@@ -46,14 +46,20 @@ const FIXTURE_STEMS = [
   "-test-fixture",
   "-test-fixtures",
 ] as const;
-const EXTERNALLY_CONSTRAINED_ADAPTER = new RegExp(
+const PRODUCT_ENTRYPOINT = new RegExp(
   [
     String.raw`^apps/api/src/main\.ts$`,
-    String.raw`^apps/(?:api|web)/src/.+\.adapter\.tsx?$`,
     String.raw`^apps/web/src/app/(?:.*/)?(?:page|layout|route|template|default|loading|error|global-error|not-found)\.tsx?$`,
+    String.raw`^apps/web/instrumentation(?:-client)?\.ts$`,
     String.raw`^apps/web/src/proxy\.ts$`,
+    String.raw`^apps/web/scripts/run-next\.ts$`,
+    String.raw`^packages/[^/]+/src/index\.ts$`,
   ].join("|"),
 );
+const NAMED_ADAPTER = /^apps\/(?:api|web)\/src\/.+\.adapter\.tsx?$/u;
+
+export const isExemplaryProductEntrypoint = (file: string): boolean =>
+  PRODUCT_ENTRYPOINT.test(file);
 
 interface RoleMetadata {
   readonly owner: string;
@@ -151,7 +157,7 @@ const roleId = (file: string, kind: ExemplaryFileKind): ExemplaryFileRoleId => {
   if (kind === "test") return "test";
   if (kind === "config") return "config";
   if (kind === "tooling") return "tooling";
-  return EXTERNALLY_CONSTRAINED_ADAPTER.test(file)
+  return isExemplaryProductEntrypoint(file) || NAMED_ADAPTER.test(file)
     ? "externally-constrained-adapter"
     : "maintained-product";
 };

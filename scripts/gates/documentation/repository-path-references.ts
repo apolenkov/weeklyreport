@@ -90,7 +90,10 @@ const TRAILING_PUNCTUATION = "),.;";
 
 const normalizedReference = (raw: string): string => {
   let normalized = raw.trim();
-  while (TRAILING_PUNCTUATION.includes(normalized.at(-1) ?? ""))
+  while (
+    normalized.length > 0 &&
+    TRAILING_PUNCTUATION.includes(normalized.at(-1) ?? "")
+  )
     normalized = normalized.slice(0, -1);
   return normalized.replace(/:\d+(?:-\d+)?$/u, "");
 };

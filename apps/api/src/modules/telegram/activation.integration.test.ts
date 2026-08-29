@@ -7,6 +7,7 @@ import { TelegramModule } from "./telegram.module.js";
 
 const ACTIVATION_ENV = {
   APP_BASE_URL: "http://localhost:3000",
+  API_HOST: "127.0.0.1",
   AUTH_DEV_MODE: "false",
   AUTH_JWT_SECRET: "test-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   DATABASE_URL:

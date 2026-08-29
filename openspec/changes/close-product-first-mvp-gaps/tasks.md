@@ -26,6 +26,7 @@
 - [x] 4.2 Make SMTP integration tests fail when Mailpit is absent in the required lane while retaining any explicitly optional local mode; verify the required invocation executes tests rather than recording skips.
 - [x] 4.3 Add explicit API and Web coverage commands/jobs with non-empty summary checks and unchanged thresholds/exclusions; verify both commands fail on an empty report and pass only when current floors are met.
 - [x] 4.4 Prove the ordinary `pnpm test` lane still excludes database integration work and remains the fast unit contour; verify repository-test ownership and unit timing/output are current.
+- [x] 4.5 Make the durable Markdown reference gate terminate on empty, punctuation-only, and nested inline-code spans; verify a planted regression case and the live tracked corpus both complete successfully.
 
 ## 5. Repository-owned operations
 
@@ -46,6 +47,7 @@
 - [x] 6.4 Reconcile curated README/onboarding/SDLC/quality counts and mobile status wording with live commands; verify `docs/README.md`, `openspec list`, and strict spec indexes have no stale or missing current entries.
 - [x] 6.5 Create and apply the focused semantic OpenSpec-retirement change from the proven 165-spec dispositions, preserving historical archives; verify all KEEP/UPDATE/RETIRE totals reconcile and strict validation passes.
 - [x] 6.6 Re-run a fresh independent read-only registry/spec review from compact cohort summaries; verify every final verdict has evidence before claiming the repository is exemplary.
+- [x] 6.7 Bind the package-command Web launcher to one exact executable-entrypoint identity; verify the catalogue keeps it on the product floor while planted nearby paths remain ordinary orphan candidates.
 
 ## 7. Mobile and product acceptance
 

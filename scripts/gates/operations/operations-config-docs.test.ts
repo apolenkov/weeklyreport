@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
 
+import { mergeNextEnvironment } from "../../../apps/web/scripts/run-next.ts";
+
 const read = (path: string): string => readFileSync(resolve(path), "utf8");
 const prodCompose = read("docker-compose.prod.yml");
 const operations = read("docs/operations.md");
@@ -10,12 +12,16 @@ const onboarding = read("docs/onboarding.md");
 const readme = read("README.md");
 const compose = read("docker-compose.yml");
 const devCompose = read("docker-compose.dev.yml");
+const apiBootstrap = read("apps/api/src/bootstrap/api-bootstrap.ts");
 const caddyReadme = read("deploy/caddy/README.md");
 const errorsCompose = read("docker-compose.errors.yml");
 const packageJson = JSON.parse(read("package.json")) as {
   readonly scripts: Readonly<Record<string, string | undefined>>;
 };
 const apiPackageJson = JSON.parse(read("apps/api/package.json")) as {
+  readonly scripts: Readonly<Record<string, string | undefined>>;
+};
+const webPackageJson = JSON.parse(read("apps/web/package.json")) as {
   readonly scripts: Readonly<Record<string, string | undefined>>;
 };
 const workflow = read(".github/workflows/ci.yml");
@@ -87,13 +93,86 @@ void test("observability commands own an isolated Compose project", () => {
   );
 });
 
+const assertNativeApiEnvironment = (
+  apiDevCommand: string | undefined,
+  environmentExample: string,
+  bootstrap: string,
+): void => {
+  assert.match(apiDevCommand ?? "", /--import tsx --watch src\/main\.ts/);
+  assert.doesNotMatch(apiDevCommand ?? "", /kill-port/);
+  assert.match(bootstrap, /await app\.listen\(env\.PORT, env\.API_HOST\)/);
+  assert.match(environmentExample, /^API_HOST=127\.0\.0\.1$/mu);
+};
+
 void test("API source development uses the supported TypeScript loader", () => {
   const apiDevCommand = apiPackageJson.scripts.dev;
-  assert.match(apiDevCommand ?? "", /--import tsx --watch src\/main\.ts/);
+  assertNativeApiEnvironment(apiDevCommand, read(".env.example"), apiBootstrap);
+  assert.match(compose, /API_HOST: 0\.0\.0\.0/);
+  assert.match(devCompose, /API_HOST: 0\.0\.0\.0/);
+  assert.match(prodCompose, /API_HOST: 0\.0\.0\.0/);
   assert.match(devCompose, /--import tsx[\s\S]*--watch src\/main\.ts/);
   assert.doesNotMatch(
     `${apiDevCommand ?? ""}\n${devCompose}`,
     /@swc-node\/register/,
+  );
+});
+
+void test("native API environment guard rejects a planted public listener", () => {
+  const planted = read(".env.example").replace(
+    "API_HOST=127.0.0.1",
+    "API_HOST=0.0.0.0",
+  );
+  assert.notEqual(planted, read(".env.example"));
+  assert.throws(() =>
+    assertNativeApiEnvironment(
+      apiPackageJson.scripts.dev,
+      planted,
+      apiBootstrap,
+    ),
+  );
+});
+
+const assertNativeWebRootEnvironment = (
+  scripts: Readonly<Record<string, string | undefined>>,
+  environmentExample: string,
+): void => {
+  assert.equal(
+    scripts.dev,
+    "node scripts/run-next.ts dev --webpack --hostname 127.0.0.1",
+  );
+  assert.equal(scripts.build, "node scripts/run-next.ts build --webpack");
+  assert.match(environmentExample, /^API_URL=http:\/\/localhost:3002$/mu);
+  assert.match(
+    environmentExample,
+    /^NEXT_PUBLIC_API_URL=http:\/\/localhost:3002$/mu,
+  );
+  assert.ok(devCompose.includes('"--hostname",\n        "0.0.0.0"'));
+};
+
+void test("native Web dev and build load the root environment contract", () => {
+  assertNativeWebRootEnvironment(webPackageJson.scripts, read(".env.example"));
+});
+
+void test("native Web environment guard rejects a planted split-brain script", () => {
+  assert.throws(() =>
+    assertNativeWebRootEnvironment(
+      { ...webPackageJson.scripts, dev: "next dev --webpack" },
+      read(".env.example"),
+    ),
+  );
+});
+
+void test("native Web root environment preserves explicit shell precedence", () => {
+  assert.deepEqual(
+    mergeNextEnvironment("API_URL=http://file\nFILE_ONLY=yes\n", {
+      API_URL: "http://shell",
+      SHELL_ONLY: "yes",
+    }),
+    {
+      API_URL: "http://shell",
+      FILE_ONLY: "yes",
+      SHELL_ONLY: "yes",
+    },
   );
 });
 

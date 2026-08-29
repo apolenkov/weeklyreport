@@ -12,6 +12,7 @@ const envObjectSchema = z.object({
   DATABASE_URL: z.url().startsWith("postgresql://"),
   DIRECT_URL: z.url().startsWith("postgresql://").optional(),
   PORT: z.coerce.number().int().positive(),
+  API_HOST: z.enum(["127.0.0.1", "0.0.0.0"]),
   NODE_ENV: z.enum(["development", "production", "test"]),
   FRONTEND_URL: z.url(),
   // Base URL the reminder scheduler embeds in notification email links

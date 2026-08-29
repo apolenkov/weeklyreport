@@ -81,6 +81,11 @@ if [ "${CONFIRM_RESTORE_TARGET:-}" != "$target" ]; then
   exit 3
 fi
 
+if [ "${PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION:-}" != "давай" ]; then
+  echo "refusing: restore requires explicit per-run destructive consent" >&2
+  exit 3
+fi
+
 if [ "$environment" = "production" ] &&
   [ "${ALLOW_PROD_DESTRUCTIVE:-}" != "yes" ]; then
   echo "refusing: production restore requires ALLOW_PROD_DESTRUCTIVE=yes" >&2

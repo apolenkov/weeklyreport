@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "kill-port 3002 || true && node --env-file-if-exists=../../.env --import tsx --watch src/main.ts",
+    "dev": "node --env-file-if-exists=../../.env --import tsx --watch src/main.ts",
     "build": "tsc -p tsconfig.json && node scripts/fix-esm-extensions.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
@@ -70,7 +70,6 @@
     "@types/luxon": "catalog:",
     "@types/nodemailer": "^8.0.1",
     "@types/passport": "^1.0.17",
-    "kill-port": "^2.0.1",
     "samlify": "^2.13.1",
     "tsx": "catalog:"
   }

@@ -23,7 +23,9 @@ Next.js 16 frontend with App Router, React 19, shadcn/ui, and Tailwind CSS v4.
 
 ## API Proxy
 
-Next.js rewrites in `next.config.ts` proxy `/trpc/*` and `/auth/*` to the API server. This keeps all cookies same-origin — no CORS issues.
+Next.js rewrites in `next.config.ts` proxy `/trpc/*`, `/auth/*`, `/health/*`,
+`/api/*`, and `/pdfs/*` to the API server. This keeps cookies and browser
+telemetry same-origin.
 
 ## Key Components
 
@@ -34,15 +36,16 @@ Next.js rewrites in `next.config.ts` proxy `/trpc/*` and `/auth/*` to the API se
 
 ## Development
 
-From the repository root, copy `.env.example` to `.env` and set
-`NEXT_PUBLIC_API_URL=http://localhost:3002` in `apps/web/.env.local`, then run:
+From the repository root, copy `.env.example` to `.env`, then run:
 
 ```bash
 pnpm dev
 ```
 
-The canonical native ports are web `3000` and API `3002`. Docker-backed
-development uses `pnpm dev:watch` and supplies container-internal origins.
+The Web package scripts load the root `.env`, so native API and Web share one
+environment contract. The canonical native ports are Web `3000` and API
+`3002`. Docker-backed development uses `pnpm dev:watch` and supplies
+container-internal origins.
 
 ## Testing
 

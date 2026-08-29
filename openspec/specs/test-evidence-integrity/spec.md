@@ -45,3 +45,22 @@ The coverage configuration MUST keep the complete source scope explicit: API MUS
 
 - **WHEN** a coverage summary with relative `src/` keys is presented as API evidence from the Web package root or vice versa
 - **THEN** the evidence helper fails instead of treating the ambiguous paths as belonging to either scope
+
+#### Scenario: An absolute coverage path traverses outside its source scope
+
+- **WHEN** a coverage key starts under the selected package but resolves through `..` into another package
+- **THEN** the evidence helper canonicalizes and rejects it as out of scope
+
+#### Scenario: A coverage path is a source-tree symlink
+
+- **WHEN** a coverage key lexically belongs to the selected source tree but its canonical target resolves outside that tree
+- **THEN** the evidence helper rejects it instead of counting foreign source evidence
+
+### Requirement: Repository evidence gates terminate deterministically
+
+Repository-owned evidence gates MUST terminate for every supported tracked input. Markdown reference normalization MUST treat empty, punctuation-only, and nested inline-code spans as non-references rather than entering an unbounded loop.
+
+#### Scenario: Markdown contains an empty or punctuation-only inline span
+
+- **WHEN** the durable documentation corpus contains an empty, punctuation-only, or nested inline-code span
+- **THEN** the repository-path reference gate completes and reports only valid repository references
