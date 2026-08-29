@@ -282,10 +282,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: prisma migrate reset (exact disposable E2E DB, no seed)
+      - name: prisma migrate reset (exact disposable E2E DB)
         env:
           PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай"
         run: pnpm exec tsx prisma/operations/migrate-reset.ts
+
+      - name: Seed canonical full profile after reset
+        env:
+          PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай"
+        run: pnpm --dir apps/api exec tsx ../../prisma/seeds/profiles/seed-profile.ts full
 
       - name: prisma generate (post-reset)
         run: pnpm exec prisma generate

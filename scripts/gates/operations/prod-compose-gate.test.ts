@@ -72,6 +72,7 @@ const REQUIRED_POLICY_INPUTS = [
   "NEXT_PUBLIC_API_URL",
   "API_URL",
   "CADDY_SITE_ADDRESS",
+  "CADDY_ACME_EMAIL",
   "CADDY_CSP_REPORT_URI",
   "HTTP_PORT",
   "HTTPS_PORT",
@@ -131,6 +132,7 @@ const FULL_POLICY_ENV: NodeJS.ProcessEnv = {
   KEYCLOAK_SAML_ISSUER: "x",
   KEYCLOAK_SAML_CERT: "x",
   CADDY_SITE_ADDRESS: "http://x",
+  CADDY_ACME_EMAIL: "ops@example.com",
   CADDY_CSP_REPORT_URI: "http://x",
   BACKUP_INTERVAL_SECONDS: "3600",
   BACKUP_RETENTION_DAYS: "14",
@@ -155,7 +157,7 @@ void test("production compose refuses to render with a blank required input", ()
   // Blank every required var: compose must exit nonzero instead of inventing
   // operational policy. A handful are exempted as documented optional
   // integrations (OTEL_EXPORTER_OTLP_ENDPOINT, SMTP_USER/PASS, SENTRY_DSN,
-  // FRONTEND_URLS, OTEL_SERVICE_VERSION, CLIENT_LOG_FORWARDING, CADDY_ACME_EMAIL).
+  // FRONTEND_URLS, OTEL_SERVICE_VERSION, CLIENT_LOG_FORWARDING).
   const blanked = renderCompose({ PATH: process.env.PATH });
   assert.notEqual(blanked.status, 0);
   assert.match(`${blanked.stdout}${blanked.stderr}`, /required|must be set/i);

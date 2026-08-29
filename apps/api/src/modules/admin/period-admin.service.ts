@@ -219,6 +219,7 @@ export class PeriodAdminService {
 
     const updated = await this.repository.updatePeriodManual({
       reportId: input.reportId,
+      expectedPeriodState: existing.periodState,
       data,
     });
 

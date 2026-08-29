@@ -390,7 +390,7 @@ services:
     image: caddy:2.8-alpine@sha256:af32e97399febea808609119bb21544d0265c58a02836576e32a2d082c262c17
     environment:
       CADDY_SITE_ADDRESS: ${CADDY_SITE_ADDRESS:?CADDY_SITE_ADDRESS must be set (e.g. customreport.example.com or http://localhost)}
-      CADDY_ACME_EMAIL: ${CADDY_ACME_EMAIL:-}
+      CADDY_ACME_EMAIL: ${CADDY_ACME_EMAIL:?CADDY_ACME_EMAIL must be set (ACME account email)}
       # Collector URL the enforcing CSP header POSTs each violation report to
       # (a Sentry/Bugsink security endpoint or a same-origin sink). Required, no
       # default: an enforcing CSP with an unset report target would drop every

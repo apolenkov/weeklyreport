@@ -40,7 +40,7 @@ DDL and `pg_dump` both need a session that outlives a single transaction.
    | `KEYCLOAK_SAML_CALLBACK_URL`, `KEYCLOAK_SAML_ENTRY_POINT`, `KEYCLOAK_SAML_ISSUER`, `KEYCLOAK_SAML_CERT` | The IdP; all four are required when `AUTH_DEV_MODE=false`.                          |
    | `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`                                                                   | Reminder delivery. Without them the api drops mail silently, so boot fails instead. |
    | `HEAP_HEALTH_THRESHOLD_BYTES`                                                                           | ~75% of the api container memory limit (2 GB → `1610612736`).                       |
-   | `CADDY_SITE_ADDRESS`, `CADDY_CSP_REPORT_URI`                                                            | Public hostname and the CSP violation collector.                                    |
+   | `CADDY_SITE_ADDRESS`, `CADDY_ACME_EMAIL`, `CADDY_CSP_REPORT_URI`                                        | Public hostname, ACME account email, and CSP violation collector.                   |
    | `HTTP_PORT`, `HTTPS_PORT`, `HTTPS_PORT_QUIC`                                                            | Host ports for the public Caddy listener.                                           |
    | `PGBOUNCER_MAX_CLIENT_CONN`, `PGBOUNCER_POOL_SIZE`, `PGBOUNCER_RESERVE_POOL_SIZE`                       | PgBouncer capacity limits.                                                          |
    | `REDIS_DB`, `LOG_LEVEL`, `OTEL_SDK_DISABLED`, `OTEL_TRACES_SAMPLER_ARG`                                 | Runtime policy values.                                                              |
@@ -49,7 +49,7 @@ DDL and `pg_dump` both need a session that outlives a single transaction.
    Optional: `FRONTEND_URLS` (extra CORS origins, no wildcards in production),
    `SENTRY_DSN`, `CLIENT_LOG_FORWARDING`, `TG_BOT_TOKEN`,
    `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_VERSION`, `SMTP_USER`,
-   `SMTP_PASS`, `CADDY_ACME_EMAIL`.
+   `SMTP_PASS`.
 
 2. **Build and start.** `NEXT_PUBLIC_*` values are compiled into the client
    bundle, so a changed public origin needs a rebuild, not a restart.
@@ -81,7 +81,8 @@ Compose environment; do not hand-edit the container mount.
   `HEAP_HEALTH_THRESHOLD_BYTES`. This is what the container healthcheck and any
   load balancer should use.
 - `GET /metrics` — Prometheus. Deliberately **not** routed through Caddy from
-  the public internet; scrape `api:3001/metrics` on the compose network.
+  the public internet; Caddy returns 404 for it at the edge. Scrape
+  `api:3001/metrics` on the compose network.
 - `/admin/queues` — Bull Board. Session-authenticated, `head` role only.
 
 ### Red `/health/ready` — triage
@@ -193,7 +194,9 @@ Images are the unit of rollback; the database is not.
 
 ## CI
 
-`.github/workflows/ci.yml` runs lint + typecheck + unit tests, a
+`.github/workflows/ci.yml` runs lint + typecheck + unit tests, a serial
+`api-integration` lane against disposable Postgres/Redis/Mailpit services, a
+`coverage` lane for API and Web that requires non-empty evidence, a
 `prisma migrate reset` drift gate, and a production image build.
 Local hooks (`.husky/pre-commit`, `.husky/pre-push`) remain the fast gate;
 `SKIP_PREPUSH=1` bypasses the slow one when you know why you are doing it.

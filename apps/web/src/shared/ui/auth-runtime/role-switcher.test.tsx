@@ -109,6 +109,19 @@ describe("DevRoleSwitcher — data-reset controls for every dev role", () => {
       screen.getByTestId("dev-role-switcher-reseed-stress"),
     ).toBeInTheDocument();
     expect(screen.getByTestId("dev-role-switcher-logout")).toBeInTheDocument();
+
+    for (const testId of [
+      "dev-role-switcher-admin-admin@customreport.local",
+      "dev-role-switcher-reseed-minimal",
+      "dev-role-switcher-reseed-demo",
+      "dev-role-switcher-reseed-full",
+      "dev-role-switcher-reseed-stress",
+      "dev-role-switcher-logout",
+    ]) {
+      expect(screen.getByTestId(testId)).toHaveClass(
+        "max-md:min-h-[var(--touch-target-min)]",
+      );
+    }
   });
 });
 

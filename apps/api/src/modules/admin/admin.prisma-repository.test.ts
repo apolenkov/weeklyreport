@@ -99,6 +99,35 @@ describe("AdminPrismaRepository.createPeriodManual — reminder parity", () => {
 
 // Both rollout-era and current database guards map to the same domain outcome.
 describe("AdminPrismaRepository period writers — overlap translation", () => {
+  function periodUpdatePrisma(error: unknown): PrismaService {
+    const report = {
+      updateMany: vi.fn(() => Promise.reject(error)),
+      findUniqueOrThrow: vi.fn(),
+    };
+    return {
+      $transaction: vi.fn((run: (tx: unknown) => Promise<unknown>) =>
+        run({
+          $queryRaw: vi.fn(() =>
+            Promise.resolve([
+              {
+                status: "draft",
+                periodState: "open",
+                periodStatus: "open",
+                archived: false,
+                autoPublished: false,
+                autoArchived: false,
+                publishedAt: null,
+                publishedById: null,
+                reopenedAt: null,
+              },
+            ]),
+          ),
+          report,
+        }),
+      ),
+    } as unknown as PrismaService;
+  }
+
   function openBoundaryP2002(): Prisma.PrismaClientKnownRequestError {
     return new Prisma.PrismaClientKnownRequestError(
       "Unique constraint failed",
@@ -150,14 +179,13 @@ describe("AdminPrismaRepository period writers — overlap translation", () => {
   });
 
   it("updatePeriodManual: P2002 on the date-envelope edit → AdminPeriodOverlapError", async () => {
-    const prisma = {
-      report: { update: vi.fn(() => Promise.reject(openBoundaryP2002())) },
-    } as unknown as PrismaService;
+    const prisma = periodUpdatePrisma(openBoundaryP2002());
     const repo = new AdminPrismaRepository(prisma);
 
     await expect(
       repo.updatePeriodManual({
         reportId: "report-1",
+        expectedPeriodState: "open",
         data: { periodStart: INPUT.periodStart, periodEnd: INPUT.periodEnd },
       }),
     ).rejects.toBeInstanceOf(AdminPeriodOverlapError);
@@ -175,14 +203,13 @@ describe("AdminPrismaRepository period writers — overlap translation", () => {
   });
 
   it("updatePeriodManual: adapter range P2039 → AdminPeriodOverlapError", async () => {
-    const prisma = {
-      report: { update: vi.fn(() => Promise.reject(periodOverlapP2039())) },
-    } as unknown as PrismaService;
+    const prisma = periodUpdatePrisma(periodOverlapP2039());
     const repo = new AdminPrismaRepository(prisma);
 
     await expect(
       repo.updatePeriodManual({
         reportId: "report-1",
+        expectedPeriodState: "open",
         data: { periodStart: INPUT.periodStart, periodEnd: INPUT.periodEnd },
       }),
     ).rejects.toBeInstanceOf(AdminPeriodOverlapError);

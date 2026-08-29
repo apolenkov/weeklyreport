@@ -77,9 +77,10 @@ pnpm install
 
 # 2. Окружение: скопировать пример и при необходимости поправить
 cp .env.example .env
+# Для `pnpm dev` пример уже использует Mailpit localhost:1025 и OTLP localhost:4318.
 
-# 3. Поднять инфраструктуру в Docker (Postgres, Redis, Mailpit, Grafana, Bugsink)
-#    Команда не запускает api/web: их единственный владелец — pnpm dev ниже.
+# 3. Поднять инфраструктуру в отдельном Compose-проекте (Postgres, Redis,
+#    Mailpit, Grafana, Bugsink). Команда не запускает api/web: их единственный владелец — pnpm dev.
 pnpm observability:up
 
 # 4. Залить схему и демо-данные в базу

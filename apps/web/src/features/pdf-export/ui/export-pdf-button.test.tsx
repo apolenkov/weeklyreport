@@ -227,6 +227,10 @@ describe("ExportPdfButton", () => {
     const link = await screen.findByRole("link", { name: "Download PDF" });
     expect(link).toHaveAttribute("href", ARTIFACT_URL);
     expect(link).toHaveAttribute("download");
+    expect(link).toHaveClass(
+      "max-md:min-h-[var(--touch-target-min)]",
+      "focus-visible:ring-2",
+    );
     expect(anchorClick).toHaveBeenCalledTimes(1);
     expect(openMock).not.toHaveBeenCalled();
     expect(toastSuccess).toHaveBeenCalledTimes(1);

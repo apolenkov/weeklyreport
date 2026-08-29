@@ -9,32 +9,17 @@ import {
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import {
   buildTransition,
-  isPeriodOverlapConflict,
   PeriodLifecycleIntegrityError,
 } from "../period/index.js";
 import {
   AdminPeriodAlreadyArchivedError,
   AdminPeriodNotFoundError,
-  AdminPeriodOverlapError,
   AdminPeriodStaleStateError,
 } from "./admin-shared.js";
+import { periodOverlapGuarded } from "./period/overlap.js";
+export { updatePeriodManual } from "./period/manual-update.js";
 
 // Period (Report) lifecycle-transition writes for the Admin Periods tab.
-
-// Translate both the rollout-era exact-boundary index and the global range
-// exclusion constraint into the same public overlap error.
-async function periodOverlapGuarded<T>(write: () => Promise<T>): Promise<T> {
-  try {
-    return await write();
-  } catch (error) {
-    if (isPeriodOverlapConflict(error)) {
-      throw new AdminPeriodOverlapError(
-        "A period already exists for these dates.",
-      );
-    }
-    throw error;
-  }
-}
 
 // Mint a Report row with the supplied dates + initial state, mirroring
 // `PeriodCreatorScheduler.runOnce`'s bare create (`status`/`periodStatus` come
@@ -92,52 +77,6 @@ export async function createPeriodManual(
     periodEnd: created.periodEnd,
     deadline: created.deadline,
     periodState: draftPeriodStateSchema.parse(created.periodState),
-  };
-}
-
-// Patch an existing Report's date envelope + weekLabel. The service has already
-// filtered `data` down to actually-changed fields, so Prisma's partial-update
-// semantics are exactly right. `periodState` is never touched here.
-export async function updatePeriodManual(
-  prisma: PrismaService,
-  input: {
-    reportId: string;
-    data: {
-      periodStart?: Date;
-      periodEnd?: Date;
-      deadline?: Date | null;
-      weekLabel?: string | null;
-    };
-  },
-): Promise<{
-  id: string;
-  periodStart: Date;
-  periodEnd: Date;
-  deadline: Date | null;
-  weekLabel: string | null;
-  periodState: PeriodState;
-}> {
-  const updated = await periodOverlapGuarded(() =>
-    prisma.report.update({
-      where: { id: input.reportId },
-      data: input.data,
-      select: {
-        id: true,
-        periodStart: true,
-        periodEnd: true,
-        deadline: true,
-        weekLabel: true,
-        periodState: true,
-      },
-    }),
-  );
-  return {
-    id: updated.id,
-    periodStart: updated.periodStart,
-    periodEnd: updated.periodEnd,
-    deadline: updated.deadline,
-    weekLabel: updated.weekLabel,
-    periodState: updated.periodState,
   };
 }
 

@@ -60,7 +60,7 @@
     "db:reset:hard": "pnpm --filter @customreport/api exec tsx ../../prisma/operations/reset-hard.ts",
     "db:reset:hard:docker": "docker compose -f docker-compose.yml -f docker-compose.dev.yml exec -T api pnpm --dir /app/apps/api exec tsx ../../prisma/operations/reset-hard.ts",
     "db:backfill:reminder-policies": "pnpm --filter @customreport/api exec tsx ../../prisma/operations/backfill-policy-rules.ts",
-    "observability:compose": "docker compose -f docker-compose.yml -f docker-compose.observability.yml -f docker-compose.errors.yml -f docker-compose.observability.dev.yml",
+    "observability:compose": "docker compose --project-name customreport-observability -f docker-compose.yml -f docker-compose.observability.yml -f docker-compose.errors.yml -f docker-compose.observability.dev.yml",
     "observability:up": "pnpm observability:compose up -d postgres redis mailpit otel-lgtm bugsink",
     "observability:down": "pnpm observability:compose down",
     "observability:logs": "pnpm observability:compose logs --tail=100 otel-lgtm",

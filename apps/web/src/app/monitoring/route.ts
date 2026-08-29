@@ -21,8 +21,8 @@ export async function POST(req: Request): Promise<Response> {
   if (!endpoint) return new Response(null, { status: 204 });
 
   try {
-    const body = await req.arrayBuffer();
-    if (body.byteLength > SENTRY_TUNNEL_MAX_BODY_BYTES) {
+    const body = await readBoundedBody(req);
+    if (body === null) {
       return new Response(null, { status: 413 });
     }
 
@@ -40,4 +40,57 @@ export async function POST(req: Request): Promise<Response> {
     // failure; the SDK will apply its normal retry/drop behavior.
     return new Response(null, { status: 204 });
   }
+}
+
+async function readBoundedBody(req: Request): Promise<ArrayBuffer | null> {
+  if (req.body === null) return new ArrayBuffer(0);
+
+  return readBoundedChunks(req.body.getReader(), []);
+}
+
+async function readBoundedChunks(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  chunks: Uint8Array[],
+): Promise<ArrayBuffer | null> {
+  const totalBytes = { value: 0 };
+
+  while (totalBytes.value <= SENTRY_TUNNEL_MAX_BODY_BYTES) {
+    const result = await reader.read();
+    if (result.done) return joinChunks(chunks, totalBytes.value);
+
+    const nextTotalBytes = totalBytes.value + result.value.byteLength;
+    if (nextTotalBytes > SENTRY_TUNNEL_MAX_BODY_BYTES) {
+      return rejectOversizedReader(reader);
+    }
+
+    chunks.push(result.value);
+    totalBytes.value = nextTotalBytes;
+  }
+
+  return null;
+}
+
+async function rejectOversizedReader(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+): Promise<null> {
+  try {
+    await reader.cancel("Sentry envelope exceeds the request limit");
+  } catch {
+    // The request is already rejected; cancellation is best effort.
+  }
+  return null;
+}
+
+function joinChunks(chunks: Uint8Array[], totalBytes: number): ArrayBuffer {
+  const output = chunks.reduce(
+    (state, chunk) => {
+      state.output.set(chunk, state.offset);
+      return {
+        output: state.output,
+        offset: state.offset + chunk.byteLength,
+      };
+    },
+    { output: new Uint8Array(totalBytes), offset: 0 },
+  ).output;
+  return output.buffer;
 }

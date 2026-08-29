@@ -1,10 +1,10 @@
 {
-  "filesOnFloor": 1004,
-  "productTotal": 1004,
+  "filesOnFloor": 1008,
+  "productTotal": 1008,
   "overrideBlocks": 19,
   "liveSuppressions": 5,
   "structural": {
-    "denominatorFileCount": 1002,
+    "denominatorFileCount": 1006,
     "total": {
       "findingCount": 0,
       "affectedFileCount": 0,

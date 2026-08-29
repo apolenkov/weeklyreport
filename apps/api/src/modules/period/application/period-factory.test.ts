@@ -80,6 +80,7 @@ type ReportCreateData = Parameters<
 
 function makePrisma(opts: {
   existing?: PeriodRow | null;
+  containing?: PeriodRow | null;
   raced?: PeriodRow | null;
   createThrows?: unknown;
   createdId?: string;
@@ -100,6 +101,7 @@ function makePrisma(opts: {
   const findMany = vi
     .fn()
     .mockResolvedValueOnce(opts.existing ? [opts.existing] : [])
+    .mockResolvedValueOnce(opts.containing ? [opts.containing] : [])
     .mockResolvedValue(opts.raced ? [opts.raced] : []);
 
   const client = { report: { findMany, create } } as unknown as FactoryPrisma;
@@ -230,6 +232,23 @@ describe("ensureCurrentPeriod", () => {
     await expect(
       ensureCurrentPeriod(client, ANCHOR_MONDAY, ANCHOR_MONDAY, SETTINGS),
     ).resolves.toMatchObject({ created: false, periodState: "scheduled" });
+  });
+
+  it("returns a live manual range containing the anchor when no exact boundary exists", async () => {
+    const containing = makePeriodRow({
+      id: "period-manual-containing-anchor",
+      periodStart: new Date("2026-05-05T00:00:00.000Z"),
+      periodEnd: new Date("2026-05-18T23:59:59.999Z"),
+    });
+    const { client, create } = makePrisma({ containing });
+
+    await expect(
+      ensureCurrentPeriod(client, ANCHOR_MONDAY, ANCHOR_MONDAY, SETTINGS),
+    ).resolves.toMatchObject({
+      created: false,
+      reportId: "period-manual-containing-anchor",
+    });
+    expect(create).not.toHaveBeenCalled();
   });
 
   it.each([

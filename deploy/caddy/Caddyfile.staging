@@ -42,6 +42,13 @@
 		}
 	}
 
+	# Keep the API's Prometheus endpoint off the public edge. This explicit
+	# handler must precede the catch-all web handler below.
+	@metrics path /metrics /metrics/*
+	handle @metrics {
+		respond "Not Found" 404
+	}
+
 	handle {
 		reverse_proxy web:3000 {
 			header_up Host {host}

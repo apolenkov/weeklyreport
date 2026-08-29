@@ -16,6 +16,7 @@ const packageJson = JSON.parse(read("package.json")) as {
 const apiPackageJson = JSON.parse(read("apps/api/package.json")) as {
   readonly scripts: Readonly<Record<string, string | undefined>>;
 };
+const workflow = read(".github/workflows/ci.yml");
 
 const requiredProductionVariables = (): readonly string[] =>
   [...prodCompose.matchAll(/\$\{([A-Z0-9_]+):\?/g)]
@@ -39,8 +40,17 @@ void test("the observability command leaves api and web to source development", 
     "pnpm observability:compose up -d postgres redis mailpit otel-lgtm bugsink",
   );
   assert.doesNotMatch(command, /\b(api|web)\b/);
-  assert.match(readme, /единственный владелец — pnpm dev/);
+  assert.match(readme, /единственный\s+владелец\s+—\s+pnpm dev/);
   assert.match(onboarding, /не запускает[\s\S]*`api` и `web`/);
+});
+
+void test("observability commands own an isolated Compose project", () => {
+  const command = packageJson.scripts["observability:compose"] ?? "";
+  assert.match(command, /--project-name customreport-observability/);
+  assert.equal(
+    packageJson.scripts["observability:down"],
+    "pnpm observability:compose down",
+  );
 });
 
 void test("API source development uses the supported TypeScript loader", () => {
@@ -57,13 +67,38 @@ void test("Mailpit is the one local SMTP service name", () => {
   assert.match(compose, /\n {2}mailpit:\n/);
   assert.doesNotMatch(`${compose}\n${devCompose}`, /mailhog/i);
   assert.match(`${compose}\n${devCompose}`, /SMTP_HOST: mailpit/);
+  assert.match(devCompose, /SMTP_PORT: ["']?1025["']?/);
+  assert.match(read(".env.example"), /^SMTP_HOST=localhost$/m);
+  assert.match(read(".env.example"), /^SMTP_PORT=1025$/m);
+  assert.match(
+    read(".env.example"),
+    /^OTEL_EXPORTER_OTLP_ENDPOINT=http:\/\/localhost:4318$/m,
+  );
+  assert.match(
+    devCompose,
+    /OTEL_EXPORTER_OTLP_ENDPOINT: http:\/\/host\.docker\.internal:4318/,
+  );
 });
 
 void test("metrics documentation and edge config keep the endpoint internal", () => {
   const caddy = read("deploy/caddy/Caddyfile");
   const stagingCaddy = read("deploy/caddy/Caddyfile.staging");
-  assert.doesNotMatch(caddy, /path[^\n]*\/metrics/);
-  assert.doesNotMatch(stagingCaddy, /path[^\n]*\/metrics/);
+  for (const policy of [caddy, stagingCaddy]) {
+    const apiPathMatcher =
+      policy.split("\n").find((line) => line.trimStart().startsWith("path ")) ??
+      "";
+    assert.doesNotMatch(apiPathMatcher, /\/metrics/);
+  }
+  for (const policy of [caddy, stagingCaddy]) {
+    assert.match(policy, /@metrics path \/metrics \/metrics\/\*/);
+    assert.match(policy, /handle @metrics[\s\S]*respond "Not Found" 404/);
+    const metricsHandler = policy.indexOf("handle @metrics");
+    const webFallback = policy.indexOf("\n\thandle {", metricsHandler);
+    assert.ok(
+      metricsHandler !== -1 && webFallback > metricsHandler,
+      "the metrics rejection must precede the catch-all web handler",
+    );
+  }
   assert.match(
     operations,
     /`\/metrics`[\s\S]*internal-only|not\*\* routed through Caddy/,
@@ -100,6 +135,21 @@ void test("production Caddy selection and Prometheus ownership are explicit", ()
     /not mounted by docker-compose\.observability\.yml/,
   );
   assert.match(read("deploy/prometheus-otel-lgtm.yml"), /Compose-owned/);
+});
+
+void test("production Caddy ACME email is fail-closed and documented", () => {
+  assert.match(prodCompose, /CADDY_ACME_EMAIL: \$\{CADDY_ACME_EMAIL:\?/);
+  assert.match(read(".env.example"), /^CADDY_ACME_EMAIL=\S+$/m);
+});
+
+void test("operations documentation inventories integration and coverage lanes", () => {
+  assert.match(
+    operations,
+    /`api-integration` lane[\s\S]*Postgres\/Redis\/Mailpit/,
+  );
+  assert.match(operations, /`coverage` lane[\s\S]*API and Web/);
+  assert.match(workflow, /api-integration:/);
+  assert.match(workflow, /coverage:/);
 });
 
 void test("Grafana guidance uses the configured password", () => {

@@ -1,0 +1,109 @@
+import { currentPeriodLifecycleSchema } from "@customreport/shared";
+import type { PrismaClient } from "@prisma/client";
+
+import type { EnsuredPeriod } from "./period-factory-types.js";
+
+export const SELECT_PERIOD = {
+  id: true,
+  periodStart: true,
+  periodEnd: true,
+  deadline: true,
+  status: true,
+  periodState: true,
+  periodStatus: true,
+  archived: true,
+  autoPublished: true,
+  autoArchived: true,
+  publishedAt: true,
+  publishedById: true,
+  reopenedAt: true,
+} as const;
+
+export class PeriodLifecycleIntegrityError extends Error {
+  constructor() {
+    super("Stored period lifecycle is inconsistent.");
+    this.name = "PeriodLifecycleIntegrityError";
+  }
+}
+
+interface DraftPeriodRow {
+  readonly id: string;
+  readonly periodStart: Date;
+  readonly periodEnd: Date;
+  readonly deadline: Date | null;
+  readonly status: unknown;
+  readonly periodState: unknown;
+  readonly periodStatus: unknown;
+  readonly archived: unknown;
+  readonly autoPublished: unknown;
+  readonly autoArchived: unknown;
+  readonly publishedAt: unknown;
+  readonly publishedById: unknown;
+  readonly reopenedAt: unknown;
+}
+
+type ReportLookupDelegate = Pick<PrismaClient["report"], "findMany">;
+
+function toFoundPeriod(row: DraftPeriodRow): EnsuredPeriod {
+  const lifecycle = currentPeriodLifecycleSchema.safeParse(row);
+  if (
+    !lifecycle.success ||
+    (lifecycle.data.periodState !== "scheduled" &&
+      lifecycle.data.periodState !== "open")
+  ) {
+    throw new PeriodLifecycleIntegrityError();
+  }
+  return {
+    created: false,
+    reportId: row.id,
+    periodStart: row.periodStart,
+    periodEnd: row.periodEnd,
+    deadline: row.deadline,
+    periodState: lifecycle.data.periodState,
+  };
+}
+
+function readLivePeriod(rows: readonly DraftPeriodRow[]): EnsuredPeriod | null {
+  const liveRows = rows
+    .map((row) => {
+      const lifecycle = currentPeriodLifecycleSchema.safeParse(row);
+      if (!lifecycle.success) throw new PeriodLifecycleIntegrityError();
+      return lifecycle.data.periodState === "scheduled" ||
+        lifecycle.data.periodState === "open"
+        ? row
+        : null;
+    })
+    .filter((row): row is DraftPeriodRow => row !== null);
+  if (liveRows.length > 1) throw new PeriodLifecycleIntegrityError();
+  return liveRows[0] ? toFoundPeriod(liveRows[0]) : null;
+}
+
+export async function readBoundaryPeriod(
+  report: ReportLookupDelegate,
+  periodStart: Date,
+  periodEnd: Date,
+): Promise<EnsuredPeriod | null> {
+  const rows = await report.findMany({
+    where: { periodStart, periodEnd },
+    select: SELECT_PERIOD,
+  });
+  return readLivePeriod(rows);
+}
+
+// Manual admin periods may use a non-Monday boundary. When no exact scheduler
+// boundary exists, a single live range containing the anchor is the current
+// period and must win over lazy canonical creation. Partial overlaps that do
+// not contain the anchor remain conflicts at the database write boundary.
+export async function readContainingPeriod(
+  report: ReportLookupDelegate,
+  anchorDate: Date,
+): Promise<EnsuredPeriod | null> {
+  const rows = await report.findMany({
+    where: {
+      periodStart: { lte: anchorDate },
+      periodEnd: { gte: anchorDate },
+    },
+    select: SELECT_PERIOD,
+  });
+  return readLivePeriod(rows);
+}

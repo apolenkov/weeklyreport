@@ -14,6 +14,8 @@ import { usePdfExportJob } from "./use-pdf-export-job";
 const DISABLED_REASON = "Publish or re-publish the report to export PDF.";
 const DISABLED_TRIGGER_CLASS =
   "inline-flex shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1";
+const FALLBACK_LINK_CLASS =
+  "inline-flex min-h-8 max-md:min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] px-3 text-sm font-semibold text-[var(--color-starbucks-accent)] underline-offset-4 hover:bg-[var(--color-success)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1";
 
 interface ExportPdfButtonProps {
   readonly reportId: string;
@@ -107,7 +109,7 @@ export function ExportPdfButton({
         </span>
       ) : null}
       {fallbackUrl !== null ? (
-        <a href={fallbackUrl} download>
+        <a href={fallbackUrl} download className={FALLBACK_LINK_CLASS}>
           Download PDF
         </a>
       ) : null}
