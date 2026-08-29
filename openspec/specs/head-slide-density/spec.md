@@ -125,7 +125,7 @@ card and in the focused slide header MUST NOT recur.
 
 The head status deck MUST NOT render its own standalone title/subtitle heading
 band; the report shell slides-mode header
-(`apps/web/src/features/report-sections/ui/head-report-shell.tsx` - the
+(`apps/web/src/features/report-pages/ui/head/head-report-shell.tsx` - the
 `Status Report` title plus the department context label) is the single title for
 the surface. This mirrors the lead-slides layout: in slides mode the head deck
 reads like the lead deck's slides chrome, with no extra heading band above the

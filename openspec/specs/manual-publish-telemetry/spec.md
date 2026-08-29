@@ -16,7 +16,7 @@ The system MUST increment `customreportReportsSubmittedTotal`
 `customreportPeriodStateTransitionsTotal`
 (`{ from: <prior periodStatus>, to: "published" }`) when
 `PeriodService.publishPeriod` (consumer surface: tRPC procedure
-`period.publish`, `apps/api/src/modules/period/period.service.ts`)
+`period.publish`, `apps/api/src/modules/period/application/period.service.ts`)
 successfully publishes a period. The increments MUST happen only after
 the repository write succeeds. The `from` label MUST carry the actual
 prior `periodStatus` (`"open"` or `"reopened"`), not a hardcoded

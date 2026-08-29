@@ -11,13 +11,13 @@ consistently across surfaces and do not regrow into per-surface bespoke styles.
 Report-context control bars MUST render through one shared component.
 Every such bar (period navigation, archive toggle, draft utilities) on
 the lead, head, and viewer report surfaces uses `ReportToolbar`
-(`apps/web/src/components/report-shell/report-toolbar.tsx`) — not
+(`apps/web/src/shared/ui/report-shell/report-toolbar.tsx`) — not
 through per-surface bespoke containers. This covers the lead form
-(`apps/web/src/components/lead/lead-form.tsx`), the head review shell
-(`apps/web/src/features/report-sections/ui/head-report-shell.tsx`), the new viewer
+(`apps/web/src/features/report-pages/ui/lead/shell/lead-form.tsx`), the head review shell
+(`apps/web/src/features/report-pages/ui/head/head-report-shell.tsx`), the new viewer
 report shell (the read-only analogue of the head shell consumed by
 `/reports/[reportId]`), and the shared report page
-(`apps/web/src/components/weekly-report/weekly-report-page.tsx`)
+(`apps/web/src/features/report-pages/ui/weekly/weekly-report-page.tsx`)
 consumed by `/head/report`, `/reports/[reportId]`, and the lead
 preview. A page MUST NOT stack two period toolbars; when a shell
 composes the toolbar, it passes the element through the page's
@@ -44,7 +44,7 @@ renders below the page header row.
 
 Icon-only action buttons inside the report toolbar MUST render through
 the shared `ToolbarIconButton` primitive
-(`apps/web/src/components/report-shell/toolbar-icon-button.tsx`) at
+(`apps/web/src/shared/ui/report-shell/toolbar-icon-button.tsx`) at
 one compact 32px size, and MUST each carry an `aria-label` and a
 tooltip (`title`). Converting a text control to an icon button MUST
 NOT change its behavior, ARIA role, or state semantics — a switch

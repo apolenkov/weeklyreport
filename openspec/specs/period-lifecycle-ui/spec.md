@@ -17,7 +17,7 @@ Consumer surfaces: `period.reopen` tRPC mutation in
 `apps/api/src/infrastructure/trpc/trpc.router.ts` (enforced via
 `headProcedure`, which is `buildRoleMiddleware(["head", "admin"])` — both
 roles are already covered), `PublishLockButton` component in
-`apps/web/src/components/weekly-report/publish-lock-button.tsx`.
+`apps/web/src/features/period/ui/publish-lock-button.tsx`.
 
 ## Requirements
 

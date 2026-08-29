@@ -14,10 +14,10 @@ governs naming/grouping semantics, not a code module.
 
 The segmented controls MUST render as one neutral, compact visual family wherever they sit — the head report header, the report toolbar's context-control bar, or the slide hero — using a soft-slate active-selection fill, not the brand accent.
 
-`ScopeToggle` (`apps/web/src/components/report-shell/scope-toggle.tsx`),
-`ViewModeToggle` (`apps/web/src/components/report-shell/view-mode-toggle.tsx`),
+`ScopeToggle` (`apps/web/src/shared/ui/report-shell/scope-toggle.tsx`),
+`ViewModeToggle` (`apps/web/src/shared/ui/report-shell/view-mode-toggle.tsx`),
 and `RecordVisibilityToggle` (the lead Mine/Everyone control in
-`apps/web/src/components/lead/lead-form.tsx`) MUST compose one shared
+`apps/web/src/features/report-pages/ui/lead/shell/lead-form.tsx`) MUST compose one shared
 presentational primitive (`SegmentedToggle`) so they are visually identical: the
 same slate active fill (`--color-toggle-active`, white active text), the same
 inactive treatment (a solid `--color-surface-empty` track with
@@ -90,7 +90,7 @@ review deck. No "Open focused report" link renders anywhere in slides mode.
 An inert deferred-feature placeholder MUST render visually subordinate to real actions — compact — and MUST lead its control group: the head report header, or the right-aligned view-control group of the report toolbar's context bar, in BOTH form mode and slides mode.
 
 Today this placeholder is `AgentReviewComingSoon`
-(`apps/web/src/components/report-shell/agent-review-coming-soon.tsx`). The inert
+(`apps/web/src/shared/ui/report-shell/agent-review-coming-soon.tsx`). The inert
 ComingSoonBadge pattern (aria-disabled, no click handler, tooltip) MUST be
 preserved. In the report toolbar's context bar the controls form two clusters —
 period navigation (and the show-archived filter) anchored left, and the
@@ -127,7 +127,7 @@ carries the placeholder just as form mode does, with no double-mount.
 The word "Publish" MUST appear on exactly one control across the head report surface — the publish action (`PublishLockButton`) — which renders in the page header line's document-action group; no other control's visible label MAY carry it.
 
 The Export-PDF control
-(`apps/web/src/components/weekly-report/export-pdf-button.tsx`) renders as a
+(`apps/web/src/features/pdf-export/ui/export-pdf-button.tsx`) renders as a
 compact 32px icon button carrying its name via `aria-label`/tooltip, not a
 visible text label; its unpublished precondition is conveyed by the disabled
 state plus an `aria-describedby`/sr-only hint, NOT by a compound label

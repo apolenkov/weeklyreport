@@ -39,7 +39,8 @@ verifiable in this repository (commands, configs, and specs are linked).
   silent config fallbacks).
   Waves are implemented by orchestrated agent lanes, each wave passes two
   independent adversarial reviews plus the full gate before commit.
-  Progress ledger: `openspec/changes/repair-exhaustive-audit-exemplary-quality/`.
+  The completed rollout is preserved at
+  `openspec/changes/archive/2026-08-04-repair-exhaustive-audit-exemplary-quality/`.
 
 ## Architecture and safety rails
 
@@ -59,5 +60,5 @@ verifiable in this repository (commands, configs, and specs are linked).
 1. `docs/exemplary-code-standard.md` — the bar.
 2. `eslint.config.ts` — the bar, mechanized.
 3. `openspec/specs/` — behavior as versioned requirements.
-4. `openspec/changes/repair-exhaustive-audit-exemplary-quality/` — the live
-   campaign plan and task ledger.
+4. `openspec/changes/archive/2026-08-04-repair-exhaustive-audit-exemplary-quality/`
+   — the archived rollout plan and task ledger.

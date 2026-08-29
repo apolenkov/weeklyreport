@@ -11,8 +11,8 @@ Keep lead section item cards at a uniform height while exposing truncated text t
 Every item card in a lead section MUST render at a uniform height within its
 section, using the empty-state placeholder card as the height reference
 (annotations B1), so a column of cards reads as an even grid rather than a ragged
-one. The cards are `apps/web/src/components/lead/item-card.tsx`, rendered within
-`apps/web/src/components/report-shell/accordion-section.tsx`. A card with little content MUST pad to that
+one. The cards are `apps/web/src/features/report-sections/ui/item-card.tsx`, rendered within
+`apps/web/src/shared/ui/report-shell/accordion-section.tsx`. A card with little content MUST pad to that
 reference height rather than shrink; a card whose text would exceed it MUST NOT
 grow past the reference height (its overflow is handled by the truncation
 requirement). The current behaviour — a `min-height: 110` floor on a

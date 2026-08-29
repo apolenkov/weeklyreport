@@ -120,7 +120,7 @@ floored display state.
 
 A stage chip MUST visually distinguish risk-covered from explicit
 status. The chip in `SdlcPipeline`
-(`apps/web/src/components/lead/sdlc-pipeline.tsx`) MUST visually
+(`apps/web/src/features/period/ui/sdlc-pipeline.tsx`) MUST visually
 distinguish a stage that is addressed because it is `coveredByOwnRisk`
 from a stage that is addressed because the lead set an explicit status,
 even when both render at the same severity color. The distinction MUST

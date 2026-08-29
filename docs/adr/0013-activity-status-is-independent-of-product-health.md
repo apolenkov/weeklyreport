@@ -1,7 +1,8 @@
 # Activity status is independent of product health and portfolio rollups
 
-**Status:** proposed (locked via the demo-feedback grill on 2026-06-30; not yet
-implemented — tracked by `openspec/changes/project-activity-reporting`)
+**Status:** accepted and implemented (archived as
+`openspec/changes/archive/2026-07-02-project-activity-reporting`; current
+contract: `openspec/specs/activity-reporting-unit/spec.md`)
 
 ## Context
 

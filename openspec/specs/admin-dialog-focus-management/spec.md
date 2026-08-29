@@ -14,12 +14,12 @@ this spec exclusively covers the admin surface.
 Each admin CRUD dialog MUST move keyboard focus to its first meaningful form
 control when it opens, rather than leaving `document.activeElement` on `<body>`.
 This governs the four hand-rolled admin overlays: the users dialog
-(`apps/web/src/components/admin/users-tab.tsx`, first control `id="user-name"`),
-the products dialog (`apps/web/src/components/admin/products-tab.tsx`, first
+(`apps/web/src/features/admin/ui/users-tab.tsx`, first control `id="user-name"`),
+the products dialog (`apps/web/src/features/admin/ui/products-tab.tsx`, first
 control `id="product-name"`), the groups dialog
-(`apps/web/src/components/admin/groups-tab.tsx`, first control
+(`apps/web/src/features/admin/ui/groups-tab.tsx`, first control
 `id="group-name"`), and the periods create dialog
-(`apps/web/src/components/admin/periods-tab-dialog.tsx`, first control
+(`apps/web/src/features/period/ui/periods-tab-dialog.tsx`, first control
 `id="period-start"`). The behavior applies in both add and edit modes where a
 dialog serves both.
 

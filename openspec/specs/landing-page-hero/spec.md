@@ -8,9 +8,9 @@ than a hardcoded string, and that rotation transitions do not produce
 layout shift.
 
 Consumer surfaces: `TaglineCycler` in
-`apps/web/src/components/landing/tagline-cycler.tsx`,
+`apps/web/src/features/landing/ui/tagline-cycler.tsx`,
 `LANDING_TAGLINES` constant in
-`apps/web/src/components/landing/landing-page.constants.ts`.
+`apps/web/src/features/landing/ui/landing-page.constants.ts`.
 
 ## Requirements
 

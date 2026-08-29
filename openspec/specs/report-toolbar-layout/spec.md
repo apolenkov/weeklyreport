@@ -240,8 +240,8 @@ header actions before the context controls.
 The lead "+ Add" quick-add control MUST render in both edit and slides modes for
 an editable (non-read-only) section, so it does not disappear when the lead
 switches to slides — today it is gated `!isSlidesMode` and vanishes (annotations
-C2). The control is `apps/web/src/components/lead/quick-add-button.tsx`, rendered
-by `apps/web/src/components/lead/lead-form.tsx` inside the header line's
+C2). The control is `apps/web/src/features/report-pages/ui/lead/chrome/quick-add-button.tsx`, rendered
+by `apps/web/src/features/report-pages/ui/lead/shell/lead-form.tsx` inside the header line's
 `DocumentActionGroup`. Within
 the document-action group it MUST sit immediately before the forward commit (the
 Submit Section primary) — after Save and Fill-From (annotations C1) — so the

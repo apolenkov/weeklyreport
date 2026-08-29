@@ -30,6 +30,10 @@ export const REPOSITORY_TEST_MANIFEST: readonly RepositoryTestManifestEntry[] =
       owner: "postgres-restore",
     },
     {
+      path: "scripts/gates/documentation/repository-path-references.test.ts",
+      owner: "repository-path-references",
+    },
+    {
       path: "scripts/gates/repository-tests/discovery.test.ts",
       owner: "repository-test-discovery",
     },

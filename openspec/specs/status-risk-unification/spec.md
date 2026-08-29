@@ -13,7 +13,7 @@ and the risk-entry dialog's stage-selection defaults.
 
 At-risk and blocked states MUST be authored only as risk rows in the Risks
 section of the lead report. Stage chips (`SdlcPipeline` in
-`apps/web/src/components/lead/sdlc-pipeline.tsx`) MUST NOT author an
+`apps/web/src/features/period/ui/sdlc-pipeline.tsx`) MUST NOT author an
 at-risk/blocked state at all: a chip has no status menu and offers no
 At Risk/Blocked option. An editable chip is a plain toggle between unset (empty)
 and On Track. A covering risk floors the chip's DISPLAYED severity at render;
@@ -121,7 +121,7 @@ coverage MUST be a deliberate choice, never the default.
 The shared Blocked-&-At-Risk builder MUST emit the project-level "flagged red"
 escalation exactly once per red product, regardless of how many leads co-own
 that product. The builder is `buildEscalationsFromReadSections` in
-`apps/api/src/modules/published-report-snapshot.ts`. The product-level red
+`apps/api/src/modules/report-sections/infrastructure/published-report-snapshot.ts`. The product-level red
 signal is product-scoped (it is derived from the product's effective status, not
 from any single lead's contribution), so it MUST NOT be emitted once per
 contributing lead's section.
@@ -188,7 +188,7 @@ set as a free workflow choice, exactly as the stage chip is — the item card is
 governed surface under the single-source-of-truth rule. This extends the
 "Risks are the single source of truth for at-risk/blocked" requirement from the
 stage chip (`SdlcPipeline`) to the item card
-(`apps/web/src/components/lead/item-card.tsx`). The detailed derivation,
+(`apps/web/src/features/report-sections/ui/item-card.tsx`). The detailed derivation,
 locked-alarm UX, route-through-blocker-creation, and stored-representation rules
 live in the `record-status-derivation` capability; this requirement fixes the
 invariant so the two surfaces cannot drift.

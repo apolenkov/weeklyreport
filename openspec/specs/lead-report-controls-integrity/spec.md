@@ -126,7 +126,7 @@ persisted traffic light unchanged.
 
 A lead report toolbar control MUST visibly indicate work in progress and MUST block repeat activation while its asynchronous action is running.
 Specifically, the icon-only save-now button
-(`apps/web/src/components/report-shell/save-now-button.tsx`): while
+(`apps/web/src/shared/ui/report-shell/save-now-button.tsx`): while
 the `saveDraft` mutation is in flight (`AutosaveSnapshot.isInFlight`),
 the button MUST replace the idle glyph with a spinner, MUST set
 `aria-busy="true"`, MUST be disabled, and MUST render the primary

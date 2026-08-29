@@ -103,7 +103,7 @@ the stage-chip foreign handling in `status-risk-unification`.
 
 ### Requirement: Setting an item to at-risk/blocked routes through blocker creation
 
-The system MUST NOT offer any item-level gesture that stores an alarm on the item. Blockers are created in Risks & Blockers or via the quick-add "blocker" entry (`apps/web/src/components/lead/quick-add-button.tsx`) — a risk of severity `blocked`, never a free-blocked item. The former in-dialog "mark as blocked" gesture is removed.
+The system MUST NOT offer any item-level gesture that stores an alarm on the item. Blockers are created in Risks & Blockers or via the quick-add "blocker" entry (`apps/web/src/features/report-pages/ui/lead/chrome/quick-add-button.tsx`) — a risk of severity `blocked`, never a free-blocked item. The former in-dialog "mark as blocked" gesture is removed.
 
 #### Scenario: the blocker quick-add creates a blocker record
 
@@ -138,7 +138,7 @@ No alarm MUST ever be stored on an item: the `ItemWorkflowStatus` enum carries p
 The escalation roll-up MUST NOT emit a blocked item and its covering blocker as
 two separate escalations for the same underlying problem. The builder is
 `buildEscalationsFromReadSections` in
-`apps/api/src/modules/published-report-snapshot.ts`. Because a displayed
+`apps/api/src/modules/report-sections/infrastructure/published-report-snapshot.ts`. Because a displayed
 item-blocked is now backed by a covering
 blocked-severity risk, the `blocked` and `unresolved_risk` escalations that a
 single blocker would otherwise produce MUST be reconciled to one signal per

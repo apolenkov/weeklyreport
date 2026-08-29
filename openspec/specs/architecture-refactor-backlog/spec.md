@@ -9,7 +9,7 @@ Record the status and closure of architecture refactor targets across lead-form 
 ### Requirement: The lead-form god component is a recorded decomposition target
 
 The backlog MUST record that the live composition root is
-`apps/web/src/features/report-pages/ui/lead-form.tsx` (250 LOC after
+`apps/web/src/features/report-pages/ui/lead/shell/lead-form.tsx` (250 LOC after
 `refactor-lead-form-toolbar-chrome` on 2026-07-10; the 250-line value was the
 decomposition target, not the repository-wide `max-lines` threshold). The
 historical slices below originated under the former `report-sections` feature

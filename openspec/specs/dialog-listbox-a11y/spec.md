@@ -21,7 +21,7 @@ Remaining hand-rolled feature dialogs SHALL integrate with the shared
 re-implementing Escape handling, Tab trapping, or focus restore per component.
 This governs the inline delete-confirmation modal in `UsersTab`
 (`apps/web/src/features/admin/ui/users-tab.tsx`), `FillFromConfirmDialog`
-(`apps/web/src/features/period/ui/fill-from-confirm-dialog.tsx`), and
+(`apps/web/src/features/period/ui/fill-from-confirmation.tsx`), and
 `PauseReasonDialog`
 (`apps/web/src/features/period/ui/pause-reason-dialog.tsx`). Each remaining
 hand-rolled dialog keeps its own backdrop-click handler wired to the same
@@ -116,7 +116,7 @@ scrolls outside the visible panel.
 
 `QuickAddButton`'s trigger MUST set `aria-haspopup` to a value consistent with the popup's actual rendered role, and `AccordionSection`'s toggle controls MUST each carry an `aria-controls` attribute referencing the panel they expand.
 
-`QuickAddButton` (`apps/web/src/features/report-sections/ui/quick-add-button.tsx`)
+`QuickAddButton` (`apps/web/src/features/report-pages/ui/lead/chrome/quick-add-button.tsx`)
 currently claims `aria-haspopup="menu"` over a `role="group"` popup, which
 must not disagree. `AccordionSection`
 (`apps/web/src/shared/ui/report-shell/accordion-section.tsx`) must wire the
