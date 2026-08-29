@@ -15,8 +15,6 @@ pre-commit guard enforces this; the policy lives in `AGENTS.md`.
 | `quality-program.md`                          | The quality system in one page: enforced gates, measured outcomes, ongoing rollout.              |
 | `sdlc.md`                                     | Lifecycle control map and fail-closed prerequisites for the first production point.              |
 | `research/`                                   | Evidence-backed research underpinning standing standards.                                        |
-| `reviews/`                                    | Consolidated review reports that still drive open work; superseded reports move to the archive.  |
-| `ui-atlas/`                                   | Visual baseline: capture manifest, console baseline, role screenshots.                           |
 
 Product tests are colocated with the code they verify. The disposable-database
 boundary remains documented in `AGENTS.md` and `docs/onboarding.md`.

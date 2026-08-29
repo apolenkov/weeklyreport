@@ -288,7 +288,7 @@
       "counter": "filesOnFloor",
       "from": 1003,
       "to": 1001,
-      "reason": "Removed two A-class production-compiled hooks whose only consumer was the retired runtime-sweep test platform; the maintained product floor remains 100%."
+      "reason": "Removed two A-class production-compiled hooks whose only consumer was the retired standalone test platform; the maintained product floor remains 100%."
     }
   ]
 }

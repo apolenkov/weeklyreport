@@ -20,8 +20,8 @@ const webConfig = defineConfig({
     // spy (e.g. a stderr silencer) never leaks into an unrelated test.
     restoreMocks: true,
     exclude: ["node_modules/**"],
-    // Coverage floors. Web has more UI code than tests can drive without a
-    // broad browser harness, so the bar is lower than api.
+    // Coverage floors. Web has more UI code than the focused DOM suite drives,
+    // so the bar is lower than api.
     coverage: {
       include: ["src/**/*.{ts,tsx}"],
       exclude: [

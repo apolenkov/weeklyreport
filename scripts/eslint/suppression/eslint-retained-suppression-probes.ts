@@ -11,13 +11,14 @@ const ledger = parseSuppressionLedger(
     "utf8",
   ),
 );
-const retainedKeys = ledger.entries
-  .filter((entry) => entry.verdict === "retain")
-  .reduce<Map<string, number>>((counts, entry) => {
+const retainedKeys = ledger.entries.reduce<Map<string, number>>(
+  (counts, entry) => {
     const key = `${entry.path}\0${entry.fingerprint}\0${entry.rule}`;
     counts.set(key, (counts.get(key) ?? 0) + 1);
     return counts;
-  }, new Map());
+  },
+  new Map(),
+);
 const retained = readSuppressionInventory().directives.filter((directive) =>
   retainedKeys.has(
     `${directive.path}\0${directive.fingerprint}\0${directive.rule}`,

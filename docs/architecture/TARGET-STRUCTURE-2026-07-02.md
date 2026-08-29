@@ -114,8 +114,8 @@ mechanical (relocate + fix imports, minimal barrel only where consumed), not a r
 - _A `modules/<domain>/` layer mirroring api verbatim (screaming-monorepo track)_ — good
   parity instinct, but `features/` is the App-Router-native term and the mechanic is identical;
   no need for a second naming convention.
-- _Slices under `app/`_ — any new `app/` route trips the e2e catalog-drift gate; keep slices
-  in `src/features/` so relocation never manufactures a phantom route.
+- _Slices under `app/`_ — `app/` owns routing only; keep product slices in
+  `src/features/` so route composition stays thin and deterministic.
 - _Big-bang relocation of all 18 domains_ — hundreds of import paths at once; unreviewable and
   re-triggers the eslint exemption list + ratchet on latent debt. One slice per OpenSpec change.
 
