@@ -15,14 +15,15 @@ containers, and adds security headers.
 ```bash
 CADDY_SITE_ADDRESS=customreport.example.com   # or http://customreport.example.com for HTTP-only
 CADDY_ACME_EMAIL=ops@example.com
-CADDY_CSP_REPORT_URI=https://customreport.example.com/api/csp-report
+CADDY_CSP_REPORT_URI=https://csp-reports.example.net/customreport
 ```
 
 The production Compose contract also requires `HTTP_PORT`, `HTTPS_PORT`, and
 `HTTPS_PORT_QUIC`. See
 [`../environment/production.env.example`](../environment/production.env.example)
 for the complete names-only template. `CADDY_CSP_REPORT_URI` must point to an
-operator-owned collector; it is not a built-in Caddy endpoint.
+external operator-owned collector; the repository does not implement a local
+CSP-report endpoint.
 
 `CADDY_SITE_ADDRESS` accepts:
 

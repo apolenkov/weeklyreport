@@ -40,3 +40,8 @@ The coverage configuration MUST keep the complete source scope explicit: API MUS
 
 - **WHEN** a fresh Git archive or checkout is created from the accepted revision
 - **THEN** the API and Web include globs remain complete and the tracked evidence helper and repository tests are present
+
+#### Scenario: Relative coverage paths are checked under the wrong package scope
+
+- **WHEN** a coverage summary with relative `src/` keys is presented as API evidence from the Web package root or vice versa
+- **THEN** the evidence helper fails instead of treating the ambiguous paths as belonging to either scope

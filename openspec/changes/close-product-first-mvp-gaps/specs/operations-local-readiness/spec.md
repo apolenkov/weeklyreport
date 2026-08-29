@@ -66,6 +66,11 @@ The production browser telemetry tunnel MUST enforce a bounded per-client quota,
 - **WHEN** one client exceeds the fixed request window or the bounded client registry is full
 - **THEN** the tunnel rejects excess envelopes without forwarding them or growing unbounded process state
 
+#### Scenario: An oversized telemetry body starts streaming
+
+- **WHEN** a request has no trustworthy oversized `Content-Length` and begins streaming beyond the body limit
+- **THEN** the tunnel rejects it and charges the attempt to the admission quota so invalid streams cannot bypass the resource bound
+
 #### Scenario: The backup container starts
 
 - **WHEN** the production backup service is built and run

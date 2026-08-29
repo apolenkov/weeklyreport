@@ -18,6 +18,7 @@ void test("accepts a coverage summary with executed files and all metric denomin
     },
     "fixture/coverage-summary.json",
     "api",
+    "/workspace/apps/api",
   );
   assert.equal(evidence.fileCount, 1);
   assert.equal(evidence.totals.lines, 3);
@@ -38,6 +39,7 @@ void test("rejects an empty execution denominator even when the report is presen
         },
         "fixture/coverage-summary.json",
         "api",
+        "/workspace/apps/api",
       ),
     /empty lines denominator/,
   );
@@ -63,6 +65,7 @@ void test("rejects metadata and stray paths as file evidence", () => {
           },
           "fixture/coverage-summary.json",
           "api",
+          "/workspace/apps/api",
         ),
       /metadata, stray, or excluded file key/,
     );
@@ -84,6 +87,7 @@ void test("rejects a valid source path from the other package scope", () => {
         },
         "fixture/coverage-summary.json",
         "api",
+        "/workspace/apps/api",
       ),
     /metadata, stray, or excluded file key/,
   );
@@ -102,6 +106,28 @@ void test("accepts an absolute path inside the selected source scope", () => {
     },
     "fixture/coverage-summary.json",
     "api",
+    "/workspace/apps/api",
   );
   assert.equal(evidence.fileCount, 1);
+});
+
+void test("rejects ambiguous relative paths when cwd belongs to another package", () => {
+  assert.throws(
+    () =>
+      assertNonEmptyCoverageSummary(
+        {
+          "src/modules/example.ts": {},
+          total: {
+            lines: metric(3),
+            statements: metric(3),
+            functions: metric(1),
+            branches: metric(2),
+          },
+        },
+        "fixture/coverage-summary.json",
+        "api",
+        "/workspace/apps/web",
+      ),
+    /scope api does not match package root/,
+  );
 });

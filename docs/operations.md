@@ -34,22 +34,21 @@ DDL and `pg_dump` both need a session that outlives a single transaction.
    every empty assignment. Compose or the api rejects an untouched template;
    the few populated values are explicit repository policy, not hidden defaults.
 
-   | Variable      | What it is                                                                      |
-   | ------------- | ------------------------------------------------------------------------------- |
-   | `DB_PASSWORD` | Postgres password; URL-safe unreserved characters only (`A-Z a-z 0-9 . - _ ~`). |
-
-| `POSTGRES_DB` | Database name shared by all consumers; letters, digits, and underscores only. |
-| `FRONTEND_URL`, `APP_BASE_URL`, `PDF_BASE_URL`, `NEXT_PUBLIC_API_URL` | Public origins. `NEXT_PUBLIC_*` is baked at image build. |
-| `API_URL` | Runtime server-side API origin (normally `http://api:3001`). |
-| `AUTH_JWT_SECRET`, `PDF_EXPORT_JWT_SECRET` | Min 32 chars each, distinct, never the dev values. |
-| `KEYCLOAK_SAML_CALLBACK_URL`, `KEYCLOAK_SAML_ENTRY_POINT`, `KEYCLOAK_SAML_ISSUER`, `KEYCLOAK_SAML_CERT` | The IdP; all four are required when `AUTH_DEV_MODE=false`. |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM` | Reminder delivery. Without them the api drops mail silently, so boot fails instead. |
-| `HEAP_HEALTH_THRESHOLD_BYTES` | ~75% of the api container memory limit (2 GB → `1610612736`). |
-| `CADDY_SITE_ADDRESS`, `CADDY_ACME_EMAIL`, `CADDY_CSP_REPORT_URI` | Public hostname, ACME account email, and CSP violation collector. |
-| `HTTP_PORT`, `HTTPS_PORT`, `HTTPS_PORT_QUIC` | Host ports for the public Caddy listener. |
-| `PGBOUNCER_MAX_CLIENT_CONN`, `PGBOUNCER_POOL_SIZE`, `PGBOUNCER_RESERVE_POOL_SIZE` | PgBouncer capacity limits. |
-| `REDIS_DB`, `LOG_LEVEL`, `OTEL_SDK_DISABLED`, `OTEL_TRACES_SAMPLER_ARG`, `OTEL_SERVICE_VERSION` | Runtime policy and exact deployed release identity; the same version is shown by Web. |
-| `BACKUP_INTERVAL_SECONDS`, `BACKUP_RETENTION_DAYS` | Your RPO and history window. See [Backups](#backups). |
+   | Variable                                                                                                | What it is                                                                       |
+   | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+   | `DB_PASSWORD`                                                                                           | Postgres password; URL-safe unreserved characters only (`A-Z a-z 0-9 . - _ ~`).  |
+   | `POSTGRES_DB`                                                                                           | Database name shared by all consumers; letters, digits, and underscores only.    |
+   | `FRONTEND_URL`, `APP_BASE_URL`, `PDF_BASE_URL`, `NEXT_PUBLIC_API_URL`                                   | Public origins. `NEXT_PUBLIC_*` is baked at image build.                         |
+   | `API_URL`                                                                                               | Runtime server-side API origin (normally `http://api:3001`).                     |
+   | `AUTH_JWT_SECRET`, `PDF_EXPORT_JWT_SECRET`                                                              | Min 32 chars each, distinct, never the dev values.                               |
+   | `KEYCLOAK_SAML_CALLBACK_URL`, `KEYCLOAK_SAML_ENTRY_POINT`, `KEYCLOAK_SAML_ISSUER`, `KEYCLOAK_SAML_CERT` | The IdP; all four are required when `AUTH_DEV_MODE=false`.                       |
+   | `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`                                                                   | Reminder delivery. Missing values fail production boot instead of dropping mail. |
+   | `HEAP_HEALTH_THRESHOLD_BYTES`                                                                           | ~75% of the api container memory limit (2 GB → `1610612736`).                    |
+   | `CADDY_SITE_ADDRESS`, `CADDY_ACME_EMAIL`, `CADDY_CSP_REPORT_URI`                                        | Public hostname, ACME account email, and external CSP violation collector.       |
+   | `HTTP_PORT`, `HTTPS_PORT`, `HTTPS_PORT_QUIC`                                                            | Host ports for the public Caddy listener.                                        |
+   | `PGBOUNCER_MAX_CLIENT_CONN`, `PGBOUNCER_POOL_SIZE`, `PGBOUNCER_RESERVE_POOL_SIZE`                       | PgBouncer capacity limits.                                                       |
+   | `REDIS_DB`, `LOG_LEVEL`, `OTEL_SDK_DISABLED`, `OTEL_TRACES_SAMPLER_ARG`, `OTEL_SERVICE_VERSION`         | Runtime policy and exact release identity; the same version is shown by Web.     |
+   | `BACKUP_INTERVAL_SECONDS`, `BACKUP_RETENTION_DAYS`                                                      | Recovery-point cadence and history window. See [Backups](#backups).              |
 
 Optional: `FRONTEND_URLS` (extra CORS origins, no wildcards in production),
 `SENTRY_DSN`, `CLIENT_LOG_FORWARDING`, `OTEL_EXPORTER_OTLP_ENDPOINT`,

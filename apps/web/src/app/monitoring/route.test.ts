@@ -198,6 +198,28 @@ describe("same-origin Sentry tunnel route", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("charges an oversized streaming attempt to the admission quota", async () => {
+    vi.stubEnv("SENTRY_DSN", "https://public-key@bugsink.test/42");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const clientKey = "198.51.100.44";
+    const headers = { "x-real-ip": clientKey };
+
+    const oversized = await POST(makeStreamingRequest(headers).request);
+    expect(oversized.status).toBe(413);
+    for (
+      let admitted = 1;
+      admitted < SENTRY_TUNNEL_MAX_REQUESTS_PER_WINDOW;
+      admitted += 1
+    ) {
+      expect(consumeSentryTunnelQuota(clientKey)).toBe(true);
+    }
+
+    const limited = await POST(makeRequest(headers));
+    expect(limited.status).toBe(429);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("swallows an upstream failure so telemetry cannot break the app", async () => {
     vi.stubEnv("SENTRY_DSN", "https://public-key@bugsink.test/42");
     const fetchMock = vi.fn(() => Promise.reject(new Error("receiver down")));

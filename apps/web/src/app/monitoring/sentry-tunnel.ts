@@ -31,8 +31,9 @@ export function resolveSentryTunnelClientKey(req: Request): string {
 }
 
 /**
- * Applies a bounded, process-local quota to the browser telemetry tunnel.
- * External edge-wide rate limiting remains a deployment concern.
+ * Applies a bounded, process-local admission quota to the browser telemetry
+ * tunnel. Attempts that begin streaming count even when their body later
+ * proves invalid; external edge-wide rate limiting remains a deployment concern.
  */
 export function consumeSentryTunnelQuota(
   clientKey: string,

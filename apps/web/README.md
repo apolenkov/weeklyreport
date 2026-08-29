@@ -2,19 +2,24 @@
 
 Next.js 16 frontend with App Router, React 19, shadcn/ui, and Tailwind CSS v4.
 
-## Pages
+## Route inventory
 
-| Route                             | Roles                       | Purpose                                    |
-| --------------------------------- | --------------------------- | ------------------------------------------ |
-| `/lead/report/[reportId]`         | lead, head, admin           | Owned structured section editing           |
-| `/lead/report/[reportId]/preview` | lead                        | Read-only lead preview                     |
-| `/head/dashboard`                 | head, admin                 | Submission completeness and review queue   |
-| `/head/report/[reportId]`         | head, admin                 | Unified review, publication, and export    |
-| `/admin`                          | admin                       | Users, products, activities, periods, jobs |
-| `/reports`, `/reports/[reportId]` | lead, head, admin, viewer   | Published report archive and detail        |
-| `/reports/latest`                 | viewer                      | Viewer landing status                      |
-| `/reports/trends`                 | lead, head, admin, viewer   | Published trend analysis                   |
-| `/print/[reportId]`               | authenticated export worker | Print-optimized PDF source                 |
+| Route group                                                              | Roles                     | Purpose                                                        |
+| ------------------------------------------------------------------------ | ------------------------- | -------------------------------------------------------------- |
+| `/admin`, `/admin/{products,activities,settings}`                        | admin                     | Users, catalogues, periods, jobs, and settings                 |
+| `/head/dashboard`, `/head/report/[reportId]`                             | head, admin               | Submission completeness, unified review, publication, export   |
+| `/lead/report/[reportId]`                                                | lead, head, admin         | Structured section editing                                     |
+| `/lead/report/[reportId]/preview`                                        | lead                      | Read-only lead preview                                         |
+| `/reports`, `/reports/history`, `/reports/[reportId]`, `/reports/trends` | lead, head, admin, viewer | Published archive, detail, and trend analysis                  |
+| `/reports/latest`                                                        | viewer                    | Viewer landing status                                          |
+| `/head/report/[reportId]/present`                                        | head, admin               | Full-screen review presentation                                |
+| `/reports/[reportId]/present`                                            | lead, head, admin, viewer | Full-screen published presentation                             |
+| `/head/history`, `/head/slides`                                          | head, admin               | Head-scoped compatibility entrypoints                          |
+| `/lead/history`                                                          | lead, head, admin         | Lead-history compatibility entrypoint                          |
+| `/head/report`                                                           | head, admin               | Back-compatible alias resolving to a canonical report URL      |
+| `/lead/report`                                                           | lead, head, admin         | Back-compatible alias resolving to a canonical report URL      |
+| `/print/[reportId]`                                                      | export token              | Print source; human sessions are redirected to their role view |
+| `/`, `/auth/error`                                                       | public/session-aware      | Sign-in dispatch and authentication failure UI                 |
 
 ## API Proxy
 

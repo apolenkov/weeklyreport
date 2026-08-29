@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { isAbsolute, resolve } from "node:path";
 
 interface CoverageMetric {
   readonly total: number;
@@ -36,30 +37,36 @@ const WEB_EXCLUDED = [
   /^src\/app\/\(app\)\/reports\/history\/page\.tsx$/u,
 ] as const;
 
-const relativeSourcePath = (filePath: string): string | undefined => {
-  const normalized = filePath.replaceAll("\\", "/");
-  const srcOffset = normalized.lastIndexOf("/src/");
-  if (srcOffset !== -1) return normalized.slice(srcOffset + 1);
-  return normalized.startsWith("src/") ? normalized : undefined;
-};
+const normalizePath = (path: string): string => path.replaceAll("\\", "/");
 
-const belongsToScopePackage = (
-  filePath: string,
+const resolveScopePackageRoot = (
+  packageRoot: string,
   scope: CoverageScope,
-): boolean => {
-  const normalized = filePath.replaceAll("\\", "/");
-  if (normalized.startsWith("src/")) return true;
-  return normalized.includes(`/apps/${scope}/src/`);
+): string => {
+  const normalizedRoot = normalizePath(resolve(packageRoot));
+  if (!normalizedRoot.endsWith(`/apps/${scope}`)) {
+    throw new Error(
+      `Coverage scope ${scope} does not match package root ${normalizedRoot}`,
+    );
+  }
+  return normalizedRoot;
 };
 
 const isExpectedSourceFile = (
   filePath: string,
   scope: CoverageScope,
+  packageRoot: string,
 ): boolean => {
-  const relative = relativeSourcePath(filePath);
+  const normalizedRoot = resolveScopePackageRoot(packageRoot, scope);
+  const absolutePath = normalizePath(
+    isAbsolute(filePath) ? filePath : resolve(normalizedRoot, filePath),
+  );
+  const sourceRoot = `${normalizedRoot}/src/`;
+  const relative = absolutePath.startsWith(sourceRoot)
+    ? `src/${absolutePath.slice(sourceRoot.length)}`
+    : undefined;
   if (
     relative === undefined ||
-    !belongsToScopePackage(filePath, scope) ||
     !/^src\/.+\.tsx?$/u.test(relative)
   ) {
     return false;
@@ -77,6 +84,7 @@ export const assertNonEmptyCoverageSummary = (
   summary: unknown,
   sourcePath: string,
   scope: CoverageScope,
+  packageRoot: string,
 ): CoverageEvidence => {
   if (typeof summary !== "object" || summary === null) {
     throw new Error(`Coverage evidence is not an object: ${sourcePath}`);
@@ -103,7 +111,7 @@ export const assertNonEmptyCoverageSummary = (
 
   const filePaths = Object.keys(candidate).filter((key) => key !== "total");
   const invalidFilePath = filePaths.find(
-    (filePath) => !isExpectedSourceFile(filePath, scope),
+    (filePath) => !isExpectedSourceFile(filePath, scope, packageRoot),
   );
   if (invalidFilePath !== undefined) {
     throw new Error(
@@ -133,6 +141,7 @@ const main = (): void => {
     JSON.parse(readFileSync(sourcePath, "utf8")) as unknown,
     sourcePath,
     scope,
+    process.cwd(),
   );
   const { lines, statements, functions, branches } = evidence.totals;
   process.stdout.write(
