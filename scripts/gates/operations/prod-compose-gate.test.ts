@@ -304,6 +304,21 @@ void test("production dependency layers retain a shared pnpm BuildKit cache", ()
   }
 });
 
+void test("release labels do not invalidate heavyweight runner layers", () => {
+  const apiRunner = apiDockerfile.slice(
+    apiDockerfile.indexOf("FROM base AS runner"),
+  );
+  assert.ok(
+    apiRunner.indexOf("LABEL org.opencontainers.image.revision=") >
+      apiRunner.indexOf("pnpm exec playwright install --with-deps chromium"),
+  );
+  const webRunner = webDockerfile.slice(webDockerfile.indexOf(" AS runner"));
+  assert.ok(
+    webRunner.indexOf("LABEL org.opencontainers.image.revision=") >
+      webRunner.lastIndexOf("COPY --from=builder"),
+  );
+});
+
 void test("untracked environment variants stay ignored while examples remain tracked", () => {
   assert.match(gitIgnoreContent, /^\.env\.\*$/mu);
   assert.match(gitIgnoreContent, /^!\.env\.example$/mu);
