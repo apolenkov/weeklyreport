@@ -72,6 +72,16 @@ function assertNoSubmittedTarget(
   }
 }
 
+function selectPlannedTargetSections(
+  targetSections: readonly ReportSectionReadModel[],
+  carriedByAuthor: readonly { authorId: string }[],
+): ReportSectionReadModel[] {
+  const plannedAuthors = new Set(
+    carriedByAuthor.map((entry) => entry.authorId),
+  );
+  return targetSections.filter((target) => plannedAuthors.has(target.authorId));
+}
+
 function assertUniqueCarriedAuthors(
   entries: readonly { authorId: string }[],
 ): void {
@@ -165,12 +175,16 @@ export class CarryOverService {
     );
     assertUniqueCarriedAuthors(carriedByAuthor);
     const counts = carriedCounts(carriedByAuthor);
+    const plannedTargetSections = selectPlannedTargetSections(
+      targetSections,
+      carriedByAuthor,
+    );
 
     // Replaying a completed carry-over must stay a no-op write: reuse the
     // stored execution and leave every target section as it stands.
     const nextTargetSections = existingExecution
-      ? [...targetSections]
-      : mergeCarriedIntoTargets(targetSections, carriedByAuthor);
+      ? plannedTargetSections
+      : mergeCarriedIntoTargets(plannedTargetSections, carriedByAuthor);
     const execution =
       existingExecution ??
       buildCarryOverExecution({

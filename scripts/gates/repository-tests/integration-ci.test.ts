@@ -29,6 +29,7 @@ const COVERAGE_RUN = "pnpm test:coverage";
 const MIGRATE_RESET_RUN = "pnpm exec tsx prisma/operations/migrate-reset.ts";
 const SEED_PROFILE_RUN =
   "pnpm --dir apps/api exec tsx ../../prisma/seeds/profiles/seed-profile.ts full";
+const DOCKER_BUILD_RUN = "docker compose -f docker-compose.prod.yml build";
 
 const escapeRegex = (value: string): string =>
   value.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
@@ -180,7 +181,24 @@ const assertMigrateResetSeed = (workflowText: string): void => {
 
 const assertDockerBuildFixture = (workflowText: string): void => {
   const job = jobBlock(workflowText, "docker-build");
+  assertRequiredJobIsEnabled(job);
   assert.match(job, /^\x20{6}CADDY_ACME_EMAIL: ci-build-only@example\.com$/m);
+  assert.match(job, /^\x20{6}POSTGRES_DB: customreport$/m);
+  assert.match(job, /^\x20{6}OTEL_SERVICE_VERSION: \$\{\{ github\.sha \}\}$/m);
+  assertRequiredStep(
+    job,
+    "Verify production Docker Compose builds",
+    DOCKER_BUILD_RUN,
+  );
+  const identityStep = stepBlock(
+    job,
+    "Verify production image release identity",
+  );
+  assert.doesNotMatch(identityStep, /^\x20{8}if:/m);
+  assert.doesNotMatch(identityStep, /^\x20{8}continue-on-error:/m);
+  assert.match(identityStep, /for service in backup migrate api web; do/u);
+  assert.match(identityStep, /org\.opencontainers\.image\.revision/u);
+  assert.match(identityStep, /test "\$revision" = "\$OTEL_SERVICE_VERSION"/u);
 };
 
 type CoverageMetric = "statements" | "branches" | "functions" | "lines";
@@ -227,12 +245,41 @@ const readThresholds = (source: string, label: string): CoverageThresholds => {
   return values;
 };
 
+const readCoverageIncludes = (source: string, label: string): string[] => {
+  const coverageOffset = source.indexOf("coverage:");
+  assert.notEqual(coverageOffset, -1, `${label} must declare coverage`);
+  const includeOffset = source.indexOf("include:", coverageOffset);
+  assert.notEqual(includeOffset, -1, `${label} must declare coverage.include`);
+  const openingOffset = source.indexOf("[", includeOffset);
+  assert.notEqual(openingOffset, -1, `${label} must open coverage.include`);
+  const closingOffset = source.indexOf("]", openingOffset);
+  assert.notEqual(closingOffset, -1, `${label} must close coverage.include`);
+  const body = source.slice(openingOffset + 1, closingOffset);
+  const quotedValues = body.match(/"[^"\n]+"/gu) ?? [];
+  const unquotedRemainder = body
+    .replaceAll(/"[^"\n]+"/gu, "")
+    .replaceAll(",", "")
+    .trim();
+  assert.equal(
+    unquotedRemainder,
+    "",
+    `${label} coverage.include must contain only quoted globs`,
+  );
+  return quotedValues.map((value) => value.slice(1, -1));
+};
+
 const assertCoverageConfig = (
   source: string,
   label: string,
   expected: CoverageThresholds,
+  includes: readonly string[],
   exclusions: readonly string[],
 ): void => {
+  assert.deepEqual(
+    readCoverageIncludes(source, label),
+    includes,
+    `${label} must retain the complete coverage.include scope`,
+  );
   assert.deepEqual(readThresholds(source, label), expected);
   for (const exclusion of exclusions) {
     assert.match(
@@ -254,6 +301,8 @@ const API_EXCLUSIONS = [
   "src/**/*.module.ts",
 ] as const;
 
+const API_INCLUDES = ["src/**/*.ts", "src/**/*.tsx"] as const;
+
 const WEB_EXCLUSIONS = [
   "src/**/*.test.{ts,tsx}",
   "src/**/__tests__/**",
@@ -267,6 +316,8 @@ const WEB_EXCLUSIONS = [
   "src/app/(app)/lead/history/page.tsx",
   "src/app/(app)/reports/history/page.tsx",
 ] as const;
+
+const WEB_INCLUDES = ["src/**/*.{ts,tsx}"] as const;
 
 void test("CI keeps a serial, disposable API integration lane with live dependencies", () => {
   assertApiIntegrationLane(workflow);
@@ -458,11 +509,46 @@ void test("docker-build fixture assertions fail when the ACME email is removed",
   assert.throws(() => assertDockerBuildFixture(mutated), /CADDY_ACME_EMAIL/);
 });
 
+void test("docker-build fixture assertions fail when the database identity is removed", () => {
+  const mutated = replaceInJob(
+    workflow,
+    "docker-build",
+    "      POSTGRES_DB: customreport\n",
+    "",
+  );
+  assert.throws(() => assertDockerBuildFixture(mutated), /POSTGRES_DB/);
+});
+
+void test("docker-build fixture assertions reject a release unrelated to the CI SHA", () => {
+  const shaExpression = "$" + "{{ github.sha }}";
+  const mutated = replaceInJob(
+    workflow,
+    "docker-build",
+    `      OTEL_SERVICE_VERSION: ${shaExpression}\n`,
+    "      OTEL_SERVICE_VERSION: dev\n",
+  );
+  assert.throws(
+    () => assertDockerBuildFixture(mutated),
+    /OTEL_SERVICE_VERSION/,
+  );
+});
+
+void test("docker-build fixture assertions reject a non-verifying image step", () => {
+  const mutated = replaceInJob(
+    workflow,
+    "docker-build",
+    '            test "$revision" = "$OTEL_SERVICE_VERSION"\n',
+    "            true\n",
+  );
+  assert.throws(() => assertDockerBuildFixture(mutated), /revision/);
+});
+
 void test("API coverage config pins thresholds and critical exclusions", () => {
   assertCoverageConfig(
     apiCoverageConfig,
     "API coverage config",
     { statements: 80, branches: 70, functions: 80, lines: 80 },
+    API_INCLUDES,
     API_EXCLUSIONS,
   );
 });
@@ -472,7 +558,41 @@ void test("Web coverage config pins thresholds and critical exclusions", () => {
     webCoverageConfig,
     "Web coverage config",
     { statements: 70, branches: 60, functions: 70, lines: 70 },
+    WEB_INCLUDES,
     WEB_EXCLUSIONS,
+  );
+});
+
+void test("coverage include assertions fail when the API scope is narrowed", () => {
+  const mutated = apiCoverageConfig.replace(', "src/**/*.tsx"', "");
+  assert.throws(
+    () =>
+      assertCoverageConfig(
+        mutated,
+        "API coverage config",
+        { statements: 80, branches: 70, functions: 80, lines: 80 },
+        API_INCLUDES,
+        API_EXCLUSIONS,
+      ),
+    /complete coverage\.include scope/,
+  );
+});
+
+void test("coverage include assertions fail when the Web scope is narrowed", () => {
+  const mutated = webCoverageConfig.replace(
+    'include: ["src/**/*.{ts,tsx}"]',
+    'include: ["src/**/*.ts"]',
+  );
+  assert.throws(
+    () =>
+      assertCoverageConfig(
+        mutated,
+        "Web coverage config",
+        { statements: 70, branches: 60, functions: 70, lines: 70 },
+        WEB_INCLUDES,
+        WEB_EXCLUSIONS,
+      ),
+    /complete coverage\.include scope/,
   );
 });
 
@@ -484,6 +604,7 @@ void test("coverage threshold assertions fail on a lowered API floor", () => {
         mutated,
         "API coverage config",
         { statements: 80, branches: 70, functions: 80, lines: 80 },
+        API_INCLUDES,
         API_EXCLUSIONS,
       ),
     /statements/,
@@ -498,6 +619,7 @@ void test("coverage threshold assertions fail on a lowered Web floor", () => {
         mutated,
         "Web coverage config",
         { statements: 70, branches: 60, functions: 70, lines: 70 },
+        WEB_INCLUDES,
         WEB_EXCLUSIONS,
       ),
     /statements/,
@@ -515,6 +637,7 @@ void test("coverage exclusion assertions fail when a critical API exclusion is r
         mutated,
         "API coverage config",
         { statements: 80, branches: 70, functions: 80, lines: 80 },
+        API_INCLUDES,
         API_EXCLUSIONS,
       ),
     /integration\.test\.ts/,
@@ -532,6 +655,7 @@ void test("coverage exclusion assertions fail when a critical Web exclusion is r
         mutated,
         "Web coverage config",
         { statements: 70, branches: 60, functions: 70, lines: 70 },
+        WEB_INCLUDES,
         WEB_EXCLUSIONS,
       ),
     /admin\/products\/page\.tsx/,

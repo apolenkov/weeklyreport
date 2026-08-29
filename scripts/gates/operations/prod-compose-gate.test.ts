@@ -5,6 +5,14 @@ import { delimiter, join, resolve } from "node:path";
 import test from "node:test";
 
 const prodCompose = resolve("docker-compose.prod.yml");
+const devCompose = resolve("docker-compose.yml");
+const devOverride = resolve("docker-compose.dev.yml");
+const observabilityCompose = resolve("docker-compose.observability.yml");
+const productionEnvironmentTemplate = resolve(
+  "deploy/environment/production.env.example",
+);
+const workflow = resolve(".github/workflows/ci.yml");
+const gitIgnore = resolve(".gitignore");
 
 function resolveExecutable(command: string): string {
   const searchPath = process.env.PATH;
@@ -47,6 +55,7 @@ const composeCommand = resolveComposeCommand();
 // observability, or edge policy a deploy never chose.
 const REQUIRED_POLICY_INPUTS = [
   "DB_PASSWORD",
+  "POSTGRES_DB",
   "PGBOUNCER_MAX_CLIENT_CONN",
   "PGBOUNCER_POOL_SIZE",
   "PGBOUNCER_RESERVE_POOL_SIZE",
@@ -60,6 +69,7 @@ const REQUIRED_POLICY_INPUTS = [
   "LOG_LEVEL",
   "REDIS_DB",
   "OTEL_SDK_DISABLED",
+  "OTEL_SERVICE_VERSION",
   "OTEL_TRACES_SAMPLER_ARG",
   "HEAP_HEALTH_THRESHOLD_BYTES",
   "SMTP_HOST",
@@ -80,6 +90,20 @@ const REQUIRED_POLICY_INPUTS = [
 ] as const;
 
 const content = readFileSync(prodCompose, "utf8");
+const devContent = readFileSync(devCompose, "utf8");
+const devOverrideContent = readFileSync(devOverride, "utf8");
+const productionEnvironment = readFileSync(
+  productionEnvironmentTemplate,
+  "utf8",
+);
+const workflowContent = readFileSync(workflow, "utf8");
+const gitIgnoreContent = readFileSync(gitIgnore, "utf8");
+const backupDockerfile = readFileSync(
+  resolve("deploy/postgres/Dockerfile.backup"),
+  "utf8",
+);
+const apiDockerfile = readFileSync(resolve("Dockerfile.api"), "utf8");
+const webDockerfile = readFileSync(resolve("Dockerfile.web"), "utf8");
 
 void test("production compose requires every operational policy input", () => {
   for (const variable of REQUIRED_POLICY_INPUTS) {
@@ -101,12 +125,147 @@ void test("production compose has no silent `:-` defaults on policy inputs", () 
   }
 });
 
+void test("the production template lists every required input as fail-closed", () => {
+  const assignments = new Map(
+    productionEnvironment
+      .split("\n")
+      .filter((line) => /^[A-Z][A-Z0-9_]*=/u.test(line))
+      .map((line) => {
+        const separator = line.indexOf("=");
+        return [line.slice(0, separator), line.slice(separator + 1)] as const;
+      }),
+  );
+  const safePolicyValues = new Set([
+    "API_URL",
+    "REDIS_DB",
+    "LOG_LEVEL",
+    "OTEL_SDK_DISABLED",
+    "OTEL_TRACES_SAMPLER_ARG",
+    "HTTP_PORT",
+    "HTTPS_PORT",
+    "HTTPS_PORT_QUIC",
+  ]);
+
+  for (const variable of REQUIRED_POLICY_INPUTS) {
+    assert.ok(
+      assignments.has(variable),
+      `${variable} must exist in the production template`,
+    );
+    if (!safePolicyValues.has(variable)) {
+      assert.equal(
+        assignments.get(variable),
+        "",
+        `${variable} must remain empty so an untouched template fails closed`,
+      );
+    }
+  }
+});
+
+void test("development Compose owns one fixed local database credential", () => {
+  for (const [path, source] of [
+    [devCompose, devContent],
+    [devOverride, devOverrideContent],
+  ] as const) {
+    assert.doesNotMatch(
+      source,
+      /\$\{DB_PASSWORD/u,
+      `${path} must not interpolate DB_PASSWORD`,
+    );
+    assert.doesNotMatch(source, /postgresql:\/\/customreport:\$\{/u);
+  }
+  assert.match(devContent, /POSTGRES_PASSWORD: localdev/u);
+  assert.match(
+    `${devContent}\n${devOverrideContent}`,
+    /postgresql:\/\/customreport:localdev@postgres:5432\/customreport_dev/u,
+  );
+});
+
+void test("the production image receives one release identity", () => {
+  assert.match(
+    content,
+    /NEXT_PUBLIC_APP_VERSION: \$\{OTEL_SERVICE_VERSION:\?/u,
+  );
+  assert.match(workflowContent, /POSTGRES_DB: customreport/u);
+  assert.match(
+    workflowContent,
+    /OTEL_SERVICE_VERSION: \$\{\{ github\.sha \}\}/u,
+  );
+  for (const dockerfile of [apiDockerfile, webDockerfile, backupDockerfile]) {
+    assert.match(
+      dockerfile,
+      /LABEL org\.opencontainers\.image\.revision=\$\{/u,
+    );
+  }
+});
+
+void test("untracked environment variants stay ignored while examples remain tracked", () => {
+  assert.match(gitIgnoreContent, /^\.env\.\*$/mu);
+  assert.match(gitIgnoreContent, /^!\.env\.example$/mu);
+  assert.match(gitIgnoreContent, /^!\.env\.test\.example$/mu);
+
+  const git = resolveExecutable("git");
+  const production = spawnSync(
+    git,
+    ["check-ignore", "--quiet", "--no-index", ".env.production"],
+    { cwd: resolve("."), encoding: "utf8" },
+  );
+  const example = spawnSync(
+    git,
+    ["check-ignore", "--quiet", "--no-index", ".env.example"],
+    { cwd: resolve("."), encoding: "utf8" },
+  );
+  assert.equal(production.status, 0, ".env.production must be ignored");
+  assert.equal(example.status, 1, ".env.example must remain trackable");
+});
+
+void test("production database identity and password URL contract are explicit", () => {
+  assert.match(content, /POSTGRES_DB: \$\{POSTGRES_DB:\?/);
+  assert.match(content, /DB_NAME: \$\{POSTGRES_DB:\?/);
+  assert.match(content, /PGDATABASE: \$\{POSTGRES_DB:\?/);
+  assert.match(content, /config-guard:/);
+  assert.match(content, /\*\[!A-Za-z0-9\._~-\]\*/);
+  assert.match(content, /\*\[!A-Za-z0-9_\]\*/);
+  assert.match(content, /depends_on:[\s\S]*config-guard:/);
+  assert.match(content, /postgresql:\/\/customreport:\$\{DB_PASSWORD:\?/);
+  assert.match(content, /@postgres:5432\/\$\{POSTGRES_DB:\?/);
+  assert.match(content, /@pgbouncer:5432\/\$\{POSTGRES_DB:\?/);
+});
+
+void test("backup entrypoints are baked into the pinned image", () => {
+  assert.match(
+    content,
+    /backup:[\s\S]*build:[\s\S]*context: \.\/deploy\/postgres/,
+  );
+  assert.doesNotMatch(
+    content,
+    /\.\/deploy\/postgres\/(?:backup-loop|backup-health|restore)\.sh:/,
+  );
+  assert.match(
+    backupDockerfile,
+    /FROM postgres:15-alpine@sha256:3d0f7584ed7d04e27fa050d6683a74746608faf21f202be78460d679cc56461f/,
+  );
+  assert.match(
+    backupDockerfile,
+    /COPY backup-loop\.sh backup-health\.sh restore\.sh \/usr\/local\/bin\//,
+  );
+});
+
 // A real render check: with the policy matrix supplied the model renders;
 // with every required var blank it must fail to render.
-const renderCompose = (env: NodeJS.ProcessEnv) =>
+const renderCompose = (
+  env: NodeJS.ProcessEnv,
+  files: readonly string[] = [prodCompose],
+  format: "yaml" | "json" = "yaml",
+) =>
   spawnSync(
     composeCommand.executable,
-    [...composeCommand.leadingArguments, "-f", prodCompose, "config"],
+    [
+      ...composeCommand.leadingArguments,
+      ...files.flatMap((file) => ["-f", file]),
+      "config",
+      "--format",
+      format,
+    ],
     {
       env,
       encoding: "utf8",
@@ -116,6 +275,7 @@ const renderCompose = (env: NodeJS.ProcessEnv) =>
 const FULL_POLICY_ENV: NodeJS.ProcessEnv = {
   PATH: process.env.PATH,
   DB_PASSWORD: "x",
+  POSTGRES_DB: "customreport",
   FRONTEND_URL: "http://x",
   APP_BASE_URL: "http://x",
   NEXT_PUBLIC_API_URL: "http://x",
@@ -142,11 +302,83 @@ const FULL_POLICY_ENV: NodeJS.ProcessEnv = {
   LOG_LEVEL: "info",
   REDIS_DB: "0",
   OTEL_SDK_DISABLED: "true",
+  OTEL_SERVICE_VERSION: "test-release",
   OTEL_TRACES_SAMPLER_ARG: "0",
   HTTP_PORT: "80",
   HTTPS_PORT: "443",
   HTTPS_PORT_QUIC: "443",
 };
+
+interface RenderedService {
+  readonly command?: readonly string[];
+  readonly environment?: Readonly<Record<string, string>>;
+  readonly image?: string;
+}
+
+interface RenderedCompose {
+  readonly services: Readonly<Record<string, RenderedService>>;
+}
+
+const renderComposeModel = (
+  env: NodeJS.ProcessEnv,
+  files: readonly string[] = [prodCompose],
+): RenderedCompose => {
+  const rendered = renderCompose(env, files, "json");
+  assert.equal(rendered.status, 0, rendered.stderr);
+  return JSON.parse(rendered.stdout) as RenderedCompose;
+};
+
+void test("every repository-built image carries the rendered release tag", () => {
+  const model = renderComposeModel(FULL_POLICY_ENV);
+  for (const service of ["backup", "migrate", "api", "web"] as const) {
+    assert.equal(
+      model.services[service]?.image,
+      `customreport-${service}:test-release`,
+    );
+  }
+});
+
+void test("the rendered config guard rejects unsafe URL components without leaking them", () => {
+  const model = renderComposeModel(FULL_POLICY_ENV);
+  const command = model.services["config-guard"]?.command;
+  assert.ok(command !== undefined);
+  assert.deepEqual(command.slice(0, 2), ["sh", "-ec"]);
+  const renderedGuard = command.at(2);
+  assert.ok(typeof renderedGuard === "string");
+  // `docker compose config` preserves the escaped dollars for a round trip;
+  // the engine sends one dollar to the container command.
+  const guard = renderedGuard.replaceAll("$$", "$");
+
+  for (const [password, database, expectedStatus] of [
+    ["safe.pass_~-", "customreport_production", 0],
+    ["unsafe@pass", "customreport_production", 1],
+    ["safe_pass", "unsafe/name", 1],
+    ["safe_pass", "unsafe-name", 1],
+  ] as const) {
+    const checked = spawnSync("/bin/sh", ["-ec", guard], {
+      env: { DB_PASSWORD: password, POSTGRES_DB: database },
+      encoding: "utf8",
+    });
+    assert.equal(checked.status, expectedStatus);
+    const output = `${checked.stdout}${checked.stderr}`;
+    assert.doesNotMatch(output, new RegExp(password));
+    assert.doesNotMatch(output, new RegExp(database));
+  }
+});
+
+void test("the production observability overlay actually enables tracing", () => {
+  const model = renderComposeModel(
+    { ...FULL_POLICY_ENV, GRAFANA_ADMIN_PASSWORD: "test-only" },
+    [prodCompose, observabilityCompose],
+  );
+  const apiEnvironment = model.services.api?.environment;
+  assert.ok(apiEnvironment !== undefined);
+  assert.equal(apiEnvironment.OTEL_SDK_DISABLED, "false");
+  assert.equal(
+    apiEnvironment.OTEL_EXPORTER_OTLP_ENDPOINT,
+    "http://otel-lgtm:4318",
+  );
+});
 
 void test("production compose renders with the full policy matrix", () => {
   const rendered = renderCompose(FULL_POLICY_ENV);
@@ -157,7 +389,7 @@ void test("production compose refuses to render with a blank required input", ()
   // Blank every required var: compose must exit nonzero instead of inventing
   // operational policy. A handful are exempted as documented optional
   // integrations (OTEL_EXPORTER_OTLP_ENDPOINT, SMTP_USER/PASS, SENTRY_DSN,
-  // FRONTEND_URLS, OTEL_SERVICE_VERSION, CLIENT_LOG_FORWARDING).
+  // FRONTEND_URLS and CLIENT_LOG_FORWARDING).
   const blanked = renderCompose({ PATH: process.env.PATH });
   assert.notEqual(blanked.status, 0);
   assert.match(`${blanked.stdout}${blanked.stderr}`, /required|must be set/i);

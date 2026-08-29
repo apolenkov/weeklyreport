@@ -23,9 +23,14 @@ describe("SegmentedToggle", () => {
     );
 
     const group = screen.getByRole("group", { name: "View mode" });
-    expect(group).toBeInTheDocument();
+    expect(group).toHaveClass(
+      "h-[var(--toolbar-control-h)]",
+      "max-md:min-h-[var(--touch-target-min)]",
+      "overflow-visible",
+    );
     for (const link of screen.getAllByRole("link")) {
       expect(link).toHaveClass(
+        "h-full",
         "max-md:min-h-[var(--touch-target-min)]",
         "max-md:min-w-[var(--touch-target-min)]",
       );

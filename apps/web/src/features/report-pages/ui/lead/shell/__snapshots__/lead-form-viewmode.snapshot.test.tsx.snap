@@ -3,7 +3,7 @@
 exports[`LeadForm view-mode toggle > shows Edit link and Slides link in edit mode 1`] = `
 <div
   aria-label="View mode"
-  class="inline-flex items-center gap-0.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] p-0.5 h-[var(--toolbar-control-h)]"
+  class="inline-flex items-center gap-0.5 overflow-visible rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] p-0.5 max-md:min-h-[var(--touch-target-min)] h-[var(--toolbar-control-h)]"
   role="group"
 >
   <a

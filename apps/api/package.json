@@ -8,7 +8,7 @@
     "build": "tsc -p tsconfig.json && node scripts/fix-esm-extensions.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "test:coverage": "NODE_OPTIONS=--throw-deprecation vitest run --config vitest.coverage.config.ts --coverage --fileParallelism=false && tsx ../../scripts/gates/coverage/coverage-evidence.ts coverage/coverage-summary.json",
+    "test:coverage": "NODE_OPTIONS=--throw-deprecation vitest run --config vitest.coverage.config.ts --coverage --fileParallelism=false && tsx ../../scripts/gates/coverage/coverage-evidence.ts coverage/coverage-summary.json api",
     "test:integration": "NODE_OPTIONS=--throw-deprecation vitest run --config vitest.integration.config.ts --reporter=verbose --fileParallelism=false",
     "db:generate": "prisma generate --schema=../../prisma/schema.prisma",
     "postinstall": "prisma generate --schema=../../prisma/schema.prisma"

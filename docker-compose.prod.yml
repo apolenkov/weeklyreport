@@ -1,11 +1,12 @@
 # Production Docker Compose configuration.
-# Usage: docker compose -f docker-compose.prod.yml up -d
+# Usage: docker compose --env-file .env.production -f docker-compose.prod.yml up --build -d
 #
 # Tracing is OFF unless the operator supplies a collector explicitly (no
 # baked-in default — a default endpoint would report "started" while
 # exporting into a nonexistent host, losing every trace silently). To ship
 # traces, compose the observability overlay, which sets the endpoint:
-#   docker compose -f docker-compose.prod.yml -f docker-compose.observability.yml up -d
+#   docker compose --env-file .env.production -f docker-compose.prod.yml \
+#     -f docker-compose.observability.yml up --build -d
 # or export OTEL_EXPORTER_OTLP_ENDPOINT for an external managed collector.
 # With the endpoint absent the api boots without traces and says so at warn.
 #
@@ -18,16 +19,42 @@
 # - JSON-file logging with rotation
 
 services:
+  # Compose cannot validate a password's use as a URL component. Fail before
+  # any database-dependent service starts instead of silently truncating or
+  # misparsing a password containing reserved URL characters.
+  config-guard:
+    image: postgres:15-alpine@sha256:3d0f7584ed7d04e27fa050d6683a74746608faf21f202be78460d679cc56461f
+    environment:
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB must be set}
+    command:
+      - sh
+      - -ec
+      - |
+        case "$$DB_PASSWORD" in
+          *[!A-Za-z0-9._~-]*)
+            echo "DB_PASSWORD must contain only URL-safe unreserved characters" >&2
+            exit 1
+            ;;
+        esac
+        case "$$POSTGRES_DB" in
+          ""|*[!A-Za-z0-9_]*)
+            echo "POSTGRES_DB must contain only letters, digits, and underscores" >&2
+            exit 1
+            ;;
+        esac
+    restart: "no"
+
   postgres:
     image: postgres:15-alpine@sha256:3d0f7584ed7d04e27fa050d6683a74746608faf21f202be78460d679cc56461f
     environment:
       POSTGRES_USER: customreport
       POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
-      POSTGRES_DB: customreport
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB must be set}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U customreport"]
+      test: ["CMD-SHELL", 'pg_isready -U customreport -d "$$POSTGRES_DB"']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -41,6 +68,9 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    depends_on:
+      config-guard:
+        condition: service_completed_successfully
 
   # PgBouncer in transaction mode fronts Postgres for the api's runtime traffic;
   # migrate bypasses it with a DATABASE_URL aimed straight at postgres:5432,
@@ -56,7 +86,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: customreport
+      DB_NAME: ${POSTGRES_DB:?POSTGRES_DB must be set}
       POOL_MODE: transaction
       MAX_CLIENT_CONN: ${PGBOUNCER_MAX_CLIENT_CONN:?set pgbouncer max client connections (e.g. 100)}
       DEFAULT_POOL_SIZE: ${PGBOUNCER_POOL_SIZE:?set pgbouncer pool size (e.g. 20)}
@@ -106,9 +136,15 @@ services:
   # here ships backups off-box — an unreplicated local dump survives a bad
   # migration, not a dead disk.
   backup:
-    # Same digest-pinned image as postgres: pg_dump must match the server
-    # major version, and reusing it adds no new supply-chain surface.
-    image: postgres:15-alpine@sha256:3d0f7584ed7d04e27fa050d6683a74746608faf21f202be78460d679cc56461f
+    # The image is built from the same digest-pinned postgres base and contains
+    # every backup/restore entrypoint. No host script bind mounts are allowed:
+    # the running artifact must be the one that was built and reviewed.
+    build:
+      context: ./deploy/postgres
+      dockerfile: Dockerfile.backup
+      args:
+        BUILD_VERSION: ${OTEL_SERVICE_VERSION:?set the deployed release version (for example the Git SHA)}
+    image: customreport-backup:${OTEL_SERVICE_VERSION:?set the deployed release version (for example the Git SHA)}
     command: ["/usr/local/bin/backup-loop.sh"]
     environment:
       # Direct to postgres, NOT pgbouncer — pg_dump needs one session for the
@@ -117,7 +153,7 @@ services:
       PGPORT: 5432
       PGUSER: customreport
       PGPASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
-      PGDATABASE: customreport
+      PGDATABASE: ${POSTGRES_DB:?POSTGRES_DB must be set}
       RESTORE_ENVIRONMENT: production
       BACKUP_DIR: /backups
       # Required with no default, both of them: together they ARE the
@@ -143,9 +179,6 @@ services:
     restart: unless-stopped
     volumes:
       - pgbackups:/backups
-      - ./deploy/postgres/backup-loop.sh:/usr/local/bin/backup-loop.sh:ro
-      - ./deploy/postgres/backup-health.sh:/usr/local/bin/backup-health.sh:ro
-      - ./deploy/postgres/restore.sh:/usr/local/bin/restore.sh:ro
     deploy:
       resources:
         limits:
@@ -191,13 +224,16 @@ services:
       context: .
       dockerfile: Dockerfile.api
       target: migrator
+      args:
+        BUILD_VERSION: ${OTEL_SERVICE_VERSION:?set the deployed release version (for example the Git SHA)}
+    image: customreport-migrate:${OTEL_SERVICE_VERSION:?set the deployed release version (for example the Git SHA)}
     command: ["pnpm", "exec", "prisma", "migrate", "deploy"]
     environment:
       # migrate connects DIRECTLY to postgres (bypassing pgbouncer) because DDL
       # needs session-mode — that is what DATABASE_URL below encodes. Prisma
       # reads only DATABASE_URL; DIRECT_URL is the direct-connection escape hatch.
-      DATABASE_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@postgres:5432/customreport
-      DIRECT_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@postgres:5432/customreport
+      DATABASE_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB must be set}
+      DIRECT_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB must be set}
     depends_on:
       postgres:
         condition: service_healthy
@@ -212,6 +248,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.api
+      args:
+        BUILD_VERSION: ${OTEL_SERVICE_VERSION:?set the deployed release version (for example the Git SHA)}
+    image: customreport-api:${OTEL_SERVICE_VERSION:?set the deployed release version (for example the Git SHA)}
     environment:
       # api connects through pgbouncer (transaction-mode) instead of
       # postgres directly. The PrismaPg pg-pool adapter (prisma.service.ts)
@@ -220,11 +259,11 @@ services:
       # flags below are no-ops at the Prisma 7 client layer but are kept as
       # explicit documentation of intent — they also prevent any future tool
       # that DOES honour them from over-pooling.
-      DATABASE_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@pgbouncer:5432/customreport?pgbouncer=true&connection_limit=1
+      DATABASE_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@pgbouncer:5432/${POSTGRES_DB:?POSTGRES_DB must be set}?pgbouncer=true&connection_limit=1
       # DIRECT_URL is reserved as an escape hatch for tooling that needs to
       # bypass pgbouncer (introspection, manual DDL, etc.). Not used at the
       # Prisma client layer in v7.
-      DIRECT_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@postgres:5432/customreport
+      DIRECT_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB must be set}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_DB: ${REDIS_DB:?REDIS_DB is required}
@@ -257,11 +296,10 @@ services:
       # a baked-in default would report "started" while exporting into a
       # nonexistent host, losing every trace silently.
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
-      # Trace/log resource identity, read via requireEnv once the SDK starts:
-      # an endpoint-enabled deploy that leaves the release version unset fails
-      # at boot instead of publishing traces under a stale build label.
+      # Release identity is required for every production deployment so a later
+      # telemetry enablement cannot inherit the development fallback.
       OTEL_SERVICE_NAME: customreport-api
-      OTEL_SERVICE_VERSION: ${OTEL_SERVICE_VERSION:-}
+      OTEL_SERVICE_VERSION: ${OTEL_SERVICE_VERSION:?set the deployed release version (for example the Git SHA)}
       OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:?set the trace sample rate (e.g. 0.1)}
       # /health/ready heap threshold (bytes) — required, no schema default.
       # Set to ~75% of the api container memory limit.
@@ -342,8 +380,10 @@ services:
         NEXT_PUBLIC_AUTH_STUB: "false"
         NEXT_PUBLIC_DEV_ROLE_SWITCHER: "false"
         NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
+        NEXT_PUBLIC_APP_VERSION: ${OTEL_SERVICE_VERSION:?set the deployed release version (for example the Git SHA)}
         API_URL: http://api:3001
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL must be set}
+    image: customreport-web:${OTEL_SERVICE_VERSION:?set the deployed release version (for example the Git SHA)}
     environment:
       # Only server-side vars (read at runtime) belong here: NEXT_PUBLIC_* is
       # inlined at BUILD time via build.args above, so a runtime line for it

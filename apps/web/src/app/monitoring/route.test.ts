@@ -2,8 +2,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { POST } from "./route";
 import {
+  consumeSentryTunnelQuota,
+  resetSentryTunnelQuota,
   resolveSentryEnvelopeEndpoint,
+  resolveSentryTunnelClientKey,
   SENTRY_TUNNEL_MAX_BODY_BYTES,
+  SENTRY_TUNNEL_MAX_CLIENT_BUCKETS,
+  SENTRY_TUNNEL_MAX_REQUESTS_PER_WINDOW,
+  SENTRY_TUNNEL_RETRY_AFTER_SECONDS,
+  SENTRY_TUNNEL_WINDOW_MS,
 } from "./sentry-tunnel";
 
 function makeRequest(
@@ -44,6 +51,7 @@ describe("same-origin Sentry tunnel route", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
+    resetSentryTunnelQuota();
   });
 
   it("derives the Bugsink envelope endpoint and query auth from the DSN", () => {
@@ -107,6 +115,71 @@ describe("same-origin Sentry tunnel route", () => {
 
     expect(res.status).toBe(413);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("enforces a per-client request quota before forwarding", async () => {
+    vi.stubEnv("SENTRY_DSN", "https://public-key@bugsink.test/42");
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(new Response(null, { status: 200 })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const headers = { "x-forwarded-for": "198.51.100.10" };
+
+    for (
+      let index = 0;
+      index < SENTRY_TUNNEL_MAX_REQUESTS_PER_WINDOW;
+      index += 1
+    ) {
+      await expect(POST(makeRequest(headers))).resolves.toMatchObject({
+        status: 200,
+      });
+    }
+
+    const limited = await POST(makeRequest(headers));
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get("retry-after")).toBe(
+      String(SENTRY_TUNNEL_RETRY_AFTER_SECONDS),
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(
+      SENTRY_TUNNEL_MAX_REQUESTS_PER_WINDOW,
+    );
+  });
+
+  it("keeps quotas independent and bounded by client bucket count", () => {
+    const now = 1000;
+    for (let index = 0; index < SENTRY_TUNNEL_MAX_CLIENT_BUCKETS; index += 1) {
+      expect(consumeSentryTunnelQuota(`client-${index}`, now)).toBe(true);
+    }
+    expect(consumeSentryTunnelQuota("overflow-client", now)).toBe(false);
+    expect(consumeSentryTunnelQuota("client-0", now)).toBe(true);
+  });
+
+  it("expires a client bucket after its fixed window", () => {
+    const now = 1000;
+    for (
+      let index = 0;
+      index < SENTRY_TUNNEL_MAX_REQUESTS_PER_WINDOW;
+      index += 1
+    ) {
+      expect(consumeSentryTunnelQuota("expiring-client", now)).toBe(true);
+    }
+
+    expect(consumeSentryTunnelQuota("expiring-client", now)).toBe(false);
+    expect(
+      consumeSentryTunnelQuota(
+        "expiring-client",
+        now + SENTRY_TUNNEL_WINDOW_MS,
+      ),
+    ).toBe(true);
+  });
+
+  it("uses the edge-provided real address before forwarded chains", () => {
+    const request = makeRequest({
+      "x-real-ip": "198.51.100.10",
+      "x-forwarded-for": "203.0.113.20, 198.51.100.30",
+    });
+
+    expect(resolveSentryTunnelClientKey(request)).toBe("198.51.100.10");
   });
 
   it.each([

@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 // their own segment elements (Link, radiogroup, aria-pressed buttons).
 
 const TRACK_BASE =
-  "inline-flex items-center gap-0.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] p-0.5";
+  "inline-flex items-center gap-0.5 overflow-visible rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] p-0.5 max-md:min-h-[var(--touch-target-min)]";
 
 // Two heights: "sm" is the shared toolbar control height (32px); "lg" matches
 // the slide-hero status row (h-11) so the in-hero scope toggle lines up with

@@ -12,11 +12,10 @@ grandfathered raw-path edges were retired on 2026-07-14). The barrel is the
 carrier of the boundary: the zone allowlist is generated from sibling
 `index.ts` paths, so a new cross-slice edge is legal only through the facade.
 
-Industry guidance pushes the other way for app-internal code: Vercel/Next.js
-and Atlassian report compile-time and bundle-size costs from internal barrel
-files, plus cycle risk, and recommend direct imports (see
-`docs/research/elegance-best-practices-2026-07-14.md` — both sides sourced).
-The tension is real and was surfaced, not overlooked.
+Industry guidance pushes the other way for app-internal code: internal barrel
+files can increase compile and bundle costs and introduce cycle risk. The
+trade-off is explicit in the target architecture: barrels are limited to
+curated public surfaces, while convenience re-export trees are prohibited.
 
 ## Decision
 

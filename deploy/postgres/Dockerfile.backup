@@ -1,0 +1,10 @@
+FROM postgres:15-alpine@sha256:3d0f7584ed7d04e27fa050d6683a74746608faf21f202be78460d679cc56461f
+ARG BUILD_VERSION
+LABEL org.opencontainers.image.revision=${BUILD_VERSION}
+
+# Keep the recovery entrypoints inside the image so a running backup job cannot
+# drift from the reviewed repository state through a host bind mount.
+COPY backup-loop.sh backup-health.sh restore.sh /usr/local/bin/
+RUN chmod 0555 /usr/local/bin/backup-loop.sh \
+    /usr/local/bin/backup-health.sh \
+    /usr/local/bin/restore.sh

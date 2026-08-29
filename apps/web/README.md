@@ -4,15 +4,17 @@ Next.js 16 frontend with App Router, React 19, shadcn/ui, and Tailwind CSS v4.
 
 ## Pages
 
-| Route                 | Role | Component                                                               |
-| --------------------- | ---- | ----------------------------------------------------------------------- |
-| `/lead/report`        | lead | ReportSectionForm — traffic lights, items, risks, decisions, priorities |
-| `/head/dashboard`     | head | Review dashboard with lead submission status                            |
-| `/head/report`        | head | Assembled report with publish action                                    |
-| `/admin`              | head | AdminPanel — users, projects, periods, reminders (tabbed CRUD)          |
-| `/reports/history`    | any  | Published report archive with DataTable                                 |
-| `/reports/[id]`       | any  | Single report detail                                                    |
-| `/reports/[id]/print` | any  | Print-optimized layout for PDF export                                   |
+| Route                             | Roles                       | Purpose                                    |
+| --------------------------------- | --------------------------- | ------------------------------------------ |
+| `/lead/report/[reportId]`         | lead, head, admin           | Owned structured section editing           |
+| `/lead/report/[reportId]/preview` | lead                        | Read-only lead preview                     |
+| `/head/dashboard`                 | head, admin                 | Submission completeness and review queue   |
+| `/head/report/[reportId]`         | head, admin                 | Unified review, publication, and export    |
+| `/admin`                          | admin                       | Users, products, activities, periods, jobs |
+| `/reports`, `/reports/[reportId]` | lead, head, admin, viewer   | Published report archive and detail        |
+| `/reports/latest`                 | viewer                      | Viewer landing status                      |
+| `/reports/trends`                 | lead, head, admin, viewer   | Published trend analysis                   |
+| `/print/[reportId]`               | authenticated export worker | Print-optimized PDF source                 |
 
 ## API Proxy
 
@@ -27,12 +29,18 @@ Next.js rewrites in `next.config.ts` proxy `/trpc/*` and `/auth/*` to the API se
 
 ## Development
 
+From the repository root, copy `.env.example` to `.env` and set
+`NEXT_PUBLIC_API_URL=http://localhost:3002` in `apps/web/.env.local`, then run:
+
 ```bash
-NEXT_PUBLIC_API_URL=http://localhost:3001 pnpm dev
+pnpm dev
 ```
+
+The canonical native ports are web `3000` and API `3002`. Docker-backed
+development uses `pnpm dev:watch` and supplies container-internal origins.
 
 ## Testing
 
 ```bash
-pnpm test
+pnpm --filter @customreport/web test
 ```

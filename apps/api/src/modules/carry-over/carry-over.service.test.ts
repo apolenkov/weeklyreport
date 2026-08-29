@@ -3,7 +3,7 @@ import type {
   CarryOverRecord,
   ReportSectionReadModel,
 } from "@customreport/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
@@ -16,6 +16,7 @@ import { buildCarryOverExecution, planCarriedEntries } from "./carry-over-plan";
 
 const sourceReportId = "22222222-2222-4222-8222-222222222222";
 const targetReportId = "55555555-5555-4555-8555-555555555555";
+const unrelatedAuthorId = "66666666-6666-4666-8666-666666666666";
 
 const sourceSection: ReportSectionReadModel = {
   reportSectionId: "11111111-1111-4111-8111-111111111111",
@@ -93,6 +94,7 @@ function createRepository(
   // Which side holds no sections; defaults to neither so both sides carry the
   // source section. Empty-source and empty-target are the two failure modes.
   emptySide: "source" | "target" | "neither" = "neither",
+  additionalTargetSections: ReportSectionReadModel[] = [],
 ): CarryOverRepository {
   const executions = new Map<string, CarryOverExecution>();
   let targetSection: ReportSectionReadModel = {
@@ -126,7 +128,12 @@ function createRepository(
     },
     getTargetSections() {
       return Promise.resolve(
-        emptySide === "target" ? [] : [structuredClone(targetSection)],
+        emptySide === "target"
+          ? []
+          : [
+              structuredClone(targetSection),
+              ...structuredClone(additionalTargetSections),
+            ],
       );
     },
     getTargetReportState() {
@@ -153,6 +160,31 @@ function createRepository(
 }
 
 describe("CarryOverService", () => {
+  it("ignores an unrelated submitted target section", async () => {
+    const unrelatedSubmitted: ReportSectionReadModel = {
+      ...sourceSection,
+      reportSectionId: "bbbb0000-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      reportId: targetReportId,
+      authorId: unrelatedAuthorId,
+      authorName: "Lead Beta",
+      status: "submitted" as const,
+      submittedAt: new Date("2026-04-09T10:00:00.000Z"),
+    };
+    const repo = createRepository(sourceSection, undefined, "neither", [
+      unrelatedSubmitted,
+    ]);
+    const saved = vi.spyOn(repo, "saveCarryOver");
+    const result = await new CarryOverService(repo).executeCarryOver(
+      sourceReportId,
+      targetReportId,
+    );
+
+    expect(result.records).toHaveLength(2);
+    expect(saved).toHaveBeenCalledOnce();
+    expect(saved.mock.calls[0]?.[2]).toHaveLength(1);
+    expect(saved.mock.calls[0]?.[2][0]?.authorId).toBe(sourceSection.authorId);
+  });
+
   it("carries only next-period items and unresolved decisions into the target section", async () => {
     const service = new CarryOverService(createRepository(sourceSection));
     const result = await service.executeCarryOver(
