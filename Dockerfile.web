@@ -57,14 +57,14 @@ RUN pnpm turbo build --filter=@customreport/web
 
 # Stage 5: Production runner with Next.js standalone
 FROM node:26-alpine@sha256:e88a35be04478413b7c71c455cd9865de9b9360e1f43456be5951032d7ac1a66 AS runner
-ARG NEXT_PUBLIC_APP_VERSION
-LABEL org.opencontainers.image.revision=${NEXT_PUBLIC_APP_VERSION}
 RUN apk add --no-cache libc6-compat
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 WORKDIR /app
 COPY --from=builder --chown=nextjs:nextjs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nextjs /app/apps/web/.next/static ./apps/web/.next/static
+ARG NEXT_PUBLIC_APP_VERSION
+LABEL org.opencontainers.image.revision=${NEXT_PUBLIC_APP_VERSION}
 USER nextjs
 ENV NODE_ENV=production
 ENV HOSTNAME="0.0.0.0"

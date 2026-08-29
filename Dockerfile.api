@@ -58,8 +58,6 @@ RUN --mount=type=cache,id=customreport-pnpm-store-v11,target=/pnpm/store,sharing
 # the web image (alpine, ~150MB); this one cannot meet it by construction, but
 # a slim base would still be worth measuring.
 FROM base AS runner
-ARG BUILD_VERSION
-LABEL org.opencontainers.image.revision=${BUILD_VERSION}
 WORKDIR /app
 
 # Manifests and the built app come from the build; every node_modules tree comes
@@ -87,6 +85,8 @@ RUN pnpm exec playwright install --with-deps chromium
 
 # Create PDF storage directory
 RUN mkdir -p /app/data/pdfs && chown node:node /app/data/pdfs
+ARG BUILD_VERSION
+LABEL org.opencontainers.image.revision=${BUILD_VERSION}
 USER node
 ENV NODE_ENV=production
 # EXPOSE/HEALTHCHECK must match the runtime bind port (PORT=3001); a plain
