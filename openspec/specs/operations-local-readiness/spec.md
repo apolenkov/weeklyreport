@@ -15,6 +15,11 @@ The repository-owned development and operations instructions, including Compose,
 - **WHEN** the documented example environment is supplied to its Compose stack
 - **THEN** configuration rendering succeeds without a missing required variable or duplicate application port owner
 
+#### Scenario: Native development starts from the repository root
+
+- **WHEN** an operator copies the root `.env.example` to `.env` and runs the native API and Web package scripts
+- **THEN** both processes load that root contract and the Web receives explicit server and public API origins without a second required env file
+
 #### Scenario: An untouched production environment template is used
 
 - **WHEN** an operator copies the tracked production template without filling its required empty values
@@ -35,6 +40,17 @@ The repository-owned development and operations instructions, including Compose,
 - **WHEN** the development Compose stack is rendered
 - **THEN** every database consumer uses the same fixed local-only credential without interpolating an arbitrary password into a URL
 
+#### Scenario: Development services publish host ports
+
+- **WHEN** a development Compose file publishes PostgreSQL, Redis, Mailpit, API, or Web to the host
+- **THEN** every published port binds explicitly to the loopback interface
+
+#### Scenario: Native development listeners start
+
+- **WHEN** the native API and Web development processes bind their configured ports
+- **THEN** both listen only on `127.0.0.1` and a port collision fails without terminating an unrelated process
+- **AND** container development binds those processes explicitly inside the private Compose network
+
 #### Scenario: Production database identity is unsafe for a connection URL
 
 - **WHEN** `DB_PASSWORD` contains a reserved URL character or `POSTGRES_DB` contains anything other than letters, digits, and underscores
@@ -44,6 +60,11 @@ The repository-owned development and operations instructions, including Compose,
 
 - **WHEN** an operator follows the observability runbook
 - **THEN** the documentation identifies the actual internal scrape path and does not claim a public Caddy `/metrics` route
+
+#### Scenario: A destructive restore is requested
+
+- **WHEN** the restore entrypoint receives a valid archive and exact target confirmation
+- **THEN** it still executes nothing unless the exact per-run destructive consent is present
 
 ### Requirement: Local safety automation fails closed
 

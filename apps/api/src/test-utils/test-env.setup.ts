@@ -3,6 +3,7 @@
 // here. `??=` lets an individual test override or delete a value per scenario.
 process.env.PDF_BASE_URL ??= "http://localhost:3000";
 process.env.APP_BASE_URL ??= "http://localhost:3000";
+process.env.API_HOST ??= "127.0.0.1";
 process.env.REDIS_HOST ??= "localhost";
 process.env.REDIS_PORT ??= "6379";
 process.env.REDIS_DB ??= "15";

@@ -10,6 +10,7 @@ import { countSuppressionDirectivesByPath } from "../../eslint/suppression/eslin
 import {
   classifyExemplaryFile,
   type ExemplaryFileKind,
+  isExemplaryProductEntrypoint,
 } from "./exemplary-file-kind.ts";
 import {
   type FloorSnapshot,
@@ -78,21 +79,6 @@ const git = (args: readonly string[]): string =>
     stdio: ["ignore", "pipe", "pipe"],
   });
 
-// A framework entry has no importer by construction: Next.js loads routes,
-// layouts, proxy.ts and instrumentation by convention, and a package barrel is
-// consumed by name. Each is anchored to the one path the convention allows —
-// matched by filename alone, an ordinary module called proxy.ts or index.ts
-// would inherit the exemption wherever someone put it.
-const FRAMEWORK_ENTRY = new RegExp(
-  [
-    String.raw`^apps/web/src/app/(?:.*/)?(?:page|layout|route|template|default|loading|error|global-error|not-found)\.tsx?$`,
-    String.raw`^apps/web/instrumentation(?:-client)?\.ts$`,
-    String.raw`^apps/web/src/proxy\.ts$`,
-    String.raw`^apps/api/src/main\.ts$`,
-    String.raw`^packages/[^/]+/src/index\.ts$`,
-  ].join("|"),
-);
-
 // tsPreCompilationDeps is on here on purpose: a module imported only as a type
 // has no runtime edge, and counting it as unreferenced would report every port
 // and every type module as dead.
@@ -160,7 +146,7 @@ const classify = (
   if (!linted) return "F";
   if (suppressions > 0) return "B";
   if (relaxed.length > 0) return "C";
-  if (fanIn === 0 && kind === "product" && !FRAMEWORK_ENTRY.test(file))
+  if (fanIn === 0 && kind === "product" && !isExemplaryProductEntrypoint(file))
     return "E";
   return "A";
 };

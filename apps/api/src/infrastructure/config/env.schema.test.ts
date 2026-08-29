@@ -8,6 +8,7 @@ import { envSchema } from "./env.schema";
 const COMPLETE = {
   NODE_ENV: "production",
   PORT: "3001",
+  API_HOST: "0.0.0.0",
   DATABASE_URL: "postgresql://user:pass@localhost:5432/db",
   FRONTEND_URL: "https://app.example.com",
   APP_BASE_URL: "https://app.example.com",
@@ -44,6 +45,7 @@ describe("envSchema — no defaults, every product var required", () => {
   it.each([
     "DATABASE_URL",
     "PORT",
+    "API_HOST",
     "NODE_ENV",
     "FRONTEND_URL",
     "APP_BASE_URL",
@@ -71,6 +73,15 @@ describe("envSchema — no defaults, every product var required", () => {
       expect(
         envSchema.safeParse({ ...COMPLETE, REDIS_DB: value }).success,
       ).toBe(false);
+    },
+  );
+
+  it.each(["localhost", "::", "", "api.internal"] as const)(
+    "rejects an unsupported API_HOST (%j)",
+    (API_HOST) => {
+      expect(envSchema.safeParse({ ...COMPLETE, API_HOST }).success).toBe(
+        false,
+      );
     },
   );
 

@@ -26,3 +26,13 @@ The one-off registry generator and browser inspection helpers MUST remain execut
 
 - **WHEN** the final registry and review evidence are archived
 - **THEN** no root E2E, UAT, browser, catalogue, campaign, or session harness is added to Git
+
+### Requirement: Executable product entrypoints have exact catalogue identity
+
+The exemplary catalogue MUST recognize repository-owned framework and package-command entrypoints by exact path because import fan-in cannot prove convention or `package.json` execution. The recognition MUST preserve product classification and MUST NOT exempt a nearby same-named module.
+
+#### Scenario: A package command owns a TypeScript launcher
+
+- **WHEN** an exact `package.json` command invokes its repository-owned TypeScript launcher and the import graph reports zero fan-in
+- **THEN** the catalogue treats the exact launcher as an executable product entrypoint rather than an orphan
+- **AND** a nearby same-named path remains subject to ordinary fan-in evidence

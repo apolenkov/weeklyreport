@@ -42,6 +42,7 @@ function runRestore(overrides: NodeJS.ProcessEnv = {}) {
     [passwordVariable]: fixtureSecret,
     PGDATABASE: "customreport_test",
     CONFIRM_RESTORE_TARGET: "test|db.internal|5432|customreport_test",
+    PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",
     ...overrides,
   };
   const result = spawnSync("/bin/sh", [restoreScript, dump], {
@@ -92,6 +93,17 @@ void test("missing environment and malformed confirmation execute nothing", () =
   const malformed = runRestore({ CONFIRM_RESTORE_TARGET: "yes" });
   assert.equal(malformed.result.status, 3);
   assert.deepEqual(malformed.calls, []);
+});
+
+void test("missing or incorrect per-run consent executes nothing", () => {
+  for (const consent of ["", "yes"]) {
+    const { calls, result } = runRestore({
+      PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: consent,
+    });
+    assert.equal(result.status, 3);
+    assert.match(result.stderr, /explicit per-run destructive consent/);
+    assert.deepEqual(calls, []);
+  }
 });
 
 void test("production requires the existing destructive consent", () => {

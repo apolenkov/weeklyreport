@@ -180,6 +180,76 @@ void test("development Compose owns one fixed local database credential", () => 
   );
 });
 
+const extractPublishedPorts = (source: string): readonly string[] => {
+  const publishedPorts: string[] = [];
+  let portsIndent: number | undefined;
+
+  for (const line of source.split("\n")) {
+    const indentation = line.length - line.trimStart().length;
+    if (/^\s+ports:\s*$/u.test(line)) {
+      portsIndent = indentation;
+      continue;
+    }
+    if (portsIndent === undefined || line.trim().length === 0) continue;
+    if (indentation <= portsIndent) {
+      portsIndent = undefined;
+      continue;
+    }
+    const port = /^\s+-\s+"([^"]+)"\s*$/u.exec(line)?.[1];
+    if (port !== undefined) publishedPorts.push(port);
+  }
+
+  return publishedPorts;
+};
+
+const assertLoopbackPublishedPorts = (
+  source: string,
+  sourcePath: string,
+): readonly string[] => {
+  const ports = extractPublishedPorts(source);
+  assert.ok(
+    ports.length > 0,
+    `${sourcePath} must publish its expected dev ports`,
+  );
+  for (const port of ports) {
+    assert.match(
+      port,
+      /^127\.0\.0\.1:\d+:\d+$/u,
+      `${sourcePath} must bind ${port} explicitly to loopback`,
+    );
+  }
+  return ports;
+};
+
+void test("every development host port binds to loopback", () => {
+  const basePorts = assertLoopbackPublishedPorts(devContent, devCompose);
+  const overridePorts = assertLoopbackPublishedPorts(
+    devOverrideContent,
+    devOverride,
+  );
+  assert.deepEqual(basePorts, [
+    "127.0.0.1:5432:5432",
+    "127.0.0.1:1025:1025",
+    "127.0.0.1:8025:8025",
+    "127.0.0.1:6379:6379",
+    "127.0.0.1:3002:3002",
+    "127.0.0.1:3000:3000",
+  ]);
+  assert.deepEqual(overridePorts, [
+    "127.0.0.1:3002:3002",
+    "127.0.0.1:3000:3000",
+  ]);
+});
+
+void test("development port guard rejects a planted wildcard binding", () => {
+  const planted = devContent.replace('"127.0.0.1:6379:6379"', '"6379:6379"');
+  assert.notEqual(planted, devContent);
+  assert.throws(
+    () => assertLoopbackPublishedPorts(planted, "planted-compose.yml"),
+    /must bind 6379:6379 explicitly to loopback/,
+  );
+});
+
 void test("the production image receives one release identity", () => {
   assert.match(
     content,

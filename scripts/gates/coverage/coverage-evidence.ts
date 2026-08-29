@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 
 interface CoverageMetric {
@@ -43,7 +43,7 @@ const resolveScopePackageRoot = (
   packageRoot: string,
   scope: CoverageScope,
 ): string => {
-  const normalizedRoot = normalizePath(resolve(packageRoot));
+  const normalizedRoot = normalizePath(realpathSync(resolve(packageRoot)));
   if (!normalizedRoot.endsWith(`/apps/${scope}`)) {
     throw new Error(
       `Coverage scope ${scope} does not match package root ${normalizedRoot}`,
@@ -58,9 +58,15 @@ const isExpectedSourceFile = (
   packageRoot: string,
 ): boolean => {
   const normalizedRoot = resolveScopePackageRoot(packageRoot, scope);
-  const absolutePath = normalizePath(
-    isAbsolute(filePath) ? filePath : resolve(normalizedRoot, filePath),
-  );
+  const requestedPath = isAbsolute(filePath)
+    ? resolve(filePath)
+    : resolve(normalizedRoot, filePath);
+  let absolutePath: string;
+  try {
+    absolutePath = normalizePath(realpathSync(requestedPath));
+  } catch {
+    return false;
+  }
   const sourceRoot = `${normalizedRoot}/src/`;
   const relative = absolutePath.startsWith(sourceRoot)
     ? `src/${absolutePath.slice(sourceRoot.length)}`

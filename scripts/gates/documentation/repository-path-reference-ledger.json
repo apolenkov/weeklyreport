@@ -17,18 +17,6 @@
       "rationale": "The closed dead-code requirement names the orphaned legacy router that must remain absent."
     },
     {
-      "path": "apps/web/.env",
-      "owners": ["docs/onboarding.md"],
-      "reason": "local-only",
-      "rationale": "Onboarding names a developer-created environment file that Git intentionally does not track."
-    },
-    {
-      "path": "apps/web/.env.local",
-      "owners": ["docs/onboarding.md"],
-      "reason": "local-only",
-      "rationale": "Onboarding names a developer-created local override that Git intentionally does not track."
-    },
-    {
       "path": "apps/web/src/components/",
       "owners": ["openspec/specs/directory-architecture-standard/spec.md"],
       "reason": "removed-path-example",

@@ -12,17 +12,17 @@ marked **untested in production**.
 `docker compose --env-file .env.production -f docker-compose.prod.yml` brings up
 nine services:
 
-| Service        | Role                                                                                                                                                                            |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `config-guard` | Fails before database services start if `DB_PASSWORD` contains a reserved URL character.                                                                                        |
-| `caddy`        | The only public entrypoint. TLS, security headers, routes `/trpc` `/auth` `/health` `/admin/queues` `/pdfs` to the api and everything else to web. `/metrics` is internal-only. |
-| `web`          | Next.js standalone server. Not published to the host — reachable only through caddy.                                                                                            |
-| `api`          | NestJS + tRPC. Not published to the host either.                                                                                                                                |
-| `migrate`      | Init container: `prisma migrate deploy`, then exits. `api` waits for it to succeed.                                                                                             |
-| `pgbouncer`    | Transaction-mode pool in front of Postgres. All api query traffic goes through it.                                                                                              |
-| `postgres`     | The database. No host port; reachable only on the compose network.                                                                                                              |
-| `redis`        | BullMQ queues. `--maxmemory 200mb`, `noeviction`.                                                                                                                               |
-| `backup`       | Periodic `pg_dump` into the `pgbackups` volume. See [Backups](#backups).                                                                                                        |
+| Service        | Role                                                                                                                                                                                                                           |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `config-guard` | Fails before database services start if `DB_PASSWORD` contains a reserved URL character.                                                                                                                                       |
+| `caddy`        | The only public entrypoint. TLS, security headers, routes `/api/web-vitals`, `/api/client-logs`, `/trpc`, `/auth`, `/health`, `/admin/queues`, and `/pdfs` to the api and everything else to web. `/metrics` is internal-only. |
+| `web`          | Next.js standalone server. Not published to the host — reachable only through caddy.                                                                                                                                           |
+| `api`          | NestJS + tRPC. Not published to the host either.                                                                                                                                                                               |
+| `migrate`      | Init container: `prisma migrate deploy`, then exits. `api` waits for it to succeed.                                                                                                                                            |
+| `pgbouncer`    | Transaction-mode pool in front of Postgres. All api query traffic goes through it.                                                                                                                                             |
+| `postgres`     | The database. No host port; reachable only on the compose network.                                                                                                                                                             |
+| `redis`        | BullMQ queues. `--maxmemory 200mb`, `noeviction`.                                                                                                                                                                              |
+| `backup`       | Periodic `pg_dump` into the `pgbackups` volume. See [Backups](#backups).                                                                                                                                                       |
 
 `migrate` and `backup` talk to `postgres` **directly**, bypassing pgbouncer:
 DDL and `pg_dump` both need a session that outlives a single transaction.
@@ -137,6 +137,7 @@ docker compose --env-file .env.production -f docker-compose.prod.yml run --rm ba
 #    <POSTGRES_DB> below with the exact value from .env.production.
 docker compose --env-file .env.production -f docker-compose.prod.yml run --rm \
   -e 'CONFIRM_RESTORE_TARGET=production|postgres|5432|<POSTGRES_DB>' \
+  -e 'PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=давай' \
   -e ALLOW_PROD_DESTRUCTIVE=yes \
   backup /usr/local/bin/restore.sh /backups/customreport-<stamp>.dump
 

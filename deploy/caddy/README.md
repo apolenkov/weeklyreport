@@ -35,9 +35,10 @@ CSP-report endpoint.
 ## Routes
 
 ```
-/trpc/*, /auth/*, /health/*, /admin/queues/*             ->  api:3001
-/metrics, /metrics/*                                     ->  404 at the public edge
-/  (everything else)                                    ->  web:3000
+/api/web-vitals*, /api/client-logs*                       ->  api:3001
+/trpc/*, /auth/*, /health/*, /admin/queues/*, /pdfs/*     ->  api:3001
+/metrics, /metrics/*                                      ->  404 at the public edge
+/  (everything else)                                     ->  web:3000
 ```
 
 Prometheus scrapes `api:3001/metrics` over the internal Compose network.

@@ -20,3 +20,20 @@ local consumer behavior.
 - **GIVEN** `NODE_ENV=production` and `OTEL_SERVICE_VERSION` is unset or blank
 - **WHEN** `validateEnv()` runs
 - **THEN** validation fails even when telemetry export is currently disabled
+
+### Requirement: API listener ownership is explicit
+
+`API_HOST` MUST be required and accept only `127.0.0.1` or `0.0.0.0`. Native
+development MUST supply loopback; container environments MUST supply the
+container-network listener explicitly. The API bootstrap MUST pass the
+validated address to `app.listen` rather than relying on the framework default.
+
+#### Scenario: API host is absent or ambiguous
+
+- **WHEN** `API_HOST` is missing or names an unsupported hostname or address
+- **THEN** environment validation fails before the API listener starts
+
+#### Scenario: API starts in a declared network boundary
+
+- **WHEN** the API bootstrap receives a valid `PORT` and `API_HOST`
+- **THEN** it binds exactly that address and port

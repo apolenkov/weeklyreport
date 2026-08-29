@@ -5,6 +5,7 @@ import {
   classifyExemplaryFile,
   classifyExemplaryFileRole,
   exemplaryFileRoleMetadata,
+  isExemplaryProductEntrypoint,
 } from "./exemplary-file-kind.ts";
 
 void describe("classifyExemplaryFile", () => {
@@ -40,12 +41,34 @@ void describe("classifyExemplaryFile", () => {
     assert.equal(classifyExemplaryFile("apps/api/src/config.ts"), "product");
   });
 
+  void it("recognizes only exact framework and package-command entrypoints", () => {
+    for (const file of [
+      "apps/api/src/main.ts",
+      "apps/web/src/app/reports/page.tsx",
+      "apps/web/instrumentation.ts",
+      "apps/web/src/proxy.ts",
+      "apps/web/scripts/run-next.ts",
+      "packages/shared/src/index.ts",
+    ]) {
+      assert.equal(isExemplaryProductEntrypoint(file), true);
+    }
+    for (const file of [
+      "apps/api/src/main-helper.ts",
+      "apps/web/src/scripts/run-next.ts",
+      "apps/web/scripts/run-next-copy.ts",
+      "packages/shared/src/nested/index.ts",
+    ]) {
+      assert.equal(isExemplaryProductEntrypoint(file), false);
+    }
+  });
+
   void it("assigns every governed repository role owner and rationale metadata", () => {
     const examples = [
       ["apps/api/src/service.ts", "maintained-product"],
       ["apps/api/src/main.ts", "externally-constrained-adapter"],
       ["apps/api/src/queue.adapter.ts", "externally-constrained-adapter"],
       ["apps/web/src/app/reports/page.tsx", "externally-constrained-adapter"],
+      ["apps/web/scripts/run-next.ts", "externally-constrained-adapter"],
       ["apps/api/src/service.test.ts", "test"],
       ["apps/api/src/__fixtures__/report.ts", "fixture"],
       ["prisma/generated/client.ts", "generated"],

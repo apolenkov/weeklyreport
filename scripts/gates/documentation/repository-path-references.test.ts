@@ -101,6 +101,27 @@ void test("a shorter marker does not close a longer fence", () => {
   );
 });
 
+void test("empty and punctuation-only inline spans terminate without references", () => {
+  assert.deepEqual(
+    validateRepositoryPathReferences(
+      [
+        {
+          path: OWNER,
+          content: "Empty: ``. Punctuation: `);`. Nested: `` `value` ``.",
+        },
+      ],
+      { version: 1, entries: [] },
+      () => false,
+    ),
+    {
+      sourceCount: 1,
+      referenceCount: 0,
+      missingCount: 0,
+      exceptionCount: 0,
+    },
+  );
+});
+
 void test("scans only Markdown files under docs", () => {
   assert.equal(isScannedMarkdown("docs/current.md"), true);
   assert.equal(isScannedMarkdown("docs/example.html"), false);

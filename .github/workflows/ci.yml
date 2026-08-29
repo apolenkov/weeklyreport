@@ -112,6 +112,7 @@ jobs:
       # the integration helper rejects accidental same-target configuration.
       DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_generate_only
       E2E_DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_e2e
+      API_HOST: 127.0.0.1
       NODE_ENV: test
       REDIS_HOST: localhost
       REDIS_PORT: "6379"
@@ -197,6 +198,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_generate_only
       E2E_DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_e2e
+      API_HOST: 127.0.0.1
       NODE_ENV: test
       REDIS_HOST: localhost
       REDIS_PORT: "6379"
