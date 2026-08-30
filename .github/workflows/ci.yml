@@ -355,8 +355,7 @@ jobs:
       - name: Verify production image release identity
         run: |
           for service in backup migrate api web; do
-            image_id="$(docker compose -f docker-compose.prod.yml images -q "$service")"
-            test -n "$image_id"
-            revision="$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$image_id")"
+            image_ref="customreport-${service}:${OTEL_SERVICE_VERSION}"
+            revision="$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$image_ref")"
             test "$revision" = "$OTEL_SERVICE_VERSION"
           done

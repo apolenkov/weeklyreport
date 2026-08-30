@@ -12,6 +12,10 @@ RUN turbo prune @customreport/web --docker
 # Stage 3: Install deps (devDeps intact — used for dev hot-reload)
 FROM base AS installer
 WORKDIR /app
+# Docker build steps have no TTY. Keep pnpm deterministic after the pruned
+# manifests are overlaid with the full source tree instead of letting it ask
+# whether an existing modules directory may be refreshed.
+ENV CI=true
 COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=pruner /app/out/json/ .

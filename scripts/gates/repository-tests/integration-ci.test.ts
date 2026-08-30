@@ -185,7 +185,7 @@ const assertDockerBuildFixture = (workflowText: string): void => {
   assert.match(job, /^\x20{6}CADDY_ACME_EMAIL: ci-build-only@example\.com$/m);
   assert.match(job, /^\x20{6}POSTGRES_DB: customreport$/m);
   assert.match(job, /^\x20{6}OTEL_SERVICE_VERSION: \$\{\{ github\.sha \}\}$/m);
-  assertRequiredStep(
+  const buildStep = assertRequiredStep(
     job,
     "Verify production Docker Compose builds",
     DOCKER_BUILD_RUN,
@@ -196,7 +196,17 @@ const assertDockerBuildFixture = (workflowText: string): void => {
   );
   assert.doesNotMatch(identityStep, /^\x20{8}if:/m);
   assert.doesNotMatch(identityStep, /^\x20{8}continue-on-error:/m);
+  assert.ok(
+    job.indexOf(buildStep) < job.indexOf(identityStep),
+    "release identity verification must run after the production build",
+  );
   assert.match(identityStep, /for service in backup migrate api web; do/u);
+  assert.match(
+    identityStep,
+    /image_ref="customreport-\$\{service\}:\$\{OTEL_SERVICE_VERSION\}"/u,
+  );
+  assert.match(identityStep, /docker image inspect/u);
+  assert.doesNotMatch(identityStep, /docker compose[^\n]* images -q/u);
   assert.match(identityStep, /org\.opencontainers\.image\.revision/u);
   assert.match(identityStep, /test "\$revision" = "\$OTEL_SERVICE_VERSION"/u);
 };
@@ -542,6 +552,30 @@ void test("docker-build fixture assertions reject a non-verifying image step", (
     "            true\n",
   );
   assert.throws(() => assertDockerBuildFixture(mutated), /revision/);
+});
+
+void test("docker-build fixture assertions reject an incomplete image set", () => {
+  const mutated = replaceInJob(
+    workflow,
+    "docker-build",
+    "for service in backup migrate api web; do",
+    "for service in migrate api web; do",
+  );
+  assert.throws(() => assertDockerBuildFixture(mutated), /service/);
+});
+
+void test("docker-build fixture assertions reject container-backed image lookup", () => {
+  const exactImageReference =
+    '            image_ref="customreport-$' +
+    "{service}:$" +
+    '{OTEL_SERVICE_VERSION}"\n';
+  const mutated = replaceInJob(
+    workflow,
+    "docker-build",
+    exactImageReference,
+    '            image_ref="$(docker compose -f docker-compose.prod.yml images -q "$service")"\n',
+  );
+  assert.throws(() => assertDockerBuildFixture(mutated), /image_ref/);
 });
 
 void test("API coverage config pins thresholds and critical exclusions", () => {

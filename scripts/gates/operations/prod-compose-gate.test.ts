@@ -304,6 +304,51 @@ void test("production dependency layers retain a shared pnpm BuildKit cache", ()
   }
 });
 
+void test("production build stages make pnpm explicitly non-interactive", () => {
+  for (const [path, dockerfile] of [
+    ["Dockerfile.api", apiDockerfile],
+    ["Dockerfile.web", webDockerfile],
+  ] as const) {
+    const installerStart = dockerfile.indexOf("FROM base AS installer");
+    const inheritedStageStart = dockerfile.indexOf(
+      "FROM installer AS",
+      installerStart,
+    );
+    assert.notEqual(
+      installerStart,
+      -1,
+      `${path} must define an installer stage`,
+    );
+    assert.notEqual(
+      inheritedStageStart,
+      -1,
+      `${path} must inherit its build stage from installer`,
+    );
+    const installer = dockerfile.slice(installerStart, inheritedStageStart);
+    assert.match(
+      installer,
+      /WORKDIR \/app\n(?:#[^\n]*\n)*ENV CI=true\n/u,
+      `${path} must set CI=true inside the non-interactive installer stage`,
+    );
+    assert.ok(
+      installer.indexOf("ENV CI=true") < installer.indexOf("pnpm install"),
+      `${path} must set CI=true before pnpm install`,
+    );
+    assert.doesNotMatch(
+      dockerfile.slice(0, installerStart),
+      /^ENV [^\n]*\bCI=/mu,
+      `${path} must not expose CI through the shared runtime base`,
+    );
+    const runnerStart = dockerfile.indexOf(" AS runner");
+    assert.notEqual(runnerStart, -1, `${path} must define an app runner stage`);
+    assert.doesNotMatch(
+      dockerfile.slice(runnerStart),
+      /^ENV [^\n]*\bCI=/mu,
+      `${path} must not expose CI in the production app runner`,
+    );
+  }
+});
+
 void test("release labels do not invalidate heavyweight runner layers", () => {
   const apiRunner = apiDockerfile.slice(
     apiDockerfile.indexOf("FROM base AS runner"),
