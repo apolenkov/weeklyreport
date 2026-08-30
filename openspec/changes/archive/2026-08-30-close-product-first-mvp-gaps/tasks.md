@@ -55,12 +55,12 @@
 
 - [x] 7.1 Run one disposable source-bound browser pass for lead, head, viewer, and admin at desktop, 375 px phone, Pixel-class phone, tablet, and landscape sizes; verify console/network logs, root/nested overflow, every scoped 44 px control, dialog focus return, history copy, compact submission guidance, and PDF-tab cleanup.
 - [x] 7.2 Update the six active mobile change task lists only from candidate-SHA browser and gate evidence; verify all six reach zero unchecked tasks and pass `openspec validate <change> --strict`.
-- [ ] 7.3 Sync/archive completed product-first and mobile changes in the supported OpenSpec workflow; verify `openspec list --json` reports zero non-deferred unchecked remainder and durable specs retain the accepted requirements.
+- [x] 7.3 Sync/archive completed product-first and mobile changes in the supported OpenSpec workflow; verify `openspec list --json` reports zero non-deferred unchecked remainder and durable specs retain the accepted requirements.
 
 ## 8. Exact-SHA verification and delivery
 
-- [ ] 8.1 Run `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm --filter @customreport/api test:integration`, explicit API/Web coverage commands, `pnpm build`, and `openspec validate --all --strict`; record each exact command, exit code, and candidate SHA.
-- [ ] 8.2 Create the candidate commit on `main`, prove tracked/untracked Git cleanliness, then repeat any gate whose evidence predates the commit; verify all final evidence names the commit SHA.
-- [ ] 8.3 Obtain a fresh independent read-only final-blob review and resolve every confirmed finding; verify a PASS verdict names the exact candidate SHA and causes a full affected-gate rerun after any edit.
-- [ ] 8.4 Push the authorized candidate to `origin/main`, read back remote SHA and required GitHub Actions jobs, and verify remote `main`, CI, local HEAD, and all evidence identify one SHA.
-- [ ] 8.5 Stop only processes/containers started for this work, remove temporary browser/catalogue caches and scratch files, preserve external curated evidence, and verify clean Git plus clean task-owned runtime state.
+- [x] 8.1 Run `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm --filter @customreport/api test:integration`, explicit API/Web coverage commands, `pnpm build`, and `openspec validate --all --strict`; record each exact command, exit code, and candidate SHA.
+- [x] 8.2 Create the candidate commit on `main`, prove tracked/untracked Git cleanliness, then repeat any gate whose evidence predates the commit; verify all final evidence names the commit SHA.
+- [x] 8.3 Obtain a fresh independent read-only final-blob review and resolve every confirmed finding; verify a PASS verdict names the exact candidate SHA and causes a full affected-gate rerun after any edit.
+- [x] 8.4 Push the authorized candidate to `origin/main`, read back remote SHA and required GitHub Actions jobs, and verify remote `main`, CI, local HEAD, and all evidence identify one SHA.
+- [x] 8.5 Stop only processes/containers started for this work, remove temporary browser/catalogue caches and scratch files, preserve external curated evidence, and verify clean Git plus clean task-owned runtime state.

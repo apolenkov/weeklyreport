@@ -96,11 +96,10 @@ re-validate target-period editability (`periodStatus` is `open` or
 `reopened`, and not `archived`) immediately before writing, not only from a
 check performed before the transaction opened, so a period that transitions
 to `published` or `archived` in the window between that earlier check and
-the transaction's write is rejected rather than written into.
-The transaction MUST lock, re-read, check, and write only target sections
-whose authors are present in the planned carry-over entries. Unrelated target
-sections, including submitted sections, MUST neither block the carry-over nor
-be mutated.
+the transaction's write is rejected rather than written into. The transaction
+MUST lock, re-read, check, and write only target sections whose authors are
+present in the planned carry-over entries. Unrelated target sections, including
+submitted sections, MUST neither block the carry-over nor be mutated.
 
 #### Scenario: the losing transaction returns the winner's rows
 
@@ -116,12 +115,11 @@ be mutated.
 
 - **WHEN** a carry-over transaction re-reads the target report's
   `periodStatus`/`archived` immediately before writing, and the period has
-  become `published` or `archived` since the pre-transaction editability
-  check
+  become `published` or `archived` since the pre-transaction editability check
 - **THEN** the transaction aborts without writing any execution, record, or
   carried item/decision row
-- **AND** the caller receives a conflict error rather than a partially
-  written state
+- **AND** the caller receives a conflict error rather than a partially written
+  state
 
 #### Scenario: an unrelated submitted target does not block a planned carry-over
 
