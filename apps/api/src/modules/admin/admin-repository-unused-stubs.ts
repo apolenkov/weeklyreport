@@ -6,7 +6,6 @@ type StubbedMethod =
   | "activateUser"
   | "archivePeriod"
   | "attachProductToGroup"
-  | "countActiveTelegramBindings"
   | "countPendingReopenRequests"
   | "createPeriodManual"
   | "deactivateUser"
@@ -41,7 +40,6 @@ export function unusedAdminRepositoryStubs(): AdminRepositoryUnusedStubs {
     attachProductToGroup: vi.fn((input) =>
       Promise.resolve({ id: STUB_ID, ...input, createdAt: STUB_DATE }),
     ),
-    countActiveTelegramBindings: vi.fn().mockResolvedValue(0),
     countPendingReopenRequests: vi.fn().mockResolvedValue(0),
     createPeriodManual: vi.fn((input) =>
       Promise.resolve({ id: STUB_ID, ...input }),

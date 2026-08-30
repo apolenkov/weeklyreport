@@ -95,7 +95,6 @@ function WeeklyReportHeader({
         {documentActionsLeading ?? (
           <ToolbarExportControl
             canExportPdf={page.canExportPdf}
-            showComingSoon={page.showLeadExportComingSoon}
             reportId={page.reportId}
             periodStatus={page.periodStatus}
           />

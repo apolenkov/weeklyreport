@@ -1,8 +1,4 @@
-import {
-  adminReminderRuleSchema,
-  reminderPolicySchema,
-} from "@customreport/shared";
-import { TRPCError } from "@trpc/server";
+import { reminderPolicySchema } from "@customreport/shared";
 import { z } from "zod";
 
 import type { ReminderAdminService } from "../../../../modules/admin/index.js";
@@ -15,31 +11,6 @@ import {
 export interface AdminReminderPoliciesDeps {
   readonly reminderAdminService: ReminderAdminService;
 }
-
-// Rules are scheduler-derived from ReminderPolicy; mutation is blocked.
-const saveReminderRule = adminProcedure
-  .input(adminReminderRuleSchema)
-  .use(captureMutationAuditInputMiddleware)
-  .mutation(() => {
-    throw new TRPCError({
-      code: "METHOD_NOT_SUPPORTED",
-      message:
-        "Per-period reminder rules are read-only; they derive from reminder policies. Use admin.savePolicy instead.",
-    });
-  });
-
-const deleteReminderRule = adminProcedure
-  .input(z.object({ ruleId: z.uuid() }))
-  .use(captureMutationAuditInputMiddleware)
-  .mutation(() => {
-    // Rules may disappear only as part of permanent policy removal, which
-    // deletes the policy and its derived rows as one domain operation.
-    throw new TRPCError({
-      code: "METHOD_NOT_SUPPORTED",
-      message:
-        "Per-period reminder rules are read-only; remove their reminder policy instead.",
-    });
-  });
 
 function buildListPolicies(deps: AdminReminderPoliciesDeps) {
   return adminProcedure.query(async () => {
@@ -100,10 +71,8 @@ export function createAdminReminderPoliciesProcedures(
   deps: AdminReminderPoliciesDeps,
 ) {
   return {
-    saveReminderRule,
     listPolicies: buildListPolicies(deps),
     savePolicy: buildSavePolicy(deps),
     removePolicy: buildRemovePolicy(deps),
-    deleteReminderRule,
   };
 }

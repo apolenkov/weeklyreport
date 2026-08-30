@@ -1,14 +1,8 @@
 import type { UserSession } from "@customreport/shared";
 
 // Prisma where fragment for per-role group visibility. Always a plain object
-// (safe to spread). project + useExplicitGroupProducts routes via GroupProduct
-// M:M join; default is lead.reportingGroupId.
+// (safe to spread). Project ownership uses the explicit GroupProduct M:M edge.
 export type ScopeTarget = "user" | "reportSection" | "project";
-
-export interface GroupScopeOptions {
-  // Only for target==='project'; defaults false (lead.reportingGroupId path).
-  useExplicitGroupProducts?: boolean;
-}
 
 type GroupScopeSession = Pick<
   UserSession,
@@ -18,7 +12,6 @@ type GroupScopeSession = Pick<
 export function groupScopeFilter(
   session: GroupScopeSession,
   target: ScopeTarget,
-  options: GroupScopeOptions = {},
 ): Record<string, unknown> {
   if (session.role === "admin") return {};
 
@@ -34,11 +27,8 @@ export function groupScopeFilter(
     case "reportSection":
       return { author: { reportingGroupId: { in: groupIds } } };
     case "project":
-      if (options.useExplicitGroupProducts) {
-        // M:M join: product in scope if any GroupProduct row is visible.
-        return { groupProducts: { some: { groupId: { in: groupIds } } } };
-      }
-      return { lead: { reportingGroupId: { in: groupIds } } };
+      // M:M join: product in scope if any GroupProduct row is visible.
+      return { groupProducts: { some: { groupId: { in: groupIds } } } };
   }
 }
 

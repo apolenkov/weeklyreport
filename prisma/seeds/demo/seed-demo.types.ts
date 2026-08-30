@@ -1,4 +1,4 @@
-// Tier dataset shapes for the demo seed — plain data, consumed by one shared
+// Dataset shapes for the demo seed — plain data, consumed by one shared
 // writer (`seed-demo.ts`). No Prisma calls live here.
 
 import type {
@@ -11,7 +11,7 @@ import type {
 import type { SEED_STAGES } from "../support/seed-constants.js";
 
 export type StageName = (typeof SEED_STAGES)[number]["name"];
-export type Tier = "small" | "huge";
+export type SeedDatasetProfile = "demo" | "stress";
 
 export interface DemoLead {
   id: string;
@@ -62,7 +62,7 @@ export interface DemoSection {
   decision?: DemoDecision;
 }
 
-export interface TierDataset {
+export interface SeedDataset {
   readonly leads: readonly DemoLead[];
   readonly products: readonly DemoProduct[];
   readonly sections: readonly DemoSection[];

@@ -127,6 +127,7 @@ describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races
           tag: "feature",
           workflowStatus: "in_progress" as const,
           carriedOver: true,
+          stageNames: ["Development"],
         },
       ],
       risks: [],
@@ -150,6 +151,7 @@ describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races
           tag: "feature",
           workflowStatus: "in_progress" as const,
           carriedOver: true,
+          stageNames: ["Development"],
         },
       ],
     };
@@ -499,6 +501,7 @@ describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races
           tag: "feature",
           workflowStatus: "in_progress" as const,
           carriedOver: true,
+          stageNames: ["Development"],
         },
       ],
       risks: [],
@@ -590,6 +593,7 @@ describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races
           tag: "feature",
           workflowStatus: "in_progress" as const,
           carriedOver: true,
+          stageNames: ["Development"],
         },
       ],
     };
@@ -638,6 +642,7 @@ describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races
           tag: "feature",
           workflowStatus: "in_progress" as const,
           carriedOver: true,
+          stageNames: ["Development"],
         },
       ],
     };

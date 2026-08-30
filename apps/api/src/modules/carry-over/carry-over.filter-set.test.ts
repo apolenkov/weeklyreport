@@ -44,6 +44,7 @@ const sourceSection: ReportSectionReadModel = {
       tag: "feature",
       workflowStatus: "in_progress",
       carriedOver: false,
+      stageNames: ["Development"],
     },
     {
       id: "ffffffff-ffff-4fff-8fff-ffffffffffff",
@@ -53,6 +54,7 @@ const sourceSection: ReportSectionReadModel = {
       tag: "support",
       workflowStatus: "done",
       carriedOver: false,
+      stageNames: ["Development"],
     },
   ],
   risks: [],
@@ -67,6 +69,7 @@ const sourceSection: ReportSectionReadModel = {
       // Decision.productId is a NOT-NULL product FK; a carried decision needs
       // a product to persist (and therefore to be counted).
       productId: "44444444-4444-4444-8444-444444444444",
+      stageNames: ["Development"],
     },
     {
       id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab",
@@ -75,6 +78,7 @@ const sourceSection: ReportSectionReadModel = {
       deadline: null,
       impact: "Already done",
       resolvedAt: new Date("2026-04-08T12:00:00.000Z"),
+      stageNames: ["Development"],
     },
   ],
   activities: [],
@@ -172,6 +176,8 @@ describe("CarryOverService — carry filter set (pin)", () => {
     workflowStatus: "in_progress",
     carriedOver: false,
     ...over,
+    stageNames:
+      over.stageNames ?? (over.activityId != null ? [] : ["Development"]),
   });
 
   const unresolvedDecision = (
@@ -185,6 +191,8 @@ describe("CarryOverService — carry filter set (pin)", () => {
     impact: "Follow up",
     resolvedAt: null,
     ...over,
+    stageNames:
+      over.stageNames ?? (over.activityId != null ? [] : ["Development"]),
   });
 
   function pinRepo(opts: {

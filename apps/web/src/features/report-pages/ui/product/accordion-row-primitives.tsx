@@ -1,7 +1,7 @@
 import { STATUS_BADGE, type StatusBadgeStatus } from "./accordion-tokens";
 
-// Gold rank marker in the dedicated left column — priorities-only hue
-// (status-color-semantics). Sitting in its own column keeps the gutter from
+// Gold rank marker in the dedicated left column uses a priorities-only hue.
+// Sitting in its own column keeps the gutter from
 // floating when an item is prioritized, and scales to several priorities.
 export function RankMark({ rank }: { readonly rank: number }) {
   return (

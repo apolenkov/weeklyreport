@@ -36,8 +36,8 @@ const publishedReportId = SEED_REPORTS.published.id;
 
 const CLOSING_ITEM_TAG = "feature";
 
-// The published week is deliberately minimal: everything green, one closing
-// item per product, so it reads as settled history next to the open period.
+// The published week is deliberately compact: everything green, one closing
+// item per product, so it reads as settled content next to the open period.
 async function seedProductRows(
   prisma: PrismaClient,
   cfg: LeadConfig,

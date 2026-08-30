@@ -61,6 +61,13 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
             sortOrder: 3,
           },
         ],
+        stageSet: [
+          {
+            stageId: "88888888-8888-4888-8888-888888888888",
+            stageName: "Development",
+            sortOrder: 3,
+          },
+        ],
       },
     ],
     items: [
@@ -70,6 +77,7 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
         projectId: PROJECT_ID,
         type: "current" as const,
         text: "Existing item",
+        stageNames: ["Development"],
         tag: "tag",
         workflowStatus: "in_progress" as const,
         carriedOver: false,
@@ -81,6 +89,7 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
         id: "66666666-6666-6666-6666-666666666666",
         stableId: "6a6a6a6a-6a6a-4a6a-8a6a-6a6a6a6a6a6a",
         text: "Existing decision",
+        stageNames: ["Development"],
         owner: "Owner",
         impact: "Impact",
       },
@@ -330,27 +339,6 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
     });
   });
 
-  it("toolbar renders the inert version-history ComingSoon control", async () => {
-    const { Wrapper } = buildHarness();
-    render(
-      <Wrapper>
-        <LeadForm />
-      </Wrapper>,
-    );
-
-    await screen.findByText("Autosaved");
-
-    const control = screen.getByTestId("version-coming-soon");
-    expect(control).toHaveAttribute(
-      "aria-label",
-      "Version history is coming soon",
-    );
-    expect(control).toHaveAttribute("aria-disabled", "true");
-    // No native title — aria-label + the amber ComingSoonBadge cover the name
-    // and the visual tooltip; a stacked title="Coming Soon" double-tooltips.
-    expect(control).not.toHaveAttribute("title");
-  });
-
   it("renders exactly one shared ReportToolbar container (head-toolbar-parity pin)", async () => {
     // Parity pin: lead form and head shell both render the shared
     // ReportToolbar — the head-side pin lives in head-report-shell.test.tsx.
@@ -492,10 +480,10 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
     expect(invalidateSpy.mock.calls.length).toBeGreaterThanOrEqual(4);
   });
 
-  it("draft: Submit is a document action; view mode + agent review are context controls", async () => {
+  it("draft: Submit is a document action and view mode is a context control", async () => {
     // report-toolbar-layout: the forward commit sits in the Document action
-    // row; the framing controls (view mode, agent review) sit in the Context
-    // control row. The commit copy is "Submit" (on the lead page a lead sees
+    // row; the framing control (view mode) sits in the Context control row.
+    // The commit copy is "Submit" (on the lead page a lead sees
     // only their own section, so "Section" added no information).
     const { Wrapper } = buildHarness();
     render(
@@ -519,18 +507,8 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
         name: /submit section|submit report/i,
       }),
     ).toBeNull();
-    // The inert document-action stubs reserve their top-row slot.
-    expect(
-      within(documentActions).getByTestId("version-coming-soon"),
-    ).toBeInTheDocument();
-    expect(
-      within(documentActions).getByTestId("lead-pdf-export-coming-soon"),
-    ).toBeInTheDocument();
     expect(
       within(contextControls).getByRole("link", { name: /slides/i }),
-    ).toBeInTheDocument();
-    expect(
-      within(contextControls).getByTestId("agent-review-coming-soon"),
     ).toBeInTheDocument();
   });
 
@@ -625,10 +603,9 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
     ).toBeInTheDocument();
   });
 
-  it("read-only past period: hides Save/Submit/Fill-From/+ Add but keeps the inert Coming-soon stubs", async () => {
+  it("read-only past period hides mutating document actions", async () => {
     // report-toolbar-layout: a read-only past period hides the real mutating
-    // document actions, while the deferred-feature inert stubs stay visible
-    // (deferred-feature-pattern) and the context row remains.
+    // document actions while the context row remains.
     const { Wrapper } = buildHarness({ byPeriodReadOnly: true });
     render(
       <Wrapper>
@@ -654,12 +631,6 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
     expect(
       within(documentActions).queryByRole("button", { name: "+ Add" }),
     ).toBeNull();
-    expect(
-      within(documentActions).getByTestId("version-coming-soon"),
-    ).toBeInTheDocument();
-    expect(
-      within(documentActions).getByTestId("lead-pdf-export-coming-soon"),
-    ).toBeInTheDocument();
     expect(
       screen.getByRole("group", { name: "Context controls" }),
     ).toBeInTheDocument();

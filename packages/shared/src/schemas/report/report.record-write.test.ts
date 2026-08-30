@@ -167,11 +167,11 @@ describe("record write stage requirements", () => {
     },
   );
 
-  it("keeps legacy stage-less records readable", () => {
+  it("rejects records without the current structured stage field", () => {
     const { stageNames: _itemStages, ...item } = validItem();
     const { stageNames: _riskStages, ...risk } = validRisk();
     const { stageNames: _decisionStages, ...decision } = validDecision();
-    const parsed = reportSectionReadModelSchema.parse({
+    const parsed = reportSectionReadModelSchema.safeParse({
       reportSectionId: uuid(),
       reportId: uuid(),
       authorId: uuid(),
@@ -184,9 +184,7 @@ describe("record write stage requirements", () => {
       risks: [risk],
       decisions: [decision],
     });
-    expect(parsed.items).toHaveLength(1);
-    expect(parsed.risks).toHaveLength(1);
-    expect(parsed.decisions).toHaveLength(1);
+    expect(parsed.success).toBe(false);
   });
 
   it("carries an optional human-readable live reporting-group label", () => {

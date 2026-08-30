@@ -41,8 +41,8 @@ authentication material, tokens, cookies, headers, or arbitrary request and
 response bodies. A failure reason MUST be a bounded safe classification and
 MUST NOT echo raw input or internal database metadata.
 Successful events MUST expose a null reason. Failed events MUST expose only a
-canonical tRPC failure code or the `LEGACY_FAILURE` classification used when an
-older row contains a non-canonical reason.
+canonical tRPC failure code. Rows with a non-canonical failure reason MUST be
+rejected at the response boundary rather than normalized or exposed.
 
 #### Scenario: A mutation succeeds with sensitive-looking input
 
@@ -60,13 +60,6 @@ older row contains a non-canonical reason.
   classification
 - **AND** neither the raw input nor internal database metadata appears in the
   audit stream, durable row, or Action Log response
-
-#### Scenario: An older failure row contains an arbitrary reason
-
-- **WHEN** `admin.actionLog.list` reads a pre-change failed event whose stored
-  reason is not a canonical failure code
-- **THEN** the response exposes `LEGACY_FAILURE` instead of the stored text
-- **AND** the original value remains inaccessible through the Action Log API
 
 ### Requirement: Each row has an accessible safe-detail disclosure
 

@@ -1,7 +1,5 @@
 "use client";
 
-import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
-
 import type { KpiData } from "../model/dashboard";
 
 interface KpiCardsProps {
@@ -52,7 +50,6 @@ function SubmissionsCard({
           <span className="text-[13px] text-[var(--color-muted-foreground)]">
             Last week
           </span>
-          <ComingSoonBadge />
           {pendingCount > 0 && (
             <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-status-at-risk-bg)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-status-at-risk-fg)]">
               {pendingCount} pending

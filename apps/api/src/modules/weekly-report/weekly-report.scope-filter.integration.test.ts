@@ -1,3 +1,4 @@
+import type { UserSession } from "@customreport/shared";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
@@ -8,7 +9,6 @@ import {
   disconnectTestPrisma,
 } from "../../test-utils/prisma-test-helper";
 import { WeeklyReportPrismaRepository } from "./weekly-report.prisma-repository";
-import type { WeeklyReportScopeSession } from "./weekly-report.service";
 
 // Portfolio ownership comes from GroupProduct (one group per product), not lead.reportingGroupId.
 describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integration)", () => {
@@ -29,9 +29,11 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
   function session(
     role: "head" | "lead",
     reportingGroupId: string,
-  ): WeeklyReportScopeSession {
+  ): UserSession {
     return {
       userId: "00000000-0000-4000-a000-0000000000e1",
+      email: "scoped-user@example.test",
+      name: "Scoped User",
       role,
       reportingGroupId,
     };
@@ -202,8 +204,10 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
       },
     });
 
-    const adminSession: WeeklyReportScopeSession = {
+    const adminSession: UserSession = {
       userId: "00000000-0000-4000-a000-0000000000e2",
+      email: "admin@example.test",
+      name: "Admin",
       role: "admin",
     };
     const result = expectDefined(
@@ -329,8 +333,10 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
     it("admin read yields no signal even when a cross-group edge exists", async () => {
       await createCrossGroupProduct();
 
-      const adminSession: WeeklyReportScopeSession = {
+      const adminSession: UserSession = {
         userId: "00000000-0000-4000-a000-0000000000e2",
+        email: "admin@example.test",
+        name: "Admin",
         role: "admin",
       };
       const result = expectDefined(

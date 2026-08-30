@@ -400,7 +400,7 @@ describe("PDF export JWT signing", () => {
     vi.stubEnv("PDF_EXPORT_JWT_SECRET", "");
     const service = createPdfExportService(createRepository(publishedReport));
 
-    expect(() => service.signPdfExportToken(reportId)).toThrow(
+    expect(() => service.signPdfExportToken(reportId, "requester-1")).toThrow(
       PdfExportDomainError,
     );
   });
@@ -410,7 +410,7 @@ describe("PDF export JWT signing", () => {
     vi.stubEnv("PDF_EXPORT_JWT_SECRET", "seventeen-chars-x");
     const service = createPdfExportService(createRepository(publishedReport));
 
-    expect(() => service.signPdfExportToken(reportId)).toThrow(
+    expect(() => service.signPdfExportToken(reportId, "requester-1")).toThrow(
       PdfExportDomainError,
     );
   });
@@ -427,7 +427,7 @@ describe("PDF export JWT signing", () => {
   it("signPdfExportToken produces a JWT carrying claim {reportId} and exp ≤ 5min", () => {
     const service = createPdfExportService(createRepository(publishedReport));
     const before = Math.floor(Date.now() / 1000);
-    const token = service.signPdfExportToken(reportId);
+    const token = service.signPdfExportToken(reportId, "requester-1");
     const after = Math.floor(Date.now() / 1000);
 
     expect(token).toMatch(/^eyJ/); // JWT header prefix

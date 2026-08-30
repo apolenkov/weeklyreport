@@ -1,14 +1,6 @@
 import type { Queue } from "bullmq";
 
-const QUEUE_NAMES = [
-  "email-reminder",
-  "pdf-export",
-  // telegram-outbound is seeds-only until the bot activates. Its handle exists
-  // now so the admin smoke-test enqueue and the DLQ monitor share one
-  // connection the moment the feature turns on.
-  // TODO(activate-telegram-bot): Remove the seed-only qualification on activation.
-  "telegram-outbound",
-] as const;
+const QUEUE_NAMES = ["email-reminder", "pdf-export"] as const;
 type QueueName = (typeof QUEUE_NAMES)[number];
 
 // Provides named access to the handles BullModule already owns, so inspectors

@@ -49,7 +49,7 @@ export const SEED_REPORTING_GROUPS: readonly SeedReportingGroup[] = [
 ] as const;
 
 // Names are surname-first ФИО with real parts; `name` is the composed display
-// value and the surname initials match the legacy abbreviated strings
+// value and the surname initials match the compact display form
 // («Антон К.» → Климов Антон …). `position` is the admin-maintained HR title.
 export const SEED_USERS: readonly SeedUser[] = [
   {

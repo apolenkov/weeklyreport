@@ -47,6 +47,7 @@ export const draftSection: ReportSectionReadModel = {
       tag: "feature",
       workflowStatus: "in_progress",
       carriedOver: false,
+      stageNames: ["Development"],
     },
   ],
   risks: [],

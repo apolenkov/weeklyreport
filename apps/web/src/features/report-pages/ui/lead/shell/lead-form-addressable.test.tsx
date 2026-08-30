@@ -57,6 +57,13 @@ function makeSection(
             sortOrder: 3,
           },
         ],
+        stageSet: [
+          {
+            stageId: "88888888-8888-4888-8888-888888888888",
+            stageName: "Development",
+            sortOrder: 3,
+          },
+        ],
       },
     ],
     items: [],
@@ -174,22 +181,6 @@ describe("LeadForm — addressable URLs", () => {
   });
 
   it("bare route + redirectToCanonical → router.replace(/lead/report/<activeReportId>)", async () => {
-    const proxy = buildHarness({});
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={proxy}>
-          <LeadForm redirectToCanonical />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
-    );
-    await waitFor(() =>
-      expect(replace).toHaveBeenCalledWith(`/lead/report/${ACTIVE_REPORT_ID}`),
-    );
-  });
-
-  it("bare route with legacy ?period= → param ignored, still redirects to canonical", async () => {
-    // Stale `?period=` bookmarks must not suppress the canonical redirect.
-    mockSearchParams = new URLSearchParams("period=2026-W15");
     const proxy = buildHarness({});
     render(
       <Wrapper>

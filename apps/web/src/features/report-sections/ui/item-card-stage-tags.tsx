@@ -12,8 +12,7 @@ export function ItemCardStageTagsRow(props: ItemCardStageTags) {
       title={stageTagsLabel}
     >
       {stageTags.length === 0 ? (
-        // Warning tokens match the risk row's "no-stage-warning" chip
-        // (at-risk bg/fg tokens) so a stage-less item reads as an anomaly.
+        // Warning tokens mark an invalid product row without a stage.
         <span className="inline-flex w-fit items-center rounded-[var(--radius-pill)] bg-[var(--color-status-at-risk-bg)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-status-at-risk-fg)]">
           No stage set
         </span>

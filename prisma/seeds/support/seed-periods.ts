@@ -133,7 +133,7 @@ function weekLabel(monday: Date): string {
 
 // Periods derive from an explicit reference instant (SEED_REFERENCE_DATE, or
 // today when unset as a documented dev convenience) so the same seed commit
-// cannot change identity across days or mid-campaign at a week boundary.
+// cannot change identity across days or at a week boundary.
 const NOW = seedReferenceDate();
 const ACTIVE_MONDAY = mondayOfWeek(NOW);
 const PREV_MONDAY = weekBefore(ACTIVE_MONDAY);

@@ -122,8 +122,7 @@ export function mapAdminSnapshot(api: AdminSnapshot): MappedAdminSnapshot {
     products: api.projects.map(mapProject),
     periods: api.periods.map(mapPeriod),
     reminders: api.reminderRules.map(mapReminder),
-    // Policies are emitted by `admin.snapshot`
-    // (default `[]` keeps older / in-memory test snapshots compatible).
+    // Policies are emitted by `admin.snapshot`.
     policies: api.policies.map(mapReminderPolicy),
   };
 }

@@ -7,6 +7,10 @@ import {
 import type { Prisma } from "@prisma/client";
 
 import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
+import {
+  type ReminderQueuePayload,
+  reminderQueuePayloadSchema,
+} from "./reminders-queue-payload.js";
 
 const ISO_DATE_LENGTH = 10;
 
@@ -39,7 +43,9 @@ const dbExecStatusToDomain: Record<
 
 export function toExecutionCreateData(
   execution: AdminReminderExecution,
+  queuePayload: ReminderQueuePayload,
 ): Prisma.ReminderExecutionUncheckedCreateInput {
+  const validatedPayload = reminderQueuePayloadSchema.parse(queuePayload);
   return {
     id: execution.id,
     ruleId: execution.ruleId,
@@ -48,19 +54,12 @@ export function toExecutionCreateData(
     status: execStatusToDb[execution.status],
     sentAt: execution.sentAt,
     error: execution.errorMessage,
+    queuePayload: validatedPayload,
   };
 }
 
-export function toExecutionUpdateData(execution: AdminReminderExecution): {
-  status: PrismaExecStatus;
-  sentAt: Date | null;
-  error: string | null;
-} {
-  return {
-    status: execStatusToDb[execution.status],
-    sentAt: execution.sentAt,
-    error: execution.errorMessage,
-  };
+export function toQueuePayload(value: unknown): ReminderQueuePayload | null {
+  return reminderQueuePayloadSchema.safeParse(value).data ?? null;
 }
 
 export function formatPeriodLabel(start: Date, end: Date): string {

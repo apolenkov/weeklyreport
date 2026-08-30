@@ -45,9 +45,9 @@ describe("groupScopeFilter", () => {
         author: { reportingGroupId: { in: [GROUP_A] } },
       });
     });
-    it("scopes project by lead.reportingGroupId", () => {
+    it("scopes project by explicit group membership", () => {
       expect(groupScopeFilter(s, "project")).toEqual({
-        lead: { reportingGroupId: { in: [GROUP_A] } },
+        groupProducts: { some: { groupId: { in: [GROUP_A] } } },
       });
     });
   });
@@ -64,9 +64,9 @@ describe("groupScopeFilter", () => {
         author: { reportingGroupId: { in: [GROUP_A] } },
       });
     });
-    it("scopes project by lead.reportingGroupId", () => {
+    it("scopes project by explicit group membership", () => {
       expect(groupScopeFilter(s, "project")).toEqual({
-        lead: { reportingGroupId: { in: [GROUP_A] } },
+        groupProducts: { some: { groupId: { in: [GROUP_A] } } },
       });
     });
   });
@@ -106,85 +106,63 @@ describe("groupScopeFilter", () => {
     });
   });
 
-  describe("head/lead with missing reportingGroupId (legacy JWT)", () => {
+  describe("head/lead with missing reportingGroupId", () => {
     it("head with no group -> zero-row filter (defensive)", () => {
       const s = session("head", { reportingGroupId: undefined });
       expect(groupScopeFilter(s, "reportSection")).toEqual({ id: { in: [] } });
     });
   });
 
-  describe("useExplicitGroupProducts", () => {
-    it("legacy path: omitting options returns lead.reportingGroupId.in", () => {
+  describe("project", () => {
+    it("filters head products via explicit group membership", () => {
       const s = session("head");
       expect(groupScopeFilter(s, "project")).toEqual({
-        lead: { reportingGroupId: { in: [GROUP_A] } },
+        groupProducts: { some: { groupId: { in: [GROUP_A] } } },
       });
     });
 
-    it("flag = false: explicit-off matches the legacy path", () => {
-      const s = session("head");
-      expect(
-        groupScopeFilter(s, "project", { useExplicitGroupProducts: false }),
-      ).toEqual({ lead: { reportingGroupId: { in: [GROUP_A] } } });
-    });
-
-    it("flag = true (head): filters via groupProducts.some.groupId.in", () => {
-      const s = session("head");
-      expect(
-        groupScopeFilter(s, "project", { useExplicitGroupProducts: true }),
-      ).toEqual({ groupProducts: { some: { groupId: { in: [GROUP_A] } } } });
-    });
-
-    it("flag = true (lead): same M:M fragment as head", () => {
+    it("filters lead products via explicit group membership", () => {
       const s = session("lead");
-      expect(
-        groupScopeFilter(s, "project", { useExplicitGroupProducts: true }),
-      ).toEqual({ groupProducts: { some: { groupId: { in: [GROUP_A] } } } });
+      expect(groupScopeFilter(s, "project")).toEqual({
+        groupProducts: { some: { groupId: { in: [GROUP_A] } } },
+      });
     });
 
-    it("flag = true (viewer multi-group): groupId.in includes all viewer groups", () => {
+    it("filters viewer products by every granted group", () => {
       const s = session("viewer", {
         reportingGroupId: undefined,
         viewerGroupAccess: [GROUP_A, GROUP_B],
       });
-      expect(
-        groupScopeFilter(s, "project", { useExplicitGroupProducts: true }),
-      ).toEqual({
+      expect(groupScopeFilter(s, "project")).toEqual({
         groupProducts: { some: { groupId: { in: [GROUP_A, GROUP_B] } } },
       });
     });
 
-    it("flag = true (admin): still returns {} (god-mode wins)", () => {
+    it("keeps admin unrestricted", () => {
       const s = session("admin");
-      expect(
-        groupScopeFilter(s, "project", { useExplicitGroupProducts: true }),
-      ).toEqual({});
+      expect(groupScopeFilter(s, "project")).toEqual({});
     });
 
-    it("flag = true (viewer with empty access): still returns the zero-row filter", () => {
+    it("returns the zero-row filter for viewer with empty access", () => {
       const s = session("viewer", {
         reportingGroupId: undefined,
         viewerGroupAccess: [],
       });
-      expect(
-        groupScopeFilter(s, "project", { useExplicitGroupProducts: true }),
-      ).toEqual({ id: { in: [] } });
+      expect(groupScopeFilter(s, "project")).toEqual({ id: { in: [] } });
     });
 
-    it("flag does not affect non-project targets (user)", () => {
+    it("keeps user scope group-based", () => {
       const s = session("head");
-      expect(
-        groupScopeFilter(s, "user", { useExplicitGroupProducts: true }),
-      ).toEqual({ reportingGroupId: { in: [GROUP_A] } });
+      expect(groupScopeFilter(s, "user")).toEqual({
+        reportingGroupId: { in: [GROUP_A] },
+      });
     });
 
-    it("flag does not affect non-project targets (reportSection)", () => {
+    it("keeps report section scope author-group-based", () => {
       const s = session("head");
-      expect(
-        groupScopeFilter(s, "reportSection", {
-          useExplicitGroupProducts: true,
-        }),
-      ).toEqual({ author: { reportingGroupId: { in: [GROUP_A] } } });
+      expect(groupScopeFilter(s, "reportSection")).toEqual({
+        author: { reportingGroupId: { in: [GROUP_A] } },
+      });
     });
   });
 });

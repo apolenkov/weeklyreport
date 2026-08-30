@@ -55,7 +55,7 @@ export function resolveDecisionFormSeed(
     owner: decision.owner,
     impact: decision.impact,
     deadline: decision.deadline ?? "",
-    stageNames: decision.stageNames ? [...decision.stageNames] : [],
+    stageNames: [...decision.stageNames],
   };
 }
 
@@ -103,7 +103,7 @@ export function buildActivityDecisionSave(args: {
     productName: name,
     activityId: args.activityId,
     activityName: name,
-    stageNames: undefined,
+    stageNames: [],
   };
 }
 
@@ -120,9 +120,6 @@ export function buildProductDecisionSave(args: {
     productId: args.parentId || "",
     productName: args.selectedProduct?.name ?? args.decision?.productName ?? "",
     activityId: null,
-    stageNames:
-      args.effectiveStageNames.length > 0
-        ? canonicalStageNames(args.effectiveStageNames)
-        : undefined,
+    stageNames: canonicalStageNames(args.effectiveStageNames),
   };
 }

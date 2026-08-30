@@ -54,6 +54,13 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
             sortOrder: 3,
           },
         ],
+        stageSet: [
+          {
+            stageId: "88888888-8888-4888-8888-888888888888",
+            stageName: "Development",
+            sortOrder: 3,
+          },
+        ],
       },
     ],
     items: [
@@ -63,6 +70,7 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
         projectId: PROJECT_ID,
         type: "current" as const,
         text: "Existing item",
+        stageNames: ["Development"],
         tag: "tag",
         workflowStatus: "in_progress" as const,
         carriedOver: false,
@@ -74,6 +82,7 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
         id: "66666666-6666-6666-6666-666666666666",
         stableId: "6a6a6a6a-6a6a-4a6a-8a6a-6a6a6a6a6a6a",
         text: "Existing decision",
+        stageNames: ["Development"],
         owner: "Owner",
         impact: "Impact",
       },

@@ -193,10 +193,7 @@ vi.mock("react", async () => {
 
 /* ---- Imports under test (after all vi.mock registrations) ---- */
 
-import HeadReportPresentPage from "../../../app/(app)/head/report/[reportId]/present/page";
-import LeadReportPreviewPage from "../../../app/(app)/lead/report/[reportId]/preview/page";
 import PublishedReportPage from "../../../app/(app)/reports/[reportId]/page";
-import PublishedReportPresentPage from "../../../app/(app)/reports/[reportId]/present/page";
 import PrintReportPage from "../../../app/print/[reportId]/page";
 
 /* ---- Helpers ---- */
@@ -227,37 +224,6 @@ const TEST_REPORT_ID = "test-report-001";
 
 /* ---- Published viewer ---- */
 
-describe("PublishedReportPage — agent-review placeholder", () => {
-  it("renders exactly one agent-review-coming-soon control", async () => {
-    const ui = (await PublishedReportPage({
-      params: paramsOf(TEST_REPORT_ID),
-      searchParams: searchParamsOf(),
-    })) as ReactElement;
-    render(ui);
-    const controls = screen.getAllByTestId("agent-review-coming-soon");
-    expect(controls).toHaveLength(1);
-  });
-
-  it("control has aria-disabled='true'", async () => {
-    const ui = (await PublishedReportPage({
-      params: paramsOf(TEST_REPORT_ID),
-      searchParams: searchParamsOf(),
-    })) as ReactElement;
-    render(ui);
-    const control = screen.getByTestId("agent-review-coming-soon");
-    expect(control).toHaveAttribute("aria-disabled", "true");
-  });
-
-  it("control carries the English copy 'Agent review'", async () => {
-    const ui = (await PublishedReportPage({
-      params: paramsOf(TEST_REPORT_ID),
-      searchParams: searchParamsOf(),
-    })) as ReactElement;
-    render(ui);
-    expect(screen.getByText("Agent review")).toBeInTheDocument();
-  });
-});
-
 // WeeklyReportPage owns the title, while the wrapper routes actions through
 // the context-controls slot; this keeps a single heading on screen.
 describe("PublishedReportPage — single title + header actions", () => {
@@ -283,15 +249,12 @@ describe("PublishedReportPage — single title + header actions", () => {
     const contextControls = screen.getByTestId(
       "weekly-report-context-controls",
     );
-    // The deferred Agent-review control remains visible without an archive link.
+    // The context toolbar has no archive link in the current report surface.
     expect(
       within(contextControls).queryByRole("link", {
         name: /back to archive/i,
       }),
     ).not.toBeInTheDocument();
-    expect(
-      within(contextControls).getByTestId("agent-review-coming-soon"),
-    ).toBeInTheDocument();
   });
 
   // Presentation is selected through slides mode and PDF export is the only
@@ -308,68 +271,6 @@ describe("PublishedReportPage — single title + header actions", () => {
     expect(
       screen.queryByRole("link", { name: /print/i }),
     ).not.toBeInTheDocument();
-  });
-});
-
-/* ---- Present routes — 308 redirect to slides mode ---- */
-
-describe("HeadReportPresentPage — 308 redirect to slides", () => {
-  it("permanentRedirects to /head/report/[id]?mode=slides", async () => {
-    permanentRedirect.mockClear();
-    await expect(
-      HeadReportPresentPage({ params: paramsOf(TEST_REPORT_ID) }),
-    ).rejects.toThrow(
-      `NEXT_PERMANENT_REDIRECT:/head/report/${TEST_REPORT_ID}?mode=slides`,
-    );
-    expect(permanentRedirect).toHaveBeenCalledWith(
-      `/head/report/${TEST_REPORT_ID}?mode=slides`,
-    );
-  });
-});
-
-describe("PublishedReportPresentPage — 308 redirect to slides", () => {
-  it("permanentRedirects to /reports/[id]?mode=slides", async () => {
-    permanentRedirect.mockClear();
-    await expect(
-      PublishedReportPresentPage({ params: paramsOf(TEST_REPORT_ID) }),
-    ).rejects.toThrow(
-      `NEXT_PERMANENT_REDIRECT:/reports/${TEST_REPORT_ID}?mode=slides`,
-    );
-    expect(permanentRedirect).toHaveBeenCalledWith(
-      `/reports/${TEST_REPORT_ID}?mode=slides`,
-    );
-  });
-});
-
-/* ---- Lead self-preview ---- */
-
-describe("LeadReportPreviewPage — agent-review placeholder", () => {
-  it("renders exactly one agent-review-coming-soon control", async () => {
-    const ui = (await LeadReportPreviewPage({
-      params: paramsOf(TEST_REPORT_ID),
-    })) as ReactElement;
-    render(ui);
-    const controls = screen.getAllByTestId("agent-review-coming-soon");
-    expect(controls).toHaveLength(1);
-  });
-
-  it("control has aria-disabled='true'", async () => {
-    const ui = (await LeadReportPreviewPage({
-      params: paramsOf(TEST_REPORT_ID),
-    })) as ReactElement;
-    render(ui);
-    expect(screen.getByTestId("agent-review-coming-soon")).toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
-  });
-
-  it("control carries the English copy 'Agent review'", async () => {
-    const ui = (await LeadReportPreviewPage({
-      params: paramsOf(TEST_REPORT_ID),
-    })) as ReactElement;
-    render(ui);
-    expect(screen.getByText("Agent review")).toBeInTheDocument();
   });
 });
 
@@ -393,11 +294,10 @@ describe("PrintReportPage — PDF-worker-vs-human server gate", () => {
       params: paramsOf(TEST_REPORT_ID),
     })) as ReactElement;
     render(ui);
-    // The template renders the report header — and zero agent-review controls.
+    // The template renders the report header.
     expect(
       screen.getByText(/core development — status report/i),
     ).toBeInTheDocument();
-    expect(screen.queryAllByTestId("agent-review-coming-soon")).toHaveLength(0);
     expect(permanentRedirect).not.toHaveBeenCalled();
     expect(redirect).not.toHaveBeenCalled();
   });

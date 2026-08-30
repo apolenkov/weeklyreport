@@ -75,7 +75,7 @@ export async function queryDraftSectionsForDispatch(
   session: UserSession,
   reportId: string,
   leadId?: string,
-): Promise<{ email: string; notificationOptOut: boolean }[]> {
+): Promise<{ email: string; name: string; notificationOptOut: boolean }[]> {
   const sections = await prisma.reportSection.findMany({
     where: {
       reportId,
@@ -86,7 +86,7 @@ export async function queryDraftSectionsForDispatch(
       ...groupScopeFilter(session, "reportSection"),
     },
     include: {
-      author: { select: { email: true, notificationOptOut: true } },
+      author: { select: { email: true, name: true, notificationOptOut: true } },
     },
   });
   return sections.map((s) => s.author);

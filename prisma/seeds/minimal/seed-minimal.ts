@@ -16,9 +16,9 @@ import pg from "pg";
 import { assertE2eRuntimeDestructive } from "../../guards/_destructive-guard.js";
 import { isEntrypoint } from "../../guards/_entrypoint.js";
 import { requireEnv } from "../../guards/_require-env.js";
+import { DEMO_LEADS, DEMO_PRODUCTS } from "../demo/seed-demo.demo-cast.js";
 import { seedScaffold } from "../demo/seed-demo.scaffold.js";
-import { SMALL_LEADS, SMALL_PRODUCTS } from "../demo/seed-demo.small-cast.js";
-import type { TierDataset } from "../demo/seed-demo.types.js";
+import type { SeedDataset } from "../demo/seed-demo.types.js";
 import { wipe } from "../demo/seed-demo.wipe.js";
 import {
   LEAD_MARIA_ID,
@@ -42,14 +42,14 @@ const requireFirst = <T>(values: readonly T[], label: string): T => {
 };
 
 export async function seedMinimal(prisma: PrismaClient): Promise<void> {
-  const lead = requireFirst(SMALL_LEADS, "one canonical lead");
+  const lead = requireFirst(DEMO_LEADS, "one canonical lead");
   const nonOwnerLead = requireFirst(
-    SMALL_LEADS.filter(({ id }) => id === LEAD_MARIA_ID),
+    DEMO_LEADS.filter(({ id }) => id === LEAD_MARIA_ID),
     "one canonical non-owner lead",
   );
-  const product = requireFirst(SMALL_PRODUCTS, "one canonical product");
+  const product = requireFirst(DEMO_PRODUCTS, "one canonical product");
   const stage = requireFirst(SEED_STAGES, "one canonical stage");
-  const dataset: TierDataset = {
+  const dataset: SeedDataset = {
     leads: [lead, nonOwnerLead],
     products: [{ ...product, leadId: lead.id }],
     sections: [],

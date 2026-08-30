@@ -35,6 +35,7 @@ export function makeWeeklyReportData(
         readonly tag: string;
         readonly workflowStatus:
           "in_progress" | "done" | "blocked" | "canceled" | "not_started";
+        readonly stageNames: readonly string[];
         readonly carriedOver: boolean;
         readonly completed: boolean;
       }[];
@@ -46,6 +47,10 @@ export function makeWeeklyReportData(
         readonly activityName: string;
         readonly status: TrafficLightStatus | null;
         readonly note?: string | null;
+        readonly linkedProducts?: readonly {
+          readonly productId: string;
+          readonly productName: string;
+        }[];
       }[];
     }[];
   },
@@ -69,7 +74,14 @@ export function makeWeeklyReportData(
         leadIds: ["5ccd4f78-2a3d-58e4-889a-e9ad6be0b941"],
       },
     ],
-    leadSections: overrides?.leadSections ?? [
+    leadSections: overrides?.leadSections?.map((section) => ({
+      ...section,
+      activities:
+        section.activities?.map((activity) => ({
+          ...activity,
+          linkedProducts: activity.linkedProducts ?? [],
+        })) ?? [],
+    })) ?? [
       {
         reportSectionId: "22222222-2222-4222-8222-aaaaaaaaaaa1",
         reportId: REPORT_ID,
@@ -91,6 +103,7 @@ export function makeWeeklyReportData(
             text: "Done task A",
             tag: "Dev",
             workflowStatus: "done",
+            stageNames: ["Development"],
             carriedOver: false,
             completed: true,
           },
@@ -98,6 +111,7 @@ export function makeWeeklyReportData(
         risks: [],
         decisions: [],
         priorities: [],
+        activities: [],
       },
     ],
     escalations: [],

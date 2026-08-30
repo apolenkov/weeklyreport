@@ -40,7 +40,7 @@ conflicts MUST use the same refetch/reload-message path as autosave.
 - **THEN** the hook invokes the shared conflict handler
 - **AND** it does not show the generic fill-from failure toast
 
-### Requirement: Write action side effects remain behavior-compatible
+### Requirement: Write action side effects preserve current invariants
 
 The write-actions hook MUST preserve the existing invalidation families, dialog
 state transitions, inline reopen error handling, and toast strings for submit,

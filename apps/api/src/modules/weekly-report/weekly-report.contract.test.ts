@@ -1,4 +1,5 @@
 import {
+  type UserSession,
   weeklyReportGetResponseSchema,
   type WeeklyReportReadModel,
   weeklyReportReadModelSchema,
@@ -22,6 +23,13 @@ const activeReportId = "22222222-2222-4222-8222-222222222222";
 const sectionId = "33333333-3333-4333-8333-333333333333";
 const authorId = "44444444-4444-4444-8444-444444444444";
 const projectId = "55555555-5555-4555-8555-555555555555";
+const caller: UserSession = {
+  userId: authorId,
+  email: "lead@example.test",
+  name: "Lead A",
+  role: "lead",
+  reportingGroupId: "77777777-7777-4777-8777-777777777777",
+};
 
 function makeWeeklyReport(
   overrides: Partial<WeeklyReportReadModel> = {},
@@ -74,6 +82,7 @@ function makeWeeklyReport(
             tag: "dev",
             workflowStatus: "done",
             carriedOver: false,
+            stageNames: ["Development"],
           },
         ],
         risks: [],
@@ -87,7 +96,6 @@ function makeWeeklyReport(
 
 function createRepository(
   reports: Map<string, WeeklyReportReadModel>,
-  activeId: string | null = null,
   currentEditableId: string | null = null,
 ): WeeklyReportRepository {
   return {
@@ -99,10 +107,10 @@ function createRepository(
         crossGroup: null,
       });
     },
-    getActiveReportId() {
-      return Promise.resolve(activeId);
-    },
     getCurrentEditableId() {
+      return Promise.resolve(currentEditableId);
+    },
+    getCurrentEditableIdForSession() {
       return Promise.resolve(currentEditableId);
     },
     getLatestPublishedNonArchivedId() {
@@ -126,7 +134,7 @@ describe("WeeklyReportService — contract tests", () => {
     const reports = new Map([[reportId, report]]);
     const service = new WeeklyReportService(createRepository(reports));
 
-    const result = await service.getWeeklyReport(reportId);
+    const result = await service.getWeeklyReport(reportId, caller);
 
     expect(result.status).toBe("active");
     if (result.status !== "active") throw new Error("expected active");
@@ -156,11 +164,11 @@ describe("WeeklyReportService — contract tests", () => {
     const service = new WeeklyReportService(createRepository(reports));
 
     await expect(
-      service.getWeeklyReport("99999999-9999-4999-8999-999999999999"),
+      service.getWeeklyReport("99999999-9999-4999-8999-999999999999", caller),
     ).rejects.toThrow(WeeklyReportDomainError);
 
     await expect(
-      service.getWeeklyReport("99999999-9999-4999-8999-999999999999"),
+      service.getWeeklyReport("99999999-9999-4999-8999-999999999999", caller),
     ).rejects.toThrow("not found");
   });
 
@@ -171,7 +179,7 @@ describe("WeeklyReportService — contract tests", () => {
       createRepository(reports, activeReportId),
     );
 
-    const result = await service.getWeeklyReport();
+    const result = await service.getWeeklyReport(undefined, caller);
 
     expect(result.status).toBe("active");
     if (result.status !== "active") throw new Error("expected active");
@@ -182,7 +190,7 @@ describe("WeeklyReportService — contract tests", () => {
     // no-period → HTTP 200; React Query does not retry 3× as it would on throw.
     const service = new WeeklyReportService(createRepository(new Map(), null));
 
-    const result = await service.getWeeklyReport();
+    const result = await service.getWeeklyReport(undefined, caller);
 
     // crossGroup is an internal signal always null on the no-period path.
     expect(result).toEqual({
@@ -221,7 +229,7 @@ describe("WeeklyReportService — contract tests", () => {
     const reports = new Map([[reportId, report]]);
     const service = new WeeklyReportService(createRepository(reports));
 
-    const result = await service.getWeeklyReport(reportId);
+    const result = await service.getWeeklyReport(reportId, caller);
 
     expect(result.status).toBe("active");
     if (result.status !== "active") throw new Error("expected active");
@@ -258,7 +266,7 @@ describe("WeeklyReportService — contract tests", () => {
     const reports = new Map([[reportId, report]]);
     const service = new WeeklyReportService(createRepository(reports));
 
-    const result = await service.getWeeklyReport(reportId);
+    const result = await service.getWeeklyReport(reportId, caller);
 
     expect(result.status).toBe("active");
     if (result.status !== "active") throw new Error("expected active");
@@ -277,7 +285,7 @@ describe("WeeklyReportService — contract tests", () => {
     const reports = new Map([[reportId, report]]);
     const service = new WeeklyReportService(createRepository(reports));
 
-    const result = await service.getWeeklyReport(reportId);
+    const result = await service.getWeeklyReport(reportId, caller);
 
     expect(result.status).toBe("active");
     if (result.status !== "active") throw new Error("expected active");
@@ -290,7 +298,7 @@ describe("WeeklyReportService — contract tests", () => {
     const reports = new Map([[reportId, report]]);
     const service = new WeeklyReportService(createRepository(reports));
 
-    const result = await service.getWeeklyReport(reportId);
+    const result = await service.getWeeklyReport(reportId, caller);
 
     const parsed = weeklyReportGetResponseSchema.parse(result);
     expect(parsed.status).toBe("active");

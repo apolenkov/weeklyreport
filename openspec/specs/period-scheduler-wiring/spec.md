@@ -43,7 +43,7 @@ no silent null-object or no-op default: the scheduler audit dependency and
 the `PeriodService` reopen-policy and analytics-cache-invalidation dependencies.
 A missing dependency MUST fail loud at composition time rather than degrade to
 a no-op at runtime. `PeriodService` MUST NOT require a repository read or
-collaborator whose only purpose is deferred publish ingestion.
+collaborator for publish ingestion; publishing has no ingestion dependency.
 
 #### Scenario: A scheduler cannot be constructed without an audit sink
 
@@ -68,11 +68,11 @@ collaborator whose only purpose is deferred publish ingestion.
 - **AND** a future refactor cannot silently drop cache invalidation after a
   publish
 
-#### Scenario: Publish has no ingestion-only section-id dependency
+#### Scenario: Publish has no ingestion section-id dependency
 
 - **WHEN** `PeriodService.publishPeriod` runs its post-publish side effects
 - **THEN** its repository port exposes no `listSectionIds` method used only for
-  deferred ingestion
+  ingestion
 - **AND** the service performs no section-id read after the publish transaction
 
 ### Requirement: Audit Sink Is Wired At The Composition Root

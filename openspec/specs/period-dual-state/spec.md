@@ -201,32 +201,14 @@ backfill for any absent field.
 - **AND** the restore does not derive `status` from `periodState` (which would
   flip it back to `"draft"`)
 
-#### Scenario: A legacy snapshot restores to a consistent row
-
-- **WHEN** a snapshot that predates the extended field set is restored
-- **THEN** absent lifecycle fields are filled from the legacy-tuple backfill
-  (e.g. `archived` ? `archived` : `status="published"` ? `published` : `open`)
-- **AND** the restored row is internally consistent, never `status="published"`
-  with a stale default `periodState="open"`
-
 ### Requirement: Current period wire models require a complete consistent lifecycle tuple
 
-The current `reportPeriodSchema` and `periodReadModelSchema` surfaces MUST require the canonical state, legacy status and archived fields, period status, audit flags, and applicable timestamps, and MUST reject every contradictory tuple. Legacy snapshot compatibility MUST use a separately named versioned decoder that returns a value accepted by the strict current schema.
+The current `reportPeriodSchema` and `periodReadModelSchema` surfaces MUST require the canonical state, legacy status and archived fields, period status, audit flags, and applicable timestamps, and MUST reject every contradictory tuple.
 
 #### Scenario: Current payload omits a lifecycle field
 
 - **WHEN** a current report-period or period-read-model payload omits any governed lifecycle field
 - **THEN** shared schema parsing fails instead of manufacturing a default or falling back to the legacy tuple
-
-#### Scenario: Supported legacy snapshot is decoded
-
-- **WHEN** an explicitly versioned supported legacy snapshot omits fields that did not exist in that version
-- **THEN** the legacy decoder derives one complete consistent tuple and the result passes the strict current schema
-
-#### Scenario: Legacy snapshot is ambiguous or contradictory
-
-- **WHEN** a legacy payload cannot determine exactly one valid current lifecycle tuple
-- **THEN** decoding fails with a typed incompatibility error and no current read model is produced
 
 ### Requirement: Lifecycle narrowing is exhaustive and fail-closed
 

@@ -1,18 +1,12 @@
 import {
-  adminTestTelegramSendSchema,
   appSettingsUpdateSchema,
   omitUndefinedProperties,
   organizationUpdateSchema,
 } from "@customreport/shared";
 import { TRPCError } from "@trpc/server";
-import type { Queue } from "bullmq";
 
-import { isTelegramConfigured } from "../../../../lib/env.js";
 import type { SnapshotAdminService } from "../../../../modules/admin/index.js";
 import type { OrganizationService } from "../../../../modules/organization/index.js";
-import { TELEGRAM_OUTBOUND_JOB_OPTS } from "../../../../modules/telegram/index.js";
-import { captureJobTraceContext } from "../../../bullmq/worker-observability.js";
-import type { EnvConfig } from "../../../config/env.schema";
 import { clearOrgCache } from "../../trpc.context.js";
 import { mapDomainError } from "../../trpc.error-mapper.js";
 import {
@@ -22,10 +16,6 @@ import {
 
 export interface AdminSettingsDeps {
   readonly snapshotAdminService: SnapshotAdminService;
-  // Validated env from main.ts — not raw process.env.
-  readonly env: EnvConfig;
-  // Optional for `{}` fixtures; undefined throws INTERNAL_SERVER_ERROR, not 500.
-  readonly telegramOutboundQueue?: Queue;
   // Optional for role-coverage `{}` deps that never hit org.* paths.
   readonly organizationService?: OrganizationService;
 }
@@ -43,16 +33,6 @@ function requireOrganizationService(
     });
   }
   return deps.organizationService;
-}
-
-function requireTelegramOutboundQueue(deps: AdminSettingsDeps): Queue {
-  if (!deps.telegramOutboundQueue) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Telegram outbound queue is not wired into the tRPC router.",
-    });
-  }
-  return deps.telegramOutboundQueue;
 }
 
 function createSnapshotSettingsProcedures(deps: AdminSettingsDeps) {
@@ -79,40 +59,6 @@ function createSnapshotSettingsProcedures(deps: AdminSettingsDeps) {
           return await deps.snapshotAdminService.updateSettings(
             omitUndefinedProperties(input),
           );
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
-  };
-}
-
-function createTelegramSettingsProcedures(deps: AdminSettingsDeps) {
-  return {
-    // Active only when TG_BOT_TOKEN is set AND ≥1 active TelegramBinding.
-    integrationsStatus: adminProcedure.query(async () => {
-      try {
-        const configured = isTelegramConfigured(deps.env);
-        return await deps.snapshotAdminService.integrationsStatus(configured);
-      } catch (error) {
-        throw mapDomainError(error);
-      }
-    }),
-    // Retry lives on job options so producers stay free of queue semantics.
-    testTelegramSend: adminProcedure
-      .input(adminTestTelegramSendSchema)
-      .use(captureMutationAuditInputMiddleware)
-      .mutation(async ({ input, ctx }) => {
-        try {
-          const job = await requireTelegramOutboundQueue(deps).add(
-            "telegram-test",
-            {
-              chatId: input.chatId,
-              text: input.text,
-              ...captureJobTraceContext(ctx.correlationId),
-            },
-            { ...TELEGRAM_OUTBOUND_JOB_OPTS },
-          );
-          return { jobId: job.id ?? null };
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -159,7 +105,6 @@ function createOrganizationProcedures(deps: AdminSettingsDeps) {
 export function createAdminSettingsProcedures(deps: AdminSettingsDeps) {
   return {
     ...createSnapshotSettingsProcedures(deps),
-    ...createTelegramSettingsProcedures(deps),
     ...createOrganizationProcedures(deps),
   };
 }

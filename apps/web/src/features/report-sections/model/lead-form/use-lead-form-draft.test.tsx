@@ -146,6 +146,7 @@ describe("useLeadFormDraft merge routing", () => {
         text: "Quick item",
         author: "Test Lead",
         priorityRank: null,
+        stageNames: [],
       });
     });
 

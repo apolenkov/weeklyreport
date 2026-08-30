@@ -2,10 +2,6 @@
 
 import { webEnv } from "../../lib/runtime/web-env";
 import { DevRoleSwitcher } from "../auth-runtime/role-switcher";
-import {
-  LanguageComingSoonControl,
-  ThemeComingSoonControl,
-} from "./coming-soon-controls";
 import { NavLogoutButton } from "./nav-logout-button";
 
 const RIGHT_RAIL_CLASS =
@@ -44,7 +40,7 @@ export function NavRightRail({
   readonly hasUser: boolean;
 }) {
   // Actions-only rail. Identity lives in the left home mark + xl text, so the
-  // center nav keeps stable space. Language, Theme and Logout stay grouped.
+  // Keep the rail limited to actions that are available in the current MVP.
   return (
     <div className={RIGHT_RAIL_CLASS}>
       {sessionLoading ? (
@@ -52,8 +48,6 @@ export function NavRightRail({
       ) : (
         <>
           {shouldRenderDevRoleSwitcher() && <DevRoleSwitcher />}
-          <ThemeComingSoonControl />
-          <LanguageComingSoonControl />
           {hasUser && <NavLogoutButton />}
         </>
       )}

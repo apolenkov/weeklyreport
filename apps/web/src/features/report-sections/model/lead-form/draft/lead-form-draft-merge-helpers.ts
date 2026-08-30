@@ -58,7 +58,6 @@ export function mergeDecisionDraft(
         owner: decision.owner,
         impact: decision.impact,
         deadline,
-        stageName: null,
       };
     }
     return {
@@ -69,7 +68,6 @@ export function mergeDecisionDraft(
       impact: decision.impact,
       deadline,
       resolvedAt: null,
-      stageName: null,
     };
   });
   return { ...section, decisions };
@@ -106,7 +104,6 @@ export function mergeRiskDraft(
         impact: risk.impact,
         mitigation: risk.mitigation,
         severity: risk.severity,
-        stageName: null,
       };
     }
     return {
@@ -116,7 +113,6 @@ export function mergeRiskDraft(
       impact: risk.impact,
       mitigation: risk.mitigation,
       severity: risk.severity,
-      stageName: null,
     };
   });
   return { ...section, risks };
@@ -148,7 +144,6 @@ function mergeItemRow(
       ...parentFields,
       text: item.text,
       workflowStatus,
-      stageName: null,
       priorityRank: item.priorityRank ?? null,
       pausedReason,
     };
@@ -161,7 +156,6 @@ function mergeItemRow(
     tag: "general",
     workflowStatus,
     carriedOver: false,
-    stageName: null,
     priorityRank: item.priorityRank ?? null,
     pausedReason,
   };

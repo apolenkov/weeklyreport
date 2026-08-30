@@ -27,7 +27,7 @@ export interface EnqueueContext {
 export function buildExecutionCandidate(
   rule: AdminReminderRule,
   recipientEmail: string,
-  payload: ReminderExecutionPayload | undefined,
+  payload: ReminderExecutionPayload,
 ): AdminReminderExecution {
   return adminReminderExecutionSchema.parse({
     id: crypto.randomUUID(),
@@ -89,6 +89,7 @@ export async function enqueueOrMarkFailed(
 interface ExecutionRecorder {
   readonly insertExecutionOnConflict: (
     execution: AdminReminderExecution,
+    payload: ReminderQueuePayload,
   ) => Promise<{
     readonly execution: AdminReminderExecution;
     readonly inserted: boolean;
@@ -98,8 +99,9 @@ interface ExecutionRecorder {
 export async function recordExecutionOnConflict(
   repository: ExecutionRecorder,
   candidate: AdminReminderExecution,
+  payload: ReminderQueuePayload,
 ): Promise<{ execution: AdminReminderExecution; inserted: boolean }> {
-  return repository.insertExecutionOnConflict(candidate);
+  return repository.insertExecutionOnConflict(candidate, payload);
 }
 
 // Revive failed→queued via CAS; without it an exhausted-SMTP cycle reports
@@ -107,13 +109,17 @@ export async function recordExecutionOnConflict(
 // is required so a revive never mints a queued row with no worker behind it.
 export async function reviveFailedExecution(
   ctx: EnqueueContext,
-  requeue: (executionId: string) => Promise<boolean>,
+  requeue: (
+    executionId: string,
+    payload: ReminderQueuePayload,
+  ) => Promise<boolean>,
   execution: AdminReminderExecution,
   recipientEmail: string,
   payload: () => Promise<ReminderQueuePayload>,
 ): Promise<AdminReminderExecution | null> {
   if (execution.status !== "failed") return null;
-  if (!(await requeue(execution.id))) return null;
+  const resolvedPayload = await payload();
+  if (!(await requeue(execution.id, resolvedPayload))) return null;
   const requeued = adminReminderExecutionSchema.parse({
     ...execution,
     status: "queued",
@@ -124,21 +130,22 @@ export async function reviveFailedExecution(
     ctx,
     requeued,
     recipientEmail,
-    await payload(),
+    resolvedPayload,
     `${execution.id}:revive:${crypto.randomUUID()}`,
   );
 }
 
-// Reaper: deterministic jobId dedups late originals; reconstructs plain-text shape.
+// Reaper: deterministic jobId dedups late originals; reconstructs the current
+// explicit deadline payload from the durable execution facts.
 export async function reEnqueueStuck(
   ctx: EnqueueContext,
   execution: AdminReminderExecution,
-  reportPeriod: string,
+  payload: ReminderQueuePayload,
 ): Promise<void> {
   await addJob(
     ctx,
     execution.id,
-    buildQueuePayload(execution, execution.recipientEmail, { reportPeriod }),
+    buildQueuePayload(execution, execution.recipientEmail, payload),
   );
   ctx.logger.info("reaper re-enqueued stuck execution", {
     executionId: execution.id,

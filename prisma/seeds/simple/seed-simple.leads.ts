@@ -127,7 +127,7 @@ export const ALL_PRODUCT_IDS: readonly string[] = [
   PROD_CRM_360,
 ];
 
-// RU weekly narrative for one lead; the per-group fixtures below fill it in.
+// Russian weekly narrative for one lead; the per-group seed data below fills it in.
 export interface LeadContent {
   currentItems: {
     text: string;

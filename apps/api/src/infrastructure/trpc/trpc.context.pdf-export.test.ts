@@ -1,5 +1,4 @@
 import type { DbRole } from "@customreport/shared";
-import { userSessionSchema } from "@customreport/shared";
 import type { INestApplication } from "@nestjs/common";
 import { TRPCError } from "@trpc/server";
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
@@ -14,7 +13,6 @@ import { SessionRevocationService } from "../../modules/admin/index.js";
 import { PrismaService } from "../prisma/prisma.service";
 import type { TrpcContext } from "./trpc.context";
 import { createContextFactory } from "./trpc.context";
-import { buildPdfExportSession } from "./trpc.context";
 import {
   anyRoleProcedure,
   headProcedure,
@@ -124,27 +122,6 @@ describe("createContextFactory — PDF JWT verifier path", () => {
     expect(harness.get).toHaveBeenCalledWith(SessionRevocationService);
   });
 
-  it("LEGACY PDF JWT (no requestedBy) → narrow viewer-synthetic session, isPdfExport=true, pdfReportId=X", async () => {
-    // Tokens without requestedBy keep the narrow viewer-synthetic session.
-    const token = jwt.sign(
-      { reportId: TEST_REPORT_ID, kind: "pdf-export" },
-      PDF_SECRET,
-      { expiresIn: "5m" },
-    );
-
-    const factory = createContextFactory(
-      makeApp(makePrismaStub()),
-      createNullLogger(),
-    );
-    const ctx = await factory(makeReq(token));
-
-    expect(ctx.session).not.toBeNull();
-    expect(ctx.session?.role).toBe("viewer");
-    expect(ctx.session?.activeReportId).toBe(TEST_REPORT_ID);
-    expect(ctx.isPdfExport).toBe(true);
-    expect(ctx.pdfReportId).toBe(TEST_REPORT_ID);
-  });
-
   it("PDF JWT signed with the correct secret but missing kind claim → falls through to session=null", async () => {
     // A regular session JWT (signed with SESSION_SECRET, full claim shape)
     // would not pass the PDF verifier even if the secrets accidentally
@@ -179,7 +156,11 @@ describe("createContextFactory — PDF JWT verifier path", () => {
 
   it("PDF JWT signed with the WRONG secret → rejected, session=null", async () => {
     const token = jwt.sign(
-      { reportId: TEST_REPORT_ID, kind: "pdf-export" },
+      {
+        reportId: TEST_REPORT_ID,
+        kind: "pdf-export",
+        requestedBy: "11111111-2222-4333-8444-aaaaaaaaaaaa",
+      },
       "a-different-secret-32-chars-or-more-haha",
       { expiresIn: "5m" },
     );
@@ -239,25 +220,6 @@ describe("createContextFactory — PDF JWT verifier path", () => {
       shortName: "PEO",
       fullName: "Product Engineering & Operations",
     });
-  });
-
-  it("valid PDF JWT synthetic session does NOT carry organization (no-hydration design)", async () => {
-    // PDF-export synthetic sessions intentionally skip hydration
-    // (guard middleware + groupScopeFilter own that restriction).
-    const token = jwt.sign(
-      { reportId: TEST_REPORT_ID, kind: "pdf-export" },
-      PDF_SECRET,
-      { expiresIn: "5m" },
-    );
-
-    const factory = createContextFactory(
-      makeApp(makePrismaStub()),
-      createNullLogger(),
-    );
-    const ctx = await factory(makeReq(token));
-
-    expect(ctx.isPdfExport).toBe(true);
-    expect(ctx.session?.organization).toBeUndefined();
   });
 });
 
@@ -423,19 +385,6 @@ describe("createContextFactory — PDF JWT be-the-requester scope", () => {
   });
 });
 
-describe("buildPdfExportSession — legacy fallback satisfies userSessionSchema", () => {
-  it("the no-requestedBy legacy session parses as a valid UserSession", async () => {
-    const session = await buildPdfExportSession(
-      "11111111-2222-4333-8444-555555555555",
-      undefined,
-      {} as unknown as PrismaService,
-      { isRevoked: () => Promise.resolve(false) },
-    );
-
-    expect(userSessionSchema.safeParse(session).success).toBe(true);
-  });
-});
-
 describe("pdfExportGuard — PDF synthetic session restrictions", () => {
   // A tiny router over the same procedure helpers exercises the guard
   // end-to-end without spinning up the full app router.
@@ -521,8 +470,6 @@ describe("pdfExportGuard — PDF synthetic session restrictions", () => {
   });
 
   it("PDF session throws FORBIDDEN if input has no reportId field", async () => {
-    // Defense-in-depth: even if a procedure was added to the allowlist that
-    // takes no input, the guard demands an input.reportId match.
     const reportId = "99999999-2222-4333-8444-aaaaaaaaaaab";
     const caller = testRouter.createCaller(makePdfCtx(reportId));
 

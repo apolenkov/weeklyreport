@@ -65,6 +65,7 @@ describe("lead form draft merge helpers", () => {
         author: "Other Lead",
         priorityRank: null,
         foreign: true,
+        stageNames: [],
       },
     ];
 
@@ -124,6 +125,7 @@ describe("lead form draft merge helpers", () => {
         impact: "Foreign impact",
         mitigation: "Foreign mitigation",
         foreign: true,
+        stageNames: ["Planning"],
       },
     ];
     const decisions: DecisionEntry[] = [
@@ -148,6 +150,7 @@ describe("lead form draft merge helpers", () => {
         impact: "Other impact",
         deadline: null,
         foreign: true,
+        stageNames: ["Planning"],
       },
     ];
 

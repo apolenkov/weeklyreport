@@ -8,12 +8,24 @@ import type { DecisionEntry, Product } from "../../report-sections";
 import { DecisionEditDialog } from "./decision-edit-dialog";
 
 const products: Product[] = [
-  { id: "p1", name: "CRM", overallStatus: "on-track", stages: [] },
+  {
+    id: "p1",
+    name: "CRM",
+    overallStatus: "on-track",
+    stages: [
+      {
+        stageName: "Development",
+        status: "on-track",
+        ownership: "mine",
+        assignee: "Test Lead",
+      },
+    ],
+  },
 ];
 
 describe("DecisionEditDialog — form-race regression", () => {
   it("preserves typed text when parent re-renders with a new stagesForProduct ref", () => {
-    const stagesV1 = ["Planning", "Dev"] as const;
+    const stagesV1 = ["Planning", "Development"] as const;
 
     const { rerender } = render(
       <DecisionEditDialog
@@ -35,7 +47,7 @@ describe("DecisionEditDialog — form-race regression", () => {
     expect(textField).toHaveValue("user typed this — must survive");
 
     // Simulate autosave parent re-render: new array reference, same values.
-    const stagesV2 = ["Planning", "Dev"] as const;
+    const stagesV2 = ["Planning", "Development"] as const;
     rerender(
       <DecisionEditDialog
         open={true}
@@ -60,7 +72,7 @@ describe("DecisionEditDialog — form-race regression", () => {
         open={true}
         decision={null}
         defaultOwner="Test Lead"
-        stagesForProduct={() => ["Planning", "Dev"]}
+        stagesForProduct={() => ["Planning", "Development"]}
         products={products}
         defaultProductId="p1"
         onSave={onSave}
@@ -98,7 +110,7 @@ describe("DecisionEditDialog — form-race regression", () => {
         open={true}
         decision={null}
         defaultOwner="Test Lead"
-        stagesForProduct={() => ["Planning", "Dev"]}
+        stagesForProduct={() => ["Planning", "Development"]}
         products={products}
         defaultProductId="p1"
         onSave={onSave}
@@ -135,10 +147,10 @@ describe("DecisionEditDialog — form-race regression", () => {
           owner: "Test Lead",
           impact: "Unblocks production rollout",
           deadline: null,
-          stageNames: ["Dev"],
+          stageNames: ["Development"],
         }}
         defaultOwner="Test Lead"
-        stagesForProduct={() => ["Planning", "Dev"]}
+        stagesForProduct={() => ["Planning", "Development"]}
         products={products}
         defaultProductId="p1"
         onSave={vi.fn()}
@@ -149,7 +161,7 @@ describe("DecisionEditDialog — form-race regression", () => {
     expect(
       screen.getByRole("checkbox", { name: "Planning" }),
     ).not.toBeChecked();
-    expect(screen.getByRole("checkbox", { name: "Dev" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Development" })).toBeChecked();
   });
 
   it("editing preserves the decision's existing owner, not defaultOwner", () => {
@@ -165,10 +177,10 @@ describe("DecisionEditDialog — form-race regression", () => {
           owner: "Original Owner",
           impact: "Unblocks production rollout",
           deadline: null,
-          stageNames: ["Dev"],
+          stageNames: ["Development"],
         }}
         defaultOwner="Different Lead"
-        stagesForProduct={() => ["Planning", "Dev"]}
+        stagesForProduct={() => ["Planning", "Development"]}
         products={products}
         defaultProductId="p1"
         onSave={onSave}
@@ -190,7 +202,7 @@ const defaultProps = {
   open: true,
   decision: null,
   defaultOwner: "Test Lead",
-  stagesForProduct: () => ["Planning", "Dev"] as readonly string[],
+  stagesForProduct: () => ["Planning", "Development"] as readonly string[],
   products,
   defaultProductId: "p1",
   onSave: vi.fn(),
@@ -291,7 +303,7 @@ describe("DecisionEditDialog — reopen renders fresh state", () => {
         open={true}
         decision={null}
         defaultOwner="Test Lead"
-        stagesForProduct={() => ["Planning", "Dev"]}
+        stagesForProduct={() => ["Planning", "Development"]}
         products={products}
         defaultProductId="p1"
         onSave={vi.fn()}
@@ -312,7 +324,7 @@ describe("DecisionEditDialog — reopen renders fresh state", () => {
         open={false}
         decision={null}
         defaultOwner="Test Lead"
-        stagesForProduct={() => ["Planning", "Dev"]}
+        stagesForProduct={() => ["Planning", "Development"]}
         products={products}
         defaultProductId="p1"
         onSave={vi.fn()}
@@ -327,7 +339,7 @@ describe("DecisionEditDialog — reopen renders fresh state", () => {
         open={true}
         decision={null}
         defaultOwner="Test Lead"
-        stagesForProduct={() => ["Planning", "Dev"]}
+        stagesForProduct={() => ["Planning", "Development"]}
         products={products}
         defaultProductId="p1"
         onSave={vi.fn()}
@@ -347,7 +359,7 @@ describe("DecisionEditDialog — require a stage", () => {
         open
         decision={null}
         defaultOwner="Test Lead"
-        stagesForProduct={() => ["Planning", "Dev"]}
+        stagesForProduct={() => ["Planning", "Development"]}
         products={products}
         defaultProductId="p1"
         onSave={onSave}
@@ -374,7 +386,7 @@ describe("DecisionEditDialog — require a stage", () => {
         open
         decision={null}
         defaultOwner="Test Lead"
-        stagesForProduct={() => ["Dev"]}
+        stagesForProduct={() => ["Development"]}
         products={products}
         defaultProductId="p1"
         onSave={onSave}
@@ -390,8 +402,7 @@ describe("DecisionEditDialog — require a stage", () => {
     fireEvent.click(screen.getByRole("button", { name: /Save Decision/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
-    // stage-label-canonicalization 1.2: the auto-applied "Dev" owned stage is
-    // persisted as the canonical "Development", never the short alias.
+    // A single canonical owned stage is applied automatically.
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
       stageNames: ["Development"],
     });
@@ -401,11 +412,35 @@ describe("DecisionEditDialog — require a stage", () => {
 // Product switch re-scopes stages and clears prior selection (never all-owned).
 describe("DecisionEditDialog — product switch re-scopes + clears stages", () => {
   const twoProducts: Product[] = [
-    { id: "p1", name: "CRM", overallStatus: "on-track", stages: [] },
-    { id: "p2", name: "ERP", overallStatus: "on-track", stages: [] },
+    {
+      id: "p1",
+      name: "CRM",
+      overallStatus: "on-track",
+      stages: [
+        {
+          stageName: "Development",
+          status: "on-track",
+          ownership: "mine",
+          assignee: "Test Lead",
+        },
+      ],
+    },
+    {
+      id: "p2",
+      name: "ERP",
+      overallStatus: "on-track",
+      stages: [
+        {
+          stageName: "Analysis",
+          status: "on-track",
+          ownership: "mine",
+          assignee: "Test Lead",
+        },
+      ],
+    },
   ];
   const stagesByProduct = (productId: string) =>
-    productId === "p1" ? ["Planning", "Dev"] : ["Analysis", "Design"];
+    productId === "p1" ? ["Planning", "Development"] : ["Analysis", "Design"];
 
   it("clears the selection and shows the new product's stages on switch", () => {
     render(
@@ -444,7 +479,7 @@ describe("DecisionEditDialog — stage-ownership scoping", () => {
         open
         decision={null}
         defaultOwner="Test Lead"
-        stagesForProduct={() => ["Dev"]}
+        stagesForProduct={() => ["Development"]}
         products={products}
         defaultProductId="p1"
         onSave={vi.fn()}
@@ -453,7 +488,7 @@ describe("DecisionEditDialog — stage-ownership scoping", () => {
     );
 
     const lockedPill = screen.getByText("Applied automatically").parentElement;
-    expect(lockedPill).toHaveTextContent("Dev");
+    expect(lockedPill).toHaveTextContent("Development");
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /Save Decision/i }),
@@ -468,6 +503,7 @@ describe("DecisionEditDialog — stage-ownership scoping", () => {
     owner: "Test Lead",
     impact: "Some impact",
     deadline: null,
+    stageNames: [],
   };
 
   it("disables Save and shows contact-admin on a zero-owned-stage product", () => {
@@ -531,7 +567,7 @@ describe("DecisionEditDialog — activity parenting", () => {
         open
         decision={null}
         defaultOwner="Test Lead"
-        stagesForProduct={() => ["Planning", "Dev"]}
+        stagesForProduct={() => ["Planning", "Development"]}
         products={products}
         activities={activities}
         defaultProductId="p1"
@@ -563,7 +599,7 @@ describe("DecisionEditDialog — activity parenting", () => {
     const saved = onSave.mock.calls[0]?.[0] as DecisionEntry;
     expect(saved.activityId).toBe("act1");
     expect(saved.productId).toBe("");
-    expect(saved.stageNames).toBeUndefined();
+    expect(saved.stageNames).toEqual([]);
     expect(saved.activityName).toBe("Jira triage duty");
     expect(saved.text).toBe("Escalate triage backlog");
   });

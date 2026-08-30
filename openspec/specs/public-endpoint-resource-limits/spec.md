@@ -37,7 +37,7 @@ route.
 
 - **WHEN** the api runs with `NODE_ENV=test` or `AUTH_DEV_MODE`
 - **THEN** the client-logs limiter uses the shared `TEST_MODE_LIMIT_PER_MINUTE`
-  ceiling so E2E suites firing rapid requests do not flake
+  ceiling for rapid local requests
 
 ### Requirement: Public ingress body sizes are bounded by an explicit limit
 

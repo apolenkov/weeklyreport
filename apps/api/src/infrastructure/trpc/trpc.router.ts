@@ -86,8 +86,6 @@ export interface AppRouterDeps {
   readonly projectActivityService: ProjectActivityService;
   // Type-optional but runtime-guarded in ops.procedures (fail-loud TRPCError).
   readonly emailReminderQueue?: Queue;
-  // Optional with a loud require guard in settings.procedures (never empty-success).
-  readonly telegramOutboundQueue?: Queue;
   // Type-optional but runtime-guarded in ops.procedures (fail-loud TRPCError).
   readonly jobsService?: JobsService;
   // Required: missing wiring must fail loud, never fabricate a zero payload.

@@ -33,7 +33,7 @@ dialog serves both.
 
 - **WHEN** the co-located test for each admin dialog runs
 - **THEN** it asserts the first control receives focus on open
-- **AND** a future edit that drops the focus-on-open wiring fails the test
+- **AND** an edit that drops the focus-on-open wiring fails the test
 
 ### Requirement: Admin CRUD dialogs MUST restore focus to the trigger on close
 
@@ -57,4 +57,4 @@ and the per-row Edit buttons in `users-tab.tsx`, `products-tab.tsx`,
 - **WHEN** the co-located test for each admin dialog runs
 - **THEN** it opens the dialog from a trigger, closes it, and asserts focus is
   back on that trigger
-- **AND** a future edit that drops the restore-on-close wiring fails the test
+- **AND** an edit that drops the restore-on-close wiring fails the test

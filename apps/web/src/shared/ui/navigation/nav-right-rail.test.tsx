@@ -18,7 +18,7 @@ const RESPONSIVE_GEOMETRY = [
 ] as const;
 
 describe("NavRightRail responsive geometry", () => {
-  it("keeps Theme, Language, and Sign out ordered with shared control geometry", () => {
+  it("keeps the available sign-out action within the shared control geometry", () => {
     const { container } = render(
       <NavRightRail sessionLoading={false} hasUser />,
     );
@@ -28,16 +28,8 @@ describe("NavRightRail responsive geometry", () => {
     );
 
     expect(controls.map((control) => control.dataset.testid)).toEqual([
-      "theme-coming-soon",
-      "language-coming-soon",
       "nav-logout",
     ]);
-    expect(
-      screen.getByRole("button", { name: "Theme selection is coming soon" }),
-    ).toHaveAttribute("aria-disabled", "true");
-    expect(
-      screen.getByRole("button", { name: "Language selection is coming soon" }),
-    ).toHaveAttribute("aria-disabled", "true");
     expect(screen.getByRole("button", { name: "Sign out" })).toHaveAttribute(
       "aria-label",
       "Sign out",

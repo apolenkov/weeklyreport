@@ -32,8 +32,8 @@ nested section graph only for rows that need the snapshot-less fallback, not for
 every listed row. To decide `nextCursor` without re-reading the whole archive, the
 query MUST fetch one probe row beyond the page (`take: limit + 1`): it returns at
 most `limit` items, and the presence of the extra `(limit + 1)`th row is what marks
-that more rows remain. The public `cursor`/`nextCursor` shape MUST NOT change (no
-shared-contract change in this MVP phase).
+that more rows remain. The public `cursor`/`nextCursor` shape MUST remain
+stable.
 
 #### Scenario: First page reads only its rows from the database
 

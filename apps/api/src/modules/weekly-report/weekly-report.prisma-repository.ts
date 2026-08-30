@@ -1,7 +1,11 @@
-import { type ReportSectionReadModel } from "@customreport/shared";
+import {
+  type ReportSectionReadModel,
+  type UserSession,
+} from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { guardGroupScope } from "../../lib/group-scope.js";
 import {
   mapPrismaToReportSection,
   parsePublishedSnapshot,
@@ -15,7 +19,6 @@ import {
   queryVisibleReportId,
 } from "./latest-for-viewer.prisma-query.js";
 import {
-  queryActiveReportId,
   queryCurrentEditableId,
   queryLatestPublishedNonArchivedId,
 } from "./report-lifecycle-ids.prisma-query.js";
@@ -38,11 +41,12 @@ import {
 export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  getActiveReportId(): Promise<string | null> {
-    return queryActiveReportId(this.prisma);
+  getCurrentEditableId(): Promise<string | null> {
+    return queryCurrentEditableId(this.prisma);
   }
 
-  getCurrentEditableId(): Promise<string | null> {
+  getCurrentEditableIdForSession(session: UserSession): Promise<string | null> {
+    guardGroupScope(session);
     return queryCurrentEditableId(this.prisma);
   }
 
@@ -52,7 +56,7 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
 
   async getWeeklyReport(
     reportId: string,
-    session?: WeeklyReportScopeSession,
+    session: UserSession,
   ): Promise<WeeklyReportRepositoryResult | null> {
     const { sectionScope, userScope, projectScope } =
       deriveScopeFilters(session);
@@ -181,7 +185,7 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
 
   private async buildLiveSections(
     report: WeeklyReportRow,
-    session: WeeklyReportScopeSession | undefined,
+    session: UserSession,
   ): Promise<WeeklyReportLiveSection[]> {
     // Stamp each live section with its author's group and whether THIS caller
     // is a designated reviewer for it. Batched — one viewerGroupAccess query
@@ -214,7 +218,7 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
         groupId,
         groupName: requireLiveGroupName(groupId, namesByGroupId),
         canReview:
-          groupId !== null && session
+          groupId !== null
             ? isDesignatedReviewer(
                 session,
                 groupId,
@@ -240,10 +244,10 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
   // query, so this only fires for the viewer role — one batched read over the
   // report's distinct groups, never one query per section.
   private async resolveViewerReviewGroupIds(
-    session: WeeklyReportScopeSession | undefined,
+    session: WeeklyReportScopeSession,
     distinctGroupIds: readonly string[],
   ): Promise<Set<string>> {
-    if (session?.role !== "viewer" || distinctGroupIds.length === 0) {
+    if (session.role !== "viewer" || distinctGroupIds.length === 0) {
       return new Set();
     }
     const rows = await this.prisma.viewerGroupAccess.findMany({
@@ -261,14 +265,17 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     session: WeeklyReportScopeSession,
     includeArchive: boolean,
   ): ReturnType<typeof queryCompiledHistory> {
+    guardGroupScope(session);
     return queryCompiledHistory(this.prisma, session, includeArchive);
   }
 
-  getVisibleReportId(reportId: string, session: WeeklyReportScopeSession) {
+  getVisibleReportId(reportId: string, session: UserSession) {
+    guardGroupScope(session);
     return queryVisibleReportId(this.prisma, reportId, session);
   }
 
-  getLatestPublishedVisibleId(session: WeeklyReportScopeSession) {
+  getLatestPublishedVisibleId(session: UserSession) {
+    guardGroupScope(session);
     return queryLatestPublishedVisibleId(this.prisma, session);
   }
 }

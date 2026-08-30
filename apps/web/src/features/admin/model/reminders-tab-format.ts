@@ -15,7 +15,7 @@ const MAX_HOUR_OFFSET_DAYS = 2;
 const MAX_HOUR_OFFSET_MINUTES =
   MAX_HOUR_OFFSET_DAYS * HOURS_PER_DAY * MINUTES_PER_HOUR;
 
-// Meaningful (kind, audience) pairings; unmatched rows surface as "Custom".
+// The current product supports two concrete reminder workflows.
 export const REMINDER_PRESETS = [
   {
     value: "deadline-leads",
@@ -37,18 +37,17 @@ export const REMINDER_PRESETS = [
 }[];
 
 export type ReminderPreset = (typeof REMINDER_PRESETS)[number]["value"];
-export type ReminderPresetChoice = ReminderPreset | "custom";
-
-export const CUSTOM_PRESET_LABEL = "Custom";
-
 export function presetForPolicy(
   kind: AdminReminderPolicyView["kind"],
   audience: AdminReminderPolicyView["audience"],
-): ReminderPresetChoice {
+): ReminderPreset {
   const match = REMINDER_PRESETS.find(
     (preset) => preset.kind === kind && preset.audience === audience,
   );
-  return match ? match.value : "custom";
+  if (!match) {
+    throw new Error(`Unsupported reminder policy: ${kind}/${audience}`);
+  }
+  return match.value;
 }
 
 export function presetPairing(preset: ReminderPreset): {

@@ -24,6 +24,19 @@ vi.mock("bullmq", () => ({
 
 // Mock services (and their transitive @customreport/shared dependency)
 vi.mock("../../modules/reminders/index.js", () => ({
+  parseReminderQueueJobData: (data: unknown) => {
+    if (
+      typeof data !== "object" ||
+      data === null ||
+      !("contractVersion" in data) ||
+      data.contractVersion !== 1 ||
+      !("kind" in data) ||
+      (data.kind !== "deadline" && data.kind !== "escalation")
+    ) {
+      throw new Error("Unsupported email reminder payload kind.");
+    }
+    return data;
+  },
   RemindersService: class {
     markReminderSent = vi.fn();
   },
@@ -143,21 +156,17 @@ function makeSpyLogger(): SpyLogger {
   };
 }
 
-const defaultJobData: EmailReminderJobData = {
-  executionId: "exec-1",
-  recipientEmail: "lead@test.com",
-  reportPeriod: "2026-04-07 – 2026-04-13",
-};
-
 const organizationBrand = {
   shortName: "Acme",
   fullName: "Acme Corp",
 };
 
 const deadlineJobData = {
-  executionId: "exec-2",
+  contractVersion: 1 as const,
+  executionId: "exec-1",
   recipientEmail: "lead@test.com",
   kind: "deadline" as const,
+  cycleDate: "2026-04-14",
   leadName: "Jane Lead",
   reportPeriod: "2026-04-07 – 2026-04-13",
   deadlineIso: "2026-04-14T18:00:00.000Z",
@@ -165,7 +174,10 @@ const deadlineJobData = {
   organization: organizationBrand,
 };
 
+const defaultJobData: EmailReminderJobData = deadlineJobData;
+
 const escalationJobData = {
+  contractVersion: 1 as const,
   executionId: "exec-3",
   recipientEmail: "head@test.com",
   kind: "escalation" as const,
@@ -191,6 +203,7 @@ const renderedEmailFixture = {
 describe("EmailReminderProcessor.processJob", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(renderEmail).mockResolvedValue(renderedEmailFixture);
   });
 
   it("sends email with correct recipient and subject containing period", async () => {
@@ -207,10 +220,11 @@ describe("EmailReminderProcessor.processJob", () => {
     await (processor as unknown as ProcessorTestSeam).processJob(job);
 
     // A null setting delegates the final From-address choice to EmailService.
-    expect(mockEmail.sendMail).toHaveBeenCalledWith(
+    expect(mockEmail.sendMailMultipart).toHaveBeenCalledWith(
       "lead@test.com",
-      "Reminder: Weekly Status Report Due",
-      expect.stringContaining("2026-04-07"),
+      expect.any(String),
+      expect.any(String),
+      expect.any(String),
       null,
     );
   });
@@ -233,9 +247,10 @@ describe("EmailReminderProcessor.processJob", () => {
     await (processor as unknown as ProcessorTestSeam).processJob(job);
 
     expect(mockAdmin.getSettings).toHaveBeenCalledTimes(1);
-    expect(mockEmail.sendMail).toHaveBeenCalledWith(
+    expect(mockEmail.sendMailMultipart).toHaveBeenCalledWith(
       "lead@test.com",
-      "Reminder: Weekly Status Report Due",
+      expect.any(String),
+      expect.any(String),
       expect.any(String),
       "alerts@corp.example.com",
     );
@@ -258,9 +273,10 @@ describe("EmailReminderProcessor.processJob", () => {
 
     await (processor as unknown as ProcessorTestSeam).processJob(job);
 
-    expect(mockEmail.sendMail).toHaveBeenCalledWith(
+    expect(mockEmail.sendMailMultipart).toHaveBeenCalledWith(
       "lead@test.com",
-      "Reminder: Weekly Status Report Due",
+      expect.any(String),
+      expect.any(String),
       expect.any(String),
       null,
     );
@@ -285,7 +301,9 @@ describe("EmailReminderProcessor.processJob", () => {
   it("does not mark sent if sendMail throws, and records a failed terminal state on the final attempt", async () => {
     const mockReminders = createMockRemindersService();
     const mockEmail = createMockEmailService();
-    mockEmail.sendMail.mockRejectedValue(new Error("SMTP connection refused"));
+    mockEmail.sendMailMultipart.mockRejectedValue(
+      new Error("SMTP connection refused"),
+    );
 
     const processor = new EmailReminderProcessor(
       mockReminders as never,
@@ -316,7 +334,9 @@ describe("EmailReminderProcessor.processJob", () => {
   it("releases the claim (not markReminderFailed) when a non-final attempt's dispatch fails", async () => {
     const mockReminders = createMockRemindersService();
     const mockEmail = createMockEmailService();
-    mockEmail.sendMail.mockRejectedValue(new Error("SMTP connection refused"));
+    mockEmail.sendMailMultipart.mockRejectedValue(
+      new Error("SMTP connection refused"),
+    );
 
     const processor = new EmailReminderProcessor(
       mockReminders as never,
@@ -377,6 +397,31 @@ describe("EmailReminderProcessor.processJob", () => {
 
     await (processor as unknown as ProcessorTestSeam).processJob(job);
 
+    expect(mockEmail.sendMail).not.toHaveBeenCalled();
+    expect(mockEmail.sendMailMultipart).not.toHaveBeenCalled();
+    expect(mockReminders.markReminderSent).not.toHaveBeenCalled();
+  });
+
+  it("rejects a pre-contract job before it can claim the execution", async () => {
+    const mockReminders = createMockRemindersService();
+    const mockEmail = createMockEmailService();
+    const processor = new EmailReminderProcessor(
+      mockReminders as never,
+      mockEmail,
+      STUB_ENV,
+      createMockSnapshotAdminService() as never,
+    );
+    const preContractJob = createMockJob({
+      executionId: "pre-contract-exec",
+      recipientEmail: "lead@test.com",
+      reportPeriod: "2026-04-07 – 2026-04-13",
+    } as unknown as EmailReminderJobData);
+
+    await expect(
+      (processor as unknown as ProcessorTestSeam).processJob(preContractJob),
+    ).rejects.toThrow();
+
+    expect(mockReminders.claimExecutionForSending).not.toHaveBeenCalled();
     expect(mockEmail.sendMail).not.toHaveBeenCalled();
     expect(mockEmail.sendMailMultipart).not.toHaveBeenCalled();
     expect(mockReminders.markReminderSent).not.toHaveBeenCalled();

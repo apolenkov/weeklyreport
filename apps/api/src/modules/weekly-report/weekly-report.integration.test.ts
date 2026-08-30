@@ -1,3 +1,4 @@
+import type { UserSession } from "@customreport/shared";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
@@ -15,6 +16,12 @@ import { WeeklyReportService } from "./weekly-report.service";
 const stageId = "a0000000-0000-4000-a000-000000000701";
 const secondStageId = "a0000000-0000-4000-a000-000000000702";
 const secondLeadId = "a0000000-0000-4000-a000-000000000703";
+const adminSession: UserSession = {
+  userId: TEST_IDS.head,
+  email: "head@test.local",
+  name: "Test Head",
+  role: "admin",
+};
 
 describe("WeeklyReportService with Prisma (integration)", () => {
   const prisma = createTestPrisma();
@@ -60,7 +67,7 @@ describe("WeeklyReportService with Prisma (integration)", () => {
   it("loads the persisted active report when reportId is omitted", async () => {
     const data = await seedSubmittedReport();
 
-    const result = await service.getWeeklyReport();
+    const result = await service.getWeeklyReport(undefined, adminSession);
 
     expect(result.status).toBe("active");
     if (result.status !== "active") throw new Error("expected active");
@@ -105,7 +112,7 @@ describe("WeeklyReportService with Prisma (integration)", () => {
       },
     });
 
-    const result = await service.getWeeklyReport(data.report.id);
+    const result = await service.getWeeklyReport(data.report.id, adminSession);
 
     expect(result.status).toBe("active");
     if (result.status !== "active") throw new Error("expected active");
@@ -133,7 +140,7 @@ describe("WeeklyReportService with Prisma (integration)", () => {
       },
     });
 
-    const result = await service.getWeeklyReport(data.report.id);
+    const result = await service.getWeeklyReport(data.report.id, adminSession);
 
     expect(result.status).toBe("active");
     if (result.status !== "active") throw new Error("expected active");
@@ -152,7 +159,7 @@ describe("WeeklyReportService with Prisma (integration)", () => {
     const data = await seedTestData(prisma);
     await prisma.reportSection.delete({ where: { id: data.section.id } });
 
-    const result = await service.getWeeklyReport(data.report.id);
+    const result = await service.getWeeklyReport(data.report.id, adminSession);
 
     expect(result.status).toBe("active");
     if (result.status !== "active") throw new Error("expected active");
@@ -173,7 +180,7 @@ describe("WeeklyReportService with Prisma (integration)", () => {
       },
     });
 
-    const result = await service.getWeeklyReport(data.report.id);
+    const result = await service.getWeeklyReport(data.report.id, adminSession);
 
     expect(result.status).toBe("active");
     if (result.status !== "active") throw new Error("expected active");
@@ -215,7 +222,7 @@ describe("WeeklyReportService with Prisma (integration)", () => {
       }),
     ]);
 
-    const result = await service.getWeeklyReport(data.report.id);
+    const result = await service.getWeeklyReport(data.report.id, adminSession);
 
     expect(result.status).toBe("active");
     if (result.status !== "active") throw new Error("expected active");

@@ -1,6 +1,5 @@
 import {
   type AdminProject,
-  type AdminReminderRule,
   type AdminUser,
   composeName,
   type ReportPeriod,
@@ -153,33 +152,6 @@ export async function removeProject(
     where: { id: projectId },
     data: { archived: true },
   });
-}
-
-export async function upsertReminderRule(
-  prisma: PrismaService,
-  rule: AdminReminderRule,
-): Promise<void> {
-  const ruleData = {
-    kind: rule.kind,
-    fireAt: rule.fireAt,
-    timezone: rule.timezone,
-    status: rule.status,
-    version: rule.version,
-    reportId: rule.reportId || null,
-  };
-  await prisma.reminderRule.upsert({
-    where: { id: rule.id },
-    create: { id: rule.id, ...ruleData },
-    update: ruleData,
-  });
-}
-
-export async function removeReminderRule(
-  prisma: PrismaService,
-  ruleId: string,
-): Promise<void> {
-  // deleteMany so a double-remove is idempotent rather than a P2025 throw.
-  await prisma.reminderRule.deleteMany({ where: { id: ruleId } });
 }
 
 // Spreads resolveLifecycle so all three lifecycle machines restore verbatim;

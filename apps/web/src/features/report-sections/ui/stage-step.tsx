@@ -34,7 +34,6 @@ export function StageStep({
         error={isDeadEnd ? undefined : error}
         onChange={onChange}
         previewSeverity={previewSeverity}
-        required
       />
       {isDeadEnd && (
         <p role="status" className="text-xs text-[var(--color-destructive)]">

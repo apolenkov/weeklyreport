@@ -111,6 +111,7 @@ function makeSection() {
         projectId: PROJECT_ID,
         type: "current" as const,
         text: "OwnItemABC",
+        stageNames: ["Development"],
         tag: "tag",
         workflowStatus: "in_progress" as const,
         carriedOver: false,
@@ -121,6 +122,7 @@ function makeSection() {
       {
         id: "77777777-7777-4777-8777-777777777777",
         text: "OwnDecisionABC",
+        stageNames: ["Development"],
         owner: "Test Lead",
         impact: "Impact",
       },
@@ -638,17 +640,5 @@ describe("LeadForm — Record visibility: publish/export independence", () => {
       expect(screen.queryByText(FOREIGN_DECISION_TEXT)).toBeNull();
     });
     expect(contentFetch).not.toHaveBeenCalled();
-  });
-
-  it("edit mode exposes an inert version + export ComingSoon control regardless of toggle", async () => {
-    const { Wrapper } = buildHarness({ seedEveryone: true });
-    render(
-      <Wrapper>
-        <LeadForm />
-      </Wrapper>,
-    );
-    await screen.findByText(FOREIGN_DECISION_TEXT);
-    const versionControl = screen.getByTestId("version-coming-soon");
-    expect(versionControl).toHaveAttribute("aria-disabled", "true");
   });
 });

@@ -243,7 +243,7 @@ const headRoleMiddleware = buildRoleMiddleware(["head", "admin"]);
 const adminRoleMiddleware = buildRoleMiddleware("admin");
 const leadRoleMiddleware = buildRoleMiddleware("lead");
 const viewerRoleMiddleware = buildRoleMiddleware("viewer");
-// Service-layer gate for multi-role reads (archive.*, weeklyReport.get).
+// Service-layer gate for multi-role weekly-report reads.
 const anyRoleMiddleware = buildRoleMiddleware([
   "lead",
   "head",

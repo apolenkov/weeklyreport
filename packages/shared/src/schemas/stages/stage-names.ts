@@ -34,62 +34,26 @@ export const STAGE_NAMES: readonly StageName[] = Object.freeze([
   STAGE.SUPPORT,
 ] as const);
 
-/**
- * Canonical lower-case stage key with Development and Dev collapsed to one slot.
- */
+/** Canonical stage key used for exact stage identity comparisons. */
 export function normalizeStageName(stageName: string): string {
-  const lower = stageName.toLowerCase();
-  return lower === "development" ? "dev" : lower;
+  return stageName;
 }
 
 /** True when two stage labels refer to the same pipeline slot. */
 export function stageNamesMatch(a: string, b: string): boolean {
-  return normalizeStageName(a) === normalizeStageName(b);
+  return a === b;
 }
 
-const STAGE_NAME_SEPARATOR = /[,;]+/;
-
-/** Splits a stage field into unique names; blank and em-dash values yield none. */
-export function splitStageNames(
-  stageName: string | null | undefined,
-): readonly string[] {
-  const trimmedStageName = stageName?.trim();
-  if (!trimmedStageName || trimmedStageName === "—") return [];
-
-  return Object.freeze([
-    ...new Set(
-      trimmedStageName
-        .split(STAGE_NAME_SEPARATOR)
-        .map((name) => name.trim())
-        .filter((name) => name.length > 0),
-    ),
-  ]);
-}
-
-/**
- * Whether a risk covers a stage; structured names win and an empty set covers all.
- */
+/** Whether a structured risk covers a stage; an empty set covers all stages. */
 export function riskCoversStage(
   risk: {
-    readonly stageName?: string | null | undefined;
     readonly stageNames?: readonly string[] | undefined;
   },
   stageName: string,
 ): boolean {
-  if (risk.stageNames !== undefined) {
-    return (
-      risk.stageNames.length === 0 ||
-      risk.stageNames.some((id) => stageNamesMatch(id, stageName))
-    );
-  }
-
-  // Wildcard is ONLY absent/blank/"—". A non-wildcard string that yields no
-  // tokens (e.g. ";;") covers NOTHING — an empty token list must not widen
-  // into covers-everything.
-  const trimmed = risk.stageName?.trim();
-  if (!trimmed || trimmed === "—") return true;
-
-  return splitStageNames(trimmed).some((name) =>
-    stageNamesMatch(name, stageName),
+  return (
+    risk.stageNames !== undefined &&
+    (risk.stageNames.length === 0 ||
+      risk.stageNames.some((id) => stageNamesMatch(id, stageName)))
   );
 }

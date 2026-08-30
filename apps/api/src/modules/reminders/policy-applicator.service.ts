@@ -47,6 +47,28 @@ export class PolicyApplicatorService {
     return tally;
   }
 
+  // Repairs a period whose initial materialisation may have failed. Existing
+  // rules are excluded so a recovery pass cannot overwrite an administrator's
+  // paused rule or a deliberately restored fire time.
+  async repairToPeriod(
+    period: { id: string; deadline: Date },
+    now?: Date,
+  ): Promise<{ created: number; updated: number; skipped: number }> {
+    const existing = await this.prisma.reminderRule.findMany({
+      where: { reportId: period.id },
+      select: { policyId: true },
+    });
+    return this.applyToPeriod(
+      period,
+      now,
+      new Set(
+        existing.flatMap((rule) =>
+          rule.policyId === null ? [] : [rule.policyId],
+        ),
+      ),
+    );
+  }
+
   // Sequential: each policy's findUnique-then-upsert must finish before the next
   // so P2002 recovery cannot interleave with a sibling write.
   private async collectPolicyTally(

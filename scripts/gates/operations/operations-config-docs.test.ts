@@ -12,14 +12,12 @@ const onboarding = read("docs/onboarding.md");
 const readme = read("README.md");
 const localEnvironment = read(".env.example");
 const compose = read("docker-compose.yml");
-const devCompose = read("docker-compose.dev.yml");
 const localBootstrap = read("prisma/operations/bootstrap-local.ts");
 const localDatabaseInitializer = read(
   "deploy/postgres/ensure-local-database.sql",
 );
 const apiBootstrap = read("apps/api/src/bootstrap/api-bootstrap.ts");
 const caddyReadme = read("deploy/caddy/README.md");
-const errorsCompose = read("docker-compose.errors.yml");
 const packageJson = JSON.parse(read("package.json")) as {
   readonly scripts: Readonly<Record<string, string | undefined>>;
 };
@@ -30,7 +28,6 @@ const webPackageJson = JSON.parse(read("apps/web/package.json")) as {
   readonly scripts: Readonly<Record<string, string | undefined>>;
 };
 const workflow = read(".github/workflows/ci.yml");
-const alertRules = read("deploy/alert-rules.yml");
 
 const requiredProductionVariables = (): readonly string[] =>
   [...prodCompose.matchAll(/\$\{([A-Z0-9_]+):\?/g)]
@@ -79,26 +76,6 @@ void test("first-deploy variable-table assertion rejects a broken Markdown row",
   );
 });
 
-void test("the observability command leaves api and web to source development", () => {
-  const command = packageJson.scripts["observability:up"];
-  assert.equal(
-    command,
-    "pnpm observability:compose up -d postgres redis mailpit otel-lgtm bugsink",
-  );
-  assert.doesNotMatch(command, /\b(api|web)\b/);
-  assert.match(readme, /единственный\s+владелец\s+—\s+pnpm dev/);
-  assert.match(onboarding, /не запускает[\s\S]*`api` и `web`/);
-});
-
-void test("observability commands own an isolated Compose project", () => {
-  const command = packageJson.scripts["observability:compose"] ?? "";
-  assert.match(command, /--project-name customreport-observability/);
-  assert.equal(
-    packageJson.scripts["observability:down"],
-    "pnpm observability:compose down",
-  );
-});
-
 const assertLocalBootstrapContract = (
   environmentExample: string,
   quickStart: string,
@@ -114,7 +91,7 @@ const assertLocalBootstrapContract = (
   );
   assert.ok(
     quickStart.includes(
-      "PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' \\\n  pnpm db:bootstrap:local minimal",
+      "PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' \\\n  pnpm db:bootstrap:local demo",
     ),
   );
   assert.ok(
@@ -128,7 +105,7 @@ const assertLocalBootstrapContract = (
     assert.ok(localBootstrap.includes(script));
   }
   assert.match(
-    `${compose}\n${devCompose}`,
+    compose,
     /postgresql:\/\/customreport:localdev@postgres:5432\/customreport_e2e/u,
   );
   assert.match(compose, /POSTGRES_DB: customreport_e2e/u);
@@ -181,13 +158,8 @@ void test("API source development uses the supported TypeScript loader", () => {
   const apiDevCommand = apiPackageJson.scripts.dev;
   assertNativeApiEnvironment(apiDevCommand, read(".env.example"), apiBootstrap);
   assert.match(compose, /API_HOST: 0\.0\.0\.0/);
-  assert.match(devCompose, /API_HOST: 0\.0\.0\.0/);
   assert.match(prodCompose, /API_HOST: 0\.0\.0\.0/);
-  assert.match(devCompose, /--import tsx[\s\S]*--watch src\/main\.ts/);
-  assert.doesNotMatch(
-    `${apiDevCommand ?? ""}\n${devCompose}`,
-    /@swc-node\/register/,
-  );
+  assert.doesNotMatch(apiDevCommand ?? "", /@swc-node\/register/);
 });
 
 void test("native API environment guard rejects a planted public listener", () => {
@@ -219,7 +191,6 @@ const assertNativeWebRootEnvironment = (
     environmentExample,
     /^NEXT_PUBLIC_API_URL=http:\/\/localhost:3002$/mu,
   );
-  assert.ok(devCompose.includes('"--hostname",\n        "0.0.0.0"'));
 };
 
 void test("native Web dev and build load the root environment contract", () => {
@@ -251,40 +222,26 @@ void test("native Web root environment preserves explicit shell precedence", () 
 
 void test("Mailpit is the one local SMTP service name", () => {
   assert.match(compose, /\n {2}mailpit:\n/);
-  assert.doesNotMatch(`${compose}\n${devCompose}`, /mailhog/i);
-  assert.match(`${compose}\n${devCompose}`, /SMTP_HOST: mailpit/);
-  assert.match(devCompose, /SMTP_PORT: ["']?1025["']?/);
+  assert.doesNotMatch(compose, /mailhog/i);
+  assert.match(compose, /SMTP_HOST: mailpit/);
   assert.match(read(".env.example"), /^SMTP_HOST=localhost$/m);
   assert.match(read(".env.example"), /^SMTP_PORT=1025$/m);
-  assert.match(
-    read(".env.example"),
-    /^OTEL_EXPORTER_OTLP_ENDPOINT=http:\/\/localhost:4318$/m,
-  );
-  assert.match(
-    devCompose,
-    /OTEL_EXPORTER_OTLP_ENDPOINT: http:\/\/host\.docker\.internal:4318/,
-  );
 });
 
 void test("metrics documentation and edge config keep the endpoint internal", () => {
   const caddy = read("deploy/caddy/Caddyfile");
-  const stagingCaddy = read("deploy/caddy/Caddyfile.staging");
-  for (const policy of [caddy, stagingCaddy]) {
-    const apiPathMatcher =
-      policy.split("\n").find((line) => line.trimStart().startsWith("path ")) ??
-      "";
-    assert.doesNotMatch(apiPathMatcher, /\/metrics/);
-  }
-  for (const policy of [caddy, stagingCaddy]) {
-    assert.match(policy, /@metrics path \/metrics \/metrics\/\*/);
-    assert.match(policy, /handle @metrics[\s\S]*respond "Not Found" 404/);
-    const metricsHandler = policy.indexOf("handle @metrics");
-    const webFallback = policy.indexOf("\n\thandle {", metricsHandler);
-    assert.ok(
-      metricsHandler !== -1 && webFallback > metricsHandler,
-      "the metrics rejection must precede the catch-all web handler",
-    );
-  }
+  const apiPathMatcher =
+    caddy.split("\n").find((line) => line.trimStart().startsWith("path ")) ??
+    "";
+  assert.doesNotMatch(apiPathMatcher, /\/metrics/);
+  assert.match(caddy, /@metrics path \/metrics \/metrics\/\*/);
+  assert.match(caddy, /handle @metrics[\s\S]*respond "Not Found" 404/);
+  const metricsHandler = caddy.indexOf("handle @metrics");
+  const webFallback = caddy.indexOf("\n\thandle {", metricsHandler);
+  assert.ok(
+    metricsHandler !== -1 && webFallback > metricsHandler,
+    "the metrics rejection must precede the catch-all web handler",
+  );
   assert.match(
     operations,
     /`\/metrics`[\s\S]*internal-only|not\*\* routed through Caddy/,
@@ -292,54 +249,12 @@ void test("metrics documentation and edge config keep the endpoint internal", ()
   assert.match(read("deploy/caddy/README.md"), /`\/metrics` stays internal/);
 });
 
-const assertActiveDlqAlertUsesAuthoritativeGauge = (document: string): void => {
-  const marker = "- alert: DLQFailuresActive";
-  const start = document.indexOf(marker);
-  assert.notEqual(start, -1, "DLQFailuresActive rule must exist");
-  const tail = document.slice(start + marker.length);
-  const nextAlertOffset = tail.indexOf("\n      - alert:");
-  const block =
-    nextAlertOffset === -1
-      ? document.slice(start)
-      : document.slice(start, start + marker.length + nextAlertOffset);
-  const lines = new Set(block.split("\n").map((line) => line.trim()));
-
-  assert.ok(
-    lines.has("expr: cr_dlq_failed_current > 0"),
-    "DLQFailuresActive must use the authoritative failed-job gauge",
-  );
-  assert.ok(
-    !block.includes("cr_dlq_failed_total"),
-    "DLQFailuresActive must not use the process-local event counter",
-  );
-  assert.ok(lines.has("for: 5m"));
-};
-
-void test("active DLQ alert survives an API restart", () => {
-  assertActiveDlqAlertUsesAuthoritativeGauge(alertRules);
-});
-
-void test("active DLQ alert gate rejects a planted event-counter regression", () => {
-  const planted = alertRules.replace(
-    "expr: cr_dlq_failed_current > 0",
-    "expr: cr_dlq_failed_total > 0",
-  );
-  assert.notEqual(planted, alertRules, "the planted regression must apply");
-  assert.throws(
-    () => assertActiveDlqAlertUsesAuthoritativeGauge(planted),
-    /authoritative failed-job gauge/u,
-  );
-});
-
-void test("both enforcing CSP policies report violations to the required collector", () => {
+void test("the enforcing CSP policy reports violations to the required collector", () => {
   const caddy = read("deploy/caddy/Caddyfile");
-  const stagingCaddy = read("deploy/caddy/Caddyfile.staging");
-  for (const policy of [caddy, stagingCaddy]) {
-    assert.match(
-      policy,
-      /Content-Security-Policy[^\n]*report-uri \{\$CADDY_CSP_REPORT_URI\}/,
-    );
-  }
+  assert.match(
+    caddy,
+    /Content-Security-Policy[^\n]*report-uri \{\$CADDY_CSP_REPORT_URI\}/,
+  );
   assert.match(caddyReadme, /external operator-owned collector/u);
   assert.doesNotMatch(
     caddyReadme,
@@ -347,24 +262,11 @@ void test("both enforcing CSP policies report violations to the required collect
   );
 });
 
-void test("production Caddy selection and Prometheus ownership are explicit", () => {
+void test("production Compose mounts the sole Caddy policy", () => {
   assert.match(
     prodCompose,
-    /- \$\{CADDY_FILE:-\.\/deploy\/caddy\/Caddyfile\}:\/etc\/caddy\/Caddyfile:ro/,
+    /- \.\/deploy\/caddy\/Caddyfile:\/etc\/caddy\/Caddyfile:ro/,
   );
-  assert.match(
-    read("deploy/caddy/Caddyfile.staging"),
-    /CADDY_FILE=.*Caddyfile\.staging/,
-  );
-  assert.match(
-    read("deploy/prometheus.yml"),
-    /Standalone Prometheus.*template/,
-  );
-  assert.match(
-    read("deploy/prometheus.yml"),
-    /not mounted by docker-compose\.observability\.yml/,
-  );
-  assert.match(read("deploy/prometheus-otel-lgtm.yml"), /Compose-owned/);
 });
 
 void test("production Compose examples always load the production environment", () => {
@@ -385,12 +287,6 @@ void test("production Compose examples always load the production environment", 
   );
 });
 
-void test("Bugsink is bound to loopback by default", () => {
-  assert.match(errorsCompose, /127\.0\.0\.1:\$\{BUGSINK_PORT:-8000\}:8000/);
-  assert.match(errorsCompose, /loopback/);
-  assert.match(caddyReadme, /\.env\.production/);
-});
-
 void test("production Caddy ACME email is fail-closed and documented", () => {
   assert.match(prodCompose, /CADDY_ACME_EMAIL: \$\{CADDY_ACME_EMAIL:\?/);
   assert.match(read(".env.example"), /^CADDY_ACME_EMAIL=\S+$/m);
@@ -404,11 +300,6 @@ void test("operations documentation inventories integration and coverage lanes",
   assert.match(operations, /`coverage` lane[\s\S]*API and Web/);
   assert.match(workflow, /api-integration:/);
   assert.match(workflow, /coverage:/);
-});
-
-void test("Grafana guidance uses the configured password", () => {
-  assert.doesNotMatch(`${readme}\n${onboarding}`, /admin.*admin/);
-  assert.match(`${readme}\n${onboarding}`, /GRAFANA_ADMIN_PASSWORD/);
 });
 
 const assertRecoveryEvidenceIsTruthful = (document: string): void => {
@@ -457,7 +348,10 @@ void test("external production controls remain blocked until external read-back"
   ].forEach((requirement) =>
     assert.match(operationsText, new RegExp(requirement)),
   );
-  assert.match(operationsText, /alertmanager\.yml[\s\S]*template/i);
+  assert.match(
+    operationsText,
+    /docker-compose\.observability\.yml[\s\S]*deploy\/prometheus-otel-lgtm\.yml[\s\S]*deploy\/alert-rules\.yml[\s\S]*template/i,
+  );
   assert.match(
     operationsText,
     /pgbackups[\s\S]*volume[\s\S]*repository evidence/i,

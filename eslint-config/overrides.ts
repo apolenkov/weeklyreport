@@ -12,7 +12,6 @@ const unrestrictedTestContourRules: Linter.RulesRecord = {
   "sonarjs/no-nested-functions": "off",
   "@typescript-eslint/no-magic-numbers": "off",
   "react-compiler/react-compiler": "off",
-  "local/no-comment-archaeology": "off",
 };
 
 export const overrideConfig: Linter.Config[] = [

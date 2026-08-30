@@ -1,6 +1,7 @@
 import type { AdminReminderRule, UserSession } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
+import type { OrganizationService } from "../organization/organization.service.js";
 import { RemindersService } from "./reminders.service.js";
 import type { RemindersRepository } from "./reminders.types.js";
 import { unusedRemindersRepositoryStubs } from "./reminders-scope.repository-stub.js";
@@ -33,7 +34,23 @@ function buildService(): RemindersService {
       }),
     findDraftSectionsForDispatch: () => Promise.resolve([]),
   } satisfies RemindersRepository;
-  return new RemindersService(repository);
+  const organizationService = {
+    getPublic: () =>
+      Promise.resolve({
+        shortName: "PEO",
+        fullName: "Product Engineering & Operations",
+      }),
+  } as OrganizationService;
+  return new RemindersService(
+    repository,
+    undefined,
+    undefined,
+    undefined,
+    organizationService,
+    {
+      APP_BASE_URL: "http://localhost:3000",
+    },
+  );
 }
 
 describe("RemindersScopeService.dispatchPendingReminders — no-matching-section guard", () => {
@@ -68,6 +85,7 @@ describe("RemindersScopeService.dispatchPendingReminders — no-matching-section
     const COUNT = 100_000;
     const sections = Array.from({ length: COUNT }, (_, index) => ({
       email: `lead-${index}@test.local`,
+      name: `Lead ${index}`,
       notificationOptOut: false,
     }));
     const activeRule: AdminReminderRule = {
@@ -83,12 +101,29 @@ describe("RemindersScopeService.dispatchPendingReminders — no-matching-section
     const repository = {
       ...unusedRemindersRepositoryStubs(),
       getRule: () => Promise.resolve(activeRule),
+      getRulePeriodLabel: () => Promise.resolve("2026-04-07 → 2026-04-13"),
       findInScopeSectionId: () => Promise.resolve(SECTION_ID),
       findActiveRuleForDispatch: () =>
         Promise.resolve({ id: RULE_ID, fireAt: activeRule.fireAt }),
       findDraftSectionsForDispatch: () => Promise.resolve(sections),
     } satisfies RemindersRepository;
-    const service = new RemindersService(repository);
+    const organizationService = {
+      getPublic: () =>
+        Promise.resolve({
+          shortName: "PEO",
+          fullName: "Product Engineering & Operations",
+        }),
+    } as OrganizationService;
+    const service = new RemindersService(
+      repository,
+      undefined,
+      undefined,
+      undefined,
+      organizationService,
+      {
+        APP_BASE_URL: "http://localhost:3000",
+      },
+    );
 
     // The old per-recipient `rest`/`acc` copies are O(n²) — 100k recipients
     // takes ~20s there (over vitest's 5s default) and ~0.25s with the loop.

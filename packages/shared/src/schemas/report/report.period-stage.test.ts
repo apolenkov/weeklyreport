@@ -94,7 +94,7 @@ describe("periodStateSchema", () => {
     expect(parsed.periodState).toBe("open");
   });
 
-  it("reportPeriodSchema: legacy payloads require the versioned decoder", () => {
+  it("reportPeriodSchema: incomplete lifecycle payloads are rejected", () => {
     const parsed = reportPeriodSchema.safeParse({
       id: randomUUID(),
       periodStart: "2026-05-11",

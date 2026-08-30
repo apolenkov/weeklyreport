@@ -15,6 +15,7 @@ import { PdfExportDomainError } from "./pdf-export.service";
 const REPORT_ID = "659b2767-0f86-41e2-b025-49730ca010e4";
 const SECTION_ID = "2a223d8b-c4b2-473c-8a7b-15ecc52195c7";
 const AUTHOR_ID = "6f99661a-cac6-4d06-bf08-2a14cced554d";
+const OWNER_GROUP_ID = "e0000000-0000-4000-a000-000000000001";
 const OWNED_PRODUCT = "4ff69d14-ec8c-4f1c-b62b-73bee530fc7d";
 const OWNED_STAGE_ID = "6366e7ef-e694-454f-863a-7e112ebbc48f";
 const RISK_ID = "e421b0e4-caac-4218-9f40-d062f523b86b";
@@ -130,6 +131,7 @@ function reportRow(severity: "blocked" | "at-risk") {
                 name: "CRM Portal",
                 archived: false,
                 stageAssignments: [],
+                groupProducts: [{ groupId: OWNER_GROUP_ID }],
                 lead: { reportingGroupId: null },
               },
               stage: { id: OWNED_STAGE_ID, name: STAGE_NAME, sortOrder: 4 },
@@ -155,7 +157,7 @@ function reportRow(severity: "blocked" | "at-risk") {
             impact: "High",
             mitigation: "Failover",
             severity,
-            stageNames: [],
+            stageNames: [STAGE_NAME],
             project: { name: "CRM Portal" },
             recordComments: [],
           },
@@ -196,7 +198,7 @@ describe("toAssembledReport — PDF portfolio totals floor", () => {
 });
 
 describe("PdfExportPrismaRepository published floor", () => {
-  it("returns null for a legacy-published report that is reopened", async () => {
+  it("returns null when the report is not currently published", async () => {
     const findUnique = vi.fn().mockResolvedValue(null);
     const prisma = { report: { findUnique } } as unknown as PrismaService;
     const repo = new PdfExportPrismaRepository(prisma);
@@ -287,29 +289,6 @@ describe("PdfExportPrismaRepository template provenance", () => {
         },
       }),
     );
-  });
-
-  it("reads back the persisted template version instead of relabelling with the running template", async () => {
-    const findUnique = vi.fn().mockResolvedValue({
-      id: "759b2767-0f86-41e2-b025-49730ca010e4",
-      reportId: REPORT_ID,
-      status: "completed",
-      templateVersion: "phase-2-legacy-v0",
-      filePath: `/pdfs/759b2767-0f86-41e2-b025-49730ca010e4.pdf`,
-      checksum: "abc123",
-      error: null,
-      requestedBy: AUTHOR_ID,
-      createdAt: new Date("2026-06-09T00:00:00Z"),
-      updatedAt: new Date("2026-06-09T00:00:00Z"),
-    });
-    const prisma = {
-      pdfExportJob: { findUnique },
-    } as unknown as PrismaService;
-    const repo = new PdfExportPrismaRepository(prisma);
-
-    const job = await repo.getExportJob("759b2767-0f86-41e2-b025-49730ca010e4");
-
-    expect(job?.templateVersion).toBe("phase-2-legacy-v0");
   });
 
   it("fails loud when job creation omits the requester (no system fallback)", async () => {

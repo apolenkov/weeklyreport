@@ -20,17 +20,15 @@ export function toReminderCycleDate(fireAt: Date): string {
   return fireAt.toISOString().slice(0, ISO_DATE_LENGTH);
 }
 
-// Manual dispatch defaults to deadline + fireAt cycle so it collides with
-// an already-sent automated reminder for the same rule/recipient/day.
 export function resolveReminderDedupeKey(
-  rule: { id: string; fireAt: Date },
+  rule: { id: string },
   recipientEmail: string,
-  payload?: { kind: ReminderDedupeKeyKind; cycleDate: string },
+  payload: { kind: ReminderDedupeKeyKind; cycleDate: string },
 ): string {
   return buildReminderDedupeKey({
     ruleId: rule.id,
-    kind: payload?.kind ?? "deadline",
-    cycleDate: payload?.cycleDate ?? toReminderCycleDate(rule.fireAt),
+    kind: payload.kind,
+    cycleDate: payload.cycleDate,
     recipientEmail,
   });
 }

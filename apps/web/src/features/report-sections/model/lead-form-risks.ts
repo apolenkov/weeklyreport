@@ -8,11 +8,9 @@ export type LeadRiskEntry = RiskEntry;
 type SectionRisk = ReportSectionReadModel["risks"][number];
 
 function requireRiskId(risk: SectionRisk): string {
-  const id: unknown = risk.id ?? risk.stableId;
+  const id: unknown = risk.id;
   if (typeof id === "string" && id.length > 0) return id;
-  throw new Error(
-    `Risk is missing both id and stableId (project ${risk.projectId ?? "none"}) — cannot map corrupt legacy lineage`,
-  );
+  throw new Error(`Risk is missing id (project ${risk.projectId ?? "none"})`);
 }
 
 function mapRisk(

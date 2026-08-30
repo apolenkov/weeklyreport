@@ -39,7 +39,7 @@ export const toItemViews = (items: SectionRow["items"]) =>
     carriedOver: item.carriedOver,
     priorityRank: item.priorityRank ?? null,
     pausedReason: item.pausedReason ?? null,
-    stageNames: item.stageNames.length > 0 ? item.stageNames : undefined,
+    stageNames: item.stageNames,
     comments: toCommentViews(item.recordComments),
   }));
 
@@ -53,7 +53,7 @@ export const toRiskViews = (risks: SectionRow["risks"]) =>
     impact: risk.impact,
     mitigation: risk.mitigation,
     severity: risk.severity,
-    stageNames: risk.stageNames.length > 0 ? risk.stageNames : undefined,
+    stageNames: risk.stageNames,
     comments: toCommentViews(risk.recordComments),
   }));
 
@@ -66,8 +66,7 @@ export const toDecisionViews = (decisions: SectionRow["decisions"]) =>
     deadline: decision.deadline,
     impact: decision.impact,
     resolvedAt: decision.resolvedAt,
-    stageNames:
-      decision.stageNames.length > 0 ? decision.stageNames : undefined,
+    stageNames: decision.stageNames,
     productId: decision.productId ?? undefined,
     activityId: decision.activityId ?? undefined,
     comments: toCommentViews(decision.recordComments),

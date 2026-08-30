@@ -2,11 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import {
-  currentPeriodLifecycleSchema,
-  decodeLegacyReportPeriod,
-  LegacyPeriodIncompatibilityError,
-} from "./period-lifecycle.schema";
+import { currentPeriodLifecycleSchema } from "./period-lifecycle.schema";
 
 const PUBLISHED_AT = new Date("2026-07-24T18:00:00.000Z");
 const REOPENED_AT = new Date("2026-07-25T09:00:00.000Z");
@@ -133,74 +129,5 @@ describe("currentPeriodLifecycleSchema", () => {
         reopenedAt: null,
       }).success,
     ).toBe(false);
-  });
-});
-
-const legacyPeriod = {
-  id: "11111111-1111-4111-8111-111111111111",
-  periodStart: "2026-07-20T00:00:00.000Z",
-  periodEnd: "2026-07-26T23:59:59.999Z",
-  deadline: null,
-  status: "draft" as const,
-};
-
-describe("decodeLegacyReportPeriod", () => {
-  it.each([
-    ["draft", false, "open", "open"],
-    ["draft", true, "archived", "open"],
-    ["published", false, "published", "published"],
-    ["published", true, "archived", "published"],
-  ] as const)(
-    "normalizes v1 %s/archived=%s to %s/%s",
-    (status, archived, periodState, periodStatus) => {
-      const decoded = decodeLegacyReportPeriod({
-        version: 1,
-        period: { ...legacyPeriod, status, archived },
-      });
-
-      expect(decoded).toMatchObject({
-        status,
-        archived,
-        periodState,
-        periodStatus,
-        autoPublished: false,
-        autoArchived: false,
-        publishedAt: null,
-        publishedById: null,
-        reopenedAt: null,
-      });
-      expect(currentPeriodLifecycleSchema.safeParse(decoded).success).toBe(
-        true,
-      );
-    },
-  );
-
-  it("rejects an unsupported version with a typed reason", () => {
-    expect(() =>
-      decodeLegacyReportPeriod({ version: 2, period: legacyPeriod }),
-    ).toThrow(
-      expect.objectContaining<Partial<LegacyPeriodIncompatibilityError>>({
-        reason: "unsupported-version",
-      }),
-    );
-  });
-
-  it("rejects unversioned input", () => {
-    expect(() => decodeLegacyReportPeriod(legacyPeriod)).toThrow(
-      LegacyPeriodIncompatibilityError,
-    );
-  });
-
-  it("rejects a mixed-generation v1 payload", () => {
-    expect(() =>
-      decodeLegacyReportPeriod({
-        version: 1,
-        period: { ...legacyPeriod, periodState: "open" },
-      }),
-    ).toThrow(
-      expect.objectContaining<Partial<LegacyPeriodIncompatibilityError>>({
-        reason: "invalid-payload",
-      }),
-    );
   });
 });

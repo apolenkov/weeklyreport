@@ -54,9 +54,8 @@ function sessionTokenFromCookies(
   return typeof value === "string" ? value : undefined;
 }
 
-// Single human-session chokepoint: rejects a missing/invalid/revoked/deactivated
-// token AND the PDF-worker / dev-mode fallbacks the full chain honors. The
-// cookie-less short-circuit stays ahead of resolveHumanSession.
+// Single human-session chokepoint: rejects a missing, invalid, revoked, or
+// deactivated token. The cookie-less short-circuit stays ahead of the resolver.
 function resolveDownloadSession(
   req: Request,
   deps: PdfDownloadDeps,

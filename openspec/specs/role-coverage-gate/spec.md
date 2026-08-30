@@ -64,8 +64,8 @@ conventions) MUST say 8.
 fix-report-surface-integrity (2026-06-16) moved the `pdfExport.request` /
 `pdfExport.status` procedures to `leadershipProcedure`
 (`["head","admin","viewer"]`): head, admin, and viewer may export a PDF and the
-lead is EXCLUDED (FORBIDDEN) — the lead surface shows an inert ComingSoon control
-instead of an active Export button. This superseded the earlier
+lead is EXCLUDED (FORBIDDEN) — the lead surface does not show an Export button.
+This superseded the earlier
 driver-findings-2026-06-13 decision that briefly routed pdfExport through
 `leadHeadAdminProcedure` (`["lead","head","admin"]`). `leadHeadAdminProcedure`
 was later removed entirely (remove-dead-surface-api) once no production caller

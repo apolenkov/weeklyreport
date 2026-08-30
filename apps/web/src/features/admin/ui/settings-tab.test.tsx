@@ -1,13 +1,7 @@
 import type { AppSettings } from "@customreport/shared";
 import { MAX_FULL_NAME_LENGTH } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -28,19 +22,6 @@ vi.mock("sonner", () => ({
 
 import { SettingsTab } from "./settings-tab";
 
-// Telegram integration status shape returned by
-// `admin.integrationsStatus`. Default to «not configured, 0 bindings» so
-// tests that don't care about Integrations don't have to opt out.
-interface IntegrationStub {
-  telegram: {
-    configured: boolean;
-    bindings: number;
-  };
-}
-const DEFAULT_INTEGRATIONS: IntegrationStub = {
-  telegram: { configured: false, bindings: 0 },
-};
-
 // Org data returned by admin.getOrganization.
 const ORG_DATA = {
   id: "singleton",
@@ -50,14 +31,13 @@ const ORG_DATA = {
   updatedAt: new Date("2026-05-10T00:00:00Z"),
 };
 
-function buildProxy(integrations: IntegrationStub = DEFAULT_INTEGRATIONS) {
+function buildProxy() {
   return createMockTRPC([
     { path: ["admin", "getOrganization"], query: ORG_DATA },
     { path: ["admin", "updateOrganization"], mutation: true },
     { path: ["admin", "updateSettings"], mutation: true },
     { path: ["admin", "snapshot"] },
     { path: ["admin", "getSettings"] },
-    { path: ["admin", "integrationsStatus"], query: integrations },
     { path: ["auth", "me"] },
     { path: ["org", "getPublic"] },
     { path: ["weeklyReport", "get"] },
@@ -141,7 +121,7 @@ describe("SettingsTab — Identity sub-tab", () => {
     await waitFor(() => expect(saveButton.disabled).toBe(false));
   });
 
-  it("keeps the Identity form busy until a deferred organization query hydrates it", async () => {
+  it("keeps the Identity form busy until the organization query hydrates it", async () => {
     let resolveOrganization!: (organization: typeof ORG_DATA) => void;
     const organizationQuery = new Promise<typeof ORG_DATA>((resolve) => {
       resolveOrganization = resolve;
@@ -155,7 +135,6 @@ describe("SettingsTab — Identity sub-tab", () => {
       { path: ["admin", "updateSettings"], mutation: true },
       { path: ["admin", "snapshot"] },
       { path: ["admin", "getSettings"] },
-      { path: ["admin", "integrationsStatus"], query: DEFAULT_INTEGRATIONS },
       { path: ["auth", "me"] },
       { path: ["org", "getPublic"] },
       { path: ["weeklyReport", "get"] },
@@ -200,7 +179,6 @@ describe("SettingsTab — Identity sub-tab", () => {
       { path: ["admin", "updateSettings"], mutation: true },
       { path: ["admin", "snapshot"] },
       { path: ["admin", "getSettings"] },
-      { path: ["admin", "integrationsStatus"], query: DEFAULT_INTEGRATIONS },
       { path: ["auth", "me"] },
       { path: ["org", "getPublic"] },
       { path: ["weeklyReport", "get"] },
@@ -260,7 +238,6 @@ describe("SettingsTab — Identity sub-tab", () => {
       { path: ["admin", "updateSettings"], mutation: true },
       { path: ["admin", "snapshot"] },
       { path: ["admin", "getSettings"] },
-      { path: ["admin", "integrationsStatus"], query: DEFAULT_INTEGRATIONS },
       { path: ["auth", "me"] },
       { path: ["org", "getPublic"] },
       { path: ["weeklyReport", "get"] },
@@ -646,97 +623,5 @@ describe("SettingsTab — Notifications sub-tab", () => {
       name: /save notification settings/i,
     });
     await waitFor(() => expect(saveBtn.disabled).toBe(true));
-  });
-});
-
-describe("SettingsTab — Integrations sub-tab", () => {
-  // Element has no live status because the available configured and binding
-  // values describe Telegram and would be false under an Element heading.
-  it("names the messaging card Element with a Coming Soon badge", async () => {
-    const { proxy } = buildProxy({
-      telegram: { configured: false, bindings: 0 },
-    });
-    renderSettings(proxy);
-
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("tab", { name: /integrations/i }));
-
-    const row = await screen.findByTestId("integration-row-telegram");
-    expect(within(row).getByRole("heading", { name: /element/i })).toBeTruthy();
-
-    const badge = await screen.findByTestId("integration-badge-telegram");
-    await waitFor(() => expect(badge.dataset.state).toBe("coming-soon"));
-    expect(badge.textContent).toMatch(/coming soon/i);
-
-    // The card must not surface a "Telegram" heading to the user.
-    expect(within(row).queryByText(/telegram/i)).toBeNull();
-  });
-
-  it("renders no Telegram-derived messaging status under the Element card", async () => {
-    // Telegram status under an "Element" heading would be a false claim.
-    const { proxy } = buildProxy({
-      telegram: { configured: true, bindings: 4 },
-    });
-    renderSettings(proxy);
-
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("tab", { name: /integrations/i }));
-
-    const badge = await screen.findByTestId("integration-badge-telegram");
-    await waitFor(() => expect(badge.dataset.state).toBe("coming-soon"));
-
-    // The configured/bindings status rows are gone — no "yes"/"4" leaks.
-    expect(screen.queryByTestId("integration-telegram-configured")).toBeNull();
-    expect(screen.queryByTestId("integration-telegram-bindings")).toBeNull();
-    const row = screen.getByTestId("integration-row-telegram");
-    expect(within(row).queryByText("4")).toBeNull();
-    expect(within(row).queryByText(/^yes$/i)).toBeNull();
-  });
-
-  it("does not render Slack or CI cards", async () => {
-    const { proxy } = buildProxy();
-    renderSettings(proxy);
-
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("tab", { name: /integrations/i }));
-
-    // Telegram card present anchors the tab content before asserting absence.
-    await screen.findByTestId("integration-badge-telegram");
-    expect(screen.queryByTestId("integration-row-slack")).toBeNull();
-    expect(screen.queryByTestId("integration-row-ci")).toBeNull();
-  });
-
-  it("renders the AI Coming Soon card", async () => {
-    const { proxy } = buildProxy();
-    renderSettings(proxy);
-
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("tab", { name: /integrations/i }));
-
-    const aiBadge = await screen.findByTestId("integration-badge-ai");
-    await waitFor(() => expect(aiBadge.dataset.state).toBe("coming-soon"));
-    expect(aiBadge.textContent).toMatch(/coming soon/i);
-
-    expect(screen.getByTestId("integration-ai-provider").textContent).toMatch(
-      /not configured/i,
-    );
-    expect(screen.getByTestId("integration-ai-rag").textContent).toMatch(
-      /empty/i,
-    );
-  });
-
-  it("keeps deferred integration content at full opacity", async () => {
-    const { proxy } = buildProxy();
-    renderSettings(proxy);
-
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("tab", { name: /integrations/i }));
-
-    for (const testId of ["integration-row-telegram", "integration-row-ai"]) {
-      const row = await screen.findByTestId(testId);
-      expect(row.className.split(/\s+/u)).not.toEqual(
-        expect.arrayContaining([expect.stringMatching(/^opacity-/u)]),
-      );
-    }
   });
 });

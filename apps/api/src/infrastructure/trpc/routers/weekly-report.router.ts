@@ -121,7 +121,6 @@ export function createWeeklyReportRouter(deps: WeeklyReportRouterDeps) {
         try {
           const result = await deps.weeklyReportService.getWeeklyReport(
             input?.reportId,
-            ctx.session.role,
             ctx.session,
           );
           // No-period is a normal 200 response, not an error path.

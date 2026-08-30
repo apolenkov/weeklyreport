@@ -59,29 +59,27 @@ export function persistableItemStatusToWorkflow(
   );
 }
 
-// Stored progress, with a type-appropriate default for legacy rows missing status.
 export function deriveItemStatus(item: {
-  workflowStatus: ItemWorkflowStatus | null;
+  workflowStatus: ItemWorkflowStatus;
   type: ItemType;
 }): ItemStatus {
-  if (item.workflowStatus) return workflowToItemStatus(item.workflowStatus);
-  return item.type === "next" ? "planned" : IN_PROGRESS_STATUS;
+  return workflowToItemStatus(item.workflowStatus);
 }
 
 // Covering-risk BLOCKED overlay on a base progress status — same rule as the
-// lead card. Only in-progress is eligible; at-risk amber stays deferred on head.
+// lead card. Only in-progress is eligible; at-risk amber remains at risk.
 export function applyBlockedRiskOverlay(
   base: ItemStatus,
   parent: {
     projectId: string;
-    stageNames?: readonly string[] | null | undefined;
+    stageNames: readonly string[];
   },
   alarmRisks: readonly AlarmRisk[],
 ): ItemStatus {
   const covered = deriveItemAlarmFromRisks(
     {
       productId: parent.projectId,
-      stageNames: parent.stageNames ?? undefined,
+      stageNames: parent.stageNames,
       status: base,
     },
     alarmRisks,
@@ -92,10 +90,10 @@ export function applyBlockedRiskOverlay(
 // Head-report badge: progress status with the blocked overlay applied.
 export function deriveHeadItemStatus(
   item: {
-    workflowStatus: ItemWorkflowStatus | null;
+    workflowStatus: ItemWorkflowStatus;
     type: ItemType;
     projectId: string;
-    stageNames?: readonly string[] | null | undefined;
+    stageNames: readonly string[];
   },
   alarmRisks: readonly AlarmRisk[],
 ): ItemStatus {

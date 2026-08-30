@@ -17,6 +17,7 @@ const BASE_ITEM: KanbanItem = {
   text: "Implement CI pipeline",
   status: "in-progress",
   author: "Alice Lead",
+  stageNames: ["Planning"],
 };
 
 describe("ItemCard — priority rank badge accessibility", () => {
@@ -65,14 +66,15 @@ describe("ItemCard — stage tags container accessibility", () => {
     expect(screen.getByText("No stage set")).toBeInTheDocument();
   });
 
-  it("deduplicates legacy stage aliases after canonicalization", () => {
+  it("preserves distinct stage values instead of aliasing them", () => {
     render(
       <ItemCard item={{ ...BASE_ITEM, stageNames: ["Dev", "Development"] }} />,
     );
 
     const container = screen.getByRole("img", {
-      name: "Item stages: Development",
+      name: "Item stages: Dev, Development",
     });
+    expect(within(container).getByText("Dev")).toBeInTheDocument();
     expect(within(container).getAllByText("Development")).toHaveLength(1);
   });
 });

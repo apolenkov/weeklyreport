@@ -129,7 +129,7 @@ function resolveRiskRecord(
     risk: toRiskEntry(risk),
     deleteTitle: "Delete risk?",
     deletePreview: risk.text || "(no description)",
-    deleteSubtitle: `${risk.productName} · ${risk.stageNames?.join(", ") || "no stage set"}`,
+    deleteSubtitle: `${risk.productName} · ${risk.stageNames.join(", ") || "no stage set"}`,
   };
 }
 
@@ -157,20 +157,20 @@ function resolveDecisionRecord(
 function toKanbanItem(item: LeadKanbanItem): KanbanItem {
   return {
     ...item,
-    ...(item.stageNames ? { stageNames: [...item.stageNames] } : {}),
+    stageNames: [...item.stageNames],
   };
 }
 
 function toRiskEntry(risk: LeadRiskEntry): RiskEntry {
   return {
     ...risk,
-    ...(risk.stageNames ? { stageNames: [...risk.stageNames] } : {}),
+    stageNames: [...risk.stageNames],
   };
 }
 
 function toDecisionEntry(decision: LeadDecisionEntry): DecisionEntry {
   return {
     ...decision,
-    ...(decision.stageNames ? { stageNames: [...decision.stageNames] } : {}),
+    stageNames: [...decision.stageNames],
   };
 }

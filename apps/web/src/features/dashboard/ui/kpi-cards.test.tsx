@@ -50,14 +50,6 @@ describe("KpiCards — a11y regression", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders a Coming Soon badge instead of a fabricated last-week comparison", () => {
-    render(<KpiCards data={baseData} />);
-    expect(screen.getByText("Last week")).toBeInTheDocument();
-    expect(screen.getByText("Coming Soon")).toBeInTheDocument();
-    const { container } = render(<KpiCards data={baseData} />);
-    expect(container.textContent).not.toMatch(/Last week \d+\/\d+/);
-  });
-
   it("exposes the Submissions region and conic ring without NaN when totals are zero", () => {
     const zeroData: KpiData = {
       ...baseData,

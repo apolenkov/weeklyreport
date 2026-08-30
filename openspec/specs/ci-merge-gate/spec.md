@@ -1,83 +1,52 @@
-# ci-merge-gate
+# ci-merge-gate Specification
 
 ## Purpose
 
-Define the server-side CI and branch-enforcement boundary for `main`, while
-keeping the local pre-push hook as defense in depth rather than a substitute.
+Define the CI-authoritative acceptance gate for `main`.
 
 ## Requirements
 
-### Requirement: A Server-Side Merge Gate MUST Exist Before The First Production Point
+### Requirement: CI runs the complete repository acceptance gate
 
-The repository MUST run CI for pull requests and pushes to `main`, and MUST have
-required status checks on a protected `main` before the first production point.
-During the pre-production MVP phase, active GitHub-hosted CI with an unprotected
-`main` is an accepted, explicitly recorded gap; it MUST NOT be described as an
-enforced merge gate. The local pre-push hook remains an additional developer
-gate and MUST NOT be presented as server-side enforcement.
+`.github/workflows/ci.yml` MUST run for pull requests, pushes to `main`, and
+manual dispatch. Its jobs MUST cover the repository's current acceptance
+surfaces: format, lint, OpenSpec validation, typecheck, unit tests, disposable
+database integration, coverage, reset safety, and production Compose builds.
 
-#### Scenario: CI runs while main remains unprotected in pre-production
+#### Scenario: A pull request runs the gate
 
-- **WHEN** CI triggers on pull requests and pushes to `main` but the Branches API
-  reports `main` as unprotected
-- **THEN** the repository records that server-side checks run but do not block a
-  direct or red update to `main`
-- **AND** reports distinguish successful CI execution from merge enforcement
-- **AND** the local pre-push gate remains active as defense in depth
+- **WHEN** a pull request is opened or updated
+- **THEN** CI runs the quality, integration, coverage, reset, and production
+  Compose build jobs
+- **AND** a failed job makes the workflow fail
 
-#### Scenario: First production point is reached with no enforced checks
+#### Scenario: A push to main runs the gate
 
-- **WHEN** the repository is about to reach its first production point
-- **THEN** `main` MUST be protected by a branch rule or ruleset
-- **AND** stable CI and security status checks MUST be required
-- **AND** force-push, deletion, review, conversation-resolution, and bypass
-  behavior MUST be explicitly verified and recorded
+- **WHEN** a commit is pushed to `main`
+- **THEN** the same acceptance workflow runs
+- **AND** its result is the authoritative repository-level acceptance signal
 
-#### Scenario: Administrative settings cannot be read
+### Requirement: CI actions are pinned and read-only by default
 
-- **WHEN** the current token or repository plan prevents a ruleset or branch
-  protection query
-- **THEN** the setting remains unverified
-- **AND** the project MUST NOT infer enforcement from workflow files alone
+Every `uses:` step in the current CI workflow MUST reference a full commit SHA
+with its readable release tag preserved in a comment. The workflow default
+permission MUST be `contents: read`; a job that needs more authority MUST
+declare only that permission at job scope.
 
-### Requirement: The Interim Local Gate MUST Cover Every Deterministic, Service-Free CI Check
+#### Scenario: A CI action is inspected
 
-`.husky/pre-push` MUST run every check from `ci.yml`'s `quality` job that
-requires no external service (database, Redis) and no built artifact, for as
-long as the server-side merge gate from the requirement above is not yet
-active. Checks that need services or a build (the `migrate reset` drift job and
-Docker build job) stay CI-only and are explicitly out of scope for `pre-push`.
+- **WHEN** the current CI workflow is parsed
+- **THEN** every action reference is immutable and its default token is
+  read-only
 
-#### Scenario: pre-push runs the full deterministic subset
+### Requirement: CI does not depend on local hooks
 
-- **WHEN** a developer runs `git push` with `SKIP_PREPUSH` unset
-- **THEN** `.husky/pre-push` runs, in order, typecheck, lint, format:check, and
-  unit tests
-- **AND** a failure in any of those checks aborts the push
+The acceptance gate MUST be complete when evaluated in a clean checkout by the
+workflow itself. No local Git hook, opt-out variable, or developer-machine state
+may be required for CI acceptance.
 
-#### Scenario: A service-dependent check stays CI-only
+#### Scenario: A clean runner evaluates the repository
 
-- **WHEN** a check requires Postgres or a built Docker image (`migrate reset`
-  or Docker build)
-- **THEN** that check MUST NOT be added to `.husky/pre-push`
-- **AND** it MUST remain a job in `ci.yml` for the future server-side gate
-
-### Requirement: The Pre-Push Skip Condition MUST Be Hook-Specific
-
-`.husky/pre-push`'s skip condition MUST depend only on a hook-specific
-opt-out variable (`SKIP_PREPUSH=1`). It MUST NOT key off the ambient `CI`
-environment variable, because `CI=true` is commonly set by tooling and CI
-providers unrelated to this repository's own `ci.yml` and would silently
-disable the only active merge gate in any such environment.
-
-#### Scenario: SKIP_PREPUSH explicitly opts out
-
-- **WHEN** a developer runs `SKIP_PREPUSH=1 git push`
-- **THEN** `.husky/pre-push` prints a skip message and exits 0 without
-  running any check
-
-#### Scenario: An ambient CI=true does not silently bypass the gate
-
-- **WHEN** a developer's shell or an unrelated tool has `CI=true` set in the
-  environment and `SKIP_PREPUSH` is unset
-- **THEN** `.husky/pre-push` still runs its full deterministic check chain
+- **WHEN** the CI workflow runs in a fresh runner checkout
+- **THEN** all required checks execute from the workflow and do not invoke a
+  local Git hook

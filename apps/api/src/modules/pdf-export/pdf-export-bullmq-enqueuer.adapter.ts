@@ -6,7 +6,7 @@ import type {
 } from "./pdf-export.ports.js";
 
 // Three attempts with 5s exponential floor — matches EmailReminderProcessor
-// and telegram-outbound so transient render/queue blips settle before DLQ.
+// so transient render/queue blips settle before DLQ.
 const PDF_EXPORT_JOB_ATTEMPTS = 3;
 const PDF_EXPORT_JOB_BACKOFF_DELAY_MS = 5000;
 

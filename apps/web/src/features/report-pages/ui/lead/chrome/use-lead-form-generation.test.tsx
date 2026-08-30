@@ -81,6 +81,7 @@ const ITEM = {
   text: "Captured under report A",
   author: "Test Lead",
   priorityRank: null,
+  stageNames: ["Planning"],
 };
 
 describe("lead-form generation ownership", () => {

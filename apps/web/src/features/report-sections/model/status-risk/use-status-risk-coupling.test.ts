@@ -17,7 +17,7 @@ function makeProduct(
 function makeRisk(
   id: string,
   productId: string,
-  stageNames?: string[],
+  stageNames: string[],
 ): RiskEntry {
   return {
     id,
@@ -37,7 +37,7 @@ describe("computeCoupling", () => {
       makeProduct("p1", "on-track"),
       makeProduct("p2", "empty"),
     ];
-    const risks = [makeRisk("r1", "p1")];
+    const risks = [makeRisk("r1", "p1", ["Planning"])];
     expect(computeCoupling(products, risks)).toEqual([]);
   });
 
@@ -49,9 +49,9 @@ describe("computeCoupling", () => {
     expect(expectDefined(result[0]).riskRowsWithoutStages).toEqual(["r1"]);
   });
 
-  it("includes blocked product with undefined stageNames", () => {
+  it("flags a blocked product risk without an explicit stage", () => {
     const products = [makeProduct("p1", "blocked")];
-    const risks = [makeRisk("r1", "p1")]; // no stageNames
+    const risks = [makeRisk("r1", "p1", [])];
     const result = computeCoupling(products, risks);
     expect(expectDefined(result[0]).riskRowsWithoutStages).toEqual(["r1"]);
   });
@@ -76,7 +76,7 @@ describe("computeCoupling", () => {
       makeProduct("p2", "at-risk"),
     ];
     const risks = [
-      makeRisk("r1", "p1"), // green product — not counted
+      makeRisk("r1", "p1", ["Planning"]), // green product — not counted
       makeRisk("r2", "p2", []), // red product — counted
     ];
     const result = computeCoupling(products, risks);
@@ -94,7 +94,7 @@ describe("computeCoupling", () => {
     // Simulate what handleSubmit does: filter out empty rows before coupling check.
     const allRisks = [
       makeRisk("r1", "p1", ["planning"]), // filled + staged
-      { ...makeRisk("r2", "p1"), text: "", mitigation: "" }, // empty, not committed
+      { ...makeRisk("r2", "p1", ["Planning"]), text: "", mitigation: "" }, // empty, not committed
     ];
     const result = computeCoupling(products, committedRisks(allRisks));
     // Only r1 remains after filter; r1 has stageNames → no coupling violation

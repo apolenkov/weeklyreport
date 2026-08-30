@@ -167,7 +167,7 @@ describe("ViewerReportShell — read-only toolbar parity", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("form mode renders the scope toggle and view-mode toggle, keeps Agent-review, and drops Back-to-Archive", () => {
+  it("form mode renders the scope and view-mode toggles", () => {
     render(<ViewerReportShell reportId={REPORT_ID} mode="form" />);
 
     const contextControls = screen.getByRole("group", {
@@ -176,10 +176,6 @@ describe("ViewerReportShell — read-only toolbar parity", () => {
     expect(within(contextControls).getByRole("radiogroup")).toBeInTheDocument();
     expect(
       within(contextControls).getByRole("link", { name: /slides/i }),
-    ).toBeInTheDocument();
-    // Keep deferred functionality visible without making it interactive.
-    expect(
-      within(contextControls).getByTestId("agent-review-coming-soon"),
     ).toBeInTheDocument();
     // The viewer navigates periods in place and must not expose an archive exit.
     expect(

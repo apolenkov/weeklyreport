@@ -36,17 +36,14 @@ describe("verifyPdfExportToken — strict claim validation", () => {
     });
   });
 
-  it("accepts a token without the optional requestedBy claim", () => {
+  it("rejects a token without the required requestedBy claim", () => {
     const token = signWith({
       reportId: REPORT_ID,
       kind: "pdf-export",
       exp: EXP_IN_SECONDS,
     });
 
-    expect(verifyPdfExportToken(token)).toEqual({
-      reportId: REPORT_ID,
-      kind: "pdf-export",
-    });
+    expect(() => verifyPdfExportToken(token)).toThrow(/requestedBy/);
   });
 
   it("rejects a token missing the reportId claim", () => {
@@ -84,9 +81,7 @@ describe("verifyPdfExportToken — strict claim validation", () => {
   it("rejects a token with no exp claim (no lifetime bound)", () => {
     const token = signWith({ reportId: REPORT_ID, kind: "pdf-export" });
 
-    expect(() => verifyPdfExportToken(token)).toThrow(
-      /Invalid PDF export token claims: exp/,
-    );
+    expect(() => verifyPdfExportToken(token)).toThrow(/requestedBy|exp/);
   });
 
   it("rejects a token with a non-string requestedBy claim", () => {

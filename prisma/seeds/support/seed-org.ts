@@ -127,14 +127,14 @@ export function reportingGroupForProduct(
   const groupId = groupByLeadId.get(leadId);
   if (groupId === undefined) {
     throw new Error(
-      `Advanced seed: product lead ${leadId} is not a seeded user`,
+      `Product seed: product lead ${leadId} is not a seeded user`,
     );
   }
   return groupId;
 }
 
 // Product group is the report grouping source of truth; derive it from the
-// seeded lead's reporting group so seed data satisfies the UAT invariant.
+// seeded lead's reporting group so seed data satisfies the product invariant.
 async function seedProducts(prisma: PrismaClient): Promise<void> {
   const groupByLeadId = new Map<string, string>(
     SEED_USERS.flatMap((user) => {

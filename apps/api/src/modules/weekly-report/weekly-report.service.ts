@@ -1,7 +1,6 @@
 import type {
   CompiledHistoryResult,
   LatestForViewerReport,
-  Role,
   UserSession,
   WeeklyReportReadModel,
 } from "@customreport/shared";
@@ -52,17 +51,15 @@ export interface WeeklyReportRepositoryResult {
 export interface WeeklyReportRepository {
   getWeeklyReport(
     reportId: string,
-    session?: WeeklyReportScopeSession,
+    session: UserSession,
   ): Promise<WeeklyReportRepositoryResult | null>;
-  getActiveReportId(): Promise<string | null>;
-  // Unlike `getActiveReportId`, has NO published fallback and filters
-  // `archived`, so the viewer gate cannot leak a published or archived-open
-  // period through it.
+  // Lifecycle-only lookup shared with PeriodPrismaRepository. Interactive
+  // callers use getCurrentEditableIdForSession below, which guards identity.
   getCurrentEditableId(): Promise<string | null>;
-  // The head's reopen authz target and leadership published fallback; skipping
-  // archived rows keeps the default usable after a newer row is archived.
+  getCurrentEditableIdForSession(session: UserSession): Promise<string | null>;
+  // Lifecycle-only resolver used by PeriodPrismaRepository when reopening a
+  // period. It is deliberately not used to default an interactive read.
   getLatestPublishedNonArchivedId(): Promise<string | null>;
-  // Scoped lead → own authored sections, otherwise group scope.
   getCompiledHistory(
     session: WeeklyReportScopeSession,
     includeArchive: boolean,
@@ -74,11 +71,9 @@ export interface WeeklyReportRepository {
   // searching older editable periods.
   getVisibleReportId(
     reportId: string,
-    session: WeeklyReportScopeSession,
+    session: UserSession,
   ): Promise<string | null>;
-  getLatestPublishedVisibleId(
-    session: WeeklyReportScopeSession,
-  ): Promise<string | null>;
+  getLatestPublishedVisibleId(session: UserSession): Promise<string | null>;
 }
 
 export class WeeklyReportService {
@@ -89,10 +84,13 @@ export class WeeklyReportService {
   // The router holds the service, not the repository, so routing
   // `latestForViewer` through this keeps the gate and the entry resolver on
   // one query.
-  getCurrentEditableId(): Promise<string | null> {
-    return this.repository.getCurrentEditableId();
+  getCurrentEditableId(session: UserSession): Promise<string | null> {
+    return this.repository.getCurrentEditableIdForSession(session);
   }
 
+  // Internal activity aggregation needs the same lifecycle target as period
+  // reopening. It does not return report contents and never backs an
+  // interactive weeklyReport.get request.
   async getCurrentLeadershipReportId(): Promise<string | null> {
     return (
       (await this.repository.getCurrentEditableId()) ??
@@ -100,25 +98,14 @@ export class WeeklyReportService {
     );
   }
 
-  // Leadership resolves through the SAME lifecycle resolvers publish/reopen
-  // authz uses, so a head's `reportId` always equals the server-derived target;
-  // admin tracks the same target, not the lead resolver. Leads stay ungated.
-  private async resolveDefaultReportId(role?: Role): Promise<string | null> {
-    if (role === "viewer" || role === "head" || role === "admin") {
-      return this.getCurrentLeadershipReportId();
-    }
-    return this.repository.getActiveReportId();
-  }
-
   // A missing period returns the `no-period` sentinel rather than throwing:
   // React Query would otherwise retry a NOT_FOUND three times, showing a 3-5s
   // spinner on fresh installs and between period cycles.
   async getWeeklyReport(
-    reportId?: string,
-    role?: Role,
-    session?: WeeklyReportScopeSession,
+    reportId: string | undefined,
+    session: UserSession,
   ): Promise<WeeklyReportServiceResult> {
-    const resolvedId = reportId ?? (await this.resolveDefaultReportId(role));
+    const resolvedId = reportId ?? (await this.getCurrentEditableId(session));
 
     if (!resolvedId) {
       this.logger.info("weekly report: no active period");
@@ -136,14 +123,18 @@ export class WeeklyReportService {
     // `currentEditableId` is resolved AFTER the fetch, so an `open → published`
     // flip mid-request no longer matches and the gate fails closed toward
     // not-found rather than serving a stale model.
-    if (role === "viewer" && readModel.periodStatus !== "published") {
-      const currentEditableId = await this.repository.getCurrentEditableId();
+    if (session.role === "viewer" && readModel.periodStatus !== "published") {
+      const currentEditableId =
+        await this.repository.getCurrentEditableIdForSession(session);
       if (resolvedId !== currentEditableId) {
         throw new WeeklyReportDomainError(`Report ${resolvedId} not found.`);
       }
     }
 
-    this.logger.info("weekly report fetched", { reportId: resolvedId, role });
+    this.logger.info("weekly report fetched", {
+      reportId: resolvedId,
+      role: session.role,
+    });
     return { status: "active", ...readModel, crossGroup };
   }
 
@@ -163,10 +154,8 @@ export class WeeklyReportService {
 
   // Must NOT search older editable periods: `getVisibleReportId` only confirms
   // the exact current id before falling back to the newest visible published.
-  async latestForViewer(
-    session: WeeklyReportScopeSession,
-  ): Promise<LatestForViewerReport> {
-    const currentEditableId = await this.getCurrentEditableId();
+  async latestForViewer(session: UserSession): Promise<LatestForViewerReport> {
+    const currentEditableId = await this.getCurrentEditableId(session);
 
     if (currentEditableId) {
       const currentVisible = await this.repository.getVisibleReportId(

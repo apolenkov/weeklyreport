@@ -266,8 +266,8 @@ describe("ReportSectionsService — stage-ownership guard", () => {
     ).rejects.toMatchObject({ code: "STAGE_NOT_OWNED" });
   });
 
-  // A legacy/cross row references a product the author owns no stage on.
-  // Unchanged, it must survive the guard.
+  // A cross row references a product the author owns no stage on. Current
+  // writes validate every product-parented row, including unchanged rows.
   const crossRowSection: ReportSectionReadModel = {
     ...testingOwner,
     referencedProjects: [
@@ -286,39 +286,38 @@ describe("ReportSectionsService — stage-ownership guard", () => {
     ],
   };
 
-  it("grandfathers an unchanged legacy/cross row (same stableId, product, stage set)", async () => {
+  it("rejects an unchanged cross row when its stage is not currently owned", async () => {
     const service = new ReportSectionsService(
       createRepository(crossRowSection),
       testGraceSettings,
     );
 
-    const saved = await service.saveDraft(
-      {
-        reportSectionId: baseSection.reportSectionId,
-        version: 1,
-        status: "draft",
-        stageStatuses: [],
-        activityStatuses: [],
-        projectStatuses: [{ projectId: PROJECT_P, status: "yellow" }],
-        items: [],
-        risks: [
-          {
-            stableId: STABLE_ID,
-            projectId: CROSS_PROJECT,
-            risk: "Gateway certification slips",
-            impact: "Payments blocked",
-            mitigation: "Escalate to vendor",
-            severity: "at-risk",
-            stageNames: ["Integration"],
-          },
-        ],
-        decisions: [],
-      },
-      baseSection.authorId,
-    );
-
-    expect(saved.status).toBe("draft");
-    expect(saved.risks).toHaveLength(1);
+    await expect(
+      service.saveDraft(
+        {
+          reportSectionId: baseSection.reportSectionId,
+          version: 1,
+          status: "draft",
+          stageStatuses: [],
+          activityStatuses: [],
+          projectStatuses: [{ projectId: PROJECT_P, status: "yellow" }],
+          items: [],
+          risks: [
+            {
+              stableId: STABLE_ID,
+              projectId: CROSS_PROJECT,
+              risk: "Gateway certification slips",
+              impact: "Payments blocked",
+              mitigation: "Escalate to vendor",
+              severity: "at-risk",
+              stageNames: ["Integration"],
+            },
+          ],
+          decisions: [],
+        },
+        baseSection.authorId,
+      ),
+    ).rejects.toMatchObject({ code: "STAGE_NOT_OWNED" });
   });
 
   it("rejects a smuggle that reuses a stableId but swaps in an unowned stage", async () => {
@@ -339,8 +338,7 @@ describe("ReportSectionsService — stage-ownership guard", () => {
           items: [],
           risks: [
             {
-              // Same lineage key as the grandfathered row, but the stage set
-              // changed to one the author does not own → re-validated, rejected.
+              // Stable identity never bypasses current ownership validation.
               stableId: STABLE_ID,
               projectId: CROSS_PROJECT,
               risk: "Gateway certification slips",
@@ -393,8 +391,8 @@ describe("ReportSectionsService — stage-ownership guard", () => {
           items: [],
           risks: [
             {
-              // Identical stage set, but the product changed to one the author
-              // owns no stage on → not grandfathered, Testing is not owned there.
+              // The product changed to one the author owns no stage on;
+              // Testing is not owned there.
               stableId: STABLE_ID,
               projectId: CROSS_PROJECT,
               risk: "Flaky suite",

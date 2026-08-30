@@ -379,6 +379,7 @@ describe("mapWeeklyReport — grouping, severity & escalation", () => {
           decisions: [
             {
               id: "d1",
+              productId: PROJECT_A,
               text: "Approve Redis cluster",
               owner: "Head",
               impact: "Caching",

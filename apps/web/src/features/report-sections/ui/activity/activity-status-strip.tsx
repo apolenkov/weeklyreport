@@ -7,22 +7,10 @@ import type {
   TrafficLightStatus,
 } from "@customreport/shared";
 
-// `linkedProducts` carries a schema default, but legacy fixtures and frozen
-// pre-activity snapshots may omit it, so tolerate its absence at the type level.
-type StripActivity = Omit<SectionActivity, "linkedProducts"> & {
-  readonly linkedProducts?: SectionActivity["linkedProducts"];
-};
-
-// Optional fields so pre-activity snapshots and legacy fixtures render empty
-// instead of crashing.
-interface ActivitySectionSlice {
-  readonly authorId: string;
-  readonly authorName: string;
-  readonly activities?: readonly StripActivity[];
-  readonly items?: ReportSectionReadModel["items"];
-  readonly risks?: ReportSectionReadModel["risks"];
-  readonly decisions?: ReportSectionReadModel["decisions"];
-}
+type ActivitySectionSlice = Pick<
+  ReportSectionReadModel,
+  "authorId" | "authorName" | "activities" | "items" | "risks" | "decisions"
+>;
 
 type ActivityTone = CanonicalStatus;
 
@@ -62,27 +50,23 @@ function toTone(status: TrafficLightStatus | null): ActivityTone {
 
 function toActivityCard(
   section: ActivitySectionSlice,
-  activity: StripActivity,
+  activity: SectionActivity,
 ): ActivityCardModel {
   const owns = (parentId: string | null | undefined): boolean =>
     parentId === activity.activityId;
-  const items = (section.items ?? []).filter((i) => owns(i.activityId));
+  const items = section.items.filter((i) => owns(i.activityId));
   return {
     key: `${activity.activityId}::${section.authorId}`,
     activityName: activity.activityName,
     authorName: section.authorName,
     // Render the risk/blocker-derived floor, falling back to the stored status.
-    // `derivedStatus`/`linkedProducts` carry schema defaults, but legacy/partial
-    // fixtures and frozen snapshots may omit them — tolerate that here.
     tone: toTone(activity.derivedStatus ?? activity.status),
     note: activity.note ?? null,
-    linkedProducts: (activity.linkedProducts ?? []).map((p) => p.productName),
+    linkedProducts: activity.linkedProducts.map((p) => p.productName),
     currentItems: items.filter((i) => i.type === "current").map((i) => i.text),
     nextItems: items.filter((i) => i.type === "next").map((i) => i.text),
-    risks: (section.risks ?? [])
-      .filter((r) => owns(r.activityId))
-      .map((r) => r.risk),
-    decisions: (section.decisions ?? [])
+    risks: section.risks.filter((r) => owns(r.activityId)).map((r) => r.risk),
+    decisions: section.decisions
       .filter((d) => owns(d.activityId))
       .map((d) => d.text),
   };
@@ -93,9 +77,7 @@ function buildActivityCards(
 ): ActivityCardModel[] {
   return sections
     .flatMap((section) =>
-      (section.activities ?? []).map((activity) =>
-        toActivityCard(section, activity),
-      ),
+      section.activities.map((activity) => toActivityCard(section, activity)),
     )
     .sort(
       (a, b) =>

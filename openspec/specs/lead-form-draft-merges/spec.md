@@ -24,7 +24,7 @@ schemas, routes, product UI strings, or write endpoints.
 - **AND** submit/revoke/reopen/fill-from write actions remain in the existing
   write-action hook
 
-### Requirement: Draft merge semantics remain behavior-compatible
+### Requirement: Draft merge semantics preserve current invariants
 
 The draft-merge boundary MUST preserve the current raw draft invariants when
 child presentation components emit changes. Activity-parented records MUST
@@ -68,7 +68,7 @@ MUST clear paused reason whenever a row leaves the paused workflow state.
 - **AND** the item priority rank remains unchanged unless the edit explicitly
   changes it
 
-### Requirement: Quick-add and blocker routing remain behavior-compatible
+### Requirement: Quick-add and blocker routing use current flows
 
 The draft-merge boundary MUST preserve the current quick-add behavior. Risk and
 decision quick-add commands MUST trigger the existing section dialogs. Blocker

@@ -38,7 +38,6 @@ export {
 
 export const LEAD_FORM_REPOSITORY = Symbol("LeadFormRepository");
 
-// TODO(versions-v2) marks version-history re-entry points.
 export class LeadFormService {
   constructor(
     private readonly repository: LeadFormRepository,
@@ -101,7 +100,6 @@ export class LeadFormService {
     await assertNoPublishedLineage(this.repository, target);
     await assertFillableSource(this.repository, sourceSectionId, userId);
 
-    // TODO(versions-v2): re-entry for pre-overwrite safety snapshot.
     const copiedItems = await this.repository.fillFromSection(
       targetSectionId,
       sourceSectionId,

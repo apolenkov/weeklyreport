@@ -19,6 +19,11 @@ import type {
 type SectionItem = ReportSectionReadModel["items"][number];
 type SectionRisk = ReportSectionReadModel["risks"][number];
 
+function requireId(record: { readonly id?: string | undefined }): string {
+  if (typeof record.id === "string" && record.id.length > 0) return record.id;
+  throw new Error("Report record is missing id");
+}
+
 // Re-exported so the weekly-report mappers keep one import site for grouping helpers.
 export { initialsFromName };
 
@@ -65,21 +70,18 @@ export function buildProjectNameMap(
   ]);
 }
 
-// `index` is the item's position within its (projectId, type) bucket — the
-// fallback id embeds it so two legacy ids never collide.
 function deriveWeeklyReportItem(
   item: SectionItem & { projectId: string },
   section: ReportSectionReadModel,
   initials: string,
   alarmRisks: readonly AlarmRisk[],
-  index: number,
 ): WeeklyReportItem {
-  const stagePart = (item.stageNames ?? []).join("+");
+  const stagePart = item.stageNames.join("+");
   const stageLead = stagePart ? `${stagePart} · ${initials}` : initials;
   return {
-    id: item.id ?? `${item.projectId}-${item.type}-${index}`,
+    id: requireId(item),
     // stageLead for print `[{stageLead}]`; accordion reads stage/owner.
-    // Next-week stays "Planned" in stageLead (print back-compat).
+    // Next-week stays "Planned" in stageLead.
     stageLead: item.type === "next" ? "Planned" : stageLead,
     stage: stagePart,
     owner: initials,
@@ -107,7 +109,7 @@ export function groupItemsByProject(
     const initials = initialsFromName(section.authorName);
     const alarmRisks: AlarmRisk[] = section.risks.map((risk) => ({
       productId: risk.projectId ?? "",
-      stageNames: risk.stageNames ?? undefined,
+      stageNames: risk.stageNames,
       severity: risk.severity,
       text: risk.risk,
     }));
@@ -125,13 +127,12 @@ export function groupItemsByProject(
         const rows = (type: SectionItem["type"]) =>
           group
             .filter((entry) => entry.item.type === type)
-            .map((entry, index) =>
+            .map((entry) =>
               deriveWeeklyReportItem(
                 entry.item,
                 entry.section,
                 entry.initials,
                 entry.alarmRisks,
-                index,
               ),
             );
         return [projectId, { current: rows("current"), next: rows("next") }];
@@ -144,13 +145,12 @@ function deriveWeeklyReportRisk(
   section: ReportSectionReadModel,
   projectNames: ReadonlyMap<string, string>,
   risk: SectionRisk & { projectId: string },
-  index: number,
 ): WeeklyReportRisk {
   const productName = projectNames.get(risk.projectId) ?? "Unknown";
   const text = `${risk.risk} — Impact: ${risk.impact} — Mitigation: ${risk.mitigation}`;
-  const riskStages = (risk.stageNames ?? []).join("+");
+  const riskStages = risk.stageNames.join("+");
   return {
-    id: risk.id ?? `risk-${section.reportSectionId}-${index}`,
+    id: requireId(risk),
     badge: riskStages ? `${productName} · ${riskStages}` : productName,
     stage: riskStages,
     owner: initialsFromName(section.authorName),
@@ -183,13 +183,8 @@ export function groupRisksByProject(
     [...Map.groupBy(entries, (entry) => entry.risk.projectId)].map(
       ([projectId, group]) => [
         projectId,
-        group.map((entry, index) =>
-          deriveWeeklyReportRisk(
-            entry.section,
-            projectNames,
-            entry.risk,
-            index,
-          ),
+        group.map((entry) =>
+          deriveWeeklyReportRisk(entry.section, projectNames, entry.risk),
         ),
       ],
     ),

@@ -13,7 +13,7 @@ import {
 } from "../support/seed-constants.js";
 import { HEAD_NAME } from "./seed-demo.constants.js";
 import { makeGroupProductId, makeViewerAccessId } from "./seed-demo.ids.js";
-import type { DemoLead, TierDataset } from "./seed-demo.types.js";
+import type { DemoLead, SeedDataset } from "./seed-demo.types.js";
 const ORGANIZATION_SHORT_NAME = "PEO";
 const ORGANIZATION_FULL_NAME = "Product Engineering & Operations";
 
@@ -126,7 +126,7 @@ async function seedUsers(
 
 async function seedStagesAndProducts(
   prisma: PrismaClient,
-  dataset: TierDataset,
+  dataset: SeedDataset,
 ): Promise<void> {
   await prisma.stage.createMany({
     data: SEED_STAGES.map((s) => ({
@@ -147,7 +147,7 @@ async function seedStagesAndProducts(
     // Explicit deterministic id (not the schema's @default(uuid())) so the
     // "fixed constants, no run-time randomness in IDs" rule holds here too.
     // The index is the product's position in the dataset, so identity is a
-    // pure function of fixture order.
+    // pure function of dataset order.
     data: dataset.products.map((p, productIdx) => ({
       id: makeGroupProductId(productIdx),
       groupId: DEFAULT_REPORTING_GROUP_ID,
@@ -159,7 +159,7 @@ async function seedStagesAndProducts(
 
 export async function seedScaffold(
   prisma: PrismaClient,
-  dataset: TierDataset,
+  dataset: SeedDataset,
 ): Promise<void> {
   await seedGroupAndOrganization(prisma);
   await seedUsers(prisma, dataset.leads);

@@ -58,7 +58,7 @@ const DEMO_USER_IDS = [
 ] as const;
 
 // One product per primary lead (the catalogue's even-indexed rows), plus the
-// three small-MVP CRM extras. Addressed by stable named id, not position: a
+// three demo CRM extras. Addressed by stable named id, not position: a
 // reordered or shortened SEED_PRODUCTS must fail loudly instead of silently
 // dropping products from the profile scope.
 const CANONICAL_DEMO_PRODUCT_IDS = [

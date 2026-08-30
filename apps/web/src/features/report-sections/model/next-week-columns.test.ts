@@ -22,6 +22,7 @@ function productItem(
     author: "Тимлид 1",
     priorityRank: null,
     ...overrides,
+    stageNames: [],
   };
 }
 
@@ -40,6 +41,7 @@ function activityItem(
     author: "Тимлид 1",
     priorityRank: null,
     ...overrides,
+    stageNames: [],
   };
 }
 

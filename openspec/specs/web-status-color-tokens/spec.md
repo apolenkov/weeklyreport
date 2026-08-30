@@ -32,8 +32,7 @@ status color MUST extend this set with a named token rather than introduce a lit
 - **AND** the in-scope status surfaces that currently draw an exact
   `rgba(0,0,0,0.08)` hairline reference `var(--color-border-subtle)` instead —
   a zero-delta swap; the `rgba(0,0,0,0.07)` and `rgba(0,0,0,0.10)` hairline
-  variants on those surfaces are explicitly deferred, since folding them onto
-  the 0.08 token would shift pixels outside the sign-off list
+  variants remain separate because they are not the same visual token
 
 ### Requirement: Status token references carry no hex fallback
 
@@ -72,9 +71,7 @@ badge (`blocked-at-risk-product-card`). The near-duplicate at-risk foreground
 single canonical `--color-status-at-risk-fg`. (The blocked foreground on report
 surfaces already resolves `--color-destructive`, so no blocked-foreground
 consolidation is in scope; the other `#92400e` / `#991b1b` literals live only in
-the out-of-scope admin domain.) Because consolidating `#8a6d1b` shifts pixels,
-the change MUST cite the recorded sign-off and present before/after screenshots
-per the `status-color-semantics` palette-acceptance gate.
+the separate admin domain.)
 
 #### Scenario: a risk severity pill renders
 
@@ -88,8 +85,7 @@ per the `status-color-semantics` palette-acceptance gate.
 - **WHEN** the at-risk foreground renders across the risk card, the portfolio
   table, and the lead-history chip
 - **THEN** all three resolve the single canonical `--color-status-at-risk-fg`
-- **AND** the change cites the sign-off and before/after screenshots for the
-  consolidated foregrounds
+  - **AND** all three resolve the same canonical token
 
 ### Requirement: Non-workflow color domains stay out of the status tokens
 
@@ -99,14 +95,10 @@ unrelated surface with it. The admin role-identity badges (`users-tab`), the
 period-lifecycle and reopened tags plus the required-field asterisk and
 destructive-action reds (`periods-tab-*`, `periods-delete-confirm-dialog`), the
 publish-lock pending-leads warning (`publish-lock-button`), the decision "Due"
-deadline chip (`decision-card`), and the print/PDF template
-(`print-report-template`) are out of scope. The publish-lock warning and the
-decision deadline chip reuse the amber palette but signal a warning / an
-approaching deadline, not report-workflow at-risk status, so — mirroring the
-stage-hint precedent's sign-off question — they stay literal rather than fold
-into `--color-status-at-risk-*`. The print template inlines hex because its
-renderer cannot resolve CSS custom properties. Any recolor of those domains is a
-separate, separately-tracked concern.
+deadline chip (`decision-card`) belong to separate color domains. The publish-lock warning and the
+decision deadline chip reuse the amber palette but signal a warning or an
+approaching deadline, not report-workflow at-risk status, so they stay in
+their own domain. Any recolor of those domains is a separate concern.
 
 #### Scenario: a role-identity badge is left unchanged
 
@@ -115,10 +107,3 @@ separate, separately-tracked concern.
 - **AND** the period-lifecycle tags, the required-field asterisk, the
   destructive-action reds, the publish-lock pending-leads warning, and the
   decision "Due" deadline chip are left to their own domain
-
-#### Scenario: the print template keeps inline hex
-
-- **WHEN** the print/PDF report template renders status color
-- **THEN** it keeps its inline hex literals
-- **AND** the change does not require it to reference a CSS custom property its
-  renderer cannot resolve

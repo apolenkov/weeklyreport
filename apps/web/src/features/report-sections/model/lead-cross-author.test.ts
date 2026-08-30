@@ -25,27 +25,27 @@ describe("buildCrossAuthorStageMap", () => {
     authorShortName: "Baker L.",
     stageNames: ["Development", "Testing"],
     stages: [
-      { stageName: "Dev", status: "green" },
+      { stageName: "Development", status: "green" },
       { stageName: "Testing", status: null },
     ],
   };
 
-  it("keys stages via normalizeStageName (Dev↔Development alias)", () => {
+  it("keys stages by their exact canonical names", () => {
     const map = buildCrossAuthorStageMap([crossAuthor]);
     const stageMap = map.get("proj-a");
     expect(stageMap).toBeDefined();
-    expect([...(stageMap?.keys() ?? [])]).toEqual(["dev", "testing"]);
+    expect([...(stageMap?.keys() ?? [])]).toEqual(["Development", "Testing"]);
   });
 
   it("derives status from ca.stages traffic only — no section data", () => {
     const map = buildCrossAuthorStageMap([crossAuthor]);
-    // Dev: green traffic → on-track (no risks/items passed, so no override).
-    expect(map.get("proj-a")?.get("dev")).toEqual({
+    // Development: green traffic → on-track (no risks/items passed, so no override).
+    expect(map.get("proj-a")?.get("Development")).toEqual({
       assignee: "Baker L.",
       status: "on-track",
     });
     // Testing: null traffic → empty.
-    expect(map.get("proj-a")?.get("testing")).toEqual({
+    expect(map.get("proj-a")?.get("Testing")).toEqual({
       assignee: "Baker L.",
       status: "empty",
     });
@@ -53,7 +53,7 @@ describe("buildCrossAuthorStageMap", () => {
 
   it("derives 'empty' status when stage list is empty", () => {
     const map = buildCrossAuthorStageMap([{ ...crossAuthor, stages: [] }]);
-    expect(map.get("proj-a")?.get("dev")).toEqual({
+    expect(map.get("proj-a")?.get("Development")).toEqual({
       assignee: "Baker L.",
       status: "empty",
     });
@@ -69,16 +69,16 @@ describe("buildCrossAuthorStageMap", () => {
       ...crossAuthor,
       stageNames: ["Development", "Testing"],
       stages: [
-        { stageName: "Dev", status: "yellow" },
+        { stageName: "Development", status: "yellow" },
         { stageName: "Testing", status: "red" },
       ],
     };
     const map = buildCrossAuthorStageMap([derived]);
-    expect(map.get("proj-a")?.get("dev")).toEqual({
+    expect(map.get("proj-a")?.get("Development")).toEqual({
       assignee: "Baker L.",
       status: "at-risk",
     });
-    expect(map.get("proj-a")?.get("testing")).toEqual({
+    expect(map.get("proj-a")?.get("Testing")).toEqual({
       assignee: "Baker L.",
       status: "blocked",
     });
@@ -94,7 +94,7 @@ describe("applyCrossAuthorStageOverrides", () => {
     overallStatus: "on-track",
     stages: [
       {
-        stageName: "Dev",
+        stageName: "Development",
         status: "on-track",
         ownership: "mine",
         assignee: "Me",
@@ -118,8 +118,8 @@ describe("applyCrossAuthorStageOverrides", () => {
     [
       "proj-a",
       new Map([
-        ["dev", { assignee: "Baker L.", status: "blocked" as const }],
-        ["testing", { assignee: "Baker L.", status: "at-risk" as const }],
+        ["Development", { assignee: "Baker L.", status: "blocked" as const }],
+        ["Testing", { assignee: "Baker L.", status: "at-risk" as const }],
         // no "support" entry — a locked stage with no cross-author match stays.
       ]),
     ],
@@ -176,7 +176,7 @@ describe("mapForeignItems", () => {
           type: "current",
           text: "Current work",
           workflowStatus: "planned",
-          stageNames: [],
+          stageNames: ["Development"],
         },
         {
           id: "item-next",
@@ -184,7 +184,7 @@ describe("mapForeignItems", () => {
           type: "next",
           text: "Next work",
           workflowStatus: "planned",
-          stageNames: [],
+          stageNames: ["Development"],
         },
       ],
     });
@@ -207,7 +207,7 @@ describe("mapForeignItems", () => {
           type: "current",
           text: "Work",
           workflowStatus: "planned",
-          stageNames: [],
+          stageNames: ["Development"],
         },
       ],
     });
@@ -226,7 +226,7 @@ describe("mapForeignItems", () => {
           type: "current",
           text: "Work",
           workflowStatus: "planned",
-          stageNames: [],
+          stageNames: ["Development"],
         },
       ],
     });
@@ -251,7 +251,7 @@ describe("mapForeignItems", () => {
           type: "current",
           text: "In-flight work",
           workflowStatus: "in_progress",
-          stageNames: [],
+          stageNames: ["Development"],
         },
       ],
       risks: [
@@ -262,7 +262,7 @@ describe("mapForeignItems", () => {
           impact: "Delivery slips",
           mitigation: "Failover plan",
           severity: "blocked",
-          stageNames: [],
+          stageNames: ["Development"],
         },
       ],
     });
@@ -283,7 +283,7 @@ describe("mapForeignItems", () => {
           type: "current",
           text: "In-flight work",
           workflowStatus: "in_progress",
-          stageNames: [],
+          stageNames: ["Development"],
         },
       ],
     });
@@ -307,7 +307,7 @@ describe("mapForeignRisks", () => {
           impact: "Delivery slips",
           mitigation: "Failover plan",
           severity: "at-risk",
-          stageNames: [],
+          stageNames: ["Development"],
         },
         {
           id: "risk-2",
@@ -316,7 +316,7 @@ describe("mapForeignRisks", () => {
           impact: "Compliance",
           mitigation: "Backups",
           severity: "blocked",
-          stageNames: [],
+          stageNames: ["Development"],
         },
       ],
     });
@@ -341,7 +341,7 @@ describe("mapForeignDecisions", () => {
           owner: "Baker Lee",
           impact: "Cost",
           deadline: new Date("2026-08-01T15:30:00.000Z"),
-          stageNames: [],
+          stageNames: ["Development"],
         },
       ],
     });
@@ -362,7 +362,7 @@ describe("mapForeignDecisions", () => {
           owner: "Baker Lee",
           impact: "Cost",
           deadline: null,
-          stageNames: [],
+          stageNames: ["Development"],
         },
       ],
     });

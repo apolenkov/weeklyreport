@@ -189,5 +189,5 @@ export class RemindersScheduler {
 }
 
 function buildSectionUrl(baseUrl: string, reportId: string): string {
-  return `${baseUrl}/lead/report?reportId=${reportId}`;
+  return `${baseUrl}/lead/report/${encodeURIComponent(reportId)}`;
 }

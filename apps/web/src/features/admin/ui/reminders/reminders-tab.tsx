@@ -12,8 +12,7 @@ import { useRemindersTabState } from "./use-reminders-tab-state";
 
 interface RemindersTabProps {
   readonly policies: readonly AdminReminderPolicyView[];
-  // Derived rules feed each card's next-send line; legacy null-policy rules
-  // remain hidden from this grouped view.
+  // Derived rules feed each card's next-send line.
   readonly derivedRulesByPolicyId: Readonly<
     Record<string, readonly AdminReminderView[]>
   >;

@@ -1,8 +1,8 @@
 ## Purpose
 
 A risk (and the escalation rows derived from it) must always carry its concrete
-SDLC stage(s) so the report surfaces can resolve and display the stage instead of
-a silent placeholder, and so stage-less legacy rows are handled explicitly.
+SDLC stage(s) so the report surfaces can resolve and display the stage instead
+of a silent placeholder.
 
 ## Requirements
 
@@ -72,66 +72,6 @@ activity parent.
 - **THEN** validation REJECTS the record — an activity owns no stage, so a
   stage-bearing activity row is not allowed
 
-### Requirement: Stage-less legacy rows are loud, never disguised
-
-A PRODUCT-parented stage-less risk, item, or decision row MUST render an explicit
-"No stage set" warning marker using existing warning tokens. The silent
-"All stages" / "all stages" label MUST NOT be used for any of these rows.
-
-The "No stage set" marker signals a PRODUCT-parented row that still needs a stage
-assigned. It MUST NOT be shown on an ACTIVITY-parented record: an activity record
-legitimately carries no stage, so its stage-less state is expected, not a
-repair-needed defect, and it renders with no stage marker at all.
-
-#### Scenario: a legacy risk row with no stage data renders
-
-- **WHEN** a PRODUCT-parented risk card renders for a row with empty `stageIds`
-- **THEN** the card shows the "No stage set" warning marker
-- **AND** no "All stages" label appears
-
-#### Scenario: a legacy item row with no stage data renders
-
-- **WHEN** a PRODUCT-parented item card renders for a row with empty `stageIds`
-- **THEN** the card shows the "No stage set" warning marker
-- **AND** no "All stages" label appears
-
-#### Scenario: a legacy decision row with no stage data renders
-
-- **WHEN** a PRODUCT-parented decision row renders for a row with empty `stageIds`
-- **THEN** the row shows the "No stage set" warning marker
-- **AND** no "all stages" label appears
-
-#### Scenario: an activity record shows no stage marker
-
-- **WHEN** an ACTIVITY-parented item, risk, or decision renders
-- **THEN** no "No stage set" warning marker is shown — the absence of a stage is
-  expected for an activity record
-
-### Requirement: Stage-less rows stay representable until repaired
-
-A stage-less risk, item, or decision row MUST remain loadable and renderable: the
-read model tolerates empty `stageIds` via dedicated read-model schemas
-(`riskReadModelSchema`, `itemReadModelSchema`, `decisionReadModelSchema`), while
-its resave MUST be rejected by the tightened write schema until the lead assigns a
-stage in the edit dialog. No backfill exists or is needed: the schema has no legacy
-`stageName` column, and verified data holds zero stage-less rows.
-
-#### Scenario: a stage-less risk row is resaved without repair
-
-- **WHEN** the lead saves a draft containing a risk whose `stageIds`
-  is still empty
-- **THEN** server-side validation rejects the payload loudly
-- **AND** the row stays visible with its warning marker until a stage
-  is selected in the edit dialog
-
-#### Scenario: a stage-less item or decision row loads then is resaved without repair
-
-- **WHEN** the section read model parses a stored item or decision whose
-  `stageIds` is empty
-- **THEN** the row loads and renders its "No stage set" marker
-- **AND** resaving that same row via the write schema is rejected until a stage
-  is selected in the edit dialog
-
 ### Requirement: Items and decisions require a concrete stage in the edit dialog
 
 An item or decision MUST reference at least one concrete SDLC stage when saved through its edit dialog and the chosen product has at least one owned stage: the dialog auto-applies a single owned stage and otherwise blocks saving a stage-less row, exactly as the risk dialog does. The empty-selection "applies to all assigned stages" fallback is removed for items and decisions; "all stages" is expressed by selecting every owned stage.
@@ -140,8 +80,8 @@ An item or decision MUST reference at least one concrete SDLC stage when saved t
    treat it as implicitly selected so the lead can save without a manual click.
 2. When the selected product has two or more owned stages and none is selected,
    the dialog MUST block saving with "Select at least one stage."
-3. When the selected product has no owned stages (a legacy cross-product row),
-   the dialog MUST NOT force a stage — there is none to pick.
+3. When the selected product has no owned stages, the dialog MUST NOT force a
+   stage — there is none to pick.
 4. The `StageMultiSelect` helper copy MUST NOT advertise the empty selection as
    "apply to all assigned stages" when the host dialog requires a stage.
 

@@ -27,7 +27,7 @@ const PRODUCT_ROWS = [
   { id: PROD_DEVOPS, name: "DevOps-инструменты", leadId: LEAD_DMITRY },
   { id: PROD_PAYMENTS, name: "Платёжный шлюз", leadId: LEAD_OLGA },
   { id: PROD_HR, name: "HR-система", leadId: LEAD_SERGEY },
-  // Vasily's extra products for small-MVP demo (product-switcher needs ≥2)
+  // Vasily's extra products for demo demo (product-switcher needs ≥2)
   { id: PROD_CRM_SALES, name: "CRM-Sales Hub", leadId: LEAD_1 },
   { id: PROD_CRM_DATA, name: "CRM-Data Lake", leadId: LEAD_1 },
   { id: PROD_CRM_360, name: "CRM-Customer 360", leadId: LEAD_1 },

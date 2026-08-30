@@ -64,28 +64,17 @@ describe("ActionLogService.list", () => {
     expect(page.nextCursor).toBe("log-1");
   });
 
-  it("normalizes historical reasons and maps only the explicit allowlist", async () => {
+  it("fails closed when a failed row contains a non-canonical reason", async () => {
     const listActionLog = vi.fn().mockResolvedValue([
       {
         ...ROW,
         status: "fail",
         reason: "raw database failure for private@example.com",
-        undocumentedPayload: "must-not-cross",
       },
-      { ...ROW, id: "log-2", reason: "should-be-null" },
     ]);
     const service = new ActionLogService({ listActionLog });
 
-    const page = await service.list({ limit: 20 });
-
-    expect(page.items[0]).toMatchObject({
-      status: "fail",
-      reason: "LEGACY_FAILURE",
-    });
-    expect(page.items[1]).toMatchObject({ status: "success", reason: null });
-    expect(JSON.stringify(page)).not.toContain("raw database failure");
-    expect(JSON.stringify(page)).not.toContain("must-not-cross");
-    expect(JSON.stringify(page)).not.toContain("should-be-null");
+    await expect(service.list({ limit: 20 })).rejects.toThrow();
   });
 
   it("preserves a recognized failure classification", async () => {

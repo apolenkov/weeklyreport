@@ -18,9 +18,8 @@ export interface OrganizationRepository {
   ) => Promise<Organization>;
 }
 
-// Singleton Organization identity. TODO(multi-org): drop id='singleton',
-// take organizationId from session on every read. Audit on write lives in
-// the router (session/IP/correlation-id), not here.
+// Singleton Organization identity; audit on write lives in the router
+// (session/IP/correlation-id), not here.
 export class OrganizationService {
   constructor(
     private readonly repository: OrganizationRepository,

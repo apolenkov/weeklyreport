@@ -38,8 +38,6 @@ function createRepository(
     removeUser: unused,
     upsertProject: unused,
     removeProject: unused,
-    upsertReminderRule: unused,
-    removeReminderRule: unused,
     getSettings: unused,
     updateSettings: unused,
     saveReportingGroup: unused,

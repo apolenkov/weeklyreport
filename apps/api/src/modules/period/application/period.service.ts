@@ -18,8 +18,8 @@ export class PeriodAccessError extends Error {
   }
 }
 
-// Lifecycle target out of scope for the caller (not the server-derived active
-// period, or an archived period) → FORBIDDEN. PeriodAccessError, by contrast,
+// Lifecycle target outside the caller's permitted scope (not the server-derived
+// active period, or an archived period) → FORBIDDEN. PeriodAccessError, by contrast,
 // carries state/policy failures → BAD_REQUEST.
 export class PeriodScopeError extends Error {
   constructor(message: string) {

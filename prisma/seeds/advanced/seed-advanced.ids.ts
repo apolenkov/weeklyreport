@@ -50,8 +50,7 @@ export function stageStatusId(
 ): string {
   // "f0" marker (2) + lead(2) + prod(4) + stage(4) = 12 hex chars. Each field is
   // zero-padded so the (leadIndex, prodSeq, stageSeq) -> id mapping stays
-  // injective: the old unpadded concatenation collided once a lead owned >=10
-  // products (prodSeq became 2 digits), producing duplicate primary keys (P2002).
+  // injective: fixed-width segments keep identifiers unique for every lead count.
   const lead = leadIndex.toString().padStart(LEAD_FIELD_WIDTH, "0");
   const prod = prodSeq.toString().padStart(PROD_FIELD_WIDTH, "0");
   const stage = stageSeq.toString().padStart(STAGE_FIELD_WIDTH, "0");

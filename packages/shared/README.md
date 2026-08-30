@@ -4,13 +4,13 @@ Shared Zod schemas, TypeScript types, and tRPC router definition used by both `@
 
 ## Schemas
 
-| Schema                       | File                   | Description                                                            |
-| ---------------------------- | ---------------------- | ---------------------------------------------------------------------- |
-| `reportSectionSchema`        | `schemas/report.ts`    | Full report section with projects, items, risks, decisions, priorities |
-| `draftSavePayloadSchema`     | `schemas/report.ts`    | Draft save input with `safeText()` sanitization                        |
-| `submitSectionPayloadSchema` | `schemas/report.ts`    | Submit input with `confirmed: true` and project statuses               |
-| `userSessionSchema`          | `schemas/auth/auth.ts` | JWT payload: userId, email, name, role, active report/section          |
-| `roleSchema`                 | `schemas/auth/auth.ts` | Role enum: lead, head, viewer                                          |
+| Schema                       | File                              | Description                                                        |
+| ---------------------------- | --------------------------------- | ------------------------------------------------------------------ |
+| `reportSectionSchema`        | `schemas/report/report.schema.ts` | Full report section with records, risks, decisions, and priorities |
+| `draftSavePayloadSchema`     | `schemas/report/report.schema.ts` | Draft save input with `safeText()` sanitization                    |
+| `submitSectionPayloadSchema` | `schemas/report/report.schema.ts` | Submit input with `confirmed: true` and product statuses           |
+| `userSessionSchema`          | `schemas/auth/auth.ts`            | Session payload with identity, role, and active report context     |
+| `roleSchema`                 | `schemas/auth/auth.ts`            | Role enum: lead, head, admin, viewer                               |
 
 ## Key Utilities
 
@@ -22,5 +22,5 @@ Shared Zod schemas, TypeScript types, and tRPC router definition used by both `@
 ## Testing
 
 ```bash
-pnpm exec vitest run src/schemas/__tests__/    # 115 boundary tests
+pnpm exec vitest run src/schemas/              # shared schema tests
 ```

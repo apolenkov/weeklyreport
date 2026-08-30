@@ -34,7 +34,6 @@ describe("adminActionLogEventSchema", () => {
     "INTERNAL_SERVER_ERROR",
     "TOO_MANY_REQUESTS",
     "CLIENT_CLOSED_REQUEST",
-    "LEGACY_FAILURE",
   ] as const)("accepts the bounded failure classification %s", (reason) => {
     expect(
       adminActionLogEventSchema.parse({

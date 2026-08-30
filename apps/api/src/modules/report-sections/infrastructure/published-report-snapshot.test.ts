@@ -176,7 +176,7 @@ describe("buildEscalationsFromReadSections", () => {
     expect(risk?.stageName).toBe("Development, Testing");
   });
 
-  it("returns a null stage for a stage-less blocked risk", () => {
+  it("returns the canonical stage for a blocked risk", () => {
     const escalations = buildEscalationsFromReadSections([
       makeSection({
         risks: [
@@ -187,14 +187,14 @@ describe("buildEscalationsFromReadSections", () => {
             impact: "High",
             mitigation: "Escalated",
             severity: "blocked",
-            stageNames: undefined,
+            stageNames: ["Development"],
           },
         ],
       }),
     ]);
 
     expect(escalations[0]?.type).toBe("blocked");
-    expect(escalations[0]?.stageName).toBeNull();
+    expect(escalations[0]?.stageName).toBe("Development");
   });
 
   it("a blocked-severity risk yields ONE escalation, never also unresolved_risk", () => {

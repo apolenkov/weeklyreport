@@ -75,8 +75,7 @@ function deriveOwnedStageRow(
     // Stage owner labels render the short form ("Иванов В.П."); the full ФИО
     // is reserved for the top user badge. Avatar chips keep 2-letter initials.
     assignee: shortNameFromName(ownerLabel),
-    // Completeness counts only risks that explicitly name the stage. A
-    // covers-all or legacy stage-less risk must not make every stage complete.
+    // Completeness counts only risks that explicitly name the stage.
     coveredByOwnRisk: risks.some(
       (r) =>
         Array.isArray(r.stageNames) &&
@@ -89,11 +88,11 @@ function deriveOwnedStageRow(
 function buildStageGrid(
   ownerLabel: string,
   ownedStages: readonly OwnedStageInput[],
-  stageSet: readonly { stageName: string }[] = [],
-  risks: readonly StageRisk[] = [],
+  stageSet: readonly { stageName: string }[],
+  risks: readonly StageRisk[],
 ): LeadStageAssignment[] {
-  // Membership is assignment-driven. Unioning the lead's own assignments
-  // keeps them visible when a legacy fixture has an incomplete stageSet.
+  // The product stage set provides the pipeline grid; a lead-owned assignment
+  // always belongs to that current grid as well.
   const inStageSet = (stageName: string): boolean =>
     stageSet.some((s) => stageNamesMatch(s.stageName, stageName)) ||
     ownedStages.some((s) => stageNamesMatch(s.stageName, stageName));
@@ -125,7 +124,10 @@ export function mapLeadProducts(
     // Touched stages apply the risk floor; untouched stages keep the raw empty
     // state so display severity and form completeness remain distinct.
     const coveringRisks = section.risks.filter(
-      (r) => r.projectId === p.projectId && r.risk.trim().length > 0,
+      (r) =>
+        r.projectId === p.projectId &&
+        r.risk.trim().length > 0 &&
+        r.stageNames.length > 0,
     );
     return {
       id: p.projectId,
@@ -141,8 +143,7 @@ export function mapLeadProducts(
   });
 }
 
-// Sort by period date, mark the active report, and preserve server-provided
-// counts without mapper fallbacks.
+// Sort by period date, mark the active report, and preserve server-provided counts.
 export function mapLeadPeriods(
   history: readonly MyHistoryEntry[],
   activeReportId: string | null,

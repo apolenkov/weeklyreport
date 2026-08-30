@@ -65,7 +65,7 @@ describe("annotateOwnRiskCoverage", () => {
     expect(result[0]?.stages[0]?.coveredByOwnRisk).toBe(true);
   });
 
-  it("does NOT set the flag for a covers-all ([]) risk", () => {
+  it("does NOT set the flag for a risk without an explicit stage", () => {
     const result = annotateOwnRiskCoverage(
       [makeProduct()],
       [makeRisk({ stageNames: [] })],

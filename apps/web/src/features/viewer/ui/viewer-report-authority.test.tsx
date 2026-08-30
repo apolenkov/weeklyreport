@@ -105,10 +105,6 @@ vi.mock("../../../shared/ui/report-shell/view-mode-toggle", () => ({
   ),
 }));
 
-vi.mock("../../../shared/ui/report-shell/agent-review-coming-soon", () => ({
-  AgentReviewComingSoon: () => <span>Agent review</span>,
-}));
-
 vi.mock("../../period", () => ({
   PeriodNavigator: () => null,
 }));

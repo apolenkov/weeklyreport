@@ -114,7 +114,7 @@ const MAX_SELECTED_STAGES = 20;
 
 // Stage NAMES, one per element, persisted as the Postgres text[] `stageNames`
 // column on Item / Risk / Decision. Comma-joined rendering is display-only.
-/** Accepts optional legacy stage-name arrays in report read models. */
+/** Accepts optional stage-name arrays in draft/write inputs. */
 export const stageNamesField = z
   .array(z.string())
   .max(MAX_SELECTED_STAGES)
@@ -136,6 +136,12 @@ const stageNameElement = z
 export const requiredStageNamesField = z
   .array(stageNameElement)
   .min(1)
+  .max(MAX_SELECTED_STAGES)
+  .readonly();
+
+/** Current read models always expose structured stage names; activity rows use []. */
+export const currentStageNamesField = z
+  .array(stageNameElement)
   .max(MAX_SELECTED_STAGES)
   .readonly();
 

@@ -1,8 +1,8 @@
 import type { PrismaClient } from "@prisma/client";
 
 // Delete in FK-safe order. ReopenRequest references ReportSection → must go
-// before ReportSection deletes; TelegramBinding → User and GroupProduct →
-// Project + ReportingGroup drop before their parents. Other CASCADE FKs
+// before ReportSection deletes; GroupProduct → Project + ReportingGroup drop
+// before their parents. Other CASCADE FKs
 // (ProjectStatus → ReportSection, Items → ReportSection, …) flow naturally.
 export async function wipeExistingData(prisma: PrismaClient): Promise<void> {
   console.log("[seed-simple] Wiping existing data...");
@@ -32,7 +32,6 @@ export async function wipeExistingData(prisma: PrismaClient): Promise<void> {
   await prisma.groupProduct.deleteMany({});
   await prisma.project.deleteMany({});
   await prisma.stage.deleteMany({});
-  await prisma.telegramBinding.deleteMany({});
   await prisma.userActionLog.deleteMany({});
   await prisma.user.deleteMany({});
   await prisma.reportingGroup.deleteMany({});

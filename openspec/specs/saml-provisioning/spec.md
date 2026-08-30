@@ -97,7 +97,7 @@ The canonical API test suite MUST execute SAML response parsing with the pinned 
 
 #### Scenario: Valid test assertion is signed
 
-- **WHEN** the integration harness signs a complete assertion with the trusted test IdP key
+- **WHEN** the integration test signs a complete assertion with the trusted test IdP key
 - **THEN** the production SAML parser validates it and returns the expected corporate identity
 
 #### Scenario: Signature bytes are mutated

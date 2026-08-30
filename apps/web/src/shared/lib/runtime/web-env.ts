@@ -7,7 +7,7 @@ import { z } from "zod";
 const emptyToUndefined = (value: unknown): unknown =>
   value === "" ? undefined : value;
 
-// Shared by the five boolean toggles: only "true"/"false"/unset so a typo is
+// Shared by the four product boolean toggles: only "true"/"false"/unset so a typo is
 // rejected at build rather than silently read as "off". Empty string coerces
 // to unset so both parse sites treat absence uniformly.
 const optionalToggle = z.preprocess(
@@ -23,7 +23,6 @@ export const webEnvSchema = z.object({
   NEXT_PUBLIC_AUTH_STUB: optionalToggle,
   NEXT_PUBLIC_CLIENT_LOG_FORWARDING: optionalToggle,
   NEXT_PUBLIC_DEV_ROLE_SWITCHER: optionalToggle,
-  NEXT_PUBLIC_DISABLE_DEVTOOLS: optionalToggle,
   NEXT_PUBLIC_SENTRY_DSN: z.preprocess(emptyToUndefined, z.url().optional()),
   NEXT_PUBLIC_WEB_VITALS: optionalToggle,
 });
@@ -36,7 +35,6 @@ const rawWebEnv = (): Record<string, string | undefined> => ({
   NEXT_PUBLIC_CLIENT_LOG_FORWARDING:
     process.env.NEXT_PUBLIC_CLIENT_LOG_FORWARDING,
   NEXT_PUBLIC_DEV_ROLE_SWITCHER: process.env.NEXT_PUBLIC_DEV_ROLE_SWITCHER,
-  NEXT_PUBLIC_DISABLE_DEVTOOLS: process.env.NEXT_PUBLIC_DISABLE_DEVTOOLS,
   NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
   NEXT_PUBLIC_WEB_VITALS: process.env.NEXT_PUBLIC_WEB_VITALS,
 });
@@ -58,8 +56,6 @@ export const webEnv = {
     isTrue(readWebEnv().NEXT_PUBLIC_DEV_ROLE_SWITCHER) && !isProduction(),
   clientLogForwarding: (): boolean =>
     isTrue(readWebEnv().NEXT_PUBLIC_CLIENT_LOG_FORWARDING),
-  disableDevtools: (): boolean =>
-    isTrue(readWebEnv().NEXT_PUBLIC_DISABLE_DEVTOOLS),
   webVitals: (): boolean => isTrue(readWebEnv().NEXT_PUBLIC_WEB_VITALS),
   appVersion: (): string | undefined => readWebEnv().NEXT_PUBLIC_APP_VERSION,
   sentryDsn: (): string | undefined => readWebEnv().NEXT_PUBLIC_SENTRY_DSN,

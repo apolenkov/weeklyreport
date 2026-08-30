@@ -23,10 +23,9 @@ export function createAppServices(deps: {
 } {
   const { app, env, logger } = deps;
 
-  // Shared BullModule handles for the admin DLQ count and Telegram smoke-test.
+  // Shared BullModule handle for the email reminder worker and admin DLQ count.
   const queueRegistry = app.get(QueueRegistry);
   const emailReminderQueue = queueRegistry.get("email-reminder");
-  const telegramOutboundQueue = queueRegistry.get("telegram-outbound");
 
   const prisma = app.get(PrismaService);
 
@@ -44,7 +43,6 @@ export function createAppServices(deps: {
     env,
     autoCarryOver,
     emailReminderQueue,
-    telegramOutboundQueue,
     jobsService,
   });
 

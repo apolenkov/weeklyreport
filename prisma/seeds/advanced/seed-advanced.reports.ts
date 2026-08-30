@@ -33,7 +33,7 @@ const PUBLISHED_FIELDS = {
   weekLabel: publishedReport.weekLabel,
   publishedAt: new Date(publishedReport.publishedAt),
   publishedById: HEAD_USER_ID,
-  // Section rows stay the source of truth for the advanced seed's content: a
+  // Section rows stay the source of truth for the product seed's content: a
   // stale empty snapshot makes /reports/<id> render 0 products even when the
   // seeded published report has submitted sections.
   publishedSnapshot: Prisma.DbNull,

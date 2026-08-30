@@ -58,7 +58,7 @@ export class PdfExportService {
 
   // Throws PdfExportDomainError (tRPC → 500) if the secret is missing/too short —
   // fail loud at request time rather than mint an unverifiable token.
-  signPdfExportToken(reportId: string, requestedBy?: string): string {
+  signPdfExportToken(reportId: string, requestedBy: string): string {
     try {
       return signPdfExportTokenPure(reportId, requestedBy);
     } catch (error) {

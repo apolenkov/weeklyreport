@@ -66,9 +66,6 @@ context: |
   - Static production UI strings in `apps/web/src/**/*.tsx` stay English
     until a real i18n phase exists; Russian is allowed only as data, seeds,
     comments, or tests
-  - Deferred user-facing features use `ComingSoonBadge` from
-    `@customreport/ui`; deferred backend paths throw
-    `Error('Not implemented — see TODO(<ref>)')`
   - Disposable-database operations use the one exact validator in
     `prisma/guards/_destructive-guard.ts`: loopback only, raw URL path exactly
     `customreport_e2e` or `customreport_e2e_lane_[a-o]_test`, no query/fragment
@@ -102,7 +99,7 @@ rules:
       Prisma writes, or shared schemas.
     - Identify which of the load-bearing invariants the change preserves,
       mutates, or relaxes (period dual-state, role-coverage gate,
-      destructive-db guard, deferred-feature pattern).
+      destructive-db guard).
     - Surface rollout concerns — migration order, feature-flag gating,
       destructive ops, downstream consumers in apps/web and apps/api.
   tasks:

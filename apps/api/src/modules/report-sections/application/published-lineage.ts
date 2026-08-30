@@ -50,18 +50,27 @@ function assertSnapshotShape(
   }
 }
 
-function collectStableIds(rows: unknown): Set<string> {
-  if (!isUnknownArray(rows)) return new Set();
-  return new Set(
-    rows.flatMap((row) =>
-      isRecord(row) && typeof row.stableId === "string" ? [row.stableId] : [],
-    ),
-  );
+function collectStableIds(rows: unknown, field: string): Set<string> {
+  if (!isUnknownArray(rows)) {
+    throw new PublishedSnapshotIntegrityError(
+      `The published snapshot has no valid ${field} array.`,
+    );
+  }
+  const ids = new Set<string>();
+  for (const row of rows) {
+    if (!isRecord(row) || typeof row.stableId !== "string") {
+      throw new PublishedSnapshotIntegrityError(
+        `The published snapshot has a ${field} row without stableId.`,
+      );
+    }
+    ids.add(row.stableId);
+  }
+  return ids;
 }
 
 // Tolerant reader over the frozen `Report.publishedSnapshot` JSON returning one
-// section's item/decision `stableId`s: null reads empty, legacy rows without a
-// stableId are skipped, a malformed snapshot throws (fail-closed protection).
+// section's item/decision `stableId`s: null reads empty, malformed snapshots
+// throw (fail-closed protection).
 export function snapshotLineageForSection(
   snapshot: unknown,
   reportSectionId: string,
@@ -78,8 +87,8 @@ export function snapshotLineageForSection(
   );
   if (!isRecord(section)) return empty;
   return {
-    itemStableIds: collectStableIds(section.items),
-    decisionStableIds: collectStableIds(section.decisions),
+    itemStableIds: collectStableIds(section.items, "items"),
+    decisionStableIds: collectStableIds(section.decisions, "decisions"),
   };
 }
 
@@ -100,10 +109,14 @@ export function snapshotLineageAllSections(snapshot: unknown): {
   const sections = snapshot.sections.filter(isRecord);
   return {
     itemStableIds: new Set(
-      sections.flatMap((section) => [...collectStableIds(section.items)]),
+      sections.flatMap((section) => [
+        ...collectStableIds(section.items, "items"),
+      ]),
     ),
     decisionStableIds: new Set(
-      sections.flatMap((section) => [...collectStableIds(section.decisions)]),
+      sections.flatMap((section) => [
+        ...collectStableIds(section.decisions, "decisions"),
+      ]),
     ),
   };
 }

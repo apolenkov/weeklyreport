@@ -45,7 +45,7 @@ export function createStubAppRouterDeps(
     projectActivityService: stub(),
     telemetryService: stub(),
     sessionRevocationService: stub(),
-    // Optional deps default to absent so fail-loud guards (ops/jobs/telegram)
+    // Optional deps default to absent so fail-loud guards stay reachable;
     // stay reachable; tests that wire them pass them as overrides.
     ...(overrides as Partial<AppRouterDeps>),
   };

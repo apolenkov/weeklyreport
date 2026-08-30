@@ -74,7 +74,7 @@ describe("deriveItemStatus", () => {
   });
 
   it("computes 'planned' for a next-week item with no workflowStatus", () => {
-    expect(deriveItemStatus({ workflowStatus: null, type: "next" })).toBe(
+    expect(deriveItemStatus({ workflowStatus: "planned", type: "next" })).toBe(
       "planned",
     );
   });
@@ -104,9 +104,9 @@ describe("deriveItemStatus", () => {
   });
 
   it("returns 'in-progress' for current-week item with no workflowStatus", () => {
-    expect(deriveItemStatus({ workflowStatus: null, type: "current" })).toBe(
-      "in-progress",
-    );
+    expect(
+      deriveItemStatus({ workflowStatus: "in_progress", type: "current" }),
+    ).toBe("in-progress");
   });
 });
 

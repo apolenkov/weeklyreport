@@ -249,29 +249,6 @@ export function createRepository(
       };
       return Promise.resolve();
     },
-    upsertReminderRule(rule) {
-      const exists = currentSnapshot.reminderRules.some(
-        (row) => row.id === rule.id,
-      );
-      currentSnapshot = {
-        ...currentSnapshot,
-        reminderRules: exists
-          ? currentSnapshot.reminderRules.map((row) =>
-              row.id === rule.id ? structuredClone(rule) : row,
-            )
-          : [...currentSnapshot.reminderRules, structuredClone(rule)],
-      };
-      return Promise.resolve();
-    },
-    removeReminderRule(ruleId) {
-      currentSnapshot = {
-        ...currentSnapshot,
-        reminderRules: currentSnapshot.reminderRules.filter(
-          (row) => row.id !== ruleId,
-        ),
-      };
-      return Promise.resolve();
-    },
     reminderPolicyExists(policyId) {
       return Promise.resolve(
         currentSnapshot.policies.some((policy) => policy.id === policyId),

@@ -10,7 +10,7 @@ import { SEED_STAGES } from "../support/seed-constants.js";
 export function cyclic<T>(values: readonly T[], index: number): T {
   const value = values[index % values.length];
   if (value === undefined) {
-    throw new Error("Advanced seed: cyclic lookup over an empty catalogue");
+    throw new Error("Product seed: cyclic lookup over an empty catalogue");
   }
   return value;
 }

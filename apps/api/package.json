@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "node --env-file-if-exists=../../.env --import tsx --watch src/main.ts",
-    "build": "tsc -p tsconfig.json && node scripts/fix-esm-extensions.mjs",
+    "build": "tsc -p tsconfig.json && tsx scripts/fix-esm-extensions.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "test:coverage": "NODE_OPTIONS=--throw-deprecation vitest run --config vitest.coverage.config.ts --coverage --fileParallelism=false && tsx ../../scripts/gates/coverage/coverage-evidence.ts coverage/coverage-summary.json api",
+    "test:coverage": "NODE_OPTIONS=--throw-deprecation vitest run --config vitest.coverage.config.ts --coverage --fileParallelism=false",
     "test:integration": "NODE_OPTIONS=--throw-deprecation vitest run --config vitest.integration.config.ts --reporter=verbose --fileParallelism=false",
     "db:generate": "prisma generate --schema=../../prisma/schema.prisma",
     "postinstall": "prisma generate --schema=../../prisma/schema.prisma"

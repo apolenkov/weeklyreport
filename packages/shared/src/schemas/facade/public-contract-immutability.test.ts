@@ -18,7 +18,6 @@ import type {
   ReportSectionReadModel,
 } from "../report-sections/section.schema";
 import { reportSectionReadModelSchema } from "../report-sections/section.schema";
-import { splitStageNames } from "../stages/stage-names";
 import { STAGE, STAGE_NAMES } from "../stages/stage-names";
 
 const ID = "00000000-0000-4000-8000-000000000001";
@@ -40,7 +39,7 @@ describe("public contract immutability", () => {
     >().toEqualTypeOf<readonly OwnedStage[]>();
     expectTypeOf<
       ReportSectionReadModel["items"][number]["stageNames"]
-    >().toEqualTypeOf<readonly string[] | undefined>();
+    >().toEqualTypeOf<readonly string[]>();
     expectTypeOf<WeeklyReportReadModel["leadSections"]>().toEqualTypeOf<
       readonly ReportSectionReadModel[]
     >();
@@ -123,7 +122,7 @@ describe("public contract immutability", () => {
       reminderExecutions: [],
       policies: [],
     });
-    const stageNames = splitStageNames("Development, Testing");
+    const stageNames = Object.freeze(["Development", "Testing"]);
 
     expect(Object.isFrozen(historyEntry)).toBe(true);
     expect(Object.isFrozen(historyEntry.trafficLights)).toBe(true);

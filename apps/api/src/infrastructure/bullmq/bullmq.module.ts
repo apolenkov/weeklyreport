@@ -16,25 +16,16 @@ import {
   QueueRegistry,
 } from "./queue-registry.js";
 
-// Bounds retained job hashes so they don't accumulate in Redis without limit
-// (AOF persists them); mirrors telegram-outbound's per-job retention.
+// Bound retained job hashes so they don't accumulate in Redis without limit.
 const BOUNDED_RETENTION_JOB_OPTS: DefaultJobOptions = {
   removeOnComplete: { count: 100 },
   removeOnFail: { count: 500 },
 };
 
-// telegram-outbound is seeds-only until the bot activates; `attempts: 3` and
-// equivalent retention are set per-job at enqueue time, not on the queue.
-const QUEUES_WITHOUT_BOUNDED_RETENTION: ReadonlySet<QueueName> = new Set([
-  "telegram-outbound",
-]);
-
 // Derives each registration from the shared QUEUE_NAMES source of truth so a
 // renamed/added queue can't drift between this list and the DLQ monitor's.
 function registerQueueOptionsFor(name: QueueName): RegisterQueueOptions {
-  return QUEUES_WITHOUT_BOUNDED_RETENTION.has(name)
-    ? { name }
-    : { name, defaultJobOptions: BOUNDED_RETENTION_JOB_OPTS };
+  return { name, defaultJobOptions: BOUNDED_RETENTION_JOB_OPTS };
 }
 
 // Redis noeviction is enforced in Docker Compose, not code.

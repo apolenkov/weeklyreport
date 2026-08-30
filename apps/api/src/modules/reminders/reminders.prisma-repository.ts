@@ -19,16 +19,18 @@ import {
   insertExecutionOnConflict,
   listStuckQueuedExecutions,
   markExecutionFailed,
+  markExecutionSent,
   markStuckSendingSent,
   queryExecutionByDedupeKey,
   queryExecutionById,
+  queryExecutionQueuePayload,
   queryExecutionsPage,
   releaseExecutionClaim,
   requeueFailedExecution,
   transitionExecutionToSending,
-  upsertExecution,
 } from "./reminders-execution.prisma-query.js";
 import type { ExecutionPageRequest } from "./reminders-execution-pagination.js";
+import type { ReminderQueuePayload } from "./reminders-queue-payload.js";
 import {
   queryReminderRule,
   queryRulePeriodLabel,
@@ -94,7 +96,9 @@ export class RemindersPrismaRepository implements RemindersRepository {
     session: UserSession,
     reportId: string,
     leadId?: string,
-  ): Promise<{ email: string; notificationOptOut: boolean }[]> => {
+  ): Promise<
+    { email: string; name: string; notificationOptOut: boolean }[]
+  > => {
     return queryDraftSectionsForDispatch(
       this.prisma,
       session,
@@ -117,17 +121,22 @@ export class RemindersPrismaRepository implements RemindersRepository {
     return queryExecutionByDedupeKey(this.prisma, dedupeKey);
   };
 
-  readonly saveExecution = (
-    execution: AdminReminderExecution,
-  ): Promise<AdminReminderExecution> => {
-    return upsertExecution(this.prisma, execution);
+  readonly markExecutionSent = (
+    executionId: string,
+    sentAt: Date,
+  ): Promise<AdminReminderExecution | null> => {
+    return markExecutionSent(this.prisma, executionId, sentAt);
   };
 
   readonly insertExecutionOnConflict = (
     execution: AdminReminderExecution,
+    payload: ReminderQueuePayload,
   ): Promise<{ execution: AdminReminderExecution; inserted: boolean }> => {
-    return insertExecutionOnConflict(this.prisma, execution);
+    return insertExecutionOnConflict(this.prisma, execution, payload);
   };
+
+  readonly getExecutionQueuePayload = (executionId: string) =>
+    queryExecutionQueuePayload(this.prisma, executionId);
 
   readonly transitionExecutionToSending = (
     executionId: string,
@@ -146,8 +155,11 @@ export class RemindersPrismaRepository implements RemindersRepository {
     return markExecutionFailed(this.prisma, executionId, errorMessage);
   };
 
-  readonly requeueFailedExecution = (executionId: string): Promise<boolean> => {
-    return requeueFailedExecution(this.prisma, executionId);
+  readonly requeueFailedExecution = (
+    executionId: string,
+    payload: ReminderQueuePayload,
+  ): Promise<boolean> => {
+    return requeueFailedExecution(this.prisma, executionId, payload);
   };
 
   readonly listStuckQueuedExecutions = (

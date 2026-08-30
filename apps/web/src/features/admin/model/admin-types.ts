@@ -73,9 +73,7 @@ export interface AdminReminderView {
   timezone: string;
   version: number;
   reportId: string | null;
-  // Policy FK preserved so the Reminders Tab can group derived rules under
-  // their owning policy in the read-only expander. `null` for legacy rules
-  // created before policies existed.
+  // Policy FK groups derived rules under their owning policy in the read-only expander.
   policyId: string | null;
 }
 

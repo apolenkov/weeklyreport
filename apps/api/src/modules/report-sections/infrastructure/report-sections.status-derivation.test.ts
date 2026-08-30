@@ -6,7 +6,7 @@ const PROJECT_ID = "44444444-4444-4444-8444-444444444444";
 const OTHER_PROJECT_ID = "55555555-5555-4555-8555-555555555555";
 
 describe("deriveEffectiveProductStatus", () => {
-  it("floors Development red for a blocked Dev risk", () => {
+  it("floors Development red for a blocked Development risk", () => {
     const status = deriveEffectiveProductStatus({
       projectId: PROJECT_ID,
       trafficLight: "green",
@@ -15,7 +15,7 @@ describe("deriveEffectiveProductStatus", () => {
         {
           projectId: PROJECT_ID,
           severity: "blocked",
-          stageNames: ["Dev"],
+          stageNames: ["Development"],
         },
       ],
     });
@@ -49,7 +49,7 @@ describe("deriveEffectiveProductStatus", () => {
         {
           projectId: OTHER_PROJECT_ID,
           severity: "blocked",
-          stageNames: ["Dev"],
+          stageNames: ["Development"],
         },
       ],
     });

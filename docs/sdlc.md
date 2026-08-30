@@ -20,9 +20,9 @@ independent recovery copy.
 
 WeeklyReport keeps verification adjacent to the product: unit tests live beside
 their modules, and API database integration tests live under `apps/api/src`.
-There is no separate browser/UAT/catalog acceptance platform. The
-`customreport_e2e` database name remains only as a legacy technical identifier
-for the guarded disposable test database; it is not a second product name.
+Browser and acceptance checks are performed against the running application;
+they are not a separate product surface. The guarded disposable database is
+used only for local and CI verification.
 
 ## Lifecycle control map
 
@@ -33,18 +33,17 @@ for the guarded disposable test database; it is not a second product name.
 | Verify  | Lint, format, typecheck, colocated unit/integration tests, migration reset, and Docker build exist.                                     | Exact commands, exit codes, source identity, failures, and artifacts.       | Stable required checks protect `main`; mandatory product suites pass on the release candidate.                                         |
 | Secure  | Dependabot covers npm, Docker, and Actions; a scheduled production-dependency audit runs; workflow tokens are read-only by declaration. | Workflow source inspection and audit results.                               | Verify secret scanning, push protection, Dependabot security updates, CodeQL, dependency review, alert ownership, and incident access. |
 | Release | Tags exist, but there is no verified registry publication or GitHub release process.                                                    | No release claim is allowed yet.                                            | Publish one image digest, SBOM, signed provenance, migration list, and immutable release manifest.                                     |
-| Deploy  | Production Compose topology and a runbook exist; no production target exists.                                                           | Local rehearsal only, explicitly labelled.                                  | Protected staging/UAT/production environments promote the same verified digest with approvals and concurrency.                         |
+| Deploy  | Production Compose topology and a runbook exist; no production target exists.                                                           | Local rehearsal only, explicitly labelled.                                  | Protected pre-production and production environments promote the same verified digest with approvals and concurrency.                  |
 | Operate | Readiness, liveness, metrics, logs, traces, error collection, dashboards, and alert-rule material exist.                                | Source-bound runtime evidence and controlled local observability rehearsal. | Owned user SLIs/SLOs, loaded rules, real receiver, runbook links, retention, and a tested end-to-end alert.                            |
 | Recover | Periodic local dumps, freshness checks, restore guard, transactional restore, and migration guidance exist.                             | Isolated local restore evidence.                                            | Encrypted off-site copy, access audit, retention, scheduled restore drill, and measured RPO/RTO.                                       |
-| Learn   | Findings feed OpenSpec, tests, architecture decisions, catalogue ratchets, and current runbooks.                                        | Each accepted finding has an owner, disposition, and regression proof.      | Release and incident reviews update controls, SLOs, runbooks, and backlog without hiding residual risk.                                |
+| Learn   | Findings feed OpenSpec, tests, architecture decisions, and current runbooks.                                                            | Each accepted finding has an owner, disposition, and regression proof.      | Release and incident reviews update controls, SLOs, and runbooks without hiding residual risk.                                         |
 
 ## Current GitHub boundary
 
-As of 2026-08-08, CI is configured for pull requests, pushes to `main`, and
-manual dispatch. The GitHub Branches API reported `main` as unprotected. The
-current token or private-repository plan returned `403` for rulesets, branch
-protection details, Actions permission settings, and several security settings.
-Those settings are **unverified**, not assumed absent or enabled.
+The workflow is configured for pull requests, pushes to `main`, and manual
+dispatch. Repository files do not prove that `main` is protected or that
+GitHub security settings are enabled. Those external settings are
+**unverified** until an authorized read-back confirms them.
 
 The pre-production MVP may continue with the explicit direct-push authorization
 in `AGENTS.md`, but it MUST NOT call current CI an enforced merge gate. The local
@@ -64,7 +63,7 @@ source-bound evidence:
 - [ ] A trusted build publishes one immutable image digest with an SPDX or
       CycloneDX SBOM and signed provenance; deployment verifies the digest and
       attestation.
-- [ ] Preview, staging/UAT, and production environments have appropriate branch
+- [ ] Pre-production and production environments have appropriate branch
       restrictions, reviewers, secret scope, concurrency, and deployment
       history. The artifact is promoted, never rebuilt between stages.
 - [ ] Schema promotion uses compatible migrations, a verified pre-deploy dump,
@@ -90,7 +89,6 @@ make this list appear complete.
 
 ## Related durable sources
 
-- [Quality program](quality-program.md)
 - [Exemplary code standard](exemplary-code-standard.md)
 - [Operations runbook](operations.md)
 - [Contributor workflow](../CONTRIBUTING.md)

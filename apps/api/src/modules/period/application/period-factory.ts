@@ -45,7 +45,10 @@ export type { EnsuredPeriod } from "./period-factory-types.js";
 type ReportDelegate = Pick<PrismaClient["report"], "findMany" | "create">;
 
 // Minimal applicator seam — injected so reminder-free tests need no mock.
-type ReminderApplicator = Pick<PolicyApplicatorService, "applyToPeriod">;
+type ReminderApplicator = Pick<
+  PolicyApplicatorService,
+  "applyToPeriod" | "repairToPeriod"
+>;
 
 export { PeriodLifecycleIntegrityError } from "./period-factory-lookup.js";
 
@@ -75,8 +78,8 @@ export function isPeriodOverlapConflict(error: unknown): boolean {
 }
 
 // Best-effort: the period is the durable artifact, so failing to materialise the
-// secondary reminder rules must NOT fail the caller (a login must not 500 over
-// reminders). The rows are recoverable via `pnpm db:backfill:reminder-policies`.
+// secondary reminder rules must NOT fail the caller. The next current-period
+// access retries only the missing rules through the applicator.
 async function materialiseReminders(
   applicator: ReminderApplicator,
   period: { readonly id: string; readonly deadline: Date },
@@ -89,7 +92,7 @@ async function materialiseReminders(
     // period barrel must stay side-effect-free (a top-level `new Logger()`
     // couples every barrel consumer to Nest logging and breaks mocked tests).
     new Logger("PeriodFactory").warn(
-      `applyToPeriod failed for period=${period.id}; reminder rules deferred to backfill: ${
+      `applyToPeriod failed for period=${period.id}; the next current-period access will retry missing reminder rules: ${
         error instanceof Error ? error.message : "unknown error"
       }`,
     );
@@ -148,6 +151,20 @@ async function recoverOverlappingCreate(
   throw new PeriodOverlapError();
 }
 
+async function repairExistingPeriod(
+  applicator: ReminderApplicator | undefined,
+  period: EnsuredPeriod,
+  now: Date,
+): Promise<void> {
+  if (applicator && period.deadline !== null) {
+    await repairReminders(
+      applicator,
+      { reportId: period.reportId, deadline: period.deadline },
+      now,
+    );
+  }
+}
+
 // Find-or-create the draft reporting period for the week of `anchorDate` (login
 // passes `now`; the scheduler passes the day after the last period's end). `now`
 // bounds reminder materialisation to still-future instants.
@@ -168,10 +185,16 @@ export async function ensureCurrentPeriod(
     periodStart,
     periodEnd,
   );
-  if (existing) return existing;
+  if (existing) {
+    await repairExistingPeriod(policyApplicator, existing, now);
+    return existing;
+  }
 
   const containing = await readContainingPeriod(prisma.report, anchorDate);
-  if (containing) return containing;
+  if (containing) {
+    await repairExistingPeriod(policyApplicator, containing, now);
+    return containing;
+  }
 
   const deadline = computeDeadline(
     periodStart,
@@ -199,6 +222,25 @@ export async function ensureCurrentPeriod(
       periodStart,
       periodEnd,
       anchorDate,
+    );
+  }
+}
+
+async function repairReminders(
+  applicator: Pick<PolicyApplicatorService, "repairToPeriod">,
+  period: { readonly reportId: string; readonly deadline: Date },
+  now: Date,
+): Promise<void> {
+  try {
+    await applicator.repairToPeriod(
+      { id: period.reportId, deadline: period.deadline },
+      now,
+    );
+  } catch (error) {
+    new Logger("PeriodFactory").warn(
+      `repairToPeriod failed for period=${period.reportId}: ${
+        error instanceof Error ? error.message : "unknown error"
+      }`,
     );
   }
 }

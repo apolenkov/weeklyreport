@@ -222,44 +222,6 @@ describe("ItemEditDialog — reopen reset", () => {
   });
 });
 
-describe("ItemEditDialog — canonical stage labels", () => {
-  it("saves a legacy 'Dev' stage as canonical 'Development' without re-toggling", () => {
-    const onSave = vi.fn();
-    const legacyItem: KanbanItem = {
-      id: "legacy-1",
-      parent: { kind: "product", id: "p1" },
-      productId: "p1",
-      productName: "DevOps Tools",
-      activityId: null,
-      text: "Legacy item stored with the short stage alias",
-      status: "in-progress",
-      author: "Test Lead",
-      stageNames: ["Dev"],
-    };
-
-    render(
-      <ItemEditDialog
-        open={true}
-        item={legacyItem}
-        products={products}
-        week="current"
-        stagesForProduct={() => ["Development", "Testing"]}
-        onSave={onSave}
-        onCancel={vi.fn()}
-      />,
-    );
-
-    // Save without touching the (already-checked) Development stage — the
-    // canonical value must still be persisted, never the legacy "Dev".
-    fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
-
-    expect(onSave).toHaveBeenCalledTimes(1);
-    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
-      stageNames: ["Development"],
-    });
-  });
-});
-
 describe("ItemEditDialog — save and reopen status reset", () => {
   it("shows updated item.status on reopen after save, not the previously-edited draft status", () => {
     const onSave = vi.fn();
@@ -273,6 +235,7 @@ describe("ItemEditDialog — save and reopen status reset", () => {
       text: "Deploy pipeline",
       status: "completed",
       author: "Test Lead",
+      stageNames: [],
     };
 
     const { rerender } = render(
@@ -344,6 +307,7 @@ describe("ItemEditDialog — unique rank picker", () => {
       status: "in-progress",
       author: "Test Lead",
       priorityRank: 2,
+      stageNames: [],
     };
     // ownPeriodRanks includes item's own rank (2) plus a foreign taken rank (3).
     // The dialog must NOT disable rank 2 (own item's rank) but MUST disable rank 3.
@@ -397,29 +361,6 @@ describe("ItemEditDialog — unique rank picker", () => {
 
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({ priorityRank: 3 });
-  });
-
-  it("does not crash when legacy data has duplicate ranks in ownPeriodRanks", () => {
-    // Legacy: two items both have rank 1 — collision must not throw.
-    render(
-      <ItemEditDialog
-        open={true}
-        item={null}
-        products={products}
-        week="current"
-        defaultProductId="p1"
-        ownPeriodRanks={[1, 1, 2]}
-        onSave={vi.fn()}
-        onCancel={() => undefined}
-      />,
-    );
-
-    const select = screen.getByLabelText<HTMLSelectElement>(/Priority rank/i);
-    // rank 1 is taken (even with duplicates), rank 3 is free
-    const opt1 = Array.from(select.options).find((o) => o.value === "1");
-    const opt3 = Array.from(select.options).find((o) => o.value === "3");
-    expect(opt1?.disabled).toBe(true);
-    expect(opt3?.disabled).toBe(false);
   });
 });
 
@@ -488,6 +429,7 @@ describe("ItemEditDialog — typing immediately on open", () => {
       text: "existing text",
       status: "in-progress",
       author: "Test Lead",
+      stageNames: [],
     };
 
     render(

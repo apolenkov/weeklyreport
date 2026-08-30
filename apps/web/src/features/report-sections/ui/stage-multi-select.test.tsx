@@ -90,7 +90,7 @@ describe("StageMultiSelect", () => {
     expect(banner.getAttribute("aria-live")).toBe("polite");
   });
 
-  it("text says 'All assigned stages…' when nothing is selected", () => {
+  it("does not create a scope banner when no stage is selected", () => {
     render(
       <StageMultiSelect
         id="stages"
@@ -100,9 +100,7 @@ describe("StageMultiSelect", () => {
         previewSeverity="blocked"
       />,
     );
-    expect(
-      screen.getByText(/All assigned stages will show as Blocked\.?/i),
-    ).toBeInTheDocument();
+    expect(screen.queryByTestId("stage-scope-banner")).toBeNull();
   });
 
   it("text names the single selected stage when exactly one is chosen", () => {
@@ -137,7 +135,7 @@ describe("StageMultiSelect", () => {
     expect(screen.queryByText(/Dev, Testing/)).toBeNull();
   });
 
-  it("does NOT render the banner when only one assigned stage exists (singleStage branch)", () => {
+  it("renders the selected-stage banner with one assigned stage", () => {
     render(
       <StageMultiSelect
         id="stages"
@@ -147,7 +145,7 @@ describe("StageMultiSelect", () => {
         previewSeverity="blocked"
       />,
     );
-    expect(screen.queryByTestId("stage-scope-banner")).toBeNull();
+    expect(screen.getByTestId("stage-scope-banner")).toBeInTheDocument();
   });
 
   it("does NOT render the banner when stages list is empty", () => {
@@ -164,8 +162,7 @@ describe("StageMultiSelect", () => {
   });
 });
 
-// Required mode: empty selection is invalid, so suppress the "all stages" banner.
-describe("StageMultiSelect — required-mode banner honesty", () => {
+describe("StageMultiSelect — explicit-stage scope", () => {
   it("suppresses the empty-selection banner when required is true", () => {
     render(
       <StageMultiSelect
@@ -182,7 +179,7 @@ describe("StageMultiSelect — required-mode banner honesty", () => {
     expect(screen.queryByText(/All assigned stages will show as/i)).toBeNull();
   });
 
-  it("still renders the empty-selection banner in non-required mode", () => {
+  it("does not render an empty-selection banner", () => {
     render(
       <StageMultiSelect
         id="stages"
@@ -193,9 +190,7 @@ describe("StageMultiSelect — required-mode banner honesty", () => {
       />,
     );
 
-    expect(
-      screen.getByText(/All assigned stages will show as Blocked\.?/i),
-    ).toBeInTheDocument();
+    expect(screen.queryByTestId("stage-scope-banner")).toBeNull();
   });
 
   it("renders the per-stage banner in required mode once a stage is selected", () => {

@@ -92,7 +92,9 @@ export function createReviewRouter(deps: ReviewRouterDeps) {
         // Resolve from the DB, not ctx.session.activeReportId (baked into the
         // JWT at login, can be stale); assembledReport and publish use the same
         // resolver so all three agree on the target period.
-        const reportId = await deps.weeklyReportService.getCurrentEditableId();
+        const reportId = await deps.weeklyReportService.getCurrentEditableId(
+          ctx.session,
+        );
 
         if (!reportId) {
           return [];
@@ -102,9 +104,11 @@ export function createReviewRouter(deps: ReviewRouterDeps) {
       }),
     ),
 
-    assembledReport: headProcedure.query(() =>
+    assembledReport: headProcedure.query(({ ctx }) =>
       withDomainErrorMapping(async () => {
-        const reportId = await deps.weeklyReportService.getCurrentEditableId();
+        const reportId = await deps.weeklyReportService.getCurrentEditableId(
+          ctx.session,
+        );
 
         if (!reportId) {
           throw new TRPCError({

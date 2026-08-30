@@ -64,6 +64,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
         tag: "feature",
         workflowStatus: "planned",
         carriedOver: false,
+        stageNames: ["Development"],
       },
     });
 
@@ -117,6 +118,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
           tag: "feature",
           workflowStatus: "in_progress" as const,
           carriedOver: true,
+          stageNames: ["Development"],
         },
       ],
       risks: [],
@@ -213,6 +215,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
           tag: "feature",
           workflowStatus: "in_progress" as const,
           carriedOver: true,
+          stageNames: ["Development"],
         },
       ],
       risks: [],
@@ -295,6 +298,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
           tag: "feature",
           workflowStatus: "in_progress" as const,
           carriedOver: true,
+          stageNames: ["Development"],
         },
       ],
       risks: [],

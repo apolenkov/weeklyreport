@@ -17,12 +17,25 @@ export type ProjectFixture = Partial<ProjectReadModel> &
 export type ActivityFixture = Partial<SectionActivity> &
   Pick<SectionActivity, "activityId" | "activityName" | "status">;
 
+type SectionRecordFixture<T> = Omit<T, "stageNames"> & {
+  stageNames?: readonly string[];
+};
+
 export type ReportSectionFixture = Omit<
   Partial<ReportSectionReadModel>,
-  "activities" | "projects"
+  "activities" | "projects" | "items" | "risks" | "decisions"
 > & {
   activities?: readonly ActivityFixture[];
   projects?: readonly ProjectFixture[];
+  items?: readonly SectionRecordFixture<
+    ReportSectionReadModel["items"][number]
+  >[];
+  risks?: readonly SectionRecordFixture<
+    ReportSectionReadModel["risks"][number]
+  >[];
+  decisions?: readonly SectionRecordFixture<
+    ReportSectionReadModel["decisions"][number]
+  >[];
 };
 
 export type WeeklyReportFixture = Omit<
@@ -63,7 +76,14 @@ export function makeActivityFixture(
 export function makeReportSectionFixture(
   overrides: ReportSectionFixture = {},
 ): ReportSectionReadModel {
-  const { activities = [], projects = [], ...sectionOverrides } = overrides;
+  const {
+    activities = [],
+    projects = [],
+    items = [],
+    risks = [],
+    decisions = [],
+    ...sectionOverrides
+  } = overrides;
   return {
     reportSectionId: SECTION_ID,
     reportId: REPORT_ID,
@@ -76,9 +96,22 @@ export function makeReportSectionFixture(
     late: false,
     projects: projects.map((project) => makeProjectFixture(project)),
     referencedProjects: [],
-    items: [],
-    risks: [],
-    decisions: [],
+    items: items.map((item) => ({
+      ...item,
+      stageNames:
+        item.stageNames ?? (item.activityId != null ? [] : ["Planning"]),
+    })),
+    risks: risks.map((risk) => ({
+      ...risk,
+      stageNames:
+        risk.stageNames ?? (risk.activityId != null ? [] : ["Planning"]),
+    })),
+    decisions: decisions.map((decision) => ({
+      ...decision,
+      stageNames:
+        decision.stageNames ??
+        (decision.activityId != null ? [] : ["Planning"]),
+    })),
     activities: activities.map((activity) => makeActivityFixture(activity)),
     reviews: [],
     ...sectionOverrides,

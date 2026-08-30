@@ -20,6 +20,7 @@ function carriedItem(): LeadItem {
     tag: "feature",
     workflowStatus: "in_progress",
     carriedOver: true,
+    stageNames: ["Planning"],
   };
 }
 

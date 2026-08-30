@@ -1,4 +1,4 @@
-// SIMPLE seed — minimal demo data for a live presentation (`pnpm db:seed:simple`).
+// Base seed writer for the current product dataset.
 // The `seed-simple.*` phase modules run in the order below; that order is
 // FK-safe and must not be parallelised.
 

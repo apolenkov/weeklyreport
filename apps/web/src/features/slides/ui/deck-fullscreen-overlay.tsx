@@ -2,7 +2,6 @@
 
 import { type Ref, useEffect, useState } from "react";
 
-import { AgentReviewComingSoon } from "../../../shared/ui/report-shell/agent-review-coming-soon";
 import { SlideFullscreenButton } from "./slide-fullscreen-button";
 
 // Keep the transient fullscreen hint visible long enough to be noticed.
@@ -79,13 +78,10 @@ export function DeckToolbarControls({
   readonly toggleRef: Ref<HTMLButtonElement>;
 }) {
   return (
-    <>
-      <AgentReviewComingSoon />
-      <SlideFullscreenButton
-        isFullscreen={isFullscreen}
-        onToggle={onToggle}
-        buttonRef={toggleRef}
-      />
-    </>
+    <SlideFullscreenButton
+      isFullscreen={isFullscreen}
+      onToggle={onToggle}
+      buttonRef={toggleRef}
+    />
   );
 }

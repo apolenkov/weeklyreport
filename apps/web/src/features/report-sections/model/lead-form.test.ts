@@ -333,10 +333,7 @@ describe("mapLeadProducts", () => {
     expect(devStage?.status).toBe("blocked");
   });
 
-  it("a stage-less (empty stageNames) risk floors every owned chip", () => {
-    // Empty/undefined stageNames means "covers all stages" — the same rule the
-    // live form applies. The read model must not floor nothing on `[]` and
-    // diverge silently from the form.
+  it("ignores a product risk without an explicit stage", () => {
     const section = baseSection({
       projects: [
         {
@@ -362,7 +359,7 @@ describe("mapLeadProducts", () => {
       risks: [
         {
           projectId: PROJECT_A,
-          risk: "Legacy stage-less blocker",
+          risk: "Unscoped blocker",
           impact: "Everything stalls",
           mitigation: "Escalate",
           severity: "blocked",
@@ -373,21 +370,14 @@ describe("mapLeadProducts", () => {
 
     const stages = mapLeadProducts(section)[0]?.stages ?? [];
     expect(stages.find((s) => s.stageName === "Development")?.status).toBe(
-      "blocked",
+      "on-track",
     );
     expect(stages.find((s) => s.stageName === "Testing")?.status).toBe(
-      "blocked",
+      "on-track",
     );
   });
 
-  it("an UNTOUCHED owned stage covered by a risk stays empty (completeness source)", () => {
-    // The read model feeds the live form's own-input completeness counter via
-    // the raw, pre-floor status. A covering risk (the Add-Risk dialog defaults
-    // to all stages checked) must NOT floor a stage the lead never set —
-    // otherwise an empty stage would count as "filled" and inflate the
-    // counter. The DISPLAY floor is re-applied at render by
-    // applyRiskSeverityFloor; this mapper output is the completeness source,
-    // so the empty stays empty.
+  it("does not count a product risk without an explicit stage", () => {
     const section = baseSection({
       projects: [
         {
@@ -408,7 +398,7 @@ describe("mapLeadProducts", () => {
       risks: [
         {
           projectId: PROJECT_A,
-          risk: "Product-wide blocker",
+          risk: "Unscoped blocker",
           impact: "Everything stalls",
           mitigation: "Escalate",
           severity: "blocked",
@@ -421,9 +411,6 @@ describe("mapLeadProducts", () => {
       (s) => s.stageName === "Development",
     );
     expect(devStage?.status).toBe("empty");
-    // A covers-all (stageNames: []) legacy risk does NOT explicitly name the
-    // stage, so it must NOT mark it covered-by-own-risk (else the counter would
-    // inflate for every empty stage).
     expect(devStage?.coveredByOwnRisk ?? false).toBe(false);
   });
 

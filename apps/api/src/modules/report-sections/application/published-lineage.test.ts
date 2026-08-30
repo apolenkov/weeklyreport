@@ -17,11 +17,7 @@ const snapshot = {
   sections: [
     {
       reportSectionId: SECTION_ID,
-      items: [
-        { stableId: ITEM_LINEAGE, text: "Published item" },
-        // Legacy row serialized before the stableId column existed.
-        { text: "Legacy item without lineage" },
-      ],
+      items: [{ stableId: ITEM_LINEAGE, text: "Published item" }],
       decisions: [{ stableId: DECISION_LINEAGE, text: "Published decision" }],
     },
     {
@@ -39,9 +35,16 @@ describe("published snapshot lineage", () => {
     expect([...lineage.decisionStableIds]).toEqual([DECISION_LINEAGE]);
   });
 
-  it("tolerates a legacy row without a stableId (skipped, no throw)", () => {
-    const lineage = snapshotLineageForSection(snapshot, SECTION_ID);
-    expect(lineage.itemStableIds.size).toBe(1);
+  it("fails closed when a row has no stableId", () => {
+    expect(() =>
+      snapshotLineageForSection(
+        {
+          ...snapshot,
+          sections: [{ ...snapshot.sections[0], items: [{ text: "missing" }] }],
+        },
+        SECTION_ID,
+      ),
+    ).toThrow(PublishedSnapshotIntegrityError);
   });
 
   it("returns empty sets for a never-published report (null snapshot)", () => {

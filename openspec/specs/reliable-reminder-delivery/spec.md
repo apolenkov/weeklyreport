@@ -191,19 +191,33 @@ value stale.
 - **WHEN** `dispatchPending` is called with that report id
 - **THEN** the procedure throws `FORBIDDEN "report-not-active"`
 
-### Requirement: Reminder email payloads never surface a raw report id as a period label
+### Requirement: Every reminder queue payload is explicitly discriminated
 
-The legacy (no-`kind`) reminder queue payload's `reportPeriod` field MUST
-carry a human-readable period label derived from the rule's period bounds. It
-MUST NOT carry the raw report UUID.
+Every email-reminder queue payload MUST include `contractVersion: 1`, a
+supported `kind` discriminator, and the complete fields required by that kind's
+renderer. No producer or worker may accept an unversioned payload or one without
+its discriminator.
 
-#### Scenario: A manually-triggered legacy reminder email shows a period label
+#### Scenario: Stuck queued execution is recovered with the current contract
 
-- **GIVEN** a reminder rule dispatched through the legacy (no-`kind`) payload
-  branch
-- **WHEN** the queue payload is built
-- **THEN** `reportPeriod` is a formatted period label
-- **AND** it is not the rule's raw `reportId`
+- **GIVEN** a queued reminder execution whose original enqueue was interrupted
+- **WHEN** the reaper re-enqueues that execution
+- **THEN** the job reuses the exact validated payload persisted with the
+  execution, including its discriminator, recipient, names, dates, brand,
+  period label, late leads, and URL
+- **AND** the worker renders the normal deadline template through the single
+  current renderer
+
+#### Scenario: A pre-contract queued execution crosses the payload migration safely
+
+- **GIVEN** an execution written before immutable renderer payloads were
+  persisted and a queue job that therefore has no `kind` discriminator
+- **WHEN** the payload-contract migration runs
+- **THEN** the execution is moved from `queued` to an explicit `failed` state
+  before the database starts rejecting payload-less queued rows
+- **AND** the old unversioned job cannot win the send claim or reach a renderer
+- **AND** the next eligible scheduler or manual dispatch atomically revives the
+  execution with a complete current payload and enqueues the normal job
 
 ### Requirement: Admin execution-history pagination does not truncate past a fixed row count
 

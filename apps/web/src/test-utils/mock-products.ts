@@ -28,7 +28,7 @@ export const MOCK_PRODUCTS: Product[] = [
         assignee: DESIGN_ASSIGNEE,
       },
       {
-        stageName: "Dev",
+        stageName: "Development",
         status: "at-risk",
         ownership: "mine",
         assignee: "Тимлид 1",
@@ -68,7 +68,7 @@ export const MOCK_PRODUCTS: Product[] = [
         assignee: "Ivanov A.",
       },
       {
-        stageName: "Dev",
+        stageName: "Development",
         status: "blocked",
         ownership: "locked",
         assignee: "Kozlov D.",
@@ -102,7 +102,7 @@ export const MOCK_PRODUCTS: Product[] = [
         assignee: DESIGN_ASSIGNEE,
       },
       {
-        stageName: "Dev",
+        stageName: "Development",
         status: "at-risk",
         ownership: "locked",
         assignee: "Smirnov K.",
@@ -130,7 +130,7 @@ export const MOCK_PRODUCTS: Product[] = [
         assignee: "Ivanov A.",
       },
       {
-        stageName: "Dev",
+        stageName: "Development",
         status: "at-risk",
         ownership: "mine",
         assignee: "Тимлид 1",
@@ -174,7 +174,7 @@ export const MOCK_PRODUCTS: Product[] = [
         assignee: DESIGN_ASSIGNEE,
       },
       {
-        stageName: "Dev",
+        stageName: "Development",
         status: "on-track",
         ownership: "locked",
         assignee: "Smirnov K.",
@@ -211,7 +211,7 @@ export const MOCK_PRODUCTS: Product[] = [
         assignee: DESIGN_ASSIGNEE,
       },
       {
-        stageName: "Dev",
+        stageName: "Development",
         status: "empty",
         ownership: "mine",
         assignee: "Тимлид 1",

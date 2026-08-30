@@ -30,6 +30,19 @@ const pausedRule: AdminReminderRule = {
 const recipientEmail = "lead1@customreport.local";
 const recipientEmail2 = "lead2@customreport.local";
 const REPORT_PERIOD_LABEL = "2026-04-07 → 2026-04-13";
+const testPayload = {
+  kind: "deadline" as const,
+  cycleDate: "2026-04-10",
+  leadName: "Test Lead",
+  reportPeriod: REPORT_PERIOD_LABEL,
+  deadlineIso: "2026-04-10T09:00:00.000Z",
+  sectionUrl:
+    "http://localhost:3000/lead/report/22222222-2222-4222-8222-222222222222",
+  organization: {
+    shortName: "PEO",
+    fullName: "Product Engineering & Operations",
+  },
+};
 
 function createRepository(...rules: AdminReminderRule[]): RemindersRepository {
   const executions = new Map<string, AdminReminderExecution>();
@@ -64,9 +77,20 @@ function createRepository(...rules: AdminReminderRule[]): RemindersRepository {
         inserted: true,
       });
     },
-    saveExecution(execution: AdminReminderExecution) {
-      executions.set(execution.id, structuredClone(execution));
-      return Promise.resolve(structuredClone(execution));
+    getExecutionQueuePayload: () =>
+      Promise.resolve(structuredClone(testPayload)),
+    transitionExecutionToSending(executionId: string) {
+      const execution = executions.get(executionId);
+      if (execution?.status !== "queued") return Promise.resolve(false);
+      executions.set(executionId, { ...execution, status: "sending" });
+      return Promise.resolve(true);
+    },
+    markExecutionSent(executionId: string, sentAt: Date) {
+      const execution = executions.get(executionId);
+      if (execution?.status !== "sending") return Promise.resolve(null);
+      const sent = { ...execution, status: "sent" as const, sentAt };
+      executions.set(executionId, sent);
+      return Promise.resolve(structuredClone(sent));
     },
     getExecution(executionId: string) {
       const execution = executions.get(executionId);
@@ -93,6 +117,7 @@ describe("RemindersService — contract tests", () => {
       const execution = await service.requestReminderExecution(
         activeRule.id,
         recipientEmail,
+        testPayload,
       );
 
       expect(execution).toBeDefined();
@@ -108,11 +133,19 @@ describe("RemindersService — contract tests", () => {
       const unknownRuleId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 
       await expect(
-        service.requestReminderExecution(unknownRuleId, recipientEmail),
+        service.requestReminderExecution(
+          unknownRuleId,
+          recipientEmail,
+          testPayload,
+        ),
       ).rejects.toBeInstanceOf(ReminderDomainError);
 
       await expect(
-        service.requestReminderExecution(unknownRuleId, recipientEmail),
+        service.requestReminderExecution(
+          unknownRuleId,
+          recipientEmail,
+          testPayload,
+        ),
       ).rejects.toThrow(`Reminder rule ${unknownRuleId} was not found.`);
     });
 
@@ -120,11 +153,19 @@ describe("RemindersService — contract tests", () => {
       const service = new RemindersService(createRepository(pausedRule));
 
       await expect(
-        service.requestReminderExecution(pausedRule.id, recipientEmail),
+        service.requestReminderExecution(
+          pausedRule.id,
+          recipientEmail,
+          testPayload,
+        ),
       ).rejects.toBeInstanceOf(ReminderDomainError);
 
       await expect(
-        service.requestReminderExecution(pausedRule.id, recipientEmail),
+        service.requestReminderExecution(
+          pausedRule.id,
+          recipientEmail,
+          testPayload,
+        ),
       ).rejects.toThrow("Reminder execution requires an active rule.");
     });
 
@@ -134,10 +175,12 @@ describe("RemindersService — contract tests", () => {
       const first = await service.requestReminderExecution(
         activeRule.id,
         recipientEmail,
+        testPayload,
       );
       const second = await service.requestReminderExecution(
         activeRule.id,
         recipientEmail,
+        testPayload,
       );
 
       expect(first.id).toBe(second.id);
@@ -158,10 +201,12 @@ describe("RemindersService — contract tests", () => {
       const original = await service.requestReminderExecution(
         activeRule.id,
         recipientEmail,
+        testPayload,
       );
       const duplicate = await service.requestReminderExecution(
         activeRule.id,
         recipientEmail,
+        testPayload,
       );
 
       expect(duplicate.id).toBe(original.id);
@@ -180,16 +225,18 @@ describe("RemindersService — contract tests", () => {
       const execution = await service.requestReminderExecution(
         activeRule.id,
         recipientEmail,
+        testPayload,
       );
 
       expect(mockQueue.enqueue).toHaveBeenCalledTimes(1);
       expect(mockQueue.enqueue).toHaveBeenCalledWith(
         execution.id,
-        {
+        expect.objectContaining({
           executionId: execution.id,
           recipientEmail,
+          kind: "deadline",
           reportPeriod: REPORT_PERIOD_LABEL,
-        },
+        }),
         {},
       );
     });
@@ -200,6 +247,7 @@ describe("RemindersService — contract tests", () => {
       const execution = await service.requestReminderExecution(
         activeRule.id,
         recipientEmail,
+        testPayload,
       );
 
       expect(execution).toBeDefined();
@@ -211,6 +259,7 @@ describe("RemindersService — contract tests", () => {
       const execution = await service.requestReminderExecution(
         activeRule.id,
         recipientEmail,
+        testPayload,
       );
 
       expect(execution.status).toBe("queued");
@@ -222,10 +271,12 @@ describe("RemindersService — contract tests", () => {
       const exec1 = await service.requestReminderExecution(
         activeRule.id,
         recipientEmail,
+        testPayload,
       );
       const exec2 = await service.requestReminderExecution(
         activeRule.id,
         recipientEmail2,
+        testPayload,
       );
 
       expect(exec1.recipientEmail).toBe(recipientEmail);
@@ -240,6 +291,7 @@ describe("RemindersService — contract tests", () => {
       const execution = await service.requestReminderExecution(
         activeRule.id,
         recipientEmail,
+        testPayload,
       );
 
       expect(execution.scheduledFor).toBeInstanceOf(Date);
@@ -253,6 +305,7 @@ describe("RemindersService — contract tests", () => {
       const execution = await service.requestReminderExecution(
         activeRule.id,
         recipientEmail,
+        testPayload,
       );
 
       expect(execution.reportId).toBe(activeRule.reportId);
@@ -263,6 +316,7 @@ describe("RemindersService — contract tests", () => {
       const execution = await service.requestReminderExecution(
         activeRule.id,
         recipientEmail,
+        testPayload,
       );
 
       expect(execution.sentAt).toBeNull();
@@ -275,10 +329,12 @@ describe("RemindersService — contract tests", () => {
       const exec1 = await service.requestReminderExecution(
         activeRule.id,
         "a@test.com",
+        testPayload,
       );
       const exec2 = await service.requestReminderExecution(
         activeRule.id,
         "b@test.com",
+        testPayload,
       );
 
       expect(exec1.id).not.toBe(exec2.id);
@@ -292,9 +348,11 @@ describe("RemindersService — contract tests", () => {
       const queued = await service.requestReminderExecution(
         activeRule.id,
         recipientEmail,
+        testPayload,
       );
 
       const before = new Date();
+      expect(await service.claimExecutionForSending(queued.id)).toBe(true);
       const sent = await service.markReminderSent(queued.id);
       const after = new Date();
 
@@ -326,8 +384,16 @@ describe("RemindersService — contract tests", () => {
     it("returns all executions for a rule", async () => {
       const service = new RemindersService(createRepository(activeRule));
 
-      await service.requestReminderExecution(activeRule.id, recipientEmail);
-      await service.requestReminderExecution(activeRule.id, recipientEmail2);
+      await service.requestReminderExecution(
+        activeRule.id,
+        recipientEmail,
+        testPayload,
+      );
+      await service.requestReminderExecution(
+        activeRule.id,
+        recipientEmail2,
+        testPayload,
+      );
 
       const result = await service.listExecutions(activeRule.id);
 
@@ -345,7 +411,11 @@ describe("RemindersService — contract tests", () => {
 
     it("validates output through Zod schema", async () => {
       const service = new RemindersService(createRepository(activeRule));
-      await service.requestReminderExecution(activeRule.id, recipientEmail);
+      await service.requestReminderExecution(
+        activeRule.id,
+        recipientEmail,
+        testPayload,
+      );
 
       const result = await service.listExecutions(activeRule.id);
 

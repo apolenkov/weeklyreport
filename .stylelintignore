@@ -1,12 +1,7 @@
 node_modules
 dist
 .next
-.next-e2e
 coverage
 .turbo
 prisma/generated
-e2e
-playwright-report
-test-results
-apps/web/.next-*
 pnpm-lock.yaml

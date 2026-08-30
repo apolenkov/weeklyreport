@@ -21,6 +21,20 @@ export interface ReportsRouterDeps {
 
 function createSectionProcedures(deps: ReportsRouterDeps) {
   return {
+    compiledHistory: anyRoleProcedure
+      .input(compiledHistoryInputSchema.optional())
+      .query(async ({ input, ctx }) => {
+        try {
+          const includeArchive = input?.includeArchive ?? false;
+          return await deps.weeklyReportService.compiledHistory(
+            ctx.session,
+            includeArchive,
+          );
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
+
     getActive: protectedProcedure.query(async ({ ctx }) => {
       try {
         if (!ctx.session.activeReportSectionId) {
@@ -73,22 +87,8 @@ function createSectionProcedures(deps: ReportsRouterDeps) {
   };
 }
 
-function createCompiledReportProcedures(deps: ReportsRouterDeps) {
+function createReportNavigationProcedures(deps: ReportsRouterDeps) {
   return {
-    compiledHistory: anyRoleProcedure
-      .input(compiledHistoryInputSchema.optional())
-      .query(async ({ input, ctx }) => {
-        try {
-          const includeArchive = input?.includeArchive ?? false;
-          return await deps.weeklyReportService.compiledHistory(
-            ctx.session,
-            includeArchive,
-          );
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
-
     // Status-target resolution rules: openspec/specs/viewer-report-navigation.
     // A lead resolves their own authored sections.
     latestForViewer: anyRoleProcedure.query(async ({ ctx }) => {
@@ -104,6 +104,6 @@ function createCompiledReportProcedures(deps: ReportsRouterDeps) {
 export function createReportsRouter(deps: ReportsRouterDeps) {
   return router({
     ...createSectionProcedures(deps),
-    ...createCompiledReportProcedures(deps),
+    ...createReportNavigationProcedures(deps),
   });
 }

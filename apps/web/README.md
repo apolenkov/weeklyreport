@@ -4,22 +4,18 @@ Next.js 16 frontend with App Router, React 19, shadcn/ui, and Tailwind CSS v4.
 
 ## Route inventory
 
-| Route group                                                              | Roles                     | Purpose                                                        |
-| ------------------------------------------------------------------------ | ------------------------- | -------------------------------------------------------------- |
-| `/admin`, `/admin/{products,activities,settings}`                        | admin                     | Users, catalogues, periods, jobs, and settings                 |
-| `/head/dashboard`, `/head/report/[reportId]`                             | head, admin               | Submission completeness, unified review, publication, export   |
-| `/lead/report/[reportId]`                                                | lead, head, admin         | Structured section editing                                     |
-| `/lead/report/[reportId]/preview`                                        | lead                      | Read-only lead preview                                         |
-| `/reports`, `/reports/history`, `/reports/[reportId]`, `/reports/trends` | lead, head, admin, viewer | Published archive, detail, and trend analysis                  |
-| `/reports/latest`                                                        | viewer                    | Viewer landing status                                          |
-| `/head/report/[reportId]/present`                                        | head, admin               | Full-screen review presentation                                |
-| `/reports/[reportId]/present`                                            | lead, head, admin, viewer | Full-screen published presentation                             |
-| `/head/history`, `/head/slides`                                          | head, admin               | Head-scoped compatibility entrypoints                          |
-| `/lead/history`                                                          | lead, head, admin         | Lead-history compatibility entrypoint                          |
-| `/head/report`                                                           | head, admin               | Back-compatible alias resolving to a canonical report URL      |
-| `/lead/report`                                                           | lead, head, admin         | Back-compatible alias resolving to a canonical report URL      |
-| `/print/[reportId]`                                                      | export token              | Print source; human sessions are redirected to their role view |
-| `/`, `/auth/error`                                                       | public/session-aware      | Sign-in dispatch and authentication failure UI                 |
+| Route group                                          | Roles                     | Purpose                                                        |
+| ---------------------------------------------------- | ------------------------- | -------------------------------------------------------------- |
+| `/admin`                                             | admin                     | Users, catalogues, periods, jobs, and settings                 |
+| `/head/dashboard`, `/head/report/[reportId]`         | head, admin               | Submission completeness, unified review, publication, export   |
+| `/head/report`                                       | head, admin               | Current head report entrypoint                                 |
+| `/lead/report/[reportId]`                            | lead, head, admin         | Structured section editing                                     |
+| `/lead/report`                                       | lead, head, admin         | Current lead report entrypoint                                 |
+| `/lead/report/[reportId]/preview`                    | lead                      | Read-only lead preview                                         |
+| `/reports`, `/reports/[reportId]`, `/reports/trends` | lead, head, admin, viewer | Published archive, detail, and trend analysis                  |
+| `/reports/latest`                                    | viewer                    | Viewer landing status                                          |
+| `/print/[reportId]`                                  | export token              | Print source; human sessions are redirected to their role view |
+| `/`, `/auth/error`                                   | public/session-aware      | Sign-in dispatch and authentication failure UI                 |
 
 ## API Proxy
 
@@ -44,8 +40,11 @@ pnpm dev
 
 The Web package scripts load the root `.env`, so native API and Web share one
 environment contract. The canonical native ports are Web `3000` and API
-`3002`. Docker-backed development uses `pnpm dev:watch` and supplies
-container-internal origins.
+`3002`.
+
+The bare `/head/report` and `/lead/report` paths are current landing
+entrypoints. The application resolves the
+active report from the current session.
 
 ## Testing
 

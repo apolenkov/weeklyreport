@@ -21,19 +21,6 @@ vi.mock("sonner", () => ({
 
 import { SettingsTab } from "./settings-tab";
 
-// Telegram integration status shape returned by
-// `admin.integrationsStatus`. Default to «not configured, 0 bindings» so
-// tests that don't care about Integrations don't have to opt out.
-interface IntegrationStub {
-  telegram: {
-    configured: boolean;
-    bindings: number;
-  };
-}
-const DEFAULT_INTEGRATIONS: IntegrationStub = {
-  telegram: { configured: false, bindings: 0 },
-};
-
 // Org data returned by admin.getOrganization.
 const ORG_DATA = {
   id: "singleton",
@@ -43,14 +30,13 @@ const ORG_DATA = {
   updatedAt: new Date("2026-05-10T00:00:00Z"),
 };
 
-function buildProxy(integrations: IntegrationStub = DEFAULT_INTEGRATIONS) {
+function buildProxy() {
   return createMockTRPC([
     { path: ["admin", "getOrganization"], query: ORG_DATA },
     { path: ["admin", "updateOrganization"], mutation: true },
     { path: ["admin", "updateSettings"], mutation: true },
     { path: ["admin", "snapshot"] },
     { path: ["admin", "getSettings"] },
-    { path: ["admin", "integrationsStatus"], query: integrations },
     { path: ["auth", "me"] },
     { path: ["org", "getPublic"] },
     { path: ["weeklyReport", "get"] },
@@ -114,49 +100,6 @@ describe("SettingsTab — accessibility regression", () => {
   });
   afterEach(() => {
     globalThis.fetch = originalFetch;
-  });
-
-  it("holidays-coming-soon span has no aria-label attribute", () => {
-    const { proxy } = buildProxy();
-    renderSettings(proxy);
-
-    const span = screen.getByTestId("holidays-coming-soon");
-    expect(span.hasAttribute("aria-label")).toBe(false);
-  });
-
-  // The badge text is a descendant of the tab trigger, so it must remain part
-  // of the computed accessible name without a redundant aria-label.
-  it("holidays tab is announced as coming soon via its computed accessible name", () => {
-    const { proxy } = buildProxy();
-    renderSettings(proxy);
-
-    const announced = screen.queryAllByRole("tab", { name: /coming soon/i });
-    expect(announced).toHaveLength(1);
-    // The announced tab is the holidays one (hosts the inert coming-soon span).
-    const holidaysSpan = screen.getByTestId("holidays-coming-soon");
-    expect(announced[0]?.contains(holidaysSpan)).toBe(true);
-  });
-
-  it("holidays tab trigger itself is disabled — inert, not selectable", () => {
-    const { proxy } = buildProxy();
-    renderSettings(proxy);
-
-    const holidaysTrigger = screen
-      .getByRole("tab", { name: /coming soon/i })
-      .closest<HTMLElement>("[data-slot='tabs-trigger'], button");
-    expect(holidaysTrigger).not.toBeNull();
-    // The disabled state lives on the actual trigger, not a nested label span.
-    expect(
-      (holidaysTrigger?.hasAttribute("disabled") ?? false) ||
-        holidaysTrigger?.getAttribute("aria-disabled") === "true",
-    ).toBe(true);
-  });
-  it("holidays tab trigger has no icon (matches sibling tabs)", () => {
-    const { proxy } = buildProxy();
-    renderSettings(proxy);
-
-    const span = screen.getByTestId("holidays-coming-soon");
-    expect(span.querySelector("svg")).toBeNull();
   });
 
   it("CheckIcon SVG has aria-hidden=true in Identity success message", async () => {

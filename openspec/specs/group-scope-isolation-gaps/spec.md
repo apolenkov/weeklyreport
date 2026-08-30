@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Confines each surface to the caller's accessible groups: telemetry aggregates are group-scoped, the viewer landing default excludes archived reports, and head lifecycle mutation scope is explicitly out of scope for this capability.
+Confines each surface to the caller's accessible groups: telemetry aggregates are group-scoped and the viewer landing default excludes archived reports. Head lifecycle mutations retain their product-defined cross-group scope.
 
 ## Requirements
 
@@ -37,14 +37,11 @@ published report.
 - **WHEN** a viewer in that group requests their default report
 - **THEN** `resolveDefaultReportId` does not return the archived report's id
 
-### Requirement: Head lifecycle mutation scope is out of scope for this capability
+### Requirement: Head lifecycle mutations retain their product-defined scope
 
-This capability MUST NOT add a group-scope guard to head lifecycle
-mutations (`archivePeriod`, `unarchivePeriod`, or any other archive-router
-write). Cross-group head archive/unarchive access is an accepted product
-decision, not a defect. This requirement exists to make the boundary
-explicit so a future change proposing such a guard is recognized as
-reopening a settled decision rather than filling an unnoticed gap.
+This capability MUST NOT add a group-scope guard to head lifecycle mutations
+(`archivePeriod`, `unarchivePeriod`, or any other archive-router write).
+Cross-group head archive/unarchive access is the current product decision.
 
 #### Scenario: Head archives a report outside their primary group
 
@@ -52,4 +49,4 @@ reopening a settled decision rather than filling an unnoticed gap.
 - **WHEN** that head calls `archivePeriod` or `unarchivePeriod` for a report
   outside the group they primarily work in
 - **THEN** the mutation is permitted by design
-- **AND** this is not treated as an isolation defect
+- **AND** this remains permitted by the current product scope

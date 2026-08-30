@@ -172,19 +172,3 @@ contracts. No database migration is introduced.
 - **THEN** the persisted policy carries a valid `kind`, `audience`,
   `offsetMinutes`, `timezone`, `active`, and validity window
 - **AND** no new persisted field and no schema migration are required
-
-### Requirement: Legacy Non-Preset Reminders Are Preserved, Not Rewritten
-
-A stored policy whose pairing is outside the two presets MUST remain visible and
-editable without being silently coerced into a preset. Such a pairing includes a
-legacy `follow_up`, or an inverted `deadline` → `head-of-late`. The card MUST
-describe it in plain language from its actual stored values, and the form MUST
-represent its type as a read-only "Custom" label so that saving unrelated fields
-(timing, active) does not change the stored pairing.
-
-#### Scenario: Editing a legacy reminder keeps its stored pairing
-
-- **WHEN** an admin edits a reminder whose stored `kind`/`audience` pair is not
-  one of the two presets, changing only its timing
-- **THEN** the type is shown as "Custom" and is not reassigned to a preset
-- **AND** the saved policy keeps its original `kind` and `audience`

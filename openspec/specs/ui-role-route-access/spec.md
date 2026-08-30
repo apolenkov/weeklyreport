@@ -112,8 +112,7 @@ role set (a strict subset) for that specific subtree.
 
 `ForbiddenPage`'s body copy MUST NOT reference an affordance that only
 exists in some environments (such as a dev-only role switcher). The copy
-MUST read correctly for a denied visitor regardless of whether the app is
-running in dev, UAT, or production.
+MUST read correctly for a denied visitor in every runtime environment.
 
 #### Scenario: A denied visitor in production sees only real affordances
 

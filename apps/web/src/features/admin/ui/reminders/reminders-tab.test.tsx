@@ -63,19 +63,6 @@ const policyEscalation: AdminReminderPolicyView = {
   validUntil: new Date("2026-12-31T00:00:00.000Z"),
 };
 
-// A legacy pairing the two presets do not cover (`follow_up` is never offered),
-// so the form must surface it read-only as "Custom" and preserve it on save.
-const policyCustom: AdminReminderPolicyView = {
-  id: "b0000000-0000-4000-8000-000000000003",
-  kind: "follow_up",
-  offsetMinutes: -2880, // 2 days before
-  timezone: "Europe/Moscow",
-  audience: "lead-with-draft",
-  active: true,
-  validFrom: new Date("2026-05-01T00:00:00.000Z"),
-  validUntil: null,
-};
-
 // Far-future fire time so the next-send line is deterministic whatever day the
 // suite runs.
 const futureRule: AdminReminderView = {
@@ -379,48 +366,11 @@ describe("RemindersTab — add / edit form", () => {
     expect(typeSelect.value).toBe("escalation-head");
   });
 
-  it("renders a legacy pairing as read-only 'Custom' and preserves kind/audience on save", async () => {
-    const user = userEvent.setup();
-    const { captured } = renderTab({
-      policies: [policyCustom],
-      derivedRulesByPolicyId: { [policyCustom.id]: [] },
-    });
-
-    await user.click(screen.getByTestId(`edit-${policyCustom.id}`));
-    expect(screen.getByTestId("policy-type-custom")).toHaveTextContent(
-      "Custom",
-    );
-
-    // Edit only the timing: flip 48h before → 48h after the deadline.
-    await user.selectOptions(
-      screen.getByLabelText(/before or after deadline/i),
-      "after",
-    );
-
-    await user.click(screen.getByTestId("policy-save-button"));
-
-    const savePolicyEntry = expectDefined(captured["admin.savePolicy"]);
-    await waitFor(() => {
-      expect(savePolicyEntry.mutationFn).toHaveBeenCalledTimes(1);
-    });
-    const arg = savePolicyEntry.mutationFn.mock.calls[0]?.[0] as Record<
-      string,
-      unknown
-    >;
-    // Stored kind/audience are written back unchanged (never coerced).
-    expect(arg.kind).toBe("follow_up");
-    expect(arg.audience).toBe("lead-with-draft");
-    expect(arg.offsetMinutes).toBe(2880); // 48 hours after
-  });
-
   it("clearing the offset magnitude does not silently become 0", async () => {
     const user = userEvent.setup();
-    const { captured } = renderTab({
-      policies: [policyCustom],
-      derivedRulesByPolicyId: { [policyCustom.id]: [] },
-    });
+    const { captured } = renderTab({ policies: [policyDeadline] });
 
-    await user.click(screen.getByTestId(`edit-${policyCustom.id}`));
+    await user.click(screen.getByTestId(`edit-${policyDeadline.id}`));
 
     const offsetInput = screen.getByLabelText<HTMLInputElement>(
       /reminder offset amount/i,

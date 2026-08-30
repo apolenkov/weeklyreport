@@ -4,7 +4,6 @@ import { useEffect, useRef } from "react";
 
 import type { PolicyFormState } from "../../model/reminders-form-state";
 import {
-  CUSTOM_PRESET_LABEL,
   presetPairing,
   REMINDER_PRESETS,
   type ReminderPreset,
@@ -45,30 +44,18 @@ function ReminderTypeField({ form, onChange }: PolicyFieldProps) {
       <label htmlFor="policy-type" className={POLICY_FORM_LABEL_CLASS}>
         Reminder type
       </label>
-      {form.preset === "custom" ? (
-        // A legacy pairing outside the two presets is shown read-only
-        // and its stored kind/audience are written back unchanged.
-        <div
-          id="policy-type"
-          data-testid="policy-type-custom"
-          className={`${POLICY_FORM_INPUT_CLASS} text-[var(--color-muted-foreground)]`}
-        >
-          {CUSTOM_PRESET_LABEL}
-        </div>
-      ) : (
-        <select
-          id="policy-type"
-          value={form.preset}
-          onChange={(e) => selectPreset(e.target.value as ReminderPreset)}
-          className={POLICY_FORM_INPUT_CLASS}
-        >
-          {REMINDER_PRESETS.map((preset) => (
-            <option key={preset.value} value={preset.value}>
-              {preset.label}
-            </option>
-          ))}
-        </select>
-      )}
+      <select
+        id="policy-type"
+        value={form.preset}
+        onChange={(e) => selectPreset(e.target.value as ReminderPreset)}
+        className={POLICY_FORM_INPUT_CLASS}
+      >
+        {REMINDER_PRESETS.map((preset) => (
+          <option key={preset.value} value={preset.value}>
+            {preset.label}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

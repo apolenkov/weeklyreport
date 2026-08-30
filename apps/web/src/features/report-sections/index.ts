@@ -67,7 +67,6 @@ export {
   canonicalStageName,
   canonicalStageNames,
   riskCoversStage,
-  splitStageNames,
 } from "./model/stage-tags";
 export {
   annotateOwnRiskCoverage,

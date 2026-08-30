@@ -120,15 +120,14 @@ describe("mapLeadFormData", () => {
 });
 
 describe("stageNamesMatch", () => {
-  it("treats 'Development' and 'Dev' as equivalent (alias)", () => {
-    expect(stageNamesMatch("Development", "Dev")).toBe(true);
-    expect(stageNamesMatch("Dev", "Development")).toBe(true);
-    expect(stageNamesMatch("development", "dev")).toBe(true);
+  it("requires the exact canonical name", () => {
+    expect(stageNamesMatch("Development", "Development")).toBe(true);
+    expect(stageNamesMatch("Development", "Dev")).toBe(false);
   });
 
-  it("matches identical names case-insensitively", () => {
+  it("does not accept case variants", () => {
     expect(stageNamesMatch("Planning", "Planning")).toBe(true);
-    expect(stageNamesMatch("TESTING", "testing")).toBe(true);
+    expect(stageNamesMatch("TESTING", "testing")).toBe(false);
   });
 
   it("does not match unrelated names", () => {
@@ -208,7 +207,12 @@ describe("ownedStagesForProject", () => {
           projectName: "CRM",
           trafficLight: "green",
           ownedStages: [
-            { stageId: "s1", stageName: "Dev", sortOrder: 3, status: "green" },
+            {
+              stageId: "s1",
+              stageName: "Development",
+              sortOrder: 3,
+              status: "green",
+            },
           ],
         },
         {

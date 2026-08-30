@@ -69,8 +69,8 @@ report-section domain, invoked through a narrow injected function.
   reminder rules)
 - **THEN** the period creation still succeeds and the login completes — reminder
   materialisation is best-effort, so a secondary write never 500s the login
-- **AND** the failure is logged, and the missing rules are recoverable via the
-  reminder-policy backfill
+- **AND** the failure is logged, and the next current-period access retries the
+  missing rules without changing rules that already exist
 
 #### Scenario: Lead login when the current-week period already exists
 

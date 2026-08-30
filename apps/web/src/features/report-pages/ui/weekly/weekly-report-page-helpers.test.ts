@@ -178,6 +178,7 @@ describe("buildAccordionModel — draftCount includes activity-only drafts", () 
               text: "Draft work",
               tag: "Dev",
               workflowStatus: "in_progress",
+              stageNames: ["Development"],
               carriedOver: false,
             },
           ],

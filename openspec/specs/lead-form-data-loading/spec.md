@@ -27,7 +27,7 @@ absorb the draft-orchestration, write-action, or draft-merge boundaries.
 - **AND** fullscreen ownership, draft orchestration, write actions, draft
   merges, and loaded view-model consumption remain outside that boundary
 
-### Requirement: Query enablement chains remain behavior-compatible
+### Requirement: Query enablement chains preserve current loading behavior
 
 The data-loading hook MUST preserve the current query enablement semantics.
 The by-period read MUST fire only when a target report is known, the session
@@ -48,7 +48,7 @@ the user's own.
   a foreign author's deck
 - **THEN** the cross-author full-content query issues no request
 
-### Requirement: Foreign-content cache purges remain behavior-compatible
+### Requirement: Foreign-content cache purges preserve current isolation
 
 The data-loading hook MUST preserve the foreign-content purge guard: the
 cached cross-author full content MUST be removed whenever the visibility state
@@ -68,7 +68,7 @@ never be served to another identity from the query cache.
 - **THEN** the cached cross-author full-content query is removed
   unconditionally
 
-### Requirement: Route redirects remain behavior-compatible
+### Requirement: Route redirects preserve current navigation behavior
 
 The data-loading hook MUST preserve the current redirect semantics: on the
 bare lead-report route the form MUST replace the URL with the canonical

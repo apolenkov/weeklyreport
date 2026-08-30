@@ -1,33 +1,5 @@
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 
-export async function queryActiveReportId(
-  prisma: PrismaService,
-): Promise<string | null> {
-  // Scheduled-future periods carry periodStatus "open" (the enum has no
-  // "scheduled" value), so without `periodStart <= now` a future period would
-  // win the periodStart-desc ordering and be mis-picked as the current period.
-  const editableReport = await prisma.report.findFirst({
-    where: {
-      periodStatus: { in: ["open", "reopened"] },
-      periodStart: { lte: new Date() },
-    },
-    orderBy: { periodStart: "desc" },
-    select: { id: true },
-  });
-
-  if (editableReport) {
-    return editableReport.id;
-  }
-
-  const publishedReport = await prisma.report.findFirst({
-    where: { periodStatus: "published" },
-    orderBy: { periodStart: "desc" },
-    select: { id: true },
-  });
-
-  return publishedReport?.id ?? null;
-}
-
 // Newest non-archived open/reopened that has started. No published fallback
 // (would defeat open→published race rejection). Secondary id desc: gate and
 // latestForViewer call this separately and must pick the same id on ties.

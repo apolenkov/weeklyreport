@@ -251,14 +251,3 @@ export const redisCacheErrorsTotal = new Counter({
   labelNames: ["operation"] as const,
   registers: [metricsRegistry],
 });
-
-// Telegram delivery and binding lifecycle metrics.
-
-// Tracks Telegram delivery outcomes so silent failures are visible before
-// users report missed notifications.
-export const telegramMessageSentTotal = new Counter({
-  name: "customreport_telegram_message_sent_total",
-  help: "Total outbound Telegram message attempts",
-  labelNames: ["status"] as const,
-  registers: [metricsRegistry],
-});

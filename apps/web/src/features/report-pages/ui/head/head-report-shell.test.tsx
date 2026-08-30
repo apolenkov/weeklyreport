@@ -155,26 +155,9 @@ import { HeadReportShell } from "./head-report-shell";
 
 const TEST_REPORT_ID = "test-report-001";
 
-describe("HeadReportShell — agent-review placeholder per mode", () => {
-  it("form mode renders exactly one placeholder in the context controls", () => {
-    render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);
-    expect(screen.getAllByTestId("agent-review-coming-soon")).toHaveLength(1);
-    expect(
-      within(
-        screen.getByRole("group", { name: "Context controls" }),
-      ).getByTestId("agent-review-coming-soon"),
-    ).toBeInTheDocument();
-  });
-
-  it("slides mode renders exactly one placeholder in the toolbar context controls", () => {
-    // Toolbar hosts the single agent-review placeholder in slides mode too.
+describe("HeadReportShell layout", () => {
+  it("renders the head slides client in slides mode", () => {
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="slides" />);
-    expect(screen.getAllByTestId("agent-review-coming-soon")).toHaveLength(1);
-    expect(
-      within(
-        screen.getByRole("group", { name: "Context controls" }),
-      ).getByTestId("agent-review-coming-soon"),
-    ).toBeInTheDocument();
     expect(screen.getByTestId("head-slides-client-stub")).toBeInTheDocument();
     expect(
       screen
@@ -200,33 +183,6 @@ describe("HeadReportShell — agent-review placeholder per mode", () => {
         screen.getByRole("group", { name: "Document actions" }),
       ).getByTestId("head-publish-lock-action-stub"),
     ).toBeInTheDocument();
-  });
-
-  it("renders one inert Slide templates control only in slides context", async () => {
-    const user = userEvent.setup();
-
-    const formRender = render(
-      <HeadReportShell reportId={TEST_REPORT_ID} mode="form" />,
-    );
-    expect(
-      screen.queryByTestId("slide-templates-coming-soon"),
-    ).not.toBeInTheDocument();
-    formRender.unmount();
-
-    render(<HeadReportShell reportId={TEST_REPORT_ID} mode="slides" />);
-    const slidesToolbar = screen.getByRole("group", {
-      name: "Context controls",
-    });
-    const templates = within(slidesToolbar).getByTestId(
-      "slide-templates-coming-soon",
-    );
-    expect(templates).toHaveAttribute("aria-disabled", "true");
-    expect(
-      within(slidesToolbar).getAllByTestId("slide-templates-coming-soon"),
-    ).toHaveLength(1);
-
-    await user.click(templates);
-    expect(templates).toHaveAttribute("aria-disabled", "true");
   });
 
   it("keeps shell-owned density reversible in the single slides context toolbar", async () => {
@@ -289,8 +245,7 @@ describe("HeadReportShell — agent-review placeholder per mode", () => {
   });
 });
 
-// Segmented toggles + agent-review stay; Present/Print are gone (Slides mode
-// and labeled Export-PDF replace them).
+// Segmented toggles remain in the context-control cluster.
 describe("HeadReportShell — context control cluster", () => {
   // Wire an ACTIVE displayed period so the shell's Export-PDF renders (it is
   // gated on an active, resolvable period). compiledHistory stays empty.
@@ -313,7 +268,7 @@ describe("HeadReportShell — context control cluster", () => {
     vi.mocked(useQuery).mockImplementation(impl);
   }
 
-  it("renders the toggles and agent-review in the context controls, with NO Present/Print links", () => {
+  it("renders the toggles in the context controls", () => {
     wireActivePeriod();
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);
     const contextControls = screen.getByRole("group", {
@@ -325,32 +280,6 @@ describe("HeadReportShell — context control cluster", () => {
     expect(
       within(contextControls).getByRole("link", { name: /slides/i }),
     ).toBeInTheDocument();
-    expect(
-      within(contextControls).getByTestId("agent-review-coming-soon"),
-    ).toBeInTheDocument();
-    // Present + browser-Print header links are removed entirely.
-    expect(
-      screen.queryByRole("link", { name: /present/i }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("link", { name: /print/i }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("places the agent-review placeholder before the toggles (leading edge)", () => {
-    wireActivePeriod();
-    render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);
-    const contextControls = screen.getByRole("group", {
-      name: "Context controls",
-    });
-    const agentReview = within(contextControls).getByTestId(
-      "agent-review-coming-soon",
-    );
-    const scopeToggle = within(contextControls).getByRole("radiogroup");
-    // head-toolbar-semantics Req3: the placeholder is the FIRST element of the
-    // group, so the scope toggle FOLLOWS it in document order.
-    const position = agentReview.compareDocumentPosition(scopeToggle);
-    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("renders exactly one labeled Export-PDF in the document-action row", () => {
@@ -375,17 +304,11 @@ describe("HeadReportShell — context control cluster", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("slides mode keeps the toggles but renders no Present/Print links", () => {
+  it("slides mode keeps the toggles", () => {
     wireActivePeriod();
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="slides" />);
     expect(screen.queryByTestId("report-actions-pill")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /slides/i })).toBeInTheDocument();
-    expect(
-      screen.queryByRole("link", { name: /present/i }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("link", { name: /print/i }),
-    ).not.toBeInTheDocument();
   });
 
   it("surfaces a history-query failure instead of silently truncating period navigation", () => {
@@ -588,9 +511,8 @@ describe("HeadReportShell — active week reachable from a published week", () =
   });
 });
 
-// head-toolbar-semantics: the view-mode toggle MUST reflect the active mode, and
-// the head view state (mode/scope/show-archived) MUST live in the URL so refresh
-// and shared links restore it.
+// The view-mode toggle reflects the active mode, and URL-backed view state
+// restores mode, scope, and archive visibility on refresh and shared links.
 describe("HeadReportShell — view-mode toggle reflects mode + URL view state", () => {
   const ACTIVE_VAR = "bg-[var(--color-toggle-active)]";
 
