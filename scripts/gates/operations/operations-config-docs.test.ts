@@ -30,6 +30,7 @@ const webPackageJson = JSON.parse(read("apps/web/package.json")) as {
   readonly scripts: Readonly<Record<string, string | undefined>>;
 };
 const workflow = read(".github/workflows/ci.yml");
+const alertRules = read("deploy/alert-rules.yml");
 
 const requiredProductionVariables = (): readonly string[] =>
   [...prodCompose.matchAll(/\$\{([A-Z0-9_]+):\?/g)]
@@ -289,6 +290,45 @@ void test("metrics documentation and edge config keep the endpoint internal", ()
     /`\/metrics`[\s\S]*internal-only|not\*\* routed through Caddy/,
   );
   assert.match(read("deploy/caddy/README.md"), /`\/metrics` stays internal/);
+});
+
+const assertActiveDlqAlertUsesAuthoritativeGauge = (document: string): void => {
+  const marker = "- alert: DLQFailuresActive";
+  const start = document.indexOf(marker);
+  assert.notEqual(start, -1, "DLQFailuresActive rule must exist");
+  const tail = document.slice(start + marker.length);
+  const nextAlertOffset = tail.indexOf("\n      - alert:");
+  const block =
+    nextAlertOffset === -1
+      ? document.slice(start)
+      : document.slice(start, start + marker.length + nextAlertOffset);
+  const lines = new Set(block.split("\n").map((line) => line.trim()));
+
+  assert.ok(
+    lines.has("expr: cr_dlq_failed_current > 0"),
+    "DLQFailuresActive must use the authoritative failed-job gauge",
+  );
+  assert.ok(
+    !block.includes("cr_dlq_failed_total"),
+    "DLQFailuresActive must not use the process-local event counter",
+  );
+  assert.ok(lines.has("for: 5m"));
+};
+
+void test("active DLQ alert survives an API restart", () => {
+  assertActiveDlqAlertUsesAuthoritativeGauge(alertRules);
+});
+
+void test("active DLQ alert gate rejects a planted event-counter regression", () => {
+  const planted = alertRules.replace(
+    "expr: cr_dlq_failed_current > 0",
+    "expr: cr_dlq_failed_total > 0",
+  );
+  assert.notEqual(planted, alertRules, "the planted regression must apply");
+  assert.throws(
+    () => assertActiveDlqAlertUsesAuthoritativeGauge(planted),
+    /authoritative failed-job gauge/u,
+  );
 });
 
 void test("both enforcing CSP policies report violations to the required collector", () => {

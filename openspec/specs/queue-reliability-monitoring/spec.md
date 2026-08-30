@@ -146,10 +146,7 @@ budget is visible before it silently hangs a report.
 ### Requirement: The authoritative DLQ failed-job count MUST be exported as a gauge
 
 The DLQ monitor's authoritative absolute failed-job count MUST be exported as a Prometheus gauge distinct from the event-driven rate counter.
-This count is currently computed via `getFailedCount()` only for the
-threshold-log comparison; exporting it lets an alerting rule threshold
-against the authoritative value rather than only the
-accumulate-since-restart counter.
+The active failed-job alert consumed by operators MUST threshold this gauge rather than the accumulate-since-restart event counter.
 
 #### Scenario: The DLQ monitor restarts mid-incident
 
@@ -157,8 +154,9 @@ accumulate-since-restart counter.
   in a queue's failed set
 - **THEN** the authoritative gauge (`cr_dlq_failed_current` or equivalent)
   reflects the true failed-job count on the next poll after restart
-- **AND** this value does not depend on `QueueEvents` having been subscribed
-  at the moment each job failed
+- **AND** the active failed-job alert evaluates that authoritative gauge
+- **AND** neither the gauge nor the alert depends on `QueueEvents` having been
+  subscribed at the moment each job failed
 
 ### Requirement: A queue health probe MUST be bounded by a timeout
 

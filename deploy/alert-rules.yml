@@ -1,9 +1,9 @@
 groups:
   - name: customreport
     rules:
-      # Fire when the DLQ has had failed jobs for more than 5 minutes.
+      # Fire when the authoritative DLQ count stays non-zero for 5 minutes.
       - alert: DLQFailuresActive
-        expr: cr_dlq_failed_total > 0
+        expr: cr_dlq_failed_current > 0
         for: 5m
         labels:
           severity: warning
