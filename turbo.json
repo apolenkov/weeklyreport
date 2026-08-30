@@ -1,6 +1,7 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["vitest.base.config.ts", "tsconfig.base.json"],
+  "globalEnv": ["PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN"],
   "tasks": {
     "build": {
       "dependsOn": ["^build", "db:generate"],

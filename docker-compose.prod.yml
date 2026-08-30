@@ -227,7 +227,7 @@ services:
       args:
         BUILD_VERSION: ${OTEL_SERVICE_VERSION:?set the deployed release version (for example the Git SHA)}
     image: customreport-migrate:${OTEL_SERVICE_VERSION:?set the deployed release version (for example the Git SHA)}
-    command: ["pnpm", "exec", "prisma", "migrate", "deploy"]
+    command: ["./node_modules/.bin/prisma", "migrate", "deploy"]
     environment:
       # migrate connects DIRECTLY to postgres (bypassing pgbouncer) because DDL
       # needs session-mode — that is what DATABASE_URL below encodes. Prisma

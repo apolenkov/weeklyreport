@@ -104,6 +104,9 @@ const backupDockerfile = readFileSync(
 );
 const apiDockerfile = readFileSync(resolve("Dockerfile.api"), "utf8");
 const webDockerfile = readFileSync(resolve("Dockerfile.web"), "utf8");
+const turboConfig = JSON.parse(readFileSync(resolve("turbo.json"), "utf8")) as {
+  readonly globalEnv?: readonly string[];
+};
 
 void test("production compose requires every operational policy input", () => {
   for (const variable of REQUIRED_POLICY_INPUTS) {
@@ -304,6 +307,113 @@ void test("production dependency layers retain a shared pnpm BuildKit cache", ()
   }
 });
 
+void test("post-install production tools bypass pnpm dependency preflight", () => {
+  assert.ok(
+    turboConfig.globalEnv?.includes("PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN"),
+  );
+
+  const dependencyPolicy = "ENV PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN=false";
+  for (const [path, dockerfile, buildCommand] of [
+    [
+      "Dockerfile.api",
+      apiDockerfile,
+      "RUN ./node_modules/.bin/turbo build --filter=@customreport/api",
+    ],
+    [
+      "Dockerfile.web",
+      webDockerfile,
+      "RUN ./node_modules/.bin/turbo build --filter=@customreport/web",
+    ],
+  ] as const) {
+    const builderStart = dockerfile.indexOf("FROM installer AS builder");
+    assert.notEqual(builderStart, -1, `${path} must define a builder stage`);
+
+    const nextStage = dockerfile.indexOf("\nFROM ", builderStart + 1);
+    const builderEnd = nextStage === -1 ? dockerfile.length : nextStage;
+    const builderStage = dockerfile.slice(builderStart, builderEnd);
+    const policyIndex = builderStage.indexOf(dependencyPolicy);
+    const commandIndex = builderStage.indexOf(buildCommand);
+
+    assert.notEqual(
+      policyIndex,
+      -1,
+      `${path} must scope the policy to its builder`,
+    );
+    assert.notEqual(commandIndex, -1, `${path} must define its Turbo command`);
+    assert.ok(
+      policyIndex < commandIndex,
+      `${path} must apply the policy before Turbo starts`,
+    );
+
+    const installerStart = dockerfile.indexOf("FROM base AS installer");
+    const installerStage = dockerfile.slice(installerStart, builderStart);
+    assert.equal(
+      installerStage.includes(dependencyPolicy),
+      false,
+      `${path} must not leak the production policy into its dev target`,
+    );
+  }
+
+  assert.match(
+    apiDockerfile,
+    /RUN DATABASE_URL=[^\n]+ \.\/node_modules\/\.bin\/prisma generate/u,
+  );
+  assert.match(
+    apiDockerfile,
+    /CMD \["\.\/node_modules\/\.bin\/prisma", "migrate", "deploy"\]/u,
+  );
+  assert.match(
+    apiDockerfile,
+    /RUN \.\/node_modules\/\.bin\/turbo build --filter=@customreport\/api/u,
+  );
+  assert.match(
+    apiDockerfile,
+    /RUN \.\/node_modules\/\.bin\/playwright install --with-deps chromium/u,
+  );
+  assert.match(
+    webDockerfile,
+    /RUN \.\/node_modules\/\.bin\/turbo build --filter=@customreport\/web/u,
+  );
+
+  const migrateCommand =
+    'command: ["./node_modules/.bin/prisma", "migrate", "deploy"]';
+  for (const [path, compose] of [
+    ["docker-compose.yml", devContent],
+    ["docker-compose.prod.yml", content],
+  ] as const) {
+    const migrateStart = compose.indexOf("\n  migrate:\n");
+    const apiStart = compose.indexOf("\n  api:\n", migrateStart);
+    const migrateService = compose.slice(migrateStart, apiStart);
+    assert.ok(
+      migrateService.includes(migrateCommand),
+      `${path} must start migration through the installed Prisma binary`,
+    );
+  }
+
+  const forbiddenPnpmCommands = [
+    "pnpm exec prisma",
+    "pnpm exec playwright",
+    "pnpm turbo",
+    "pnpm run ",
+  ] as const;
+  for (const [path, dockerfile] of [
+    ["Dockerfile.api", apiDockerfile],
+    ["Dockerfile.web", webDockerfile],
+  ] as const) {
+    const commandLines = dockerfile
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith("RUN ") || line.startsWith("CMD "));
+    for (const forbidden of forbiddenPnpmCommands) {
+      assert.equal(
+        commandLines.some((line) => line.includes(forbidden)),
+        false,
+        `${path} must not invoke ${forbidden.trim()} after installation`,
+      );
+    }
+  }
+});
+
 void test("production build stages make pnpm explicitly non-interactive", () => {
   for (const [path, dockerfile] of [
     ["Dockerfile.api", apiDockerfile],
@@ -355,7 +465,9 @@ void test("release labels do not invalidate heavyweight runner layers", () => {
   );
   assert.ok(
     apiRunner.indexOf("LABEL org.opencontainers.image.revision=") >
-      apiRunner.indexOf("pnpm exec playwright install --with-deps chromium"),
+      apiRunner.indexOf(
+        "./node_modules/.bin/playwright install --with-deps chromium",
+      ),
   );
   const webRunner = webDockerfile.slice(webDockerfile.indexOf(" AS runner"));
   assert.ok(

@@ -29,7 +29,7 @@ RUN --mount=type=cache,id=customreport-pnpm-store-v11,target=/pnpm/store,sharing
 COPY --from=pruner /app/out/full/ .
 COPY tsconfig.base.json ./tsconfig.base.json
 COPY prisma.config.ts ./prisma.config.ts
-RUN DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport pnpm exec prisma generate
+RUN DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport ./node_modules/.bin/prisma generate
 
 # Stage 4: Migration runner with Prisma CLI available.
 # Compose/Kubernetes init jobs should use this target, not the production API
@@ -37,11 +37,14 @@ RUN DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport 
 FROM installer AS migrator
 ARG BUILD_VERSION
 LABEL org.opencontainers.image.revision=${BUILD_VERSION}
-CMD ["pnpm", "exec", "prisma", "migrate", "deploy"]
+CMD ["./node_modules/.bin/prisma", "migrate", "deploy"]
 
 # Stage 5: Build
 FROM installer AS builder
-RUN pnpm turbo build --filter=@customreport/api
+# The inherited frozen install is authoritative. pnpm 11 otherwise lets the
+# workspace scripts spawned by Turbo reconcile dependencies after source copy.
+ENV PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN=false
+RUN ./node_modules/.bin/turbo build --filter=@customreport/api
 
 # Stage 6: Production dependencies, installed fresh from the same lockfile.
 # NOT `pnpm prune --prod`: run at the workspace root it keeps the virtual store
@@ -85,7 +88,7 @@ COPY --from=builder --chown=node:node /app/prisma ./prisma
 # every suite stayed green. Runs from the api workspace, not the repo root:
 # playwright is a dependency of apps/api, so its bin is linked only there.
 WORKDIR /app/apps/api
-RUN pnpm exec playwright install --with-deps chromium
+RUN ./node_modules/.bin/playwright install --with-deps chromium
 
 # Create PDF storage directory
 RUN mkdir -p /app/data/pdfs && chown node:node /app/data/pdfs
