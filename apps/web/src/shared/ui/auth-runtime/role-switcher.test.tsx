@@ -185,8 +185,10 @@ describe("DevRoleSwitcher — logout honesty", () => {
     expect(trigger).toBeDisabled();
     trigger.blur();
     expectDefined(logoutResponse.resolve)({ ok: false });
-    await waitFor(() => expect(trigger).not.toBeDisabled());
-    expect(trigger).toHaveFocus();
+    await waitFor(() => {
+      expect(trigger).not.toBeDisabled();
+      expect(trigger).toHaveFocus();
+    });
   });
 
   it("re-enables and restores trigger focus after reseed fails", async () => {
@@ -211,8 +213,10 @@ describe("DevRoleSwitcher — logout honesty", () => {
     trigger.blur();
     expectDefined(reseedFailure.onError)(new Error("reseed failed"));
 
-    await waitFor(() => expect(trigger).not.toBeDisabled());
-    expect(trigger).toHaveFocus();
+    await waitFor(() => {
+      expect(trigger).not.toBeDisabled();
+      expect(trigger).toHaveFocus();
+    });
   });
 
   it("redirects home when logout responds OK", async () => {
