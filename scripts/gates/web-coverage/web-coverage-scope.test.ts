@@ -8,6 +8,22 @@ const webVitestConfig = readFileSync(
   "utf8",
 );
 
+const escapedOpenParenthesis = String.raw`\(`;
+const escapedCloseParenthesis = String.raw`\)`;
+
+const rawGlobLiteral = (path: string): string =>
+  [
+    "String.raw`",
+    path
+      .replaceAll("(", escapedOpenParenthesis)
+      .replaceAll(")", escapedCloseParenthesis),
+    "`",
+  ].join("");
+
+const hasCoverageExclusion = (source: string, path: string): boolean =>
+  source.includes(JSON.stringify(path)) ||
+  source.includes(rawGlobLiteral(path));
+
 // TOOL-COVERAGE-002: the broad `src/app/**/page.tsx` exclusion hid every route
 // page from both the numerator and denominator of web coverage. Only
 // framework-thin redirect aliases may be excluded wholesale; any page carrying
@@ -32,10 +48,18 @@ void test("framework-thin redirect aliases are the only page exclusions", () => 
   ];
   for (const stub of expectedStubs) {
     assert.ok(
-      webVitestConfig.includes(stub),
+      hasCoverageExclusion(webVitestConfig, stub),
       `redirect stub ${stub} is excluded wholesale`,
     );
   }
+});
+
+void test("the page-exclusion detector rejects a planted removed redirect", () => {
+  const stub = "src/app/(app)/admin/products/page.tsx";
+  const literal = rawGlobLiteral(stub);
+  const mutated = webVitestConfig.replace(literal, "");
+  assert.notEqual(mutated, webVitestConfig, "the planted exclusion must apply");
+  assert.equal(hasCoverageExclusion(mutated, stub), false);
 });
 
 void test("behavioral route pages stay in the coverage include set", () => {
@@ -50,7 +74,7 @@ void test("behavioral route pages stay in the coverage include set", () => {
   ];
   for (const page of behavioralPages) {
     assert.ok(
-      !webVitestConfig.includes(page),
+      !hasCoverageExclusion(webVitestConfig, page),
       `behavioral page ${page} must not be excluded wholesale`,
     );
   }

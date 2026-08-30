@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import type { LeadSubmitReadiness } from "../../../../report-sections";
 import { autosaveReadinessCopy } from "./autosave-state-copy";
 
@@ -8,11 +10,26 @@ interface LeadSubmitReadinessSummaryProps {
   readonly onSubmit: () => void;
 }
 
+type Promotion = LeadSubmitReadiness["willAutoPromote"][number];
+
+const PROMOTION_GROUPS = [
+  { kind: "product", title: "Products" },
+  { kind: "activity", title: "Activities" },
+  { kind: "stage", title: "Stages" },
+] as const;
+
+function readinessStatusCopy(readiness: LeadSubmitReadiness): string {
+  if (readiness.submitPending) return "Submitting report…";
+  if (readiness.blockingIssues.length > 0) {
+    return "Complete the items below before submitting.";
+  }
+  return "This report is ready to submit.";
+}
+
 function ReadinessHeader({
   readiness,
   onSubmit,
 }: LeadSubmitReadinessSummaryProps) {
-  const ready = readiness.blockingIssues.length === 0;
   return (
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div>
@@ -20,10 +37,10 @@ function ReadinessHeader({
           id="lead-submit-readiness-title"
           className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]"
         >
-          Submit readiness
+          Before you submit
         </h2>
         <p className="mt-1 text-sm font-semibold" role="status">
-          {ready ? "Ready" : "Needs attention"}
+          {readinessStatusCopy(readiness)}
         </p>
         <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
           {autosaveReadinessCopy(readiness.autosaveState)}
@@ -35,7 +52,11 @@ function ReadinessHeader({
         className="btn-press inline-flex min-h-10 max-md:min-h-[var(--touch-target-min)] max-md:min-w-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-5 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
         onClick={onSubmit}
         disabled={!readiness.canOpenConfirmation}
-        title={readiness.blockingIssues[0]?.label}
+        title={
+          readiness.submitPending
+            ? "Submission in progress"
+            : readiness.blockingIssues[0]?.label
+        }
       >
         Submit
       </button>
@@ -43,26 +64,76 @@ function ReadinessHeader({
   );
 }
 
-function ReadinessGroup({
+function PromotionGroup({
   title,
   items,
-  blocked = false,
 }: {
   readonly title: string;
-  readonly items: readonly { readonly id: string; readonly label: string }[];
-  readonly blocked?: boolean;
+  readonly items: readonly Promotion[];
 }) {
   if (items.length === 0) return null;
   return (
-    <div className="mt-4">
-      <h3
-        className={`text-sm font-semibold ${blocked ? "text-[var(--color-destructive)]" : "text-[var(--color-foreground)]"}`}
-      >
-        {title}
+    <div>
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+        {title} ({items.length})
       </h3>
-      <ul
-        className={`mt-1 list-disc space-y-1 pl-5 text-sm ${blocked ? "text-[var(--color-foreground)]" : "text-[var(--color-muted-foreground)]"}`}
-      >
+      <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-[var(--color-foreground)]">
+        {items.map((item) => (
+          <li key={item.id}>{item.label}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function AutomaticStatusChanges({
+  items,
+}: {
+  readonly items: LeadSubmitReadiness["willAutoPromote"];
+}) {
+  const [open, setOpen] = useState(false);
+  if (items.length === 0) return null;
+  const statusLabel = items.length === 1 ? "status" : "statuses";
+  return (
+    <details
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+      className="mt-4 rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-hover)]/40"
+      data-testid="lead-submit-automatic-statuses"
+    >
+      <summary className="cursor-pointer px-4 py-3 text-sm marker:text-[var(--color-muted-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-ring)]">
+        <span className="font-semibold text-[var(--color-foreground)]">
+          When you submit:
+        </span>{" "}
+        <span className="text-[var(--color-muted-foreground)]">
+          {items.length} unset {statusLabel} will be set to On Track.
+        </span>
+      </summary>
+      <div className="grid max-h-64 gap-4 overflow-y-auto border-t border-[var(--color-border-subtle)] px-4 py-3 md:grid-cols-3">
+        {PROMOTION_GROUPS.map((group) => (
+          <PromotionGroup
+            key={group.kind}
+            title={group.title}
+            items={items.filter((item) => item.kind === group.kind)}
+          />
+        ))}
+      </div>
+    </details>
+  );
+}
+
+function BlockingIssues({
+  items,
+}: {
+  readonly items: LeadSubmitReadiness["blockingIssues"];
+}) {
+  if (items.length === 0) return null;
+  return (
+    <div className="mt-4 rounded-[var(--radius)] border border-[var(--color-destructive)]/35 bg-[var(--color-destructive-surface-subtle)] p-4">
+      <h3 className="text-sm font-semibold text-[var(--color-destructive)]">
+        Fix before submitting
+      </h3>
+      <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-[var(--color-foreground)]">
         {items.map((item) => (
           <li key={item.id}>{item.label}</li>
         ))}
@@ -82,15 +153,8 @@ export function LeadSubmitReadinessSummary({
       data-testid="lead-submit-readiness"
     >
       <ReadinessHeader readiness={readiness} onSubmit={onSubmit} />
-      <ReadinessGroup
-        title="Will be set to On Track"
-        items={readiness.willAutoPromote}
-      />
-      <ReadinessGroup
-        title="Blocks submission"
-        items={readiness.blockingIssues}
-        blocked
-      />
+      <AutomaticStatusChanges items={readiness.willAutoPromote} />
+      <BlockingIssues items={readiness.blockingIssues} />
     </section>
   );
 }

@@ -371,6 +371,39 @@ void test("Grafana guidance uses the configured password", () => {
   assert.match(`${readme}\n${onboarding}`, /GRAFANA_ADMIN_PASSWORD/);
 });
 
+const assertRecoveryEvidenceIsTruthful = (document: string): void => {
+  assert.match(
+    document,
+    /Neither value alone\s+proves achieved RPO or RTO/,
+    "cadence and retention must not be presented as measured recovery evidence",
+  );
+  assert.doesNotMatch(
+    document,
+    /together they are the recovery-point objective/i,
+  );
+  assert.match(
+    document,
+    /do\s+not constitute a current restore drill or prove schema and row-count parity/,
+  );
+  assert.match(
+    document,
+    /A drill record must bind the repository SHA, dump checksum,[\s\S]*schema comparison,[\s\S]*readiness result/,
+  );
+};
+
+void test("recovery guidance distinguishes configuration from measured evidence", () => {
+  assertRecoveryEvidenceIsTruthful(operations);
+});
+
+void test("recovery guidance rejects a planted RPO overclaim", () => {
+  const overclaim = operations.replace(
+    "Neither value alone\nproves achieved RPO or RTO",
+    "Together they are the recovery-point objective and\nprove achieved RPO or RTO",
+  );
+  assert.notEqual(overclaim, operations, "the planted claim must apply");
+  assert.throws(() => assertRecoveryEvidenceIsTruthful(overclaim));
+});
+
 void test("external production controls remain blocked until external read-back", () => {
   const operationsText = read("docs/operations.md");
   assert.match(operationsText, /External first-production prerequisites/);

@@ -7,11 +7,12 @@ const REPORT_TOOLBAR_FRAME_CLASS =
 // Sticky opt-in: opaque surface (no /70), shadow, z-20 under NavBar dropdowns
 // (z-30). Resting frame above stays byte-identical for non-sticky usages.
 const REPORT_TOOLBAR_FRAME_STICKY_CLASS =
-  "rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-hover)] px-2 py-1.5 sticky top-0 z-20 shadow-md";
+  "rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-hover)] px-2 py-1.5 md:sticky md:top-0 md:z-20 md:shadow-md";
 
 // Context controls wrap at narrow widths so every action remains visible and
 // keyboard-reachable without creating a second horizontal scroll surface.
-const REPORT_TOOLBAR_ROW_CLASS = "flex min-w-0 flex-wrap items-center gap-1.5";
+const REPORT_TOOLBAR_ROW_CLASS =
+  "flex min-w-0 flex-wrap items-center gap-1.5 md:flex-nowrap";
 
 interface ReportToolbarProps {
   // Context-control row only. Document actions render on the page header via

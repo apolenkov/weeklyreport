@@ -7,6 +7,7 @@ import { LeadFormEditSections } from "../chrome/lead-form-edit-sections";
 import { LeadFormSkeleton } from "./lead-form-skeleton";
 
 vi.mock("../../../../report-sections", () => ({
+  STAGE_CHIP_BOX_HEIGHT: "36px",
   mapLeadReviewFeedback: () => [],
   ownedStagesForProject: () => [],
 }));

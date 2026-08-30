@@ -45,7 +45,9 @@ export function ComingSoonIconButton({
 
 /**
  * Inert labelled deferred control with ComingSoon tooltip; primitive owns geometry (no className).
- * `compact` strips the touch-target min-height for denser toolbars.
+ * `compact` strips the touch-target min-height for denser desktop toolbars.
+ * `mobileIconOnly` keeps the label available to assistive technology while
+ * reserving a 44px icon target on narrow viewports.
  */
 export function ComingSoonControl({
   icon: Icon,
@@ -53,12 +55,14 @@ export function ComingSoonControl({
   testId,
   label,
   compact = false,
+  mobileIconOnly = false,
 }: {
   readonly icon: LucideIcon;
   readonly ariaLabel: string;
   readonly testId: string;
   readonly label: string;
   readonly compact?: boolean;
+  readonly mobileIconOnly?: boolean;
 }) {
   return (
     <ComingSoonTooltip>
@@ -71,12 +75,14 @@ export function ComingSoonControl({
           INERT_CHROME,
           "gap-1.5 rounded-[var(--radius-pill)]",
           compact
-            ? "h-[var(--toolbar-control-h)] px-2.5 text-xs"
+            ? `h-[var(--toolbar-control-h)] px-2.5 text-xs ${mobileIconOnly ? "max-md:min-h-[var(--touch-target-min)] max-md:min-w-[var(--touch-target-min)] max-md:px-0" : ""}`
             : "min-h-[var(--touch-target-min)] px-4 py-1.5 text-sm",
         )}
       >
         <Icon size={14} strokeWidth={2} aria-hidden="true" />
-        <span>{label}</span>
+        <span className={mobileIconOnly ? "max-md:sr-only" : undefined}>
+          {label}
+        </span>
       </button>
     </ComingSoonTooltip>
   );

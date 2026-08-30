@@ -133,7 +133,7 @@ export function NextWeekSection(props: NextWeekSectionProps) {
       tabIndex={0}
       role="group"
       aria-label="Next week items"
-      className="max-h-[420px] overflow-y-auto"
+      className="max-md:max-h-none max-md:overflow-visible md:max-h-[420px] md:overflow-y-auto"
       style={{ scrollbarWidth: "thin" }}
     >
       <NextWeekBoardGrid

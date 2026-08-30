@@ -45,6 +45,8 @@ The existing dual-state transition builder remains the single owner of lifecycle
 
 Compiled history will distinguish lead-specific draft entries from compiled published/archived entries before rendering submission copy. PDF delivery will stay in the current page: after a completed job it attempts the same-origin attachment download and always exposes the durable fallback link. It never opens a temporary browser tab.
 
+The end-of-form submission summary will answer one user question first: whether the report can be submitted and, if not, what must be fixed. Automatic On Track promotion remains unchanged but appears as one counted consequence with grouped details behind a native disclosure, rather than a full internal ledger occupying the page. Pending submission never claims that the report is merely `Ready`; the non-sticky summary stays at the end of the form while the existing completion action cluster remains the only sticky surface.
+
 Compact control geometry will be repaired in the shared segmented toggle and the two action owners. Responsive minimums apply only below 48 rem; the admin users table remains an intentional contained horizontal scroller. Existing six mobile changes share the final browser pass so global touch/overflow evidence cannot disagree across changes.
 
 ### 3. Separate fast unit, required integration, and coverage evidence
@@ -63,7 +65,7 @@ Historical OpenSpec archives remain provenance. Current specs receive a complete
 
 ### 5. Make repository-owned operations internally truthful
 
-Development docs will choose one application owner: observability infrastructure plus source apps, or the full Compose stack, never both. Production runbooks will enumerate every required Compose variable and be checked by `docker compose config`. Backup cadence/retention validate before loops; post-update hooks propagate failures; Mailpit/Grafana/metrics/staging documentation matches real service and route ownership.
+Development docs will choose one application owner: observability infrastructure plus source apps, or the full Compose stack, never both. Production runbooks will enumerate every required Compose variable and be checked by `docker compose config`. Backup cadence/retention validate before loops or health arithmetic, and a completed dump is reported and pruned only after atomic publication succeeds; post-update hooks propagate failures; Mailpit/Grafana/metrics/staging documentation matches real service and route ownership.
 
 Browser telemetry will use a same-origin tunnel so the enforced `connect-src 'self'` policy remains closed while configured error delivery works. A repository check will prove the tunnel/config/CSP relationship. External receiver delivery and off-host recovery remain separate read-back prerequisites.
 
@@ -83,7 +85,7 @@ Implementation proceeds product/data -> UI/mobile -> fast tests/CI -> operations
 ## Migration Plan
 
 1. Add focused regression tests, then land atomic API writers and the append-only overlap constraint after preflight.
-2. Land web/mobile fixes and focused accessibility/interaction tests.
+2. Land web/mobile fixes, plain-language submission guidance, and focused accessibility/interaction tests.
 3. Add required integration and coverage commands/jobs; make dependency absence fail closed.
 4. Repair repository-owned operations/config/docs and generate the tracked-file/spec dispositions.
 5. Complete and archive the six mobile changes; create the focused semantic spec-retirement change from the proven disposition set.

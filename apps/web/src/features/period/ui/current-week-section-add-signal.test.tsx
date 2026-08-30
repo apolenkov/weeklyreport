@@ -63,6 +63,18 @@ describe("CurrentWeekSection — addSignal snapshot regression", () => {
 });
 
 describe("CurrentWeekSection — compact touch floor", () => {
+  it("removes the nested mobile scroll while retaining the desktop cap", () => {
+    render(
+      <CurrentWeekSection items={[]} products={MOCK_PRODUCTS.slice(0, 1)} />,
+    );
+
+    const board = screen.getByRole("group", { name: "Current week items" });
+    expect(board.className).toContain("max-md:max-h-none");
+    expect(board.className).toContain("max-md:overflow-visible");
+    expect(board.className).toContain("md:max-h-[420px]");
+    expect(board.className).toContain("md:overflow-y-auto");
+  });
+
   it("the per-product '+ Add' button floors at the touch target below md", () => {
     // jsdom cannot evaluate media queries; the class assertions are the teeth.
     // Two products are required — the "+ Add" affordance only renders when a

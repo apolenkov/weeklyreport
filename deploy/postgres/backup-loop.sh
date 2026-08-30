@@ -4,9 +4,9 @@
 # Connects to postgres DIRECTLY, never through pgbouncer: pg_dump holds one
 # session across many statements, which transaction-mode pooling breaks.
 #
-# Every variable is required with no default. A backup cadence and a retention
-# window ARE the recovery-point objective — a silent default would invent an
-# RPO nobody agreed to and quietly discard history on that schedule.
+# Every variable is required with no default. Cadence sets the intended local
+# recovery-point interval; retention sets the local history window. A silent
+# default would invent either policy and could quietly discard history.
 set -u
 
 : "${PGHOST:?PGHOST is required}"
@@ -20,19 +20,32 @@ set -u
 positive_integer() {
   case "$1" in
     ''|*[!0-9]*) return 1 ;;
-    *[1-9]*) return 0 ;;
+    *[1-9]*)
+      [ "${#1}" -le 9 ] || return 1
+      return 0
+      ;;
     *) return 1 ;;
   esac
 }
 
+canonical_decimal() {
+  while [ "${1#0}" != "$1" ]; do
+    set -- "${1#0}"
+  done
+  printf '%s\n' "$1"
+}
+
 if ! positive_integer "$BACKUP_INTERVAL_SECONDS"; then
-  echo "BACKUP_INTERVAL_SECONDS must be a positive integer" >&2
+  echo "BACKUP_INTERVAL_SECONDS must be a positive integer with at most 9 digits" >&2
   exit 1
 fi
 if ! positive_integer "$BACKUP_RETENTION_DAYS"; then
-  echo "BACKUP_RETENTION_DAYS must be a positive integer" >&2
+  echo "BACKUP_RETENTION_DAYS must be a positive integer with at most 9 digits" >&2
   exit 1
 fi
+
+backup_interval_seconds="$(canonical_decimal "$BACKUP_INTERVAL_SECONDS")"
+backup_retention_days="$(canonical_decimal "$BACKUP_RETENTION_DAYS")"
 
 export PGHOST PGUSER PGPASSWORD PGDATABASE
 
@@ -42,7 +55,7 @@ log() {
 
 mkdir -p "$BACKUP_DIR"
 
-log "started: every ${BACKUP_INTERVAL_SECONDS}s, keeping ${BACKUP_RETENTION_DAYS} days, into ${BACKUP_DIR}"
+log "started: every ${backup_interval_seconds}s, keeping ${backup_retention_days} days, into ${BACKUP_DIR}"
 
 while true; do
   stamp="$(date -u +%Y%m%dT%H%M%SZ)"
@@ -53,13 +66,17 @@ while true; do
   # lands under .partial and is renamed only on success, so a crashed or
   # truncated run can never be mistaken for a restorable backup.
   if pg_dump --format=custom --compress=6 --file="$partial" 2>&1; then
-    mv "$partial" "$target"
-    log "wrote $(basename "$target") ($(wc -c < "$target") bytes)"
+    if mv "$partial" "$target"; then
+      log "wrote $(basename "$target") ($(wc -c < "$target") bytes)"
 
-    deleted="$(find "$BACKUP_DIR" -name 'customreport-*.dump' -type f \
-      -mtime "+${BACKUP_RETENTION_DAYS}" -print -delete | wc -l)"
-    if [ "$deleted" -gt 0 ]; then
-      log "pruned ${deleted} dump(s) older than ${BACKUP_RETENTION_DAYS} days"
+      deleted="$(find "$BACKUP_DIR" -name 'customreport-*.dump' -type f \
+        -mtime "+${backup_retention_days}" -print -delete | wc -l)"
+      if [ "$deleted" -gt 0 ]; then
+        log "pruned ${deleted} dump(s) older than ${backup_retention_days} days"
+      fi
+    else
+      rm -f "$partial"
+      log "FAILED — completed dump could not be published; retrying after the interval"
     fi
   else
     # Keep looping instead of exiting: a restart storm would bury the cause in
@@ -69,5 +86,5 @@ while true; do
     log "FAILED — pg_dump did not complete; retrying after the interval"
   fi
 
-  sleep "$BACKUP_INTERVAL_SECONDS"
+  sleep "$backup_interval_seconds"
 done

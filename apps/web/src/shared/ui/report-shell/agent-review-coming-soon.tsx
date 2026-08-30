@@ -14,6 +14,7 @@ export function AgentReviewComingSoon({
       ariaLabel="Agent review is coming soon"
       testId="agent-review-coming-soon"
       compact={compact}
+      mobileIconOnly={compact}
     />
   );
 }

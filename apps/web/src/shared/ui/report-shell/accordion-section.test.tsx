@@ -91,6 +91,25 @@ describe("AccordionSection — group commands", () => {
 });
 
 describe("AccordionSection — responsive disclosure geometry", () => {
+  it("moves action controls to a second mobile header row", () => {
+    render(
+      <AccordionSection
+        icon={HIDDEN_ICON}
+        title="Risks"
+        actions={<button type="button">Add risk</button>}
+      >
+        <p>Panel body</p>
+      </AccordionSection>,
+    );
+
+    const headerToggle = screen.getByRole("button", { name: "Risks" });
+    expect(headerToggle.className).toContain("max-sm:basis-full");
+    expect(headerToggle.parentElement?.className).toContain("max-sm:flex-wrap");
+    expect(
+      screen.getByRole("button", { name: "Add risk" }).parentElement?.className,
+    ).toContain("max-sm:ml-auto");
+  });
+
   it("floors the trailing disclosure at the touch target in both states", () => {
     render(
       <AccordionSection

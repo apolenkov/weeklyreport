@@ -126,6 +126,23 @@ describe("PeriodNavigator (lead)", () => {
     expect(triggerContainer?.className).toContain("min-w-0");
     expect(triggerContainer?.className).toContain("flex-1");
     expect(triggerContainer?.className).toContain("md:w-[24ch]");
+    expect(getTrigger().className).toContain(
+      "max-md:min-h-[var(--touch-target-min)]",
+    );
+    expect(getTrigger().className).toContain(
+      "max-md:min-w-[var(--touch-target-min)]",
+    );
+    for (const arrow of screen.getAllByRole("button", {
+      name: /period$/i,
+    })) {
+      expect(arrow.className).toContain(
+        "max-md:min-h-[var(--touch-target-min)]",
+      );
+      expect(arrow.className).toContain(
+        "max-md:min-w-[var(--touch-target-min)]",
+      );
+      expect(arrow.querySelector("span")?.className).toContain("md:inline");
+    }
   });
 
   describe("custom listbox", () => {

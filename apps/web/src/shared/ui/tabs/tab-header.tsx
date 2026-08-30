@@ -24,7 +24,7 @@ export function TabHeader({
   return (
     <header
       data-testid={resolvedTestId}
-      className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-start sm:justify-between"
+      className="flex flex-col items-stretch gap-3 xl:flex-row xl:items-start xl:justify-between"
     >
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex flex-wrap items-center gap-2">
@@ -44,7 +44,7 @@ export function TabHeader({
         ) : null}
       </div>
       {(search || actions) && (
-        <div className="flex flex-shrink-0 flex-wrap items-center gap-2 sm:flex-nowrap">
+        <div className="flex flex-shrink-0 flex-wrap items-center gap-2 xl:flex-nowrap">
           {search}
           {actions}
         </div>

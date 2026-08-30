@@ -23,7 +23,11 @@ function getFirstCardStyle(container: HTMLElement): string {
 // move product health (left edge) or own-input completeness.
 
 function renderedStageNames(container: HTMLElement): string[] {
-  return Array.from(container.querySelectorAll("button[aria-label]")).map(
+  return Array.from(
+    container.querySelectorAll(
+      '[data-testid="sdlc-stage-row"] button[aria-label]',
+    ),
+  ).map(
     (b) => (b.getAttribute("aria-label") ?? "").split(":")[0]?.trim() ?? "",
   );
 }
@@ -104,9 +108,10 @@ describe("SdlcPipeline — Mine chip visibility", () => {
     );
     const indicator = container.querySelector(COLLAPSED_INDICATOR);
     expect(indicator).not.toBeNull();
-    // The indicator stays inert — role="img", never a keyboard tab stop.
-    expect(indicator?.getAttribute("role")).toBe("img");
-    expect(indicator?.getAttribute("tabindex")).toBeNull();
+    // The indicator is read-only, but focusable so its tooltip works on touch
+    // and keyboard as well as pointer hover.
+    expect(indicator?.tagName).toBe("BUTTON");
+    expect(indicator?.getAttribute("type")).toBe("button");
     // Visible count of collapsed stages (Testing + DevOps hidden).
     expect(indicator?.textContent).toContain("2");
     // aria-label lists each hidden stage with an honest owner line — owned
@@ -129,8 +134,7 @@ describe("SdlcPipeline — Mine chip visibility", () => {
     // No tooltip until hover.
     expect(screen.queryByRole("tooltip")).toBeNull();
     const indicator = screen.getByTestId("collapsed-stages-indicator");
-    // The indicator is inert (not a keyboard tab stop), so the Radix tooltip
-    // opens on pointer hover rather than focus.
+    // The indicator opens the shared tooltip on pointer hover or focus.
     fireEvent.pointerEnter(indicator);
     fireEvent.pointerMove(indicator);
     const tip = await screen.findByRole("tooltip");

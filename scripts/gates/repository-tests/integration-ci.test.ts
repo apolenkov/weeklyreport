@@ -282,9 +282,10 @@ const assertCoverageConfig = (
   );
   assert.deepEqual(readThresholds(source, label), expected);
   for (const exclusion of exclusions) {
-    assert.match(
-      source,
-      new RegExp(`"${escapeRegex(exclusion)}"`),
+    const quotedLiteral = JSON.stringify(exclusion);
+    const rawLiteral = `String.raw\`${exclusion}\``;
+    assert.ok(
+      source.includes(quotedLiteral) || source.includes(rawLiteral),
       `${label} must retain exclusion ${exclusion}`,
     );
   }
@@ -308,13 +309,13 @@ const WEB_EXCLUSIONS = [
   "src/**/__tests__/**",
   "src/**/types.ts",
   "src/app/**/layout.tsx",
-  String.raw`src/app/\\(app\\)/admin/products/page.tsx`,
-  String.raw`src/app/\\(app\\)/admin/activities/page.tsx`,
-  String.raw`src/app/\\(app\\)/admin/settings/page.tsx`,
-  String.raw`src/app/\\(app\\)/head/history/page.tsx`,
-  String.raw`src/app/\\(app\\)/head/slides/page.tsx`,
-  String.raw`src/app/\\(app\\)/lead/history/page.tsx`,
-  String.raw`src/app/\\(app\\)/reports/history/page.tsx`,
+  String.raw`src/app/\(app\)/admin/products/page.tsx`,
+  String.raw`src/app/\(app\)/admin/activities/page.tsx`,
+  String.raw`src/app/\(app\)/admin/settings/page.tsx`,
+  String.raw`src/app/\(app\)/head/history/page.tsx`,
+  String.raw`src/app/\(app\)/head/slides/page.tsx`,
+  String.raw`src/app/\(app\)/lead/history/page.tsx`,
+  String.raw`src/app/\(app\)/reports/history/page.tsx`,
 ] as const;
 
 const WEB_INCLUDES = ["src/**/*.{ts,tsx}"] as const;
@@ -651,8 +652,13 @@ void test("coverage exclusion assertions fail when a critical API exclusion is r
 
 void test("coverage exclusion assertions fail when a critical Web exclusion is removed", () => {
   const mutated = webCoverageConfig.replace(
-    '        "src/app/\\\\(app\\\\)/admin/products/page.tsx",\n',
-    "",
+    String.raw`src/app/\(app\)/admin/products/page.tsx`,
+    String.raw`src/app/\(app\)/admin/products/page.removed.tsx`,
+  );
+  assert.notEqual(
+    mutated,
+    webCoverageConfig,
+    "the planted mutation must apply",
   );
   assert.throws(
     () =>

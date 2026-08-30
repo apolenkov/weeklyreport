@@ -130,11 +130,14 @@ function AccordionHeader({
   readonly actions?: React.ReactNode;
   readonly onToggle: () => void;
 }) {
+  const hasActions = actions !== null && actions !== undefined;
   return (
-    <div className="flex w-full items-center justify-between gap-3 p-5 transition-colors hover:bg-[var(--color-surface-hover)]">
+    <div
+      className={`flex w-full items-center justify-between gap-3 p-5 transition-colors hover:bg-[var(--color-surface-hover)] ${hasActions ? "max-sm:flex-wrap" : ""}`}
+    >
       <button
         type="button"
-        className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
+        className={`flex min-w-0 flex-1 items-center justify-between gap-3 text-left ${hasActions ? "max-sm:basis-full" : ""}`}
         onClick={onToggle}
         aria-expanded={expanded}
         aria-controls={panelId}
@@ -143,7 +146,9 @@ function AccordionHeader({
         {!actions && <RotatingChevron expanded={expanded} />}
       </button>
       {actions ? (
-        <div className="flex shrink-0 items-center gap-2">{actions}</div>
+        <div className="flex shrink-0 items-center gap-2 max-sm:ml-auto">
+          {actions}
+        </div>
       ) : null}
       {actions ? (
         <AccordionActionsToggle

@@ -11,7 +11,7 @@
 # With the endpoint absent the api boots without traces and says so at warn.
 #
 # Differences from docker-compose.yml:
-# - No bind mounts (images are self-contained)
+# - No mutable application or backup-script bind mounts
 # - Restart policies on all services
 # - Health checks on all services including web
 # - Resource limits per service
@@ -156,11 +156,11 @@ services:
       PGDATABASE: ${POSTGRES_DB:?POSTGRES_DB must be set}
       RESTORE_ENVIRONMENT: production
       BACKUP_DIR: /backups
-      # Required with no default, both of them: together they ARE the
-      # recovery-point objective. A default would invent an RPO nobody agreed
-      # to and silently delete history on that schedule. 3600 = hourly,
-      # 14 = keep two weeks.
-      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:?set the backup cadence in seconds (e.g. 3600) — this is your RPO}
+      # Required with no default: cadence sets the intended local recovery-point
+      # interval, while retention sets the local history window. Neither value
+      # proves production RPO/RTO until a scheduled restore drill measures them.
+      # 3600 = hourly, 14 = keep two weeks.
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:?set the intended local backup cadence in seconds (e.g. 3600)}
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:?set how many days of dumps to keep (e.g. 14) — older ones are deleted}
     depends_on:
       postgres:
@@ -175,7 +175,7 @@ services:
       retries: 2
       # One full cadence before the first verdict, so a fresh stack is not
       # reported unhealthy merely for having taken no backup yet.
-      start_period: ${BACKUP_INTERVAL_SECONDS:?set the backup cadence in seconds (e.g. 3600) — this is your RPO}s
+      start_period: ${BACKUP_INTERVAL_SECONDS:?set the intended local backup cadence in seconds (e.g. 3600)}s
     restart: unless-stopped
     volumes:
       - pgbackups:/backups

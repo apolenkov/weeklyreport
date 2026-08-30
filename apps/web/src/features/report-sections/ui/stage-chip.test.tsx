@@ -95,14 +95,14 @@ describe("StageChip — chip box height token", () => {
     expect(button.style.height).toBe("36px");
   });
 
-  it("chip button floors at the touch target below md", () => {
+  it("chip button floors at the touch target below lg", () => {
     // jsdom cannot evaluate media queries; the class assertion is the teeth.
-    // min-height beats the 36px inline height below `md`, so the chip grows to
-    // the touch floor on phones while desktop keeps the aligned 36px box.
+    // min-height beats the 36px inline height below `lg`, so phones and tablets
+    // keep the touch floor while desktop keeps the aligned 36px box.
     render(<StageChip stage={{ ...BASE_LOCKED, status: "on-track" }} />);
     const button = screen.getByRole("button");
     expect(button.className).toContain(
-      "max-md:min-h-[var(--touch-target-min)]",
+      "max-lg:min-h-[var(--touch-target-min)]",
     );
   });
 });
@@ -269,6 +269,21 @@ describe("StageChip — assignee label invariants (mine/locked)", () => {
   it("locked chip assignee label is unchanged", () => {
     render(<StageChip stage={{ ...BASE_LOCKED, status: "on-track" }} />);
     expect(screen.getByText("Boris")).toBeInTheDocument();
+  });
+
+  it("truncates long assignee labels to one line", () => {
+    render(
+      <StageChip
+        stage={{
+          ...BASE_LOCKED,
+          status: "on-track",
+          assignee: "A very long assignee name",
+        }}
+      />,
+    );
+    const assignee = screen.getByText("A very long assignee name");
+    expect(assignee.className).toContain("truncate");
+    expect(assignee).toHaveAttribute("title", "A very long assignee name");
   });
 });
 
