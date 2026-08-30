@@ -207,7 +207,18 @@ tick; the sweep adds no guard of its own.
 
 ### Requirement: Current-period lookup selects only a coupled live tuple
 
-The login-time and scheduler current-period factory MUST select an existing report only when legacy status is draft, archived is false, canonical state is scheduled or open, and all lifecycle fields form a valid tuple for the requested boundary. The factory MUST first return the exact live scheduling boundary when one exists; when no exact boundary exists, it MUST return the single valid live `scheduled` or `open` manual range containing the anchor date rather than creating an overlapping canonical week. A live range that only partially overlaps the canonical week and does not contain the anchor MUST still surface the typed overlap error from the database write path. If a manual range commits after both lookups but before canonical creation, the overlap-error recovery MUST re-read the exact boundary and then the containing range before returning the typed conflict.
+The login-time and scheduler current-period factory MUST select an existing
+report only when legacy status is draft, archived is false, canonical state is
+scheduled or open, and all lifecycle fields form a valid tuple for the requested
+boundary. The factory MUST first return the exact live scheduling boundary when
+one exists; when no exact boundary exists, it MUST return the single valid live
+`scheduled` or `open` manual range containing the anchor date rather than
+creating an overlapping canonical week. A live range that only partially
+overlaps the canonical week and does not contain the anchor MUST still surface
+the typed overlap error from the database write path. If a manual range commits
+after both lookups but before canonical creation, the overlap-error recovery
+MUST re-read the exact boundary and then the containing range before returning
+the typed conflict.
 
 #### Scenario: Archived draft occupies the requested boundary
 

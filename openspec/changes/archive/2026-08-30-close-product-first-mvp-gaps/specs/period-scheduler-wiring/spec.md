@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Arbitrary editable period ranges cannot overlap under concurrency
 
@@ -66,6 +66,16 @@ after both lookups but before canonical creation, the overlap-error recovery
 MUST re-read the exact boundary and then the containing range before returning
 the typed conflict.
 
+#### Scenario: Archived draft occupies the requested boundary
+
+- **WHEN** an archived row retains legacy draft status and its dates contain the requested instant
+- **THEN** current-period lookup excludes that row and finds or creates the valid live row
+
+#### Scenario: Contradictory row occupies the requested boundary
+
+- **WHEN** a row matches the date boundary but its canonical and legacy lifecycle fields disagree
+- **THEN** lookup fails with a typed integrity error and MUST NOT return or overwrite the row
+
 #### Scenario: Manual range contains the login anchor
 
 - **WHEN** no exact scheduler boundary exists and one valid live manual range
@@ -85,3 +95,8 @@ the typed conflict.
 - **WHEN** no exact boundary exists and a live manual range overlaps the
   canonical week but ends before the anchor date
 - **THEN** canonical creation fails with the typed period-overlap error
+
+#### Scenario: Valid scheduled or open row exists
+
+- **WHEN** exactly one complete live tuple matches the requested boundary
+- **THEN** the factory returns that row without creating a duplicate
