@@ -30,6 +30,9 @@ COPY tsconfig.base.json ./tsconfig.base.json
 
 # Stage 4: Build for production
 FROM installer AS builder
+# The inherited frozen install is authoritative. pnpm 11 otherwise lets the
+# workspace scripts spawned by Turbo reconcile dependencies after source copy.
+ENV PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN=false
 # API_URL is the server-side origin (compose network); NEXT_PUBLIC_API_URL is
 # inlined into the client bundle at build. Both are REQUIRED build args — a
 # production-labelled build that omits them must fail loud instead of baking a
@@ -57,7 +60,7 @@ ENV NEXT_PUBLIC_DEV_ROLE_SWITCHER=${NEXT_PUBLIC_DEV_ROLE_SWITCHER}
 ENV NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
 ENV NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION}
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN pnpm turbo build --filter=@customreport/web
+RUN ./node_modules/.bin/turbo build --filter=@customreport/web
 
 # Stage 5: Production runner with Next.js standalone
 FROM node:26-alpine@sha256:e88a35be04478413b7c71c455cd9865de9b9360e1f43456be5951032d7ac1a66 AS runner
