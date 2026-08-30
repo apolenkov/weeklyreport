@@ -44,6 +44,10 @@ type LeadFormLoadedActions = LeadFormEditSectionsActions &
 type LeadFormLoadedWriteActions = LeadFormHeaderWriteActions &
   LeadFormDialogsWriteActions & { readonly handleSubmit: () => void };
 
+// The fixed completion rail owns the only conditional content clearance.
+// Route containers must not add a second always-on offset.
+const LEAD_STICKY_COMPLETION_CLEARANCE_CLASS = "pb-28";
+
 // Declared data-loading seam — not the hook's raw return type.
 export interface LeadFormLoadedData {
   readonly byPeriodData:
@@ -198,7 +202,7 @@ export function LeadFormLoaded(props: LeadFormLoadedProps) {
   return (
     <SdlcTooltipProvider>
       <form
-        className={`space-y-6 ${completion.showStickyCompletion ? "pb-28" : ""}`}
+        className={`space-y-6 ${completion.showStickyCompletion ? LEAD_STICKY_COMPLETION_CLEARANCE_CLASS : ""}`}
         data-testid="lead-report-form"
         data-layout-key="report-page"
         data-layout-stability="position-width"

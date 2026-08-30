@@ -5,7 +5,7 @@ WeeklyReport already supports the core weekly-report journey, but live source-bo
 ## What Changes
 
 - Make period creation/update, published-report deletion, carry-over, revoke, and period-module composition fail closed under concurrency and real Nest wiring.
-- Correct compiled-history presentation and PDF delivery; bring the remaining mobile actions to the 44 px compact-viewport floor and close the six then-active mobile changes with one-off browser evidence.
+- Correct compiled-history presentation, PDF delivery, and the lead's jargon-heavy end-of-form submission summary; bring the remaining mobile actions to the 44 px compact-viewport floor and close the six then-active mobile changes with one-off browser evidence.
 - Add required disposable-database integration and explicit coverage CI lanes, including rollback proof and fail-closed Mailpit execution.
 - Catalogue every tracked file once with role, owner, review lens, verdict, and evidence; remove proven dead repository material, reconcile docs/current quality denominators, and produce explicit dispositions for a separate semantic OpenSpec-retirement change.
 - Repair repository-owned development, deployment, backup, hook, observability, and recovery documentation/configuration. External receivers, off-host storage, and platform controls remain honest external blockers rather than simulated PASS results.
@@ -28,7 +28,7 @@ WeeklyReport already supports the core weekly-report journey, but live source-bo
 ### Modified Capabilities
 
 - `period-scheduler-wiring`, `report-section-write-gates`: Explicit race-safe period and section-write requirements; existing dual-state and carry-over contracts remain unchanged and are implemented as written.
-- `lead-history-summary`, `pdf-export-integrity`, `ui-control-density`: Correct product copy, download lifecycle, and compact control geometry.
+- `lead-history-summary`, `lead-completion-guidance`, `pdf-export-integrity`, `ui-control-density`: Correct product copy, submission guidance, download lifecycle, and compact control geometry.
 - `dependency-currency`: Remove the obsolete Playwright-base-image sync contract and require explicit pnpm pins everywhere Node 26 executes.
 - `uat-quality-gates`: Product-first exact-SHA acceptance without a persistent browser campaign.
 - `destructive-db-guard`: Exact disposable-target safety contract with no broad suffix or production bypass.

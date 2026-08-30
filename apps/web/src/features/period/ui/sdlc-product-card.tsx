@@ -1,6 +1,7 @@
 "use client";
 
-import type { ComponentProps } from "react";
+import { ArrowRight } from "lucide-react";
+import type { ComponentProps, CSSProperties } from "react";
 
 import type { StageStatus } from "../../report-sections";
 import type { Product } from "../../report-sections";
@@ -15,6 +16,16 @@ const OWN_STAGES_LABEL = "Your stages";
 const COMPLETENESS_RING_WIDTH = "1.5px";
 const COMPLETENESS_RING_STYLE = "dashed";
 const COMPLETENESS_RING_RADIUS = "var(--radius-pill)";
+const SDLC_STAGE_WIDE_WIDTH = "6.625rem";
+
+interface SdlcStagesStyle extends CSSProperties {
+  readonly "--sdlc-stage-width": string;
+}
+
+const SDLC_STAGES_STYLE: SdlcStagesStyle = {
+  minHeight: STAGE_CHIP_BOX_HEIGHT,
+  "--sdlc-stage-width": SDLC_STAGE_WIDE_WIDTH,
+};
 
 interface SdlcProductCardProps {
   readonly product: Product;
@@ -86,26 +97,55 @@ function CompletenessPill({
 
 type StageChipProps = ComponentProps<typeof StageChip>;
 
+function StageConnector({ isOwnEdge }: { readonly isOwnEdge: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      data-testid="sdlc-stage-connector"
+      data-own-edge={isOwnEdge}
+      className="hidden shrink-0 items-center justify-center lg:flex"
+      style={{
+        height: STAGE_CHIP_BOX_HEIGHT,
+        color: isOwnEdge
+          ? "var(--color-starbucks-accent)"
+          : "var(--color-muted-foreground)",
+      }}
+    >
+      <ArrowRight className="h-3.5 w-3.5" strokeWidth={2.25} />
+    </span>
+  );
+}
+
 function StageStep({
   stage,
+  showConnector,
+  isOwnEdge,
   rawStatus,
   readOnly,
   onStatusChange,
 }: {
   readonly stage: StageChipProps["stage"];
+  readonly showConnector: boolean;
+  readonly isOwnEdge: boolean;
   readonly rawStatus: StageChipProps["rawStatus"];
   readonly readOnly: boolean;
   readonly onStatusChange: StageChipProps["onStatusChange"];
 }) {
   return (
-    <div data-testid="sdlc-stage-row" className="w-full min-w-0">
-      <StageChip
-        stage={stage}
-        rawStatus={rawStatus}
-        readOnly={readOnly}
-        onStatusChange={onStatusChange}
-      />
-    </div>
+    <>
+      {showConnector && <StageConnector isOwnEdge={isOwnEdge} />}
+      <div
+        data-testid="sdlc-stage-row"
+        className="w-full min-w-0 lg:w-[var(--sdlc-stage-width)] lg:flex-none"
+      >
+        <StageChip
+          stage={stage}
+          rawStatus={rawStatus}
+          readOnly={readOnly}
+          onStatusChange={onStatusChange}
+        />
+      </div>
+    </>
   );
 }
 
@@ -133,13 +173,19 @@ function StagesRow({
 
   return (
     <div
-      className="w-full space-y-2 pb-1"
-      style={{ minHeight: STAGE_CHIP_BOX_HEIGHT }}
+      data-testid="sdlc-stages"
+      className="grid w-full min-w-0 grid-cols-2 items-start gap-x-2 gap-y-3 pb-1 md:grid-cols-4 lg:flex lg:flex-nowrap lg:justify-center lg:gap-1"
+      style={SDLC_STAGES_STYLE}
     >
-      {visibleStages.map((stage) => (
+      {visibleStages.map((stage, index) => (
         <StageStep
           key={stage.stageName}
           stage={stage}
+          showConnector={index > 0}
+          isOwnEdge={
+            stage.ownership === "mine" ||
+            visibleStages[index - 1]?.ownership === "mine"
+          }
           rawStatus={
             rawProduct.stages.find((rs) => rs.stageName === stage.stageName)
               ?.status ?? stage.status

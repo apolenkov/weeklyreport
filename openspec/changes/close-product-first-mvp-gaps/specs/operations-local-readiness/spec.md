@@ -81,12 +81,27 @@ The repository-owned development and operations instructions, including Compose,
 
 ### Requirement: Local safety automation fails closed
 
-The backup automation and repository post-update hooks MUST validate positive integer cadence and retention inputs before looping or deleting backups, and MUST propagate dependency-install or generated-client failures to their caller.
+The backup automation and its staleness healthcheck MUST validate positive
+integer cadence inputs before arithmetic, looping, or filesystem work; the
+backup loop MUST also validate retention. A completed dump MUST become visible
+only after its atomic publish succeeds, and success logging or retention
+pruning MUST NOT run after a failed publish. Repository post-update hooks MUST
+propagate dependency-install or generated-client failures to their caller.
 
 #### Scenario: Backup cadence is invalid
 
 - **WHEN** cadence or retention is empty, zero, negative, or non-numeric
 - **THEN** the backup process exits non-zero before entering a hot loop or deleting backups
+
+#### Scenario: Backup health cadence is invalid
+
+- **WHEN** the backup healthcheck receives an empty, zero, negative, or non-numeric cadence
+- **THEN** it exits non-zero before arithmetic or filesystem inspection and cannot report a stale backup target as healthy
+
+#### Scenario: A completed dump cannot be published
+
+- **WHEN** `pg_dump` succeeds but the atomic rename from the partial path fails
+- **THEN** the loop reports the publish failure, removes the partial file, and does not log success or prune retained dumps
 
 #### Scenario: A post-update hook command fails
 

@@ -9,9 +9,9 @@ import {
 import type { StageStatus } from "../../report-sections";
 import { STAGE_CHIP_BOX_HEIGHT, STATUS_CONFIG } from "../../report-sections";
 
-// Mine-mode inert indicator for collapsed foreign/vacant stages. aria-label
-// and a shared Radix tooltip reveal names/statuses; never un-hides chips or
-// touches health/completeness.
+// Mine-mode summary for collapsed foreign stages. It never un-hides chips or
+// touches health/completeness, but is focusable so the Radix tooltip also works
+// on touch and keyboard rather than relying on hover alone.
 const HIDDEN_STAGES_ARIA_PREFIX = "Hidden stages —";
 
 function collapsedStagesIndicatorLabel(count: number): string {
@@ -36,11 +36,11 @@ export function CollapsedStagesIndicator({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span
-          role="img"
+        <button
+          type="button"
           data-testid="collapsed-stages-indicator"
           aria-label={`${HIDDEN_STAGES_ARIA_PREFIX} ${reveal.join(", ")}`}
-          className="inline-flex cursor-default items-center rounded-[var(--radius-pill)] border border-dashed px-2 text-[12px] font-medium"
+          className="col-span-full inline-flex min-h-[var(--touch-target-min)] w-full cursor-pointer items-center justify-center rounded-[var(--radius-pill)] border border-dashed px-3 text-[12px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-1 lg:col-auto lg:min-h-0 lg:w-auto"
           style={{
             height: STAGE_CHIP_BOX_HEIGHT,
             borderColor: colors.border,
@@ -48,7 +48,7 @@ export function CollapsedStagesIndicator({
           }}
         >
           {collapsedStagesIndicatorLabel(count)}
-        </span>
+        </button>
       </TooltipTrigger>
       {/* Light popover surface (scoped override); hideArrow avoids the dark default arrow. */}
       <TooltipContent

@@ -28,7 +28,7 @@ interface PeriodNavigatorProps {
 }
 
 const PERIOD_NAV_ARROW_BUTTON_CLASS =
-  "inline-flex h-[var(--toolbar-control-h)] items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-1.5 text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] focus-visible:shadow-[0_0_0_3px_var(--color-ring)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35";
+  "inline-flex h-[var(--toolbar-control-h)] max-md:min-h-[var(--touch-target-min)] max-md:min-w-[var(--touch-target-min)] items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-1.5 text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] focus-visible:shadow-[0_0_0_3px_var(--color-ring)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35";
 
 function PeriodNavArrowButton({
   direction,
@@ -52,7 +52,7 @@ function PeriodNavArrowButton({
       aria-label={isPrev ? "Previous period" : "Next period"}
     >
       {isPrev && <ChevronLeft />}
-      <span className="text-xs font-medium xl:hidden">
+      <span className="hidden text-xs font-medium md:inline xl:hidden">
         {isPrev ? "Previous" : "Next"}
       </span>
       {!isPrev && <ChevronRight />}
@@ -97,7 +97,7 @@ function PeriodSelectTrigger({
         aria-activedescendant={
           open && hasOptions ? `${optionIdPrefix}${activeIdx}` : undefined
         }
-        className="flex h-[var(--toolbar-control-h)] w-full cursor-pointer items-center gap-1.5 truncate rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] px-2 pr-7 text-left text-[13px] font-semibold text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+        className="flex h-[var(--toolbar-control-h)] w-full cursor-pointer items-center gap-1.5 truncate rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] px-2 pr-7 text-left text-[13px] font-semibold text-[var(--color-foreground)] max-md:min-h-[var(--touch-target-min)] max-md:min-w-[var(--touch-target-min)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
         onClick={toggleOpen}
         onKeyDown={handleTriggerKeyDown}
       >

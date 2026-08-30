@@ -8,6 +8,16 @@ import { MOCK_PRODUCTS } from "../../../../test-utils/mock-products";
 import { NextWeekSection } from "./next-week-section";
 
 describe("NextWeekSection — compact touch floor (responsive-compact-layout)", () => {
+  it("removes the nested mobile scroll while retaining the desktop cap", () => {
+    render(<NextWeekSection items={[]} products={MOCK_PRODUCTS.slice(0, 1)} />);
+
+    const board = screen.getByRole("group", { name: "Next week items" });
+    expect(board.className).toContain("max-md:max-h-none");
+    expect(board.className).toContain("max-md:overflow-visible");
+    expect(board.className).toContain("md:max-h-[420px]");
+    expect(board.className).toContain("md:overflow-y-auto");
+  });
+
   // jsdom cannot evaluate media queries; the class assertions are the teeth.
   it("the empty-state '+ Add Item' CTA floors at the touch target below md", () => {
     // No items AND no products → the stand-alone empty-state CTA renders

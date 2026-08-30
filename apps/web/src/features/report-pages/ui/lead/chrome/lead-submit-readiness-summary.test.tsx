@@ -21,7 +21,13 @@ describe("LeadSubmitReadinessSummary", () => {
       <LeadSubmitReadinessSummary readiness={ready} onSubmit={onSubmit} />,
     );
 
-    expect(screen.getByRole("status")).toHaveTextContent("Ready");
+    expect(
+      screen.getByRole("heading", { name: "Before you submit" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Submit readiness")).toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "This report is ready to submit.",
+    );
     await userEvent.click(
       screen.getByRole("button", { name: "Submit report" }),
     );
@@ -43,7 +49,7 @@ describe("LeadSubmitReadinessSummary", () => {
     expect(submit.className).toContain("min-h-10");
   });
 
-  it("lists auto-promotions without treating them as blockers", () => {
+  it("summarizes auto-promotions in a closed inspectable disclosure", async () => {
     render(
       <LeadSubmitReadinessSummary
         readiness={{
@@ -60,10 +66,18 @@ describe("LeadSubmitReadinessSummary", () => {
       />,
     );
 
-    expect(screen.getByText("Will be set to On Track")).toBeInTheDocument();
+    expect(
+      screen.getByText("1 unset status will be set to On Track."),
+    ).toBeInTheDocument();
+    const disclosure = screen.getByTestId("lead-submit-automatic-statuses");
+    expect(disclosure).not.toHaveAttribute("open");
+    expect(screen.getByText("Products (1)")).toBeInTheDocument();
     expect(screen.getByText("Portal")).toBeInTheDocument();
-    expect(screen.queryByText("Blocks submission")).toBeNull();
+    expect(screen.queryByText("Fix before submitting")).toBeNull();
     expect(screen.getByText(/waiting to save/i)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByText("When you submit:"));
+    expect(disclosure).toHaveAttribute("open");
   });
 
   it("names blockers and disables the final submit action", () => {
@@ -83,8 +97,10 @@ describe("LeadSubmitReadinessSummary", () => {
       />,
     );
 
-    expect(screen.getByRole("status")).toHaveTextContent("Needs attention");
-    expect(screen.getByText("Blocks submission")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Complete the items below before submitting.",
+    );
+    expect(screen.getByText("Fix before submitting")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Submit report" }),
     ).toBeDisabled();
@@ -110,5 +126,23 @@ describe("LeadSubmitReadinessSummary", () => {
     expect(
       screen.getByText("The report draft is not available."),
     ).toBeInTheDocument();
+  });
+
+  it("announces an in-progress submission instead of claiming readiness", () => {
+    render(
+      <LeadSubmitReadinessSummary
+        readiness={{
+          ...ready,
+          submitPending: true,
+          canOpenConfirmation: false,
+        }}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent("Submitting report…");
+    expect(
+      screen.getByRole("button", { name: "Submit report" }),
+    ).toBeDisabled();
   });
 });

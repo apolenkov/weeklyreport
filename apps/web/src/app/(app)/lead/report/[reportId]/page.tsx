@@ -11,8 +11,6 @@ interface Props {
   searchParams: Promise<{ mode?: string }>;
 }
 
-// Clears the fixed lead-form action bar so content is not covered on scroll.
-const LEAD_FORM_ACTION_BAR_CLEARANCE = "88px";
 // Soft brand wash under the form chrome; fades into page background by 160px.
 const LEAD_FORM_PAGE_BG =
   "bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-starbucks-green)_4%,transparent)_0%,var(--color-background)_160px)]";
@@ -39,10 +37,7 @@ export default async function LeadReportByIdPage({
       tabIndex={-1}
       className={`min-h-screen ${LEAD_FORM_PAGE_BG}`}
     >
-      <div
-        className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8"
-        style={{ paddingBottom: LEAD_FORM_ACTION_BAR_CLEARANCE }}
-      >
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <Suspense fallback={<LeadFormSkeleton mode={resolvedMode} />}>
           <LeadForm reportId={reportId} mode={resolvedMode} />
         </Suspense>

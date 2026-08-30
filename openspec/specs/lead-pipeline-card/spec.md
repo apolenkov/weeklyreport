@@ -138,80 +138,85 @@ non-visual user gets the same distinction as a sighted one.
 
 ### Requirement: The pipeline shows only the lead's own stages in Mine mode
 
-The lead SDLC pipeline MUST scope which stage rows render to the visibility
+The lead SDLC pipeline MUST scope which stage controls render to the visibility
 mode, so that Mine reads as the lead's own contribution and Everyone shows the
 fuller team picture, without changing the health or completeness signals.
 
 1. In **Mine** mode the pipeline MUST render only the stages the current lead
-   owns. Stages owned by another author MUST NOT render as stage rows — they are hidden,
-   not greyed. A stage with no assignment on the product is NOT part of the
-   product's stage set (see "Unassigned stages are excluded from a product's
-   pipeline") and therefore never renders in any mode.
+   owns. Stages owned by another author MUST NOT render as stage controls — they
+   are hidden, not greyed. A stage with no assignment on the product is NOT part
+   of the product's stage set (see "Unassigned stages are excluded from a
+   product's pipeline") and therefore never renders in any mode.
 2. In **Everyone** mode the pipeline MUST render the lead's own stages plus the
    stages owned by other authors (the existing locked chips). It MUST NOT render
-   an "unassigned"/vacant row — an unassigned stage is excluded from the
+   an "unassigned" or vacant control — an unassigned stage is excluded from the
    product's stage set, not greyed.
-3. Hiding non-owned rows MUST NOT change the product health (left edge)
+3. Hiding non-owned controls MUST NOT change the product health (left edge)
    severity or the own-input completeness count: both are derived from the
    underlying risks/status and the lead's owned-stage set, independent of which
-   rows are rendered.
+   controls are rendered.
 4. When the lead owns none of a product's stages, the product MUST still render
-   (with its honest health) and show a brief "No stages assigned to you" note in
-   place of an empty stage list, rather than collapsing to nothing.
+   with its honest health and show a brief "No stages assigned to you" note in
+   place of an empty pipeline, rather than collapsing to nothing.
 5. In **Mine** mode, when one or more of a product's stages are hidden by the
    filter AND at least one own stage still renders, the card MUST show a small
    inert indicator that those stages are collapsed. The indicator MUST reveal,
    on hover, the hidden stages' names and statuses, AND MUST expose the same
-   information non-visually (e.g. through accessible label text), so a
-   non-visual user gets the hidden stages' statuses too. The reveal MUST NOT
-   re-render the hidden rows or change the rendered own-stage set; it is a
-   read-only summary. The mechanism (native title attribute versus a tooltip
-   primitive) is left to implementation.
-6. Every rendered stage MUST occupy its own full-width row within the product
-   card. The row MUST retain the stage's icon, readable name, risk-derived
-   status visualization, and existing interaction affordance; it MUST NOT be
-   compressed into a shared horizontal strip with another stage. Long labels
-   MUST remain inside the card without horizontal overflow or clipping.
-7. Stage rows MUST use stable geometry: changing a stage's status or opening
-   its existing interaction MUST NOT move neighboring rows, the product header,
-   or the card's outer width except for the intended content change. Focused
-   and hover states MUST remain visible and keyboard reachable.
+   information non-visually, so a non-visual user gets the hidden stages'
+   statuses too. The reveal MUST NOT re-render the hidden controls or change the
+   rendered own-stage set; it is a read-only summary.
+6. The visible stages MUST preserve canonical order without a horizontal
+   scroller or page-level horizontal overflow. Below 48 rem they MUST render in
+   a two-column grid; from 48 rem through below 64 rem they MUST render in a
+   four-column grid; at 64 rem and above they MUST form one unwrapped compact
+   fixed-width arrow lane. Connector arrows MUST render only in the wide lane,
+   exactly between adjacent rendered stages. Wide stage controls MUST use the
+   same compact width regardless of visible-stage count and MUST NOT grow to
+   consume spare card width. Every grid and wide control MUST retain the stage
+   icon, readable name, risk-derived status visualization, and interaction
+   affordance; controls MUST be at least 44 px tall through tablet widths. Long
+   labels MUST remain inside the card without clipping; truncation MUST retain
+   the full accessible name and tooltip.
+7. All three responsive modes MUST use stable geometry: changing a stage's
+   status or opening its existing interaction MUST NOT reorder stages, move the product
+   header, or change the card's outer width except for the intended content
+   change. Focused and hover states MUST remain visible and keyboard reachable.
 8. The collapsed-stage indicator MUST appear ONLY in Mine mode. In Everyone
-   mode, where the full stage list already renders, the indicator MUST NOT appear.
-   When the lead owns none of a product's stages, the "No stages assigned to
-   you" note MUST take precedence and the indicator MUST NOT be shown for that
-   product.
+   mode, where the full stage list already renders, the indicator MUST NOT
+   appear. When the lead owns none of a product's stages, the "No stages
+   assigned to you" note MUST take precedence and the indicator MUST NOT be
+   shown for that product.
 
 #### Scenario: Mine shows only the lead's stages
 
 - **WHEN** a lead views a product in Mine mode where they own two of the
   product's assigned stages and other authors own the rest
-- **THEN** only the two owned stage rows render; the other stages do not appear
-- **AND** each rendered row spans the available product-card width and contains
-  its stage icon, name, and status visualization
+- **THEN** only the two owned stage controls render; the other stages do not
+  appear
+- **AND** each rendered control contains its stage icon, name, and status
+  visualization
 
 #### Scenario: Everyone reveals foreign-owned stages, not vacant ones
 
 - **WHEN** the same lead switches that product to Everyone mode
-- **THEN** the two owned rows plus the foreign-owned (locked) rows render,
+- **THEN** the two owned controls plus the foreign-owned locked controls render,
   showing the full pipeline of the product's assigned stages
-- **AND** no "unassigned"/vacant row appears — unassigned stages are excluded
-  from the product's stage set
+- **AND** no "unassigned" or vacant control appears
 
 #### Scenario: hiding chips does not change health or completeness
 
 - **WHEN** a product is covered by a blocker raised on a stage the lead does not
   own, and the lead is in Mine mode
-- **THEN** the foreign stage row is hidden
-- **AND** the product left edge still shows the blocked severity (health stays
-  honest) and the own-input completeness count is unchanged
+- **THEN** the foreign stage control is hidden
+- **AND** the product left edge still shows blocked severity and the own-input
+  completeness count is unchanged
 
 #### Scenario: a product with no own stages still renders
 
 - **WHEN** in Mine mode a lead views a product on which they own no stages
 - **THEN** the product card still renders with its health signal and shows a
-  "No stages assigned to you" note instead of an empty stage list
-- **AND** the collapsed-stage indicator is NOT shown — the note takes precedence
+  "No stages assigned to you" note instead of an empty pipeline
+- **AND** the collapsed-stage indicator is NOT shown
 
 #### Scenario: Mine shows a collapsed-stage indicator that reveals hidden statuses on hover
 
@@ -219,14 +224,38 @@ fuller team picture, without changing the health or completeness signals.
   product's assigned stages and the rest are hidden by the filter
 - **THEN** the card shows a small inert indicator that the remaining stages are
   collapsed
-- **AND** hovering the indicator reveals those hidden stages' names and statuses
-- **AND** the same hidden-stage statuses are exposed non-visually through the
-  indicator's accessible label, not by visual hover alone
+- **AND** hover and non-visual text expose those hidden stages' names and
+  statuses without rendering the hidden controls
+
+#### Scenario: a wide viewport shows the connected process
+
+- **WHEN** the product card renders at a viewport width of at least 64 rem
+- **THEN** all visible stage controls form one non-wrapping horizontal pipeline
+  in canonical order
+- **AND** exactly one decorative connector appears between each adjacent pair
+  of visible stages
+- **AND** every stage control has the same compact width used by other product
+  cards at that viewport, independent of the number of visible stages
+
+#### Scenario: a phone viewport uses a two-column grid
+
+- **WHEN** the product card renders below 48 rem
+- **THEN** visible stages occupy a two-column grid in canonical order
+- **AND** connector arrows are absent and the card creates no horizontal
+  scroller or root overflow
+
+#### Scenario: a tablet viewport uses a four-column grid
+
+- **WHEN** the product card renders from 48 rem through below 64 rem
+- **THEN** visible stages occupy a four-column grid in canonical order
+- **AND** connector arrows are absent, every stage control is at least 44 px
+  tall, and the card creates no horizontal scroller or root overflow
 
 #### Scenario: rows remain stable while a stage changes state
 
 - **WHEN** a visible stage changes status or its existing interaction is opened
-- **THEN** the other stage rows retain their order and horizontal bounds
+- **THEN** the other stage controls retain canonical order and their responsive
+  mode
 - **AND** the product header and top-level card width do not jump
 
 #### Scenario: no indicator when the lead owns every stage

@@ -126,6 +126,26 @@ describe("shared coming-soon primitive owns the inert button chrome", () => {
     expect(button).not.toHaveClass("min-h-[var(--touch-target-min)]");
   });
 
+  it("labelled compact mobile-icon variant keeps the label accessible", () => {
+    render(
+      <ComingSoonControl
+        icon={History}
+        label="Agent review"
+        ariaLabel="Agent review is coming soon"
+        testId="primitive-mobile-icon"
+        compact
+        mobileIconOnly
+      />,
+    );
+    const button = screen.getByTestId("primitive-mobile-icon");
+    expect(button).toHaveClass(
+      "max-md:min-h-[var(--touch-target-min)]",
+      "max-md:min-w-[var(--touch-target-min)]",
+    );
+    expect(button.querySelector("span")).toHaveClass("max-md:sr-only");
+    expect(button).toHaveAccessibleName("Agent review is coming soon");
+  });
+
   it("opens the amber ComingSoonBadge through the Radix portal on focus", async () => {
     render(
       <ComingSoonIconButton

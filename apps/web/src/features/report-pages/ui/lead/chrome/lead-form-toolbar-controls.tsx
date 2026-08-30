@@ -65,31 +65,34 @@ export function LeadFormToolbarControls({
       layoutKey="report-context-toolbar"
       contextControls={
         <>
-          <ToolbarPeriodCluster
-            viewModel={viewModel}
-            leadSubmittedAt={leadSubmittedAt}
-            showArchivePeriods={showArchivePeriods}
-            onShowArchivePeriodsChange={onShowArchivePeriodsChange}
-          />
-          <div className="grow" aria-hidden="true" />
-          <ToolbarViewCluster
-            toolbarVisibility={toolbarVisibility}
-            onVisibilityChange={onVisibilityChange}
-            isForeignSlidesDeck={isForeignSlidesDeck}
-            isSlidesMode={isSlidesMode}
-            targetReportId={targetReportId}
-            desktopLabels
-          />
-          <ToolbarTrailingSlot
-            viewModel={viewModel}
-            isSlidesMode={isSlidesMode}
-            density={density}
-            onDensityChange={onDensityChange}
-            slidesFullscreen={slidesFullscreen}
-            fullscreenToggleRef={fullscreenToggleRef}
-            groupExpanded={groupExpanded}
-            setGroupExpanded={setGroupExpanded}
-          />
+          <div className="flex min-w-0 basis-full items-center gap-1.5 md:basis-auto">
+            <ToolbarPeriodCluster
+              viewModel={viewModel}
+              leadSubmittedAt={leadSubmittedAt}
+              showArchivePeriods={showArchivePeriods}
+              onShowArchivePeriodsChange={onShowArchivePeriodsChange}
+            />
+          </div>
+          <div className="flex min-w-0 basis-full flex-wrap items-center gap-1.5 md:ml-auto md:basis-auto md:flex-nowrap">
+            <ToolbarViewCluster
+              toolbarVisibility={toolbarVisibility}
+              onVisibilityChange={onVisibilityChange}
+              isForeignSlidesDeck={isForeignSlidesDeck}
+              isSlidesMode={isSlidesMode}
+              targetReportId={targetReportId}
+              desktopLabels
+            />
+            <ToolbarTrailingSlot
+              viewModel={viewModel}
+              isSlidesMode={isSlidesMode}
+              density={density}
+              onDensityChange={onDensityChange}
+              slidesFullscreen={slidesFullscreen}
+              fullscreenToggleRef={fullscreenToggleRef}
+              groupExpanded={groupExpanded}
+              setGroupExpanded={setGroupExpanded}
+            />
+          </div>
         </>
       }
     />
@@ -226,7 +229,7 @@ function ToolbarTrailingSlot({
   return (
     <button
       type="button"
-      className="btn-press inline-flex h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+      className="btn-press inline-flex h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] max-md:min-h-[var(--touch-target-min)] max-md:min-w-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50"
       onClick={() => setGroupExpanded((prev) => !prev)}
       disabled={!hasCollapsibleContent}
       aria-label={collapseAllLabel}

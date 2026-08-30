@@ -38,7 +38,7 @@ export function StageChipContent({
 }) {
   return (
     <>
-      <span className="flex min-w-0 items-center gap-2 truncate">
+      <span className="flex min-w-0 items-center gap-2 truncate lg:gap-1.5">
         <StageIconGlyph stageName={stage.stageName} />
         <span className="min-w-0 truncate">
           {stageShortLabel(stage.stageName)}
@@ -48,7 +48,7 @@ export function StageChipContent({
         aria-hidden="true"
         data-testid="stage-status-glyph"
         data-status={stage.status}
-        className="ml-auto inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-current/25 text-[11px] font-bold"
+        className="ml-auto inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-current/25 text-[11px] font-bold lg:h-4 lg:w-4 lg:text-[9px]"
       >
         {STATUS_CONFIG[stage.status].icon}
       </span>
@@ -61,7 +61,8 @@ export function AssigneeLabel({ stage }: { readonly stage: StageAssignment }) {
   const isMine = stage.ownership === "mine";
   return (
     <span
-      className="text-[11px]"
+      className="block max-w-full truncate text-[11px]"
+      title={stage.assignee ?? "Unassigned"}
       style={{
         color: isMine
           ? "var(--color-starbucks-accent)"

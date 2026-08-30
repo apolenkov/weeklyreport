@@ -9,6 +9,7 @@ import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import type { Product } from "../../report-sections";
+import { STAGE_CHIP_BOX_HEIGHT } from "../../report-sections";
 import { getProductCardStyle, SdlcPipeline } from "./sdlc-pipeline";
 
 // ---- Unit: getProductCardStyle (health-only, always solid) ----
@@ -531,31 +532,82 @@ describe("SdlcPipeline — co-lead blocked locked chip: initials, no counts", ()
   });
 });
 
-// ---- Pipeline stage-row structural contract ----
+// ---- Responsive pipeline structural contract ----
 // jsdom has no layout engine; these tests pin the structural contract only:
-// every visible stage has its own full-width row and the row keeps one
-// semantic status control with an explicit visual status marker.
+// phone/tablet viewports use compact grids, while lg+ renders one non-wrapping
+// arrow-connected sequence without changing semantic control order.
 function getStageRows(container: HTMLElement): HTMLElement[] {
   return Array.from(
     container.querySelectorAll<HTMLElement>('[data-testid="sdlc-stage-row"]'),
   );
 }
 
-describe("SdlcPipeline — pipeline stage-row structural contract", () => {
-  it("renders one full-width row per visible stage", () => {
+function getStageConnectors(container: HTMLElement): HTMLElement[] {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(
+      '[data-testid="sdlc-stage-connector"]',
+    ),
+  );
+}
+
+describe("SdlcPipeline — responsive stage pipeline contract", () => {
+  it("keeps one semantic control per stage across both responsive modes", () => {
     const { container } = render(
       <SdlcPipeline products={[BASE_PRODUCT]} readOnly={false} />,
     );
+    const stages = container.querySelector<HTMLElement>(
+      '[data-testid="sdlc-stages"]',
+    );
     const rows = getStageRows(container);
+    expect(stages).not.toBeNull();
+    expect(stages?.className).toContain("grid-cols-2");
+    expect(stages?.className).toContain("md:grid-cols-4");
+    expect(stages?.className).toContain("lg:flex");
+    expect(stages?.className).toContain("lg:flex-nowrap");
+    expect(stages?.className).not.toContain("flex-wrap");
     expect(rows).toHaveLength(BASE_PRODUCT.stages.length);
     for (const row of rows) {
       expect(row.className).toContain("w-full");
       expect(row.className).toContain("min-w-0");
+      expect(row.className).toContain("lg:w-[var(--sdlc-stage-width)]");
+      expect(row.className).toContain("lg:flex-none");
+      expect(row.className).not.toContain("lg:flex-1");
       expect(row.querySelector("button")).toBeInTheDocument();
+    }
+    expect(stages?.className).toContain("lg:justify-center");
+    expect(stages?.style.getPropertyValue("--sdlc-stage-width")).toBe(
+      "6.625rem",
+    );
+  });
+
+  it("renders one decorative shared-height connector per adjacent stage pair", () => {
+    const { container } = render(
+      <SdlcPipeline products={[BASE_PRODUCT]} readOnly={false} />,
+    );
+    const connectors = getStageConnectors(container);
+    expect(connectors).toHaveLength(BASE_PRODUCT.stages.length - 1);
+    for (const connector of connectors) {
+      expect(connector).toHaveAttribute("aria-hidden", "true");
+      expect(connector).not.toHaveAttribute("tabindex");
+      expect(connector.className).toContain("hidden");
+      expect(connector.className).toContain("lg:flex");
+      expect(connector.style.height).toBe(STAGE_CHIP_BOX_HEIGHT);
+      expect(connector.querySelector("svg")).toBeInTheDocument();
     }
   });
 
-  it("preserves canonical stage order and renders a status glyph in each row", () => {
+  it("does not render an orphan connector for a one-stage pipeline", () => {
+    const oneStageProduct: Product = {
+      ...BASE_PRODUCT,
+      stages: BASE_PRODUCT.stages.slice(0, 1),
+    };
+    const { container } = render(
+      <SdlcPipeline products={[oneStageProduct]} readOnly={false} />,
+    );
+    expect(getStageConnectors(container)).toHaveLength(0);
+  });
+
+  it("preserves canonical stage order and the status glyph in every mode", () => {
     const { container } = render(
       <SdlcPipeline products={[BASE_PRODUCT]} readOnly={false} />,
     );
@@ -575,7 +627,7 @@ describe("SdlcPipeline — pipeline stage-row structural contract", () => {
     ).toHaveLength(BASE_PRODUCT.stages.length);
   });
 
-  it("keeps long labels inside a full-width row", () => {
+  it("keeps long labels inside the responsive stage width", () => {
     const longLabelProduct: Product = {
       ...BASE_PRODUCT,
       stages: [

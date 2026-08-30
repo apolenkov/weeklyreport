@@ -363,7 +363,15 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
 
     await screen.findByText("Autosaved");
 
+    const toolbar = screen.getByTestId("report-toolbar");
     expect(screen.getAllByTestId("report-toolbar")).toHaveLength(1);
+    const mobileRows = Array.from(toolbar.children).filter((child) =>
+      child.className.includes("basis-full"),
+    );
+    expect(mobileRows).toHaveLength(2);
+    expect(mobileRows.every((row) => row.className.includes("min-w-0"))).toBe(
+      true,
+    );
   });
 
   it("submitted-section action: Lead sees Request Reopen, not Revoke", async () => {
@@ -606,6 +614,7 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
       name: "Sticky completion actions",
     });
     expect(sticky).toBeInTheDocument();
+    expect(screen.getByTestId("lead-report-form").className).toContain("pb-28");
     expect(screen.getAllByRole("button", { name: "Submit" })).toHaveLength(1);
 
     act(() => {
@@ -655,6 +664,9 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
       screen.getByRole("group", { name: "Context controls" }),
     ).toBeInTheDocument();
     expect(screen.queryByTestId("lead-sticky-completion-actions")).toBeNull();
+    expect(screen.getByTestId("lead-report-form").className).not.toContain(
+      "pb-28",
+    );
     expect(screen.queryByTestId("lead-submit-readiness")).toBeNull();
   });
 });

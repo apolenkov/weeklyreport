@@ -19,6 +19,7 @@
 - [x] 3.1 Stop compiled published/archived history cards from rendering `Submitted: Not submitted` while retaining the draft lead fallback; verify focused render tests cover both variants.
 - [x] 3.2 Remove the temporary PDF popup flow; after completion attempt one current-page attachment download and retain a visible fallback link; verify interaction tests prove no tab opens, the attempt occurs once, and failure remains retryable.
 - [x] 3.3 Run the focused web/UI unit suites for all six existing mobile changes plus the three newly repaired controls; verify every named control, focus semantic, and overflow class contract passes.
+- [x] 3.4 Replace the jargon-heavy end-of-form submission ledger with one plain-language outcome, explicit blockers, and a collapsed counted/grouped summary of automatic On Track changes; verify ready, blocked, pending, disclosure, touch-target, and shared-submit-handler tests pass.
 
 ## 4. Required test and CI evidence
 
@@ -32,7 +33,7 @@
 
 - [x] 5.1 Remove the documented double-start path between observability and source development; verify the quick-start service/port set has one API and one Web owner.
 - [x] 5.2 Reconcile every required production Compose variable, including `API_URL`, with the first-deploy runbook; verify the documented example environment passes `docker compose config`.
-- [x] 5.3 Validate backup cadence and retention as positive integers before loop/cleanup work; verify empty, zero, negative, and non-numeric regression cases exit non-zero without a hot loop.
+- [x] 5.3 Validate backup cadence and retention before loop, health-arithmetic, or cleanup work, and bind success logging plus pruning to atomic publication; verify empty, zero, negative, non-numeric, oversized, and failed-rename regression cases fail closed.
 - [x] 5.4 Make post-merge and post-rewrite hooks propagate install/generation failures; verify planted command failures produce a non-zero hook result.
 - [x] 5.5 Reconcile Mailpit service naming, Grafana password guidance, internal-only metrics routing, Prometheus template ownership, and the staging Caddy selection path; verify operations config/documentation tests match the actual files and routes.
 - [x] 5.6 Route configured browser telemetry through a same-origin tunnel compatible with the enforced CSP; verify a repository check plus one-off browser error delivery succeeds without widening `connect-src`.
@@ -52,7 +53,7 @@
 
 ## 7. Mobile and product acceptance
 
-- [x] 7.1 Run one disposable source-bound browser pass for lead, head, viewer, and admin at desktop, 375 px phone, Pixel-class phone, tablet, and landscape sizes; verify console/network logs, root/nested overflow, every scoped 44 px control, dialog focus return, history copy, and PDF-tab cleanup.
+- [x] 7.1 Run one disposable source-bound browser pass for lead, head, viewer, and admin at desktop, 375 px phone, Pixel-class phone, tablet, and landscape sizes; verify console/network logs, root/nested overflow, every scoped 44 px control, dialog focus return, history copy, compact submission guidance, and PDF-tab cleanup.
 - [x] 7.2 Update the six active mobile change task lists only from candidate-SHA browser and gate evidence; verify all six reach zero unchecked tasks and pass `openspec validate <change> --strict`.
 - [ ] 7.3 Sync/archive completed product-first and mobile changes in the supported OpenSpec workflow; verify `openspec list --json` reports zero non-deferred unchecked remainder and durable specs retain the accepted requirements.
 

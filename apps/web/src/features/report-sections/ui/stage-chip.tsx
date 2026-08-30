@@ -15,7 +15,7 @@ import type { StageAssignment, StageStatus } from "../model/types";
 import { AssigneeLabel, StageChipContent } from "./stage/stage-chip-parts";
 
 const CHIP_BASE_CLASSES =
-  "relative w-full max-md:min-h-[var(--touch-target-min)] p-2 rounded-lg inline-flex items-center justify-start gap-2 text-left text-xs font-semibold transition-[background-color,border-color,box-shadow,opacity,filter] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-1";
+  "relative w-full max-lg:min-h-[var(--touch-target-min)] p-2 rounded-lg inline-flex items-center justify-start gap-2 text-left text-xs font-semibold transition-[background-color,border-color,box-shadow,opacity,filter] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-1 lg:gap-1 lg:px-1.5";
 const CHIP_EDITABLE_CLASSES =
   "cursor-pointer hover:opacity-80 hover:saturate-50 hover:shadow-[0_0_0_2.5px_var(--card-surface-border)]";
 const CHIP_EMPTY_CLASSES =
@@ -157,7 +157,7 @@ export function StageChip({
   }
 
   return (
-    <div className="flex w-full min-w-0 flex-col items-stretch gap-1">
+    <div className="flex w-full min-w-0 flex-col items-stretch gap-1 lg:items-center">
       <Tooltip>
         <TooltipTrigger asChild>
           <button
@@ -176,7 +176,7 @@ export function StageChip({
         <TooltipContent>{chipTitle(stage, coverageSuffix)}</TooltipContent>
       </Tooltip>
 
-      <span className="self-start px-2">
+      <span className="block max-w-full truncate self-start px-2 lg:self-auto lg:px-0 lg:text-center">
         <AssigneeLabel stage={stage} />
       </span>
     </div>

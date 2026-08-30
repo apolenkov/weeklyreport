@@ -48,7 +48,7 @@ DDL and `pg_dump` both need a session that outlives a single transaction.
    | `HTTP_PORT`, `HTTPS_PORT`, `HTTPS_PORT_QUIC`                                                            | Host ports for the public Caddy listener.                                        |
    | `PGBOUNCER_MAX_CLIENT_CONN`, `PGBOUNCER_POOL_SIZE`, `PGBOUNCER_RESERVE_POOL_SIZE`                       | PgBouncer capacity limits.                                                       |
    | `REDIS_DB`, `LOG_LEVEL`, `OTEL_SDK_DISABLED`, `OTEL_TRACES_SAMPLER_ARG`, `OTEL_SERVICE_VERSION`         | Runtime policy and exact release identity; the same version is shown by Web.     |
-   | `BACKUP_INTERVAL_SECONDS`, `BACKUP_RETENTION_DAYS`                                                      | Recovery-point cadence and history window. See [Backups](#backups).              |
+   | `BACKUP_INTERVAL_SECONDS`, `BACKUP_RETENTION_DAYS`                                                      | Local backup cadence and history window. See [Backups](#backups).                |
 
 Optional: `FRONTEND_URLS` (extra CORS origins, no wildcards in production),
 `SENTRY_DSN`, `CLIENT_LOG_FORWARDING`, `OTEL_EXPORTER_OTLP_ENDPOINT`,
@@ -103,8 +103,10 @@ Read the JSON body first: it names the failing indicator.
 
 The `backup` service dumps the database every `BACKUP_INTERVAL_SECONDS` into
 the `pgbackups` volume and deletes dumps older than `BACKUP_RETENTION_DAYS`.
-Both values are required: together they are the recovery-point objective, and a
-default would invent one nobody agreed to.
+Both values are required: cadence sets the intended interval between successful
+local dumps, while retention sets the local history window. Neither value alone
+proves achieved RPO or RTO; those measurements come from a recorded restore
+drill. A default would silently invent recovery policy nobody agreed to.
 Its pinned backup image contains the backup, health, and restore entrypoints;
 the production Compose file does not mount mutable host scripts into it. Every
 repository-built image is tagged and labelled with `OTEL_SERVICE_VERSION`; the
@@ -120,9 +122,10 @@ somewhere else is a deployment decision this repo cannot make for you.
 
 ### Restore drill
 
-Practise this on a scratch database before you need it in anger. The procedure
-below was exercised against a real dump (schema plus row counts matched the
-source exactly); **untested in production**.
+Practise this on a scratch database before you need it in anger. Repository
+tests exercise the archive, target, consent, and transaction guards, but they do
+not constitute a current restore drill or prove schema and row-count parity.
+The procedure remains **untested in production**.
 
 ```sh
 # 1. Stop everything that writes. pg_restore --clean must DROP objects, and an
@@ -148,6 +151,12 @@ curl -fsS https://<host>/health/ready
 
 The restore runs in a single transaction: a failure part-way rolls back to the
 pre-restore state rather than leaving a half-populated schema.
+
+A drill record must bind the repository SHA, dump checksum, source and target,
+start and finish timestamps, schema comparison, agreed row-count or checksum
+queries, and the final readiness result. Keep that read-back outside the
+repository with the production release evidence; without it, measured RPO/RTO
+and production recovery remain BLOCKED.
 
 ## Rotating secrets
 

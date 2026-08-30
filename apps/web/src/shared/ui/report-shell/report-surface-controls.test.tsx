@@ -144,6 +144,7 @@ vi.mock("../../lib/trpc/trpc-context", () => ({
 }));
 
 vi.mock("../../../features/report-sections", () => ({
+  STAGE_CHIP_BOX_HEIGHT: "36px",
   STATUS_BADGE: {
     "in-progress": { label: "In Progress" },
     completed: { label: "Completed" },

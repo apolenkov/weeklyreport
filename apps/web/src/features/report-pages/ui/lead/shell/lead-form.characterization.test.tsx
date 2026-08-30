@@ -373,7 +373,9 @@ describe("lead-form draft: submit gating + dialogs", () => {
       </Wrapper>,
     );
 
-    expect(await screen.findByText("Blocks submission")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Complete the items below before submitting."),
+    ).toBeInTheDocument();
     expect(
       screen.getByText("Test Product: specify stages for committed risks."),
     ).toBeInTheDocument();

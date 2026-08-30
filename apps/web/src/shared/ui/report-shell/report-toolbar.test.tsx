@@ -49,6 +49,9 @@ describe("ReportToolbar", () => {
     const contextBar = screen.getByRole("group", { name: "Context controls" });
     // Pinned positioning + a z-index below the NavBar dropdown layer (z-30).
     expect(contextBar.className).toContain("sticky");
+    expect(contextBar.className).toContain("md:sticky");
+    expect(contextBar.className).toContain("md:top-0");
+    expect(contextBar.className).toContain("md:z-20");
     expect(contextBar.className).toContain("top-0");
     expect(contextBar.className).toContain("z-20");
     // Opaque background (no /70) so scrolling content cannot bleed through,
