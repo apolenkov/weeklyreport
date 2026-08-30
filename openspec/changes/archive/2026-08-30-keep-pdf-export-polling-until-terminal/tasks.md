@@ -9,4 +9,4 @@
 
 ## 3. Verification
 
-- [ ] 3.1 Run the focused PDF export test, strict OpenSpec validation, the complete local gates, production Docker build, and cold real-browser acceptance for head and viewer before archive and final closeout.
+- [x] 3.1 Run the focused PDF export test, strict OpenSpec validation, the complete local gates, production Docker build, and cold real-browser acceptance for head and viewer before archive and final closeout.
