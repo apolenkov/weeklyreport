@@ -71,6 +71,7 @@ This index maps every durable capability to one canonical home. Product capabili
 
 #### Submit
 
+- [lead-completion-guidance](./lead-completion-guidance/spec.md) — A compact end-of-form summary explains whether submission is possible, what to fix, and which unset statuses will become On Track. `[roles: Lead]`
 - [report-section-write-gates](./report-section-write-gates/spec.md) — Save, submit, and revoke writers decide editability from canonical period and archive state and reject concurrent closure. `[roles: Lead]`
 
 #### Consume/Search
