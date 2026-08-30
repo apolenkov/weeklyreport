@@ -1,8 +1,11 @@
-import { type AdminSnapshot, composeName } from "@customreport/shared";
+import {
+  type AdminSnapshot,
+  adminSnapshotSchema,
+  composeName,
+} from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import { ensureFallbackReportingGroup } from "../organization/index.js";
 import type { PolicyApplicatorService } from "../reminders/index.js";
 import { writePeriodRow } from "./admin-entity-write.queries";
 import { getSnapshot } from "./admin-snapshot.queries";
@@ -60,15 +63,11 @@ async function applyGroupHeads(
 async function upsertUsers(
   tx: Prisma.TransactionClient,
   users: AdminSnapshot["users"],
-  fallbackReportingGroupId: string,
 ): Promise<void> {
   const currentUserIds = new Set((await tx.user.findMany()).map((u) => u.id));
 
   for (const user of users) {
-    const reportingGroupId =
-      user.role === "viewer"
-        ? null
-        : (user.reportingGroupId ?? fallbackReportingGroupId);
+    const reportingGroupId = user.reportingGroupId ?? null;
     // Recompute the denormalized display name from the structured parts
     // server-side so the `name === composeName(parts)` invariant holds for
     // EVERY admin client / imported snapshot, not just the web form mapper.
@@ -170,24 +169,23 @@ export async function saveSnapshot(
   policyApplicator: PolicyApplicatorService | undefined,
   snapshot: AdminSnapshot,
 ): Promise<AdminSnapshot> {
+  // Repository callers can bypass the public service, so validate here before
+  // opening a transaction. Non-viewer users must carry their explicit group;
+  // restore never selects or creates a substitute group.
+  const parsedSnapshot = adminSnapshotSchema.parse(snapshot);
   const { newlyCreatedPeriods } = await prisma.$transaction(async (tx) => {
     const currentRules = await tx.reminderRule.findMany();
 
-    // Groups before users (User.reportingGroupId FK); fallback upsert under tx.
-    await upsertGroups(tx, snapshot.groups);
-
-    const fallbackReportingGroupId =
-      snapshot.groups.find((group) => !group.archived)?.id ??
-      (await ensureFallbackReportingGroup(tx));
-
-    await upsertUsers(tx, snapshot.users, fallbackReportingGroupId);
+    // Groups precede users because User.reportingGroupId is a foreign key.
+    await upsertGroups(tx, parsedSnapshot.groups);
+    await upsertUsers(tx, parsedSnapshot.users);
     // Apply group head assignments now that every head's User row exists;
     // upsertGroups only wrote name/description/archived.
-    await applyGroupHeads(tx, snapshot.groups);
-    await upsertProjects(tx, snapshot.projects);
-    const periods = await upsertPeriods(tx, snapshot.periods);
-    await upsertReminderPolicies(tx, snapshot.policies);
-    await upsertReminderRules(tx, snapshot.reminderRules, currentRules);
+    await applyGroupHeads(tx, parsedSnapshot.groups);
+    await upsertProjects(tx, parsedSnapshot.projects);
+    const periods = await upsertPeriods(tx, parsedSnapshot.periods);
+    await upsertReminderPolicies(tx, parsedSnapshot.policies);
+    await upsertReminderRules(tx, parsedSnapshot.reminderRules, currentRules);
 
     return periods;
   });
@@ -197,7 +195,7 @@ export async function saveSnapshot(
   // already-elapsed instants from an old snapshot are not re-dispatched.
   await applyPoliciesToNewPeriods(
     policyApplicator,
-    snapshot.reminderRules,
+    parsedSnapshot.reminderRules,
     newlyCreatedPeriods,
   );
 

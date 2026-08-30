@@ -1,7 +1,7 @@
 // Deterministic ID factories for the demo seed — fixed, run-stable IDs for
 // demo-only rows. Canonical IDs (head/leads/products/stages/reports/group) are
 // reused from seed-constants; only sections/items/statuses/etc. get these.
-// Every id is a PURE function of its owner's fixture position: the caller
+// Every id is a pure function of its owner's dataset position: the caller
 // passes explicit (lead, contribution, row) indices, so reordering unrelated
 // calls cannot change the identity graph (no shared mutable counter).
 
@@ -43,7 +43,7 @@ export const makeRowId = makeIdFactory(ROW_BLOCK * TAIL_BLOCK_BITS);
 
 // makeRowId serves several tables (projectStatus, stageStatus, item, risk,
 // decision, activity rows), so its block is sub-divided by table and writer:
-// the active-period writer, the prior-period writer and the activity writer
+// the active-period writer, the period-history writer and the activity writer
 // each start their own band, and within a band each row kind has its own slot.
 const ACTIVE_WRITER = 0x0;
 const PRIOR_WRITER = 0x8_00_00_00;
@@ -68,7 +68,7 @@ const ACTIVITY_DECISION_SLOT = 6;
 
 // ── Active-period rows (seed-demo.sections.ts) ──────────────────────────────
 // Section rows live in their own factory block; the active writer occupies the
-// low band, prior sections the band above it.
+// low band, period-history sections the band above it.
 export const ACTIVE_SECTION_INDEX = 0x0;
 export const PRIOR_SECTION_INDEX = 0x10_00_00;
 
@@ -126,7 +126,7 @@ export const activeDecisionId = (
     ACTIVE_WRITER + DECISION_SLOT + leadIdx * LEAD_STRIDE + contributionIdx,
   );
 
-// ── Prior-period rows (seed-demo.prior-sections.ts) ────────────────────────
+// ── Period-history rows (seed-demo.prior-sections.ts) ──────────────────────
 export const priorProjectStatusId = (
   reportIdx: number,
   leadIdx: number,

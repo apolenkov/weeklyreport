@@ -9,40 +9,38 @@ export type LeadKanbanItem = KanbanItem & {
   pausedReason: string | null;
 };
 
-// Truncation length for a fallback id's embedded text fragment.
-const ID_TEXT_FRAGMENT_LENGTH = 8;
-
 type SectionItem = ReportSectionReadModel["items"][number];
 
 function buildLeadItemCommon(
   item: SectionItem,
   section: ReportSectionReadModel,
-  itemType: "current" | "next",
 ) {
   return {
-    id:
-      item.id ??
-      `${itemType}-${item.projectId ?? item.activityId ?? "row"}-${item.text.slice(0, ID_TEXT_FRAGMENT_LENGTH)}`,
+    id: requireItemId(item),
     status: deriveItemStatus({
       workflowStatus: item.workflowStatus,
       type: item.type,
     }),
     text: item.text,
     author: section.authorName,
-    ...(item.stageNames ? { stageNames: item.stageNames } : {}),
+    stageNames: item.stageNames,
     priorityRank: item.priorityRank ?? null,
     pausedReason: item.pausedReason ?? null,
   };
 }
 
+function requireItemId(item: SectionItem): string {
+  if (typeof item.id === "string" && item.id.length > 0) return item.id;
+  throw new Error("Item is missing id");
+}
+
 function mapLeadItem(
   item: SectionItem,
   section: ReportSectionReadModel,
-  itemType: "current" | "next",
   projectIndex: ReturnType<typeof buildProjectIndex>,
   activityNameById: ReturnType<typeof buildActivityIndex>,
 ): LeadKanbanItem[] {
-  const common = buildLeadItemCommon(item, section, itemType);
+  const common = buildLeadItemCommon(item, section);
   if (item.activityId != null) {
     const activityName = activityNameById.get(item.activityId) ?? "Unknown";
     return [
@@ -85,6 +83,6 @@ export function mapLeadItems(
         (item.projectId != null || item.activityId != null),
     )
     .flatMap((item) =>
-      mapLeadItem(item, section, itemType, projectIndex, activityNameById),
+      mapLeadItem(item, section, projectIndex, activityNameById),
     );
 }

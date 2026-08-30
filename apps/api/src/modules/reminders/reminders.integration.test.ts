@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
@@ -10,6 +11,7 @@ import {
   TEST_IDS,
 } from "../../test-utils/prisma-test-helper";
 import { RemindersPrismaRepository } from "./reminders.prisma-repository";
+import type { ReminderQueuePayload } from "./reminders-queue-payload.js";
 
 describe("RemindersPrismaRepository (integration)", () => {
   const prisma = createTestPrisma();
@@ -37,39 +39,55 @@ describe("RemindersPrismaRepository (integration)", () => {
     });
   });
 
+  const queuePayload: ReminderQueuePayload = {
+    kind: "deadline",
+    cycleDate: "2026-04-11",
+    leadName: "Test Lead",
+    reportPeriod: "2026-04-06 → 2026-04-12",
+    deadlineIso: "2026-04-11T09:00:00.000Z",
+    sectionUrl: "https://example.test/lead/report",
+    organization: {
+      shortName: "CustomReport",
+      fullName: "CustomReport Department",
+    },
+  };
+  const queuePayloadJson = queuePayload as unknown as Prisma.InputJsonValue;
+
   afterAll(async () => {
     await cleanDatabase();
     await disconnectTestPrisma();
   });
 
-  it("saveExecution creates execution with deduplication", async () => {
-    const execution = {
-      id: TEST_IDS.reminderExec1,
-      ruleId: TEST_IDS.reminderRule,
-      reportId: testData.report.id,
-      dedupeKey: `${TEST_IDS.reminderRule}-2026-04-11`,
-      status: "queued" as const,
-      scheduledFor: new Date("2026-04-11T09:00:00.000Z"),
-      sentAt: null,
-      recipientEmail: "",
-      errorMessage: null,
-    };
+  it("insertExecutionOnConflict creates one execution and persists its payload", async () => {
+    const execution = baseExecution(
+      TEST_IDS.reminderExec1,
+      `${TEST_IDS.reminderRule}-2026-04-11`,
+    );
 
-    const created = await repo.saveExecution(execution);
+    const createdResult = await repo.insertExecutionOnConflict(
+      execution,
+      queuePayload,
+    );
+    expect(createdResult.inserted).toBe(true);
+    const created = createdResult.execution;
     expect(created.id).toBe(execution.id);
     expect(created.ruleId).toBe(TEST_IDS.reminderRule);
     expect(created.dedupeKey).toBe(execution.dedupeKey);
     expect(created.status).toBe("queued");
 
-    // Upsert with same dedupeKey should update, not create duplicate
-    const updated = await repo.saveExecution({
-      ...execution,
-      status: "sent" as const,
-      sentAt: new Date("2026-04-11T09:00:05.000Z"),
-    });
+    const persistedPayload = await repo.getExecutionQueuePayload(execution.id);
+    expect(persistedPayload).toEqual(queuePayload);
 
-    expect(updated.dedupeKey).toBe(execution.dedupeKey);
-    expect(updated.status).toBe("sent");
+    const duplicate = await repo.insertExecutionOnConflict(
+      {
+        ...execution,
+        id: TEST_IDS.reminderExec2,
+      },
+      queuePayload,
+    );
+
+    expect(duplicate.inserted).toBe(false);
+    expect(duplicate.execution.id).toBe(execution.id);
 
     const allExecutions = await prisma.reminderExecution.findMany({
       where: { dedupeKey: execution.dedupeKey },
@@ -86,6 +104,7 @@ describe("RemindersPrismaRepository (integration)", () => {
         dedupeKey: `${TEST_IDS.reminderRule}-2026-04-04`,
         status: "sent",
         sentAt: new Date("2026-04-04T09:00:00.000Z"),
+        queuePayload: queuePayloadJson,
       },
     });
 
@@ -96,6 +115,7 @@ describe("RemindersPrismaRepository (integration)", () => {
         recipientEmail: "lead-b@test.local",
         dedupeKey: `${TEST_IDS.reminderRule}-2026-04-11`,
         status: "pending",
+        queuePayload: queuePayloadJson,
       },
     });
 
@@ -144,11 +164,13 @@ describe("RemindersPrismaRepository (integration)", () => {
   it("insertExecutionOnConflict: duplicate dedupeKey inserts once and reports inserted=false", async () => {
     const first = await repo.insertExecutionOnConflict(
       baseExecution(TEST_IDS.reminderExec1, "dup-1"),
+      queuePayload,
     );
     expect(first.inserted).toBe(true);
 
     const second = await repo.insertExecutionOnConflict(
       baseExecution(TEST_IDS.reminderExec2, "dup-1"),
+      queuePayload,
     );
     expect(second.inserted).toBe(false);
     // The existing row is returned, not the second caller's fresh id.
@@ -166,9 +188,11 @@ describe("RemindersPrismaRepository (integration)", () => {
     const results = await Promise.all([
       repo.insertExecutionOnConflict(
         baseExecution(TEST_IDS.reminderExec1, "dup-2"),
+        queuePayload,
       ),
       repo.insertExecutionOnConflict(
         baseExecution(TEST_IDS.reminderExec2, "dup-2"),
+        queuePayload,
       ),
     ]);
 
@@ -180,7 +204,10 @@ describe("RemindersPrismaRepository (integration)", () => {
   });
 
   it("transitionExecutionToSending claims a queued row exactly once", async () => {
-    await repo.saveExecution(baseExecution(TEST_IDS.reminderExec1, "cas-1"));
+    await repo.insertExecutionOnConflict(
+      baseExecution(TEST_IDS.reminderExec1, "cas-1"),
+      queuePayload,
+    );
 
     const first = await repo.transitionExecutionToSending(
       TEST_IDS.reminderExec1,
@@ -199,11 +226,19 @@ describe("RemindersPrismaRepository (integration)", () => {
   });
 
   it("transitionExecutionToSending does not claim an already-sent row", async () => {
-    await repo.saveExecution({
-      ...baseExecution(TEST_IDS.reminderExec1, "cas-2"),
-      status: "sent",
-      sentAt: new Date("2026-04-11T09:00:05.000Z"),
-    });
+    await repo.insertExecutionOnConflict(
+      baseExecution(TEST_IDS.reminderExec1, "cas-2"),
+      queuePayload,
+    );
+    expect(
+      await repo.transitionExecutionToSending(TEST_IDS.reminderExec1),
+    ).toBe(true);
+    expect(
+      await repo.markExecutionSent(
+        TEST_IDS.reminderExec1,
+        new Date("2026-04-11T09:00:05.000Z"),
+      ),
+    ).not.toBeNull();
 
     const claimed = await repo.transitionExecutionToSending(
       TEST_IDS.reminderExec1,
@@ -215,8 +250,9 @@ describe("RemindersPrismaRepository (integration)", () => {
   });
 
   it("releaseExecutionClaim flips a sending row back to the claimable status", async () => {
-    await repo.saveExecution(
+    await repo.insertExecutionOnConflict(
       baseExecution(TEST_IDS.reminderExec1, "release-1"),
+      queuePayload,
     );
     const claimed = await repo.transitionExecutionToSending(
       TEST_IDS.reminderExec1,
@@ -234,11 +270,19 @@ describe("RemindersPrismaRepository (integration)", () => {
   });
 
   it("releaseExecutionClaim is a no-op against an already-sent row", async () => {
-    await repo.saveExecution({
-      ...baseExecution(TEST_IDS.reminderExec1, "release-2"),
-      status: "sent",
-      sentAt: new Date("2026-04-11T09:00:05.000Z"),
-    });
+    await repo.insertExecutionOnConflict(
+      baseExecution(TEST_IDS.reminderExec1, "release-2"),
+      queuePayload,
+    );
+    expect(
+      await repo.transitionExecutionToSending(TEST_IDS.reminderExec1),
+    ).toBe(true);
+    expect(
+      await repo.markExecutionSent(
+        TEST_IDS.reminderExec1,
+        new Date("2026-04-11T09:00:05.000Z"),
+      ),
+    ).not.toBeNull();
 
     await repo.releaseExecutionClaim(TEST_IDS.reminderExec1);
 
@@ -247,7 +291,10 @@ describe("RemindersPrismaRepository (integration)", () => {
   });
 
   it("markExecutionFailed records a terminal failure but never clobbers a sent row", async () => {
-    await repo.saveExecution(baseExecution(TEST_IDS.reminderExec1, "fail-1"));
+    await repo.insertExecutionOnConflict(
+      baseExecution(TEST_IDS.reminderExec1, "fail-1"),
+      queuePayload,
+    );
     await repo.markExecutionFailed(TEST_IDS.reminderExec1, "SMTP refused");
 
     const failed = await repo.getExecution(TEST_IDS.reminderExec1);
@@ -255,14 +302,63 @@ describe("RemindersPrismaRepository (integration)", () => {
     expect(failed?.errorMessage).toBe("SMTP refused");
 
     // A late failure write must not overwrite a row that already reached sent.
-    await repo.saveExecution({
-      ...baseExecution(TEST_IDS.reminderExec2, "fail-2"),
-      status: "sent",
-      sentAt: new Date("2026-04-11T09:00:05.000Z"),
-    });
+    await repo.insertExecutionOnConflict(
+      baseExecution(TEST_IDS.reminderExec2, "fail-2"),
+      queuePayload,
+    );
+    expect(
+      await repo.transitionExecutionToSending(TEST_IDS.reminderExec2),
+    ).toBe(true);
+    expect(
+      await repo.markExecutionSent(
+        TEST_IDS.reminderExec2,
+        new Date("2026-04-11T09:00:05.000Z"),
+      ),
+    ).not.toBeNull();
     await repo.markExecutionFailed(TEST_IDS.reminderExec2, "too late");
     const stillSent = await repo.getExecution(TEST_IDS.reminderExec2);
     expect(stillSent?.status).toBe("sent");
+  });
+
+  it("revives a payload-less failed row with one atomic current payload write", async () => {
+    await prisma.reminderExecution.create({
+      data: {
+        id: TEST_IDS.reminderExec1,
+        ruleId: TEST_IDS.reminderRule,
+        recipientEmail: "lead@test.local",
+        dedupeKey: "migrated-failed",
+        status: "failed",
+        error: "awaiting current-contract redispatch",
+      },
+    });
+
+    expect(
+      await repo.requeueFailedExecution(TEST_IDS.reminderExec1, queuePayload),
+    ).toBe(true);
+
+    const revived = await prisma.reminderExecution.findUniqueOrThrow({
+      where: { id: TEST_IDS.reminderExec1 },
+      select: { status: true, error: true, queuePayload: true },
+    });
+    expect(revived).toEqual({
+      status: "pending",
+      error: null,
+      queuePayload: queuePayloadJson,
+    });
+  });
+
+  it("rejects a queued execution without a renderer payload", async () => {
+    await expect(
+      prisma.reminderExecution.create({
+        data: {
+          id: TEST_IDS.reminderExec1,
+          ruleId: TEST_IDS.reminderRule,
+          recipientEmail: "lead@test.local",
+          dedupeKey: "payload-less-queued",
+          status: "pending",
+        },
+      }),
+    ).rejects.toThrow();
   });
 
   it("listStuckQueuedExecutions returns old queued rows and excludes sending / fresh rows", async () => {
@@ -280,6 +376,7 @@ describe("RemindersPrismaRepository (integration)", () => {
         dedupeKey: "stuck-queued",
         status: "pending",
         createdAt: old,
+        queuePayload: queuePayloadJson,
       },
     });
     // In-flight send: old, but intentionally NOT reclaimed.
@@ -291,6 +388,7 @@ describe("RemindersPrismaRepository (integration)", () => {
         dedupeKey: "stuck-sending",
         status: "sending",
         createdAt: old,
+        queuePayload: queuePayloadJson,
       },
     });
     // Freshly queued: within the window, not yet stranded.
@@ -302,6 +400,7 @@ describe("RemindersPrismaRepository (integration)", () => {
         dedupeKey: "fresh-queued",
         status: "pending",
         createdAt: fresh,
+        queuePayload: queuePayloadJson,
       },
     });
 

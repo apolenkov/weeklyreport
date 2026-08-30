@@ -1,4 +1,3 @@
-import { AgentReviewComingSoon } from "../../../shared/ui/report-shell/agent-review-coming-soon";
 import { ArchiveToggle } from "../../../shared/ui/report-shell/archive-toggle";
 import { ScopeToggle } from "../../../shared/ui/report-shell/scope-toggle";
 import type { ReportShellScopeValue } from "../../../shared/ui/report-shell/use-report-shell-url-state";
@@ -57,7 +56,6 @@ export function ViewerContextControls({
       ) : null}
       <ArchiveToggle checked={includeArchive} onChange={setIncludeArchive} />
       <div className="grow" aria-hidden="true" />
-      <AgentReviewComingSoon compact />
       <ScopeToggle
         value={scope}
         onChange={setScope}

@@ -75,6 +75,7 @@ describe("buildWeeklyReportPageView — authorId scroll target", () => {
               text: "Shipped the thing",
               tag: "Dev",
               workflowStatus: "done",
+              stageNames: ["Development"],
               carriedOver: false,
             },
           ],

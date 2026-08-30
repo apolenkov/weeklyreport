@@ -69,7 +69,7 @@ const baseSection: ReportSectionReadModel = {
 // copy of the seeded items for the write-path test payloads below.
 const writeItems = baseSection.items.map((it) => ({
   ...it,
-  stageNames: it.stageNames ?? [],
+  stageNames: it.stageNames,
 }));
 
 function validDraftFor(section: ReportSectionReadModel) {

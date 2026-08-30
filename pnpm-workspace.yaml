@@ -10,7 +10,6 @@ catalog:
   "tsx": "^4.23.1"
   "@trpc/server": "^11.18.0"
   "react": "^19.2.8"
-  "react-doctor": "^0.9.3"
   "superjson": "^2.2.6"
   "zod": "^4.4.3"
   "lucide-react": "^1.27.0"
@@ -47,12 +46,7 @@ onlyBuiltDependencies:
   - msw
   - unrs-resolver
 
-# Track latest deliberately during MVP; re-enable (e.g. 1440) once prod is live.
-minimumReleaseAge: 0
-
-# Upstream peer ranges lag majors we already run under (lint + typecov green).
-# Drop these when eslint-plugin-react/jsx-a11y publish ESLint 10 peers and
-# type-coverage publishes a TS 6 peer range.
+# Upstream peer ranges lag majors we already run under.
 packageExtensions:
   eslint-plugin-react:
     peerDependencies:
@@ -60,15 +54,11 @@ packageExtensions:
   eslint-plugin-jsx-a11y:
     peerDependencies:
       eslint: ">=3 <11"
-  type-coverage-core:
-    peerDependencies:
-      typescript: "2 || 3 || 4 || 5 || 6"
 
 peerDependencyRules:
   allowedVersions:
     "eslint-plugin-react>eslint": "10"
     "eslint-plugin-jsx-a11y>eslint": "10"
-    "type-coverage-core>typescript": "6"
 
 overrides:
   # Upper bounds are load-bearing on EVERY entry here: an open-ended floor let
@@ -77,25 +67,19 @@ overrides:
   "@xmldom/xmldom": ">=0.8.13 <0.10"
   protobufjs: ">=8.0.2 <9"
   vite: ">=8.1.5 <9"
-  # dependabot 2026-08-04: GHSA-rgw5-rvv9-x895 supersedes the earlier
-  # brace-expansion mitigation, and GHSA-7p8r-x3mc-p8w7 fixes fast-uri host
-  # confusion. Keep both brace-expansion lines: the graph contains incompatible
-  # 1.x and 5.x consumers, so one cross-major override would be unsafe.
+  # Keep both brace-expansion ranges: the graph contains incompatible 1.x and
+  # 5.x consumers, so one cross-major override would be unsafe.
   "brace-expansion@<2": ">=1.1.18 <2"
   "brace-expansion@>=4 <6": ">=5.0.9 <6"
   fast-uri: ">=3.1.5 <4"
-  # pnpm audit 2026-08-10: keep the verified tree free of additional high
-  # advisories while GitHub refreshes the default-branch Dependabot scan.
+  # Keep transitive packages in verified major ranges.
   js-yaml: ">=4.3.1 <5"
   nanoid: ">=3.3.17 <4"
-  # dependabot 2026-07-24: find-my-way via @prisma/dev, sharp via next,
-  # postcss (2 alerts) via the css toolchain — all transitive, hence overrides.
+  # These are transitive through Prisma, Next.js, and the CSS toolchain.
   find-my-way: ">=9.7.0 <10"
   sharp: ">=0.35.0 <1"
   postcss: ">=8.5.23 <9"
-  # dependabot 2026-07-27: GHSA-5qjj-4xww-7phc. @prisma/dev pins valibot to an
-  # exact 1.2.0, so only an override reaches the fix; bounded below major 2
-  # because compatibility was argued from semver, not tested across a major.
+  # Prisma pins valibot exactly, so the safe current range is enforced here.
   valibot: ">=1.4.2 <2"
 
 patchedDependencies:

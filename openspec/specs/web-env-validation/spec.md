@@ -12,14 +12,14 @@ The web app MUST declare every `NEXT_PUBLIC_*` variable it consumes (outside the
 `NEXT_PUBLIC_API_URL` seam) in a single Zod schema, and that schema MUST NOT
 attach a `.default()` to any field — a genuinely-optional toggle is declared
 `.optional()` with the consumer handling absence, mirroring the api
-`env-schema-coverage` no-default posture. The in-scope set is exactly seven:
+`env-schema-coverage` no-default posture. The in-scope set is exactly six:
 `NEXT_PUBLIC_APP_VERSION`, `NEXT_PUBLIC_AUTH_STUB`,
 `NEXT_PUBLIC_CLIENT_LOG_FORWARDING`, `NEXT_PUBLIC_DEV_ROLE_SWITCHER`,
-`NEXT_PUBLIC_DISABLE_DEVTOOLS`, `NEXT_PUBLIC_SENTRY_DSN`, and
-`NEXT_PUBLIC_WEB_VITALS`. Each field MUST carry meaningful validation, not a
+`NEXT_PUBLIC_SENTRY_DSN`, and `NEXT_PUBLIC_WEB_VITALS`. Each field MUST carry
+meaningful validation, not a
 blanket permissive string: `NEXT_PUBLIC_SENTRY_DSN` is a URL-or-unset; the
 boolean toggles (`AUTH_STUB`, `CLIENT_LOG_FORWARDING`, `DEV_ROLE_SWITCHER`,
-`DISABLE_DEVTOOLS`, `WEB_VITALS`) accept only `"true"`, `"false"`, or unset so a
+`WEB_VITALS`) accept only `"true"`, `"false"`, or unset so a
 typo is rejected rather than read as "off"; `NEXT_PUBLIC_APP_VERSION` is an
 optional string. Empty string MUST count as unset WITHIN the schema itself (a
 per-field `""`→`undefined` preprocess), so that BOTH the build assert and the
@@ -93,7 +93,7 @@ eagerly at module scope, so a value read is not frozen at first import — the
 existing suite mutates `process.env.NEXT_PUBLIC_*` after import
 (`role-switcher.test.tsx`, `login-page.client.test.tsx`, `page.test.tsx`), and an
 eager module-scope parse would break it. The accessor MUST expose typed derived
-getters — the five boolean toggles resolved to `boolean` (so the scattered
+getters — the four boolean toggles resolved to `boolean` (so the scattered
 `=== "true"` comparisons live in one place), plus `appVersion` and `sentryDsn`.
 Two toggle getters MUST fold the existing `NODE_ENV !== "production"` guard to
 match current code: `NEXT_PUBLIC_AUTH_STUB` (as `login-page.client.tsx` does) AND
@@ -142,17 +142,13 @@ an in-scope var with a call to the typed accessor, at each named consumer site:
 and `apps/web/src/shared/ui/auth-runtime/role-switcher.tsx` (`NEXT_PUBLIC_DEV_ROLE_SWITCHER`),
 `apps/web/src/shared/lib/telemetry/client-logger.ts` (`NEXT_PUBLIC_CLIENT_LOG_FORWARDING`),
 `apps/web/src/features/telemetry/model/vitals/web-vitals.ts` (`NEXT_PUBLIC_WEB_VITALS`),
-`apps/web/src/shared/ui/auth-runtime/agentation-devtools.tsx`
-(`NEXT_PUBLIC_DISABLE_DEVTOOLS`), and
 `apps/web/instrumentation-client.ts` (`NEXT_PUBLIC_SENTRY_DSN`). After the
 change a grep of `apps/web/src` and the web root for a literal
 `process.env.NEXT_PUBLIC_` read outside the accessor module and the
 `NEXT_PUBLIC_API_URL` seam MUST return no product-code hits (test files
-excluded), with ONE explicit carve-out: the two server-runtime configs
-`apps/web/sentry.server.config.ts` and `apps/web/sentry.edge.config.ts` retain
-their `NEXT_PUBLIC_SENTRY_DSN` read and are excluded from the grep, because the
-sibling requirement leaves that server-runtime (non-inlined) surface out of scope
-— they are not client build-inlined reads and are deferred to a follow-up.
+excluded); the two server-runtime configs
+`apps/web/sentry.server.config.ts` and `apps/web/sentry.edge.config.ts` use the
+shared `sentry-options.config.ts` seam for their server-runtime Sentry options.
 
 #### Scenario: A consumer reads the toggle through the accessor
 
@@ -167,20 +163,15 @@ sibling requirement leaves that server-runtime (non-inlined) surface out of scop
 - **GIVEN** the change is complete
 - **WHEN** `apps/web/src` and the web root are grepped for
   `process.env.NEXT_PUBLIC_` outside the accessor module, the
-  `NEXT_PUBLIC_API_URL` seam, and the two out-of-scope server-runtime configs
-  `sentry.server.config.ts` / `sentry.edge.config.ts`, excluding test files
+  `NEXT_PUBLIC_API_URL` seam, excluding test files
 - **THEN** the grep returns zero product-code hits
 
-### Requirement: The accessor stays out of the API-URL and server-runtime Sentry surfaces
+### Requirement: The accessor stays out of the API-URL surface
 
 The `web-env` accessor MUST NOT declare or resolve `NEXT_PUBLIC_API_URL` or
 `API_URL`; those stay owned by the `requireApiUrl` seam and the
 `web-api-url-config` capability, which `next.config.ts` already build-asserts via
-its top-level `requireApiUrl()` call. The server-runtime
-`SENTRY_DSN ?? NEXT_PUBLIC_SENTRY_DSN` fallback chain in
-`apps/web/sentry.server.config.ts` and `apps/web/sentry.edge.config.ts` is
-explicitly out of scope: those are server-runtime reads (not build-inlined) on a
-different validation surface, deferred to a follow-up rather than folded here.
+its top-level `requireApiUrl()` call.
 
 #### Scenario: API-URL ownership is not duplicated
 
@@ -189,10 +180,30 @@ different validation surface, deferred to a follow-up rather than folded here.
 - **THEN** neither key appears, so the `requireApiUrl` seam remains the single
   owner and no header/ownership collision with `web-api-url-config` occurs
 
-#### Scenario: Server-runtime Sentry chain is left untouched
+### Requirement: Server-runtime Sentry configuration is validated at its shared seam
 
-- **GIVEN** `apps/web/sentry.server.config.ts` reads
-  `SENTRY_DSN ?? NEXT_PUBLIC_SENTRY_DSN` at server runtime
-- **WHEN** this change is applied
-- **THEN** that server-runtime chain is left as-is and recorded as an explicit
-  out-of-scope follow-up, because it is not a build-inlined client read
+The shared `apps/web/sentry-options.config.ts` seam MUST read both
+`SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_DSN` through explicit environment literals.
+Each configured value MUST be a non-empty URL; an absent or empty value is
+treated as unset. The server DSN MUST take precedence when both values are
+valid, and a malformed value MUST throw a descriptive error before Sentry is
+initialized. Both `sentry.server.config.ts` and `sentry.edge.config.ts` MUST
+continue to initialize through this one seam.
+
+#### Scenario: Server DSN takes precedence
+
+- **GIVEN** both Sentry DSNs are valid URLs
+- **WHEN** the shared Sentry options are created
+- **THEN** `SENTRY_DSN` is selected
+
+#### Scenario: Empty runtime DSNs are absent
+
+- **GIVEN** either runtime DSN is empty or whitespace-only
+- **WHEN** the shared Sentry options are created
+- **THEN** that value is treated as unset and initialization remains valid
+
+#### Scenario: Malformed runtime DSN fails closed
+
+- **GIVEN** either runtime DSN is present but not a URL
+- **WHEN** the shared Sentry options are created
+- **THEN** creation throws a descriptive error naming that variable

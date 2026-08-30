@@ -6,6 +6,24 @@ Define portfolio totals and stage counts derived from the published snapshot rea
 
 ## Requirements
 
+### Requirement: Published snapshots are the sole archive read source
+
+Archive reads MUST use the report's validated `publishedSnapshot`. A published
+report without a snapshot, or with a malformed snapshot/record lacking the
+required `stableId`, MUST fail closed; archive reads MUST NOT rebuild content
+from mutable live section rows.
+
+#### Scenario: An archived report without a snapshot is rejected
+
+- WHEN an archive list or detail read encounters a published archived report
+  with no `publishedSnapshot`
+- THEN the read fails closed and does not load live section content
+
+#### Scenario: A snapshot record without stableId is rejected
+
+- WHEN lineage inspection encounters an item or decision without `stableId`
+- THEN it raises a snapshot-integrity error rather than silently skipping the row
+
 ### Requirement: Published portfolio totals are counted once per distinct product
 
 `computePortfolioOverviewFromReadSections` MUST fold every occurrence of a
@@ -31,10 +49,8 @@ occurrence.
 
 `buildPortfolioProductsFromSnapshotSections`'s `stageCount` for a product
 MUST reflect the union of every stage assigned to any lead on that product
-(`project.stageSet`), not the `Math.max` of any single lead's own owned-stage
-count. When `project.stageSet` is absent (legacy fixtures or frozen
-snapshots that pre-date the field), it MAY fall back to the `Math.max`
-owned-stages computation.
+(`project.stageSet`). The published snapshot MUST contain this complete stage
+set; a missing `project.stageSet` is a snapshot-integrity error.
 
 #### Scenario: A product's stages split across two leads report the full union
 

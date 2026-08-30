@@ -166,7 +166,9 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
     expect(data.leadName).toBe("Lead Alpha");
     expect(data.reportPeriod).toBe("2026-04-13 → 2026-04-19");
     expect(data.deadlineIso).toBe("2026-04-19T15:00:00.000Z");
-    expect(String(data.sectionUrl)).toContain(reportId);
+    expect(data.sectionUrl).toBe(
+      `${schedulerTestEnv.APP_BASE_URL}/lead/report/${reportId}`,
+    );
   });
 
   it("builds sectionUrl from the injected APP_BASE_URL, not raw process.env", async () => {
@@ -342,10 +344,6 @@ describe("RemindersScheduler — escalation dispatch", () => {
           execution: structuredClone(execution),
           inserted: true,
         });
-      },
-      saveExecution(execution) {
-        executions.set(execution.id, structuredClone(execution));
-        return Promise.resolve(structuredClone(execution));
       },
       getExecution(id) {
         return Promise.resolve(executions.get(id) ?? null);
@@ -658,9 +656,6 @@ describe("RemindersScheduler — opt-out", () => {
           execution: structuredClone(execution),
           inserted: true,
         });
-      },
-      saveExecution(execution) {
-        return Promise.resolve(structuredClone(execution));
       },
       getExecution() {
         return Promise.resolve(null);

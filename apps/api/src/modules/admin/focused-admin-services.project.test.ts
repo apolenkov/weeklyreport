@@ -325,14 +325,6 @@ describe("focused services — users, integrations, and stages", () => {
     expect(vi.mocked(repo.activateUser)).toHaveBeenCalledWith("user-1");
   });
 
-  it("integrationsStatus combines the caller-resolved `configured` flag with the repository binding count", async () => {
-    const service = new SnapshotAdminService(createRepository(initialSnapshot));
-
-    await expect(service.integrationsStatus(true)).resolves.toEqual({
-      telegram: { configured: true, bindings: 0 },
-    });
-  });
-
   it("listStages and listStageAssignmentCounts delegate to the repository", async () => {
     const service = new ProjectAdminService(
       createRepository(initialSnapshot),

@@ -445,16 +445,6 @@ describe("AdminPrismaRepository — deactivate/activate, integrations, stages", 
     });
   });
 
-  it("countActiveTelegramBindings counts only active=true rows", async () => {
-    const count = vi.fn(() => Promise.resolve(3));
-    const repo = new AdminPrismaRepository({
-      telegramBinding: { count },
-    } as unknown as PrismaService);
-
-    await expect(repo.countActiveTelegramBindings()).resolves.toBe(3);
-    expect(count).toHaveBeenCalledWith({ where: { active: true } });
-  });
-
   it("listStages orders by sortOrder asc", async () => {
     const findMany = vi.fn((..._args: unknown[]) => Promise.resolve([]));
     const repo = new AdminPrismaRepository({

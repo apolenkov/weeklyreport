@@ -1,3 +1,4 @@
+import type { UserSession } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
@@ -8,6 +9,13 @@ import {
 } from "../report-sections/index.js";
 import { WeeklyReportPrismaRepository } from "./weekly-report.prisma-repository";
 
+const adminSession: UserSession = {
+  userId: "00000000-0000-4000-8000-000000000001",
+  email: "admin@example.test",
+  name: "Admin",
+  role: "admin",
+};
+
 function createRepository(findFirst: ReturnType<typeof vi.fn>) {
   const prisma = {
     report: { findFirst },
@@ -15,58 +23,6 @@ function createRepository(findFirst: ReturnType<typeof vi.fn>) {
 
   return new WeeklyReportPrismaRepository(prisma);
 }
-
-describe("WeeklyReportPrismaRepository.getActiveReportId", () => {
-  it("prefers the latest editable period before published history", async () => {
-    const findFirst = vi
-      .fn()
-      .mockResolvedValueOnce({ id: "editable-report-id" });
-    const repository = createRepository(findFirst);
-
-    await expect(repository.getActiveReportId()).resolves.toBe(
-      "editable-report-id",
-    );
-
-    expect(findFirst).toHaveBeenCalledOnce();
-    const callArgs = findFirst.mock.calls[0]?.[0] as {
-      where: { periodStatus: { in: string[] }; periodStart: { lte: Date } };
-      orderBy: { periodStart: string };
-      select: { id: boolean };
-    };
-    expect(callArgs.where.periodStatus).toEqual({ in: ["open", "reopened"] });
-    expect(callArgs.where.periodStart.lte).toBeInstanceOf(Date);
-    expect(callArgs.orderBy).toEqual({ periodStart: "desc" });
-    expect(callArgs.select).toEqual({ id: true });
-  });
-
-  it("falls back to the latest published period when no editable period exists", async () => {
-    const findFirst = vi
-      .fn()
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ id: "published-report-id" });
-    const repository = createRepository(findFirst);
-
-    await expect(repository.getActiveReportId()).resolves.toBe(
-      "published-report-id",
-    );
-
-    expect(findFirst).toHaveBeenCalledTimes(2);
-    expect(findFirst).toHaveBeenNthCalledWith(2, {
-      where: { periodStatus: "published" },
-      orderBy: { periodStart: "desc" },
-      select: { id: true },
-    });
-  });
-
-  it("returns null when there are no editable or published periods", async () => {
-    const findFirst = vi.fn().mockResolvedValue(null);
-    const repository = createRepository(findFirst);
-
-    await expect(repository.getActiveReportId()).resolves.toBeNull();
-
-    expect(findFirst).toHaveBeenCalledTimes(2);
-  });
-});
 
 // Unit counterpart to the real-Prisma integration test: pins archived:false +
 // the editable-only filter + no published fallback, so the gate cannot be
@@ -80,7 +36,7 @@ describe("WeeklyReportPrismaRepository.getCurrentEditableId", () => {
       "current-editable-id",
     );
 
-    // Single query — NO published fallback (unlike getActiveReportId).
+    // Single query — no published fallback.
     expect(findFirst).toHaveBeenCalledOnce();
     const callArgs = findFirst.mock.calls[0]?.[0] as {
       where: {
@@ -111,6 +67,36 @@ describe("WeeklyReportPrismaRepository.getCurrentEditableId", () => {
     // Exactly one call: a null result must NOT fall through to a published query.
     expect(findFirst).toHaveBeenCalledOnce();
   });
+
+  it("rejects an unscoped interactive current read before querying", () => {
+    const findFirst = vi.fn();
+    const repository = createRepository(findFirst);
+
+    expect(() =>
+      repository.getCurrentEditableIdForSession(
+        undefined as unknown as UserSession,
+      ),
+    ).toThrow("group isolation not enforced");
+    expect(findFirst).not.toHaveBeenCalled();
+  });
+});
+
+describe("WeeklyReportPrismaRepository scoped reads", () => {
+  it("rejects a missing session before any weekly-report query", async () => {
+    const findUnique = vi.fn();
+    const prisma = {
+      report: { findUnique },
+    } as unknown as PrismaService;
+    const repository = new WeeklyReportPrismaRepository(prisma);
+
+    await expect(
+      repository.getWeeklyReport(
+        "f9665336-7c74-4abc-8f4f-2fb8346d28bb",
+        undefined as unknown as UserSession,
+      ),
+    ).rejects.toThrow("group isolation not enforced");
+    expect(findUnique).not.toHaveBeenCalled();
+  });
 });
 
 // Live path uses the same mapper+builder as the published-snapshot path.
@@ -122,6 +108,7 @@ describe("live escalation pipeline (mapPrismaToReportSection -> builder)", () =>
   const REFERENCED_PRODUCT = "2a223d8b-c4b2-473c-8a7b-15ecc52195c7";
   const STAGE_DEV = "6f99661a-cac6-4d06-bf08-2a14cced554d";
   const STAGE_TEST = "4ff69d14-ec8c-4f1c-b62b-73bee530fc7d";
+  const PRODUCT_GROUP = "5b5b554c-7b3b-4e2e-90c3-84c2be55d453";
 
   function makePrismaRow(): PrismaReportSectionWithRelations {
     return {
@@ -146,6 +133,7 @@ describe("live escalation pipeline (mapPrismaToReportSection -> builder)", () =>
               name: "CRM Portal",
               archived: false,
               stageAssignments: [],
+              groupProducts: [{ groupId: PRODUCT_GROUP }],
               lead: { reportingGroupId: null },
             },
             stage: { id: STAGE_DEV, name: "Development", sortOrder: 0 },
@@ -159,6 +147,7 @@ describe("live escalation pipeline (mapPrismaToReportSection -> builder)", () =>
               name: "CRM Portal",
               archived: false,
               stageAssignments: [],
+              groupProducts: [{ groupId: PRODUCT_GROUP }],
               lead: { reportingGroupId: null },
             },
             stage: { id: STAGE_TEST, name: "Testing", sortOrder: 1 },
@@ -203,7 +192,7 @@ describe("live escalation pipeline (mapPrismaToReportSection -> builder)", () =>
           impact: "Medium",
           mitigation: "Coordinate",
           severity: "at-risk",
-          stageNames: [],
+          stageNames: ["Development"],
           project: { name: "Shared Platform" },
           recordComments: [],
         },
@@ -228,7 +217,7 @@ describe("live escalation pipeline (mapPrismaToReportSection -> builder)", () =>
     // Risk references a product the author owns no stage on; the name still
     // resolves via referencedProjects — never "Unknown".
     expect(risk?.productName).toBe("Shared Platform");
-    expect(risk?.stageName).toBeNull();
+    expect(risk?.stageName).toBe("Development");
   });
 });
 
@@ -277,6 +266,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
                   name: "CRM Portal",
                   archived: false,
                   stageAssignments: [],
+                  groupProducts: [{ groupId: GROUP_ID }],
                   lead: { reportingGroupId: null },
                 },
                 stage: { id: STAGE_DEV, name: "Development", sortOrder: 0 },
@@ -297,8 +287,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
           ],
           stageStatuses: [],
           items: [],
-          // ...but the author's own covers-all (empty stageNames) BLOCKED risk
-          // floors the product to red.
+          // A blocked risk on the owned stage floors the product to red.
           risks: [
             {
               id: "a7777777-7777-4777-8777-777777777777",
@@ -307,7 +296,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
               impact: "High",
               mitigation: "Escalate",
               severity: "blocked",
-              stageNames: [],
+              stageNames: ["Development"],
               project: { name: "CRM Portal" },
               recordComments: [],
             },
@@ -382,7 +371,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
 
   it("floors the owned product card red and keeps the untouched product card null", async () => {
     const repository = createRepository();
-    const result = await repository.getWeeklyReport(REPORT_ID);
+    const result = await repository.getWeeklyReport(REPORT_ID, adminSession);
 
     const cards = result?.readModel.portfolioOverview ?? [];
     const owned = cards.find((c) => c.productId === OWNED_PRODUCT);
@@ -415,7 +404,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
 
     const result = await new WeeklyReportPrismaRepository(
       prisma,
-    ).getWeeklyReport(REPORT_ID);
+    ).getWeeklyReport(REPORT_ID, adminSession);
 
     expect(result?.readModel.leadSections[0]?.groupName).toBe(
       "Finance Platforms",
@@ -440,7 +429,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     } as unknown as PrismaService;
     const repository = new WeeklyReportPrismaRepository(prisma);
 
-    const pending = repository.getWeeklyReport(REPORT_ID);
+    const pending = repository.getWeeklyReport(REPORT_ID, adminSession);
     // Flush pending microtasks so the findUnique await resolves and the
     // Promise.all dispatch runs, without resolving the leadUsers query.
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -466,6 +455,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     } as unknown as PrismaService;
     await new WeeklyReportPrismaRepository(livePrisma).getWeeklyReport(
       REPORT_ID,
+      adminSession,
     );
 
     const liveInclude = projectFindManyLive.mock.calls[0]?.[0] as {
@@ -486,89 +476,13 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     } as unknown as PrismaService;
     await new WeeklyReportPrismaRepository(publishedPrisma).getWeeklyReport(
       REPORT_ID,
+      adminSession,
     );
 
     // The published-snapshot path reads nothing from the live project rows,
     // so the query must not run at all — every signal (cross-group audit,
     // portfolio, escalations) comes from the frozen snapshot.
     expect(projectFindManyPublished).not.toHaveBeenCalled();
-  });
-});
-
-// Viewer periodStatus=published filter is role-conditional on list and archive-count.
-describe("WeeklyReportPrismaRepository.getCompiledHistory", () => {
-  interface QueryArg {
-    where: Record<string, unknown>;
-  }
-
-  const GROUP_A = "a1111111-1111-4111-8111-111111111111";
-
-  function createHistoryRepository(
-    findMany: ReturnType<typeof vi.fn>,
-    count: ReturnType<typeof vi.fn>,
-  ) {
-    const prisma = {
-      report: { findMany, count },
-    } as unknown as PrismaService;
-    return new WeeklyReportPrismaRepository(prisma);
-  }
-
-  const viewerSession = {
-    userId: "c3333333-3333-4333-8333-333333333333",
-    role: "viewer" as const,
-    viewerGroupAccess: [GROUP_A],
-  };
-  const headSession = {
-    userId: "e5555555-5555-4555-8555-555555555555",
-    role: "head" as const,
-    viewerGroupAccess: [],
-  };
-  const leadSession = {
-    userId: "d4444444-4444-4444-8444-444444444444",
-    role: "lead" as const,
-    reportingGroupId: GROUP_A,
-    viewerGroupAccess: [],
-  };
-
-  it("applies periodStatus='published' to BOTH the list and archive-count for a viewer", async () => {
-    const findMany = vi.fn((_q: QueryArg) => Promise.resolve([]));
-    const count = vi.fn((_q: QueryArg) => Promise.resolve(0));
-    const repository = createHistoryRepository(findMany, count);
-
-    await repository.getCompiledHistory(viewerSession, true);
-
-    const listWhere = findMany.mock.calls[0]?.[0].where;
-    const countWhere = count.mock.calls[0]?.[0].where;
-    expect(listWhere).toMatchObject({ periodStatus: "published" });
-    expect(countWhere).toMatchObject({ periodStatus: "published" });
-  });
-
-  it("does NOT apply the periodStatus filter for a head (non-regression)", async () => {
-    const findMany = vi.fn((_q: QueryArg) => Promise.resolve([]));
-    const count = vi.fn((_q: QueryArg) => Promise.resolve(0));
-    const repository = createHistoryRepository(findMany, count);
-
-    await repository.getCompiledHistory(headSession, true);
-
-    expect(findMany.mock.calls[0]?.[0].where).not.toHaveProperty(
-      "periodStatus",
-    );
-    expect(count.mock.calls[0]?.[0].where).not.toHaveProperty("periodStatus");
-  });
-
-  it("does NOT apply the periodStatus filter for a lead (non-regression)", async () => {
-    const findMany = vi.fn((_q: QueryArg) => Promise.resolve([]));
-    const count = vi.fn((_q: QueryArg) => Promise.resolve(0));
-    const repository = createHistoryRepository(findMany, count);
-
-    await repository.getCompiledHistory(leadSession, true);
-
-    const listWhere = findMany.mock.calls[0]?.[0].where;
-    expect(listWhere).not.toHaveProperty("periodStatus");
-    // Lead History scopes sections by author, unchanged.
-    expect(listWhere).toMatchObject({
-      sections: { some: { authorId: leadSession.userId } },
-    });
   });
 });
 
@@ -583,8 +497,10 @@ describe("WeeklyReportPrismaRepository.getVisibleReportId / getLatestPublishedVi
     return new WeeklyReportPrismaRepository(prisma);
   }
 
-  const viewerSession = {
+  const viewerSession: UserSession = {
     userId: "c3333333-3333-4333-8333-333333333333",
+    email: "viewer@example.test",
+    name: "Viewer",
     role: "viewer" as const,
     viewerGroupAccess: [GROUP_A],
   };
@@ -661,6 +577,8 @@ describe("WeeklyReportPrismaRepository.getVisibleReportId / getLatestPublishedVi
 
     await repository.getLatestPublishedVisibleId({
       userId: LEAD_ID,
+      email: "lead@example.test",
+      name: "Lead",
       role: "lead" as const,
       reportingGroupId: GROUP_A,
       viewerGroupAccess: [],

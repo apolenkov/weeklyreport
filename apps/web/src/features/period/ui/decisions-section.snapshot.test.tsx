@@ -16,6 +16,7 @@ const BASE_DECISION = {
   owner: "Vasily Lead",
   impact: "Faster delivery",
   deadline: null,
+  stageNames: ["Planning"],
 };
 
 describe("DecisionsSection meta-row", () => {
@@ -25,7 +26,12 @@ describe("DecisionsSection meta-row", () => {
   });
 
   it("renders the 'No stage set' warning pill when stageNames is absent", () => {
-    render(<DecisionsSection decisions={[BASE_DECISION]} readOnly />);
+    render(
+      <DecisionsSection
+        decisions={[{ ...BASE_DECISION, stageNames: [] }]}
+        readOnly
+      />,
+    );
     expect(screen.getByText("No stage set")).toBeInTheDocument();
     expect(screen.queryByText("All stages")).not.toBeInTheDocument();
   });
@@ -33,15 +39,15 @@ describe("DecisionsSection meta-row", () => {
   it("renders specific stage chips alongside the owner in the meta-row", () => {
     render(
       <DecisionsSection
-        decisions={[{ ...BASE_DECISION, stageNames: ["Analysis", "Dev"] }]}
+        decisions={[
+          { ...BASE_DECISION, stageNames: ["Analysis", "Development"] },
+        ]}
         stagesForProduct={() => ["Analysis", "Development"]}
         readOnly
       />,
     );
     expect(screen.getByText("Vasily Lead")).toBeInTheDocument();
     expect(screen.getByText("Analysis")).toBeInTheDocument();
-    // stage-label-canonicalization: a stored short "Dev" heals to the canonical
-    // "Development" at render (the decision row never shows the short form).
     expect(screen.getByText("Development")).toBeInTheDocument();
   });
 });

@@ -2,7 +2,6 @@ import type { AdminSnapshot } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { createNullLogger } from "../../lib/logger.js";
-import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   adminSession,
   buildAdminCaller,
@@ -140,7 +139,6 @@ describe("focused admin services", () => {
       repository,
       createNullLogger(),
     );
-    const reminderService = new ReminderAdminService(repository);
 
     const withProject = await projectService.upsertProject({
       archived: false,
@@ -149,19 +147,7 @@ describe("focused admin services", () => {
       leadName: leadSession.name,
       name: "Project 1",
     });
-    const withRule = await reminderService.upsertReminderRule({
-      fireAt: new Date("2026-04-17T09:00:00.000Z"),
-      id: "66666666-6666-4666-8666-666666666666",
-      kind: "deadline",
-      reportId: "55555555-5555-4555-8555-555555555555",
-      status: "active",
-      timezone: "Europe/Moscow",
-      version: 1,
-      policyId: null,
-    });
-
     expect(withProject.projects).toHaveLength(1);
-    expect(withRule.reminderRules).toHaveLength(1);
   });
 
   it("rejects non-admin access at the live procedure gate", async () => {
@@ -413,65 +399,6 @@ describe("focused admin services", () => {
       expect(result.projects[0]?.name).toBe("Updated");
     });
   });
-
-  describe("upsertReminderRule — regression", () => {
-    it("creates a new reminder rule with kind/fireAt/status fields", async () => {
-      const service = new ReminderAdminService(
-        createRepository(initialSnapshot),
-      );
-
-      const result = await service.upsertReminderRule({
-        id: "66666666-6666-4666-8666-666666666666",
-        reportId: "22222222-2222-4222-8222-222222222222",
-        kind: "deadline",
-        fireAt: new Date("2026-04-17T09:00:00.000Z"),
-        timezone: "Europe/Moscow",
-        status: "active",
-        version: 1,
-        policyId: null,
-      });
-
-      expect(result.reminderRules).toHaveLength(1);
-      const rule = expectDefined(result.reminderRules[0]);
-      expect(rule.kind).toBe("deadline");
-      expect(rule.fireAt).toBeInstanceOf(Date);
-      expect(rule.status).toBe("active");
-      expect(rule.timezone).toBe("Europe/Moscow");
-      expect(rule.version).toBe(1);
-    });
-
-    it("updates existing reminder rule by ID", async () => {
-      const service = new ReminderAdminService(
-        createRepository(initialSnapshot),
-      );
-
-      await service.upsertReminderRule({
-        id: "66666666-6666-4666-8666-666666666666",
-        reportId: "22222222-2222-4222-8222-222222222222",
-        kind: "deadline",
-        fireAt: new Date("2026-04-17T09:00:00.000Z"),
-        timezone: "Europe/Moscow",
-        status: "active",
-        version: 1,
-        policyId: null,
-      });
-
-      const result = await service.upsertReminderRule({
-        id: "66666666-6666-4666-8666-666666666666",
-        reportId: "22222222-2222-4222-8222-222222222222",
-        kind: "deadline",
-        fireAt: new Date("2026-04-18T09:00:00.000Z"),
-        timezone: "Europe/Moscow",
-        status: "paused",
-        version: 2,
-        policyId: null,
-      });
-
-      expect(result.reminderRules).toHaveLength(1);
-      expect(result.reminderRules[0]?.status).toBe("paused");
-      expect(result.reminderRules[0]?.version).toBe(2);
-    });
-  });
 });
 
 describe("removeUser — DB deletion via repository", () => {
@@ -587,34 +514,6 @@ describe("removeProject — archive behavior", () => {
 
     expect(result.projects).toHaveLength(1);
     expect(result.projects[0]?.archived).toBe(true);
-  });
-});
-
-describe("removeReminderRule — deletion", () => {
-  it("removes the reminder rule from the snapshot", async () => {
-    const snapshotWithRule: AdminSnapshot = {
-      ...initialSnapshot,
-      reminderRules: [
-        {
-          id: "66666666-6666-4666-8666-666666666666",
-          reportId: "22222222-2222-4222-8222-222222222222",
-          kind: "deadline",
-          fireAt: new Date("2026-04-17T09:00:00.000Z"),
-          timezone: "Europe/Moscow",
-          status: "active",
-          version: 1,
-          policyId: null,
-        },
-      ],
-    };
-    const service = new ReminderAdminService(
-      createRepository(snapshotWithRule),
-    );
-    const result = await service.removeReminderRule(
-      "66666666-6666-4666-8666-666666666666",
-    );
-
-    expect(result.reminderRules).toHaveLength(0);
   });
 });
 

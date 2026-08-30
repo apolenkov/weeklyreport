@@ -13,7 +13,14 @@ const products: Product[] = [
     id: "p1",
     name: "CRM",
     overallStatus: "on-track",
-    stages: [],
+    stages: [
+      {
+        stageName: "Development",
+        status: "on-track",
+        ownership: "mine",
+        assignee: "Test Lead",
+      },
+    ],
   },
 ];
 
@@ -28,12 +35,14 @@ describe("RiskEditDialog - SDLC stage selector", () => {
         onSave={onSave}
         onCancel={() => undefined}
         defaultProductId="p1"
-        stagesForProduct={() => ["Dev", "Testing"]}
+        stagesForProduct={() => ["Development", "Testing"]}
       />,
     );
 
     // Both checkboxes should start unchecked (no flagged stages in pipeline).
-    expect(screen.getByRole("checkbox", { name: "Dev" })).not.toBeChecked();
+    expect(
+      screen.getByRole("checkbox", { name: "Development" }),
+    ).not.toBeChecked();
     expect(screen.getByRole("checkbox", { name: "Testing" })).not.toBeChecked();
 
     fireEvent.change(screen.getByLabelText(/^Risk \*/i), {
@@ -61,7 +70,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
         overallStatus: "at-risk",
         stages: [
           {
-            stageName: "Dev",
+            stageName: "Development",
             status: "blocked",
             ownership: "mine",
             assignee: "Lead",
@@ -84,12 +93,14 @@ describe("RiskEditDialog - SDLC stage selector", () => {
         onSave={onSave}
         onCancel={() => undefined}
         defaultProductId="p1"
-        stagesForProduct={() => ["Dev", "Testing"]}
+        stagesForProduct={() => ["Development", "Testing"]}
       />,
     );
 
     // Stage checkboxes start empty on create regardless of pipeline flags.
-    expect(screen.getByRole("checkbox", { name: "Dev" })).not.toBeChecked();
+    expect(
+      screen.getByRole("checkbox", { name: "Development" }),
+    ).not.toBeChecked();
     expect(screen.getByRole("checkbox", { name: "Testing" })).not.toBeChecked();
 
     fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
@@ -108,7 +119,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
         onSave={onSave}
         onCancel={() => undefined}
         defaultProductId="p1"
-        stagesForProduct={() => ["Dev"]}
+        stagesForProduct={() => ["Development"]}
       />,
     );
 
@@ -141,7 +152,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
         onSave={onSave}
         onCancel={() => undefined}
         defaultProductId="p1"
-        stagesForProduct={() => ["Dev", "Testing"]}
+        stagesForProduct={() => ["Development", "Testing"]}
       />,
     );
 
@@ -154,14 +165,13 @@ describe("RiskEditDialog - SDLC stage selector", () => {
     fireEvent.change(screen.getByLabelText(/^Mitigation \*/i), {
       target: { value: "Escalate" },
     });
-    // No stages are pre-selected (none are at-risk/blocked). Select 'Dev' explicitly.
-    fireEvent.click(screen.getByRole("checkbox", { name: "Dev" }));
+    // No stages are pre-selected (none are at-risk/blocked). Select Development explicitly.
+    fireEvent.click(screen.getByRole("checkbox", { name: "Development" }));
 
     fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
-    // stage-label-canonicalization 1.2: the selected "Dev" option persists as
-    // the canonical "Development".
+    // The selected canonical stage is persisted in the payload.
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
       stageNames: ["Development"],
       text: "Vendor delay",
@@ -207,7 +217,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
         onCancel={() => undefined}
         defaultProductId="p1"
         stagesForProduct={(id) =>
-          id === "p2" ? ["Dev", "Testing"] : ["Planning"]
+          id === "p2" ? ["Development", "Testing"] : ["Planning"]
         }
       />,
     );
@@ -223,7 +233,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
     ]);
   });
 
-  it("does NOT pre-select stages on create when pipeline uses alias (Dev → Development)", () => {
+  it("does NOT pre-select stages on create when pipeline has flagged stages", () => {
     const productsWithAlias: Product[] = [
       {
         id: "p1",
@@ -231,7 +241,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
         overallStatus: "blocked",
         stages: [
           {
-            stageName: "Dev",
+            stageName: "Development",
             status: "blocked",
             ownership: "mine",
             assignee: "Lead",
@@ -273,7 +283,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
         overallStatus: "blocked",
         stages: [
           {
-            stageName: "Dev",
+            stageName: "Development",
             status: "blocked",
             ownership: "mine",
             assignee: "Lead",
@@ -296,7 +306,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
         onSave={() => undefined}
         onCancel={() => undefined}
         defaultProductId="p1"
-        stagesForProduct={() => ["Dev", "Testing"]}
+        stagesForProduct={() => ["Development", "Testing"]}
       />,
     );
 
@@ -317,7 +327,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
         onSave={() => undefined}
         onCancel={() => undefined}
         defaultProductId="p1"
-        stagesForProduct={() => ["Dev", "Testing"]}
+        stagesForProduct={() => ["Development", "Testing"]}
       />,
     );
 
@@ -335,7 +345,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
         onSave={() => undefined}
         onCancel={() => undefined}
         defaultProductId="p1"
-        stagesForProduct={() => ["Dev", "Testing"]}
+        stagesForProduct={() => ["Development", "Testing"]}
       />,
     );
 
@@ -345,8 +355,8 @@ describe("RiskEditDialog - SDLC stage selector", () => {
       "true",
     );
 
-    // Toggle Dev stage checkbox — severity must NOT flip back to at-risk.
-    fireEvent.click(screen.getByRole("checkbox", { name: "Dev" }));
+    // Toggle Development stage checkbox — severity must NOT flip back to at-risk.
+    fireEvent.click(screen.getByRole("checkbox", { name: "Development" }));
 
     expect(screen.getByRole("button", { name: /Blocked/i })).toHaveAttribute(
       "aria-pressed",
@@ -366,7 +376,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
         overallStatus: "blocked",
         stages: [
           {
-            stageName: "Dev",
+            stageName: "Development",
             status: "blocked",
             ownership: "mine",
             assignee: "Lead",
@@ -383,7 +393,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
         onSave={() => undefined}
         onCancel={() => undefined}
         defaultProductId="p1"
-        stagesForProduct={() => ["Dev"]}
+        stagesForProduct={() => ["Development"]}
       />,
     );
 
@@ -402,7 +412,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
         overallStatus: "blocked",
         stages: [
           {
-            stageName: "Dev",
+            stageName: "Development",
             status: "blocked",
             ownership: "mine",
             assignee: "Lead",
@@ -418,7 +428,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
           id: "r1",
           productId: "p1",
           productName: "CRM",
-          stageNames: ["Dev"],
+          stageNames: ["Development"],
           severity: "at-risk",
           text: "Old risk",
           impact: "",
@@ -428,7 +438,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
         onSave={() => undefined}
         onCancel={() => undefined}
         defaultProductId="p1"
-        stagesForProduct={() => ["Dev"]}
+        stagesForProduct={() => ["Development"]}
       />,
     );
 
@@ -452,7 +462,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
         onSave={() => undefined}
         onCancel={() => undefined}
         defaultProductId="p1"
-        stagesForProduct={() => ["Dev"]}
+        stagesForProduct={() => ["Development"]}
       />,
     );
 
@@ -476,7 +486,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
         onSave={() => undefined}
         onCancel={() => undefined}
         defaultProductId="p1"
-        stagesForProduct={() => ["Dev", "Testing"]}
+        stagesForProduct={() => ["Development", "Testing"]}
       />,
     );
 
@@ -491,7 +501,9 @@ describe("RiskEditDialog - SDLC stage selector", () => {
     expect(
       screen.getByRole("button", { name: /Blocked/i }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("checkbox", { name: "Dev" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("checkbox", { name: "Development" }),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText(/^Product/i)).toBeInTheDocument();
   });
 });

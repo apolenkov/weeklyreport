@@ -1,134 +1,58 @@
 ## Purpose
 
-The 2026-06-10 design-polish walk-through found that horizontal control
-clusters (the admin users-tab filter row, the head Status Report header)
-had drifted into per-control ad-hoc heights, and that color changes were at
-risk of landing without the research step the repo "Visual And Theme Work"
-rule requires. This capability fixes two durable properties established by
-the `polish-ui-density-and-palette` change: grouped controls share one
-height token, and palette work stays research-gated. It governs visual
-consistency properties, not a code module.
+Define the current responsive control geometry used by the report interface.
 
 ## Requirements
 
-### Requirement: Grouped interactive controls in one row share a consistent height
+### Requirement: Grouped controls share a consistent height
 
-Interactive controls grouped in one horizontal cluster MUST render at a single
-consistent control height drawn from a shared height token, not per-control
-ad-hoc heights. This applies to clusters such as a filter row or a header action
-bar (buttons, selects, inputs together). It is the durable property the admin
-users-tab filter row and the head Status Report header fixes establish, and it
-MUST NOT regress. Adjusting layout to satisfy this MUST NOT remove any control
-from the keyboard tab order or change its operability (see
-`a11y-regression-coverage`).
+Interactive controls in one horizontal cluster MUST use one shared control
+height token. Buttons, selects, inputs, and segmented controls MUST remain
+keyboard-focusable and operable.
 
-Exception: an inert deferred-feature placeholder (aria-disabled, no click
-handler, ComingSoonBadge pattern — see `head-toolbar-semantics`) MAY render
-compact, below the cluster height. The requirement's intent is hittable
-interactive targets; a non-interactive placeholder is not one. The exception
-applies ONLY while the control is inert — the moment the feature activates,
-the control MUST adopt the cluster height.
+#### Scenario: a filter or action row renders
 
-#### Scenario: a filter/action row renders at one height
+- **WHEN** a horizontal cluster contains mixed controls
+- **THEN** every control uses the shared height
+- **AND** every control remains keyboard-focusable and operable
 
-- **WHEN** a horizontal cluster contains a mix of buttons, selects, and inputs
-- **THEN** every control in the cluster shares the same rendered height
-- **AND** each control remains keyboard-focusable and operable
+### Requirement: SDLC connectors align with stage chips
 
-#### Scenario: a cluster contains an inert deferred placeholder
+At widths of 64 rem and above, each SDLC connector MUST be vertically centered
+on the stage chip box. The chip and connector MUST use one shared height, stage
+boxes MUST have equal compact widths, and the pipeline MUST remain on one row.
+Connectors are decorative and MUST be excluded from the accessibility tree and
+keyboard navigation.
 
-- **WHEN** a horizontal cluster contains real actions and an aria-disabled
-  ComingSoonBadge placeholder
-- **THEN** the real actions share the cluster height
-- **AND** the placeholder MAY render compact below that height
-- **AND** activating the deferred feature restores the placeholder's control
-  to the cluster height
+Below 64 rem, the pipeline MUST use a four-column grid through 48 rem and a
+two-column grid below 48 rem, without connector arrows, horizontal scrollers,
+or root overflow. Stage controls MUST retain a 44 px touch target.
 
-### Requirement: Color/palette changes stay research-gated
+#### Scenario: stages show assignees
 
-Any change to background, accent, or theme color tokens MUST be preceded by an
-approved research memo with concrete options and a chosen direction (the repo
-"Visual And Theme Work" rule). A proposal MAY explore and recommend palette
-options, but MUST NOT implement CSS color/background/theme tokens without an
-explicit user sign-off recorded in the change.
+- **WHEN** stage chips include assignee labels at desktop width
+- **THEN** the connector midline matches the chip midline
+- **AND** assignee height does not shift either alignment
 
-#### Scenario: a palette item ships options before code
+#### Scenario: a compact viewport renders the pipeline
 
-- **WHEN** a change identifies an undesirable color/background
-- **THEN** it delivers a research memo with options and a recommendation
-- **AND** no CSS color/background/theme token is edited until the user approves a
-  direction
+- **WHEN** the viewport is narrower than 64 rem
+- **THEN** stages use the prescribed grid and arrows are absent
+- **AND** the page has no root horizontal overflow
 
-### Requirement: SDLC pipeline arrows center on the stage chip box
+### Requirement: Compact actions meet the touch target
 
-At viewport widths of 64 rem (1024 CSS px) and above, the connector arrow
-between SDLC stage chips MUST be vertically centered on the chip box itself —
-not on the chip-plus-assignee-label column. Consumer surface:
-`apps/web/src/features/period/ui/sdlc-pipeline.tsx` with `stage-chip.tsx`, reused
-by the read-only head/report surfaces. The chip box and arrow box MUST derive
-their height from one shared named constant, so alignment holds by construction
-with and without assignee names. Chip boxes MUST share a common top edge and the
-pipeline MUST NOT wrap. Stage boxes MUST use one equal compact width and MUST
-NOT grow when a product has fewer visible stages. Each connector MUST be decorative, hidden from the
-accessibility tree, and excluded from keyboard navigation. From 48 rem through
-below 64 rem, the pipeline MUST use a four-column grid without connector arrows;
-below 48 rem it MUST use a two-column grid without connector arrows. Both grid
-modes MUST avoid horizontal scrollers and root horizontal overflow, and stage
-controls MUST retain the 44 px touch floor.
+Below 48 rem, report view-mode segments, the development role-switcher trigger
+and menu items, and admin user-row actions MUST each measure at least 44 by 44
+CSS pixels. The shared segmented-toggle track MUST preserve child focus
+indicators and its compact desktop geometry.
 
-#### Scenario: stages render with assignee names below the chips
-
-- **WHEN** the pipeline renders at or above 64 rem and stage chips carry
-  assignee labels
-- **THEN** each connector arrow's vertical midline matches the adjacent chip
-  boxes' vertical midline
-- **AND** chip and arrow boxes carry the same shared height value
-- **AND** assignee-label height does not shift a chip or connector
-
-#### Scenario: connector arrows are decorative
-
-- **WHEN** a keyboard or assistive-technology user traverses a wide pipeline
-- **THEN** each stage control remains reachable in canonical order
-- **AND** connector arrows receive no focus and contribute no accessible name
-
-#### Scenario: the stages row wraps on a narrow viewport
-
-- **WHEN** the viewport becomes narrower than 64 rem
-- **THEN** the pipeline switches to a four-column grid from 48 rem through
-  below 64 rem and a two-column grid below 48 rem
-- **AND** connector arrows are absent rather than wrapping onto misleading
-  lines
-- **AND** the product card creates no horizontal scroller or root horizontal
-  overflow
-
-### Requirement: Remaining compact-viewport actions meet the touch floor
-
-Below 48 rem, each segment of the report view-mode toggle, the development-only
-role-switcher trigger and its interactive menu items, and every admin-user row
-action in the corresponding `apps/web` React surfaces MUST render at least 44
-by 44 CSS pixels. Labels, selected state, navigation, dropdown behavior, and
-compact desktop geometry MUST remain unchanged. The shared segmented-toggle
-track MUST also have at least the 44 px mobile minimum while retaining its
-existing compact desktop height, and MUST NOT clip its child focus indicators.
-
-#### Scenario: Lead changes report view on a phone
+#### Scenario: a phone user changes report view
 
 - **WHEN** Edit and Slides segments are visible below 48 rem
-- **THEN** each interactive segment measures at least 44 by 44 CSS pixels
-  without root overflow
+- **THEN** each segment is at least 44 by 44 CSS pixels without root overflow
 
-#### Scenario: Administrator uses user-row actions on a phone
+#### Scenario: a phone user operates a user row
 
-- **WHEN** Edit, Activate or Deactivate, and More actions are visible below 48
-  rem
-- **THEN** every action measures at least 44 by 44 CSS pixels while the
-  intentionally scrollable table stays contained
-
-#### Scenario: Dev role switcher is enabled
-
-- **WHEN** the development-only role switcher appears below 48 rem
-- **THEN** its trigger and every interactive role, reseed, and logout menu item
-  measure at least 44 by 44 CSS pixels and preserve their menu semantics
-- **AND** its menu remains within the viewport at 280 CSS pixels wide
-- **AND** a failed logout or reseed re-enables the trigger before returning
-  keyboard focus to it
+- **WHEN** user-row actions are visible below 48 rem
+- **THEN** every action is at least 44 by 44 CSS pixels

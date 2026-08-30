@@ -113,7 +113,7 @@ export const DEVELOPMENT_LEAD_CONTENT: Record<string, LeadContent> = {
     },
     decisions: [
       {
-        text: "Решение: завести E2E-сьют чекаута в обязательный ночной прогон",
+        text: "Решение: завести обязательный ночной прогон чекаута",
         impact: "Снижает риск регрессий в проде на ~70%",
       },
       {

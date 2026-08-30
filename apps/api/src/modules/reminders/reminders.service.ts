@@ -5,7 +5,9 @@ import {
   type PaginationInput,
 } from "@customreport/shared";
 
+import type { EnvConfig } from "../../infrastructure/config/env.schema.js";
 import { type AppLogger, createNullLogger } from "../../lib/logger";
+import { OrganizationService } from "../organization/index.js";
 import { ReminderDomainError, ReminderScopeError } from "./reminders.errors.js";
 import {
   NOOP_REMINDERS_TELEMETRY,
@@ -31,6 +33,8 @@ import {
 } from "./reminders-queue-payload.js";
 import { RemindersScopeService } from "./reminders-scope.service.js";
 
+const ISO_DATE_LENGTH = 10;
+
 export { ReminderDomainError, ReminderScopeError };
 
 interface ReminderExecutionResult {
@@ -49,19 +53,55 @@ export class RemindersService {
     logger?: AppLogger,
     emailQueue?: RemindersEnqueuer,
     private readonly telemetry: RemindersTelemetry = NOOP_REMINDERS_TELEMETRY,
+    private readonly organizationService?: OrganizationService,
+    private readonly env?: Pick<EnvConfig, "APP_BASE_URL">,
   ) {
     this.logger = logger ?? createNullLogger();
     this.emailQueue = emailQueue ?? null;
-    this.scope = new RemindersScopeService(repository, (ruleId, email) =>
-      this.requestReminderExecutionWithOutcome(ruleId, email),
+    this.scope = new RemindersScopeService(
+      repository,
+      async (ruleId, email, leadName) =>
+        this.requestReminderExecutionWithOutcome(
+          ruleId,
+          email,
+          await this.buildManualPayload(ruleId, leadName),
+        ),
     );
+  }
+
+  private async buildManualPayload(
+    ruleId: string,
+    leadName?: string,
+  ): Promise<ReminderExecutionPayload> {
+    if (!leadName || !this.organizationService || !this.env) {
+      throw new ReminderDomainError(
+        "Manual reminder dispatch requires live lead and organization context.",
+      );
+    }
+    const rule = await this.repository.getRule(ruleId);
+    const reportPeriod = await requireRulePeriodLabel(this.repository, ruleId);
+    if (!rule?.reportId || rule.kind !== "deadline") {
+      throw new ReminderDomainError(
+        "Manual reminder dispatch requires an active deadline rule.",
+      );
+    }
+    const organization = await this.organizationService.getPublic();
+    return {
+      kind: "deadline",
+      cycleDate: rule.fireAt.toISOString().slice(0, ISO_DATE_LENGTH),
+      leadName,
+      reportPeriod,
+      deadlineIso: rule.fireAt.toISOString(),
+      sectionUrl: `${this.env.APP_BASE_URL}/lead/report/${rule.reportId}`,
+      organization,
+    };
   }
 
   // Shared dedupe key; enqueue only when this call inserted the row.
   async requestReminderExecution(
     ruleId: string,
     recipientEmail: string,
-    payload?: ReminderExecutionPayload,
+    payload: ReminderExecutionPayload,
   ): Promise<AdminReminderExecution> {
     const { execution } = await this.requestReminderExecutionWithOutcome(
       ruleId,
@@ -75,27 +115,35 @@ export class RemindersService {
   async requestReminderExecutionWithOutcome(
     ruleId: string,
     recipientEmail: string,
-    payload?: ReminderExecutionPayload,
+    payload: ReminderExecutionPayload,
   ): Promise<ReminderExecutionResult> {
     const rule = await this.loadActiveRule(ruleId);
-
     const { execution, inserted } = await recordExecutionOnConflict(
       this.repository,
       buildExecutionCandidate(rule, recipientEmail, payload),
+      payload,
     );
 
-    // Lazy: only the paths that actually enqueue may pay the period-label read.
-    const queuePayload = async () =>
-      payload ?? {
-        reportPeriod: await requireRulePeriodLabel(this.repository, rule.id),
-      };
+    const persistedQueuePayload = async () => {
+      const persisted = await this.repository.getExecutionQueuePayload(
+        execution.id,
+      );
+      if (persisted) return persisted;
+      // The payload-contract migration quarantines pre-contract queued rows as
+      // failed. Their next eligible dispatch supplies a complete current
+      // snapshot, which the failed→queued CAS persists atomically.
+      if (execution.status === "failed") return payload;
+      throw new ReminderDomainError(
+        `Reminder execution ${execution.id} has no persisted email payload.`,
+      );
+    };
 
     if (!inserted) {
       return this.resolveExistingExecution(
         ruleId,
         execution,
         recipientEmail,
-        queuePayload,
+        persistedQueuePayload,
       );
     }
 
@@ -114,7 +162,7 @@ export class RemindersService {
         this.enqueueContext(this.emailQueue),
         execution,
         recipientEmail,
-        await queuePayload(),
+        payload,
       ),
       outcome: "created",
     };
@@ -210,11 +258,18 @@ export class RemindersService {
       });
       return;
     }
-    const reportPeriod = await requireRulePeriodLabel(this.repository, rule.id);
+    const payload = await this.repository.getExecutionQueuePayload(
+      execution.id,
+    );
+    if (!payload) {
+      throw new ReminderDomainError(
+        `Reminder execution ${execution.id} has no persisted email payload.`,
+      );
+    }
     await reEnqueueStuck(
       this.enqueueContext(this.emailQueue),
       execution,
-      reportPeriod,
+      payload,
     );
   }
 
@@ -231,21 +286,21 @@ export class RemindersService {
   }
 
   async markReminderSent(executionId: string): Promise<AdminReminderExecution> {
-    const execution = await this.repository.getExecution(executionId);
+    this.logger.info("marking reminder sent", { executionId });
+    const sent = await this.repository.markExecutionSent(
+      executionId,
+      new Date(),
+    );
+    if (sent) return sent;
 
+    const execution = await this.repository.getExecution(executionId);
     if (!execution) {
       throw new ReminderDomainError(
         `Reminder execution ${executionId} was not found.`,
       );
     }
-
-    this.logger.info("marking reminder sent", { executionId });
-    return this.repository.saveExecution(
-      adminReminderExecutionSchema.parse({
-        ...execution,
-        status: "sent",
-        sentAt: new Date(),
-      }),
+    throw new ReminderDomainError(
+      `Reminder execution ${executionId} is not claimed for sending.`,
     );
   }
 

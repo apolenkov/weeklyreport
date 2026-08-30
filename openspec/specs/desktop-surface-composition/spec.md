@@ -2,66 +2,55 @@
 
 ## Purpose
 
-Keep WeeklyReport desktop pages visually coherent, grounded, and stable during primary navigation without changing their data or compact-layout behavior.
+Keep desktop pages aligned, readable, and stable during primary navigation.
 
 ## Requirements
 
-### Requirement: Desktop primary navigation preserves the complete application frame
+### Requirement: Desktop navigation preserves the application frame
 
-Primary navigation between History, Dashboard, and Status MUST leave the desktop viewport at the top of the document with the complete application header visible. The route transition MUST NOT focus-scroll `main#main-content` beneath the persistent header, while the skip link MUST retain a programmatically focusable main target.
+Primary navigation between History, Dashboard, and Status MUST leave the
+desktop viewport at the document top with the complete application header
+visible. Route transitions MUST NOT focus-scroll `main#main-content` beneath
+the persistent header, while the skip link MUST retain a focusable main target.
 
-#### Scenario: Head changes primary route at the top of the page
+#### Scenario: a head changes route at the top of the page
 
-- **WHEN** a head activates History, Dashboard, or Status from the desktop navigation while `window.scrollY` is zero
-- **THEN** the destination renders with `window.scrollY` still zero
-- **AND** the navigation header remains fully visible above `main#main-content`
+- **WHEN** a head activates a primary route while `window.scrollY` is zero
+- **THEN** the destination keeps `window.scrollY` at zero
+- **AND** the navigation header remains visible above `main#main-content`
 
-### Requirement: Decorative desktop background never carries product meaning
+### Requirement: Decorative background has no product meaning
 
-Application desktop routes MUST use a restrained decorative background layer that is visually subordinate to card surfaces. The decoration MUST be CSS-only, MUST expose no semantic content or interaction, MUST preserve foreground contrast, and MUST NOT animate.
+Desktop routes MAY use a restrained CSS-only decorative background subordinate
+to card surfaces. It MUST expose no semantic content or interaction, preserve
+foreground contrast, and remain static.
 
-#### Scenario: Decorative shapes are unavailable
+#### Scenario: decoration is unavailable
 
-- **WHEN** CSS background decoration is disabled or ignored by assistive technology
-- **THEN** every page retains the same information, controls, reading order, and completion status
+- **WHEN** background decoration is disabled or ignored by assistive technology
+- **THEN** information, controls, reading order, and completion status remain
+  unchanged
 
-### Requirement: Desktop application frame stays aligned and usable
+### Requirement: Desktop surfaces share aligned geometry
 
-The desktop navigation and primary application pages MUST share the same content width. At the showcase desktop width, the Head report context toolbar MUST keep the period and trailing control clusters on one row without hiding their visible labels.
+Desktop navigation and primary application pages MUST share the same content
+width. Head report context controls MUST remain usable on one row at showcase
+desktop width without hiding visible labels.
 
-#### Scenario: Head opens the complete slides toolbar
+#### Scenario: the head opens report controls
 
-- **WHEN** the Head views slides with scope, view, deferred template, and density controls visible
-- **THEN** the navigation, toolbar, and report content share aligned outer edges
-- **AND** the context controls remain on one row without replacing their text labels with icon-only controls
+- **WHEN** a head views a report at showcase desktop width
+- **THEN** navigation, context controls, and report content share aligned edges
+- **AND** visible control labels remain available
 
-### Requirement: Empty History aligns with its summary rail
+### Requirement: Empty history uses the current empty-state surface
 
-The `/reports` desktop empty state MUST occupy the same visual grid row as History Summary and Submission Status. It MUST present one centered empty-state message without leaving a short detached placeholder above unused grid space.
+The `/reports` empty state MUST occupy the same visual grid row as its summary
+rail, present one centered message, use `--color-surface-empty`, and show no
+fabricated report data or action.
 
-#### Scenario: Compiled history has no current entries
+#### Scenario: history has no current entries
 
-- **WHEN** `/reports` renders no current history at a desktop width
-- **THEN** the empty-state panel and the complete summary rail share aligned top and bottom grid boundaries
-- **AND** no fabricated report data or action is shown
-
-### Requirement: Empty History uses the semantic empty-state surface
-
-The `/reports` History empty-state panel MUST use the `--color-surface-empty` semantic token rather than the elevated `--color-card` token. The token correction MUST preserve the existing grid alignment, centered message, copy, and no-data behavior.
-
-#### Scenario: Compiled history renders the semantic empty surface
-
-- **WHEN** `/reports` renders no current history at a desktop width
-- **THEN** the empty-state panel uses `bg-[var(--color-surface-empty)]`
-- **AND** the empty-state panel does not use `bg-[var(--color-card)]`
-- **AND** the panel remains aligned with the complete summary rail row
-
-### Requirement: Visual acceptance covers every affected desktop surface
-
-The change MUST be accepted only after source-bound screenshots and direct interaction checks cover Head History, Dashboard, Status form, Status slides in Product and Leads scope, plus the shared Lead report control hierarchy.
-
-#### Scenario: Desktop composition is submitted for acceptance
-
-- **WHEN** implementation is complete
-- **THEN** a fresh manifest identifies the exact source SHA, route, role, state, and viewport for every required screenshot
-- **AND** an independent reviewer inspects the complete fresh set
+- **WHEN** `/reports` renders without current history at desktop width
+- **THEN** the empty panel and summary rail share aligned boundaries
+- **AND** the panel uses `bg-[var(--color-surface-empty)]`

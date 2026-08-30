@@ -96,9 +96,7 @@ existing email-only match remains the accepted path.
 Every JWT-admitting entry path carrying a human requester identity (regular
 tRPC session, requester-bound PDF-export rebuild, Bull Board admin guard) MUST
 consult the same revocation decision so a stale JWT cannot outlive a
-deactivation. The legacy PDF-export token without `requestedBy` is a narrow
-synthetic viewer session, not a human identity, and is intentionally outside
-this gate. The gate has two tiers, in order:
+deactivation. The gate has two tiers, in order:
 
 1. Redis revoked-set fast path, **fail-OPEN**: a thrown/failed lookup must NOT
    bar the user, otherwise a Redis outage would lock everyone out; the

@@ -21,10 +21,9 @@ describe("StageStep", () => {
     const onChange = vi.fn();
     render(<StageStep {...BASE_PROPS} onChange={onChange} />);
 
-    expect(screen.getByText(/^Required\. Select at least one/)).toHaveAttribute(
-      "id",
-      "record-stage-hint",
-    );
+    expect(
+      screen.getByText(/^Select at least one assigned stage/),
+    ).toHaveAttribute("id", "record-stage-hint");
     expect(
       screen.getByRole("checkbox", { name: "Development" }),
     ).not.toBeChecked();

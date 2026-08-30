@@ -30,8 +30,7 @@ export const NAV_LINKS: readonly NavLink[] = [
     title: HISTORY_LINK_TITLE,
     roles: ["lead"],
   },
-  // /head/history 307-redirects to /reports (same surface as viewer). The
-  // nav link points directly to the destination.
+  // Heads use the same published history surface as viewers.
   {
     href: REPORTS_ROUTE,
     label: "History",
@@ -57,8 +56,7 @@ export const NAV_LINKS: readonly NavLink[] = [
   { href: HEAD_DASHBOARD_ROUTE, label: "Dashboard", roles: ["head"] },
   { href: HEAD_REPORT_ROUTE, label: "Status", roles: ["head"] },
   // Slides is a mode toggle inside Status/History, not a separate nav
-  // destination. The legacy /head/slides URL still redirects to /reports
-  // (back-compat in head/slides/page.tsx).
+  // destination.
   // admin tab is admin-only. heads have a dashboard, not an admin panel.
   // The /admin/layout.tsx role gate enforces the same on the route.
   { href: ADMIN_ROUTE, label: "Admin", roles: ["admin"] },

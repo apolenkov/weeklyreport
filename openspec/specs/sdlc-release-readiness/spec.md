@@ -58,6 +58,7 @@ promote, verify, or roll back a real immutable artifact.
 
 #### Scenario: No production target exists
 
-- **WHEN** release-readiness work is performed during the MVP phase
+- **WHEN** release-readiness work is performed before a production target is
+  configured
 - **THEN** repository-local hardening and evidence contracts may be completed
 - **AND** external deployment tasks remain explicit first-production blockers

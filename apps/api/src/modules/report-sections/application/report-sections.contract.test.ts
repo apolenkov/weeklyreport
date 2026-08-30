@@ -431,7 +431,7 @@ describe("ReportSectionsService — multi-project", () => {
   // stage-guaranteed copy for write payloads.
   const multiWriteItems = multiProjectSection.items.map((it) => ({
     ...it,
-    stageNames: it.stageNames ?? [],
+    stageNames: it.stageNames,
   }));
 
   it("saveDraft updates traffic lights for multiple projects", async () => {

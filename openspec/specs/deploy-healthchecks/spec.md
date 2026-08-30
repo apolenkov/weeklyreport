@@ -2,7 +2,9 @@
 
 ## Purpose
 
-Docker healthchecks for the production stack must exercise real dependency paths, not just TCP/process liveness, so unhealthy containers are detected before they serve traffic.
+Docker healthchecks for the production API must exercise the real dependency
+path, not just TCP/process liveness, so an unhealthy container is detected
+before it serves traffic.
 
 ## Requirements
 

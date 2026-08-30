@@ -3,10 +3,14 @@ import type { AdminReminderExecution } from "@customreport/shared";
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { ExecutionPageRequest } from "./reminders-execution-pagination.js";
 import {
+  type ReminderQueuePayload,
+  reminderQueuePayloadSchema,
+} from "./reminders-queue-payload.js";
+import {
   isDedupeKeyConflict,
   toExecutionCreateData,
   toExecutionDomain,
-  toExecutionUpdateData,
+  toQueuePayload,
 } from "./reminders-row-mappers.js";
 
 export async function queryExecutionByDedupeKey(
@@ -20,27 +24,14 @@ export async function queryExecutionByDedupeKey(
   return execution ? toExecutionDomain(execution) : null;
 }
 
-export async function upsertExecution(
-  prisma: PrismaService,
-  execution: AdminReminderExecution,
-): Promise<AdminReminderExecution> {
-  const saved = await prisma.reminderExecution.upsert({
-    where: { dedupeKey: execution.dedupeKey },
-    create: toExecutionCreateData(execution),
-    update: toExecutionUpdateData(execution),
-    include: { rule: true },
-  });
-
-  return toExecutionDomain(saved);
-}
-
 export async function insertExecutionOnConflict(
   prisma: PrismaService,
   execution: AdminReminderExecution,
+  queuePayload: ReminderQueuePayload,
 ): Promise<{ execution: AdminReminderExecution; inserted: boolean }> {
   try {
     const created = await prisma.reminderExecution.create({
-      data: toExecutionCreateData(execution),
+      data: toExecutionCreateData(execution, queuePayload),
       include: { rule: true },
     });
     return { execution: toExecutionDomain(created), inserted: true };
@@ -56,6 +47,17 @@ export async function insertExecutionOnConflict(
   }
 }
 
+export async function queryExecutionQueuePayload(
+  prisma: PrismaService,
+  executionId: string,
+): Promise<ReminderQueuePayload | null> {
+  const row = await prisma.reminderExecution.findUnique({
+    where: { id: executionId },
+    select: { queuePayload: true },
+  });
+  return row ? toQueuePayload(row.queuePayload) : null;
+}
+
 // CAS claim: only one of two racing workers matches status pending → sending.
 export async function transitionExecutionToSending(
   prisma: PrismaService,
@@ -66,6 +68,21 @@ export async function transitionExecutionToSending(
     data: { status: "sending" },
   });
   return result.count > 0;
+}
+
+// CAS completion: only the worker that owns the sending claim can mark the
+// execution sent. Creation is deliberately impossible through this path.
+export async function markExecutionSent(
+  prisma: PrismaService,
+  executionId: string,
+  sentAt: Date,
+): Promise<AdminReminderExecution | null> {
+  const result = await prisma.reminderExecution.updateMany({
+    where: { id: executionId, status: "sending" },
+    data: { status: "sent", sentAt, error: null },
+  });
+  if (result.count === 0) return null;
+  return queryExecutionById(prisma, executionId);
 }
 
 // sending → pending for retryable failures; no-op if already sent/failed.
@@ -95,10 +112,16 @@ export async function markExecutionFailed(
 export async function requeueFailedExecution(
   prisma: PrismaService,
   executionId: string,
+  queuePayload: ReminderQueuePayload,
 ): Promise<boolean> {
+  const validatedPayload = reminderQueuePayloadSchema.parse(queuePayload);
   const result = await prisma.reminderExecution.updateMany({
     where: { id: executionId, status: "failed" },
-    data: { status: "pending", error: null },
+    data: {
+      status: "pending",
+      error: null,
+      queuePayload: validatedPayload,
+    },
   });
   return result.count > 0;
 }

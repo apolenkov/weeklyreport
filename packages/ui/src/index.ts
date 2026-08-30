@@ -1,8 +1,6 @@
 /** Public surface of `@customreport/ui` (components, hooks, `cn`). */
 // Utility
 
-export { ComingSoonBadge } from "./components/coming-soon-badge";
-export { ComingSoonTooltip } from "./components/coming-soon-tooltip";
 // UI Components
 export { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 export {

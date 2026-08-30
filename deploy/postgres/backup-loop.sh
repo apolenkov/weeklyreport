@@ -1,8 +1,7 @@
 #!/bin/sh
 # Periodic pg_dump loop for the production stack.
 #
-# Connects to postgres DIRECTLY, never through pgbouncer: pg_dump holds one
-# session across many statements, which transaction-mode pooling breaks.
+# Holds one PostgreSQL session across the complete dump.
 #
 # Every variable is required with no default. Cadence sets the intended local
 # recovery-point interval; retention sets the local history window. A silent

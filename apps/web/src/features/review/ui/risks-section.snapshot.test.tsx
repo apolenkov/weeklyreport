@@ -14,6 +14,7 @@ const BASE_RISK = {
   text: "Vendor delay",
   impact: "Delivery slips",
   mitigation: "Escalate",
+  stageNames: ["Planning"],
 };
 
 describe("RisksSection meta-row", () => {
@@ -25,7 +26,12 @@ describe("RisksSection meta-row", () => {
   });
 
   it("renders the No-stage-set warning pill when stageNames is absent", () => {
-    render(<RisksSection risks={[BASE_RISK]} sectionAuthorName="Anna" />);
+    render(
+      <RisksSection
+        risks={[{ ...BASE_RISK, stageNames: [] }]}
+        sectionAuthorName="Anna"
+      />,
+    );
     expect(screen.getByText("No stage set")).toBeInTheDocument();
     expect(screen.queryByText("All stages")).not.toBeInTheDocument();
     expect(
@@ -36,13 +42,12 @@ describe("RisksSection meta-row", () => {
   it("renders specific stage chips and author together in the meta-row", () => {
     render(
       <RisksSection
-        risks={[{ ...BASE_RISK, stageNames: ["Dev", "Testing"] }]}
-        stagesForProduct={() => ["Dev", "Testing"]}
+        risks={[{ ...BASE_RISK, stageNames: ["Development", "Testing"] }]}
+        stagesForProduct={() => ["Development", "Testing"]}
         sectionAuthorName="Vasily Lead"
       />,
     );
     expect(screen.getByText("Vasily Lead")).toBeInTheDocument();
-    // "Dev" is canonicalized to "Development" before rendering.
     expect(screen.getByText("Development")).toBeInTheDocument();
     expect(screen.getByText("Testing")).toBeInTheDocument();
     expect(

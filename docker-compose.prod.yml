@@ -1,13 +1,9 @@
 # Production Docker Compose configuration.
 # Usage: docker compose --env-file .env.production -f docker-compose.prod.yml up --build -d
 #
-# Tracing is OFF unless the operator supplies a collector explicitly (no
-# baked-in default — a default endpoint would report "started" while
-# exporting into a nonexistent host, losing every trace silently). To ship
-# traces, compose the observability overlay, which sets the endpoint:
-#   docker compose --env-file .env.production -f docker-compose.prod.yml \
-#     -f docker-compose.observability.yml up --build -d
-# or export OTEL_EXPORTER_OTLP_ENDPOINT for an external managed collector.
+# Tracing is OFF unless the operator supplies an external managed collector
+# explicitly. A baked-in endpoint would report "started" while exporting into
+# a nonexistent host, losing every trace silently.
 # With the endpoint absent the api boots without traces and says so at warn.
 #
 # Differences from docker-compose.yml:
@@ -76,10 +72,6 @@ services:
   # migrate bypasses it with a DATABASE_URL aimed straight at postgres:5432,
   # since DDL needs session-mode. Pool: ~20 backend conns serving ~100 clients.
   pgbouncer:
-    # 1.22.1-p0 is the NEWEST 1.22.1 packaging revision published on Docker
-    # Hub (registry-verified: the -p2 tag this file used to name was never
-    # published — it could not be pulled, so this pin is a correction, not a
-    # downgrade). Digest-pinned per the supply-chain floor.
     image: edoburu/pgbouncer:1.22.1-p0@sha256:7f39cf2f872c8d9a0bb0e6a5440c3bf5814036eccf284102870ab08e2603a2c7
     environment:
       DB_USER: customreport
@@ -92,21 +84,12 @@ services:
       DEFAULT_POOL_SIZE: ${PGBOUNCER_POOL_SIZE:?set pgbouncer pool size (e.g. 20)}
       RESERVE_POOL_SIZE: ${PGBOUNCER_RESERVE_POOL_SIZE:?set pgbouncer reserve pool size (e.g. 5)}
       AUTH_TYPE: scram-sha-256
-      # Prisma (and most ORMs) disable prepared statements when
-      # ?pgbouncer=true is set in the URL; keep this aligned.
       SERVER_RESET_QUERY: DISCARD ALL
       LOG_CONNECTIONS: 0
       LOG_DISCONNECTIONS: 0
     depends_on:
       postgres:
         condition: service_healthy
-    # Query-path probe: run a real SELECT through pgbouncer's own listener
-    # (127.0.0.1:5432, the path client traffic takes) so the check fails when
-    # pgbouncer cannot actually reach and query Postgres — not merely when its
-    # TCP listener accepts connections. pg_isready alone would report healthy
-    # while every pooled query timed out. $$ passes the literal $ to the
-    # container shell so DB_* resolve from the service environment, not at
-    # compose-parse time.
     healthcheck:
       test:
         [
@@ -147,7 +130,7 @@ services:
     image: customreport-backup:${OTEL_SERVICE_VERSION:?set the deployed release version (for example the Git SHA)}
     command: ["/usr/local/bin/backup-loop.sh"]
     environment:
-      # Direct to postgres, NOT pgbouncer — pg_dump needs one session for the
+      # Direct to postgres, not pgbouncer: pg_dump needs one session for the
       # whole dump, which transaction-mode pooling cannot hold.
       PGHOST: postgres
       PGPORT: 5432
@@ -229,9 +212,7 @@ services:
     image: customreport-migrate:${OTEL_SERVICE_VERSION:?set the deployed release version (for example the Git SHA)}
     command: ["./node_modules/.bin/prisma", "migrate", "deploy"]
     environment:
-      # migrate connects DIRECTLY to postgres (bypassing pgbouncer) because DDL
-      # needs session-mode — that is what DATABASE_URL below encodes. Prisma
-      # reads only DATABASE_URL; DIRECT_URL is the direct-connection escape hatch.
+      # Migrations connect directly to PostgreSQL because DDL needs a session.
       DATABASE_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB must be set}
       DIRECT_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB must be set}
     depends_on:
@@ -252,17 +233,7 @@ services:
         BUILD_VERSION: ${OTEL_SERVICE_VERSION:?set the deployed release version (for example the Git SHA)}
     image: customreport-api:${OTEL_SERVICE_VERSION:?set the deployed release version (for example the Git SHA)}
     environment:
-      # api connects through pgbouncer (transaction-mode) instead of
-      # postgres directly. The PrismaPg pg-pool adapter (prisma.service.ts)
-      # opens its own per-process pool against pgbouncer; pgbouncer multiplies
-      # those connections into a smaller pool against postgres. The query-string
-      # flags below are no-ops at the Prisma 7 client layer but are kept as
-      # explicit documentation of intent — they also prevent any future tool
-      # that DOES honour them from over-pooling.
       DATABASE_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@pgbouncer:5432/${POSTGRES_DB:?POSTGRES_DB must be set}?pgbouncer=true&connection_limit=1
-      # DIRECT_URL is reserved as an escape hatch for tooling that needs to
-      # bypass pgbouncer (introspection, manual DDL, etc.). Not used at the
-      # Prisma client layer in v7.
       DIRECT_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB must be set}
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -290,9 +261,8 @@ services:
       LOG_DIR: /app/logs
       OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:?set telemetry posture (true disables the SDK, false enables it when an endpoint is set)}
       # NO default endpoint on purpose (repo rule: no silent defaults for
-      # product config): tracing is ON only when the operator supplies the
-      # collector explicitly — compose the observability overlay (which sets
-      # it) or export OTEL_EXPORTER_OTLP_ENDPOINT for a managed collector.
+      # product config): tracing is ON only when the operator supplies a
+      # managed collector explicitly through OTEL_EXPORTER_OTLP_ENDPOINT.
       # Absent -> the api boots with tracing OFF and says so at warn level;
       # a baked-in default would report "started" while exporting into a
       # nonexistent host, losing every trace silently.
@@ -318,7 +288,7 @@ services:
       KEYCLOAK_SAML_CERT: ${KEYCLOAK_SAML_CERT:?KEYCLOAK_SAML_CERT must be set}
       # Optional coverage vars (all .optional() in envSchema). In prod, forward
       # SENTRY_DSN for error capture and CLIENT_LOG_FORWARDING=true to accept the
-      # browser log forwarder; the rest (TG_BOT_TOKEN, AUTH_DEV_MODE_ALLOW_TEST,
+      # browser log forwarder; the rest (AUTH_DEV_MODE_ALLOW_TEST,
       # CUSTOMREPORT_REPO_ROOT, DLQ_ALERT_THRESHOLD, AUTH_JWT_COOKIE_NAME) stay
       # at their consumer defaults unless a deploy needs the override.
       SENTRY_DSN: ${SENTRY_DSN:-}
@@ -392,7 +362,7 @@ services:
       API_URL: ${API_URL:?API_URL must be set (server-side origin, e.g. http://api:3001)}
       # Feeds sentry.server.config.ts, so Server-Component failures (root
       # generateMetadata, getOrgPublic) and instrumentation.ts onRequestError
-      # reach Bugsink. Optional like the api's: unset means log-only, and every
+      # reach the configured Sentry-compatible endpoint. Optional like the api's: unset means log-only, and every
       # such failure still writes to this service's stderr.
       SENTRY_DSN: ${SENTRY_DSN:-}
     depends_on:
@@ -424,23 +394,20 @@ services:
   # Caddy edge — TLS termination + reverse-proxy + security headers.
   # Routes /trpc, /auth, /health, /admin/queues -> api; /metrics remains
   # internal-only on the compose network; everything else -> web.
-  # WebSocket upgrade is automatic. Auto-HTTPS via Let's Encrypt
-  # when CADDY_SITE_ADDRESS resolves publicly; swap deploy/caddy/Caddyfile
-  # for Caddyfile.staging if you need caddy's internal CA instead.
+  # WebSocket upgrade is automatic. Auto-HTTPS uses Let's Encrypt when
+  # CADDY_SITE_ADDRESS resolves publicly.
   caddy:
     image: caddy:2.8-alpine@sha256:af32e97399febea808609119bb21544d0265c58a02836576e32a2d082c262c17
     environment:
       CADDY_SITE_ADDRESS: ${CADDY_SITE_ADDRESS:?CADDY_SITE_ADDRESS must be set (e.g. customreport.example.com or http://localhost)}
       CADDY_ACME_EMAIL: ${CADDY_ACME_EMAIL:?CADDY_ACME_EMAIL must be set (ACME account email)}
       # Collector URL the enforcing CSP header POSTs each violation report to
-      # (a Sentry/Bugsink security endpoint or a same-origin sink). Required, no
+      # (a Sentry-compatible security endpoint or a same-origin sink). Required, no
       # default: an enforcing CSP with an unset report target would drop every
       # violation silently.
       CADDY_CSP_REPORT_URI: ${CADDY_CSP_REPORT_URI:?CADDY_CSP_REPORT_URI must be set (CSP violation-report collector URL)}
     volumes:
-      # Set CADDY_FILE=./deploy/caddy/Caddyfile.staging for the internal-CA
-      # staging profile; the default is the public production policy.
-      - ${CADDY_FILE:-./deploy/caddy/Caddyfile}:/etc/caddy/Caddyfile:ro
+      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:

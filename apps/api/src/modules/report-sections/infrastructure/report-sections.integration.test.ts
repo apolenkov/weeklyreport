@@ -359,6 +359,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
           tag: "bugfix",
           workflowStatus: "done" as const,
           carriedOver: false,
+          stageNames: ["Development"],
         },
       ],
       risks: [
@@ -368,6 +369,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
           impact: "Low",
           mitigation: "None needed",
           severity: "at-risk" as const,
+          stageNames: ["Development"],
         },
       ],
       decisions: [
@@ -378,6 +380,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
           impact: "High",
           resolvedAt: null,
           productId: testData.project.id,
+          stageNames: ["Development"],
         },
       ],
     };
@@ -416,6 +419,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
           impact: "High",
           resolvedAt: null,
           productId: testData.project.id,
+          stageNames: ["Development"],
         },
       ],
     };

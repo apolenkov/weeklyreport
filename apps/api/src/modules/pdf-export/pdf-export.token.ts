@@ -2,12 +2,11 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 
 // reportId binds the cookie to one resource; kind routes the verifier away
-// from session JWTs. requestedBy rebuilds the worker session as the requester
-// (legacy tokens without it fall back to a narrow viewer synthetic session).
+// from session JWTs. requestedBy rebuilds the worker session as the requester.
 export interface PdfExportTokenClaims {
   reportId: string;
   kind: "pdf-export";
-  requestedBy?: string;
+  requestedBy: string;
 }
 
 const PDF_EXPORT_JWT_TTL = "5m";
@@ -24,7 +23,7 @@ const MIN_PDF_EXPORT_JWT_SECRET_LENGTH = 32;
 const pdfExportTokenClaimsSchema = z.object({
   reportId: z.string().min(1),
   kind: z.literal(PDF_EXPORT_KIND),
-  requestedBy: z.string().min(1).optional(),
+  requestedBy: z.string().min(1),
   exp: z.number().int().positive(),
 });
 
@@ -38,7 +37,7 @@ function requirePdfExportSecret(): string {
   return secret;
 }
 
-// Deferred verifier for trpc.context after verifySessionToken fails.
+// Fallback verifier for trpc.context after verifySessionToken fails.
 export function verifyPdfExportToken(token: string): PdfExportTokenClaims {
   const secret = requirePdfExportSecret();
   const decoded = jwt.verify(token, secret, {
@@ -57,15 +56,13 @@ export function verifyPdfExportToken(token: string): PdfExportTokenClaims {
   return {
     reportId: parsed.data.reportId,
     kind: parsed.data.kind,
-    ...(parsed.data.requestedBy
-      ? { requestedBy: parsed.data.requestedBy }
-      : {}),
+    requestedBy: parsed.data.requestedBy,
   };
 }
 
 export function signPdfExportToken(
   reportId: string,
-  requestedBy?: string,
+  requestedBy: string,
 ): string {
   const secret = requirePdfExportSecret();
   const claims: PdfExportTokenClaims = {
@@ -73,7 +70,7 @@ export function signPdfExportToken(
     kind: PDF_EXPORT_KIND,
     // Bind the worker's render session to the requester so the export is
     // scoped exactly to their in-app view.
-    ...(requestedBy ? { requestedBy } : {}),
+    requestedBy,
   };
   return jwt.sign(claims, secret, { expiresIn: PDF_EXPORT_JWT_TTL });
 }

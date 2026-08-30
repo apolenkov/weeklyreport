@@ -58,8 +58,8 @@ status is at-risk/blocked but which has NO covering risk MUST render as On Track
 on the live form, matching the read-model mapper. `applyRiskSeverityFloor` MUST
 route every own stage through `deriveEffectiveStageStatus` (not only stages with
 a covering risk), so the live form and read model never disagree on an orphan
-explicit severity. This also serves as the migration for legacy explicit
-at-risk/blocked stage rows — they render On Track on next load with no backfill.
+explicit severity. A stale explicit at-risk/blocked value therefore renders
+On Track on the next load without a separate repair step.
 
 The RAW read-model status is a SEPARATE layer from the displayed chip. The
 mapper (`mapLeadProducts` in `apps/web/src/features/report-sections/model/lead-form.ts`) applies the
@@ -140,12 +140,12 @@ escalations are genuinely per-record and, for PRODUCT-parented records, MUST
 remain unchanged in both count and content.
 
 Activity-parented records — an `Item` or `Risk` whose product FK is null and
-whose `activityId` is set — MUST NOT feed the escalation table in Phase 1. The
+whose `activityId` is set — MUST NOT feed the escalation table. The
 builder is keyed on `projectId`, so it MUST skip null-`projectId` records: an
 activity's blocked item or unresolved risk emits NO per-item `blocked`, per-risk
 `unresolved_risk`, or product-level flagged-red escalation, and it never inflates
-a linked product's roll-up. Escalation parity for activities is a deferred,
-separately-tracked change; this narrowing keeps the escalation feed
+a linked product's roll-up. Activity escalation parity is not part of the
+current escalation feed; this narrowing keeps the escalation feed
 product-scoped while activities become first-class on the report surfaces.
 
 #### Scenario: a red product co-owned by multiple leads

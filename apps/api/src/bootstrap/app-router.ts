@@ -50,20 +50,12 @@ export interface AppRouterAssemblyDeps {
     targetReportId: string,
   ) => Promise<AutoCarryOverOutcome>;
   readonly emailReminderQueue: Queue;
-  readonly telegramOutboundQueue: Queue;
   readonly jobsService: JobsService;
 }
 
 export function buildAppRouter(deps: AppRouterAssemblyDeps): AppRouter {
-  const {
-    app,
-    prisma,
-    env,
-    autoCarryOver,
-    emailReminderQueue,
-    telegramOutboundQueue,
-    jobsService,
-  } = deps;
+  const { app, prisma, env, autoCarryOver, emailReminderQueue, jobsService } =
+    deps;
   return createAppRouter({
     prisma,
     env,
@@ -94,7 +86,6 @@ export function buildAppRouter(deps: AppRouterAssemblyDeps): AppRouter {
     activityService: app.get(ActivityService),
     projectActivityService: app.get(ProjectActivityService),
     emailReminderQueue,
-    telegramOutboundQueue,
     jobsService,
     telemetryService: app.get(TelemetryService),
   });

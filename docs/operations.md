@@ -1,7 +1,7 @@
 # Operations runbook
 
 Everything needed to stand up, watch, and recover the production stack.
-Architecture lives in `architecture/`; this file is the operational half.
+This file is the operational runbook for the current stack.
 
 No production deployment exists yet. Steps below are written against
 `docker-compose.prod.yml` as it stands and were exercised locally except where
@@ -47,13 +47,11 @@ DDL and `pg_dump` both need a session that outlives a single transaction.
    | `CADDY_SITE_ADDRESS`, `CADDY_ACME_EMAIL`, `CADDY_CSP_REPORT_URI`                                        | Public hostname, ACME account email, and external CSP violation collector.       |
    | `HTTP_PORT`, `HTTPS_PORT`, `HTTPS_PORT_QUIC`                                                            | Host ports for the public Caddy listener.                                        |
    | `PGBOUNCER_MAX_CLIENT_CONN`, `PGBOUNCER_POOL_SIZE`, `PGBOUNCER_RESERVE_POOL_SIZE`                       | PgBouncer capacity limits.                                                       |
-   | `REDIS_DB`, `LOG_LEVEL`, `OTEL_SDK_DISABLED`, `OTEL_TRACES_SAMPLER_ARG`, `OTEL_SERVICE_VERSION`         | Runtime policy and exact release identity; the same version is shown by Web.     |
+   | `REDIS_DB`, `LOG_LEVEL`, `OTEL_SDK_DISABLED`, `OTEL_TRACES_SAMPLER_ARG`, `OTEL_SERVICE_VERSION`         | Runtime policy, telemetry mode, and the exact release identity.                  |
    | `BACKUP_INTERVAL_SECONDS`, `BACKUP_RETENTION_DAYS`                                                      | Local backup cadence and history window. See [Backups](#backups).                |
 
 Optional: `FRONTEND_URLS` (extra CORS origins, no wildcards in production),
-`SENTRY_DSN`, `CLIENT_LOG_FORWARDING`, `OTEL_EXPORTER_OTLP_ENDPOINT`,
-`SMTP_USER`, `SMTP_PASS`. Telegram delivery remains deferred; leave
-`TG_BOT_TOKEN` unset until that tracked capability is implemented.
+`SENTRY_DSN`, `CLIENT_LOG_FORWARDING`, `SMTP_USER`, `SMTP_PASS`.
 
 2. **Build and start.** `NEXT_PUBLIC_*` values are compiled into the client
    bundle, so a changed public origin needs a rebuild, not a restart.
@@ -73,9 +71,8 @@ Optional: `FRONTEND_URLS` (extra CORS origins, no wildcards in production),
    curl -fsS https://<host>/health/ready                # api: DB + Redis + queues + memory
    ```
 
-The production Caddy mount defaults to `deploy/caddy/Caddyfile`. For a staging
-or air-gapped run set `CADDY_FILE=./deploy/caddy/Caddyfile.staging` in the
-Compose environment; do not hand-edit the container mount.
+The production Caddy mount defaults to `deploy/caddy/Caddyfile`; do not
+hand-edit the container mount.
 
 ## Health and where to look
 
@@ -83,9 +80,8 @@ Compose environment; do not hand-edit the container mount.
 - `GET /health/ready` — checks Postgres, Redis, BullMQ and heap against
   `HEAP_HEALTH_THRESHOLD_BYTES`. This is what the container healthcheck and any
   load balancer should use.
-- `GET /metrics` — Prometheus. Deliberately **not** routed through Caddy from
-  the public internet; Caddy returns 404 for it at the edge. Scrape
-  `api:3001/metrics` on the compose network.
+- `GET /metrics` — internal API metrics. Deliberately **not** routed through
+  Caddy from the public internet; Caddy returns 404 for it at the edge.
 - `/admin/queues` — Bull Board. Session-authenticated, `head` role only.
 
 ### Red `/health/ready` — triage
@@ -109,7 +105,7 @@ proves achieved RPO or RTO; those measurements come from a recorded restore
 drill. A default would silently invent recovery policy nobody agreed to.
 Its pinned backup image contains the backup, health, and restore entrypoints;
 the production Compose file does not mount mutable host scripts into it. Every
-repository-built image is tagged and labelled with `OTEL_SERVICE_VERSION`; the
+repository-built image is tagged with the configured release version; the
 documented `up --build` command prevents a stale local tag from being reused.
 
 Its healthcheck is deliberately not a liveness probe — it goes red when the
@@ -216,12 +212,12 @@ Images are the unit of rollback; the database is not.
 
 ## CI
 
-`.github/workflows/ci.yml` runs lint + typecheck + unit tests, a serial
-`api-integration` lane against disposable Postgres/Redis/Mailpit services, a
-`coverage` lane for API and Web that requires non-empty evidence, a
-`prisma migrate reset` drift gate, and a production image build.
-Local hooks (`.husky/pre-commit`, `.husky/pre-push`) remain the fast gate;
-`SKIP_PREPUSH=1` bypasses the slow one when you know why you are doing it.
+`.github/workflows/ci.yml` runs the `quality`, `api-integration`, `coverage`,
+`migrate-reset`, and `docker-build` jobs. The `api-integration` lane runs serial
+tests against disposable Postgres/Redis/Mailpit services. The `coverage` lane
+enforces the configured coverage thresholds for API and Web; the remaining jobs cover lint,
+typecheck, unit tests, migration drift, and the production image build. Local
+commands remain the fast gate; run the same checks before pushing.
 
 ## External first-production prerequisites
 
@@ -238,8 +234,10 @@ following remain **BLOCKED** until an authorized external read-back exists:
 - an immutable release record binding commit, image, migrations, approvals,
   deployment evidence, and rollback decision.
 
-The local `alertmanager.yml`, `pgbackups` volume, and checked-in workflows are
-templates or repository evidence only; none is a production PASS by itself.
+The local `docker-compose.observability.yml` overlay, its
+`deploy/prometheus-otel-lgtm.yml` and `deploy/alert-rules.yml` mounts,
+`pgbackups` volume, and checked-in workflows are templates or repository evidence
+only; none is a production PASS by itself.
 Off-box encrypted backup remains **BLOCKED** until an operator supplies a
 provider endpoint, repository identity, encryption key policy, retention policy,
 and a scheduled restore read-back. This repository deliberately does not invent

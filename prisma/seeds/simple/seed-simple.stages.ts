@@ -49,7 +49,7 @@ const ALL_STAGE_IDS = [
 ];
 
 // Vasily owns only the tech stages (4/7) on PROD_CRM; Boris (LEAD_MOBILE_PM)
-// owns the PM stages (3/7) — enables the cross-author readonly UAT demo.
+// owns the PM stages (3/7), demonstrating cross-author read-only visibility.
 const VASILY_CRM_STAGES = [STAGE_DEV, STAGE_TEST, STAGE_DEVOPS, STAGE_SUPPORT];
 
 // Ids stay deterministic per product block so a re-run is idempotent: the last
@@ -149,7 +149,7 @@ const STAGE_ASSIGNMENT_ROWS = [
     stageId: STAGE_DESIGN,
     userId: LEAD_DEVOPS_PM,
   },
-  // 3-contributor split on PROD_CRM for cross-author UAT demo.
+  // 3-contributor split on PROD_CRM for cross-author read-only visibility.
   // Boris=Planning, Victor=Analysis, Galina=Design (@@unique([stageId, projectId])).
   {
     id: "b0000000-0000-4000-8000-000000000033",
@@ -202,7 +202,7 @@ export async function seedStages(prisma: PrismaClient): Promise<void> {
   await prisma.stage.createMany({ data: STAGE_ROWS });
 }
 
-// A full 7-stage single-owner fixture exists (Vasily on PROD_CRM_DATA /
+// A full 7-stage single-owner example exists (Vasily on PROD_CRM_DATA /
 // PROD_CRM_360) so "lead assigned everywhere renders correctly on /lead/report"
 // is exercised end-to-end; other leads keep a single-Development assignment.
 export async function seedStageAssignments(

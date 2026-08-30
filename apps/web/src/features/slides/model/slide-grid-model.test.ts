@@ -31,7 +31,7 @@ const item = (over: Partial<Item> = {}): Item => ({
   workflowStatus: "in_progress",
   carriedOver: false,
   projectId: "p1",
-  stageNames: [],
+  stageNames: ["Development"],
   ...over,
 });
 
@@ -41,7 +41,7 @@ const risk = (over: Partial<Risk> = {}): Risk => ({
   mitigation: "",
   severity: "at-risk",
   projectId: "p1",
-  stageNames: [],
+  stageNames: ["Development"],
   ...over,
 });
 
@@ -50,7 +50,7 @@ const decision = (over: Partial<Decision> = {}): Decision => ({
   owner: "",
   impact: "",
   productId: "p1",
-  stageNames: [],
+  stageNames: ["Development"],
   ...over,
 });
 
@@ -165,7 +165,7 @@ describe("buildSlideGridModel — status marks and columns", () => {
               type: "current",
               text: "foreign item",
               workflowStatus: "in_progress",
-              stageNames: [],
+              stageNames: ["Development"],
             },
           ],
         }),
@@ -194,16 +194,16 @@ describe("buildSlideGridModel — sorting and author series", () => {
       section: section({
         items: [
           item({ text: "support", stageNames: ["Support"] }),
-          item({ text: "no stage" }),
+          item({ text: "no stage", stageNames: [] }),
           item({ text: "planning", stageNames: ["Planning"] }),
-          item({ text: "dev alias", stageNames: ["Dev"] }),
+          item({ text: "development", stageNames: ["Development"] }),
         ],
       }),
     });
     const texts = productLevelOf(cardOf(model, "p1")).columns.current.map(
       (r) => r.text,
     );
-    expect(texts).toEqual(["planning", "dev alias", "support", "no stage"]);
+    expect(texts).toEqual(["planning", "development", "support", "no stage"]);
   });
 
   it("collapses consecutive same-author rows to one badge", () => {
@@ -504,7 +504,7 @@ describe("buildSlideGridModel — authors and header stats", () => {
               type: "current",
               text: "lost",
               workflowStatus: "in_progress",
-              stageNames: [],
+              stageNames: ["Development"],
             },
           ],
         }),

@@ -1,55 +1,41 @@
+# deploy-caddy-config Specification
+
 ## Purpose
 
-Defines the Caddy reverse-proxy configuration guarantees for prod and staging deployments.
+Define the production Caddy reverse-proxy contract for WeeklyReport.
 
 ## Requirements
 
-### Requirement: Staging and prod Caddyfiles carry matching security-header floors
+### Requirement: Production API-owned paths route directly to the API
 
-The security `header` block in `deploy/caddy/Caddyfile.staging` MUST set the
-same header set as `deploy/caddy/Caddyfile`, including
-`Strict-Transport-Security` and `Content-Security-Policy-Report-Only`, with
-matching directive values. Staging MUST NOT ship with a lower security-header
-floor than prod, so any header validated in staging reflects what prod
-actually sends. A future change that flips the CSP directive from
-`Report-Only` to enforcing MUST update both files together.
+The `@api` matcher in `deploy/caddy/Caddyfile` MUST route the API-owned
+prefixes (`/api/web-vitals`, `/api/client-logs`, `/trpc`, `/auth`, `/health`,
+`/admin/queues`, and `/pdfs`, including their nested paths) directly to
+`api:3001`. The matcher MUST NOT claim frontend-owned Next.js routes. The
+public `/metrics` path MUST remain unavailable at the edge.
 
-#### Scenario: staging response carries the same header floor as prod
+#### Scenario: An API request is proxied directly
 
-- **WHEN** a client requests any page through `Caddyfile.staging`
-- **THEN** the response includes `Strict-Transport-Security` with the same
-  `max-age`, `includeSubDomains`, and `preload` directives as the prod
-  `Caddyfile`
-- **AND** the response includes `Content-Security-Policy-Report-Only` with
-  the same policy string as the prod `Caddyfile`
+- **WHEN** a request uses an API-owned prefix
+- **THEN** Caddy reverse-proxies it directly to `api:3001`
+- **AND** it does not fall through to the Web catch-all
 
-#### Scenario: a future CSP enforcing flip touches both files
+#### Scenario: Public metrics remain unavailable
 
-- **WHEN** the `TODO` on the CSP directive is resolved and the policy moves
-  from `Content-Security-Policy-Report-Only` to `Content-Security-Policy`
-- **THEN** the same edit is applied to both `Caddyfile` and
-  `Caddyfile.staging` in the same change, so staging keeps exercising the
-  policy that will actually run in prod
+- **WHEN** a client requests `/metrics` or `/metrics/*`
+- **THEN** Caddy returns `404`
+- **AND** the request is not proxied to the API or Web service
 
-### Requirement: The `@api` matcher routes `/api/*` directly to the api container
+### Requirement: Production responses carry the security-header floor
 
-The `@api` path matcher MUST include `/api` and `/api/*` in both
-`deploy/caddy/Caddyfile` and `deploy/caddy/Caddyfile.staging`, alongside the
-existing `/trpc`, `/auth`, `/health`, `/admin/queues`, and `/pdfs` prefixes,
-so that any endpoint served by the api under the `/api` path is fronted
-directly by `api:3001` over a single reverse-proxy hop rather than falling
-through to the `web:3000` catch-all and being re-proxied by the Next.js
-`/api` rewrite.
+The production `header` block MUST set the configured security headers,
+including strict transport security, content-type sniffing protection, frame
+protection, referrer policy, and the enforcing content-security policy. Required
+environment variables for the site address and CSP reporting URI MUST be
+explicitly supplied by the production environment.
 
-#### Scenario: an `/api/*` request is proxied directly to the api container
+#### Scenario: A production page response is inspected
 
-- **WHEN** a request path starts with `/api/`
-- **THEN** Caddy's `@api` matcher selects it
-- **AND** the request is reverse-proxied straight to `api:3001`, not to
-  `web:3000`
-
-#### Scenario: staging and prod matchers stay identical for `/api`
-
-- **WHEN** a maintainer diffs the `@api` path list between `Caddyfile` and
-  `Caddyfile.staging`
-- **THEN** both list the same prefixes, including `/api /api/*`
+- **WHEN** a client requests a page through the production Caddy site
+- **THEN** the response includes the configured security-header floor
+- **AND** the response does not expose the server identity header

@@ -23,7 +23,7 @@ The `AuditLogger` interface MUST expose a `scopeAccessed` method that
 records a granted cross-group product read. The real logger MUST emit it
 at `info` level (granted access is normal traffic, unlike `scopeDenied`
 which stays at `warn`). The no-op logger MUST implement it as a silent
-no-op so test harnesses produce no audit signal.
+no-op for callers that do not configure audit output.
 
 The payload MUST be whitelisted at the type level — it carries the
 caller (`userId`, `role`, `ip`), the surfaced cross-group `productIds`

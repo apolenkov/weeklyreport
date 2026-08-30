@@ -10,9 +10,7 @@ Align head slides, dashboard, and report toolbar chrome with the shared lead/rep
 
 The head slide deck SHALL place its toolbar controls at the top as the lead deck does,
 render no standalone "Group Status Slides" header band, and render no in-slide
-`ReadinessStrip`. The Agent-review control stays in the toolbar context-controls group
-(it is NOT relocated to the period-navigation row — see the report-toolbar requirement
-below). The carousel placement is unchanged (confirmed correct); no slide data or status
+`ReadinessStrip`. The carousel placement is unchanged; no slide data or status
 semantics change.
 
 #### Scenario: The redundant slides header is gone and controls stay on top
@@ -22,7 +20,6 @@ semantics change.
 - **THEN** there is no separate "Group Status Slides" header line duplicating the report context
 - **AND** there is no in-slide `ReadinessStrip` (per-slide readiness reads from the carousel thumbnails)
 - **AND** the toolbar controls sit at the top, mirroring the lead deck
-- **AND** the Agent-review control stays in the toolbar context-controls group, not the period-navigation row
 
 ### Requirement: The Head Dashboard Sheds Non-Signal Chrome While Keeping KPIs
 
@@ -62,18 +59,13 @@ redesigned.
 ### Requirement: The Head Report Toolbar Splits Document Actions From Context Controls and Drops Present
 
 The head report toolbar SHALL group the document actions (Export-PDF, Publish) separately
-from the context controls (period navigation, archived-period switch, Agent-review, slide
-scope, view mode) and SHALL render no "Present" button, which the slides view-mode supersedes.
-
-The Agent-review control leads the context-controls group (it is not moved to the
-period-navigation row). The `ScopeToggle` (Product / Leads) is UNCHANGED — the shared
+from the context controls (period navigation, archived-period switch, slide scope,
+view mode). The `ScopeToggle` (Product / Leads) is UNCHANGED — the shared
 `SegmentedToggle` already gives lead and head one toolbar idiom, so no restyle is made.
 
-#### Scenario: Present is removed and the toolbar keeps its action split
+#### Scenario: the toolbar keeps its action split
 
 - **GIVEN** the head report toolbar
 - **WHEN** it renders
-- **THEN** the "Present" button is absent (the slides view-mode covers presentation)
-- **AND** the document actions (Export-PDF, Publish) sit apart from the context controls
-- **AND** the Agent-review control leads the context-controls group
+- **THEN** the document actions (Export-PDF, Publish) sit apart from the context controls
 - **AND** the ScopeToggle keeps its existing shared segmented style

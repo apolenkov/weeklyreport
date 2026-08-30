@@ -65,45 +65,25 @@ set.
 ### Requirement: The reports history page carries no tab state
 
 The `/reports` history page MUST render a single role-defaulted history
-view and MUST NOT depend on a `tab` query parameter. Legacy history
-entry points (`/lead/history`, `/head/history`) MUST redirect to
-`/reports` without a `tab` parameter, and the page MUST NOT carry copy or
-comments promising tabs that are not implemented.
+view at `/reports` and MUST NOT depend on a `tab` query parameter. The page
+MUST NOT carry copy or comments promising tabs that are not implemented.
 
-#### Scenario: Legacy lead history route lands on the unified page
+#### Scenario: Lead opens the unified history page
 
-- **WHEN** a lead navigates to `/lead/history`
-- **THEN** the browser is redirected to `/reports` with no `tab`
-  parameter
-- **AND** the lead sees their role-defaulted personal history
-
-#### Scenario: A stray tab parameter changes nothing
-
-- **WHEN** `/reports?tab=drafts` is opened directly
-- **THEN** the page renders the same role-defaulted history as `/reports`
-  with no tab affordance
+- **WHEN** a lead navigates to `/reports`
+- **THEN** the lead sees the role-defaulted personal history
+- **AND** no tab affordance or tab query parameter is present
 
 ### Requirement: History navigation links carry no tab parameter
 
 The NavBar History link MUST target `/reports` with no `tab` query parameter
-for every role that sees it (lead, head, viewer). The `tab` parameter is dead —
-`reports/page.tsx` does not read it — so the navigation MUST NOT emit it. This
-complements the existing rule that the reports history page carries no tab
-state: neither the page nor the links that reach it depend on a `tab` param.
-
-A stray `tab` parameter typed directly into the address bar still resolves to
-the same History view (back-compat), and the History link still renders active
-on `/reports` and on published-report paths regardless of any stray param.
+for every role that sees it (lead, head, viewer). Neither the page nor the links
+that reach it depend on a tab state.
 
 #### Scenario: the History nav link omits the tab param
 
 - **WHEN** the NavBar renders the History link for a lead, head, or viewer
 - **THEN** the link's href is `/reports` with no `tab` query parameter
-
-#### Scenario: History stays active on a stray tab URL
-
-- **WHEN** `/reports?tab=drafts` or `/reports?tab=published` is open directly
-- **THEN** the History nav link still renders as the active link
 
 ### Requirement: Compiled history does not invent lead submission state
 

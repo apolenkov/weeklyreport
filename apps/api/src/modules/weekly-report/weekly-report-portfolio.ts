@@ -3,10 +3,7 @@ import type {
   TrafficLightStatus,
 } from "@customreport/shared";
 
-import {
-  groupScopeFilter,
-  type GroupScopeOptions,
-} from "../../lib/group-scope.js";
+import { groupScopeFilter } from "../../lib/group-scope.js";
 import { computeWorstStatus } from "../report-sections/index.js";
 import type { WeeklyReportScopeSession } from "./weekly-report.service.js";
 
@@ -78,12 +75,10 @@ export function buildPortfolioOverview(
 
 // undefined when no filter applies (admin or no-session).
 export function scopeWhere(
-  session: WeeklyReportScopeSession | undefined,
+  session: WeeklyReportScopeSession,
   target: "user" | "reportSection" | "project",
-  options: GroupScopeOptions = {},
 ): Record<string, unknown> | undefined {
-  if (!session) return undefined;
-  const scope = groupScopeFilter(session, target, options);
+  const scope = groupScopeFilter(session, target);
   if (Object.keys(scope).length === 0) return undefined;
   return scope;
 }

@@ -1,6 +1,5 @@
 import type {
   AdminProject,
-  AdminReminderRule,
   AdminSnapshot,
   AdminUser,
   AppSettings,
@@ -139,14 +138,6 @@ export class AdminPrismaRepository implements AdminRepository {
     return entityWriteQueries.removeProject(this.prisma, projectId);
   }
 
-  upsertReminderRule(rule: AdminReminderRule): Promise<void> {
-    return entityWriteQueries.upsertReminderRule(this.prisma, rule);
-  }
-
-  removeReminderRule(ruleId: string): Promise<void> {
-    return entityWriteQueries.removeReminderRule(this.prisma, ruleId);
-  }
-
   // ---- Periods ----
 
   listPeriodsByState(filter: {
@@ -243,10 +234,6 @@ export class AdminPrismaRepository implements AdminRepository {
 
   activateUser(userId: string): Promise<void> {
     return entityWriteQueries.activateUser(this.prisma, userId);
-  }
-
-  countActiveTelegramBindings(): Promise<number> {
-    return settingsQueries.countActiveTelegramBindings(this.prisma);
   }
 
   listStages(): Promise<StageRow[]> {

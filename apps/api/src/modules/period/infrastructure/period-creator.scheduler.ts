@@ -97,9 +97,8 @@ export class PeriodCreatorScheduler {
     }
   }
 
-  // 00:05 UTC — the 5-minute offset keeps the tick out of the 00:00 backup
-  // window most ops shops run on. Per-timezone firing stays deferred until the
-  // settings surface broadens.
+  // One global reconciliation tick at 00:05 UTC keeps lifecycle transitions
+  // deterministic and avoids the 00:00 backup boundary.
   @Cron("5 0 * * *")
   async runDaily(): Promise<void> {
     await this.runOnce(new Date());

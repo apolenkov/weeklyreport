@@ -98,11 +98,6 @@ const envObjectSchema = z.object({
   // Browser → server log forwarder toggle (`main.ts`). Optional prod opt-in;
   // dev enables the forwarder via NODE_ENV, prod opts in with "true".
   CLIENT_LOG_FORWARDING: z.string().optional(),
-  // Telegram bot token. Optional: unset/blank selects MockTelegramAdapter;
-  // non-blank currently reaches the explicit deferred-feature error. The
-  // configured check is centralised in `isTelegramConfigured`.
-  TG_BOT_TOKEN: z.string().optional(),
-
   // PDF generation
   PDF_BASE_URL: z.url(),
   // Directory where the BullMQ worker writes generated PDFs and

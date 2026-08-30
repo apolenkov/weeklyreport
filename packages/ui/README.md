@@ -22,7 +22,7 @@ and WCAG constraints.
 
 ## Components
 
-The source tree currently contains **25 component `.tsx` files**:
+The source tree currently contains **22 component `.tsx` files**:
 
 - **22 files under `src/components/ui/`**. Twenty UI modules are exported from
   the package root: Alert, Avatar, Badge, Button, Card, Collapsible, Dialog,
@@ -30,13 +30,9 @@ The source tree currently contains **25 component `.tsx` files**:
   Toaster, Table, Tabs, Textarea, and Tooltip.
 - `chart.tsx` and `dropdown-menu-items.tsx` are source modules used by the
   package but are not separate root exports.
-- **3 custom composition files** are at `src/components/`: `ComingSoonBadge`,
-  `ComingSoonTooltip`, and `ComingSoonControl`. The first two are root exports;
-  `ComingSoonControl` is intentionally consumed through its component path.
-
-The public root also exports `useIsMobile` and `cn`. Individual modules expose
-their Radix subparts (for example `CardHeader`, `DialogContent`, `TabsTrigger`)
-through the same public surface.
+  The public root also exports `useIsMobile` and `cn`. Individual modules expose
+  their Radix subparts (for example `CardHeader`, `DialogContent`, `TabsTrigger`)
+  through the same public surface.
 
 ## Design tokens
 
@@ -46,8 +42,7 @@ Tokens are named CSS variables such as `--color-background`, `--color-card`,
 `theme.css`; do not introduce legacy unprefixed aliases or an undefined generic
 `--color-surface`. Use `--color-surface-muted`, `--color-surface-hover`, or
 `--color-surface-empty` according to semantic role. The current `.dark` class
-overrides only the coming-soon pair and overlay; it is not a full alternate
-palette.
+overrides only the overlay; it is not a full alternate palette.
 
 ## Usage
 

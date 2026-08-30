@@ -23,7 +23,7 @@ function toItemDrafts(items: ReportSectionReadModel["items"]) {
       tag: it.tag,
       workflowStatus: it.workflowStatus,
       carriedOver: it.carriedOver,
-      stageNames: it.stageNames ?? [],
+      stageNames: it.stageNames,
       priorityRank: it.priorityRank ?? null,
       pausedReason:
         it.workflowStatus === "paused" ? (it.pausedReason ?? null) : null,
@@ -44,7 +44,7 @@ function toRiskDrafts(risks: ReportSectionReadModel["risks"]) {
       impact: r.impact,
       mitigation: r.mitigation,
       severity: r.severity,
-      stageNames: r.stageNames ?? [],
+      stageNames: r.stageNames,
     }));
 }
 
@@ -59,7 +59,7 @@ function toDecisionDrafts(decisions: ReportSectionReadModel["decisions"]) {
       deadline: d.deadline ?? null,
       impact: d.impact,
       resolvedAt: d.resolvedAt ?? null,
-      stageNames: d.stageNames ?? [],
+      stageNames: d.stageNames,
       productId: d.productId ?? null,
       activityId: d.activityId ?? null,
     }));

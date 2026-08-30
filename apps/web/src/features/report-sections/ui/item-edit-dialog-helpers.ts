@@ -55,7 +55,6 @@ export interface CoverageArgs {
 }
 
 // Covering risk floors live edit for product+stage only; activity severity is isolated.
-// Stage-less creates are never pre-locked by the wildcard.
 function isItemCovered(args: CoverageArgs): boolean {
   if (args.isActivityParent || !args.productId) return false;
   if (args.stageNames.length === 0) return false;
@@ -97,7 +96,7 @@ export function resolveSaveProduct(
   );
 }
 
-// Offer priority ranks 1..10, plus any legacy rank above 10 already on the item.
+// Offer standard priority ranks and retain an existing higher rank for editing.
 const MAX_ITEM_RANK = 10;
 
 export function buildRankOptions(existingRank: number | null): number[] {
@@ -127,6 +126,7 @@ export function resolveInitialItem(args: {
         productId: args.seedProduct.id,
         productName: args.seedProduct.name,
         activityId: null,
+        stageNames: [],
       }
     : {
         ...common,
@@ -134,12 +134,8 @@ export function resolveInitialItem(args: {
         productId: null,
         productName: "",
         activityId: null,
+        stageNames: [],
       };
-}
-
-// Legacy stored `blocked` opens as in-progress so re-save never re-persists bare blocked.
-export function coerceInitialStatus(status: ItemStatus): ItemStatus {
-  return status === "blocked" ? IN_PROGRESS_STATUS : status;
 }
 
 export function resolveItemParentName(args: {
@@ -189,6 +185,7 @@ export function buildActivityItemSave(
     productName: activityName,
     activityId: args.activityId,
     activityName,
+    stageNames: [],
   };
 }
 
@@ -204,9 +201,6 @@ export function buildProductItemSave(
     productId: args.product.id,
     productName: args.product.name,
     activityId: null,
-    stageNames:
-      args.effectiveStageNames.length > 0
-        ? canonicalStageNames(args.effectiveStageNames)
-        : undefined,
+    stageNames: canonicalStageNames(args.effectiveStageNames),
   };
 }

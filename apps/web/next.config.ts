@@ -39,11 +39,9 @@ const nextConfig: NextConfig = {
     ]),
 };
 
-// correlate-errors-to-traces: wrap with Sentry so the SDK's build-time
-// instrumentation (client config detection, server hooks) is applied. Source-map
-// upload to Bugsink is DISABLED by default — it is gated on a separate
-// sentry-cli/debug-id preflight (see openspec/changes/correlate-errors-to-traces,
-// task 5.2). `silent` outside CI keeps the dev build quiet.
+// Wrap with Sentry so the SDK's build-time instrumentation (client config
+// detection and server hooks) is applied. Source-map upload stays disabled;
+// `silent` outside CI keeps the dev build quiet.
 export default withSentryConfig(nextConfig, {
   silent: !process.env.CI,
   sourcemaps: { disable: true },

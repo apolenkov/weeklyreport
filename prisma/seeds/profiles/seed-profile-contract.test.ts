@@ -15,7 +15,7 @@ describe("seed profile contract", () => {
   });
 
   it.each([undefined, "", "small", "middle", "huge", "FULL"])(
-    "rejects missing and obsolete profile %s",
+    "rejects missing and unsupported profile %s",
     (profile) => {
       expect(() => parseSeedProfile(profile)).toThrow(
         "Use exactly one of: minimal, demo, full, stress",

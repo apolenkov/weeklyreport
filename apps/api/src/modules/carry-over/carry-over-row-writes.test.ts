@@ -31,6 +31,7 @@ function sectionWithCarriedItem(): ReportSectionReadModel {
         tag: "feature",
         workflowStatus: "in_progress",
         carriedOver: true,
+        stageNames: ["Development"],
       },
     ],
     risks: [],

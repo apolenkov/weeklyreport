@@ -124,17 +124,4 @@ describe("buildPdfExportSession", () => {
     expect(result?.activeReportId).toBe(REPORT_ID);
     expect(result?.reportingGroupId).toBe("group-7");
   });
-
-  it("returns the legacy viewer session when no requestedBy claim is present", async () => {
-    const result = await buildPdfExportSession(
-      REPORT_ID,
-      undefined,
-      makePrisma(),
-      notRevoked,
-    );
-
-    expect(result).not.toBeNull();
-    expect(result?.role).toBe("viewer");
-    expect(result?.activeReportId).toBe(REPORT_ID);
-  });
 });

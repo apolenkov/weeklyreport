@@ -9,7 +9,19 @@ import type { KanbanItem, Product, RiskEntry } from "../model/types";
 import { ItemEditDialog } from "./item-edit-dialog";
 
 const products: Product[] = [
-  { id: "p1", name: "DevOps Tools", overallStatus: "on-track", stages: [] },
+  {
+    id: "p1",
+    name: "DevOps Tools",
+    overallStatus: "on-track",
+    stages: [
+      {
+        stageName: "Development",
+        status: "on-track",
+        ownership: "mine",
+        assignee: "Test Lead",
+      },
+    ],
+  },
 ];
 
 const defaultA11yProps = {
@@ -133,7 +145,7 @@ describe("ItemEditDialog — cross-stage product preservation", () => {
         products={products}
         week="current"
         stagesForProduct={(productId) =>
-          productId === "p1" ? ["Dev", "Testing"] : []
+          productId === "p1" ? ["Development", "Testing"] : []
         }
         onSave={onSave}
         onCancel={vi.fn()}
@@ -162,14 +174,14 @@ describe("ItemEditDialog — stage-ownership scoping", () => {
         products={products}
         week="current"
         defaultProductId="p1"
-        stagesForProduct={() => ["Dev"]}
+        stagesForProduct={() => ["Development"]}
         onSave={vi.fn()}
         onCancel={() => undefined}
       />,
     );
 
     const lockedPill = screen.getByText("Applied automatically").parentElement;
-    expect(lockedPill).toHaveTextContent("Dev");
+    expect(lockedPill).toHaveTextContent("Development");
     // Locked: no checkbox exists, so the single stage cannot be deselected.
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     expect(
@@ -190,7 +202,7 @@ describe("ItemEditDialog — stage-ownership scoping", () => {
         week="current"
         defaultProductId="p1"
         stagesForProduct={(id) =>
-          id === "p1" ? ["Dev", "Testing"] : ["Analysis"]
+          id === "p1" ? ["Development", "Testing"] : ["Analysis"]
         }
         onSave={vi.fn()}
         onCancel={() => undefined}
@@ -218,6 +230,7 @@ describe("ItemEditDialog — stage-ownership scoping", () => {
     text: "Legacy cross item",
     status: "in-progress",
     author: "Test Lead",
+    stageNames: [],
   };
 
   it("disables Save and shows contact-admin on a zero-owned-stage product", () => {
@@ -279,7 +292,7 @@ describe("ItemEditDialog — require a stage", () => {
         products={products}
         week="current"
         defaultProductId="p1"
-        stagesForProduct={() => ["Dev", "Testing"]}
+        stagesForProduct={() => ["Development", "Testing"]}
         onSave={onSave}
         onCancel={() => undefined}
       />,
@@ -303,7 +316,7 @@ describe("ItemEditDialog — require a stage", () => {
         products={products}
         week="current"
         defaultProductId="p1"
-        stagesForProduct={() => ["Dev"]}
+        stagesForProduct={() => ["Development"]}
         onSave={onSave}
         onCancel={() => undefined}
       />,
@@ -329,7 +342,7 @@ describe("ItemEditDialog — require a stage", () => {
         products={products}
         week="current"
         defaultProductId="p1"
-        stagesForProduct={() => ["Dev", "Testing"]}
+        stagesForProduct={() => ["Development", "Testing"]}
         onSave={onSave}
         onCancel={() => undefined}
       />,
@@ -363,7 +376,7 @@ describe("ItemEditDialog — activity parenting", () => {
         activities={activities}
         week="current"
         defaultProductId="p1"
-        stagesForProduct={() => ["Dev", "Testing"]}
+        stagesForProduct={() => ["Development", "Testing"]}
         onSave={onSave}
         onCancel={() => undefined}
       />,
@@ -388,7 +401,7 @@ describe("ItemEditDialog — activity parenting", () => {
     expect(saved.activityId).toBe("act1");
     expect(saved.parent).toEqual({ kind: "activity", id: "act1" });
     expect(saved.productId).toBeNull();
-    expect(saved.stageNames).toBeUndefined();
+    expect(saved.stageNames).toEqual([]);
     expect(saved.text).toBe("Triaged 12 tickets");
   });
 });
@@ -497,7 +510,7 @@ describe("ItemEditDialog — activity-lane + Add preselects the activity", () =>
         week="current"
         defaultProductId="p1"
         defaultActivityId="act-1"
-        stagesForProduct={() => ["Dev", "Testing"] as const}
+        stagesForProduct={() => ["Development", "Testing"] as const}
         onSave={vi.fn()}
         onCancel={vi.fn()}
       />,

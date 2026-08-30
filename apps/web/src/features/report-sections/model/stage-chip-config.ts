@@ -47,13 +47,11 @@ export const STATUS_CONFIG: Record<
   },
 };
 
-// Per-stage SDLC icons aid spatial scanning without carrying status. The
-// "Dev" / "Development" aliases mirror the names accepted by lead-form.ts.
+// Per-stage SDLC icons aid spatial scanning without carrying status.
 export const STAGE_ICONS: Partial<Record<string, typeof ClipboardList>> = {
   Planning: ClipboardList,
   Analysis: Search,
   Design: PenTool,
-  Dev: Hammer,
   Development: Hammer,
   Testing: FlaskConical,
   DevOps: Server,

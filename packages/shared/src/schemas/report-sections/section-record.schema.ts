@@ -2,11 +2,11 @@ import { z } from "zod";
 
 import {
   addItemTypeStatusIssue,
+  currentStageNamesField,
   itemTypeSchema,
   itemWorkflowStatusSchema,
   riskSeveritySchema,
   safeText,
-  stageNamesField,
   trafficLightStatusSchema,
   writeStageNamesField,
 } from "../primitives/report-primitives.schema";
@@ -77,15 +77,54 @@ const itemInputObjectSchema = z.object({
   stageNames: writeStageNamesField,
 });
 
+const addReadParentXorIssues = (
+  value: {
+    readonly projectId?: string | null | undefined;
+    readonly productId?: string | null | undefined;
+    readonly activityId?: string | null | undefined;
+    readonly stageNames: readonly string[];
+  },
+  productPath: "projectId" | "productId",
+  ctx: z.RefinementCtx,
+): void => {
+  const hasProduct =
+    (productPath === "productId" ? value.productId : value.projectId) != null;
+  const hasActivity = value.activityId != null;
+  if (hasProduct === hasActivity) {
+    ctx.addIssue({
+      code: "custom",
+      path: [hasActivity ? "activityId" : productPath],
+      message:
+        "A record must have exactly one parent — a product or an activity.",
+    });
+    return;
+  }
+  if (hasProduct && value.stageNames.length === 0) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["stageNames"],
+      message: "A product-parented record requires at least one stage.",
+    });
+  }
+  if (hasActivity && value.stageNames.length > 0) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["stageNames"],
+      message: "An activity-parented record must not carry a stage.",
+    });
+  }
+};
+
 /** Accepts the shared fields of an item draft or read model. */
 export const itemInputSchema = itemInputObjectSchema.readonly();
 
 /** Describes an item returned to report clients with review comments. */
 export const itemReadModelSchema = itemInputObjectSchema
   .extend({
-    stageNames: stageNamesField,
+    stageNames: currentStageNamesField,
     comments: z.array(recordCommentViewSchema.readonly()).readonly().optional(),
   })
+  .superRefine((value, ctx) => addReadParentXorIssues(value, "projectId", ctx))
   .readonly();
 
 const riskInputObjectSchema = z.object({
@@ -106,9 +145,10 @@ export const riskInputSchema = riskInputObjectSchema.readonly();
 /** Describes a risk returned to report clients with review comments. */
 export const riskReadModelSchema = riskInputObjectSchema
   .extend({
-    stageNames: stageNamesField,
+    stageNames: currentStageNamesField,
     comments: z.array(recordCommentViewSchema.readonly()).readonly().optional(),
   })
+  .superRefine((value, ctx) => addReadParentXorIssues(value, "projectId", ctx))
   .readonly();
 
 const decisionInputObjectSchema = z.object({
@@ -130,9 +170,10 @@ export const decisionInputSchema = decisionInputObjectSchema.readonly();
 /** Describes a decision returned to report clients with review comments. */
 export const decisionReadModelSchema = decisionInputObjectSchema
   .extend({
-    stageNames: stageNamesField,
+    stageNames: currentStageNamesField,
     comments: z.array(recordCommentViewSchema.readonly()).readonly().optional(),
   })
+  .superRefine((value, ctx) => addReadParentXorIssues(value, "productId", ctx))
   .readonly();
 
 const addParentXorIssues = (

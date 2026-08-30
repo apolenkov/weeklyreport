@@ -1,3 +1,4 @@
+import type { UserSession } from "@customreport/shared";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
@@ -22,6 +23,13 @@ describe("WeeklyReportPrismaRepository.getLatestPublishedNonArchivedId (integrat
   const OPEN = "e0000000-0000-4000-a000-0000000000a4";
   const TIE_LOW = "e0000000-0000-4000-a000-0000000000a5";
   const TIE_HIGH = "e0000000-0000-4000-a000-0000000000a6";
+  const viewerSession: UserSession = {
+    userId: "e0000000-0000-4000-a000-0000000000b1",
+    email: "viewer@example.test",
+    name: "Viewer",
+    role: "viewer",
+    viewerGroupAccess: [],
+  };
 
   async function createReport(
     id: string,
@@ -107,7 +115,7 @@ describe("WeeklyReportPrismaRepository.getLatestPublishedNonArchivedId (integrat
     ).resolves.toBeNull();
   });
 
-  it("does not resolve an archived-only published report as the viewer default", async () => {
+  it("does not default to an archived-only published report", async () => {
     await createReport(
       ARCHIVED_PUBLISHED,
       "published",
@@ -116,13 +124,13 @@ describe("WeeklyReportPrismaRepository.getLatestPublishedNonArchivedId (integrat
     );
 
     const service = new WeeklyReportService(repository);
-    await expect(service.getWeeklyReport(undefined, "viewer")).resolves.toEqual(
-      {
-        status: "no-period",
-        report: null,
-        crossGroup: null,
-      },
-    );
+    await expect(
+      service.getWeeklyReport(undefined, viewerSession),
+    ).resolves.toEqual({
+      status: "no-period",
+      report: null,
+      crossGroup: null,
+    });
   });
 
   it("breaks a same-periodStart tie deterministically by id desc", async () => {

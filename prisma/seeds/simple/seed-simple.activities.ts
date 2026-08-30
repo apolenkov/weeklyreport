@@ -121,7 +121,7 @@ const ACTIVITY_ROWS = ACTIVITY_SEEDS.flatMap((seed, pIdx) =>
   }),
 );
 
-// The full profile's project activities are exactly these deterministic rows,
+// The product seed's project activities are exactly these deterministic rows,
 // so a post-seed journey can assert profile-owned existence without trusting
 // unrelated residue left by another seed.
 export const PROJECT_ACTIVITY_IDS = ACTIVITY_ROWS.map((row) => row.activityId);

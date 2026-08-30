@@ -1,6 +1,6 @@
 // The canonical product and SDLC-stage catalogues: 12 products (2 per lead) and
-// 7 stages. IDs and lead assignments are the stable keys UUID-keyed fixtures and
-// E2E assertions rely on; product names are RU Cyrillic demo data.
+// Seven stages. IDs and lead assignments are stable keys for deterministic seed
+// data; product names are Russian demo data.
 
 import {
   LEAD_1_ID,
@@ -86,8 +86,7 @@ export interface SeedStage {
   sortOrder: number;
 }
 
-// Full names ('Development', not 'Dev') because the admin E2E assertions match
-// the admin mock STAGE_NAMES verbatim.
+// Full names ('Development', not 'Dev') are the canonical catalog values.
 export const SEED_STAGES: readonly SeedStage[] = [
   {
     id: "a0000000-0000-4000-8000-000000000701",

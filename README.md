@@ -34,20 +34,17 @@
   работы, доставку напоминаний, неизменяемые опубликованные снимки,
   наблюдаемость и защищённые процедуры резервного копирования и восстановления.
 
-Полная карта действующих контрактов по ролям и этапам находится в
-[`openspec/specs/README.md`](./openspec/specs/README.md). Элементы с пометкой
-`Coming Soon` и явно отложенные владельцем функции не входят в действующий
-набор возможностей MVP. Мобильные сценарии входят в MVP и закреплены шестью
-контрактами `mobile-*`. Репозиторий доказывает реализацию и сборку, но не
-заменяет проверку конкретного production-развёртывания.
+Актуальные контракты поведения находятся в `openspec/specs/`. Репозиторий
+доказывает реализацию и сборку, но не заменяет проверку конкретного
+production-развёртывания.
 
 ## Стек
 
 - **Фронтенд** — Next.js 16 / React 19 (`apps/web`).
 - **Бэкенд** — NestJS 11 + tRPC + Prisma (`apps/api`).
 - **БД** — PostgreSQL; общие схемы и контракты — `packages/shared`.
-- **Наблюдаемость** — трейсы/логи/метрики в Grafana (otel-lgtm: Tempo/Loki/
-  Prometheus), ошибки — в Bugsink.
+- **Наблюдаемость** — структурированные логи, внутренние метрики на `/metrics`
+  и ошибки в подключённом внешнем Sentry.
 - **Монорепо** — pnpm workspaces + Turborepo.
 
 ## Структура
@@ -67,7 +64,7 @@ weeklyreport
 
 - Node.js **>= 26**
 - pnpm **11.17.0** (`npm install -g pnpm@11.17.0`; Node 26 не поставляет Corepack)
-- Docker (для Postgres, Redis, почты и наблюдаемости)
+- Docker (для локальных Postgres и Redis и production-сборки)
 
 ## Быстрый старт
 
@@ -77,16 +74,15 @@ pnpm install
 
 # 2. Окружение: скопировать пример и при необходимости поправить
 cp .env.example .env
-# Для `pnpm dev` пример уже использует Mailpit localhost:1025 и OTLP localhost:4318.
+# Для `pnpm dev` достаточно значений из примера и локальных Postgres/Redis.
 
-# 3. Поднять инфраструктуру в отдельном Compose-проекте (Postgres, Redis,
-#    Mailpit, Grafana, Bugsink). Команда не запускает api/web: их единственный владелец — pnpm dev.
-pnpm observability:up
+# 3. Поднять локальные зависимости
+docker compose up -d postgres redis
 
 # 4. Создать точную disposable-базу, применить миграции и залить профиль
 PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' \
-  pnpm db:bootstrap:local minimal
-# demo | full | stress — возрастающие возможности и объём
+  pnpm db:bootstrap:local demo
+# stress — тот же продуктовый набор с большим объёмом данных
 
 # 5. Запустить web + api локально (в одном процессе, параллельно)
 pnpm dev
@@ -99,10 +95,8 @@ pnpm dev
 
 - Веб — http://localhost:3000
 - API — http://localhost:3002
-- Почта (Mailpit) — http://localhost:8025
-- Grafana (трейсы/логи/метрики) — http://localhost:3003; логин `admin`, пароль
-  из `GRAFANA_ADMIN_PASSWORD` в `.env` (в примере — только локальный пароль)
-- Bugsink (ошибки) — http://localhost:8000
+- Метрики API — http://localhost:3002/metrics (в production endpoint закрыт
+  внешним Caddy)
 
 ### Вход без реального SSO (dev)
 
@@ -115,26 +109,27 @@ pnpm dev
 
 ```bash
 pnpm dev            # web + api в dev-режиме (turbo --parallel)
-pnpm db:bootstrap:local minimal # guarded create + migrate + seed
+pnpm db:bootstrap:local demo    # guarded create + migrate + seed
 pnpm typecheck      # проверка типов во всех пакетах
 pnpm lint           # полный набор проверок качества, отчёт по каждой
-pnpm test           # unit-тесты (Vitest)
+pnpm test           # unit-тесты workspace + Prisma, cleanliness и operations checks
 pnpm build          # production-сборка
 pnpm format         # Prettier по всему дереву
+pnpm spec:check     # строгая проверка всех спецификаций OpenSpec
 ```
 
 Перед поставкой один и тот же tree должен пройти:
 `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` и
-`pnpm exec openspec validate --all --strict`.
+`pnpm spec:check`.
 
-Полезное при отладке:
+Корневой `pnpm test` запускает unit-тесты workspace, Prisma-тесты и проверки
+repository cleanliness и operations. Интеграционные тесты API с базой данных в
+него не входят: запускайте их отдельно через
+`pnpm --filter @customreport/api test:integration`.
 
-```bash
-pnpm logs           # хвост лога API (apps/api/.logs/app.log)
-pnpm logs:errors    # только error/warn из лога API
-PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' \
-  pnpm db:bootstrap:local demo # пересобрать disposable-базу
-```
+Полезное при отладке: читай структурированный лог API в
+`apps/api/.logs/app.log`, проверяй готовность через `/health/ready`, а метрики —
+через `/metrics`.
 
 ## Куда смотреть дальше
 
@@ -144,6 +139,7 @@ PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' \
 - **[`CONTEXT.md`](./CONTEXT.md)** — словарь терминов проекта (отчётный период,
   submission, сценарии и т.д.). Читать до того, как спорить о названиях.
 - **[`docs/adr/`](./docs/adr/)** — архитектурные решения (почему так, а не иначе).
-- **`openspec/`** — текущий бэклог и контракты. Список активных изменений:
-  `openspec list`.
+- **`openspec/specs/`** — актуальные контракты поведения продукта. Для нового
+  нетривиального поведения рабочие материалы создаются в `openspec/changes/`,
+  а итоговая спецификация проверяется командой `pnpm spec:check`.
 - **[`CONTRIBUTING.md`](./CONTRIBUTING.md)** — правила контрибьюции.

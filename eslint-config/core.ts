@@ -11,8 +11,6 @@ import unicorn from "eslint-plugin-unicorn";
 import unusedImports from "eslint-plugin-unused-imports";
 import tseslint from "typescript-eslint";
 
-import { localPlugin } from "../tools/eslint-rules/index.ts";
-
 const reactHooksPlugin = reactHooks as unknown as ESLint.Plugin;
 
 export const coreConfig: Linter.Config[] = [
@@ -409,7 +407,7 @@ export const coreConfig: Linter.Config[] = [
   },
   // `prisma/` has no tsconfig of its own, so projectService would parse it under
   // the config-less default project, where `node:*` resolves to `any` and every
-  // seed helper trips no-unsafe-*. Use the project `lint:prisma:typecheck` uses.
+  // seed helper trips no-unsafe-*. Use the root typecheck command's Prisma project.
   {
     files: ["prisma/**/*.ts"],
     languageOptions: {
@@ -418,18 +416,6 @@ export const coreConfig: Linter.Config[] = [
         project: ["./tsconfig.prisma.json"],
       },
     },
-  },
-  // Comment archaeology (change-log / ticket / phase refs) is banned by
-  // AGENTS.md; git history holds that. Scoped to product source only —
-  // `scripts/`, `tools/` and root configs legitimately carry plan-shaped labels.
-  {
-    files: [
-      "apps/**/*.{ts,tsx,js,jsx,mjs}",
-      "packages/**/*.{ts,tsx,js,jsx,mjs}",
-      "prisma/**/*.{ts,tsx,js,jsx,mjs}",
-    ],
-    plugins: { local: localPlugin },
-    rules: { "local/no-comment-archaeology": "error" },
   },
   // `scripts/` and `tools/` have the same shape as `prisma/`: no tsconfig the
   // project service can discover, so their `node:*` imports would resolve to

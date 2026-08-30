@@ -60,6 +60,9 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
         ownedStages: [
           { stageId: STAGE_ID, stageName: "Development", sortOrder: 3 },
         ],
+        stageSet: [
+          { stageId: STAGE_ID, stageName: "Development", sortOrder: 3 },
+        ],
       },
     ],
     items: [
@@ -69,6 +72,7 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
         projectId: PROJECT_ID,
         type: "current" as const,
         text: "Existing item",
+        stageNames: ["Development"],
         tag: "tag",
         workflowStatus: "in_progress" as const,
         carriedOver: false,

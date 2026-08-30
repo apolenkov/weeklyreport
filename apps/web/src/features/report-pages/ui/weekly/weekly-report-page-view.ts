@@ -31,7 +31,6 @@ export interface WeeklyReportPageView {
   readonly currentRole: CurrentRole;
   readonly canMutatePeriod: boolean;
   readonly canExportPdf: boolean;
-  readonly showLeadExportComingSoon: boolean;
   readonly periodId: string;
   readonly reportId: string;
   readonly periodStatus: PeriodStatus;
@@ -165,9 +164,8 @@ function deriveRoleFacet(
     currentRole,
     canMutatePeriod,
     // head/admin/viewer get real export; lead is FORBIDDEN (pdfExport on
-    // leadershipProcedure) and sees ComingSoon — never a button that would 403.
+    // Leads do not have the leadership export capability.
     canExportPdf: currentRole !== null && !isLead(currentRole),
-    showLeadExportComingSoon: isLead(currentRole),
     canPublishReport,
     // Publish hint for head-like roles while unpublished and not yet publishable.
     showPublishHint:

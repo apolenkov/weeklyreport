@@ -60,24 +60,6 @@ describe("DLQMonitorService.recordTerminalFailure", () => {
     vi.restoreAllMocks();
   });
 
-  it("increments cr_dlq_failed_total exactly once for a terminal telegram failure", async () => {
-    const inc = vi.spyOn(dlqFailedTotal, "inc");
-    const queue: Pick<Queue, "getJob"> = {
-      getJob: vi
-        .fn()
-        .mockResolvedValue({ opts: { attempts: 3 }, attemptsMade: 3 }),
-    };
-
-    await seam().recordTerminalFailure(
-      "telegram-outbound",
-      queue,
-      "job-1",
-      "boom",
-    );
-
-    expect(inc).toHaveBeenCalledExactlyOnceWith({ queue: "telegram-outbound" });
-  });
-
   it("does not increment on a non-terminal (retryable) failure", async () => {
     const inc = vi.spyOn(dlqFailedTotal, "inc");
     const queue: Pick<Queue, "getJob"> = {

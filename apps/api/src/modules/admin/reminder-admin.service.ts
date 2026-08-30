@@ -1,8 +1,4 @@
 import {
-  type AdminReminderRule,
-  adminReminderRuleSchema,
-  type AdminSnapshot,
-  adminSnapshotSchema,
   type ReminderPolicy,
   reminderPolicySchema,
 } from "@customreport/shared";
@@ -19,22 +15,6 @@ export class ReminderAdminService {
     private readonly repository: ReminderAdminRepository,
     private readonly logger: AppLogger,
   ) {}
-
-  private async getSnapshot(): Promise<AdminSnapshot> {
-    return adminSnapshotSchema.parse(await this.repository.getSnapshot());
-  }
-
-  async upsertReminderRule(rule: AdminReminderRule): Promise<AdminSnapshot> {
-    const parsedRule = adminReminderRuleSchema.parse(rule);
-    this.logger.info("upserted reminder rule", { ruleId: parsedRule.id });
-    await this.repository.upsertReminderRule(parsedRule);
-    return this.getSnapshot();
-  }
-
-  async removeReminderRule(ruleId: string): Promise<AdminSnapshot> {
-    await this.repository.removeReminderRule(ruleId);
-    return this.getSnapshot();
-  }
 
   async listPolicies(): Promise<ReminderPolicy[]> {
     const rows = await this.repository.listReminderPolicies();

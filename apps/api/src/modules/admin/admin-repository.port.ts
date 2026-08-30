@@ -1,6 +1,5 @@
 import type {
   AdminProject,
-  AdminReminderRule,
   AdminSnapshot,
   AdminUser,
   AppSettings,
@@ -39,8 +38,6 @@ export interface AdminRepository {
   removeUser(userId: string): Promise<void>;
   upsertProject(project: AdminProject): Promise<void>;
   removeProject(projectId: string): Promise<void>;
-  upsertReminderRule(rule: AdminReminderRule): Promise<void>;
-  removeReminderRule(ruleId: string): Promise<void>;
   getSettings(): Promise<AppSettings>;
   updateSettings(data: Partial<AppSettings>): Promise<AppSettings>;
   saveReportingGroup(group: ReportingGroup): Promise<ReportingGroup>;
@@ -141,8 +138,6 @@ export interface AdminRepository {
   deactivateUser(userId: string): Promise<void>;
   // Flip `User.isActive=true`. Session restoration stays the caller's job.
   activateUser(userId: string): Promise<void>;
-  // Count of `TelegramBinding` rows with `active=true` (Settings → Integrations).
-  countActiveTelegramBindings(): Promise<number>;
   // Full SDLC stage catalogue, ordered by `sortOrder`.
   listStages(): Promise<StageRow[]>;
   // Per-project `StageAssignment` counts (single grouped query).

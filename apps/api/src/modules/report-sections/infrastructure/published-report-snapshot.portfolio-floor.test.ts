@@ -67,10 +67,10 @@ function makeSection(overrides: SectionFixture = {}): ReportSectionReadModel {
   );
 }
 
-// OWNED empty stage covered by the author's own at-risk/blocked risk must
+// OWNED stage covered by the author's own at-risk/blocked risk must
 // floor product status via effectiveProjectStatus (not raw trafficLight).
 describe("buildPortfolioProductsFromSnapshotSections — own-risk floor", () => {
-  it("1.1 floors red for a covers-all blocked own risk on an empty stage", () => {
+  it("1.1 floors red for a blocked own risk on the owned stage", () => {
     const products = buildPortfolioProductsFromSnapshotSections([
       makeSection({
         projects: [
@@ -96,7 +96,7 @@ describe("buildPortfolioProductsFromSnapshotSections — own-risk floor", () => 
             impact: "High",
             mitigation: "Failover",
             severity: "blocked",
-            stageNames: [],
+            stageNames: [OWNED_STAGE_NAME],
           },
         ],
       }),
@@ -105,7 +105,7 @@ describe("buildPortfolioProductsFromSnapshotSections — own-risk floor", () => 
     expect(products[0]?.worstStatus).toBe("red");
   });
 
-  it("1.2 floors yellow for a covers-all at-risk own risk on an empty stage", () => {
+  it("1.2 floors yellow for an at-risk own risk on the owned stage", () => {
     const products = buildPortfolioProductsFromSnapshotSections([
       makeSection({
         projects: [
@@ -131,7 +131,7 @@ describe("buildPortfolioProductsFromSnapshotSections — own-risk floor", () => 
             impact: "Medium",
             mitigation: "Re-plan",
             severity: "at-risk",
-            stageNames: [],
+            stageNames: [OWNED_STAGE_NAME],
           },
         ],
       }),
@@ -140,7 +140,7 @@ describe("buildPortfolioProductsFromSnapshotSections — own-risk floor", () => 
     expect(products[0]?.worstStatus).toBe("yellow");
   });
 
-  it("1.3 floors yellow for a stage-named at-risk own risk on that empty stage", () => {
+  it("1.3 floors yellow for a stage-named at-risk own risk", () => {
     const products = buildPortfolioProductsFromSnapshotSections([
       makeSection({
         projects: [
@@ -175,7 +175,7 @@ describe("buildPortfolioProductsFromSnapshotSections — own-risk floor", () => 
     expect(products[0]?.worstStatus).toBe("yellow");
   });
 
-  it("floors Development red for a published snapshot risk named Dev", () => {
+  it("floors Development red for a published snapshot risk", () => {
     const products = buildPortfolioProductsFromSnapshotSections([
       makeSection({
         projects: [
@@ -201,7 +201,7 @@ describe("buildPortfolioProductsFromSnapshotSections — own-risk floor", () => 
             impact: "High",
             mitigation: "Fix before release",
             severity: "blocked",
-            stageNames: ["Dev"],
+            stageNames: [OWNED_STAGE_NAME],
           },
         ],
       }),
@@ -236,7 +236,7 @@ describe("buildPortfolioProductsFromSnapshotSections — own-risk floor", () => 
             impact: "Low",
             mitigation: "Monitor",
             severity: "at-risk",
-            stageNames: [],
+            stageNames: [OWNED_STAGE_NAME],
           },
         ],
       }),
@@ -245,7 +245,7 @@ describe("buildPortfolioProductsFromSnapshotSections — own-risk floor", () => 
     expect(products[0]?.worstStatus).toBe("red");
   });
 
-  it("1.5 scopes a covers-all blocked own risk to its own product only", () => {
+  it("1.5 scopes a blocked own risk to its own product only", () => {
     const products = buildPortfolioProductsFromSnapshotSections([
       makeSection({
         projects: [
@@ -284,7 +284,7 @@ describe("buildPortfolioProductsFromSnapshotSections — own-risk floor", () => 
             impact: "High",
             mitigation: "Hotfix",
             severity: "blocked",
-            stageNames: [],
+            stageNames: [OWNED_STAGE_NAME],
           },
         ],
       }),
@@ -297,11 +297,11 @@ describe("buildPortfolioProductsFromSnapshotSections — own-risk floor", () => 
   });
 });
 
-// Once the risk floor turns an empty stage red, `buildEscalationsFromReadSections`
+// Once the risk floor turns an owned stage red, `buildEscalationsFromReadSections`
 // fires an `at_risk` "flagged red" escalation off the effective status, alongside
 // the existing per-risk `unresolved_risk`. Pin both so the pair stays deliberate.
 describe("buildEscalationsFromReadSections — own-risk floor side effect", () => {
-  it("emits at_risk + blocked for a covers-all blocked own risk on an empty stage", () => {
+  it("emits at_risk + blocked for a blocked own risk on the owned stage", () => {
     const escalations = buildEscalationsFromReadSections([
       makeSection({
         projects: [
@@ -327,7 +327,7 @@ describe("buildEscalationsFromReadSections — own-risk floor side effect", () =
             impact: "High",
             mitigation: "Failover",
             severity: "blocked",
-            stageNames: [],
+            stageNames: [OWNED_STAGE_NAME],
           },
         ],
       }),
@@ -342,7 +342,7 @@ describe("buildEscalationsFromReadSections — own-risk floor side effect", () =
     ]);
   });
 
-  it("does NOT fire at_risk when the product has no owned stages (covers-all has nothing to floor)", () => {
+  it("does NOT fire at_risk when the product has no owned stages", () => {
     const escalations = buildEscalationsFromReadSections([
       makeSection({
         risks: [
@@ -353,7 +353,7 @@ describe("buildEscalationsFromReadSections — own-risk floor side effect", () =
             impact: "Medium",
             mitigation: "Re-plan",
             severity: "blocked",
-            stageNames: [],
+            stageNames: [OWNED_STAGE_NAME],
           },
         ],
       }),
@@ -447,7 +447,11 @@ describe("buildAssembledReportFromPrismaRow — portfolio totals floor (Shape B)
                 project: {
                   ...fullProject("CRM Portal"),
                   stageAssignments: [],
-                  lead: { reportingGroupId: null },
+                  groupProducts: [
+                    {
+                      groupId: "abababab-abab-4aba-8aba-abababababab",
+                    },
+                  ],
                 },
                 stage: {
                   id: OWNED_STAGE_ID,
@@ -459,7 +463,7 @@ describe("buildAssembledReportFromPrismaRow — portfolio totals floor (Shape B)
             ],
           },
           // Stale green ProjectStatus, no StageStatus row (owned stage has no
-          // submitted status), one covers-all own risk.
+          // submitted status), one own risk on the owned stage.
           projectStatuses: [
             {
               id: `${OWNED_PRODUCT}-status`,
@@ -486,7 +490,7 @@ describe("buildAssembledReportFromPrismaRow — portfolio totals floor (Shape B)
               impact: "High",
               mitigation: "Failover",
               severity,
-              stageNames: [],
+              stageNames: [STAGE_NAME],
               project: { name: "CRM Portal" },
               recordComments: [],
             },
@@ -499,14 +503,14 @@ describe("buildAssembledReportFromPrismaRow — portfolio totals floor (Shape B)
     };
   }
 
-  it("counts the product red (not green) for a covers-all blocked own risk", () => {
+  it("counts the product red (not green) for a blocked own risk", () => {
     const report = buildAssembledReportFromPrismaRow(reportRow("blocked"));
 
     expect(report.portfolioOverview.status).toBe("red");
     expect(report.portfolioOverview.totals).toMatchObject({ red: 1, green: 0 });
   });
 
-  it("counts the product yellow for a covers-all at-risk own risk", () => {
+  it("counts the product yellow for an at-risk own risk", () => {
     const report = buildAssembledReportFromPrismaRow(reportRow("at-risk"));
 
     expect(report.portfolioOverview.status).toBe("yellow");

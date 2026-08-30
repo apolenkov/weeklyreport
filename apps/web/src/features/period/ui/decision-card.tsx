@@ -7,7 +7,6 @@ import {
   canonicalStageName,
   FOREIGN_ENTRY_OPACITY,
   PublishedRecordMarker,
-  splitStageNames,
 } from "../../report-sections";
 
 function formatDeadline(iso: string | null): string | null {
@@ -86,13 +85,7 @@ function DecisionCardHeader({
 
 export function DecisionCard(props: DecisionCardProps) {
   const { decision } = props;
-  const stageTags = (
-    decision.stageNames && decision.stageNames.length > 0
-      ? decision.stageNames
-      : splitStageNames(decision.stageName)
-  )
-    // Heal legacy short "Dev" at render, mirroring the risk row and item card.
-    .map(canonicalStageName);
+  const stageTags = decision.stageNames.map(canonicalStageName);
 
   return (
     <div

@@ -32,6 +32,7 @@ export interface RemindersScopeRepository {
   ) => Promise<
     readonly {
       readonly email: string;
+      readonly name?: string;
       readonly notificationOptOut: boolean;
     }[]
   >;

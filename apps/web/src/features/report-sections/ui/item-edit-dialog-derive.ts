@@ -112,15 +112,16 @@ export function deriveItemEditFields(
   const parent = deriveItemParentFields(args);
   const stage = deriveItemStageFields(args, parent);
 
+  const ranks = args.ownPeriodRanks ?? [];
+  if (new Set(ranks).size !== ranks.length) {
+    throw new Error("Duplicate priority ranks are invalid");
+  }
   // Ranks already taken by OTHER items. The item's own current rank is
   // excluded so the user can keep it without seeing a false "taken" marker.
-  // Legacy data with duplicate ranks is tolerated: the Set deduplicates.
   const takenRanks = new Set(
-    (args.ownPeriodRanks ?? []).filter(
-      (r) => r !== (args.item?.priorityRank ?? null),
-    ),
+    ranks.filter((r) => r !== (args.item?.priorityRank ?? null)),
   );
-  // Offer options 1..10 plus any legacy rank above 10 already on the item.
+  // Offer the standard ranks and retain an existing higher rank for editing.
   const rankOptions = buildRankOptions(args.item?.priorityRank ?? null);
 
   return {

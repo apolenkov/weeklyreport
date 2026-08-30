@@ -219,18 +219,17 @@ MVP.
 - **AND** the failed side effect is reported without preventing the independent
   side effect from running
 
-#### Scenario: Ingestion degradation never breaks publish
+#### Scenario: Publishing has no ingestion dependency
 
-- **WHEN** a deferred ingestion system is unavailable or unconfigured
-- **THEN** manual and automatic publishing still succeed because the current
-  MVP does not invoke an ingestion path
+- **WHEN** manual or automatic publishing runs
+- **THEN** it succeeds because the current MVP does not invoke an ingestion path
 
-#### Scenario: Production composition has no dormant ingestion dependency
+#### Scenario: Production composition has no ingestion dependency
 
 - **WHEN** the API modules resolve under `NODE_ENV=production` with the required
   product configuration
 - **THEN** manual and automatic publishing resolve without an ingestion queue,
-  hook, no-op adapter, or missing-consumer guard
+  hook, or no-op adapter
 - **AND** no publish path reads report-section identifiers solely for ingestion
 
 ### Requirement: There is exactly one manual publish entry point

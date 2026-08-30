@@ -27,34 +27,6 @@ consumer default; supplying an invalid value MUST fail boot rather than recover.
 - **THEN** it uses that parsed numeric value and alerts when the failed-job
   count exceeds it
 
-### Requirement: Telegram terminal failures count toward DLQ metrics
-
-The `telegram-outbound` queue MUST be included in the monitored `QUEUE_NAMES`
-so the existing DLQ monitor increments
-`cr_dlq_failed_total{queue="telegram-outbound"}` exactly once per terminal
-failure via its `QueueEvents` listener, the same single-owner path it already
-uses for `email-reminder` and `pdf-export`. The change MUST NOT add a second
-increment from a telegram worker handler, which would double-count. Because
-telegram is deferred, the `QUEUE_NAMES` entry — the activation point — MUST
-carry a `TODO(activate-telegram-bot)` trace per the deferred-feature convention.
-
-#### Scenario: A terminal telegram failure increments the DLQ counter once
-
-- **GIVEN** `telegram-outbound` is in the monitored `QUEUE_NAMES`
-- **AND** a `telegram-outbound` job that has exhausted its retry attempts
-- **WHEN** the DLQ monitor observes the terminal failure via `QueueEvents`
-- **THEN** `cr_dlq_failed_total{queue="telegram-outbound"}` increments exactly
-  once, with no second increment from any worker handler
-- **AND** that failure is eligible to trip the DLQ alert threshold because the
-  threshold poll iterates the same monitored queue set
-
-#### Scenario: Telegram queue is part of the monitored set
-
-- **GIVEN** the DLQ monitor enumerates the queues it watches
-- **WHEN** it builds its monitored set
-- **THEN** `telegram-outbound` is present alongside `email-reminder` and
-  `pdf-export`
-
 ### Requirement: Bull Board queue handles close on shutdown
 
 Every BullMQ `Queue` instance created for Bull Board MUST be lifecycle-managed
@@ -73,9 +45,8 @@ leaked after a graceful stop.
 
 The `pdf-export` and `email-reminder` BullMQ queues MUST register
 `defaultJobOptions` bounding both completed and failed job retention
-(`removeOnComplete` and `removeOnFail` with a finite `count`), matching the
-retention `telegram-outbound` already sets per-job, so completed and failed
-job hashes do not accumulate in Redis without bound.
+(`removeOnComplete` and `removeOnFail` with a finite `count`), so completed and
+failed job hashes do not accumulate in Redis without bound.
 
 #### Scenario: Completed pdf-export jobs are pruned past the retention count
 

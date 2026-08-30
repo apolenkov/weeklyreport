@@ -15,6 +15,7 @@ import {
   fullRisk,
   mapRow,
   OWNED_PROJECT,
+  OWNER_GROUP_ID,
   SECTION_ID,
   STAGE_ID,
   TESTING_STAGE_ID,
@@ -41,6 +42,7 @@ describe("mapPrismaToReportSection — referencedProjects", () => {
         risks: [
           fullRisk({
             projectId: UNOWNED_PROJECT,
+            stageNames: ["Development"],
             project: { name: "Foreign Project" },
           }),
         ],
@@ -61,6 +63,7 @@ describe("mapPrismaToReportSection — referencedProjects", () => {
         items: [
           fullItem({
             projectId: UNOWNED_PROJECT,
+            stageNames: ["Development"],
             text: "Cross-stage item",
             project: { name: "Foreign Project" },
           }),
@@ -68,6 +71,7 @@ describe("mapPrismaToReportSection — referencedProjects", () => {
         decisions: [
           fullDecision({
             productId: UNOWNED_PROJECT,
+            stageNames: ["Development"],
             text: "Cross-stage decision",
             project: { name: "Foreign Project" },
           }),
@@ -86,6 +90,7 @@ describe("mapPrismaToReportSection — referencedProjects", () => {
         risks: [
           fullRisk({
             projectId: OWNED_PROJECT,
+            stageNames: ["Development"],
             project: { name: "Owned Project" },
           }),
         ],
@@ -115,6 +120,7 @@ describe("mapPrismaToReportSection — referencedProjects", () => {
         risks: [
           fullRisk({
             projectId: OWNED_PROJECT,
+            stageNames: ["Development"],
             project: { name: "Archived Project" },
           }),
         ],
@@ -127,40 +133,37 @@ describe("mapPrismaToReportSection — referencedProjects", () => {
     ]);
   });
 
-  it("skips rows without a loaded project relation (legacy fixture shape)", () => {
-    // A real DB row's nullable `project` relation surfaces as `null`, never
-    // `undefined` — this pins the honest contract (the hand-written type
-    // used to model it as optional-absent).
-    const section = mapRow(
-      baseRow({
-        risks: [fullRisk({ projectId: UNOWNED_PROJECT, project: null })],
-      }),
-    );
-
-    expect(section.referencedProjects).toEqual([]);
+  it("fails closed when a product-parented row has no loaded project relation", () => {
+    expect(() =>
+      mapRow(
+        baseRow({
+          risks: [fullRisk({ projectId: UNOWNED_PROJECT, project: null })],
+        }),
+      ),
+    ).toThrow(/references product .* relation was not loaded/);
   });
 });
 
 // stageSet excludes vacant stages; ownedStages stay author-writable only.
 describe("mapPrismaToReportSection — ownerGroupId freeze", () => {
-  it("stamps each project entry with the PRODUCT lead's reporting group, not the section author's", () => {
+  it("stamps each project entry with its explicit GroupProduct owner", () => {
     const assignment = fullOwnedStageAssignment();
     const row = baseRow({
       author: {
         name: "Lead 1",
         role: "lead",
         id: AUTHOR_ID,
-        // The section author's own group differs from the product owner's —
-        // a stamp that read the author's group would leak through here.
+        // The section author's group differs from the product owner — a stamp
+        // that read the author's group would leak through here.
         reportingGroupId: "e0000000-0000-4000-a000-0000000000a1",
         stageAssignments: [
           {
             ...assignment,
             project: {
               ...assignment.project,
-              lead: {
-                reportingGroupId: "e0000000-0000-4000-a000-0000000000b2",
-              },
+              groupProducts: [
+                { groupId: "e0000000-0000-4000-a000-0000000000b2" },
+              ],
             },
           },
         ],
@@ -174,10 +177,54 @@ describe("mapPrismaToReportSection — ownerGroupId freeze", () => {
     );
   });
 
-  it("freezes a null ownerGroupId for a product whose lead has no group", () => {
-    const mapped = mapRow(baseRow());
+  it("fails closed when a project has no GroupProduct owner", () => {
+    const assignment = fullOwnedStageAssignment();
+    const row = baseRow({
+      author: {
+        name: "Lead 1",
+        role: "lead",
+        id: AUTHOR_ID,
+        reportingGroupId: OWNER_GROUP_ID,
+        stageAssignments: [
+          {
+            ...assignment,
+            project: { ...assignment.project, groupProducts: [] },
+          },
+        ],
+      },
+    });
 
-    expect(mapped.projects[0]?.ownerGroupId).toBeNull();
+    expect(() => mapRow(row)).toThrow(
+      `Project ${OWNED_PROJECT} must have exactly one GroupProduct owner, found 0`,
+    );
+  });
+
+  it("fails closed when a project has multiple GroupProduct owners", () => {
+    const assignment = fullOwnedStageAssignment();
+    const row = baseRow({
+      author: {
+        name: "Lead 1",
+        role: "lead",
+        id: AUTHOR_ID,
+        reportingGroupId: OWNER_GROUP_ID,
+        stageAssignments: [
+          {
+            ...assignment,
+            project: {
+              ...assignment.project,
+              groupProducts: [
+                { groupId: OWNER_GROUP_ID },
+                { groupId: "e0000000-0000-4000-a000-0000000000b2" },
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    expect(() => mapRow(row)).toThrow(
+      `Project ${OWNED_PROJECT} must have exactly one GroupProduct owner, found 2`,
+    );
   });
 });
 
@@ -261,13 +308,13 @@ describe("mapPrismaToReportSection — own-risk product floor", () => {
     });
   }
 
-  it("floors red for a covers-all blocked own risk on an owned empty stage", () => {
+  it("floors red for a blocked own risk on an owned stage", () => {
     const section = mapRow(
       baseRow({
         projectStatuses: [
           fullProjectStatus({ projectId: OWNED_PROJECT, status: "green" }),
         ],
-        risks: [coveringRisk("blocked", [])],
+        risks: [coveringRisk("blocked", ["Development"])],
       }),
     );
 
@@ -280,13 +327,13 @@ describe("mapPrismaToReportSection — own-risk product floor", () => {
     expect(project.ownedStages[0]?.status ?? null).toBeNull();
   });
 
-  it("floors yellow for a covers-all at-risk own risk on an owned empty stage", () => {
+  it("floors yellow for an at-risk own risk on an owned stage", () => {
     const section = mapRow(
       baseRow({
         projectStatuses: [
           fullProjectStatus({ projectId: OWNED_PROJECT, status: "green" }),
         ],
-        risks: [coveringRisk("at-risk", [])],
+        risks: [coveringRisk("at-risk", ["Development"])],
       }),
     );
 
@@ -301,7 +348,7 @@ describe("mapPrismaToReportSection — own-risk product floor", () => {
         projectStatuses: [
           fullProjectStatus({ projectId: OWNED_PROJECT, status: "red" }),
         ],
-        risks: [coveringRisk("at-risk", [])],
+        risks: [coveringRisk("at-risk", ["Development"])],
       }),
     );
 

@@ -4,7 +4,6 @@ import { Separator } from "@customreport/ui/components/ui/separator";
 import type { ComponentProps, RefObject } from "react";
 
 import type { FullscreenHandle } from "../../../../../shared/hooks/browser/use-fullscreen";
-import { AgentReviewComingSoon } from "../../../../../shared/ui/report-shell/agent-review-coming-soon";
 import { ArchiveToggle } from "../../../../../shared/ui/report-shell/archive-toggle";
 import { ReportToolbar } from "../../../../../shared/ui/report-shell/report-toolbar";
 import { ViewModeToggle } from "../../../../../shared/ui/report-shell/view-mode-toggle";
@@ -160,9 +159,6 @@ function ToolbarViewCluster({
     : "/lead/report";
   return (
     <>
-      {/* Inert Agent-review placeholder leads the right-aligned view
-          group (compact, leading edge). */}
-      <AgentReviewComingSoon compact />
       {/* Always rendered so trailing controls never shift between modes. */}
       <RecordVisibilityToggle
         value={toolbarVisibility}

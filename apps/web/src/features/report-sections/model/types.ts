@@ -18,7 +18,7 @@ export interface StageAssignment {
   readonly assignee: string | null;
   readonly tooltip?: string | undefined;
   // True when the lead's own non-empty risk explicitly names this stage
-  // (empty/legacy "covers all" stageNames does NOT set it). Additive to raw
+  // (empty stageNames does NOT set it). Additive to raw
   // status for completeness; foreign risks never set it.
   readonly coveredByOwnRisk?: boolean | undefined;
 }
@@ -39,15 +39,14 @@ export type KanbanItemParent =
 
 interface KanbanItemFields {
   readonly id: string;
-  readonly stageName?: string | undefined;
-  readonly stageNames?: readonly string[] | undefined;
+  readonly stageNames: readonly string[];
   readonly status: ItemStatus;
   readonly text: string;
   readonly author: string;
   readonly foreign?: boolean | undefined;
   readonly authorId?: string | undefined;
   readonly priorityRank?: number | null | undefined;
-  // Required in UI when pausing; schema stays permissive for legacy paused rows.
+  // Required in UI when pausing.
   readonly pausedReason?: string | null | undefined;
 }
 
@@ -84,8 +83,7 @@ export interface RiskEntry {
   readonly productName: string;
   readonly activityId?: string | null | undefined;
   readonly activityName?: string | undefined;
-  readonly stageName?: string | undefined;
-  readonly stageNames?: readonly string[] | undefined;
+  readonly stageNames: readonly string[];
   readonly severity: "at-risk" | "blocked";
   readonly text: string;
   readonly impact: string;
@@ -106,8 +104,7 @@ export interface DecisionEntry {
   readonly owner: string;
   readonly impact: string;
   readonly deadline: string | null;
-  readonly stageName?: string | undefined;
-  readonly stageNames?: readonly string[] | undefined;
+  readonly stageNames: readonly string[];
   readonly foreign?: boolean | undefined;
   readonly authorId?: string | undefined;
 }
@@ -115,8 +112,7 @@ export interface DecisionEntry {
 export interface PriorityEntry {
   readonly rank: number;
   readonly text: string;
-  readonly stageName?: string | undefined;
-  readonly stageNames?: readonly string[] | undefined;
+  readonly stageNames: readonly string[];
   readonly productId?: string | undefined;
   readonly productName?: string | undefined;
   readonly foreign?: boolean | undefined;

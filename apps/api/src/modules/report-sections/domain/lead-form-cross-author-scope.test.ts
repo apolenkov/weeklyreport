@@ -56,6 +56,7 @@ function sectionWithComments(): ReportSectionReadModel {
         pausedReason: "Blocked on a confidential legal review",
         carriedOver: false,
         comments: [{ ...COMMENT }],
+        stageNames: ["Development"],
       },
       {
         projectId: UNSHARED_PRODUCT_ID,
@@ -65,6 +66,7 @@ function sectionWithComments(): ReportSectionReadModel {
         workflowStatus: "in_progress",
         carriedOver: false,
         comments: [{ ...COMMENT }],
+        stageNames: ["Development"],
       },
     ],
     risks: [
@@ -75,6 +77,7 @@ function sectionWithComments(): ReportSectionReadModel {
         mitigation: "Mitigation",
         severity: "at-risk",
         comments: [{ ...COMMENT }],
+        stageNames: ["Development"],
       },
       {
         projectId: UNSHARED_PRODUCT_ID,
@@ -83,6 +86,7 @@ function sectionWithComments(): ReportSectionReadModel {
         mitigation: "Mitigation",
         severity: "blocked",
         comments: [{ ...COMMENT }],
+        stageNames: ["Development"],
       },
     ],
     decisions: [
@@ -93,6 +97,7 @@ function sectionWithComments(): ReportSectionReadModel {
         impact: "Impact",
         deadline: null,
         comments: [{ ...COMMENT }],
+        stageNames: ["Development"],
       },
       {
         productId: UNSHARED_PRODUCT_ID,
@@ -101,6 +106,7 @@ function sectionWithComments(): ReportSectionReadModel {
         impact: "Impact",
         deadline: null,
         comments: [{ ...COMMENT }],
+        stageNames: ["Development"],
       },
     ],
     activities: [

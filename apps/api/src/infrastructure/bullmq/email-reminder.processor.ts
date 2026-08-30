@@ -1,4 +1,3 @@
-import type { OrganizationBrand } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
 import { type Job, type WorkerOptions } from "bullmq";
 import { ClsService } from "nestjs-cls";
@@ -8,67 +7,21 @@ import { errorMessage } from "../../lib/error-message.js";
 import type { AppLogger } from "../../lib/logger.js";
 import { SnapshotAdminService } from "../../modules/admin/index.js";
 import { renderEmail } from "../../modules/email/index.js";
-import { RemindersService } from "../../modules/reminders/index.js";
+import type {
+  DeadlineQueueData,
+  EscalationQueueData,
+  ReminderQueueJobEnvelope,
+} from "../../modules/reminders/index.js";
+import {
+  parseReminderQueueJobData,
+  RemindersService,
+} from "../../modules/reminders/index.js";
 import { ENV_CONFIG } from "../config/config.module.js";
 import type { EnvConfig } from "../config/env.schema";
 import { EMAIL_PORT, type EmailPort } from "../email/email.service";
 import { RawBullMqProcessor } from "./raw-bullmq-processor.js";
-import {
-  describeJobFailureTrace,
-  type JobTraceContext,
-} from "./worker-observability.js";
-
-// Kind-absent payloads send plaintext with a hardcoded brand; deadline/escalation
-// payloads render react-email templates and carry the enqueue-time organization
-// snapshot.
-interface LegacyReminderPayload {
-  executionId: string;
-  recipientEmail: string;
-  reportPeriod: string;
-}
-
-interface DeadlineReminderPayload {
-  executionId: string;
-  recipientEmail: string;
-  kind: "deadline";
-  leadName: string;
-  reportPeriod: string;
-  deadlineIso: string;
-  sectionUrl: string;
-  organization: OrganizationBrand;
-}
-
-interface EscalationReminderPayload {
-  executionId: string;
-  recipientEmail: string;
-  kind: "escalation";
-  headName: string;
-  cycleDate: string;
-  reportPeriod: string;
-  lateLeads: readonly {
-    leadName: string;
-    sectionTitle: string;
-    deadlineIso: string;
-  }[];
-  organization: OrganizationBrand;
-}
-
-export type EmailReminderJobData = JobTraceContext &
-  (LegacyReminderPayload | DeadlineReminderPayload | EscalationReminderPayload);
-
-function hasDeadlineKind(
-  data: EmailReminderJobData,
-): data is JobTraceContext & DeadlineReminderPayload {
-  const kind: unknown = "kind" in data ? data.kind : undefined;
-  return kind === "deadline";
-}
-
-function hasEscalationKind(
-  data: EmailReminderJobData,
-): data is JobTraceContext & EscalationReminderPayload {
-  const kind: unknown = "kind" in data ? data.kind : undefined;
-  return kind === "escalation";
-}
+import { describeJobFailureTrace } from "./worker-observability.js";
+export type EmailReminderJobData = ReminderQueueJobEnvelope;
 
 // null means "use the SMTP_FROM env default".
 type FromOverride = string | null;
@@ -130,7 +83,11 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
   protected readonly processJob = async (
     job: Job<EmailReminderJobData>,
   ): Promise<void> => {
-    const { executionId } = job.data;
+    // BullMQ is a runtime boundary: validate the complete current envelope
+    // before claiming the DB row. A stale kind-less job may fail into the DLQ,
+    // but can never consume the claim needed by its current-contract revival.
+    const data = parseReminderQueueJobData(job.data);
+    const { executionId } = data;
 
     // Compare-and-set `queued → sending` before any SMTP work: a retry or a
     // duplicate worker that finds the row already claimed loses the transition
@@ -145,7 +102,7 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
     }
 
     try {
-      await this.dispatchEmail(job.data);
+      await this.dispatchEmail(data);
     } catch (error: unknown) {
       // The send never happened, so the row must not stay `sending`. On the
       // last attempt `failed` is terminal; earlier, release the claim back to
@@ -172,17 +129,15 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
     const fromOverride = (await this.snapshotAdminService.getSettings())
       .notificationFromEmail;
 
-    if (hasDeadlineKind(data)) {
+    if (data.kind === "deadline") {
       await this.sendDeadlineReminder(data, fromOverride);
-    } else if (hasEscalationKind(data)) {
-      await this.sendEscalationReminder(data, fromOverride);
     } else {
-      await this.sendLegacyReminder(data, fromOverride);
+      await this.sendEscalationReminder(data, fromOverride);
     }
   }
 
   private async sendDeadlineReminder(
-    data: DeadlineReminderPayload,
+    data: DeadlineQueueData,
     fromOverride: FromOverride,
   ): Promise<void> {
     const rendered = await renderEmail({
@@ -205,7 +160,7 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
   }
 
   private async sendEscalationReminder(
-    data: EscalationReminderPayload,
+    data: EscalationQueueData,
     fromOverride: FromOverride,
   ): Promise<void> {
     const rendered = await renderEmail({
@@ -223,29 +178,6 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
       rendered.subject,
       rendered.html,
       rendered.text,
-      fromOverride,
-    );
-  }
-
-  // Plaintext path for kind-absent payloads; brand stays hardcoded on this branch.
-  private async sendLegacyReminder(
-    data: LegacyReminderPayload,
-    fromOverride: FromOverride,
-  ): Promise<void> {
-    const subject = "Reminder: Weekly Status Report Due";
-    const body = [
-      "Hello,",
-      "",
-      `This is a reminder to fill in your section for the status report period: ${data.reportPeriod}.`,
-      "",
-      "Please log in and submit your section before the deadline.",
-      "",
-      "Thank you.",
-    ].join("\n");
-    await this.emailService.sendMail(
-      data.recipientEmail,
-      subject,
-      body,
       fromOverride,
     );
   }

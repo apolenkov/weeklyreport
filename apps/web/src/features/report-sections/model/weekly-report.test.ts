@@ -96,6 +96,7 @@ describe("mapWeeklyReport", () => {
               tag: "planning",
               workflowStatus: "planned",
               carriedOver: false,
+              stageNames: ["Planning"],
             },
           ],
           risks: [
@@ -183,7 +184,7 @@ describe("mapWeeklyReport", () => {
             {
               id: "next-1",
               stageLead: "Planned",
-              stage: "",
+              stage: "Planning",
               owner: "AL",
               text: "Plan follow-up",
               status: "planned",

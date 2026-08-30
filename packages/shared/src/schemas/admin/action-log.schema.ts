@@ -25,7 +25,6 @@ export const actionLogFailureReasonSchema = z.enum([
   "PRECONDITION_REQUIRED",
   "TOO_MANY_REQUESTS",
   "CLIENT_CLOSED_REQUEST",
-  "LEGACY_FAILURE",
 ]);
 
 const actionLogEventShape = {

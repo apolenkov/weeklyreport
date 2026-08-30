@@ -1,12 +1,9 @@
 "use client";
 
-import { ComingSoonControl } from "@customreport/ui/components/coming-soon-control";
 import { Skeleton } from "@customreport/ui/components/ui/skeleton";
-import { LayoutTemplate } from "lucide-react";
 import { useCallback, useContext } from "react";
 
 import { SessionContext } from "../../../../shared/lib/auth/session-provider";
-import { AgentReviewComingSoon } from "../../../../shared/ui/report-shell/agent-review-coming-soon";
 import { ArchiveToggle } from "../../../../shared/ui/report-shell/archive-toggle";
 import {
   DocumentActionGroup,
@@ -66,7 +63,6 @@ function HeadContextTrailing({
       className="flex min-w-0 flex-wrap items-center gap-1.5"
       data-testid="head-context-trailing"
     >
-      <AgentReviewComingSoon compact />
       <ScopeToggle
         value={scope}
         onChange={setScope}
@@ -79,16 +75,7 @@ function HeadContextTrailing({
         desktopLabels
       />
       {mode === "slides" ? (
-        <>
-          <ComingSoonControl
-            icon={LayoutTemplate}
-            label="Slide templates"
-            ariaLabel="Slide templates are coming soon"
-            testId="slide-templates-coming-soon"
-            compact
-          />
-          <SlideDensityControl value={density} onChange={onDensityChange} />
-        </>
+        <SlideDensityControl value={density} onChange={onDensityChange} />
       ) : null}
     </div>
   );

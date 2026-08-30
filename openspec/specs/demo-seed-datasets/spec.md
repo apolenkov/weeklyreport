@@ -9,9 +9,7 @@ Provide four explicit deterministic seed profiles as a monotonic capability ladd
 ### Requirement: Four explicit seed profiles
 
 The repository MUST expose exactly four profiles through one public selector:
-`minimal`, `demo`, `full`, and `stress`. Legacy `small`, `middle`, `huge`, and
-`fresh:*` commands MUST NOT remain public aliases after repository callers
-migrate.
+`minimal`, `demo`, `full`, and `stress`.
 
 #### Scenario: A developer selects a profile
 
@@ -42,8 +40,8 @@ A richer profile MUST NOT remove an already-proved capability.
 
 ### Requirement: Demo preserves the curated product walkthrough
 
-The `demo` profile MUST preserve the curated walkthrough formerly carried by
-the small tier: multiple roles, green/yellow/red product health, multi-stage
+The `demo` profile MUST provide the curated walkthrough: multiple roles,
+green/yellow/red product health, multi-stage
 items, split and vacant stage ownership, foreign co-owner content in current
 and next week buckets, draft/submitted contrast, a published period, active
 reminder dispatch, and a blocked item that derives Needs Attention. These rows
@@ -92,9 +90,9 @@ at least one end-to-end smoke journey appropriate to its purpose.
 
 ### Requirement: Repository seed consumers select profiles explicitly
 
-Hard reset, migration seed, visual regression, UAT, developer reseed, and e2e
-setup MUST select a canonical profile explicitly. No caller may depend on an
-implicit `seed-simple.ts` default or an undocumented command-to-dataset mapping.
+Development reset and migration seed MUST select a canonical profile
+explicitly. No caller may depend on an implicit default or an undocumented
+command-to-dataset mapping.
 
 #### Scenario: Hard reset completes
 
@@ -102,7 +100,7 @@ implicit `seed-simple.ts` default or an undocumented command-to-dataset mapping.
 - **THEN** it preserves the destructive guard, resets the accepted disposable
   target, writes that profile, and runs its validator
 
-### Requirement: MVP data cutovers preserve safety, not old rows
+### Requirement: Profile cutovers preserve safety
 
 Profile and schema changes MAY discard existing non-production MVP rows and MAY
 use breaking reset-based cutovers. They MUST preserve the destructive database

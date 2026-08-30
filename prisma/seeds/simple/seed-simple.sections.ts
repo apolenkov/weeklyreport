@@ -29,8 +29,8 @@ import {
   SUBMIT_DAY_OFFSET,
 } from "./seed-simple.period.js";
 
-// Every Item / Risk / Decision carries a stage label so the UI never shows the
-// '—' legacy placeholder. Vasily rotates across his 7-stage CRM ownership to
+// Every Item / Risk / Decision carries a stage label so the UI has an explicit
+// stage for each record. Vasily rotates across his 7-stage CRM ownership to
 // exercise per-stage scoping; every other lead sits on "Development", matching
 // the seeded Stage.name and their single StageAssignment.
 const SEED_STAGE_ROTATION = [

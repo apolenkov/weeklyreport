@@ -1,5 +1,4 @@
 import {
-  type ActionLogFailureReason,
   actionLogFailureReasonSchema,
   type AdminActionLogEvent,
   adminActionLogEventSchema,
@@ -57,11 +56,6 @@ export class ActionLogService {
   }
 }
 
-function normalizeFailureReason(reason: string | null): ActionLogFailureReason {
-  const parsed = actionLogFailureReasonSchema.safeParse(reason);
-  return parsed.success ? parsed.data : "LEGACY_FAILURE";
-}
-
 function mapActionLogRow(row: ActionLogRow): AdminActionLogEvent {
   const common = {
     id: row.id,
@@ -81,7 +75,10 @@ function mapActionLogRow(row: ActionLogRow): AdminActionLogEvent {
       : {
           ...common,
           status: "fail",
-          reason: normalizeFailureReason(row.reason),
+          // Current writers persist only the shared allowlist. Parsing here
+          // deliberately fails closed if an out-of-contract row is present;
+          // historical arbitrary reasons are not part of the MVP contract.
+          reason: actionLogFailureReasonSchema.parse(row.reason),
         },
   );
 }

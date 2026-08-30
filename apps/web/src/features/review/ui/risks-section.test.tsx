@@ -16,6 +16,7 @@ const baseRisk: RiskEntry = {
   text: "Vendor delay",
   impact: "Delivery slips",
   mitigation: "Escalate",
+  stageNames: ["Planning"],
 };
 
 const foreignRisk: RiskEntry = {
@@ -28,6 +29,7 @@ const foreignRisk: RiskEntry = {
   mitigation: "m",
   foreign: true,
   authorName: "Alice",
+  stageNames: ["Planning"],
 };
 
 describe("RisksSection LockBadge", () => {
@@ -134,7 +136,7 @@ describe("RisksSection LockBadge", () => {
 
 describe("RisksSection — aria-hidden decorative icons", () => {
   it("EditIcon SVG has aria-hidden='true'", () => {
-    render(<RisksSection risks={[baseRisk]} />);
+    render(<RisksSection risks={[{ ...baseRisk, stageNames: [] }]} />);
 
     const editBtn = screen.getByRole("button", { name: /Edit risk for CRM/i });
     const svg = editBtn.querySelector("svg");
@@ -244,13 +246,12 @@ describe("RisksSection stage scope", () => {
   it("renders explicit all-stage selection as stage chips, not All stages", () => {
     render(
       <RisksSection
-        risks={[{ ...baseRisk, stageNames: ["Dev", "Testing"] }]}
-        stagesForProduct={() => ["Dev", "Testing"]}
+        risks={[{ ...baseRisk, stageNames: ["Development", "Testing"] }]}
+        stagesForProduct={() => ["Development", "Testing"]}
       />,
     );
 
     expect(screen.queryByText("All stages")).not.toBeInTheDocument();
-    // "Dev" is canonicalized to "Development" before rendering.
     expect(screen.getByText("Development")).toBeInTheDocument();
     expect(screen.getByText("Testing")).toBeInTheDocument();
   });
@@ -258,15 +259,15 @@ describe("RisksSection stage scope", () => {
   it("renders a No-stage-set warning chip for omitted stage scope", () => {
     // A risk with no stages is a legacy anomaly, never an implicit "all stages"
     // scope — the card must say so loudly.
-    render(<RisksSection risks={[baseRisk]} />);
+    render(<RisksSection risks={[{ ...baseRisk, stageNames: [] }]} />);
 
     expect(screen.getByText("No stage set")).toBeInTheDocument();
     expect(screen.queryByText("All stages")).not.toBeInTheDocument();
   });
 
-  it("resolves the legacy stageName fallback before warning", () => {
+  it("renders the explicit stage scope", () => {
     render(
-      <RisksSection risks={[{ ...baseRisk, stageName: "Development" }]} />,
+      <RisksSection risks={[{ ...baseRisk, stageNames: ["Development"] }]} />,
     );
 
     expect(screen.getByText("Development")).toBeInTheDocument();
@@ -280,7 +281,7 @@ describe("RisksSection stage scope", () => {
         risks={[
           {
             ...baseRisk,
-            stageNames: ["Planning", "Analysis", "Design", "Dev"],
+            stageNames: ["Planning", "Analysis", "Design", "Development"],
           },
         ]}
       />,
@@ -289,7 +290,6 @@ describe("RisksSection stage scope", () => {
     expect(screen.getByText("Planning")).toBeInTheDocument();
     expect(screen.getByText("Analysis")).toBeInTheDocument();
     expect(screen.getByText("Design")).toBeInTheDocument();
-    // "Dev" is canonicalized to "Development" before rendering.
     expect(screen.getByText("Development")).toBeInTheDocument();
     expect(screen.queryByText("+1")).not.toBeInTheDocument();
   });

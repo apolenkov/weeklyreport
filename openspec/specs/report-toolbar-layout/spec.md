@@ -18,7 +18,7 @@ The Head form and slides headers MUST use a stable desktop title/action layout i
 
 ### Requirement: Head slide context controls occupy one compact toolbar row
 
-At desktop width, period/archive controls MUST remain the left cluster and Agent review, scope, view, and density controls MUST remain the right cluster of the single report context toolbar. The working Document/Presentation density choice MUST NOT render as a separate deck row.
+At desktop width, period/archive controls MUST remain the left cluster and scope, view, and density controls MUST remain the right cluster of the single report context toolbar. The working Document/Presentation density choice MUST NOT render as a separate deck row.
 
 #### Scenario: Head opens Leads presentation
 
@@ -28,7 +28,7 @@ At desktop width, period/archive controls MUST remain the left cluster and Agent
 
 ### Requirement: Lead slide context controls expose the working density choice
 
-At desktop width, the Lead report context toolbar MUST keep period/archive controls in the left cluster and Agent review, record visibility, labeled view mode, density, and fullscreen controls in the trailing cluster. The working Document/Presentation density choice MUST NOT render as a second hosted deck row, while standalone Lead decks MAY keep their local density toolbar.
+At desktop width, the Lead report context toolbar MUST keep period/archive controls in the left cluster and record visibility, labeled view mode, density, and fullscreen controls in the trailing cluster. The working Document/Presentation density choice MUST NOT render as a second hosted deck row, while standalone Lead decks MAY keep their local density toolbar.
 
 #### Scenario: Lead opens hosted slides
 
@@ -44,7 +44,7 @@ resting solid brand-accent fill — the forward commit when one is available —
 MUST render the other document actions with a lesser accent (outline/ghost) so
 they do not compete with that primary. The bordered context-control bar MUST NOT
 give any control a solid brand-accent fill; its segmented toggles use a neutral
-active-selection fill, not the brand accent (see `head-toolbar-semantics`).
+active-selection fill, not the brand accent.
 
 1. When a forward commit is available (Submit Section for lead, Publish & Lock
    for head) it MUST be the only control with the resting solid brand-accent
@@ -81,26 +81,6 @@ active-selection fill, not the brand accent (see `head-toolbar-semantics`).
   accent
 - **AND** no control in the bar carries a solid brand-accent fill
 
-### Requirement: Inert coming-soon document actions reserve their top-row slot
-
-An inert Coming-soon document action MUST occupy its slot in the header line's
-document-action group, so the layout does not shift when the deferred feature
-later activates.
-
-1. The lead Version Coming-soon control and the lead PDF Coming-soon control
-   MUST render in the header action group as inert controls consistent in shape
-   with their sibling document actions, wrapped in `ComingSoonBadge` per the
-   deferred-feature pattern.
-2. No new control MUST be introduced by this layout change; the Fill-From copy
-   icon MUST NOT be surfaced as a separate "Copy" control.
-
-#### Scenario: a lead draft reserves the inert document-action slots
-
-- **WHEN** a lead opens their report for an editable period
-- **THEN** the header action group shows the inert Version Coming-soon and PDF
-  Coming-soon controls in their slots, ordered before the real document actions,
-  inert and not working exports
-
 ### Requirement: Toolbar row composition adapts to role and period state without losing positional stability
 
 The report surface MUST adjust which controls render by role and period state
@@ -108,18 +88,16 @@ while keeping the surviving controls in stable positions across the header actio
 group and the context bar.
 
 1. For a lead read-only past period, the header action group MUST hide the real
-   mutating document actions (Save, Submit Section, Fill-From) while the inert
-   Coming-soon controls remain visible per the deferred-feature pattern; the
+   mutating document actions (Save, Submit Section, Fill-From); the
    context-control bar MUST remain.
 2. When a lead submits, Save MUST be hidden and the forward commit slot MUST
    switch to the reversal action without reordering the remaining controls.
 3. Viewer and the lead preview render through the shared report page; neither
    header action group MUST contain any commit control (Save/Submit/Publish). For
-   the viewer specifically, the navigation it adds (e.g. Back to Archive) and the
-   `AgentReviewComingSoon` placeholder MUST sit in the context-control bar, not
-   the header action group. The lead preview keeps its own outer header; its
-   outer-header navigation and placeholder are outside the shared toolbar contract
-   and are not relocated by this change.
+   the viewer specifically, the navigation it adds (e.g. Back to Archive) MUST
+   sit in the context-control bar, not the header action group. The lead preview
+   keeps its own outer header; its outer-header navigation is outside the shared
+   toolbar contract and is not relocated by this change.
 4. Status indicators (submitted count, autosave time, publish precondition hint,
    department label) MUST render on the header line as labels, NOT inside the
    document-action group or the context bar.
@@ -128,16 +106,14 @@ group and the context bar.
 
 - **WHEN** a lead opens a read-only past period
 - **THEN** the header action group hides Save, Submit Section, and Fill-From
-- **AND** the inert Coming-soon controls remain visible and the context bar still
-  allows navigating periods
+- **AND** the context bar still allows navigating periods
 
 #### Scenario: a viewer opens a published report
 
 - **WHEN** a viewer opens a published report through the shared report page
 - **THEN** the header action group shows only the PDF export with no
   Save/Submit/Publish
-- **AND** the submitted-count badge and the Agent review placeholder render
-  outside the header action group
+- **AND** the submitted-count badge renders outside the header action group
 
 ### Requirement: All toolbar controls stay reachable at narrow viewport widths
 
@@ -172,7 +148,7 @@ The report surface MUST split its controls by one axis — operates on the repor
    title/status block — NOT inside the bordered toolbar.
 2. A control that changes which report is shown or how it is presented (period
    navigation, show-archived-periods filter, scope, view mode, the mode-adaptive
-   collapse-all (edit) / fullscreen (slides) control, Agent review) MUST render in
+   collapse-all (edit) / fullscreen (slides) control) MUST render in
    the bordered toolbar bar, even when it persists a setting.
 3. The bordered toolbar MUST render exactly one row (the context-control bar);
    it MUST NOT contain a document-action row.
@@ -188,7 +164,7 @@ The report surface MUST split its controls by one axis — operates on the repor
   Section commit
 - **AND** the bordered toolbar shows one row: period navigation, the
   show-archived-periods filter, the Mine/Everyone scope, the Edit/Slides view
-  mode, the collapse-all control, and Agent review
+  mode, and the collapse-all control
 
 #### Scenario: the lead slides surface shows fullscreen in the collapse-all slot
 
@@ -204,7 +180,7 @@ The report surface MUST split its controls by one axis — operates on the repor
   Lock commit
 - **AND** the bordered toolbar shows one row: period navigation, the
   show-archived-periods filter, the Product/Leads scope, the Edit/Slides view
-  mode, and Agent review
+  mode
 
 #### Scenario: a published head period offers move-to-archive as a document action
 
@@ -223,7 +199,7 @@ header actions before the context controls.
    MUST carry its own (e.g. `aria-label="Context controls"`), so the split is not
    conveyed by placement or colour alone.
 2. Every icon-only control MUST keep its existing `aria-label`/tooltip contract
-   after the move (no regression against `report-toolbar-parity`).
+   after the move.
 3. Keyboard focus order MUST traverse the header action group, then the context
    bar — satisfied by the header preceding the toolbar in the DOM.
 
@@ -292,26 +268,3 @@ The lead, head, and viewer report context bars MUST keep controls that answer th
 
 - **WHEN** the same report context controls do not fit on one row
 - **THEN** the clusters wrap without clipping any control or separating the archive filter from period navigation
-
-### Requirement: Visual acceptance uses clean role and viewport evidence
-
-Report UI changes MUST be accepted against clean browser screenshots for lead, head, admin, and viewer roles at desktop and compact widths. The evidence MUST include report edit and slides where the role supports them, MUST identify the tested source SHA, and MUST NOT classify browser inspector overlays or browser chrome as product rendering.
-
-The capture runtime MUST suppress the Next.js on-screen development indicator and application inspection tools while retaining compile and runtime error reporting. The application navigation MUST expose exactly one stable product-owned accent landmark for visual evidence.
-
-#### Scenario: a suspected navigation stripe is reviewed
-
-- **WHEN** a screenshot contains a line or highlight not reproduced in a clean browser capture at the same route and viewport
-- **THEN** the highlight is recorded as capture tooling or browser state rather than fixed as application CSS
-
-#### Scenario: a report layout change is accepted
-
-- **WHEN** a change affects shared report chrome or slide presentation
-- **THEN** the review set contains source-bound screenshots for every affected role, mode, and required viewport before the change is accepted
-
-#### Scenario: development capture distinguishes product chrome from tooling
-
-- **WHEN** the source-bound capture runs against a development server
-- **THEN** the Next.js development indicator and application inspection tools are absent
-- **AND** exactly one application-owned navigation accent landmark remains visible
-- **AND** compile and runtime errors remain enabled

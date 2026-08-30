@@ -17,8 +17,9 @@ export const reportSectionFullInclude = {
               stageAssignments: {
                 include: { stage: true },
               },
-              // Lead group frozen for snapshot cross-group access (no live re-query).
-              lead: { select: { reportingGroupId: true } },
+              // Product ownership is an explicit one-group edge. The mapper
+              // rejects missing or duplicate edges before freezing a snapshot.
+              groupProducts: { select: { groupId: true } },
             },
           },
           stage: true,

@@ -56,12 +56,4 @@ export class SnapshotAdminService {
     await this.repository.activateUser(userId);
     return { success: true };
   }
-
-  // Telegram active only when TG_BOT_TOKEN is set AND at least one binding is active.
-  async integrationsStatus(
-    configured: boolean,
-  ): Promise<{ telegram: { configured: boolean; bindings: number } }> {
-    const bindings = await this.repository.countActiveTelegramBindings();
-    return { telegram: { configured, bindings } };
-  }
 }

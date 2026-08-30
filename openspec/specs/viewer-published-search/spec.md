@@ -22,8 +22,7 @@ cannot reach.
 Search visibility is **narrower than the viewer's report read**, by design: under
 `viewer-live-status` the viewer READS the current period live (drafts included),
 but search stays **published-scoped**. A live submitted or draft record is therefore
-**readable before it is searchable** — an explicit, accepted v1 divergence; making
-search live is deferred. Search results MUST still route inside the viewer surface
+**readable before it is searchable**. Search results MUST still route inside the viewer surface
 (`/reports/[reportId]`), never to the lead or admin surfaces.
 
 This runs under a dedicated `published` scope; it does not widen the head/admin

@@ -79,8 +79,8 @@ describe("WeeklyReportPage visibility states", () => {
     expect(emptyState).toBeInTheDocument();
     expect(emptyState).toHaveTextContent(/no submissions yet for week 16/i);
     expect(
-      screen.getByRole("link", { name: /view archived reports in archive/i }),
-    ).toHaveAttribute("href", "/reports?tab=published");
+      screen.getByRole("link", { name: /view report history/i }),
+    ).toHaveAttribute("href", "/reports");
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
@@ -131,6 +131,7 @@ describe("WeeklyReportPage visibility states", () => {
                   text: "Draft task in progress",
                   tag: "Dev",
                   workflowStatus: "in_progress",
+                  stageNames: ["Development"],
                   carriedOver: false,
                   completed: false,
                 },

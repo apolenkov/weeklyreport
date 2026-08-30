@@ -40,9 +40,8 @@ Adding a new status-bearing surface MUST reuse the canonical map — this clause
 holds repo-wide, not only for the enumerated consumers — and MUST NOT introduce
 a second tone/icon/dot lookup for the canonical status set.
 
-The color VALUES themselves stay owned by `status-color-semantics` and the
-tokens introduced by `unify-web-status-color-tokens`; this map keys onto those
-tokens and does not restate the token rule.
+The color values themselves stay owned by `web-status-color-tokens`; this map
+keys onto those tokens and does not restate the token rule.
 
 #### Scenario: an in-scope surface renders a status tone, icon, or dot
 
@@ -75,14 +74,12 @@ canonical map changes no pixel. Parity is reproduction, not unification: every
 label a surface renders today MUST still render, resolved through its variant
 key, and no color value, icon choice, or dot treatment changes for any canonical
 status. The consolidation MUST NOT move a color onto or off any surface. Because
-output is unchanged, this change is outside the `status-color-semantics` palette
-sign-off gate (no visual drift is introduced).
+output is unchanged, this consolidation does not alter the color-token
+contract.
 
 `blocked-at-risk-product-card`'s at-risk badge foreground is a raw hex literal
 (`#8a6d1b`) today; folding it into the canonical map under parity is only
-possible after `unify-web-status-color-tokens` consolidates that hex onto
-`--color-status-at-risk-fg`. Until then this card is gated on that predecessor
-(tasks 3.6).
+possible after the shared `--color-status-at-risk-fg` token is available.
 
 #### Scenario: the same canonical status renders identically across surfaces
 

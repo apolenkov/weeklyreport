@@ -36,33 +36,6 @@ describe("ItemEditDialog blocked-status boundary", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("opens a legacy stored-blocked item as In Progress", () => {
-    render(
-      <ItemEditDialog
-        open
-        item={{
-          id: "i1",
-          parent: { kind: "product", id: "p1" },
-          productId: "p1",
-          productName: "Product 1",
-          activityId: null,
-          status: "blocked",
-          text: "Legacy blocked row",
-          author: "Lead",
-        }}
-        products={products}
-        week="current"
-        stagesForProduct={() => ["Development"]}
-        onSave={vi.fn()}
-        onCancel={vi.fn()}
-      />,
-    );
-
-    expect(
-      screen.getByRole("button", { name: "! In Progress" }),
-    ).toHaveAttribute("aria-pressed", "true");
-  });
-
   it("still requires a stage choice when several stages are owned", () => {
     const onSave = vi.fn();
     render(

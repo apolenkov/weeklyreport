@@ -19,7 +19,7 @@ describe("demo seed id purity", () => {
   it("is invariant to the order ids are requested in (no shared counter)", () => {
     // Whatever order the call sites ask for ids, the same (factory, index)
     // pair maps to the same id — row identity is a pure function of the
-    // fixture position, not of how many unrelated calls ran first.
+    // dataset position, not of how many unrelated calls ran first.
     const byIndex = [
       activeSectionId(0),
       activeSectionId(1),

@@ -82,7 +82,7 @@ const ACTION_LOG_REFERENCE_DAY = 14;
 const ACTION_LOG_REFERENCE_HOUR = 12;
 
 // Two pages of deterministic, profile-owned events make the Action Log cursor
-// transition executable without relying on production or prior-run residue.
+// transition executable without relying on external database residue.
 export const ACTION_LOG_ROWS = Array.from(
   { length: ACTION_LOG_ROW_COUNT },
   (_, index) => {
@@ -116,12 +116,12 @@ export const ACTION_LOG_ROWS = Array.from(
   },
 );
 
-// The full profile's action-log examples are exactly these deterministic rows,
+// The product seed's action-log examples are exactly these deterministic rows,
 // so a post-seed journey can assert profile-owned existence instead of trusting
 // unrelated residue.
 export const ACTION_LOG_IDS = ACTION_LOG_ROWS.map((row) => row.id);
 
-// Reminder policies the full profile owns (advanced seed re-upserts the same
+// Reminder policies owned by the product seed (the advanced writer re-upserts the same
 // two ids), used by the journey to scope the existence check to this seed.
 export const REMINDER_POLICY_IDS = [
   POLICY_DEADLINE,

@@ -4,8 +4,6 @@ import type { Ref } from "react";
 
 import { isLead } from "../../../../../shared/lib/auth/role-predicates";
 import { DocumentActionGroup } from "../../../../../shared/ui/report-shell/report-toolbar";
-import { VersionComingSoonControl } from "../../../../admin";
-import { PdfExportComingSoonControl } from "../../../../pdf-export";
 import { FillFromButton } from "../../../../period";
 import type { LeadFormLoadedViewModel } from "../../../../report-sections";
 import {
@@ -173,11 +171,6 @@ function HeaderActionToolbar({
 
   return (
     <DocumentActionGroup>
-      <VersionComingSoonControl />
-      {/* TODO(lead-pdf-export): lead is excluded from pdfExport
-          (role-coverage-gate); this inert ComingSoon control never
-          reaches a backend call. */}
-      <PdfExportComingSoonControl />
       {!isReadOnly && (
         <FillFromButton
           periods={visiblePeriods}

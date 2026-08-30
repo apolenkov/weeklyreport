@@ -75,7 +75,7 @@ function createDispatchPendingProcedure(deps: RemindersRouterDeps) {
     .mutation(async ({ input, ctx }) => {
       try {
         const currentEditableReportId =
-          await deps.weeklyReportService.getCurrentEditableId();
+          await deps.weeklyReportService.getCurrentEditableId(ctx.session);
         if (currentEditableReportId !== input.reportId) {
           throw new TRPCError({
             code: "FORBIDDEN",

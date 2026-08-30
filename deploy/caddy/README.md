@@ -3,12 +3,8 @@
 Edge service that terminates TLS, fans out HTTP traffic to the api/web
 containers, and adds security headers.
 
-## Files
-
-| File                | When to use                                                                                                                                                                          |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `Caddyfile`         | Production. Auto-HTTPS via Let's Encrypt; needs `CADDY_SITE_ADDRESS` set to a publicly resolvable hostname and `CADDY_ACME_EMAIL` for cert notifications. `/metrics` stays internal. |
-| `Caddyfile.staging` | Staging / air-gapped / LE rate-limited. Uses caddy's built-in CA (`tls internal`).                                                                                                   |
+`Caddyfile` is the single deployment configuration. It provides automatic HTTPS
+for a publicly resolvable `CADDY_SITE_ADDRESS`; `/metrics` stays internal.
 
 ## Required env vars (in `.env.production`)
 
@@ -20,7 +16,7 @@ CADDY_CSP_REPORT_URI=https://csp-reports.example.net/customreport
 
 The production Compose contract also requires `HTTP_PORT`, `HTTPS_PORT`, and
 `HTTPS_PORT_QUIC`. See
-[`../environment/production.env.example`](../environment/production.env.example)
+[`production.env.example`](../environment/production.env.example)
 for the complete names-only template. `CADDY_CSP_REPORT_URI` must point to an
 external operator-owned collector; the repository does not implement a local
 CSP-report endpoint.
@@ -41,7 +37,8 @@ CSP-report endpoint.
 /  (everything else)                                     ->  web:3000
 ```
 
-Prometheus scrapes `api:3001/metrics` over the internal Compose network.
+An operator-owned metrics collector can scrape `api:3001/metrics` over the
+internal Compose network.
 
 WebSocket upgrade is automatic for tRPC subscriptions when those land — caddy
 forwards `Upgrade: websocket` headers without configuration.
@@ -66,15 +63,4 @@ Caddy renews automatically ~30 days before expiry. To force a renewal:
 
 ```bash
 docker compose --env-file .env.production -f docker-compose.prod.yml exec caddy caddy reload --config /etc/caddy/Caddyfile
-```
-
-## Trust the staging CA
-
-For `Caddyfile.staging` (caddy internal CA), browsers will warn until the root
-is trusted. Pull the root and import it on the client:
-
-```bash
-docker compose --env-file .env.production -f docker-compose.prod.yml exec caddy \
-  cat /data/caddy/pki/authorities/local/root.crt > caddy-staging-root.crt
-# Then import caddy-staging-root.crt into your OS / browser trust store.
 ```

@@ -1,4 +1,4 @@
-import { normalizeStageName, stageNamesMatch } from "../stages/stage-names";
+import { stageNamesMatch } from "../stages/stage-names";
 import type {
   DraftSaveInput,
   ReportSectionReadModel,
@@ -31,26 +31,6 @@ const authorOwnedStages = (
     : section.projects.filter((project) => project.projectId === projectId)
   ).flatMap((project) => project.ownedStages.map((stage) => stage.stageName));
 
-const canonicalStageKey = (stageNames: readonly string[]): string =>
-  [...stageNames]
-    .map(normalizeStageName)
-    .sort((left, right) => left.localeCompare(right))
-    .join("|");
-
-const isGrandfathered = (
-  row: StageOwnershipRow,
-  serverByStableId: ReadonlyMap<string, StageOwnershipRow>,
-): boolean => {
-  if (row.stableId === undefined) return false;
-  const serverRow = serverByStableId.get(row.stableId);
-  return (
-    serverRow !== undefined &&
-    serverRow.projectId === row.projectId &&
-    canonicalStageKey(serverRow.stageNames) ===
-      canonicalStageKey(row.stageNames)
-  );
-};
-
 const stageNotOwnedMessage = (
   stage: string,
   section: ReportSectionReadModel,
@@ -68,17 +48,10 @@ const stageNotOwnedMessage = (
 
 const validateStageRows = (
   payloadRows: readonly StageOwnershipRow[],
-  serverRows: readonly StageOwnershipRow[],
   section: ReportSectionReadModel,
 ): readonly DraftSaveValidationError[] => {
-  const serverByStableId = new Map(
-    serverRows.flatMap((row) =>
-      row.stableId === undefined ? [] : [[row.stableId, row] as const],
-    ),
-  );
   return Object.freeze(
     payloadRows.flatMap((row) => {
-      if (isGrandfathered(row, serverByStableId)) return [];
       const owned = authorOwnedStages(section, row.projectId);
       const offending = row.stageNames.find(
         (stage) =>
@@ -109,28 +82,12 @@ const inputRows = (input: DraftSaveInput | SubmitSectionInput) =>
     ),
   ] as const;
 
-const sectionRows = (section: ReportSectionReadModel) =>
-  [
-    section.items.map((row) =>
-      toRow(row.stableId, row.projectId ?? undefined, row.stageNames),
-    ),
-    section.risks.map((row) =>
-      toRow(row.stableId, row.projectId ?? undefined, row.stageNames),
-    ),
-    section.decisions.map((row) =>
-      toRow(row.stableId, row.productId ?? undefined, row.stageNames),
-    ),
-  ] as const;
-
 /** Rejects changed record stages that the section author does not own. */
 export function validateStageOwnership(
   section: ReportSectionReadModel,
   input: DraftSaveInput | SubmitSectionInput,
 ): readonly DraftSaveValidationError[] {
-  const serverRows = sectionRows(section);
   return Object.freeze(
-    inputRows(input).flatMap((rows, index) =>
-      validateStageRows(rows, serverRows[index] ?? [], section),
-    ),
+    inputRows(input).flatMap((rows) => validateStageRows(rows, section)),
   );
 }

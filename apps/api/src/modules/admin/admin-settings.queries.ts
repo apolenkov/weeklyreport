@@ -69,12 +69,6 @@ export async function getSettings(prisma: PrismaService): Promise<AppSettings> {
   return rowToAppSettings(row);
 }
 
-export async function countActiveTelegramBindings(
-  prisma: PrismaService,
-): Promise<number> {
-  return prisma.telegramBinding.count({ where: { active: true } });
-}
-
 // A partial update must touch only the columns the caller actually sent, so
 // undefined entries are dropped rather than written as nulls.
 function definedOnly(fields: Record<string, unknown>): Record<string, unknown> {

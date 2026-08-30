@@ -61,7 +61,6 @@ export const jsdocConfig: Linter.Config = {
     "jsdoc/require-property-type": "off",
     "jsdoc/require-next-type": "off",
     "jsdoc/require-throws-type": "off",
-    "local/require-export-contract": "error",
     "jsdoc/check-param-names": [
       "error",
       { checkDestructured: false, enableFixer: false },

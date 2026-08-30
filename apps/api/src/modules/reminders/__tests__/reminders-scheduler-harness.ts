@@ -92,10 +92,6 @@ export function createServiceRepo(
         inserted: true,
       });
     },
-    saveExecution(execution) {
-      executions.set(execution.id, structuredClone(execution));
-      return Promise.resolve(structuredClone(execution));
-    },
     getExecution(id) {
       return Promise.resolve(executions.get(id) ?? null);
     },

@@ -1,7 +1,5 @@
 "use client";
 import type { AppSettings } from "@customreport/shared";
-import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
-import { ComingSoonTooltip } from "@customreport/ui/components/coming-soon-tooltip";
 import {
   Tabs,
   TabsContent,
@@ -11,11 +9,7 @@ import {
 import { useState } from "react";
 
 import { TabHeader } from "../../../shared/ui/tabs/tab-header";
-import {
-  IdentitySubTab,
-  IntegrationsSubTab,
-  NotificationsSubTab,
-} from "../../organization";
+import { IdentitySubTab, NotificationsSubTab } from "../../organization";
 import { PeriodsSubTab } from "../../period";
 import { RemindersSubTab } from "./reminders/settings-reminders-sub-tab";
 
@@ -24,7 +18,6 @@ const SETTINGS_SECTIONS = [
   { label: "Periods", value: "periods" },
   { label: "Reminders", value: "reminders" },
   { label: "Notifications", value: "notifications" },
-  { label: "Integrations", value: "integrations" },
 ] as const;
 
 type SettingsSection = (typeof SETTINGS_SECTIONS)[number]["value"];
@@ -60,15 +53,6 @@ function SettingsNavigation({
           </option>
         ))}
       </select>
-      <span
-        aria-disabled="true"
-        className="flex min-h-[var(--touch-target-min)] w-full items-center justify-between gap-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-3 text-sm font-medium text-[var(--color-muted-foreground)] md:hidden"
-        data-testid="mobile-holidays-coming-soon"
-      >
-        Holidays
-        <ComingSoonBadge />
-      </span>
-
       <TabsList
         variant="line"
         className="hidden max-w-full justify-start border-b border-[var(--color-border)] md:inline-flex"
@@ -77,20 +61,6 @@ function SettingsNavigation({
         <TabsTrigger value="periods">Periods</TabsTrigger>
         <TabsTrigger value="reminders">Reminders</TabsTrigger>
         <TabsTrigger value="notifications">Notifications</TabsTrigger>
-        <TabsTrigger value="integrations">Integrations</TabsTrigger>
-        <TabsTrigger
-          value="holidays"
-          aria-disabled="true"
-          className="cursor-default opacity-50"
-          onMouseDown={(event) => event.preventDefault()}
-          onKeyDown={(event) => {
-            if (event.key === " " || event.key === "Enter") {
-              event.preventDefault();
-            }
-          }}
-        >
-          <HolidaysComingSoonControl />
-        </TabsTrigger>
       </TabsList>
     </>
   );
@@ -135,29 +105,7 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
         <TabsContent value="notifications" className="pt-6">
           <NotificationsSubTab serverSettings={serverSettings} />
         </TabsContent>
-
-        <TabsContent value="integrations" className="pt-6">
-          <IntegrationsSubTab />
-        </TabsContent>
       </Tabs>
     </div>
-  );
-}
-
-// ─── Holidays Coming Soon Control ────────────────────────────────────────
-
-function HolidaysComingSoonControl() {
-  return (
-    <ComingSoonTooltip>
-      <span
-        data-testid="holidays-coming-soon"
-        className="inline-flex cursor-default items-center"
-      >
-        Holidays
-        {/* Portaled hover badge vanishes; sr-only badge keeps coming-soon
-            in the tab's accessible name without a title attribute. */}
-        <ComingSoonBadge className="sr-only" />
-      </span>
-    </ComingSoonTooltip>
   );
 }

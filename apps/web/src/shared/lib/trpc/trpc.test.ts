@@ -72,10 +72,10 @@ describe("createAuthRedirectHandler — 401 interceptor logic", () => {
   });
 
   it("preserves query string in the next= parameter", () => {
-    stubLocation("/lead/report", "?period=2026-W17");
+    stubLocation("/lead/report", "?mode=slides");
     createAuthRedirectHandler()(makeUnauthorizedError());
     expect(assignSpy).toHaveBeenCalledWith(
-      "/?next=%2Flead%2Freport%3Fperiod%3D2026-W17",
+      "/?next=%2Flead%2Freport%3Fmode%3Dslides",
     );
   });
 

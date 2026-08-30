@@ -1,8 +1,0 @@
-#!/usr/bin/env sh
-
-# 34-01: commit-msg hook — enforces Conventional Commits subject line.
-# Format: type(scope): summary
-# Types: feat | fix | chore | docs | refactor | test | perf | ci | build | style | revert
-# Bypass with `git commit --no-verify` (don't).
-
-pnpm exec commitlint --edit "$1"

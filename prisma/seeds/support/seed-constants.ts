@@ -1,5 +1,5 @@
 // Canonical seed constants for CustomReport — the single import surface for the
-// seed scripts, the tRPC dev session context and the E2E id helpers. The
+// seed scripts, the tRPC dev session context, and deterministic id helpers. The
 // definitions live in the four leaf modules re-exported below.
 
 export * from "./seed-catalog.js";

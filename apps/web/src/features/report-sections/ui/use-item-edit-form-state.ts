@@ -3,10 +3,7 @@ import { useRef, useState } from "react";
 import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";
 import { resolveRecordParent } from "../model/record-parent";
 import type { ItemStatus, KanbanItem, Product } from "../model/types";
-import {
-  coerceInitialStatus,
-  resolveInitialItem,
-} from "./item-edit-dialog-helpers";
+import { resolveInitialItem } from "./item-edit-dialog-helpers";
 import type { ParentActivityOption, RecordParent } from "./parent-picker";
 
 export interface ItemEditErrors {
@@ -53,10 +50,7 @@ function useItemEditFields({
   seedActivityId,
 }: ItemEditFieldsArgs) {
   const [text, setText] = useState(initial.text);
-  // Legacy blocked coerces to in-progress so re-save never persists bare blocked.
-  const [status, setStatus] = useState<ItemStatus>(() =>
-    coerceInitialStatus(initial.status),
-  );
+  const [status, setStatus] = useState<ItemStatus>(initial.status);
   // Seed from bound row so edit preserves pause reason; required only while Paused.
   const [pausedReason, setPausedReason] = useState(item?.pausedReason ?? "");
   // XOR parent; activity-lane create presets activity over seed product.

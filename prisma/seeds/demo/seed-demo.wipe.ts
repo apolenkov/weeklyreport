@@ -28,7 +28,6 @@ export async function wipe(prisma: PrismaClient): Promise<void> {
   await prisma.groupProduct.deleteMany({});
   await prisma.project.deleteMany({});
   await prisma.stage.deleteMany({});
-  await prisma.telegramBinding.deleteMany({});
   await prisma.userActionLog.deleteMany({});
   await prisma.user.deleteMany({});
   await prisma.reportingGroup.deleteMany({});

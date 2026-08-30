@@ -78,6 +78,7 @@ function foreignSectionWithTwoProducts(): ReportSectionReadModel {
         tag: "feature",
         workflowStatus: "in_progress",
         carriedOver: false,
+        stageNames: ["Development"],
       },
       {
         projectId: PROJECT_ID,
@@ -86,6 +87,7 @@ function foreignSectionWithTwoProducts(): ReportSectionReadModel {
         tag: "plan",
         workflowStatus: "in_progress",
         carriedOver: false,
+        stageNames: ["Development"],
       },
       {
         projectId: UNSHARED_PROJECT_ID,
@@ -94,6 +96,7 @@ function foreignSectionWithTwoProducts(): ReportSectionReadModel {
         tag: "feature",
         workflowStatus: "in_progress",
         carriedOver: false,
+        stageNames: ["Development"],
       },
       {
         projectId: UNSHARED_PROJECT_ID,
@@ -102,6 +105,7 @@ function foreignSectionWithTwoProducts(): ReportSectionReadModel {
         tag: "plan",
         workflowStatus: "in_progress",
         carriedOver: false,
+        stageNames: ["Development"],
       },
     ],
     risks: [
@@ -111,6 +115,7 @@ function foreignSectionWithTwoProducts(): ReportSectionReadModel {
         impact: "i",
         mitigation: "m",
         severity: "at-risk",
+        stageNames: ["Development"],
       },
       {
         projectId: UNSHARED_PROJECT_ID,
@@ -118,6 +123,7 @@ function foreignSectionWithTwoProducts(): ReportSectionReadModel {
         impact: "i",
         mitigation: "m",
         severity: "blocked",
+        stageNames: ["Development"],
       },
     ],
     decisions: [
@@ -127,6 +133,7 @@ function foreignSectionWithTwoProducts(): ReportSectionReadModel {
         owner: "o",
         impact: "i",
         deadline: null,
+        stageNames: ["Development"],
       },
       {
         productId: UNSHARED_PROJECT_ID,
@@ -134,6 +141,7 @@ function foreignSectionWithTwoProducts(): ReportSectionReadModel {
         owner: "o",
         impact: "i",
         deadline: null,
+        stageNames: ["Development"],
       },
       // A cross-cutting decision with no product scope (productId null). It is
       // not "a record on an unshared product", so the co-lead scoping keeps it.
@@ -143,6 +151,7 @@ function foreignSectionWithTwoProducts(): ReportSectionReadModel {
         owner: "o",
         impact: "i",
         deadline: null,
+        stageNames: ["Development"],
       },
     ],
   };

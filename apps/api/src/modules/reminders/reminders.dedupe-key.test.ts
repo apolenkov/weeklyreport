@@ -5,6 +5,7 @@ import type {
 } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
+import type { OrganizationService } from "../organization/organization.service.js";
 import { RemindersService } from "./reminders.service";
 import type { RemindersRepository } from "./reminders.types";
 import {
@@ -14,8 +15,7 @@ import {
 } from "./reminders-dedupe-key.js";
 import { unusedRemindersRepositoryStubs } from "./reminders-scope.repository-stub.js";
 
-// Manual (no payload) and scheduler deadline keys must be byte-identical.
-describe("resolveReminderDedupeKey — cross-caller divergence regression", () => {
+describe("resolveReminderDedupeKey", () => {
   const rule = {
     id: "66666666-6666-4666-8666-666666666666",
     fireAt: new Date("2026-04-12T09:00:00.000Z"),
@@ -23,15 +23,13 @@ describe("resolveReminderDedupeKey — cross-caller divergence regression", () =
   const recipientEmail = "lead1@customreport.local";
   const cycleDate = toReminderCycleDate(rule.fireAt);
 
-  it("a no-payload manual dispatch key is byte-identical to the scheduler's deadline-payload key for the same cycle", () => {
-    const manualKey = resolveReminderDedupeKey(rule, recipientEmail);
-    const schedulerKey = resolveReminderDedupeKey(rule, recipientEmail, {
+  it("uses the explicit discriminator and cycle", () => {
+    const key = resolveReminderDedupeKey(rule, recipientEmail, {
       kind: "deadline",
       cycleDate,
     });
 
-    expect(manualKey).toBe(schedulerKey);
-    expect(manualKey).toBe(
+    expect(key).toBe(
       buildReminderDedupeKey({
         ruleId: rule.id,
         kind: "deadline",
@@ -41,11 +39,14 @@ describe("resolveReminderDedupeKey — cross-caller divergence regression", () =
     );
   });
 
-  it("documents the pre-fix legacy shape as no longer reachable from either caller", () => {
-    const legacyShape = `${rule.id}:${rule.fireAt.toISOString()}:${recipientEmail}`;
-    const unifiedShape = resolveReminderDedupeKey(rule, recipientEmail);
+  it("keeps the canonical key independent from raw timestamp formatting", () => {
+    const timestampShape = `${rule.id}:${rule.fireAt.toISOString()}:${recipientEmail}`;
+    const unifiedShape = resolveReminderDedupeKey(rule, recipientEmail, {
+      kind: "deadline",
+      cycleDate,
+    });
 
-    expect(unifiedShape).not.toBe(legacyShape);
+    expect(unifiedShape).not.toBe(timestampShape);
   });
 });
 
@@ -105,10 +106,20 @@ describe("RemindersScopeService.dispatchDraftSections — manual dispatch after 
           inserted: true,
         });
       },
-      saveExecution(execution: AdminReminderExecution) {
-        executions.set(execution.id, structuredClone(execution));
-        return Promise.resolve(structuredClone(execution));
-      },
+      getExecutionQueuePayload: () =>
+        Promise.resolve({
+          kind: "deadline" as const,
+          cycleDate: toReminderCycleDate(rule.fireAt),
+          leadName: "Lead One",
+          reportPeriod: "2026-04-07 → 2026-04-13",
+          deadlineIso: rule.fireAt.toISOString(),
+          sectionUrl:
+            "http://localhost:3000/lead/report/22222222-2222-4222-8222-222222222222",
+          organization: {
+            shortName: "Demo",
+            fullName: "Example Software Department",
+          },
+        }),
       getExecution(executionId: string) {
         const execution = executions.get(executionId);
         return Promise.resolve(execution ? structuredClone(execution) : null);
@@ -127,14 +138,34 @@ describe("RemindersScopeService.dispatchDraftSections — manual dispatch after 
       },
       findDraftSectionsForDispatch() {
         return Promise.resolve([
-          { email: recipientEmail, notificationOptOut: false },
+          {
+            email: recipientEmail,
+            name: "Lead One",
+            notificationOptOut: false,
+          },
         ]);
       },
     };
   }
 
   it("reports alreadySent (not a new dispatch) for a manual Remind following the automated cycle send", async () => {
-    const service = new RemindersService(buildDispatchRepository());
+    const organizationService = {
+      getPublic: () =>
+        Promise.resolve({
+          shortName: "Demo",
+          fullName: "Example Software Department",
+        }),
+    } as OrganizationService;
+    const service = new RemindersService(
+      buildDispatchRepository(),
+      undefined,
+      undefined,
+      undefined,
+      organizationService,
+      {
+        APP_BASE_URL: "http://localhost:3000",
+      },
+    );
     const cycleDate = toReminderCycleDate(rule.fireAt);
 
     // The scheduler's automated T-24h tick.
@@ -163,7 +194,23 @@ describe("RemindersScopeService.dispatchDraftSections — manual dispatch after 
   });
 
   it("classifies a fresh insert as dispatched regardless of DB timestamps", async () => {
-    const service = new RemindersService(buildDispatchRepository());
+    const organizationService = {
+      getPublic: () =>
+        Promise.resolve({
+          shortName: "Demo",
+          fullName: "Example Software Department",
+        }),
+    } as OrganizationService;
+    const service = new RemindersService(
+      buildDispatchRepository(),
+      undefined,
+      undefined,
+      undefined,
+      organizationService,
+      {
+        APP_BASE_URL: "http://localhost:3000",
+      },
+    );
 
     const result = await service.scope.dispatchPendingReminders(
       adminSession,

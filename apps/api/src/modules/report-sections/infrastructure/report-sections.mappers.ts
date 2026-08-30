@@ -107,6 +107,22 @@ function toStageSet(project: StageAssignmentRow["project"]) {
   return [...byStageId.values()].sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
+function requireSingleOwnerGroupId(
+  project: StageAssignmentRow["project"],
+): string {
+  const ownerGroupIds = project.groupProducts.map((edge) => edge.groupId);
+  if (ownerGroupIds.length !== 1) {
+    throw new Error(
+      `Project ${project.id} must have exactly one GroupProduct owner, found ${ownerGroupIds.length}`,
+    );
+  }
+  const [ownerGroupId] = ownerGroupIds;
+  if (ownerGroupId === undefined) {
+    throw new Error(`Project ${project.id} has no GroupProduct owner`);
+  }
+  return ownerGroupId;
+}
+
 function toProjectView(group: AuthorProjectGroup, ctx: ProjectViewContext) {
   const { project } = group;
   const ownedStages = toOwnedStages(group, ctx);
@@ -127,14 +143,17 @@ function toProjectView(group: AuthorProjectGroup, ctx: ProjectViewContext) {
       risks: ctx.sectionRisks.map((r) => ({
         projectId: r.projectId,
         severity: r.severity as RiskSeverity,
-        ...(r.stageNames.length > 0 ? { stageNames: r.stageNames } : {}),
+        // An empty list is meaningful: it covers every owned stage. Keep the
+        // current persisted shape explicit so the derivation cannot confuse a
+        // product risk with an activity risk that has no stage list.
+        stageNames: r.stageNames,
       })),
     }),
     ownedStages,
     stageSet: toStageSet(project),
-    // Freeze the product's owner group so a published-snapshot read can
+    // Freeze the explicit product owner so a published-snapshot read can
     // detect cross-group access without a live project re-query.
-    ownerGroupId: project.lead.reportingGroupId ?? null,
+    ownerGroupId: requireSingleOwnerGroupId(project),
   };
 }
 
@@ -182,9 +201,43 @@ function toActivityViews(
     .sort((a, b) => a.activityName.localeCompare(b.activityName, "ru"));
 }
 
+function assertProductRelationsLoaded(row: SectionRow): void {
+  const missingRelation = [
+    ...row.items.map((item) => ({
+      id: item.id,
+      parentId: item.projectId,
+      project: item.project,
+    })),
+    ...row.risks.map((risk) => ({
+      id: risk.id,
+      parentId: risk.projectId,
+      project: risk.project,
+    })),
+    ...row.decisions.map((decision) => ({
+      id: decision.id,
+      parentId: decision.productId,
+      project: decision.project,
+    })),
+  ].find(
+    (
+      candidate,
+    ): candidate is typeof candidate & {
+      parentId: string;
+      project: null;
+    } => candidate.parentId !== null && candidate.project === null,
+  );
+
+  if (missingRelation !== undefined) {
+    throw new Error(
+      `Report section record ${missingRelation.id} references product ${missingRelation.parentId}, but its product relation was not loaded`,
+    );
+  }
+}
+
 export function mapPrismaToReportSection(
   row: SectionRow,
 ): ReportSectionReadModel {
+  assertProductRelationsLoaded(row);
   const owned = groupAuthorAssignmentsByProject(row.author.stageAssignments);
   return reportSectionReadModelSchema.parse({
     reportSectionId: row.id,

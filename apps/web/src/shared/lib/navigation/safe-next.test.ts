@@ -10,8 +10,8 @@ describe("sanitizeNext — same-origin redirect validation", () => {
   });
 
   it("preserves the query string and hash of a same-origin path", () => {
-    expect(sanitizeNext("/reports?tab=published#top", FALLBACK)).toBe(
-      "/reports?tab=published#top",
+    expect(sanitizeNext("/admin?tab=products#top", FALLBACK)).toBe(
+      "/admin?tab=products#top",
     );
   });
 

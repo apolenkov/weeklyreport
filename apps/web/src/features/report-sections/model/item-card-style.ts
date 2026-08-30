@@ -66,8 +66,7 @@ export function cardContainerStyle(opts: {
 }): CSSProperties {
   const { isPlanned, isBlocked, foreign, isEditing } = opts;
   const borderStyle = isPlanned ? "dashed" : "solid";
-  // Faint blocked border = the destructive token at 20% (token-derived, no
-  // hardcoded status literal — status-color-semantics).
+  // Faint blocked border uses the destructive token at 20%.
   const borderColor = isBlocked
     ? "color-mix(in srgb, var(--color-destructive) 20%, transparent)"
     : "var(--color-muted)";

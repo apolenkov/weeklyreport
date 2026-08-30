@@ -9,9 +9,7 @@ export function unusedRemindersRepositoryStubs(): RemindersRepository {
     getRule: vi.fn().mockResolvedValue(null),
     getRulePeriodLabel: vi.fn().mockResolvedValue(null),
     findExecutionByDedupeKey: vi.fn().mockResolvedValue(null),
-    saveExecution: vi.fn((execution: AdminReminderExecution) =>
-      Promise.resolve(execution),
-    ),
+    markExecutionSent: vi.fn().mockResolvedValue(null),
     insertExecutionOnConflict: vi.fn((execution: AdminReminderExecution) =>
       Promise.resolve({ execution, inserted: true }),
     ),
@@ -21,6 +19,7 @@ export function unusedRemindersRepositoryStubs(): RemindersRepository {
     requeueFailedExecution: vi.fn().mockResolvedValue(false),
     markStuckSendingSent: vi.fn().mockResolvedValue(0),
     getExecution: vi.fn().mockResolvedValue(null),
+    getExecutionQueuePayload: vi.fn().mockResolvedValue(null),
     listExecutions: vi.fn().mockResolvedValue([]),
     getRuleReportId: vi.fn().mockResolvedValue(null),
     findInScopeSectionId: vi.fn().mockResolvedValue(null),

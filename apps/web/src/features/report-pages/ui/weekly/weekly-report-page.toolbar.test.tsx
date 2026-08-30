@@ -159,18 +159,6 @@ describe("WeeklyReportPage — async Export PDF button role gating", () => {
       ).toBeInTheDocument();
     },
   );
-
-  it("shows a lead the inert ComingSoon control, NOT an active Export button", async () => {
-    renderPage(makeWeeklyReportData("published"), undefined, "lead");
-    // The inert control is present (lead export is a deferred ComingSoon).
-    expect(
-      await screen.findByTestId("lead-pdf-export-coming-soon"),
-    ).toBeInTheDocument();
-    // …and the real Export PDF button never renders for a lead.
-    expect(
-      screen.queryByRole("button", { name: /export pdf/i }),
-    ).not.toBeInTheDocument();
-  });
 });
 
 // The page splits controls by axis: document actions render on the page header

@@ -119,7 +119,7 @@ The system MUST NOT offer any item-level gesture that stores an alarm on the ite
 
 ### Requirement: No stored item alarm exists without a covering risk
 
-No alarm MUST ever be stored on an item: the `ItemWorkflowStatus` enum carries progress values only (`planned | in_progress | paused | postponed | done`) — `at-risk` and `blocked` are not representable as stored item statuses. The displayed alarm remains the covering-risk roll-up at render (the raw-vs-displayed split of `status-risk-unification` is unchanged). The former legacy-`blocked` healing path is obsolete: the value no longer exists in the enum, and seed fixtures that stored `blocked` carry a covering blocker risk plus a progress status instead.
+No alarm MUST ever be stored on an item: the `ItemWorkflowStatus` enum carries progress values only (`planned | in_progress | paused | postponed | done`) — `at-risk` and `blocked` are not representable as stored item statuses. The displayed alarm remains the covering-risk roll-up at render (the raw-vs-displayed split of `status-risk-unification` is unchanged).
 
 #### Scenario: at-risk is display-only for items
 
@@ -213,9 +213,8 @@ pause takes effect, and the reason MUST be persisted with the item
 (`Item.pausedReason`) and surfaced on the item card. Both pause entry points —
 the quick "Pause" action on a current-week card and the "Paused" status choice
 in the item edit dialog — MUST enforce the reason. The requirement is enforced
-at the UI entry points, not as a hard schema invariant, so legacy paused rows
-that predate the field still load and round-trip. Leaving the paused status
-clears the reason.
+at the UI entry points, not as a hard schema invariant. Leaving the paused
+status clears the reason.
 
 #### Scenario: the quick pause action requires a reason
 

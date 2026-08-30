@@ -1,9 +1,7 @@
 ################################################################################
 # CustomReport — production reverse-proxy
 #
-# Auto-HTTPS via Let's Encrypt when DOMAIN resolves publicly. For staging or
-# air-gapped envs, see deploy/caddy/Caddyfile.staging which forces caddy's
-# internal CA (self-signed cert chain).
+# Auto-HTTPS via Let's Encrypt when DOMAIN resolves publicly.
 #
 # Routes:
 #   /api/web-vitals*, /api/client-logs*, /trpc/*, /auth/*, /health/*,

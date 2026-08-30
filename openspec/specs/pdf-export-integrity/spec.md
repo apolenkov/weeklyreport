@@ -4,6 +4,24 @@ Ensure PDF exports of the weekly report are captured only from a successfully re
 
 ## Requirements
 
+### Requirement: PDF export tokens are bound to their requester
+
+Every PDF-export token MUST contain a non-empty `requestedBy` user identifier.
+The verifier MUST reject tokens that omit the claim, and the worker session MUST
+be rebuilt from that requester so export authorization cannot fall back to a
+synthetic identity.
+
+#### Scenario: A token without requestedBy is rejected
+
+- WHEN a PDF-export token omits `requestedBy`
+- THEN verification fails before a worker session is established
+
+#### Scenario: A current token rebuilds the requester session
+
+- WHEN a valid PDF-export token includes `requestedBy`
+- THEN the worker session is resolved from that user and its current access
+  state is checked
+
 ### Requirement: The print template exposes a machine-detectable render outcome
 
 The print template MUST stamp a stable `data-print-state` attribute on the root
@@ -105,22 +123,6 @@ one attempt early.
 - **WHEN** both the `pdf-export` worker's `failed` handler and the DLQ
   monitor's exhausted-retry check evaluate that job
 - **THEN** they agree on whether the job has exhausted its retries
-
-### Requirement: Legacy PDF-export synthetic session satisfies userSessionSchema
-
-The legacy (pre-`requestedBy`) PDF-export synthetic session MUST parse successfully against `userSessionSchema`, including a `userId` that is a valid UUID accepted by `z.uuid()`.
-
-#### Scenario: Legacy synthetic session parses against userSessionSchema
-
-- WHEN `buildLegacyPdfExportSession(reportId)` constructs the synthetic
-  session for an inbound PDF-export cookie with no `requestedBy` claim
-- THEN `userSessionSchema.safeParse(session).success` is `true`
-
-#### Scenario: Synthetic user id is composed only of hex digits and dashes
-
-- WHEN the synthetic PDF-export `userId` constant is inspected
-- THEN every character outside the UUID's dash separators is a hex digit
-  (`0-9`, `a-f`)
 
 ### Requirement: Status-poll failure recovers the button to a clickable state
 

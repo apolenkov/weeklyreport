@@ -515,6 +515,7 @@ describe("sectionToDraftPayload — durable stableId round-trip", () => {
           tag: "tag",
           workflowStatus: "in_progress",
           carriedOver: false,
+          stageNames: ["Planning"],
         },
       ],
     };

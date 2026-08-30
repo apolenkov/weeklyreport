@@ -20,6 +20,7 @@ function laneItem(id: string): KanbanItem {
     status: "in-progress",
     text: `row ${id}`,
     author: "Тимлид 1",
+    stageNames: [],
   };
 }
 

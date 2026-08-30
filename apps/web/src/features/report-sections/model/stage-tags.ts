@@ -1,38 +1,18 @@
-import { splitStageNames, STAGE } from "@customreport/shared";
-export { riskCoversStage, splitStageNames } from "@customreport/shared";
+export { riskCoversStage } from "@customreport/shared";
 
-// "Dev" is a UI chip alias; the DB form is the full stage name.
+// Stage values are canonical when they reach the UI. Kept as a direct helper
+// for consumers that need a single-value normal form.
 export function canonicalStageName(name: string): string {
-  return name.toLowerCase() === "dev" ? STAGE.DEVELOPMENT : name;
+  return name;
 }
 
-// Typed legacy-healing seam: rows written before structured stageNames carry a
-// single stage field; this is the one place that reads it, so consumers never
-// touch the deprecated property directly.
-export function stageNamesFromLegacyField(item: {
-  readonly stageNames?: readonly string[] | undefined;
-  readonly stageName?: string | undefined;
-}): readonly string[] {
-  return item.stageNames && item.stageNames.length > 0
-    ? item.stageNames
-    : splitStageNames(item.stageName);
-}
-
-// Aliasing can collapse a legacy `["Dev", "Development"]` to one entry; record
-// dialogs run saved selections through this so only canonical names persist
-// (openspec/specs/stage-label-canonicalization 1.2).
+// Preserve the selected canonical values while removing duplicates.
 export function canonicalStageNames(ids: readonly string[]): string[] {
-  return [...new Set(ids.map(canonicalStageName))];
+  return [...new Set(ids)];
 }
-
-// Display-only, so seven chips fit one pipeline row; the short form is NEVER
-// stored or matched. Unlisted stages display in full.
-const STAGE_SHORT_LABEL: Record<string, string> = {
-  [STAGE.DEVELOPMENT]: "Dev",
-};
 
 export function stageShortLabel(name: string): string {
-  return STAGE_SHORT_LABEL[canonicalStageName(name)] ?? name;
+  return name;
 }
 
 export type ItemCardStageTags =
@@ -48,12 +28,11 @@ export type ItemCardStageTags =
 const MAX_VISIBLE_STAGE_TAGS = 2;
 
 export function deriveItemCardStageTags(item: {
-  readonly stageNames?: readonly string[] | undefined;
-  readonly stageName?: string | undefined;
+  readonly stageNames: readonly string[];
   readonly activityId?: string | null | undefined;
 }): ItemCardStageTags {
   if (item.activityId != null) return { isActivityItem: true };
-  const stageTags = canonicalStageNames(stageNamesFromLegacyField(item));
+  const stageTags = canonicalStageNames(item.stageNames);
   const visibleStageTags = stageTags.slice(0, MAX_VISIBLE_STAGE_TAGS);
   return {
     stageTags,

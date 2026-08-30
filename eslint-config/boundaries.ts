@@ -21,7 +21,6 @@ const apiModules = [
   "report-sections",
   "review",
   "search",
-  "telegram",
   "telemetry",
   "weekly-report",
 ] as const;

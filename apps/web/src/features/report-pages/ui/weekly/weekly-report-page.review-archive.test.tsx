@@ -52,7 +52,6 @@ import {
   invalidateLeadForm,
   invalidateLeadHistory,
 } from "../../../../shared/lib/query/cache-keys";
-import { AgentReviewComingSoon } from "../../../../shared/ui/report-shell/agent-review-coming-soon";
 import { expectDefined } from "../../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../../test-utils/mock-trpc";
 import {
@@ -307,26 +306,6 @@ describe("WeeklyReportPage — review-mode split (report-review-mode)", () => {
     expect(
       within(band).getAllByRole("button", { name: "Approve" }),
     ).toHaveLength(1);
-  });
-
-  it("keeps the Agent-review placeholder rendered in both read and review mode", async () => {
-    renderPage(
-      makeReviewableData(),
-      undefined,
-      "head",
-      undefined,
-      undefined,
-      undefined,
-      <AgentReviewComingSoon />,
-    );
-
-    expect(
-      await screen.findByTestId("agent-review-coming-soon"),
-    ).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("button", { name: "Review" }));
-
-    expect(screen.getByTestId("agent-review-coming-soon")).toBeInTheDocument();
   });
 });
 

@@ -13,6 +13,7 @@ export const OWNED_PROJECT = "44444444-4444-4444-8444-444444444444";
 export const UNOWNED_PROJECT = "55555555-5555-4555-8555-555555555555";
 export const STAGE_ID = "66666666-6666-4666-8666-666666666666";
 export const TESTING_STAGE_ID = "aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa";
+export const OWNER_GROUP_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
 export type FabricatedRow = Pick<
   PrismaReportSectionWithRelations,
@@ -84,7 +85,7 @@ export function fullOwnedStageAssignment(
     project: {
       ...fullProjectScalars(overrides.project),
       stageAssignments: overrides.crossLeadAssignments ?? [],
-      lead: { reportingGroupId: null },
+      groupProducts: [{ groupId: OWNER_GROUP_ID }],
     },
     stage: fullStage(STAGE_ID, "Development", 4),
   };

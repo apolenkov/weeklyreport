@@ -196,7 +196,7 @@ describe("mapLeadRisks / mapLeadDecisions / mapLeadPriorities", () => {
     expect(mapped?.id).toBe("d1");
     expect(mapped?.stableId).toBe("88888888-8888-4888-8888-888888888888");
     expect(mapped?.text).toBe("Approve Redis cluster");
-    expect(mapped?.productName).toBe("Group");
+    expect(mapped?.productName).toBe("Unknown");
   });
 
   // Activity risks/decisions surface in the main sections labeled with the
@@ -226,7 +226,7 @@ describe("mapLeadRisks / mapLeadDecisions / mapLeadPriorities", () => {
     expect(risk.text).toBe("Rotation understaffed");
   });
 
-  it("fails loud on a risk with neither id nor stableId instead of fabricating one", () => {
+  it("fails loud on a risk without an id", () => {
     const section = baseSection({
       projects: [
         { projectId: PROJECT_A, projectName: "CRM", trafficLight: "yellow" },
@@ -234,37 +234,16 @@ describe("mapLeadRisks / mapLeadDecisions / mapLeadPriorities", () => {
       risks: [
         {
           projectId: PROJECT_A,
-          risk: "Corrupt legacy risk",
+          risk: "Corrupt risk",
           impact: "Impact",
           mitigation: "Mitigation",
           severity: "at-risk",
+          stageNames: ["Planning"],
         },
       ],
     });
 
-    expect(() => mapLeadRisks(section)).toThrow(/missing both id and stableId/);
-  });
-
-  it("uses the durable stableId when the id is absent", () => {
-    const section = baseSection({
-      projects: [
-        { projectId: PROJECT_A, projectName: "CRM", trafficLight: "yellow" },
-      ],
-      risks: [
-        {
-          stableId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-          projectId: PROJECT_A,
-          risk: "Legacy risk with lineage key",
-          impact: "Impact",
-          mitigation: "Mitigation",
-          severity: "at-risk",
-        },
-      ],
-    });
-
-    expect(mapLeadRisks(section).at(0)?.id).toBe(
-      "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-    );
+    expect(() => mapLeadRisks(section)).toThrow(/missing id/);
   });
 
   it("includes an activity-parented decision labeled with the activity name", () => {
@@ -289,7 +268,7 @@ describe("mapLeadRisks / mapLeadDecisions / mapLeadPriorities", () => {
     expect(decision.productName).toBe("Jira triage duty");
   });
 
-  it("derives priorities from items with priorityRank, sorted by rank, floors invalid ranks to 1", () => {
+  it("derives priorities from positive integer ranks, sorted by rank", () => {
     const section = baseSection({
       items: [
         {
@@ -330,8 +309,7 @@ describe("mapLeadRisks / mapLeadDecisions / mapLeadPriorities", () => {
     // Variable-length list keeps rank as-is when ≥ 1.
     expect(expectDefined(mapped[1]).rank).toBe(5);
     expect(expectDefined(mapped[1]).text).toBe("P5");
-    // rank=0 is clamped to 1 (clampRank guard).
-    expect(expectDefined(mapped[2]).rank).toBe(1);
+    expect(mapped).toHaveLength(2);
   });
 });
 
@@ -514,6 +492,7 @@ describe("report-wide name resolution (referencedProjects)", () => {
           impact: "Impact",
           mitigation: "Mitigation",
           severity: "at-risk",
+          stageNames: ["Planning"],
         },
       ],
     });
@@ -530,6 +509,7 @@ describe("report-wide name resolution (referencedProjects)", () => {
           owner: "Owner",
           impact: "Impact",
           productId: FOREIGN_PROJECT,
+          stageNames: ["Planning"],
         },
       ],
     });
@@ -551,6 +531,7 @@ describe("report-wide name resolution (referencedProjects)", () => {
           workflowStatus: "in_progress",
           carriedOver: false,
           priorityRank: 1,
+          stageNames: ["Planning"],
         },
       ],
     });
@@ -573,6 +554,7 @@ describe("report-wide name resolution (referencedProjects)", () => {
           impact: "Impact",
           mitigation: "Mitigation",
           severity: "at-risk",
+          stageNames: ["Planning"],
         },
       ],
       decisions: [
@@ -582,6 +564,7 @@ describe("report-wide name resolution (referencedProjects)", () => {
           owner: "Owner",
           impact: "Impact",
           productId: TRULY_UNKNOWN,
+          stageNames: ["Planning"],
         },
       ],
     });
@@ -601,6 +584,7 @@ describe("report-wide name resolution (referencedProjects)", () => {
           impact: "Impact",
           mitigation: "Mitigation",
           severity: "at-risk",
+          stageNames: ["Planning"],
         },
       ],
     });

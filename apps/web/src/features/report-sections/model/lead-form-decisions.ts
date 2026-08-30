@@ -10,11 +10,11 @@ export type LeadPriorityEntry = PriorityEntry;
 type SectionItem = ReportSectionReadModel["items"][number];
 type SectionDecision = ReportSectionReadModel["decisions"][number];
 
-function clampRank(rank: number): number {
-  // Keep ranks ≥ 1 (schema requires a positive int) but no upper clamp —
-  // the priority list is variable-length, so any rank is renderable.
-  if (rank < 1 || !Number.isInteger(rank)) return 1;
-  return rank;
+function requireDecisionId(decision: SectionDecision): string {
+  if (typeof decision.id === "string" && decision.id.length > 0) {
+    return decision.id;
+  }
+  throw new Error("Decision is missing id");
 }
 
 function resolveDecisionProductName(
@@ -28,7 +28,7 @@ function resolveDecisionProductName(
   if (decision.activityId) {
     return activityNameById.get(decision.activityId) ?? "Unknown";
   }
-  return "Group";
+  return "Unknown";
 }
 
 function resolveDecisionActivity(
@@ -44,12 +44,11 @@ function resolveDecisionActivity(
 
 function mapDecision(
   decision: SectionDecision,
-  index: number,
   projectIndex: ReturnType<typeof buildProjectIndex>,
   activityNameById: ReturnType<typeof buildActivityIndex>,
 ): LeadDecisionEntry {
   return {
-    id: decision.id ?? `decision-${index}`,
+    id: requireDecisionId(decision),
     ...(decision.stableId === undefined ? {} : { stableId: decision.stableId }),
     productId: decision.productId ?? "",
     productName: resolveDecisionProductName(
@@ -73,11 +72,10 @@ export function mapLeadDecisions(
 ): readonly LeadDecisionEntry[] {
   const projectIndex = buildProjectIndex(section);
   const activityNameById = buildActivityIndex(section);
-  // Product-parented, legacy parentless ("Group"), AND activity-parented
-  // decisions all render in the Decisions section — activity rows labeled
-  // with the activity name.
-  return section.decisions.map((decision, index) =>
-    mapDecision(decision, index, projectIndex, activityNameById),
+  // Product-parented and activity-parented decisions render in the Decisions
+  // section; parentless records use the invalid-input label.
+  return section.decisions.map((decision) =>
+    mapDecision(decision, projectIndex, activityNameById),
   );
 }
 
@@ -88,16 +86,17 @@ export function mapLeadPriorities(
   // Priorities are product-side; activity items are never product priorities.
   return section.items
     .filter(
-      (i): i is SectionItem & { projectId: string } =>
-        i.priorityRank != null && i.projectId != null,
+      (i): i is SectionItem & { projectId: string; priorityRank: number } =>
+        i.priorityRank != null &&
+        Number.isInteger(i.priorityRank) &&
+        i.priorityRank > 0 &&
+        i.projectId != null,
     )
     .sort((a, b) => {
-      const ra = (a.priorityRank ?? 0) >= 1 ? (a.priorityRank ?? 0) : Infinity;
-      const rb = (b.priorityRank ?? 0) >= 1 ? (b.priorityRank ?? 0) : Infinity;
-      return ra - rb;
+      return a.priorityRank - b.priorityRank;
     })
     .map((i) => ({
-      rank: clampRank(i.priorityRank ?? 0),
+      rank: i.priorityRank,
       text: i.text,
       stageNames: i.stageNames,
       productId: i.projectId,

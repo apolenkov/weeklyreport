@@ -81,7 +81,7 @@ export async function seedActivityParentedRecords(
   });
 }
 
-async function seedActivityOnlyFixture(prisma: PrismaClient): Promise<void> {
+async function seedActivityOnlySection(prisma: PrismaClient): Promise<void> {
   await prisma.projectActivity.create({
     data: {
       id: ACTIVITY_ONLY_ID,
@@ -161,6 +161,6 @@ export async function seedActivityOnlyLead(
   prisma: PrismaClient,
 ): Promise<void> {
   console.log("[seed-simple] Creating activity-only lead + section...");
-  await seedActivityOnlyFixture(prisma);
+  await seedActivityOnlySection(prisma);
   await seedActivityOnlyRecords(prisma);
 }

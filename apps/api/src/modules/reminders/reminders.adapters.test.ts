@@ -13,9 +13,16 @@ describe("reminders infrastructure adapters", () => {
     await enqueue(
       "execution-1",
       {
+        contractVersion: 1,
         executionId: "execution-1",
         recipientEmail: "lead@example.com",
+        kind: "deadline",
+        cycleDate: "2026-04-07",
+        leadName: "Lead",
         reportPeriod: "Week 1",
+        deadlineIso: "2026-04-07T09:00:00.000Z",
+        sectionUrl: "https://example.test/lead/report",
+        organization: { shortName: "ORG", fullName: "Organization" },
       },
       { tracestate: "state", correlationId: "correlation" },
     );
@@ -23,9 +30,16 @@ describe("reminders infrastructure adapters", () => {
     expect(queue.add).toHaveBeenCalledWith(
       "send",
       {
+        contractVersion: 1,
         executionId: "execution-1",
         recipientEmail: "lead@example.com",
+        kind: "deadline",
+        cycleDate: "2026-04-07",
+        leadName: "Lead",
         reportPeriod: "Week 1",
+        deadlineIso: "2026-04-07T09:00:00.000Z",
+        sectionUrl: "https://example.test/lead/report",
+        organization: { shortName: "ORG", fullName: "Organization" },
         tracestate: "state",
         correlationId: "correlation",
       },

@@ -6,3 +6,11 @@ export {
   ReminderScopeError,
   RemindersService,
 } from "./reminders.service.js";
+export type {
+  DeadlineQueueData,
+  EscalationQueueData,
+  ReminderQueueJobData,
+  ReminderQueueJobEnvelope,
+  ReminderQueuePayload,
+} from "./reminders-queue-payload.js";
+export { parseReminderQueueJobData } from "./reminders-queue-payload.js";

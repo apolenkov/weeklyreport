@@ -62,7 +62,7 @@ async function seedStageStatuses(
   const reportSectionId = sectionId(ACTIVE_SUFFIX, cfg.leadIndex);
   const globalIdx = SEED_PRODUCTS.findIndex((p) => p.id === projectId);
   if (globalIdx === -1) {
-    throw new Error(`Advanced seed: product ${projectId} is not in catalogue`);
+    throw new Error(`Product seed: product ${projectId} is not in catalogue`);
   }
   const startStageIdx = globalIdx;
 
@@ -168,9 +168,8 @@ async function seedItems(
   return rows.length;
 }
 
-// Priority ranks mark the lead's first N items (texts are demo copy, only the
-// count reaches the DB). Ranks are cleared first each run so a shrunk list
-// drops the obsolete ranks instead of leaving them on old rows.
+// Priority ranks mark the lead's first N items. Ranks are cleared first each
+// run so a shrunk list does not leave stale ranks on rows.
 export async function applyPriorityRanks(
   prisma: PrismaClient,
   cfg: LeadConfig,

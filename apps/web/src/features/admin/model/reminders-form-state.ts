@@ -6,16 +6,14 @@ import type { AdminReminderPolicyView } from "./admin-types";
 import {
   presetForPolicy,
   presetPairing,
-  type ReminderPresetChoice,
+  type ReminderPreset,
 } from "./reminders-tab-format";
 
 const DEFAULT_OFFSET_DAYS_BEFORE = 1;
 const DEFAULT_OFFSET_MINUTES = -(DEFAULT_OFFSET_DAYS_BEFORE * MINUTES_PER_DAY);
 
 export type PolicyFormState = AdminReminderPolicyFormInput & {
-  // Preset kind/audience are derived on save; custom rows preserve legacy
-  // pairings instead of silently coercing them into a preset.
-  preset: ReminderPresetChoice;
+  preset: ReminderPreset;
   // ISO `YYYY-MM-DD` captured when this form was first opened.
   todayIso: string;
   // The forever toggle forces `validUntilIso` to null and hides its input.

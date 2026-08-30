@@ -134,6 +134,9 @@ function makeApplicator() {
     applyToPeriod: vi
       .fn()
       .mockResolvedValue({ created: 0, updated: 0, skipped: 0 }),
+    repairToPeriod: vi
+      .fn()
+      .mockResolvedValue({ created: 0, updated: 0, skipped: 0 }),
   };
 }
 
@@ -437,11 +440,16 @@ describe("ensureCurrentPeriod", () => {
     const { client } = makePrisma({ createdId: "period-besteffort" });
     const policyApplicator = {
       applyToPeriod: vi.fn().mockRejectedValue(new Error("reminders DB down")),
+      repairToPeriod: vi.fn().mockResolvedValue({
+        created: 0,
+        updated: 0,
+        skipped: 0,
+      }),
     };
 
     // The period is the durable artifact — a reminder-materialisation failure
     // must not propagate (it would 500 a login). It is logged and left for the
-    // backfill command.
+    // current-period recovery pass.
     const result = await ensureCurrentPeriod(
       client,
       ANCHOR_MONDAY,
@@ -457,7 +465,7 @@ describe("ensureCurrentPeriod", () => {
     expect(policyApplicator.applyToPeriod).toHaveBeenCalledTimes(1);
   });
 
-  it("does NOT apply reminder policy on the found (idempotent) branch", async () => {
+  it("repairs missing reminder policy rows on the found branch", async () => {
     const { client } = makePrisma({ existing: makePeriodRow() });
     const policyApplicator = makeApplicator();
 
@@ -469,6 +477,9 @@ describe("ensureCurrentPeriod", () => {
       policyApplicator,
     );
 
-    expect(policyApplicator.applyToPeriod).not.toHaveBeenCalled();
+    expect(policyApplicator.repairToPeriod).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "period-existing" }),
+      ANCHOR_MONDAY,
+    );
   });
 });

@@ -1,6 +1,6 @@
 // The single reference instant the seeds derive their periods from. Wall-clock
 // `new Date()` at module load made the same seed commit produce different data
-// across days and could change mid-campaign at a week boundary; an explicit
+// across days and could change at a week boundary; an explicit
 // SEED_REFERENCE_DATE (ISO 8601, UTC) pins the whole identity graph. The
 // default — today — is a documented dev convenience so the active period still
 // covers "today" in casual local seeding; any run that needs reproducibility

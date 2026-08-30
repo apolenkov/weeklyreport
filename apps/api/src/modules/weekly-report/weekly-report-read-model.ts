@@ -1,10 +1,12 @@
 import {
   type AssembledReport,
   type ReportSectionReadModel,
+  type UserSession,
   weeklyReportReadModelSchema,
 } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
+import { guardGroupScope } from "../../lib/group-scope.js";
 import {
   buildEscalationsFromReadSections,
   buildPortfolioProductsFromSnapshotSections,
@@ -12,10 +14,7 @@ import {
   type reportSectionFullInclude,
 } from "../report-sections/index.js";
 import { computeCrossGroupSignalFromSnapshotProjects } from "./cross-group-signal.js";
-import type {
-  WeeklyReportRepositoryResult,
-  WeeklyReportScopeSession,
-} from "./weekly-report.service.js";
+import type { WeeklyReportRepositoryResult } from "./weekly-report.service.js";
 import {
   buildPortfolioOverview,
   scopeWhere,
@@ -64,24 +63,23 @@ export function requireLiveGroupName(
 }
 
 export function deriveScopeFilters(
-  session: WeeklyReportScopeSession | undefined,
+  session: UserSession,
 ): WeeklyReportScopeFilters {
+  guardGroupScope(session);
   return {
     sectionScope: scopeWhere(session, "reportSection"),
     userScope: scopeWhere(session, "user"),
     // Ownership here is the explicit GroupProduct M:M edge, not the implicit
     // `lead.reportingGroupId` derivation: a product joined to two groups must
     // surface in both heads' reports, and a lead rotation must not drop one.
-    projectScope: scopeWhere(session, "project", {
-      useExplicitGroupProducts: true,
-    }),
+    projectScope: scopeWhere(session, "project"),
   };
 }
 
 export function buildSnapshotResult(
   report: WeeklyReportRow,
   snapshot: AssembledReport,
-  session: WeeklyReportScopeSession | undefined,
+  session: UserSession,
   sectionScope: Record<string, unknown> | undefined,
   totalLeads: number,
   activePolicyCount: number,

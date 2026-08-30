@@ -2,137 +2,61 @@
 
 ## Purpose
 
-Keeps deploy and CI configuration honest across environments: prod-layered observability targets the running prod services, observability admin credentials never silently default, non-prod images are digest-pinned, GitHub Actions steps are SHA-pinned for parity with images, observability host ports bind to loopback under a prod-layered run, and monitoring webhook targets resolve to real, reachable routes.
+Keep the current development and production Compose definitions executable,
+deterministic, and aligned with the repository's service graph.
 
 ## Requirements
 
-### Requirement: Prod-layered observability MUST target the running prod services
+### Requirement: Compose definitions use only current service surfaces
 
-Every exporter and scrape target in the observability overlay MUST resolve against the actual prod service names, ports, and database names.
-This applies when `docker-compose.observability.yml` is layered on top of
-the prod compose file — no target may resolve to a hardcoded dev-only
-value.
+`docker-compose.yml` and `docker-compose.prod.yml` MUST describe the current
+WeeklyReport service graph without references to removed Compose overlays,
+staging variants, or error-only stacks. Required production values MUST fail
+closed when absent rather than silently defaulting.
 
-#### Scenario: Postgres exporter targets the prod database name
+#### Scenario: Current Compose files render
 
-- **WHEN** `docker-compose.observability.yml` is composed with
-  `docker-compose.prod.yml`
-- **THEN** `postgres-exporter`'s `DATA_SOURCE_NAME` resolves to the same
-  database name `docker-compose.prod.yml` configures for `POSTGRES_DB`
-- **AND** it does not hardcode `customreport_dev`
+- **WHEN** an operator renders the development or production Compose file with
+  its documented environment
+- **THEN** rendering succeeds with the current service graph
+- **AND** no removed overlay or service is required
 
-#### Scenario: Prometheus scrapes the API's prod-reachable metrics port
+#### Scenario: Production values are missing
 
-- **WHEN** `docker-compose.observability.yml` is composed with
-  `docker-compose.prod.yml`
-- **THEN** at least one Prometheus scrape target in
-  `deploy/prometheus-otel-lgtm.yml` resolves to the API container's
-  compose-network address and prod port (`api:3001`)
-- **AND** the API `/metrics` endpoint is reachable from that target without
-  relying on the dev-only host-published port
+- **WHEN** a required production value is absent
+- **THEN** Compose or the service configuration fails before the service accepts
+  traffic
 
-### Requirement: Observability admin credentials MUST NOT silently default
+### Requirement: External Compose images are immutable
 
-`docker-compose.observability.yml` MUST require `GRAFANA_ADMIN_PASSWORD` to
-be set explicitly and MUST NOT fall back to a hardcoded or well-known
-default when the variable is absent.
+Every external `image:` reference in `docker-compose.yml` and
+`docker-compose.prod.yml` MUST include an immutable `@sha256:` digest. Locally
+built application images MAY use the release version supplied by the operator.
 
-#### Scenario: Grafana boots without GRAFANA_ADMIN_PASSWORD set
+#### Scenario: A Compose image is inspected
 
-- **WHEN** the observability overlay is composed without
-  `GRAFANA_ADMIN_PASSWORD` set in the environment
-- **THEN** compose fails loud (required-variable error) rather than booting
-  Grafana with an `admin`/`admin` login
+- **WHEN** a service in either current Compose file uses an external image
+- **THEN** its reference includes a full SHA-256 digest alongside the readable
+  tag
 
-### Requirement: Non-prod container images MUST be pinned to an immutable digest
+### Requirement: Production builds use the frozen installed toolchain
 
-Every image reference in `docker-compose.yml`, `docker-compose.errors.yml`, and `docker-compose.observability.yml` that currently resolves to a mutable tag MUST be pinned to a `@sha256:...` digest — except the dev-only `postgres:15-alpine` and `redis:7-alpine` base services, which the proposal's Non-goals leave tag-pinned (their prod counterparts in `docker-compose.prod.yml` are already digest-pinned).
-This applies to any `:latest` or bare version tag without a digest, matching
-the pinning discipline `docker-compose.prod.yml` already applies to
-`postgres`, `pgbouncer`, `redis`, and `caddy`.
+The production API and Web build paths MUST acquire dependencies through their
+explicit frozen install steps. Prisma generation, application compilation,
+and migration startup MUST then use the installed toolchain without a second
+package-manager install or registry preflight. The production configuration
+gate MUST reject a Compose migration override or Dockerfile wrapper that
+reintroduces dependency resolution after installation.
 
-#### Scenario: A dev/observability image is referenced by tag only
+#### Scenario: Production migration starts
 
-- **WHEN** an image reference in `docker-compose.yml`,
-  `docker-compose.errors.yml`, or `docker-compose.observability.yml` has no
-  `@sha256:...` suffix
-- **THEN** the reference is updated to include the digest of the image
-  currently in use
-- **AND** the human-readable tag is preserved for reference (e.g. as a
-  trailing comment or in the same `image:` line before the digest)
+- **WHEN** the migration service starts from `docker-compose.prod.yml`
+- **THEN** it invokes the installed Prisma binary directly
+- **AND** it does not resolve or install dependencies at startup
 
-### Requirement: GitHub Actions steps MUST be pinned to a commit SHA
+#### Scenario: A late dependency install is introduced
 
-Every `uses:` step in `.github/workflows/ci.yml` referencing a mutable major-version tag (e.g. `actions/checkout@v4`) MUST be pinned to a full commit SHA.
-The SHA MUST be the commit the tag currently resolves to, with the
-human-readable tag preserved as a trailing comment.
-
-#### Scenario: A workflow step references a mutable action tag
-
-- **WHEN** a `uses:` line in `ci.yml` references `owner/action@vN`
-- **THEN** it is rewritten to `owner/action@<40-char-sha>  # vN`
-- **AND** the SHA is the commit the `vN` tag pointed to at pin time
-
-### Requirement: Observability host ports MUST bind to loopback in a prod-layered run
-
-Every host port `docker-compose.observability.yml` publishes MUST bind to
-`127.0.0.1` rather than all interfaces, so a prod-layered observability run
-does not expose Grafana, the OTLP receiver, or the Prometheus UI to the
-public network.
-
-#### Scenario: The observability overlay is composed over the prod stack
-
-- **WHEN** `docker-compose.observability.yml` is layered on
-  `docker-compose.prod.yml` and brought up on a host with a public network
-  interface
-- **THEN** the Grafana (`GRAFANA_PORT`), OTLP gRPC (`4317`), OTLP HTTP
-  (`4318`), and Prometheus (`9090`) ports published by `otel-lgtm` are only
-  reachable from `127.0.0.1` on that host
-- **AND** none of those ports are reachable from the public network
-  interface
-
-### Requirement: A monitoring webhook target MUST resolve to a real, reachable route
-
-`deploy/alertmanager.yml`'s webhook configuration MUST target a port the
-production API container actually exposes on the compose network. If the
-receiving route does not yet exist in the API, the file MUST say so
-explicitly in a comment rather than pointing at a plausible-looking but
-non-existent path silently.
-
-#### Scenario: The webhook target port doesn't match the API's actual port
-
-- **WHEN** `deploy/alertmanager.yml`'s webhook URL host:port doesn't match
-  the API container's `PORT`/`expose` configuration in
-  `docker-compose.prod.yml`
-- **THEN** the webhook URL is corrected to the actual port
-
-#### Scenario: The webhook target endpoint has no receiving route
-
-- **WHEN** the API has no route handler for the webhook's configured path
-- **THEN** the file's comment explicitly states the endpoint is not yet
-  implemented and alerting MUST NOT be activated until it is
-- **AND** the URL is not silently left pointing at a non-existent endpoint
-  without that comment
-
-### Requirement: Production container tools MUST NOT reconcile dependencies after the frozen install
-
-The production API and Web Docker build paths MUST acquire dependencies only through their explicit frozen install steps. After those steps, Prisma generation, API and Web compilation, Chromium installation, and migration startup MUST use the installed toolchain without invoking a package-manager dependency preflight that can start another install or contact the registry. Turbo's strict task environment MUST propagate the builder-scoped preflight setting to workspace scripts without applying it to the development installer targets. The production configuration gate MUST reject a missing or leaked propagation setting, a Compose migration override that invokes the package manager, or a Dockerfile that restores a late package-manager wrapper for one of those consumers.
-
-#### Scenario: Build tools run after the source overlay changes file metadata
-
-- **WHEN** the pruned full source has been copied over the dependency-install layer and the API or Web image runs Prisma or Turbo
-- **THEN** the installed tool executes without starting dependency reconciliation
-- **AND** Turbo-proxied workspace scripts inherit the builder-scoped preflight setting
-- **AND** no second registry-dependent install occurs after the explicit frozen install
-
-#### Scenario: The migration image starts
-
-- **WHEN** the migration container executes its Prisma migrate command
-- **THEN** it uses the Prisma tool already present in the image
-- **AND** Compose does not replace that command with a package-manager wrapper
-- **AND** startup does not invoke Pnpm or attempt to resolve dependencies
-
-#### Scenario: A late package-manager wrapper is reintroduced
-
-- **WHEN** either production Dockerfile wraps Prisma, Turbo, or Playwright in a Pnpm `exec` or `run` after dependency installation
-- **THEN** the production configuration gate exits non-zero and identifies the non-deterministic tool invocation
+- **WHEN** a production Dockerfile or Compose command adds a package-manager
+  install or dependency preflight after the frozen install
+- **THEN** the production configuration gate fails and identifies the
+  non-deterministic invocation

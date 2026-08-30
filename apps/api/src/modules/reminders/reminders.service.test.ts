@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { ReminderDomainError, RemindersService } from "./reminders.service";
 import type { RemindersRepository } from "./reminders.types";
+import type { ReminderQueuePayload } from "./reminders-queue-payload.js";
 import { unusedRemindersRepositoryStubs } from "./reminders-scope.repository-stub.js";
 
 const activeRule: AdminReminderRule = {
@@ -23,6 +24,20 @@ const pausedRule: AdminReminderRule = {
   ...activeRule,
   id: "77777777-7777-4777-8777-777777777777",
   status: "paused",
+};
+
+const testPayload = {
+  kind: "deadline" as const,
+  cycleDate: "2026-04-10",
+  leadName: "Test Lead",
+  reportPeriod: "2026-04-07 → 2026-04-13",
+  deadlineIso: "2026-04-10T09:00:00.000Z",
+  sectionUrl:
+    "http://localhost:3000/lead/report/22222222-2222-4222-8222-222222222222",
+  organization: {
+    shortName: "Demo",
+    fullName: "Example Software Department",
+  },
 };
 
 function createRepository(initialRule: AdminReminderRule): RemindersRepository {
@@ -61,6 +76,9 @@ function createRepository(initialRule: AdminReminderRule): RemindersRepository {
         inserted: true,
       });
     },
+    getExecutionQueuePayload() {
+      return Promise.resolve(structuredClone(testPayload));
+    },
     getExecution(executionId: string) {
       const execution = executions.get(executionId);
       return Promise.resolve(execution ? structuredClone(execution) : null);
@@ -72,9 +90,18 @@ function createRepository(initialRule: AdminReminderRule): RemindersRepository {
           .map((execution) => structuredClone(execution)),
       );
     },
-    saveExecution(execution: AdminReminderExecution) {
-      executions.set(execution.id, structuredClone(execution));
-      return Promise.resolve(structuredClone(execution));
+    transitionExecutionToSending(executionId: string) {
+      const execution = executions.get(executionId);
+      if (execution?.status !== "queued") return Promise.resolve(false);
+      executions.set(executionId, { ...execution, status: "sending" });
+      return Promise.resolve(true);
+    },
+    markExecutionSent(executionId: string, sentAt: Date) {
+      const execution = executions.get(executionId);
+      if (execution?.status !== "sending") return Promise.resolve(null);
+      const sent = { ...execution, status: "sent" as const, sentAt };
+      executions.set(executionId, sent);
+      return Promise.resolve(structuredClone(sent));
     },
   };
 }
@@ -85,6 +112,7 @@ describe("RemindersService", () => {
     const execution = await service.requestReminderExecution(
       activeRule.id,
       "lead1@customreport.local",
+      testPayload,
     );
 
     expect(execution.status).toBe("queued");
@@ -96,10 +124,12 @@ describe("RemindersService", () => {
     const first = await service.requestReminderExecution(
       activeRule.id,
       "lead1@customreport.local",
+      testPayload,
     );
     const second = await service.requestReminderExecution(
       activeRule.id,
       "lead1@customreport.local",
+      testPayload,
     );
 
     expect(second.id).toBe(first.id);
@@ -112,6 +142,7 @@ describe("RemindersService", () => {
       service.requestReminderExecution(
         pausedRule.id,
         "lead1@customreport.local",
+        testPayload,
       ),
     ).rejects.toBeInstanceOf(ReminderDomainError);
   });
@@ -121,7 +152,9 @@ describe("RemindersService", () => {
     const queued = await service.requestReminderExecution(
       activeRule.id,
       "lead1@customreport.local",
+      testPayload,
     );
+    expect(await service.claimExecutionForSending(queued.id)).toBe(true);
     const sent = await service.markReminderSent(queued.id);
 
     expect(sent.status).toBe("sent");
@@ -141,6 +174,7 @@ describe("reminder rule domain mapping and deduplication", () => {
     const execution = await service.requestReminderExecution(
       activeRule.id,
       "lead1@customreport.local",
+      testPayload,
     );
 
     expect(execution.dedupeKey).toBe(
@@ -153,6 +187,7 @@ describe("reminder rule domain mapping and deduplication", () => {
     const execution = await service.requestReminderExecution(
       weeklyRule.id,
       "lead1@customreport.local",
+      testPayload,
     );
 
     expect(execution.dedupeKey).toBe(
@@ -165,10 +200,12 @@ describe("reminder rule domain mapping and deduplication", () => {
     const exec1 = await service.requestReminderExecution(
       activeRule.id,
       "lead1@customreport.local",
+      testPayload,
     );
     const exec2 = await service.requestReminderExecution(
       activeRule.id,
       "lead2@customreport.local",
+      testPayload,
     );
 
     expect(exec1.id).not.toBe(exec2.id);
@@ -182,10 +219,12 @@ describe("reminder rule domain mapping and deduplication", () => {
     const exec1 = await service.requestReminderExecution(
       activeRule.id,
       "lead1@customreport.local",
+      testPayload,
     );
     const exec2 = await service.requestReminderExecution(
       activeRule.id,
       "lead1@customreport.local",
+      testPayload,
     );
 
     // Same inputs must produce the same execution (idempotency via dedupeKey)
@@ -198,6 +237,7 @@ describe("reminder rule domain mapping and deduplication", () => {
     const execution = await service.requestReminderExecution(
       activeRule.id,
       "lead1@customreport.local",
+      testPayload,
     );
 
     expect(execution.dedupeKey).toContain("lead1@customreport.local");
@@ -266,11 +306,12 @@ describe("deadline payload — extended dedupe-key shape", () => {
     expect(cycleNplus1.dedupeKey).not.toBe(cycleN.dedupeKey);
   });
 
-  it("no-payload dispatch defaults to kind:'deadline' with cycleDate from the rule's own fireAt", async () => {
+  it("explicit payload uses its deadline cycle in the dedupe key", async () => {
     const service = new RemindersService(createRepository(activeRule));
     const manual = await service.requestReminderExecution(
       activeRule.id,
       "lead@test.local",
+      testPayload,
     );
 
     // activeRule.fireAt is 2026-04-10T09:00:00.000Z — UTC-truncated to
@@ -280,7 +321,7 @@ describe("deadline payload — extended dedupe-key shape", () => {
     );
   });
 
-  it("a no-payload manual dispatch collides with an automated payload for the same cycle — no second execution (regression)", async () => {
+  it("manual and automated payloads collide for the same cycle", async () => {
     const service = new RemindersService(createRepository(activeRule));
     const automated = await service.requestReminderExecution(
       activeRule.id,
@@ -290,17 +331,19 @@ describe("deadline payload — extended dedupe-key shape", () => {
     const manual = await service.requestReminderExecution(
       activeRule.id,
       "lead@test.local",
+      { ...testPayload, cycleDate: "2026-04-10" },
     );
 
     expect(manual.id).toBe(automated.id);
     expect(manual.dedupeKey).toBe(automated.dedupeKey);
   });
 
-  it("no-payload and payload dispatches for a DIFFERENT cycle stay independent", async () => {
+  it("payload dispatches for different cycles stay independent", async () => {
     const service = new RemindersService(createRepository(activeRule));
     const manual = await service.requestReminderExecution(
       activeRule.id,
       "lead@test.local",
+      { ...testPayload, cycleDate: "2026-04-10" },
     );
     const automated = await service.requestReminderExecution(
       activeRule.id,
@@ -345,9 +388,8 @@ describe("requestReminderExecution — enqueue gated on insert", () => {
           inserted,
         });
       },
-      saveExecution(execution: AdminReminderExecution) {
-        return Promise.resolve(structuredClone(execution));
-      },
+      getExecutionQueuePayload: () =>
+        Promise.resolve(structuredClone(testPayload)),
       getExecution() {
         return Promise.resolve(null);
       },
@@ -369,7 +411,11 @@ describe("requestReminderExecution — enqueue gated on insert", () => {
     };
     const service = new RemindersService(repository, undefined, queue);
 
-    await service.requestReminderExecution(activeRule.id, "lead@test.local");
+    await service.requestReminderExecution(
+      activeRule.id,
+      "lead@test.local",
+      testPayload,
+    );
 
     expect(addCalls).toHaveLength(1);
   });
@@ -385,7 +431,11 @@ describe("requestReminderExecution — enqueue gated on insert", () => {
     };
     const service = new RemindersService(repository, undefined, queue);
 
-    await service.requestReminderExecution(activeRule.id, "lead@test.local");
+    await service.requestReminderExecution(
+      activeRule.id,
+      "lead@test.local",
+      testPayload,
+    );
 
     expect(addCalls).toHaveLength(0);
   });
@@ -405,7 +455,11 @@ describe("requestReminderExecution — enqueue gated on insert", () => {
     const service = new RemindersService(repository);
 
     await expect(
-      service.requestReminderExecution(activeRule.id, "lead@test.local"),
+      service.requestReminderExecution(
+        activeRule.id,
+        "lead@test.local",
+        testPayload,
+      ),
     ).rejects.toMatchObject({ name: "ZodError" });
   });
 });
@@ -416,8 +470,10 @@ describe("requestReminderExecution — enqueue gated on insert", () => {
 describe("requestReminderExecution — failed execution revival", () => {
   function buildFailedRepo(opts: {
     status: AdminReminderExecution["status"];
+    persistedPayload?: ReminderQueuePayload | null;
     requeueWins?: boolean;
     requeueCalls?: string[];
+    requeuePayloads?: ReminderQueuePayload[];
   }): RemindersRepository {
     const existing: AdminReminderExecution = {
       id: "99999999-9999-4999-8999-999999999998",
@@ -447,12 +503,19 @@ describe("requestReminderExecution — failed execution revival", () => {
           inserted: false,
         });
       },
-      requeueFailedExecution(executionId: string) {
+      getExecutionQueuePayload: () =>
+        Promise.resolve(
+          opts.persistedPayload === null
+            ? null
+            : structuredClone(opts.persistedPayload ?? testPayload),
+        ),
+      requeueFailedExecution(
+        executionId: string,
+        payload: ReminderQueuePayload,
+      ) {
         opts.requeueCalls?.push(executionId);
+        opts.requeuePayloads?.push(structuredClone(payload));
         return Promise.resolve(opts.requeueWins ?? true);
-      },
-      saveExecution(execution: AdminReminderExecution) {
-        return Promise.resolve(structuredClone(execution));
       },
       getExecution() {
         return Promise.resolve(null);
@@ -484,6 +547,7 @@ describe("requestReminderExecution — failed execution revival", () => {
     const result = await service.requestReminderExecution(
       activeRule.id,
       "lead@test.local",
+      testPayload,
     );
 
     expect(requeueCalls).toHaveLength(1);
@@ -498,6 +562,30 @@ describe("requestReminderExecution — failed execution revival", () => {
     expect(jobId).toContain("99999999-9999-4999-8999-999999999998");
   });
 
+  it("hydrates a migrated failed row from the next current dispatch", async () => {
+    const requeuePayloads: ReminderQueuePayload[] = [];
+    const addCalls: unknown[] = [];
+    const service = new RemindersService(
+      buildFailedRepo({
+        status: "failed",
+        persistedPayload: null,
+        requeuePayloads,
+      }),
+      undefined,
+      buildQueue(addCalls),
+    );
+
+    const result = await service.requestReminderExecution(
+      activeRule.id,
+      "lead@test.local",
+      testPayload,
+    );
+
+    expect(result.status).toBe("queued");
+    expect(requeuePayloads).toEqual([testPayload]);
+    expect(addCalls).toHaveLength(1);
+  });
+
   it("does not enqueue when the revival CAS is lost to a concurrent caller", async () => {
     const addCalls: unknown[] = [];
     const service = new RemindersService(
@@ -509,6 +597,7 @@ describe("requestReminderExecution — failed execution revival", () => {
     const result = await service.requestReminderExecution(
       activeRule.id,
       "lead@test.local",
+      testPayload,
     );
 
     expect(addCalls).toHaveLength(0);
@@ -527,6 +616,7 @@ describe("requestReminderExecution — failed execution revival", () => {
     const result = await service.requestReminderExecution(
       activeRule.id,
       "lead@test.local",
+      testPayload,
     );
 
     expect(requeueCalls).toHaveLength(0);
@@ -543,7 +633,11 @@ describe("requestReminderExecution — failed execution revival", () => {
     );
 
     await expect(
-      service.requestReminderExecution(activeRule.id, "lead@test.local"),
+      service.requestReminderExecution(
+        activeRule.id,
+        "lead@test.local",
+        testPayload,
+      ),
     ).rejects.toMatchObject({
       name: "ReminderDomainError",
       message:
@@ -577,9 +671,6 @@ describe("requestReminderExecution — enqueue failure is recorded, not swallowe
         failures.push([executionId, errorMessage]);
         return Promise.resolve();
       },
-      saveExecution(execution: AdminReminderExecution) {
-        return Promise.resolve(structuredClone(execution));
-      },
       getExecution() {
         return Promise.resolve(null);
       },
@@ -602,6 +693,7 @@ describe("requestReminderExecution — enqueue failure is recorded, not swallowe
     const result = await service.requestReminderExecution(
       activeRule.id,
       "lead@test.local",
+      testPayload,
     );
 
     expect(result.status).toBe("failed");

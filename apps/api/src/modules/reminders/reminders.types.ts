@@ -6,6 +6,7 @@ import {
 
 import type { EscalationGroupDigest } from "./reminders-escalation-grouping.js";
 import type { ExecutionPageRequest } from "./reminders-execution-pagination.js";
+import type { ReminderQueuePayload } from "./reminders-queue-payload.js";
 import { type RemindersScopeRepository } from "./reminders-scope.types.js";
 
 export interface RemindersRepository extends RemindersScopeRepository {
@@ -13,16 +14,21 @@ export interface RemindersRepository extends RemindersScopeRepository {
   readonly findExecutionByDedupeKey: (
     dedupeKey: string,
   ) => Promise<AdminReminderExecution | null>;
-  readonly saveExecution: (
-    execution: AdminReminderExecution,
-  ) => Promise<AdminReminderExecution>;
+  readonly markExecutionSent: (
+    executionId: string,
+    sentAt: Date,
+  ) => Promise<AdminReminderExecution | null>;
   // Atomic insert-on-conflict; inserted=true only for the winner (enqueue once).
   readonly insertExecutionOnConflict: (
     execution: AdminReminderExecution,
+    payload: ReminderQueuePayload,
   ) => Promise<{
     readonly execution: AdminReminderExecution;
     readonly inserted: boolean;
   }>;
+  readonly getExecutionQueuePayload: (
+    executionId: string,
+  ) => Promise<ReminderQueuePayload | null>;
   // CAS queued → sending; false means another worker already claimed.
   readonly transitionExecutionToSending: (
     executionId: string,
@@ -35,8 +41,12 @@ export interface RemindersRepository extends RemindersScopeRepository {
   readonly getRulePeriodLabel: (ruleId: string) => Promise<string | null>;
   // Undo sending claim for retryable failure; no-op if already sent/failed.
   readonly releaseExecutionClaim: (executionId: string) => Promise<void>;
-  // failed → queued revival; true only when this call won.
-  readonly requeueFailedExecution: (executionId: string) => Promise<boolean>;
+  // failed → queued revival; persists the validated renderer snapshot in the
+  // same write, so a migrated terminal row can never become payload-less queued.
+  readonly requeueFailedExecution: (
+    executionId: string,
+    payload: ReminderQueuePayload,
+  ) => Promise<boolean>;
   // Time-bound reconciliation: `sending` rows presumed delivered after a
   // crashed worker resolve to `sent`; returns how many rows were reconciled.
   readonly markStuckSendingSent: (olderThan: Date) => Promise<number>;
@@ -72,8 +82,8 @@ export interface DueEscalationRule {
   readonly groups: readonly EscalationGroupDigest[];
 }
 
-// organization is snapshotted at enqueue so mid-flight brand edits do not
-// affect already-queued emails. Omit payload → defaults to kind deadline.
+// Organization is snapshotted at enqueue so mid-flight brand edits do not
+// affect already-queued emails.
 export interface DeadlineReminderPayload {
   readonly kind: "deadline";
   readonly cycleDate: string; // ISO YYYY-MM-DD UTC of the fireAt deadline

@@ -62,8 +62,8 @@ The system MUST propagate the active W3C `traceparent` and the request
 `correlationId` into BullMQ job data at every `queue.add`, and each worker
 processor MUST start a span linked to that enqueue trace and restore the
 `correlationId` into a `nestjs-cls` scope for the duration of the job. This
-applies to the instrumented job processors (`pdf-export`, `email-reminder`,
-`telegram-outbound`); it does not change the handling of genuinely span-less
+applies to the instrumented job processors (`pdf-export`, `email-reminder`); it
+does not change the handling of genuinely span-less
 captures (boot, context loss, uninstrumented paths), which remain covered by
 the existing no-active-span requirement.
 
@@ -116,8 +116,8 @@ duration logs and apply an explicit timeout to `page.goto`.
 `recipientEmail`) before an entry reaches any sink, so a caller cannot leak
 personal data into stdout, the rotating file sink, or the OTLP/Loki forwarder
 by passing it as a log context value. Redaction MUST apply at the single
-`emit` call site inside `AppLoggerImpl`, not per call site, so no future log
-call can bypass it.
+`emit` call site inside `AppLoggerImpl`, not per call site, so no log call can
+bypass it.
 
 #### Scenario: A log call with a recipient email is redacted at every sink
 

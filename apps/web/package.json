@@ -6,10 +6,9 @@
   "scripts": {
     "dev": "node scripts/run-next.ts dev --webpack --hostname 127.0.0.1",
     "build": "node scripts/run-next.ts build --webpack",
-    "doctor": "react-doctor . --no-telemetry --blocking error --no-parallel --max-duration 300",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage && tsx ../../scripts/gates/coverage/coverage-evidence.ts coverage/coverage-summary.json web"
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@customreport/shared": "workspace:*",
@@ -40,11 +39,9 @@
     "@types/react": "catalog:",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
-    "agentation": "^3.0.2",
     "babel-plugin-react-compiler": "^1.0.0",
     "jsdom": "^30.0.0",
     "postcss": "^8.5.23",
-    "react-doctor": "catalog:",
     "tailwindcss": "^4.3.3",
     "vite": "^8.1.5"
   },

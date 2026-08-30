@@ -37,7 +37,6 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # The exemplary-floor ratchet compares against the first parent.
           fetch-depth: 2
 
       - name: Setup Node.js
@@ -46,7 +45,9 @@ jobs:
           node-version-file: .nvmrc
 
       - name: Setup pnpm
-        run: npm install --global pnpm@11.17.0
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: 11.17.0
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -54,15 +55,17 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm exec prisma generate
 
-      # The lint gate reports every static failure in one run.
       - name: Lint
         run: pnpm lint
 
       - name: Format check
         run: pnpm format:check
 
+      - name: Validate OpenSpec
+        run: pnpm spec:check
+
       - name: Typecheck
-        run: pnpm turbo typecheck
+        run: pnpm typecheck
 
       - name: Unit Tests
         run: pnpm test
@@ -136,7 +139,9 @@ jobs:
           node-version-file: .nvmrc
 
       - name: Setup pnpm
-        run: npm install --global pnpm@11.17.0
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: 11.17.0
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -156,7 +161,7 @@ jobs:
         run: pnpm --filter @customreport/api test:integration
 
   coverage:
-    name: API & Web coverage evidence
+    name: API & Web coverage
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: quality
@@ -223,7 +228,9 @@ jobs:
           node-version-file: .nvmrc
 
       - name: Setup pnpm
-        run: npm install --global pnpm@11.17.0
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: 11.17.0
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -239,7 +246,7 @@ jobs:
       - name: Verify Mailpit HTTP endpoint
         run: curl --fail --retry 30 --retry-delay 1 http://localhost:8025/api/v1/messages
 
-      - name: API and Web coverage with non-empty evidence
+      - name: API and Web coverage thresholds
         run: pnpm test:coverage
 
   migrate-reset:
@@ -279,7 +286,9 @@ jobs:
           node-version-file: .nvmrc
 
       - name: Setup pnpm
-        run: npm install --global pnpm@11.17.0
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: 11.17.0
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

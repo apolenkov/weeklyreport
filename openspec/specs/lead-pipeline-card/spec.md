@@ -49,8 +49,9 @@ no separate manual status that can drift from the risks.
 2. A stage MAY be covered by multiple risks (one-to-many). The displayed status
    MUST collapse to the HIGHEST covering severity (blocker > at-risk >
    on-track); all covering risks remain listed.
-3. Because status is derived, the legacy "stage marked at-risk/blocked without a
-   backing risk" warning MUST be removed — it can no longer occur.
+3. Because status is derived, a stage marked at-risk or blocked without a
+   backing risk MUST be rendered as on-track; no separate stale-status warning
+   is needed.
 
 #### Scenario: a risk is added in the Risks section
 
@@ -74,17 +75,13 @@ counts when their own risk covers it. The counter MUST be derived from a
 `coveredByOwnRisk` annotation placed on the raw stage by the read-model
 mapper (`mapLeadProducts` in `apps/web/src/features/report-sections/model/lead-form.ts`),
 where `computeCompleteness` counts a stage when
-`status !== "empty" || coveredByOwnRisk`. Two cases MUST NOT inflate the
+`status !== "empty" || coveredByOwnRisk`. Foreign coverage MUST NOT inflate the
 counter:
 
 1. A foreign or cross-author covering risk MAY color the chip (display
    floor) but MUST NOT set `coveredByOwnRisk` and MUST NOT count toward
    this lead's completeness — another lead's risk never finishes this
    lead's input.
-2. A stage-less legacy risk (empty `stageIds`) MUST contribute ZERO. The
-   annotation MUST NOT reuse the display-floor `riskCoversStage`
-   predicate that treats an empty `stageIds` as covering all stages; a
-   stage-less risk covers no stage for completeness.
 
 This MUST hold on reload: `coveredByOwnRisk` is derived from the
 persisted own risks plus the raw per-stage status, never from transient
@@ -107,14 +104,6 @@ floored display state.
 - **THEN** the chip renders at the covering severity (display floor)
 - **AND** the completeness counter does NOT count that stage —
   `coveredByOwnRisk` is false for a foreign risk
-
-#### Scenario: a stage-less legacy own risk counts zero
-
-- **WHEN** the lead has an own risk with an empty `stageIds` array and no
-  explicit status is set on any of the lead's stages
-- **THEN** the legacy risk contributes zero to completeness
-- **AND** the counter does not treat the empty `stageIds` as covering
-  every stage
 
 ### Requirement: The pipeline chip distinguishes risk-covered from explicit status
 

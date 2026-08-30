@@ -6,8 +6,6 @@ import test from "node:test";
 
 const prodCompose = resolve("docker-compose.prod.yml");
 const devCompose = resolve("docker-compose.yml");
-const devOverride = resolve("docker-compose.dev.yml");
-const observabilityCompose = resolve("docker-compose.observability.yml");
 const productionEnvironmentTemplate = resolve(
   "deploy/environment/production.env.example",
 );
@@ -91,7 +89,6 @@ const REQUIRED_POLICY_INPUTS = [
 
 const content = readFileSync(prodCompose, "utf8");
 const devContent = readFileSync(devCompose, "utf8");
-const devOverrideContent = readFileSync(devOverride, "utf8");
 const productionEnvironment = readFileSync(
   productionEnvironmentTemplate,
   "utf8",
@@ -166,20 +163,15 @@ void test("the production template lists every required input as fail-closed", (
 
 const DEV_APP_DATABASE_URL =
   "postgresql://customreport:localdev@postgres:5432/customreport_e2e";
-const DEV_APP_DATABASE_ASSIGNMENT_COUNT = 5;
+const DEV_APP_DATABASE_ASSIGNMENT_COUNT = 2;
 
 void test("development Compose owns one exact guarded database target", () => {
-  for (const [path, source] of [
-    [devCompose, devContent],
-    [devOverride, devOverrideContent],
-  ] as const) {
-    assert.doesNotMatch(
-      source,
-      /\$\{DB_PASSWORD/u,
-      `${path} must not interpolate DB_PASSWORD`,
-    );
-    assert.doesNotMatch(source, /postgresql:\/\/customreport:\$\{/u);
-  }
+  assert.doesNotMatch(
+    devContent,
+    /\$\{DB_PASSWORD/u,
+    `${devCompose} must not interpolate DB_PASSWORD`,
+  );
+  assert.doesNotMatch(devContent, /postgresql:\/\/customreport:\$\{/u);
   assert.match(devContent, /POSTGRES_PASSWORD: localdev/u);
   assert.match(devContent, /POSTGRES_DB: customreport_e2e/u);
   assert.match(devContent, /pg_isready -U customreport -d postgres/u);
@@ -187,11 +179,11 @@ void test("development Compose owns one exact guarded database target", () => {
     devContent,
     /local-database-init:[\s\S]*migrate:[\s\S]*local-database-init:[\s\S]*condition: service_completed_successfully/u,
   );
-  const applicationDatabaseUrls = `${devContent}\n${devOverrideContent}`
+  const applicationDatabaseUrls = devContent
     .split("\n")
     .map((line) => line.trim())
     .flatMap((line) => {
-      for (const key of ["DATABASE_URL: ", "DIRECT_URL: "]) {
+      for (const key of ["DATABASE_URL: "]) {
         if (line.startsWith(key)) return [line.slice(key.length)];
       }
       return [];
@@ -249,19 +241,11 @@ const assertLoopbackPublishedPorts = (
 
 void test("every development host port binds to loopback", () => {
   const basePorts = assertLoopbackPublishedPorts(devContent, devCompose);
-  const overridePorts = assertLoopbackPublishedPorts(
-    devOverrideContent,
-    devOverride,
-  );
   assert.deepEqual(basePorts, [
     "127.0.0.1:5432:5432",
     "127.0.0.1:1025:1025",
     "127.0.0.1:8025:8025",
     "127.0.0.1:6379:6379",
-    "127.0.0.1:3002:3002",
-    "127.0.0.1:3000:3000",
-  ]);
-  assert.deepEqual(overridePorts, [
     "127.0.0.1:3002:3002",
     "127.0.0.1:3000:3000",
   ]);
@@ -496,7 +480,7 @@ void test("untracked environment variants stay ignored while examples remain tra
   assert.equal(example.status, 1, ".env.example must remain trackable");
 });
 
-void test("production database identity and password URL contract are explicit", () => {
+void test("production services pool API connections and preserve direct paths", () => {
   assert.match(content, /POSTGRES_DB: \$\{POSTGRES_DB:\?/);
   assert.match(content, /DB_NAME: \$\{POSTGRES_DB:\?/);
   assert.match(content, /PGDATABASE: \$\{POSTGRES_DB:\?/);
@@ -505,8 +489,24 @@ void test("production database identity and password URL contract are explicit",
   assert.match(content, /\*\[!A-Za-z0-9_\]\*/);
   assert.match(content, /depends_on:[\s\S]*config-guard:/);
   assert.match(content, /postgresql:\/\/customreport:\$\{DB_PASSWORD:\?/);
-  assert.match(content, /@postgres:5432\/\$\{POSTGRES_DB:\?/);
-  assert.match(content, /@pgbouncer:5432\/\$\{POSTGRES_DB:\?/);
+  assert.match(
+    content,
+    /pgbouncer:[\s\S]*edoburu\/pgbouncer:1\.22\.1-p0@sha256:[0-9a-f]{64}[\s\S]*POOL_MODE: transaction[\s\S]*healthcheck:[\s\S]*SELECT 1/u,
+  );
+  const migrationDatabaseUrl =
+    /DATABASE_URL: postgresql:\/\/customreport:\$\{DB_PASSWORD:\?[^\n]+@postgres:5432\/\$\{POSTGRES_DB:\?[^\n]+/g;
+  assert.equal([...content.matchAll(migrationDatabaseUrl)].length, 1);
+  const directUrl =
+    /DIRECT_URL: postgresql:\/\/customreport:\$\{DB_PASSWORD:\?[^\n]+@postgres:5432\/\$\{POSTGRES_DB:\?[^\n]+/g;
+  assert.equal([...content.matchAll(directUrl)].length, 2);
+  assert.match(
+    content,
+    /api:[\s\S]*DATABASE_URL: postgresql:\/\/customreport:[\s\S]*@pgbouncer:5432[\s\S]*DIRECT_URL: postgresql:\/\/customreport:[\s\S]*@postgres:5432[\s\S]*depends_on:[\s\S]*pgbouncer:[\s\S]*condition: service_healthy[\s\S]*healthcheck:[\s\S]*health\/ready/u,
+  );
+  assert.match(
+    content,
+    /backup:[\s\S]*PGHOST: postgres[\s\S]*PGPORT: 5432[\s\S]*depends_on:[\s\S]*postgres:[\s\S]*condition: service_healthy/u,
+  );
 });
 
 void test("backup entrypoints are baked into the pinned image", () => {
@@ -532,14 +532,14 @@ void test("backup entrypoints are baked into the pinned image", () => {
 // with every required var blank it must fail to render.
 const renderCompose = (
   env: NodeJS.ProcessEnv,
-  files: readonly string[] = [prodCompose],
   format: "yaml" | "json" = "yaml",
 ) =>
   spawnSync(
     composeCommand.executable,
     [
       ...composeCommand.leadingArguments,
-      ...files.flatMap((file) => ["-f", file]),
+      "-f",
+      prodCompose,
       "config",
       "--format",
       format,
@@ -597,11 +597,8 @@ interface RenderedCompose {
   readonly services: Readonly<Record<string, RenderedService>>;
 }
 
-const renderComposeModel = (
-  env: NodeJS.ProcessEnv,
-  files: readonly string[] = [prodCompose],
-): RenderedCompose => {
-  const rendered = renderCompose(env, files, "json");
+const renderComposeModel = (env: NodeJS.ProcessEnv): RenderedCompose => {
+  const rendered = renderCompose(env, "json");
   assert.equal(rendered.status, 0, rendered.stderr);
   return JSON.parse(rendered.stdout) as RenderedCompose;
 };
@@ -642,20 +639,6 @@ void test("the rendered config guard rejects unsafe URL components without leaki
     assert.doesNotMatch(output, new RegExp(password));
     assert.doesNotMatch(output, new RegExp(database));
   }
-});
-
-void test("the production observability overlay actually enables tracing", () => {
-  const model = renderComposeModel(
-    { ...FULL_POLICY_ENV, GRAFANA_ADMIN_PASSWORD: "test-only" },
-    [prodCompose, observabilityCompose],
-  );
-  const apiEnvironment = model.services.api?.environment;
-  assert.ok(apiEnvironment !== undefined);
-  assert.equal(apiEnvironment.OTEL_SDK_DISABLED, "false");
-  assert.equal(
-    apiEnvironment.OTEL_EXPORTER_OTLP_ENDPOINT,
-    "http://otel-lgtm:4318",
-  );
 });
 
 void test("production compose renders with the full policy matrix", () => {

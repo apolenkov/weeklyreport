@@ -7,7 +7,6 @@ import {
   createTestPrisma,
   disconnectTestPrisma,
   seedTestData,
-  TEST_IDS,
 } from "../../test-utils/prisma-test-helper";
 import { AdminPrismaRepository } from "./admin.prisma-repository";
 import { AdminUserConflictError } from "./admin-shared";
@@ -282,34 +281,6 @@ describe("AdminPrismaRepository (integration) — targeted writes & concurrency"
       await prisma.project.findUnique({ where: { id: second.id } }),
     );
     expect(untouched.archived).toBe(false);
-  });
-
-  it("removeReminderRule deletes only the named row", async () => {
-    const ruleData = {
-      kind: "deadline" as const,
-      fireAt: new Date("2026-04-11T09:00:00.000Z"),
-      timezone: "Europe/Moscow",
-      status: "active" as const,
-      version: 1,
-      reportId: testData.report.id,
-    };
-    await prisma.reminderRule.create({
-      data: { id: TEST_IDS.reminderRule, ...ruleData },
-    });
-    await prisma.reminderRule.create({
-      data: { id: SECOND_RULE_ID, ...ruleData },
-    });
-
-    await repo.removeReminderRule(TEST_IDS.reminderRule);
-
-    expect(
-      await prisma.reminderRule.findUnique({
-        where: { id: TEST_IDS.reminderRule },
-      }),
-    ).toBeNull();
-    expect(
-      await prisma.reminderRule.findUnique({ where: { id: SECOND_RULE_ID } }),
-    ).not.toBeNull();
   });
 
   it("saveStageAssignment resolves two concurrent reassigns atomically, leaving one row", async () => {

@@ -7,11 +7,7 @@ import {
   SectionVersionConflictError,
 } from "../application/report-sections.service";
 import type { FabricatedRow } from "./__tests__/report-sections-prisma-harness";
-import {
-  AUTHOR_ID,
-  baseRow,
-  mapRow,
-} from "./__tests__/report-sections-prisma-harness";
+import { baseRow, mapRow } from "./__tests__/report-sections-prisma-harness";
 import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
 
 interface LifecycleGateRow {
@@ -432,29 +428,5 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
       );
       expect(error).toBe(generic);
     });
-  });
-});
-
-// Ordering keys on report.periodStart, not the row's createdAt: createdAt is
-// insertion time and says nothing about which period a report covers, so
-// sorting by it would scramble the lead history against compiledHistory.
-describe("ReportSectionsPrismaRepository.getMyHistoryRows — ordering", () => {
-  it("orders by report.periodStart desc, with createdAt as the stable tiebreak", async () => {
-    const findMany = vi.fn(() => Promise.resolve([]));
-    const prisma = { reportSection: { findMany } };
-    const repository = new ReportSectionsPrismaRepository(
-      prisma as unknown as PrismaService,
-    );
-
-    const result = await repository.getMyHistoryRows(AUTHOR_ID);
-
-    expect(result).toEqual([]);
-    expect(findMany).toHaveBeenCalledTimes(1);
-    expect(findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { authorId: AUTHOR_ID },
-        orderBy: [{ report: { periodStart: "desc" } }, { createdAt: "desc" }],
-      }),
-    );
   });
 });

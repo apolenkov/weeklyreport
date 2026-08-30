@@ -1,6 +1,3 @@
-/** Package identity string for `@customreport/shared`. */
-export const sharedPackageName = "@customreport/shared";
-
 export * from "./admin/reminder-policy.schema";
 export * from "./admin/reminder-policy-time";
 export * from "./auth";
@@ -12,7 +9,6 @@ export * from "./period/reopen-window";
 export * from "./schemas/admin/action-log.schema";
 export * from "./schemas/analytics/analytics";
 export * from "./schemas/auth/auth";
-export * from "./schemas/integrations/integrations";
 export * from "./schemas/observability/web-vitals";
 export * from "./schemas/organization/organization";
 export * from "./schemas/primitives/report-primitives.schema";

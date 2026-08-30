@@ -39,8 +39,6 @@
   --color-destructive-emphasis: #991b1b;
   --color-destructive-emphasis-hover: #7f1d1d;
   --color-destructive-foreground: #ffffff;
-  --color-coming-soon: #fef3c7;
-  --color-coming-soon-foreground: #b45309;
   --color-overlay: rgba(0, 0, 0, 0.5);
 
   /* Identity chips avoid the red, amber, and gold semantic status hues. */
@@ -159,7 +157,6 @@
   --radius-xl: 1.25rem;
   --radius-pill: 3.125rem;
 
-  --font-size-coming-soon: 0.625rem;
   --font-size-chart-tooltip: 0.75rem;
   --radius-chart-tooltip: 0.375rem;
   --layer-overlay: 50;
@@ -181,8 +178,6 @@
 }
 
 .dark {
-  --color-coming-soon: #78350f;
-  --color-coming-soon-foreground: #fef3c7;
   --color-overlay: rgba(0, 0, 0, 0.7);
 }
 

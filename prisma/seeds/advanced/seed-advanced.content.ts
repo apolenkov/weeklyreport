@@ -104,7 +104,7 @@ const CONTENT_BY_LEAD: Readonly<Record<string, LeadContent>> = {
 export function contentFor(leadId: string): LeadContent {
   const content = CONTENT_BY_LEAD[leadId];
   if (content === undefined) {
-    throw new Error(`Advanced seed: no demo content for lead ${leadId}`);
+    throw new Error(`Product seed: no demo content for lead ${leadId}`);
   }
   return content;
 }

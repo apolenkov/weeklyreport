@@ -5,7 +5,6 @@ import { render } from "@testing-library/react";
 import * as React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { expectDefined } from "../../../test-utils/expect-defined.js";
 import type { SessionState } from "../../lib/auth/session-provider";
 
 const navigationMock = vi.hoisted(() => ({
@@ -182,15 +181,12 @@ describe("NavBar — role-aware visibility", () => {
     expectLinkMissing(container, "/admin");
   });
 
-  it("head sees three tabs: Dashboard, Status, History (no Slides)", () => {
+  it("head sees Dashboard, Status, and History", () => {
     setRole("head");
     const { container } = render(<NavBar />);
     expectLinkExists(container, "/head/dashboard");
     expectLinkExists(container, "/head/report");
-    // Head History points to bare /reports.
     expectLinkExists(container, "/reports");
-    expectLinkMissing(container, "/head/history");
-    expectLinkMissing(container, "/head/slides");
   });
 
   it("activates Status on addressed /head/report/[reportId] pages", () => {
@@ -208,64 +204,6 @@ describe("NavBar — role-aware visibility", () => {
     const { container } = render(<NavBar />);
     expectLinkExists(container, "/admin");
     expectLinkMissing(container, "/reports");
-  });
-
-  it("renders the parked Theme control with Coming Soon in metadata", () => {
-    setRole("lead");
-    const { container } = render(<NavBar />);
-
-    const themeControl = container.querySelector(
-      '[data-testid="theme-coming-soon"]',
-    );
-
-    expect(themeControl).not.toBeNull();
-    // Icon-only: visible text is the aria-label + amber ComingSoonBadge
-    // tooltip. No native title="Coming Soon" so a second tooltip does not
-    // stack over the badge.
-    expect(expectDefined(themeControl).textContent.trim()).toBe("");
-    expect(themeControl).toHaveAttribute(
-      "aria-label",
-      "Theme selection is coming soon",
-    );
-    expect(themeControl).not.toHaveAttribute("title");
-    expect(themeControl).toHaveAttribute("aria-disabled", "true");
-  });
-
-  it("renders the parked Language control with Coming Soon metadata", () => {
-    setRole("lead");
-    const { container } = render(<NavBar />);
-
-    const languageControl = container.querySelector(
-      '[data-testid="language-coming-soon"]',
-    );
-
-    expect(languageControl).not.toBeNull();
-    // Icon-only: visible text is the aria-label + amber ComingSoonBadge
-    // tooltip. No native title="Coming Soon" so a second tooltip does not
-    // stack over the badge.
-    expect(expectDefined(languageControl).textContent.trim()).toBe("");
-    expect(languageControl).toHaveAttribute(
-      "aria-label",
-      "Language selection is coming soon",
-    );
-    expect(languageControl).not.toHaveAttribute("title");
-    expect(languageControl).toHaveAttribute("aria-disabled", "true");
-  });
-
-  it("renders Theme before Language in the right rail", () => {
-    setRole("lead");
-    const { container } = render(<NavBar />);
-
-    const comingSoonControls = Array.from(
-      container.querySelectorAll<HTMLButtonElement>(
-        'button[data-testid$="coming-soon"]',
-      ),
-    ).map((element) => element.dataset.testid);
-
-    expect(comingSoonControls).toEqual([
-      "theme-coming-soon",
-      "language-coming-soon",
-    ]);
   });
 
   it("renders the user initials in the compact home mark", () => {
@@ -378,53 +316,14 @@ describe("NavBar — role-aware visibility", () => {
     expectLinkMissing(container, "/lead/report");
   });
 
-  // Archive toggle does not write the URL, so /reports may lack a tab param;
-  // History stays highlighted regardless — active state is decoupled from
-  // the tab/archive query. Stray ?tab=* values are back-compat only.
-  it.each([
-    {
-      label: "lead on /reports?tab=drafts (back-compat)",
-      role: "lead" as const,
-      query: "tab=drafts",
-      inactive: null,
-    },
-    {
-      label: "head on /reports?tab=published",
-      role: "head" as const,
-      query: "tab=published",
-      inactive: "/head/dashboard" as const,
-    },
-    {
-      label: "lead on /reports?tab=published",
-      role: "lead" as const,
-      query: "tab=published",
-      inactive: null,
-    },
-    {
-      label: "head on /reports with NO tab param",
-      role: "head" as const,
-      query: "",
-      inactive: "/head/dashboard" as const,
-    },
-  ])("keeps History active — $label", ({ role, query, inactive }) => {
-    setRole(role);
-    setRoute("/reports", query);
-
-    const { container } = render(<NavBar />);
-
-    expectActiveLink(container, "/reports");
-    if (inactive !== null) {
-      expectInactiveLink(container, inactive);
-    }
-  });
-
-  it("keeps lead History active on /reports with NO tab param", () => {
-    setRole("lead");
+  it("keeps History active on the reports page", () => {
+    setRole("head");
     setRoute("/reports", "");
 
     const { container } = render(<NavBar />);
 
     expectActiveLink(container, "/reports");
+    expectInactiveLink(container, "/head/dashboard");
   });
 
   it("does not activate History on report analytics routes", () => {

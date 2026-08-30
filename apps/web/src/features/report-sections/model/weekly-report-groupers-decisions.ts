@@ -17,9 +17,8 @@ interface ResolvedProduct {
   readonly projectName: string;
 }
 
-// Explicit productId when present, else the section author's first project (legacy).
+// Decisions are grouped only when their current record carries a product parent.
 function resolveDecisionProduct(
-  section: ReportSectionReadModel,
   projectNames: ReadonlyMap<string, string>,
   decision: SectionDecision,
 ): ResolvedProduct | undefined {
@@ -29,7 +28,7 @@ function resolveDecisionProduct(
       projectName: projectNames.get(decision.productId) ?? "Unknown",
     };
   }
-  return section.projects.at(0);
+  return undefined;
 }
 
 function deriveWeeklyReportDecision(
@@ -48,8 +47,8 @@ function deriveWeeklyReportDecision(
   };
 }
 
-// Explicit productId when present; legacy without productId → first project.
-// Neither → dropped. projectNames is the report-wide id→name map.
+// Product-parented decisions only; activity-parented decisions render in their
+// activity lane and parentless records are rejected as invalid input.
 export function groupDecisionsByProject(
   sections: readonly ReportSectionReadModel[],
   projectNames: ReadonlyMap<string, string>,
@@ -58,7 +57,7 @@ export function groupDecisionsByProject(
     // Activity-parented decisions skip product fallback (render under activity).
     section.decisions.flatMap((decision, idx) => {
       if (decision.activityId != null) return [];
-      const target = resolveDecisionProduct(section, projectNames, decision);
+      const target = resolveDecisionProduct(projectNames, decision);
       if (!target) return [];
       return [{ section, target, decision, idx }];
     }),

@@ -50,12 +50,12 @@ describe("fetchForeignContentSections", () => {
 describe("deriveForeignStageStatus", () => {
   const dev = "Development";
 
-  it("returns red when a covers-all (empty stageNames) blocked risk covers the stage", () => {
+  it("returns red when a blocked risk names the stage", () => {
     expect(
       deriveForeignStageStatus(
         dev,
         PROJECT_1,
-        [{ projectId: PROJECT_1, severity: "blocked", stageNames: [] }],
+        [{ projectId: PROJECT_1, severity: "blocked", stageNames: [dev] }],
         null,
       ),
     ).toBe("red");
@@ -66,20 +66,20 @@ describe("deriveForeignStageStatus", () => {
       deriveForeignStageStatus(
         dev,
         PROJECT_1,
-        [{ projectId: PROJECT_1, severity: "at-risk", stageNames: ["Dev"] }],
+        [{ projectId: PROJECT_1, severity: "at-risk", stageNames: [dev] }],
         "green",
       ),
     ).toBe("yellow");
   });
 
-  it("blocked wins over at-risk within the covering set", () => {
+  it("blocked wins over at-risk within the named stage set", () => {
     expect(
       deriveForeignStageStatus(
         dev,
         PROJECT_1,
         [
-          { projectId: PROJECT_1, severity: "at-risk", stageNames: [] },
-          { projectId: PROJECT_1, severity: "blocked", stageNames: [] },
+          { projectId: PROJECT_1, severity: "at-risk", stageNames: [dev] },
+          { projectId: PROJECT_1, severity: "blocked", stageNames: [dev] },
         ],
         null,
       ),
@@ -91,7 +91,7 @@ describe("deriveForeignStageStatus", () => {
       deriveForeignStageStatus(
         dev,
         PROJECT_1,
-        [{ projectId: PROJECT_2, severity: "blocked", stageNames: [] }],
+        [{ projectId: PROJECT_2, severity: "blocked", stageNames: [dev] }],
         "green",
       ),
     ).toBe("green");
@@ -114,12 +114,12 @@ describe("deriveForeignStageStatus", () => {
     ).toBeNull();
   });
 
-  it("matches a Dev-aliased stage name", () => {
+  it("matches the canonical Development stage name", () => {
     expect(
       deriveForeignStageStatus(
         dev,
         PROJECT_1,
-        [{ projectId: PROJECT_1, severity: "blocked", stageNames: ["Dev"] }],
+        [{ projectId: PROJECT_1, severity: "blocked", stageNames: [dev] }],
         null,
       ),
     ).toBe("red");
@@ -138,7 +138,7 @@ describe("deriveForeignStageStatus", () => {
       deriveForeignStageStatus(
         dev,
         PROJECT_1,
-        [{ projectId: PROJECT_1, severity: "unknown", stageNames: [] }],
+        [{ projectId: PROJECT_1, severity: "unknown", stageNames: [dev] }],
         null,
       ),
     ).toThrow();
@@ -150,7 +150,13 @@ describe("indexForeignSections", () => {
     const { statusMap, risksByAuthor } = indexForeignSections([
       {
         authorId: AUTHOR_A,
-        risks: [{ projectId: PROJECT_1, severity: "at-risk", stageNames: [] }],
+        risks: [
+          {
+            projectId: PROJECT_1,
+            severity: "at-risk",
+            stageNames: ["Development"],
+          },
+        ],
         stageStatuses: [
           { projectId: PROJECT_1, stageId: STAGE_DEV, status: "green" },
           { projectId: PROJECT_1, stageId: STAGE_TEST, status: null },
@@ -165,7 +171,11 @@ describe("indexForeignSections", () => {
       false,
     );
     expect(risksByAuthor.get(AUTHOR_A)).toEqual([
-      { projectId: PROJECT_1, severity: "at-risk", stageNames: [] },
+      {
+        projectId: PROJECT_1,
+        severity: "at-risk",
+        stageNames: ["Development"],
+      },
     ]);
   });
 });
@@ -365,7 +375,7 @@ describe("buildCrossAuthorContentRows", () => {
               workflowStatus: "in_progress",
               carriedOver: false,
               priorityRank: null,
-              stageNames: [],
+              stageNames: ["Development"],
             },
             {
               id: "i2",
@@ -376,7 +386,7 @@ describe("buildCrossAuthorContentRows", () => {
               workflowStatus: "in_progress",
               carriedOver: false,
               priorityRank: null,
-              stageNames: [],
+              stageNames: ["Development"],
             },
             {
               id: "i3",
@@ -398,7 +408,7 @@ describe("buildCrossAuthorContentRows", () => {
               impact: "impact",
               mitigation: "mit",
               severity: "blocked",
-              stageNames: [],
+              stageNames: ["Development"],
             },
           ],
           decisions: [
@@ -410,7 +420,7 @@ describe("buildCrossAuthorContentRows", () => {
               deadline: null,
               impact: "imp",
               resolvedAt: null,
-              stageNames: [],
+              stageNames: ["Development"],
             },
             {
               id: "d2",
@@ -438,7 +448,7 @@ describe("buildCrossAuthorContentRows", () => {
     expect(row?.risks.map((r) => r.id)).toEqual(["r1"]);
     expect(row?.risks[0]?.severity).toBe("blocked");
     expect(row?.decisions.map((d) => d.id)).toEqual(["d1"]);
-    // Risk-derived stage chip: covers-all blocked risk -> red.
+    // Risk-derived stage chip: blocked risk on Development -> red.
     expect(row?.stages).toEqual([
       { projectId: PROJECT_1, stageName: "Development", status: "red" },
     ]);
@@ -476,7 +486,7 @@ describe("buildCrossAuthorContentRows", () => {
                 workflowStatus: "unknown",
                 carriedOver: false,
                 priorityRank: null,
-                stageNames: [],
+                stageNames: ["Development"],
               },
             ],
             risks: [],

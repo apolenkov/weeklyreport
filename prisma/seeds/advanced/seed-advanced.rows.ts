@@ -1,4 +1,4 @@
-// Upsert shapes shared by the active, published and history generations: the
+// Upsert shapes shared by the active, published, and archive generations: the
 // natural key decides identity, the surrogate id is only written on create.
 
 import type {

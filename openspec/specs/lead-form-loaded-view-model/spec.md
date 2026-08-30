@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Derive the loaded lead-form view, cross-author visibility, activity alarms, and available affordances through one behavior-compatible view model.
+Derive the loaded lead-form view, cross-author visibility, activity alarms, and available affordances through one current view model.
 
 ## Requirements
 
@@ -24,7 +24,7 @@ API procedures, schemas, routes, product UI strings, or write endpoints.
 - **AND** draft orchestration, write actions, and draft merge commands remain in
   their existing boundaries
 
-### Requirement: Cross-author display gating remains behavior-compatible
+### Requirement: Cross-author display gating preserves current isolation
 
 The loaded-view-model boundary MUST preserve the current cross-author display
 semantics. Foreign full-content item, risk, and decision rows MUST be displayed
@@ -50,7 +50,7 @@ and submit summaries MUST NOT include foreign rows.
 - **AND** no foreign full-content row can reach draft/write inputs through the
   loaded view model
 
-### Requirement: Loaded affordance derivations remain behavior-compatible
+### Requirement: Loaded affordance derivations preserve current behavior
 
 The loaded-view-model boundary MUST preserve current derived affordances:
 priority ranks MUST be computed from own current and next-week items only,
@@ -74,7 +74,7 @@ MUST remain derived from the mapped read-only flag or submitted state.
 - **AND** the selected archived period remains visible when it is the current
   selected period
 
-### Requirement: Unified activity and activity alarm derivations remain behavior-compatible
+### Requirement: Unified activity and activity alarm derivations preserve current behavior
 
 The loaded-view-model boundary MUST preserve unified activity and activity alarm
 derivations. The unified by-state view MUST be an opt-in presentation controlled

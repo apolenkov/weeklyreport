@@ -63,9 +63,9 @@ export const HEADER_STATUS_TONE = {
   empty: CSS.mutedForeground,
 } as const satisfies Record<WeeklyProductStatus, string>;
 
-// status-color-semantics: each workflow status resolves its badge through named
-// tokens — never hardcoded hex. blocked=red alarm, in-progress=steel-blue (the
-// added token), completed=success green, planned=muted.
+// Each workflow status resolves its badge through named tokens, never hardcoded
+// hex: blocked=red alarm, in-progress=steel-blue, completed=success green,
+// planned=muted.
 export const STATUS_BADGE = {
   blocked: {
     label: "Blocked",

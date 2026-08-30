@@ -30,9 +30,7 @@ late-submission and reopen guards (`autoCreatePeriods`,
 NOT create individual periods — that is _Period management_. Policy is the org
 rule; management is the instance.
 _Avoid_: period settings used loosely (say "period policy" for the org rules,
-"period management" for the per-instance tab); "deferred / not wired yet" (most
-policy knobs have live consumers — only describe a field as deferred when its
-consumer genuinely does not exist).
+"period management" for the per-instance tab).
 
 **Period management** (Admin → Periods tab):
 The CRUD-and-lifecycle surface for INDIVIDUAL reporting-period instances —
@@ -84,11 +82,9 @@ not a consumer of finished reports: visibility is NOT gated on `published`. The 
 when one exists with viewer-visible content, else the latest viewer-visible
 published report (a published fallback is NOT a Current period — that term stays
 reserved for the editable state). Search remains published-scoped, so a live
-submitted record is readable before it is searchable — an accepted v1 divergence
-(see ADR 0007).
-_Avoid_: published-only viewer (the prior, reversed model — a viewer once saw a
-report only once its period was `published`); consumer (a viewer watches live
-status, not only completed reports).
+submitted record is readable before it is searchable.
+_Avoid_: published-only viewer; consumer (a viewer watches live status, not only
+completed reports).
 
 **Reopen request (section reopen)**:
 A lead-initiated ask to edit their OWN already-submitted section again — one
@@ -222,10 +218,7 @@ never-published draft CAN be deleted (an uncommitted mistake — typo, duplicate
 wrong product). It moves between states kanban-style — _done_ closes it; the other Progress
 states (see _Progress (item status)_) keep it open — and open work is not lost at the period boundary (the
 exact carry scope is a spec/design detail; carry-over today covers items and
-decisions). A delete-locked позиция shows a marker saying why. See ADR 0015. _Future:_ AI-assisted
-entry — the lead types free text and an agent classifies and structures it into a
-позиция (e.g. "it's broken, doesn't work" → a blocked risk on the Development
-stage); this is the capability the inert _Agent-review_ placeholder foreshadows.
+decisions). A delete-locked позиция shows a marker saying why. See ADR 0015.
 _Avoid_: English "position" (that is the HR job title); deleting a published позиция
 to make it go away (resolve or carry it forward instead).
 
@@ -325,7 +318,7 @@ not write yet are document actions).
 **Context control** (report toolbar vocabulary):
 A toolbar control that changes which report is shown or how it is presented,
 without operating on the document — period navigation, archive filter, scope,
-view mode, expand-all, Agent review. A context control may persist a setting;
+view mode, expand-all. A context control may persist a setting;
 persistence does not make it a document action.
 _Avoid_: filter (only some are filters); view control (view = the narrow
 edit/slides mode; Context control is the broader umbrella).
@@ -412,14 +405,11 @@ are derived, read-only, and after the simplification collapse to a single
 ## Slides & UI affordances
 
 **Tooltip / hover affordance**:
-There are THREE distinct hover-reveal systems — do not conflate them. (1) The
+There are two distinct hover-reveal systems — do not conflate them. (1) The
 shared **Radix tooltip** (the `ui/tooltip` primitive, content rendered in a
-portal so it is never clipped) — used by the pipeline "+N more" indicator, the
-SDLC stage chips, the sidebar, and the Coming-Soon controls. (2) The separate
-**stage-chip portal** (`sdlc-tooltip`, a `createPortal` singleton) that escapes
-accordion `overflow:hidden`; it is NOT Radix. (3) The **Coming-Soon tooltip** —
-the deferred-feature hover that shows the canonical amber `ComingSoonBadge`; it
-rides on the Radix system.
+portal so it is never clipped). (2) The separate **stage-chip portal**
+(`sdlc-tooltip`, a `createPortal` singleton) that escapes accordion
+`overflow:hidden`; it is NOT Radix.
 _Avoid_: "the tooltip" unqualified (ambiguous across three systems); calling the
 `sdlc-tooltip` portal "Radix".
 

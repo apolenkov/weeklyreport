@@ -72,6 +72,7 @@ const sourceAlpha: ReportSectionReadModel = makeSection({
       tag: "feature",
       workflowStatus: "in_progress",
       carriedOver: false,
+      stageNames: ["Development"],
     },
     {
       id: "e2e20000-e2e2-4e2e-8e2e-e2e2e2e2e2e2",
@@ -81,6 +82,7 @@ const sourceAlpha: ReportSectionReadModel = makeSection({
       tag: "support",
       workflowStatus: "done",
       carriedOver: false,
+      stageNames: ["Development"],
     },
     {
       id: "e3e30000-e3e3-4e3e-8e3e-e3e3e3e3e3e3",
@@ -90,6 +92,7 @@ const sourceAlpha: ReportSectionReadModel = makeSection({
       tag: "tech-debt",
       workflowStatus: "in_progress",
       carriedOver: true,
+      stageNames: ["Development"],
     },
   ],
   decisions: [
@@ -103,6 +106,7 @@ const sourceAlpha: ReportSectionReadModel = makeSection({
       // Decision.productId is a NOT-NULL product FK — a carried decision needs
       // a product to persist (and thus to be counted).
       productId: projectAlphaId,
+      stageNames: ["Development"],
     },
     {
       id: "f2f20000-f2f2-4f2f-8f2f-f2f2f2f2f2f2",
@@ -111,6 +115,7 @@ const sourceAlpha: ReportSectionReadModel = makeSection({
       deadline: new Date("2026-04-01T00:00:00.000Z"),
       impact: "Already handled",
       resolvedAt: new Date("2026-04-05T12:00:00.000Z"),
+      stageNames: ["Development"],
     },
   ],
 });
@@ -139,6 +144,7 @@ const sourceBeta: ReportSectionReadModel = makeSection({
       tag: "bugfix",
       workflowStatus: "planned",
       carriedOver: false,
+      stageNames: ["Development"],
     },
   ],
   decisions: [
@@ -150,6 +156,7 @@ const sourceBeta: ReportSectionReadModel = makeSection({
       impact: "Blocks deployment",
       resolvedAt: null,
       productId: projectBetaId,
+      stageNames: ["Development"],
     },
   ],
 });
@@ -168,6 +175,7 @@ const sourceGamma: ReportSectionReadModel = makeSection({
       tag: "infra",
       workflowStatus: "in_progress",
       carriedOver: false,
+      stageNames: ["Development"],
     },
   ],
   decisions: [],
@@ -485,6 +493,7 @@ describe("CarryOverService — contract tests", () => {
           tag: "support",
           workflowStatus: "done",
           carriedOver: false,
+          stageNames: ["Development"],
         },
       ],
       decisions: [
@@ -495,6 +504,7 @@ describe("CarryOverService — contract tests", () => {
           deadline: null,
           impact: "Done",
           resolvedAt: new Date("2026-04-01T12:00:00.000Z"),
+          stageNames: ["Development"],
         },
       ],
     });
@@ -572,6 +582,7 @@ describe("CarryOverService — contract tests", () => {
           tag: "feature",
           workflowStatus: "done",
           carriedOver: false,
+          stageNames: ["Development"],
         },
       ],
       decisions: [],

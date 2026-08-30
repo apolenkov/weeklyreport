@@ -59,7 +59,7 @@ describe("toItemRows", () => {
             carriedOver: false,
             priorityRank: null,
             pausedReason: null,
-            stageNames: undefined,
+            stageNames: ["Development"],
             comments: [],
           },
           {
@@ -87,7 +87,7 @@ describe("toItemRows", () => {
     expect(rows[1]?.stableId).toBe("stable-1");
     expect(rows[0]?.priorityRank).toBeNull();
     expect(rows[0]?.pausedReason).toBeNull();
-    expect(rows[0]?.stageNames).toEqual([]);
+    expect(rows[0]?.stageNames).toEqual(["Development"]);
     expect(rows[1]?.stageNames).toEqual(["Development"]);
     expect(rows[0]?.reportSectionId).toBe(SECTION_ID);
   });
@@ -108,7 +108,7 @@ describe("toItemRows", () => {
             carriedOver: false,
             priorityRank: null,
             pausedReason: null,
-            stageNames: undefined,
+            stageNames: [],
             comments: [],
           },
         ],
@@ -131,7 +131,7 @@ describe("assertPersistableDecisionParents + toDecisionRows", () => {
     deadline: null,
     impact: "Impact",
     resolvedAt: null,
-    stageNames: undefined,
+    stageNames: ["Development"],
     productId: undefined,
     activityId: undefined,
     comments: [],
@@ -163,7 +163,7 @@ describe("assertPersistableDecisionParents + toDecisionRows", () => {
 
   it("maps XOR parent to null for the missing side", () => {
     const rows = toDecisionRows(
-      [decision({ activityId: ACTIVITY })],
+      [decision({ activityId: ACTIVITY, stageNames: [] })],
       SECTION_ID,
     );
     expect(rows[0]?.productId).toBeNull();

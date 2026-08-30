@@ -30,17 +30,32 @@ describe("reminder execution row mapping — recipient identity", () => {
   });
 
   it("toExecutionCreateData persists recipientEmail verbatim", () => {
-    const createData = toExecutionCreateData({
-      id: row.id,
-      ruleId: row.ruleId,
-      reportId: null,
-      dedupeKey: row.dedupeKey,
-      status: "queued",
-      scheduledFor: row.createdAt,
-      sentAt: null,
-      recipientEmail: row.recipientEmail,
-      errorMessage: null,
-    });
+    const createData = toExecutionCreateData(
+      {
+        id: row.id,
+        ruleId: row.ruleId,
+        reportId: null,
+        dedupeKey: row.dedupeKey,
+        status: "queued",
+        scheduledFor: row.createdAt,
+        sentAt: null,
+        recipientEmail: row.recipientEmail,
+        errorMessage: null,
+      },
+      {
+        kind: "deadline",
+        cycleDate: "2026-04-12",
+        leadName: "Lead One",
+        reportPeriod: "2026-04-06 → 2026-04-12",
+        deadlineIso: "2026-04-12T09:00:00.000Z",
+        sectionUrl:
+          "http://localhost:3000/lead/report/22222222-2222-4222-8222-222222222222",
+        organization: {
+          shortName: "Demo",
+          fullName: "Example Software Department",
+        },
+      },
+    );
     expect(createData.recipientEmail).toBe("column-owner@test.local");
   });
 });

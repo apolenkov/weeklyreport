@@ -1,4 +1,3 @@
-import { splitStageNames } from "./stage-tags";
 import type {
   ActivityKanbanItem,
   KanbanItem,
@@ -61,10 +60,7 @@ function activityLanes(
 }
 
 function groupKeyFor(item: ProductKanbanItem): string {
-  const tags =
-    item.stageNames && item.stageNames.length > 0
-      ? item.stageNames
-      : splitStageNames(item.stageName);
+  const tags = item.stageNames;
   return tags.length > 0
     ? `${item.parent.id} · ${tags.join(", ")}`
     : item.parent.id;

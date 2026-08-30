@@ -61,14 +61,13 @@ already uses the WeeklyReport design-system focus token.
 - **AND** pointer interaction does not alter the keyboard focus contract of any
   interactive control
 
-### Requirement: Main-landmark focus behavior MUST have source and real-browser regression evidence
+### Requirement: Main-landmark focus behavior MUST have source and automated regression evidence
 
 The web regression gate MUST reject any rendered `main-content` branch that is
 not programmatically focusable or does not participate in the shared landmark
-presentation contract. Acceptance evidence MUST also exercise the real keyboard
-skip-link path in Chrome at mobile, tablet, and desktop widths; a source scan,
-unit test, axe result, or pointer-only screenshot alone MUST NOT be treated as
-proof of the rendered focus state.
+presentation contract. Automated DOM-level tests MUST exercise the keyboard
+skip-link path and verify the shared landmark presentation contract. A source
+scan alone MUST NOT be treated as proof of the rendered focus state.
 
 #### Scenario: A route drops the landmark presentation contract
 
@@ -77,12 +76,11 @@ proof of the rendered focus state.
 - **THEN** the source-level web regression gate fails and identifies the route
   source
 
-#### Scenario: Browser evidence proves both focus and presentation
+#### Scenario: Automated regression evidence proves both focus and presentation
 
-- **WHEN** the focus contract is verified at 375 px, 768 px, and 1280 px widths
-  in real Chrome
-- **THEN** each run proves that `main-content` is the active element after skip
-  link activation
-- **AND** each run proves the full-surface browser-default outline is absent
-- **AND** each run proves at least one subsequent interactive control retains a
+- **WHEN** the web regression suite renders each route branch and activates the
+  skip link
+- **THEN** the test proves that `main-content` is the active element
+- **AND** the test proves the full-surface browser-default outline is absent
+- **AND** the test proves at least one subsequent interactive control retains a
   visible focus indicator

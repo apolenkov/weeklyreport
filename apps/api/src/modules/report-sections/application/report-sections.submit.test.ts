@@ -77,7 +77,7 @@ const baseSection: ReportSectionReadModel = {
 // the write payloads below require it. Expose a stage-guaranteed copy.
 const writeItems = baseSection.items.map((it) => ({
   ...it,
-  stageNames: it.stageNames ?? [],
+  stageNames: it.stageNames,
 }));
 
 function createRepository(

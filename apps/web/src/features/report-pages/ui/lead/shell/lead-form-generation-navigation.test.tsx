@@ -222,6 +222,7 @@ describe("LeadForm generation navigation", () => {
         text: "Captured under report A",
         author: "Test Lead",
         priorityRank: null,
+        stageNames: [],
       }),
     );
     expect(screen.getByText("report-b:0")).toBeInTheDocument();

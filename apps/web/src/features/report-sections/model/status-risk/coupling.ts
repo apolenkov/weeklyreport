@@ -9,7 +9,8 @@ interface ProductCoupling {
 
 export type CouplingState = readonly ProductCoupling[];
 
-// Empty stageNames is valid for green products (legacy "all stages"); enforced only for red/yellow.
+// Empty stageNames is valid only for activity-parented rows; product risks are
+// rejected by the write contract before they reach this projection.
 export function computeCoupling(
   products: readonly Product[],
   risks: readonly RiskEntry[],
@@ -30,8 +31,7 @@ export function computeCoupling(
         riskRowsWithoutStages: risks
           .filter(
             (risk) =>
-              risk.productId === product.id &&
-              (!risk.stageNames || risk.stageNames.length === 0),
+              risk.productId === product.id && risk.stageNames.length === 0,
           )
           .map((risk) => risk.id),
       },

@@ -5,9 +5,12 @@ import { ClsService } from "nestjs-cls";
 
 import { BullMQModule } from "../../infrastructure/bullmq/bullmq.module";
 import { ConfigModule } from "../../infrastructure/config/config.module.js";
+import { ENV_CONFIG } from "../../infrastructure/config/config.module.js";
+import type { EnvConfig } from "../../infrastructure/config/env.schema.js";
 import { APP_LOGGER } from "../../lib/audit-logger.js";
 import type { AppLogger } from "../../lib/logger.js";
 import { OrganizationModule } from "../organization/index.js";
+import { OrganizationService } from "../organization/index.js";
 import {
   REMINDERS_ENQUEUER,
   REMINDERS_TELEMETRY,
@@ -45,12 +48,24 @@ import { RemindersInfrastructureTelemetry } from "./reminders-telemetry.adapter.
         logger: AppLogger,
         queue: RemindersEnqueuer,
         telemetry: RemindersTelemetry,
-      ) => new RemindersService(repo, logger, queue, telemetry),
+        organizationService: OrganizationService,
+        env: EnvConfig,
+      ) =>
+        new RemindersService(
+          repo,
+          logger,
+          queue,
+          telemetry,
+          organizationService,
+          env,
+        ),
       inject: [
         RemindersPrismaRepository,
         APP_LOGGER,
         REMINDERS_ENQUEUER,
         REMINDERS_TELEMETRY,
+        OrganizationService,
+        ENV_CONFIG,
       ],
     },
     // Hourly @Cron deadline reminder dispatcher.

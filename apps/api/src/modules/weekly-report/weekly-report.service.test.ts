@@ -1,4 +1,5 @@
 import {
+  type UserSession,
   type WeeklyReportReadModel,
   weeklyReportReadModelSchema,
 } from "@customreport/shared";
@@ -16,10 +17,21 @@ import {
 } from "./weekly-report.service";
 
 const reportId = "11111111-1111-4111-8111-111111111111";
-const activeReportId = "22222222-2222-4222-8222-222222222222";
-const sectionId = "33333333-3333-4333-8333-333333333333";
-const authorId = "44444444-4444-4444-8444-444444444444";
+const currentReportId = "22222222-2222-4222-8222-222222222222";
+const groupId = "33333333-3333-4333-8333-333333333333";
+const userId = "44444444-4444-4444-8444-444444444444";
 const projectId = "55555555-5555-4555-8555-555555555555";
+
+function session(role: UserSession["role"] = "head"): UserSession {
+  return {
+    userId,
+    email: "weekly-report@example.test",
+    name: "Weekly Report User",
+    role,
+    reportingGroupId: role === "admin" ? undefined : groupId,
+    viewerGroupAccess: role === "viewer" ? [groupId] : undefined,
+  };
+}
 
 function makeWeeklyReport(
   overrides: Partial<WeeklyReportReadModel> = {},
@@ -33,23 +45,23 @@ function makeWeeklyReport(
     archived: false,
     weekLabel: "W16-2026",
     submissionCount: 1,
-    totalLeads: 3,
+    totalLeads: 1,
     hasActiveReminderRule: true,
     portfolioOverview: [
       {
         productId: projectId,
         productName: "Project Alpha",
         worstStatus: "green",
-        stageCount: 2,
+        stageCount: 1,
         leadNames: ["Lead A"],
-        leadIds: ["492e3762-5859-556b-a696-a97143cfad26"],
+        leadIds: [userId],
       },
     ],
     leadSections: [
       makeReportSectionReadModel({
-        reportSectionId: sectionId,
+        reportSectionId: "66666666-6666-4666-8666-666666666666",
         reportId,
-        authorId,
+        authorId: userId,
         authorName: "Lead A",
         authorRole: "lead",
         version: 1,
@@ -63,17 +75,7 @@ function makeWeeklyReport(
             trafficLight: "green",
           }),
         ],
-        items: [
-          {
-            id: "66666666-6666-4666-8666-666666666666",
-            projectId,
-            type: "current",
-            text: "Implemented feature X",
-            tag: "dev",
-            workflowStatus: "done",
-            carriedOver: false,
-          },
-        ],
+        items: [],
         risks: [],
         decisions: [],
       }),
@@ -83,575 +85,157 @@ function makeWeeklyReport(
   });
 }
 
-function makeRepoResult(
+function makeResult(
   readModel: WeeklyReportReadModel,
   crossGroup: WeeklyReportRepositoryResult["crossGroup"] = null,
 ): WeeklyReportRepositoryResult {
   return { readModel, crossGroup };
 }
 
-function createSpyRepository(
-  reports: Map<string, WeeklyReportReadModel>,
-  activeId: string | null = null,
+function createRepository(
+  reports: ReadonlyMap<string, WeeklyReportReadModel>,
   currentEditableId: string | null = null,
-  latestPublishedNonArchivedId: string | null = null,
+  latestPublishedVisibleId: string | null = null,
 ): WeeklyReportRepository & {
-  getWeeklyReport: ReturnType<typeof vi.fn>;
-  getActiveReportId: ReturnType<typeof vi.fn>;
-  getCurrentEditableId: ReturnType<typeof vi.fn>;
-  getLatestPublishedNonArchivedId: ReturnType<typeof vi.fn>;
+  readonly getWeeklyReport: ReturnType<typeof vi.fn>;
+  readonly getCurrentEditableIdForSession: ReturnType<typeof vi.fn>;
 } {
   return {
     getWeeklyReport: vi.fn((id: string) => {
-      const model = reports.get(id);
+      const report = reports.get(id);
       return Promise.resolve(
-        model ? makeRepoResult(structuredClone(model)) : null,
+        report ? makeResult(structuredClone(report)) : null,
       );
     }),
-    getActiveReportId: vi.fn(() => Promise.resolve(activeId)),
     getCurrentEditableId: vi.fn(() => Promise.resolve(currentEditableId)),
-    getLatestPublishedNonArchivedId: vi.fn(() =>
-      Promise.resolve(latestPublishedNonArchivedId),
+    getCurrentEditableIdForSession: vi.fn(() =>
+      Promise.resolve(currentEditableId),
     ),
+    getLatestPublishedNonArchivedId: vi.fn(() => Promise.resolve(null)),
     getCompiledHistory: vi.fn(() =>
       Promise.resolve({ reports: [], archiveCount: 0 }),
     ),
-    getVisibleReportId: vi.fn(() => Promise.resolve(null)),
-    getLatestPublishedVisibleId: vi.fn(() => Promise.resolve(null)),
+    getVisibleReportId: vi.fn(() => Promise.resolve(currentEditableId)),
+    getLatestPublishedVisibleId: vi.fn(() =>
+      Promise.resolve(latestPublishedVisibleId),
+    ),
   };
 }
 
-describe("WeeklyReportService — unit tests", () => {
-  it("calls getWeeklyReport with the provided reportId", async () => {
+describe("WeeklyReportService", () => {
+  it("forwards the authenticated session to an explicit read", async () => {
     const report = makeWeeklyReport();
-    const reports = new Map([[reportId, report]]);
-    const repo = createSpyRepository(reports);
-    const service = new WeeklyReportService(repo);
+    const repository = createRepository(new Map([[reportId, report]]));
+    const service = new WeeklyReportService(repository);
+    const caller = session("head");
 
-    await service.getWeeklyReport(reportId);
+    await expect(
+      service.getWeeklyReport(reportId, caller),
+    ).resolves.toMatchObject({
+      status: "active",
+      reportId,
+    });
 
-    expect(repo.getWeeklyReport).toHaveBeenCalledOnce();
-    expect(repo.getWeeklyReport).toHaveBeenCalledWith(reportId, undefined);
-    expect(repo.getActiveReportId).not.toHaveBeenCalled();
+    expect(repository.getWeeklyReport).toHaveBeenCalledWith(reportId, caller);
   });
 
-  it("falls back to getActiveReportId when no ID is provided", async () => {
-    const report = makeWeeklyReport({ reportId: activeReportId });
-    const reports = new Map([[activeReportId, report]]);
-    const repo = createSpyRepository(reports, activeReportId);
-    const service = new WeeklyReportService(repo);
+  it("defaults only to the current editable report", async () => {
+    const report = makeWeeklyReport({ reportId: currentReportId });
+    const repository = createRepository(
+      new Map([[currentReportId, report]]),
+      currentReportId,
+    );
+    const service = new WeeklyReportService(repository);
+    const caller = session("lead");
 
-    await service.getWeeklyReport();
-
-    expect(repo.getActiveReportId).toHaveBeenCalledOnce();
-    expect(repo.getWeeklyReport).toHaveBeenCalledWith(
-      activeReportId,
-      undefined,
+    await expect(
+      service.getWeeklyReport(undefined, caller),
+    ).resolves.toMatchObject({
+      status: "active",
+      reportId: currentReportId,
+    });
+    expect(repository.getCurrentEditableIdForSession).toHaveBeenCalledWith(
+      caller,
     );
   });
 
-  it("throws WeeklyReportDomainError (not generic Error) for missing report", async () => {
-    const repo = createSpyRepository(new Map());
-    const service = new WeeklyReportService(repo);
+  it("returns no-period instead of defaulting to published history", async () => {
+    const repository = createRepository(new Map(), null);
+    const service = new WeeklyReportService(repository);
 
-    const error = await service
-      .getWeeklyReport(reportId)
-      .catch((error_: unknown) => error_);
-
-    expect(error).toBeInstanceOf(WeeklyReportDomainError);
-    expect(error).toBeInstanceOf(Error);
-    expect((error as Error).message).toContain(reportId);
-  });
-
-  it("returns no-period sentinel when no active and no explicit ID", async () => {
-    // A 200 response with { status: 'no-period' } (not a thrown domain error)
-    // prevents React Query retry storm.
-    const repo = createSpyRepository(new Map(), null);
-    const service = new WeeklyReportService(repo);
-
-    const result = await service.getWeeklyReport();
-
-    // crossGroup is an internal audit signal; always null on the no-period path.
-    expect(result).toEqual({
+    await expect(
+      service.getWeeklyReport(undefined, session("admin")),
+    ).resolves.toEqual({
       status: "no-period",
       report: null,
       crossGroup: null,
     });
-    expect(repo.getWeeklyReport).not.toHaveBeenCalled();
+    expect(repository.getWeeklyReport).not.toHaveBeenCalled();
+    expect(repository.getLatestPublishedNonArchivedId).not.toHaveBeenCalled();
   });
 
-  it("returns published period data unchanged", async () => {
-    const report = makeWeeklyReport({
-      periodStatus: "published",
-      submissionCount: 6,
-      totalLeads: 6,
-    });
-    const reports = new Map([[reportId, report]]);
-    const service = new WeeklyReportService(createSpyRepository(reports));
-
-    const result = await service.getWeeklyReport(reportId);
-
-    expect(result.status).toBe("active");
-    if (result.status !== "active") throw new Error("expected active");
-    expect(result.periodStatus).toBe("published");
-    expect(result.submissionCount).toBe(6);
-    expect(result.totalLeads).toBe(6);
-  });
-});
-
-describe("WeeklyReportService — viewer published-or-current gate", () => {
-  it("viewer reads the CURRENT open period (drafts included)", async () => {
-    const open = makeWeeklyReport({ periodStatus: "open" });
-    const reports = new Map([[reportId, open]]);
-    // currentEditableId === the fetched id → the gate admits it
+  it("rejects a viewer's non-current editable period", async () => {
+    const report = makeWeeklyReport({ periodStatus: "open" });
     const service = new WeeklyReportService(
-      createSpyRepository(reports, null, reportId),
-    );
-
-    const result = await service.getWeeklyReport(reportId, "viewer");
-
-    expect(result.status).toBe("active");
-    if (result.status !== "active") throw new Error("expected active");
-    expect(result.periodStatus).toBe("open");
-    expect(result.reportId).toBe(reportId);
-  });
-
-  it("viewer reads a submitted section in the current open period", async () => {
-    const open = makeWeeklyReport({ periodStatus: "open" });
-    // makeWeeklyReport's lead section defaults to status "submitted"
-    expect(open.leadSections[0]?.status).toBe("submitted");
-    const reports = new Map([[reportId, open]]);
-    const service = new WeeklyReportService(
-      createSpyRepository(reports, null, reportId),
-    );
-
-    const result = await service.getWeeklyReport(reportId, "viewer");
-
-    expect(result.status).toBe("active");
-  });
-
-  // Current reopened → live content (no snapshot-sticky).
-  it("viewer reads the CURRENT reopened period live", async () => {
-    const reopened = makeWeeklyReport({ periodStatus: "reopened" });
-    const reports = new Map([[reportId, reopened]]);
-    const service = new WeeklyReportService(
-      createSpyRepository(reports, null, reportId),
-    );
-
-    const result = await service.getWeeklyReport(reportId, "viewer");
-
-    expect(result.status).toBe("active");
-    if (result.status !== "active") throw new Error("expected active");
-    expect(result.periodStatus).toBe("reopened");
-  });
-
-  // viewer + explicit NON-current open id → rejected. This test is also the
-  // mutation sentinel for the gate's id check: drop `resolvedId !==
-  // currentEditableId` and a non-current/future/stale period would leak.
-  it("viewer is REJECTED on a non-current open period (id check teeth)", async () => {
-    const open = makeWeeklyReport({ periodStatus: "open" });
-    const reports = new Map([[reportId, open]]);
-    // the current editable period is a DIFFERENT id
-    const service = new WeeklyReportService(
-      createSpyRepository(reports, null, activeReportId),
+      createRepository(new Map([[reportId, report]]), currentReportId),
     );
 
     await expect(
-      service.getWeeklyReport(reportId, "viewer"),
+      service.getWeeklyReport(reportId, session("viewer")),
     ).rejects.toBeInstanceOf(WeeklyReportDomainError);
   });
 
-  // viewer + open period the resolver does not surface (archived, scheduled, or
-  // otherwise excluded from currentEditableId) → rejected: the viewer cannot
-  // read a period the repository never resolves as current.
-  it("viewer is REJECTED when no current editable period resolves", async () => {
-    const open = makeWeeklyReport({ periodStatus: "open" });
-    const reports = new Map([[reportId, open]]);
-    const service = new WeeklyReportService(
-      createSpyRepository(reports, null, null),
+  it("allows a viewer's current editable and explicitly requested published reports", async () => {
+    const viewer = session("viewer");
+    const current = makeWeeklyReport({ periodStatus: "reopened" });
+    const currentService = new WeeklyReportService(
+      createRepository(new Map([[reportId, current]]), reportId),
     );
-
     await expect(
-      service.getWeeklyReport(reportId, "viewer"),
-    ).rejects.toBeInstanceOf(WeeklyReportDomainError);
-  });
-
-  // viewer + past published id → snapshot (published is always readable)
-  it("viewer reads a past published period", async () => {
-    const published = makeWeeklyReport({ periodStatus: "published" });
-    const reports = new Map([[reportId, published]]);
-    // no current editable period at all
-    const service = new WeeklyReportService(
-      createSpyRepository(reports, null, null),
-    );
-
-    const result = await service.getWeeklyReport(reportId, "viewer");
-
-    expect(result.status).toBe("active");
-    if (result.status !== "active") throw new Error("expected active");
-    expect(result.periodStatus).toBe("published");
-    expect(result.reportId).toBe(reportId);
-  });
-
-  // viewer + open→published race → rejected on the stale-open fetch, then the
-  // published snapshot on re-fetch (fail-closed ordering)
-  it("viewer race open→published is rejected, then reads the snapshot on re-fetch", async () => {
-    const open = makeWeeklyReport({ periodStatus: "open" });
-    const published = makeWeeklyReport({ periodStatus: "published" });
-    // the period was published mid-request, so there is no current editable id
-    const repo = createSpyRepository(new Map(), null, null);
-    repo.getWeeklyReport
-      .mockResolvedValueOnce(makeRepoResult(open)) // stale-open read
-      .mockResolvedValueOnce(makeRepoResult(published)); // after the flip
-    const service = new WeeklyReportService(repo);
-
-    await expect(
-      service.getWeeklyReport(reportId, "viewer"),
-    ).rejects.toBeInstanceOf(WeeklyReportDomainError);
-
-    const recovered = await service.getWeeklyReport(reportId, "viewer");
-    expect(recovered.status).toBe("active");
-    if (recovered.status !== "active") throw new Error("expected active");
-    expect(recovered.periodStatus).toBe("published");
-  });
-
-  // viewer + no group access → empty content (zero-row scope), no leak. The gate
-  // admits the period; the empty section scope yields no content.
-  it("viewer with no access reads an empty current period (no leak)", async () => {
-    const emptyOpen = makeWeeklyReport({
-      periodStatus: "open",
-      leadSections: [],
-      portfolioOverview: [],
-      escalations: [],
-    });
-    const reports = new Map([[reportId, emptyOpen]]);
-    const service = new WeeklyReportService(
-      createSpyRepository(reports, null, reportId),
-    );
-
-    const result = await service.getWeeklyReport(reportId, "viewer");
-
-    expect(result.status).toBe("active");
-    if (result.status !== "active") throw new Error("expected active");
-    expect(result.leadSections).toHaveLength(0);
-  });
-
-  // viewer + NO reportId: the default MUST resolve via the same source as the
-  // gate (getCurrentEditableId), never getActiveReportId — a tie or an
-  // archived-open period would default to a period the gate then 404s.
-  it("viewer no-reportId resolves via the current editable id, not getActiveReportId", async () => {
-    const current = makeWeeklyReport({ reportId, periodStatus: "open" });
-    const stale = makeWeeklyReport({
-      reportId: activeReportId,
-      periodStatus: "open",
-    });
-    const reports = new Map([
-      [reportId, current],
-      [activeReportId, stale],
-    ]);
-    const service = new WeeklyReportService(
-      // getActiveReportId → activeReportId (stale); getCurrentEditableId → reportId
-      createSpyRepository(reports, activeReportId, reportId),
-    );
-
-    const result = await service.getWeeklyReport(undefined, "viewer");
-
-    expect(result.status).toBe("active");
-    if (result.status !== "active") throw new Error("expected active");
-    expect(result.reportId).toBe(reportId);
-  });
-
-  // viewer + NO reportId + no current editable period → falls back to the newest
-  // non-archived published report, NOT either archived-inclusive resolver.
-  it("viewer no-reportId falls back to the latest non-archived published report", async () => {
-    const published = makeWeeklyReport({ periodStatus: "published" });
-    const reports = new Map([[reportId, published]]);
-    const repo = createSpyRepository(reports, activeReportId, null, reportId);
-    const service = new WeeklyReportService(repo);
-
-    const result = await service.getWeeklyReport(undefined, "viewer");
-
-    expect(result.status).toBe("active");
-    if (result.status !== "active") throw new Error("expected active");
-    expect(result.periodStatus).toBe("published");
-    expect(result.reportId).toBe(reportId);
-    expect(repo.getCurrentEditableId).toHaveBeenCalledOnce();
-    expect(repo.getLatestPublishedNonArchivedId).toHaveBeenCalledOnce();
-    expect(repo.getActiveReportId).not.toHaveBeenCalled();
-  });
-
-  // viewer + NO reportId + nothing to show → no-period sentinel (never a 404).
-  it("viewer no-reportId with neither current nor published returns no-period", async () => {
-    const service = new WeeklyReportService(
-      createSpyRepository(new Map(), null, null, null),
-    );
-
-    const result = await service.getWeeklyReport(undefined, "viewer");
-
-    expect(result.status).toBe("no-period");
-  });
-
-  it("head role reads draft (open) period without filter", async () => {
-    const draft = makeWeeklyReport({ periodStatus: "open" });
-    const reports = new Map([[reportId, draft]]);
-    const service = new WeeklyReportService(createSpyRepository(reports));
-
-    const result = await service.getWeeklyReport(reportId, "head");
-
-    expect(result.status).toBe("active");
-    if (result.status !== "active") throw new Error("expected active");
-    expect(result.periodStatus).toBe("open");
-  });
-
-  it("lead and admin roles also read drafts (no scoping)", async () => {
-    const draft = makeWeeklyReport({ periodStatus: "open" });
-    const reports = new Map([[reportId, draft]]);
-    const service = new WeeklyReportService(createSpyRepository(reports));
-
-    await expect(
-      service.getWeeklyReport(reportId, "lead"),
+      currentService.getWeeklyReport(reportId, viewer),
     ).resolves.toMatchObject({
       status: "active",
-      periodStatus: "open",
+      periodStatus: "reopened",
     });
+
+    const published = makeWeeklyReport({ periodStatus: "published" });
+    const publishedService = new WeeklyReportService(
+      createRepository(new Map([[reportId, published]])),
+    );
     await expect(
-      service.getWeeklyReport(reportId, "admin"),
-    ).resolves.toMatchObject({
-      status: "active",
-      periodStatus: "open",
-    });
+      publishedService.getWeeklyReport(reportId, viewer),
+    ).resolves.toMatchObject({ status: "active", periodStatus: "published" });
   });
 
-  it("undefined role keeps legacy contract (no scoping; preserves callers predating role-based scoping)", async () => {
-    const draft = makeWeeklyReport({ periodStatus: "open" });
-    const reports = new Map([[reportId, draft]]);
-    const service = new WeeklyReportService(createSpyRepository(reports));
-
-    const result = await service.getWeeklyReport(reportId, undefined);
-    expect(result.status).toBe("active");
-    if (result.status !== "active") throw new Error("expected active");
-    expect(result.periodStatus).toBe("open");
-  });
-});
-
-const crossProductId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
-const crossGroupId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
-
-function createCrossGroupRepository(
-  readModel: WeeklyReportReadModel,
-  crossGroup: WeeklyReportRepositoryResult["crossGroup"],
-): WeeklyReportRepository {
-  return {
-    getWeeklyReport(_id: string) {
-      return Promise.resolve(
-        makeRepoResult(structuredClone(readModel), crossGroup),
-      );
-    },
-    getActiveReportId() {
-      return Promise.resolve(null);
-    },
-    getCurrentEditableId() {
-      return Promise.resolve(null);
-    },
-    getLatestPublishedNonArchivedId() {
-      return Promise.resolve(null);
-    },
-    getCompiledHistory() {
-      return Promise.resolve({ reports: [], archiveCount: 0 });
-    },
-    getVisibleReportId() {
-      return Promise.resolve(null);
-    },
-    getLatestPublishedVisibleId() {
-      return Promise.resolve(null);
-    },
-  };
-}
-
-describe("WeeklyReportService — cross-group audit signal", () => {
-  it("forwards crossGroup signal when non-admin read surfaces a cross-group product", async () => {
-    const report = makeWeeklyReport();
+  it("keeps the cross-group signal for the router to audit", async () => {
     const signal = {
-      productIds: [crossProductId],
-      groupIds: [crossGroupId],
+      productIds: ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"],
+      groupIds: ["bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"],
     };
-    const service = new WeeklyReportService(
-      createCrossGroupRepository(report, signal),
+    const repository = createRepository(
+      new Map([[reportId, makeWeeklyReport()]]),
     );
+    repository.getWeeklyReport.mockResolvedValue(
+      makeResult(makeWeeklyReport(), signal),
+    );
+    const service = new WeeklyReportService(repository);
 
-    const result = await service.getWeeklyReport(reportId, "lead");
+    const result = await service.getWeeklyReport(reportId, session("head"));
 
-    expect(result.status).toBe("active");
-    if (result.status !== "active") throw new Error("expected active");
-    expect(result.crossGroup).toEqual(signal);
+    expect(result).toMatchObject({ status: "active", crossGroup: signal });
   });
 
-  it("forwards crossGroup with two products — still one signal object (per-request dedupe)", async () => {
-    const report = makeWeeklyReport();
-    const twoProducts = {
-      productIds: [crossProductId, "cccccccc-cccc-4ccc-8ccc-cccccccccccc"],
-      groupIds: [crossGroupId],
-    };
-    const service = new WeeklyReportService(
-      createCrossGroupRepository(report, twoProducts),
+  it("resolves viewer navigation through the scoped current-then-published path", async () => {
+    const viewer = session("viewer");
+    const repository = createRepository(new Map(), currentReportId, reportId);
+    const service = new WeeklyReportService(repository);
+
+    await expect(service.latestForViewer(viewer)).resolves.toEqual({
+      reportId: currentReportId,
+    });
+    expect(repository.getVisibleReportId).toHaveBeenCalledWith(
+      currentReportId,
+      viewer,
     );
-
-    const result = await service.getWeeklyReport(reportId, "head");
-
-    expect(result.status).toBe("active");
-    if (result.status !== "active") throw new Error("expected active");
-    // Single signal object — not one per product. The router-level
-    // exactly-one-emit rule is covered by scope-accessed-emit.test.ts.
-    expect(result.crossGroup).toEqual(twoProducts);
-  });
-
-  it("passes crossGroup null when repository signals no cross-group products", async () => {
-    const report = makeWeeklyReport();
-    const service = new WeeklyReportService(
-      createCrossGroupRepository(report, null),
-    );
-
-    const result = await service.getWeeklyReport(reportId, "lead");
-
-    expect(result.status).toBe("active");
-    if (result.status !== "active") throw new Error("expected active");
-    expect(result.crossGroup).toBeNull();
-  });
-
-  it("passes crossGroup through unchanged for admin read (router owns the admin guard)", async () => {
-    const report = makeWeeklyReport();
-    // The repository returns the signal regardless of role; suppression is the
-    // router's responsibility, so the service must not filter it for admin.
-    const signal = { productIds: [crossProductId], groupIds: [crossGroupId] };
-    const service = new WeeklyReportService(
-      createCrossGroupRepository(report, signal),
-    );
-
-    const result = await service.getWeeklyReport(reportId, "admin");
-
-    expect(result.status).toBe("active");
-    if (result.status !== "active") throw new Error("expected active");
-    // Service passes signal through; router is responsible for the admin guard.
-    expect(result.crossGroup).toEqual(signal);
-  });
-
-  it("read model fields are identical whether crossGroup is present or null", async () => {
-    const report = makeWeeklyReport();
-    const signal = { productIds: [crossProductId], groupIds: [crossGroupId] };
-
-    const withSignal = new WeeklyReportService(
-      createCrossGroupRepository(report, signal),
-    );
-    const withNull = new WeeklyReportService(
-      createCrossGroupRepository(report, null),
-    );
-
-    const resultWith = await withSignal.getWeeklyReport(reportId, "lead");
-    const resultNull = await withNull.getWeeklyReport(reportId, "lead");
-
-    expect(resultWith.status).toBe("active");
-    expect(resultNull.status).toBe("active");
-    if (resultWith.status !== "active") throw new Error("expected active");
-    if (resultNull.status !== "active") throw new Error("expected active");
-
-    // Strip the crossGroup signal before comparing; the read model must be the same.
-    const { crossGroup: _w, ...modelWith } = resultWith;
-    const { crossGroup: _n, ...modelNull } = resultNull;
-    expect(modelWith).toEqual(modelNull);
-  });
-});
-
-describe("WeeklyReportService — head default resolution", () => {
-  const olderPublishedId = "66666666-6666-4666-8666-666666666666";
-
-  it("resolves the head default via getCurrentEditableId, not getActiveReportId", async () => {
-    const report = makeWeeklyReport({ reportId });
-    const reports = new Map([[reportId, report]]);
-    // getActiveReportId points elsewhere; the head default MUST track the
-    // lifecycle resolver so its reportId equals the publish authz target.
-    const repo = createSpyRepository(reports, activeReportId, reportId, null);
-    const service = new WeeklyReportService(repo);
-
-    await service.getWeeklyReport(undefined, "head");
-
-    expect(repo.getCurrentEditableId).toHaveBeenCalledOnce();
-    expect(repo.getActiveReportId).not.toHaveBeenCalled();
-    expect(repo.getWeeklyReport).toHaveBeenCalledWith(reportId, undefined);
-  });
-
-  it("falls back to getLatestPublishedNonArchivedId (skipping an archived newest published) when no current editable period", async () => {
-    const report = makeWeeklyReport({ reportId: olderPublishedId });
-    const reports = new Map([[olderPublishedId, report]]);
-    // No current editable; the newest published is archived, so the head
-    // default lands on the older NON-archived published id — the same target
-    // period.reopen authz resolves.
-    const repo = createSpyRepository(
-      reports,
-      activeReportId,
-      null,
-      olderPublishedId,
-    );
-    const service = new WeeklyReportService(repo);
-
-    await service.getWeeklyReport(undefined, "head");
-
-    expect(repo.getCurrentEditableId).toHaveBeenCalledOnce();
-    expect(repo.getLatestPublishedNonArchivedId).toHaveBeenCalledOnce();
-    expect(repo.getActiveReportId).not.toHaveBeenCalled();
-    expect(repo.getWeeklyReport).toHaveBeenCalledWith(
-      olderPublishedId,
-      undefined,
-    );
-  });
-
-  it("keeps the lead default on getActiveReportId (unchanged)", async () => {
-    const report = makeWeeklyReport({ reportId: activeReportId });
-    const reports = new Map([[activeReportId, report]]);
-    const repo = createSpyRepository(reports, activeReportId, null, null);
-    const service = new WeeklyReportService(repo);
-
-    await service.getWeeklyReport(undefined, "lead");
-
-    expect(repo.getActiveReportId).toHaveBeenCalledOnce();
-    expect(repo.getCurrentEditableId).not.toHaveBeenCalled();
-    expect(repo.getLatestPublishedNonArchivedId).not.toHaveBeenCalled();
-    expect(repo.getWeeklyReport).toHaveBeenCalledWith(
-      activeReportId,
-      undefined,
-    );
-  });
-
-  // The admin default MUST resolve through the same leadership lifecycle
-  // resolver as viewer/head — getActiveReportId can land on an archived or
-  // stale period the head would never see as its default.
-  it("resolves the admin default via getCurrentEditableId, not getActiveReportId", async () => {
-    const report = makeWeeklyReport({ reportId });
-    const reports = new Map([[reportId, report]]);
-    // getActiveReportId points at the stale id; the leadership resolver
-    // points at the current one — admin must follow the latter.
-    const repo = createSpyRepository(reports, activeReportId, reportId, null);
-    const service = new WeeklyReportService(repo);
-
-    await service.getWeeklyReport(undefined, "admin");
-
-    expect(repo.getCurrentEditableId).toHaveBeenCalledOnce();
-    expect(repo.getActiveReportId).not.toHaveBeenCalled();
-    expect(repo.getWeeklyReport).toHaveBeenCalledWith(reportId, undefined);
-  });
-
-  it("admin no-reportId falls back to the latest non-archived published report", async () => {
-    const published = makeWeeklyReport({ periodStatus: "published" });
-    const reports = new Map([[reportId, published]]);
-    const repo = createSpyRepository(reports, activeReportId, null, reportId);
-    const service = new WeeklyReportService(repo);
-
-    const result = await service.getWeeklyReport(undefined, "admin");
-
-    expect(result.status).toBe("active");
-    if (result.status !== "active") throw new Error("expected active");
-    expect(result.reportId).toBe(reportId);
-    expect(repo.getCurrentEditableId).toHaveBeenCalledOnce();
-    expect(repo.getLatestPublishedNonArchivedId).toHaveBeenCalledOnce();
-    expect(repo.getActiveReportId).not.toHaveBeenCalled();
   });
 });

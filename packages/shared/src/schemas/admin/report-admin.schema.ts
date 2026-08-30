@@ -149,6 +149,18 @@ export const adminSnapshotSchema = z
       .default([]),
     policies: z.array(reminderPolicySchema.readonly()).readonly().default([]),
   })
+  .superRefine((snapshot, ctx) => {
+    snapshot.users.forEach((user, index) => {
+      if (user.role !== "viewer" && user.reportingGroupId == null) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["users", index, "reportingGroupId"],
+          message:
+            "Snapshot users with lead, head, or admin roles require reportingGroupId.",
+        });
+      }
+    });
+  })
   .readonly();
 
 /** Metadata for one failed queue job; processor payloads stay server-private. */

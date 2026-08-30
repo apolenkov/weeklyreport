@@ -48,7 +48,7 @@ const HISTORY_PERIODS = SEED_HISTORY_REPORTS.map((report, index) => {
   const suffix = HISTORY_SUFFIXES[index];
   if (suffix === undefined) {
     throw new Error(
-      "Advanced seed: every history period needs its own report suffix",
+      "Product seed: every archive period needs its own report suffix",
     );
   }
   return { report, suffix };

@@ -62,8 +62,6 @@ application imports the package stylesheet through
 | Destructive           | `--color-destructive`                                                                       | `#c82014`                                                        | Errors, blocked state, destructive actions       |
 | Destructive emphasis  | `--color-destructive-emphasis` / `--color-destructive-emphasis-hover`                       | `#991b1b` / `#7f1d1d`                                            | Required marks and compact destructive controls  |
 | Destructive text      | `--color-destructive-foreground`                                                            | `#ffffff`                                                        | Text on destructive                              |
-| Coming-soon           | `--color-coming-soon`                                                                       | `#fef3c7`                                                        | Deferred-feature badge surface                   |
-| Coming-soon text      | `--color-coming-soon-foreground`                                                            | `#b45309`                                                        | Deferred-feature badge text                      |
 | Overlay               | `--color-overlay`                                                                           | `rgba(0, 0, 0, 0.5)`                                             | Dialog/backdrop overlay                          |
 | Selected neutral      | `--color-toggle-active`                                                                     | `#3f4a44`                                                        | Segmented control active state                   |
 | Skeleton              | `--color-skeleton`                                                                          | `#d8ddd4`                                                        | Loading shimmer base                             |
@@ -98,7 +96,6 @@ The login primary action uses `--shadow-primary-cta`; app code must not restate
 its brand-green shadow or the warm login hairline as literal color values.
 
 There is no complete dark palette. The `.dark` class currently overrides only
-`--color-coming-soon`, `--color-coming-soon-foreground`, and
 `--color-overlay` (to `rgba(0, 0, 0, 0.7)`); consumers must not assume all
 light tokens have dark counterparts.
 
@@ -288,9 +285,8 @@ The state contracts below describe what the current code already provides.
 - **Alert/Toast**: `Alert` has default/destructive variants and
   `role="alert"`; `Toaster` maps success/info/warning/error/loading to Lucide
   icons and follows the current theme.
-- **Badge/ComingSoon**: pill labels with default/secondary/destructive/
-  outline/ghost/link variants; deferred controls remain visible but inert, with
-  accessible `aria-disabled`/tooltip treatment.
+- **Badge**: pill labels with default/secondary/destructive/outline/ghost/link
+  variants.
 - **Skeleton/Progress**: shimmer placeholders and determinate progress bars;
   report/admin/slide skeletons mirror the eventual shell to reduce layout shift.
 - **Empty/error**: empty surfaces use `--color-surface-empty`; query owners
@@ -349,7 +345,7 @@ Do not replace these layers with a single flat fill or a one-off shadow. Do not
 use primary green as a decorative background when the control is not a forward
 action.
 
-## 8. Accessibility Constraints & Accepted Debt
+## 8. Accessibility constraints
 
 ### Constraints
 
@@ -369,7 +365,7 @@ action.
 - Touch targets use the 44px minimum below the mobile density breakpoint.
   Primary mobile actions, navigation triggers, search, and dialog actions must
   not fall below that floor.
-- Loading, empty, error, disabled, and deferred-feature states are explicit in
+- Loading, empty, and error states are explicit in
   the DOM (`role="status"`, `role="alert"`, `aria-busy`, or
   `aria-disabled`) and must not be conveyed by color alone.
 - Respect `prefers-reduced-motion: reduce`; never add essential meaning that
@@ -378,9 +374,3 @@ action.
 - Focused product tests verify semantic accessibility behavior. Changed UI
   surfaces also receive direct keyboard, focus and contrast review when the
   product risk warrants it.
-
-### Accepted Debt
-
-| Item                             | Location | Why accepted                                                                                                                                                                                                        | Owner / Exit                                                                           |
-| -------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| None verified in this extraction | —        | No current WCAG, COGA, keyboard, screen-reader, touch, or motion issue was explicitly accepted in the inspected source/spec inputs. This document records constraints; it does not silently waive a future finding. | Re-open this table only with a located, evidence-backed finding and an owner decision. |

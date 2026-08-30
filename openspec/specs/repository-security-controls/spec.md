@@ -22,9 +22,9 @@ job scope and MUST document the trusted operation that requires it.
 - **AND** it declares no write permission for a read-only quality, test, audit,
   or build operation
 
-#### Scenario: A future publishing job needs authority
+#### Scenario: A publishing job needs authority
 
-- **WHEN** a future job publishes a package, attestation, security result, or
+- **WHEN** a job publishes a package, attestation, security result, or
   deployment
 - **THEN** only that job declares the exact required write scope
 - **AND** ordinary pull-request jobs remain read-only
@@ -32,9 +32,8 @@ job scope and MUST document the trusted operation that requires it.
 ### Requirement: Read-only checkouts MUST NOT retain credentials
 
 Every `actions/checkout` step in a job that does not push repository changes
-MUST disable credential persistence. A future write-back checkout MUST be
-isolated to a trusted event and MUST document why retained credentials are
-necessary.
+MUST disable credential persistence. Any write-back checkout MUST be isolated
+to a trusted event and MUST document why retained credentials are necessary.
 
 #### Scenario: Current workflows check out source
 

@@ -6,7 +6,7 @@ import type {
 import type { ReminderQueueJobData } from "./reminders-queue-payload.js";
 
 // Three attempts with 5s exponential floor — matches EmailReminderProcessor
-// and telegram-outbound so transient SMTP blips settle before DLQ.
+// so transient SMTP blips settle before DLQ.
 const REMINDER_JOB_ATTEMPTS = 3;
 const REMINDER_JOB_BACKOFF_DELAY_MS = 5000;
 

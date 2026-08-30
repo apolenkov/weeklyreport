@@ -32,6 +32,7 @@ export class RemindersScopeService {
     private readonly requestReminderExecution: (
       ruleId: string,
       recipientEmail: string,
+      leadName?: string,
     ) => Promise<{
       execution: AdminReminderExecution;
       outcome: "created" | "revived" | "deduplicated";
@@ -122,12 +123,13 @@ export class RemindersScopeService {
   // Classify from the atomic insert outcome (dedupeKey unique index); no clocks.
   private async classifySectionDispatch(
     rule: { id: string; fireAt: Date },
-    section: { email: string; notificationOptOut: boolean },
+    section: { email: string; name?: string; notificationOptOut: boolean },
   ): Promise<SectionDispatchOutcome> {
     if (section.notificationOptOut) return "skipped";
     const { outcome } = await this.requestReminderExecution(
       rule.id,
       section.email,
+      section.name,
     );
     return outcome === "deduplicated" ? "alreadySent" : "dispatched";
   }
@@ -139,6 +141,7 @@ export class RemindersScopeService {
     rule: { id: string; fireAt: Date },
     draftSections: readonly {
       email: string;
+      name?: string;
       notificationOptOut: boolean;
     }[],
   ): Promise<DispatchPendingResult> {

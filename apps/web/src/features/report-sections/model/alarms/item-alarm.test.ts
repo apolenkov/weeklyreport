@@ -10,7 +10,7 @@ const inProgress = {
 
 function risk(overrides: {
   productId?: string;
-  stageNames?: string[];
+  stageNames: string[];
   severity: "at-risk" | "blocked";
   text?: string;
 }) {
@@ -60,21 +60,12 @@ describe("deriveItemAlarmFromRisks", () => {
     expect(deriveItemAlarmFromRisks(inProgress, [])).toBeNull();
   });
 
-  it("treats an empty-stage (wildcard) risk as covering any stage", () => {
+  it("ignores a risk without an explicit stage", () => {
     expect(
       deriveItemAlarmFromRisks(inProgress, [
         risk({ stageNames: [], severity: "at-risk" }),
       ]),
-    ).toBe("at-risk");
-  });
-
-  it("covers a stage-less item with any same-product risk", () => {
-    const stageless = { productId: "p1", status: "in-progress" as const };
-    expect(
-      deriveItemAlarmFromRisks(stageless, [
-        risk({ stageNames: ["Testing"], severity: "blocked" }),
-      ]),
-    ).toBe("blocked");
+    ).toBeNull();
   });
 
   it("ignores a risk on a different product", () => {
@@ -111,18 +102,5 @@ describe("deriveItemAlarmFromRisks", () => {
         risk({ stageNames: [], severity: "blocked" }),
       ]),
     ).toBeNull();
-  });
-
-  it("heals a legacy single-stage label (stageName) when stageNames is absent", () => {
-    const legacy = {
-      productId: "p1",
-      stageName: "Development",
-      status: "in-progress" as const,
-    };
-    expect(
-      deriveItemAlarmFromRisks(legacy, [
-        risk({ stageNames: ["Development"], severity: "at-risk" }),
-      ]),
-    ).toBe("at-risk");
   });
 });

@@ -42,10 +42,9 @@ const ROOT_MANIFEST = "package.json";
 const WORKSPACE_MANIFEST = "pnpm-workspace.yaml";
 
 const DOCKERFILES = ["Dockerfile.api", "Dockerfile.web"];
-const ACTIONS_WORKFLOWS = [
-  ".github/workflows/ci.yml",
-  ".github/workflows/dependency-scan.yml",
-];
+const ACTIONS_WORKFLOW = ".github/workflows/ci.yml";
+const EXPECTED_ACTION_SETUP_COUNT = 4;
+const ACTION_SHA_LENGTH = 40;
 
 const readRootManifest = (): RootManifest =>
   JSON.parse(read(ROOT_MANIFEST)) as RootManifest;
@@ -83,20 +82,31 @@ const majorless = (packageManager: string): string | undefined =>
 const workflowPnpmPins = (file: string): readonly Declaration[] => {
   const content = read(file);
   const setupCount = [...content.matchAll(/- name: Setup pnpm/g)].length;
-  const pins = [
+  const steps = [
     ...content.matchAll(
-      /- name: Setup pnpm\s+run: npm install --global pnpm@(\d+\.\d+\.\d+)/g,
+      /- name: Setup pnpm\n\s+uses: pnpm\/action-setup@([0-9a-f]{40}) # v(\d+\.\d+\.\d+)\n\s+with:\n\s+version: (\d+\.\d+\.\d+)/g,
     ),
   ];
+  const pins = steps.map((step) => {
+    const actionSha = step[1];
+    const actionVersion = step[2];
+    return actionSha?.length === ACTION_SHA_LENGTH &&
+      actionVersion !== undefined
+      ? step[3]
+      : undefined;
+  });
 
-  return Array.from({ length: setupCount }, (_, index) => ({
-    source: `${file} Setup pnpm ${index + 1}`,
-    value: pins[index]?.[1],
-  }));
+  return Array.from({ length: EXPECTED_ACTION_SETUP_COUNT }, (_, index) => {
+    return {
+      source: `${file} Setup pnpm ${index + 1}`,
+      value:
+        setupCount === EXPECTED_ACTION_SETUP_COUNT ? pins[index] : undefined,
+    };
+  });
 };
 
-// pnpm is installed explicitly everywhere Node 26 executes because corepack is
-// absent. Every setup step must carry the packageManager pin itself.
+// The action setup stays SHA-pinned and its requested pnpm version must agree
+// with the repository packageManager pin.
 const pnpmPins = (): readonly Declaration[] => [
   {
     source: "package.json packageManager",
@@ -106,7 +116,7 @@ const pnpmPins = (): readonly Declaration[] => [
     source: `${file} npm install -g`,
     value: /npm install -g pnpm@(\d+\.\d+\.\d+)/.exec(read(file))?.[1],
   })),
-  ...ACTIONS_WORKFLOWS.flatMap(workflowPnpmPins),
+  ...workflowPnpmPins(ACTIONS_WORKFLOW),
 ];
 
 const wasRead = (entry: Declaration): entry is ReadDeclaration =>

@@ -107,13 +107,13 @@ const TARGETED_CLASSES = {
     className: "AdminPrismaRepository",
     operations: ["reminderPolicyExists"],
   },
-  "src/modules/review/infrastructure/review.prisma-repository.ts": {
-    className: "ReviewPrismaRepository",
-    operations: ["getSubmissionDashboard"],
-  },
   "src/modules/archive/archive.prisma-repository.ts": {
     className: "ArchivePrismaRepository",
     operations: ["listArchiveReports", "getArchiveReport"],
+  },
+  "src/modules/review/infrastructure/review.prisma-repository.ts": {
+    className: "ReviewPrismaRepository",
+    operations: ["getSubmissionDashboard"],
   },
   "src/modules/search/search.prisma-repository.ts": {
     className: "SearchPrismaRepository",
@@ -148,10 +148,6 @@ const TARGETED_CLASSES = {
   },
   "src/infrastructure/bullmq/email-reminder.processor.ts": {
     className: "EmailReminderProcessor",
-    operations: ["processJob", "onJobFailed", "extraWorkerOptions"],
-  },
-  "src/modules/telegram/telegram.queue.ts": {
-    className: "TelegramProcessor",
     operations: ["processJob", "onJobFailed", "extraWorkerOptions"],
   },
 } as const;

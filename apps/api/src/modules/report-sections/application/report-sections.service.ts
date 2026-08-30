@@ -289,9 +289,6 @@ export class ReportSectionsService {
     return saved;
   }
 
-  // The lead's own section history, newest reporting-period first. Pure
-  // post-processing lives in buildMyHistoryEntries; this threads the repo rows
-  // through it.
   async myHistory(authorId: string): Promise<MyHistoryEntry[]> {
     const sections = await this.repository.getMyHistoryRows(authorId);
     return buildMyHistoryEntries(sections);

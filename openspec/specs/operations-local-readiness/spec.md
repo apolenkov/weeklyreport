@@ -2,13 +2,18 @@
 
 ## Purpose
 
-Ensure every repository-owned development and operations instruction agrees with executable configuration while keeping external production dependencies explicit.
+Ensure the repository-owned development and production operations instructions
+agree with the current Compose service graph and recovery entrypoints while
+keeping external production dependencies explicit.
 
 ## Requirements
 
 ### Requirement: Repository-owned operations instructions are executable
 
-The repository-owned development and operations instructions, including Compose, observability, metrics, Grafana, SMTP, staging, and restore surfaces, MUST agree with the checked-in service graph, required environment variables, routes, credentials, and ownership declarations.
+The repository-owned development and production instructions, including
+Compose, SMTP, database, backup, and restore surfaces, MUST agree with the
+checked-in service graph, required environment variables, routes, credentials,
+and ownership declarations.
 
 #### Scenario: A documented environment is rendered
 
@@ -30,18 +35,12 @@ The repository-owned development and operations instructions, including Compose,
 - **WHEN** CI or an operator builds the production API and Web images
 - **THEN** one exact release version identifies telemetry, the user-visible Web build, and every repository-built image label and tag
 
-#### Scenario: The observability overlay is composed
-
-- **WHEN** the production stack is rendered with the repository observability overlay
-- **THEN** the overlay supplies a collector endpoint and explicitly enables the telemetry SDK
-
 #### Scenario: Development database configuration is rendered
 
 - **WHEN** the development Compose stack is rendered
 - **THEN** every database consumer uses the same fixed local-only credential without interpolating an arbitrary password into a URL
 - **AND** application consumers target exact disposable PostgreSQL `customreport_e2e`
 - **AND** an idempotent one-shot initializer ensures that database exists before migrations run
-- **AND** a legacy named volume containing only `customreport_dev` upgrades without deleting the volume
 
 #### Scenario: A fresh local product database is bootstrapped
 
@@ -71,10 +70,10 @@ The repository-owned development and operations instructions, including Compose,
 - **WHEN** `DB_PASSWORD` contains a reserved URL character or `POSTGRES_DB` contains anything other than letters, digits, and underscores
 - **THEN** the configuration guard exits non-zero without logging either value and no database-dependent service starts
 
-#### Scenario: Metrics remain internal
+#### Scenario: Metrics remain private
 
-- **WHEN** an operator follows the observability runbook
-- **THEN** the documentation identifies the actual internal scrape path and does not claim a public Caddy `/metrics` route
+- **WHEN** an operator requests the production Caddy `/metrics` path
+- **THEN** the edge does not expose the API metrics endpoint
 
 #### Scenario: A destructive restore is requested
 
@@ -87,8 +86,7 @@ The backup automation and its staleness healthcheck MUST validate positive
 integer cadence inputs before arithmetic, looping, or filesystem work; the
 backup loop MUST also validate retention. A completed dump MUST become visible
 only after its atomic publish succeeds, and success logging or retention
-pruning MUST NOT run after a failed publish. Repository post-update hooks MUST
-propagate dependency-install or generated-client failures to their caller.
+pruning MUST NOT run after a failed publish.
 
 #### Scenario: Backup cadence is invalid
 
@@ -104,11 +102,6 @@ propagate dependency-install or generated-client failures to their caller.
 
 - **WHEN** `pg_dump` succeeds but the atomic rename from the partial path fails
 - **THEN** the loop reports the publish failure, removes the partial file, and does not log success or prune retained dumps
-
-#### Scenario: A post-update hook command fails
-
-- **WHEN** dependency installation or generated-client refresh fails
-- **THEN** the Git hook exits non-zero and exposes the failed step
 
 ### Requirement: Repository-owned runtime surfaces are bounded and reproducible
 

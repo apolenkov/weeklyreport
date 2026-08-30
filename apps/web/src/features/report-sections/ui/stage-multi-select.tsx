@@ -1,7 +1,5 @@
 "use client";
 
-import { canonicalStageName } from "../model/stage-tags";
-
 interface StageMultiSelectProps {
   readonly id: string;
   readonly value: readonly string[];
@@ -9,20 +7,17 @@ interface StageMultiSelectProps {
   readonly error?: string | undefined;
   readonly onChange: (next: string[]) => void;
   readonly previewSeverity?: "at-risk" | "blocked" | undefined;
-  // Required: drop "empty = all stages" copy; empty selection is invalid.
   readonly required?: boolean | undefined;
 }
 
-// Empty selection → "all stages" only when optional; required mode suppresses that banner.
 function computeBannerText(
   selected: readonly string[],
   previewSeverity: "at-risk" | "blocked",
-  required: boolean,
 ): string {
   const severityLabel = previewSeverity === "blocked" ? "Blocked" : "At Risk";
   const [onlySelected] = selected;
   if (onlySelected === undefined) {
-    return required ? "" : `All assigned stages will show as ${severityLabel}.`;
+    return "";
   }
   if (selected.length === 1) {
     return `Stage ${onlySelected} will show as ${severityLabel}.`;
@@ -30,35 +25,24 @@ function computeBannerText(
   return `Selected stages will show as ${severityLabel}.`;
 }
 
-// stage-label-canonicalization: match the option against the stored value by
-// canonical name, so a legacy "Dev"-stored selection still reads as checked
-// when the option is the canonical "Development" (and toggling-off removes it).
 function isStageSelected(selected: readonly string[], stage: string): boolean {
-  const canonical = canonicalStageName(stage);
-  return selected.some((item) => canonicalStageName(item) === canonical);
+  return selected.includes(stage);
 }
 
 function toggleStage(selected: readonly string[], stage: string): string[] {
-  const canonical = canonicalStageName(stage);
   return isStageSelected(selected, stage)
-    ? selected.filter((item) => canonicalStageName(item) !== canonical)
+    ? selected.filter((item) => item !== stage)
     : [...selected, stage];
 }
 
 function deriveStageScopePresentation(
   selected: readonly string[],
-  stages: readonly string[],
   previewSeverity: "at-risk" | "blocked" | undefined,
-  required: boolean,
 ) {
-  const isMultiChoice = stages.length >= 2;
   return {
-    bannerText:
-      isMultiChoice && previewSeverity
-        ? computeBannerText(selected, previewSeverity, required)
-        : "",
-    showScopeHint:
-      !required && !previewSeverity && selected.length === 0 && isMultiChoice,
+    bannerText: previewSeverity
+      ? computeBannerText(selected, previewSeverity)
+      : "",
   };
 }
 
@@ -69,7 +53,6 @@ export function StageMultiSelect({
   error,
   onChange,
   previewSeverity,
-  required = false,
 }: StageMultiSelectProps) {
   const selected = value;
   const helperId = `${id}-hint`;
@@ -78,11 +61,9 @@ export function StageMultiSelect({
   const isSelected = (stage: string) => isStageSelected(selected, stage);
   const toggle = (stage: string) => onChange(toggleStage(selected, stage));
 
-  const { bannerText, showScopeHint } = deriveStageScopePresentation(
+  const { bannerText } = deriveStageScopePresentation(
     selected,
-    stages,
     previewSeverity,
-    required,
   );
 
   return (
@@ -93,14 +74,9 @@ export function StageMultiSelect({
       <legend className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]">
         SDLC Stages
       </legend>
-      <StageHelperText id={helperId} required={required} />
+      <StageHelperText id={helperId} />
       {bannerText && <StageScopeBanner text={bannerText} />}
       <StageChoices stages={stages} isSelected={isSelected} onToggle={toggle} />
-      {showScopeHint && (
-        <p className="mt-2 text-[11px] text-[var(--color-muted-foreground)]">
-          Scope: all assigned stages.
-        </p>
-      )}
       {error && (
         <p
           id={errorId}
@@ -113,21 +89,14 @@ export function StageMultiSelect({
   );
 }
 
-function StageHelperText({
-  id,
-  required,
-}: {
-  readonly id: string;
-  readonly required: boolean;
-}) {
+function StageHelperText({ id }: { readonly id: string }) {
   return (
     <p
       id={id}
       className="mb-2 text-[11px] text-[var(--color-muted-foreground)]"
     >
-      {required
-        ? "Required. Select at least one assigned stage — a single owned stage is applied automatically."
-        : "Optional. Leave empty to apply to all assigned stages. Tip: mark the stage as blocked on the SDLC pipeline above before pinning a risk — that keeps your blocker scope honest."}
+      Select at least one assigned stage. A single owned stage is applied
+      automatically.
     </p>
   );
 }

@@ -2,10 +2,7 @@ import type { PeriodStatus } from "@customreport/shared";
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 
-import {
-  ExportPdfButton,
-  PdfExportComingSoonControl,
-} from "../../../pdf-export";
+import { ExportPdfButton } from "../../../pdf-export";
 import type {
   LeadOverviewRow,
   WeeklyPortfolioProduct,
@@ -161,23 +158,18 @@ export function ReportOverviewBand({
   );
 }
 
-// head/admin/viewer get the real export; lead is FORBIDDEN and gets ComingSoon.
+// Export is shown only when the server-provided capability allows it.
 export function ToolbarExportControl({
   canExportPdf,
-  showComingSoon,
   reportId,
   periodStatus,
 }: {
   canExportPdf: boolean;
-  showComingSoon: boolean;
   reportId: string;
   periodStatus: PeriodStatus;
 }) {
   if (canExportPdf) {
     return <ExportPdfButton reportId={reportId} periodStatus={periodStatus} />;
-  }
-  if (showComingSoon) {
-    return <PdfExportComingSoonControl />;
   }
   return null;
 }

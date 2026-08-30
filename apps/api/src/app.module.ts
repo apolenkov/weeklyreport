@@ -37,7 +37,6 @@ import { RemindersService } from "./modules/reminders/index.js";
 import { ReportSectionsModule } from "./modules/report-sections/index.js";
 import { ReviewModule } from "./modules/review/index.js";
 import { SearchModule } from "./modules/search/index.js";
-import { TelegramModule } from "./modules/telegram/index.js";
 import { TelemetryModule } from "./modules/telemetry/index.js";
 import { WeeklyReportModule } from "./modules/weekly-report/index.js";
 
@@ -75,10 +74,6 @@ import { WeeklyReportModule } from "./modules/weekly-report/index.js";
     TelemetryModule,
     PeriodModule,
     WeeklyReportModule,
-    // Telegram outbound queue + adapter seam.
-    // Seeds-only — MockTelegramAdapter unless TG_BOT_TOKEN is set, in
-    // which case selectTelegramAdapter throws at boot.
-    TelegramModule,
     ObservabilityModule,
   ],
   providers: [

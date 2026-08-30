@@ -17,10 +17,10 @@ export function NoSubmissionsEmptyState({
         Leads have not filed their sections for this period.
       </p>
       <Link
-        href="/reports?tab=published"
+        href="/reports"
         className="mt-4 text-sm font-medium text-[var(--color-primary)] underline-offset-4 hover:underline"
       >
-        View archived reports in Archive &rarr;
+        View report history &rarr;
       </Link>
     </div>
   );

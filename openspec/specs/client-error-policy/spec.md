@@ -1,7 +1,5 @@
 # Spec: Client Error Policy
 
-Synced from change `hoist-query-error-policy` (archived 2026-06-11).
-
 ## Purpose
 
 Pin the durable contract that every TanStack Query load failure on a page

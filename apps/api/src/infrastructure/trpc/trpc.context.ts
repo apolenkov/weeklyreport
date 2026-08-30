@@ -46,35 +46,15 @@ const DEV_SESSION: UserSession = {
   reportingGroupName: DEFAULT_REPORTING_GROUP.name,
 };
 
-// Synthetic session for PDF-export JWTs; must satisfy userSessionSchema.
-// Read-only limits live on isPdfExport/pdfReportId, not the role.
-const PDF_EXPORT_SYNTHETIC_USER_ID = "a0000000-0000-4000-8000-00000000fdb0";
-const PDF_EXPORT_SYNTHETIC_EMAIL = "pdf-worker@internal.example.test";
-
-// Back-compat for tokens without requestedBy: viewer with no group access
-// (renders empty). New tokens always carry requestedBy.
-function buildLegacyPdfExportSession(reportId: string): UserSession {
-  return {
-    userId: PDF_EXPORT_SYNTHETIC_USER_ID,
-    email: PDF_EXPORT_SYNTHETIC_EMAIL,
-    name: "PDF Worker",
-    role: "viewer",
-    activeReportId: reportId,
-    activeReportSectionId: null,
-  };
-}
-
 // Rebuild the requester's real session (hydrateSession) so export scope
 // matches their in-app view. pdfExportGuard still enforces the allowlist.
-// Null when requester is gone (fail closed); no requestedBy → legacy session.
+// Null when requester is gone (fail closed).
 export async function buildPdfExportSession(
   reportId: string,
-  requestedBy: string | undefined,
+  requestedBy: string,
   prisma: PrismaService,
   sessionRevocation: Pick<SessionRevocationService, "isRevoked">,
 ): Promise<UserSession | null> {
-  if (!requestedBy) return buildLegacyPdfExportSession(reportId);
-
   // A deactivated/revoked requester must not keep exporting for the token's
   // ~5-min window; fall through to no session so the auth middleware rejects.
   if (await isUserAccessBarred(requestedBy, prisma, sessionRevocation)) {
