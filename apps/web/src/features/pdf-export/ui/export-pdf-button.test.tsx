@@ -24,11 +24,13 @@ vi.mock("sonner", () => ({
 }));
 
 import { ExportPdfButton } from "./export-pdf-button";
+import { pdfExportRefetchInterval } from "./use-pdf-export-job";
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
 const JOB_ID = "22222222-2222-4222-8222-222222222222";
 const ARTIFACT_URL = `/pdfs/${JOB_ID}.pdf`;
 const DISABLED_REASON = "Publish or re-publish the report to export PDF.";
+const STATUS_POLL_INTERVAL_MS = 2000;
 
 const COMPLETED_STATUS = {
   jobId: JOB_ID,
@@ -71,7 +73,7 @@ function renderButton(options: {
     );
   }
 
-  render(
+  const rendered = render(
     <ExportPdfButton
       reportId={REPORT_ID}
       periodStatus={options.periodStatus ?? "published"}
@@ -79,8 +81,20 @@ function renderButton(options: {
     { wrapper: Wrapper },
   );
 
-  return { captured };
+  return { captured, ...rendered };
 }
+
+describe("pdfExportRefetchInterval", () => {
+  it.each([
+    [undefined, STATUS_POLL_INTERVAL_MS],
+    ["queued", STATUS_POLL_INTERVAL_MS],
+    ["processing", STATUS_POLL_INTERVAL_MS],
+    ["completed", false],
+    ["failed", false],
+  ] as const)("maps %s to %s", (status, expected) => {
+    expect(pdfExportRefetchInterval(status)).toBe(expected);
+  });
+});
 
 describe("ExportPdfButton", () => {
   afterEach(() => {
@@ -92,6 +106,7 @@ describe("ExportPdfButton", () => {
     toastSuccess.mockClear();
     toastError.mockClear();
     vi.unstubAllGlobals();
+    window.sessionStorage.clear();
   });
 
   it("stays disabled while the report is open", () => {
@@ -239,6 +254,40 @@ describe("ExportPdfButton", () => {
     expect(openMock).not.toHaveBeenCalled();
     expect(toastSuccess).toHaveBeenCalledTimes(1);
     expect(toastSuccess).toHaveBeenCalledWith("PDF ready");
+  });
+
+  it("resumes an active job after remount and clears its tab-scoped identity on completion", async () => {
+    const first = renderButton({ statusQuery: "pending" });
+    expectDefined(
+      first.captured["pdfExport.request"],
+    ).mutationFn.mockResolvedValue({ jobId: JOB_ID });
+
+    await userEvent.click(screen.getByRole("button", { name: "Export PDF" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Export PDF" }),
+      ).toHaveAttribute("aria-busy", "true");
+    });
+    expect(window.sessionStorage).toHaveLength(1);
+    expect(window.sessionStorage.key(0)).toContain(REPORT_ID);
+    expect(
+      window.sessionStorage.getItem(
+        expectDefined(window.sessionStorage.key(0)),
+      ),
+    ).toBe(JOB_ID);
+
+    first.unmount();
+    const anchorClick = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => undefined);
+    renderButton({ statusQuery: COMPLETED_STATUS });
+
+    expect(
+      await screen.findByRole("link", { name: "Download PDF" }),
+    ).toHaveAttribute("href", ARTIFACT_URL);
+    expect(anchorClick).toHaveBeenCalledTimes(1);
+    expect(window.sessionStorage).toHaveLength(0);
   });
 
   it("uses a reduced-motion-safe spinner while the export request is pending", async () => {

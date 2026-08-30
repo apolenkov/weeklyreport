@@ -6,6 +6,51 @@ import { toast } from "sonner";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 
 const STATUS_POLL_INTERVAL_MS = 2 * MS_PER_SECOND;
+const ACTIVE_JOB_STORAGE_PREFIX = "weeklyreport:pdf-export:active";
+
+interface ActivePdfExportJob {
+  readonly reportId: string;
+  readonly jobId: string;
+}
+
+function activeJobStorageKey(reportId: string): string {
+  return `${ACTIVE_JOB_STORAGE_PREFIX}:${reportId}`;
+}
+
+function readStoredActiveJob(reportId: string): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.sessionStorage.getItem(activeJobStorageKey(reportId));
+  } catch {
+    return null;
+  }
+}
+
+function storeActiveJob(reportId: string, jobId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(activeJobStorageKey(reportId), jobId);
+  } catch {
+    // The live export still works when tab-scoped storage is unavailable.
+  }
+}
+
+function removeStoredActiveJob(reportId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(activeJobStorageKey(reportId));
+  } catch {
+    // Storage denial must not block terminal UI recovery.
+  }
+}
+
+export function pdfExportRefetchInterval(
+  status: string | undefined,
+): number | false {
+  return status === "completed" || status === "failed"
+    ? false
+    : STATUS_POLL_INTERVAL_MS;
+}
 
 interface UsePdfExportJobArgs {
   readonly reportId: string;
@@ -25,10 +70,12 @@ export function usePdfExportJob({
   periodStatus,
 }: UsePdfExportJobArgs): UsePdfExportJobResult {
   const trpc = useTRPC();
-  const [jobId, setJobId] = useReducer(
-    (_current: string | null, next: string | null) => next,
+  const [activeJob, setActiveJob] = useReducer(
+    (_current: ActivePdfExportJob | null, next: ActivePdfExportJob | null) =>
+      next,
     null,
   );
+  const jobId = activeJob?.reportId === reportId ? activeJob.jobId : null;
   // Held so the fallback link stays visible after jobId is cleared.
   const [fallbackUrl, setFallbackUrl] = useState<string | null>(null);
   // One-shot guard: delivery fires exactly once per completed jobId regardless
@@ -39,21 +86,30 @@ export function usePdfExportJob({
   const statusQ = useJobStatusPoll(jobId);
 
   useEffect(() => {
+    const storedJobId = readStoredActiveJob(reportId);
+    setActiveJob(
+      storedJobId === null ? null : { reportId, jobId: storedJobId },
+    );
+  }, [reportId]);
+
+  useEffect(() => {
     if (jobId === null) return;
     const outcome = readJobOutcome(statusQ.isError, statusQ.data);
     if (outcome === null) return;
 
     if (outcome.kind === "failed") {
       toast.error(outcome.message);
-      setJobId(null);
+      removeStoredActiveJob(reportId);
+      setActiveJob(null);
       return;
     }
 
     if (lastDownloadedJobIdRef.current === outcome.jobId) return;
     lastDownloadedJobIdRef.current = outcome.jobId;
     deliverArtifact(outcome.artifactUrl, setFallbackUrl);
-    setJobId(null);
-  }, [statusQ.data, statusQ.isError, jobId]);
+    removeStoredActiveJob(reportId);
+    setActiveJob(null);
+  }, [statusQ.data, statusQ.isError, jobId, reportId]);
 
   const isExportable = periodStatus === "published";
   const isGenerating = requestMut.isPending || jobId !== null;
@@ -62,7 +118,13 @@ export function usePdfExportJob({
   function handleExport() {
     if (disabled) return;
     setFallbackUrl(null);
-    requestMut.mutate({ reportId }, exportRequestHandlers(setJobId));
+    requestMut.mutate(
+      { reportId },
+      exportRequestHandlers((nextJobId) => {
+        storeActiveJob(reportId, nextJobId);
+        setActiveJob({ reportId, jobId: nextJobId });
+      }),
+    );
   }
 
   return { isExportable, isGenerating, disabled, fallbackUrl, handleExport };
@@ -81,7 +143,7 @@ function exportRequestHandlers(onStarted: (jobId: string) => void) {
   };
 }
 
-// Polls only while the job is queued; any terminal status stops the interval.
+// Poll until a terminal result; missing data is still a pending observation.
 function useJobStatusPoll(jobId: string | null) {
   const trpc = useTRPC();
   return useQuery(
@@ -89,10 +151,7 @@ function useJobStatusPoll(jobId: string | null) {
       { jobId: jobId ?? "" },
       {
         enabled: jobId !== null,
-        refetchInterval: (q) => {
-          const status = q.state.data?.status;
-          return status === "queued" ? STATUS_POLL_INTERVAL_MS : false;
-        },
+        refetchInterval: (q) => pdfExportRefetchInterval(q.state.data?.status),
       },
     ),
   );
