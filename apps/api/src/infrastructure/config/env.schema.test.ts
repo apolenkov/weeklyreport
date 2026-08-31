@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { envSchema } from "./env.schema";
+import {
+  REPORT_ASSISTANT_ENV_KEYS,
+  REQUIRED_REPORT_ASSISTANT_ENV_KEYS,
+} from "./report-assistant-env-keys";
 
 // A complete env that satisfies every required field, so each test can flip or
 // omit exactly one knob and attribute the pass/fail to it. The schema has no
@@ -36,6 +40,23 @@ const COMPLETE = {
   DB_POOL_IDLE_TIMEOUT_MS: "10000",
   DB_POOL_CONNECTION_TIMEOUT_MS: "0",
   OTEL_SERVICE_VERSION: "84221c6d",
+  [REPORT_ASSISTANT_ENV_KEYS.providerConfigEncryptionKey]:
+    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+  [REPORT_ASSISTANT_ENV_KEYS.providerConfigKeyVersion]: "1",
+  [REPORT_ASSISTANT_ENV_KEYS.providerAllowedOrigins]:
+    "https://api.mistral.ai,https://openrouter.ai,https://api.groq.com,https://api.jina.ai,https://api.openai.com",
+  [REPORT_ASSISTANT_ENV_KEYS.outboundDataApproved]: "false",
+  [REPORT_ASSISTANT_ENV_KEYS.inputVersion]: "1",
+  [REPORT_ASSISTANT_ENV_KEYS.similarityThreshold]: "0.55",
+  [REPORT_ASSISTANT_ENV_KEYS.candidateLimit]: "500",
+  [REPORT_ASSISTANT_ENV_KEYS.readThroughLimit]: "16",
+  [REPORT_ASSISTANT_ENV_KEYS.exhaustiveLimit]: "200",
+  [REPORT_ASSISTANT_ENV_KEYS.contextTokenBudget]: "8000",
+  [REPORT_ASSISTANT_ENV_KEYS.providerTimeoutMs]: "30000",
+  [REPORT_ASSISTANT_ENV_KEYS.plannerMaxTokens]: "1500",
+  [REPORT_ASSISTANT_ENV_KEYS.answerMaxTokens]: "2000",
+  [REPORT_ASSISTANT_ENV_KEYS.embeddingBatchSize]: "32",
+  [REPORT_ASSISTANT_ENV_KEYS.embeddingTokenBudget]: "8000",
 } as const;
 
 describe("envSchema — no defaults, every product var required", () => {
@@ -65,6 +86,7 @@ describe("envSchema — no defaults, every product var required", () => {
     "PDF_OUTPUT_DIR",
     "PDF_EXPORT_JWT_SECRET",
     "HEAP_HEALTH_THRESHOLD_BYTES",
+    ...REQUIRED_REPORT_ASSISTANT_ENV_KEYS,
   ] as const)("rejects a config missing %s", (key) => {
     const { [key]: _omit, ...without } = COMPLETE;
     expect(envSchema.safeParse(without).success).toBe(false);
@@ -223,6 +245,30 @@ describe("envSchema — no defaults, every product var required", () => {
       envSchema.safeParse({ ...COMPLETE, APP_BASE_URL: "not-a-url" }).success,
     ).toBe(false);
   });
+
+  it.each(["0", "-1", "1.5", "not-a-number"] as const)(
+    "rejects invalid assistant integer limits (%s)",
+    (value) => {
+      expect(
+        envSchema.safeParse({
+          ...COMPLETE,
+          REPORT_ASSISTANT_CANDIDATE_LIMIT: value,
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each(["-0.1", "1.1", "not-a-number"] as const)(
+    "rejects an invalid assistant similarity threshold (%s)",
+    (value) => {
+      expect(
+        envSchema.safeParse({
+          ...COMPLETE,
+          REPORT_ASSISTANT_SIMILARITY_THRESHOLD: value,
+        }).success,
+      ).toBe(false);
+    },
+  );
 });
 
 describe("envSchema — production fences", () => {

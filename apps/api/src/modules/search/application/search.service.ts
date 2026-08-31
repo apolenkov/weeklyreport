@@ -7,8 +7,8 @@ import {
   type UserSession,
 } from "@customreport/shared";
 
-import { computeAllowedGroupIds } from "../../lib/group-scope.js";
-import { createServiceLogger } from "../../lib/logger-service.js";
+import { computeAllowedGroupIds } from "../../../lib/group-scope.js";
+import { createServiceLogger } from "../../../lib/logger-service.js";
 
 // Prisma-free port so unit tests supply an in-memory fake; Prisma impl uses
 // $queryRaw + plainto_tsquery against GIN-indexed searchTsv columns.

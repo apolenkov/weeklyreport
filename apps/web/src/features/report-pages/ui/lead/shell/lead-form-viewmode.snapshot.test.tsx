@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { SessionContext } from "../../../../../shared/lib/auth/session-provider";
 import { TRPCProxyContext } from "../../../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
+import { LeadReportAssistantStore } from "../../lead-report-assistant-store";
 import { LeadForm } from "./lead-form";
 
 vi.mock("sonner", () => ({
@@ -121,7 +122,7 @@ function Wrapper({ children }: { readonly children: ReactNode }) {
         }}
       >
         <TRPCProxyContext.Provider value={buildTRPC()}>
-          {children}
+          <LeadReportAssistantStore>{children}</LeadReportAssistantStore>
         </TRPCProxyContext.Provider>
       </SessionContext.Provider>
     </QueryClientProvider>

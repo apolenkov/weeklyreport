@@ -6,8 +6,8 @@
 # Not part of the prod-default compose — the org typically has a managed stack already.
 #
 # Usage:
-#   pnpm observability:up   # isolated project; dev layering is composed last
-#   pnpm observability:down # removes only that observability project
+#   pnpm observability:up   # extends the current local Compose project
+#   pnpm observability:down # removes only observability-owned services
 #   docker compose --project-name customreport-production-observability \
 #     --env-file .env.production -f docker-compose.prod.yml \
 #     -f docker-compose.observability.yml up --build -d

@@ -2,9 +2,13 @@ import { z } from "zod";
 
 import { logLevelSchema } from "../../lib/logger.js";
 import { SAML_ENV_KEYS } from "../../lib/saml-env-keys.js";
+import { REPORT_ASSISTANT_ENV_KEYS } from "./report-assistant-env-keys.js";
 
 const MIN_JWT_SECRET_LENGTH = 32;
 const MAX_REDIS_LOGICAL_DATABASE = 15;
+const MIN_SIMILARITY_THRESHOLD = 0;
+const MAX_SIMILARITY_THRESHOLD = 1;
+const positiveIntegerEnv = z.coerce.number().int().positive();
 
 const optionalUrl = z.preprocess(
   (value) =>
@@ -67,6 +71,36 @@ const envObjectSchema = z.object({
   // when absent. A PRESENT value must be a whole positive number: `z.coerce`
   // fails boot loud rather than letting a typo degrade the alert silently.
   DLQ_ALERT_THRESHOLD: z.coerce.number().int().positive().optional(),
+
+  // The provider and prompt control plane is database-backed. Deployment
+  // configuration owns only credential encryption, endpoint allowlisting,
+  // and bounded runtime limits.
+  [REPORT_ASSISTANT_ENV_KEYS.providerConfigEncryptionKey]: z
+    .string()
+    .trim()
+    .min(1),
+  [REPORT_ASSISTANT_ENV_KEYS.providerConfigKeyVersion]: positiveIntegerEnv,
+  [REPORT_ASSISTANT_ENV_KEYS.providerAllowedOrigins]: z.string().trim().min(1),
+  // Explicit owner approval for sending report-derived content to an
+  // activated provider. The fail-closed deployment switch covers privacy,
+  // retention/training posture, endpoint region, and network destination.
+  [REPORT_ASSISTANT_ENV_KEYS.outboundDataApproved]: z
+    .enum(["true", "false"])
+    .transform((value) => value === "true"),
+  [REPORT_ASSISTANT_ENV_KEYS.inputVersion]: z.string().trim().min(1),
+  [REPORT_ASSISTANT_ENV_KEYS.similarityThreshold]: z.coerce
+    .number()
+    .min(MIN_SIMILARITY_THRESHOLD)
+    .max(MAX_SIMILARITY_THRESHOLD),
+  [REPORT_ASSISTANT_ENV_KEYS.candidateLimit]: positiveIntegerEnv,
+  [REPORT_ASSISTANT_ENV_KEYS.readThroughLimit]: positiveIntegerEnv,
+  [REPORT_ASSISTANT_ENV_KEYS.exhaustiveLimit]: positiveIntegerEnv,
+  [REPORT_ASSISTANT_ENV_KEYS.contextTokenBudget]: positiveIntegerEnv,
+  [REPORT_ASSISTANT_ENV_KEYS.providerTimeoutMs]: positiveIntegerEnv,
+  [REPORT_ASSISTANT_ENV_KEYS.plannerMaxTokens]: positiveIntegerEnv,
+  [REPORT_ASSISTANT_ENV_KEYS.answerMaxTokens]: positiveIntegerEnv,
+  [REPORT_ASSISTANT_ENV_KEYS.embeddingBatchSize]: positiveIntegerEnv,
+  [REPORT_ASSISTANT_ENV_KEYS.embeddingTokenBudget]: positiveIntegerEnv,
 
   // SMTP (email reminders). The fields stay optional for dev/test; the
   // production fence below requires host, port, and sender together.

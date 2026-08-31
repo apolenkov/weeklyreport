@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { promisify } from "node:util";
 
@@ -7,6 +7,8 @@ const execFileAsync = promisify(execFile);
 const BYTES_PER_KIB = 1024;
 const MAX_BUFFER_KIB = 128;
 const MAX_BUFFER_SIZE = MAX_BUFFER_KIB * BYTES_PER_KIB * BYTES_PER_KIB;
+const OPENSPEC_INDEX_PATH = "openspec/specs/README.md";
+const OPENSPEC_SPEC_PATH = /^openspec\/specs\/([^/]+)\/spec\.md$/u;
 const IGNORED_DIRECTORY_NAMES = new Set([
   ".git",
   "node_modules",
@@ -110,8 +112,48 @@ export function validateInventory(inventory: RepositoryInventory): string[] {
   ].sort((left, right) => left.localeCompare(right));
 }
 
+export async function validateOpenSpecIndex(
+  rootInput: string,
+  tracked: readonly string[],
+): Promise<string[]> {
+  const specNames = tracked.flatMap((path) => {
+    const match = OPENSPEC_SPEC_PATH.exec(path);
+    return match?.[1] ? [match[1]] : [];
+  });
+  if (specNames.length === 0) return [];
+  if (!tracked.includes(OPENSPEC_INDEX_PATH)) {
+    return [`openspec-index: missing ${OPENSPEC_INDEX_PATH}`];
+  }
+
+  const index = await readFile(resolve(rootInput, OPENSPEC_INDEX_PATH), "utf8");
+  const indexedNames = [
+    ...index.matchAll(/\]\(\.\/([^/]+)\/spec\.md\)/gu),
+  ].flatMap((match) => (match[1] ? [match[1]] : []));
+  const indexed = new Set(indexedNames);
+  const specs = new Set(specNames);
+  const duplicates = indexedNames.filter(
+    (name, position) => indexedNames.indexOf(name) !== position,
+  );
+
+  return [...new Set(duplicates).values()]
+    .map((name) => `openspec-index: duplicate ${name}`)
+    .concat(
+      [...specs]
+        .filter((name) => !indexed.has(name))
+        .map((name) => `openspec-index: unindexed ${name}`),
+      [...indexed]
+        .filter((name) => !specs.has(name))
+        .map((name) => `openspec-index: missing spec ${name}`),
+    )
+    .sort((left, right) => left.localeCompare(right));
+}
+
 export async function assertRepositoryClean(root: string): Promise<void> {
-  const findings = validateInventory(await inventoryRepository(root));
+  const inventory = await inventoryRepository(root);
+  const findings = [
+    ...validateInventory(inventory),
+    ...(await validateOpenSpecIndex(root, inventory.tracked)),
+  ].sort((left, right) => left.localeCompare(right));
   if (findings.length > 0)
     throw new Error(
       `Repository contains forbidden residue:\n${findings.join("\n")}`,

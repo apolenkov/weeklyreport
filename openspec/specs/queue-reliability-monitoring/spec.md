@@ -41,9 +41,9 @@ leaked after a graceful stop.
 - **THEN** every Bull Board `Queue` instance is closed
 - **AND** no idle Redis connection from them remains open
 
-### Requirement: pdf-export and email-reminder jobs carry bounded retention
+### Requirement: registered jobs carry bounded retention
 
-The `pdf-export` and `email-reminder` BullMQ queues MUST register
+Every BullMQ queue registered in `QueueRegistry` MUST register
 `defaultJobOptions` bounding both completed and failed job retention
 (`removeOnComplete` and `removeOnFail` with a finite `count`), so completed and
 failed job hashes do not accumulate in Redis without bound.
@@ -64,6 +64,42 @@ failed job hashes do not accumulate in Redis without bound.
   terminally failed
 - **THEN** BullMQ prunes the oldest failed job hashes so at most 500 remain
   in Redis
+
+### Requirement: head queue investigation covers every monitored queue
+
+The head queue surfaces MUST expose every queue in `QueueRegistry` for
+failed-job investigation. The in-app typed list, retry, and remove commands
+MUST use the canonical `headProcedure` middleware rather than the admin-only or
+any-role chain, and MUST accept only the canonical queue-name contract. Bull
+Board remains restricted to a literal `head` role. Returned metadata MUST
+exclude processor payloads, credentials, recipient addresses, and report
+content.
+
+Reminder-execution existence checks MUST run only for `email-reminder` jobs.
+An `executionId` in any other queue belongs to that queue's own domain and MUST
+NOT cause the failed job to be removed as a stale reminder.
+
+#### Scenario: A head investigates any monitored queue
+
+- **GIVEN** a failed job exists in `pdf-export`, `ai-provider-test`, or
+  `semantic-index`
+- **WHEN** a head lists, retries, or removes the failed job
+- **THEN** the action targets only that named queue and opaque job id
+- **AND** the response contains allowlisted failure metadata only
+
+#### Scenario: A provider test execution id is not a reminder reference
+
+- **GIVEN** a failed `ai-provider-test` job carries its provider-test
+  `executionId`
+- **WHEN** a head retries that job
+- **THEN** the job is retried without querying `ReminderExecution`
+- **AND** it is not removed as a stale reminder
+
+#### Scenario: A non-head cannot operate the queue surface
+
+- **WHEN** an unauthorized role calls the in-app queue API or a non-head opens
+  Bull Board
+- **THEN** authorization fails before queue data or mutation is read
 
 ### Requirement: Redis memory usage is monitored and alerted on before the configured cap is reached
 

@@ -1,7 +1,11 @@
 export { ActionLogService } from "./action-log.service.js";
 export { AdminModule } from "./admin.module.js";
 export { AdminPrismaRepository } from "./admin.prisma-repository.js";
-export type { AdminJobHandle, AdminJobsQueue } from "./admin-jobs.port.js";
+export type {
+  AdminJobHandle,
+  AdminJobsQueue,
+  AdminJobsQueueRegistry,
+} from "./admin-jobs.port.js";
 export {
   AdminAccessError,
   AdminGroupProductConflictError,

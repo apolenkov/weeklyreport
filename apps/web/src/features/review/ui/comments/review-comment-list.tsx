@@ -26,17 +26,17 @@ export function ReviewCommentList({
           className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-2.5 py-1.5"
         >
           <div className="flex items-baseline justify-between gap-2">
-            <span className="text-[11px] font-semibold text-[var(--color-foreground)]">
+            <span className="min-w-0 break-words text-[11px] font-semibold text-[var(--color-foreground)] [overflow-wrap:anywhere]">
               {comment.reviewerName ?? "Reviewer"}
             </span>
-            <span className="flex items-center gap-2">
+            <span className="flex shrink-0 items-center gap-2">
               <span className="text-[10px] tabular-nums text-[var(--color-muted-foreground)]">
                 {formatCommentDate(comment.createdAt)}
               </span>
               {renderAction?.(comment)}
             </span>
           </div>
-          <p className="mt-0.5 whitespace-pre-wrap text-[12.5px] leading-snug text-[var(--color-foreground)]">
+          <p className="mt-0.5 whitespace-pre-wrap break-words text-[12.5px] leading-snug text-[var(--color-foreground)] [overflow-wrap:anywhere]">
             {comment.text}
           </p>
         </li>

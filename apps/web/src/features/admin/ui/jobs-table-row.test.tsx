@@ -31,8 +31,11 @@ function renderRow(timestamp: number): string {
           isExpanded={false}
           isRetrying={false}
           retryDisabled={false}
+          isRemoving={false}
+          removeDisabled={false}
           onToggleExpand={vi.fn()}
           onRetry={vi.fn()}
+          onRemove={vi.fn()}
         />
       </tbody>
     </table>,

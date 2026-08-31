@@ -208,6 +208,7 @@ describe("DevRoleSwitcher — logout honesty", () => {
     const trigger = screen.getByTestId("dev-role-switcher-trigger");
     await user.click(trigger);
     await user.click(screen.getByTestId("dev-role-switcher-reseed-demo"));
+    await user.click(screen.getByRole("button", { name: /wipe \+ reseed/i }));
 
     expect(trigger).toBeDisabled();
     trigger.blur();

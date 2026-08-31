@@ -4,6 +4,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { delimiter, join, resolve } from "node:path";
 import test from "node:test";
 
+import { REQUIRED_REPORT_ASSISTANT_ENV_KEYS } from "../../../apps/api/src/infrastructure/config/report-assistant-env-keys.ts";
+
 const prodCompose = resolve("docker-compose.prod.yml");
 const devCompose = resolve("docker-compose.yml");
 const devOverrideCompose = resolve("docker-compose.dev.yml");
@@ -69,6 +71,21 @@ const REQUIRED_POLICY_INPUTS = [
   "AUTH_JWT_SECRET",
   "PDF_EXPORT_JWT_SECRET",
   "PDF_BASE_URL",
+  "AI_PROVIDER_CONFIG_ENCRYPTION_KEY",
+  "AI_PROVIDER_CONFIG_KEY_VERSION",
+  "AI_PROVIDER_ALLOWED_ORIGINS",
+  "REPORT_ASSISTANT_OUTBOUND_DATA_APPROVED",
+  "REPORT_ASSISTANT_INPUT_VERSION",
+  "REPORT_ASSISTANT_SIMILARITY_THRESHOLD",
+  "REPORT_ASSISTANT_CANDIDATE_LIMIT",
+  "REPORT_ASSISTANT_READ_THROUGH_LIMIT",
+  "REPORT_ASSISTANT_EXHAUSTIVE_LIMIT",
+  "REPORT_ASSISTANT_CONTEXT_TOKEN_BUDGET",
+  "REPORT_ASSISTANT_PROVIDER_TIMEOUT_MS",
+  "REPORT_ASSISTANT_PLANNER_MAX_TOKENS",
+  "REPORT_ASSISTANT_ANSWER_MAX_TOKENS",
+  "REPORT_ASSISTANT_EMBEDDING_BATCH_SIZE",
+  "REPORT_ASSISTANT_EMBEDDING_TOKEN_BUDGET",
   "LOG_LEVEL",
   "REDIS_DB",
   "OTEL_SDK_DISABLED",
@@ -187,6 +204,20 @@ void test("the production template lists every required input as fail-closed", (
       }),
   );
   const safePolicyValues = new Set([
+    "AI_PROVIDER_CONFIG_KEY_VERSION",
+    "AI_PROVIDER_ALLOWED_ORIGINS",
+    "REPORT_ASSISTANT_OUTBOUND_DATA_APPROVED",
+    "REPORT_ASSISTANT_INPUT_VERSION",
+    "REPORT_ASSISTANT_SIMILARITY_THRESHOLD",
+    "REPORT_ASSISTANT_CANDIDATE_LIMIT",
+    "REPORT_ASSISTANT_READ_THROUGH_LIMIT",
+    "REPORT_ASSISTANT_EXHAUSTIVE_LIMIT",
+    "REPORT_ASSISTANT_CONTEXT_TOKEN_BUDGET",
+    "REPORT_ASSISTANT_PROVIDER_TIMEOUT_MS",
+    "REPORT_ASSISTANT_PLANNER_MAX_TOKENS",
+    "REPORT_ASSISTANT_ANSWER_MAX_TOKENS",
+    "REPORT_ASSISTANT_EMBEDDING_BATCH_SIZE",
+    "REPORT_ASSISTANT_EMBEDDING_TOKEN_BUDGET",
     "REDIS_DB",
     "LOG_LEVEL",
     "OTEL_SDK_DISABLED",
@@ -735,7 +766,8 @@ void test("backup entrypoints are baked into the pinned image", () => {
 
 // A real render check: with the policy matrix supplied the model renders;
 // with every required var blank it must fail to render.
-const renderCompose = (
+const renderComposeFiles = (
+  composeFiles: readonly string[],
   env: NodeJS.ProcessEnv,
   format: "yaml" | "json" = "yaml",
 ) =>
@@ -743,8 +775,7 @@ const renderCompose = (
     composeCommand.executable,
     [
       ...composeCommand.leadingArguments,
-      "-f",
-      prodCompose,
+      ...composeFiles.flatMap((composeFile) => ["-f", composeFile]),
       "config",
       "--format",
       format,
@@ -754,6 +785,11 @@ const renderCompose = (
       encoding: "utf8",
     },
   );
+
+const renderCompose = (
+  env: NodeJS.ProcessEnv,
+  format: "yaml" | "json" = "yaml",
+) => renderComposeFiles([prodCompose], env, format);
 
 const FULL_POLICY_ENV: NodeJS.ProcessEnv = {
   PATH: process.env.PATH,
@@ -770,6 +806,21 @@ const FULL_POLICY_ENV: NodeJS.ProcessEnv = {
   AUTH_JWT_SECRET: "x".repeat(32),
   PDF_EXPORT_JWT_SECRET: "x".repeat(32),
   PDF_BASE_URL: "http://x",
+  AI_PROVIDER_CONFIG_ENCRYPTION_KEY: "x".repeat(32),
+  AI_PROVIDER_CONFIG_KEY_VERSION: "1",
+  AI_PROVIDER_ALLOWED_ORIGINS: "https://api.example.com",
+  REPORT_ASSISTANT_OUTBOUND_DATA_APPROVED: "false",
+  REPORT_ASSISTANT_INPUT_VERSION: "1",
+  REPORT_ASSISTANT_SIMILARITY_THRESHOLD: "0.55",
+  REPORT_ASSISTANT_CANDIDATE_LIMIT: "500",
+  REPORT_ASSISTANT_READ_THROUGH_LIMIT: "16",
+  REPORT_ASSISTANT_EXHAUSTIVE_LIMIT: "200",
+  REPORT_ASSISTANT_CONTEXT_TOKEN_BUDGET: "8000",
+  REPORT_ASSISTANT_PROVIDER_TIMEOUT_MS: "30000",
+  REPORT_ASSISTANT_PLANNER_MAX_TOKENS: "1500",
+  REPORT_ASSISTANT_ANSWER_MAX_TOKENS: "2000",
+  REPORT_ASSISTANT_EMBEDDING_BATCH_SIZE: "32",
+  REPORT_ASSISTANT_EMBEDDING_TOKEN_BUDGET: "8000",
   HEAP_HEALTH_THRESHOLD_BYTES: "1610612736",
   SMTP_HOST: "x",
   SMTP_PORT: "587",
@@ -796,6 +847,26 @@ const FULL_POLICY_ENV: NodeJS.ProcessEnv = {
   HTTPS_PORT_QUIC: "443",
 };
 
+const LOCAL_ASSISTANT_POLICY_ENV: NodeJS.ProcessEnv = {
+  PATH: process.env.PATH,
+  AI_PROVIDER_CONFIG_ENCRYPTION_KEY:
+    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+  AI_PROVIDER_CONFIG_KEY_VERSION: "1",
+  AI_PROVIDER_ALLOWED_ORIGINS:
+    "https://api.mistral.ai,https://openrouter.ai,https://api.groq.com,https://api.jina.ai,https://api.openai.com",
+  REPORT_ASSISTANT_INPUT_VERSION: "1",
+  REPORT_ASSISTANT_SIMILARITY_THRESHOLD: "0.55",
+  REPORT_ASSISTANT_CANDIDATE_LIMIT: "500",
+  REPORT_ASSISTANT_READ_THROUGH_LIMIT: "16",
+  REPORT_ASSISTANT_EXHAUSTIVE_LIMIT: "200",
+  REPORT_ASSISTANT_CONTEXT_TOKEN_BUDGET: "8000",
+  REPORT_ASSISTANT_PROVIDER_TIMEOUT_MS: "30000",
+  REPORT_ASSISTANT_PLANNER_MAX_TOKENS: "1500",
+  REPORT_ASSISTANT_ANSWER_MAX_TOKENS: "2000",
+  REPORT_ASSISTANT_EMBEDDING_BATCH_SIZE: "32",
+  REPORT_ASSISTANT_EMBEDDING_TOKEN_BUDGET: "8000",
+};
+
 interface RenderedService {
   readonly command?: readonly string[];
   readonly environment?: Readonly<Record<string, string>>;
@@ -811,6 +882,48 @@ const renderComposeModel = (env: NodeJS.ProcessEnv): RenderedCompose => {
   assert.equal(rendered.status, 0, rendered.stderr);
   return JSON.parse(rendered.stdout) as RenderedCompose;
 };
+
+void test("every documented Compose lane supplies the required report-assistant environment", () => {
+  const lanes = [
+    ["local", [devCompose], { PATH: process.env.PATH }],
+    [
+      "source-watch",
+      [devCompose, devOverrideCompose],
+      LOCAL_ASSISTANT_POLICY_ENV,
+    ],
+    ["production", [prodCompose], FULL_POLICY_ENV],
+  ] as const;
+  const renderedLanes = new Map(
+    lanes.map(([lane, composeFiles, environment]) => {
+      const rendered = renderComposeFiles(composeFiles, environment, "json");
+      assert.equal(rendered.status, 0, `${lane}: ${rendered.stderr}`);
+      const model = JSON.parse(rendered.stdout) as RenderedCompose;
+      const apiEnvironment = model.services.api?.environment;
+      assert.ok(
+        apiEnvironment !== undefined,
+        `${lane}: api environment is absent`,
+      );
+      return [lane, apiEnvironment] as const;
+    }),
+  );
+  assert.ok(REQUIRED_REPORT_ASSISTANT_ENV_KEYS.length > 0);
+
+  for (const [lane, apiEnvironment] of renderedLanes) {
+    for (const key of REQUIRED_REPORT_ASSISTANT_ENV_KEYS) {
+      assert.ok(
+        apiEnvironment[key] !== undefined,
+        `${lane}: api environment must supply ${key}`,
+      );
+    }
+    if (lane !== "production") {
+      assert.equal(
+        apiEnvironment.REPORT_ASSISTANT_OUTBOUND_DATA_APPROVED,
+        "false",
+        `${lane}: report-derived outbound data must stay denied`,
+      );
+    }
+  }
+});
 
 void test("every repository-built image carries the rendered release tag", () => {
   const model = renderComposeModel(FULL_POLICY_ENV);
@@ -853,11 +966,7 @@ void test("the rendered config guard rejects unsafe URL components without leaki
 void test("production compose renders with the full policy matrix", () => {
   const rendered = renderCompose(FULL_POLICY_ENV);
   assert.equal(rendered.status, 0, rendered.stderr);
-  for (const variable of [
-    "DB_POOL_MAX",
-    "DB_POOL_IDLE_TIMEOUT_MS",
-    "DB_POOL_CONNECTION_TIMEOUT_MS",
-  ]) {
+  for (const variable of REQUIRED_POLICY_INPUTS) {
     assert.match(
       workflowContent,
       new RegExp(`^      ${variable}:`, "mu"),

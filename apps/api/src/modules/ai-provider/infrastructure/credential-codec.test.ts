@@ -1,0 +1,85 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  AesGcmCredentialCodec,
+  CredentialCodecError,
+} from "./credential-codec";
+
+const KEY = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+const context = { revisionId: "revision-1", role: "generation" as const };
+
+describe("AesGcmCredentialCodec", () => {
+  it("round-trips a credential and exposes only masked metadata", () => {
+    const codec = new AesGcmCredentialCodec(KEY, 7);
+    const encrypted = codec.encrypt("sk-provider-secret", context);
+
+    expect(codec.decrypt(encrypted, context)).toBe("sk-provider-secret");
+    expect(encrypted.ciphertext).not.toContain("sk-provider-secret");
+    expect(codec.metadata(encrypted)).toEqual({
+      configured: true,
+      maskedSuffix: "••••cret",
+    });
+  });
+
+  it.each(["a", "abcd"])(
+    "uses only the fixed mask for a short credential (%s)",
+    (credential) => {
+      const codec = new AesGcmCredentialCodec(KEY, 7);
+      const encrypted = codec.encrypt(credential, context);
+
+      expect(codec.decrypt(encrypted, context)).toBe(credential);
+      expect(codec.metadata(encrypted)).toEqual({
+        configured: true,
+        maskedSuffix: "••••",
+      });
+      expect(encrypted.maskedSuffix).not.toContain(credential);
+    },
+  );
+
+  it("rejects credential metadata outside the shared safe mask contract", () => {
+    const codec = new AesGcmCredentialCodec(KEY, 7);
+    const encrypted = codec.encrypt("provider-secret", context);
+
+    expect(() =>
+      codec.metadata({ ...encrypted, maskedSuffix: "secret" }),
+    ).toThrow(/metadata/i);
+  });
+
+  it("detects tampering and rejects a different key version", () => {
+    const codec = new AesGcmCredentialCodec(KEY, 1);
+    const encrypted = codec.encrypt("secret", context);
+    const tampered = { ...encrypted, ciphertext: `${encrypted.ciphertext}A` };
+
+    expect(() => codec.decrypt(tampered, context)).toThrow(
+      CredentialCodecError,
+    );
+    expect(() =>
+      codec.decrypt({ ...encrypted, keyVersion: 2 }, context),
+    ).toThrow(/version/i);
+  });
+
+  it("rejects a credential authenticated for another revision or role", () => {
+    const codec = new AesGcmCredentialCodec(KEY, 1);
+    const encrypted = codec.encrypt("secret", context);
+
+    expect(() =>
+      codec.decrypt(encrypted, {
+        revisionId: "revision-2",
+        role: "generation",
+      }),
+    ).toThrow(CredentialCodecError);
+    expect(() =>
+      codec.decrypt(encrypted, {
+        revisionId: "revision-1",
+        role: "embeddings",
+      }),
+    ).toThrow(CredentialCodecError);
+  });
+
+  it("validates key material before encryption", () => {
+    expect(() => new AesGcmCredentialCodec("short", 1)).toThrow(
+      /exactly 32 bytes/i,
+    );
+    expect(() => new AesGcmCredentialCodec(KEY, 0)).toThrow(/version/i);
+  });
+});

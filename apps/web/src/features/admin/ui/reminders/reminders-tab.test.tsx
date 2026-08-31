@@ -347,6 +347,18 @@ describe("RemindersTab — add / edit form", () => {
     expect(typeSelect.value).toBe("escalation-head");
   });
 
+  it("returns focus to the edit trigger after cancelling the inline editor", async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    await user.click(screen.getByTestId(`edit-${policyDeadline.id}`));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId(`edit-${policyDeadline.id}`)).toHaveFocus(),
+    );
+  });
+
   it("clearing the offset magnitude does not silently become 0", async () => {
     const user = userEvent.setup();
     const { captured } = renderTab({ policies: [policyDeadline] });
@@ -361,8 +373,16 @@ describe("RemindersTab — add / edit form", () => {
     // The raw empty value is kept and an inline error surfaces; Save stays
     // blocked until a deliberate magnitude is entered (no fabricated 0).
     expect(offsetInput.value).toBe("");
+    expect(offsetInput).toHaveAttribute(
+      "aria-describedby",
+      "policy-offset-minutes-error",
+    );
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Enter a non-negative number",
+    );
+    expect(screen.getByRole("alert")).toHaveAttribute(
+      "id",
+      "policy-offset-minutes-error",
     );
     expect(screen.getByTestId("policy-save-button")).toBeDisabled();
     expect(

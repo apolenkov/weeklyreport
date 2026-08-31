@@ -41,6 +41,9 @@ function ProductNameField({
       <input
         id="product-name"
         type="text"
+        name="productName"
+        autoComplete="off"
+        required
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={FIELD_CONTROL_CLASS}
@@ -67,6 +70,9 @@ function LeadOwnerField({
       </label>
       <select
         id="product-lead"
+        name="leadId"
+        autoComplete="off"
+        required
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={FIELD_CONTROL_CLASS}
@@ -114,7 +120,7 @@ function ProductFormFields({
   readonly leadProductCount: number;
 }) {
   return (
-    <div className="mt-4 space-y-4">
+    <div className="mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
       <ProductNameField
         value={form.name}
         onChange={(name) => onFormChange({ ...form, name })}
@@ -151,26 +157,33 @@ export function ProductEditDialog({
     <DialogSurface
       surfaceRef={surfaceRef}
       onDismiss={onClose}
-      surfaceClassName="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl"
+      surfaceClassName="animate-scale-in mx-4 flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl"
       ariaLabel={editingProduct ? "Edit product" : "Add product"}
     >
-      <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-        {editingProduct ? "Edit Product" : "Add Product"}
-      </h3>
-      <ProductFormFields
-        form={form}
-        onFormChange={onFormChange}
-        leads={leads}
-        leadProductCount={leadProductCount}
-      />
-      <AdminEntityDialogActions
-        saveLabel={editingProduct !== null ? "Save Changes" : "Add Product"}
-        isSaving={isSaving}
-        canSave={canSave}
-        onSave={onSave}
-        onClose={onClose}
-        saveDisabled={isSaving || !canSave}
-      />
+      <form
+        className="flex min-h-0 flex-1 flex-col"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!isSaving && canSave) onSave();
+        }}
+      >
+        <h3 className="shrink-0 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
+          {editingProduct ? "Edit Product" : "Add Product"}
+        </h3>
+        <ProductFormFields
+          form={form}
+          onFormChange={onFormChange}
+          leads={leads}
+          leadProductCount={leadProductCount}
+        />
+        <AdminEntityDialogActions
+          saveLabel={editingProduct !== null ? "Save Changes" : "Add Product"}
+          isSaving={isSaving}
+          canSave={canSave}
+          onClose={onClose}
+          saveDisabled={isSaving || !canSave}
+        />
+      </form>
     </DialogSurface>
   );
 }

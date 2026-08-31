@@ -11,6 +11,8 @@ not belong in this directory.
 | `environment.md`             | Environment precedence, ownership, and safe contracts for dev, tests, Docker, production, and CI. |
 | `operations.md`              | Production runbook: first deploy, health triage, backups and restore, secret rotation, rollback.  |
 | `sdlc.md`                    | Lifecycle control map and fail-closed prerequisites for the first production point.               |
+| `llm-report/`                | Current Report Assistant flow, component boundaries, and load-bearing invariants.                 |
+| `coming-soon.md`             | Canonical register of intentionally deferred product work awaiting direct owner instruction.      |
 
 Product tests are colocated with the code they verify. The disposable-database
 boundary remains documented in `AGENTS.md` and `docs/onboarding.md`.

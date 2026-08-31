@@ -245,8 +245,25 @@ export const failedJobListSchema = z
   })
   .readonly();
 
+/** Canonical BullMQ queue name for reminder delivery jobs. */
+export const EMAIL_REMINDER_QUEUE_NAME = "email-reminder" as const;
+/** Canonical BullMQ queue name for PDF export jobs. */
+export const PDF_EXPORT_QUEUE_NAME = "pdf-export" as const;
+/** Canonical BullMQ queue name for AI provider test jobs. */
+export const AI_PROVIDER_TEST_QUEUE_NAME = "ai-provider-test" as const;
+/** Canonical BullMQ queue name for semantic indexing jobs. */
+export const SEMANTIC_INDEX_QUEUE_NAME = "semantic-index" as const;
+/** Stable queue order shared by monitoring, admin APIs, and UI selectors. */
+export const QUEUE_NAMES = [
+  EMAIL_REMINDER_QUEUE_NAME,
+  PDF_EXPORT_QUEUE_NAME,
+  AI_PROVIDER_TEST_QUEUE_NAME,
+  SEMANTIC_INDEX_QUEUE_NAME,
+] as const;
 /** Queue names exposed through the admin failed-job surface. */
-export const queueNameSchema = z.enum(["email-reminder"]);
+export const queueNameSchema = z.enum(QUEUE_NAMES);
+/** Queue name accepted by the admin failed-job surface. */
+export type QueueName = z.infer<typeof queueNameSchema>;
 
 /** Admin-editable identity, role, group assignment, and activation state. */
 export type AdminUser = z.infer<typeof adminUserSchema>;

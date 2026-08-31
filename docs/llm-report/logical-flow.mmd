@@ -1,0 +1,41 @@
+flowchart TD
+    user["Lead: задаёт вопрос в Report chat"] --> ui["Web: отправляет question и resolution tokens"]
+    ui --> api["tRPC leadForm.assistant\nТолько canonical leadProcedure"]
+    api --> snapshot["AiRuntimeConfigurationRepository\nrepeatable-read provider + active prompt pair"]
+    snapshot --> ready{"Enabled provider, active current-serving\nbundle with valid content?"}
+    ready -- "Нет" --> unavailable["Исход: ai_not_configured\nДо retrieval и provider work"]
+    ready -- "Да" --> planner["Snapshot planner\nОдин search_report_entries tool call"]
+    planner --> valid{"SearchPlan\nпрошёл Zod-проверку?"}
+    valid -- "Нет, первая ошибка" --> planRepair["Snapshot planner-repair\nОдна попытка исправления"]
+    planRepair --> valid
+    valid -- "Нет, повторно" --> invalidPlan["Исход: invalid_plan"]
+    valid -- "Да" --> period["Выбрать источники периодов\nТекущий open/reopened: live\nИстория: publishedSnapshot"]
+    period --> acl["Проверить доступ Lead\nи отфильтровать чужие секции\nдо проекции данных"]
+    acl --> hasAccess{"Есть разрешённые\nreport occurrences?"}
+    hasAccess -- "Нет" --> noResults["Исход: no_results\nБез раскрытия недоступных данных"]
+    hasAccess -- "Да" --> catalog["Построить каталог только\nиз доступных authors/products/activities"]
+    catalog --> resolve{"Названия разрешены\nоднозначно?"}
+    resolve -- "Несколько вариантов" --> clarify["Исход: clarification_required\nПодписанные actor-bound tokens"]
+    resolve -- "Нет совпадений" --> noResults
+    resolve -- "Да" --> candidates["Спроецировать временные candidates\nItem, Risk, Decision, Product/Stage/Activity status"]
+    candidates --> exact["Применить точные фильтры\nAND между измерениями, OR внутри"]
+    exact --> matched{"Найдены факты?"}
+    matched -- "Нет" --> noResults
+    matched -- "Да" --> semantic{"План требует поиска\nпо смыслу?"}
+    semantic -- "Нет" --> context["Сервер считает aggregate\nи собирает компактный GroundingBundle"]
+    semantic -- "Да" --> cache{"Все нужные embeddings\nесть в semantic cache?"}
+    cache -- "Да" --> rank["pgvector: ранжировать\nтолько разрешённый exact-набор"]
+    cache -- "Нет, небольшой gap" --> readThrough["Snapshot embeddings\n+ upsert cache"]
+    readThrough --> rank
+    cache -- "Нет, большой gap" --> queue["Поставить BullMQ jobs\nбез текста отчёта в payload"]
+    queue --> pending["Исход: semantic_index_pending"]
+    rank --> context
+    context --> answer["Snapshot answerer\nQuestion + GroundingBundle"]
+    answer --> citations{"Все citations\nвалидны?"}
+    citations -- "Нет, первая ошибка" --> citationRepair["Snapshot citation-repair\nОдна попытка исправления"]
+    citationRepair --> citations
+    citations -- "Нет, повторно" --> generationError["Контролируемая ошибка генерации"]
+    citations -- "Да" --> result["Исход: ok\nMarkdown + проверенные источники + metadata"]
+    planner -. "Временный provider failure" .-> unavailableProvider["Исход: provider_unavailable"]
+    answer -. "Временный provider failure" .-> unavailableProvider
+    readThrough -. "Временный provider failure" .-> unavailableProvider

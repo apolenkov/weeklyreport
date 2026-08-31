@@ -1,8 +1,10 @@
 import { Logger } from "@nestjs/common";
 import type { HealthIndicatorResult } from "@nestjs/terminus";
 import { HealthIndicatorService } from "@nestjs/terminus";
+import type { Queue } from "bullmq";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { QueueRegistry } from "../bullmq/queue-registry.js";
 import { WorkerLivenessRegistry } from "../bullmq/worker-liveness.registry.js";
 import type { EnvConfig } from "../config/env.schema.js";
 import { BullMQHealthIndicator } from "./bullmq.health.js";
@@ -29,8 +31,11 @@ const explicitInjectionToken = (
 };
 
 describe("health provider composition", () => {
-  it("injects the application-scoped worker registry into BullMQ readiness", () => {
-    expect(explicitInjectionToken(BullMQHealthIndicator, 2)).toBe(
+  it("injects the canonical queue registry into BullMQ readiness", () => {
+    expect(explicitInjectionToken(BullMQHealthIndicator, 0)).toBe(
+      QueueRegistry,
+    );
+    expect(explicitInjectionToken(BullMQHealthIndicator, 1)).toBe(
       WorkerLivenessRegistry,
     );
   });
@@ -38,7 +43,7 @@ describe("health provider composition", () => {
   it.each([
     [RedisHealthIndicator, 0],
     [PrismaHealthIndicator, 1],
-    [BullMQHealthIndicator, 3],
+    [BullMQHealthIndicator, 2],
   ] as const)(
     "%s declares its HealthIndicatorService injection token for the tsx runtime",
     (provider, index) => {
@@ -287,10 +292,10 @@ describe("BullMQHealthIndicator", () => {
     vi.useRealTimers();
   });
 
-  function makeQueue(counts: { waiting: number; active: number }) {
+  function makeQueue(counts: { waiting: number; active: number }): Queue {
     return {
       getJobCounts: vi.fn().mockResolvedValue(counts),
-    };
+    } as unknown as Queue;
   }
 
   function readyWorkers() {
@@ -298,6 +303,8 @@ describe("BullMQHealthIndicator", () => {
     const handle = { isPaused: () => false, isRunning: () => true };
     registry.register("pdf-export", handle).markReady();
     registry.register("email-reminder", handle).markReady();
+    registry.register("ai-provider-test", handle).markReady();
+    registry.register("semantic-index", handle).markReady();
     return registry;
   }
 
@@ -307,13 +314,14 @@ describe("BullMQHealthIndicator", () => {
   ) {
     const pdfQueue = makeQueue(pdfCounts);
     const emailQueue = makeQueue(emailCounts);
+    const aiQueue = makeQueue({ waiting: 0, active: 0 });
+    const semanticQueue = makeQueue({ waiting: 0, active: 0 });
     const indicator = new BullMQHealthIndicator(
-      pdfQueue,
-      emailQueue,
+      new QueueRegistry([emailQueue, pdfQueue, aiQueue, semanticQueue]),
       readyWorkers(),
       new HealthIndicatorService(),
     );
-    return { indicator, pdfQueue, emailQueue };
+    return { indicator, pdfQueue, emailQueue, aiQueue, semanticQueue };
   }
 
   it("returns up result keyed `bullmq` with per-queue counts when queues are healthy", async () => {
@@ -327,8 +335,12 @@ describe("BullMQHealthIndicator", () => {
     expect(result).toMatchObject({
       bullmq: {
         status: "up",
-        pdf_export: { waiting: 3, active: 1 },
-        email_reminder: { waiting: 0, active: 2 },
+        queues: {
+          "pdf-export": { waiting: 3, active: 1 },
+          "email-reminder": { waiting: 0, active: 2 },
+          "ai-provider-test": { waiting: 0, active: 0 },
+          "semantic-index": { waiting: 0, active: 0 },
+        },
       },
     });
   });
@@ -336,16 +348,20 @@ describe("BullMQHealthIndicator", () => {
   it("returns down result keyed `bullmq` without echoing the raw queue error, and logs it internally", async () => {
     const pdfQueue = {
       getJobCounts: vi.fn().mockRejectedValue(new Error("Queue unavailable")),
-    };
+    } as unknown as Queue;
     const emailQueue = {
       getJobCounts: vi.fn().mockResolvedValue({ waiting: 0, active: 0 }),
-    };
+    } as unknown as Queue;
     const errorSpy = vi
       .spyOn(Logger.prototype, "error")
       .mockImplementation(() => undefined);
     const indicator = new BullMQHealthIndicator(
-      pdfQueue,
-      emailQueue,
+      new QueueRegistry([
+        emailQueue,
+        pdfQueue,
+        makeQueue({ waiting: 0, active: 0 }),
+        makeQueue({ waiting: 0, active: 0 }),
+      ]),
       readyWorkers(),
       new HealthIndicatorService(),
     );
@@ -361,6 +377,28 @@ describe("BullMQHealthIndicator", () => {
     );
   });
 
+  it("checks every canonical queue and fails readiness when one is unavailable", async () => {
+    const queues = [
+      makeQueue({ waiting: 0, active: 0 }),
+      makeQueue({ waiting: 0, active: 0 }),
+      {
+        getJobCounts: vi.fn().mockRejectedValue(new Error("AI queue down")),
+      } as unknown as Queue,
+      makeQueue({ waiting: 0, active: 0 }),
+    ] as const;
+    const indicator = new BullMQHealthIndicator(
+      new QueueRegistry(queues),
+      readyWorkers(),
+      new HealthIndicatorService(),
+    );
+
+    await expect(indicator.isHealthy("bullmq")).resolves.toMatchObject({
+      bullmq: { status: "down" },
+    });
+    for (const queue of queues)
+      expect(queue.getJobCounts).toHaveBeenCalledOnce();
+  });
+
   it("returns down on timeout and safely absorbs a later queue rejection", async () => {
     vi.useFakeTimers();
     const pending = Promise.withResolvers<{
@@ -369,10 +407,9 @@ describe("BullMQHealthIndicator", () => {
     }>();
     const queue = {
       getJobCounts: vi.fn(() => pending.promise),
-    };
+    } as unknown as Queue;
     const indicator = new BullMQHealthIndicator(
-      queue,
-      queue,
+      new QueueRegistry([queue, queue, queue, queue]),
       readyWorkers(),
       new HealthIndicatorService(),
     );
@@ -391,12 +428,13 @@ describe("BullMQHealthIndicator", () => {
   it("returns down without probing queues while a required worker is stopped", async () => {
     const pdfQueue = makeQueue({ waiting: 0, active: 0 });
     const emailQueue = makeQueue({ waiting: 0, active: 0 });
+    const aiQueue = makeQueue({ waiting: 0, active: 0 });
+    const semanticQueue = makeQueue({ waiting: 0, active: 0 });
     const registry = readyWorkers();
     const stopped = { isPaused: () => false, isRunning: () => false };
     registry.register("email-reminder", stopped).markReady();
     const indicator = new BullMQHealthIndicator(
-      pdfQueue,
-      emailQueue,
+      new QueueRegistry([emailQueue, pdfQueue, aiQueue, semanticQueue]),
       registry,
       new HealthIndicatorService(),
     );
@@ -414,12 +452,13 @@ describe("BullMQHealthIndicator", () => {
   it("recovers after the stopped worker is replaced and reports ready", async () => {
     const pdfQueue = makeQueue({ waiting: 0, active: 0 });
     const emailQueue = makeQueue({ waiting: 0, active: 0 });
+    const aiQueue = makeQueue({ waiting: 0, active: 0 });
+    const semanticQueue = makeQueue({ waiting: 0, active: 0 });
     const registry = readyWorkers();
     const stopped = { isPaused: () => false, isRunning: () => false };
     registry.register("pdf-export", stopped).markReady();
     const indicator = new BullMQHealthIndicator(
-      pdfQueue,
-      emailQueue,
+      new QueueRegistry([emailQueue, pdfQueue, aiQueue, semanticQueue]),
       registry,
       new HealthIndicatorService(),
     );

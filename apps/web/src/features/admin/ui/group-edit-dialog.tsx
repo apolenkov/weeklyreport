@@ -42,6 +42,9 @@ function GroupNameField({ form, onFormChange }: GroupFieldProps) {
       <input
         id="group-name"
         type="text"
+        name="groupName"
+        autoComplete="off"
+        required
         value={form.name}
         onChange={(e) => onFormChange({ ...form, name: e.target.value })}
         className={FIELD_CONTROL_CLASS}
@@ -58,6 +61,8 @@ function GroupDescriptionField({ form, onFormChange }: GroupFieldProps) {
       </label>
       <textarea
         id="group-description"
+        name="groupDescription"
+        autoComplete="off"
         value={form.description}
         onChange={(e) => onFormChange({ ...form, description: e.target.value })}
         rows={3}
@@ -79,6 +84,8 @@ function GroupLeaderField({
       </label>
       <select
         id="group-leader"
+        name="headUserId"
+        autoComplete="off"
         value={form.headUserId}
         onChange={(e) => onFormChange({ ...form, headUserId: e.target.value })}
         className={FIELD_CONTROL_CLASS}
@@ -107,6 +114,7 @@ function GroupArchivedField({ form, onFormChange }: GroupFieldProps) {
       <label className="flex cursor-pointer items-start gap-3">
         <input
           type="checkbox"
+          name="archived"
           checked={form.archived}
           onChange={(e) =>
             onFormChange({ ...form, archived: e.target.checked })
@@ -183,26 +191,33 @@ export function GroupEditDialog(props: GroupEditDialogProps) {
       ariaLabel={editingGroup ? "Edit group" : "Add group"}
       testId="crud-sheet"
     >
-      <h3 className="shrink-0 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-        {editingGroup ? "Edit Group" : "Add Group"}
-      </h3>
-      <GroupFormFields
-        form={props.form}
-        onFormChange={props.onFormChange}
-        headCandidates={props.headCandidates}
-        products={props.products}
-        editingGroup={editingGroup}
-      />
-      <AdminEntityDialogActions
-        saveLabel={editingGroup ? "Save Changes" : "Add Group"}
-        canSave={props.canSave}
-        isSaving={isSaving}
-        onSave={props.onSave}
-        onClose={closeIfIdle}
-        saveButtonAttributes={{
-          "data-interaction-effect": "mutation-required",
+      <form
+        className="flex min-h-0 flex-1 flex-col"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!isSaving && props.canSave) props.onSave();
         }}
-      />
+      >
+        <h3 className="shrink-0 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
+          {editingGroup ? "Edit Group" : "Add Group"}
+        </h3>
+        <GroupFormFields
+          form={props.form}
+          onFormChange={props.onFormChange}
+          headCandidates={props.headCandidates}
+          products={props.products}
+          editingGroup={editingGroup}
+        />
+        <AdminEntityDialogActions
+          saveLabel={editingGroup ? "Save Changes" : "Add Group"}
+          canSave={props.canSave}
+          isSaving={isSaving}
+          onClose={closeIfIdle}
+          saveButtonAttributes={{
+            "data-interaction-effect": "mutation-required",
+          }}
+        />
+      </form>
     </DialogSurface>
   );
 }

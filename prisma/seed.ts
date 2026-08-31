@@ -6,6 +6,10 @@ import pg from "pg";
 
 import { assertE2eRuntimeDestructive } from "./guards/_destructive-guard.js";
 import { requireEnv } from "./guards/_require-env.js";
+import {
+  seedAiPromptBaseline,
+  seedAiProviderControl,
+} from "./seed-ai-prompts.js";
 import { seedActiveSections } from "./seeds/advanced/seed-advanced.active-sections.js";
 import { seedAdminExamples } from "./seeds/advanced/seed-advanced.admin-examples.js";
 import { seedCrossAuthorOverlay } from "./seeds/advanced/seed-advanced.cross-author.js";
@@ -57,6 +61,8 @@ async function main(): Promise<void> {
     const adminExamples = await seedAdminExamples(prisma);
     const reminders = await seedReminders(prisma);
     await seedSingletons(prisma);
+    await seedAiProviderControl(prisma);
+    await seedAiPromptBaseline(prisma);
 
     logSeedSummary({
       ...organization,

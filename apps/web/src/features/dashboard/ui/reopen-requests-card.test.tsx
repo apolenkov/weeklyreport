@@ -112,10 +112,12 @@ describe("ReopenRequestsCard", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("renders nothing while loading", () => {
+  it("renders a stable loading placeholder while loading", () => {
     mockList(undefined, { isPending: true });
-    const { container } = render(<ReopenRequestsCard />);
-    expect(container).toBeEmptyDOMElement();
+    render(<ReopenRequestsCard />);
+    expect(
+      screen.getByRole("status", { name: /loading pending reopen requests/i }),
+    ).toBeInTheDocument();
   });
 
   it("renders a retryable error instead of an empty queue", () => {

@@ -1,6 +1,7 @@
 "use client";
 
 import type { AppSettings } from "@customreport/shared";
+import { useState } from "react";
 
 import { useServerSeededDraft } from "../../../../shared/hooks/drafts/use-server-seeded-draft";
 import {
@@ -56,11 +57,17 @@ export function RemindersSubTab({
   const { draft, setDraft, markClean } =
     useServerSeededDraft<AppSettings>(serverSettings);
   const updateSettingsMut = useUpdateSettingsMut("Reminder defaults");
+  const [showSaved, setShowSaved] = useState(false);
 
   function handleSave() {
     updateSettingsMut.mutate(
       { defaultTimezone: draft.defaultTimezone },
-      { onSuccess: () => markClean() },
+      {
+        onSuccess: () => {
+          markClean();
+          setShowSaved(true);
+        },
+      },
     );
   }
   const isSaving = updateSettingsMut.isPending;
@@ -74,7 +81,10 @@ export function RemindersSubTab({
 
       <DefaultTimezoneField
         value={draft.defaultTimezone}
-        onChange={(defaultTimezone) => setDraft({ ...draft, defaultTimezone })}
+        onChange={(defaultTimezone) => {
+          setShowSaved(false);
+          setDraft({ ...draft, defaultTimezone });
+        }}
       />
 
       <div className="flex items-center gap-3 pt-2">
@@ -87,8 +97,12 @@ export function RemindersSubTab({
         >
           {isSaving ? "Saving…" : "Save Reminder Defaults"}
         </button>
-        {updateSettingsMut.isSuccess && (
-          <span className="flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]">
+        {showSaved && (
+          <span
+            className="flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]"
+            role="status"
+            aria-live="polite"
+          >
             <CheckIcon />
             Reminder defaults saved
           </span>

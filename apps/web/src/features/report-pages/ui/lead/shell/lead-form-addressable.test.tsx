@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SessionContext } from "../../../../../shared/lib/auth/session-provider";
 import { TRPCProxyContext } from "../../../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
+import { LeadReportAssistantStore } from "../../lead-report-assistant-store";
 import { LeadForm } from "./lead-form";
 
 vi.mock("sonner", () => ({
@@ -164,11 +165,37 @@ function buildHarness(opts: {
   return proxy;
 }
 
-function Wrapper({ children }: { readonly children: ReactNode }) {
+function Wrapper({
+  children,
+  proxy,
+}: {
+  readonly children: ReactNode;
+  readonly proxy: ReturnType<typeof buildHarness>;
+}) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={qc}>
+      <TRPCProxyContext.Provider value={proxy}>
+        <SessionContext.Provider
+          value={{
+            user: {
+              id: "test-lead",
+              name: "Test Lead",
+              email: "lead@example.test",
+              role: "lead",
+            },
+            organization: null,
+            isLoading: false,
+            isAuthenticated: true,
+          }}
+        >
+          <LeadReportAssistantStore>{children}</LeadReportAssistantStore>
+        </SessionContext.Provider>
+      </TRPCProxyContext.Provider>
+    </QueryClientProvider>
+  );
 }
 
 describe("LeadForm — addressable URLs", () => {
@@ -185,10 +212,8 @@ describe("LeadForm — addressable URLs", () => {
   it("bare route + redirectToCanonical → router.replace(/lead/report/<activeReportId>)", async () => {
     const proxy = buildHarness({});
     render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={proxy}>
-          <LeadForm redirectToCanonical />
-        </TRPCProxyContext.Provider>
+      <Wrapper proxy={proxy}>
+        <LeadForm redirectToCanonical />
       </Wrapper>,
     );
     await waitFor(() =>
@@ -206,10 +231,8 @@ describe("LeadForm — addressable URLs", () => {
       byPeriodReadOnly: true,
     });
     render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={proxy}>
-          <LeadForm reportId={PAST_REPORT_ID} />
-        </TRPCProxyContext.Provider>
+      <Wrapper proxy={proxy}>
+        <LeadForm reportId={PAST_REPORT_ID} />
       </Wrapper>,
     );
     // Positive anchor: wait for the query cascade to settle by confirming the
@@ -224,25 +247,23 @@ describe("LeadForm — addressable URLs", () => {
       onByPeriodQuery: byPeriodQuery,
     });
     render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={proxy}>
-          <SessionContext.Provider
-            value={{
-              user: {
-                id: "head-id",
-                name: "Head User",
-                email: "head@example.test",
-                role: "head",
-              },
-              // Null org: brand hydration is not under test.
-              organization: null,
-              isLoading: false,
-              isAuthenticated: true,
-            }}
-          >
-            <LeadForm reportId={PAST_REPORT_ID} />
-          </SessionContext.Provider>
-        </TRPCProxyContext.Provider>
+      <Wrapper proxy={proxy}>
+        <SessionContext.Provider
+          value={{
+            user: {
+              id: "head-id",
+              name: "Head User",
+              email: "head@example.test",
+              role: "head",
+            },
+            // Null org: brand hydration is not under test.
+            organization: null,
+            isLoading: false,
+            isAuthenticated: true,
+          }}
+        >
+          <LeadForm reportId={PAST_REPORT_ID} />
+        </SessionContext.Provider>
       </Wrapper>,
     );
     // Wait for the head-session redirect to fire, then assert no lead query ran.
@@ -262,10 +283,8 @@ describe("LeadForm — addressable URLs", () => {
       byPeriodReadOnly: true,
     });
     render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={proxy}>
-          <LeadForm reportId={PAST_REPORT_ID} />
-        </TRPCProxyContext.Provider>
+      <Wrapper proxy={proxy}>
+        <LeadForm reportId={PAST_REPORT_ID} />
       </Wrapper>,
     );
     // History entry for PAST_REPORT_ID → Apr 7–13, 2026, ISO Week 15. No
@@ -285,7 +304,7 @@ describe("LeadForm — addressable URLs", () => {
       byPeriodReadOnly: true,
     });
     render(
-      <Wrapper>
+      <Wrapper proxy={proxy}>
         <SessionContext.Provider
           value={{
             user: {
@@ -302,9 +321,7 @@ describe("LeadForm — addressable URLs", () => {
             isAuthenticated: true,
           }}
         >
-          <TRPCProxyContext.Provider value={proxy}>
-            <LeadForm reportId={PAST_REPORT_ID} />
-          </TRPCProxyContext.Provider>
+          <LeadForm reportId={PAST_REPORT_ID} />
         </SessionContext.Provider>
       </Wrapper>,
     );

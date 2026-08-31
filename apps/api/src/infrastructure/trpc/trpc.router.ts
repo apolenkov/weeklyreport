@@ -1,5 +1,4 @@
 import type { PrismaClient } from "@prisma/client";
-import type { Queue } from "bullmq";
 
 import type { ActivityService } from "../../modules/activity/index.js";
 import type { ActionLogService } from "../../modules/admin/index.js";
@@ -12,6 +11,8 @@ import type {
   SnapshotAdminService,
 } from "../../modules/admin/index.js";
 import type { SessionRevocationService } from "../../modules/admin/index.js";
+import type { AiPromptService } from "../../modules/ai-prompts/index.js";
+import type { AiProviderConfigurationService } from "../../modules/ai-provider/index.js";
 import type { AnalyticsService } from "../../modules/analytics/index.js";
 import type { ArchiveService } from "../../modules/archive/index.js";
 import type { AutoCarryOverOutcome } from "../../modules/carry-over/index.js";
@@ -25,12 +26,16 @@ import type { LeadFormService } from "../../modules/report-sections/index.js";
 import type { ReportSectionsService } from "../../modules/report-sections/index.js";
 import type { ReviewService } from "../../modules/review/index.js";
 import type { ReviewActionsService } from "../../modules/review/index.js";
-import { type SearchService } from "../../modules/search/index.js";
+import type {
+  ReportAssistantService,
+  SearchService,
+} from "../../modules/search/index.js";
 import type { TelemetryService } from "../../modules/telemetry/index.js";
 import type { WeeklyReportService } from "../../modules/weekly-report/index.js";
 import type { EnvConfig } from "../config/env.schema";
 import { createActivityRouter } from "./routers/activity.router.js";
 import { createAdminRouter } from "./routers/admin/admin.router.js";
+import { createAiRouter } from "./routers/ai.router.js";
 import { createAnalyticsRouter } from "./routers/analytics.router.js";
 import { createArchiveRouter } from "./routers/archive.router.js";
 import { createAuthRouter } from "./routers/auth.router.js";
@@ -81,20 +86,19 @@ export interface AppRouterDeps {
   // Redis prefix invalidation on period publish/reopen.
   readonly analyticsService: AnalyticsService;
   readonly searchService: SearchService;
+  readonly reportAssistantService: ReportAssistantService;
+  readonly aiProviderService: AiProviderConfigurationService;
+  readonly aiPromptService: AiPromptService;
   readonly activityService: ActivityService;
   // Distinct from activityService (live-status feed under activity.*).
   readonly projectActivityService: ProjectActivityService;
-  // Type-optional but runtime-guarded in ops.procedures (fail-loud TRPCError).
-  readonly emailReminderQueue?: Queue;
-  // Type-optional but runtime-guarded in ops.procedures (fail-loud TRPCError).
-  readonly jobsService?: JobsService;
+  readonly jobsService: JobsService;
   // Required: missing wiring must fail loud, never fabricate a zero payload.
   readonly telemetryService: TelemetryService;
   // Required: the admin deactivate/activate procedures enforce revocation; a
   // missing service must fail loud, not silently skip the Redis fast path.
   readonly sessionRevocationService: SessionRevocationService;
-  // Type-optional but runtime-guarded in ops.procedures (fail-loud TRPCError).
-  readonly actionLogService?: ActionLogService;
+  readonly actionLogService: ActionLogService;
 }
 
 export function createAppRouter(deps: AppRouterDeps) {
@@ -107,6 +111,7 @@ export function createAppRouter(deps: AppRouterDeps) {
     review: createReviewRouter(deps),
     pdfExport: createPdfExportRouter(deps),
     admin: createAdminRouter(deps),
+    ai: createAiRouter(deps),
     archive: createArchiveRouter(deps),
     reminders: createRemindersRouter(deps),
     period: createPeriodRouter(deps),

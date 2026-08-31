@@ -1,4 +1,8 @@
-import { failedJobSchema } from "@customreport/shared";
+import {
+  EMAIL_REMINDER_QUEUE_NAME,
+  failedJobSchema,
+  type QueueName,
+} from "@customreport/shared";
 import type { Job, Queue } from "bullmq";
 
 import type {
@@ -35,7 +39,10 @@ function getReminderExecutionId(data: unknown): string | null {
   return null;
 }
 
-export function createAdminJobHandle(job: AdminQueueJob): AdminJobHandle {
+export function createAdminJobHandle(
+  queue: QueueName,
+  job: AdminQueueJob,
+): AdminJobHandle {
   return {
     failedJob: failedJobSchema.parse({
       id: job.id,
@@ -45,24 +52,37 @@ export function createAdminJobHandle(job: AdminQueueJob): AdminJobHandle {
       attemptsMade: job.attemptsMade,
       timestamp: job.timestamp,
     }),
-    reminderExecutionId: getReminderExecutionId(job.data),
+    domainReference:
+      queue === EMAIL_REMINDER_QUEUE_NAME
+        ? {
+            queue,
+            reminderExecutionId: getReminderExecutionId(job.data),
+          }
+        : { queue },
     retry: () => job.retry(),
     remove: () => job.remove(),
   };
 }
 
 export class AdminBullmqJobsQueue implements AdminJobsQueue {
-  constructor(private readonly queue: Queue) {}
+  constructor(
+    private readonly name: QueueName,
+    private readonly queue: Queue,
+  ) {}
 
   readonly getFailed = async (
     start: number,
     end: number,
   ): Promise<readonly AdminJobHandle[]> => {
-    return (await this.queue.getFailed(start, end)).map(createAdminJobHandle);
+    return (await this.queue.getFailed(start, end)).map((job) =>
+      createAdminJobHandle(this.name, job),
+    );
   };
+
+  readonly getFailedCount = (): Promise<number> => this.queue.getFailedCount();
 
   readonly getJob = async (id: string): Promise<AdminJobHandle | undefined> => {
     const job = await this.queue.getJob(id);
-    return job ? createAdminJobHandle(job) : undefined;
+    return job ? createAdminJobHandle(this.name, job) : undefined;
   };
 }

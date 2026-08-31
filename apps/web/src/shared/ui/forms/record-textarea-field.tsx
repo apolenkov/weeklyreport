@@ -102,7 +102,10 @@ export function RecordTextareaField({
       {hint}
       <textarea
         id={id}
+        name={id}
+        autoComplete="off"
         ref={elementRef}
+        required={required}
         aria-invalid={error ? "true" : "false"}
         aria-describedby={error ? errorId : undefined}
         className={textareaClassName(fill, Boolean(error))}

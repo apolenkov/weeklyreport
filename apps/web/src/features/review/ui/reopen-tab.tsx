@@ -29,7 +29,7 @@ function ReopenFilterBar({
           key={f.value}
           type="button"
           onClick={() => onChange(f.value)}
-          className={`rounded-[var(--radius-pill)] px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+          className={`rounded-[var(--radius-pill)] px-3 py-1.5 text-[12px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-1 ${
             filter === f.value
               ? "bg-[var(--color-starbucks-accent)] text-[var(--color-primary-foreground)]"
               : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-surface-hover)]"

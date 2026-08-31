@@ -20,6 +20,8 @@ function TimezoneField({ form, onChange }: PolicyFieldProps) {
       </label>
       <select
         id="policy-timezone"
+        name="reminder-timezone"
+        autoComplete="off"
         value={form.timezone}
         onChange={(e) =>
           onChange((prev) => ({ ...prev, timezone: e.target.value }))
@@ -48,7 +50,9 @@ function ValidFromField({ form, onChange }: PolicyFieldProps) {
       </label>
       <input
         id="policy-valid-from"
+        name="reminder-valid-from"
         type="date"
+        autoComplete="off"
         value={form.validFromIso}
         onChange={(e) =>
           onChange((prev) => ({ ...prev, validFromIso: e.target.value }))
@@ -67,6 +71,8 @@ function ForeverToggle({ form, onChange }: PolicyFieldProps) {
     <label className="inline-flex items-center gap-1 text-xs text-[var(--color-muted-foreground)]">
       <input
         type="checkbox"
+        name="reminder-no-end-date"
+        autoComplete="off"
         checked={form.foreverChecked}
         onChange={(e) =>
           onChange((prev) => ({
@@ -96,7 +102,9 @@ function ValidUntilField({ form, onChange }: PolicyFieldProps) {
       </div>
       <input
         id="policy-valid-until"
+        name="reminder-valid-until"
         type="date"
+        autoComplete="off"
         value={form.validUntilIso ?? ""}
         disabled={form.foreverChecked}
         onChange={(e) =>

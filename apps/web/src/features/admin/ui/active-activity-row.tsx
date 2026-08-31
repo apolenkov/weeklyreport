@@ -38,7 +38,7 @@ function ActivitySummary({
       <button
         type="button"
         onClick={() => onToggleExpand(activity.id)}
-        className="flex h-7 w-7 items-center justify-center rounded-full text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
+        className="flex h-7 w-7 max-md:min-h-[var(--touch-target-min)] max-md:min-w-[var(--touch-target-min)] items-center justify-center rounded-full text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
         aria-label={`${isExpanded ? "Collapse" : "Expand"} lead attachments for ${activity.name}`}
         aria-expanded={isExpanded}
       >
@@ -86,7 +86,7 @@ function ActivityRowActions({
       <button
         type="button"
         onClick={() => onEdit(activity)}
-        className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] bg-[var(--color-card)] px-3 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:border-[var(--color-border-accent-hover)] hover:bg-[var(--color-success)]"
+        className="btn-press inline-flex min-h-[34px] max-md:min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] bg-[var(--color-card)] px-3 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:border-[var(--color-border-accent-hover)] hover:bg-[var(--color-success)]"
         aria-label={`Edit ${activity.name}`}
       >
         Edit
@@ -95,7 +95,7 @@ function ActivityRowActions({
         type="button"
         onClick={() => onArchive(activity)}
         disabled={isArchiving}
-        className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] bg-[var(--color-card)] px-3 text-xs font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-border-strong)] hover:bg-[var(--color-muted)] disabled:cursor-not-allowed disabled:opacity-50"
+        className="btn-press inline-flex min-h-[34px] max-md:min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] bg-[var(--color-card)] px-3 text-xs font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-border-strong)] hover:bg-[var(--color-muted)] disabled:cursor-not-allowed disabled:opacity-50"
         aria-label={`Archive ${activity.name}`}
       >
         Archive
@@ -132,7 +132,7 @@ export function ActiveActivityRow({
       </div>
 
       <div
-        className="grid transition-[grid-template-rows] duration-300"
+        className="grid transition-[grid-template-rows] duration-300 motion-reduce:transition-none"
         style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
       >
         <div className="min-h-0 overflow-hidden">

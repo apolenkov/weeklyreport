@@ -108,10 +108,12 @@ export function useOrgIdentityForm() {
       orgQuery.isError,
     ),
     editShortName: (shortName: string) => {
+      updateMutation.reset();
       setSubmitted(undefined);
       setDraft({ shortName, fullName: value.fullName });
     },
     editFullName: (fullName: string) => {
+      updateMutation.reset();
       setSubmitted(undefined);
       setDraft({ shortName: value.shortName, fullName });
     },

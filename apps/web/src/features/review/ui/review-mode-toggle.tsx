@@ -29,7 +29,7 @@ export function ReviewModeToggle({
           type="button"
           aria-pressed={value === segment.value}
           onClick={() => onChange(segment.value)}
-          className={segmentClassName(value === segment.value)}
+          className={`${segmentClassName(value === segment.value)} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-1`}
         >
           {segment.label}
         </button>

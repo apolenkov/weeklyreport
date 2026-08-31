@@ -1,9 +1,11 @@
 "use client";
 
+import type { Role } from "@customreport/shared";
 import { Separator } from "@customreport/ui/components/ui/separator";
 import type { ComponentProps, RefObject } from "react";
 
 import type { FullscreenHandle } from "../../../../../shared/hooks/browser/use-fullscreen";
+import { useSession } from "../../../../../shared/lib/auth/session-provider";
 import { ArchiveToggle } from "../../../../../shared/ui/report-shell/archive-toggle";
 import { ReportToolbar } from "../../../../../shared/ui/report-shell/report-toolbar";
 import { ViewModeToggle } from "../../../../../shared/ui/report-shell/view-mode-toggle";
@@ -15,6 +17,7 @@ import {
   SlideDensityControl,
   SlideFullscreenButton,
 } from "../../../../slides";
+import { LeadReportAssistant } from "../../lead-report-assistant";
 import { CollapseIcon } from "./lead-form-icons";
 import { RecordVisibilityToggle } from "./visibility/record-visibility-toggle";
 
@@ -41,6 +44,10 @@ interface LeadFormToolbarControlsProps {
   readonly setGroupExpanded: (update: (prev: boolean) => boolean) => void;
 }
 
+export const canShowLeadReportAssistant = (
+  role: Role | null | undefined,
+): boolean => role === "lead";
+
 export function LeadFormToolbarControls({
   viewModel,
   leadSubmittedAt,
@@ -58,6 +65,8 @@ export function LeadFormToolbarControls({
   groupExpanded,
   setGroupExpanded,
 }: LeadFormToolbarControlsProps) {
+  const { user } = useSession();
+
   return (
     <ReportToolbar
       sticky
@@ -73,6 +82,7 @@ export function LeadFormToolbarControls({
             />
           </div>
           <div className="flex min-w-0 basis-full flex-wrap items-center gap-1.5 md:ml-auto md:basis-auto md:flex-nowrap">
+            {canShowLeadReportAssistant(user?.role) && <LeadReportAssistant />}
             <ToolbarViewCluster
               toolbarVisibility={toolbarVisibility}
               onVisibilityChange={onVisibilityChange}

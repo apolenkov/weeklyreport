@@ -531,6 +531,7 @@ describe("CarryOverService — activity-parented carry-over", () => {
         activityId: ACTIVITY_ID,
         activityName: "Jira triage duty",
         status: "green",
+        jiraAccounts: [],
         linkedProducts: [],
         derivedStatus: "green",
         alarmFloor: null,

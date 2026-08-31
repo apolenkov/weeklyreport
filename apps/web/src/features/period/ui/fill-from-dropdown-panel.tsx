@@ -34,6 +34,8 @@ function PeriodSearchInput({
       </label>
       <input
         id="period-search"
+        name="periodSearch"
+        autoComplete="off"
         type="text"
         className="w-full max-md:min-h-[var(--touch-target-min)] rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-card)] px-3 py-1.5 pl-8 text-[13px] text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_var(--color-ring)] focus:outline-none"
         placeholder="Search reports…"

@@ -66,7 +66,7 @@ const imageNodeVersions = (): readonly Declaration[] =>
   DOCKERFILES.flatMap((file) => {
     const matches = [
       ...read(file).matchAll(
-        /^FROM node:([0-9]+\.[0-9]+\.[0-9]+)-[a-z0-9.-]+@sha256:[0-9a-f]{64} AS ([a-z-]+)$/gmu,
+        /^FROM node:(\d+\.\d+\.\d+)-[a-z\d.-]+@sha256:[\da-f]{64} AS ([a-z-]+)$/gmu,
       ),
     ];
 

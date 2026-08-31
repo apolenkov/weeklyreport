@@ -29,7 +29,7 @@ export function SubmissionFilterToggle({
           type="button"
           aria-pressed={value === segment.value}
           onClick={() => onChange(segment.value)}
-          className={segmentClassName(value === segment.value)}
+          className={`${segmentClassName(value === segment.value)} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-1`}
         >
           {segment.label}
         </button>
@@ -59,7 +59,7 @@ export function DraftHiddenSignal({
       <button
         type="button"
         onClick={onShowAll}
-        className="btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-3 py-1 text-[12px] font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)]"
+        className="btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-3 py-1 text-[12px] font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2"
       >
         Show all
       </button>

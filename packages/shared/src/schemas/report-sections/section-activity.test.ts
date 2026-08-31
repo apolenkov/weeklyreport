@@ -63,6 +63,7 @@ describe("validateActivityStatuses", () => {
       activityId: ACTIVITY_ID,
       activityName: "Jira triage duty",
       status: "green",
+      jiraAccounts: [],
     },
   ]);
 

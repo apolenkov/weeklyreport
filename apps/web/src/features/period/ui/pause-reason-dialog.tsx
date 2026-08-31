@@ -96,9 +96,12 @@ function PauseReasonField({
       </label>
       <textarea
         id="pause-reason-input"
+        name="pauseReason"
+        autoComplete="off"
         className="w-full resize-y rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-card)] px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_var(--color-ring)] focus:outline-none"
         style={{ minHeight: "64px" }}
         value={reason}
+        required
         onChange={(e) => onReasonChange(e.target.value)}
         placeholder="Why is this paused? (e.g. waiting on a dependency)"
       />

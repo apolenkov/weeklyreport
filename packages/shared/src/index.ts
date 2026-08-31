@@ -24,6 +24,9 @@ export * from "./period/reopen-window";
 export * from "./schemas/admin/action-log.schema";
 export type { ReminderRecoverySnapshot } from "./schemas/admin/reminder-recovery.validation";
 export * from "./schemas/admin/reopen-request.schema";
+export * from "./schemas/ai-prompt-management";
+export * from "./schemas/ai-provider-configuration";
+export * from "./schemas/ai-provider-test-execution";
 export type {
   LeadVelocityInput,
   LeadVelocityOutput,
@@ -98,6 +101,7 @@ export type {
   PublishedLineage,
   PublishedReportSectionReadModel,
   PublishedReportSnapshot,
+  QueueName,
   RecordCommentView,
   ReminderQueuePayload,
   ReportingGroup,
@@ -135,6 +139,7 @@ export {
   adminUpdatePeriodManualResultSchema,
   adminUpdatePeriodManualSchema,
   adminUserSchema,
+  AI_PROVIDER_TEST_QUEUE_NAME,
   appSettingsSchema,
   appSettingsUpdateSchema,
   archiveReportDetailSchema,
@@ -147,6 +152,7 @@ export {
   currentPeriodLifecycleSchema,
   draftPeriodStateSchema,
   draftSaveSchema,
+  EMAIL_REMINDER_QUEUE_NAME,
   failedJobSchema,
   groupProductEdgeInputSchema,
   groupProductSchema,
@@ -155,12 +161,14 @@ export {
   MAX_WEEK_LABEL_LENGTH,
   myHistoryEntrySchema,
   paginationInputSchema,
+  PDF_EXPORT_QUEUE_NAME,
   pdfExportJobSchema,
   periodListBucketSchema,
   periodListItemSchema,
   publishedLineageSchema,
   publishedReportSectionReadModelSchema,
   publishedReportSnapshotSchema,
+  QUEUE_NAMES,
   queueNameSchema,
   recordCommentViewSchema,
   reminderDeadlinePayloadSchema,
@@ -178,6 +186,7 @@ export {
   reviewVerdictResultSchema,
   riskSeveritySchema,
   safeText,
+  SEMANTIC_INDEX_QUEUE_NAME,
   stageAssignmentSchema,
   submissionDashboardRowSchema,
   submitSectionSchema,
@@ -190,6 +199,8 @@ export {
   weeklyReportReadModelSchema,
 } from "./schemas/report";
 export * from "./schemas/report/published-projections";
+export * from "./schemas/report-assistant";
+export * from "./schemas/report-assistant-search-plan";
 export type {
   SearchHit,
   SearchQueryInput,

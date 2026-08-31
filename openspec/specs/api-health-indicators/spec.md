@@ -54,6 +54,23 @@ change the current worker state.
   replacement worker registers and reports ready
 - **THEN** BullMQ readiness recovers to `up` after both queue probes succeed
 
+### Requirement: BullMQ readiness checks the exhaustive queue registry
+
+`BullMQHealthIndicator` MUST obtain queue handles from the application-scoped
+`QueueRegistry` and probe every name in the canonical `QUEUE_NAMES` tuple:
+`email-reminder`, `pdf-export`, `ai-provider-test`, and `semantic-index`.
+Readiness MUST be `down` if any one of those queue probes fails or times out.
+The current `pdf_export` and `email_reminder` count fields remain supported;
+successful results additionally expose the complete `queues` map keyed by the
+canonical queue names, with only `waiting` and `active` counts.
+
+#### Scenario: An auxiliary queue is unavailable
+
+- **WHEN** the required workers are ready but any canonical queue's count probe
+  fails or times out
+- **THEN** BullMQ readiness reports `down`
+- **AND** the response does not expose the raw queue error or job payload
+
 #### Scenario: Workers are still connecting during startup grace
 
 - **WHEN** the API process exists but one or both required workers have not yet

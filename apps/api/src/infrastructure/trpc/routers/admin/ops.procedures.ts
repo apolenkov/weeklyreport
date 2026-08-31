@@ -5,7 +5,6 @@ import {
   queueNameSchema,
 } from "@customreport/shared";
 import { TRPCError } from "@trpc/server";
-import type { Queue } from "bullmq";
 import { z } from "zod";
 
 import type { ActionLogService } from "../../../../modules/admin/index.js";
@@ -14,49 +13,39 @@ import { mapDomainError } from "../../trpc.error-mapper.js";
 import {
   adminProcedure,
   captureMutationAuditInputMiddleware,
+  headProcedure,
   router,
 } from "../../trpc.middleware.js";
 
 const MAX_FAILED_JOBS_LIMIT = 200;
 
 export interface AdminOpsDeps {
-  // Type-optional but runtime-guarded: an unwired dependency throws a loud
-  // TRPCError, never an empty/no-op success (no-fallback policy).
-  readonly emailReminderQueue?: Queue;
-  readonly jobsService?: JobsService;
-  readonly actionLogService?: ActionLogService;
+  readonly jobsService: JobsService;
+  readonly actionLogService: ActionLogService;
 }
 
 // Fields are required at the type level; the guards still fail loud on a
 // `{}`-cast fixture (or a broken composition) instead of no-op'ing.
-function requireActionLogService(deps: AdminOpsDeps): ActionLogService {
-  if (!deps.actionLogService) {
+function requireActionLogService(
+  service: ActionLogService | undefined,
+): ActionLogService {
+  if (!service) {
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
       message: "Action log service is not configured.",
     });
   }
-  return deps.actionLogService;
+  return service;
 }
 
-function requireEmailReminderQueue(deps: AdminOpsDeps): Queue {
-  if (!deps.emailReminderQueue) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Email reminder queue is not configured.",
-    });
-  }
-  return deps.emailReminderQueue;
-}
-
-function requireJobsService(deps: AdminOpsDeps): JobsService {
-  if (!deps.jobsService) {
+function requireJobsService(service: JobsService | undefined): JobsService {
+  if (!service) {
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
       message: "Jobs service is not configured.",
     });
   }
-  return deps.jobsService;
+  return service;
 }
 
 // Rows share correlation id with the structured app.log line for support.
@@ -67,7 +56,9 @@ function createActionLogRouter(deps: AdminOpsDeps) {
       .output(adminActionLogPageSchema)
       .query(async ({ input }) => {
         try {
-          return await requireActionLogService(deps).list(input);
+          return await requireActionLogService(deps.actionLogService).list(
+            input,
+          );
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -85,15 +76,16 @@ const retryFailedInputSchema = z.object({
   queue: queueNameSchema,
   jobId: z.string().min(1),
 });
+const removeFailedInputSchema = retryFailedInputSchema;
 
 // In-app DLQ triage so head need not leave the SPA for Bull Board.
 function createJobsRouter(deps: AdminOpsDeps) {
   return router({
-    listFailed: adminProcedure
+    listFailed: headProcedure
       .input(listFailedInputSchema)
       .query(async ({ input }) => {
         try {
-          return await requireJobsService(deps).listFailed(
+          return await requireJobsService(deps.jobsService).listFailed(
             omitUndefinedProperties(input),
           );
         } catch (error) {
@@ -101,12 +93,22 @@ function createJobsRouter(deps: AdminOpsDeps) {
         }
       }),
 
-    retryFailed: adminProcedure
+    retryFailed: headProcedure
       .input(retryFailedInputSchema)
       .use(captureMutationAuditInputMiddleware)
       .mutation(async ({ input }) => {
         try {
-          return await requireJobsService(deps).retryFailed(input);
+          return await requireJobsService(deps.jobsService).retryFailed(input);
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
+    removeFailed: headProcedure
+      .input(removeFailedInputSchema)
+      .use(captureMutationAuditInputMiddleware)
+      .mutation(async ({ input }) => {
+        try {
+          return await requireJobsService(deps.jobsService).removeFailed(input);
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -118,7 +120,7 @@ export function createAdminOpsProcedures(deps: AdminOpsDeps) {
   return {
     dlqCount: adminProcedure.query(async () => {
       try {
-        const count = await requireEmailReminderQueue(deps).getFailedCount();
+        const count = await requireJobsService(deps.jobsService).countFailed();
         return { count };
       } catch (error) {
         throw mapDomainError(error);

@@ -2,7 +2,7 @@ import type { SearchHit } from "@customreport/shared";
 import { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
-import type { SearchRepository } from "./search.service.js";
+import type { SearchRepository } from "./application/search.service.js";
 
 interface RawPublishedHit {
   readonly type: "item" | "risk" | "decision";

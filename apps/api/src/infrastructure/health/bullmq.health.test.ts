@@ -2,6 +2,7 @@ import { HealthIndicatorService } from "@nestjs/terminus";
 import type { Queue } from "bullmq";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { QueueRegistry } from "../bullmq/queue-registry.js";
 import { WorkerLivenessRegistry } from "../bullmq/worker-liveness.registry.js";
 import { BullMQHealthIndicator } from "./bullmq.health.js";
 
@@ -10,6 +11,8 @@ function readyWorkers(): WorkerLivenessRegistry {
   const worker = { isPaused: () => false, isRunning: () => true };
   registry.register("pdf-export", worker).markReady();
   registry.register("email-reminder", worker).markReady();
+  registry.register("ai-provider-test", worker).markReady();
+  registry.register("semantic-index", worker).markReady();
   return registry;
 }
 
@@ -27,8 +30,12 @@ describe("BullMQHealthIndicator timeout", () => {
   it("resolves down when both job-count probes never settle", async () => {
     vi.useFakeTimers();
     const indicator = new BullMQHealthIndicator(
-      pendingQueue(),
-      pendingQueue(),
+      new QueueRegistry([
+        pendingQueue(),
+        pendingQueue(),
+        pendingQueue(),
+        pendingQueue(),
+      ]),
       readyWorkers(),
       new HealthIndicatorService(),
     );

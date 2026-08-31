@@ -157,7 +157,7 @@ function StageAssignmentDrawer({
 }) {
   return (
     <div
-      className="grid transition-[grid-template-rows] duration-300"
+      className="grid transition-[grid-template-rows] duration-300 motion-reduce:transition-none"
       style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
     >
       <div className="min-h-0 overflow-hidden">

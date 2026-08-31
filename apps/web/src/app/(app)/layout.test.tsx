@@ -18,6 +18,13 @@ vi.mock("../../shared/lib/auth/session-provider", () => ({
     isLoading: false,
   }),
 }));
+vi.mock("../../features/report-pages/ui/lead-report-assistant-store", () => ({
+  LeadReportAssistantStore: ({
+    children,
+  }: {
+    readonly children: React.ReactNode;
+  }) => children,
+}));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/lead/report",
 }));

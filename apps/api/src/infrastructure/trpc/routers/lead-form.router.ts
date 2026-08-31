@@ -1,4 +1,8 @@
-import { MAX_REOPEN_REASON_LENGTH } from "@customreport/shared";
+import {
+  MAX_REOPEN_REASON_LENGTH,
+  reportAssistantOutcomeSchema,
+  reportAssistantRequestSchema,
+} from "@customreport/shared";
 import { z } from "zod";
 
 import { groupScopeFilter } from "../../../lib/group-scope.js";
@@ -7,10 +11,12 @@ import {
   LeadFormDomainError,
   type LeadFormService,
 } from "../../../modules/report-sections/index.js";
+import type { ReportAssistantService } from "../../../modules/search/index.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
 import {
   captureMutationAuditInputMiddleware,
   headProcedure,
+  leadProcedure,
   protectedProcedure,
   router,
 } from "../trpc.middleware.js";
@@ -18,6 +24,7 @@ import {
 export interface LeadFormRouterDeps {
   snapshotAdminService: SnapshotAdminService;
   leadFormService: LeadFormService;
+  reportAssistantService: ReportAssistantService;
 }
 
 const reportIdInput = z.object({ reportId: z.uuid() });
@@ -206,8 +213,26 @@ function crossAuthorContentProcedure(deps: LeadFormRouterDeps) {
     });
 }
 
+function assistantProcedure(deps: LeadFormRouterDeps) {
+  return leadProcedure
+    .input(reportAssistantRequestSchema)
+    .use(captureMutationAuditInputMiddleware)
+    .output(reportAssistantOutcomeSchema)
+    .mutation(async ({ input, ctx }) => {
+      try {
+        return await deps.reportAssistantService.answer(
+          input,
+          ctx.session.userId,
+        );
+      } catch (error) {
+        throw mapDomainError(error);
+      }
+    });
+}
+
 export function createLeadFormRouter(deps: LeadFormRouterDeps) {
   return router({
+    assistant: assistantProcedure(deps),
     viewSettings: viewSettingsProcedure(deps),
     byPeriod: byPeriodProcedure(deps),
     fillFrom: fillFromProcedure(deps),

@@ -95,7 +95,7 @@ function ArchivedProductList({
             type="button"
             onClick={() => onRestore(product)}
             disabled={isSaving}
-            className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] bg-[var(--color-card)] px-3 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:border-[var(--color-border-accent-hover)] hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn-press inline-flex min-h-[34px] max-md:min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] bg-[var(--color-card)] px-3 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:border-[var(--color-border-accent-hover)] hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
             aria-label={`Restore ${product.name}`}
           >
             Restore

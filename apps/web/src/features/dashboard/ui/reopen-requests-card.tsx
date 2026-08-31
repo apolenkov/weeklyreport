@@ -153,7 +153,20 @@ export function ReopenRequestsCard() {
   const respondMut = useRespondReopenRequest(closeResponder);
   const requests = listQuery.data ?? [];
 
-  if (listQuery.isPending) return null;
+  if (listQuery.isPending) {
+    return (
+      <section
+        id={REOPEN_REQUESTS_CARD_ID}
+        className="min-h-28 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-4"
+        role="status"
+        aria-busy="true"
+        aria-label="Loading pending reopen requests"
+      >
+        <div className="h-5 w-40 animate-pulse rounded bg-[var(--color-surface-hover)]" />
+        <div className="mt-4 h-12 w-full animate-pulse rounded bg-[var(--color-surface-hover)]" />
+      </section>
+    );
+  }
 
   if (listQuery.isError) {
     return (

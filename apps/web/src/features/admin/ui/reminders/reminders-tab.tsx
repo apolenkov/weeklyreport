@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
 import type {
   AdminReminderPolicyView,
   AdminReminderView,
@@ -26,6 +28,20 @@ export function RemindersTab({
   defaultTimezone,
 }: RemindersTabProps) {
   const state = useRemindersTabState(policies, defaultTimezone);
+  const previousEditor = useRef(state.editor);
+  useEffect(() => {
+    const wasOpen = previousEditor.current.mode !== "closed";
+    if (wasOpen && state.editor.mode === "closed") {
+      const testId =
+        previousEditor.current.mode === "edit"
+          ? `edit-${previousEditor.current.id}`
+          : "new-policy-button";
+      document
+        .querySelector<HTMLElement>(`[data-testid="${CSS.escape(testId)}"]`)
+        ?.focus();
+    }
+    previousEditor.current = state.editor;
+  }, [state.editor]);
   const editorProps = {
     form: state.form,
     isSaving: state.isSaving,

@@ -139,6 +139,53 @@ describe("UsersTab — dialog keyboard and click behavior", () => {
 
     expect(screen.getByTestId("crud-sheet")).toBeInTheDocument();
   });
+
+  it("keeps the long user form scrollable inside the viewport", () => {
+    renderTab();
+
+    openDialog();
+
+    expect(screen.getByRole("dialog")).toHaveClass(
+      "max-h-[90vh]",
+      "overflow-hidden",
+    );
+    expect(
+      screen.getByLabelText(/^last name$/i).parentElement?.parentElement,
+    ).toHaveClass("overflow-y-auto");
+  });
+
+  it("submits exactly once from Enter in a valid field", async () => {
+    const { captured } = renderTab([], [GROUP]);
+    const saveUser = expectDefined(captured["admin.saveUser"]);
+    saveUser.mutationFn.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+
+    openDialog();
+    await user.type(screen.getByLabelText(/^last name$/i), "Petrov");
+    await user.type(screen.getByLabelText(/^first name$/i), "Ivan");
+    await user.type(screen.getByLabelText(/^email$/i), "ivan@example.com");
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => expect(saveUser.mutationFn).toHaveBeenCalledOnce());
+  });
+
+  it("validates email on blur and exposes the error to assistive technology", async () => {
+    renderTab();
+    const user = userEvent.setup();
+
+    openDialog();
+    const email = screen.getByLabelText<HTMLInputElement>(/^email$/i);
+    await user.type(email, "not-an-email");
+    await user.tab();
+
+    expect(email).toHaveAttribute("name", "email");
+    expect(email).toHaveAttribute("autocomplete", "email");
+    expect(email).toHaveAttribute("aria-invalid", "true");
+    expect(email).toHaveAttribute("aria-describedby", "user-email-error");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Enter a valid email address.",
+    );
+  });
 });
 
 describe("UsersTab — invalidation contract", () => {

@@ -19,6 +19,7 @@ import { useEffect, useRef, useState } from "react";
 import { logoutThenRedirect } from "../../lib/navigation/logout-then-redirect";
 import { webEnv } from "../../lib/runtime/web-env";
 import { useTRPC } from "../../lib/trpc/trpc-context";
+import { ConfirmationDialog } from "../dialogs/confirmation-dialog";
 
 type DataResetVariant = ReseedVariant;
 
@@ -120,6 +121,7 @@ function RoleSwitcherTrigger({
         variant="outline"
         size="sm"
         disabled={pending}
+        aria-busy={pending}
         aria-label="Switch development role"
         title="Switch development role"
         className="inline-flex h-8 max-md:min-h-[var(--touch-target-min)] max-md:min-w-[var(--touch-target-min)] items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] px-2.5 text-[12px] font-semibold text-[var(--color-muted-foreground)] shadow-none transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)] data-[state=open]:border-[var(--color-status-at-risk-border)] data-[state=open]:bg-[var(--color-status-at-risk-bg)] data-[state=open]:text-[var(--color-status-at-risk-fg)]"
@@ -133,6 +135,9 @@ function RoleSwitcherTrigger({
 
 function useDevRoleSwitcher() {
   const [pending, setPending] = useState(false);
+  const [resetVariant, setResetVariant] = useState<DataResetVariant | null>(
+    null,
+  );
   const [focusRecoveryToken, setFocusRecoveryToken] = useState(0);
   const trpc = useTRPC();
 
@@ -182,9 +187,19 @@ function useDevRoleSwitcher() {
       setPending(true);
       logoutThen("/");
     },
-    reseed: (variant: DataResetVariant) => {
+    requestReseed: (variant: DataResetVariant) => {
+      setResetVariant(variant);
+    },
+    cancelReseed: () => setResetVariant(null),
+    confirmReseed: () => {
+      if (resetVariant === null) return;
       setPending(true);
-      wipeAndReseedMut.mutate({ variant });
+      setResetVariant(null);
+      wipeAndReseedMut.mutate({ variant: resetVariant });
+    },
+    resetVariant,
+    retryUsers: () => {
+      void usersQ.refetch().catch(() => undefined);
     },
   };
 }
@@ -199,7 +214,11 @@ export function DevRoleSwitcher() {
     users,
     switchTo,
     logout,
-    reseed,
+    requestReseed,
+    cancelReseed,
+    confirmReseed,
+    resetVariant,
+    retryUsers,
   } = useDevRoleSwitcher();
 
   useEffect(() => {
@@ -224,15 +243,15 @@ export function DevRoleSwitcher() {
           )}
           {usersQ.error && (
             <DropdownMenuItem
-              disabled
+              onSelect={() => retryUsers()}
               className="text-[var(--color-destructive)]"
             >
-              Load error
+              Retry loading users
             </DropdownMenuItem>
           )}
           <RoleUserItems users={users} onSelect={switchTo} />
           <DropdownMenuLabel>Data</DropdownMenuLabel>
-          <DataResetItems onReseed={reseed} />
+          <DataResetItems onReseed={requestReseed} />
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onSelect={() => logout()}
@@ -243,6 +262,17 @@ export function DevRoleSwitcher() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      <ConfirmationDialog
+        open={resetVariant !== null}
+        onClose={cancelReseed}
+        onConfirm={confirmReseed}
+        title="Reset development data?"
+        description={`Wipe and reseed the ${resetVariant ?? "selected"} dataset. Current development data will be deleted.`}
+        confirmLabel="Wipe + Reseed"
+        variant="destructive"
+        isPending={pending}
+        testId="dev-role-switcher-reset-confirm"
+      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 
+import { QUEUE_NAMES } from "@customreport/shared";
 import { Queue, QueueEvents, Worker } from "bullmq";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -87,8 +88,15 @@ describe("JobsService — integration (BullMQ failed jobs)", () => {
     ).resolves.toBeNull();
 
     const service = new JobsService(
-      new AdminBullmqJobsQueue(queue),
-      undefined,
+      {
+        names: QUEUE_NAMES,
+        get: (name) => {
+          if (name !== queueName) {
+            throw new Error(`No test queue for '${name}'`);
+          }
+          return new AdminBullmqJobsQueue(name, queue);
+        },
+      },
       {
         reminderExecutionExists: async (executionId) => {
           const execution = await prisma.reminderExecution.findUnique({

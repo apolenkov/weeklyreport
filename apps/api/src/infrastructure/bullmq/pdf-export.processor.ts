@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { performance } from "node:perf_hooks";
 
+import { PDF_EXPORT_QUEUE_NAME } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
 import { type Job } from "bullmq";
 import { ClsService } from "nestjs-cls";
@@ -61,7 +62,7 @@ interface PdfExportJobData extends JobTraceContext {
 
 @Injectable()
 export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
-  protected readonly queueName = "pdf-export";
+  protected readonly queueName = PDF_EXPORT_QUEUE_NAME;
   protected readonly spanName = "pdf-export.process";
 
   constructor(

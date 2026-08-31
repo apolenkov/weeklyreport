@@ -141,7 +141,7 @@ function useInlineEditCommands({
     setInlineEditRef(null);
     setPendingDeleteRef(null);
   };
-  const { saveDraftSection } = useSlideDraftSaveMutation({
+  const { saveDraftSection, isPending } = useSlideDraftSaveMutation({
     refetchSection,
     onSaved: clearActive,
   });
@@ -175,6 +175,7 @@ function useInlineEditCommands({
   return {
     ...dialogData,
     ...saveHandlers,
+    isPending,
     onRowActivate: canInlineEdit ? handleRowActivate : undefined,
     onCancelEdit: () => setInlineEditRef(null),
     onRequestDelete: requestInlineDelete,
@@ -190,6 +191,7 @@ export function useSlideInlineEditor(
     onRowActivate: commands.onRowActivate,
     dialogs: (
       <SlideInlineEditorDialogs
+        isPending={commands.isPending}
         inlineEditRecord={commands.inlineEditRecord}
         pendingDeleteRecord={commands.pendingDeleteRecord}
         currentUserName={args.formData?.currentUser.name}

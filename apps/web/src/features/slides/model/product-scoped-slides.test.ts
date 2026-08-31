@@ -59,6 +59,7 @@ describe("buildProductScopedSlides", () => {
             activityId: "act-1",
             activityName: "Triage",
             status: "green",
+            jiraAccounts: [],
             derivedStatus: "green",
             alarmFloor: "green",
             linkedProducts: [{ productId: "p1", productName: "Portal" }],

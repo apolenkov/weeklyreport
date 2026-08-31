@@ -34,6 +34,7 @@ export type SlideInlineDecisionRecord = Extract<
 >;
 
 interface SlideInlineEditorDialogsProps {
+  readonly isPending: boolean;
   readonly inlineEditRecord: SlideInlineEditRecord | null;
   readonly pendingDeleteRecord: SlideInlineEditRecord | null;
   readonly currentUserName?: string | undefined;
@@ -82,6 +83,16 @@ export function SlideInlineEditorDialogs(props: SlideInlineEditorDialogsProps) {
   };
   return (
     <>
+      {props.isPending && (
+        <div
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+          className="fixed bottom-4 left-1/2 z-[var(--layer-toast)] -translate-x-1/2 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-xs font-semibold text-[var(--color-foreground)] shadow-lg"
+        >
+          Saving slide changes…
+        </div>
+      )}
       <InlineItemDialog
         {...shared}
         record={getActiveItemRecord(inlineEditRecord)}

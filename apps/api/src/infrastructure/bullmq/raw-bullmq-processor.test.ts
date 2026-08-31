@@ -7,6 +7,7 @@ const workerState = vi.hoisted(() => ({
   worker: undefined as
     | {
         emit: (event: string, ...args: unknown[]) => void;
+        close: (force?: boolean) => Promise<void>;
       }
     | undefined,
 }));
@@ -44,7 +45,7 @@ vi.mock("bullmq", () => ({
     waitUntilReady(): Promise<Record<string, never>> {
       return Promise.resolve({});
     }
-    close(): Promise<void> {
+    close(_force = false): Promise<void> {
       this.running = false;
       this.emit("closed");
       return Promise.resolve();

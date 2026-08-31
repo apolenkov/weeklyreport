@@ -5,7 +5,7 @@ import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
-} from "../../test-utils/prisma-test-helper";
+} from "../../../test-utils/prisma-test-helper";
 import { SearchPrismaRepository } from "./search.prisma-repository";
 
 const GROUP_ID = "c0000000-0000-4000-a000-000000000001";
@@ -66,6 +66,13 @@ describe("SearchPrismaRepository excludeTypes (integration)", () => {
         reportId: REPORT_ID,
         authorId: LEAD_ID,
         status: "submitted",
+      },
+    });
+    await prisma.projectStatus.create({
+      data: {
+        reportSectionId: SECTION_ID,
+        projectId: PROJECT_ID,
+        status: "green",
       },
     });
     await prisma.item.create({

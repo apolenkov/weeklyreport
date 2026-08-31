@@ -5,6 +5,7 @@ import type { ClsService } from "nestjs-cls";
 
 import type { AppLogger } from "../../lib/logger.js";
 import type { EnvConfig } from "../config/env.schema";
+import { closeBullMqResource } from "./bounded-shutdown.js";
 import { getBullMQOptions } from "./bullmq-options";
 import type { QueueName } from "./queue-registry";
 import type {
@@ -29,7 +30,12 @@ class WorkerLifecycle<TData> {
   readonly close = async (): Promise<void> => {
     const worker = this.worker;
     this.worker = null;
-    await worker?.close();
+    if (!worker) return;
+    await closeBullMqResource(
+      "worker",
+      () => worker.close(),
+      () => worker.close(true),
+    );
   };
 }
 

@@ -2,9 +2,9 @@ import type { SearchHit } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 
-import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
-import { searchPublishedDocuments } from "./published-search-query.js";
-import type { SearchRepository } from "./search.service.js";
+import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
+import type { SearchRepository } from "../application/search.service.js";
+import { searchPublishedDocuments } from "../published-search-query.js";
 
 interface RawHit {
   readonly type: "item" | "risk" | "decision" | "project";

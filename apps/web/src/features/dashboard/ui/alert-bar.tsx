@@ -138,6 +138,7 @@ export function AlertBar({ pendingLeads, reportId, ruleId }: AlertBarProps) {
           if (ruleId) dispatchMut.mutate({ reportId, ruleId });
         }}
         disabled={dispatchMut.isPending || ruleId === null}
+        aria-busy={dispatchMut.isPending}
         className="btn-press ml-auto inline-flex min-h-[36px] items-center rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-3.5 py-1.5 font-[family-name:var(--font-sans)] text-[13px] font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
         title={ruleId ? undefined : "Active deadline reminder required."}
       >

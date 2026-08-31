@@ -1,0 +1,88 @@
+flowchart LR
+    lead["Lead в браузере"]
+    admin["Admin в браузере"]
+
+    subgraph web["apps/web — Next.js / React"]
+        toolbar["Lead toolbar\nКнопка Report chat"]
+        sheet["LeadReportAssistant Sheet\nформа, outcomes, citations"]
+        settings["Settings → AI\nProvider · Features"]
+        integrations["Settings → Integrations\nExternal roadmaps only"]
+        toolbar --> sheet
+    end
+
+    subgraph api["apps/api — NestJS + tRPC"]
+        leadRouter["leadForm.assistant\nleadProcedure + shared contracts"]
+        adminRouter["admin.aiProvider + admin.aiPrompts\ncanonical adminProcedure"]
+        service["ReportAssistantService\none request snapshot + telemetry"]
+        configRepo["AiRuntimeConfigurationRepository\nrepeatable-read pair resolution"]
+        promptService["AiPromptService\ncomposition, lifecycle"]
+        plannerPort["Planner / repair ports"]
+        answerPort["Answer / citation-repair ports"]
+        retrieval["Authorized retrieval\nperiod source + ACL + projection"]
+        grounding["ContextBuilder\naggregates + compact evidence"]
+        semantic["SemanticRetrievalService\ncache completeness + ranking"]
+        leadRouter --> service
+        adminRouter --> promptService
+        service --> configRepo
+        service --> plannerPort
+        service --> retrieval
+        retrieval --> semantic
+        retrieval --> grounding
+        semantic --> grounding
+        grounding --> answerPort
+    end
+
+    subgraph db["PostgreSQL 15 + pgvector"]
+        live["Live report tables\nТолько current open/reopened"]
+        snapshots["Report.publishedSnapshot\nНеизменяемая история"]
+        providerDb["AiProviderControl +\nAiProviderConfiguration"]
+        promptDb["AiFeaturePromptControl +\nAiPromptBundleRevision"]
+        embeddings["SemanticEmbedding\nhash + vector + provider scope\nБез текста, ACL и record IDs"]
+    end
+
+    subgraph async["Redis + BullMQ"]
+        queue["semantic-index queue\nrevision + scope + locator + hash"]
+        worker["SemanticIndexProcessor\nresolve exact provider revision"]
+        queue --> worker
+    end
+
+    subgraph external["Active provider API — allowlisted origin"]
+        planModel["Planner\nfunction calling"]
+        answerModel["Answer\nstructured output"]
+        embedModel["Embeddings\nconfigured model"]
+    end
+
+    subgraph shared["packages/shared"]
+        schemas["Zod contracts\nSearchPlan + prompt lifecycle + outcomes"]
+    end
+
+    subgraph operations["Наблюдаемость"]
+        metrics["Prometheus metrics\nlatency, outcomes, bounded counts"]
+        audit["Safe audit events\nno prompt/provider bodies"]
+    end
+
+    lead --> toolbar
+    sheet -->|"tRPC mutation"| leadRouter
+    admin --> settings
+    admin --> integrations
+    settings --> adminRouter
+    leadRouter --> schemas
+    adminRouter --> schemas
+    configRepo --> providerDb
+    configRepo --> promptDb
+    promptService --> promptDb
+    promptService --> providerDb
+    plannerPort -->|"composed prompt snapshot"| planModel
+    answerPort -->|"composed prompt snapshot"| answerModel
+    retrieval --> live
+    retrieval --> snapshots
+    semantic --> embeddings
+    semantic -->|"query/document vectors"| embedModel
+    semantic -->|"large missing cache set"| queue
+    worker --> live
+    worker --> snapshots
+    worker -->|"embed canonical text"| embedModel
+    worker --> embeddings
+    service --> metrics
+    promptService --> metrics
+    promptService --> audit

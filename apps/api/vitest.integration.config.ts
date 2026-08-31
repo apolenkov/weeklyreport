@@ -1,5 +1,7 @@
 import { config } from "dotenv";
-import { defineConfig } from "vitest/config";
+import { defineConfig, mergeConfig } from "vitest/config";
+
+import baseConfig from "../../vitest.base.config.ts";
 
 config({ path: "../../.env.test" });
 
@@ -8,9 +10,12 @@ config({ path: "../../.env.test" });
 // carry it for integration runs.
 process.env.LOG_LEVEL ??= "info";
 
-export default defineConfig({
-  test: {
-    include: ["src/**/*.integration.test.ts"],
-    exclude: ["**/dist/**", "**/node_modules/**"],
-  },
-});
+export default mergeConfig(
+  baseConfig,
+  defineConfig({
+    test: {
+      include: ["src/**/*.integration.test.ts"],
+      exclude: ["**/dist/**", "**/node_modules/**"],
+    },
+  }),
+);

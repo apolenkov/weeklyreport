@@ -46,6 +46,8 @@ function ReminderTypeField({ form, onChange }: PolicyFieldProps) {
       </label>
       <select
         id="policy-type"
+        name="reminder-type"
+        autoComplete="off"
         value={form.preset}
         onChange={(e) => selectPreset(e.target.value as ReminderPreset)}
         className={POLICY_FORM_INPUT_CLASS}
@@ -85,7 +87,7 @@ export function PolicyForm({
       role="group"
       aria-label={editing ? "Edit reminder" : "New reminder"}
       data-testid="policy-form"
-      className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] p-4 focus:outline-none"
+      className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
     >
       <div className="grid gap-4 md:grid-cols-2">
         <ReminderTypeField form={form} onChange={onChange} />

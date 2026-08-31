@@ -1,17 +1,23 @@
 import { Module } from "@nestjs/common";
 
-import { SearchPrismaRepository } from "./search.prisma-repository.js";
-import { SearchService } from "./search.service.js";
+import { BullMQModule } from "../../infrastructure/bullmq/bullmq.module.js";
+import { ConfigModule } from "../../infrastructure/config/config.module.js";
+import { AiPromptsModule } from "../ai-prompts/index.js";
+import { AiProviderModule } from "../ai-provider/index.js";
+import { AiProviderConfigurationService } from "../ai-provider/index.js";
+import { AiRuntimeResolver } from "./application/ai-runtime.resolver.js";
+import { ReportAssistantService } from "./application/report-assistant.service.js";
+import { SearchService } from "./application/search.service.js";
+import { createSearchProviders } from "./search.providers.js";
 
 @Module({
-  providers: [
-    SearchPrismaRepository,
-    {
-      provide: SearchService,
-      useFactory: (repo: SearchPrismaRepository) => new SearchService(repo),
-      inject: [SearchPrismaRepository],
-    },
+  imports: [BullMQModule, ConfigModule, AiProviderModule, AiPromptsModule],
+  providers: createSearchProviders(),
+  exports: [
+    SearchService,
+    ReportAssistantService,
+    AiRuntimeResolver,
+    AiProviderConfigurationService,
   ],
-  exports: [SearchService],
 })
 export class SearchModule {}

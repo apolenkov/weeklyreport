@@ -1,5 +1,13 @@
 import { router } from "../../trpc.middleware.js";
 import {
+  type AdminAiPromptDeps,
+  createAdminAiPromptProcedures,
+} from "./ai-prompts.procedures.js";
+import {
+  type AdminAiProviderDeps,
+  createAdminAiProviderProcedures,
+} from "./ai-provider.procedures.js";
+import {
   type AdminCatalogDeps,
   createAdminCatalogProcedures,
 } from "./catalog.procedures.js";
@@ -31,11 +39,15 @@ export interface AdminRouterDeps
     AdminCatalogDeps,
     AdminPeriodsDeps,
     AdminReminderPoliciesDeps,
-    AdminOpsDeps {}
+    AdminOpsDeps,
+    AdminAiProviderDeps,
+    AdminAiPromptDeps {}
 
 export function createAdminRouter(deps: AdminRouterDeps) {
   return router({
     ...createAdminSettingsProcedures(deps),
+    aiProvider: createAdminAiProviderProcedures(deps),
+    aiPrompts: createAdminAiPromptProcedures(deps),
     ...createAdminUsersProcedures(deps),
     ...createAdminCatalogProcedures(deps),
     ...createAdminPeriodsProcedures(deps),

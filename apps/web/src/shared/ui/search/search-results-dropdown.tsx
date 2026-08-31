@@ -1,4 +1,5 @@
 import type { SearchHit } from "@customreport/shared";
+import type { ReactNode } from "react";
 
 import { formatDateWithYear } from "../../lib/format/format-date";
 import { renderSnippet, targetUrlFor, TYPE_BADGE } from "./search-input-utils";
@@ -10,6 +11,7 @@ export interface SearchResultsDropdownProps {
   readonly isError: boolean;
   readonly isFetching: boolean;
   readonly isViewer: boolean;
+  readonly onRetry: () => void;
   readonly onHoverHit: (idx: number) => void;
   readonly onSelectHit: (url: string) => void;
 }
@@ -18,9 +20,13 @@ export interface SearchResultsDropdownProps {
 function StatusRow({
   children,
   loading = false,
+  actionLabel,
+  onAction,
 }: {
-  readonly children: string;
+  readonly children: ReactNode;
   readonly loading?: boolean;
+  readonly actionLabel?: string;
+  readonly onAction?: () => void;
 }) {
   return (
     <div
@@ -30,7 +36,16 @@ function StatusRow({
       aria-label={loading ? "Searching reports" : undefined}
       className="px-3 py-2 text-sm text-[var(--color-muted-foreground)]"
     >
-      {children}
+      <span>{children}</span>
+      {actionLabel && onAction ? (
+        <button
+          type="button"
+          className="ml-2 font-semibold underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)]"
+          onClick={onAction}
+        >
+          {actionLabel}
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -122,37 +137,43 @@ export function SearchResultsDropdown({
   isError,
   isFetching,
   isViewer,
+  onRetry,
   onHoverHit,
   onSelectHit,
 }: SearchResultsDropdownProps) {
   const showEmpty = !isError && !isFetching && hits.length === 0;
 
   return (
-    <div
-      id={resultsId}
-      role="listbox"
-      className="absolute z-[var(--layer-popover)] mt-1 max-h-[420px] w-full overflow-y-auto rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] shadow-lg"
-    >
-      {isFetching && hits.length === 0 && (
-        <StatusRow loading>Searching…</StatusRow>
+    <div className="absolute z-[var(--layer-popover)] mt-1 max-h-[420px] w-full overflow-y-auto rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] shadow-lg">
+      {isFetching && <StatusRow loading>Searching…</StatusRow>}
+
+      {isError && (
+        <StatusRow actionLabel="Try again" onAction={onRetry}>
+          Search failed
+        </StatusRow>
       )}
 
-      {isError && <StatusRow>Search failed</StatusRow>}
+      {showEmpty && (
+        <StatusRow>
+          <span>No results found</span>
+          <span className="ml-1">Try a different search.</span>
+        </StatusRow>
+      )}
 
-      {showEmpty && <StatusRow>No results found</StatusRow>}
-
-      {hits.map((hit, idx) => (
-        <SearchHitOption
-          key={`${hit.type}-${hit.id}`}
-          hit={hit}
-          optionId={`${resultsId}-option-${idx}`}
-          index={idx}
-          isActive={idx === activeIndex}
-          isViewer={isViewer}
-          onHoverHit={onHoverHit}
-          onSelectHit={onSelectHit}
-        />
-      ))}
+      <div id={resultsId} role="listbox" aria-label="Search results">
+        {hits.map((hit, idx) => (
+          <SearchHitOption
+            key={`${hit.type}-${hit.id}`}
+            hit={hit}
+            optionId={`${resultsId}-option-${idx}`}
+            index={idx}
+            isActive={idx === activeIndex}
+            isViewer={isViewer}
+            onHoverHit={onHoverHit}
+            onSelectHit={onSelectHit}
+          />
+        ))}
+      </div>
     </div>
   );
 }

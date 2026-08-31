@@ -85,7 +85,11 @@ function SaveIdentityRow({
         {isSaving ? "Saving…" : "Save Identity"}
       </button>
       {isSaved && (
-        <span className="flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]">
+        <span
+          className="flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]"
+          role="status"
+          aria-live="polite"
+        >
           <CheckIcon />
           Identity saved
         </span>

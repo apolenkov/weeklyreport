@@ -23,14 +23,12 @@ export function createAppServices(deps: {
 } {
   const { app, env, logger } = deps;
 
-  // Shared BullModule handle for the email reminder worker and admin DLQ count.
   const queueRegistry = app.get(QueueRegistry);
-  const emailReminderQueue = queueRegistry.get("email-reminder");
 
   const prisma = app.get(PrismaService);
 
   const jobsService = createBootstrapJobsService({
-    emailReminderQueue,
+    queueRegistry,
     prisma,
     logger,
   });
@@ -42,7 +40,6 @@ export function createAppServices(deps: {
     prisma,
     env,
     autoCarryOver,
-    emailReminderQueue,
     jobsService,
   });
 

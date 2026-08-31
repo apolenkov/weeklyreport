@@ -2,7 +2,10 @@ import type { Role } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { createNullLogger } from "../../../../lib/logger.js";
-import { ActionLogService } from "../../../../modules/admin/index.js";
+import {
+  ActionLogService,
+  type JobsService,
+} from "../../../../modules/admin/index.js";
 import { createNullAuditLogger } from "../../../../test-utils/audit-logger.js";
 import { createAppRouter } from "../../trpc.router.js";
 
@@ -56,11 +59,28 @@ function buildActionLogCaller(actionLogService: ActionLogService, role: Role) {
   });
 }
 
+function buildJobsCaller(jobsService: JobsService, role: Role) {
+  const deps = { jobsService } as Parameters<typeof createAppRouter>[0];
+  return createAppRouter(deps).createCaller({
+    session: {
+      userId: "44444444-4444-4444-8444-444444444444",
+      email: `${role}@test.local`,
+      name: `${role} User`,
+      role,
+    },
+    logger: createNullLogger(),
+    auditLogger: createNullAuditLogger(),
+    ip: "test-ip",
+    isPdfExport: false,
+    pdfReportId: null,
+  });
+}
+
 describe("admin ops dependency wiring", () => {
-  it("dlqCount fails loud when the email-reminder queue is unwired", async () => {
+  it("dlqCount fails loud when the jobs service is unwired", async () => {
     await expect(buildAdminCaller().admin.dlqCount()).rejects.toMatchObject({
       code: "INTERNAL_SERVER_ERROR",
-      message: "Email reminder queue is not configured.",
+      message: "Jobs service is not configured.",
     });
   });
 
@@ -135,4 +155,86 @@ describe("admin action log contract", () => {
       }),
     ).rejects.toThrow();
   });
+});
+
+describe("jobs contract uses the canonical Head authority", () => {
+  function makeJobsService() {
+    const listFailed = vi.fn().mockResolvedValue({
+      jobs: [],
+      nextCursor: null,
+    });
+    const retryFailed = vi.fn().mockResolvedValue({
+      retried: true,
+      jobId: "job-1",
+    });
+    const removeFailed = vi.fn().mockResolvedValue({
+      removed: true,
+      jobId: "job-1",
+    });
+    const service = {
+      listFailed,
+      retryFailed,
+      removeFailed,
+    } as unknown as JobsService;
+    return { service, listFailed, retryFailed, removeFailed };
+  }
+
+  it("dlqCount reads the count from JobsService", async () => {
+    const countFailed = vi.fn().mockResolvedValue(3);
+    const service = { countFailed } as unknown as JobsService;
+
+    await expect(
+      buildJobsCaller(service, "admin").admin.dlqCount(),
+    ).resolves.toEqual({ count: 3 });
+    expect(countFailed).toHaveBeenCalledOnce();
+  });
+
+  it("allows a head to list, retry, and remove failed jobs", async () => {
+    const { service, listFailed, retryFailed, removeFailed } =
+      makeJobsService();
+    const caller = buildJobsCaller(service, "head");
+    const input = { queue: "pdf-export" as const, jobId: "job-1" };
+
+    await expect(
+      caller.admin.jobs.listFailed({ queue: input.queue }),
+    ).resolves.toEqual({ jobs: [], nextCursor: null });
+    await expect(caller.admin.jobs.retryFailed(input)).resolves.toEqual({
+      retried: true,
+      jobId: "job-1",
+    });
+    await expect(caller.admin.jobs.removeFailed(input)).resolves.toEqual({
+      removed: true,
+      jobId: "job-1",
+    });
+
+    expect(listFailed).toHaveBeenCalledOnce();
+    expect(retryFailed).toHaveBeenCalledOnce();
+    expect(removeFailed).toHaveBeenCalledOnce();
+  });
+
+  it.each(["lead", "viewer"] as const)(
+    "rejects the %s role before reading or mutating queue state",
+    async (role) => {
+      const { service, listFailed, retryFailed, removeFailed } =
+        makeJobsService();
+      const caller = buildJobsCaller(service, role);
+      const input = { queue: "pdf-export" as const, jobId: "job-1" };
+
+      await expect(
+        caller.admin.jobs.listFailed({ queue: input.queue }),
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+      await expect(caller.admin.jobs.retryFailed(input)).rejects.toMatchObject({
+        code: "FORBIDDEN",
+      });
+      await expect(caller.admin.jobs.removeFailed(input)).rejects.toMatchObject(
+        {
+          code: "FORBIDDEN",
+        },
+      );
+
+      expect(listFailed).not.toHaveBeenCalled();
+      expect(retryFailed).not.toHaveBeenCalled();
+      expect(removeFailed).not.toHaveBeenCalled();
+    },
+  );
 });

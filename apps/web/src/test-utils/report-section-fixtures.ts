@@ -66,6 +66,7 @@ export function makeActivityFixture(
     activityId: ACTIVITY_ID,
     activityName: "Test activity",
     status: null,
+    jiraAccounts: [],
     linkedProducts: [],
     derivedStatus: null,
     alarmFloor: null,

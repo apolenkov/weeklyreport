@@ -7,6 +7,11 @@ import { toast } from "sonner";
 
 import { invalidateReview } from "../../../../shared/lib/query/cache-keys";
 import { useTRPC } from "../../../../shared/lib/trpc/trpc-context";
+import {
+  CommentDeleteDialog,
+  type CommentFeedback,
+  CommentFeedbackMessage,
+} from "./record-comment-feedback";
 import { ReviewCommentList } from "./review-comment-list";
 
 // Exactly one concrete record anchors each comment.
@@ -29,6 +34,8 @@ export type RecordCommentAnchor =
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const COMMENT_EXCERPT_MAX_LENGTH = 60;
+const COMMENT_EXCERPT_SUFFIX_LENGTH = 3;
 
 function anchorId(anchor: RecordCommentAnchor): string | undefined {
   return anchor.itemId ?? anchor.riskId ?? anchor.decisionId;
@@ -38,10 +45,25 @@ function reviewErrorMessage(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback;
 }
 
+function commentDeleteLabel(comment: RecordCommentView): string {
+  const author = comment.reviewerName ?? "Reviewer";
+  const excerpt = comment.text.replaceAll(/\s+/g, " ").trim();
+  const shortened =
+    excerpt.length > COMMENT_EXCERPT_MAX_LENGTH
+      ? `${excerpt.slice(0, COMMENT_EXCERPT_MAX_LENGTH - COMMENT_EXCERPT_SUFFIX_LENGTH)}…`
+      : excerpt;
+  return shortened
+    ? `Delete comment by ${author}: ${shortened}`
+    : `Delete comment by ${author}`;
+}
+
 function useRecordCommentMutations(
   anchor: RecordCommentAnchor,
   onCommentAdded: () => void,
   onMutated: () => void,
+  onCommentError: (err: unknown) => void,
+  onDeleteSuccess: () => void,
+  onDeleteError: (err: unknown) => void,
 ) {
   const trpc = useTRPC();
   const qc = useQueryClient();
@@ -54,7 +76,7 @@ function useRecordCommentMutations(
         onMutated();
       },
       onError: (err: unknown) => {
-        toast.error(reviewErrorMessage(err, "Failed to add comment"));
+        onCommentError(err);
       },
     }),
   );
@@ -64,9 +86,10 @@ function useRecordCommentMutations(
       onSuccess: () => {
         invalidateReview(qc, trpc);
         onMutated();
+        onDeleteSuccess();
       },
       onError: (err: unknown) => {
-        toast.error(reviewErrorMessage(err, "Failed to delete comment"));
+        onDeleteError(err);
       },
     }),
   );
@@ -85,6 +108,7 @@ interface CommentComposerFormProps {
   readonly onSubmit: () => void;
   readonly submitDisabled: boolean;
   readonly isPending: boolean;
+  readonly feedbackId?: string;
 }
 
 function CommentComposerForm({
@@ -93,6 +117,7 @@ function CommentComposerForm({
   onSubmit,
   submitDisabled,
   isPending,
+  feedbackId,
 }: CommentComposerFormProps) {
   return (
     <form
@@ -106,15 +131,19 @@ function CommentComposerForm({
       <textarea
         className="min-h-[52px] w-full resize-y rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-background)] px-2.5 py-1.5 text-[12.5px] text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)]"
         placeholder="Add a review comment…"
+        name="review-comment"
+        autoComplete="off"
         value={draft}
         onChange={(event) => onDraftChange(event.target.value)}
         aria-label="Add a review comment"
+        aria-describedby={feedbackId}
       />
       <div className="flex justify-end">
         <button
           type="submit"
           className="btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-3 py-1 text-[12px] font-semibold text-[var(--color-primary-foreground)] transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
           disabled={submitDisabled}
+          aria-busy={isPending || undefined}
         >
           {isPending ? "Adding…" : "Comment"}
         </button>
@@ -152,7 +181,8 @@ function RecordCommentThread({
               className="inline-flex items-center justify-center max-md:min-h-[var(--touch-target-min)] max-md:min-w-[var(--touch-target-min)] text-[10px] font-semibold text-[var(--color-destructive)] underline-offset-2 hover:underline disabled:opacity-50"
               onClick={() => onDelete(comment.id)}
               disabled={isDeletePending}
-              aria-label="Delete comment"
+              aria-busy={isDeletePending || undefined}
+              aria-label={commentDeleteLabel(comment)}
             >
               Delete
             </button>
@@ -161,6 +191,15 @@ function RecordCommentThread({
       />
     </div>
   );
+}
+
+function canDeleteComment(
+  comment: RecordCommentView,
+  canReview: boolean,
+  currentUserId: string,
+  isAdmin: boolean,
+): boolean {
+  return isAdmin || (canReview && comment.reviewerId === currentUserId);
 }
 
 // Designated-reviewer comments on one record; canReview is the affordance gate
@@ -181,10 +220,35 @@ export function RecordComments({
   readonly onMutated: () => void;
 }) {
   const [draft, setDraft] = useState("");
-  const { submitComment, isCommentPending, deleteComment, isDeletePending } =
-    useRecordCommentMutations(anchor, () => setDraft(""), onMutated);
-
+  const [feedback, setFeedback] = useState<CommentFeedback | null>(null);
+  const [deleteCandidate, setDeleteCandidate] =
+    useState<RecordCommentView | null>(null);
   const id = anchorId(anchor);
+  const feedbackId = `record-comment-feedback-${id ?? "unknown"}`;
+  const { submitComment, isCommentPending, deleteComment, isDeletePending } =
+    useRecordCommentMutations(
+      anchor,
+      () => {
+        setDraft("");
+        setFeedback({ message: "Comment added.", tone: "success" });
+      },
+      onMutated,
+      (err) => {
+        const message = reviewErrorMessage(err, "Failed to add comment");
+        setFeedback({ message, tone: "error" });
+        toast.error(message);
+      },
+      () => {
+        setDeleteCandidate(null);
+        setFeedback({ message: "Comment deleted.", tone: "success" });
+      },
+      (err) => {
+        const message = reviewErrorMessage(err, "Failed to delete comment");
+        setFeedback({ message, tone: "error" });
+        toast.error(message);
+      },
+    );
+
   // A synthetic (non-persisted) record has no real UUID — the composer stays
   // hidden so a synthetic id can never reach the uuid-validated mutation.
   const canCompose = canReview && id !== undefined && UUID_RE.test(id);
@@ -194,6 +258,12 @@ export function RecordComments({
   const trimmed = draft.trim();
   const submitDisabled = trimmed.length === 0 || isCommentPending;
 
+  const requestDelete = (commentId: string) => {
+    setDeleteCandidate(
+      comments.find((candidate) => candidate.id === commentId) ?? null,
+    );
+  };
+
   return (
     // md+ indent matches the anchor row content column; below md keep a
     // minimal inset so the block stacks under the record on phones.
@@ -202,22 +272,35 @@ export function RecordComments({
         <RecordCommentThread
           comments={comments}
           canDelete={(comment) =>
-            isAdmin || (canReview && comment.reviewerId === currentUserId)
+            canDeleteComment(comment, canReview, currentUserId, isAdmin)
           }
-          onDelete={deleteComment}
+          onDelete={requestDelete}
           isDeletePending={isDeletePending}
         />
       ) : null}
 
+      <CommentFeedbackMessage feedback={feedback} id={feedbackId} />
+
       {canCompose ? (
         <CommentComposerForm
           draft={draft}
-          onDraftChange={setDraft}
+          onDraftChange={(value) => {
+            setDraft(value);
+            setFeedback(null);
+          }}
           onSubmit={() => submitComment(trimmed)}
           submitDisabled={submitDisabled}
           isPending={isCommentPending}
+          {...(feedback ? { feedbackId } : {})}
         />
       ) : null}
+
+      <CommentDeleteDialog
+        candidate={deleteCandidate}
+        isPending={isDeletePending}
+        onConfirm={deleteComment}
+        onCancel={() => setDeleteCandidate(null)}
+      />
     </div>
   );
 }

@@ -23,6 +23,7 @@ interface SearchComboboxProps {
   readonly value: string;
   readonly placeholder: string;
   readonly onOpen: () => void;
+  readonly onBlur: (event: React.FocusEvent<HTMLInputElement>) => void;
   readonly onValueChange: (next: string) => void;
   readonly onKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void;
 }
@@ -35,12 +36,14 @@ function SearchCombobox({
   value,
   placeholder,
   onOpen,
+  onBlur,
   onValueChange,
   onKeyDown,
 }: SearchComboboxProps) {
   return (
     <input
       id={inputId}
+      name="search"
       type="search"
       role="combobox"
       aria-expanded={expanded}
@@ -51,12 +54,13 @@ function SearchCombobox({
       value={value}
       placeholder={placeholder}
       onFocus={onOpen}
+      onBlur={onBlur}
       onChange={(e) => {
         onValueChange(e.target.value);
         onOpen();
       }}
       onKeyDown={onKeyDown}
-      className="w-full min-h-[var(--touch-target-min)] rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-success)]"
+      className="w-full min-h-[var(--touch-target-min)] rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus-visible:border-[var(--color-starbucks-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-success)]"
     />
   );
 }
@@ -88,7 +92,8 @@ function SearchField({
   placeholder,
   search,
 }: SearchFieldProps) {
-  const { q, setQ, setOpen, hits, activeIndex, handleKeyDown } = search;
+  const { q, setQ, setOpen, hits, activeIndex, handleKeyDown, handleBlur } =
+    search;
 
   return (
     <>
@@ -107,6 +112,7 @@ function SearchField({
         value={q}
         placeholder={placeholder}
         onOpen={() => setOpen(true)}
+        onBlur={handleBlur}
         onValueChange={setQ}
         onKeyDown={handleKeyDown}
       />
@@ -126,6 +132,7 @@ function SearchResults({
     activeIndex,
     isError,
     isFetching,
+    retry,
     isViewer,
     setActiveIndex,
     navigateTo,
@@ -138,6 +145,7 @@ function SearchResults({
       activeIndex={activeIndex}
       isError={isError}
       isFetching={isFetching}
+      onRetry={retry}
       isViewer={isViewer}
       onHoverHit={setActiveIndex}
       onSelectHit={navigateTo}

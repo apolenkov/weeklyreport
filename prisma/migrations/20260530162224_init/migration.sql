@@ -1,5 +1,30 @@
+-- The semantic cache stores vectors in PostgreSQL; all tracked database
+-- environments use an image that provides this extension.
+CREATE EXTENSION IF NOT EXISTS vector;
+
 -- CreateEnum
 CREATE TYPE "Role" AS ENUM ('lead', 'head', 'viewer', 'admin');
+
+-- CreateEnum
+CREATE TYPE "AiProviderProfile" AS ENUM ('mistral', 'openrouter', 'openai', 'groq', 'jina', 'custom_openai_compatible');
+
+-- CreateEnum
+CREATE TYPE "AiProviderEmbeddingMode" AS ENUM ('reuse_generation', 'separate');
+
+-- CreateEnum
+CREATE TYPE "AiProviderLifecycle" AS ENUM ('draft', 'validated', 'preparing', 'active', 'failed', 'superseded');
+
+-- CreateEnum
+CREATE TYPE "AiProviderReasoningMode" AS ENUM ('provider_default', 'off', 'custom');
+
+-- CreateEnum
+CREATE TYPE "AiPromptBundleLifecycle" AS ENUM ('draft', 'validated', 'active', 'failed', 'superseded');
+
+-- CreateEnum
+CREATE TYPE "AiProviderTestExecutionState" AS ENUM ('queued', 'running', 'completed');
+
+-- CreateEnum
+CREATE TYPE "AiProviderTestOutcome" AS ENUM ('passed', 'incompatible', 'configuration_error', 'inconclusive');
 
 -- CreateEnum
 CREATE TYPE "UserActionStatus" AS ENUM ('success', 'fail');
@@ -294,7 +319,7 @@ CREATE TABLE "PdfExportJob" (
     "reportId" TEXT NOT NULL,
     "publicationAt" TIMESTAMP(3) NOT NULL,
     "publicationSnapshot" JSONB NOT NULL,
-    "publicationGroupIds" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
+    "publicationGroupIds" TEXT[] NOT NULL,
     "status" "PdfExportStatus" NOT NULL DEFAULT 'pending',
     "templateVersion" TEXT NOT NULL,
     "filePath" TEXT,
@@ -1086,3 +1111,262 @@ ALTER TABLE "Report"
       AND (("publishedSnapshot"->>'publishedAt')::timestamptz AT TIME ZONE 'UTC') = "publishedAt"
     )
   );
+
+-- Content-addressed cache only: no report text, report identity, ACL, user,
+-- credential, prompt, or generated-answer columns are persisted here.
+CREATE TABLE "SemanticEmbedding" (
+    "contentHash" TEXT NOT NULL,
+    "provider" TEXT NOT NULL,
+    "model" TEXT NOT NULL,
+    "inputVersion" TEXT NOT NULL,
+    "dimensions" INTEGER NOT NULL,
+    "vector" vector NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "SemanticEmbedding_pkey" PRIMARY KEY ("contentHash", "provider", "model", "inputVersion", "dimensions"),
+    CONSTRAINT "SemanticEmbedding_vector_dimensions_check" CHECK (vector_dims("vector") = "dimensions")
+);
+
+-- Immutable provider revisions. Only encrypted credentials and a masked
+-- suffix are stored; the singleton control row below owns runtime activation.
+CREATE TABLE "AiProviderConfiguration" (
+    "id" TEXT NOT NULL,
+    "generationProfile" "AiProviderProfile" NOT NULL,
+    "generationBaseUrl" TEXT NOT NULL,
+    "generationEndpointIdentity" TEXT NOT NULL,
+    "plannerModel" TEXT NOT NULL,
+    "answerModel" TEXT NOT NULL,
+    "reasoningMode" "AiProviderReasoningMode" NOT NULL,
+    "reasoningCustomValue" TEXT,
+    "generationCredentialCiphertext" TEXT NOT NULL,
+    "generationCredentialNonce" TEXT NOT NULL,
+    "generationCredentialTag" TEXT NOT NULL,
+    "generationCredentialKeyVersion" INTEGER NOT NULL,
+    "generationCredentialMaskedSuffix" TEXT NOT NULL,
+    "embeddingMode" "AiProviderEmbeddingMode" NOT NULL,
+    "embeddingProfile" "AiProviderProfile",
+    "embeddingBaseUrl" TEXT,
+    "embeddingEndpointIdentity" TEXT,
+    "embeddingModel" TEXT NOT NULL,
+    "embeddingDimensions" INTEGER,
+    "embeddingCredentialCiphertext" TEXT,
+    "embeddingCredentialNonce" TEXT,
+    "embeddingCredentialTag" TEXT,
+    "embeddingCredentialKeyVersion" INTEGER,
+    "embeddingCredentialMaskedSuffix" TEXT,
+    "semanticInputVersion" TEXT NOT NULL,
+    "generationCompatibilityIdentity" TEXT NOT NULL,
+    "embeddingScopeIdentity" TEXT NOT NULL,
+    "compositeTestIdentity" TEXT NOT NULL,
+    "lifecycle" "AiProviderLifecycle" NOT NULL DEFAULT 'draft',
+    "testResult" JSONB,
+    "testedAt" TIMESTAMP(3),
+    "preparationCompleted" INTEGER NOT NULL DEFAULT 0,
+    "preparationTotal" INTEGER NOT NULL DEFAULT 0,
+    "preparationFailed" INTEGER NOT NULL DEFAULT 0,
+    "preparationStartedAt" TIMESTAMP(3),
+    "preparationFinishedAt" TIMESTAMP(3),
+    "preparationElapsedMs" INTEGER NOT NULL DEFAULT 0,
+    "preparationSourceFingerprint" TEXT,
+    "preparationSourceGeneration" BIGINT,
+    "activatedAt" TIMESTAMP(3),
+    "supersededAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "AiProviderConfiguration_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "AiProviderConfiguration_embedding_mode_shape_check" CHECK (
+      ("embeddingMode" = 'reuse_generation'
+        AND "embeddingProfile" IS NULL
+        AND "embeddingBaseUrl" IS NULL
+        AND "embeddingEndpointIdentity" IS NULL
+        AND "embeddingCredentialCiphertext" IS NULL
+        AND "embeddingCredentialNonce" IS NULL
+        AND "embeddingCredentialTag" IS NULL
+        AND "embeddingCredentialKeyVersion" IS NULL
+        AND "embeddingCredentialMaskedSuffix" IS NULL)
+      OR
+      ("embeddingMode" = 'separate'
+        AND "embeddingProfile" IS NOT NULL
+        AND "embeddingBaseUrl" IS NOT NULL
+        AND "embeddingEndpointIdentity" IS NOT NULL
+        AND "embeddingCredentialCiphertext" IS NOT NULL
+        AND "embeddingCredentialNonce" IS NOT NULL
+        AND "embeddingCredentialTag" IS NOT NULL
+        AND "embeddingCredentialKeyVersion" IS NOT NULL
+        AND "embeddingCredentialMaskedSuffix" IS NOT NULL)
+    )
+);
+
+CREATE TABLE "AiPromptBundleRevision" (
+    "id" TEXT NOT NULL,
+    "featureKey" TEXT NOT NULL,
+    "revision" INTEGER NOT NULL,
+    "baseRevisionId" TEXT,
+    "coreContractVersion" TEXT NOT NULL,
+    "composerVersion" TEXT NOT NULL,
+    "servingContractVersion" TEXT,
+    "lockedCoreSnapshot" JSONB NOT NULL,
+    "promptContents" JSONB NOT NULL,
+    "effectiveContentHash" TEXT NOT NULL,
+    "lifecycle" "AiPromptBundleLifecycle" NOT NULL DEFAULT 'draft',
+    "createdBy" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "activatedAt" TIMESTAMP(3),
+    "supersededAt" TIMESTAMP(3),
+
+    CONSTRAINT "AiPromptBundleRevision_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "AiFeaturePromptControl" (
+    "id" TEXT NOT NULL,
+    "featureKey" TEXT NOT NULL,
+    "activeRevisionId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "AiFeaturePromptControl_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "AiProviderTestExecution" (
+    "id" TEXT NOT NULL,
+    "identity" TEXT NOT NULL,
+    "providerRevisionId" TEXT NOT NULL,
+    "testSuiteVersion" TEXT NOT NULL,
+    "state" "AiProviderTestExecutionState" NOT NULL DEFAULT 'queued',
+    "outcome" "AiProviderTestOutcome",
+    "failureCode" TEXT,
+    "checks" JSONB,
+    "requestedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "startedAt" TIMESTAMP(3),
+    "executionAttempt" INTEGER,
+    "completedAt" TIMESTAMP(3),
+
+    CONSTRAINT "AiProviderTestExecution_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "AiProviderControl" (
+    "id" TEXT NOT NULL DEFAULT 'singleton',
+    "activeConfigurationId" TEXT,
+    "enabled" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "AiProviderControl_pkey" PRIMARY KEY ("id")
+);
+
+CREATE INDEX "SemanticEmbedding_provider_model_inputVersion_dimensions_idx"
+  ON "SemanticEmbedding"("provider", "model", "inputVersion", "dimensions");
+CREATE INDEX "AiProviderConfiguration_lifecycle_updatedAt_idx"
+  ON "AiProviderConfiguration"("lifecycle", "updatedAt" DESC);
+CREATE INDEX "AiProviderConfiguration_generationCompatibilityIdentity_idx"
+  ON "AiProviderConfiguration"("generationCompatibilityIdentity");
+CREATE INDEX "AiProviderConfiguration_embeddingScopeIdentity_idx"
+  ON "AiProviderConfiguration"("embeddingScopeIdentity");
+CREATE INDEX "AiProviderConfiguration_compositeTestIdentity_idx"
+  ON "AiProviderConfiguration"("compositeTestIdentity");
+CREATE INDEX "AiProviderConfiguration_embeddingEndpointIdentity_embedding_idx"
+  ON "AiProviderConfiguration"("embeddingEndpointIdentity", "embeddingModel", "semanticInputVersion", "embeddingDimensions");
+
+-- Database-enforced semantic source generation. The trigger list covers every
+-- mutable row reachable from the live report occurrence aggregate, plus the
+-- report snapshot metadata. Activation locks and compares this singleton in
+-- its pointer transaction, closing the prepare/activate TOCTOU at the DB
+-- boundary instead of relying on an application fingerprint read.
+CREATE TABLE "SemanticSourceState" (
+    "id" TEXT NOT NULL DEFAULT 'singleton',
+    "generation" BIGINT NOT NULL DEFAULT 0,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    CONSTRAINT "SemanticSourceState_pkey" PRIMARY KEY ("id")
+);
+INSERT INTO "SemanticSourceState" ("id", "generation", "updatedAt")
+VALUES ('singleton', 0, CURRENT_TIMESTAMP);
+
+CREATE OR REPLACE FUNCTION bump_semantic_source_generation()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  INSERT INTO "SemanticSourceState" ("id", "generation", "updatedAt")
+  VALUES ('singleton', 1, CURRENT_TIMESTAMP)
+  ON CONFLICT ("id") DO UPDATE
+    SET "generation" = "SemanticSourceState"."generation" + 1,
+        "updatedAt" = CURRENT_TIMESTAMP;
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+CREATE TRIGGER "Report_semantic_source_generation"
+AFTER INSERT OR UPDATE OR DELETE ON "Report"
+FOR EACH ROW EXECUTE FUNCTION bump_semantic_source_generation();
+CREATE TRIGGER "ReportSection_semantic_source_generation"
+AFTER INSERT OR UPDATE OR DELETE ON "ReportSection"
+FOR EACH ROW EXECUTE FUNCTION bump_semantic_source_generation();
+CREATE TRIGGER "ProjectStatus_semantic_source_generation"
+AFTER INSERT OR UPDATE OR DELETE ON "ProjectStatus"
+FOR EACH ROW EXECUTE FUNCTION bump_semantic_source_generation();
+CREATE TRIGGER "StageStatus_semantic_source_generation"
+AFTER INSERT OR UPDATE OR DELETE ON "StageStatus"
+FOR EACH ROW EXECUTE FUNCTION bump_semantic_source_generation();
+CREATE TRIGGER "ActivityStatus_semantic_source_generation"
+AFTER INSERT OR UPDATE OR DELETE ON "ActivityStatus"
+FOR EACH ROW EXECUTE FUNCTION bump_semantic_source_generation();
+CREATE TRIGGER "Item_semantic_source_generation"
+AFTER INSERT OR UPDATE OR DELETE ON "Item"
+FOR EACH ROW EXECUTE FUNCTION bump_semantic_source_generation();
+CREATE TRIGGER "Risk_semantic_source_generation"
+AFTER INSERT OR UPDATE OR DELETE ON "Risk"
+FOR EACH ROW EXECUTE FUNCTION bump_semantic_source_generation();
+CREATE TRIGGER "Decision_semantic_source_generation"
+AFTER INSERT OR UPDATE OR DELETE ON "Decision"
+FOR EACH ROW EXECUTE FUNCTION bump_semantic_source_generation();
+CREATE TRIGGER "Project_semantic_source_generation"
+AFTER INSERT OR UPDATE OR DELETE ON "Project"
+FOR EACH ROW EXECUTE FUNCTION bump_semantic_source_generation();
+CREATE TRIGGER "ProjectActivity_semantic_source_generation"
+AFTER INSERT OR UPDATE OR DELETE ON "ProjectActivity"
+FOR EACH ROW EXECUTE FUNCTION bump_semantic_source_generation();
+CREATE TRIGGER "Stage_semantic_source_generation"
+AFTER INSERT OR UPDATE OR DELETE ON "Stage"
+FOR EACH ROW EXECUTE FUNCTION bump_semantic_source_generation();
+CREATE INDEX "AiPromptBundleRevision_featureKey_lifecycle_updatedAt_idx"
+  ON "AiPromptBundleRevision"("featureKey", "lifecycle", "updatedAt" DESC);
+CREATE INDEX "AiPromptBundleRevision_effectiveContentHash_idx"
+  ON "AiPromptBundleRevision"("effectiveContentHash");
+CREATE UNIQUE INDEX "AiPromptBundleRevision_featureKey_revision_key"
+  ON "AiPromptBundleRevision"("featureKey", "revision");
+CREATE UNIQUE INDEX "AiFeaturePromptControl_featureKey_key"
+  ON "AiFeaturePromptControl"("featureKey");
+CREATE UNIQUE INDEX "AiFeaturePromptControl_activeRevisionId_key"
+  ON "AiFeaturePromptControl"("activeRevisionId");
+CREATE INDEX "AiFeaturePromptControl_activeRevisionId_idx"
+  ON "AiFeaturePromptControl"("activeRevisionId");
+CREATE UNIQUE INDEX "AiProviderTestExecution_identity_key"
+  ON "AiProviderTestExecution"("identity");
+CREATE INDEX "AiProviderTestExecution_providerRevisionId_requestedAt_idx"
+  ON "AiProviderTestExecution"("providerRevisionId", "requestedAt" DESC);
+CREATE INDEX "AiProviderTestExecution_state_requestedAt_idx"
+  ON "AiProviderTestExecution"("state", "requestedAt");
+CREATE UNIQUE INDEX "AiProviderControl_activeConfigurationId_key"
+  ON "AiProviderControl"("activeConfigurationId");
+CREATE INDEX "AiProviderControl_activeConfigurationId_idx"
+  ON "AiProviderControl"("activeConfigurationId");
+
+ALTER TABLE "AiPromptBundleRevision"
+  ADD CONSTRAINT "AiPromptBundleRevision_baseRevisionId_fkey"
+  FOREIGN KEY ("baseRevisionId") REFERENCES "AiPromptBundleRevision"("id")
+  ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "AiFeaturePromptControl"
+  ADD CONSTRAINT "AiFeaturePromptControl_activeRevisionId_fkey"
+  FOREIGN KEY ("activeRevisionId") REFERENCES "AiPromptBundleRevision"("id")
+  ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "AiProviderTestExecution"
+  ADD CONSTRAINT "AiProviderTestExecution_providerRevisionId_fkey"
+  FOREIGN KEY ("providerRevisionId") REFERENCES "AiProviderConfiguration"("id")
+  ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "AiProviderControl"
+  ADD CONSTRAINT "AiProviderControl_activeConfigurationId_fkey"
+  FOREIGN KEY ("activeConfigurationId") REFERENCES "AiProviderConfiguration"("id")
+  ON DELETE SET NULL ON UPDATE CASCADE;

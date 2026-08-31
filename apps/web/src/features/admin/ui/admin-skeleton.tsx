@@ -40,22 +40,27 @@ export function AdminTabSkeleton({ variant }: AdminTabSkeletonProps) {
         <Skeleton className="h-4 w-40" />
         <Skeleton className="h-11 w-32 rounded-[var(--radius-pill)]" />
       </div>
-      <div className="rounded-[var(--radius)] border border-[var(--color-border)]">
-        <div className="grid grid-cols-5 gap-4 border-b border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3">
-          {tableColumnIndexes.map((col) => (
-            <Skeleton key={col} className="h-4 w-24" />
-          ))}
-        </div>
-        {tableBodyRowIndexes.map((row) => (
-          <div
-            key={row}
-            className="grid grid-cols-5 gap-4 border-b border-[var(--color-border)] px-4 py-3 last:border-0"
-          >
+      <div
+        className="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-border)]"
+        data-testid="skeleton-table-grid"
+      >
+        <div className="min-w-[36rem]">
+          <div className="grid grid-cols-5 gap-4 border-b border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3">
             {tableColumnIndexes.map((col) => (
-              <Skeleton key={col} className="h-4 w-full" />
+              <Skeleton key={col} className="h-4 w-24" />
             ))}
           </div>
-        ))}
+          {tableBodyRowIndexes.map((row) => (
+            <div
+              key={row}
+              className="grid grid-cols-5 gap-4 border-b border-[var(--color-border)] px-4 py-3 last:border-0"
+            >
+              {tableColumnIndexes.map((col) => (
+                <Skeleton key={col} className="h-4 w-full" />
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

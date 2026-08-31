@@ -12,7 +12,7 @@ interface GroupsTableProps {
 
 // Compact table-row actions (denser than --touch-target-min header controls).
 const ROW_ACTION_CLASS =
-  "btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] bg-[var(--color-card)] px-3 text-xs font-semibold transition-colors";
+  "btn-press inline-flex min-h-[34px] max-md:min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] bg-[var(--color-card)] px-3 text-xs font-semibold transition-colors";
 const ROW_ACTION_EDIT_CLASS = `${ROW_ACTION_CLASS} text-[var(--color-starbucks-accent)] hover:border-[var(--color-border-accent-hover)] hover:bg-[var(--color-success)]`;
 const ROW_ACTION_ARCHIVE_CLASS = `${ROW_ACTION_CLASS} text-[var(--color-destructive)] hover:border-[color-mix(in_srgb,var(--color-destructive)_30%,transparent)] hover:bg-[var(--color-status-blocked-bg)]`;
 

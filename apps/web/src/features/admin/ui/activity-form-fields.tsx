@@ -27,6 +27,9 @@ function ActivityNameField({
       <input
         id="activity-name"
         type="text"
+        name="activityName"
+        autoComplete="off"
+        required
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={FIELD_CONTROL_CLASS}
@@ -55,6 +58,9 @@ function ReportingGroupField({
       </label>
       <select
         id="activity-group"
+        name="groupId"
+        autoComplete="off"
+        required
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
         disabled={lockedByLeads}
@@ -112,6 +118,7 @@ function LinkedProductsField({
               <label className="flex cursor-pointer items-center gap-2 rounded-sm px-1 py-0.5 text-sm text-[var(--color-foreground)] hover:bg-[var(--color-muted)]">
                 <input
                   type="checkbox"
+                  name="linkedProductIds"
                   checked={linkedProductIds.has(product.id)}
                   onChange={(e) =>
                     onFormChange(
@@ -146,6 +153,8 @@ function JiraAccountsField({
       <input
         id="activity-jira"
         type="text"
+        name="jiraAccounts"
+        autoComplete="off"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="ACME, PLATFORM"

@@ -23,7 +23,7 @@ export function UserEditDialogShell({
     <DialogSurface
       surfaceRef={surfaceRef}
       onDismiss={onClose}
-      surfaceClassName="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl"
+      surfaceClassName="animate-scale-in mx-4 flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl"
       ariaLabel={ariaLabel}
       testId="crud-sheet"
     >

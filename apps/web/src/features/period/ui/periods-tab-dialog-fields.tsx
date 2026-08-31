@@ -19,9 +19,9 @@ interface CreatePeriodFieldsProps {
 }
 
 const FIELD_CLASS =
-  "w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]";
+  "w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm text-[var(--color-foreground)] focus-visible:border-[var(--color-starbucks-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]";
 const INVALID_FIELD_CLASS =
-  "w-full rounded-[var(--radius-sm)] border px-3 py-2 text-sm text-[var(--color-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] border-[var(--color-destructive)] bg-[var(--color-status-blocked-bg)] focus:border-[var(--color-destructive)]";
+  "w-full rounded-[var(--radius-sm)] border px-3 py-2 text-sm text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] border-[var(--color-destructive)] bg-[var(--color-status-blocked-bg)] focus-visible:border-[var(--color-destructive)]";
 
 function OptionalHint() {
   return (
@@ -60,6 +60,7 @@ function FieldError({
   return (
     <p
       id={id}
+      role="alert"
       data-testid={testId}
       className="mt-1 text-xs text-[var(--color-destructive)]"
     >
@@ -81,6 +82,8 @@ function PeriodStartField({
       <input
         id="period-start"
         type="date"
+        name="periodStart"
+        autoComplete="off"
         value={periodStart}
         onChange={(e) => onPeriodStartChange(e.target.value)}
         required
@@ -113,6 +116,8 @@ function PeriodEndField({
       <input
         id="period-end"
         type="date"
+        name="periodEnd"
+        autoComplete="off"
         value={periodEnd}
         onChange={(e) => onPeriodEndChange(e.target.value)}
         required={isEdit}
@@ -150,6 +155,8 @@ function DeadlineField({
       <input
         id="period-deadline"
         type="datetime-local"
+        name="deadline"
+        autoComplete="off"
         value={deadline}
         onChange={(e) => onDeadlineChange(e.target.value)}
         aria-invalid={deadlineError !== null}
@@ -189,6 +196,8 @@ function WeekLabelField({
       <input
         id="period-label"
         type="text"
+        name="weekLabel"
+        autoComplete="off"
         value={weekLabel}
         onChange={(e) => onWeekLabelChange(e.target.value)}
         maxLength={MAX_WEEK_LABEL_LENGTH}

@@ -16,6 +16,17 @@ import {
   AdminUserPublishedHistoryError,
   AdminUserReportingGroupRequiredError,
 } from "../../modules/admin/index.js";
+import {
+  AiPromptConfigurationError,
+  AiPromptConflictError,
+  AiPromptNotFoundError,
+} from "../../modules/ai-prompts/index.js";
+import {
+  AiProviderConfigurationError,
+  AiProviderNotFoundError,
+  CredentialCodecError,
+  ProviderUrlPolicyError,
+} from "../../modules/ai-provider/index.js";
 import { ArchiveDomainError } from "../../modules/archive/index.js";
 import {
   CarryOverConflictError,
@@ -337,6 +348,43 @@ describe("mapDomainError", () => {
 
 describe("mapDomainError — exhaustive domain-error → code coverage", () => {
   const cases = [
+    {
+      name: "AiProviderConfigurationError",
+      make: () => new AiProviderConfigurationError("m"),
+      code: "BAD_REQUEST",
+    },
+    {
+      name: "AiProviderNotFoundError",
+      make: () => new AiProviderNotFoundError(),
+      code: "NOT_FOUND",
+      message: "AI provider configuration was not found",
+    },
+    {
+      name: "CredentialCodecError",
+      make: () => new CredentialCodecError("m"),
+      code: "BAD_REQUEST",
+    },
+    {
+      name: "ProviderUrlPolicyError",
+      make: () => new ProviderUrlPolicyError("m"),
+      code: "BAD_REQUEST",
+    },
+    {
+      name: "AiPromptConfigurationError",
+      make: () => new AiPromptConfigurationError("m"),
+      code: "BAD_REQUEST",
+    },
+    {
+      name: "AiPromptConflictError",
+      make: () => new AiPromptConflictError("m"),
+      code: "CONFLICT",
+    },
+    {
+      name: "AiPromptNotFoundError",
+      make: () => new AiPromptNotFoundError(),
+      code: "NOT_FOUND",
+      message: "AI prompt revision was not found",
+    },
     {
       name: "SectionVersionConflictError",
       make: () => new SectionVersionConflictError("m"),
