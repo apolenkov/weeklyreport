@@ -5,6 +5,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -232,6 +233,36 @@ describe("LeadReportAssistant", () => {
       ),
     ).toBe(false);
     consoleError.mockRestore();
+  });
+
+  it("preserves Markdown heading levels and list semantics", () => {
+    render(
+      <LeadReportAssistantMarkdown
+        markdown={"# Overview\n## Details\n### Note\n- First\n* Second"}
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Overview" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Details" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 3, name: "Note" }),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("list")).getAllByRole("listitem"),
+    ).toHaveLength(2);
+  });
+
+  it("uses the shared mobile touch target for assistant submit", async () => {
+    renderAssistant();
+    await openAssistant();
+
+    expect(
+      screen.getByRole("button", { name: "Ask report chat" }),
+    ).toHaveAttribute("data-size", "touch");
   });
 
   it("resubmits the original question plus the selected clarification token", async () => {
