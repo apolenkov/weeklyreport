@@ -1,5 +1,7 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { logoutThenRedirect } from "../../lib/navigation/logout-then-redirect";
@@ -8,13 +10,21 @@ const LOGOUT_BUTTON_CLASS =
   "inline-flex h-[var(--toolbar-control-h)] min-w-[var(--toolbar-control-h)] w-10 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)]";
 
 export function NavLogoutButton() {
+  const queryClient = useQueryClient();
+  const [pending, setPending] = useState(false);
+
   return (
     <button
       type="button"
+      disabled={pending}
+      aria-busy={pending}
       onClick={() => {
-        logoutThenRedirect("/", () => {
+        setPending(true);
+        const started = logoutThenRedirect(queryClient, "/", () => {
+          setPending(false);
           toast.error("Sign out failed. You are still signed in.");
         });
+        if (!started) setPending(false);
       }}
       data-testid="nav-logout"
       aria-label="Sign out"

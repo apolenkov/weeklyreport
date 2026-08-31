@@ -11,10 +11,15 @@ import {
   type Observable,
   observable,
   type Observer,
+  type Unsubscribable,
 } from "@trpc/server/observable";
 import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
 import superjson from "superjson";
 
+import {
+  isSessionTransitionActive,
+  runAfterSessionTransition,
+} from "../auth/session-transition";
 import { createTraceparent } from "../telemetry/trace-context";
 
 // Pages where a 401 must not redirect (would loop): login and /auth/* callbacks.
@@ -46,6 +51,9 @@ export function createAuthRedirectHandler(): (err: unknown) => boolean {
     const isUnauthorized =
       httpStatus === HTTP_UNAUTHORIZED || code === "UNAUTHORIZED";
     if (!isUnauthorized) return false;
+    // An explicit logout/role switch owns navigation. Swallow a late 401 from
+    // old-session work so it cannot replace the intended destination.
+    if (isSessionTransitionActive()) return true;
 
     const { pathname, search } = window.location;
     if (AUTH_REDIRECT_EXEMPT.test(pathname)) return false;
@@ -55,6 +63,36 @@ export function createAuthRedirectHandler(): (err: unknown) => boolean {
     window.location.assign(`/?next=${encodeURIComponent(pathname + search)}`);
     return true;
   };
+}
+
+function subscribeAfterSessionTransition<TValue, TError>(
+  source: Observable<TValue, TError>,
+  observer: Observer<TValue, TError>,
+  signal: AbortSignal | null | undefined,
+): () => void {
+  const state: { subscription?: Unsubscribable } = {};
+  const stopWaiting = runAfterSessionTransition(() => {
+    if (signal?.aborted) {
+      observer.complete();
+      return;
+    }
+    state.subscription = source.subscribe(observer);
+  });
+
+  return () => {
+    stopWaiting();
+    state.subscription?.unsubscribe();
+  };
+}
+
+export function createSessionTransitionLink(): TRPCLink<AppRouter> {
+  return () =>
+    ({ next, op }) => {
+      const source = next(op);
+      return observable((observer) =>
+        subscribeAfterSessionTransition(source, observer, op.signal),
+      );
+    };
 }
 
 function forwardUnlessRedirecting<TValue, TError>(
@@ -101,6 +139,7 @@ export function makeTRPCClient() {
 
   return createTRPCClientCore<AppRouter>({
     links: [
+      createSessionTransitionLink(),
       // Auth redirect MUST come before the transport so it can observe the
       // network error stream and short-circuit before the caller sees it.
       createAuthRedirectLink(),

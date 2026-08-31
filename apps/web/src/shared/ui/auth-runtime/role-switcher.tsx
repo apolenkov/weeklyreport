@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@customreport/ui/components/ui/dropdown-menu";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Users } from "lucide-react";
 import type { RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
@@ -140,6 +140,7 @@ function useDevRoleSwitcher() {
   );
   const [focusRecoveryToken, setFocusRecoveryToken] = useState(0);
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
 
   const enabled = webEnv.devRoleSwitcher();
 
@@ -157,7 +158,11 @@ function useDevRoleSwitcher() {
     recoverFromFailure();
     alert(LOGOUT_FAILED_MESSAGE);
   };
-  const logoutThen = (href: string) => logoutThenRedirect(href, stayLoggedIn);
+  const logoutThen = (href: string) => {
+    const started = logoutThenRedirect(queryClient, href, stayLoggedIn);
+    if (!started) recoverFromFailure();
+    return started;
+  };
 
   const wipeAndReseedMut = useMutation(
     trpc.dev.wipeAndReseed.mutationOptions({
