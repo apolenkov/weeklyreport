@@ -16,8 +16,8 @@ import {
   runInJobTraceContext,
 } from "./worker-observability.js";
 
-// Raw `Worker` (not @Processor/WorkerHost) avoids the DiscoveryService DI bug
-// in @nestjs/bullmq 11 with NestJS 11. Subclass supplies queue/span/handler.
+// Raw `Worker` owns one explicit lifecycle for CLS/Sentry wrapping, liveness,
+// and the failure hook. Subclasses supply only queue, span, and handler policy.
 class WorkerLifecycle<TData> {
   private worker: Worker<TData> | null = null;
 

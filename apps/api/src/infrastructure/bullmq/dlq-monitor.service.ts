@@ -32,9 +32,13 @@ const POLL_INTERVAL_MS = 60_000;
 const REDIS_MEMORY_WARN_RATIO = 0.8;
 const PERCENT_SCALE = 100;
 const REDIS_MEMORY_WARN_PERCENT = REDIS_MEMORY_WARN_RATIO * PERCENT_SCALE;
-// Any registry queue's shared connection can serve the INFO probe; the queues
-// all point at the same Redis instance.
-const MEMORY_PROBE_QUEUE = QUEUE_NAMES[0];
+
+export interface RedisMemoryClient {
+  readonly info: () => Promise<string>;
+  readonly disconnect: () => void;
+}
+
+export const DLQ_MEMORY_CLIENT = Symbol("DlqMemoryClient");
 
 // Anchored `used_memory:` match excludes siblings like used_memory_rss/peak.
 // Returns null when absent or non-numeric so the gauge is never set bogus.
@@ -53,6 +57,7 @@ function parseUsedMemoryBytes(info: string): number | null {
 export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(DLQMonitorService.name);
   private readonly queueEvents = new Map<QueueName, QueueEvents>();
+  private readonly memoryClient: RedisMemoryClient;
   // The interval handle only exists between onModuleInit and onModuleDestroy,
   // so it cannot be a constructor-time readonly.
   private pollTimer: NodeJS.Timeout | null = null;
@@ -60,7 +65,10 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
   constructor(
     @Inject(QueueRegistry) private readonly registry: QueueRegistryLike,
     @Inject(ENV_CONFIG) private readonly env: EnvConfig,
-  ) {}
+    @Inject(DLQ_MEMORY_CLIENT) memoryClient: RedisMemoryClient,
+  ) {
+    this.memoryClient = memoryClient;
+  }
 
   onModuleInit(): void {
     const bullOptions = getBullMQOptions(this.env);
@@ -102,6 +110,7 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
     for (const events of this.queueEvents.values()) {
       await events.close();
     }
+    this.memoryClient.disconnect();
   }
 
   // Sole owner of cr_dlq_failed_total — workers must not also inc. BullMQ emits
@@ -182,8 +191,7 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
 
   private async checkRedisMemory(): Promise<void> {
     try {
-      const client = await this.registry.get(MEMORY_PROBE_QUEUE).client;
-      const used = parseUsedMemoryBytes(await client.info());
+      const used = parseUsedMemoryBytes(await this.memoryClient.info());
       if (used === null) {
         this.logger.warn(
           "[redis-mem] used_memory absent from INFO reply — skipping this poll",

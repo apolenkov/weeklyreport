@@ -2,7 +2,7 @@ import { request } from "node:http";
 import type { AddressInfo } from "node:net";
 
 import express from "express";
-import type Redis from "ioredis";
+import type { Redis } from "ioredis";
 import { describe, expect, it, vi } from "vitest";
 
 import type { AppLogger } from "../../lib/logger";
@@ -57,7 +57,10 @@ describe("rate-limit Redis readiness", () => {
       call.mockRejectedValue(new Error("redis unavailable"));
       const degradedStatus = await postStatus(port);
       expect(degradedStatus).toBe(204);
-      expect(call).toHaveBeenCalledTimes(2);
+      // rate-limit-redis retries only an explicit NOSCRIPT reply. Retrying an
+      // indeterminate transport failure could double-count a committed hit.
+      expect(call).toHaveBeenCalledOnce();
+      expect(call.mock.calls[0]?.[0]).toBe("EVALSHA");
       expect(storeError).toHaveBeenCalledOnce();
 
       call.mockClear();

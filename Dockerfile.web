@@ -1,7 +1,7 @@
 # Stage 1: Base with pnpm and turbo
 FROM node:24-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf AS base
 RUN apk add --no-cache libc6-compat
-RUN npm install -g pnpm@11.17.0 turbo@2.10.7
+RUN npm install -g pnpm@11.24.0 turbo@2.10.12
 
 # Stage 2: Prune monorepo for web workspace
 FROM base AS pruner

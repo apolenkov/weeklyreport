@@ -3,7 +3,7 @@ import { request } from "node:http";
 import type { AddressInfo } from "node:net";
 
 import express from "express";
-import Redis from "ioredis";
+import { Redis } from "ioredis";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { requireEnv } from "../../lib/env";

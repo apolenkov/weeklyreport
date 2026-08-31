@@ -5,11 +5,17 @@ import {
 } from "@nestjs/bullmq";
 import { Module } from "@nestjs/common";
 import type { DefaultJobOptions, Queue } from "bullmq";
+import { Redis } from "ioredis";
 
 import { ConfigModule, ENV_CONFIG } from "../config/config.module.js";
 import type { EnvConfig } from "../config/env.schema";
+import { buildFailOpenRedisConnectionOptions } from "../config/redis-connection";
 import { getBullMQOptions } from "./bullmq-options";
-import { DLQMonitorService } from "./dlq-monitor.service.js";
+import {
+  DLQ_MEMORY_CLIENT,
+  DLQMonitorService,
+  type RedisMemoryClient,
+} from "./dlq-monitor.service.js";
 import {
   QUEUE_NAMES,
   type QueueName,
@@ -50,10 +56,24 @@ function registerQueueOptionsFor(name: QueueName): RegisterQueueOptions {
       inject: QUEUE_NAMES.map((name) => getQueueToken(name)),
     },
     {
+      provide: DLQ_MEMORY_CLIENT,
+      useFactory: (env: EnvConfig): RedisMemoryClient => {
+        const client = new Redis({
+          ...buildFailOpenRedisConnectionOptions(env),
+        });
+        client.on("error", () => undefined);
+        return client;
+      },
+      inject: [ENV_CONFIG],
+    },
+    {
       provide: DLQMonitorService,
-      useFactory: (registry: QueueRegistry, env: EnvConfig) =>
-        new DLQMonitorService(registry, env),
-      inject: [QueueRegistry, ENV_CONFIG],
+      useFactory: (
+        registry: QueueRegistry,
+        env: EnvConfig,
+        memoryClient: RedisMemoryClient,
+      ) => new DLQMonitorService(registry, env, memoryClient),
+      inject: [QueueRegistry, ENV_CONFIG, DLQ_MEMORY_CLIENT],
     },
   ],
   exports: [BullModule, QueueRegistry, WorkerLivenessRegistry],

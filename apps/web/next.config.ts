@@ -19,6 +19,7 @@ const nextConfig: NextConfig = {
   reactCompiler: true,
   transpilePackages: ["@customreport/ui"],
   experimental: {
+    useTypeScriptCli: false,
     optimizePackageImports: ["lucide-react", "recharts"],
   },
   allowedDevOrigins: ["127.0.0.1", "localhost"],
