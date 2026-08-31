@@ -101,27 +101,6 @@ export const startProviderTestExecution = async (
   return reclaimed.count === 1;
 };
 
-export const updateProviderTestExecutionIdentity = async (
-  prisma: PrismaService,
-  id: string,
-  identity: string,
-  revisionId: string,
-): Promise<boolean> => {
-  const existing = await prisma.aiProviderTestExecution.findUnique({
-    where: { id },
-    select: { identity: true },
-  });
-  if (!existing) return false;
-  const retrySuffix = /:retry:\d+$/u.exec(existing.identity)?.[0] ?? "";
-  const result = await prisma.aiProviderTestExecution.updateMany({
-    where: { id },
-    data: {
-      identity: `${revisionExecutionIdentity(identity, revisionId)}${retrySuffix}`,
-    },
-  });
-  return result.count === 1;
-};
-
 export const completeProviderTestExecution = async (
   prisma: PrismaService,
   id: string,
