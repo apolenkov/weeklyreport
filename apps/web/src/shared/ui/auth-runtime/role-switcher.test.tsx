@@ -7,10 +7,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const useQueryMock = vi.fn();
 const useMutationMock = vi.fn();
+const cancelQueriesMock = vi.fn<() => Promise<void>>();
+const refetchQueriesMock =
+  vi.fn<(filters: { readonly type: "active" }) => Promise<void>>();
 
 vi.mock("@tanstack/react-query", () => ({
   useQuery: (opts: unknown): unknown => useQueryMock(opts),
   useMutation: (opts: unknown): unknown => useMutationMock(opts),
+  useQueryClient: () => ({
+    cancelQueries: cancelQueriesMock,
+    refetchQueries: refetchQueriesMock,
+  }),
 }));
 
 vi.mock("../../lib/trpc/trpc-context", () => ({
@@ -29,6 +36,7 @@ import type { DbRole } from "@customreport/shared";
 import { expectTypeOf } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
+import { beginSessionTransition } from "../../lib/auth/session-transition";
 import { DevRoleSwitcher, ROLE_ORDER } from "./role-switcher";
 
 const SEED_USER = {
@@ -140,6 +148,10 @@ describe("DevRoleSwitcher — logout honesty", () => {
     vi.stubEnv("NEXT_PUBLIC_DEV_ROLE_SWITCHER", "true");
     useQueryMock.mockReset();
     useMutationMock.mockReset();
+    cancelQueriesMock.mockReset();
+    cancelQueriesMock.mockResolvedValue(undefined);
+    refetchQueriesMock.mockReset();
+    refetchQueriesMock.mockResolvedValue(undefined);
     hrefAssign.mockReset();
     vi.stubGlobal("fetch", fetchMock);
     vi.stubGlobal("alert", vi.fn());
@@ -163,6 +175,54 @@ describe("DevRoleSwitcher — logout honesty", () => {
     });
   });
 
+  it("waits for active queries to stop before changing the session", async () => {
+    primeHooks("admin");
+    const cancellation = {
+      resolve: undefined as (() => void) | undefined,
+    };
+    cancelQueriesMock.mockReturnValue(
+      new Promise<void>((resolve) => {
+        cancellation.resolve = resolve;
+      }),
+    );
+    fetchMock.mockResolvedValue({ ok: false });
+    const user = userEvent.setup();
+
+    render(<DevRoleSwitcher />);
+    const trigger = screen.getByTestId("dev-role-switcher-trigger");
+    await user.click(trigger);
+    await user.click(screen.getByTestId("dev-role-switcher-logout"));
+
+    await waitFor(() => expect(cancelQueriesMock).toHaveBeenCalledOnce());
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(trigger).toBeDisabled();
+
+    expectDefined(cancellation.resolve)();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    await waitFor(() => expect(trigger).not.toBeDisabled());
+    expect(refetchQueriesMock).toHaveBeenCalledWith({ type: "active" });
+  });
+
+  it("recovers when another session control already owns navigation", async () => {
+    primeHooks("admin");
+    const transition = beginSessionTransition();
+    expect(transition).not.toBeNull();
+    const user = userEvent.setup();
+
+    try {
+      render(<DevRoleSwitcher />);
+      const trigger = screen.getByTestId("dev-role-switcher-trigger");
+      await user.click(trigger);
+      await user.click(screen.getByTestId("dev-role-switcher-logout"));
+
+      await waitFor(() => expect(trigger).not.toBeDisabled());
+      expect(cancelQueriesMock).not.toHaveBeenCalled();
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      transition?.finish();
+    }
+  });
+
   it("does not redirect and re-enables controls when logout responds non-OK", async () => {
     primeHooks("admin");
     const logoutResponse = {
@@ -181,6 +241,7 @@ describe("DevRoleSwitcher — logout honesty", () => {
     await user.click(screen.getByTestId("dev-role-switcher-logout"));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    expect(cancelQueriesMock).toHaveBeenCalledOnce();
     expect(hrefAssign).not.toHaveBeenCalled();
     expect(trigger).toBeDisabled();
     trigger.blur();
@@ -230,6 +291,7 @@ describe("DevRoleSwitcher — logout honesty", () => {
     await user.click(screen.getByTestId("dev-role-switcher-logout"));
 
     await waitFor(() => expect(hrefAssign).toHaveBeenCalledWith("/"));
+    expect(cancelQueriesMock).toHaveBeenCalledOnce();
   });
 });
 

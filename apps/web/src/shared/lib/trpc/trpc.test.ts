@@ -2,9 +2,11 @@ import { TRPCClientError, type TRPCClientRuntime } from "@trpc/client";
 import { observable } from "@trpc/server/observable";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { beginSessionTransition } from "../auth/session-transition";
 import {
   createAuthRedirectHandler,
   createAuthRedirectLink,
+  createSessionTransitionLink,
   isConflictError,
 } from "./trpc";
 
@@ -106,6 +108,18 @@ describe("createAuthRedirectHandler — 401 interceptor logic", () => {
     expect(handled).toBe(false);
     expect(assignSpy).not.toHaveBeenCalled();
   });
+
+  it("lets the explicit session transition own navigation on a late 401", () => {
+    stubLocation("/head/dashboard");
+    const transition = beginSessionTransition();
+    expect(transition).not.toBeNull();
+
+    const handled = createAuthRedirectHandler()(makeUnauthorizedError());
+
+    expect(handled).toBe(true);
+    expect(assignSpy).not.toHaveBeenCalled();
+    transition?.finish();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -196,6 +210,55 @@ describe("createAuthRedirectLink — observable seam", () => {
     expect(spies.next).toHaveBeenCalledWith(envelope);
     expect(spies.complete).toHaveBeenCalledTimes(1);
     expect(spies.error).not.toHaveBeenCalled();
+  });
+});
+
+describe("createSessionTransitionLink — observable seam", () => {
+  it("holds new operations until a failed transition releases the page", () => {
+    const transition = beginSessionTransition();
+    expect(transition).not.toBeNull();
+    const upstreamSubscribed = vi.fn();
+    const spies: SpySet = {
+      next: vi.fn(),
+      error: vi.fn(),
+      complete: vi.fn(),
+    };
+    const runtime: TRPCClientRuntime = {};
+    const opLink = createSessionTransitionLink()(runtime);
+    const source = observable<{ result: { data: string } }>((observer) => {
+      upstreamSubscribed();
+      observer.next({ result: { data: "ready" } });
+      observer.complete();
+    });
+
+    opLink({ next: () => source, op: makeOperation() }).subscribe(spies);
+    expect(upstreamSubscribed).not.toHaveBeenCalled();
+
+    transition?.finish();
+    expect(upstreamSubscribed).toHaveBeenCalledOnce();
+    expect(spies.next).toHaveBeenCalledWith({ result: { data: "ready" } });
+    expect(spies.complete).toHaveBeenCalledOnce();
+  });
+
+  it("drops a canceled waiter instead of sending it after release", () => {
+    const transition = beginSessionTransition();
+    expect(transition).not.toBeNull();
+    const upstreamSubscribed = vi.fn();
+    const runtime: TRPCClientRuntime = {};
+    const opLink = createSessionTransitionLink()(runtime);
+    const source = observable((observer) => {
+      upstreamSubscribed();
+      observer.complete();
+    });
+
+    const subscription = opLink({
+      next: () => source,
+      op: makeOperation(),
+    }).subscribe({});
+    subscription.unsubscribe();
+    transition?.finish();
+
+    expect(upstreamSubscribed).not.toHaveBeenCalled();
   });
 });
 
