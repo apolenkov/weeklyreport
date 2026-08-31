@@ -68,32 +68,3 @@ export function pauseBeforeReportCreate(
     },
   });
 }
-
-// Pauses immediately before the next ReportSection updateMany statement.
-export function pauseBeforeSectionUpdate(
-  prisma: PrismaClient,
-  pause: () => Promise<void>,
-): PrismaClient {
-  const updateMany = prisma.reportSection.updateMany.bind(prisma.reportSection);
-  const reportSection = new Proxy(prisma.reportSection, {
-    get(target, property): unknown {
-      if (property === "updateMany") {
-        return async (
-          ...args: Parameters<typeof prisma.reportSection.updateMany>
-        ) => {
-          await pause();
-          return updateMany(...args);
-        };
-      }
-      return Reflect.get(target, property, target) as unknown;
-    },
-  });
-  return new Proxy(prisma, {
-    get(target, property): unknown {
-      if (property === "reportSection") {
-        return reportSection;
-      }
-      return Reflect.get(target, property, target) as unknown;
-    },
-  });
-}

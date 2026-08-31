@@ -5,6 +5,7 @@ import { z } from "zod";
 // from session JWTs. requestedBy rebuilds the worker session as the requester.
 export interface PdfExportTokenClaims {
   reportId: string;
+  jobId: string;
   kind: "pdf-export";
   requestedBy: string;
 }
@@ -22,13 +23,13 @@ const MIN_PDF_EXPORT_JWT_SECRET_LENGTH = 32;
 // token without it would otherwise be accepted with no lifetime bound.
 const pdfExportTokenClaimsSchema = z.object({
   reportId: z.string().min(1),
+  jobId: z.uuid(),
   kind: z.literal(PDF_EXPORT_KIND),
   requestedBy: z.string().min(1),
   exp: z.number().int().positive(),
 });
 
-function requirePdfExportSecret(): string {
-  const secret = process.env.PDF_EXPORT_JWT_SECRET;
+function requirePdfExportSecret(secret: string | undefined): string {
   if (!secret || secret.length < MIN_PDF_EXPORT_JWT_SECRET_LENGTH) {
     throw new Error(
       "PDF_EXPORT_JWT_SECRET is missing or too short (must be >= 32 chars).",
@@ -38,8 +39,11 @@ function requirePdfExportSecret(): string {
 }
 
 // Fallback verifier for trpc.context after verifySessionToken fails.
-export function verifyPdfExportToken(token: string): PdfExportTokenClaims {
-  const secret = requirePdfExportSecret();
+export function verifyPdfExportToken(
+  token: string,
+  pdfExportJwtSecret: string | undefined,
+): PdfExportTokenClaims {
+  const secret = requirePdfExportSecret(pdfExportJwtSecret);
   const decoded = jwt.verify(token, secret, {
     algorithms: [PDF_EXPORT_JWT_ALGORITHM],
   });
@@ -55,6 +59,7 @@ export function verifyPdfExportToken(token: string): PdfExportTokenClaims {
   }
   return {
     reportId: parsed.data.reportId,
+    jobId: parsed.data.jobId,
     kind: parsed.data.kind,
     requestedBy: parsed.data.requestedBy,
   };
@@ -62,11 +67,14 @@ export function verifyPdfExportToken(token: string): PdfExportTokenClaims {
 
 export function signPdfExportToken(
   reportId: string,
+  jobId: string,
   requestedBy: string,
+  pdfExportJwtSecret: string | undefined,
 ): string {
-  const secret = requirePdfExportSecret();
+  const secret = requirePdfExportSecret(pdfExportJwtSecret);
   const claims: PdfExportTokenClaims = {
     reportId,
+    jobId,
     kind: PDF_EXPORT_KIND,
     // Bind the worker's render session to the requester so the export is
     // scoped exactly to their in-app view.

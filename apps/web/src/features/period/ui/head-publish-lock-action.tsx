@@ -11,7 +11,7 @@ import { SessionContext } from "../../../shared/lib/auth/session-provider";
 import { mutationErrorMessage } from "../../../shared/lib/errors/mutation-error-message";
 import { invalidatePeriodLifecycle } from "../../../shared/lib/query/cache-keys";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
-import { mapWeeklyReport, reportHasContent } from "../../report-sections";
+import { mapWeeklyReport } from "../../report-sections";
 import { PublishLockButton } from "./publish-lock-button";
 
 interface HeadPublishLockActionProps {
@@ -116,8 +116,7 @@ export function HeadPublishLockAction({
   const submitted = view.submissionCount;
   const total = view.totalLeads;
   const pendingCount = Math.max(0, total - submitted);
-  const hasExpandableProducts = view.products.some(reportHasContent);
-  const canPublishReport = submitted > 0 && hasExpandableProducts;
+  const canPublishReport = submitted > 0;
 
   return (
     <PublishLockButton

@@ -12,13 +12,44 @@ function prismaWith(
   existing: { groupId: string },
   groupRow: { name: string } | null,
 ): PrismaService {
-  return {
+  const tx = {
+    $queryRaw: vi.fn().mockResolvedValue([{ id: "lead-1" }]),
+    project: {
+      findUnique: vi
+        .fn()
+        .mockResolvedValueOnce({ leadId: "lead-1" })
+        .mockResolvedValueOnce({
+          leadId: "lead-1",
+          lead: { role: "lead", reportingGroupId: OWNER_GROUP },
+        }),
+      findUniqueOrThrow: vi.fn().mockResolvedValue({ leadId: "lead-1" }),
+    },
+    user: {
+      findUnique: vi
+        .fn()
+        .mockResolvedValue({ role: "lead", reportingGroupId: OWNER_GROUP }),
+    },
     groupProduct: {
-      findUnique: vi.fn().mockResolvedValue(existing),
+      findUnique: vi.fn().mockResolvedValue({
+        id: "edge-1",
+        productId: PRODUCT_ID,
+        ...existing,
+      }),
       create: vi.fn(),
     },
     reportingGroup: {
       findUnique: vi.fn().mockResolvedValue(groupRow),
+    },
+  };
+  return {
+    $transaction: vi.fn((operation: (client: typeof tx) => unknown) =>
+      Promise.resolve(operation(tx)),
+    ),
+    groupProduct: {
+      findUnique: vi.fn(),
+    },
+    reportingGroup: {
+      findUnique: vi.fn(),
     },
   } as unknown as PrismaService;
 }

@@ -23,32 +23,12 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./deploy/postgres/init-pg-stat-statements.sql:/docker-entrypoint-initdb.d/01-pg-stat-statements.sql:ro
     healthcheck:
-      # `postgres` exists on both legacy and fresh named volumes. The one-shot
-      # initializer below owns creation of the exact application database.
       test: ["CMD-SHELL", "pg_isready -U customreport -d postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
     ports:
       - "127.0.0.1:5432:5432"
-
-  local-database-init:
-    image: postgres:15-alpine@sha256:3d0f7584ed7d04e27fa050d6683a74746608faf21f202be78460d679cc56461f
-    command:
-      - "psql"
-      - "--host=postgres"
-      - "--username=customreport"
-      - "--dbname=postgres"
-      - "--set=ON_ERROR_STOP=1"
-      - "--file=/opt/customreport/ensure-local-database.sql"
-    environment:
-      PGPASSWORD: localdev
-    volumes:
-      - ./deploy/postgres/ensure-local-database.sql:/opt/customreport/ensure-local-database.sql:ro
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: "no"
 
   # Mailpit is a multi-arch image by axllent — SMTP :1025 + Web UI :8025.
   mailpit:
@@ -96,8 +76,8 @@ services:
     environment:
       DATABASE_URL: postgresql://customreport:localdev@postgres:5432/customreport_e2e
     depends_on:
-      local-database-init:
-        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
     restart: "no"
 
   api:
@@ -112,9 +92,12 @@ services:
       REDIS_PORT: 6379
       REDIS_DB: 0
       REDIS_MAXMEMORY_BYTES: 209715200
+      DB_POOL_MAX: 10
+      DB_POOL_IDLE_TIMEOUT_MS: 10000
+      DB_POOL_CONNECTION_TIMEOUT_MS: 0
       # This is the DEV compose (Mailpit catch-all, exposed ports,
       # dev secrets, AUTH_DEV_MODE on). Production uses docker-compose.prod.yml.
-      # The boot fence in env.schema.ts now refuses to start when both
+      # The boot fence in env.schema.ts refuses to start when both
       # NODE_ENV=production AND AUTH_DEV_MODE=true; keeping NODE_ENV=development
       # here matches the actual purpose of this compose.
       NODE_ENV: development
@@ -136,7 +119,7 @@ services:
       # Optional coverage vars (all .optional() in envSchema, each defaulting to
       # its consumer behaviour when absent): SENTRY_DSN,
       # CLIENT_LOG_FORWARDING, AUTH_DEV_MODE_ALLOW_TEST, CUSTOMREPORT_REPO_ROOT,
-      # DLQ_ALERT_THRESHOLD, AUTH_JWT_COOKIE_NAME. Add a pass-through line only to
+      # DLQ_ALERT_THRESHOLD. Add a pass-through line only to
       # override a default. See .env.example.
     depends_on:
       migrate:
@@ -163,16 +146,10 @@ services:
       context: .
       dockerfile: Dockerfile.web
       target: installer
-      args:
-        API_URL: http://api:3002
-        NEXT_PUBLIC_API_URL: http://localhost:3002
-        NEXT_PUBLIC_AUTH_STUB: "true"
-        NEXT_PUBLIC_DEV_ROLE_SWITCHER: "true"
     command: pnpm --filter @customreport/web exec next dev --webpack -H 0.0.0.0 -p 3000
     environment:
       NODE_ENV: development
       API_URL: http://api:3002
-      NEXT_PUBLIC_API_URL: http://localhost:3002
       NEXT_PUBLIC_AUTH_STUB: "true"
       NEXT_PUBLIC_DEV_ROLE_SWITCHER: "true"
       NEXT_DIST_DIR: .next-docker-dev

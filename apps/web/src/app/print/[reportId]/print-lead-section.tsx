@@ -83,8 +83,8 @@ function PrintLeadHeader({ report }: PrintLeadSectionProps) {
 
 function PrintNeedsAttention({ report }: PrintLeadSectionProps) {
   if (!report.needsAttention) return null;
-  // The projection guarantees severity alongside the text (ProductAttention);
-  // a missing severity here is a projection bug the type system now rejects.
+  // ProductAttention carries severity alongside its explanatory text; a
+  // missing severity is invalid at the projection boundary.
   return (
     <div
       style={{

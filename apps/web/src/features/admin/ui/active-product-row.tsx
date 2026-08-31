@@ -2,6 +2,7 @@
 
 import { STAGE_NAMES } from "@customreport/shared";
 
+import { RotatingChevron } from "../../../shared/ui/report-shell/rotating-chevron";
 import type { AdminProductView, AdminUserView } from "../model/admin-types";
 import { ProductGroupChips } from "./product-group-chips";
 import { StageAssignmentEditor } from "./stage-assignments/stage-assignment-editor";
@@ -82,7 +83,7 @@ function ProductSummary({
         aria-label={`${isExpanded ? "Collapse" : "Expand"} stage assignments for ${product.name}`}
         aria-expanded={isExpanded}
       >
-        <ChevronIcon expanded={isExpanded} />
+        <RotatingChevron expanded={isExpanded} />
       </button>
       <div className="min-w-0 flex-1 flex-col gap-1">
         <div>
@@ -171,21 +172,5 @@ function StageAssignmentDrawer({
         </div>
       </div>
     </div>
-  );
-}
-
-function ChevronIcon({ expanded }: { readonly expanded: boolean }) {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="h-4 w-4 transition-transform duration-200"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      style={{ transform: expanded ? "rotate(90deg)" : "rotate(0deg)" }}
-    >
-      <path d="M9 18l6-6-6-6" />
-    </svg>
   );
 }

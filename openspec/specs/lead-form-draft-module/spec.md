@@ -13,7 +13,7 @@ The lead-form draft lifecycle (draft state, reconciliation, save and save-echo c
 #### Scenario: Draft interactions are unit-testable through the handle
 
 - **WHEN** a test drives quick-add, save, conflict, and submit through the module's handle with a fake write seam
-- **THEN** the sequencing that previously depended on per-render ref refreshes is exercised deterministically in one unit test file
+- **THEN** the complete sequencing is exercised deterministically in one unit test file
 
 #### Scenario: No ref smuggling survives
 
@@ -24,16 +24,17 @@ The lead-form draft lifecycle (draft state, reconciliation, save and save-echo c
 
 - **WHEN** a lead-form child component's props are inspected
 - **THEN** each field is a value or handler the component itself reads
-- **AND** no props type references `ReturnType<typeof useLeadFormDraftMerges>` or sibling hook types
+- **AND** no props type references a draft hook's return type or a sibling hook type
 
-#### Scenario: Behavior is unchanged
+#### Scenario: The characterization suite covers the complete draft lifecycle
 
-- **WHEN** the pre-refactor characterization suite (autosave, save-echo, optimistic lock, quick-add, submit gating) runs against the deepened module
-- **THEN** every assertion passes without modification
+- **WHEN** the characterization suite covers autosave, save echo, optimistic
+  locking, quick add, and submit gating through the deep module
+- **THEN** every declared draft-lifecycle behavior passes
 
 ### Requirement: Stable serialization MUST distinguish payloads that differ only by Date value
 
-The Lead Form draft hashing function (`stableStringify`) MUST serialize a
+The Lead Form draft comparison-key encoder (`encodeAutosaveComparisonKey`) MUST serialize a
 `Date` value into a form that differs whenever the underlying instant
 differs, so that dirty-state detection and content-based record identity
 never collapse two distinct dates into the same key.
@@ -42,7 +43,7 @@ never collapse two distinct dates into the same key.
 
 - WHEN the current draft payload and the last-saved payload are identical
   except that one field is a `Date` and its value has changed
-- THEN `stableStringify` produces different keys for the two payloads
+- THEN `encodeAutosaveComparisonKey` produces different keys for the two payloads
 - AND the autosave hook's `dirty` flag becomes `true`
 
 #### Scenario: Same-text decisions with different deadlines keep distinct content keys
@@ -57,7 +58,7 @@ never collapse two distinct dates into the same key.
 
 - WHEN a payload contains only primitive, array, or plain-object fields (no
   `Date`)
-- THEN `stableStringify`'s output is unchanged from its current behavior
+- THEN `encodeAutosaveComparisonKey`'s output is unchanged from its current behavior
 
 ### Requirement: The data hook crosses the component seam as a declared slice
 

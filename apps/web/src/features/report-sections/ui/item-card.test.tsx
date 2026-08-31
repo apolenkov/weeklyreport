@@ -54,16 +54,12 @@ describe("ItemCard — stage tags container accessibility", () => {
     expect(container).toHaveAttribute("aria-label", "Item stages: S1, S2");
   });
 
-  it("stage tags container shows the 'No stage set' warning when no stageNames", () => {
+  it("does not render a warning for an empty product stage list", () => {
     render(<ItemCard item={{ ...BASE_ITEM, stageNames: [] }} />);
-    const container = screen.getByRole("img", {
-      name: "Item stages: No stage set",
-    });
-    expect(container).toHaveAttribute(
-      "aria-label",
-      "Item stages: No stage set",
-    );
-    expect(screen.getByText("No stage set")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("img", { name: /^Item stages:/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("No stage set")).not.toBeInTheDocument();
   });
 
   it("preserves distinct stage values instead of aliasing them", () => {
@@ -192,8 +188,8 @@ describe("ItemCard — uniform height", () => {
     expect(shortCard.style.height).toBe(EMPTY_STATE_REFERENCE_HEIGHT);
     expect(longCard.style.height).toBe(EMPTY_STATE_REFERENCE_HEIGHT);
     expect(shortCard.style.height).toBe(longCard.style.height);
-    // The old layout floored on min-height, which a long card could outgrow;
-    // the static render is fixed via `height`, never `min-height`.
+    // The static render fixes the card height through `height`, never
+    // `min-height`, so siblings retain the same footprint.
     expect(shortCard.style.minHeight).toBe("");
     expect(longCard.style.minHeight).toBe("");
   });
@@ -305,7 +301,7 @@ describe("ItemCard — risk-derived alarm status", () => {
     expect(screen.queryByText("Blocked")).not.toBeInTheDocument();
   });
 
-  it("trusts item.status when no risk set is threaded in (foreign/legacy path)", () => {
+  it("trusts item.status when no risk set is threaded in (foreign path)", () => {
     render(<ItemCard item={{ ...inProgress, status: "blocked" }} />);
     expect(screen.getByText("Blocked")).toBeInTheDocument();
   });

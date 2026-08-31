@@ -4,8 +4,15 @@ import {
   projectActivitySchema,
 } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import {
+  currentEditableReportWhere,
+  lockCurrentEditableReport,
+} from "../../lib/report-lifecycle.js";
+import { lockStatusGraph } from "../../lib/status-graph-lock.js";
+import { lockUser } from "../../lib/user-activity-assignment.js";
 import {
   assertGroupMoveAllowed,
   assertLeadAttachable,
@@ -136,30 +143,52 @@ export class ProjectActivityPrismaRepository implements ProjectActivityRepositor
 
   async attachLead(edge: ProjectActivityLeadEdge): Promise<void> {
     await runProjectActivityTransaction(this.prisma, async (tx) => {
+      await lockStatusGraph(tx);
+      await lockUser(tx, edge.leadId);
+      // Provisioning locks the parent report before creating a section. Lock
+      // every current editable parent first, otherwise a first provisioning
+      // transaction can be invisible to this transaction's section scan.
+      const lockedReports = await lockAllEditableReports(tx);
       await assertLeadAttachable(tx, edge);
       await tx.projectActivityLead.upsert({
         where: { activityId_leadId: edge },
         create: edge,
         update: {},
       });
+      const sections = await tx.reportSection.findMany({
+        where: { authorId: edge.leadId, reportId: { in: lockedReports } },
+        select: { id: true, reportId: true },
+      });
+      await tx.activityStatus.createMany({
+        data: sections.map((section) => ({
+          reportSectionId: section.id,
+          activityId: edge.activityId,
+          status: null,
+        })),
+        skipDuplicates: true,
+      });
     });
   }
 
   async detachLead(edge: ProjectActivityLeadEdge): Promise<void> {
-    // deleteMany is a no-op if already detached. Cascade ActivityStatus on
-    // open/reopened only — published history stays frozen for the signed record.
-    await this.prisma.$transaction([
-      this.prisma.projectActivityLead.deleteMany({ where: edge }),
-      this.prisma.activityStatus.deleteMany({
+    await runProjectActivityTransaction(this.prisma, async (tx) => {
+      await lockStatusGraph(tx);
+      const editableReports = await lockAllEditableReports(tx);
+      // The edge and its live status rows are one current-state mutation.
+      // Published/closed sections are deliberately outside the delete set.
+      await tx.projectActivityLead.deleteMany({ where: edge });
+      if (editableReports.length === 0) return;
+      const sections = await tx.reportSection.findMany({
+        where: { authorId: edge.leadId, reportId: { in: editableReports } },
+        select: { id: true },
+      });
+      await tx.activityStatus.deleteMany({
         where: {
           activityId: edge.activityId,
-          reportSection: {
-            authorId: edge.leadId,
-            report: { periodStatus: { in: ["open", "reopened"] } },
-          },
+          reportSectionId: { in: sections.map((section) => section.id) },
         },
-      }),
-    ]);
+      });
+    });
   }
 
   async groupExists(groupId: string): Promise<boolean> {
@@ -179,4 +208,20 @@ export class ProjectActivityPrismaRepository implements ProjectActivityRepositor
     });
     return products.map(({ id }) => id);
   }
+}
+
+async function lockAllEditableReports(
+  tx: Prisma.TransactionClient,
+): Promise<string[]> {
+  const candidates = await tx.report.findMany({
+    where: currentEditableReportWhere(),
+    select: { id: true },
+    orderBy: { id: "asc" },
+  });
+  const editableReports: string[] = [];
+  for (const { id: reportId } of candidates) {
+    const gate = await lockCurrentEditableReport(tx, { reportId });
+    if (gate.kind === "editable") editableReports.push(gate.reportId);
+  }
+  return editableReports;
 }

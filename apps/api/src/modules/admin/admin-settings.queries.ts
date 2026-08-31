@@ -52,9 +52,8 @@ function rowToAppSettings(row: {
   });
 }
 
-// The singleton row is provisioned by `prisma/seed.ts`; a READ that encounters
-// a missing row is a data-integrity failure, not a signal to materialize
-// defaults on the fly.
+// The canonical init migration provisions the singleton; a READ that encounters
+// a missing row is a data-integrity failure, not a signal to materialize defaults.
 export async function getSettings(prisma: PrismaService): Promise<AppSettings> {
   const row = await prisma.appSettings.findUnique({
     where: { id: "singleton" },
@@ -62,7 +61,7 @@ export async function getSettings(prisma: PrismaService): Promise<AppSettings> {
 
   if (!row) {
     throw new Error(
-      "AppSettings singleton row 'singleton' is missing — run the seed to provision it.",
+      "AppSettings singleton row 'singleton' is missing — apply the canonical init migration or restore the row.",
     );
   }
 
@@ -111,13 +110,12 @@ export async function updateSettings(
 ): Promise<AppSettings> {
   const dbData = appSettingsToRow(data);
 
-  const row = await prisma.appSettings.upsert({
+  // The canonical migration owns singleton creation. A partial update must
+  // fail if that invariant is broken instead of manufacturing a row from DB
+  // defaults and the caller's incomplete patch.
+  const row = await prisma.appSettings.update({
     where: { id: "singleton" },
-    create: {
-      id: "singleton",
-      ...dbData,
-    },
-    update: dbData,
+    data: dbData,
   });
 
   return rowToAppSettings(row);

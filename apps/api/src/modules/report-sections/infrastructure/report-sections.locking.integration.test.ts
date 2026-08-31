@@ -6,6 +6,7 @@ import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
+  publishedSnapshotFixture,
   seedTestData,
 } from "../../../test-utils/prisma-test-helper";
 import {
@@ -16,6 +17,7 @@ import { ReportSectionsPrismaRepository } from "./report-sections.prisma-reposit
 
 const testGraceSettings = () =>
   Promise.resolve({ gracePeriodHours: 0, allowLateSubmissions: true });
+const PUBLISHED_AT = new Date("2026-08-02T10:00:00.000Z");
 
 describe("ReportSectionsPrismaRepository (integration) — locking, identity & write gates", () => {
   const prisma = createTestPrisma();
@@ -120,6 +122,13 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
           status: "published",
           periodStatus: "published",
           periodState: "published",
+          publishedAt: PUBLISHED_AT,
+          publishedSnapshot: publishedSnapshotFixture({
+            reportId: testData.report.id,
+            periodStart: testData.report.periodStart,
+            periodEnd: testData.report.periodEnd,
+            publishedAt: PUBLISHED_AT,
+          }),
         },
       });
       const itemsBefore = await prisma.item.findMany({
@@ -295,9 +304,9 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
     });
   });
 
-  // Gate on periodStatus not legacy status; reopened stays editable.
+  // Gate on periodStatus, not just status; reopened stays editable.
   describe("period-status write gates", () => {
-    it("saveDraft persists on a reopened period even though the legacy status reads published", async () => {
+    it("saveDraft persists on a reopened period even though status reads published", async () => {
       await assignLeadToProject();
       await prisma.report.update({
         where: { id: testData.report.id },
@@ -305,8 +314,14 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
           status: "published",
           periodState: "open",
           periodStatus: "reopened",
-          publishedAt: new Date("2026-07-31T18:00:00.000Z"),
+          publishedAt: PUBLISHED_AT,
           reopenedAt: new Date("2026-08-01T09:00:00.000Z"),
+          publishedSnapshot: publishedSnapshotFixture({
+            reportId: testData.report.id,
+            periodStart: testData.report.periodStart,
+            periodEnd: testData.report.periodEnd,
+            publishedAt: PUBLISHED_AT,
+          }),
         },
       });
 
@@ -347,6 +362,7 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
           tag: "feature",
           workflowStatus: "in_progress",
           carriedOver: false,
+          stageNames: ["Development"],
         },
       });
       const risk = await prisma.risk.create({
@@ -357,6 +373,7 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
           impact: "High",
           mitigation: "Mitigate",
           severity: "at-risk",
+          stageNames: ["Development"],
         },
       });
       const decision = await prisma.decision.create({
@@ -366,12 +383,24 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
           text: "Live decision",
           owner: "Owner",
           impact: "Medium",
+          stageNames: ["Development"],
         },
       });
 
       await prisma.report.update({
         where: { id: testData.report.id },
-        data: { periodStatus: "published" },
+        data: {
+          status: "published",
+          periodStatus: "published",
+          periodState: "published",
+          publishedAt: PUBLISHED_AT,
+          publishedSnapshot: publishedSnapshotFixture({
+            reportId: testData.report.id,
+            periodStart: testData.report.periodStart,
+            periodEnd: testData.report.periodEnd,
+            publishedAt: PUBLISHED_AT,
+          }),
+        },
       });
 
       const service = new ReportSectionsService(repo, testGraceSettings);

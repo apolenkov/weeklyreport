@@ -59,8 +59,8 @@ different keys.
 
 ### Requirement: Published-floor analytics queries exclude reopened periods
 
-Published-floor analytics queries MUST require both legacy `status:
-'published'` and `periodStatus: 'published'`. A legacy-published report whose
+Published-floor analytics queries MUST require both companion `status:
+'published'` and `periodStatus: 'published'`. A publication-marked report whose
 period is currently reopened MUST be absent from `trafficLightHistory`,
 `leadVelocity`, and `periodComparison` until it is re-published.
 
@@ -76,6 +76,39 @@ period is currently reopened MUST be absent from `trafficLightHistory`,
   `'published'` again
 - **WHEN** any published-floor analytics query covers that report's period
 - **THEN** the report's re-published sections are included normally
+
+### Requirement: Settled analytics facts come only from the publication snapshot
+
+`trafficLightHistory`, `leadVelocity`, and `periodComparison` MUST derive
+published and archived facts from the validated immutable
+`publishedSnapshot`. They MUST NOT reconstruct statuses, risks, lead activity,
+or group ownership from mutable `ReportSection`, `ProjectStatus`, `Risk`, or
+`User` rows. DB-side admission MAY use `PublishedSectionScope`, but the returned
+facts and final scope filter MUST come from the canonical snapshot parser and
+its frozen section ownership. An absent, malformed, or report-mismatched
+snapshot MUST fail closed.
+
+#### Scenario: Recovery restores a publication without live sections
+
+- **GIVEN** a settled report has a valid immutable snapshot and frozen scope projection
+- **AND** its live section, status, and risk rows are absent after recovery
+- **WHEN** an authorized caller requests published analytics
+- **THEN** the result matches the metrics captured at publication time
+- **AND** a caller from another group receives none of those facts
+
+#### Scenario: Mutable ownership drifts after publication
+
+- **GIVEN** a published snapshot freezes a section under group A
+- **WHEN** the live author's current reporting group later changes
+- **THEN** group A retains the published analytics visibility
+- **AND** the mutable user row does not change historical metrics or scope
+
+#### Scenario: A settled snapshot is malformed
+
+- **GIVEN** a report satisfies the published lifecycle floor
+- **AND** its persisted publication snapshot is malformed or mismatched
+- **WHEN** analytics attempts to read the report
+- **THEN** the read fails with a snapshot-integrity error instead of falling back to live rows
 
 ### Requirement: Every successful publish path invalidates the analytics cache
 

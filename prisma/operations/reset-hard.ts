@@ -1,4 +1,4 @@
-// Drop all app rows, flush Redis, and seed an explicit named profile.
+// Drop all app rows, flush the disposable Redis database, and seed a profile.
 
 import { spawnSync } from "node:child_process";
 import net from "node:net";
@@ -26,57 +26,43 @@ import { parseSeedProfile } from "../seeds/profiles/seed-profile-contract.js";
 interface RedisEndpoint {
   readonly host: string;
   readonly port: number;
-  readonly source: "REDIS_URL" | "REDIS_HOST/REDIS_PORT";
 }
 
-// A local FLUSHALL answers in milliseconds; this only bounds a hung socket.
-const REDIS_FLUSHALL_TIMEOUT_MS = 5000;
-
-// FLUSHALL wipes EVERY database on the server, including other applications'
-// keys. Refuse unless the operator explicitly authorises this endpoint as
-// disposable; a shared dev Redis must not lose unrelated data.
-const REDIS_DISPOSABLE_AUTHORISATION = "RESET_HARD_REDIS_DISPOSABLE";
+const REDIS_FLUSH_TIMEOUT_MS = 5000;
+const E2E_REDIS_DATABASE = "15";
+const IPV4_PART_COUNT = 4;
+const LOOPBACK_OCTET = 127;
+const MAX_IPV4_OCTET = 255;
+const REDIS_DB_ERROR = `Refusing Redis cleanup: REDIS_DB must be exactly ${E2E_REDIS_DATABASE}`;
 
 function getRedisEndpoint(): RedisEndpoint {
-  const redisUrl = process.env.REDIS_URL;
-  if (redisUrl) {
-    const url = new URL(redisUrl);
-    if (!url.port) {
-      throw new Error(`REDIS_URL must include an explicit port: ${redisUrl}`);
-    }
-    const port = Number(url.port);
-    if (!Number.isInteger(port) || port <= 0) {
-      throw new Error(`Invalid Redis port in REDIS_URL: ${url.port}`);
-    }
-    if (!url.hostname) {
-      throw new Error(`REDIS_URL has no host: ${redisUrl}`);
-    }
-    return {
-      host: url.hostname,
-      port,
-      source: "REDIS_URL",
-    };
-  }
-
   const rawPort = process.env.REDIS_PORT;
-  if (!rawPort) {
-    throw new Error(
-      "REDIS_PORT must be set in .env (or provide REDIS_URL with a port)",
-    );
-  }
+  if (!rawPort) throw new Error("REDIS_PORT must be set in .env");
   const port = Number(rawPort);
-  if (!Number.isInteger(port) || port <= 0) {
+  if (!Number.isInteger(port) || port <= 0)
     throw new Error(`Invalid REDIS_PORT: ${rawPort}`);
-  }
   const host = process.env.REDIS_HOST;
-  if (!host) {
-    throw new Error("REDIS_HOST must be set in .env (or provide REDIS_URL)");
-  }
-  return {
-    host,
-    port,
-    source: "REDIS_HOST/REDIS_PORT",
-  };
+  if (!host) throw new Error("REDIS_HOST must be set in .env");
+  if (!isLoopbackHost(host))
+    throw new Error(
+      `Redis endpoint must be loopback-only for reset-hard: ${host}`,
+    );
+  return { host, port };
+}
+
+function isLoopbackIpv4(host: string): boolean {
+  const parts = host.split(".");
+  return (
+    parts.length === IPV4_PART_COUNT &&
+    parts.every((part) => /^(?:0|[1-9]\d*)$/u.test(part)) &&
+    Number(parts[0]) === LOOPBACK_OCTET &&
+    parts.slice(1).every((part) => Number(part) <= MAX_IPV4_OCTET)
+  );
+}
+
+function isLoopbackHost(hostname: string): boolean {
+  const host = hostname.toLowerCase().replaceAll(/^\[|\]$/gu, "");
+  return host === "localhost" || host === "::1" || isLoopbackIpv4(host);
 }
 
 function writeRedisCommand(command: string, ...args: string[]): Buffer {
@@ -89,47 +75,128 @@ function writeRedisCommand(command: string, ...args: string[]): Buffer {
   );
 }
 
+interface RespFrame {
+  readonly value: unknown;
+  readonly rest: string;
+}
+
+function parseRespAggregateFrame(
+  buffer: string,
+  lineEnd: number,
+  type: string,
+  line: string,
+): RespFrame | undefined {
+  const count = Number(line);
+  if (!Number.isInteger(count) || count < -1)
+    throw new Error(`Redis returned malformed RESP ${type} frame`);
+  if (count === -1) return { value: null, rest: buffer.slice(lineEnd + 2) };
+  if (type === "*") return parseRespArray(buffer.slice(lineEnd + 2), count);
+  const start = lineEnd + 2;
+  const end = start + count;
+  if (buffer.length < end + 2) return undefined;
+  if (buffer.slice(end, end + 2) !== "\r\n")
+    throw new Error("Redis returned malformed bulk-string frame");
+  return { value: buffer.slice(start, end), rest: buffer.slice(end + 2) };
+}
+
+function parseRespFrame(buffer: string): RespFrame | undefined {
+  const type = buffer[0];
+  if (type === undefined) return undefined;
+  const lineEnd = buffer.indexOf("\r\n", 1);
+  if (lineEnd === -1) return undefined;
+  const line = buffer.slice(1, lineEnd);
+  if (type === "+" || type === "-" || type === ":") {
+    return {
+      value: type === ":" ? Number(line) : `${type}${line}`,
+      rest: buffer.slice(lineEnd + 2),
+    };
+  }
+  if (type === "$" || type === "*")
+    return parseRespAggregateFrame(buffer, lineEnd, type, line);
+  throw new Error(`Redis returned unsupported RESP frame type: ${type}`);
+}
+
+function parseRespArray(buffer: string, count: number): RespFrame | undefined {
+  let rest = buffer;
+  const values: unknown[] = [];
+  for (let index = 0; index < count; index += 1) {
+    const frame = parseRespFrame(rest);
+    if (frame === undefined) return undefined;
+    values.push(frame.value);
+    rest = frame.rest;
+  }
+  return { value: values, rest };
+}
+
+function requireRedisDatabase(): void {
+  if (process.env.REDIS_DB !== E2E_REDIS_DATABASE)
+    throw new Error(REDIS_DB_ERROR);
+}
+
+function getRedisReplyError(
+  value: unknown,
+  replyCount: number,
+): Error | undefined {
+  if (value === "+OK") return undefined;
+  const command = replyCount === 0 ? "SELECT 15" : "FLUSHDB";
+  const detail =
+    typeof value === "string" && value.startsWith("-")
+      ? `failed: ${value}`
+      : `returned unexpected reply: ${String(value)}`;
+  return new Error(`Redis ${command} ${detail}`);
+}
+
 export async function flushRedis(): Promise<void> {
   assertE2eRuntimeDestructive("reset-hard-flush-redis");
-  const env = (process as { env: Record<string, string | undefined> }).env;
-  if (env[REDIS_DISPOSABLE_AUTHORISATION] !== "yes") {
-    throw new Error(
-      `Refusing FLUSHALL: ${REDIS_DISPOSABLE_AUTHORISATION} is not 'yes'. ` +
-        "FLUSHALL wipes every database on the server; set the variable only " +
-        "for a disposable CustomReport-exclusive Redis endpoint.",
-    );
-  }
+  requireRedisDatabase();
 
-  const { host, port, source } = getRedisEndpoint();
-  console.log(`[reset-hard] Redis target: ${host}:${port} (${source})`);
+  const { host, port } = getRedisEndpoint();
+  console.log(
+    `[reset-hard] Redis target: ${host}:${port} (REDIS_HOST/REDIS_PORT)`,
+  );
 
   await new Promise<void>((resolve, reject) => {
     const sock = net.createConnection({ host, port }, () => {
-      sock.write(writeRedisCommand("FLUSHALL"));
+      // Never pipeline FLUSHDB: if SELECT were rejected, a pipelined flush
+      // would run against Redis' default DB 0.
+      sock.write(writeRedisCommand("SELECT", E2E_REDIS_DATABASE));
     });
     const timer = setTimeout(() => {
       sock.destroy();
-      reject(new Error(`Redis FLUSHALL timed out at ${host}:${port}`));
-    }, REDIS_FLUSHALL_TIMEOUT_MS);
-    // The reply can arrive split across segments; carrying the bytes seen so
-    // far as an argument keeps the accumulator out of a mutable binding.
-    const readReply = (buffered: string): void => {
-      if (buffered.startsWith("+OK")) {
-        clearTimeout(timer);
-        sock.end();
-        resolve();
-      } else if (buffered.startsWith("-")) {
-        clearTimeout(timer);
-        sock.end();
-        reject(new Error(`Redis FLUSHALL failed: ${buffered.trim()}`));
-      } else {
-        sock.once("data", (chunk: Buffer) => {
-          readReply(buffered + chunk.toString("utf8"));
-        });
+      reject(
+        new Error(`Redis SELECT 15 + FLUSHDB timed out at ${host}:${port}`),
+      );
+    }, REDIS_FLUSH_TIMEOUT_MS);
+    let buffered = "";
+    let replies = 0;
+    const readReplies = (): void => {
+      while (replies < 2) {
+        const frame = parseRespFrame(buffered);
+        if (frame === undefined) return;
+        buffered = frame.rest;
+        const replyError = getRedisReplyError(frame.value, replies);
+        if (replyError) {
+          clearTimeout(timer);
+          sock.end();
+          reject(replyError);
+          return;
+        }
+        replies += 1;
+        if (replies === 1) sock.write(writeRedisCommand("FLUSHDB"));
       }
+      clearTimeout(timer);
+      sock.end();
+      resolve();
     };
-    sock.once("data", (chunk: Buffer) => {
-      readReply(chunk.toString("utf8"));
+    sock.on("data", (chunk: Buffer) => {
+      buffered += chunk.toString("utf8");
+      try {
+        readReplies();
+      } catch (error: unknown) {
+        clearTimeout(timer);
+        sock.destroy();
+        reject(error);
+      }
     });
     sock.on("error", (error) => {
       clearTimeout(timer);
@@ -139,12 +206,14 @@ export async function flushRedis(): Promise<void> {
     sock.on("end", () => {
       clearTimeout(timer);
       reject(
-        new Error("Redis FLUSHALL: connection closed before +OK was received"),
+        new Error(
+          `Redis SELECT 15 + FLUSHDB: connection closed before both replies were received (got ${replies}/2)`,
+        ),
       );
     });
   });
 
-  console.log("[reset-hard] Redis FLUSHALL: OK");
+  console.log("[reset-hard] Redis DB 15 FLUSHDB: OK");
 }
 
 // PostgreSQL identifiers are quoted by doubling embedded quotes (the dialect's

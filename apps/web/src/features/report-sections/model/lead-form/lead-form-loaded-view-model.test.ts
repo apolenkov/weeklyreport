@@ -52,6 +52,7 @@ function makeForeignContent(): CrossAuthorContentRow[] {
     {
       authorId: FOREIGN_AUTHOR_ID,
       authorName: "Foreign Lead",
+      authorRole: "lead",
       items: [
         {
           id: "fi-current",
@@ -479,6 +480,7 @@ describe("unified activity and activity alarm derivations", () => {
       {
         authorId: FOREIGN_AUTHOR_ID,
         authorName: "Foreign Lead",
+        authorRole: "lead",
         items: [
           {
             id: "fi-blocked",

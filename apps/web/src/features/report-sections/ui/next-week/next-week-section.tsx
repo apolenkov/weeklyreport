@@ -2,18 +2,18 @@
 
 import type { ReactNode } from "react";
 
+import { createEditableListHandlers } from "../../../../shared/hooks/dialogs/create-editable-list-handlers";
 import { useEditableListDialog } from "../../../../shared/hooks/dialogs/use-editable-list-dialog";
-import {
-  buildDialogsProps,
-  createItemHandlers,
-  type NextWeekItemHandlers,
-  type NextWeekSectionProps,
-} from "../../model/next-week/next-week-section-model";
+import { buildItemDialogProps } from "../../model/item-dialog-props";
+import type { NextWeekSectionProps } from "../../model/next-week/next-week-section.types";
 import { isBoardEmpty, splitItemBoard } from "../../model/next-week-columns";
 import type { KanbanItem, Product } from "../../model/types";
 import { ItemCard } from "../item-card";
+import { ItemDialogStack } from "../item-dialog-stack";
 import { NextWeekBoardGrid } from "./next-week-board-grid";
-import { NextWeekDialogs } from "./next-week-dialogs";
+type NextWeekItemHandlers = ReturnType<
+  typeof createEditableListHandlers<KanbanItem>
+>;
 
 // Stand-alone CTA seeded from the first product. Disabled (with an explanatory
 // title) for a lead who owns no product, since an item needs a product column.
@@ -108,7 +108,7 @@ export function NextWeekSection(props: NextWeekSectionProps) {
     requireSeed: true,
   });
 
-  const handlers = createItemHandlers({ props, dialog });
+  const handlers = createEditableListHandlers(props, dialog);
 
   if (isBoardEmpty(items, products, activities)) {
     return (
@@ -145,7 +145,14 @@ export function NextWeekSection(props: NextWeekSectionProps) {
         renderItem={createItemRenderer({ props, handlers })}
       />
 
-      <NextWeekDialogs {...buildDialogsProps({ props, dialog, handlers })} />
+      <ItemDialogStack
+        {...buildItemDialogProps({
+          section: props,
+          dialog,
+          handlers,
+          week: "next",
+        })}
+      />
     </div>
   );
 }

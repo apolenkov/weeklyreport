@@ -3,7 +3,7 @@
 // with `as unknown as ReturnType<typeof useQuery>`.
 import type { QueryObserverResult } from "@tanstack/react-query";
 
-export type QueryFetchStatus = "fetching" | "paused" | "idle";
+type QueryFetchStatus = "fetching" | "paused" | "idle";
 
 export interface QueryStateInput<TData, TError = Error> {
   readonly data: TData;

@@ -33,8 +33,8 @@ const EMPTY_DISPATCH_RESULT: RemindersSchedulerResult = {
   failures: [],
 };
 
-// Hourly tick: deadline (T-24h) + escalation (T+2h). Escalation bypasses
-// notificationOptOut. Dedupe key collapses two ticks in one UTC day to one email.
+// Hourly tick: policy-relative deadline and escalation reminders. Escalation
+// bypasses notificationOptOut. One UTC rule cycle deduplicates repeated ticks.
 @Injectable()
 export class RemindersScheduler {
   private readonly logger = new Logger(RemindersScheduler.name);
@@ -122,7 +122,7 @@ export class RemindersScheduler {
   ): Promise<RuleDispatchOutcome> {
     const cycleDate = toReminderCycleDate(rule.fireAt);
     const sectionUrl = buildSectionUrl(this.env.APP_BASE_URL, rule.reportId);
-    const deadlineIso = rule.fireAt.toISOString();
+    const deadlineIso = rule.deadline.toISOString();
     // Folded sequentially — enqueue order stays deterministic and one
     // recipient's failure (counted, logged) never aborts the remaining ones.
     return rule.recipients.reduce<Promise<RuleDispatchOutcome>>(
@@ -133,20 +133,23 @@ export class RemindersScheduler {
           return tally;
         }
         try {
-          await this.service.requestReminderExecution(
-            rule.id,
-            recipient.email,
-            {
-              kind: "deadline",
-              cycleDate,
-              leadName: recipient.name,
-              reportPeriod: rule.reportPeriodLabel,
-              deadlineIso,
-              sectionUrl,
-              organization,
-            },
-          );
-          return { ...tally, requested: tally.requested + 1 };
+          const { outcome } =
+            await this.service.requestReminderExecutionWithOutcome(
+              rule.id,
+              recipient.email,
+              {
+                kind: "deadline",
+                cycleDate,
+                leadName: recipient.name,
+                reportPeriod: rule.reportPeriodLabel,
+                deadlineIso,
+                sectionUrl,
+                organization,
+              },
+            );
+          return outcome === "skipped"
+            ? tally
+            : { ...tally, requested: tally.requested + 1 };
         } catch (error: unknown) {
           return this.recordDispatchFailure(tally, recipient.userId, error);
         }
@@ -166,19 +169,22 @@ export class RemindersScheduler {
       async (pending, group) => {
         const tally = await pending;
         try {
-          await this.service.requestReminderExecution(
-            rule.id,
-            group.head.email,
-            {
-              kind: "escalation",
-              cycleDate,
-              headName: group.head.name,
-              reportPeriod: rule.reportPeriodLabel,
-              lateLeads: group.lateLeads,
-              organization,
-            },
-          );
-          return { ...tally, requested: tally.requested + 1 };
+          const { outcome } =
+            await this.service.requestReminderExecutionWithOutcome(
+              rule.id,
+              group.head.email,
+              {
+                kind: "escalation",
+                cycleDate,
+                headName: group.head.name,
+                reportPeriod: rule.reportPeriodLabel,
+                lateLeads: group.lateLeads,
+                organization,
+              },
+            );
+          return outcome === "skipped"
+            ? tally
+            : { ...tally, requested: tally.requested + 1 };
         } catch (error: unknown) {
           return this.recordDispatchFailure(tally, group.head.userId, error);
         }

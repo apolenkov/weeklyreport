@@ -1,15 +1,24 @@
-import { composeName } from "@customreport/shared";
+import { composeName, type ReminderPolicy } from "@customreport/shared";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
+  createPauseGate,
+  pauseBeforeTransaction,
+} from "../../test-utils/paused-prisma.js";
+import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
+  publishedSnapshotFixture,
   seedTestData,
 } from "../../test-utils/prisma-test-helper";
+import { ensureLeadSection } from "../report-sections/index.js";
 import { AdminPrismaRepository } from "./admin.prisma-repository";
-import { AdminUserConflictError } from "./admin-shared";
+import {
+  AdminUserConflictError,
+  AdminUserPublishedHistoryError,
+} from "./admin-shared";
 
 describe("AdminPrismaRepository (integration) — targeted writes & concurrency", () => {
   const prisma = createTestPrisma();
@@ -32,6 +41,7 @@ describe("AdminPrismaRepository (integration) — targeted writes & concurrency"
   const NONEXISTENT_REPORT_ID = "a0000000-0000-4000-a000-0000000009ff";
   const SECOND_PROJECT_ID = "a0000000-0000-4000-a000-000000000200";
   const SECOND_RULE_ID = "a0000000-0000-4000-a000-000000000620";
+  const SECOND_POLICY_ID = "a0000000-0000-4000-a000-000000000621";
   const JIT_USER_ID = "a0000000-0000-4000-a000-0000000000aa";
 
   const jitUserData = {
@@ -56,11 +66,24 @@ describe("AdminPrismaRepository (integration) — targeted writes & concurrency"
     const extraProject = await prisma.project.create({
       data: { id: SECOND_PROJECT_ID, name: "Extra", leadId: testData.lead.id },
     });
+    await prisma.reminderPolicy.create({
+      data: {
+        id: SECOND_POLICY_ID,
+        kind: "deadline",
+        offsetMinutes: -1440,
+        timezone: "Europe/Moscow",
+        audience: "LEAD_WITH_DRAFT",
+        active: true,
+        validFrom: new Date("2026-01-01T00:00:00.000Z"),
+      },
+    });
     const extraRule = await prisma.reminderRule.create({
       data: {
         id: SECOND_RULE_ID,
+        policyId: SECOND_POLICY_ID,
         kind: "deadline",
         fireAt: new Date("2026-04-11T09:00:00.000Z"),
+        deadline: expectDefined(testData.report.deadline),
         timezone: "Europe/Moscow",
         status: "active",
         version: 1,
@@ -83,10 +106,251 @@ describe("AdminPrismaRepository (integration) — targeted writes & concurrency"
     ).not.toBeNull();
   });
 
+  it("reconciles only editable project statuses during a snapshot lead restore", async () => {
+    const leadBId = "a0000000-0000-4000-a000-0000000000b1";
+    const publishedReportId = "a0000000-0000-4000-a000-0000000000b2";
+    const archivedReportId = "a0000000-0000-4000-a000-0000000000b3";
+    const publishedAt = new Date("2026-04-12T10:00:00.000Z");
+    await prisma.user.create({
+      data: {
+        id: leadBId,
+        email: "lead2@test.local",
+        name: "Test Lead 2",
+        lastName: "Test",
+        firstName: "Lead 2",
+        role: "lead",
+        samlId: "lead-test-2",
+        reportingGroupId: testData.lead.reportingGroupId,
+      },
+    });
+    const [published, archived] = await prisma.$transaction([
+      prisma.report.create({
+        data: {
+          id: publishedReportId,
+          periodStart: new Date("2026-04-14"),
+          periodEnd: new Date("2026-04-20"),
+          deadline: new Date("2026-04-18"),
+          status: "published",
+          periodStatus: "published",
+          periodState: "published",
+          publishedAt,
+          publishedSnapshot: publishedSnapshotFixture({
+            reportId: publishedReportId,
+            periodStart: "2026-04-14",
+            periodEnd: "2026-04-20",
+            deadline: "2026-04-18",
+            publishedAt,
+          }),
+        },
+      }),
+      prisma.report.create({
+        data: {
+          id: archivedReportId,
+          periodStart: new Date("2026-04-21"),
+          periodEnd: new Date("2026-04-27"),
+          deadline: new Date("2026-04-25"),
+          status: "draft",
+          periodStatus: "open",
+          periodState: "archived",
+          archived: true,
+        },
+      }),
+    ]);
+    const publishedA = await prisma.reportSection.create({
+      data: { reportId: published.id, authorId: testData.lead.id },
+    });
+    const archivedA = await prisma.reportSection.create({
+      data: { reportId: archived.id, authorId: testData.lead.id },
+    });
+    await prisma.projectStatus.createMany({
+      data: [
+        {
+          reportSectionId: testData.section.id,
+          projectId: testData.project.id,
+          status: "red",
+        },
+        {
+          reportSectionId: publishedA.id,
+          projectId: testData.project.id,
+          status: "red",
+        },
+        {
+          reportSectionId: archivedA.id,
+          projectId: testData.project.id,
+          status: "red",
+        },
+      ],
+    });
+    const editableB = await prisma.reportSection.create({
+      data: { reportId: testData.report.id, authorId: leadBId },
+    });
+
+    const snapshot = await repo.getSnapshot();
+    await repo.saveSnapshot({
+      ...snapshot,
+      projects: snapshot.projects.map((project) =>
+        project.id === testData.project.id
+          ? { ...project, leadId: leadBId, leadName: "Test Lead 2" }
+          : project,
+      ),
+    });
+
+    await expect(
+      prisma.projectStatus.findUnique({
+        where: {
+          reportSectionId_projectId: {
+            reportSectionId: testData.section.id,
+            projectId: testData.project.id,
+          },
+        },
+      }),
+    ).resolves.toBeNull();
+    await expect(
+      prisma.projectStatus.findUnique({
+        where: {
+          reportSectionId_projectId: {
+            reportSectionId: editableB.id,
+            projectId: testData.project.id,
+          },
+        },
+      }),
+    ).resolves.toMatchObject({ status: null });
+    await expect(
+      prisma.projectStatus.findUnique({
+        where: {
+          reportSectionId_projectId: {
+            reportSectionId: publishedA.id,
+            projectId: testData.project.id,
+          },
+        },
+      }),
+    ).resolves.toMatchObject({ status: "red" });
+    await expect(
+      prisma.projectStatus.findUnique({
+        where: {
+          reportSectionId_projectId: {
+            reportSectionId: archivedA.id,
+            projectId: testData.project.id,
+          },
+        },
+      }),
+    ).resolves.toMatchObject({ status: "red" });
+  });
+
+  it.each(["assignment-first", "provisioning-first"] as const)(
+    "does not deadlock when project assignment overlaps first section provisioning (%s)",
+    async (order) => {
+      const leadBId = "a0000000-0000-4000-8000-0000000002b1";
+      await prisma.user.create({
+        data: {
+          id: leadBId,
+          email: "deadlock-lead-b@test.local",
+          name: "Deadlock Lead B",
+          lastName: "Lead",
+          firstName: "B",
+          role: "lead",
+          samlId: "deadlock-lead-b",
+          reportingGroupId: testData.lead.reportingGroupId,
+        },
+      });
+      await prisma.reportSection.delete({ where: { id: testData.section.id } });
+
+      if (order === "provisioning-first") {
+        await ensureLeadSection(prisma, testData.report.id, testData.lead.id);
+        await prisma.reportSection.deleteMany({
+          where: { reportId: testData.report.id },
+        });
+      }
+      // The status graph is globally serialized. Pause before opening the
+      // assignment transaction so the test can choose which writer acquires
+      // that lane first without holding it while another writer waits.
+      const assignmentGate = createPauseGate();
+      const assignmentPrisma = pauseBeforeTransaction(
+        prisma,
+        assignmentGate.pause,
+      );
+      const assignmentRepository = new AdminPrismaRepository(
+        assignmentPrisma as never,
+      );
+      const assignment = () =>
+        assignmentRepository.upsertProject({
+          id: testData.project.id,
+          name: testData.project.name,
+          archived: false,
+          leadId: leadBId,
+          leadName: "Deadlock Lead B",
+        });
+      const assignmentPromise = assignment();
+      const newReportId = "a0000000-0000-4000-8000-0000000002b2";
+      await prisma.report.create({
+        data: {
+          id: newReportId,
+          periodStart: new Date("2026-05-04"),
+          periodEnd: new Date("2026-05-10"),
+          deadline: new Date("2026-05-08"),
+          status: "draft",
+          periodStatus: "open",
+          periodState: "open",
+        },
+      });
+      await assignmentGate.paused;
+      const provision = () =>
+        ensureLeadSection(prisma, newReportId, testData.lead.id);
+      let provisioningPromise: ReturnType<typeof provision>;
+      if (order === "assignment-first") {
+        assignmentGate.release();
+        await assignmentPromise;
+        provisioningPromise = provision();
+      } else {
+        provisioningPromise = provision();
+        await provisioningPromise;
+        assignmentGate.release();
+      }
+      await expect(
+        Promise.all([assignmentPromise, provisioningPromise]),
+      ).resolves.toBeDefined();
+
+      const currentSection = await prisma.reportSection.findUnique({
+        where: {
+          reportId_authorId: {
+            reportId: testData.report.id,
+            authorId: testData.lead.id,
+          },
+        },
+        select: { id: true },
+      });
+      // The fixture deliberately removes the original section. The only
+      // first-provisioning write in this race targets the newly created report.
+      expect(currentSection).toBeNull();
+      await expect(
+        prisma.project.findUnique({
+          where: { id: testData.project.id },
+          select: { leadId: true },
+        }),
+      ).resolves.toEqual({ leadId: leadBId });
+      const newSection = await prisma.reportSection.findUniqueOrThrow({
+        where: {
+          reportId_authorId: {
+            reportId: newReportId,
+            authorId: testData.lead.id,
+          },
+        },
+        select: { id: true },
+      });
+      await expect(
+        prisma.projectStatus.count({
+          where: {
+            reportSectionId: newSection.id,
+            projectId: testData.project.id,
+          },
+        }),
+      ).resolves.toBe(0);
+    },
+  );
+
   it("targeted upsertUser recomputes a drifted name from the structured parts", async () => {
-    // The admin UI's user edit now routes through the targeted upsertUser, so
-    // the `name === composeName(parts)` invariant must hold on THIS path too,
-    // not only the whole-snapshot restore.
+    // Targeted user writes recompute the denormalized name from structured
+    // parts, preserving the `name === composeName(parts)` invariant.
     await repo.upsertUser({
       id: testData.lead.id,
       email: "lead1@test.local",
@@ -207,11 +471,20 @@ describe("AdminPrismaRepository (integration) — targeted writes & concurrency"
     expect(proj.name).toBe("Renamed Project");
   });
 
-  it("a mid-restore failure rolls the whole saveSnapshot back", async () => {
+  it("rejects an invalid reminder cross-reference before applying user edits", async () => {
     const snapshot = await repo.getSnapshot();
-    // Rename the lead in an earlier phase, and add a reminder rule whose
-    // reportId does not resolve so the LAST phase throws (FK P2003). The whole
-    // transaction must roll back, leaving the rename unpersisted.
+    const policy: ReminderPolicy = {
+      id: SECOND_POLICY_ID,
+      kind: "deadline",
+      offsetMinutes: -1440,
+      timezone: "Europe/Moscow",
+      audience: "lead-with-draft",
+      active: true,
+      validFrom: new Date("2026-01-01T00:00:00.000Z"),
+      validUntil: null,
+    };
+    // The user edit must not start when a rule points outside the snapshot's
+    // report set; shared validation fails before the transaction opens.
     const corrupted = {
       ...snapshot,
       users: snapshot.users.map((u) =>
@@ -228,14 +501,16 @@ describe("AdminPrismaRepository (integration) — targeted writes & concurrency"
         {
           id: SECOND_RULE_ID,
           reportId: NONEXISTENT_REPORT_ID,
-          policyId: null,
+          policyId: SECOND_POLICY_ID,
           kind: "deadline" as const,
           fireAt: new Date("2026-04-11T09:00:00.000Z"),
+          deadline: new Date("2026-04-12T09:00:00.000Z"),
           timezone: "Europe/Moscow",
           status: "active" as const,
           version: 1,
         },
       ],
+      policies: [...snapshot.policies, policy],
     };
 
     await expect(repo.saveSnapshot(corrupted)).rejects.toThrow();
@@ -264,6 +539,51 @@ describe("AdminPrismaRepository (integration) — targeted writes & concurrency"
     });
     await repo.removeUser(free.id);
     expect(await prisma.user.findUnique({ where: { id: free.id } })).toBeNull();
+  });
+
+  it("retains a published-report publisher while allowing deactivation and snapshot export", async () => {
+    const publishedAt = new Date("2026-04-12T10:00:00.000Z");
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: {
+        status: "published",
+        periodState: "published",
+        periodStatus: "published",
+        publishedAt,
+        publishedById: testData.head.id,
+        publishedSnapshot: publishedSnapshotFixture({
+          reportId: testData.report.id,
+          periodStart: testData.report.periodStart,
+          periodEnd: testData.report.periodEnd,
+          deadline: testData.report.deadline,
+          publishedAt,
+          publishedById: testData.head.id,
+          publishedByName: testData.head.name,
+        }),
+      },
+    });
+
+    await expect(
+      prisma.user.delete({ where: { id: testData.head.id } }),
+    ).rejects.toMatchObject({ code: "P2003" });
+    await expect(repo.removeUser(testData.head.id)).rejects.toBeInstanceOf(
+      AdminUserPublishedHistoryError,
+    );
+
+    await repo.deactivateUser(testData.head.id);
+    const snapshot = await repo.getSnapshot();
+    const publisher = expectDefined(
+      snapshot.users.find((user) => user.id === testData.head.id),
+    );
+    const publishedPeriod = expectDefined(
+      snapshot.periods.find((period) => period.id === testData.report.id),
+    );
+
+    expect(publisher.isActive).toBe(false);
+    expect(publishedPeriod.publishedById).toBe(testData.head.id);
+    expect(publishedPeriod.publishedSnapshot?.publishedById).toBe(
+      testData.head.id,
+    );
   });
 
   it("removeProject archives only the named row", async () => {

@@ -329,29 +329,25 @@ describe("section slide utilities", () => {
     expect(floored.productSlides[0]?.status).toBe("red");
   });
 
-  it("a stage-less (empty stageNames) legacy risk floors every owned stage", () => {
-    // Empty/undefined stageNames means "covers all stages" in the live form;
-    // the slide export must agree so a legacy stage-less risk does not floor
-    // every chip in the form yet nothing on the deck. Routing through
-    // `riskCoversStage` kills that divergence.
+  it("a product risk only floors the explicitly named owned stage", () => {
     const slide = buildSectionSlideModel(
       makeSection({
         risks: [
           {
             id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
             projectId: PRODUCT_ID,
-            risk: "Legacy stage-less blocker",
+            risk: "Build blocker",
             impact: "Everything stalls",
             mitigation: "Escalate",
             severity: "blocked",
-            stageNames: [],
+            stageNames: ["Build"],
           },
         ],
       }),
     );
 
     expect(slide.productSlides[0]?.stages).toEqual([
-      expect.objectContaining({ name: "Discovery", status: "red" }),
+      expect.objectContaining({ name: "Discovery", status: "green" }),
       expect.objectContaining({ name: "Build", status: "red" }),
     ]);
   });

@@ -1,8 +1,8 @@
 import type { Role } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
+import { createNullAuditLogger } from "../../test-utils/audit-logger.js";
 import { createStubAppRouterDeps } from "../../test-utils/stub-app-router-deps.js";
 import { createAppRouter } from "./trpc.router.js";
 

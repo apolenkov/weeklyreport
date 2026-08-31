@@ -2,9 +2,9 @@ import type { AdminReminderRule, UserSession } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import type { OrganizationService } from "../organization/organization.service.js";
+import { unusedRemindersRepositoryStubs } from "./__tests__/reminders-scope.repository-stub.js";
 import { RemindersService } from "./reminders.service.js";
 import type { RemindersRepository } from "./reminders.types.js";
-import { unusedRemindersRepositoryStubs } from "./reminders-scope.repository-stub.js";
 
 const REPORT_ID = "b0000000-0000-4000-a000-0000000000b1";
 const RULE_ID = "b0000000-0000-4000-a000-0000000000b2";
@@ -31,6 +31,7 @@ function buildService(): RemindersService {
       Promise.resolve({
         id: RULE_ID,
         fireAt: new Date("2026-04-12T09:00:00.000Z"),
+        deadline: new Date("2026-04-13T18:00:00.000Z"),
       }),
     findDraftSectionsForDispatch: () => Promise.resolve([]),
   } satisfies RemindersRepository;
@@ -58,6 +59,7 @@ describe("RemindersScopeService.dispatchPendingReminders — no-matching-section
     const result = await buildService().scope.dispatchPendingReminders(
       headSession,
       REPORT_ID,
+      RULE_ID,
     );
 
     // No `reason` key at all: "no-matching-section" belongs to a lead-targeted
@@ -69,7 +71,7 @@ describe("RemindersScopeService.dispatchPendingReminders — no-matching-section
     const result = await buildService().scope.dispatchPendingReminders(
       headSession,
       REPORT_ID,
-      undefined,
+      RULE_ID,
       LEAD_ID,
     );
 
@@ -96,7 +98,7 @@ describe("RemindersScopeService.dispatchPendingReminders — no-matching-section
       timezone: "Europe/Moscow",
       status: "active",
       version: 1,
-      policyId: null,
+      policyId: "99999999-9999-4999-8999-999999999999",
     };
     const repository = {
       ...unusedRemindersRepositoryStubs(),
@@ -104,7 +106,11 @@ describe("RemindersScopeService.dispatchPendingReminders — no-matching-section
       getRulePeriodLabel: () => Promise.resolve("2026-04-07 → 2026-04-13"),
       findInScopeSectionId: () => Promise.resolve(SECTION_ID),
       findActiveRuleForDispatch: () =>
-        Promise.resolve({ id: RULE_ID, fireAt: activeRule.fireAt }),
+        Promise.resolve({
+          id: RULE_ID,
+          fireAt: activeRule.fireAt,
+          deadline: new Date("2026-04-13T18:00:00.000Z"),
+        }),
       findDraftSectionsForDispatch: () => Promise.resolve(sections),
     } satisfies RemindersRepository;
     const organizationService = {
@@ -125,11 +131,11 @@ describe("RemindersScopeService.dispatchPendingReminders — no-matching-section
       },
     );
 
-    // The old per-recipient `rest`/`acc` copies are O(n²) — 100k recipients
-    // takes ~20s there (over vitest's 5s default) and ~0.25s with the loop.
+    // The dispatch fold keeps memory and work linear in the recipient count.
     const result = await service.scope.dispatchPendingReminders(
       headSession,
       REPORT_ID,
+      RULE_ID,
     );
 
     expect(result.dispatched).toBe(COUNT);

@@ -37,7 +37,7 @@ import {
 const DEFAULT_PERIOD_LIST_LIMIT = 50;
 const MAX_PERIOD_LIST_LIMIT = 200;
 
-// A backwards envelope is reported through the overlap error so create and
+// A reversed envelope is reported through the overlap error so create and
 // patch surface one message shape for an unusable range.
 function assertEndNotBeforeStart(periodStart: Date, periodEnd: Date): void {
   if (periodEnd.getTime() < periodStart.getTime()) {
@@ -49,7 +49,7 @@ function assertEndNotBeforeStart(periodStart: Date, periodEnd: Date): void {
 
 // Manual-create defaults mirror the scheduler's date math. Load-bearing order:
 // the envelope resolves and validates BEFORE the deadline is computed, so a
-// backwards range surfaces as the overlap error, not a computeDeadline error.
+// reversed range surfaces as the overlap error, not a computeDeadline error.
 function resolveManualPeriodEnvelope(
   input: AdminCreatePeriodManualInput,
   settings: AppSettings,
@@ -76,12 +76,15 @@ function resolveManualPeriodEnvelope(
 
 export class PeriodAdminService {
   private readonly logger: AppLogger;
+  private readonly clock: () => Date;
 
   constructor(
     private readonly repository: AdminRepository,
     logger?: AppLogger,
+    clock: () => Date = () => new Date(),
   ) {
     this.logger = logger ?? createNullLogger();
+    this.clock = clock;
   }
 
   private async getSettings(): Promise<AppSettings> {
@@ -226,12 +229,16 @@ export class PeriodAdminService {
     return { result: toUpdateManualResult(updated), diff };
   }
 
-  // next periodState is derived in the repository from the historical tuple
+  // next periodState is derived in the repository from the persisted lifecycle fields
   // (archived column lost scheduled/open/published distinction).
   async unarchivePeriod(
     periodId: string,
+    options: { now?: Date } = {},
   ): Promise<{ success: true; periodState: PeriodState }> {
-    const result = await this.repository.unarchivePeriod(periodId);
+    const result = await this.repository.unarchivePeriod(
+      periodId,
+      options.now ?? this.clock(),
+    );
     this.logger.info("unarchived period", { periodId });
     return { success: true, periodState: result.nextPeriodState };
   }

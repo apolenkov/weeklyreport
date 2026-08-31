@@ -7,9 +7,9 @@ import { queryPublishedLineage } from "./published-lineage.query.js";
 import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository.js";
 
 const candidates = {
-  reportId: "report-1",
-  reportSectionId: "section-1",
-  itemStableIds: ["own-item", "published-item", "reopened-item", "draft-item"],
+  reportId: "10000000-0000-4000-8000-000000000001",
+  reportSectionId: "10000000-0000-4000-8000-000000000002",
+  itemStableIds: ["own-item", "closed-item", "reopened-item", "draft-item"],
   decisionStableIds: [
     "archived-decision",
     "reopened-decision",
@@ -18,46 +18,21 @@ const candidates = {
 };
 
 function createPrisma() {
-  const reportFindUnique = vi.fn().mockResolvedValue({
-    publishedSnapshot: {
-      sections: [
-        {
-          reportSectionId: candidates.reportSectionId,
-          items: [{ stableId: "own-item" }],
-          decisions: [],
-        },
-      ],
-    },
-  });
-  const reportFindMany = vi.fn().mockResolvedValue([
-    {
-      publishedSnapshot: {
-        sections: [
-          {
-            reportSectionId: "source-section",
-            items: [{ stableId: "reopened-item" }],
-            decisions: [{ stableId: "reopened-decision" }],
-          },
-        ],
-      },
-    },
+  const documentFindMany = vi.fn().mockResolvedValue([
+    { recordType: "item", stableId: "own-item" },
+    { recordType: "item", stableId: "closed-item" },
+    { recordType: "item", stableId: "reopened-item" },
+    { recordType: "decision", stableId: "archived-decision" },
+    { recordType: "decision", stableId: "reopened-decision" },
   ]);
-  const itemFindMany = vi
-    .fn()
-    .mockResolvedValue([{ stableId: "published-item" }]);
-  const decisionFindMany = vi
-    .fn()
-    .mockResolvedValue([{ stableId: "archived-decision" }]);
+  const reportFindMany = vi.fn().mockResolvedValue([]);
   return {
     prisma: {
-      report: { findUnique: reportFindUnique, findMany: reportFindMany },
-      item: { findMany: itemFindMany },
-      decision: { findMany: decisionFindMany },
+      publishedSearchDocument: { findMany: documentFindMany },
+      report: { findMany: reportFindMany },
     } as unknown as PrismaService,
-    reportFindUnique,
+    documentFindMany,
     reportFindMany,
-    itemFindMany,
-    decisionFindMany,
   };
 }
 
@@ -72,39 +47,130 @@ describe("queryPublishedLineage", () => {
         decisionStableIds: [],
       }),
     ).resolves.toEqual({ itemStableIds: [], decisionStableIds: [] });
-    expect(fixture.reportFindUnique).not.toHaveBeenCalled();
-    expect(fixture.reportFindMany).not.toHaveBeenCalled();
-    expect(fixture.itemFindMany).not.toHaveBeenCalled();
-    expect(fixture.decisionFindMany).not.toHaveBeenCalled();
+    expect(fixture.documentFindMany).not.toHaveBeenCalled();
   });
 
-  it("reads frozen sources and returns only published candidates", async () => {
+  it("uses the current snapshot and indexed frozen rows for lineage", async () => {
     const fixture = createPrisma();
 
     await expect(
       queryPublishedLineage(fixture.prisma, candidates),
     ).resolves.toEqual({
-      itemStableIds: ["own-item", "published-item", "reopened-item"],
+      itemStableIds: ["own-item", "closed-item", "reopened-item"],
       decisionStableIds: ["archived-decision", "reopened-decision"],
     });
-    expect(fixture.itemFindMany).toHaveBeenCalledWith({
+    expect(fixture.documentFindMany).toHaveBeenCalledWith({
       where: {
-        stableId: { in: candidates.itemStableIds },
-        reportSectionId: { not: candidates.reportSectionId },
-        reportSection: {
-          report: {
-            OR: [{ periodStatus: "published" }, { archived: true }],
+        OR: [
+          {
+            recordType: "item",
+            stableId: { in: candidates.itemStableIds },
           },
+          {
+            recordType: "decision",
+            stableId: { in: candidates.decisionStableIds },
+          },
+        ],
+      },
+      select: { recordType: true, stableId: true },
+    });
+  });
+
+  it("does not query mutable item, decision, or section models", async () => {
+    const documentFindMany = vi
+      .fn()
+      .mockResolvedValue([{ recordType: "item", stableId: "closed-item" }]);
+    const mutableRead = vi.fn(() => {
+      throw new Error("Mutable published lineage read");
+    });
+    const prisma = {
+      publishedSearchDocument: { findMany: documentFindMany },
+      item: { findMany: mutableRead },
+      decision: { findMany: mutableRead },
+      reportSection: { findMany: mutableRead },
+      report: { findMany: vi.fn().mockResolvedValue([]) },
+    } as unknown as PrismaService;
+
+    await expect(queryPublishedLineage(prisma, candidates)).resolves.toEqual({
+      itemStableIds: ["closed-item"],
+      decisionStableIds: [],
+    });
+    expect(mutableRead).not.toHaveBeenCalled();
+  });
+
+  it("includes the current report snapshot when the report was reopened", async () => {
+    const fixture = createPrisma();
+    fixture.reportFindMany.mockResolvedValue([
+      {
+        id: candidates.reportId,
+        publishedSnapshot: {
+          reportId: candidates.reportId,
+          periodStart: "2026-04-07T00:00:00.000Z",
+          periodEnd: "2026-04-13T00:00:00.000Z",
+          deadline: null,
+          status: "published",
+          publishedAt: "2026-04-14T10:00:00.000Z",
+          publishedById: null,
+          publishedByName: null,
+          portfolioOverview: {
+            status: "green",
+            totals: { green: 0, yellow: 0, red: 0 },
+          },
+          sections: [
+            {
+              reportId: candidates.reportId,
+              reportSectionId: candidates.reportSectionId,
+              authorId: "00000000-0000-4000-8000-000000000001",
+              authorName: "Test Lead",
+              authorRole: "lead",
+              groupId: "00000000-0000-4000-8000-000000000002",
+              groupName: "Engineering",
+              status: "submitted",
+              submittedAt: null,
+              version: 1,
+              late: false,
+              projectStatuses: [],
+              stageStatuses: [],
+              activityStatuses: [],
+              projects: [],
+              referencedProjects: [],
+              activities: [],
+              reviews: [],
+              items: [
+                {
+                  id: "00000000-0000-4000-8000-000000000003",
+                  stableId: "10000000-0000-4000-8000-000000000005",
+                  projectId: "00000000-0000-4000-8000-000000000004",
+                  activityId: null,
+                  type: "current",
+                  text: "Published item",
+                  tag: "feature",
+                  workflowStatus: "done",
+                  carriedOver: false,
+                  priorityRank: null,
+                  pausedReason: null,
+                  createdAt: "2026-04-07T00:00:00.000Z",
+                  updatedAt: "2026-04-07T00:00:00.000Z",
+                  stageNames: ["Development"],
+                },
+              ],
+              risks: [],
+              decisions: [],
+            },
+          ],
         },
       },
-      select: { stableId: true },
-    });
-    expect(fixture.reportFindMany).toHaveBeenCalledWith({
-      where: {
-        id: { not: candidates.reportId },
-        periodStatus: "reopened",
-      },
-      select: { publishedSnapshot: true },
+    ]);
+
+    await expect(
+      queryPublishedLineage(fixture.prisma, {
+        ...candidates,
+        itemStableIds: ["10000000-0000-4000-8000-000000000005"],
+        decisionStableIds: [],
+      }),
+    ).resolves.toEqual({
+      itemStableIds: ["10000000-0000-4000-8000-000000000005"],
+      decisionStableIds: [],
     });
   });
 
@@ -128,7 +194,7 @@ describe("queryPublishedLineage", () => {
 
     expect(leadFormLineage).toEqual(reportSectionsLineage);
     expect(reportSectionsLineage).toEqual({
-      itemStableIds: ["own-item", "published-item", "reopened-item"],
+      itemStableIds: ["own-item", "closed-item", "reopened-item"],
       decisionStableIds: ["archived-decision", "reopened-decision"],
     });
   });

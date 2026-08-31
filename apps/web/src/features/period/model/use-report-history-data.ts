@@ -1,6 +1,10 @@
 "use client";
 
-import type { MyHistoryEntry, Role } from "@customreport/shared";
+import type {
+  MyHistoryEntry,
+  MyHistoryResult,
+  Role,
+} from "@customreport/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -11,6 +15,7 @@ import {
   isViewer,
 } from "../../../shared/lib/auth/role-predicates";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
+import { useCursorPagination } from "../../admin";
 import {
   type HistoryEntry,
   mapCompiledHistoryEntries,
@@ -35,10 +40,17 @@ function useHistoryQueryState(role: Role | null) {
   // archive toggle is local state only, never derived from the URL.
   const [includeArchive, setIncludeArchive] = useState(false);
 
-  const historyQ = useQuery({
-    ...trpc.reports.myHistory.queryOptions(),
-    enabled: isLead,
-  });
+  const historyQ = useCursorPagination(
+    (input) =>
+      trpc.reports.myHistory.infiniteQueryOptions(
+        input as never,
+        {
+          getNextPageParam: (lastPage: MyHistoryResult) => lastPage.nextCursor,
+        } as never,
+      ) as never,
+    { limit: 50 },
+    { enabled: isLead },
+  );
 
   const compiledHistoryQ = useQuery({
     ...trpc.reports.compiledHistory.queryOptions({ includeArchive }),
@@ -47,8 +59,15 @@ function useHistoryQueryState(role: Role | null) {
   });
 
   useEffect(() => {
+    if (isLead && historyQ.hasNextPage && !historyQ.isFetchingNextPage) {
+      historyQ.fetchNextPage();
+    }
     if (isLead && historyQ.isError) {
-      toast.error(historyQ.error.message);
+      toast.error(
+        historyQ.error instanceof Error
+          ? historyQ.error.message
+          : "History unavailable.",
+      );
     }
     if (usesCompiledHistory && compiledHistoryQ.isError) {
       toast.error(compiledHistoryQ.error.message);
@@ -58,6 +77,10 @@ function useHistoryQueryState(role: Role | null) {
     compiledHistoryQ.isError,
     historyQ.error,
     historyQ.isError,
+    historyQ.hasNextPage,
+    historyQ.isFetchingNextPage,
+    historyQ.fetchNextPage,
+    historyQ,
     isLead,
     usesCompiledHistory,
   ]);
@@ -85,12 +108,9 @@ export function useHistoryData(role: Role | null): HistoryView {
   } = useHistoryQueryState(role);
 
   const allEntries = useMemo(() => {
-    const history =
-      isLead && Array.isArray(historyQ.data)
-        ? (historyQ.data as readonly MyHistoryEntry[])
-        : [];
+    const history = isLead ? (historyQ.items as readonly MyHistoryEntry[]) : [];
     return mapHistoryEntries(history);
-  }, [historyQ.data, isLead]);
+  }, [historyQ.items, isLead]);
 
   // A lead's archived rows are filtered client-side; the compiled query already
   // returns exactly the rows its includeArchive argument asked for.

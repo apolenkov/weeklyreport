@@ -1,12 +1,12 @@
 import type {
   PeriodState,
   PeriodStatus,
+  ReopenRequestStatusFilter,
   ReportSectionStatus,
   UserSession,
 } from "@customreport/shared";
 
-export type ReopenRequestStatusFilter =
-  "pending" | "approved" | "rejected" | "all";
+export type { ReopenRequestStatusFilter } from "@customreport/shared";
 
 export interface ListReopenRequestsInput {
   readonly status: ReopenRequestStatusFilter;

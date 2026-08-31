@@ -2,8 +2,8 @@ import type { SubmissionDashboardRow, UserSession } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { createAppRouter } from "../../../infrastructure/trpc/trpc.router.js";
-import { createNullAuditLogger } from "../../../lib/audit-logger.js";
 import { createNullLogger } from "../../../lib/logger.js";
+import { createNullAuditLogger } from "../../../test-utils/audit-logger.js";
 import { createStubAppRouterDeps } from "../../../test-utils/stub-app-router-deps.js";
 import { type ReviewRepository, ReviewService } from "./review.service";
 

@@ -1,23 +1,16 @@
 ## Purpose
 
-The 2026-06-10 lead-surface walk-through
-(`fix-lead-surface-snapshot-and-fillfrom`, 7-agent audit
-`memos/lead-surface-audit-verdict.md`) confirmed seven bugs and three
-design gaps on the lead report and history pages: leaving snapshot view
-reopened the Add Item modal, the Show-archived toggle was a visible
-no-op, the History Summary mixed draft and submitted populations, and
-the Fill From dropdown was clipped by the toolbar overflow. This
-capability fixes the durable control-integrity properties of the lead
-report/history surface so these classes of defect do not regrow. It
-governs control behavior on that surface, not a code module.
+Define the durable control-integrity properties of the lead report and history
+surfaces. This capability governs control behavior on those surfaces, not a
+code module.
 
 ## Requirements
 
 ### Requirement: View-state transitions never open dialogs
 
-A view-state transition MUST NOT open any dialog on the lead report
-page — this covers snapshot view via `viewedSnapshotVersion`, read-only
-flips, and period switches. Dialogs open only from a direct user action
+A view-state transition MUST NOT open any dialog on the lead report page —
+this covers a server section `version` refresh, read-only flips, and period
+switches. Dialogs open only from a direct user action
 in the current view. Imperative "open" signals (the four add-signal
 counters in `lead-form.tsx`: current-week, next-week, risks, decisions)
 MUST NOT be re-interpreted by effects reacting to unrelated prop

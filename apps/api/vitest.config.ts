@@ -14,22 +14,15 @@ export default mergeConfig(
       // processes. Keep enough CPU headroom that those gates measure code
       // defects instead of timing out behind the unit-test worker pool.
       maxWorkers: 4,
-      // Integration and eval suites have their own runner
-      // (`vitest.integration.config.ts`, run with --fileParallelism=false), so
-      // the default run stays unit-only.
-      exclude: [
-        "**/*.integration.test.ts",
-        "**/*.eval.test.ts",
-        "**/dist/**",
-        "**/node_modules/**",
-      ],
+      // Integration suites have their own runner, so the default run stays
+      // unit-only.
+      exclude: ["**/*.integration.test.ts", "**/dist/**", "**/node_modules/**"],
       coverage: {
         include: ["src/**/*.ts", "src/**/*.tsx"],
         exclude: [
           "src/**/*.test.ts",
           "src/**/*.test.tsx",
           "src/**/*.integration.test.ts",
-          "src/**/*.eval.test.ts",
           "src/**/__tests__/**",
           "src/**/test-utils/**",
           "src/main.ts",

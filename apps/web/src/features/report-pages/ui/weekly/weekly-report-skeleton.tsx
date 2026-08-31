@@ -4,7 +4,7 @@ import { PeriodNavigationSkeleton } from "../../../period";
 import { SlideSkeleton } from "../../../slides";
 
 // The initial request has no data-derived layout shape. Reserve the complete
-// MVP full-report overview and do not speculate about dynamic sections below.
+// full-report overview and do not speculate about dynamic sections below.
 const PORTFOLIO_CARD_COUNT = 15;
 
 function HeaderTitleSkeleton() {

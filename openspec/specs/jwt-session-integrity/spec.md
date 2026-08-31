@@ -63,13 +63,12 @@ records the tradeoff as accepted, not as a defect.
 - **THEN** the copied token still passes verification and can still
   establish a session until its original 1-hour expiry
 
-### Requirement: SAML identity matching cross-checks samlId when both sides carry one
+### Requirement: SAML identity matching cross-checks the persisted samlId
 
 When resolving a SAML profile to a stored user, session construction MUST NOT
-accept an email match as the same identity if both the profile and the
-matched user carry a `samlId` and those `samlId` values differ. When either
-the profile or the matched user has no `samlId` (seed/dev-login users), the
-existing email-only match remains the accepted path.
+accept an email match as the same identity when the persisted and incoming
+`samlId` values differ. `samlId` is required on every persisted User and is the
+stable fallback when a user's email changes.
 
 #### Scenario: Reused email with a different samlId is not silently inherited
 
@@ -77,13 +76,6 @@ existing email-only match remains the accepted path.
 - **WHEN** a SAML profile presents email `lead1@example.com` and `samlId` `B`
 - **THEN** the session build does not treat the stored user as the same
   identity on the email match alone
-
-#### Scenario: A samlId-less seed user still resolves by email
-
-- **GIVEN** a stored user with email `lead1@example.com` and no `samlId`
-- **WHEN** a SAML profile presents email `lead1@example.com` with any `samlId`
-- **THEN** the session build accepts the email match, unchanged from current
-  behavior
 
 #### Scenario: Matching samlId confirms the identity
 
@@ -103,8 +95,9 @@ deactivation. The gate has two tiers, in order:
    authoritative Prisma read below is the safety net.
 2. Prisma `isActive` read, **fail-CLOSED**: a missing/`null` row OR
    `isActive === false` bars the user. Barring the missing row closes the
-   hard-deleted-user gap — admin snapshot-restore deletes unreferenced users
-   without touching the revoked set, so the fast path never fires for them.
+   hard-deleted-user gap — the dedicated admin remove command may delete a
+   reference-free user without touching the revoked set, so the fast path never
+   fires for them. Users retained by published history are deactivated instead.
 
 #### Scenario: A revoked user is barred before any Prisma read
 

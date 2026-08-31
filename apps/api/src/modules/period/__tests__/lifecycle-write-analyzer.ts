@@ -22,14 +22,6 @@ const WRITE_METHODS = new Set([
   "upsert",
 ]);
 const PAYLOAD_KEYS = new Set(["data", "create", "update"]);
-const EXEMPT_MARKER = "lifecycle-write-gate-allow";
-const EXACT_EXEMPT_MARKER =
-  /lifecycle-write-gate-allow\(ref=([A-Z][A-Z0-9-]*)\)/g;
-
-export interface LifecycleExemption {
-  readonly ref: string;
-  readonly ownerSuffix: string;
-}
 
 export interface LifecycleViolation {
   readonly file: string;
@@ -129,28 +121,11 @@ function payloadExpressions(
   });
 }
 
-function markerForNode(source: ts.SourceFile, node: ts.Node): string | null {
-  const text = source.getFullText();
-  const statement = ts.findAncestor(node, ts.isStatement) ?? node;
-  const comments = ts
-    .getLeadingCommentRanges(text, statement.getFullStart())
-    ?.map((range) => text.slice(range.pos, range.end))
-    .join("\n");
-  return comments?.includes(EXEMPT_MARKER) ? comments : null;
-}
-
-function exemptionRef(marker: string): string | undefined {
-  const matches = [...marker.matchAll(EXACT_EXEMPT_MARKER)];
-  return matches.length === 1 ? matches[0]?.[1] : undefined;
-}
-
 export function analyzeLifecycleWrites(
   program: ts.Program,
   sources: readonly ts.SourceFile[],
-  exemptions: readonly LifecycleExemption[] = [],
 ): LifecycleViolation[] {
   const checker = program.getTypeChecker();
-  const usedExemptions = new Set<string>();
   const violations: LifecycleViolation[] = [];
 
   const addViolation = (
@@ -187,34 +162,6 @@ export function analyzeLifecycleWrites(
     }
     const method = target.method;
     if (!WRITE_METHODS.has(method)) return;
-
-    const marker = markerForNode(source, call);
-    if (marker) {
-      const ref = exemptionRef(marker);
-      const exemption = exemptions.find((candidate) => candidate.ref === ref);
-      if (!ref || !exemption) {
-        addViolation(
-          source,
-          call,
-          method,
-          "<exemption>",
-          "malformed or unknown exemption",
-        );
-        return;
-      }
-      if (!source.fileName.endsWith(exemption.ownerSuffix)) {
-        addViolation(
-          source,
-          call,
-          method,
-          "<exemption>",
-          "exemption outside its owner",
-        );
-        return;
-      }
-      usedExemptions.add(ref);
-      return;
-    }
 
     const payloads = payloadExpressions(checker, call.arguments[0]);
     if (!payloads || payloads.length === 0) {
@@ -271,16 +218,5 @@ export function analyzeLifecycleWrites(
     visit(source);
   }
 
-  exemptions
-    .filter((exemption) => !usedExemptions.has(exemption.ref))
-    .forEach((exemption) =>
-      violations.push({
-        file: exemption.ownerSuffix,
-        line: 1,
-        field: "<exemption>",
-        method: "none",
-        reason: `unreferenced exemption ${exemption.ref}`,
-      }),
-    );
   return violations;
 }

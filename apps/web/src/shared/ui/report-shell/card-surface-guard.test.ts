@@ -11,6 +11,9 @@ const SRC_DIR = path.resolve(process.cwd(), "src");
 
 const CARD_SURFACE_SHADOW_LITERAL = "0_8px_18px_-14px_rgba(0,0,0,0.18)";
 const ROTATING_CHEVRON_LITERAL = "rotate(-90deg";
+const INLINE_CHEVRON_PATH = /<path\s+d=["']M9 18l6-6-6-6["']/;
+const INLINE_CHEVRON_POLYLINE = /<polyline\s+points=["']9 18 15 12 9 6["']/;
+const INLINE_CHEVRON_ROTATION = /rotate\((?:0|90)deg\)|rotate-90/;
 const ROTATING_CHEVRON_HOME = "rotating-chevron.tsx";
 
 // The detection predicates, extracted so a planted positive/negative probe
@@ -24,7 +27,9 @@ export function handRollsRotatingChevron(
   fileName: string,
 ): boolean {
   return (
-    text.includes(ROTATING_CHEVRON_LITERAL) &&
+    (text.includes(ROTATING_CHEVRON_LITERAL) ||
+      ((INLINE_CHEVRON_PATH.test(text) || INLINE_CHEVRON_POLYLINE.test(text)) &&
+        INLINE_CHEVRON_ROTATION.test(text))) &&
     !fileName.endsWith(ROTATING_CHEVRON_HOME)
   );
 }
@@ -74,6 +79,33 @@ describe("web-shared-idioms source guards — predicate probes", () => {
         "rotating-chevron.tsx",
       ),
     ).toBe(false);
+  });
+
+  it("detects an inline right-chevron rotated down when expanded", () => {
+    expect(
+      handRollsRotatingChevron(
+        `<svg style={{ transform: expanded ? "rotate(90deg)" : "rotate(0deg)" }}><path d="M9 18l6-6-6-6" /></svg>`,
+        "other.tsx",
+      ),
+    ).toBe(true);
+  });
+
+  it("does not flag an unrelated rotating icon", () => {
+    expect(
+      handRollsRotatingChevron(
+        `<svg style={{ transform: "rotate(90deg)" }}><path d="M12 2v20" /></svg>`,
+        "other.tsx",
+      ),
+    ).toBe(false);
+  });
+
+  it("detects an inline right-chevron using a rotated utility class", () => {
+    expect(
+      handRollsRotatingChevron(
+        `<svg className={expanded ? "rotate-90" : ""}><polyline points="9 18 15 12 9 6" /></svg>`,
+        "other.tsx",
+      ),
+    ).toBe(true);
   });
 
   it("homes the card surface once in the shared stylesheet", () => {

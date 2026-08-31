@@ -24,13 +24,7 @@ export const coreConfig: Linter.Config[] = [
     ".agents/**",
     "**/coverage/**",
     "**/.turbo/**",
-    "**/prisma/generated/**",
     "openspec/**",
-    // Workflow-harness scripts (the `Workflow` tool wraps these in an async
-    // function and injects args/log/parallel/agent), so they legitimately use
-    // top-level return/await and are not standalone modules — linting them as
-    // such only produces false "return outside of function" parse errors.
-    "**/*.workflow.mjs",
   ]),
   // A disable directive that no longer suppresses anything asserts a constraint
   // the code already satisfies. ESLint reports these at `warn` by default, which
@@ -73,16 +67,8 @@ export const coreConfig: Linter.Config[] = [
       // simple-import-sort: deterministic import/export order (autofixable).
       "simple-import-sort/imports": "error",
       "simple-import-sort/exports": "error",
-      // unicorn — a CURATED allowlist, not the recommended preset.
-      // Directive: community-strict, no overhead, AI-controlled. The full
-      // `recommended` set (3266 firings) is dominated by two notorious rules
-      // (prevent-abbreviations, no-null) plus several whose AUTOFIX introduces
-      // bugs/regressions here — measured: prefer-https rewrites the SVG XML
-      // namespace `http://www.w3.org/2000/svg` (an identifier, not a URL) to
-      // https and breaks the SVG; prefer-spread turns `Array.from(domCollection)`
-      // into a spread that loses TS typing (no-unsafe-*); no-useless-undefined
-      // rewrites `() => undefined` into `() => {}` (empty-function). So enable
-      // only the safe, high-value, autofix-clean rules:
+      // Curated Unicorn rules only. The complete recommended preset conflicts
+      // with typed DOM collections, explicit undefined values, and SVG namespaces.
       "unicorn/escape-case": "error",
       // unicorn/number-literal-case is intentionally NOT enabled: it conflicts
       // with Prettier (the formatter of record). The rule wants UPPERCASE hex
@@ -112,20 +98,6 @@ export const coreConfig: Linter.Config[] = [
       "unicorn/no-unnecessary-array-splice-count": "error",
       "unicorn/prefer-type-error": "error",
       "unicorn/require-css-escape": "error",
-      // Dropped (left non-autofixable stragglers that fight intentional code):
-      // no-useless-switch-case (explicit `case X: default:` documents known enum
-      // values), prefer-query-selector / better-dom-traversing / text-encoding-
-      // identifier-case / prefer-logical-operator-over-ternary (borderline value,
-      // autofix self-declined on type/nullish nuance).
-      // Several recommended rules are NOT enabled because their autofix breaks
-      // types/behavior in this typed codebase (all caught by the gate):
-      //  • no-useless-undefined — strips required explicit `undefined`
-      //    (`safeParse(undefined)`→`safeParse()`; `calledWith({},undefined)`→`({})`).
-      //  • prefer-native-coercion-functions — `.filter((x): x is string =>
-      //    Boolean(x))`→`.filter(Boolean)` drops the type predicate (string|undefined).
-      //  • prefer-math-min-max — `date > latest ? date : latest`→`Math.max(...)`
-      //    returns number where a Date is required.
-      //  • prefer-https / prefer-spread — break the SVG XML namespace / lose DOM types.
       // unicorn/filename-case with our ignore patterns:
       "unicorn/filename-case": [
         "error",
@@ -219,36 +191,21 @@ export const coreConfig: Linter.Config[] = [
 
       "@typescript-eslint/no-deprecated": "error",
 
-      // require-await repo-wide
-      // (the declared standard does NOT exempt tests for the type-aware base).
-      // src violations are fixed in code; test-mock methods that are async purely
-      // to satisfy an async interface contract carry a per-site disable.
+      // Async interface mocks that need no await carry a reasoned per-site disable.
       "@typescript-eslint/require-await": "error",
       "@typescript-eslint/no-empty-function": "error",
       // allowWithDecorator exempts decorated classes: in this NestJS codebase
       // an empty `@Module` class is correct by design (the decorator carries
       // the provider/import metadata). This is the rule's built-in
-      // framework-accommodation option, NOT a weakening — the rule still fires
-      // on genuinely extraneous (non-decorated) classes. The 6 remaining
-      // test-mock sites (inert `@nestjs/common` lifecycle stubs in vi.mock
-      // factories) carry per-site disables with reasons.
+      // framework-accommodation option; non-decorated empty classes still fail.
       "@typescript-eslint/no-extraneous-class": [
         "error",
         { allowWithDecorator: true },
       ],
-      // no-misused-promises: every firing is a real correctness question
-      // (a Promise used where a void/boolean is expected). Fixed per-site to
-      // preserve intended behavior; no eslint-disable escape is permitted here.
+      // Promise values must not leak into void or boolean positions.
       "@typescript-eslint/no-misused-promises": "error",
-      // strictTypeChecked
-      // sets every allow:false (202 firings here), but 184 are a plain `${number}`
-      // and a handful are `${boolean}` — both safe, idiomatic interpolation. Per
-      // the spec's "built-in option is a config choice, not a weakening" scenario
-      // (same precedent as no-extraneous-class allowWithDecorator), allowNumber +
-      // allowBoolean scope the rule to its dominant noise instead of churning ~190
-      // mechanical String() wraps. The rule still fires on the genuinely-risky
-      // shapes (any, nullish, never, RegExp), which were fixed by hand at the
-      // source (e.g. typing DATABASE_URL as string in the destructive guard).
+      // Numbers and booleans interpolate safely; unknown, nullish, never, and
+      // RegExp values must be narrowed explicitly.
       "@typescript-eslint/restrict-template-expressions": [
         "error",
         {
@@ -260,94 +217,36 @@ export const coreConfig: Linter.Config[] = [
           allowRegExp: false,
         },
       ],
-      // prefer-nullish-coalescing: SOFTENED from strictTypeChecked's default via
-      // `ignorePrimitives: { string: true }` (a deliberate relaxation, documented
-      // as such). 20 of 23 firings are string `||` where an empty string is a
-      // meaningful fall-through (id/label/description defaults: `name || "—"`,
-      // `productId || "" `, `week || range || "…"`); for strings `||` and `??`
-      // differ only on "", and here "" SHOULD fall through, so `||` is the
-      // intended idiom, not a bug. Trade-off: this blinds the rule to future
-      // string `||` (incl. genuine ones). The 3 non-string firings were fixed by
-      // hand (`?? 0`, `??=`, ternary→`??`); the rule still guards number/boolean/
-      // object `||`.
+      // Empty strings intentionally fall through display-label defaults, while
+      // number, boolean, and object defaults remain nullish-only.
       "@typescript-eslint/prefer-nullish-coalescing": [
         "error",
         { ignorePrimitives: { string: true } },
       ],
-      // unbound-method: product code carries no firings. Tests swap this for
-      // `vitest/unbound-method` (see the test-file override), which models
-      // `expect(mock.method)` natively instead of needing a disable per spy
-      // assertion. The one genuine method-capture (reminders.scheduler.test)
-      // was fixed with `.bind`, not a disable.
+      // Tests use vitest/unbound-method so spy assertions retain mock semantics.
       "@typescript-eslint/unbound-method": "error",
-      // no-base-to-string: 7 real "[object Object]" risks on `unknown` operands
-      // (SAML profile fields, generic data-table cells, a spawn error's stderr),
-      // each fixed by narrowing to a string at the source — no disables.
+      // Unknown values must be narrowed before stringification.
       "@typescript-eslint/no-base-to-string": "error",
-      // no-confusing-void-expression: SOFTENED via `ignoreArrowShorthand: true`
-      // (a deliberate relaxation from strictTypeChecked's default, documented as
-      // such). 270 of 274 firings are arrow-shorthand void returns — idiomatic
-      // React event handlers (`onClick={() => setOpen(true)}`) where the void
-      // return is intended, not confusing. This softening opens NO Promise hole:
-      // the only dangerous arrow-shorthand-void case is a Promise-returning call
-      // in a void slot, and `no-misused-promises` (already error, with the
-      // default checksVoidReturn) already rejects that. The 4 remaining real
-      // firings — explicit `return <void-call>()` from block-bodied functions in
-      // main.ts and sidebar.tsx — were fixed by hand (statement + bare `return`).
+      // Arrow-shorthand void expressions are idiomatic React handlers;
+      // no-misused-promises still rejects Promise-returning handlers.
       "@typescript-eslint/no-confusing-void-expression": [
         "error",
         { ignoreArrowShorthand: true },
       ],
-      // The `any`-flow
-      // family. 218 firings (54 src / 160 test). Every src firing was fixed at
-      // its ROOT by giving the value a real type instead of `any` — typed Prisma
-      // payloads (Prisma.ReportGetPayload / the shared PrismaReportSectionWith-
-      // Relations cast), `getInstance() as express.Express`, a structural
-      // PrismaLogEventEmitter for Prisma 7's $on, `: unknown` boundary
-      // annotations, and a typed tRPC-proxy shim — NET REMOVING several former
-      // no-explicit-any disables. One firing surfaced a real masked `null`
-      // (projectStatuses[].status). Test firings were typed at their any-source
-      // (JSON.parse → Record<string, unknown>, mock casts), with a documented
-      // per-site disable only where no real type is reachable. No rule option is
-      // softened here — the family runs at full strictTypeChecked strength.
+      // Keep the complete strict any-flow family enabled.
       "@typescript-eslint/no-unsafe-argument": "error",
       "@typescript-eslint/no-unsafe-assignment": "error",
       "@typescript-eslint/no-unsafe-call": "error",
       "@typescript-eslint/no-unsafe-member-access": "error",
       "@typescript-eslint/no-unsafe-return": "error",
-      // non-nullable-type-assertion-style: 9 firings, all `x as T` where T is the
-      // non-null form of x (i.e. equivalent to `x!`). NOT converted to `!` (that
-      // would seed the declared no-non-null-assertion→error target with new debt);
-      // instead each was removed at the ROOT so no assertion is needed: the 3 src
-      // `d.productId as string` sites turned their upstream `.filter(d => !!d.productId)`
-      // into a type-predicate filter (`d is typeof d & { productId: string }`),
-      // narrowing productId to string honestly; the test sites dropped the
-      // assertion (non-optional tuple element / `map.get(k) ?? null`). 0 disables.
+      // Prefer real narrowing over assertion-based non-null claims.
       "@typescript-eslint/non-nullable-type-assertion-style": "error",
-      // no-unnecessary-type-assertion: 134 firings (44 src / 90 test). The
-      // autofix removed the genuinely-redundant assertions across 40 files
-      // cleanly (verified by tsc). The 8 remaining files carry a file-level
-      // single-rule disable, NOT a removal: they hit a documented ESLint-vs-
-      // tsc mismatch where ESLint's type-aware program judges an assertion
-      // redundant but the app tsconfig still needs it — 8 RTL test files cast
-      // `getByLabelText(...)` to a concrete element (HTMLInputElement etc.) to
-      // reach .value/.checked/.options (TS2339 without it). File-level
-      // (not line) disables here are position-independent — immune to the
-      // pre-commit-prettier comment-shift hazard.
+      // RTL element casts may carry a file-level disable where ESLint and the
+      // package tsconfig disagree about concrete DOM element properties.
       "@typescript-eslint/no-unnecessary-type-assertion": "error",
-      // The last
-      // and most behaviour-sensitive cluster: 225 firings, no option lever.
-      // Dominant root cause: `noUncheckedIndexedAccess` is OFF, so `arr[i]` is
-      // typed non-null though an out-of-bounds index is `undefined` at runtime —
-      // every `arr[i] ?? x` / `arr[i]?.y` fired as "unnecessary" while being a
-      // REAL guard. Fixed at the ROOT with `arr.at(i)` (honestly `T | undefined`),
-      // NOT by deleting the guard. Honestly-dead guards (Prisma model fields,
-      // Zod-defaulted inputs, narrowed locals, tRPC error.message, role-validated
-      // Record lookups) were removed; genuine type-lies at boundaries that have no
-      // clean type fix carry a per-site disable with a reason (external lib /
-      // queue / DOM / sparse Record / optimistic query contract). The full test
-      // suite caught two optimistic-contract lies (a `ci` field, synthetic-ctx
-      // `req.headers`) that typecheck could not — both now guarded + disabled.
+      // Use `.at()` where out-of-bounds access is possible so runtime guards are
+      // represented honestly in the type. Boundary type gaps need a reasoned
+      // per-site disable.
       "@typescript-eslint/no-unnecessary-condition": "error",
 
       // React hooks (single-owned by ESLint)
@@ -355,8 +254,8 @@ export const coreConfig: Linter.Config[] = [
       // `const` (enforceConst). The options scope the rule to its signal:
       // -1/0/1/2 are universal idioms; array indexes, enums, readonly class
       // props, type positions and numeric literal types are self-documenting.
-      // No autofix exists — firings are fixed by hand-lifting the literal,
-      // never by mass-disable.
+      // No autofix exists; lift each literal into a named constant rather than
+      // mass-disabling the rule.
       "@typescript-eslint/no-magic-numbers": [
         "error",
         {
@@ -375,16 +274,11 @@ export const coreConfig: Linter.Config[] = [
       // immutability, refs, …) that pair with react-compiler/react-compiler.
       ...reactHooks.configs.recommended.rules,
       "react-hooks/exhaustive-deps": "error",
-      // refs: error since the burn-down. The compiler taints a WHOLE hook
-      // return object that bundles refs with data, so dialog components
-      // DESTRUCTURE the hook result instead of holding the bag; the surviving
-      // deliberate render-time ref patterns (latest-ref bridges, mutation
-      // callbacks) carry per-site disables with reasons.
+      // Destructure hooks that bundle refs with data; deliberate render-time ref
+      // bridges carry a reasoned per-site disable.
       "react-hooks/refs": "error",
-      // set-state-in-effect: error since the 24-site burn-down (derive/paired
-      // state/mount-fresh redesigns; the surviving effect-owned sites —
-      // external-system syncs, signal props, timer choreography — carry
-      // per-site disables with reasons).
+      // Effect-owned external sync and timer choreography require a reasoned
+      // per-site disable.
       "react-hooks/set-state-in-effect": "error",
 
       // React Compiler (React 19)
@@ -392,12 +286,8 @@ export const coreConfig: Linter.Config[] = [
 
       // file size + cyclomatic complexity. `max-lines` counts real code lines
       // only (skipBlankLines + skipComments); `complexity` uses the ESLint
-      // default of 20 (community best-practice — 10 would be ~87 functions of
-      // churn per the directive's "no overhead"; cognitive-complexity is
-      // sonarjs's job). The rule is ACTIVE repo-wide so any NEW 301+ line file
-      // or 20+ complexity function fails immediately. Pre-existing violators are
-      // grandfathered in the permanent-exempt override blocks at the end of this
-      // config.
+      // default of 20; cognitive complexity is owned by sonarjs. Named override
+      // blocks below document the files that use a different limit.
       "max-lines": [
         "error",
         { max: 300, skipBlankLines: true, skipComments: true },

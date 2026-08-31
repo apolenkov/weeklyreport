@@ -10,7 +10,7 @@ Resolve the web API base URL and tRPC batch decoding through fail-loud shared se
 
 The web app MUST resolve the API base URL through a single seam
 (`requireApiUrl` in `apps/web/src/shared/server/transport/api-url.ts`) that reads `API_URL`
-then `NEXT_PUBLIC_API_URL` and throws a descriptive error when neither is set.
+and throws a descriptive error when it is unset.
 It MUST NOT fall back to a hardcoded `http://localhost:3002` (or any other
 default). Every consumer — `apps/web/next.config.ts`,
 `apps/web/src/app/api/client-logs/route.ts`,
@@ -20,27 +20,26 @@ default). Every consumer — `apps/web/next.config.ts`,
 this seam, so a missing value fails loud at config-load / request time rather
 than silently targeting localhost.
 
-#### Scenario: both env vars unset
+Production Compose MUST own one immutable internal API origin (`http://api:3001`)
+and provide that same value to both the Next build arguments (which compile the
+rewrites) and the running Web server environment (which serves server-side
+fetches). `API_URL` MUST NOT be a production operator input or be interpolated
+from the shell, because divergent build-time and runtime values create a
+split-brain Web route. Native development and CI may continue to provide their
+own explicit `API_URL` values.
 
-- **GIVEN** neither `API_URL` nor `NEXT_PUBLIC_API_URL` is set in the
-  environment
+#### Scenario: API_URL unset
+
+- **GIVEN** `API_URL` is unset in the environment
 - **WHEN** any consumer calls `requireApiUrl`
-- **THEN** it throws an error naming the missing variables and does not return
+- **THEN** it throws an error naming `API_URL` and does not return
   a localhost or other default value
 
-#### Scenario: API_URL takes precedence
+#### Scenario: API_URL is used
 
-- **GIVEN** `API_URL=https://api.internal` and
-  `NEXT_PUBLIC_API_URL=https://api.public` are both set
+- **GIVEN** `API_URL=https://api.internal` is set
 - **WHEN** a consumer calls `requireApiUrl`
-- **THEN** it returns `https://api.internal` (the `API_URL` precedence of the
-  former inline chain is preserved)
-
-#### Scenario: only the public var is set
-
-- **GIVEN** `API_URL` is unset and `NEXT_PUBLIC_API_URL=https://api.public`
-- **WHEN** a consumer calls `requireApiUrl`
-- **THEN** it returns `https://api.public`
+- **THEN** it returns `https://api.internal`
 
 ### Requirement: Org-identity transport failure degrades to the generic identity and is reported
 
@@ -94,7 +93,7 @@ loading skeleton while the session query is in flight.
 
 #### Scenario: a missing base URL still fails loud
 
-- **GIVEN** neither `API_URL` nor `NEXT_PUBLIC_API_URL` is set
+- **GIVEN** `API_URL` is unset
 - **WHEN** `getOrgPublic` runs
 - **THEN** `requireApiUrl` throws before any fetch is attempted and the generic
   identity is NOT substituted, because config is not a transport failure

@@ -1,50 +1,11 @@
-// The API schema has no name/description, so the Reminders tab gets readable
-// copy synthesized from kind and fireAt instead of a raw enum value.
-
 import type { AdminReminderRule } from "@customreport/shared";
 
 import type { AdminReminderView } from "./admin-types";
 
-function reminderName(kind: AdminReminderRule["kind"]): string {
-  switch (kind) {
-    case "deadline":
-      return "Deadline reminder";
-    case "escalation":
-      return "Escalation digest";
-    case "follow_up":
-      return "Follow-up reminder";
-  }
-}
-
-// "YYYY-MM-DD HH:MM" — ISO date+time truncated to minute precision.
-const ISO_DATETIME_MINUTE_LENGTH = 16;
-
-function reminderDescription(rule: AdminReminderRule): string {
-  const at = rule.fireAt
-    .toISOString()
-    .replace("T", " ")
-    .slice(0, ISO_DATETIME_MINUTE_LENGTH);
-  switch (rule.kind) {
-    case "deadline":
-      return `Send a reminder when the deadline is reached (fires at ${at} UTC).`;
-    case "escalation":
-      return `Send a T+2h escalation digest to the head with all late leads (fires at ${at} UTC).`;
-    case "follow_up":
-      return `Send a follow-up reminder to leads who have not submitted (fires at ${at} UTC).`;
-  }
-}
-
 export function mapReminder(api: AdminReminderRule): AdminReminderView {
   return {
-    id: api.id,
-    name: reminderName(api.kind),
-    description: reminderDescription(api),
-    active: api.status === "active",
-    kind: api.kind,
-    fireAt: api.fireAt,
-    timezone: api.timezone,
-    version: api.version,
-    reportId: api.reportId,
     policyId: api.policyId,
+    fireAt: api.fireAt,
+    active: api.status === "active",
   };
 }

@@ -190,9 +190,8 @@ describe("riskInputSchema — safeText", () => {
 });
 
 // ---------------------------------------------------------------------------
-// risks, items, AND decisions must each carry ≥1 concrete SDLC stage
-// on the write path; the read model stays tolerant of stage-less legacy rows
-// (rendered as a loud "No stage set" warning).
+// risks, items, AND decisions must each carry a concrete SDLC stage when
+// product-parented; activity-parented rows intentionally carry no stages.
 // ---------------------------------------------------------------------------
 
 describe("decisionInputSchema — safeText", () => {

@@ -11,22 +11,22 @@ of a silent placeholder.
 A PRODUCT-parented risk, item, and decision MUST each reference at least one
 concrete SDLC stage at every layer: the edit dialog blocks saving a stage-less
 row, the shared write schemas (`riskInputSchema`, `itemInputSchema`,
-`decisionInputSchema`) reject an empty or absent `stageIds` array via
-`requiredStageIdsField`, and seed data writes explicit stages on every seeded
-product-parented risk, item, and decision. The empty-selection "applies to all
-assigned stages" fallback is removed at the schema layer for items and
-decisions; "all stages" is expressed by selecting every owned stage.
+`decisionInputSchema`) enforce the product/activity stage rule through
+`writeStageNamesField` and parent-aware superRefine checks, and seed data writes explicit stages on every seeded
+product-parented risk, item, and decision. Empty selection MUST NOT mean
+"applies to all assigned stages" for items or decisions; "all stages" is
+expressed by selecting every owned stage.
 
 This rule applies ONLY to a record whose parent is a PRODUCT. A record parented
 to a project ACTIVITY carries no SDLC stage (an activity has no stage lane), so
 the write schemas MUST accept an activity-parented risk, item, or decision with
-an empty or absent `stageIds`, and the stage-required rule MUST NOT be applied to
+an empty or absent `stageNames`, and the stage-required rule MUST NOT be applied to
 it. The parent XOR is what discriminates: a product FK present means the stage
 rule applies; an `activityId` present means it does not.
 
 An activity-parented record carrying NO stage is not merely tolerated, it is
 REQUIRED: the write schemas MUST REJECT a risk, item, or decision whose
-`activityId` is set and whose `stageIds` is NON-empty. An activity owns no
+`activityId` is set and whose `stageNames` is NON-empty. An activity owns no
 stages, so a stage name on an activity-parented row can only be a spoofed or
 stale owned-stage name and MUST fail validation. The `.superRefine` enforces
 both directions: stage-required for a product parent, stage-forbidden for an
@@ -40,27 +40,27 @@ activity parent.
 
 #### Scenario: the API receives a risk without stages
 
-- **WHEN** a draft-save payload contains a PRODUCT-parented risk whose `stageIds`
+- **WHEN** a draft-save payload contains a PRODUCT-parented risk whose `stageNames`
   is missing or empty
 - **THEN** validation fails and the payload is rejected
 
 #### Scenario: the API receives an item without stages
 
 - **WHEN** a draft-save or submit payload contains a PRODUCT-parented item whose
-  `stageIds` is missing or empty
+  `stageNames` is missing or empty
 - **THEN** validation fails and the payload is rejected by `itemInputSchema`
 
 #### Scenario: the API receives a decision without stages
 
 - **WHEN** a draft-save or submit payload contains a PRODUCT-parented decision
-  whose `stageIds` is missing or empty
+  whose `stageNames` is missing or empty
 - **THEN** validation fails and the payload is rejected by `decisionInputSchema`
 
 #### Scenario: an activity-parented record is accepted without stages
 
 - **WHEN** a draft-save or submit payload contains a risk, item, or decision
   whose parent is an activity (`activityId` set, product FK null) and whose
-  `stageIds` is empty or absent
+  `stageNames` is empty or absent
 - **THEN** validation ACCEPTS the record — the stage-required rule does not apply
   to an activity parent
 
@@ -68,13 +68,18 @@ activity parent.
 
 - **WHEN** a draft-save or submit payload contains a risk, item, or decision
   whose parent is an activity (`activityId` set, product FK null) and whose
-  `stageIds` is NON-empty
+  `stageNames` is NON-empty
 - **THEN** validation REJECTS the record — an activity owns no stage, so a
   stage-bearing activity row is not allowed
 
 ### Requirement: Items and decisions require a concrete stage in the edit dialog
 
-An item or decision MUST reference at least one concrete SDLC stage when saved through its edit dialog and the chosen product has at least one owned stage: the dialog auto-applies a single owned stage and otherwise blocks saving a stage-less row, exactly as the risk dialog does. The empty-selection "applies to all assigned stages" fallback is removed for items and decisions; "all stages" is expressed by selecting every owned stage.
+An item or decision MUST reference at least one concrete SDLC stage when saved
+through its edit dialog and the chosen product has at least one owned stage: the
+dialog auto-applies a single owned stage and otherwise blocks saving a
+stage-less row, exactly as the risk dialog does. Empty selection MUST NOT mean
+"applies to all assigned stages" for items or decisions; "all stages" is
+expressed by selecting every owned stage.
 
 1. When the selected product has exactly one owned stage, the dialog MUST
    treat it as implicitly selected so the lead can save without a manual click.
@@ -104,11 +109,12 @@ An item or decision MUST reference at least one concrete SDLC stage when saved t
 
 ### Requirement: Record dialogs do not pre-select stages on create
 
-The Item, Risk, and Decision dialogs MUST open in create mode with NO SDLC stage pre-selected, so the lead makes an explicit stage choice and cannot silently skip it. This propagates the risk dialog's existing behaviour (the `fix-report-surface-integrity` W11 removal of the "all owned stages" default) to the item and decision dialogs.
+The Item, Risk, and Decision dialogs MUST open in create mode with NO SDLC stage
+pre-selected, so the lead makes an explicit stage choice and cannot silently
+skip it.
 
-1. On create, the stage selector MUST start empty for all three dialogs; the prior
-   "pre-select every owned stage" default for items and decisions is removed.
-2. On edit, the dialog MUST restore the record's existing `stageIds`.
+1. On create, the stage selector MUST start empty for all three dialogs.
+2. On edit, the dialog MUST restore the record's existing `stageNames`.
 3. The required-stage rule is unchanged: a product with exactly one owned stage
    auto-applies it; a multi-owned-stage product with no selection blocks saving
    with "Select at least one stage."
@@ -135,7 +141,9 @@ The Item, Risk, and Decision dialogs MUST open in create mode with NO SDLC stage
 
 ### Requirement: Decision stage options follow the selected product
 
-The Decision dialog MUST source its SDLC stage options from the SELECTED product's owned stages and reset the selection when the product changes, exactly as the item and risk dialogs do. The earlier department-wide union sourcing is removed.
+The Decision dialog MUST source its SDLC stage options from the SELECTED
+product's owned stages and reset the selection when the product changes,
+exactly as the item and risk dialogs do.
 
 1. The stage options shown MUST be the owned stages of the currently selected
    product, not the union across all products.

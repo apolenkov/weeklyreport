@@ -4,7 +4,7 @@ import {
   Gauge,
   Histogram,
   Registry,
-} from "prom-client";
+} from "@prometheus-io/client";
 
 const metricBuckets = (values: readonly string[]): number[] =>
   values.map(Number);
@@ -47,7 +47,7 @@ const SUBMISSION_LATENCY_BUCKETS = metricBuckets([
 ]);
 
 // Shared registration point for application and Node.js process metrics.
-// prom-client rejects duplicate names, so every singleton lives here.
+// The Prometheus client rejects duplicate names, so every singleton lives here.
 export const metricsRegistry = new Registry();
 
 collectDefaultMetrics({ register: metricsRegistry });
@@ -66,6 +66,14 @@ export const dlqFailedTotal = new Counter({
   name: "cr_dlq_failed_total",
   help: "Total BullMQ jobs that exhausted their retry budget",
   labelNames: ["queue"] as const,
+  registers: [metricsRegistry],
+});
+
+// SMTP is not transactionally coupled to PostgreSQL. A stale `sending` row
+// therefore represents an explicitly unknown delivery outcome, not success.
+export const reminderDeliveryUncertainTotal = new Counter({
+  name: "cr_reminder_delivery_uncertain_total",
+  help: "Reminder executions terminalized because SMTP delivery outcome is unknown",
   registers: [metricsRegistry],
 });
 

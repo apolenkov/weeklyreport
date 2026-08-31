@@ -4,7 +4,15 @@ import type { Prisma } from "@prisma/client";
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import { isForeignKeyViolation } from "../../../lib/prisma-foreign-key-violation.js";
 import { ReviewNotFoundError } from "../application/review.service.js";
-import type { RecordAnchor } from "../application/review-actions.service.js";
+import type {
+  RecordAnchor,
+  ReviewWriteActor,
+} from "../application/review-actions.service.js";
+import {
+  assertReviewEntitlement,
+  lockEditableReport,
+  lockReviewUsers,
+} from "./review-write-gate.js";
 
 type RecordKind = "item" | "risk" | "decision";
 
@@ -16,7 +24,7 @@ function throwAnchorNotFound(): never {
 interface AnchorLineageRow {
   readonly stableId: string;
   readonly reportSectionId: string;
-  readonly reportSection: { reportId: string };
+  readonly reportSection: { reportId: string; authorId: string };
 }
 
 interface AnchorLineage {
@@ -24,12 +32,13 @@ interface AnchorLineage {
   readonly stableId: string;
   readonly reportSectionId: string;
   readonly reportId: string;
+  readonly authorId: string;
 }
 
 const anchorLineageSelect = {
   stableId: true,
   reportSectionId: true,
-  reportSection: { select: { reportId: true } },
+  reportSection: { select: { reportId: true, authorId: true } },
 } as const;
 
 const createdCommentSelect = {
@@ -50,6 +59,7 @@ function toLineage(
     stableId: row.stableId,
     reportSectionId: row.reportSectionId,
     reportId: row.reportSection.reportId,
+    authorId: row.reportSection.authorId,
   };
 }
 
@@ -152,16 +162,27 @@ async function createComment(
 // transaction, then anchors the comment by durable lineage.
 export function insertCoordinatedComment(
   prisma: PrismaService,
-  reviewerId: string,
+  actor: ReviewWriteActor,
   anchor: RecordAnchor,
   text: string,
 ): Promise<RecordCommentView> {
   return prisma.$transaction(async (tx) => {
     const lineage = await loadAnchorLineage(tx, anchor);
-    await tx.$queryRaw<
-      { periodStatus: string }[]
-    >`SELECT "periodStatus" FROM "Report" WHERE "id" = ${lineage.reportId} FOR UPDATE`;
+    await lockReviewUsers(tx, [actor.userId, lineage.authorId]);
+    await lockEditableReport(tx, lineage.reportId);
+    const section = await tx.reportSection.findFirst({
+      where: { id: lineage.reportSectionId, reportId: lineage.reportId },
+      select: {
+        authorId: true,
+        author: { select: { reportingGroupId: true } },
+      },
+    });
+    if (!section) throwAnchorNotFound();
+    if (section.authorId !== lineage.authorId) throwAnchorNotFound();
+    const groupId = section.author.reportingGroupId;
+    if (!groupId) throw new ReviewNotFoundError("Review group not found.");
+    await assertReviewEntitlement(tx, actor, groupId);
     const currentAnchorId = await loadCurrentAnchorId(tx, lineage);
-    return createComment(tx, reviewerId, lineage, currentAnchorId, text);
+    return createComment(tx, actor.userId, lineage, currentAnchorId, text);
   });
 }

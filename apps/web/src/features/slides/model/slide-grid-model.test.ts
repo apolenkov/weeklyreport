@@ -8,6 +8,7 @@ import {
   type ReportSectionFixture,
 } from "../../../test-utils/report-section-fixtures";
 import type { CrossAuthorContentRow } from "../../report-sections";
+import { buildForeignRows } from "./slide-grid-foreign";
 import {
   buildSlideGridModel,
   collectStageNames,
@@ -78,6 +79,7 @@ const foreignRow = (
 ): CrossAuthorContentRow => ({
   authorId: "co-1",
   authorName: "Смирнова А.С.",
+  authorRole: "lead",
   items: [],
   risks: [],
   decisions: [],
@@ -100,6 +102,33 @@ const productLevelOf = (card: GridProductCard): GridSubsection => {
 };
 
 describe("buildSlideGridModel — status marks and columns", () => {
+  it("uses the exhaustive canonical item status map for foreign rows", () => {
+    const rows = buildForeignRows([
+      foreignRow({
+        items: (
+          ["planned", "in_progress", "paused", "postponed", "done"] as const
+        ).map((workflowStatus, index) => ({
+          id: `foreign-${String(index)}`,
+          projectId: "p1",
+          type: "current",
+          text: workflowStatus,
+          workflowStatus,
+          stageNames: [],
+        })),
+      }),
+    ]);
+
+    expect(rows.map(({ row }) => [row.text, row.tone, row.hoverLabel])).toEqual(
+      [
+        ["planned", "neutral", "Planned"],
+        ["in_progress", "neutral", "In progress"],
+        ["paused", "paused", "Paused"],
+        ["postponed", "postponed", "Postponed"],
+        ["done", "completed", "Completed"],
+      ],
+    );
+  });
+
   it("marks done items and plays risk severity via row highlight", () => {
     const model = buildSlideGridModel({
       section: section({
@@ -316,7 +345,7 @@ describe("buildSlideGridModel — priority strip", () => {
   it("does not fabricate a positional id for an item without id or stableId", () => {
     const model = buildSlideGridModel({
       section: section({
-        items: [item({ text: "legacy priority", priorityRank: 1 })],
+        items: [item({ text: "ranked priority", priorityRank: 1 })],
       }),
     });
 
@@ -473,8 +502,7 @@ describe("buildSlideGridModel — authors and header stats", () => {
     expect(model.authors.map((a) => [a.isOwner, a.role])).toEqual([
       [true, "lead"],
       [false, "lead"],
-      // A row predating the field (frozen snapshot) still renders, role-less.
-      [false, undefined],
+      [false, "lead"],
     ]);
   });
 

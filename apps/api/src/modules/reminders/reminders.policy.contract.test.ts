@@ -79,7 +79,7 @@ describe("reminderPolicySchema", () => {
     }[] = [
       {
         label: "omitted validFrom",
-        overrides: { kind: "follow_up", offsetMinutes: 60, validUntil: null },
+        overrides: { kind: "deadline", offsetMinutes: 60, validUntil: null },
         path: ["validFrom"],
       },
       {

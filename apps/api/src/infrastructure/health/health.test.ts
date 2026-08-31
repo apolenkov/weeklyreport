@@ -3,10 +3,12 @@ import type { HealthIndicatorResult } from "@nestjs/terminus";
 import { HealthIndicatorService } from "@nestjs/terminus";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { WorkerLivenessRegistry } from "../bullmq/worker-liveness.registry.js";
 import type { EnvConfig } from "../config/env.schema.js";
 import { BullMQHealthIndicator } from "./bullmq.health.js";
 import { HealthController } from "./health.controller.js";
 import { PrismaHealthIndicator } from "./prisma.health.js";
+import { READINESS_PROBE_TIMEOUT_MS } from "./readiness-timeout.js";
 import { RedisHealthIndicator } from "./redis.health.js";
 
 // lazyConnect keeps the constructed client from opening a socket; the tests
@@ -27,10 +29,16 @@ const explicitInjectionToken = (
 };
 
 describe("health provider composition", () => {
+  it("injects the application-scoped worker registry into BullMQ readiness", () => {
+    expect(explicitInjectionToken(BullMQHealthIndicator, 2)).toBe(
+      WorkerLivenessRegistry,
+    );
+  });
+
   it.each([
     [RedisHealthIndicator, 0],
     [PrismaHealthIndicator, 1],
-    [BullMQHealthIndicator, 2],
+    [BullMQHealthIndicator, 3],
   ] as const)(
     "%s declares its HealthIndicatorService injection token for the tsx runtime",
     (provider, index) => {
@@ -108,6 +116,10 @@ describe("HealthController", () => {
 });
 
 describe("PrismaHealthIndicator", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   function makeIndicator() {
     const prisma = { $queryRaw: vi.fn() };
     const indicator = new PrismaHealthIndicator(
@@ -135,6 +147,21 @@ describe("PrismaHealthIndicator", () => {
     expect(result).toMatchObject({ database: { status: "down" } });
   });
 
+  it("returns down when SELECT 1 does not settle before the readiness deadline", async () => {
+    vi.useFakeTimers();
+    const { indicator, prisma } = makeIndicator();
+    prisma.$queryRaw.mockImplementation(
+      () => new Promise<never>(() => undefined),
+    );
+
+    const resultPromise = indicator.isHealthy("database");
+    await vi.advanceTimersByTimeAsync(READINESS_PROBE_TIMEOUT_MS);
+
+    await expect(resultPromise).resolves.toMatchObject({
+      database: { status: "down" },
+    });
+  });
+
   it("does not leak the raw database error into the readiness body (logs it internally instead)", async () => {
     const { indicator, prisma } = makeIndicator();
     const errorSpy = vi
@@ -158,6 +185,10 @@ describe("PrismaHealthIndicator", () => {
 });
 
 describe("RedisHealthIndicator", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("returns up result keyed `redis` when ping succeeds", async () => {
     const indicator = new RedisHealthIndicator(
       new HealthIndicatorService(),
@@ -191,6 +222,49 @@ describe("RedisHealthIndicator", () => {
     expect(result).toMatchObject({ redis: { status: "down" } });
   });
 
+  it("returns down when ping does not settle before the readiness deadline", async () => {
+    vi.useFakeTimers();
+    const indicator = new RedisHealthIndicator(
+      new HealthIndicatorService(),
+      STUB_ENV,
+    );
+    const redisMock = {
+      ping: vi.fn(() => new Promise<never>(() => undefined)),
+      disconnect: vi.fn(),
+    };
+    Object.assign(indicator, { redis: redisMock });
+
+    const resultPromise = indicator.isHealthy("redis");
+    await vi.advanceTimersByTimeAsync(READINESS_PROBE_TIMEOUT_MS);
+
+    await expect(resultPromise).resolves.toMatchObject({
+      redis: { status: "down" },
+    });
+  });
+
+  it("logs a safe structured reason when ping fails", async () => {
+    const warning = vi
+      .spyOn(Logger.prototype, "warn")
+      .mockImplementation(() => undefined);
+    const indicator = new RedisHealthIndicator(
+      new HealthIndicatorService(),
+      STUB_ENV,
+    );
+    Object.assign(indicator, {
+      redis: {
+        ping: vi.fn().mockRejectedValue(new Error("ECONNREFUSED")),
+        disconnect: vi.fn(),
+      },
+    });
+
+    await indicator.isHealthy("redis");
+
+    expect(warning).toHaveBeenCalledWith("redis readiness check failed", {
+      error: "ECONNREFUSED",
+    });
+    warning.mockRestore();
+  });
+
   it("disconnects without issuing a Redis command on module destroy", () => {
     const indicator = new RedisHealthIndicator(
       new HealthIndicatorService(),
@@ -219,6 +293,14 @@ describe("BullMQHealthIndicator", () => {
     };
   }
 
+  function readyWorkers() {
+    const registry = new WorkerLivenessRegistry();
+    const handle = { isPaused: () => false, isRunning: () => true };
+    registry.register("pdf-export", handle).markReady();
+    registry.register("email-reminder", handle).markReady();
+    return registry;
+  }
+
   function makeIndicator(
     pdfCounts = { waiting: 2, active: 1 },
     emailCounts = { waiting: 0, active: 0 },
@@ -228,6 +310,7 @@ describe("BullMQHealthIndicator", () => {
     const indicator = new BullMQHealthIndicator(
       pdfQueue,
       emailQueue,
+      readyWorkers(),
       new HealthIndicatorService(),
     );
     return { indicator, pdfQueue, emailQueue };
@@ -263,6 +346,7 @@ describe("BullMQHealthIndicator", () => {
     const indicator = new BullMQHealthIndicator(
       pdfQueue,
       emailQueue,
+      readyWorkers(),
       new HealthIndicatorService(),
     );
 
@@ -289,6 +373,7 @@ describe("BullMQHealthIndicator", () => {
     const indicator = new BullMQHealthIndicator(
       queue,
       queue,
+      readyWorkers(),
       new HealthIndicatorService(),
     );
 
@@ -301,5 +386,52 @@ describe("BullMQHealthIndicator", () => {
 
     pending.reject(new Error("late queue failure"));
     await Promise.resolve();
+  });
+
+  it("returns down without probing queues while a required worker is stopped", async () => {
+    const pdfQueue = makeQueue({ waiting: 0, active: 0 });
+    const emailQueue = makeQueue({ waiting: 0, active: 0 });
+    const registry = readyWorkers();
+    const stopped = { isPaused: () => false, isRunning: () => false };
+    registry.register("email-reminder", stopped).markReady();
+    const indicator = new BullMQHealthIndicator(
+      pdfQueue,
+      emailQueue,
+      registry,
+      new HealthIndicatorService(),
+    );
+
+    await expect(indicator.isHealthy("bullmq")).resolves.toMatchObject({
+      bullmq: {
+        status: "down",
+        workers: { "email-reminder": "stopped", "pdf-export": "ready" },
+      },
+    });
+    expect(pdfQueue.getJobCounts).not.toHaveBeenCalled();
+    expect(emailQueue.getJobCounts).not.toHaveBeenCalled();
+  });
+
+  it("recovers after the stopped worker is replaced and reports ready", async () => {
+    const pdfQueue = makeQueue({ waiting: 0, active: 0 });
+    const emailQueue = makeQueue({ waiting: 0, active: 0 });
+    const registry = readyWorkers();
+    const stopped = { isPaused: () => false, isRunning: () => false };
+    registry.register("pdf-export", stopped).markReady();
+    const indicator = new BullMQHealthIndicator(
+      pdfQueue,
+      emailQueue,
+      registry,
+      new HealthIndicatorService(),
+    );
+    await expect(indicator.isHealthy("bullmq")).resolves.toMatchObject({
+      bullmq: { status: "down" },
+    });
+
+    const replacement = { isPaused: () => false, isRunning: () => true };
+    registry.register("pdf-export", replacement).markReady();
+
+    await expect(indicator.isHealthy("bullmq")).resolves.toMatchObject({
+      bullmq: { status: "up" },
+    });
   });
 });

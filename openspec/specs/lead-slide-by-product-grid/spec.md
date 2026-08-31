@@ -3,13 +3,33 @@
 ## Purpose
 
 The status slide deck uses one by-product article for lead, head, and viewer
-presentation surfaces. The article replaces the old fixed-frame quadrant and
-separate product-grid layouts with an auto-height canvas: header, priorities,
+presentation surfaces. The article renders an auto-height canvas with a header,
+priorities,
 one shared column-header row, product cards, contributors, and stage legend. It
 governs the slide article itself; shell-level scope controls and navigation stay
 owned by the report surfaces.
 
 ## Requirements
+
+### Requirement: Deep-linked lead history reports remain addressable
+
+When the lead slide route contains an explicit report id, the route MUST use
+that id as the by-period read candidate even when it is older than the bounded
+history selector page. The scoped API read MUST decide whether the report is
+available; an invalid or unauthorized id MUST surface an unavailable/error
+state and MUST NOT silently fall back to the active report.
+
+#### Scenario: Older report deep link
+
+- **WHEN** a lead opens a report id beyond the first history page
+- **THEN** the by-period query requests that exact id
+- **AND** the UI does not substitute the active report
+
+#### Scenario: Invalid deep link
+
+- **WHEN** the explicit report id is invalid or inaccessible
+- **THEN** the route shows the typed unavailable/error state
+- **AND** the active report is not rendered as a substitute
 
 ### Requirement: One slide article renders every deck slide
 
@@ -65,15 +85,16 @@ article. All colors MUST come from existing design tokens.
 
 ### Requirement: Canvas is auto-height with a bounded width
 
-The slide canvas MUST be centered with `max-width: 1088px`, a minimum width of
-approximately `900px` below which the container scrolls horizontally, a minimum
-height of `680px`, and height that grows with content. Content MUST NOT be
+The slide canvas MUST be centered with the `--slide-canvas-max-w` token (`100%`),
+use the `--slide-canvas-min-w` token (`900px`) so narrower containers scroll
+horizontally, and use the `--slide-canvas-min-h` token (`360px`) while growing
+with content. Content MUST NOT be
 clipped and no count-based truncation (`+N more`) is allowed. In fullscreen, a
 slide taller than the viewport MUST be reachable by vertical scroll.
 
 #### Scenario: dense slide grows instead of clipping
 
-- **WHEN** a section holds more records than fit within `680px`
+- **WHEN** a section holds more records than fit within the `360px` minimum
 - **THEN** the slide grows vertically and every record renders
 
 #### Scenario: fullscreen overflow scrolls
@@ -102,24 +123,27 @@ without truncation, the product name, and the author's initials badge.
 
 ### Requirement: Product cards expose status without relying on color
 
-Each product card MUST show a shape-distinct compact status icon with accessible
-English status text beside the product name, and MUST retain the existing
-status-colored left stripe as reinforcement. On Track, At Risk, and Blocked MUST
-have distinguishable icon shapes and accessible labels. A product with no data
-for the period MUST render as a collapsed dashed-border row reading "no status
-for this period" and MUST render without a status stripe or status icon.
+Each product card MUST retain the status-colored left stripe and MAY show a
+shape-distinct compact status glyph. On Track, At Risk, and Blocked MUST have
+distinguishable glyph shapes when a glyph is rendered, and the corresponding
+English status label MUST be available to assistive technology as an `sr-only`
+label; status words MUST NOT consume visible card space beside the product name.
+A product with no data for the period MUST render as a collapsed dashed-border
+row reading "no status for this period" and MUST render without a status stripe
+or status glyph.
 
 #### Scenario: Blocked product has redundant status channels
 
 - **WHEN** a product's derived status is blocked
-- **THEN** its card shows the blocked stripe and the distinct blocked icon beside the product name
-- **AND** assistive technology announces `Blocked` without relying on color
+- **THEN** its card shows the blocked stripe and, when present, the distinct blocked glyph
+- **AND** assistive technology announces `Blocked` through the glyph's hidden label without relying on color
 
 #### Scenario: Statuses remain distinguishable without color
 
 - **WHEN** on-track, at-risk, and blocked product cards are viewed without color information
 - **THEN** their compact icons remain shape-distinct
-- **AND** each icon exposes its corresponding `On Track`, `At Risk`, or `Blocked` accessible text
+- **AND** each rendered glyph exposes its corresponding `On Track`, `At Risk`, or `Blocked` accessible text
+- **AND** those status words are not visible beside the product name
 
 #### Scenario: Product without data collapses
 
@@ -131,7 +155,7 @@ for this period" and MUST render without a status stripe or status icon.
 
 Inside a product card, subsections MUST order Product-level first, then one
 subsection per project. Every subsection row MUST use the same shared grid
-template (`1.15fr 1fr 1.1fr 1fr`) so columns align vertically across the whole
+template (`1.35fr 1.25fr 0.85fr 0.85fr`) so columns align vertically across the whole
 slide. Subsections separate with a dashed top border. A project subsection
 header MUST show a branch icon, the project's status dot, and the project name
 uppercase; it MUST NOT show a textual project status badge. An empty cell MUST
@@ -149,17 +173,31 @@ render an em dash placeholder.
 
 ### Requirement: Item rows attribute author, priority, status, and stage
 
-An item row MUST show, in order: the author initials badge, an optional priority
-badge, the wrapping item text, a status badge, and SDLC stage watermark icons.
+An item row MUST show the author initials badge, the wrapping item text, and
+SDLC stage watermark icons where applicable. Status MUST be communicated by the
+row's quiet frame tone and, when mapped, an optional shape-distinct glyph; its
+English status label MUST be `sr-only` and available through the row's
+accessible/hover description. Status words MUST NOT be rendered as visible
+badges in the row.
 Author colors come from a deterministic cycle of existing tokens assigned per
 slide with the lead always first; the full name lives in the badge's `title`.
 In a run of consecutive rows by the same author within one cell, only the first
 row shows the badge; following rows keep an invisible spacer of equal width. The
-status badge map MUST stay open for future statuses and currently renders:
-COMPLETED and IN PROGRESS for current work, PLANNED for next focus, and AT RISK
-for risks with `riskSeverity: "at-risk"`. A risk with
-`riskSeverity: "blocked"` MUST render with the row highlight treatment and no
-status badge; blocker emphasis MUST NOT appear outside the Risks column.
+item status tone/glyph map MUST be exhaustive over the validated
+`ItemWorkflowStatus` contract (`planned | in_progress | paused | postponed |
+done`) and MUST reuse the canonical status mapping for own and foreign rows.
+An unvalidated or unknown item status MUST be rejected before rendering; no
+neutral or PLANNED compatibility fallback is allowed. Current work, next focus,
+and risks use their canonical tone/glyph mappings, while risk severity remains
+in the row frame. A risk with `riskSeverity: "blocked"` MUST render with the
+row highlight treatment and no visible status badge; blocker emphasis MUST NOT
+appear outside the Risks column.
+
+Each item row MAY intentionally clamp its body to two lines to keep the grid
+compact, but MUST expose the complete status-and-text description through its
+hover tooltip and accessible edit label. Clamping MUST NOT remove a source row;
+all rows remain present in Document density and all rows/pages remain present
+exactly once in Presentation density.
 
 #### Scenario: consecutive same-author rows collapse the badge
 
@@ -167,16 +205,23 @@ status badge; blocker emphasis MUST NOT appear outside the Risks column.
 - **THEN** only the first row shows the initials badge
 - **AND** the next two keep an equal-width spacer
 
+#### Scenario: clamped text remains available
+
+- **WHEN** an item text exceeds two lines in a slide row
+- **THEN** the visible body is clamped to two lines
+- **AND** the complete text and status remain available through the row tooltip
+- **AND** the source item is not dropped from the document or presentation pages
+
 #### Scenario: blocked risk highlights
 
 - **WHEN** a risk has severity `blocked`
-- **THEN** its row gets the highlight treatment, shows no AT RISK badge, and
+- **THEN** its row gets the highlight treatment, shows no visible status badge, and
   keeps stage icons on the shared vertical
 
 ### Requirement: Stage watermarks and cell ordering follow the canonical stage order
 
-Item rows at product level MUST show their SDLC stages as low-opacity watermark
-icons positioned at the row's bottom-right, one icon per stage, reusing
+Item rows at product level MUST show their SDLC stages as low-opacity inline
+icons before the item text, one icon per stage, reusing
 `STAGE_ICONS` from
 `apps/web/src/features/report-sections/model/stage-chip-config.ts` with the
 stage name in a `title` tooltip; rows inside project subsections render without
@@ -187,7 +232,7 @@ the lead first; the sort MUST be stable.
 #### Scenario: multi-stage item
 
 - **WHEN** a product-level item carries the Development and Support stages
-- **THEN** both watermark icons render side by side at the row's bottom-right
+- **THEN** both stage icons render side by side before the item text
 
 #### Scenario: cell sorts by stage then author
 
@@ -195,17 +240,17 @@ the lead first; the sort MUST be stable.
   item by a contributor
 - **THEN** the Planning item renders first
 
-### Requirement: Legend names contributors with optional roles
+### Requirement: Legend names contributors with their roles
 
 The slide footer MUST render a legend listing each contributor: initials badge
-in the contributor's assigned color, full name, and "role" suffix only when
-`authorRole` is present. When a contributor has no role, the suffix MUST be
-omitted entirely; no placeholder is allowed.
+in the contributor's assigned color, full name, and the persisted `authorRole`
+suffix. Every current cross-author content row MUST carry a valid `DbRole`;
+missing roles are invalid input and MUST NOT be represented by a placeholder.
 
-#### Scenario: contributor without a role
+#### Scenario: contributor role is rendered
 
-- **WHEN** a legend entry's author has no `authorRole`
-- **THEN** the entry shows only the badge and name
+- **WHEN** a legend entry's author has `authorRole: "viewer"`
+- **THEN** the entry shows the badge, name, and `viewer` role suffix
 
 ### Requirement: Product and lead scopes reuse the same article layout
 

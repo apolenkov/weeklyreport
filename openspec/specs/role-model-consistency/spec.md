@@ -9,17 +9,18 @@ Keep web route role maps and section guards aligned with the roles admitted by t
 ### Requirement: The route role map matches the API authorization gate
 
 The web guarded-route policy MUST grant a route only to roles the API actually
-admits. This binds the `*_ROUTE_ROLES` constants and
-`rolesForGuardedRoute` in `apps/web/src/shared/model/route-role-policy.ts`, the
-required-role arrays passed to `RoleGate` by the route layouts, and the role
-descriptions in `openspec/config.yaml` to the roles the corresponding API
-procedures accept. Advertising access in the UI/docs that the API rejects is
-forbidden — all four sources MUST agree on one role model.
+admits. This binds the six `*_ROUTE_ROLES` constants in
+`apps/web/src/shared/model/route-role-policy.ts` to the required-role arrays
+passed directly to `RoleGate` by the corresponding route layouts and preview
+page, and to the role descriptions in `openspec/config.yaml`, for the roles
+the corresponding API procedures accept. Advertising access in the UI/docs
+that the API rejects is forbidden — all four sources MUST agree on one role
+model.
 
 #### Scenario: Admin route role set matches adminProcedure
 
 - **WHEN** `adminProcedure` admits only the `admin` role
-- **THEN** `ADMIN_ROUTE_ROLES` / `rolesForGuardedRoute("/admin")` and the
+- **THEN** `ADMIN_ROUTE_ROLES` and the
   `apps/web/src/app/(app)/admin/layout.tsx` `RoleGate` required-roles list
   contain `admin` only (not `head`)
 - **AND** the `config.yaml` role descriptions do not claim `head` has admin access

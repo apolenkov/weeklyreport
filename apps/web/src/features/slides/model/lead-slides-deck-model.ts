@@ -26,8 +26,8 @@ export function buildLeadDeckModel(
     showOwnerBadges,
   });
   if (foreignContentRows.length === 0) return base;
-  // Legacy string-list merge keeps the deck-chrome aggregates (carousel counts,
-  // tone) consistent with the merged content.
+  // The aggregate string lists keep deck chrome (carousel counts and tone)
+  // consistent with the product-level merged content.
   return mergeForeignSlideContent(
     base,
     crossAuthorContentToSlideForeign(foreignContentRows),

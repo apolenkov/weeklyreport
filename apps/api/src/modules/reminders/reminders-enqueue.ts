@@ -4,12 +4,17 @@ import {
   type AdminReminderRule,
 } from "@customreport/shared";
 
+import { errorMessage } from "../../lib/error-message.js";
 import type { AppLogger } from "../../lib/logger";
 import type {
+  ReminderEnqueueOptions,
   RemindersEnqueuer,
   RemindersTelemetry,
 } from "./reminders.ports.js";
-import type { ReminderExecutionPayload } from "./reminders.types.js";
+import type {
+  ReminderExecutionPayload,
+  ReminderExecutionRecordResult,
+} from "./reminders.types.js";
 import { resolveReminderDedupeKey } from "./reminders-dedupe-key.js";
 import {
   buildQueuePayload,
@@ -47,8 +52,14 @@ async function addJob(
   executionId: string,
   data: ReminderQueueJobData,
   jobId: string = executionId,
+  options?: ReminderEnqueueOptions,
 ): Promise<void> {
-  await ctx.queue.enqueue(jobId, data, ctx.telemetry.captureJobContext());
+  await ctx.queue.enqueue(
+    jobId,
+    data,
+    ctx.telemetry.captureJobContext(),
+    options,
+  );
 }
 
 // Sync enqueue throws become terminal failed (not swallowed) so queued rows
@@ -72,7 +83,7 @@ export async function enqueueOrMarkFailed(
     });
     return execution;
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = errorMessage(error);
     ctx.logger.error("failed to enqueue email reminder job", {
       executionId: execution.id,
       error: message,
@@ -90,53 +101,25 @@ interface ExecutionRecorder {
   readonly insertExecutionOnConflict: (
     execution: AdminReminderExecution,
     payload: ReminderQueuePayload,
-  ) => Promise<{
-    readonly execution: AdminReminderExecution;
-    readonly inserted: boolean;
-  }>;
+    allowFailedRevival?: boolean,
+  ) => Promise<ReminderExecutionRecordResult>;
 }
 
 export async function recordExecutionOnConflict(
   repository: ExecutionRecorder,
   candidate: AdminReminderExecution,
   payload: ReminderQueuePayload,
-): Promise<{ execution: AdminReminderExecution; inserted: boolean }> {
-  return repository.insertExecutionOnConflict(candidate, payload);
-}
-
-// Revive failed→queued via CAS; without it an exhausted-SMTP cycle reports
-// "already sent" on manual re-dispatch (unified dedupe key). The queue context
-// is required so a revive never mints a queued row with no worker behind it.
-export async function reviveFailedExecution(
-  ctx: EnqueueContext,
-  requeue: (
-    executionId: string,
-    payload: ReminderQueuePayload,
-  ) => Promise<boolean>,
-  execution: AdminReminderExecution,
-  recipientEmail: string,
-  payload: () => Promise<ReminderQueuePayload>,
-): Promise<AdminReminderExecution | null> {
-  if (execution.status !== "failed") return null;
-  const resolvedPayload = await payload();
-  if (!(await requeue(execution.id, resolvedPayload))) return null;
-  const requeued = adminReminderExecutionSchema.parse({
-    ...execution,
-    status: "queued",
-    errorMessage: null,
-  });
-  // Fresh jobId — removeOnFail keeps the failed job; reusing execution.id is a no-op.
-  return enqueueOrMarkFailed(
-    ctx,
-    requeued,
-    recipientEmail,
-    resolvedPayload,
-    `${execution.id}:revive:${crypto.randomUUID()}`,
+  allowFailedRevival?: boolean,
+): Promise<ReminderExecutionRecordResult> {
+  return repository.insertExecutionOnConflict(
+    candidate,
+    payload,
+    allowFailedRevival,
   );
 }
 
-// Reaper: deterministic jobId dedups late originals; reconstructs the current
-// explicit deadline payload from the durable execution facts.
+// Reaper: replace a retained terminal job before re-adding the same execution
+// id. A late original remains harmless because the processor CAS-claims once.
 export async function reEnqueueStuck(
   ctx: EnqueueContext,
   execution: AdminReminderExecution,
@@ -146,6 +129,8 @@ export async function reEnqueueStuck(
     ctx,
     execution.id,
     buildQueuePayload(execution, execution.recipientEmail, payload),
+    execution.id,
+    { replaceTerminal: true },
   );
   ctx.logger.info("reaper re-enqueued stuck execution", {
     executionId: execution.id,

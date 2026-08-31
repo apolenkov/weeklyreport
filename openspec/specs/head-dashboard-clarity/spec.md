@@ -10,10 +10,9 @@ Keep the head dashboard focused on triage and action through one live activity f
 
 The head dashboard (`/head/dashboard`, `DashboardPage`) MUST represent lead
 submission/edit freshness exactly once in the canonical Period Summary queue. A
-standalone `ActivityLivePanel` per-lead roster or any second card that
-re-renders the same lead activity feed MUST NOT appear. Non-lead operational
-events MAY remain in a collapsed event feed only when they are not another lead
-roster.
+standalone per-lead activity roster or any second card that re-renders the same
+lead activity feed MUST NOT appear. Non-lead operational events MAY remain in a
+collapsed event feed only when they are not another lead roster.
 
 #### Scenario: the head opens the dashboard
 
@@ -51,11 +50,12 @@ controls MUST never be clipped.
 - **THEN** it uses stacked/compact responsive rows with no horizontal scrollbar
 - **AND** action controls remain fully visible and keyboard reachable
 
-### Requirement: Every content-bearing live activity row drills into the focused report
+### Requirement: Every content-bearing Period Summary row drills into the focused report
 
-The head dashboard `ActivityLivePanel` MUST render every row with report content
-as a link to that lead's focused live report, whether the section is draft or
-submitted, and MUST keep only zero-content rows inert.
+The head dashboard Period Summary queue MUST expose its current Open or Review
+action for every row with report content, whether the section is draft or
+submitted. The action MUST target that lead's focused live report. A row with no
+content MUST NOT expose an Open action.
 
 #### Scenario: Draft content opens the focused live report
 
@@ -124,34 +124,27 @@ confirmation, count, authorization, and mutation behavior.
 - **THEN** normal per-lead queue actions remain visually primary
 - **AND** invoking the secondary bulk action still requires the existing destructive confirmation
 
-### Requirement: A submitted lead row is never marked 24h-inactive
-
-A `submitted` lead row in `LeadSummaryTable` MUST NOT be marked 24h-inactive (the `lead-row-inactive-24h` dim/nudge treatment), even when its `submittedAt`-derived `lastActivity` is a date-only value that parses to more than 24 hours ago. The 24h-inactive styling applies only to leads with open work (draft or pending). A submitted lead is done, not stale, so the row stays at full prominence for the Revoke affordance.
-
-#### Scenario: a lead submitted earlier in the period
-
-- **WHEN** the head opens the dashboard and a lead row is `submitted` with a
-  date-only `lastActivity` more than 24 hours ago
-- **THEN** that row is not dimmed and carries no `lead-row-inactive-24h` marker
-- **AND** its Revoke action reads at full prominence
-
 ### Requirement: The per-lead Remind button is gated by an active reminder rule
 
 The per-lead `RemindLeadButton` inside `LeadSummaryTable` MUST be offered only
-when `hasActiveReminderRule` is true — the same `canSendReminder` gate the
-`AlertBar` already honors. When no active reminder rule covers the period, the
-table MUST NOT offer a Remind action that would dispatch nothing.
+when the weekly report exposes an exact `activeDeadlineReminderRuleId` — the
+same non-null `ruleId` predicate the `AlertBar` honors. When no current
+sendable deadline rule covers the period, the table MUST NOT offer a Remind
+action that would dispatch nothing. An escalation rule alone never enables
+this control.
 
 #### Scenario: no active reminder rule
 
-- **WHEN** the head opens `/head/dashboard` and `hasActiveReminderRule` is false
+- **WHEN** the head opens `/head/dashboard` and
+  `activeDeadlineReminderRuleId` is null
 - **THEN** the Period Summary table offers no per-lead Remind action
 
 #### Scenario: an active reminder rule covers the period
 
-- **WHEN** the head opens `/head/dashboard`, `hasActiveReminderRule` is true,
-  and a lead row is in draft
+- **WHEN** the head opens `/head/dashboard`, an exact
+  `activeDeadlineReminderRuleId` is present, and a lead row is in draft
 - **THEN** that row offers a Remind action
+- **AND** the mutation submits that exact rule id
 - **AND** activating it dispatches at least one reminder (not
   `reason: "no-active-rule"`)
 

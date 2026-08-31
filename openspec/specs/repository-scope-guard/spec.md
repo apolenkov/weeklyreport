@@ -2,66 +2,65 @@
 
 ## Purpose
 
-Define the defensive scope-guard invariant that prevents Prisma repository
-read methods from returning cross-group data when upstream middleware
-regresses. Ensures that every read of `findDraftSections`, `findReports`,
-and period queries is bounded to the caller's authorised product group.
+Define the canonical group-scope filter that prevents authenticated Prisma
+reads from returning cross-group data. Repository consumers derive a target-
+specific Prisma `where` fragment from the current session and fail closed to an
+empty result when the caller has no allowed groups.
 
-Consumer surfaces: `findDraftSections`, `findReports`, and period query
-methods in `apps/api/src/modules/` repositories; `ScopeGuardError` type;
-tRPC procedures that call these methods.
+Consumer surface: `apps/api/src/lib/group-scope.ts` — `groupScopeFilter` and
+`guardGroupScope`; group-scoped repositories under `apps/api/src/modules/`.
 
 ## Requirements
 
-### Requirement: Repository Read Methods Enforce Group Scope Defensively
+### Requirement: The canonical filter derives scope from the authenticated session
 
-Prisma repository read methods MUST assert that a non-null `groupScope`
-is present in the call context before executing the query. This applies
-to `findDraftSections`, `findReports`, and period queries. The assertion
-MUST be at the repository layer so that an upstream middleware
-regression cannot silently widen the data set returned to a caller.
+Group-scoped Prisma reads MUST call `groupScopeFilter(session, target)` with
+the authenticated session and the appropriate `user`, `reportSection`, or
+`project` target. A non-admin caller with allowed groups receives a Prisma
+filter restricted to those group ids. An admin receives the unrestricted `{}`
+filter by product decision.
 
-#### Scenario: Caller supplies a valid group scope
+#### Scenario: Caller has an allowed group
 
-- **WHEN** a tRPC procedure passes `groupScope.productIds = [<uuid>...]` into the repository
-- **THEN** the query executes and returns rows restricted to those product ids
+- **WHEN** a repository derives a target filter for a session allowed to access group A
+- **THEN** the query executes with the target's group relation restricted to group A
+- **AND** it cannot return group-B rows
 
-#### Scenario: Caller forgets to pass a group scope
+#### Scenario: Caller has no allowed groups
 
-- **WHEN** a tRPC procedure calls the repository without a `groupScope`
-- **THEN** the repository raises a `ScopeGuardError` BEFORE executing the query
-- **AND** no rows are read or returned
+- **WHEN** `groupScopeFilter` receives an authenticated non-admin session whose allowed-group set is empty
+- **THEN** it returns the canonical deny-all filter `{ id: { in: [] } }`
+- **AND** the repository returns zero rows without widening access
 
-#### Scenario: Caller passes an empty group scope
+#### Scenario: Admin uses the same filter API
 
-- **WHEN** a tRPC procedure calls the repository with `groupScope.productIds = []`
-- **THEN** the repository raises a `ScopeGuardError`
-- **AND** the caller MUST explicitly handle the empty-scope case upstream rather than leaning on the repository to return zero rows
+- **WHEN** `groupScopeFilter` receives an admin session
+- **THEN** it returns `{}` for every supported target
 
-### Requirement: Every Caller of Guarded Methods Must Pass a Valid Group Scope
+### Requirement: Every group-scoped repository uses the canonical filter
 
-Callers of `findDraftSections`, `findReports`, and period queries MUST supply
-a non-null `groupScope` from the authenticated session context. Callers MUST
-NOT bypass the scope guard by passing a null or empty scope with the expectation
-that the query returns zero rows.
+Telemetry, review, weekly-report portfolio, reminders, activity, and lifecycle
+repositories MUST use `groupScopeFilter` or `guardGroupScope` rather than
+reimplementing role and group expansion. `guardGroupScope` MUST reject a missing
+session before query construction.
 
-#### Scenario: New procedure added that calls a guarded method
+#### Scenario: A new group-scoped read is added
 
-- **WHEN** a developer adds a new tRPC procedure that calls `findReports`
-- **THEN** the procedure MUST pass `groupScope` from `ctx` into the repository call
-- **AND** a code review or CI check MUST flag the absence of `groupScope` as a violation
+- **WHEN** a repository adds a read whose records belong to reporting groups
+- **THEN** it derives the filter from the authenticated session through the canonical scope API
+- **AND** it does not maintain a second role-to-group implementation
 
 ### Requirement: Regression Test Covers Unauthorized Group Access
 
-A regression test MUST construct a user authenticated for group A and
-attempt to read reports / sections from group B. The test MUST assert
-that the request is rejected at the API boundary (typically `403`) and
-that no group-B data is returned.
+A regression test MUST construct a user authenticated for group A and attempt
+to read reports or sections from group B. The target-specific contract MAY
+either reject direct access at the API boundary or return an empty scoped list,
+but MUST return no group-B data.
 
 #### Scenario: User from group A queries group B
 
 - **WHEN** the regression test calls a tRPC procedure for group B reports while authenticated as a group-A user
-- **THEN** the call rejects with a 403-equivalent error
+- **THEN** the call rejects with a 403-equivalent error or returns an empty scoped result
 - **AND** the response contains no rows from group B
 
 ### Requirement: Head Cross-Author Lead-Form Reads Enforce Group Scope

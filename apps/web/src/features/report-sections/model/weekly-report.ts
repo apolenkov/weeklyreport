@@ -13,7 +13,6 @@ import {
   groupItemsByProject,
   groupRisksByProject,
   initialsFromName,
-  statusLabelFor,
   trafficToProductStatus,
 } from "./weekly-report-groupers";
 import {
@@ -229,9 +228,3 @@ export function mapWeeklyReportLeadOverview(
         a.name.localeCompare(b.name),
     );
 }
-
-export const __testing = {
-  initialsFromName,
-  trafficToProductStatus,
-  statusLabelFor,
-};

@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined.js";
@@ -5,11 +7,12 @@ import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
+  publishedSnapshotFixture,
   seedTestData,
   TEST_IDS,
 } from "../../test-utils/prisma-test-helper";
 import { PeriodPrismaRepository } from "../period/test-seams/index.js";
-import { WeeklyReportPrismaRepository } from "../weekly-report/index.js";
+import { WeeklyReportPrismaRepository } from "../weekly-report/weekly-report.prisma-repository.js";
 import { ArchivePrismaRepository } from "./archive.prisma-repository";
 import type { ArchiveScopeSession } from "./archive.service.js";
 import { encodeArchiveCursor } from "./archive-cursor.js";
@@ -57,6 +60,15 @@ describe("ArchivePrismaRepository (integration)", () => {
       where: { id: testData.report.id },
       data: {
         status: "published",
+        publishedSnapshot: publishedSnapshotFixture({
+          reportId: testData.report.id,
+          periodStart: testData.report.periodStart,
+          periodEnd: testData.report.periodEnd,
+          deadline: testData.report.deadline,
+          publishedAt: new Date("2026-04-12T10:00:00.000Z"),
+          publishedById: testData.head.id,
+          publishedByName: testData.head.name,
+        }),
         publishedAt: new Date("2026-04-12T10:00:00.000Z"),
         publishedById: testData.head.id,
         archived: true,
@@ -106,6 +118,15 @@ describe("ArchivePrismaRepository (integration)", () => {
       where: { id: testData.report.id },
       data: {
         status: "published",
+        publishedSnapshot: publishedSnapshotFixture({
+          reportId: testData.report.id,
+          periodStart: testData.report.periodStart,
+          periodEnd: testData.report.periodEnd,
+          deadline: testData.report.deadline,
+          publishedAt: new Date("2026-04-12T10:00:00.000Z"),
+          publishedById: testData.head.id,
+          publishedByName: testData.head.name,
+        }),
         publishedAt: new Date("2026-04-12T10:00:00.000Z"),
         publishedById: testData.head.id,
         // archived remains false (default)
@@ -133,6 +154,15 @@ describe("ArchivePrismaRepository (integration)", () => {
       where: { id: testData.report.id },
       data: {
         status: "published",
+        publishedSnapshot: publishedSnapshotFixture({
+          reportId: testData.report.id,
+          periodStart: testData.report.periodStart,
+          periodEnd: testData.report.periodEnd,
+          deadline: testData.report.deadline,
+          publishedAt: new Date("2026-04-12T10:00:00.000Z"),
+          publishedById: testData.head.id,
+          publishedByName: testData.head.name,
+        }),
         publishedAt: new Date("2026-04-12T10:00:00.000Z"),
         publishedById: testData.head.id,
         archived: true,
@@ -155,19 +185,8 @@ describe("ArchivePrismaRepository (integration)", () => {
   });
 
   it("getArchiveReport returns full detail for published report", async () => {
-    // Archive detail is available only after the explicit archive transition.
-    await prisma.report.update({
-      where: { id: testData.report.id },
-      data: {
-        status: "published",
-        publishedAt: new Date("2026-04-12T10:00:00.000Z"),
-        publishedById: testData.head.id,
-        archived: true,
-      },
-    });
-
-    // The archive summary now derives from the assignment-scoped read model
-    // (same as the detail / live total), so the product must be OWNED to be
+    // The archive summary derives from the assignment-scoped read model (same
+    // as the detail / live total), so the product must be OWNED to be
     // counted — a bare ProjectStatus with no stage assignment is excluded.
     const stage = await prisma.stage.create({
       data: {
@@ -200,7 +219,15 @@ describe("ArchivePrismaRepository (integration)", () => {
         tag: "feature",
         workflowStatus: "done",
         carriedOver: false,
+        stageNames: ["Development"],
       },
+    });
+
+    // Archive detail is available only after the explicit archive transition.
+    await periodRepo.publishPeriod(testData.report.id, testData.head.id);
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: { archived: true, periodState: "archived" },
     });
 
     const detail = await repo.getArchiveReport(
@@ -225,66 +252,46 @@ describe("ArchivePrismaRepository (integration)", () => {
     ).toBe("Archive item");
   });
 
-  it("floors a no-snapshot archive summary by an own covering risk", async () => {
-    // Published + archived WITHOUT a stored snapshot (seed/legacy shape), so
-    // the summary takes the read-model fallback. A stale green ProjectStatus
-    // must not win: the lead's covers-all blocked risk floors the total to red.
-    await prisma.report.update({
-      where: { id: testData.report.id },
-      data: {
-        status: "published",
-        publishedAt: new Date("2026-04-12T10:00:00.000Z"),
-        publishedById: testData.head.id,
-        archived: true,
-      },
-    });
-    const stage = await prisma.stage.create({
-      data: {
-        id: "a0000000-0000-4000-a000-000000000aa5",
-        name: "Development",
-        sortOrder: 3,
-      },
-    });
-    await prisma.stageAssignment.create({
-      data: {
-        userId: testData.lead.id,
-        projectId: testData.project.id,
-        stageId: stage.id,
-      },
-    });
-    // Stale green ProjectStatus, NO StageStatus (owned stage left empty).
-    await prisma.projectStatus.create({
-      data: {
-        reportSectionId: testData.section.id,
-        projectId: testData.project.id,
-        status: "green",
-      },
-    });
-    await prisma.risk.create({
-      data: {
-        reportSectionId: testData.section.id,
-        projectId: testData.project.id,
-        risk: "Own covering risk",
-        impact: "High",
-        mitigation: "Mitigate",
-        severity: "blocked",
-        stageNames: [], // covers-all
-      },
-    });
+  it("rejects publishing an archived report without a snapshot", async () => {
+    await expect(
+      prisma.report.update({
+        where: { id: testData.report.id },
+        data: {
+          status: "published",
+          publishedAt: new Date("2026-04-12T10:00:00.000Z"),
+          publishedById: testData.head.id,
+          archived: true,
+        },
+      }),
+    ).rejects.toThrow(/Report_published_requires_snapshot/);
+    await expect(
+      prisma.report.findUnique({ where: { id: testData.report.id } }),
+    ).resolves.toMatchObject({ status: "draft", publishedSnapshot: null });
+  });
 
-    const detail = await repo.getArchiveReport(
-      testData.report.id,
-      undefined,
-      adminSession,
-    );
-
-    expect(detail.detail).not.toBeNull();
-    // Floored to red by the own covering risk, not the stale green ProjectStatus.
-    expect(expectDefined(detail.detail).summary.portfolioStatus).toBe("red");
-    // Summary and detail agree (same floored, assignment-scoped read model).
-    expect(expectDefined(detail.detail).report.portfolioOverview.status).toBe(
-      "red",
-    );
+  it("rejects a published report without a publication timestamp", async () => {
+    const publishedAt = new Date("2026-04-12T10:00:00.000Z");
+    await expect(
+      prisma.report.update({
+        where: { id: testData.report.id },
+        data: {
+          status: "published",
+          publishedAt: null,
+          publishedById: testData.head.id,
+          publishedSnapshot: publishedSnapshotFixture({
+            reportId: testData.report.id,
+            periodStart: testData.report.periodStart,
+            periodEnd: testData.report.periodEnd,
+            publishedAt,
+            publishedById: testData.head.id,
+            publishedByName: testData.head.name,
+          }),
+        },
+      }),
+    ).rejects.toThrow(/Report_published_requires_snapshot/);
+    await expect(
+      prisma.report.findUnique({ where: { id: testData.report.id } }),
+    ).resolves.toMatchObject({ status: "draft", publishedAt: null });
   });
 
   it("reads the publish-time snapshot after later draft edits", async () => {
@@ -318,6 +325,7 @@ describe("ArchivePrismaRepository (integration)", () => {
         tag: "feature",
         workflowStatus: "done",
         carriedOver: false,
+        stageNames: ["Development"],
       },
     });
 
@@ -350,12 +358,14 @@ describe("ArchivePrismaRepository (integration)", () => {
     publishedAt: Date,
     periodEnd: Date = publishedAt,
   ): Promise<{ id: string; publishedAt: Date }> {
+    const reportId = randomUUID();
+    const periodStart = new Date(periodEnd.getTime() - 6 * 86_400_000);
     const report = await prisma.report.create({
       data: {
-        // Historical archive rows do not participate in the live-period range
-        // constraint, but the fixture still carries a complete canonical and
-        // legacy lifecycle tuple.
-        periodStart: new Date(periodEnd.getTime() - 6 * 86_400_000),
+        id: reportId,
+        // Archived rows do not participate in the live-period range
+        // constraint, but still carry the complete current lifecycle fields.
+        periodStart,
         periodEnd,
         deadline: periodEnd,
         status: "published",
@@ -363,6 +373,15 @@ describe("ArchivePrismaRepository (integration)", () => {
         periodStatus: "published",
         publishedAt,
         publishedById: testData.head.id,
+        publishedSnapshot: publishedSnapshotFixture({
+          reportId,
+          periodStart,
+          periodEnd,
+          deadline: periodEnd,
+          publishedAt,
+          publishedById: testData.head.id,
+          publishedByName: testData.head.name,
+        }),
         archived: true,
       },
     });
@@ -520,6 +539,9 @@ describe("ArchivePrismaRepository (integration)", () => {
     await prisma.project.create({
       data: { id: projectBId, name: "Project B", leadId: leadBId },
     });
+    await prisma.groupProduct.create({
+      data: { groupId: groupBId, productId: projectBId },
+    });
     const sectionB = await prisma.reportSection.create({
       data: {
         reportId: testData.report.id,
@@ -550,7 +572,7 @@ describe("ArchivePrismaRepository (integration)", () => {
       },
     });
 
-    // Group B: owned stage floored by a blocked, covers-all own risk → red.
+    // Group B: owned stage floored by a blocked own risk → red.
     await prisma.stageAssignment.create({
       data: { userId: leadBId, projectId: projectBId, stageId: stageBId },
     });
@@ -562,7 +584,10 @@ describe("ArchivePrismaRepository (integration)", () => {
         impact: "High",
         mitigation: "None",
         severity: "blocked",
-        stageNames: [],
+        // Keep the risk scoped to the stage owned by this product.  The
+        // current-only contract does not treat a differently named stage as a
+        // portfolio-wide risk.
+        stageNames: ["Stage B"],
       },
     });
 
@@ -617,56 +642,21 @@ describe("ArchivePrismaRepository (integration)", () => {
     );
   });
 
-  it("fallback path: a group-scoped session reads only its own group's sections and portfolio", async () => {
-    const { sectionBId } = await seedCrossGroupSections();
-    // Published + archived WITHOUT publishPeriod → no snapshot → the read takes
-    // the loadFallbackGraphs / scoped-sections-include path.
-    await prisma.report.update({
-      where: { id: testData.report.id },
-      data: {
-        status: "published",
-        publishedAt: new Date("2026-04-12T10:00:00.000Z"),
-        publishedById: testData.head.id,
-        archived: true,
-      },
-    });
-
-    const detailA = await repo.getArchiveReport(
-      testData.report.id,
-      undefined,
-      sessionA,
-    );
-    expect(detailA.detail).not.toBeNull();
-    expect(expectDefined(detailA.detail).report.sections).toHaveLength(1);
-    expect(
-      expectDefined(expectDefined(detailA.detail).report.sections[0])
-        .reportSectionId,
-    ).toBe(testData.section.id);
-    expect(expectDefined(detailA.detail).report.portfolioOverview.status).toBe(
-      "green",
-    );
-
-    // The list path here has no snapshot, so it exercises loadFallbackGraphs
-    // with the same section scope.
-    const listA = await repo.listArchiveReports(undefined, undefined, sessionA);
-    expect(
-      expectDefined(listA.items.find((r) => r.reportId === testData.report.id))
-        .portfolioStatus,
-    ).toBe("green");
-
-    // Symmetric: group B's fallback graph load returns only its red section.
-    const detailB = await repo.getArchiveReport(
-      testData.report.id,
-      undefined,
-      sessionB,
-    );
-    expect(expectDefined(detailB.detail).report.sections).toHaveLength(1);
-    expect(
-      expectDefined(expectDefined(detailB.detail).report.sections[0])
-        .reportSectionId,
-    ).toBe(sectionBId);
-    expect(expectDefined(detailB.detail).report.portfolioOverview.status).toBe(
-      "red",
-    );
+  it("rejects publishing a scoped archive row without a snapshot", async () => {
+    await seedCrossGroupSections();
+    await expect(
+      prisma.report.update({
+        where: { id: testData.report.id },
+        data: {
+          status: "published",
+          publishedAt: new Date("2026-04-12T10:00:00.000Z"),
+          publishedById: testData.head.id,
+          archived: true,
+        },
+      }),
+    ).rejects.toThrow(/Report_published_requires_snapshot/);
+    await expect(
+      prisma.report.findUnique({ where: { id: testData.report.id } }),
+    ).resolves.toMatchObject({ status: "draft", publishedSnapshot: null });
   });
 });

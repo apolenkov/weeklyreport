@@ -1,7 +1,9 @@
-import type {
-  AssembledReport,
-  PdfExportJob,
-  UserSession,
+import {
+  type AssembledReport,
+  AUTH_COOKIE_NAME,
+  type PdfExportJob,
+  type PublishedReportSnapshot,
+  type UserSession,
 } from "@customreport/shared";
 import jwt from "jsonwebtoken";
 import {
@@ -14,11 +16,12 @@ import {
   vi,
 } from "vitest";
 
+import type { EnvConfig } from "../../infrastructure/config/env.schema.js";
 import { customreportPdfExportRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
 import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
+import { NOOP_PDF_EXPORT_TELEMETRY } from "../../test-utils/pdf-export.js";
 import {
-  NOOP_PDF_EXPORT_TELEMETRY,
   type PdfExportEnqueuer,
   type PdfExportTelemetry,
 } from "./pdf-export.ports.js";
@@ -28,7 +31,7 @@ import {
   type PdfExportRepository,
   PdfExportService,
 } from "./pdf-export.service";
-import { verifyPdfExportToken } from "./pdf-export.token";
+import { verifyPdfExportToken as verifyPdfExportTokenImpl } from "./pdf-export.token";
 import { PdfExportInfrastructureTelemetry } from "./pdf-export-telemetry.adapter.js";
 
 const reportId = "22222222-2222-4222-8222-222222222222";
@@ -36,6 +39,8 @@ const TEST_PDF_SECRET = "test-pdf-export-secret-at-least-32-chars";
 const NOOP_PDF_QUEUE: PdfExportEnqueuer = {
   enqueue: () => Promise.resolve(),
 };
+const verifyPdfExportToken = (token: string) =>
+  verifyPdfExportTokenImpl(token, process.env.PDF_EXPORT_JWT_SECRET);
 
 function createPdfExportService(
   repository: PdfExportRepository,
@@ -43,7 +48,10 @@ function createPdfExportService(
   queue: PdfExportEnqueuer = NOOP_PDF_QUEUE,
   telemetry: PdfExportTelemetry = NOOP_PDF_EXPORT_TELEMETRY,
 ): PdfExportService {
-  return new PdfExportService(repository, logger, queue, telemetry);
+  return new PdfExportService(repository, logger, queue, telemetry, {
+    PDF_BASE_URL: process.env.PDF_BASE_URL ?? "http://localhost:3000",
+    PDF_EXPORT_JWT_SECRET: process.env.PDF_EXPORT_JWT_SECRET ?? TEST_PDF_SECRET,
+  });
 }
 
 beforeEach(() => {
@@ -103,8 +111,11 @@ function createRepository(
   const jobs = new Map<string, PdfExportJobRecord>();
 
   return {
-    canReadReport() {
-      return Promise.resolve(canRead);
+    getPublishedReportForExport() {
+      return Promise.resolve(canRead ? structuredClone(report) : null);
+    },
+    getPublishedReportForJob() {
+      return Promise.resolve(null as PublishedReportSnapshot | null);
     },
     createExportJob(job: PdfExportJob, requestedBy: string) {
       if (capture) {
@@ -120,13 +131,6 @@ function createRepository(
     getExportJob(jobId: string) {
       const job = jobs.get(jobId);
       return Promise.resolve(job ? structuredClone(job) : null);
-    },
-    getPublishedReport(activeReportId: string) {
-      return Promise.resolve(
-        activeReportId === reportId && report !== null
-          ? structuredClone(report)
-          : null,
-      );
     },
     saveExportJob(job: PdfExportJob) {
       jobs.set(job.jobId, {
@@ -155,7 +159,7 @@ describe("PdfExportService", () => {
     await expect(
       service.requestPdfExport(reportId, requesterSession),
     ).rejects.toThrow(
-      new PdfExportDomainError("PDF export requires a published report."),
+      new PdfExportDomainError("PDF export is not available for this caller."),
     );
     expect(createExportJob).not.toHaveBeenCalled();
     expect(queue.enqueue).not.toHaveBeenCalled();
@@ -291,7 +295,13 @@ describe("PdfExportService", () => {
     expectTypeOf<
       ConstructorParameters<typeof PdfExportService>
     >().toEqualTypeOf<
-      [PdfExportRepository, AppLogger, PdfExportEnqueuer, PdfExportTelemetry]
+      [
+        PdfExportRepository,
+        AppLogger,
+        PdfExportEnqueuer,
+        PdfExportTelemetry,
+        Pick<EnvConfig, "PDF_BASE_URL" | "PDF_EXPORT_JWT_SECRET">,
+      ]
     >();
   });
 
@@ -400,9 +410,13 @@ describe("PDF export JWT signing", () => {
     vi.stubEnv("PDF_EXPORT_JWT_SECRET", "");
     const service = createPdfExportService(createRepository(publishedReport));
 
-    expect(() => service.signPdfExportToken(reportId, "requester-1")).toThrow(
-      PdfExportDomainError,
-    );
+    expect(() =>
+      service.signPdfExportToken(
+        reportId,
+        "00000000-0000-4000-8000-000000000001",
+        "requester-1",
+      ),
+    ).toThrow(PdfExportDomainError);
   });
 
   it("signPdfExportToken throws PdfExportDomainError when secret is too short (<32 chars)", () => {
@@ -410,9 +424,13 @@ describe("PDF export JWT signing", () => {
     vi.stubEnv("PDF_EXPORT_JWT_SECRET", "seventeen-chars-x");
     const service = createPdfExportService(createRepository(publishedReport));
 
-    expect(() => service.signPdfExportToken(reportId, "requester-1")).toThrow(
-      PdfExportDomainError,
-    );
+    expect(() =>
+      service.signPdfExportToken(
+        reportId,
+        "00000000-0000-4000-8000-000000000001",
+        "requester-1",
+      ),
+    ).toThrow(PdfExportDomainError);
   });
 
   it("verifyPdfExportToken throws when secret is too short (<32 chars)", () => {
@@ -427,7 +445,11 @@ describe("PDF export JWT signing", () => {
   it("signPdfExportToken produces a JWT carrying claim {reportId} and exp ≤ 5min", () => {
     const service = createPdfExportService(createRepository(publishedReport));
     const before = Math.floor(Date.now() / 1000);
-    const token = service.signPdfExportToken(reportId, "requester-1");
+    const token = service.signPdfExportToken(
+      reportId,
+      "00000000-0000-4000-8000-000000000001",
+      "requester-1",
+    );
     const after = Math.floor(Date.now() / 1000);
 
     expect(token).toMatch(/^eyJ/); // JWT header prefix
@@ -534,40 +556,13 @@ describe("markExportFailed", () => {
 });
 
 describe("buildAuthCookies", () => {
-  it("uses AUTH_JWT_COOKIE_NAME env for cookie name", () => {
-    const originalEnv = process.env.AUTH_JWT_COOKIE_NAME;
-    process.env.AUTH_JWT_COOKIE_NAME = "my_custom_session";
+  it("uses the canonical session cookie name", () => {
+    const service = createPdfExportService(createRepository(publishedReport));
+    const cookies = service.buildAuthCookies("test-jwt-token");
 
-    try {
-      const service = createPdfExportService(createRepository(publishedReport));
-      const cookies = service.buildAuthCookies("test-jwt-token");
-
-      expect(cookies).toHaveLength(1);
-      expect(cookies[0]?.name).toBe("my_custom_session");
-      expect(cookies[0]?.value).toBe("test-jwt-token");
-    } finally {
-      if (originalEnv === undefined) {
-        delete process.env.AUTH_JWT_COOKIE_NAME;
-      } else {
-        process.env.AUTH_JWT_COOKIE_NAME = originalEnv;
-      }
-    }
-  });
-
-  it("falls back to default cookie name when env is not set", () => {
-    const originalEnv = process.env.AUTH_JWT_COOKIE_NAME;
-    delete process.env.AUTH_JWT_COOKIE_NAME;
-
-    try {
-      const service = createPdfExportService(createRepository(publishedReport));
-      const cookies = service.buildAuthCookies("test-jwt-token");
-
-      expect(cookies[0]?.name).toBe("customreport_session");
-    } finally {
-      if (originalEnv !== undefined) {
-        process.env.AUTH_JWT_COOKIE_NAME = originalEnv;
-      }
-    }
+    expect(cookies).toHaveLength(1);
+    expect(cookies[0]?.name).toBe(AUTH_COOKIE_NAME);
+    expect(cookies[0]?.value).toBe("test-jwt-token");
   });
 
   it("sets httpOnly to true for security", () => {

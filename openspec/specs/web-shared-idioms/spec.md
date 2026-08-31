@@ -8,16 +8,17 @@ Centralize repeated web presentation and navigation idioms into shared homes for
 
 ### Requirement: Card surface chrome has a single shared idiom
 
-The web layer SHALL expose exactly one shared card-surface idiom (a `CardSurface`
-wrapper or a Tailwind component class next to `packages/ui` `card.tsx`) that
-encapsulates the border + white-gradient + layered-shadow + hover-shadow chrome,
-and every surface that previously inlined that mega-literal MUST consume it. No
+The web layer SHALL expose exactly one shared card-surface idiom: the
+`.card-surface` utility in `packages/ui/src/styles/utilities.css`. It
+encapsulates the border + white-gradient + layered-shadow chrome, and every
+matching surface MUST consume it together with the shared hover modifier when
+hover treatment is required. No
 web file MUST carry a second verbatim copy of the surface class string.
 
 #### Scenario: A restyle of the card surface is a single edit
 
-- **GIVEN** the card-surface chrome is homed in one shared idiom consumed by all
-  former copy sites (accordion-section, product-accordion, portfolio-overview-table,
+- **GIVEN** the card-surface chrome is homed in one shared idiom consumed by
+  accordion-section, product-accordion, portfolio-overview-table,
   lead-summary-table, blocked-at-risk-table, the skeleton and history surfaces)
 - **WHEN** the surface border, gradient, or shadow is changed once in that idiom
 - **THEN** every consuming surface reflects the change
@@ -34,12 +35,11 @@ web file MUST carry a second verbatim copy of the surface class string.
 ### Requirement: The rotating chevron is one shared component over lucide
 
 The web layer SHALL provide a single `RotatingChevron` component that wraps
-`lucide-react`'s `ChevronDown` with the shared rotate transition, and the three
-hand-rolled _rotating_ chevron SVGs (`shared/ui/report-shell/accordion-section.tsx`,
-`features/report-pages/ui/product-accordion.tsx`,
-`features/dashboard/ui/blocked-at-risk-table.tsx` —
-each `h-4 w-4` with an `expanded` prop driving the transform) MUST be deleted in
-favour of it. No report-shell sibling MUST hand-roll a _rotating_ chevron while
+`lucide-react`'s `ChevronDown` with the shared rotate transition.
+`shared/ui/report-shell/accordion-section.tsx`,
+`features/report-pages/ui/product/product-accordion.tsx`, and
+`features/dashboard/ui/blocked-at-risk-table.tsx` MUST use it. No report-shell
+sibling MUST hand-roll a _rotating_ chevron while
 `lucide-react` is available. The _static_ split-button dropdown glyph in
 `features/period/ui/fill-from-button.tsx` (a non-rotating `h-3 w-3` `ChevronDown` with no
 `expanded` prop) MUST NOT be routed through `RotatingChevron` — homing it there
@@ -51,10 +51,8 @@ preservation; it MUST instead import `lucide-react`'s `ChevronDown` directly at
 
 - **GIVEN** an accordion or expandable row consuming the shared `RotatingChevron`
 - **WHEN** the row toggles between collapsed and expanded
-- **THEN** the chevron rotates via the shared transition, matching the prior
-  hand-rolled behaviour
-- **AND** the three former local _rotating_ `ChevronDown` definitions no longer
-  exist
+- **THEN** the chevron rotates via the shared transition
+- **AND** no local rotating `ChevronDown` definition exists
 
 #### Scenario: The static split-button glyph is left non-rotating
 
@@ -71,20 +69,18 @@ preservation; it MUST instead import `lucide-react`'s `ChevronDown` directly at
 - **GIVEN** the shared `RotatingChevron` is rendered inside a toggle control
 - **WHEN** the surface is inspected for accessibility
 - **THEN** the chevron SVG is `aria-hidden` in one place
-- **AND** each former copy's ad-hoc `aria-hidden` wiring is removed
+- **AND** consuming surfaces do not repeat ad-hoc `aria-hidden` wiring
 
 ### Requirement: Short date and timestamp formatting has one home
 
-`apps/web/src/shared/lib/format/format-date.ts` SHALL export `MONTHS_SHORT` and a
-`formatTimestampShort` function, and the three external local month/timestamp
-formatter copies MUST import them instead of redefining their own month arrays or
-timestamp logic. No web file outside `format-date.ts` MUST declare a private
+`apps/web/src/shared/lib/format/format-date.ts` SHALL own the short-month table
+and expose `formatTimestampShort`. All web date and timestamp presentation MUST
+use this canonical formatter home; no other web file may declare a private
 short-month array for display formatting.
 
 #### Scenario: The external formatter copies consume the shared home
 
-- **GIVEN** `MONTHS_SHORT` is exported and `formatTimestampShort` is defined in
-  `format-date.ts`
+- **GIVEN** `formatTimestampShort` is defined in `format-date.ts`
 - **WHEN** the reminders, lead-form, and lead-history formatter sites render a
   short date or timestamp
 - **THEN** they call the shared exports
@@ -92,7 +88,7 @@ short-month array for display formatting.
 
 #### Scenario: A month-label correction propagates from one place
 
-- **GIVEN** all short-date rendering flows through the shared `MONTHS_SHORT`
+- **GIVEN** all short-date rendering flows through the shared formatter
 - **WHEN** the month labels are edited once in `format-date.ts`
 - **THEN** every consuming surface reflects the change
 - **AND** no other file needs editing to stay consistent
@@ -100,19 +96,18 @@ short-month array for display formatting.
 ### Requirement: Role labels have a single shared source
 
 `packages/shared` SHALL export exactly one `ROLE_LABEL` map keyed by the canonical
-role enum (next to `roleSchema` in `schemas/auth.ts`), and the drifted label
-sources MUST consume it — closing the existing "Department Head" vs "Head"
-divergence by converging the head label on `Head` (the value 2 of the 3 existing
-sources already render). No web or api file MUST hand-derive a role's display
-label from a role token inline.
+role enum (next to `roleSchema` in
+`packages/shared/src/schemas/auth/auth.ts`). Every role-label surface
+MUST consume it, and the canonical head label MUST be `Head`. No web or API file
+MUST derive a role's display label from a role token inline.
 
-#### Scenario: The drifted label sources converge
+#### Scenario: Role-label surfaces agree
 
 - **GIVEN** `ROLE_LABEL` is homed once in `packages/shared`
 - **WHEN** the login-page role map, the dev role-switcher, and the inline
   role-derivation site (`lead-form.ts`) render a role label
 - **THEN** all three render the same label for a given role
-- **AND** the prior "Department Head" vs "Head" mismatch is gone
+- **AND** every head label renders `Head`
 
 #### Scenario: Adding a role forces a label entry
 
@@ -124,12 +119,13 @@ label from a role token inline.
 ### Requirement: Role-to-route landing has a single non-divergent map
 
 `packages/shared` SHALL export exactly one role→route landing map
-`ROLE_HOME_PATH` (next to `roleSchema` in `schemas/auth.ts`) that backs the API
+`ROLE_HOME_PATH` (next to `roleSchema` in
+`packages/shared/src/schemas/auth/auth.ts`) that backs the API
 `dev-login.routes.ts` fallback, the web `devLoginHref` and `defaultRedirectFor`
 helpers in `app/login-page-roles.ts`, and the web `nav-active.ts` / `role-gate.tsx`
 home consumers — so a role's landing route cannot diverge between them. The map
 MUST be exhaustively typed on the role enum with NO runtime fallback at the
-shared home; unknown/retired non-`Role` runtime values stay the responsibility
+shared home; unknown non-`Role` runtime values stay the responsibility
 of the web call site (the existing `defaultRedirectFor` `FALLBACK_REDIRECT`
 guard), documented there. The viewer target MUST be `/reports/latest`, the
 viewer's canonical primary entry to its report per the
@@ -139,7 +135,7 @@ fallback only: it is passed as the `fallbackPath` to
 `resolveDevLoginRedirectUrl`, and the `safeRedirectPath` open-redirect
 precedence and ordering are unchanged.
 
-#### Scenario: The viewer landing route no longer diverges
+#### Scenario: The viewer landing route is canonical
 
 - **GIVEN** the single shared role→route map with viewer target `/reports/latest`
 - **WHEN** a viewer completes a param-less dev-login (API — no explicit `redirect`
@@ -184,7 +180,7 @@ the setter into the head shell or by an override that could skip the strip.
 - **GIVEN** `useReportShellUrlState` owns the archive toggle and scope derivation
 - **WHEN** the head shell and the viewer shell read or update their shell URL state
 - **THEN** both route through the shared hook
-- **AND** the previously duplicated `searchParams`/`URLSearchParams` blocks are gone
+- **AND** neither shell owns a private `searchParams`/`URLSearchParams` block
 
 #### Scenario: The viewer strip-list runs on every in-shell navigation
 
@@ -194,7 +190,7 @@ the setter into the head shell or by an override that could skip the strip.
   archive, or view-mode toggle)
 - **THEN** the setter deletes `source` and `recovery` from the params on that call
 - **AND** the head shell, passing `stripParams = []`, strips nothing, so neither
-  shell's behaviour changes from its pre-extraction copy
+  shell loses its declared behavior
 
 #### Scenario: A URL-state fix lands once for both shells
 

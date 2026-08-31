@@ -4,7 +4,11 @@ import type { Queue } from "bullmq";
 import { ClsService } from "nestjs-cls";
 
 import { BullMQModule } from "../../infrastructure/bullmq/bullmq.module";
-import { ConfigModule } from "../../infrastructure/config/config.module.js";
+import {
+  ConfigModule,
+  ENV_CONFIG,
+} from "../../infrastructure/config/config.module.js";
+import type { EnvConfig } from "../../infrastructure/config/env.schema.js";
 import { APP_LOGGER } from "../../lib/audit-logger.js";
 import type { AppLogger } from "../../lib/logger.js";
 import {
@@ -40,12 +44,14 @@ import { PdfExportInfrastructureTelemetry } from "./pdf-export-telemetry.adapter
         logger: AppLogger,
         queue: PdfExportEnqueuer,
         telemetry: PdfExportTelemetry,
-      ) => new PdfExportService(repo, logger, queue, telemetry),
+        env: EnvConfig,
+      ) => new PdfExportService(repo, logger, queue, telemetry, env),
       inject: [
         PdfExportPrismaRepository,
         APP_LOGGER,
         PDF_EXPORT_ENQUEUER,
         PDF_EXPORT_TELEMETRY,
+        ENV_CONFIG,
       ],
     },
   ],

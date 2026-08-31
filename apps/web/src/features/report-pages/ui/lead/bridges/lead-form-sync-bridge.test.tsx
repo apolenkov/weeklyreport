@@ -273,7 +273,7 @@ describe("LeadFormSyncBridge", () => {
     // Stage chip is non-interactive in readOnly mode (popover cannot open).
     // The non-empty covering risk floors the rendered status to at-risk even
     // on the read-only surface.
-    const devChip = screen.getByRole("button", { name: /^Dev: at-risk/ });
+    const devChip = screen.getByRole("button", { name: /^Dev: At risk/ });
     expect(devChip).toHaveAttribute("aria-disabled", "true");
 
     // Risk text rendered as plain preview, not a form control.
@@ -347,10 +347,10 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
     // The Dev chip renders blocked via the render-time floor; Planning (locked)
     // and the uncovered Testing chip stay at their explicit on-track.
     expect(
-      await screen.findByRole("button", { name: /^Dev: blocked/ }),
+      await screen.findByRole("button", { name: /^Dev: Blocked/ }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /^Testing: on-track/ }),
+      screen.getByRole("button", { name: /^Testing: On track/ }),
     ).toBeInTheDocument();
 
     // No status was persisted onto the products — the chip severity is a pure
@@ -402,7 +402,7 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
     // Planning is locked-ownership — the floor never touches it, and nothing is
     // persisted onto the products.
     expect(
-      await screen.findByRole("button", { name: /^Planning: on-track/ }),
+      await screen.findByRole("button", { name: /^Planning: On track/ }),
     ).toBeInTheDocument();
     expect(onProductsChangeSpy).not.toHaveBeenCalled();
   });
@@ -506,15 +506,15 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
     // 1 + 3. The Dev chip renders floored (blocked) AND announces "by risk", so
     // it is visibly distinct from the explicitly-set Testing chip ("status set").
     expect(
-      screen.getByRole("button", { name: "Dev: blocked by risk" }),
+      screen.getByRole("button", { name: "Dev: Blocked by risk" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Testing: on-track — status set" }),
+      screen.getByRole("button", { name: "Testing: On track — status set" }),
     ).toBeInTheDocument();
   });
 
-  it("a covers-all (stageNames: []) risk does NOT tick the pill (root-cause guard)", () => {
-    // A covers-all risk (empty stageNames) must never count an untouched stage.
+  it("an unscoped product risk does NOT tick the pill (root-cause guard)", () => {
+    // A product risk without named stages must never count an untouched stage.
     // Dev stays uncounted → 1/2.
     const product = buildProduct({
       stages: [
@@ -532,7 +532,7 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
         },
       ],
     });
-    const coversAllRisk: RiskEntry = {
+    const unscopedProductRisk: RiskEntry = {
       id: "r-all",
       productId: "crm",
       productName: "CRM Platform",
@@ -543,7 +543,10 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
       mitigation: "Escalate",
     };
     const { container } = render(
-      <Harness initialProducts={[product]} initialRisks={[coversAllRisk]} />,
+      <Harness
+        initialProducts={[product]}
+        initialRisks={[unscopedProductRisk]}
+      />,
     );
     const pill = container.querySelector<HTMLElement>("[data-complete]");
     expect(pill?.textContent).toContain("1/2 Your stages");
@@ -573,18 +576,18 @@ describe("LeadFormSyncBridge — severity floor and chip toggle", () => {
     render(<Harness initialProducts={[product]} initialRisks={[risk]} />);
 
     expect(
-      screen.getByRole("button", { name: /^Dev: blocked/ }),
+      screen.getByRole("button", { name: /^Dev: Blocked/ }),
     ).toBeInTheDocument();
     // Uncovered sibling stage stays at its explicit status.
     expect(
-      screen.getByRole("button", { name: /^Testing: on-track/ }),
+      screen.getByRole("button", { name: /^Testing: On track/ }),
     ).toBeInTheDocument();
   });
 
   it("an orphan explicit blocked stage with no covering risk renders on-track on the live form", () => {
     // The read model already collapses an unbacked severity to on-track; the
     // live form must agree. A stage persisted blocked with NO covering risk
-    // renders on-track so legacy explicit-severity rows need no backfill.
+    // renders on-track so the risk-derived view stays authoritative.
     const product = buildProduct({
       stages: [
         {
@@ -599,10 +602,10 @@ describe("LeadFormSyncBridge — severity floor and chip toggle", () => {
     render(<Harness initialProducts={[product]} initialRisks={[]} />);
 
     expect(
-      screen.getByRole("button", { name: /^Dev: on-track/ }),
+      screen.getByRole("button", { name: /^Dev: On track/ }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: /^Dev: blocked/ }),
+      screen.queryByRole("button", { name: /^Dev: Blocked/ }),
     ).not.toBeInTheDocument();
   });
 
@@ -628,7 +631,7 @@ describe("LeadFormSyncBridge — severity floor and chip toggle", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /^Dev: empty/ }));
+    await user.click(screen.getByRole("button", { name: /^Dev: No status/ }));
 
     // The toggle applies straight through — no menu, no risk dialog.
     expect(
@@ -636,7 +639,7 @@ describe("LeadFormSyncBridge — severity floor and chip toggle", () => {
     ).not.toBeInTheDocument();
     expect(onProductsChangeSpy).toHaveBeenCalled();
     expect(
-      await screen.findByRole("button", { name: /^Dev: on-track/ }),
+      await screen.findByRole("button", { name: /^Dev: On track/ }),
     ).toBeInTheDocument();
   });
 
@@ -659,7 +662,7 @@ describe("LeadFormSyncBridge — severity floor and chip toggle", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /^Dev: blocked/ }));
+    await user.click(screen.getByRole("button", { name: /^Dev: Blocked/ }));
 
     expect(toast.info).toHaveBeenCalledWith(
       expect.stringMatching(/covering risk/i),
@@ -667,7 +670,7 @@ describe("LeadFormSyncBridge — severity floor and chip toggle", () => {
     expect(onRisksChangeSpy).not.toHaveBeenCalled();
     expect(onProductsChangeSpy).not.toHaveBeenCalled();
     expect(
-      screen.getByRole("button", { name: /^Dev: blocked/ }),
+      screen.getByRole("button", { name: /^Dev: Blocked/ }),
     ).toBeInTheDocument();
   });
 
@@ -703,7 +706,7 @@ describe("LeadFormSyncBridge — severity floor and chip toggle", () => {
     );
 
     // The mine chip shows the lead's own on-track (foreign risk never floors it).
-    await user.click(screen.getByRole("button", { name: /^Dev: on-track/ }));
+    await user.click(screen.getByRole("button", { name: /^Dev: On track/ }));
 
     // The toggle applies — no hint, no block.
     expect(toast.info).not.toHaveBeenCalled();

@@ -4,12 +4,15 @@
     "verbatimModuleSyntax": false,
     "noEmit": true,
     "allowImportingTsExtensions": true,
-    // Deliberately REPLACES the base workspace mappings rather than extending
-    // them: `prisma/` is not a workspace package and the repo root does not
-    // depend on @customreport/*, so a mapping here would typecheck an import
-    // that fails at runtime under tsx. The role-type spec names this isolation
-    // as the reason `prisma/seeds/support/seed-constants.ts` may mirror shared literals.
-    "paths": {}
+    // Prisma seeds consume the server-only persistence package and the pure
+    // shared contracts at runtime through the workspace install.
+    "paths": {
+      "@customreport/report-persistence": [
+        "./packages/report-persistence/src/index.ts"
+      ],
+      "@customreport/shared": ["./packages/shared/src/index.ts"],
+      "@customreport/shared/*": ["./packages/shared/src/*"]
+    }
   },
   "include": ["prisma/**/*.ts"]
 }

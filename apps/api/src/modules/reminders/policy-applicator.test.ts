@@ -7,388 +7,307 @@ import { describe, expect, it, vi } from "vitest";
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { PolicyApplicatorService } from "./policy-applicator.service";
 
-/* ------------------------------------------------------------------ */
-/*  Validity gate (pure)                                               */
-/* ------------------------------------------------------------------ */
-
-describe("reminderPolicyAppliesTo — validity gate", () => {
+describe("reminderPolicyAppliesTo", () => {
   const validFrom = new Date("2026-05-01T00:00:00.000Z");
   const validUntil = new Date("2026-08-01T00:00:00.000Z");
 
   it.each([
-    {
-      label: "active and deadline inside [validFrom, validUntil]",
-      policy: { active: true, validFrom, validUntil },
-      deadline: new Date("2026-06-15T18:00:00.000Z"),
-      expected: true,
-    },
-    {
-      label: "policy.active is false",
-      policy: { active: false, validFrom, validUntil },
-      deadline: new Date("2026-06-15T18:00:00.000Z"),
-      expected: false,
-    },
-    {
-      label: "deadline is before validFrom",
-      policy: { active: true, validFrom, validUntil },
-      deadline: new Date("2026-04-15T18:00:00.000Z"),
-      expected: false,
-    },
-    {
-      label: "deadline is after validUntil",
-      policy: { active: true, validFrom, validUntil },
-      deadline: new Date("2026-09-15T18:00:00.000Z"),
-      expected: false,
-    },
-    {
-      label: "validUntil is null (forever-policy)",
-      policy: { active: true, validFrom, validUntil: null },
-      deadline: new Date("2030-01-01T00:00:00.000Z"),
-      expected: true,
-    },
+    [true, validFrom, validUntil, new Date("2026-06-15T18:00:00.000Z"), true],
+    [false, validFrom, validUntil, new Date("2026-06-15T18:00:00.000Z"), false],
+    [true, validFrom, validUntil, new Date("2026-04-15T18:00:00.000Z"), false],
+    [true, validFrom, validUntil, new Date("2026-09-15T18:00:00.000Z"), false],
+    [true, validFrom, null, new Date("2030-01-01T00:00:00.000Z"), true],
   ] as const)(
-    "returns $expected when $label",
-    ({ policy, deadline, expected }) => {
-      expect(reminderPolicyAppliesTo(policy, deadline)).toBe(expected);
+    "checks active=%s and the inclusive validity window",
+    (active, from, until, deadline, expected) => {
+      expect(
+        reminderPolicyAppliesTo(
+          { active, validFrom: from, validUntil: until },
+          deadline,
+        ),
+      ).toBe(expected);
     },
   );
 
-  it("boundary: deadline === validFrom is INSIDE the window", () => {
-    const result = reminderPolicyAppliesTo(
-      { active: true, validFrom, validUntil },
-      new Date("2026-05-01T00:00:00.000Z"),
-    );
-    expect(result).toBe(true);
-  });
-
-  it("boundary: deadline === validUntil is INSIDE the window", () => {
-    const result = reminderPolicyAppliesTo(
-      { active: true, validFrom, validUntil },
-      new Date("2026-08-01T00:00:00.000Z"),
-    );
-    expect(result).toBe(true);
+  it("includes both validity boundaries", () => {
+    const policy = { active: true, validFrom, validUntil };
+    expect(reminderPolicyAppliesTo(policy, validFrom)).toBe(true);
+    expect(reminderPolicyAppliesTo(policy, validUntil)).toBe(true);
   });
 });
 
-/* ------------------------------------------------------------------ */
-/*  computeFireAt — DST-correct math                                   */
-/* ------------------------------------------------------------------ */
-
-describe("computeReminderFireAt — DST-correct math", () => {
-  it("subtracts 24h in Europe/Moscow (no DST — fixed UTC+3)", () => {
-    // Deadline: 2026-06-01 21:00 MSK = 18:00 UTC
-    const deadline = new Date("2026-06-01T18:00:00.000Z");
-    const fireAt = computeReminderFireAt(deadline, -24 * 60, "Europe/Moscow");
-    // T-24h: 2026-05-31 21:00 MSK = 18:00 UTC
-    expect(fireAt.toISOString()).toBe("2026-05-31T18:00:00.000Z");
-  });
-
-  it("handles DST forward in America/New_York (clocks +1h)", () => {
-    // Deadline: 2026-03-09 09:00 EDT = 13:00 UTC (after DST jump)
+describe("computeReminderFireAt", () => {
+  it("applies elapsed minutes across timezones", () => {
     const deadline = new Date("2026-03-09T13:00:00.000Z");
-    // T-24h in wall-clock should be 2026-03-08 09:00 EST = 14:00 UTC
-    // (because NY was still on EST then). Luxon's DateTime arithmetic
-    // gives exact-24h elapsed, which means 2026-03-08 13:00 UTC.
-    const fireAt = computeReminderFireAt(
-      deadline,
-      -24 * 60,
-      "America/New_York",
-    );
-    expect(fireAt.toISOString()).toBe("2026-03-08T13:00:00.000Z");
+    expect(
+      computeReminderFireAt(
+        deadline,
+        -24 * 60,
+        "America/New_York",
+      ).toISOString(),
+    ).toBe("2026-03-08T13:00:00.000Z");
   });
 });
 
-/* ------------------------------------------------------------------ */
-/*  applyToPeriod — orchestration with stubbed Prisma                  */
-/* ------------------------------------------------------------------ */
+const DEADLINE = new Date("2026-06-01T18:00:00.000Z");
+const POLICY = {
+  id: "policy-a",
+  active: true,
+  validFrom: new Date("2026-01-01T00:00:00.000Z"),
+  validUntil: new Date("2026-12-31T00:00:00.000Z"),
+  offsetMinutes: -1440,
+  timezone: "Europe/Moscow",
+  audience: "lead_with_draft" as const,
+  kind: "deadline" as const,
+  createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+};
+interface LockedReportRow {
+  readonly id: string;
+  readonly deadline: Date | null;
+  readonly periodState: "scheduled" | "open" | "published" | "archived";
+  readonly status: "draft" | "published";
+  readonly periodStatus: "open" | "published" | "reopened";
+  readonly archived: boolean;
+}
+const REPORT = {
+  id: "report-1",
+  deadline: DEADLINE,
+  periodState: "open" as const,
+  status: "draft" as const,
+  periodStatus: "open" as const,
+  archived: false,
+} satisfies LockedReportRow;
 
-interface StubPolicy {
-  id: string;
-  active: boolean;
-  validFrom: Date;
-  validUntil: Date | null;
-  offsetMinutes: number;
-  timezone: string;
-  kind: "deadline" | "follow_up" | "escalation";
+function sqlText(query: unknown): string {
+  if (Array.isArray(query)) return query.join("?");
+  if (
+    typeof query === "object" &&
+    query !== null &&
+    "strings" in query &&
+    Array.isArray(query.strings)
+  ) {
+    return query.strings.join("?");
+  }
+  throw new Error("Expected a Prisma SQL template");
 }
 
-function makeStubPrisma(policies: StubPolicy[], existingRules: Set<string>) {
-  const upsertCalls: {
-    where: unknown;
-    create: Record<string, unknown>;
-    update: Record<string, unknown>;
-  }[] = [];
-
-  return {
-    upsertCalls,
-    prisma: {
-      reminderPolicy: {
-        findMany: vi.fn(() =>
-          Promise.resolve(policies.filter((p) => p.active)),
-        ),
-      },
-      reminderRule: {
-        findUnique: vi.fn(
-          (args: {
-            where: {
-              reportId_policyId: { reportId: string; policyId: string };
-            };
-          }) => {
-            const key = `${args.where.reportId_policyId.reportId}:${args.where.reportId_policyId.policyId}`;
-            return Promise.resolve(
-              existingRules.has(key) ? { id: "existing" } : null,
-            );
-          },
-        ),
-        upsert: vi.fn(
-          (args: {
-            where: unknown;
-            create: Record<string, unknown>;
-            update: Record<string, unknown>;
-          }) => {
-            upsertCalls.push(args);
-            return Promise.resolve({ id: "rule-id" });
-          },
-        ),
-      },
-    } as unknown as PrismaService,
+function makePrisma(input?: {
+  policies?: readonly (typeof POLICY)[];
+  report?: LockedReportRow | null;
+  current?: {
+    id: string;
+    reportId: string;
+    policyId: string;
+    kind: "deadline" | "escalation";
+    fireAt: Date;
+    deadline: Date;
+    timezone: string;
+    status: "active" | "paused";
+    version: number;
+    _count: { executions: number };
+  } | null;
+}) {
+  const policies = input?.policies ?? [POLICY];
+  const report = input?.report === undefined ? REPORT : input.report;
+  const sql: string[] = [];
+  const $queryRaw = vi.fn((query: unknown): unknown[] => {
+    const statement = sqlText(query);
+    sql.push(statement);
+    if (statement.includes('FROM "ReminderPolicy"')) return [...policies];
+    if (statement.includes('FROM "Report"')) return report ? [report] : [];
+    throw new Error(`Unexpected SQL: ${statement}`);
+  });
+  const reminderRule = {
+    findFirst: vi.fn().mockResolvedValue(input?.current ?? null),
+    updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+    update: vi.fn().mockResolvedValue({}),
+    create: vi.fn().mockResolvedValue({ id: "rule-created" }),
   };
+  const tx = { $queryRaw, reminderRule };
+  const prisma = {
+    $transaction: vi.fn((callback: (client: typeof tx) => Promise<unknown>) =>
+      callback(tx),
+    ),
+  } as unknown as PrismaService;
+  return { prisma, reminderRule, sql };
 }
 
-describe("PolicyApplicatorService.applyToPeriod", () => {
-  const validFrom = new Date("2026-01-01T00:00:00.000Z");
-  const validUntil = new Date("2026-12-31T00:00:00.000Z");
+describe("PolicyApplicatorService", () => {
+  it("locks policies before the Report and creates from the persisted deadline", async () => {
+    const stub = makePrisma();
 
-  const policyA: StubPolicy = {
-    id: "policy-a",
-    active: true,
-    validFrom,
-    validUntil,
-    offsetMinutes: -1440,
-    timezone: "Europe/Moscow",
-    kind: "deadline",
-  };
+    await expect(
+      new PolicyApplicatorService(stub.prisma).applyToPeriod("report-1"),
+    ).resolves.toEqual({ created: 1, updated: 0, skipped: 0 });
 
-  const policyB: StubPolicy = {
-    id: "policy-b",
-    active: true,
-    validFrom: new Date("2027-01-01T00:00:00.000Z"),
-    validUntil: null,
-    offsetMinutes: -1440,
-    timezone: "Europe/Moscow",
-    kind: "deadline",
-  };
-
-  const policyInactive: StubPolicy = {
-    ...policyA,
-    id: "policy-inactive",
-    active: false,
-  };
-
-  it("creates one rule per applicable active policy", async () => {
-    const period = {
-      id: "report-1",
-      deadline: new Date("2026-06-01T18:00:00.000Z"),
+    expect(stub.sql[0]).toContain('FROM "ReminderPolicy"');
+    expect(stub.sql[1]).toContain('FROM "Report"');
+    const createArgs = stub.reminderRule.create.mock
+      .calls[0]?.[0] as unknown as {
+      data: Record<string, unknown>;
     };
-    const stub = makeStubPrisma([policyA, policyB, policyInactive], new Set());
-    const svc = new PolicyApplicatorService(stub.prisma);
-
-    const result = await svc.applyToPeriod(period);
-
-    // policyA: in-window → upsert
-    // policyB: validFrom in 2027 → skip
-    // policyInactive: filtered by findMany WHERE active:true → not seen
-    expect(result.created).toBe(1);
-    expect(result.updated).toBe(0);
-    expect(result.skipped).toBe(1); // policyB
-    expect(stub.upsertCalls).toHaveLength(1);
-    expect(stub.upsertCalls[0]?.create).toMatchObject({
+    expect(createArgs.data).toMatchObject({
       reportId: "report-1",
-      policyId: "policy-a",
-      kind: "deadline",
-      timezone: "Europe/Moscow",
-      status: "active",
+      policyId: POLICY.id,
+      deadline: DEADLINE,
+      fireAt: computeReminderFireAt(
+        DEADLINE,
+        POLICY.offsetMinutes,
+        POLICY.timezone,
+      ),
+      version: 1,
     });
   });
 
-  it("is idempotent: second call updates instead of creating", async () => {
-    const period = {
-      id: "report-1",
-      deadline: new Date("2026-06-01T18:00:00.000Z"),
+  it("updates an unexecuted rule in place when its schedule identity changes", async () => {
+    const current = {
+      id: "rule-v1",
+      reportId: REPORT.id,
+      policyId: POLICY.id,
+      kind: "deadline" as const,
+      fireAt: new Date("2026-05-20T18:00:00.000Z"),
+      deadline: new Date("2026-05-21T18:00:00.000Z"),
+      timezone: POLICY.timezone,
+      status: "active" as const,
+      version: 1,
+      _count: { executions: 0 },
     };
-    const existing = new Set<string>(["report-1:policy-a"]);
-    const stub = makeStubPrisma([policyA], existing);
-    const svc = new PolicyApplicatorService(stub.prisma);
+    const stub = makePrisma({ current });
 
-    const result = await svc.applyToPeriod(period);
+    await expect(
+      new PolicyApplicatorService(stub.prisma).repairToPeriod("report-1"),
+    ).resolves.toEqual({ created: 0, updated: 1, skipped: 0 });
 
-    expect(result.created).toBe(0);
-    expect(result.updated).toBe(1);
-    expect(stub.upsertCalls).toHaveLength(1);
+    const updateArgs = stub.reminderRule.update.mock
+      .calls[0]?.[0] as unknown as {
+      data: Record<string, unknown>;
+      where: Record<string, unknown>;
+    };
+    expect(updateArgs).toMatchObject({
+      where: { id: "rule-v1" },
+      data: { deadline: DEADLINE, status: "active" },
+    });
+    expect(stub.reminderRule.create).not.toHaveBeenCalled();
   });
 
-  it("skips policy whose validUntil predates the deadline", async () => {
-    const period = {
-      id: "report-1",
-      deadline: new Date("2027-01-01T18:00:00.000Z"),
+  it("versions an executed rule instead of rewriting immutable execution facts", async () => {
+    const oldDeadline = new Date("2026-05-21T18:00:00.000Z");
+    const current = {
+      id: "rule-v1",
+      reportId: REPORT.id,
+      policyId: POLICY.id,
+      kind: "deadline" as const,
+      fireAt: computeReminderFireAt(
+        oldDeadline,
+        POLICY.offsetMinutes,
+        POLICY.timezone,
+      ),
+      deadline: oldDeadline,
+      timezone: POLICY.timezone,
+      status: "active" as const,
+      version: 1,
+      _count: { executions: 1 },
     };
-    const stub = makeStubPrisma([policyA], new Set());
-    const svc = new PolicyApplicatorService(stub.prisma);
+    const stub = makePrisma({ current });
 
-    const result = await svc.applyToPeriod(period);
+    await expect(
+      new PolicyApplicatorService(stub.prisma).repairToPeriod("report-1"),
+    ).resolves.toEqual({ created: 1, updated: 0, skipped: 0 });
 
-    expect(result.created).toBe(0);
-    expect(result.skipped).toBe(1);
-    expect(stub.upsertCalls).toHaveLength(0);
-  });
-
-  it("when `now` is given, skips an elapsed instant but keeps a still-future one", async () => {
-    // Period created late: now sits AFTER the T-24h deadline reminder fired but
-    // BEFORE the T+2h escalation. The elapsed deadline rule must be skipped (it
-    // would fire stale), the future escalation must still be materialised.
-    const deadline = new Date("2026-06-01T18:00:00.000Z");
-    const now = new Date("2026-06-01T19:00:00.000Z");
-    const policyEscalation: StubPolicy = {
-      ...policyA,
-      id: "policy-escalation",
-      offsetMinutes: 120, // T+2h → fireAt 20:00Z, still future at now=19:00Z
-      kind: "escalation",
+    expect(stub.reminderRule.update).toHaveBeenCalledWith({
+      where: { id: "rule-v1" },
+      data: { status: "paused" },
+    });
+    const createArgs = stub.reminderRule.create.mock
+      .calls[0]?.[0] as unknown as {
+      data: Record<string, unknown>;
     };
-    const stub = makeStubPrisma([policyA, policyEscalation], new Set());
-    const svc = new PolicyApplicatorService(stub.prisma);
-
-    const result = await svc.applyToPeriod({ id: "report-1", deadline }, now);
-
-    // policyA (T-24h, fireAt 2026-05-31) is elapsed → skipped; escalation kept.
-    expect(result.created).toBe(1);
-    expect(result.skipped).toBe(1);
-    expect(stub.upsertCalls).toHaveLength(1);
-    expect(stub.upsertCalls[0]?.create).toMatchObject({
-      policyId: "policy-escalation",
+    expect(createArgs.data).toMatchObject({
+      reportId: REPORT.id,
+      policyId: POLICY.id,
+      deadline: DEADLINE,
+      version: 2,
     });
   });
 
-  it("without `now`, materialises even an already-past instant (backfill/snapshot path)", async () => {
-    // Callers that omit `now` — snapshot-restore and the reminder-policy
-    // backfill — reinstate rules verbatim, so the elapsed-skip must not apply
-    // (the cron scheduler passes `now` via the period factory).
-    const deadline = new Date("2026-06-01T18:00:00.000Z");
-    const stub = makeStubPrisma([policyA], new Set());
-    const svc = new PolicyApplicatorService(stub.prisma);
-
-    const result = await svc.applyToPeriod({ id: "report-1", deadline });
-
-    expect(result.created).toBe(1);
-    expect(stub.upsertCalls).toHaveLength(1);
-  });
-
-  it("catches P2002 race on the rule constraint and continues with the rest of the policies", async () => {
-    const period = {
-      id: "report-1",
-      deadline: new Date("2026-06-01T18:00:00.000Z"),
-    };
-    const policyC: StubPolicy = {
-      ...policyA,
-      id: "policy-c",
-      offsetMinutes: -120, // T-2h, distinct rule
-    };
-
-    let firstCall = true;
-    const prisma = {
-      reminderPolicy: {
-        findMany: vi.fn(() => Promise.resolve([policyA, policyC])),
+  it("does not revive a rule when deactivation wins before the locked read", async () => {
+    const stub = makePrisma({
+      policies: [{ ...POLICY, active: false }],
+      current: {
+        id: "rule-v1",
+        reportId: REPORT.id,
+        policyId: POLICY.id,
+        kind: POLICY.kind,
+        fireAt: computeReminderFireAt(
+          DEADLINE,
+          POLICY.offsetMinutes,
+          POLICY.timezone,
+        ),
+        deadline: DEADLINE,
+        timezone: POLICY.timezone,
+        status: "paused",
+        version: 1,
+        _count: { executions: 0 },
       },
-      reminderRule: {
-        findUnique: vi.fn(() => Promise.resolve(null)),
-        upsert: vi.fn(() => {
-          if (firstCall) {
-            firstCall = false;
-            const err = new Error("Unique constraint failed") as Error & {
-              code?: string;
-              meta?: {
-                driverAdapterError: { cause: { originalMessage: string } };
-              };
-            };
-            err.code = "P2002";
-            // pg-adapter shape: constraint identity lives in meta, not meta.target.
-            err.meta = {
-              driverAdapterError: {
-                cause: {
-                  originalMessage:
-                    'duplicate key value violates unique constraint "uq_rule_report_policy"',
-                },
-              },
-            };
-            return Promise.reject(err);
-          }
-          return Promise.resolve({ id: "rule-id" });
-        }),
-      },
-    } as unknown as PrismaService;
-    const svc = new PolicyApplicatorService(prisma);
-
-    const result = await svc.applyToPeriod(period);
-
-    // policyA: P2002 on uq_rule_report_policy → skipped
-    // policyC: success → created
-    expect(result.created).toBe(1);
-    expect(result.skipped).toBe(1);
-  });
-
-  it("re-throws a P2002 from an UNRELATED constraint (not the rule race)", async () => {
-    const unrelatedP2002 = new Error("Unique constraint failed") as Error & {
-      code?: string;
-      meta?: { driverAdapterError: { cause: { originalMessage: string } } };
-    };
-    unrelatedP2002.code = "P2002";
-    unrelatedP2002.meta = {
-      driverAdapterError: {
-        cause: {
-          originalMessage:
-            'duplicate key value violates unique constraint "ReminderRule_SomeOther_key"',
-        },
-      },
-    };
-    const prisma = {
-      reminderPolicy: {
-        findMany: vi.fn(() => Promise.resolve([policyA])),
-      },
-      reminderRule: {
-        findUnique: vi.fn(() => Promise.resolve(null)),
-        upsert: vi.fn().mockRejectedValue(unrelatedP2002),
-      },
-    } as unknown as PrismaService;
-    const svc = new PolicyApplicatorService(prisma);
+    });
 
     await expect(
-      svc.applyToPeriod({
-        id: "report-1",
-        deadline: new Date("2026-06-01T18:00:00.000Z"),
-      }),
-    ).rejects.toBe(unrelatedP2002);
+      new PolicyApplicatorService(stub.prisma).applyToPeriod("report-1"),
+    ).resolves.toEqual({ created: 0, updated: 0, skipped: 1 });
+    expect(stub.reminderRule.create).not.toHaveBeenCalled();
+    expect(stub.reminderRule.update).not.toHaveBeenCalled();
   });
 
-  it("re-throws an unexpected Prisma error and aborts later policies", async () => {
-    const unexpectedError = new Error("Database connection lost");
-    const policyC: StubPolicy = { ...policyA, id: "policy-c" };
-    const upsert = vi.fn().mockRejectedValue(unexpectedError);
-    const prisma = {
-      reminderPolicy: {
-        findMany: vi.fn().mockResolvedValue([policyA, policyC]),
+  it("pauses a rule for a contradictory open lifecycle tuple", async () => {
+    const current = {
+      id: "rule-v1",
+      reportId: REPORT.id,
+      policyId: POLICY.id,
+      kind: POLICY.kind,
+      fireAt: computeReminderFireAt(
+        DEADLINE,
+        POLICY.offsetMinutes,
+        POLICY.timezone,
+      ),
+      deadline: DEADLINE,
+      timezone: POLICY.timezone,
+      status: "active" as const,
+      version: 1,
+      _count: { executions: 0 },
+    };
+    const stub = makePrisma({
+      current,
+      report: {
+        ...REPORT,
+        status: "published",
+        periodStatus: "published",
       },
-      reminderRule: {
-        findUnique: vi.fn().mockResolvedValue(null),
-        upsert,
-      },
-    } as unknown as PrismaService;
-    const svc = new PolicyApplicatorService(prisma);
+    });
 
     await expect(
-      svc.applyToPeriod({
-        id: "report-1",
-        deadline: new Date("2026-06-01T18:00:00.000Z"),
-      }),
-    ).rejects.toBe(unexpectedError);
-    expect(upsert).toHaveBeenCalledTimes(1);
+      new PolicyApplicatorService(stub.prisma).repairToPeriod(REPORT.id),
+    ).resolves.toEqual({ created: 0, updated: 1, skipped: 0 });
+    expect(stub.reminderRule.update).toHaveBeenCalledWith({
+      where: { id: current.id },
+      data: { status: "paused" },
+    });
+  });
+
+  it("skips an excluded restored policy and a missing Report", async () => {
+    const excluded = makePrisma();
+    await expect(
+      new PolicyApplicatorService(excluded.prisma).applyToPeriod(
+        "report-1",
+        undefined,
+        new Set([POLICY.id]),
+      ),
+    ).resolves.toEqual({ created: 0, updated: 0, skipped: 1 });
+    expect(excluded.reminderRule.findFirst).not.toHaveBeenCalled();
+
+    const missing = makePrisma({ report: null });
+    await expect(
+      new PolicyApplicatorService(missing.prisma).repairToPeriod("missing"),
+    ).resolves.toEqual({ created: 0, updated: 0, skipped: 1 });
   });
 });

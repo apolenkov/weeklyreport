@@ -25,6 +25,7 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
   const LEAD_A_ID = "a0000000-0000-4000-a000-0000000000c1";
   const PROJECT_ID = "a0000000-0000-4000-a000-0000000000d1";
   const REPORT_ID = "a0000000-0000-4000-a000-0000000000e1";
+  const PUBLISHED_AT = new Date("2026-05-10T12:00:00.000Z");
 
   function session(
     role: "head" | "lead",
@@ -271,13 +272,15 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
         data: {
           status: "published",
           periodStatus: "published",
+          periodState: "published",
+          publishedAt: PUBLISHED_AT,
           publishedSnapshot: {
             reportId: REPORT_ID,
             periodStart: "2026-05-04T00:00:00.000Z",
             periodEnd: "2026-05-10T00:00:00.000Z",
             deadline: "2026-05-08T15:00:00.000Z",
             status: "published",
-            publishedAt: null,
+            publishedAt: PUBLISHED_AT.toISOString(),
             publishedById: null,
             publishedByName: null,
             portfolioOverview: {
@@ -290,6 +293,8 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
                 reportId: REPORT_ID,
                 authorId: LEAD_A_ID,
                 authorName: "Lead A",
+                groupId: GROUP_A_ID,
+                groupName: "Group A",
                 version: 1,
                 status: "submitted",
                 submittedAt: null,
@@ -299,12 +304,23 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
                   ownerGroupId: project.ownerGroupId,
                   trafficLight: "green",
                 })),
+                referencedProjects: [],
                 items: [],
                 risks: [],
                 decisions: [],
+                activities: [],
+                reviews: [],
               },
             ],
           },
+        },
+      });
+      await prisma.publishedSectionScope.create({
+        data: {
+          reportId: REPORT_ID,
+          reportSectionId: SECTION_A_ID,
+          authorId: LEAD_A_ID,
+          groupId: GROUP_A_ID,
         },
       });
     }

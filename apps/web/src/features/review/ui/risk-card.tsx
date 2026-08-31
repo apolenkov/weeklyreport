@@ -1,7 +1,6 @@
 import { MetaRow } from "../../../shared/ui/report-shell/meta-row";
 import type { RiskEntry, StageStatus } from "../../report-sections";
 import { FOREIGN_ENTRY_OPACITY } from "../../report-sections";
-import { canonicalRiskStageTags } from "../model/risk-stage-tags";
 import { RiskCardActions, RiskCardSummary } from "./risk-card-parts";
 
 // Keep the card wash softer than its chip while deriving every hue from the
@@ -30,8 +29,8 @@ interface RiskCardState {
   isBlocked: boolean;
   // Activity-parented rows are legitimately stage-less — no warning chip.
   isActivityRisk: boolean;
-  stageTags: string[];
-  stageTagsLabel: string;
+  stageTags: readonly string[];
+  stageTagsLabel: string | undefined;
   needsStage: boolean;
   locked: boolean;
 }
@@ -41,20 +40,19 @@ function deriveRiskCardState(
   readOnly: boolean,
   linkedProductStatus: RiskCardProps["linkedProductStatus"],
 ): RiskCardState {
-  const stageTags = canonicalRiskStageTags(risk);
+  const stageTags = risk.stageNames;
   // An activity-parented risk is legitimately stage-less (activities carry no
   // SDLC stage) — no warning chip, no stage nudge.
   const isActivityRisk = risk.activityId != null;
-  // A PRODUCT risk with no stages is an anomaly (legacy row), never an
-  // implicit "all stages" scope — render the loud "No stage set" warning chip
-  // instead of disguising it. Keep every selected stage visible; seven SDLC
-  // chips fit better than hiding critical scope behind "+N".
+  // Product risks always carry explicit stages. Keep every selected stage
+  // visible; seven SDLC chips fit better than hiding critical scope behind
+  // "+N".
   const stageTagsLabel =
     stageTags.length > 0
       ? stageTags.join(", ")
       : isActivityRisk
         ? "Activity — no SDLC stage"
-        : "No stage set";
+        : undefined;
   // Warn when the linked product is at-risk/blocked but no explicit stage is
   // selected for this risk row.
   const needsStage =
@@ -167,9 +165,10 @@ export function RiskCard({
       <MetaRow
         authorName={risk.authorName ?? sectionAuthorName}
         stageTags={state.stageTags}
-        ariaLabel={`Risk stages: ${state.stageTagsLabel}`}
+        {...(state.stageTagsLabel
+          ? { ariaLabel: `Risk stages: ${state.stageTagsLabel}` }
+          : {})}
         foreign={risk.foreign === true}
-        emptyStageChip={state.isActivityRisk ? "none" : "no-stage-warning"}
       />
     </div>
   );

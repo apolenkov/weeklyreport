@@ -3,7 +3,7 @@ import type {
   Product,
   RiskEntry,
 } from "../../report-sections";
-import { canonicalStageName, canonicalStageNames } from "../../report-sections";
+import { canonicalStageNames } from "../../report-sections";
 
 export type RiskSeverity = "at-risk" | "blocked";
 
@@ -21,9 +21,7 @@ export function deriveFromPreChecked(
   ownedStages: readonly string[],
 ): RiskSeverity {
   const flagged = (product?.stages ?? []).filter((s) =>
-    ownedStages.some(
-      (n) => canonicalStageName(n) === canonicalStageName(s.stageName),
-    ),
+    ownedStages.includes(s.stageName),
   );
   if (flagged.some((s) => s.status === "blocked")) return "blocked";
   return "at-risk";
@@ -48,13 +46,9 @@ export function computePreCheckedStages(
       (s): s is Product["stages"][number] & { status: RiskSeverity } =>
         s.status === "at-risk" || s.status === "blocked",
     )
-    .filter((s) =>
-      ownedStages.some(
-        (n) => canonicalStageName(n) === canonicalStageName(s.stageName),
-      ),
-    )
+    .filter((stage) => ownedStages.includes(stage.stageName))
     .map((s) => ({
-      name: canonicalStageName(s.stageName),
+      name: s.stageName,
       severity: s.status,
     }));
 }

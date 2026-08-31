@@ -9,12 +9,14 @@ export interface PrintRouteContext {
   readonly session: UserSession | null;
   readonly isPdfExport: boolean;
   readonly pdfReportId: string | null;
+  readonly pdfJobId: string | null;
 }
 
 const NO_CONTEXT: PrintRouteContext = {
   session: null,
   isPdfExport: false,
   pdfReportId: null,
+  pdfJobId: null,
 };
 
 // Malformed print-gate payloads resolve to NO_CONTEXT so the route fails closed.
@@ -27,5 +29,6 @@ export function decodePrintGateResponse(body: unknown): PrintRouteContext {
     session: session.success ? session.data : null,
     isPdfExport: p.isPdfExport === true,
     pdfReportId: typeof p.pdfReportId === "string" ? p.pdfReportId : null,
+    pdfJobId: typeof p.pdfJobId === "string" ? p.pdfJobId : null,
   };
 }

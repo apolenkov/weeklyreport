@@ -1,19 +1,22 @@
 import {
+  buildAssembledReportFromPrismaRow,
+  buildPortfolioProductsFromSnapshotSections,
+  computePortfolioOverviewFromReadSections,
+  PublishedSnapshotIntegrityError,
+  requirePublishedSnapshot,
+} from "@customreport/report-persistence";
+import {
   type ReportSectionReadModel,
   reportSectionReadModelSchema,
 } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
+import { publishedSnapshotFixture } from "../../../test-utils/prisma-test-helper";
 import {
   makeProjectReadModel,
   makeReportSectionReadModel,
   makeSectionActivity,
 } from "../../../test-utils/report-section-fixtures.js";
-import {
-  buildAssembledReportFromPrismaRow,
-  buildPortfolioProductsFromSnapshotSections,
-  computePortfolioOverviewFromReadSections,
-} from "./published-report-snapshot";
 import { buildEscalationsFromReadSections } from "./report-escalations";
 
 const REPORT_ID = "659b2767-0f86-41e2-b025-49730ca010e4";
@@ -368,6 +371,7 @@ describe("buildEscalationsFromReadSections — own-risk floor side effect", () =
 // top-line totals agree with the per-product cards in the same snapshot.
 describe("buildAssembledReportFromPrismaRow — portfolio totals floor (Shape B)", () => {
   const STAGE_NAME = "Development";
+  const AUTHOR_GROUP_ID = "abababab-abab-4aba-8aba-abababababab";
   const FIXED_TIMESTAMP = new Date("2026-01-01T00:00:00.000Z");
 
   // Full scalar defaults for Prisma.ReportGetPayload fixtures.
@@ -436,7 +440,11 @@ describe("buildAssembledReportFromPrismaRow — portfolio totals floor (Shape B)
             name: "Alice Lead",
             role: "lead" as const,
             id: AUTHOR_ID,
-            reportingGroupId: null,
+            reportingGroupId: AUTHOR_GROUP_ID,
+            reportingGroup: {
+              id: AUTHOR_GROUP_ID,
+              name: "Finance Platforms",
+            },
             stageAssignments: [
               {
                 id: `${OWNED_STAGE_ID}-assignment`,
@@ -449,7 +457,7 @@ describe("buildAssembledReportFromPrismaRow — portfolio totals floor (Shape B)
                   stageAssignments: [],
                   groupProducts: [
                     {
-                      groupId: "abababab-abab-4aba-8aba-abababababab",
+                      groupId: AUTHOR_GROUP_ID,
                     },
                   ],
                 },
@@ -508,6 +516,10 @@ describe("buildAssembledReportFromPrismaRow — portfolio totals floor (Shape B)
 
     expect(report.portfolioOverview.status).toBe("red");
     expect(report.portfolioOverview.totals).toMatchObject({ red: 1, green: 0 });
+    expect(report.sections[0]).toMatchObject({
+      groupId: AUTHOR_GROUP_ID,
+      groupName: "Finance Platforms",
+    });
   });
 
   it("counts the product yellow for an at-risk own risk", () => {
@@ -518,6 +530,29 @@ describe("buildAssembledReportFromPrismaRow — portfolio totals floor (Shape B)
       yellow: 1,
       green: 0,
     });
+  });
+
+  it("refuses to build a snapshot section without an author group anchor", () => {
+    const row = reportRow("blocked");
+    const section = row.sections[0];
+    if (!section) throw new Error("missing section fixture");
+    const malformed = {
+      ...row,
+      sections: [
+        {
+          ...section,
+          author: {
+            ...section.author,
+            reportingGroupId: null,
+            reportingGroup: null,
+          },
+        },
+      ],
+    };
+
+    expect(() => buildAssembledReportFromPrismaRow(malformed)).toThrow(
+      /has no consistent reporting-group ownership/,
+    );
   });
 });
 
@@ -549,5 +584,73 @@ describe("activity statuses do not roll up (stage-less, independent of product h
       makeSection({ activities: [RED_ACTIVITY] }),
     ]);
     expect(escalations).toEqual([]);
+  });
+});
+
+describe("requirePublishedSnapshot", () => {
+  const snapshot = publishedSnapshotFixture({
+    reportId: REPORT_ID,
+    periodStart: "2026-04-06T00:00:00.000Z",
+    periodEnd: "2026-04-12T23:59:59.999Z",
+    publishedAt: "2026-04-13T10:00:00.000Z",
+  });
+
+  it("accepts a valid snapshot with the expected report identity", () => {
+    expect(requirePublishedSnapshot(snapshot, REPORT_ID).reportId).toBe(
+      REPORT_ID,
+    );
+  });
+
+  it("fails closed for an absent snapshot", () => {
+    expect(() => requirePublishedSnapshot(null, REPORT_ID)).toThrow(
+      PublishedSnapshotIntegrityError,
+    );
+  });
+
+  it("fails closed when snapshot identity does not match the row", () => {
+    expect(() =>
+      requirePublishedSnapshot(
+        snapshot,
+        "123e4567-e89b-42d3-a456-426614174000",
+      ),
+    ).toThrow(PublishedSnapshotIntegrityError);
+  });
+
+  it("fails closed when the stored document is not a publication", () => {
+    expect(() =>
+      requirePublishedSnapshot(
+        { ...(snapshot as Record<string, unknown>), status: "draft" },
+        REPORT_ID,
+      ),
+    ).toThrow(PublishedSnapshotIntegrityError);
+  });
+
+  it("fails closed when a section belongs to another report", () => {
+    expect(() =>
+      requirePublishedSnapshot(
+        {
+          ...(snapshot as Record<string, unknown>),
+          sections: [
+            makeSection({
+              reportId: "123e4567-e89b-42d3-a456-426614174000",
+            }),
+          ],
+        },
+        REPORT_ID,
+      ),
+    ).toThrow(PublishedSnapshotIntegrityError);
+  });
+
+  it("fails closed when a section identity is duplicated", () => {
+    const section = makeSection();
+    expect(() =>
+      requirePublishedSnapshot(
+        {
+          ...(snapshot as Record<string, unknown>),
+          sections: [section, section],
+        },
+        REPORT_ID,
+      ),
+    ).toThrow(PublishedSnapshotIntegrityError);
   });
 });

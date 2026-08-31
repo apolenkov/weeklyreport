@@ -1,7 +1,7 @@
 import {
   type CarryOverExecution,
   type CarryOverRecord,
-  type PeriodStatus,
+  type CurrentPeriodLifecycle,
   type ReportSectionReadModel,
 } from "@customreport/shared";
 
@@ -36,10 +36,18 @@ export interface CarryOverResult {
 }
 
 // Editable iff open/reopened AND not archived (archived is a separate flag).
-export interface TargetReportState {
-  periodStatus: PeriodStatus;
-  archived: boolean;
-}
+export type TargetReportState = Pick<
+  CurrentPeriodLifecycle,
+  | "status"
+  | "periodState"
+  | "periodStatus"
+  | "archived"
+  | "autoPublished"
+  | "autoArchived"
+  | "publishedAt"
+  | "publishedById"
+  | "reopenedAt"
+>;
 
 export interface CarryOverRepository {
   findExecutionByDedupeKey(
@@ -217,6 +225,8 @@ export class CarryOverService {
 export function isTargetEditable(state: TargetReportState): boolean {
   return (
     !state.archived &&
-    (state.periodStatus === "open" || state.periodStatus === "reopened")
+    state.periodState === "open" &&
+    ((state.status === "draft" && state.periodStatus === "open") ||
+      (state.status === "published" && state.periodStatus === "reopened"))
   );
 }

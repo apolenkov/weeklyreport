@@ -142,8 +142,15 @@ function createRepository(
     },
     getTargetReportState() {
       return Promise.resolve({
+        status: "draft" as const,
+        periodState: "open" as const,
         periodStatus: "open" as const,
         archived: false,
+        autoPublished: false,
+        autoArchived: false,
+        publishedAt: null,
+        publishedById: null,
+        reopenedAt: null,
       });
     },
     saveCarryOver(
@@ -279,7 +286,17 @@ describe("CarryOverService", () => {
       getSourceSections: () => Promise.resolve([structuredClone(src)]),
       getTargetSections: () => Promise.resolve([structuredClone(target)]),
       getTargetReportState: () =>
-        Promise.resolve({ periodStatus: "open" as const, archived: false }),
+        Promise.resolve({
+          status: "draft" as const,
+          periodState: "open" as const,
+          periodStatus: "open" as const,
+          archived: false,
+          autoPublished: false,
+          autoArchived: false,
+          publishedAt: null,
+          publishedById: null,
+          reopenedAt: null,
+        }),
       saveCarryOver: (execution, records, sections) =>
         Promise.resolve({
           execution,
@@ -378,8 +395,15 @@ describe("CarryOverService", () => {
         },
         getTargetReportState() {
           return Promise.resolve({
+            status: "draft" as const,
+            periodState: "open" as const,
             periodStatus: "open" as const,
             archived: false,
+            autoPublished: false,
+            autoArchived: false,
+            publishedAt: null,
+            publishedById: null,
+            reopenedAt: null,
           });
         },
         saveCarryOver(

@@ -3,6 +3,8 @@
 import {
   MAX_FULL_NAME_LENGTH,
   MAX_SHORT_NAME_LENGTH,
+  type OrganizationPublic,
+  type OrganizationUpdate,
 } from "@customreport/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
@@ -12,14 +14,11 @@ import { invalidateAdmin } from "../../../shared/lib/query/cache-keys";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { revalidateOrgLandingPage } from "../../../shared/ui/settings/settings-tab";
 
-interface IdentityDraft {
-  readonly shortName: string;
-  readonly fullName: string;
-}
+type IdentityDraft = OrganizationUpdate;
 
 interface SubmittedIdentity {
   readonly baseIdentity: string;
-  readonly value: IdentityDraft;
+  readonly value: OrganizationPublic;
 }
 
 const EMPTY_IDENTITY: IdentityDraft = { shortName: "", fullName: "" };

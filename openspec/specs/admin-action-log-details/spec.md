@@ -36,7 +36,8 @@ allowlist.
 Mutation auditing MAY inspect decoded input only to derive allowlisted target
 identifiers, but the `UserActionLog` write and `admin.actionLog.list` response
 MUST NOT retain or expose report or section text, item/risk/decision text,
-review comments, user profile values, Telegram content or chat identifiers,
+review comments, user profile values, or external integration content and
+identifiers,
 authentication material, tokens, cookies, headers, or arbitrary request and
 response bodies. A failure reason MUST be a bounded safe classification and
 MUST NOT echo raw input or internal database metadata.

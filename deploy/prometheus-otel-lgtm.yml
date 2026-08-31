@@ -3,16 +3,16 @@
 # Mounted to /otel-lgtm/prometheus.yaml inside the container.
 # Extends the otel-lgtm defaults with scrape configs for our exporters.
 # Dev overrides this mount with prometheus-otel-lgtm.dev.yml
-# (docker-compose.dev.yml), whose api target is the dev host port — a static
-# file cannot switch targets per environment, and a permanently-down target
-# would keep the ApiDown alert firing.
+# (`docker-compose.observability.dev.yml`, composed last), whose api target is
+# the dev host port. A static file cannot switch targets per environment, and a
+# permanently-down target would keep the ApiDown alert firing.
 
 global:
   scrape_interval: 15s
   evaluation_interval: 30s
   scrape_native_histograms: true
   external_labels:
-    cluster: customreport-local
+    cluster: customreport-production
 
 otlp:
   keep_identifying_resource_attributes: true

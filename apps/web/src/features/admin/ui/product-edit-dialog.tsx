@@ -7,6 +7,7 @@ import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";
 import { DialogSurface } from "../../../shared/ui/dialogs/dialog-surface";
 import type { AdminProductView, AdminUserView } from "../model/admin-types";
 import type { ProductFormData } from "../model/product-form";
+import { AdminEntityDialogActions } from "./admin-entity-dialog-actions";
 
 const FIELD_LABEL_CLASS =
   "mb-1 block text-sm font-medium text-[var(--color-foreground)]";
@@ -128,41 +129,6 @@ function ProductFormFields({
   );
 }
 
-function ProductDialogFooter({
-  isEditing,
-  isSaving,
-  canSave,
-  onSave,
-  onClose,
-}: {
-  readonly isEditing: boolean;
-  readonly isSaving: boolean;
-  readonly canSave: boolean;
-  readonly onSave: () => void;
-  readonly onClose: () => void;
-}) {
-  return (
-    <div className="mt-6 flex justify-end gap-3">
-      <button
-        type="button"
-        onClick={onClose}
-        disabled={isSaving}
-        className="btn-press rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        Cancel
-      </button>
-      <button
-        type="button"
-        onClick={onSave}
-        disabled={isSaving || !canSave}
-        className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {isSaving ? "Saving…" : isEditing ? "Save Changes" : "Add Product"}
-      </button>
-    </div>
-  );
-}
-
 export function ProductEditDialog({
   editingProduct,
   form,
@@ -197,12 +163,13 @@ export function ProductEditDialog({
         leads={leads}
         leadProductCount={leadProductCount}
       />
-      <ProductDialogFooter
-        isEditing={editingProduct !== null}
+      <AdminEntityDialogActions
+        saveLabel={editingProduct !== null ? "Save Changes" : "Add Product"}
         isSaving={isSaving}
         canSave={canSave}
         onSave={onSave}
         onClose={onClose}
+        saveDisabled={isSaving || !canSave}
       />
     </DialogSurface>
   );

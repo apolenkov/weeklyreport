@@ -32,6 +32,9 @@ const COMPLETE = {
   KEYCLOAK_SAML_ISSUER: "customreport",
   KEYCLOAK_SAML_CERT: "MIIC-fake-cert-material",
   HEAP_HEALTH_THRESHOLD_BYTES: "1610612736",
+  DB_POOL_MAX: "10",
+  DB_POOL_IDLE_TIMEOUT_MS: "10000",
+  DB_POOL_CONNECTION_TIMEOUT_MS: "0",
   OTEL_SERVICE_VERSION: "84221c6d",
 } as const;
 
@@ -112,6 +115,30 @@ describe("envSchema — no defaults, every product var required", () => {
     },
   );
 
+  it.each(["", " ".repeat(3)] as const)(
+    "treats a blank optional OTEL endpoint as absent (%j)",
+    (OTEL_EXPORTER_OTLP_ENDPOINT) => {
+      const result = envSchema.safeParse({
+        ...COMPLETE,
+        OTEL_EXPORTER_OTLP_ENDPOINT,
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.OTEL_EXPORTER_OTLP_ENDPOINT).toBeUndefined();
+      }
+    },
+  );
+
+  it("rejects a non-blank invalid OTEL endpoint", () => {
+    expect(
+      envSchema.safeParse({
+        ...COMPLETE,
+        OTEL_EXPORTER_OTLP_ENDPOINT: "not-a-url",
+      }).success,
+    ).toBe(false);
+  });
+
   it.each(["0", "-1", "1.5", "not-a-number"] as const)(
     "rejects a non-positive-integer HEAP_HEALTH_THRESHOLD_BYTES (%s)",
     (value) => {
@@ -150,11 +177,14 @@ describe("envSchema — no defaults, every product var required", () => {
     },
   );
 
-  // DB_POOL_* are genuinely optional (absent → PrismaService applies its own
-  // named defaults), so an omitted value must still parse — but a PRESENT
-  // malformed value must fail boot rather than reach pg.
-  it("accepts a config with the DB_POOL_* vars absent", () => {
-    expect(envSchema.safeParse(COMPLETE).success).toBe(true);
+  it("rejects a config with the DB_POOL_* vars absent", () => {
+    const {
+      DB_POOL_MAX: _max,
+      DB_POOL_IDLE_TIMEOUT_MS: _idle,
+      DB_POOL_CONNECTION_TIMEOUT_MS: _connection,
+      ...without
+    } = COMPLETE;
+    expect(envSchema.safeParse(without).success).toBe(false);
   });
 
   it.each(["10junk", "1.5", "0", "-1", ""] as const)(

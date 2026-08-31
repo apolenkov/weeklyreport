@@ -8,10 +8,10 @@ Require every report UI surface token reference to resolve to a design-system to
 
 ### Requirement: Report UI references only defined surface tokens
 
-Every `var(--color-…)` surface reference in the web UI MUST resolve to a token defined in `packages/ui/src/styles/theme.css`; the undefined `--color-surface` custom property MUST NOT be referenced, and each former callsite MUST use the defined token that matches its semantic role.
+Every `var(--color-…)` surface reference in the web UI MUST resolve to a token defined in `packages/ui/src/styles/theme.css`; the undefined `--color-surface` custom property MUST NOT be referenced, and each callsite MUST use the defined token that matches its semantic role.
 
-1. The undefined `--color-surface` MUST be removed from all `apps/web/src`
-   callsites; a new `--color-surface` token MUST NOT be introduced (the palette
+1. The undefined `--color-surface` MUST NOT appear in any `apps/web/src`
+   callsite; a `--color-surface` token MUST NOT be introduced (the palette
    already defines `--color-card`, `--color-surface-empty`,
    `--color-surface-hover`, and `--color-surface-muted`).
 2. Dashed empty-state panels (no submissions, no slides, empty grids) MUST use

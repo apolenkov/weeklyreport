@@ -4,9 +4,14 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
+  createPauseGate,
+  pauseBeforeTransaction,
+} from "../../../test-utils/paused-prisma.js";
+import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
+  publishedSnapshotFixture,
   seedTestData,
   TEST_IDS,
 } from "../../../test-utils/prisma-test-helper";
@@ -16,7 +21,11 @@ import {
 } from "../../carry-over/index.js";
 import { applyRevokeTransition } from "../../report-sections/index.js";
 import { ReportSectionsPrismaRepository } from "../../report-sections/test-seams/index.js";
-import { ReviewNotFoundError } from "../application/review.service.js";
+import {
+  ReviewAccessError,
+  ReviewConstraintError,
+  ReviewNotFoundError,
+} from "../application/review.service.js";
 import { ReviewActionsService } from "../application/review-actions.service";
 import { ReviewActionsPrismaRepository } from "./review-actions.prisma-repository";
 
@@ -95,7 +104,15 @@ describe("review-actions (integration)", () => {
   describe("comment-aware saveSection", () => {
     it("preserves a comment across a re-save, re-anchored to the recreated record", async () => {
       const item = await seedItem();
-      await repo.insertComment(testData.head.id, { itemId: item.id }, "fix me");
+      await repo.insertComment(
+        {
+          userId: testData.head.id,
+          role: "head",
+          reportingGroupId: expectDefined(testData.head.reportingGroupId),
+        },
+        { itemId: item.id },
+        "fix me",
+      );
 
       const model = expectDefined(
         await sectionsRepo.getSectionById(testData.section.id),
@@ -118,7 +135,15 @@ describe("review-actions (integration)", () => {
 
     it("hard-deletes a comment when its record is dropped from the payload", async () => {
       const item = await seedItem();
-      await repo.insertComment(testData.head.id, { itemId: item.id }, "fix me");
+      await repo.insertComment(
+        {
+          userId: testData.head.id,
+          role: "head",
+          reportingGroupId: expectDefined(testData.head.reportingGroupId),
+        },
+        { itemId: item.id },
+        "fix me",
+      );
 
       const model = expectDefined(
         await sectionsRepo.getSectionById(testData.section.id),
@@ -138,7 +163,11 @@ describe("review-actions (integration)", () => {
       const [saveResult, commentResult] = await Promise.allSettled([
         sectionsRepo.saveSection(model, model.version),
         repo.insertComment(
-          testData.head.id,
+          {
+            userId: testData.head.id,
+            role: "head",
+            reportingGroupId: expectDefined(testData.head.reportingGroupId),
+          },
           { itemId: item.id },
           "racing comment",
         ),
@@ -179,7 +208,11 @@ describe("review-actions (integration)", () => {
 
       await expect(
         repo.insertComment(
-          testData.head.id,
+          {
+            userId: testData.head.id,
+            role: "head",
+            reportingGroupId: expectDefined(testData.head.reportingGroupId),
+          },
           { itemId: item.id },
           "stale comment",
         ),
@@ -240,6 +273,182 @@ describe("review-actions (integration)", () => {
         where: { reportSectionId: testData.section.id },
       });
       expect(expectDefined(review).verdict).toBe("changes_requested");
+    });
+  });
+
+  describe("review write lifecycle gate", () => {
+    it.each([
+      [
+        "scheduled",
+        { status: "draft", periodState: "scheduled", periodStatus: "open" },
+      ],
+      [
+        "contradictory",
+        { status: "draft", periodState: "open", periodStatus: "reopened" },
+      ],
+      [
+        "published tuple",
+        {
+          status: "published",
+          periodState: "published",
+          periodStatus: "published",
+        },
+      ],
+    ] as const)(
+      "rejects acknowledgement, comment, and deletion for %s reports",
+      async (_label, lifecycle) => {
+        const item = await seedItem();
+        const comment = await repo.insertComment(
+          {
+            userId: testData.head.id,
+            role: "head",
+            reportingGroupId: expectDefined(testData.head.reportingGroupId),
+          },
+          { itemId: item.id },
+          "protected comment",
+        );
+        const publishedAt = new Date("2026-07-22T12:00:00.000Z");
+        await prisma.report.update({
+          where: { id: testData.report.id },
+          data:
+            lifecycle.status === "published"
+              ? {
+                  ...lifecycle,
+                  publishedAt,
+                  publishedSnapshot: publishedSnapshotFixture({
+                    reportId: testData.report.id,
+                    periodStart: testData.report.periodStart,
+                    periodEnd: testData.report.periodEnd,
+                    publishedAt,
+                    publishedById: testData.head.id,
+                  }),
+                }
+              : lifecycle,
+        });
+
+        const actor = {
+          userId: testData.head.id,
+          role: "head" as const,
+          reportingGroupId: expectDefined(testData.head.reportingGroupId),
+        };
+        await expect(
+          repo.acknowledge(actor, testData.report.id, TEST_IDS.group),
+        ).rejects.toBeInstanceOf(ReviewConstraintError);
+        await expect(
+          repo.insertComment(actor, { itemId: item.id }, "must not write"),
+        ).rejects.toBeInstanceOf(ReviewConstraintError);
+        await expect(
+          repo.deleteComment(comment.id, actor),
+        ).rejects.toBeInstanceOf(ReviewConstraintError);
+
+        await expect(
+          prisma.recordComment.findUnique({ where: { id: comment.id } }),
+        ).resolves.not.toBeNull();
+        await expect(
+          prisma.reviewAcknowledgement.findUnique({
+            where: {
+              userId_reportId_groupId: {
+                userId: testData.head.id,
+                reportId: testData.report.id,
+                groupId: TEST_IDS.group,
+              },
+            },
+          }),
+        ).resolves.toBeNull();
+      },
+    );
+  });
+
+  describe("transactional entitlement rechecks", () => {
+    it("rejects an acknowledgement when the actor is demoted after admission", async () => {
+      const actor = {
+        userId: testData.head.id,
+        role: "head" as const,
+        reportingGroupId: expectDefined(testData.head.reportingGroupId),
+      };
+      const gate = createPauseGate();
+      const pausedRepo = new ReviewActionsPrismaRepository(
+        pauseBeforeTransaction(prisma, gate.pause) as never,
+      );
+      const pending = pausedRepo.acknowledge(
+        actor,
+        testData.report.id,
+        TEST_IDS.group,
+      );
+      await gate.paused;
+      await prisma.user.update({
+        where: { id: testData.head.id },
+        data: { role: "lead" },
+      });
+      gate.release();
+      await expect(pending).rejects.toBeInstanceOf(ReviewAccessError);
+      await expect(
+        prisma.reviewAcknowledgement.count({
+          where: { reportId: testData.report.id, userId: testData.head.id },
+        }),
+      ).resolves.toBe(0);
+    });
+
+    it("rejects a verdict when the actor changes group after admission", async () => {
+      const groupB = await prisma.reportingGroup.create({
+        data: { name: "Review group B", description: "test" },
+      });
+      const actor = {
+        userId: testData.head.id,
+        role: "head" as const,
+        reportingGroupId: expectDefined(testData.head.reportingGroupId),
+      };
+      await setSubmitted();
+      const gate = createPauseGate();
+      const pausedRepo = new ReviewActionsPrismaRepository(
+        pauseBeforeTransaction(prisma, gate.pause) as never,
+      );
+      const pending = pausedRepo.postVerdict({
+        sectionId: testData.section.id,
+        reviewerId: actor.userId,
+        verdict: "approved",
+        expectedVersion: testData.section.version,
+        currentStatus: "submitted",
+      });
+      await gate.paused;
+      await prisma.user.update({
+        where: { id: testData.head.id },
+        data: { reportingGroupId: groupB.id },
+      });
+      gate.release();
+      await expect(pending).rejects.toBeInstanceOf(ReviewAccessError);
+      await expect(sectionReviewCount()).resolves.toBe(0);
+    });
+
+    it("rejects a comment when its section author moves groups after admission", async () => {
+      const item = await seedItem();
+      const groupB = await prisma.reportingGroup.create({
+        data: { name: "Author group B", description: "test" },
+      });
+      const actor = {
+        userId: testData.head.id,
+        role: "head" as const,
+        reportingGroupId: expectDefined(testData.head.reportingGroupId),
+      };
+      const gate = createPauseGate();
+      const pausedRepo = new ReviewActionsPrismaRepository(
+        pauseBeforeTransaction(prisma, gate.pause) as never,
+      );
+      const pending = pausedRepo.insertComment(
+        actor,
+        { itemId: item.id },
+        "must not write",
+      );
+      await gate.paused;
+      await prisma.user.update({
+        where: { id: testData.lead.id },
+        data: { reportingGroupId: groupB.id },
+      });
+      gate.release();
+      await expect(pending).rejects.toBeInstanceOf(ReviewAccessError);
+      await expect(
+        prisma.recordComment.count({ where: { itemId: item.id } }),
+      ).resolves.toBe(0);
     });
   });
 
@@ -482,7 +691,11 @@ describe("review-actions (integration)", () => {
         },
       });
       await repo.insertComment(
-        testData.head.id,
+        {
+          userId: testData.head.id,
+          role: "head",
+          reportingGroupId: expectDefined(testData.head.reportingGroupId),
+        },
         { itemId: sourceItem.id },
         "source comment",
       );

@@ -14,6 +14,7 @@ export function createAuthRouter() {
         session: ctx.session,
         isPdfExport: ctx.isPdfExport,
         pdfReportId: ctx.pdfReportId,
+        pdfJobId: ctx.pdfJobId ?? null,
       };
     }),
   });

@@ -16,7 +16,7 @@ schemas, routes, product UI strings, or write endpoints.
 
 #### Scenario: LeadForm delegates draft edit commands
 
-- **WHEN** the lead report form renders after the extraction
+- **WHEN** the lead report form renders
 - **THEN** `LeadForm` obtains product, activity, item, risk, decision,
   move-action, blocker-routing, and quick-add handlers from the draft-merge
   boundary

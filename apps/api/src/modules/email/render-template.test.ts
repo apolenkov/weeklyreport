@@ -42,12 +42,16 @@ describe('renderEmail — kind="deadline"', () => {
     expect(out.text).toContain(formattedDeadline);
   });
 
-  it("produces a subject containing the report period and 24h cue", async () => {
+  it("states the exact deadline without assuming a policy offset", async () => {
     const out = await renderEmail({ kind: "deadline", props: baseProps });
 
     expect(out.subject).toMatch(/^\[PEO\]/);
     expect(out.subject).toContain("2026-04-13");
-    expect(out.subject).toMatch(/24h/i);
+    expect(`${out.subject}\n${out.html}\n${out.text}`).not.toMatch(
+      /24\s*(?:h|hours?)/i,
+    );
+    expect(out.html).toContain(formattedDeadline);
+    expect(out.text).toContain(formattedDeadline);
   });
 
   it("html and text are non-empty for minimal-length names", async () => {

@@ -18,6 +18,8 @@ export function DashboardPanelLoading({
   return (
     <div
       data-testid={`dashboard-${kind}-loading`}
+      role="status"
+      aria-label={`Loading ${kind} data`}
       className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-4"
     >
       <Skeleton className={`w-full ${PANEL_HEIGHT_CLASS[kind]}`} />

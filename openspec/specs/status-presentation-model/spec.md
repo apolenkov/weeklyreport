@@ -20,21 +20,20 @@ label/tone only), and the label helpers in `weekly-report` /
 private copy.
 
 Labels are variant-aware, not collapsed to one string per status. The map holds
-the label variants the surfaces render today (screen sentence-case `On track` /
+the label variants required by the surfaces (screen sentence-case `On track` /
 `At risk` / `Blocked` / `No status`; print Title-case `On Track` / `At Risk`;
 `status-slide-deck`'s section-readiness vocabulary `Ready` / `Review` / `Blocked`
 / `Empty`; `lead-slide-hero`'s `Blockers`), addressed through a variant key
 (`statusLabel(status, variant)`), so parity is preserved by reproducing each
-existing label — not by unifying them. Which surface uses which variant is
-captured by the pre-change inventory (tasks 1.1); this requirement does not
-change any rendered label.
+existing label — not by unifying them. Which surface uses which variant is part
+of this canonical contract.
 
 A raw status source that is not already a canonical key (a traffic-light color,
 `SlideTone`, `PillStatus`, or `Severity`) MUST be mapped to a canonical key by a
 normalizer (e.g. `toPillStatus`, the raw-color→`ProductStatus` function,
 severity→key). That key-normalization is status derivation, not vocabulary
 lookup, and is explicitly permitted; the private-copy prohibition targets
-label/tone/icon/dot Records, not the enum→key normalizers.
+label/tone/icon/dot records, not the enum-to-key normalizers.
 
 Adding a new status-bearing surface MUST reuse the canonical map — this clause
 holds repo-wide, not only for the enumerated consumers — and MUST NOT introduce
@@ -66,44 +65,35 @@ keys onto those tokens and does not restate the token rule.
 - **THEN** it consumes the canonical map
 - **AND** no second tone/icon/dot `Record<status, …>` is introduced
 
-### Requirement: Consolidation preserves rendered output parity per status
+### Requirement: Each surface preserves its declared status presentation
 
-The system MUST render the same tone, label, icon, and dot for each in-scope
-surface after the consolidation as before it, so moving the derivation into the
-canonical map changes no pixel. Parity is reproduction, not unification: every
-label a surface renders today MUST still render, resolved through its variant
-key, and no color value, icon choice, or dot treatment changes for any canonical
-status. The consolidation MUST NOT move a color onto or off any surface. Because
-output is unchanged, this consolidation does not alter the color-token
-contract.
-
-`blocked-at-risk-product-card`'s at-risk badge foreground is a raw hex literal
-(`#8a6d1b`) today; folding it into the canonical map under parity is only
-possible after the shared `--color-status-at-risk-fg` token is available.
+The canonical map MUST preserve each surface's declared tone, label variant,
+icon, and dot. Parity means using the appropriate surface variant rather than
+forcing one label everywhere. Every status color MUST resolve through the
+tokens owned by `web-status-color-tokens`; no canonical-map consumer may add a
+private literal or move a color onto an unrelated surface.
 
 #### Scenario: the same canonical status renders identically across surfaces
 
 - **WHEN** the same canonical workflow status (`blocked` / `at-risk` /
-  `on-track` / `empty`) is rendered on two in-scope surfaces after consolidation
-- **THEN** each surface renders the tone, label variant, icon, and dot it
-  rendered before the change
-- **AND** no surface's rendered status appearance differs from its pre-change
-  appearance
+  `on-track` / `empty`) is rendered on two in-scope surfaces
+- **THEN** each surface renders its declared tone, label variant, icon, and dot
+- **AND** both resolve their shared semantics through the canonical map
 
-#### Scenario: no color value moves during the refactor
+#### Scenario: the canonical map does not own color literals
 
-- **WHEN** the consolidation re-points a surface at the canonical map
-- **THEN** the token each canonical status resolves to is unchanged
-- **AND** no color literal is added, removed, or moved between surfaces
+- **WHEN** a surface resolves a canonical status color
+- **THEN** the map returns the status token for that semantic role
+- **AND** no color literal is declared in the map or the consuming surface
 
 ### Requirement: Shared status badge and empty-state components back the in-scope surfaces
 
 The system MUST render the slide status badge through one shared
 `SlideStatusBadge` component and the empty status section through one shared
 `SlideEmptyState` component, so the badge and empty-section markup are defined
-once. The in-scope surfaces that previously inlined their own status badge
-(`lead-product-grid` badge JSX, the `status-slide-deck` tone badge) or their own
-empty placeholder MUST render the shared components. `SlideStatusBadge` MUST take
+once. `lead-product-grid`, `status-slide-deck`, and every other in-scope slide
+surface MUST render those shared components instead of private badge or empty
+placeholder markup. `SlideStatusBadge` MUST take
 a canonical status (plus its label variant) and resolve label, icon, and tone
 through the canonical map — it MUST NOT accept a pre-formatted tone/color prop
 that would let a caller bypass the map.
@@ -124,20 +114,22 @@ that would let a caller bypass the map.
 ### Requirement: The canonical status vocabulary is declared once
 
 The system MUST declare the canonical status union
-(`"blocked" | "at-risk" | "on-track" | "empty"`) exactly once: `CanonicalStatus` in
-`apps/web/src/shared/lib/status/status-presentation.ts`, next to the canonical map it
-keys. Every other name for the vocabulary MUST be a type alias of
-`CanonicalStatus` (e.g. `StageStatus` in
-`features/report-sections/model/traffic-light.ts` is the feature-domain
-alias; `model/mock-data.ts` re-exports that alias), never a re-declared
-literal union. Modules outside the feature MUST NOT import the type from a
-feature module — `lib` code types against `CanonicalStatus` directly.
+(`"blocked" | "at-risk" | "on-track" | "empty"`) exactly once as
+`CanonicalStatus` in
+`packages/shared/src/schemas/status/canonical-status.ts`, exported by
+`@customreport/shared`. The Web presentation map in
+`apps/web/src/shared/lib/status/status-presentation.ts` MUST key its labels,
+icons, and tones by that shared type. Every other name for the vocabulary MUST
+be a type alias of `CanonicalStatus`; for example, `StageStatus` in
+`features/report-sections/model/traffic-light.ts` is the feature-domain alias,
+never a re-declared literal union. Application modules MUST import the canonical
+type from `@customreport/shared`, not from another feature.
 
 #### Scenario: a module needs the canonical status type
 
-- **WHEN** a module in `apps/web/src/shared/lib` needs the vocabulary type
-- **THEN** it imports `CanonicalStatus` from `shared/lib/status/status-presentation`
-- **AND** no shared library module imports the type from a feature module
+- **WHEN** an application module needs the vocabulary type
+- **THEN** it imports `CanonicalStatus` from `@customreport/shared`
+- **AND** no application module imports the canonical type from a feature module
 
 #### Scenario: a feature-domain name is kept
 

@@ -1,4 +1,5 @@
 import type { ReportStatus } from "@customreport/shared";
+import { Prisma } from "@prisma/client";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
@@ -6,13 +7,14 @@ import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
+  publishedSnapshotFixture,
 } from "../../test-utils/prisma-test-helper";
+import { replacePublishedProjections } from "./published-search-projection";
 import { SearchPrismaRepository } from "./search.prisma-repository";
 
-// Pins that the publish gate keys on `periodStatus`, NOT `status`: a reopened
-// period keeps `status='published'` while its content is unreadable, so a
-// `status`-based gate would leak it. Rules: openspec/specs/viewer-published-search.
-describe("SearchPrismaRepository — published scope read-parity (integration)", () => {
+// Published search is an immutable consumer: current period lifecycle selects
+// snapshots, while content and group ownership come only from those snapshots.
+describe("SearchPrismaRepository — immutable published scope (integration)", () => {
   const prisma = createTestPrisma();
   let repo: SearchPrismaRepository;
 
@@ -48,22 +50,148 @@ describe("SearchPrismaRepository — published scope read-parity (integration)",
   // Distinct token present in every item's text so plainto_tsquery matches.
   const Q = "paritysearchtoken";
 
+  function publishedContentSnapshot(
+    reportId: string,
+    periodDate: Date,
+  ): Prisma.InputJsonValue {
+    const base = publishedSnapshotFixture({
+      reportId,
+      periodStart: periodDate,
+      periodEnd: periodDate,
+      deadline: periodDate,
+      publishedAt: periodDate,
+    }) as Prisma.InputJsonObject;
+    if (reportId !== REPORT_PUB_ID) return base;
+
+    const sectionBase = {
+      reportId,
+      authorRole: "lead",
+      version: 1,
+      status: "submitted",
+      submittedAt: periodDate.toISOString(),
+      late: false,
+      projects: [
+        {
+          projectId: PROJECT_ID,
+          projectName: "Parity Platform",
+          trafficLight: "green",
+          ownedStages: [],
+          stageSet: [],
+          ownerGroupId: GROUP_A_ID,
+        },
+      ],
+      referencedProjects: [],
+      activities: [],
+      reviews: [],
+    } as const;
+    const item = (id: string) => ({
+      id,
+      stableId: `${id.slice(0, -4)}f${id.slice(-3)}`,
+      projectId: PROJECT_ID,
+      activityId: null,
+      type: "current",
+      text: `${Q} release blocker`,
+      tag: "general",
+      workflowStatus: "in_progress",
+      carriedOver: false,
+      priorityRank: null,
+      pausedReason: null,
+      stageNames: ["Development"],
+    });
+    const decision = (id: string) => ({
+      id,
+      stableId: `${id.slice(0, -4)}e${id.slice(-3)}`,
+      text: `${Q} go decision`,
+      owner: "owner",
+      deadline: null,
+      impact: "high",
+      resolvedAt: null,
+      stageNames: ["Development"],
+      productId: PROJECT_ID,
+      activityId: null,
+    });
+
+    return {
+      ...base,
+      sections: [
+        {
+          ...sectionBase,
+          reportSectionId: SECTION_PUB_A_ID,
+          authorId: LEAD_A_ID,
+          authorName: "Lead A",
+          groupId: GROUP_A_ID,
+          groupName: "Group A",
+          items: [item(ITEM_PUB_IN_GROUP)],
+          risks: [
+            {
+              id: RISK_PUB_IN_GROUP,
+              stableId: `${RISK_PUB_IN_GROUP.slice(0, -4)}d${RISK_PUB_IN_GROUP.slice(-3)}`,
+              projectId: PROJECT_ID,
+              activityId: null,
+              risk: `${Q} schedule risk`,
+              impact: "high",
+              mitigation: "mitigate",
+              severity: "at-risk",
+              stageNames: ["Development"],
+            },
+          ],
+          decisions: [decision(DECISION_PUB_IN_GROUP)],
+        },
+        {
+          ...sectionBase,
+          reportSectionId: SECTION_PUB_B_ID,
+          authorId: LEAD_B_ID,
+          authorName: "Lead B",
+          groupId: GROUP_B_ID,
+          groupName: "Group B",
+          items: [item(ITEM_PUB_OUT_GROUP)],
+          risks: [],
+          decisions: [decision(DECISION_PUB_OUT_GROUP)],
+        },
+      ],
+    };
+  }
+
   async function createReport(
     id: string,
     status: ReportStatus,
     periodStatus: "open" | "published" | "reopened",
     periodStart: string,
   ): Promise<void> {
+    const periodDate = new Date(periodStart);
     await prisma.report.create({
       data: {
         id,
-        periodStart: new Date(periodStart),
-        periodEnd: new Date(periodStart),
-        deadline: new Date(periodStart),
+        periodStart: periodDate,
+        periodEnd: periodDate,
+        deadline: periodDate,
         status,
         periodStatus,
+        publishedAt: status === "published" ? periodDate : null,
+        ...(status === "published"
+          ? {
+              publishedSnapshot: publishedSnapshotFixture({
+                reportId: id,
+                periodStart: periodDate,
+                periodEnd: periodDate,
+                deadline: periodDate,
+                publishedAt: periodDate,
+              }),
+            }
+          : {}),
       },
     });
+
+    if (status === "published") {
+      const snapshot = publishedContentSnapshot(id, periodDate);
+      await prisma.report.update({
+        where: { id },
+        data: { publishedSnapshot: snapshot },
+      });
+      await prisma.$transaction(async (tx) => {
+        await replacePublishedProjections(tx, { reportId: id, snapshot });
+      });
+    }
   }
 
   async function createSection(
@@ -89,6 +217,7 @@ describe("SearchPrismaRepository — published scope read-parity (integration)",
         text: `${Q} release blocker`,
         tag: "general",
         workflowStatus: "in_progress",
+        stageNames: ["Development"],
       },
     });
   }
@@ -106,6 +235,7 @@ describe("SearchPrismaRepository — published scope read-parity (integration)",
         impact: "high",
         mitigation: "mitigate",
         severity: "at-risk",
+        stageNames: ["Development"],
       },
     });
   }
@@ -122,6 +252,7 @@ describe("SearchPrismaRepository — published scope read-parity (integration)",
         text: `${Q} go decision`,
         owner: "owner",
         impact: "high",
+        stageNames: ["Development"],
       },
     });
   }
@@ -165,6 +296,9 @@ describe("SearchPrismaRepository — published scope read-parity (integration)",
     });
     await prisma.project.create({
       data: { id: PROJECT_ID, name: "Parity Platform", leadId: LEAD_A_ID },
+    });
+    await prisma.groupProduct.create({
+      data: { groupId: GROUP_A_ID, productId: PROJECT_ID },
     });
 
     await createReport(
@@ -260,6 +394,87 @@ describe("SearchPrismaRepository — published scope read-parity (integration)",
     expect([...ids].sort()).toEqual(
       [ITEM_PUB_IN_GROUP, RISK_PUB_IN_GROUP, DECISION_PUB_IN_GROUP].sort(),
     );
+  });
+
+  it("keeps frozen content, anchors, and group scope after live rows and current ownership are removed", async () => {
+    const before = await repo.search({
+      q: Q,
+      scope: "published",
+      userId: LEAD_A_ID,
+      groupIds: [GROUP_A_ID],
+      excludeTypes: ["project"],
+      limit: 50,
+    });
+
+    await prisma.user.update({
+      where: { id: LEAD_A_ID },
+      data: { reportingGroupId: GROUP_B_ID },
+    });
+    await prisma.reportSection.deleteMany({
+      where: { reportId: REPORT_PUB_ID },
+    });
+
+    const after = await repo.search({
+      q: Q,
+      scope: "published",
+      userId: LEAD_A_ID,
+      groupIds: [GROUP_A_ID],
+      excludeTypes: ["project"],
+      limit: 50,
+    });
+
+    expect(after).toEqual(before);
+    expect(after).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: ITEM_PUB_IN_GROUP,
+          reportId: REPORT_PUB_ID,
+          reportSectionId: SECTION_PUB_A_ID,
+          title: `${Q} release blocker`,
+        }),
+      ]),
+    );
+    expect(after.map(({ id }) => id)).not.toContain(ITEM_PUB_OUT_GROUP);
+  });
+
+  it("searches a rebuilt published projection with no live section graph", async () => {
+    const stored = await prisma.report.findUniqueOrThrow({
+      where: { id: REPORT_PUB_ID },
+      select: {
+        periodStart: true,
+        periodEnd: true,
+        deadline: true,
+        publishedAt: true,
+        publishedSnapshot: true,
+      },
+    });
+    await prisma.report.delete({ where: { id: REPORT_PUB_ID } });
+    await prisma.report.create({
+      data: {
+        id: REPORT_PUB_ID,
+        periodStart: stored.periodStart,
+        periodEnd: stored.periodEnd,
+        deadline: stored.deadline,
+        status: "published",
+        periodStatus: "published",
+        publishedAt: stored.publishedAt,
+        publishedSnapshot: stored.publishedSnapshot ?? Prisma.JsonNull,
+      },
+    });
+    await prisma.$transaction(async (tx) => {
+      await replacePublishedProjections(tx, {
+        reportId: REPORT_PUB_ID,
+        snapshot: stored.publishedSnapshot,
+      });
+    });
+
+    const ids = await publishedSearch([GROUP_A_ID]);
+    expect([...ids].sort()).toEqual(
+      [ITEM_PUB_IN_GROUP, RISK_PUB_IN_GROUP, DECISION_PUB_IN_GROUP].sort(),
+    );
+    await expect(
+      prisma.reportSection.count({ where: { reportId: REPORT_PUB_ID } }),
+    ).resolves.toBe(0);
   });
 
   it("a viewer with access to BOTH groups also sees the group-B published item", async () => {

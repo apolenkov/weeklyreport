@@ -1,7 +1,12 @@
-import type { UserSession } from "@customreport/shared";
+import {
+  computeReminderFireAt,
+  reminderPolicyAppliesTo,
+  type UserSession,
+} from "@customreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { groupScopeFilter } from "../../lib/group-scope.js";
+import { editableReminderReportWhere } from "./reminders-editable-report.prisma.js";
 
 // Changing a predicate here changes who is authorized (fail-closed scope).
 
@@ -33,7 +38,13 @@ export async function queryInScopeSectionAuthorEmails(
   reportId: string,
 ): Promise<string[]> {
   const sections = await prisma.reportSection.findMany({
-    where: { reportId, AND: [groupScopeFilter(session, "reportSection")] },
+    where: {
+      reportId,
+      AND: [
+        groupScopeFilter(session, "reportSection"),
+        { author: { isActive: true } },
+      ],
+    },
     select: { author: { select: { email: true } } },
   });
   return sections.map((s) => s.author.email);
@@ -45,7 +56,11 @@ export async function queryInScopeLeadId(
   leadId: string,
 ): Promise<string | null> {
   const lead = await prisma.user.findFirst({
-    where: { id: leadId, ...groupScopeFilter(session, "user") },
+    where: {
+      id: leadId,
+      isActive: true,
+      AND: [groupScopeFilter(session, "user")],
+    },
     select: { id: true },
   });
   return lead?.id ?? null;
@@ -54,20 +69,49 @@ export async function queryInScopeLeadId(
 export function queryActiveRuleForDispatch(
   prisma: PrismaService,
   reportId: string,
-  ruleId?: string,
-): Promise<{ id: string; fireAt: Date } | null> {
-  return prisma.reminderRule.findFirst({
-    where: {
-      reportId,
-      status: "active",
-      // Manual dispatch must exclude archived periods just like the
-      // deadline/escalation scheduler queries do.
-      report: { archived: false },
-      ...(ruleId ? { id: ruleId } : {}),
-    },
-    orderBy: { fireAt: "asc" },
-    select: { id: true, fireAt: true },
-  });
+  ruleId: string,
+): Promise<{ id: string; fireAt: Date; deadline: Date } | null> {
+  return prisma.reminderRule
+    .findFirst({
+      where: {
+        reportId,
+        id: ruleId,
+        kind: "deadline",
+        status: "active",
+        policy: { active: true },
+        // Manual and automated dispatch share the exact editable lifecycle.
+        report: editableReminderReportWhere,
+      },
+      select: {
+        id: true,
+        kind: true,
+        fireAt: true,
+        deadline: true,
+        timezone: true,
+        report: { select: { deadline: true } },
+        policy: true,
+      },
+    })
+    .then((rule) => {
+      if (rule === null) return null;
+      if (rule.report.deadline === null) return null;
+      const reportDeadline = rule.report.deadline;
+      if (
+        rule.deadline.getTime() !== reportDeadline.getTime() ||
+        rule.kind !== rule.policy.kind ||
+        rule.timezone !== rule.policy.timezone ||
+        !reminderPolicyAppliesTo(rule.policy, reportDeadline) ||
+        rule.fireAt.getTime() !==
+          computeReminderFireAt(
+            reportDeadline,
+            rule.policy.offsetMinutes,
+            rule.policy.timezone,
+          ).getTime()
+      ) {
+        return null;
+      }
+      return { id: rule.id, fireAt: rule.fireAt, deadline: rule.deadline };
+    });
 }
 
 export async function queryDraftSectionsForDispatch(
@@ -80,10 +124,12 @@ export async function queryDraftSectionsForDispatch(
     where: {
       reportId,
       status: "draft",
-      // Same archived-period guard as the other dispatch queries.
-      report: { archived: false },
+      report: editableReminderReportWhere,
       ...(leadId ? { authorId: leadId } : {}),
-      ...groupScopeFilter(session, "reportSection"),
+      AND: [
+        groupScopeFilter(session, "reportSection"),
+        { author: { isActive: true } },
+      ],
     },
     include: {
       author: { select: { email: true, name: true, notificationOptOut: true } },

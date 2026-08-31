@@ -44,15 +44,16 @@ interface RepoOverrides {
 }
 
 function buildRepo(overrides: RepoOverrides = {}) {
-  const insertComment = vi.fn((reviewerId: string, anchor: RecordAnchor) =>
-    Promise.resolve({
-      id: "aa000000-0000-4000-8000-0000000000aa",
-      reviewerId,
-      reviewerName: "R",
-      text: "please fix",
-      createdAt: new Date("2026-06-01T00:00:00.000Z"),
-      ...anchor,
-    }),
+  const insertComment = vi.fn(
+    (actor: { userId: string }, anchor: RecordAnchor) =>
+      Promise.resolve({
+        id: "aa000000-0000-4000-8000-0000000000aa",
+        reviewerId: actor.userId,
+        reviewerName: "R",
+        text: "please fix",
+        createdAt: new Date("2026-06-01T00:00:00.000Z"),
+        ...anchor,
+      }),
   );
   const postVerdict = vi.fn((params: PostVerdictParams) =>
     Promise.resolve({
@@ -61,9 +62,9 @@ function buildRepo(overrides: RepoOverrides = {}) {
         params.currentStatus === "submitted",
     }),
   );
-  const acknowledge = vi.fn((userId: string) =>
+  const acknowledge = vi.fn((actor: { userId: string }) =>
     Promise.resolve({
-      userId,
+      userId: actor.userId,
       reportId: REPORT,
       groupId: GROUP_A,
       seenAt: new Date("2026-06-01T00:00:00.000Z"),
@@ -275,7 +276,7 @@ describe("ReviewActionsService — deleteComment", () => {
     });
 
     expect(result).toEqual({ success: true });
-    expect(deleteComment).toHaveBeenCalledWith(COMMENT_ID);
+    expect(deleteComment).toHaveBeenCalledWith(COMMENT_ID, headA);
   });
 
   it("admin deletes a comment in any group", async () => {
@@ -289,7 +290,7 @@ describe("ReviewActionsService — deleteComment", () => {
     });
 
     expect(result).toEqual({ success: true });
-    expect(deleteComment).toHaveBeenCalledWith(COMMENT_ID);
+    expect(deleteComment).toHaveBeenCalledWith(COMMENT_ID, adminSession);
   });
 
   it("a designated reviewer deletes their OWN comment", async () => {
@@ -304,7 +305,7 @@ describe("ReviewActionsService — deleteComment", () => {
     });
 
     expect(result).toEqual({ success: true });
-    expect(deleteComment).toHaveBeenCalledWith(COMMENT_ID);
+    expect(deleteComment).toHaveBeenCalledWith(COMMENT_ID, reviewerA);
   });
 
   it("a designated reviewer cannot delete ANOTHER reviewer's comment", async () => {

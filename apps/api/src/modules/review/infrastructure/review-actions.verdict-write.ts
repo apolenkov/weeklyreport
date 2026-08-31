@@ -8,39 +8,11 @@ import {
   ReviewVersionConflictError,
 } from "../application/review.service.js";
 import type { PostVerdictParams } from "../application/review-actions.service.js";
-
-async function assertPeriodEditable(
-  tx: Prisma.TransactionClient,
-  sectionId: string,
-): Promise<void> {
-  const gate = await tx.$queryRaw<
-    { periodStatus: string; archived: boolean }[]
-  >`SELECT report."periodStatus", report."archived"
-        FROM "Report" AS report
-        INNER JOIN "ReportSection" AS section
-          ON section."reportId" = report."id"
-        WHERE section."id" = ${sectionId}
-        FOR UPDATE OF report`;
-  const gateRow = gate[0];
-  // A missing row means the section was deleted between the precheck and
-  // this transaction — NOT_FOUND, not a period-state constraint.
-  if (gateRow === undefined) {
-    throw new ReviewNotFoundError(
-      "The section no longer exists; a verdict cannot be recorded.",
-    );
-  }
-  // The archive transition leaves periodStatus untouched, so the in-tx
-  // gate must re-check `archived` too — same predicate as
-  // isEditablePeriod on the authz path.
-  if (
-    gateRow.archived ||
-    (gateRow.periodStatus !== "open" && gateRow.periodStatus !== "reopened")
-  ) {
-    throw new ReviewConstraintError(
-      "This period is not editable; a verdict cannot be recorded.",
-    );
-  }
-}
+import {
+  assertReviewEntitlementByUserId,
+  lockEditableReport,
+  lockReviewUsers,
+} from "./review-write-gate.js";
 
 // Version lock as a guarded WRITE, not a plain read: the no-op update row-locks
 // the section, so a concurrent re-submit either committed first (zero rows) or
@@ -112,9 +84,54 @@ export function writeVerdict(
   params: PostVerdictParams,
 ): Promise<{ unsubmitted: boolean }> {
   return prisma.$transaction(async (tx) => {
-    await assertPeriodEditable(tx, params.sectionId);
+    const before = await tx.reportSection.findUnique({
+      where: { id: params.sectionId },
+      select: {
+        reportId: true,
+        authorId: true,
+      },
+    });
+    if (!before) {
+      throw new ReviewNotFoundError(
+        "The section no longer exists; a verdict cannot be recorded.",
+      );
+    }
+    await lockReviewUsers(tx, [params.reviewerId, before.authorId]);
+    await lockEditableReport(tx, before.reportId);
+    const section = await tx.reportSection.findUnique({
+      where: { id: params.sectionId },
+      select: {
+        status: true,
+        reportId: true,
+        authorId: true,
+        author: { select: { reportingGroupId: true } },
+      },
+    });
+    if (section?.reportId !== before.reportId) {
+      throw new ReviewNotFoundError(
+        "The section no longer exists; a verdict cannot be recorded.",
+      );
+    }
+    if (section.authorId !== before.authorId) {
+      throw new ReviewConstraintError(
+        "The section owner changed; reload and re-decide.",
+      );
+    }
+    if (!section.author.reportingGroupId) {
+      throw new ReviewNotFoundError("Review group not found.");
+    }
+    await assertReviewEntitlementByUserId(
+      tx,
+      params.reviewerId,
+      section.author.reportingGroupId,
+    );
     await lockSectionVersion(tx, params.sectionId, params.expectedVersion);
     await upsertVerdict(tx, params);
-    return { unsubmitted: await unsubmitOnChangesRequested(tx, params) };
+    return {
+      unsubmitted: await unsubmitOnChangesRequested(tx, {
+        ...params,
+        currentStatus: section.status,
+      }),
+    };
   });
 }

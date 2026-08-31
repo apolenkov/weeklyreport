@@ -10,6 +10,7 @@ import pg from "pg";
 
 import { assertE2eRuntimeDestructive } from "../../guards/_destructive-guard.js";
 import { requireEnv } from "../../guards/_require-env.js";
+import { finalizePublishedSnapshots } from "../support/published-snapshot.js";
 import { assertSeedCoverage } from "../support/seed-coverage-check.js";
 import {
   seedActionLog,
@@ -62,6 +63,7 @@ async function main(): Promise<void> {
     await seedActivityOnlyLead(prisma);
     await seedPublishedWeekSections(prisma);
     await seedArchivedHistory(prisma);
+    await finalizePublishedSnapshots(prisma);
     await seedGroupLeaderAndViewer(prisma);
     await seedReopenRequest(prisma);
     await seedActionLog(prisma);

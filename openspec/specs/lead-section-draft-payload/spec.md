@@ -34,5 +34,4 @@ AND `impact`.
 #### Scenario: The decisions filter is unchanged
 
 - **WHEN** a decision row is missing any of `text`, `owner`, or `impact`
-- **THEN** it continues to be excluded from the payload's `decisions` array,
-  as before this change
+- **THEN** it is excluded from the payload's `decisions` array

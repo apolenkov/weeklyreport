@@ -1,8 +1,8 @@
 import { ArrowDownUp } from "lucide-react";
 
+import { DeleteIcon, EditIcon } from "../../../shared/ui/icons/action-icons";
 import { LockBadge } from "../../../shared/ui/report-shell/lock-badge";
 import type { RiskEntry } from "../../report-sections";
-import { DeleteIcon, EditIcon } from "./risk-card-icons";
 
 const ACTION_BUTTON_CLASS =
   "flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] md:min-h-[34px] md:min-w-[34px] items-center justify-center rounded-full border border-[var(--card-surface-border)] bg-[var(--color-card)] p-1.5";

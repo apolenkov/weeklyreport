@@ -6,11 +6,13 @@ import test from "node:test";
 
 const prodCompose = resolve("docker-compose.prod.yml");
 const devCompose = resolve("docker-compose.yml");
+const devOverrideCompose = resolve("docker-compose.dev.yml");
 const productionEnvironmentTemplate = resolve(
   "deploy/environment/production.env.example",
 );
 const workflow = resolve(".github/workflows/ci.yml");
 const gitIgnore = resolve(".gitignore");
+const dockerIgnore = resolve(".dockerignore");
 
 function resolveExecutable(command: string): string {
   const searchPath = process.env.PATH;
@@ -54,6 +56,9 @@ const composeCommand = resolveComposeCommand();
 const REQUIRED_POLICY_INPUTS = [
   "DB_PASSWORD",
   "POSTGRES_DB",
+  "DB_POOL_MAX",
+  "DB_POOL_IDLE_TIMEOUT_MS",
+  "DB_POOL_CONNECTION_TIMEOUT_MS",
   "PGBOUNCER_MAX_CLIENT_CONN",
   "PGBOUNCER_POOL_SIZE",
   "PGBOUNCER_RESERVE_POOL_SIZE",
@@ -77,8 +82,9 @@ const REQUIRED_POLICY_INPUTS = [
   "KEYCLOAK_SAML_ENTRY_POINT",
   "KEYCLOAK_SAML_ISSUER",
   "KEYCLOAK_SAML_CERT",
-  "NEXT_PUBLIC_API_URL",
-  "API_URL",
+  "NEXT_PUBLIC_CLIENT_LOG_FORWARDING",
+  "NEXT_PUBLIC_WEB_VITALS",
+  "CLIENT_LOG_FORWARDING",
   "CADDY_SITE_ADDRESS",
   "CADDY_ACME_EMAIL",
   "CADDY_CSP_REPORT_URI",
@@ -89,12 +95,14 @@ const REQUIRED_POLICY_INPUTS = [
 
 const content = readFileSync(prodCompose, "utf8");
 const devContent = readFileSync(devCompose, "utf8");
+const devOverrideContent = readFileSync(devOverrideCompose, "utf8");
 const productionEnvironment = readFileSync(
   productionEnvironmentTemplate,
   "utf8",
 );
 const workflowContent = readFileSync(workflow, "utf8");
 const gitIgnoreContent = readFileSync(gitIgnore, "utf8");
+const dockerIgnoreContent = readFileSync(dockerIgnore, "utf8");
 const backupDockerfile = readFileSync(
   resolve("deploy/postgres/Dockerfile.backup"),
   "utf8",
@@ -104,6 +112,49 @@ const webDockerfile = readFileSync(resolve("Dockerfile.web"), "utf8");
 const turboConfig = JSON.parse(readFileSync(resolve("turbo.json"), "utf8")) as {
   readonly globalEnv?: readonly string[];
 };
+
+void test("Docker build context excludes TypeScript test harnesses", () => {
+  for (const pattern of [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "**/*.integration.test.ts",
+    "**/*.integration.test.tsx",
+    "**/__tests__",
+    "**/test-utils",
+    "**/*-fixtures.ts",
+    "**/*-fixtures.tsx",
+    "**/*.fixtures.ts",
+    "**/*.fixtures.tsx",
+    "**/*.fixture.ts",
+    "**/*.fixture.tsx",
+    "**/*stub*.ts",
+    "**/*stub*.tsx",
+    "**/*harness*.ts",
+    "**/*harness*.tsx",
+    "**/test-seams",
+    "**/__snapshots__",
+    "**/*.snap",
+  ]) {
+    assert.ok(
+      dockerIgnoreContent.split("\n").includes(pattern),
+      `${dockerIgnore} must exclude ${pattern}`,
+    );
+  }
+});
+
+void test("Docker build context retains the production-prune self-test", () => {
+  const fixture = "scripts/gates/production-deps-prune.fixture.test.ts";
+  assert.ok(
+    dockerIgnoreContent.split("\n").includes(`!${fixture}`),
+    `${dockerIgnore} must retain ${fixture}`,
+  );
+  assert.ok(
+    apiDockerfile.includes(`COPY ${fixture} `),
+    `Dockerfile.api must copy ${fixture}`,
+  );
+});
 
 void test("production compose requires every operational policy input", () => {
   for (const variable of REQUIRED_POLICY_INPUTS) {
@@ -136,11 +187,13 @@ void test("the production template lists every required input as fail-closed", (
       }),
   );
   const safePolicyValues = new Set([
-    "API_URL",
     "REDIS_DB",
     "LOG_LEVEL",
     "OTEL_SDK_DISABLED",
     "OTEL_TRACES_SAMPLER_ARG",
+    "NEXT_PUBLIC_CLIENT_LOG_FORWARDING",
+    "NEXT_PUBLIC_WEB_VITALS",
+    "CLIENT_LOG_FORWARDING",
     "HTTP_PORT",
     "HTTPS_PORT",
     "HTTPS_PORT_QUIC",
@@ -175,10 +228,6 @@ void test("development Compose owns one exact guarded database target", () => {
   assert.match(devContent, /POSTGRES_PASSWORD: localdev/u);
   assert.match(devContent, /POSTGRES_DB: customreport_e2e/u);
   assert.match(devContent, /pg_isready -U customreport -d postgres/u);
-  assert.match(
-    devContent,
-    /local-database-init:[\s\S]*migrate:[\s\S]*local-database-init:[\s\S]*condition: service_completed_successfully/u,
-  );
   const applicationDatabaseUrls = devContent
     .split("\n")
     .map((line) => line.trim())
@@ -195,6 +244,17 @@ void test("development Compose owns one exact guarded database target", () => {
   assert.deepEqual(
     new Set(applicationDatabaseUrls),
     new Set([DEV_APP_DATABASE_URL]),
+  );
+});
+
+void test("development API watches the current persistence source", () => {
+  assert.match(
+    devOverrideContent,
+    /- \.\/packages\/report-persistence\/src:\/app\/packages\/report-persistence\/src/u,
+  );
+  assert.match(
+    devOverrideContent,
+    /action: restart\n\s+path: \.\/packages\/report-persistence\/src/u,
   );
 });
 
@@ -281,7 +341,9 @@ void test("the production image receives one release identity", () => {
 void test("production dependency layers retain a shared pnpm BuildKit cache", () => {
   const cacheMount =
     "--mount=type=cache,id=customreport-pnpm-store-v11,target=/pnpm/store,sharing=locked";
-  assert.equal(apiDockerfile.split(cacheMount).length - 1, 2);
+  // API installs the full build graph once, the isolated migrator runtime once,
+  // and production dependencies once; each uses the same locked store.
+  assert.equal(apiDockerfile.split(cacheMount).length - 1, 3);
   assert.equal(webDockerfile.split(cacheMount).length - 1, 1);
   for (const dockerfile of [apiDockerfile, webDockerfile]) {
     assert.match(
@@ -289,6 +351,118 @@ void test("production dependency layers retain a shared pnpm BuildKit cache", ()
       /pnpm install[^\n]*--store-dir=\/pnpm\/store --network-concurrency=4/u,
     );
   }
+});
+
+void test("production builders carry the complete dist gate policy", () => {
+  for (const [path, dockerfile] of [
+    ["Dockerfile.api", apiDockerfile],
+    ["Dockerfile.web", webDockerfile],
+  ] as const) {
+    assert.match(
+      dockerfile,
+      /COPY scripts\/gates\/production-dist\.ts \.\/scripts\/gates\/production-dist\.ts/u,
+      `${path} must copy production-dist.ts into the pruned builder`,
+    );
+    assert.match(
+      dockerfile,
+      /COPY scripts\/gates\/production-dist-policy\.ts \.\/scripts\/gates\/production-dist-policy\.ts/u,
+      `${path} must copy production-dist-policy.ts into the pruned builder`,
+    );
+  }
+});
+
+void test("the migrator target contains only the canonical migration runtime", () => {
+  const start = apiDockerfile.indexOf(
+    "FROM node:24-bookworm@sha256:be23f54a88d34e8824c741b19b91064094f92c1c97b194144bfc8b50d67258e2 AS migrator",
+  );
+  const end = apiDockerfile.indexOf("\n# Stage 6: Build", start);
+  assert.notEqual(start, -1, "Dockerfile.api must define a migrator target");
+  assert.notEqual(
+    end,
+    -1,
+    "Dockerfile.api must keep the builder after migrator",
+  );
+  const migrator = apiDockerfile.slice(start, end);
+  assert.doesNotMatch(migrator, /FROM installer/u);
+  assert.doesNotMatch(migrator, /FROM base AS migrator/u);
+  assert.doesNotMatch(migrator, /printf .*package\.json/u);
+  assert.match(
+    apiDockerfile.slice(
+      apiDockerfile.indexOf("FROM installer AS migrator-deps"),
+      start,
+    ),
+    /deploy --prod --legacy --frozen-lockfile \/tmp\/migrate-deps/u,
+  );
+  assert.match(
+    migrator,
+    /COPY --from=migrator-deps \/tmp\/migrate-deps\/node_modules/u,
+  );
+  assert.match(
+    migrator,
+    /COPY --from=migrator-deps \/app\/prisma\/migrations \.\/prisma\/migrations/u,
+  );
+  assert.match(
+    migrator,
+    /COPY --from=migrator-deps \/app\/prisma\/migration\.config\.ts \.\/prisma\.config\.ts/u,
+  );
+  assert.match(migrator, /\/app\/prisma\/schema\.prisma/u);
+  assert.match(
+    migrator,
+    /! grep -Eq 'seed\|apps\/api\|tsx\|pnpm' \/app\/prisma\.config\.ts/u,
+  );
+  assert.match(migrator, /\/app\/prisma\/migrations\/migration_lock\.toml/u);
+  assert.match(
+    migrator,
+    /find \/app\/prisma\/migrations -type f -name '\*\.sql'/u,
+  );
+  assert.match(migrator, /test ! -e \/app\/apps/u);
+  assert.match(migrator, /test ! -e \/app\/packages/u);
+  assert.match(migrator, /test ! -e \/app\/node_modules\/\.bin\/pnpm/u);
+  assert.match(migrator, /test ! -e \/app\/node_modules\/\.bin\/turbo/u);
+  assert.match(migrator, /test ! -e \/usr\/local\/bin\/pnpm/u);
+  assert.match(migrator, /test ! -e \/usr\/local\/bin\/turbo/u);
+  assert.match(migrator, /test ! -e \/app\/node_modules\/@customreport/u);
+  assert.match(migrator, /test ! -e \/app\/scripts/u);
+  assert.match(migrator, /test ! -e \/app\/prisma\/operations/u);
+  assert.match(migrator, /test ! -e \/app\/prisma\/guards/u);
+  assert.match(migrator, /test ! -e \/app\/prisma\/seeds/u);
+  assert.match(
+    migrator,
+    /test ! -e \/app\/prisma\/migrations\/canonical-init-contract\.test\.ts/u,
+  );
+  assert.match(
+    migrator,
+    /CMD \["\.\/node_modules\/\.bin\/prisma", "migrate", "deploy"\]/u,
+  );
+});
+
+void test("the API runner excludes migration-only tooling", () => {
+  assert.match(
+    apiDockerfile,
+    /pnpm --filter=@customreport\/api deploy --prod --legacy --frozen-lockfile --ignore-scripts \/tmp\/api-deps/u,
+  );
+  assert.match(
+    apiDockerfile,
+    /production-deps-prune\.ts \/tmp\/api-deps/u,
+    "the API production deploy must run the deterministic dependency-closure prune",
+  );
+  assert.match(
+    apiDockerfile,
+    /production-deps-prune\.fixture\.test\.ts/u,
+    "the API dependency layer must execute the behavioral prune fixture",
+  );
+  const runner = apiDockerfile.slice(apiDockerfile.indexOf(" AS runner"));
+  assert.match(runner, /test ! -e \/app\/node_modules\/\.bin\/prisma/u);
+  assert.match(
+    runner,
+    /test ! -e \/app\/node_modules\/@customreport\/migrator-runtime/u,
+  );
+  assert.match(runner, /find \/app\/node_modules\/\.pnpm -maxdepth 1 -type d/u);
+  assert.match(
+    runner,
+    /@typescript\+typescript6@\*/u,
+    "the API runner must reject the aliased TypeScript compiler payload",
+  );
 });
 
 void test("post-install production tools bypass pnpm dependency preflight", () => {
@@ -352,7 +526,7 @@ void test("post-install production tools bypass pnpm dependency preflight", () =
   );
   assert.match(
     apiDockerfile,
-    /RUN \.\/node_modules\/\.bin\/playwright install --with-deps chromium/u,
+    /RUN \/app\/node_modules\/\.bin\/playwright install --with-deps chromium/u,
   );
   assert.match(
     webDockerfile,
@@ -445,8 +619,13 @@ void test("production build stages make pnpm explicitly non-interactive", () => 
 
 void test("release labels do not invalidate heavyweight runner layers", () => {
   const apiRunner = apiDockerfile.slice(
-    apiDockerfile.indexOf("FROM base AS runner"),
+    apiDockerfile.lastIndexOf("FROM ", apiDockerfile.indexOf(" AS runner")),
   );
+  assert.match(
+    apiRunner,
+    /FROM node:24-bookworm@sha256:[0-9a-f]{64} AS runner/,
+  );
+  assert.doesNotMatch(apiRunner, /COPY[^\n]*(?:pnpm|turbo)/);
   assert.ok(
     apiRunner.indexOf("LABEL org.opencontainers.image.revision=") >
       apiRunner.indexOf(
@@ -496,17 +675,34 @@ void test("production services pool API connections and preserve direct paths", 
   const migrationDatabaseUrl =
     /DATABASE_URL: postgresql:\/\/customreport:\$\{DB_PASSWORD:\?[^\n]+@postgres:5432\/\$\{POSTGRES_DB:\?[^\n]+/g;
   assert.equal([...content.matchAll(migrationDatabaseUrl)].length, 1);
-  const directUrl =
-    /DIRECT_URL: postgresql:\/\/customreport:\$\{DB_PASSWORD:\?[^\n]+@postgres:5432\/\$\{POSTGRES_DB:\?[^\n]+/g;
-  assert.equal([...content.matchAll(directUrl)].length, 2);
   assert.match(
     content,
-    /api:[\s\S]*DATABASE_URL: postgresql:\/\/customreport:[\s\S]*@pgbouncer:5432[\s\S]*DIRECT_URL: postgresql:\/\/customreport:[\s\S]*@postgres:5432[\s\S]*depends_on:[\s\S]*pgbouncer:[\s\S]*condition: service_healthy[\s\S]*healthcheck:[\s\S]*health\/ready/u,
+    /api:[\s\S]*DATABASE_URL: postgresql:\/\/customreport:[\s\S]*@pgbouncer:5432[\s\S]*depends_on:[\s\S]*pgbouncer:[\s\S]*condition: service_healthy[\s\S]*healthcheck:[\s\S]*health\/ready/u,
   );
   assert.match(
     content,
     /backup:[\s\S]*PGHOST: postgres[\s\S]*PGPORT: 5432[\s\S]*depends_on:[\s\S]*postgres:[\s\S]*condition: service_healthy/u,
   );
+});
+
+void test("web health probes use the IPv4 address the standalone server binds", () => {
+  assert.match(
+    content,
+    /web:[\s\S]*healthcheck:[\s\S]*http:\/\/127\.0\.0\.1:3000\//u,
+  );
+  assert.match(
+    webDockerfile,
+    /HEALTHCHECK[\s\S]*http:\/\/127\.0\.0\.1:3000\//u,
+  );
+  assert.doesNotMatch(webDockerfile, /http:\/\/localhost:3000\//u);
+});
+
+void test("Caddy health probes the IPv4 admin listener", () => {
+  assert.match(
+    content,
+    /caddy:[\s\S]*healthcheck:[\s\S]*http:\/\/127\.0\.0\.1:2019\/config\//u,
+  );
+  assert.doesNotMatch(content, /http:\/\/localhost:2019\/config\//u);
 });
 
 void test("backup entrypoints are baked into the pinned image", () => {
@@ -554,10 +750,14 @@ const FULL_POLICY_ENV: NodeJS.ProcessEnv = {
   PATH: process.env.PATH,
   DB_PASSWORD: "x",
   POSTGRES_DB: "customreport",
+  DB_POOL_MAX: "10",
+  DB_POOL_IDLE_TIMEOUT_MS: "10000",
+  DB_POOL_CONNECTION_TIMEOUT_MS: "0",
   FRONTEND_URL: "http://x",
   APP_BASE_URL: "http://x",
-  NEXT_PUBLIC_API_URL: "http://x",
-  API_URL: "http://api:3001",
+  NEXT_PUBLIC_CLIENT_LOG_FORWARDING: "false",
+  NEXT_PUBLIC_WEB_VITALS: "false",
+  CLIENT_LOG_FORWARDING: "false",
   AUTH_JWT_SECRET: "x".repeat(32),
   PDF_EXPORT_JWT_SECRET: "x".repeat(32),
   PDF_BASE_URL: "http://x",
@@ -644,13 +844,42 @@ void test("the rendered config guard rejects unsafe URL components without leaki
 void test("production compose renders with the full policy matrix", () => {
   const rendered = renderCompose(FULL_POLICY_ENV);
   assert.equal(rendered.status, 0, rendered.stderr);
+  for (const variable of [
+    "DB_POOL_MAX",
+    "DB_POOL_IDLE_TIMEOUT_MS",
+    "DB_POOL_CONNECTION_TIMEOUT_MS",
+  ]) {
+    assert.match(
+      workflowContent,
+      new RegExp(`^      ${variable}:`, "mu"),
+      `CI Docker build must provide ${variable}`,
+    );
+  }
+});
+
+void test("production Web uses one Compose-owned API origin in both phases", () => {
+  assert.equal(
+    [...content.matchAll(/^[ \t]+API_URL: \*production-api-url$/gmu)].length,
+    2,
+    "the Web build args and runtime environment must share the named API URL anchor",
+  );
+  assert.doesNotMatch(
+    content,
+    /\$\{API_URL[:}]/u,
+    "production Web API_URL must not be operator-overridable",
+  );
+  assert.doesNotMatch(
+    productionEnvironment,
+    /^API_URL=/mu,
+    "API_URL must not be a production operator input",
+  );
 });
 
 void test("production compose refuses to render with a blank required input", () => {
   // Blank every required var: compose must exit nonzero instead of inventing
   // operational policy. A handful are exempted as documented optional
   // integrations (OTEL_EXPORTER_OTLP_ENDPOINT, SMTP_USER/PASS, SENTRY_DSN,
-  // FRONTEND_URLS and CLIENT_LOG_FORWARDING).
+  // FRONTEND_URLS).
   const blanked = renderCompose({ PATH: process.env.PATH });
   assert.notEqual(blanked.status, 0);
   assert.match(`${blanked.stdout}${blanked.stderr}`, /required|must be set/i);

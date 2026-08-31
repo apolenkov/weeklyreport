@@ -43,6 +43,7 @@ export interface LeadInfo extends ReviewPresentation {
   readonly version?: number;
   readonly reviews: readonly SectionReviewView[];
   readonly attentionLabel: AttentionLabel;
+  readonly reminderRuleId: string | null;
   readonly actions: {
     readonly canOpen: boolean;
     readonly canRemind: boolean;

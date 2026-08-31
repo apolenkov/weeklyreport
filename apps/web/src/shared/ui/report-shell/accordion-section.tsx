@@ -35,12 +35,14 @@ function AccordionHeading({
   badge,
   badgeStyle,
   subtitle,
-}: AccordionHeadingProps) {
+  headingId,
+}: AccordionHeadingProps & { readonly headingId: string }) {
   return (
     <div className="min-w-0">
       <div className="flex items-center gap-3">
         {icon}
         <span
+          id={headingId}
           className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em]"
           style={{ color: titleColor }}
         >
@@ -80,7 +82,7 @@ function AccordionActionsToggle({
   return (
     <button
       type="button"
-      className="flex h-10 w-10 max-md:min-h-[var(--touch-target-min)] max-md:min-w-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-[var(--radius-pill)] transition-colors hover:bg-[var(--color-card)]"
+      className="flex h-10 w-10 max-md:min-h-[var(--touch-target-min)] max-md:min-w-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-[var(--radius-pill)] transition-colors hover:bg-[var(--color-card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-1"
       onClick={onToggle}
       aria-label={expanded ? `Collapse ${title}` : `Expand ${title}`}
       aria-expanded={expanded}
@@ -93,16 +95,20 @@ function AccordionActionsToggle({
 
 function AccordionPanel({
   panelId,
+  headingId,
   expanded,
   children,
 }: {
   readonly panelId: string;
+  readonly headingId: string;
   readonly expanded: boolean;
   readonly children: React.ReactNode;
 }) {
   return (
     <div
       id={panelId}
+      role="region"
+      aria-labelledby={headingId}
       className="grid transition-[grid-template-rows] duration-300"
       style={{ gridTemplateRows: expanded ? "1fr" : "0fr" }}
     >
@@ -119,12 +125,14 @@ function AccordionPanel({
 
 function AccordionHeader({
   heading,
+  headingId,
   expanded,
   panelId,
   actions,
   onToggle,
 }: {
   readonly heading: AccordionHeadingProps;
+  readonly headingId: string;
   readonly expanded: boolean;
   readonly panelId: string;
   readonly actions?: React.ReactNode;
@@ -137,12 +145,12 @@ function AccordionHeader({
     >
       <button
         type="button"
-        className={`flex min-w-0 flex-1 items-center justify-between gap-3 text-left ${hasActions ? "max-sm:basis-full" : ""}`}
+        className={`flex min-w-0 flex-1 items-center justify-between gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-1 ${hasActions ? "max-sm:basis-full" : ""}`}
         onClick={onToggle}
         aria-expanded={expanded}
         aria-controls={panelId}
       >
-        <AccordionHeading {...heading} />
+        <AccordionHeading {...heading} headingId={headingId} />
         {!actions && <RotatingChevron expanded={expanded} />}
       </button>
       {actions ? (
@@ -205,6 +213,7 @@ export function AccordionSection({
   // aria-controls at it; derived from testId when present, else a unique id.
   const generatedId = useId();
   const panelId = testId ? `${testId}-panel` : generatedId;
+  const headingId = `${panelId}-title`;
 
   return (
     <div
@@ -213,12 +222,17 @@ export function AccordionSection({
     >
       <AccordionHeader
         heading={{ icon, title, titleColor, badge, badgeStyle, subtitle }}
+        headingId={headingId}
         expanded={expanded}
         panelId={panelId}
         actions={actions}
         onToggle={toggleExpanded}
       />
-      <AccordionPanel panelId={panelId} expanded={expanded}>
+      <AccordionPanel
+        panelId={panelId}
+        headingId={headingId}
+        expanded={expanded}
+      >
         {children}
       </AccordionPanel>
     </div>

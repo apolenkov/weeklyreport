@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { POST } from "./route";
 import {
   consumeSentryTunnelQuota,
-  resetSentryTunnelQuota,
   resolveSentryEnvelopeEndpoint,
   resolveSentryTunnelClientKey,
   SENTRY_TUNNEL_MAX_BODY_BYTES,
@@ -12,6 +11,7 @@ import {
   SENTRY_TUNNEL_RETRY_AFTER_SECONDS,
   SENTRY_TUNNEL_WINDOW_MS,
 } from "./sentry-tunnel";
+import { SentryTunnelQuota } from "./sentry-tunnel-quota";
 
 function makeRequest(
   headers: Record<string, string> = {},
@@ -51,7 +51,6 @@ describe("same-origin Sentry tunnel route", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
-    resetSentryTunnelQuota();
   });
 
   it("derives the Bugsink envelope endpoint and query auth from the DSN", () => {
@@ -146,30 +145,39 @@ describe("same-origin Sentry tunnel route", () => {
   });
 
   it("keeps quotas independent and bounded by client bucket count", () => {
+    const quota = new SentryTunnelQuota(
+      SENTRY_TUNNEL_WINDOW_MS,
+      SENTRY_TUNNEL_MAX_REQUESTS_PER_WINDOW,
+      SENTRY_TUNNEL_MAX_CLIENT_BUCKETS,
+      128,
+    );
     const now = 1000;
     for (let index = 0; index < SENTRY_TUNNEL_MAX_CLIENT_BUCKETS; index += 1) {
-      expect(consumeSentryTunnelQuota(`client-${index}`, now)).toBe(true);
+      expect(quota.consume(`client-${index}`, now)).toBe(true);
     }
-    expect(consumeSentryTunnelQuota("overflow-client", now)).toBe(false);
-    expect(consumeSentryTunnelQuota("client-0", now)).toBe(true);
+    expect(quota.consume("overflow-client", now)).toBe(false);
+    expect(quota.consume("client-0", now)).toBe(true);
   });
 
   it("expires a client bucket after its fixed window", () => {
+    const quota = new SentryTunnelQuota(
+      SENTRY_TUNNEL_WINDOW_MS,
+      SENTRY_TUNNEL_MAX_REQUESTS_PER_WINDOW,
+      SENTRY_TUNNEL_MAX_CLIENT_BUCKETS,
+      128,
+    );
     const now = 1000;
     for (
       let index = 0;
       index < SENTRY_TUNNEL_MAX_REQUESTS_PER_WINDOW;
       index += 1
     ) {
-      expect(consumeSentryTunnelQuota("expiring-client", now)).toBe(true);
+      expect(quota.consume("expiring-client", now)).toBe(true);
     }
 
-    expect(consumeSentryTunnelQuota("expiring-client", now)).toBe(false);
+    expect(quota.consume("expiring-client", now)).toBe(false);
     expect(
-      consumeSentryTunnelQuota(
-        "expiring-client",
-        now + SENTRY_TUNNEL_WINDOW_MS,
-      ),
+      quota.consume("expiring-client", now + SENTRY_TUNNEL_WINDOW_MS),
     ).toBe(true);
   });
 

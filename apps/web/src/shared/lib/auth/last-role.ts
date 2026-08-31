@@ -45,12 +45,3 @@ export function writeLastRole(record: LastRoleRecord): void {
     /* noop */
   }
 }
-
-export function clearLastRole(): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.removeItem(LAST_ROLE_STORAGE_KEY);
-  } catch {
-    /* noop */
-  }
-}

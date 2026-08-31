@@ -1,11 +1,11 @@
 ## Purpose
 
-The head-role status deck now uses the same by-product `SlideArticle` contract
-as lead and viewer presentation surfaces. This capability governs head-only deck
-chrome around that article: recorded visual acceptance, top-carousel
-navigation, fullscreen exit affordance, status-badge duplication, and removal of
-the old standalone heading band. Article anatomy, colors, auto-height behavior,
-and product-card layout live in `lead-slide-by-product-grid`.
+The head-role status deck uses the same by-product `SlideArticle` contract as
+lead and viewer presentation surfaces. This capability governs head-only deck
+chrome around that article: report-context density, representative visual
+acceptance, top-carousel navigation, fullscreen exit, exactly-once status, and
+the absence of a standalone heading band. Article anatomy, colors, auto-height
+behavior, and product-card layout live in `lead-slide-by-product-grid`.
 
 ## Requirements
 
@@ -48,20 +48,19 @@ The Head slide carousel MUST expose explicitly named Previous and Next buttons, 
 - **AND** the newly selected card is visible in the carousel viewport
 - **AND** the corresponding edge control becomes disabled only at the first or last slide
 
-### Requirement: The head-slide redesign ships only with recorded sign-off and visual acceptance
+### Requirement: Head slide layout changes receive representative visual acceptance
 
-A change implementing `head-slide-density` MUST reference the recorded user
-decisions that settled the design Open Questions, because those are deliberately
-left as taste decisions, and MUST present same-viewport before/after screenshots
-for user review before the change is archived - covering one-lead, many-leads,
-empty-section, dense-decisions, and fullscreen states.
+A layout change governed by `head-slide-density` MUST follow the current design
+contract and present same-viewport screenshots for user review before release,
+covering one-lead, many-leads, empty-section, dense-decisions, and fullscreen
+states.
 
-#### Scenario: a head-slide redesign implementation lands
+#### Scenario: a head-slide layout change lands
 
 - **WHEN** a change edits head slide density or layout
-- **THEN** it cites the recorded user decisions for the open taste questions
-- **AND** before/after screenshots across the listed states are produced for
-  user acceptance before archiving
+- **THEN** it cites the current design contract for the affected decisions
+- **AND** screenshots across the listed states are produced for user acceptance
+  and tied to the reviewed tree
 
 ### Requirement: The head deck navigates via a top carousel
 
@@ -112,8 +111,7 @@ The active head slide MUST reuse the shared fullscreen affordance (`DeckFullscre
 ### Requirement: Slide status renders exactly once per slide
 
 The slide status (Blocked / Review / Ready) MUST render exactly once per slide.
-The duplicate status badge that previously appeared both on the left sidebar
-card and in the focused slide header MUST NOT recur.
+No secondary list-card or heading badge may duplicate the focused slide's status.
 
 #### Scenario: a slide has a status
 

@@ -3,6 +3,7 @@ export {
   EditIcon,
   PlusIcon,
 } from "../../../shared/ui/icons/action-icons";
+export { RotatingChevron as Chevron } from "../../../shared/ui/report-shell/rotating-chevron";
 
 const DANGER_ICON_CLASSES =
   "text-[var(--color-destructive-emphasis)] hover:text-[var(--color-destructive-emphasis-hover)]";
@@ -42,23 +43,6 @@ export function IconButton({
     >
       {icon}
     </button>
-  );
-}
-
-export function Chevron({ expanded }: { readonly expanded: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className={`h-4 w-4 transition-transform ${expanded ? "rotate-90" : ""}`}
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <polyline points="9 18 15 12 9 6" />
-    </svg>
   );
 }
 

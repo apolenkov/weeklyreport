@@ -5,9 +5,8 @@
 import nextPlugin from "@next/eslint-plugin-next";
 import type { Linter } from "eslint";
 
-// Next 16 removed `next lint`, so the plugin must be wired manually or these
-// rules simply never run. The core-web-vitals preset layers the CWV-relevant
-// promotions on top of recommended; preset severities kept as shipped.
+// The plugin is wired directly for the App Router; core-web-vitals adds the
+// performance-focused rules to the recommended set.
 export const nextConfig: Linter.Config = {
   files: ["apps/web/**/*.{ts,tsx}"],
   plugins: { "@next/next": nextPlugin },

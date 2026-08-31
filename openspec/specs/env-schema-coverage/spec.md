@@ -16,19 +16,17 @@ rather than at a scattered raw read. A grep of `apps/api/src` (excluding
 read MUST NOT surface a product-config `<NAME>` absent from `envSchema`.
 Inherited process-runtime variables such as `PATH` are not product
 configuration and stay at their explicit operating-system boundary: the dev
-reseed resolver uses `PATH` only to locate an executable. The six variables
-identified by the coverage audit —
+reseed resolver uses `PATH` only to locate an executable. The current
+product-config variables, including
 `SENTRY_DSN`, `CLIENT_LOG_FORWARDING`, `AUTH_DEV_MODE_ALLOW_TEST`,
-`CUSTOMREPORT_REPO_ROOT`, `DLQ_ALERT_THRESHOLD`, and
-`AUTH_JWT_COOKIE_NAME` — MUST each be added.
+`CUSTOMREPORT_REPO_ROOT`, and `DLQ_ALERT_THRESHOLD` MUST each be declared.
 
-The literal-`process.env.<NAME>` grep is a necessary but not sufficient check: a
-var read through a factory that receives `process.env` as a parameter (e.g.
-`AUTH_JWT_COOKIE_NAME`, read as `env.AUTH_JWT_COOKIE_NAME` inside
-`resolveSessionCookieName(env)`) is invisible to it. That factory-passed-env
-blind spot MUST be closed by auditing the sanctioned factory sites by hand; this
-change declares `AUTH_JWT_COOKIE_NAME` (found by that audit, not the grep) to
-prove the point.
+The literal-`process.env.<NAME>` grep is necessary but not sufficient: a value
+read through a factory parameter is invisible to it. The sanctioned factories
+and bootstrap boundaries MUST therefore be reviewed alongside the grep, with
+each product-config value accounted for in the schema or in the explicit raw
+boundary list below. This prevents an indirect read from bypassing startup
+validation.
 
 #### Scenario: Every consumed var is declared
 
@@ -38,34 +36,26 @@ prove the point.
 - **THEN** the key is present in the `envSchema` object shape
 - **AND** the coverage grep over `apps/api/src` reports zero undeclared keys
 
-#### Scenario: A factory-passed-env var is caught by the manual audit
-
-- **GIVEN** `AUTH_JWT_COOKIE_NAME` is read as `env.AUTH_JWT_COOKIE_NAME` inside
-  `resolveSessionCookieName`, never as a literal `process.env.AUTH_JWT_COOKIE_NAME`
-- **WHEN** the sanctioned `process.env`-consuming factories are audited by hand
-- **THEN** the var is found and declared `.optional()` in `envSchema`
-- **AND** the coverage requirement records that the grep alone cannot see it
-
 ### Requirement: Declared vars obey the no-default posture
 
 The system MUST NOT attach a `.default()` to any product-config field in
 `envSchema`; a value that is mandatory to run MUST be declared REQUIRED (no
 default, so boot fails loud on absence), and a genuinely-optional feature MUST
 be declared `.optional()` (no default) with the consumer handling absence. The
-six added vars are all genuinely optional and MUST be `.optional()`, each
+optional variables are genuinely optional and MUST be `.optional()`, each
 mapped to the existing precedent for its shape: `SENTRY_DSN` follows the
 optional-string form (`OTEL_EXPORTER_OTLP_ENDPOINT`);
-`DLQ_ALERT_THRESHOLD` follows the optional-coerced-number form (`DB_POOL_MAX`)
+`DLQ_ALERT_THRESHOLD` follows the optional-coerced-number form
 with the consumer applying its named `DEFAULT_THRESHOLD` constant;
-`CLIENT_LOG_FORWARDING`, `AUTH_DEV_MODE_ALLOW_TEST`, `CUSTOMREPORT_REPO_ROOT`,
-and `AUTH_JWT_COOKIE_NAME` are optional strings (dev/test-only toggles,
-overrides, and a named-default cookie name).
+`CLIENT_LOG_FORWARDING`, `AUTH_DEV_MODE_ALLOW_TEST`, and
+`CUSTOMREPORT_REPO_ROOT` are optional strings (dev/test-only toggles and
+overrides).
 
 #### Scenario: No default is introduced
 
 - **WHEN** `env.schema.ts` is scanned for `.default(`
 - **THEN** no product-config field carries a `.default()`
-- **AND** each of the six added vars is declared `.optional()` with no default
+- **AND** each optional variable is declared `.optional()` with no default
 
 #### Scenario: A missing required var fails boot loud
 
@@ -76,30 +66,29 @@ overrides, and a named-default cookie name).
 
 ### Requirement: Routed vars read through the validated config except at named boundaries
 
-The system MUST read the vars this change routes through the validated
+The system MUST read the routed variables through the validated
 `EnvConfig` — injected via the `ENV_CONFIG` token, a locally validated `env`,
 or a constructor/parameter that already carries `EnvConfig` — rather than
-reaching for raw `process.env`. The routed set is exactly these six vars,
-each with a single reachable validated view: `CLIENT_LOG_FORWARDING` (the
+reaching for raw `process.env`. The routed set includes the three required
+database pool settings and these existing variables,
+each with a single reachable validated view: `DB_POOL_MAX`,
+`DB_POOL_IDLE_TIMEOUT_MS`, `DB_POOL_CONNECTION_TIMEOUT_MS` (the Prisma pool
+constructor), `CLIENT_LOG_FORWARDING` (the
 `main.ts` local `validateEnv()` result), `DLQ_ALERT_THRESHOLD`
 (`dlq-monitor.service.ts` via injected `ENV_CONFIG`), `CUSTOMREPORT_REPO_ROOT`
 (the tRPC router via an `EnvConfig` threaded onto
-`RouterDeps`), `LOG_LEVEL` (`prisma.service.ts`, via the `env: EnvConfig`
+`AppRouterDeps`), `LOG_LEVEL` (`prisma.service.ts`, via the `env: EnvConfig`
 already stored on the constructed instance), `PDF_OUTPUT_DIR`
 (`pdf-export.processor.ts`, via the `env` field its base class
-`RawBullMqProcessor` already stores), and `BULLMQ_PREFIX`
-(`getBullMQConnectionOptions`/`getBullMQOptions` in `bullmq-options.ts`, via
-the `env: EnvConfig` parameter each function already receives).
+`RawBullMqProcessor` already stores).
 
 Raw `process.env` access remains permitted at these enumerated boundaries,
 which run before or outside the Nest DI container: the single
-`envSchema.safeParse(process.env)` entry point in `env.schema.ts`; the
-`Sentry.init` at `main.ts` module load, which executes before
-`validateEnv()` is called; the second `validateEnv()` at the BullMQ
-`worker-observability.ts` process boundary; and factory functions whose
-default parameter is `env: NodeJS.ProcessEnv = process.env`
-(`createAuthController`, `createSamlStrategyOptions`, `otel.bootstrap`,
-`resolveSessionCookieName`); and `createServiceLogger` in
+`envSchema.safeParse(process.env)` entry point in `env.schema.ts`; the dynamic
+`sentry-bootstrap` import inside `start()`; the second `validateEnv()` at the
+BullMQ `worker-observability.ts` process boundary; the API auth-ingress
+bootstrap that passes `process.env` into the validated auth/SAML factories;
+`otel.bootstrap`; and `createServiceLogger` in
 `logger-service.ts`, a pre-DI logger factory that parses
 `process.env.LOG_LEVEL` through `logLevelSchema.parse` (throws on an invalid
 value — validated, no silent fallback) before the container exists. `AUTH_DEV_MODE_ALLOW_TEST` is declared for
@@ -116,7 +105,7 @@ of the three buys no safety once it is declared, so all three stay raw.
 
 #### Scenario: A sanctioned bootstrap read is allowed
 
-- **GIVEN** `main.ts` initialises Sentry at module load before `validateEnv()` runs
+- **GIVEN** `start()` dynamically loads Sentry at the validated bootstrap boundary
 - **WHEN** it reads `SENTRY_DSN` via raw `process.env`
 - **THEN** that read is permitted because no validated `env` exists at that point
 

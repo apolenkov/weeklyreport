@@ -8,6 +8,7 @@ import { DialogSurface } from "../../../shared/ui/dialogs/dialog-surface";
 import type { ActivityFormData } from "../model/activity-form";
 import type { AdminGroupView, AdminProductView } from "../model/admin-types";
 import { ActivityFormFields } from "./activity-form-fields";
+import { AdminEntityDialogActions } from "./admin-entity-dialog-actions";
 
 interface ActivityEditDialogProps {
   readonly editingActivity: ProjectActivity | null;
@@ -19,41 +20,6 @@ interface ActivityEditDialogProps {
   readonly isSaving: boolean;
   readonly onSave: () => void;
   readonly onClose: () => void;
-}
-
-function ActivityDialogFooter({
-  isEditing,
-  canSave,
-  isSaving,
-  onSave,
-  onClose,
-}: {
-  readonly isEditing: boolean;
-  readonly canSave: boolean;
-  readonly isSaving: boolean;
-  readonly onSave: () => void;
-  readonly onClose: () => void;
-}) {
-  return (
-    <div className="mt-6 flex justify-end gap-3">
-      <button
-        type="button"
-        onClick={onClose}
-        disabled={isSaving}
-        className="btn-press rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        Cancel
-      </button>
-      <button
-        type="button"
-        onClick={onSave}
-        disabled={isSaving || !canSave}
-        className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {isSaving ? "Saving…" : isEditing ? "Save Changes" : "Add Activity"}
-      </button>
-    </div>
-  );
 }
 
 export function ActivityEditDialog({
@@ -91,12 +57,13 @@ export function ActivityEditDialog({
         products={products}
         groupLockedByLeads={(editingActivity?.leadIds.length ?? 0) > 0}
       />
-      <ActivityDialogFooter
-        isEditing={editingActivity !== null}
+      <AdminEntityDialogActions
+        saveLabel={editingActivity !== null ? "Save Changes" : "Add Activity"}
         canSave={canSave}
         isSaving={isSaving}
         onSave={onSave}
         onClose={onClose}
+        saveDisabled={isSaving || !canSave}
       />
     </DialogSurface>
   );

@@ -22,16 +22,6 @@ export type { LeadInfo } from "./dashboard-lead-presentation";
 
 // ---- Composer ----
 
-export interface MapDashboardArgs {
-  readonly review: readonly SubmissionDashboardRow[];
-  readonly weeklyReport: WeeklyReportReadModel;
-  readonly activity?: ActivityLiveResponse;
-  // Override `now` for deterministic deadline tests.
-  readonly now?: Date;
-  // Optional authenticated lead id used to flag isCurrentUser.
-  readonly currentUserId?: string;
-}
-
 export interface MapWeeklyDashboardArgs {
   readonly weeklyReport: WeeklyReportReadModel;
   // Override `now` for deterministic deadline tests.
@@ -114,19 +104,5 @@ export function mapReviewDashboardData({
     pendingLeads: leads
       .filter((lead) => lead.status === "pending")
       .map((lead) => lead.name),
-  };
-}
-
-export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
-  const review = mapReviewDashboardData(args);
-  const weekly = mapWeeklyDashboardData({
-    weeklyReport: args.weeklyReport,
-    pendingCount: review.pendingLeads.length,
-    ...(args.now ? { now: args.now } : {}),
-  });
-
-  return {
-    ...weekly,
-    ...review,
   };
 }

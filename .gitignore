@@ -2,19 +2,11 @@ node_modules/
 
 .turbo/
 .next/
+.next-docker-dev/
 dist/
 *.tsbuildinfo
 
-# Runtime bytecode from packaged Python-based developer tools.
-__pycache__/
-*.py[cod]
-
 coverage/
-# Keep generated coverage output ignored while tracking the repository-owned
-# evidence helper used by the test gates.
-!scripts/gates/coverage/
-scripts/gates/coverage/*
-!scripts/gates/coverage/coverage-evidence.ts
 playwright-report/
 test-results/
 
@@ -25,21 +17,11 @@ test-results/
 
 .idea/
 
-.results
 .logs/
 
 apps/api/storage/
 
 apps/web/next-env.d.ts
 
-.playwright-mcp
-
-.scratch/
-.agent-council/
-.goals
-scheduled_tasks.lock
-
 # macOS Finder metadata
 .DS_Store
-# Ad-hoc verification-run artifact dirs (regenerated per live-verify)
-.verify-*/

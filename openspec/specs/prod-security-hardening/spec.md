@@ -71,4 +71,4 @@ production-labeled bundle. Environments that need either flag on (the dev
 - **WHEN** `docker-compose.yml` (dev) builds the `web` service
 - **THEN** its `build.args` explicitly set both flags to `"true"`
 - **AND** the resulting dev image still shows the dev role switcher and
-  auth stub, unchanged from before this requirement
+  auth stub

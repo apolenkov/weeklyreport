@@ -7,25 +7,31 @@
     "**/*.css"
   ],
   "exports": {
-    ".": "./src/index.ts",
     "./styles/globals.css": "./src/styles/globals.css",
-    "./lib/*": "./src/lib/*",
-    "./components/*": "./src/components/*",
-    "./hooks/*": "./src/hooks/*"
+    "./lib/utils": "./src/lib/utils.ts",
+    "./components/ui/alert": "./src/components/ui/alert.tsx",
+    "./components/ui/button": "./src/components/ui/button.tsx",
+    "./components/ui/card": "./src/components/ui/card.tsx",
+    "./components/ui/chart": "./src/components/ui/chart.tsx",
+    "./components/ui/dialog": "./src/components/ui/dialog.tsx",
+    "./components/ui/dropdown-menu": "./src/components/ui/dropdown-menu.tsx",
+    "./components/ui/separator": "./src/components/ui/separator.tsx",
+    "./components/ui/sheet": "./src/components/ui/sheet.tsx",
+    "./components/ui/skeleton": "./src/components/ui/skeleton.tsx",
+    "./components/ui/sonner": "./src/components/ui/sonner.tsx",
+    "./components/ui/tabs": "./src/components/ui/tabs.tsx",
+    "./components/ui/tooltip": "./src/components/ui/tooltip.tsx"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "tsc --noEmit -p tsconfig.json"
+    "build": "tsc6 -p tsconfig.json",
+    "typecheck": "tsc6 --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "catalog:",
-    "next-themes": "^0.4.6",
     "radix-ui": "^1.6.7",
     "react": "catalog:",
-    "react-dom": "catalog:",
     "recharts": "catalog:",
     "sonner": "catalog:",
     "tailwind-merge": "^3.6.0"

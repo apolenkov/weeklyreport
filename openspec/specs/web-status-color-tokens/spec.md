@@ -29,25 +29,24 @@ status color MUST extend this set with a named token rather than introduce a lit
 
 - **WHEN** the design-system token block is read
 - **THEN** it defines `--color-border-subtle` at `rgba(0,0,0,0.08)`
-- **AND** the in-scope status surfaces that currently draw an exact
-  `rgba(0,0,0,0.08)` hairline reference `var(--color-border-subtle)` instead —
-  a zero-delta swap; the `rgba(0,0,0,0.07)` and `rgba(0,0,0,0.10)` hairline
-  variants remain separate because they are not the same visual token
+- **AND** in-scope status surfaces with that exact hairline reference
+  `var(--color-border-subtle)`; the `rgba(0,0,0,0.07)` and
+  `rgba(0,0,0,0.10)` variants remain separate semantic values
 
 ### Requirement: Status token references carry no hex fallback
 
 A web token reference for a status color MUST be written as `var(--color-…)` with
 no trailing hex fallback, because a `var(--color-…, #hex)` fallback silently masks
 whether the base token is defined and can pin a callsite to the wrong color. The
-saved-state checkmark stroke MUST resolve the green foreground token, not the pale
-`--color-success` fill it currently falls back through.
+saved-state checkmark stroke MUST resolve the green foreground token, not the
+pale `--color-success` fill.
 
 #### Scenario: a status token is referenced
 
 - **WHEN** the web source is grepped for the `var(--color-…, #hex)` fallback form
   on a status color reference
 - **THEN** there are zero matches in `apps/web/src`
-- **AND** each former callsite references the bare `var(--color-…)` token
+- **AND** every callsite references the bare `var(--color-…)` token
 
 #### Scenario: the save-now checkmark renders
 
@@ -66,12 +65,10 @@ severity options (`risk-edit-dialog`), the portfolio-overview status cells
 lead-history severity chip and dot (`lead-history-list`, `lead-history-sidebar`),
 the stage-hint amber (`meta-row`, `item-card-stage-tags`), the product-accordion
 "At Risk" pill (`product-accordion`), and the dashboard blocked/at-risk severity
-badge (`blocked-at-risk-product-card`). The near-duplicate at-risk foreground
-`#8a6d1b`, which repeats raw across these surfaces, MUST consolidate onto the
-single canonical `--color-status-at-risk-fg`. (The blocked foreground on report
-surfaces already resolves `--color-destructive`, so no blocked-foreground
-consolidation is in scope; the other `#92400e` / `#991b1b` literals live only in
-the separate admin domain.)
+badge (`blocked-at-risk-product-card`). Every at-risk foreground on these
+surfaces MUST resolve through the single canonical
+`--color-status-at-risk-fg`. Blocked report surfaces resolve through
+`--color-destructive`; admin-only red values belong to their separate domain.
 
 #### Scenario: a risk severity pill renders
 
@@ -102,7 +99,7 @@ their own domain. Any recolor of those domains is a separate concern.
 
 #### Scenario: a role-identity badge is left unchanged
 
-- **WHEN** this change routes report-workflow status surfaces onto status tokens
+- **WHEN** a report-workflow surface resolves a status token
 - **THEN** the admin role-identity badge is not remapped to `--color-status-*`
 - **AND** the period-lifecycle tags, the required-field asterisk, the
   destructive-action reds, the publish-lock pending-leads warning, and the

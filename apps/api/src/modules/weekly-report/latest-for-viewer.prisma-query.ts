@@ -1,10 +1,17 @@
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { currentEditableReportWhere } from "../../lib/report-lifecycle.js";
+import {
+  publishedReportScopeWhere,
+  requirePublishedSnapshot,
+  requireScopedPublishedSnapshot,
+} from "../report-sections/index.js";
 import type { WeeklyReportScopeSession } from "./weekly-report.service.js";
 import { historySectionScope } from "./weekly-report-portfolio.js";
 
 // Resolve the exact-id visibility check for the current editable period —
 // MUST NOT search older editable periods, the gate authorizes only the
-// current editable id.
+// current editable id. Reasserting the lifecycle tuple closes the race where
+// the id resolver observes an editable row just before archive or publish.
 export async function queryVisibleReportId(
   prisma: PrismaService,
   reportId: string,
@@ -14,6 +21,7 @@ export async function queryVisibleReportId(
   const report = await prisma.report.findFirst({
     where: {
       id: reportId,
+      ...currentEditableReportWhere(),
       sections: { some: sectionScope },
     },
     select: { id: true },
@@ -28,15 +36,21 @@ export async function queryLatestPublishedVisibleId(
   prisma: PrismaService,
   session: WeeklyReportScopeSession,
 ): Promise<string | null> {
-  const sectionScope = historySectionScope(session);
   const report = await prisma.report.findFirst({
     where: {
       periodStatus: "published" as const,
       archived: false,
-      sections: { some: sectionScope },
+      ...publishedReportScopeWhere(session, "lead-own"),
     },
     orderBy: [{ periodStart: "desc" }, { id: "desc" }],
-    select: { id: true },
+    select: { id: true, publishedSnapshot: true },
   });
-  return report?.id ?? null;
+
+  if (!report) return null;
+  const snapshot = requirePublishedSnapshot(
+    report.publishedSnapshot,
+    report.id,
+  );
+  requireScopedPublishedSnapshot(snapshot, session, "lead-own");
+  return report.id;
 }

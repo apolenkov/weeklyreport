@@ -9,7 +9,7 @@ Declare every consumed public web variable in one no-default schema, fail builds
 ### Requirement: Client env is declared in one Zod schema with no default
 
 The web app MUST declare every `NEXT_PUBLIC_*` variable it consumes (outside the
-`NEXT_PUBLIC_API_URL` seam) in a single Zod schema, and that schema MUST NOT
+API URL seam) in a single Zod schema, and that schema MUST NOT
 attach a `.default()` to any field — a genuinely-optional toggle is declared
 `.optional()` with the consumer handling absence, mirroring the api
 `env-schema-coverage` no-default posture. The in-scope set is exactly six:
@@ -29,7 +29,7 @@ absent rather than one of them feeding `""` into `z.url()`.
 #### Scenario: Every consumed client var is declared
 
 - **GIVEN** a `NEXT_PUBLIC_*` var such as `NEXT_PUBLIC_WEB_VITALS` is read in
-  `apps/web/src` outside test code and outside the `NEXT_PUBLIC_API_URL` seam
+  `apps/web/src` outside test code and outside the API URL seam
 - **WHEN** the client-env schema object shape is inspected
 - **THEN** the key is present with a non-permissive Zod type
 - **AND** no field in the schema carries a `.default()`
@@ -47,7 +47,7 @@ The web app MUST parse the client-env schema at `apps/web/next.config.ts`
 load time — which executes during `next build`, where the real `NEXT_PUBLIC_*`
 values are present in `process.env` before inlining — and MUST throw a
 descriptive error that fails the build when any value is malformed. This is a
-completeness-and-typing gate, not a required-presence gate: all seven vars are
+completeness-and-typing gate, not a required-presence gate: all six vars are
 optional, so absence is allowed and only a PRESENT-but-malformed value (e.g. a
 non-URL DSN) rejects the build.
 
@@ -60,7 +60,7 @@ non-URL DSN) rejects the build.
 
 #### Scenario: All-absent env builds clean
 
-- **GIVEN** none of the seven in-scope vars are set at build time
+- **GIVEN** none of the six in-scope vars are set at build time
 - **WHEN** `next.config.ts` runs the client-env assert
 - **THEN** the assert passes because every field is optional and the build
   proceeds
@@ -68,7 +68,7 @@ non-URL DSN) rejects the build.
 #### Scenario: Empty-string DSN passes the build assert
 
 - **GIVEN** `NEXT_PUBLIC_SENTRY_DSN=""` at build time (as `docker-compose.dev.yml`
-  supplies via `${NEXT_PUBLIC_SENTRY_DSN_DOCKER:-}` when the host value is unset)
+  supplies via `${NEXT_PUBLIC_SENTRY_DSN:-}` when the host value is unset)
 - **WHEN** `next.config.ts` runs the client-env assert during `next build`
 - **THEN** the assert passes because the schema's `""`→unset preprocess maps the
   empty string to absent before `z.url()` runs, rather than rejecting it and
@@ -76,7 +76,7 @@ non-URL DSN) rejects the build.
 
 ### Requirement: A typed accessor is the single client-env read seam and preserves inlining
 
-The web app MUST read the seven in-scope client vars through one typed accessor
+The web app MUST read the six in-scope client vars through one typed accessor
 module (a `web-env` seam sibling to `requireApiUrl` in
 `apps/web/src/shared/server/transport/api-url.ts`) rather than reaching for raw
 `process.env`. Because Next replaces each `process.env.NEXT_PUBLIC_X` occurrence
@@ -130,7 +130,7 @@ production build where `NEXT_PUBLIC_DEV_ROLE_SWITCHER=true`.
 - **WHEN** `nav-right-rail.tsx` or `role-switcher.tsx` reads the dev-role-switcher
   getter
 - **THEN** it observes `false`, because the getter folds the same
-  `NODE_ENV !== "production"` guard both sites apply today, so the dev role
+  `NODE_ENV !== "production"` guard both consumers apply, so the dev role
   switcher never renders in a production build
 
 ### Requirement: Every current raw client-env consumer routes through the accessor
@@ -142,10 +142,10 @@ an in-scope var with a call to the typed accessor, at each named consumer site:
 and `apps/web/src/shared/ui/auth-runtime/role-switcher.tsx` (`NEXT_PUBLIC_DEV_ROLE_SWITCHER`),
 `apps/web/src/shared/lib/telemetry/client-logger.ts` (`NEXT_PUBLIC_CLIENT_LOG_FORWARDING`),
 `apps/web/src/features/telemetry/model/vitals/web-vitals.ts` (`NEXT_PUBLIC_WEB_VITALS`),
-`apps/web/instrumentation-client.ts` (`NEXT_PUBLIC_SENTRY_DSN`). After the
-change a grep of `apps/web/src` and the web root for a literal
+`apps/web/instrumentation-client.ts` (`NEXT_PUBLIC_SENTRY_DSN`). A grep of
+`apps/web/src` and the web root for a literal
 `process.env.NEXT_PUBLIC_` read outside the accessor module and the
-`NEXT_PUBLIC_API_URL` seam MUST return no product-code hits (test files
+API URL seam MUST return no product-code hits (test files
 excluded); the two server-runtime configs
 `apps/web/sentry.server.config.ts` and `apps/web/sentry.edge.config.ts` use the
 shared `sentry-options.config.ts` seam for their server-runtime Sentry options.
@@ -160,24 +160,23 @@ shared `sentry-options.config.ts` seam for their server-runtime Sentry options.
 
 #### Scenario: No stray raw read remains
 
-- **GIVEN** the change is complete
+- **GIVEN** the typed accessor owns the in-scope client environment variables
 - **WHEN** `apps/web/src` and the web root are grepped for
   `process.env.NEXT_PUBLIC_` outside the accessor module, the
-  `NEXT_PUBLIC_API_URL` seam, excluding test files
+  API URL seam, excluding test files
 - **THEN** the grep returns zero product-code hits
 
 ### Requirement: The accessor stays out of the API-URL surface
 
-The `web-env` accessor MUST NOT declare or resolve `NEXT_PUBLIC_API_URL` or
-`API_URL`; those stay owned by the `requireApiUrl` seam and the
+The `web-env` accessor MUST NOT declare or resolve `API_URL`; it stays owned by the `requireApiUrl` seam and the
 `web-api-url-config` capability, which `next.config.ts` already build-asserts via
 its top-level `requireApiUrl()` call.
 
 #### Scenario: API-URL ownership is not duplicated
 
 - **GIVEN** the `web-env` accessor and its schema
-- **WHEN** they are inspected for `NEXT_PUBLIC_API_URL` or `API_URL`
-- **THEN** neither key appears, so the `requireApiUrl` seam remains the single
+- **WHEN** they are inspected for `API_URL`
+- **THEN** the key does not appear, so the `requireApiUrl` seam remains the single
   owner and no header/ownership collision with `web-api-url-config` occurs
 
 ### Requirement: Server-runtime Sentry configuration is validated at its shared seam

@@ -58,7 +58,7 @@ describe("lead slide periods", () => {
     expect(options[0]?.label).not.toContain("(Archived)");
   });
 
-  it("resolves requested, active, and newest non-archived report ids", () => {
+  it("keeps an explicit requested id authoritative beyond the bounded options page", () => {
     const options = buildLeadSlidePeriodOptions(
       [
         historyEntry(ARCHIVED_REPORT_ID, "2026-04-27T00:00:00.000Z", true),
@@ -80,7 +80,7 @@ describe("lead slide periods", () => {
         requestedReportId: "99999999-9999-4999-8999-999999999999",
         activeReportId: PUBLISHED_REPORT_ID,
       }),
-    ).toBe(PUBLISHED_REPORT_ID);
+    ).toBe("99999999-9999-4999-8999-999999999999");
     expect(
       resolveLeadSlideReportId({
         options,

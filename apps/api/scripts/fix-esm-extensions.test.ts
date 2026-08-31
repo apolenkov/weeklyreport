@@ -9,13 +9,22 @@ import { transformModuleSource } from "./fix-esm-extensions.js";
 const fixtureRoot = mkdtempSync(join(tmpdir(), "fix-esm-extensions-"));
 const apiDistSrc = join(fixtureRoot, "api/apps/api/src");
 const apiSharedDistRoot = join(fixtureRoot, "api/packages/shared/src");
-const roots = { apiDistSrc, apiSharedDistRoot };
+const apiPersistenceDistRoot = join(
+  fixtureRoot,
+  "api/packages/report-persistence/src",
+);
+const roots = { apiDistSrc, apiSharedDistRoot, apiPersistenceDistRoot };
 
 beforeAll(() => {
   mkdirSync(apiDistSrc, { recursive: true });
   mkdirSync(apiSharedDistRoot, { recursive: true });
+  mkdirSync(apiPersistenceDistRoot, { recursive: true });
   writeFileSync(join(apiDistSrc, "dep.js"), "export const dep = 1;\n");
   writeFileSync(join(apiSharedDistRoot, "index.js"), "export const x = 1;\n");
+  writeFileSync(
+    join(apiPersistenceDistRoot, "index.js"),
+    "export const mapper = 1;\n",
+  );
 });
 
 afterAll(() => {
@@ -35,6 +44,7 @@ describe("fix-esm-extensions transformModuleSource", () => {
       'export * from "./dep";',
       'const d = import("./dep");',
       'import { x } from "@customreport/shared";',
+      'import { mapper } from "@customreport/report-persistence";',
     ].join("\n");
 
     const result = transformModuleSource(source, file("mod.js"), roots);
@@ -47,9 +57,10 @@ describe("fix-esm-extensions transformModuleSource", () => {
         'export * from "./dep.js";',
         'const d = import("./dep.js");',
         'import { x } from "../../../packages/shared/src/index.js";',
+        'import { mapper } from "../../../packages/report-persistence/src/index.js";',
       ].join("\n"),
     );
-    expect(result.changedSpecifiers).toBe(6);
+    expect(result.changedSpecifiers).toBe(7);
   });
 
   it("leaves import-shaped runtime text byte-identical", () => {
@@ -85,6 +96,26 @@ describe("fix-esm-extensions transformModuleSource", () => {
       roots,
     ).source;
     expect(nonApiOut).toBe('import { x } from "@customreport/shared";');
+  });
+
+  it("rewrites the report-persistence package into the API runtime tree", () => {
+    const result = transformModuleSource(
+      'import { mapper } from "@customreport/report-persistence";',
+      file("persistence-import.js"),
+      roots,
+    );
+    expect(result.source).toBe(
+      'import { mapper } from "../../../packages/report-persistence/src/index.js";',
+    );
+
+    const persistenceOut = transformModuleSource(
+      'import { x } from "@customreport/shared";',
+      join(apiPersistenceDistRoot, "peer.js"),
+      roots,
+    );
+    expect(persistenceOut.source).toBe(
+      'import { x } from "../../shared/src/index.js";',
+    );
   });
 
   it("keeps already explicit specifiers unchanged", () => {

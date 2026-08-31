@@ -58,6 +58,10 @@ function makeLead(overrides: Partial<LeadInfo> = {}): LeadInfo {
     },
     priority: "active",
     ...overrides,
+    reminderRuleId:
+      overrides.reminderRuleId === undefined
+        ? "40000000-0000-4000-8000-000000000001"
+        : overrides.reminderRuleId,
   };
 }
 

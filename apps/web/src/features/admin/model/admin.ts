@@ -83,9 +83,8 @@ function mapProject(api: AdminProject): AdminProductView {
 
 function mapPeriod(api: ReportPeriod): AdminPeriodView {
   // adminSnapshotSchema ships reportPeriodSchema (status: 'draft' | 'published').
-  // Admin UI expects 'open' | 'published' | 'reopened'. Map 'draft' -> 'open';
-  // 'reopened' is unreachable from this endpoint (only periodReadModelSchema
-  // exposes periodStatus).
+  // Admin UI expects 'open' | 'published' | 'reopened'. This snapshot endpoint
+  // exposes report status, so its draft value maps to the UI's open state.
   const status: PeriodStatus =
     api.status === "published" ? "published" : "open";
   return {
@@ -126,8 +125,3 @@ export function mapAdminSnapshot(api: AdminSnapshot): MappedAdminSnapshot {
     policies: api.policies.map(mapReminderPolicy),
   };
 }
-
-// Internal exports for tests — keep narrow.
-export const __testing = {
-  mapReminder,
-};

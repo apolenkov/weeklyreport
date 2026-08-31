@@ -4,22 +4,31 @@ import { ensureLeadSection } from "./ensure-lead-section.js";
 
 const REPORT_ID = "report-1";
 const USER_ID = "lead-1";
+const PUBLISHER_ID = "99999999-9999-4999-8999-999999999999";
+const OPEN_REPORT = {
+  id: REPORT_ID,
+  status: "draft",
+  periodState: "open",
+  periodStatus: "open",
+  archived: false,
+  autoPublished: false,
+  autoArchived: false,
+  publishedAt: null,
+  publishedById: null,
+  reopenedAt: null,
+} as const;
 
 type LeadSectionPrisma = Parameters<typeof ensureLeadSection>[0];
 
 function makePrisma(opts: {
   existing?: { id: string } | null;
-  raced?: { id: string } | null;
+  report?: object | null;
   createThrows?: unknown;
   createdId?: string;
   projects?: { id: string }[];
   activityAttachments?: { activityId: string }[];
 }) {
-  const sectionFindUnique = vi
-    .fn()
-    .mockResolvedValueOnce(opts.existing ?? null)
-    // Second call is the post-conflict re-read.
-    .mockResolvedValue(opts.raced ?? null);
+  const sectionFindUnique = vi.fn().mockResolvedValue(opts.existing ?? null);
   const sectionCreate = vi.fn().mockImplementation(() => {
     if (opts.createThrows) throw opts.createThrows;
     return { id: opts.createdId ?? "section-new" };
@@ -32,12 +41,20 @@ function makePrisma(opts: {
   const activityStatusCreateMany = vi.fn().mockResolvedValue({ count: 0 });
 
   const transaction = vi.fn();
+  const queryRaw = vi
+    .fn()
+    .mockResolvedValue(
+      opts.report === null ? [] : [opts.report ?? OPEN_REPORT],
+    );
+  const executeRaw = vi.fn().mockResolvedValue(0);
   const client = {
     reportSection: { findUnique: sectionFindUnique, create: sectionCreate },
     project: { findMany: projectFindMany },
     projectStatus: { createMany: projectStatusCreateMany },
     projectActivityLead: { findMany: activityLeadFindMany },
     activityStatus: { createMany: activityStatusCreateMany },
+    $queryRaw: queryRaw,
+    $executeRaw: executeRaw,
     $transaction: transaction,
   } as unknown as LeadSectionPrisma;
   transaction.mockImplementation(
@@ -47,6 +64,8 @@ function makePrisma(opts: {
   return {
     client,
     transaction,
+    queryRaw,
+    executeRaw,
     sectionFindUnique,
     sectionCreate,
     projectStatusCreateMany,
@@ -55,20 +74,73 @@ function makePrisma(opts: {
   };
 }
 
-const P2002_SECTION = {
-  code: "P2002",
-  meta: { target: "ReportSection_reportId_authorId_key" },
-};
-
 describe("ensureLeadSection", () => {
-  it("returns the existing section without creating", async () => {
-    const { client, sectionCreate } = makePrisma({
+  it("locks the parent before returning an existing section", async () => {
+    const {
+      client,
+      transaction,
+      queryRaw,
+      executeRaw,
+      sectionFindUnique,
+      sectionCreate,
+    } = makePrisma({
       existing: { id: "sec-old" },
     });
 
     const result = await ensureLeadSection(client, REPORT_ID, USER_ID);
 
     expect(result).toEqual({ sectionId: "sec-old" });
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(executeRaw).toHaveBeenCalledTimes(1);
+    const [lockSql, lockKey] = executeRaw.mock.calls[0] as [
+      readonly string[],
+      number,
+    ];
+    expect(lockSql[0]).toContain("SELECT pg_advisory_xact_lock");
+    expect(lockKey).toBe(2_147_483_647);
+    expect(queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      sectionFindUnique.mock.invocationCallOrder[0] ?? 0,
+    );
+    expect(sectionCreate).not.toHaveBeenCalled();
+  });
+
+  it("rejects a stale existing section after its report was published", async () => {
+    const { client, sectionFindUnique, sectionCreate } = makePrisma({
+      existing: { id: "sec-old" },
+      report: {
+        ...OPEN_REPORT,
+        status: "published",
+        periodState: "published",
+        periodStatus: "published",
+        publishedAt: new Date("2026-08-31T10:00:00.000Z"),
+        publishedById: PUBLISHER_ID,
+      },
+    });
+
+    await expect(ensureLeadSection(client, REPORT_ID, USER_ID)).rejects.toThrow(
+      "Cannot provision a section outside an editable report.",
+    );
+    expect(sectionFindUnique).not.toHaveBeenCalled();
+    expect(sectionCreate).not.toHaveBeenCalled();
+  });
+
+  it("rejects new-section provisioning after its report was archived", async () => {
+    const { client, sectionFindUnique, sectionCreate } = makePrisma({
+      report: {
+        ...OPEN_REPORT,
+        status: "published",
+        periodState: "archived",
+        periodStatus: "published",
+        archived: true,
+        publishedAt: new Date("2026-08-31T10:00:00.000Z"),
+        publishedById: PUBLISHER_ID,
+      },
+    });
+
+    await expect(ensureLeadSection(client, REPORT_ID, USER_ID)).rejects.toThrow(
+      "Cannot provision a section outside an editable report.",
+    );
+    expect(sectionFindUnique).not.toHaveBeenCalled();
     expect(sectionCreate).not.toHaveBeenCalled();
   });
 
@@ -143,22 +215,6 @@ describe("ensureLeadSection", () => {
     expect(projectStatusCreateMany).not.toHaveBeenCalled();
   });
 
-  it("concurrent same-lead login: create P2002 resolves to the winner's section, no throw", async () => {
-    const { client, transaction, sectionFindUnique, projectStatusCreateMany } =
-      makePrisma({
-        createThrows: P2002_SECTION,
-        raced: { id: "sec-winner" },
-      });
-
-    const result = await ensureLeadSection(client, REPORT_ID, USER_ID);
-
-    expect(result).toEqual({ sectionId: "sec-winner" });
-    expect(transaction).toHaveBeenCalledTimes(1);
-    expect(sectionFindUnique).toHaveBeenCalledTimes(2);
-    // The loser must not seed statuses — the winner already did.
-    expect(projectStatusCreateMany).not.toHaveBeenCalled();
-  });
-
   it("rejects the whole transaction when activity-status seeding fails", async () => {
     const seedError = new Error("activity status seed failed");
     const { client, transaction, sectionCreate, activityStatusCreateMany } =
@@ -176,7 +232,7 @@ describe("ensureLeadSection", () => {
     expect(sectionCreate).toHaveBeenCalledTimes(1);
   });
 
-  it("re-throws a non-unique-violation error from create", async () => {
+  it("re-throws a create error and rolls back the transaction", async () => {
     const other = { code: "P2003" };
     const { client } = makePrisma({ createThrows: other });
 

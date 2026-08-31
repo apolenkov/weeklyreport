@@ -23,8 +23,12 @@ export interface RemindersScopeRepository {
   ) => Promise<string | null>;
   readonly findActiveRuleForDispatch: (
     reportId: string,
-    ruleId?: string,
-  ) => Promise<{ readonly id: string; readonly fireAt: Date } | null>;
+    ruleId: string,
+  ) => Promise<{
+    readonly id: string;
+    readonly fireAt: Date;
+    readonly deadline: Date;
+  } | null>;
   readonly findDraftSectionsForDispatch: (
     session: UserSession,
     reportId: string,

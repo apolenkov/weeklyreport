@@ -75,8 +75,9 @@ beforeEach(() => {
 const baseProps = {
   pendingLeads: ["Alice", "Bob"],
   reportId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-  canSendReminder: false,
+  ruleId: null,
 };
+const RULE_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
 function dispatchResult(result: DispatchResult): void {
   useMutationMock.mockImplementation(
@@ -88,7 +89,7 @@ function dispatchResult(result: DispatchResult): void {
 }
 
 function sendReminder(): void {
-  render(<AlertBar {...baseProps} canSendReminder />);
+  render(<AlertBar {...baseProps} ruleId={RULE_ID} />);
   fireEvent.click(screen.getByRole("button", { name: /send reminder/i }));
 }
 
@@ -111,7 +112,7 @@ describe("AlertBar semantic structure", () => {
       <AlertBar
         pendingLeads={["Alice", "Bob"]}
         reportId="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
-        canSendReminder
+        ruleId={RULE_ID}
       />,
     );
 
@@ -126,7 +127,7 @@ describe("AlertBar semantic structure", () => {
 });
 
 describe("AlertBar — role gating", () => {
-  it("renders the Configure reminders link for admin when canSendReminder=false", () => {
+  it("renders the Configure reminders link for admin when ruleId is absent", () => {
     mockRole("admin");
 
     render(<AlertBar {...baseProps} />);
@@ -136,7 +137,7 @@ describe("AlertBar — role gating", () => {
     ).toBeVisible();
   });
 
-  it("hides the Configure reminders link for head even when canSendReminder=false", () => {
+  it("hides the Configure reminders link for head when ruleId is absent", () => {
     mockRole("head");
 
     render(<AlertBar {...baseProps} />);
@@ -156,10 +157,10 @@ describe("AlertBar — role gating", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("hides the Configure reminders link when an active policy is present (admin, canSendReminder=true)", () => {
+  it("hides the Configure reminders link for admin when ruleId is present", () => {
     mockRole("admin");
 
-    render(<AlertBar {...baseProps} canSendReminder />);
+    render(<AlertBar {...baseProps} ruleId={RULE_ID} />);
 
     expect(
       screen.queryByRole("link", { name: /configure reminders/i }),
@@ -173,7 +174,10 @@ describe("AlertBar — role gating", () => {
 
     const button = screen.getByRole("button", { name: /send reminder/i });
     expect(button).toBeDisabled();
-    expect(button).toHaveAttribute("title", "Active reminder policy required.");
+    expect(button).toHaveAttribute(
+      "title",
+      "Active deadline reminder required.",
+    );
   });
 
   it.each([
@@ -261,11 +265,12 @@ describe("AlertBar — role gating", () => {
       }),
     );
 
-    render(<AlertBar {...baseProps} canSendReminder />);
+    render(<AlertBar {...baseProps} ruleId={RULE_ID} />);
     fireEvent.click(screen.getByRole("button", { name: /send reminder/i }));
 
     expect(mutate).toHaveBeenCalledWith({
       reportId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      ruleId: RULE_ID,
     });
     expect(toast.error).toHaveBeenCalledWith("SMTP transport unavailable");
   });
@@ -302,7 +307,7 @@ describe("AlertBar — no reopen surface", () => {
     mockRole(null);
 
     const { container } = render(
-      <AlertBar {...baseProps} pendingLeads={[]} canSendReminder />,
+      <AlertBar {...baseProps} pendingLeads={[]} ruleId={RULE_ID} />,
     );
 
     expect(container).toBeEmptyDOMElement();
@@ -312,7 +317,7 @@ describe("AlertBar — no reopen surface", () => {
     mockRole(null);
 
     render(
-      <AlertBar {...baseProps} pendingLeads={["Alice"]} canSendReminder />,
+      <AlertBar {...baseProps} pendingLeads={["Alice"]} ruleId={RULE_ID} />,
     );
 
     expect(screen.getByText(/haven't started/i)).toBeInTheDocument();

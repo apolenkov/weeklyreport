@@ -10,7 +10,7 @@ import { IfRole } from "../../../shared/ui/auth-runtime/if-role";
 interface AlertBarProps {
   readonly pendingLeads: readonly string[];
   readonly reportId: string;
-  readonly canSendReminder: boolean;
+  readonly ruleId: string | null;
 }
 
 function AlertIcon() {
@@ -95,11 +95,7 @@ function ConfigureRemindersLink() {
   );
 }
 
-export function AlertBar({
-  pendingLeads,
-  reportId,
-  canSendReminder,
-}: AlertBarProps) {
+export function AlertBar({ pendingLeads, reportId, ruleId }: AlertBarProps) {
   const trpc = useTRPC();
   const dispatchMut = useMutation(
     trpc.reminders.dispatchPending.mutationOptions({
@@ -138,14 +134,16 @@ export function AlertBar({
       </div>
       <button
         type="button"
-        onClick={() => dispatchMut.mutate({ reportId })}
-        disabled={dispatchMut.isPending || !canSendReminder}
+        onClick={() => {
+          if (ruleId) dispatchMut.mutate({ reportId, ruleId });
+        }}
+        disabled={dispatchMut.isPending || ruleId === null}
         className="btn-press ml-auto inline-flex min-h-[36px] items-center rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-3.5 py-1.5 font-[family-name:var(--font-sans)] text-[13px] font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-        title={canSendReminder ? undefined : "Active reminder policy required."}
+        title={ruleId ? undefined : "Active deadline reminder required."}
       >
         {dispatchMut.isPending ? "Sending…" : "Send Reminder"}
       </button>
-      {!canSendReminder && <ConfigureRemindersLink />}
+      {!ruleId && <ConfigureRemindersLink />}
     </div>
   );
 }

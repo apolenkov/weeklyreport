@@ -396,8 +396,7 @@ describe("rate-limit middleware — fail-loud store policy", () => {
   });
 
   it("rejects a malformed Redis reply instead of asserting its shape", () => {
-    // The store previously cast the raw reply to RedisReply; an unexpected
-    // shape must now fail the guard, not pass through.
+    // Redis primitives and primitive arrays are valid; object shapes fail.
     expect(isRateLimitRedisReply(42)).toBe(true);
     expect(isRateLimitRedisReply("PONG")).toBe(true);
     expect(isRateLimitRedisReply([1, "two", true])).toBe(true);

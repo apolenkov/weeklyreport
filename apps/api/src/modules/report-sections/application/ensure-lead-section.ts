@@ -1,18 +1,33 @@
-import type { PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 
-import { isUniqueViolation } from "../../../lib/prisma-unique-violation.js";
+import { lockCurrentEditableReport } from "../../../lib/report-lifecycle.js";
+import { lockStatusGraph } from "../../../lib/status-graph-lock.js";
+import { PeriodLifecycleIntegrityError } from "../../period/index.js";
+import {
+  ReportSectionDomainError,
+  ReportSectionNotFoundError,
+} from "./report-sections.contract.js";
 
 // Provision a lead's `ReportSection` + seeded `ProjectStatus` rows at login.
-// Concurrent first-logins of the SAME lead can both miss the fast-path find;
-// the create is guarded by catch-on-unique-violation + re-read (loser wins).
+// Parent-first locking serializes provisioning with publish/archive transitions
+// and concurrent first logins before either reads or creates the child row.
 const INITIAL_STATUS = null;
-const SECTION_UNIQUE_INDEX = "ReportSection_reportId_authorId_key";
 
-function isSectionUniqueViolation(error: unknown): boolean {
-  return isUniqueViolation(error, {
-    index: SECTION_UNIQUE_INDEX,
-    columns: ["reportId", "authorId"],
-  });
+async function assertEditableReport(
+  tx: Prisma.TransactionClient,
+  reportId: string,
+): Promise<void> {
+  const gate = await lockCurrentEditableReport(tx, { reportId });
+  if (gate.kind === "not-found") {
+    throw new ReportSectionNotFoundError("The report no longer exists.");
+  }
+  if (gate.kind === "inconsistent") throw new PeriodLifecycleIntegrityError();
+  if (gate.kind === "not-editable") {
+    throw new ReportSectionDomainError(
+      "SECTION_ALREADY_SUBMITTED",
+      "Cannot provision a section outside an editable report.",
+    );
+  }
 }
 
 async function seedProjectStatuses(
@@ -74,29 +89,21 @@ export async function ensureLeadSection(
   reportId: string,
   userId: string,
 ): Promise<{ sectionId: string }> {
-  const existing = await prisma.reportSection.findUnique({
-    where: { reportId_authorId: { reportId, authorId: userId } },
-    select: { id: true },
-  });
-  if (existing) return { sectionId: existing.id };
-
-  try {
-    return await prisma.$transaction(async (tx) => {
-      const section = await tx.reportSection.create({
-        data: { reportId, authorId: userId },
-        select: { id: true },
-      });
-      await seedProjectStatuses(tx, section.id, userId);
-      await seedActivityStatuses(tx, section.id, userId);
-      return { sectionId: section.id };
-    });
-  } catch (error) {
-    if (!isSectionUniqueViolation(error)) throw error;
-    const won = await prisma.reportSection.findUnique({
+  return prisma.$transaction(async (tx) => {
+    await lockStatusGraph(tx);
+    await assertEditableReport(tx, reportId);
+    const existing = await tx.reportSection.findUnique({
       where: { reportId_authorId: { reportId, authorId: userId } },
       select: { id: true },
     });
-    if (!won) throw error;
-    return { sectionId: won.id };
-  }
+    if (existing) return { sectionId: existing.id };
+
+    const section = await tx.reportSection.create({
+      data: { reportId, authorId: userId },
+      select: { id: true },
+    });
+    await seedProjectStatuses(tx, section.id, userId);
+    await seedActivityStatuses(tx, section.id, userId);
+    return { sectionId: section.id };
+  });
 }

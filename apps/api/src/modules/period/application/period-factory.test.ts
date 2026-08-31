@@ -108,11 +108,6 @@ function makePrisma(opts: {
   return { client, create, findMany };
 }
 
-const P2002_OPEN_BOUNDARY = {
-  code: "P2002",
-  meta: { target: "Report_one_open_per_boundary" },
-};
-
 const P2039_PERIOD_OVERLAP = {
   code: "P2039",
   message:
@@ -167,7 +162,7 @@ describe("ensureCurrentPeriod", () => {
     );
 
     // The create data carries the full governed lifecycle field set from
-    // buildTransition (periodState + the legacy draft/false tuple), not a
+    // buildTransition (periodState plus the companion draft/false fields), not a
     // hand-assembled subset.
     const createArg = create.mock.calls[0]?.[0] as { data: ReportCreateData };
     expect(createArg.data).toMatchObject({
@@ -287,7 +282,7 @@ describe("ensureCurrentPeriod", () => {
       row: makePeriodRow({ periodState: null }),
     },
     {
-      label: "contradictory tuple",
+      label: "contradictory lifecycle fields",
       row: makePeriodRow({
         status: "published",
         periodState: "open",
@@ -306,10 +301,10 @@ describe("ensureCurrentPeriod", () => {
     expect(create).not.toHaveBeenCalled();
   });
 
-  it("concurrent create (P2002 on the open-boundary index) re-reads and returns the winner", async () => {
+  it("concurrent create (range exclusion) re-reads and returns the winner", async () => {
     const raced = makePeriodRow({ id: "period-winner" });
     const { client, create } = makePrisma({
-      createThrows: P2002_OPEN_BOUNDARY,
+      createThrows: P2039_PERIOD_OVERLAP,
       raced,
     });
 
@@ -330,7 +325,7 @@ describe("ensureCurrentPeriod", () => {
       periodState: "scheduled",
     });
     const { client, findMany } = makePrisma({
-      createThrows: P2002_OPEN_BOUNDARY,
+      createThrows: P2039_PERIOD_OVERLAP,
       raced,
     });
 
@@ -409,7 +404,7 @@ describe("ensureCurrentPeriod", () => {
     // handing it `now` — it does not blunt-skip the whole call when the deadline
     // has passed (that would drop still-future instants like a T+2h escalation).
     expect(policyApplicator.applyToPeriod).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "period-fut" }),
+      "period-fut",
       now,
     );
   });
@@ -431,7 +426,7 @@ describe("ensureCurrentPeriod", () => {
     // The applicator is still invoked — it (not the factory) decides per rule
     // which instants are elapsed, so a still-future escalation is not lost.
     expect(policyApplicator.applyToPeriod).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "period-late" }),
+      "period-late",
       lateNow,
     );
   });
@@ -478,7 +473,7 @@ describe("ensureCurrentPeriod", () => {
     );
 
     expect(policyApplicator.repairToPeriod).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "period-existing" }),
+      "period-existing",
       ANCHOR_MONDAY,
     );
   });

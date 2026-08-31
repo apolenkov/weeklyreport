@@ -47,6 +47,9 @@ describe("SearchPrismaRepository excludeTypes (integration)", () => {
         leadId: LEAD_ID,
       },
     });
+    await prisma.groupProduct.create({
+      data: { groupId: GROUP_ID, productId: PROJECT_ID },
+    });
     await prisma.report.create({
       data: {
         id: REPORT_ID,
@@ -74,6 +77,7 @@ describe("SearchPrismaRepository excludeTypes (integration)", () => {
         text: `${QUERY} item`,
         tag: "general",
         workflowStatus: "in_progress",
+        stageNames: ["Development"],
       },
     });
     await prisma.risk.create({
@@ -85,6 +89,7 @@ describe("SearchPrismaRepository excludeTypes (integration)", () => {
         impact: "high",
         mitigation: "mitigate",
         severity: "at-risk",
+        stageNames: ["Development"],
       },
     });
     await prisma.decision.create({
@@ -95,6 +100,7 @@ describe("SearchPrismaRepository excludeTypes (integration)", () => {
         text: `${QUERY} decision`,
         owner: "owner",
         impact: "high",
+        stageNames: ["Development"],
       },
     });
   });

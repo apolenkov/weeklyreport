@@ -11,6 +11,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { logs } from "@opentelemetry/api-logs";
 import type { ClsService } from "nestjs-cls";
 import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
@@ -208,6 +209,35 @@ describe("createAppLogger", () => {
     expect(parsed.level).toBe("info");
     expect(parsed.correlationId).toBe("no-context");
     expect(parsed.timestamp).not.toBe("1970-01-01T00:00:00.000Z");
+  });
+
+  it("does not let caller context spoof canonical trace fields in OTel", () => {
+    const stdoutSpy = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    const emit = vi.fn();
+    vi.spyOn(logs, "getLogger").mockReturnValue({ emit } as never);
+    const logger = createAppLogger();
+
+    logger.info("trace-safe", {
+      traceId: "spoofed-trace",
+      spanId: "spoofed-span",
+      correlationId: "spoofed-correlation",
+      requestId: "request-1",
+    });
+
+    const entry = JSON.parse(
+      expectDefined(stdoutSpy.mock.calls[0])[0] as string,
+    ) as Record<string, unknown>;
+    expect(entry.traceId).toBeUndefined();
+    expect(entry.spanId).toBeUndefined();
+    expect(entry.correlationId).toBe("no-context");
+    expect(emit).toHaveBeenCalledOnce();
+    const emitted = emit.mock.calls[0]?.[0] as unknown as {
+      attributes?: Record<string, unknown>;
+    };
+    expect(emitted.attributes?.requestId).toBe("request-1");
+    expect(emitted.attributes?.correlationId).toBe("no-context");
+    expect(emitted.attributes).not.toHaveProperty("traceId");
+    expect(emitted.attributes).not.toHaveProperty("spanId");
   });
 
   it("flush drains pending file writes before resolving", async () => {

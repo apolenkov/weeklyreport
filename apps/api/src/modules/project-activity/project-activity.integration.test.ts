@@ -8,6 +8,7 @@ import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
+  publishedSnapshotFixture,
 } from "../../test-utils/prisma-test-helper";
 import { ensureLeadSection } from "../report-sections/index.js";
 import { ReportSectionsPrismaRepository } from "../report-sections/test-seams/index.js";
@@ -69,6 +70,9 @@ describe("ProjectActivity (integration)", () => {
     });
     await prisma.project.create({
       data: { id: productId, name: "CRM Portal", leadId: leadA },
+    });
+    await prisma.groupProduct.create({
+      data: { groupId: groupA, productId },
     });
     await prisma.report.create({
       data: {
@@ -263,6 +267,13 @@ describe("ProjectActivity (integration)", () => {
         periodStatus: "published",
         periodState: "published",
         publishedAt: new Date("2026-06-26T16:00:00.000Z"),
+        publishedSnapshot: publishedSnapshotFixture({
+          reportId: publishedReportId,
+          periodStart: "2026-06-22T00:00:00.000Z",
+          periodEnd: "2026-06-28T00:00:00.000Z",
+          deadline: "2026-06-26T15:00:00.000Z",
+          publishedAt: "2026-06-26T16:00:00.000Z",
+        }),
       },
     });
     await prisma.reportSection.create({
@@ -357,6 +368,9 @@ describe("ProjectActivity (integration)", () => {
     const otherProductId = "b0000000-0000-4000-a000-00000000000b";
     await prisma.project.create({
       data: { id: otherProductId, name: "Billing Service", leadId: leadA },
+    });
+    await prisma.groupProduct.create({
+      data: { groupId: groupA, productId: otherProductId },
     });
 
     const updated = await repo.update({

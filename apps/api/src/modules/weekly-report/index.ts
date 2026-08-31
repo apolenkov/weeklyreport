@@ -5,3 +5,8 @@ export {
   WeeklyReportService,
   type WeeklyReportServiceResult,
 } from "./weekly-report.service.js";
+export {
+  WEEKLY_REPORT_LIFECYCLE,
+  type WeeklyReportLifecyclePort,
+} from "./weekly-report-lifecycle.port.js";
+export { buildPublishedReadModelFromSnapshot } from "./weekly-report-read-model.js";

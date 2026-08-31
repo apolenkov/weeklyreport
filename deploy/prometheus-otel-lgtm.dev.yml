@@ -2,9 +2,9 @@
 # Compose-owned Prometheus config for grafana/otel-lgtm (development override).
 # Mounted to /otel-lgtm/prometheus.yaml inside the container.
 # Extends the otel-lgtm defaults with scrape configs for our exporters.
-# Mounted by docker-compose.dev.yml over the prod-true file: the api target
-# is the published dev host port, which reaches both the dev api container
-# and an api run from source on the host.
+# Mounted by docker-compose.observability.dev.yml, composed last over the
+# prod-true file. The api target is the published dev host port, which reaches
+# both the dev api container and an api run from source on the host.
 
 global:
   scrape_interval: 15s

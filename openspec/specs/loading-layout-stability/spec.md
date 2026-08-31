@@ -37,7 +37,10 @@ The lead, head, and viewer report loading skeletons MUST preserve the loaded sur
 
 ### Requirement: Slide skeletons mirror the current full-width article
 
-The lead and head slide loading skeleton MUST represent the current full-width slide article with its hero, summary strip, four-column headings, and product-card body. It MUST NOT render the retired sidebar-plus-canvas layout. At compact widths, the placeholder MUST remain contained without horizontal page overflow.
+The lead and head slide loading skeleton MUST represent the current full-width
+slide article with its hero, summary strip, four-column headings, and
+product-card body. It MUST NOT render a sidebar-plus-canvas layout. At compact
+widths, the placeholder MUST remain contained without horizontal page overflow.
 
 #### Scenario: slide data resolves
 

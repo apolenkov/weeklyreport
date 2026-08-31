@@ -6,12 +6,8 @@ export const reminderAudienceSchema = z.enum([
   "head-of-late",
 ]);
 
-/** Reminder policy kind: deadline, escalation, or follow_up. */
-export const reminderPolicyKindSchema = z.enum([
-  "deadline",
-  "escalation",
-  "follow_up",
-]);
+/** Reminder policy kind. */
+export const reminderPolicyKindSchema = z.enum(["deadline", "escalation"]);
 
 // Resolvability probe: supportedValuesOf omit UTC/GMT/Etc/* the app itself uses.
 const isResolvableTimeZone = (timezone: string): boolean => {
@@ -45,6 +41,17 @@ export const reminderPolicySchema = z
     // same wire payload change meaning between reads.
     validFrom: z.coerce.date(),
     validUntil: z.coerce.date().nullable().default(null),
+  })
+  .superRefine((policy, context) => {
+    const expectedAudience =
+      policy.kind === "deadline" ? "lead-with-draft" : "head-of-late";
+    if (policy.audience !== expectedAudience) {
+      context.addIssue({
+        code: "custom",
+        path: ["audience"],
+        message: `${policy.kind} policies require the ${expectedAudience} audience`,
+      });
+    }
   })
   // Wire-level window invariant; UI can be bypassed by a malicious admin client.
   .refine(

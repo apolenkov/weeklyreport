@@ -5,25 +5,9 @@ export const MAX_SHORT_NAME_LENGTH = 16;
 /** Maximum accepted length of the full organization brand. */
 export const MAX_FULL_NAME_LENGTH = 200;
 
-/**
- * Canonical singleton organization identity with display-safe brand limits.
- */
-export const organizationSchema = z
-  .object({
-    id: z.literal("singleton"),
-    shortName: z.string().min(1).max(MAX_SHORT_NAME_LENGTH),
-    fullName: z.string().min(1).max(MAX_FULL_NAME_LENGTH),
-    createdAt: z.coerce.date(),
-    updatedAt: z.coerce.date(),
-  })
-  .readonly();
-
-// `<`/`>` are HTML tag delimiters and carry no legitimate brand meaning, so the
-// admin write boundary rejects them as defence-in-depth: a stored org name can
-// never reach an inline-script (or other markup) sink carrying breakout
-// characters. The read/projection schemas below stay unconstrained — they parse
-// values read FROM the database, so a legacy stored value must never make a
-// read throw.
+// `<`/`>` are HTML tag delimiters and carry no legitimate brand meaning. Apply
+// the same safe charset to writes and reads so every persisted/public value has
+// one current contract; out-of-contract stored data fails validation.
 const orgBrandString = (max: number) =>
   z
     .string()
@@ -32,6 +16,19 @@ const orgBrandString = (max: number) =>
     .refine((v) => !v.includes("<") && !v.includes(">"), {
       message: "must not contain '<' or '>'",
     });
+
+/**
+ * Canonical singleton organization identity with display-safe brand limits.
+ */
+export const organizationSchema = z
+  .object({
+    id: z.literal("singleton"),
+    shortName: orgBrandString(MAX_SHORT_NAME_LENGTH),
+    fullName: orgBrandString(MAX_FULL_NAME_LENGTH),
+    createdAt: z.coerce.date(),
+    updatedAt: z.coerce.date(),
+  })
+  .readonly();
 
 /**
  * Brand update input; the singleton identity is implicit and cannot be addressed by clients.
@@ -48,8 +45,8 @@ export const organizationUpdateSchema = z
  */
 export const organizationPublicSchema = z
   .object({
-    shortName: z.string().min(1).max(MAX_SHORT_NAME_LENGTH),
-    fullName: z.string().min(1).max(MAX_FULL_NAME_LENGTH),
+    shortName: orgBrandString(MAX_SHORT_NAME_LENGTH),
+    fullName: orgBrandString(MAX_FULL_NAME_LENGTH),
   })
   .readonly();
 

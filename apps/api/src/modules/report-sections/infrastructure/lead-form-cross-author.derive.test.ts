@@ -11,6 +11,10 @@ import {
 } from "./lead-form-cross-author.derive";
 import { fetchForeignContentSections } from "./lead-form-cross-author.fetch";
 import {
+  getPublishedCrossAuthorContent,
+  getPublishedSharedNonArchivedProductIds,
+} from "./lead-form-cross-author.query";
+import {
   buildCrossAuthorContentRows,
   groupCrossAuthorAuthors,
 } from "./lead-form-cross-author-content.derive";
@@ -21,6 +25,55 @@ const PROJECT_1 = "11111111-1111-4111-8111-111111111111";
 const PROJECT_2 = "22222222-2222-4222-8222-222222222222";
 const STAGE_DEV = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 const STAGE_TEST = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+
+function frozenCrossAuthorSnapshot() {
+  const section = (authorId: string, projectId: string) => ({
+    reportSectionId: `${authorId.slice(0, 8)}-0000-4000-8000-000000000001`,
+    reportId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    authorId,
+    authorName: authorId === AUTHOR_A ? "Viewer" : "Foreign",
+    authorRole: "lead" as const,
+    version: 1,
+    status: "submitted" as const,
+    submittedAt: null,
+    late: false,
+    projects: [
+      {
+        projectId,
+        projectName: "Frozen product",
+        trafficLight: null,
+        ownedStages: [{ stageId: STAGE_DEV, stageName: "Dev", sortOrder: 1 }],
+        stageSet: [{ stageId: STAGE_DEV, stageName: "Dev", sortOrder: 1 }],
+        ownerGroupId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      },
+    ],
+    referencedProjects: [],
+    items: [],
+    risks: [],
+    decisions: [],
+    activities: [],
+    reviews: [],
+    groupId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    groupName: "Frozen group",
+  });
+  return {
+    reportId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    periodStart: new Date("2026-05-04"),
+    periodEnd: new Date("2026-05-10"),
+    deadline: null,
+    status: "published" as const,
+    publishedAt: new Date("2026-05-10"),
+    publishedById: null,
+    publishedByName: null,
+    portfolioOverview: {
+      status: "green" as const,
+      totals: { green: 0, yellow: 0, red: 0 },
+    },
+    sections: [section(AUTHOR_A, PROJECT_1), section(AUTHOR_B, PROJECT_1)],
+  } as unknown as ReturnType<
+    typeof import("@customreport/report-persistence").requirePublishedSnapshot
+  >;
+}
 
 describe("fetchForeignContentSections", () => {
   it("orders every nested record collection by durable identity", async () => {
@@ -44,6 +97,50 @@ describe("fetchForeignContentSections", () => {
     expect(query?.select.items.orderBy).toEqual({ stableId: "asc" });
     expect(query?.select.risks.orderBy).toEqual({ stableId: "asc" });
     expect(query?.select.decisions.orderBy).toEqual({ stableId: "asc" });
+  });
+});
+
+describe("published cross-author assignment races", () => {
+  it("grant-after-publish does NOT grant frozen foreign access", () => {
+    const snapshot = frozenCrossAuthorSnapshot();
+    const beforeGrant = getPublishedSharedNonArchivedProductIds(
+      snapshot,
+      AUTHOR_A,
+      AUTHOR_B,
+    );
+    // A new live StageAssignment/project grant is intentionally not an input
+    // to this pure published projection read.
+    const afterGrant = getPublishedSharedNonArchivedProductIds(
+      snapshot,
+      AUTHOR_A,
+      AUTHOR_B,
+    );
+    expect(afterGrant).toEqual(beforeGrant);
+    expect(
+      getPublishedCrossAuthorContent(snapshot, AUTHOR_A).rows,
+    ).toHaveLength(1);
+  });
+
+  it("revoke-after-publish does NOT revoke frozen coownership or content", () => {
+    const snapshot = frozenCrossAuthorSnapshot();
+    const beforeRevoke = getPublishedCrossAuthorContent(snapshot, AUTHOR_A);
+    // Removing the live assignment after publication cannot alter immutable
+    // ownedStages or the frozen cross-author result.
+    const afterRevoke = getPublishedCrossAuthorContent(snapshot, AUTHOR_A);
+    expect(afterRevoke).toEqual(beforeRevoke);
+    expect(afterRevoke.coOwnsShared).toBe(true);
+  });
+
+  it("publish/reopen between former authorization and content calls cannot mix states", () => {
+    const snapshot = frozenCrossAuthorSnapshot();
+    const frozenIds = getPublishedSharedNonArchivedProductIds(
+      snapshot,
+      AUTHOR_A,
+      AUTHOR_B,
+    );
+    const result = getPublishedCrossAuthorContent(snapshot, AUTHOR_A);
+    expect(frozenIds).toEqual([PROJECT_1]);
+    expect(result.rows[0]?.sharedProductIds).toEqual(frozenIds);
   });
 });
 
@@ -72,6 +169,17 @@ describe("deriveForeignStageStatus", () => {
     ).toBe("yellow");
   });
 
+  it("does not treat an empty product stage set as a wildcard", () => {
+    expect(
+      deriveForeignStageStatus(
+        dev,
+        PROJECT_1,
+        [{ projectId: PROJECT_1, severity: "blocked", stageNames: [] }],
+        "green",
+      ),
+    ).toBe("green");
+  });
+
   it("blocked wins over at-risk within the named stage set", () => {
     expect(
       deriveForeignStageStatus(
@@ -97,7 +205,7 @@ describe("deriveForeignStageStatus", () => {
     ).toBe("green");
   });
 
-  it("ignores a named risk that does not name this stage (Dev↔Development aliasing aside)", () => {
+  it("ignores a named risk that does not exactly name this stage", () => {
     expect(
       deriveForeignStageStatus(
         dev,

@@ -26,26 +26,6 @@ export const VASILY_LABEL = "Василий И.";
 export const MARIA_LABEL = "Мария К.";
 export const IGOR_LABEL = "Игорь В.";
 
-// Stage and tag vocabularies: named so a typo is a type error and so repeated
-// dataset literals stay a single source of truth.
-export const STAGE = {
-  planning: "Planning",
-  analysis: "Analysis",
-  design: "Design",
-  development: "Development",
-  testing: "Testing",
-  devops: "DevOps",
-} as const;
-
-export const TAG = {
-  feature: "feature",
-  bugfix: "bugfix",
-  infra: "infra",
-  ops: "ops",
-  research: "research",
-  techDebt: "tech-debt",
-} as const;
-
 export const DEMO_LEADS: readonly DemoLead[] = [
   {
     id: LEAD_1_ID,

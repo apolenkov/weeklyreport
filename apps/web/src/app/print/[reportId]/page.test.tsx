@@ -47,6 +47,7 @@ function session(role: Role): NonNullable<PrintRouteContext["session"]> {
 function renderPage() {
   return PrintReportPage({
     params: Promise.resolve({ reportId: REPORT_ID }),
+    searchParams: Promise.resolve({ jobId: "job-123" }),
   });
 }
 
@@ -56,6 +57,7 @@ describe("PrintReportPage server gate", () => {
       session: session("head"),
       isPdfExport: true,
       pdfReportId: REPORT_ID,
+      pdfJobId: "job-123",
     });
 
     render(await renderPage());
@@ -71,11 +73,41 @@ describe("PrintReportPage server gate", () => {
       session: session("head"),
       isPdfExport: true,
       pdfReportId: "other-report",
+      pdfJobId: "job-123",
     });
 
     await expect(renderPage()).rejects.toThrow(
       `NEXT_REDIRECT:/head/report/${REPORT_ID}`,
     );
+  });
+
+  it("rejects a worker token bound to another export job", async () => {
+    getPrintRouteContextMock.mockResolvedValue({
+      session: session("head"),
+      isPdfExport: true,
+      pdfReportId: REPORT_ID,
+      pdfJobId: "different-job",
+    });
+
+    await expect(renderPage()).rejects.toThrow(
+      `NEXT_REDIRECT:/head/report/${REPORT_ID}`,
+    );
+  });
+
+  it("rejects a worker request without a job id", async () => {
+    getPrintRouteContextMock.mockResolvedValue({
+      session: session("head"),
+      isPdfExport: true,
+      pdfReportId: REPORT_ID,
+      pdfJobId: "job-123",
+    });
+
+    await expect(
+      PrintReportPage({
+        params: Promise.resolve({ reportId: REPORT_ID }),
+        searchParams: Promise.resolve({}),
+      }),
+    ).rejects.toThrow(`NEXT_REDIRECT:/head/report/${REPORT_ID}`);
   });
 
   it.each([
@@ -88,6 +120,7 @@ describe("PrintReportPage server gate", () => {
       session: session(role),
       isPdfExport: false,
       pdfReportId: null,
+      pdfJobId: null,
     });
 
     await expect(renderPage()).rejects.toThrow(`NEXT_REDIRECT:${target}`);
@@ -98,6 +131,7 @@ describe("PrintReportPage server gate", () => {
       session: null,
       isPdfExport: false,
       pdfReportId: null,
+      pdfJobId: null,
     });
 
     const returnPath = encodeURIComponent(`/print/${REPORT_ID}`);

@@ -1,3 +1,4 @@
+import { AUTH_COOKIE_NAME } from "@customreport/shared";
 import type { Job } from "bullmq";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -47,10 +48,12 @@ vi.mock("../../modules/pdf-export/index.js", () => ({
   PdfExportService: class {
     markExportCompleted = vi.fn();
     markExportFailed = vi.fn();
+    reconcileTerminalState = vi.fn();
+    assertPdfExportJobIdentity = vi.fn();
     signPdfExportToken = vi.fn().mockReturnValue("fresh-jwt");
     buildAuthCookies = vi.fn().mockReturnValue([
       {
-        name: "customreport_session",
+        name: AUTH_COOKIE_NAME,
         value: "fake-jwt",
         domain: "localhost",
         path: "/",
@@ -121,12 +124,14 @@ function createMockPdfExportService() {
   return {
     markExportCompleted: vi.fn().mockResolvedValue(undefined),
     markExportFailed: vi.fn().mockResolvedValue(undefined),
+    reconcileTerminalState: vi.fn().mockResolvedValue(true),
+    assertPdfExportJobIdentity: vi.fn().mockResolvedValue(undefined),
     // The processor mints the short-lived render JWT at execution time and
     // passes it to buildAuthCookies before page.goto.
     signPdfExportToken: vi.fn().mockReturnValue("fresh-jwt"),
     buildAuthCookies: vi.fn().mockReturnValue([
       {
-        name: "customreport_session",
+        name: AUTH_COOKIE_NAME,
         value: "fake-jwt",
         domain: "localhost",
         path: "/",
@@ -148,7 +153,12 @@ function createMockJob(
   attemptsMade = 0,
   attempts = 1,
 ): Job<PdfExportJobData> {
-  return { data, attemptsMade, opts: { attempts } } as Job<PdfExportJobData>;
+  return {
+    id: data.jobId,
+    data,
+    attemptsMade,
+    opts: { attempts },
+  } as Job<PdfExportJobData>;
 }
 
 // Test seam — `processJob` is `protected`; cast through this interface so
@@ -205,6 +215,25 @@ describe("PdfExportProcessor.processJob", () => {
     expect(chromium.launch).toHaveBeenCalledWith({ headless: true });
   });
 
+  it("fails closed when queue identity does not match the persisted job", async () => {
+    setupMocks();
+    const mockService = createMockPdfExportService();
+    mockService.assertPdfExportJobIdentity.mockRejectedValueOnce(
+      new Error("PDF export job job-1 was not found."),
+    );
+    const processor = new PdfExportProcessor(mockService as never, STUB_ENV);
+    const job = createMockJob({
+      reportId: "wrong-report",
+      jobId: "job-1",
+      requestedBy: "user-1",
+    });
+
+    await expect(
+      (processor as unknown as ProcessorTestSeam).processJob(job),
+    ).rejects.toThrow("PDF export job job-1 was not found.");
+    expect(chromium.launch).not.toHaveBeenCalled();
+  });
+
   it("mints a fresh render token at execution time and never reads one from job data", async () => {
     // The durable payload carries only identifiers; the worker signs a fresh
     // short-lived token from them and feeds exactly that token into the cookie.
@@ -221,6 +250,7 @@ describe("PdfExportProcessor.processJob", () => {
 
     expect(mockService.signPdfExportToken).toHaveBeenCalledExactlyOnceWith(
       "report-1",
+      "job-1",
       "user-1",
     );
     expect(mockService.buildAuthCookies).toHaveBeenCalledWith("fresh-jwt");
@@ -241,7 +271,7 @@ describe("PdfExportProcessor.processJob", () => {
     // Print route lives at /print/[id] (top-level, outside the (app) route
     // group) so the print viewport doesn't inherit NavBar/DEV switcher chrome.
     expect(mockPage.goto).toHaveBeenCalledWith(
-      "http://localhost:3000/print/report-1",
+      "http://localhost:3000/print/report-1?jobId=job-1",
       { waitUntil: "domcontentloaded", timeout: 60_000 },
     );
   });
@@ -539,10 +569,43 @@ describe("PdfExportProcessor.onModuleInit", () => {
       new Error("browser missing") as never,
     );
 
-    expect(mockService.markExportFailed).toHaveBeenCalledWith(
-      "job-1",
-      "browser missing",
+    expect(mockService.reconcileTerminalState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        jobId: "job-1",
+        reportId: "report-1",
+        requestedBy: "user-1",
+        status: "failed",
+      }),
     );
     expect(mockService.markExportCompleted).not.toHaveBeenCalled();
+  });
+
+  it("rejects a failed event whose BullMQ id does not match its payload", () => {
+    const mockService = createMockPdfExportService();
+    const processor = new PdfExportProcessor(mockService as never, STUB_ENV);
+    processor.onModuleInit();
+    const instances = (
+      Worker as unknown as {
+        instances: { handlers: Record<string, (...args: never[]) => void> }[];
+      }
+    ).instances;
+    const failedHandler = instances.at(-1)?.handlers.failed;
+    const jobData = {
+      reportId: "report-1",
+      jobId: "job-1",
+      requestedBy: "user-1",
+    };
+
+    failedHandler?.(
+      {
+        id: "other-job",
+        data: jobData,
+        attemptsMade: 3,
+        opts: { attempts: 3 },
+      } as never,
+      new Error("bad") as never,
+    );
+
+    expect(mockService.reconcileTerminalState).not.toHaveBeenCalled();
   });
 });

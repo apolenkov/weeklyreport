@@ -1,16 +1,17 @@
 import type { ReportStatus, UserSession } from "@customreport/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
 import {
   WeeklyReportPrismaRepository,
   WeeklyReportService,
 } from "../../modules/weekly-report/index.js";
+import { createNullAuditLogger } from "../../test-utils/audit-logger.js";
 import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
+  publishedSnapshotFixture,
 } from "../../test-utils/prisma-test-helper";
 import { createStubAppRouterDeps } from "../../test-utils/stub-app-router-deps.js";
 import type { PrismaService } from "../prisma/prisma.service";
@@ -44,23 +45,64 @@ describe("reports.latestForViewer (integration)", () => {
     periodStatus: "open" | "published" | "reopened",
     periodStart: string,
     archived = false,
+    sectionOwner?: {
+      readonly groupId: string;
+      readonly authorId: string;
+      readonly authorName: string;
+    },
   ): Promise<void> {
+    const periodEnd = new Date(periodStart);
+    const publishedAt = new Date(periodStart);
     await prisma.report.create({
       data: {
         id,
         periodStart: new Date(periodStart),
-        periodEnd: new Date(periodStart),
+        periodEnd,
         deadline: new Date(periodStart),
         status,
         periodStatus,
         archived,
+        ...(periodStatus !== "open" ? { publishedAt } : {}),
         periodState: archived
           ? "archived"
           : periodStatus === "published"
             ? "published"
             : "open",
+        ...(periodStatus !== "open"
+          ? {
+              publishedSnapshot: publishedSnapshotFixture({
+                reportId: id,
+                periodStart,
+                periodEnd,
+                deadline: periodEnd,
+                publishedAt,
+                sectionOwners: sectionOwner
+                  ? [
+                      {
+                        reportSectionId: id,
+                        ...sectionOwner,
+                        groupName:
+                          sectionOwner.groupId === GROUP_A_ID
+                            ? "Group A"
+                            : "Group B",
+                      },
+                    ]
+                  : [],
+              }),
+            }
+          : {}),
       },
     });
+    if (periodStatus !== "open" && sectionOwner) {
+      await prisma.publishedSectionScope.create({
+        data: {
+          reportId: id,
+          reportSectionId: id,
+          authorId: sectionOwner.authorId,
+          groupId: sectionOwner.groupId,
+        },
+      });
+    }
   }
 
   async function createSection(
@@ -139,6 +181,8 @@ describe("reports.latestForViewer (integration)", () => {
       "published",
       "published",
       "2026-05-04T00:00:00.000Z",
+      false,
+      { groupId: GROUP_A_ID, authorId: LEAD_A_ID, authorName: "Lead A" },
     );
     await createReport(
       REPORT_OPEN_A,
@@ -151,12 +195,16 @@ describe("reports.latestForViewer (integration)", () => {
       "published",
       "published",
       "2026-05-18T00:00:00.000Z",
+      false,
+      { groupId: GROUP_B_ID, authorId: LEAD_B_ID, authorName: "Lead B" },
     );
     await createReport(
       REPORT_REOPENED_A,
       "published",
       "reopened",
       "2026-05-25T00:00:00.000Z",
+      false,
+      { groupId: GROUP_A_ID, authorId: LEAD_A_ID, authorName: "Lead A" },
     );
 
     await createSection(REPORT_OLD_PUB_A, LEAD_A_ID);
@@ -214,6 +262,8 @@ describe("reports.latestForViewer (integration)", () => {
       "published",
       "published",
       "2026-05-04T00:00:00.000Z",
+      false,
+      { groupId: GROUP_A_ID, authorId: LEAD_A_ID, authorName: "Lead A" },
     );
     await createReport(
       REPORT_NEW_PUB_B,
@@ -221,6 +271,7 @@ describe("reports.latestForViewer (integration)", () => {
       "published",
       "2026-05-25T00:00:00.000Z",
       true,
+      { groupId: GROUP_A_ID, authorId: LEAD_A_ID, authorName: "Lead A" },
     );
     await createSection(REPORT_OLD_PUB_A, LEAD_A_ID);
     await createSection(REPORT_NEW_PUB_B, LEAD_A_ID);
@@ -238,6 +289,7 @@ describe("reports.latestForViewer (integration)", () => {
       "published",
       "2026-05-25T00:00:00.000Z",
       true,
+      { groupId: GROUP_A_ID, authorId: LEAD_A_ID, authorName: "Lead A" },
     );
     await createSection(REPORT_NEW_PUB_B, LEAD_A_ID);
 
@@ -253,6 +305,8 @@ describe("reports.latestForViewer (integration)", () => {
       "published",
       "published",
       "2026-05-18T00:00:00.000Z",
+      false,
+      { groupId: GROUP_B_ID, authorId: LEAD_B_ID, authorName: "Lead B" },
     );
     await createSection(REPORT_NEW_PUB_B, LEAD_B_ID);
 

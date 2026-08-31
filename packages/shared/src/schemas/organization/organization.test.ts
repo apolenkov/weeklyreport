@@ -34,8 +34,8 @@ describe("organizationUpdateSchema character guard", () => {
   });
 });
 
-describe("organization schemas compatibility bounds", () => {
-  it("uses the exported length bounds for stored and update schemas", () => {
+describe("organization schemas current bounds", () => {
+  it("uses the exported length bounds for stored, public, and update schemas", () => {
     expect(
       organizationUpdateSchema.safeParse({
         shortName: "A".repeat(MAX_SHORT_NAME_LENGTH + 1),
@@ -57,14 +57,29 @@ describe("organization schemas compatibility bounds", () => {
         updatedAt: new Date(),
       }).success,
     ).toBe(false);
-  });
-
-  it("keeps stored names readable when they exceed the current write charset", () => {
     expect(
       organizationPublicSchema.safeParse({
         shortName: "ok",
-        fullName: "legacy <name>",
+        fullName: "A".repeat(MAX_FULL_NAME_LENGTH + 1),
       }).success,
-    ).toBe(true);
+    ).toBe(false);
+  });
+
+  it("rejects unsafe characters in stored and public names", () => {
+    expect(
+      organizationPublicSchema.safeParse({
+        shortName: "ok",
+        fullName: "unsafe <name>",
+      }).success,
+    ).toBe(false);
+    expect(
+      organizationSchema.safeParse({
+        id: "singleton",
+        shortName: "ok",
+        fullName: "unsafe >name",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }).success,
+    ).toBe(false);
   });
 });

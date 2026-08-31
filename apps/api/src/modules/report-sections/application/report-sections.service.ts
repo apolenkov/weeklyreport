@@ -4,7 +4,6 @@ import {
   draftSaveSchema,
   MS_PER_HOUR,
   MS_PER_SECOND,
-  type MyHistoryEntry,
   type ReportSectionReadModel,
   reportSectionReadModelSchema,
   type SubmitSectionInput,
@@ -17,7 +16,6 @@ import {
 } from "@customreport/shared";
 
 import { createServiceLogger } from "../../../lib/logger-service.js";
-import { buildMyHistoryEntries } from "../domain/my-history.js";
 import { findPublishedRecordViolation } from "../domain/published-record-guard.js";
 import { mergeSection } from "../domain/report-section-merge.js";
 import {
@@ -223,7 +221,7 @@ export class ReportSectionsService {
     this.assertCanEditSection(section, actorUserId);
 
     // Gate the destructive delete-recreate on the canonical period status, not
-    // the legacy Report.status column: a section can sit in `draft` under a
+    // the Report.status column: a section can sit in `draft` under a
     // published period, and submitting would rewrite rows the snapshot froze.
     const writeGate = await this.repository.getReportPeriodWriteGateForSection(
       section.reportSectionId,
@@ -247,7 +245,7 @@ export class ReportSectionsService {
     if (errors.length > 0) {
       const firstError = errors.at(0);
       // `errors.length > 0` guarantees firstError exists, but TS narrows the
-      // tuple access to `T | undefined` — explicit guard satisfies strict.
+      // field access to `T | undefined` — explicit guard satisfies strict.
       if (firstError) {
         throw new ReportSectionDomainError(firstError.code, firstError.message);
       }
@@ -289,8 +287,10 @@ export class ReportSectionsService {
     return saved;
   }
 
-  async myHistory(authorId: string): Promise<MyHistoryEntry[]> {
-    const sections = await this.repository.getMyHistoryRows(authorId);
-    return buildMyHistoryEntries(sections);
+  async myHistory(
+    authorId: string,
+    pagination: { cursor?: string | undefined; limit: number },
+  ) {
+    return this.repository.getMyHistoryPage(authorId, pagination);
   }
 }

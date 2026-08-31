@@ -12,8 +12,8 @@ export interface SearchRouterDeps {
   searchService: SearchService;
 }
 
-// Service gates scope='all' via SearchAuthorizationError → FORBIDDEN;
-// protectedProcedure is enough because the service is the real authz gate.
+// Service applies role/scope authorization via SearchAuthorizationError →
+// FORBIDDEN; protectedProcedure is enough because the service is the authz gate.
 
 export function createSearchRouter(deps: SearchRouterDeps) {
   return router({

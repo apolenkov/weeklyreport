@@ -26,10 +26,6 @@
 .card-surface-hover:hover {
   box-shadow: var(--card-surface-shadow-hover);
 }
-.toolbar-band-fill {
-  background-image: var(--toolbar-band-gradient);
-}
-
 @keyframes skeleton-shimmer {
   0% {
     background-position: 200% 0;
@@ -37,49 +33,6 @@
   100% {
     background-position: -200% 0;
   }
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-in {
-  animation: fade-in 0.4s ease-out both;
-}
-
-.stagger-children > * {
-  animation: fade-in 0.4s ease-out both;
-}
-.stagger-children > *:nth-child(1) {
-  animation-delay: 0ms;
-}
-.stagger-children > *:nth-child(2) {
-  animation-delay: 60ms;
-}
-.stagger-children > *:nth-child(3) {
-  animation-delay: 120ms;
-}
-.stagger-children > *:nth-child(4) {
-  animation-delay: 180ms;
-}
-.stagger-children > *:nth-child(5) {
-  animation-delay: 240ms;
-}
-.stagger-children > *:nth-child(6) {
-  animation-delay: 300ms;
-}
-.stagger-children > *:nth-child(7) {
-  animation-delay: 360ms;
-}
-.stagger-children > *:nth-child(8) {
-  animation-delay: 420ms;
 }
 
 @keyframes scale-in {
@@ -95,38 +48,6 @@
 
 .animate-scale-in {
   animation: scale-in 0.2s ease-out both;
-}
-
-[data-slot="collapsible-content"] {
-  overflow: hidden;
-}
-[data-slot="collapsible-content"][data-state="open"] {
-  animation: collapsible-down 0.2s ease-out;
-}
-[data-slot="collapsible-content"][data-state="closed"] {
-  animation: collapsible-up 0.2s ease-out;
-}
-
-@keyframes collapsible-down {
-  from {
-    height: 0;
-    opacity: 0;
-  }
-  to {
-    height: var(--radix-collapsible-content-height);
-    opacity: 1;
-  }
-}
-
-@keyframes collapsible-up {
-  from {
-    height: var(--radix-collapsible-content-height);
-    opacity: 1;
-  }
-  to {
-    height: 0;
-    opacity: 0;
-  }
 }
 
 .btn-press:active {
@@ -145,12 +66,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-fade-in,
   .animate-scale-in,
-  .stagger-children > *,
-  .skeleton,
-  [data-slot="collapsible-content"][data-state="open"],
-  [data-slot="collapsible-content"][data-state="closed"] {
+  .skeleton {
     animation: none;
     opacity: 1;
     transform: none;

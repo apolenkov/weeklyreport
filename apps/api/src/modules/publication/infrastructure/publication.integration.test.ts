@@ -7,6 +7,7 @@ import {
   createTestPrisma,
   disconnectTestPrisma,
   seedTestData,
+  TEST_IDS,
 } from "../../../test-utils/prisma-test-helper";
 import { PublicationPrismaRepository } from "./publication.prisma-repository";
 
@@ -131,6 +132,17 @@ describe("PublicationPrismaRepository (integration)", () => {
   });
 
   it("saveAutoPublishedReport writes the full autoPublish set for a non-archived draft", async () => {
+    const frozenItem = await prisma.item.create({
+      data: {
+        reportSectionId: testData.section.id,
+        projectId: testData.project.id,
+        type: "current",
+        text: "auto projection publication",
+        tag: "general",
+        workflowStatus: "in_progress",
+        stageNames: ["Development"],
+      },
+    });
     const assembled = await repo.getAssembledReport(testData.report.id);
     expect(assembled).not.toBeNull();
 
@@ -154,6 +166,17 @@ describe("PublicationPrismaRepository (integration)", () => {
     expect(expectDefined(reloaded).periodState).toBe("published");
     expect(expectDefined(reloaded).autoPublished).toBe(true);
     expect(expectDefined(reloaded).publishedById).toBeNull();
+    await expect(
+      prisma.publishedSearchDocument.findMany({
+        where: { reportId: testData.report.id },
+      }),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        recordId: frozenItem.id,
+        title: "auto projection publication",
+        groupId: TEST_IDS.group,
+      }),
+    ]);
   });
 
   it("saveAutoPublishedReport freezes the snapshot from a fresh in-transaction re-read (captures a lead edit committed after assemble)", async () => {
@@ -219,4 +242,41 @@ describe("PublicationPrismaRepository (integration)", () => {
     expect(expectDefined(reloaded).periodState).toBe("archived");
     expect(expectDefined(reloaded).periodStatus).not.toBe("published");
   });
+
+  it.each([
+    ["moved to a future deadline", new Date("2026-05-01T10:00:00.000Z")],
+    ["cleared deadline", null],
+  ])(
+    "saveAutoPublishedReport skips when the deadline is %s after candidate selection",
+    async (_description, currentDeadline) => {
+      const assembled = await repo.getAssembledReport(testData.report.id);
+      const selectedDeadline = expectDefined(assembled).deadline;
+      expect(selectedDeadline).not.toBeNull();
+      const published = {
+        ...expectDefined(assembled),
+        status: "published" as const,
+        publishedAt: new Date("2026-04-12T10:00:00.000Z"),
+        publishedById: null,
+      };
+
+      // Model an admin edit after the scheduler selected the overdue row.
+      await prisma.report.update({
+        where: { id: testData.report.id },
+        data: { deadline: currentDeadline },
+      });
+
+      const result = await repo.saveAutoPublishedReport(
+        published,
+        expectDefined(selectedDeadline),
+      );
+
+      expect(result).toEqual({ published: false });
+      const reloaded = await prisma.report.findUnique({
+        where: { id: testData.report.id },
+      });
+      expect(expectDefined(reloaded).status).toBe("draft");
+      expect(expectDefined(reloaded).publishedSnapshot).toBeNull();
+      expect(expectDefined(reloaded).deadline).toEqual(currentDeadline);
+    },
+  );
 });

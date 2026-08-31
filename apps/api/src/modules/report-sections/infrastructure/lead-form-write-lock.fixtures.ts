@@ -2,6 +2,11 @@ import type { PrismaClient } from "@prisma/client";
 
 import type { seedTestData } from "../../../test-utils/prisma-test-helper.js";
 import { buildTransition } from "../../period/index.js";
+import {
+  buildAssembledReportFromPrismaRow,
+  reportFullIncludeForSnapshot,
+  toPublishedSnapshotJson,
+} from "../index.js";
 
 type TestData = Awaited<ReturnType<typeof seedTestData>>;
 
@@ -12,24 +17,18 @@ export async function publishTarget(
   prisma: PrismaClient,
   testData: TestData,
 ): Promise<void> {
-  await prisma.report.update({
-    where: { id: testData.report.id },
-    data: {
-      ...buildTransition("autoPublish", { now: publishedAt }),
-    },
-  });
+  await publishReportWithSnapshot(prisma, testData.report.id);
 }
 
 async function createSourceSection(
   prisma: PrismaClient,
   testData: TestData,
-): Promise<string> {
+): Promise<{ reportId: string; sectionId: string }> {
   const sourceReport = await prisma.report.create({
     data: {
       periodStart: new Date("2026-07-07T00:00:00.000Z"),
       periodEnd: new Date("2026-07-13T00:00:00.000Z"),
       deadline: new Date("2026-07-12T18:00:00.000Z"),
-      ...buildTransition("autoPublish", { now: publishedAt }),
     },
   });
   const source = await prisma.reportSection.create({
@@ -39,7 +38,29 @@ async function createSourceSection(
       status: "submitted",
     },
   });
-  return source.id;
+  return { reportId: sourceReport.id, sectionId: source.id };
+}
+
+async function publishReportWithSnapshot(
+  prisma: PrismaClient,
+  reportId: string,
+): Promise<void> {
+  const candidate = await prisma.report.findUniqueOrThrow({
+    where: { id: reportId },
+    include: reportFullIncludeForSnapshot,
+  });
+  const snapshot = buildAssembledReportFromPrismaRow({
+    ...candidate,
+    status: "published",
+    publishedAt,
+  });
+  await prisma.report.update({
+    where: { id: reportId },
+    data: {
+      ...buildTransition("autoPublish", { now: publishedAt }),
+      publishedSnapshot: toPublishedSnapshotJson(snapshot),
+    },
+  });
 }
 
 function seedItems(
@@ -56,6 +77,7 @@ function seedItems(
         text: "Source item",
         tag: "plan",
         workflowStatus: "planned",
+        stageNames: ["Development"],
       },
       {
         reportSectionId: testData.section.id,
@@ -64,6 +86,7 @@ function seedItems(
         text: "Target item",
         tag: "feature",
         workflowStatus: "in_progress",
+        stageNames: ["Development"],
       },
     ],
   });
@@ -83,6 +106,7 @@ function seedRisks(
         impact: "High",
         mitigation: "Mitigate",
         severity: "blocked",
+        stageNames: ["Development"],
       },
       {
         reportSectionId: testData.section.id,
@@ -91,6 +115,7 @@ function seedRisks(
         impact: "Low",
         mitigation: "Monitor",
         severity: "at-risk",
+        stageNames: ["Development"],
       },
     ],
   });
@@ -109,6 +134,7 @@ function seedDecisions(
         text: "Source decision",
         owner: "Lead",
         impact: "High",
+        stageNames: ["Development"],
       },
       {
         reportSectionId: testData.section.id,
@@ -116,6 +142,7 @@ function seedDecisions(
         text: "Target decision",
         owner: "Lead",
         impact: "Low",
+        stageNames: ["Development"],
       },
     ],
   });
@@ -125,13 +152,14 @@ export async function seedFillRows(
   prisma: PrismaClient,
   testData: TestData,
 ): Promise<string> {
-  const sourceSectionId = await createSourceSection(prisma, testData);
+  const source = await createSourceSection(prisma, testData);
   await Promise.all([
-    seedItems(prisma, testData, sourceSectionId),
-    seedRisks(prisma, testData, sourceSectionId),
-    seedDecisions(prisma, testData, sourceSectionId),
+    seedItems(prisma, testData, source.sectionId),
+    seedRisks(prisma, testData, source.sectionId),
+    seedDecisions(prisma, testData, source.sectionId),
   ]);
-  return sourceSectionId;
+  await publishReportWithSnapshot(prisma, source.reportId);
+  return source.sectionId;
 }
 
 export function targetRows(prisma: PrismaClient, testData: TestData) {

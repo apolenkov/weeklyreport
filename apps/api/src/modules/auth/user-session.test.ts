@@ -314,7 +314,7 @@ describe("buildUserSession — first-login create race (P2002 reread)", () => {
   });
 });
 
-// A reused email pointing at a different IdP identity must not inherit the old
+// A reused email pointing at a different IdP identity must not inherit the matched
 // account's role/group: an email match with a mismatched samlId is refused.
 describe("buildUserSession — samlId identity cross-check", () => {
   const EXISTING_USER = {
@@ -396,21 +396,5 @@ describe("buildUserSession — samlId identity cross-check", () => {
 
     expect(session.userId).toBe(EXISTING_USER.id);
     expect(prisma.user.update).not.toHaveBeenCalled();
-  });
-
-  it("a stored user with no samlId on record still resolves by email, unchanged", async () => {
-    // Empty samlId models the seed/dev-login carve-out: the ratified rule
-    // only compares samlId when BOTH sides carry one.
-    const { prisma } = fakePrisma("");
-    const profile: SamlProfile = {
-      samlId: "saml-any-idp-value",
-      email: EXISTING_USER.email,
-      displayName: "Whoever",
-      role: "lead",
-    };
-
-    const session = await buildUserSession(prisma, profile, failIfProvisioned);
-
-    expect(session.userId).toBe(EXISTING_USER.id);
   });
 });

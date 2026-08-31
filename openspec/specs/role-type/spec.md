@@ -9,7 +9,7 @@ Keep role vocabularies in one shared source per session and persistence axis, wi
 ### Requirement: The role vocabulary has one source of truth per axis
 
 The workspace MUST expose exactly two role contracts, both in
-`packages/shared` (`schemas/auth.ts`): `roleSchema` with its inferred
+`packages/shared/src/schemas/auth/auth.ts`: `roleSchema` with its inferred
 `DbRole` type for the persistence axis, and `sessionRoleSchema` with its
 inferred `Role` type for the session axis. The
 `"lead" | "head" | "admin" | "viewer"` literal union MUST NOT be re-declared
@@ -82,7 +82,7 @@ label (e.g. CSS `text-transform`/`capitalize` on the literal value).
 
 ### Requirement: Role-membership guards derive from the shared schema
 
-Runtime role-membership checks (`isRole`, `VALID_ROLES`, and equivalents) MUST
+Runtime role-membership checks (`isRole` and equivalents) MUST
 derive their accepted value set from `sessionRoleSchema.options` (or an
 equivalent schema-backed check, e.g. `sessionRoleSchema.safeParse`) rather
 than hand-writing the four-role literal list a second time. A field typed
@@ -92,6 +92,6 @@ retyped to `Role` or `DbRole` per the axis rule above.
 #### Scenario: the session role set changes
 
 - **WHEN** `sessionRoleSchema`'s enum members change
-- **THEN** every schema-derived guard (`isRole`, `VALID_ROLES`) accepts the
-  new set without a corresponding hand-edit, because the guard reads the
+- **THEN** every schema-derived guard accepts the new set without a
+  corresponding hand-edit, because the guard reads the
   schema rather than mirroring it

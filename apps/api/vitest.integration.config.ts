@@ -11,6 +11,6 @@ process.env.LOG_LEVEL ??= "info";
 export default defineConfig({
   test: {
     include: ["src/**/*.integration.test.ts"],
-    exclude: ["**/*.eval.test.ts", "**/dist/**", "**/node_modules/**"],
+    exclude: ["**/dist/**", "**/node_modules/**"],
   },
 });

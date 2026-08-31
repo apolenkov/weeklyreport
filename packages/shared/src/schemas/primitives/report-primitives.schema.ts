@@ -24,7 +24,7 @@ export const safeText = (
 // Reject pre-2000 dates (prevents pre-epoch/nonsensical report dates).
 const MIN_VALID_YEAR = 2000;
 
-/** Zod coerced date that rejects years before 2000. */
+/** Zod coerced date that accepts year 2000 and later. */
 export const reportDate = () =>
   z.coerce.date().refine((d) => d.getUTCFullYear() >= MIN_VALID_YEAR, {
     message: "Date must be after year 2000",
@@ -88,18 +88,18 @@ export const reportSectionStatusSchema = z.enum(["draft", "submitted"]);
  * literals live only here; consumers import this type.
  */
 export type ReportSectionStatus = z.infer<typeof reportSectionStatusSchema>;
-/** Defines the legacy publication states stored on a report. */
+/** Defines the publication states stored on a report. */
 export const reportStatusSchema = z.enum(["draft", "published"]);
 /**
  * The single source of truth for the report status value (report-status-type
  * spec). The two literals live only here; consumers import this type.
  */
 export type ReportStatus = z.infer<typeof reportStatusSchema>;
-/** Defines the legacy lifecycle status stored on a reporting period. */
+/** Defines the lifecycle status stored on a reporting period. */
 export const periodStatusSchema = z.enum(["open", "published", "reopened"]);
 
 /**
- * Explicit lifecycle state; writers must also update the legacy tuple atomically.
+ * Explicit lifecycle state; writers must also update the companion lifecycle fields atomically.
  * Transitions: `openspec/specs/period-dual-state`.
  */
 export const periodStateSchema = z.enum([
@@ -112,15 +112,6 @@ export const periodStateSchema = z.enum([
 // Payload guard against pathological stage selections; normal is 1–7 stages.
 const MAX_SELECTED_STAGES = 20;
 
-// Stage NAMES, one per element, persisted as the Postgres text[] `stageNames`
-// column on Item / Risk / Decision. Comma-joined rendering is display-only.
-/** Accepts optional stage-name arrays in draft/write inputs. */
-export const stageNamesField = z
-  .array(z.string())
-  .max(MAX_SELECTED_STAGES)
-  .readonly()
-  .optional();
-
 const stageNameElement = z
   .string()
   .min(1)
@@ -129,26 +120,15 @@ const stageNameElement = z
     message: "Stage must contain visible characters",
   });
 
-// Strict write variant: every written row must carry at least one concrete
-// SDLC stage. Read models re-loosen to `stageNamesField` so stage-less legacy
-// rows still load and render the loud "No stage set" marker.
-/** Accepts a non-empty array of concrete SDLC stage names. */
-export const requiredStageNamesField = z
-  .array(stageNameElement)
-  .min(1)
-  .max(MAX_SELECTED_STAGES)
-  .readonly();
-
 /** Current read models always expose structured stage names; activity rows use []. */
 export const currentStageNamesField = z
   .array(stageNameElement)
   .max(MAX_SELECTED_STAGES)
   .readonly();
 
-// Element-quality-validated like requiredStageNamesField but length-tolerant, for
-// the XOR-parented record write field. The conditional rule (≥1 stage for a
-// product parent, none for an activity parent) is enforced by the record
-// superRefine in section.schema.ts, since it depends on the parent kind.
+// The conditional rule (at least one stage for a product parent and none for
+// an activity parent) is enforced by the record superRefine in
+// section.schema.ts because it depends on the parent kind.
 /** Accepts a validated stage array whose cardinality is checked with its parent. */
 export const writeStageNamesField = z
   .array(stageNameElement)

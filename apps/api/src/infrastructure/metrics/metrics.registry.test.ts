@@ -6,14 +6,21 @@ import {
   loginAttemptsTotal,
   metricsRegistry,
   rateLimitHitsTotal,
+  reminderDeliveryUncertainTotal,
 } from "./metrics.registry.js";
 
 describe("metrics registry", () => {
   beforeEach(() => {
-    // prom-client counters are global. Reset per-test so assertions don't
+    // Prometheus counters are global. Reset per-test so assertions don't
     // bleed across them. resetMetrics() zeros sample state without
     // unregistering, which is what we want.
     metricsRegistry.resetMetrics();
+  });
+
+  it("keeps the classic Prometheus exposition content type", () => {
+    expect(metricsRegistry.contentType).toBe(
+      "text/plain; version=0.0.4; charset=utf-8",
+    );
   });
 
   it("exposes /metrics output with the three custom counters", async () => {
@@ -38,6 +45,13 @@ describe("metrics registry", () => {
     const text = await metricsRegistry.metrics();
     expect(text).toContain('cr_rate_limit_hits_total{bucket="auth"} 2');
     expect(text).toContain('cr_rate_limit_hits_total{bucket="trpc"} 1');
+  });
+
+  it("exposes uncertain reminder delivery outcomes", async () => {
+    reminderDeliveryUncertainTotal.inc(2);
+
+    const text = await metricsRegistry.metrics();
+    expect(text).toContain("cr_reminder_delivery_uncertain_total 2");
   });
 
   it("counts both login outcomes per method", async () => {

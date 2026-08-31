@@ -38,8 +38,8 @@ DDL and `pg_dump` both need a session that outlives a single transaction.
    | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
    | `DB_PASSWORD`                                                                                           | Postgres password; URL-safe unreserved characters only (`A-Z a-z 0-9 . - _ ~`).  |
    | `POSTGRES_DB`                                                                                           | Database name shared by all consumers; letters, digits, and underscores only.    |
-   | `FRONTEND_URL`, `APP_BASE_URL`, `PDF_BASE_URL`, `NEXT_PUBLIC_API_URL`                                   | Public origins. `NEXT_PUBLIC_*` is baked at image build.                         |
-   | `API_URL`                                                                                               | Runtime server-side API origin (normally `http://api:3001`).                     |
+   | `FRONTEND_URL`, `APP_BASE_URL`, `PDF_BASE_URL`                                                          | Public origins.                                                                  |
+   | `CLIENT_LOG_FORWARDING`, `NEXT_PUBLIC_CLIENT_LOG_FORWARDING`, `NEXT_PUBLIC_WEB_VITALS`                  | Explicit server/browser telemetry toggles.                                       |
    | `AUTH_JWT_SECRET`, `PDF_EXPORT_JWT_SECRET`                                                              | Min 32 chars each, distinct, never the dev values.                               |
    | `KEYCLOAK_SAML_CALLBACK_URL`, `KEYCLOAK_SAML_ENTRY_POINT`, `KEYCLOAK_SAML_ISSUER`, `KEYCLOAK_SAML_CERT` | The IdP; all four are required when `AUTH_DEV_MODE=false`.                       |
    | `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`                                                                   | Reminder delivery. Missing values fail production boot instead of dropping mail. |
@@ -47,11 +47,21 @@ DDL and `pg_dump` both need a session that outlives a single transaction.
    | `CADDY_SITE_ADDRESS`, `CADDY_ACME_EMAIL`, `CADDY_CSP_REPORT_URI`                                        | Public hostname, ACME account email, and external CSP violation collector.       |
    | `HTTP_PORT`, `HTTPS_PORT`, `HTTPS_PORT_QUIC`                                                            | Host ports for the public Caddy listener.                                        |
    | `PGBOUNCER_MAX_CLIENT_CONN`, `PGBOUNCER_POOL_SIZE`, `PGBOUNCER_RESERVE_POOL_SIZE`                       | PgBouncer capacity limits.                                                       |
+   | `DB_POOL_MAX`, `DB_POOL_IDLE_TIMEOUT_MS`, `DB_POOL_CONNECTION_TIMEOUT_MS`                               | API pg.Pool capacity and timeout policy; all three are required.                 |
    | `REDIS_DB`, `LOG_LEVEL`, `OTEL_SDK_DISABLED`, `OTEL_TRACES_SAMPLER_ARG`, `OTEL_SERVICE_VERSION`         | Runtime policy, telemetry mode, and the exact release identity.                  |
    | `BACKUP_INTERVAL_SECONDS`, `BACKUP_RETENTION_DAYS`                                                      | Local backup cadence and history window. See [Backups](#backups).                |
+   | `GRAFANA_ADMIN_PASSWORD`                                                                                | Operator secret required when the optional observability overlay is composed.    |
 
 Optional: `FRONTEND_URLS` (extra CORS origins, no wildcards in production),
-`SENTRY_DSN`, `CLIENT_LOG_FORWARDING`, `SMTP_USER`, `SMTP_PASS`.
+`SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`, `SMTP_USER`, `SMTP_PASS`.
+`CLIENT_LOG_FORWARDING`, `NEXT_PUBLIC_CLIENT_LOG_FORWARDING`, and
+`NEXT_PUBLIC_WEB_VITALS` are explicit required toggles. `NEXT_PUBLIC_SENTRY_DSN` is compiled into the Web image; changing
+it requires `up --build`, not a container restart.
+
+Production Compose owns the internal web-to-api origin as one YAML anchor
+(`http://api:3001`) and supplies it to both the Next build and the running
+Web server. Do not add `API_URL` to `.env.production`; an operator override
+would let rewrites and server-side fetches target different origins.
 
 2. **Build and start.** `NEXT_PUBLIC_*` values are compiled into the client
    bundle, so a changed public origin needs a rebuild, not a restart.
@@ -77,9 +87,11 @@ hand-edit the container mount.
 ## Health and where to look
 
 - `GET /health/live` — the process is up. Says nothing about dependencies.
-- `GET /health/ready` — checks Postgres, Redis, BullMQ and heap against
-  `HEAP_HEALTH_THRESHOLD_BYTES`. This is what the container healthcheck and any
-  load balancer should use.
+- `GET /health/ready` — checks Postgres, Redis, both required BullMQ workers and
+  their queues, and heap against `HEAP_HEALTH_THRESHOLD_BYTES`. This is what the
+  container healthcheck and any load balancer should use. During startup it
+  stays unavailable until both workers connect; Compose grants a 60-second
+  startup grace.
 - `GET /metrics` — internal API metrics. Deliberately **not** routed through
   Caddy from the public internet; Caddy returns 404 for it at the edge.
 - `/admin/queues` — Bull Board. Session-authenticated, `head` role only.
@@ -92,7 +104,7 @@ Read the JSON body first: it names the failing indicator.
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `database` | pgbouncer or postgres down, or the pool is exhausted. `docker compose --env-file .env.production -f docker-compose.prod.yml logs pgbouncer postgres`. Its healthcheck runs a real `SELECT 1` through the pooler, so a healthy pgbouncer means the path works. |
 | `redis`    | Redis evicting or out of memory. It runs `noeviction` on purpose — a full Redis fails writes loudly rather than dropping jobs. Check `INFO memory` against the 200 MB cap.                                                                                    |
-| `bullmq`   | Workers cannot reach Redis, or a queue is wedged. Inspect `/admin/queues` and the DLQ.                                                                                                                                                                        |
+| `bullmq`   | A required worker is starting, paused, stopped, or disconnected, or a queue is wedged. Read the safe `workers` states, then inspect API logs, `/admin/queues`, and the DLQ.                                                                                   |
 | `memory`   | Heap crossed the threshold. This sheds traffic on purpose, ahead of the container OOM-killer. Restart the api, then find what grew.                                                                                                                           |
 
 ## Backups
@@ -178,11 +190,12 @@ they are inlined at build time and a restart will not pick them up.
 `migrate` runs `prisma migrate deploy` on every `up`, applying only pending
 migrations. It never resets.
 
-Treat committed migrations as append-only. A pre-production schema-history
-rewrite still requires an explicit reviewed task and is permitted only for the
-exact disposable targets listed in `AGENTS.md`, section **Database safety**.
+The MVP uses one canonical init migration synchronized with `schema.prisma`.
+Validate every schema rewrite by recreating only an exact disposable target
+listed in `AGENTS.md`, section **Database safety**.
 `prisma/guards/_destructive-guard.ts` must accept the resolved target before any
-destructive command. Leave `ALLOW_PROD_DESTRUCTIVE` unset.
+destructive command. Product or shared databases are never reset; leave
+`ALLOW_PROD_DESTRUCTIVE` unset.
 
 ## Rollback
 
@@ -215,8 +228,9 @@ Images are the unit of rollback; the database is not.
 `.github/workflows/ci.yml` runs the `quality`, `api-integration`, `coverage`,
 `migrate-reset`, and `docker-build` jobs. The `api-integration` lane runs serial
 tests against disposable Postgres/Redis/Mailpit services. The `coverage` lane
-enforces the configured coverage thresholds for API and Web; the remaining jobs cover lint,
-typecheck, unit tests, migration drift, and the production image build. Local
+enforces the configured coverage thresholds for API and Web; the quality lane
+runs lint, typecheck, unit tests, and the complete workspace build, while the
+remaining jobs cover migration drift and the production image build. Local
 commands remain the fast gate; run the same checks before pushing.
 
 ## External first-production prerequisites
@@ -238,6 +252,14 @@ The local `docker-compose.observability.yml` overlay, its
 `deploy/prometheus-otel-lgtm.yml` and `deploy/alert-rules.yml` mounts,
 `pgbackups` volume, and checked-in workflows are templates or repository evidence
 only; none is a production PASS by itself.
+When this overlay is composed with the production stack, it reads the required
+`GRAFANA_ADMIN_PASSWORD` operator secret from `.env.production`; the Compose
+contract has no password default.
+Grafana scans two non-overlapping dashboard roots: operational and tRPC
+dashboards appear in `CustomReport`, while product telemetry appears in
+`Product KPIs`. The production Prometheus overlay labels its series
+`cluster=customreport-production`; the composed-last development override keeps
+`cluster=customreport-local`.
 Off-box encrypted backup remains **BLOCKED** until an operator supplies a
 provider endpoint, repository identity, encryption key policy, retention policy,
 and a scheduled restore read-back. This repository deliberately does not invent

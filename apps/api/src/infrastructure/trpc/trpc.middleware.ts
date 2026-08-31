@@ -110,13 +110,16 @@ const mutationAuditMiddleware = t.middleware(
     });
     const duration = Math.round(performance.now() - start);
 
-    await recordMutationAudit(ctx, {
-      procedure: path,
-      decodedInput: inputState.captured ? inputState.decodedInput : undefined,
-      status: result.ok ? "success" : "fail",
-      failureCode: result.ok ? null : result.error.code,
-      durationMs: duration,
-    });
+    await recordMutationAudit(
+      { ...ctx, pdfJobId: ctx.pdfJobId ?? null },
+      {
+        procedure: path,
+        decodedInput: inputState.captured ? inputState.decodedInput : undefined,
+        status: result.ok ? "success" : "fail",
+        failureCode: result.ok ? null : result.error.code,
+        durationMs: duration,
+      },
+    );
 
     return result;
   },
@@ -163,7 +166,31 @@ const isAuthed = t.middleware(({ ctx, next }) => {
 const PDF_EXPORT_ALLOWED_PATHS: ReadonlySet<string> = new Set([
   "weeklyReport.get",
   "archive.detail",
+  "pdfExport.render",
 ]);
+
+function assertPdfExportRenderInput(
+  raw: unknown,
+  ctx: {
+    readonly pdfJobId: string | null | undefined;
+    readonly pdfReportId: string | null;
+  },
+): void {
+  const input =
+    raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  if (input.jobId !== ctx.pdfJobId) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "PDF-export session jobId does not match procedure input",
+    });
+  }
+  if (input.reportId !== ctx.pdfReportId) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "PDF-export session reportId does not match procedure input",
+    });
+  }
+}
 
 const pdfExportGuard = t.middleware(
   async ({ ctx, path, next, getRawInput }) => {
@@ -185,6 +212,11 @@ const pdfExportGuard = t.middleware(
       raw && typeof raw === "object" && "reportId" in raw
         ? (raw as { reportId?: unknown }).reportId
         : undefined;
+
+    if (path === "pdfExport.render") {
+      assertPdfExportRenderInput(raw, ctx);
+      return next();
+    }
 
     if (
       typeof inputReportId !== "string" ||
@@ -241,8 +273,6 @@ function buildRoleMiddleware(allowed: Role | Role[]) {
 // have a dashboard, not /admin/*). Admin still passes head procedures.
 const headRoleMiddleware = buildRoleMiddleware(["head", "admin"]);
 const adminRoleMiddleware = buildRoleMiddleware("admin");
-const leadRoleMiddleware = buildRoleMiddleware("lead");
-const viewerRoleMiddleware = buildRoleMiddleware("viewer");
 // Service-layer gate for multi-role weekly-report reads.
 const anyRoleMiddleware = buildRoleMiddleware([
   "lead",
@@ -260,8 +290,6 @@ const leadershipRoleMiddleware = buildRoleMiddleware([
 ]);
 
 export const headProcedure = buildProtectedProcedure(headRoleMiddleware);
-export const leadProcedure = buildProtectedProcedure(leadRoleMiddleware);
-export const viewerProcedure = buildProtectedProcedure(viewerRoleMiddleware);
 export const anyRoleProcedure = buildProtectedProcedure(anyRoleMiddleware);
 // Admin-only gate. /admin/* tRPC endpoints attach this; head users get
 // FORBIDDEN. Use headProcedure for endpoints reachable by both head and admin

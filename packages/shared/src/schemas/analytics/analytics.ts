@@ -31,9 +31,6 @@ export const trafficLightRowSchema = z
     statuses: z.array(trafficLightCellSchema).readonly(),
   })
   .readonly();
-/** Traffic-light history row for a project. */
-export type TrafficLightRow = z.infer<typeof trafficLightRowSchema>;
-
 /** Periods × rows history matrix for the traffic-light chart. */
 export const trafficLightHistoryOutputSchema = z
   .object({

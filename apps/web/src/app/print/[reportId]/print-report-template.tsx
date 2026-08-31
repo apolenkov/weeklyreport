@@ -31,15 +31,10 @@ import { PrintReportStyles } from "./print-report-styles";
 
 interface PrintReportTemplateProps {
   readonly reportId: string;
+  readonly jobId?: string;
 }
 
-function ReadyReport({
-  reportId,
-  view,
-}: {
-  readonly reportId: string;
-  readonly view: MapWeeklyReportResult;
-}) {
+function ReadyReport({ view }: { readonly view: MapWeeklyReportResult }) {
   const blockedCount = view.products.filter(
     (product) => product.status === "blocked",
   ).length;
@@ -78,14 +73,43 @@ function ReadyReport({
         <PrintProductReports view={view} />
         <PrintReportFooter
           generatedAt={formatDateTime(new Date())}
-          reportId={reportId}
+          reportId={view.period.reportId}
         />
       </main>
     </>
   );
 }
 
-export function PrintReportTemplate({ reportId }: PrintReportTemplateProps) {
+function PrintReportForJob({
+  reportId,
+  jobId,
+}: {
+  readonly reportId: string;
+  readonly jobId: string;
+}) {
+  const trpc = useTRPC();
+  const weeklyQuery = useQuery(
+    trpc.pdfExport.render.queryOptions({ jobId, reportId }),
+  );
+
+  useEffect(() => {
+    if (weeklyQuery.isError) {
+      toast.error(
+        formatClientErrorMessage("Failed to load report", weeklyQuery.error),
+      );
+    }
+  }, [weeklyQuery.isError, weeklyQuery.error]);
+
+  if (weeklyQuery.isError) {
+    return <ErrorShell reportId={reportId} />;
+  }
+  if (weeklyQuery.isLoading || !weeklyQuery.data) {
+    return <LoadingShell reportId={reportId} />;
+  }
+  return <ReadyReport view={mapWeeklyReport(weeklyQuery.data)} />;
+}
+
+function PrintReportForLiveReport({ reportId }: { readonly reportId: string }) {
   const trpc = useTRPC();
   const weeklyQuery = useQuery(
     trpc.weeklyReport.get.queryOptions({ reportId }),
@@ -105,7 +129,16 @@ export function PrintReportTemplate({ reportId }: PrintReportTemplateProps) {
   if (weeklyQuery.isLoading || !weeklyQuery.data) {
     return <LoadingShell reportId={reportId} />;
   }
-  return (
-    <ReadyReport reportId={reportId} view={mapWeeklyReport(weeklyQuery.data)} />
+  return <ReadyReport view={mapWeeklyReport(weeklyQuery.data)} />;
+}
+
+export function PrintReportTemplate({
+  reportId,
+  jobId,
+}: PrintReportTemplateProps) {
+  return jobId ? (
+    <PrintReportForJob reportId={reportId} jobId={jobId} />
+  ) : (
+    <PrintReportForLiveReport reportId={reportId} />
   );
 }

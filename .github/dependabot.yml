@@ -5,9 +5,8 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
-    # One grouped PR instead of a dozen pairwise-conflicting lockfile PRs;
-    # majors stay separate so breaking bumps get their own review. The OTel
-    # experimental packages are version-locked and must move together.
+    # Group compatible updates; majors stay separate so breaking bumps get their
+    # own review. OTel packages move together because their versions are coupled.
     groups:
       npm-minor-patch:
         update-types:
@@ -17,9 +16,6 @@ updates:
         patterns:
           - "@opentelemetry/*"
 
-  # Without this the base images are bumped by nothing: Dockerfile.web sat on
-  # Node 25 for eight weeks after its end of life. Grouped so both images move
-  # together — check-runtime-node-sync fails a push that bumps only one.
   - package-ecosystem: "docker"
     directories:
       - "/"

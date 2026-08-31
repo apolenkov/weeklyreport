@@ -1,0 +1,241 @@
+import { describe, expect, it, vi } from "vitest";
+
+import { publishedSnapshotFixture } from "../../../test-utils/prisma-test-helper.js";
+import { ReportSectionDomainError } from "../application/report-sections.contract.js";
+import {
+  decodeMyHistoryCursor,
+  queryMyHistoryPage,
+} from "./report-sections.my-history-query.js";
+
+const reportId = "a0000000-0000-4000-8000-000000000010";
+const sectionId = "a0000000-0000-4000-8000-000000000011";
+const authorId = "a0000000-0000-4000-8000-000000000001";
+
+describe("queryMyHistoryPage", () => {
+  it("reads published lead history from the immutable snapshot", async () => {
+    const findManyLive = vi.fn().mockResolvedValue([]);
+    const findManyPublished = vi.fn().mockResolvedValue([
+      {
+        id: reportId,
+        archived: false,
+        publishedSnapshot: publishedSnapshotFixture({
+          reportId,
+          periodStart: "2026-04-14",
+          periodEnd: "2026-04-18",
+          publishedAt: "2026-04-20T12:00:00.000Z",
+          sectionOwners: [
+            {
+              reportSectionId: sectionId,
+              authorId,
+              authorName: "Test Lead",
+              groupId: "a0000000-0000-4000-8000-000000000009",
+              groupName: "Test Group",
+            },
+          ],
+        }),
+      },
+    ]);
+    const prisma = {
+      reportSection: { findMany: findManyLive },
+      report: { findMany: findManyPublished },
+      $transaction: (operation: (tx: unknown) => unknown) =>
+        Promise.resolve(
+          operation({
+            reportSection: { findMany: findManyLive },
+            report: { findMany: findManyPublished },
+          }),
+        ),
+    } as never;
+
+    const rows = await queryMyHistoryPage(prisma, authorId, { limit: 20 });
+
+    expect(rows.items).toHaveLength(1);
+    expect(rows.items[0]).toMatchObject({
+      sectionId,
+      reportId,
+      reportStatus: "published",
+    });
+    expect(findManyLive).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { authorId, report: { periodStatus: { not: "published" } } },
+      }),
+    );
+    const publishedQuery: unknown = findManyPublished.mock.calls[0]?.[0];
+    expect(publishedQuery).toMatchObject({
+      where: {
+        status: "published",
+        periodStatus: "published",
+        publishedSectionScopes: { some: { authorId } },
+      },
+    });
+  });
+
+  it.each([
+    ["publish after the live statement", "live"],
+    ["publish before the published statement", "published"],
+  ] as const)(
+    "keeps the merged page on one repeatable-read snapshot when %s",
+    async (_label, initialSource) => {
+      const live =
+        initialSource === "live"
+          ? [
+              liveRow(
+                sectionId,
+                new Date("2026-04-14T00:00:00Z"),
+                new Date("2026-04-14T12:00:00Z"),
+              ),
+            ]
+          : [];
+      const published =
+        initialSource === "published"
+          ? [
+              publishedRow(
+                reportId,
+                "2026-04-14T00:00:00Z",
+                "2026-04-14T12:00:00Z",
+              ),
+            ]
+          : [];
+      const initialLive = [...live];
+      const initialPublished = [...published];
+      let transactionOptions: unknown;
+      const client = {
+        reportSection: {
+          findMany: vi.fn(() => {
+            live.splice(0);
+            return Promise.resolve(initialLive);
+          }),
+        },
+        report: {
+          findMany: vi.fn(() => {
+            published.splice(0);
+            return Promise.resolve(initialPublished);
+          }),
+        },
+      };
+      const prisma = {
+        $transaction: async (
+          operation: (tx: typeof client) => Promise<unknown>,
+          options: unknown,
+        ) => {
+          transactionOptions = options;
+          const snapshotLive = [...live];
+          const snapshotPublished = [...published];
+          return operation({
+            reportSection: {
+              findMany: vi.fn(() => Promise.resolve(snapshotLive)),
+            },
+            report: {
+              findMany: vi.fn(() => Promise.resolve(snapshotPublished)),
+            },
+          });
+        },
+      } as never;
+
+      const result = await queryMyHistoryPage(prisma, authorId, { limit: 20 });
+
+      expect(result.items).toHaveLength(1);
+      expect(result.nextCursor).toBeNull();
+      expect(transactionOptions).toEqual({ isolationLevel: "RepeatableRead" });
+    },
+  );
+});
+
+function liveRow(id: string, periodStart: Date, createdAt: Date) {
+  return {
+    id,
+    status: "submitted",
+    submittedAt: createdAt,
+    createdAt,
+    updatedAt: createdAt,
+    report: {
+      id: "a0000000-0000-4000-8000-000000000012",
+      periodStart,
+      periodEnd: new Date(periodStart.getTime() + 4 * 86_400_000),
+      status: "draft",
+      archived: false,
+      publishedAt: null,
+    },
+    items: [],
+    risks: [],
+    decisions: [],
+    projectStatuses: [],
+    stageStatuses: [],
+  };
+}
+
+function publishedRow(id: string, periodStart: string, publishedAt: string) {
+  return {
+    id,
+    archived: true,
+    publishedSnapshot: publishedSnapshotFixture({
+      reportId: id,
+      periodStart: periodStart.slice(0, 10),
+      periodEnd: "2026-05-08",
+      publishedAt,
+      sectionOwners: [
+        {
+          reportSectionId: id,
+          authorId,
+          authorName: "Test Lead",
+          groupId: "a0000000-0000-4000-8000-000000000009",
+          groupName: "Test Group",
+        },
+      ],
+    }),
+  };
+}
+
+function pagedPrisma(live: unknown[], published: unknown[]) {
+  let publishedCalls = 0;
+  const client = {
+    reportSection: {
+      findMany: vi.fn((args: { where?: { OR?: unknown[] } }) => {
+        const or = args.where?.OR;
+        if (!or) return Promise.resolve(live);
+        const last = or.at(-1);
+        return Promise.resolve(
+          last && typeof last === "object" && "id" in last ? [] : live,
+        );
+      }),
+    },
+    report: {
+      findMany: vi.fn((args: { where?: { OR?: unknown[] } }) => {
+        publishedCalls += 1;
+        const or = args.where?.OR;
+        return Promise.resolve(!or && publishedCalls === 1 ? published : []);
+      }),
+    },
+  };
+  return {
+    ...client,
+    $transaction: (operation: (tx: unknown) => unknown) =>
+      Promise.resolve(operation(client)),
+  } as never;
+}
+
+it("keeps equal-coordinate live and published rows distinct across pages", async () => {
+  const instant = new Date("2026-05-04T12:00:00.000Z");
+  const periodStart = new Date("2026-05-04T00:00:00.000Z");
+  const id = "a0000000-0000-4000-8000-000000000011";
+  const prisma = pagedPrisma(
+    [liveRow(id, periodStart, instant)],
+    [publishedRow(id, instant.toISOString(), instant.toISOString())],
+  );
+  const first = await queryMyHistoryPage(prisma, authorId, { limit: 1 });
+  const second = await queryMyHistoryPage(prisma, authorId, {
+    limit: 1,
+    cursor: first.nextCursor ?? undefined,
+  });
+  expect(first.items).toHaveLength(1);
+  expect(second.items).toHaveLength(1);
+  expect(first.items[0]?.sectionId).toBe(second.items[0]?.sectionId);
+  expect(first.items[0]?.archived).not.toBe(second.items[0]?.archived);
+  expect(second.nextCursor).toBeNull();
+});
+
+it("rejects malformed opaque cursors as a typed client error", () => {
+  expect(() => decodeMyHistoryCursor("not-a-cursor")).toThrow(
+    ReportSectionDomainError,
+  );
+});

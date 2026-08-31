@@ -27,64 +27,58 @@ function makePolicy(index: number) {
 
 function makePrismaStub(policyCount: number) {
   const policies = Array.from({ length: policyCount }, (_, i) => makePolicy(i));
-
+  const $queryRaw = vi
+    .fn()
+    .mockResolvedValueOnce(policies)
+    .mockResolvedValueOnce([
+      {
+        ...PERIOD,
+        periodState: "open",
+        archived: false,
+      },
+    ]);
+  const reminderRule = {
+    findFirst: vi.fn(),
+    updateMany: vi.fn(),
+    update: vi.fn(),
+    create: vi.fn(),
+  };
+  const tx = { $queryRaw, reminderRule };
   return {
-    reminderPolicy: {
-      findMany: vi.fn().mockResolvedValue(policies),
-    },
+    $transaction: vi.fn((callback: (client: typeof tx) => Promise<unknown>) =>
+      callback(tx),
+    ),
+    $queryRaw,
     reminderRule: {
-      findUnique: vi.fn().mockResolvedValue(null),
-      upsert: vi.fn().mockResolvedValue({ id: "new-rule" }),
+      ...reminderRule,
     },
   };
 }
 
-async function countArrayIterationSteps(policyCount: number): Promise<number> {
+async function exerciseExcludedPolicies(policyCount: number) {
+  const prisma = makePrismaStub(policyCount);
   const service = new PolicyApplicatorService(
-    makePrismaStub(policyCount) as unknown as PrismaService,
+    prisma as unknown as PrismaService,
   );
   const excludedPolicyIds = new Set(
     Array.from({ length: policyCount }, (_, index) => makePolicy(index).id),
   );
-  const originalIterator = Array.prototype[Symbol.iterator];
-  const iterationSteps = new Int32Array(new SharedArrayBuffer(4));
-
-  Object.defineProperty(Array.prototype, Symbol.iterator, {
-    configurable: true,
-    value: function () {
-      const iterator = originalIterator.call(this);
-
-      return {
-        next: () => {
-          Atomics.add(iterationSteps, 0, 1);
-          return iterator.next();
-        },
-        [Symbol.iterator]() {
-          return this;
-        },
-      };
-    },
-    writable: true,
-  });
-
-  try {
-    await service.applyToPeriod(PERIOD, undefined, excludedPolicyIds);
-  } finally {
-    Object.defineProperty(Array.prototype, Symbol.iterator, {
-      configurable: true,
-      value: originalIterator,
-      writable: true,
-    });
-  }
-
-  return Atomics.load(iterationSteps, 0);
+  const result = await service.applyToPeriod(
+    PERIOD.id,
+    undefined,
+    excludedPolicyIds,
+  );
+  return { prisma, result };
 }
 
 describe("PolicyApplicatorService fan-out performance", () => {
-  it("does not copy a growing outcome array while accumulating", async () => {
+  it("keeps excluded fan-out to one transaction and two lock reads", async () => {
     const policyCount = 256;
-    const arrayIterationSteps = await countArrayIterationSteps(policyCount);
+    const { prisma, result } = await exerciseExcludedPolicies(policyCount);
 
-    expect(arrayIterationSteps).toBeLessThan(policyCount);
+    expect(result).toEqual({ created: 0, updated: 0, skipped: policyCount });
+    expect(prisma.$transaction).toHaveBeenCalledOnce();
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(2);
+    expect(prisma.reminderRule.findFirst).not.toHaveBeenCalled();
   });
 });

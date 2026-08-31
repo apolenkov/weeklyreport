@@ -22,13 +22,13 @@ services:
     volumes:
       - ./apps/api/src:/app/apps/api/src
       - ./packages/shared/src:/app/packages/shared/src
+      - ./packages/report-persistence/src:/app/packages/report-persistence/src
       - ./prisma:/app/prisma
       - ./tsconfig.base.json:/app/tsconfig.base.json:ro
       - apilogs:/app/logs
     environment:
       NODE_ENV: development
       DATABASE_URL: postgresql://customreport:localdev@postgres:5432/customreport_e2e
-      DIRECT_URL: postgresql://customreport:localdev@postgres:5432/customreport_e2e
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_DB: 0
@@ -47,7 +47,7 @@ services:
       LOG_LEVEL: debug
       LOG_DIR: /app/logs
       # host.docker.internal resolves to the Docker host on Mac/Windows —
-      # otel-lgtm and bugsink run in a separate compose project (customreport-obs)
+      # otel-lgtm and bugsink run in the separate customreport-observability project
       # so they are on a different Docker network and not reachable by service name.
       OTEL_EXPORTER_OTLP_ENDPOINT: http://host.docker.internal:4318
       OTEL_SDK_DISABLED: "false"
@@ -57,12 +57,9 @@ services:
       OTEL_SERVICE_VERSION: dev
       OTEL_TRACES_SAMPLER_ARG: "1.0"
       HEAP_HEALTH_THRESHOLD_BYTES: ${HEAP_HEALTH_THRESHOLD_BYTES:-1610612736}
-      SENTRY_DSN: ${SENTRY_DSN_DOCKER:-}
-      # Remaining optional coverage vars (all declared .optional() in envSchema,
-      # each defaulting to its consumer behaviour when absent): TG_BOT_TOKEN,
-      # CLIENT_LOG_FORWARDING, AUTH_DEV_MODE_ALLOW_TEST, CUSTOMREPORT_REPO_ROOT,
-      # DLQ_ALERT_THRESHOLD, AUTH_JWT_COOKIE_NAME. Add a pass-through line here
-      # only when a run needs to override the default. See .env.example.
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      # Optional values are intentionally omitted here; local runs use the
+      # consumer defaults unless a targeted command supplies an override.
     depends_on:
       postgres:
         condition: service_healthy
@@ -76,6 +73,8 @@ services:
           path: ./apps/api/src
         - action: restart
           path: ./packages/shared/src
+        - action: restart
+          path: ./packages/report-persistence/src
         - action: restart
           path: ./prisma/schema.prisma
 
@@ -97,20 +96,17 @@ services:
       ]
     volumes:
       - ./apps/web/src:/app/apps/web/src
-      - ./apps/web/public:/app/apps/web/public
       - ./packages/shared/src:/app/packages/shared/src
       - ./packages/ui/src:/app/packages/ui/src
       - ./tsconfig.base.json:/app/tsconfig.base.json:ro
     environment:
       NODE_ENV: development
       API_URL: http://api:3002
-      NEXT_PUBLIC_API_URL: http://api:3002
-      AUTH_DEV_MODE: "true"
       NEXT_PUBLIC_AUTH_STUB: "true"
       NEXT_PUBLIC_DEV_ROLE_SWITCHER: "true"
-      # Sentry/Bugsink error tracking — reads from host .env via ${} interpolation
-      SENTRY_DSN: ${SENTRY_DSN_DOCKER:-}
-      NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN_DOCKER:-}
+      # Sentry/Bugsink error tracking — reads the canonical root environment.
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
     depends_on:
       - api
     ports:

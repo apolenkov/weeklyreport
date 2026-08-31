@@ -2,26 +2,27 @@
 
 import { useRef } from "react";
 
+import { createEditableListHandlers } from "../../../shared/hooks/dialogs/create-editable-list-handlers";
 import { useEditableListDialog } from "../../../shared/hooks/dialogs/use-editable-list-dialog";
 import type { KanbanItem, Product } from "../../report-sections";
 import {
   BoardEmptyState,
+  buildItemDialogProps,
   isBoardEmpty,
   ItemCard,
+  ItemDialogStack,
   splitItemBoard,
 } from "../../report-sections";
 import { usePauseReason } from "../model/controls/use-pause-reason";
 import { useScrollFade } from "../model/controls/use-scroll-fade";
 import { AddItemButton } from "./current-week-add-button";
 import { CurrentWeekBoardGrid } from "./current-week-board-grid";
-import { CurrentWeekDialogs } from "./current-week-dialogs";
 import type { CurrentWeekSectionProps } from "./current-week-section.types";
-import {
-  buildDialogsProps,
-  createItemHandlers,
-  type CurrentWeekItemHandlers,
-  type PauseReasonPrompt,
-} from "./current-week-section-model";
+import { PauseReasonDialog } from "./pause-reason-dialog";
+type CurrentWeekItemHandlers = ReturnType<
+  typeof createEditableListHandlers<KanbanItem>
+>;
+type PauseReasonPrompt = ReturnType<typeof usePauseReason<KanbanItem>>;
 
 // Bind a card renderer to this section's props; the grid calls it per item.
 function createItemRenderer({
@@ -116,7 +117,7 @@ export function CurrentWeekSection(props: CurrentWeekSectionProps) {
     requireSeed: true,
   });
 
-  const handlers = createItemHandlers({ props, dialog });
+  const handlers = createEditableListHandlers(props, dialog);
 
   // Only fall back to the standalone empty-state when there are neither
   // items nor products to drive a column layout.
@@ -134,6 +135,12 @@ export function CurrentWeekSection(props: CurrentWeekSectionProps) {
   // Falls back to non-empty groups when products is omitted. Activity lanes
   // sit below the grid, never as peer product columns.
   const board = splitItemBoard(products, items, activities);
+  const dialogProps = buildItemDialogProps({
+    section: props,
+    dialog,
+    handlers,
+    week: "current",
+  });
 
   return (
     <div className="relative">
@@ -154,8 +161,17 @@ export function CurrentWeekSection(props: CurrentWeekSectionProps) {
           renderItem={createItemRenderer({ props, handlers, pause })}
         />
 
-        <CurrentWeekDialogs
-          {...buildDialogsProps({ props, dialog, handlers, pause })}
+        <ItemDialogStack
+          {...dialogProps}
+          pauseDialog={
+            <PauseReasonDialog
+              open={pause.pending !== null}
+              preview={pause.pending?.text ?? ""}
+              initialReason={pause.pending?.pausedReason ?? ""}
+              onConfirm={pause.confirm}
+              onCancel={pause.cancel}
+            />
+          }
         />
       </div>
       {canScrollDown && <ScrollFadeOverlay />}

@@ -34,7 +34,7 @@ export async function renderEmail(
       const text = deadlineEmailPlaintext(input.props);
       // Subject prefixes the org `shortName` so the recipient's inbox folder
       // rules can grep on the brand without parsing the long-form name.
-      const subject = `[${input.props.organization.shortName}] Reminder: ${input.props.reportPeriod} report section due in 24h`;
+      const subject = `[${input.props.organization.shortName}] Reminder: ${input.props.reportPeriod} report section deadline`;
       return { subject, html, text };
     }
     case "escalation": {

@@ -5,7 +5,7 @@ import { validateEnv } from "../infrastructure/config/env.schema.js";
 import type { OtelBootstrapResult } from "../infrastructure/otel/otel.bootstrap.js";
 import { shutdownOtel } from "../infrastructure/otel/otel.bootstrap.js";
 import { mountApiIngress } from "./api-ingress.js";
-import { registerApiShutdown } from "./api-shutdown.js";
+import { registerApiShutdown, shutdownApi } from "./api-shutdown.js";
 import { createAppServices } from "./app-services.js";
 import { mountAuthIngress } from "./auth-ingress.js";
 import { configureHttpPipeline } from "./http-pipeline.js";
@@ -50,18 +50,20 @@ export async function bootstrapApi(
     autoCarryOver,
     authLimiter,
   });
-  mountBullBoard(app);
-  registerProcessErrorHandlers(logger);
-
-  await app.listen(env.PORT, env.API_HOST);
-  logger.info(`API server listening on ${env.API_HOST}:${env.PORT}`);
-  // This coordinator exclusively owns process signals so Nest lifecycle hooks,
-  // logs, and telemetry drain exactly once in one observable sequence.
-  registerApiShutdown({
+  mountBullBoard(app, env);
+  const shutdownDependencies = {
     app,
     logger,
     shutdownRateLimitStore,
     shutdownOtel,
     shutdownSentry,
+  };
+  registerProcessErrorHandlers(logger, {
+    shutdown: () => shutdownApi(shutdownDependencies),
   });
+  await app.listen(env.PORT, env.API_HOST);
+  logger.info(`API server listening on ${env.API_HOST}:${env.PORT}`);
+  // This coordinator exclusively owns process signals so Nest lifecycle hooks,
+  // logs, and telemetry drain exactly once in one observable sequence.
+  registerApiShutdown(shutdownDependencies);
 }

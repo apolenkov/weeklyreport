@@ -1,45 +1,66 @@
-import type { Prisma } from "@prisma/client";
+import type {
+  PublishedReportSnapshot,
+  UserSession,
+} from "@customreport/shared";
+import { Prisma, type Prisma as PrismaTypes } from "@prisma/client";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import {
+  publishedReportScopeWhere,
+  requirePublishedSnapshot,
+  requireScopedPublishedSnapshot,
+} from "../report-sections/index.js";
 
-// Typed Prisma where fragments, never a bare Record bag — the report scope
-// gates which periods settle and the section scope gates which lead sections
-// aggregate, so both must stay Prisma-checked at every call site.
-type ReportScope = Prisma.ReportWhereInput;
-type SectionScope = Prisma.ReportSectionWhereInput;
+/** Selects immutable settled publications, including archived history. */
+export function settledPublicationWhere(): PrismaTypes.ReportWhereInput {
+  return {
+    status: "published",
+    periodStatus: "published",
+    periodState: { in: ["published", "archived"] },
+    publishedSnapshot: { not: Prisma.DbNull },
+  };
+}
 
-// A reopened period is editable again, so settled metrics fall back to the
-// latest period whose lifecycle flavour is still published.
-export async function querySettledPeriodIds(
+/**
+ * Returns newest settled publication snapshots. Scoped callers are filtered
+ * from immutable frozen section ownership, never mutable User/Section rows.
+ */
+export async function querySettledPeriodSnapshots(
   prisma: PrismaService,
   take: number,
-  reportScope: ReportScope = {},
-): Promise<string[]> {
-  const reports = await prisma.report.findMany({
-    where: { periodStatus: "published", ...reportScope },
-    orderBy: { periodStart: "desc" },
+  session?: UserSession,
+): Promise<PublishedReportSnapshot[]> {
+  if (take <= 0) return [];
+
+  const rows = await prisma.report.findMany({
+    where: {
+      ...settledPublicationWhere(),
+      ...(session === undefined ? {} : publishedReportScopeWhere(session)),
+    },
+    orderBy: [{ periodStart: "desc" }, { id: "desc" }],
     take,
-    select: { id: true },
+    select: { id: true, publishedSnapshot: true },
   });
-  return reports.map(({ id }) => id);
+
+  return rows.flatMap((row) => {
+    const snapshot = requirePublishedSnapshot(row.publishedSnapshot, row.id);
+    const scoped = session
+      ? requireScopedPublishedSnapshot(snapshot, session)
+      : snapshot;
+    return [scoped];
+  });
 }
 
 // Shared by dashboard summary and Prometheus gauge so the two never drift.
 export async function queryActiveLeadsLastPublishedPeriod(
   prisma: PrismaService,
-  sectionScope: SectionScope,
+  session?: UserSession,
 ): Promise<number> {
-  const scoped = Object.keys(sectionScope).length > 0;
-  const [reportId] = await querySettledPeriodIds(
-    prisma,
-    1,
-    scoped ? { sections: { some: sectionScope } } : {},
-  );
-  if (!reportId) return 0;
-  const rows = await prisma.reportSection.findMany({
-    where: { reportId, status: "submitted", ...sectionScope },
-    distinct: ["authorId"],
-    select: { authorId: true },
-  });
-  return rows.length;
+  const [snapshot] = await querySettledPeriodSnapshots(prisma, 1, session);
+  if (!snapshot) return 0;
+  return new Set(
+    snapshot.sections
+      .filter((section) => section.status === "submitted")
+      .map((section) => section.authorId),
+  ).size;
 }

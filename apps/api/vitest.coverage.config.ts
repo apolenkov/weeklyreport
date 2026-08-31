@@ -16,7 +16,7 @@ export default mergeConfig(
     test: {
       setupFiles: ["./src/test-utils/test-env.setup.ts"],
       include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
-      exclude: ["**/*.eval.test.ts", "**/dist/**", "**/node_modules/**"],
+      exclude: ["**/dist/**", "**/node_modules/**"],
       fileParallelism: false,
       maxWorkers: 1,
       coverage: {
@@ -25,7 +25,6 @@ export default mergeConfig(
           "src/**/*.test.ts",
           "src/**/*.test.tsx",
           "src/**/*.integration.test.ts",
-          "src/**/*.eval.test.ts",
           "src/**/__tests__/**",
           "src/**/test-utils/**",
           "src/main.ts",

@@ -3,8 +3,8 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach } from "vitest";
 
-// Radix UI primitives (the shared Tooltip the SDLC pipeline now uses) open a
-// Popper layer that calls ResizeObserver + pointer-capture/scroll APIs jsdom omits.
+// Radix UI primitives open a Popper layer that calls ResizeObserver and
+// pointer-capture/scroll APIs jsdom omits.
 // The DOM lib types declare these as always present, so the stubs are installed
 // through loose casts and assigned unconditionally (test environment only).
 const noop = (): void => undefined;

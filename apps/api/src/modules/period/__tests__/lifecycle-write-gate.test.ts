@@ -3,10 +3,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import {
-  analyzeLifecycleWrites,
-  type LifecycleExemption,
-} from "./lifecycle-write-analyzer.js";
+import { analyzeLifecycleWrites } from "./lifecycle-write-analyzer.js";
 import {
   programFromTsconfig,
   syntheticProgram,
@@ -187,68 +184,5 @@ describe("lifecycle-write-gate planted negatives", () => {
         persist({ status: "published" } as LifecycleWrite);
       `),
     ).toEqual(["<forged-transition>"]);
-  });
-});
-
-describe("lifecycle-write-gate exemptions", () => {
-  const ownerFile = resolve(TEST_DIR, "period-transition-owner.ts");
-  const exemption: LifecycleExemption = {
-    ref: "TRANSITION-OWNER",
-    ownerSuffix: "period-transition-owner.ts",
-  };
-
-  function exemptionViolations(
-    marker: string,
-    fileName = ownerFile,
-    exemptions: readonly LifecycleExemption[] = [exemption],
-  ) {
-    const source = `${PRELUDE}\n${marker}\nprisma.report.update({ data: { status: "published" } });`;
-    const program = syntheticProgram(fileName, source);
-    const sourceFile = program.getSourceFile(fileName);
-    if (!sourceFile) throw new Error(`Synthetic source missing: ${fileName}`);
-    return analyzeLifecycleWrites(program, [sourceFile], exemptions);
-  }
-
-  it("accepts one exact referenced marker in its configured owner", () => {
-    expect(
-      exemptionViolations(
-        "// lifecycle-write-gate-allow(ref=TRANSITION-OWNER)",
-      ),
-    ).toEqual([]);
-  });
-
-  it.each([
-    ["unknown", "// lifecycle-write-gate-allow(ref=UNKNOWN)"],
-    ["malformed", "// lifecycle-write-gate-allow TRANSITION-OWNER"],
-  ])("rejects %s exemptions", (_label, marker) => {
-    expect(exemptionViolations(marker)).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ field: "<exemption>" }),
-      ]),
-    );
-  });
-
-  it("rejects a valid ref outside its configured owner", () => {
-    expect(
-      exemptionViolations(
-        "// lifecycle-write-gate-allow(ref=TRANSITION-OWNER)",
-        resolve(TEST_DIR, "other-owner.ts"),
-      ),
-    ).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ reason: "exemption outside its owner" }),
-      ]),
-    );
-  });
-
-  it("rejects configured exemptions that no write references", () => {
-    const program = syntheticProgram(ownerFile, PRELUDE);
-    const sourceFile = program.getSourceFile(ownerFile);
-    if (!sourceFile) throw new Error(`Synthetic source missing: ${ownerFile}`);
-    expect(analyzeLifecycleWrites(program, [sourceFile], [exemption])).toEqual([
-      expect.objectContaining({
-        reason: "unreferenced exemption TRANSITION-OWNER",
-      }),
-    ]);
   });
 });

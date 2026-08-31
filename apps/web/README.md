@@ -19,16 +19,20 @@ Next.js 16 frontend with App Router, React 19, shadcn/ui, and Tailwind CSS v4.
 
 ## API Proxy
 
-Next.js rewrites in `next.config.ts` proxy `/trpc/*`, `/auth/*`, `/health/*`,
-`/api/*`, and `/pdfs/*` to the API server. This keeps cookies and browser
-telemetry same-origin.
+Next.js owns the local `/api/client-logs` admission proxy and
+`/api/revalidate-org` cache-invalidation handler. After those route handlers,
+the rewrites in `next.config.ts` proxy `/trpc/*`, `/auth/*`, `/health/*`, the
+remaining `/api/*`, and `/pdfs/*` to the API server. This keeps cookies and
+browser telemetry same-origin. In production Caddy sends the API-owned client
+log path directly to the API and leaves cache invalidation on Web.
 
-## Key Components
+## Main UI surfaces
 
-- `NavBar` — session-aware, role-filtered navigation and account controls
-- `ReportSectionForm` — Full report editing form with autosave
-- `AdminPanel` — Tabbed CRUD interface for admin entities
-- `DataTable` — Sortable, accessible table with keyboard navigation
+- `shared/ui/navigation` — session-aware, role-filtered navigation
+- `features/report-pages` — lead, head, and weekly report page composition
+- `features/report-sections` — lead editing, autosave, submit, and record cards
+- `features/admin/ui/admin-panel.tsx` — administration workspace
+- `shared/ui/report-shell` — shared report controls and section chrome
 
 ## Development
 
@@ -43,8 +47,10 @@ environment contract. The canonical native ports are Web `3000` and API
 `3002`.
 
 The bare `/head/report` and `/lead/report` paths are current landing
-entrypoints. The application resolves the
-active report from the current session.
+entrypoints. The page resolves the current editable report through the
+`weeklyReport.get` API query with no explicit `reportId`, then redirects to its
+canonical report URL; it does not use the session's `activeReportId` as the
+source of truth.
 
 ## Testing
 

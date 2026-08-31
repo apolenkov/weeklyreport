@@ -11,8 +11,6 @@ import type {
 import type { SEED_STAGES } from "../support/seed-constants.js";
 
 export type StageName = (typeof SEED_STAGES)[number]["name"];
-export type SeedDatasetProfile = "demo" | "stress";
-
 export interface DemoLead {
   id: string;
   email: string;

@@ -9,8 +9,8 @@ Keep lead section item cards at a uniform height while exposing truncated text t
 ### Requirement: Item cards in a section render at a uniform height
 
 Every item card in a lead section MUST render at a uniform height within its
-section, using the empty-state placeholder card as the height reference
-(annotations B1), so a column of cards reads as an even grid rather than a ragged
+section, using the shared empty-state placeholder card as the height reference,
+so a column of cards reads as an even grid rather than a ragged
 one. The cards are `apps/web/src/features/report-sections/ui/item-card.tsx`, rendered within
 `apps/web/src/shared/ui/report-shell/accordion-section.tsx`. A card with little content MUST pad to that
 reference height rather than shrink; a card whose text would exceed it MUST NOT
@@ -39,7 +39,7 @@ tags; only the body text is subject to truncation.
 
 Item card body text that exceeds the card's uniform height MUST truncate with an
 ellipsis rather than expand the card, and the full untruncated text MUST stay
-available on hover via a native `title` tooltip (annotations B2). The static
+available on hover via a native `title` tooltip. The static
 (non-editing) render already uses `line-clamp-3` + `title`; this requirement pins
 BOTH halves so a later edit cannot drop the clamp (letting the card grow) or the
 `title` (losing the full text). Truncation MUST apply only to the static render:

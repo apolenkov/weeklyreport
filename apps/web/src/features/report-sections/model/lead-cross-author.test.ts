@@ -159,6 +159,7 @@ function makeContentRow(
   return {
     authorId: AUTHOR_ID,
     authorName: "Baker Lee",
+    authorRole: "lead",
     items: [],
     risks: [],
     decisions: [],

@@ -63,7 +63,7 @@ export function useLeadDeckRequest(
 export function useLeadDeckPeriod(requestedReportId: string | null) {
   const trpc = useTRPC();
   const activeQ = useQuery(trpc.reports.getActive.queryOptions());
-  const historyQ = useQuery(trpc.reports.myHistory.queryOptions());
+  const historyQ = useQuery(trpc.reports.myHistory.queryOptions({ limit: 50 }));
   useQueryErrorHandler(activeQ, {
     event: "leadSlides.getActive.load_failed",
     component: "LeadSlidesClient",
@@ -72,8 +72,9 @@ export function useLeadDeckPeriod(requestedReportId: string | null) {
 
   const activeReportId = activeQ.data?.reportId ?? null;
   const periodOptions = useMemo(
-    () => buildLeadSlidePeriodOptions(historyQ.data ?? [], activeReportId),
-    [historyQ.data, activeReportId],
+    () =>
+      buildLeadSlidePeriodOptions(historyQ.data?.items ?? [], activeReportId),
+    [historyQ.data?.items, activeReportId],
   );
   const targetReportId = useMemo(
     () =>
@@ -86,7 +87,7 @@ export function useLeadDeckPeriod(requestedReportId: string | null) {
   );
 
   return {
-    history: historyQ.data,
+    history: historyQ.data?.items,
     targetReportId,
     isLoading: activeQ.isLoading || historyQ.isLoading,
     isError: activeQ.isError || historyQ.isError,

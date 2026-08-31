@@ -1,6 +1,5 @@
+import { effectiveProjectStatus } from "@customreport/report-persistence";
 import type { Escalation, ReportSectionReadModel } from "@customreport/shared";
-
-import { effectiveProjectStatus } from "./published-report-snapshot.js";
 
 // Single builder for live and published-snapshot paths (identical roll-up).
 
@@ -8,10 +7,10 @@ const UNKNOWN_PRODUCT_NAME = "Unknown";
 const STAGE_NAME_SEPARATOR = ", ";
 
 // stageNames holds stage NAMES, not UUIDs — hence a plain join, no lookup.
-function resolveStageName(
-  stageNames: readonly string[] | undefined,
-): string | null {
-  if (!stageNames || stageNames.length === 0) return null;
+function resolveStageName(stageNames: readonly string[]): string {
+  if (stageNames.length === 0) {
+    throw new Error("Escalation source must carry at least one stage name");
+  }
   return stageNames.join(STAGE_NAME_SEPARATOR);
 }
 

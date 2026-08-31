@@ -1,4 +1,8 @@
 import {
+  buildPortfolioProductsFromSnapshotSections,
+  computePortfolioOverviewFromReadSections,
+} from "@customreport/report-persistence";
+import {
   type ReportSectionReadModel,
   reportSectionReadModelSchema,
 } from "@customreport/shared";
@@ -9,10 +13,6 @@ import {
   makeReportSectionReadModel,
   makeSectionActivity,
 } from "../../../test-utils/report-section-fixtures.js";
-import {
-  buildPortfolioProductsFromSnapshotSections,
-  computePortfolioOverviewFromReadSections,
-} from "./published-report-snapshot";
 import { buildEscalationsFromReadSections } from "./report-escalations";
 
 const REPORT_ID = "659b2767-0f86-41e2-b025-49730ca010e4";

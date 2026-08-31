@@ -1,3 +1,4 @@
+import { AUTH_COOKIE_NAME } from "@customreport/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // `server-only` throws if imported from a non-server module — under vitest
@@ -79,7 +80,7 @@ describe("getServerSession", () => {
     fetchMock.mockReset();
     vi.stubGlobal("fetch", fetchMock);
     // The unit suite loads no env file; requireApiUrl has no fallback.
-    vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:3002");
+    vi.stubEnv("API_URL", "http://localhost:3002");
   });
 
   afterEach(() => {
@@ -130,7 +131,7 @@ describe("getServerSession", () => {
     );
     expect(url).toContain("/trpc/auth.me");
     expect(init.headers).toMatchObject({
-      cookie: "customreport_session=a-jwt-cookie-value",
+      cookie: `${AUTH_COOKIE_NAME}=a-jwt-cookie-value`,
     });
     // cache: 'no-store' is mandatory so role downgrades are visible at
     // request time rather than waiting on the data cache.

@@ -1,0 +1,9 @@
+{
+  "name": "@customreport/migrator-runtime",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "dotenv": "17.4.2",
+    "prisma": "7.10.0"
+  }
+}

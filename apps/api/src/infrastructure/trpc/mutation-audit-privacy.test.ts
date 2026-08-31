@@ -3,11 +3,11 @@ import { TRPCError } from "@trpc/server";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
+import { createNullAuditLogger } from "../../test-utils/audit-logger.js";
 import {
   captureMutationAuditInputMiddleware,
-  leadProcedure,
+  protectedProcedure,
   router,
 } from "./trpc.middleware.js";
 
@@ -38,11 +38,11 @@ const privateInputSchema = z.object({
 });
 
 const privacyRouter = router({
-  succeeds: leadProcedure
+  succeeds: protectedProcedure
     .input(privateInputSchema)
     .use(captureMutationAuditInputMiddleware)
     .mutation(() => "ok"),
-  fails: leadProcedure
+  fails: protectedProcedure
     .input(privateInputSchema)
     .use(captureMutationAuditInputMiddleware)
     .mutation(({ input }) => {
@@ -60,7 +60,7 @@ const privacyRouter = router({
         ].join(" | "),
       });
     }),
-  stripsUnknown: leadProcedure
+  stripsUnknown: protectedProcedure
     .input(z.object({ safe: z.string() }))
     .use(captureMutationAuditInputMiddleware)
     .mutation(() => "ok"),

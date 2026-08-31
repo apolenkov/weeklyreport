@@ -4,25 +4,7 @@ import {
   type GridRow,
   itemToneEntry,
   sortStageNames,
-  type ToneEntry,
 } from "./slide-grid-rows";
-
-const KNOWN_ITEM_STATUSES = [
-  "planned",
-  "in_progress",
-  "paused",
-  "postponed",
-  "done",
-] as const;
-
-// Known statuses reuse the own-item map; unknown values coerce to neutral/"Planned"
-// (same lenient convention as coerceWorkflowToItemStatus).
-function foreignItemToneEntry(workflowStatus: string): ToneEntry {
-  const known = KNOWN_ITEM_STATUSES.find((status) => status === workflowStatus);
-  return known === undefined
-    ? { tone: "neutral", hoverLabel: "Planned" }
-    : itemToneEntry(known);
-}
 
 export interface ForeignGridRow {
   readonly row: GridRow;
@@ -36,7 +18,7 @@ type ForeignRowBase = Pick<GridRow, "authorId" | "showAuthorBadge">;
 const toForeignItemRow =
   (base: ForeignRowBase) =>
   (item: CrossAuthorContentRow["items"][number]): ForeignGridRow => {
-    const { tone, hoverLabel } = foreignItemToneEntry(item.workflowStatus);
+    const { tone, hoverLabel } = itemToneEntry(item.workflowStatus);
     return {
       productId: item.projectId,
       column: item.type === "next" ? "next" : "current",

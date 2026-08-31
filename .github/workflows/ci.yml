@@ -1,8 +1,7 @@
 name: CI
 
 # GitHub-hosted CI runs on pull requests, pushes to main, and manual dispatch.
-# Main remains unprotected during the authorized pre-production MVP phase;
-# required checks and branch protection are first-production prerequisites.
+# Main changes are validated by the required repository checks and owner review.
 on:
   workflow_dispatch:
   pull_request:
@@ -18,16 +17,19 @@ concurrency:
 
 jobs:
   quality:
-    name: Lint, Typecheck & Unit Tests
+    name: Lint, Typecheck, Unit Tests & Build
     runs-on: ubuntu-latest
-    # The complete quality gate currently takes more than 15 minutes on a
-    # cold hosted runner. Keep enough headroom for cleanup after the unit suite.
+    # Keep cleanup headroom around the complete lint, contract, type, and unit
+    # gate on a cold hosted runner.
     timeout-minutes: 30
 
     env:
       # Prisma resolves the datasource before generate, so this parseable URL
       # is required even though the quality job opens no database connection.
       DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_generate_only
+      # The web workspace validates its server-side API target while building;
+      # no connection is required for the compile-time gate.
+      API_URL: http://127.0.0.1:3002
       # Type-aware monorepo ESLint can exceed Node's default heap cap on hosted
       # runners; this stays within the runner's available memory.
       NODE_OPTIONS: --max-old-space-size=8192
@@ -69,6 +71,9 @@ jobs:
 
       - name: Unit Tests
         run: pnpm test
+
+      - name: Build all workspaces
+        run: pnpm build
 
   api-integration:
     name: API serial integration (disposable services)
@@ -293,6 +298,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate Prisma Client
+        run: pnpm exec prisma generate
+
       - name: prisma migrate reset (exact disposable E2E DB)
         env:
           PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай"
@@ -302,9 +310,6 @@ jobs:
         env:
           PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай"
         run: pnpm --dir apps/api exec tsx ../../prisma/seeds/profiles/seed-profile.ts full
-
-      - name: prisma generate (post-reset)
-        run: pnpm exec prisma generate
 
   # Production stages exercise standalone Next.js copies and the migrator
   # target that development images do not cover.
@@ -318,11 +323,16 @@ jobs:
       # Compose requires all guarded values before it can render a build.
       DB_PASSWORD: ci-build-only
       POSTGRES_DB: customreport
+      DB_POOL_MAX: "10"
+      DB_POOL_IDLE_TIMEOUT_MS: "10000"
+      DB_POOL_CONNECTION_TIMEOUT_MS: "0"
       REDIS_DB: "0"
       FRONTEND_URL: http://localhost
       APP_BASE_URL: http://localhost
-      NEXT_PUBLIC_API_URL: http://localhost
       API_URL: http://api:3001
+      NEXT_PUBLIC_CLIENT_LOG_FORWARDING: "false"
+      NEXT_PUBLIC_WEB_VITALS: "false"
+      CLIENT_LOG_FORWARDING: "false"
       AUTH_JWT_SECRET: ci-build-only-secret-32-characters-min!!
       PDF_EXPORT_JWT_SECRET: ci-build-only-secret-32-characters-min!!
       PDF_BASE_URL: http://localhost

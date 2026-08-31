@@ -7,21 +7,17 @@ import {
   OctagonXIcon,
   TriangleAlertIcon,
 } from "lucide-react";
-import { useTheme } from "next-themes";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 
-/** Global toast host that follows the active light or dark theme. */
+/** Global toast host for the current light design surface. */
 const Toaster = ({
   theme: themeOverride,
   style: styleOverride,
   ...props
 }: Readonly<ToasterProps>) => {
-  const { theme: activeTheme } = useTheme();
-  const theme = themeOverride ?? activeTheme ?? "system";
-
   return (
     <Sonner
-      theme={theme as NonNullable<ToasterProps["theme"]>}
+      theme={themeOverride ?? "light"}
       className="toaster group"
       icons={{
         success: <CircleCheckIcon className="size-4" />,

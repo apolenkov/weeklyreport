@@ -1,6 +1,7 @@
 ## Purpose
 
-Bound every section-save array payload so no client-supplied array field can grow unbounded.
+Bound every section-save array payload so no client-supplied array field can
+exceed the current per-section limit.
 
 ## Requirements
 
@@ -37,4 +38,4 @@ client-supplied payload.
   `stageStatuses` arrays each stay within `MAX_RECORDS_PER_SECTION_SAVE`
   entries
 - **WHEN** the payload is parsed
-- **THEN** parsing succeeds exactly as it did before the bound was added
+- **THEN** parsing succeeds for every payload within the declared bound

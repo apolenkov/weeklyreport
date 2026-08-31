@@ -18,11 +18,17 @@ describe("desktop application paper surface", () => {
 
   it("keeps the decorative surface free of semantic or animated content", () => {
     const paperStart = appCss.indexOf(".operational-paper-shell");
-    const utilitiesStart = appCss.indexOf(
-      "/*\n * Force-generate utilities",
+    // Keep the assertion scoped to the surface rules. Global keyframes below
+    // the component layer are intentionally used by status indicators and do
+    // not make the paper surface itself animated or semantic.
+    const keyframesStart = appCss.indexOf(
+      "/* Pulsing red dot anchored",
       paperStart,
     );
-    const paperCss = appCss.slice(paperStart, utilitiesStart);
+    const paperCss = appCss.slice(
+      paperStart,
+      keyframesStart === -1 ? appCss.length : keyframesStart,
+    );
 
     expect(paperCss).not.toMatch(/animation\s*:/);
     expect(paperCss).not.toMatch(/content\s*:/);

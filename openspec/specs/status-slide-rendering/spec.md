@@ -41,7 +41,7 @@ When the user enters the slide deck in fullscreen mode, the deck MUST render a P
 The lead status slide deck MUST scope its records to the Record-visibility mode: Mine shows the lead's own records only, Everyone additionally merges co-owners' cross-author content on shared products into the deck's grids and KPI counters, while product health stays honest in both modes and Everyone never leaves the view layer.
 
 1. In **Mine** the deck MUST show only the lead's own items/risks/decisions and
-   the KPI counts MUST count own records only (today's behavior).
+   the KPI counts MUST count own records only.
 2. In **Everyone** the deck MUST merge the co-owners' cross-author content
    (items / risks / decisions) on shared products into the relevant slide grids,
    and the KPI counters MUST reflect own + foreign, so the deck reads the full

@@ -2,7 +2,8 @@
 
 ## Purpose
 
-Require every persisted enum value to have a production writer or be removed consistently from persistence, shared schemas, and domain mappings.
+Require every persisted enum value to have a production writer or be removed
+consistently from persistence, shared schemas, and domain mappings.
 
 ## Requirements
 
@@ -22,20 +23,12 @@ implemented (writer + test) or deleted.
   mapper
 - **AND** the chosen disposition is recorded so intent is reviewable
 
-#### Scenario: The three audited values are dispositioned
+#### Scenario: Persisted enum values have current dispositions
 
-- **WHEN** `CarryOverStatus.failed`/`pending` are audited — the service writes
-  only `completed`, with no designed error or queued path
-- **THEN** they are removed; the enum collapses to `completed` and the column
-  default moves `pending`→`completed`
-- **WHEN** `PdfExportStatus.processing` is audited — export goes
-  `queued`→`completed`/`failed` with no in-flight write
-- **THEN** it is removed from the db enum, the domain enum, and the mapper
-- **WHEN** `ReminderRuleStatus.paused` is audited — found read by the scheduler,
-  rendered by the derived-rules panel, and mapped on both web sides, with only
-  the write trigger missing
-- **THEN** it is implemented: pausing or archiving a `ReminderPolicy` cascades
-  its `active` flag onto the policy's derived `ReminderRule` rows
-  (`active ? "active" : "paused"`) at policy-save time, so the scheduler stops
-  firing them immediately; the reader and anticipatory `@@index([status, fireAt])`
-  are retained
+- **WHEN** a persisted enum value is audited
+- **THEN** its current production writer, reader, schema mirror, and mapper are
+  covered together; a value without that contract is removed consistently
+- **WHEN** `ReminderRuleStatus.paused` is read by the scheduler and rendered by
+  the derived-rules panel
+- **THEN** policy save writes `active ? "active" : "paused"` to its derived
+  rules, so pausing or archiving stops dispatch immediately

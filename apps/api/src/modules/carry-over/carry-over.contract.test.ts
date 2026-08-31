@@ -188,8 +188,15 @@ function createInMemoryRepository(opts: {
 }): CarryOverRepository {
   const executions = new Map<string, CarryOverExecution>();
   const targetReportState: TargetReportState = opts.targetReportState ?? {
+    status: "draft",
+    periodState: "open",
     periodStatus: "open",
     archived: false,
+    autoPublished: false,
+    autoArchived: false,
+    publishedAt: null,
+    publishedById: null,
+    reopenedAt: null,
   };
 
   return {
@@ -684,7 +691,17 @@ describe("CarryOverService — contract tests", () => {
     const repo = createInMemoryRepository({
       sourceSections: [sourceAlpha],
       targetSections: [makeTargetSection(sourceAlpha)],
-      targetReportState: { periodStatus: "published", archived: false },
+      targetReportState: {
+        status: "published",
+        periodState: "published",
+        periodStatus: "published",
+        archived: false,
+        autoPublished: false,
+        autoArchived: false,
+        publishedAt: new Date(),
+        publishedById: null,
+        reopenedAt: null,
+      },
     });
     const saveSpy = vi.spyOn(repo, "saveCarryOver");
     const service = new CarryOverService(repo);
@@ -699,7 +716,17 @@ describe("CarryOverService — contract tests", () => {
     const repo = createInMemoryRepository({
       sourceSections: [sourceAlpha],
       targetSections: [makeTargetSection(sourceAlpha)],
-      targetReportState: { periodStatus: "open", archived: true },
+      targetReportState: {
+        status: "draft",
+        periodState: "archived",
+        periodStatus: "open",
+        archived: true,
+        autoPublished: false,
+        autoArchived: false,
+        publishedAt: null,
+        publishedById: null,
+        reopenedAt: null,
+      },
     });
     const saveSpy = vi.spyOn(repo, "saveCarryOver");
     const service = new CarryOverService(repo);

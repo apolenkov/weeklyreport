@@ -6,6 +6,7 @@ import {
 } from "@node-saml/passport-saml";
 
 import { requireEnv } from "../../lib/env.js";
+import { SAML_ENV_KEYS } from "../../lib/saml-env-keys.js";
 
 export type SamlStrategyOptions = PassportSamlConfig & {
   devMode: boolean;
@@ -17,13 +18,6 @@ export interface VerifiedSamlProfile extends Record<string, unknown> {
   readonly displayName: string;
   readonly role: Role;
 }
-
-const SAML_ENV_KEYS = [
-  "KEYCLOAK_SAML_CALLBACK_URL",
-  "KEYCLOAK_SAML_ENTRY_POINT",
-  "KEYCLOAK_SAML_ISSUER",
-  "KEYCLOAK_SAML_CERT",
-] as const;
 
 // Deliberately ANY, not all: a PARTIAL set is always a misconfiguration, so the
 // caller proceeds into createSamlStrategyOptions, whose requireEnv fails loud

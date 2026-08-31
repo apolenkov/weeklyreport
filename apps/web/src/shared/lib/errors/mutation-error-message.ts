@@ -13,3 +13,10 @@ export function mutationErrorMessage(
     ? actionFailure
     : error.message;
 }
+
+export function toastMutationError(fallbackMessage: string) {
+  return (error: unknown): void => {
+    toast.error(mutationErrorMessage(error, fallbackMessage));
+  };
+}
+import { toast } from "sonner";

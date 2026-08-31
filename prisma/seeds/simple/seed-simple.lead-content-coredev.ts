@@ -39,6 +39,7 @@ export const COREDEV_LEAD_CONTENT: Record<string, LeadContent> = {
         text: "Миграция шаблонов писем на паузе: ждём финальный брендбук",
         tag: "feature",
         status: ItemWorkflowStatus.paused,
+        pausedReason: "Ожидаем финальный брендбук",
       },
     ],
     nextItems: [

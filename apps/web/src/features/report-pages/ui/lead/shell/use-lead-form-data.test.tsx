@@ -114,7 +114,7 @@ function buildTRPC(
   const contentSpy = vi.fn();
   const { proxy } = createMockTRPC([
     { path: ["reports", "getActive"], query: active },
-    { path: ["reports", "myHistory"], query: [] },
+    { path: ["reports", "myHistory"], query: { items: [] } },
     {
       path: ["leadForm", "viewSettings"],
       query: failures.viewSettings

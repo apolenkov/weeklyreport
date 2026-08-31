@@ -10,8 +10,8 @@ properties; it is not a separate OKLCH theme package.
   `src/styles/utilities.css`.
 - `theme.css` owns the `@theme` palette, font stacks, radii, layers, control
   dimensions, card-surface recipes, and slide constants.
-- `utilities.css` owns shared `.card-surface`, toolbar fill, skeleton, fade,
-  scale, collapsible, press, reduced-motion, and print rules.
+- `utilities.css` owns shared `.card-surface`, skeleton, scale, press,
+  reduced-motion, and print rules.
 - The web app imports this package stylesheet from
   `apps/web/src/styles/app.css`, then adds its paper shell and landing hero
   layers in `apps/web/src/styles/app.css` and `apps/web/src/styles/pulse.css`.
@@ -22,31 +22,32 @@ and WCAG constraints.
 
 ## Components
 
-The source tree currently contains **22 component `.tsx` files**:
+The source tree currently contains **13 component `.tsx` files**:
 
-- **22 files under `src/components/ui/`**. Twenty UI modules are exported from
-  the package root: Alert, Avatar, Badge, Button, Card, Collapsible, Dialog,
-  DropdownMenu, Input, Label, Progress, Select, Separator, Sheet, Skeleton,
-  Toaster, Table, Tabs, Textarea, and Tooltip.
-- `chart.tsx` and `dropdown-menu-items.tsx` are source modules used by the
-  package but are not separate root exports.
-  The public root also exports `useIsMobile` and `cn`. Individual modules expose
-  their Radix subparts (for example `CardHeader`, `DialogContent`, `TabsTrigger`)
-  through the same public surface.
+- **13 files under `src/components/ui/`**. Current consumers import twelve live
+  UI modules by subpath: Alert, Button, Card, Chart, Dialog, DropdownMenu,
+  Separator, Sheet, Skeleton, Toaster, Tabs, and Tooltip.
+- `dropdown-menu-items.tsx` is the only internal source module. The package
+  utility is imported from `@customreport/ui/lib/utils`. Only currently
+  consumed subparts are public: card content/header;
+  dialog content/description/title; dropdown
+  content/item/label/separator/trigger; sheet content/header/title/
+  trigger; and tabs content/list/trigger.
 
 ## Design tokens
 
 Tokens are named CSS variables such as `--color-background`, `--color-card`,
 `--color-primary`, `--color-success`, `--color-destructive`, `--color-border`,
 `--color-ring`, and `--radius-pill`. Current values are hex or `rgba()` in
-`theme.css`; do not introduce legacy unprefixed aliases or an undefined generic
+`theme.css`; do not introduce unprefixed aliases or an undefined generic
 `--color-surface`. Use `--color-surface-muted`, `--color-surface-hover`, or
-`--color-surface-empty` according to semantic role. The current `.dark` class
-overrides only the overlay; it is not a full alternate palette.
+`--color-surface-empty` according to semantic role. The product currently ships
+one light palette; use `--color-on-dark` only for text on deep brand surfaces.
 
 ## Usage
 
 ```tsx
-import { Badge, Button, Card, CardContent } from "@customreport/ui";
+import { Button } from "@customreport/ui/components/ui/button";
+import { Card, CardContent } from "@customreport/ui/components/ui/card";
 import "@customreport/ui/styles/globals.css";
 ```

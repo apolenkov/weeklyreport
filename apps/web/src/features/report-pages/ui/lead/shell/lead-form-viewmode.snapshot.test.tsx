@@ -5,6 +5,7 @@ import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { SessionContext } from "../../../../../shared/lib/auth/session-provider";
 import { TRPCProxyContext } from "../../../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
 import { LeadForm } from "./lead-form";
@@ -54,7 +55,7 @@ function buildTRPC() {
     },
     {
       path: ["reports", "myHistory"],
-      query: [],
+      query: { items: [] },
     },
     {
       path: ["reports", "saveDraft"],
@@ -106,9 +107,23 @@ function Wrapper({ children }: { readonly children: ReactNode }) {
   });
   return (
     <QueryClientProvider client={qc}>
-      <TRPCProxyContext.Provider value={buildTRPC()}>
-        {children}
-      </TRPCProxyContext.Provider>
+      <SessionContext.Provider
+        value={{
+          user: {
+            id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            name: "Test Lead",
+            email: "lead@example.com",
+            role: "lead",
+          },
+          organization: null,
+          isLoading: false,
+          isAuthenticated: true,
+        }}
+      >
+        <TRPCProxyContext.Provider value={buildTRPC()}>
+          {children}
+        </TRPCProxyContext.Provider>
+      </SessionContext.Provider>
     </QueryClientProvider>
   );
 }

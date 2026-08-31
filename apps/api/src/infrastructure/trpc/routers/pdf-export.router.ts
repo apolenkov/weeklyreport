@@ -44,5 +44,19 @@ export function createPdfExportRouter(deps: PdfExportRouterDeps) {
           throw mapDomainError(error);
         }
       }),
+
+    render: leadershipProcedure
+      .input(z.object({ jobId: z.uuid(), reportId: z.uuid() }))
+      .query(async ({ input, ctx }) => {
+        try {
+          return await deps.pdfExportService.getPdfExportRender(
+            input.jobId,
+            ctx.session.userId,
+            input.reportId,
+          );
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
   });
 }

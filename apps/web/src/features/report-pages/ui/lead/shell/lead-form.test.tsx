@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { SessionContext } from "../../../../../shared/lib/auth/session-provider";
 import { TRPCProxyContext } from "../../../../../shared/lib/trpc/trpc-context";
 import { expectDefined } from "../../../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
@@ -120,7 +121,7 @@ function buildHarness(
     },
     {
       path: ["reports", "myHistory"],
-      query: opts.myHistory ?? [],
+      query: { items: opts.myHistory ?? [] },
     },
     {
       path: ["reports", "saveDraft"],
@@ -185,9 +186,23 @@ function buildHarness(
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <TRPCProxyContext.Provider value={proxy}>
-          {children}
-        </TRPCProxyContext.Provider>
+        <SessionContext.Provider
+          value={{
+            user: {
+              id: AUTHOR_ID,
+              name: "Test Lead",
+              email: "lead@example.com",
+              role: "lead",
+            },
+            organization: null,
+            isLoading: false,
+            isAuthenticated: true,
+          }}
+        >
+          <TRPCProxyContext.Provider value={proxy}>
+            {children}
+          </TRPCProxyContext.Provider>
+        </SessionContext.Provider>
       </QueryClientProvider>
     );
   }
@@ -665,7 +680,7 @@ describe("LeadForm mutation wiring", () => {
     const editableChip = screen.getAllByRole("button").find((b) => {
       const label = b.getAttribute("aria-label") ?? "";
       return (
-        /^(Planning|Analysis|Design|Development|Testing|DevOps|Support): (on-track|empty)/.test(
+        /^(Planning|Analysis|Design|Development|Testing|DevOps|Support): (On track|No status)/.test(
           label,
         ) && b.getAttribute("aria-disabled") !== "true"
       );
@@ -705,7 +720,7 @@ describe("LeadForm mutation wiring", () => {
     const editableChip = screen.getAllByRole("button").find((button) => {
       const label = button.getAttribute("aria-label") ?? "";
       return (
-        /^(Planning|Analysis|Design|Development|Testing|DevOps|Support): (on-track|empty)/.test(
+        /^(Planning|Analysis|Design|Development|Testing|DevOps|Support): (On track|No status)/.test(
           label,
         ) && button.getAttribute("aria-disabled") !== "true"
       );

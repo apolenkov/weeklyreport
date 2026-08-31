@@ -2,11 +2,11 @@ import * as path from "node:path";
 
 import { defineConfig } from "vitest/config";
 
-// Root-level code under prisma/ and tools/ is outside every workspace
-// suite; this config is its only runner, chained into `pnpm test`.
+// Root-level code under prisma/ is outside every workspace suite; this config
+// is its only runner, chained into `pnpm test`.
 export default defineConfig({
-  // Nothing links the workspace packages into the repo root, so an import that
-  // resolves inside apps/ does not resolve here.
+  // Nothing links workspace packages into the repo root, so shared imports need
+  // an explicit source alias here.
   resolve: {
     alias: {
       "@customreport/shared": path.resolve(
@@ -16,6 +16,6 @@ export default defineConfig({
     },
   },
   test: {
-    include: ["prisma/**/*.test.ts", "tools/**/*.test.ts"],
+    include: ["prisma/**/*.test.ts"],
   },
 });

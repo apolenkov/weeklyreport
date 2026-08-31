@@ -17,12 +17,11 @@ pertains to in-flight work on the stage, not to finished or not-yet-started work
 so a completed/planned item keeps its progress status even when a risk covers its
 product and stage. An eligible item is COVERED by a risk when both live in the
 same `ReportSection`, name the same product, and their SDLC stages overlap —
-where an empty `stageNames` on the risk means "all of the author's assigned
-stages on that product" (the canonical wildcard from
-`escalation-types-and-flagged-red-rollup`) and therefore covers the item
-regardless of the item's stage. Coverage is stage-grained, so one risk floors
-EVERY co-located in-progress item on that product/stage (see `design.md`
-Decision 1). With no covering risk the item shows its progress status
+where the risk's `stageNames` explicitly overlaps the item's stage. An empty
+`stageNames` is valid only for an activity-parented risk, which has no product
+stage to cover. Coverage is stage-grained, so one risk floors
+EVERY co-located in-progress item on that product/stage. With no covering risk
+the item shows its progress status
 (`in-progress` / `completed` / `planned`) and no alarm. The derivation reuses the
 stage-chip render-floor mechanism (`deriveEffectiveStageStatus`), applied to the
 item via a shared helper.
@@ -103,7 +102,7 @@ the stage-chip foreign handling in `status-risk-unification`.
 
 ### Requirement: Setting an item to at-risk/blocked routes through blocker creation
 
-The system MUST NOT offer any item-level gesture that stores an alarm on the item. Blockers are created in Risks & Blockers or via the quick-add "blocker" entry (`apps/web/src/features/report-pages/ui/lead/chrome/quick-add-button.tsx`) — a risk of severity `blocked`, never a free-blocked item. The former in-dialog "mark as blocked" gesture is removed.
+The system MUST NOT offer any item-level gesture that stores an alarm on the item. Blockers are created in Risks & Blockers or via the quick-add "blocker" entry (`apps/web/src/features/report-pages/ui/lead/chrome/quick-add-button.tsx`) — a risk of severity `blocked`, never a free-blocked item. No item dialog may expose a separate "mark as blocked" gesture.
 
 #### Scenario: the blocker quick-add creates a blocker record
 
@@ -138,7 +137,7 @@ No alarm MUST ever be stored on an item: the `ItemWorkflowStatus` enum carries p
 The escalation roll-up MUST NOT emit a blocked item and its covering blocker as
 two separate escalations for the same underlying problem. The builder is
 `buildEscalationsFromReadSections` in
-`apps/api/src/modules/report-sections/infrastructure/published-report-snapshot.ts`. Because a displayed
+`packages/report-persistence/src/published-report-snapshot.ts`. Because a displayed
 item-blocked is now backed by a covering
 blocked-severity risk, the `blocked` and `unresolved_risk` escalations that a
 single blocker would otherwise produce MUST be reconciled to one signal per
@@ -188,7 +187,7 @@ The item edit dialog MUST offer exactly the item type's status vocabulary (curre
 
 ### Requirement: One stored progress status per item, with per-type vocabularies
 
-`ItemWorkflowStatus` (Prisma enum + shared Zod item schemas) MUST be the single stored source of an item's progress: `planned | in_progress | paused | postponed | done`. The system MUST NOT store `blocked` on an item (alarms derive from covering risks) and MUST NOT carry a separate completed flag (`Item.completed` is removed). Shared Zod MUST reject a status outside the item type's vocabulary: current → `in_progress | paused | done`; next → `planned | postponed`. `paused` and `postponed` roll up as not-done and MUST NOT feed the blocked/at-risk escalation paths.
+`ItemWorkflowStatus` (Prisma enum + shared Zod item schemas) MUST be the single stored source of an item's progress: `planned | in_progress | paused | postponed | done`. The system MUST NOT store `blocked` on an item (alarms derive from covering risks) and MUST NOT define or persist a separate `Item.completed` flag. Shared Zod MUST reject a status outside the item type's vocabulary: current → `in_progress | paused | done`; next → `planned | postponed`. `paused` and `postponed` roll up as not-done and MUST NOT feed the blocked/at-risk escalation paths.
 
 #### Scenario: next item accepts only its vocabulary
 
@@ -212,9 +211,10 @@ When a lead pauses an item, the UI MUST require a non-blank reason before the
 pause takes effect, and the reason MUST be persisted with the item
 (`Item.pausedReason`) and surfaced on the item card. Both pause entry points —
 the quick "Pause" action on a current-week card and the "Paused" status choice
-in the item edit dialog — MUST enforce the reason. The requirement is enforced
-at the UI entry points, not as a hard schema invariant. Leaving the paused
-status clears the reason.
+in the item edit dialog — MUST enforce the reason. This is a hard invariant at
+every write boundary: a paused item MUST have a non-blank trimmed
+`pausedReason`, and every non-paused item MUST have `pausedReason = null` (or
+omit it before persistence). Leaving the paused status clears the reason.
 
 #### Scenario: the quick pause action requires a reason
 

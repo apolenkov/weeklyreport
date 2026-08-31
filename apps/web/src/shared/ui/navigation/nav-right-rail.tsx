@@ -39,8 +39,8 @@ export function NavRightRail({
   readonly sessionLoading: boolean;
   readonly hasUser: boolean;
 }) {
-  // Actions-only rail. Identity lives in the left home mark + xl text, so the
-  // Keep the rail limited to actions that are available in the current MVP.
+  // The rail contains actions only; identity lives in the left home mark and
+  // the expanded navigation text. Keep it limited to currently available actions.
   return (
     <div className={RIGHT_RAIL_CLASS}>
       {sessionLoading ? (

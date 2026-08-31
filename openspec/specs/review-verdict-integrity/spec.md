@@ -4,6 +4,30 @@ Verdicts on a report section must be tied to the exact version the reviewer judg
 
 ## Requirements
 
+### Requirement: Verdict authorization is rechecked inside the write transaction
+
+The verdict transaction MUST lock the parent report and re-read the current
+section author and reporting group before the version compare-and-set or
+`SectionReview` upsert. It MUST resolve the reviewer's current role,
+group-entitlement, and viewer designation from the database in that same
+transaction. A service-level reviewer precheck is advisory only; a concurrent
+group move, role change, or designation revocation MUST reject the verdict and
+write neither a verdict nor an un-submit transition.
+
+#### Scenario: Revoked reviewer cannot persist a stale verdict
+
+- **WHEN** a reviewer loses the current database designation after the
+  application precheck but before the verdict transaction reaches the write
+- **THEN** the verdict is rejected and no `SectionReview` row or section-state
+  transition is written
+
+#### Scenario: Group ownership is resolved at write time
+
+- **WHEN** the section's author is moved to another reporting group after the
+  reviewer precheck
+- **THEN** the transaction evaluates the new group and rejects a reviewer who
+  is not entitled to that group
+
 ### Requirement: A verdict records the version the reviewer judged
 
 A reviewer's verdict MUST record `judgedVersion` from the reviewer-supplied

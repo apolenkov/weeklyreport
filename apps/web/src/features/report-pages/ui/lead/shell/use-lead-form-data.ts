@@ -22,7 +22,7 @@ import { useLeadFormRedirects } from "./use-lead-form-redirects";
 interface UseLeadFormDataInput {
   // Path-segment reportId scopes load away from the session's active period.
   readonly reportId?: string | undefined;
-  // Bare-route → canonical addressed URL once active reportId is known.
+  // Entry route → addressed URL once the active reportId is known.
   readonly redirectToCanonical?: boolean | undefined;
   readonly isSlidesMode: boolean;
 }

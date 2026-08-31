@@ -2,7 +2,7 @@ import type { PeriodState, ReportStatus } from "@customreport/shared";
 
 // The single, pure source of truth for the `Report` lifecycle field set: no DB
 // constraint ties the coupled lifecycle representations together. The governed
-// set and identity tuple are specified in openspec/specs/period-dual-state.
+// set and identity fields are specified in openspec/specs/period-dual-state.
 
 // The bare-scalar lifecycle subset every transition produces — never a Prisma
 // `{ set }` wrapper — so the object is assignable to both `ReportUpdateInput`
@@ -49,10 +49,10 @@ export interface TransitionCtx {
   archive: Record<string, never>;
   // Scheduler-driven archive past the retention window.
   autoArchive: Record<string, never>;
-  // Un-archive: the caller derives `nextPeriodState` from the surviving legacy
-  // tuple (a DB read a pure builder must not do) and passes it in.
+  // Un-archive: the caller derives `nextPeriodState` from the surviving companion
+  // fields (a DB read a pure builder must not do) and passes them in.
   unarchive: { nextPeriodState: PeriodState };
-  // Restore a complete lifecycle tuple already validated by the shared schema.
+  // Restore a complete lifecycle field set already validated by the shared schema.
   restore: { lifecycle: Required<LifecycleFields> };
 }
 
@@ -126,7 +126,7 @@ const transitionBuilders: {
   autoPublish: ({ now }) => autoPublishWrite(now),
   // Intentional asymmetry: periodState reverts to 'open' (editable again) while
   // periodStatus carries the 'reopened' marker so consumers can still
-  // discriminate a reopen from a fresh open. The legacy tuple is untouched.
+  // discriminate a reopen from a fresh open. The companion state stays current.
   reopen: ({ now }) => reopenWrite(now),
   archive: () => lifecycleWrite({ archived: true, periodState: "archived" }),
   autoArchive: () =>
@@ -140,7 +140,7 @@ const transitionBuilders: {
   restore: ({ lifecycle }) => lifecycleWrite(lifecycle),
 };
 
-// Build the complete governed lifecycle field set for a transition. Pure and
+// Build the canonical governed lifecycle delta for a transition. Pure and
 // deterministic: no Nest, no Prisma client, no `new Date()` — timestamps arrive
 // via `ctx`, so the same `(kind, ctx)` always yields the same object.
 export function buildTransition<K extends TransitionKind>(

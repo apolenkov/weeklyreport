@@ -17,15 +17,6 @@ function DropdownMenu({
   return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
 }
 
-/** Portal for dropdown content outside the trigger tree. */
-function DropdownMenuPortal({
-  ...props
-}: Readonly<React.ComponentProps<typeof DropdownMenuPrimitive.Portal>>) {
-  return (
-    <DropdownMenuPrimitive.Portal data-slot="dropdown-menu-portal" {...props} />
-  );
-}
-
 /** Control that opens the dropdown menu. */
 function DropdownMenuTrigger({
   ...props
@@ -61,49 +52,10 @@ function DropdownMenuContent({
   );
 }
 
-/** Nested submenu root. */
-function DropdownMenuSub({
-  ...props
-}: Readonly<React.ComponentProps<typeof DropdownMenuPrimitive.Sub>>) {
-  return <DropdownMenuPrimitive.Sub data-slot="dropdown-menu-sub" {...props} />;
-}
-
-/** Panel for a nested submenu. */
-function DropdownMenuSubContent({
-  className,
-  ...props
-}: Readonly<React.ComponentProps<typeof DropdownMenuPrimitive.SubContent>>) {
-  return (
-    <DropdownMenuPrimitive.SubContent
-      data-slot="dropdown-menu-sub-content"
-      className={cn(
-        CONTENT_SURFACE,
-        CONTENT_MOTION,
-        "overflow-hidden shadow-lg",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
+export { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger };
 
 export {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuPortal,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuTrigger,
-};
-
-export {
-  DropdownMenuCheckboxItem,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
-  DropdownMenuShortcut,
-  DropdownMenuSubTrigger,
 } from "./dropdown-menu-items";

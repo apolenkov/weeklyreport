@@ -10,7 +10,10 @@ import {
   AdminPeriodStaleStateError,
   AdminReopenRequestAlreadyProcessedError,
   AdminReopenRequestNotFoundError,
+  AdminSnapshotConflictError,
+  AdminUserActivityAssignmentConflictError,
   AdminUserConflictError,
+  AdminUserPublishedHistoryError,
   AdminUserReportingGroupRequiredError,
 } from "../../modules/admin/index.js";
 import { ArchiveDomainError } from "../../modules/archive/index.js";
@@ -496,8 +499,23 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
       code: "CONFLICT",
     },
     {
+      name: "AdminSnapshotConflictError",
+      make: () => new AdminSnapshotConflictError("m"),
+      code: "CONFLICT",
+    },
+    {
       name: "AdminUserConflictError",
       make: () => new AdminUserConflictError("m"),
+      code: "CONFLICT",
+    },
+    {
+      name: "AdminUserActivityAssignmentConflictError",
+      make: () => new AdminUserActivityAssignmentConflictError("m"),
+      code: "CONFLICT",
+    },
+    {
+      name: "AdminUserPublishedHistoryError",
+      make: () => new AdminUserPublishedHistoryError("m"),
       code: "CONFLICT",
     },
     {

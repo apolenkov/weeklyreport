@@ -1,4 +1,5 @@
 import { statusLabel } from "../../../shared/lib/status/status-presentation";
+import { Rail } from "../../../shared/ui/report-shell/rail";
 import type {
   BlockedAtRiskItem,
   ProductGroup,
@@ -61,20 +62,9 @@ function productInitials(product: string): string {
     .toUpperCase();
 }
 
-// Distinct assignees in first-appearance order, joined for the header sub-line
-// (the "Василий И. · Игорь В." line in the reference card).
+// Distinct assignees in first-appearance order for the header sub-line.
 function assigneeLine(group: ProductGroup): string {
   return [...new Set(group.items.map((item) => item.assignee))].join(" · ");
-}
-
-function Rail({ tone }: { readonly tone: string }) {
-  return (
-    <span
-      className="min-h-[22px] self-stretch rounded-[2px]"
-      style={{ background: tone }}
-      aria-hidden="true"
-    />
-  );
 }
 
 function IssueRow({ item }: { readonly item: BlockedAtRiskItem }) {

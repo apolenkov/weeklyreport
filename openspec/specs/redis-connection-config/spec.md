@@ -2,38 +2,43 @@
 
 ## Purpose
 
-Derive every Redis connection from one fail-loud validated configuration builder and keep Redis-backed service instances under dependency injection.
+Derive every Redis connection from one fail-loud validated configuration
+builder, including the explicitly selected logical database, and keep
+Redis-backed service instances under dependency injection.
 
 ## Requirements
 
-### Requirement: Redis host and port MUST come from one validated-env builder
+### Requirement: Redis database, host, and port MUST come from one validated-env builder
 
-The API MUST derive the Redis connection `host` and `port` from a single
+The API MUST derive the Redis connection `db`, `host`, and `port` from a single
 `buildRedisConnectionOptions(env)` helper that reads only the validated
-`EnvConfig` (`REDIS_HOST`, `REDIS_PORT`). The helper MUST NOT read
+`EnvConfig` (`REDIS_DB`, `REDIS_HOST`, `REDIS_PORT`). `REDIS_DB` selects the
+logical database for the client; product/dev uses logical DB `0`, while the
+guarded E2E lane uses logical DB `15`. The helper MUST NOT read
 `process.env` directly, MUST NOT coerce the port with `Number(...)` (the
 validated `EnvConfig.REDIS_PORT` is already a `number`), and MUST NOT supply any
-fallback or default value for either field. It returns exactly `{ host, port }`;
+fallback or default value for any field. It returns exactly `{ db, host, port }`;
 per-client resilience flags are the caller's concern.
 
-#### Scenario: The helper returns the validated host and port
+#### Scenario: The helper returns the validated database, host, and port
 
 - **WHEN** `buildRedisConnectionOptions(env)` is called with a validated
-  `EnvConfig` whose `REDIS_HOST` is `"redis"` and `REDIS_PORT` is `6379`
-- **THEN** it returns `{ host: "redis", port: 6379 }`
+  `EnvConfig` whose `REDIS_DB` is `0`, `REDIS_HOST` is `"redis"`, and
+  `REDIS_PORT` is `6379`
+- **THEN** it returns `{ db: 0, host: "redis", port: 6379 }`
 - **AND** it reads neither `process.env.REDIS_HOST` nor `process.env.REDIS_PORT`
 
 #### Scenario: The helper carries no fallback for a missing value
 
 - **WHEN** a reviewer inspects `buildRedisConnectionOptions`
 - **THEN** it contains no `?? "localhost"`, no `?? 6379`, and no `.default(...)`
-- **AND** absence of `REDIS_HOST`/`REDIS_PORT` is already rejected upstream by
+- **AND** absence of `REDIS_DB`/`REDIS_HOST`/`REDIS_PORT` is already rejected upstream by
   the env schema, so the helper never observes an unset value
 
-### Requirement: Every Redis consumer MUST obtain host/port from the builder
+### Requirement: Every Redis consumer MUST obtain database, host, and port from the builder
 
 Each API consumer that constructs an ioredis client or a BullMQ connection MUST
-obtain its `host` and `port` by spreading `buildRedisConnectionOptions(env)`,
+obtain its `db`, `host`, and `port` by spreading `buildRedisConnectionOptions(env)`,
 and MUST NOT inline `requireEnv(process.env, "REDIS_HOST")` or
 `Number(requireEnv(process.env, "REDIS_PORT"))`. The consumers are
 `bullmq-options.ts` (`getBullMQConnectionOptions`), `redis.health.ts`,
@@ -46,7 +51,7 @@ those differ per consumer and are not env-derived.
 #### Scenario: A consumer builds its connection from the helper
 
 - **WHEN** `getBullMQConnectionOptions` constructs its connection options
-- **THEN** its `host`/`port` come from `buildRedisConnectionOptions(env)`
+- **THEN** its `db`/`host`/`port` come from `buildRedisConnectionOptions(env)`
 - **AND** its own `maxRetriesPerRequest: null` is preserved alongside the spread
 
 #### Scenario: No consumer re-reads process.env for host or port
@@ -54,8 +59,8 @@ those differ per consumer and are not env-derived.
 - **WHEN** the six named consumers are searched for Redis connection reads
 - **THEN** none contains `requireEnv(process.env, "REDIS_HOST")` or
   `Number(requireEnv(process.env, "REDIS_PORT"))`
-- **AND** each resilience flag value that existed before the change is unchanged
-  after it (behavior-preserving)
+- **AND** each consumer retains its declared resilience flags alongside the
+  shared host and port
 
 #### Scenario: The rate-limit Redis store builds its client from the helper
 
@@ -65,13 +70,13 @@ those differ per consumer and are not env-derived.
 - **AND** it reads neither `process.env.REDIS_HOST` nor
   `process.env.REDIS_PORT` directly
 
-### Requirement: A missing REDIS_HOST or REDIS_PORT MUST fail boot loud
+### Requirement: A missing Redis connection field MUST fail boot loud
 
-The env schema MUST keep `REDIS_HOST` and `REDIS_PORT` REQUIRED with no
+The env schema MUST keep `REDIS_DB`, `REDIS_HOST`, and `REDIS_PORT` REQUIRED with no
 `.default()`, so a deploy that omits either fails validation at boot rather than
 silently connecting to a wrong host or port. This preserves the no-silent-default
-contract (`lint-max-strictness-standard`) after the connection read is
-centralized: the single builder reads only already-validated values, so there is
+contract after the connection read is centralized: the single builder reads
+only already-validated values, so there is
 exactly one place the fields are consumed and no place a fallback can reappear.
 
 #### Scenario: Boot fails when REDIS_HOST is unset
@@ -81,6 +86,13 @@ exactly one place the fields are consumed and no place a fallback can reappear.
   than returning a config
 - **AND** no consumer ever reaches `buildRedisConnectionOptions` with a missing
   host
+
+#### Scenario: Boot rejects an invalid logical database
+
+- **WHEN** `validateEnv()` runs with `REDIS_DB` set outside the supported logical
+  database range
+- **THEN** validation fails on `REDIS_DB` before any Redis connection is
+  constructed
 
 #### Scenario: Boot fails when REDIS_PORT is not a positive integer
 

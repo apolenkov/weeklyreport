@@ -38,7 +38,7 @@ CREATE TYPE "PeriodState" AS ENUM ('scheduled', 'open', 'published', 'archived')
 CREATE TYPE "ReopenRequestStatus" AS ENUM ('pending', 'approved', 'rejected');
 
 -- CreateEnum
-CREATE TYPE "ReminderRuleKind" AS ENUM ('deadline', 'follow_up', 'escalation');
+CREATE TYPE "ReminderRuleKind" AS ENUM ('deadline', 'escalation');
 
 -- CreateEnum
 CREATE TYPE "ReminderAudience" AS ENUM ('LEAD_WITH_DRAFT', 'HEAD_OF_LATE');
@@ -48,6 +48,9 @@ CREATE TYPE "WorkingDays" AS ENUM ('MON_FRI', 'MON_SAT', 'MON_SUN');
 
 -- CreateEnum
 CREATE TYPE "ReminderRuleStatus" AS ENUM ('active', 'paused');
+
+-- CreateEnum
+CREATE TYPE "PublishedSearchRecordType" AS ENUM ('item', 'risk', 'decision');
 
 -- CreateTable
 CREATE TABLE "User" (
@@ -156,6 +159,33 @@ CREATE TABLE "Report" (
 );
 
 -- CreateTable
+CREATE TABLE "PublishedSectionScope" (
+    "reportId" TEXT NOT NULL,
+    "reportSectionId" TEXT NOT NULL,
+    "authorId" TEXT NOT NULL,
+    "groupId" TEXT NOT NULL,
+
+    CONSTRAINT "PublishedSectionScope_pkey" PRIMARY KEY ("reportId", "reportSectionId")
+);
+
+-- CreateTable
+CREATE TABLE "PublishedSearchDocument" (
+    "reportId" TEXT NOT NULL,
+    "reportSectionId" TEXT NOT NULL,
+    "recordType" "PublishedSearchRecordType" NOT NULL,
+    "recordId" TEXT NOT NULL,
+    "stableId" TEXT NOT NULL,
+    "groupId" TEXT NOT NULL,
+    "projectId" TEXT,
+    "title" TEXT NOT NULL,
+    "searchText" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL,
+    "searchTsv" tsvector GENERATED ALWAYS AS (to_tsvector('russian'::regconfig, COALESCE("searchText", ''::text))) STORED,
+
+    CONSTRAINT "PublishedSearchDocument_pkey" PRIMARY KEY ("reportId", "recordType", "recordId")
+);
+
+-- CreateTable
 CREATE TABLE "ReportSection" (
     "id" TEXT NOT NULL,
     "reportId" TEXT NOT NULL,
@@ -214,7 +244,7 @@ CREATE TABLE "Item" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "searchTsv" tsvector GENERATED ALWAYS AS (to_tsvector('russian'::regconfig, COALESCE(text, ''::text))) STORED,
-    "stageNames" TEXT[],
+    "stageNames" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
 
     CONSTRAINT "Item_pkey" PRIMARY KEY ("id")
 );
@@ -233,7 +263,7 @@ CREATE TABLE "Risk" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "searchTsv" tsvector GENERATED ALWAYS AS (to_tsvector('russian'::regconfig, ((((COALESCE(risk, ''::text) || ' '::text) || COALESCE(impact, ''::text)) || ' '::text) || COALESCE(mitigation, ''::text)))) STORED,
-    "stageNames" TEXT[],
+    "stageNames" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
 
     CONSTRAINT "Risk_pkey" PRIMARY KEY ("id")
 );
@@ -253,7 +283,7 @@ CREATE TABLE "Decision" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "searchTsv" tsvector GENERATED ALWAYS AS (to_tsvector('russian'::regconfig, COALESCE(text, ''::text))) STORED,
-    "stageNames" TEXT[],
+    "stageNames" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
 
     CONSTRAINT "Decision_pkey" PRIMARY KEY ("id")
 );
@@ -262,6 +292,9 @@ CREATE TABLE "Decision" (
 CREATE TABLE "PdfExportJob" (
     "id" TEXT NOT NULL,
     "reportId" TEXT NOT NULL,
+    "publicationAt" TIMESTAMP(3) NOT NULL,
+    "publicationSnapshot" JSONB NOT NULL,
+    "publicationGroupIds" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
     "status" "PdfExportStatus" NOT NULL DEFAULT 'pending',
     "templateVersion" TEXT NOT NULL,
     "filePath" TEXT,
@@ -277,12 +310,13 @@ CREATE TABLE "PdfExportJob" (
 -- CreateTable
 CREATE TABLE "ReminderRule" (
     "id" TEXT NOT NULL,
-    "reportId" TEXT,
-    "policyId" TEXT,
+    "reportId" TEXT NOT NULL,
+    "policyId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "kind" "ReminderRuleKind" NOT NULL,
     "fireAt" TIMESTAMP(3) NOT NULL,
+    "deadline" TIMESTAMP(3) NOT NULL,
     "timezone" TEXT NOT NULL DEFAULT 'Europe/Moscow',
     "status" "ReminderRuleStatus" NOT NULL DEFAULT 'active',
     "version" INTEGER NOT NULL DEFAULT 1,
@@ -303,7 +337,11 @@ CREATE TABLE "ReminderPolicy" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "ReminderPolicy_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "ReminderPolicy_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "ReminderPolicy_kind_audience_check" CHECK (
+      ("kind" = 'deadline' AND "audience" = 'LEAD_WITH_DRAFT')
+      OR ("kind" = 'escalation' AND "audience" = 'HEAD_OF_LATE')
+    )
 );
 
 -- CreateTable
@@ -313,12 +351,18 @@ CREATE TABLE "ReminderExecution" (
     "recipientEmail" TEXT NOT NULL,
     "dedupeKey" TEXT NOT NULL,
     "status" "ReminderExecutionStatus" NOT NULL DEFAULT 'pending',
+    "queuePayload" JSONB NOT NULL,
     "sentAt" TIMESTAMP(3),
     "error" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "ReminderExecution_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "ReminderExecution_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "ReminderExecution_lifecycle_check" CHECK (
+      ("status" = 'sent' AND "sentAt" IS NOT NULL AND "error" IS NULL)
+      OR ("status" = 'failed' AND "sentAt" IS NULL AND "error" IS NOT NULL AND "error" ~ '[^[:space:]]')
+      OR ("status" IN ('pending', 'sending') AND "sentAt" IS NULL AND "error" IS NULL)
+    )
 );
 
 -- CreateTable
@@ -420,17 +464,16 @@ CREATE TABLE "Organization" (
     CONSTRAINT "Organization_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
-CREATE TABLE "TelegramBinding" (
-    "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "chatId" TEXT NOT NULL,
-    "linkedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "active" BOOLEAN NOT NULL DEFAULT true,
-    "lastSeenAt" TIMESTAMP(3),
+-- The application requires both configuration singletons before it can serve
+-- production requests. Canonical defaults establish AppSettings; a demo seed
+-- may update either row idempotently without being a deployment prerequisite.
+INSERT INTO "AppSettings" ("id", "updatedAt")
+VALUES ('singleton', CURRENT_TIMESTAMP)
+ON CONFLICT ("id") DO NOTHING;
 
-    CONSTRAINT "TelegramBinding_pkey" PRIMARY KEY ("id")
-);
+INSERT INTO "Organization" ("id", "shortName", "fullName", "updatedAt")
+VALUES ('singleton', 'PEO', 'Product Engineering & Operations', CURRENT_TIMESTAMP)
+ON CONFLICT ("id") DO NOTHING;
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
@@ -498,16 +541,29 @@ CREATE INDEX "Report_periodState_periodStart_idx" ON "Report"("periodState", "pe
 -- CreateIndex
 CREATE INDEX "Report_publishedById_idx" ON "Report"("publishedById");
 
--- At most one scheduled or open Report may occupy a reporting boundary. Prisma
--- cannot express a partial unique index (the WHERE predicate), so it is
--- hand-written here (mirrors ReopenRequest_one_pending_per_section).
--- Published/archived rows for the same boundary are unconstrained. This is the
--- durable guarantee behind the period factory's concurrent-create race guard:
--- two simultaneous creators can pass the find step, but only one live
--- pre-published row persists; the loser gets P2002 and re-reads the winner.
-CREATE UNIQUE INDEX "Report_one_open_per_boundary"
-  ON "Report"("periodStart", "periodEnd")
-  WHERE "periodState" IN ('open', 'scheduled');
+-- CreateIndex
+CREATE INDEX "PublishedSectionScope_groupId_reportId_idx" ON "PublishedSectionScope"("groupId", "reportId");
+
+-- CreateIndex
+CREATE INDEX "PublishedSectionScope_authorId_reportId_idx" ON "PublishedSectionScope"("authorId", "reportId");
+
+-- CreateIndex
+CREATE INDEX "PublishedSearchDocument_recordType_stableId_idx" ON "PublishedSearchDocument"("recordType", "stableId");
+
+-- CreateIndex
+CREATE INDEX "PublishedSearchDocument_groupId_createdAt_idx" ON "PublishedSearchDocument"("groupId", "createdAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "PublishedSearchDocument_searchTsv_idx" ON "PublishedSearchDocument" USING GIN ("searchTsv");
+
+-- At most one scheduled or open Report may overlap any live reporting range.
+-- PostgreSQL exclusion constraints provide the atomic race guard for arbitrary
+-- ranges; published/archived history remains unconstrained.
+ALTER TABLE "Report"
+  ADD CONSTRAINT "Report_no_live_period_overlap"
+  EXCLUDE USING GIST (
+    tsrange("periodStart", "periodEnd", '[]') WITH &&
+  ) WHERE ("periodState" IN ('open', 'scheduled'));
 
 -- CreateIndex
 CREATE INDEX "ReportSection_authorId_idx" ON "ReportSection"("authorId");
@@ -588,6 +644,12 @@ CREATE INDEX "PdfExportJob_reportId_idx" ON "PdfExportJob"("reportId");
 CREATE INDEX "PdfExportJob_requestedBy_idx" ON "PdfExportJob"("requestedBy");
 
 -- CreateIndex
+CREATE INDEX "PdfExportJob_createdAt_idx" ON "PdfExportJob"("createdAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "PdfExportJob_publicationGroupIds_idx" ON "PdfExportJob" USING GIN ("publicationGroupIds");
+
+-- CreateIndex
 CREATE INDEX "PdfExportJob_status_createdAt_idx" ON "PdfExportJob"("status", "createdAt" DESC);
 
 -- CreateIndex
@@ -600,7 +662,10 @@ CREATE INDEX "ReminderRule_status_fireAt_idx" ON "ReminderRule"("status", "fireA
 CREATE INDEX "ReminderRule_policyId_idx" ON "ReminderRule"("policyId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "uq_rule_report_policy" ON "ReminderRule"("reportId", "policyId");
+CREATE UNIQUE INDEX "uq_rule_report_policy_version" ON "ReminderRule"("reportId", "policyId", "version");
+
+-- CreateIndex
+CREATE INDEX "ReminderRule_reportId_policyId_version_idx" ON "ReminderRule"("reportId", "policyId", "version" DESC);
 
 -- CreateIndex
 CREATE INDEX "ReminderPolicy_kind_active_idx" ON "ReminderPolicy"("kind", "active");
@@ -660,14 +725,6 @@ CREATE INDEX "ReopenRequest_requestedById_idx" ON "ReopenRequest"("requestedById
 CREATE INDEX "ReopenRequest_reviewedById_idx" ON "ReopenRequest"("reviewedById");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "TelegramBinding_userId_key" ON "TelegramBinding"("userId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "TelegramBinding_chatId_key" ON "TelegramBinding"("chatId");
-
--- CreateIndex
-CREATE INDEX "TelegramBinding_active_linkedAt_idx" ON "TelegramBinding"("active", "linkedAt");
-
 -- AddForeignKey
 ALTER TABLE "User" ADD CONSTRAINT "User_reportingGroupId_fkey" FOREIGN KEY ("reportingGroupId") REFERENCES "ReportingGroup"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
@@ -690,7 +747,13 @@ ALTER TABLE "GroupProduct" ADD CONSTRAINT "GroupProduct_groupId_fkey" FOREIGN KE
 ALTER TABLE "GroupProduct" ADD CONSTRAINT "GroupProduct_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Project"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Report" ADD CONSTRAINT "Report_publishedById_fkey" FOREIGN KEY ("publishedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Report" ADD CONSTRAINT "Report_publishedById_fkey" FOREIGN KEY ("publishedById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PublishedSectionScope" ADD CONSTRAINT "PublishedSectionScope_reportId_fkey" FOREIGN KEY ("reportId") REFERENCES "Report"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PublishedSearchDocument" ADD CONSTRAINT "PublishedSearchDocument_reportId_fkey" FOREIGN KEY ("reportId") REFERENCES "Report"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ReportSection" ADD CONSTRAINT "ReportSection_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -735,10 +798,10 @@ ALTER TABLE "Decision" ADD CONSTRAINT "Decision_productId_fkey" FOREIGN KEY ("pr
 ALTER TABLE "PdfExportJob" ADD CONSTRAINT "PdfExportJob_reportId_fkey" FOREIGN KEY ("reportId") REFERENCES "Report"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ReminderRule" ADD CONSTRAINT "ReminderRule_reportId_fkey" FOREIGN KEY ("reportId") REFERENCES "Report"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "ReminderRule" ADD CONSTRAINT "ReminderRule_reportId_fkey" FOREIGN KEY ("reportId") REFERENCES "Report"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ReminderRule" ADD CONSTRAINT "ReminderRule_policyId_fkey" FOREIGN KEY ("policyId") REFERENCES "ReminderPolicy"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "ReminderRule" ADD CONSTRAINT "ReminderRule_policyId_fkey" FOREIGN KEY ("policyId") REFERENCES "ReminderPolicy"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ReminderExecution" ADD CONSTRAINT "ReminderExecution_ruleId_fkey" FOREIGN KEY ("ruleId") REFERENCES "ReminderRule"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -770,12 +833,8 @@ ALTER TABLE "ReopenRequest" ADD CONSTRAINT "ReopenRequest_requestedById_fkey" FO
 -- AddForeignKey
 ALTER TABLE "ReopenRequest" ADD CONSTRAINT "ReopenRequest_reviewedById_fkey" FOREIGN KEY ("reviewedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "TelegramBinding" ADD CONSTRAINT "TelegramBinding_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- Preserve the Risk.severity domain guard from 20260515141000_risk_severity.
--- Prisma cannot express CHECK constraints in schema.prisma, so it is restated
--- here to keep the squashed init faithful to the original migration history.
+-- Prisma cannot express CHECK constraints in schema.prisma, so the canonical
+-- init enforces the current Risk.severity vocabulary directly.
 ALTER TABLE "Risk"
   ADD CONSTRAINT "Risk_severity_check"
   CHECK ("severity" IN ('at-risk', 'blocked'));
@@ -963,6 +1022,14 @@ ALTER TABLE "Item"
   ADD CONSTRAINT "Item_parent_xor_check"
   CHECK ((("projectId" IS NOT NULL)::int + ("activityId" IS NOT NULL)::int) = 1);
 
+ALTER TABLE "Item"
+  ADD CONSTRAINT "Item_parent_stage_names_check"
+  CHECK (
+    ("projectId" IS NOT NULL AND cardinality("stageNames") > 0)
+    OR
+    ("activityId" IS NOT NULL AND cardinality("stageNames") = 0)
+  );
+
 -- Per-type progress vocabulary (rework-item-status-model): current items may
 -- only hold in_progress/paused/done, next items only planned/postponed.
 -- Prisma cannot express a CHECK, so it is hand-written here as defence-in-depth
@@ -974,9 +1041,48 @@ ALTER TABLE "Item"
     OR
     ("type" = 'next' AND "workflowStatus" IN ('planned', 'postponed'))
   );
+
+-- Every paused item explains why it is paused; non-paused items carry no
+-- stale pause metadata. The trim check mirrors the shared write schema.
+ALTER TABLE "Item"
+  ADD CONSTRAINT "Item_paused_reason_check"
+  CHECK (
+    ("workflowStatus" = 'paused' AND "pausedReason" IS NOT NULL AND btrim("pausedReason") <> '')
+    OR
+    ("workflowStatus" <> 'paused' AND "pausedReason" IS NULL)
+  );
 ALTER TABLE "Risk"
   ADD CONSTRAINT "Risk_parent_xor_check"
   CHECK ((("projectId" IS NOT NULL)::int + ("activityId" IS NOT NULL)::int) = 1);
+ALTER TABLE "Risk"
+  ADD CONSTRAINT "Risk_parent_stage_names_check"
+  CHECK (
+    ("projectId" IS NOT NULL AND cardinality("stageNames") > 0)
+    OR
+    ("activityId" IS NOT NULL AND cardinality("stageNames") = 0)
+  );
 ALTER TABLE "Decision"
   ADD CONSTRAINT "Decision_parent_xor_check"
   CHECK ((("productId" IS NOT NULL)::int + ("activityId" IS NOT NULL)::int) = 1);
+ALTER TABLE "Decision"
+  ADD CONSTRAINT "Decision_parent_stage_names_check"
+  CHECK (
+    ("productId" IS NOT NULL AND cardinality("stageNames") > 0)
+    OR
+    ("activityId" IS NOT NULL AND cardinality("stageNames") = 0)
+  );
+
+-- A published report is an immutable read model, not a live-graph view.
+-- Prisma cannot express this cross-field invariant, so keep it in the
+-- canonical init alongside the application-level publication checks.
+ALTER TABLE "Report"
+  ADD CONSTRAINT "Report_published_requires_snapshot"
+  CHECK (
+    "status" <> 'published'
+    OR (
+      "publishedAt" IS NOT NULL
+      AND "publishedSnapshot" IS NOT NULL
+      AND ("publishedSnapshot"->>'publishedAt') IS NOT NULL
+      AND (("publishedSnapshot"->>'publishedAt')::timestamptz AT TIME ZONE 'UTC') = "publishedAt"
+    )
+  );

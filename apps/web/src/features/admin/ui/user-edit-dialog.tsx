@@ -5,7 +5,7 @@ import { useRef } from "react";
 import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";
 import type { AdminGroupView, AdminUserView } from "../model/admin-types";
 import type { UserFormData } from "../model/user-form";
-import { UserEditDialogActions } from "./user-edit-dialog-actions";
+import { AdminEntityDialogActions } from "./admin-entity-dialog-actions";
 import { UserEditDialogFields } from "./user-edit-dialog-fields";
 import { UserEditDialogShell } from "./user-edit-dialog-shell";
 
@@ -55,7 +55,7 @@ export function UserEditDialog({
         activeGroups={activeGroups}
         groups={groups}
       />
-      <UserEditDialogActions
+      <AdminEntityDialogActions
         canSave={canSave}
         isSaving={isSaving}
         saveLabel={editingUser ? "Save Changes" : "Add User"}

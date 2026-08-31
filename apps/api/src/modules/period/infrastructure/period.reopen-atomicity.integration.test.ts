@@ -5,10 +5,11 @@ import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
+  publishedSnapshotFixture,
 } from "../../../test-utils/prisma-test-helper";
 import { AdminPeriodAlreadyArchivedError } from "../../admin/index.js";
 import { archivePeriod } from "../../admin/test-seams/index.js";
-import { WeeklyReportPrismaRepository } from "../../weekly-report/index.js";
+import { WeeklyReportPrismaRepository } from "../../weekly-report/weekly-report.prisma-repository.js";
 import { PeriodScopeError } from "../application/period.service";
 import { PeriodPrismaRepository } from "./period.prisma-repository";
 
@@ -50,6 +51,15 @@ describe("PeriodPrismaRepository reopen atomicity (integration)", () => {
         periodState: "published",
         publishedAt: new Date("2026-06-13T00:00:00.000Z"),
         publishedById: USER,
+        publishedSnapshot: publishedSnapshotFixture({
+          reportId: REPORT,
+          periodStart: "2026-06-08T00:00:00.000Z",
+          periodEnd: "2026-06-14T00:00:00.000Z",
+          deadline: "2026-06-12T00:00:00.000Z",
+          publishedAt: "2026-06-13T00:00:00.000Z",
+          publishedById: USER,
+          publishedByName: "Reopen Atomicity Head",
+        }),
       },
     });
     await prisma.reportSection.create({

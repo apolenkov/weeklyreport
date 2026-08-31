@@ -6,6 +6,7 @@ import { act, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { SessionContext } from "../../../../../shared/lib/auth/session-provider";
 import { TRPCProxyContext } from "../../../../../shared/lib/trpc/trpc-context";
 import { expectDefined } from "../../../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
@@ -91,7 +92,7 @@ function buildHarness() {
         authorRole: "lead" as const,
       },
     },
-    { path: ["reports", "myHistory"], query: [] },
+    { path: ["reports", "myHistory"], query: { items: [] } },
     { path: ["reports", "saveDraft"], mutation: true },
     { path: ["reports", "submit"], mutation: true },
     {
@@ -128,9 +129,23 @@ function buildHarness() {
   function Wrapper({ children }: { readonly children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <TRPCProxyContext.Provider value={proxy}>
-          {children}
-        </TRPCProxyContext.Provider>
+        <SessionContext.Provider
+          value={{
+            user: {
+              id: AUTHOR_ID,
+              name: "Test Lead",
+              email: "lead@example.com",
+              role: "lead",
+            },
+            organization: null,
+            isLoading: false,
+            isAuthenticated: true,
+          }}
+        >
+          <TRPCProxyContext.Provider value={proxy}>
+            {children}
+          </TRPCProxyContext.Provider>
+        </SessionContext.Provider>
       </QueryClientProvider>
     );
   }
@@ -160,7 +175,7 @@ function clickEditableStageChip() {
   const chip = screen.getAllByRole("button").find((button) => {
     const label = button.getAttribute("aria-label") ?? "";
     return (
-      /^Development: (on-track|empty)/.test(label) &&
+      /^Development: (On track|No status)/.test(label) &&
       button.getAttribute("aria-disabled") !== "true"
     );
   });

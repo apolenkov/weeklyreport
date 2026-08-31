@@ -173,7 +173,7 @@ describe("HeadReportShell layout", () => {
   });
 
   it("slides mode drops the Open focused report link and hosts Publish & Lock", () => {
-    // Drill-in link removed (deck has its own nav); header hosts Publish & Lock.
+    // The deck owns navigation; the header hosts Publish & Lock.
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="slides" />);
     expect(
       screen.queryByRole("link", { name: /open focused report/i }),

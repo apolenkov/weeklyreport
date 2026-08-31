@@ -1,16 +1,22 @@
 import { z } from "zod";
 
 import { logLevelSchema } from "../../lib/logger.js";
+import { SAML_ENV_KEYS } from "../../lib/saml-env-keys.js";
 
 const MIN_JWT_SECRET_LENGTH = 32;
 const MAX_REDIS_LOGICAL_DATABASE = 15;
+
+const optionalUrl = z.preprocess(
+  (value) =>
+    typeof value === "string" && value.trim().length === 0 ? undefined : value,
+  z.url().optional(),
+);
 
 // No `.default()` anywhere by design: every value is REQUIRED and supplied
 // explicitly per environment, so a misconfigured deploy fails boot loud instead
 // of running on a silent (e.g. localhost) default. See env-schema-coverage spec.
 const envObjectSchema = z.object({
   DATABASE_URL: z.url().startsWith("postgresql://"),
-  DIRECT_URL: z.url().startsWith("postgresql://").optional(),
   PORT: z.coerce.number().int().positive(),
   API_HOST: z.enum(["127.0.0.1", "0.0.0.0"]),
   NODE_ENV: z.enum(["development", "production", "test"]),
@@ -40,10 +46,6 @@ const envObjectSchema = z.object({
   // mode — dev-login still issues a session JWT — so a config without it
   // crashes at controller construction regardless of AUTH_DEV_MODE.
   AUTH_JWT_SECRET: z.string().min(MIN_JWT_SECRET_LENGTH),
-  // Session-cookie name. Optional: `resolveSessionCookieName` applies its
-  // named SESSION_COOKIE_DEFAULT_NAME const when absent (a consumer default,
-  // not a schema `.default()`).
-  AUTH_JWT_COOKIE_NAME: z.string().optional(),
 
   // SAML / Keycloak (validated at runtime by saml.strategy.ts requireEnv).
   // Optional here because dev-login (AUTH_DEV_MODE) needs no IdP; prod boots
@@ -61,7 +63,6 @@ const envObjectSchema = z.object({
   // its memory-usage alert threshold from it, so it MUST track the redis
   // container's `--maxmemory`, or usage creeps toward OOM-kill unnoticed.
   REDIS_MAXMEMORY_BYTES: z.coerce.number().int().positive(),
-  BULLMQ_PREFIX: z.string().optional(),
   // Consumed only by DLQMonitorService, which applies its own named default
   // when absent. A PRESENT value must be a whole positive number: `z.coerce`
   // fails boot loud rather than letting a typo degrade the alert silently.
@@ -78,7 +79,7 @@ const envObjectSchema = z.object({
   // OpenTelemetry. The endpoint stays optional — the SDK only starts when
   // OTEL_EXPORTER_OTLP_ENDPOINT is set AND OTEL_SDK_DISABLED is not 'true'.
   // The toggle + sampler are required so the telemetry posture is explicit.
-  OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
+  OTEL_EXPORTER_OTLP_ENDPOINT: optionalUrl,
   OTEL_SDK_DISABLED: z.string(),
   OTEL_TRACES_SAMPLER_ARG: z
     .string()
@@ -91,11 +92,12 @@ const envObjectSchema = z.object({
   // while export is disabled so later enablement cannot inherit "dev".
   OTEL_SERVICE_VERSION: z.string().optional(),
 
-  // Error capture (Bugsink/Sentry-compatible). Optional: `main.ts` inits the
-  // SDK only when set. Read raw at module load there — before validateEnv()
-  // runs — so this declaration is for coverage, not routing.
+  // Error capture (Bugsink/Sentry-compatible). Optional: the dynamic Sentry
+  // bootstrap reads this only after startup validation; this schema remains
+  // the single validation and coverage owner.
   SENTRY_DSN: z.string().optional(),
-  // Browser → server log forwarder toggle (`main.ts`). Optional prod opt-in;
+  // Browser → server log forwarder toggle (`main.ts`). This schema owns its
+  // validation; optional prod opt-in;
   // dev enables the forwarder via NODE_ENV, prod opts in with "true".
   CLIENT_LOG_FORWARDING: z.string().optional(),
   // PDF generation
@@ -114,16 +116,11 @@ const envObjectSchema = z.object({
   // cap, so it must track that cap per environment (~75% of the api limit).
   HEAP_HEALTH_THRESHOLD_BYTES: z.coerce.number().int().positive(),
 
-  // pg.Pool tunables consumed only by PrismaService, which applies its own named
-  // defaults when absent. A PRESENT value must parse — pg coerces `max: 0` back
-  // to 10 and hangs on a negative max; the timeouts allow 0 (0 disables them).
-  DB_POOL_MAX: z.coerce.number().int().positive().optional(),
-  DB_POOL_IDLE_TIMEOUT_MS: z.coerce.number().int().nonnegative().optional(),
-  DB_POOL_CONNECTION_TIMEOUT_MS: z.coerce
-    .number()
-    .int()
-    .nonnegative()
-    .optional(),
+  // pg.Pool tunables are required so production capacity and timeout policy
+  // cannot silently drift from the deployment contract.
+  DB_POOL_MAX: z.coerce.number().int().positive(),
+  DB_POOL_IDLE_TIMEOUT_MS: z.coerce.number().int().nonnegative(),
+  DB_POOL_CONNECTION_TIMEOUT_MS: z.coerce.number().int().nonnegative(),
 });
 
 type ValidatedEnv = z.infer<typeof envObjectSchema>;
@@ -204,12 +201,7 @@ const addMissingReleaseVersionIssue = (
 // SAML/Keycloak must be configured in production once dev-login is off. The
 // vars stay `.optional()` (dev-login boots without an IdP); this fence fails
 // boot loud before saml.strategy.ts's requireEnv would fail late.
-const SAML_PRODUCTION_KEYS = [
-  "KEYCLOAK_SAML_CALLBACK_URL",
-  "KEYCLOAK_SAML_ENTRY_POINT",
-  "KEYCLOAK_SAML_ISSUER",
-  "KEYCLOAK_SAML_CERT",
-] as const;
+const SAML_PRODUCTION_KEYS = SAML_ENV_KEYS;
 
 const addMissingSamlIssues = (
   data: ValidatedEnv,

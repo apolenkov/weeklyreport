@@ -1,5 +1,13 @@
-import type { Prisma } from "@prisma/client";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { Prisma } from "@prisma/client";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { expectDefined } from "../../test-utils/expect-defined.js";
@@ -7,11 +15,18 @@ import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
+  publishedSnapshotFixture,
   seedTestData,
   TEST_IDS,
 } from "../../test-utils/prisma-test-helper";
+import { saveReminderPolicy } from "../admin/admin-reminder-policy.queries.js";
 import { RemindersPrismaRepository } from "./reminders.prisma-repository";
+import { RemindersService } from "./reminders.service.js";
+import { UNCERTAIN_DELIVERY_ERROR } from "./reminders-execution.prisma-query.js";
 import type { ReminderQueuePayload } from "./reminders-queue-payload.js";
+
+const DEADLINE_POLICY_ID = "a0000000-0000-4000-a000-000000000703";
+const ESCALATION_POLICY_ID = "a0000000-0000-4000-a000-000000000704";
 
 describe("RemindersPrismaRepository (integration)", () => {
   const prisma = createTestPrisma();
@@ -26,11 +41,38 @@ describe("RemindersPrismaRepository (integration)", () => {
     await cleanDatabase();
     testData = await seedTestData(prisma);
 
+    await prisma.reminderPolicy.createMany({
+      data: [
+        {
+          id: DEADLINE_POLICY_ID,
+          kind: "deadline",
+          offsetMinutes: 540,
+          timezone: "Europe/Moscow",
+          audience: "LEAD_WITH_DRAFT",
+          active: true,
+          // The fixture deadline is historical; Prisma's default validFrom is
+          // the insertion clock and would make every rule ineligible.
+          validFrom: new Date("2026-01-01T00:00:00.000Z"),
+        },
+        {
+          id: ESCALATION_POLICY_ID,
+          kind: "escalation",
+          offsetMinutes: 660,
+          timezone: "UTC",
+          audience: "HEAD_OF_LATE",
+          active: true,
+          validFrom: new Date("2026-01-01T00:00:00.000Z"),
+        },
+      ],
+    });
+
     await prisma.reminderRule.create({
       data: {
         id: TEST_IDS.reminderRule,
+        policyId: DEADLINE_POLICY_ID,
         kind: "deadline",
         fireAt: new Date("2026-04-11T09:00:00.000Z"),
+        deadline: expectDefined(testData.report.deadline),
         timezone: "Europe/Moscow",
         status: "active",
         version: 1,
@@ -40,11 +82,12 @@ describe("RemindersPrismaRepository (integration)", () => {
   });
 
   const queuePayload: ReminderQueuePayload = {
+    contractVersion: 1,
     kind: "deadline",
     cycleDate: "2026-04-11",
     leadName: "Test Lead",
     reportPeriod: "2026-04-06 → 2026-04-12",
-    deadlineIso: "2026-04-11T09:00:00.000Z",
+    deadlineIso: "2026-04-11T00:00:00.000Z",
     sectionUrl: "https://example.test/lead/report",
     organization: {
       shortName: "CustomReport",
@@ -52,6 +95,15 @@ describe("RemindersPrismaRepository (integration)", () => {
     },
   };
   const queuePayloadJson = queuePayload as unknown as Prisma.InputJsonValue;
+  const executionPayload = {
+    kind: "deadline" as const,
+    cycleDate: queuePayload.cycleDate,
+    leadName: queuePayload.leadName,
+    reportPeriod: queuePayload.reportPeriod,
+    deadlineIso: queuePayload.deadlineIso,
+    sectionUrl: queuePayload.sectionUrl,
+    organization: queuePayload.organization,
+  };
 
   afterAll(async () => {
     await cleanDatabase();
@@ -68,7 +120,7 @@ describe("RemindersPrismaRepository (integration)", () => {
       execution,
       queuePayload,
     );
-    expect(createdResult.inserted).toBe(true);
+    expect(createdResult.outcome).toBe("created");
     const created = createdResult.execution;
     expect(created.id).toBe(execution.id);
     expect(created.ruleId).toBe(TEST_IDS.reminderRule);
@@ -86,7 +138,7 @@ describe("RemindersPrismaRepository (integration)", () => {
       queuePayload,
     );
 
-    expect(duplicate.inserted).toBe(false);
+    expect(duplicate.outcome).toBe("deduplicated");
     expect(duplicate.execution.id).toBe(execution.id);
 
     const allExecutions = await prisma.reminderExecution.findMany({
@@ -95,7 +147,181 @@ describe("RemindersPrismaRepository (integration)", () => {
     expect(allExecutions).toHaveLength(1);
   });
 
+  it("creates nothing when publish wins after due discovery, then allows reopened delivery", async () => {
+    const due = await repo.findDueDeadlineRules(
+      new Date("2026-04-11T10:00:00.000Z"),
+    );
+    expect(due.map((rule) => rule.id)).toContain(TEST_IDS.reminderRule);
+
+    const publishedAt = new Date("2026-04-11T10:01:00.000Z");
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: {
+        status: "published",
+        periodState: "published",
+        periodStatus: "published",
+        publishedAt,
+        publishedById: testData.head.id,
+        publishedSnapshot: publishedSnapshotFixture({
+          reportId: testData.report.id,
+          periodStart: testData.report.periodStart,
+          periodEnd: testData.report.periodEnd,
+          deadline: testData.report.deadline,
+          publishedAt,
+          publishedById: testData.head.id,
+          publishedByName: testData.head.name,
+        }),
+      },
+    });
+
+    const queue = { enqueue: vi.fn().mockResolvedValue(undefined) };
+    const service = new RemindersService(repo, undefined, queue);
+    await expect(
+      service.requestReminderExecutionWithOutcome(
+        TEST_IDS.reminderRule,
+        testData.lead.email,
+        executionPayload,
+      ),
+    ).resolves.toEqual({ execution: null, outcome: "skipped" });
+    expect(queue.enqueue).not.toHaveBeenCalled();
+    expect(await prisma.reminderExecution.count()).toBe(0);
+
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: {
+        periodState: "open",
+        periodStatus: "reopened",
+        reopenedAt: new Date("2026-04-11T10:02:00.000Z"),
+      },
+    });
+
+    const reopened = await service.requestReminderExecutionWithOutcome(
+      TEST_IDS.reminderRule,
+      testData.lead.email,
+      executionPayload,
+    );
+    expect(reopened.outcome).toBe("created");
+    expect(reopened.execution).not.toBeNull();
+    expect(queue.enqueue).toHaveBeenCalledTimes(1);
+    expect(await prisma.reminderExecution.count()).toBe(1);
+  });
+
+  it("creates and sends nothing when policy disable wins after due discovery", async () => {
+    const due = await repo.findDueDeadlineRules(
+      new Date("2026-04-11T10:00:00.000Z"),
+    );
+    expect(due.map((rule) => rule.id)).toContain(TEST_IDS.reminderRule);
+
+    await saveReminderPolicy(prisma as unknown as PrismaService, {
+      id: DEADLINE_POLICY_ID,
+      kind: "deadline",
+      offsetMinutes: -1440,
+      timezone: "Europe/Moscow",
+      audience: "lead-with-draft",
+      active: false,
+      validFrom: new Date("2026-01-01T00:00:00.000Z"),
+      validUntil: null,
+    });
+
+    const queue = { enqueue: vi.fn().mockResolvedValue(undefined) };
+    const service = new RemindersService(repo, undefined, queue);
+    await expect(
+      service.requestReminderExecutionWithOutcome(
+        TEST_IDS.reminderRule,
+        testData.lead.email,
+        executionPayload,
+      ),
+    ).rejects.toThrow("Reminder execution requires an active rule.");
+    expect(queue.enqueue).not.toHaveBeenCalled();
+    expect(await prisma.reminderExecution.count()).toBe(0);
+  });
+
+  it("rejects a stale deadline payload when the report deadline changes", async () => {
+    const [due] = await repo.findDueDeadlineRules(
+      new Date("2026-04-11T10:00:00.000Z"),
+    );
+    expect(due?.deadline).toEqual(testData.report.deadline);
+
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: { deadline: new Date("2026-04-12T00:00:00.000Z") },
+    });
+
+    const queue = { enqueue: vi.fn().mockResolvedValue(undefined) };
+    const service = new RemindersService(repo, undefined, queue);
+    await expect(
+      service.requestReminderExecutionWithOutcome(
+        TEST_IDS.reminderRule,
+        testData.lead.email,
+        executionPayload,
+      ),
+    ).resolves.toEqual({ execution: null, outcome: "skipped" });
+    expect(queue.enqueue).not.toHaveBeenCalled();
+    expect(await prisma.reminderExecution.count()).toBe(0);
+  });
+
+  it("does not revive a failed execution when publish wins after rule lookup", async () => {
+    const dedupeKey = `${TEST_IDS.reminderRule}:deadline:${queuePayload.cycleDate}:${testData.lead.email}`;
+    await repo.insertExecutionOnConflict(
+      {
+        ...baseExecution(TEST_IDS.reminderExec1, dedupeKey),
+        recipientEmail: testData.lead.email,
+      },
+      queuePayload,
+    );
+    await repo.markExecutionFailed(TEST_IDS.reminderExec1, "SMTP refused");
+
+    const publishedAt = new Date("2026-04-11T10:01:00.000Z");
+    const getRule = repo.getRule;
+    const lookup = vi
+      .spyOn(repo, "getRule")
+      .mockImplementationOnce(async (id) => {
+        const rule = await getRule(id);
+        await prisma.report.update({
+          where: { id: testData.report.id },
+          data: {
+            status: "published",
+            periodState: "published",
+            periodStatus: "published",
+            publishedAt,
+            publishedById: testData.head.id,
+            publishedSnapshot: publishedSnapshotFixture({
+              reportId: testData.report.id,
+              periodStart: testData.report.periodStart,
+              periodEnd: testData.report.periodEnd,
+              deadline: testData.report.deadline,
+              publishedAt,
+              publishedById: testData.head.id,
+              publishedByName: testData.head.name,
+            }),
+          },
+        });
+        return rule;
+      });
+    const queue = { enqueue: vi.fn().mockResolvedValue(undefined) };
+    const service = new RemindersService(repo, undefined, queue);
+
+    try {
+      await expect(
+        service.requestReminderExecutionWithOutcome(
+          TEST_IDS.reminderRule,
+          testData.lead.email,
+          executionPayload,
+          "manual",
+        ),
+      ).resolves.toEqual({ execution: null, outcome: "skipped" });
+    } finally {
+      lookup.mockRestore();
+    }
+    expect(queue.enqueue).not.toHaveBeenCalled();
+    const failed = await repo.getExecution(TEST_IDS.reminderExec1);
+    expect(failed?.status).toBe("failed");
+    expect(failed?.errorMessage).toBe("SMTP refused");
+  });
+
   it("listExecutions returns executions ordered by createdAt", async () => {
+    const firstCreatedAt = new Date("2026-05-01T10:00:00.000Z");
+    const secondCreatedAt = new Date("2026-05-02T10:00:00.000Z");
     await prisma.reminderExecution.create({
       data: {
         id: TEST_IDS.reminderExec1,
@@ -105,6 +331,7 @@ describe("RemindersPrismaRepository (integration)", () => {
         status: "sent",
         sentAt: new Date("2026-04-04T09:00:00.000Z"),
         queuePayload: queuePayloadJson,
+        createdAt: firstCreatedAt,
       },
     });
 
@@ -116,6 +343,7 @@ describe("RemindersPrismaRepository (integration)", () => {
         dedupeKey: `${TEST_IDS.reminderRule}-2026-04-11`,
         status: "pending",
         queuePayload: queuePayloadJson,
+        createdAt: secondCreatedAt,
       },
     });
 
@@ -128,6 +356,18 @@ describe("RemindersPrismaRepository (integration)", () => {
     // Most recent first (ordered by createdAt desc)
     expect(expectDefined(executions[0]).id).toBe(TEST_IDS.reminderExec2);
     expect(expectDefined(executions[1]).id).toBe(TEST_IDS.reminderExec1);
+    expect(
+      executions.every(
+        (row) =>
+          row.scheduledFor.getTime() ===
+          new Date("2026-04-11T09:00:00.000Z").getTime(),
+      ),
+    ).toBe(true);
+    expect(executions[0]?.scheduledFor).not.toEqual(secondCreatedAt);
+
+    const byId = expectDefined(await repo.getExecution(TEST_IDS.reminderExec1));
+    expect(byId.scheduledFor).toEqual(new Date("2026-04-11T09:00:00.000Z"));
+    expect(byId.scheduledFor).not.toEqual(firstCreatedAt);
   });
 
   const ESC_RULE = "a0000000-0000-4000-a000-000000000620";
@@ -137,8 +377,10 @@ describe("RemindersPrismaRepository (integration)", () => {
     await prisma.reminderRule.create({
       data: {
         id,
+        policyId: ESCALATION_POLICY_ID,
         kind: "escalation",
         fireAt: new Date("2026-04-11T11:00:00.000Z"),
+        deadline: expectDefined(testData.report.deadline),
         timezone: "UTC",
         status: "active",
         version: 1,
@@ -156,23 +398,23 @@ describe("RemindersPrismaRepository (integration)", () => {
       status: "queued" as const,
       scheduledFor: new Date("2026-04-11T09:00:00.000Z"),
       sentAt: null,
-      recipientEmail: "",
+      recipientEmail: "lead@example.test",
       errorMessage: null,
     };
   }
 
-  it("insertExecutionOnConflict: duplicate dedupeKey inserts once and reports inserted=false", async () => {
+  it("insertExecutionOnConflict: duplicate dedupeKey inserts once and reports deduplication", async () => {
     const first = await repo.insertExecutionOnConflict(
       baseExecution(TEST_IDS.reminderExec1, "dup-1"),
       queuePayload,
     );
-    expect(first.inserted).toBe(true);
+    expect(first.outcome).toBe("created");
 
     const second = await repo.insertExecutionOnConflict(
       baseExecution(TEST_IDS.reminderExec2, "dup-1"),
       queuePayload,
     );
-    expect(second.inserted).toBe(false);
+    expect(second.outcome).toBe("deduplicated");
     // The existing row is returned, not the second caller's fresh id.
     expect(second.execution.id).toBe(TEST_IDS.reminderExec1);
 
@@ -183,8 +425,7 @@ describe("RemindersPrismaRepository (integration)", () => {
   });
 
   it("concurrent insertExecutionOnConflict: exactly one inserts, one row persists", async () => {
-    // Races the real pg P2002 path — proves isDedupeKeyConflict matches the
-    // driver-adapter error shape (a wrong matcher re-throws and fails here).
+    // Races the real ON CONFLICT path under the locked editable report.
     const results = await Promise.all([
       repo.insertExecutionOnConflict(
         baseExecution(TEST_IDS.reminderExec1, "dup-2"),
@@ -196,7 +437,7 @@ describe("RemindersPrismaRepository (integration)", () => {
       ),
     ]);
 
-    expect(results.filter((r) => r.inserted)).toHaveLength(1);
+    expect(results.filter((r) => r.outcome === "created")).toHaveLength(1);
     const rows = await prisma.reminderExecution.findMany({
       where: { dedupeKey: "dup-2" },
     });
@@ -217,8 +458,11 @@ describe("RemindersPrismaRepository (integration)", () => {
     );
 
     // Exactly one caller wins the queued → sending transition.
-    expect(first).toBe(true);
-    expect(second).toBe(false);
+    expect(first).toEqual({
+      recipientEmail: "lead@example.test",
+      queuePayload,
+    });
+    expect(second).toBeNull();
 
     // The claim is durable and reads back as `sending`.
     const reread = await repo.getExecution(TEST_IDS.reminderExec1);
@@ -232,7 +476,7 @@ describe("RemindersPrismaRepository (integration)", () => {
     );
     expect(
       await repo.transitionExecutionToSending(TEST_IDS.reminderExec1),
-    ).toBe(true);
+    ).not.toBeNull();
     expect(
       await repo.markExecutionSent(
         TEST_IDS.reminderExec1,
@@ -244,7 +488,7 @@ describe("RemindersPrismaRepository (integration)", () => {
       TEST_IDS.reminderExec1,
     );
 
-    expect(claimed).toBe(false);
+    expect(claimed).toBeNull();
     const reread = await repo.getExecution(TEST_IDS.reminderExec1);
     expect(reread?.status).toBe("sent");
   });
@@ -257,7 +501,7 @@ describe("RemindersPrismaRepository (integration)", () => {
     const claimed = await repo.transitionExecutionToSending(
       TEST_IDS.reminderExec1,
     );
-    expect(claimed).toBe(true);
+    expect(claimed).not.toBeNull();
 
     await repo.releaseExecutionClaim(TEST_IDS.reminderExec1);
 
@@ -266,7 +510,7 @@ describe("RemindersPrismaRepository (integration)", () => {
     const reclaimed = await repo.transitionExecutionToSending(
       TEST_IDS.reminderExec1,
     );
-    expect(reclaimed).toBe(true);
+    expect(reclaimed).not.toBeNull();
   });
 
   it("releaseExecutionClaim is a no-op against an already-sent row", async () => {
@@ -276,7 +520,7 @@ describe("RemindersPrismaRepository (integration)", () => {
     );
     expect(
       await repo.transitionExecutionToSending(TEST_IDS.reminderExec1),
-    ).toBe(true);
+    ).not.toBeNull();
     expect(
       await repo.markExecutionSent(
         TEST_IDS.reminderExec1,
@@ -308,7 +552,7 @@ describe("RemindersPrismaRepository (integration)", () => {
     );
     expect(
       await repo.transitionExecutionToSending(TEST_IDS.reminderExec2),
-    ).toBe(true);
+    ).not.toBeNull();
     expect(
       await repo.markExecutionSent(
         TEST_IDS.reminderExec2,
@@ -320,21 +564,47 @@ describe("RemindersPrismaRepository (integration)", () => {
     expect(stillSent?.status).toBe("sent");
   });
 
-  it("revives a payload-less failed row with one atomic current payload write", async () => {
+  it("terminalizes a stale sending row as unknown delivery, never fabricated sent", async () => {
+    await repo.insertExecutionOnConflict(
+      baseExecution(TEST_IDS.reminderExec1, "uncertain-1"),
+      queuePayload,
+    );
+    expect(
+      await repo.transitionExecutionToSending(TEST_IDS.reminderExec1),
+    ).not.toBeNull();
+    await prisma.reminderExecution.update({
+      where: { id: TEST_IDS.reminderExec1 },
+      data: { updatedAt: new Date("2026-04-11T09:00:00.000Z") },
+    });
+
+    await expect(
+      repo.markStuckSendingUncertain(new Date("2026-04-11T09:30:00.000Z")),
+    ).resolves.toBe(1);
+    const uncertain = await repo.getExecution(TEST_IDS.reminderExec1);
+    expect(uncertain?.status).toBe("failed");
+    expect(uncertain?.errorMessage).toBe(UNCERTAIN_DELIVERY_ERROR);
+  });
+
+  it("revives a failed row with one atomic current payload write", async () => {
     await prisma.reminderExecution.create({
       data: {
         id: TEST_IDS.reminderExec1,
         ruleId: TEST_IDS.reminderRule,
         recipientEmail: "lead@test.local",
-        dedupeKey: "migrated-failed",
+        dedupeKey: "retryable-failed",
         status: "failed",
-        error: "awaiting current-contract redispatch",
+        error: "temporary queue failure",
+        queuePayload: queuePayloadJson,
       },
     });
 
-    expect(
-      await repo.requeueFailedExecution(TEST_IDS.reminderExec1, queuePayload),
-    ).toBe(true);
+    const result = await repo.insertExecutionOnConflict(
+      baseExecution(TEST_IDS.reminderExec2, "retryable-failed"),
+      queuePayload,
+      true,
+    );
+    expect(result.outcome).toBe("revived");
+    expect(result.execution.id).toBe(TEST_IDS.reminderExec1);
 
     const revived = await prisma.reminderExecution.findUniqueOrThrow({
       where: { id: TEST_IDS.reminderExec1 },
@@ -347,17 +617,15 @@ describe("RemindersPrismaRepository (integration)", () => {
     });
   });
 
-  it("rejects a queued execution without a renderer payload", async () => {
+  it("rejects an execution without a renderer payload", async () => {
     await expect(
-      prisma.reminderExecution.create({
-        data: {
-          id: TEST_IDS.reminderExec1,
-          ruleId: TEST_IDS.reminderRule,
-          recipientEmail: "lead@test.local",
-          dedupeKey: "payload-less-queued",
-          status: "pending",
-        },
-      }),
+      prisma.$executeRaw(Prisma.sql`
+        INSERT INTO "ReminderExecution"
+          ("id", "ruleId", "recipientEmail", "dedupeKey", "status", "queuePayload", "updatedAt")
+        VALUES
+          (${TEST_IDS.reminderExec1}, ${TEST_IDS.reminderRule}, ${"lead@test.local"},
+           ${"missing-renderer-payload"}, 'pending', NULL, CURRENT_TIMESTAMP)
+      `),
     ).rejects.toThrow();
   });
 
@@ -411,8 +679,8 @@ describe("RemindersPrismaRepository (integration)", () => {
   });
 
   it("escalation resolves the late lead's group head for an unpublished period", async () => {
-    // publishedBy is null on the seed report — the old publisher-based path
-    // would drop this digest entirely.
+    // Escalation ownership comes from the late lead's reporting group, even
+    // when the report has no publisher yet.
     expect(testData.report.publishedById).toBeNull();
     await prisma.reportingGroup.update({
       where: { id: TEST_IDS.group },

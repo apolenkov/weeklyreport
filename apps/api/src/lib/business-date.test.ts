@@ -5,10 +5,7 @@ import {
   addBusinessDays,
   computeDeadline,
   getCurrentWeekBounds,
-  isBusinessDay,
-  nextBusinessDay,
   parseDeadlineTime,
-  workingDaySet,
 } from "./business-date";
 
 // Helper: build a UTC `Date` from an ISO wall-clock string interpreted in the
@@ -33,59 +30,6 @@ function expectWallClock(date: Date, isoNoZone: string, tz: string): void {
 const TZ_MSK = "Europe/Moscow";
 const TZ_BER = "Europe/Berlin";
 const TZ_NYC = "America/New_York";
-
-describe("business-date: workingDaySet", () => {
-  it("mon-fri returns 1..5", () => {
-    expect([...workingDaySet("mon-fri")].sort()).toEqual([1, 2, 3, 4, 5]);
-  });
-  it("mon-sat returns 1..6", () => {
-    expect([...workingDaySet("mon-sat")].sort()).toEqual([1, 2, 3, 4, 5, 6]);
-  });
-  it("mon-sun returns 1..7", () => {
-    expect([...workingDaySet("mon-sun")].sort()).toEqual([1, 2, 3, 4, 5, 6, 7]);
-  });
-});
-
-describe("business-date: isBusinessDay", () => {
-  // 2026-05-04 is a Monday, 2026-05-09 Saturday, 2026-05-10 Sunday.
-  const monday = inZone("2026-05-04T10:00:00", TZ_MSK);
-  const saturday = inZone("2026-05-09T10:00:00", TZ_MSK);
-  const sunday = inZone("2026-05-10T10:00:00", TZ_MSK);
-
-  it("mon-fri: Monday is business", () => {
-    expect(isBusinessDay(monday, "mon-fri", TZ_MSK)).toBe(true);
-  });
-  it("mon-fri: Saturday is NOT business", () => {
-    expect(isBusinessDay(saturday, "mon-fri", TZ_MSK)).toBe(false);
-  });
-  it("mon-fri: Sunday is NOT business", () => {
-    expect(isBusinessDay(sunday, "mon-fri", TZ_MSK)).toBe(false);
-  });
-  it("mon-sat: Saturday IS business", () => {
-    expect(isBusinessDay(saturday, "mon-sat", TZ_MSK)).toBe(true);
-  });
-  it("mon-sat: Sunday is NOT business", () => {
-    expect(isBusinessDay(sunday, "mon-sat", TZ_MSK)).toBe(false);
-  });
-  it("mon-sun: every day is business", () => {
-    expect(isBusinessDay(sunday, "mon-sun", TZ_MSK)).toBe(true);
-    expect(isBusinessDay(saturday, "mon-sun", TZ_MSK)).toBe(true);
-    expect(isBusinessDay(monday, "mon-sun", TZ_MSK)).toBe(true);
-  });
-
-  it("timezone-aware: late-Sunday UTC that is already Monday in MSK reads as Monday", () => {
-    // Sunday 2026-05-10 22:30 UTC = Monday 2026-05-11 01:30 MSK
-    const date = new Date(Date.UTC(2026, 4, 10, 22, 30, 0));
-    expect(isBusinessDay(date, "mon-fri", TZ_MSK)).toBe(true);
-    expect(isBusinessDay(date, "mon-fri", "UTC")).toBe(false);
-  });
-
-  it("throws on invalid timezone", () => {
-    expect(() => isBusinessDay(new Date(), "mon-fri", "Not/A_Zone")).toThrow(
-      /invalid timezone/,
-    );
-  });
-});
 
 describe("business-date: addBusinessDays — mon-fri", () => {
   it("Monday + 4 business days = Friday", () => {
@@ -204,23 +148,6 @@ describe("business-date: addBusinessDays — boundaries", () => {
     const start = inZone("2026-10-30T09:00:00", TZ_NYC);
     const got = addBusinessDays(start, 1, "mon-fri", TZ_NYC);
     expectWallClock(got, "2026-11-02T09:00:00", TZ_NYC);
-  });
-});
-
-describe("business-date: nextBusinessDay", () => {
-  it("is equivalent to addBusinessDays(_, 1)", () => {
-    const start = inZone("2026-05-08T09:00:00", TZ_MSK); // Fri
-    const a = nextBusinessDay(start, "mon-fri", TZ_MSK);
-    const b = addBusinessDays(start, 1, "mon-fri", TZ_MSK);
-    expect(a.getTime()).toBe(b.getTime());
-    expectWallClock(a, "2026-05-11T09:00:00", TZ_MSK);
-  });
-
-  it("from a non-business day still advances exactly one business day", () => {
-    // Saturday in mon-fri → next business day is Monday.
-    const start = inZone("2026-05-09T09:00:00", TZ_MSK);
-    const got = nextBusinessDay(start, "mon-fri", TZ_MSK);
-    expectWallClock(got, "2026-05-11T09:00:00", TZ_MSK);
   });
 });
 

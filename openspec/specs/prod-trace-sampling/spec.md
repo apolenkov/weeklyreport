@@ -4,23 +4,29 @@ Defines production OTLP trace export configuration, sampling policy, and boot-ti
 
 ## Requirements
 
-### Requirement: Prod OTLP endpoint defaults to the composed observability collector
+### Requirement: Production tracing is explicit and overlay-enabled
 
-The production compose file MUST set `OTEL_EXPORTER_OTLP_ENDPOINT` for the
-api service, defaulting to the collector published by the
-`docker-compose.observability.yml` overlay on the shared compose network, and
-MUST remain overridable so an operator can point at a separately managed
-collector instead. Leaving the endpoint unresolvable (overlay not composed,
-no override set) MUST remain a valid "tracing off" configuration rather than
-a required one.
+The production compose file MUST leave `OTEL_EXPORTER_OTLP_ENDPOINT` empty
+unless an operator explicitly supplies a managed collector. The optional
+`docker-compose.observability.yml` overlay MUST enable tracing against its
+internal collector when composed, and an operator MUST be able to substitute
+a separately managed collector. Leaving the endpoint unset MUST remain a valid
+"tracing off" configuration rather than exporting to a nonexistent host.
 
-#### Scenario: Endpoint resolves when the observability overlay is composed
+#### Scenario: Base production compose keeps tracing off by default
+
+- **GIVEN** only `docker-compose.prod.yml` is composed with no endpoint override
+- **WHEN** the api container starts
+- **THEN** `decideOtelBootstrap` receives an empty endpoint
+- **AND** `startOtel` returns a disabled decision that is logged at warn level
+
+#### Scenario: The observability overlay enables its internal collector
 
 - **GIVEN** `docker-compose.prod.yml` and `docker-compose.observability.yml`
-  are composed together with no `OTEL_EXPORTER_OTLP_ENDPOINT` override
+  are composed together with no endpoint override
 - **WHEN** the api container starts
-- **THEN** `decideOtelBootstrap` receives a non-empty
-  `OTEL_EXPORTER_OTLP_ENDPOINT` pointing at the composed collector
+- **THEN** the overlay sets `OTEL_EXPORTER_OTLP_ENDPOINT` to
+  `http://otel-lgtm:4318`
 - **AND** `startOtel` returns `{ started: true, reason: "enabled" }`
 
 #### Scenario: An external managed collector can be substituted
@@ -51,7 +57,7 @@ only root spans with no parent decision MUST consult the ratio.
 - **GIVEN** `OTEL_EXPORTER_OTLP_ENDPOINT` is set and `OTEL_TRACES_SAMPLER_ARG`
   is unset
 - **WHEN** `decideOtelBootstrap` computes the sampling ratio
-- **THEN** it returns `1.0`, not the prior `0.1` default
+- **THEN** it returns `1.0`
 
 ### Requirement: An untraced boot logs loud
 

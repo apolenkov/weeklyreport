@@ -67,7 +67,7 @@ interface DashboardPanelsProps {
   readonly weeklySource: DashboardSourceState;
   readonly weekly?: ReturnType<typeof mapWeeklyDashboardData> | undefined;
   readonly weeklyReport?: WeeklyReportReadModel | undefined;
-  readonly canSendReminder: boolean;
+  readonly reminderRuleId: string | null;
   readonly onRefreshDashboard: () => void;
 }
 
@@ -121,7 +121,7 @@ function DashboardAlertPanel(props: DashboardPanelsProps) {
         <AlertBar
           pendingLeads={props.queue.pendingLeads}
           reportId={reportId}
-          canSendReminder={props.canSendReminder}
+          ruleId={props.reminderRuleId}
         />
       ) : null}
     </DashboardSourceSlot>
@@ -201,11 +201,10 @@ function dashboardPanelModel(
     weeklySource: weeklyState,
     weekly,
     weeklyReport,
-    canSendReminder: Boolean(
-      weeklyReport &&
-      weeklyReport.periodStatus !== "published" &&
-      weeklyReport.hasActiveReminderRule,
-    ),
+    reminderRuleId:
+      weeklyReport?.periodStatus === "published"
+        ? null
+        : (weeklyReport?.activeDeadlineReminderRuleId ?? null),
     onRefreshDashboard: props.onRefreshDashboard,
   };
 }
@@ -216,7 +215,11 @@ export function DashboardContent(props: DashboardContentProps) {
   const isLoading = dashboardIsLoading(panelModel);
 
   return (
-    <div className="space-y-6" data-dashboard-loading={isLoading}>
+    <div
+      className="space-y-6"
+      data-dashboard-loading={isLoading}
+      aria-busy={isLoading}
+    >
       <DashboardHeader
         weekLabel={props.weeklyReport?.weekLabel}
         organizationName={props.organizationName}

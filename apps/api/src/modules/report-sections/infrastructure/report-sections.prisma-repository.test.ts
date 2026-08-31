@@ -69,6 +69,9 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
       // The publish/save row lock (SELECT ... FOR UPDATE on the parent
       // report) runs before the version compare-and-set; an open period lets
       // these characterizations exercise the version lock itself.
+      // The canonical status-graph advisory lock is part of every save
+      // transaction and must remain observable in this harness.
+      $executeRaw: vi.fn(() => Promise.resolve(0)),
       $queryRaw: vi.fn<() => Promise<LifecycleGateRow[]>>(() =>
         Promise.resolve(lifecycleRows),
       ),
@@ -137,6 +140,7 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
     ]);
     // The compare-and-set matched, so the delete-then-recreate ran.
     expect(tx.item.deleteMany).toHaveBeenCalled();
+    expect(tx.$executeRaw).toHaveBeenCalledOnce();
     // The re-read happened on `tx` (inside the transaction), never on a
     // separate outer client.
     expect(tx.reportSection.findUnique).toHaveBeenCalledWith({
@@ -213,6 +217,7 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
           status: "published",
           periodState: "published",
           periodStatus: "published",
+          publishedAt: new Date("2026-07-31T18:00:00.000Z"),
         },
       ]),
     );
@@ -229,7 +234,7 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
     expect(tx.item.deleteMany).not.toHaveBeenCalled();
   });
 
-  it("rejects a contradictory lifecycle tuple inside the transaction", async () => {
+  it("rejects contradictory lifecycle fields inside the transaction", async () => {
     const tx = makeTx(1, baseRow({ version: 1 }));
     tx.$queryRaw = vi.fn(() =>
       Promise.resolve([
@@ -253,7 +258,7 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
     expect(tx.item.deleteMany).not.toHaveBeenCalled();
   });
 
-  it("allows a complete reopened lifecycle tuple", async () => {
+  it("allows a complete reopened lifecycle field set", async () => {
     const tx = makeTx(1, baseRow({ version: 2 }));
     tx.$queryRaw = vi.fn(() =>
       Promise.resolve([
@@ -328,12 +333,13 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
         const { repo, tx } = buildRepo(1, 2, rows);
 
         await expect(repo.saveSection(candidate, 1)).rejects.toThrow();
+        expect(tx.$executeRaw).toHaveBeenCalledOnce();
         expect(tx.reportSection.updateMany).not.toHaveBeenCalled();
         expect(tx.item.deleteMany).not.toHaveBeenCalled();
       },
     );
 
-    it("accepts a complete reopened tuple", async () => {
+    it("accepts a complete reopened lifecycle field set", async () => {
       const reopened = {
         ...OPEN_LIFECYCLE_ROW,
         status: "published",

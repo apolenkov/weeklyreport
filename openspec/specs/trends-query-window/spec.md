@@ -10,21 +10,19 @@ Define how the Trends page derives its query window and handles empty results.
 
 The Trends page SHALL derive its `trafficLightHistory` and `leadVelocity`
 query window from the current date at request time, not from a hardcoded
-calendar range. The window MUST land before 2027-01-01 to close the gap
-where the previously hardcoded `2026-01-01`–`2026-12-31` bound would start
-excluding every report.
+calendar range. The rolling window MUST remain valid across calendar-year
+boundaries.
 
 #### Scenario: Window rolls forward with the current date
 
-- **GIVEN** the current date is any day on or after the change lands
+- **GIVEN** any current date
 - **WHEN** the Trends page loads
 - **THEN** `periodFrom` and `periodTo` are computed as a rolling 12-month
   span ending on the current date, not read from a fixed constant
 
-#### Scenario: Window stays valid past the year the change ships in
+#### Scenario: Window stays valid across calendar years
 
-- **GIVEN** the current date is 2027-06-01, one year after the previously
-  hardcoded window's upper bound
+- **GIVEN** the current date is 2027-06-01
 - **WHEN** the Trends page loads
 - **THEN** the derived window covers 2026-06-01 through 2027-06-01 and still
   includes reports published in that span
@@ -34,8 +32,7 @@ excluding every report.
 - **GIVEN** fewer than two published periods exist, so `latestPeriodPair`
   resolves `null`
 - **WHEN** the period-comparison query builds its fallback bounds
-- **THEN** it uses the same derived rolling window, not the removed
-  hardcoded constants
+- **THEN** it uses the same derived rolling window and no fixed calendar bounds
 
 ### Requirement: Trends charts show an explicit empty state for a window with no data
 

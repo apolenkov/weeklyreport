@@ -22,6 +22,31 @@ synthetic identity.
 - THEN the worker session is resolved from that user and its current access
   state is checked
 
+### Requirement: A PDF job is an immutable scoped publication
+
+When a PDF export is requested, the job MUST atomically persist the publication
+timestamp, the frozen publication snapshot, and its indexed publication group
+ids. The requester MUST be authorized against that same frozen snapshot and a
+non-admin request with an empty frozen scope MUST be rejected. The queue token
+MUST carry both the report id and job id, and the print route MUST render the
+snapshot stored on that job. It MUST NOT re-read the mutable report publication
+for rendering after reopen or republish.
+
+#### Scenario: Republish cannot change an already queued export
+
+- GIVEN a queued export for publication P1
+- WHEN the report is reopened and republished as P2 before the worker renders
+- THEN the worker renders P1 from the job snapshot
+- AND P2 cannot authorize, replace, or broaden that job's payload
+
+#### Scenario: A scoped export never leaks another group
+
+- GIVEN a head or viewer authorized for group A and a publication containing A
+  and B
+- WHEN the export job is created
+- THEN its persisted snapshot contains only the caller's frozen scope
+- AND the print render and download contain no group-B sections
+
 ### Requirement: The print template exposes a machine-detectable render outcome
 
 The print template MUST stamp a stable `data-print-state` attribute on the root
@@ -188,7 +213,7 @@ is added to the queue.
 
 ### Requirement: PDF export eligibility excludes reopened periods
 
-PDF export eligibility MUST require both legacy `status: 'published'` and
+PDF export eligibility MUST require both companion `status: 'published'` and
 `periodStatus: 'published'`. The repository MUST return `null`, the service
 MUST raise `PdfExportDomainError` without creating or enqueueing a job, and the
 web export control MUST remain disabled while a period is reopened.
@@ -212,31 +237,106 @@ web export control MUST remain disabled while a period is reopened.
 - **WHEN** PDF export is requested by an in-scope caller
 - **THEN** the request proceeds normally
 
-### Requirement: PDF download read-authorization has one canonical implementation
+### Requirement: PDF export renders the immutable publication snapshot
 
-The report-read authorization check used by the authenticated PDF download
-handler (admin god-mode; otherwise the report has at least one section
-within the caller's group scope) MUST be implemented in exactly one place
-and reused by both the download handler and `PdfExportPrismaRepository`. A
-second hand-written copy of this check MUST NOT exist, so a future change to
-group-scope or admin visibility rules cannot update one copy while leaving
-the other stale.
+`PdfExportPrismaRepository.getPublishedReportForExport` MUST read the selected report's
+`publishedSnapshot` and MUST NOT load or assemble the mutable live section
+graph. A report eligible for export with an absent, malformed, or
+identity-mismatched snapshot MUST fail closed with an integrity error. The
+snapshot returned to the renderer MUST retain the persisted publication data
+until the export job completes.
 
-#### Scenario: Group-scope rules change
+The render path MUST build its `WeeklyReportReadModel` exclusively from the
+validated, job-bound frozen snapshot; it MUST NOT load mutable live sections.
 
-- **WHEN** the report-read authorization rule (admin god-mode or group-scope
-  section check) is modified
-- **THEN** updating the single shared implementation changes the behavior of
-  both the PDF download handler and `PdfExportPrismaRepository.canReadReport`
-- **AND** no second, independently-maintained copy of the check exists to
-  fall out of sync
+#### Scenario: A published report uses its frozen snapshot
 
-#### Scenario: A reviewer greps for the authorization logic
+- **GIVEN** a report with `status: 'published'`, `periodStatus: 'published'`,
+  and a valid `publishedSnapshot`
+- **WHEN** the PDF repository loads the report
+- **THEN** it returns the validated snapshot
+- **AND** it does not query or derive live sections
 
-- **WHEN** a future reviewer searches for the admin/group-scope report-read
-  check used by PDF export
-- **THEN** exactly one implementation is found, imported by both the
-  download handler and the repository
+#### Scenario: A published report without a valid snapshot is rejected
+
+- **GIVEN** an eligible report whose snapshot is absent, malformed, or names
+  another report
+- **WHEN** the PDF repository loads the report
+- **THEN** it raises a published-snapshot integrity error
+
+### Requirement: Terminal queue states reconcile to the durable export row
+
+The PDF export runtime MUST periodically inspect retained terminal BullMQ jobs
+and reconcile them to the matching pending database row. A failed terminal job
+MUST mark the row failed with its failure reason; a completed terminal job MUST
+only mark the row completed when its return value contains the canonical
+artifact URL and checksum. Existing database terminal states MUST never be
+regressed, and a missing or malformed queue result MUST remain observable
+without inventing a successful artifact. The reconciliation MUST run after
+startup and on a bounded schedule so a process restart repairs a row left
+queued by an unavailable database or worker event handler.
+Every terminal mutation MUST bind the queue job id to the payload's `jobId`,
+`reportId`, and `requestedBy`, and then verify all three against the persisted
+job before updating the database.
+
+#### Scenario: A terminal failure repairs a stranded queued row
+
+- **GIVEN** BullMQ retains a failed PDF job while its database row is still
+  queued
+- **WHEN** the reconciliation pass runs
+- **THEN** the row becomes failed with the BullMQ failure reason
+
+#### Scenario: A completed queue result repairs a stranded row
+
+- **GIVEN** BullMQ retains a completed PDF job with the canonical artifact URL
+  and checksum in its return value while its database row is queued
+- **WHEN** the reconciliation pass runs
+- **THEN** the row becomes completed with that artifact and checksum
+
+#### Scenario: Reconciliation never regresses a terminal row
+
+- **GIVEN** the database row is already completed or failed
+- **WHEN** a retained terminal BullMQ job is inspected
+- **THEN** no database update regresses or overwrites that terminal state
+
+#### Scenario: An incomplete completion result fails closed
+
+- **GIVEN** BullMQ retains a completed PDF job without a canonical artifact
+  URL or checksum
+- **WHEN** the reconciliation pass runs
+- **THEN** the database row is not marked completed and an error is logged
+
+#### Scenario: A stale queue payload cannot terminalize another export
+
+- **GIVEN** a retained terminal BullMQ job whose Redis id or payload identity
+  does not match the persisted export row
+- **WHEN** the failure listener or reconciliation pass runs
+- **THEN** no export row is updated
+
+### Requirement: PDF artifact download is authorized by frozen job ownership
+
+The authenticated PDF download handler MUST authorize a completed artifact by
+the immutable `PdfExportJob.requestedBy` user identity persisted at enqueue
+time. It MUST NOT re-run mutable report-read, group-membership, section, or
+admin visibility checks when serving the bytes. The export request itself still
+checks report scope before creating the job; download authorization is a
+separate owner-only boundary for the already-created artifact.
+
+#### Scenario: Later group reassignment does not transfer an artifact
+
+- **GIVEN** a completed PDF job owned by user A
+- **WHEN** the report's groups or live sections are reassigned after the job was
+  created
+- **THEN** user A can still download the completed artifact
+- **AND** a different user cannot download it merely because their current
+  report scope now includes the report
+
+#### Scenario: Artifact access ends only with invalid owner identity
+
+- **GIVEN** a completed PDF job whose `requestedBy` is user A
+- **WHEN** user A's identity is no longer valid for session authentication
+- **THEN** the download is rejected by the session/authentication boundary
+- **AND** the handler does not substitute mutable report or group authorization
 
 ### Requirement: Successful PDF delivery creates no blank browser tab
 
@@ -405,13 +505,13 @@ retry, but an existing symlink or invalid entry MUST be rejected.
 - **THEN** cleanup removes only the current attempt's temporary file
 - **AND** it never unlinks the canonical file belonging to the terminal row
 
-#### Scenario: Worker rollout does not mix canonical writers
+#### Scenario: A deployment keeps one canonical-writer protocol
 
-- **WHEN** the no-replace artifact protocol is deployed
-- **THEN** the `pdf-export` queue is drained or quiesced before old workers are
-  removed
-- **AND** old workers that can overwrite the canonical path do not run
-  concurrently with the new protocol
+- **WHEN** a deployment changes the canonical artifact-write protocol
+- **THEN** the `pdf-export` queue is drained or quiesced before workers using a
+  different protocol overlap
+- **AND** replace-capable and no-replace canonical writers never run
+  concurrently
 
 ### Requirement: PDF export status polling continues until a terminal result
 

@@ -83,7 +83,7 @@ export const overrideConfig: Linter.Config[] = [
       "sonarjs/hardcoded-secret-signatures": "off",
       // firings inherent to test code (the rules stay `error`
       // in src). http:// fixtures for local collectors/IP URLs; intentional
-      // undefined args for legacy-contract checks; idiomatic duplicate render
+      // undefined args for input-boundary checks; idiomatic duplicate render
       // wrappers; bare .sort() in test assertions.
       "sonarjs/no-clear-text-protocols": "off",
       "sonarjs/no-undefined-argument": "off",
@@ -101,11 +101,11 @@ export const overrideConfig: Linter.Config[] = [
       "**/__fixtures__/**",
       "**/fixture/**",
       "**/fixtures/**",
-      "**/*-harness.{ts,tsx,js,jsx,mjs,cjs}",
-      "**/*.fixture.{ts,tsx,js,jsx,mjs,cjs}",
-      "**/*.fixtures.{ts,tsx,js,jsx,mjs,cjs}",
-      "**/*-fixture.{ts,tsx,js,jsx,mjs,cjs}",
-      "**/*-test-fixture.{ts,tsx,js,jsx,mjs,cjs}",
+      "**/*-harness.{ts,tsx}",
+      "**/*.fixture.{ts,tsx}",
+      "**/*.fixtures.{ts,tsx}",
+      "**/*-fixture.{ts,tsx}",
+      "**/*-test-fixture.{ts,tsx}",
     ],
     rules: unrestrictedTestContourRules,
   },

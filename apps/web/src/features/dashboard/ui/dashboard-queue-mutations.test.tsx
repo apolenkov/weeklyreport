@@ -74,6 +74,8 @@ import { RemindLeadButton } from "./remind-lead-button";
 import { RequestChangesButton } from "./request-changes-button";
 import { RevokeLeadButton } from "./revoke-lead-button";
 
+const RULE_ID = "40000000-0000-4000-8000-000000000001";
+
 interface MockMutationOptions {
   readonly kind: "remind" | "review" | "revoke";
   readonly options?: MutationCallbacks | undefined;
@@ -123,6 +125,7 @@ describe("dashboard queue mutation transitions", () => {
     render(
       <RemindLeadButton
         reportId="10000000-0000-4000-8000-000000000001"
+        ruleId={RULE_ID}
         leadId="20000000-0000-4000-8000-000000000001"
         leadName="Alice Lead"
         onMutated={onMutated}
@@ -132,6 +135,7 @@ describe("dashboard queue mutation transitions", () => {
     fireEvent.click(screen.getByRole("button", { name: /send reminder/i }));
     expect(mutate).toHaveBeenCalledWith({
       reportId: "10000000-0000-4000-8000-000000000001",
+      ruleId: RULE_ID,
       leadId: "20000000-0000-4000-8000-000000000001",
     });
     expect(onMutated).toHaveBeenCalledTimes(1);
@@ -184,6 +188,7 @@ describe("dashboard queue mutation transitions", () => {
     render(
       <RemindLeadButton
         reportId="10000000-0000-4000-8000-000000000001"
+        ruleId={RULE_ID}
         leadId="20000000-0000-4000-8000-000000000001"
         leadName="Alice Lead"
         onMutated={onMutated}
@@ -214,6 +219,7 @@ describe("dashboard queue mutation transitions", () => {
     render(
       <RemindLeadButton
         reportId="10000000-0000-4000-8000-000000000001"
+        ruleId={RULE_ID}
         leadId="20000000-0000-4000-8000-000000000001"
         leadName="Alice Lead"
         onMutated={onMutated}

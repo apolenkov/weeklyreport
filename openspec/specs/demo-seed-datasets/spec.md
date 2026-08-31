@@ -106,9 +106,10 @@ Profile and schema changes MAY discard existing non-production MVP rows and MAY
 use breaking reset-based cutovers. They MUST preserve the destructive database
 guard and MUST NOT treat an unnamed external database as an execution target.
 
-#### Scenario: A profile requires a reshaped schema
+#### Scenario: A profile schema differs from disposable rows
 
-- **WHEN** the new architecture cannot read prior disposable rows
+- **WHEN** the selected profile cannot read existing disposable rows after a
+  schema change
 - **THEN** the migration/reset path may rebuild the database
 - **AND** all four profile writers and proofs are adapted before completion
 

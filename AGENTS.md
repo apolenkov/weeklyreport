@@ -13,14 +13,18 @@ publishes, and exports a unified report. pnpm + Turbo monorepo:
 
 - `apps/web` — Next.js 16 / React 19 frontend (`@customreport/web`)
 - `apps/api` — NestJS 11 / tRPC 11 / Prisma 7 backend (`@customreport/api`)
+- `packages/report-persistence` — server-only Prisma include, mapper, and
+  published-snapshot assembly (`@customreport/report-persistence`)
+- `packages/migrator-runtime` — pinned Prisma CLI/dotenv manifest used only to
+  build the minimal production migration image
 - `packages/shared` — Zod schemas, tRPC contracts (update here before duplicating types)
 - `packages/ui` — shadcn/ui + Tailwind 4 tokens
 - `prisma` — schema, single init migration, seeds, destructive guard
-- `openspec` — active backlog (`changes/`) + durable specs (`specs/`)
+- `openspec` — durable product and engineering specifications (`specs/`)
 
 ## Commands
 
-Use `pnpm` from the repo root (Node >=26). Never `npm`/Yarn.
+Use `pnpm` from the repo root (Node 24 LTS, `>=24.0.0 <25.0.0`). Never `npm`/Yarn.
 
 ```bash
 pnpm dev                # run API and web from source
@@ -80,9 +84,10 @@ pnpm spec:check         # strict validation of all durable OpenSpec specs
 No DB constraint enforces these — code review and CI do. Any change to a write
 path must respect them and link the relevant `openspec/specs/` spec.
 
-- **Period dual-state.** A Report carries both the new period state and the legacy
-  period tuple; concurrent leads must write both atomically.
-- **Role-coverage gate.** tRPC procedures must use one of the 8 canonical
+- **Period dual-state.** A Report carries canonical `periodState` plus its
+  companion lifecycle tuple (`status`, `periodStatus`, `archived`, audit flags,
+  and applicable timestamps); lifecycle writers must update them atomically.
+- **Role-coverage gate.** tRPC procedures must use one of the 6 canonical
   middleware-chain builders (matched by reference identity). Don't hand-roll a chain.
 
 ## Conventions

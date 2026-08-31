@@ -32,7 +32,7 @@ is in the head allowlist.
 
 - **WHEN** a session with role `admin` opens `/admin?tab=reopen`
 - **THEN** the tab loads the requests, the pending badge, and the
-  approve/reject actions exactly as before
+  approve/reject actions
 
 ### Requirement: The head decides reopen requests from the dashboard
 
@@ -94,20 +94,18 @@ group, even by passing its id directly.
 ### Requirement: The dashboard surfaces the pending reopen count
 
 The head dashboard MUST surface pending reopen requests through a SINGLE
-consolidated surface — the Reopen Requests card
+surface — the Reopen Requests card
 (`apps/web/src/features/dashboard/ui/reopen-requests-card.tsx`) — and MUST NOT also
 duplicate the pending reopen count as a separate indicator in the pending-lead
-alert bar (`apps/web/src/features/dashboard/ui/alert-bar.tsx`). Live walkthrough
-2026-07-02 (head HF6) found the alert bar's reopen line and the card's header
-count state the same thing twice. The pending reopen count and its queue MUST
+alert bar (`apps/web/src/features/dashboard/ui/alert-bar.tsx`). The pending
+reopen count and its queue MUST
 live only on the Reopen Requests card, whose header already shows the "N pending"
 count; the alert bar's outstanding signals MUST be limited to lead-submission
 signals (missing/late leads and the reminder action). The Reopen Requests card
 MUST render whenever at least one reopen request is pending — even when every lead
 has submitted — and MUST render nothing when the queue is empty. The alert bar
 MUST self-suppress when there are no missing lead submissions, independent of the
-reopen queue. This reverses the earlier `reopen-request-lifecycle` (D3) decision
-that made the alert bar carry the reopen indicator.
+reopen queue.
 
 #### Scenario: Reopen requests show with zero missing leads
 
@@ -153,6 +151,12 @@ period-level reopen (Admin → Periods, governed by
 `AppSettings.allowReopenAfterPublish`); once it becomes `reopened`, section
 reopen requests are allowed again.
 
+Creating the request MUST lock the parent report first inside the same
+transaction that rechecks ownership and submitted status and inserts the
+request. The shared lifecycle gate MUST admit only the exact draft/open or
+published/reopened non-archived tuple; a stale read MUST NOT create a request
+after publish or archive commits.
+
 #### Scenario: Open period allows the request
 
 - **WHEN** a lead with a submitted section on an `open` period opens their report
@@ -177,6 +181,12 @@ reopen requests are allowed again.
 - **WHEN** a lead views a submitted section whose period is `archived`
 - **THEN** `canRequestReopen` is false, the Request Reopen control is hidden, and
   a direct `requestReopen` call is rejected
+
+#### Scenario: Publish wins request creation
+
+- **WHEN** publish commits after the lead starts `requestReopen` but before its
+  transaction locks the parent report
+- **THEN** request creation fails closed and no pending row is inserted
 
 #### Scenario: An existing pending request hides the control
 
@@ -218,6 +228,12 @@ The section flip and the funnel metric increment MUST happen only for the decisi
 that wins; a losing decision MUST change nothing and MUST report that the request
 was already processed.
 
+Before any request or section mutation, the decision transaction MUST lock the
+parent report through the same shared lifecycle gate used by section writes. A
+publish, archive, deletion, or contradictory lifecycle that wins before this
+lock MUST leave the request pending and the section submitted; neither approval
+nor rejection may mutate a closed report.
+
 #### Scenario: Concurrent approve and reject
 
 - **WHEN** a head and an admin submit a decision for the same pending request at
@@ -232,3 +248,10 @@ was already processed.
 - **THEN** the section is not flipped again, the approve/reject funnel metric is
   not incremented, the request becomes terminal and drops out of the pending list
   and count, and the call reports the request as stale
+
+#### Scenario: Publish wins request approval
+
+- **WHEN** publish commits after approval starts but before the decision
+  transaction locks the parent report
+- **THEN** approval fails closed, the request stays pending, and the section
+  stays submitted

@@ -1,6 +1,6 @@
 "use client";
 
-import type { DbRole } from "@customreport/shared";
+import type { DbRole, ReseedVariant } from "@customreport/shared";
 import { ROLE_LABEL } from "@customreport/shared";
 import { Button } from "@customreport/ui/components/ui/button";
 import {
@@ -20,7 +20,7 @@ import { logoutThenRedirect } from "../../lib/navigation/logout-then-redirect";
 import { webEnv } from "../../lib/runtime/web-env";
 import { useTRPC } from "../../lib/trpc/trpc-context";
 
-type DataResetVariant = "minimal" | "demo" | "full" | "stress";
+type DataResetVariant = ReseedVariant;
 
 export const ROLE_ORDER = [
   "head",

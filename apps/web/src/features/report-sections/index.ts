@@ -1,5 +1,6 @@
 export { crossAuthorContentFetchEnabled } from "./model/cross-author/cross-author-content-gate";
 export { FOREIGN_ENTRY_OPACITY, STATUS_BADGE } from "./model/item-card-style";
+export { buildItemDialogProps } from "./model/item-dialog-props";
 export { persistableItemStatusToWorkflow } from "./model/item-status";
 export {
   markCompletePatch,
@@ -25,7 +26,6 @@ export {
 export type { DraftPatch } from "./model/lead-form/draft/lead-form-draft-patch";
 export type { LeadFormGeneration } from "./model/lead-form/lead-form-generation";
 export { leadFormGenerationOf } from "./model/lead-form/lead-form-generation";
-export type { PublishedLineage } from "./model/lead-form/lead-form-loaded-record-builders";
 export type {
   LeadFormLoadedInput,
   LeadFormLoadedViewModel,
@@ -63,11 +63,7 @@ export {
   computeEffectiveStageNames,
   isZeroOwnedStageDeadEnd,
 } from "./model/stage-ownership";
-export {
-  canonicalStageName,
-  canonicalStageNames,
-  riskCoversStage,
-} from "./model/stage-tags";
+export { canonicalStageNames, riskCoversStage } from "./model/stage-tags";
 export {
   annotateOwnRiskCoverage,
   applyRiskSeverityFloor,
@@ -103,11 +99,11 @@ export type {
 } from "./model/weekly-report-types";
 export { ActivityStatusStrip } from "./ui/activity/activity-status-strip";
 export { UnifiedActivitySection } from "./ui/activity/unified-activity-section";
-export { ActivityLanesBlock } from "./ui/activity-lanes-block";
-export { BoardColumnHeader } from "./ui/board-column-header";
 export { BoardEmptyState } from "./ui/board-empty-state";
+export { BoardGrid } from "./ui/board-grid";
 export { ItemCard } from "./ui/item-card";
 export { PublishedRecordMarker } from "./ui/item-card-actions";
+export { ItemDialogStack } from "./ui/item-dialog-stack";
 export { ItemEditDialog } from "./ui/item-edit-dialog";
 export { resolveSaveProduct } from "./ui/item-edit-dialog-helpers";
 export { NextWeekSection } from "./ui/next-week/next-week-section";

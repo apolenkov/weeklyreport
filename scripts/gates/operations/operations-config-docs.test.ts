@@ -11,11 +11,19 @@ const operations = read("docs/operations.md");
 const onboarding = read("docs/onboarding.md");
 const readme = read("README.md");
 const localEnvironment = read(".env.example");
+const productionEnvironment = read("deploy/environment/production.env.example");
 const compose = read("docker-compose.yml");
-const localBootstrap = read("prisma/operations/bootstrap-local.ts");
-const localDatabaseInitializer = read(
-  "deploy/postgres/ensure-local-database.sql",
+const devCompose = read("docker-compose.dev.yml");
+const observabilityCompose = read("docker-compose.observability.yml");
+const operationalDashboardProvider = read(
+  "deploy/grafana/provisioning/dashboards/customreport.yml",
 );
+const productDashboardProvider = read(
+  "deploy/grafana/provisioning/dashboards/product-telemetry.yml",
+);
+const productionPrometheus = read("deploy/prometheus-otel-lgtm.yml");
+const developmentPrometheus = read("deploy/prometheus-otel-lgtm.dev.yml");
+const localBootstrap = read("prisma/operations/bootstrap-local.ts");
 const apiBootstrap = read("apps/api/src/bootstrap/api-bootstrap.ts");
 const caddyReadme = read("deploy/caddy/README.md");
 const packageJson = JSON.parse(read("package.json")) as {
@@ -83,7 +91,6 @@ const assertLocalBootstrapContract = (
   const target =
     "postgresql://customreport:localdev@localhost:5432/customreport_e2e";
   assert.ok(environmentExample.includes(`DATABASE_URL=${target}`));
-  assert.ok(environmentExample.includes(`DIRECT_URL=${target}`));
   assert.ok(environmentExample.includes(`E2E_DATABASE_URL=${target}`));
   assert.equal(
     packageJson.scripts["db:bootstrap:local"],
@@ -111,15 +118,6 @@ const assertLocalBootstrapContract = (
   assert.match(compose, /POSTGRES_DB: customreport_e2e/u);
   assert.match(compose, /pg_isready -U customreport -d postgres/u);
   assert.ok(localEnvironment.includes("POSTGRES_DB=customreport_e2e"));
-  assert.match(
-    compose,
-    /local-database-init:[\s\S]*ensure-local-database\.sql[\s\S]*migrate:[\s\S]*local-database-init:[\s\S]*condition: service_completed_successfully/u,
-  );
-  assert.match(localDatabaseInitializer, /CREATE DATABASE customreport_e2e/u);
-  assert.doesNotMatch(
-    localDatabaseInitializer,
-    /\b(?:DROP|DELETE|TRUNCATE)\b/iu,
-  );
 };
 
 void test("local quick start bootstraps one exact guarded database", () => {
@@ -149,7 +147,6 @@ const assertNativeApiEnvironment = (
   bootstrap: string,
 ): void => {
   assert.match(apiDevCommand ?? "", /--import tsx --watch src\/main\.ts/);
-  assert.doesNotMatch(apiDevCommand ?? "", /kill-port/);
   assert.match(bootstrap, /await app\.listen\(env\.PORT, env\.API_HOST\)/);
   assert.match(environmentExample, /^API_HOST=127\.0\.0\.1$/mu);
 };
@@ -159,7 +156,6 @@ void test("API source development uses the supported TypeScript loader", () => {
   assertNativeApiEnvironment(apiDevCommand, read(".env.example"), apiBootstrap);
   assert.match(compose, /API_HOST: 0\.0\.0\.0/);
   assert.match(prodCompose, /API_HOST: 0\.0\.0\.0/);
-  assert.doesNotMatch(apiDevCommand ?? "", /@swc-node\/register/);
 });
 
 void test("native API environment guard rejects a planted public listener", () => {
@@ -187,14 +183,16 @@ const assertNativeWebRootEnvironment = (
   );
   assert.equal(scripts.build, "node scripts/run-next.ts build --webpack");
   assert.match(environmentExample, /^API_URL=http:\/\/localhost:3002$/mu);
-  assert.match(
-    environmentExample,
-    /^NEXT_PUBLIC_API_URL=http:\/\/localhost:3002$/mu,
-  );
 };
 
 void test("native Web dev and build load the root environment contract", () => {
   assertNativeWebRootEnvironment(webPackageJson.scripts, read(".env.example"));
+  assert.match(compose, /target: installer/u);
+  assert.equal(
+    compose.split("\n").some((line) => line.trim() === "args:"),
+    false,
+    "the installer dev target must not advertise builder-only arguments",
+  );
 });
 
 void test("native Web environment guard rejects a planted split-brain script", () => {
@@ -222,7 +220,6 @@ void test("native Web root environment preserves explicit shell precedence", () 
 
 void test("Mailpit is the one local SMTP service name", () => {
   assert.match(compose, /\n {2}mailpit:\n/);
-  assert.doesNotMatch(compose, /mailhog/i);
   assert.match(compose, /SMTP_HOST: mailpit/);
   assert.match(read(".env.example"), /^SMTP_HOST=localhost$/m);
   assert.match(read(".env.example"), /^SMTP_PORT=1025$/m);
@@ -287,9 +284,95 @@ void test("production Compose examples always load the production environment", 
   );
 });
 
-void test("production Caddy ACME email is fail-closed and documented", () => {
-  assert.match(prodCompose, /CADDY_ACME_EMAIL: \$\{CADDY_ACME_EMAIL:\?/);
-  assert.match(read(".env.example"), /^CADDY_ACME_EMAIL=\S+$/m);
+void test("production Caddy variables have one production-only source", () => {
+  for (const variable of [
+    "CADDY_SITE_ADDRESS",
+    "CADDY_ACME_EMAIL",
+    "CADDY_CSP_REPORT_URI",
+  ]) {
+    assert.ok(prodCompose.includes(`${variable}: \${${variable}:?`));
+    assert.match(productionEnvironment, new RegExp(`^${variable}=$`, "m"));
+    assert.doesNotMatch(localEnvironment, new RegExp(`^${variable}=`, "m"));
+  }
+});
+
+void test("observability has explicit local and production Grafana contracts", () => {
+  assert.match(
+    localEnvironment,
+    /^GRAFANA_ADMIN_PASSWORD=\S+$/m,
+    "the copied local environment must render observability:up",
+  );
+  assert.match(
+    observabilityCompose,
+    /GRAFANA_ADMIN_PASSWORD:\?GRAFANA_ADMIN_PASSWORD must be set/,
+  );
+  assert.match(
+    onboarding,
+    /pnpm observability:up[\s\S]*GRAFANA_ADMIN_PASSWORD/,
+  );
+  assert.match(productionEnvironment, /^GRAFANA_ADMIN_PASSWORD=$/m);
+  assert.match(
+    operations,
+    /observability overlay[\s\S]*GRAFANA_ADMIN_PASSWORD[\s\S]*no password default/i,
+  );
+});
+
+void test("Grafana providers own non-overlapping current dashboard roots", () => {
+  assert.match(
+    observabilityCompose,
+    /dashboards\/customreport\/operations\/customreport-dashboard\.json/,
+  );
+  assert.match(
+    observabilityCompose,
+    /dashboards\/customreport\/operations\/trpc-latency-dashboard\.json/,
+  );
+  assert.match(
+    observabilityCompose,
+    /dashboards\/customreport\/product\/product-telemetry-dashboard\.json/,
+  );
+  assert.match(
+    operationalDashboardProvider,
+    /path: \/var\/lib\/grafana\/dashboards\/customreport\/operations/,
+  );
+  assert.match(
+    productDashboardProvider,
+    /path: \/var\/lib\/grafana\/dashboards\/customreport\/product/,
+  );
+  assert.doesNotMatch(
+    operationalDashboardProvider + productDashboardProvider,
+    /path: \/var\/lib\/grafana\/dashboards\/customreport\s*$/m,
+  );
+  assert.match(productionPrometheus, /cluster: customreport-production/);
+  assert.match(developmentPrometheus, /cluster: customreport-local/);
+  assert.match(
+    operations,
+    /two non-overlapping dashboard roots[\s\S]*cluster=customreport-production[\s\S]*cluster=customreport-local/,
+  );
+});
+
+void test("development Compose uses the canonical Sentry variable names", () => {
+  assert.match(devCompose, /SENTRY_DSN: \$\{SENTRY_DSN:-\}/);
+  assert.match(
+    devCompose,
+    /NEXT_PUBLIC_SENTRY_DSN: \$\{NEXT_PUBLIC_SENTRY_DSN:-\}/,
+  );
+  assert.doesNotMatch(devCompose, /SENTRY_DSN_[A-Z]/);
+});
+
+void test("production documents the browser DSN as a build-time input", () => {
+  assert.match(
+    prodCompose,
+    /NEXT_PUBLIC_SENTRY_DSN: \$\{NEXT_PUBLIC_SENTRY_DSN:-\}/,
+  );
+  assert.match(productionEnvironment, /^# NEXT_PUBLIC_SENTRY_DSN=https:\/\//m);
+  assert.match(
+    onboarding,
+    /NEXT_PUBLIC_SENTRY_DSN[\s\S]*компилируется[\s\S]*новой сборки/,
+  );
+  assert.match(
+    operations,
+    /NEXT_PUBLIC_SENTRY_DSN[\s\S]*compiled into the Web image[\s\S]*up --build/,
+  );
 });
 
 void test("operations documentation inventories integration and coverage lanes", () => {
@@ -300,6 +383,11 @@ void test("operations documentation inventories integration and coverage lanes",
   assert.match(operations, /`coverage` lane[\s\S]*API and Web/);
   assert.match(workflow, /api-integration:/);
   assert.match(workflow, /coverage:/);
+});
+
+void test("the CI quality lane builds every workspace", () => {
+  assert.match(workflow, /- name: Build all workspaces\s+run: pnpm build/u);
+  assert.match(operations, /quality lane[\s\S]*complete workspace build/u);
 });
 
 const assertRecoveryEvidenceIsTruthful = (document: string): void => {

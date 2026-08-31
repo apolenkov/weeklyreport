@@ -1,11 +1,13 @@
 import type { TrafficLightStatus } from "@customreport/shared";
 import type { UserSession } from "@customreport/shared";
+import type { Prisma } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
+  publishedSnapshotFixture,
   seedTestData,
   TEST_IDS,
 } from "../../test-utils/prisma-test-helper";
@@ -40,6 +42,88 @@ const adminDR: UserSession = {
 
 const MAY = { periodFrom: "2026-05-01", periodTo: "2026-05-31" };
 
+interface AnalyticsSnapshotSection {
+  readonly sectionId: string;
+  readonly authorId: string;
+  readonly authorName: string;
+  readonly groupId: string;
+  readonly groupName: string;
+  readonly projectId?: string;
+  readonly projectName?: string;
+  readonly status?: TrafficLightStatus;
+  readonly sectionStatus: "submitted" | "draft";
+  readonly risks?: number;
+}
+
+function analyticsSnapshot(args: {
+  readonly reportId: string;
+  readonly periodStart: Date | string;
+  readonly periodEnd: Date | string;
+  readonly publishedAt: Date;
+  readonly sections: readonly AnalyticsSnapshotSection[];
+}): Prisma.InputJsonValue {
+  const iso = (value: Date | string) => new Date(value).toISOString();
+  return {
+    reportId: args.reportId,
+    periodStart: iso(args.periodStart),
+    periodEnd: iso(args.periodEnd),
+    deadline: iso(args.periodEnd),
+    status: "published",
+    publishedAt: args.publishedAt.toISOString(),
+    publishedById: null,
+    publishedByName: null,
+    portfolioOverview: {
+      status: "green",
+      totals: { green: 0, yellow: 0, red: 0 },
+    },
+    sections: args.sections.map((section) => ({
+      reportSectionId: section.sectionId,
+      reportId: args.reportId,
+      authorId: section.authorId,
+      authorName: section.authorName,
+      authorRole: "lead",
+      version: 1,
+      status: section.sectionStatus,
+      submittedAt:
+        section.sectionStatus === "submitted"
+          ? args.publishedAt.toISOString()
+          : null,
+      late: false,
+      projects:
+        section.projectId === undefined
+          ? []
+          : [
+              {
+                projectId: section.projectId,
+                projectName: section.projectName ?? "Project",
+                trafficLight: section.status ?? null,
+                ownedStages: [],
+                stageSet: [],
+                ownerGroupId: section.groupId,
+              },
+            ],
+      referencedProjects: [],
+      items: [],
+      risks: Array.from({ length: section.risks ?? 0 }, (_unused, index) => ({
+        id: `${section.sectionId.slice(0, -4)}1${String(index).padStart(3, "0")}`,
+        stableId: `${section.sectionId.slice(0, -4)}2${String(index).padStart(3, "0")}`,
+        projectId: section.projectId,
+        activityId: null,
+        risk: `risk ${String(index)}`,
+        impact: "impact",
+        mitigation: "mitigation",
+        severity: "at-risk",
+        stageNames: ["Development"],
+      })),
+      decisions: [],
+      activities: [],
+      reviews: [],
+      groupId: section.groupId,
+      groupName: section.groupName,
+    })),
+  };
+}
+
 describe("Analytics day-range matching (integration)", () => {
   const prisma = createTestPrisma();
   let repo: AnalyticsPrismaRepository;
@@ -54,6 +138,7 @@ describe("Analytics day-range matching (integration)", () => {
     projectStatus?: TrafficLightStatus;
     risks?: number;
   }): Promise<void> {
+    const publishedAt = new Date(args.periodEnd);
     await prisma.report.create({
       data: {
         id: args.id,
@@ -63,6 +148,13 @@ describe("Analytics day-range matching (integration)", () => {
         status: "published",
         periodState: "published",
         periodStatus: "published",
+        publishedAt,
+        publishedSnapshot: publishedSnapshotFixture({
+          reportId: args.id,
+          periodStart: args.periodStart,
+          periodEnd: args.periodEnd,
+          publishedAt,
+        }),
         ...(args.createdAt ? { createdAt: new Date(args.createdAt) } : {}),
       },
     });
@@ -93,11 +185,45 @@ describe("Analytics day-range matching (integration)", () => {
             impact: "impact",
             mitigation: "mitigation",
             severity: "at-risk",
-            stageNames: [],
+            stageNames: ["Development"],
           },
         }),
       ),
     );
+    await prisma.report.update({
+      where: { id: args.id },
+      data: {
+        publishedSnapshot: analyticsSnapshot({
+          reportId: args.id,
+          periodStart: args.periodStart,
+          periodEnd: args.periodEnd,
+          publishedAt,
+          sections: [
+            {
+              sectionId: args.sectionId,
+              authorId: DR_LEAD,
+              authorName: "Lead DR",
+              groupId: DR_GROUP,
+              groupName: "DR Group",
+              ...(args.projectStatus === undefined
+                ? {}
+                : { projectId: DR_PROJECT, status: args.projectStatus }),
+              projectName: "DR Project",
+              sectionStatus: args.sectionStatus,
+              ...(args.risks === undefined ? {} : { risks: args.risks }),
+            },
+          ],
+        }),
+      },
+    });
+    await prisma.publishedSectionScope.create({
+      data: {
+        reportId: args.id,
+        reportSectionId: args.sectionId,
+        authorId: DR_LEAD,
+        groupId: DR_GROUP,
+      },
+    });
   }
 
   beforeEach(async () => {
@@ -120,6 +246,9 @@ describe("Analytics day-range matching (integration)", () => {
     });
     await prisma.project.create({
       data: { id: DR_PROJECT, name: "DR Project", leadId: DR_LEAD },
+    });
+    await prisma.groupProduct.create({
+      data: { groupId: DR_GROUP, productId: DR_PROJECT },
     });
   });
 
@@ -296,9 +425,20 @@ describe("Analytics group scoping (integration)", () => {
     };
 
     // Publish the seeded unified period and submit its group-A section.
+    const publishedAt = new Date(testData.report.periodEnd);
     await prisma.report.update({
       where: { id: testData.report.id },
-      data: { status: "published", periodStatus: "published" },
+      data: {
+        status: "published",
+        periodStatus: "published",
+        publishedAt,
+        publishedSnapshot: publishedSnapshotFixture({
+          reportId: testData.report.id,
+          periodStart: testData.report.periodStart,
+          periodEnd: testData.report.periodEnd,
+          publishedAt,
+        }),
+      },
     });
     await prisma.reportSection.update({
       where: { id: testData.section.id },
@@ -331,6 +471,9 @@ describe("Analytics group scoping (integration)", () => {
     await prisma.project.create({
       data: { id: PROJECT_B, name: "Project B", leadId: LEAD_B },
     });
+    await prisma.groupProduct.create({
+      data: { groupId: GROUP_B, productId: PROJECT_B },
+    });
     await prisma.reportSection.create({
       data: {
         id: SECTION_B,
@@ -354,7 +497,60 @@ describe("Analytics group scoping (integration)", () => {
         impact: "B impact",
         mitigation: "B mitigation",
         severity: "at-risk",
+        stageNames: ["Development"],
       },
+    });
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: {
+        publishedSnapshot: analyticsSnapshot({
+          reportId: testData.report.id,
+          periodStart: testData.report.periodStart,
+          periodEnd: testData.report.periodEnd,
+          publishedAt,
+          sections: [
+            {
+              sectionId: testData.section.id,
+              authorId: testData.lead.id,
+              authorName: testData.lead.name,
+              groupId: TEST_IDS.group,
+              groupName: "Test Group",
+              projectId: testData.project.id,
+              projectName: testData.project.name,
+              status: "green",
+              sectionStatus: "submitted",
+            },
+            {
+              sectionId: SECTION_B,
+              authorId: LEAD_B,
+              authorName: "Lead B",
+              groupId: GROUP_B,
+              groupName: "Group B",
+              projectId: PROJECT_B,
+              projectName: "Project B",
+              status: "red",
+              sectionStatus: "submitted",
+              risks: 1,
+            },
+          ],
+        }),
+      },
+    });
+    await prisma.publishedSectionScope.createMany({
+      data: [
+        {
+          reportId: testData.report.id,
+          reportSectionId: testData.section.id,
+          authorId: testData.lead.id,
+          groupId: TEST_IDS.group,
+        },
+        {
+          reportId: testData.report.id,
+          reportSectionId: SECTION_B,
+          authorId: LEAD_B,
+          groupId: GROUP_B,
+        },
+      ],
     });
   });
 
@@ -398,5 +594,35 @@ describe("Analytics group scoping (integration)", () => {
     const ids = result.rows.map((r) => r.projectId);
     expect(ids).toContain(testData.project.id);
     expect(ids).not.toContain(PROJECT_B);
+  });
+
+  it("keeps published metrics and frozen scope after live section deletion and user-group drift", async () => {
+    const before = await Promise.all([
+      repo.trafficLightHistory(HISTORY_INPUT, headA),
+      repo.leadVelocity(HISTORY_INPUT, headA),
+      repo.periodComparison(
+        { periodA: "2026-04-13", periodB: "2026-04-20" },
+        headA,
+      ),
+    ]);
+
+    await prisma.reportSection.deleteMany({
+      where: { reportId: testData.report.id },
+    });
+    await prisma.user.update({
+      where: { id: testData.lead.id },
+      data: { reportingGroupId: GROUP_B },
+    });
+
+    const after = await Promise.all([
+      repo.trafficLightHistory(HISTORY_INPUT, headA),
+      repo.leadVelocity(HISTORY_INPUT, headA),
+      repo.periodComparison(
+        { periodA: "2026-04-13", periodB: "2026-04-20" },
+        headA,
+      ),
+    ]);
+
+    expect(after).toEqual(before);
   });
 });

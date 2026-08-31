@@ -1,7 +1,12 @@
 import type { PrismaClient } from "@prisma/client";
 
 import type { AppLogger } from "../../lib/logger";
-import { ensureLeadSection } from "../report-sections/index.js";
+import {
+  ensureLeadSection,
+  ReportSectionDomainError,
+  ReportSectionNotFoundError,
+  requirePublishedSnapshot,
+} from "../report-sections/index.js";
 import {
   CarryOverDomainError,
   type CarryOverRepository,
@@ -144,6 +149,8 @@ type AutoCarryOverPrisma = Pick<
   | "projectStatus"
   | "projectActivityLead"
   | "activityStatus"
+  | "report"
+  | "user"
 >;
 
 // Active authors only; ensureLeadSection seeds the same status rows as login provision.
@@ -157,6 +164,31 @@ export function buildAutoCarryOverDeps(input: {
     repository: input.repository,
     carryOverService: input.carryOverService,
     listActiveSourceAuthorIds: async (sourceReportId) => {
+      const source = await input.prisma.report.findUnique({
+        where: { id: sourceReportId },
+        select: { periodStatus: true, publishedSnapshot: true },
+      });
+      if (source?.periodStatus === "published") {
+        const frozenAuthorIds = [
+          ...new Set(
+            requirePublishedSnapshot(
+              source.publishedSnapshot,
+              sourceReportId,
+            ).sections.map((section) => section.authorId),
+          ),
+        ];
+        if (frozenAuthorIds.length === 0) return [];
+        const activeAuthors = await input.prisma.user.findMany({
+          where: { id: { in: frozenAuthorIds }, isActive: true },
+          select: { id: true },
+        });
+        const activeAuthorIds = new Set(
+          activeAuthors.map((author) => author.id),
+        );
+        return frozenAuthorIds.filter((authorId) =>
+          activeAuthorIds.has(authorId),
+        );
+      }
       const sections = await input.prisma.reportSection.findMany({
         where: { reportId: sourceReportId, author: { isActive: true } },
         select: { authorId: true },
@@ -164,7 +196,17 @@ export function buildAutoCarryOverDeps(input: {
       return sections.map((section) => section.authorId);
     },
     ensureSection: async (targetReportId, authorId) => {
-      await ensureLeadSection(input.prisma, targetReportId, authorId);
+      try {
+        await ensureLeadSection(input.prisma, targetReportId, authorId);
+      } catch (error) {
+        if (
+          error instanceof ReportSectionDomainError ||
+          error instanceof ReportSectionNotFoundError
+        ) {
+          throw new CarryOverDomainError(error.message);
+        }
+        throw error;
+      }
     },
     logger: input.logger,
   };

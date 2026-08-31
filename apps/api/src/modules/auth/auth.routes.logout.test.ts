@@ -1,7 +1,8 @@
+import { AUTH_COOKIE_NAME } from "@customreport/shared";
 import type { Request, Response } from "express";
 import { describe, expect, it, vi } from "vitest";
 
-import { createNullAuditLogger } from "../../lib/audit-logger.js";
+import { createNullAuditLogger } from "../../test-utils/audit-logger.js";
 import { createLogoutHandler, deriveLogoutOrigins } from "./auth.routes";
 
 const STUB_ENV = { NODE_ENV: "test" } as NodeJS.ProcessEnv;
@@ -94,7 +95,7 @@ describe("createLogoutHandler origin gate", () => {
     // the redirect alone would leave the browser logged in.
     expect(res.setHeader).toHaveBeenCalledWith(
       "Set-Cookie",
-      expect.stringMatching(/^customreport_session=;.*Max-Age=0/),
+      expect.stringMatching(new RegExp(`^${AUTH_COOKIE_NAME}=;.*Max-Age=0`)),
     );
     const setHeaderOrder = res.setHeader.mock.invocationCallOrder[0];
     const redirectOrder = res.redirect.mock.invocationCallOrder[0];

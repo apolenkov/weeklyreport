@@ -9,7 +9,7 @@ export interface EnsuredPeriod {
   // Null only on a found (not minted) row whose deadline an admin explicitly
   // cleared; a freshly minted period always carries one.
   readonly deadline: Date | null;
-  // A draft period can only be `scheduled` or `open` (the legacy `status:"draft"`
-  // tuple maps to exactly those two states), so the public shape stays narrow.
+  // A draft period can only be `scheduled` or `open` (the persisted
+  // `status:"draft"` fields map to exactly those two states), so the public shape stays narrow.
   readonly periodState: Extract<PeriodState, "scheduled" | "open">;
 }

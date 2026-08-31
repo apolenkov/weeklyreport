@@ -82,9 +82,9 @@ describe("MetaRow", () => {
     expect(screen.getByText("Alice")).toBeInTheDocument();
   });
 
-  it("renders All stages chip when stageTags is empty", () => {
+  it("renders no stage chip when stageTags is empty", () => {
     render(<MetaRow authorName="Alice" stageTags={[]} />);
-    expect(screen.getByText("All stages")).toBeInTheDocument();
+    expect(screen.queryByText("All stages")).not.toBeInTheDocument();
   });
 
   it("renders individual stage chips", () => {

@@ -1,13 +1,10 @@
 // No `server-only` import: next.config.ts loads this at Node config time.
 
 export function requireApiUrl(): string {
-  // An empty string counts as unset — an env file's `API_URL=` must fall
-  // through to the public var, not produce an empty base URL.
-  const url =
-    nonEmpty(process.env.API_URL) ?? nonEmpty(process.env.NEXT_PUBLIC_API_URL);
+  const url = nonEmpty(process.env.API_URL);
   if (url === undefined) {
     throw new Error(
-      "API base URL is not configured — set API_URL (server-side) or NEXT_PUBLIC_API_URL.",
+      "API base URL is not configured — set API_URL (server-side).",
     );
   }
   return url;

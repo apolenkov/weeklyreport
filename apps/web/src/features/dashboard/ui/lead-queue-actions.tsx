@@ -59,10 +59,11 @@ export function LeadPrimaryAction({
       />
     );
   }
-  if (action === "remind") {
+  if (action === "remind" && lead.reminderRuleId !== null) {
     return (
       <RemindLeadButton
         reportId={reportId}
+        ruleId={lead.reminderRuleId}
         leadId={lead.id}
         leadName={lead.name}
         onMutated={onMutated}
@@ -124,9 +125,10 @@ function SecondaryActionSet({
           leadName={lead.name}
         />
       ) : null}
-      {actions.showRemind ? (
+      {actions.showRemind && lead.reminderRuleId !== null ? (
         <RemindLeadButton
           reportId={reportId}
+          ruleId={lead.reminderRuleId}
           leadId={lead.id}
           leadName={lead.name}
           onMutated={onMutated}

@@ -7,7 +7,8 @@ export type DraftSaveValidationErrorCode =
   | "STAGE_NOT_OWNED"
   | "ACTIVITY_NOT_ATTACHED"
   | "PUBLISHED_RECORD_LOCKED"
-  | "INVALID_DECISION_PARENT";
+  | "INVALID_DECISION_PARENT"
+  | "INVALID_HISTORY_CURSOR";
 
 /** Domain validation failure safe to return to section clients. */
 export interface DraftSaveValidationError {

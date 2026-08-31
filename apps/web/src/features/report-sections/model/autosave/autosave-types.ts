@@ -1,11 +1,8 @@
-import type {
-  DraftSavePayload,
-  ReportSectionReadModel,
-} from "@customreport/shared";
+import type { ReportSectionReadModel } from "@customreport/shared";
 
-// Keep optimistic-lock metadata out of the hashed content; the hook injects
-// the live version at mutate time so version bumps never dirty or re-seed.
-export type DraftSaveContent = Omit<DraftSavePayload, "version">;
+import type { DraftSaveContent } from "../lead-section-draft-payload";
+
+export type { DraftSaveContent } from "../lead-section-draft-payload";
 
 export type AutosaveState = "idle" | "pending" | "saving" | "saved" | "error";
 

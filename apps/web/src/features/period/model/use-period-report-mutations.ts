@@ -1,15 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { mutationErrorMessage } from "../../../shared/lib/errors/mutation-error-message";
+import { toastMutationError } from "../../../shared/lib/errors/mutation-error-message";
 import { invalidatePeriodLifecycle } from "../../../shared/lib/query/cache-keys";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
-
-function toastMutationError(fallbackMessage: string) {
-  return (err: unknown) => {
-    toast.error(mutationErrorMessage(err, fallbackMessage));
-  };
-}
 
 interface PeriodReportMutations {
   readonly publish: (reportId: string) => void;

@@ -45,7 +45,7 @@ function makeActiveReportData() {
     weekLabel: "Week 16",
     submissionCount: 1,
     totalLeads: 1,
-    hasActiveReminderRule: true,
+    activeDeadlineReminderRuleId: "a0000000-0000-4000-a000-000000000600",
     portfolioOverview: [
       {
         productId: PRODUCT_ID,

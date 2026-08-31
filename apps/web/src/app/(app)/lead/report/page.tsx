@@ -6,7 +6,8 @@ interface Props {
   searchParams: Promise<{ mode?: string }>;
 }
 
-// Back-compat bare route: form client-replaces to the addressed URL once known.
+// Addressable entry route: the form replaces it with the active report URL
+// once the current period is known.
 export default async function LeadReportPage({ searchParams }: Props) {
   const { mode } = await searchParams;
   const resolvedMode = mode === "slides" ? "slides" : "edit";

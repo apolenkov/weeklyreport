@@ -8,7 +8,7 @@ Publish reports through one guarded compare-and-set that classifies zero-row out
 
 ### Requirement: Single Shared Publish Compare-And-Set Helper
 
-The manual-publish compare-and-set SHALL be implemented once, in the shared helper, and `PeriodPrismaRepository.publishPeriod` — the sole surviving manual publish write path — MUST call it; no repository may carry its own inline copy of the manual guarded predicate or its zero-row classification. `PublicationPrismaRepository.saveAutoPublishedReport` deliberately does NOT call the helper: the scheduler path guards on a different, draft-keyed predicate (`status: "draft", archived: false`), and switching it onto the manual predicate would auto-publish a reopened period a head is actively editing.
+The manual-publish compare-and-set SHALL be implemented once, in the shared helper, and `PeriodPrismaRepository.publishPeriod` — the sole manual publish write path — MUST call it; no repository may carry its own inline copy of the manual guarded predicate or its zero-row classification. `PublicationPrismaRepository.saveAutoPublishedReport` deliberately does NOT call the helper: the scheduler path guards on a different, draft-keyed predicate (`status: "draft", archived: false`), and switching it onto the manual predicate would auto-publish a reopened period a head is actively editing.
 
 #### Scenario: The manual publish path consumes the shared helper
 
@@ -23,11 +23,11 @@ The manual-publish compare-and-set SHALL be implemented once, in the shared help
 - **THEN** it guards on its own draft-keyed predicate and does not call the manual helper
 - **AND** the divergence is documented at the helper's declaration
 
-#### Scenario: No orphaned publish write path survives
+#### Scenario: Every publish write path has a production caller
 
 - **WHEN** the publication repository's publish methods are enumerated
 - **THEN** every one of them has a reachable production caller
-- **AND** `publishAssembledReport` and its `PublishReportOutcome` type no longer exist
+- **AND** no second manual publish method or outcome type exists
 
 ### Requirement: Canonical Guarded Predicate
 
@@ -170,28 +170,27 @@ only its snapshot's freshness and atomicity are shared.
   `archived: false`
 - **AND** it still does not call the shared manual-publish helper.
 
-### Requirement: Dedup Is Behavior-Preserving And Scope-Bounded
+### Requirement: Manual and automatic publish keep their distinct predicates
 
-This change SHALL NOT alter any observable publish behavior, the period-dual-state
-single-transition-writer invariant, or the lifecycle field set (which continues
-to come from the transition builder). The existing publish-atomicity integration
-test MUST continue to pass unchanged. `saveAutoPublishedReport`, whose predicate
-is `status: "draft"`, is a DIFFERENT compare-and-set and MUST remain out of
-scope.
+The shared manual helper MUST preserve the period-dual-state
+single-transition-writer invariant and obtain the lifecycle field set from the
+transition builder. The publish-atomicity integration test MUST cover this
+contract. `saveAutoPublishedReport`, whose predicate is `status: "draft"`, is a
+distinct compare-and-set and MUST remain outside the manual helper.
 
-#### Scenario: Atomicity test still gates the extracted helper
+#### Scenario: Atomicity test gates the manual helper
 
-- **GIVEN** the extracted shared helper in use by both repositories
+- **GIVEN** the shared helper is used by the manual publish repository
 - **WHEN** `period.publish-atomicity.integration.test.ts` runs against real
   Postgres
 - **THEN** exactly one of two concurrent publishes transitions the row and
-  rebuilds the snapshot, exactly as before the extraction.
+  rebuilds the snapshot.
 
-#### Scenario: Auto-publish CAS is untouched
+#### Scenario: Auto-publish keeps its own compare-and-set
 
 - **GIVEN** `PublicationPrismaRepository.saveAutoPublishedReport`
-- **WHEN** this change is applied
-- **THEN** its `status: "draft"` predicate is unchanged and it does not call the
+- **WHEN** it attempts an automatic publish
+- **THEN** its `status: "draft"` predicate applies and it does not call the
   manual-publish helper.
 
 ### Requirement: Post-publish side-effects are emitted from one module
@@ -202,7 +201,7 @@ publish-capable services MUST NOT carry a private copy of the emission
 discipline, and side-effects MUST fire only after a real state transition
 (never on raced, archived, or skipped outcomes). Publish-time ingestion MUST
 NOT be required, invoked, or represented by a no-op collaborator in the current
-MVP.
+contract.
 
 #### Scenario: Manual and auto publish share the emission seam
 
@@ -222,7 +221,7 @@ MVP.
 #### Scenario: Publishing has no ingestion dependency
 
 - **WHEN** manual or automatic publishing runs
-- **THEN** it succeeds because the current MVP does not invoke an ingestion path
+- **THEN** it succeeds without invoking an ingestion path
 
 #### Scenario: Production composition has no ingestion dependency
 
@@ -261,7 +260,7 @@ ahead of the scheduler is never recorded as an auto-publish audit event.
 - **THEN** the scheduler does not call `auditLogger.periodAutoPublish`
 - **AND** the scheduler does not log an `auto-publish period=...` line
 - **AND** the scheduler does not query the missing-sections count
-- **AND** the report's id is excluded from the scheduler's `publishedIds`.
+- **AND** the report's id is excluded from the scheduler's `periodIds`.
 
 #### Scenario: A real auto-publish write is still audited
 
@@ -270,12 +269,11 @@ ahead of the scheduler is never recorded as an auto-publish audit event.
   succeeds
 - **THEN** the scheduler calls `auditLogger.periodAutoPublish` exactly once
   for that report
-- **AND** the report's id appears in the scheduler's `publishedIds`.
+- **AND** the report's id appears in the scheduler's `periodIds`.
 
-#### Scenario: The archived-after-selection branch is unaffected
+#### Scenario: The archived-after-selection branch emits no success effects
 
 - **GIVEN** a period archived between candidate selection and the guarded
   write, so `publishAuto` returns `{ published: false }`
 - **WHEN** the scheduler processes that outcome
-- **THEN** it continues to skip the audit, log, and missing-sections count
-  exactly as before this change.
+- **THEN** it skips the audit, log, and missing-sections count.

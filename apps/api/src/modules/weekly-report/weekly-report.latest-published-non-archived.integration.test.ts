@@ -6,6 +6,7 @@ import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
+  publishedSnapshotFixture,
 } from "../../test-utils/prisma-test-helper";
 import { WeeklyReportPrismaRepository } from "./weekly-report.prisma-repository";
 import { WeeklyReportService } from "./weekly-report.service";
@@ -37,11 +38,13 @@ describe("WeeklyReportPrismaRepository.getLatestPublishedNonArchivedId (integrat
     periodStart: string,
     archived = false,
   ): Promise<void> {
+    const periodEnd = new Date(periodStart);
+    const publishedAt = new Date(periodStart);
     await prisma.report.create({
       data: {
         id,
         periodStart: new Date(periodStart),
-        periodEnd: new Date(periodStart),
+        periodEnd,
         deadline: new Date(periodStart),
         status: periodStatus === "published" ? "published" : "draft",
         periodStatus,
@@ -54,6 +57,18 @@ describe("WeeklyReportPrismaRepository.getLatestPublishedNonArchivedId (integrat
             ? "published"
             : "open",
         archived,
+        ...(periodStatus === "published"
+          ? {
+              publishedAt,
+              publishedSnapshot: publishedSnapshotFixture({
+                reportId: id,
+                periodStart,
+                periodEnd,
+                deadline: periodEnd,
+                publishedAt,
+              }),
+            }
+          : {}),
       },
     });
   }

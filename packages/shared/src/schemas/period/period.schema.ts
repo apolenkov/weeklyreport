@@ -53,7 +53,7 @@ export const periodListItemSchema = z
     publishedAt: z.coerce.date().nullable(),
     weekLabel: z.string().nullable().optional(),
     periodState: periodStateSchema,
-    // The legacy status remains independent from the explicit lifecycle state.
+    // Reopen status remains independent from the archive lifecycle state.
     periodStatus: periodStatusSchema,
     archived: z.boolean(),
     autoPublished: z.boolean(),
@@ -202,23 +202,9 @@ export const appSettingsUpdateSchema = appSettingsObjectSchema
   .partial()
   .readonly();
 
-/** Validates the period navigator read model. */
-export const periodReadModelSchema = currentPeriodLifecycleSchema
-  .unwrap()
-  .safeExtend({
-    id: z.uuid(),
-    periodStart: reportDate(),
-    periodEnd: reportDate(),
-    deadline: reportDate().nullable(),
-    weekLabel: z.string().nullable(),
-  })
-  .readonly();
-
 /** Validated reporting period with complete lifecycle state. */
 export type ReportPeriod = z.infer<typeof reportPeriodSchema>;
 /** Complete organization policy consumed by period and reminder automation. */
 export type AppSettings = z.infer<typeof appSettingsSchema>;
 /** Work-week calendar admitted by deadline calculation. */
 export type WorkingDays = z.infer<typeof workingDaysSchema>;
-/** Lifecycle-complete row consumed by period navigation. */
-export type PeriodReadModel = z.infer<typeof periodReadModelSchema>;

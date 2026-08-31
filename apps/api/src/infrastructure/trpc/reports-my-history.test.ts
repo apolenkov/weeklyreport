@@ -1,14 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
 import { ReportSectionDomainError } from "../../modules/report-sections/index.js";
+import { createNullAuditLogger } from "../../test-utils/audit-logger.js";
 import { createStubAppRouterDeps } from "../../test-utils/stub-app-router-deps.js";
 import { createAppRouter } from "./trpc.router.js";
 
 // `reports.myHistory` delegates to ReportSectionsService.myHistory, threading
-// the caller's userId through. The ordering guarantee lives where the query is
-// issued (report-sections.prisma-repository.test.ts).
+// the caller's userId through. The ordering/keyset guarantee lives in
+// report-sections.my-history-query.test.ts.
 
 function buildLeadCaller(myHistory: ReturnType<typeof vi.fn>) {
   const deps = createStubAppRouterDeps({
@@ -33,15 +33,18 @@ function buildLeadCaller(myHistory: ReturnType<typeof vi.fn>) {
 
 describe("reports.myHistory — router delegation", () => {
   it("forwards the caller's userId to the service and returns its result", async () => {
-    const myHistory = vi.fn(() => Promise.resolve([]));
+    const myHistory = vi.fn(() =>
+      Promise.resolve({ items: [], nextCursor: null }),
+    );
     const caller = buildLeadCaller(myHistory);
 
-    const result = await caller.reports.myHistory();
+    const result = await caller.reports.myHistory({ limit: 20 });
 
-    expect(result).toEqual([]);
+    expect(result).toEqual({ items: [], nextCursor: null });
     expect(myHistory).toHaveBeenCalledTimes(1);
     expect(myHistory).toHaveBeenCalledWith(
       "44444444-4444-4444-8444-444444444444",
+      { limit: 20 },
     );
   });
 
@@ -56,9 +59,11 @@ describe("reports.myHistory — router delegation", () => {
     );
     const caller = buildLeadCaller(myHistory);
 
-    await expect(caller.reports.myHistory()).rejects.toMatchObject({
-      code: "BAD_REQUEST",
-      message: "History is unavailable.",
-    });
+    await expect(caller.reports.myHistory({ limit: 20 })).rejects.toMatchObject(
+      {
+        code: "BAD_REQUEST",
+        message: "History is unavailable.",
+      },
+    );
   });
 });

@@ -1,24 +1,31 @@
 import type { AssembledReport } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
-import type { Prisma } from "@prisma/client";
+import { Prisma, type Prisma as PrismaTypes } from "@prisma/client";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { buildTransition } from "../../period/index.js";
+import {
+  lockAllReminderPolicies,
+  pauseReminderRulesForReport,
+} from "../../reminders/index.js";
 import {
   buildAssembledReportFromPrismaRow,
   reportFullIncludeForSnapshot,
   toPublishedSnapshotJson,
 } from "../../report-sections/index.js";
+import { replacePublishedProjections } from "../../search/index.js";
 import type {
   AutoPublishResult,
   PublicationRepository,
 } from "../application/publication.service";
 
 // Re-read the just-published row through the SAME transaction client and freeze
-// its `publishedSnapshot` as a second statement, so a lead save committing
-// between assemble-read and publish write is captured (`update` has no include).
+// its `publishedSnapshot` as a second statement. The guarded lifecycle write
+// also carries a provisional non-null snapshot because the database rejects a
+// published row without one; this second statement replaces it with the exact
+// post-CAS state (`update` has no include).
 async function freezeSnapshotInTx(
-  tx: Prisma.TransactionClient,
+  tx: PrismaTypes.TransactionClient,
   reportId: string,
 ): Promise<AssembledReport> {
   const row = await tx.report.findUniqueOrThrow({
@@ -30,6 +37,7 @@ async function freezeSnapshotInTx(
     where: { id: reportId },
     data: { publishedSnapshot: toPublishedSnapshotJson(snapshot) },
   });
+  await replacePublishedProjections(tx, { reportId, snapshot });
   return snapshot;
 }
 
@@ -54,28 +62,70 @@ export class PublicationPrismaRepository implements PublicationRepository {
 
   async saveAutoPublishedReport(
     report: AssembledReport,
+    expectedDeadline: Date | null = report.deadline,
   ): Promise<AutoPublishResult> {
-    return this.prisma.$transaction(async (tx) => {
-      // Compare-and-set: the candidate `archived:false` filter cannot cover a
-      // period archived between selection and this write, so scoping the write
-      // to `status="draft"` + `archived=false` closes the race (zero-row skips).
-      const { count } = await tx.report.updateMany({
-        where: { id: report.reportId, status: "draft", archived: false },
-        data: this.publishLifecycle(report),
-      });
+    return this.prisma.$transaction(
+      async (tx) => {
+        await lockAllReminderPolicies(tx);
+        // The scheduler's assembled payload was read before this transaction
+        // began. Re-read the complete live graph on the transaction client so
+        // user/project/rule/group changes cannot be published from a stale
+        // payload. RepeatableRead makes that graph and the lifecycle CAS one
+        // coherent snapshot for the whole admission/write/freeze sequence.
+        const currentRow = await tx.report.findUnique({
+          where: { id: report.reportId },
+          include: reportFullIncludeForSnapshot,
+        });
+        if (!currentRow) {
+          return { published: false };
+        }
+        const currentReport = buildAssembledReportFromPrismaRow(currentRow);
+        const candidate: AssembledReport = {
+          ...currentReport,
+          status: "published",
+          publishedAt: report.publishedAt ?? new Date(),
+          publishedById: null,
+          publishedByName: "system",
+        };
+        // Compare-and-set on the complete editable identity. In particular, the
+        // overdue deadline captured by the scheduler must still be exact: a
+        // moved/cleared deadline is a stale candidate and must not publish.
+        const { count } = await tx.report.updateMany({
+          where: {
+            id: candidate.reportId,
+            status: "draft",
+            archived: false,
+            periodState: "open",
+            periodStatus: "open",
+            autoPublished: false,
+            autoArchived: false,
+            publishedAt: null,
+            publishedById: null,
+            reopenedAt: null,
+            deadline: expectedDeadline,
+          },
+          data: {
+            ...this.publishLifecycle(report),
+            publishedSnapshot: toPublishedSnapshotJson(candidate),
+          },
+        });
 
-      if (count === 0) {
-        return { published: false };
-      }
+        if (count === 0) {
+          return { published: false };
+        }
 
-      return {
-        published: true,
-        // This layer only ever performs the write — the idempotent
-        // no-write short-circuit lives in `publishAuto`, above it.
-        wasAlreadyPublished: false,
-        report: await freezeSnapshotInTx(tx, report.reportId),
-      };
-    });
+        await pauseReminderRulesForReport(tx, candidate.reportId);
+
+        return {
+          published: true,
+          // This layer only ever performs the write — the idempotent
+          // no-write short-circuit lives in `publishAuto`, above it.
+          wasAlreadyPublished: false,
+          report: await freezeSnapshotInTx(tx, candidate.reportId),
+        };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
   }
 
   // Build the autoPublish lifecycle field set, sourcing the timestamp from the

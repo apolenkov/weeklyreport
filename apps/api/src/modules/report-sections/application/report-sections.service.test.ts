@@ -123,8 +123,8 @@ function createRepository(
 
       return Promise.resolve(structuredClone(currentSection));
     },
-    getMyHistoryRows() {
-      return Promise.resolve([]);
+    getMyHistoryPage() {
+      return Promise.resolve({ items: [], nextCursor: null });
     },
   };
 }
@@ -206,8 +206,7 @@ describe("ReportSectionsService", () => {
   });
 
   // Fail-closed: the writing actor is mandatory and must own the section — an
-  // unauthorized actor never reaches the repository write (the old optional
-  // actor let a write proceed unowned).
+  // unauthorized actor never reaches the repository write.
   it.each([
     {
       method: "saveDraft",
@@ -415,11 +414,11 @@ describe("ReportSectionsService", () => {
       expect(saved.projects[0]?.trafficLight).toBe("green");
     });
 
-    it("allows editing on a reopened period even while the legacy status reads published", async () => {
+    it("allows editing on a reopened period even while status reads published", async () => {
       const repo = createRepository(baseSection);
-      // The reopen transition leaves the legacy Report.status at 'published'
+      // The reopen transition leaves Report.status at 'published'
       // while flipping the canonical periodStatus to 'reopened'. The gate must
-      // follow periodStatus regardless of the divergent legacy value.
+      // follow periodStatus regardless of the divergent status value.
       repo.getReportPeriodWriteGateForSection = () =>
         Promise.resolve({ periodStatus: "reopened", archived: false });
 

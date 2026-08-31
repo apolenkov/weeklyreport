@@ -67,7 +67,9 @@ describe("LeadSubmitReadinessSummary", () => {
     );
 
     expect(
-      screen.getByText("1 unset status will be set to On Track."),
+      screen.getByText(
+        "1 unset status will be marked On Track when submitted.",
+      ),
     ).toBeInTheDocument();
     const disclosure = screen.getByTestId("lead-submit-automatic-statuses");
     expect(disclosure).not.toHaveAttribute("open");

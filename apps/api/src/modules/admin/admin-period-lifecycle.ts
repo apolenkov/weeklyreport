@@ -12,6 +12,11 @@ import {
   PeriodLifecycleIntegrityError,
 } from "../period/index.js";
 import {
+  lockAllReminderPolicies,
+  pauseReminderRulesForReport,
+  reconcileLockedPolicyForReport,
+} from "../reminders/index.js";
+import {
   AdminPeriodAlreadyArchivedError,
   AdminPeriodNotFoundError,
   AdminPeriodStaleStateError,
@@ -48,9 +53,9 @@ export async function createPeriodManual(
         periodEnd: input.periodEnd,
         deadline: input.deadline,
         weekLabel: input.weekLabel,
-        // Lifecycle fields (periodState + legacy status/archived tuple) come
+        // Lifecycle fields (periodState plus the companion status/archive fields) come
         // from the transition builder, never hand-assembled: both draft states
-        // map to a draft/false legacy tuple the schedule/open transitions produce.
+        // map to the draft/false companion values the schedule/open transitions produce.
         ...buildTransition(
           periodState === "scheduled" ? "schedule" : "open",
           {},
@@ -82,18 +87,25 @@ export async function createPeriodManual(
 
 // Manual archive: a guarded `updateMany` is mutually exclusive with a concurrent
 // reopen (not-yet-archived, not-reopened rows only; zero-row match fails closed)
-// and writes both legacy `archived` + new `periodState` in one statement.
+// and writes both the archive flag and `periodState` in one statement.
 export async function archivePeriod(
   prisma: PrismaService,
   periodId: string,
 ): Promise<void> {
-  const { count } = await prisma.report.updateMany({
-    where: {
-      id: periodId,
-      archived: false,
-      periodStatus: { not: "reopened" },
-    },
-    data: buildTransition("archive", {}),
+  const count = await prisma.$transaction(async (tx) => {
+    await lockAllReminderPolicies(tx);
+    const result = await tx.report.updateMany({
+      where: {
+        id: periodId,
+        archived: false,
+        periodStatus: { not: "reopened" },
+      },
+      data: buildTransition("archive", {}),
+    });
+    if (result.count === 1) {
+      await pauseReminderRulesForReport(tx, periodId);
+    }
+    return result.count;
   });
   if (count === 0) {
     throw new AdminPeriodAlreadyArchivedError(
@@ -102,18 +114,26 @@ export async function archivePeriod(
   }
 }
 
-// Un-archive: flips `archived=false` and derives the next `periodState` from
-// the legacy `(status, periodStatus)` tuple — the only ground truth left after
-// a row was set to `archived` (scheduled→open is lost; a rare edge).
+// Un-archive: flips `archived=false` and derives the next draft state from the
+// persisted period start at the operation's exact clock instant. The archived
+// marker replaces periodState, so a future draft must be scheduled again while
+// an elapsed (or boundary) draft becomes open.
 export async function unarchivePeriod(
   prisma: PrismaService,
   periodId: string,
+  now: Date,
 ): Promise<{ nextPeriodState: PeriodState; nextPeriodStatus: PeriodStatus }> {
   return periodOverlapGuarded(() =>
     prisma.$transaction(async (tx) => {
+      // Reminder writers share policy -> report -> rule ordering. Lock policies
+      // before restoring an editable Report so no active rule can retain the
+      // archived deadline or policy contract.
+      const policies = await lockAllReminderPolicies(tx);
       const row = await tx.report.findUnique({
         where: { id: periodId },
         select: {
+          periodStart: true,
+          deadline: true,
           status: true,
           periodState: true,
           periodStatus: true,
@@ -137,16 +157,44 @@ export async function unarchivePeriod(
         );
       }
 
-      const nextPeriodState: Extract<PeriodState, "open" | "published"> =
-        lifecycle.data.status === "published" ? "published" : "open";
+      const nextPeriodState: Extract<
+        PeriodState,
+        "open" | "published" | "scheduled"
+      > =
+        lifecycle.data.status === "published"
+          ? "published"
+          : row.periodStart.getTime() > now.getTime()
+            ? "scheduled"
+            : "open";
       const { count } = await tx.report.updateMany({
-        where: { id: periodId, ...lifecycle.data },
+        where: {
+          id: periodId,
+          periodStart: row.periodStart,
+          ...lifecycle.data,
+        },
         data: buildTransition("unarchive", { nextPeriodState }),
       });
       if (count !== 1) {
         throw new AdminPeriodStaleStateError(
           "The period changed while it was being unarchived. Reload and retry.",
         );
+      }
+      if (nextPeriodState === "scheduled" || nextPeriodState === "open") {
+        for (const policy of policies) {
+          await reconcileLockedPolicyForReport(
+            tx,
+            policy,
+            {
+              id: periodId,
+              deadline: row.deadline,
+              periodState: nextPeriodState,
+              status: lifecycle.data.status,
+              periodStatus: lifecycle.data.periodStatus,
+              archived: false,
+            },
+            now,
+          );
+        }
       }
       return {
         nextPeriodState,

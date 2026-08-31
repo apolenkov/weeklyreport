@@ -6,10 +6,6 @@ const sonnerMocks = vi.hoisted(() => ({
   props: vi.fn<(props: Record<string, unknown>) => void>(),
 }));
 
-vi.mock("next-themes", () => ({
-  useTheme: () => ({ theme: "light" }),
-}));
-
 vi.mock("sonner", () => ({
   Toaster: (props: Record<string, unknown>) => {
     sonnerMocks.props(props);
@@ -30,6 +26,7 @@ describe("Toaster", () => {
     expect(props).toBeDefined();
     if (!props) return;
     expect(props.richColors).toBe(true);
+    expect(props.theme).toBe("light");
     expect(props.style).toEqual(
       expect.objectContaining({
         "--success-bg": "var(--color-success)",

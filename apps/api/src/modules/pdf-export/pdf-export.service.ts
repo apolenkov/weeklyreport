@@ -1,13 +1,16 @@
 import {
   type AssembledReport,
+  AUTH_COOKIE_NAME,
   type PdfExportJob,
   pdfExportJobSchema,
+  type PublishedReportSnapshot,
   type UserSession,
 } from "@customreport/shared";
 
+import type { EnvConfig } from "../../infrastructure/config/env.schema.js";
 import { requireEnv } from "../../lib/env.js";
 import { type AppLogger } from "../../lib/logger";
-import { resolveSessionCookieName } from "../../lib/session-cookie.js";
+import { buildPublishedReadModelFromSnapshot } from "../weekly-report/index.js";
 import {
   type PdfExportEnqueuer,
   type PdfExportTelemetry,
@@ -30,15 +33,31 @@ const SYSTEM_ROLE_LABEL = "system";
 
 export type PdfExportJobRecord = PdfExportJob & { requestedBy: string };
 
+export interface PdfExportTerminalState {
+  readonly jobId: string;
+  readonly reportId: string;
+  readonly requestedBy: string;
+  readonly status: "completed" | "failed";
+  readonly artifactUrl?: string;
+  readonly checksum?: string;
+  readonly error?: string;
+}
+
 export interface PdfExportRepository {
-  getPublishedReport(reportId: string): Promise<AssembledReport | null>;
-  canReadReport(session: UserSession, reportId: string): Promise<boolean>;
+  getPublishedReportForExport(
+    reportId: string,
+    session: UserSession,
+  ): Promise<AssembledReport | null>;
   // Requester identity is mandatory: a job without a requester is a caller
   // bug and must fail loud rather than be relabelled as a system actor.
   createExportJob(
     job: PdfExportJob,
     requestedBy: string,
+    publicationSnapshot: AssembledReport,
   ): Promise<PdfExportJob>;
+  getPublishedReportForJob(
+    jobId: string,
+  ): Promise<PublishedReportSnapshot | null>;
   getExportJob(jobId: string): Promise<PdfExportJobRecord | null>;
   saveExportJob(job: PdfExportJob): Promise<PdfExportJob>;
   markExportFailed(jobId: string, error: string): Promise<void>;
@@ -52,15 +71,28 @@ export class PdfExportService {
     logger: AppLogger,
     private readonly pdfQueue: PdfExportEnqueuer,
     private readonly telemetry: PdfExportTelemetry,
+    private readonly env: Pick<
+      EnvConfig,
+      "PDF_BASE_URL" | "PDF_EXPORT_JWT_SECRET"
+    >,
   ) {
     this.logger = logger;
   }
 
   // Throws PdfExportDomainError (tRPC → 500) if the secret is missing/too short —
   // fail loud at request time rather than mint an unverifiable token.
-  signPdfExportToken(reportId: string, requestedBy: string): string {
+  signPdfExportToken(
+    reportId: string,
+    jobId: string,
+    requestedBy: string,
+  ): string {
     try {
-      return signPdfExportTokenPure(reportId, requestedBy);
+      return signPdfExportTokenPure(
+        reportId,
+        jobId,
+        requestedBy,
+        this.env.PDF_EXPORT_JWT_SECRET,
+      );
     } catch (error) {
       throw new PdfExportDomainError(
         error instanceof Error
@@ -76,16 +108,18 @@ export class PdfExportService {
     // Role label for customreport_pdf_export_requests_total; worker/cron default to 'system'.
     requestedByRole?: string,
   ): Promise<PdfExportJob> {
-    const report = await this.repository.getPublishedReport(reportId);
+    const report = await this.repository.getPublishedReportForExport(
+      reportId,
+      session,
+    );
 
-    if (report?.status !== "published") {
-      throw new PdfExportDomainError("PDF export requires a published report.");
-    }
-
-    if (!(await this.repository.canReadReport(session, reportId))) {
+    if (!report) {
       throw new PdfExportDomainError(
         "PDF export is not available for this caller.",
       );
+    }
+    if (report.status !== "published") {
+      throw new PdfExportDomainError("PDF export requires a published report.");
     }
 
     this.logger.info("requesting PDF export", {
@@ -104,6 +138,7 @@ export class PdfExportService {
         artifactUrl: null,
       }),
       session.userId,
+      report,
     );
 
     // The durable job carries only non-credential identifiers; the worker
@@ -134,6 +169,26 @@ export class PdfExportService {
     return job;
   }
 
+  async getPdfExportRender(
+    jobId: string,
+    requestedBy: string,
+    reportId: string,
+  ): Promise<ReturnType<typeof buildPublishedReadModelFromSnapshot>> {
+    const job = await this.repository.getExportJob(jobId);
+    if (job?.requestedBy !== requestedBy || job.reportId !== reportId) {
+      throw new PdfExportDomainError(`PDF export job ${jobId} was not found.`);
+    }
+    const snapshot = await this.repository.getPublishedReportForJob(jobId);
+    if (!snapshot) {
+      throw new PdfExportDomainError(`PDF export job ${jobId} was not found.`);
+    }
+    return buildPublishedReadModelFromSnapshot(snapshot, {
+      periodStatus: "published",
+      archived: false,
+      weekLabel: null,
+    });
+  }
+
   async getPdfExportStatus(
     jobId: string,
     requestedBy: string,
@@ -145,6 +200,18 @@ export class PdfExportService {
     }
 
     return pdfExportJobSchema.parse(job);
+  }
+
+  /** Validates the queue payload against the immutable persisted job identity. */
+  async assertPdfExportJobIdentity(
+    jobId: string,
+    reportId: string,
+    requestedBy: string,
+  ): Promise<void> {
+    const job = await this.repository.getExportJob(jobId);
+    if (job?.reportId !== reportId || job.requestedBy !== requestedBy) {
+      throw new PdfExportDomainError(`PDF export job ${jobId} was not found.`);
+    }
   }
 
   async markExportCompleted(
@@ -174,6 +241,49 @@ export class PdfExportService {
     await this.repository.markExportFailed(jobId, error);
   }
 
+  /** Reconciles one durable BullMQ terminal state; DB terminal states win ties. */
+  async reconcileTerminalState(
+    state: PdfExportTerminalState,
+  ): Promise<boolean> {
+    const job = await this.repository.getExportJob(state.jobId);
+    if (
+      job?.status !== "queued" ||
+      job.reportId !== state.reportId ||
+      job.requestedBy !== state.requestedBy
+    ) {
+      if (job?.status === "queued") {
+        this.logger.error("pdf-export terminal identity mismatch", {
+          jobId: state.jobId,
+          reportId: state.reportId,
+          requestedBy: state.requestedBy,
+        });
+      }
+      return false;
+    }
+    if (state.status === "failed") {
+      await this.markExportFailed(
+        state.jobId,
+        state.error ?? "PDF export failed in BullMQ",
+      );
+      return true;
+    }
+    if (!state.artifactUrl || !state.checksum) {
+      this.logger.error(
+        "pdf-export completed job has no durable artifact result",
+        {
+          jobId: state.jobId,
+        },
+      );
+      return false;
+    }
+    await this.markExportCompleted(
+      state.jobId,
+      state.artifactUrl,
+      state.checksum,
+    );
+    return true;
+  }
+
   // Prefer Playwright `url` over domain/secure inference from PDF_BASE_URL —
   // IP, localhost, and proxy hostnames reject or mis-scope domain cookies.
   buildAuthCookies(authToken: string): {
@@ -183,14 +293,11 @@ export class PdfExportService {
     httpOnly: boolean;
     sameSite: "Lax" | "Strict" | "None";
   }[] {
-    const cookieName = resolveSessionCookieName(
-      process.env.AUTH_JWT_COOKIE_NAME,
-    );
-    const baseUrl = requireEnv(process.env, "PDF_BASE_URL");
+    const baseUrl = requireEnv(this.env, "PDF_BASE_URL");
 
     return [
       {
-        name: cookieName,
+        name: AUTH_COOKIE_NAME,
         value: authToken,
         url: baseUrl,
         httpOnly: true,

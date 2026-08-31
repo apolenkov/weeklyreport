@@ -114,21 +114,24 @@ scrolls outside the visible panel.
 
 ### Requirement: Popup and expander controls MUST expose accurate ARIA relationships
 
-`QuickAddButton`'s trigger MUST set `aria-haspopup` to a value consistent with the popup's actual rendered role, and `AccordionSection`'s toggle controls MUST each carry an `aria-controls` attribute referencing the panel they expand.
+`QuickAddButton`'s disclosure trigger MUST omit `aria-haspopup` because its
+expanded content is a labelled `group`, not one of the popup roles accepted by
+that attribute. `AccordionSection`'s toggle controls MUST each carry an
+`aria-controls` attribute referencing the panel they expand.
 
 `QuickAddButton` (`apps/web/src/features/report-pages/ui/lead/chrome/quick-add-button.tsx`)
-currently claims `aria-haspopup="menu"` over a `role="group"` popup, which
-must not disagree. `AccordionSection`
+MUST expose the expanded state through `aria-expanded` and the labelled group
+relationship. `AccordionSection`
 (`apps/web/src/shared/ui/report-shell/accordion-section.tsx`) must wire the
 `aria-controls` id on both the header toggle and the trailing icon-button
 toggle when both are rendered for the same panel, and that id must resolve
 to a stable id on the collapsible panel.
 
-#### Scenario: QuickAddButton's aria-haspopup matches its popup's role
+#### Scenario: QuickAddButton exposes a group disclosure accurately
 
 - **WHEN** QuickAddButton's popup is inspected via the accessibility tree
-- **THEN** the trigger's `aria-haspopup` value agrees with the popup's
-  rendered `role`
+- **THEN** the trigger omits `aria-haspopup`, reports `aria-expanded`, and the
+  expanded content exposes its labelled `group` role
 
 #### Scenario: An accordion toggle references its panel via aria-controls
 

@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import { customreportReopenRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
 import { createNullLogger } from "../../lib/logger.js";
+import { unusedAdminRepositoryStubs } from "./__tests__/admin-repository-unused-stubs.js";
 import { AdminPrometheusTelemetry } from "./admin-prometheus-telemetry.adapter.js";
-import { unusedAdminRepositoryStubs } from "./admin-repository-unused-stubs.js";
 import {
   AdminReopenRequestAlreadyProcessedError,
   type AdminRepository,

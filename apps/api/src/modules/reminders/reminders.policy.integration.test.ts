@@ -63,10 +63,7 @@ describe("PolicyApplicatorService (integration)", () => {
       data: { deadline },
     });
 
-    const result = await applicator.applyToPeriod({
-      id: testData.report.id,
-      deadline,
-    });
+    const result = await applicator.applyToPeriod(testData.report.id);
 
     expect(result.created).toBe(1);
     expect(result.skipped).toBe(0);
@@ -81,6 +78,7 @@ describe("PolicyApplicatorService (integration)", () => {
     expect(rule.kind).toBe("deadline");
     expect(rule.timezone).toBe("Europe/Moscow");
     expect(rule.status).toBe("active");
+    expect(rule.deadline).toEqual(deadline);
 
     // T-1440 min from 2026-06-01T18:00Z (Moscow is UTC+3 year-round
     // since 2014) → 2026-05-31T18:00Z.
@@ -115,7 +113,7 @@ describe("PolicyApplicatorService (integration)", () => {
       data: { deadline },
     });
 
-    await applicator.applyToPeriod({ id: testData.report.id, deadline });
+    await applicator.applyToPeriod(testData.report.id);
 
     const rules = await prisma.reminderRule.findMany({
       where: { reportId: testData.report.id },
@@ -146,10 +144,7 @@ describe("PolicyApplicatorService (integration)", () => {
       data: { deadline },
     });
 
-    const result = await applicator.applyToPeriod({
-      id: testData.report.id,
-      deadline,
-    });
+    const result = await applicator.applyToPeriod(testData.report.id);
     expect(result.created).toBe(0);
     expect(result.skipped).toBe(1);
 
@@ -179,10 +174,7 @@ describe("PolicyApplicatorService (integration)", () => {
       data: { deadline },
     });
 
-    const result = await applicator.applyToPeriod({
-      id: testData.report.id,
-      deadline,
-    });
+    const result = await applicator.applyToPeriod(testData.report.id);
     expect(result.created).toBe(0);
     expect(result.skipped).toBe(1);
 
@@ -214,10 +206,7 @@ describe("PolicyApplicatorService (integration)", () => {
       data: { deadline },
     });
 
-    const result = await applicator.applyToPeriod({
-      id: testData.report.id,
-      deadline,
-    });
+    const result = await applicator.applyToPeriod(testData.report.id);
     expect(result.created).toBe(0);
 
     const rules = await prisma.reminderRule.findMany({
@@ -246,20 +235,14 @@ describe("PolicyApplicatorService (integration)", () => {
       data: { deadline },
     });
 
-    const first = await applicator.applyToPeriod({
-      id: testData.report.id,
-      deadline,
-    });
+    const first = await applicator.applyToPeriod(testData.report.id);
     expect(first.created).toBe(1);
     expect(first.updated).toBe(0);
 
-    const second = await applicator.applyToPeriod({
-      id: testData.report.id,
-      deadline,
-    });
-    // Second pass should hit the upsert update branch — no new row.
+    const second = await applicator.applyToPeriod(testData.report.id);
     expect(second.created).toBe(0);
-    expect(second.updated).toBe(1);
+    expect(second.updated).toBe(0);
+    expect(second.skipped).toBe(1);
 
     const rules = await prisma.reminderRule.findMany({
       where: { reportId: testData.report.id },

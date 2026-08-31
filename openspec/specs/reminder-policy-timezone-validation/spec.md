@@ -15,7 +15,8 @@ zone identifier at the shared wire-format schema boundary
 buggy admin client. A syntactically non-empty but non-IANA string (a typo,
 an offset-style string, or an arbitrary value from a client that skips the
 React form) MUST fail validation before it can be persisted, so it can never
-reach `PolicyApplicatorService.computeFireAt` or the `ReminderRule` upsert.
+reach the shared `computeReminderFireAt` calculation used by
+`PolicyApplicatorService.applyToPeriod` or the `ReminderRule` upsert.
 
 #### Scenario: A valid IANA zone is accepted
 
@@ -33,7 +34,7 @@ reach `PolicyApplicatorService.computeFireAt` or the `ReminderRule` upsert.
 - **AND** no `Report`/`ReminderPolicy` write and no `ReminderRule`
   materialization is attempted with that value
 
-#### Scenario: A bad timezone can no longer abort reminder-rule creation for an entire period
+#### Scenario: A bad timezone does not abort reminder-rule creation for an entire period
 
 - **GIVEN** an admin attempts to save a policy with an invalid timezone
 - **WHEN** the schema rejects it at save time

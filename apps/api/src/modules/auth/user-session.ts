@@ -56,25 +56,21 @@ export class ReportingGroupRequiredError extends Error {
   }
 }
 
-// True only when BOTH sides carry a samlId and they differ. Either side
-// missing one (seed/dev-login users) is not a mismatch — the email-only path
-// stays unchanged for them.
+// A persisted User always carries a samlId. An email match with a different
+// stable SAML identity is therefore a security mismatch, never a relink.
 function isSamlIdentityMismatch(
   existingByEmail: { samlId: string } | null,
   profile: SamlProfile,
 ): boolean {
-  return Boolean(
-    existingByEmail?.samlId &&
-    profile.samlId &&
-    existingByEmail.samlId !== profile.samlId,
-  );
+  return Boolean(existingByEmail && existingByEmail.samlId !== profile.samlId);
 }
 
 type ExistingUser = Awaited<ReturnType<PrismaClient["user"]["findFirst"]>>;
 
-// Prefer email match (seed users may not have samlId), fall back to samlId. A
-// samlId collision on the email hit is refused outright (not re-linked, not
-// auto-created) rather than silently inheriting the old account's role/group.
+// Prefer email match, then resolve the same stable SAML identity when an email
+// changed. A samlId collision on the email hit is refused outright (not
+// re-linked, not auto-created) rather than silently inheriting the matched
+// account's role/group.
 async function resolveExistingUser(
   prisma: PrismaClient,
   profile: SamlProfile,
@@ -95,7 +91,7 @@ async function resolveExistingUser(
 
 // `User.email` and `User.samlId` are each `@unique`; either colliding means a
 // concurrent first-login raced us. The shared guard also reads the pg-adapter
-// shape, where the old meta.target-only check was blind.
+// error shape and checks both the constraint metadata and indexed columns.
 function isUserUniqueViolation(error: unknown): boolean {
   return (
     isUniqueViolation(error, { index: "User_email_key", columns: ["email"] }) ||
@@ -226,7 +222,7 @@ export async function buildUserSession(
 
   // SAML is create-only: an existing record is the source of truth and is
   // NEVER re-synced from the IdP. dev-login passes { resyncExisting: true } so
-  // its query-param role switch still updates the live row (the UAT mechanism).
+  // its development-only query-param role switch updates the live row.
   const user =
     existing && options.resyncExisting !== true
       ? existing

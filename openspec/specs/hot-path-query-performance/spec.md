@@ -22,14 +22,14 @@ the other, since neither depends on the other's result.
 
 ### Requirement: Archive listing paginates at the database
 
-Archive listing MUST paginate at the repository using the existing cursor
-contract — `PaginationInput.cursor` (a `reportId`) in, `PaginatedResult.nextCursor`
-(the last row's `reportId`, or `null`) out — instead of fetching the entire
-archive and slicing in memory. The repository query MUST use a stable ordering of
-`publishedAt desc` plus the unique `id` as a tie-breaker so the cursor resumes
-deterministically when two rows share a `publishedAt`, and it MUST load the heavy
-nested section graph only for rows that need the snapshot-less fallback, not for
-every listed row. To decide `nextCursor` without re-reading the whole archive, the
+Archive listing MUST paginate at the repository using an opaque keyset cursor
+in `PaginationInput.cursor` and `PaginatedResult.nextCursor` out, instead of
+fetching the entire archive and slicing in memory. The cursor encodes the
+`(publishedAt, id)` coordinate of the last row. The repository query MUST use a
+stable ordering of `publishedAt desc` plus the unique `id` as a tie-breaker.
+Archive content MUST come
+only from the validated immutable `publishedSnapshot`; the repository MUST NOT
+load or rebuild a mutable nested section graph fallback. To decide `nextCursor` without re-reading the whole archive, the
 query MUST fetch one probe row beyond the page (`take: limit + 1`): it returns at
 most `limit` items, and the presence of the extra `(limit + 1)`th row is what marks
 that more rows remain. The public `cursor`/`nextCursor` shape MUST remain
@@ -41,39 +41,41 @@ stable.
 - **WHEN** the repository queries the archive
 - **THEN** the query reads at most `limit + 1` rows (one probe row beyond the page)
   in `publishedAt desc, id desc` order rather than the whole archive
-- **AND** it returns at most `limit` items, and `nextCursor` is the last returned
-  row's `reportId` when the probe row is present, else `null`
+- **AND** it returns at most `limit` items, and `nextCursor` is an opaque cursor
+  for the last returned row when the probe row is present, else `null`
 
 #### Scenario: A cursor resumes after the prior page
 
-- **GIVEN** an archive list request whose `cursor` is a `reportId` from a prior
-  page
+- **GIVEN** an archive list request whose `cursor` is an opaque cursor from a
+  prior page
 - **WHEN** the repository queries the archive
 - **THEN** it returns the rows that follow that cursor in the stable
   `publishedAt desc, id desc` order, without re-reading earlier rows
 
-#### Scenario: Last or missing cursor yields a null next cursor
+#### Scenario: Last page yields a null next cursor and malformed cursors fail
 
-- **GIVEN** an archive list request that lands on the final page, or whose
-  `cursor` no longer matches any row
+- **GIVEN** an archive list request that lands on the final page
 - **WHEN** the repository queries the archive
 - **THEN** `nextCursor` is `null` so infinite scroll terminates cleanly
 
-#### Scenario: Section graph loads only for snapshot-less rows
+- **WHEN** a present cursor is malformed
+- **THEN** the request fails with HTTP 400 instead of restarting at page one
 
-- **GIVEN** an archive page where some rows have a stored snapshot and some do
-  not
+#### Scenario: Snapshot-less rows fail closed
+
+- **GIVEN** an archive page containing a published archived row without a
+  stored snapshot
 - **WHEN** the service assembles the list
-- **THEN** the heavy nested section graph is loaded only for the snapshot-less
-  fallback rows
+- **THEN** the read fails closed and does not load mutable section content
 
 ### Requirement: Snapshot user writes remain additive and explicit removals are bounded
 
 The whole-snapshot restore's `upsertUsers` MUST remain additive-only: it may
 prefetch current ids and upsert/create each user present in the snapshot, but it
 MUST NOT infer removals from absent snapshot rows. Explicit user removal uses the
-dedicated admin remove command and its idempotent `deleteMany` operation, rather
-than a per-user count-plus-delete loop.
+dedicated admin remove command. It MAY perform bounded reference guards,
+including the mandatory published-history lookup, and then uses one idempotent
+`deleteMany` operation rather than reconciling every omitted snapshot user.
 
 #### Scenario: An omitted snapshot user is not implicitly removed
 
@@ -82,19 +84,27 @@ than a per-user count-plus-delete loop.
 - **THEN** the omitted user remains; only users present in the snapshot are
   upserted or created
 
-#### Scenario: Explicit removal uses one idempotent delete
+#### Scenario: Explicit removal uses bounded guards and one idempotent delete
 
 - **GIVEN** an administrator removes a user through the dedicated admin command
 - **WHEN** removal runs
-- **THEN** it uses one `deleteMany` for that user id, not a count-plus-delete
-  loop
+- **THEN** it performs only bounded reference checks and one `deleteMany` for
+  that user id, never a loop over snapshot users
 
 ### Requirement: Organization read does not write on read
 
-`organization.getOrganization` MUST read the organization with `findUnique` and
-only fall back to a write (`upsert`/create) when the row is absent, so a normal
-read — including the anonymous landing path — does not take a write lock on
-every hit.
+`organization.getOrganization` MUST read the singleton with `findUnique` and
+MUST fail loudly when the row is absent. It MUST NOT create or upsert during
+read; the canonical init migration provisions the baseline row and the seed
+may update its product defaults, so a normal read — including the anonymous
+landing path — is always read-only.
+
+#### Scenario: Fresh canonical initialization provisions the singleton
+
+- **WHEN** a fresh production database applies the canonical init migration
+- **THEN** it contains the `Organization` row with id `singleton`, short name
+  `PEO`, and full name `Product Engineering & Operations`
+- **AND** applying the seed remains idempotent and may update that row
 
 #### Scenario: Reading an existing organization performs no write
 
@@ -102,12 +112,11 @@ every hit.
 - **WHEN** `getOrganization` is called (e.g. from the anonymous landing path)
 - **THEN** it returns the row via `findUnique` without performing a write
 
-#### Scenario: Absent organization is created once
+#### Scenario: Absent organization fails loudly
 
 - **GIVEN** no organization row exists yet
 - **WHEN** `getOrganization` is called
-- **THEN** it falls back to creating the row, after which subsequent reads are
-  read-only
+- **THEN** it fails with a missing-singleton error and performs no write
 
 ### Requirement: Log pruning does not run per log line
 
@@ -189,21 +198,20 @@ depends only on the already-fetched `report.deadline`.
 - **THEN** all three queries are dispatched concurrently and awaited
   together, not with the count issued as a subsequent serial `await`
 
-### Requirement: Published weekly-report reads do not fetch stageAssignments
+### Requirement: Published weekly-report reads use only the frozen snapshot
 
-On a published report, `getWeeklyReport`'s `projects` query MUST NOT
-include the `stageAssignments` relation, since the published read model is
-built from the frozen snapshot and `projects` on that branch is used only
-for the cross-group audit computation (`id` and `lead.reportingGroupId`).
-The live (non-published) branch, which feeds `buildPortfolioOverview` from
-the live project rows, MUST continue to include `stageAssignments`.
+On a published report, `getWeeklyReport` MUST build the result exclusively from
+the validated immutable `publishedSnapshot` and MUST NOT query live `Project`,
+`GroupProduct`, or `StageAssignment` rows. This keeps published reads stable
+after live records are archived, reassigned, or deleted. Cross-group audit
+signals on published reads are derived from frozen snapshot data.
 
-#### Scenario: Published branch fetches only the fields the audit signal needs
+#### Scenario: Published branch performs no live project read
 
 - **GIVEN** a request for a report whose `periodStatus` is `published`
-- **WHEN** the repository queries `projects`
-- **THEN** the query selects `id` and `lead.reportingGroupId` and does not
-  include `stageAssignments`
+- **WHEN** the repository builds the result
+- **THEN** it reads the frozen snapshot and performs no live project,
+  group-product, or stage-assignment query
 
 #### Scenario: Live branch still fetches stageAssignments
 
@@ -211,3 +219,19 @@ the live project rows, MUST continue to include `stageAssignments`.
 - **WHEN** the repository queries `projects`
 - **THEN** the query includes `stageAssignments`, as consumed by
   `buildPortfolioOverview`
+
+### Requirement: Published search is bounded and GIN-backed
+
+Published search MUST issue one database query over
+`PublishedSearchDocument.searchTsv`, applying `plainto_tsquery`, the caller's
+frozen group grants, included record types, and the requested result limit in
+SQL. It MUST NOT load every published snapshot into application memory or
+serialize the corpus back to PostgreSQL per request.
+
+#### Scenario: Search work is bounded by the database query
+
+- **GIVEN** any number of historical published reports
+- **WHEN** a caller runs published search with limit N
+- **THEN** PostgreSQL filters the stored GIN-indexed projection and returns at
+  most N ordered rows
+- **AND** the API does not load or reconstruct unrelated snapshot documents

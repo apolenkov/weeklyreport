@@ -1,6 +1,7 @@
 import {
   compiledHistoryInputSchema,
   draftSaveSchema,
+  paginationInputSchema,
   submitSectionSchema,
 } from "@customreport/shared";
 
@@ -49,13 +50,18 @@ function createSectionProcedures(deps: ReportsRouterDeps) {
       }
     }),
 
-    myHistory: protectedProcedure.query(async ({ ctx }) => {
-      try {
-        return await deps.reportSectionsService.myHistory(ctx.session.userId);
-      } catch (error) {
-        throw mapDomainError(error);
-      }
-    }),
+    myHistory: protectedProcedure
+      .input(paginationInputSchema)
+      .query(async ({ input, ctx }) => {
+        try {
+          return await deps.reportSectionsService.myHistory(
+            ctx.session.userId,
+            input,
+          );
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
 
     saveDraft: protectedProcedure
       .input(draftSaveSchema)

@@ -1,8 +1,7 @@
 import { isPeriodOverlapConflict } from "../../period/index.js";
 import { AdminPeriodOverlapError } from "../admin-errors.js";
 
-// Translate both the rollout-era exact-boundary index and the global range
-// exclusion constraint into the same public overlap error.
+// Translate the global range exclusion constraint into the public overlap error.
 export async function periodOverlapGuarded<T>(
   write: () => Promise<T>,
 ): Promise<T> {

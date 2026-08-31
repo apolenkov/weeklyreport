@@ -40,7 +40,6 @@ application imports the package stylesheet through
 | Card text             | `--color-card-foreground`                                                                   | `rgba(0, 0, 0, 0.87)`                                            | Text on cards                                    |
 | Popover               | `--color-popover`                                                                           | `#ffffff`                                                        | Dialog, menu, and popover surfaces               |
 | Popover text          | `--color-popover-foreground`                                                                | `rgba(0, 0, 0, 0.87)`                                            | Text in popovers                                 |
-| Input surface         | `--color-input`                                                                             | `#d6d1c9`                                                        | Input and dark-mode input boundary               |
 | Border                | `--color-border`                                                                            | `#ccd4c8`                                                        | Default controls and dividers                    |
 | Warm hairline         | `--color-border-warm`                                                                       | `#ece8e2`                                                        | Login-card and role-picker boundaries            |
 | Subtle border         | `--color-border-subtle`                                                                     | `rgba(0, 0, 0, 0.08)`                                            | Hairlines and report toolbar frames              |
@@ -50,15 +49,12 @@ application imports the package stylesheet through
 | Primary action        | `--color-primary` / `--color-starbucks-green`                                               | `#006241`                                                        | Forward actions, headings, chart 1               |
 | Primary foreground    | `--color-primary-foreground`                                                                | `#ffffff`                                                        | Text and icons on primary                        |
 | Accent action         | `--color-starbucks-accent`                                                                  | `#00754a`                                                        | Primary button fills, active nav accent, chart 2 |
-| House green           | `--color-starbucks-house`                                                                   | `#1e3932`                                                        | Sidebar, deep brand surfaces, chart 5            |
 | Gold                  | `--color-starbucks-gold`                                                                    | `#cba258`                                                        | Brand/gold accent and chart 3                    |
-| Cream                 | `--color-starbucks-cream`                                                                   | `#f2f0eb`                                                        | Dark sidebar foreground and brand cream          |
 | Secondary surface     | `--color-secondary`                                                                         | `#e2e6df`                                                        | Secondary controls                               |
 | Secondary text        | `--color-secondary-foreground`                                                              | `#1e3932`                                                        | Text on secondary                                |
 | Success surface       | `--color-success`                                                                           | `#d8ece4`                                                        | On-track and positive state fills                |
 | Success text          | `--color-success-foreground`                                                                | `#006241`                                                        | Positive state text and saved icon               |
 | Warning               | `--color-warning`                                                                           | `#fbbc05`                                                        | Deadline and warning accents                     |
-| Warning text          | `--color-warning-foreground`                                                                | `#1a1a1a`                                                        | Text on warning                                  |
 | Destructive           | `--color-destructive`                                                                       | `#c82014`                                                        | Errors, blocked state, destructive actions       |
 | Destructive emphasis  | `--color-destructive-emphasis` / `--color-destructive-emphasis-hover`                       | `#991b1b` / `#7f1d1d`                                            | Required marks and compact destructive controls  |
 | Destructive text      | `--color-destructive-foreground`                                                            | `#ffffff`                                                        | Text on destructive                              |
@@ -79,11 +75,8 @@ application imports the package stylesheet through
 | At-risk dot           | `--color-status-dot-at-risk`                                                                | `#d4a017`                                                        | Small status indicator                           |
 | Decisions accent      | `--color-decisions-accent`                                                                  | `#4a7494`                                                        | Decision state kept distinct from success        |
 | Stage DevOps          | `--color-stage-devops`                                                                      | `#6366f1`                                                        | JS-only stage token preserved in `:root`         |
-| Chart series          | `--color-chart-1` … `--color-chart-6`                                                       | `#15803d`, `#2563eb`, `#9333ea`, `#0891b2`, `#c2410c`, `#a21caf` | Recharts series                                  |
-| Sidebar               | `--color-sidebar` / `--color-sidebar-foreground`                                            | `#1e3932` / `#f2f0eb`                                            | Dark navigation surfaces                         |
-| Sidebar primary       | `--color-sidebar-primary` / `--color-sidebar-primary-foreground`                            | `#00754a` / `#ffffff`                                            | Sidebar action                                   |
-| Sidebar accent        | `--color-sidebar-accent` / `--color-sidebar-accent-foreground`                              | `#2d4f47` / `#f2f0eb`                                            | Sidebar hover/selected surface                   |
-| Sidebar border/ring   | `--color-sidebar-border` / `--color-sidebar-ring`                                           | `#3a6359` / `#00754a`                                            | Sidebar boundary and focus                       |
+| Chart series          | `--color-chart-1` … `--color-chart-6`                                                       | `#166534`, `#2563eb`, `#9333ea`, `#0e7490`, `#c2410c`, `#a21caf` | Recharts series                                  |
+| On-dark text          | `--color-on-dark`                                                                           | `#f2f0eb`                                                        | Text on deep brand surfaces                      |
 | Landing deep          | `--pulse-deep` / `--pulse-mid` / `--pulse-tip`                                              | `#0c2620` / `#006241` / `#00754a`                                | Dark landing gradient; app-specific layer        |
 | Landing author colors | `--slide-author-0` … `--slide-author-5`                                                     | `#d6e5dc`, `#d8e4f0`, `#e4dcee`, `#d5eae8`, `#e8e3d9`, `#f0dee3` | Pastel author identity colors                    |
 
@@ -95,14 +88,13 @@ white vertical gradient for chrome rather than a card.
 The login primary action uses `--shadow-primary-cta`; app code must not restate
 its brand-green shadow or the warm login hairline as literal color values.
 
-There is no complete dark palette. The `.dark` class currently overrides only
-`--color-overlay` (to `rgba(0, 0, 0, 0.7)`); consumers must not assume all
-light tokens have dark counterparts.
+The product uses the current light palette only. Deep brand surfaces use the
+`--color-on-dark` text token where light text is required for contrast.
 
 ### Rules
 
-- Use the semantic token that matches the surface or state. Do not reintroduce
-  the removed generic `--color-surface` token.
+- Use the semantic token that matches the surface or state; generic surface
+  coloring is not part of the current token contract.
 - Brand green is the single forward-commit meaning. Neutral segmented active
   states use `--color-toggle-active`; reversal/lifecycle controls remain
   neutral or outlined.
@@ -123,8 +115,6 @@ serif` fallback. The landing `PulseMark` uses this for the WEEKLY/REPORT
   wordmark.
 - **UI sans**: `Lexend`, then `Source Sans 3`, then `ui-sans-serif, system-ui,
 sans-serif`, through `--font-sans`.
-- **Body**: `Source Sans 3`, then `Lexend`, then the UI sans fallback,
-  through `--font-body`.
 - **Mono**: `"Geist Mono", ui-monospace, monospace` through `--font-mono`.
 
 `body` uses `font-sans`, antialiasing, and `tracking-[-0.01em]`. The app
@@ -219,9 +209,8 @@ The state contracts below describe what the current code already provides.
 
 ### Card and surface primitives
 
-- **Structure**: `Card` with `CardHeader`, `CardTitle`,
-  `CardDescription`, `CardAction`, `CardContent`, and `CardFooter`;
-  report cards use the shared `.card-surface` utility.
+- **Structure**: `Card` with `CardHeader` and `CardContent`; report cards use
+  the shared `.card-surface` utility.
 - **Variants/states**: card, elevated card, gradient fill, hover shadow,
   skeleton, empty (`--color-surface-empty`), and error/alert content.
 - **Spacing**: package card `gap-6`, `py-6`, `px-6`; report accordion

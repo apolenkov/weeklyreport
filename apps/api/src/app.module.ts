@@ -6,6 +6,8 @@ import { ClsModule, ClsService } from "nestjs-cls";
 import { BullMQModule } from "./infrastructure/bullmq/bullmq.module";
 import { EmailReminderProcessor } from "./infrastructure/bullmq/email-reminder.processor";
 import { PdfExportProcessor } from "./infrastructure/bullmq/pdf-export.processor";
+import { PdfExportReconciliationScheduler } from "./infrastructure/bullmq/pdf-export-reconciliation.scheduler.js";
+import { WorkerLivenessRegistry } from "./infrastructure/bullmq/worker-liveness.registry.js";
 import { createWorkerLogger } from "./infrastructure/bullmq/worker-observability.js";
 import {
   ConfigModule,
@@ -83,15 +85,23 @@ import { WeeklyReportModule } from "./modules/weekly-report/index.js";
         pdfExportService: PdfExportService,
         env: EnvConfig,
         cls: ClsService,
+        workerLiveness: WorkerLivenessRegistry,
       ) =>
         new PdfExportProcessor(
           pdfExportService,
           env,
           createWorkerLogger("pdf-export-worker", cls),
           cls,
+          workerLiveness,
         ),
-      inject: [PdfExportService, ENV_CONFIG, ClsService],
+      inject: [
+        PdfExportService,
+        ENV_CONFIG,
+        ClsService,
+        WorkerLivenessRegistry,
+      ],
     },
+    PdfExportReconciliationScheduler,
     {
       provide: EmailReminderProcessor,
       useFactory: (
@@ -100,6 +110,7 @@ import { WeeklyReportModule } from "./modules/weekly-report/index.js";
         env: EnvConfig,
         snapshotAdminService: SnapshotAdminService,
         cls: ClsService,
+        workerLiveness: WorkerLivenessRegistry,
       ) =>
         new EmailReminderProcessor(
           remindersService,
@@ -108,6 +119,7 @@ import { WeeklyReportModule } from "./modules/weekly-report/index.js";
           snapshotAdminService,
           createWorkerLogger("email-reminder-worker", cls),
           cls,
+          workerLiveness,
         ),
       inject: [
         RemindersService,
@@ -115,6 +127,7 @@ import { WeeklyReportModule } from "./modules/weekly-report/index.js";
         ENV_CONFIG,
         SnapshotAdminService,
         ClsService,
+        WorkerLivenessRegistry,
       ],
     },
     EmailService,

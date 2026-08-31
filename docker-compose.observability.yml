@@ -33,11 +33,9 @@ services:
     volumes:
       - lgtmdata:/data
       - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./deploy/grafana/customreport-dashboard.json:/var/lib/grafana/dashboards/customreport/customreport-dashboard.json:ro
-      # tRPC latency dashboard
-      - ./deploy/grafana/trpc-latency-dashboard.json:/var/lib/grafana/dashboards/customreport/trpc-latency-dashboard.json:ro
-      # product-KPI dashboard
-      - ./deploy/grafana/product-telemetry-dashboard.json:/var/lib/grafana/dashboards/customreport/product-telemetry-dashboard.json:ro
+      - ./deploy/grafana/customreport-dashboard.json:/var/lib/grafana/dashboards/customreport/operations/customreport-dashboard.json:ro
+      - ./deploy/grafana/trpc-latency-dashboard.json:/var/lib/grafana/dashboards/customreport/operations/trpc-latency-dashboard.json:ro
+      - ./deploy/grafana/product-telemetry-dashboard.json:/var/lib/grafana/dashboards/customreport/product/product-telemetry-dashboard.json:ro
       - ./deploy/prometheus-otel-lgtm.yml:/otel-lgtm/prometheus.yaml:ro
       - ./deploy/alert-rules.yml:/otel-lgtm/alert-rules.yml:ro
     environment:

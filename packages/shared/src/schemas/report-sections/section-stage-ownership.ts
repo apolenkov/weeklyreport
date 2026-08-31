@@ -1,4 +1,3 @@
-import { stageNamesMatch } from "../stages/stage-names";
 import type {
   DraftSaveInput,
   ReportSectionReadModel,
@@ -53,10 +52,7 @@ const validateStageRows = (
   return Object.freeze(
     payloadRows.flatMap((row) => {
       const owned = authorOwnedStages(section, row.projectId);
-      const offending = row.stageNames.find(
-        (stage) =>
-          !owned.some((candidate) => stageNamesMatch(candidate, stage)),
-      );
+      const offending = row.stageNames.find((stage) => !owned.includes(stage));
       return offending === undefined
         ? []
         : [

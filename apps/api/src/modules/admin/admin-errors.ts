@@ -5,6 +5,15 @@ export class AdminAccessError extends Error {
   }
 }
 
+// Additive recovery never overwrites a newer or incompatible reminder state.
+// The operator must export a fresh snapshot or resolve the live conflict.
+export class AdminSnapshotConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminSnapshotConflictError";
+  }
+}
+
 // Overlapping [periodStart, periodEnd] range → BAD_REQUEST so the toast shows
 // which existing period is in the way.
 export class AdminPeriodOverlapError extends Error {
@@ -55,12 +64,31 @@ export class AdminUserConflictError extends Error {
   }
 }
 
+// Published history owns its publisher identity permanently. Administrators
+// can deactivate the account, but hard deletion would invalidate the frozen
+// snapshot metadata and is therefore an existing-resource conflict.
+export class AdminUserPublishedHistoryError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminUserPublishedHistoryError";
+  }
+}
+
 // Non-viewer without a reportingGroupId → BAD_REQUEST; never manufacture a
 // group silently.
 export class AdminUserReportingGroupRequiredError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "AdminUserReportingGroupRequiredError";
+  }
+}
+
+// A lead's activity attachments are live ownership edges. Changing the user's
+// role or reporting group underneath them would create an invalid assignment.
+export class AdminUserActivityAssignmentConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminUserActivityAssignmentConflictError";
   }
 }
 

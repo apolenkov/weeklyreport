@@ -10,6 +10,7 @@ import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
 import {
   mapPrismaToReportSection,
   reportSectionFullInclude,
+  requirePublishedSnapshot,
 } from "../report-sections/index.js";
 import {
   CarryOverConflictError,
@@ -75,17 +76,38 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
   ): Promise<TargetReportState | null> {
     const row = await this.prisma.report.findUnique({
       where: { id: targetReportId },
-      select: { periodStatus: true, archived: true },
+      select: {
+        status: true,
+        periodState: true,
+        periodStatus: true,
+        archived: true,
+        autoPublished: true,
+        autoArchived: true,
+        publishedAt: true,
+        publishedById: true,
+        reopenedAt: true,
+      },
     });
 
-    return row
-      ? { periodStatus: row.periodStatus, archived: row.archived }
-      : null;
+    return row;
   }
 
   async getSourceSections(
     sourceReportId: string,
   ): Promise<ReportSectionReadModel[]> {
+    const report = await this.prisma.report.findUnique({
+      where: { id: sourceReportId },
+      select: { periodStatus: true, publishedSnapshot: true },
+    });
+    if (report?.periodStatus === "published") {
+      // A closed source is a published artifact. Carry-over must replay the
+      // exact publication even when recovery restored no live section graph or
+      // a later edit mutated the old rows.
+      return [
+        ...requirePublishedSnapshot(report.publishedSnapshot, sourceReportId)
+          .sections,
+      ];
+    }
     return this.readSectionsByReport(sourceReportId);
   }
 

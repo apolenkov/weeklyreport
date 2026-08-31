@@ -1,10 +1,7 @@
 import { type AdminSnapshot, adminSnapshotSchema } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import { expectDefined } from "../../../test-utils/expect-defined.js";
-import { __testing, mapAdminSnapshot } from "./admin";
-
-const { mapReminder } = __testing;
+import { mapAdminSnapshot } from "./admin";
 
 // Valid v4-shape UUIDs (variant 8/9/a/b in 19th hex char, version 4 in 13th).
 const UUID_A = "11111111-1111-4111-8111-111111111111";
@@ -23,6 +20,7 @@ const OPEN_LIFECYCLE = {
   publishedAt: null,
   publishedById: null,
   reopenedAt: null,
+  publishedSnapshot: null,
 };
 
 const PUBLISHED_LIFECYCLE = {
@@ -32,6 +30,22 @@ const PUBLISHED_LIFECYCLE = {
   periodStatus: "published" as const,
   publishedAt: "2026-04-18T18:30:00.000Z",
   publishedById: UUID_C,
+};
+
+const PUBLISHED_SNAPSHOT = {
+  reportId: UUID_A,
+  periodStart: "2026-04-13T00:00:00.000Z",
+  periodEnd: "2026-04-19T23:59:59.000Z",
+  deadline: "2026-04-18T18:00:00.000Z",
+  status: "published" as const,
+  publishedAt: "2026-04-18T18:30:00.000Z",
+  publishedById: UUID_C,
+  publishedByName: "Viewer Person",
+  portfolioOverview: {
+    status: "green" as const,
+    totals: { green: 0, yellow: 0, red: 0 },
+  },
+  sections: [],
 };
 
 function makeSnapshot(overrides: Partial<AdminSnapshot> = {}): AdminSnapshot {
@@ -101,13 +115,16 @@ function makeSnapshot(overrides: Partial<AdminSnapshot> = {}): AdminSnapshot {
     periods: overrides.periods ?? [
       {
         id: UUID_A,
+        weekLabel: "Apr 13–19",
         periodStart: "2026-04-13T00:00:00.000Z",
         periodEnd: "2026-04-19T23:59:59.000Z",
         deadline: "2026-04-18T18:00:00.000Z",
         ...PUBLISHED_LIFECYCLE,
+        publishedSnapshot: PUBLISHED_SNAPSHOT,
       },
       {
         id: UUID_B,
+        weekLabel: "Apr 20–26",
         periodStart: "2026-04-20T00:00:00.000Z",
         periodEnd: "2026-04-26T23:59:59.000Z",
         deadline: "2026-04-25T18:00:00.000Z",
@@ -117,25 +134,29 @@ function makeSnapshot(overrides: Partial<AdminSnapshot> = {}): AdminSnapshot {
     reminderRules: overrides.reminderRules ?? [
       {
         id: UUID_A,
-        reportId: null,
+        reportId: UUID_B,
+        policyId: UUID_D,
         kind: "deadline",
-        fireAt: "2026-04-25T15:00:00.000Z",
+        deadline: "2026-04-25T18:00:00.000Z",
+        fireAt: "2026-04-24T18:00:00.000Z",
         timezone: "Europe/Moscow",
         status: "active",
         version: 1,
       },
-      {
-        id: UUID_B,
-        reportId: null,
-        kind: "follow_up",
-        fireAt: "2026-04-26T15:00:00.000Z",
-        timezone: "Europe/Moscow",
-        status: "paused",
-        version: 1,
-      },
     ],
     reminderExecutions: overrides.reminderExecutions ?? [],
-    policies: overrides.policies ?? [],
+    policies: overrides.policies ?? [
+      {
+        id: UUID_D,
+        kind: "deadline",
+        offsetMinutes: -1440,
+        timezone: "Europe/Moscow",
+        audience: "lead-with-draft",
+        active: true,
+        validFrom: "2026-01-01T00:00:00.000Z",
+        validUntil: null,
+      },
+    ],
   });
 }
 
@@ -148,6 +169,7 @@ describe("mapAdminSnapshot", () => {
       periods: [],
       reminderRules: [],
       reminderExecutions: [],
+      policies: [],
     });
     const mapped = mapAdminSnapshot(empty);
     expect(mapped.users).toEqual([]);
@@ -216,31 +238,13 @@ describe("mapAdminSnapshot", () => {
     expect(period?.deadline).toBe("2026-04-18");
   });
 
-  it("maps reminder status active->true, paused->false", () => {
-    const snapshot = makeSnapshot();
-    const active = mapReminder(expectDefined(snapshot.reminderRules[0]));
-    const paused = mapReminder(expectDefined(snapshot.reminderRules[1]));
-    expect(active.active).toBe(true);
-    expect(paused.active).toBe(false);
-  });
-
-  it("synthesizes reminder name and description (API has no name/description)", () => {
+  it("maps generated rules only to the fields used by reminder cards", () => {
     const mapped = mapAdminSnapshot(makeSnapshot());
-    expect(
-      mapped.reminders.map(({ name, description }) => ({
-        name,
-        description,
-      })),
-    ).toStrictEqual([
+    expect(mapped.reminders).toStrictEqual([
       {
-        name: "Deadline reminder",
-        description:
-          "Send a reminder when the deadline is reached (fires at 2026-04-25 15:00 UTC).",
-      },
-      {
-        name: "Follow-up reminder",
-        description:
-          "Send a follow-up reminder to leads who have not submitted (fires at 2026-04-26 15:00 UTC).",
+        policyId: UUID_D,
+        fireAt: new Date("2026-04-24T18:00:00.000Z"),
+        active: true,
       },
     ]);
   });
@@ -250,6 +254,7 @@ describe("mapAdminSnapshot", () => {
     const validUntil = new Date("2026-05-20T00:00:00.000Z");
     const mapped = mapAdminSnapshot(
       makeSnapshot({
+        reminderRules: [],
         policies: [
           {
             id: UUID_D,
@@ -294,6 +299,35 @@ describe("mapAdminSnapshot", () => {
           reportingGroupId: UUID_GROUP,
           reportingGroupName: "Core Development",
           isActive: true,
+        },
+        {
+          id: UUID_C,
+          email: "publisher@example.com",
+          name: "Publisher",
+          lastName: "Publisher",
+          firstName: "Person",
+          middleName: null,
+          position: null,
+          role: "viewer",
+          reportingGroupId: null,
+          reportingGroupName: null,
+          isActive: false,
+        },
+      ],
+      projects: [
+        {
+          id: UUID_A,
+          name: "CRM Portal",
+          archived: false,
+          leadId: UUID_D,
+          leadName: "Stable Lead",
+        },
+        {
+          id: UUID_B,
+          name: "Legacy Tool",
+          archived: true,
+          leadId: UUID_D,
+          leadName: "Stable Lead",
         },
       ],
     });

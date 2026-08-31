@@ -5,7 +5,7 @@ import { useCallback } from "react";
 
 export type ReportShellScopeValue = "product" | "lead";
 
-interface ReportShellUrlState {
+export interface ReportShellUrlState {
   // null/"" deletes a key. stripParams members are always deleted first so
   // one-shot markers never survive an in-shell navigation.
   readonly buildQuery: (overrides: Record<string, string | null>) => string;

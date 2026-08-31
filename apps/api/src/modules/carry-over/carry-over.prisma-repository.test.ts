@@ -1,6 +1,7 @@
 import type { CarryOverExecution } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
+import { publishedSnapshotFixture } from "../../test-utils/prisma-test-helper.js";
 import { baseRow } from "../report-sections/test-seams/index.js";
 import { CarryOverPrismaRepository } from "./carry-over.prisma-repository";
 
@@ -103,5 +104,45 @@ describe("CarryOverPrismaRepository.saveCarryOver — P2002 classification", () 
       where: { dedupeKey: execution.dedupeKey },
       include: { records: true },
     });
+  });
+});
+
+describe("CarryOverPrismaRepository.getSourceSections", () => {
+  it("uses the published snapshot after live source rows are removed", async () => {
+    const liveFindMany = vi
+      .fn()
+      .mockRejectedValue(
+        new Error("published source must not read live sections"),
+      );
+    const prisma = {
+      report: {
+        findUnique: vi.fn().mockResolvedValue({
+          periodStatus: "published",
+          publishedSnapshot: publishedSnapshotFixture({
+            reportId: sourceReportId,
+            periodStart: "2026-04-27",
+            periodEnd: "2026-05-01",
+            publishedAt: "2026-05-04T09:30:00.000Z",
+            sectionOwners: [
+              {
+                reportSectionId: "33333333-3333-4333-8333-333333333333",
+                authorId: "44444444-4444-4444-8444-444444444444",
+                authorName: "Published Lead",
+                groupId: "66666666-6666-4666-8666-666666666666",
+                groupName: "Published Group",
+              },
+            ],
+          }),
+        }),
+      },
+      reportSection: { findMany: liveFindMany },
+    };
+    const repo = new CarryOverPrismaRepository(prisma as never);
+
+    const sections = await repo.getSourceSections(sourceReportId);
+
+    expect(sections).toHaveLength(1);
+    expect(sections[0]?.authorName).toBe("Published Lead");
+    expect(liveFindMany).not.toHaveBeenCalled();
   });
 });

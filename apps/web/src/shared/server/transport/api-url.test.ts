@@ -11,28 +11,19 @@ afterEach(() => {
 });
 
 describe("requireApiUrl", () => {
-  it("throws a descriptive error naming both vars when neither is set", () => {
+  it("throws a descriptive error when API_URL is unset", () => {
     vi.stubEnv("API_URL", "");
-    vi.stubEnv("NEXT_PUBLIC_API_URL", "");
-    expect(() => requireApiUrl()).toThrow(/API_URL.*NEXT_PUBLIC_API_URL/);
+    expect(() => requireApiUrl()).toThrow(/API_URL/);
   });
 
   it("throws when both vars are truly unset (undefined)", () => {
     vi.stubEnv("API_URL", undefined);
-    vi.stubEnv("NEXT_PUBLIC_API_URL", undefined);
-    expect(() => requireApiUrl()).toThrow(/API_URL.*NEXT_PUBLIC_API_URL/);
+    expect(() => requireApiUrl()).toThrow(/API_URL/);
   });
 
-  it("prefers API_URL over NEXT_PUBLIC_API_URL", () => {
+  it("reads the server-side API_URL", () => {
     vi.stubEnv("API_URL", "http://api.internal:3001");
-    vi.stubEnv("NEXT_PUBLIC_API_URL", "http://public.example");
     expect(requireApiUrl()).toBe("http://api.internal:3001");
-  });
-
-  it("falls through to NEXT_PUBLIC_API_URL when API_URL is unset", () => {
-    vi.stubEnv("API_URL", "");
-    vi.stubEnv("NEXT_PUBLIC_API_URL", "http://public.example");
-    expect(requireApiUrl()).toBe("http://public.example");
   });
 });
 

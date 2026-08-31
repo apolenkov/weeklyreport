@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { createNullAuditLogger } from "../../../lib/audit-logger.js";
 import { createNullLogger } from "../../../lib/logger.js";
+import { createNullAuditLogger } from "../../../test-utils/audit-logger.js";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createStubAppRouterDeps } from "../../../test-utils/stub-app-router-deps.js";
 import type { TrpcContext } from "../trpc.context.js";
@@ -11,12 +11,10 @@ import {
   captureMutationAuditInputMiddleware,
   headProcedure,
   leadershipProcedure,
-  leadProcedure,
   loggingMiddleware,
   metricsMiddleware,
   protectedProcedure,
   publicProcedure,
-  viewerProcedure,
 } from "../trpc.middleware.js";
 import { createAppRouter } from "../trpc.router.js";
 
@@ -43,8 +41,6 @@ const ALLOWED_CHAINS: readonly { name: string; chain: readonly unknown[] }[] = [
   { name: "protectedProcedure", chain: captureChain(protectedProcedure) },
   { name: "headProcedure", chain: captureChain(headProcedure) },
   { name: "adminProcedure", chain: captureChain(adminProcedure) },
-  { name: "leadProcedure", chain: captureChain(leadProcedure) },
-  { name: "viewerProcedure", chain: captureChain(viewerProcedure) },
   { name: "anyRoleProcedure", chain: ANY_ROLE_CHAIN },
   { name: "leadershipProcedure", chain: LEADERSHIP_CHAIN },
 ];
@@ -115,7 +111,7 @@ function findUncoveredProcedures(router: InspectableRouter): string[] {
 }
 
 describe("default-deny coverage gate", () => {
-  it("every AppRouter leaf procedure uses one of the eight recognised role bases", () => {
+  it("every AppRouter leaf procedure uses one of the six recognised role bases", () => {
     // Build the AppRouter with stub deps — we never invoke any procedure here,
     // we only inspect _def.middlewares identity. The deps shape is satisfied
     // by `{}` casts because nothing reads them at construction time.
@@ -130,7 +126,7 @@ describe("default-deny coverage gate", () => {
           .map((p) => `  - ${p}`)
           .join(
             "\n",
-          )}\nFix: rebuild on publicProcedure / protectedProcedure / leadProcedure / headProcedure / viewerProcedure / adminProcedure / anyRoleProcedure / leadershipProcedure.`,
+          )}\nFix: rebuild on publicProcedure / protectedProcedure / headProcedure / adminProcedure / anyRoleProcedure / leadershipProcedure.`,
       );
     }
 

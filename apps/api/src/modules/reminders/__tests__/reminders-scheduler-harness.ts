@@ -6,7 +6,7 @@ import type {
 import type { EnvConfig } from "../../../infrastructure/config/env.schema";
 import type { OrganizationService } from "../../organization/organization.service";
 import type { DueDeadlineRule, RemindersRepository } from "../reminders.types";
-import { unusedRemindersRepositoryStubs } from "../reminders-scope.repository-stub.js";
+import { unusedRemindersRepositoryStubs } from "./reminders-scope.repository-stub.js";
 
 // Validated-env fixture for scheduler construction: APP_BASE_URL is resolved
 // from the injected EnvConfig at construction, never from raw process.env.
@@ -25,6 +25,7 @@ export const fakeOrganizationService = {
 
 export const ruleId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 export const reportId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+export const reportDeadline = new Date("2026-04-21T09:00:00.000Z");
 
 export const activeRule: AdminReminderRule = {
   id: ruleId,
@@ -34,7 +35,7 @@ export const activeRule: AdminReminderRule = {
   timezone: "UTC",
   status: "active",
   version: 1,
-  policyId: null,
+  policyId: "99999999-9999-4999-8999-999999999999",
 };
 
 export function dueRuleFromRecipients(
@@ -49,6 +50,7 @@ export function dueRuleFromRecipients(
     id: activeRule.id,
     reportId,
     fireAt: activeRule.fireAt,
+    deadline: reportDeadline,
     reportPeriodLabel: "2026-04-13 → 2026-04-19",
     recipients: recipients.map((r) => ({
       ...r,
@@ -82,14 +84,14 @@ export function createServiceRepo(
         if (exec.dedupeKey === execution.dedupeKey) {
           return Promise.resolve({
             execution: structuredClone(exec),
-            inserted: false,
+            outcome: "deduplicated" as const,
           });
         }
       }
       executions.set(execution.id, structuredClone(execution));
       return Promise.resolve({
         execution: structuredClone(execution),
-        inserted: true,
+        outcome: "created" as const,
       });
     },
     getExecution(id) {

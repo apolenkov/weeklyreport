@@ -7,6 +7,7 @@ import {
   createTestPrisma,
   disconnectTestPrisma,
   seedTestData,
+  TEST_IDS,
 } from "../../../test-utils/prisma-test-helper";
 import { ReportSectionsService } from "../application/report-sections.service";
 import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
@@ -69,6 +70,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
         tag: "feature",
         workflowStatus: "in_progress",
         carriedOver: false,
+        stageNames: ["Development"],
       },
     });
 
@@ -80,6 +82,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
         impact: "High",
         mitigation: "Mitigate it",
         severity: "at-risk",
+        stageNames: ["Development"],
       },
     });
 
@@ -90,6 +93,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
         text: "Test decision",
         owner: "Test Lead 1",
         impact: "Medium",
+        stageNames: ["Development"],
       },
     });
 
@@ -100,7 +104,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     expect(expectDefined(result).authorName).toBe("Test Lead 1");
     expect(expectDefined(result).status).toBe("draft");
     expect(expectDefined(result).projects).toHaveLength(1);
-    // Seed risk is at-risk covers-all → floors product trafficLight to yellow.
+    // Seed risk names Development and floors product trafficLight to yellow.
     expect(expectDefined(expectDefined(result).projects[0]).trafficLight).toBe(
       "yellow",
     );
@@ -141,6 +145,12 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
         id: "a0000000-0000-4000-a000-000000000101",
         name: "Owner metadata only",
         leadId: testData.lead.id,
+      },
+    });
+    await prisma.groupProduct.create({
+      data: {
+        groupId: TEST_IDS.group,
+        productId: ownerOnlyProject.id,
       },
     });
 
@@ -290,7 +300,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     expect(expectDefined(saved.decisions[0]).stageNames).toEqual(["Design"]);
   });
 
-  // Own covers-all blocked risk floors empty owned stage to red; raw status stays null.
+  // Own blocked risk on Development floors the empty owned stage to red; raw status stays null.
   it("getSectionById floors trafficLight by an own covering risk on an owned empty stage", async () => {
     await assignLeadToProject();
     await prisma.projectStatus.create({
@@ -309,7 +319,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
         impact: "High",
         mitigation: "Failover",
         severity: "blocked",
-        stageNames: [],
+        stageNames: ["Development"],
       },
     });
 

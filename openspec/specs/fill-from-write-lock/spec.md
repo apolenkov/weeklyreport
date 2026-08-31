@@ -21,9 +21,9 @@ This closes the same class of race `saveSection` already closes: a publish
 that commits between the service's `assertPeriodNotPublished` precheck and
 `fillFromSection`'s transaction never advances `ReportSection.version`, so an
 unlocked, unchecked transaction would let Fill From overwrite a now-frozen
-published period's live rows — rows the viewer's published SEARCH reads
-directly (not the frozen snapshot), which would surface content absent from
-the report a viewer actually opens.
+published period's live rows. Published readers and search consume the frozen
+snapshot, but lifecycle integrity still forbids a post-publication write from
+silently diverging the live graph from that immutable document.
 
 #### Scenario: A publish committing mid-race blocks the fill
 
@@ -50,5 +50,4 @@ the report a viewer actually opens.
   `"reopened"`
 - **WHEN** `fillFromSection` runs with no concurrent publish
 - **THEN** the lock check passes, the version CAS proceeds, and the target's
-  rows are replaced with the carryable rows from the source section exactly
-  as before this change
+  rows are replaced with the carryable rows from the source section

@@ -46,6 +46,26 @@ function moveTransaction(
 ): Prisma.TransactionClient {
   const conflict = () => Promise.reject(adapterConflict());
   return {
+    report: {
+      findMany: vi
+        .fn()
+        .mockResolvedValue([{ id: "55555555-5555-4555-8555-555555555555" }]),
+    },
+    $executeRaw: vi.fn().mockResolvedValue(0),
+    $queryRaw: vi.fn().mockResolvedValue([
+      {
+        id: "55555555-5555-4555-8555-555555555555",
+        status: "draft",
+        periodState: "open",
+        periodStatus: "open",
+        archived: false,
+        autoPublished: false,
+        autoArchived: false,
+        publishedAt: null,
+        publishedById: null,
+        reopenedAt: null,
+      },
+    ]),
     projectActivity: {
       findUnique: vi.fn().mockResolvedValue({ groupId: GROUP_A }),
       update:
@@ -76,6 +96,26 @@ function attachTransaction(
 ): Prisma.TransactionClient {
   const conflict = () => Promise.reject(adapterConflict());
   return {
+    report: {
+      findMany: vi
+        .fn()
+        .mockResolvedValue([{ id: "55555555-5555-4555-8555-555555555555" }]),
+    },
+    $executeRaw: vi.fn().mockResolvedValue(0),
+    $queryRaw: vi.fn().mockResolvedValue([
+      {
+        id: "55555555-5555-4555-8555-555555555555",
+        status: "draft",
+        periodState: "open",
+        periodStatus: "open",
+        archived: false,
+        autoPublished: false,
+        autoArchived: false,
+        publishedAt: null,
+        publishedById: null,
+        reopenedAt: null,
+      },
+    ]),
     projectActivity: {
       findUnique: vi.fn().mockResolvedValue({
         groupId: activityGroup,
@@ -96,6 +136,15 @@ function attachTransaction(
         conflictAt === "lead-read"
           ? vi.fn(conflict)
           : vi.fn().mockResolvedValue({}),
+    },
+    reportSection: {
+      findMany: vi.fn().mockResolvedValue([]),
+    },
+    project: {
+      findMany: vi.fn().mockResolvedValue([]),
+    },
+    activityStatus: {
+      createMany: vi.fn().mockResolvedValue({ count: 0 }),
     },
   } as unknown as Prisma.TransactionClient;
 }

@@ -138,7 +138,8 @@ export function deriveLeadQueueState(
     reviews,
     review,
     editable,
-    remindersEnabled: context.weeklyReport.hasActiveReminderRule,
+    remindersEnabled:
+      context.weeklyReport.activeDeadlineReminderRuleId !== null,
     lastEditAt,
     isStale: leadIsStale(editable, status, lastEditAt, context.now),
     reviewer,

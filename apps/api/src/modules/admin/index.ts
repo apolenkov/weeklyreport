@@ -11,7 +11,10 @@ export {
   AdminPeriodStaleStateError,
   AdminReopenRequestAlreadyProcessedError,
   AdminReopenRequestNotFoundError,
+  AdminSnapshotConflictError,
+  AdminUserActivityAssignmentConflictError,
   AdminUserConflictError,
+  AdminUserPublishedHistoryError,
   AdminUserReportingGroupRequiredError,
 } from "./admin-shared.js";
 export type { AdminTelemetry } from "./admin-telemetry.port.js";

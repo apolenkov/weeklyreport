@@ -8,7 +8,11 @@ import {
 import type { EnvConfig } from "../../infrastructure/config/env.schema.js";
 import { type AppLogger, createNullLogger } from "../../lib/logger";
 import { OrganizationService } from "../organization/index.js";
-import { ReminderDomainError, ReminderScopeError } from "./reminders.errors.js";
+import {
+  ReminderDomainError,
+  ReminderExecutionIneligibleError,
+  ReminderScopeError,
+} from "./reminders.errors.js";
 import {
   NOOP_REMINDERS_TELEMETRY,
   type RemindersEnqueuer,
@@ -24,11 +28,12 @@ import {
   enqueueOrMarkFailed,
   recordExecutionOnConflict,
   reEnqueueStuck,
-  reviveFailedExecution,
 } from "./reminders-enqueue.js";
 import { paginateReminderExecutions } from "./reminders-execution-pagination.js";
 import {
-  type ReminderQueuePayload,
+  buildPersistedQueuePayload,
+  buildReminderQueueJobData,
+  type ReminderQueueJobData,
   requireRulePeriodLabel,
 } from "./reminders-queue-payload.js";
 import { RemindersScopeService } from "./reminders-scope.service.js";
@@ -37,10 +42,12 @@ const ISO_DATE_LENGTH = 10;
 
 export { ReminderDomainError, ReminderScopeError };
 
-interface ReminderExecutionResult {
-  readonly execution: AdminReminderExecution;
-  readonly outcome: "created" | "revived" | "deduplicated";
-}
+type ReminderExecutionResult =
+  | {
+      readonly execution: AdminReminderExecution;
+      readonly outcome: "created" | "revived" | "deduplicated";
+    }
+  | { readonly execution: null; readonly outcome: "skipped" };
 
 export class RemindersService {
   private readonly logger: AppLogger;
@@ -60,17 +67,19 @@ export class RemindersService {
     this.emailQueue = emailQueue ?? null;
     this.scope = new RemindersScopeService(
       repository,
-      async (ruleId, email, leadName) =>
+      async (ruleId, email, deadline, leadName) =>
         this.requestReminderExecutionWithOutcome(
           ruleId,
           email,
-          await this.buildManualPayload(ruleId, leadName),
+          await this.buildManualPayload(ruleId, deadline, leadName),
+          "manual",
         ),
     );
   }
 
   private async buildManualPayload(
     ruleId: string,
+    deadline: Date,
     leadName?: string,
   ): Promise<ReminderExecutionPayload> {
     if (!leadName || !this.organizationService || !this.env) {
@@ -91,13 +100,13 @@ export class RemindersService {
       cycleDate: rule.fireAt.toISOString().slice(0, ISO_DATE_LENGTH),
       leadName,
       reportPeriod,
-      deadlineIso: rule.fireAt.toISOString(),
+      deadlineIso: deadline.toISOString(),
       sectionUrl: `${this.env.APP_BASE_URL}/lead/report/${rule.reportId}`,
       organization,
     };
   }
 
-  // Shared dedupe key; enqueue only when this call inserted the row.
+  // Shared dedupe key; enqueue only when this call creates or revives the row.
   async requestReminderExecution(
     ruleId: string,
     recipientEmail: string,
@@ -108,6 +117,11 @@ export class RemindersService {
       recipientEmail,
       payload,
     );
+    if (!execution) {
+      throw new ReminderDomainError(
+        "Reminder execution requires an editable report and active rule.",
+      );
+    }
     return execution;
   }
 
@@ -116,45 +130,44 @@ export class RemindersService {
     ruleId: string,
     recipientEmail: string,
     payload: ReminderExecutionPayload,
+    dispatchSource: "automatic" | "manual" = "automatic",
   ): Promise<ReminderExecutionResult> {
     const rule = await this.loadActiveRule(ruleId);
-    const { execution, inserted } = await recordExecutionOnConflict(
+    const queuePayload = buildPersistedQueuePayload(payload);
+    const recorded = await recordExecutionOnConflict(
       this.repository,
       buildExecutionCandidate(rule, recipientEmail, payload),
-      payload,
-    );
-
-    const persistedQueuePayload = async () => {
-      const persisted = await this.repository.getExecutionQueuePayload(
-        execution.id,
-      );
-      if (persisted) return persisted;
-      // The payload-contract migration quarantines pre-contract queued rows as
-      // failed. Their next eligible dispatch supplies a complete current
-      // snapshot, which the failed→queued CAS persists atomically.
-      if (execution.status === "failed") return payload;
-      throw new ReminderDomainError(
-        `Reminder execution ${execution.id} has no persisted email payload.`,
-      );
-    };
-
-    if (!inserted) {
-      return this.resolveExistingExecution(
-        ruleId,
-        execution,
-        recipientEmail,
-        persistedQueuePayload,
-      );
+      queuePayload,
+      dispatchSource === "manual" && this.emailQueue !== null,
+    ).catch((error: unknown) => {
+      if (!(error instanceof ReminderExecutionIneligibleError)) throw error;
+      this.logger.debug("skipped stale reminder execution", { ruleId });
+      return null;
+    });
+    if (!recorded) return { execution: null, outcome: "skipped" };
+    const { execution, outcome } = recorded;
+    if (outcome === "deduplicated") {
+      if (
+        dispatchSource === "manual" &&
+        execution.status === "failed" &&
+        !this.emailQueue
+      ) {
+        throw new ReminderDomainError(
+          "Cannot revive a failed reminder execution: no email queue is wired.",
+        );
+      }
+      this.logger.debug("deduplicated reminder execution", { ruleId });
+      return { execution, outcome };
     }
 
-    this.logger.info("creating reminder execution", { ruleId });
+    this.logger.info(`${outcome} reminder execution`, { ruleId });
 
-    // Enqueue only after the insert has committed AND only for the caller that
-    // inserted the row, so a redundant concurrent tick enqueues nothing.
+    // Enqueue only after the transaction commits and only for the caller that
+    // created or revived the row, so a redundant concurrent tick enqueues nothing.
     if (!this.emailQueue) {
       return {
         execution: adminReminderExecutionSchema.parse(execution),
-        outcome: "created",
+        outcome,
       };
     }
     return {
@@ -162,9 +175,12 @@ export class RemindersService {
         this.enqueueContext(this.emailQueue),
         execution,
         recipientEmail,
-        payload,
+        queuePayload,
+        outcome === "revived"
+          ? `${execution.id}:revive:${crypto.randomUUID()}`
+          : undefined,
       ),
-      outcome: "created",
+      outcome,
     };
   }
 
@@ -184,39 +200,6 @@ export class RemindersService {
     return rule;
   }
 
-  // The insert lost the race: revive a failed row if we can, else report dedupe.
-  private async resolveExistingExecution(
-    ruleId: string,
-    execution: AdminReminderExecution,
-    recipientEmail: string,
-    queuePayload: () => Promise<ReminderQueuePayload>,
-  ): Promise<ReminderExecutionResult> {
-    const queue = this.emailQueue;
-    if (queue) {
-      const revived = await reviveFailedExecution(
-        this.enqueueContext(queue),
-        this.repository.requeueFailedExecution.bind(this.repository),
-        execution,
-        recipientEmail,
-        queuePayload,
-      );
-      if (revived) return { execution: revived, outcome: "revived" };
-    } else if (execution.status === "failed") {
-      // Without a queue there is no job to enqueue — reviving would leave a
-      // queued row with no worker. Fail loud instead of a silent dead state.
-      throw new ReminderDomainError(
-        "Cannot revive a failed reminder execution: no email queue is wired.",
-      );
-    }
-    // dedupeKey embeds recipientEmail for uniqueness; logging it would
-    // leak that address, so ruleId is the identifier we surface here.
-    this.logger.debug("deduplicated reminder execution", { ruleId });
-    return {
-      execution: adminReminderExecutionSchema.parse(execution),
-      outcome: "deduplicated",
-    };
-  }
-
   private enqueueContext(queue: RemindersEnqueuer): EnqueueContext {
     return {
       queue,
@@ -228,9 +211,19 @@ export class RemindersService {
     };
   }
 
-  // CAS claim: true only when this caller moved queued → sending.
-  async claimExecutionForSending(executionId: string): Promise<boolean> {
-    return this.repository.transitionExecutionToSending(executionId);
+  // CAS claim returns the durable renderer input from the same DB write.
+  async claimExecutionForSending(
+    executionId: string,
+  ): Promise<ReminderQueueJobData | null> {
+    const claimed =
+      await this.repository.transitionExecutionToSending(executionId);
+    return claimed
+      ? buildReminderQueueJobData(
+          executionId,
+          claimed.recipientEmail,
+          claimed.queuePayload,
+        )
+      : null;
   }
 
   async markReminderFailed(
@@ -273,12 +266,14 @@ export class RemindersService {
     );
   }
 
-  // Reaper: resolve `sending` rows presumed delivered after a worker crashed
-  // mid-write, so no delivery can stay in-flight forever.
+  // SMTP outcome cannot be inferred after a crash. Terminalize the ambiguous
+  // row for alerting/manual review; automation must never retry it.
   async reconcileStuckSendingExecutions(olderThan: Date): Promise<number> {
-    const reconciled = await this.repository.markStuckSendingSent(olderThan);
+    const reconciled =
+      await this.repository.markStuckSendingUncertain(olderThan);
     if (reconciled > 0) {
-      this.logger.info("reconciled stuck sending executions as sent", {
+      this.telemetry.recordUncertainDelivery(reconciled);
+      this.logger.warn("terminalized reminders with unknown delivery outcome", {
         reconciled,
       });
     }

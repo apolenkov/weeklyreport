@@ -35,11 +35,15 @@ vi.mock("../../report-sections", () => ({
       periodStatus: "open",
     },
   }),
-  reportHasContent: () => true,
+  reportHasContent: () => false,
 }));
 
 vi.mock("./publish-lock-button", () => ({
-  PublishLockButton: () => <button type="button">Publish &amp; Lock</button>,
+  PublishLockButton: ({ canPublish }: { readonly canPublish: boolean }) => (
+    <button type="button" disabled={!canPublish}>
+      {canPublish ? "Publish & Lock" : "Nothing to publish"}
+    </button>
+  ),
 }));
 
 const pending = new Promise<never>(() => undefined);

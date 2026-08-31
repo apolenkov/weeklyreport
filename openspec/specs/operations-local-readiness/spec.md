@@ -40,13 +40,15 @@ and ownership declarations.
 - **WHEN** the development Compose stack is rendered
 - **THEN** every database consumer uses the same fixed local-only credential without interpolating an arbitrary password into a URL
 - **AND** application consumers target exact disposable PostgreSQL `customreport_e2e`
-- **AND** an idempotent one-shot initializer ensures that database exists before migrations run
+- **AND** the guarded local bootstrap creates the configured `POSTGRES_DB`
+  database when it does not yet exist before migrations run
 
 #### Scenario: A fresh local product database is bootstrapped
 
 - **WHEN** an operator supplies the exact per-run consent and an explicit seed profile after starting local PostgreSQL
 - **THEN** one repository command verifies matching `DATABASE_URL` and `E2E_DATABASE_URL` targets
-- **AND** it creates exact `customreport_e2e`, applies migrations, and seeds the profile in order
+- **AND** it validates the configured `POSTGRES_DB` target, creates that exact
+  disposable database, applies migrations, and seeds the profile in order
 - **AND** every child operation repeats the exact guard before touching the database
 
 #### Scenario: A local bootstrap step fails

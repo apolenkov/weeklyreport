@@ -114,7 +114,7 @@ export function createSpyRepository(
 }
 
 // Mirror of the same helper in publication.service.test.ts — introspects a
-// prom-client Counter without leaking registry internals into assertions.
+// Prometheus Counter without leaking registry internals into assertions.
 export async function getCounterValue(
   counter: {
     get(): Promise<{
@@ -150,7 +150,7 @@ export function publishedReport(id: string, archived = false): SpyReport {
   };
 }
 
-// A reopened period keeps the legacy tuple (status='published') but flips
+// A reopened period keeps status='published' but flips
 // periodStatus to 'reopened' — the marker the single-active-reopen guard reads.
 export function reopenedReport(id: string, archived = false): SpyReport {
   return {

@@ -6,7 +6,6 @@ import type {
   Product,
   RiskEntry,
 } from "../../report-sections";
-import { canonicalRiskStageTags } from "../model/risk-stage-tags";
 import { RiskCard } from "./risk-card";
 import { RiskEditDialog } from "./risk-edit-dialog";
 import { deriveRiskDialogSeedProps } from "./risk-edit-dialog-helpers";
@@ -117,8 +116,7 @@ function RisksSectionDialogs({
         subtitle={
           pendingDelete
             ? `${pendingDelete.productName} · ${
-                canonicalRiskStageTags(pendingDelete).join(", ") ||
-                "no stage set"
+                pendingDelete.stageNames.join(", ") || "no stage set"
               }`
             : undefined
         }

@@ -1,4 +1,5 @@
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { currentEditableReportWhere } from "../../lib/report-lifecycle.js";
 
 // Newest non-archived open/reopened that has started. No published fallback
 // (would defeat open→published race rejection). Secondary id desc: gate and
@@ -7,11 +8,7 @@ export async function queryCurrentEditableId(
   prisma: PrismaService,
 ): Promise<string | null> {
   const editableReport = await prisma.report.findFirst({
-    where: {
-      periodStatus: { in: ["open", "reopened"] },
-      periodStart: { lte: new Date() },
-      archived: false,
-    },
+    where: currentEditableReportWhere(),
     orderBy: [{ periodStart: "desc" }, { id: "desc" }],
     select: { id: true },
   });

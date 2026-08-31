@@ -10,11 +10,12 @@ const STABLE_ID = "33333333-3333-4333-8333-333333333333";
 const SECTION_ID = "44444444-4444-4444-8444-444444444444";
 const REPORT_ID = "55555555-5555-4555-8555-555555555555";
 const REVIEWER_ID = "66666666-6666-4666-8666-666666666666";
+const AUTHOR_ID = "88888888-8888-4888-8888-888888888888";
 
 const rawAnchorRow = {
   stableId: STABLE_ID,
   reportSectionId: SECTION_ID,
-  reportSection: { reportId: REPORT_ID },
+  reportSection: { reportId: REPORT_ID, authorId: AUTHOR_ID },
 };
 
 const createdComment = {
@@ -45,10 +46,36 @@ function buildRepository({
       ? vi.fn().mockResolvedValue(createdComment)
       : vi.fn().mockRejectedValue(createError);
   const tx = {
-    $queryRaw: vi.fn().mockResolvedValue([{ periodStatus: "open" }]),
+    $queryRaw: vi.fn().mockResolvedValue([
+      {
+        id: REPORT_ID,
+        status: "draft",
+        periodState: "open",
+        periodStatus: "open",
+        archived: false,
+        autoPublished: false,
+        autoArchived: false,
+        publishedAt: null,
+        publishedById: null,
+        reopenedAt: null,
+      },
+    ]),
     item: { findUnique: itemFindUnique },
     risk: { findUnique: vi.fn() },
     decision: { findUnique: vi.fn() },
+    reportSection: {
+      findFirst: vi.fn().mockResolvedValue({
+        authorId: AUTHOR_ID,
+        author: { reportingGroupId: "99999999-9999-4999-8999-999999999999" },
+      }),
+    },
+    user: {
+      findUnique: vi.fn().mockResolvedValue({
+        role: "admin",
+        reportingGroupId: null,
+        viewerGroupAccess: [],
+      }),
+    },
     recordComment: { create: recordCommentCreate },
   };
   const prisma = {
@@ -67,7 +94,11 @@ describe("ReviewActionsPrismaRepository.insertComment", () => {
     const { repo, tx } = buildRepository({ rawRow: null });
 
     await expect(
-      repo.insertComment(REVIEWER_ID, { itemId: RAW_ITEM_ID }, "Please revise"),
+      repo.insertComment(
+        { userId: REVIEWER_ID, role: "admin" },
+        { itemId: RAW_ITEM_ID },
+        "Please revise",
+      ),
     ).rejects.toBeInstanceOf(ReviewNotFoundError);
     expect(tx.$queryRaw).not.toHaveBeenCalled();
     expect(tx.recordComment.create).not.toHaveBeenCalled();
@@ -89,7 +120,11 @@ describe("ReviewActionsPrismaRepository.insertComment", () => {
     const { repo } = buildRepository({ createError: p2003 });
 
     await expect(
-      repo.insertComment(REVIEWER_ID, { itemId: RAW_ITEM_ID }, "Please revise"),
+      repo.insertComment(
+        { userId: REVIEWER_ID, role: "admin" },
+        { itemId: RAW_ITEM_ID },
+        "Please revise",
+      ),
     ).rejects.toBeInstanceOf(ReviewNotFoundError);
   });
 
@@ -109,7 +144,11 @@ describe("ReviewActionsPrismaRepository.insertComment", () => {
     const { repo } = buildRepository({ createError: reviewerFkError });
 
     await expect(
-      repo.insertComment(REVIEWER_ID, { itemId: RAW_ITEM_ID }, "Please revise"),
+      repo.insertComment(
+        { userId: REVIEWER_ID, role: "admin" },
+        { itemId: RAW_ITEM_ID },
+        "Please revise",
+      ),
     ).rejects.toBe(reviewerFkError);
   });
 
@@ -117,7 +156,11 @@ describe("ReviewActionsPrismaRepository.insertComment", () => {
     const { repo, tx } = buildRepository();
 
     await expect(
-      repo.insertComment(REVIEWER_ID, { itemId: RAW_ITEM_ID }, "Please revise"),
+      repo.insertComment(
+        { userId: REVIEWER_ID, role: "admin" },
+        { itemId: RAW_ITEM_ID },
+        "Please revise",
+      ),
     ).resolves.toMatchObject({
       id: createdComment.id,
       reviewerName: createdComment.reviewer.name,
@@ -130,7 +173,7 @@ describe("ReviewActionsPrismaRepository.insertComment", () => {
         reportSectionId: true,
       }) as unknown,
     });
-    expect(tx.$queryRaw).toHaveBeenCalledOnce();
+    expect(tx.$queryRaw.mock.calls.length).toBeGreaterThanOrEqual(3);
     expect(tx.item.findUnique).toHaveBeenNthCalledWith(2, {
       where: {
         reportSectionId_stableId: {

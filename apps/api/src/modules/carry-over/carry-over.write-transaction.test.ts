@@ -101,7 +101,20 @@ describe("writeCarryOver — replay of a completed execution", () => {
     const tx = {
       $queryRaw: vi
         .fn()
-        .mockResolvedValueOnce([{ periodStatus: "open", archived: false }])
+        .mockResolvedValueOnce([
+          {
+            id: targetReportId,
+            status: "draft",
+            periodState: "open",
+            periodStatus: "open",
+            archived: false,
+            autoPublished: false,
+            autoArchived: false,
+            publishedAt: null,
+            publishedById: null,
+            reopenedAt: null,
+          },
+        ])
         .mockResolvedValueOnce([{ id: sectionId }]),
       reportSection: {
         findMany: vi
@@ -139,7 +152,20 @@ describe("writeCarryOver — replay of a completed execution", () => {
     const tx = {
       $queryRaw: vi
         .fn()
-        .mockResolvedValueOnce([{ periodStatus: "open", archived: false }])
+        .mockResolvedValueOnce([
+          {
+            id: targetReportId,
+            status: "draft",
+            periodState: "open",
+            periodStatus: "open",
+            archived: false,
+            autoPublished: false,
+            autoArchived: false,
+            publishedAt: null,
+            publishedById: null,
+            reopenedAt: null,
+          },
+        ])
         .mockResolvedValueOnce([{ id: sectionId }]),
       reportSection: {
         findMany: vi
@@ -189,5 +215,55 @@ describe("writeCarryOver — replay of a completed execution", () => {
       skipDuplicates: true,
     });
     expect(decisionCreateMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("writeCarryOver — scheduled dual-state interleaving", () => {
+  it("rejects a legacy-looking target after archive/unarchive leaves periodState scheduled", async () => {
+    const tx = {
+      // The service-level precheck may have observed draft/open/unarchived.
+      // The authoritative transaction lock deterministically observes the
+      // scheduler's canonical state and must fail before any target or write
+      // query can run.
+      $queryRaw: vi.fn().mockResolvedValueOnce([
+        {
+          id: targetReportId,
+          status: "draft",
+          periodState: "scheduled",
+          periodStatus: "open",
+          archived: false,
+          autoPublished: false,
+          autoArchived: false,
+          publishedAt: null,
+          publishedById: null,
+          reopenedAt: null,
+        },
+      ]),
+      reportSection: { findMany: vi.fn() },
+      carryOverExecution: {
+        findFirst: vi.fn(),
+        create: vi.fn(),
+      },
+      carryOverRecord: {
+        findMany: vi.fn(),
+        createMany: vi.fn(),
+      },
+      item: { createMany: vi.fn() },
+      decision: { findMany: vi.fn(), createMany: vi.fn() },
+    };
+
+    await expect(
+      writeCarryOver(
+        tx as never,
+        execution,
+        [],
+        [targetSectionWithCarriedRow()],
+      ),
+    ).rejects.toThrow("Carry-over target period is no longer editable.");
+    expect(tx.reportSection.findMany).not.toHaveBeenCalled();
+    expect(tx.carryOverExecution.create).not.toHaveBeenCalled();
+    expect(tx.carryOverRecord.createMany).not.toHaveBeenCalled();
+    expect(tx.item.createMany).not.toHaveBeenCalled();
+    expect(tx.decision.createMany).not.toHaveBeenCalled();
   });
 });

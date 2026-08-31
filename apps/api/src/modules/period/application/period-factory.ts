@@ -8,7 +8,6 @@ import {
   parseDeadlineTime,
 } from "../../../lib/business-date.js";
 import { isPrismaConstraintViolation } from "../../../lib/prisma/constraint-violation.js";
-import { isUniqueViolation } from "../../../lib/prisma-unique-violation.js";
 import type { PolicyApplicatorService } from "../../reminders/index.js";
 import {
   buildTransition,
@@ -25,7 +24,6 @@ import type { EnsuredPeriod } from "./period-factory-types.js";
 // lazy login-create path both route through here, so the deadline formula and
 // the coupled lifecycle write exist once (see period-dual-state spec).
 
-const LEGACY_OPEN_BOUNDARY_INDEX = "Report_one_open_per_boundary";
 const PERIOD_OVERLAP_CONSTRAINT = "Report_no_live_period_overlap";
 const PRISMA_DATABASE_CONSTRAINT_ERROR_CODES = ["P2004", "P2039"] as const;
 
@@ -59,40 +57,33 @@ export class PeriodOverlapError extends Error {
   }
 }
 
-// During rolling migration, writers can see the legacy exact-boundary P2002.
 // The range exclusion is P2004 through Prisma's engine path and P2039 through
 // adapter-pg. Scope every path by constraint identity so unrelated database
 // failures still propagate unchanged.
 export function isPeriodOverlapConflict(error: unknown): boolean {
-  return (
-    isUniqueViolation(error, {
-      index: LEGACY_OPEN_BOUNDARY_INDEX,
-      columns: ["periodStart", "periodEnd"],
-    }) ||
-    PRISMA_DATABASE_CONSTRAINT_ERROR_CODES.some((code) =>
-      isPrismaConstraintViolation(error, code, {
-        index: PERIOD_OVERLAP_CONSTRAINT,
-      }),
-    )
+  return PRISMA_DATABASE_CONSTRAINT_ERROR_CODES.some((code) =>
+    isPrismaConstraintViolation(error, code, {
+      index: PERIOD_OVERLAP_CONSTRAINT,
+    }),
   );
 }
 
-// Best-effort: the period is the durable artifact, so failing to materialise the
-// secondary reminder rules must NOT fail the caller. The next current-period
-// access retries only the missing rules through the applicator.
+// Best-effort: the period is the durable artifact, so failing to reconcile the
+// secondary reminder schedule must NOT fail the caller. The next current-period
+// access retries the complete current schedule through the applicator.
 async function materialiseReminders(
   applicator: ReminderApplicator,
-  period: { readonly id: string; readonly deadline: Date },
+  reportId: string,
   now: Date,
 ): Promise<void> {
   try {
-    await applicator.applyToPeriod(period, now);
+    await applicator.applyToPeriod(reportId, now);
   } catch (error) {
     // Constructed here, not at module load: importing this file through the
     // period barrel must stay side-effect-free (a top-level `new Logger()`
     // couples every barrel consumer to Nest logging and breaks mocked tests).
     new Logger("PeriodFactory").warn(
-      `applyToPeriod failed for period=${period.id}; the next current-period access will retry missing reminder rules: ${
+      `applyToPeriod failed for period=${reportId}; the next current-period access will retry reminder reconciliation: ${
         error instanceof Error ? error.message : "unknown error"
       }`,
     );
@@ -121,11 +112,7 @@ async function createPeriod(args: {
   });
 
   if (args.policyApplicator && created.deadline !== null) {
-    await materialiseReminders(
-      args.policyApplicator,
-      { id: created.id, deadline: created.deadline },
-      args.now,
-    );
+    await materialiseReminders(args.policyApplicator, created.id, args.now);
   }
 
   return {
@@ -157,11 +144,7 @@ async function repairExistingPeriod(
   now: Date,
 ): Promise<void> {
   if (applicator && period.deadline !== null) {
-    await repairReminders(
-      applicator,
-      { reportId: period.reportId, deadline: period.deadline },
-      now,
-    );
+    await repairReminders(applicator, period.reportId, now);
   }
 }
 
@@ -228,17 +211,14 @@ export async function ensureCurrentPeriod(
 
 async function repairReminders(
   applicator: Pick<PolicyApplicatorService, "repairToPeriod">,
-  period: { readonly reportId: string; readonly deadline: Date },
+  reportId: string,
   now: Date,
 ): Promise<void> {
   try {
-    await applicator.repairToPeriod(
-      { id: period.reportId, deadline: period.deadline },
-      now,
-    );
+    await applicator.repairToPeriod(reportId, now);
   } catch (error) {
     new Logger("PeriodFactory").warn(
-      `repairToPeriod failed for period=${period.reportId}: ${
+      `repairToPeriod failed for period=${reportId}: ${
         error instanceof Error ? error.message : "unknown error"
       }`,
     );

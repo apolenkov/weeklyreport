@@ -100,8 +100,8 @@ async function buildClientLogsApp(): Promise<express.Express> {
   const app = express();
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
-  // Production-budget run (isTest=false) needs a store now that a missing one
-  // fails loud; the fake redis backs the real RedisStore without a live Redis.
+  // The production-budget path requires a store; fake Redis exercises the real
+  // RedisStore without an external service.
   const { clientLogsLimiter } = await createRateLimits({
     logger: silentLogger,
     isTest: false,

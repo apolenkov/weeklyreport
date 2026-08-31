@@ -167,7 +167,7 @@ export class AdminPrismaRepository implements AdminRepository {
     // is forwarded so a backfilled period with a past deadline does not arm
     // elapsed reminders as active. Runs after the create; errors propagate.
     if (this.policyApplicator) {
-      await this.policyApplicator.applyToPeriod(created, now);
+      await this.policyApplicator.applyToPeriod(created.id, now);
     }
     return created;
   }
@@ -188,11 +188,14 @@ export class AdminPrismaRepository implements AdminRepository {
     return periodLifecycle.archivePeriod(this.prisma, periodId);
   }
 
-  unarchivePeriod(periodId: string): Promise<{
+  unarchivePeriod(
+    periodId: string,
+    now: Date,
+  ): Promise<{
     nextPeriodState: PeriodState;
     nextPeriodStatus: PeriodStatus;
   }> {
-    return periodLifecycle.unarchivePeriod(this.prisma, periodId);
+    return periodLifecycle.unarchivePeriod(this.prisma, periodId, now);
   }
 
   deleteReport(reportId: string): Promise<void> {

@@ -1,12 +1,11 @@
 import {
+  aggregateTrafficLight,
   type DraftSaveInput,
   type ReportSectionReadModel,
   reportSectionReadModelSchema,
   type SubmitSectionInput,
   type TrafficLightStatus,
 } from "@customreport/shared";
-
-import { aggregateTrafficLight } from "./traffic-light-aggregation";
 
 type SectionWritePayload = DraftSaveInput | SubmitSectionInput;
 type SectionProject = ReportSectionReadModel["projects"][number];

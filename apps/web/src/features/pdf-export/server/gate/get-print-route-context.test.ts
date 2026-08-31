@@ -32,7 +32,12 @@ describe("decodePrintGateResponse", () => {
       {
         result: {
           data: {
-            json: { session: null, isPdfExport: true, pdfReportId: REPORT_ID },
+            json: {
+              session: null,
+              isPdfExport: true,
+              pdfReportId: REPORT_ID,
+              pdfJobId: "22222222-2222-4222-8222-222222222222",
+            },
           },
         },
       },
@@ -41,6 +46,7 @@ describe("decodePrintGateResponse", () => {
       session: null,
       isPdfExport: true,
       pdfReportId: REPORT_ID,
+      pdfJobId: "22222222-2222-4222-8222-222222222222",
     });
   });
 
@@ -49,7 +55,12 @@ describe("decodePrintGateResponse", () => {
       {
         result: {
           data: {
-            json: { session: SESSION, isPdfExport: false, pdfReportId: null },
+            json: {
+              session: SESSION,
+              isPdfExport: false,
+              pdfReportId: null,
+              pdfJobId: null,
+            },
           },
         },
       },
@@ -58,6 +69,7 @@ describe("decodePrintGateResponse", () => {
       session: SESSION,
       isPdfExport: false,
       pdfReportId: null,
+      pdfJobId: null,
     });
   });
 
@@ -65,7 +77,12 @@ describe("decodePrintGateResponse", () => {
     const body = [
       {
         result: {
-          data: { session: SESSION, isPdfExport: false, pdfReportId: null },
+          data: {
+            session: SESSION,
+            isPdfExport: false,
+            pdfReportId: null,
+            pdfJobId: null,
+          },
         },
       },
     ];
@@ -73,6 +90,7 @@ describe("decodePrintGateResponse", () => {
       session: SESSION,
       isPdfExport: false,
       pdfReportId: null,
+      pdfJobId: null,
     });
   });
 
@@ -81,11 +99,17 @@ describe("decodePrintGateResponse", () => {
       session: null,
       isPdfExport: false,
       pdfReportId: null,
+      pdfJobId: null,
     });
   });
 
   it("fails closed to no-context on an empty / malformed body", () => {
-    const closed = { session: null, isPdfExport: false, pdfReportId: null };
+    const closed = {
+      session: null,
+      isPdfExport: false,
+      pdfReportId: null,
+      pdfJobId: null,
+    };
     expect(decodePrintGateResponse([])).toEqual(closed);
     expect(decodePrintGateResponse(null)).toEqual(closed);
     expect(decodePrintGateResponse([{ result: { data: null } }])).toEqual(
@@ -102,6 +126,7 @@ describe("decodePrintGateResponse", () => {
               session: { role: "head" },
               isPdfExport: false,
               pdfReportId: null,
+              pdfJobId: null,
             },
           },
         },
@@ -111,6 +136,7 @@ describe("decodePrintGateResponse", () => {
       session: null,
       isPdfExport: false,
       pdfReportId: null,
+      pdfJobId: null,
     });
   });
 });

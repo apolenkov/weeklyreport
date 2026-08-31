@@ -1,8 +1,9 @@
+import type { ReportSectionStatus } from "@customreport/shared";
+
 // API has two ReportSectionStatus values (draft, submitted); UI exposes three
 // LeadStatus values. 'pending' is presentation-only (no Prisma/Zod equivalent)
 // for a draft section with no report content yet.
 
-export type ReportSectionStatus = "draft" | "submitted";
 export type LeadStatus = "submitted" | "draft" | "pending";
 
 export function deriveLeadStatus(context: {

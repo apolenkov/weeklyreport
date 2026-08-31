@@ -5,6 +5,7 @@ import type { PrismaClient } from "@prisma/client";
 
 import { errorMessage } from "../../lib/error-message.js";
 import { PrismaService } from "../prisma/prisma.service.js";
+import { withReadinessTimeout } from "./readiness-timeout.js";
 
 // The only Prisma surface the probe touches; narrow so tests inject a stub
 // without an erasing cast.
@@ -24,7 +25,7 @@ export class PrismaHealthIndicator {
 
   async isHealthy(key: string): Promise<HealthIndicatorResult> {
     try {
-      await this.prisma.$queryRaw`SELECT 1`;
+      await withReadinessTimeout("database", this.prisma.$queryRaw`SELECT 1`);
       return this.healthIndicator.check(key).up();
     } catch (error) {
       // The readiness body is served to unauthenticated callers: log the raw

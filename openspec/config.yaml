@@ -11,22 +11,23 @@ context: |
   in this long-lived agent context.
 
   # Stack
-  - Monorepo: pnpm 11.17 workspaces + Turborepo 2.5
+  - Monorepo: pnpm 11.17 workspaces + Turborepo 2.10.7
   - Frontend: Next.js 16 (App Router, React Compiler), React 19, Tailwind 4,
     shadcn/ui via `@customreport/ui`, TanStack Query 5, tRPC 11 client
   - Backend: NestJS 11, Express 5, tRPC 11 server, Prisma 7 with
     `@prisma/adapter-pg`, BullMQ 5, Redis 7, PostgreSQL 15, OpenTelemetry,
-    Prometheus prom-client
+    Prometheus @prometheus-io/client
   - Auth: SAML via `@node-saml/passport-saml` + Keycloak (prod); dev-only
     `/auth/dev-login` gated behind `AUTH_DEV_MODE`
   - Validation: Zod 4 shared schemas in `@customreport/shared`
   - Testing: Vitest 4, Testing Library, MSW 2; Playwright is a production-only
     dependency of the API PDF worker
-  - Node: >=26 (Docker pins Node 26 images; API installs Chromium explicitly)
+  - Node: 24 LTS (Docker pins Node 24 images; API installs Chromium explicitly)
 
   # Workspace layout
   apps/web         — Next.js frontend (`@customreport/web`)
   apps/api         — NestJS backend (`@customreport/api`)
+  packages/report-persistence — server-only Prisma mapper and published snapshot assembly (`@customreport/report-persistence`)
   packages/shared  — Zod schemas + tRPC router types (`@customreport/shared`)
   packages/ui      — shadcn/ui + composition components (`@customreport/ui`)
   prisma/          — schema, migrations, seeds, destructive
@@ -36,15 +37,18 @@ context: |
   - lead    — fills own report section (items, risks, decisions, priorities,
               traffic lights); submits
   - head    — lead capabilities + review + publish + PDF export
-  - viewer  — read-only access to published reports + PDF download
-  No runtime director role exists.
+  - viewer  — read-only report content for the current live report and visible
+              published reports + PDF download; assigned review acknowledgements,
+              comments, and verdicts remain available
+  - admin   — organization administration, review, publishing, and PDF export
 
   # Domain model anchors
   Report (period) → ReportSection (per lead) → { ProjectStatus[], Item[]
-  (current/next), Risk[], Decision[], Priority[] }. Versioning v8.4 adds
-  autosave→snapshot wiring, pinned snapshots, time-based retention. Report
-  carries both `periodState` and legacy period tuple — six writers must
-  update both atomically (no DB constraint enforces this).
+  (current/next), Risk[], Decision[], ActivityStatus[] }. ProjectActivity is the
+  separate catalogue and parent for activity-linked records. Priorities are an Item
+  projection selected and ordered by `priorityRank`, not a separate entity.
+  Report carries both `periodState` and the companion lifecycle tuple; every
+  lifecycle writer must update both atomically (no DB constraint enforces this).
 
   # Conventions (load-bearing)
   - TypeScript strict everywhere; `no-explicit-any` is an error; no floating
@@ -52,7 +56,7 @@ context: |
   - File names kebab-case with role suffix (`*.service.ts`,
     `*.prisma-repository.ts`, `*.router.ts`, `*.module.ts`); React component
     files kebab-case, exports PascalCase
-  - tRPC procedures must use one of 8 canonical middleware-chain builders
+  - tRPC procedures must use one of 6 canonical middleware-chain builders
     (role-coverage gate; CI compares by reference identity)
   - Repository interface lives in the service file; Prisma implementation in
     `*.prisma-repository.ts`; wired via `useFactory` in the module
@@ -63,9 +67,8 @@ context: |
     router input); use `safeText()` helper for user-facing text fields
   - Shared schemas/enums live in `@customreport/shared` — update there
     before duplicating in app code
-  - Static production UI strings in `apps/web/src/**/*.tsx` stay English
-    until a real i18n phase exists; Russian is allowed only as data, seeds,
-    comments, or tests
+  - Static production UI strings in `apps/web/src/**/*.tsx` stay English;
+    Russian is allowed only as data, seeds, comments, or tests
   - Disposable-database operations use the one exact validator in
     `prisma/guards/_destructive-guard.ts`: loopback only, raw URL path exactly
     `customreport_e2e` or `customreport_e2e_lane_[a-o]_test`, no query/fragment
@@ -74,16 +77,17 @@ context: |
     `ALLOW_PROD_DESTRUCTIVE` bypass exists for these flows
   - Development operations use the same exact target contract; production
     restore remains a separate entrypoint and contract
-  - Treat committed Prisma migrations as append-only. A history rewrite needs
-    an explicit reviewed task and is allowed only for the exact disposable DB
-    targets in `AGENTS.md`; the destructive guard and per-run consent still apply
+  - The MVP has one canonical Prisma init migration. Keep it synchronized with
+    `schema.prisma`; prove every rewrite only by recreating an exact disposable
+    DB target from `AGENTS.md` behind the destructive guard and per-run consent
 
   # Quality gates (must stay green)
-  pnpm typecheck && pnpm lint && pnpm test && pnpm build
+  pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm spec:check
 
   # Sources of truth (read before proposing)
   - `prisma/schema.prisma` — current data model
   - `packages/shared/src/schemas/` — canonical Zod schemas
+  - `openspec/specs/` — durable product and engineering contracts
 
 rules:
   proposal:

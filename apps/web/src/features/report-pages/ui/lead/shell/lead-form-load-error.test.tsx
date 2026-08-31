@@ -32,7 +32,7 @@ function buildHarness(opts: { byPeriodQueryFn?: () => unknown } = {}) {
         authorRole: section.authorRole,
       },
     },
-    { path: ["reports", "myHistory"], query: [] },
+    { path: ["reports", "myHistory"], query: { items: [] } },
     { path: ["reports", "saveDraft"], mutation: true },
     { path: ["reports", "submit"], mutation: true },
     {

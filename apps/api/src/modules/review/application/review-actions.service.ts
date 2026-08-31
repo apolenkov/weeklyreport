@@ -31,6 +31,11 @@ export interface RecordAnchor {
   readonly decisionId?: string;
 }
 
+export type ReviewWriteActor = Pick<
+  ReviewSession,
+  "userId" | "role" | "reportingGroupId"
+>;
+
 // Section facts a verdict reads — editable status, owning group, period lifecycle.
 export interface VerdictContext {
   readonly status: ReportSectionStatus;
@@ -51,7 +56,7 @@ export interface PostVerdictParams {
 
 export interface ReviewActionsRepository {
   acknowledge(
-    userId: string,
+    actor: ReviewWriteActor,
     reportId: string,
     groupId: string,
   ): Promise<ReviewAcknowledgementView>;
@@ -64,14 +69,14 @@ export interface ReviewActionsRepository {
   ): Promise<{ groupId: string | null } | null>;
   getViewerCanReview(userId: string, groupId: string): Promise<boolean>;
   insertComment(
-    reviewerId: string,
+    actor: ReviewWriteActor,
     anchor: RecordAnchor,
     text: string,
   ): Promise<RecordCommentView>;
   getCommentContext(
     commentId: string,
   ): Promise<{ reviewerId: string; groupId: string | null } | null>;
-  deleteComment(commentId: string): Promise<void>;
+  deleteComment(commentId: string, actor: ReviewWriteActor): Promise<void>;
   getVerdictContext(sectionId: string): Promise<VerdictContext | null>;
   postVerdict(params: PostVerdictParams): Promise<{ unsubmitted: boolean }>;
 }
@@ -99,7 +104,7 @@ export class ReviewActionsService {
   ): Promise<ReviewAcknowledgementView> {
     this.assertScope(session, input.groupId);
     const ack = await this.repository.acknowledge(
-      session.userId,
+      session,
       input.reportId,
       input.groupId,
     );
@@ -129,7 +134,7 @@ export class ReviewActionsService {
     }
     await this.assertReviewer(session, context.groupId);
     const comment = await this.repository.insertComment(
-      session.userId,
+      session,
       anchor,
       input.text,
     );
@@ -157,7 +162,7 @@ export class ReviewActionsService {
         "You can only delete your own review comment.",
       );
     }
-    await this.repository.deleteComment(input.commentId);
+    await this.repository.deleteComment(input.commentId, session);
     return { success: true };
   }
 

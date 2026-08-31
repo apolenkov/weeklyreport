@@ -1,6 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { AUTH_COOKIE_NAME } from "@customreport/shared";
 import type { INestApplication } from "@nestjs/common";
 import * as trpcExpress from "@trpc/server/adapters/express";
 import type { Express, RequestHandler } from "express";
@@ -11,7 +12,6 @@ import type { PrismaService } from "../infrastructure/prisma/prisma.service";
 import { createContextFactory } from "../infrastructure/trpc/trpc.context";
 import type { AppRouter } from "../infrastructure/trpc/trpc.router";
 import type { AppLogger } from "../lib/logger";
-import { resolveSessionCookieName } from "../lib/session-cookie.js";
 import { SessionRevocationService } from "../modules/admin/index.js";
 import { createAuthController } from "../modules/auth/index.js";
 import { createPdfDownloadHandler } from "../modules/pdf-export/index.js";
@@ -44,13 +44,13 @@ export function mountApiIngress(deps: {
   mkdirSync(pdfDir, { recursive: true });
   // Resolve the cookie name once here from the validated env — the handler
   // must not re-read process.env per request.
-  const pdfAuthController = createAuthController(process.env);
+  const pdfAuthController = createAuthController(env);
   expressApp.get(
     PDF_DOWNLOAD_ROUTE,
     createPdfDownloadHandler({
       prisma,
       pdfDir,
-      sessionCookieName: resolveSessionCookieName(env.AUTH_JWT_COOKIE_NAME),
+      sessionCookieName: AUTH_COOKIE_NAME,
       verifySessionToken: (token) =>
         pdfAuthController.verifySessionToken(token),
       sessionRevocation: app.get(SessionRevocationService),
@@ -69,7 +69,7 @@ export function mountApiIngress(deps: {
     trpcLimiter,
     trpcExpress.createExpressMiddleware({
       router: appRouter,
-      createContext: createContextFactory(app, logger),
+      createContext: createContextFactory(app, logger, env),
       maxBodySize: TRPC_MAX_BODY_BYTES,
     }),
   );

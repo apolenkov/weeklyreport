@@ -60,7 +60,11 @@ describe("itemWriteSchema progress vocabulary", () => {
 
   it.each(currentStatuses)("accepts %s on a current item", (workflowStatus) => {
     expect(
-      itemWriteSchema.safeParse({ ...validItem(), workflowStatus }).success,
+      itemWriteSchema.safeParse({
+        ...validItem(),
+        workflowStatus,
+        ...(workflowStatus === "paused" ? { pausedReason: "Waiting" } : {}),
+      }).success,
     ).toBe(true);
   });
 
@@ -105,13 +109,36 @@ describe("itemWriteSchema progress vocabulary", () => {
     ).toBe(false);
   });
 
-  it("strips the removed completed flag", () => {
+  it("strips the unsupported completed flag", () => {
     const parsed = itemInputSchema.safeParse({
       ...validItem(),
       completed: true,
     });
     expect(parsed.success).toBe(true);
     if (parsed.success) expect("completed" in parsed.data).toBe(false);
+  });
+
+  it("requires a non-blank reason for paused items", () => {
+    expect(
+      itemWriteSchema.safeParse({ ...validItem(), workflowStatus: "paused" })
+        .success,
+    ).toBe(false);
+    expect(
+      itemWriteSchema.safeParse({
+        ...validItem(),
+        workflowStatus: "paused",
+        pausedReason: "  waiting on a dependency  ",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects stale pause reasons on non-paused items", () => {
+    expect(
+      itemWriteSchema.safeParse({
+        ...validItem(),
+        pausedReason: "stale reason",
+      }).success,
+    ).toBe(false);
   });
 });
 

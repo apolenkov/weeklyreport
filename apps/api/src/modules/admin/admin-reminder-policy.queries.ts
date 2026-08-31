@@ -4,6 +4,11 @@ import {
 } from "@customreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import {
+  lockLiveReminderReports,
+  lockReminderPolicy,
+  reconcileLockedPolicyForReport,
+} from "../reminders/index.js";
 import { audienceFromPrisma, audienceToPrisma } from "./admin-enum-mappers";
 
 export async function listReminderPolicies(
@@ -42,6 +47,7 @@ export async function reminderPolicyExists(
 export async function saveReminderPolicy(
   prisma: PrismaService,
   policy: ReminderPolicy,
+  now: Date = new Date(),
 ): Promise<ReminderPolicy> {
   const parsed = reminderPolicySchema.parse(policy);
   const data = {
@@ -53,16 +59,29 @@ export async function saveReminderPolicy(
     validFrom: parsed.validFrom,
     validUntil: parsed.validUntil,
   };
-  const row = await prisma.reminderPolicy.upsert({
-    where: { id: parsed.id },
-    create: { id: parsed.id, ...data },
-    update: data,
-  });
-  // Inactive policy parks derived rules as paused (cron skips them).
-  // Applicator only (re)creates for active policies, so paused rows stay.
-  await prisma.reminderRule.updateMany({
-    where: { policyId: row.id },
-    data: { status: row.active ? "active" : "paused" },
+  const row = await prisma.$transaction(async (tx) => {
+    await tx.reminderPolicy.upsert({
+      where: { id: parsed.id },
+      create: { id: parsed.id, ...data },
+      update: data,
+    });
+    const saved = await lockReminderPolicy(tx, parsed.id);
+    if (!saved) throw new Error(`Reminder policy ${parsed.id} disappeared.`);
+
+    // Shared lock order is policy, live reports in id order, then rules.
+    // Policy and every current-period rule commit together. Historical rule
+    // versions stay paused so retained executions keep their exact identity.
+    const reports = await lockLiveReminderReports(tx);
+    // Park every prior/historical version first; reconciliation below arms
+    // only the latest version of each live scheduled/editable report.
+    await tx.reminderRule.updateMany({
+      where: { policyId: saved.id, status: "active" },
+      data: { status: "paused" },
+    });
+    for (const report of reports) {
+      await reconcileLockedPolicyForReport(tx, saved, report, now);
+    }
+    return saved;
   });
   return reminderPolicySchema.parse({
     id: row.id,
@@ -76,11 +95,11 @@ export async function saveReminderPolicy(
   });
 }
 
-// FK is ON DELETE SET NULL — delete rules first so they are not orphaned.
 export async function deleteReminderPolicy(
   prisma: PrismaService,
   policyId: string,
 ): Promise<void> {
-  await prisma.reminderRule.deleteMany({ where: { policyId } });
+  // The mandatory FK cascades rules (and their executions) atomically with
+  // the policy delete, so a concurrent applicator can never leave an orphan.
   await prisma.reminderPolicy.delete({ where: { id: policyId } });
 }

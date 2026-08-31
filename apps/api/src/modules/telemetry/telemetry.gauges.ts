@@ -5,7 +5,7 @@ import {
   type OnModuleDestroy,
   type OnModuleInit,
 } from "@nestjs/common";
-import type { Gauge } from "prom-client";
+import type { Gauge } from "@prometheus-io/client";
 
 import {
   customreportActiveLeadsTotal,
@@ -14,7 +14,7 @@ import {
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import {
   queryActiveLeadsLastPublishedPeriod,
-  querySettledPeriodIds,
+  querySettledPeriodSnapshots,
 } from "./telemetry.queries.js";
 
 // Rolling window for the on-time-ratio gauge: last N published periods.
@@ -33,35 +33,24 @@ export class TelemetryGaugesPrismaRepository implements TelemetryGaugesPort {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async onTimeRatioLastNPeriods(n: number): Promise<number | null> {
-    const reportIds = await querySettledPeriodIds(this.prisma, n);
-    if (reportIds.length === 0) return null;
-    const baseWhere = {
-      reportId: { in: reportIds },
-      status: "submitted" as const,
-    };
-    const [total, onTime] = await Promise.all([
-      this.prisma.reportSection.count({
-        where: { ...baseWhere },
-      }),
-      this.prisma.reportSection.count({
-        where: {
-          ...baseWhere,
-          late: false,
-        },
-      }),
-    ]);
+    const snapshots = await querySettledPeriodSnapshots(this.prisma, n);
+    const submitted = snapshots.flatMap((snapshot) =>
+      snapshot.sections.filter((section) => section.status === "submitted"),
+    );
+    const total = submitted.length;
     if (total === 0) return null;
+    const onTime = submitted.filter((section) => !section.late).length;
     return onTime / total;
   }
 
   activeLeadsLastPublishedPeriod(): Promise<number> {
     // Prometheus scrapes have no requester session, so this gauge is org-wide.
-    return queryActiveLeadsLastPublishedPeriod(this.prisma, {});
+    return queryActiveLeadsLastPublishedPeriod(this.prisma);
   }
 }
 
-// prom-client@15: collect is runtime-assignable but TS only types it as a
-// constructor option — cast required.
+// The client types collect as a constructor option but accepts runtime
+// assignment for scrape-time callbacks, so keep the cast localized here.
 const collectAssignable = (gauge: Gauge): { collect: () => Promise<void> } =>
   gauge as unknown as { collect: () => Promise<void> };
 
@@ -81,7 +70,7 @@ export class TelemetryGauges implements OnModuleInit, OnModuleDestroy {
     const activeLeads = collectAssignable(customreportActiveLeadsTotal);
 
     onTimeRatio.collect = async () => {
-      // A rejection here fails prom-client's Promise.all over all collect
+      // A rejection here fails the client's Promise.all over all collect
       // callbacks, 500-ing the whole scrape during a DB outage — exactly
       // when the DB-independent metrics matter most.
       try {

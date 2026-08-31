@@ -1,4 +1,4 @@
-import type { DbRole } from "@customreport/shared";
+import { AUTH_COOKIE_NAME, type DbRole } from "@customreport/shared";
 import type { INestApplication } from "@nestjs/common";
 import { TRPCError } from "@trpc/server";
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
@@ -12,7 +12,25 @@ import { createNullLogger } from "../../lib/logger";
 import { SessionRevocationService } from "../../modules/admin/index.js";
 import { PrismaService } from "../prisma/prisma.service";
 import type { TrpcContext } from "./trpc.context";
-import { createContextFactory } from "./trpc.context";
+import { createContextFactory as createContextFactoryImpl } from "./trpc.context";
+
+const testContextEnv = () => ({
+  NODE_ENV: (process.env.NODE_ENV ?? "test") as
+    "development" | "production" | "test",
+  AUTH_DEV_MODE: process.env.AUTH_DEV_MODE === "true",
+  AUTH_DEV_MODE_ALLOW_TEST: process.env.AUTH_DEV_MODE_ALLOW_TEST,
+  AUTH_JWT_SECRET:
+    process.env.AUTH_JWT_SECRET ?? "integration-test-secret-32-chars-or-more",
+  PDF_EXPORT_JWT_SECRET:
+    process.env.PDF_EXPORT_JWT_SECRET ?? "pdf-export-secret-32-chars-or-more",
+});
+
+function createContextFactory(
+  app: INestApplication,
+  logger: ReturnType<typeof createNullLogger>,
+) {
+  return createContextFactoryImpl(app, logger, testContextEnv());
+}
 import {
   anyRoleProcedure,
   headProcedure,
@@ -78,7 +96,7 @@ function makeApp(prisma: object): INestApplication {
 
 function makeReq(cookieToken?: string): CreateExpressContextOptions {
   const req = {
-    cookies: cookieToken ? { customreport_session: cookieToken } : {},
+    cookies: cookieToken ? { [AUTH_COOKIE_NAME]: cookieToken } : {},
   } as unknown as Request;
   const res = {} as Response;
   return {
@@ -98,6 +116,7 @@ function makeReq(cookieToken?: string): CreateExpressContextOptions {
 
 const TEST_REPORT_ID = "11111111-2222-4333-8444-555555555555";
 const PDF_SECRET = "pdf-export-secret-32-chars-or-more";
+const PDF_JOB_ID = "a0000000-0000-4000-8000-000000000099";
 const SESSION_SECRET = "integration-test-secret-32-chars-or-more";
 
 describe("createContextFactory — PDF JWT verifier path", () => {
@@ -158,6 +177,7 @@ describe("createContextFactory — PDF JWT verifier path", () => {
     const token = jwt.sign(
       {
         reportId: TEST_REPORT_ID,
+        jobId: PDF_JOB_ID,
         kind: "pdf-export",
         requestedBy: "11111111-2222-4333-8444-aaaaaaaaaaaa",
       },
@@ -286,6 +306,7 @@ describe("createContextFactory — PDF JWT be-the-requester scope", () => {
     const token = jwt.sign(
       {
         reportId: TEST_REPORT_ID,
+        jobId: PDF_JOB_ID,
         kind: "pdf-export",
         requestedBy: HEAD_REQUESTER_ID,
       },
@@ -318,6 +339,7 @@ describe("createContextFactory — PDF JWT be-the-requester scope", () => {
     const token = jwt.sign(
       {
         reportId: TEST_REPORT_ID,
+        jobId: PDF_JOB_ID,
         kind: "pdf-export",
         requestedBy: VIEWER_REQUESTER_ID,
       },
@@ -347,6 +369,7 @@ describe("createContextFactory — PDF JWT be-the-requester scope", () => {
     const token = jwt.sign(
       {
         reportId: TEST_REPORT_ID,
+        jobId: PDF_JOB_ID,
         kind: "pdf-export",
         requestedBy: "a9999999-9999-4999-8999-999999999999",
       },
@@ -367,6 +390,7 @@ describe("createContextFactory — PDF JWT be-the-requester scope", () => {
     const token = jwt.sign(
       {
         reportId: TEST_REPORT_ID,
+        jobId: PDF_JOB_ID,
         kind: "pdf-export",
         requestedBy: HEAD_REQUESTER_ID,
       },
@@ -404,9 +428,20 @@ describe("pdfExportGuard — PDF synthetic session restrictions", () => {
     admin: testTrpcRouter({
       users: headProcedure.query(() => ({ ok: true })),
     }),
+    pdfExport: testTrpcRouter({
+      render: anyRoleProcedure
+        .input(z.object({ reportId: z.string(), jobId: z.string() }))
+        .query(({ input }) => ({
+          reportId: input.reportId,
+          jobId: input.jobId,
+        })),
+    }),
   });
 
-  function makePdfCtx(reportId: string): TrpcContext {
+  function makePdfCtx(
+    reportId: string,
+    pdfJobId = "bbbbbbbb-2222-4333-8444-bbbbbbbbbbbb",
+  ): TrpcContext {
     return {
       session: {
         userId: "a0000000-0000-4000-8000-00000000fdb0",
@@ -421,6 +456,7 @@ describe("pdfExportGuard — PDF synthetic session restrictions", () => {
       ip: "pdf-worker",
       isPdfExport: true,
       pdfReportId: reportId,
+      pdfJobId,
     };
   }
 
@@ -438,6 +474,31 @@ describe("pdfExportGuard — PDF synthetic session restrictions", () => {
 
     const result = await caller.archive.detail({ reportId });
     expect(result).toEqual({ reportId, ok: true });
+  });
+
+  it("PDF session render requires both the bound reportId and jobId", async () => {
+    const reportId = "99999999-2222-4333-8444-111111111111";
+    const jobId = "bbbbbbbb-2222-4333-8444-bbbbbbbbbbbb";
+    const caller = testRouter.createCaller(makePdfCtx(reportId, jobId));
+
+    await expect(caller.pdfExport.render({ reportId, jobId })).resolves.toEqual(
+      {
+        reportId,
+        jobId,
+      },
+    );
+    await expect(
+      caller.pdfExport.render({
+        reportId: "99999999-2222-4333-8444-222222222222",
+        jobId,
+      }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      caller.pdfExport.render({
+        reportId,
+        jobId: "bbbbbbbb-2222-4333-8444-cccccccccccc",
+      }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
   it("PDF session for reportId=X CANNOT access weeklyReport.get for reportId=Y", async () => {

@@ -20,8 +20,8 @@ export function useLeadFormRedirects({
 }: UseLeadFormRedirectsInput): void {
   const router = useRouter();
 
-  // Bare route → canonical once active reportId is known; skip if already
-  // pinned or no active period (empty/skeleton).
+  // Resolve the unpinned entry route once the active reportId is known; skip
+  // if already pinned or no active period is available yet.
   useEffect(() => {
     if (!redirectToCanonical) return;
     if (pinnedReportId) return;

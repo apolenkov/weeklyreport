@@ -6,6 +6,7 @@ import type {
   EscalationReminderPayload,
 } from "./reminders.types.js";
 import {
+  buildPersistedQueuePayload,
   buildQueuePayload,
   parseReminderQueueJobData,
   requireRulePeriodLabel,
@@ -100,7 +101,7 @@ describe("buildQueuePayload", () => {
 
 describe("toQueuePayload", () => {
   it("accepts a complete persisted payload", () => {
-    const payload: DeadlineReminderPayload = {
+    const payload = buildPersistedQueuePayload({
       kind: "deadline",
       cycleDate: "2026-04-07",
       leadName: "Test Lead",
@@ -108,7 +109,7 @@ describe("toQueuePayload", () => {
       deadlineIso: "2026-04-13T18:00:00.000Z",
       sectionUrl: "https://example.test/reports/current",
       organization,
-    };
+    });
 
     expect(toQueuePayload(payload)).toEqual(payload);
   });
@@ -116,6 +117,15 @@ describe("toQueuePayload", () => {
   it.each([
     null,
     { kind: "deadline" },
+    {
+      kind: "deadline",
+      cycleDate: "2026-04-07",
+      leadName: "Test Lead",
+      reportPeriod: "Week",
+      deadlineIso: "2026-04-13T18:00:00.000Z",
+      sectionUrl: "https://example.test/reports/current",
+      organization,
+    },
     {
       kind: "deadline",
       cycleDate: "not-a-date",
@@ -168,7 +178,7 @@ describe("parseReminderQueueJobData", () => {
     ).toThrow();
   });
 
-  it("rejects a rich pre-contract envelope without a contract version", () => {
+  it("rejects a rich envelope without a contract version", () => {
     expect(() =>
       parseReminderQueueJobData({
         executionId: execution.id,

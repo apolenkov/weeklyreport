@@ -19,7 +19,7 @@ const DRAFT_LIFECYCLE = {
 } as const;
 
 describe("buildTransition — create", () => {
-  it("periodStart in the past → open (legacy tuple draft/false)", () => {
+  it("periodStart in the past → open (companion draft/false fields)", () => {
     expect(
       buildTransition("create", {
         periodStart: new Date("2026-05-01T00:00:00.000Z"),
@@ -28,7 +28,7 @@ describe("buildTransition — create", () => {
     ).toEqual({ ...DRAFT_LIFECYCLE, periodState: "open" });
   });
 
-  it("periodStart in the future → scheduled (legacy tuple draft/false)", () => {
+  it("periodStart in the future → scheduled (companion draft/false fields)", () => {
     expect(
       buildTransition("create", {
         periodStart: new Date("2026-06-15T00:00:00.000Z"),
@@ -46,14 +46,14 @@ describe("buildTransition — create", () => {
 });
 
 describe("buildTransition — schedule / open", () => {
-  it("schedule writes the scheduled state with the draft/false tuple", () => {
+  it("schedule writes the scheduled state with the draft/false companion fields", () => {
     expect(buildTransition("schedule", {})).toEqual({
       periodState: "scheduled",
       ...DRAFT_LIFECYCLE,
     });
   });
 
-  it("open writes the open state with the draft/false tuple", () => {
+  it("open writes the open state with the draft/false companion fields", () => {
     expect(buildTransition("open", {})).toEqual({
       periodState: "open",
       ...DRAFT_LIFECYCLE,
@@ -92,7 +92,7 @@ describe("buildTransition — reopen (intentional asymmetry)", () => {
   it("periodState reverts to open while periodStatus carries 'reopened'", () => {
     // The reopen transition deliberately diverges: periodState='open' (editable
     // again) but periodStatus='reopened' so consumers can discriminate a reopen
-    // from a fresh open. The legacy (status, archived) tuple is untouched.
+    // from a fresh open. The companion status/archive fields stay current.
     expect(buildTransition("reopen", { now: NOW })).toEqual({
       periodStatus: "reopened",
       periodState: "open",
@@ -134,7 +134,7 @@ describe("buildTransition — unarchive", () => {
 });
 
 describe("buildTransition — restore", () => {
-  it("preserves one complete schema-validated lifecycle tuple verbatim", () => {
+  it("preserves one complete schema-validated lifecycle field set verbatim", () => {
     const lifecycle = {
       periodState: "open",
       status: "published",

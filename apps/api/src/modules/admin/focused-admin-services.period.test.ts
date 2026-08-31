@@ -69,14 +69,21 @@ function makePeriodAwareRepository(
       row.periodState = "archived";
       return Promise.resolve();
     },
-    unarchivePeriod(periodId): Promise<{
+    unarchivePeriod(
+      periodId,
+      now = new Date(),
+    ): Promise<{
       nextPeriodState: PeriodState;
       nextPeriodStatus: PeriodStatus;
     }> {
       const row = store.find((r) => r.id === periodId);
       if (!row) return Promise.reject(new Error("not found"));
       const next: PeriodState =
-        row.periodStatus === "open" ? "open" : "published";
+        row.periodStatus === "published"
+          ? "published"
+          : row.periodStart.getTime() > now.getTime()
+            ? "scheduled"
+            : "open";
       row.archived = false;
       row.periodState = next;
       return Promise.resolve({
@@ -228,6 +235,22 @@ describe("PeriodAdminService — archivePeriod / unarchivePeriod", () => {
     const result = await service.unarchivePeriod(PERIOD_ID_ARCHIVED);
     expect(result.success).toBe(true);
     expect(result.periodState).toBe("published");
+  });
+
+  it("unarchivePeriod restores a future draft as scheduled at the supplied time", async () => {
+    const future = periodFixture(PERIOD_ID_ARCHIVED, "archived", {
+      periodStatus: "open",
+      periodStart: new Date("2026-09-07T00:00:00Z"),
+    });
+    const service = new PeriodAdminService(
+      makePeriodAwareRepository([future]),
+      undefined,
+      () => new Date("2026-08-31T12:00:00Z"),
+    );
+
+    const result = await service.unarchivePeriod(PERIOD_ID_ARCHIVED);
+
+    expect(result).toEqual({ success: true, periodState: "scheduled" });
   });
 });
 

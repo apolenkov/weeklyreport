@@ -159,13 +159,20 @@ export type CarryOverExecution = z.infer<typeof carryOverExecutionSchema>;
 export type ArchiveReportSummary = z.infer<typeof archiveReportSummarySchema>;
 /** Archived assembled report paired with its list summary. */
 export type ArchiveReportDetail = z.infer<typeof archiveReportDetailSchema>;
-/** Optional archive-inclusion filter for compiled history. */
-export type CompiledHistoryInput = z.infer<typeof compiledHistoryInputSchema>;
 /** Completed-period aggregates and per-status traffic-light totals. */
 export type CompiledHistoryEntry = z.infer<typeof compiledHistoryEntrySchema>;
 /** Ordered compiled-history entries plus the independent archive count. */
 export type CompiledHistoryResult = z.infer<typeof compiledHistoryResultSchema>;
 /** Lead-specific period result with optional aggregate details. */
 export type MyHistoryEntry = z.infer<typeof myHistoryEntrySchema>;
+/** A bounded page of lead-specific history entries. */
+export const myHistoryResultSchema = z
+  .object({
+    items: myHistoryEntrySchema.array().readonly(),
+    nextCursor: z.string().min(1).nullable(),
+  })
+  .readonly();
+/** Bounded lead-specific history page. */
+export type MyHistoryResult = z.infer<typeof myHistoryResultSchema>;
 /** Bounded cursor-page request. */
 export type PaginationInput = z.infer<typeof paginationInputSchema>;

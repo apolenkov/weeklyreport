@@ -81,7 +81,7 @@ const ORG = { shortName: "TEST", fullName: "Test Organisation" };
 
 // Transport test: worker that wins the atomic send claim, then records delivery.
 const remindersStub = {
-  claimExecutionForSending: vi.fn().mockResolvedValue(true),
+  claimExecutionForSending: vi.fn(),
   markReminderSent: vi.fn().mockResolvedValue(undefined),
 };
 
@@ -130,15 +130,18 @@ describe("email-dispatch integration", () => {
       const executionId = `exec-integration-${Date.now()}`;
 
       const jobData = {
+        contractVersion: 1 as const,
         executionId,
         recipientEmail: recipient,
         kind: "deadline" as const,
+        cycleDate: "2026-06-08",
         leadName: "Integration Tester",
         reportPeriod: PERIOD,
         deadlineIso: new Date("2026-06-08T09:00:00.000Z").toISOString(),
         sectionUrl: "http://localhost:3000/lead/report?reportId=test",
         organization: ORG,
       };
+      remindersStub.claimExecutionForSending.mockResolvedValueOnce(jobData);
 
       await (processor as unknown as ProcessorSeam).processJob({
         data: jobData,
@@ -152,7 +155,7 @@ describe("email-dispatch integration", () => {
 
       expect(msg.Subject).toContain("[TEST]");
       expect(msg.Subject).toContain("Reminder:");
-      expect(msg.Subject.toLowerCase()).toContain("report section due");
+      expect(msg.Subject.toLowerCase()).toContain("report section deadline");
 
       expect(remindersStub.markReminderSent).toHaveBeenCalledWith(executionId);
     },
@@ -187,6 +190,7 @@ describe("email-dispatch integration", () => {
       const executionId = `exec-escalation-${Date.now()}`;
 
       const jobData = {
+        contractVersion: 1 as const,
         executionId,
         recipientEmail: headRecipient,
         kind: "escalation" as const,
@@ -202,6 +206,7 @@ describe("email-dispatch integration", () => {
         ],
         organization: ORG,
       };
+      remindersStub.claimExecutionForSending.mockResolvedValueOnce(jobData);
 
       await (processor as unknown as ProcessorSeam).processJob({
         data: jobData,

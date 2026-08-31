@@ -142,7 +142,7 @@ function makeProviders() {
   const reportB = section("report-b", "section-b");
   const { proxy, captured } = createMockTRPC([
     { path: ["reports", "getActive"], query: reportA },
-    { path: ["reports", "myHistory"], query: [] },
+    { path: ["reports", "myHistory"], query: { items: [] } },
     { path: ["reports", "saveDraft"], mutation: true },
     {
       path: ["leadForm", "viewSettings"],

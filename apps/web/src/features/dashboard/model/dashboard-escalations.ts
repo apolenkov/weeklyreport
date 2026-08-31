@@ -25,14 +25,9 @@ export function groupByProduct(
   );
 }
 
-// Wording for a stage-keyed escalation (blocked item / unresolved risk) that
-// carries no stage. Both the live and snapshot API paths return stageName=null
-// identically, so this is the single place that empty case is worded.
-const NO_STAGE_LABEL = "No stage set";
-
 // A product-level "flagged red" roll-up has no stage by design, so it reads
-// "Flagged" (matching the report accordion's EscalationRow) — "No stage set"
-// would look like a data defect on a row that legitimately has none.
+// "Flagged" matches the report accordion's EscalationRow for a product-level
+// roll-up whose absence of a concrete stage is intentional.
 const FLAGGED_STAGE_LABEL = "Flagged";
 
 export function escalationToBlockedItem(
@@ -42,7 +37,7 @@ export function escalationToBlockedItem(
     return {
       severity: "blocked",
       product: escalation.productName,
-      stage: escalation.stageName ?? NO_STAGE_LABEL,
+      stage: escalation.stageName,
       assignee: shortNameFromName(escalation.leadName),
       description: escalation.description,
     };
@@ -60,7 +55,7 @@ export function escalationToBlockedItem(
   return {
     severity: "at-risk",
     product: escalation.productName,
-    stage: escalation.stageName ?? NO_STAGE_LABEL,
+    stage: escalation.stageName,
     assignee: shortNameFromName(escalation.leadName),
     description: escalation.description,
   };
