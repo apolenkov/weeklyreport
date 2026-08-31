@@ -9,9 +9,8 @@ export interface ReportContentSummary {
   readonly priorities: readonly unknown[];
 }
 
-// Single source for the publish gate, the accordion render guard, and the
-// per-lead grouping filter, so the three cannot diverge on what "has content"
-// means.
+// Single source for accordion visibility, focused-product selection, and
+// per-lead grouping so those views cannot diverge on what "has content" means.
 export function reportHasContent(report: ReportContentSummary): boolean {
   return (
     (report.needsAttention?.trim().length ?? 0) > 0 ||

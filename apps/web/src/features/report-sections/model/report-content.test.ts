@@ -17,7 +17,7 @@ function makeSummary(
   };
 }
 
-describe("reportHasContent — publish-gate contract", () => {
+describe("reportHasContent — content-detection contract", () => {
   it("returns false when every content field is empty", () => {
     expect(reportHasContent(makeSummary())).toBe(false);
   });
