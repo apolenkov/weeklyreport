@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
 import type { Role } from "@customreport/shared";
-import { render } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render as testingRender } from "@testing-library/react";
 import * as React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -23,6 +24,15 @@ vi.mock("../../lib/auth/session-provider", () => ({
 }));
 
 import { NavBar } from "./nav-bar";
+
+function render(element: React.ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return testingRender(
+    <QueryClientProvider client={queryClient}>{element}</QueryClientProvider>,
+  );
+}
 
 function setRole(role: Role | null): void {
   if (role === null) {
