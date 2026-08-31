@@ -1,10 +1,31 @@
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 
 const MARKER_STRIDE = 2;
 const ODD_MARKER_POSITION = 1;
 const H3_PREFIX_LENGTH = 4;
 const H2_PREFIX_LENGTH = 3;
 const H1_PREFIX_LENGTH = 2;
+
+type MarkdownLine =
+  | Readonly<{ kind: "heading"; tag: "h1" | "h2" | "h3"; text: string }>
+  | Readonly<{ kind: "list"; text: string }>
+  | Readonly<{ kind: "paragraph"; text: string }>
+  | Readonly<{ kind: "spacer" }>;
+
+type MarkdownBlock =
+  | Readonly<{
+      key: string;
+      kind: "heading";
+      tag: "h1" | "h2" | "h3";
+      text: string;
+    }>
+  | Readonly<{
+      key: string;
+      kind: "list";
+      items: readonly Readonly<{ key: string; text: string }>[];
+    }>
+  | Readonly<{ key: string; kind: "paragraph"; text: string }>
+  | Readonly<{ key: string; kind: "spacer" }>;
 
 const inlineNodes = (value: string): ReactNode[] => {
   const occurrences = new Map<string, number>();
@@ -21,52 +42,118 @@ const inlineNodes = (value: string): ReactNode[] => {
   });
 };
 
-const lineContent = (
-  line: string,
-): Readonly<{ kind: "heading" | "list" | "paragraph"; text: string }> => {
+const lineContent = (line: string): MarkdownLine => {
   const trimmed = line.trim();
   if (trimmed.startsWith("### ")) {
-    return { kind: "heading", text: trimmed.slice(H3_PREFIX_LENGTH) };
+    return {
+      kind: "heading",
+      tag: "h3",
+      text: trimmed.slice(H3_PREFIX_LENGTH),
+    };
   }
   if (trimmed.startsWith("## ")) {
-    return { kind: "heading", text: trimmed.slice(H2_PREFIX_LENGTH) };
+    return {
+      kind: "heading",
+      tag: "h2",
+      text: trimmed.slice(H2_PREFIX_LENGTH),
+    };
   }
   if (trimmed.startsWith("# ")) {
-    return { kind: "heading", text: trimmed.slice(H1_PREFIX_LENGTH) };
+    return {
+      kind: "heading",
+      tag: "h1",
+      text: trimmed.slice(H1_PREFIX_LENGTH),
+    };
   }
   if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
     return { kind: "list", text: trimmed.slice(2) };
   }
+  if (trimmed.length === 0) {
+    return { kind: "spacer" };
+  }
   return { kind: "paragraph", text: trimmed };
 };
 
-const renderLine = (line: string, key: string): ReactNode => {
-  if (line.trim().length === 0) {
-    return <div key={key} className="h-2" />;
+const parseBlocks = (markdown: string): MarkdownBlock[] => {
+  const lines = markdown.split("\n");
+  const blocks: MarkdownBlock[] = [];
+
+  // eslint-disable-next-line no-restricted-syntax -- The cursor advances over each grouped list exactly once.
+  for (let position = 0; position < lines.length; position += 1) {
+    const content = lineContent(lines[position] ?? "");
+    if (content.kind !== "list") {
+      blocks.push({ ...content, key: `line-${position}` });
+      continue;
+    }
+
+    const start = position;
+    const items = [{ key: `line-${position}`, text: content.text }];
+    while (position + 1 < lines.length) {
+      const next = lineContent(lines[position + 1] ?? "");
+      if (next.kind !== "list") break;
+      items.push({ key: `line-${position + 1}`, text: next.text });
+      position += 1;
+    }
+    blocks.push({ key: `list-${start}`, kind: "list", items });
   }
-  const content = lineContent(line);
-  if (content.kind === "heading") {
+
+  return blocks;
+};
+
+const renderHeading = (
+  content: Extract<MarkdownBlock, { kind: "heading" }>,
+): ReactElement => {
+  if (content.tag === "h1") {
     return (
-      <h3
-        key={key}
+      <h1
+        key={content.key}
+        className="mt-4 text-base font-semibold text-[var(--color-foreground)] first:mt-0"
+      >
+        {inlineNodes(content.text)}
+      </h1>
+    );
+  }
+  if (content.tag === "h2") {
+    return (
+      <h2
+        key={content.key}
         className="mt-3 text-sm font-semibold text-[var(--color-foreground)] first:mt-0"
       >
         {inlineNodes(content.text)}
-      </h3>
-    );
-  }
-  if (content.kind === "list") {
-    return (
-      <div key={key} className="flex gap-2 leading-6">
-        <span aria-hidden="true" className="text-[var(--color-primary)]">
-          •
-        </span>
-        <span>{inlineNodes(content.text)}</span>
-      </div>
+      </h2>
     );
   }
   return (
-    <p key={key} className="whitespace-pre-wrap leading-6">
+    <h3
+      key={content.key}
+      className="mt-2 text-sm font-medium text-[var(--color-foreground)] first:mt-0"
+    >
+      {inlineNodes(content.text)}
+    </h3>
+  );
+};
+
+const renderBlock = (content: MarkdownBlock): ReactElement => {
+  if (content.kind === "heading") return renderHeading(content);
+  if (content.kind === "list") {
+    return (
+      <ul
+        key={content.key}
+        className="list-disc space-y-1 pl-5 marker:text-[var(--color-primary)]"
+      >
+        {content.items.map((item) => (
+          <li key={item.key} className="pl-1 leading-6">
+            {inlineNodes(item.text)}
+          </li>
+        ))}
+      </ul>
+    );
+  }
+  if (content.kind === "spacer") {
+    return <div key={content.key} aria-hidden="true" className="h-2" />;
+  }
+  return (
+    <p key={content.key} className="whitespace-pre-wrap leading-6">
       {inlineNodes(content.text)}
     </p>
   );
@@ -77,14 +164,9 @@ export function LeadReportAssistantMarkdown({
 }: {
   readonly markdown: string;
 }) {
-  const occurrences = new Map<string, number>();
   return (
     <div className="space-y-1 text-sm text-[var(--color-foreground)]">
-      {markdown.split("\n").map((line) => {
-        const occurrence = occurrences.get(line) ?? 0;
-        occurrences.set(line, occurrence + 1);
-        return renderLine(line, `${line}-${occurrence}`);
-      })}
+      {parseBlocks(markdown).map(renderBlock)}
     </div>
   );
 }

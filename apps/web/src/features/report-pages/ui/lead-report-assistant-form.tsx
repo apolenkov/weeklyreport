@@ -47,7 +47,7 @@ export function LeadReportAssistantForm({
         />
         <Button
           type="submit"
-          size="icon"
+          size="touch"
           aria-label={isBusy ? "Searching reports" : "Ask report chat"}
           disabled={isBusy || question.trim().length === 0}
           data-testid="lead-report-assistant-submit"
