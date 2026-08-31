@@ -1,10 +1,11 @@
-import type { AdminReminderRule, UserSession } from "@customreport/shared";
+import type { UserSession } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import type { OrganizationService } from "../organization/organization.service.js";
 import { unusedRemindersRepositoryStubs } from "./__tests__/reminders-scope.repository-stub.js";
 import { RemindersService } from "./reminders.service.js";
 import type { RemindersRepository } from "./reminders.types.js";
+import { RemindersScopeService } from "./reminders-scope.service.js";
 
 const REPORT_ID = "b0000000-0000-4000-a000-0000000000b1";
 const RULE_ID = "b0000000-0000-4000-a000-0000000000b2";
@@ -90,49 +91,23 @@ describe("RemindersScopeService.dispatchPendingReminders — no-matching-section
       name: `Lead ${index}`,
       notificationOptOut: false,
     }));
-    const activeRule: AdminReminderRule = {
-      id: RULE_ID,
-      reportId: REPORT_ID,
-      kind: "deadline",
-      fireAt: new Date("2026-04-12T09:00:00.000Z"),
-      timezone: "Europe/Moscow",
-      status: "active",
-      version: 1,
-      policyId: "99999999-9999-4999-8999-999999999999",
-    };
     const repository = {
       ...unusedRemindersRepositoryStubs(),
-      getRule: () => Promise.resolve(activeRule),
-      getRulePeriodLabel: () => Promise.resolve("2026-04-07 → 2026-04-13"),
       findInScopeSectionId: () => Promise.resolve(SECTION_ID),
       findActiveRuleForDispatch: () =>
         Promise.resolve({
           id: RULE_ID,
-          fireAt: activeRule.fireAt,
+          fireAt: new Date("2026-04-12T09:00:00.000Z"),
           deadline: new Date("2026-04-13T18:00:00.000Z"),
         }),
       findDraftSectionsForDispatch: () => Promise.resolve(sections),
     } satisfies RemindersRepository;
-    const organizationService = {
-      getPublic: () =>
-        Promise.resolve({
-          shortName: "PEO",
-          fullName: "Product Engineering & Operations",
-        }),
-    } as OrganizationService;
-    const service = new RemindersService(
-      repository,
-      undefined,
-      undefined,
-      undefined,
-      organizationService,
-      {
-        APP_BASE_URL: "http://localhost:3000",
-      },
+    const service = new RemindersScopeService(repository, () =>
+      Promise.resolve({ execution: null, outcome: "created" }),
     );
 
     // The dispatch fold keeps memory and work linear in the recipient count.
-    const result = await service.scope.dispatchPendingReminders(
+    const result = await service.dispatchPendingReminders(
       headSession,
       REPORT_ID,
       RULE_ID,
