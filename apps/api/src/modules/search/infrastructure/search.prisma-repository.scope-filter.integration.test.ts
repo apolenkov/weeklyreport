@@ -2,14 +2,14 @@ import type { ReportStatus } from "@customreport/shared";
 import { Prisma } from "@prisma/client";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
   publishedSnapshotFixture,
-} from "../../test-utils/prisma-test-helper";
-import { replacePublishedProjections } from "./published-search-projection";
+} from "../../../test-utils/prisma-test-helper";
+import { replacePublishedProjections } from "../published-search-projection";
 import { SearchPrismaRepository } from "./search.prisma-repository";
 
 // Published search is an immutable consumer: current period lifecycle selects

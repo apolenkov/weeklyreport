@@ -33,9 +33,9 @@ describe("decodeTrpcBatchPayload", () => {
     expect(decodeTrpcBatchPayload(body)).toEqual({ id: "u1" });
   });
 
-  it("passes an untransformed payload through unchanged (config-drift fallback)", () => {
+  it("rejects an untransformed payload", () => {
     const body = [{ result: { data: { id: "u1" } } }];
-    expect(decodeTrpcBatchPayload(body)).toEqual({ id: "u1" });
+    expect(decodeTrpcBatchPayload(body)).toBeNull();
   });
 
   it("preserves a domain payload with its own json field", () => {

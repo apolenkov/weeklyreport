@@ -109,6 +109,8 @@ function DecisionDeadlineField({
       </label>
       <input
         id="dec-deadline"
+        name="deadline"
+        autoComplete="off"
         type="date"
         className="w-full max-md:min-h-[var(--touch-target-min)] rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-card)] px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_var(--color-ring)] focus:outline-none"
         value={deadline}

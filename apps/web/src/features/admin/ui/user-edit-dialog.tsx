@@ -48,20 +48,27 @@ export function UserEditDialog({
       ariaLabel={editingUser ? "Edit user" : "Add user"}
       onClose={onClose}
     >
-      <UserEditDialogFields
-        form={form}
-        onFormChange={onFormChange}
-        groupOptions={groupOptions}
-        activeGroups={activeGroups}
-        groups={groups}
-      />
-      <AdminEntityDialogActions
-        canSave={canSave}
-        isSaving={isSaving}
-        saveLabel={editingUser ? "Save Changes" : "Add User"}
-        onSave={onSave}
-        onClose={onClose}
-      />
+      <form
+        className="flex min-h-0 flex-1 flex-col"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!isSaving && canSave) onSave();
+        }}
+      >
+        <UserEditDialogFields
+          form={form}
+          onFormChange={onFormChange}
+          groupOptions={groupOptions}
+          activeGroups={activeGroups}
+          groups={groups}
+        />
+        <AdminEntityDialogActions
+          canSave={canSave}
+          isSaving={isSaving}
+          saveLabel={editingUser ? "Save Changes" : "Add User"}
+          onClose={onClose}
+        />
+      </form>
     </UserEditDialogShell>
   );
 }

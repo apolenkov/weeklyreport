@@ -34,29 +34,41 @@ DDL and `pg_dump` both need a session that outlives a single transaction.
    every empty assignment. Compose or the api rejects an untouched template;
    the few populated values are explicit repository policy, not hidden defaults.
 
-   | Variable                                                                                                | What it is                                                                       |
-   | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-   | `DB_PASSWORD`                                                                                           | Postgres password; URL-safe unreserved characters only (`A-Z a-z 0-9 . - _ ~`).  |
-   | `POSTGRES_DB`                                                                                           | Database name shared by all consumers; letters, digits, and underscores only.    |
-   | `FRONTEND_URL`, `APP_BASE_URL`, `PDF_BASE_URL`                                                          | Public origins.                                                                  |
-   | `CLIENT_LOG_FORWARDING`, `NEXT_PUBLIC_CLIENT_LOG_FORWARDING`, `NEXT_PUBLIC_WEB_VITALS`                  | Explicit server/browser telemetry toggles.                                       |
-   | `AUTH_JWT_SECRET`, `PDF_EXPORT_JWT_SECRET`                                                              | Min 32 chars each, distinct, never the dev values.                               |
-   | `KEYCLOAK_SAML_CALLBACK_URL`, `KEYCLOAK_SAML_ENTRY_POINT`, `KEYCLOAK_SAML_ISSUER`, `KEYCLOAK_SAML_CERT` | The IdP; all four are required when `AUTH_DEV_MODE=false`.                       |
-   | `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`                                                                   | Reminder delivery. Missing values fail production boot instead of dropping mail. |
-   | `HEAP_HEALTH_THRESHOLD_BYTES`                                                                           | ~75% of the api container memory limit (2 GB → `1610612736`).                    |
-   | `CADDY_SITE_ADDRESS`, `CADDY_ACME_EMAIL`, `CADDY_CSP_REPORT_URI`                                        | Public hostname, ACME account email, and external CSP violation collector.       |
-   | `HTTP_PORT`, `HTTPS_PORT`, `HTTPS_PORT_QUIC`                                                            | Host ports for the public Caddy listener.                                        |
-   | `PGBOUNCER_MAX_CLIENT_CONN`, `PGBOUNCER_POOL_SIZE`, `PGBOUNCER_RESERVE_POOL_SIZE`                       | PgBouncer capacity limits.                                                       |
-   | `DB_POOL_MAX`, `DB_POOL_IDLE_TIMEOUT_MS`, `DB_POOL_CONNECTION_TIMEOUT_MS`                               | API pg.Pool capacity and timeout policy; all three are required.                 |
-   | `REDIS_DB`, `LOG_LEVEL`, `OTEL_SDK_DISABLED`, `OTEL_TRACES_SAMPLER_ARG`, `OTEL_SERVICE_VERSION`         | Runtime policy, telemetry mode, and the exact release identity.                  |
-   | `BACKUP_INTERVAL_SECONDS`, `BACKUP_RETENTION_DAYS`                                                      | Local backup cadence and history window. See [Backups](#backups).                |
-   | `GRAFANA_ADMIN_PASSWORD`                                                                                | Operator secret required when the optional observability overlay is composed.    |
+   | Variable                                                                                                                                                                                  | What it is                                                                       |
+   | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+   | `DB_PASSWORD`                                                                                                                                                                             | Postgres password; URL-safe unreserved characters only (`A-Z a-z 0-9 . - _ ~`).  |
+   | `POSTGRES_DB`                                                                                                                                                                             | Database name shared by all consumers; letters, digits, and underscores only.    |
+   | `FRONTEND_URL`, `APP_BASE_URL`, `PDF_BASE_URL`                                                                                                                                            | Public origins.                                                                  |
+   | `CLIENT_LOG_FORWARDING`, `NEXT_PUBLIC_CLIENT_LOG_FORWARDING`, `NEXT_PUBLIC_WEB_VITALS`                                                                                                    | Explicit server/browser telemetry toggles.                                       |
+   | `AUTH_JWT_SECRET`, `PDF_EXPORT_JWT_SECRET`                                                                                                                                                | Min 32 chars each, distinct, never the dev values.                               |
+   | `AI_PROVIDER_CONFIG_ENCRYPTION_KEY`                                                                                                                                                       | Base64 or hexadecimal key for encrypted provider credentials; required at boot.  |
+   | `AI_PROVIDER_CONFIG_KEY_VERSION`, `AI_PROVIDER_ALLOWED_ORIGINS`                                                                                                                           | Current key version and exact upstream origin allowlist.                         |
+   | `REPORT_ASSISTANT_OUTBOUND_DATA_APPROVED`                                                                                                                                                 | Explicit owner decision for sending report-derived content; `false` blocks it.   |
+   | `REPORT_ASSISTANT_INPUT_VERSION`, `REPORT_ASSISTANT_SIMILARITY_THRESHOLD`, `REPORT_ASSISTANT_CANDIDATE_LIMIT`, `REPORT_ASSISTANT_READ_THROUGH_LIMIT`, `REPORT_ASSISTANT_EXHAUSTIVE_LIMIT` | Bounded retrieval policy for the report assistant.                               |
+   | `REPORT_ASSISTANT_CONTEXT_TOKEN_BUDGET`, `REPORT_ASSISTANT_PROVIDER_TIMEOUT_MS`, `REPORT_ASSISTANT_PLANNER_MAX_TOKENS`, `REPORT_ASSISTANT_ANSWER_MAX_TOKENS`                              | Bounded assistant execution limits.                                              |
+   | `REPORT_ASSISTANT_EMBEDDING_BATCH_SIZE`, `REPORT_ASSISTANT_EMBEDDING_TOKEN_BUDGET`                                                                                                        | Bounded embedding workload limits.                                               |
+   | `KEYCLOAK_SAML_CALLBACK_URL`, `KEYCLOAK_SAML_ENTRY_POINT`, `KEYCLOAK_SAML_ISSUER`, `KEYCLOAK_SAML_CERT`                                                                                   | The IdP; all four are required when `AUTH_DEV_MODE=false`.                       |
+   | `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`                                                                                                                                                     | Reminder delivery. Missing values fail production boot instead of dropping mail. |
+   | `HEAP_HEALTH_THRESHOLD_BYTES`                                                                                                                                                             | ~75% of the api container memory limit (2 GB → `1610612736`).                    |
+   | `CADDY_SITE_ADDRESS`, `CADDY_ACME_EMAIL`, `CADDY_CSP_REPORT_URI`                                                                                                                          | Public hostname, ACME account email, and external CSP violation collector.       |
+   | `HTTP_PORT`, `HTTPS_PORT`, `HTTPS_PORT_QUIC`                                                                                                                                              | Host ports for the public Caddy listener.                                        |
+   | `PGBOUNCER_MAX_CLIENT_CONN`, `PGBOUNCER_POOL_SIZE`, `PGBOUNCER_RESERVE_POOL_SIZE`                                                                                                         | PgBouncer capacity limits.                                                       |
+   | `DB_POOL_MAX`, `DB_POOL_IDLE_TIMEOUT_MS`, `DB_POOL_CONNECTION_TIMEOUT_MS`                                                                                                                 | API pg.Pool capacity and timeout policy; all three are required.                 |
+   | `REDIS_DB`, `LOG_LEVEL`, `OTEL_SDK_DISABLED`, `OTEL_TRACES_SAMPLER_ARG`, `OTEL_SERVICE_VERSION`                                                                                           | Runtime policy, telemetry mode, and the exact release identity.                  |
+   | `BACKUP_INTERVAL_SECONDS`, `BACKUP_RETENTION_DAYS`                                                                                                                                        | Local backup cadence and history window. See [Backups](#backups).                |
+   | `GRAFANA_ADMIN_PASSWORD`                                                                                                                                                                  | Operator secret required when the optional observability overlay is composed.    |
 
 Optional: `FRONTEND_URLS` (extra CORS origins, no wildcards in production),
 `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`, `SMTP_USER`, `SMTP_PASS`.
 `CLIENT_LOG_FORWARDING`, `NEXT_PUBLIC_CLIENT_LOG_FORWARDING`, and
 `NEXT_PUBLIC_WEB_VITALS` are explicit required toggles. `NEXT_PUBLIC_SENTRY_DSN` is compiled into the Web image; changing
 it requires `up --build`, not a container restart.
+
+The local Bugsink errors overlay accepts `BUGSINK_PORT` (default `8000`) and
+requires `BUGSINK_SECRET_KEY` with no Compose fallback. Both are loopback/local
+settings; the errors overlay is not part of the production Compose command, so
+`BUGSINK_SECRET_KEY` is intentionally absent from the production environment
+template.
 
 Production Compose owns the internal web-to-api origin as one YAML anchor
 (`http://api:3001`) and supplies it to both the Next build and the running
@@ -94,7 +106,13 @@ hand-edit the container mount.
   startup grace.
 - `GET /metrics` — internal API metrics. Deliberately **not** routed through
   Caddy from the public internet; Caddy returns 404 for it at the edge.
-- `/admin/queues` — Bull Board. Session-authenticated, `head` role only.
+- `/admin/queues` — Bull Board. Session-authenticated, `head` role only; exposes
+  every monitored queue (`email-reminder`, `pdf-export`, `ai-provider-test`,
+  `semantic-index`) for investigation. The in-app Jobs tab exposes the same
+  allowlisted failed-job metadata through the canonical Head tRPC authority and
+  never displays processor payloads. Retry validates a durable
+  `ReminderExecution` only for the `email-reminder` queue; similarly named ids
+  in other queues stay in their own domains.
 
 ### Red `/health/ready` — triage
 
@@ -172,6 +190,33 @@ and production recovery remain BLOCKED.
 short-lived token the PDF renderer uses. Rotating either **invalidates every
 live session or in-flight export** — there is no dual-key grace period.
 
+`AI_PROVIDER_CONFIG_ENCRYPTION_KEY` and `AI_PROVIDER_CONFIG_KEY_VERSION` have
+an even narrower current-MVP boundary: the credential codec has exactly one
+active key and decrypts only records with that same version. Do **not** treat a
+version increment as a safe rotation and do not replace either value while
+encrypted provider credentials are retained. The API will reject a mismatched
+version; a changed key makes existing ciphertext fail authentication. There is
+no keyring, dual-key grace period, or in-place re-encryption procedure.
+
+Before any intentional reconfiguration, preserve the exact current key/version
+pair and inventory every affected provider credential outside the repository.
+If the new pair has already been deployed, restore the original pair to recover
+the retained configuration; if that pair is unavailable, the ciphertext cannot
+be recovered and every provider credential must be entered again under the new
+pair. Treat that outcome as provider reconfiguration, not a reversible key
+rotation.
+
+### API shutdown budget
+
+The API completes its ordered shutdown phases within a 12.5-second worst-case
+budget: application close, rate-limit Redis, log barrier and file flush, OTel,
+and Sentry. BullMQ workers and queue handles first attempt a graceful close for
+500 ms, then use BullMQ's supported force-close/disconnect operation. Force
+disconnecting does not delete active jobs; BullMQ's stalled-job recovery can
+reclaim them on the next worker start. Production Compose grants the API a
+20-second `stop_grace_period`, leaving margin for signal delivery and runtime
+teardown while preserving the final log and telemetry phases.
+
 1. Put the new value in the environment file.
 2. `docker compose --env-file .env.production -f docker-compose.prod.yml up -d api`
    (recreates the api only).
@@ -226,9 +271,11 @@ Images are the unit of rollback; the database is not.
 ## CI
 
 `.github/workflows/ci.yml` runs the `quality`, `api-integration`, `coverage`,
-`migrate-reset`, and `docker-build` jobs. The `api-integration` lane runs serial
-tests against disposable Postgres/Redis/Mailpit services. The `coverage` lane
-enforces the configured coverage thresholds for API and Web; the quality lane
+`migrate-reset`, and `docker-build` jobs. The `api-integration` lane runs the
+API unit and integration suites once, serially, against disposable
+Postgres/Redis/Mailpit services and enforces the API coverage thresholds. The
+`coverage` lane enforces Web coverage without starting a second dependency
+stack; the quality lane
 runs lint, typecheck, unit tests, and the complete workspace build, while the
 remaining jobs cover migration drift and the production image build. Local
 commands remain the fast gate; run the same checks before pushing.

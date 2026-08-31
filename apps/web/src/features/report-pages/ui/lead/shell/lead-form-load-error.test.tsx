@@ -5,9 +5,11 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { SessionContext } from "../../../../../shared/lib/auth/session-provider";
 import { TRPCProxyContext } from "../../../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
 import { makeReportSectionFixture } from "../../../../../test-utils/report-section-fixtures";
+import { LeadReportAssistantStore } from "../../lead-report-assistant-store";
 import { LeadForm } from "./lead-form";
 
 vi.mock("sonner", () => ({
@@ -64,7 +66,21 @@ function buildHarness(opts: { byPeriodQueryFn?: () => unknown } = {}) {
     return (
       <QueryClientProvider client={queryClient}>
         <TRPCProxyContext.Provider value={proxy}>
-          {children}
+          <SessionContext.Provider
+            value={{
+              user: {
+                id: "test-lead",
+                name: "Test Lead",
+                email: "lead@example.test",
+                role: "lead",
+              },
+              organization: null,
+              isLoading: false,
+              isAuthenticated: true,
+            }}
+          >
+            <LeadReportAssistantStore>{children}</LeadReportAssistantStore>
+          </SessionContext.Provider>
         </TRPCProxyContext.Provider>
       </QueryClientProvider>
     );

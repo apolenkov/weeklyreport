@@ -84,6 +84,14 @@ describe("NumberField", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Whole number between 1 and 31 required",
     );
+    expect(screen.getByLabelText("Period length (days)")).toHaveAttribute(
+      "aria-describedby",
+      "period-length-days-error",
+    );
+    expect(screen.getByRole("alert")).toHaveAttribute(
+      "id",
+      "period-length-days-error",
+    );
   });
 });
 

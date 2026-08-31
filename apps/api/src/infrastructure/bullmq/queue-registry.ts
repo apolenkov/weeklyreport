@@ -1,11 +1,12 @@
+import { QUEUE_NAMES, type QueueName } from "@customreport/shared";
+import type { OnModuleDestroy } from "@nestjs/common";
 import type { Queue } from "bullmq";
 
-const QUEUE_NAMES = ["email-reminder", "pdf-export"] as const;
-type QueueName = (typeof QUEUE_NAMES)[number];
+import { closeBullMqResource } from "./bounded-shutdown.js";
 
 // Provides named access to the handles BullModule already owns, so inspectors
 // and bootstrap producers reuse Nest's connections and shutdown lifecycle.
-export class QueueRegistry {
+export class QueueRegistry implements OnModuleDestroy {
   private readonly queues: ReadonlyMap<QueueName, Queue>;
 
   constructor(handles: readonly Queue[]) {
@@ -30,6 +31,21 @@ export class QueueRegistry {
     if (!queue) throw new Error(`No queue handle registered for '${name}'`);
     return queue;
   };
+
+  readonly names = QUEUE_NAMES;
+
+  /** Close all producer handles within one bounded shutdown window. */
+  async onModuleDestroy(): Promise<void> {
+    await Promise.all(
+      [...this.queues.entries()].map(([name, queue]) =>
+        closeBullMqResource(
+          `queue ${name}`,
+          () => queue.close(),
+          () => queue.disconnect(),
+        ),
+      ),
+    );
+  }
 }
 
 export { QUEUE_NAMES };

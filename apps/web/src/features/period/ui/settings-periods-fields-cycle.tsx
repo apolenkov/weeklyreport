@@ -69,6 +69,7 @@ function DeadlineTimeField({ draft, setDraft }: DraftFieldProps) {
         id="deadline-time"
         name="deadline-time"
         type="time"
+        autoComplete="off"
         step={60}
         value={draft.deadlineTime}
         onChange={(e) =>
@@ -145,6 +146,7 @@ function ReopenWindowField({
         max={REOPEN_WINDOW_HOURS_MAX}
         disabled={!draft.allowReopenAfterPublish}
         aria-invalid={error !== null}
+        aria-describedby={error ? "reopen-window-hours-error" : undefined}
         value={raw}
         onChange={(e) => handleChange(e.target.value)}
         className={`${FIELD_INPUT_CLASS} disabled:cursor-not-allowed`}
@@ -155,7 +157,11 @@ function ReopenWindowField({
           week). Greyed out when «allow reopen» is off.
         </p>
       ) : (
-        <p className={FIELD_ERROR_CLASS} role="alert">
+        <p
+          id="reopen-window-hours-error"
+          className={FIELD_ERROR_CLASS}
+          role="alert"
+        >
           {error}
         </p>
       )}

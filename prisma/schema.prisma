@@ -853,6 +853,168 @@ model RecordComment {
   @@index([reviewerId])
 }
 
+// Content-addressed semantic cache. This table intentionally has no report,
+// record, ACL, or text columns; canonical occurrences remain the only source
+// of report data. Prisma cannot read/write the unsupported vector field, so
+// the semantic repository uses parameterized SQL for that field.
+model SemanticEmbedding {
+  contentHash  String
+  provider     String
+  model        String
+  inputVersion String
+  dimensions   Int
+  vector       Unsupported("vector")
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  // `provider` stores the stable, non-secret endpoint identity derived from
+  // profile + normalized base URL. Dimensions are part of the identity so a
+  // staged embedding scope can coexist with the active scope.
+  @@id([contentHash, provider, model, inputVersion, dimensions])
+  @@index([provider, model, inputVersion, dimensions])
+}
+
+// Immutable, organization-wide provider revisions. Credentials are encrypted
+// application data; only the masked suffix is safe to return from reads.
+model AiProviderConfiguration {
+  id                               String                     @id
+  generationProfile                AiProviderProfile
+  generationBaseUrl                String
+  generationEndpointIdentity       String
+  plannerModel                     String
+  answerModel                      String
+  reasoningMode                    AiProviderReasoningMode
+  reasoningCustomValue             String?
+  generationCredentialCiphertext   String
+  generationCredentialNonce        String
+  generationCredentialTag          String
+  generationCredentialKeyVersion   Int
+  generationCredentialMaskedSuffix String
+  embeddingMode                    AiProviderEmbeddingMode
+  embeddingProfile                 AiProviderProfile?
+  embeddingBaseUrl                 String?
+  embeddingEndpointIdentity        String?
+  embeddingModel                   String
+  embeddingDimensions              Int?
+  embeddingCredentialCiphertext    String?
+  embeddingCredentialNonce         String?
+  embeddingCredentialTag           String?
+  embeddingCredentialKeyVersion    Int?
+  embeddingCredentialMaskedSuffix  String?
+  semanticInputVersion             String
+  generationCompatibilityIdentity  String
+  embeddingScopeIdentity           String
+  compositeTestIdentity            String
+  lifecycle                        AiProviderLifecycle        @default(draft)
+  testResult                       Json?
+  testedAt                         DateTime?
+  preparationCompleted             Int                        @default(0)
+  preparationTotal                 Int                        @default(0)
+  preparationFailed                Int                        @default(0)
+  preparationStartedAt             DateTime?
+  preparationFinishedAt            DateTime?
+  preparationElapsedMs             Int                        @default(0)
+  preparationSourceFingerprint     String?
+  preparationSourceGeneration      BigInt?
+  activatedAt                      DateTime?
+  supersededAt                     DateTime?
+  createdAt                        DateTime                   @default(now())
+  updatedAt                        DateTime                   @updatedAt
+  activeControl                    AiProviderControl?         @relation("AiProviderControlActive")
+  testExecutions                   AiProviderTestExecution[] @relation("AiProviderTestExecutionProvider")
+
+  @@index([lifecycle, updatedAt(sort: Desc)])
+  @@index([generationCompatibilityIdentity])
+  @@index([embeddingScopeIdentity])
+  @@index([compositeTestIdentity])
+  @@index([embeddingEndpointIdentity, embeddingModel, semanticInputVersion, embeddingDimensions])
+}
+
+// Singleton generation bumped by database triggers on every mutable row that
+// can contribute to semantic report input. Activation compares it in the same
+// transaction that changes the active pointer.
+model SemanticSourceState {
+  id         String   @id @default("singleton")
+  generation BigInt   @default(0)
+  updatedAt  DateTime @updatedAt
+}
+
+// Feature-scoped immutable prompt bundles. The JSON columns are server-owned
+// snapshots; shared contracts validate the shape before any runtime use.
+model AiPromptBundleRevision {
+  id                      String                     @id
+  featureKey              String
+  revision                Int
+  baseRevisionId          String?
+  coreContractVersion     String
+  composerVersion         String
+  servingContractVersion  String?
+  lockedCoreSnapshot      Json
+  promptContents          Json
+  effectiveContentHash    String
+  lifecycle               AiPromptBundleLifecycle    @default(draft)
+  createdBy               String?
+  createdAt               DateTime                   @default(now())
+  updatedAt               DateTime                   @updatedAt
+  activatedAt             DateTime?
+  supersededAt            DateTime?
+  baseRevision            AiPromptBundleRevision?    @relation("AiPromptRevisionBase", fields: [baseRevisionId], references: [id], onDelete: Restrict)
+  derivedRevisions        AiPromptBundleRevision[]   @relation("AiPromptRevisionBase")
+  activeControl           AiFeaturePromptControl?    @relation("AiPromptControlActive")
+
+  @@unique([featureKey, revision])
+  @@index([featureKey, lifecycle, updatedAt(sort: Desc)])
+  @@index([effectiveContentHash])
+}
+
+// One control row per code-registered feature. The nullable pointer is the
+// only runtime source for an active prompt bundle.
+model AiFeaturePromptControl {
+  id               String                  @id @default(uuid())
+  featureKey       String                  @unique
+  activeRevisionId String?                 @unique
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  activeRevision   AiPromptBundleRevision? @relation("AiPromptControlActive", fields: [activeRevisionId], references: [id], onDelete: SetNull)
+
+  @@index([activeRevisionId])
+}
+
+// A durable provider-only capability test. It stores only identity, bounded
+// classifications, and timestamps; secrets, prompts, and raw responses never
+// leave process memory.
+model AiProviderTestExecution {
+  id                 String                    @id @default(uuid())
+  identity           String                    @unique
+  providerRevisionId String
+  testSuiteVersion   String
+  state              AiProviderTestExecutionState @default(queued)
+  outcome            AiProviderTestOutcome?
+  failureCode        String?
+  checks             Json?
+  requestedAt        DateTime                  @default(now())
+  startedAt          DateTime?
+  executionAttempt   Int?
+  completedAt        DateTime?
+  providerRevision   AiProviderConfiguration   @relation("AiProviderTestExecutionProvider", fields: [providerRevisionId], references: [id], onDelete: Cascade)
+
+  @@index([providerRevisionId, requestedAt(sort: Desc)])
+  @@index([state, requestedAt])
+}
+
+// Singleton control row. The active pointer is the only source of runtime
+// availability; retained revisions remain addressable for explicit restore.
+model AiProviderControl {
+  id                    String                   @id @default("singleton")
+  activeConfigurationId String?                  @unique
+  enabled               Boolean                  @default(false)
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  activeConfiguration   AiProviderConfiguration? @relation("AiProviderControlActive", fields: [activeConfigurationId], references: [id], onDelete: SetNull)
+
+  @@index([activeConfigurationId])
+}
+
 enum ReviewVerdict {
   approved
   changes_requested
@@ -863,6 +1025,56 @@ enum Role {
   head
   viewer
   admin
+}
+
+enum AiProviderProfile {
+  mistral
+  openrouter
+  openai
+  groq
+  jina
+  custom_openai_compatible
+}
+
+enum AiProviderEmbeddingMode {
+  reuse_generation
+  separate
+}
+
+enum AiProviderLifecycle {
+  draft
+  validated
+  preparing
+  active
+  failed
+  superseded
+}
+
+enum AiProviderReasoningMode {
+  provider_default
+  off
+  custom
+}
+
+enum AiPromptBundleLifecycle {
+  draft
+  validated
+  active
+  failed
+  superseded
+}
+
+enum AiProviderTestExecutionState {
+  queued
+  running
+  completed
+}
+
+enum AiProviderTestOutcome {
+  passed
+  incompatible
+  configuration_error
+  inconclusive
 }
 
 enum UserActionStatus {

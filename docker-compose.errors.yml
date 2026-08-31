@@ -1,6 +1,6 @@
 # Optional error-tracking sidecar (Sentry-compatible via Bugsink).
-# Bring up through the isolated root command, which owns only the
-# observability project and never the source-owned api/web services:
+# Bring up through the root overlay command. It reuses the current local
+# dependencies and owns only the observability sidecar below:
 #   pnpm observability:up
 #
 # Bugsink UI: http://127.0.0.1:8000 (bound to loopback by default; no default
@@ -17,7 +17,7 @@ services:
     volumes:
       - bugsinkdata:/app/data
     environment:
-      SECRET_KEY: ${BUGSINK_SECRET_KEY:-localdev-insecure-key-for-local-dev-only-change-in-prod-2025}
+      SECRET_KEY: ${BUGSINK_SECRET_KEY:?BUGSINK_SECRET_KEY must be set}
       BASE_URL: http://localhost:${BUGSINK_PORT:-8000}
       BUGSINK_SINGLE_USER_MODE: "true"
       # The pinned image supports CREATE_SUPERUSER=email:password, but Compose

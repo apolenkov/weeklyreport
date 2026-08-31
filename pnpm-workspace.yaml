@@ -70,3 +70,23 @@ patchedDependencies:
   "@node-saml/node-saml@5.1.0": patches/@node-saml__node-saml@5.1.0.patch
   "samlify@2.13.1": patches/samlify@2.13.1.patch
   "xml-crypto@6.1.2": patches/xml-crypto@6.1.2.patch
+
+# These same-day releases were explicitly selected and reviewed. Remove each
+# exemption once the package ages out of pnpm's supply-chain quarantine.
+minimumReleaseAgeExclude:
+  - "@nestjs/terminus@12.0.0"
+  - "@sentry/bundler-plugins@10.73.0"
+  - "@sentry/core@10.73.0"
+  - "@sentry/nestjs@10.73.0"
+  - "@sentry/node-core@10.73.0"
+  - "@sentry/node@10.73.0"
+  - "@sentry/opentelemetry@10.73.0"
+  - "@sentry/server-utils@10.73.0"
+  - "@sentry/browser-utils@10.73.0"
+  - "@sentry/browser@10.73.0"
+  - "@sentry/feedback@10.73.0"
+  - "@sentry/nextjs@10.73.0"
+  - "@sentry/react@10.73.0"
+  - "@sentry/replay-canvas@10.73.0"
+  - "@sentry/replay@10.73.0"
+  - "@sentry/vercel-edge@10.73.0"

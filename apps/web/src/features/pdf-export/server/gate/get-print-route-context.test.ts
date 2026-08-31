@@ -73,7 +73,7 @@ describe("decodePrintGateResponse", () => {
     });
   });
 
-  it("decodes the un-transformed payload shape (config-drift fallback)", () => {
+  it("fails closed for the un-transformed payload shape", () => {
     const body = [
       {
         result: {
@@ -87,7 +87,7 @@ describe("decodePrintGateResponse", () => {
       },
     ];
     expect(decodePrintGateResponse(body)).toEqual({
-      session: SESSION,
+      session: null,
       isPdfExport: false,
       pdfReportId: null,
       pdfJobId: null,

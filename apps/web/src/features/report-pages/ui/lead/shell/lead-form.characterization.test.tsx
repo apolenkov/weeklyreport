@@ -14,6 +14,7 @@ import {
 import { TRPCProxyContext } from "../../../../../shared/lib/trpc/trpc-context";
 import { expectDefined } from "../../../../../test-utils/expect-defined";
 import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
+import { LeadReportAssistantStore } from "../../lead-report-assistant-store";
 import { LeadForm } from "./lead-form";
 
 vi.mock("sonner", () => ({
@@ -165,7 +166,7 @@ function buildHarness(
           }}
         >
           <TRPCProxyContext.Provider value={proxy}>
-            {children}
+            <LeadReportAssistantStore>{children}</LeadReportAssistantStore>
           </TRPCProxyContext.Provider>
         </SessionContext.Provider>
       </QueryClientProvider>

@@ -153,6 +153,11 @@ describe("canonical init migration", () => {
   it("creates exactly the current persistence model", () => {
     const currentTables = [
       "ActivityStatus",
+      "AiFeaturePromptControl",
+      "AiPromptBundleRevision",
+      "AiProviderConfiguration",
+      "AiProviderControl",
+      "AiProviderTestExecution",
       "AppSettings",
       "CarryOverExecution",
       "CarryOverRecord",
@@ -179,6 +184,8 @@ describe("canonical init migration", () => {
       "ReviewAcknowledgement",
       "Risk",
       "SectionReview",
+      "SemanticEmbedding",
+      "SemanticSourceState",
       "Stage",
       "StageAssignment",
       "StageStatus",
@@ -191,6 +198,31 @@ describe("canonical init migration", () => {
       .sort();
 
     expect(createdTables).toEqual(currentTables);
+  });
+
+  it("tracks every mutable semantic source through one durable generation", () => {
+    expect(migration).toContain('CREATE TABLE "SemanticSourceState"');
+    expect(migration).toContain(
+      `INSERT INTO "SemanticSourceState" ("id", "generation", "updatedAt")`,
+    );
+    expect(migration).toContain(`VALUES ('singleton', 0, CURRENT_TIMESTAMP)`);
+    for (const table of [
+      "Report",
+      "ReportSection",
+      "ProjectStatus",
+      "StageStatus",
+      "ActivityStatus",
+      "Item",
+      "Risk",
+      "Decision",
+      "Project",
+      "ProjectActivity",
+      "Stage",
+    ]) {
+      expect(migration).toContain(
+        `AFTER INSERT OR UPDATE OR DELETE ON "${table}"`,
+      );
+    }
   });
 
   it("provisions both required configuration singletons", () => {

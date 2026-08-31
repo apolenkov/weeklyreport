@@ -273,6 +273,7 @@ function buildRoleMiddleware(allowed: Role | Role[]) {
 // have a dashboard, not /admin/*). Admin still passes head procedures.
 const headRoleMiddleware = buildRoleMiddleware(["head", "admin"]);
 const adminRoleMiddleware = buildRoleMiddleware("admin");
+const leadRoleMiddleware = buildRoleMiddleware("lead");
 // Service-layer gate for multi-role weekly-report reads.
 const anyRoleMiddleware = buildRoleMiddleware([
   "lead",
@@ -290,6 +291,7 @@ const leadershipRoleMiddleware = buildRoleMiddleware([
 ]);
 
 export const headProcedure = buildProtectedProcedure(headRoleMiddleware);
+export const leadProcedure = buildProtectedProcedure(leadRoleMiddleware);
 export const anyRoleProcedure = buildProtectedProcedure(anyRoleMiddleware);
 // Admin-only gate. /admin/* tRPC endpoints attach this; head users get
 // FORBIDDEN. Use headProcedure for endpoints reachable by both head and admin

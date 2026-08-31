@@ -416,6 +416,7 @@ describe("mapPrismaToReportSection — activity derived-status floor", () => {
           note: null,
           activity: {
             name: "Jira triage duty",
+            jiraAccounts: [],
             activityProducts: [
               { product: { id: LINKED_PRODUCT, name: "CRM Portal" } },
             ],

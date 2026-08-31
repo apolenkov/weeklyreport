@@ -1,7 +1,7 @@
 // Stub tRPC proxy; drive captured mutationFn, not a real network.
 import type { FailedJob } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -25,6 +25,7 @@ import { JobsTab } from "./jobs-tab";
 
 const BASE_DESCRIPTORS = [
   { path: ["admin", "jobs", "retryFailed"], mutation: true as const },
+  { path: ["admin", "jobs", "removeFailed"], mutation: true as const },
   { path: ["admin", "dlqCount"] },
 ];
 
@@ -143,119 +144,123 @@ describe("JobsTab — JobsSkeleton a11y attributes", () => {
       <div
         aria-label="Loading failed jobs"
         aria-live="polite"
-        class="rounded-[var(--radius)] border border-[var(--color-border)]"
+        class="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-border)]"
         data-testid="jobs-loading-state"
         role="status"
       >
         <div
-          class="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3"
+          class="min-w-[37rem]"
         >
           <div
-            class="h-4 w-20 animate-pulse rounded bg-[var(--color-border)]"
-          />
+            class="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3"
+          >
+            <div
+              class="h-4 w-20 animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+            <div
+              class="h-4 w-20 animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+            <div
+              class="h-4 w-20 animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+            <div
+              class="h-4 w-20 animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+            <div
+              class="h-4 w-20 animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+            <div
+              class="h-4 w-20 animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+          </div>
           <div
-            class="h-4 w-20 animate-pulse rounded bg-[var(--color-border)]"
-          />
+            class="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] px-4 py-3 last:border-0"
+          >
+            <div
+              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+            <div
+              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+            <div
+              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+            <div
+              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+            <div
+              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+            <div
+              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+          </div>
           <div
-            class="h-4 w-20 animate-pulse rounded bg-[var(--color-border)]"
-          />
+            class="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] px-4 py-3 last:border-0"
+          >
+            <div
+              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+            <div
+              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+            <div
+              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+            <div
+              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+            <div
+              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+            <div
+              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+          </div>
           <div
-            class="h-4 w-20 animate-pulse rounded bg-[var(--color-border)]"
-          />
+            class="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] px-4 py-3 last:border-0"
+          >
+            <div
+              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+            <div
+              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+            <div
+              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+            <div
+              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+            <div
+              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+            <div
+              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+          </div>
           <div
-            class="h-4 w-20 animate-pulse rounded bg-[var(--color-border)]"
-          />
-          <div
-            class="h-4 w-20 animate-pulse rounded bg-[var(--color-border)]"
-          />
-        </div>
-        <div
-          class="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] px-4 py-3 last:border-0"
-        >
-          <div
-            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
-          />
-          <div
-            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
-          />
-          <div
-            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
-          />
-          <div
-            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
-          />
-          <div
-            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
-          />
-          <div
-            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
-          />
-        </div>
-        <div
-          class="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] px-4 py-3 last:border-0"
-        >
-          <div
-            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
-          />
-          <div
-            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
-          />
-          <div
-            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
-          />
-          <div
-            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
-          />
-          <div
-            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
-          />
-          <div
-            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
-          />
-        </div>
-        <div
-          class="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] px-4 py-3 last:border-0"
-        >
-          <div
-            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
-          />
-          <div
-            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
-          />
-          <div
-            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
-          />
-          <div
-            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
-          />
-          <div
-            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
-          />
-          <div
-            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
-          />
-        </div>
-        <div
-          class="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] px-4 py-3 last:border-0"
-        >
-          <div
-            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
-          />
-          <div
-            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
-          />
-          <div
-            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
-          />
-          <div
-            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
-          />
-          <div
-            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
-          />
-          <div
-            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
-          />
+            class="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] px-4 py-3 last:border-0"
+          >
+            <div
+              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+            <div
+              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+            <div
+              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+            <div
+              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+            <div
+              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+            <div
+              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
+            />
+          </div>
         </div>
       </div>
     `);
@@ -276,6 +281,45 @@ describe("JobsTab — BullMQ DLQ admin UI", () => {
       ),
     ).toBeInTheDocument();
   });
+
+  it.each([
+    [
+      "email-reminder",
+      "Failed email reminder deliveries after all retries. Rules are configured in Reminders; this tab is only for delivery failures.",
+      "No failed email reminder jobs. Queue is clean.",
+    ],
+    [
+      "pdf-export",
+      "Failed PDF export jobs after all retries.",
+      "No failed PDF export jobs. Queue is clean.",
+    ],
+    [
+      "ai-provider-test",
+      "Failed AI provider test jobs after all retries.",
+      "No failed AI provider test jobs. Queue is clean.",
+    ],
+    [
+      "semantic-index",
+      "Failed semantic indexing jobs after all retries.",
+      "No failed semantic indexing jobs. Queue is clean.",
+    ],
+  ] as const)(
+    "uses queue-aware copy for %s",
+    async (queue, description, emptyState) => {
+      renderTab([]);
+      await userEvent
+        .setup()
+        .selectOptions(screen.getByLabelText("Failed job queue"), queue);
+
+      expect(await screen.findByText(description)).toBeInTheDocument();
+      expect(await screen.findByText(emptyState)).toBeInTheDocument();
+      if (queue !== "email-reminder") {
+        expect(
+          screen.queryByText(/Failed email reminder deliveries/),
+        ).toBeNull();
+      }
+    },
+  );
 
   it("loads rows beyond the first 50-job page through Load more", async () => {
     const { proxy } = makePagedMockTRPC();
@@ -396,6 +440,66 @@ describe("JobsTab — BullMQ DLQ admin UI", () => {
     await waitFor(() => {
       expect(toastInfo).toHaveBeenCalledWith("Reminder execution missing.");
     });
+  });
+
+  it("confirms removal with the selected queue and job, then refreshes the UI", async () => {
+    const { captured } = renderTab([makeJob("job-remove")]);
+    const removeMutationFn = expectDefined(
+      captured["admin.jobs.removeFailed"],
+    ).mutationFn;
+    removeMutationFn.mockResolvedValue({ removed: true, jobId: "job-remove" });
+
+    await screen.findByText("job-remove");
+    await userEvent.selectOptions(
+      screen.getByLabelText("Failed job queue"),
+      "pdf-export",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Remove failed job job-remove" }),
+    );
+
+    const dialog = await screen.findByRole("alertdialog", {
+      name: "Remove failed job?",
+    });
+    expect(removeMutationFn).not.toHaveBeenCalled();
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Remove" }),
+    );
+
+    await waitFor(() => expect(removeMutationFn).toHaveBeenCalledOnce());
+    expect(removeMutationFn.mock.calls[0]?.[0]).toEqual({
+      queue: "pdf-export",
+      jobId: "job-remove",
+    });
+    await waitFor(() =>
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
+    );
+    expect(toastSuccess).toHaveBeenCalledWith(
+      "Job job-remove removed from failed jobs.",
+    );
+  });
+
+  it("cancels removal without invoking the mutation and shows its pending state separately", async () => {
+    const { captured } = renderTab([makeJob("job-cancel")]);
+    const removeMutationFn = expectDefined(
+      captured["admin.jobs.removeFailed"],
+    ).mutationFn;
+
+    await screen.findByText("job-cancel");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Remove failed job job-cancel" }),
+    );
+    const dialog = await screen.findByRole("alertdialog", {
+      name: "Remove failed job?",
+    });
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Cancel" }),
+    );
+    expect(removeMutationFn).not.toHaveBeenCalled();
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Retry job job-cancel" }),
+    ).toBeEnabled();
   });
 
   it("renders the queue header so the head knows which queue is shown", async () => {

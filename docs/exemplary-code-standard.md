@@ -19,6 +19,15 @@ applicable rules.
    goes through an explicit service or contract.
 6. **No suppressed failures.** Warnings, type errors, focused tests, and
    ignored checks are failures to resolve, not completion evidence.
+7. **Current state only.** Every tracked file and directory has a live purpose
+   in the current product, tests, documentation, or delivery path. Remove dead
+   code, historical copies, compatibility layers, speculative fallbacks,
+   generated residue, and empty structure instead of retaining them for a
+   possible future need.
+8. **One source of truth.** Define each contract, constant, and configuration
+   value once at its owning boundary and derive every consumer from it. Do not
+   keep duplicated manifests, parallel configuration paths, or documentation
+   that restates a machine-readable contract and can drift.
 
 ## Verification
 
@@ -47,6 +56,9 @@ specification aligned with the current product.
 
 - Product source, tests, configuration, and documentation describe the same
   current behaviour.
+- Every retained repository artifact has a named live consumer or is the
+  authoritative source for a current contract; duplicated or legacy paths are
+  absent.
 - Public exports have useful names and stable types.
 - User-facing controls have accessible names, keyboard support, and visible
   focus states.

@@ -1,5 +1,4 @@
 import type { INestApplication } from "@nestjs/common";
-import type { Queue } from "bullmq";
 
 import type { EnvConfig } from "../infrastructure/config/env.schema";
 import type { PrismaService } from "../infrastructure/prisma/prisma.service";
@@ -18,6 +17,8 @@ import {
   SessionRevocationService,
   SnapshotAdminService,
 } from "../modules/admin/index.js";
+import { AiPromptService } from "../modules/ai-prompts/index.js";
+import { AiProviderConfigurationService } from "../modules/ai-provider/index.js";
 import { AnalyticsService } from "../modules/analytics/index.js";
 import { ArchiveService } from "../modules/archive/index.js";
 import type { AutoCarryOverOutcome } from "../modules/carry-over/index.js";
@@ -35,13 +36,16 @@ import {
   ReviewActionsService,
   ReviewService,
 } from "../modules/review/index.js";
-import { SearchService } from "../modules/search/index.js";
+import {
+  ReportAssistantService,
+  SearchService,
+} from "../modules/search/index.js";
 import { TelemetryService } from "../modules/telemetry/index.js";
 import { WeeklyReportService } from "../modules/weekly-report/index.js";
 
 // Resolve every tRPC-facing service from the DI container and assemble the app
 // router. The cross-cutting primitives built in bootstrap (env, autoCarryOver,
-// the queue handles and the DLQ jobs service) are threaded in.
+// and the DLQ jobs service) are threaded in.
 export interface AppRouterAssemblyDeps {
   readonly app: INestApplication;
   readonly prisma: PrismaService;
@@ -49,13 +53,11 @@ export interface AppRouterAssemblyDeps {
   readonly autoCarryOver: (
     targetReportId: string,
   ) => Promise<AutoCarryOverOutcome>;
-  readonly emailReminderQueue: Queue;
   readonly jobsService: JobsService;
 }
 
 export function buildAppRouter(deps: AppRouterAssemblyDeps): AppRouter {
-  const { app, prisma, env, autoCarryOver, emailReminderQueue, jobsService } =
-    deps;
+  const { app, prisma, env, autoCarryOver, jobsService } = deps;
   return createAppRouter({
     prisma,
     env,
@@ -71,6 +73,8 @@ export function buildAppRouter(deps: AppRouterAssemblyDeps): AppRouter {
     periodAdminService: app.get(PeriodAdminService),
     reopenRequestAdminService: app.get(ReopenRequestAdminService),
     actionLogService: app.get(ActionLogService),
+    aiProviderService: app.get(AiProviderConfigurationService),
+    aiPromptService: app.get(AiPromptService),
     // The DI instance shares the Redis revoked set with the context factory's
     // own instance, so a revocation lands where `isUserAccessBarred` reads —
     // without this the deactivate/activate revoked-set fast path is dead code.
@@ -83,9 +87,9 @@ export function buildAppRouter(deps: AppRouterAssemblyDeps): AppRouter {
     leadFormService: app.get(LeadFormService),
     analyticsService: app.get(AnalyticsService),
     searchService: app.get(SearchService),
+    reportAssistantService: app.get(ReportAssistantService),
     activityService: app.get(ActivityService),
     projectActivityService: app.get(ProjectActivityService),
-    emailReminderQueue,
     jobsService,
     telemetryService: app.get(TelemetryService),
   });

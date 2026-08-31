@@ -87,8 +87,9 @@ function VerdictActions({
         className={APPROVE_BUTTON_CLASSNAME}
         onClick={() => onSubmit("approved")}
         disabled={disabled}
+        aria-busy={disabled}
       >
-        Approve
+        {disabled ? "Saving…" : "Approve"}
       </button>
       <button
         type="button"
@@ -96,8 +97,9 @@ function VerdictActions({
         className={REQUEST_CHANGES_BUTTON_CLASSNAME}
         onClick={() => onSubmit("changes_requested")}
         disabled={disabled}
+        aria-busy={disabled}
       >
-        Request changes
+        {disabled ? "Saving…" : "Request changes"}
       </button>
     </span>
   );

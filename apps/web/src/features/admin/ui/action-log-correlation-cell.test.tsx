@@ -35,7 +35,7 @@ describe("CorrelationCell", () => {
     render(<CorrelationCell value="req-123" />);
 
     fireEvent.click(screen.getByRole("button", { name: /copy reference id/i }));
-    expect(await screen.findByText("Copied")).toBeInTheDocument();
+    expect(await screen.findByRole("status")).toHaveTextContent("Copied");
     expect(toastError).not.toHaveBeenCalled();
   });
 

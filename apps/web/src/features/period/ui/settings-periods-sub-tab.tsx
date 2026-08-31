@@ -1,7 +1,8 @@
 "use client";
 
 import type { AppSettings } from "@customreport/shared";
-import { useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
+import { useEffect, useState } from "react";
 
 import { useServerSeededDraft } from "../../../shared/hooks/drafts/use-server-seeded-draft";
 import {
@@ -62,7 +63,11 @@ function SavePeriodPolicyRow({
         {isSaving ? "Saving…" : "Save Period Policy"}
       </button>
       {isSaved && (
-        <span className="flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]">
+        <span
+          className="flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]"
+          role="status"
+          aria-live="polite"
+        >
           <CheckIcon />
           Period policy saved
         </span>
@@ -93,6 +98,7 @@ function usePeriodPolicyForm(serverSettings: AppSettings) {
   const { draft, setDraft, markClean } =
     useServerSeededDraft<AppSettings>(serverSettings);
   const updateSettingsMut = useUpdateSettingsMut("Period policy");
+  const [showSaved, setShowSaved] = useState(false);
   const [invalidFields, setInvalidFields] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -107,18 +113,33 @@ function usePeriodPolicyForm(serverSettings: AppSettings) {
 
   function handleSave() {
     updateSettingsMut.mutate(toPeriodPolicyPatch(draft), {
-      onSuccess: markClean,
+      onSuccess: () => {
+        markClean();
+        setShowSaved(true);
+      },
     });
   }
 
+  const updateDraft: Dispatch<SetStateAction<AppSettings>> = (next) => {
+    setShowSaved(false);
+    setDraft(next);
+  };
+
+  const firstInvalidFieldId = [...invalidFields][0];
+  useEffect(() => {
+    if (firstInvalidFieldId !== undefined) {
+      document.getElementById(firstInvalidFieldId)?.focus();
+    }
+  }, [firstInvalidFieldId]);
+
   return {
     draft,
-    setDraft,
     handleValidityChange,
     handleSave,
     hasInvalidField: invalidFields.size > 0,
     isSaving: updateSettingsMut.isPending,
-    isSaved: updateSettingsMut.isSuccess,
+    isSaved: showSaved,
+    updateDraft,
   };
 }
 
@@ -129,7 +150,7 @@ export function PeriodsSubTab({
 }) {
   const {
     draft,
-    setDraft,
+    updateDraft,
     handleValidityChange,
     handleSave,
     hasInvalidField,
@@ -141,20 +162,20 @@ export function PeriodsSubTab({
     <div className="max-w-lg space-y-5">
       <PeriodBaseFields
         draft={draft}
-        setDraft={setDraft}
+        setDraft={updateDraft}
         onValidityChange={handleValidityChange}
       />
 
       <PeriodCycleFields
         draft={draft}
-        setDraft={setDraft}
+        setDraft={updateDraft}
         onValidityChange={handleValidityChange}
       />
 
       <UnifiedActivityViewToggle
         checked={draft.unifiedActivityView}
         onCheckedChange={(checked) =>
-          setDraft({ ...draft, unifiedActivityView: checked })
+          updateDraft({ ...draft, unifiedActivityView: checked })
         }
       />
 

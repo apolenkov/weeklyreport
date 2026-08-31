@@ -8,6 +8,7 @@ import { SessionContext } from "../../../../../shared/lib/auth/session-provider"
 import { TRPCProxyContext } from "../../../../../shared/lib/trpc/trpc-context";
 import { expectDefined } from "../../../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
+import { LeadReportAssistantStore } from "../../lead-report-assistant-store";
 import { LeadForm } from "./lead-form";
 
 vi.mock("sonner", () => ({
@@ -241,6 +242,10 @@ function buildHarness(opts: BuildOpts = {}) {
     { path: ["leadForm", "revoke"], mutation: true },
     { path: ["leadForm", "fillFrom"], mutation: true },
     { path: ["leadForm", "requestReopen"], mutation: true },
+    {
+      path: ["ai", "availability"],
+      query: { availability: "not_configured" },
+    },
     { path: ["leadForm", "crossAuthors"], query: () => [STATUS_ONLY_ROW] },
     {
       path: ["leadForm", "viewSettings"],
@@ -285,7 +290,7 @@ function buildHarness(opts: BuildOpts = {}) {
               isAuthenticated: true,
             }}
           >
-            {children}
+            <LeadReportAssistantStore>{children}</LeadReportAssistantStore>
           </SessionContext.Provider>
         </TRPCProxyContext.Provider>
       </QueryClientProvider>
@@ -547,6 +552,10 @@ describe("LeadForm — Record visibility: purge on toggle/identity/report", () =
       { path: ["leadForm", "revoke"], mutation: true },
       { path: ["leadForm", "fillFrom"], mutation: true },
       { path: ["leadForm", "requestReopen"], mutation: true },
+      {
+        path: ["ai", "availability"],
+        query: { availability: "not_configured" },
+      },
       { path: ["leadForm", "crossAuthors"], query: () => [STATUS_ONLY_ROW] },
       {
         path: ["leadForm", "viewSettings"],
@@ -587,7 +596,9 @@ describe("LeadForm — Record visibility: purge on toggle/identity/report", () =
                 isAuthenticated: true,
               }}
             >
-              <LeadForm />
+              <LeadReportAssistantStore>
+                <LeadForm />
+              </LeadReportAssistantStore>
             </SessionContext.Provider>
           </TRPCProxyContext.Provider>
         </QueryClientProvider>

@@ -1,3 +1,4 @@
+import { EMAIL_REMINDER_QUEUE_NAME } from "@customreport/shared";
 import { getQueueToken } from "@nestjs/bullmq";
 import { Module } from "@nestjs/common";
 import type { Queue } from "bullmq";
@@ -33,7 +34,7 @@ import { RemindersInfrastructureTelemetry } from "./reminders-telemetry.adapter.
     {
       provide: REMINDERS_ENQUEUER,
       useFactory: (queue: Queue) => new RemindersBullmqEnqueuer(queue),
-      inject: [getQueueToken("email-reminder")],
+      inject: [getQueueToken(EMAIL_REMINDER_QUEUE_NAME)],
     },
     {
       provide: REMINDERS_TELEMETRY,

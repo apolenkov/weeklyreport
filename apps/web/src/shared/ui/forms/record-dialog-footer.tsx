@@ -6,6 +6,7 @@ interface RecordDialogFooterProps {
   readonly onSave: () => void;
   readonly onDelete?: (() => void) | undefined;
   readonly saveDisabled?: boolean | undefined;
+  readonly savePending?: boolean | undefined;
   readonly sticky?: boolean | undefined;
 }
 
@@ -15,6 +16,7 @@ export function RecordDialogFooter({
   onSave,
   onDelete,
   saveDisabled = false,
+  savePending = false,
   sticky = false,
 }: RecordDialogFooterProps) {
   return (
@@ -44,11 +46,17 @@ export function RecordDialogFooter({
       <button
         type="button"
         onClick={onSave}
-        disabled={saveDisabled}
+        disabled={saveDisabled || savePending}
+        aria-busy={savePending || undefined}
         className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50 md:min-h-[40px]"
       >
-        {saveLabel}
+        {savePending ? "Saving…" : saveLabel}
       </button>
+      {savePending ? (
+        <span className="sr-only" role="status" aria-live="polite">
+          Saving…
+        </span>
+      ) : null}
     </div>
   );
 }

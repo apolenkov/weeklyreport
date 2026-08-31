@@ -166,6 +166,7 @@ describe("CarryOverService — carry filter set (pin)", () => {
       activityId: ACTIVITY,
       activityName: "Reattached activity",
       status: "green",
+      jiraAccounts: [],
       linkedProducts: [],
       derivedStatus: "green",
       alarmFloor: null,

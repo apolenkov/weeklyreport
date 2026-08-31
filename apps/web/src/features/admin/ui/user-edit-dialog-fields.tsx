@@ -1,6 +1,7 @@
 "use client";
 
 import type { DbRole } from "@customreport/shared";
+import { type FocusEventHandler, type SyntheticEvent, useState } from "react";
 
 import type { AdminGroupView } from "../model/admin-types";
 import type { UserFormData } from "../model/user-form";
@@ -20,14 +21,26 @@ function TextField({
   id,
   label,
   type = "text",
+  name,
+  autoComplete,
+  required,
   value,
   onChange,
+  onBlur,
+  onInvalid,
+  error,
 }: {
   readonly id: string;
   readonly label: string;
   readonly type?: "text" | "email";
+  readonly name: string;
+  readonly autoComplete: string;
+  readonly required?: boolean;
   readonly value: string;
   readonly onChange: (value: string) => void;
+  readonly onBlur?: FocusEventHandler<HTMLInputElement>;
+  readonly onInvalid?: (event: SyntheticEvent<HTMLInputElement>) => void;
+  readonly error?: string | undefined;
 }) {
   return (
     <div>
@@ -37,38 +50,77 @@ function TextField({
       <input
         id={id}
         type={type}
+        name={name}
+        autoComplete={autoComplete}
+        required={required}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur}
+        onInvalid={onInvalid}
+        aria-invalid={error ? "true" : undefined}
+        aria-describedby={error ? `${id}-error` : undefined}
+        spellCheck={type === "email" ? false : undefined}
         className={CONTROL_CLASS}
       />
+      {error ? (
+        <p
+          id={`${id}-error`}
+          role="alert"
+          className="mt-1 text-xs text-[var(--color-destructive)]"
+        >
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
 
 function IdentityFields({ form, onFormChange }: FormBinding) {
+  const [emailError, setEmailError] = useState<string | undefined>(undefined);
+  const validateEmail = (event: { currentTarget: HTMLInputElement }) => {
+    const { validity } = event.currentTarget;
+    setEmailError(
+      validity.valid
+        ? undefined
+        : validity.valueMissing
+          ? "Email is required."
+          : "Enter a valid email address.",
+    );
+  };
+
   return (
     <>
       <TextField
         id="user-last-name"
         label="Last name"
+        name="lastName"
+        autoComplete="family-name"
+        required
         value={form.lastName}
         onChange={(lastName) => onFormChange({ ...form, lastName })}
       />
       <TextField
         id="user-first-name"
         label="First name"
+        name="firstName"
+        autoComplete="given-name"
+        required
         value={form.firstName}
         onChange={(firstName) => onFormChange({ ...form, firstName })}
       />
       <TextField
         id="user-middle-name"
         label="Middle name"
+        name="middleName"
+        autoComplete="additional-name"
         value={form.middleName}
         onChange={(middleName) => onFormChange({ ...form, middleName })}
       />
       <TextField
         id="user-position"
         label="Position"
+        name="position"
+        autoComplete="organization-title"
         value={form.position}
         onChange={(position) => onFormChange({ ...form, position })}
       />
@@ -76,8 +128,14 @@ function IdentityFields({ form, onFormChange }: FormBinding) {
         id="user-email"
         label="Email"
         type="email"
+        name="email"
+        autoComplete="email"
+        required
         value={form.email}
         onChange={(email) => onFormChange({ ...form, email })}
+        onBlur={validateEmail}
+        onInvalid={validateEmail}
+        error={emailError}
       />
     </>
   );
@@ -117,6 +175,8 @@ function RoleField({
       </label>
       <select
         id="user-role"
+        name="role"
+        autoComplete="off"
         value={form.role}
         onChange={(e) =>
           onFormChange(
@@ -146,6 +206,9 @@ function GroupField({
       </label>
       <select
         id="user-group"
+        name="groupId"
+        autoComplete="off"
+        required={form.role !== "viewer" && groupOptions.length > 0}
         value={form.groupId ?? ""}
         onChange={(e) => onFormChange({ ...form, groupId: e.target.value })}
         className={CONTROL_CLASS}
@@ -182,7 +245,7 @@ export function UserEditDialogFields({
   readonly groups: readonly AdminGroupView[];
 }) {
   return (
-    <div className="mt-4 space-y-4">
+    <div className="mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
       <IdentityFields form={form} onFormChange={onFormChange} />
       <RoleField
         form={form}

@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import type { SearchRepository } from "./application/search.service.js";
 import { searchPublishedDocuments } from "./published-search-query.js";
-import type { SearchRepository } from "./search.service.js";
 
 const GROUP_ID = "10000000-0000-4000-8000-000000000001";
 const REPORT_ID = "10000000-0000-4000-8000-000000000002";

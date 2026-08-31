@@ -41,12 +41,15 @@ export function createStubAppRouterDeps(
     leadFormService: stub(),
     analyticsService: stub(),
     searchService: stub(),
+    reportAssistantService: stub(),
+    aiProviderService: stub(),
+    aiPromptService: stub(),
     activityService: stub(),
     projectActivityService: stub(),
+    jobsService: stub(),
+    actionLogService: stub(),
     telemetryService: stub(),
     sessionRevocationService: stub(),
-    // Optional deps default to absent so fail-loud guards stay reachable;
-    // stay reachable; tests that wire them pass them as overrides.
     ...(overrides as Partial<AppRouterDeps>),
   };
 }

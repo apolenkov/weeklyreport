@@ -19,6 +19,11 @@ vi.mock("sonner", () => ({
     info: vi.fn(),
   },
 }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/admin",
+  useRouter: () => ({ replace: vi.fn() }),
+  useSearchParams: () => new URLSearchParams("tab=settings"),
+}));
 
 import { SettingsTab } from "./settings-tab";
 

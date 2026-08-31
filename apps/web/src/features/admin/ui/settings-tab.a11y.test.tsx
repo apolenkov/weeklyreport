@@ -18,6 +18,11 @@ vi.mock("sonner", () => ({
     info: vi.fn(),
   },
 }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/admin",
+  useRouter: () => ({ replace: vi.fn() }),
+  useSearchParams: () => new URLSearchParams("tab=settings"),
+}));
 
 import { SettingsTab } from "./settings-tab";
 
@@ -279,7 +284,7 @@ describe("SettingsTab — accessibility regression", () => {
     const successMsg = await screen.findByText(/identity saved/i);
     const container = successMsg.closest("span");
     expect(container?.outerHTML).toMatchInlineSnapshot(
-      `"<span class="flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]"><svg viewBox="0 0 24 24" class="h-4 w-4" stroke="currentColor" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>Identity saved</span>"`,
+      `"<span class="flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]" role="status" aria-live="polite"><svg viewBox="0 0 24 24" class="h-4 w-4" stroke="currentColor" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>Identity saved</span>"`,
     );
   });
 });

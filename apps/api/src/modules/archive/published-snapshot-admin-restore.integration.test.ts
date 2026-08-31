@@ -13,7 +13,7 @@ import { AdminPrismaRepository } from "../admin/index.js";
 import { PeriodPrismaRepository } from "../period/test-seams/index.js";
 import { findPublishedRecordViolation } from "../report-sections/domain/published-record-guard.js";
 import { queryPublishedLineage } from "../report-sections/infrastructure/published-lineage.query.js";
-import { SearchPrismaRepository } from "../search/search.prisma-repository.js";
+import { SearchPrismaRepository } from "../search/infrastructure/search.prisma-repository.js";
 import { WeeklyReportPrismaRepository } from "../weekly-report/weekly-report.prisma-repository.js";
 import { ArchivePrismaRepository } from "./archive.prisma-repository.js";
 

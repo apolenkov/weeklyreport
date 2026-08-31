@@ -1,3 +1,10 @@
+import {
+  AI_PROVIDER_TEST_QUEUE_NAME,
+  EMAIL_REMINDER_QUEUE_NAME,
+  PDF_EXPORT_QUEUE_NAME,
+  type QueueName,
+  SEMANTIC_INDEX_QUEUE_NAME,
+} from "@customreport/shared";
 import { type ComponentProps } from "react";
 
 import { TabHeader, TabSearch } from "../../../../shared/ui/tabs/tab-header";
@@ -7,6 +14,7 @@ import { JobsTableRow } from "../jobs-table-row";
 export type FailedJob = ComponentProps<typeof JobsTableRow>["job"];
 
 interface JobsTabViewProps {
+  readonly queue: QueueName;
   readonly jobs: readonly FailedJob[];
   readonly filteredJobs: readonly FailedJob[];
   readonly isLoading: boolean;
@@ -20,8 +28,11 @@ interface JobsTabViewProps {
   readonly expanded: ReadonlySet<string>;
   readonly retryingId: string | null;
   readonly retryPending: boolean;
+  readonly removingId: string | null;
+  readonly removePending: boolean;
   readonly onToggleExpand: (jobId: string) => void;
   readonly onRetry: (jobId: string) => void;
+  readonly onRemove: (jobId: string) => void;
 }
 
 function JobsErrorState({ message }: { readonly message: string }) {
@@ -36,14 +47,40 @@ function JobsErrorState({ message }: { readonly message: string }) {
   );
 }
 
-function JobsEmptyState({ queueIsClean }: { readonly queueIsClean: boolean }) {
+const QUEUE_COPY = {
+  [EMAIL_REMINDER_QUEUE_NAME]: {
+    description:
+      "Failed email reminder deliveries after all retries. Rules are configured in Reminders; this tab is only for delivery failures.",
+    empty: "No failed email reminder jobs. Queue is clean.",
+  },
+  [PDF_EXPORT_QUEUE_NAME]: {
+    description: "Failed PDF export jobs after all retries.",
+    empty: "No failed PDF export jobs. Queue is clean.",
+  },
+  [AI_PROVIDER_TEST_QUEUE_NAME]: {
+    description: "Failed AI provider test jobs after all retries.",
+    empty: "No failed AI provider test jobs. Queue is clean.",
+  },
+  [SEMANTIC_INDEX_QUEUE_NAME]: {
+    description: "Failed semantic indexing jobs after all retries.",
+    empty: "No failed semantic indexing jobs. Queue is clean.",
+  },
+} satisfies Record<QueueName, { description: string; empty: string }>;
+
+function JobsEmptyState({
+  queue,
+  queueIsClean,
+}: {
+  readonly queue: QueueName;
+  readonly queueIsClean: boolean;
+}) {
   return (
     <div
       data-testid="jobs-empty-state"
       className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]"
     >
       {queueIsClean
-        ? "No failed email reminder jobs. Queue is clean."
+        ? QUEUE_COPY[queue].empty
         : "No failed jobs match the search."}
     </div>
   );
@@ -55,16 +92,17 @@ function JobsListState({
   error,
   jobs,
   filteredJobs,
+  queue,
 }: Pick<
   JobsTabViewProps,
-  "isLoading" | "isError" | "error" | "jobs" | "filteredJobs"
+  "isLoading" | "isError" | "error" | "jobs" | "filteredJobs" | "queue"
 >) {
   if (isLoading) return <JobsSkeleton />;
   if (isError) {
     return <JobsErrorState message={error?.message ?? "Unknown error"} />;
   }
   if (filteredJobs.length === 0) {
-    return <JobsEmptyState queueIsClean={jobs.length === 0} />;
+    return <JobsEmptyState queue={queue} queueIsClean={jobs.length === 0} />;
   }
   return null;
 }
@@ -77,16 +115,22 @@ function JobsTable({
   expanded,
   retryingId,
   retryPending,
+  removingId,
+  removePending,
   onToggleExpand,
   onRetry,
+  onRemove,
 }: Pick<
   JobsTabViewProps,
   | "jobs"
   | "expanded"
   | "retryingId"
   | "retryPending"
+  | "removingId"
+  | "removePending"
   | "onToggleExpand"
   | "onRetry"
+  | "onRemove"
 >) {
   return (
     <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-border)] shadow-[var(--shadow-card-resting)]">
@@ -108,9 +152,12 @@ function JobsTable({
               job={job}
               isExpanded={expanded.has(job.id)}
               isRetrying={retryingId === job.id && retryPending}
-              retryDisabled={retryPending}
+              retryDisabled={retryPending || removePending}
               onToggleExpand={onToggleExpand}
               onRetry={onRetry}
+              onRemove={onRemove}
+              isRemoving={removingId === job.id && removePending}
+              removeDisabled={removePending || retryPending}
             />
           ))}
         </tbody>
@@ -151,7 +198,7 @@ export function JobsTabView(props: JobsTabViewProps) {
     <div className="space-y-4" data-testid="jobs-tab">
       <TabHeader
         title="Failed Jobs"
-        description="Failed email reminder deliveries after all retries. Rules are configured in Reminders; this tab is only for delivery failures."
+        description={QUEUE_COPY[props.queue].description}
         count={
           props.isLoading
             ? "Loading…"

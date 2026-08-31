@@ -48,7 +48,7 @@ services:
     restart: "no"
 
   postgres:
-    image: postgres:15-alpine@sha256:3d0f7584ed7d04e27fa050d6683a74746608faf21f202be78460d679cc56461f
+    image: pgvector/pgvector:0.8.2-pg15-bookworm@sha256:bd12d6788a617f4147d5a2ae0b56d07921398adabfe5a033bd3f50c245df55a1
     environment:
       POSTGRES_USER: customreport
       POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
@@ -248,6 +248,21 @@ services:
       # its 80%-of-cap memory alert from this value. Kept a literal (not an
       # overridable interpolation) so the two cannot drift.
       REDIS_MAXMEMORY_BYTES: 209715200
+      AI_PROVIDER_CONFIG_ENCRYPTION_KEY: ${AI_PROVIDER_CONFIG_ENCRYPTION_KEY:?AI_PROVIDER_CONFIG_ENCRYPTION_KEY must be set}
+      AI_PROVIDER_CONFIG_KEY_VERSION: ${AI_PROVIDER_CONFIG_KEY_VERSION:?AI_PROVIDER_CONFIG_KEY_VERSION must be set}
+      AI_PROVIDER_ALLOWED_ORIGINS: ${AI_PROVIDER_ALLOWED_ORIGINS:?AI_PROVIDER_ALLOWED_ORIGINS must be set}
+      REPORT_ASSISTANT_OUTBOUND_DATA_APPROVED: ${REPORT_ASSISTANT_OUTBOUND_DATA_APPROVED:?REPORT_ASSISTANT_OUTBOUND_DATA_APPROVED must be set}
+      REPORT_ASSISTANT_INPUT_VERSION: ${REPORT_ASSISTANT_INPUT_VERSION:?REPORT_ASSISTANT_INPUT_VERSION must be set}
+      REPORT_ASSISTANT_SIMILARITY_THRESHOLD: ${REPORT_ASSISTANT_SIMILARITY_THRESHOLD:?REPORT_ASSISTANT_SIMILARITY_THRESHOLD must be set}
+      REPORT_ASSISTANT_CANDIDATE_LIMIT: ${REPORT_ASSISTANT_CANDIDATE_LIMIT:?REPORT_ASSISTANT_CANDIDATE_LIMIT must be set}
+      REPORT_ASSISTANT_READ_THROUGH_LIMIT: ${REPORT_ASSISTANT_READ_THROUGH_LIMIT:?REPORT_ASSISTANT_READ_THROUGH_LIMIT must be set}
+      REPORT_ASSISTANT_EXHAUSTIVE_LIMIT: ${REPORT_ASSISTANT_EXHAUSTIVE_LIMIT:?REPORT_ASSISTANT_EXHAUSTIVE_LIMIT must be set}
+      REPORT_ASSISTANT_CONTEXT_TOKEN_BUDGET: ${REPORT_ASSISTANT_CONTEXT_TOKEN_BUDGET:?REPORT_ASSISTANT_CONTEXT_TOKEN_BUDGET must be set}
+      REPORT_ASSISTANT_PROVIDER_TIMEOUT_MS: ${REPORT_ASSISTANT_PROVIDER_TIMEOUT_MS:?REPORT_ASSISTANT_PROVIDER_TIMEOUT_MS must be set}
+      REPORT_ASSISTANT_PLANNER_MAX_TOKENS: ${REPORT_ASSISTANT_PLANNER_MAX_TOKENS:?REPORT_ASSISTANT_PLANNER_MAX_TOKENS must be set}
+      REPORT_ASSISTANT_ANSWER_MAX_TOKENS: ${REPORT_ASSISTANT_ANSWER_MAX_TOKENS:?REPORT_ASSISTANT_ANSWER_MAX_TOKENS must be set}
+      REPORT_ASSISTANT_EMBEDDING_BATCH_SIZE: ${REPORT_ASSISTANT_EMBEDDING_BATCH_SIZE:?REPORT_ASSISTANT_EMBEDDING_BATCH_SIZE must be set}
+      REPORT_ASSISTANT_EMBEDDING_TOKEN_BUDGET: ${REPORT_ASSISTANT_EMBEDDING_TOKEN_BUDGET:?REPORT_ASSISTANT_EMBEDDING_TOKEN_BUDGET must be set}
       PORT: 3001
       API_HOST: 0.0.0.0
       NODE_ENV: production
@@ -295,7 +310,6 @@ services:
       # Optional production overrides use null-valued entries so Compose passes
       # them through only when the operator sets them; unset values stay absent
       # and retain the typed consumer defaults.
-      DLQ_ALERT_THRESHOLD:
       SENTRY_DSN: ${SENTRY_DSN:-}
       CLIENT_LOG_FORWARDING: ${CLIENT_LOG_FORWARDING:?CLIENT_LOG_FORWARDING must be set (true or false)}
     depends_on:
@@ -321,6 +335,10 @@ services:
       retries: 3
       start_period: 60s
     restart: unless-stopped
+    # API shutdown has a documented 12.5s worst-case application budget. The
+    # 20s grace period leaves margin for signal delivery and runtime teardown;
+    # BullMQ workers/queues force-close their Redis handles inside that budget.
+    stop_grace_period: 20s
     # API is not host-published — all external traffic flows through the
     # Caddy edge over the compose network, mirroring the expose-only posture
     # applied to web. Closing the host port also removes the direct-to-host API

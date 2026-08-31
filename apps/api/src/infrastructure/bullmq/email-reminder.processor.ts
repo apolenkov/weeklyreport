@@ -1,3 +1,4 @@
+import { EMAIL_REMINDER_QUEUE_NAME } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
 import { type Job, type WorkerOptions } from "bullmq";
 import { ClsService } from "nestjs-cls";
@@ -30,7 +31,7 @@ type FromOverride = string | null;
 // BullMQ discovers this worker through Nest injection, not a direct call.
 @Injectable()
 export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobData> {
-  protected readonly queueName = "email-reminder";
+  protected readonly queueName = EMAIL_REMINDER_QUEUE_NAME;
   protected readonly spanName = "email-reminder.process";
 
   constructor(

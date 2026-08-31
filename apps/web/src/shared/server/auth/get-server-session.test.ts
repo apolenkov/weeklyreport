@@ -31,9 +31,9 @@ describe("decodeAuthMeResponse", () => {
     expect(decodeAuthMeResponse(body)).toEqual(SESSION);
   });
 
-  it("accepts a schema-valid session in the untransformed shape (config-drift fallback)", () => {
+  it("rejects a schema-valid session in the untransformed shape", () => {
     const body = [{ result: { data: SESSION } }];
-    expect(decodeAuthMeResponse(body)).toEqual(SESSION);
+    expect(decodeAuthMeResponse(body)).toBeNull();
   });
 
   it("returns null for an explicit null payload (auth.me unauthenticated)", () => {

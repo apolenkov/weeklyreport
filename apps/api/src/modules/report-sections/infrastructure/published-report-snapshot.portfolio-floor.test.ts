@@ -560,6 +560,7 @@ describe("activity statuses do not roll up (stage-less, independent of product h
   const RED_ACTIVITY = {
     activityId: "0e2f75a2-6f2f-4d51-8f5f-1b2c3d4e5f60",
     activityName: "Jira triage duty",
+    jiraAccounts: [],
     status: "red" as const,
     linkedProducts: [],
     derivedStatus: "red" as const,

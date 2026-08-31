@@ -20,6 +20,8 @@ function ActiveToggle({
     <label className="inline-flex items-center gap-2 text-sm">
       <input
         type="checkbox"
+        name="reminder-active"
+        autoComplete="off"
         checked={form.active}
         onChange={(e) =>
           onChange((prev) => ({ ...prev, active: e.target.checked }))

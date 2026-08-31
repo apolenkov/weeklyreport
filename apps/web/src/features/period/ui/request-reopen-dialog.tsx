@@ -182,6 +182,8 @@ function ReopenReasonField({
       </label>
       <textarea
         id="reopen-reason"
+        name="reopenReason"
+        autoComplete="off"
         ref={textareaRef}
         className="w-full resize-y rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-card)] px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_var(--color-ring)] focus:outline-none"
         style={{ minHeight: "80px" }}

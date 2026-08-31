@@ -67,6 +67,7 @@ export function PeriodDialogActions({
         type="button"
         onClick={onSubmit}
         disabled={!canSubmit}
+        aria-busy={isPending}
         data-testid="periods-create-submit"
         className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
       >

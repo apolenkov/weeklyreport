@@ -51,7 +51,7 @@ const PORT_INTERFACES = {
     "TelemetryCachePort",
   ],
   "src/modules/review/application/review.service.ts": ["ReviewRepository"],
-  "src/modules/search/search.service.ts": ["SearchRepository"],
+  "src/modules/search/application/search.service.ts": ["SearchRepository"],
   "src/modules/admin/reminder-admin.service.ts": ["ReminderAdminRepository"],
 } as const;
 
@@ -115,7 +115,7 @@ const TARGETED_CLASSES = {
     className: "ReviewPrismaRepository",
     operations: ["getSubmissionDashboard"],
   },
-  "src/modules/search/search.prisma-repository.ts": {
+  "src/modules/search/infrastructure/search.prisma-repository.ts": {
     className: "SearchPrismaRepository",
     operations: ["search"],
   },

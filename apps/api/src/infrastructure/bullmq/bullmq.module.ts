@@ -21,6 +21,10 @@ import {
   type QueueName,
   QueueRegistry,
 } from "./queue-registry.js";
+import {
+  SEMANTIC_INDEX_JOB_OPTS,
+  SEMANTIC_INDEX_QUEUE_NAME,
+} from "./semantic-index-queue-contract.js";
 import { WorkerLivenessRegistry } from "./worker-liveness.registry.js";
 
 // Bound retained job hashes so they don't accumulate in Redis without limit.
@@ -32,7 +36,13 @@ const BOUNDED_RETENTION_JOB_OPTS: DefaultJobOptions = {
 // Derives each registration from the shared QUEUE_NAMES source of truth so a
 // renamed/added queue can't drift between this list and the DLQ monitor's.
 function registerQueueOptionsFor(name: QueueName): RegisterQueueOptions {
-  return { name, defaultJobOptions: BOUNDED_RETENTION_JOB_OPTS };
+  return {
+    name,
+    defaultJobOptions:
+      name === SEMANTIC_INDEX_QUEUE_NAME
+        ? SEMANTIC_INDEX_JOB_OPTS
+        : BOUNDED_RETENTION_JOB_OPTS,
+  };
 }
 
 // Redis noeviction is enforced in Docker Compose, not code.

@@ -3,15 +3,23 @@ import "@testing-library/jest-dom/vitest";
 
 import type { RecordCommentView } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import type { ReactElement } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RecordComments } from "./record-comments";
 
 const mutationCalls = vi.hoisted(() => ({
   comment: [] as unknown[],
   deleteComment: [] as unknown[],
+  commentError: null as Error | null,
+  deleteError: null as Error | null,
 }));
 
 vi.mock("../../../../shared/lib/query/cache-keys", () => ({
@@ -26,6 +34,9 @@ vi.mock("../../../../shared/lib/trpc/trpc-context", () => ({
           ...options,
           mutationFn: (input: unknown) => {
             mutationCalls.comment.push(input);
+            if (mutationCalls.commentError) {
+              return Promise.reject(mutationCalls.commentError);
+            }
             return Promise.resolve({});
           },
         }),
@@ -35,6 +46,9 @@ vi.mock("../../../../shared/lib/trpc/trpc-context", () => ({
           ...options,
           mutationFn: (input: unknown) => {
             mutationCalls.deleteComment.push(input);
+            if (mutationCalls.deleteError) {
+              return Promise.reject(mutationCalls.deleteError);
+            }
             return Promise.resolve({});
           },
         }),
@@ -56,6 +70,12 @@ const OWN_COMMENT: RecordCommentView = {
 beforeEach(() => {
   mutationCalls.comment.length = 0;
   mutationCalls.deleteComment.length = 0;
+  mutationCalls.commentError = null;
+  mutationCalls.deleteError = null;
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 function renderWithClient(ui: ReactElement) {
@@ -100,6 +120,7 @@ describe("RecordComments — mutation success", () => {
     await waitFor(() => {
       expect(onMutated).toHaveBeenCalledTimes(1);
       expect(draft).toHaveValue("");
+      expect(screen.getByRole("status")).toHaveTextContent("Comment added.");
       expect(mutationCalls.comment).toEqual([
         {
           itemId: "11111111-1111-4111-8111-111111111111",
@@ -122,14 +143,88 @@ describe("RecordComments — mutation success", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Delete comment" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /Delete comment by Head Reviewer/ }),
+    );
+    const dialog = screen.getByRole("alertdialog", {
+      name: "Delete review comment?",
+    });
+    expect(dialog).toHaveTextContent(OWN_COMMENT.text);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
 
     await waitFor(() => {
       expect(onMutated).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole("status")).toHaveTextContent("Comment deleted.");
       expect(mutationCalls.deleteComment).toEqual([
         { commentId: OWN_COMMENT.id },
       ]);
     });
+  });
+
+  it("keeps a failed add visible as inline live feedback", async () => {
+    mutationCalls.commentError = new Error("Comment could not be saved");
+    renderComments();
+
+    fireEvent.change(
+      screen.getByRole("textbox", { name: "Add a review comment" }),
+      {
+        target: { value: "Ready to publish." },
+      },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Comment" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Comment could not be saved",
+      );
+    });
+  });
+
+  it("does not delete when the confirmation is cancelled", () => {
+    renderComments();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Delete comment by Head Reviewer/ }),
+    );
+    const dialog = screen.getByRole("alertdialog", {
+      name: "Delete review comment?",
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+
+    expect(mutationCalls.deleteComment).toHaveLength(0);
+    expect(
+      screen.queryByRole("alertdialog", { name: "Delete review comment?" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("names each delete action with its comment context", () => {
+    const secondComment: RecordCommentView = {
+      ...OWN_COMMENT,
+      id: "44444444-4444-4444-8444-444444444444",
+      reviewerName: "Another Reviewer",
+      text: "Please add the rollout date.",
+    };
+    renderWithClient(
+      <RecordComments
+        anchor={{ itemId: "11111111-1111-4111-8111-111111111111" }}
+        comments={[OWN_COMMENT, secondComment]}
+        canReview
+        currentUserId={REVIEWER_ID}
+        isAdmin={false}
+        onMutated={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", {
+        name: "Delete comment by Head Reviewer: Please split this item.",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "Delete comment by Another Reviewer: Please add the rollout date.",
+      }),
+    ).toBeInTheDocument();
   });
 });
 
@@ -138,7 +233,9 @@ describe("RecordComments — compact touch floor", () => {
   it("the per-comment Delete text-link floors its hit area below md", () => {
     renderComments();
 
-    const deleteLink = screen.getByRole("button", { name: "Delete comment" });
+    const deleteLink = screen.getByRole("button", {
+      name: /Delete comment by Head Reviewer/,
+    });
     // Visually it stays a text link; only the hit area grows on phones.
     expect(deleteLink.className).toContain(
       "max-md:min-h-[var(--touch-target-min)]",
@@ -207,7 +304,7 @@ describe("RecordComments — authorization branches", () => {
     );
 
     expect(
-      screen.queryByRole("button", { name: "Delete comment" }),
+      screen.queryByRole("button", { name: /Delete comment by/ }),
     ).not.toBeInTheDocument();
   });
 
@@ -229,7 +326,7 @@ describe("RecordComments — authorization branches", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: "Delete comment" }),
+      screen.getByRole("button", { name: /Delete comment by/ }),
     ).toBeInTheDocument();
   });
 
@@ -237,7 +334,7 @@ describe("RecordComments — authorization branches", () => {
     renderComments();
 
     expect(
-      screen.getByRole("button", { name: "Delete comment" }),
+      screen.getByRole("button", { name: /Delete comment by/ }),
     ).toBeInTheDocument();
   });
 });

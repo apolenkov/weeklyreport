@@ -41,6 +41,7 @@ export const reportSectionFullInclude = {
       activity: {
         select: {
           name: true,
+          jiraAccounts: true,
           activityProducts: {
             select: { product: { select: { id: true, name: true } } },
           },

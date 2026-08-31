@@ -11,6 +11,8 @@ const apiModules = [
   "auth",
   "carry-over",
   "email",
+  "ai-prompts",
+  "ai-provider",
   "observability",
   "organization",
   "pdf-export",

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
 
@@ -11,10 +11,13 @@ const operations = read("docs/operations.md");
 const onboarding = read("docs/onboarding.md");
 const readme = read("README.md");
 const localEnvironment = read(".env.example");
+const integrationEnvironment = read(".env.test.example");
 const productionEnvironment = read("deploy/environment/production.env.example");
 const compose = read("docker-compose.yml");
 const devCompose = read("docker-compose.dev.yml");
 const observabilityCompose = read("docker-compose.observability.yml");
+const errorsCompose = read("docker-compose.errors.yml");
+const environmentDocs = read("docs/environment.md");
 const operationalDashboardProvider = read(
   "deploy/grafana/provisioning/dashboards/customreport.yml",
 );
@@ -36,6 +39,7 @@ const webPackageJson = JSON.parse(read("apps/web/package.json")) as {
   readonly scripts: Readonly<Record<string, string | undefined>>;
 };
 const workflow = read(".github/workflows/ci.yml");
+const vitestBase = read("vitest.base.config.ts");
 
 const requiredProductionVariables = (): readonly string[] =>
   [...prodCompose.matchAll(/\$\{([A-Z0-9_]+):\?/g)]
@@ -191,6 +195,12 @@ const assertNativeWebRootEnvironment = (
 
 void test("native Web dev and build load the root environment contract", () => {
   assertNativeWebRootEnvironment(webPackageJson.scripts, read(".env.example"));
+  assert.equal(
+    existsSync(resolve("apps/web/.env.example")),
+    false,
+    "Web-local env examples create a second, unsupported configuration source",
+  );
+  assert.doesNotMatch(localEnvironment, /^NEXT_PUBLIC_API_URL=/mu);
   assert.match(compose, /target: installer/u);
   assert.equal(
     compose.split("\n").some((line) => line.trim() === "args:"),
@@ -312,6 +322,8 @@ void test("production Caddy variables have one production-only source", () => {
 });
 
 void test("observability has explicit local and production Grafana contracts", () => {
+  assert.match(localEnvironment, /^GRAFANA_PORT=3003$/m);
+  assert.match(localEnvironment, /^GRAFANA_ADMIN_USER=admin$/m);
   assert.match(
     localEnvironment,
     /^GRAFANA_ADMIN_PASSWORD=\S+$/m,
@@ -330,6 +342,59 @@ void test("observability has explicit local and production Grafana contracts", (
     operations,
     /observability overlay[\s\S]*GRAFANA_ADMIN_PASSWORD[\s\S]*no password default/i,
   );
+  assert.match(environmentDocs, /`GRAFANA_PORT`[\s\S]*`GRAFANA_ADMIN_USER`/u);
+  assert.match(environmentDocs, /host ports are loopback-only/u);
+});
+
+void test("local observability extends one Compose project without duplicate ports", () => {
+  const composeCommand = packageJson.scripts["observability:compose"] ?? "";
+  const downCommand = packageJson.scripts["observability:down"] ?? "";
+
+  assert.doesNotMatch(composeCommand, /--project-name/u);
+  assert.match(
+    downCommand,
+    /rm --stop --force otel-lgtm bugsink postgres-exporter redis-exporter/u,
+  );
+  assert.match(
+    devCompose,
+    /OTEL_EXPORTER_OTLP_ENDPOINT: http:\/\/otel-lgtm:4318/u,
+  );
+  assert.doesNotMatch(devCompose, /host\.docker\.internal/u);
+  assert.match(environmentDocs, /reuses its PostgreSQL, Redis, and Mailpit/u);
+});
+
+void test("local Bugsink overlay has an explicit secret contract", () => {
+  assert.match(localEnvironment, /^BUGSINK_PORT=8000$/m);
+  assert.match(
+    localEnvironment,
+    /^BUGSINK_SECRET_KEY=localdev-insecure-key-for-local-dev-only-change-in-prod-2025$/m,
+  );
+  assert.match(errorsCompose, /BUGSINK_PORT:-8000/u);
+  assert.match(
+    errorsCompose,
+    /BUGSINK_SECRET_KEY:\?BUGSINK_SECRET_KEY must be set/u,
+  );
+  assert.match(
+    environmentDocs,
+    /`BUGSINK_SECRET_KEY`[\s\S]*no Compose fallback[\s\S]*local-only/u,
+  );
+  assert.match(
+    operations,
+    /Bugsink errors overlay[\s\S]*BUGSINK_PORT[\s\S]*BUGSINK_SECRET_KEY[\s\S]*not part of the production Compose command/u,
+  );
+});
+
+void test("integration environment documents its guarded target boundary", () => {
+  assert.match(integrationEnvironment, /Guarded disposable E2E target/u);
+  assert.match(
+    integrationEnvironment,
+    /If DATABASE_URL is present[\s\S]*must not identify this same database/u,
+  );
+  assert.match(
+    integrationEnvironment,
+    /Local bootstrap is a different path[\s\S]*DATABASE_URL=E2E_DATABASE_URL/u,
+  );
+  assert.doesNotMatch(integrationEnvironment, /^DATABASE_URL=/mu);
 });
 
 void test("Grafana providers own non-overlapping current dashboard roots", () => {
@@ -395,14 +460,32 @@ void test("operations documentation inventories integration and coverage lanes",
     operations,
     /`api-integration` lane[\s\S]*Postgres\/Redis\/Mailpit/,
   );
-  assert.match(operations, /`coverage` lane[\s\S]*API and Web/);
+  assert.match(
+    operations,
+    /`api-integration` lane[\s\S]*API coverage thresholds/u,
+  );
+  assert.match(operations, /`coverage` lane[\s\S]*Web coverage/u);
   assert.match(workflow, /api-integration:/);
   assert.match(workflow, /coverage:/);
+  assert.equal(
+    [...workflow.matchAll(/@customreport\/api test:coverage/gu)].length,
+    1,
+  );
 });
 
 void test("the CI quality lane builds every workspace", () => {
   assert.match(workflow, /- name: Build all workspaces\s+run: pnpm build/u);
   assert.match(operations, /quality lane[\s\S]*complete workspace build/u);
+});
+
+void test("Vitest CI output has one labelled summary contract", () => {
+  assert.match(vitestBase, /jobSummary:\s*\{\s*enabled:\s*false\s*\}/u);
+  assert.match(vitestBase, /displayAnnotations:\s*true/u);
+  assert.match(vitestBase, /VITEST_JSON_OUTPUT_FILE/u);
+  assert.match(workflow, /Publish unit test summary/u);
+  assert.match(workflow, /Publish API verification summary/u);
+  assert.match(workflow, /Publish coverage summary/u);
+  assert.match(workflow, /coverage-summary\.json/u);
 });
 
 const assertRecoveryEvidenceIsTruthful = (document: string): void => {
@@ -436,6 +519,51 @@ void test("recovery guidance rejects a planted RPO overclaim", () => {
   );
   assert.notEqual(overclaim, operations, "the planted claim must apply");
   assert.throws(() => assertRecoveryEvidenceIsTruthful(overclaim));
+});
+
+const assertAiCredentialKeyRotationBoundary = (
+  operationsDocument: string,
+  productionTemplate: string,
+): void => {
+  assert.match(
+    operationsDocument,
+    /exactly one\s+active key[\s\S]*only records with that same version/u,
+  );
+  assert.match(
+    operationsDocument,
+    /Do \*\*not\*\* treat a\s+version increment as a safe rotation/u,
+  );
+  assert.match(
+    operationsDocument,
+    /no keyring, dual-key grace period, or in-place re-encryption procedure/u,
+  );
+  assert.match(
+    operationsDocument,
+    /restore the original pair to recover[\s\S]*every provider credential must be entered again/u,
+  );
+  assert.match(
+    productionTemplate,
+    /current MVP supports one active key only[\s\S]*Existing credentials then cannot be decrypted/u,
+  );
+  assert.doesNotMatch(
+    productionTemplate,
+    /Rotate by raising the explicit key version/u,
+  );
+};
+
+void test("AI credential-key documentation states the single-key MVP boundary", () => {
+  assertAiCredentialKeyRotationBoundary(operations, productionEnvironment);
+});
+
+void test("AI credential-key documentation rejects a planted rotation claim", () => {
+  const overclaim = operations.replace(
+    "Do **not** treat a\nversion increment as a safe rotation",
+    "Treat a version increment as a safe rotation",
+  );
+  assert.notEqual(overclaim, operations, "the planted claim must apply");
+  assert.throws(() =>
+    assertAiCredentialKeyRotationBoundary(overclaim, productionEnvironment),
+  );
 });
 
 void test("external production controls remain blocked until external read-back", () => {

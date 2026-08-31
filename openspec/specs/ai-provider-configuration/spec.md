@@ -1,0 +1,223 @@
+# ai-provider-configuration Specification
+
+## Purpose
+
+Define the organization-wide, administrator-managed AI provider configuration and its safe lifecycle.
+
+## Requirements
+
+### Requirement: Only administrators manage the global AI integration
+
+The `admin.aiProvider` tRPC surface and Settings → AI → Provider card MUST use the canonical `adminProcedure` for every configuration read, draft write, test, activation, disable, rollback, and progress operation. The system MUST maintain one organization-wide active AI configuration and MUST NOT expose per-user, per-role, or per-feature provider overrides.
+
+#### Scenario: Admin manages the integration
+
+- **WHEN** an authenticated user with role `admin` opens the AI integration card or submits a valid configuration operation
+- **THEN** the system permits the operation through `adminProcedure`
+
+#### Scenario: Non-admin attempts configuration access
+
+- **WHEN** a lead, head, viewer, or unauthenticated caller invokes an AI configuration procedure
+- **THEN** canonical role middleware rejects the call before configuration or credential data is read
+
+#### Scenario: Authorized users invoke an AI feature
+
+- **WHEN** any existing AI feature passes its own role and data-authorization gates
+- **THEN** it uses the same global active configuration revision regardless of the caller
+- **AND** this change does not grant that feature to any additional role
+
+### Requirement: Supported profiles include approved custom models
+
+The configuration contract MUST use one role-aware provider-profile registry. It MUST support `mistral`, `openrouter`, `openai`, `groq`, `jina`, and `custom-openai-compatible` profiles. Generation MUST allow Mistral, OpenRouter, OpenAI, Groq, and custom profiles; embeddings MUST allow Mistral, OpenRouter, OpenAI, Jina, and custom profiles. Built-in profiles MUST select their fixed base URL and declare their supported roles. The custom profile MUST accept a normalized base URL and free-form model identifiers for its selected role. Every resolved base URL MUST match an origin explicitly supplied by deployment configuration, and the API MUST reject user-info, query, fragment, redirect, or non-allowlisted targets before making a request.
+
+#### Scenario: Admin selects a built-in profile
+
+- **WHEN** the admin saves a role-compatible built-in profile with valid model identifiers and a credential
+- **THEN** the server resolves the profile's fixed base URL and verifies its origin against deployment policy
+
+#### Scenario: Role-incompatible built-in profile is submitted
+
+- **WHEN** the admin submits Jina for generation or Groq for embeddings
+- **THEN** shared and server validation reject the connection before any provider request
+
+#### Scenario: Admin selects an approved corporate endpoint
+
+- **WHEN** the admin saves a custom OpenAI-compatible base URL whose normalized origin is allowlisted
+- **THEN** the system accepts the endpoint and its custom model identifiers for capability testing
+
+#### Scenario: Admin submits an unsafe endpoint
+
+- **WHEN** the custom URL contains user info, a query, a fragment, follows a redirect, or resolves to an origin absent from the deployment allowlist
+- **THEN** the system rejects it without sending a credential or synthetic test payload
+
+### Requirement: AI configuration revisions bind generation and embedding connections atomically
+
+One immutable provider revision MUST contain exactly one generation connection and one effective embedding connection. Generation MUST own the planner and answer models plus reasoning configuration. Embeddings MUST either reuse the generation profile, endpoint, and credential or define one separate profile, endpoint, credential, and model. The system MUST NOT expose independent active pointers or lifecycle operations for the two connections, and runtime MUST never serve a mixed pair from different revisions.
+
+#### Scenario: Admin chooses separate providers
+
+- **WHEN** the admin saves OpenAI or Groq for generation and Mistral or Jina for embeddings with valid role-specific fields
+- **THEN** one draft revision contains both connections and their model identifiers
+- **AND** neither connection becomes active independently
+
+#### Scenario: Embeddings reuse generation
+
+- **WHEN** the admin selects `reuse_generation`
+- **THEN** the revision derives the effective embedding profile, endpoint, and credential from generation
+- **AND** it stores no independent embedding credential
+
+#### Scenario: Separate embedding fields are incomplete
+
+- **WHEN** separate mode omits a required embedding profile, endpoint, credential, or model
+- **THEN** the shared contract rejects the draft before persistence or provider work
+
+### Requirement: Provider credentials remain secret at every boundary
+
+The configuration repository MUST persist each independent provider credential using authenticated encryption under a required environment-owned master key and connection-role-specific authenticated data. Shared schemas, `admin.aiProvider` responses, the Settings UI, jobs, audit events, logs, traces, metrics, and client errors MUST NOT expose plaintext credentials or stored ciphertext. Read models MUST expose only role-specific credential presence and optional masked suffixes. Masked metadata MUST use either a fixed mask with no plaintext for credentials of four or fewer characters, or that fixed mask plus exactly the final four characters for longer credentials; it MUST NOT reproduce a short credential verbatim. A changed connection MUST require a new credential; an unchanged connection MAY inherit encrypted credential material from the base revision. Reuse-generation mode MUST reject a second embedding credential.
+
+#### Scenario: Admin saves a provider credential
+
+- **WHEN** a valid credential is submitted for a draft revision
+- **THEN** the repository stores authenticated ciphertext and encryption metadata rather than plaintext
+
+#### Scenario: Admin saves two connection credentials
+
+- **WHEN** valid separate generation and embedding credentials are submitted
+- **THEN** the repository stores two independently authenticated encryption envelopes rather than plaintext
+
+#### Scenario: Admin reads an existing configuration
+
+- **WHEN** the configuration has a stored credential
+- **THEN** the response reports role-specific credential presence and may show masked suffixes
+- **AND** neither plaintext nor ciphertext is returned
+
+#### Scenario: Admin reads a short provider credential
+
+- **WHEN** the stored credential has four or fewer characters
+- **THEN** the response returns only the fixed mask with no plaintext suffix
+- **AND** the shared read contract rejects any other masked-metadata shape
+
+#### Scenario: Encryption configuration is missing
+
+- **WHEN** the API boots without the required encryption master key or with an invalid key shape
+- **THEN** validated environment configuration fails boot with a specific error
+
+### Requirement: Draft configurations prove required provider capabilities before activation
+
+The `admin.aiProvider.test` operation MUST use synthetic, non-report data to verify authentication, timeout handling, exactly one forced planner function call with parallel calls disabled, fixed JSON Object Mode answer output, token usage, batch embeddings, finite ordered vectors, and one consistent positive embedding-vector length. It MUST persist that measured length on the revision only when every required provider capability passes, and MUST NOT send an embedding-dimensions option to the provider. Provider test results MUST contain only bounded generation and embedding capability lanes; they MUST NOT persist a protocol selector or prompt/feature compatibility diagnostics. A draft MUST NOT enter a validated or preparing state unless every required provider capability passes. Safe test status MUST be visible to the admin without provider response bodies. Retesting an active revision MUST persist the safe result and measurement without changing its `active` lifecycle, active pointer, or availability.
+
+#### Scenario: All capabilities pass
+
+- **WHEN** the provider satisfies every planner, answer, usage, and embedding probe within the configured timeout
+- **THEN** the draft becomes validated and eligible for activation
+
+#### Scenario: One capability fails
+
+- **WHEN** authentication fails, a required parameter is unsupported, output violates its schema, vectors are invalid, or vectors in the batch have different lengths
+- **THEN** the draft remains inactive with a safe field-level or capability-level failure
+- **AND** the current active configuration is unchanged
+
+#### Scenario: Admin saves a draft without a vector-size setting
+
+- **WHEN** an admin saves a provider profile, credential, and model identifiers
+- **THEN** the system creates a draft without embedding dimensions
+- **AND** it derives and persists the dimensions from a successful synthetic embedding response before activation
+
+#### Scenario: Test runs against synthetic content
+
+- **WHEN** the server tests any provider profile
+- **THEN** no report question, report record, user identifier, entity name, or existing embedding is sent
+
+#### Scenario: Admin retests the active provider
+
+- **WHEN** an administrator invokes `admin.aiProvider.test` for the revision selected by `AiProviderControl.activeConfigurationId`
+- **THEN** the system persists the latest safe capability result and measured dimensions
+- **AND** the revision remains `active`, the global pointer remains unchanged, and `ai.availability` remains `available`
+
+### Requirement: Activation is atomic and preserves service during preparation
+
+The `admin.aiProvider.activate` operation MUST express an administrator's intent to make one validated revision global. If its embedding scope differs from the active scope, the system MUST keep the old revision active while the new scope is prepared, expose exact completed, total, failed, and elapsed status, and atomically change the global active pointer only after preparation is complete. That new-scope activation MUST verify the prepared source fingerprint and lock and match the current semantic-source generation. If the scope is unchanged, activation MUST NOT rebuild embeddings or require the active revision's historical preparation generation or fingerprint to match current report sources: existing cache rows remain reusable, while complete-set runtime read-through and queueing fail closed for missing current hashes. The activation transaction MUST instead verify that the pointer still names the readiness source revision, verify the exact embedding-scope identity, and copy that revision's complete historical preparation progress, source fingerprint, and source generation to the candidate. It MUST NOT synthesize readiness defaults. Candidate lifecycle updates and the active-pointer compare-and-set MUST commit in one transaction; a stale pointer race MUST roll back the candidate transition and return a controlled conflict.
+
+#### Scenario: Provider or embedding scope changes
+
+- **WHEN** an admin activates a validated revision with a different endpoint identity, embedding model, dimensions, or semantic-input version
+- **THEN** the revision enters preparation and the old revision continues serving all users
+- **AND** the pointer changes only after the new scope satisfies the semantic readiness gate
+
+#### Scenario: Only credential or generation models change
+
+- **WHEN** an admin activates a validated revision whose embedding scope equals the active scope
+- **THEN** the system copies the active revision's exact successful readiness evidence and atomically activates the candidate without reindexing the corpus
+- **AND** report-source changes after that historical preparation do not block activation
+- **AND** a changed active pointer, mismatched scope, or incomplete historical evidence leaves the candidate inactive
+
+#### Scenario: Preparation fails
+
+- **WHEN** any required embedding remains failed or missing after bounded retries
+- **THEN** the candidate revision is not activated
+- **AND** the prior configuration continues serving users without automatic fallback to any third provider
+
+#### Scenario: Another activation wins the pointer race
+
+- **WHEN** two administrators activate validated revisions concurrently
+- **THEN** exactly one compare-and-set succeeds
+- **AND** the losing transaction leaves its candidate and the previous pointer unchanged
+
+### Requirement: Provider test queue handoff is recoverable
+
+The durable provider test execution MUST be claimable only from `queued` to
+`running`. A request that finds an existing queued execution MUST enqueue it
+again, and a duplicate request MUST reuse the same execution identity. A worker
+MUST persist a terminal bounded outcome and timestamps without storing prompts,
+provider response bodies, credentials, or report data.
+While a worker is executing, revision test evidence and execution identity MUST
+be persisted in one transaction guarded by the exact execution id, attempt,
+`running` state, and provider revision id. A superseded attempt MUST NOT mutate
+revision evidence, execution identity, audit events, capability-test metrics, or
+the terminal execution row.
+
+#### Scenario: Queue handoff is interrupted
+
+- **WHEN** the database row is queued but the first queue enqueue is lost
+- **THEN** a later test request re-enqueues the same queued execution
+- **AND** the worker can claim it exactly once
+
+#### Scenario: A stalled worker returns after a retry wins
+
+- **WHEN** attempt 1 stalls, attempt 2 reclaims the same execution and persists
+  its result, and attempt 1 later returns
+- **THEN** the revision test evidence and execution identity remain those of
+  attempt 2
+- **AND** attempt 1 cannot complete or emit provider-test success side effects
+
+### Requirement: Unconfigured and disabled states are explicit
+
+The admin MUST be able to disable the global integration without deleting its retained configuration. An authenticated availability read used by AI product surfaces MUST reveal only `available` or `not_configured`, not provider details. When no configuration is active or the integration is disabled, AI controls MUST remain visible but disabled with English explanatory copy, and direct assistant calls MUST return the controlled `ai_not_configured` outcome. The current database seed MUST create an explicitly disabled provider control without provider credentials or an active provider configuration. Non-AI report workflows MUST remain available.
+
+#### Scenario: Fresh installation has no active configuration
+
+- **WHEN** an authorized user reaches an AI surface before an admin activates a configuration
+- **THEN** the control is disabled and explains that AI is not configured by an administrator
+- **AND** report viewing, editing, saving, submission, review, and publication keep their existing behavior
+
+#### Scenario: Admin disables AI
+
+- **WHEN** an admin confirms the disable operation
+- **THEN** subsequent AI availability reads return `not_configured`
+- **AND** the retained credential is not exposed or deleted
+
+#### Scenario: Current seed starts AI unconfigured
+
+- **WHEN** the current database seed runs on an empty database
+- **THEN** it creates the singleton provider control in the disabled state without a provider configuration
+- **AND** AI availability remains `not_configured` until an administrator activates a tested database revision
+
+### Requirement: Configuration lifecycle changes are auditable
+
+The control plane MUST audit draft saves, tests, activation requests, activation success or failure, disables, and manual restoration of a retained revision. Each event MUST identify the admin actor when applicable, revision, profile, model identifiers, safe transition, and timestamp, and MUST exclude credentials, provider response bodies, prompts, report data, and embeddings.
+
+#### Scenario: Admin activates a tested revision
+
+- **WHEN** activation begins and later succeeds or fails
+- **THEN** the audit trail contains the request and terminal transition with safe configuration metadata
+- **AND** it contains no secret or provider payload

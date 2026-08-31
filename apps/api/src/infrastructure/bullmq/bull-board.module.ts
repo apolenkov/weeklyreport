@@ -89,14 +89,12 @@ export function createRequireHeadGuard(deps: RequireHeadDeps): RequestHandler {
 
 export function mountBullBoard(app: INestApplication, env: EnvConfig): void {
   const registry = app.get(QueueRegistry);
-  const pdfQueue = registry.get("pdf-export");
-  const emailQueue = registry.get("email-reminder");
 
   const serverAdapter = new ExpressAdapter();
   serverAdapter.setBasePath("/admin/queues");
 
   createBullBoard({
-    queues: [new BullMQAdapter(pdfQueue), new BullMQAdapter(emailQueue)],
+    queues: registry.names.map((name) => new BullMQAdapter(registry.get(name))),
     serverAdapter,
   });
 

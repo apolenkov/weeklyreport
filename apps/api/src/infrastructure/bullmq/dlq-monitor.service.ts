@@ -11,6 +11,7 @@ import {
   queueDepth,
   redisMemoryUsedBytes,
 } from "../metrics/metrics.registry.js";
+import { closeBullMqResource } from "./bounded-shutdown.js";
 import { getBullMQOptions } from "./bullmq-options";
 import {
   QUEUE_NAMES,
@@ -107,10 +108,19 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
       clearInterval(this.pollTimer);
       this.pollTimer = null;
     }
-    for (const events of this.queueEvents.values()) {
-      await events.close();
+    try {
+      await Promise.all(
+        [...this.queueEvents.entries()].map(([name, events]) =>
+          closeBullMqResource(
+            `queue events ${name}`,
+            () => events.close(),
+            () => events.disconnect(),
+          ),
+        ),
+      );
+    } finally {
+      this.memoryClient.disconnect();
     }
-    this.memoryClient.disconnect();
   }
 
   // Sole owner of cr_dlq_failed_total — workers must not also inc. BullMQ emits

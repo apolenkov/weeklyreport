@@ -10,6 +10,7 @@ import { expectDefined } from "../../../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
 import { makeReportSectionFixture } from "../../../../../test-utils/report-section-fixtures";
 import { sectionToDraftPayload } from "../../../../report-sections";
+import { LeadReportAssistantStore } from "../../lead-report-assistant-store";
 import { LeadForm } from "./lead-form";
 
 vi.mock("sonner", () => ({
@@ -180,7 +181,7 @@ function buildHarness(
           }}
         >
           <TRPCProxyContext.Provider value={proxy}>
-            {children}
+            <LeadReportAssistantStore>{children}</LeadReportAssistantStore>
           </TRPCProxyContext.Provider>
         </SessionContext.Provider>
       </QueryClientProvider>

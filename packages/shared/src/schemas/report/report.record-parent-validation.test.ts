@@ -66,6 +66,7 @@ const section = reportSectionReadModelSchema.parse({
       activityId: attachedActivityId,
       activityName: "Ops rotation",
       status: null,
+      jiraAccounts: [],
       linkedProducts: [],
       derivedStatus: null,
       alarmFloor: null,

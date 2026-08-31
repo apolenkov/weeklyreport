@@ -17,8 +17,11 @@ interface JobsTableRowProps {
   readonly isExpanded: boolean;
   readonly isRetrying: boolean;
   readonly retryDisabled: boolean;
+  readonly isRemoving: boolean;
+  readonly removeDisabled: boolean;
   readonly onToggleExpand: (jobId: string) => void;
   readonly onRetry: (jobId: string) => void;
+  readonly onRemove: (jobId: string) => void;
 }
 
 // Long failure reasons collapse to one truncated line; the toggle appears only
@@ -73,8 +76,11 @@ export function JobsTableRow({
   isExpanded,
   isRetrying,
   retryDisabled,
+  isRemoving,
+  removeDisabled,
   onToggleExpand,
   onRetry,
+  onRemove,
 }: JobsTableRowProps) {
   return (
     <tr
@@ -106,6 +112,15 @@ export function JobsTableRow({
           aria-label={`Retry job ${job.id}`}
         >
           {isRetrying ? "Retrying…" : "Retry"}
+        </button>
+        <button
+          type="button"
+          onClick={() => onRemove(job.id)}
+          disabled={removeDisabled}
+          className="ml-2 btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[var(--color-destructive)] px-3 py-1.5 text-xs font-semibold text-[var(--color-destructive)] disabled:opacity-50"
+          aria-label={`Remove failed job ${job.id}`}
+        >
+          {isRemoving ? "Removing…" : "Remove"}
         </button>
       </td>
     </tr>

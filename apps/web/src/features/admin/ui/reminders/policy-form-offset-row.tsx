@@ -85,16 +85,23 @@ function OffsetAmountInput({
     <div>
       <input
         id="policy-offset-minutes"
+        name="reminder-offset-amount"
         type="number"
+        autoComplete="off"
         min={0}
         aria-invalid={error !== null}
+        aria-describedby={error ? "policy-offset-minutes-error" : undefined}
         value={raw}
         onChange={(e) => handleChange(e.target.value)}
         aria-label="reminder offset amount"
         className={POLICY_FORM_INPUT_CLASS}
       />
       {error !== null && (
-        <p className="text-xs text-[var(--color-destructive)]" role="alert">
+        <p
+          id="policy-offset-minutes-error"
+          className="text-xs text-[var(--color-destructive)]"
+          role="alert"
+        >
           {error}
         </p>
       )}
@@ -111,6 +118,8 @@ function OffsetUnitSelect({
 }: OffsetControlProps) {
   return (
     <select
+      name="reminder-offset-unit"
+      autoComplete="off"
       aria-label="reminder offset unit"
       value={unit}
       onChange={(e) => {
@@ -144,6 +153,8 @@ function OffsetDirectionSelect({
 }: OffsetControlProps) {
   return (
     <select
+      name="reminder-offset-direction"
+      autoComplete="off"
       aria-label="before or after deadline"
       value={beforeDeadline ? "before" : "after"}
       onChange={(e) => {

@@ -47,24 +47,30 @@ export function ActivityEditDialog({
       surfaceClassName="animate-scale-in mx-4 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl"
       ariaLabel={editingActivity ? "Edit activity" : "Add activity"}
     >
-      <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-        {editingActivity ? "Edit Activity" : "Add Activity"}
-      </h3>
-      <ActivityFormFields
-        form={form}
-        onFormChange={onFormChange}
-        groups={groups}
-        products={products}
-        groupLockedByLeads={(editingActivity?.leadIds.length ?? 0) > 0}
-      />
-      <AdminEntityDialogActions
-        saveLabel={editingActivity !== null ? "Save Changes" : "Add Activity"}
-        canSave={canSave}
-        isSaving={isSaving}
-        onSave={onSave}
-        onClose={onClose}
-        saveDisabled={isSaving || !canSave}
-      />
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!isSaving && canSave) onSave();
+        }}
+      >
+        <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
+          {editingActivity ? "Edit Activity" : "Add Activity"}
+        </h3>
+        <ActivityFormFields
+          form={form}
+          onFormChange={onFormChange}
+          groups={groups}
+          products={products}
+          groupLockedByLeads={(editingActivity?.leadIds.length ?? 0) > 0}
+        />
+        <AdminEntityDialogActions
+          saveLabel={editingActivity !== null ? "Save Changes" : "Add Activity"}
+          canSave={canSave}
+          isSaving={isSaving}
+          onClose={onClose}
+          saveDisabled={isSaving || !canSave}
+        />
+      </form>
     </DialogSurface>
   );
 }

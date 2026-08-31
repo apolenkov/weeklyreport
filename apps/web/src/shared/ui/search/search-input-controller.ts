@@ -32,9 +32,11 @@ export interface SearchController {
   readonly isError: boolean;
   readonly isFetching: boolean;
   readonly isViewer: boolean;
+  readonly retry: () => void;
   readonly activeIndex: number;
   readonly setActiveIndex: (idx: number) => void;
   readonly handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  readonly handleBlur: (e: React.FocusEvent<HTMLInputElement>) => void;
   readonly navigateTo: (url: string) => void;
 }
 
@@ -46,7 +48,7 @@ function useSearchHits(q: string, scope: SearchScope, isViewer: boolean) {
   const debouncedQ = useDebouncedValue(q.trim(), DEBOUNCE_MS);
   const enabled = debouncedQ.length >= MIN_LEN && debouncedQ.length <= MAX_LEN;
 
-  const { data, isError, isFetching } = useQuery({
+  const { data, isError, isFetching, refetch } = useQuery({
     ...trpc.search.query.queryOptions({
       q: debouncedQ,
       scope,
@@ -63,7 +65,7 @@ function useSearchHits(q: string, scope: SearchScope, isViewer: boolean) {
     return isViewer ? all.filter((hit) => hit.type !== "project") : all;
   }, [data, isViewer]);
 
-  return { enabled, hits, isError, isFetching };
+  return { enabled, hits, isError, isFetching, retry: () => void refetch() };
 }
 
 interface KeyDownArgs {
@@ -142,7 +144,7 @@ export function useSearchController(scope: SearchScope): SearchController {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
 
-  const { enabled, hits, isError, isFetching } = useSearchHits(
+  const { enabled, hits, isError, isFetching, retry } = useSearchHits(
     q,
     scope,
     isViewer,
@@ -160,6 +162,13 @@ export function useSearchController(scope: SearchScope): SearchController {
     router.push(url);
   };
 
+  const handleBlur = (event: React.FocusEvent<HTMLInputElement>) => {
+    const nextTarget = event.relatedTarget;
+    if (!nextTarget || !containerRef.current?.contains(nextTarget)) {
+      setOpen(false);
+    }
+  };
+
   return {
     q,
     setQ,
@@ -171,6 +180,7 @@ export function useSearchController(scope: SearchScope): SearchController {
     isError,
     isFetching,
     isViewer,
+    retry,
     activeIndex,
     setActiveIndex,
     handleKeyDown: keyDownHandler({
@@ -185,6 +195,7 @@ export function useSearchController(scope: SearchScope): SearchController {
       moveActive,
       navigateTo,
     }),
+    handleBlur,
     navigateTo,
   };
 }

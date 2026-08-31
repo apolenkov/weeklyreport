@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 
-import { withSentryConfig } from "@sentry/nextjs";
+import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
 import { assertWebEnv } from "./src/shared/lib/runtime/web-env";

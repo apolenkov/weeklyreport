@@ -1,23 +1,21 @@
-import { InjectQueue } from "@nestjs/bullmq";
+import {
+  EMAIL_REMINDER_QUEUE_NAME,
+  PDF_EXPORT_QUEUE_NAME,
+} from "@customreport/shared";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import type { HealthIndicatorResult } from "@nestjs/terminus";
 import { HealthIndicatorService } from "@nestjs/terminus";
-import type { Queue } from "bullmq";
 
+import { QUEUE_NAMES, QueueRegistry } from "../bullmq/queue-registry.js";
 import { WorkerLivenessRegistry } from "../bullmq/worker-liveness.registry.js";
 import { withReadinessTimeout } from "./readiness-timeout.js";
-
-// The only Queue surface the probe touches; narrow so tests inject a stub
-// without an erasing cast (BullMQ's Queue class has no usable interface).
-type JobCountQueue = Pick<Queue, "getJobCounts">;
 
 @Injectable()
 export class BullMQHealthIndicator {
   private readonly logger = new Logger(BullMQHealthIndicator.name);
 
   constructor(
-    @InjectQueue("pdf-export") private readonly pdfQueue: JobCountQueue,
-    @InjectQueue("email-reminder") private readonly emailQueue: JobCountQueue,
+    @Inject(QueueRegistry) private readonly queues: QueueRegistry,
     @Inject(WorkerLivenessRegistry)
     private readonly workerLiveness: WorkerLivenessRegistry,
     @Inject(HealthIndicatorService)
@@ -34,19 +32,29 @@ export class BullMQHealthIndicator {
       }
       const counts = await withReadinessTimeout(
         "BullMQ job-count",
-        Promise.all([
-          this.pdfQueue.getJobCounts(),
-          this.emailQueue.getJobCounts(),
+        Promise.all(
+          QUEUE_NAMES.map(
+            async (name) =>
+              [name, await this.queues.get(name).getJobCounts()] as const,
+          ),
+        ),
+      );
+      const queueCounts = Object.fromEntries(
+        counts.map(([name, queueCounts]) => [
+          name,
+          {
+            waiting: queueCounts.waiting,
+            active: queueCounts.active,
+          },
         ]),
       );
-      const [pdfCounts, emailCounts] = counts;
 
       return this.healthIndicator.check(key).up({
-        pdf_export: { waiting: pdfCounts.waiting, active: pdfCounts.active },
-        email_reminder: {
-          waiting: emailCounts.waiting,
-          active: emailCounts.active,
-        },
+        // Keep the health contract stable while exposing the exhaustive queue
+        // map used by readiness checks and operations tooling.
+        pdf_export: queueCounts[PDF_EXPORT_QUEUE_NAME],
+        email_reminder: queueCounts[EMAIL_REMINDER_QUEUE_NAME],
+        queues: queueCounts,
         workers: requiredWorkers.workers,
       });
     } catch (error) {

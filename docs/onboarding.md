@@ -84,9 +84,13 @@ WeeklyReport автоматизирует еженедельные статус-
 web, чтобы заработала корреляция ошибок с трейсами (см. раздел 6). В production
 он компилируется в Web-образ, поэтому изменение требует новой сборки.
 
-Локальный `pnpm observability:up` читает `GRAFANA_ADMIN_PASSWORD` из корневого
-`.env`. В `.env.example` задано только loopback-значение; для общего окружения
-его необходимо заменить до запуска overlay.
+Локальный `pnpm observability:up` читает настройки overlay из корневого `.env`:
+`GRAFANA_PORT` (по умолчанию `3003`), `GRAFANA_ADMIN_USER` (по умолчанию
+`admin`) и обязательный `GRAFANA_ADMIN_PASSWORD`. Порты Grafana и Bugsink
+(`BUGSINK_PORT`, по умолчанию `8000`) привязаны только к loopback. Для Bugsink
+также обязателен `BUGSINK_SECRET_KEY`; значение из `.env.example` подходит
+только для локального стека и должно быть заменено в общем окружении. Подробный
+контракт — в [environment.md](environment.md).
 
 Аутентификация локально:
 
@@ -155,8 +159,10 @@ Docker-базы.
   этот endpoint во внешний интернет.
 - Sentry-совместимый сервис получает ошибки API и Web, когда заданы
   `SENTRY_DSN` и `NEXT_PUBLIC_SENTRY_DSN`. Для локальной диагностики команда
-  `pnpm observability:up` поднимает изолированные Grafana/OTel и Bugsink; основной
-  dev-стек остаётся работоспособным без overlay и DSN.
+  `pnpm observability:up` добавляет Grafana/OTel и Bugsink в текущий Compose-
+  проект и переиспользует его PostgreSQL, Redis и Mailpit без конкурирующих
+  host-портов. Основной dev-стек остаётся работоспособным без overlay и DSN;
+  `pnpm observability:down` удаляет только observability-сервисы.
 
 ## 7. Гейты и стиль кода
 

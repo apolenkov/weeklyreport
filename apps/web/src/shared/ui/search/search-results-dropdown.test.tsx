@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import type { SearchHit } from "@customreport/shared";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { SearchResultsDropdown } from "./search-results-dropdown";
@@ -23,6 +23,7 @@ function makeHit(overrides: Partial<SearchHit> = {}): SearchHit {
 function renderDropdown(
   hits: SearchHit[],
   state: { readonly isError?: boolean; readonly isFetching?: boolean } = {},
+  onRetry = vi.fn(),
 ) {
   render(
     <SearchResultsDropdown
@@ -32,6 +33,7 @@ function renderDropdown(
       isError={state.isError ?? false}
       isFetching={state.isFetching ?? false}
       isViewer={false}
+      onRetry={onRetry}
       onHoverHit={vi.fn()}
       onSelectHit={vi.fn()}
     />,
@@ -55,6 +57,28 @@ describe("SearchResultsDropdown — loading semantics", () => {
     renderDropdown(hits, state);
 
     expect(document.querySelector('[aria-busy="true"]')).toBeNull();
+  });
+
+  it("keeps the busy status while retained hits remain visible", () => {
+    renderDropdown([makeHit()], { isFetching: true });
+
+    expect(
+      screen.getByRole("status", { name: "Searching reports" }),
+    ).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByText("Ship v2")).toBeInTheDocument();
+  });
+
+  it("offers retry for errors", () => {
+    const onRetry = vi.fn();
+    renderDropdown([], { isError: true }, onRetry);
+
+    expect(screen.getByText("Search failed")).toBeInTheDocument();
+    const retry = screen.getByRole("button", { name: "Try again" });
+    expect(
+      screen.getByRole("listbox", { name: "Search results" }),
+    ).not.toContainElement(retry);
+    fireEvent.click(retry);
+    expect(onRetry).toHaveBeenCalledOnce();
   });
 });
 

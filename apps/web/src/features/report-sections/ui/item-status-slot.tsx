@@ -10,7 +10,10 @@ import type { StatusSlot } from "./item-edit-dialog-helpers";
 function StatusField({ children }: { readonly children: ReactNode }) {
   return (
     <div>
-      <span className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]">
+      <span
+        id="item-status-label"
+        className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+      >
         Status
       </span>
       {children}
@@ -29,7 +32,12 @@ function ItemStatusChips({
 }) {
   return (
     <StatusField>
-      <ChoiceChipRow choices={choices} value={status} onSelect={onSelect} />
+      <ChoiceChipRow
+        choices={choices}
+        value={status}
+        onSelect={onSelect}
+        ariaLabelledBy="item-status-label"
+      />
     </StatusField>
   );
 }

@@ -78,11 +78,13 @@ export function ReopenRespondForm({
       </label>
       <textarea
         id={`reopen-note-${requestId}`}
+        name="reopen-note"
+        autoComplete="off"
         value={note}
         onChange={(event) => onNoteChange(event.target.value)}
         maxLength={MAX_REOPEN_NOTE_LENGTH}
-        placeholder="Example: approved, please update the report."
-        className="w-full resize-y rounded-md border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm focus:border-[var(--color-starbucks-accent)] focus:outline-none"
+        placeholder="Example: approved, please update the report…"
+        className="w-full resize-y rounded-md border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm focus-visible:border-[var(--color-starbucks-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)]"
         style={{ minHeight: "60px" }}
       />
       <ReopenRespondActions

@@ -71,6 +71,7 @@ This index maps every durable capability to one canonical home. Product capabili
 
 #### Consume/Search
 
+- [lead-report-assistant](./lead-report-assistant/spec.md) — Leads ask bounded questions over authorized report evidence through a grounded, fail-closed assistant. `[roles: Lead]`
 - [lead-history-summary](./lead-history-summary/spec.md) — Lead history is period-ordered, aggregates only completed periods, and never fabricates a missing submission for compiled reports. `[roles: Lead]`
 - [lead-slide-by-product-grid](./lead-slide-by-product-grid/spec.md) — One auto-height by-product slide article renders lead, head, and viewer content with priorities, contributors, stages, and full record order. `[roles: Lead, Head, Viewer]`
 - [slide-inline-record-editing](./slide-inline-record-editing/spec.md) — Leads edit or delete their own slide rows through the existing form write path while read-only rows ignore activation. `[roles: Lead]`
@@ -117,6 +118,9 @@ Authority model:
 
 #### Configure
 
+- [ai-prompt-management](./ai-prompt-management/spec.md) — Admin-managed feature prompt revisions remain typed, immutable, versioned, and fail closed at runtime. `[roles: Admin]`
+- [ai-provider-configuration](./ai-provider-configuration/spec.md) — One organization-wide AI provider follows an administrator-only draft, test, activation, disable, and restore lifecycle. `[roles: Admin]`
+- [ai-provider-settings-layout](./ai-provider-settings-layout/spec.md) — Settings → AI keeps provider configuration compact, accessible, responsive, and free of horizontal overflow. `[roles: Admin]`
 - [admin-dialog-focus-management](./admin-dialog-focus-management/spec.md) — Admin CRUD dialogs move focus inside on open and restore it to the initiating control on close. `[roles: Admin]`
 - [admin-reminders-ui](./admin-reminders-ui/spec.md) — Admins configure reminder policies through plain-language cards, inline editing, presets, and explicit permanent removal. `[roles: Admin]`
 - [admin-settings-ui](./admin-settings-ui/spec.md) — Admin Settings provides client-side sub-tabs, honest live policy controls, and resilient unsaved form state. `[roles: Admin]`
@@ -143,6 +147,7 @@ Authority model:
 
 ### Security and authorization
 
+- [authorized-report-retrieval](./authorized-report-retrieval/spec.md) — The Lead Report Assistant validates one strict search plan and applies server-owned period and authorization boundaries before projection.
 - [destructive-db-guard](./destructive-db-guard/spec.md) — Allows destructive developer flows only for exact loopback disposable database names with explicit per-run consent; production restore stays separate.
 - [jwt-session-integrity](./jwt-session-integrity/spec.md) — Pins JWT verification algorithms, enforces secret strength, and documents stateless logout semantics.
 - [prod-security-hardening](./prod-security-hardening/spec.md) — Enforces production CSP, immutable base-image digests, and safe dev-auth build defaults.
@@ -160,6 +165,7 @@ Authority model:
 - [client-error-policy](./client-error-policy/spec.md) — Routes query load failures through one exactly-once reporting seam with consistent retry and message behavior.
 - [error-trace-correlation](./error-trace-correlation/spec.md) — Correlates request, browser, queue, worker, and redacted application logs with one trace context.
 - [hot-path-query-performance](./hot-path-query-performance/spec.md) — Parallelizes independent reads, batches ownership and reconciliation, paginates archives, and removes write-on-read hot paths.
+- [lead-assistant-provider-resilience](./lead-assistant-provider-resilience/spec.md) — Bounds assistant context and provider retries while returning deterministic recovery outcomes without automatic failover.
 - [manual-publish-telemetry](./manual-publish-telemetry/spec.md) — Emits publish counters only after a successful manual transition and records the real prior state.
 - [operational-logger-wiring](./operational-logger-wiring/spec.md) — Injects the shared operational logger into service factories instead of silently falling back to a null logger.
 - [period-scheduler-wiring](./period-scheduler-wiring/spec.md) — Makes scheduler composition executable, rejects overlapping periods under concurrency, and emits committed transition audit events.
@@ -193,6 +199,7 @@ Authority model:
 - [report-delete-integrity](./report-delete-integrity/spec.md) — Deletes only lifecycle-eligible reports through one atomic guard and preserves data when publication wins a race.
 - [reopen-compare-and-set](./reopen-compare-and-set/spec.md) — Guards reopen and manual archive transitions against zero-row and concurrent-writer races.
 - [schema-conventions](./schema-conventions/spec.md) — Standardizes Zod string-format validators and index coverage for foreign-key and cascade columns.
+- [semantic-embedding-cache](./semantic-embedding-cache/spec.md) — Activates content-addressed embedding scopes only after complete, current-source preparation and race-safe verification.
 - [seed-determinism](./seed-determinism/spec.md) — Keeps seed identifiers collision-free and covers the canonical item-status vocabulary.
 - [archive-published-floor](./archive-published-floor/spec.md) — Archive transitions preserve the published-data floor.
 - [fill-from-write-lock](./fill-from-write-lock/spec.md) — Fill operations preserve write-lock ownership and concurrency guarantees.

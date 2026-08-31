@@ -49,7 +49,7 @@ export function LeadReviewFeedback({
             <span className="text-[11px] font-bold uppercase tracking-[0.09em] text-[var(--color-muted-foreground)]">
               {KIND_LABEL[record.kind]} &middot; {record.productName}
             </span>
-            <span className="text-[13px] font-medium text-[var(--color-foreground)]">
+            <span className="min-w-0 break-words text-[13px] font-medium text-[var(--color-foreground)] [overflow-wrap:anywhere]">
               {record.text}
             </span>
             <ReviewCommentList comments={record.comments} />

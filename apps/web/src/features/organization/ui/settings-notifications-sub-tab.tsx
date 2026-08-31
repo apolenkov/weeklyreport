@@ -64,16 +64,24 @@ function NotificationFromEmailField({
         id="notification-from-email"
         name="notification-from-email"
         type="email"
-        autoComplete="off"
+        autoComplete="email"
         placeholder="reports@yourdomain.com"
         value={value}
+        aria-invalid={!isValid}
+        aria-describedby={
+          !isValid ? "notification-from-email-error" : undefined
+        }
         onChange={(e) =>
           onChange(e.target.value === "" ? null : e.target.value)
         }
         className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
       />
       {!isValid && (
-        <p className="mt-1 text-xs text-[var(--color-destructive)]">
+        <p
+          id="notification-from-email-error"
+          className="mt-1 text-xs text-[var(--color-destructive)]"
+          role="alert"
+        >
           Enter a valid email or leave the field empty.
         </p>
       )}
@@ -104,7 +112,11 @@ function NotificationSaveRow({
         {isSaving ? "Saving…" : "Save Notification Settings"}
       </button>
       {showSaved && (
-        <span className="flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]">
+        <span
+          className="flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]"
+          role="status"
+          aria-live="polite"
+        >
           <CheckIcon />
           Notification settings saved
         </span>
@@ -119,9 +131,14 @@ export function NotificationsSubTab({
   readonly serverSettings: AppSettings;
 }) {
   const { draft, setDraft, setIsDirty } = useServerSeededDraft(serverSettings);
+  const [showSaved, setShowSaved] = useState(false);
 
-  const updateSettingsMut = useUpdateSettingsMut("Notification settings", () =>
-    setIsDirty(false),
+  const updateSettingsMut = useUpdateSettingsMut(
+    "Notification settings",
+    () => {
+      setIsDirty(false);
+      setShowSaved(true);
+    },
   );
 
   const trimmed = draft.notificationFromEmail?.trim() ?? "";
@@ -146,6 +163,7 @@ export function NotificationsSubTab({
         isValid={isValidEmail}
         onChange={(notificationFromEmail) => {
           setIsDirty(true);
+          setShowSaved(false);
           setDraft({ ...draft, notificationFromEmail });
         }}
       />
@@ -154,7 +172,7 @@ export function NotificationsSubTab({
         onSave={handleSave}
         isSaving={isSaving}
         disabled={isSaving || !isValidEmail}
-        showSaved={updateSettingsMut.isSuccess}
+        showSaved={showSaved}
       />
     </div>
   );

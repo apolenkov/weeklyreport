@@ -108,8 +108,13 @@ function AcknowledgeGroupControl({
         onClick={() => ackMut.mutate({ reportId, groupId: group.groupId })}
         disabled={ackMut.isPending || acknowledged || rosterUnavailable}
         aria-pressed={acknowledged}
+        aria-busy={ackMut.isPending}
       >
-        {(acknowledged ? "Acknowledged" : "Acknowledge") + suffix}
+        {(ackMut.isPending
+          ? "Acknowledging…"
+          : acknowledged
+            ? "Acknowledged"
+            : "Acknowledge") + suffix}
       </button>
       {rosterUnavailable ? (
         <span

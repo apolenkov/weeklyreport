@@ -6,10 +6,15 @@ import {
   TabsList,
   TabsTrigger,
 } from "@customreport/ui/components/ui/tabs";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { TabHeader } from "../../../shared/ui/tabs/tab-header";
-import { IdentitySubTab, NotificationsSubTab } from "../../organization";
+import {
+  IdentitySubTab,
+  NotificationsSubTab,
+  SettingsAiSubTab,
+} from "../../organization";
 import { PeriodsSubTab } from "../../period";
 import { RemindersSubTab } from "./reminders/settings-reminders-sub-tab";
 
@@ -18,12 +23,23 @@ const SETTINGS_SECTIONS = [
   { label: "Periods", value: "periods" },
   { label: "Reminders", value: "reminders" },
   { label: "Notifications", value: "notifications" },
+  { label: "AI", value: "ai" },
 ] as const;
 
 type SettingsSection = (typeof SETTINGS_SECTIONS)[number]["value"];
 
+interface SettingsSelection {
+  readonly section: SettingsSection;
+  readonly source: string;
+}
+
 function isSettingsSection(value: string): value is SettingsSection {
   return SETTINGS_SECTIONS.some((section) => section.value === value);
+}
+
+function sectionFromSearch(source: string): SettingsSection {
+  const value = new URLSearchParams(source).get("settingsTab");
+  return value !== null && isSettingsSection(value) ? value : "identity";
 }
 
 interface SettingsTabProps {
@@ -53,31 +69,49 @@ function SettingsNavigation({
           </option>
         ))}
       </select>
-      <TabsList
-        variant="line"
-        className="hidden max-w-full justify-start border-b border-[var(--color-border)] md:inline-flex"
-      >
-        <TabsTrigger value="identity">Identity</TabsTrigger>
-        <TabsTrigger value="periods">Periods</TabsTrigger>
-        <TabsTrigger value="reminders">Reminders</TabsTrigger>
-        <TabsTrigger value="notifications">Notifications</TabsTrigger>
-      </TabsList>
+      <div className="hidden min-w-0 max-w-full overflow-x-auto md:block">
+        <TabsList
+          variant="line"
+          className="min-w-max justify-start border-b border-[var(--color-border)]"
+        >
+          <TabsTrigger value="identity">Identity</TabsTrigger>
+          <TabsTrigger value="periods">Periods</TabsTrigger>
+          <TabsTrigger value="reminders">Reminders</TabsTrigger>
+          <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          <TabsTrigger value="ai">AI</TabsTrigger>
+        </TabsList>
+      </div>
     </>
   );
 }
 
 export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
-  const [activeSection, setActiveSection] =
-    useState<SettingsSection>("identity");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const searchState = searchParams.toString();
+  const [optimisticSelection, setOptimisticSelection] =
+    useState<SettingsSelection>(() => ({
+      section: sectionFromSearch(searchState),
+      source: searchState,
+    }));
+  const activeSection =
+    optimisticSelection.source === searchState
+      ? optimisticSelection.section
+      : sectionFromSearch(searchState);
   const activateSection = (value: string) => {
-    if (isSettingsSection(value)) setActiveSection(value);
+    if (!isSettingsSection(value)) return;
+    setOptimisticSelection({ section: value, source: searchState });
+    const params = new URLSearchParams(searchState);
+    params.set("settingsTab", value);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
   return (
     <div className="space-y-6">
       <TabHeader
         title="Settings"
-        description="Organization identity, period defaults, and notification preferences."
+        description="Organization identity, reporting defaults, notifications, and AI configuration."
       />
 
       <Tabs
@@ -104,6 +138,10 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
 
         <TabsContent value="notifications" className="pt-6">
           <NotificationsSubTab serverSettings={serverSettings} />
+        </TabsContent>
+
+        <TabsContent value="ai" className="pt-6">
+          <SettingsAiSubTab />
         </TabsContent>
       </Tabs>
     </div>

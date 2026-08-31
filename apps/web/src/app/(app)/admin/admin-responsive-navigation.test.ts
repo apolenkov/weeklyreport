@@ -39,11 +39,11 @@ describe("Admin responsive navigation contract", () => {
     expect(pickerSource).toContain("<AdminTabsMobileAlerts />");
   });
 
-  it("keeps the Settings selector and Radix list on complementary md sides", () => {
+  it("keeps the Settings selector and scrollable Radix list on complementary md sides", () => {
     const settingsSource = read("features/admin/ui/settings-tab.tsx");
 
     expect(settingsSource).toContain("md:hidden");
-    expect(settingsSource).toMatch(/className="hidden[^\"]*md:inline-flex"/);
-    expect(settingsSource).not.toContain("overflow-x-auto");
+    expect(settingsSource).toMatch(/className="hidden[^\"]*md:block"/);
+    expect(settingsSource).toContain("overflow-x-auto");
   });
 });

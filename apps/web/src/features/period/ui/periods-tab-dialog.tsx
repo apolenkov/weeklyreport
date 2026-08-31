@@ -223,7 +223,7 @@ export function CreatePeriodDialog({
         onWeekLabelChange={setters.setWeekLabel}
       />
       <PeriodDialogActions
-        onCancel={onCancel}
+        onCancel={guardedCancel}
         onSubmit={handleSubmit}
         isPending={isPending}
         canSubmit={validation.canSubmit}

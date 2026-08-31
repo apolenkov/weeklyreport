@@ -74,6 +74,12 @@ describe("SearchInput", () => {
     ).toBeInTheDocument();
   });
 
+  it("gives the search control a meaningful form name", () => {
+    render(<SearchInput scope="mine" />);
+
+    expect(screen.getByRole("combobox")).toHaveAttribute("name", "search");
+  });
+
   it("passes enabled:false to useQuery while q is below the 2-char floor", () => {
     render(<SearchInput scope="mine" />);
     const input = screen.getByRole("combobox");
@@ -166,6 +172,7 @@ describe("SearchInput", () => {
     });
 
     expect(screen.getByText("No results found")).toBeInTheDocument();
+    expect(screen.getByText("Try a different search.")).toBeInTheDocument();
   });
 
   it("renders an error state when search fails", () => {
@@ -265,6 +272,43 @@ describe("SearchInput", () => {
     });
     expect(input.value).toBe("");
     // The listbox must be removed from the DOM after Escape.
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
+
+  it("closes the dropdown when keyboard focus leaves the search container", () => {
+    useQueryMock.mockReturnValue(
+      makeQueryState({
+        data: [
+          {
+            type: "item",
+            id: ITEM_ID,
+            title: "Release blocked",
+            snippet: "Release <<blocked>>",
+            rank: 0.9,
+            projectId: PROJECT_ID,
+            reportId: REPORT_ID,
+            reportSectionId: SECTION_ID,
+            createdAt: "2026-05-06T08:00:00.000Z",
+          },
+        ],
+      }),
+    );
+
+    render(
+      <>
+        <SearchInput scope="mine" />
+        <button type="button">Next control</button>
+      </>,
+    );
+    const input = screen.getByRole("combobox");
+    act(() => {
+      fireEvent.focus(input);
+      fireEvent.change(input, { target: { value: "release" } });
+      vi.advanceTimersByTime(350);
+    });
+
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+    fireEvent.blur(input, { relatedTarget: screen.getByRole("button") });
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   });
 

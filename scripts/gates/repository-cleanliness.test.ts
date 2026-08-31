@@ -10,6 +10,7 @@ import {
   assertRepositoryClean,
   inventoryRepository,
   validateInventory,
+  validateOpenSpecIndex,
 } from "./repository-cleanliness.ts";
 
 const execFileAsync = promisify(execFile);
@@ -120,7 +121,34 @@ describe("repository cleanliness", () => {
     const root = await repository();
     await mkdir(join(root, "openspec/specs/current"), { recursive: true });
     await writeFile(join(root, "openspec/specs/current/spec.md"), "current");
+    await writeFile(
+      join(root, "openspec/specs/README.md"),
+      "[current](./current/spec.md)\n",
+    );
     await execFileAsync("git", ["add", "."], { cwd: root });
     await expect(assertRepositoryClean(root)).resolves.toBeUndefined();
+  });
+
+  it("rejects unindexed, duplicate, and missing OpenSpec entries", async () => {
+    const root = await repository();
+    await mkdir(join(root, "openspec/specs/current"), { recursive: true });
+    await writeFile(join(root, "openspec/specs/current/spec.md"), "current");
+    await writeFile(
+      join(root, "openspec/specs/README.md"),
+      [
+        "[missing](./missing/spec.md)",
+        "[missing again](./missing/spec.md)",
+      ].join("\n"),
+    );
+    await execFileAsync("git", ["add", "."], { cwd: root });
+    const inventory = await inventoryRepository(root);
+
+    await expect(
+      validateOpenSpecIndex(root, inventory.tracked),
+    ).resolves.toEqual([
+      "openspec-index: duplicate missing",
+      "openspec-index: missing spec missing",
+      "openspec-index: unindexed current",
+    ]);
   });
 });

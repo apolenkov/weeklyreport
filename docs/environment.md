@@ -14,6 +14,23 @@ safe placeholders only.
 | Production Compose        | `.env.production` passed with `--env-file`                         | `docker-compose.prod.yml` and optional observability overlay       | Copy `deploy/environment/production.env.example`; required values fail Compose rendering. `NEXT_PUBLIC_*` values are build-time, production Compose owns one immutable internal `API_URL` for Next rewrites and server fetches, `DB_PASSWORD` is URL-safe, `POSTGRES_DB` is a simple identifier, and the observability overlay requires `GRAFANA_ADMIN_PASSWORD`. |
 | CI                        | Workflow job `env` blocks and service containers                   | `.github/workflows/ci.yml`                                         | CI uses disposable PostgreSQL `customreport_e2e`, Redis DB `15`, and non-production values. No developer `.env` is uploaded or required.                                                                                                                                                                                                                          |
 
+## Optional local observability overlays
+
+`pnpm observability:up` reads the root `.env`, joins the current local Compose
+project, and reuses its PostgreSQL, Redis, and Mailpit services while adding
+Grafana/OTel and Bugsink. It never creates a second host-bound dependency
+stack. `pnpm observability:down` removes only those observability services. The
+host ports are loopback-only. The production example composes only the
+Grafana/OTel overlay; the Bugsink errors overlay is not part of the production
+command or its environment template.
+
+| Variable             | Scope and default                                   | Security contract                                                               |
+| -------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `GRAFANA_PORT`       | Grafana host port; defaults to `3003`               | Loopback binding; change only for a local port collision.                       |
+| `GRAFANA_ADMIN_USER` | Grafana UI user; defaults to `admin`                | Local convenience default; choose an explicit operator identity elsewhere.      |
+| `BUGSINK_PORT`       | Local Bugsink host port; defaults to `8000`         | Loopback binding; change only for a local port collision.                       |
+| `BUGSINK_SECRET_KEY` | Required by the errors overlay; no Compose fallback | The example value is local-only; replace it with a unique secret outside local. |
+
 ## Precedence and ownership
 
 Compose interpolation reads the shell and the Compose project env file before

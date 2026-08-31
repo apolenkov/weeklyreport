@@ -1,3 +1,4 @@
+import { PDF_EXPORT_QUEUE_NAME } from "@customreport/shared";
 import { getQueueToken } from "@nestjs/bullmq";
 import { Module } from "@nestjs/common";
 import type { Queue } from "bullmq";
@@ -29,7 +30,7 @@ import { PdfExportInfrastructureTelemetry } from "./pdf-export-telemetry.adapter
     {
       provide: PDF_EXPORT_ENQUEUER,
       useFactory: (queue: Queue) => new PdfExportBullmqEnqueuer(queue),
-      inject: [getQueueToken("pdf-export")],
+      inject: [getQueueToken(PDF_EXPORT_QUEUE_NAME)],
     },
     {
       provide: PDF_EXPORT_TELEMETRY,

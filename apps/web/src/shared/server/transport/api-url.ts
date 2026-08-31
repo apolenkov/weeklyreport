@@ -36,15 +36,16 @@ function isSuperJsonEnvelope(value: unknown): value is SuperJsonEnvelope {
 // tRPC v11 batched GET empty-input map for procedures with no args.
 export const TRPC_BATCH_EMPTY_INPUT = encodeURIComponent('{"0":{}}');
 
-// Superjson contract is `{ json, meta? }`; non-matching payloads pass through
-// so untransformed responses still decode and domain `json` fields are not unwrapped.
+// Superjson is configured on both sides of the tRPC transport. Rejecting any
+// other shape keeps configuration drift from becoming an undocumented wire
+// contract.
 export function decodeTrpcBatchPayload(body: unknown): unknown {
   if (!Array.isArray(body) || body.length === 0) return null;
   const entry = body[0] as TrpcBatchEntry | undefined;
   if (!entry || entry.error) return null;
   const data = entry.result?.data;
   if (data === null || data === undefined) return null;
-  return isSuperJsonEnvelope(data) ? (data.json ?? null) : data;
+  return isSuperJsonEnvelope(data) ? (data.json ?? null) : null;
 }
 
 export function shouldUseDevAuthFallback(): boolean {

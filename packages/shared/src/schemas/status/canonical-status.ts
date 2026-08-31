@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import type {
   RiskSeverity,
   TrafficLightStatus,
@@ -6,7 +8,15 @@ import type {
 /**
  * Canonical severity ladder shared by web presentation and API traffic-light folds.
  */
-export type CanonicalStatus = "blocked" | "at-risk" | "on-track" | "empty";
+export const canonicalStatusSchema = z.enum([
+  "blocked",
+  "at-risk",
+  "on-track",
+  "empty",
+]);
+
+/** Canonical status accepted at application boundaries. */
+export type CanonicalStatus = z.infer<typeof canonicalStatusSchema>;
 
 /** Numeric severity order used to fold canonical statuses to their worst value. */
 export const CANONICAL_STATUS_PRECEDENCE: Readonly<

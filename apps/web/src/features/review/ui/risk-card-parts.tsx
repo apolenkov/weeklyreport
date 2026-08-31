@@ -5,7 +5,7 @@ import { LockBadge } from "../../../shared/ui/report-shell/lock-badge";
 import type { RiskEntry } from "../../report-sections";
 
 const ACTION_BUTTON_CLASS =
-  "flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] md:min-h-[34px] md:min-w-[34px] items-center justify-center rounded-full border border-[var(--card-surface-border)] bg-[var(--color-card)] p-1.5";
+  "flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] md:min-h-[34px] md:min-w-[34px] items-center justify-center rounded-full border border-[var(--card-surface-border)] bg-[var(--color-card)] p-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2";
 const DEFAULT_ACTION_HOVER_CLASS =
   "text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]";
 const DESTRUCTIVE_ACTION_HOVER_CLASS =

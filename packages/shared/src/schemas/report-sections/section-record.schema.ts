@@ -47,6 +47,7 @@ export const sectionActivitySchema = z
     activityName: z.string().min(1),
     status: trafficLightStatusSchema.nullable(),
     note: z.string().nullable().optional(),
+    jiraAccounts: z.array(z.string().min(1)).readonly(),
     linkedProducts: z.array(linkedProductSchema).readonly().default([]),
     derivedStatus: trafficLightStatusSchema.nullable().default(null),
     alarmFloor: trafficLightStatusSchema.nullable().default(null),

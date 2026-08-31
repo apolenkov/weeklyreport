@@ -64,8 +64,11 @@ function DecisionCardHeader({
 }: DecisionCardProps) {
   return (
     <div className="mb-2 flex flex-wrap items-center gap-2">
-      <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]">
-        {decision.productName}
+      <span
+        className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
+        title={decision.productName}
+      >
+        <span className="min-w-0 truncate">{decision.productName}</span>
       </span>
       {decision.deadline && <DueChip deadline={decision.deadline} />}
       {publishedLocked && <PublishedRecordMarker />}

@@ -92,10 +92,12 @@ export function NumberField({
         id={id}
         name={id}
         type="number"
+        autoComplete="off"
         inputMode="numeric"
         min={bounds.min}
         max={bounds.max}
         aria-invalid={error !== null}
+        aria-describedby={error ? `${id}-error` : undefined}
         value={raw}
         onChange={(e) => handleChange(e.target.value)}
         className={
@@ -105,7 +107,7 @@ export function NumberField({
       {error === null ? (
         <p className={FIELD_HINT_CLASS}>{hint}</p>
       ) : (
-        <p className={FIELD_ERROR_CLASS} role="alert">
+        <p id={`${id}-error`} className={FIELD_ERROR_CLASS} role="alert">
           {error}
         </p>
       )}

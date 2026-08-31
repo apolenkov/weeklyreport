@@ -1,3 +1,4 @@
+import { PDF_EXPORT_QUEUE_NAME } from "@customreport/shared";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import type { Job } from "bullmq";
@@ -30,7 +31,7 @@ export class PdfExportReconciliationScheduler {
   }
 
   async runOnce(): Promise<void> {
-    const queue = this.queues.get("pdf-export");
+    const queue = this.queues.get(PDF_EXPORT_QUEUE_NAME);
     const jobs = await queue.getJobs(
       ["completed", "failed"],
       0,
