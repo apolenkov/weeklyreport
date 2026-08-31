@@ -19,7 +19,6 @@ dist
 **/.planning
 .playwright-mcp
 .remember
-.rtk
 .sisyphus
 .tmp
 **/.tmp

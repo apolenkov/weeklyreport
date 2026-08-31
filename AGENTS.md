@@ -39,9 +39,7 @@ pnpm spec:check         # strict validation of all durable OpenSpec specs
 - `pnpm lint` runs every configured check and exits non-zero on a failure. Each
   check is runnable alone through its package script.
 - Run one unit test: `cd apps/web && pnpm exec vitest run src/path/to/file.test.tsx`
-  (same in `apps/api`). Do NOT wrap `vitest` in `rtk`. RTK 0.45.0 preserves
-  the non-zero exit code for a no-tests failure but renders the result as
-  `PASS (0) FAIL (0)`, which hides the actual Vitest diagnostic.
+  (same in `apps/api`).
 - If TS errors reference a known Prisma model (e.g. TS2339), run
   `pnpm --filter @customreport/api db:generate` — pnpm ops wipe the `.prisma` client.
 - Product tests are colocated under each package. The root `pnpm test` runs the
