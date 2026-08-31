@@ -146,7 +146,10 @@ const assertNativeApiEnvironment = (
   environmentExample: string,
   bootstrap: string,
 ): void => {
-  assert.match(apiDevCommand ?? "", /--import tsx --watch src\/main\.ts/);
+  assert.equal(
+    apiDevCommand,
+    "tsx watch --env-file-if-exists=../../.env --clear-screen=false --exclude '../../node_modules/**' --exclude 'node_modules/**' --exclude '.logs/**' --exclude 'storage/**' --include '../../packages/report-persistence/src/**' --include '../../packages/shared/src/**' src/main.ts",
+  );
   assert.match(bootstrap, /await app\.listen\(env\.PORT, env\.API_HOST\)/);
   assert.match(environmentExample, /^API_HOST=127\.0\.0\.1$/mu);
 };

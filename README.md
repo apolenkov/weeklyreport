@@ -112,7 +112,7 @@ pnpm dev
 ## Основные команды
 
 ```bash
-pnpm dev            # web + api в dev-режиме (turbo --parallel)
+pnpm dev            # web + api в dev-режиме через persistent Turbo tasks
 pnpm db:bootstrap:local demo    # guarded create + migrate + seed
 pnpm typecheck      # проверка типов во всех пакетах
 pnpm lint           # полный набор проверок качества, отчёт по каждой
