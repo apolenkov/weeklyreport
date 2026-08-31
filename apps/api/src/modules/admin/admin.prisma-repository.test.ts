@@ -4,12 +4,14 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import type { PolicyApplicatorService } from "../reminders/index.js";
+import { LeadFormConstraintError } from "../report-sections/index.js";
 import { AdminPrismaRepository } from "./admin.prisma-repository";
 import {
   AdminGroupProductConflictError,
   AdminPeriodOverlapError,
   AdminReopenRequestNotFoundError,
   AdminUserConflictError,
+  AdminUserPublishedHistoryError,
   AdminUserReportingGroupRequiredError,
 } from "./admin-shared";
 
@@ -57,7 +59,7 @@ describe("AdminPrismaRepository.createPeriodManual — reminder parity", () => {
 
     expect(result).toEqual(CREATED);
     expect(applicator.applyToPeriod).toHaveBeenCalledTimes(1);
-    expect(applicator.applyToPeriod).toHaveBeenCalledWith(CREATED, now);
+    expect(applicator.applyToPeriod).toHaveBeenCalledWith(CREATED.id, now);
   });
 
   it("still mints the period when no applicator is wired", async () => {
@@ -128,17 +130,6 @@ describe("AdminPrismaRepository period writers — overlap translation", () => {
     } as unknown as PrismaService;
   }
 
-  function openBoundaryP2002(): Prisma.PrismaClientKnownRequestError {
-    return new Prisma.PrismaClientKnownRequestError(
-      "Unique constraint failed",
-      {
-        code: "P2002",
-        clientVersion: "test",
-        meta: { target: "Report_one_open_per_boundary" },
-      },
-    );
-  }
-
   function periodOverlapP2039(): Prisma.PrismaClientKnownRequestError {
     return new Prisma.PrismaClientKnownRequestError(
       'Database error. Code: `23P01`. Message: `conflicting key value violates exclusion constraint "Report_no_live_period_overlap"`',
@@ -167,30 +158,6 @@ describe("AdminPrismaRepository period writers — overlap translation", () => {
     periodState: "open" as const,
   };
 
-  it("createPeriodManual: P2002 → AdminPeriodOverlapError", async () => {
-    const prisma = {
-      report: { create: vi.fn(() => Promise.reject(openBoundaryP2002())) },
-    } as unknown as PrismaService;
-    const repo = new AdminPrismaRepository(prisma);
-
-    await expect(repo.createPeriodManual(INPUT)).rejects.toBeInstanceOf(
-      AdminPeriodOverlapError,
-    );
-  });
-
-  it("updatePeriodManual: P2002 on the date-envelope edit → AdminPeriodOverlapError", async () => {
-    const prisma = periodUpdatePrisma(openBoundaryP2002());
-    const repo = new AdminPrismaRepository(prisma);
-
-    await expect(
-      repo.updatePeriodManual({
-        reportId: "report-1",
-        expectedPeriodState: "open",
-        data: { periodStart: INPUT.periodStart, periodEnd: INPUT.periodEnd },
-      }),
-    ).rejects.toBeInstanceOf(AdminPeriodOverlapError);
-  });
-
   it("createPeriodManual: adapter range P2039 → AdminPeriodOverlapError", async () => {
     const prisma = {
       report: { create: vi.fn(() => Promise.reject(periodOverlapP2039())) },
@@ -215,9 +182,10 @@ describe("AdminPrismaRepository period writers — overlap translation", () => {
     ).rejects.toBeInstanceOf(AdminPeriodOverlapError);
   });
 
-  it("unarchivePeriod: P2002 when unarchiving into a held boundary → AdminPeriodOverlapError", async () => {
+  it("unarchivePeriod: range exclusion when unarchiving into an overlap → AdminPeriodOverlapError", async () => {
     const findUnique = vi.fn(() =>
       Promise.resolve({
+        periodStart: new Date("2026-08-31T00:00:00.000Z"),
         status: "draft",
         periodState: "archived",
         periodStatus: "open",
@@ -229,17 +197,20 @@ describe("AdminPrismaRepository period writers — overlap translation", () => {
         reopenedAt: null,
       }),
     );
-    const updateMany = vi.fn(() => Promise.reject(openBoundaryP2002()));
+    const updateMany = vi.fn(() => Promise.reject(periodOverlapP2039()));
     const prisma = {
       $transaction: vi.fn((run: (tx: unknown) => Promise<unknown>) =>
-        run({ report: { findUnique, updateMany } }),
+        run({
+          $queryRaw: vi.fn(() => Promise.resolve([])),
+          report: { findUnique, updateMany },
+        }),
       ),
     } as unknown as PrismaService;
     const repo = new AdminPrismaRepository(prisma);
 
-    await expect(repo.unarchivePeriod("report-1")).rejects.toBeInstanceOf(
-      AdminPeriodOverlapError,
-    );
+    await expect(
+      repo.unarchivePeriod("report-1", new Date("2026-08-30T12:00:00.000Z")),
+    ).rejects.toBeInstanceOf(AdminPeriodOverlapError);
   });
 
   it("re-throws a non-P2002 error unchanged (an unrelated failure is not masked)", async () => {
@@ -321,7 +292,22 @@ describe("AdminPrismaRepository entity writers — P2002 race handling", () => {
   }
 
   it("attachProductToGroup returns the concurrent winner for the same group", async () => {
+    const leadId = "a0000000-0000-4000-8000-000000000101";
     const prisma = {
+      $transaction: vi.fn((run: (tx: unknown) => Promise<unknown>) =>
+        run(prisma),
+      ),
+      $queryRaw: vi.fn(() => Promise.resolve([{ id: leadId }])),
+      project: {
+        findUnique: vi.fn().mockResolvedValue({ leadId }),
+        findUniqueOrThrow: vi.fn().mockResolvedValue({ leadId }),
+      },
+      user: {
+        findUnique: vi.fn().mockResolvedValue({
+          role: "lead",
+          reportingGroupId: PRODUCT_INPUT.groupId,
+        }),
+      },
       groupProduct: {
         findUnique: vi
           .fn()
@@ -342,6 +328,20 @@ describe("AdminPrismaRepository entity writers — P2002 race handling", () => {
   it("attachProductToGroup reports a concurrent winner in another group", async () => {
     const otherGroupId = "a0000000-0000-4000-8000-000000000302";
     const prisma = {
+      $transaction: vi.fn((run: (tx: unknown) => Promise<unknown>) =>
+        run(prisma),
+      ),
+      $queryRaw: vi.fn(() => Promise.resolve([{ id: "lead-1" }])),
+      project: {
+        findUnique: vi.fn().mockResolvedValue({ leadId: "lead-1" }),
+        findUniqueOrThrow: vi.fn().mockResolvedValue({ leadId: "lead-1" }),
+      },
+      user: {
+        findUnique: vi.fn().mockResolvedValue({
+          role: "lead",
+          reportingGroupId: PRODUCT_INPUT.groupId,
+        }),
+      },
       groupProduct: {
         findUnique: vi
           .fn()
@@ -366,6 +366,13 @@ describe("AdminPrismaRepository entity writers — P2002 race handling", () => {
     "upsertUser translates a %s collision to AdminUserConflictError",
     async (target) => {
       const prisma = {
+        $transaction: vi.fn((run: (tx: unknown) => Promise<unknown>) =>
+          run(prisma),
+        ),
+        $queryRaw: vi.fn(() => Promise.resolve([{ id: USER_INPUT.id }])),
+        project: { findMany: vi.fn().mockResolvedValue([]) },
+        projectActivityLead: { findMany: vi.fn().mockResolvedValue([]) },
+        reportingGroup: { findMany: vi.fn().mockResolvedValue([]) },
         user: {
           upsert: vi.fn(() => Promise.reject(uniqueViolation(target))),
         },
@@ -402,6 +409,20 @@ describe("AdminPrismaRepository entity writers — P2002 race handling", () => {
   it("attachProductToGroup re-throws a non-P2002 error unchanged", async () => {
     const original = new Error("connection reset");
     const prisma = {
+      $transaction: vi.fn((run: (tx: unknown) => Promise<unknown>) =>
+        run(prisma),
+      ),
+      $queryRaw: vi.fn(() => Promise.resolve([{ id: "lead-1" }])),
+      project: {
+        findUnique: vi.fn().mockResolvedValue({ leadId: "lead-1" }),
+        findUniqueOrThrow: vi.fn().mockResolvedValue({ leadId: "lead-1" }),
+      },
+      user: {
+        findUnique: vi.fn().mockResolvedValue({
+          role: "lead",
+          reportingGroupId: PRODUCT_INPUT.groupId,
+        }),
+      },
       groupProduct: {
         findUnique: vi.fn(() => Promise.resolve(null)),
         create: vi.fn(() => Promise.reject(original)),
@@ -417,6 +438,49 @@ describe("AdminPrismaRepository entity writers — P2002 race handling", () => {
 
 // Group-scope where-clause pinning lives at this repository boundary.
 describe("AdminPrismaRepository — deactivate/activate, integrations, stages", () => {
+  it("removeUser reports a published-report reference before deleting", async () => {
+    const deleteMany = vi.fn();
+    const sectionCount = vi.fn();
+    const projectCount = vi.fn();
+    const repo = new AdminPrismaRepository({
+      report: {
+        findFirst: vi.fn(() => Promise.resolve({ id: "report-1" })),
+      },
+      reportSection: { count: sectionCount },
+      project: { count: projectCount },
+      user: { deleteMany },
+    } as unknown as PrismaService);
+
+    await expect(repo.removeUser("publisher-1")).rejects.toBeInstanceOf(
+      AdminUserPublishedHistoryError,
+    );
+    expect(sectionCount).not.toHaveBeenCalled();
+    expect(projectCount).not.toHaveBeenCalled();
+    expect(deleteMany).not.toHaveBeenCalled();
+  });
+
+  it("removeUser reports a publication that wins the guard/delete race", async () => {
+    const findFirst = vi
+      .fn()
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: "report-raced" });
+    const repo = new AdminPrismaRepository({
+      report: { findFirst },
+      reportSection: { count: vi.fn(() => Promise.resolve(0)) },
+      project: { count: vi.fn(() => Promise.resolve(0)) },
+      user: {
+        deleteMany: vi.fn(() => Promise.reject({ code: "P2003" })),
+      },
+    } as unknown as PrismaService);
+
+    await expect(repo.removeUser("publisher-1")).rejects.toMatchObject({
+      name: "AdminUserPublishedHistoryError",
+      message:
+        "User is retained by published report report-raced; deactivate the user instead.",
+    });
+    expect(findFirst).toHaveBeenCalledTimes(2);
+  });
+
   it("deactivateUser sets isActive=false", async () => {
     const update = vi.fn(() => Promise.resolve({}));
     const repo = new AdminPrismaRepository({
@@ -472,6 +536,21 @@ describe("AdminPrismaRepository — deactivate/activate, integrations, stages", 
     });
   });
 
+  it("deleteReminderPolicy relies on one cascading policy delete", async () => {
+    const policyDelete = vi.fn(() => Promise.resolve({ id: "policy-1" }));
+    const ruleDeleteMany = vi.fn();
+    const repo = new AdminPrismaRepository({
+      reminderPolicy: { delete: policyDelete },
+      reminderRule: { deleteMany: ruleDeleteMany },
+    } as unknown as PrismaService);
+
+    await expect(
+      repo.deleteReminderPolicy("policy-1"),
+    ).resolves.toBeUndefined();
+    expect(policyDelete).toHaveBeenCalledWith({ where: { id: "policy-1" } });
+    expect(ruleDeleteMany).not.toHaveBeenCalled();
+  });
+
   it("listStageAssignmentCounts maps the groupBy rows", async () => {
     const groupBy = vi.fn(() =>
       Promise.resolve([{ projectId: "p1", _count: { _all: 4 } }]),
@@ -487,6 +566,23 @@ describe("AdminPrismaRepository — deactivate/activate, integrations, stages", 
 });
 
 describe("AdminPrismaRepository — reopen-request lifecycle", () => {
+  const editableGate = () =>
+    vi.fn(() =>
+      Promise.resolve([
+        {
+          id: "report-1",
+          status: "draft",
+          periodState: "open",
+          periodStatus: "open",
+          archived: false,
+          autoPublished: false,
+          autoArchived: false,
+          publishedAt: null,
+          publishedById: null,
+          reopenedAt: null,
+        },
+      ]),
+    );
   const headSession: UserSession = {
     userId: "head-1",
     email: "head@test.local",
@@ -564,6 +660,7 @@ describe("AdminPrismaRepository — reopen-request lifecycle", () => {
     // caught: the scoped re-load lives in the same transaction as the
     // decision, so an out-of-scope request is rejected and nothing is written.
     const tx = {
+      $queryRaw: editableGate(),
       reopenRequest: {
         findFirst: vi.fn(() => Promise.resolve(null)),
         updateMany: vi.fn(() => Promise.resolve({ count: 1 })),
@@ -605,6 +702,7 @@ describe("AdminPrismaRepository — reopen-request lifecycle", () => {
 
   it("decideReopenRequest: a loser of a concurrent decision reports already-processed", async () => {
     const tx = {
+      $queryRaw: editableGate(),
       reopenRequest: {
         findFirst: vi.fn(() =>
           Promise.resolve({ id: "req-1", reportSectionId: "sec-1" }),
@@ -631,6 +729,7 @@ describe("AdminPrismaRepository — reopen-request lifecycle", () => {
 
   it("decideReopenRequest: a winning approve flips the section", async () => {
     const tx = {
+      $queryRaw: editableGate(),
       reopenRequest: {
         findFirst: vi.fn(() =>
           Promise.resolve({ id: "req-1", reportSectionId: "sec-1" }),
@@ -662,8 +761,56 @@ describe("AdminPrismaRepository — reopen-request lifecycle", () => {
     });
   });
 
+  it("decideReopenRequest: publish wins before approval and no row changes", async () => {
+    const tx = {
+      $queryRaw: vi.fn(() =>
+        Promise.resolve([
+          {
+            id: "report-1",
+            status: "published",
+            periodState: "published",
+            periodStatus: "published",
+            archived: false,
+            autoPublished: false,
+            autoArchived: false,
+            publishedAt: new Date("2026-08-31T08:00:00.000Z"),
+            publishedById: "99999999-9999-4999-8999-999999999999",
+            reopenedAt: null,
+          },
+        ]),
+      ),
+      reopenRequest: {
+        findFirst: vi.fn(() =>
+          Promise.resolve({ id: "req-1", reportSectionId: "sec-1" }),
+        ),
+        updateMany: vi.fn(() => Promise.resolve({ count: 1 })),
+      },
+      reportSection: {
+        updateMany: vi.fn(() => Promise.resolve({ count: 1 })),
+      },
+    };
+    const repo = new AdminPrismaRepository({
+      $transaction: vi.fn((cb: (t: typeof tx) => unknown) =>
+        Promise.resolve(cb(tx)),
+      ),
+    } as unknown as PrismaService);
+
+    await expect(
+      repo.decideReopenRequest({
+        id: "req-1",
+        decision: "approved",
+        reviewNote: null,
+        decidedBy: "head-1",
+        session: headSession,
+      }),
+    ).rejects.toBeInstanceOf(LeadFormConstraintError);
+    expect(tx.reopenRequest.updateMany).not.toHaveBeenCalled();
+    expect(tx.reportSection.updateMany).not.toHaveBeenCalled();
+  });
+
   it("decideReopenRequest: a stale approve auto-closes to rejected", async () => {
     const tx = {
+      $queryRaw: editableGate(),
       reopenRequest: {
         findFirst: vi.fn(() =>
           Promise.resolve({ id: "req-1", reportSectionId: "sec-1" }),
@@ -695,6 +842,7 @@ describe("AdminPrismaRepository — reopen-request lifecycle", () => {
 
   it("decideReopenRequest: a reject skips the section flip entirely", async () => {
     const tx = {
+      $queryRaw: editableGate(),
       reopenRequest: {
         findFirst: vi.fn(() =>
           Promise.resolve({ id: "req-1", reportSectionId: "sec-1" }),

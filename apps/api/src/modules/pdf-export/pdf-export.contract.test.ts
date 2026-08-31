@@ -1,14 +1,15 @@
 import type {
   AssembledReport,
   PdfExportJob,
+  PublishedReportSnapshot,
   UserSession,
 } from "@customreport/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
+import { NOOP_PDF_EXPORT_TELEMETRY } from "../../test-utils/pdf-export.js";
 import {
-  NOOP_PDF_EXPORT_TELEMETRY,
   type PdfExportEnqueuer,
   type PdfExportTelemetry,
 } from "./pdf-export.ports.js";
@@ -32,7 +33,12 @@ function createPdfExportService(
   queue: PdfExportEnqueuer = NOOP_PDF_QUEUE,
   telemetry: PdfExportTelemetry = NOOP_PDF_EXPORT_TELEMETRY,
 ): PdfExportService {
-  return new PdfExportService(repository, logger, queue, telemetry);
+  return new PdfExportService(repository, logger, queue, telemetry, {
+    // Deliberately preserve undefined here so the no-fallback contract test
+    // exercises the required environment value.
+    PDF_BASE_URL: process.env.PDF_BASE_URL ?? "",
+    PDF_EXPORT_JWT_SECRET: process.env.PDF_EXPORT_JWT_SECRET ?? TEST_PDF_SECRET,
+  });
 }
 
 beforeEach(() => {
@@ -87,14 +93,13 @@ function createRepository(
   const jobs = new Map<string, PdfExportJobRecord>();
 
   return {
-    canReadReport() {
-      return Promise.resolve(canRead);
+    getPublishedReportForExport(id: string) {
+      return Promise.resolve(
+        canRead && id === report?.reportId ? structuredClone(report) : null,
+      );
     },
-    getPublishedReport(id: string) {
-      if (id === report?.reportId) {
-        return Promise.resolve(structuredClone(report));
-      }
-      return Promise.resolve(null);
+    getPublishedReportForJob() {
+      return Promise.resolve(null as PublishedReportSnapshot | null);
     },
     createExportJob(job: PdfExportJob, requestedBy: string) {
       jobs.set(job.jobId, {
@@ -150,7 +155,7 @@ describe("PdfExportService — contract tests", () => {
 
       await expect(
         service.requestPdfExport(unknownReportId, requesterSession),
-      ).rejects.toThrow("PDF export requires a published report.");
+      ).rejects.toThrow("PDF export is not available for this caller.");
     });
 
     it("throws PdfExportDomainError when report is a draft", async () => {
@@ -401,27 +406,6 @@ describe("PdfExportService — contract tests", () => {
       } finally {
         if (originalBaseUrl !== undefined) {
           process.env.PDF_BASE_URL = originalBaseUrl;
-        }
-      }
-    });
-
-    it("respects AUTH_JWT_COOKIE_NAME env variable", () => {
-      const originalCookieName = process.env.AUTH_JWT_COOKIE_NAME;
-      process.env.AUTH_JWT_COOKIE_NAME = "custom_auth_token";
-
-      try {
-        const service = createPdfExportService(
-          createRepository(publishedReport),
-        );
-        const cookies = service.buildAuthCookies("my-jwt");
-
-        expect(expectDefined(cookies[0]).name).toBe("custom_auth_token");
-        expect(expectDefined(cookies[0]).value).toBe("my-jwt");
-      } finally {
-        if (originalCookieName === undefined) {
-          delete process.env.AUTH_JWT_COOKIE_NAME;
-        } else {
-          process.env.AUTH_JWT_COOKIE_NAME = originalCookieName;
         }
       }
     });

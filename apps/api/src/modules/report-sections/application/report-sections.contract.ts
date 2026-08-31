@@ -1,11 +1,11 @@
 import type {
   DraftSaveValidationError,
+  MyHistoryResult,
   PeriodStatus,
+  PublishedLineage,
   ReportSectionReadModel,
   ReportStatus,
 } from "@customreport/shared";
-
-import type { MyHistorySectionRow } from "../domain/my-history.js";
 
 export class ReportSectionDomainError extends Error {
   constructor(
@@ -56,18 +56,30 @@ export interface ReportSectionsRepository {
   getReportMeta(
     reportId: string,
   ): Promise<{ status: ReportStatus; deadline: Date | null } | null>;
-  getPublishedLineage(section: ReportSectionReadModel): Promise<{
-    itemStableIds: readonly string[];
-    decisionStableIds: readonly string[];
-  }>;
+  getPublishedLineage(
+    section: ReportSectionReadModel,
+  ): Promise<PublishedLineage>;
   saveSection(
     section: ReportSectionReadModel,
     expectedVersion: number,
   ): Promise<ReportSectionReadModel>;
-  getMyHistoryRows(authorId: string): Promise<readonly MyHistorySectionRow[]>;
+  getMyHistoryPage(
+    authorId: string,
+    pagination: { cursor?: string | undefined; limit: number },
+  ): Promise<MyHistoryResult>;
 }
 
 export const REPORT_SECTIONS_REPOSITORY = Symbol("ReportSectionsRepository");
+
+/** Runtime settings needed by section submission, deliberately independent of AdminModule. */
+export interface ReportSectionsGraceSettings {
+  gracePeriodHours: number;
+  allowLateSubmissions: boolean;
+}
+
+export const REPORT_SECTIONS_GRACE_SETTINGS = Symbol(
+  "ReportSectionsGraceSettings",
+);
 
 export type GetGraceSettings = () => Promise<{
   gracePeriodHours: number;

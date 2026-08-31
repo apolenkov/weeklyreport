@@ -5,9 +5,9 @@ import type {
 import { describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined.js";
+import { unusedRemindersRepositoryStubs } from "./__tests__/reminders-scope.repository-stub.js";
 import { RemindersService } from "./reminders.service.js";
 import type { RemindersRepository } from "./reminders.types.js";
-import { unusedRemindersRepositoryStubs } from "./reminders-scope.repository-stub.js";
 
 // Recipient-level scope on `listExecutions` MUST run over the full slice BEFORE
 // cursor pagination: filtering the already-paginated page would let out-of-scope

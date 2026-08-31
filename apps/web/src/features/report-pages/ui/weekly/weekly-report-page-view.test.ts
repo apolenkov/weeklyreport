@@ -26,6 +26,23 @@ function baseReport(
 }
 
 describe("buildWeeklyReportPageView — authorId scroll target", () => {
+  it("keeps a submitted empty section publishable", () => {
+    const view = buildWeeklyReportPageView(
+      baseReport({ portfolioOverview: [], leadSections: [] }),
+      {
+        scope: "product",
+        currentRole: "head",
+        currentUserId: null,
+        focusedAuthorId: null,
+        submissionFilter: "submitted",
+        onReviewMutated: vi.fn(),
+      },
+    );
+
+    expect(view.canPublishReport).toBe(true);
+    expect(view.showPublishHint).toBe(false);
+  });
+
   it("resolves scrollTargetProductId to the SAME product as focusedProductId when the author's first authored product is empty and a later one has content", () => {
     const report = baseReport({
       portfolioOverview: [

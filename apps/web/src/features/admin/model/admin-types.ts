@@ -61,20 +61,9 @@ export interface AdminPeriodView {
 }
 
 export interface AdminReminderView {
-  id: string;
-  name: string;
-  description: string;
-  active: boolean;
-  // API round-trip fields preserved from `adminReminderRuleSchema`. Surfaced
-  // on the mock so the Reminders tab can rebuild a valid `saveReminderRule`
-  // input (e.g. when toggling status without re-entering kind/fireAt).
-  kind: "deadline" | "follow_up" | "escalation";
+  policyId: string;
   fireAt: Date;
-  timezone: string;
-  version: number;
-  reportId: string | null;
-  // Policy FK groups derived rules under their owning policy in the read-only expander.
-  policyId: string | null;
+  active: boolean;
 }
 
 // Wire shape 1:1; no name/description synthesis — editor shows every column.

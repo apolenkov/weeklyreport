@@ -50,7 +50,7 @@ severity when its stage is covered by at least one non-empty own risk
 empty while covering risks exist. This DISPLAY floor is applied at RENDER time —
 by the live lead form (`applyRiskSeverityFloor` in `lead-form-sync-bridge.tsx`)
 and the slides/head-review surface (`floorSlideStageStatus` in
-`section-slide-utils.ts`), both deriving the severity through the shared
+`section-slide-product-projection.ts`), both deriving the severity through the shared
 `deriveEffectiveStageStatus`.
 
 The render floor MUST also COLLAPSE a stale unbacked severity: a stage whose raw
@@ -95,11 +95,12 @@ separately via the `coveredByOwnRisk` annotation for the completeness counter.
 The risk-entry dialog stage multi-select MUST NOT default to every owned
 stage checked. When the dialog opens with a prefilled stage — the item
 dialog's alarm gesture passes the item's product + stage — it MUST default
-the selection to that prefilled stage only. Switching the product through
-`setProductAndStages` MUST NOT auto-select all of the newly-owned
-stages; it MUST clear the selection or keep only the originating stage. A
-risk MAY still deliberately cover several stages, but multi-stage
-coverage MUST be a deliberate choice, never the default.
+the selection to that prefilled stage only. Switching the product through the
+dialog's `onParentChange` boundary, backed by `setParentAndStages`, MUST NOT
+auto-select all of the newly-owned stages; it MUST clear the selection or keep
+only the originating stage. A risk MAY still deliberately cover several
+stages, but multi-stage coverage MUST be a deliberate choice, never the
+default.
 
 #### Scenario: opening the dialog with a prefilled stage selects only that stage
 
@@ -110,8 +111,7 @@ coverage MUST be a deliberate choice, never the default.
 
 #### Scenario: switching product does not auto-select all owned stages
 
-- **WHEN** the lead changes the product in the open risk dialog via
-  `setProductAndStages`
+- **WHEN** the lead changes the product in the open risk dialog
 - **THEN** the stage multi-select does not auto-check every stage owned
   on the new product
 - **AND** the selection is cleared or keeps only the originating stage
@@ -121,7 +121,7 @@ coverage MUST be a deliberate choice, never the default.
 The shared Blocked-&-At-Risk builder MUST emit the project-level "flagged red"
 escalation exactly once per red product, regardless of how many leads co-own
 that product. The builder is `buildEscalationsFromReadSections` in
-`apps/api/src/modules/report-sections/infrastructure/published-report-snapshot.ts`. The product-level red
+`packages/report-persistence/src/published-report-snapshot.ts`. The product-level red
 signal is product-scoped (it is derived from the product's effective status, not
 from any single lead's contribution), so it MUST NOT be emitted once per
 contributing lead's section.
@@ -138,6 +138,13 @@ This de-duplication MUST apply ONLY to the project-level flagged-red escalation.
 The per-item `blocked` escalations and the per-risk `unresolved_risk`
 escalations are genuinely per-record and, for PRODUCT-parented records, MUST
 remain unchanged in both count and content.
+
+Every PRODUCT-parented `blocked` or `unresolved_risk` escalation MUST carry a
+non-empty `stageName`. Only the product-level `at_risk` roll-up may have a null
+`stageName`, because it represents the product flag rather than a concrete
+stage. The shared escalation contract MUST reject a missing or empty stage on
+the two stage-keyed escalation types; consumers MUST NOT synthesize a
+placeholder stage label.
 
 Activity-parented records — an `Item` or `Risk` whose product FK is null and
 whose `activityId` is set — MUST NOT feed the escalation table. The

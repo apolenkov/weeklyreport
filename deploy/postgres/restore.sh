@@ -59,7 +59,7 @@ fi
 port="$PGPORT"
 
 case "$environment" in
-  development | test | uat | staging | production) ;;
+  test | production) ;;
   *)
     echo "refusing: unknown RESTORE_ENVIRONMENT" >&2
     exit 2

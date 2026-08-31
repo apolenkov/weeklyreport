@@ -29,7 +29,7 @@ const apiModules = [
 // their own module (except: [M]), or through a sibling's index.ts facade barrel.
 // Any other sibling internal path errors. The barrel allowlist is GENERATED
 // (every sibling's index.ts), so a new module→module edge is legal the moment it
-// targets the facade — no per-edge grandfathering to maintain.
+// targets the facade, keeping the boundary explicit for every module.
 const apiCrossModuleZones = apiModules.map((moduleName) => ({
   target: `${apiModulesDir}/${moduleName}`,
   from: apiModulesDir,
@@ -61,9 +61,8 @@ const apiInfrastructureModuleZones = [
 }));
 
 // One zone per web slice: files under features/S may import from features/ only
-// within their own slice or through a sibling's public index.ts/client.ts entrypoint. ALL populated
-// slices are enforced (boundaries flip #33); any slice-to-slice coupling not
-// through a barrel is a lint error.
+// within their own slice or through a sibling's public index.ts/client.ts
+// entrypoint; any slice-to-slice coupling not through a barrel is a lint error.
 const webFeaturesDir = "apps/web/src/features";
 const webSlices = [
   "admin",
@@ -94,9 +93,9 @@ const webCrossSliceZones = webSlices.map((sliceName) => ({
 
 export const boundaryConfig: Linter.Config[] = [
   // import boundary — apps/web must not import apps/api at RUNTIME. The tRPC
-  // client legitimately needs the AppRouter *type* (apps/web/src/shared/lib/trpc/trpc.ts), so
+  // client legitimately needs the AppRouter *type*, so
   // type-only imports are allowed via allowTypeImports; a VALUE import would pull
-  // the Nest/Prisma server graph into the browser bundle. Currently 0 violations.
+  // the Nest/Prisma server graph into the browser bundle.
   {
     files: ["apps/web/**/*.{ts,tsx}"],
     rules: {
@@ -134,8 +133,8 @@ export const boundaryConfig: Linter.Config[] = [
       ],
     },
   },
-  // Zone 3 — api cross-module internals. Tests are exempt: cross-module imports in
-  // test setup are wiring, not production coupling (12 test files do it today).
+  // Zone 3 — api cross-module internals. Tests are exempt because their
+  // cross-module imports are test wiring rather than production coupling.
   {
     files: ["apps/api/src/**/*.ts"],
     ignores: ["**/*.test.ts", "**/*.spec.ts", "**/__tests__/**"],
@@ -183,10 +182,8 @@ export const boundaryConfig: Linter.Config[] = [
       "apps/api/src/modules/report-sections/domain/**/*.ts",
       "apps/api/src/modules/review/domain/**/*.ts",
       "apps/api/src/modules/publication/domain/**/*.ts",
-      // admin is a flat (non-hexagon) module; its port + shared-type files
-      // join the ban so the fixed ReportStatus leak cannot regress
-      // (report-status-type). admin-shared.ts is now a barrel over the two —
-      // all three stay listed so a re-inline cannot dodge the guard.
+      // Admin is a flat module; its port and shared-type files stay in this
+      // boundary so domain code cannot depend on admin infrastructure types.
       "apps/api/src/modules/admin/admin-shared.ts",
       "apps/api/src/modules/admin/admin-repository.port.ts",
       "apps/api/src/modules/admin/admin-shared-types.ts",
@@ -212,16 +209,15 @@ export const boundaryConfig: Linter.Config[] = [
       ],
     },
   },
-  // Zone 4b — repository port-type boundary (repository-port-type-boundary
-  // spec). The explicit inventory of port-declaring files: module
+  // Zone 4b — repository port-type boundary. The explicit inventory of
+  // port-declaring files covers module
   // service/contract files whose interfaces domain code and routers consume.
   // They must not import @prisma/client — value OR type — so no port can leak
-  // a Prisma type again (the admin-shared.ts leak fixed by report-status-type
-  // is pinned by Zone 4 above). Unlike domain/, these files may use Nest —
+  // a Prisma type. Unlike domain/, these files may use Nest —
   // only the Prisma boundary is banned. Sanctioned Prisma users stay OUTSIDE
   // this list: infrastructure/**, *.prisma-repository.ts adapters,
   // transaction applicators in application/, module query internals, and lib
-  // helpers. A new port file joins this list in the change that creates it.
+  // helpers. New port files must be added to this inventory.
   {
     files: [
       "apps/api/src/modules/activity/activity.service.ts",

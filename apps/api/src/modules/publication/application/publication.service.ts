@@ -35,10 +35,14 @@ export type AutoPublishResult =
 
 export interface PublicationRepository {
   getAssembledReport(activeReportId: string): Promise<AssembledReport | null>;
-  // Compare-and-set: writes only while the row is still `status="draft"` and
-  // `archived=false`. A zero-row match writes nothing and returns
-  // `{ published: false }`.
-  saveAutoPublishedReport(report: AssembledReport): Promise<AutoPublishResult>;
+  // Compare-and-set: writes only while the row is still in the coherent
+  // editable lifecycle and its deadline matches the overdue scheduler scan.
+  // A zero-row match writes nothing and returns `{ published: false }`.
+  // `expectedDeadline` is part of the compare-and-set identity.
+  saveAutoPublishedReport(
+    report: AssembledReport,
+    expectedDeadline: Date | null,
+  ): Promise<AutoPublishResult>;
 }
 
 // DI token binding the PublicationRepository port to its adapter at the module
@@ -133,6 +137,7 @@ export class PublicationService {
   async publishAuto(
     activeReportId: string,
     publishAt: Date,
+    expectedDeadline?: Date | null,
   ): Promise<AutoPublishResult> {
     const report = await this.getAssembledReport(activeReportId);
 
@@ -143,6 +148,7 @@ export class PublicationService {
     this.logger.info("auto-publishing report", { activeReportId });
     const result = await this.repository.saveAutoPublishedReport(
       deriveAutoPublishedReport(report, publishAt),
+      expectedDeadline === undefined ? report.deadline : expectedDeadline,
     );
 
     if (!result.published) {

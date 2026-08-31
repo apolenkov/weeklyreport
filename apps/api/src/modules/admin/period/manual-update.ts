@@ -9,6 +9,10 @@ import type { Prisma } from "@prisma/client";
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { PeriodLifecycleIntegrityError } from "../../period/index.js";
 import {
+  lockAllReminderPolicies,
+  reconcileLockedPolicyForReport,
+} from "../../reminders/index.js";
+import {
   AdminAccessError,
   AdminPeriodNotFoundError,
   AdminPeriodStaleStateError,
@@ -105,6 +109,9 @@ async function writeManualUpdate(
       deadline: true,
       weekLabel: true,
       periodState: true,
+      status: true,
+      periodStatus: true,
+      archived: true,
     },
   });
 }
@@ -119,12 +126,40 @@ export async function updatePeriodManual(
     expectedPeriodState: PeriodState;
     data: ManualUpdateData;
   },
+  now: Date = new Date(),
 ) {
   return periodOverlapGuarded(() =>
     prisma.$transaction(async (tx) => {
+      // Deadline writers share the same policy-first order as policy saves and
+      // the applicator. A week-label/envelope-only edit needs no policy lock.
+      const policies =
+        input.data.deadline === undefined
+          ? []
+          : await lockAllReminderPolicies(tx);
       const lifecycle = await lockLifecycle(tx, input.reportId);
       assertUpdateAllowed(lifecycle, input.expectedPeriodState, input.data);
-      return writeManualUpdate(tx, input.reportId, lifecycle, input.data);
+      const updated = await writeManualUpdate(
+        tx,
+        input.reportId,
+        lifecycle,
+        input.data,
+      );
+      for (const policy of policies) {
+        await reconcileLockedPolicyForReport(
+          tx,
+          policy,
+          {
+            id: updated.id,
+            deadline: updated.deadline,
+            periodState: updated.periodState,
+            status: updated.status,
+            periodStatus: updated.periodStatus,
+            archived: updated.archived,
+          },
+          now,
+        );
+      }
+      return updated;
     }),
   );
 }

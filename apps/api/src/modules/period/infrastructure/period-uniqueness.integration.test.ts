@@ -9,6 +9,7 @@ import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
+  publishedSnapshotFixture,
 } from "../../../test-utils/prisma-test-helper";
 import {
   ensureCurrentPeriod,
@@ -20,6 +21,7 @@ import {
 const BASE_START = new Date("2026-08-03T00:00:00.000Z");
 const BASE_END = new Date("2026-08-09T23:59:59.999Z");
 const DEADLINE = new Date("2026-08-07T15:00:00.000Z");
+const PUBLISHED_AT = new Date("2026-08-10T10:00:00.000Z");
 const FACTORY_SETTINGS: PeriodFactorySettings = {
   periodLengthDays: 7,
   defaultDeadlineDays: 4,
@@ -47,15 +49,29 @@ describe("Report_no_live_period_overlap exclusion constraint (integration)", () 
   }) {
     const periodState = input.periodState ?? "open";
     const published = periodState === "published" || periodState === "archived";
+    const id = crypto.randomUUID();
     return prisma.report.create({
       data: {
+        id,
         periodStart: input.periodStart,
         periodEnd: input.periodEnd,
         deadline: DEADLINE,
         status: published ? "published" : "draft",
+        publishedAt: published ? PUBLISHED_AT : null,
         periodState,
         periodStatus: published ? "published" : "open",
         archived: periodState === "archived",
+        ...(published
+          ? {
+              publishedSnapshot: publishedSnapshotFixture({
+                reportId: id,
+                periodStart: input.periodStart,
+                periodEnd: input.periodEnd,
+                deadline: DEADLINE,
+                publishedAt: PUBLISHED_AT,
+              }),
+            }
+          : {}),
       },
     });
   }

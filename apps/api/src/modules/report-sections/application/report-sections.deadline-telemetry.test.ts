@@ -116,8 +116,8 @@ describe("ReportSectionsService — deadline gate", () => {
         currentSection = structuredClone(next);
         return Promise.resolve(structuredClone(currentSection));
       },
-      getMyHistoryRows() {
-        return Promise.resolve([]);
+      getMyHistoryPage() {
+        return Promise.resolve({ items: [], nextCursor: null });
       },
     };
   }
@@ -311,8 +311,8 @@ describe("ReportSectionsService — product telemetry", () => {
         current = structuredClone(next);
         return Promise.resolve(structuredClone(current));
       },
-      getMyHistoryRows() {
-        return Promise.resolve([]);
+      getMyHistoryPage() {
+        return Promise.resolve({ items: [], nextCursor: null });
       },
     };
   }

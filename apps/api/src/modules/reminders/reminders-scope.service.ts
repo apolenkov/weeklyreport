@@ -32,10 +32,11 @@ export class RemindersScopeService {
     private readonly requestReminderExecution: (
       ruleId: string,
       recipientEmail: string,
+      deadline: Date,
       leadName?: string,
     ) => Promise<{
-      execution: AdminReminderExecution;
-      outcome: "created" | "revived" | "deduplicated";
+      execution: AdminReminderExecution | null;
+      outcome: "created" | "revived" | "deduplicated" | "skipped";
     }>,
   ) {}
 
@@ -96,7 +97,7 @@ export class RemindersScopeService {
   async dispatchPendingReminders(
     session: UserSession,
     reportId: string,
-    ruleId?: string,
+    ruleId: string,
     leadId?: string,
   ): Promise<DispatchPendingResult> {
     if (session.role !== "admin") {
@@ -122,15 +123,17 @@ export class RemindersScopeService {
 
   // Classify from the atomic insert outcome (dedupeKey unique index); no clocks.
   private async classifySectionDispatch(
-    rule: { id: string; fireAt: Date },
+    rule: { id: string; fireAt: Date; deadline: Date },
     section: { email: string; name?: string; notificationOptOut: boolean },
   ): Promise<SectionDispatchOutcome> {
     if (section.notificationOptOut) return "skipped";
     const { outcome } = await this.requestReminderExecution(
       rule.id,
       section.email,
+      rule.deadline,
       section.name,
     );
+    if (outcome === "skipped") return "skipped";
     return outcome === "deduplicated" ? "alreadySent" : "dispatched";
   }
 
@@ -138,7 +141,7 @@ export class RemindersScopeService {
   // loop (not recursion, not per-step acc copies) keeps a deep recipient set
   // flat — one await per section, O(n) memory.
   private async dispatchDraftSections(
-    rule: { id: string; fireAt: Date },
+    rule: { id: string; fireAt: Date; deadline: Date },
     draftSections: readonly {
       email: string;
       name?: string;

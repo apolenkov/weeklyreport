@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 280" width="1200" height="280" role="img" aria-labelledby="lt ld">
-  <title id="lt">Жизненный цикл отчёта CustomReport</title>
+  <title id="lt">Жизненный цикл отчёта WeeklyReport</title>
   <desc id="ld">Три шага: лид заполняет секцию (draft переходит в submitted), глава отдела проверяет и сводит секции (approved или changes), затем публикует период и экспортирует его в PDF (published, pdf).</desc>
 
   <style>

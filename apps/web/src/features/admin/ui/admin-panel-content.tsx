@@ -46,12 +46,7 @@ function SettingsContent(props: AdminPanelContentProps) {
 function groupRulesByPolicyId(
   rules: readonly AdminReminderView[],
 ): Readonly<Record<string, readonly AdminReminderView[]>> {
-  const entries = [
-    ...Map.groupBy(rules, (rule) => rule.policyId).entries(),
-  ].filter(
-    (entry): entry is [string, AdminReminderView[]] => entry[0] !== null,
-  );
-  return Object.fromEntries(entries);
+  return Object.fromEntries(Map.groupBy(rules, (rule) => rule.policyId));
 }
 
 function RemindersContent(props: AdminPanelContentProps) {

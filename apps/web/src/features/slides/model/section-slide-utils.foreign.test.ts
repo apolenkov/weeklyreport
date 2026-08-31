@@ -91,6 +91,7 @@ function makeForeignRow(
   return {
     authorId: FOREIGN_AUTHOR_ID,
     authorName: "Bria Co-owner",
+    authorRole: "lead",
     items: [],
     risks: [],
     decisions: [],

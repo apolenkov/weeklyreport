@@ -77,7 +77,7 @@ function mapActionLogRow(row: ActionLogRow): AdminActionLogEvent {
           status: "fail",
           // Current writers persist only the shared allowlist. Parsing here
           // deliberately fails closed if an out-of-contract row is present;
-          // historical arbitrary reasons are not part of the MVP contract.
+          // unknown reasons are outside the current action-log contract.
           reason: actionLogFailureReasonSchema.parse(row.reason),
         },
   );

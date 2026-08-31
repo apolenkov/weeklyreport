@@ -30,6 +30,7 @@ export const immutabilityConfig: Linter.Config[] = [
     files: [
       "apps/api/src/**/*.{ts,tsx}",
       "apps/web/src/**/*.{ts,tsx}",
+      "packages/report-persistence/src/**/*.{ts,tsx}",
       "packages/shared/src/**/*.{ts,tsx}",
       "packages/ui/src/**/*.{ts,tsx}",
     ],
@@ -83,7 +84,7 @@ export const immutabilityConfig: Linter.Config[] = [
       "no-param-reassign": ["error", { props: true }],
     },
   },
-  // Functional immutability ratchet: only pure source layers. Infrastructure,
+  // Functional immutability applies to pure source layers. Infrastructure,
   // UI, Prisma builders and React refs keep their local mutation idioms.
   {
     files: [
@@ -99,12 +100,12 @@ export const immutabilityConfig: Linter.Config[] = [
       ],
     },
   },
-  // Point-free ratchet, api modules only. The rule is arity-aware (verified: it
+  // Point-free style applies to api modules only. The rule is arity-aware: it
   // does NOT report `xs.map((x) => f(x))` when `f` has a second optional
   // parameter), so a tacit rewrite here cannot leak `map`'s index argument.
   // Scoped deliberately: outside this boundary the rule's suggestion strips the
   // type predicate from `(x): x is string => Boolean(x)`, which breaks narrowing
-  // (measured: 2 typecheck errors across web + trpc infrastructure).
+  // which preserves type predicates outside this scope.
   // `checkMemberExpressions` stays default-off — it would add the `this`-binding
   // hazard of `.map(obj.method)`.
   {
@@ -133,10 +134,9 @@ export const immutabilityConfig: Linter.Config[] = [
       ],
     },
   },
-  // Suppression ban: eslint-disable of any boundary-zone rule is forbidden, so the
-  // config-level allowlist is the ONLY grandfathering mechanism (every exemption
-  // reviewable in one place, shrinking monotonically). A bare disable that would
-  // sweep these rules is caught too.
+  // Suppression ban: boundary-zone rules cannot be disabled in source. The
+  // config-level allowlist is the single reviewable exception mechanism, and
+  // broad disables are rejected as well.
   {
     plugins: { "@eslint-community/eslint-comments": eslintCommentsPlugin },
     rules: {

@@ -12,10 +12,14 @@ doubt, the option that makes entry quicker and clearer wins.
 ## Reporting periods & submission
 
 **Reporting period**:
-The weekly window a report covers — the `Report` row itself. Carries the
-lifecycle state machine (`open` / `published` / `reopened`) plus an `archived`
-flag. A period is never "submitted"; submission is a per-lead act on a section
-within the period (see _Lead submission_).
+The weekly window a report covers — the `Report` row itself. Its canonical
+`periodState` is one of `scheduled`, `open`, `published`, or `archived`.
+The companion lifecycle tuple (`status`, `periodStatus`, `archived`, audit
+flags, and applicable timestamps) is stored on the same row and updated with
+it: `periodStatus` carries the `reopened` flavour while `periodState` returns
+to `open` for an editable reopened period. A period is never "submitted";
+submission is a per-lead act on a section within the period (see _Lead
+submission_).
 _Avoid_: week (the period is the window, not the calendar week label).
 
 **Period policy** (Settings → Periods sub-tab):
@@ -151,8 +155,7 @@ Lock_).
 **Review comment**:
 A reviewer's note anchored to a CONCRETE record — one Item, Risk, or Decision —
 so the lead sees exactly where something is wrong. Flat, with no reply threads in
-the MVP. A future AI review agent authors these the same way, against the same
-record anchor. Rendered inline at the record, carrying the reviewer's name, never
+the MVP. Rendered inline at the record, carrying the reviewer's name, never
 repeating the record's own text.
 _Avoid_: a whole-report comment (a review comment anchors to one record);
 duplicating record content into the comment.
@@ -177,9 +180,10 @@ _Avoid_: project (the DB model name; in product language it is a "product").
 
 **SDLC stage**:
 One of the fixed lifecycle phases (`Planning`, `Analysis`, `Design`,
-`Development`, `Testing`, `DevOps`, `Support`). An `Item` carries one or more
-stage names; by convention an item carries exactly ONE stage (a person reports an
-item against their own stage). Risks may legitimately span several stages.
+`Development`, `Testing`, `DevOps`, `Support`). A product-parented record carries
+at least one stage selected from the product's assigned stages; activity-parented
+records carry none. An item normally names one stage, while risks and decisions
+may legitimately span several stages.
 _Avoid_: phase, step.
 
 **Stage chip**:
@@ -210,15 +214,16 @@ The umbrella for the four kinds of report line a lead authors in a section — a
 current-week item, a next-week item, a risk, and a decision. Russian: _позиция_;
 in code and on screen the term stays **record** (English _position_ is already
 taken — see _Position (должность)_). A позиция is the unit a reviewer acts on
-(per-record _Review comment_ + section _Verdict_, see `review-acknowledgement`)
-and the unit quick-entry creates and moves (see `unified-activity-entry`).
+(per-record _Review comment_ + section _Verdict_, see ADR 0009 and the
+`review-verdict-integrity` spec) and the unit quick-entry creates and moves (see
+the `activity-reporting-unit` spec).
 A позиция that has appeared in a PUBLISHED report can never be deleted — only
 RESOLVED (marked done) or carried forward; one that has only ever been a
 never-published draft CAN be deleted (an uncommitted mistake — typo, duplicate,
 wrong product). It moves between states kanban-style — _done_ closes it; the other Progress
 states (see _Progress (item status)_) keep it open — and open work is not lost at the period boundary (the
-exact carry scope is a spec/design detail; carry-over today covers items and
-decisions). A delete-locked позиция shows a marker saying why. See ADR 0015.
+carry-over scope contains items and decisions). A delete-locked позиция shows a
+marker saying why. See ADR 0015.
 _Avoid_: English "position" (that is the HR job title); deleting a published позиция
 to make it go away (resolve or carry it forward instead).
 
@@ -229,7 +234,7 @@ subset: current-week → in progress / paused / done; next-week → planned /
 postponed. **Paused** = on hold, the lead intends to resume. **Postponed** =
 consciously pushed beyond this period; postponed work is NOT auto-carried —
 re-planning it is an explicit call. Neither paused nor postponed raises any
-alarm. (Model locked in `rework-item-status-model`.)
+alarm. (Model locked in the `record-status-derivation` spec.)
 _Avoid_: blocked as an item status (that is an Alarm, see below); "completed"
 as a separate flag (done-ness lives in the status); stage (a stage is the SDLC
 phase, not the progress state); "workflow status" as a separate term (this IS
@@ -246,9 +251,8 @@ resolve a risk instead).
 A choice a lead needs leadership to make, phrased as a yes/no or short
 statement and recorded against ONE product. Like an item or a risk, a decision
 is product-scoped: its SDLC stage options are the stages owned on the selected
-product, and changing the product re-scopes them. (Earlier the decision dialog
-drew stages from the department-wide union; that is no longer the model — all
-three record dialogs share one product↔stage rule.) A decision's **owner** is
+product, and changing the product re-scopes them. All three record dialogs
+share this product↔stage rule. A decision's **owner** is
 its author — the lead who raised it; ownership is implicit (set to the author on
 create, preserved on edit) and is NOT separately assignable, so the dialog shows
 no Owner field.
@@ -385,7 +389,7 @@ reminder to leads» (nudges leads who still have a draft, before the deadline) o
 deadline). The engine stores this as a kind × audience pair; the admin picks the
 pair as one choice, never two independent dropdowns.
 _Avoid_: exposing `kind` and `audience` as separate admin controls (only the
-two presets above are valid pairings; `follow_up` kind is unused).
+two presets above are valid pairings).
 
 **Reminder policy**:
 The durable engine template behind a Reminder — declares the type, the timing
@@ -413,11 +417,9 @@ portal so it is never clipped). (2) The separate **stage-chip portal**
 _Avoid_: "the tooltip" unqualified (ambiguous across three systems); calling the
 `sdlc-tooltip` portal "Radix".
 
-**Slide capacity (soft cap)**:
-The advisory ceilings on how much content fits a slide before it overflows:
-`MAX_PRODUCTS_PER_LEAD` (products per person) and `SLIDE_SECTION_SOFT_CAP`
-(records per section). They warn the author; they never block saving or adding.
-Distinct from `MAX_VISIBLE_ITEMS`, the hard render truncation ("+N more") on the
-Product-scope grid path.
-_Avoid_: limit (a soft cap does not enforce); `MAX_VISIBLE_ITEMS` (that is render
-truncation on a different slide path, not an authoring advisory).
+**Ownership capacity (soft cap)**:
+`MAX_PRODUCTS_PER_LEAD` is the recommended number of active products owned by
+one lead. The admin product-assignment UI shows a non-blocking advisory at or
+above this count; it never blocks saving. Slide presentation capacity is a
+separate auto-height concern governed by `lead-slide-by-product-grid`.
+_Avoid_: limit (the recommendation does not enforce a write constraint).

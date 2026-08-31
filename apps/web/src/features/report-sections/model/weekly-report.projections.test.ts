@@ -8,11 +8,14 @@ import {
   type WeeklyReportFixture,
 } from "../../../test-utils/report-section-fixtures";
 import {
-  __testing,
   mapWeeklyReport,
   mapWeeklyReportLeadGroups,
   mapWeeklyReportLeadOverview,
 } from "./weekly-report";
+import {
+  statusLabelFor,
+  trafficToProductStatus,
+} from "./weekly-report-groupers";
 import type {
   WeeklyProductReport,
   WeeklyReportItem,
@@ -56,27 +59,25 @@ describe("formatPeriodRangeWithYear", () => {
 });
 
 describe("trafficToProductStatus", () => {
-  const fn = __testing.trafficToProductStatus;
   it("green -> on-track, yellow -> at-risk, red -> blocked", () => {
-    expect(fn("green")).toBe("on-track");
-    expect(fn("yellow")).toBe("at-risk");
-    expect(fn("red")).toBe("blocked");
+    expect(trafficToProductStatus("green")).toBe("on-track");
+    expect(trafficToProductStatus("yellow")).toBe("at-risk");
+    expect(trafficToProductStatus("red")).toBe("blocked");
   });
 
   it("null worstStatus stays explicitly empty", () => {
-    expect(fn(null)).toBe("empty");
+    expect(trafficToProductStatus(null)).toBe("empty");
   });
 });
 
 describe("statusLabelFor", () => {
-  const fn = __testing.statusLabelFor;
   it("joins lead names with ', ' and prefixes the status", () => {
-    expect(fn("at-risk", ["Тимлид 1", "Maria K."])).toBe(
+    expect(statusLabelFor("at-risk", ["Тимлид 1", "Maria K."])).toBe(
       "At Risk \u00B7 Тимлид 1, Maria K.",
     );
   });
   it('falls back to "unassigned" when no leads', () => {
-    expect(fn("on-track", [])).toBe("On Track \u00B7 unassigned");
+    expect(statusLabelFor("on-track", [])).toBe("On Track \u00B7 unassigned");
   });
 });
 

@@ -3,5 +3,4 @@ dist
 .next
 coverage
 .turbo
-prisma/generated
 pnpm-lock.yaml

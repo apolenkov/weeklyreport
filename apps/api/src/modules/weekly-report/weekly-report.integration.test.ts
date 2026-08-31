@@ -7,9 +7,15 @@ import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
+  publishedSnapshotFixture,
   seedTestData,
   TEST_IDS,
 } from "../../test-utils/prisma-test-helper";
+import {
+  buildAssembledReportFromPrismaRow,
+  reportFullIncludeForSnapshot,
+  toPublishedSnapshotJson,
+} from "../report-sections/index.js";
 import { WeeklyReportPrismaRepository } from "./weekly-report.prisma-repository";
 import { WeeklyReportService } from "./weekly-report.service";
 
@@ -137,6 +143,7 @@ describe("WeeklyReportService with Prisma (integration)", () => {
         impact: "Release delay",
         mitigation: "Escalate dependency",
         severity: "blocked",
+        stageNames: ["Development"],
       },
     });
 
@@ -171,12 +178,32 @@ describe("WeeklyReportService with Prisma (integration)", () => {
 
   it("reads a persisted published report without changing its lifecycle", async () => {
     const data = await seedSubmittedReport();
+    const publishedAt = new Date("2026-04-10T00:00:00.000Z");
     await prisma.report.update({
       where: { id: data.report.id },
       data: {
         status: "published",
         periodStatus: "published",
         periodState: "published",
+        publishedAt,
+        publishedSnapshot: publishedSnapshotFixture({
+          reportId: data.report.id,
+          periodStart: data.report.periodStart,
+          periodEnd: data.report.periodEnd,
+          publishedAt,
+        }),
+      },
+    });
+    const publishedReport = await prisma.report.findUniqueOrThrow({
+      where: { id: data.report.id },
+      include: reportFullIncludeForSnapshot,
+    });
+    await prisma.report.update({
+      where: { id: data.report.id },
+      data: {
+        publishedSnapshot: toPublishedSnapshotJson(
+          buildAssembledReportFromPrismaRow(publishedReport),
+        ),
       },
     });
 
@@ -199,6 +226,7 @@ describe("WeeklyReportService with Prisma (integration)", () => {
           text: "Ship feature",
           tag: "feature",
           workflowStatus: "done",
+          stageNames: ["Development"],
         },
       }),
       prisma.risk.create({
@@ -209,6 +237,7 @@ describe("WeeklyReportService with Prisma (integration)", () => {
           impact: "Revenue",
           mitigation: "Add capacity",
           severity: "at-risk",
+          stageNames: ["Development"],
         },
       }),
       prisma.decision.create({
@@ -218,6 +247,7 @@ describe("WeeklyReportService with Prisma (integration)", () => {
           text: "Upgrade PostgreSQL",
           owner: "Test Lead 1",
           impact: "Performance",
+          stageNames: ["Development"],
         },
       }),
     ]);

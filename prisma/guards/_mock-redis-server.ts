@@ -8,27 +8,40 @@ import { afterEach, vi } from "vitest";
 
 export interface MockRedisServer {
   readonly port: number;
+  receivedData(): string;
   close(): Promise<void>;
 }
 
 const openServers = new Set<MockRedisServer>();
 
-// Starts a loopback Redis peer that replies once after receiving one command,
-// then closes. `undefined` reply means close without answering.
+// Starts a loopback Redis peer that returns one reply per received command.
+// `undefined` means close without answering that command.
 export async function startMockRedisServer(
-  reply: string | undefined,
+  reply: string | undefined | readonly (string | undefined)[],
 ): Promise<MockRedisServer> {
   const sockets = new Set<Socket>();
+  const replies: readonly (string | undefined)[] =
+    typeof reply === "string" || reply === undefined ? [reply] : reply;
+  let received = "";
   const server = createServer((socket) => {
     sockets.add(socket);
     socket.once("close", () => {
       sockets.delete(socket);
     });
-    socket.once("data", () => {
-      if (reply === undefined) {
+    let replyIndex = 0;
+    socket.on("data", (chunk: unknown) => {
+      const data = Buffer.isBuffer(chunk)
+        ? chunk.toString("utf8")
+        : String(chunk);
+      received += data;
+      const nextReply = replies[replyIndex];
+      replyIndex += 1;
+      if (nextReply === undefined) {
         socket.end();
+      } else if (replyIndex >= replies.length) {
+        socket.end(nextReply);
       } else {
-        socket.end(reply);
+        socket.write(nextReply);
       }
     });
   });
@@ -44,6 +57,7 @@ export async function startMockRedisServer(
 
   const mockServer: MockRedisServer = {
     port: address.port,
+    receivedData: () => received,
     async close() {
       // Self-deregistering and idempotent, so a spec may close a server early
       // to free its port and the teardown still runs cleanly.

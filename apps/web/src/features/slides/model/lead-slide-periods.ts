@@ -60,10 +60,10 @@ export function resolveLeadSlideReportId({
   readonly requestedReportId: string | null;
   readonly activeReportId: string | null;
 }): string {
-  if (
-    requestedReportId &&
-    options.some((option) => option.reportId === requestedReportId)
-  ) {
+  // A deep-linked report may be older than the bounded selector page. The
+  // scoped by-period query is the authority for access and availability; do
+  // not silently replace an explicit URL with the active report.
+  if (requestedReportId) {
     return requestedReportId;
   }
 

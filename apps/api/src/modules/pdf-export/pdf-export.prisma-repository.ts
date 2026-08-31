@@ -1,23 +1,24 @@
 import {
+  type AssembledReport,
   type PdfExportJob,
   pdfExportJobSchema,
+  type PublishedReportSnapshot,
+  publishedReportSnapshotSchema,
   type UserSession,
 } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
-import { canReadReport } from "../../lib/report-read-access.js";
 import {
-  reportFullInclude,
-  toAssembledReport,
-} from "./pdf-export.assembled-report.js";
+  publishedReportScopeWhere,
+  requirePublishedSnapshot,
+  requireScopedPublishedSnapshot,
+} from "../report-sections/index.js";
 import {
   PdfExportDomainError,
   type PdfExportJobRecord,
   type PdfExportRepository,
 } from "./pdf-export.service.js";
-
-export { toAssembledReport } from "./pdf-export.assembled-report.js";
 
 const pdfStatusToDb: Record<
   PdfExportJob["status"],
@@ -59,6 +60,8 @@ interface PdfExportJobRow {
   checksum: string | null;
   error: string | null;
   requestedBy: string;
+  publicationAt: Date;
+  publicationSnapshot: unknown;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -81,45 +84,60 @@ function toDomainStatus(status: string): PdfExportJob["status"] {
 export class PdfExportPrismaRepository implements PdfExportRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  async getPublishedReport(
+  async getPublishedReportForExport(
     reportId: string,
-  ): ReturnType<PdfExportRepository["getPublishedReport"]> {
-    const report = await this.prisma.report.findUnique({
-      where: {
-        id: reportId,
-        status: "published",
-        periodStatus: "published",
-      },
-      include: reportFullInclude,
-    });
-
-    if (!report) {
-      return null;
-    }
-
-    return toAssembledReport(report);
-  }
-
-  async canReadReport(
     session: UserSession,
-    reportId: string,
-  ): Promise<boolean> {
-    return canReadReport(session, reportId, this.prisma);
+  ): Promise<AssembledReport | null> {
+    return this.prisma.$transaction(async (tx) => {
+      const report = await tx.report.findFirst({
+        where: {
+          id: reportId,
+          status: "published",
+          periodStatus: "published",
+          ...(session.role === "admin"
+            ? {}
+            : publishedReportScopeWhere(session)),
+        },
+        select: { id: true, publishedSnapshot: true },
+      });
+      if (!report) return null;
+      const snapshot = requirePublishedSnapshot(
+        report.publishedSnapshot,
+        report.id,
+      );
+      return requireScopedPublishedSnapshot(snapshot, session);
+    });
   }
 
   async createExportJob(
     job: PdfExportJob,
     requestedBy: string,
+    publicationSnapshot: AssembledReport,
   ): Promise<PdfExportJob> {
     if (requestedBy === "") {
       throw new PdfExportDomainError(
         "PDF export job creation requires a requester.",
       );
     }
+    const snapshot = publicationSnapshot;
+    if (!snapshot.publishedAt) {
+      throw new PdfExportDomainError(
+        `PDF export requires a publication timestamp for report ${job.reportId}.`,
+      );
+    }
     const created = await this.prisma.pdfExportJob.create({
       data: {
         id: job.jobId,
         reportId: job.reportId,
+        publicationAt: snapshot.publishedAt,
+        publicationSnapshot: snapshot,
+        publicationGroupIds: [
+          ...new Set(
+            snapshot.sections.flatMap((section) =>
+              section.groupId ? [section.groupId] : [],
+            ),
+          ),
+        ],
         status: pdfStatusToDb[job.status],
         requestedBy,
         templateVersion: job.templateVersion,
@@ -130,6 +148,32 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
     });
 
     return toExportJob(created);
+  }
+
+  async getPublishedReportForJob(
+    jobId: string,
+  ): Promise<PublishedReportSnapshot | null> {
+    const row = await this.prisma.pdfExportJob.findUnique({
+      where: { id: jobId },
+      select: {
+        reportId: true,
+        publicationAt: true,
+        publicationSnapshot: true,
+      },
+    });
+    if (!row) return null;
+    const snapshot = publishedReportSnapshotSchema.parse(
+      row.publicationSnapshot,
+    );
+    if (
+      snapshot.reportId !== row.reportId ||
+      snapshot.publishedAt.getTime() !== row.publicationAt.getTime()
+    ) {
+      throw new PdfExportDomainError(
+        `PDF export job ${jobId} has an invalid publication snapshot.`,
+      );
+    }
+    return snapshot;
   }
 
   async getExportJob(jobId: string): Promise<PdfExportJobRecord | null> {

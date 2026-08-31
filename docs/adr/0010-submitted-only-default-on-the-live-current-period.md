@@ -5,7 +5,8 @@
 ## Decision
 
 The head and viewer see only submitted sections of the live current period by
-default. A per-user toggle reveals all authorized sections, including drafts.
+default. An explicit Show all control reveals all authorized sections, including
+drafts.
 The toggle changes presentation only; it does not change authorization or the
 published snapshot, which renders as stored.
 

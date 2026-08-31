@@ -1,5 +1,6 @@
-import type { PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient, ReportStatus } from "@prisma/client";
 
+import { parseSeedPublishedSnapshot } from "../support/published-snapshot.js";
 import {
   SEED_PROFILE_MANIFESTS,
   type SeedCountDimension,
@@ -43,6 +44,51 @@ interface ScopedProjectGroup {
   readonly id: string;
   readonly leadId: string;
   readonly groupProducts: readonly { readonly groupId: string }[];
+}
+
+interface ScopedReportSnapshot {
+  readonly id: string;
+  readonly status: ReportStatus;
+  readonly publishedSnapshot: Prisma.JsonValue | null;
+  readonly sections: readonly { readonly id: string }[];
+}
+
+export function assertPublishedSnapshotIntegrity(
+  profile: SeedProfile,
+  reports: readonly ScopedReportSnapshot[],
+): void {
+  const problems = reports.flatMap((report) => {
+    if (report.status !== "published") return [];
+
+    let snapshot;
+    try {
+      snapshot = parseSeedPublishedSnapshot(report.publishedSnapshot);
+    } catch {
+      return [`${report.id}: snapshot is absent or malformed`];
+    }
+    if (!snapshot) {
+      return [`${report.id}: snapshot is absent or malformed`];
+    }
+    if (snapshot.reportId !== report.id) {
+      return [`${report.id}: snapshot identifies report ${snapshot.reportId}`];
+    }
+
+    const liveSectionIds = report.sections
+      .map(({ id }) => id)
+      .sort((a, b) => a.localeCompare(b));
+    const snapshotSectionIds = snapshot.sections
+      .map(({ reportSectionId }) => reportSectionId)
+      .sort((a, b) => a.localeCompare(b));
+    return JSON.stringify(snapshotSectionIds) === JSON.stringify(liveSectionIds)
+      ? []
+      : [`${report.id}: snapshot sections do not match live seeded sections`];
+  });
+
+  if (problems.length > 0) {
+    throw new Error(
+      `Seed profile ${profile} published-snapshot integrity failed: ${problems.join("; ")}`,
+    );
+  }
 }
 
 export function assertProjectGroupIntegrity(
@@ -137,7 +183,13 @@ export async function validateSeedProfile(
     prisma.report.findMany({
       where: { id: { in: [...scope.reportIds] } },
       orderBy: { id: "asc" },
-      select: { id: true, weekLabel: true },
+      select: {
+        id: true,
+        weekLabel: true,
+        status: true,
+        publishedSnapshot: true,
+        sections: { select: { id: true } },
+      },
     }),
     prisma.item.findMany({
       where: { reportSection: { reportId: { in: [...scope.reportIds] } } },
@@ -158,6 +210,7 @@ export async function validateSeedProfile(
 
   assertCountBounds(profile, counts);
   assertProjectGroupIntegrity(profile, users, projects);
+  assertPublishedSnapshotIntegrity(profile, reports);
   await runProfileJourney(prisma, profile);
 
   return {

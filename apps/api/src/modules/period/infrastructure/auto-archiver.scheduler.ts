@@ -5,6 +5,10 @@ import { Cron } from "@nestjs/schedule";
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { AUDIT_LOGGER, type AuditLogger } from "../../../lib/audit-logger.js";
 import { SnapshotAdminService } from "../../admin/index.js";
+import {
+  lockAllReminderPolicies,
+  pauseReminderRulesForReport,
+} from "../../reminders/index.js";
 import { buildTransition } from "../domain/period-transition.js";
 
 // A per-candidate archive outcome: `skipped` is the benign lost-race no-op,
@@ -68,7 +72,10 @@ export class AutoArchiverScheduler {
         // without this guard they would be auto-archived mid-edit.
         periodState: { not: "open" },
       },
-      select: { id: true },
+      // Keep the exact publication instant selected by this scan. The write
+      // below must match it as well, otherwise a reopen+republish between the
+      // scan and the CAS can make a fresh publication look stale.
+      select: { id: true, publishedAt: true },
     });
 
     // Folded sequentially — awaiting the pending tally before the next write
@@ -85,7 +92,12 @@ export class AutoArchiverScheduler {
     >(
       async (pending, candidate) => {
         const tally = await pending;
-        const outcome = await this.archiveCandidate(candidate.id);
+        // `publishedAt: { not: null }` above makes this non-null at runtime;
+        // fail closed if the database ever returns an inconsistent row.
+        const outcome =
+          candidate.publishedAt === null
+            ? ({ archived: false, reason: "skipped" } as const)
+            : await this.archiveCandidate(candidate.id, candidate.publishedAt);
         if (outcome.archived) {
           return {
             ...tally,
@@ -112,13 +124,27 @@ export class AutoArchiverScheduler {
   // writer that won the race is a benign skip, a write error is a failure.
   private async archiveCandidate(
     periodId: string,
+    expectedPublishedAt: Date,
   ): Promise<ArchiveCandidateOutcome> {
     try {
-      // Compare-and-set on periodStatus so a reopen between scan and write
-      // drops this update to zero rows (see period-dual-state).
-      const { count } = await this.prisma.report.updateMany({
-        where: { id: periodId, archived: false, periodStatus: "published" },
-        data: buildTransition("autoArchive", {}),
+      // Compare-and-set on the full selected publication identity. A reopen
+      // followed by republish can leave the same id published and non-archived;
+      // matching publishedAt prevents this stale scan from archiving it.
+      const count = await this.prisma.$transaction(async (tx) => {
+        await lockAllReminderPolicies(tx);
+        const result = await tx.report.updateMany({
+          where: {
+            id: periodId,
+            archived: false,
+            periodStatus: "published",
+            publishedAt: expectedPublishedAt,
+          },
+          data: buildTransition("autoArchive", {}),
+        });
+        if (result.count === 1) {
+          await pauseReminderRulesForReport(tx, periodId);
+        }
+        return result.count;
       });
       if (count === 0) {
         this.logger.log(

@@ -55,7 +55,9 @@ The reminder card MUST NOT render the read-only generated-rules table or a
 the rules already provided to the card. When at least one upcoming send exists,
 the line MUST state the earliest upcoming send date and that it recurs each
 period. When the reminder is disabled or has no upcoming send, the line MUST read
-that there are no upcoming sends. No backend query is added.
+that there are no upcoming sends. The UI projection of each generated rule MUST
+contain only `policyId`, `active`, and `fireAt`; policy editing continues to use
+the separate complete policy view. No backend query is added.
 
 #### Scenario: Active reminder shows the next send date
 
@@ -71,6 +73,14 @@ that there are no upcoming sends. No backend query is added.
   generated rule
 - **THEN** the card's next-send line states there are no upcoming sends
 
+#### Scenario: Generated rules stay a minimal read-only projection
+
+- **WHEN** the admin snapshot is mapped for the Reminders tab
+- **THEN** each generated rule exposes only its owning `policyId`, active flag,
+  and fire time
+- **AND** no generated name, description, or unused rule round-trip fields are
+  synthesized for the policy editor
+
 ### Requirement: Add and Edit Use One Reminder-Type Preset
 
 The Add/Edit form MUST offer the reminder type as a single preset choice rather
@@ -78,8 +88,8 @@ than two independent `Kind` and `Audience` controls. Exactly two presets MUST be
 selectable for a new reminder: "Deadline reminder to leads" (mapping to
 `kind=deadline`, `audience=lead-with-draft`) and "Escalation digest to head"
 (mapping to `kind=escalation`, `audience=head-of-late`). The form MUST NOT
-offer the unused `follow_up` kind and MUST NOT allow an admin to assemble a
-kind/audience pairing outside these presets. The existing timing input (numeric
+offer a third kind or allow an admin to assemble a kind/audience pairing
+outside these presets. The existing timing input (numeric
 amount + minutes/hours/days unit + before/after-deadline direction) MUST be
 retained unchanged.
 
@@ -110,7 +120,7 @@ retained unchanged.
 The form MUST place the timezone and the validity window (`Valid from`,
 `Valid until`, and the forever toggle) inside an "Advanced" section that is
 collapsed by default. These fields MUST remain fully editable when the section is
-expanded, preserving dated rollout and per-reminder timezone. The common path
+expanded, preserving validity windows and per-reminder timezone. The common path
 (type + timing + active) MUST be usable without opening Advanced.
 
 #### Scenario: Advanced section hides timezone and validity by default
@@ -147,8 +157,8 @@ remove the form and leave the list unchanged.
 
 The remove action MUST hard-delete the selected `ReminderPolicy` and all of its
 derived `ReminderRule` rows. The remove-confirm dialog MUST warn that the action
-is permanent and cannot be undone. The previous archive/soft-delete behavior
-MUST NOT be used.
+is permanent and cannot be undone. The action MUST NOT archive or soft-delete
+the policy.
 
 #### Scenario: Removing a reminder deletes it from the list
 
@@ -157,18 +167,17 @@ MUST NOT be used.
 - **AND** the card disappears from the list
 - **AND** the confirmation dialog explains that the action is permanent
 
-### Requirement: The Reminders Engine Is Unchanged
+### Requirement: The reminders UI uses the existing engine contract
 
-This presentation change MUST NOT alter the reminders engine. Saving a reminder
-through the simplified card or form MUST write the same `ReminderPolicy` fields
-the engine already consumes (`kind`, `audience`, `offsetMinutes`, `timezone`,
-`active`, `validFrom`, `validUntil`). The change MUST NOT modify the Prisma
-schema, the policy-to-rule applicator, the dispatch scheduler, or the shared
-contracts. No database migration is introduced.
+Saving a reminder through the card or form MUST write only the `ReminderPolicy`
+fields consumed by the engine (`kind`, `audience`, `offsetMinutes`, `timezone`,
+`active`, `validFrom`, `validUntil`). The UI MUST use the existing Prisma,
+policy-to-rule applicator, dispatch scheduler, and shared contracts without
+adding a persisted presentation-only field.
 
 #### Scenario: Saving writes existing policy fields only
 
 - **WHEN** an admin saves a reminder from the simplified form
 - **THEN** the persisted policy carries a valid `kind`, `audience`,
   `offsetMinutes`, `timezone`, `active`, and validity window
-- **AND** no new persisted field and no schema migration are required
+- **AND** no presentation-only field is persisted

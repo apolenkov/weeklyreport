@@ -28,29 +28,21 @@ describe("OrganizationPrismaRepository.getOrganization", () => {
     expect(upsert).not.toHaveBeenCalled();
   });
 
-  it("upserts the singleton (race-safe) only when the row is absent", async () => {
+  it("fails loudly when the seeded singleton row is absent", async () => {
     const findUnique = vi.fn().mockResolvedValue(null);
-    const upsert = vi.fn().mockResolvedValue(existingRow);
     const prisma = {
-      organization: { findUnique, upsert },
+      organization: { findUnique },
     } as unknown as PrismaService;
 
     const repo = new OrganizationPrismaRepository(prisma);
-    await repo.getOrganization();
-
-    expect(upsert).toHaveBeenCalledOnce();
-    // A concurrent create must collapse to a no-op update, not a P2002.
-    expect(upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: "singleton" },
-        update: {},
-      }),
+    await expect(repo.getOrganization()).rejects.toThrow(
+      /singleton row 'singleton' is missing/,
     );
   });
 });
 
 describe("OrganizationPrismaRepository.updateOrganization", () => {
-  it("upserts the singleton with the input shortName and fullName", async () => {
+  it("updates the seeded singleton with the input shortName and fullName", async () => {
     const input = {
       shortName: "NEW",
       fullName: "New Organization Name",
@@ -60,9 +52,9 @@ describe("OrganizationPrismaRepository.updateOrganization", () => {
       shortName: input.shortName,
       fullName: input.fullName,
     };
-    const upsert = vi.fn().mockResolvedValue(updatedRow);
+    const update = vi.fn().mockResolvedValue(updatedRow);
     const prisma = {
-      organization: { upsert },
+      organization: { update },
     } as unknown as PrismaService;
 
     const repo = new OrganizationPrismaRepository(prisma);
@@ -70,15 +62,10 @@ describe("OrganizationPrismaRepository.updateOrganization", () => {
 
     expect(org.shortName).toBe(input.shortName);
     expect(org.fullName).toBe(input.fullName);
-    expect(upsert).toHaveBeenCalledOnce();
-    expect(upsert).toHaveBeenCalledWith({
+    expect(update).toHaveBeenCalledOnce();
+    expect(update).toHaveBeenCalledWith({
       where: { id: "singleton" },
-      create: {
-        id: "singleton",
-        shortName: input.shortName,
-        fullName: input.fullName,
-      },
-      update: {
+      data: {
         shortName: input.shortName,
         fullName: input.fullName,
       },

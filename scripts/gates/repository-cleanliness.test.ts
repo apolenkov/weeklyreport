@@ -50,7 +50,7 @@ describe("repository cleanliness", () => {
     const root = await repository();
     await writeFile(
       join(root, ".gitignore"),
-      "ignored/**\n.cache/**\n.env\nnode_modules/\n",
+      "ignored/**\n.cache/**\n.env\nnode_modules/\n.next-docker-dev/\n",
     );
     await mkdir(join(root, "browser-harness"), { recursive: true });
     await writeFile(join(root, "browser-harness/run.json"), "{}");
@@ -61,6 +61,8 @@ describe("repository cleanliness", () => {
     await writeFile(join(root, ".cache/junk"), "junk");
     await writeFile(join(root, ".env"), "LOCAL_ONLY=true");
     await mkdir(join(root, "node_modules/pkg"), { recursive: true });
+    await mkdir(join(root, ".next-docker-dev/cache"), { recursive: true });
+    await writeFile(join(root, ".next-docker-dev/cache/build"), "generated");
     await execFileAsync("git", ["add", ".gitignore"], { cwd: root });
     const inventory = await inventoryRepository(root);
     expect(validateInventory(inventory)).toEqual([
@@ -79,10 +81,10 @@ describe("repository cleanliness", () => {
     const root = await repository();
     await mkdir(join(root, "empty-dir"));
     await mkdir(join(root, ".next/cache"), { recursive: true });
+    await mkdir(join(root, ".next-docker-dev/cache"), { recursive: true });
     await mkdir(join(root, ".turbo/cache"), { recursive: true });
     await mkdir(join(root, "dist/assets"), { recursive: true });
     await mkdir(join(root, "coverage/raw"), { recursive: true });
-    await mkdir(join(root, "prisma/generated"), { recursive: true });
     await mkdir(join(root, "node_modules/pkg"), { recursive: true });
     await writeFile(join(root, ".gitignore"), ".env\n");
     await writeFile(join(root, ".env"), "LOCAL_ONLY=true");

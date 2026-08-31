@@ -1,6 +1,7 @@
 import type { PeriodState } from "@customreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { lockAllReminderPolicies } from "../reminders/index.js";
 import type { PeriodRowFromRepo } from "./admin-shared";
 import { AdminAccessError, AdminPeriodNotFoundError } from "./admin-shared.js";
 
@@ -163,6 +164,56 @@ export async function deleteReport(
   reportId: string,
 ): Promise<void> {
   await prisma.$transaction(async (tx) => {
+    // Report deletion cascades ReminderRule rows. Match restore and every
+    // reminder writer by taking the policy locks first, so the FK cascade
+    // cannot invert the policy -> report -> rule lock order.
+    await lockAllReminderPolicies(tx);
+
+    // Lock the lifecycle row before inspecting lineage. CarryOverExecution
+    // intentionally uses RESTRICT report FKs, and a concurrent carry-over may
+    // reference this report as either source or target. The row lock makes
+    // cleanup and the lifecycle compare-and-delete one atomic ownership point.
+    const locked = await tx.$queryRaw<
+      { id: string; status: string; periodStatus: string; archived: boolean }[]
+    >`
+      SELECT "id", "status", "periodStatus", "archived"
+      FROM "Report"
+      WHERE "id" = ${reportId}
+      FOR UPDATE
+    `;
+    const current = locked.at(0);
+    if (!current) {
+      throw new AdminPeriodNotFoundError(`Report ${reportId} not found.`);
+    }
+    if (
+      current.status !== "draft" ||
+      current.periodStatus !== "open" ||
+      current.archived
+    ) {
+      throw new AdminAccessError(
+        "Cannot delete a published or archived period. Reopen it first if needed.",
+      );
+    }
+
+    // Remove the children inside this same transaction before deleting the
+    // execution rows and the report. This is explicit ownership rather than a
+    // schema-level cascade, preserving RESTRICT for all other delete paths.
+    const executions = await tx.carryOverExecution.findMany({
+      where: {
+        OR: [{ sourceReportId: reportId }, { targetReportId: reportId }],
+      },
+      select: { id: true },
+    });
+    if (executions.length > 0) {
+      const executionIds = executions.map(({ id }) => id);
+      await tx.carryOverRecord.deleteMany({
+        where: { executionId: { in: executionIds } },
+      });
+      await tx.carryOverExecution.deleteMany({
+        where: { id: { in: executionIds } },
+      });
+    }
+
     const deleted = await tx.report.deleteMany({
       where: {
         id: reportId,
@@ -173,13 +224,8 @@ export async function deleteReport(
     });
     if (deleted.count > 0) return;
 
-    const current = await tx.report.findUnique({
-      where: { id: reportId },
-      select: { status: true, periodStatus: true, archived: true },
-    });
-    if (!current) {
-      throw new AdminPeriodNotFoundError(`Report ${reportId} not found.`);
-    }
+    // The row was locked and classified above. A zero-row result here means a
+    // lifecycle writer violated the guarded contract; fail closed.
     throw new AdminAccessError(
       "Cannot delete a published or archived period. Reopen it first if needed.",
     );

@@ -8,7 +8,8 @@ import {
   TEST_IDS,
 } from "../../test-utils/prisma-test-helper";
 import { AdminPrismaRepository, PeriodAdminService } from "../admin/index.js";
-import { WeeklyReportPrismaRepository } from "../weekly-report/index.js";
+import { PeriodPrismaRepository } from "../period/test-seams/index.js";
+import { WeeklyReportPrismaRepository } from "../weekly-report/weekly-report.prisma-repository.js";
 import { ArchivePrismaRepository } from "./archive.prisma-repository";
 
 // The pair behind the head's Archive / Restore toolbar controls: the same
@@ -26,12 +27,14 @@ describe("Archive → restore round-trip (integration)", () => {
 
   let archiveRepo: ArchivePrismaRepository;
   let historyRepo: WeeklyReportPrismaRepository;
+  let periodRepo: PeriodPrismaRepository;
   let periodAdmin: PeriodAdminService;
   let testData: Awaited<ReturnType<typeof seedTestData>>;
 
   beforeAll(() => {
     archiveRepo = new ArchivePrismaRepository(prisma as never);
     historyRepo = new WeeklyReportPrismaRepository(prisma as never);
+    periodRepo = new PeriodPrismaRepository(prisma as never, historyRepo);
     periodAdmin = new PeriodAdminService(
       new AdminPrismaRepository(prisma as never),
     );
@@ -40,16 +43,13 @@ describe("Archive → restore round-trip (integration)", () => {
   beforeEach(async () => {
     await cleanDatabase();
     testData = await seedTestData(prisma);
-    await prisma.report.update({
-      where: { id: testData.report.id },
-      data: {
-        status: "published",
-        periodStatus: "published",
-        periodState: "published",
-        publishedAt: new Date("2026-04-12T10:00:00.000Z"),
-        publishedById: testData.head.id,
-      },
-    });
+    const publication = await periodRepo.publishPeriod(
+      testData.report.id,
+      testData.head.id,
+    );
+    if (!publication.transitioned) {
+      throw new Error(`fixture publication failed: ${publication.reason}`);
+    }
   });
 
   afterAll(async () => {
@@ -62,7 +62,7 @@ describe("Archive → restore round-trip (integration)", () => {
       headSession,
       false,
     );
-    return reports.map((report) => report.id);
+    return reports.map((report) => report.snapshot.reportId);
   }
 
   async function archivedIds(): Promise<string[]> {

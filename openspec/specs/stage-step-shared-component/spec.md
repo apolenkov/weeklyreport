@@ -8,7 +8,7 @@ Requires product-parent stage selection to use one shared component across recor
 
 ### Requirement: Product-parent stage selection uses one shared component across record types
 
-The stage-selection control for a product-scoped item, decision, or risk record — the multi-select plus the zero-owned-stage "contact admin" notice — MUST be implemented by a single shared component (`StageStep` in `apps/web/src/features/report-sections/ui/`), parameterized by the caller's dead-end notice text and optional severity preview, and MUST NOT be re-implemented per record type as separate near-duplicate components. An activity parent, which owns no SDLC stage, MUST NOT render this control at all — callers gate it on a product parent, unchanged from today's behavior.
+The stage-selection control for a product-scoped item, decision, or risk record — the multi-select plus the zero-owned-stage "contact admin" notice — MUST be implemented by a single shared component (`StageStep` in `apps/web/src/features/report-sections/ui/`), parameterized by the caller's dead-end notice text and optional severity preview, and MUST NOT be re-implemented per record type as separate near-duplicate components. An activity parent, which owns no SDLC stage, MUST NOT render this control at all — callers gate it on a product parent according to the current product-parent rule.
 
 #### Scenario: Item, Decision, and Risk dialogs render the same underlying component
 
@@ -23,7 +23,7 @@ The stage-selection control for a product-scoped item, decision, or risk record 
 - **WHEN** the shared `StageStep` component renders in the dead-end branch
 - **THEN** it shows the notice text the caller supplied
 - **AND** the required-stage validation error is suppressed while the
-  dead-end notice is shown, exactly as before this change
+  dead-end notice is shown
 
 #### Scenario: Risk's severity preview still renders
 

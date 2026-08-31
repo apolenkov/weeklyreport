@@ -18,7 +18,7 @@ interface CanonicalRedirectArgs {
   readonly canonicalBasePath: string;
 }
 
-// Bare `/head/report` → canonical `/head/report/<reportId>` once known.
+// The unpinned entry route resolves to the active report URL once known.
 export function useCanonicalReportRedirect({
   enabled,
   reportId,

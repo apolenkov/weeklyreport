@@ -1,14 +1,18 @@
 import {
+  assembledReportSchema,
   type UserSession,
   type WeeklyReportReadModel,
   weeklyReportReadModelSchema,
 } from "@customreport/shared";
+import type { Prisma } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
 import {
   makeProjectReadModel,
   makeReportSectionReadModel,
 } from "../../test-utils/report-section-fixtures.js";
+import { buildCompiledHistoryEntries } from "./compiled-history.js";
+import { queryCompiledHistory } from "./compiled-history.prisma-query.js";
 import {
   WeeklyReportDomainError,
   type WeeklyReportRepository,
@@ -21,6 +25,48 @@ const currentReportId = "22222222-2222-4222-8222-222222222222";
 const groupId = "33333333-3333-4333-8333-333333333333";
 const userId = "44444444-4444-4444-8444-444444444444";
 const projectId = "55555555-5555-4555-8555-555555555555";
+const historySectionId = "77777777-7777-4777-8777-777777777777";
+const reopenedSectionId = "88888888-8888-4888-8888-888888888888";
+
+function historySnapshot() {
+  return assembledReportSchema.parse({
+    reportId,
+    periodStart: new Date("2026-04-06T00:00:00.000Z"),
+    periodEnd: new Date("2026-04-12T23:59:59.999Z"),
+    deadline: new Date("2026-04-10T15:00:00.000Z"),
+    status: "published",
+    publishedAt: new Date("2026-04-12T18:00:00.000Z"),
+    publishedById: userId,
+    publishedByName: "Head User",
+    portfolioOverview: {
+      status: "red",
+      totals: { green: 1, yellow: 0, red: 1 },
+    },
+    sections: [
+      makeReportSectionReadModel({
+        reportSectionId: historySectionId,
+        reportId,
+        authorId: userId,
+        authorName: "Lead A",
+        status: "submitted",
+        projects: [
+          makeProjectReadModel({
+            projectId,
+            projectName: "Project Alpha",
+            trafficLight: "green",
+          }),
+          makeProjectReadModel({
+            projectId: currentReportId,
+            projectName: "Project Beta",
+            trafficLight: "red",
+          }),
+        ],
+        groupId,
+        groupName: "Weekly Group",
+      }),
+    ],
+  });
+}
 
 function session(role: UserSession["role"] = "head"): UserSession {
   return {
@@ -46,7 +92,7 @@ function makeWeeklyReport(
     weekLabel: "W16-2026",
     submissionCount: 1,
     totalLeads: 1,
-    hasActiveReminderRule: true,
+    activeDeadlineReminderRuleId: "a0000000-0000-4000-a000-000000000600",
     portfolioOverview: [
       {
         productId: projectId,
@@ -121,6 +167,114 @@ function createRepository(
     ),
   };
 }
+
+describe("compiled history immutable snapshots", () => {
+  it("derives health and product counts from the frozen snapshot", () => {
+    const entries = buildCompiledHistoryEntries([
+      { archived: true, snapshot: historySnapshot() },
+    ]);
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      reportId,
+      archived: true,
+      publishedByName: "Head User",
+      trafficLights: { green: 1, yellow: 0, red: 1 },
+      sectionCount: 1,
+      productCount: 2,
+    });
+  });
+
+  function queryFixture(periodStatus: "published" | "reopened") {
+    const report = {
+      id: reportId,
+      archived: false,
+      periodStatus,
+      publishedSnapshot: JSON.parse(JSON.stringify(historySnapshot())) as never,
+      sections: [{ id: historySectionId }, { id: reopenedSectionId }],
+    };
+    const findMany = vi.fn().mockResolvedValue([report]);
+    const count = vi.fn().mockResolvedValue(0);
+    const prisma = {
+      report: {
+        findMany,
+        count,
+      },
+    } as never;
+    return { prisma, findMany, count };
+  }
+
+  it("reads a closed publication without intersecting mutable live section ids", async () => {
+    const fixture = queryFixture("published");
+    const result = await queryCompiledHistory(
+      fixture.prisma,
+      session("admin"),
+      true,
+    );
+
+    expect(result.reports[0]?.snapshot.sections).toHaveLength(1);
+    expect(result.reports[0]?.snapshot.sections[0]?.reportSectionId).toBe(
+      historySectionId,
+    );
+    expect(fixture.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ take: 100 }),
+    );
+  });
+
+  it("ignores a new live section while the report is reopened", async () => {
+    const fixture = queryFixture("reopened");
+    const result = await queryCompiledHistory(
+      fixture.prisma,
+      session("admin"),
+      true,
+    );
+
+    expect(result.reports).toHaveLength(1);
+    expect(result.reports[0]?.snapshot.sections).toHaveLength(1);
+    expect(result.reports[0]?.snapshot.sections[0]?.reportSectionId).toBe(
+      historySectionId,
+    );
+  });
+
+  it("bounds viewer history and archive count with the indexed frozen scope", async () => {
+    const fixture = queryFixture("published");
+    const viewer = session("viewer");
+
+    await queryCompiledHistory(fixture.prisma, viewer, true);
+
+    const scope: Prisma.ReportWhereInput = {
+      publishedSectionScopes: {
+        some: { groupId: { in: [groupId] } },
+      },
+    };
+    const listQuery = fixture.findMany.mock.calls[0]?.[0] as
+      Prisma.ReportFindManyArgs | undefined;
+    expect(listQuery).toEqual({
+      where: {
+        status: "published",
+        periodStatus: "published",
+        ...scope,
+      },
+      orderBy: { periodStart: "desc" },
+      take: 100,
+      select: {
+        id: true,
+        archived: true,
+        publishedSnapshot: true,
+      },
+    });
+    const countQuery = fixture.count.mock.calls[0]?.[0] as
+      Prisma.ReportCountArgs | undefined;
+    expect(countQuery).toEqual({
+      where: {
+        status: "published",
+        archived: true,
+        periodStatus: "published",
+        ...scope,
+      },
+    });
+  });
+});
 
 describe("WeeklyReportService", () => {
   it("forwards the authenticated session to an explicit read", async () => {

@@ -4,6 +4,18 @@
 
 Define activity-parented report records, links, and derived status across the lead form, slide deck, head report, and admin activity configuration without changing linked-product health.
 
+Current consumer map (all paths are repository-relative): lead-form status cards
+live in `apps/web/src/features/period/ui/activity-status-section.tsx`, editable
+activity records in
+`apps/web/src/features/report-sections/ui/activity/unified-activity-section.tsx`,
+slide grouping in `apps/web/src/features/slides/ui/slide-activity-pills.tsx`,
+and the head report in
+`apps/web/src/features/report-pages/ui/weekly/weekly-report-page.tsx`.
+The API entry points are
+`apps/api/src/infrastructure/trpc/routers/activity.router.ts`,
+`apps/api/src/infrastructure/trpc/routers/project-activity.router.ts`, and
+`apps/api/src/infrastructure/trpc/routers/weekly-report.router.ts`.
+
 ## Requirements
 
 ### Requirement: An activity carries the same reporting records as a product
@@ -29,7 +41,7 @@ a product's records under the product; the shared read model itself stays flat.
 - **GIVEN** a lead whose section is attached to an activity
 - **WHEN** the lead adds a current-week item and scopes it to that activity
 - **THEN** the item persists with `activityId` set, its product FK null, and an
-  empty `stageIds`
+  empty `stageNames`
 - **AND** the section read model returns that item in the top-level `items` array
   with `activityId` set, and the presentation mapper groups it under the activity
 
@@ -174,9 +186,10 @@ record content. The activity's records (items, risks, decisions) MUST render and
 be editable in the main record sections (Current Week / Next Week / Risks /
 Decisions, and the unified by-state view when enabled), grouped under an
 activity lane keyed by `activityId` and labeled with the activity name — the
-same grouping treatment product records get, without a stage lane. On the slides
-(`slide-activity-pills.tsx`, `lead-unified-slide.tsx`) the lead's activities are
-grouped by traffic-light status. On the head report
+same grouping treatment product records get, without a stage lane. On the lead
+slides, `lead/lead-slides-deck-view.tsx` renders the current section-slide and
+grid model projections, with `slide-activity-pills.tsx` grouping activities by
+traffic-light status. On the head report
 (`activity-status-strip.tsx`, `weekly-report-page.tsx`) each activity renders in
 the report body like a product — its records and linked product(s) — instead of a
 status-only strip. Every surface MUST show the activity's linked product(s).
@@ -261,7 +274,7 @@ The write path MUST validate every `activityId` carried on an
 `items`/`risks`/`decisions` payload row against the section author's
 server-loaded `section.activities` before `saveSection` persists — the same client-trust boundary the
 stage-ownership guard (`validateStageOwnership`) and the activity-status guard
-(`validateActivityStatuses`) already enforce for `projectId`/`stageIds` and for
+(`validateActivityStatuses`) already enforce for `projectId`/`stageNames` and for
 `activityStatuses`. A payload row whose `activityId` is not one of the section's
 attached activities MUST be hard-rejected with an `ACTIVITY_NOT_ATTACHED` error;
 the delete-recreate MUST NOT trust a client-supplied `activityId`.
@@ -341,36 +354,36 @@ submit, the way `submitSectionSchema` already tightens `projectStatuses.status`.
 - **THEN** submission is still rejected for the missing product status (the
   activity does not substitute for it)
 
-### Requirement: The activity schema migration preserves existing links and status rows
+### Requirement: Activity links and statuses use the normalized persistence model
 
-The schema migration MUST preserve every existing activity→product link and every
-existing `ActivityStatus` row. The migration MUST backfill exactly one
-`ProjectActivityProduct` row for each existing `ProjectActivity` whose
-`projectId` is non-null before the `ProjectActivity.projectId` column is dropped,
-so no label link is lost. Existing `ActivityStatus` rows MUST remain intact and
-readable (the derived-status floor is applied at read time, not by rewriting the
-stored status).
+Every activity-to-product link MUST be represented by one
+`ProjectActivityProduct` row; `ProjectActivity` MUST NOT carry a direct
+`projectId` field. An activity with no product links remains valid and has no
+join rows. Persisted `ActivityStatus` rows MUST remain the stored source for the
+explicit activity status, while the derived-status floor is applied at read time
+without rewriting that value.
 
-#### Scenario: an activity that had a product link keeps it after migration
+#### Scenario: a linked activity loads through its join row
 
-- **GIVEN** an existing `ProjectActivity` with a non-null `projectId`
-- **WHEN** the migration runs
-- **THEN** one `ProjectActivityProduct` row links that activity to that product,
-  and the `projectId` column is dropped with no link lost
+- **GIVEN** a `ProjectActivity` linked to a product by one
+  `ProjectActivityProduct` row
+- **WHEN** the activity is loaded
+- **THEN** that product link is present exactly once
+- **AND** no direct `ProjectActivity.projectId` field is required
 
-#### Scenario: an activity with no product link migrates cleanly
+#### Scenario: an activity with no product link remains valid
 
-- **GIVEN** an existing `ProjectActivity` with a null `projectId`
-- **WHEN** the migration runs
-- **THEN** zero `ProjectActivityProduct` rows are created for it and the activity
-  remains valid
+- **GIVEN** a `ProjectActivity` with no `ProjectActivityProduct` rows
+- **WHEN** the activity is loaded
+- **THEN** it has an empty product-link collection and remains valid
 
-#### Scenario: existing activity status rows survive
+#### Scenario: stored activity status is not rewritten by its derived floor
 
-- **GIVEN** existing `ActivityStatus` rows seeded before this change
-- **WHEN** the migration runs and the section reloads
-- **THEN** the stored statuses are intact and the derived floor is applied at
-  read time
+- **GIVEN** an `ActivityStatus` row whose effective status is raised by the
+  derived floor
+- **WHEN** the section is loaded
+- **THEN** the response reflects the derived floor
+- **AND** the stored explicit status remains intact
 
 ### Requirement: Duplicate linked-product ids are rejected as a clean validation error
 

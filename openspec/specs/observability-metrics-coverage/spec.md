@@ -27,6 +27,12 @@ Any Prometheus gauge fed by a query that can legitimately return "no data" MUST 
 This applies for example to the on-time-ratio gauge when there is no
 eligible published period.
 
+DB-backed published-period gauges MUST calculate active leads and on-time
+ratios from validated immutable publication snapshots. They MUST remain stable
+when recovery omits mutable live sections, and a malformed settled snapshot
+MUST clear the affected gauge through the existing collection error path rather
+than silently exporting live-row drift.
+
 #### Scenario: The on-time-ratio query has data, then has none
 
 - **WHEN** `onTimeRatioLastNPeriods` returns a numeric value on one scrape
@@ -35,6 +41,12 @@ eligible published period.
   the subsequent scrape
 - **AND** the scrape output reflects the no-data state (e.g. `NaN` or an
   unset value) instead
+
+#### Scenario: A recovered publication has no live sections
+
+- **GIVEN** the latest settled report has a valid publication snapshot but no live section graph
+- **WHEN** Prometheus collects the active-lead and on-time gauges
+- **THEN** both values derive from the frozen snapshot and match publication-time facts
 
 ### Requirement: A W3C traceparent header MUST propagate from the web client to the API
 

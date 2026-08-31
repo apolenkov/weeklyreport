@@ -67,10 +67,6 @@ export const adminActionLogPageSchema = z
   })
   .readonly();
 
-/** Canonical bounded failure classification exposed by the Action Log. */
-export type ActionLogFailureReason = z.infer<
-  typeof actionLogFailureReasonSchema
->;
 /** Immutable allowlisted audit event exposed only to administrators. */
 export type AdminActionLogEvent = z.infer<typeof adminActionLogEventSchema>;
 /** Immutable cursor page of administrator-visible audit events. */

@@ -1,7 +1,14 @@
 import { randomUUID } from "node:crypto";
 
-import { composeName, type ReminderPolicy } from "@customreport/shared";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  buildPublishedProjections,
+  composeName,
+  publishedReportSnapshotSchema,
+  type ReminderPolicy,
+  type ReminderQueuePayload,
+} from "@customreport/shared";
+import { Prisma } from "@prisma/client";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
@@ -12,16 +19,28 @@ import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
+  publishedSnapshotFixture,
   seedTestData,
   TEST_IDS,
 } from "../../test-utils/prisma-test-helper";
-import { PolicyApplicatorService } from "../reminders/index.js";
+import { PeriodPrismaRepository } from "../period/infrastructure/period.prisma-repository.js";
+import {
+  lockAllReminderPolicies,
+  PolicyApplicatorService,
+  RemindersPrismaRepository,
+  RemindersService,
+} from "../reminders/index.js";
+import { WeeklyReportPrismaRepository } from "../weekly-report/weekly-report.prisma-repository.js";
 import { AdminPrismaRepository } from "./admin.prisma-repository";
+import { archivePeriod } from "./admin-period-lifecycle";
 import {
   AdminAccessError,
   AdminPeriodNotFoundError,
   AdminPeriodStaleStateError,
+  AdminSnapshotConflictError,
 } from "./admin-shared.js";
+import { lockRestoredReports } from "./admin-snapshot/period-locks.js";
+import { lockReminderRestoreGraph } from "./admin-snapshot/reminder-locks.js";
 import { PeriodAdminService } from "./period-admin.service.js";
 
 describe("AdminPrismaRepository (integration)", () => {
@@ -34,6 +53,24 @@ describe("AdminPrismaRepository (integration)", () => {
     await cleanDatabase();
     testData = await seedTestData(prisma);
   });
+
+  type PublishedSnapshotOverrides = Pick<
+    Parameters<typeof publishedSnapshotFixture>[0],
+    "publishedAt"
+  > &
+    Partial<
+      Omit<
+        Parameters<typeof publishedSnapshotFixture>[0],
+        "reportId" | "periodStart" | "periodEnd" | "publishedAt"
+      >
+    >;
+  const publishedSnapshot = (overrides: PublishedSnapshotOverrides) =>
+    publishedSnapshotFixture({
+      reportId: testData.report.id,
+      periodStart: testData.report.periodStart,
+      periodEnd: testData.report.periodEnd,
+      ...overrides,
+    });
 
   afterAll(async () => {
     await cleanDatabase();
@@ -51,6 +88,68 @@ describe("AdminPrismaRepository (integration)", () => {
     ).resolves.toBe(0);
   });
 
+  it("deletes carry-over lineage when the report is the source", async () => {
+    const target = await prisma.report.create({
+      data: {
+        periodStart: new Date("2026-04-20T00:00:00.000Z"),
+        periodEnd: new Date("2026-04-26T23:59:59.999Z"),
+      },
+    });
+    const execution = await prisma.carryOverExecution.create({
+      data: {
+        sourceReportId: testData.report.id,
+        targetReportId: target.id,
+        dedupeKey: `${testData.report.id}:${target.id}`,
+      },
+    });
+    await prisma.carryOverRecord.create({
+      data: { executionId: execution.id, recordType: "item" },
+    });
+
+    await repo.deleteReport(testData.report.id);
+
+    await expect(
+      prisma.carryOverExecution.findUnique({ where: { id: execution.id } }),
+    ).resolves.toBeNull();
+    await expect(
+      prisma.carryOverRecord.count({ where: { executionId: execution.id } }),
+    ).resolves.toBe(0);
+    await expect(
+      prisma.report.findUnique({ where: { id: target.id } }),
+    ).resolves.not.toBeNull();
+  });
+
+  it("deletes carry-over lineage when the report is the target", async () => {
+    const source = await prisma.report.create({
+      data: {
+        periodStart: new Date("2026-03-30T00:00:00.000Z"),
+        periodEnd: new Date("2026-04-05T23:59:59.999Z"),
+      },
+    });
+    const execution = await prisma.carryOverExecution.create({
+      data: {
+        sourceReportId: source.id,
+        targetReportId: testData.report.id,
+        dedupeKey: `${source.id}:${testData.report.id}`,
+      },
+    });
+    await prisma.carryOverRecord.create({
+      data: { executionId: execution.id, recordType: "decision" },
+    });
+
+    await repo.deleteReport(testData.report.id);
+
+    await expect(
+      prisma.carryOverExecution.findUnique({ where: { id: execution.id } }),
+    ).resolves.toBeNull();
+    await expect(
+      prisma.carryOverRecord.count({ where: { executionId: execution.id } }),
+    ).resolves.toBe(0);
+    await expect(
+      prisma.report.findUnique({ where: { id: source.id } }),
+    ).resolves.not.toBeNull();
+  });
+
   it.each([
     [
       "published",
@@ -64,7 +163,17 @@ describe("AdminPrismaRepository (integration)", () => {
   ] as const)("does not delete a %s report", async (_label, data) => {
     await prisma.report.update({
       where: { id: testData.report.id },
-      data,
+      data: {
+        ...data,
+        ...("status" in data
+          ? {
+              publishedAt: new Date("2026-04-13T15:00:00.000Z"),
+              publishedSnapshot: publishedSnapshot({
+                publishedAt: new Date("2026-04-13T15:00:00.000Z"),
+              }),
+            }
+          : {}),
+      },
     });
 
     await expect(repo.deleteReport(testData.report.id)).rejects.toBeInstanceOf(
@@ -89,7 +198,10 @@ describe("AdminPrismaRepository (integration)", () => {
         status: "published",
         periodStatus: "published",
         periodState: "published",
-        publishedAt: new Date(),
+        publishedAt: new Date("2026-04-13T15:00:00.000Z"),
+        publishedSnapshot: publishedSnapshot({
+          publishedAt: new Date("2026-04-13T15:00:00.000Z"),
+        }),
       },
     });
     gate.release();
@@ -137,7 +249,16 @@ describe("AdminPrismaRepository (integration)", () => {
       const { expectedArchived, ...lifecycleData } = data;
       await prisma.report.update({
         where: { id: testData.report.id },
-        data: lifecycleData,
+        data: {
+          ...lifecycleData,
+          ...("status" in lifecycleData
+            ? {
+                publishedSnapshot: publishedSnapshot({
+                  publishedAt: lifecycleData.publishedAt,
+                }),
+              }
+            : {}),
+        },
       });
       gate.release();
 
@@ -163,6 +284,9 @@ describe("AdminPrismaRepository (integration)", () => {
         periodStatus: "published",
         periodState: "published",
         publishedAt: new Date("2026-08-07T15:00:00.000Z"),
+        publishedSnapshot: publishedSnapshot({
+          publishedAt: new Date("2026-08-07T15:00:00.000Z"),
+        }),
       },
     });
 
@@ -193,6 +317,182 @@ describe("AdminPrismaRepository (integration)", () => {
     expect(rejected?.reason).toBeInstanceOf(AdminPeriodNotFoundError);
   });
 
+  it("keeps report deletion ordered after policy-first reminder recovery", async () => {
+    let releaseRestore!: () => void;
+    const restoreMayFinish = new Promise<void>((resolve) => {
+      releaseRestore = resolve;
+    });
+
+    // Model the restore side of the interleaving: it holds every policy and
+    // then the report while the delete transaction is attempting to start.
+    const restore = prisma.$transaction(async (tx) => {
+      await lockAllReminderPolicies(tx);
+      await tx.$queryRaw`SELECT "id" FROM "Report" WHERE "id" = ${testData.report.id} FOR UPDATE`;
+      await restoreMayFinish;
+    });
+
+    // Let the first transaction acquire both locks before starting the
+    // opposite operation. With the canonical policy-first boundary, release
+    // always lets both transactions complete; the old report-first delete
+    // could deadlock against the restore's policy -> report sequence.
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    const deletion = repo.deleteReport(testData.report.id);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    releaseRestore();
+
+    await expect(restore).resolves.toBeUndefined();
+    await expect(deletion).resolves.toBeUndefined();
+    await expect(
+      prisma.report.findUnique({ where: { id: testData.report.id } }),
+    ).resolves.toBeNull();
+  });
+
+  it.each([
+    ["publish", "draft"],
+    ["archive", "published"],
+    ["reopen", "published"],
+  ] as const)(
+    "serializes snapshot restore before %s without losing lifecycle or projections",
+    async (operation, initialState) => {
+      const reportId = testData.report.id;
+      const publishedAt = new Date("2026-08-10T15:00:00.000Z");
+      const snapshot = publishedSnapshot({
+        publishedAt,
+        publishedById: testData.head.id,
+      });
+      if (initialState === "published") {
+        await prisma.report.update({
+          where: { id: reportId },
+          data: {
+            status: "published",
+            periodStatus: "published",
+            periodState: "published",
+            archived: false,
+            publishedAt,
+            publishedById: testData.head.id,
+            publishedSnapshot: snapshot,
+          },
+        });
+        const projections = buildPublishedProjections(
+          publishedReportSnapshotSchema.parse(snapshot),
+        );
+        await prisma.publishedSectionScope.createMany({
+          data: [...projections.sectionScopes],
+        });
+        await prisma.publishedSearchDocument.createMany({
+          data: [...projections.searchDocuments],
+        });
+      }
+
+      const restoreGate = createPauseGate();
+      const restore = prisma.$transaction(async (tx) => {
+        await lockAllReminderPolicies(tx);
+        await lockReminderRestoreGraph(tx, [], [], [reportId]);
+        await restoreGate.pause();
+        await tx.$queryRaw`
+          SELECT "id" FROM "Report" WHERE "id" = ${reportId} FOR UPDATE
+        `;
+        await tx.report.update({
+          where: { id: reportId },
+          data:
+            initialState === "published"
+              ? {
+                  status: "published",
+                  periodStatus: "published",
+                  periodState: "published",
+                  archived: false,
+                  publishedAt,
+                  publishedById: testData.head.id,
+                  publishedSnapshot: snapshot,
+                }
+              : {
+                  status: "draft",
+                  periodStatus: "open",
+                  periodState: "open",
+                  archived: false,
+                  publishedAt: null,
+                  publishedById: null,
+                  publishedSnapshot: Prisma.JsonNull,
+                },
+        });
+      });
+      await restoreGate.paused;
+
+      const periodRepository = new PeriodPrismaRepository(
+        prisma as never,
+        new WeeklyReportPrismaRepository(prisma as never),
+      );
+      const competing =
+        operation === "publish"
+          ? periodRepository.publishPeriod(reportId, testData.head.id)
+          : operation === "archive"
+            ? archivePeriod(prisma as never, reportId)
+            : periodRepository.reopenPeriod(reportId);
+      restoreGate.release();
+      await expect(restore).resolves.toBeUndefined();
+      await competing;
+
+      const finalReport = await prisma.report.findUnique({
+        where: { id: reportId },
+        select: {
+          status: true,
+          periodState: true,
+          periodStatus: true,
+          archived: true,
+          publishedSnapshot: true,
+        },
+      });
+      expect(finalReport).not.toBeNull();
+      expect(finalReport).toMatchObject(
+        operation === "publish"
+          ? {
+              status: "published",
+              periodState: "published",
+              periodStatus: "published",
+              archived: false,
+            }
+          : operation === "archive"
+            ? { periodState: "archived", archived: true }
+            : {
+                status: "published",
+                periodState: "open",
+                periodStatus: "reopened",
+                archived: false,
+              },
+      );
+      const expected = finalReport?.publishedSnapshot
+        ? buildPublishedProjections(
+            publishedReportSnapshotSchema.parse(finalReport.publishedSnapshot),
+          )
+        : { sectionScopes: [], searchDocuments: [] };
+      await expect(
+        prisma.publishedSectionScope.findMany({ where: { reportId } }),
+      ).resolves.toEqual(expected.sectionScopes);
+      await expect(
+        prisma.publishedSearchDocument.findMany({ where: { reportId } }),
+      ).resolves.toEqual(expected.searchDocuments);
+    },
+  );
+
+  it("acquires multiple restored Report locks in one deterministic order", async () => {
+    const second = await prisma.report.create({
+      data: {
+        periodStart: new Date("2026-08-17T00:00:00.000Z"),
+        periodEnd: new Date("2026-08-23T23:59:59.999Z"),
+      },
+    });
+    await expect(
+      Promise.all([
+        prisma.$transaction((tx) =>
+          lockRestoredReports(tx, [second.id, testData.report.id]),
+        ),
+        prisma.$transaction((tx) =>
+          lockRestoredReports(tx, [testData.report.id, second.id]),
+        ),
+      ]),
+    ).resolves.toHaveLength(2);
+  });
+
   it("lets the manual precheck and writer reuse a historical date range", async () => {
     await prisma.report.update({
       where: { id: testData.report.id },
@@ -201,6 +501,9 @@ describe("AdminPrismaRepository (integration)", () => {
         periodStatus: "published",
         periodState: "published",
         publishedAt: new Date("2026-04-12T10:00:00.000Z"),
+        publishedSnapshot: publishedSnapshot({
+          publishedAt: new Date("2026-04-12T10:00:00.000Z"),
+        }),
       },
     });
 
@@ -222,11 +525,25 @@ describe("AdminPrismaRepository (integration)", () => {
   });
 
   it("getSnapshot returns users, projects, periods, and rules", async () => {
+    const policyId = "a0000000-0000-4000-a000-000000000601";
+    await prisma.reminderPolicy.create({
+      data: {
+        id: policyId,
+        kind: "deadline",
+        offsetMinutes: -1440,
+        timezone: "Europe/Moscow",
+        audience: "LEAD_WITH_DRAFT",
+        active: true,
+        validFrom: new Date("2026-01-01T00:00:00.000Z"),
+      },
+    });
     await prisma.reminderRule.create({
       data: {
         id: TEST_IDS.reminderRule,
+        policyId,
         kind: "deadline",
-        fireAt: new Date("2026-04-11T09:00:00.000Z"),
+        fireAt: new Date("2026-04-10T00:00:00.000Z"),
+        deadline: expectDefined(testData.report.deadline),
         timezone: "Europe/Moscow",
         status: "active",
         version: 1,
@@ -254,6 +571,24 @@ describe("AdminPrismaRepository (integration)", () => {
     const period = snapshot.periods.find((p) => p.id === testData.report.id);
     expect(period).toBeDefined();
     expect(expectDefined(period).status).toBe("draft");
+  });
+
+  it("round-trips an admin week label through fresh period restore", async () => {
+    const weekLabel = "Apr 7–13 recovery";
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: { weekLabel },
+    });
+    const snapshot = await repo.getSnapshot();
+    await prisma.report.delete({ where: { id: testData.report.id } });
+
+    await repo.saveSnapshot(snapshot);
+
+    expect(
+      await prisma.report.findUniqueOrThrow({
+        where: { id: testData.report.id },
+      }),
+    ).toMatchObject({ weekLabel });
   });
 
   it("saveSnapshot updates entities correctly", async () => {
@@ -517,6 +852,11 @@ describe("AdminPrismaRepository (integration)", () => {
         autoPublished: true,
         publishedAt,
         publishedById: testData.head.id,
+        publishedSnapshot: publishedSnapshot({
+          publishedAt,
+          publishedById: testData.head.id,
+          deadline: testData.report.deadline,
+        }),
       },
     });
 
@@ -559,6 +899,14 @@ describe("AdminPrismaRepository (integration)", () => {
         publishedAt: new Date("2026-04-19T10:00:00.000Z"),
         publishedById: testData.head.id,
         reopenedAt,
+        publishedSnapshot: publishedSnapshotFixture({
+          reportId: TEST_IDS.targetReport,
+          periodStart: "2026-04-14T00:00:00.000Z",
+          periodEnd: "2026-04-20T00:00:00.000Z",
+          publishedAt: "2026-04-19T10:00:00.000Z",
+          publishedById: testData.head.id,
+          deadline: "2026-04-18T00:00:00.000Z",
+        }),
       },
     });
 
@@ -589,6 +937,11 @@ describe("AdminPrismaRepository (integration)", () => {
         status: "published",
         periodState: "published",
         periodStatus: "published",
+        publishedAt: new Date("2026-04-13T15:00:00.000Z"),
+        publishedSnapshot: publishedSnapshot({
+          publishedAt: new Date("2026-04-13T15:00:00.000Z"),
+          deadline: testData.report.deadline,
+        }),
       },
     });
 
@@ -655,16 +1008,26 @@ describe("AdminPrismaRepository (integration)", () => {
       data: { headUserId: testData.head.id },
     });
 
-    // Promote the lead to a head-eligible role so it can lead the group, then
-    // capture the snapshot with the new head assignment.
-    await prisma.user.update({
-      where: { id: testData.lead.id },
-      data: { role: "head" },
+    // Add a second eligible head rather than promoting the product lead. A
+    // lead role is required by the product ownership graph, so promoting the
+    // existing project lead would intentionally make the final graph invalid.
+    const alternateHeadId = "a0000000-0000-4000-a000-000000000098";
+    await prisma.user.create({
+      data: {
+        id: alternateHeadId,
+        email: "alternate-head@test.local",
+        name: "Alternate Head",
+        lastName: "Alternate",
+        firstName: "Head",
+        role: "head",
+        samlId: "alternate-head-test",
+        reportingGroupId: TEST_IDS.group,
+      },
     });
 
     const snapshot = await repo.getSnapshot();
     const groups = snapshot.groups.map((g) =>
-      g.id === TEST_IDS.group ? { ...g, headUserId: testData.lead.id } : g,
+      g.id === TEST_IDS.group ? { ...g, headUserId: alternateHeadId } : g,
     );
 
     await repo.saveSnapshot({ ...snapshot, groups });
@@ -673,7 +1036,7 @@ describe("AdminPrismaRepository (integration)", () => {
     const group = expectDefined(
       restored.groups.find((g) => g.id === TEST_IDS.group),
     );
-    expect(group.headUserId).toBe(testData.lead.id);
+    expect(group.headUserId).toBe(alternateHeadId);
   });
 
   // Restore must carry rule.policyId so derived rules stay attached to policies.
@@ -697,7 +1060,8 @@ describe("AdminPrismaRepository (integration)", () => {
         id: ruleId,
         policyId,
         kind: "deadline",
-        fireAt: new Date("2026-04-11T09:00:00.000Z"),
+        fireAt: new Date("2026-04-10T00:00:00.000Z"),
+        deadline: expectDefined(testData.report.deadline),
         timezone: "Europe/Moscow",
         status: "active",
         version: 1,
@@ -721,11 +1085,23 @@ describe("AdminPrismaRepository (integration)", () => {
     );
     expect(restoredPolicy.audience).toBe("LEAD_WITH_DRAFT");
 
-    // UPDATE branch: strip the FK on the live row, restore again over the
-    // existing rule id, and confirm the update re-attaches the policy.
+    // UPDATE branch: point the live row at another valid policy, then confirm
+    // restore re-attaches the snapshot policy without an orphan state.
+    const otherPolicyId = "d1111111-1111-4111-8111-111111111112";
+    await prisma.reminderPolicy.create({
+      data: {
+        id: otherPolicyId,
+        kind: "deadline",
+        offsetMinutes: -720,
+        timezone: "Europe/Moscow",
+        audience: "LEAD_WITH_DRAFT",
+        active: true,
+        validFrom: new Date("2026-01-01T00:00:00.000Z"),
+      },
+    });
     await prisma.reminderRule.update({
       where: { id: ruleId },
-      data: { policyId: null },
+      data: { policyId: otherPolicyId },
     });
     await repo.saveSnapshot(snapshot);
     const reRestored = expectDefined(
@@ -734,8 +1110,389 @@ describe("AdminPrismaRepository (integration)", () => {
     expect(reRestored.policyId).toBe(policyId);
   });
 
-  // Post-commit applicator must not re-materialize pairs the restore already wrote.
-  it("fresh-DB restore keeps a snapshot rule paused instead of re-materializing it active", async () => {
+  it("restores sent and queued reminder executions without rescheduling or payload drift", async () => {
+    const policyId = "d6666666-6666-4666-8666-666666666666";
+    const ruleId = "d7777777-7777-4777-8777-777777777777";
+    const sentExecutionId = "d8888888-8888-4888-8888-888888888888";
+    const queuedExecutionId = "d9999999-9999-4999-8999-999999999999";
+    const fireAt = new Date("2026-04-11T09:00:00.000Z");
+    const sentAt = new Date("2026-04-11T09:01:00.000Z");
+    const sentCreatedAt = new Date("2026-04-11T08:58:00.000Z");
+    const sentUpdatedAt = new Date("2026-04-11T09:01:00.000Z");
+    const queuedCreatedAt = new Date("2026-04-11T08:59:00.000Z");
+    const queuedUpdatedAt = new Date("2026-04-11T08:59:30.000Z");
+    const reportDeadline = expectDefined(testData.report.deadline);
+    const payload: ReminderQueuePayload = {
+      contractVersion: 1,
+      kind: "deadline",
+      cycleDate: "2026-04-11",
+      leadName: "Test Lead 1",
+      reportPeriod: "2026-04-06 → 2026-04-12",
+      deadlineIso: reportDeadline.toISOString(),
+      sectionUrl: `https://example.test/lead/report/${testData.report.id}`,
+      organization: {
+        shortName: "Demo",
+        fullName: "Example Software Department",
+      },
+    };
+    const sentRecipient = "sent@test.local";
+    const queuedRecipient = "queued@test.local";
+    const dedupeKey = (recipientEmail: string) =>
+      `${ruleId}:deadline:2026-04-11:${recipientEmail}`;
+
+    await prisma.reminderPolicy.create({
+      data: {
+        id: policyId,
+        kind: "deadline",
+        offsetMinutes: 540,
+        timezone: "Europe/Moscow",
+        audience: "LEAD_WITH_DRAFT",
+        active: true,
+        validFrom: new Date("2026-01-01T00:00:00.000Z"),
+      },
+    });
+    await prisma.reminderRule.create({
+      data: {
+        id: ruleId,
+        reportId: testData.report.id,
+        policyId,
+        kind: "deadline",
+        fireAt,
+        deadline: reportDeadline,
+        timezone: "Europe/Moscow",
+        status: "active",
+        version: 1,
+      },
+    });
+    await prisma.reminderExecution.createMany({
+      data: [
+        {
+          id: sentExecutionId,
+          ruleId,
+          recipientEmail: sentRecipient,
+          dedupeKey: dedupeKey(sentRecipient),
+          status: "sent",
+          sentAt,
+          error: null,
+          queuePayload: payload,
+          createdAt: sentCreatedAt,
+          updatedAt: sentUpdatedAt,
+        },
+        {
+          id: queuedExecutionId,
+          ruleId,
+          recipientEmail: queuedRecipient,
+          dedupeKey: dedupeKey(queuedRecipient),
+          status: "pending",
+          sentAt: null,
+          error: null,
+          queuePayload: payload,
+          createdAt: queuedCreatedAt,
+          updatedAt: queuedUpdatedAt,
+        },
+      ],
+    });
+
+    const snapshot = await repo.getSnapshot();
+    await prisma.reminderRule.delete({ where: { id: ruleId } });
+    expect(await prisma.reminderExecution.count({ where: { ruleId } })).toBe(0);
+
+    await repo.saveSnapshot(snapshot);
+
+    const [restoredSent, restoredQueued] = await Promise.all([
+      prisma.reminderExecution.findUniqueOrThrow({
+        where: { id: sentExecutionId },
+      }),
+      prisma.reminderExecution.findUniqueOrThrow({
+        where: { id: queuedExecutionId },
+      }),
+    ]);
+    expect(restoredSent).toMatchObject({
+      ruleId,
+      recipientEmail: sentRecipient,
+      dedupeKey: dedupeKey(sentRecipient),
+      status: "sent",
+      sentAt,
+      error: null,
+      queuePayload: payload,
+      createdAt: sentCreatedAt,
+      updatedAt: sentUpdatedAt,
+    });
+    expect(restoredQueued).toMatchObject({
+      ruleId,
+      recipientEmail: queuedRecipient,
+      dedupeKey: dedupeKey(queuedRecipient),
+      status: "pending",
+      sentAt: null,
+      error: null,
+      queuePayload: payload,
+      createdAt: queuedCreatedAt,
+      updatedAt: queuedUpdatedAt,
+    });
+
+    const enqueued: unknown[] = [];
+    const reminders = new RemindersService(
+      new RemindersPrismaRepository(prisma as never),
+      undefined,
+      {
+        enqueue: (...args: unknown[]) => {
+          enqueued.push(args);
+          return Promise.resolve();
+        },
+      },
+    );
+    const duplicate = await reminders.requestReminderExecution(
+      ruleId,
+      sentRecipient,
+      {
+        kind: payload.kind,
+        cycleDate: payload.cycleDate,
+        leadName: payload.leadName,
+        reportPeriod: payload.reportPeriod,
+        deadlineIso: payload.deadlineIso,
+        sectionUrl: payload.sectionUrl,
+        organization: payload.organization,
+      },
+    );
+    expect(duplicate).toMatchObject({ id: sentExecutionId, status: "sent" });
+    expect(enqueued).toHaveLength(0);
+
+    // A timestamp alone is not authority to unclaim an in-flight delivery:
+    // sending -> queued could duplicate SMTP after restore.
+    const liveSendingUpdatedAt = new Date("2026-04-11T09:00:00.000Z");
+    await prisma.reminderExecution.update({
+      where: { id: queuedExecutionId },
+      data: { status: "sending", updatedAt: liveSendingUpdatedAt },
+    });
+    const newerQueuedSnapshot = {
+      ...snapshot,
+      reminderExecutions: snapshot.reminderExecutions.map((execution) =>
+        execution.id === queuedExecutionId
+          ? {
+              ...execution,
+              updatedAt: new Date("2026-04-11T09:01:00.000Z"),
+            }
+          : execution,
+      ),
+    };
+    await expect(repo.saveSnapshot(newerQueuedSnapshot)).rejects.toBeInstanceOf(
+      AdminSnapshotConflictError,
+    );
+    expect(
+      await prisma.reminderExecution.findUniqueOrThrow({
+        where: { id: queuedExecutionId },
+      }),
+    ).toMatchObject({ status: "sending", updatedAt: liveSendingUpdatedAt });
+
+    const nextFireAt = new Date("2026-04-12T09:00:00.000Z");
+    const incompatibleRuleSnapshot = {
+      ...snapshot,
+      reminderRules: snapshot.reminderRules.map((rule) =>
+        rule.id === ruleId ? { ...rule, fireAt: nextFireAt } : rule,
+      ),
+      // Keep the deliberately incompatible rule internally coherent with the
+      // supplied snapshot policy; the live retained execution is what must
+      // produce AdminSnapshotConflictError, not schema-level rejection.
+      policies: snapshot.policies.map((policy) =>
+        policy.id === policyId ? { ...policy, offsetMinutes: 1980 } : policy,
+      ),
+      reminderExecutions: snapshot.reminderExecutions.map((execution) =>
+        execution.ruleId === ruleId
+          ? {
+              ...execution,
+              scheduledFor: nextFireAt,
+              dedupeKey: `${ruleId}:deadline:2026-04-12:${execution.recipientEmail}`,
+              queuePayload: {
+                ...execution.queuePayload,
+                cycleDate: "2026-04-12" as const,
+              },
+            }
+          : execution,
+      ),
+    };
+    await expect(
+      repo.saveSnapshot(incompatibleRuleSnapshot),
+    ).rejects.toBeInstanceOf(AdminSnapshotConflictError);
+    expect(
+      await prisma.reminderRule.findUniqueOrThrow({ where: { id: ruleId } }),
+    ).toMatchObject({ fireAt });
+
+    // The live worker advances the row after the old queued snapshot was
+    // captured. Reapplying that stale snapshot must retain the terminal row.
+    const liveQueuedSentAt = new Date("2026-04-11T09:02:00.000Z");
+    const liveQueuedUpdatedAt = new Date("2026-04-11T09:03:00.000Z");
+    await prisma.reminderExecution.update({
+      where: { id: queuedExecutionId },
+      data: {
+        status: "sent",
+        sentAt: liveQueuedSentAt,
+        updatedAt: liveQueuedUpdatedAt,
+      },
+    });
+    await repo.saveSnapshot(snapshot);
+    expect(
+      await prisma.reminderExecution.findUniqueOrThrow({
+        where: { id: queuedExecutionId },
+      }),
+    ).toMatchObject({
+      status: "sent",
+      sentAt: liveQueuedSentAt,
+      updatedAt: liveQueuedUpdatedAt,
+    });
+    const staleDuplicate = await reminders.requestReminderExecution(
+      ruleId,
+      queuedRecipient,
+      {
+        kind: payload.kind,
+        cycleDate: payload.cycleDate,
+        leadName: payload.leadName,
+        reportPeriod: payload.reportPeriod,
+        deadlineIso: payload.deadlineIso,
+        sectionUrl: payload.sectionUrl,
+        organization: payload.organization,
+      },
+    );
+    expect(staleDuplicate).toMatchObject({
+      id: queuedExecutionId,
+      status: "sent",
+    });
+    expect(enqueued).toHaveLength(0);
+
+    await prisma.reminderExecution.update({
+      where: { id: queuedExecutionId },
+      data: {
+        queuePayload: { ...payload, leadName: "Conflicting Live Lead" },
+      },
+    });
+    await expect(repo.saveSnapshot(snapshot)).rejects.toBeInstanceOf(
+      AdminSnapshotConflictError,
+    );
+  });
+
+  it("round-trips a sent execution after the report schedule and policy kind change", async () => {
+    const policyId = "d6666666-6666-4666-8666-666666666667";
+    const historicalRuleId = "d7777777-7777-4777-8777-777777777778";
+    const currentRuleId = "d7777777-7777-4777-8777-777777777779";
+    const executionId = "d8888888-8888-4888-8888-888888888889";
+    const historicalDeadline = expectDefined(testData.report.deadline);
+    const currentDeadline = new Date("2026-04-12T12:00:00.000Z");
+    const recipientEmail = "historical@test.local";
+    const payload: ReminderQueuePayload = {
+      contractVersion: 1,
+      kind: "deadline",
+      cycleDate: "2026-04-11",
+      leadName: "Historical Lead",
+      reportPeriod: "2026-04-07 → 2026-04-13",
+      deadlineIso: historicalDeadline.toISOString(),
+      sectionUrl: `https://example.test/lead/report/${testData.report.id}`,
+      organization: {
+        shortName: "Demo",
+        fullName: "Example Software Department",
+      },
+    };
+
+    await prisma.reminderPolicy.create({
+      data: {
+        id: policyId,
+        kind: "deadline",
+        offsetMinutes: 0,
+        timezone: "Europe/Moscow",
+        audience: "LEAD_WITH_DRAFT",
+        active: true,
+        validFrom: new Date("2026-01-01T00:00:00.000Z"),
+      },
+    });
+    await prisma.reminderRule.create({
+      data: {
+        id: historicalRuleId,
+        reportId: testData.report.id,
+        policyId,
+        kind: "deadline",
+        fireAt: historicalDeadline,
+        deadline: historicalDeadline,
+        timezone: "Europe/Moscow",
+        status: "active",
+        version: 1,
+      },
+    });
+    await prisma.reminderExecution.create({
+      data: {
+        id: executionId,
+        ruleId: historicalRuleId,
+        recipientEmail,
+        dedupeKey: `${historicalRuleId}:deadline:2026-04-11:${recipientEmail}`,
+        status: "sent",
+        sentAt: new Date("2026-04-11T00:01:00.000Z"),
+        error: null,
+        queuePayload: payload,
+        createdAt: new Date("2026-04-10T23:59:00.000Z"),
+        updatedAt: new Date("2026-04-11T00:01:00.000Z"),
+      },
+    });
+
+    await prisma.reminderRule.update({
+      where: { id: historicalRuleId },
+      data: { status: "paused" },
+    });
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: { deadline: currentDeadline },
+    });
+    await prisma.reminderPolicy.update({
+      where: { id: policyId },
+      data: { kind: "escalation", audience: "HEAD_OF_LATE" },
+    });
+    await prisma.reminderRule.create({
+      data: {
+        id: currentRuleId,
+        reportId: testData.report.id,
+        policyId,
+        kind: "escalation",
+        fireAt: currentDeadline,
+        deadline: currentDeadline,
+        timezone: "Europe/Moscow",
+        status: "active",
+        version: 2,
+      },
+    });
+
+    const snapshot = await repo.getSnapshot();
+    await prisma.reminderPolicy.delete({ where: { id: policyId } });
+    await repo.saveSnapshot(snapshot);
+
+    const [restoredHistoricalRule, restoredCurrentRule, restoredExecution] =
+      await Promise.all([
+        prisma.reminderRule.findUniqueOrThrow({
+          where: { id: historicalRuleId },
+        }),
+        prisma.reminderRule.findUniqueOrThrow({ where: { id: currentRuleId } }),
+        prisma.reminderExecution.findUniqueOrThrow({
+          where: { id: executionId },
+        }),
+      ]);
+    expect(restoredHistoricalRule).toMatchObject({
+      kind: "deadline",
+      deadline: historicalDeadline,
+      fireAt: historicalDeadline,
+      status: "paused",
+      version: 1,
+    });
+    expect(restoredCurrentRule).toMatchObject({
+      kind: "escalation",
+      deadline: currentDeadline,
+      fireAt: currentDeadline,
+      status: "active",
+      version: 2,
+    });
+    expect(restoredExecution).toMatchObject({
+      ruleId: historicalRuleId,
+      status: "sent",
+      queuePayload: payload,
+    });
+  });
+
+  // Post-commit applicator must not re-materialize an inactive policy's pair.
+  it("fresh-DB restore keeps an inactive policy's rule paused", async () => {
     const policyId = "d3333333-3333-4333-8333-333333333333";
     const ruleId = "d4444444-4444-4444-8444-444444444444";
     const periodId = "d5555555-5555-4555-8555-555555555555";
@@ -745,8 +1502,6 @@ describe("AdminPrismaRepository (integration)", () => {
         id: periodId,
         periodStart: new Date("2026-03-02"),
         periodEnd: new Date("2026-03-08"),
-        // Deadline already past: without the restore-time `now` guard the
-        // applicator would also arm elapsed instants as active.
         deadline: new Date("2026-03-06T15:00:00.000Z"),
         status: "draft",
       },
@@ -758,7 +1513,7 @@ describe("AdminPrismaRepository (integration)", () => {
         offsetMinutes: -1440,
         timezone: "Europe/Moscow",
         audience: "LEAD_WITH_DRAFT",
-        active: true,
+        active: false,
         validFrom: new Date("2026-01-01T00:00:00.000Z"),
       },
     });
@@ -768,6 +1523,7 @@ describe("AdminPrismaRepository (integration)", () => {
         policyId,
         kind: "deadline",
         fireAt: new Date("2026-03-05T15:00:00.000Z"),
+        deadline: new Date("2026-03-06T15:00:00.000Z"),
         timezone: "Europe/Moscow",
         status: "paused",
         version: 1,
@@ -798,6 +1554,50 @@ describe("AdminPrismaRepository (integration)", () => {
       where: { reportId: periodId, policyId },
     });
     expect(pairRules).toHaveLength(1);
+  });
+
+  it("restoring an inactive policy pauses a retained rule omitted from the snapshot", async () => {
+    const policyId = "d3333333-3333-4333-8333-333333333334";
+    const ruleId = "d4444444-4444-4444-8444-444444444445";
+    await prisma.reminderPolicy.create({
+      data: {
+        id: policyId,
+        kind: "deadline",
+        offsetMinutes: -1440,
+        timezone: "Europe/Moscow",
+        audience: "LEAD_WITH_DRAFT",
+        active: true,
+        validFrom: new Date("2026-01-01T00:00:00.000Z"),
+      },
+    });
+    await prisma.reminderRule.create({
+      data: {
+        id: ruleId,
+        policyId,
+        kind: "deadline",
+        fireAt: new Date("2026-04-10T00:00:00.000Z"),
+        deadline: expectDefined(testData.report.deadline),
+        timezone: "Europe/Moscow",
+        status: "active",
+        version: 1,
+        reportId: testData.report.id,
+      },
+    });
+    const snapshot = await repo.getSnapshot();
+
+    await repo.saveSnapshot({
+      ...snapshot,
+      policies: snapshot.policies.map((policy) =>
+        policy.id === policyId ? { ...policy, active: false } : policy,
+      ),
+      reminderRules: snapshot.reminderRules.filter(
+        (rule) => rule.id !== ruleId,
+      ),
+    });
+
+    expect(
+      await prisma.reminderRule.findUniqueOrThrow({ where: { id: ruleId } }),
+    ).toMatchObject({ status: "paused", policyId });
   });
 
   it("attachProductToGroup rejects moving a product from another group", async () => {
@@ -844,13 +1644,17 @@ describe("AdminPrismaRepository (integration)", () => {
     });
 
     const seedActiveRule = async () => {
-      await repo.saveReminderPolicy(buildPolicy(true));
+      // Seed the derived row directly so the policy writer does not create a
+      // second version during setup; the test targets the false -> true
+      // cascade itself.
+      await repo.saveReminderPolicy(buildPolicy(false));
       await prisma.reminderRule.create({
         data: {
           id: ruleId,
           policyId,
           kind: "deadline",
           fireAt: new Date("2026-04-11T09:00:00.000Z"),
+          deadline: expectDefined(testData.report.deadline),
           timezone: "Europe/Moscow",
           status: "active",
           version: 1,
@@ -864,14 +1668,22 @@ describe("AdminPrismaRepository (integration)", () => {
         .status;
 
     it("saveReminderPolicy(active:false) parks derived rules as paused, and re-activating resumes them", async () => {
-      await seedActiveRule();
-      expect(await ruleStatus()).toBe("active");
+      // The fixture uses an April 2026 schedule; freeze the policy writer's
+      // clock before that schedule so this test exercises activation rather
+      // than the production rule that elapsed reminders stay paused.
+      vi.useFakeTimers({ now: new Date("2026-04-01T00:00:00.000Z") });
+      try {
+        await seedActiveRule();
+        expect(await ruleStatus()).toBe("active");
 
-      await repo.saveReminderPolicy(buildPolicy(false));
-      expect(await ruleStatus()).toBe("paused");
+        await repo.saveReminderPolicy(buildPolicy(false));
+        expect(await ruleStatus()).toBe("paused");
 
-      await repo.saveReminderPolicy(buildPolicy(true));
-      expect(await ruleStatus()).toBe("active");
+        await repo.saveReminderPolicy(buildPolicy(true));
+        expect(await ruleStatus()).toBe("active");
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it("deleteReminderPolicy hard-deletes the policy, its rules, and their executions", async () => {
@@ -885,6 +1697,10 @@ describe("AdminPrismaRepository (integration)", () => {
           ruleId,
           recipientEmail: "lead@test.local",
           dedupeKey: `dk-${ruleId}`,
+          status: "sent",
+          sentAt: new Date("2026-04-11T09:01:00.000Z"),
+          error: null,
+          queuePayload: { kind: "deadline" },
         },
       });
 

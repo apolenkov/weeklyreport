@@ -3,6 +3,8 @@ import type {
   ReportSectionReadModel,
 } from "@customreport/shared";
 
+// The draft producer owns content without optimistic-lock metadata; writers
+// inject the current version only when they issue a mutation.
 export type DraftSaveContent = Omit<DraftSavePayload, "version">;
 
 // Filter blank required text — safeText({min:1}) would reject and toast-fail

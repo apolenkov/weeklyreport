@@ -18,21 +18,19 @@ export interface RemindersRepository extends RemindersScopeRepository {
     executionId: string,
     sentAt: Date,
   ) => Promise<AdminReminderExecution | null>;
-  // Atomic insert-on-conflict; inserted=true only for the winner (enqueue once).
+  // One locked lifecycle decision: create, explicitly revive, or deduplicate.
   readonly insertExecutionOnConflict: (
     execution: AdminReminderExecution,
     payload: ReminderQueuePayload,
-  ) => Promise<{
-    readonly execution: AdminReminderExecution;
-    readonly inserted: boolean;
-  }>;
+    allowFailedRevival?: boolean,
+  ) => Promise<ReminderExecutionRecordResult>;
   readonly getExecutionQueuePayload: (
     executionId: string,
   ) => Promise<ReminderQueuePayload | null>;
-  // CAS queued → sending; false means another worker already claimed.
+  // CAS queued → sending; returns only the durable recipient/render payload.
   readonly transitionExecutionToSending: (
     executionId: string,
-  ) => Promise<boolean>;
+  ) => Promise<ClaimedReminderExecution | null>;
   // Terminal failed; never overwrites an already-sent row.
   readonly markExecutionFailed: (
     executionId: string,
@@ -41,15 +39,9 @@ export interface RemindersRepository extends RemindersScopeRepository {
   readonly getRulePeriodLabel: (ruleId: string) => Promise<string | null>;
   // Undo sending claim for retryable failure; no-op if already sent/failed.
   readonly releaseExecutionClaim: (executionId: string) => Promise<void>;
-  // failed → queued revival; persists the validated renderer snapshot in the
-  // same write, so a migrated terminal row can never become payload-less queued.
-  readonly requeueFailedExecution: (
-    executionId: string,
-    payload: ReminderQueuePayload,
-  ) => Promise<boolean>;
-  // Time-bound reconciliation: `sending` rows presumed delivered after a
-  // crashed worker resolve to `sent`; returns how many rows were reconciled.
-  readonly markStuckSendingSent: (olderThan: Date) => Promise<number>;
+  // SMTP outcome is unknowable after a worker crash; terminalize stale
+  // `sending` rows as explicit delivery-uncertain failures for manual review.
+  readonly markStuckSendingUncertain: (olderThan: Date) => Promise<number>;
   readonly getExecution: (
     executionId: string,
   ) => Promise<AdminReminderExecution | null>;
@@ -59,11 +51,22 @@ export interface RemindersRepository extends RemindersScopeRepository {
   ) => Promise<AdminReminderExecution[]>;
 }
 
+export interface ReminderExecutionRecordResult {
+  readonly execution: AdminReminderExecution;
+  readonly outcome: "created" | "revived" | "deduplicated";
+}
+
+export interface ClaimedReminderExecution {
+  readonly recipientEmail: string;
+  readonly queuePayload: ReminderQueuePayload;
+}
+
 // Draft-section leads for a due deadline rule; opt-out skips deadline only.
 export interface DueDeadlineRule {
   readonly id: string;
   readonly reportId: string;
   readonly fireAt: Date;
+  readonly deadline: Date;
   readonly reportPeriodLabel: string;
   readonly recipients: readonly {
     readonly userId: string;

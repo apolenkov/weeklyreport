@@ -6,6 +6,7 @@ import type {
 import { describe, expect, it } from "vitest";
 
 import type { OrganizationService } from "../organization/organization.service.js";
+import { unusedRemindersRepositoryStubs } from "./__tests__/reminders-scope.repository-stub.js";
 import { RemindersService } from "./reminders.service";
 import type { RemindersRepository } from "./reminders.types";
 import {
@@ -13,7 +14,7 @@ import {
   resolveReminderDedupeKey,
   toReminderCycleDate,
 } from "./reminders-dedupe-key.js";
-import { unusedRemindersRepositoryStubs } from "./reminders-scope.repository-stub.js";
+import type { ReminderQueuePayload } from "./reminders-queue-payload.js";
 
 describe("resolveReminderDedupeKey", () => {
   const rule = {
@@ -61,8 +62,9 @@ describe("RemindersScopeService.dispatchDraftSections — manual dispatch after 
     timezone: "Europe/Moscow",
     status: "active",
     version: 1,
-    policyId: null,
+    policyId: "99999999-9999-4999-8999-999999999999",
   };
+  const reportDeadline = new Date("2026-04-13T18:00:00.000Z");
   const recipientEmail = "lead1@customreport.local";
   const adminSession: UserSession = {
     userId: "00000000-0000-4000-8000-0000000000ad",
@@ -73,7 +75,9 @@ describe("RemindersScopeService.dispatchDraftSections — manual dispatch after 
     activeReportSectionId: null,
   };
 
-  function buildDispatchRepository(): RemindersRepository {
+  function buildDispatchRepository(
+    insertedPayloads: ReminderQueuePayload[] = [],
+  ): RemindersRepository {
     const executions = new Map<string, AdminReminderExecution>();
 
     return {
@@ -91,28 +95,33 @@ describe("RemindersScopeService.dispatchDraftSections — manual dispatch after 
         }
         return Promise.resolve(null);
       },
-      insertExecutionOnConflict(candidate: AdminReminderExecution) {
+      insertExecutionOnConflict(
+        candidate: AdminReminderExecution,
+        payload: ReminderQueuePayload,
+      ) {
         for (const existing of executions.values()) {
           if (existing.dedupeKey === candidate.dedupeKey) {
             return Promise.resolve({
               execution: structuredClone(existing),
-              inserted: false,
+              outcome: "deduplicated" as const,
             });
           }
         }
+        insertedPayloads.push(structuredClone(payload));
         executions.set(candidate.id, structuredClone(candidate));
         return Promise.resolve({
           execution: structuredClone(candidate),
-          inserted: true,
+          outcome: "created" as const,
         });
       },
       getExecutionQueuePayload: () =>
         Promise.resolve({
+          contractVersion: 1 as const,
           kind: "deadline" as const,
           cycleDate: toReminderCycleDate(rule.fireAt),
           leadName: "Lead One",
           reportPeriod: "2026-04-07 → 2026-04-13",
-          deadlineIso: rule.fireAt.toISOString(),
+          deadlineIso: reportDeadline.toISOString(),
           sectionUrl:
             "http://localhost:3000/lead/report/22222222-2222-4222-8222-222222222222",
           organization: {
@@ -129,10 +138,14 @@ describe("RemindersScopeService.dispatchDraftSections — manual dispatch after 
           [...executions.values()].filter((e) => e.ruleId === ruleId),
         );
       },
-      findActiveRuleForDispatch(reportId: string) {
+      findActiveRuleForDispatch(reportId: string, ruleId: string) {
         return Promise.resolve(
-          reportId === rule.reportId
-            ? { id: rule.id, fireAt: rule.fireAt }
+          reportId === rule.reportId && ruleId === rule.id
+            ? {
+                id: rule.id,
+                fireAt: rule.fireAt,
+                deadline: reportDeadline,
+              }
             : null,
         );
       },
@@ -168,13 +181,13 @@ describe("RemindersScopeService.dispatchDraftSections — manual dispatch after 
     );
     const cycleDate = toReminderCycleDate(rule.fireAt);
 
-    // The scheduler's automated T-24h tick.
+    // The scheduler's automated policy-relative tick.
     await service.requestReminderExecution(rule.id, recipientEmail, {
       kind: "deadline",
       cycleDate,
       leadName: "Lead One",
       reportPeriod: "2026-04-07 → 2026-04-13",
-      deadlineIso: rule.fireAt.toISOString(),
+      deadlineIso: reportDeadline.toISOString(),
       sectionUrl: "http://localhost:3000/lead/report?reportId=x",
       organization: {
         shortName: "Demo",
@@ -186,6 +199,7 @@ describe("RemindersScopeService.dispatchDraftSections — manual dispatch after 
     const result = await service.scope.dispatchPendingReminders(
       adminSession,
       REPORT_ID,
+      rule.id,
     );
 
     expect(result.dispatched).toBe(0);
@@ -194,6 +208,7 @@ describe("RemindersScopeService.dispatchDraftSections — manual dispatch after 
   });
 
   it("classifies a fresh insert as dispatched regardless of DB timestamps", async () => {
+    const insertedPayloads: ReminderQueuePayload[] = [];
     const organizationService = {
       getPublic: () =>
         Promise.resolve({
@@ -202,7 +217,7 @@ describe("RemindersScopeService.dispatchDraftSections — manual dispatch after 
         }),
     } as OrganizationService;
     const service = new RemindersService(
-      buildDispatchRepository(),
+      buildDispatchRepository(insertedPayloads),
       undefined,
       undefined,
       undefined,
@@ -215,10 +230,17 @@ describe("RemindersScopeService.dispatchDraftSections — manual dispatch after 
     const result = await service.scope.dispatchPendingReminders(
       adminSession,
       REPORT_ID,
+      rule.id,
     );
 
     expect(result.dispatched).toBe(1);
     expect(result.alreadySent).toBe(0);
     expect(result.skipped).toBe(0);
+    const insertedPayload = insertedPayloads[0];
+    if (insertedPayload?.kind !== "deadline") {
+      throw new Error("expected a persisted deadline payload");
+    }
+    expect(insertedPayload.deadlineIso).toBe(reportDeadline.toISOString());
+    expect(insertedPayload.deadlineIso).not.toBe(rule.fireAt.toISOString());
   });
 });

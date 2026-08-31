@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { createNullAuditLogger } from "../../../lib/audit-logger.js";
 import { createNullLogger } from "../../../lib/logger.js";
+import { createNullAuditLogger } from "../../../test-utils/audit-logger.js";
 import { createAppRouter } from "../trpc.router.js";
 
 // Regression: telemetry.summary must fail loud when the service is unwired,

@@ -1,4 +1,9 @@
 import {
+  mapPrismaToReportSection,
+  reportSectionFullInclude,
+} from "@customreport/report-persistence";
+import {
+  type PublishedLineage,
   type ReportSectionReadModel,
   type ReportStatus,
 } from "@customreport/shared";
@@ -12,11 +17,11 @@ import {
   type ReportSectionsRepository,
   SectionVersionConflictError,
 } from "../application/report-sections.service";
-import type { MyHistorySectionRow } from "../domain/my-history.js";
-import { queryPublishedLineage } from "./published-lineage.query.js";
-import { reportSectionFullInclude } from "./report-sections.include";
-import { mapPrismaToReportSection } from "./report-sections.mappers";
-import { queryMyHistoryRows } from "./report-sections.my-history-query.js";
+import {
+  publishedLineageCandidates,
+  queryPublishedLineage,
+} from "./published-lineage.query.js";
+import { queryMyHistoryPage } from "./report-sections.my-history-query.js";
 import { applySaveSection } from "./save-section.transaction";
 
 // A section save rewrites every child table (project/stage/activity statuses,
@@ -27,9 +32,8 @@ const SAVE_SECTION_TX_TIMEOUT_MS = 15_000;
 // The save transaction's child tables (ProjectStatus, StageStatus,
 // ActivityStatus, Item, Risk, Decision) are the only tables whose unique
 // constraints a malformed payload can trip. Scope the P2002 check to exactly
-// those constraints so a P2002 from any other row this transaction touches
-// (a future constraint) re-throws as an internal bug instead of being masked
-// as a friendly duplicate-row 400.
+// those constraints so a P2002 from any other constraint re-throws as an
+// internal bug instead of being masked as a friendly duplicate-row 400.
 const CHILD_UNIQUE_COLUMN_SETS = [
   ["reportSectionId", "projectId"],
   ["reportSectionId", "activityId"],
@@ -46,7 +50,7 @@ function isChildRowDuplicate(error: unknown): boolean {
 export class ReportSectionsPrismaRepository implements ReportSectionsRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  // Selects the complete lifecycle gate, never the legacy `Report.status`
+  // Selects the complete lifecycle gate, never just `Report.status`
   // column, so reopened reports remain distinguishable while archives fail
   // closed in both application prechecks.
   async getReportPeriodWriteGateForSection(
@@ -90,20 +94,13 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
   // Reference set for the resolve-not-delete lock: the union of this report's
   // frozen `publishedSnapshot` (reopened period) and live rows in other frozen
   // published/archived reports (carried clone).
-  getPublishedLineage(section: ReportSectionReadModel): Promise<{
-    itemStableIds: readonly string[];
-    decisionStableIds: readonly string[];
-  }> {
-    return queryPublishedLineage(this.prisma, {
-      reportId: section.reportId,
-      reportSectionId: section.reportSectionId,
-      itemStableIds: section.items.flatMap((item) =>
-        item.stableId ? [item.stableId] : [],
-      ),
-      decisionStableIds: section.decisions.flatMap((decision) =>
-        decision.stableId ? [decision.stableId] : [],
-      ),
-    });
+  getPublishedLineage(
+    section: ReportSectionReadModel,
+  ): Promise<PublishedLineage> {
+    return queryPublishedLineage(
+      this.prisma,
+      publishedLineageCandidates(section),
+    );
   }
 
   async saveSection(
@@ -133,7 +130,10 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
     }
   }
 
-  getMyHistoryRows(authorId: string): Promise<readonly MyHistorySectionRow[]> {
-    return queryMyHistoryRows(this.prisma, authorId);
+  getMyHistoryPage(
+    authorId: string,
+    pagination: { cursor?: string | undefined; limit: number },
+  ) {
+    return queryMyHistoryPage(this.prisma, authorId, pagination);
   }
 }

@@ -156,6 +156,7 @@ function buildItemRows(
       text: it.text,
       tag: it.tag,
       workflowStatus: it.status,
+      pausedReason: it.pausedReason ?? null,
       carriedOver: it.carriedOver ?? false,
       stageNames: [stageFor(lead.id, idx)],
       priorityRank: idx < content.priorities.length ? idx + 1 : null,

@@ -150,8 +150,8 @@ describe("ReportSectionsService — saveDraft happy path", () => {
       validDraft({
         decisions: [
           {
-            // a decision now needs exactly one parent;
-            // product-parent it (stageNames is then required, as here).
+            // A decision has exactly one parent; product-parented decisions
+            // carry their required stageNames.
             productId: PROJECT_ID_1,
             text: "Upgrade DB",
             owner: "Alice",

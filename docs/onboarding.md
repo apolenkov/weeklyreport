@@ -16,7 +16,10 @@ WeeklyReport автоматизирует еженедельные статус-
 2. **head** — просматривает секции всех лидов, публикует и экспортирует единый
    сводный отчёт (в том числе в PDF).
 3. **admin** — администрирование: продукты, настройки, фоновые задачи.
-4. **viewer** — доступ только на чтение опубликованных отчётов.
+4. **viewer** — открывает опубликованный отчёт в режиме просмотра: по умолчанию
+   видит только отправленные секции, а через «Show all» может раскрыть и
+   текущие live-секции. Назначенный viewer также может выполнять review-действия
+   (подтверждение, комментарий и verdict), но не изменяет содержание отчёта.
 
 Ключевые термины («отчётный период», «submission», «архивный период» и т.д.)
 строго определены в [`../CONTEXT.md`](../CONTEXT.md). Это не формальность: эти
@@ -30,8 +33,18 @@ WeeklyReport автоматизирует еженедельные статус-
 - **`apps/web`** — фронтенд на Next.js 16 / React 19. App Router.
 - **`apps/api`** — бэкенд на NestJS 11. Слой API — tRPC. Доступ к БД — Prisma.
 - **`packages/shared`** — Zod-схемы, типы, enum-ы. Общий контракт между web и api.
+- **`packages/report-persistence`** — серверный Prisma include/mapper и сборка
+  immutable published snapshots, общая для API и seed-профилей.
+- **`packages/migrator-runtime`** — зафиксированный manifest Prisma CLI и dotenv
+  для production migration image; продуктового кода здесь нет.
+- Production API собирается через изолированный `pnpm deploy --prod`. После
+  deploy скрипт [`scripts/gates/production-deps-prune.ts`](../scripts/gates/production-deps-prune.ts)
+  удаляет из virtual store миграторный и компиляторный payload по фактической
+  symlink-достижимости и проверяет отсутствие битых runtime-ссылок. Поэтому
+  Prisma CLI и TypeScript не попадают в API runner даже при peer-контекстах
+  общего lockfile.
 - **`packages/ui`** — компоненты shadcn/ui и токены Tailwind.
-- **`prisma`** — схема БД, init и append-only integrity-миграции, сиды,
+- **`prisma`** — схема БД, единая canonical init-миграция, сиды,
   защитные guard-ы.
 - **`openspec`** — спецификации поведения продукта (см. раздел 8).
 
@@ -47,7 +60,8 @@ WeeklyReport автоматизирует еженедельные статус-
 2. Next.js по правилам из `apps/web/next.config.ts` (`rewrites`) проксирует
    `/trpc`, `/auth`, `/health`, `/api` на бэкенд через обязательный `API_URL`.
 3. На бэкенде tRPC примонтирован как Express-middleware на `/trpc`
-   (`apps/api/src/main.ts`), роутер собирается в
+   (`apps/api/src/bootstrap/api-ingress.ts`), который вызывается bootstrap-слоем;
+   роутер собирается в
    `apps/api/src/infrastructure/trpc/`.
 4. Процедура вызывает сервис нужного модуля → Prisma → PostgreSQL.
 
@@ -67,7 +81,12 @@ WeeklyReport автоматизирует еженедельные статус-
 
 Важная тонкость: переменные `NEXT_PUBLIC_*` должны быть доступны процессу web,
 иначе браузер их не увидит. Например, `NEXT_PUBLIC_SENTRY_DSN` нужен в окружении
-web, чтобы заработала корреляция ошибок с трейсами (см. раздел 6).
+web, чтобы заработала корреляция ошибок с трейсами (см. раздел 6). В production
+он компилируется в Web-образ, поэтому изменение требует новой сборки.
+
+Локальный `pnpm observability:up` читает `GRAFANA_ADMIN_PASSWORD` из корневого
+`.env`. В `.env.example` задано только loopback-значение; для общего окружения
+его необходимо заменить до запуска overlay.
 
 Аутентификация локально:
 
@@ -100,9 +119,9 @@ PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' \
 `pnpm db:seed:profile demo` с тем же явным согласием; корневой `.env` указывает
 на loopback-порт этой базы.
 
-- Схема — `prisma/schema.prisma`. Обычные изменения отражаются в схеме и init;
-  DB-native инварианты, которые Prisma не выражает, добавляются отдельной
-  append-only integrity-миграцией и закрепляются OpenSpec-контрактом.
+- Схема — `prisma/schema.prisma`. Любые изменения отражаются одновременно в
+  схеме и единственной canonical init-миграции; DB-native инварианты, которые
+  Prisma не выражает, добавляются прямо в init и закрепляются OpenSpec-контрактом.
 - Профили bootstrap: `demo` для текущего продуктового набора и `stress` для
   проверки объёма данных.
   Внутренние seed-слои остаются деталями реализации.
@@ -127,19 +146,24 @@ Docker-базы.
 
 ## 6. Наблюдаемость (логи, метрики, ошибки)
 
-- API пишет структурированные логи в `apps/api/.logs/app.log` с `traceId` и
-  `spanId`, если они есть в контексте запроса.
+- При локальном запуске API пишет структурированные логи в
+  `apps/api/.logs/app.log`. В production Compose файл находится в
+  `/app/logs/app.log` внутри контейнера `api` и сохраняется в named volume
+  `apilogs`. В обоих случаях записи содержат `traceId` и `spanId`, если они есть
+  в контексте запроса.
 - `GET /metrics` отдаёт внутренние метрики API. Production Caddy не публикует
   этот endpoint во внешний интернет.
-- Sentry получает ошибки API и Web, когда задан соответствующий DSN. Это
-  внешний сервис; локальный сборщик телеметрии в репозитории не нужен.
+- Sentry-совместимый сервис получает ошибки API и Web, когда заданы
+  `SENTRY_DSN` и `NEXT_PUBLIC_SENTRY_DSN`. Для локальной диагностики команда
+  `pnpm observability:up` поднимает изолированные Grafana/OTel и Bugsink; основной
+  dev-стек остаётся работоспособным без overlay и DSN.
 
 ## 7. Гейты и стиль кода
 
-Перед коммитом должны быть зелёными четыре гейта:
+Перед коммитом должны быть зелёными шесть обязательных гейтов:
 
 ```bash
-pnpm typecheck && pnpm lint && pnpm test && pnpm build
+pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm spec:check
 ```
 
 Инструменты:
@@ -148,15 +172,14 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
   `no-explicit-any: error`, `no-floating-promises: error`, неиспользуемые
   переменные — ошибка.
 - **Prettier** (`.prettierrc.json`) — форматирование всего (TS/JS/JSON/CSS/YAML/
-  Markdown). Markdown форматируется, но не линтуется.
+  Markdown); `pnpm format:check` проверяет результат.
 - **stylelint** (`.stylelintrc.json`) — линт CSS.
 
 Правила, о которые легко споткнуться:
 
 - **UI-строки — только английские.** Имеется в виду хардкод в продакшен-коде
   фронта (`apps/web/src`): JSX, toast, aria-label, placeholder. Русский допустим
-  как данные из БД/сидов/фикстур, в комментариях и тестах. Полноценной i18n-фазы
-  ещё нет.
+  как данные из БД/сидов/фикстур, в комментариях и тестах.
 - **Conventional Commits**: `type: subject` (`feat`/`fix`/`refactor`/`docs`/
   `test`/`chore`), повелительное наклонение.
 - Язык артефактов: код, комментарии, коммиты — английские; прозовые доки
@@ -181,8 +204,18 @@ workspace, Prisma-тесты и проверки repository cleanliness и opera
 
 ## 9. Отладка
 
-- Логи API — `pnpm logs` (хвост `apps/api/.logs/app.log`), только ошибки —
-  `pnpm logs:errors`. В строках лога есть `traceId`/`spanId`.
+- Локальные логи API — `pnpm logs` (хвост `apps/api/.logs/app.log`), только
+  ошибки — `pnpm logs:errors`. Production-файл читается точным Compose-контуром:
+
+  ```bash
+  docker compose --env-file .env.production -f docker-compose.prod.yml exec api \
+    tail -F /app/logs/app.log
+  ```
+
+  Стандартный поток контейнера доступен через ту же конфигурацию командой
+  `docker compose --env-file .env.production -f docker-compose.prod.yml logs -f api`.
+  В строках структурированного лога есть `traceId`/`spanId`.
+
 - Трассировка запроса начинается со структурированного лога и его `traceId`.
 - Ошибки с фронта и бэка — во внешнем Sentry.
 - Сломалась локальная disposable-база или нужны другие демо-данные — останови
@@ -199,4 +232,4 @@ workspace, Prisma-тесты и проверки repository cleanliness и opera
    вызов процедуры, проследи его до сервиса модуля в `apps/api/src/modules/*` и
    до Prisma.
 4. Открой нужную спецификацию поведения в `openspec/specs/`.
-5. Перед любым PR прогоняй четыре гейта из раздела 7.
+5. Перед любым PR прогоняй шесть гейтов из раздела 7.

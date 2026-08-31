@@ -1,4 +1,4 @@
--- 39-03 — pg_stat_statements bootstrap.
+-- pg_stat_statements bootstrap.
 --
 -- Runs once on first DB init (when pgdata volume is empty). The extension
 -- itself is loaded via shared_preload_libraries in docker-compose.yml.

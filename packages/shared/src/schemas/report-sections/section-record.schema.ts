@@ -77,6 +77,31 @@ const itemInputObjectSchema = z.object({
   stageNames: writeStageNamesField,
 });
 
+const addPausedReasonIssues = (
+  value: {
+    readonly workflowStatus: string;
+    readonly pausedReason?: string | null | undefined;
+  },
+  ctx: z.RefinementCtx,
+): void => {
+  const reason = value.pausedReason ?? null;
+  if (value.workflowStatus === "paused") {
+    if (reason == null || reason.trim().length === 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["pausedReason"],
+        message: "A paused item requires a non-blank reason.",
+      });
+    }
+  } else if (reason != null) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["pausedReason"],
+      message: "Only paused items may carry a pause reason.",
+    });
+  }
+};
+
 const addReadParentXorIssues = (
   value: {
     readonly projectId?: string | null | undefined;
@@ -116,7 +141,9 @@ const addReadParentXorIssues = (
 };
 
 /** Accepts the shared fields of an item draft or read model. */
-export const itemInputSchema = itemInputObjectSchema.readonly();
+export const itemInputSchema = itemInputObjectSchema
+  .superRefine(addPausedReasonIssues)
+  .readonly();
 
 /** Describes an item returned to report clients with review comments. */
 export const itemReadModelSchema = itemInputObjectSchema
@@ -125,6 +152,7 @@ export const itemReadModelSchema = itemInputObjectSchema
     comments: z.array(recordCommentViewSchema.readonly()).readonly().optional(),
   })
   .superRefine((value, ctx) => addReadParentXorIssues(value, "projectId", ctx))
+  .superRefine(addPausedReasonIssues)
   .readonly();
 
 const riskInputObjectSchema = z.object({
@@ -218,6 +246,7 @@ export const itemWriteSchema = itemInputObjectSchema
   .superRefine((value, ctx) => {
     addParentXorIssues(value, value.projectId, "projectId", ctx);
     addItemTypeStatusIssue(value.type, value.workflowStatus, ctx);
+    addPausedReasonIssues(value, ctx);
   })
   .readonly();
 

@@ -1,7 +1,7 @@
 import type { Request, RequestHandler, Response } from "express";
 import { z } from "zod";
 
-import type { AppLogger } from "../lib/logger";
+import { type AppLogger, logLevelSchema } from "../lib/logger";
 
 const NO_CONTENT = 204;
 
@@ -16,7 +16,7 @@ const MAX_JAVASCRIPT_TIMESTAMP_MS = 8_640_000_000_000_000;
 
 const clientLogEntrySchema = z
   .object({
-    level: z.enum(["debug", "info", "warn", "error"]),
+    level: logLevelSchema,
     message: z.string().max(MAX_CLIENT_LOG_MESSAGE_LENGTH),
     source: z.enum(["console", "window-error", "unhandled-rejection"]),
     url: z.string().max(MAX_CLIENT_LOG_URL_LENGTH).optional(),

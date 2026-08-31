@@ -106,8 +106,7 @@ describe("Dev-mode role picker (AUTH_STUB=true, no stored hint)", () => {
     render(<LoginPageClient initialOrg={STUB_ORG} />);
 
     // After the localStorage check resolves (no hint stored in jsdom),
-    // the box must offer the role picker — not vanish (the old collapse
-    // read as a layout jump and left no way to pick a role).
+    // the box must offer the role picker and remain available for role choice.
     const picker = await screen.findByTestId("role-picker");
     expect(picker).toBeInTheDocument();
     for (const role of sessionRoleSchema.options) {

@@ -2,10 +2,15 @@ import { Module } from "@nestjs/common";
 
 import { WeeklyReportPrismaRepository } from "./weekly-report.prisma-repository.js";
 import { WeeklyReportService } from "./weekly-report.service.js";
+import { WEEKLY_REPORT_LIFECYCLE } from "./weekly-report-lifecycle.port.js";
 
 @Module({
   providers: [
     WeeklyReportPrismaRepository,
+    {
+      provide: WEEKLY_REPORT_LIFECYCLE,
+      useExisting: WeeklyReportPrismaRepository,
+    },
     {
       provide: WeeklyReportService,
       useFactory: (repo: WeeklyReportPrismaRepository) =>
@@ -13,9 +18,6 @@ import { WeeklyReportService } from "./weekly-report.service.js";
       inject: [WeeklyReportPrismaRepository],
     },
   ],
-  // WeeklyReportPrismaRepository is exported so PeriodModule's repository can
-  // delegate the lifecycle resolvers (getCurrentEditableId /
-  // getLatestPublishedNonArchivedId) to it instead of re-defining the queries.
-  exports: [WeeklyReportService, WeeklyReportPrismaRepository],
+  exports: [WeeklyReportService, WEEKLY_REPORT_LIFECYCLE],
 })
 export class WeeklyReportModule {}

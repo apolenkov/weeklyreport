@@ -1,6 +1,7 @@
 import type { Job } from "bullmq";
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 
+import { UNKNOWN_ERROR_MESSAGE } from "../../lib/error-message.js";
 import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 
 // Keep the real module surface so adding another Nest import cannot turn it
@@ -86,15 +87,6 @@ const STUB_ENV = {
   REDIS_HOST: "localhost",
   REDIS_PORT: 6379,
 } as EnvConfig;
-
-function createMockRemindersService() {
-  return {
-    claimExecutionForSending: vi.fn().mockResolvedValue(true),
-    markReminderSent: vi.fn().mockResolvedValue(undefined),
-    markReminderFailed: vi.fn().mockResolvedValue(undefined),
-    releaseExecutionClaim: vi.fn().mockResolvedValue(undefined),
-  };
-}
 
 function createMockEmailService() {
   return {
@@ -199,6 +191,17 @@ const renderedEmailFixture = {
   html: "<p>rendered html</p>",
   text: "rendered text",
 };
+
+function createMockRemindersService(
+  durableData: EmailReminderJobData = defaultJobData,
+) {
+  return {
+    claimExecutionForSending: vi.fn().mockResolvedValue(durableData),
+    markReminderSent: vi.fn().mockResolvedValue(undefined),
+    markReminderFailed: vi.fn().mockResolvedValue(undefined),
+    releaseExecutionClaim: vi.fn().mockResolvedValue(undefined),
+  };
+}
 
 describe("EmailReminderProcessor.processJob", () => {
   beforeEach(() => {
@@ -328,6 +331,35 @@ describe("EmailReminderProcessor.processJob", () => {
     expect(mockReminders.releaseExecutionClaim).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["empty", new Error("")],
+    ["whitespace-only", new Error(" \t ")],
+  ] as const)(
+    "uses a deterministic non-empty failure for a %s terminal SMTP error",
+    async (_label, smtpError) => {
+      const mockReminders = createMockRemindersService();
+      const mockEmail = createMockEmailService();
+      mockEmail.sendMailMultipart.mockRejectedValue(smtpError);
+      const processor = new EmailReminderProcessor(
+        mockReminders as never,
+        mockEmail,
+        STUB_ENV,
+        createMockSnapshotAdminService() as never,
+      );
+
+      await expect(
+        (processor as unknown as ProcessorTestSeam).processJob(
+          createMockJob(defaultJobData, 2, 3),
+        ),
+      ).rejects.toBe(smtpError);
+      expect(mockReminders.markReminderFailed).toHaveBeenCalledWith(
+        "exec-1",
+        UNKNOWN_ERROR_MESSAGE,
+      );
+      expect(mockReminders.releaseExecutionClaim).not.toHaveBeenCalled();
+    },
+  );
+
   // A non-terminal failure must release the claim (not mark failed) so the next
   // BullMQ attempt can re-claim. In processJob's catch the counter is
   // pre-increment; any value below `attempts` is non-terminal.
@@ -385,7 +417,7 @@ describe("EmailReminderProcessor.processJob", () => {
   // send nothing — the guard against double-delivery.
   it("short-circuits without sending when the execution is already claimed", async () => {
     const mockReminders = createMockRemindersService();
-    mockReminders.claimExecutionForSending.mockResolvedValue(false);
+    mockReminders.claimExecutionForSending.mockResolvedValue(null);
     const mockEmail = createMockEmailService();
     const processor = new EmailReminderProcessor(
       mockReminders as never,
@@ -480,7 +512,7 @@ describe("EmailReminderProcessor.processJob", () => {
 
   it('renders and sends the escalation template for kind: "escalation" jobs', async () => {
     vi.mocked(renderEmail).mockResolvedValue(renderedEmailFixture);
-    const mockReminders = createMockRemindersService();
+    const mockReminders = createMockRemindersService(escalationJobData);
     const mockEmail = createMockEmailService();
     const processor = new EmailReminderProcessor(
       mockReminders as never,
@@ -508,6 +540,60 @@ describe("EmailReminderProcessor.processJob", () => {
       renderedEmailFixture.html,
       renderedEmailFixture.text,
       null,
+    );
+  });
+
+  it("renders the durable DB payload when an old failed job is retried after manual revival", async () => {
+    const staleJobA: EmailReminderJobData = {
+      ...deadlineJobData,
+      recipientEmail: "old-recipient@test.com",
+      leadName: "Old Lead",
+      reportPeriod: "Old period",
+      deadlineIso: "2026-04-14T18:00:00.000Z",
+    };
+    const durablePayloadB: EmailReminderJobData = {
+      ...deadlineJobData,
+      recipientEmail: "current-recipient@test.com",
+      leadName: "Current Lead",
+      reportPeriod: "Current period",
+      deadlineIso: "2026-04-21T18:00:00.000Z",
+    };
+    const mockReminders = createMockRemindersService(durablePayloadB);
+    const mockEmail = createMockEmailService();
+    const processor = new EmailReminderProcessor(
+      mockReminders as never,
+      mockEmail,
+      STUB_ENV,
+      createMockSnapshotAdminService() as never,
+    );
+
+    await (processor as unknown as ProcessorTestSeam).processJob(
+      createMockJob(staleJobA),
+    );
+
+    expect(renderEmail).toHaveBeenCalledWith({
+      kind: "deadline",
+      props: {
+        leadName: durablePayloadB.leadName,
+        reportPeriod: durablePayloadB.reportPeriod,
+        deadlineIso: durablePayloadB.deadlineIso,
+        sectionUrl: durablePayloadB.sectionUrl,
+        organization: durablePayloadB.organization,
+      },
+    });
+    expect(mockEmail.sendMailMultipart).toHaveBeenCalledWith(
+      durablePayloadB.recipientEmail,
+      renderedEmailFixture.subject,
+      renderedEmailFixture.html,
+      renderedEmailFixture.text,
+      null,
+    );
+    expect(mockEmail.sendMailMultipart).not.toHaveBeenCalledWith(
+      staleJobA.recipientEmail,
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
     );
   });
 });

@@ -436,8 +436,7 @@ describe("SdlcPipeline — left edge reflects any stage owner's risk", () => {
 // A locked stage produced by applyCrossAuthorStageOverrides carries:
 //   ownership: "locked", assignee: "<initials>", status: (risk-derived)
 // It must render with the initials as the visible assignee label and
-// MUST NOT render any item/risk count text (those fields were removed from
-// the CrossAuthorRow shape entirely).
+// MUST NOT render item/risk count text; the CrossAuthorRow is identity-only.
 
 describe("SdlcPipeline — co-lead blocked locked chip: initials, no counts", () => {
   // Product with one own stage and one locked (co-lead) stage that is blocked.
@@ -509,8 +508,8 @@ describe("SdlcPipeline — co-lead blocked locked chip: initials, no counts", ()
         readOnly={false}
       />,
     );
-    // Count patterns ("N items", "N risks") must not appear — these fields
-    // were removed from CrossAuthorRow; the chip is identity-only.
+    // Count patterns ("N items", "N risks") must not appear; the chip is
+    // identity-only.
     expect(container.textContent).not.toContain("items");
     expect(container.textContent).not.toContain("risks");
   });
@@ -534,8 +533,8 @@ describe("SdlcPipeline — co-lead blocked locked chip: initials, no counts", ()
 
 // ---- Responsive pipeline structural contract ----
 // jsdom has no layout engine; these tests pin the structural contract only:
-// phone/tablet viewports use compact grids, while lg+ renders one non-wrapping
-// arrow-connected sequence without changing semantic control order.
+// phone/tablet/narrow-desktop viewports use compact grids, while xl+ renders
+// one non-wrapping arrow-connected sequence without changing semantic order.
 function getStageRows(container: HTMLElement): HTMLElement[] {
   return Array.from(
     container.querySelectorAll<HTMLElement>('[data-testid="sdlc-stage-row"]'),
@@ -562,22 +561,20 @@ describe("SdlcPipeline — responsive stage pipeline contract", () => {
     expect(stages).not.toBeNull();
     expect(stages?.className).toContain("grid-cols-2");
     expect(stages?.className).toContain("md:grid-cols-4");
-    expect(stages?.className).toContain("lg:flex");
-    expect(stages?.className).toContain("lg:flex-nowrap");
+    expect(stages?.className).toContain("xl:flex");
+    expect(stages?.className).toContain("xl:flex-nowrap");
     expect(stages?.className).not.toContain("flex-wrap");
     expect(rows).toHaveLength(BASE_PRODUCT.stages.length);
     for (const row of rows) {
       expect(row.className).toContain("w-full");
       expect(row.className).toContain("min-w-0");
-      expect(row.className).toContain("lg:w-[var(--sdlc-stage-width)]");
-      expect(row.className).toContain("lg:flex-none");
-      expect(row.className).not.toContain("lg:flex-1");
+      expect(row.className).toContain("xl:w-[var(--sdlc-stage-width)]");
+      expect(row.className).toContain("xl:flex-none");
+      expect(row.className).not.toContain("xl:flex-1");
       expect(row.querySelector("button")).toBeInTheDocument();
     }
-    expect(stages?.className).toContain("lg:justify-center");
-    expect(stages?.style.getPropertyValue("--sdlc-stage-width")).toBe(
-      "6.625rem",
-    );
+    expect(stages?.className).toContain("xl:justify-center");
+    expect(stages?.style.getPropertyValue("--sdlc-stage-width")).toBe("9rem");
   });
 
   it("renders one decorative shared-height connector per adjacent stage pair", () => {
@@ -590,7 +587,7 @@ describe("SdlcPipeline — responsive stage pipeline contract", () => {
       expect(connector).toHaveAttribute("aria-hidden", "true");
       expect(connector).not.toHaveAttribute("tabindex");
       expect(connector.className).toContain("hidden");
-      expect(connector.className).toContain("lg:flex");
+      expect(connector.className).toContain("xl:flex");
       expect(connector.style.height).toBe(STAGE_CHIP_BOX_HEIGHT);
       expect(connector.querySelector("svg")).toBeInTheDocument();
     }

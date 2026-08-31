@@ -87,8 +87,8 @@ function createRepository(
 
       return Promise.resolve(structuredClone(currentSection));
     },
-    getMyHistoryRows() {
-      return Promise.resolve([]);
+    getMyHistoryPage() {
+      return Promise.resolve({ items: [], nextCursor: null });
     },
   };
 }

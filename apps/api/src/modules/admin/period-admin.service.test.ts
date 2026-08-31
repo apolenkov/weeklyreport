@@ -5,7 +5,7 @@ import { mapDomainError } from "../../infrastructure/trpc/trpc.error-mapper.js";
 import type { AppLogger } from "../../lib/logger.js";
 import { createNullLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
-import { unusedAdminRepositoryStubs } from "./admin-repository-unused-stubs.js";
+import { unusedAdminRepositoryStubs } from "./__tests__/admin-repository-unused-stubs.js";
 import { AdminAccessError, type AdminRepository } from "./admin-shared.js";
 import { PeriodAdminService } from "./period-admin.service.js";
 

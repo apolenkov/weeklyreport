@@ -10,6 +10,7 @@ import type {
   AdminUserView,
 } from "../model/admin-types";
 import type { GroupFormData } from "../model/group-form";
+import { AdminEntityDialogActions } from "./admin-entity-dialog-actions";
 import { GroupProductsEditor } from "./group-products-editor";
 
 interface GroupEditDialogProps {
@@ -158,46 +159,6 @@ function GroupFormFields({
   );
 }
 
-function GroupDialogFooter({
-  editingGroup,
-  canSave,
-  isSaving,
-  onSave,
-  onClose,
-}: Pick<
-  GroupEditDialogProps,
-  "editingGroup" | "canSave" | "isSaving" | "onSave"
-> & {
-  readonly onClose: () => void;
-}) {
-  const saveLabel = isSaving
-    ? "Saving…"
-    : editingGroup
-      ? "Save Changes"
-      : "Add Group";
-  return (
-    <div className="mt-6 flex shrink-0 justify-end gap-3">
-      <button
-        type="button"
-        onClick={onClose}
-        disabled={isSaving}
-        className="btn-press rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        Cancel
-      </button>
-      <button
-        type="button"
-        onClick={onSave}
-        disabled={!canSave}
-        data-interaction-effect="mutation-required"
-        className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {saveLabel}
-      </button>
-    </div>
-  );
-}
-
 export function GroupEditDialog(props: GroupEditDialogProps) {
   const { editingGroup, isSaving, onClose } = props;
   const surfaceRef = useRef<HTMLDivElement>(null);
@@ -232,12 +193,15 @@ export function GroupEditDialog(props: GroupEditDialogProps) {
         products={props.products}
         editingGroup={editingGroup}
       />
-      <GroupDialogFooter
-        editingGroup={editingGroup}
+      <AdminEntityDialogActions
+        saveLabel={editingGroup ? "Save Changes" : "Add Group"}
         canSave={props.canSave}
         isSaving={isSaving}
         onSave={props.onSave}
         onClose={closeIfIdle}
+        saveButtonAttributes={{
+          "data-interaction-effect": "mutation-required",
+        }}
       />
     </DialogSurface>
   );

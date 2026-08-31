@@ -2,9 +2,9 @@
 
 ## Purpose
 
-Define the viewer's primary navigation entry to the latest published report it can
-see (a stable `/reports/latest` redirect) and the read-only report surface that
-mirrors the head shell's toolbar without any mutation affordance.
+Define the viewer's Status entry and read-only report surface. Status resolves to
+the current allowed report, while the live current-period view defaults to
+submitted sections and may explicitly reveal all authorized sections.
 
 ## Requirements
 
@@ -66,7 +66,8 @@ report id or the head-only `/head/report` surface.
 - **WHEN** the viewer surface renders
 - **THEN** both the Status entry and the History entry are present
 - **AND** the viewer's History lists only `published` reports (a reopened period,
-  whose legacy status is still "published", does not appear as an unopenable row)
+  whose companion publication status is still "published", does not appear as
+  an unopenable row)
 
 ### Requirement: Viewer reads the Status target live, gated published-or-current
 
@@ -75,12 +76,13 @@ The system SHALL let a viewer read a report if and only if its
 newest non-archived `open` / `reopened` report with `periodStart <= now`, with NO
 published fallback; every other period MUST be rejected as not-found. The
 current-editable id MUST be resolved no earlier than the report fetch, so that an
-`open → published` race rejects (recovered by a one-shot re-resolution through the
-Status entry) and a newly-created period likewise fails closed — the race resolves
+`open → published` race rejects (the Status entry may resolve again) and a
+newly-created period likewise fails closed — the race resolves
 toward not-found, never toward exposure or a stale live model. On a period the viewer may
 read, the viewer MUST see the same content the head sees on that period —
-including unsubmitted **draft** sections — scoped to the viewer's
-`ViewerGroupAccess` groups and rendered strictly read-only. A non-current `open` /
+including unsubmitted **draft** sections only when the viewer explicitly chooses
+Show all — scoped to the viewer's `ViewerGroupAccess` groups and rendered strictly
+read-only. A non-current `open` /
 `reopened` period, or a scheduled-future period (`periodStart > now`), requested by
 explicit id MUST be rejected, so the live read cannot probe arbitrary periods. A
 viewer with no group access MUST see nothing (zero-row scope), never another group's
@@ -97,16 +99,26 @@ content.
 
 - **GIVEN** a lead in the viewer's group has draft (unsubmitted) content in the
   current `open` period
-- **WHEN** the viewer opens that period
-- **THEN** the draft content is shown read-only (same as the head sees it)
+- **WHEN** the viewer opens that period with the default submission filter
+- **THEN** the draft content is hidden
+
+#### Scenario: Viewer can explicitly show all current sections
+
+- **GIVEN** the viewer is on the live current period and has authorized draft
+  sections
+- **WHEN** the viewer activates the Show all submission-state control
+- **THEN** those draft sections are shown read-only
+- **AND** the control is unavailable for published snapshots
 
 #### Scenario: A reopened current period shows live content, not a blank
 
 - **GIVEN** the current period is a previously published period the head has
   reopened (its sections reset to draft, text intact)
-- **WHEN** the viewer opens it
+- **WHEN** the viewer opens it with the default submission filter
+- **THEN** the reset draft sections remain hidden
+- **WHEN** the viewer activates Show all
 - **THEN** the live section content is shown read-only
-- **AND** the report does not appear empty
+- **AND** the report does not appear empty while Show all is active
 
 #### Scenario: A non-current period is rejected by explicit id
 
@@ -130,12 +142,22 @@ content.
 - **WHEN** the viewer opens it
 - **THEN** its published snapshot is shown read-only
 
-#### Scenario: Viewer with no group access sees an empty report
+#### Scenario: Viewer with no group access sees an empty current report
 
 - **GIVEN** a viewer with no `ViewerGroupAccess` rows
-- **WHEN** the viewer opens a current or published report it would otherwise see
-- **THEN** the report content is empty (zero-row scope)
+- **WHEN** the viewer opens the globally current editable report
+- **THEN** the current-period gate admits the report but its scoped content is
+  empty
 - **AND** no content from other groups is revealed
+
+#### Scenario: Viewer with no group access cannot address a published report
+
+- **GIVEN** a viewer with no `ViewerGroupAccess` rows
+- **WHEN** the viewer opens a published report by explicit id
+- **THEN** report-level admission returns `NOT_FOUND` rather than an empty
+  report envelope
+- **AND** the Status target resolves to the empty state without revealing
+  whether an inaccessible report exists
 
 #### Scenario: A race not-found recovers once through the Status entry
 
@@ -164,5 +186,5 @@ The `PeriodNavigator` rendered on the viewer's read-only report surface (`/repor
 
 - **GIVEN** the viewer's period navigator
 - **WHEN** the viewer picks a period directly from the listbox
-- **THEN** navigation lands on the picked period, exactly as before this
+- **THEN** navigation lands on the picked period
   change

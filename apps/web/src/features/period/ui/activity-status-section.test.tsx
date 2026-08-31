@@ -168,12 +168,12 @@ describe("ActivityStatusSection", () => {
     ).toBeInTheDocument();
   });
 
-  it("lets the lead lower a legacy self-raised status when no floor holds it", async () => {
+  it("lets the lead lower a stored raised status when no floor holds it", async () => {
     const onStatusChange = vi.fn();
     const onRaiseRequiresRisk = vi.fn();
     const user = userEvent.setup();
-    // Stored red predates the raise gate (legacy data) — no covering risk, so
-    // alarmFloor is null and lowering to green stays a direct write.
+    // With no covering risk, alarmFloor is null and lowering a stored red value
+    // to green stays a direct write.
     renderSection(
       [
         makeCard({

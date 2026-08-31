@@ -6,11 +6,11 @@ import type {
 } from "@customreport/shared";
 
 import { createAppRouter } from "../../../infrastructure/trpc/trpc.router.js";
-import { createNullAuditLogger } from "../../../lib/audit-logger.js";
 import { createNullLogger } from "../../../lib/logger.js";
-import { unusedAdminRepositoryStubs } from "../admin-repository-unused-stubs.js";
+import { createNullAuditLogger } from "../../../test-utils/audit-logger.js";
 import { type AdminRepository } from "../admin-shared.js";
 import { SnapshotAdminService } from "../snapshot-admin.service.js";
+import { unusedAdminRepositoryStubs } from "./admin-repository-unused-stubs.js";
 
 export const adminSession: UserSession = {
   userId: "00000000-0000-4000-8000-0000000000ad",

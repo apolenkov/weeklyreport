@@ -27,7 +27,7 @@ import type {
 
 export interface AdminRepository {
   getSnapshot(): Promise<AdminSnapshot>;
-  // Whole-snapshot restore, run atomically. Additive-only: upserts every
+  // Admin-recovery restore, run atomically. Additive-only: upserts every
   // supplied row, NEVER deletes/archives a row absent from the payload —
   // removals go exclusively through the targeted remove* methods.
   saveSnapshot(snapshot: AdminSnapshot): Promise<AdminSnapshot>;
@@ -60,6 +60,7 @@ export interface AdminRepository {
   archivePeriod(periodId: string): Promise<void>;
   unarchivePeriod(
     periodId: string,
+    now: Date,
   ): Promise<{ nextPeriodState: PeriodState; nextPeriodStatus: PeriodStatus }>;
   // Delete a Report only when its lifecycle is still draft/open/non-archived;
   // throws a typed error when the guarded operation matches zero rows.

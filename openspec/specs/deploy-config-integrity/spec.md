@@ -10,8 +10,8 @@ deterministic, and aligned with the repository's service graph.
 ### Requirement: Compose definitions use only current service surfaces
 
 `docker-compose.yml` and `docker-compose.prod.yml` MUST describe the current
-WeeklyReport service graph without references to removed Compose overlays,
-staging variants, or error-only stacks. Required production values MUST fail
+WeeklyReport service graph with positive ownership declarations for every
+current service. Required production values MUST fail
 closed when absent rather than silently defaulting.
 
 #### Scenario: Current Compose files render
@@ -19,7 +19,7 @@ closed when absent rather than silently defaulting.
 - **WHEN** an operator renders the development or production Compose file with
   its documented environment
 - **THEN** rendering succeeds with the current service graph
-- **AND** no removed overlay or service is required
+- **AND** every declared service has an active owner in the current graph
 
 #### Scenario: Production values are missing
 

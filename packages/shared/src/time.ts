@@ -20,7 +20,5 @@ export const MS_PER_WEEK = MS_PER_DAY * DAYS_PER_WEEK;
 
 /** Seconds in one hour. */
 export const SECONDS_PER_HOUR = SECONDS_PER_MINUTE * MINUTES_PER_HOUR;
-/** Seconds in one day. */
-export const SECONDS_PER_DAY = SECONDS_PER_HOUR * HOURS_PER_DAY;
 /** Minutes in one day. */
 export const MINUTES_PER_DAY = MINUTES_PER_HOUR * HOURS_PER_DAY;

@@ -15,6 +15,7 @@ import ts from "typescript";
 export interface TransformRoots {
   readonly apiDistSrc: string;
   readonly apiSharedDistRoot: string;
+  readonly apiPersistenceDistRoot: string;
 }
 
 export interface TransformResult {
@@ -34,10 +35,15 @@ const repoRoot = resolve(apiRoot, "../..");
 const apiDistRoot = resolve(apiRoot, "dist");
 const apiDistSrc = resolve(apiDistRoot, "apps/api/src");
 const apiSharedDistRoot = resolve(apiDistRoot, "packages/shared/src");
+const apiPersistenceDistRoot = resolve(
+  apiDistRoot,
+  "packages/report-persistence/src",
+);
 
 const scanRoots = [
   apiDistSrc,
   apiSharedDistRoot,
+  apiPersistenceDistRoot,
   resolve(repoRoot, "packages/shared/dist"),
 ].filter(existsSync);
 
@@ -55,15 +61,25 @@ export function transformModuleSource(
     false,
     ts.ScriptKind.JS,
   );
-  const isApiDistFile = filePath.startsWith(roots.apiDistSrc);
+  const isApiRuntimeFile =
+    filePath.startsWith(roots.apiDistSrc) ||
+    filePath.startsWith(roots.apiPersistenceDistRoot);
   const edits: SourceEdit[] = [];
 
   const rewrite = (specifier: string, start: number, end: number): void => {
-    if (specifier.startsWith("@customreport/shared")) {
-      if (!isApiDistFile) return;
-      const target = resolveSharedSpecifier(
-        roots,
-        specifier.slice("@customreport/shared".length),
+    const internalPackages = [
+      ["@customreport/shared", roots.apiSharedDistRoot],
+      ["@customreport/report-persistence", roots.apiPersistenceDistRoot],
+    ] as const;
+    const internalPackage = internalPackages.find(([name]) =>
+      specifier.startsWith(name),
+    );
+    if (internalPackage) {
+      if (!isApiRuntimeFile) return;
+      const [name, root] = internalPackage;
+      const target = resolvePackageSpecifier(
+        root,
+        specifier.slice(name.length),
       );
       if (!target) return;
       edits.push({
@@ -109,15 +125,12 @@ export function transformModuleSource(
   return { source: rewritten, changedSpecifiers: edits.length };
 }
 
-function resolveSharedSpecifier(
-  roots: TransformRoots,
-  subpath: string,
-): string | null {
+function resolvePackageSpecifier(root: string, subpath: string): string | null {
   const cleanSubpath = subpath.startsWith("/") ? subpath.slice(1) : subpath;
   const targetBase =
     cleanSubpath.length === 0
-      ? resolve(roots.apiSharedDistRoot, "index")
-      : resolve(roots.apiSharedDistRoot, cleanSubpath);
+      ? resolve(root, "index")
+      : resolve(root, cleanSubpath);
 
   if (existsSync(`${targetBase}.js`)) return `${targetBase}.js`;
   const indexPath = join(targetBase, "index.js");
@@ -154,7 +167,7 @@ function collectJsFiles(directory: string, output: string[]): void {
 }
 
 function main(): void {
-  const roots = { apiDistSrc, apiSharedDistRoot };
+  const roots = { apiDistSrc, apiSharedDistRoot, apiPersistenceDistRoot };
   const jsFiles: string[] = [];
   for (const root of scanRoots) collectJsFiles(root, jsFiles);
 

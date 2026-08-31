@@ -1,8 +1,8 @@
 import type { PrismaClient } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 
-import { createNullAuditLogger } from "../../../lib/audit-logger.js";
 import { createNullLogger } from "../../../lib/logger.js";
+import { createNullAuditLogger } from "../../../test-utils/audit-logger.js";
 import type { EnvConfig } from "../../config/env.schema";
 import { createDevRouter } from "./dev.router.js";
 

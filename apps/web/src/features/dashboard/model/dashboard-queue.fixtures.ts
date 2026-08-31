@@ -123,7 +123,7 @@ export function queueReport(
     submissionCount: leadSections.filter((row) => row.status === "submitted")
       .length,
     totalLeads,
-    hasActiveReminderRule: true,
+    activeDeadlineReminderRuleId: "a0000000-0000-4000-a000-000000000600",
     portfolioOverview: [],
     leadSections: [...leadSections],
     escalations: [],

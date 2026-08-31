@@ -27,13 +27,18 @@ describe("OTel bootstrap decision", () => {
     }
   });
 
-  it("returns no-endpoint when OTEL_EXPORTER_OTLP_ENDPOINT is unset", () => {
-    const decision = decideOtelBootstrap({});
-    expect(decision.started).toBe(false);
-    if (!decision.started) {
-      expect(decision.reason).toBe("no-endpoint");
-    }
-  });
+  it.each([undefined, ""])(
+    "returns no-endpoint when OTEL_EXPORTER_OTLP_ENDPOINT is %j",
+    (OTEL_EXPORTER_OTLP_ENDPOINT) => {
+      const decision = decideOtelBootstrap({
+        OTEL_EXPORTER_OTLP_ENDPOINT,
+      });
+      expect(decision.started).toBe(false);
+      if (!decision.started) {
+        expect(decision.reason).toBe("no-endpoint");
+      }
+    },
+  );
 
   it("returns enabled with default sampling ratio 1.0 when only endpoint is set", () => {
     const decision = decideOtelBootstrap({

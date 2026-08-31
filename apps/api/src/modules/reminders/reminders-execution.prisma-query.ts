@@ -1,17 +1,40 @@
 import type { AdminReminderExecution } from "@customreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { errorMessage as normalizeErrorMessage } from "../../lib/error-message.js";
+import { ReminderExecutionIneligibleError } from "./reminders.errors.js";
+import type {
+  ClaimedReminderExecution,
+  ReminderExecutionRecordResult,
+} from "./reminders.types.js";
 import type { ExecutionPageRequest } from "./reminders-execution-pagination.js";
 import {
   type ReminderQueuePayload,
   reminderQueuePayloadSchema,
 } from "./reminders-queue-payload.js";
 import {
-  isDedupeKeyConflict,
   toExecutionCreateData,
   toExecutionDomain,
   toQueuePayload,
 } from "./reminders-row-mappers.js";
+
+const executionRule = {
+  select: { reportId: true, fireAt: true },
+} as const;
+
+function payloadDeadline(queuePayload: ReminderQueuePayload): Date {
+  if (queuePayload.kind === "deadline") {
+    return new Date(queuePayload.deadlineIso);
+  }
+  const deadlineIso = queuePayload.lateLeads[0]?.deadlineIso;
+  if (
+    deadlineIso === undefined ||
+    queuePayload.lateLeads.some((lead) => lead.deadlineIso !== deadlineIso)
+  ) {
+    throw new ReminderExecutionIneligibleError();
+  }
+  return new Date(deadlineIso);
+}
 
 export async function queryExecutionByDedupeKey(
   prisma: PrismaService,
@@ -19,7 +42,7 @@ export async function queryExecutionByDedupeKey(
 ): Promise<AdminReminderExecution | null> {
   const execution = await prisma.reminderExecution.findUnique({
     where: { dedupeKey },
-    include: { rule: true },
+    include: { rule: executionRule },
   });
   return execution ? toExecutionDomain(execution) : null;
 }
@@ -28,23 +51,101 @@ export async function insertExecutionOnConflict(
   prisma: PrismaService,
   execution: AdminReminderExecution,
   queuePayload: ReminderQueuePayload,
-): Promise<{ execution: AdminReminderExecution; inserted: boolean }> {
-  try {
-    const created = await prisma.reminderExecution.create({
-      data: toExecutionCreateData(execution, queuePayload),
-      include: { rule: true },
+  allowFailedRevival = false,
+): Promise<ReminderExecutionRecordResult> {
+  return prisma.$transaction(async (tx) => {
+    const ruleOwner = await tx.reminderRule.findUnique({
+      where: { id: execution.ruleId },
+      select: { policyId: true },
     });
-    return { execution: toExecutionDomain(created), inserted: true };
-  } catch (error: unknown) {
-    // Concurrent tick won the dedupeKey insert — re-read, report inserted:false.
-    if (!isDedupeKeyConflict(error)) throw error;
-    const existing = await queryExecutionByDedupeKey(
-      prisma,
-      execution.dedupeKey,
-    );
-    if (!existing) throw error;
-    return { execution: existing, inserted: false };
-  }
+    if (!ruleOwner) throw new ReminderExecutionIneligibleError();
+    const [policy] = await tx.$queryRaw<{ active: boolean }[]>`
+      SELECT "active"
+      FROM "ReminderPolicy"
+      WHERE "id" = ${ruleOwner.policyId}
+      FOR UPDATE
+    `;
+    if (!policy?.active) throw new ReminderExecutionIneligibleError();
+
+    const executionDeadline = payloadDeadline(queuePayload);
+    // Lock the rule and owning Report under the exact editable predicate. A
+    // concurrent publish either commits first (zero rows, no insert) or waits
+    // for this transaction; it cannot slip between this guard and the write.
+    const eligible = await tx.$queryRaw<{ id: string }[]>`
+      SELECT rule."id"
+      FROM "ReminderRule" AS rule
+      INNER JOIN "Report" AS report ON report."id" = rule."reportId"
+      INNER JOIN "ReminderPolicy" AS policy ON policy."id" = rule."policyId"
+      WHERE rule."id" = ${execution.ruleId}
+        AND rule."policyId" = ${ruleOwner.policyId}
+        AND rule."reportId" = ${execution.reportId}
+        AND rule."fireAt" = ${execution.scheduledFor}
+        AND rule."kind" = ${queuePayload.kind}::"ReminderRuleKind"
+        AND rule."deadline" = ${executionDeadline}
+        AND to_char(rule."fireAt" AT TIME ZONE 'UTC', 'YYYY-MM-DD') = ${queuePayload.cycleDate}
+        AND rule."status" = 'active'::"ReminderRuleStatus"
+        AND policy."active" = true
+        AND policy."kind" = rule."kind"
+        AND policy."timezone" = rule."timezone"
+        AND policy."validFrom" <= rule."deadline"
+        AND (policy."validUntil" IS NULL OR policy."validUntil" >= rule."deadline")
+        AND rule."fireAt" = rule."deadline" + policy."offsetMinutes" * INTERVAL '1 minute'
+        AND report."deadline" IS NOT NULL
+        AND report."deadline" = rule."deadline"
+        AND report."archived" = false
+        AND report."periodState" = 'open'::"PeriodState"
+        AND (
+          (report."status" = 'draft'::"ReportStatus" AND report."periodStatus" = 'open'::"PeriodStatus")
+          OR
+          (report."status" = 'published'::"ReportStatus" AND report."periodStatus" = 'reopened'::"PeriodStatus")
+        )
+      FOR UPDATE OF rule, report
+    `;
+    if (eligible.length === 0) {
+      throw new ReminderExecutionIneligibleError();
+    }
+
+    // ON CONFLICT DO NOTHING keeps the transaction usable so the loser can
+    // return the canonical deduplicated row from the same locked snapshot.
+    const inserted = await tx.reminderExecution.createMany({
+      data: toExecutionCreateData(execution, queuePayload),
+      skipDuplicates: true,
+    });
+    const persisted = await tx.reminderExecution.findUnique({
+      where: { dedupeKey: execution.dedupeKey },
+      include: { rule: executionRule },
+    });
+    if (!persisted) {
+      throw new Error(
+        "Reminder execution insert conflicted without a matching dedupe row.",
+      );
+    }
+    const domainExecution = toExecutionDomain(persisted);
+    if (inserted.count === 1) {
+      return { execution: domainExecution, outcome: "created" };
+    }
+    if (allowFailedRevival && persisted.status === "failed") {
+      const revived = await tx.reminderExecution.updateMany({
+        where: { id: persisted.id, status: "failed" },
+        data: {
+          status: "pending",
+          error: null,
+          queuePayload: reminderQueuePayloadSchema.parse(queuePayload),
+        },
+      });
+      if (revived.count === 1) {
+        return {
+          execution: {
+            ...domainExecution,
+            status: "queued",
+            errorMessage: null,
+          },
+          outcome: "revived",
+        };
+      }
+    }
+    return { execution: domainExecution, outcome: "deduplicated" };
+  });
 }
 
 export async function queryExecutionQueuePayload(
@@ -62,12 +163,26 @@ export async function queryExecutionQueuePayload(
 export async function transitionExecutionToSending(
   prisma: PrismaService,
   executionId: string,
-): Promise<boolean> {
-  const result = await prisma.reminderExecution.updateMany({
-    where: { id: executionId, status: "pending" },
-    data: { status: "sending" },
+): Promise<ClaimedReminderExecution | null> {
+  return prisma.$transaction(async (tx) => {
+    const [claimed] = await tx.$queryRaw<
+      { recipientEmail: string; queuePayload: unknown }[]
+    >`
+      UPDATE "ReminderExecution"
+      SET "status" = 'sending'::"ReminderExecutionStatus",
+          "updatedAt" = CURRENT_TIMESTAMP
+      WHERE "id" = ${executionId}
+        AND "status" = 'pending'::"ReminderExecutionStatus"
+      RETURNING "recipientEmail", "queuePayload"
+    `;
+    if (!claimed) return null;
+    return {
+      recipientEmail: claimed.recipientEmail,
+      // Validation happens inside the transaction: malformed durable state
+      // rolls the status update back instead of burning the sending claim.
+      queuePayload: reminderQueuePayloadSchema.parse(claimed.queuePayload),
+    };
   });
-  return result.count > 0;
 }
 
 // CAS completion: only the worker that owns the sending claim can mark the
@@ -100,30 +215,12 @@ export async function releaseExecutionClaim(
 export async function markExecutionFailed(
   prisma: PrismaService,
   executionId: string,
-  errorMessage: string,
+  failureMessage: string,
 ): Promise<void> {
   await prisma.reminderExecution.updateMany({
     where: { id: executionId, status: { in: ["pending", "sending"] } },
-    data: { status: "failed", error: errorMessage },
+    data: { status: "failed", error: normalizeErrorMessage(failureMessage) },
   });
-}
-
-// failed → queued CAS; exactly one concurrent revival wins.
-export async function requeueFailedExecution(
-  prisma: PrismaService,
-  executionId: string,
-  queuePayload: ReminderQueuePayload,
-): Promise<boolean> {
-  const validatedPayload = reminderQueuePayloadSchema.parse(queuePayload);
-  const result = await prisma.reminderExecution.updateMany({
-    where: { id: executionId, status: "failed" },
-    data: {
-      status: "pending",
-      error: null,
-      queuePayload: validatedPayload,
-    },
-  });
-  return result.count > 0;
 }
 
 // Pod-died-before-enqueue: queued older than threshold. Exclude sending (dup risk).
@@ -136,22 +233,25 @@ export async function listStuckQueuedExecutions(
 ): Promise<AdminReminderExecution[]> {
   const executions = await prisma.reminderExecution.findMany({
     where: { status: "pending", createdAt: { lt: olderThan } },
-    include: { rule: true },
+    include: { rule: executionRule },
     orderBy: [{ createdAt: "asc" }],
     take: STUCK_QUEUED_REAPER_BATCH_SIZE,
   });
   return executions.map(toExecutionDomain);
 }
 
-// A `sending` row is presumed delivered after a worker crash; CAS-resolve only
-// rows still `sending` past the cutoff, never re-queue or fail a sent email.
-export async function markStuckSendingSent(
+export const UNCERTAIN_DELIVERY_ERROR =
+  "Delivery outcome unknown after worker timeout; manual redispatch required.";
+
+// SMTP and the DB cannot commit atomically. A crashed `sending` worker may
+// have failed before SMTP or after delivery, so persist the ambiguity honestly.
+export async function markStuckSendingUncertain(
   prisma: PrismaService,
   olderThan: Date,
 ): Promise<number> {
   const result = await prisma.reminderExecution.updateMany({
     where: { status: "sending", updatedAt: { lt: olderThan } },
-    data: { status: "sent" },
+    data: { status: "failed", error: UNCERTAIN_DELIVERY_ERROR },
   });
   return result.count;
 }
@@ -162,7 +262,7 @@ export async function queryExecutionById(
 ): Promise<AdminReminderExecution | null> {
   const execution = await prisma.reminderExecution.findUnique({
     where: { id: executionId },
-    include: { rule: true },
+    include: { rule: executionRule },
   });
 
   if (!execution) {
@@ -177,12 +277,12 @@ export async function queryExecutionsPage(
   ruleId: string,
   page: ExecutionPageRequest,
 ): Promise<AdminReminderExecution[]> {
-  // Keyset page at the database level: recipient scoping happens in the
-  // service (recipientEmail is derived from dedupeKey, not a column), so the
-  // service walks these pages instead of loading the whole history.
+  // Keyset page at the database level. The service applies its derived
+  // recipient allowlist to the explicit recipientEmail column while walking
+  // these pages instead of loading the whole history.
   const executions = await prisma.reminderExecution.findMany({
     where: { ruleId },
-    include: { rule: true },
+    include: { rule: executionRule },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: page.take,
     ...(page.cursor ? { cursor: { id: page.cursor }, skip: 1 } : {}),

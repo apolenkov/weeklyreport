@@ -6,6 +6,7 @@ import {
   TrafficLightStatus,
 } from "@prisma/client";
 
+import { provisionalPublishedSnapshot } from "../support/published-snapshot.js";
 import { HEAD_ID, REPORT_ACTIVE, REPORT_PUBLISHED } from "./seed-simple.ids.js";
 import {
   ACTIVE_FRIDAY_DEADLINE,
@@ -90,6 +91,21 @@ const REPORT_ROWS = [
       periodState: isPublished ? PeriodState.archived : PeriodState.scheduled,
       ...(r.publishedAt === undefined ? {} : { publishedAt: r.publishedAt }),
       publishedById: r.publishedAt ? HEAD_ID : null,
+      ...(isPublished && r.publishedAt
+        ? {
+            publishedSnapshot: provisionalPublishedSnapshot({
+              reportId: r.id,
+              periodStart: r.monday,
+              periodEnd: endOfDayUTC(
+                plusDaysUTC(r.monday, LAST_DAY_OF_WEEK_OFFSET),
+              ),
+              deadline: fridayDeadlineFor(r.monday),
+              publishedAt: r.publishedAt,
+              publishedById: HEAD_ID,
+              publishedByName: "Елена Р.",
+            }),
+          }
+        : {}),
     };
   }),
 ];

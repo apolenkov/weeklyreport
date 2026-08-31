@@ -5,8 +5,9 @@ import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
+  publishedSnapshotFixture,
 } from "../../../test-utils/prisma-test-helper";
-import { WeeklyReportPrismaRepository } from "../../weekly-report/index.js";
+import { WeeklyReportPrismaRepository } from "../../weekly-report/weekly-report.prisma-repository.js";
 import { buildTransition } from "../domain/period-transition.js";
 import { PeriodPrismaRepository } from "./period.prisma-repository";
 
@@ -22,6 +23,8 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
 
   const REPORT = "f0000000-0000-4000-a000-0000000000d1";
   const USER = "00000000-0000-4000-8000-0000000000d9";
+  const GROUP = "f0000000-0000-4000-a000-0000000000d2";
+  const PROJECT = "f0000000-0000-4000-a000-0000000000d3";
 
   async function createOpenReport(): Promise<void> {
     // The publish transition stamps publishedById, which references User.
@@ -50,9 +53,7 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
   }
 
   beforeEach(async () => {
-    // Reports reference User via publishedById, so clear them first.
-    await prisma.report.deleteMany();
-    await prisma.user.deleteMany();
+    await cleanDatabase();
     await createOpenReport();
   });
 
@@ -61,24 +62,122 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
     await disconnectTestPrisma();
   });
 
-  it("transitions an open period once and writes the snapshot", async () => {
+  it("writes identical publication metadata to the report and snapshot", async () => {
     const result = await repository.publishPeriod(REPORT, USER);
 
     expect(result).toEqual({ transitioned: true });
     const reloaded = await prisma.report.findUnique({ where: { id: REPORT } });
+    const snapshot = reloaded?.publishedSnapshot as {
+      status?: unknown;
+      publishedAt?: unknown;
+      publishedById?: unknown;
+      publishedByName?: unknown;
+    };
     expect(reloaded?.periodStatus).toBe("published");
     expect(reloaded?.periodState).toBe("published");
     expect(reloaded?.publishedById).toBe(USER);
-    expect(reloaded?.publishedSnapshot).not.toBeNull();
+    expect(snapshot).toMatchObject({
+      status: "published",
+      publishedAt: reloaded?.publishedAt?.toISOString(),
+      publishedById: USER,
+      publishedByName: "Atomicity Head",
+    });
+  });
+
+  it("atomically replaces frozen scope and search rows on republish", async () => {
+    await prisma.reportingGroup.create({
+      data: { id: GROUP, name: "Projection Group" },
+    });
+    await prisma.user.update({
+      where: { id: USER },
+      data: { reportingGroupId: GROUP },
+    });
+    await prisma.project.create({
+      data: { id: PROJECT, name: "Projection Project", leadId: USER },
+    });
+    await prisma.groupProduct.create({
+      data: { groupId: GROUP, productId: PROJECT },
+    });
+    const section = await prisma.reportSection.create({
+      data: { reportId: REPORT, authorId: USER, status: "submitted" },
+    });
+    const item = await prisma.item.create({
+      data: {
+        reportSectionId: section.id,
+        projectId: PROJECT,
+        type: "current",
+        text: "projection first publication",
+        tag: "general",
+        workflowStatus: "in_progress",
+        stageNames: ["Development"],
+      },
+    });
+
+    await expect(repository.publishPeriod(REPORT, USER)).resolves.toEqual({
+      transitioned: true,
+    });
+    await expect(
+      prisma.publishedSectionScope.findMany({ where: { reportId: REPORT } }),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        reportSectionId: section.id,
+        authorId: USER,
+        groupId: GROUP,
+      }),
+    ]);
+    await expect(
+      prisma.publishedSearchDocument.findMany({
+        where: { reportId: REPORT },
+      }),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        recordId: item.id,
+        title: "projection first publication",
+        groupId: GROUP,
+      }),
+    ]);
+
+    await repository.reopenPeriod(REPORT);
+    await prisma.item.update({
+      where: { id: item.id },
+      data: { text: "projection second publication" },
+    });
+    await expect(repository.publishPeriod(REPORT, USER)).resolves.toEqual({
+      transitioned: true,
+    });
+
+    await expect(
+      prisma.publishedSearchDocument.findMany({
+        where: { reportId: REPORT },
+      }),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        recordId: item.id,
+        title: "projection second publication",
+      }),
+    ]);
   });
 
   it("transitions a reopened period back to published", async () => {
-    // A reopened period keeps the legacy tuple (status="published") but flips
+    // A reopened period keeps status="published" but flips
     // periodStatus to "reopened". The shared guard keys on periodStatus, not
-    // legacy status, so it must still transition here.
+    // status, so it must still transition here.
     await prisma.report.update({
       where: { id: REPORT },
-      data: { status: "published", periodStatus: "reopened" },
+      data: {
+        status: "published",
+        periodStatus: "reopened",
+        publishedAt: new Date("2026-05-17T00:00:00.000Z"),
+        publishedSnapshot: publishedSnapshotFixture({
+          reportId: REPORT,
+          periodStart: "2026-05-11T00:00:00.000Z",
+          periodEnd: "2026-05-17T00:00:00.000Z",
+          deadline: "2026-05-15T00:00:00.000Z",
+          publishedAt: "2026-05-17T00:00:00.000Z",
+          publishedById: USER,
+          publishedByName: "Atomicity Head",
+        }),
+      },
     });
 
     const result = await repository.publishPeriod(REPORT, USER);
@@ -138,7 +237,7 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
     expect(reloaded?.publishedSnapshot).not.toBeNull();
   });
 
-  it("rolls back the complete dual-state lifecycle tuple as one database write", async () => {
+  it("rolls back the complete dual-state lifecycle field set as one database write", async () => {
     const lifecycleFields = {
       status: true,
       archived: true,
@@ -159,10 +258,23 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
       prisma.$transaction(async (tx) => {
         await tx.report.update({
           where: { id: REPORT },
-          data: buildTransition("publish", {
-            now: new Date("2026-05-29T12:00:00.000Z"),
-            userId: USER,
-          }),
+          // The canonical database check requires the snapshot in the same
+          // lifecycle write as status='published'.
+          data: {
+            ...buildTransition("publish", {
+              now: new Date("2026-05-29T12:00:00.000Z"),
+              userId: USER,
+            }),
+            publishedSnapshot: publishedSnapshotFixture({
+              reportId: REPORT,
+              periodStart: "2026-05-11T00:00:00.000Z",
+              periodEnd: "2026-05-17T00:00:00.000Z",
+              deadline: "2026-05-15T00:00:00.000Z",
+              publishedAt: "2026-05-29T12:00:00.000Z",
+              publishedById: USER,
+              publishedByName: "Atomicity Head",
+            }),
+          },
         });
         const insideTransaction = await tx.report.findUniqueOrThrow({
           where: { id: REPORT },

@@ -14,12 +14,7 @@ import {
   sortCellRows,
 } from "./slide-grid-rows";
 
-export interface CellBuckets {
-  readonly current: readonly GridRow[];
-  readonly next: readonly GridRow[];
-  readonly risks: readonly GridRow[];
-  readonly decisions: readonly GridRow[];
-}
+export type CellBuckets = GridColumns;
 
 export const emptyBuckets = (): CellBuckets => ({
   current: [],

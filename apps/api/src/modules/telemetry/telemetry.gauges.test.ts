@@ -104,12 +104,11 @@ describe("TelemetryGauges", () => {
     gauges.onModuleInit();
     expect(await gaugeValue(customreportActiveLeadsTotal)).toBe(9);
 
-    // After destroy, the collect callback is a no-op. Manually reset the
-    // gauge, then re-fetch: if destroy left a live callback, it would
-    // overwrite the reset; a no-op leaves the manual value intact.
+    // Destruction detaches collection. A manual reset therefore remains
+    // unchanged when the gauge is read again.
     gauges.onModuleDestroy();
     customreportActiveLeadsTotal.set(0);
-    // Re-fetching should not invoke the (now no-op) callback.
+    // Re-fetching does not invoke a collection callback.
     expect(await gaugeValue(customreportActiveLeadsTotal)).toBe(0);
   });
 });

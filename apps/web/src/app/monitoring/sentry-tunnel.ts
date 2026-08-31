@@ -10,12 +10,14 @@ export const SENTRY_TUNNEL_MAX_REQUESTS_PER_WINDOW = 30;
 export const SENTRY_TUNNEL_MAX_CLIENT_BUCKETS = 1024;
 const MAX_CLIENT_KEY_LENGTH = 128;
 
-interface ClientQuotaBucket {
-  windowStartedAt: number;
-  requests: number;
-}
+import { SentryTunnelQuota } from "./sentry-tunnel-quota";
 
-const clientQuotaBuckets = new Map<string, ClientQuotaBucket>();
+const clientQuota = new SentryTunnelQuota(
+  SENTRY_TUNNEL_WINDOW_MS,
+  SENTRY_TUNNEL_MAX_REQUESTS_PER_WINDOW,
+  SENTRY_TUNNEL_MAX_CLIENT_BUCKETS,
+  MAX_CLIENT_KEY_LENGTH,
+);
 
 /**
  * Resolves the edge-provided client identity for the process-local quota.
@@ -39,38 +41,7 @@ export function consumeSentryTunnelQuota(
   clientKey: string,
   now = Date.now(),
 ): boolean {
-  const normalizedKey =
-    clientKey.trim().slice(0, MAX_CLIENT_KEY_LENGTH) || "anonymous";
-  const current = clientQuotaBuckets.get(normalizedKey);
-
-  if (current && now - current.windowStartedAt < SENTRY_TUNNEL_WINDOW_MS) {
-    if (current.requests >= SENTRY_TUNNEL_MAX_REQUESTS_PER_WINDOW) {
-      return false;
-    }
-    current.requests += 1;
-    return true;
-  }
-
-  for (const [key, bucket] of clientQuotaBuckets) {
-    if (now - bucket.windowStartedAt >= SENTRY_TUNNEL_WINDOW_MS) {
-      clientQuotaBuckets.delete(key);
-    }
-  }
-
-  if (!current && clientQuotaBuckets.size >= SENTRY_TUNNEL_MAX_CLIENT_BUCKETS) {
-    return false;
-  }
-
-  clientQuotaBuckets.set(normalizedKey, {
-    windowStartedAt: now,
-    requests: 1,
-  });
-  return true;
-}
-
-/** Clears process-local quota state between isolated route tests. */
-export function resetSentryTunnelQuota(): void {
-  clientQuotaBuckets.clear();
+  return clientQuota.consume(clientKey, now);
 }
 
 function configuredDsn(): string | undefined {

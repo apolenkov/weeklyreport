@@ -324,9 +324,7 @@ describe("PdfExportProcessor artifact publication races", () => {
       store,
     );
 
-    await expect(
-      persist(processor, "job-1", Buffer.from("completed-bytes")),
-    ).resolves.toBeUndefined();
+    await persist(processor, "job-1", Buffer.from("completed-bytes"));
 
     expect(mockService.markExportCompleted).toHaveBeenCalledOnce();
     expect(warn).toHaveBeenCalledWith(

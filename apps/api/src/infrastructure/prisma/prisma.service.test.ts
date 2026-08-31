@@ -24,6 +24,9 @@ const openServices: PrismaService[] = [];
 function makeService(overrides: Partial<EnvConfig> = {}): PrismaService {
   const env = {
     DATABASE_URL: "postgresql://user:pass@localhost:5432/customreport_test",
+    DB_POOL_MAX: 10,
+    DB_POOL_IDLE_TIMEOUT_MS: 10_000,
+    DB_POOL_CONNECTION_TIMEOUT_MS: 0,
     ...overrides,
   } as EnvConfig;
   const service = new PrismaService(env);
@@ -93,10 +96,7 @@ describe("PrismaService pool error listener", () => {
 });
 
 describe("PrismaService pool configuration", () => {
-  it("applies the named defaults when no DB_POOL_* env vars are set", async () => {
-    // Assert via the boot log, which only carries the SERVICE's resolved
-    // config — pg.Pool backfills max/idleTimeoutMillis with identical
-    // values on its own, so pool.options assertions could never fail.
+  it("applies the explicit pool policy at boot", async () => {
     const service = makeService();
     vi.spyOn(service, "$connect").mockResolvedValue(undefined);
     const logSpy = vi

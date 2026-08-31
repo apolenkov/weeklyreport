@@ -2,8 +2,7 @@
 // restore is a separate shell entrypoint and does not use this module.
 export const E2E_DESTRUCTIVE_CONSENT = "давай" as const;
 export const E2E_DATABASE_NAME = "customreport_e2e" as const;
-export const E2E_RUNTIME_DATABASE_PATTERN =
-  /^customreport_e2e(?:_lane_[a-o]_test)?$/u;
+const E2E_RUNTIME_DATABASE_PATTERN = /^customreport_e2e(?:_lane_[a-o]_test)?$/u;
 
 export interface DestructiveTargetEnv {
   readonly ALLOW_PROD_DESTRUCTIVE?: string;
@@ -277,7 +276,7 @@ export function parseE2eRuntimeDatabaseTarget(
 }
 
 /** Assert the exact disposable target without authorizing a mutation. */
-export function assertE2eRuntimeDatabaseTarget(
+function assertE2eRuntimeDatabaseTarget(
   scriptName: string,
   databaseUrl: string | undefined,
   env: DestructiveTargetEnv = process.env,

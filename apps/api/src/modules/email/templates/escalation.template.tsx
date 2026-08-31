@@ -13,7 +13,7 @@ import {
 } from "react-email";
 
 // Per-head late-leads digest; opt-out / timing / dedupe live on the scheduler path.
-export interface LateLead {
+interface LateLead {
   readonly leadName: string;
   readonly sectionTitle: string;
   readonly deadlineIso: string;

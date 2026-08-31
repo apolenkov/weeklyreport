@@ -13,7 +13,6 @@
     "paths": {
       "@customreport/shared": ["../../packages/shared/src/index.ts"],
       "@customreport/shared/*": ["../../packages/shared/src/*"],
-      "@customreport/ui": ["../../packages/ui/src/index.ts"],
       "@customreport/ui/*": ["../../packages/ui/src/*"],
       "@customreport/api/*": ["../../apps/api/src/*"]
     }

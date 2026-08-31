@@ -15,6 +15,7 @@ import {
   type QueueName,
   QueueRegistry,
 } from "./queue-registry.js";
+import { WorkerLivenessRegistry } from "./worker-liveness.registry.js";
 
 // Bound retained job hashes so they don't accumulate in Redis without limit.
 const BOUNDED_RETENTION_JOB_OPTS: DefaultJobOptions = {
@@ -42,6 +43,7 @@ function registerQueueOptionsFor(name: QueueName): RegisterQueueOptions {
     ),
   ],
   providers: [
+    WorkerLivenessRegistry,
     {
       provide: QueueRegistry,
       useFactory: (...queues: Queue[]) => new QueueRegistry(queues),
@@ -54,6 +56,6 @@ function registerQueueOptionsFor(name: QueueName): RegisterQueueOptions {
       inject: [QueueRegistry, ENV_CONFIG],
     },
   ],
-  exports: [BullModule, QueueRegistry],
+  exports: [BullModule, QueueRegistry, WorkerLivenessRegistry],
 })
 export class BullMQModule {}

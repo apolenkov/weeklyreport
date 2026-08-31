@@ -1,7 +1,7 @@
 import type { AppSettings } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { createNullAuditLogger } from "../../../lib/audit-logger.js";
+import { createNullAuditLogger } from "../../../test-utils/audit-logger.js";
 import { silenceNestLogger } from "../../../test-utils/silence-logs";
 import { AutoPublisherScheduler } from "./auto-publisher.scheduler.js";
 
@@ -31,6 +31,7 @@ function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
 // contract, so cast through `unknown` to the constructor's parameter type —
 // a signature change in the real class becomes a compile error here.
 const asStub = <T>(value: unknown, _target?: T): T => value as T;
+const overdueDeadline = new Date("2026-05-01T15:00:00.000Z");
 
 describe("AutoPublisherScheduler", () => {
   it("skip-when-disabled: autoPublishAfterDeadline=false → no DB scan", async () => {
@@ -67,7 +68,9 @@ describe("AutoPublisherScheduler", () => {
   it("fire-when-eligible: draft past deadline+grace → publishAuto + emits audit with missingSectionsCount", async () => {
     const prisma = {
       report: {
-        findMany: vi.fn().mockResolvedValue([{ id: "rep-1" }]),
+        findMany: vi
+          .fn()
+          .mockResolvedValue([{ id: "rep-1", deadline: overdueDeadline }]),
       },
       reportSection: { count: vi.fn().mockResolvedValue(2) },
     };
@@ -103,7 +106,19 @@ describe("AutoPublisherScheduler", () => {
     expect(publication.publishAuto).toHaveBeenCalledWith(
       "rep-1",
       new Date("2026-05-12T12:00:00Z"),
+      overdueDeadline,
     );
+    expect(prisma.report.findMany).toHaveBeenCalledWith({
+      where: {
+        status: "draft",
+        archived: false,
+        periodState: "open",
+        periodStatus: "open",
+        deadline: { lt: new Date("2026-05-12T10:00:00.000Z") },
+      },
+      orderBy: { deadline: "asc" },
+      select: { id: true, deadline: true },
+    });
     expect(audit.periodAutoPublish).toHaveBeenCalledWith({
       periodId: "rep-1",
       missingSectionsCount: 2,
@@ -144,9 +159,10 @@ describe("AutoPublisherScheduler", () => {
     silenceNestLogger();
     const prisma = {
       report: {
-        findMany: vi
-          .fn()
-          .mockResolvedValue([{ id: "rep-bad" }, { id: "rep-good" }]),
+        findMany: vi.fn().mockResolvedValue([
+          { id: "rep-bad", deadline: overdueDeadline },
+          { id: "rep-good", deadline: overdueDeadline },
+        ]),
       },
       reportSection: { count: vi.fn().mockResolvedValue(0) },
     };
@@ -232,7 +248,11 @@ describe("AutoPublisherScheduler", () => {
   // no periodIds — and is not logged as an error (an expected no-op).
   it("skip outcome: {published:false} emits no audit, no count, no periodIds", async () => {
     const prisma = {
-      report: { findMany: vi.fn().mockResolvedValue([{ id: "rep-skip" }]) },
+      report: {
+        findMany: vi
+          .fn()
+          .mockResolvedValue([{ id: "rep-skip", deadline: overdueDeadline }]),
+      },
       reportSection: { count: vi.fn() },
     };
     const admin = {
@@ -258,6 +278,7 @@ describe("AutoPublisherScheduler", () => {
     expect(publication.publishAuto).toHaveBeenCalledWith(
       "rep-skip",
       new Date("2026-05-12T12:00:00Z"),
+      overdueDeadline,
     );
     expect(result).toEqual({ published: true, periodIds: [], failures: [] });
     expect(audit.periodAutoPublish).not.toHaveBeenCalled();
@@ -269,9 +290,10 @@ describe("AutoPublisherScheduler", () => {
   it("mixed tick: skipped id excluded from periodIds, published id kept", async () => {
     const prisma = {
       report: {
-        findMany: vi
-          .fn()
-          .mockResolvedValue([{ id: "rep-skip" }, { id: "rep-ok" }]),
+        findMany: vi.fn().mockResolvedValue([
+          { id: "rep-skip", deadline: overdueDeadline },
+          { id: "rep-ok", deadline: overdueDeadline },
+        ]),
       },
       reportSection: { count: vi.fn().mockResolvedValue(1) },
     };
@@ -320,7 +342,11 @@ describe("AutoPublisherScheduler", () => {
   // Manual publish between selection and publishAuto must not audit as auto.
   it("raced outcome: wasAlreadyPublished=true emits no audit, no log, no count, excluded from periodIds", async () => {
     const prisma = {
-      report: { findMany: vi.fn().mockResolvedValue([{ id: "rep-race" }]) },
+      report: {
+        findMany: vi
+          .fn()
+          .mockResolvedValue([{ id: "rep-race", deadline: overdueDeadline }]),
+      },
       reportSection: { count: vi.fn() },
     };
     const admin = {
@@ -350,6 +376,7 @@ describe("AutoPublisherScheduler", () => {
     expect(publication.publishAuto).toHaveBeenCalledWith(
       "rep-race",
       new Date("2026-05-12T12:00:00Z"),
+      overdueDeadline,
     );
     expect(result).toEqual({ published: true, periodIds: [], failures: [] });
     expect(audit.periodAutoPublish).not.toHaveBeenCalled();
@@ -361,9 +388,10 @@ describe("AutoPublisherScheduler", () => {
   it("mixed tick: raced id excluded from periodIds, genuinely auto-published id still audited", async () => {
     const prisma = {
       report: {
-        findMany: vi
-          .fn()
-          .mockResolvedValue([{ id: "rep-race" }, { id: "rep-ok" }]),
+        findMany: vi.fn().mockResolvedValue([
+          { id: "rep-race", deadline: overdueDeadline },
+          { id: "rep-ok", deadline: overdueDeadline },
+        ]),
       },
       reportSection: { count: vi.fn().mockResolvedValue(3) },
     };

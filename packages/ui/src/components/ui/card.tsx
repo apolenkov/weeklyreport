@@ -37,57 +37,6 @@ function CardHeader({
 }
 
 /**
- * Primary title slot inside CardHeader.
- */
-function CardTitle({
-  className,
-  ...props
-}: Readonly<React.ComponentProps<"div">>) {
-  return (
-    <div
-      data-slot="card-title"
-      className={cn("leading-none font-semibold", className)}
-      {...props}
-    />
-  );
-}
-
-/**
- * Muted description slot inside CardHeader.
- */
-function CardDescription({
-  className,
-  ...props
-}: Readonly<React.ComponentProps<"div">>) {
-  return (
-    <div
-      data-slot="card-description"
-      className={cn("text-sm text-muted-foreground", className)}
-      {...props}
-    />
-  );
-}
-
-/**
- * Action cell aligned in the CardHeader grid (end column, span rows).
- */
-function CardAction({
-  className,
-  ...props
-}: Readonly<React.ComponentProps<"div">>) {
-  return (
-    <div
-      data-slot="card-action"
-      className={cn(
-        "col-start-2 row-span-2 row-start-1 self-start justify-self-end",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-/**
  * Main body content slot of Card.
  */
 function CardContent({
@@ -103,28 +52,4 @@ function CardContent({
   );
 }
 
-/**
- * Footer actions row of Card.
- */
-function CardFooter({
-  className,
-  ...props
-}: Readonly<React.ComponentProps<"div">>) {
-  return (
-    <div
-      data-slot="card-footer"
-      className={cn("flex items-center px-6 [.border-t]:pt-6", className)}
-      {...props}
-    />
-  );
-}
-
-export {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-};
+export { Card, CardContent, CardHeader };

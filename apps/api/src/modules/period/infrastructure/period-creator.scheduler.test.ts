@@ -1,8 +1,9 @@
 import type { AppSettings } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { createNullAuditLogger } from "../../../lib/audit-logger.js";
+import { createNullAuditLogger } from "../../../test-utils/audit-logger.js";
 import type { AutoCarryOverOutcome } from "../../carry-over/index.js";
+import { readMostRecentLivePeriod } from "../application/period-factory-lookup.js";
 import {
   flipDueScheduledToOpen,
   PeriodCreatorScheduler,
@@ -38,7 +39,21 @@ interface ReportCreateData {
   periodState: "scheduled" | "open";
 }
 
+function sqlText(query: unknown): string {
+  if (Array.isArray(query)) return query.join("?");
+  if (
+    typeof query === "object" &&
+    query !== null &&
+    "strings" in query &&
+    Array.isArray(query.strings)
+  ) {
+    return query.strings.join("?");
+  }
+  throw new Error("Expected a Prisma SQL template");
+}
+
 interface StubPrisma {
+  $transaction: ReturnType<typeof vi.fn>;
   report: {
     findFirst: ReturnType<typeof vi.fn>;
     create: ReturnType<typeof vi.fn>;
@@ -59,32 +74,51 @@ function makePrismaStub(opts: {
     periodState: "scheduled" | "open";
   } | null;
 }): StubPrisma {
-  return {
-    report: {
-      findFirst: vi
-        .fn()
-        .mockImplementation((args?: { orderBy?: unknown }) =>
-          args?.orderBy ? opts.mostRecent : (opts.existingInWindow ?? null),
-        ),
-      // The scheduler `await`s create(); a plain object resolves the same, so the
-      // stub stays sync (no `async` → no require-await disable to keep in place).
-      create: vi
-        .fn()
-        .mockImplementation(({ data }: { data: ReportCreateData }) => ({
-          id: opts.createdId ?? "period-new",
-          periodStart: data.periodStart,
-          periodEnd: data.periodEnd,
-          deadline: data.deadline,
-          // Echo the periodState the scheduler wrote so the returned shape
-          // matches the real prisma client surface.
-          periodState: data.periodState,
-        })),
-      // The flip reads due scheduled rows then updates each; the runOnce-level
-      // tests exercise the create/skip paths, so the default here is "no due
-      // rows". The flip's own recovery is covered by the focused flip tests.
-      findMany: vi.fn().mockResolvedValue([]),
-      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+  const report = {
+    findFirst: vi
+      .fn()
+      .mockImplementation((args?: { orderBy?: unknown }) =>
+        args?.orderBy ? opts.mostRecent : (opts.existingInWindow ?? null),
+      ),
+    create: vi
+      .fn()
+      .mockImplementation(({ data }: { data: ReportCreateData }) => ({
+        id: opts.createdId ?? "period-new",
+        periodStart: data.periodStart,
+        periodEnd: data.periodEnd,
+        deadline: data.deadline,
+        periodState: data.periodState,
+      })),
+    findMany: vi.fn().mockResolvedValue([]),
+    updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+  };
+  const transactionClient = {
+    $queryRaw: vi.fn((query: unknown) =>
+      sqlText(query).includes('FROM "ReminderPolicy"')
+        ? []
+        : [
+            {
+              id: "period-due",
+              deadline: new Date("2026-05-16T18:00:00.000Z"),
+              periodState: "open",
+              archived: false,
+            },
+          ],
+    ),
+    report,
+    reminderRule: {
+      findFirst: vi.fn(),
+      updateMany: vi.fn(),
+      update: vi.fn(),
+      create: vi.fn(),
     },
+  };
+  return {
+    $transaction: vi.fn(
+      (callback: (client: typeof transactionClient) => Promise<unknown>) =>
+        callback(transactionClient),
+    ),
+    report,
   };
 }
 
@@ -100,7 +134,10 @@ function createScheduler(
   prisma: StubPrisma,
   admin: unknown,
   audit: unknown,
-  policyApplicator: unknown = { applyToPeriod: vi.fn() },
+  policyApplicator: unknown = {
+    applyToPeriod: vi.fn(),
+    repairToPeriod: vi.fn(),
+  },
   autoCarryOver: unknown = vi.fn().mockResolvedValue({ status: "no-source" }),
 ): PeriodCreatorScheduler {
   return new PeriodCreatorScheduler(
@@ -113,6 +150,25 @@ function createScheduler(
 }
 
 describe("PeriodCreatorScheduler", () => {
+  it("uses the canonical live lifecycle predicate for the future horizon", async () => {
+    const findFirst = vi.fn().mockResolvedValue(null);
+
+    await expect(
+      readMostRecentLivePeriod(asStub({ findFirst })),
+    ).resolves.toBeNull();
+
+    expect(findFirst).toHaveBeenCalledWith({
+      where: {
+        status: "draft",
+        periodStatus: "open",
+        periodState: { in: ["scheduled", "open"] },
+        archived: false,
+      },
+      orderBy: { periodStart: "desc" },
+      select: { id: true, periodEnd: true },
+    });
+  });
+
   it("skip-when-disabled: autoCreatePeriods=false → no create, no audit", async () => {
     const prisma = makePrismaStub({ mostRecent: null });
     const admin = {
@@ -136,6 +192,14 @@ describe("PeriodCreatorScheduler", () => {
       id: "period-due",
       periodStart: new Date("2026-05-12T00:00:00.000Z"),
       periodEnd: new Date("2026-05-18T23:59:59.999Z"),
+      status: "draft",
+      periodStatus: "open",
+      archived: false,
+      autoPublished: false,
+      autoArchived: false,
+      publishedAt: null,
+      publishedById: null,
+      reopenedAt: null,
     };
     prisma.report.findMany.mockResolvedValue([due]);
     const admin = {
@@ -149,7 +213,23 @@ describe("PeriodCreatorScheduler", () => {
 
     expect(result).toEqual({ created: false, reason: "disabled" });
     expect(prisma.report.updateMany).toHaveBeenCalledWith({
-      where: { id: due.id, periodState: "scheduled" },
+      where: {
+        id: due.id,
+        periodState: "scheduled",
+        periodStart: {
+          equals: due.periodStart,
+          lte: new Date("2026-05-12T00:05:00Z"),
+        },
+        periodEnd: due.periodEnd,
+        status: "draft",
+        periodStatus: "open",
+        archived: false,
+        autoPublished: false,
+        autoArchived: false,
+        publishedAt: null,
+        publishedById: null,
+        reopenedAt: null,
+      },
       data: {
         periodState: "open",
         status: "draft",
@@ -261,13 +341,25 @@ describe("PeriodCreatorScheduler", () => {
 
     // The flip queries the due scheduled rows in a deterministic order; the
     // per-row update behaviour is covered by the focused tests below.
-    expect(prisma.report.findMany).toHaveBeenCalledWith({
+    expect(prisma.report.findMany).toHaveBeenNthCalledWith(1, {
       where: {
         periodState: "scheduled",
         periodStart: { lte: new Date("2026-05-12T00:05:00Z") },
       },
       orderBy: [{ periodStart: "asc" }, { id: "asc" }],
-      select: { id: true, periodStart: true, periodEnd: true },
+      select: {
+        id: true,
+        periodStart: true,
+        periodEnd: true,
+        status: true,
+        periodStatus: true,
+        archived: true,
+        autoPublished: true,
+        autoArchived: true,
+        publishedAt: true,
+        publishedById: true,
+        reopenedAt: true,
+      },
     });
   });
 
@@ -386,7 +478,7 @@ describe("PeriodCreatorScheduler", () => {
     // The factory delegates with `now` so the applicator can drop elapsed
     // instants; the scheduler creates future periods, so nothing is dropped.
     expect(policyApplicator.applyToPeriod).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "period-td06" }),
+      "period-td06",
       expect.any(Date),
     );
   });
@@ -467,22 +559,99 @@ interface FlipReportStub {
   updateMany: ReturnType<typeof vi.fn>;
 }
 
+function makeFlipPrisma(
+  report: FlipReportStub,
+  policies: readonly object[] = [],
+) {
+  const $queryRaw = vi.fn((query: unknown) =>
+    sqlText(query).includes('FROM "ReminderPolicy"')
+      ? policies
+      : [
+          {
+            id: "s1",
+            deadline: new Date("2026-05-16T18:00:00.000Z"),
+            periodState: "open",
+            status: "draft",
+            periodStatus: "open",
+            archived: false,
+          },
+        ],
+  );
+  const reminderRule = {
+    findFirst: vi.fn().mockResolvedValue(null),
+    updateMany: vi.fn(),
+    update: vi.fn(),
+    create: vi.fn().mockResolvedValue({ id: "rule-v1" }),
+  };
+  const tx = {
+    $queryRaw,
+    report,
+    reminderRule,
+  };
+  return {
+    report,
+    $queryRaw,
+    reminderRule,
+    $transaction: vi.fn((callback: (client: typeof tx) => Promise<unknown>) =>
+      callback(tx),
+    ),
+  };
+}
+
 describe("flipDueScheduledToOpen", () => {
   const now = new Date("2026-05-12T00:05:00.000Z");
 
   it("opens a row that is still scheduled via the governed transition", async () => {
     const report: FlipReportStub = {
-      findMany: vi
-        .fn()
-        .mockResolvedValue([{ id: "s1", periodStart: W, periodEnd: W_END }]),
+      findMany: vi.fn().mockResolvedValue([
+        {
+          id: "s1",
+          periodStart: W,
+          periodEnd: W_END,
+          status: "draft",
+          periodStatus: "open",
+          archived: false,
+          autoPublished: false,
+          autoArchived: false,
+          publishedAt: null,
+          publishedById: null,
+          reopenedAt: null,
+        },
+      ]),
       updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     };
     const logger = { log: vi.fn(), warn: vi.fn() };
+    const policy = {
+      id: "policy-1",
+      kind: "deadline",
+      offsetMinutes: -180,
+      timezone: "Europe/Moscow",
+      audience: "LEAD_WITH_DRAFT",
+      active: true,
+      validFrom: new Date("2026-01-01T00:00:00.000Z"),
+      validUntil: null,
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+    };
+    const prisma = makeFlipPrisma(report, [policy]);
 
-    await flipDueScheduledToOpen(asStub(report), now, logger);
+    await flipDueScheduledToOpen(asStub(prisma), now, logger);
 
     expect(report.updateMany).toHaveBeenCalledWith({
-      where: { id: "s1", periodState: "scheduled" },
+      where: {
+        id: "s1",
+        periodState: "scheduled",
+        periodStart: { equals: W, lte: now },
+        periodEnd: W_END,
+        status: "draft",
+        periodStatus: "open",
+        archived: false,
+        autoPublished: false,
+        autoArchived: false,
+        publishedAt: null,
+        publishedById: null,
+        reopenedAt: null,
+      },
       data: {
         periodState: "open",
         status: "draft",
@@ -497,40 +666,128 @@ describe("flipDueScheduledToOpen", () => {
     });
     expect(logger.log).not.toHaveBeenCalled();
     expect(logger.warn).not.toHaveBeenCalled();
+    expect(prisma.$transaction).toHaveBeenCalledOnce();
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(2);
+    const createArgs = prisma.reminderRule.create.mock
+      .calls[0]?.[0] as unknown as {
+      data: Record<string, unknown>;
+    };
+    expect(createArgs.data).toMatchObject({
+      reportId: "s1",
+      policyId: policy.id,
+      status: "active",
+    });
   });
 
   it("logs and skips a row concurrently transitioned away from scheduled", async () => {
     const report: FlipReportStub = {
-      findMany: vi
-        .fn()
-        .mockResolvedValue([{ id: "s1", periodStart: W, periodEnd: W_END }]),
+      findMany: vi.fn().mockResolvedValue([
+        {
+          id: "s1",
+          periodStart: W,
+          periodEnd: W_END,
+          status: "draft",
+          periodStatus: "open",
+          archived: false,
+          autoPublished: false,
+          autoArchived: false,
+          publishedAt: null,
+          publishedById: null,
+          reopenedAt: null,
+        },
+      ]),
       updateMany: vi.fn().mockResolvedValue({ count: 0 }),
     };
     const logger = { log: vi.fn(), warn: vi.fn() };
+    const prisma = makeFlipPrisma(report);
 
-    await flipDueScheduledToOpen(asStub(report), now, logger);
+    await flipDueScheduledToOpen(asStub(prisma), now, logger);
 
-    expect(report.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: "s1", periodState: "scheduled" },
-      }),
-    );
+    const updateArgs = report.updateMany.mock.calls[0]?.[0] as unknown as {
+      where: Record<string, unknown>;
+    };
+    expect(updateArgs.where).toMatchObject({
+      id: "s1",
+      periodState: "scheduled",
+      periodStart: { equals: W, lte: now },
+      periodEnd: W_END,
+      status: "draft",
+      periodStatus: "open",
+      archived: false,
+      autoPublished: false,
+      autoArchived: false,
+      publishedAt: null,
+      publishedById: null,
+      reopenedAt: null,
+    });
     expect(logger.log).toHaveBeenCalledWith(
       expect.stringContaining("transitioned away from scheduled"),
     );
     expect(logger.warn).not.toHaveBeenCalled();
+    expect(prisma.$queryRaw).toHaveBeenCalledOnce();
+  });
+
+  it("does not open a row moved into the future after the due scan", async () => {
+    const updateMany = vi.fn().mockImplementation(() => {
+      // Deterministic interleaving: the admin edit commits between findMany
+      // and the scheduler CAS, moving the same scheduled row to the future.
+      return { count: 0 };
+    });
+    const report: FlipReportStub = {
+      findMany: vi.fn().mockResolvedValue([
+        {
+          id: "s1",
+          periodStart: W,
+          periodEnd: W_END,
+          status: "draft",
+          periodStatus: "open",
+          archived: false,
+          autoPublished: false,
+          autoArchived: false,
+          publishedAt: null,
+          publishedById: null,
+          reopenedAt: null,
+        },
+      ]),
+      updateMany,
+    };
+
+    await flipDueScheduledToOpen(asStub(makeFlipPrisma(report)), now, {
+      log: vi.fn(),
+      warn: vi.fn(),
+    });
+
+    const updateArgs = updateMany.mock.calls[0]?.[0] as unknown as {
+      where: Record<string, unknown>;
+    };
+    expect(updateArgs.where).toMatchObject({
+      periodStart: { equals: W, lte: now },
+      periodEnd: W_END,
+    });
   });
 
   it("re-throws a non-P2002 error (the tick aborts rather than silently swallowing)", async () => {
     const report: FlipReportStub = {
-      findMany: vi
-        .fn()
-        .mockResolvedValue([{ id: "s1", periodStart: W, periodEnd: W_END }]),
+      findMany: vi.fn().mockResolvedValue([
+        {
+          id: "s1",
+          periodStart: W,
+          periodEnd: W_END,
+          status: "draft",
+          periodStatus: "open",
+          archived: false,
+          autoPublished: false,
+          autoArchived: false,
+          publishedAt: null,
+          publishedById: null,
+          reopenedAt: null,
+        },
+      ]),
       updateMany: vi.fn().mockRejectedValue(new Error("db down")),
     };
 
     await expect(
-      flipDueScheduledToOpen(asStub(report), now, {
+      flipDueScheduledToOpen(asStub(makeFlipPrisma(report)), now, {
         log: vi.fn(),
         warn: vi.fn(),
       }),

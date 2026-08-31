@@ -20,9 +20,6 @@ never share one cue.
    health color) indicating whether the responsible person has completed their
    input for the product.
 
-(Direction captured from live-walk feedback; the exact completeness rule and
-the completeness affordance are open design questions in proposal.md.)
-
 #### Scenario: a stage owner flagged a blocker on an otherwise-filled product
 
 - **WHEN** a product has a covering blocker raised by a stage owner and the
@@ -67,7 +64,7 @@ no separate manual status that can drift from the risks.
 
 ### Requirement: Own-input completeness counts only stages the lead explicitly set
 
-Own-input completeness (D1) MUST count a stage as addressed when EITHER
+Own-input completeness MUST count a stage as addressed when EITHER
 the lead set an explicit non-empty status on it OR the stage is covered
 by the current lead's OWN non-empty staged risk. A risk is the lead's
 input about that stage, so a stage the lead never explicitly set still
@@ -156,16 +153,21 @@ fuller team picture, without changing the health or completeness signals.
    rendered own-stage set; it is a read-only summary.
 6. The visible stages MUST preserve canonical order without a horizontal
    scroller or page-level horizontal overflow. Below 48 rem they MUST render in
-   a two-column grid; from 48 rem through below 64 rem they MUST render in a
-   four-column grid; at 64 rem and above they MUST form one unwrapped compact
-   fixed-width arrow lane. Connector arrows MUST render only in the wide lane,
+   a two-column grid; from 48 rem through below 80 rem they MUST render in a
+   four-column contained grid; at 80 rem and above they MUST form one
+   unwrapped compact fixed-width arrow lane. Connector arrows MUST render only in the wide lane,
    exactly between adjacent rendered stages. Wide stage controls MUST use the
    same compact width regardless of visible-stage count and MUST NOT grow to
    consume spare card width. Every grid and wide control MUST retain the stage
    icon, readable name, risk-derived status visualization, and interaction
    affordance; controls MUST be at least 44 px tall through tablet widths. Long
    labels MUST remain inside the card without clipping; truncation MUST retain
-   the full accessible name and tooltip.
+   the full accessible name and tooltip. At desktop width (80 rem and above),
+   every canonical stage name MUST be rendered in full in the visible chip;
+   compact short labels are reserved for narrower layouts. The contained
+   four-column layout MUST continue through narrow desktop widths so the card
+   never creates document-level horizontal overflow and every stage remains
+   reachable without page scrolling.
 7. All three responsive modes MUST use stable geometry: changing a stage's
    status or opening its existing interaction MUST NOT reorder stages, move the product
    header, or change the card's outer width except for the intended content
@@ -218,13 +220,20 @@ fuller team picture, without changing the health or completeness signals.
 
 #### Scenario: a wide viewport shows the connected process
 
-- **WHEN** the product card renders at a viewport width of at least 64 rem
+- **WHEN** the product card renders at a viewport width of at least 80 rem
 - **THEN** all visible stage controls form one non-wrapping horizontal pipeline
   in canonical order
 - **AND** exactly one decorative connector appears between each adjacent pair
   of visible stages
 - **AND** every stage control has the same compact width used by other product
   cards at that viewport, independent of the number of visible stages
+
+#### Scenario: a wide viewport shows full canonical stage names
+
+- **WHEN** a visible stage has a canonical name longer than its compact label,
+  such as `Development`, at a viewport width of at least 80 rem
+- **THEN** the desktop chip renders the complete canonical name
+- **AND** the name remains inside the equal-width chip without clipping
 
 #### Scenario: a phone viewport uses a two-column grid
 
@@ -235,7 +244,7 @@ fuller team picture, without changing the health or completeness signals.
 
 #### Scenario: a tablet viewport uses a four-column grid
 
-- **WHEN** the product card renders from 48 rem through below 64 rem
+- **WHEN** the product card renders from 48 rem through below 80 rem
 - **THEN** visible stages occupy a four-column grid in canonical order
 - **AND** connector arrows are absent, every stage control is at least 44 px
   tall, and the card creates no horizontal scroller or root overflow
@@ -334,8 +343,8 @@ The `+N more` collapsed-stages indicator MUST color its border and text by the f
 1. The color precedence MUST be: red when any hidden stage is `blocked`; otherwise
    yellow when any is `at-risk`; otherwise grey when any is unfilled (`empty` —
    owned but unstatused); otherwise green when every hidden stage is `on-track`.
-2. This reverses the prior "neutral grey unless blocked/at-risk" behaviour: a
-   fully on-track hidden set now reads green, and a partially unfilled set reads grey.
+2. A fully on-track hidden set MUST read green, and a partially unfilled set
+   MUST read grey.
 3. This color is derived from the same hidden-stage set the indicator reveals; it
    MUST NOT change product health (left stripe) or the own-input completeness counter.
 
@@ -387,7 +396,7 @@ is READ-ONLY display metadata: it MUST NOT widen the write path, so a lead can
 never persist a stage status for a stage they do not own (the save path stays
 scoped to the lead's owned stages). Excluding unassigned stages MUST NOT change
 any product-health, severity, or completeness number: a risk only floors health
-through owned stages today, so a stage nobody owns never drove the traffic light;
+through owned stages, so a stage nobody owns never drives the traffic light;
 a covering risk stays listed in the risk section, so severity stays explained by
 a visible object. Published report snapshots are frozen: this requirement governs
 the live/draft pipeline render and MUST NOT retroactively alter an

@@ -6,6 +6,20 @@ Define the Admin Settings sub-tab navigation, live policy fields, and form-state
 
 ## Requirements
 
+### Requirement: Settings updates never manufacture the singleton
+
+The canonical init migration MUST remain the only owner of `AppSettings`
+singleton creation. `admin.updateSettings` MUST apply a partial update to the
+fixed `id='singleton'` row and MUST fail if that row is missing; it MUST NOT
+upsert a replacement from Prisma defaults and an incomplete patch.
+
+#### Scenario: settings singleton is missing during a partial update
+
+- **WHEN** an admin submits a valid partial settings update while the canonical
+  singleton row is absent
+- **THEN** the update fails as a data-integrity error
+- **AND** no new `AppSettings` row is created
+
 ### Requirement: Period Policy Form Exposes Only Live Fields, Described Honestly
 
 The Settings → Periods form MUST expose only period-policy fields that have a
@@ -13,16 +27,17 @@ live consumer, and each field's help text MUST describe the field's actual
 current behavior rather than claiming it is deferred when its consumer already
 ships.
 
-#### Scenario: Consumer-less fields are removed end-to-end
+#### Scenario: Consumer-less fields are absent end-to-end
 
-- **WHEN** the four consumer-less fields (`firstDayOfWeek`, `deadlineDayOfWeek`,
-  `maxOpenPeriods`, `requireAllSectionsToPublish`) are removed
-- **THEN** they are absent from the Settings → Periods form, from the
+- **WHEN** the period-settings contract is inspected for `firstDayOfWeek`,
+  `deadlineDayOfWeek`, `maxOpenPeriods`, and `requireAllSectionsToPublish`
+- **THEN** those fields are absent from the Settings → Periods form, from the
   `admin.updateSettings` input payload, AND from the `admin.getSettings` read
   payload
-- **AND** they are absent from the shared period-settings schema/type and from
-  the `AppSettings` Prisma model, with the init migration and both Prisma seed
-  programs kept in sync so `prisma migrate reset` + seed succeeds
+- **AND** those fields are absent from the shared period-settings schema/type and from
+  the `AppSettings` Prisma model
+- **AND** canonical init creates the `AppSettings` singleton while demo seed
+  updates it idempotently, so `prisma migrate reset` plus seed succeeds
 
 #### Scenario: Each working field's copy matches its real behavior
 
@@ -149,12 +164,10 @@ The products-tab deep-link auto-expand effect MUST auto-expand the
 `?product=<id>` panel on initial load, but MUST NOT re-open a panel the user
 has manually collapsed solely because the underlying `products` data
 reference changed. This governs `ProductsTab`
-(`apps/web/src/features/admin/ui/products-tab.tsx`), whose effect currently
-re-runs on any new `products` reference (e.g. from a same-tab product
-mutation invalidating `admin.snapshot`). The effect MUST distinguish a
-genuine new deep-link target (`productFilter` changing) from a data-only
-refetch, and only the former re-triggers auto-expand once the user has
-manually toggled the panel.
+(`apps/web/src/features/admin/ui/products-tab.tsx`). The effect MUST distinguish
+a genuine new deep-link target (`productFilter` changing) from a data-only
+refetch, and only the former re-triggers auto-expand once the user has manually
+toggled the panel.
 
 #### Scenario: A same-tab mutation does not reopen a collapsed deep-linked panel
 

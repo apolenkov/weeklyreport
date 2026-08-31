@@ -5,14 +5,24 @@ import type {
 import { Inject, Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
+import {
+  ReviewAccessError,
+  ReviewNotFoundError,
+} from "../application/review.service.js";
 import type {
   PostVerdictParams,
   RecordAnchor,
   ReviewActionsRepository,
+  ReviewWriteActor,
   VerdictContext,
 } from "../application/review-actions.service.js";
 import { insertCoordinatedComment } from "./review-actions.comment-write.js";
 import { writeVerdict } from "./review-actions.verdict-write.js";
+import {
+  assertReviewEntitlement,
+  lockEditableReport,
+  lockReviewUsers,
+} from "./review-write-gate.js";
 
 // review-acknowledgement: the group that owns a record is its section author's
 // reporting group (the same relation path `groupScopeFilter(_, 'reportSection')`
@@ -27,22 +37,48 @@ interface SectionGroupRow {
 
 const groupIdOf = (row: SectionGroupRow | null): string | null | undefined =>
   row === null ? undefined : row.reportSection.author.reportingGroupId;
+const REVIEW_GROUP_NOT_FOUND = "Review group not found.";
 
 @Injectable()
 export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async acknowledge(
-    userId: string,
+    actor: ReviewWriteActor,
     reportId: string,
     groupId: string,
   ): Promise<ReviewAcknowledgementView> {
-    const ack = await this.prisma.reviewAcknowledgement.upsert({
-      where: { userId_reportId_groupId: { userId, reportId, groupId } },
-      create: { userId, reportId, groupId },
-      // Explicit so @updatedAt refreshes the receipt on a re-acknowledge.
-      update: { seenAt: new Date() },
-      select: { userId: true, reportId: true, groupId: true, seenAt: true },
+    const ack = await this.prisma.$transaction(async (tx) => {
+      const section = await tx.reportSection.findFirst({
+        where: { reportId, author: { reportingGroupId: groupId } },
+        orderBy: { id: "asc" },
+        select: { id: true, authorId: true },
+      });
+      if (!section) {
+        throw new ReviewNotFoundError(REVIEW_GROUP_NOT_FOUND);
+      }
+      await lockReviewUsers(tx, [actor.userId, section.authorId]);
+      await lockEditableReport(tx, reportId);
+      const currentSection = await tx.reportSection.findFirst({
+        where: { reportId, author: { reportingGroupId: groupId } },
+        select: { id: true, authorId: true },
+      });
+      if (currentSection?.authorId !== section.authorId) {
+        throw new ReviewNotFoundError(REVIEW_GROUP_NOT_FOUND);
+      }
+      await assertReviewEntitlement(tx, actor, groupId);
+      return tx.reviewAcknowledgement.upsert({
+        where: {
+          userId_reportId_groupId: {
+            userId: actor.userId,
+            reportId,
+            groupId,
+          },
+        },
+        create: { userId: actor.userId, reportId, groupId },
+        update: { seenAt: new Date() },
+        select: { userId: true, reportId: true, groupId: true, seenAt: true },
+      });
     });
     return ack;
   }
@@ -110,11 +146,11 @@ export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
   }
 
   async insertComment(
-    reviewerId: string,
+    actor: ReviewWriteActor,
     anchor: RecordAnchor,
     text: string,
   ): Promise<RecordCommentView> {
-    return insertCoordinatedComment(this.prisma, reviewerId, anchor, text);
+    return insertCoordinatedComment(this.prisma, actor, anchor, text);
   }
 
   async getCommentContext(
@@ -136,8 +172,119 @@ export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
     return { reviewerId: comment.reviewerId, groupId: groupId ?? null };
   }
 
-  async deleteComment(commentId: string): Promise<void> {
-    await this.prisma.recordComment.delete({ where: { id: commentId } });
+  async deleteComment(
+    commentId: string,
+    actor: ReviewWriteActor,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const comment = await tx.recordComment.findUnique({
+        where: { id: commentId },
+        select: {
+          reviewerId: true,
+          item: {
+            select: {
+              reportSection: {
+                select: {
+                  reportId: true,
+                  authorId: true,
+                  author: { select: { reportingGroupId: true } },
+                },
+              },
+            },
+          },
+          risk: {
+            select: {
+              reportSection: {
+                select: {
+                  reportId: true,
+                  authorId: true,
+                  author: { select: { reportingGroupId: true } },
+                },
+              },
+            },
+          },
+          decision: {
+            select: {
+              reportSection: {
+                select: {
+                  reportId: true,
+                  authorId: true,
+                  author: { select: { reportingGroupId: true } },
+                },
+              },
+            },
+          },
+        },
+      });
+      if (!comment) throw new ReviewNotFoundError("Comment not found.");
+      const target = comment.item ?? comment.risk ?? comment.decision;
+      if (!target) throw new ReviewNotFoundError("Comment target not found.");
+      const groupId = target.reportSection.author.reportingGroupId;
+      await lockReviewUsers(tx, [
+        actor.userId,
+        comment.reviewerId,
+        target.reportSection.authorId,
+      ]);
+      await lockEditableReport(tx, target.reportSection.reportId);
+      const current = await tx.recordComment.findUnique({
+        where: { id: commentId },
+        select: {
+          reviewerId: true,
+          item: {
+            select: {
+              reportSection: {
+                select: {
+                  reportId: true,
+                  author: { select: { reportingGroupId: true } },
+                },
+              },
+            },
+          },
+          risk: {
+            select: {
+              reportSection: {
+                select: {
+                  reportId: true,
+                  author: { select: { reportingGroupId: true } },
+                },
+              },
+            },
+          },
+          decision: {
+            select: {
+              reportSection: {
+                select: {
+                  reportId: true,
+                  author: { select: { reportingGroupId: true } },
+                },
+              },
+            },
+          },
+        },
+      });
+      if (!current) throw new ReviewNotFoundError("Comment not found.");
+      const currentTarget = current.item ?? current.risk ?? current.decision;
+      if (
+        currentTarget?.reportSection.reportId !== target.reportSection.reportId
+      ) {
+        throw new ReviewNotFoundError("Comment target not found.");
+      }
+      const currentGroupId =
+        currentTarget.reportSection.author.reportingGroupId;
+      if (currentGroupId !== groupId)
+        throw new ReviewNotFoundError(REVIEW_GROUP_NOT_FOUND);
+      if (!groupId) throw new ReviewNotFoundError(REVIEW_GROUP_NOT_FOUND);
+      await assertReviewEntitlement(tx, actor, groupId);
+      const allowed =
+        actor.role === "admin" ||
+        actor.userId === current.reviewerId ||
+        (actor.role === "head" && actor.reportingGroupId === groupId);
+      if (!allowed)
+        throw new ReviewAccessError(
+          "You can only delete your own review comment.",
+        );
+      await tx.recordComment.delete({ where: { id: commentId } });
+    });
   }
 
   async getVerdictContext(sectionId: string): Promise<VerdictContext | null> {

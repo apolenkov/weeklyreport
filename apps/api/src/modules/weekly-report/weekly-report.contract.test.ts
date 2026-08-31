@@ -44,7 +44,7 @@ function makeWeeklyReport(
     weekLabel: "W16-2026",
     submissionCount: 1,
     totalLeads: 3,
-    hasActiveReminderRule: true,
+    activeDeadlineReminderRuleId: "a0000000-0000-4000-a000-000000000600",
     portfolioOverview: [
       {
         productId: projectId,
@@ -206,21 +206,21 @@ describe("WeeklyReportService — contract tests", () => {
         {
           type: "blocked",
           productName: "Project Alpha",
-          stageName: null,
+          stageName: "Development",
           leadName: "Lead A",
           description: "Blocked by external dependency",
         },
         {
           type: "at_risk",
           productName: "Project Alpha",
-          stageName: null,
+          stageName: "Development",
           leadName: "Lead A",
           description: "Project Project Alpha is flagged red.",
         },
         {
           type: "unresolved_risk",
           productName: "Project Alpha",
-          stageName: null,
+          stageName: "Development",
           leadName: "Lead A",
           description: "Key developer may leave",
         },

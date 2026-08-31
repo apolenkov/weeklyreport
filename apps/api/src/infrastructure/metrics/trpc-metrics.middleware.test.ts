@@ -33,7 +33,7 @@ function installSpanSpy(): {
 
 describe("trpcMetricsMiddleware", () => {
   beforeEach(() => {
-    // prom-client samples are global per registry; reset between tests so
+    // Client samples are global per registry; reset between tests so
     // counter assertions don't bleed across test cases. Mirrors the pattern
     // used by metrics.registry.test.ts.
     metricsRegistry.resetMetrics();

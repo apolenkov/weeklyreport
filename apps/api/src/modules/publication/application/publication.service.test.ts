@@ -116,8 +116,8 @@ function expectPublished(result: AutoPublishResult): AssembledReport {
   return result.report;
 }
 
-// Helper for prom-client Counter introspection: the registry tracks
-// (labels → value) pairs and we find the matching tuple, avoiding prom-client
+// Helper for Prometheus Counter introspection: the registry tracks
+// (labels → value) pairs and we find the matching tuple, avoiding client
 // internals leaking into every test file.
 async function getCounterValue(
   counter: {
@@ -538,6 +538,35 @@ describe("PublicationService", () => {
         report: { status: "published" },
       });
       expect(saveSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("publishAuto forwards the scheduler's expected deadline into the CAS", async () => {
+      const expectedDeadline = new Date("2026-04-09T15:00:00.000Z");
+      const saveAutoPublishedReport = vi.fn(
+        (nextReport: AssembledReport, _expectedDeadline: Date | null) =>
+          Promise.resolve({
+            published: true as const,
+            wasAlreadyPublished: false,
+            report: nextReport,
+          }),
+      );
+      const repository: PublicationRepository = {
+        getAssembledReport: () =>
+          Promise.resolve(structuredClone(assembledReport)),
+        saveAutoPublishedReport,
+      };
+      const service = new PublicationService(
+        repository,
+        createNullLogger(),
+        noopInvalidateAnalyticsCache,
+      );
+
+      await service.publishAuto(reportId, publishAt, expectedDeadline);
+
+      expect(saveAutoPublishedReport).toHaveBeenCalledWith(
+        expect.objectContaining({ status: "published" }),
+        expectedDeadline,
+      );
     });
 
     it("publishAuto invalidates analytics after a successful publish", async () => {

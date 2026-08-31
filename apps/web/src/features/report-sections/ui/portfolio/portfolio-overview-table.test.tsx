@@ -179,8 +179,7 @@ describe("PortfolioOverviewTable — scope-adaptive (by lead)", () => {
 
   it("a lead card click lifts the lead id to the report surface, never poking the DOM", () => {
     const onNavigate = vi.fn();
-    // Regression: the old handler reached into the section DOM by id; a click
-    // must now surface the target through React state only.
+    // Navigation must surface the target through React state without DOM lookup.
     const section = document.createElement("section");
     section.id = "report-lead-L1";
     section.tabIndex = -1;

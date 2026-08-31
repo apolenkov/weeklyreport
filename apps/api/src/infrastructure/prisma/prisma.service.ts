@@ -12,9 +12,6 @@ const SLOW_QUERY_MS = 100;
 // pg's own defaults, named so an absent `DB_POOL_*` env tunable resolves to an
 // explicit, greppable value. A malformed present value fails boot in
 // `env.schema.ts` and never reaches here.
-const DEFAULT_DB_POOL_MAX = 10;
-const DEFAULT_DB_POOL_IDLE_TIMEOUT_MS = 10_000;
-const DEFAULT_DB_POOL_CONNECTION_TIMEOUT_MS = 0;
 
 interface ResolvedPoolConfig {
   readonly max: number;
@@ -42,12 +39,9 @@ export class PrismaService
 
   constructor(@Inject(ENV_CONFIG) private readonly env: EnvConfig) {
     const poolConfig: ResolvedPoolConfig = {
-      max: env.DB_POOL_MAX ?? DEFAULT_DB_POOL_MAX,
-      idleTimeoutMillis:
-        env.DB_POOL_IDLE_TIMEOUT_MS ?? DEFAULT_DB_POOL_IDLE_TIMEOUT_MS,
-      connectionTimeoutMillis:
-        env.DB_POOL_CONNECTION_TIMEOUT_MS ??
-        DEFAULT_DB_POOL_CONNECTION_TIMEOUT_MS,
+      max: env.DB_POOL_MAX,
+      idleTimeoutMillis: env.DB_POOL_IDLE_TIMEOUT_MS,
+      connectionTimeoutMillis: env.DB_POOL_CONNECTION_TIMEOUT_MS,
     };
     const pool = new pg.Pool({
       connectionString: env.DATABASE_URL,

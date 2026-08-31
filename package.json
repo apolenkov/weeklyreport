@@ -5,9 +5,11 @@
   "type": "module",
   "packageManager": "pnpm@11.17.0",
   "engines": {
-    "node": ">=26.0.0"
+    "node": ">=24.0.0 <25.0.0"
   },
   "dependencies": {
+    "@customreport/report-persistence": "workspace:*",
+    "@customreport/shared": "workspace:*",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "dotenv": "^17.4.2",
@@ -25,10 +27,10 @@
     "lint:runtime-node": "node scripts/gates/environment/check-runtime-node-sync.ts",
     "lint:cleanliness": "tsx scripts/gates/repository-cleanliness.ts",
     "spec:check": "openspec validate --all --strict",
-    "typecheck": "tsc --project tsconfig.prisma.json --noEmit && tsc --project tsconfig.scripts.json --noEmit && turbo run typecheck",
+    "typecheck": "tsc6 --project tsconfig.prisma.json --noEmit && tsc6 --project tsconfig.scripts.json --noEmit && turbo run typecheck",
     "test": "turbo run test && vitest run --config vitest.prisma.config.ts && pnpm test:cleanliness && pnpm test:operations",
     "test:cleanliness": "vitest run scripts/gates/repository-cleanliness.test.ts",
-    "test:operations": "node --test scripts/gates/operations/backup-loop.test.ts scripts/gates/operations/restore-guard.test.ts scripts/gates/operations/prod-compose-gate.test.ts scripts/gates/operations/operations-config-docs.test.ts",
+    "test:operations": "node --import tsx --test scripts/gates/production-dist-policy.test.ts scripts/gates/production-deps-prune.fixture.test.ts scripts/gates/operations/backup-loop.test.ts scripts/gates/operations/restore-guard.test.ts scripts/gates/operations/prod-compose-gate.test.ts scripts/gates/operations/operations-config-docs.test.ts",
     "test:coverage": "pnpm --filter @customreport/api test:coverage && pnpm --filter @customreport/web test:coverage",
     "db:bootstrap:local": "node --import tsx prisma/operations/bootstrap-local.ts",
     "db:seed:profile": "tsx prisma/seeds/profiles/seed-profile.ts",
@@ -69,7 +71,7 @@
     "stylelint": "^17.14.1",
     "stylelint-config-standard": "^40.0.0",
     "tsx": "catalog:",
-    "turbo": "^2.10.7",
+    "turbo": "2.10.7",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "typescript-eslint": "^8.65.0",
     "vitest": "^4.1.10"

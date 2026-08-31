@@ -51,6 +51,20 @@ describe("PublicationService analytics invalidation (integration)", () => {
 
   it("recomputes a warmed analytics query after publishAuto", async () => {
     const data = await seedTestData(prisma);
+    const stage = await prisma.stage.create({
+      data: {
+        id: "a0000000-0000-4000-a000-000000000a91",
+        name: "Development",
+        sortOrder: 1,
+      },
+    });
+    await prisma.stageAssignment.create({
+      data: {
+        userId: data.lead.id,
+        projectId: data.project.id,
+        stageId: stage.id,
+      },
+    });
     await prisma.projectStatus.create({
       data: {
         reportSectionId: data.section.id,

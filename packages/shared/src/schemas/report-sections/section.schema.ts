@@ -7,12 +7,16 @@ import {
 } from "../primitives/report-primitives.schema";
 import { sectionReviewViewSchema } from "../review/review.schema";
 import {
+  publishedDecisionReadModelSchema,
+  publishedItemReadModelSchema,
+  publishedRiskReadModelSchema,
+} from "./published-section-record.schema";
+import {
   activityStatusInputSchema,
   decisionReadModelSchema,
   decisionWriteSchema,
   itemReadModelSchema,
   itemWriteSchema,
-  linkedProductSchema,
   projectStatusInputSchema,
   riskReadModelSchema,
   riskWriteSchema,
@@ -20,6 +24,14 @@ import {
   stageStatusInputSchema,
 } from "./section-record.schema";
 
+export {
+  type PublishedDecisionReadModel,
+  publishedDecisionReadModelSchema,
+  type PublishedItemReadModel,
+  publishedItemReadModelSchema,
+  type PublishedRiskReadModel,
+  publishedRiskReadModelSchema,
+} from "./published-section-record.schema";
 export {
   activityStatusInputSchema,
   decisionInputSchema,
@@ -170,6 +182,33 @@ const reportSectionReadModelObjectSchema = z.object({
 export const reportSectionReadModelSchema =
   reportSectionReadModelObjectSchema.readonly();
 
+/** Identifies published item and decision records that current drafts cannot delete. */
+export const publishedLineageSchema = z
+  .object({
+    itemStableIds: z.array(z.string().min(1)).readonly(),
+    decisionStableIds: z.array(z.string().min(1)).readonly(),
+  })
+  .readonly();
+
+/**
+ * Frozen publication section with immutable author-group ownership.
+ *
+ * Live read models keep these fields optional because draft authorization is
+ * resolved from current database relations. Publication snapshots require
+ * both values so restored reports can be scoped without live ReportSection
+ * rows and malformed snapshots fail closed.
+ */
+export const publishedReportSectionReadModelSchema =
+  reportSectionReadModelObjectSchema
+    .extend({
+      groupId: z.uuid(),
+      groupName: z.string().min(1),
+      items: z.array(publishedItemReadModelSchema).readonly(),
+      risks: z.array(publishedRiskReadModelSchema).readonly(),
+      decisions: z.array(publishedDecisionReadModelSchema).readonly(),
+    })
+    .readonly();
+
 /** Describes one lead's submission state in the head dashboard. */
 export const submissionDashboardRowSchema = z
   .object({
@@ -194,20 +233,16 @@ export type SubmitSectionInput = z.infer<typeof submitSectionSchema>;
 export type ReportSectionReadModel = z.infer<
   typeof reportSectionReadModelSchema
 >;
+/** Published record identities protected by the resolve-not-delete contract. */
+export type PublishedLineage = z.infer<typeof publishedLineageSchema>;
+/** Complete section state frozen into an immutable publication snapshot. */
+export type PublishedReportSectionReadModel = z.infer<
+  typeof publishedReportSectionReadModelSchema
+>;
 /** Product context exposed inside a section read model. */
 export type ProjectReadModel = z.infer<typeof projectReadModelSchema>;
 /** Department activity and its derived reporting status. */
 export type SectionActivity = z.infer<typeof sectionActivitySchema>;
-/** Product identity linked to a department activity. */
-export type LinkedProduct = z.infer<typeof linkedProductSchema>;
-/** Writable status and note for one department activity. */
-export type ActivityStatusInput = z.infer<typeof activityStatusInputSchema>;
-/** Product identity referenced outside the author's assigned products. */
-export type ReferencedProject = z.infer<typeof referencedProjectSchema>;
-/** Reporting stage assigned to the section author. */
-export type OwnedStage = z.infer<typeof ownedStageSchema>;
-/** Stage identity displayed in a product's read-only grid. */
-export type StageSetEntry = z.infer<typeof stageSetEntrySchema>;
 /** Lead submission state displayed in the head dashboard. */
 export type SubmissionDashboardRow = z.infer<
   typeof submissionDashboardRowSchema

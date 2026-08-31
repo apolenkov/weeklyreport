@@ -9,7 +9,6 @@ import { auditPersistFailuresTotal } from "../metrics/metrics.registry.js";
 import {
   adminProcedure,
   captureMutationAuditInputMiddleware,
-  leadProcedure,
   protectedProcedure,
   router,
 } from "./trpc.middleware.js";
@@ -86,7 +85,7 @@ const reviewVerdictMutation = adminProcedure
   .use(captureMutationAuditInputMiddleware)
   .mutation(() => "ok");
 
-const piiFailingMutation = leadProcedure
+const piiFailingMutation = protectedProcedure
   .input(z.object({ id: z.string() }))
   .use(captureMutationAuditInputMiddleware)
   .mutation(() => {
@@ -97,12 +96,12 @@ const piiFailingMutation = leadProcedure
   });
 
 const auditTestRouter = router({
-  saveDraft: leadProcedure
+  saveDraft: protectedProcedure
     .input(z.object({ sectionId: z.string(), text: z.string() }))
     .use(captureMutationAuditInputMiddleware)
     .mutation(({ input }) => ({ id: input.sectionId, ok: true })),
 
-  failingMutation: leadProcedure
+  failingMutation: protectedProcedure
     .input(z.object({ id: z.string() }))
     .use(captureMutationAuditInputMiddleware)
     .mutation(() => {

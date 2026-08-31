@@ -20,11 +20,11 @@ const section = (over: ReportSectionFixture = {}): ReportSectionReadModel =>
 const foreignRow = (
   authorId: string,
   authorName: string,
-  authorRole?: CrossAuthorContentRow["authorRole"],
+  authorRole: CrossAuthorContentRow["authorRole"],
 ): CrossAuthorContentRow => ({
   authorId,
   authorName,
-  ...(authorRole === undefined ? {} : { authorRole }),
+  authorRole,
   items: [],
   risks: [],
   decisions: [],
@@ -33,7 +33,7 @@ const foreignRow = (
 describe("buildAuthorRoster — color assignment", () => {
   it("derives initials, preserves identity fields, and sorts foreign authors by name", () => {
     const roster = buildAuthorRoster(section(), [
-      foreignRow("co-z", "Zoe Zebra"),
+      foreignRow("co-z", "Zoe Zebra", "viewer"),
       foreignRow("co-a", "Alice Adams", "lead"),
     ]);
 
@@ -54,6 +54,7 @@ describe("buildAuthorRoster — color assignment", () => {
       expect.objectContaining({
         id: "co-z",
         name: "Zoe Zebra",
+        role: "viewer",
         initials: "ZZ",
       }),
     ]);
@@ -63,7 +64,7 @@ describe("buildAuthorRoster — color assignment", () => {
     const roster = buildAuthorRoster(
       section(),
       ["a", "b", "c", "d", "e"].map((letter, index) =>
-        foreignRow(`co-${String(index)}`, `${letter} ${letter}`),
+        foreignRow(`co-${String(index)}`, `${letter} ${letter}`, "lead"),
       ),
     );
     expect(roster.authors.map((a) => a.colorIndex)).toEqual([0, 1, 2, 3, 4, 5]);
@@ -73,7 +74,7 @@ describe("buildAuthorRoster — color assignment", () => {
     const roster = buildAuthorRoster(
       section(),
       Array.from({ length: 8 }, (_unused, index) =>
-        foreignRow(`co-${String(index)}`, `Author ${String(index)}`),
+        foreignRow(`co-${String(index)}`, `Author ${String(index)}`, "lead"),
       ),
     );
     const foreignColorIndexes = roster.authors

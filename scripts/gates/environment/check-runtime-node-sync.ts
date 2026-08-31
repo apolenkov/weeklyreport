@@ -1,10 +1,6 @@
 #!/usr/bin/env node
-// Drift guard: the Node major the code is typed, linted and tested against must
-// be the one the shipped images actually execute. Before this guard the repo ran
-// three at once — .nvmrc 26, web image 25, api image 24 (inherited unnoticed from
-// the Playwright base) — so every gate passed on a runtime that shipped nowhere.
-// Also pins pnpm in images and Actions workflows because node:26 no longer
-// resolves packageManager through a bundled corepack binary.
+// Keep the Node and pnpm versions used by local gates, CI, and shipped images in
+// sync. Node 24 images install the repository's explicit pnpm version.
 //
 // Usage: node scripts/gates/environment/check-runtime-node-sync.ts
 // Exits 0 when every declaration agrees, 1 (naming each) when they drift.
@@ -27,6 +23,12 @@ interface ReadDeclaration {
 interface RootManifest {
   readonly engines: { readonly node: string };
   readonly packageManager: string;
+  readonly devDependencies: { readonly turbo: string };
+  readonly scripts: Readonly<Record<string, string>>;
+}
+
+interface ScriptManifest {
+  readonly scripts?: Readonly<Record<string, string>>;
 }
 
 const repoRoot = path.resolve(import.meta.dirname, "../../..");
@@ -35,6 +37,8 @@ const read = (file: string): string =>
   fs.readFileSync(path.join(repoRoot, file), "utf8");
 
 const ROOT_MANIFEST = "package.json";
+const SUPPORTED_NODE_MAJOR = "24";
+const SUPPORTED_NODE_ENGINE = ">=24.0.0 <25.0.0";
 
 // One declaration, because every manifest resolves `@types/node` through
 // `catalog:` — pnpm enforces the agreement at install time, so this guard only
@@ -43,8 +47,17 @@ const WORKSPACE_MANIFEST = "pnpm-workspace.yaml";
 
 const DOCKERFILES = ["Dockerfile.api", "Dockerfile.web"];
 const ACTIONS_WORKFLOW = ".github/workflows/ci.yml";
+const DEPENDENCY_SCAN_WORKFLOW = ".github/workflows/dependency-scan.yml";
 const EXPECTED_ACTION_SETUP_COUNT = 4;
 const ACTION_SHA_LENGTH = 40;
+const TYPESCRIPT_SCRIPT_MANIFESTS = [
+  ROOT_MANIFEST,
+  "apps/api/package.json",
+  "apps/web/package.json",
+  "packages/shared/package.json",
+  "packages/report-persistence/package.json",
+  "packages/ui/package.json",
+] as const;
 
 const readRootManifest = (): RootManifest =>
   JSON.parse(read(ROOT_MANIFEST)) as RootManifest;
@@ -76,10 +89,24 @@ const declarations = (): readonly Declaration[] => [
   catalogTypesNodeMajor(),
 ];
 
+const nodeEngineOk = (): boolean => {
+  const engine = readRootManifest().engines.node;
+  if (engine !== SUPPORTED_NODE_ENGINE) {
+    console.error(
+      `package.json engines.node must be the exact supported Node 24 range: ${SUPPORTED_NODE_ENGINE}; found ${engine}`,
+    );
+    return false;
+  }
+  return true;
+};
+
 const majorless = (packageManager: string): string | undefined =>
   /^pnpm@(\d+\.\d+\.\d+)$/.exec(packageManager)?.[1];
 
-const workflowPnpmPins = (file: string): readonly Declaration[] => {
+const workflowPnpmPins = (
+  file: string,
+  expectedSetupCount: number,
+): readonly Declaration[] => {
   const content = read(file);
   const setupCount = [...content.matchAll(/- name: Setup pnpm/g)].length;
   const steps = [
@@ -96,11 +123,10 @@ const workflowPnpmPins = (file: string): readonly Declaration[] => {
       : undefined;
   });
 
-  return Array.from({ length: EXPECTED_ACTION_SETUP_COUNT }, (_, index) => {
+  return Array.from({ length: expectedSetupCount }, (_, index) => {
     return {
       source: `${file} Setup pnpm ${index + 1}`,
-      value:
-        setupCount === EXPECTED_ACTION_SETUP_COUNT ? pins[index] : undefined,
+      value: setupCount === expectedSetupCount ? pins[index] : undefined,
     };
   });
 };
@@ -116,8 +142,46 @@ const pnpmPins = (): readonly Declaration[] => [
     source: `${file} npm install -g`,
     value: /npm install -g pnpm@(\d+\.\d+\.\d+)/.exec(read(file))?.[1],
   })),
-  ...workflowPnpmPins(ACTIONS_WORKFLOW),
+  ...workflowPnpmPins(ACTIONS_WORKFLOW, EXPECTED_ACTION_SETUP_COUNT),
+  ...workflowPnpmPins(DEPENDENCY_SCAN_WORKFLOW, 1),
 ];
+
+const turboPins = (): readonly Declaration[] => [
+  {
+    source: "package.json devDependencies.turbo",
+    value: /^(\d+\.\d+\.\d+)$/u.exec(
+      readRootManifest().devDependencies.turbo,
+    )?.[1],
+  },
+  ...DOCKERFILES.map((file) => ({
+    source: `${file} npm install -g`,
+    value: /npm install -g[^\n]*turbo@(\d+\.\d+\.\d+)/u.exec(read(file))?.[1],
+  })),
+];
+
+const usesAmbientTsc = (command: string): boolean =>
+  /(^|[\s;&|])tsc(?=\s|$)/u.test(command);
+
+const pinnedTypescriptCliOk = (): boolean => {
+  const ambientCommands = TYPESCRIPT_SCRIPT_MANIFESTS.flatMap((file) => {
+    const manifest = JSON.parse(read(file)) as ScriptManifest;
+    return Object.entries(manifest.scripts ?? {})
+      .filter(([, command]) => usesAmbientTsc(command))
+      .map(([script]) => `${file}#${script}`);
+  });
+
+  if (ambientCommands.length > 0) {
+    console.error(
+      `TypeScript scripts must invoke the pinned tsc6 binary, not an ambient global tsc:\n${ambientCommands
+        .map((source) => `  ${source}`)
+        .join("\n")}`,
+    );
+    return false;
+  }
+
+  console.log("TypeScript scripts use pinned tsc6");
+  return true;
+};
 
 const wasRead = (entry: Declaration): entry is ReadDeclaration =>
   entry.value !== undefined;
@@ -150,6 +214,18 @@ const report = (label: string, entries: readonly Declaration[]): boolean => {
 };
 
 const nodeOk = report("Node major", declarations());
+const nodeEngineRangeOk = nodeEngineOk();
 const pnpmOk = report("pnpm version", pnpmPins());
+const turboOk = report("Turbo version", turboPins());
+const typescriptCliOk = pinnedTypescriptCliOk();
 
-process.exit(nodeOk && pnpmOk ? 0 : 1);
+process.exit(
+  nodeOk &&
+    nodeEngineRangeOk &&
+    declarations().every((entry) => entry.value === SUPPORTED_NODE_MAJOR) &&
+    pnpmOk &&
+    turboOk &&
+    typescriptCliOk
+    ? 0
+    : 1,
+);

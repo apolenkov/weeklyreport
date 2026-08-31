@@ -139,6 +139,11 @@ vi.mock("../../lib/trpc/trpc-context", () => ({
     pdfExport: {
       request: { mutationOptions: () => ({}) },
       status: { queryOptions: () => ({ queryKey: ["pdfExport.status"] }) },
+      render: {
+        queryOptions: (input: { jobId: string; reportId: string }) => ({
+          queryKey: ["pdfExport.render", input.jobId, input.reportId],
+        }),
+      },
     },
   }),
 }));
@@ -289,9 +294,11 @@ describe("PrintReportPage — PDF-worker-vs-human server gate", () => {
       session: sessionOf("head"),
       isPdfExport: true,
       pdfReportId: TEST_REPORT_ID,
+      pdfJobId: "job-123",
     });
     const ui = (await PrintReportPage({
       params: paramsOf(TEST_REPORT_ID),
+      searchParams: Promise.resolve({ jobId: "job-123" }),
     })) as ReactElement;
     render(ui);
     // The template renders the report header.
@@ -308,9 +315,13 @@ describe("PrintReportPage — PDF-worker-vs-human server gate", () => {
       session: sessionOf("head"),
       isPdfExport: true,
       pdfReportId: "some-other-report",
+      pdfJobId: "job-123",
     });
     await expect(
-      PrintReportPage({ params: paramsOf(TEST_REPORT_ID) }),
+      PrintReportPage({
+        params: paramsOf(TEST_REPORT_ID),
+        searchParams: Promise.resolve({ jobId: "job-123" }),
+      }),
     ).rejects.toThrow(/NEXT_REDIRECT/);
   });
 
@@ -322,9 +333,13 @@ describe("PrintReportPage — PDF-worker-vs-human server gate", () => {
       session: sessionOf("head"),
       isPdfExport: false,
       pdfReportId: null,
+      pdfJobId: null,
     });
     await expect(
-      PrintReportPage({ params: paramsOf(TEST_REPORT_ID) }),
+      PrintReportPage({
+        params: paramsOf(TEST_REPORT_ID),
+        searchParams: Promise.resolve({}),
+      }),
     ).rejects.toThrow(`NEXT_REDIRECT:/head/report/${TEST_REPORT_ID}`);
   });
 
@@ -334,9 +349,13 @@ describe("PrintReportPage — PDF-worker-vs-human server gate", () => {
       session: sessionOf("viewer"),
       isPdfExport: false,
       pdfReportId: null,
+      pdfJobId: null,
     });
     await expect(
-      PrintReportPage({ params: paramsOf(TEST_REPORT_ID) }),
+      PrintReportPage({
+        params: paramsOf(TEST_REPORT_ID),
+        searchParams: Promise.resolve({}),
+      }),
     ).rejects.toThrow(`NEXT_REDIRECT:/reports/${TEST_REPORT_ID}`);
   });
 
@@ -346,9 +365,13 @@ describe("PrintReportPage — PDF-worker-vs-human server gate", () => {
       session: sessionOf("lead"),
       isPdfExport: false,
       pdfReportId: null,
+      pdfJobId: null,
     });
     await expect(
-      PrintReportPage({ params: paramsOf(TEST_REPORT_ID) }),
+      PrintReportPage({
+        params: paramsOf(TEST_REPORT_ID),
+        searchParams: Promise.resolve({}),
+      }),
     ).rejects.toThrow("NEXT_REDIRECT:/lead/report");
   });
 
@@ -358,10 +381,14 @@ describe("PrintReportPage — PDF-worker-vs-human server gate", () => {
       session: null,
       isPdfExport: false,
       pdfReportId: null,
+      pdfJobId: null,
     });
     const nextParam = encodeURIComponent(`/print/${TEST_REPORT_ID}`);
     await expect(
-      PrintReportPage({ params: paramsOf(TEST_REPORT_ID) }),
+      PrintReportPage({
+        params: paramsOf(TEST_REPORT_ID),
+        searchParams: Promise.resolve({}),
+      }),
     ).rejects.toThrow(`NEXT_REDIRECT:/?next=${nextParam}`);
   });
 });

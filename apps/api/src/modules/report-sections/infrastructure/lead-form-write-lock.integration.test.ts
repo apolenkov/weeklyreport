@@ -1,20 +1,23 @@
+import type { UserSession } from "@customreport/shared";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import {
   createPauseGate,
-  pauseBeforeSectionUpdate,
   pauseBeforeTransaction,
 } from "../../../test-utils/paused-prisma.js";
 import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
+  publishedSnapshotFixture,
   seedTestData,
 } from "../../../test-utils/prisma-test-helper.js";
+import { decideReopenRequest } from "../../admin/admin-reopen-request-lifecycle.js";
 import {
   LeadFormConstraintError,
   LeadFormDomainError,
+  ReopenRequestError,
 } from "../domain/lead-form-shared.js";
 import { LeadFormPrismaRepository } from "./lead-form.prisma-repository.js";
 import {
@@ -121,6 +124,13 @@ describe("lead-form published-period write locks (integration)", () => {
         periodStatus: "reopened",
         periodState: "open",
         publishedAt,
+        reopenedAt: new Date("2026-08-01T09:00:00.000Z"),
+        publishedSnapshot: publishedSnapshotFixture({
+          reportId: testData.report.id,
+          periodStart: testData.report.periodStart,
+          periodEnd: testData.report.periodEnd,
+          publishedAt,
+        }),
       },
     });
 
@@ -147,7 +157,7 @@ describe("lead-form published-period write locks (integration)", () => {
     });
     const gate = createPauseGate();
     const pausedRepo = new LeadFormPrismaRepository(
-      pauseBeforeSectionUpdate(prisma, gate.pause) as unknown as PrismaService,
+      pauseBeforeTransaction(prisma, gate.pause) as unknown as PrismaService,
     );
 
     const revoke = pausedRepo.revokeSectionSubmission(
@@ -175,5 +185,115 @@ describe("lead-form published-period write locks (integration)", () => {
       revokedAt: null,
       revokedBy: null,
     });
+  });
+
+  it("keeps submitted sections unchanged when archive wins a bulk revoke race", async () => {
+    const testData = await seedTestData(prisma);
+    const submittedAt = new Date("2026-07-22T11:00:00.000Z");
+    await prisma.reportSection.update({
+      where: { id: testData.section.id },
+      data: { status: "submitted", submittedAt },
+    });
+    const gate = createPauseGate();
+    const pausedRepo = new LeadFormPrismaRepository(
+      pauseBeforeTransaction(prisma, gate.pause) as unknown as PrismaService,
+    );
+
+    const revoke = pausedRepo.revokeAllSubmitted(
+      testData.report.id,
+      testData.head.id,
+      {},
+    );
+    await gate.paused;
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: { archived: true, periodState: "archived" },
+    });
+    gate.release();
+
+    await expect(revoke).resolves.toBe(0);
+    await expect(
+      prisma.reportSection.findUniqueOrThrow({
+        where: { id: testData.section.id },
+        select: { status: true, submittedAt: true, revokedAt: true },
+      }),
+    ).resolves.toEqual({ status: "submitted", submittedAt, revokedAt: null });
+  });
+
+  it("does not create a reopen request when publish wins provisioning", async () => {
+    const testData = await seedTestData(prisma);
+    await prisma.reportSection.update({
+      where: { id: testData.section.id },
+      data: { status: "submitted", submittedAt: new Date() },
+    });
+    const gate = createPauseGate();
+    const pausedRepo = new LeadFormPrismaRepository(
+      pauseBeforeTransaction(prisma, gate.pause) as unknown as PrismaService,
+    );
+
+    const request = pausedRepo.createReopenRequest(
+      testData.section.id,
+      testData.lead.id,
+      " Fix typo ",
+    );
+    await gate.paused;
+    await publishTarget(prisma, testData);
+    gate.release();
+
+    await expect(request).rejects.toBeInstanceOf(ReopenRequestError);
+    await expect(
+      prisma.reopenRequest.count({
+        where: { reportSectionId: testData.section.id },
+      }),
+    ).resolves.toBe(0);
+  });
+
+  it("leaves a request pending when publish wins its approval race", async () => {
+    const testData = await seedTestData(prisma);
+    const submittedAt = new Date("2026-07-22T11:00:00.000Z");
+    await prisma.reportSection.update({
+      where: { id: testData.section.id },
+      data: { status: "submitted", submittedAt },
+    });
+    const request = await prisma.reopenRequest.create({
+      data: {
+        reportSectionId: testData.section.id,
+        requestedById: testData.lead.id,
+      },
+    });
+    const gate = createPauseGate();
+    const session: UserSession = {
+      userId: testData.head.id,
+      email: testData.head.email,
+      name: testData.head.name,
+      role: "admin",
+    };
+    const decision = decideReopenRequest(
+      pauseBeforeTransaction(prisma, gate.pause) as unknown as PrismaService,
+      {
+        id: request.id,
+        decision: "approved",
+        reviewNote: null,
+        decidedBy: testData.head.id,
+        session,
+      },
+    );
+    await gate.paused;
+    await publishTarget(prisma, testData);
+    gate.release();
+
+    await expect(decision).rejects.toBeInstanceOf(LeadFormConstraintError);
+    await expect(
+      prisma.reopenRequest.findUniqueOrThrow({
+        where: { id: request.id },
+        select: { status: true, reviewedAt: true },
+      }),
+    ).resolves.toEqual({ status: "pending", reviewedAt: null });
+    await expect(
+      prisma.reportSection.findUniqueOrThrow({
+        where: { id: testData.section.id },
+        select: { status: true, submittedAt: true },
+      }),
+    ).resolves.toEqual({ status: "submitted", submittedAt });
   });
 });

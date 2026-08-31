@@ -17,7 +17,6 @@ const LAST_SECOND = 59;
 // ISO 8601: week 1 is the week containing January 4th.
 const ISO_FIRST_WEEK_DAY_OF_YEAR = 4;
 const MS_PER_WEEK = 604_800_000;
-const ESCALATION_HOURS_AFTER_DEADLINE = 2;
 
 // The active period is anchored to the *current* UTC week so weeklyReport.get
 // always finds an open report covering today; a static window would drift into
@@ -94,13 +93,6 @@ export const PREV_SUNDAY = endOfDayUTC(
 export const PREV_FRIDAY_DEADLINE = fridayDeadlineFor(PREV_MONDAY);
 export const PREV_SUBMIT_AT = plusDaysUTC(PREV_MONDAY, SUBMIT_DAY_OFFSET);
 
-export const ACTIVE_REMINDER_DEADLINE_FIRE = new Date(ACTIVE_FRIDAY_DEADLINE);
-export const ACTIVE_REMINDER_ESCALATION_FIRE = (() => {
-  const r = new Date(ACTIVE_FRIDAY_DEADLINE);
-  r.setUTCHours(r.getUTCHours() + ESCALATION_HOURS_AFTER_DEADLINE);
-  return r;
-})();
-
 export interface ExtraReportSeed {
   id: string;
   monday: Date;
@@ -124,7 +116,8 @@ const FUTURE_PERIOD_IDS = [
 
 // Extra historical + future periods so the Periods admin tab and /reports
 // archive show realistic data instead of a 1-row "0/1 Submission" dashboard.
-// Historical = published (deeper history), future = open (upcoming-week preview).
+// Historical rows are canonically published. Future rows are canonically
+// scheduled while their companion periodStatus remains open.
 export const EXTRA_REPORTS: ExtraReportSeed[] = [
   ...PUBLISHED_HISTORY_IDS.map((id, idx) => {
     const weeksBeforePrev = PUBLISHED_HISTORY_IDS.length - idx;

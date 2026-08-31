@@ -1,6 +1,7 @@
 import type { AssembledReport } from "@customreport/shared";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { replacePublishedProjections } from "../../search/index.js";
 import { PublicationPrismaRepository } from "./publication.prisma-repository";
 
 // The snapshot helpers need a full Prisma row to build/serialize; stub them so
@@ -14,6 +15,9 @@ vi.mock("../../report-sections/index.js", () => ({
     status: "published",
   })),
 }));
+vi.mock("../../search/index.js", () => ({
+  replacePublishedProjections: vi.fn().mockResolvedValue(undefined),
+}));
 
 const asAny = (value: unknown): never => value as never;
 
@@ -22,6 +26,7 @@ const asAny = (value: unknown): never => value as never;
 // AssembledReport shape is irrelevant to the compare-and-set under test.
 const autoReport: AssembledReport = asAny({
   reportId: "rep-1",
+  deadline: new Date("2026-05-01T00:00:00.000Z"),
   status: "published",
   publishedAt: new Date("2026-05-01T00:00:00.000Z"),
   publishedById: null,
@@ -29,24 +34,47 @@ const autoReport: AssembledReport = asAny({
 
 // The auto-publish runs inside `$transaction`, so the fake threads a single `tx`
 // report delegate (updateMany + the snapshot re-read/write) through the callback.
-function makeRepo(tx: {
-  updateMany: ReturnType<typeof vi.fn>;
-  findUniqueOrThrow: ReturnType<typeof vi.fn>;
-  update: ReturnType<typeof vi.fn>;
-}) {
+function makeRepo(
+  tx: {
+    updateMany: ReturnType<typeof vi.fn>;
+    findUnique: ReturnType<typeof vi.fn>;
+    findUniqueOrThrow: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+  },
+  pauseRules = vi.fn().mockResolvedValue({ count: 1 }),
+  onTransactionOptions: (options: unknown) => undefined = () => undefined,
+) {
+  const reminderRule = { updateMany: pauseRules };
   return new PublicationPrismaRepository(
     asAny({
-      $transaction: (fn: (client: unknown) => unknown) => fn({ report: tx }),
+      $transaction: (fn: (client: unknown) => unknown, options: unknown) => {
+        onTransactionOptions(options);
+        return fn({
+          $queryRaw: vi.fn().mockResolvedValue([]),
+          report: tx,
+          reminderRule,
+        });
+      },
     }),
   );
 }
 
 describe("PublicationPrismaRepository.saveAutoPublishedReport", () => {
-  it("guards the write on status=draft AND archived=false (compare-and-set)", async () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("guards the write on the exact editable lifecycle and expected deadline", async () => {
     const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const findUnique = vi.fn().mockResolvedValue({ id: "rep-1" });
     const findUniqueOrThrow = vi.fn().mockResolvedValue({ id: "rep-1" });
     const update = vi.fn().mockResolvedValue({ id: "rep-1" });
-    const repo = makeRepo({ updateMany, findUniqueOrThrow, update });
+    const repo = makeRepo({
+      updateMany,
+      findUnique,
+      findUniqueOrThrow,
+      update,
+    });
 
     await repo.saveAutoPublishedReport(autoReport);
 
@@ -57,33 +85,86 @@ describe("PublicationPrismaRepository.saveAutoPublishedReport", () => {
             id: "rep-1",
             status: "draft",
             archived: false,
+            periodState: "open",
+            periodStatus: "open",
+            autoPublished: false,
+            autoArchived: false,
+            publishedAt: null,
+            publishedById: null,
+            reopenedAt: null,
+            deadline: new Date("2026-05-01T00:00:00.000Z"),
           },
         },
       ],
     ]);
+    expect(updateMany.mock.calls[0]?.[0]).toMatchObject({
+      data: { publishedSnapshot: { snapshot: true } },
+    });
     // The snapshot rides a SECOND statement (in-transaction re-read), never the
     // guarded updateMany — so its bytes reflect the latest committed state.
     expect(update).toHaveBeenCalledOnce();
+    const projectionMock = vi.mocked(replacePublishedProjections);
+    expect(projectionMock).toHaveBeenCalledOnce();
+    expect(projectionMock.mock.calls[0]?.[1]).toEqual({
+      reportId: "rep-1",
+      snapshot: { reportId: "rep-1", status: "published" },
+    });
+  });
+
+  it("uses one repeatable-read transaction for the fresh graph and publish CAS", async () => {
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const findUnique = vi.fn().mockResolvedValue({ id: "rep-1" });
+    const findUniqueOrThrow = vi.fn().mockResolvedValue({ id: "rep-1" });
+    const update = vi.fn().mockResolvedValue({ id: "rep-1" });
+    let options: unknown;
+    const repo = makeRepo(
+      { updateMany, findUnique, findUniqueOrThrow, update },
+      undefined,
+      (value) => {
+        options = value;
+      },
+    );
+
+    await repo.saveAutoPublishedReport(autoReport);
+
+    expect(options).toEqual({ isolationLevel: "RepeatableRead" });
+    expect(findUnique).toHaveBeenCalledWith({
+      where: { id: "rep-1" },
+      include: {},
+    });
+    expect(updateMany).toHaveBeenCalledOnce();
   });
 
   it("zero-row match → { published: false } and does NOT re-read the row", async () => {
     const updateMany = vi.fn().mockResolvedValue({ count: 0 });
+    const findUnique = vi.fn();
     const findUniqueOrThrow = vi.fn();
     const update = vi.fn();
-    const repo = makeRepo({ updateMany, findUniqueOrThrow, update });
+    const repo = makeRepo({
+      updateMany,
+      findUnique,
+      findUniqueOrThrow,
+      update,
+    });
 
     const result = await repo.saveAutoPublishedReport(autoReport);
 
     expect(result).toEqual({ published: false });
     expect(findUniqueOrThrow).not.toHaveBeenCalled();
     expect(update).not.toHaveBeenCalled();
+    expect(replacePublishedProjections).not.toHaveBeenCalled();
   });
 
   it("matched row → { published: true } carrying the fresh in-transaction re-read", async () => {
     const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const findUnique = vi.fn().mockResolvedValue({ id: "rep-1" });
     const findUniqueOrThrow = vi.fn().mockResolvedValue({ id: "rep-1" });
     const update = vi.fn().mockResolvedValue({ id: "rep-1" });
-    const repo = makeRepo({ updateMany, findUniqueOrThrow, update });
+    const pauseRules = vi.fn().mockResolvedValue({ count: 1 });
+    const repo = makeRepo(
+      { updateMany, findUnique, findUniqueOrThrow, update },
+      pauseRules,
+    );
 
     const result = await repo.saveAutoPublishedReport(autoReport);
 
@@ -95,5 +176,9 @@ describe("PublicationPrismaRepository.saveAutoPublishedReport", () => {
     expect(findUniqueOrThrow).toHaveBeenCalledOnce();
     // The snapshot is frozen as a second in-transaction statement.
     expect(update).toHaveBeenCalledOnce();
+    expect(pauseRules).toHaveBeenCalledWith({
+      where: { reportId: "rep-1", status: "active" },
+      data: { status: "paused" },
+    });
   });
 });

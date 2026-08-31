@@ -21,9 +21,9 @@ commit. Include only the minimum evidence needed to reproduce the problem:
 - relevant request, trace, or run identifiers with secrets removed;
 - suggested containment, when known.
 
-The repository owner coordinates triage until a dedicated security team and
-on-call rotation exist. A report is not closed until containment, root cause,
-verification, and follow-up ownership are recorded.
+The repository owner coordinates triage for every report. A report is not
+closed until containment, root cause, verification, and follow-up ownership are
+recorded.
 
 ## Leaked credential response
 

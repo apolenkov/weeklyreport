@@ -32,4 +32,5 @@ regardless of what the filter object contains.
 #### Scenario: A correctly-built filter still narrows as intended
 
 - **WHEN** the archive service's own `buildArchiveReadFilter` produces `{ status: "published" }` or `{}`
-- **THEN** the query behavior is identical to before this change (the floor and the filter agree, so composition order is unobservable)
+- **THEN** the canonical floor and the caller filter agree, so composition order
+  is unobservable

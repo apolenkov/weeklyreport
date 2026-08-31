@@ -16,7 +16,21 @@ import { RemindersService } from "./reminders.service.js";
 const EXECUTION_COUNT = 105;
 const PAGE_SIZE = 20;
 const RULE_ID = "a0000000-0000-4000-a000-000000000700";
+const POLICY_ID = "a0000000-0000-4000-a000-000000000705";
 const CREATED_AT = new Date("2026-04-11T09:00:00.000Z");
+const QUEUE_PAYLOAD = {
+  contractVersion: 1 as const,
+  kind: "deadline" as const,
+  cycleDate: "2026-04-11",
+  leadName: "Test Lead",
+  reportPeriod: "2026-04-06 → 2026-04-12",
+  deadlineIso: "2026-04-11T00:00:00.000Z",
+  sectionUrl: "https://example.test/lead/report",
+  organization: {
+    shortName: "CustomReport",
+    fullName: "CustomReport Department",
+  },
+};
 
 const prisma = createTestPrisma();
 const repository = new RemindersPrismaRepository(prisma as never);
@@ -24,11 +38,23 @@ const service = new RemindersService(repository);
 
 async function seedExecutionHistory(): Promise<readonly string[]> {
   const { report } = await seedTestData(prisma);
+  await prisma.reminderPolicy.create({
+    data: {
+      id: POLICY_ID,
+      kind: "deadline",
+      offsetMinutes: -1440,
+      timezone: "Europe/Moscow",
+      audience: "LEAD_WITH_DRAFT",
+      active: true,
+    },
+  });
   await prisma.reminderRule.create({
     data: {
       id: RULE_ID,
+      policyId: POLICY_ID,
       kind: "deadline",
       fireAt: CREATED_AT,
+      deadline: new Date(QUEUE_PAYLOAD.deadlineIso),
       timezone: "Europe/Moscow",
       status: "active",
       version: 1,
@@ -46,6 +72,7 @@ async function seedExecutionHistory(): Promise<readonly string[]> {
       recipientEmail: `lead-${index}@test.local`,
       dedupeKey: `${RULE_ID}:deadline:2026-04-11:lead-${index}@test.local`,
       status: "pending",
+      queuePayload: QUEUE_PAYLOAD,
       createdAt: new Date(CREATED_AT.getTime() - index),
     })),
   });

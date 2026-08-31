@@ -1,7 +1,11 @@
-import type { UserSession } from "@customreport/shared";
+import {
+  publishedReportSnapshotSchema,
+  type UserSession,
+} from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { makeReportSectionReadModel } from "../../test-utils/report-section-fixtures.js";
 import {
   buildEscalationsFromReadSections,
   mapPrismaToReportSection,
@@ -40,18 +44,36 @@ describe("WeeklyReportPrismaRepository.getCurrentEditableId", () => {
     expect(findFirst).toHaveBeenCalledOnce();
     const callArgs = findFirst.mock.calls[0]?.[0] as {
       where: {
-        periodStatus: { in: string[] };
+        periodStatus?: string;
+        periodState?: string;
+        status?: string;
         periodStart: { lte: Date };
-        archived: boolean;
+        archived?: boolean;
+        OR: readonly unknown[];
       };
       orderBy: { periodStart?: string; id?: string }[];
       select: { id: boolean };
     };
-    expect(callArgs.where.periodStatus).toEqual({ in: ["open", "reopened"] });
+    expect(callArgs.where.OR).toEqual([
+      {
+        status: "draft",
+        periodStatus: "open",
+        periodState: "open",
+        archived: false,
+      },
+      {
+        status: "published",
+        periodStatus: "reopened",
+        periodState: "open",
+        archived: false,
+      },
+    ]);
     expect(callArgs.where.periodStart.lte).toBeInstanceOf(Date);
-    // The archived:false guard (mutation sentinel: dropping it would let an
-    // archived-open row be mistaken for the current period).
-    expect(callArgs.where.archived).toBe(false);
+    // Each exact lifecycle tuple carries archived:false (mutation sentinel:
+    // dropping it would let an archived-open row be mistaken for current).
+    expect(callArgs.where.OR).toEqual(
+      expect.arrayContaining([expect.objectContaining({ archived: false })]),
+    );
     // Deterministic order: periodStart desc, then id desc as a total-order
     // tiebreak so concurrent same-periodStart periods resolve to one stable id.
     expect(callArgs.orderBy).toEqual([{ periodStart: "desc" }, { id: "desc" }]);
@@ -238,6 +260,8 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
       periodStart: new Date("2026-04-14"),
       periodEnd: new Date("2026-04-18"),
       deadline: new Date("2026-04-17T15:00:00.000Z"),
+      status: "draft",
+      periodState: "open",
       periodStatus: "open",
       archived: false,
       weekLabel: "W16-2026",
@@ -316,16 +340,18 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
   // getWeeklyReport takes the snapshot render path — the branch that reads
   // nothing from the live project rows.
   function makePublishedReportRow() {
+    const publishedAt = new Date("2026-04-18T18:00:00.000Z");
     return {
       ...makeReportRow(),
       periodStatus: "published",
+      publishedAt,
       publishedSnapshot: {
         reportId: REPORT_ID,
         periodStart: "2026-04-14T00:00:00.000Z",
         periodEnd: "2026-04-18T00:00:00.000Z",
         deadline: "2026-04-17T15:00:00.000Z",
         status: "published",
-        publishedAt: null,
+        publishedAt: publishedAt.toISOString(),
         publishedById: null,
         publishedByName: null,
         portfolioOverview: {
@@ -338,10 +364,13 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     };
   }
 
-  function createRepository() {
+  function createRepository(
+    reportRow = makeReportRow(),
+    reminderRuleFindFirst = vi.fn().mockResolvedValue(null),
+  ) {
     const prisma = {
       report: {
-        findUnique: vi.fn().mockResolvedValue(makeReportRow()),
+        findUnique: vi.fn().mockResolvedValue(reportRow),
       },
       user: { findMany: vi.fn().mockResolvedValue([{ id: AUTHOR_ID }]) },
       project: {
@@ -363,7 +392,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
           },
         ]),
       },
-      reminderPolicy: { count: vi.fn().mockResolvedValue(0) },
+      reminderRule: { findFirst: reminderRuleFindFirst },
     } as unknown as PrismaService;
 
     return new WeeklyReportPrismaRepository(prisma);
@@ -389,6 +418,179 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     expect(untouched?.worstStatus).toBeNull();
   });
 
+  it("does not expose manual Remind capability for an escalation-only rule", async () => {
+    const deadline = makeReportRow().deadline;
+    const reminderRuleFindFirst = vi.fn().mockResolvedValue({
+      id: "a0000000-0000-4000-a000-000000000601",
+      fireAt: new Date(deadline.getTime() - 180 * 60_000),
+      timezone: "Europe/Moscow",
+      policy: {
+        id: "policy-escalation",
+        kind: "escalation",
+        offsetMinutes: -180,
+        timezone: "Europe/Moscow",
+        audience: "HEAD_OF_LATE",
+        active: true,
+        validFrom: new Date("2026-01-01T00:00:00.000Z"),
+        validUntil: null,
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+      },
+    });
+    const result = await createRepository(
+      makeReportRow(),
+      reminderRuleFindFirst,
+    ).getWeeklyReport(REPORT_ID, adminSession);
+
+    expect(result?.readModel.activeDeadlineReminderRuleId).toBeNull();
+    const ruleQuery = reminderRuleFindFirst.mock.calls[0]?.[0] as unknown as {
+      where: Record<string, unknown> & { report: Record<string, unknown> };
+      orderBy: Record<string, unknown>;
+      select: Record<string, unknown>;
+    };
+    expect(ruleQuery.where).toMatchObject({
+      reportId: REPORT_ID,
+      kind: "deadline",
+      status: "active",
+    });
+    expect(ruleQuery.where.report).toMatchObject({
+      archived: false,
+      periodState: "open",
+      OR: [
+        { status: "draft", periodStatus: "open" },
+        { status: "published", periodStatus: "reopened" },
+      ],
+    });
+    expect(ruleQuery).toMatchObject({
+      orderBy: { version: "desc" },
+      select: {
+        id: true,
+        fireAt: true,
+        timezone: true,
+        policy: true,
+      },
+    });
+  });
+
+  it("fails closed when a published report has no immutable snapshot", async () => {
+    const repository = createRepository({
+      ...makeReportRow(),
+      periodStatus: "published",
+    });
+
+    await expect(
+      repository.getWeeklyReport(REPORT_ID, adminSession),
+    ).rejects.toThrow("Published snapshot integrity failure");
+  });
+
+  it("fails closed when a published snapshot is malformed", async () => {
+    const repository = createRepository({
+      ...makeReportRow(),
+      periodStatus: "published",
+      publishedSnapshot: {} as never,
+    });
+
+    await expect(
+      repository.getWeeklyReport(REPORT_ID, adminSession),
+    ).rejects.toThrow("Published snapshot integrity failure");
+  });
+
+  it("does not expose an unauthorized published report envelope", async () => {
+    const findUnique = vi.fn().mockResolvedValue(makePublishedReportRow());
+    const findFirst = vi.fn().mockResolvedValue(null);
+    const repository = new WeeklyReportPrismaRepository({
+      report: { findUnique, findFirst },
+    } as unknown as PrismaService);
+    const headSession: UserSession = {
+      userId: "00000000-0000-4000-8000-000000000002",
+      email: "head@example.test",
+      name: "Head",
+      role: "head",
+      reportingGroupId: "00000000-0000-4000-8000-000000000099",
+    };
+
+    await expect(
+      repository.getWeeklyReport(REPORT_ID, headSession),
+    ).resolves.toBeNull();
+    expect(findFirst).toHaveBeenCalledWith({
+      where: {
+        id: REPORT_ID,
+        publishedSectionScopes: {
+          some: {
+            groupId: { in: [headSession.reportingGroupId] },
+          },
+        },
+      },
+      select: { id: true },
+    });
+  });
+
+  it("fails closed when an admitted published report has no scoped snapshot sections", async () => {
+    const findUnique = vi.fn().mockResolvedValue(makePublishedReportRow());
+    const findFirst = vi.fn().mockResolvedValue({ id: REPORT_ID });
+    const repository = new WeeklyReportPrismaRepository({
+      report: { findUnique, findFirst },
+    } as unknown as PrismaService);
+    const headSession: UserSession = {
+      userId: "00000000-0000-4000-8000-000000000002",
+      email: "head@example.test",
+      name: "Head",
+      role: "head",
+      reportingGroupId: "00000000-0000-4000-8000-000000000099",
+    };
+
+    await expect(
+      repository.getWeeklyReport(REPORT_ID, headSession),
+    ).rejects.toThrow("Published snapshot integrity failure");
+  });
+
+  it("fails closed when a live read races with an unauthorized republish", async () => {
+    const findUnique = vi
+      .fn()
+      .mockResolvedValueOnce(makeReportRow())
+      .mockResolvedValueOnce(makePublishedReportRow());
+    const findFirst = vi.fn().mockResolvedValue(null);
+    const repository = new WeeklyReportPrismaRepository({
+      report: { findUnique, findFirst },
+    } as unknown as PrismaService);
+    const headSession: UserSession = {
+      userId: "00000000-0000-4000-8000-000000000002",
+      email: "head@example.test",
+      name: "Head",
+      role: "head",
+      reportingGroupId: "00000000-0000-4000-8000-000000000099",
+    };
+
+    await expect(
+      repository.getWeeklyReport(REPORT_ID, headSession),
+    ).resolves.toBeNull();
+    expect(findUnique).toHaveBeenCalledTimes(2);
+    expect(findFirst).toHaveBeenCalledOnce();
+  });
+
+  it("requires a fresh request after an admitted republish race", async () => {
+    const findUnique = vi
+      .fn()
+      .mockResolvedValueOnce(makeReportRow())
+      .mockResolvedValueOnce(makePublishedReportRow());
+    const findFirst = vi.fn().mockResolvedValue({ id: REPORT_ID });
+    const repository = new WeeklyReportPrismaRepository({
+      report: { findUnique, findFirst },
+    } as unknown as PrismaService);
+    const headSession: UserSession = {
+      userId: "00000000-0000-4000-8000-000000000002",
+      email: "head@example.test",
+      name: "Head",
+      role: "head",
+      reportingGroupId: "00000000-0000-4000-8000-000000000001",
+    };
+
+    await expect(
+      repository.getWeeklyReport(REPORT_ID, headSession),
+    ).resolves.toBeNull();
+    expect(findFirst).toHaveBeenCalledOnce();
+  });
+
   it("batches live group metadata and stamps the section with its name", async () => {
     const report = makeReportRow(GROUP_ID);
     const groupFindMany = vi
@@ -398,7 +600,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
       report: { findUnique: vi.fn().mockResolvedValue(report) },
       user: { findMany: vi.fn().mockResolvedValue([{ id: AUTHOR_ID }]) },
       project: { findMany: vi.fn().mockResolvedValue([]) },
-      reminderPolicy: { count: vi.fn().mockResolvedValue(0) },
+      reminderRule: { findFirst: vi.fn().mockResolvedValue(null) },
       reportingGroup: { findMany: groupFindMany },
     } as unknown as PrismaService;
 
@@ -415,17 +617,17 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     });
   });
 
-  it("dispatches leadUsers, projects, and the reminder-policy count concurrently", async () => {
+  it("dispatches leadUsers, projects, and the deadline-rule lookup concurrently", async () => {
     const { promise: usersPending, resolve: releaseUsers } =
       Promise.withResolvers<{ id: string }[]>();
     const userFindMany = vi.fn().mockReturnValue(usersPending);
     const projectFindMany = vi.fn().mockResolvedValue([]);
-    const reminderPolicyCount = vi.fn().mockResolvedValue(0);
+    const reminderRuleFindFirst = vi.fn().mockResolvedValue(null);
     const prisma = {
       report: { findUnique: vi.fn().mockResolvedValue(makeReportRow()) },
       user: { findMany: userFindMany },
       project: { findMany: projectFindMany },
-      reminderPolicy: { count: reminderPolicyCount },
+      reminderRule: { findFirst: reminderRuleFindFirst },
     } as unknown as PrismaService;
     const repository = new WeeklyReportPrismaRepository(prisma);
 
@@ -435,14 +637,60 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     // All three reads dispatched while leadUsers is unresolved — proving
-    // Promise.all, not a sequential await chain; the policy count must be in
+    // Promise.all, not a sequential await chain; the rule lookup must be in
     // the batch, not a later serial await.
     expect(userFindMany).toHaveBeenCalledOnce();
     expect(projectFindMany).toHaveBeenCalledOnce();
-    expect(reminderPolicyCount).toHaveBeenCalledOnce();
+    expect(reminderRuleFindFirst).toHaveBeenCalledOnce();
 
     releaseUsers([{ id: AUTHOR_ID }]);
     await pending;
+  });
+
+  it("keeps the live result coherent when publication commits after lifecycle recheck", async () => {
+    let publicationCommitted = false;
+    const report = makeReportRow();
+    const findUnique = vi
+      .fn()
+      .mockResolvedValueOnce(report)
+      .mockImplementationOnce(() => {
+        // This is the existing lifecycle/section recheck. A concurrent
+        // publisher commits immediately after it; dependency reads below
+        // must still belong to the same RepeatableRead snapshot.
+        publicationCommitted = true;
+        return report;
+      });
+    const userFindMany = vi.fn().mockResolvedValue([{ id: AUTHOR_ID }]);
+    const projectFindMany = vi.fn().mockResolvedValue([]);
+    const reminderRuleFindFirst = vi.fn().mockResolvedValue(null);
+    const tx = {
+      report: { findUnique, findFirst: vi.fn() },
+      user: { findMany: userFindMany },
+      project: { findMany: projectFindMany },
+      reminderRule: { findFirst: reminderRuleFindFirst },
+      reportingGroup: { findMany: vi.fn().mockResolvedValue([]) },
+      viewerGroupAccess: { findMany: vi.fn().mockResolvedValue([]) },
+    };
+    const prisma = {
+      ...tx,
+      $transaction: vi.fn(
+        (callback: (client: typeof tx) => unknown, options: unknown) => {
+          expect(options).toEqual({ isolationLevel: "RepeatableRead" });
+          return callback(tx);
+        },
+      ),
+    } as unknown as PrismaService;
+
+    const result = await new WeeklyReportPrismaRepository(
+      prisma,
+    ).getWeeklyReport(REPORT_ID, adminSession);
+
+    expect(publicationCommitted).toBe(true);
+    expect(result?.readModel.leadSections).toHaveLength(1);
+    expect(result?.readModel.periodStatus).toBe("open");
+    expect(userFindMany).toHaveBeenCalledOnce();
+    expect(projectFindMany).toHaveBeenCalledOnce();
+    expect(reminderRuleFindFirst).toHaveBeenCalledOnce();
   });
 
   it("includes stageAssignments on the live path and skips the projects query entirely on the published-snapshot path", async () => {
@@ -451,7 +699,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
       report: { findUnique: vi.fn().mockResolvedValue(makeReportRow()) },
       user: { findMany: vi.fn().mockResolvedValue([]) },
       project: { findMany: projectFindManyLive },
-      reminderPolicy: { count: vi.fn().mockResolvedValue(0) },
+      reminderRule: { findFirst: vi.fn().mockResolvedValue(null) },
     } as unknown as PrismaService;
     await new WeeklyReportPrismaRepository(livePrisma).getWeeklyReport(
       REPORT_ID,
@@ -472,7 +720,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
       },
       user: { findMany: vi.fn().mockResolvedValue([]) },
       project: { findMany: projectFindManyPublished },
-      reminderPolicy: { count: vi.fn().mockResolvedValue(0) },
+      reminderRule: { findFirst: vi.fn().mockResolvedValue(null) },
     } as unknown as PrismaService;
     await new WeeklyReportPrismaRepository(publishedPrisma).getWeeklyReport(
       REPORT_ID,
@@ -483,6 +731,10 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     // so the query must not run at all — every signal (cross-group audit,
     // portfolio, escalations) comes from the frozen snapshot.
     expect(projectFindManyPublished).not.toHaveBeenCalled();
+    expect(publishedPrisma.report.findUnique).toHaveBeenCalledOnce();
+    expect(publishedPrisma.report.findUnique).toHaveBeenCalledWith({
+      where: { id: REPORT_ID },
+    });
   });
 });
 
@@ -492,9 +744,43 @@ describe("WeeklyReportPrismaRepository.getVisibleReportId / getLatestPublishedVi
   const CURRENT_ID = "b2222222-2222-4222-8222-222222222222";
   const LEAD_ID = "d4444444-4444-4444-8444-444444444444";
 
-  function createLookupRepository(findFirst: ReturnType<typeof vi.fn>) {
-    const prisma = { report: { findFirst } } as unknown as PrismaService;
+  function createLookupRepository(reportQueries: {
+    readonly findFirst?: ReturnType<typeof vi.fn>;
+  }) {
+    const prisma = { report: reportQueries } as unknown as PrismaService;
     return new WeeklyReportPrismaRepository(prisma);
+  }
+
+  function publishedLookupRow(groupId = GROUP_A, authorId = LEAD_ID) {
+    const publishedAt = new Date("2026-04-18T18:00:00.000Z");
+    return {
+      id: "f6666666-6666-4666-8666-666666666666",
+      publishedSnapshot: publishedReportSnapshotSchema.parse({
+        reportId: "f6666666-6666-4666-8666-666666666666",
+        periodStart: new Date("2026-04-14T00:00:00.000Z"),
+        periodEnd: new Date("2026-04-18T00:00:00.000Z"),
+        deadline: null,
+        status: "published",
+        publishedAt,
+        publishedById: null,
+        publishedByName: "system",
+        portfolioOverview: {
+          status: "green",
+          totals: { green: 0, yellow: 0, red: 0 },
+        },
+        sections: [
+          {
+            ...makeReportSectionReadModel({
+              reportSectionId: "e5555555-5555-4555-8555-555555555555",
+              reportId: "f6666666-6666-4666-8666-666666666666",
+              authorId,
+            }),
+            groupId,
+            groupName: "Frozen Group",
+          },
+        ],
+      }),
+    };
   }
 
   const viewerSession: UserSession = {
@@ -506,8 +792,10 @@ describe("WeeklyReportPrismaRepository.getVisibleReportId / getLatestPublishedVi
   };
 
   it("getVisibleReportId checks the exact id, group-scoped", async () => {
-    const findFirst = vi.fn(() => Promise.resolve({ id: CURRENT_ID }));
-    const repository = createLookupRepository(findFirst);
+    const findFirst = vi.fn((_args: unknown) =>
+      Promise.resolve({ id: CURRENT_ID }),
+    );
+    const repository = createLookupRepository({ findFirst });
 
     const result = await repository.getVisibleReportId(
       CURRENT_ID,
@@ -515,23 +803,23 @@ describe("WeeklyReportPrismaRepository.getVisibleReportId / getLatestPublishedVi
     );
 
     expect(result).toBe(CURRENT_ID);
-    expect(findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: {
-          id: CURRENT_ID,
-          sections: {
-            some: { author: { reportingGroupId: { in: [GROUP_A] } } },
-          },
-        },
-        select: { id: true },
-      }),
-    );
+    const lookupQuery = findFirst.mock.calls[0]?.[0] as {
+      where: Record<string, unknown>;
+      select: Record<string, unknown>;
+    };
+    expect(lookupQuery.where).toMatchObject({
+      id: CURRENT_ID,
+      sections: {
+        some: { author: { reportingGroupId: { in: [GROUP_A] } } },
+      },
+    });
+    expect(lookupQuery.select).toEqual({ id: true });
   });
 
-  it("getLatestPublishedVisibleId resolves the newest visible published report, group-scoped", async () => {
+  it("getLatestPublishedVisibleId resolves the newest visible published report from frozen scope", async () => {
     const PUBLISHED_ID = "f6666666-6666-4666-8666-666666666666";
-    const findFirst = vi.fn(() => Promise.resolve({ id: PUBLISHED_ID }));
-    const repository = createLookupRepository(findFirst);
+    const findFirst = vi.fn(() => Promise.resolve(publishedLookupRow()));
+    const repository = createLookupRepository({ findFirst });
 
     const result = await repository.getLatestPublishedVisibleId(viewerSession);
 
@@ -541,55 +829,63 @@ describe("WeeklyReportPrismaRepository.getVisibleReportId / getLatestPublishedVi
         where: {
           periodStatus: "published",
           archived: false,
-          sections: {
-            some: { author: { reportingGroupId: { in: [GROUP_A] } } },
+          publishedSectionScopes: {
+            some: { groupId: { in: [GROUP_A] } },
           },
         },
         orderBy: [{ periodStart: "desc" }, { id: "desc" }],
-        select: { id: true },
+        select: { id: true, publishedSnapshot: true },
       }),
     );
   });
 
-  it("a viewer with no granted groups yields a zero-row section filter", async () => {
+  it("a viewer with no granted groups rejects every frozen candidate", async () => {
     const findFirst = vi.fn(() => Promise.resolve(null));
-    const repository = createLookupRepository(findFirst);
+    const repository = createLookupRepository({ findFirst });
 
-    await repository.getLatestPublishedVisibleId({
-      ...viewerSession,
-      viewerGroupAccess: [],
-    });
+    await expect(
+      repository.getLatestPublishedVisibleId({
+        ...viewerSession,
+        viewerGroupAccess: [],
+      }),
+    ).resolves.toBeNull();
 
     expect(findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
           periodStatus: "published",
           archived: false,
-          sections: { some: { id: { in: [] } } },
+          publishedSectionScopes: {
+            some: { reportId: { in: [] } },
+          },
         },
       }),
     );
   });
 
-  it("a lead resolves their own authored sections, not a group filter", async () => {
-    const findFirst = vi.fn(() => Promise.resolve(null));
-    const repository = createLookupRepository(findFirst);
+  it("a lead resolves their own frozen authored section", async () => {
+    const findFirst = vi.fn(() =>
+      Promise.resolve(publishedLookupRow(GROUP_A, LEAD_ID)),
+    );
+    const repository = createLookupRepository({ findFirst });
 
-    await repository.getLatestPublishedVisibleId({
-      userId: LEAD_ID,
-      email: "lead@example.test",
-      name: "Lead",
-      role: "lead" as const,
-      reportingGroupId: GROUP_A,
-      viewerGroupAccess: [],
-    });
+    await expect(
+      repository.getLatestPublishedVisibleId({
+        userId: LEAD_ID,
+        email: "lead@example.test",
+        name: "Lead",
+        role: "lead" as const,
+        reportingGroupId: GROUP_A,
+        viewerGroupAccess: [],
+      }),
+    ).resolves.toBe("f6666666-6666-4666-8666-666666666666");
 
     expect(findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
           periodStatus: "published",
           archived: false,
-          sections: { some: { authorId: LEAD_ID } },
+          publishedSectionScopes: { some: { authorId: LEAD_ID } },
         },
       }),
     );

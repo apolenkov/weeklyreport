@@ -19,7 +19,7 @@ export const ACTIVE_WEEKLY = {
   weekLabel: "Week 20",
   periodStatus: "open",
   submissionCount: 2,
-  hasActiveReminderRule: true,
+  activeDeadlineReminderRuleId: "a0000000-0000-4000-a000-000000000600",
   leadSections: [],
 };
 

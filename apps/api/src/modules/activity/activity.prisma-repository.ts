@@ -1,12 +1,19 @@
 import type {
   ActivityLiveResponse,
   ActivityLiveRow,
+  PublishedReportSnapshot,
   UserSession,
 } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { groupScopeFilter } from "../../lib/group-scope.js";
+import {
+  publishedReportScopeWhere,
+  requirePublishedSnapshot,
+  requireScopedPublishedSnapshot,
+} from "../report-sections/index.js";
 import type { ActivityRepository } from "./activity.service.js";
 
 interface ActivityReport {
@@ -14,6 +21,7 @@ interface ActivityReport {
   readonly periodStart: Date;
   readonly periodEnd: Date;
   readonly periodStatus: ActivityLiveResponse["periodStatus"];
+  readonly publishedSnapshot: Prisma.JsonValue | null;
 }
 
 interface ActivityLead {
@@ -89,6 +97,32 @@ function buildActivityRow(
   };
 }
 
+function buildPublishedActivityRow(
+  reportId: string,
+  section: PublishedReportSnapshot["sections"][number],
+): ActivityLiveRow {
+  return {
+    reportId,
+    reportSectionId: section.reportSectionId,
+    leadId: section.authorId,
+    leadName: section.authorName,
+    // The frozen publication contract intentionally contains no mutable user
+    // contact data. Reminder delivery resolves recipients separately.
+    email: null,
+    status: section.status,
+    itemCount: section.items.length,
+    riskCount: section.risks.length,
+    decisionCount: section.decisions.length,
+    priorityCount: section.items.filter(
+      ({ priorityRank }) => priorityRank != null,
+    ).length,
+    // Published snapshots preserve content and submission time, not mutable
+    // row update timestamps. Do not invent a last-edit time.
+    lastEditAt: null,
+    submittedAt: section.submittedAt,
+  };
+}
+
 const sortActivityRows = (rows: readonly ActivityLiveRow[]) =>
   [...rows].sort((left, right) => {
     const statusDifference =
@@ -109,54 +143,88 @@ export class ActivityPrismaRepository implements ActivityRepository {
     session: UserSession,
   ): Promise<ActivityLiveResponse> => {
     if (!reportId) return emptyActivity();
-    const report: ActivityReport | null = await this.prisma.report.findUnique({
-      where: { id: reportId },
-      select: {
-        id: true,
-        periodStart: true,
-        periodEnd: true,
-        periodStatus: true,
-      },
-    });
+    return this.prisma.$transaction(
+      async (tx) => {
+        const report: ActivityReport | null = await tx.report.findUnique({
+          where: { id: reportId },
+          select: {
+            id: true,
+            periodStart: true,
+            periodEnd: true,
+            periodStatus: true,
+            publishedSnapshot: true,
+          },
+        });
 
-    if (!report) return emptyActivity();
+        if (!report) return emptyActivity();
 
-    const [leads, sections]: [ActivityLead[], ActivitySection[]] =
-      await Promise.all([
-        this.prisma.user.findMany({
-          where: { role: "lead", ...groupScopeFilter(session, "user") },
-          select: { id: true, name: true, email: true },
-          orderBy: { name: "asc" },
-        }),
-        this.prisma.reportSection.findMany({
-          where: {
+        if (report.periodStatus === "published") {
+          if (session.role !== "admin") {
+            const admitted = await tx.report.findFirst({
+              where: {
+                id: report.id,
+                ...publishedReportScopeWhere(session),
+              },
+              select: { id: true },
+            });
+            if (!admitted) return emptyActivity();
+          }
+          const snapshot = requireScopedPublishedSnapshot(
+            requirePublishedSnapshot(report.publishedSnapshot, report.id),
+            session,
+          );
+          return {
             reportId: report.id,
-            ...groupScopeFilter(session, "reportSection"),
-          },
-          include: {
-            items: { select: { updatedAt: true, priorityRank: true } },
-            risks: { select: { updatedAt: true } },
-            decisions: { select: { updatedAt: true } },
-          },
-        }),
-      ]);
+            periodStart: report.periodStart,
+            periodEnd: report.periodEnd,
+            periodStatus: report.periodStatus,
+            rows: sortActivityRows(
+              snapshot.sections.map((section) =>
+                buildPublishedActivityRow(report.id, section),
+              ),
+            ),
+          };
+        }
 
-    const sectionByAuthor = new Map(
-      sections.map((s) => [s.authorId, s] as const),
+        const [leads, sections]: [ActivityLead[], ActivitySection[]] =
+          await Promise.all([
+            tx.user.findMany({
+              where: { role: "lead", ...groupScopeFilter(session, "user") },
+              select: { id: true, name: true, email: true },
+              orderBy: { name: "asc" },
+            }),
+            tx.reportSection.findMany({
+              where: {
+                reportId: report.id,
+                ...groupScopeFilter(session, "reportSection"),
+              },
+              include: {
+                items: { select: { updatedAt: true, priorityRank: true } },
+                risks: { select: { updatedAt: true } },
+                decisions: { select: { updatedAt: true } },
+              },
+            }),
+          ]);
+
+        const sectionByAuthor = new Map(
+          sections.map((s) => [s.authorId, s] as const),
+        );
+
+        const rows = sortActivityRows(
+          leads.map((lead) =>
+            buildActivityRow(report.id, lead, sectionByAuthor.get(lead.id)),
+          ),
+        );
+
+        return {
+          reportId: report.id,
+          periodStart: report.periodStart,
+          periodEnd: report.periodEnd,
+          periodStatus: report.periodStatus,
+          rows,
+        };
+      },
+      { isolationLevel: "RepeatableRead" },
     );
-
-    const rows = sortActivityRows(
-      leads.map((lead) =>
-        buildActivityRow(report.id, lead, sectionByAuthor.get(lead.id)),
-      ),
-    );
-
-    return {
-      reportId: report.id,
-      periodStart: report.periodStart,
-      periodEnd: report.periodEnd,
-      periodStatus: report.periodStatus,
-      rows,
-    };
   };
 }

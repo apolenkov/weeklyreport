@@ -40,21 +40,23 @@ CSP-report endpoint.
 An operator-owned metrics collector can scrape `api:3001/metrics` over the
 internal Compose network.
 
-WebSocket upgrade is automatic for tRPC subscriptions when those land — caddy
-forwards `Upgrade: websocket` headers without configuration.
-
 ## Verifying
 
 After `docker compose --env-file .env.production -f docker-compose.prod.yml up --build -d`:
 
 ```bash
-# Inside the docker network (the pinned Caddy image provides wget):
+# API reachability only (inside the Docker network; this does not prove the
+# host-bound Caddy site or its TLS/SNI routing):
 docker compose --env-file .env.production -f docker-compose.prod.yml exec caddy wget -q --spider http://localhost/health/live
 
-# From a host that resolves CADDY_SITE_ADDRESS:
-curl -I https://customreport.example.com/health/live
-curl -I https://customreport.example.com/             # 200 from web
-curl -I https://customreport.example.com/trpc/health  # 200 from api
+# Edge proof: substitute the exact host from CADDY_SITE_ADDRESS and the public
+# IP returned by DNS. The hostname in the URL supplies SNI; --resolve keeps the
+# request on the intended edge while preserving that host for Caddy routing.
+SITE_HOST=customreport.example.com
+PUBLIC_IP=203.0.113.10
+curl --fail --resolve "${SITE_HOST}:443:${PUBLIC_IP}" "https://${SITE_HOST}/health/live"   # 200: API process is running; dependencies are not checked
+curl --fail --resolve "${SITE_HOST}:443:${PUBLIC_IP}" "https://${SITE_HOST}/health/ready"  # 200 only when DB, Redis, BullMQ, and heap checks pass
+curl --fail --head --resolve "${SITE_HOST}:443:${PUBLIC_IP}" "https://${SITE_HOST}/"            # 200 from web
 ```
 
 ## Rotating Let's Encrypt certs

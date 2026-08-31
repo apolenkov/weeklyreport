@@ -131,7 +131,7 @@ function useLeadFormReportQueries({
   const refetchSection = byPeriodQ.refetch;
   const { byPeriodRetrying, retrySection } =
     useLeadFormSectionRetry(refetchSection);
-  const historyQ = useQuery(trpc.reports.myHistory.queryOptions());
+  const historyQ = useQuery(trpc.reports.myHistory.queryOptions({ limit: 50 }));
   const viewSettingsQ = useQuery(trpc.leadForm.viewSettings.queryOptions());
   const crossAuthorsQ = useQuery({
     ...trpc.leadForm.crossAuthors.queryOptions({
@@ -189,7 +189,7 @@ export function useLeadFormReports(input: {
       byPeriodRetrying: queries.byPeriodRetrying,
       refetchSection: queries.refetchSection,
       retrySection: queries.retrySection,
-      historyData: historyQ.data,
+      historyData: historyQ.data?.items,
       settingsData: viewSettingsQ.data,
       crossAuthors: crossAuthorsQ.data,
       loadingStates: [

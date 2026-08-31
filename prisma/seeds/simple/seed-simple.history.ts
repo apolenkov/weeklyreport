@@ -101,6 +101,7 @@ async function seedPublishedSection(
         workflowStatus: ItemWorkflowStatus.done,
         carriedOver: false,
         priorityRank: 1,
+        stageNames: ["Development"],
       },
       {
         id: nextItemId,
@@ -112,6 +113,7 @@ async function seedPublishedSection(
         tag: "feature",
         workflowStatus: ItemWorkflowStatus.planned,
         carriedOver: false,
+        stageNames: ["Development"],
       },
     ],
   });

@@ -4,6 +4,7 @@ import {
   type ActivityBucket,
   deriveActivityBucket,
 } from "../activity/activity-buckets";
+import type { UnifiedActivityEntry } from "../activity/unified-activity-entry";
 import {
   type CrossAuthorContentRow,
   mapForeignDecisions,
@@ -13,11 +14,7 @@ import {
 import type { DecisionEntry, KanbanItem, Product, RiskEntry } from "../types";
 import type { ReportPeriod } from "../types";
 
-export interface UnifiedActivityEntry {
-  readonly item: KanbanItem;
-  readonly bucket: ActivityBucket;
-  readonly week: "current" | "next";
-}
+export type { UnifiedActivityEntry } from "../activity/unified-activity-entry";
 
 type SectionItem = ReportSectionReadModel["items"][number];
 

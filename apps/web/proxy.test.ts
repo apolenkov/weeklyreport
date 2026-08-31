@@ -1,3 +1,4 @@
+import { AUTH_COOKIE_NAME } from "@customreport/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import proxy, { config } from "./src/proxy";
@@ -84,7 +85,7 @@ describe("apps/web/proxy.ts — auth guard", () => {
     // Three dot-separated base64-ish segments, total length > 20.
     const validShapeJwt = "aaaaaaaaaa.bbbbbbbbbb.cccccccccc";
     const req = makeRequest("/lead/report", "", {
-      customreport_session: validShapeJwt,
+      [AUTH_COOKIE_NAME]: validShapeJwt,
     });
     const response = proxy(req);
 
@@ -95,7 +96,7 @@ describe("apps/web/proxy.ts — auth guard", () => {
 
   it("redirects when session cookie value is empty string", () => {
     const req = makeRequest("/lead/report", "", {
-      customreport_session: "",
+      [AUTH_COOKIE_NAME]: "",
     });
     const response = proxy(req);
 
@@ -121,7 +122,7 @@ describe("apps/web/proxy.ts — auth guard", () => {
     },
   ] as const)("redirects when session cookie is $label", ({ cookie }) => {
     const req = makeRequest("/lead/report", "", {
-      customreport_session: cookie,
+      [AUTH_COOKIE_NAME]: cookie,
     });
     const response = proxy(req);
 

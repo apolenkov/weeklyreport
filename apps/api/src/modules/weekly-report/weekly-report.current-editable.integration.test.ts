@@ -5,6 +5,7 @@ import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
+  publishedSnapshotFixture,
 } from "../../test-utils/prisma-test-helper";
 import { WeeklyReportPrismaRepository } from "./weekly-report.prisma-repository";
 
@@ -30,7 +31,7 @@ describe("WeeklyReportPrismaRepository.getCurrentEditableId (integration)", () =
     periodStart: string,
     archived = false,
   ): Promise<void> {
-    // Dual-state fixture: a reopened period keeps the published legacy status
+    // Dual-state fixture: a reopened period keeps the published status
     // while `periodState` reverts to 'open'; archived flips `periodState` only.
     // Invariant: openspec/specs/period-dual-state/spec.md.
     const status = periodStatus === "open" ? "draft" : "published";
@@ -39,6 +40,7 @@ describe("WeeklyReportPrismaRepository.getCurrentEditableId (integration)", () =
       : periodStatus === "published"
         ? "published"
         : "open";
+    const publishedAt = new Date(periodStart);
     await prisma.report.create({
       data: {
         id,
@@ -49,6 +51,18 @@ describe("WeeklyReportPrismaRepository.getCurrentEditableId (integration)", () =
         periodStatus,
         periodState,
         archived,
+        ...(periodStatus !== "open"
+          ? {
+              publishedAt,
+              publishedSnapshot: publishedSnapshotFixture({
+                reportId: id,
+                periodStart,
+                periodEnd: periodStart,
+                deadline: periodStart,
+                publishedAt,
+              }),
+            }
+          : {}),
       },
     });
   }

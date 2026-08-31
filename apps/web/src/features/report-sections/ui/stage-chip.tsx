@@ -7,6 +7,7 @@ import {
 } from "@customreport/ui/components/ui/tooltip";
 import type { CSSProperties } from "react";
 
+import { statusLabel } from "../../../shared/lib/status/status-presentation";
 import {
   STAGE_CHIP_BOX_HEIGHT,
   STATUS_CONFIG,
@@ -101,7 +102,9 @@ function chipTitle(stage: StageAssignment, coverageSuffix: string): string {
     ].join(" · ");
   }
   // Append outside ?? so an explicit tooltip still gets the coverage cue.
-  const baseTooltip = stage.tooltip ?? `${stage.stageName} · ${stage.status}`;
+  const baseTooltip =
+    stage.tooltip ??
+    `${stage.stageName} · ${statusLabel(stage.status, "screen")}`;
   return `${baseTooltip}${coverageSuffix}`;
 }
 
@@ -164,11 +167,14 @@ export function StageChip({
             type="button"
             className={chipClassName({ isEditable, isEmpty, isLocked })}
             style={chipStyle({ status: stage.status, isEmpty, coveredByRisk })}
-            aria-label={`${stage.stageName}: ${stage.status}${coverageSuffix}`}
+            aria-label={`${stage.stageName}: ${statusLabel(stage.status, "screen")}${coverageSuffix}`}
             data-coverage={coveredByRisk ? "risk" : undefined}
             onClick={handleChipClick}
             aria-disabled={!isEditable}
-            tabIndex={isEditable || isLocked ? 0 : -1}
+            // Read-only chips remain in the tab order so keyboard users can
+            // discover their status and tooltip; aria-disabled communicates
+            // that activation cannot mutate the report.
+            tabIndex={0}
           >
             <StageChipContent stage={stage} isLocked={isLocked} />
           </button>

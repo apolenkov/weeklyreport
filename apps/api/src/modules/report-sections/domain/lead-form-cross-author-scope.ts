@@ -29,10 +29,16 @@ export async function resolveCrossAuthorScope(
   if (!ownSection) {
     return null;
   }
-  const sharedProductIds = await repository.getSharedNonArchivedProductIds(
-    userId,
-    requestedAuthorId,
-  );
+  const sharedProductIds = repository.getSharedNonArchivedProductIdsForReport
+    ? await repository.getSharedNonArchivedProductIdsForReport(
+        reportId,
+        userId,
+        requestedAuthorId,
+      )
+    : await repository.getSharedNonArchivedProductIds(
+        userId,
+        requestedAuthorId,
+      );
   return sharedProductIds.length > 0 ? new Set(sharedProductIds) : null;
 }
 

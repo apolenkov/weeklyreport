@@ -1,8 +1,8 @@
 // Bare presence check only — stronger contracts (e.g. JWT min length) layer on.
-export function requireEnv(env: NodeJS.ProcessEnv, key: string): string {
+export function requireEnv(env: Record<string, unknown>, key: string): string {
   const value = env[key];
 
-  if (!value) {
+  if (typeof value !== "string" || !value) {
     throw new Error(`Missing required environment variable: ${key}`);
   }
 

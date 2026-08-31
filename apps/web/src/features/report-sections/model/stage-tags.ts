@@ -1,18 +1,15 @@
 export { riskCoversStage } from "@customreport/shared";
 
-// Stage values are canonical when they reach the UI. Kept as a direct helper
-// for consumers that need a single-value normal form.
-export function canonicalStageName(name: string): string {
-  return name;
-}
-
 // Preserve the selected canonical values while removing duplicates.
 export function canonicalStageNames(ids: readonly string[]): string[] {
   return [...new Set(ids)];
 }
 
 export function stageShortLabel(name: string): string {
-  return name;
+  // The pipeline has seven fixed-width desktop columns. Keep the stored
+  // canonical value intact while using the compact presentation label that
+  // fits beside the stage icon and status glyph.
+  return name === "Development" ? "Dev" : name;
 }
 
 export type ItemCardStageTags =
@@ -36,8 +33,7 @@ export function deriveItemCardStageTags(item: {
   const visibleStageTags = stageTags.slice(0, MAX_VISIBLE_STAGE_TAGS);
   return {
     stageTags,
-    stageTagsLabel:
-      stageTags.length === 0 ? "No stage set" : stageTags.join(", "),
+    stageTagsLabel: stageTags.join(", "),
     visibleStageTags,
     hiddenStageCount: Math.max(stageTags.length - visibleStageTags.length, 0),
     isActivityItem: false,

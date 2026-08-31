@@ -6,7 +6,6 @@ import {
 } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
-import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
 import {
   type ReminderQueuePayload,
   reminderQueuePayloadSchema,
@@ -68,16 +67,6 @@ export function formatPeriodLabel(start: Date, end: Date): string {
     .slice(0, ISO_DATE_LENGTH)}`;
 }
 
-// Only a `ReminderExecution` insert reaches here, so matching the `dedupeKey`
-// unique index is unambiguous; the shared guard carries the pg-adapter matching
-// (serialized meta + message, never `meta.target` alone).
-export function isDedupeKeyConflict(error: unknown): boolean {
-  return isUniqueViolation(error, {
-    index: "ReminderExecution_dedupeKey_key",
-    columns: ["dedupeKey"],
-  });
-}
-
 export function toRuleDomain(rule: {
   id: string;
   kind: string;
@@ -85,13 +74,15 @@ export function toRuleDomain(rule: {
   timezone: string;
   status: string;
   version: number;
-  reportId: string | null;
+  reportId: string;
+  policyId: string;
   createdAt: Date;
   updatedAt: Date;
 }): AdminReminderRule {
   return adminReminderRuleSchema.parse({
     id: rule.id,
     reportId: rule.reportId,
+    policyId: rule.policyId,
     kind: rule.kind,
     fireAt: rule.fireAt,
     timezone: rule.timezone,
@@ -110,7 +101,7 @@ export function toExecutionDomain(execution: {
   error: string | null;
   createdAt: Date;
   updatedAt: Date;
-  rule: { reportId: string | null };
+  rule: { reportId: string; fireAt: Date };
 }): AdminReminderExecution {
   return adminReminderExecutionSchema.parse({
     id: execution.id,
@@ -118,7 +109,7 @@ export function toExecutionDomain(execution: {
     reportId: execution.rule.reportId,
     dedupeKey: execution.dedupeKey,
     status: dbExecStatusToDomain[execution.status],
-    scheduledFor: execution.createdAt,
+    scheduledFor: execution.rule.fireAt,
     sentAt: execution.sentAt,
     recipientEmail: execution.recipientEmail,
     errorMessage: execution.error,

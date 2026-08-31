@@ -30,7 +30,11 @@ describe("PDF export infrastructure adapters", () => {
         traceparent: "trace",
         correlationId: "correlation",
       },
-      { attempts: 3, backoff: { type: "exponential", delay: 5000 } },
+      {
+        attempts: 3,
+        backoff: { type: "exponential", delay: 5000 },
+        jobId: "job-1",
+      },
     );
   });
 

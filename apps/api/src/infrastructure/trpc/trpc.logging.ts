@@ -11,8 +11,8 @@ const TRPC_REQUEST_LOG_PHASE = "trpc.request";
 
 const SLOW_TRPC_MS = 500;
 
-// Compact response-shape descriptor for debug logs — keys/lengths only,
-// never values (full JSON previously leaked PII on auth.me / admin.*).
+// Compact response-shape descriptor for debug logs. Auth and admin responses
+// can contain PII, so logs include keys and lengths but never values.
 function describeShape(value: unknown): string {
   if (value === null) return "null";
   if (Array.isArray(value)) {

@@ -8,6 +8,7 @@ import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
+  publishedSnapshotFixture,
   seedTestData,
 } from "../../../test-utils/prisma-test-helper.js";
 import {
@@ -109,6 +110,13 @@ describe("review verdict published-period write lock (integration)", () => {
         periodStatus: "published",
         periodState: "published",
         publishedAt,
+        publishedSnapshot: publishedSnapshotFixture({
+          reportId: testData.report.id,
+          periodStart: testData.report.periodStart,
+          periodEnd: testData.report.periodEnd,
+          publishedAt,
+          publishedById: testData.head.id,
+        }),
       },
     });
     gate.release();

@@ -320,6 +320,18 @@ describe("ArchiveService — contract tests", () => {
         reportSectionId: "b1b1b1b1-b1b1-4b1b-8b1b-b1b1b1b1b1b1",
         authorId: "33333333-3333-4333-8333-333333333334",
         authorName: "Zulu Lead",
+        items: sectionLead1.items.map((item) => ({
+          ...item,
+          id: "cccccccc-cccc-4ccc-8ccc-cccccccccccd",
+        })),
+        risks: sectionLead1.risks.map((risk) => ({
+          ...risk,
+          id: "dddddddd-dddd-4ddd-8ddd-ddddddddddde",
+        })),
+        decisions: sectionLead1.decisions.map((decision) => ({
+          ...decision,
+          id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeef",
+        })),
       };
       // Fed in non-alphabetical input order to verify the service sorts.
       const detail = makeDetail({ sections: [sectionZ, sectionLead1] });

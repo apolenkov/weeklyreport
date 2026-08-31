@@ -55,6 +55,7 @@ const RULES = [
     id: "a0000000-0000-4000-8000-00000000c001",
     kind: ReminderRuleKind.deadline,
     fireAt: shiftHours(activeDeadline, -HOURS_BEFORE_DEADLINE),
+    deadline: activeDeadline,
     timezone: MOSCOW_TIMEZONE,
     status: ReminderRuleStatus.active,
     version: RULE_VERSION,
@@ -65,6 +66,7 @@ const RULES = [
     id: "a0000000-0000-4000-8000-00000000c002",
     kind: ReminderRuleKind.escalation,
     fireAt: shiftHours(activeDeadline, HOURS_AFTER_DEADLINE),
+    deadline: activeDeadline,
     timezone: MOSCOW_TIMEZONE,
     status: ReminderRuleStatus.active,
     version: RULE_VERSION,
@@ -84,7 +86,7 @@ async function seedPolicies(prisma: PrismaClient): Promise<number> {
   return POLICIES.length;
 }
 
-// Upsert by the natural key (reportId, policyId), not the surrogate id: the
+// Upsert by the versioned natural key, not the surrogate id: the
 // reset-hard baseline already created a rule for this pair under a different
 // id, so an id-keyed upsert would CREATE a duplicate and violate the unique
 // constraint (P2002).
@@ -92,11 +94,16 @@ async function seedRules(prisma: PrismaClient): Promise<number> {
   for (const rule of RULES) {
     await prisma.reminderRule.upsert({
       where: {
-        reportId_policyId: { reportId: rule.reportId, policyId: rule.policyId },
+        reportId_policyId_version: {
+          reportId: rule.reportId,
+          policyId: rule.policyId,
+          version: rule.version,
+        },
       },
       update: {
         kind: rule.kind,
         fireAt: rule.fireAt,
+        deadline: rule.deadline,
         timezone: rule.timezone,
         status: rule.status,
         version: rule.version,

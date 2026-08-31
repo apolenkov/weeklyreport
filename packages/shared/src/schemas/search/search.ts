@@ -9,9 +9,6 @@ export const searchHitTypeSchema = z.enum([
   "decision",
   "project",
 ]);
-/** Record kind returned by the unified full-text endpoint. */
-export type SearchHitType = z.infer<typeof searchHitTypeSchema>;
-
 /** Describes a ranked search result and its navigation anchors. */
 export const searchHitSchema = z
   .object({
@@ -33,7 +30,10 @@ export const searchHitSchema = z
     projectId: z.uuid().optional(),
     reportId: z.uuid().optional(),
     reportSectionId: z.uuid().optional(),
-    /** ISO timestamp of the underlying row (Item/Risk/Decision/Project.createdAt). */
+    /**
+     * ISO ordering timestamp: the live row's createdAt, or the immutable
+     * publication timestamp for a frozen snapshot hit.
+     */
     createdAt: z.iso.datetime(),
   })
   .readonly();
@@ -43,7 +43,10 @@ export type SearchHit = z.infer<typeof searchHitSchema>;
 const MAX_SEARCH_RESULTS_LIMIT = 50;
 const DEFAULT_SEARCH_RESULTS_LIMIT = 20;
 
-/** Bounded full-text query with caller-authorized mine, all, or published scope. */
+/**
+ * Role-agnostic wire shape. SearchService authorizes the requested scope for
+ * the current session; in particular, viewers may request only `published`.
+ */
 export const searchQueryInputSchema = z
   .object({
     q: safeText({ min: 2, max: 200 }),

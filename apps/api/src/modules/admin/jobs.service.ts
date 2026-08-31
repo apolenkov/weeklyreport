@@ -93,6 +93,8 @@ export class JobsService {
       }
     }
 
+    // A retry only requeues the execution id. The reminder worker claims the
+    // row and renders its current durable DB payload, never this job's body.
     await job.retry();
     this.logger.info("admin.jobs.retry — job requeued", {
       phase: "admin.jobs.retry",

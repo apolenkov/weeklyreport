@@ -32,8 +32,8 @@ const deadline: DeadlineReminderPayload = {
   organization,
 };
 
-// The builder used to erase its known payload union to `Record<string, unknown>`;
-// the concrete union must survive so the worker keeps the per-kind fields.
+// The concrete payload union must survive so the worker keeps the per-kind
+// fields and rejects unrelated shapes.
 describe("buildQueuePayload return type", () => {
   it("returns a concrete payload union, not a generic record", () => {
     expectTypeOf(

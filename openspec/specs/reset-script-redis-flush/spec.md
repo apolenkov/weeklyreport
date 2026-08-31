@@ -2,17 +2,18 @@
 
 ## Purpose
 
-Requires a destructive-reset script's Redis flush to settle honestly on the socket-close case rather than mishandling it.
+Requires a destructive-reset script's Redis cleanup to select only the reserved
+disposable database and settle honestly on socket-close or protocol errors.
 
 ## Requirements
 
 ### Requirement: A destructive-reset script's Redis flush settles honestly
 
-Every Prisma maintenance script that flushes Redis as part of a destructive reset MUST settle its flush promise honestly: it MUST resolve success only when a `+OK` reply was actually observed, and it MUST NOT leave the promise permanently unsettled when the socket closes without a reply. A replyless close MUST be reported as a non-fatal, explicit non-success outcome (a rejected promise or an explicit `{flushed:false, reason:...}` result), never silently treated as success and never left hanging past the configured timeout.
+Every Prisma maintenance script that cleans Redis as part of a destructive reset MUST require `REDIS_DB=15`, connect only to a loopback endpoint, issue `SELECT 15` and then `FLUSHDB` on the same socket, and settle its promise honestly. It MUST wait for the successful `SELECT 15` reply before sending `FLUSHDB`; the commands MUST NOT be pipelined because a rejected selection could otherwise flush DB 0. It MUST resolve success only after successful replies to both commands have been observed, parse split RESP replies and explicit Redis errors, and MUST NOT leave the promise permanently unsettled when the socket closes without a reply. A replyless close MUST be reported as a non-fatal, explicit non-success outcome (a rejected promise or an explicit `{flushed:false, reason:...}` result), never silently treated as success and never left hanging past the configured timeout. It MUST never issue a server-wide database cleanup command.
 
 #### Scenario: A confirmed flush resolves success
 
-- **GIVEN** the Redis peer replies `+OK` to the flush command
+- **GIVEN** the Redis peer replies `+OK` to `SELECT 15` and `FLUSHDB`
 - **WHEN** the flush promise settles
 - **THEN** it resolves as a successful flush
 
@@ -30,3 +31,17 @@ Every Prisma maintenance script that flushes Redis as part of a destructive rese
 - **WHEN** the flush promise settles
 - **THEN** it does not resolve as success
 - **AND** the script does not print a success message for that flush
+
+#### Scenario: Cleanup is scoped to the reserved database
+
+- **GIVEN** `REDIS_DB` is missing or is not exactly `15`
+- **WHEN** the reset script starts Redis cleanup
+- **THEN** it rejects before opening a Redis socket
+- **AND** it does not issue a command to any Redis database
+
+#### Scenario: A failed database selection cannot flush DB 0
+
+- **GIVEN** Redis rejects `SELECT 15`
+- **WHEN** the cleanup command handles that reply
+- **THEN** it fails closed
+- **AND** it never sends `FLUSHDB`

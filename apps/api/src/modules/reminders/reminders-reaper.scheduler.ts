@@ -16,9 +16,8 @@ export class RemindersReaperScheduler {
   // age is well past the seconds-scale insert→enqueue window.
   private readonly stuckQueuedTimeoutMs = 900_000;
 
-  // A `sending` row whose worker crashed after SMTP delivery has no one to
-  // write `sent`; this is far past the per-attempt SMTP window, so it only
-  // ever catches crashed-after-delivery rows — never a live slow send.
+  // Past this conservative bound, a `sending` row has an unknowable SMTP
+  // outcome. It becomes terminal and observable; automation never resends it.
   private readonly stuckSendingTimeoutMs = 1_800_000;
 
   constructor(

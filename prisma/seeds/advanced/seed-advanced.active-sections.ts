@@ -43,7 +43,7 @@ const activeReportId = SEED_REPORTS.active.id;
 // canonical dataset carries every stored Progress state on each reseed —
 // assertSeedCoverage fails the run loudly if either is ever dropped. Both land
 // on the primary lead's section so a single dev-login surfaces both treatments;
-// pausedReason stays unset (the UI enforces it only at the point of pausing).
+// Paused rows carry the explanation required by the current data contract.
 const PAUSED_CURRENT_INDEX = 3;
 const POSTPONED_NEXT_INDEX = 0;
 
@@ -147,6 +147,9 @@ async function seedItems(
       text,
       tag: tagFor(i),
       workflowStatus: currentStatusFor(cfg, i),
+      ...(cfg.leadIndex === LEAD_SLOT_PRIMARY && i === PAUSED_CURRENT_INDEX
+        ? { pausedReason: "Ожидаем подтверждение владельца этапа" }
+        : {}),
       stageNames: [stageNameFor(cfg.leadIndex + i)],
     })),
     ...next.map((text, i) => ({

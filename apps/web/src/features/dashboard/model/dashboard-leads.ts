@@ -89,6 +89,7 @@ function buildLeadInfo(
     reviews: state.reviews,
     ...state.review,
     attentionLabel: attentionLabel(state.trafficLights),
+    reminderRuleId: context.weeklyReport.activeDeadlineReminderRuleId,
     actions: leadActions(state),
     priority: queuePriority(
       state.review.reviewState,

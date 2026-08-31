@@ -34,7 +34,7 @@ describe("getOrgPublic", () => {
     vi.stubGlobal("fetch", fetchMock);
     vi.spyOn(console, "error").mockImplementation(consoleError);
     // The unit suite loads no env file; requireApiUrl has no fallback.
-    vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:3002");
+    vi.stubEnv("API_URL", "http://localhost:3002");
   });
 
   afterEach(() => {

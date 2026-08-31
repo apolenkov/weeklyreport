@@ -1,10 +1,7 @@
 ## Purpose
 
-Fixed by `fix-product-name-resolution` (2026-06-10): weekly-report risk and
-decision badges rendered "Unknown" for products the report could name,
-because resolution was scoped to the owning section's projects. This
-capability fixes the durable property that badge product names resolve
-report-wide. It governs name resolution, not a code module.
+Ensure weekly-report risk and decision badges resolve product names across the
+whole report. This capability governs name resolution, not a code module.
 
 ## Requirements
 

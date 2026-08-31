@@ -22,7 +22,7 @@ const validWeeklyReport = () => ({
   weekLabel: "W16-2026",
   submissionCount: 3,
   totalLeads: 6,
-  hasActiveReminderRule: true,
+  activeDeadlineReminderRuleId: uuid(),
   portfolioOverview: [],
   leadSections: [],
   escalations: [],
@@ -53,8 +53,25 @@ describe("weeklyReportReadModelSchema", () => {
     ).toBe(true);
   });
 
+  it("requires a stage for blocked and unresolved-risk escalations", () => {
+    const report = {
+      ...validWeeklyReport(),
+      escalations: [
+        {
+          type: "blocked" as const,
+          productName: "CRM Platform",
+          stageName: null,
+          leadName: "Alice Lead",
+          description: "Blocked",
+        },
+      ],
+    };
+    expect(weeklyReportReadModelSchema.safeParse(report).success).toBe(false);
+  });
+
   it("requires reminder availability", () => {
-    const { hasActiveReminderRule: _hasRule, ...report } = validWeeklyReport();
+    const { activeDeadlineReminderRuleId: _ruleId, ...report } =
+      validWeeklyReport();
     expect(weeklyReportReadModelSchema.safeParse(report).success).toBe(false);
   });
 
@@ -171,26 +188,39 @@ describe("portfolioProductOverviewSchema", () => {
 });
 
 describe("escalationSchema", () => {
-  const validEscalation = () => ({
+  const validEscalation = (overrides: Record<string, unknown> = {}) => ({
     type: "blocked" as const,
     productName: "CRM",
     stageName: "Development",
     leadName: "Alice",
     description: "ETL memory leak",
+    ...overrides,
   });
 
   it("accepts an escalation with a stage", () => {
     expect(escalationSchema.safeParse(validEscalation()).success).toBe(true);
   });
 
-  it("accepts an escalation without a stage", () => {
+  it("accepts a product-level at-risk escalation without a stage", () => {
     expect(
       escalationSchema.safeParse({
-        ...validEscalation(),
+        ...validEscalation({ type: "at_risk" }),
         stageName: null,
       }).success,
     ).toBe(true);
   });
+
+  it.each(["blocked", "unresolved_risk"] as const)(
+    "rejects a %s escalation without a stage",
+    (type) => {
+      expect(
+        escalationSchema.safeParse({
+          ...validEscalation({ type }),
+          stageName: null,
+        }).success,
+      ).toBe(false);
+    },
+  );
 
   it("accepts an unresolved-risk escalation", () => {
     expect(

@@ -1,8 +1,7 @@
-import type { UserSession } from "@customreport/shared";
+import { AUTH_COOKIE_NAME, type UserSession } from "@customreport/shared";
 import type { Request, Response } from "express";
 import { describe, expect, it, vi } from "vitest";
 
-import { resolveSessionCookieName } from "../../lib/session-cookie";
 import type { PrismaService } from "../prisma/prisma.service";
 import { createRequireHeadGuard } from "./bull-board.module";
 
@@ -28,9 +27,8 @@ function makePrisma(isActive: boolean): PrismaService {
 }
 
 function makeReq(token: string | undefined): Request {
-  const cookieName = resolveSessionCookieName(process.env.AUTH_JWT_COOKIE_NAME);
   return {
-    cookies: token === undefined ? {} : { [cookieName]: token },
+    cookies: token === undefined ? {} : { [AUTH_COOKIE_NAME]: token },
   } as unknown as Request;
 }
 
@@ -49,6 +47,7 @@ describe("createRequireHeadGuard", () => {
       verifySessionToken: () => headSession,
       prisma: makePrisma(false),
       sessionRevocation: { isRevoked: () => Promise.resolve(false) },
+      sessionCookieName: AUTH_COOKIE_NAME,
     })(makeReq("token"), res, next);
 
     expect(status).toHaveBeenCalledWith(401);
@@ -64,6 +63,7 @@ describe("createRequireHeadGuard", () => {
       // An active DB row must not rescue a revoked head.
       prisma: makePrisma(true),
       sessionRevocation: { isRevoked: () => Promise.resolve(true) },
+      sessionCookieName: AUTH_COOKIE_NAME,
     })(makeReq("token"), res, next);
 
     expect(status).toHaveBeenCalledWith(401);
@@ -78,6 +78,7 @@ describe("createRequireHeadGuard", () => {
       verifySessionToken: () => headSession,
       prisma: makePrisma(true),
       sessionRevocation: { isRevoked: () => Promise.resolve(false) },
+      sessionCookieName: AUTH_COOKIE_NAME,
     })(makeReq("token"), res, next);
 
     expect(next).toHaveBeenCalledTimes(1);
@@ -92,6 +93,7 @@ describe("createRequireHeadGuard", () => {
       verifySessionToken: () => ({ ...headSession, role: "lead" }),
       prisma: makePrisma(true),
       sessionRevocation: { isRevoked: () => Promise.resolve(false) },
+      sessionCookieName: AUTH_COOKIE_NAME,
     })(makeReq("token"), res, next);
 
     expect(status).toHaveBeenCalledWith(403);
@@ -106,6 +108,7 @@ describe("createRequireHeadGuard", () => {
       verifySessionToken: () => headSession,
       prisma: makePrisma(true),
       sessionRevocation: { isRevoked: () => Promise.resolve(false) },
+      sessionCookieName: AUTH_COOKIE_NAME,
     })(makeReq(undefined), res, next);
 
     expect(status).toHaveBeenCalledWith(401);
@@ -122,6 +125,7 @@ describe("createRequireHeadGuard", () => {
       },
       prisma: makePrisma(true),
       sessionRevocation: { isRevoked: () => Promise.resolve(false) },
+      sessionCookieName: AUTH_COOKIE_NAME,
     })(makeReq("token"), res, next);
 
     expect(status).toHaveBeenCalledWith(401);
@@ -142,6 +146,7 @@ describe("createRequireHeadGuard", () => {
           },
         } as unknown as PrismaService,
         sessionRevocation: { isRevoked: () => Promise.resolve(false) },
+        sessionCookieName: AUTH_COOKIE_NAME,
       })(makeReq("token"), res, next),
     ).rejects.toBe(databaseError);
 

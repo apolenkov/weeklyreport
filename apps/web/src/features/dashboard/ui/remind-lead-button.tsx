@@ -8,6 +8,7 @@ import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 
 interface RemindLeadButtonProps {
   readonly reportId: string;
+  readonly ruleId: string;
   readonly leadId: string;
   readonly leadName: string;
   readonly onMutated: () => void;
@@ -74,6 +75,7 @@ interface RemindLeadState {
 // Client never sees lead emails — backend resolves rule, recipient, and dedupe.
 function useRemindLead({
   reportId,
+  ruleId,
   leadId,
   onMutated,
 }: Omit<RemindLeadButtonProps, "leadName">): RemindLeadState {
@@ -110,7 +112,7 @@ function useRemindLead({
     busy: mutation.isPending,
     send: () => {
       mutation.mutate(
-        { reportId, leadId },
+        { reportId, ruleId, leadId },
         {
           onSuccess: (result) => {
             setConfirm(confirmStateFromDispatch(result));
@@ -146,12 +148,14 @@ function ConfirmIcon({
 
 export function RemindLeadButton({
   reportId,
+  ruleId,
   leadId,
   leadName,
   onMutated,
 }: RemindLeadButtonProps): React.JSX.Element {
   const { confirm, busy, send } = useRemindLead({
     reportId,
+    ruleId,
     leadId,
     onMutated,
   });

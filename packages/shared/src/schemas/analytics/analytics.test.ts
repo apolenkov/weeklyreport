@@ -97,9 +97,8 @@ describe("ISO date rule diagnostic surface", () => {
     ]);
   });
 
-  // Diagnostics come from zod's single `date` format check. Before this rule
-  // used a regex + refine pair, which emitted two issues for a shape failure
-  // and a `custom` "Not a real calendar date" for an impossible day.
+  // The public aliases expose one consistent date-format diagnostic for an
+  // impossible calendar day.
   it("reports one invalid_format issue for an impossible calendar day", () => {
     const issues = parseByAlias.periodFrom("2026-02-30").error?.issues ?? [];
 

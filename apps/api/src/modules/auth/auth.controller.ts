@@ -1,4 +1,5 @@
 import {
+  AUTH_COOKIE_NAME,
   SECONDS_PER_HOUR,
   type UserSession,
   userSessionSchema,
@@ -7,7 +8,6 @@ import { stringifySetCookie } from "cookie";
 import jwt from "jsonwebtoken";
 
 import { requireEnv } from "../../lib/env.js";
-import { resolveSessionCookieName } from "../../lib/session-cookie.js";
 
 const ONE_HOUR_IN_SECONDS = SECONDS_PER_HOUR;
 
@@ -21,7 +21,7 @@ export interface JwtSigner {
   verifySession: (token: string) => UserSession;
 }
 
-function requireJwtSecret(env: NodeJS.ProcessEnv): string {
+function requireJwtSecret(env: Record<string, unknown>): string {
   // Layered on the generic presence helper: presence first (same error message
   // as every other required var), then the symmetric-secret strength floor.
   const secret = requireEnv(env, "AUTH_JWT_SECRET");
@@ -35,7 +35,7 @@ function requireJwtSecret(env: NodeJS.ProcessEnv): string {
   return secret;
 }
 
-export function createJwtSigner(env: NodeJS.ProcessEnv): JwtSigner {
+export function createJwtSigner(env: Record<string, unknown>): JwtSigner {
   const secret = requireJwtSecret(env);
 
   return {
@@ -65,11 +65,11 @@ export function createSessionCookie({
   maxAgeSeconds = ONE_HOUR_IN_SECONDS,
 }: {
   token: string;
-  env: NodeJS.ProcessEnv;
+  env: Record<string, unknown>;
   maxAgeSeconds?: number;
 }): string {
   return stringifySetCookie({
-    name: resolveSessionCookieName(env.AUTH_JWT_COOKIE_NAME),
+    name: AUTH_COOKIE_NAME,
     value: token,
     httpOnly: true,
     secure: env.NODE_ENV === "production",
@@ -79,7 +79,7 @@ export function createSessionCookie({
   });
 }
 
-export function createAuthController(env: NodeJS.ProcessEnv) {
+export function createAuthController(env: Record<string, unknown>) {
   const jwtSigner = createJwtSigner(env);
 
   return {

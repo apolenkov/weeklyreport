@@ -8,8 +8,36 @@ describe("ReviewActionsPrismaRepository.postVerdict write lock", () => {
     const updateMany = vi.fn();
     const upsert = vi.fn();
     const tx = {
-      $queryRaw: vi.fn().mockResolvedValue([{ periodStatus: "published" }]),
-      reportSection: { updateMany },
+      $queryRaw: vi.fn().mockResolvedValue([
+        {
+          id: "55555555-5555-4555-8555-555555555555",
+          status: "published",
+          periodState: "published",
+          periodStatus: "published",
+          archived: false,
+          autoPublished: false,
+          autoArchived: false,
+          publishedAt: new Date("2026-07-22T12:00:00.000Z"),
+          publishedById: "55555555-5555-4555-8555-555555555555",
+          reopenedAt: null,
+        },
+      ]),
+      user: {
+        findUnique: vi.fn().mockResolvedValue({
+          role: "admin",
+          reportingGroupId: null,
+          viewerGroupAccess: [],
+        }),
+      },
+      reportSection: {
+        findUnique: vi.fn().mockResolvedValue({
+          reportId: "55555555-5555-4555-8555-555555555555",
+          authorId: "66666666-6666-4666-8666-666666666666",
+          status: "submitted",
+          author: { reportingGroupId: "77777777-7777-4777-8777-777777777777" },
+        }),
+        updateMany,
+      },
       sectionReview: { upsert },
     };
     const prisma = {
@@ -28,7 +56,7 @@ describe("ReviewActionsPrismaRepository.postVerdict write lock", () => {
         currentStatus: "submitted",
       }),
     ).rejects.toBeInstanceOf(ReviewConstraintError);
-    expect(tx.$queryRaw).toHaveBeenCalledOnce();
+    expect(tx.$queryRaw.mock.calls.length).toBeGreaterThanOrEqual(3);
     expect(updateMany).not.toHaveBeenCalled();
     expect(upsert).not.toHaveBeenCalled();
   });

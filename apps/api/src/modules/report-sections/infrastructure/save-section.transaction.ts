@@ -1,17 +1,18 @@
 import {
-  currentPeriodLifecycleSchema,
-  type ReportSectionReadModel,
-} from "@customreport/shared";
+  mapPrismaToReportSection,
+  reportSectionFullInclude,
+} from "@customreport/report-persistence";
+import { type ReportSectionReadModel } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
+import { lockCurrentEditableReport } from "../../../lib/report-lifecycle.js";
+import { lockStatusGraph } from "../../../lib/status-graph-lock.js";
 import { PeriodLifecycleIntegrityError } from "../../period/index.js";
 import {
   ReportSectionDomainError,
   ReportSectionNotFoundError,
   SectionVersionConflictError,
 } from "../application/report-sections.service";
-import { reportSectionFullInclude } from "./report-sections.include";
-import { mapPrismaToReportSection } from "./report-sections.mappers";
 import {
   captureRecordComments,
   reinsertRecordComments,
@@ -34,37 +35,15 @@ async function lockReportForSave(
   tx: Prisma.TransactionClient,
   reportId: string,
 ): Promise<void> {
-  const gate = await tx.$queryRaw<
-    {
-      status: string;
-      periodState: string;
-      periodStatus: string;
-      archived: boolean;
-      autoPublished: boolean;
-      autoArchived: boolean;
-      publishedAt: Date | null;
-      publishedById: string | null;
-      reopenedAt: Date | null;
-    }[]
-  >`SELECT "status", "periodState", "periodStatus", "archived",
-      "autoPublished", "autoArchived", "publishedAt", "publishedById",
-      "reopenedAt"
-    FROM "Report" WHERE "id" = ${reportId} FOR UPDATE`;
-  const gateRow = gate[0];
+  const gate = await lockCurrentEditableReport(tx, { reportId });
   // No row means the report was deleted between the precheck and this
   // transaction — the resource is gone, not period-locked, so it must surface
   // as NOT_FOUND rather than a period-state constraint.
-  if (gateRow === undefined) {
+  if (gate.kind === "not-found") {
     throw new ReportSectionNotFoundError("The report no longer exists.");
   }
-  const lifecycle = currentPeriodLifecycleSchema.safeParse(gateRow);
-  if (!lifecycle.success) throw new PeriodLifecycleIntegrityError();
-
-  if (
-    lifecycle.data.archived ||
-    (lifecycle.data.periodStatus !== "open" &&
-      lifecycle.data.periodStatus !== "reopened")
-  ) {
+  if (gate.kind === "inconsistent") throw new PeriodLifecycleIntegrityError();
+  if (gate.kind === "not-editable") {
     throw new ReportSectionDomainError(
       "SECTION_ALREADY_SUBMITTED",
       "Cannot edit sections of a published report.",
@@ -171,6 +150,7 @@ export async function applySaveSection(
   section: ReportSectionReadModel,
   expectedVersion: number,
 ): Promise<ReportSectionReadModel> {
+  await lockStatusGraph(tx);
   const sectionId = section.reportSectionId;
 
   await lockReportForSave(tx, section.reportId);

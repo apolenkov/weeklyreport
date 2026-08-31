@@ -185,7 +185,7 @@ product overview already uses, so the overview never reshuffles unpredictably.
 #### Scenario: by-product scope is unchanged
 
 - **WHEN** the head views the report in `by product` scope
-- **THEN** the overview renders one card per product exactly as before, and a
+- **THEN** the overview renders one card per product, and a
   card click jumps to that product's accordion (`report-product-<id>`)
 
 #### Scenario: clicking a lead card jumps to that lead's section

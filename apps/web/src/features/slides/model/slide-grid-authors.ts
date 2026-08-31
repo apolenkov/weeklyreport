@@ -54,7 +54,7 @@ export function buildAuthorRoster(
     ...foreignAuthors.map(([id, { name, role }], index) => ({
       id,
       name,
-      ...(role === undefined ? {} : { role }),
+      role,
       initials: initialsOf(name),
       colorIndex: (index % FOREIGN_COLOR_COUNT) + 1,
       isOwner: false,

@@ -635,8 +635,7 @@ describe("PeriodsTab — deadline UTC round-trip under a non-UTC timezone", () =
 
   // publishedFresh.deadline is 2026-05-09T18:00:00Z — a non-midnight UTC
   // instant. Editing the row without touching the deadline must submit the
-  // identical instant. Under UTC+3 the old local parse would yield
-  // 2026-05-09T15:00:00.000Z (-3h drift).
+  // identical instant regardless of the operator's local timezone.
   it("no-op edit submits the stored deadline unchanged (no -N-hour drift)", async () => {
     const user = userEvent.setup();
     const { captured } = renderTab();
@@ -666,9 +665,8 @@ describe("PeriodsTab — deadline UTC round-trip under a non-UTC timezone", () =
   });
 
   // An early-in-day deadline (01:00) is inside [periodStart, periodEnd] only
-  // when parsed as UTC. The old UTC+3 local parse would resolve it to
-  // 2026-05-03T22:00:00.000Z — before the 2026-05-04T00:00:00.000Z start —
-  // tripping the range-validation error and blocking submit. The fix keeps
+  // when parsed as UTC. The submitted value must remain inside the period
+  // range and must not drift with the operator's local timezone. The form keeps
   // the validation and the submit on the same UTC instant, so no error
   // appears and the deadline reaches the payload as the UTC-parsed instant.
   it("range validation and submit agree on the UTC instant for an in-range early deadline", async () => {

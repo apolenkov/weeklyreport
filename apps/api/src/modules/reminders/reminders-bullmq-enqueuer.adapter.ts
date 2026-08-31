@@ -1,5 +1,6 @@
 import type { JobEnqueuer } from "../../infrastructure/bullmq/job-enqueuer.js";
 import type {
+  ReminderEnqueueOptions,
   ReminderJobContext,
   RemindersEnqueuer,
 } from "./reminders.ports.js";
@@ -17,7 +18,20 @@ export class RemindersBullmqEnqueuer implements RemindersEnqueuer {
     executionId: string,
     data: ReminderQueueJobData,
     context: ReminderJobContext,
+    options?: ReminderEnqueueOptions,
   ): Promise<void> => {
+    if (options?.replaceTerminal && this.queue.getJob) {
+      const existing = await this.queue.getJob(executionId);
+      if (existing) {
+        const state = await existing.getState();
+        if (state !== "failed" && state !== "completed") {
+          throw new Error(
+            `Cannot replace non-terminal reminder job ${executionId} in ${state} state.`,
+          );
+        }
+        await existing.remove();
+      }
+    }
     await this.queue.add(
       "send",
       { ...data, ...context },

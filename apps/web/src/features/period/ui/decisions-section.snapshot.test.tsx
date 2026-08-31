@@ -25,14 +25,14 @@ describe("DecisionsSection meta-row", () => {
     expect(screen.getByText("Vasily Lead")).toBeInTheDocument();
   });
 
-  it("renders the 'No stage set' warning pill when stageNames is absent", () => {
+  it("does not render a warning when a product has no stages", () => {
     render(
       <DecisionsSection
         decisions={[{ ...BASE_DECISION, stageNames: [] }]}
         readOnly
       />,
     );
-    expect(screen.getByText("No stage set")).toBeInTheDocument();
+    expect(screen.queryByText("No stage set")).not.toBeInTheDocument();
     expect(screen.queryByText("All stages")).not.toBeInTheDocument();
   });
 
@@ -142,7 +142,8 @@ describe("DecisionsSection — own decision stays editable despite owner/name mi
     expect(
       screen.getByRole("button", { name: "Delete decision for CRM" }),
     ).toBeInTheDocument();
-    // The old "Owner: … — read-only for you" marker must be gone.
+    // Foreign ownership is represented by the current compact affordance, not
+    // a duplicated read-only marker.
     expect(screen.queryByText(/Owner:/)).not.toBeInTheDocument();
   });
 

@@ -1,4 +1,5 @@
 import type { UserSession } from "@customreport/shared";
+import { publishedReportSnapshotSchema } from "@customreport/shared";
 import {
   afterAll,
   afterEach,
@@ -13,15 +14,16 @@ import {
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { createNullLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
+import { NOOP_PDF_EXPORT_TELEMETRY } from "../../test-utils/pdf-export.js";
 import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
+  publishedSnapshotFixture,
   seedTestData,
   TEST_IDS,
 } from "../../test-utils/prisma-test-helper";
 import type { PdfExportEnqueuer } from "./pdf-export.ports";
-import { NOOP_PDF_EXPORT_TELEMETRY } from "./pdf-export.ports.js";
 import { PdfExportPrismaRepository } from "./pdf-export.prisma-repository";
 import { PdfExportService } from "./pdf-export.service";
 
@@ -55,7 +57,19 @@ describe("PdfExportPrismaRepository (integration)", () => {
       artifactUrl: null,
     };
 
-    const created = await repo.createExportJob(job, testData.head.id);
+    const created = await repo.createExportJob(
+      job,
+      testData.head.id,
+      publishedReportSnapshotSchema.parse(
+        publishedSnapshotFixture({
+          reportId: testData.report.id,
+          periodStart: testData.report.periodStart,
+          periodEnd: testData.report.periodEnd,
+          deadline: testData.report.deadline,
+          publishedAt: testData.report.publishedAt ?? new Date(),
+        }),
+      ),
+    );
 
     expect(created.jobId).toBe(TEST_IDS.pdfJob1);
     expect(created.reportId).toBe(testData.report.id);
@@ -81,6 +95,15 @@ describe("PdfExportPrismaRepository (integration)", () => {
         artifactUrl: null,
       },
       testData.head.id,
+      publishedReportSnapshotSchema.parse(
+        publishedSnapshotFixture({
+          reportId: testData.report.id,
+          periodStart: testData.report.periodStart,
+          periodEnd: testData.report.periodEnd,
+          deadline: testData.report.deadline,
+          publishedAt: testData.report.publishedAt ?? new Date(),
+        }),
+      ),
     );
 
     const completedChecksum = "sha256:deadbeef";
@@ -119,6 +142,50 @@ describe("cookie seam — service against real Prisma repo", () => {
   const prisma = createTestPrisma();
   let repo: PdfExportPrismaRepository;
 
+  async function publishReportFixture(
+    testData: Awaited<ReturnType<typeof seedTestData>>,
+  ): Promise<void> {
+    const publishedAt = new Date("2026-04-15T10:00:00.000Z");
+    const sectionOwner = {
+      reportSectionId: testData.section.id,
+      authorId: testData.lead.id,
+      authorName: testData.lead.name,
+      groupId: TEST_IDS.group,
+      groupName: "Test Group",
+    };
+
+    await prisma.$transaction(async (tx) => {
+      await tx.report.update({
+        where: { id: testData.report.id },
+        data: {
+          status: "published",
+          periodStatus: "published",
+          periodState: "published",
+          publishedAt,
+          publishedById: testData.head.id,
+          publishedSnapshot: publishedSnapshotFixture({
+            reportId: testData.report.id,
+            periodStart: testData.report.periodStart,
+            periodEnd: testData.report.periodEnd,
+            publishedAt,
+            publishedById: testData.head.id,
+            sectionOwners: [sectionOwner],
+          }),
+        },
+      });
+      await tx.publishedSectionScope.createMany({
+        data: [
+          {
+            reportId: testData.report.id,
+            reportSectionId: sectionOwner.reportSectionId,
+            authorId: sectionOwner.authorId,
+            groupId: sectionOwner.groupId,
+          },
+        ],
+      });
+    });
+  }
+
   beforeAll(() => {
     repo = new PdfExportPrismaRepository(prisma as unknown as PrismaService);
   });
@@ -144,16 +211,7 @@ describe("cookie seam — service against real Prisma repo", () => {
 
   it("enqueues non-credential identifiers bound to the requester for a published report", async () => {
     const testData = await seedTestData(prisma);
-    // Promote the report to published so the service accepts the export.
-    await prisma.report.update({
-      where: { id: testData.report.id },
-      data: {
-        status: "published",
-        periodStatus: "published",
-        publishedAt: new Date("2026-04-15T10:00:00.000Z"),
-        publishedById: testData.head.id,
-      },
-    });
+    await publishReportFixture(testData);
 
     interface EnqueuedJob {
       reportId: string;
@@ -173,6 +231,10 @@ describe("cookie seam — service against real Prisma repo", () => {
       createNullLogger(),
       fakeQueue,
       NOOP_PDF_EXPORT_TELEMETRY,
+      {
+        PDF_BASE_URL: "http://localhost:3000",
+        PDF_EXPORT_JWT_SECRET: "test-pdf-export-secret-at-least-32-chars",
+      },
     );
     const session: UserSession = {
       userId: testData.head.id,
@@ -198,15 +260,7 @@ describe("cookie seam — service against real Prisma repo", () => {
 
   it("rejects a published report outside the caller's group before enqueue", async () => {
     const testData = await seedTestData(prisma);
-    await prisma.report.update({
-      where: { id: testData.report.id },
-      data: {
-        status: "published",
-        periodStatus: "published",
-        publishedAt: new Date("2026-04-15T10:00:00.000Z"),
-        publishedById: testData.head.id,
-      },
-    });
+    await publishReportFixture(testData);
     const otherGroup = await prisma.reportingGroup.create({
       data: {
         name: "Other Group",
@@ -239,6 +293,10 @@ describe("cookie seam — service against real Prisma repo", () => {
       createNullLogger(),
       queue,
       NOOP_PDF_EXPORT_TELEMETRY,
+      {
+        PDF_BASE_URL: "http://localhost:3000",
+        PDF_EXPORT_JWT_SECRET: "test-pdf-export-secret-at-least-32-chars",
+      },
     );
 
     await expect(

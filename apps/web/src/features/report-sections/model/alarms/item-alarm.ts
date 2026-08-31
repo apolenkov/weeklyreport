@@ -40,7 +40,7 @@ export function coveringRisksForItem<T extends AlarmRisk>(
   return risks.filter((risk) => {
     if (risk.productId !== item.productId) return false;
     if (risk.text.trim().length === 0) return false;
-    if (stages.length === 0 || risk.stageNames.length === 0) return false;
+    if (stages.length === 0) return false;
     return stages.some((stage) => riskCoversStage(risk, stage));
   });
 }

@@ -1,36 +1,40 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
+import {
+  mapPrismaToReportSection,
+  reportSectionFullInclude,
+} from "@customreport/report-persistence";
+import type {
+  PublishedLineage,
+  ReportSectionReadModel,
+} from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
-import { isUniqueViolation } from "../../../lib/prisma-unique-violation.js";
 import type {
   CrossAuthorSectionRow,
   LeadFormRepository,
 } from "../application/lead-form.service";
-import { applyRevokeTransition } from "../application/revoke-transition";
-import {
-  LeadFormConstraintError,
-  type ReopenEligibilityFacts,
-} from "../domain/lead-form-shared";
-import {
-  reopenBlockedMessage,
-  ReopenRequestError,
-} from "../domain/lead-form-shared";
+import { type ReopenEligibilityFacts } from "../domain/lead-form-shared";
 import { fillFromSectionTx } from "./fill-from.transaction.js";
+import { getSharedNonArchivedProductIds } from "./lead-form-cross-author.query.js";
 import {
-  getCrossAuthorContent,
-  getCrossAuthors,
-  getSharedNonArchivedProductIds,
-} from "./lead-form-cross-author.query.js";
+  getCrossAuthorContentRead,
+  getCrossAuthorsRead,
+  getSharedNonArchivedProductIdsForReportRead,
+} from "./lead-form-cross-author.reads.js";
 import {
-  getSectionForPeriod,
-  getSectionForPeriodAsGroupPeer,
-  getSectionReopenContext,
-  type SectionForPeriodResult,
-} from "./lead-form-reopen-eligibility.query.js";
-import { queryPublishedLineage } from "./published-lineage.query.js";
-import { reportSectionFullInclude } from "./report-sections.include";
-import { mapPrismaToReportSection } from "./report-sections.mappers";
+  createReopenRequestTx,
+  revokeAllSubmittedTx,
+  revokeSectionSubmissionTx,
+} from "./lead-form-lifecycle-writes.js";
+import {
+  getSectionForPeriodAsGroupPeerRead,
+  getSectionForPeriodRead,
+} from "./lead-form-period.reads.js";
+import { getSectionReopenContext } from "./lead-form-reopen-eligibility.query.js";
+import {
+  publishedLineageCandidates,
+  queryPublishedLineage,
+} from "./published-lineage.query.js";
 
 @Injectable()
 export class LeadFormPrismaRepository implements LeadFormRepository {
@@ -87,20 +91,13 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
   // Published lineage for the byPeriod read — the same resolve-not-delete
   // reference set the save guard uses, surfaced so the form can mark locked
   // records. One shared query definition, no second copy.
-  getPublishedLineage(section: ReportSectionReadModel): Promise<{
-    itemStableIds: readonly string[];
-    decisionStableIds: readonly string[];
-  }> {
-    return queryPublishedLineage(this.prisma, {
-      reportId: section.reportId,
-      reportSectionId: section.reportSectionId,
-      itemStableIds: section.items.flatMap((item) =>
-        item.stableId ? [item.stableId] : [],
-      ),
-      decisionStableIds: section.decisions.flatMap((decision) =>
-        decision.stableId ? [decision.stableId] : [],
-      ),
-    });
+  getPublishedLineage(
+    section: ReportSectionReadModel,
+  ): Promise<PublishedLineage> {
+    return queryPublishedLineage(
+      this.prisma,
+      publishedLineageCandidates(section),
+    );
   }
 
   async getUserReportingGroupId(userId: string): Promise<string | null> {
@@ -111,19 +108,19 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     return row?.reportingGroupId ?? null;
   }
 
-  getSectionForPeriod(
+  async getSectionForPeriod(
     reportId: string,
     userId: string,
-  ): Promise<SectionForPeriodResult | null> {
-    return getSectionForPeriod(this.prisma, reportId, userId);
+  ): ReturnType<LeadFormRepository["getSectionForPeriod"]> {
+    return getSectionForPeriodRead(this.prisma, reportId, userId);
   }
 
-  getSectionForPeriodAsGroupPeer(
+  async getSectionForPeriodAsGroupPeer(
     reportId: string,
     authorId: string,
     peerUserId: string,
-  ): Promise<SectionForPeriodResult | null> {
-    return getSectionForPeriodAsGroupPeer(
+  ): ReturnType<LeadFormRepository["getSectionForPeriodAsGroupPeer"]> {
+    return getSectionForPeriodAsGroupPeerRead(
       this.prisma,
       reportId,
       authorId,
@@ -141,19 +138,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     sectionId: string,
     revokedBy: string,
   ): Promise<void> {
-    // The caller's scoped read proved the id is in the caller's group, so the
-    // write is by id only; the shared transition's `status: "submitted"` guard
-    // keeps it race-safe. The changes_requested verdict reuses this transition.
-    const count = await applyRevokeTransition(
-      this.prisma,
-      sectionId,
-      revokedBy,
-    );
-    if (count === 0) {
-      throw new LeadFormConstraintError(
-        "Cannot revoke a submission from a non-editable period.",
-      );
-    }
+    await revokeSectionSubmissionTx(this.prisma, sectionId, revokedBy);
   }
 
   // Revoke every submitted section in a report.
@@ -162,27 +147,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     revokedBy: string,
     scope: Record<string, unknown>,
   ): Promise<number> {
-    // One scoped, race-safe write: the group-scope filter spreads into the
-    // `where` (head flips only their own group; admin = `{}` → all). The
-    // periodStatus filter is the same published-period gate the revoke enforces.
-    const result = await this.prisma.reportSection.updateMany({
-      where: {
-        reportId,
-        status: "submitted",
-        report: {
-          archived: false,
-          periodStatus: { in: ["open", "reopened"] },
-        },
-        ...scope,
-      },
-      data: {
-        status: "draft",
-        revokedAt: new Date(),
-        revokedBy,
-        submittedAt: null,
-      },
-    });
-    return result.count;
+    return revokeAllSubmittedTx(this.prisma, reportId, revokedBy, scope);
   }
 
   fillFromSection(
@@ -203,28 +168,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     userId: string,
     reason?: string,
   ): Promise<void> {
-    // Persist the request as a ReopenRequest row for the Admin Panel. Status
-    // starts `pending`; the head's approve/reject updates the row and may flip
-    // the section back to draft when approved.
-    try {
-      await this.prisma.reopenRequest.create({
-        data: {
-          reportSectionId: sectionId,
-          requestedById: userId,
-          reason: reason && reason.trim().length > 0 ? reason.trim() : null,
-        },
-      });
-    } catch (error) {
-      // A true race passes the app-level check on both calls, then the
-      // one-pending partial unique index rejects the second with P2002 —
-      // translated to the same friendly domain error, never a 500.
-      if (isUniqueViolation(error)) {
-        throw new ReopenRequestError(
-          reopenBlockedMessage("pending_request_exists"),
-        );
-      }
-      throw error;
-    }
+    await createReopenRequestTx(this.prisma, sectionId, userId, reason);
   }
 
   getSharedNonArchivedProductIds(
@@ -234,17 +178,31 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     return getSharedNonArchivedProductIds(this.prisma, viewerId, authorId);
   }
 
+  async getSharedNonArchivedProductIdsForReport(
+    reportId: string,
+    viewerId: string,
+    authorId: string,
+  ): Promise<string[]> {
+    return getSharedNonArchivedProductIdsForReportRead(
+      this.prisma,
+      reportId,
+      viewerId,
+      authorId,
+    );
+  }
+
   getCrossAuthors(
     reportId: string,
     userId: string,
-  ): ReturnType<typeof getCrossAuthors> {
-    return getCrossAuthors(this.prisma, reportId, userId);
+    role?: import("@customreport/shared").Role,
+  ): ReturnType<LeadFormRepository["getCrossAuthors"]> {
+    return getCrossAuthorsRead(this.prisma, reportId, userId, role);
   }
 
   getCrossAuthorContent(
     reportId: string,
     userId: string,
   ): Promise<{ coOwnsShared: boolean; rows: CrossAuthorSectionRow[] }> {
-    return getCrossAuthorContent(this.prisma, reportId, userId);
+    return getCrossAuthorContentRead(this.prisma, reportId, userId);
   }
 }

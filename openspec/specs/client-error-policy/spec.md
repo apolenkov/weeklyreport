@@ -47,10 +47,9 @@ This explicitly covers **client-input validation failures** (a tRPC
 map such errors to a clean human message (e.g. an invalid-link / not-found
 message), never the raw issues array or its regex `pattern`.
 
-The driver confirmed this is currently violated: a malformed `reportId` makes
-the formatter echo the raw Zod JSON to the user via `leadForm.byPeriod`
-(lead) and `weeklyReport.get` (head). Fixing it is a **risky** change because
-the formatter is the shared seam every role's queries flow through.
+The formatter MUST map malformed identifiers to the safe client-facing error
+message for both `leadForm.byPeriod` and `weeklyReport.get`; raw Zod issue
+details MUST remain internal.
 
 #### Scenario: an internal server error with a requestId
 
@@ -83,9 +82,8 @@ deterministic client-error HTTP status (4xx). The TanStack Query client
 `false` for any 4xx so a deterministic `BAD_REQUEST` (e.g. a malformed
 `reportId`) fails once, not three additional times.
 
-The driver observed 4 attempts (207/400/400/400) on the `byPeriod` batch
-because no `retry` override exists today, so the TanStack default of 3 retries
-applies even to a deterministic 400.
+Deterministic client errors from the `byPeriod` batch MUST not be retried;
+transient failures may retain the configured retry policy.
 
 #### Scenario: a query fails with a deterministic 4xx
 

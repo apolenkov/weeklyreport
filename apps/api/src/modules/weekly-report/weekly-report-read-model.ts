@@ -1,7 +1,8 @@
 import {
-  type AssembledReport,
+  type PublishedReportSnapshot,
   type ReportSectionReadModel,
   type UserSession,
+  type WeeklyReportReadModel,
   weeklyReportReadModelSchema,
 } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
@@ -10,8 +11,8 @@ import { guardGroupScope } from "../../lib/group-scope.js";
 import {
   buildEscalationsFromReadSections,
   buildPortfolioProductsFromSnapshotSections,
-  filterSnapshotSections,
   type reportSectionFullInclude,
+  requireScopedPublishedSnapshot,
 } from "../report-sections/index.js";
 import { computeCrossGroupSignalFromSnapshotProjects } from "./cross-group-signal.js";
 import type { WeeklyReportRepositoryResult } from "./weekly-report.service.js";
@@ -26,6 +27,8 @@ import {
 export type WeeklyReportRow = Prisma.ReportGetPayload<{
   include: { sections: { include: typeof reportSectionFullInclude } };
 }>;
+
+export type WeeklyReportMetadata = Omit<WeeklyReportRow, "sections">;
 
 // The live project row shape queried on the non-published render path
 // (skipped entirely on the snapshot path — see `fetchReportDependencies`).
@@ -77,23 +80,17 @@ export function deriveScopeFilters(
 }
 
 export function buildSnapshotResult(
-  report: WeeklyReportRow,
-  snapshot: AssembledReport,
+  report: WeeklyReportMetadata,
+  snapshot: PublishedReportSnapshot,
   session: UserSession,
-  sectionScope: Record<string, unknown> | undefined,
-  totalLeads: number,
-  activePolicyCount: number,
 ): WeeklyReportRepositoryResult {
-  const scopedSnapshot = filterSnapshotSections(
-    snapshot,
-    sectionScope
-      ? new Set(report.sections.map((section) => section.id))
-      : undefined,
-  );
-  const leadSections = scopedSnapshot.sections;
-  const snapshotSubmissionCount = leadSections.filter(
-    (section) => section.status === "submitted",
-  ).length;
+  const scopedSnapshot = requireScopedPublishedSnapshot(snapshot, session);
+  const readModel = buildPublishedReadModelFromSnapshot(scopedSnapshot, {
+    periodStatus: report.periodStatus,
+    archived: report.archived,
+    weekLabel: report.weekLabel,
+  });
+  const leadSections = readModel.leadSections;
 
   // The signal comes from owner groups frozen INTO the snapshot, never a live
   // re-query: a product since archived or since detached from its group would
@@ -104,24 +101,37 @@ export function buildSnapshotResult(
   );
 
   return {
-    readModel: weeklyReportReadModelSchema.parse({
-      reportId: report.id,
-      periodStart: scopedSnapshot.periodStart,
-      periodEnd: scopedSnapshot.periodEnd,
-      deadline: scopedSnapshot.deadline,
-      periodStatus: report.periodStatus,
-      archived: report.archived,
-      weekLabel: report.weekLabel,
-      submissionCount: snapshotSubmissionCount,
-      totalLeads,
-      hasActiveReminderRule: activePolicyCount > 0,
-      portfolioOverview:
-        buildPortfolioProductsFromSnapshotSections(leadSections),
-      leadSections,
-      escalations: buildEscalationsFromReadSections(leadSections),
-    }),
+    readModel,
     crossGroup,
   };
+}
+
+/** Builds the weekly read model solely from an already-scoped frozen snapshot. */
+export function buildPublishedReadModelFromSnapshot(
+  snapshot: PublishedReportSnapshot,
+  metadata: Pick<
+    WeeklyReportMetadata,
+    "periodStatus" | "archived" | "weekLabel"
+  >,
+): WeeklyReportReadModel {
+  const leadSections = snapshot.sections;
+  return weeklyReportReadModelSchema.parse({
+    reportId: snapshot.reportId,
+    periodStart: snapshot.periodStart,
+    periodEnd: snapshot.periodEnd,
+    deadline: snapshot.deadline,
+    periodStatus: metadata.periodStatus,
+    archived: metadata.archived,
+    weekLabel: metadata.weekLabel,
+    submissionCount: leadSections.filter(
+      (section) => section.status === "submitted",
+    ).length,
+    totalLeads: new Set(leadSections.map((section) => section.authorId)).size,
+    activeDeadlineReminderRuleId: null,
+    portfolioOverview: buildPortfolioProductsFromSnapshotSections(leadSections),
+    leadSections,
+    escalations: buildEscalationsFromReadSections(leadSections),
+  });
 }
 
 export function buildLiveResult(
@@ -131,7 +141,7 @@ export function buildLiveResult(
   crossGroup: WeeklyReportRepositoryResult["crossGroup"],
   submissionCount: number,
   totalLeads: number,
-  activePolicyCount: number,
+  activeDeadlineRuleId: string | null,
 ): WeeklyReportRepositoryResult {
   // Statuses come from the floored `leadSections` so a card cannot disagree
   // with the escalations in this same payload; membership still comes from the
@@ -153,7 +163,7 @@ export function buildLiveResult(
       weekLabel: report.weekLabel,
       submissionCount,
       totalLeads,
-      hasActiveReminderRule: activePolicyCount > 0,
+      activeDeadlineReminderRuleId: activeDeadlineRuleId,
       portfolioOverview,
       leadSections,
       escalations,

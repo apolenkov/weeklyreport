@@ -102,7 +102,7 @@ decision).
 
 - **GIVEN** a non-archived period and a manual archive request
 - **WHEN** the guarded `updateMany` matches the row
-- **THEN** both the legacy `archived` boolean and `periodState="archived"` are
+- **THEN** both the companion `archived` boolean and `periodState="archived"` are
   written from `buildTransition("archive", …)` in that single statement.
 
 ### Requirement: Reopen Atomicity Is Covered by an Integration Test

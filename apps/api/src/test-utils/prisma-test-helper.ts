@@ -1,5 +1,5 @@
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@prisma/client";
+import { type Prisma, PrismaClient } from "@prisma/client";
 import pg from "pg";
 
 import {
@@ -132,6 +132,66 @@ export const TEST_IDS = {
   reminderExec2: "a0000000-0000-4000-a000-000000000611",
 } as const;
 
+interface PublishedSnapshotFixtureInput {
+  readonly reportId: string;
+  readonly periodStart: Date | string;
+  readonly periodEnd: Date | string;
+  readonly deadline?: Date | string | null;
+  readonly publishedAt: Date | string;
+  readonly publishedById?: string | null;
+  readonly publishedByName?: string | null;
+  readonly sectionOwners?: readonly {
+    readonly reportSectionId: string;
+    readonly authorId: string;
+    readonly authorName: string;
+    readonly groupId: string;
+    readonly groupName: string;
+  }[];
+}
+
+const toIsoString = (value: Date | string): string =>
+  value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+
+/** Minimal immutable snapshot for integration fixtures that do not test content. */
+export function publishedSnapshotFixture(
+  input: PublishedSnapshotFixtureInput,
+): Prisma.InputJsonValue {
+  return {
+    reportId: input.reportId,
+    periodStart: toIsoString(input.periodStart),
+    periodEnd: toIsoString(input.periodEnd),
+    deadline: input.deadline == null ? null : toIsoString(input.deadline),
+    status: "published",
+    publishedAt: toIsoString(input.publishedAt),
+    publishedById: input.publishedById ?? null,
+    publishedByName: input.publishedByName ?? null,
+    portfolioOverview: {
+      status: "green",
+      totals: { green: 0, yellow: 0, red: 0 },
+    },
+    sections: (input.sectionOwners ?? []).map((owner) => ({
+      reportSectionId: owner.reportSectionId,
+      reportId: input.reportId,
+      authorId: owner.authorId,
+      authorName: owner.authorName,
+      authorRole: "lead",
+      version: 1,
+      status: "submitted",
+      submittedAt: null,
+      late: false,
+      projects: [],
+      referencedProjects: [],
+      items: [],
+      risks: [],
+      decisions: [],
+      activities: [],
+      reviews: [],
+      groupId: owner.groupId,
+      groupName: owner.groupName,
+    })),
+  };
+}
+
 // Sequential awaits, not Promise.all: each create depends on the previous
 // row's FK.
 async function seedUsers(prisma: PrismaClient, reportingGroupId: string) {
@@ -180,6 +240,15 @@ export async function seedTestData(prisma: PrismaClient) {
       id: TEST_IDS.project,
       name: "Test Project 1",
       leadId: lead.id,
+    },
+  });
+
+  // Product ownership is an explicit invariant: every fixture project must
+  // have exactly one GroupProduct edge, independently of the lead's group.
+  await prisma.groupProduct.create({
+    data: {
+      groupId: group.id,
+      productId: project.id,
     },
   });
 

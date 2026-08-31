@@ -33,6 +33,7 @@ export interface ItemRow {
   readonly text: string;
   readonly tag: string;
   readonly workflowStatus: ItemWorkflowStatus;
+  readonly pausedReason?: string | null;
   readonly stageNames: string[];
 }
 

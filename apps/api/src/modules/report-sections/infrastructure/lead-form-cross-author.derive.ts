@@ -1,12 +1,11 @@
 import type { TrafficLightStatus } from "@customreport/shared";
 import {
+  initialsFromName,
   riskSeveritySchema,
   shortNameFromName,
-  stageNamesMatch,
 } from "@customreport/shared";
 
 import type { CrossAuthorStatusRow } from "../domain/lead-form-shared";
-import { initialsFromName } from "../domain/lead-form-shared";
 import { indexNonNullStageStatuses } from "./non-null-stage-status-index.derive.js";
 
 // API traffic-light enum; null = no data / untouched stage.
@@ -36,11 +35,7 @@ export function deriveForeignStageStatus(
   const covering = risks
     .map((r) => ({ ...r, severity: riskSeveritySchema.parse(r.severity) }))
     .filter(
-      (r) =>
-        r.projectId === projectId &&
-        // Empty stageNames = covers-all; without this covers-all risks colour nothing.
-        (r.stageNames.length === 0 ||
-          r.stageNames.some((name) => stageNamesMatch(name, stageName))),
+      (r) => r.projectId === projectId && r.stageNames.includes(stageName),
     );
   if (covering.some((r) => r.severity === "blocked")) return "red";
   if (covering.length > 0) return "yellow";

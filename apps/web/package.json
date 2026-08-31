@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node scripts/run-next.ts dev --webpack --hostname 127.0.0.1",
     "build": "node scripts/run-next.ts build --webpack",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc6 --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },

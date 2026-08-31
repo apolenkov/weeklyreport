@@ -132,7 +132,7 @@ export function makeWeeklyReportFixture(
     weekLabel: "Week 16",
     submissionCount: 0,
     totalLeads: 0,
-    hasActiveReminderRule: true,
+    activeDeadlineReminderRuleId: "a0000000-0000-4000-a000-000000000600",
     portfolioOverview: [],
     leadSections: leadSections.map((section) =>
       makeReportSectionFixture(section),

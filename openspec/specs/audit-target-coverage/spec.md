@@ -8,11 +8,11 @@ Requires mutation audit rows to capture a target for user-lifecycle and group-pr
 
 ### Requirement: Mutation Audit Rows Capture A Target For User-Lifecycle And Group-Product Edge Mutations
 
-`mutationAuditMiddleware`'s target extraction (`TARGET_ID_KEYS`) MUST
-include `userId` and `groupId` (in addition to the existing
-`sectionId`/`reportId`/`periodId`/`projectId`/`leadId`/`id` keys), so that a
+`mutationAuditMiddleware`'s target extraction (`TARGET_ID_KEYS`) MUST include
+`userId` and `groupId`, so that a
 mutation whose input identifies its subject only by `userId` or `groupId`
-still produces an audit row with a resolved `target`.
+still produces an audit row with a resolved `target`. Resolution follows the
+current ordered key list; `productId` precedes `groupId` for edge mutations.
 
 #### Scenario: User-lifecycle mutations carry a target
 
@@ -27,10 +27,9 @@ still produces an audit row with a resolved `target`.
 - **THEN** the resulting audit row's `target` is non-undefined, resolved to
   one of the mutation's identifying ids
 
-#### Scenario: Existing target resolution is unaffected
+#### Scenario: Current target precedence remains deterministic
 
 - **WHEN** a mutation whose input carries `sectionId`, `reportId`,
   `periodId`, `projectId`, `leadId`, or bare `id` (and none of the newly
   added keys) is called
-- **THEN** its audit row's `target` resolves exactly as it did before this
-  change
+- **THEN** its audit row's `target` follows the current ordered key list

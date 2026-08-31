@@ -1,13 +1,36 @@
 import { MS_PER_WEEK, type UserSession } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
+import type { Prisma as PrismaTypes } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { groupScopeFilter, guardGroupScope } from "../../lib/group-scope.js";
+import { currentEditableReportWhere } from "../../lib/report-lifecycle.js";
+import { publishedReportScopeWhere } from "../report-sections/index.js";
 import type { TelemetryRepository } from "./telemetry.ports.js";
 import {
   queryActiveLeadsLastPublishedPeriod,
-  querySettledPeriodIds,
+  querySettledPeriodSnapshots,
+  settledPublicationWhere,
 } from "./telemetry.queries.js";
+
+function reportVisibilityWhere(
+  session: UserSession,
+): PrismaTypes.ReportWhereInput {
+  const scoped = session.role !== "admin";
+  const liveScope = scoped ? groupScopeFilter(session, "reportSection") : {};
+  return {
+    OR: [
+      {
+        ...settledPublicationWhere(),
+        ...(scoped ? publishedReportScopeWhere(session) : {}),
+      },
+      {
+        ...currentEditableReportWhere(),
+        ...(scoped ? { sections: { some: liveScope } } : {}),
+      },
+    ],
+  };
+}
 
 @Injectable()
 export class TelemetryPrismaRepository implements TelemetryRepository {
@@ -17,21 +40,18 @@ export class TelemetryPrismaRepository implements TelemetryRepository {
     session: UserSession,
   ): Promise<number> => {
     guardGroupScope(session);
-    const scope = groupScopeFilter(session, "reportSection");
-    const scoped = Object.keys(scope).length > 0;
-    // Latest period by start (any status) so the headline does not flip to
-    // zero at the draft→published deadline boundary.
+    const visibility = reportVisibilityWhere(session);
+    // Current/reopened periods use live ownership; settled publications use
+    // their indexed frozen projection. Resolve one latest visible start, then
+    // let Postgres count that exact period instead of loading report history.
     const latest = await this.prisma.report.findFirst({
-      where: { ...(scoped ? { sections: { some: scope } } : {}) },
+      where: visibility,
       orderBy: { periodStart: "desc" },
       select: { periodStart: true },
     });
     if (!latest) return 0;
     return this.prisma.report.count({
-      where: {
-        periodStart: latest.periodStart,
-        ...(scoped ? { sections: { some: scope } } : {}),
-      },
+      where: { periodStart: latest.periodStart, ...visibility },
     });
   };
 
@@ -39,30 +59,22 @@ export class TelemetryPrismaRepository implements TelemetryRepository {
     session: UserSession,
   ): Promise<number> => {
     guardGroupScope(session);
-    const scope = groupScopeFilter(session, "reportSection");
-    return queryActiveLeadsLastPublishedPeriod(this.prisma, scope);
+    return queryActiveLeadsLastPublishedPeriod(this.prisma, session);
   };
 
   readonly lateSectionsLastPublishedPeriod = async (
     session: UserSession,
   ): Promise<number> => {
     guardGroupScope(session);
-    const scope = groupScopeFilter(session, "reportSection");
-    const scoped = Object.keys(scope).length > 0;
-    const [reportId] = await querySettledPeriodIds(
+    const [snapshot] = await querySettledPeriodSnapshots(
       this.prisma,
       1,
-      scoped ? { sections: { some: scope } } : {},
+      session,
     );
-    if (!reportId) return 0;
-    return this.prisma.reportSection.count({
-      where: {
-        reportId,
-        status: "submitted",
-        late: true,
-        ...scope,
-      },
-    });
+    if (!snapshot) return 0;
+    return snapshot.sections.filter(
+      (section) => section.status === "submitted" && section.late,
+    ).length;
   };
 
   readonly pendingReopenCount = async (
@@ -81,15 +93,20 @@ export class TelemetryPrismaRepository implements TelemetryRepository {
 
   readonly pdfExportsLast7d = async (session: UserSession): Promise<number> => {
     guardGroupScope(session);
-    const scope = groupScopeFilter(session, "reportSection");
-    const scoped = Object.keys(scope).length > 0;
     const sevenDaysAgo = new Date(Date.now() - MS_PER_WEEK);
-    // DB row has createdAt only; domain requestedAt is assembled for callers.
+    const where = { createdAt: { gte: sevenDaysAgo } };
+    if (session.role === "admin") {
+      return this.prisma.pdfExportJob.count({ where });
+    }
+    const groupIds =
+      session.role === "viewer"
+        ? (session.viewerGroupAccess ?? [])
+        : session.reportingGroupId
+          ? [session.reportingGroupId]
+          : [];
+    if (groupIds.length === 0) return 0;
     return this.prisma.pdfExportJob.count({
-      where: {
-        createdAt: { gte: sevenDaysAgo },
-        ...(scoped ? { report: { is: { sections: { some: scope } } } } : {}),
-      },
+      where: { ...where, publicationGroupIds: { hasSome: [...groupIds] } },
     });
   };
 
@@ -98,35 +115,19 @@ export class TelemetryPrismaRepository implements TelemetryRepository {
     session: UserSession,
   ): Promise<readonly number[]> => {
     guardGroupScope(session);
-    const scope = groupScopeFilter(session, "reportSection");
-    const scoped = Object.keys(scope).length > 0;
-    const reportIds = await querySettledPeriodIds(
+    const snapshots = await querySettledPeriodSnapshots(
       this.prisma,
       n,
-      scoped ? { sections: { some: scope } } : {},
+      session,
     );
-    if (reportIds.length === 0) return [];
 
-    // Chain each period after the previous one so a degraded database receives
-    // only two bounded count queries at a time.
-    return [...reportIds]
-      .reverse()
-      .reduce<Promise<number[]>>(async (ratiosPromise, reportId) => {
-        const ratios = await ratiosPromise;
-        const [total, onTime] = await Promise.all([
-          this.prisma.reportSection.count({
-            where: { reportId, status: "submitted", ...scope },
-          }),
-          this.prisma.reportSection.count({
-            where: {
-              reportId,
-              status: "submitted",
-              late: false,
-              ...scope,
-            },
-          }),
-        ]);
-        return total > 0 ? [...ratios, onTime / total] : ratios;
-      }, Promise.resolve([]));
+    return [...snapshots].reverse().reduce<number[]>((ratios, snapshot) => {
+      const submitted = snapshot.sections.filter(
+        (section) => section.status === "submitted",
+      );
+      const total = submitted.length;
+      const onTime = submitted.filter((section) => !section.late).length;
+      return total > 0 ? [...ratios, onTime / total] : ratios;
+    }, []);
   };
 }

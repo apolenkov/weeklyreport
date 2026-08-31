@@ -20,6 +20,7 @@ import { ENV_CONFIG } from "../config/config.module.js";
 import type { EnvConfig } from "../config/env.schema";
 import { EMAIL_PORT, type EmailPort } from "../email/email.service";
 import { RawBullMqProcessor } from "./raw-bullmq-processor.js";
+import { WorkerLivenessRegistry } from "./worker-liveness.registry.js";
 import { describeJobFailureTrace } from "./worker-observability.js";
 export type EmailReminderJobData = ReminderQueueJobEnvelope;
 
@@ -43,8 +44,10 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
     private readonly snapshotAdminService: SnapshotAdminService,
     @Inject(APP_LOGGER) logger: AppLogger,
     @Inject(ClsService) cls: ClsService | null,
+    @Inject(WorkerLivenessRegistry)
+    workerLiveness?: WorkerLivenessRegistry,
   ) {
-    super(env, logger, cls);
+    super(env, logger, cls, workerLiveness);
   }
 
   // Cap SMTP throughput at 5 emails per rolling 60s window so a burst of
@@ -86,15 +89,15 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
     // BullMQ is a runtime boundary: validate the complete current envelope
     // before claiming the DB row. A stale kind-less job may fail into the DLQ,
     // but can never consume the claim needed by its current-contract revival.
-    const data = parseReminderQueueJobData(job.data);
-    const { executionId } = data;
+    const queuedData = parseReminderQueueJobData(job.data);
+    const { executionId } = queuedData;
 
     // Compare-and-set `queued → sending` before any SMTP work: a retry or a
     // duplicate worker that finds the row already claimed loses the transition
     // and acks without sending — the guard against double-delivery.
-    const claimed =
+    const durableData =
       await this.remindersService.claimExecutionForSending(executionId);
-    if (!claimed) {
+    if (!durableData) {
       this.logger.info("email-reminder short-circuit: execution not queued", {
         executionId,
       });
@@ -102,7 +105,10 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
     }
 
     try {
-      await this.dispatchEmail(data);
+      // Redis only identifies the execution. Recipient and renderer fields are
+      // read atomically from the claimed DB row, so retrying an old failed job
+      // after manual revival cannot send its stale payload.
+      await this.dispatchEmail(durableData);
     } catch (error: unknown) {
       // The send never happened, so the row must not stay `sending`. On the
       // last attempt `failed` is terminal; earlier, release the claim back to
@@ -119,9 +125,9 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
       throw error;
     }
 
-    // Outside the try/catch on purpose: if this throws the send already
-    // succeeded, and leaving the row `sending` reads as "delivered,
-    // persistence unconfirmed" — better than `failed`, which invites a resend.
+    // Outside the try/catch on purpose: if this throws after SMTP, leave the
+    // row `sending`. The reaper later records an explicit unknown-delivery
+    // terminal failure; automatic ticks never revive it.
     await this.remindersService.markReminderSent(executionId);
   };
 

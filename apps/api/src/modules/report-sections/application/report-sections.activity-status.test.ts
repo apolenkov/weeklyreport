@@ -88,8 +88,8 @@ function createRepository(
       store.set(saved.reportSectionId, saved);
       return Promise.resolve(structuredClone(saved));
     },
-    getMyHistoryRows() {
-      return Promise.resolve([]);
+    getMyHistoryPage() {
+      return Promise.resolve({ items: [], nextCursor: null });
     },
   };
 }

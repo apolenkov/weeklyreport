@@ -24,6 +24,7 @@ import {
   logSeedSummary,
   sumSectionCounts,
 } from "./seeds/advanced/seed-advanced.summary.js";
+import { finalizePublishedSnapshots } from "./seeds/support/published-snapshot.js";
 import { SEED_REPORTS } from "./seeds/support/seed-constants.js";
 import { assertSeedCoverage } from "./seeds/support/seed-coverage-check.js";
 import { seedOrganizationBaseline } from "./seeds/support/seed-org.js";
@@ -51,6 +52,7 @@ async function main(): Promise<void> {
 
     const published = await seedPublishedSections(prisma);
     const history = await seedHistoryPeriods(prisma);
+    await finalizePublishedSnapshots(prisma);
 
     const adminExamples = await seedAdminExamples(prisma);
     const reminders = await seedReminders(prisma);

@@ -71,8 +71,8 @@ describe("resolveDevLoginIdentity", () => {
   });
 
   it("uses the DB name/samlId, never a hardcoded role default", async () => {
-    // Even when the seed name differs from any old hardcoded default, the
-    // session reflects the database row verbatim.
+    // The session reflects the database row verbatim rather than a code-level
+    // role or name default.
     const prisma = fakePrisma({ name: "Renamed Head", samlId: "head-1" });
 
     const identity = await resolveDevLoginIdentity(

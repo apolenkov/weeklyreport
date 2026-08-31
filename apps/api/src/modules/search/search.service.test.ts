@@ -46,14 +46,7 @@ function makeHit(overrides: Partial<SearchHit> = {}): SearchHit {
 }
 
 function createRepository(
-  handler: (params: {
-    readonly q: string;
-    readonly scope: "mine" | "all" | "published";
-    readonly userId: string;
-    readonly groupIds: readonly string[] | null;
-    readonly excludeTypes: readonly SearchHit["type"][];
-    readonly limit: number;
-  }) => SearchHit[],
+  handler: (params: Parameters<SearchRepository["search"]>[0]) => SearchHit[],
 ): SearchRepository {
   return {
     search(params) {
@@ -348,33 +341,46 @@ describe("SearchService", () => {
     );
   });
 
-  it("viewer with granted groups passes those groupIds", async () => {
-    const repo = createRepository((params) => {
-      expect(params.groupIds).toEqual([groupA, groupB]);
-      return [];
-    });
-    const service = new SearchService(repo);
-
-    await service.query(
-      { q: "release", scope: "mine", limit: 20 },
-      makeSession({ role: "viewer", viewerGroupAccess: [groupA, groupB] }),
-    );
-  });
-
-  it("viewer with no granted groups returns empty without calling repository", async () => {
+  it('rejects scope="mine" for a viewer before calling the repository', async () => {
     const spy = vi.fn(() => [] as SearchHit[]);
     const service = new SearchService(createRepository(spy));
 
-    const result = await service.query(
-      { q: "release", scope: "mine", limit: 20 },
-      makeSession({ role: "viewer", viewerGroupAccess: [] }),
-    );
+    await expect(
+      service.query(
+        { q: "release", scope: "mine", limit: 20 },
+        makeSession({
+          role: "viewer",
+          viewerGroupAccess: [groupA, groupB],
+        }),
+      ),
+    ).rejects.toBeInstanceOf(SearchAuthorizationError);
 
-    expect(result).toEqual([]);
     expect(spy).not.toHaveBeenCalled();
   });
 
   // The `published` viewer search surface.
+  it.each([
+    ["lead", [groupA], ["project"]],
+    ["head", [groupA], []],
+    ["admin", null, []],
+  ] as const)(
+    'keeps role grants for scope="published" (%s)',
+    async (role, expectedGroupIds, expectedExcludedTypes) => {
+      const repo = createRepository((params) => {
+        expect(params.scope).toBe("published");
+        expect(params.groupIds).toEqual(expectedGroupIds);
+        expect(params.excludeTypes).toEqual(expectedExcludedTypes);
+        return [];
+      });
+      const service = new SearchService(repo);
+
+      await service.query(
+        { q: "release", scope: "published", limit: 20 },
+        makeSession({ role }),
+      );
+    },
+  );
+
   it('allows scope="published" for viewer and forwards it to the repository', async () => {
     const repo = createRepository((params) => {
       expect(params.scope).toBe("published");

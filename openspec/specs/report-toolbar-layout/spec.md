@@ -97,7 +97,7 @@ group and the context bar.
    the viewer specifically, the navigation it adds (e.g. Back to Archive) MUST
    sit in the context-control bar, not the header action group. The lead preview
    keeps its own outer header; its outer-header navigation is outside the shared
-   toolbar contract and is not relocated by this change.
+   toolbar contract and remains in that outer header.
 4. Status indicators (submitted count, autosave time, publish precondition hint,
    department label) MUST render on the header line as labels, NOT inside the
    document-action group or the context bar.
@@ -198,8 +198,7 @@ header actions before the context controls.
    (e.g. `role="group" aria-label="Document actions"`) and the bordered toolbar
    MUST carry its own (e.g. `aria-label="Context controls"`), so the split is not
    conveyed by placement or colour alone.
-2. Every icon-only control MUST keep its existing `aria-label`/tooltip contract
-   after the move.
+2. Every icon-only control MUST expose its declared `aria-label` and tooltip.
 3. Keyboard focus order MUST traverse the header action group, then the context
    bar — satisfied by the header preceding the toolbar in the DOM.
 
@@ -215,12 +214,12 @@ header actions before the context controls.
 
 The lead "+ Add" quick-add control MUST render in both edit and slides modes for
 an editable (non-read-only) section, so it does not disappear when the lead
-switches to slides — today it is gated `!isSlidesMode` and vanishes (annotations
-C2). The control is `apps/web/src/features/report-pages/ui/lead/chrome/quick-add-button.tsx`, rendered
+switches to slides. The
+control is `apps/web/src/features/report-pages/ui/lead/chrome/quick-add-button.tsx`, rendered
 by `apps/web/src/features/report-pages/ui/lead/shell/lead-form.tsx` inside the header line's
 `DocumentActionGroup`. Within
 the document-action group it MUST sit immediately before the forward commit (the
-Submit Section primary) — after Save and Fill-From (annotations C1) — so the
+Submit Section primary) — after Save and Fill-From — so the
 single-forward-primary accent hierarchy is preserved: "+ Add" takes the
 neutral/outline treatment and MUST NOT carry a resting solid brand-accent fill,
 which stays reserved for the Submit Section commit. On a read-only past period

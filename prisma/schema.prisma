@@ -28,7 +28,7 @@ model User {
   createdAt               DateTime                @default(now())
   updatedAt               DateTime                @updatedAt
   notificationOptOut      Boolean                 @default(false)
-  // A2 (UAT-v7 2026-05-12): soft-deactivation flag. false = deactivated.
+  // Soft-deactivation flag. false = deactivated.
   // Sessions are immediately revoked in Redis; Prisma is the authoritative
   // source for the isActive state.
   isActive                Boolean                 @default(true)
@@ -140,12 +140,11 @@ model Project {
   risks            Risk[]
   stageStatuses    StageStatus[]
   stageAssignments StageAssignment[]
-  // Explicit M:M edge to ReportingGroup. Inverse of
-  // GroupProduct.product. Left untouched on backfill; existing read paths
-  // that derive group via `lead.reportingGroupId` continue to work.
+  // Explicit product ownership edge to ReportingGroup. Person scope remains
+  // on `lead.reportingGroupId`; product scope reads this relation.
   groupProducts    GroupProduct[]
-  // Product-parented decisions. The parent FK is now nullable (a decision may be
-  // activity-parented instead — XOR); Restrict on delete keeps authored rows.
+  // Product-parented decisions. The parent FK is nullable because a decision
+  // may be activity-parented instead (XOR); Restrict keeps authored rows.
   decisions        Decision[]
   // Activities linked to this product via the M:N ProjectActivityProduct join.
   // The link is label-only display metadata; it never feeds product health.
@@ -156,18 +155,11 @@ model Project {
   @@index([searchTsv], type: Gin)
 }
 
-// Explicit Group → Product edge.
-//
-// Today products belong to a group implicitly through `Project.lead.reportingGroupId`.
-// This model makes the ownership explicit so:
+// Explicit Group → Product ownership edge:
 //   - a product belongs to exactly one reporting group, enforced by
 //     `@@unique([productId])`; a group can contain many products;
 //   - lead rotation does not change product ownership at the group level;
 //   - head dashboards can read «my group's products» without joining through User.
-//
-// Backfill seeds one row per existing Project mapping to
-// `Project.lead.reportingGroupId`. Existing scope-filter consumers continue to
-// derive group from `Project.lead.reportingGroupId` until they opt in.
 model GroupProduct {
   id        String         @id @default(uuid())
   groupId   String
@@ -176,73 +168,69 @@ model GroupProduct {
   group     ReportingGroup @relation(fields: [groupId], references: [id])
   product   Project        @relation(fields: [productId], references: [id])
 
-  // B1: one-group-per-product invariant. A product belongs to exactly one
+  // One-group-per-product invariant. A product belongs to exactly one
   // reporting group; a group can contain many products.
   @@unique([productId])
   @@index([groupId])
 }
 
 model Report {
-  id                     String                  @id @default(uuid())
+  id                     String                    @id @default(uuid())
   periodStart            DateTime
   periodEnd              DateTime
   // Nullable by ruling F16 (allow-deadline-explicit-clear): an admin may
   // clear a period's deadline; deadline-driven automation (gate, reminders,
   // auto-publish) must then skip that period EXPLICITLY, never via fallback.
   deadline               DateTime?
-  status                 ReportStatus            @default(draft)
+  status                 ReportStatus              @default(draft)
   publishedAt            DateTime?
   publishedById          String?
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  periodStatus           PeriodStatus            @default(open)
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
+  periodStatus           PeriodStatus              @default(open)
   reopenedAt             DateTime?
   weekLabel              String?
   // Lifecycle flag set by the auto-archiver scheduler
   // when `AppSettings.autoArchiveWeeksAfterPublish > 0` AND
-  // `publishedAt + weeks * 7d < now`. Existing rows backfill to false via
-  // the migration default. Indexed alongside periodStart so the archive
-  // dashboard's "last N un-archived" query stays cheap.
-  archived               Boolean                 @default(false)
+  // `publishedAt + weeks * 7d < now`. Indexed alongside periodStart so the
+  // archive dashboard's "last N un-archived" query stays cheap.
+  archived               Boolean                   @default(false)
   // Lifecycle audit flags surfaced by the period state-machine.
   // `autoPublished` is set true when the auto-publish scheduler flips
   // status=draft→published at deadline+grace (vs an explicit head
   // action). `autoArchived` mirrors that for the auto-archive scheduler.
-  // Both default to `false` so existing rows backfill cleanly via the
-  // migration default.
-  autoPublished          Boolean                 @default(false)
-  autoArchived           Boolean                 @default(false)
-  // Explicit lifecycle state column. The legacy
-  // `status` + `archived` + `periodStatus` tuple is preserved (one-release
-  // compatibility window) and writers update both the new column and the
-  // old fields atomically. Backfill is OPEN | PUBLISHED | ARCHIVED; the
-  // SCHEDULED state is reserved for future periods minted by the
-  // PeriodCreator scheduler (no historical row backfills to SCHEDULED).
-  // Index mirrors the legacy `(status, periodStart)` shape so the
-  // archive/dashboard read paths can migrate without an index gap.
+  autoPublished          Boolean                   @default(false)
+  autoArchived           Boolean                   @default(false)
+  // Explicit archive lifecycle state. Writers update it atomically with
+  // `status`, `archived`, and `periodStatus`; each field serves a current
+  // product query or state transition. SCHEDULED is reserved for future
+  // periods minted by the PeriodCreator scheduler.
   // Note: `PeriodState` and `PeriodStatus` are intentionally separate
   // state machines — `periodStatus` carries the reopen flavour
   // (open/published/reopened, no archived); `periodState` carries the
   // archive lifecycle (scheduled/open/published/archived, no reopened).
   // On reopen we revert `periodState` to `open` while flipping
-  // `periodStatus` to `reopened` (Open Question — documented in SUMMARY).
-  periodState            PeriodState             @default(open)
+  // `periodStatus` to `reopened` so editability and publication lineage remain explicit.
+  periodState            PeriodState               @default(open)
   // Immutable publish-time read model for archive and
   // director-facing published views. Reopen/draft edits after publication
   // must not mutate the published output until the next publish writes a
-  // replacement snapshot.
+  // replacement snapshot. The canonical init also enforces that a report
+  // with status=published always has this persisted snapshot.
   publishedSnapshot      Json?
-  carryOverSources       CarryOverExecution[]    @relation("CarryOverSource")
-  carryOverTargets       CarryOverExecution[]    @relation("CarryOverTarget")
+  publishedSectionScopes PublishedSectionScope[]
+  publishedSearchDocs    PublishedSearchDocument[]
+  carryOverSources       CarryOverExecution[]      @relation("CarryOverSource")
+  carryOverTargets       CarryOverExecution[]      @relation("CarryOverTarget")
   pdfExportJobs          PdfExportJob[]
   reminderRules          ReminderRule[]
-  publishedBy            User?                   @relation("PublishedBy", fields: [publishedById], references: [id])
+  publishedBy            User?                     @relation("PublishedBy", fields: [publishedById], references: [id], onDelete: Restrict)
   sections               ReportSection[]
   // review-acknowledgement: group-level seen receipts pinned to this period.
   reviewAcknowledgements ReviewAcknowledgement[]
   // Partial EXCLUDE constraint "Report_no_live_period_overlap" on the closed
-  // [periodStart, periodEnd] tsrange is hand-written in the append-only
-  // migration because Prisma cannot express PostgreSQL exclusion constraints.
+  // [periodStart, periodEnd] tsrange is hand-written in the canonical init
+  // because Prisma cannot express PostgreSQL exclusion constraints.
   // It keeps editable live ranges non-overlapping while allowing durable
   // published/archived republish history to share an envelope.
 
@@ -251,6 +239,45 @@ model Report {
   @@index([status, periodStart(sort: Desc)])
   @@index([archived, periodStart(sort: Desc)])
   @@index([periodState, periodStart(sort: Desc)])
+}
+
+// Immutable publish-time authorization projection. Identifiers deliberately
+// do not reference mutable section/user/group rows: recovery may restore the
+// frozen report without that live graph, and later ownership changes must not
+// rewrite historical visibility.
+model PublishedSectionScope {
+  reportId        String
+  reportSectionId String
+  authorId        String
+  groupId         String
+  report          Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@id([reportId, reportSectionId])
+  @@index([groupId, reportId])
+  @@index([authorId, reportId])
+}
+
+// Immutable, bounded full-text projection derived from publishedSnapshot.
+// It carries no FK to mutable records or groups; Report is its sole lifecycle
+// owner and deletes cascade only when the frozen report itself is deleted.
+model PublishedSearchDocument {
+  reportId        String
+  reportSectionId String
+  recordType      PublishedSearchRecordType
+  recordId        String
+  stableId        String
+  groupId         String
+  projectId       String?
+  title           String
+  searchText      String
+  createdAt       DateTime
+  searchTsv       Unsupported("tsvector")?  @default(dbgenerated("to_tsvector('russian'::regconfig, COALESCE(\"searchText\", ''::text))"))
+  report          Report                    @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@id([reportId, recordType, recordId])
+  @@index([recordType, stableId])
+  @@index([groupId, createdAt(sort: Desc)])
+  @@index([searchTsv], type: Gin)
 }
 
 model ReportSection {
@@ -270,8 +297,7 @@ model ReportSection {
   revokedBy        String?
   // Stamped true by submitSection when
   // `now > Report.deadline` (regardless of grace-period). Used by head
-  // dashboard + lead form to render a "late" badge. Existing rows
-  // backfill to false via the migration default.
+  // dashboard + lead form to render a "late" badge.
   late             Boolean             @default(false)
   decisions        Decision[]
   items            Item[]
@@ -425,15 +451,14 @@ model Item {
   workflowStatus  ItemWorkflowStatus
   carriedOver     Boolean                  @default(false)
   priorityRank    Int?
-  // require-paused-item-reason: the lead's reason for pausing. Nullable — legacy
-  // paused rows predate the field and non-paused items never carry one; the UI
-  // makes it required at the point of pausing, not the schema (a hard invariant
-  // would reject those legacy rows on the next save).
+  // require-paused-item-reason: paused items must carry visible reason text;
+  // every other workflow status must leave this field null. The shared write
+  // schema and the canonical init CHECK enforce the same invariant.
   pausedReason    String?
   createdAt       DateTime                 @default(now())
   updatedAt       DateTime                 @updatedAt
   searchTsv       Unsupported("tsvector")? @default(dbgenerated("to_tsvector('russian'::regconfig, COALESCE(text, ''::text))"))
-  stageNames      String[]
+  stageNames      String[]                 @default([])
   project         Project?                 @relation(fields: [projectId], references: [id], onDelete: Restrict)
   activity        ProjectActivity?         @relation(fields: [activityId], references: [id], onDelete: Restrict)
   reportSection   ReportSection            @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
@@ -471,7 +496,7 @@ model Risk {
   createdAt       DateTime                 @default(now())
   updatedAt       DateTime                 @updatedAt
   searchTsv       Unsupported("tsvector")? @default(dbgenerated("to_tsvector('russian'::regconfig, ((((COALESCE(risk, ''::text) || ' '::text) || COALESCE(impact, ''::text)) || ' '::text) || COALESCE(mitigation, ''::text)))"))
-  stageNames      String[]
+  stageNames      String[]                 @default([])
   project         Project?                 @relation(fields: [projectId], references: [id], onDelete: Restrict)
   activity        ProjectActivity?         @relation(fields: [activityId], references: [id], onDelete: Restrict)
   reportSection   ReportSection            @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
@@ -505,7 +530,7 @@ model Decision {
   createdAt       DateTime                 @default(now())
   updatedAt       DateTime                 @updatedAt
   searchTsv       Unsupported("tsvector")? @default(dbgenerated("to_tsvector('russian'::regconfig, COALESCE(text, ''::text))"))
-  stageNames      String[]
+  stageNames      String[]                 @default([])
   reportSection   ReportSection            @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
   // Restrict on parent delete (matching Item/Risk/ProjectStatus): hard product
   // or activity deletion is unsupported; retire via the `archived` flag instead.
@@ -523,39 +548,50 @@ model Decision {
 }
 
 model PdfExportJob {
-  id              String          @id @default(uuid())
-  reportId        String
-  status          PdfExportStatus @default(pending)
-  templateVersion String
-  filePath        String?
-  checksum        String?
-  error           String?
-  requestedBy     String
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  report          Report          @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  id                  String          @id @default(uuid())
+  reportId            String
+  // Immutable publication identity captured in the same write as the job.
+  // The worker must never resolve a mutable Report row for rendering.
+  publicationAt       DateTime
+  publicationSnapshot Json
+  publicationGroupIds String[]
+  status              PdfExportStatus @default(pending)
+  templateVersion     String
+  filePath            String?
+  checksum            String?
+  error               String?
+  requestedBy         String
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  report              Report          @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
   @@index([reportId])
   @@index([requestedBy])
+  @@index([createdAt(sort: Desc)])
+  @@index([publicationGroupIds], type: Gin)
   @@index([status, createdAt(sort: Desc)])
 }
 
 model ReminderRule {
   id         String              @id @default(uuid())
-  reportId   String?
-  policyId   String?
+  reportId   String
+  policyId   String
   createdAt  DateTime            @default(now())
   updatedAt  DateTime            @updatedAt
   kind       ReminderRuleKind
   fireAt     DateTime
+  // Immutable schedule basis for this rule version. Historical executions
+  // validate against it after the owning Report deadline changes.
+  deadline   DateTime
   timezone   String              @default("Europe/Moscow")
   status     ReminderRuleStatus  @default(active)
   version    Int                 @default(1)
   executions ReminderExecution[]
-  report     Report?             @relation(fields: [reportId], references: [id])
-  policy     ReminderPolicy?     @relation(fields: [policyId], references: [id])
+  report     Report              @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  policy     ReminderPolicy      @relation(fields: [policyId], references: [id], onDelete: Cascade)
 
-  @@unique([reportId, policyId], map: "uq_rule_report_policy")
+  @@unique([reportId, policyId, version], map: "uq_rule_report_policy_version")
+  @@index([reportId, policyId, version(sort: Desc)])
   @@index([createdAt(sort: Desc)])
   @@index([status, fireAt])
   @@index([policyId])
@@ -564,8 +600,7 @@ model ReminderRule {
 // ReminderPolicy is a parameterized template that ReminderRule rows
 // reference. One policy declares (kind, offsetMinutes, timezone, audience)
 // and acts as the source-of-truth for every concrete rule scheduled against
-// a report. The FK is nullable for now; a future change flips it to NOT
-// NULL once Period.create wires the policy in.
+// a report.
 model ReminderPolicy {
   id            String           @id @default(uuid())
   kind          ReminderRuleKind
@@ -578,6 +613,9 @@ model ReminderPolicy {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   rules         ReminderRule[]
+
+  // Canonical SQL CHECK ReminderPolicy_kind_audience_check admits only
+  // deadline→lead-with-draft and escalation→head-of-late.
 
   @@index([kind, active])
   @@index([active])
@@ -594,9 +632,11 @@ model ReminderExecution {
   status         ReminderExecutionStatus @default(pending)
   sentAt         DateTime?
   error          String?
-  // Server-private immutable renderer payload; excluded from admin DTOs.
-  // Terminal rows may lack it; a database CHECK forbids queued rows without it.
-  queuePayload   Json?
+  // Canonical SQL CHECK ReminderExecution_lifecycle_check binds status to
+  // sentAt/error; Prisma schema syntax cannot express cross-column checks.
+  // Immutable renderer payload; excluded from routine admin listings but
+  // included in the explicit admin-recovery snapshot contract.
+  queuePayload   Json
   createdAt      DateTime                @default(now())
   updatedAt      DateTime                @updatedAt
   rule           ReminderRule            @relation(fields: [ruleId], references: [id], onDelete: Cascade)
@@ -675,7 +715,7 @@ model ReopenRequest {
   reportSection   ReportSection       @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
   requestedBy     User                @relation("ReopenRequester", fields: [requestedById], references: [id])
   reviewedBy      User?               @relation("ReopenReviewer", fields: [reviewedById], references: [id])
-  // reopen-request-lifecycle (D5): at most ONE pending request per section.
+  // reopen-request-lifecycle: at most one pending request per section.
   // Enforced by a PARTIAL unique index `ReopenRequest_one_pending_per_section`
   // ON ("reportSectionId") WHERE "status" = 'pending'. Prisma cannot express a
   // partial-index predicate, so the index is hand-written in the init migration
@@ -689,13 +729,10 @@ model ReopenRequest {
   @@index([reviewedById])
 }
 
-// Org-wide knobs the admin can flip without a redeploy. Most columns carry a
-// SQL default (notificationFromEmail is nullable with no default; updatedAt
-// is Prisma-managed via `@updatedAt`); the init migration ships no DML, so
-// the singleton row itself is provisioned by `prisma/seed.ts` (which upserts
-// `id='singleton'`) and the defaults fill any column the seed omits. Semantics:
-//   - workingDays            : metadata-only in v1 (UI hint); deadline math
-//                              stays Mon-Fri until a future scheduler change.
+// Org-wide knobs the admin can change without a redeploy. The canonical init
+// creates `id='singleton'`; `notificationFromEmail` is the only nullable
+// setting without a SQL default. Semantics:
+//   - workingDays            : calendar used to calculate period deadlines.
 //   - gracePeriodHours +
 //     allowLateSubmissions   : when allowLateSubmissions=true, leads can
 //                              submit within (deadline + grace); outside the
@@ -704,10 +741,9 @@ model ReopenRequest {
 //   - autoPublishAfterDeadline: scheduler will fire at (deadline + grace);
 //                              missing sections render «Не сдал» placeholder.
 //                              The toggle is persisted and consumed by the scheduler.
-// The legacy `departmentName` column was dropped from this
-// model. Brand identity (short + full name) lives on the `Organization`
-// singleton below; readers consume it via `OrganizationService.getPublic()`
-// or the per-request `auth.me.organization` hydration on the wire.
+// Brand identity (short + full name) lives on the `Organization` singleton;
+// readers consume it via `OrganizationService.getPublic()` or the per-request
+// `auth.me.organization` hydration on the wire.
 model AppSettings {
   id                           String           @id @default("singleton")
   autoCreatePeriods            Boolean          @default(false)
@@ -721,20 +757,8 @@ model AppSettings {
   allowLateSubmissions         Boolean          @default(true)
   autoPublishAfterDeadline     Boolean          @default(false)
   autoArchiveWeeksAfterPublish Int              @default(0)
-  // Period-cycle expansion. Org-wide knobs for the
-  // manual-creation deadline default (deadlineTime, HH:MM in defaultTimezone)
-  // and publish/reopen gating (allowReopenAfterPublish, reopenWindowHours).
-  // All carry SQL defaults, so adding them needs no data-migration backfill;
-  // the singleton row is still provisioned by `prisma/seed.ts`. Wire schema
-  // mirrors these via `appSettingsSchema` defaults in packages/shared.
-  //
-  // periodCadence (the "weekly"/"bi-weekly" radio) was removed —
-  // a dead column the schedulers never read. Period length is expressed
-  // solely by periodLengthDays.
-  //
-  // admin-settings-surface-cleanup: firstDayOfWeek, deadlineDayOfWeek,
-  // maxOpenPeriods, and requireAllSectionsToPublish were removed — they had
-  // no consumer anywhere (read/written only by the settings form).
+  // Manual period deadlines use deadlineTime in defaultTimezone; publish and
+  // reopen gates use allowReopenAfterPublish and reopenWindowHours.
   deadlineTime                 String           @default("18:00")
   allowReopenAfterPublish      Boolean          @default(true)
   reopenWindowHours            Int              @default(72)
@@ -750,9 +774,9 @@ model AppSettings {
 // rendered in the nav-bar / page chrome (≤16 chars); fullName is the
 // long-form description used on the landing hero and in PDF report headers.
 // Singleton invariant enforced at the application layer via `id='singleton'`
-// upsert — not a DB CHECK constraint. `prisma/seed.ts` provisions the row
-// with Demo / Example Software Department (the init migration ships no
-// DML); admins can override via Settings → Identity tab.
+// and a baseline row in the canonical init migration. `prisma/seed.ts` may
+// update the row with the same product defaults; admins can override via
+// Settings → Identity tab.
 model Organization {
   id        String   @id @default("singleton")
   shortName String
@@ -807,9 +831,8 @@ model SectionReview {
 // review-acknowledgement: a reviewer comment anchored to exactly one concrete
 // record — an Item, Risk, or Decision (the discriminated FK trio; exactly one
 // non-null, enforced by a hand-written CHECK in the init migration and the Zod
-// input). Each anchor cascades so a comment dies with its record. Flat, no
-// reply threads. `reviewerId` is the human author today; the column set leaves
-// room for a future non-human (AI) reviewer without a breaking change.
+// input). Each anchor cascades so a comment dies with its record. Comments are
+// flat (no reply threads), and `reviewerId` identifies the human author.
 model RecordComment {
   id         String    @id @default(uuid())
   reviewerId String
@@ -903,11 +926,10 @@ enum PeriodStatus {
   reopened
 }
 
-// Explicit Period lifecycle enum that replaces the
-// implicit (status × archived × periodStatus) tuple. Lowercase to match the
-// `ReportStatus`/`PeriodSection`/`PeriodStatus` precedent in this schema
-// (the screaming-snake enums are categorically different — they carry
-// metadata, not lifecycle). Wire format mirrors the lowercase Prisma enum.
+// Canonical report lifecycle state. The companion `status`, `periodStatus`,
+// `archived`, audit flags, and applicable timestamps remain separate fields
+// and are written atomically with this state; `periodStatus` carries reopen
+// semantics while this enum carries the archive lifecycle.
 enum PeriodState {
   scheduled
   open
@@ -923,7 +945,6 @@ enum ReopenRequestStatus {
 
 enum ReminderRuleKind {
   deadline
-  follow_up
   escalation
 }
 
@@ -949,4 +970,10 @@ enum WorkingDays {
 enum ReminderRuleStatus {
   active
   paused
+}
+
+enum PublishedSearchRecordType {
+  item
+  risk
+  decision
 }

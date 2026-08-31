@@ -1,7 +1,7 @@
 ################################################################################
 # CustomReport — production reverse-proxy
 #
-# Auto-HTTPS via Let's Encrypt when DOMAIN resolves publicly.
+# Auto-HTTPS via Let's Encrypt when CADDY_SITE_ADDRESS resolves publicly.
 #
 # Routes:
 #   /api/web-vitals*, /api/client-logs*, /trpc/*, /auth/*, /health/*,
@@ -10,8 +10,6 @@
 #   (/metrics is deliberately NOT routed at the public edge — see @api below)
 #   /                                                              -> web:3000
 #
-# WebSocket upgrade for tRPC subscriptions: caddy v2 forwards Upgrade headers
-# automatically when the client requests it; no extra directive needed.
 ################################################################################
 {
 	# Let's Encrypt account email (set via env in docker-compose.prod.yml).
@@ -41,7 +39,6 @@
 			header_up X-Real-IP {remote_host}
 			header_up X-Forwarded-For {remote_host}
 			header_up X-Forwarded-Proto {scheme}
-			# Long timeout for SSE / future tRPC subscriptions; tune if needed.
 			transport http {
 				read_timeout 5m
 				write_timeout 5m
@@ -83,9 +80,9 @@
 		# emits inline Flight/bootstrap scripts and Caddy cannot thread a
 		# per-render nonce, so without it every page fails to hydrate the
 		# moment the policy enforces. Foreign SCRIPT ORIGINS stay blocked —
-		# that is the floor this header buys. Google Fonts needs its style
-		# and font origins allowed (see app/layout.tsx preconnects).
-		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; report-uri {$CADDY_CSP_REPORT_URI}"
+		# that is the floor this header buys. Fonts are emitted as same-origin
+		# build assets by next/font.
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; report-uri {$CADDY_CSP_REPORT_URI}"
 		-Server
 	}
 

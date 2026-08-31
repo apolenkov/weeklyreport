@@ -1,3 +1,4 @@
+import { reportSectionFullInclude } from "@customreport/report-persistence";
 import type { TrafficLightStatus } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
@@ -21,7 +22,6 @@ import {
   TESTING_STAGE_ID,
   UNOWNED_PROJECT,
 } from "./__tests__/report-sections-prisma-harness";
-import { reportSectionFullInclude } from "./report-sections.include";
 
 describe("reportSectionFullInclude", () => {
   it("orders child records by their unique durable identity", () => {
@@ -391,6 +391,7 @@ describe("mapPrismaToReportSection — activity derived-status floor", () => {
       activityId: ACTIVITY_ID,
       text: "Activity item",
       workflowStatus,
+      pausedReason: workflowStatus === "paused" ? "Paused for review" : null,
     });
 
   const activityRisk = (severity: string) =>

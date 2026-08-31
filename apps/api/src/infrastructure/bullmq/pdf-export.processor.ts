@@ -18,6 +18,7 @@ import {
   type PdfArtifactStore,
 } from "./pdf-export.artifact-store.js";
 import { RawBullMqProcessor } from "./raw-bullmq-processor.js";
+import { WorkerLivenessRegistry } from "./worker-liveness.registry.js";
 import {
   describeJobFailureTrace,
   type JobTraceContext,
@@ -69,8 +70,10 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
     @Inject(ENV_CONFIG) env: EnvConfig,
     @Inject(APP_LOGGER) logger: AppLogger,
     @Inject(ClsService) cls: ClsService | null,
+    @Inject(WorkerLivenessRegistry)
+    workerLiveness?: WorkerLivenessRegistry,
   ) {
-    super(env, logger, cls);
+    super(env, logger, cls, workerLiveness);
   }
 
   protected readonly onJobFailed = (
@@ -78,7 +81,7 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
     error: Error,
   ): void => {
     const { logFields: correlation } = describeJobFailureTrace(job?.data);
-    this.markTerminalFailure(job, error, correlation);
+    void this.markTerminalFailure(job, error, correlation);
 
     this.logger.error("pdf-export job failed", {
       jobId: job?.data.jobId,
@@ -89,31 +92,56 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
     });
   };
 
-  private markTerminalFailure(
+  private async markTerminalFailure(
     job: Job<PdfExportJobData> | undefined,
     error: Error,
     correlation: Readonly<Record<string, string>>,
-  ): void {
-    if (!job?.data.jobId) return;
+  ): Promise<void> {
+    if (
+      !job?.data.jobId ||
+      !job.data.reportId ||
+      !job.data.requestedBy ||
+      (job.id !== undefined && job.id !== job.data.jobId)
+    ) {
+      this.logger.error("pdf-export failed event identity rejected", {
+        queueJobId: job?.id,
+        jobId: job?.data.jobId,
+      });
+      return;
+    }
     const maxAttempts = job.opts.attempts ?? 1;
     if (job.attemptsMade < maxAttempts) return;
-    void this.pdfExportService
-      .markExportFailed(job.data.jobId, error.message)
-      .catch((markError: unknown) => {
-        this.logger.error("pdf-export failed-state update failed", {
-          jobId: job.data.jobId,
-          ...correlation,
-          error: errorMessage(markError),
-        });
+    try {
+      await this.pdfExportService.reconcileTerminalState({
+        jobId: job.data.jobId,
+        reportId: job.data.reportId,
+        requestedBy: job.data.requestedBy,
+        status: "failed",
+        error: error.message,
       });
+    } catch (markError: unknown) {
+      this.logger.error("pdf-export failed-state update failed", {
+        jobId: job.data.jobId,
+        ...correlation,
+        error: errorMessage(markError),
+      });
+    }
   }
 
   protected readonly processJob = async (
     job: Job<PdfExportJobData>,
-  ): Promise<void> => {
+  ): Promise<{ artifactUrl: string; checksum: string }> => {
     const { reportId, jobId, requestedBy } = job.data;
+    // Redis payloads are untrusted delivery data. Bind every identity field to
+    // the immutable database job before minting a token or opening the print
+    // route, so a stale/tampered payload cannot render another report.
+    await this.pdfExportService.assertPdfExportJobIdentity(
+      jobId,
+      reportId,
+      requestedBy,
+    );
     const baseUrl = this.env.PDF_BASE_URL;
-    const reportUrl = `${baseUrl}/print/${reportId}`;
+    const reportUrl = `${baseUrl}/print/${reportId}?jobId=${encodeURIComponent(jobId)}`;
 
     const browser = await chromium.launch({ headless: true });
     try {
@@ -122,6 +150,7 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
       // before a delayed/retried job runs.
       const authToken = this.pdfExportService.signPdfExportToken(
         reportId,
+        jobId,
         requestedBy,
       );
       // The auth cookie MUST be set before page.goto so the print page's tRPC
@@ -154,7 +183,7 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
 
       const outputDir = resolve(this.env.PDF_OUTPUT_DIR);
       const artifactUrl = pdfArtifactUrl(jobId);
-      await this.persistCompletedArtifact({
+      return await this.persistCompletedArtifact({
         artifactUrl,
         jobId,
         outputDir,
@@ -185,7 +214,7 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
     jobId: string;
     outputDir: string;
     pdfBuffer: Buffer;
-  }): Promise<void> {
+  }): Promise<{ artifactUrl: string; checksum: string }> {
     const artifactStore = this.createArtifactStore();
     const attempt = await artifactStore.createAttempt(
       input.outputDir,
@@ -200,6 +229,8 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
         input.artifactUrl,
         checksum,
       );
+      await this.cleanupCompletedAttempt(artifactStore, attempt, input.jobId);
+      return { artifactUrl: input.artifactUrl, checksum };
     } catch (error) {
       await this.cleanupFailedAttempt(
         artifactStore,
@@ -209,8 +240,6 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
       );
       throw error;
     }
-
-    await this.cleanupCompletedAttempt(artifactStore, attempt, input.jobId);
   }
 
   protected createArtifactStore(): PdfArtifactStore {

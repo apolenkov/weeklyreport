@@ -1,17 +1,19 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 
+import {
+  CheckIcon,
+  DeleteIcon,
+  EditIcon,
+} from "../../../shared/ui/icons/action-icons";
 import { LockBadge } from "../../../shared/ui/report-shell/lock-badge";
 import type { KanbanItem } from "../model/types";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
-  CheckIcon,
-  DeleteIcon,
-  EditIcon,
   PauseIcon,
-} from "./item-card-action-icons";
+} from "./item-card-status-icons";
 
 // Shared square icon-button shell; the two variants differ only in hover state.
 const ACTION_BUTTON_BASE =
@@ -64,7 +66,7 @@ interface StatusActionSpec {
   readonly label: string;
   readonly title: string;
   readonly className: string;
-  readonly Icon: () => ReactNode;
+  readonly Icon: ComponentType<{ readonly className?: string }>;
 }
 
 interface StatusAction extends StatusActionSpec {
@@ -129,7 +131,7 @@ function StatusActions(props: ItemCardActionsProps) {
           label={label}
           title={title}
         >
-          <Icon />
+          <Icon className="h-3 w-3" />
         </ActionButton>
       ))}
     </>
@@ -150,7 +152,7 @@ function EditDeleteActions({
           onClick={() => onEdit(item.id)}
           label="Edit"
         >
-          <EditIcon />
+          <EditIcon className="h-3 w-3" />
         </ActionButton>
       )}
       {onDelete && !publishedLocked && (
@@ -159,7 +161,7 @@ function EditDeleteActions({
           onClick={() => onDelete(item.id)}
           label="Delete"
         >
-          <DeleteIcon />
+          <DeleteIcon className="h-3 w-3" />
         </ActionButton>
       )}
     </>

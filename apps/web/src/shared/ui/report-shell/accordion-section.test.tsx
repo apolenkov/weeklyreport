@@ -40,6 +40,8 @@ describe("AccordionSection — aria-controls", () => {
     const panel = document.getElementById(panelId);
     expect(panel).not.toBeNull();
     expect(panel).toContainElement(screen.getByText("Panel body"));
+    expect(panel).toHaveAttribute("role", "region");
+    expect(panel).toHaveAttribute("aria-labelledby", `${panelId}-title`);
   });
 
   it("derives a stable panel id from testId", () => {

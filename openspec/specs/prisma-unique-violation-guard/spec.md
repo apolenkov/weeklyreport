@@ -53,9 +53,9 @@ caller re-throws it. When no scope is supplied, any P2002 matches.
 
 #### Scenario: Scoped guard accepts its own constraint
 
-- **GIVEN** a P2002 carrying the open-boundary index identity
+- **GIVEN** a P2002 carrying the scoped unique-constraint identity
 - **WHEN** `isUniqueViolation` is called scoped to
-  `Report_one_open_per_boundary` (or its `periodStart`+`periodEnd` columns)
+  a named unique constraint (or its column set)
 - **THEN** it returns `true` and the caller maps it to the friendly overlap error.
 
 #### Scenario: Scoped guard re-throws an unrelated unique violation
@@ -68,9 +68,9 @@ caller re-throws it. When no scope is supplied, any P2002 matches.
 
 ### Requirement: Matcher Is Proven By A Real-Database Integration Test
 
-This change SHALL add an integration test that runs against a real Postgres via
-the pg driver adapter, provokes an ACTUAL P2002 (not a hand-built mock), and
-asserts the shared guard returns `true` for that live error. The test MUST fail
+The integration suite MUST run against a real Postgres through the pg driver
+adapter, provoke an actual P2002 rather than a hand-built mock, and assert that
+the shared guard returns `true` for that live error. The test MUST fail
 if the guard reverts to a `meta.target`-only match, because the adapter leaves
 `meta.target` unset.
 
@@ -83,22 +83,15 @@ if the guard reverts to a `meta.target`-only match, because the adapter leaves
 - **AND** the test asserts the caught error's `meta.target` is unset, pinning
   the reason a `meta.target`-only guard would silently miss it.
 
-### Requirement: Ad-Hoc Detectors Consolidate Onto The Shared Guard
+### Requirement: Production detectors use the shared guard
 
-ALL existing inline P2002 detectors SHALL be replaced by calls to the shared
-guard, leaving no bare `"P2002"` literal in non-test code. Adoption is
-behavior-preserving at every site EXCEPT the two that currently test
-`meta.target` only (`ensure-lead-section`, `user-session`), which MUST adopt the
-pg-adapter-correct shape; that is a behavior fix, since under the adapter those
-guards previously returned `false` and let the concurrent-login race surface as a
-raw error instead of resolving to the race winner. The already-correct second
-copy (reminders' `isDedupeKeyConflict`) folds onto the guard scoped to its
-`dedupeKey` constraint; the two bare `code === "P2002"` swallow-sites
-(`carry-over`, `policy-applicator`) fold onto the UNSCOPED guard, preserving
-their current swallow-any-P2002 behavior — scoping them would newly re-throw an
-unrelated P2002 and is therefore out of scope.
+Every non-test P2002 detector MUST call the shared guard, leaving no bare
+`"P2002"` literal in production code. `ensure-lead-section`, `user-session`, and
+the reminders dedupe path MUST use constraint-aware matching. `carry-over` and
+`policy-applicator` intentionally accept any P2002 and MUST call the unscoped
+guard so their swallow-any-unique-violation contract remains explicit.
 
-#### Scenario: Concurrent first-login race resolves after adoption
+#### Scenario: Concurrent first-login race resolves through the shared guard
 
 - **GIVEN** two concurrent first-logins of the same user under the pg adapter,
   where the loser's create raises a P2002 with unset `meta.target`

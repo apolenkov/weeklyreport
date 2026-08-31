@@ -8,11 +8,11 @@ import {
   seedTestData,
   TEST_IDS,
 } from "../../test-utils/prisma-test-helper";
-import { canReadReport } from "./pdf-export.download-handler";
+import { canReadReport } from "../../test-utils/report-read-access.js";
 
-// canReadReport is true only when the caller's group scope intersects the
-// report; a revoked viewer must not pull the artifact (real DB).
-describe("canReadReport (integration)", () => {
+// The shared report-read access predicate is true only when the caller's group
+// scope intersects the report; a revoked viewer must not pull the artifact.
+describe("report-read-access canReadReport (integration)", () => {
   const prisma = createTestPrisma();
   let testData: Awaited<ReturnType<typeof seedTestData>>;
 

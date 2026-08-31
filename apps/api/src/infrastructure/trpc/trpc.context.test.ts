@@ -1,4 +1,4 @@
-import type { UserSession } from "@customreport/shared";
+import { AUTH_COOKIE_NAME, type UserSession } from "@customreport/shared";
 import type { INestApplication } from "@nestjs/common";
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { Request, Response } from "express";
@@ -7,10 +7,29 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createNullLogger } from "../../lib/logger";
 import {
   clearOrgCache,
-  createContextFactory,
+  createContextFactory as createContextFactoryImpl,
   type HumanSessionDeps,
   resolveHumanSession,
 } from "./trpc.context";
+
+const testContextEnv = () => ({
+  NODE_ENV: (process.env.NODE_ENV ?? "test") as
+    "development" | "production" | "test",
+  AUTH_DEV_MODE: process.env.AUTH_DEV_MODE === "true",
+  AUTH_DEV_MODE_ALLOW_TEST: process.env.AUTH_DEV_MODE_ALLOW_TEST,
+  AUTH_JWT_SECRET:
+    process.env.AUTH_JWT_SECRET ?? "integration-test-secret-32-chars-or-more",
+  PDF_EXPORT_JWT_SECRET:
+    process.env.PDF_EXPORT_JWT_SECRET ??
+    "test-pdf-export-secret-at-least-32-chars",
+});
+
+function createContextFactory(
+  app: INestApplication,
+  logger: ReturnType<typeof createNullLogger>,
+) {
+  return createContextFactoryImpl(app, logger, testContextEnv());
+}
 
 // Dev-mode flag matrix against a mocked Nest app — no real DB.
 // Cookie-path coverage lives in integration tests.
@@ -55,7 +74,7 @@ function makeApp(prisma: ReturnType<typeof makePrismaStub>): INestApplication {
 function makeReq(cookieToken?: string): CreateExpressContextOptions {
   const req = {
     headers: {},
-    cookies: cookieToken ? { customreport_session: cookieToken } : {},
+    cookies: cookieToken ? { [AUTH_COOKIE_NAME]: cookieToken } : {},
   } as unknown as Request;
   const res = {} as Response;
   return {
@@ -204,7 +223,7 @@ describe("createContextFactory — dev-mode flag matrix", () => {
     expect(ctx.session?.userId).toBeTruthy();
   });
 
-  it("AUTH_DEV_MODE=true (legacy) + AUTH_DEV_MODE_ALLOW_TEST=false + no cookie → DEV_SESSION", async () => {
+  it("AUTH_DEV_MODE=true + AUTH_DEV_MODE_ALLOW_TEST=false + no cookie → DEV_SESSION", async () => {
     vi.stubEnv("AUTH_DEV_MODE", "true");
     vi.stubEnv("AUTH_DEV_MODE_ALLOW_TEST", "false");
 

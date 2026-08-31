@@ -1,11 +1,8 @@
 /*
  * Landing hero styling for the «Weekly Report» wordmark + static column.
  *
- * Aesthetic direction: refined editorial-industrial. Corporate SaaS but
- * calm. Originally the «Your PULSE?» rebrand with a breathing
- * wordmark and an ECG heartbeat trace; the decorative pulse motif was
- * removed 2026-06-23, so the hero is now fully static (the only motion
- * left is the JS-toggled tagline fade on `.pulse-tagline`).
+ * Aesthetic direction: calm editorial-industrial corporate SaaS. The hero is
+ * static except for the JS-controlled tagline fade on `.pulse-tagline`.
  *
  * Tokens (mirrored from app palette):
  *  --pulse-deep       deepest forest backdrop
@@ -143,6 +140,4 @@
   );
 }
 
-/* No keyframes — the landing hero is fully static since the pulse motif
-   was removed (2026-06-23). The tagline cycler's fade is a JS-toggled
-   opacity transition declared on `.pulse-tagline`, not a CSS animation. */
+/* The tagline cycler uses the opacity transition above; no keyframes needed. */

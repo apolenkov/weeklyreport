@@ -98,3 +98,88 @@ The reports-history React route MUST NOT render `Submitted: Not submitted` for a
 
 - **WHEN** a lead-specific draft entry has no submission timestamp
 - **THEN** the card continues to show `Not submitted`
+
+### Requirement: Compiled history uses the immutable publication snapshot
+
+The compiled history query MUST derive section-scoped counts, traffic-light
+totals, and product totals from the report's validated `publishedSnapshot`.
+It MUST NOT read mutable items, risks, decisions, or status rows from the
+published report graph. A missing, malformed, report-mismatched, or
+scope-mismatched closed-publication snapshot MUST fail closed rather than
+serving a live graph projection. When a period is reopened, newly created live
+sections are not part of the last publication and MUST be ignored until the
+next publish replaces the snapshot.
+
+#### Scenario: Later edits do not change a compiled history entry
+
+- **WHEN** a published report's live records or product statuses change after
+  publication
+- **THEN** compiled history continues to show the counts and totals frozen in
+  the publication snapshot
+
+#### Scenario: Invalid snapshot is rejected
+
+- **WHEN** a published report has no valid snapshot for the requested scoped
+  sections
+- **THEN** the compiled history read fails closed
+- **AND** it does not fall back to mutable report records
+
+#### Scenario: Reopened edits do not corrupt the last published entry
+
+- **GIVEN** a reopened report has a new live section that was not present in
+  its last publication snapshot
+- **WHEN** a head or lead reads compiled history
+- **THEN** the entry is derived from the last published scoped sections only
+- **AND** the new live section appears only after the report is published again
+
+### Requirement: Personal history uses the immutable publication snapshot
+
+The lead-specific history read MUST derive entries for published periods from
+the validated `publishedSnapshot`, including section status and record counts.
+It MUST NOT load mutable sections, items, risks, decisions, or status rows for a
+published period. The database candidate query MUST admit only
+`periodStatus = published` reports through the indexed frozen author scope;
+reopened reports are admitted exactly once through their live section path.
+Draft and reopened live periods MAY use their current rows.
+
+#### Scenario: Published personal history survives live-row mutation
+
+- **WHEN** a lead's published section or child records are changed or removed
+  after publication
+- **THEN** the lead's history entry retains the published section status and
+
+### Requirement: Personal history is explicitly cursor-paginated
+
+The `reports.myHistory` contract MUST accept an optional opaque cursor and an
+explicit bounded `limit` (maximum 100), and MUST return `items` plus
+`nextCursor`. The repository MUST fetch at most `limit + 1` live sections and
+published report envelopes per source, merge them by period chronology with a
+stable id tie-breaker, and use the probe row to determine whether another page
+exists. It MUST NOT load the complete live graph or complete published-report
+set for an author. A malformed cursor MUST fail with a client error rather
+than restarting at the first page.
+
+#### Scenario: Older personal history remains reachable
+
+- **WHEN** a lead requests a page with a limit smaller than their history
+- **THEN** the response contains at most that limit and a non-null `nextCursor`
+  when more entries exist
+- **AND** requesting that cursor returns the following entries without
+  duplicating the previous page
+
+#### Scenario: Pagination terminates explicitly
+
+- **WHEN** the final page is returned
+- **THEN** `nextCursor` is `null`; the API never silently truncates history
+  counts from the immutable snapshot
+- **AND** the query does not fall back to the mutable published graph
+
+#### Scenario: Personal history uses one repeatable-read snapshot
+
+- **WHEN** a report is published while `reports.myHistory` reads its live and
+  published candidate sources
+- **THEN** both source reads use the same `RepeatableRead` transaction snapshot
+- **AND** the merged page contains the report exactly once or not at all,
+  according to that snapshot
+- **AND** a cursor never skips or duplicates an entry because publication
+  occurred between the two source statements.

@@ -3,6 +3,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { searchPublishedDocuments } from "./published-search-query.js";
 import type { SearchRepository } from "./search.service.js";
 
 interface RawHit {
@@ -25,7 +26,6 @@ interface SearchSqlContext {
   readonly projectMineFilter: Prisma.Sql;
   readonly sectionGroupFilter: Prisma.Sql;
   readonly projectGroupFilter: Prisma.Sql;
-  readonly publishedReportJoin: Prisma.Sql;
 }
 
 type SearchParams = Parameters<SearchRepository["search"]>[0];
@@ -49,14 +49,6 @@ function buildSqlContext(params: SearchParams): SearchSqlContext {
     groupIds === null
       ? Prisma.empty
       : Prisma.sql`AND p."leadId" IN (SELECT "id" FROM "User" WHERE "reportingGroupId" IN (${Prisma.join(groupIds)}))`;
-  // The `published` scope gates on `periodStatus` — the lifecycle column — NOT
-  // `status` (the list column, which can stay 'published' on a reopened period
-  // whose content is unreadable). Projects join no section, so no published gate.
-  const publishedReportJoin =
-    scope === "published"
-      ? Prisma.sql`INNER JOIN "Report" rpt ON rpt."id" = rs."reportId" AND rpt."periodStatus" = 'published'::"PeriodStatus"`
-      : Prisma.empty;
-
   return {
     q,
     headlineOpts: "MaxWords=12,MinWords=4,StartSel=<<,StopSel=>>",
@@ -65,7 +57,6 @@ function buildSqlContext(params: SearchParams): SearchSqlContext {
     projectMineFilter,
     sectionGroupFilter,
     projectGroupFilter,
-    publishedReportJoin,
   };
 }
 
@@ -81,7 +72,6 @@ function buildItemChunk(context: SearchSqlContext): Prisma.Sql {
       i."reportSectionId"::text AS "reportSectionId", i."createdAt" AS "createdAt"
     FROM "Item" i
     INNER JOIN "ReportSection" rs ON rs."id" = i."reportSectionId"
-    ${context.publishedReportJoin}
     WHERE i."searchTsv" @@ plainto_tsquery('russian', ${q})
     ${context.sectionMineFilter} ${context.sectionGroupFilter}
     ORDER BY "rank" DESC, i."createdAt" DESC
@@ -105,7 +95,6 @@ function buildRiskChunk(context: SearchSqlContext): Prisma.Sql {
       r."reportSectionId"::text AS "reportSectionId", r."createdAt" AS "createdAt"
     FROM "Risk" r
     INNER JOIN "ReportSection" rs ON rs."id" = r."reportSectionId"
-    ${context.publishedReportJoin}
     WHERE r."searchTsv" @@ plainto_tsquery('russian', ${q})
     ${context.sectionMineFilter} ${context.sectionGroupFilter}
     ORDER BY "rank" DESC, r."createdAt" DESC
@@ -125,7 +114,6 @@ function buildDecisionChunk(context: SearchSqlContext): Prisma.Sql {
       d."reportSectionId"::text AS "reportSectionId", d."createdAt" AS "createdAt"
     FROM "Decision" d
     INNER JOIN "ReportSection" rs ON rs."id" = d."reportSectionId"
-    ${context.publishedReportJoin}
     WHERE d."searchTsv" @@ plainto_tsquery('russian', ${q})
     ${context.sectionMineFilter} ${context.sectionGroupFilter}
     ORDER BY "rank" DESC, d."createdAt" DESC
@@ -192,6 +180,10 @@ export class SearchPrismaRepository implements SearchRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   readonly search = async (params: SearchParams): Promise<SearchHit[]> => {
+    if (params.scope === "published") {
+      return searchPublishedDocuments(this.prisma, params);
+    }
+
     const chunks = buildIncludedChunks(
       buildSqlContext(params),
       params.excludeTypes,

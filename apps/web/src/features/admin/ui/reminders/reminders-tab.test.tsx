@@ -14,7 +14,6 @@ import { TRPCProxyContext } from "../../../../shared/lib/trpc/trpc-context";
 import { expectDefined } from "../../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../../test-utils/mock-trpc";
 import type {
-  AdminPeriodView,
   AdminReminderPolicyView,
   AdminReminderView,
 } from "../../model/admin-types";
@@ -31,15 +30,6 @@ vi.mock("sonner", () => ({
     info: (...args: unknown[]) => toastInfo(...args),
   },
 }));
-
-const period: AdminPeriodView = {
-  id: "a0000000-0000-4000-8000-000000000001",
-  weekLabel: "Week 19",
-  startDate: "2026-05-04",
-  endDate: "2026-05-10",
-  deadline: "2026-05-08T10:00:00.000Z",
-  status: "open" as const,
-};
 
 const policyDeadline: AdminReminderPolicyView = {
   id: "b0000000-0000-4000-8000-000000000001",
@@ -66,16 +56,9 @@ const policyEscalation: AdminReminderPolicyView = {
 // Far-future fire time so the next-send line is deterministic whatever day the
 // suite runs.
 const futureRule: AdminReminderView = {
-  id: "c0000000-0000-4000-8000-000000000001",
-  name: "Deadline reminder",
-  description: "auto",
-  active: true,
-  kind: "deadline",
-  fireAt: new Date("2099-05-07T10:00:00.000Z"),
-  timezone: "Europe/Moscow",
-  version: 1,
-  reportId: period.id,
   policyId: policyDeadline.id,
+  fireAt: new Date("2099-05-07T10:00:00.000Z"),
+  active: true,
 };
 
 function renderTab(args?: {
@@ -261,12 +244,10 @@ describe("RemindersTab — plain-language cards", () => {
         [policyDeadline.id]: [
           {
             ...futureRule,
-            id: "rule-late",
             fireAt: new Date("2099-05-07T10:00:00.000Z"),
           },
           {
             ...futureRule,
-            id: "rule-early",
             fireAt: new Date("2098-03-02T10:00:00.000Z"),
           },
         ],

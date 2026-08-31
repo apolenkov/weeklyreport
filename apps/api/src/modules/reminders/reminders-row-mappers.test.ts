@@ -3,12 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   toExecutionCreateData,
   toExecutionDomain,
+  toRuleDomain,
 } from "./reminders-row-mappers.js";
 
 // The recipient identity MUST come from the persisted recipientEmail column,
 // never by parsing the dedupeKey back apart. A row whose dedupeKey embeds a
 // different address than the column (e.g. after a re-mail) must surface the
-// column value — the old extractRecipientEmail(dedupeKey) behavior failed this.
+// column value, even when the dedupe key carries a different address.
 describe("reminder execution row mapping — recipient identity", () => {
   const row = {
     id: "99999999-9999-4999-8999-999999999998",
@@ -21,12 +22,17 @@ describe("reminder execution row mapping — recipient identity", () => {
     error: null,
     createdAt: new Date("2026-04-12T09:00:00.000Z"),
     updatedAt: new Date("2026-04-12T09:00:00.000Z"),
-    rule: { reportId: null },
+    rule: {
+      reportId: "77777777-7777-4777-8777-777777777777",
+      fireAt: new Date("2026-04-10T15:00:00.000Z"),
+    },
   };
 
   it("toExecutionDomain reads recipientEmail from the column, not the dedupeKey", () => {
     const execution = toExecutionDomain(row);
     expect(execution.recipientEmail).toBe("column-owner@test.local");
+    expect(execution.scheduledFor).toEqual(row.rule.fireAt);
+    expect(execution.scheduledFor).not.toEqual(row.createdAt);
   });
 
   it("toExecutionCreateData persists recipientEmail verbatim", () => {
@@ -34,7 +40,7 @@ describe("reminder execution row mapping — recipient identity", () => {
       {
         id: row.id,
         ruleId: row.ruleId,
-        reportId: null,
+        reportId: row.rule.reportId,
         dedupeKey: row.dedupeKey,
         status: "queued",
         scheduledFor: row.createdAt,
@@ -43,6 +49,7 @@ describe("reminder execution row mapping — recipient identity", () => {
         errorMessage: null,
       },
       {
+        contractVersion: 1,
         kind: "deadline",
         cycleDate: "2026-04-12",
         leadName: "Lead One",
@@ -57,5 +64,25 @@ describe("reminder execution row mapping — recipient identity", () => {
       },
     );
     expect(createData.recipientEmail).toBe("column-owner@test.local");
+  });
+
+  it("toRuleDomain preserves mandatory report and policy ownership", () => {
+    const rule = toRuleDomain({
+      id: "66666666-6666-4666-8666-666666666666",
+      reportId: "77777777-7777-4777-8777-777777777777",
+      policyId: "88888888-8888-4888-8888-888888888888",
+      kind: "deadline",
+      fireAt: new Date("2026-04-12T09:00:00.000Z"),
+      timezone: "Europe/Moscow",
+      status: "active",
+      version: 1,
+      createdAt: new Date("2026-04-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-04-01T00:00:00.000Z"),
+    });
+
+    expect(rule).toMatchObject({
+      reportId: "77777777-7777-4777-8777-777777777777",
+      policyId: "88888888-8888-4888-8888-888888888888",
+    });
   });
 });

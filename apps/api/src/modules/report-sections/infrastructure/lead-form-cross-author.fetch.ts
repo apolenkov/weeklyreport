@@ -1,9 +1,11 @@
-import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
+import type { Prisma } from "@prisma/client";
+
+type PrismaReader = Prisma.TransactionClient;
 
 // The caller's distinct assigned productIds (report-wide; assignments are not
 // report-scoped). Both cross-author reads start from this same join.
 export async function fetchViewerProjectIds(
-  prisma: PrismaService,
+  prisma: PrismaReader,
   userId: string,
 ): Promise<string[]> {
   const assignments = await prisma.stageAssignment.findMany({
@@ -15,7 +17,7 @@ export async function fetchViewerProjectIds(
 
 // Other users' stage assignments on the caller's products (status-only read).
 export function fetchForeignStatusAssignments(
-  prisma: PrismaService,
+  prisma: PrismaReader,
   myProjectIds: string[],
   userId: string,
 ) {
@@ -35,7 +37,7 @@ export function fetchForeignStatusAssignments(
 // RISK-DERIVED (covering risks that name the stage), never the foreign item
 // text; persisted traffic is the empty/non-empty base when no risk covers it.
 export function fetchForeignStatusSections(
-  prisma: PrismaService,
+  prisma: PrismaReader,
   reportId: string,
   otherUserIds: string[],
 ) {
@@ -56,7 +58,7 @@ export function fetchForeignStatusSections(
 // Co-owners on shared, NON-ARCHIVED products, with the author's role (the
 // full-content read scopes to non-archived products only).
 export function fetchForeignContentAssignments(
-  prisma: PrismaService,
+  prisma: PrismaReader,
   myProjectIds: string[],
   userId: string,
 ) {
@@ -125,7 +127,7 @@ const foreignContentSectionSelect = {
 } as const;
 
 export function fetchForeignContentSections(
-  prisma: PrismaService,
+  prisma: PrismaReader,
   reportId: string,
   otherUserIds: string[],
 ) {

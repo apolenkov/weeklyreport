@@ -1,5 +1,6 @@
 import "server-only";
 
+import { AUTH_COOKIE_NAME } from "@customreport/shared";
 import { cookies } from "next/headers";
 
 import {
@@ -8,8 +9,6 @@ import {
   TRPC_BATCH_EMPTY_INPUT,
 } from "../transport/api-url";
 import { decodeAuthMeResponse } from "./decode-auth-me";
-import { AUTH_COOKIE_NAME } from "./session";
-
 export async function getServerSession() {
   const cookieStore = await cookies();
   const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;

@@ -114,18 +114,8 @@ export type ReviewVerdict = z.infer<typeof reviewVerdictSchema>;
 export type RecordCommentView = z.infer<typeof recordCommentViewSchema>;
 /** Section verdict tied to a judged version and derived currency state. */
 export type SectionReviewView = z.infer<typeof sectionReviewViewSchema>;
-/** Command acknowledging one report for one reporting group. */
-export type ReviewAcknowledgeInput = z.infer<
-  typeof reviewAcknowledgeInputSchema
->;
 /** Command creating a comment at exactly one item, risk, or decision anchor. */
 export type ReviewCommentInput = z.infer<typeof reviewCommentInputSchema>;
-/** Command deleting one anchored comment by id. */
-export type ReviewDeleteCommentInput = z.infer<
-  typeof reviewDeleteCommentInputSchema
->;
-/** Command applying a verdict to an expected section version. */
-export type ReviewVerdictInput = z.infer<typeof reviewVerdictInputSchema>;
 /** User read receipt for one report and reporting group. */
 export type ReviewAcknowledgementView = z.infer<
   typeof reviewAcknowledgementViewSchema

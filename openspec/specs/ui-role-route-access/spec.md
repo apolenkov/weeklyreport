@@ -31,7 +31,7 @@ cross-role exception exists.
 ### Requirement: Access denial returns the visitor to their own home
 
 When a role is denied a route, the "go home" affordance on the denial surface MUST
-resolve to the visitor's own role home via the `role-home` helper, falling back to
+resolve to the visitor's own role home via `ROLE_HOME_PATH`, falling back to
 `/` for anonymous visitors — never a hardcoded destination. `ForbiddenPage` stays
 role-agnostic: the caller passes a pre-resolved `homeHref` string (it never
 receives the visitor's role).
@@ -39,7 +39,7 @@ receives the visitor's role).
 #### Scenario: Denied visitor is sent to their own home
 
 - **WHEN** a visitor is denied a route and uses the denial screen's home link
-- **THEN** the link resolves to `roleHomePath(role)` for an authenticated visitor,
+- **THEN** the link resolves to `ROLE_HOME_PATH[role]` for an authenticated visitor,
   or `/` when there is no session — not a hardcoded `/head/dashboard`
 
 ### Requirement: Role gates route through the shared RoleGate component
@@ -52,7 +52,7 @@ allowed roles via its `allowedRoles` prop. New hand-rolled guard blocks
 a layout or page) MUST NOT be added. `RoleGate` MUST itself satisfy the
 existing contracts of this spec: it denies by rendering the in-page
 `ForbiddenPage` at the requested URL (never a redirect), and it resolves
-the wall's `homeHref` via `roleHomePath` with the `/` fallback for
+the wall's `homeHref` via `ROLE_HOME_PATH[session.role]` with the `/` fallback for
 anonymous visitors. Per-route allowed-role arrays remain declared at each
 call site (route policies are intentionally distinct); a centralized
 route→roles map is out of contract. The `api/revalidate-org` route
@@ -71,7 +71,7 @@ not a rendered wall.
 - **WHEN** the session is absent or its role is not in `allowedRoles`
 - **THEN** `RoleGate` renders `ForbiddenPage` in place with
   `requiredRoles` equal to the gate's `allowedRoles`
-- **AND** `homeHref` is `roleHomePath(session.role)` for an authenticated
+- **AND** `homeHref` is `ROLE_HOME_PATH[session.role]` for an authenticated
   visitor, or `/` when there is no session
 
 #### Scenario: RoleGate allows a visitor

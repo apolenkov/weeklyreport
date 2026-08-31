@@ -161,17 +161,7 @@ export class LeadFormService {
     userId: string,
     role?: Role,
   ): Promise<CrossAuthorStatusRow[]> {
-    const isHeadLike = role === "head" || role === "admin";
-    if (!isHeadLike) {
-      const ownSection = await this.repository.getSectionForPeriod(
-        reportId,
-        userId,
-      );
-      if (!ownSection) {
-        return [];
-      }
-    }
-    return this.repository.getCrossAuthors(reportId, userId);
+    return this.repository.getCrossAuthors(reportId, userId, role);
   }
 
   // Report access + co-ownership required; no head/admin bypass. Empty payload
@@ -180,17 +170,8 @@ export class LeadFormService {
     reportId: string,
     userId: string,
   ): Promise<CrossAuthorSectionRow[]> {
-    // (a) Report access — own a section in this report. No role bypass.
-    const ownSection = await this.repository.getSectionForPeriod(
-      reportId,
-      userId,
-    );
-    if (!ownSection) {
-      this.telemetry.recordCrossAuthorRead("denied");
-      return [];
-    }
-
-    // (b) Co-ownership + content. The repository returns `coOwnsShared`
+    // Report access, co-ownership, lifecycle, and content are proven by one
+    // repository transaction. The repository returns `coOwnsShared`
     // separately from row-emptiness so denied and empty stay distinguishable.
     const { coOwnsShared, rows } = await this.repository.getCrossAuthorContent(
       reportId,

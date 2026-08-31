@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
+import { createNullAuditLogger } from "../test-utils/audit-logger.js";
 import { expectDefined } from "../test-utils/expect-defined.js";
-import { createAuditLogger, createNullAuditLogger } from "./audit-logger.js";
+import { createAuditLogger } from "./audit-logger.js";
 import type { AppLogger } from "./logger.js";
 
 interface Captured {
@@ -80,7 +81,7 @@ describe("createAuditLogger — policySave / policyRemove", () => {
       role: "admin",
       ip: "10.0.0.6",
       policyId: "22222222-2222-4222-8222-222222222220",
-      kind: "follow_up",
+      kind: "escalation",
       action: "update",
     });
 
@@ -88,7 +89,7 @@ describe("createAuditLogger — policySave / policyRemove", () => {
     expect(entry.context).toMatchObject({
       event: "admin.policy.save",
       action: "update",
-      kind: "follow_up",
+      kind: "escalation",
     });
   });
 

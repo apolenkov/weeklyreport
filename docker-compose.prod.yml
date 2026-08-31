@@ -14,6 +14,12 @@
 # - Internal-only networking for postgres/redis (no host ports)
 # - JSON-file logging with rotation
 
+# One immutable internal origin is shared by the Next build (rewrites) and the
+# standalone server (server-side fetches). It is intentionally not an
+# operator-provided variable: changing one phase without the other creates a
+# production split-brain route.
+x-production-api-url: &production-api-url http://api:3001
+
 services:
   # Compose cannot validate a password's use as a URL component. Fail before
   # any database-dependent service starts instead of silently truncating or
@@ -156,8 +162,7 @@ services:
       interval: 5m
       timeout: 10s
       retries: 2
-      # One full cadence before the first verdict, so a fresh stack is not
-      # reported unhealthy merely for having taken no backup yet.
+      # Allow one full cadence before the first verdict.
       start_period: ${BACKUP_INTERVAL_SECONDS:?set the intended local backup cadence in seconds (e.g. 3600)}s
     restart: unless-stopped
     volumes:
@@ -214,7 +219,6 @@ services:
     environment:
       # Migrations connect directly to PostgreSQL because DDL needs a session.
       DATABASE_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB must be set}
-      DIRECT_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB must be set}
     depends_on:
       postgres:
         condition: service_healthy
@@ -234,7 +238,9 @@ services:
     image: customreport-api:${OTEL_SERVICE_VERSION:?set the deployed release version (for example the Git SHA)}
     environment:
       DATABASE_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@pgbouncer:5432/${POSTGRES_DB:?POSTGRES_DB must be set}?pgbouncer=true&connection_limit=1
-      DIRECT_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB must be set}
+      DB_POOL_MAX: ${DB_POOL_MAX:?DB_POOL_MAX must be set}
+      DB_POOL_IDLE_TIMEOUT_MS: ${DB_POOL_IDLE_TIMEOUT_MS:?DB_POOL_IDLE_TIMEOUT_MS must be set}
+      DB_POOL_CONNECTION_TIMEOUT_MS: ${DB_POOL_CONNECTION_TIMEOUT_MS:?DB_POOL_CONNECTION_TIMEOUT_MS must be set}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_DB: ${REDIS_DB:?REDIS_DB is required}
@@ -286,13 +292,12 @@ services:
       KEYCLOAK_SAML_ENTRY_POINT: ${KEYCLOAK_SAML_ENTRY_POINT:?KEYCLOAK_SAML_ENTRY_POINT must be set}
       KEYCLOAK_SAML_ISSUER: ${KEYCLOAK_SAML_ISSUER:?KEYCLOAK_SAML_ISSUER must be set}
       KEYCLOAK_SAML_CERT: ${KEYCLOAK_SAML_CERT:?KEYCLOAK_SAML_CERT must be set}
-      # Optional coverage vars (all .optional() in envSchema). In prod, forward
-      # SENTRY_DSN for error capture and CLIENT_LOG_FORWARDING=true to accept the
-      # browser log forwarder; the rest (AUTH_DEV_MODE_ALLOW_TEST,
-      # CUSTOMREPORT_REPO_ROOT, DLQ_ALERT_THRESHOLD, AUTH_JWT_COOKIE_NAME) stay
-      # at their consumer defaults unless a deploy needs the override.
+      # Optional production overrides use null-valued entries so Compose passes
+      # them through only when the operator sets them; unset values stay absent
+      # and retain the typed consumer defaults.
+      DLQ_ALERT_THRESHOLD:
       SENTRY_DSN: ${SENTRY_DSN:-}
-      CLIENT_LOG_FORWARDING: ${CLIENT_LOG_FORWARDING:-}
+      CLIENT_LOG_FORWARDING: ${CLIENT_LOG_FORWARDING:?CLIENT_LOG_FORWARDING must be set (true or false)}
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -301,12 +306,11 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      # Same /health/ready endpoint the image now bakes in by default; this
-      # override exists only to tune the intervals (a faster 15s loop, 5s
+      # The override tunes the intervals (a faster 15s loop, 5s
       # timeout) for the compose network, not because the endpoint differs.
-      # /health/ready checks DB + Redis + BullMQ + memory, so the container
-      # marks healthy only when actually serving; start_period 60s spans the
-      # first migration + tRPC bootstrap so they don't flap the loop.
+      # /health/ready checks DB + Redis + both BullMQ workers/queues + memory,
+      # so the container marks healthy only when actually serving; start_period
+      # 60s spans migration, worker connections, and tRPC bootstrap.
       test:
         [
           "CMD-SHELL",
@@ -317,7 +321,7 @@ services:
       retries: 3
       start_period: 60s
     restart: unless-stopped
-    # api is no longer host-published — all external traffic flows through the
+    # API is not host-published — all external traffic flows through the
     # Caddy edge over the compose network, mirroring the expose-only posture
     # applied to web. Closing the host port also removes the direct-to-host API
     # path that could bypass edge controls / forge X-Forwarded-For once trust
@@ -344,22 +348,24 @@ services:
       dockerfile: Dockerfile.web
       # NEXT_PUBLIC_* values are inlined into the client bundle at BUILD time and
       # cannot be overridden at runtime. API_URL here is the fixed internal origin
-      # baked into the next.config.ts rewrites — a literal, NOT the runtime
-      # ${API_URL}, so a stray shell API_URL can't bake a broken rewrite. The base
-      # Dockerfile.web ARGs default to dev values; production overrides them here.
+      # baked into the next.config.ts rewrites — a literal, NOT an operator
+      # value, so a stray shell API_URL cannot bake a broken rewrite. The
+      # Dockerfile requires the server-side API origin and explicit telemetry
+      # toggles; these values are baked into the client bundle at build time.
       args:
         NEXT_PUBLIC_AUTH_STUB: "false"
         NEXT_PUBLIC_DEV_ROLE_SWITCHER: "false"
         NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
         NEXT_PUBLIC_APP_VERSION: ${OTEL_SERVICE_VERSION:?set the deployed release version (for example the Git SHA)}
-        API_URL: http://api:3001
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL must be set}
+        API_URL: *production-api-url
+        NEXT_PUBLIC_CLIENT_LOG_FORWARDING: ${NEXT_PUBLIC_CLIENT_LOG_FORWARDING:?NEXT_PUBLIC_CLIENT_LOG_FORWARDING must be set (true or false)}
+        NEXT_PUBLIC_WEB_VITALS: ${NEXT_PUBLIC_WEB_VITALS:?NEXT_PUBLIC_WEB_VITALS must be set (true or false)}
     image: customreport-web:${OTEL_SERVICE_VERSION:?set the deployed release version (for example the Git SHA)}
     environment:
       # Only server-side vars (read at runtime) belong here: NEXT_PUBLIC_* is
       # inlined at BUILD time via build.args above, so a runtime line for it
-      # would be a no-op. Required — a default would mask a misrouted origin.
-      API_URL: ${API_URL:?API_URL must be set (server-side origin, e.g. http://api:3001)}
+      # would be a no-op. Keep this identical to the build-time rewrite origin.
+      API_URL: *production-api-url
       # Feeds sentry.server.config.ts, so Server-Component failures (root
       # generateMetadata, getOrgPublic) and instrumentation.ts onRequestError
       # reach the configured Sentry-compatible endpoint. Optional like the api's: unset means log-only, and every
@@ -369,16 +375,13 @@ services:
       api:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/ || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000/ || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3
       start_period: 20s
     restart: unless-stopped
-    # web is no longer published to the host directly — caddy fronts it.
-    # Uncomment WEB_PORT mapping below if you bypass caddy in a dev-prod run.
-    # ports:
-    #   - "${WEB_PORT:-3000}:3000"
+    # Web is not published to the host directly — Caddy fronts it.
     expose:
       - "3000"
     deploy:
@@ -392,10 +395,10 @@ services:
         max-file: "5"
 
   # Caddy edge — TLS termination + reverse-proxy + security headers.
-  # Routes /trpc, /auth, /health, /admin/queues -> api; /metrics remains
-  # internal-only on the compose network; everything else -> web.
-  # WebSocket upgrade is automatic. Auto-HTTPS uses Let's Encrypt when
-  # CADDY_SITE_ADDRESS resolves publicly.
+  # Routes /trpc, /auth, /health, /admin/queues, /api/web-vitals,
+  # /api/client-logs and /pdfs -> api; /metrics remains internal-only on the
+  # compose network; everything else -> web.
+  # Auto-HTTPS uses Let's Encrypt when CADDY_SITE_ADDRESS resolves publicly.
   caddy:
     image: caddy:2.8-alpine@sha256:af32e97399febea808609119bb21544d0265c58a02836576e32a2d082c262c17
     environment:
@@ -416,9 +419,8 @@ services:
       web:
         condition: service_healthy
     healthcheck:
-      # caddy doesn't ship curl/wget in the alpine image, but the admin API on
-      # :2019 always responds — use it for liveness.
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:2019/config/"]
+      # Probe Caddy's local admin API so liveness covers the running proxy.
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:2019/config/"]
       interval: 30s
       timeout: 5s
       retries: 3

@@ -39,9 +39,7 @@ export function toIsoDateString(date: Date): string {
   return date.toISOString().slice(0, ISO_DATE_LENGTH);
 }
 
-// Single home for short English month labels (getUTCMonth index). Exported so
-// parsers of these rendered labels invert this table instead of respelling it.
-export const MONTHS_SHORT: readonly string[] = [
+const MONTHS_SHORT: readonly string[] = [
   "Jan",
   "Feb",
   "Mar",

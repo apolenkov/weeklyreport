@@ -1,11 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
-import {
-  PeriodState,
-  PeriodStatus,
-  Prisma,
-  ReportStatus,
-} from "@prisma/client";
+import { PeriodState, PeriodStatus, ReportStatus } from "@prisma/client";
 
+import { provisionalPublishedSnapshot } from "../support/published-snapshot.js";
 import { HEAD_USER_ID, SEED_REPORTS } from "../support/seed-constants.js";
 
 const activeReport = SEED_REPORTS.active;
@@ -36,7 +32,15 @@ const PUBLISHED_FIELDS = {
   // Section rows stay the source of truth for the product seed's content: a
   // stale empty snapshot makes /reports/<id> render 0 products even when the
   // seeded published report has submitted sections.
-  publishedSnapshot: Prisma.DbNull,
+  publishedSnapshot: provisionalPublishedSnapshot({
+    reportId: publishedReport.id,
+    periodStart: new Date(publishedReport.periodStart),
+    periodEnd: new Date(publishedReport.periodEnd),
+    deadline: new Date(publishedReport.deadline),
+    publishedAt: new Date(publishedReport.publishedAt),
+    publishedById: HEAD_USER_ID,
+    publishedByName: "Елена Р.",
+  }),
 };
 
 export async function seedActiveReport(prisma: PrismaClient): Promise<number> {

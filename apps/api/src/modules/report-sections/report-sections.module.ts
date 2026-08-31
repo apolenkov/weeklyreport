@@ -1,11 +1,15 @@
 import { Module } from "@nestjs/common";
 
-import { AdminModule, SnapshotAdminService } from "../admin/index.js";
+import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import {
   LEAD_FORM_REPOSITORY,
   type LeadFormRepository,
   LeadFormService,
 } from "./application/lead-form.service.js";
+import {
+  REPORT_SECTIONS_GRACE_SETTINGS,
+  type ReportSectionsGraceSettings,
+} from "./application/report-sections.contract.js";
 import {
   REPORT_SECTIONS_REPOSITORY,
   type ReportSectionsRepository,
@@ -20,11 +24,27 @@ import { ReportSectionsPrismaRepository } from "./infrastructure/report-sections
 import { ReportSectionsPrometheusTelemetry } from "./infrastructure/report-sections-prometheus-telemetry.adapter.js";
 
 @Module({
-  // AdminModule is imported so ReportSectionsService reads gracePeriodHours +
-  // allowLateSubmissions from the AppSettings singleton per submitSection. The
-  // callback shape keeps the service test seam narrow.
-  imports: [AdminModule],
   providers: [
+    {
+      provide: REPORT_SECTIONS_GRACE_SETTINGS,
+      useFactory: (
+        prisma: PrismaService,
+      ): (() => Promise<ReportSectionsGraceSettings>) => {
+        return async () => {
+          const settings = await prisma.appSettings.findUnique({
+            where: { id: "singleton" },
+            select: { gracePeriodHours: true, allowLateSubmissions: true },
+          });
+          if (!settings) {
+            throw new Error(
+              "AppSettings singleton row 'singleton' is missing — apply the canonical init migration or restore the row.",
+            );
+          }
+          return settings;
+        };
+      },
+      inject: [PrismaService],
+    },
     ReportSectionsPrometheusTelemetry,
     {
       provide: REPORT_SECTIONS_TELEMETRY,
@@ -39,23 +59,12 @@ import { ReportSectionsPrometheusTelemetry } from "./infrastructure/report-secti
       provide: ReportSectionsService,
       useFactory: (
         repo: ReportSectionsRepository,
-        admin: SnapshotAdminService,
+        getGraceSettings: () => Promise<ReportSectionsGraceSettings>,
         telemetry: ReportSectionsTelemetry,
-      ) =>
-        new ReportSectionsService(
-          repo,
-          async () => {
-            const s = await admin.getSettings();
-            return {
-              gracePeriodHours: s.gracePeriodHours,
-              allowLateSubmissions: s.allowLateSubmissions,
-            };
-          },
-          telemetry,
-        ),
+      ) => new ReportSectionsService(repo, getGraceSettings, telemetry),
       inject: [
         REPORT_SECTIONS_REPOSITORY,
-        SnapshotAdminService,
+        REPORT_SECTIONS_GRACE_SETTINGS,
         REPORT_SECTIONS_TELEMETRY,
       ],
     },

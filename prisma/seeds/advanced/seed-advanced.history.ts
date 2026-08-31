@@ -9,6 +9,7 @@ import {
   TrafficLightStatus,
 } from "@prisma/client";
 
+import { provisionalPublishedSnapshot } from "../support/published-snapshot.js";
 import type { SeedHistoryReport } from "../support/seed-constants.js";
 import {
   HEAD_USER_ID,
@@ -74,6 +75,15 @@ async function upsertHistoryReport(
     weekLabel: report.weekLabel,
     publishedAt: new Date(report.periodEnd),
     publishedById: HEAD_USER_ID,
+    publishedSnapshot: provisionalPublishedSnapshot({
+      reportId: report.id,
+      periodStart: new Date(report.periodStart),
+      periodEnd: new Date(report.periodEnd),
+      deadline: new Date(report.deadline),
+      publishedAt: new Date(report.periodEnd),
+      publishedById: HEAD_USER_ID,
+      publishedByName: "Елена Р.",
+    }),
   };
   await prisma.report.upsert({
     where: { id: report.id },

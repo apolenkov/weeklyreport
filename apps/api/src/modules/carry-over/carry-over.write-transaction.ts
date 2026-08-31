@@ -10,6 +10,7 @@ import {
   Prisma,
 } from "@prisma/client";
 
+import { lockCurrentEditableReport } from "../../lib/report-lifecycle.js";
 import {
   mapPrismaToReportSection,
   reportSectionFullInclude,
@@ -17,7 +18,6 @@ import {
 import {
   CarryOverConflictError,
   type CarryOverResult,
-  isTargetEditable,
 } from "./carry-over.service";
 import {
   mergePlannedCarriedRows,
@@ -81,7 +81,14 @@ export async function writeCarryOver(
   records: CarryOverRecord[],
   targetSections: ReportSectionReadModel[],
 ): Promise<CarryOverResult> {
-  await assertTargetEditable(tx, execution.targetReportId);
+  const targetGate = await lockCurrentEditableReport(tx, {
+    reportId: execution.targetReportId,
+  });
+  if (targetGate.kind !== "editable") {
+    throw new CarryOverConflictError(
+      "Carry-over target period is no longer editable.",
+    );
+  }
 
   const currentTargetSections = await lockAndReadTargetSections(
     tx,
@@ -167,22 +174,6 @@ async function lockAndReadTargetSections(
     const section = byId.get(row.id);
     return section === undefined ? [] : [section];
   });
-}
-
-// FOR UPDATE on Report closes the race with concurrent publish/archive.
-async function assertTargetEditable(
-  tx: Prisma.TransactionClient,
-  targetReportId: string,
-): Promise<void> {
-  const rows = await tx.$queryRaw<
-    { periodStatus: "open" | "published" | "reopened"; archived: boolean }[]
-  >`SELECT "periodStatus", "archived" FROM "Report" WHERE "id" = ${targetReportId} FOR UPDATE`;
-  const state = rows.at(0);
-  if (state === undefined || !isTargetEditable(state)) {
-    throw new CarryOverConflictError(
-      "Carry-over target period is no longer editable.",
-    );
-  }
 }
 
 // Concurrent loser: return the winner's recorded rows, not the caller's phantom ids.

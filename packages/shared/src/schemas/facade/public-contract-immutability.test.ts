@@ -13,7 +13,6 @@ import {
 import type { ProjectActivityCreateInput } from "../project-activity/project-activity.schema";
 import type { WeeklyReportReadModel } from "../report/report.schema";
 import type {
-  OwnedStage,
   ProjectReadModel,
   ReportSectionReadModel,
 } from "../report-sections/section.schema";
@@ -34,9 +33,6 @@ describe("public contract immutability", () => {
     expectTypeOf<ReportSectionReadModel["projects"]>().toEqualTypeOf<
       readonly ProjectReadModel[]
     >();
-    expectTypeOf<
-      ReportSectionReadModel["projects"][number]["ownedStages"]
-    >().toEqualTypeOf<readonly OwnedStage[]>();
     expectTypeOf<
       ReportSectionReadModel["items"][number]["stageNames"]
     >().toEqualTypeOf<readonly string[]>();

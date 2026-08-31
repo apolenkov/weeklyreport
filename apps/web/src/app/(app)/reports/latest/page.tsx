@@ -28,6 +28,7 @@ function ResolvingStatus() {
     <p
       className="py-16 text-center text-sm text-[var(--color-muted-foreground)]"
       role="status"
+      aria-label="Opening the status report"
     >
       Opening the status report…
     </p>
@@ -62,8 +63,18 @@ function ReportsLatestContent() {
       {isResolving ? (
         <ResolvingStatus />
       ) : latestQ.isError ? (
-        <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-card)] p-8 text-center">
-          <p className="text-sm text-[var(--color-muted-foreground)]">
+        <section
+          role="alert"
+          aria-labelledby="reports-latest-error-title"
+          className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-card)] p-8 text-center"
+        >
+          <h1
+            id="reports-latest-error-title"
+            className="text-base font-semibold text-[var(--color-foreground)]"
+          >
+            Status report unavailable
+          </h1>
+          <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
             Could not load the status report.
           </p>
           <button
@@ -75,13 +86,22 @@ function ReportsLatestContent() {
           >
             Try again
           </button>
-        </div>
+        </section>
       ) : (
-        <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-card)] p-8 text-center">
-          <p className="text-sm text-[var(--color-muted-foreground)]">
+        <section
+          aria-labelledby="reports-latest-empty-title"
+          className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-card)] p-8 text-center"
+        >
+          <h1
+            id="reports-latest-empty-title"
+            className="text-base font-semibold text-[var(--color-foreground)]"
+          >
+            No status report yet
+          </h1>
+          <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
             There is no report to show yet.
           </p>
-        </div>
+        </section>
       )}
     </ReportsLatestShell>
   );

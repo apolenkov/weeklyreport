@@ -2,11 +2,11 @@ import type { Role } from "@customreport/shared";
 import { TRPCError } from "@trpc/server";
 import { describe, expect, it, vi } from "vitest";
 
-import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
 import type { AdminTelemetry } from "../../modules/admin/index.js";
 import { AdminPrismaRepository } from "../../modules/admin/index.js";
 import { ReopenRequestAdminService } from "../../modules/admin/index.js";
+import { createNullAuditLogger } from "../../test-utils/audit-logger.js";
 import { createStubAppRouterDeps } from "../../test-utils/stub-app-router-deps.js";
 import { customreportReopenRequestsTotal } from "../metrics/metrics.registry.js";
 import { createAppRouter } from "./trpc.router.js";
@@ -45,6 +45,22 @@ interface TxCounts {
 
 function makeTx(counts: TxCounts) {
   return {
+    $queryRaw: vi.fn(() =>
+      Promise.resolve([
+        {
+          id: "report-1",
+          status: "draft",
+          periodState: "open",
+          periodStatus: "open",
+          archived: false,
+          autoPublished: false,
+          autoArchived: false,
+          publishedAt: null,
+          publishedById: null,
+          reopenedAt: null,
+        },
+      ]),
+    ),
     reopenRequest: {
       // The scoped re-load inside the decision transaction returns the row
       // under decision; `updateMany` below models the state transition.

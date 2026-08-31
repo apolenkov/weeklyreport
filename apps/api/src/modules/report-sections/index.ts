@@ -16,19 +16,24 @@ export {
 export { applyRevokeTransition } from "./application/revoke-transition.js";
 export { LeadFormPrismaRepository } from "./infrastructure/lead-form.prisma-repository.js";
 export {
+  canReadPublishedSnapshot,
+  filterPublishedSnapshotForSession,
+  publishedReportScopeWhere,
+  requireScopedPublishedSnapshot,
+} from "./infrastructure/published-report-scope.js";
+export { buildEscalationsFromReadSections } from "./infrastructure/report-escalations.js";
+export { ReportSectionsModule } from "./report-sections.module.js";
+export { PublishedSnapshotIntegrityError } from "@customreport/report-persistence";
+export {
   buildAssembledReportFromPrismaRow,
   buildPortfolioProductsFromSnapshotSections,
-  computePortfolioOverviewFromReadSections,
   computeWorstStatus,
-  filterSnapshotSections,
-  parsePublishedSnapshot,
   reportFullIncludeForSnapshot,
+  requirePublishedSnapshot,
   toPublishedSnapshotJson,
-} from "./infrastructure/published-report-snapshot.js";
-export { buildEscalationsFromReadSections } from "./infrastructure/report-escalations.js";
+} from "@customreport/report-persistence";
 export {
   type PrismaReportSectionWithRelations,
   reportSectionFullInclude,
-} from "./infrastructure/report-sections.include.js";
-export { mapPrismaToReportSection } from "./infrastructure/report-sections.mappers.js";
-export { ReportSectionsModule } from "./report-sections.module.js";
+} from "@customreport/report-persistence";
+export { mapPrismaToReportSection } from "@customreport/report-persistence";

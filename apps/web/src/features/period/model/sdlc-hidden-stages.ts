@@ -1,8 +1,5 @@
 import type { StageAssignment, StageStatus } from "../../report-sections";
-import {
-  canonicalStageName,
-  trafficToStageStatus,
-} from "../../report-sections";
+import { trafficToStageStatus } from "../../report-sections";
 import type { CrossAuthorEntry } from "./sdlc-cross-author";
 
 interface ForeignOwner {
@@ -20,12 +17,9 @@ export function foreignOwnersForProduct(
       .filter((c) => c.projectId === productId)
       .flatMap((ca) =>
         ca.stageNames.map((name): [string, ForeignOwner] => {
-          const key = canonicalStageName(name);
-          const st = ca.stages.find(
-            (s) => canonicalStageName(s.stageName) === key,
-          );
+          const st = ca.stages.find((stage) => stage.stageName === name);
           return [
-            key,
+            name,
             {
               owner: ca.authorInitials,
               status: trafficToStageStatus(st?.status ?? null),
@@ -40,7 +34,7 @@ function hiddenStageLine(
   s: StageAssignment,
   foreignOwners: Map<string, ForeignOwner>,
 ): string {
-  const foreign = foreignOwners.get(canonicalStageName(s.stageName));
+  const foreign = foreignOwners.get(s.stageName);
   if (foreign) {
     return foreign.status === "empty"
       ? `${s.stageName} — ${foreign.owner} (no status set)`
@@ -68,8 +62,5 @@ export function hiddenStagesEffectiveStatuses(
   hidden: readonly StageAssignment[],
   foreignOwners: Map<string, ForeignOwner>,
 ): StageStatus[] {
-  return hidden.map(
-    (s) =>
-      foreignOwners.get(canonicalStageName(s.stageName))?.status ?? s.status,
-  );
+  return hidden.map((s) => foreignOwners.get(s.stageName)?.status ?? s.status);
 }

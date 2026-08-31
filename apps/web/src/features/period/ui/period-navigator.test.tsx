@@ -192,7 +192,7 @@ describe("PeriodNavigator (lead)", () => {
         name: /Apr 7–13, 2026/,
       });
       expect(within(archivedOption).getByText("Archived")).toBeInTheDocument();
-      // The legacy "[Archived]" bracketed prefix must be gone.
+      // The current label never carries an "[Archived]" bracketed prefix.
       expect(archivedOption.textContent).not.toContain("[Archived]");
     });
 

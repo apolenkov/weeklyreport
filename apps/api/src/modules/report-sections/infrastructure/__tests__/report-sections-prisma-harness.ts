@@ -1,10 +1,9 @@
 // Row builders for the mapper and repository suites. Shared rather than copied
 // because a fabricated row must stay identical across both to be worth
 // asserting on.
+import type { PrismaReportSectionWithRelations } from "@customreport/report-persistence";
+import { mapPrismaToReportSection } from "@customreport/report-persistence";
 import type { TrafficLightStatus } from "@customreport/shared";
-
-import type { PrismaReportSectionWithRelations } from "../report-sections.include";
-import { mapPrismaToReportSection } from "../report-sections.mappers";
 
 export const SECTION_ID = "11111111-1111-4111-8111-111111111111";
 const REPORT_ID = "22222222-2222-4222-8222-222222222222";
@@ -151,6 +150,7 @@ export function fullItem(
     workflowStatus: "planned" | "in_progress" | "paused" | "postponed" | "done";
     carriedOver: boolean;
     priorityRank: number | null;
+    pausedReason: string | null;
     stageNames: string[];
     project: { name: string } | null;
   }> = {},
@@ -167,7 +167,7 @@ export function fullItem(
     workflowStatus: overrides.workflowStatus ?? "in_progress",
     carriedOver: overrides.carriedOver ?? false,
     priorityRank: overrides.priorityRank ?? null,
-    pausedReason: null,
+    pausedReason: overrides.pausedReason ?? null,
     createdAt: FIXED_TIMESTAMP,
     updatedAt: FIXED_TIMESTAMP,
     stageNames: overrides.stageNames ?? [],

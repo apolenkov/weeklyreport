@@ -141,7 +141,7 @@ function createPeriodLifecycleProcedures(deps: AdminPeriodsDeps) {
           deps.periodAdminService.archivePeriod(input.periodId),
         ),
       ),
-    // Derive next periodState from legacy (status, periodStatus) — the new
+    // Derive next periodState from companion (status, periodStatus) fields — the
     // column lost the pre-archive distinction when overwritten with archived.
     unarchivePeriod: adminProcedure
       .input(z.object({ periodId: z.uuid() }))

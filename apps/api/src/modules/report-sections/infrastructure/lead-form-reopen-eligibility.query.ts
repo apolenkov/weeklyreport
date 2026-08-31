@@ -1,10 +1,13 @@
+import {
+  mapPrismaToReportSection,
+  reportSectionFullInclude,
+} from "@customreport/report-persistence";
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { Prisma } from "@prisma/client";
 
-import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import type { ReopenEligibilityFacts } from "../domain/lead-form-shared";
-import { reportSectionFullInclude } from "./report-sections.include";
-import { mapPrismaToReportSection } from "./report-sections.mappers";
+
+type PrismaReader = Prisma.TransactionClient;
 
 // Shared Prisma include for `getSectionForPeriod` and its group-scoped twin —
 // one contract, so a query change (e.g. a new reopen-lifecycle field) lands in
@@ -56,7 +59,7 @@ function mapSectionForPeriodRow(
 }
 
 export async function getSectionForPeriod(
-  prisma: PrismaService,
+  prisma: PrismaReader,
   reportId: string,
   userId: string,
 ): Promise<SectionForPeriodResult | null> {
@@ -76,7 +79,7 @@ export async function getSectionForPeriod(
 // `findFirst`, so membership + section come from a single snapshot, closing the
 // reassignment race a separate assertHeadTargetInGroup pre-check leaves open.
 export async function getSectionForPeriodAsGroupPeer(
-  prisma: PrismaService,
+  prisma: PrismaReader,
   reportId: string,
   authorId: string,
   peerUserId: string,
@@ -98,7 +101,7 @@ export async function getSectionForPeriodAsGroupPeer(
 }
 
 export async function getSectionReopenContext(
-  prisma: PrismaService,
+  prisma: PrismaReader,
   sectionId: string,
 ): Promise<{ authorId: string; facts: ReopenEligibilityFacts } | null> {
   const row = await prisma.reportSection.findUnique({

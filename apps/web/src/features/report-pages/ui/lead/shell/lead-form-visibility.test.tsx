@@ -226,7 +226,7 @@ function buildHarness(opts: BuildOpts = {}) {
     },
     {
       path: ["reports", "myHistory"],
-      query: () => (opts.seedHistory ? [makeHistoryEntry()] : []),
+      query: () => ({ items: opts.seedHistory ? [makeHistoryEntry()] : [] }),
     },
     { path: ["reports", "saveDraft"], mutation: true },
     { path: ["reports", "submit"], mutation: true },
@@ -401,7 +401,7 @@ describe("LeadForm — Record visibility: honest health is toggle-independent", 
     // Health derives from the always-fetched status read, not the gated content.
     expect(contentFetch).not.toHaveBeenCalled();
     // Foreign "locked" red chip is hidden in Mine only (Testing stays unassigned).
-    expect(screen.queryByLabelText(/^Testing: blocked/)).toBeNull();
+    expect(screen.queryByLabelText(/^Testing: Blocked/)).toBeNull();
   });
 
   it("Everyone: foreign chip shows and health still reflects the foreign red", async () => {
@@ -413,9 +413,8 @@ describe("LeadForm — Record visibility: honest health is toggle-independent", 
     );
     await screen.findByText(FOREIGN_DECISION_TEXT);
     expect(await productSectionRedSignal()).toBe(true);
-    // Foreign "locked" red chip now visible — Testing rewritten to the co-lead's
-    // red status (the override only runs in Everyone).
-    expect(screen.getByLabelText(/^Testing: blocked/)).toBeInTheDocument();
+    // Everyone mode exposes the co-lead's red status on the foreign stage chip.
+    expect(screen.getByLabelText(/^Testing: Blocked/)).toBeInTheDocument();
   });
 });
 
@@ -534,7 +533,7 @@ describe("LeadForm — Record visibility: purge on toggle/identity/report", () =
           authorRole: "lead" as const,
         },
       },
-      { path: ["reports", "myHistory"], query: [] },
+      { path: ["reports", "myHistory"], query: { items: [] } },
       { path: ["reports", "saveDraft"], mutation: true },
       { path: ["reports", "submit"], mutation: true },
       {

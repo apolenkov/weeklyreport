@@ -9,19 +9,59 @@ import {
 import type { CrossAuthorContentRow } from "../../report-sections";
 import { buildActivitySlideModel } from "./activity-slide-model";
 import { buildProductScopedSlides } from "./product-scoped-slides";
+import type { SectionSlideModel } from "./section-slide-contracts";
 import { buildSectionSlideModel } from "./section-slide-model";
 import { sortSlidesForReview } from "./section-slide-pagination";
 import {
   paginateSectionSlides,
   slidesForDensity,
 } from "./slide-density-pagination";
-import { slideRecordIdentities } from "./slide-record-identities";
+import type { SlideGridModel } from "./slide-grid-model";
+import type { GridProductCard, GridSubsection } from "./slide-grid-products";
+import { COLUMN_ORDER } from "./slide-grid-rows";
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
 const SECTION_ID = "22222222-2222-4222-8222-222222222222";
 const AUTHOR_ID = "33333333-3333-4333-8333-333333333333";
 const PRODUCT_ID = "44444444-4444-4444-8444-444444444444";
 const PRODUCT_TWO_ID = "88888888-8888-4888-8888-888888888888";
+
+function subsectionRecordIdentities(
+  productId: string,
+  subsection: GridSubsection,
+): readonly string[] {
+  return COLUMN_ORDER.flatMap((column) =>
+    subsection.columns[column].map(
+      (row) => `row:${productId}:${subsection.id}:${column}:${row.id}`,
+    ),
+  );
+}
+
+function productRecordIdentities(
+  grid: SlideGridModel,
+  product: GridProductCard,
+): readonly string[] {
+  return [
+    ...grid.priorityStrip
+      .filter(
+        (card): card is typeof card & { id: string } =>
+          card.id !== null && card.productId === product.id,
+      )
+      .map((card) => `priority:${product.id}:${card.id}`),
+    ...product.subsections.flatMap((subsection) =>
+      subsectionRecordIdentities(product.id, subsection),
+    ),
+  ];
+}
+
+function slideRecordIdentities(model: SectionSlideModel): readonly string[] {
+  const grid = model.grid;
+  return grid === undefined
+    ? []
+    : grid.products.flatMap((product) =>
+        productRecordIdentities(grid, product),
+      );
+}
 
 function makeSection(
   overrides: ReportSectionFixture = {},
@@ -85,6 +125,7 @@ function makeForeignRow(
   return {
     authorId: FOREIGN_AUTHOR_ID,
     authorName: "Bria Co-owner",
+    authorRole: "lead",
     items: [],
     risks: [],
     decisions: [],
@@ -468,7 +509,7 @@ describe("section slide utilities — paging, risk stories & transposition", () 
           impact: "Release slips",
           mitigation: "Escalate to head",
           severity: "blocked",
-          stageNames: [],
+          stageNames: ["Development"],
         },
       ],
       decisions: [

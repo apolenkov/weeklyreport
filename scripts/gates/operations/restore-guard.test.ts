@@ -95,6 +95,18 @@ void test("missing environment and malformed confirmation execute nothing", () =
   assert.deepEqual(malformed.calls, []);
 });
 
+void test("undeployed environment labels execute nothing", () => {
+  for (const environment of ["development", "uat", "staging"]) {
+    const { calls, result } = runRestore({
+      RESTORE_ENVIRONMENT: environment,
+      CONFIRM_RESTORE_TARGET: `${environment}|db.example.com|5432|customreport_test`,
+    });
+    assert.equal(result.status, 2);
+    assert.match(result.stderr, /unknown RESTORE_ENVIRONMENT/);
+    assert.deepEqual(calls, []);
+  }
+});
+
 void test("missing or incorrect per-run consent executes nothing", () => {
   for (const consent of ["", "yes"]) {
     const { calls, result } = runRestore({

@@ -59,7 +59,7 @@ function createDispatchPendingProcedure(deps: RemindersRouterDeps) {
     .input(
       z.object({
         reportId: z.uuid(),
-        ruleId: z.uuid().optional(),
+        ruleId: z.uuid(),
         leadId: z.uuid().optional(),
       }),
     )

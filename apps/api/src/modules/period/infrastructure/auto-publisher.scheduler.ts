@@ -69,10 +69,15 @@ export class AutoPublisherScheduler {
       where: {
         status: "draft",
         archived: false,
+        periodState: "open",
+        periodStatus: "open",
         deadline: { lt: cutoff },
       },
       orderBy: { deadline: "asc" },
-      select: { id: true },
+      // Keep the exact deadline selected by this scan. The publication CAS
+      // must reassert it because an admin may move or clear it before the
+      // queued candidate reaches the writer.
+      select: { id: true, deadline: true },
     });
 
     // Folded sequentially — awaiting the pending tally first is what keeps one
@@ -88,7 +93,12 @@ export class AutoPublisherScheduler {
     >(
       async (pending, candidate) => {
         const tally = await pending;
-        const outcome = await this.publishOne(candidate.id, now);
+        // `deadline: { lt: cutoff }` above makes this non-null at runtime;
+        // fail closed if the database ever returns an inconsistent row.
+        const outcome =
+          candidate.deadline === null
+            ? ({ published: false, reason: "skipped" } as const)
+            : await this.publishOne(candidate.id, now, candidate.deadline);
         if (outcome.published) {
           return {
             ...tally,
@@ -115,12 +125,17 @@ export class AutoPublisherScheduler {
   private async publishOne(
     periodId: string,
     now: Date,
+    expectedDeadline: Date,
   ): Promise<PublishCandidateOutcome> {
     try {
       // Sole lifecycle writer here — a second report.update after publish
       // risks a torn autoPublished flag (see period-dual-state). The tick time
       // is the explicit publishAt the domain boundary supplies.
-      const outcome = await this.publicationService.publishAuto(periodId, now);
+      const outcome = await this.publicationService.publishAuto(
+        periodId,
+        now,
+        expectedDeadline,
+      );
 
       // Archived or already published between scan and CAS — expected no-op.
       if (!outcome.published) return { published: false, reason: "skipped" };

@@ -11,10 +11,10 @@ const IGNORED_DIRECTORY_NAMES = new Set([
   ".git",
   "node_modules",
   ".next",
+  ".next-docker-dev",
   "dist",
   "coverage",
 ]);
-const ALLOWED_IGNORED_PREFIXES = ["prisma/generated"];
 const FORBIDDEN_PATHS = [
   /^openspec\/changes\/archive(?:\/|$)/,
   /^openspec\/deferred(?:\/|$)/,
@@ -44,12 +44,8 @@ async function findEmptyDirectories(root: string): Promise<string[]> {
   const findings: string[] = [];
   const isAllowedDirectory = (directory: string): boolean => {
     const path = relative(root, directory);
-    return (
-      path === "prisma/generated" ||
-      ALLOWED_IGNORED_PREFIXES.some(
-        (prefix) => path === prefix || path.startsWith(`${prefix}/`),
-      ) ||
-      /(^|\/)(?:node_modules|\.next|dist|coverage|\.turbo)(?:\/|$)/.test(path)
+    return /(^|\/)(?:node_modules|\.next(?:-docker-dev)?|dist|coverage|\.turbo)(?:\/|$)/.test(
+      path,
     );
   };
   const visit = async (directory: string): Promise<void> => {
@@ -94,14 +90,11 @@ function isForbidden(path: string): boolean {
 }
 
 function isAllowedIgnored(path: string): boolean {
+  if (/(^|\/)node_modules(?:\/|$)/.test(path)) return true;
   if (
-    ALLOWED_IGNORED_PREFIXES.some(
-      (prefix) => path === prefix || path.startsWith(`${prefix}/`),
-    )
+    /(^|\/)(?:\.next(?:-docker-dev)?|dist|coverage|\.turbo)(?:\/|$)/.test(path)
   )
     return true;
-  if (/(^|\/)node_modules(?:\/|$)/.test(path)) return true;
-  if (/(^|\/)(?:\.next|dist|coverage|\.turbo)(?:\/|$)/.test(path)) return true;
   if (/(^|\/)(?:\.env|\.env\.[^/]+)$/.test(path)) return true;
   return path.endsWith(".tsbuildinfo");
 }

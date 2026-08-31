@@ -20,7 +20,7 @@ export function moveToCurrentWeekPatch(): Partial<LeadItem> {
   return { type: "current", workflowStatus: "in_progress", carriedOver: false };
 }
 
-// Reason is required at the UI entry point; schema stays permissive for legacy rows.
+// Reason is required at the UI entry point; the write schema validates it.
 export function pauseItemPatch(reason: string): Partial<LeadItem> {
   return { workflowStatus: "paused", pausedReason: reason };
 }

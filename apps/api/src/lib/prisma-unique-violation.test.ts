@@ -8,7 +8,7 @@ import {
 // The pg-adapter P2002 shape: `meta.target` is UNSET and the constraint identity
 // surfaces only in `message` + serialized `meta`. A guard reading `meta.target`
 // alone misses this; these cases pin that it does not.
-const OPEN_BOUNDARY_INDEX = "Report_one_open_per_boundary";
+const SCOPED_INDEX = "GroupProduct_productId_key";
 
 function pgAdapterP2002(originalMessage: string, message: string): unknown {
   return {
@@ -28,23 +28,23 @@ describe("isUniqueViolation", () => {
 
   it("matches a scoped index when meta.target is unset (pg-adapter shape)", () => {
     const error = pgAdapterP2002(
-      `duplicate key value violates unique constraint "${OPEN_BOUNDARY_INDEX}"`,
+      `duplicate key value violates unique constraint "${SCOPED_INDEX}"`,
       "Unique constraint failed",
     );
 
     expect(
       (error as { meta?: { target?: unknown } }).meta?.target,
     ).toBeUndefined();
-    expect(isUniqueViolation(error, { index: OPEN_BOUNDARY_INDEX })).toBe(true);
+    expect(isUniqueViolation(error, { index: SCOPED_INDEX })).toBe(true);
   });
 
   it("matches a scoped index in the plain Prisma message form", () => {
     const error = {
       code: PRISMA_UNIQUE_CONSTRAINT_ERROR_CODE,
-      message: `Unique constraint failed on "${OPEN_BOUNDARY_INDEX}"`,
+      message: `Unique constraint failed on "${SCOPED_INDEX}"`,
     };
 
-    expect(isUniqueViolation(error, { index: OPEN_BOUNDARY_INDEX })).toBe(true);
+    expect(isUniqueViolation(error, { index: SCOPED_INDEX })).toBe(true);
   });
 
   it("matches a scoped composite column set present in the identity", () => {
@@ -75,20 +75,16 @@ describe("isUniqueViolation", () => {
       "Unique constraint failed",
     );
 
-    expect(isUniqueViolation(error, { index: OPEN_BOUNDARY_INDEX })).toBe(
-      false,
-    );
+    expect(isUniqueViolation(error, { index: SCOPED_INDEX })).toBe(false);
   });
 
   it("rejects index and column substrings inside unrelated identifiers", () => {
     const error = pgAdapterP2002(
-      `duplicate key value violates unique constraint "Archived_${OPEN_BOUNDARY_INDEX}_backup"`,
+      `duplicate key value violates unique constraint "Archived_${SCOPED_INDEX}_backup"`,
       "Unique constraint failed on dedupeKeyBackup",
     );
 
-    expect(isUniqueViolation(error, { index: OPEN_BOUNDARY_INDEX })).toBe(
-      false,
-    );
+    expect(isUniqueViolation(error, { index: SCOPED_INDEX })).toBe(false);
     expect(isUniqueViolation(error, { columns: ["dedupeKey"] })).toBe(false);
   });
 

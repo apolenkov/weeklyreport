@@ -1,8 +1,8 @@
 import "server-only";
 
+import { AUTH_COOKIE_NAME } from "@customreport/shared";
 import { cookies } from "next/headers";
 
-import { AUTH_COOKIE_NAME } from "../../../../shared/server/auth/session";
 import {
   requireApiUrl,
   shouldUseDevAuthFallback,
@@ -21,6 +21,7 @@ const NO_CONTEXT: PrintRouteContext = {
   session: null,
   isPdfExport: false,
   pdfReportId: null,
+  pdfJobId: null,
 };
 
 export async function getPrintRouteContext(): Promise<PrintRouteContext> {

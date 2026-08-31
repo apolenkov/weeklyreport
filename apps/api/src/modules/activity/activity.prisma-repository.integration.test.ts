@@ -1,10 +1,13 @@
 import type { UserSession } from "@customreport/shared";
+import type { Prisma } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
+import { createPauseGate } from "../../test-utils/paused-prisma.js";
 import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
+  publishedSnapshotFixture,
 } from "../../test-utils/prisma-test-helper";
 import { ActivityPrismaRepository } from "./activity.prisma-repository";
 
@@ -18,6 +21,7 @@ describe("ActivityPrismaRepository (integration)", () => {
   const leadA = "a0000000-0000-4000-a000-000000000404";
   const leadB = "a0000000-0000-4000-a000-000000000405";
   const reportId = "a0000000-0000-4000-a000-000000000406";
+  const publishedAt = new Date("2026-05-10T16:00:00.000Z");
 
   const headSession: UserSession = {
     userId: headA,
@@ -75,16 +79,46 @@ describe("ActivityPrismaRepository (integration)", () => {
         periodStart: new Date("2026-05-04T00:00:00.000Z"),
         periodEnd: new Date("2026-05-10T00:00:00.000Z"),
         deadline: new Date("2026-05-09T12:00:00.000Z"),
-        status: "draft",
+        status: "published",
         periodStatus: "reopened",
         periodState: "open",
+        publishedAt,
+        publishedSnapshot: publishedSnapshotFixture({
+          reportId,
+          periodStart: "2026-05-04T00:00:00.000Z",
+          periodEnd: "2026-05-10T00:00:00.000Z",
+          deadline: "2026-05-09T12:00:00.000Z",
+          publishedAt,
+          sectionOwners: [
+            {
+              reportSectionId: "a0000000-0000-4000-a000-000000000408",
+              authorId: leadA,
+              authorName: "Lead A at publication",
+              groupId: groupA,
+              groupName: "Software Development",
+            },
+          ],
+        }),
       },
     });
     await prisma.reportSection.createMany({
       data: [
-        { reportId, authorId: leadA, status: "draft" },
+        {
+          id: "a0000000-0000-4000-a000-000000000408",
+          reportId,
+          authorId: leadA,
+          status: "draft",
+        },
         { reportId, authorId: leadB, status: "submitted" },
       ],
+    });
+    await prisma.publishedSectionScope.create({
+      data: {
+        reportId,
+        reportSectionId: "a0000000-0000-4000-a000-000000000408",
+        authorId: leadA,
+        groupId: groupA,
+      },
     });
   });
 
@@ -140,7 +174,7 @@ describe("ActivityPrismaRepository (integration)", () => {
     expect(result.rows[0]?.leadId).toBe(leadA);
   });
 
-  it("keeps a no-section lead in the published-report roster", async () => {
+  it("uses the frozen published roster and never adds a live no-section lead", async () => {
     const leadNoSection = "a0000000-0000-4000-a000-000000000410";
     await prisma.user.create({
       data: {
@@ -160,20 +194,137 @@ describe("ActivityPrismaRepository (integration)", () => {
         status: "published",
         periodStatus: "published",
         periodState: "published",
+        publishedAt,
+        publishedSnapshot: publishedSnapshotFixture({
+          reportId,
+          periodStart: "2026-05-04T00:00:00.000Z",
+          periodEnd: "2026-05-10T00:00:00.000Z",
+          publishedAt,
+          sectionOwners: [
+            {
+              reportSectionId: "a0000000-0000-4000-a000-000000000408",
+              authorId: leadA,
+              authorName: "Lead A at publication",
+              groupId: groupA,
+              groupName: "Software Development",
+            },
+          ],
+        }),
       },
     });
 
     const result = await repo.getLiveActivity(reportId, headSession);
 
     expect(result.periodStatus).toBe("published");
-    const row = result.rows.find((r) => r.leadId === leadNoSection);
-    expect(row).toBeDefined();
-    expect(row?.reportSectionId).toBeNull();
-    expect(row?.status).toBe("draft");
-    expect(row?.itemCount).toBe(0);
-    expect(row?.riskCount).toBe(0);
-    expect(row?.decisionCount).toBe(0);
-    expect(row?.lastEditAt).toBeNull();
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]).toMatchObject({
+      leadId: leadA,
+      leadName: "Lead A at publication",
+      email: null,
+    });
+    expect(result.rows.find((r) => r.leadId === leadNoSection)).toBeUndefined();
+  });
+
+  it("does not change published activity after live author or section drift", async () => {
+    await prisma.report.update({
+      where: { id: reportId },
+      data: { periodStatus: "published", periodState: "published" },
+    });
+    await prisma.user.update({
+      where: { id: leadA },
+      data: { name: "Lead A renamed after publication" },
+    });
+    await prisma.reportSection.deleteMany({ where: { reportId } });
+
+    const result = await repo.getLiveActivity(reportId, headSession);
+
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]).toMatchObject({
+      leadId: leadA,
+      leadName: "Lead A at publication",
+      status: "submitted",
+      email: null,
+    });
+  });
+
+  it("keeps lifecycle and live activity in one snapshot across publish and group drift", async () => {
+    await prisma.report.update({
+      where: { id: reportId },
+      data: { periodStatus: "reopened", periodState: "open" },
+    });
+    const gate = createPauseGate();
+    const pausedPrisma = new Proxy(prisma, {
+      get(target, property, receiver): unknown {
+        if (property !== "$transaction")
+          return Reflect.get(target, property, receiver);
+        return async (
+          callback: (tx: Prisma.TransactionClient) => Promise<unknown>,
+          options?: Parameters<typeof prisma.$transaction>[1],
+        ) => {
+          const transaction = prisma.$transaction.bind(prisma);
+          return transaction(
+            async (tx) =>
+              callback(
+                new Proxy(tx, {
+                  get(txTarget, txProperty, txReceiver): unknown {
+                    if (txProperty !== "report")
+                      return Reflect.get(txTarget, txProperty, txReceiver);
+                    return new Proxy(txTarget.report, {
+                      get(
+                        reportTarget,
+                        reportProperty,
+                        reportReceiver,
+                      ): unknown {
+                        return reportProperty === "findUnique"
+                          ? async (
+                              ...args: Parameters<
+                                typeof txTarget.report.findUnique
+                              >
+                            ) => {
+                              const findUnique =
+                                txTarget.report.findUnique.bind(
+                                  txTarget.report,
+                                );
+                              const result = await findUnique(...args);
+                              await gate.pause();
+                              return result;
+                            }
+                          : Reflect.get(
+                              reportTarget,
+                              reportProperty,
+                              reportReceiver,
+                            );
+                      },
+                    });
+                  },
+                }) as Prisma.TransactionClient,
+              ),
+            options,
+          );
+        };
+      },
+    });
+
+    const read = new ActivityPrismaRepository(
+      pausedPrisma as never,
+    ).getLiveActivity(reportId, headSession);
+    await gate.paused;
+    await prisma.$transaction(async (tx) => {
+      await tx.report.update({
+        where: { id: reportId },
+        data: { periodStatus: "published", periodState: "published" },
+      });
+      await tx.user.update({
+        where: { id: leadA },
+        data: { reportingGroupId: groupB },
+      });
+    });
+    gate.release();
+
+    const result = await read;
+    expect(result.periodStatus).toBe("reopened");
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]?.leadId).toBe(leadA);
   });
 
   it("sorts a draft-status lead before a submitted-status lead regardless of name or record recency", async () => {
@@ -200,6 +351,9 @@ describe("ActivityPrismaRepository (integration)", () => {
         leadId: leadSubmitted,
       },
     });
+    await prisma.groupProduct.create({
+      data: { groupId: groupA, productId: projectSubmitted },
+    });
     const submittedSection = await prisma.reportSection.create({
       data: { reportId, authorId: leadSubmitted, status: "submitted" },
     });
@@ -211,6 +365,7 @@ describe("ActivityPrismaRepository (integration)", () => {
         text: "Late-edited submitted item",
         tag: "feature",
         workflowStatus: "done",
+        stageNames: ["Development"],
         updatedAt: new Date("2026-06-01T10:00:00.000Z"),
       },
     });
@@ -253,6 +408,9 @@ describe("ActivityPrismaRepository (integration)", () => {
     await prisma.project.create({
       data: { id: projectMulti, name: "Multi Project", leadId: leadMulti },
     });
+    await prisma.groupProduct.create({
+      data: { groupId: groupA, productId: projectMulti },
+    });
     const section = await prisma.reportSection.create({
       data: {
         reportId,
@@ -269,6 +427,7 @@ describe("ActivityPrismaRepository (integration)", () => {
         text: "Multi item",
         tag: "feature",
         workflowStatus: "done",
+        stageNames: ["Development"],
         updatedAt: itemUpdatedAt,
       },
     });
@@ -280,6 +439,7 @@ describe("ActivityPrismaRepository (integration)", () => {
         impact: "High",
         mitigation: "Mitigate",
         severity: "at-risk",
+        stageNames: ["Development"],
         updatedAt: riskUpdatedAt,
       },
     });
@@ -290,6 +450,7 @@ describe("ActivityPrismaRepository (integration)", () => {
         text: "Multi decision",
         owner: "Owner",
         impact: "High",
+        stageNames: ["Development"],
         updatedAt: decisionUpdatedAt,
       },
     });

@@ -4,12 +4,20 @@ export interface JobEnqueuer {
     data: Readonly<Record<string, unknown>>,
     opts?: JobEnqueueOptions,
   ) => Promise<unknown>;
+  /** Read and remove an existing BullMQ job when a recovery must replace it. */
+  readonly getJob?: (jobId: string) => Promise<
+    | {
+        readonly getState: () => Promise<string>;
+        readonly remove: () => Promise<void>;
+      }
+    | undefined
+  >;
 }
 
 interface JobEnqueueOptions {
   readonly attempts?: number;
   readonly backoff?: { readonly type: string; readonly delay: number };
-  // Deterministic job id: BullMQ ignores a second `add` carrying an id already
-  // present, so a reaper re-enqueue dedups against a late-arriving original.
+  // Stable job id for normal dispatch. Recovery may first remove a terminal
+  // job with this id, because BullMQ otherwise silently ignores the add.
   readonly jobId?: string;
 }

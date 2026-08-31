@@ -1,9 +1,9 @@
 import type { UserSession } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { createNullAuditLogger } from "../../../lib/audit-logger.js";
 import { createNullLogger } from "../../../lib/logger.js";
 import type { RemindersService } from "../../../modules/reminders/index.js";
+import { createNullAuditLogger } from "../../../test-utils/audit-logger.js";
 import { createRemindersRouter } from "./reminders.router.js";
 
 const CURRENT_REPORT_ID = "10000000-0000-4000-8000-000000000001";
@@ -65,7 +65,7 @@ describe("reminders.dispatchPending current editable report gate", () => {
     const { caller, dispatchPendingReminders } = buildCaller(CURRENT_REPORT_ID);
 
     await expect(
-      caller.dispatchPending({ reportId: OTHER_REPORT_ID }),
+      caller.dispatchPending({ reportId: OTHER_REPORT_ID, ruleId: RULE_ID }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
       message: "report-not-active",
@@ -77,7 +77,7 @@ describe("reminders.dispatchPending current editable report gate", () => {
     const { caller, dispatchPendingReminders } = buildCaller(null);
 
     await expect(
-      caller.dispatchPending({ reportId: CURRENT_REPORT_ID }),
+      caller.dispatchPending({ reportId: CURRENT_REPORT_ID, ruleId: RULE_ID }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
       message: "report-not-active",

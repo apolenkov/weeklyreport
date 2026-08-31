@@ -9,7 +9,10 @@ import {
   AdminPeriodStaleStateError,
   AdminReopenRequestAlreadyProcessedError,
   AdminReopenRequestNotFoundError,
+  AdminSnapshotConflictError,
+  AdminUserActivityAssignmentConflictError,
   AdminUserConflictError,
+  AdminUserPublishedHistoryError,
   AdminUserReportingGroupRequiredError,
 } from "../../modules/admin/index.js";
 import { ArchiveDomainError } from "../../modules/archive/index.js";
@@ -118,6 +121,9 @@ export const DOMAIN_ERROR_CODES: readonly (readonly [
   // The race-safe decide transaction's loser (zero rows matched the
   // compare-and-set) — a state conflict on an existing resource → CONFLICT.
   [AdminReopenRequestAlreadyProcessedError, "CONFLICT"],
+  // A stale admin recovery snapshot conflicts with newer durable delivery
+  // state; the operator must refresh instead of overwriting it.
+  [AdminSnapshotConflictError, "CONFLICT"],
   // Scope/archived denial → FORBIDDEN; missing report → NOT_FOUND. Two
   // classes because they map to different codes.
   [PeriodScopeError, "FORBIDDEN"],
@@ -135,6 +141,10 @@ export const DOMAIN_ERROR_CODES: readonly (readonly [
   [AdminGroupProductConflictError, "CONFLICT"],
   // An email or SAML identity collision is an existing-resource conflict.
   [AdminUserConflictError, "CONFLICT"],
+  [AdminUserActivityAssignmentConflictError, "CONFLICT"],
+  // Published reports retain their publisher identity; deactivation is the
+  // supported offboarding path, so a hard delete is a state conflict.
+  [AdminUserPublishedHistoryError, "CONFLICT"],
   // A non-viewer write without a reporting group is a validation failure on
   // the admin input — BAD_REQUEST, never a silently manufactured group.
   [AdminUserReportingGroupRequiredError, "BAD_REQUEST"],

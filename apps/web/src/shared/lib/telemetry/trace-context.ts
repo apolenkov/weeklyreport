@@ -15,12 +15,3 @@ export function createTraceparent(): string {
   const parentId = randomUuidHex().slice(0, PARENT_ID_HEX_LENGTH);
   return formatTraceparent(traceId, parentId);
 }
-
-export function fetchWithTraceparent(
-  input: RequestInfo | URL,
-  init?: RequestInit,
-): Promise<Response> {
-  const headers = new Headers(init?.headers);
-  headers.set("traceparent", createTraceparent());
-  return fetch(input, { ...init, headers, credentials: "include" });
-}

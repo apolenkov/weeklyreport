@@ -1,19 +1,20 @@
 import {
   adminProjectSchema,
-  adminReminderExecutionSchema,
-  adminReminderRuleSchema,
+  adminReportPeriodSchema,
   type AdminSnapshot,
+  adminSnapshotReminderExecutionSchema,
+  adminSnapshotReminderRuleSchema,
   adminSnapshotSchema,
   adminUserSchema,
   reminderPolicySchema,
   reportingGroupSchema,
-  reportPeriodSchema,
 } from "@customreport/shared";
+import { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { audienceFromPrisma } from "./admin-enum-mappers";
 
-async function fetchSnapshotRows(prisma: PrismaService) {
+async function fetchSnapshotRows(prisma: Prisma.TransactionClient) {
   const [
     groups,
     users,
@@ -83,11 +84,12 @@ function toAdminProject(p: SnapshotRows["projects"][number]) {
 }
 
 function toReportPeriod(r: SnapshotRows["periods"][number]) {
-  return reportPeriodSchema.parse({
+  return adminReportPeriodSchema.parse({
     id: r.id,
     periodStart: r.periodStart,
     periodEnd: r.periodEnd,
     deadline: r.deadline,
+    weekLabel: r.weekLabel,
     status: r.status,
     // Full governed lifecycle set so restore can reinstate it verbatim.
     periodState: r.periodState,
@@ -98,17 +100,19 @@ function toReportPeriod(r: SnapshotRows["periods"][number]) {
     publishedAt: r.publishedAt,
     publishedById: r.publishedById,
     reopenedAt: r.reopenedAt,
+    publishedSnapshot: r.publishedSnapshot,
   });
 }
 
 function toReminderRule(rule: SnapshotRows["reminderRules"][number]) {
-  return adminReminderRuleSchema.parse({
+  return adminSnapshotReminderRuleSchema.parse({
     id: rule.id,
     reportId: rule.reportId,
     // Policy FK so the UI can group derived rules under their owning policy.
     policyId: rule.policyId,
     kind: rule.kind,
     fireAt: rule.fireAt,
+    deadline: rule.deadline,
     timezone: rule.timezone,
     status: rule.status,
     version: rule.version,
@@ -116,10 +120,10 @@ function toReminderRule(rule: SnapshotRows["reminderRules"][number]) {
 }
 
 // Executions don't store reportId or a schedule instant; both come from the
-// owning rule's real columns (reportId, fireAt) so the snapshot never invents
-// facts — createdAt is a row timestamp, not a schedule.
+// owning rule's real columns. Persistence timestamps and the immutable renderer
+// payload are exported exactly so recovery preserves reaper and dedupe state.
 function toReminderExecution(exec: SnapshotRows["reminderExecutions"][number]) {
-  return adminReminderExecutionSchema.parse({
+  return adminSnapshotReminderExecutionSchema.parse({
     id: exec.id,
     ruleId: exec.ruleId,
     reportId: exec.rule.reportId,
@@ -129,6 +133,9 @@ function toReminderExecution(exec: SnapshotRows["reminderExecutions"][number]) {
     sentAt: exec.sentAt,
     recipientEmail: exec.recipientEmail,
     errorMessage: exec.error,
+    queuePayload: exec.queuePayload,
+    createdAt: exec.createdAt,
+    updatedAt: exec.updatedAt,
   });
 }
 
@@ -148,16 +155,21 @@ function toReminderPolicy(row: SnapshotRows["reminderPolicies"][number]) {
 export async function getSnapshot(
   prisma: PrismaService,
 ): Promise<AdminSnapshot> {
-  const rows = await fetchSnapshotRows(prisma);
-
-  return adminSnapshotSchema.parse({
-    groups: rows.groups.map((group) => reportingGroupSchema.parse(group)),
-    users: rows.users.map(toAdminUser),
-    projects: rows.projects.map(toAdminProject),
-    periods: rows.periods.map(toReportPeriod),
-    reminderRules: rows.reminderRules.map(toReminderRule),
-    reminderExecutions: rows.reminderExecutions.map(toReminderExecution),
-    // Inline policies keep the snapshot fetch one round trip.
-    policies: rows.reminderPolicies.map(toReminderPolicy),
-  });
+  return prisma.$transaction(
+    async (tx) => {
+      const rows = await fetchSnapshotRows(tx);
+      // Parse before committing the read transaction so no incoherent export
+      // can escape if cross-entity invariants are violated.
+      return adminSnapshotSchema.parse({
+        groups: rows.groups.map((group) => reportingGroupSchema.parse(group)),
+        users: rows.users.map(toAdminUser),
+        projects: rows.projects.map(toAdminProject),
+        periods: rows.periods.map(toReportPeriod),
+        reminderRules: rows.reminderRules.map(toReminderRule),
+        reminderExecutions: rows.reminderExecutions.map(toReminderExecution),
+        policies: rows.reminderPolicies.map(toReminderPolicy),
+      });
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+  );
 }

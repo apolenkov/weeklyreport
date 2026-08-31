@@ -1,0 +1,23 @@
+{
+  "name": "@customreport/report-persistence",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc6 --noEmit -p tsconfig.json",
+    "test": "vitest run --exclude '**/dist/**'"
+  },
+  "dependencies": {
+    "@customreport/shared": "workspace:*"
+  },
+  "peerDependencies": {
+    "@prisma/client": "^7.10.0"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:",
+    "typescript": "npm:@typescript/typescript6@^6.0.2"
+  }
+}

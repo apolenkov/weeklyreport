@@ -8,16 +8,21 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable, Writable } from "node:stream";
 
-import type { UserSession } from "@customreport/shared";
+import {
+  AUTH_COOKIE_NAME,
+  publishedReportSnapshotSchema,
+  type UserSession,
+} from "@customreport/shared";
 import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { type AppLogger, createNullLogger } from "../../lib/logger";
+import { canReadReport } from "../../test-utils/report-read-access.js";
+import { makeReportSectionReadModel } from "../../test-utils/report-section-fixtures.js";
 import { createAuthController } from "../auth/index.js";
 import {
-  canReadReport,
   handlePdfDownload,
   type PdfDownloadDeps,
 } from "./pdf-export.download-handler";
@@ -91,13 +96,18 @@ function asResponse(res: MockResponse): Response {
 
 function makeReq(opts: { cookie?: string; file?: string }): Request {
   return {
-    cookies: opts.cookie ? { customreport_session: opts.cookie } : {},
+    cookies: opts.cookie ? { [AUTH_COOKIE_NAME]: opts.cookie } : {},
     params: { file: opts.file ?? `${JOB_ID}.pdf` },
   } as unknown as Request;
 }
 
 interface PrismaStubOptions {
-  job?: { status: string; filePath: string; reportId: string } | null;
+  job?: {
+    status: string;
+    filePath: string;
+    reportId: string;
+    requestedBy?: string;
+  } | null;
   reportAuthorized?: boolean;
   isActive?: boolean;
   viewerGroups?: string[];
@@ -139,11 +149,12 @@ function makePrisma(opts: PrismaStubOptions = {}): PrismaService {
   return stub as unknown as PrismaService;
 }
 
-function completedJob() {
+function completedJob(requestedBy = headSession.userId) {
   return {
     status: "completed",
     filePath: `/pdfs/${JOB_ID}.pdf`,
     reportId: REPORT_ID,
+    requestedBy,
   };
 }
 
@@ -153,9 +164,7 @@ function makeDeps(overrides: Partial<PdfDownloadDeps> = {}): PdfDownloadDeps {
   return {
     prisma: makePrisma(),
     pdfDir,
-    // Matches the cookie name makeReq stamps; supplied explicitly so the
-    // handler never reads process.env.AUTH_JWT_COOKIE_NAME per request.
-    sessionCookieName: "customreport_session",
+    sessionCookieName: AUTH_COOKIE_NAME,
     verifySessionToken: () => headSession,
     sessionRevocation: { isRevoked: () => Promise.resolve(false) },
     logger: createNullLogger(),
@@ -185,7 +194,7 @@ describe("handlePdfDownload", () => {
       makeDeps({
         verifySessionToken: () => viewerSession,
         prisma: makePrisma({
-          job: completedJob(),
+          job: completedJob(viewerSession.userId),
           reportAuthorized: true,
           viewerGroups: ["group-1"],
         }),
@@ -199,37 +208,27 @@ describe("handlePdfDownload", () => {
     expect(res.body).toBe("PDF-BYTES");
   });
 
-  it("reads the session cookie under the deps cookie name, ignoring process.env (200)", async () => {
-    const originalCookieName = process.env.AUTH_JWT_COOKIE_NAME;
-    process.env.AUTH_JWT_COOKIE_NAME = "env-session-cookie";
-    try {
-      writeFileSync(join(pdfDir, `${JOB_ID}.pdf`), "PDF-BYTES");
-      const res = new MockResponse();
-      const finished = new Promise<void>((r) => res.on("finish", () => r()));
+  it("reads the session cookie under the deps cookie name (200)", async () => {
+    writeFileSync(join(pdfDir, `${JOB_ID}.pdf`), "PDF-BYTES");
+    const res = new MockResponse();
+    const finished = new Promise<void>((r) => res.on("finish", () => r()));
 
-      await handlePdfDownload(
-        makeReq({ cookie: "valid" }),
-        asResponse(res),
-        makeDeps({
-          verifySessionToken: () => viewerSession,
-          prisma: makePrisma({
-            job: completedJob(),
-            reportAuthorized: true,
-            viewerGroups: ["group-1"],
-          }),
+    await handlePdfDownload(
+      makeReq({ cookie: "valid" }),
+      asResponse(res),
+      makeDeps({
+        verifySessionToken: () => viewerSession,
+        prisma: makePrisma({
+          job: completedJob(viewerSession.userId),
+          reportAuthorized: true,
+          viewerGroups: ["group-1"],
         }),
-      );
-      await finished;
+      }),
+    );
+    await finished;
 
-      expect(res.statusCode).toBe(200);
-      expect(res.body).toBe("PDF-BYTES");
-    } finally {
-      if (originalCookieName === undefined) {
-        delete process.env.AUTH_JWT_COOKIE_NAME;
-      } else {
-        process.env.AUTH_JWT_COOKIE_NAME = originalCookieName;
-      }
-    }
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toBe("PDF-BYTES");
   });
 
   it("rejects an unauthenticated request (401, no bytes)", async () => {
@@ -244,7 +243,7 @@ describe("handlePdfDownload", () => {
   it("rejects a non-string session cookie value (validated, not cast)", async () => {
     const res = new MockResponse();
     const req = {
-      cookies: { customreport_session: 123_456 },
+      cookies: { [AUTH_COOKIE_NAME]: 123_456 },
       params: { file: `${JOB_ID}.pdf` },
     } as unknown as Request;
 
@@ -547,47 +546,79 @@ describe("handlePdfDownload", () => {
   });
 });
 
-describe("canReadReport", () => {
-  it("authorizes a viewer via the group-scope section filter (anti-vacuous)", async () => {
-    const findFirst = vi.fn(() => Promise.resolve({ id: REPORT_ID }));
-    const prisma = { report: { findFirst } } as unknown as PrismaService;
+describe("report-read-access canReadReport", () => {
+  const GROUP_ID = "33333333-3333-4333-8333-333333333333";
+  const AUTHOR_ID = "44444444-4444-4444-8444-444444444444";
+  const SECTION_ID = "55555555-5555-4555-8555-555555555555";
+
+  function publishedReportRow() {
+    const publishedAt = new Date("2026-04-18T18:00:00.000Z");
+    return {
+      id: REPORT_ID,
+      status: "published",
+      periodStatus: "published",
+      publishedSnapshot: publishedReportSnapshotSchema.parse({
+        reportId: REPORT_ID,
+        periodStart: new Date("2026-04-14T00:00:00.000Z"),
+        periodEnd: new Date("2026-04-18T00:00:00.000Z"),
+        deadline: null,
+        status: "published",
+        publishedAt,
+        publishedById: null,
+        publishedByName: "system",
+        portfolioOverview: {
+          status: "green",
+          totals: { green: 0, yellow: 0, red: 0 },
+        },
+        sections: [
+          {
+            ...makeReportSectionReadModel({
+              reportSectionId: SECTION_ID,
+              reportId: REPORT_ID,
+              authorId: AUTHOR_ID,
+            }),
+            groupId: GROUP_ID,
+            groupName: "Frozen Group",
+          },
+        ],
+      }),
+    };
+  }
+
+  it("authorizes a viewer from frozen section ownership without a live-section query", async () => {
+    const findUnique = vi.fn(() => Promise.resolve(publishedReportRow()));
+    const findFirst = vi.fn();
+    const prisma = {
+      report: { findUnique, findFirst },
+    } as unknown as PrismaService;
     const viewer: UserSession = {
       ...viewerSession,
-      viewerGroupAccess: ["group-1"],
+      viewerGroupAccess: [GROUP_ID],
     };
 
     const allowed = await canReadReport(viewer, REPORT_ID, prisma);
 
     expect(allowed).toBe(true);
-    expect(findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: {
-          id: REPORT_ID,
-          sections: {
-            some: { author: { reportingGroupId: { in: ["group-1"] } } },
-          },
-        },
-      }),
-    );
+    expect(findUnique).toHaveBeenCalledOnce();
+    expect(findFirst).not.toHaveBeenCalled();
   });
 
-  it("denies an empty-access viewer (zero-row scope filter)", async () => {
-    const findFirst = vi.fn(() => Promise.resolve(null));
-    const prisma = { report: { findFirst } } as unknown as PrismaService;
+  it("denies an empty-access viewer from the same frozen snapshot", async () => {
+    const findUnique = vi.fn(() => Promise.resolve(publishedReportRow()));
+    const findFirst = vi.fn();
+    const prisma = {
+      report: { findUnique, findFirst },
+    } as unknown as PrismaService;
     const viewer: UserSession = { ...viewerSession, viewerGroupAccess: [] };
 
     const allowed = await canReadReport(viewer, REPORT_ID, prisma);
 
     expect(allowed).toBe(false);
-    expect(findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: REPORT_ID, sections: { some: { id: { in: [] } } } },
-      }),
-    );
+    expect(findFirst).not.toHaveBeenCalled();
   });
 
-  it("authorizes an admin against the report by existence (god mode)", async () => {
-    const findUnique = vi.fn(() => Promise.resolve({ id: REPORT_ID }));
+  it("authorizes an admin only after validating the published snapshot", async () => {
+    const findUnique = vi.fn(() => Promise.resolve(publishedReportRow()));
     const prisma = { report: { findUnique } } as unknown as PrismaService;
     const admin: UserSession = { ...headSession, role: "admin" };
 

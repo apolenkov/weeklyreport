@@ -213,6 +213,7 @@ describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races
         tag: "feature",
         workflowStatus: "planned",
         carriedOver: false,
+        stageNames: ["Development"],
       },
     });
 

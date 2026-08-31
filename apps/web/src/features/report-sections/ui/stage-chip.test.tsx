@@ -10,7 +10,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { StageChip } from "./stage-chip";
 
-// StageChip now reveals its tooltip through the shared Radix Tooltip, which
+// StageChip reveals its tooltip through the shared Radix Tooltip, which
 // requires a TooltipProvider ancestor (SdlcPipeline mounts one in the app).
 // Wrap every isolated chip render in the provider so the Radix Root resolves.
 function render(ui: ReactElement) {
@@ -24,10 +24,10 @@ const BASE_LOCKED = {
 };
 
 describe("StageChip — locked stage color", () => {
-  it("locked + empty → chip labelled with empty status", () => {
+  it("locked + empty → chip labelled with no status", () => {
     render(<StageChip stage={{ ...BASE_LOCKED, status: "empty" }} />);
     expect(
-      screen.getByRole("button", { name: "DevOps: empty" }),
+      screen.getByRole("button", { name: "DevOps: No status" }),
     ).toBeInTheDocument();
     // empty surface token, not a flat gray override
     expect(screen.getByRole("button").style.background).toBe(
@@ -38,7 +38,7 @@ describe("StageChip — locked stage color", () => {
   it("locked + at-risk → chip labelled with at-risk status and token", () => {
     render(<StageChip stage={{ ...BASE_LOCKED, status: "at-risk" }} />);
     expect(
-      screen.getByRole("button", { name: "DevOps: at-risk" }),
+      screen.getByRole("button", { name: "DevOps: At risk" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button").style.background).toBe(
       "var(--color-chip-at-risk-bg)",
@@ -48,7 +48,7 @@ describe("StageChip — locked stage color", () => {
   it("locked + blocked → chip labelled with blocked status and token", () => {
     render(<StageChip stage={{ ...BASE_LOCKED, status: "blocked" }} />);
     expect(
-      screen.getByRole("button", { name: "DevOps: blocked" }),
+      screen.getByRole("button", { name: "DevOps: Blocked" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button").style.background).toBe(
       "var(--color-chip-blocked-bg)",
@@ -58,7 +58,7 @@ describe("StageChip — locked stage color", () => {
   it("locked + on-track → chip labelled with on-track status and token", () => {
     render(<StageChip stage={{ ...BASE_LOCKED, status: "on-track" }} />);
     expect(
-      screen.getByRole("button", { name: "DevOps: on-track" }),
+      screen.getByRole("button", { name: "DevOps: On track" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button").style.background).toBe(
       "var(--color-chip-on-track-bg)",
@@ -108,6 +108,24 @@ describe("StageChip — chip box height token", () => {
 });
 
 describe("StageChip — stretched row status visualization", () => {
+  it("uses the compact display label for Development without changing its accessible name", () => {
+    render(
+      <StageChip
+        stage={{
+          stageName: "Development",
+          ownership: "locked",
+          assignee: "Boris",
+          status: "on-track",
+        }}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Development: On track" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Dev")).toHaveClass("lg:hidden");
+    expect(screen.getByText("Development")).toHaveClass("hidden", "lg:inline");
+  });
+
   it("keeps the status glyph derived from the displayed status", () => {
     render(<StageChip stage={{ ...BASE_LOCKED, status: "blocked" }} />);
     const glyph = screen.getByTestId("stage-status-glyph");
@@ -152,7 +170,7 @@ describe("StageChip — covered-by-risk vs status-set distinction", () => {
       />,
     );
     expect(
-      screen.getByRole("button", { name: "Design: blocked by risk" }),
+      screen.getByRole("button", { name: "Design: Blocked by risk" }),
     ).toBeInTheDocument();
   });
 
@@ -165,7 +183,7 @@ describe("StageChip — covered-by-risk vs status-set distinction", () => {
       />,
     );
     expect(
-      screen.getByRole("button", { name: "Design: on-track — status set" }),
+      screen.getByRole("button", { name: "Design: On track — status set" }),
     ).toBeInTheDocument();
   });
 
@@ -179,7 +197,7 @@ describe("StageChip — covered-by-risk vs status-set distinction", () => {
       />,
     );
     expect(
-      screen.getByRole("button", { name: "Design: blocked by risk" }),
+      screen.getByRole("button", { name: "Design: Blocked by risk" }),
     ).toBeInTheDocument();
   });
 
@@ -191,7 +209,7 @@ describe("StageChip — covered-by-risk vs status-set distinction", () => {
       />,
     );
     expect(
-      screen.getByRole("button", { name: "Design: at-risk by risk" }),
+      screen.getByRole("button", { name: "Design: At risk by risk" }),
     ).toBeInTheDocument();
   });
 
@@ -215,7 +233,7 @@ describe("StageChip — covered-by-risk vs status-set distinction", () => {
     );
     const setButton = screen.getByRole("button");
     expect(coveredLabel).toBe(setButton.getAttribute("aria-label"));
-    expect(coveredLabel).toBe("Design: blocked by risk");
+    expect(coveredLabel).toBe("Design: Blocked by risk");
     expect(coveredCoverage).toBe("risk");
     expect(setButton.dataset.coverage).not.toBe("risk");
   });
@@ -228,14 +246,14 @@ describe("StageChip — covered-by-risk vs status-set distinction", () => {
       />,
     );
     expect(
-      screen.getByRole("button", { name: "DevOps: blocked" }),
+      screen.getByRole("button", { name: "DevOps: Blocked" }),
     ).toBeInTheDocument();
   });
 
   it("covered chip with an explicit tooltip still surfaces 'by risk' on focus", async () => {
     // A pre-set tooltip must NOT swallow the coverage cue: a sighted hover
     // user gets the dashed border AND the "by risk" explanation, now revealed
-    // through the shared Radix tooltip (opened here via keyboard focus).
+    // receives both the dashed border and the "by risk" explanation.
     render(
       <StageChip
         stage={{

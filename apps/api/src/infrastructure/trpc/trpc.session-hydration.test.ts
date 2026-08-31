@@ -115,8 +115,7 @@ describe("hydrateSession", () => {
     ).rejects.toThrow(/Organization singleton row 'singleton' is missing/);
 
     expect(findUnique).toHaveBeenCalledOnce();
-    // The old fallback created the row from DEFAULT_ORGANIZATION_IDENTITY;
-    // the fix must never write a code default on a read path.
+    // Read hydration must not create or mutate the singleton when it is absent.
     expect(upsert).not.toHaveBeenCalled();
   });
 

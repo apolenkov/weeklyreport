@@ -1,7 +1,12 @@
+import {
+  type PrismaReportSectionWithRelations,
+  reportSectionFullInclude,
+} from "@customreport/report-persistence";
 import { type Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { isUniqueViolation } from "../../../lib/prisma-unique-violation.js";
+import { lockCurrentEditableReport } from "../../../lib/report-lifecycle.js";
 import {
   ReportSectionDomainError,
   SectionVersionConflictError,
@@ -16,10 +21,6 @@ import {
   toFilledItemRows,
   toFilledRiskRows,
 } from "./fill-from.derive.js";
-import {
-  type PrismaReportSectionWithRelations,
-  reportSectionFullInclude,
-} from "./report-sections.include";
 
 interface CarryableChildRows {
   itemsToCopy: PrismaReportSectionWithRelations["items"];
@@ -63,28 +64,27 @@ async function assertTargetSectionEditable(
   tx: Prisma.TransactionClient,
   targetSectionId: string,
 ): Promise<void> {
-  const gate = await tx.$queryRaw<
-    { periodStatus: string; archived: boolean }[]
-  >`SELECT report."periodStatus", report."archived"
-            FROM "Report" AS report
-            INNER JOIN "ReportSection" AS section
-              ON section."reportId" = report."id"
-            WHERE section."id" = ${targetSectionId}
-            FOR UPDATE OF report`;
-  const gateRow = gate[0];
+  const gate = await lockCurrentEditableReport(tx, {
+    sectionId: targetSectionId,
+  });
   // A missing row means the section was deleted between the precheck
   // and this transaction — that is a NOT_FOUND, not a period-state
   // constraint.
-  if (gateRow === undefined) {
+  if (gate.kind === "not-found") {
     throw new LeadFormDomainError("The target section no longer exists.");
+  }
+  if (gate.kind === "inconsistent") {
+    // The lifecycle gate remains fail-closed; Fill From exposes its stable
+    // caller contract for a period write rather than leaking infrastructure
+    // integrity details through the repository boundary.
+    throw new LeadFormConstraintError(
+      "Cannot fill a section of a published report.",
+    );
   }
   // The archive transition leaves periodStatus untouched, so the
   // in-tx gate must re-check `archived` too — same predicate as
   // isEditablePeriod on the authz path.
-  if (
-    gateRow.archived ||
-    (gateRow.periodStatus !== "open" && gateRow.periodStatus !== "reopened")
-  ) {
+  if (gate.kind === "not-editable") {
     throw new LeadFormConstraintError(
       "Cannot fill a section of a published report.",
     );

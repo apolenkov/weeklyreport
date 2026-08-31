@@ -68,8 +68,7 @@ describe("RisksSection LockBadge", () => {
       </SdlcTooltipProvider>,
     );
 
-    // The author-attribution meta row must mark a foreign risk as read-only
-    // (previously hardcoded foreign={false} hid the indicator).
+    // The author-attribution meta row marks a foreign risk as read-only.
     const lockImgs = screen.getAllByRole("img", { name: /Read-only/i });
     expect(lockImgs.length).toBeGreaterThanOrEqual(1);
   });
@@ -256,12 +255,10 @@ describe("RisksSection stage scope", () => {
     expect(screen.getByText("Testing")).toBeInTheDocument();
   });
 
-  it("renders a No-stage-set warning chip for omitted stage scope", () => {
-    // A risk with no stages is a legacy anomaly, never an implicit "all stages"
-    // scope — the card must say so loudly.
+  it("does not render a warning for omitted product stage scope", () => {
     render(<RisksSection risks={[{ ...baseRisk, stageNames: [] }]} />);
 
-    expect(screen.getByText("No stage set")).toBeInTheDocument();
+    expect(screen.queryByText("No stage set")).not.toBeInTheDocument();
     expect(screen.queryByText("All stages")).not.toBeInTheDocument();
   });
 

@@ -1,7 +1,7 @@
 import { MS_PER_DAY } from "@customreport/shared";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Cron } from "@nestjs/schedule";
-import type { PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { AUDIT_LOGGER, type AuditLogger } from "../../../lib/audit-logger.js";
@@ -11,11 +11,16 @@ import {
   runAutoCarryOverWithRetry,
 } from "../../carry-over/index.js";
 import { PolicyApplicatorService } from "../../reminders/index.js";
+import {
+  lockAllReminderPolicies,
+  synchronizeReminderRulesForReport,
+} from "../../reminders/index.js";
 import type { EnsuredPeriod } from "../application/period-factory.js";
 import {
   ensureCurrentPeriod,
   PeriodOverlapError,
 } from "../application/period-factory.js";
+import { readMostRecentLivePeriod } from "../application/period-factory-lookup.js";
 import { buildTransition } from "../domain/period-transition.js";
 
 // The `report` delegate methods the scheduled→open flip needs.
@@ -24,24 +29,63 @@ type FlipReportDelegate = Pick<
   "findMany" | "updateMany"
 >;
 
-// Re-asserting `periodState: "scheduled"` in the WHERE makes a concurrent
-// lifecycle transition win instead of being overwritten; `buildTransition`
-// carries the legacy period tuple alongside the new state in the same write.
+interface FlipPrisma {
+  readonly report: FlipReportDelegate;
+  readonly $transaction: <T>(
+    callback: (tx: Prisma.TransactionClient) => Promise<T>,
+  ) => Promise<T>;
+}
+
+// Re-assert the selected scheduling boundary and complete draft lifecycle in
+// the WHERE. An admin can move a period into the future after the due scan;
+// that write must win instead of being overwritten by the cron flip.
 export async function flipDueScheduledToOpen(
-  report: FlipReportDelegate,
+  prisma: FlipPrisma,
   now: Date,
   logger: Pick<Logger, "log" | "warn">,
 ): Promise<void> {
-  const due = await report.findMany({
+  const due = await prisma.report.findMany({
     where: { periodState: "scheduled", periodStart: { lte: now } },
     orderBy: [{ periodStart: "asc" }, { id: "asc" }],
-    select: { id: true, periodStart: true, periodEnd: true },
+    select: {
+      id: true,
+      periodStart: true,
+      periodEnd: true,
+      status: true,
+      periodStatus: true,
+      archived: true,
+      autoPublished: true,
+      autoArchived: true,
+      publishedAt: true,
+      publishedById: true,
+      reopenedAt: true,
+    },
   });
 
   for (const row of due) {
-    const { count } = await report.updateMany({
-      where: { id: row.id, periodState: "scheduled" },
-      data: buildTransition("open", {}),
+    const count = await prisma.$transaction(async (tx) => {
+      const policies = await lockAllReminderPolicies(tx);
+      const result = await tx.report.updateMany({
+        where: {
+          id: row.id,
+          periodState: "scheduled",
+          periodStart: { equals: row.periodStart, lte: now },
+          periodEnd: row.periodEnd,
+          status: "draft",
+          periodStatus: "open",
+          archived: false,
+          autoPublished: false,
+          autoArchived: false,
+          publishedAt: null,
+          publishedById: null,
+          reopenedAt: null,
+        },
+        data: buildTransition("open", {}),
+      });
+      if (result.count === 1) {
+        await synchronizeReminderRulesForReport(tx, policies, row.id, now);
+      }
+      return result.count;
     });
     if (count === 0) {
       logger.log(
@@ -111,17 +155,14 @@ export class PeriodCreatorScheduler {
 
     // Periods minted ahead of time on an earlier tick become open here, before
     // any create decision is made against the table.
-    await flipDueScheduledToOpen(this.prisma.report, now, this.logger);
+    await flipDueScheduledToOpen(this.prisma, now, this.logger);
     await this.reconcileCarryOver();
 
     if (!settings.autoCreatePeriods) {
       return { created: false, reason: "disabled" };
     }
 
-    const mostRecent = await this.prisma.report.findFirst({
-      orderBy: { periodStart: "desc" },
-      select: { id: true, periodEnd: true },
-    });
+    const mostRecent = await readMostRecentLivePeriod(this.prisma.report);
 
     if (mostRecent && mostRecent.periodEnd.getTime() > now.getTime()) {
       return { created: false, reason: FUTURE_PERIOD_EXISTS };

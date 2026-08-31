@@ -3,9 +3,6 @@
   --font-sans:
     var(--font-lexend), var(--font-source-sans-3), ui-sans-serif, system-ui,
     sans-serif;
-  --font-body:
-    var(--font-source-sans-3), var(--font-lexend), ui-sans-serif, system-ui,
-    sans-serif;
   --font-mono: "Geist Mono", ui-monospace, monospace;
 
   --color-background: #eef1ec;
@@ -34,7 +31,6 @@
   --color-success: #d8ece4;
   --color-success-foreground: #006241;
   --color-warning: #fbbc05;
-  --color-warning-foreground: #1a1a1a;
   --color-destructive: #c82014;
   --color-destructive-emphasis: #991b1b;
   --color-destructive-emphasis-hover: #7f1d1d;
@@ -93,13 +89,9 @@
   --color-secondary: #e2e6df;
   --color-secondary-foreground: #1e3932;
 
-  --color-input: #d6d1c9;
-
   --color-starbucks-green: #006241;
   --color-starbucks-accent: #00754a;
-  --color-starbucks-house: #1e3932;
   --color-starbucks-gold: #cba258;
-  --color-starbucks-cream: #f2f0eb;
 
   --color-chart-1: #166534;
   --color-chart-2: #2563eb;
@@ -108,14 +100,7 @@
   --color-chart-5: #c2410c;
   --color-chart-6: #a21caf;
 
-  --color-sidebar: #1e3932;
-  --color-sidebar-foreground: #f2f0eb;
-  --color-sidebar-primary: #00754a;
-  --color-sidebar-primary-foreground: #ffffff;
-  --color-sidebar-accent: #2d4f47;
-  --color-sidebar-accent-foreground: #f2f0eb;
-  --color-sidebar-border: #3a6359;
-  --color-sidebar-ring: #00754a;
+  --color-on-dark: #f2f0eb;
 
   --card-surface-border: rgba(0, 0, 0, 0.1);
   --card-surface-gradient: linear-gradient(
@@ -175,10 +160,6 @@
   --slide-canvas-max-w: 100%;
   --slide-canvas-min-w: 900px;
   --slide-canvas-min-h: 360px;
-}
-
-.dark {
-  --color-overlay: rgba(0, 0, 0, 0.7);
 }
 
 /* Pastel author colors avoid semantic status hues. Plain :root preserves

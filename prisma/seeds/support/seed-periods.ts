@@ -2,7 +2,6 @@
 // weeks, derived from the run time — a hardcoded date would drift into the past
 // and leave the current-week section blank on the page the lead opens.
 
-import type { SeedReportStatus } from "./seed-constants.js";
 import {
   ACTIVE_REPORT_ID,
   HISTORY_REPORT_2_ID,
@@ -11,17 +10,6 @@ import {
   PUBLISHED_REPORT_ID,
 } from "./seed-identifiers.js";
 import { seedReferenceDate } from "./seed-reference-date.js";
-
-export interface SeedReport {
-  id: string;
-  periodStart: string;
-  periodEnd: string;
-  deadline: string;
-  weekLabel: string;
-  periodStatus: "open" | "published" | "reopened";
-  status: SeedReportStatus;
-  publishedAt?: string;
-}
 
 export interface SeedHistoryReport {
   id: string;

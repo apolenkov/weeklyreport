@@ -4,7 +4,25 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createNullLogger } from "../../lib/logger";
 import { SessionRevocationService } from "../../modules/admin/index.js";
 import { PrismaService } from "../prisma/prisma.service";
-import { buildPdfExportSession, createContextFactory } from "./trpc.context";
+import {
+  buildPdfExportSession,
+  createContextFactory as createContextFactoryImpl,
+} from "./trpc.context";
+
+const testContextEnv = () => ({
+  NODE_ENV: "test" as const,
+  AUTH_DEV_MODE: false,
+  AUTH_DEV_MODE_ALLOW_TEST: undefined,
+  AUTH_JWT_SECRET: "test-auth-secret-that-is-at-least-32-bytes",
+  PDF_EXPORT_JWT_SECRET: "test-pdf-export-secret-at-least-32-chars",
+});
+
+function createContextFactory(
+  app: INestApplication,
+  logger: ReturnType<typeof createNullLogger>,
+) {
+  return createContextFactoryImpl(app, logger, testContextEnv());
+}
 
 // The PDF worker rebuilds the requester's session from the `requestedBy` claim.
 // A deactivated/revoked requester must yield `null` (the auth middleware then

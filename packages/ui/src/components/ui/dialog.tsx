@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@customreport/ui/components/ui/button";
 import { cn } from "@customreport/ui/lib/utils";
 import { XIcon } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
@@ -15,25 +14,11 @@ function Dialog({
   return <DialogPrimitive.Root data-slot="dialog" {...props} />;
 }
 
-/** Control that opens its associated dialog. */
-function DialogTrigger({
-  ...props
-}: Readonly<React.ComponentProps<typeof DialogPrimitive.Trigger>>) {
-  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
-}
-
 /** Mounts dialog surfaces outside ancestor stacking and overflow contexts. */
 function DialogPortal({
   ...props
 }: Readonly<React.ComponentProps<typeof DialogPrimitive.Portal>>) {
   return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
-}
-
-/** Control that dismisses its associated dialog. */
-function DialogClose({
-  ...props
-}: Readonly<React.ComponentProps<typeof DialogPrimitive.Close>>) {
-  return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
 }
 
 type DialogOverlayProps = React.ComponentProps<
@@ -124,54 +109,6 @@ function DialogContent({
   );
 }
 
-/**
- * Layout shell for dialog title and description.
- */
-function DialogHeader({
-  className,
-  ...props
-}: Readonly<React.ComponentProps<"div">>) {
-  return (
-    <div
-      data-slot="dialog-header"
-      className={cn("flex flex-col gap-2 text-center sm:text-left", className)}
-      {...props}
-    />
-  );
-}
-
-/**
- * Action row for dialog buttons; optional outline Close (default off).
- */
-function DialogFooter({
-  className,
-  showCloseButton = false,
-  children,
-  ...props
-}: Readonly<
-  React.ComponentProps<"div"> & {
-    showCloseButton?: boolean;
-  }
->) {
-  return (
-    <div
-      data-slot="dialog-footer"
-      className={cn(
-        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
-        className,
-      )}
-      {...props}
-    >
-      {children}
-      {showCloseButton && (
-        <DialogPrimitive.Close asChild>
-          <Button variant="outline">Close</Button>
-        </DialogPrimitive.Close>
-      )}
-    </div>
-  );
-}
-
 /** Accessible heading for its associated dialog. */
 function DialogTitle({
   className,
@@ -200,15 +137,4 @@ function DialogDescription({
   );
 }
 
-export {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogOverlay,
-  DialogPortal,
-  DialogTitle,
-  DialogTrigger,
-};
+export { Dialog, DialogContent, DialogDescription, DialogTitle };

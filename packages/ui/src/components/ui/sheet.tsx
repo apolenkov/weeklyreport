@@ -22,15 +22,6 @@ function SheetTrigger({
 }
 
 /**
- * Control that closes the sheet.
- */
-function SheetClose({
-  ...props
-}: Readonly<React.ComponentProps<typeof SheetPrimitive.Close>>) {
-  return <SheetPrimitive.Close data-slot="sheet-close" {...props} />;
-}
-
-/**
  * Portal for sheet overlay and content.
  */
 function SheetPortal({
@@ -121,22 +112,6 @@ function SheetHeader({
 }
 
 /**
- * Bottom layout slot for sheet actions.
- */
-function SheetFooter({
-  className,
-  ...props
-}: Readonly<React.ComponentProps<"div">>) {
-  return (
-    <div
-      data-slot="sheet-footer"
-      className={cn("mt-auto flex flex-col gap-2 p-4", className)}
-      {...props}
-    />
-  );
-}
-
-/**
  * Accessible title for the sheet.
  */
 function SheetTitle({
@@ -152,29 +127,4 @@ function SheetTitle({
   );
 }
 
-/**
- * Supporting description under the sheet title.
- */
-function SheetDescription({
-  className,
-  ...props
-}: Readonly<React.ComponentProps<typeof SheetPrimitive.Description>>) {
-  return (
-    <SheetPrimitive.Description
-      data-slot="sheet-description"
-      className={cn("text-sm text-muted-foreground", className)}
-      {...props}
-    />
-  );
-}
-
-export {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-};
+export { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger };

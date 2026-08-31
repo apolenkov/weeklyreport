@@ -1,8 +1,10 @@
 import type {
   DbRole,
   ItemWorkflowStatus,
+  PublishedLineage,
   ReportSectionReadModel,
   RiskSeverity,
+  Role,
   TrafficLightStatus,
 } from "@customreport/shared";
 
@@ -71,10 +73,9 @@ export interface LeadFormRepository {
   // periodStatus (not status) so reopened periods stay fillable.
   getReportPeriodStatusForSection(sectionId: string): Promise<string | null>;
   // Published stableIds for lock marker; empty for never-published drafts.
-  getPublishedLineage(section: ReportSectionReadModel): Promise<{
-    itemStableIds: readonly string[];
-    decisionStableIds: readonly string[];
-  }>;
+  getPublishedLineage(
+    section: ReportSectionReadModel,
+  ): Promise<PublishedLineage>;
   revokeSectionSubmission(sectionId: string, revokedBy: string): Promise<void>;
   fillFromSection(
     targetSectionId: string,
@@ -91,14 +92,21 @@ export interface LeadFormRepository {
     viewerId: string,
     authorId: string,
   ): Promise<string[]>;
+  getSharedNonArchivedProductIdsForReport?(
+    reportId: string,
+    viewerId: string,
+    authorId: string,
+  ): Promise<string[]>;
   getCrossAuthors(
     reportId: string,
     userId: string,
+    role?: Role,
   ): Promise<CrossAuthorStatusRow[]>;
   // Full-content Everyone read; coOwnsShared distinguishes denied vs empty for metrics.
   getCrossAuthorContent(
     reportId: string,
     userId: string,
+    role?: Role,
   ): Promise<{ coOwnsShared: boolean; rows: CrossAuthorSectionRow[] }>;
   // Scope on updateMany so heads revoke only their group's submissions.
   revokeAllSubmitted(
@@ -207,15 +215,4 @@ export function reopenBlockedMessage(reason: ReopenBlockedReason): string {
     case "pending_request_exists":
       return "A reopen request for this section is already pending.";
   }
-}
-
-// Server-side initials so full name never crosses the status-only API boundary.
-export function initialsFromName(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .filter((word) => word.length > 0)
-    .slice(0, 2)
-    .map((word) => word.charAt(0).toUpperCase())
-    .join("");
 }

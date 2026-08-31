@@ -15,7 +15,7 @@ procedures, schemas, product UI strings, or write endpoints.
 
 #### Scenario: LeadForm delegates write commands to the hook
 
-- **WHEN** the lead report form renders after the extraction
+- **WHEN** the lead report form renders
 - **THEN** `LeadForm` obtains submit, revoke, reopen-request, and fill-from
   command handlers from the write-actions hook
 - **AND** record merge handlers remain outside that hook

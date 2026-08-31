@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import { getSettings } from "./admin-settings.queries";
+import { getSettings, updateSettings } from "./admin-settings.queries";
 
 // Regression: a settings READ must fail loud on a missing singleton row, never
 // upsert-created configured defaults on the fly (no-fallback policy).
@@ -47,5 +47,25 @@ describe("admin-settings.queries.getSettings", () => {
     expect(settings.autoCreatePeriods).toBe(true);
     expect(settings.workingDays).toBe("mon-fri");
     expect(settings.deadlineTime).toBe("18:00");
+  });
+});
+
+describe("admin-settings.queries.updateSettings", () => {
+  it("uses a fixed-id update and never creates a missing singleton", async () => {
+    const missing = new Error("Record to update not found");
+    const update = vi.fn().mockRejectedValue(missing);
+    const upsert = vi.fn();
+    const prisma = {
+      appSettings: { update, upsert },
+    } as unknown as PrismaService;
+
+    await expect(
+      updateSettings(prisma, { defaultDeadlineDays: 7 }),
+    ).rejects.toBe(missing);
+    expect(update).toHaveBeenCalledWith({
+      where: { id: "singleton" },
+      data: { defaultDeadlineDays: 7 },
+    });
+    expect(upsert).not.toHaveBeenCalled();
   });
 });

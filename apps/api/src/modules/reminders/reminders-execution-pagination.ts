@@ -52,8 +52,9 @@ async function collectScoped(
   );
 }
 
-// Recipient allowlist is derived (not a column): filter batches until the
-// page fills. Cursor is a previously returned row id (valid keyset input).
+// Recipient allowlist is derived outside persistence: filter explicit
+// recipientEmail values in batches until the page fills. Cursor is a
+// previously returned row id (valid keyset input).
 export async function paginateReminderExecutions(
   fetchPage: FetchExecutionsPage,
   pagination?: PaginationInput,

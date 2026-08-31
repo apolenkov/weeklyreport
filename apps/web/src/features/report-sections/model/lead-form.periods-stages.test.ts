@@ -14,7 +14,6 @@ import {
   mapLeadPeriods,
   mapLeadProducts,
   ownedStagesForProject,
-  stageNamesMatch,
 } from "./lead-form";
 
 const SECTION_ID = "11111111-1111-4111-8111-111111111111";
@@ -116,23 +115,6 @@ describe("mapLeadFormData", () => {
       history: [],
     });
     expect(result.readOnly).toBe(true);
-  });
-});
-
-describe("stageNamesMatch", () => {
-  it("requires the exact canonical name", () => {
-    expect(stageNamesMatch("Development", "Development")).toBe(true);
-    expect(stageNamesMatch("Development", "Dev")).toBe(false);
-  });
-
-  it("does not accept case variants", () => {
-    expect(stageNamesMatch("Planning", "Planning")).toBe(true);
-    expect(stageNamesMatch("TESTING", "testing")).toBe(false);
-  });
-
-  it("does not match unrelated names", () => {
-    expect(stageNamesMatch("Planning", "Testing")).toBe(false);
-    expect(stageNamesMatch("Dev", "DevOps")).toBe(false);
   });
 });
 

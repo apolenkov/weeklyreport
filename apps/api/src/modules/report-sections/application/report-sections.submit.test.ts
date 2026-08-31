@@ -107,8 +107,8 @@ function createRepository(
       currentSection = structuredClone(nextSection);
       return Promise.resolve(structuredClone(currentSection));
     },
-    getMyHistoryRows() {
-      return Promise.resolve([]);
+    getMyHistoryPage() {
+      return Promise.resolve({ items: [], nextCursor: null });
     },
   };
 }
@@ -388,6 +388,7 @@ describe("ReportSectionsService — item tag and workflowStatus combinations", (
               text: `Test item ${tag}/${ws}`,
               tag,
               workflowStatus: ws,
+              ...(ws === "paused" ? { pausedReason: "Waiting on input" } : {}),
               carriedOver: false,
               stageNames: ["Development"],
             },

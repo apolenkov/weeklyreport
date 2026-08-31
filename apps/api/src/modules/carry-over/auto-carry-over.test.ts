@@ -1,12 +1,146 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { publishedSnapshotFixture } from "../../test-utils/prisma-test-helper.js";
 import {
   type AutoCarryOverDeps,
   type AutoCarryOverOutcome,
+  buildAutoCarryOverDeps,
   carryOverIntoOpenedPeriod,
   runAutoCarryOverWithRetry,
 } from "./auto-carry-over";
 import { CarryOverDomainError } from "./carry-over.service";
+
+const PUBLISHED_REPORT_ID = "11111111-1111-4111-8111-111111111111";
+const ACTIVE_AUTHOR_ID = "22222222-2222-4222-8222-222222222222";
+const DEACTIVATED_AUTHOR_ID = "33333333-3333-4333-8333-333333333333";
+const MISSING_AUTHOR_ID = "44444444-4444-4444-8444-444444444444";
+
+const sectionOwner = (authorId: string, index: number) => ({
+  reportSectionId: `55555555-5555-4555-8555-55555555555${String(index)}`,
+  authorId,
+  authorName: `Published Lead ${String(index)}`,
+  groupId: "66666666-6666-4666-8666-666666666666",
+  groupName: "Published Group",
+});
+
+function publishedSourcePrisma(
+  authorIds: readonly string[],
+  activeAuthorIds: readonly string[] = [ACTIVE_AUTHOR_ID],
+) {
+  const findActiveUsers = vi
+    .fn()
+    .mockResolvedValue(activeAuthorIds.map((id) => ({ id })));
+  const findTargetSection = vi
+    .fn()
+    .mockResolvedValue({ id: "77777777-7777-4777-8777-777777777777" });
+  const prisma = {
+    report: {
+      findUnique: vi.fn().mockResolvedValue({
+        periodStatus: "published",
+        publishedSnapshot: publishedSnapshotFixture({
+          reportId: PUBLISHED_REPORT_ID,
+          periodStart: "2026-04-27",
+          periodEnd: "2026-05-01",
+          publishedAt: "2026-05-04T09:30:00.000Z",
+          sectionOwners: authorIds.map(sectionOwner),
+        }),
+      }),
+    },
+    user: { findMany: findActiveUsers },
+    reportSection: { findMany: vi.fn(), findUnique: findTargetSection },
+    $queryRaw: vi.fn().mockResolvedValue([
+      {
+        id: "88888888-8888-4888-8888-888888888888",
+        status: "draft",
+        periodState: "open",
+        periodStatus: "open",
+        archived: false,
+        autoPublished: false,
+        autoArchived: false,
+        publishedAt: null,
+        publishedById: null,
+        reopenedAt: null,
+      },
+    ]),
+    $executeRaw: vi.fn().mockResolvedValue(1),
+    $transaction: vi.fn(),
+  };
+  prisma.$transaction.mockImplementation(
+    (callback: (client: typeof prisma) => unknown) =>
+      Promise.resolve(callback(prisma)),
+  );
+  return { prisma, findActiveUsers, findTargetSection };
+}
+
+function buildPublishedSourceDeps(prisma: object) {
+  const findPreviousReportId = vi.fn().mockResolvedValue(PUBLISHED_REPORT_ID);
+  const findExecutionByDedupeKey = vi.fn().mockResolvedValue(null);
+  const executeCarryOver = vi.fn().mockResolvedValue({});
+  const deps = buildAutoCarryOverDeps({
+    prisma: prisma as never,
+    repository: {
+      findPreviousReportId,
+      findExecutionByDedupeKey,
+    },
+    carryOverService: { executeCarryOver },
+    logger: { info: vi.fn(), warn: vi.fn() },
+  });
+  return { deps, executeCarryOver };
+}
+
+describe("buildAutoCarryOverDeps — published source authors", () => {
+  it("carries a mixed frozen set only for authors that remain active", async () => {
+    const { prisma, findActiveUsers, findTargetSection } =
+      publishedSourcePrisma([
+        ACTIVE_AUTHOR_ID,
+        DEACTIVATED_AUTHOR_ID,
+        MISSING_AUTHOR_ID,
+      ]);
+    const { deps, executeCarryOver } = buildPublishedSourceDeps(prisma);
+
+    await expect(
+      carryOverIntoOpenedPeriod(deps, "target-1"),
+    ).resolves.toMatchObject({ status: "completed", authorCount: 1 });
+    expect(findActiveUsers).toHaveBeenCalledExactlyOnceWith({
+      where: {
+        id: {
+          in: [ACTIVE_AUTHOR_ID, DEACTIVATED_AUTHOR_ID, MISSING_AUTHOR_ID],
+        },
+        isActive: true,
+      },
+      select: { id: true },
+    });
+    expect(findTargetSection).toHaveBeenCalledExactlyOnceWith({
+      where: {
+        reportId_authorId: {
+          reportId: "target-1",
+          authorId: ACTIVE_AUTHOR_ID,
+        },
+      },
+      select: { id: true },
+    });
+    expect(executeCarryOver).toHaveBeenCalledExactlyOnceWith(
+      PUBLISHED_REPORT_ID,
+      "target-1",
+    );
+    expect(prisma.reportSection.findMany).not.toHaveBeenCalled();
+  });
+
+  it("skips missing and deactivated frozen authors without aborting the carry", async () => {
+    const { prisma, findActiveUsers, findTargetSection } =
+      publishedSourcePrisma([DEACTIVATED_AUTHOR_ID, MISSING_AUTHOR_ID], []);
+    const { deps, executeCarryOver } = buildPublishedSourceDeps(prisma);
+
+    await expect(carryOverIntoOpenedPeriod(deps, "target-1")).resolves.toEqual({
+      status: "skipped",
+      targetReportId: "target-1",
+      reason: "no-active-authors",
+    });
+    expect(findActiveUsers).toHaveBeenCalledTimes(1);
+    expect(findTargetSection).not.toHaveBeenCalled();
+    expect(executeCarryOver).not.toHaveBeenCalled();
+  });
+});
 
 function makeDeps(overrides: Partial<AutoCarryOverDeps> = {}): {
   deps: AutoCarryOverDeps;

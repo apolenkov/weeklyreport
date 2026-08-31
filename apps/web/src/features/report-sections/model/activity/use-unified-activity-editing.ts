@@ -3,14 +3,9 @@
 import { useState } from "react";
 
 import type { KanbanItem } from "../types";
-import type { ActivityBucket } from "./activity-buckets";
+import type { UnifiedActivityEntry } from "./unified-activity-entry";
 
-// Bucket is a projection; week is persisted Item.type and never changes here (ADR 0011).
-export interface UnifiedActivityEntry {
-  readonly item: KanbanItem;
-  readonly bucket: ActivityBucket;
-  readonly week: "current" | "next";
-}
+export type { UnifiedActivityEntry } from "./unified-activity-entry";
 
 export interface UnifiedActivityEditState {
   readonly entry: UnifiedActivityEntry;

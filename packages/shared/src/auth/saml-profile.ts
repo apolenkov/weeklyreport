@@ -15,7 +15,4 @@ export const SamlProfileSchema = z
   .strict()
   .readonly();
 
-/** Parsed SAML assertion profile shape accepted from Keycloak. */
-export type SamlProfile = z.infer<typeof SamlProfileSchema>;
-
 export type { Role };

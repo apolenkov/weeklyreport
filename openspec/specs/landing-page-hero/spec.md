@@ -83,8 +83,8 @@ requirement.
 - **THEN** the hero shows no animated ECG/heartbeat trace
 - **AND** the brand wordmark does not animate its weight or position
 
-#### Scenario: Dead pulse motion is removed, not merely paused
+#### Scenario: The stylesheet defines no pulse motion
 
 - **WHEN** the landing stylesheet is inspected
 - **THEN** it defines no keyframes for the heartbeat sweep or wordmark breathing
-- **AND** no element references those removed animations
+- **AND** no element references heartbeat or wordmark-breathing animations

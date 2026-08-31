@@ -217,23 +217,24 @@ describe("LeadFormService — getCrossAuthors authorization", () => {
 
   it("returns [] for a non-privileged caller with no own section in the report", async () => {
     const repo = createMockRepository({
-      getSectionForPeriod: vi.fn().mockResolvedValue(null),
-      getCrossAuthors: vi.fn().mockResolvedValue([crossAuthorRow]),
+      // Admission is owned by the repository's single RepeatableRead call.
+      getCrossAuthors: vi.fn().mockResolvedValue([]),
     });
     const service = new LeadFormService(repo);
 
     const rows = await service.getCrossAuthors(REPORT_ID, AUTHOR_ID, "lead");
 
     expect(rows).toEqual([]);
-    // The guard short-circuits BEFORE the repository read — no foreign context fetched.
-    expect(repo.getCrossAuthors).not.toHaveBeenCalled();
+    expect(repo.getCrossAuthors).toHaveBeenCalledTimes(1);
+    expect(repo.getCrossAuthors).toHaveBeenCalledWith(
+      REPORT_ID,
+      AUTHOR_ID,
+      "lead",
+    );
   });
 
   it("delegates to the repository when the caller owns a section in the report", async () => {
     const repo = createMockRepository({
-      getSectionForPeriod: vi
-        .fn()
-        .mockResolvedValue(structuredClone(draftSection)),
       getCrossAuthors: vi.fn().mockResolvedValue([crossAuthorRow]),
     });
     const service = new LeadFormService(repo);
@@ -241,12 +242,15 @@ describe("LeadFormService — getCrossAuthors authorization", () => {
     const rows = await service.getCrossAuthors(REPORT_ID, AUTHOR_ID, "lead");
 
     expect(rows).toEqual([crossAuthorRow]);
-    expect(repo.getCrossAuthors).toHaveBeenCalledWith(REPORT_ID, AUTHOR_ID);
+    expect(repo.getCrossAuthors).toHaveBeenCalledWith(
+      REPORT_ID,
+      AUTHOR_ID,
+      "lead",
+    );
   });
 
   it("bypasses the own-section check for a head, even with no own section", async () => {
     const repo = createMockRepository({
-      getSectionForPeriod: vi.fn().mockResolvedValue(null),
       getCrossAuthors: vi.fn().mockResolvedValue([crossAuthorRow]),
     });
     const service = new LeadFormService(repo);
@@ -255,7 +259,11 @@ describe("LeadFormService — getCrossAuthors authorization", () => {
 
     expect(rows).toEqual([crossAuthorRow]);
     expect(repo.getSectionForPeriod).not.toHaveBeenCalled();
-    expect(repo.getCrossAuthors).toHaveBeenCalledWith(REPORT_ID, AUTHOR_ID);
+    expect(repo.getCrossAuthors).toHaveBeenCalledWith(
+      REPORT_ID,
+      AUTHOR_ID,
+      "head",
+    );
   });
 });
 
@@ -290,10 +298,9 @@ describe("LeadFormService — getCrossAuthorContent authorization", () => {
 
   it("denies (returns [], result=denied) when the caller owns no section in the report", async () => {
     const repo = createMockRepository({
-      getSectionForPeriod: vi.fn().mockResolvedValue(null),
       getCrossAuthorContent: vi
         .fn()
-        .mockResolvedValue({ coOwnsShared: true, rows: [contentRow] }),
+        .mockResolvedValue({ coOwnsShared: false, rows: [] }),
     });
     const service = new LeadFormService(
       repo,
@@ -304,16 +311,16 @@ describe("LeadFormService — getCrossAuthorContent authorization", () => {
     const rows = await service.getCrossAuthorContent(REPORT_ID, AUTHOR_ID);
 
     expect(rows).toEqual([]);
-    // The report-access gate short-circuits before the content read.
-    expect(repo.getCrossAuthorContent).not.toHaveBeenCalled();
+    expect(repo.getCrossAuthorContent).toHaveBeenCalledTimes(1);
+    expect(repo.getCrossAuthorContent).toHaveBeenCalledWith(
+      REPORT_ID,
+      AUTHOR_ID,
+    );
     expect(await readResultCount("denied")).toBe(before + 1);
   });
 
   it("denies (returns [], result=denied) when the caller co-owns no shared product", async () => {
     const repo = createMockRepository({
-      getSectionForPeriod: vi
-        .fn()
-        .mockResolvedValue(structuredClone(draftSection)),
       getCrossAuthorContent: vi
         .fn()
         .mockResolvedValue({ coOwnsShared: false, rows: [] }),
@@ -332,9 +339,6 @@ describe("LeadFormService — getCrossAuthorContent authorization", () => {
 
   it("is empty (returns [], result=empty) when the caller co-owns but no foreign records exist", async () => {
     const repo = createMockRepository({
-      getSectionForPeriod: vi
-        .fn()
-        .mockResolvedValue(structuredClone(draftSection)),
       getCrossAuthorContent: vi
         .fn()
         .mockResolvedValue({ coOwnsShared: true, rows: [] }),
@@ -353,9 +357,6 @@ describe("LeadFormService — getCrossAuthorContent authorization", () => {
 
   it("allows (returns rows, result=allowed) for a co-owner with foreign records", async () => {
     const repo = createMockRepository({
-      getSectionForPeriod: vi
-        .fn()
-        .mockResolvedValue(structuredClone(draftSection)),
       getCrossAuthorContent: vi
         .fn()
         .mockResolvedValue({ coOwnsShared: true, rows: [contentRow] }),
@@ -373,32 +374,29 @@ describe("LeadFormService — getCrossAuthorContent authorization", () => {
   });
 
   it("has NO head/admin bypass — a head who co-owns nothing is denied like any non-co-owner", async () => {
-    // The service signature carries no role: getCrossAuthorContent(reportId,
-    // userId). A head reaches the same gate as a lead — own section AND
-    // co-ownership — with no role exception.
+    // Admission and co-ownership are decided atomically by the repository;
+    // the service only maps the denied result and records telemetry.
     const repo = createMockRepository({
-      // Head owns no section in this report → report-access gate denies.
-      getSectionForPeriod: vi.fn().mockResolvedValue(null),
       getCrossAuthorContent: vi
         .fn()
-        .mockResolvedValue({ coOwnsShared: true, rows: [contentRow] }),
+        .mockResolvedValue({ coOwnsShared: false, rows: [] }),
     });
     const service = new LeadFormService(repo);
 
     const rows = await service.getCrossAuthorContent(REPORT_ID, AUTHOR_ID);
 
     expect(rows).toEqual([]);
-    expect(repo.getCrossAuthorContent).not.toHaveBeenCalled();
+    expect(repo.getCrossAuthorContent).toHaveBeenCalledTimes(1);
+    expect(repo.getCrossAuthorContent).toHaveBeenCalledWith(
+      REPORT_ID,
+      AUTHOR_ID,
+    );
   });
 
-  // The service gate is (a) report access AND (b) co-ownership, with NO role
-  // bypass. The own-author vs co-owner split is a repository concern; the
-  // service threads rows through unchanged once both gates pass.
-  it("threads the repository rows through unchanged once both gates pass (no role narrowing)", async () => {
+  // The repository owns report admission and co-ownership in one transaction;
+  // the service threads rows through unchanged once both gates pass.
+  it("threads the repository rows through unchanged after one repository call", async () => {
     const repo = createMockRepository({
-      getSectionForPeriod: vi
-        .fn()
-        .mockResolvedValue(structuredClone(draftSection)),
       getCrossAuthorContent: vi
         .fn()
         .mockResolvedValue({ coOwnsShared: true, rows: [contentRow] }),
@@ -407,9 +405,8 @@ describe("LeadFormService — getCrossAuthorContent authorization", () => {
 
     const rows = await service.getCrossAuthorContent(REPORT_ID, AUTHOR_ID);
 
-    // No role argument exists on the signature, so the result cannot vary by
-    // role — the same rows return for any caller that clears both gates.
     expect(rows).toEqual([contentRow]);
+    expect(repo.getCrossAuthorContent).toHaveBeenCalledTimes(1);
     expect(repo.getCrossAuthorContent).toHaveBeenCalledWith(
       REPORT_ID,
       AUTHOR_ID,

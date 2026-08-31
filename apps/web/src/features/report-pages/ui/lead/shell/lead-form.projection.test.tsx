@@ -4,6 +4,7 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { SessionContext } from "../../../../../shared/lib/auth/session-provider";
 import { TRPCProxyContext } from "../../../../../shared/lib/trpc/trpc-context";
 import { expectDefined } from "../../../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
@@ -100,7 +101,7 @@ function buildHarness(
     },
     {
       path: ["reports", "myHistory"],
-      query: opts.myHistory ?? [],
+      query: { items: opts.myHistory ?? [] },
     },
     {
       path: ["reports", "saveDraft"],
@@ -165,9 +166,23 @@ function buildHarness(
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <TRPCProxyContext.Provider value={proxy}>
-          {children}
-        </TRPCProxyContext.Provider>
+        <SessionContext.Provider
+          value={{
+            user: {
+              id: AUTHOR_ID,
+              name: "Test Lead",
+              email: "lead@example.com",
+              role: "lead",
+            },
+            organization: null,
+            isLoading: false,
+            isAuthenticated: true,
+          }}
+        >
+          <TRPCProxyContext.Provider value={proxy}>
+            {children}
+          </TRPCProxyContext.Provider>
+        </SessionContext.Provider>
       </QueryClientProvider>
     );
   }

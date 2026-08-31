@@ -24,6 +24,17 @@ from mutable live section rows.
 - WHEN lineage inspection encounters an item or decision without `stableId`
 - THEN it raises a snapshot-integrity error rather than silently skipping the row
 
+#### Scenario: An admitted archive row must contain a matching scoped section
+
+- GIVEN the database-side `PublishedSectionScope` admission predicate admits an
+  archived report for a non-admin session
+- WHEN the immutable snapshot is filtered for that same session
+- AND the filtered snapshot contains no sections
+- THEN the archive list/detail read raises a snapshot-integrity error rather
+  than silently dropping the row or returning an empty detail
+- BUT a database query that returns no admitted row remains the ordinary
+  unauthorized empty/null result
+
 ### Requirement: Published portfolio totals are counted once per distinct product
 
 `computePortfolioOverviewFromReadSections` MUST fold every occurrence of a

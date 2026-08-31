@@ -30,12 +30,9 @@ async function loadFlushRedis(): Promise<
 }
 
 function configureRedis(port: number): void {
-  vi.stubEnv("REDIS_URL", "");
   vi.stubEnv("REDIS_HOST", "127.0.0.1");
   vi.stubEnv("REDIS_PORT", String(port));
-  // FLUSHALL wipes every database on the server; the test endpoint is the
-  // disposable mock server, so the explicit authorisation is granted.
-  vi.stubEnv("RESET_HARD_REDIS_DISPOSABLE", "yes");
+  vi.stubEnv("REDIS_DB", "15");
 }
 
 registerMockRedisTeardown();
@@ -91,11 +88,13 @@ describe("flushRedis", () => {
   });
 
   it("resolves after an observed +OK reply", async () => {
-    const server = await startMockRedisServer("+OK\r\n");
+    const server = await startMockRedisServer(["+OK\r\n", "+OK\r\n"]);
     configureRedis(server.port);
     const flushRedis = await loadFlushRedis();
 
     await expect(flushRedis()).resolves.toBeUndefined();
+    expect(server.receivedData()).toContain("SELECT");
+    expect(server.receivedData()).toContain("FLUSHDB");
   });
 
   it("rejects a replyless close promptly", async () => {
@@ -104,7 +103,7 @@ describe("flushRedis", () => {
     const flushRedis = await loadFlushRedis();
 
     await expect(settlePromptly(flushRedis())).rejects.toThrow(
-      "Redis FLUSHALL: connection closed before +OK was received",
+      "Redis SELECT 15 + FLUSHDB: connection closed before both replies were received",
     );
   });
 
@@ -120,44 +119,34 @@ describe("flushRedis", () => {
     });
   });
 
-  it("fails closed without the disposable-endpoint authorisation", async () => {
-    const server = await startMockRedisServer("+OK\r\n");
+  it("fails closed unless the reserved Redis database is selected", async () => {
+    const server = await startMockRedisServer(["+OK\r\n", "+OK\r\n"]);
     configureRedis(server.port);
-    vi.stubEnv("RESET_HARD_REDIS_DISPOSABLE", "");
+    vi.stubEnv("REDIS_DB", "0");
     const flushRedis = await loadFlushRedis();
 
-    await expect(flushRedis()).rejects.toThrow(/RESET_HARD_REDIS_DISPOSABLE/);
+    await expect(flushRedis()).rejects.toThrow(/REDIS_DB must be exactly 15/);
   });
 
-  it("fails loud when REDIS_URL omits an explicit port", async () => {
-    vi.stubEnv("REDIS_URL", "redis://127.0.0.1");
-    vi.stubEnv("RESET_HARD_REDIS_DISPOSABLE", "yes");
+  it("never sends FLUSHDB when SELECT 15 is rejected", async () => {
+    const server = await startMockRedisServer("-ERR invalid DB index\r\n");
+    configureRedis(server.port);
     const flushRedis = await loadFlushRedis();
 
-    await expect(flushRedis()).rejects.toThrow(
-      /REDIS_URL must include an explicit port/,
-    );
+    await expect(flushRedis()).rejects.toThrow(/SELECT 15 failed/);
+    expect(server.receivedData()).toContain("SELECT");
+    expect(server.receivedData()).not.toContain("FLUSHDB");
   });
 
-  it("fails loud when neither REDIS_URL nor REDIS_PORT pins a port", async () => {
-    vi.stubEnv("REDIS_URL", "");
+  it("fails loud when REDIS_PORT is absent", async () => {
     vi.stubEnv("REDIS_HOST", "127.0.0.1");
     vi.stubEnv("REDIS_PORT", "");
-    vi.stubEnv("RESET_HARD_REDIS_DISPOSABLE", "yes");
+    vi.stubEnv("REDIS_DB", "15");
     const flushRedis = await loadFlushRedis();
 
     await expect(flushRedis()).rejects.toThrow(
       /REDIS_PORT must be set in \.env/,
     );
-  });
-
-  it("accepts REDIS_URL with an explicit port", async () => {
-    const server = await startMockRedisServer("+OK\r\n");
-    vi.stubEnv("REDIS_URL", `redis://127.0.0.1:${server.port}`);
-    vi.stubEnv("RESET_HARD_REDIS_DISPOSABLE", "yes");
-    const flushRedis = await loadFlushRedis();
-
-    await expect(flushRedis()).resolves.toBeUndefined();
   });
 });
 

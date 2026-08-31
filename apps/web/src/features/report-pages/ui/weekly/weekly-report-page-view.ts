@@ -188,7 +188,7 @@ export function buildWeeklyReportPageView(
   const view = mapWeeklyReport(reportData);
   const reviewSurface = deriveReviewSurface(reportData, view, params);
   const progress = deriveProgressFacet(view);
-  // Empty-state + publish gate use FULL content, never the filtered accordion.
+  // Empty-state uses full content; submission alone is the publish precondition.
   const hasAnyContent = reviewSurface.accordion.hasAnyContent;
   const focusedProductId = resolveFocusedProductId(
     view.products,
@@ -199,7 +199,7 @@ export function buildWeeklyReportPageView(
     ...deriveRoleFacet(
       params.currentRole,
       view.period.periodStatus,
-      progress.submitted > 0 && hasAnyContent,
+      progress.submitted > 0,
     ),
     ...derivePeriodFacet(view.period),
     ...progress,

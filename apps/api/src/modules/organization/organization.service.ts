@@ -9,8 +9,8 @@ import {
 import type { AppLogger } from "../../lib/logger.js";
 
 export interface OrganizationRepository {
-  // Implementations MUST return a row even on fresh DBs (upsert with seed
-  // defaults) so the public landing page always has a brand to render.
+  // The canonical init migration and seed establish the singleton. A missing
+  // row is an invariant failure and must be surfaced, never created on read.
   readonly getOrganization: () => Promise<Organization>;
   // Implementations MUST keep id='singleton' — no new id is accepted on the wire.
   readonly updateOrganization: (

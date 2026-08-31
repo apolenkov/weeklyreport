@@ -2,19 +2,18 @@
 
 ## Purpose
 
-Define the server-side editability gates for the two lead-section write paths,
-`saveDraft` and `submitSection`, in
-`apps/api/src/modules/report-sections/`. Both paths MUST decide editability from
-the canonical `periodStatus` of the section's report, never from the legacy
-`Report.status` column, so that reopen editing works and the published read-only
-lock cannot be bypassed on the submit path.
+Define the server-side editability gate shared by lead-section provisioning,
+save, fill, review, revoke, and reopen-request writes. Every mutation MUST lock
+the parent report first and admit only a complete canonical editable lifecycle,
+so reopened reports remain writable while publish and archive transitions close
+all section-write races.
 
 ## Requirements
 
 ### Requirement: Draft saves gate on canonical period status
 
 `saveDraft` MUST decide editability from the section's canonical `periodStatus`,
-never from the legacy `Report.status` column. It MUST reject the write when
+never from the companion `Report.status` column. It MUST reject the write when
 `periodStatus === "published"` and MUST allow it when the period is `"open"` or
 `"reopened"` AND the report is not archived. The existing
 `section.status === "submitted"` read-only rejection MUST remain in force, so an
@@ -24,11 +23,10 @@ Archiving does NOT change `periodStatus`, so a gate reading that column alone
 admits an archive that commits between the service-level precheck and the write
 transaction. Every write gate MUST therefore evaluate the same predicate as
 `isEditablePeriod` (`review-authz.ts`): not archived, and status `"open"` or
-`"reopened"`. This binds the in-transaction `FOR UPDATE` gates in
-`save-section.transaction.ts`, `fill-from.transaction.ts` and
-`review-actions.verdict-write.ts` alike — they are one contract in three
-places, and two of the three carried the archived term while this text still
-said "only when published".
+`"reopened"`. This binds every in-transaction `FOR UPDATE` gate in
+provisioning, save, fill, review, revoke, and reopen-request paths. Those paths
+MUST call one shared parent-report lock helper rather than copy lifecycle SQL or
+predicates.
 
 A gate that reads no row at all is a different case: the row it locks was
 deleted inside the same window — the parent `Report` for the save gate, the
@@ -62,8 +60,8 @@ compare-and-set and stays `SectionVersionConflictError` → `CONFLICT`.
 #### Scenario: Reopened period accepts a draft save
 
 - **WHEN** a lead autosaves a draft on a section whose report `periodStatus` is
-  `"reopened"` (its legacy `Report.status` column still reads `"published"`
-  because the reopen transition leaves the legacy tuple untouched)
+  `"reopened"` (its companion `Report.status` column still reads `"published"`
+  because the reopen transition leaves the companion publication fields unchanged)
 - **THEN** `saveDraft` persists the draft and does not throw
   `SECTION_ALREADY_SUBMITTED`
 
@@ -118,22 +116,21 @@ Both `saveDraft` and `submitSection` MUST obtain the canonical lifecycle facts
 through one section-keyed lookup on the `ReportSectionsRepository` port. The
 lookup MUST return both `periodStatus` and `archived`, or `null` when the owning
 tuple cannot be resolved. Neither write path may re-derive editability or read
-the legacy `Report.status` column. Automated coverage MUST assert reopened,
+the companion `Report.status` column. Automated coverage MUST assert reopened,
 published, and archived behavior.
 
-#### Scenario: Write paths do not consult the legacy status column
+#### Scenario: Write paths do not consult the companion publication status column
 
 - **WHEN** the `saveDraft` and `submitSection` application gates are inspected
 - **THEN** each reads `periodStatus` and `archived` via the shared section-keyed
   lookup
-- **AND** neither decides editability from `getReportStatus` or the legacy
-  `Report.status` column
+- **AND** neither decides editability from the companion `Report.status` column
 
 #### Scenario: Automated tests pin the two behaviors
 
 - **WHEN** the report-sections test suite runs
 - **THEN** at least one test asserts that a draft save on a non-archived
-  `reopened` period succeeds even though the legacy status is `"published"`
+  `reopened` period succeeds even though the companion publication status is `"published"`
 - **AND** tests assert that archived `open` and archived `reopened` periods are
   rejected before later submit work or mutation
 
@@ -154,15 +151,17 @@ published, and archived behavior.
 #### Scenario: Reopened period remains editable
 
 - **WHEN** the owning report has one complete reopened tuple throughout the transaction
-- **THEN** draft save or submit applies atomically and preserves the period tuple unchanged
+- **THEN** draft save or submit applies atomically and preserves the lifecycle tuple unchanged
 
 ### Requirement: Revoke rechecks archive and editable-period state in the write
 
 The individual `leadForm.revoke` and bulk `leadForm.revokeAllSubmitted` tRPC
-procedures MUST persist their section-state transition only when the database
-write predicate includes `archived = false` and a canonical period status of
-`"open"` or `"reopened"`. A prior application-layer read MUST NOT authorize a
-later write after the report is archived or leaves an editable state.
+procedures MUST lock the parent report first inside the mutation transaction and
+persist their section-state transition only when the complete lifecycle tuple is
+exactly draft/open or published/reopened and not archived. Group scope and the
+submitted-state compare-and-set remain defense-in-depth; a prior application
+read or relation predicate MUST NOT authorize a later write after the report is
+archived or leaves an editable state.
 
 #### Scenario: Archive wins against revoke
 
@@ -176,3 +175,27 @@ later write after the report is archived or leaves an editable state.
 - **WHEN** a submitted section belongs to a non-archived report whose canonical
   status is `"open"` or `"reopened"`
 - **THEN** an authorized revoke may return it to the permitted editable state
+
+### Requirement: Section provisioning locks the parent lifecycle
+
+`ensureLeadSection` MUST run the existing-section lookup and any creation in one
+transaction that first locks the parent `Report` through the shared lifecycle
+gate. An existing section MUST NOT be returned as an active workspace after its
+report became published, archived, scheduled, deleted, or contradictory. A
+caller that races a lifecycle transition MAY re-resolve the current period, but
+MUST NOT fall back to provisioning the stale report.
+
+#### Scenario: Publish wins before section provisioning
+
+- **WHEN** the target report is published before `ensureLeadSection` acquires
+  its parent lock, whether or not the section row already exists
+- **THEN** provisioning rejects before returning or creating the section
+- **AND** a workspace caller re-resolves the current report once or propagates
+  the typed stale lifecycle result
+
+#### Scenario: Open report admits existing and new sections
+
+- **WHEN** the parent report keeps one complete draft/open lifecycle throughout
+  the transaction
+- **THEN** provisioning may return the existing lead section or create and seed
+  one new section atomically

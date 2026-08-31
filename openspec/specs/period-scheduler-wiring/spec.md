@@ -57,22 +57,19 @@ collaborator for publish ingestion; publishing has no ingestion dependency.
 - **WHEN** `PeriodService` is constructed
 - **THEN** `readReopenPolicy` is a required argument with a non-null policy
   return type
-- **AND** no production or future code path can silently skip the reopen-policy
-  gate
+- **AND** no production code path can silently skip the reopen-policy gate
 
 #### Scenario: Analytics-cache invalidation is a required PeriodService dependency
 
 - **WHEN** `PeriodService` is constructed
 - **THEN** `invalidateAnalyticsCache` is a required argument with no no-op
   default
-- **AND** a future refactor cannot silently drop cache invalidation after a
-  publish
+- **AND** every successful publish invalidates the analytics cache
 
 #### Scenario: Publish has no ingestion section-id dependency
 
 - **WHEN** `PeriodService.publishPeriod` runs its post-publish side effects
-- **THEN** its repository port exposes no `listSectionIds` method used only for
-  ingestion
+- **THEN** its repository port exposes no ingestion-only section-id lookup
 - **AND** the service performs no section-id read after the publish transaction
 
 ### Requirement: Audit Sink Is Wired At The Composition Root
@@ -101,11 +98,14 @@ instance rather than each reconstructing its own.
 ### Requirement: The scheduled-to-open flip is a guarded compare-and-set
 
 `flipDueScheduledToOpen` MUST write each due row's transition as a guarded
-update that re-asserts `periodState: 'scheduled'` in the same statement as
-the write (a Prisma `updateMany` with that predicate, or an equivalent
-atomic compare-and-set) — never an unconditional update keyed only on the
-row's id. When the guarded write affects zero rows, the scheduler MUST treat
-it as a benign concurrent-writer skip (log and continue), the same way
+update that re-asserts the selected `periodStart` and `periodEnd`,
+`periodStart <= now`, `periodState: 'scheduled'`, and the complete draft
+lifecycle boundary (`status: 'draft'`, `periodStatus: 'open'`, unarchived,
+not auto-published/archived, and null publication/reopen fields) in the same
+statement as the write (a Prisma `updateMany` with that predicate, or an
+equivalent atomic compare-and-set) — never an unconditional update keyed only
+on the row's id. When the guarded write affects zero rows, the scheduler MUST
+treat it as a benign concurrent-writer skip (log and continue), the same way
 `AutoArchiverScheduler`'s guarded write treats its own zero-row case, so a
 row that a concurrent writer (for example an admin archive) transitioned
 away from `scheduled` inside the same cron tick is never silently
@@ -126,33 +126,22 @@ overwritten back to `open`.
   no concurrent writer has touched
 - **WHEN** `flipDueScheduledToOpen` processes it
 - **THEN** the row transitions to `open` via the full governed
-  `buildTransition('open', {})` field set, unchanged from prior behavior
+  `buildTransition('open', {})` field set
 
 ### Requirement: At most one row per scheduling boundary across scheduled and open states
 
 The database MUST NOT permit two rows sharing the same `(periodStart,
 periodEnd)` boundary to both be in a live pre-published state
-(`scheduled` or `open`) at once. A duplicate `scheduled` row inserted by a
-racing concurrent creator MUST NOT persist as a permanent orphan once its
-boundary's winning row reaches `open` — either the uniqueness guarantee is
-enforced at insert time across both states, or a reconcile step removes the
-losing duplicate once the boundary resolves.
+(`scheduled` or `open`) at once. The database exclusion constraint MUST reject
+overlapping editable ranges at write time; no duplicate-reconciliation path is
+required.
 
 #### Scenario: Two concurrent creators cannot both persist a scheduled row for the same boundary
 
 - **WHEN** two period-creation attempts race for the same
   `(periodStart, periodEnd)` boundary
-- **THEN** at most one `scheduled` (or `open`) row for that boundary
-  survives — the loser either fails its insert/update or is reconciled away
-
-#### Scenario: A duplicate scheduled row does not sit orphaned forever
-
-- **GIVEN** a duplicate `scheduled` row exists for a boundary whose other
-  row has already opened
-- **WHEN** the scheduler runs a subsequent tick
-- **THEN** the duplicate is not left indefinitely re-scanned and
-  warn-logged with no resolution — it is either prevented from having been
-  created in the first place, or removed
+- **THEN** at most one `scheduled` (or `open`) row for that boundary survives,
+  because the database rejects the overlapping write
 
 ### Requirement: Due scheduled periods open independently of automatic period creation
 
@@ -208,7 +197,7 @@ tick; the sweep adds no guard of its own.
 ### Requirement: Current-period lookup selects only a coupled live tuple
 
 The login-time and scheduler current-period factory MUST select an existing
-report only when legacy status is draft, archived is false, canonical state is
+report only when companion publication status is draft, archived is false, canonical state is
 scheduled or open, and all lifecycle fields form a valid tuple for the requested
 boundary. The factory MUST first return the exact live scheduling boundary when
 one exists; when no exact boundary exists, it MUST return the single valid live
@@ -222,12 +211,12 @@ the typed conflict.
 
 #### Scenario: Archived draft occupies the requested boundary
 
-- **WHEN** an archived row retains legacy draft status and its dates contain the requested instant
+- **WHEN** an archived row retains draft publication status and its dates contain the requested instant
 - **THEN** current-period lookup excludes that row and finds or creates the valid live row
 
 #### Scenario: Contradictory row occupies the requested boundary
 
-- **WHEN** a row matches the date boundary but its canonical and legacy lifecycle fields disagree
+- **WHEN** a row matches the date boundary but its canonical and companion lifecycle fields disagree
 - **THEN** lookup fails with a typed integrity error and MUST NOT return or overwrite the row
 
 #### Scenario: Manual range contains the login anchor
@@ -305,3 +294,20 @@ substitute for a real composition test.
   infrastructure providers
 - **THEN** all period services and schedulers resolve without an
   unknown-dependency or silent no-op fallback
+
+### Requirement: Auto carry-over uses the publication source of truth
+
+When the previous source period is published, auto carry-over MUST derive its
+source sections and author set from that period's validated immutable
+`publishedSnapshot`. It MUST NOT require mutable source sections or active user
+rows to exist. Draft and reopened source periods continue to use their live
+sections and active authors.
+
+#### Scenario: Published source survives recovery and later mutation
+
+- **GIVEN** the previous period is published and its live section graph is
+  absent or has changed after publication
+- **WHEN** auto carry-over opens the next period
+- **THEN** it copies the authors and carryable records from the validated
+  publication snapshot
+- **AND** it does not read the mutable published source graph

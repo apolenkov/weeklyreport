@@ -9,7 +9,7 @@ import {
 import {
   type AuditLogger,
   createNullAuditLogger,
-} from "../../lib/audit-logger.js";
+} from "../../test-utils/audit-logger.js";
 import {
   createSamlAuthenticationCallback,
   createSamlCallbackHandler,

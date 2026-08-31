@@ -1,7 +1,7 @@
 import type { ReminderPolicy } from "@customreport/shared";
 import { describe, expect, expectTypeOf, it } from "vitest";
 
-import { unusedAdminRepositoryStubs } from "./admin-repository-unused-stubs.js";
+import { unusedAdminRepositoryStubs } from "./__tests__/admin-repository-unused-stubs.js";
 import type { AdminRepository } from "./admin-shared.js";
 
 const ID = "00000000-0000-4000-8000-000000000001";
@@ -35,7 +35,7 @@ describe("unusedAdminRepositoryStubs", () => {
     await expect(stubs.saveReminderPolicy(policy)).resolves.toBe(policy);
     await expect(stubs.deleteReminderPolicy(ID)).resolves.toBeUndefined();
     await expect(stubs.archivePeriod(ID)).resolves.toBeUndefined();
-    await expect(stubs.unarchivePeriod(ID)).resolves.toEqual({
+    await expect(stubs.unarchivePeriod(ID, new Date(0))).resolves.toEqual({
       nextPeriodState: "open",
       nextPeriodStatus: "open",
     });

@@ -1,3 +1,4 @@
+import { reopenRequestStatusFilterSchema } from "@customreport/shared";
 import { z } from "zod";
 
 import type { ReopenRequestAdminService } from "../../../../modules/admin/index.js";
@@ -15,9 +16,7 @@ interface ReopenRequestsDeps {
 
 const listReopenRequestsInput = z
   .object({
-    status: z
-      .enum(["pending", "approved", "rejected", "all"])
-      .default("pending"),
+    status: reopenRequestStatusFilterSchema.default("pending"),
   })
   .optional();
 

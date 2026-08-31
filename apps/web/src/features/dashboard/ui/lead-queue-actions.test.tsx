@@ -34,6 +34,7 @@ function lead(actions: LeadInfo["actions"]): LeadInfo {
     reportSectionId: "30000000-0000-4000-8000-000000000001",
     version: 2,
     reviews: [],
+    reminderRuleId: "40000000-0000-4000-8000-000000000001",
     reviewState: "none",
     reviewLabel: "Not reviewed",
     attentionLabel: "No signal",

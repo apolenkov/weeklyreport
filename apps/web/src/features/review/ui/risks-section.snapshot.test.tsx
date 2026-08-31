@@ -25,18 +25,18 @@ describe("RisksSection meta-row", () => {
     expect(screen.getByText("Vasily Lead")).toBeInTheDocument();
   });
 
-  it("renders the No-stage-set warning pill when stageNames is absent", () => {
+  it("does not render a warning when a product has no stages", () => {
     render(
       <RisksSection
         risks={[{ ...BASE_RISK, stageNames: [] }]}
         sectionAuthorName="Anna"
       />,
     );
-    expect(screen.getByText("No stage set")).toBeInTheDocument();
+    expect(screen.queryByText("No stage set")).not.toBeInTheDocument();
     expect(screen.queryByText("All stages")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("group", { name: "Risk stages: No stage set" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("group", { name: /^Risk stages:/ }),
+    ).not.toBeInTheDocument();
   });
 
   it("renders specific stage chips and author together in the meta-row", () => {

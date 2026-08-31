@@ -209,8 +209,7 @@ describe("SdlcPipeline — Mine chip visibility", () => {
   });
 
   it("a hidden foreign blocked stage colours the indicator red", () => {
-    // The live Mine-mode shape (the one the suite previously never exercised):
-    // the foreign DevOps stage is unassigned/empty in the lead's OWN grid, and
+    // In Mine mode the foreign DevOps stage is empty in the lead's own grid, and
     // its real blocked severity arrives only via crossAuthors. The indicator
     // colour must follow that resolved severity, not the local "empty" (grey).
     const product: Product = {
@@ -298,7 +297,7 @@ describe("SdlcPipeline — Mine chip visibility", () => {
 
   it("an all-on-track hidden set turns the indicator green (full scale)", () => {
     // Every hidden stage is on-track → green, so the lead can trace a healthy
-    // collapsed set (reverses the old "neutral unless blocked/at-risk").
+    // collapsed set while preserving the healthy product signal.
     const allOnTrackHidden: Product = {
       id: "p-green-hidden",
       name: "Green Hidden",

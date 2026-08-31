@@ -6,6 +6,7 @@ import { PrintReportTemplate } from "./print-report-template";
 
 interface Props {
   params: Promise<{ reportId: string }>;
+  searchParams: Promise<{ jobId?: string }>;
 }
 
 // Human bounce targets; lead → own report home (no per-report ownership check).
@@ -21,16 +22,22 @@ function humanRedirectPath(role: Role, reportId: string): string {
   }
 }
 
-export default async function PrintReportPage({ params }: Props) {
-  const [{ reportId }, ctx] = await Promise.all([
+export default async function PrintReportPage({ params, searchParams }: Props) {
+  const [{ reportId }, { jobId }, ctx] = await Promise.all([
     params,
+    searchParams,
     getPrintRouteContext(),
   ]);
 
   // Worker check must come first: a worker token otherwise looks like a human
   // session. These redirects are UX only; pdfExportGuard is the data boundary.
-  if (ctx.isPdfExport && ctx.pdfReportId === reportId) {
-    return <PrintReportTemplate reportId={reportId} />;
+  if (
+    ctx.isPdfExport &&
+    ctx.pdfReportId === reportId &&
+    typeof jobId === "string" &&
+    ctx.pdfJobId === jobId
+  ) {
+    return <PrintReportTemplate reportId={reportId} jobId={jobId} />;
   }
 
   // Destination varies by session role, so this must stay a temporary (307)

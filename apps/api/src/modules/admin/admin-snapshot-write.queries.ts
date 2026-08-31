@@ -1,20 +1,26 @@
-import {
-  type AdminSnapshot,
-  adminSnapshotSchema,
-  composeName,
-} from "@customreport/shared";
-import type { Prisma } from "@prisma/client";
+import { type AdminSnapshot, adminSnapshotSchema } from "@customreport/shared";
+import { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { reconcileRestoredProjectAssignment } from "../../lib/project-assignment.js";
+import { lockStatusGraph } from "../../lib/status-graph-lock.js";
+import { lockAndAssertGroupHead } from "../../lib/user-activity-assignment.js";
 import type { PolicyApplicatorService } from "../reminders/index.js";
+import { replaceRestoredPublishedProjections } from "../search/index.js";
 import { writePeriodRow } from "./admin-entity-write.queries";
 import { getSnapshot } from "./admin-snapshot.queries";
+import { lockAndValidateSnapshotAssignmentGraph } from "./admin-snapshot/assignment-graph.js";
+import { lockRestoredReports } from "./admin-snapshot/period-locks.js";
+import { upsertReminderExecutions } from "./admin-snapshot/reminder-execution-restore.js";
+import { lockReminderRestoreGraph } from "./admin-snapshot/reminder-locks.js";
 import {
   applyPoliciesToNewPeriods,
   type NewlyCreatedPeriod,
+  reconcileRestoredReminderRuleStatuses,
   upsertReminderPolicies,
   upsertReminderRules,
 } from "./admin-snapshot/reminders.js";
+import { upsertUsers } from "./admin-snapshot/users.js";
 
 async function upsertGroups(
   tx: Prisma.TransactionClient,
@@ -52,7 +58,10 @@ async function applyGroupHeads(
 ): Promise<void> {
   // After upsertUsers: groups precede users, so headUserId was omitted earlier
   // (FK would fail on create while the head User row did not exist yet).
-  for (const group of groups) {
+  for (const group of [...groups].sort((left, right) =>
+    left.id.localeCompare(right.id),
+  )) {
+    await lockAndAssertGroupHead(tx, group.headUserId);
     await tx.reportingGroup.update({
       where: { id: group.id },
       data: { headUserId: group.headUserId ?? null },
@@ -60,85 +69,17 @@ async function applyGroupHeads(
   }
 }
 
-async function upsertUsers(
-  tx: Prisma.TransactionClient,
-  users: AdminSnapshot["users"],
-): Promise<void> {
-  const currentUserIds = new Set((await tx.user.findMany()).map((u) => u.id));
-
-  for (const user of users) {
-    const reportingGroupId = user.reportingGroupId ?? null;
-    // Recompute the denormalized display name from the structured parts
-    // server-side so the `name === composeName(parts)` invariant holds for
-    // EVERY admin client / imported snapshot, not just the web form mapper.
-    const name = composeName({
-      lastName: user.lastName,
-      firstName: user.firstName,
-      middleName: user.middleName,
-    });
-    if (currentUserIds.has(user.id)) {
-      await tx.user.update({
-        where: { id: user.id },
-        data: {
-          email: user.email,
-          name,
-          lastName: user.lastName,
-          firstName: user.firstName,
-          middleName: user.middleName,
-          position: user.position,
-          role: user.role,
-          reportingGroupId,
-          isActive: user.isActive,
-        },
-      });
-    } else {
-      await tx.user.create({
-        data: {
-          id: user.id,
-          email: user.email,
-          name,
-          lastName: user.lastName,
-          firstName: user.firstName,
-          middleName: user.middleName,
-          position: user.position,
-          role: user.role,
-          samlId: user.email,
-          reportingGroupId,
-          isActive: user.isActive,
-        },
-      });
-    }
-  }
-}
-
-async function upsertProjects(
+async function upsertRestoredProjects(
   tx: Prisma.TransactionClient,
   projects: AdminSnapshot["projects"],
+  previousLeadByProject: ReadonlyMap<string, string>,
 ): Promise<void> {
-  const currentProjectIds = new Set(
-    (await tx.project.findMany()).map((p) => p.id),
-  );
-
   for (const project of projects) {
-    if (currentProjectIds.has(project.id)) {
-      await tx.project.update({
-        where: { id: project.id },
-        data: {
-          name: project.name,
-          archived: project.archived,
-          leadId: project.leadId,
-        },
-      });
-    } else {
-      await tx.project.create({
-        data: {
-          id: project.id,
-          name: project.name,
-          archived: project.archived,
-          leadId: project.leadId,
-        },
-      });
-    }
+    await reconcileRestoredProjectAssignment(
+      tx,
+      project,
+      previousLeadByProject.get(project.id) ?? null,
+    );
   }
 }
 
@@ -161,8 +102,9 @@ async function upsertPeriods(
   return { newlyCreatedPeriods };
 }
 
-// Additive-only whole-snapshot restore in one txn; removals use remove* primitives.
-// Policy applicator runs post-commit on newly created periods.
+// Additive admin-recovery restore for the contract's listed entities; this is
+// not a PostgreSQL DR backup. Removals use remove* primitives. Policy
+// applicator runs post-commit on newly created periods.
 // Spec: openspec/specs/admin-snapshot-restore
 export async function saveSnapshot(
   prisma: PrismaService,
@@ -174,18 +116,52 @@ export async function saveSnapshot(
   // restore never selects or creates a substitute group.
   const parsedSnapshot = adminSnapshotSchema.parse(snapshot);
   const { newlyCreatedPeriods } = await prisma.$transaction(async (tx) => {
-    const currentRules = await tx.reminderRule.findMany();
+    await lockStatusGraph(tx);
+    const currentRules = await lockReminderRestoreGraph(
+      tx,
+      parsedSnapshot.reminderRules.map((rule) => rule.id),
+      parsedSnapshot.policies.map((policy) => policy.id),
+      parsedSnapshot.periods.map((period) => period.id),
+    );
+    await lockRestoredReports(
+      tx,
+      parsedSnapshot.periods.map((period) => period.id),
+    );
+
+    const previousLeadByProject = await lockAndValidateSnapshotAssignmentGraph(
+      tx,
+      parsedSnapshot,
+    );
 
     // Groups precede users because User.reportingGroupId is a foreign key.
     await upsertGroups(tx, parsedSnapshot.groups);
-    await upsertUsers(tx, parsedSnapshot.users);
+    await upsertUsers(tx, parsedSnapshot.users, { validateAssignments: false });
     // Apply group head assignments now that every head's User row exists;
     // upsertGroups only wrote name/description/archived.
     await applyGroupHeads(tx, parsedSnapshot.groups);
-    await upsertProjects(tx, parsedSnapshot.projects);
+    await upsertRestoredProjects(
+      tx,
+      parsedSnapshot.projects,
+      previousLeadByProject,
+    );
     const periods = await upsertPeriods(tx, parsedSnapshot.periods);
+    await replaceRestoredPublishedProjections(
+      tx,
+      parsedSnapshot.periods.map((period) => ({
+        reportId: period.id,
+        snapshot: period.publishedSnapshot,
+      })),
+    );
     await upsertReminderPolicies(tx, parsedSnapshot.policies);
     await upsertReminderRules(tx, parsedSnapshot.reminderRules, currentRules);
+    await reconcileRestoredReminderRuleStatuses(
+      tx,
+      parsedSnapshot.policies,
+      parsedSnapshot.periods.map((period) => period.id),
+    );
+    // Executions depend on rules and carry the dedupe/payload lifecycle that
+    // prevents recovery from rescheduling or losing a delivery.
+    await upsertReminderExecutions(tx, parsedSnapshot.reminderExecutions);
 
     return periods;
   });

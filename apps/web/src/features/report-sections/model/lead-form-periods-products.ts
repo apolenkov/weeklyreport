@@ -4,11 +4,7 @@ import type {
   RiskSeverity,
   TrafficLightStatus,
 } from "@customreport/shared";
-import {
-  shortNameFromName,
-  STAGE_NAMES,
-  stageNamesMatch,
-} from "@customreport/shared";
+import { shortNameFromName, STAGE_NAMES } from "@customreport/shared";
 
 import {
   formatPeriodRangeWithYear,
@@ -35,12 +31,12 @@ export function ownedStagesForProject(
   const projects = projectId
     ? section.projects.filter((p) => p.projectId === projectId)
     : section.projects;
-  const rawOwned = projects.flatMap((project) =>
-    project.ownedStages.map((stage) => stage.stageName),
+  const rawOwned = new Set(
+    projects.flatMap((project) =>
+      project.ownedStages.map((stage) => stage.stageName),
+    ),
   );
-  return STAGE_NAMES.filter((canonical) =>
-    rawOwned.some((raw) => stageNamesMatch(canonical, raw)),
-  );
+  return STAGE_NAMES.filter((canonical) => rawOwned.has(canonical));
 }
 
 interface OwnedStageInput {
@@ -94,11 +90,11 @@ function buildStageGrid(
   // The product stage set provides the pipeline grid; a lead-owned assignment
   // always belongs to that current grid as well.
   const inStageSet = (stageName: string): boolean =>
-    stageSet.some((s) => stageNamesMatch(s.stageName, stageName)) ||
-    ownedStages.some((s) => stageNamesMatch(s.stageName, stageName));
+    stageSet.some((stage) => stage.stageName === stageName) ||
+    ownedStages.some((stage) => stage.stageName === stageName);
   return STAGE_NAMES.filter(inStageSet).map((stageName) => {
     const ownedStage =
-      ownedStages.find((s) => stageNamesMatch(s.stageName, stageName)) ?? null;
+      ownedStages.find((stage) => stage.stageName === stageName) ?? null;
     if (ownedStage) {
       return deriveOwnedStageRow(stageName, ownedStage, ownerLabel, risks);
     }

@@ -12,7 +12,8 @@ import {
   formatWeekLabel,
 } from "../../../shared/lib/format/format-date";
 
-// Self-contained presentation type so consumers don't depend on mock-data.ts.
+// History rows use a presentation-only submission state; API payload types stay
+// owned by @customreport/shared.
 type HistorySubmissionState = "submitted" | "not-submitted" | "unavailable";
 
 export interface HistoryEntry {

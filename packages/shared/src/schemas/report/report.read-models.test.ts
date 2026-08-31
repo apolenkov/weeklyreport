@@ -28,11 +28,11 @@ describe("carryOverStatusSchema", () => {
   // Carry-over is synchronous: the service writes only `completed` (or throws,
   // persisting nothing). The enum collapses to that single live value —
   // `pending`/`failed` are not accepted.
-  it('rejects "pending" (removed dead state)', () => {
+  it('rejects unsupported "pending" state', () => {
     expect(carryOverStatusSchema.safeParse("pending").success).toBe(false);
   });
 
-  it('rejects "failed" (removed dead state)', () => {
+  it('rejects unsupported "failed" state', () => {
     expect(carryOverStatusSchema.safeParse("failed").success).toBe(false);
   });
 
@@ -98,6 +98,15 @@ describe("reportDate via assembledReportSchema", () => {
       periodStart,
     });
     expect(result.success).toBe(success);
+  });
+
+  it("rejects a published report without publishedAt", () => {
+    expect(
+      assembledReportSchema.safeParse({
+        ...validAssembled(),
+        status: "published",
+      }).success,
+    ).toBe(false);
   });
 });
 

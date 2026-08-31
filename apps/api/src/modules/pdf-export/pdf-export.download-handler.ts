@@ -10,9 +10,6 @@ import {
   resolveHumanSession,
 } from "../../lib/human-session.js";
 import type { AppLogger } from "../../lib/logger.js";
-import { canReadReport } from "../../lib/report-read-access.js";
-
-export { canReadReport } from "../../lib/report-read-access.js";
 
 const JOB_ID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -37,7 +34,7 @@ export interface PdfDownloadDeps {
 
 // Same-origin URL (`/pdfs/{jobId}.pdf`) so the attachment request carries the
 // session cookie. Streams only to callers with a valid human session and
-// report-read permission.
+// the immutable job owner.
 export function createPdfDownloadHandler(
   deps: PdfDownloadDeps,
 ): RequestHandler {
@@ -158,7 +155,7 @@ export async function handlePdfDownload(
 
   const job = await deps.prisma.pdfExportJob.findUnique({
     where: { id: jobId },
-    select: { status: true, filePath: true, reportId: true },
+    select: { status: true, filePath: true, reportId: true, requestedBy: true },
   });
   // The job row — not the filesystem — decides whether bytes may be served:
   // 404 when missing, not completed, or the persisted artifact path does not
@@ -168,7 +165,9 @@ export async function handlePdfDownload(
     return;
   }
 
-  if (!(await canReadReport(session, job.reportId, deps.prisma))) {
+  // The artifact is requester-scoped at enqueue time. Current report/group
+  // membership is mutable and must not broaden access to an old PDF.
+  if (job.requestedBy !== session.userId) {
     res.status(HTTP.forbidden).end();
     return;
   }

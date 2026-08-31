@@ -1,4 +1,9 @@
-import type { ReportSectionReadModel, Role } from "@customreport/shared";
+import {
+  type PublishedLineage,
+  publishedLineageSchema,
+  type ReportSectionReadModel,
+  type Role,
+} from "@customreport/shared";
 
 import {
   assertHeadTargetInGroup,
@@ -20,10 +25,7 @@ export interface GetByPeriodResult {
   // Resolve-not-delete: the section's published item/decision lineages, so the
   // form can mark locked records and hide Delete. Advisory for the UI only —
   // the save-path guard enforces the lock.
-  publishedLineage: {
-    itemStableIds: readonly string[];
-    decisionStableIds: readonly string[];
-  };
+  publishedLineage: PublishedLineage;
 }
 
 const isHeadLikeRole = (role: Role | undefined): boolean =>
@@ -154,7 +156,9 @@ async function buildByPeriodResult(
 
   // Computed over the (possibly product-filtered) section actually returned,
   // so a cross-author read never leaks lineage of records it does not show.
-  const publishedLineage = await repository.getPublishedLineage(section);
+  const publishedLineage = publishedLineageSchema.parse(
+    await repository.getPublishedLineage(section),
+  );
 
   return {
     section,

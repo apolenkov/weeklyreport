@@ -6,11 +6,20 @@ import { publishCompareAndSet } from "../../../lib/publish-compare-and-set.js";
 import { reopenCompareAndSet } from "../../../lib/reopen-compare-and-set.js";
 import { AdminPeriodOverlapError } from "../../admin/index.js";
 import {
+  lockAllReminderPolicies,
+  pauseReminderRulesForReport,
+  synchronizeReminderRulesForReport,
+} from "../../reminders/index.js";
+import {
   buildAssembledReportFromPrismaRow,
   reportFullIncludeForSnapshot,
   toPublishedSnapshotJson,
 } from "../../report-sections/index.js";
-import { WeeklyReportPrismaRepository } from "../../weekly-report/index.js";
+import { replacePublishedProjections } from "../../search/index.js";
+import {
+  WEEKLY_REPORT_LIFECYCLE,
+  type WeeklyReportLifecyclePort,
+} from "../../weekly-report/index.js";
 import type {
   PeriodRepository,
   PublishPeriodOutcome,
@@ -26,8 +35,8 @@ export class PeriodPrismaRepository implements PeriodRepository {
     // The lifecycle resolvers live once in the weekly-report repository (the
     // canonical home of getCurrentEditableId). Delegating to it keeps the head's
     // authz target and the weekly-report default in lock-step — no second copy.
-    @Inject(WeeklyReportPrismaRepository)
-    private readonly weeklyReportRepository: WeeklyReportPrismaRepository,
+    @Inject(WEEKLY_REPORT_LIFECYCLE)
+    private readonly weeklyReportRepository: WeeklyReportLifecyclePort,
   ) {}
 
   async getReportById(reportId: string): Promise<{
@@ -60,7 +69,7 @@ export class PeriodPrismaRepository implements PeriodRepository {
   }
 
   async getReopenedNonArchivedId(): Promise<string | null> {
-    // periodStatus='reopened' is the canonical reopen marker (legacy tuple stays published).
+    // periodStatus='reopened' is the canonical reopen marker (status stays published).
     const reopened = await this.prisma.report.findFirst({
       where: { periodStatus: "reopened", archived: false },
       orderBy: [{ periodStart: "desc" }, { id: "desc" }],
@@ -74,21 +83,49 @@ export class PeriodPrismaRepository implements PeriodRepository {
     userId: string,
   ): Promise<PublishPeriodOutcome> {
     return this.prisma.$transaction(async (tx) => {
-      // CAS via transition builder; snapshot is a second statement in the same tx.
-      // See openspec/specs/period-dual-state.
-      const outcome = await publishCompareAndSet(
-        tx,
-        reportId,
-        buildTransition("publish", { now: new Date(), userId }),
-      );
+      const publishAt = new Date();
+      await lockAllReminderPolicies(tx);
+      // The publishedSnapshot check requires the guarded write itself to carry
+      // the prospective published metadata. Build that provisional snapshot
+      // from the same timestamp and publisher as the CAS; the post-CAS read
+      // below replaces it with the exact state that won the transition. Under
+      // READ COMMITTED, each statement sees the latest committed row, and the
+      // CAS holds the row lock until commit, so the second read cannot observe
+      // a torn publication.
+      const candidate = await tx.report.findUnique({
+        where: { id: reportId },
+        include: reportFullIncludeForSnapshot,
+      });
+      const publisher = candidate
+        ? await tx.user.findUnique({ where: { id: userId } })
+        : null;
+
+      const provisionalSnapshot = candidate
+        ? toPublishedSnapshotJson(
+            buildAssembledReportFromPrismaRow({
+              ...candidate,
+              status: "published",
+              publishedAt: publishAt,
+              publishedById: userId,
+              publishedBy: publisher,
+            }),
+          )
+        : {};
+
+      const outcome = await publishCompareAndSet(tx, reportId, {
+        ...buildTransition("publish", { now: publishAt, userId }),
+        publishedSnapshot: provisionalSnapshot,
+      });
 
       if (outcome !== "transitioned") {
         return { transitioned: false, reason: outcome };
       }
 
-      // updateMany cannot carry an `include`, so read the row back to build the
-      // snapshot — still inside this transaction, so it stays atomic with the
-      // transition.
+      await pauseReminderRulesForReport(tx, reportId);
+
+      // updateMany cannot carry an `include`, so read the row back to replace
+      // the provisional snapshot — still inside this transaction, so it stays
+      // atomic with the transition.
       const published = await tx.report.findUniqueOrThrow({
         where: { id: reportId },
         include: reportFullIncludeForSnapshot,
@@ -100,20 +137,23 @@ export class PeriodPrismaRepository implements PeriodRepository {
           publishedSnapshot: toPublishedSnapshotJson(snapshot),
         },
       });
+      await replacePublishedProjections(tx, { reportId, snapshot });
 
       return { transitioned: true };
     });
   }
 
   async reopenPeriod(reportId: string): Promise<void> {
+    const reopenedAt = new Date();
     try {
       await this.prisma.$transaction(async (tx) => {
+        const policies = await lockAllReminderPolicies(tx);
         // CAS on archived+periodStatus closes the reopen-vs-archive race.
         // Field set from transition builder (period-dual-state).
         const outcome = await reopenCompareAndSet(
           tx,
           reportId,
-          buildTransition("reopen", { now: new Date() }),
+          buildTransition("reopen", { now: reopenedAt }),
         );
 
         if (outcome !== "transitioned") {
@@ -136,6 +176,12 @@ export class PeriodPrismaRepository implements PeriodRepository {
             submittedAt: null,
           },
         });
+        await synchronizeReminderRulesForReport(
+          tx,
+          policies,
+          reportId,
+          reopenedAt,
+        );
       });
     } catch (error) {
       // Open-boundary unique index: surface as BAD_REQUEST, never 500.

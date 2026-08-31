@@ -1,10 +1,11 @@
+import type { ReopenRequestStatusFilter } from "@customreport/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 
-export type ReopenFilterStatus = "pending" | "approved" | "rejected" | "all";
+export type ReopenFilterStatus = ReopenRequestStatusFilter;
 
 // Free-text match across every field the row renders, so what the admin reads
 // is what the search box searches.

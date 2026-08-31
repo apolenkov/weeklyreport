@@ -1,5 +1,4 @@
 import {
-  DEFAULT_ORGANIZATION_IDENTITY,
   type Organization,
   organizationSchema,
   type OrganizationUpdate,
@@ -13,8 +12,8 @@ import type { OrganizationRepository } from "./organization.service.js";
 // singleton invariant (`organizationSchema.id` is `z.literal("singleton")`).
 const ORGANIZATION_SINGLETON_ID = "singleton";
 
-// Upsert (not create) so cold/truncated DBs and concurrent first-reads
-// collapse safely; seed normally inserts the singleton on migrate.
+// The init migration and seed establish this singleton before the API starts.
+// Reads and updates must expose a missing row instead of silently rebuilding it.
 @Injectable()
 export class OrganizationPrismaRepository implements OrganizationRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
@@ -23,17 +22,12 @@ export class OrganizationPrismaRepository implements OrganizationRepository {
     const existing = await this.prisma.organization.findUnique({
       where: { id: ORGANIZATION_SINGLETON_ID },
     });
-    const row =
-      existing ??
-      (await this.prisma.organization.upsert({
-        where: { id: ORGANIZATION_SINGLETON_ID },
-        create: {
-          id: ORGANIZATION_SINGLETON_ID,
-          shortName: DEFAULT_ORGANIZATION_IDENTITY.shortName,
-          fullName: DEFAULT_ORGANIZATION_IDENTITY.fullName,
-        },
-        update: {},
-      }));
+    if (!existing) {
+      throw new Error(
+        `Organization singleton row '${ORGANIZATION_SINGLETON_ID}' is missing; apply the canonical init migration or restore the row`,
+      );
+    }
+    const row = existing;
     return organizationSchema.parse({
       id: row.id,
       shortName: row.shortName,
@@ -46,16 +40,11 @@ export class OrganizationPrismaRepository implements OrganizationRepository {
   readonly updateOrganization = async (
     input: OrganizationUpdate,
   ): Promise<Organization> => {
-    // Only the singleton row is writable; upsert is defense in depth if the
-    // row was purged out-of-band (production should never take create).
-    const row = await this.prisma.organization.upsert({
+    // Only the seeded singleton row is writable; a missing row is a deployment
+    // invariant failure, never an invitation to create a new tenant.
+    const row = await this.prisma.organization.update({
       where: { id: ORGANIZATION_SINGLETON_ID },
-      create: {
-        id: ORGANIZATION_SINGLETON_ID,
-        shortName: input.shortName,
-        fullName: input.fullName,
-      },
-      update: {
+      data: {
         shortName: input.shortName,
         fullName: input.fullName,
       },

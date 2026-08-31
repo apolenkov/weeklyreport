@@ -98,3 +98,39 @@ describe("reminderPolicySchema validity window", () => {
     }
   });
 });
+
+describe("reminderPolicySchema kind and audience", () => {
+  it.each([
+    ["deadline", "lead-with-draft"],
+    ["escalation", "head-of-late"],
+  ] as const)("accepts the %s to %s contract", (kind, audience) => {
+    expect(
+      reminderPolicySchema.safeParse({ ...validPolicy, kind, audience })
+        .success,
+    ).toBe(true);
+  });
+
+  it.each([
+    ["deadline", "head-of-late", "lead-with-draft"],
+    ["escalation", "lead-with-draft", "head-of-late"],
+  ] as const)(
+    "rejects %s with %s instead of %s",
+    (kind, audience, expectedAudience) => {
+      const result = reminderPolicySchema.safeParse({
+        ...validPolicy,
+        kind,
+        audience,
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues).toContainEqual(
+          expect.objectContaining({
+            path: ["audience"],
+            message: `${kind} policies require the ${expectedAudience} audience`,
+          }),
+        );
+      }
+    },
+  );
+});

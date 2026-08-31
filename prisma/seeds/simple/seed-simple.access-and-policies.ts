@@ -1,3 +1,4 @@
+import { computeReminderFireAt } from "@customreport/shared";
 import {
   type PrismaClient,
   ReminderAudience,
@@ -19,11 +20,7 @@ import {
   REPORT_PUBLISHED,
   VIEWER_ID,
 } from "./seed-simple.ids.js";
-import {
-  ACTIVE_MONDAY,
-  ACTIVE_REMINDER_DEADLINE_FIRE,
-  ACTIVE_REMINDER_ESCALATION_FIRE,
-} from "./seed-simple.period.js";
+import { ACTIVE_FRIDAY_DEADLINE, ACTIVE_MONDAY } from "./seed-simple.period.js";
 
 const SEED_TIMEZONE = "Europe/Moscow";
 // Deadline reminder fires 24h before the deadline; escalation 2h after it.
@@ -160,7 +157,12 @@ const REMINDER_RULE_ROWS = [
     reportId: REPORT_ACTIVE,
     policyId: POLICY_DEADLINE,
     kind: ReminderRuleKind.deadline,
-    fireAt: ACTIVE_REMINDER_DEADLINE_FIRE,
+    fireAt: computeReminderFireAt(
+      ACTIVE_FRIDAY_DEADLINE,
+      DEADLINE_OFFSET_MINUTES,
+      SEED_TIMEZONE,
+    ),
+    deadline: ACTIVE_FRIDAY_DEADLINE,
     timezone: SEED_TIMEZONE,
     status: ReminderRuleStatus.active,
     version: 1,
@@ -170,7 +172,12 @@ const REMINDER_RULE_ROWS = [
     reportId: REPORT_ACTIVE,
     policyId: POLICY_ESCALATION,
     kind: ReminderRuleKind.escalation,
-    fireAt: ACTIVE_REMINDER_ESCALATION_FIRE,
+    fireAt: computeReminderFireAt(
+      ACTIVE_FRIDAY_DEADLINE,
+      ESCALATION_OFFSET_MINUTES,
+      SEED_TIMEZONE,
+    ),
+    deadline: ACTIVE_FRIDAY_DEADLINE,
     timezone: SEED_TIMEZONE,
     status: ReminderRuleStatus.active,
     version: 1,

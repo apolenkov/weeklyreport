@@ -13,11 +13,6 @@ export const webVitalBeaconSchema = z
   })
   .readonly();
 
-/** Validated web-vital sample accepted from the browser beacon. */
-export type WebVitalBeacon = z.infer<typeof webVitalBeaconSchema>;
-/** Bounded web-vital metric name accepted by the public endpoint. */
-export type WebVitalName = WebVitalBeacon["name"];
-
 const WEB_VITAL_NAVIGATION_TYPES = new Set<string>([
   "navigate",
   "reload",

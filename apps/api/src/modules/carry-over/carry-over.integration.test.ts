@@ -397,8 +397,8 @@ describe("CarryOverPrismaRepository (integration)", () => {
       reviews: [],
     };
 
-    // The old write used a non-existent `stageName` field, aborting the whole
-    // transaction whenever a carried decision had a product. This must commit.
+    // Product-parented carried decisions persist their stageNames in the same
+    // transaction as the rest of the carry-over.
     await repo.saveCarryOver(execution, records, [targetSectionReadModel]);
 
     const created = await prisma.decision.findMany({

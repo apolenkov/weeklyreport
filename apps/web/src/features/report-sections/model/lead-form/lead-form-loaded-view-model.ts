@@ -1,5 +1,6 @@
 import type {
   MyHistoryEntry,
+  PublishedLineage,
   ReportSectionReadModel,
 } from "@customreport/shared";
 
@@ -40,10 +41,7 @@ export interface LeadFormLoadedInput {
   readonly serverReadOnly: boolean;
   // Server-computed; the client must not reconstruct reopen policy.
   readonly canRequestReopen: boolean;
-  readonly publishedLineage: {
-    readonly itemStableIds: readonly string[];
-    readonly decisionStableIds: readonly string[];
-  };
+  readonly publishedLineage: PublishedLineage;
   readonly history: readonly MyHistoryEntry[];
   // Status-only cross-author data drives stage chips and is always fetched.
   readonly crossAuthors: readonly CrossAuthorRow[];

@@ -9,10 +9,12 @@ import {
   createServiceRepo,
   dueRuleFromRecipients,
   fakeOrganizationService,
+  reportDeadline,
   reportId,
   ruleId,
   schedulerTestEnv,
 } from "./__tests__/reminders-scheduler-harness.js";
+import { unusedRemindersRepositoryStubs } from "./__tests__/reminders-scope.repository-stub.js";
 import { RemindersScheduler } from "./reminders.scheduler";
 import { RemindersService } from "./reminders.service";
 import type {
@@ -20,7 +22,6 @@ import type {
   DueEscalationRule,
   RemindersRepository,
 } from "./reminders.types";
-import { unusedRemindersRepositoryStubs } from "./reminders-scope.repository-stub.js";
 
 describe("RemindersScheduler — deadline reminder dispatch", () => {
   let queueAdds: { name: string; data: Record<string, unknown> }[];
@@ -42,7 +43,7 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
     };
   });
 
-  it("one lead with draft section at T-24h gets exactly one email per cycle (twice-fired tick is idempotent)", async () => {
+  it("one lead gets one email per non-24h policy cycle (repeated tick is idempotent)", async () => {
     const recipients = [
       { userId: "u1", email: "lead@test.local", name: "Lead Alpha" },
     ];
@@ -66,7 +67,7 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
       schedulerTestEnv,
     );
 
-    // Tick #1 at 16:00 UTC — same UTC day as the deadline (2026-04-19).
+    // Tick #1 is after fireAt but well before the independent report deadline.
     await scheduler.runOnce(new Date("2026-04-19T16:00:00.000Z"));
     expect(queueAdds).toHaveLength(1);
     expect(queueAdds[0]?.data.kind).toBe("deadline");
@@ -76,6 +77,56 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
     // on the same `${rule.id}:deadline:${cycleDate}:${email}` key.
     await scheduler.runOnce(new Date("2026-04-19T17:00:00.000Z"));
     expect(queueAdds).toHaveLength(1); // STILL one — second tick was a no-op
+  });
+
+  it("the next automatic tick never revives a terminal failed execution", async () => {
+    const recipient = {
+      userId: "u1",
+      email: "lead@test.local",
+      name: "Lead Alpha",
+    };
+    const failed: AdminReminderExecution = {
+      id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      ruleId,
+      reportId,
+      dedupeKey: `${ruleId}:deadline:2026-04-19:${recipient.email}`,
+      status: "failed",
+      scheduledFor: activeRule.fireAt,
+      sentAt: null,
+      recipientEmail: recipient.email,
+      errorMessage: "SMTP refused",
+    };
+    const recordExecution = vi.fn().mockResolvedValue({
+      execution: failed,
+      outcome: "deduplicated" as const,
+    });
+    const service = new RemindersService(
+      createServiceRepo({
+        insertExecutionOnConflict: recordExecution,
+      }),
+      undefined,
+      fakeQueue as unknown as ConstructorParameters<typeof RemindersService>[2],
+    );
+    const scheduler = new RemindersScheduler(
+      service,
+      {
+        findDueDeadlineRules: vi.fn(() =>
+          Promise.resolve([dueRuleFromRecipients([recipient])]),
+        ),
+        findDueEscalationRules: vi.fn(() => Promise.resolve([])),
+      } as unknown as ConstructorParameters<typeof RemindersScheduler>[1],
+      fakeOrganizationService,
+      schedulerTestEnv,
+    );
+
+    await scheduler.runOnce(new Date("2026-04-19T17:00:00.000Z"));
+
+    expect(recordExecution).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      false,
+    );
+    expect(queueAdds).toHaveLength(0);
   });
 
   it("no lead with draft section → zero emails", async () => {
@@ -165,7 +216,8 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
     expect(data.kind).toBe("deadline");
     expect(data.leadName).toBe("Lead Alpha");
     expect(data.reportPeriod).toBe("2026-04-13 → 2026-04-19");
-    expect(data.deadlineIso).toBe("2026-04-19T15:00:00.000Z");
+    expect(data.deadlineIso).toBe(reportDeadline.toISOString());
+    expect(data.deadlineIso).not.toBe(activeRule.fireAt.toISOString());
     expect(data.sectionUrl).toBe(
       `${schedulerTestEnv.APP_BASE_URL}/lead/report/${reportId}`,
     );
@@ -224,6 +276,7 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
       id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
       reportId,
       fireAt: new Date("2026-04-26T15:00:00.000Z"),
+      deadline: new Date("2026-04-28T09:00:00.000Z"),
       reportPeriodLabel: "2026-04-20 → 2026-04-26",
       recipients: recipients.map((r) => ({ ...r, notificationOptOut: false })),
     };
@@ -284,7 +337,7 @@ describe("RemindersScheduler — escalation dispatch", () => {
     timezone: "UTC",
     status: "active",
     version: 1,
-    policyId: null,
+    policyId: "99999999-9999-4999-8999-999999999999",
   };
 
   function makeEscalationRule(
@@ -335,14 +388,14 @@ describe("RemindersScheduler — escalation dispatch", () => {
           if (exec.dedupeKey === execution.dedupeKey) {
             return Promise.resolve({
               execution: structuredClone(exec),
-              inserted: false,
+              outcome: "deduplicated" as const,
             });
           }
         }
         executions.set(execution.id, structuredClone(execution));
         return Promise.resolve({
           execution: structuredClone(execution),
-          inserted: true,
+          outcome: "created" as const,
         });
       },
       getExecution(id) {
@@ -574,6 +627,7 @@ describe("RemindersScheduler — opt-out", () => {
       id: ruleId,
       reportId,
       fireAt: activeRule.fireAt,
+      deadline: reportDeadline,
       reportPeriodLabel: "2026-04-13 → 2026-04-19",
       recipients,
     };
@@ -639,7 +693,7 @@ describe("RemindersScheduler — opt-out", () => {
       timezone: "UTC",
       status: "active",
       version: 1,
-      policyId: null,
+      policyId: "99999999-9999-4999-8999-999999999999",
     };
     const escalationServiceRepo: RemindersRepository = {
       ...unusedRemindersRepositoryStubs(),
@@ -654,7 +708,7 @@ describe("RemindersScheduler — opt-out", () => {
       insertExecutionOnConflict(execution) {
         return Promise.resolve({
           execution: structuredClone(execution),
-          inserted: true,
+          outcome: "created" as const,
         });
       },
       getExecution() {

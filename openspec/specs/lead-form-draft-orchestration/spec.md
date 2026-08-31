@@ -21,7 +21,7 @@ without replacing the local draft content the lead is actively editing; when
 an incoming server section reflects a genuine external edit while the draft
 is dirty, the hook MUST surface the existing conflict/reload toast rather
 than swapping the draft content without warning. A clean (non-dirty) draft
-may still be reseeded silently, as before.
+may still be reseeded silently when clean.
 
 #### Scenario: Fresh server data seeds the draft without marking it dirty
 
@@ -102,14 +102,14 @@ stale closure.
 
 The hook MUST expose the same conflict handler used by autosave, submit, and
 fill-from. A stale-version conflict MUST refetch `leadForm.byPeriod` and show
-the existing reload/error toast instead of silently discarding or marking local
+the canonical form reload/error toast instead of silently discarding or marking local
 edits saved.
 
 #### Scenario: Submit conflict reloads the section
 
 - **WHEN** the submit mutation reports a stale-version conflict
 - **THEN** `leadForm.byPeriod` is refetched
-- **AND** the lead sees the reload message already used by the form today
+- **AND** the lead sees the canonical form reload message
 
 #### Scenario: Autosave conflict suppresses the generic autosave toast
 

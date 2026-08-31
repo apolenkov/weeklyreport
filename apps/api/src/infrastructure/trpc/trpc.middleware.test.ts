@@ -1,8 +1,8 @@
 import { TRPCError } from "@trpc/server";
 import { describe, expect, it, vi } from "vitest";
 
-import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { type AppLogger, createNullLogger } from "../../lib/logger.js";
+import { createNullAuditLogger } from "../../test-utils/audit-logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   adminProcedure,
@@ -10,11 +10,9 @@ import {
   deriveCauseInfo,
   headProcedure,
   leadershipProcedure,
-  leadProcedure,
   protectedProcedure,
   publicProcedure,
   router,
-  viewerProcedure,
 } from "./trpc.middleware.js";
 
 describe("protected procedure chain-composition pins", () => {
@@ -31,8 +29,6 @@ describe("protected procedure chain-composition pins", () => {
   const publicChain = getChain(publicProcedure);
   const protectedChain = getChain(protectedProcedure);
   const headChain = getChain(headProcedure);
-  const leadChain = getChain(leadProcedure);
-  const viewerChain = getChain(viewerProcedure);
   const anyRoleChain = getChain(anyRoleProcedure);
   const adminChain = getChain(adminProcedure);
   const leadershipChain = getChain(leadershipProcedure);
@@ -40,8 +36,6 @@ describe("protected procedure chain-composition pins", () => {
   const protectedBuilders = [
     { name: "protectedProcedure", chain: protectedChain },
     { name: "headProcedure", chain: headChain },
-    { name: "leadProcedure", chain: leadChain },
-    { name: "viewerProcedure", chain: viewerChain },
     { name: "anyRoleProcedure", chain: anyRoleChain },
     { name: "adminProcedure", chain: adminChain },
     { name: "leadershipProcedure", chain: leadershipChain },

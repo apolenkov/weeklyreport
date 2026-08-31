@@ -3,7 +3,11 @@ import fs from "node:fs";
 import path from "node:path";
 import url from "node:url";
 
-import { MS_PER_MINUTE } from "@customreport/shared";
+import {
+  MS_PER_MINUTE,
+  type ReseedVariant,
+  reseedVariantSchema,
+} from "@customreport/shared";
 import type { PrismaClient } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
@@ -35,8 +39,6 @@ export interface DevRouterDeps {
   // neither reads raw process.env.
   env: EnvConfig;
 }
-
-type ReseedVariant = "minimal" | "demo" | "full" | "stress";
 
 // Refuse unless AUTH_DEV_MODE so an accidental prod deploy cannot wipe data.
 // Reads the validated env (boolean post-transform), never raw process.env.
@@ -128,7 +130,7 @@ export function createDevRouter(deps: DevRouterDeps) {
     wipeAndReseed: protectedProcedure
       .input(
         z.object({
-          variant: z.enum(["minimal", "demo", "full", "stress"]),
+          variant: reseedVariantSchema,
         }),
       )
       .use(captureMutationAuditInputMiddleware)

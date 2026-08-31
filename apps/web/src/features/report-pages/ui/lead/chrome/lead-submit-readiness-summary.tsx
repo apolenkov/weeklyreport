@@ -106,7 +106,8 @@ function AutomaticStatusChanges({
           When you submit:
         </span>{" "}
         <span className="text-[var(--color-muted-foreground)]">
-          {items.length} unset {statusLabel} will be set to On Track.
+          {items.length} unset {statusLabel} will be marked On Track when
+          submitted.
         </span>
       </summary>
       <div className="grid max-h-64 gap-4 overflow-y-auto border-t border-[var(--color-border-subtle)] px-4 py-3 md:grid-cols-3">

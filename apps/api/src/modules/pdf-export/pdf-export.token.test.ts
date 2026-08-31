@@ -1,12 +1,26 @@
 import jwt from "jsonwebtoken";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { signPdfExportToken, verifyPdfExportToken } from "./pdf-export.token";
+import {
+  signPdfExportToken as signPdfExportTokenImpl,
+  verifyPdfExportToken as verifyPdfExportTokenImpl,
+} from "./pdf-export.token";
 
 const TEST_SECRET = "test-pdf-export-secret-at-least-32-chars";
 const REPORT_ID = "22222222-2222-4222-8222-222222222222";
 const REQUESTED_BY = "00000000-0000-4000-8000-000000000001";
+const JOB_ID = "a0000000-0000-4000-8000-000000000099";
 const EXP_IN_SECONDS = Math.floor(Date.now() / 1000) + 300;
+
+const verifyPdfExportToken = (token: string) =>
+  verifyPdfExportTokenImpl(token, process.env.PDF_EXPORT_JWT_SECRET);
+const signPdfExportToken = (reportId: string, requestedBy: string) =>
+  signPdfExportTokenImpl(
+    reportId,
+    JOB_ID,
+    requestedBy,
+    process.env.PDF_EXPORT_JWT_SECRET,
+  );
 
 beforeEach(() => {
   vi.stubEnv("PDF_EXPORT_JWT_SECRET", TEST_SECRET);
@@ -24,6 +38,7 @@ describe("verifyPdfExportToken — strict claim validation", () => {
   it("accepts a token carrying every canonical claim", () => {
     const token = signWith({
       reportId: REPORT_ID,
+      jobId: JOB_ID,
       kind: "pdf-export",
       requestedBy: REQUESTED_BY,
       exp: EXP_IN_SECONDS,
@@ -31,6 +46,7 @@ describe("verifyPdfExportToken — strict claim validation", () => {
 
     expect(verifyPdfExportToken(token)).toEqual({
       reportId: REPORT_ID,
+      jobId: JOB_ID,
       kind: "pdf-export",
       requestedBy: REQUESTED_BY,
     });
@@ -39,6 +55,7 @@ describe("verifyPdfExportToken — strict claim validation", () => {
   it("rejects a token without the required requestedBy claim", () => {
     const token = signWith({
       reportId: REPORT_ID,
+      jobId: JOB_ID,
       kind: "pdf-export",
       exp: EXP_IN_SECONDS,
     });
@@ -69,6 +86,7 @@ describe("verifyPdfExportToken — strict claim validation", () => {
   it("rejects a token whose kind is not pdf-export", () => {
     const token = signWith({
       reportId: REPORT_ID,
+      jobId: JOB_ID,
       kind: "session",
       exp: EXP_IN_SECONDS,
     });
@@ -87,6 +105,7 @@ describe("verifyPdfExportToken — strict claim validation", () => {
   it("rejects a token with a non-string requestedBy claim", () => {
     const token = signWith({
       reportId: REPORT_ID,
+      jobId: JOB_ID,
       kind: "pdf-export",
       requestedBy: 42,
       exp: EXP_IN_SECONDS,
@@ -102,6 +121,7 @@ describe("verifyPdfExportToken — strict claim validation", () => {
 
     expect(verifyPdfExportToken(token)).toEqual({
       reportId: REPORT_ID,
+      jobId: JOB_ID,
       kind: "pdf-export",
       requestedBy: REQUESTED_BY,
     });

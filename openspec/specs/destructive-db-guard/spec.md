@@ -1,13 +1,13 @@
 ## Purpose
 
-`prisma/guards/_destructive-guard.ts` exports `assertNonProdDestructive(scriptName)`, called
-at the top of every destructive Prisma script (seed, wipe, reset). It inspects the
-runtime environment and MUST throw before executing any destructive SQL if the target
-looks like production. The guard reads `DATABASE_URL`; env examples and Compose files
-MUST keep `POSTGRES_DB` and `DATABASE_URL` in sync so the guard sees the correct
-database name.
+`prisma/guards/_destructive-guard.ts` exports the exact disposable-target APIs
+`assertE2eRuntimeDestructive` and `assertE2eRuntimeDestructiveTarget`, called
+immediately before destructive E2E/runtime database work. They validate the
+resolved URL, environment, and per-run consent before a destructive primitive
+can execute.
 
-Consumer surface: `prisma/guards/_destructive-guard.ts` — `assertNonProdDestructive`.
+Consumer surface: `prisma/guards/_destructive-guard.ts` —
+`assertE2eRuntimeDestructive` and `assertE2eRuntimeDestructiveTarget`.
 
 ## Requirements
 
@@ -15,7 +15,8 @@ Consumer surface: `prisma/guards/_destructive-guard.ts` — `assertNonProdDestru
 
 The guard MUST refuse when `NODE_ENV === "production"`, regardless of `DATABASE_URL`. No environment variable may bypass this refusal for disposable-database workflows.
 
-Consumer surface: `prisma/guards/_destructive-guard.ts` — `assertNonProdDestructive`.
+Consumer surface: `prisma/guards/_destructive-guard.ts` —
+`assertE2eRuntimeDestructiveTarget`.
 
 #### Scenario: Production environment variable is set
 
@@ -29,27 +30,14 @@ The guard MUST refuse when `DATABASE_URL` is not set, because a script without a
 #### Scenario: DATABASE_URL is empty or unset
 
 - **WHEN** `DATABASE_URL` is `""` or the environment variable is absent
-- **THEN** `assertNonProdDestructive` throws with a message containing `"DATABASE_URL not set"`
-
-### Requirement: Block on prod-smelling database name
-
-The guard MUST refuse when the database name (last path segment of `DATABASE_URL`, before `?`) matches `prod`, `production`, or `live` as a whole-word match — regardless of host. This catches tunnelled or SSH-forwarded production connections.
-
-#### Scenario: Database name contains prod
-
-- **WHEN** `DATABASE_URL` ends in `/myapp_prod` or `/production` or `/live_db`
-- **THEN** `assertNonProdDestructive` throws with a message containing the database name and `"looks like production"`
-
-#### Scenario: Database name contains prod as substring of another word
-
-- **WHEN** `DATABASE_URL` ends in `/report_products` (substring, not a whole word)
-- **THEN** `assertNonProdDestructive` does NOT throw based on name alone
+- **THEN** `assertE2eRuntimeDestructive` throws with a message containing `"DATABASE_URL not set"`
 
 ### Requirement: Disposable targets use one exact allowlist and per-run consent
 
 Destructive development and integration workflows MUST accept only loopback PostgreSQL URLs whose raw database path is exactly `customreport_e2e` or `customreport_e2e_lane_[a-o]_test`, with no query, fragment, encoded alias, or credential disclosure. Each destructive invocation MUST also receive the exact per-run consent value required by repository policy.
 
-Consumer surface: `prisma/guards/_destructive-guard.ts` — `assertNonProdDestructive` and the shared disposable-target validation used by destructive workflows.
+Consumer surface: `prisma/guards/_destructive-guard.ts` —
+`assertE2eRuntimeDestructive` and `assertE2eRuntimeDestructiveTarget`.
 
 #### Scenario: Exact lane target and consent are present
 
@@ -70,7 +58,9 @@ Consumer surface: `prisma/guards/_destructive-guard.ts` — `assertNonProdDestru
 
 Every Compose file and environment example used by a destructive disposable-database workflow MUST use the same accepted database name in both `POSTGRES_DB` and the raw final path segment of `DATABASE_URL`. The guard MUST validate the resolved URL itself; a safe-looking `POSTGRES_DB` value cannot override a different URL target.
 
-Consumer surface: destructive workflow Compose files and environment examples, plus `prisma/guards/_destructive-guard.ts` — `assertNonProdDestructive`.
+Consumer surface: destructive workflow Compose files and environment examples,
+plus `prisma/guards/_destructive-guard.ts` —
+`assertE2eRuntimeDestructiveTarget`.
 
 #### Scenario: Consistent naming
 
@@ -84,7 +74,15 @@ Consumer surface: destructive workflow Compose files and environment examples, p
 
 ### Requirement: Restore confirmation identifies the complete resolved target
 
-The production restore entrypoint MUST canonicalize and display environment identity, host, port, and database, and MUST require an exact confirmation token for that complete target before invoking any destructive `pg_restore` action.
+The production restore entrypoint MUST accept only the current `test` and
+`production` environment identities, canonicalize and display the identity,
+host, port, and database, and require an exact confirmation token for that
+complete target before invoking any destructive `pg_restore` action.
+
+#### Scenario: An undeployed environment label is supplied
+
+- **WHEN** `RESTORE_ENVIRONMENT` is `development`, `uat`, `staging`, or any other undeployed label
+- **THEN** restore refuses before archive validation or `pg_restore`
 
 #### Scenario: Database name matches but host differs
 

@@ -253,10 +253,10 @@ class AppLoggerImpl implements AppLogger {
       severityNumber: LEVEL_SEVERITY[level],
       severityText: level,
       attributes: {
+        ...stripReservedContext(mergedContext),
         correlationId: entry.correlationId,
         ...(entry.traceId ? { traceId: entry.traceId } : {}),
         ...(entry.spanId ? { spanId: entry.spanId } : {}),
-        ...mergedContext,
       },
     });
   }

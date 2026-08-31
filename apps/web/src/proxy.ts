@@ -1,3 +1,4 @@
+import { AUTH_COOKIE_NAME } from "@customreport/shared";
 import { type NextRequest, NextResponse } from "next/server";
 
 // Next.js 16 proxy.ts must live HERE (apps/web/src/proxy.ts) because the
@@ -9,8 +10,6 @@ import { type NextRequest, NextResponse } from "next/server";
 
 // Proxy only gates session-cookie presence; API middleware remains the role and
 // signature boundary. Protected prefixes redirect unauthenticated requests.
-
-const COOKIE_NAME = "customreport_session";
 
 const PROTECTED_PATH_PREFIXES = ["/lead", "/head", "/reports", "/admin"];
 
@@ -48,7 +47,7 @@ export default function proxy(request: NextRequest): NextResponse {
   // (header.payload.signature). 20 chars is a conservative lower bound
   // (real tokens are several hundred chars); anything shorter is
   // definitionally not a JWT.
-  const cookieValue = request.cookies.get(COOKIE_NAME)?.value;
+  const cookieValue = request.cookies.get(AUTH_COOKIE_NAME)?.value;
   const hasValidCookieShape =
     !!cookieValue &&
     cookieValue.length > MIN_JWT_LENGTH &&

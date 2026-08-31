@@ -3,6 +3,7 @@
 import type { ProjectActivity } from "@customreport/shared";
 
 import { pluralize } from "../../../shared/lib/format/pluralize";
+import { RotatingChevron } from "../../../shared/ui/report-shell/rotating-chevron";
 import type { AdminUserView } from "../model/admin-types";
 import { ActivityLeadsEditor } from "./activity-leads-editor";
 
@@ -41,7 +42,7 @@ function ActivitySummary({
         aria-label={`${isExpanded ? "Collapse" : "Expand"} lead attachments for ${activity.name}`}
         aria-expanded={isExpanded}
       >
-        <ChevronIcon expanded={isExpanded} />
+        <RotatingChevron expanded={isExpanded} />
       </button>
       <div className="flex min-w-0 flex-col gap-1">
         <div className="min-w-0">
@@ -143,21 +144,5 @@ export function ActiveActivityRow({
         </div>
       </div>
     </div>
-  );
-}
-
-function ChevronIcon({ expanded }: { readonly expanded: boolean }) {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="h-4 w-4 transition-transform duration-200"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      style={{ transform: expanded ? "rotate(90deg)" : "rotate(0deg)" }}
-    >
-      <path d="M9 18l6-6-6-6" />
-    </svg>
   );
 }

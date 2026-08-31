@@ -34,26 +34,12 @@ export const STAGE_NAMES: readonly StageName[] = Object.freeze([
   STAGE.SUPPORT,
 ] as const);
 
-/** Canonical stage key used for exact stage identity comparisons. */
-export function normalizeStageName(stageName: string): string {
-  return stageName;
-}
-
-/** True when two stage labels refer to the same pipeline slot. */
-export function stageNamesMatch(a: string, b: string): boolean {
-  return a === b;
-}
-
-/** Whether a structured risk covers a stage; an empty set covers all stages. */
+/** Whether an explicitly staged risk covers a stage. */
 export function riskCoversStage(
   risk: {
     readonly stageNames?: readonly string[] | undefined;
   },
   stageName: string,
 ): boolean {
-  return (
-    risk.stageNames !== undefined &&
-    (risk.stageNames.length === 0 ||
-      risk.stageNames.some((id) => stageNamesMatch(id, stageName)))
-  );
+  return risk.stageNames?.includes(stageName) ?? false;
 }

@@ -1,5 +1,7 @@
 import { STATUS_BADGE, type StatusBadgeStatus } from "./accordion-tokens";
 
+export { Rail } from "../../../../shared/ui/report-shell/rail";
+
 // Gold rank marker in the dedicated left column uses a priorities-only hue.
 // Sitting in its own column keeps the gutter from
 // floating when an item is prioritized, and scales to several priorities.
@@ -15,16 +17,6 @@ export function RankMark({ rank }: { readonly rank: number }) {
     >
       {rank}
     </span>
-  );
-}
-
-export function Rail({ tone }: { readonly tone: string }) {
-  return (
-    <span
-      className="min-h-[22px] self-stretch rounded-[2px]"
-      style={{ background: tone }}
-      aria-hidden="true"
-    />
   );
 }
 

@@ -21,7 +21,7 @@ export async function queryRulePeriodLabel(
       report: { select: { periodStart: true, periodEnd: true } },
     },
   });
-  return rule?.report
+  return rule
     ? formatPeriodLabel(rule.report.periodStart, rule.report.periodEnd)
     : null;
 }

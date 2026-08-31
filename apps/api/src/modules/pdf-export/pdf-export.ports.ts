@@ -1,8 +1,6 @@
-export interface PdfExportJobContext {
-  readonly traceparent?: string;
-  readonly tracestate?: string;
-  readonly correlationId?: string;
-}
+import type { JobTraceContext } from "../../lib/job-trace-context.js";
+
+export type PdfExportJobContext = JobTraceContext;
 
 export interface PdfExportEnqueueInput {
   readonly reportId: string;
@@ -26,8 +24,3 @@ export interface PdfExportTelemetry {
 
 export const PDF_EXPORT_ENQUEUER = Symbol("PdfExportEnqueuer");
 export const PDF_EXPORT_TELEMETRY = Symbol("PdfExportTelemetry");
-
-export const NOOP_PDF_EXPORT_TELEMETRY: PdfExportTelemetry = {
-  captureJobContext: () => ({}),
-  recordRequest: () => undefined,
-};

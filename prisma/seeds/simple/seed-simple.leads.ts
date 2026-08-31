@@ -134,6 +134,7 @@ export interface LeadContent {
     tag: string;
     status: ItemWorkflowStatus;
     carriedOver?: boolean;
+    pausedReason?: string;
   }[];
   nextItems: { text: string; tag: string; status?: ItemWorkflowStatus }[];
   risk?: {

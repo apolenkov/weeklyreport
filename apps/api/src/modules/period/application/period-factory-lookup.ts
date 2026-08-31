@@ -1,4 +1,5 @@
 import { currentPeriodLifecycleSchema } from "@customreport/shared";
+import type { Prisma } from "@prisma/client";
 import type { PrismaClient } from "@prisma/client";
 
 import type { EnsuredPeriod } from "./period-factory-types.js";
@@ -18,6 +19,14 @@ export const SELECT_PERIOD = {
   publishedById: true,
   reopenedAt: true,
 } as const;
+
+/** The only report rows that can occupy the scheduler's live future horizon. */
+export const LIVE_SCHEDULER_PERIOD_WHERE = {
+  status: "draft",
+  periodStatus: "open",
+  periodState: { in: ["scheduled", "open"] },
+  archived: false,
+} satisfies Prisma.ReportWhereInput;
 
 export class PeriodLifecycleIntegrityError extends Error {
   constructor() {
@@ -43,6 +52,13 @@ interface DraftPeriodRow {
 }
 
 type ReportLookupDelegate = Pick<PrismaClient["report"], "findMany">;
+
+type LatestPeriodLookupDelegate = Pick<PrismaClient["report"], "findFirst">;
+
+export interface MostRecentLivePeriod {
+  readonly id: string;
+  readonly periodEnd: Date;
+}
 
 function toFoundPeriod(row: DraftPeriodRow): EnsuredPeriod {
   const lifecycle = currentPeriodLifecycleSchema.safeParse(row);
@@ -106,4 +122,16 @@ export async function readContainingPeriod(
     select: SELECT_PERIOD,
   });
   return readLivePeriod(rows);
+}
+
+/** Reads the latest valid live scheduler period, ignoring archived and stale rows. */
+export async function readMostRecentLivePeriod(
+  report: LatestPeriodLookupDelegate,
+): Promise<MostRecentLivePeriod | null> {
+  const row = await report.findFirst({
+    where: LIVE_SCHEDULER_PERIOD_WHERE,
+    orderBy: { periodStart: "desc" },
+    select: { id: true, periodEnd: true },
+  });
+  return row;
 }

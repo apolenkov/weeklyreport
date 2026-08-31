@@ -3,7 +3,6 @@ import { sessionRoleSchema } from "@customreport/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
-  clearLastRole,
   LAST_ROLE_STORAGE_KEY,
   type LastRoleRecord,
   readLastRole,
@@ -89,12 +88,6 @@ describe("last-role helper", () => {
       writeLastRole({ ...sample, role });
       expect(readLastRole()).toEqual({ ...sample, role });
     }
-  });
-
-  it("clearLastRole removes the key", () => {
-    writeLastRole(sample);
-    clearLastRole();
-    expect(storage.getItem(LAST_ROLE_STORAGE_KEY)).toBeNull();
   });
 
   it("writeLastRole swallows quota errors", () => {

@@ -10,14 +10,17 @@ Define the CI-authoritative acceptance gate for `main`.
 
 `.github/workflows/ci.yml` MUST run for pull requests, pushes to `main`, and
 manual dispatch. Its jobs MUST cover the repository's current acceptance
-surfaces: format, lint, OpenSpec validation, typecheck, unit tests, disposable
-database integration, coverage, reset safety, and production Compose builds.
+surfaces: format, lint, OpenSpec validation, typecheck, unit tests, the complete
+workspace build, disposable database integration, coverage, reset safety, and
+production Compose builds. Docker target builds do not replace the complete
+workspace build because their filters may omit an independently buildable
+package.
 
 #### Scenario: A pull request runs the gate
 
 - **WHEN** a pull request is opened or updated
-- **THEN** CI runs the quality, integration, coverage, reset, and production
-  Compose build jobs
+- **THEN** CI runs the quality job including the complete workspace build, plus
+  the integration, coverage, reset, and production Compose build jobs
 - **AND** a failed job makes the workflow fail
 
 #### Scenario: A push to main runs the gate

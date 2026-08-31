@@ -10,7 +10,7 @@ import {
   ReportToolbarCenterLabel,
 } from "../../../../shared/ui/report-shell/report-toolbar";
 import { ScopeToggle } from "../../../../shared/ui/report-shell/scope-toggle";
-import type { ReportShellScopeValue } from "../../../../shared/ui/report-shell/use-report-shell-url-state";
+import type { ReportShellUrlState } from "../../../../shared/ui/report-shell/use-report-shell-url-state";
 import { ViewModeToggle } from "../../../../shared/ui/report-shell/view-mode-toggle";
 import {
   HeadPublishLockAction,
@@ -23,14 +23,6 @@ import { type SlideDensity, SlideDensityControl } from "../../../slides";
 const FALLBACK_DEPARTMENT_LABEL = "CustomReport";
 
 export type HeadReportMode = "form" | "slides";
-
-export interface ReportShellUrlState {
-  readonly buildQuery: (overrides: Record<string, string | null>) => string;
-  readonly includeArchive: boolean;
-  readonly setIncludeArchive: (value: boolean) => void;
-  readonly scope: ReportShellScopeValue;
-  readonly setScope: (value: ReportShellScopeValue) => void;
-}
 
 function HeadDepartmentLabel() {
   const sessionState = useContext(SessionContext);

@@ -85,6 +85,9 @@ describe("ReportsLatestPage — redirect / empty / error wiring", () => {
     expect(
       screen.getByText(/there is no report to show yet/i),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "No status report yet" }),
+    ).toBeInTheDocument();
   });
 
   it("shows the error copy when the query errors", () => {
@@ -100,6 +103,10 @@ describe("ReportsLatestPage — redirect / empty / error wiring", () => {
     expect(
       screen.getByText(/could not load the status report/i),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Status report unavailable" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toBeInTheDocument();
   });
 
   it("offers a real retry that refetches on the error state", () => {

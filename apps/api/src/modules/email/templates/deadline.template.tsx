@@ -35,12 +35,12 @@ export function DeadlineEmail({
   return (
     <Html>
       <Head />
-      <Preview>Your weekly status report section is due in 24 hours</Preview>
+      <Preview>Weekly status report section deadline reminder</Preview>
       <Tailwind>
         <Body className="bg-gray-50 font-sans">
           <Container className="mx-auto max-w-xl bg-white p-8 rounded-lg">
             <Heading className="text-xl text-gray-900">
-              Hi {leadName}, your section is due in 24 hours
+              Hi {leadName}, please complete your report section
             </Heading>
             <Text className="text-gray-700">
               This is a reminder that your section of the {reportPeriod} weekly

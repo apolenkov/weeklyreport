@@ -126,6 +126,7 @@ describe("useLeadSlidesData report-key transitions", () => {
       {
         authorId: "foreign-author",
         authorName: "Maria",
+        authorRole: "lead",
         items: [],
         risks: [],
         decisions: [],
@@ -185,6 +186,7 @@ describe("useLeadSlidesData report-key transitions", () => {
       {
         authorId: "foreign-author",
         authorName: "Maria",
+        authorRole: "lead",
         items: [],
         risks: [],
         decisions: [],

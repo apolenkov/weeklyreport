@@ -3,6 +3,9 @@ import type { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { groupScopeFilter } from "../../lib/group-scope.js";
+import { lockCurrentEditableReport } from "../../lib/report-lifecycle.js";
+import { PeriodLifecycleIntegrityError } from "../period/index.js";
+import { LeadFormConstraintError } from "../report-sections/index.js";
 import {
   AdminReopenRequestNotFoundError,
   type DecideReopenRequestInput,
@@ -157,6 +160,17 @@ export async function decideReopenRequest(
     });
     if (!req) {
       throw new AdminReopenRequestNotFoundError("Reopen request not found.");
+    }
+    const gate = await lockCurrentEditableReport(tx, {
+      sectionId: req.reportSectionId,
+    });
+    if (gate.kind === "inconsistent") {
+      throw new PeriodLifecycleIntegrityError();
+    }
+    if (gate.kind !== "editable") {
+      throw new LeadFormConstraintError(
+        "Cannot decide a reopen request outside an editable report.",
+      );
     }
     return applyDecision(tx, req, input);
   });

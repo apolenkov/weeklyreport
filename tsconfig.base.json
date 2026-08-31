@@ -20,9 +20,14 @@
     "verbatimModuleSyntax": true,
     "paths": {
       "@customreport/api/*": ["./apps/api/src/*"],
+      "@customreport/report-persistence": [
+        "./packages/report-persistence/src/index.ts"
+      ],
+      "@customreport/report-persistence/*": [
+        "./packages/report-persistence/src/*"
+      ],
       "@customreport/shared": ["./packages/shared/src/index.ts"],
       "@customreport/shared/*": ["./packages/shared/src/*"],
-      "@customreport/ui": ["./packages/ui/src/index.ts"],
       "@customreport/ui/*": ["./packages/ui/src/*"]
     }
   }

@@ -1,9 +1,13 @@
 import {
   type AdminReminderExecution,
-  organizationPublicSchema,
+  reminderDeadlinePayloadSchema,
+  reminderEscalationPayloadSchema,
+  type ReminderQueuePayload,
+  reminderQueuePayloadSchema,
 } from "@customreport/shared";
 import { z } from "zod";
 
+import type { JobTraceContext } from "../../lib/job-trace-context.js";
 import { ReminderDomainError } from "./reminders.errors.js";
 import type {
   DeadlineReminderPayload,
@@ -12,45 +16,16 @@ import type {
   RemindersRepository,
 } from "./reminders.types.js";
 
-export type ReminderQueuePayload = ReminderExecutionPayload;
+export { type ReminderQueuePayload, reminderQueuePayloadSchema };
 
-const deadlinePayloadSchema = z
-  .object({
-    kind: z.literal("deadline"),
-    cycleDate: z.iso.date(),
-    leadName: z.string().min(1),
-    reportPeriod: z.string().min(1),
-    deadlineIso: z.iso.datetime(),
-    sectionUrl: z.url(),
-    organization: organizationPublicSchema,
-  })
-  .strict();
-
-const escalationPayloadSchema = z
-  .object({
-    kind: z.literal("escalation"),
-    cycleDate: z.iso.date(),
-    headName: z.string().min(1),
-    reportPeriod: z.string().min(1),
-    lateLeads: z
-      .array(
-        z
-          .object({
-            leadName: z.string().min(1),
-            sectionTitle: z.string().min(1),
-            deadlineIso: z.iso.datetime(),
-          })
-          .strict(),
-      )
-      .min(1),
-    organization: organizationPublicSchema,
-  })
-  .strict();
-
-export const reminderQueuePayloadSchema = z.discriminatedUnion("kind", [
-  deadlinePayloadSchema,
-  escalationPayloadSchema,
-]);
+export function buildPersistedQueuePayload(
+  payload: ReminderExecutionPayload,
+): ReminderQueuePayload {
+  return reminderQueuePayloadSchema.parse({
+    ...payload,
+    contractVersion: 1,
+  });
+}
 
 // The worker-facing job shapes, built here and consumed by the email-reminder
 // processor; keeping the union concrete preserves the per-kind fields instead
@@ -76,18 +51,11 @@ const jobEnvelopeFields = {
 } as const;
 
 const reminderQueueJobDataSchema = z.discriminatedUnion("kind", [
-  deadlinePayloadSchema.extend(jobEnvelopeFields).strict(),
-  escalationPayloadSchema.extend(jobEnvelopeFields).strict(),
+  reminderDeadlinePayloadSchema.extend(jobEnvelopeFields).strict(),
+  reminderEscalationPayloadSchema.extend(jobEnvelopeFields).strict(),
 ]);
 
-interface ReminderQueueJobTraceContext {
-  readonly traceparent?: string;
-  readonly tracestate?: string;
-  readonly correlationId?: string;
-}
-
-export type ReminderQueueJobEnvelope = ReminderQueueJobData &
-  ReminderQueueJobTraceContext;
+export type ReminderQueueJobEnvelope = ReminderQueueJobData & JobTraceContext;
 
 export function parseReminderQueueJobData(
   value: unknown,
@@ -113,12 +81,20 @@ export async function requireRulePeriodLabel(
 export function buildQueuePayload(
   execution: AdminReminderExecution,
   recipientEmail: string,
-  payload: ReminderQueuePayload,
+  payload: ReminderExecutionPayload,
+): ReminderQueueJobData {
+  return buildReminderQueueJobData(execution.id, recipientEmail, payload);
+}
+
+export function buildReminderQueueJobData(
+  executionId: string,
+  recipientEmail: string,
+  payload: ReminderExecutionPayload,
 ): ReminderQueueJobData {
   if (payload.kind === "deadline") {
     return {
       contractVersion: 1,
-      executionId: execution.id,
+      executionId,
       recipientEmail,
       kind: "deadline",
       cycleDate: payload.cycleDate,
@@ -131,7 +107,7 @@ export function buildQueuePayload(
   }
   return {
     contractVersion: 1,
-    executionId: execution.id,
+    executionId,
     recipientEmail,
     kind: "escalation",
     headName: payload.headName,

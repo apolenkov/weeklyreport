@@ -1,7 +1,7 @@
 import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { ExpressAdapter } from "@bull-board/express";
-import type { UserSession } from "@customreport/shared";
+import { AUTH_COOKIE_NAME, type UserSession } from "@customreport/shared";
 import type { INestApplication } from "@nestjs/common";
 import type {
   Express,
@@ -12,10 +12,10 @@ import type {
 } from "express";
 
 import { readRequestCookie } from "../../lib/request-boundary.js";
-import { resolveSessionCookieName } from "../../lib/session-cookie";
 import { SessionRevocationService } from "../../modules/admin/index.js";
 import { createAuthController } from "../../modules/auth/index.js";
 import { isUserAccessBarred } from "../../modules/auth/index.js";
+import type { EnvConfig } from "../config/env.schema.js";
 import { PrismaService } from "../prisma/prisma.service";
 import { QueueRegistry } from "./queue-registry.js";
 
@@ -26,6 +26,7 @@ interface RequireHeadDeps {
   verifySessionToken: (token: string) => UserSession;
   prisma: PrismaService;
   sessionRevocation: Pick<SessionRevocationService, "isRevoked">;
+  sessionCookieName: string;
 }
 
 // Only token-verification failure means "invalid session" (401). A rejected
@@ -52,11 +53,8 @@ export function createRequireHeadGuard(deps: RequireHeadDeps): RequestHandler {
     next: NextFunction,
   ): Promise<void> => {
     // Read the cookie under the same resolved name the set/clear/read paths use
-    // (honours AUTH_JWT_COOKIE_NAME), finishing the cookie-name dedup.
-    const token = readRequestCookie(
-      req,
-      resolveSessionCookieName(process.env.AUTH_JWT_COOKIE_NAME),
-    );
+    // (uses the shared canonical cookie name), finishing the cookie-name dedup.
+    const token = readRequestCookie(req, deps.sessionCookieName);
 
     if (!token) {
       res.status(HTTP_UNAUTHORIZED).json({ error: "Authentication required" });
@@ -89,7 +87,7 @@ export function createRequireHeadGuard(deps: RequireHeadDeps): RequestHandler {
   };
 }
 
-export function mountBullBoard(app: INestApplication): void {
+export function mountBullBoard(app: INestApplication, env: EnvConfig): void {
   const registry = app.get(QueueRegistry);
   const pdfQueue = registry.get("pdf-export");
   const emailQueue = registry.get("email-reminder");
@@ -102,7 +100,7 @@ export function mountBullBoard(app: INestApplication): void {
     serverAdapter,
   });
 
-  const authController = createAuthController(process.env);
+  const authController = createAuthController(env);
 
   // DI-managed singletons (non-strict, app-wide): Prisma is @Global and
   // SessionRevocationService is from AdminModule — reusing them keeps
@@ -111,6 +109,7 @@ export function mountBullBoard(app: INestApplication): void {
     verifySessionToken: (token) => authController.verifySessionToken(token),
     prisma: app.get(PrismaService),
     sessionRevocation: app.get(SessionRevocationService),
+    sessionCookieName: AUTH_COOKIE_NAME,
   });
 
   const expressApp = app.getHttpAdapter().getInstance() as Express;

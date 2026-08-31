@@ -44,7 +44,7 @@ function makeReport(reportId: string, weekLabel: string) {
     weekLabel,
     submissionCount: 0,
     totalLeads: 0,
-    hasActiveReminderRule: false,
+    activeDeadlineReminderRuleId: null,
     portfolioOverview: [],
     leadSections: [],
     escalations: [],

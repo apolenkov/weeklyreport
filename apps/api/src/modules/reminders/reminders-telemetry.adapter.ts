@@ -4,6 +4,7 @@ import {
   captureJobTraceContext,
   resolveCorrelationId,
 } from "../../infrastructure/bullmq/worker-observability.js";
+import { reminderDeliveryUncertainTotal } from "../../infrastructure/metrics/metrics.registry.js";
 import type {
   ReminderJobContext,
   RemindersTelemetry,
@@ -14,5 +15,9 @@ export class RemindersInfrastructureTelemetry implements RemindersTelemetry {
 
   readonly captureJobContext = (): ReminderJobContext => {
     return captureJobTraceContext(resolveCorrelationId(this.cls));
+  };
+
+  readonly recordUncertainDelivery = (count: number): void => {
+    reminderDeliveryUncertainTotal.inc(count);
   };
 }

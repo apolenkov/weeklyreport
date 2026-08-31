@@ -91,6 +91,19 @@ function validateDraftMetadata(
   }
 }
 
+function validatePublishedMetadata(
+  value: LifecycleFields,
+  context: z.RefinementCtx,
+): void {
+  if (value.status === "published" && value.publishedAt === null) {
+    addIssue(
+      context,
+      "publishedAt",
+      "Published periods require a publication timestamp.",
+    );
+  }
+}
+
 function validateReopenedTimestamp(
   value: LifecycleFields,
   context: z.RefinementCtx,
@@ -111,10 +124,11 @@ export const currentPeriodLifecycleSchema = lifecycleFieldsSchema
       addIssue(
         context,
         "periodState",
-        "The canonical and legacy lifecycle fields contradict each other.",
+        "The lifecycle fields contradict each other.",
       );
     }
     validateDraftMetadata(value, context);
+    validatePublishedMetadata(value, context);
     validateReopenedTimestamp(value, context);
   })
   .readonly();

@@ -161,7 +161,3 @@ export const SEED_USERS: readonly SeedUser[] = [
     reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
   },
 ] as const;
-
-export const LEAD_IDS = SEED_USERS.filter((u) => u.role === "lead").map(
-  (u) => u.id,
-);

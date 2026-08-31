@@ -1,6 +1,7 @@
 import { context, propagation, trace } from "@opentelemetry/api";
 import type { ClsService } from "nestjs-cls";
 
+import type { JobTraceContext } from "../../lib/job-trace-context.js";
 import { type AppLogger, createAppLogger } from "../../lib/logger.js";
 import { validateEnv } from "../config/env.schema.js";
 
@@ -10,11 +11,7 @@ const WORKER_TRACER_NAME = "customreport-bullmq";
 // Trace/correlation threaded into a BullMQ job so the worker re-links to the
 // enqueue trace. Fields omitted (never written as undefined) when no trace is
 // active or the enqueuer is outside a request scope.
-export interface JobTraceContext {
-  readonly traceparent?: string;
-  readonly tracestate?: string;
-  readonly correlationId?: string;
-}
+export type { JobTraceContext } from "../../lib/job-trace-context.js";
 
 // The CLS surface workers actually use; ClsService is nominal (private `als`),
 // so declaring the consumed members lets tests inject a real AsyncLocalStorage
@@ -48,12 +45,12 @@ export function captureJobTraceContext(
 
 // Link the job body to its enqueue trace and seed CLS with the enqueue
 // correlationId so job logs share the request's trace/correlation context.
-export async function runInJobTraceContext(
+export async function runInJobTraceContext<T>(
   jobContext: JobTraceContext,
   spanName: string,
   cls: JobCls | null,
-  body: () => Promise<void>,
-): Promise<void> {
+  body: () => Promise<T>,
+): Promise<T> {
   const parent = propagation.extract(context.active(), {
     ...(jobContext.traceparent ? { traceparent: jobContext.traceparent } : {}),
     ...(jobContext.tracestate ? { tracestate: jobContext.tracestate } : {}),
@@ -63,9 +60,9 @@ export async function runInJobTraceContext(
     links: parentSpanContext ? [{ context: parentSpanContext }] : [],
   });
 
-  const runSpan = async (): Promise<void> => {
+  const runSpan = async (): Promise<T> => {
     try {
-      await context.with(trace.setSpan(context.active(), span), body);
+      return await context.with(trace.setSpan(context.active(), span), body);
     } finally {
       span.end();
     }
@@ -73,13 +70,12 @@ export async function runInJobTraceContext(
 
   const { correlationId } = jobContext;
   if (cls && correlationId !== undefined) {
-    await cls.run(async () => {
+    return cls.run(async () => {
       cls.set(CORRELATION_ID_KEY, correlationId);
-      await runSpan();
+      return runSpan();
     });
-    return;
   }
-  await runSpan();
+  return runSpan();
 }
 
 const TRACEPARENT_SEGMENT_COUNT = 4;

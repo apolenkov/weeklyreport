@@ -6,7 +6,7 @@ import type {
   MyHistoryEntry,
   Role,
 } from "@customreport/shared";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -29,7 +29,11 @@ vi.mock("@tanstack/react-query", async () => {
   const actual = await vi.importActual<typeof import("@tanstack/react-query")>(
     "@tanstack/react-query",
   );
-  return { ...actual, useQuery: vi.fn() };
+  return {
+    ...actual,
+    useQuery: vi.fn(),
+    useInfiniteQuery: vi.fn(),
+  };
 });
 
 vi.mock("sonner", () => ({
@@ -61,6 +65,11 @@ vi.mock("../../../shared/lib/trpc/trpc-context", () => ({
     reports: {
       myHistory: {
         queryOptions: () => ({ queryKey: ["reports.myHistory"] }),
+        infiniteQueryOptions: () => ({
+          queryKey: ["reports.myHistory"],
+          initialPageParam: undefined,
+          getNextPageParam: () => null,
+        }),
       },
       compiledHistory: {
         queryOptions: (input: { includeArchive?: boolean }) => ({
@@ -154,6 +163,47 @@ const archivedCompiled: CompiledHistoryEntry = {
 };
 
 function mockQueries() {
+  const data = {
+    pages: [{ items: [currentLead, archivedLead], nextCursor: null }],
+    pageParams: [null],
+  };
+  const result = {
+    data,
+    dataUpdatedAt: 0,
+    error: null,
+    errorUpdatedAt: 0,
+    failureCount: 0,
+    failureReason: null,
+    errorUpdateCount: 0,
+    hasNextPage: false,
+    hasPreviousPage: false,
+    isEnabled: true,
+    isError: false,
+    isFetched: true,
+    isFetchedAfterMount: true,
+    isFetching: false,
+    isLoading: false,
+    isPending: false,
+    isLoadingError: false,
+    isInitialLoading: false,
+    isPaused: false,
+    isPlaceholderData: false,
+    isRefetchError: false,
+    isRefetching: false,
+    isStale: false,
+    isSuccess: true,
+    isFetchNextPageError: false,
+    isFetchingNextPage: false,
+    isFetchPreviousPageError: false,
+    isFetchingPreviousPage: false,
+    status: "success",
+    fetchStatus: "idle",
+    fetchNextPage: vi.fn(),
+    fetchPreviousPage: vi.fn(),
+    refetch: vi.fn(),
+    promise: Promise.resolve(data),
+  } satisfies ReturnType<typeof useInfiniteQuery>;
+  vi.mocked(useInfiniteQuery).mockReturnValue(result);
   vi.mocked(useQuery).mockImplementation((options: unknown) => {
     const query = options as QueryOptions;
     if (query.enabled === false) {

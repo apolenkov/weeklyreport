@@ -157,7 +157,7 @@ describe("JobsService — DLQ admin surface", () => {
     });
   });
 
-  it("retryFailed: retries reminder jobs when the execution row still exists", async () => {
+  it("retryFailed: retries a live execution job without treating its old body as authoritative", async () => {
     const job = makeJob({
       id: "job-live",
       reminderExecutionId: "existing-execution",

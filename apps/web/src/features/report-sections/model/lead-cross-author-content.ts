@@ -22,8 +22,8 @@ import type {
 export interface CrossAuthorContentRow {
   readonly authorId: string;
   readonly authorName: string;
-  // Access role for the slide legend; optional so older snapshots still parse.
-  readonly authorRole?: DbRole;
+  // Access role for the slide legend; persisted on every current read row.
+  readonly authorRole: DbRole;
   readonly items: readonly {
     readonly id: string;
     readonly projectId: string;

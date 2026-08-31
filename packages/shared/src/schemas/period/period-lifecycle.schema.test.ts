@@ -74,7 +74,7 @@ function lifecycleForTuple(
 }
 
 describe("currentPeriodLifecycleSchema", () => {
-  it("covers all 42 contradictory core tuples", () => {
+  it("covers all 42 contradictory core combinations", () => {
     expect(contradictoryCoreTuples).toHaveLength(42);
   });
 
@@ -90,7 +90,7 @@ describe("currentPeriodLifecycleSchema", () => {
   );
 
   it.each(contradictoryCoreTuples)(
-    "rejects contradictory tuple $periodState/$status/archived=$archived/$periodStatus",
+    "rejects contradictory lifecycle combination $periodState/$status/archived=$archived/$periodStatus",
     ({ periodState, status, archived, periodStatus }) => {
       expect(
         currentPeriodLifecycleSchema.safeParse(
@@ -122,11 +122,20 @@ describe("currentPeriodLifecycleSchema", () => {
     ).toBe(false);
   });
 
-  it("requires reopenedAt for the reopened tuple", () => {
+  it("requires reopenedAt for the reopened lifecycle combination", () => {
     expect(
       currentPeriodLifecycleSchema.safeParse({
         ...lifecycleForTuple("open", "published", false, "reopened"),
         reopenedAt: null,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("requires publishedAt for every published lifecycle", () => {
+    expect(
+      currentPeriodLifecycleSchema.safeParse({
+        ...lifecycleForTuple("published", "published", false, "published"),
+        publishedAt: null,
       }).success,
     ).toBe(false);
   });

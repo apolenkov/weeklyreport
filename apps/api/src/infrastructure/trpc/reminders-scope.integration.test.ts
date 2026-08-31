@@ -1,12 +1,13 @@
 import { TRPCError } from "@trpc/server";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
-import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
+import type { OrganizationService } from "../../modules/organization/index.js";
 import { RemindersPrismaRepository } from "../../modules/reminders/index.js";
 import { RemindersService } from "../../modules/reminders/index.js";
 import { WeeklyReportPrismaRepository } from "../../modules/weekly-report/index.js";
 import { WeeklyReportService } from "../../modules/weekly-report/index.js";
+import { createNullAuditLogger } from "../../test-utils/audit-logger.js";
 import {
   cleanDatabase,
   createTestPrisma,
@@ -28,11 +29,36 @@ const REPORT_B = TEST_IDS.targetReport;
 const SECTION_B_ON_B = "b0000000-0000-4000-8000-0000000000b4";
 const RULE_A = TEST_IDS.reminderRule;
 const RULE_B = "b0000000-0000-4000-8000-0000000000b5";
+const POLICY_ID = "b0000000-0000-4000-8000-0000000000b6";
 const FIRE_AT = new Date("2026-04-11T09:00:00.000Z");
 
 const LEAD_A_EMAIL = "lead1@test.local"; // seedTestData lead, group A
 const LEAD_B_EMAIL = "lead-b@test.local";
 const HEAD_A_EMAIL = "head@test.local";
+const QUEUE_PAYLOAD = {
+  kind: "deadline" as const,
+  cycleDate: "2026-04-11",
+  leadName: "Test Lead",
+  reportPeriod: "2026-04-06 → 2026-04-12",
+  deadlineIso: "2026-04-11T09:00:00.000Z",
+  sectionUrl: "https://example.test/lead/report",
+  organization: {
+    shortName: "CustomReport",
+    fullName: "CustomReport Department",
+  },
+};
+
+const ORGANIZATION_SERVICE = {
+  getPublic: () =>
+    Promise.resolve({
+      shortName: "CustomReport",
+      fullName: "CustomReport Department",
+    }),
+} as OrganizationService;
+
+const TEST_ENV = {
+  APP_BASE_URL: "http://localhost:3000",
+};
 
 type Role = "head" | "admin";
 
@@ -53,12 +79,21 @@ const prisma = createTestPrisma();
 
 function buildCaller(role: Role, activeReportId: string | null) {
   const repo = new RemindersPrismaRepository(prisma as never);
-  const remindersService = new RemindersService(repo);
+  const remindersService = new RemindersService(
+    repo,
+    undefined,
+    undefined,
+    undefined,
+    ORGANIZATION_SERVICE,
+    TEST_ENV,
+  );
   const weeklyReportService = new WeeklyReportService(
     new WeeklyReportPrismaRepository(prisma as never),
   );
   const deps = createStubAppRouterDeps({
     prisma,
+    env: TEST_ENV,
+    organizationService: ORGANIZATION_SERVICE,
     remindersService,
     weeklyReportService,
   });
@@ -80,6 +115,10 @@ describe("reminders namespace — per-group scope (integration)", () => {
   beforeEach(async () => {
     await cleanDatabase();
     const data = await seedTestData(prisma);
+    await prisma.report.update({
+      where: { id: data.report.id },
+      data: { deadline: FIRE_AT },
+    });
 
     // Group B + its lead, plus a second in-scope group-A lead with NO section.
     await prisma.reportingGroup.create({
@@ -129,7 +168,7 @@ describe("reminders namespace — per-group scope (integration)", () => {
         // dispatchPending's gate compares against that resolved value.
         periodStart: new Date("2026-03-24"),
         periodEnd: new Date("2026-03-30"),
-        deadline: new Date("2026-03-28"),
+        deadline: FIRE_AT,
         status: "draft",
       },
     });
@@ -142,13 +181,29 @@ describe("reminders namespace — per-group scope (integration)", () => {
       },
     });
 
+    await prisma.reminderPolicy.create({
+      data: {
+        id: POLICY_ID,
+        kind: "deadline",
+        offsetMinutes: 0,
+        timezone: "Europe/Moscow",
+        audience: "LEAD_WITH_DRAFT",
+        active: true,
+        // Keep the historical fixture deadline inside the policy's validity
+        // window; Prisma defaults validFrom to the wall clock at insert time.
+        validFrom: new Date("2026-01-01T00:00:00.000Z"),
+      },
+    });
+
     // Active rules: A on the shared report, B on the group-B report.
     await prisma.reminderRule.createMany({
       data: [
         {
           id: RULE_A,
+          policyId: POLICY_ID,
           kind: "deadline",
           fireAt: FIRE_AT,
+          deadline: FIRE_AT,
           timezone: "Europe/Moscow",
           status: "active",
           version: 1,
@@ -156,8 +211,10 @@ describe("reminders namespace — per-group scope (integration)", () => {
         },
         {
           id: RULE_B,
+          policyId: POLICY_ID,
           kind: "deadline",
           fireAt: FIRE_AT,
+          deadline: FIRE_AT,
           timezone: "Europe/Moscow",
           status: "active",
           version: 1,
@@ -175,6 +232,7 @@ describe("reminders namespace — per-group scope (integration)", () => {
           recipientEmail: LEAD_A_EMAIL,
           dedupeKey: dedupeKey(RULE_A, LEAD_A_EMAIL),
           status: "pending",
+          queuePayload: QUEUE_PAYLOAD,
         },
         {
           id: TEST_IDS.reminderExec2,
@@ -182,6 +240,7 @@ describe("reminders namespace — per-group scope (integration)", () => {
           recipientEmail: LEAD_B_EMAIL,
           dedupeKey: dedupeKey(RULE_A, LEAD_B_EMAIL),
           status: "pending",
+          queuePayload: QUEUE_PAYLOAD,
         },
       ],
     });
@@ -205,6 +264,7 @@ describe("reminders namespace — per-group scope (integration)", () => {
       await expect(
         caller.reminders.dispatchPending({
           reportId: TEST_IDS.report,
+          ruleId: RULE_A,
           leadId: LEAD_B,
         }),
       ).rejects.toMatchObject({
@@ -251,6 +311,7 @@ describe("reminders namespace — per-group scope (integration)", () => {
       const caller = buildCaller("head", TEST_IDS.report);
       const result = await caller.reminders.dispatchPending({
         reportId: TEST_IDS.report,
+        ruleId: RULE_A,
         leadId: LEAD_A2,
       });
       expect(result.reason).toBe("no-matching-section");
@@ -269,10 +330,30 @@ describe("reminders namespace — per-group scope (integration)", () => {
       const caller = buildCaller("head", TEST_IDS.report);
       const result = await caller.reminders.dispatchPending({
         reportId: TEST_IDS.report,
+        ruleId: RULE_A,
         leadId: TEST_IDS.lead,
       });
       expect(result.reason).toBe("no-matching-section");
       expect(result.dispatched).toBe(0);
+    });
+
+    it("rejects a deactivated lead before manual recipient discovery", async () => {
+      await prisma.user.update({
+        where: { id: TEST_IDS.lead },
+        data: { isActive: false },
+      });
+
+      const caller = buildCaller("head", TEST_IDS.report);
+      await expect(
+        caller.reminders.dispatchPending({
+          reportId: TEST_IDS.report,
+          ruleId: RULE_A,
+          leadId: TEST_IDS.lead,
+        }),
+      ).rejects.toMatchObject({
+        code: "FORBIDDEN",
+        message: "lead-out-of-scope",
+      });
     });
   });
 
@@ -300,6 +381,7 @@ describe("reminders namespace — per-group scope (integration)", () => {
       const caller = buildCaller("admin", REPORT_B);
       const result = await caller.reminders.dispatchPending({
         reportId: REPORT_B,
+        ruleId: RULE_B,
         leadId: LEAD_B,
       });
       expect(result.dispatched).toBe(1);

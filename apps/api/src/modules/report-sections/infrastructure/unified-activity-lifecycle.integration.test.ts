@@ -16,6 +16,11 @@ import {
 } from "../../carry-over/index.js";
 import { LeadFormService } from "../application/lead-form.service";
 import { ReportSectionsService } from "../application/report-sections.service";
+import {
+  buildAssembledReportFromPrismaRow,
+  reportFullIncludeForSnapshot,
+  toPublishedSnapshotJson,
+} from "../index.js";
 import { LeadFormPrismaRepository } from "./lead-form.prisma-repository";
 import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
 
@@ -82,28 +87,39 @@ describe("unified-activity lifecycle (integration)", () => {
     });
   }
 
-  // Publish-then-reopen the seeded report: the frozen snapshot pins the
-  // published lineage while the live rows become editable again. The snapshot
-  // JSON is fabricated to the minimal shape the lineage reader consumes.
-  async function publishThenReopen(publishedItemStableIds: readonly string[]) {
+  async function publishCurrentReport(): Promise<void> {
+    const publishedAt = new Date("2026-04-14T10:00:00.000Z");
+    const candidate = await prisma.report.findUniqueOrThrow({
+      where: { id: testData.report.id },
+      include: reportFullIncludeForSnapshot,
+    });
+    const snapshot = buildAssembledReportFromPrismaRow({
+      ...candidate,
+      status: "published",
+      publishedAt,
+    });
     await prisma.report.update({
       where: { id: testData.report.id },
       data: {
         status: "published",
+        periodStatus: "published",
+        periodState: "published",
+        publishedAt,
+        publishedSnapshot: toPublishedSnapshotJson(snapshot),
+      },
+    });
+  }
+
+  // Publish-then-reopen the seeded report: the complete frozen snapshot pins
+  // the published lineage while the live rows become editable again.
+  async function publishThenReopen(): Promise<void> {
+    await publishCurrentReport();
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: {
         periodState: "open",
         periodStatus: "reopened",
-        publishedAt: new Date("2026-04-14T10:00:00.000Z"),
         reopenedAt: new Date("2026-04-15T10:00:00.000Z"),
-        publishedSnapshot: {
-          reportId: testData.report.id,
-          sections: [
-            {
-              reportSectionId: testData.section.id,
-              items: publishedItemStableIds.map((stableId) => ({ stableId })),
-              decisions: [],
-            },
-          ],
-        },
       },
     });
   }
@@ -128,7 +144,7 @@ describe("unified-activity lifecycle (integration)", () => {
 
   it("rejects dropping a published-lineage item from a reopened period", async () => {
     await seedItem(testData.section.id, PUBLISHED_ITEM_LINEAGE, "Published");
-    await publishThenReopen([PUBLISHED_ITEM_LINEAGE]);
+    await publishThenReopen();
 
     await expect(
       service.saveDraft(
@@ -160,7 +176,7 @@ describe("unified-activity lifecycle (integration)", () => {
 
   it("a record added after reopen stays deletable until re-published", async () => {
     await seedItem(testData.section.id, PUBLISHED_ITEM_LINEAGE, "Published");
-    await publishThenReopen([PUBLISHED_ITEM_LINEAGE]);
+    await publishThenReopen();
 
     // Add a fresh record post-reopen (not in the snapshot), then drop it.
     const withDraft = await service.saveDraft(
@@ -204,13 +220,7 @@ describe("unified-activity lifecycle (integration)", () => {
   it("a carried clone of a published record stays locked by lineage in the new period", async () => {
     // The prior period holds the lineage and is frozen-published.
     await seedItem(testData.section.id, PUBLISHED_ITEM_LINEAGE, "Origin");
-    await prisma.report.update({
-      where: { id: testData.report.id },
-      data: {
-        periodStatus: "published",
-        publishedAt: new Date("2026-04-14T10:00:00.000Z"),
-      },
-    });
+    await publishCurrentReport();
 
     // A new open period holds the carried clone (same stableId, new row).
     const nextReport = await prisma.report.create({
@@ -254,24 +264,7 @@ describe("unified-activity lifecycle (integration)", () => {
     // The prior period holds the lineage and is REOPENED (a reopened period was
     // published before, so its live rows still continue a published lineage).
     await seedItem(testData.section.id, PUBLISHED_ITEM_LINEAGE, "Origin");
-    await prisma.report.update({
-      where: { id: testData.report.id },
-      data: {
-        periodStatus: "reopened",
-        publishedAt: new Date("2026-04-14T10:00:00.000Z"),
-        reopenedAt: new Date("2026-04-15T10:00:00.000Z"),
-        publishedSnapshot: {
-          reportId: testData.report.id,
-          sections: [
-            {
-              reportSectionId: testData.section.id,
-              items: [{ stableId: PUBLISHED_ITEM_LINEAGE }],
-              decisions: [],
-            },
-          ],
-        },
-      },
-    });
+    await publishThenReopen();
 
     // A new open period holds the carried clone (same stableId, new row).
     const nextReport = await prisma.report.create({
@@ -363,7 +356,7 @@ describe("unified-activity lifecycle (integration)", () => {
 
   it("fill-from is rejected when the target holds a published-lineage record", async () => {
     await seedItem(testData.section.id, PUBLISHED_ITEM_LINEAGE, "Published");
-    await publishThenReopen([PUBLISHED_ITEM_LINEAGE]);
+    await publishThenReopen();
 
     // A source section owned by the same lead; its content is irrelevant — the
     // lock fires on the TARGET's lineage before the source is read. The prior
@@ -414,13 +407,7 @@ describe("unified-activity lifecycle (integration)", () => {
       "Plan work",
       "next",
     );
-    await prisma.report.update({
-      where: { id: testData.report.id },
-      data: {
-        periodStatus: "published",
-        publishedAt: new Date("2026-04-14T10:00:00.000Z"),
-      },
-    });
+    await publishCurrentReport();
 
     const carryService = new CarryOverService(
       new CarryOverPrismaRepository(prisma as unknown as PrismaService),
@@ -509,6 +496,7 @@ describe("unified-activity lifecycle (integration)", () => {
         tag: "feature",
         workflowStatus: "done",
         carriedOver: false,
+        stageNames: ["Development"],
       },
     });
     await prisma.decision.create({
@@ -518,15 +506,10 @@ describe("unified-activity lifecycle (integration)", () => {
         text: "Pending decision",
         owner: "Head",
         impact: "High",
+        stageNames: ["Development"],
       },
     });
-    await prisma.report.update({
-      where: { id: testData.report.id },
-      data: {
-        periodStatus: "published",
-        publishedAt: new Date("2026-04-14T10:00:00.000Z"),
-      },
-    });
+    await publishCurrentReport();
 
     // The lead's target section is deliberately NOT pre-created: the
     // orchestrator must materialize it via ensureLeadSection.

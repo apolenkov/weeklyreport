@@ -86,12 +86,12 @@ function HeroPanel({
   readonly orgFullName: string;
 }) {
   return (
-    <div className="relative hidden flex-1 flex-col items-start justify-center overflow-hidden p-16 text-[var(--color-sidebar-foreground)] lg:flex">
+    <div className="relative hidden flex-1 flex-col items-start justify-center overflow-hidden p-16 text-[var(--color-on-dark)] lg:flex">
       <PulseBackground />
       <div className="relative z-10 max-w-[480px]">
         <PulseMark />
         <TaglineCycler />
-        <p className="mt-10 text-xs uppercase tracking-[0.22em] text-[var(--color-sidebar-foreground)]/40">
+        <p className="mt-10 text-xs uppercase tracking-[0.22em] text-[var(--color-on-dark)]/40">
           {orgShortName} · {orgFullName}
         </p>
       </div>

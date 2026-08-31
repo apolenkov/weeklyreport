@@ -151,7 +151,7 @@ function makeProviders() {
       path: ["reports", "getActive"],
       query: { reportId: "report-a", reportSectionId: "section-a" },
     },
-    { path: ["reports", "myHistory"], query: [] },
+    { path: ["reports", "myHistory"], query: { items: [] } },
     {
       path: ["leadForm", "viewSettings"],
       query: { unifiedActivityView: false },

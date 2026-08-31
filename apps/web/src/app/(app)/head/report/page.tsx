@@ -4,7 +4,8 @@ interface Props {
   searchParams: Promise<{ authorId?: string }>;
 }
 
-// Back-compat bare route: client-replaces to /head/report/[reportId] once known.
+// Addressable entry route: the page replaces it with the active report URL
+// once the current period is known.
 export default async function HeadReportPage({ searchParams }: Props) {
   const { authorId } = await searchParams;
 

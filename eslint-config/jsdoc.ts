@@ -13,13 +13,11 @@ const jsdocRecommendedTs = jsdoc.configs["flat/recommended-typescript"] as {
   readonly rules: Linter.RulesRecord;
 };
 
-// Presence: every exported declaration needs a short /** contract */.
+// Presence: every published shared/ui export needs a short /** contract */.
 // Param/return tags stay optional because TypeScript owns those shapes.
 // enableFixer false — never inject bare @param tags via eslint --fix.
 // publicOnly — file-private helpers free.
-// apps/api and apps/web are deliberately OUT until their surfaces are
-// documented: a ratchet has to close behind work already done, and declaring
-// it ahead of undocumented files only turns `pnpm lint` red for everyone.
+// apps/api and apps/web are outside this published-package contract.
 export const jsdocConfig: Linter.Config = {
   files: ["packages/shared/src/**/*.ts", "packages/ui/src/**/*.{ts,tsx}"],
   plugins: { jsdoc },

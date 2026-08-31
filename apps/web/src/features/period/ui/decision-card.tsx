@@ -4,7 +4,6 @@ import { LockBadge } from "../../../shared/ui/report-shell/lock-badge";
 import { MetaRow } from "../../../shared/ui/report-shell/meta-row";
 import type { DecisionEntry } from "../../report-sections";
 import {
-  canonicalStageName,
   FOREIGN_ENTRY_OPACITY,
   PublishedRecordMarker,
 } from "../../report-sections";
@@ -23,16 +22,14 @@ interface DecisionCardProps {
   readonly onDelete: (id: string) => void;
 }
 
-// Stage-less product decision is a legacy anomaly — announce "No stage set".
-// Activity-parented decisions are legitimately stage-less.
 function stagesAriaLabel(
   stageTags: readonly string[],
   activityId: string | null | undefined,
-): string {
+): string | undefined {
   if (stageTags.length > 0) return `Decision stages: ${stageTags.join(", ")}`;
   return activityId != null
     ? "Decision stages: Activity — no SDLC stage"
-    : "Decision stages: No stage set";
+    : undefined;
 }
 
 // The amber deadline chip and the icon-button hairline/destructive-hover ramp
@@ -85,7 +82,8 @@ function DecisionCardHeader({
 
 export function DecisionCard(props: DecisionCardProps) {
   const { decision } = props;
-  const stageTags = decision.stageNames.map(canonicalStageName);
+  const stageTags = decision.stageNames;
+  const stageAriaLabel = stagesAriaLabel(stageTags, decision.activityId);
 
   return (
     <div
@@ -100,11 +98,8 @@ export function DecisionCard(props: DecisionCardProps) {
       <MetaRow
         authorName={decision.owner}
         stageTags={stageTags}
-        ariaLabel={stagesAriaLabel(stageTags, decision.activityId)}
+        {...(stageAriaLabel ? { ariaLabel: stageAriaLabel } : {})}
         foreign={false}
-        emptyStageChip={
-          decision.activityId != null ? "none" : "no-stage-warning"
-        }
       />
     </div>
   );

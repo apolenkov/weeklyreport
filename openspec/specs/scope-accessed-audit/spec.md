@@ -10,10 +10,10 @@ granted cross-group access.
 
 Consumer surfaces: the `AuditLogger.scopeAccessed` method
 (`apps/api/src/lib/audit-logger.ts`, type in
-`apps/api/src/lib/audit-logger-types.ts`); the `weeklyReport.get` tRPC
-query (`apps/api/src/infrastructure/trpc/trpc.router.ts`); the
-weekly-report read
-(`apps/api/src/modules/weekly-report/weekly-report.prisma-repository.ts`).
+`apps/api/src/lib/audit-logger-types.ts`); the `weeklyReport.get` procedure in
+`apps/api/src/infrastructure/trpc/routers/weekly-report.router.ts`; and the
+weekly-report read in
+`apps/api/src/modules/weekly-report/weekly-report.prisma-repository.ts`.
 
 ## Requirements
 
@@ -130,4 +130,4 @@ to the live `Project` row or its `GroupProduct` edges since publish.
 #### Scenario: Live (non-published) reads are unaffected
 
 - **WHEN** a non-admin caller reads a report that is not yet published
-- **THEN** the cross-group signal is computed from the live, currently-scoped project list, as before
+- **THEN** the cross-group signal is computed from the live, currently-scoped project list

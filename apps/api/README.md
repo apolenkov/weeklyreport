@@ -4,21 +4,36 @@ NestJS 11 backend with tRPC API, Prisma ORM, and JWT/SAML authentication.
 
 ## Modules
 
-| Module            | Purpose                                                    |
-| ----------------- | ---------------------------------------------------------- |
-| `auth`            | SAML login/callback/logout, dev-login, JWT cookie sessions |
-| `report-sections` | Lead report CRUD: getActive, saveDraft, submit             |
-| `review`          | Head dashboard and assembled report views                  |
-| `publication`     | Report publishing workflow                                 |
-| `pdf-export`      | Async PDF generation via Playwright                        |
-| `admin`           | User, project, period, reminder CRUD                       |
-| `reminders`       | Email reminder rules and execution                         |
-| `carry-over`      | Carry previous report data to next period                  |
-| `archive`         | Published report history                                   |
+| Module             | Purpose                                                   |
+| ------------------ | --------------------------------------------------------- |
+| `activity`         | Live per-report activity status feed                      |
+| `admin`            | Users, groups, products, periods, reminders, and settings |
+| `analytics`        | Scoped report analytics                                   |
+| `archive`          | Published report history                                  |
+| `auth`             | SAML, dev login, JWT sessions, and role context           |
+| `carry-over`       | Carry unfinished records into the current period          |
+| `email`            | Reminder and notification delivery                        |
+| `observability`    | Web Vitals ingestion                                      |
+| `organization`     | Organization singleton and public identity                |
+| `pdf-export`       | Published-snapshot PDF generation                         |
+| `period`           | Period lifecycle, scheduling, and automation              |
+| `project-activity` | Admin activity provisioning and catalogue CRUD            |
+| `publication`      | Atomic publication and immutable snapshots                |
+| `reminders`        | Reminder policy evaluation and execution                  |
+| `report-sections`  | Lead drafts, submission, and report assembly              |
+| `review`           | Verdicts, comments, acknowledgements, and reopen requests |
+| `search`           | Scoped published-content search                           |
+| `telemetry`        | Scoped operational telemetry reads                        |
+| `weekly-report`    | Current and published weekly read models                  |
 
 ## tRPC Routers
 
-All API endpoints are tRPC procedures served at `/trpc`. Authentication uses `protectedProcedure` (any role) or `headProcedure` (head-only).
+All product RPC procedures are served at `/trpc`. Every router procedure uses
+one of the six canonical builders exported by
+`src/infrastructure/trpc/trpc.middleware.ts`; each builder owns its exact role
+and scope middleware chain. Conventional HTTP surfaces own authentication,
+health, metrics, browser telemetry/log admission, the Bull Board, and PDF
+artifact delivery.
 
 ## Development
 

@@ -37,8 +37,30 @@ apps/api/.logs
 **/.logs
 apps/web/.tmp
 **/*.test.ts
+**/*.test.tsx
 **/*.spec.ts
+**/*.spec.tsx
 **/*.integration.test.ts
+**/*.integration.test.tsx
+**/__tests__
+**/test-utils
+**/*-fixtures.ts
+**/*-fixtures.tsx
+**/*.fixtures.ts
+**/*.fixtures.tsx
+**/*.fixture.ts
+**/*.fixture.tsx
+**/*stub*.ts
+**/*stub*.tsx
+**/*harness*.ts
+**/*harness*.tsx
+**/test-seams
+**/__snapshots__
+**/*.snap
+# The API image executes this build-time self-test before pruning production
+# dependencies. Keep the single reviewed fixture in the context while every
+# product test and harness above remains excluded.
+!scripts/gates/production-deps-prune.fixture.test.ts
 **/*.tsbuildinfo
 .env
 .env.*

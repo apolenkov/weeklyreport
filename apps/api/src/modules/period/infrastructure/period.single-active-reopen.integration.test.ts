@@ -6,8 +6,9 @@ import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
+  publishedSnapshotFixture,
 } from "../../../test-utils/prisma-test-helper";
-import { WeeklyReportPrismaRepository } from "../../weekly-report/index.js";
+import { WeeklyReportPrismaRepository } from "../../weekly-report/weekly-report.prisma-repository.js";
 import {
   type AnalyticsCacheInvalidator,
   PeriodScopeError,
@@ -66,7 +67,7 @@ describe("PeriodService single-active-reopen guard (integration)", () => {
         periodStart: new Date(periodStart),
         periodEnd: new Date(periodStart),
         deadline: new Date(periodStart),
-        // A reopened period keeps the legacy published tuple but reverts the
+        // A reopened period keeps the published status but reverts the
         // canonical periodState to 'open' (the reopen transition's asymmetry).
         status: "published",
         periodStatus,
@@ -77,6 +78,13 @@ describe("PeriodService single-active-reopen guard (integration)", () => {
             : "published",
         publishedAt: new Date(periodStart),
         archived,
+        publishedSnapshot: publishedSnapshotFixture({
+          reportId: id,
+          periodStart,
+          periodEnd: periodStart,
+          deadline: periodStart,
+          publishedAt: periodStart,
+        }),
       },
     });
   }

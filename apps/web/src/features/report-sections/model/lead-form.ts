@@ -7,11 +7,7 @@ import type {
   ReportSectionReadModel,
   TrafficLightStatus,
 } from "@customreport/shared";
-import {
-  normalizeStageName,
-  ROLE_LABEL,
-  stageNamesMatch,
-} from "@customreport/shared";
+import { ROLE_LABEL } from "@customreport/shared";
 
 import { initialsFromName } from "../../../shared/lib/format/user-initials";
 import { mapLeadDecisions, mapLeadPriorities } from "./lead-form-decisions";
@@ -39,12 +35,6 @@ export {
   mapLeadRisks,
   ownedStagesForProject,
 };
-
-// The Dev↔Development stage-name canonicalization is single-homed in
-// @customreport/shared so the server ownership guard and this client mapper
-// never disagree on whether two names refer to the same pipeline slot.
-// Re-exported for the web modules that pull it from this barrel.
-export { normalizeStageName, stageNamesMatch };
 
 export interface LeadCurrentUser {
   name: string;

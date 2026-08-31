@@ -1,12 +1,15 @@
 import type { TrafficLightStatus } from "@customreport/shared";
+import type { Prisma } from "@prisma/client";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
+import { createPauseGate } from "../../../test-utils/paused-prisma.js";
 import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
+  publishedSnapshotFixture,
   seedTestData,
 } from "../../../test-utils/prisma-test-helper";
 import { LeadFormDomainError } from "../domain/lead-form-shared";
@@ -16,6 +19,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
   const prisma = createTestPrisma();
   let repo: LeadFormPrismaRepository;
   let testData: Awaited<ReturnType<typeof seedTestData>>;
+  const sourceReportId = "a0000000-0000-4000-a000-000000000710";
 
   beforeAll(() => {
     repo = new LeadFormPrismaRepository(prisma as unknown as PrismaService);
@@ -40,6 +44,14 @@ describe("LeadFormPrismaRepository (integration)", () => {
         status: "published",
         periodStatus: "published",
         publishedAt: new Date("2026-04-05T19:00:00.000Z"),
+        id: sourceReportId,
+        publishedSnapshot: publishedSnapshotFixture({
+          reportId: sourceReportId,
+          periodStart: "2026-03-31T00:00:00.000Z",
+          periodEnd: "2026-04-06T00:00:00.000Z",
+          deadline: "2026-04-05T18:00:00.000Z",
+          publishedAt: "2026-04-05T19:00:00.000Z",
+        }),
       },
     });
     const sourceSection = await prisma.reportSection.create({
@@ -61,6 +73,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
           tag: "feature",
           workflowStatus: "in_progress",
           carriedOver: true,
+          stageNames: ["Dev"],
         },
         {
           reportSectionId: sourceSection.id,
@@ -70,6 +83,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
           tag: "plan",
           workflowStatus: "planned",
           carriedOver: false,
+          stageNames: ["Dev"],
         },
       ],
     });
@@ -103,6 +117,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
         text: "Target stale item",
         tag: "stale",
         workflowStatus: "in_progress",
+        stageNames: ["Dev"],
       },
     });
     await prisma.risk.create({
@@ -113,6 +128,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
         impact: "Old",
         mitigation: "Old",
         severity: "at-risk",
+        stageNames: ["Dev"],
       },
     });
     await prisma.decision.create({
@@ -122,6 +138,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
         text: "Target stale decision",
         owner: "Lead",
         impact: "Old",
+        stageNames: ["Dev"],
       },
     });
 
@@ -154,6 +171,114 @@ describe("LeadFormPrismaRepository (integration)", () => {
     expect(expectDefined(risks[0]).stageNames).toEqual(["Dev"]);
     expect(decisions).toHaveLength(1);
     expect(expectDefined(decisions[0]).text).toBe("Source decision");
+  });
+
+  it("keeps LeadForm lifecycle and content in one snapshot across publish and assignment drift", async () => {
+    const originalGroupId = expectDefined(testData.head.reportingGroupId);
+    const groupB = await prisma.reportingGroup.create({
+      data: { name: "Drifted group", description: null },
+    });
+    const gate = createPauseGate();
+    const pausedPrisma = new Proxy(prisma, {
+      get(target, property, receiver): unknown {
+        if (property !== "$transaction")
+          return Reflect.get(target, property, receiver);
+        return async (
+          callback: (tx: Prisma.TransactionClient) => Promise<unknown>,
+          options?: Parameters<typeof prisma.$transaction>[1],
+        ) => {
+          const transaction = prisma.$transaction.bind(prisma);
+          return transaction(
+            async (tx) =>
+              callback(
+                new Proxy(tx, {
+                  get(txTarget, txProperty, txReceiver): unknown {
+                    if (txProperty !== "report")
+                      return Reflect.get(txTarget, txProperty, txReceiver);
+                    return new Proxy(txTarget.report, {
+                      get(
+                        reportTarget,
+                        reportProperty,
+                        reportReceiver,
+                      ): unknown {
+                        return reportProperty === "findUnique"
+                          ? async (
+                              ...args: Parameters<
+                                typeof txTarget.report.findUnique
+                              >
+                            ) => {
+                              const findUnique =
+                                txTarget.report.findUnique.bind(
+                                  txTarget.report,
+                                );
+                              const result = await findUnique(...args);
+                              await gate.pause();
+                              return result;
+                            }
+                          : Reflect.get(
+                              reportTarget,
+                              reportProperty,
+                              reportReceiver,
+                            );
+                      },
+                    });
+                  },
+                }) as Prisma.TransactionClient,
+              ),
+            options,
+          );
+        };
+      },
+    });
+
+    const snapshot = publishedSnapshotFixture({
+      reportId: testData.report.id,
+      periodStart: testData.report.periodStart.toISOString(),
+      periodEnd: testData.report.periodEnd.toISOString(),
+      publishedAt: "2026-05-10T16:00:00.000Z",
+      sectionOwners: [
+        {
+          reportSectionId: testData.section.id,
+          authorId: testData.lead.id,
+          authorName: "Frozen lead",
+          groupId: originalGroupId,
+          groupName: "Original group",
+        },
+      ],
+    });
+    const read = new LeadFormPrismaRepository(
+      pausedPrisma as never,
+    ).getSectionForPeriod(testData.report.id, testData.lead.id);
+    await gate.paused;
+    await prisma.$transaction(async (tx) => {
+      await tx.report.update({
+        where: { id: testData.report.id },
+        data: {
+          status: "published",
+          periodStatus: "published",
+          periodState: "published",
+          publishedAt: new Date("2026-05-10T16:00:00.000Z"),
+          publishedSnapshot: snapshot,
+        },
+      });
+      await tx.user.update({
+        where: { id: testData.lead.id },
+        data: { reportingGroupId: groupB.id },
+      });
+      await tx.publishedSectionScope.create({
+        data: {
+          reportId: testData.report.id,
+          reportSectionId: testData.section.id,
+          authorId: testData.lead.id,
+          groupId: originalGroupId,
+        },
+      });
+    });
+    gate.release();
+
+    const result = await read;
+    expect(result?.readOnly).toBe(false);
+    expect(result?.section.reportSectionId).toBe(testData.section.id);
   });
 
   it("fillFromSection throws LeadFormDomainError when the source section is absent on the copy re-read (TOCTOU)", async () => {
@@ -278,7 +403,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
       expect(row.authorShortName).toBe("Anna K.");
       // The FULL ФИО must still NOT appear on the wire.
       expect(Object.keys(row)).not.toContain("authorName");
-      // The three removed count fields must not appear.
+      // The row exposes no aggregate count fields.
       expect(Object.keys(row)).not.toContain("itemCount");
       expect(Object.keys(row)).not.toContain("riskCount");
       // Foreign text must not appear (no items/risks/decisions text on the row).
@@ -370,6 +495,12 @@ describe("LeadFormPrismaRepository (integration)", () => {
           leadId: coLead.id,
         },
       });
+      await prisma.groupProduct.create({
+        data: {
+          groupId: expectDefined(testData.lead.reportingGroupId),
+          productId: otherProject.id,
+        },
+      });
       await prisma.stageAssignment.create({
         data: {
           userId: coLead.id,
@@ -410,9 +541,31 @@ describe("LeadFormPrismaRepository (integration)", () => {
       expect(expectDefined(testingStage).status).toBe("green");
     });
 
-    it("a covering blocked risk colours the stage red (→ blocked in the mapper)", async () => {
+    it.each([
+      {
+        label:
+          "a covering blocked risk colours the stage red (→ blocked in the mapper)",
+        severity: "blocked",
+        expectedStatus: "red",
+      },
+      {
+        label: "a covering at-risk risk colours the stage yellow (not red)",
+        severity: "at-risk",
+        expectedStatus: "yellow",
+      },
+      {
+        label: "a blocked risk naming the assigned stage colours it red",
+        severity: "blocked",
+        expectedStatus: "red",
+      },
+      {
+        label: "an at-risk risk naming the assigned stage colours it yellow",
+        severity: "at-risk",
+        expectedStatus: "yellow",
+      },
+    ] as const)("$label", async ({ severity, expectedStatus }) => {
       await seedCoLead(testData.report.id, {
-        risks: [{ severity: "blocked", stageNames: ["Testing"] }],
+        risks: [{ severity, stageNames: ["Testing"] }],
       });
 
       const rows = await repo.getCrossAuthors(
@@ -422,54 +575,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
 
       const row = expectDefined(rows[0]);
       const testingStage = row.stages.find((s) => s.stageName === "Testing");
-      expect(expectDefined(testingStage).status).toBe("red");
-    });
-
-    it("a covering at-risk risk colours the stage yellow (not red)", async () => {
-      await seedCoLead(testData.report.id, {
-        risks: [{ severity: "at-risk", stageNames: ["Testing"] }],
-      });
-
-      const rows = await repo.getCrossAuthors(
-        testData.report.id,
-        testData.lead.id,
-      );
-
-      const row = expectDefined(rows[0]);
-      const testingStage = row.stages.find((s) => s.stageName === "Testing");
-      expect(expectDefined(testingStage).status).toBe("yellow");
-    });
-
-    it("a covers-all blocked risk (empty stageNames) colours every assigned stage red", async () => {
-      // Empty stageNames is the Add-Risk dialog default = "all assigned stages".
-      // The co-lead is assigned only to Testing, so Testing must read red.
-      await seedCoLead(testData.report.id, {
-        risks: [{ severity: "blocked", stageNames: [] }],
-      });
-
-      const rows = await repo.getCrossAuthors(
-        testData.report.id,
-        testData.lead.id,
-      );
-
-      const row = expectDefined(rows[0]);
-      const testingStage = row.stages.find((s) => s.stageName === "Testing");
-      expect(expectDefined(testingStage).status).toBe("red");
-    });
-
-    it("a covers-all at-risk risk (empty stageNames) colours every assigned stage yellow", async () => {
-      await seedCoLead(testData.report.id, {
-        risks: [{ severity: "at-risk", stageNames: [] }],
-      });
-
-      const rows = await repo.getCrossAuthors(
-        testData.report.id,
-        testData.lead.id,
-      );
-
-      const row = expectDefined(rows[0]);
-      const testingStage = row.stages.find((s) => s.stageName === "Testing");
-      expect(expectDefined(testingStage).status).toBe("yellow");
+      expect(expectDefined(testingStage).status).toBe(expectedStatus);
     });
 
     it("an item's own workflowStatus (no risk) does NOT colour the stage red", async () => {
@@ -606,6 +712,12 @@ describe("LeadFormPrismaRepository (integration)", () => {
           leadId: testData.lead.id,
         },
       });
+      await prisma.groupProduct.create({
+        data: {
+          groupId: expectDefined(testData.lead.reportingGroupId),
+          productId: OTHER_PROJECT_ID,
+        },
+      });
       // Co-lead is assigned to the unshared product; the caller is NOT. Without
       // the `projectId: { in: myProjectIds }` clause this assignment would enter
       // the co-lead's shared set and leak the unshared records.
@@ -717,6 +829,18 @@ describe("LeadFormPrismaRepository (integration)", () => {
           name: "Author Only",
           leadId: author.id,
         },
+      });
+      await prisma.groupProduct.createMany({
+        data: [
+          {
+            groupId: expectDefined(testData.lead.reportingGroupId),
+            productId: ARCHIVED_PROJECT_ID,
+          },
+          {
+            groupId: expectDefined(testData.lead.reportingGroupId),
+            productId: AUTHOR_ONLY_PROJECT_ID,
+          },
+        ],
       });
       await prisma.stageAssignment.createMany({
         data: [

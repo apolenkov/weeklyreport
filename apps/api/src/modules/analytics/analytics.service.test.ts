@@ -277,8 +277,8 @@ describe("stableHash", () => {
   });
 
   it("distinguishes two inputs differing only in a nested value", () => {
-    // The old top-level-keys replacer whitelisted "outer" at every depth, so
-    // both nested objects serialized to `{}` and these hashed identically.
+    // Nested values are part of the canonical cache-key material, so distinct
+    // nested inputs must produce distinct keys.
     const a = { outer: { count: 1 } };
     const b = { outer: { count: 2 } };
 

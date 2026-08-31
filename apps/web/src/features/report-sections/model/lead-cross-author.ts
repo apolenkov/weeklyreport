@@ -3,11 +3,7 @@
 
 import type { TrafficLightStatus } from "@customreport/shared";
 
-import {
-  type LeadProduct,
-  normalizeStageName,
-  stageNamesMatch,
-} from "./lead-form";
+import { type LeadProduct } from "./lead-form";
 import { type StageStatus, trafficToStageStatus } from "./traffic-light";
 
 export interface CrossAuthorRow {
@@ -52,15 +48,14 @@ export function buildCrossAuthorStageMap(
   const map: CrossAuthorStageMap = new Map();
   for (const ca of crossAuthors) {
     const stageMap = getOrCreateStageMap(map, ca.projectId);
-    for (const sn of ca.stageNames) {
-      const norm = normalizeStageName(sn);
-      const stageEntry = ca.stages.find((s) =>
-        stageNamesMatch(s.stageName, sn),
+    for (const stageName of ca.stageNames) {
+      const stageEntry = ca.stages.find(
+        (stage) => stage.stageName === stageName,
       );
       const status = trafficToStageStatus(stageEntry?.status ?? null);
       // Stage labels need the recognizable short name; the two-letter mark is
       // reserved for avatars and space-constrained chips.
-      stageMap.set(norm, { assignee: ca.authorShortName, status });
+      stageMap.set(stageName, { assignee: ca.authorShortName, status });
     }
   }
   return map;
@@ -79,7 +74,7 @@ export function applyCrossAuthorStageOverrides(
       ...product,
       stages: product.stages.map((stage) => {
         if (stage.ownership !== "locked") return stage;
-        const entry = stageMap.get(normalizeStageName(stage.stageName));
+        const entry = stageMap.get(stage.stageName);
         if (!entry) return stage;
         return {
           ...stage,

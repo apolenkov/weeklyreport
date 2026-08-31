@@ -1,7 +1,6 @@
 # Capability: web-trpc-test-harness
 
 Shared tRPC mock-factory contract for web component and hook tests.
-Pinned by: refactor-web-trpc-test-harness (archived 2026-06-13).
 
 ## Purpose
 
@@ -17,8 +16,8 @@ behavior.
 Web component and hook tests under `apps/web/src` MUST obtain their
 tRPC proxy stub from `createMockTRPC` in
 `apps/web/src/test-utils/mock-trpc.ts` by passing an array of
-path-descriptor entries (`{ path, query?, mutation? }`; full API in
-`design.md` D1 of the archived change), and MUST NOT hand-roll per-file
+path-descriptor entries (`{ path, query?, mutation? }`; full API in the
+`createMockTRPC` type signature), and MUST NOT hand-roll per-file
 objects that re-encode the `queryOptions` / `mutationOptions` /
 `queryKey` / `pathFilter` proxy shape.
 
@@ -64,4 +63,4 @@ called), a non-401 error propagates via `observer.error`, and
 #### Scenario: a regression makes the link swallow non-401 errors
 
 - **WHEN** the swallow branch is widened beyond 401 by mistake
-- **THEN** the propagate test fails before the change merges
+- **THEN** the propagate test fails

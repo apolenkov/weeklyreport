@@ -1,7 +1,12 @@
-import type { Prisma } from "@prisma/client";
+import {
+  computeReminderFireAt,
+  reminderPolicyAppliesTo,
+} from "@customreport/shared";
+import type { Prisma, ReminderPolicy, ReminderRule } from "@prisma/client";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { DueDeadlineRule, DueEscalationRule } from "./reminders.types.js";
+import { editableReminderReportWhere } from "./reminders-editable-report.prisma.js";
 import { buildEscalationGroups } from "./reminders-escalation-grouping.js";
 import { formatPeriodLabel } from "./reminders-row-mappers.js";
 
@@ -14,13 +19,15 @@ export interface UnresolvedGroupLogger {
 // Period identity plus the still-draft sections' authors — the leads a deadline
 // reminder is addressed to.
 const deadlineRecipientsInclude = {
+  policy: true,
   report: {
     select: {
       id: true,
       periodStart: true,
       periodEnd: true,
+      deadline: true,
       sections: {
-        where: { status: "draft" },
+        where: { status: "draft", author: { isActive: true } },
         select: {
           authorId: true,
           author: {
@@ -40,6 +47,7 @@ const deadlineRecipientsInclude = {
 // Adds the deadline and each late lead's reporting-group head, the routing
 // target an escalation digest fans out to.
 const escalationRoutingInclude = {
+  policy: true,
   report: {
     select: {
       id: true,
@@ -47,7 +55,7 @@ const escalationRoutingInclude = {
       periodEnd: true,
       deadline: true,
       sections: {
-        where: { status: "draft" },
+        where: { status: "draft", author: { isActive: true } },
         select: {
           author: {
             select: {
@@ -74,6 +82,38 @@ const escalationRoutingInclude = {
   },
 } as const satisfies Prisma.ReminderRuleInclude;
 
+function sameInstant(left: Date, right: Date): boolean {
+  return left.getTime() === right.getTime();
+}
+
+function isCurrentPolicyRule(
+  rule: Pick<
+    ReminderRule,
+    "deadline" | "fireAt" | "kind" | "status" | "timezone"
+  >,
+  policy: ReminderPolicy,
+  reportDeadline: Date | null,
+): reportDeadline is Date {
+  if (
+    reportDeadline === null ||
+    rule.status !== "active" ||
+    !sameInstant(rule.deadline, reportDeadline) ||
+    rule.kind !== policy.kind ||
+    rule.timezone !== policy.timezone ||
+    !reminderPolicyAppliesTo(policy, reportDeadline)
+  ) {
+    return false;
+  }
+  return sameInstant(
+    rule.fireAt,
+    computeReminderFireAt(
+      reportDeadline,
+      policy.offsetMinutes,
+      policy.timezone,
+    ),
+  );
+}
+
 export async function queryDueDeadlineRules(
   prisma: PrismaService,
   now: Date,
@@ -82,18 +122,18 @@ export async function queryDueDeadlineRules(
     where: {
       status: "active",
       kind: "deadline",
+      policy: { active: true },
       fireAt: { lte: now },
-      reportId: { not: null },
       // Cleared deadlines remove the reminder reference point; archived periods
-      // are out of scope even though their rules remain active, so exclude both.
-      report: { deadline: { not: null }, archived: false },
+      // and every non-editable lifecycle tuple are outside automation scope.
+      report: editableReminderReportWhere,
     },
     include: deadlineRecipientsInclude,
   });
 
   return rules.flatMap((rule) => {
     const report = rule.report;
-    if (!report) return [];
+    if (!isCurrentPolicyRule(rule, rule.policy, report.deadline)) return [];
     // author is a required section relation, always present.
     const recipients = report.sections.map((s) => ({
       userId: s.author.id,
@@ -107,6 +147,7 @@ export async function queryDueDeadlineRules(
         id: rule.id,
         reportId: report.id,
         fireAt: rule.fireAt,
+        deadline: rule.deadline,
         reportPeriodLabel: formatPeriodLabel(
           report.periodStart,
           report.periodEnd,
@@ -126,25 +167,23 @@ export async function queryDueEscalationRules(
     where: {
       status: "active",
       kind: "escalation",
+      policy: { active: true },
       fireAt: { lte: now },
-      reportId: { not: null },
       // Same guard as the deadline query: a cleared deadline silences the
-      // period's rules at dispatch time, and an archived period is out of
-      // scope — its rules stay `active` but must never dispatch again.
-      report: { deadline: { not: null }, archived: false },
+      // period's rules, and only a coherent editable lifecycle may dispatch.
+      report: editableReminderReportWhere,
     },
     include: escalationRoutingInclude,
   });
 
   return rules.flatMap((rule) => {
     const report = rule.report;
-    if (!report) return [];
     // The where-clause already excludes cleared deadlines; this re-check
     // narrows the type and covers a clear racing the query.
-    if (report.deadline === null) return [];
+    if (!isCurrentPolicyRule(rule, rule.policy, report.deadline)) return [];
     const { groups, unresolved } = buildEscalationGroups({
       ...report,
-      deadline: report.deadline,
+      deadline: rule.deadline,
     });
     if (unresolved.length > 0) {
       logger.warn(

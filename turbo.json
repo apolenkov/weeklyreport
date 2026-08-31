@@ -7,7 +7,6 @@
       "dependsOn": ["^build", "db:generate"],
       "env": [
         "API_URL",
-        "NEXT_PUBLIC_API_URL",
         "NEXT_PUBLIC_APP_VERSION",
         "NEXT_PUBLIC_AUTH_STUB",
         "NEXT_PUBLIC_CLIENT_LOG_FORWARDING",
@@ -19,11 +18,7 @@
       "outputs": [".next/**", "dist/**"]
     },
     "db:generate": {
-      "cache": false,
-      "outputs": [
-        "../../node_modules/.prisma/**",
-        "../../node_modules/@prisma/client/**"
-      ]
+      "cache": false
     },
     "dev": {
       "cache": false,

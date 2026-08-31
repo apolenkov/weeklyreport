@@ -4,8 +4,8 @@ import type {
   CanonicalStatus,
   ReportSectionReadModel,
   SectionActivity,
-  TrafficLightStatus,
 } from "@customreport/shared";
+import { trafficLightToCanonical } from "@customreport/shared";
 
 type ActivitySectionSlice = Pick<
   ReportSectionReadModel,
@@ -41,13 +41,6 @@ const TONE_DOT_CLASS: Record<ActivityTone, string> = {
   empty: "bg-[var(--color-muted-foreground)] opacity-50",
 };
 
-function toTone(status: TrafficLightStatus | null): ActivityTone {
-  if (status === "red") return "blocked";
-  if (status === "yellow") return "at-risk";
-  if (status === "green") return "on-track";
-  return "empty";
-}
-
 function toActivityCard(
   section: ActivitySectionSlice,
   activity: SectionActivity,
@@ -60,7 +53,7 @@ function toActivityCard(
     activityName: activity.activityName,
     authorName: section.authorName,
     // Render the risk/blocker-derived floor, falling back to the stored status.
-    tone: toTone(activity.derivedStatus ?? activity.status),
+    tone: trafficLightToCanonical(activity.derivedStatus ?? activity.status),
     note: activity.note ?? null,
     linkedProducts: activity.linkedProducts.map((p) => p.productName),
     currentItems: items.filter((i) => i.type === "current").map((i) => i.text),

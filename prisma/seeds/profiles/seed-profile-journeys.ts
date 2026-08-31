@@ -1,4 +1,8 @@
-import type { PrismaClient } from "@prisma/client";
+import {
+  computeReminderFireAt,
+  reminderPolicyAppliesTo,
+} from "@customreport/shared";
+import type { PrismaClient, ReminderRuleKind } from "@prisma/client";
 
 import {
   ACTION_LOG_IDS,
@@ -20,6 +24,51 @@ const CANONICAL_ROLE_COUNT = 4;
 const requireTrue = (condition: boolean, message: string): void => {
   if (!condition) throw new Error(`Seed journey failed: ${message}`);
 };
+
+interface ActiveReminderRuleJourneyRow {
+  readonly id: string;
+  readonly kind: ReminderRuleKind;
+  readonly fireAt: Date;
+  readonly deadline: Date;
+  readonly timezone: string;
+  readonly report: { readonly deadline: Date | null };
+  readonly policy: {
+    readonly kind: ReminderRuleKind;
+    readonly offsetMinutes: number;
+    readonly timezone: string;
+    readonly active: boolean;
+    readonly validFrom: Date;
+    readonly validUntil: Date | null;
+  };
+}
+
+export function assertActiveReminderRuleIntegrity(
+  rules: readonly ActiveReminderRuleJourneyRow[],
+): void {
+  requireTrue(rules.length > 0, "demo includes active reminder rules");
+  const problems = rules.flatMap((rule) => {
+    const reportDeadline = rule.report.deadline;
+    if (!reportDeadline) return [`${rule.id}: report deadline is absent`];
+    const expectedFireAt = computeReminderFireAt(
+      reportDeadline,
+      rule.policy.offsetMinutes,
+      rule.policy.timezone,
+    );
+    const valid =
+      rule.kind === rule.policy.kind &&
+      rule.timezone === rule.policy.timezone &&
+      rule.deadline.getTime() === reportDeadline.getTime() &&
+      rule.fireAt.getTime() === expectedFireAt.getTime() &&
+      reminderPolicyAppliesTo(rule.policy, reportDeadline);
+    return valid
+      ? []
+      : [`${rule.id}: schedule does not match report and policy`];
+  });
+  requireTrue(
+    problems.length === 0,
+    `demo reminder integrity failed: ${problems.join("; ")}`,
+  );
+}
 
 async function runMinimalJourney(prisma: PrismaClient): Promise<void> {
   const active = await prisma.report.findUnique({
@@ -68,8 +117,29 @@ async function runDemoJourney(prisma: PrismaClient): Promise<void> {
         where: { id: PUBLISHED_REPORT_ID },
         select: { periodState: true },
       }),
-      prisma.reminderRule.count({
-        where: { reportId: { in: [...scope.reportIds] } },
+      prisma.reminderRule.findMany({
+        where: {
+          reportId: { in: [...scope.reportIds] },
+          status: "active",
+        },
+        select: {
+          id: true,
+          kind: true,
+          fireAt: true,
+          deadline: true,
+          timezone: true,
+          report: { select: { deadline: true } },
+          policy: {
+            select: {
+              kind: true,
+              offsetMinutes: true,
+              timezone: true,
+              active: true,
+              validFrom: true,
+              validUntil: true,
+            },
+          },
+        },
       }),
       prisma.stageAssignment.findMany({
         where: { projectId: { in: [...scope.projectIds] } },
@@ -96,7 +166,7 @@ async function runDemoJourney(prisma: PrismaClient): Promise<void> {
     published?.periodState === "published",
     "demo includes a published period",
   );
-  requireTrue(reminders > 0, "demo includes reminder rules");
+  assertActiveReminderRuleIntegrity(reminders);
   requireTrue(
     assignments.some(({ userId, project }) => userId !== project.leadId),
     "demo includes foreign stage ownership",

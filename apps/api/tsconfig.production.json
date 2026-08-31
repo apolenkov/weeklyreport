@@ -1,0 +1,31 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "../.."
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.integration.test.ts",
+    "**/*.integration.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "**/__tests__/**",
+    "**/test-utils/**",
+    "**/*.fixture.ts",
+    "**/*.fixture.tsx",
+    "**/*.fixtures.ts",
+    "**/*.fixtures.tsx",
+    "**/*-fixtures.ts",
+    "**/*-fixtures.tsx",
+    "**/*stub*.ts",
+    "**/*stub*.tsx",
+    "**/*harness*.ts",
+    "**/*harness*.tsx",
+    "**/test-seams/**"
+  ]
+}

@@ -1,5 +1,6 @@
 import type {
   MyHistoryEntry,
+  PublishedLineage,
   ReportSectionReadModel,
 } from "@customreport/shared";
 
@@ -8,7 +9,6 @@ import type {
   CrossAuthorRow,
   LeadFormLoadedContext,
   LeadFormLoadedInput,
-  PublishedLineage,
 } from "../../../../report-sections";
 import { leadFormGenerationOf } from "../../../../report-sections";
 import type { LeadFormLoadedData } from "./lead-form-loaded";

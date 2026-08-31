@@ -17,3 +17,13 @@ export class ReminderScopeError extends Error {
     this.name = "ReminderScopeError";
   }
 }
+
+// Internal control-flow signal: the rule/report stopped being eligible between
+// discovery and the atomic execution insert. Services turn it into a skipped
+// dispatch; it must never escape to tRPC or enqueue a job.
+export class ReminderExecutionIneligibleError extends Error {
+  constructor() {
+    super("Reminder execution requires an editable report and active rule.");
+    this.name = "ReminderExecutionIneligibleError";
+  }
+}

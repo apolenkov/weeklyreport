@@ -6,9 +6,9 @@ import {
 import { describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined.js";
+import { unusedRemindersRepositoryStubs } from "./__tests__/reminders-scope.repository-stub.js";
 import { ReminderDomainError, RemindersService } from "./reminders.service";
 import type { RemindersRepository } from "./reminders.types";
-import { unusedRemindersRepositoryStubs } from "./reminders-scope.repository-stub.js";
 
 const activeRule: AdminReminderRule = {
   id: "66666666-6666-4666-8666-666666666666",
@@ -18,7 +18,7 @@ const activeRule: AdminReminderRule = {
   timezone: "Europe/Moscow",
   status: "active",
   version: 1,
-  policyId: null,
+  policyId: "99999999-9999-4999-8999-999999999999",
 };
 
 const pausedRule: AdminReminderRule = {
@@ -31,6 +31,7 @@ const recipientEmail = "lead1@customreport.local";
 const recipientEmail2 = "lead2@customreport.local";
 const REPORT_PERIOD_LABEL = "2026-04-07 → 2026-04-13";
 const testPayload = {
+  contractVersion: 1 as const,
   kind: "deadline" as const,
   cycleDate: "2026-04-10",
   leadName: "Test Lead",
@@ -67,23 +68,26 @@ function createRepository(...rules: AdminReminderRule[]): RemindersRepository {
         if (existing.dedupeKey === execution.dedupeKey) {
           return Promise.resolve({
             execution: structuredClone(existing),
-            inserted: false,
+            outcome: "deduplicated" as const,
           });
         }
       }
       executions.set(execution.id, structuredClone(execution));
       return Promise.resolve({
         execution: structuredClone(execution),
-        inserted: true,
+        outcome: "created" as const,
       });
     },
     getExecutionQueuePayload: () =>
       Promise.resolve(structuredClone(testPayload)),
     transitionExecutionToSending(executionId: string) {
       const execution = executions.get(executionId);
-      if (execution?.status !== "queued") return Promise.resolve(false);
+      if (execution?.status !== "queued") return Promise.resolve(null);
       executions.set(executionId, { ...execution, status: "sending" });
-      return Promise.resolve(true);
+      return Promise.resolve({
+        recipientEmail: execution.recipientEmail,
+        queuePayload: structuredClone(testPayload),
+      });
     },
     markExecutionSent(executionId: string, sentAt: Date) {
       const execution = executions.get(executionId);
@@ -238,6 +242,7 @@ describe("RemindersService — contract tests", () => {
           reportPeriod: REPORT_PERIOD_LABEL,
         }),
         {},
+        undefined,
       );
     });
 
@@ -352,7 +357,11 @@ describe("RemindersService — contract tests", () => {
       );
 
       const before = new Date();
-      expect(await service.claimExecutionForSending(queued.id)).toBe(true);
+      expect(await service.claimExecutionForSending(queued.id)).toMatchObject({
+        executionId: queued.id,
+        recipientEmail: queued.recipientEmail,
+        kind: "deadline",
+      });
       const sent = await service.markReminderSent(queued.id);
       const after = new Date();
 

@@ -1,9 +1,5 @@
 import type { TrafficLightStatus } from "@customreport/shared";
-import {
-  normalizeStageName,
-  type ReportSectionReadModel,
-  STAGE_NAMES,
-} from "@customreport/shared";
+import { type ReportSectionReadModel, STAGE_NAMES } from "@customreport/shared";
 
 export type SlideTrafficStatus = TrafficLightStatus | null;
 
@@ -72,11 +68,7 @@ export const COLUMN_ORDER: readonly (keyof GridColumns)[] = [
 const UNKNOWN_STAGE_RANK = STAGE_NAMES.length;
 
 function stageRank(stageName: string): number {
-  const index = STAGE_NAMES.findIndex(
-    (canonical) =>
-      // The alias-folding comparison (Development ↔ Dev) both sides use.
-      normalizeStageName(canonical) === normalizeStageName(stageName),
-  );
+  const index = STAGE_NAMES.findIndex((canonical) => canonical === stageName);
   return index === -1 ? UNKNOWN_STAGE_RANK : index;
 }
 

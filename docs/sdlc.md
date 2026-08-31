@@ -69,10 +69,6 @@ source-bound evidence:
 - [ ] Schema promotion uses compatible migrations, a verified pre-deploy dump,
       post-migration smoke evidence, and an explicit fix-forward or restore
       decision.
-- [x] The durable MVP publish contract explicitly retires ingestion. Manual and
-      automatic publishing have no ingestion queue, hook, no-op adapter, or
-      missing-consumer guard; production composition depends only on owned
-      publish side effects.
 - [ ] Encrypted backups exist in an independent failure domain; an isolated
       restore drill proves schema, row, and checksum evidence and measures
       RPO/RTO.

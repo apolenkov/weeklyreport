@@ -8,7 +8,10 @@ import {
   reportStatusSchema,
   trafficLightStatusSchema,
 } from "../primitives/report-primitives.schema";
-import { reportSectionReadModelSchema } from "../report-sections/section.schema";
+import {
+  publishedReportSectionReadModelSchema,
+  reportSectionReadModelSchema,
+} from "../report-sections/section.schema";
 
 /**
  * Live lead-section activity row; `lastEditAt` is derived from child records.
@@ -19,7 +22,9 @@ export const activityLiveRowSchema = z
     reportSectionId: z.uuid().nullable(),
     leadId: z.uuid(),
     leadName: z.string().min(1),
-    email: z.email(),
+    // Closed publications do not consult mutable User rows. The address is
+    // therefore unavailable on frozen activity rows; live rows still carry it.
+    email: z.email().nullable(),
     status: reportSectionStatusSchema,
     itemCount: z.number().int().min(0),
     riskCount: z.number().int().min(0),
@@ -62,30 +67,163 @@ export const portfolioOverviewSchema = z
   .readonly();
 
 /** Describes the immutable report document consumed by export surfaces. */
-export const assembledReportSchema = z
-  .object({
-    reportId: z.uuid(),
-    periodStart: reportDate(),
-    periodEnd: reportDate(),
-    deadline: reportDate().nullable(),
-    status: reportStatusSchema,
-    publishedAt: z.coerce.date().nullable(),
-    publishedById: z.uuid().nullable(),
-    publishedByName: z.string().min(1).nullable(),
-    portfolioOverview: portfolioOverviewSchema,
-    sections: z.array(reportSectionReadModelSchema).readonly(),
+const assembledReportObjectSchema = z.object({
+  reportId: z.uuid(),
+  periodStart: reportDate(),
+  periodEnd: reportDate(),
+  deadline: reportDate().nullable(),
+  status: reportStatusSchema,
+  publishedAt: z.coerce.date().nullable(),
+  publishedById: z.uuid().nullable(),
+  publishedByName: z.string().min(1).nullable(),
+  portfolioOverview: portfolioOverviewSchema,
+  sections: z.array(reportSectionReadModelSchema).readonly(),
+});
+
+interface ReportIdentitySection {
+  readonly reportSectionId: string;
+  readonly authorId: string;
+  readonly items: readonly { readonly id?: string | undefined }[];
+  readonly risks: readonly { readonly id?: string | undefined }[];
+  readonly decisions: readonly { readonly id?: string | undefined }[];
+}
+
+function findPreviousRecordIdentity(
+  report: { readonly sections: readonly ReportIdentitySection[] },
+  sectionIndex: number,
+  recordType: "item" | "risk" | "decision",
+  recordId: string,
+  recordIndex: number,
+): [number, string, number] | undefined {
+  return report.sections
+    .slice(0, sectionIndex + 1)
+    .flatMap((previousSection, previousSectionIndex) =>
+      (
+        [
+          ["item", previousSection.items],
+          ["risk", previousSection.risks],
+          ["decision", previousSection.decisions],
+        ] as const
+      ).flatMap(([previousType, previousRecords]) =>
+        previousRecords
+          .slice(
+            0,
+            previousSectionIndex === sectionIndex ? recordIndex : undefined,
+          )
+          .flatMap((previousRecord, previousRecordIndex) =>
+            previousType === recordType && previousRecord.id === recordId
+              ? [
+                  [
+                    previousSectionIndex,
+                    `${previousType}s`,
+                    previousRecordIndex,
+                  ] as [number, string, number],
+                ]
+              : [],
+          ),
+      ),
+    )
+    .at(0);
+}
+
+/**
+ * Keeps every report snapshot collection addressable without ambiguity.
+ * Record ids are namespaced by their frozen collection type: an item and a
+ * risk may legitimately share a database id, while two items may not.
+ */
+function addReportIdentityIssues(
+  report: { readonly sections: readonly ReportIdentitySection[] },
+  context: z.RefinementCtx,
+): void {
+  report.sections.forEach((section, sectionIndex) => {
+    const previousSection = report.sections
+      .slice(0, sectionIndex)
+      .findIndex(
+        (candidate) => candidate.reportSectionId === section.reportSectionId,
+      );
+    if (previousSection !== -1) {
+      context.addIssue({
+        code: "custom",
+        path: ["sections", sectionIndex, "reportSectionId"],
+        message: `Section ${section.reportSectionId} is duplicated (also at index ${previousSection}).`,
+      });
+    }
+
+    const previousAuthor = report.sections
+      .slice(0, sectionIndex)
+      .findIndex((candidate) => candidate.authorId === section.authorId);
+    if (previousAuthor !== -1) {
+      context.addIssue({
+        code: "custom",
+        path: ["sections", sectionIndex, "authorId"],
+        message: `Author ${section.authorId} is duplicated (also at section index ${previousAuthor}).`,
+      });
+    }
+
+    const collections = [
+      ["item", section.items],
+      ["risk", section.risks],
+      ["decision", section.decisions],
+    ] as const;
+    collections.forEach(([recordType, records]) => {
+      records.forEach((record, recordIndex) => {
+        if (record.id === undefined) return;
+        const identity = `${recordType}:${record.id}`;
+        const previous = findPreviousRecordIdentity(
+          report,
+          sectionIndex,
+          recordType,
+          record.id,
+          recordIndex,
+        );
+        if (previous !== undefined) {
+          context.addIssue({
+            code: "custom",
+            path: [
+              "sections",
+              sectionIndex,
+              `${recordType}s`,
+              recordIndex,
+              "id",
+            ],
+            message: `Record identity ${identity} is duplicated (also at section index ${previous[0]}, ${previous[1]} index ${previous[2]}).`,
+          });
+        }
+      });
+    });
+  });
+}
+
+/** Validates the mutable assembled report read model and its publication invariant. */
+export const assembledReportSchema = assembledReportObjectSchema
+  .superRefine(addReportIdentityIssues)
+  .superRefine((report, context) => {
+    if (report.status === "published" && report.publishedAt === null) {
+      context.addIssue({
+        code: "custom",
+        path: ["publishedAt"],
+        message: "Published reports require a publication timestamp.",
+      });
+    }
   })
+  .readonly();
+
+/**
+ * Immutable publication payload. Unlike a live assembled draft, every section
+ * must carry its publish-time author group so restored reports remain safely
+ * scopeable without mutable ReportSection/User relations.
+ */
+export const publishedReportSnapshotSchema = assembledReportObjectSchema
+  .extend({
+    status: z.literal("published"),
+    publishedAt: z.coerce.date(),
+    sections: z.array(publishedReportSectionReadModelSchema).readonly(),
+  })
+  .superRefine(addReportIdentityIssues)
   .readonly();
 
 /** Defines the lifecycle states exposed for an asynchronous PDF export. */
 export const pdfExportStatusSchema = z.enum(["queued", "completed", "failed"]);
-
-/** Accepts the report identity submitted to the PDF export queue. */
-export const pdfExportRequestSchema = z
-  .object({
-    reportId: z.uuid(),
-  })
-  .readonly();
 
 /** Describes the observable state and artifact metadata of a PDF export job. */
 export const pdfExportJobSchema = z
@@ -127,15 +265,35 @@ export const portfolioProductOverviewSchema = z
   .readonly();
 
 /** Describes a head-facing call-out that requires attention. */
-export const escalationSchema = z
-  .object({
-    type: z.enum(["blocked", "at_risk", "unresolved_risk"]),
-    productName: z.string().min(1),
-    stageName: z.string().nullable(),
-    leadName: z.string().min(1),
-    description: z.string(),
-  })
-  .readonly();
+export const escalationSchema = z.discriminatedUnion("type", [
+  z
+    .object({
+      type: z.literal("blocked"),
+      productName: z.string().min(1),
+      stageName: z.string().min(1),
+      leadName: z.string().min(1),
+      description: z.string(),
+    })
+    .readonly(),
+  z
+    .object({
+      type: z.literal("unresolved_risk"),
+      productName: z.string().min(1),
+      stageName: z.string().min(1),
+      leadName: z.string().min(1),
+      description: z.string(),
+    })
+    .readonly(),
+  z
+    .object({
+      type: z.literal("at_risk"),
+      productName: z.string().min(1),
+      stageName: z.string().nullable(),
+      leadName: z.string().min(1),
+      description: z.string(),
+    })
+    .readonly(),
+]);
 
 /** Describes the live weekly report state consumed by report pages. */
 export const weeklyReportReadModelSchema = z
@@ -154,7 +312,10 @@ export const weeklyReportReadModelSchema = z
     // request (one source of truth).
     submissionCount: z.number().int().min(0),
     totalLeads: z.number().int().min(0),
-    hasActiveReminderRule: z.boolean(),
+    // Null means no sendable deadline rule (including closed publications).
+    // The concrete id is carried through manual dispatch to avoid selecting an
+    // unrelated escalation rule after the capability check.
+    activeDeadlineReminderRuleId: z.uuid().nullable(),
     portfolioOverview: z.array(portfolioProductOverviewSchema).readonly(),
     leadSections: z.array(reportSectionReadModelSchema).readonly(),
     escalations: z.array(escalationSchema).readonly(),
@@ -197,7 +358,9 @@ export type WeeklyReportGetResponse = z.infer<
 export type PortfolioOverview = z.infer<typeof portfolioOverviewSchema>;
 /** Immutable report document consumed by export surfaces. */
 export type AssembledReport = z.infer<typeof assembledReportSchema>;
-/** Report identity admitted by the asynchronous PDF export queue. */
-export type PdfExportRequest = z.infer<typeof pdfExportRequestSchema>;
+/** Immutable, ownership-complete publication snapshot. */
+export type PublishedReportSnapshot = z.infer<
+  typeof publishedReportSnapshotSchema
+>;
 /** Observable state and artifact metadata of a PDF export job. */
 export type PdfExportJob = z.infer<typeof pdfExportJobSchema>;

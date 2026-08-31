@@ -16,7 +16,9 @@ const OWN_STAGES_LABEL = "Your stages";
 const COMPLETENESS_RING_WIDTH = "1.5px";
 const COMPLETENESS_RING_STYLE = "dashed";
 const COMPLETENESS_RING_RADIUS = "var(--radius-pill)";
-const SDLC_STAGE_WIDE_WIDTH = "6.625rem";
+// Wide stages keep one equal track, while leaving enough room for the longest
+// canonical name (Development) beside its icon and status glyph.
+const SDLC_STAGE_WIDE_WIDTH = "9rem";
 
 interface SdlcStagesStyle extends CSSProperties {
   readonly "--sdlc-stage-width": string;
@@ -42,13 +44,13 @@ interface SdlcProductCardProps {
 // flags active blockers without requiring the label to be read.
 function ProductHeading({ product }: { readonly product: Product }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex min-w-0 items-center gap-2">
       <span className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-[var(--color-primary)]">
         {product.name}
       </span>
       {product.riskSummary && (
         <span
-          className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-destructive-surface-subtle)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-destructive)]"
+          className="inline-flex min-w-0 shrink items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-destructive-surface-subtle)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-destructive)]"
           title={product.riskSummary}
         >
           <span
@@ -58,7 +60,7 @@ function ProductHeading({ product }: { readonly product: Product }) {
             }}
             aria-hidden="true"
           />
-          {product.riskSummary}
+          <span className="min-w-0 break-words">{product.riskSummary}</span>
         </span>
       )}
     </div>
@@ -103,7 +105,7 @@ function StageConnector({ isOwnEdge }: { readonly isOwnEdge: boolean }) {
       aria-hidden="true"
       data-testid="sdlc-stage-connector"
       data-own-edge={isOwnEdge}
-      className="hidden shrink-0 items-center justify-center lg:flex"
+      className="hidden shrink-0 items-center justify-center xl:flex"
       style={{
         height: STAGE_CHIP_BOX_HEIGHT,
         color: isOwnEdge
@@ -136,7 +138,7 @@ function StageStep({
       {showConnector && <StageConnector isOwnEdge={isOwnEdge} />}
       <div
         data-testid="sdlc-stage-row"
-        className="w-full min-w-0 lg:w-[var(--sdlc-stage-width)] lg:flex-none"
+        className="w-full min-w-0 xl:w-[var(--sdlc-stage-width)] xl:flex-none"
       >
         <StageChip
           stage={stage}
@@ -174,7 +176,7 @@ function StagesRow({
   return (
     <div
       data-testid="sdlc-stages"
-      className="grid w-full min-w-0 grid-cols-2 items-start gap-x-2 gap-y-3 pb-1 md:grid-cols-4 lg:flex lg:flex-nowrap lg:justify-center lg:gap-1"
+      className="grid w-full min-w-0 grid-cols-2 items-start gap-x-2 gap-y-3 pb-1 md:grid-cols-4 xl:flex xl:flex-nowrap xl:justify-center xl:gap-1"
       style={SDLC_STAGES_STYLE}
     >
       {visibleStages.map((stage, index) => (

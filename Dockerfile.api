@@ -1,9 +1,9 @@
 # Stage 1: Base with pnpm and turbo.
 # glibc (Debian) rather than alpine: Chromium needs it for PDF export, and the
 # native node modules must be built for the same libc the runner uses.
-# node:26 no longer ships corepack, so pnpm is installed with npm — the pin is
+# Node 24 does not ship Corepack, so pnpm is installed with npm — the pin is
 # held against package.json's packageManager by scripts/gates/environment/check-runtime-node-sync.ts.
-FROM node:26-bookworm@sha256:219fc9da91e7f29a9f32290ff598cdf8886fd68f421ff515c8f93434da39a271 AS base
+FROM node:24-bookworm@sha256:be23f54a88d34e8824c741b19b91064094f92c1c97b194144bfc8b50d67258e2 AS base
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 RUN npm install -g pnpm@11.17.0 turbo@2.10.7
 
@@ -13,7 +13,7 @@ WORKDIR /app
 COPY . .
 RUN turbo prune @customreport/api --docker
 
-# Stage 3: Install deps + generate Prisma (devDeps intact — used for dev hot-reload)
+# Stage 3: Install build dependencies and generate Prisma (devDeps stay in this stage only)
 FROM base AS installer
 WORKDIR /app
 # Docker build steps have no TTY. Keep pnpm deterministic after the pruned
@@ -31,64 +31,108 @@ COPY tsconfig.base.json ./tsconfig.base.json
 COPY prisma.config.ts ./prisma.config.ts
 RUN DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport ./node_modules/.bin/prisma generate
 
-# Stage 4: Migration runner with Prisma CLI available.
-# Compose/Kubernetes init jobs should use this target, not the production API
-# runner, because migrations require the Prisma CLI from devDependencies.
-FROM installer AS migrator
+# Stage 4: Migration dependency extraction. None of this stage's source tree
+# is copied into the published migration image.
+FROM installer AS migrator-deps
+RUN --mount=type=cache,id=customreport-pnpm-store-v11,target=/pnpm/store,sharing=locked \
+    pnpm --filter @customreport/migrator-runtime deploy --prod --legacy --frozen-lockfile /tmp/migrate-deps && \
+    rm -rf /tmp/migrate-deps/node_modules/@customreport && \
+    find /app/prisma/migrations -type f \
+      ! -name 'migration_lock.toml' ! -name '*.sql' -delete
+
+# Stage 5: Minimal migration runner, rooted in a fresh base image.
+FROM node:24-bookworm@sha256:be23f54a88d34e8824c741b19b91064094f92c1c97b194144bfc8b50d67258e2 AS migrator
+WORKDIR /app
+COPY --from=migrator-deps /tmp/migrate-deps/node_modules ./node_modules
+COPY --from=migrator-deps /tmp/migrate-deps/package.json ./package.json
+COPY --from=migrator-deps /app/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=migrator-deps /app/prisma/migration.config.ts ./prisma.config.ts
+COPY --from=migrator-deps /app/prisma/schema.prisma ./prisma/schema.prisma
+COPY --from=migrator-deps /app/prisma/migrations ./prisma/migrations
 ARG BUILD_VERSION
 LABEL org.opencontainers.image.revision=${BUILD_VERSION}
+RUN test -f /app/package.json && \
+    test -f /app/pnpm-lock.yaml && \
+    test -f /app/prisma.config.ts && \
+    test -f /app/prisma/schema.prisma && \
+    test -f /app/prisma/migrations/migration_lock.toml && \
+    test ! -e /app/apps && test ! -e /app/packages && \
+    test ! -e /app/scripts && test ! -e /app/prisma/operations && \
+    test ! -e /app/prisma/guards && test ! -e /app/prisma/seeds && \
+    test ! -e /app/prisma/migrations/canonical-init-contract.test.ts && \
+    ! grep -Eq 'seed|apps/api|tsx|pnpm' /app/prisma.config.ts && \
+    test ! -e /app/node_modules/.bin/pnpm && \
+    test ! -e /app/node_modules/.bin/turbo && \
+    test ! -e /usr/local/bin/pnpm && \
+    test ! -e /usr/local/bin/turbo && \
+    test ! -e /app/node_modules/@customreport && \
+    find /app/prisma/migrations -type f -name '*.sql' -print -quit | grep -q .
 CMD ["./node_modules/.bin/prisma", "migrate", "deploy"]
 
-# Stage 5: Build
+# Stage 6: Build
 FROM installer AS builder
 # The inherited frozen install is authoritative. pnpm 11 otherwise lets the
 # workspace scripts spawned by Turbo reconcile dependencies after source copy.
 ENV PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN=false
+COPY scripts/gates/production-dist.ts ./scripts/gates/production-dist.ts
+COPY scripts/gates/production-dist-policy.ts ./scripts/gates/production-dist-policy.ts
 RUN ./node_modules/.bin/turbo build --filter=@customreport/api
 
-# Stage 6: Production dependencies, installed fresh from the same lockfile.
-# NOT `pnpm prune --prod`: run at the workspace root it keeps the virtual store
-# but empties every workspace's node_modules, so the built app resolves nothing
-# at runtime. --ignore-scripts keeps playwright from pulling a browser here;
-# the runner installs Chromium explicitly.
+# Stage 7: Production dependencies, installed fresh from the same lockfile.
+# Deploy the API closure into an isolated production tree. A workspace-root
+# install would also retain unrelated root tooling and the migration package.
+# --ignore-scripts keeps playwright from pulling a browser here; the runner
+# installs Chromium explicitly.
 FROM base AS prod-deps
 WORKDIR /app
 COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=pruner /app/out/json/ .
+COPY scripts/gates/production-deps-prune.ts ./scripts/gates/production-deps-prune.ts
+COPY scripts/gates/production-deps-prune.fixture.test.ts ./scripts/gates/production-deps-prune.fixture.test.ts
+RUN node --experimental-strip-types --test ./scripts/gates/production-deps-prune.fixture.test.ts
 RUN --mount=type=cache,id=customreport-pnpm-store-v11,target=/pnpm/store,sharing=locked \
-    pnpm install --prod --frozen-lockfile --ignore-scripts --store-dir=/pnpm/store --network-concurrency=4
+    pnpm --filter=@customreport/api deploy --prod --legacy --frozen-lockfile --ignore-scripts /tmp/api-deps && \
+    node --experimental-strip-types ./scripts/gates/production-deps-prune.ts /tmp/api-deps && \
+    test ! -e /tmp/api-deps/node_modules/@customreport/migrator-runtime && \
+    test ! -e /tmp/api-deps/node_modules/.bin/prisma
+# Prisma's generated runtime is an artifact of the builder, not a production
+# dependency install input. Transfer it into the hoisted production tree.
+RUN --mount=from=builder,source=/app/node_modules,target=/mnt/builder-node_modules,readonly \
+    generated="$(find /mnt/builder-node_modules/.pnpm -path '*/node_modules/.prisma/client/default.js' -print -quit)"; \
+    test -n "$generated"; \
+    mkdir -p /tmp/api-deps/node_modules/.prisma/client && \
+    cp -a "$(dirname "$generated")/." /tmp/api-deps/node_modules/.prisma/client/
+RUN test -f /tmp/api-deps/node_modules/.prisma/client/default.js
+RUN mkdir -p /app/node_modules && cp -a /tmp/api-deps/node_modules/. /app/node_modules/
 
-# Stage 7: Production runner
-# ~4.3GB: a real Chromium plus the apt dependencies `playwright install
-# --with-deps` pulls onto the full bookworm base. The 200MB target applies to
-# the web image (alpine, ~150MB); this one cannot meet it by construction, but
-# a slim base would still be worth measuring.
-FROM base AS runner
+# Stage 8: Production runner
+FROM node:24-bookworm@sha256:be23f54a88d34e8824c741b19b91064094f92c1c97b194144bfc8b50d67258e2 AS runner
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 WORKDIR /app
 
 # Manifests and the built app come from the build; every node_modules tree comes
 # from prod-deps, so no devDependency reaches the image.
-COPY --from=builder --chown=node:node /app/package.json ./package.json
-COPY --from=builder --chown=node:node /app/pnpm-lock.yaml ./pnpm-lock.yaml
-COPY --from=builder --chown=node:node /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
-COPY --from=builder --chown=node:node /app/prisma.config.ts ./prisma.config.ts
 COPY --from=prod-deps --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/apps/api/dist ./apps/api/dist
 COPY --from=builder --chown=node:node /app/apps/api/package.json ./apps/api/package.json
-COPY --from=prod-deps --chown=node:node /app/apps/api/node_modules ./apps/api/node_modules
-COPY --from=builder --chown=node:node /app/packages ./packages
 
-# Prisma client and schema needed at runtime
-COPY --from=builder --chown=node:node /app/prisma ./prisma
+# Runtime images must not carry migration/configuration or test-only sources.
+RUN test ! -e /app/prisma && test ! -e /app/prisma.config.ts && \
+    test ! -e /app/node_modules/.bin/prisma && \
+    test ! -e /app/node_modules/@customreport/migrator-runtime && \
+    test ! -e /app/node_modules/@typescript/typescript6 && \
+    test ! -e /app/node_modules/prisma && \
+    ! find /app/node_modules/.pnpm -maxdepth 1 -type d \( -name 'prisma@*' -o -name '@customreport+migrator-runtime@*' -o -name '@prisma+dev@*' -o -name '@prisma+studio*' -o -name '@typescript+typescript6@*' -o -name 'typescript@*' \) -print -quit | grep -q . && \
+    ! find /app/apps -type d \( -name test-utils -o -name __tests__ -o -name seeds -o -name guards -o -name operations \) -print | grep -q .
+# Verify the two runtime dependency surfaces before installing Chromium.
+RUN test ! -e /app/node_modules/.bin/pnpm && test ! -e /app/node_modules/.bin/turbo && \
+    node -e "Promise.all([import('/app/apps/api/dist/packages/shared/src/index.js'), import('/app/apps/api/dist/packages/report-persistence/src/index.js'), import('@prisma/client'), import('@prisma/adapter-pg')]).then(([, , { PrismaClient }, { PrismaPg }]) => { new PrismaClient({ adapter: new PrismaPg({ connectionString: 'postgresql://ci-build-only@localhost:5432/customreport' }) }); console.log('runtime imports passed') })"
 
-# Chromium is installed by the very `playwright` package this image runs, so the
-# browser revision cannot drift from the dependency — the failure mode a separate
-# base-image pin used to have, where PDF export died at chromium.launch() while
-# every suite stayed green. Runs from the api workspace, not the repo root:
-# playwright is a dependency of apps/api, so its bin is linked only there.
+# Install the Chromium revision pinned by the production Playwright dependency.
+# The production install hoists the API binary into the root dependency tree.
 WORKDIR /app/apps/api
-RUN ./node_modules/.bin/playwright install --with-deps chromium
+RUN /app/node_modules/.bin/playwright install --with-deps chromium
 
 # Create PDF storage directory
 RUN mkdir -p /app/data/pdfs && chown node:node /app/data/pdfs

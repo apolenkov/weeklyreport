@@ -1,14 +1,16 @@
 import type { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import {
+  publishedReportScopeWhere,
+  requirePublishedSnapshot,
+  requireScopedPublishedSnapshot,
+} from "../report-sections/index.js";
 import type { CompiledHistoryReportRow } from "./compiled-history.js";
 import type { WeeklyReportScopeSession } from "./weekly-report.service.js";
-import { historySectionScope } from "./weekly-report-portfolio.js";
 
 // Cap history list size; archive count is separate so the UI can still offer expand.
 const COMPILED_HISTORY_PAGE_SIZE = 100;
-
-type HistorySectionScope = ReturnType<typeof historySectionScope>;
 
 // Viewer-only: reopened periods (status published, periodStatus reopened)
 // would appear as broken History links; head/lead must still see them.
@@ -22,27 +24,45 @@ function viewerPeriodWhere(
 
 function historyListWhere(
   session: WeeklyReportScopeSession,
-  sectionScope: HistorySectionScope,
   includeArchive: boolean,
 ): Prisma.ReportWhereInput {
   return {
     status: "published" as const,
     ...(includeArchive ? {} : { archived: false }),
     ...viewerPeriodWhere(session),
-    sections: { some: sectionScope },
+    ...publishedReportScopeWhere(session, "lead-own"),
   };
 }
 
 function historyArchiveCountWhere(
   session: WeeklyReportScopeSession,
-  sectionScope: HistorySectionScope,
 ): Prisma.ReportWhereInput {
   return {
     status: "published" as const,
     archived: true,
     ...viewerPeriodWhere(session),
-    sections: { some: sectionScope },
+    ...publishedReportScopeWhere(session, "lead-own"),
   };
+}
+
+function toScopedHistoryRow(
+  report: {
+    readonly id: string;
+    readonly archived: boolean;
+    readonly publishedSnapshot: Prisma.JsonValue | null;
+  },
+  session: WeeklyReportScopeSession,
+): CompiledHistoryReportRow {
+  const snapshot = requirePublishedSnapshot(
+    report.publishedSnapshot,
+    report.id,
+  );
+  const scopedSnapshot = requireScopedPublishedSnapshot(
+    snapshot,
+    session,
+    "lead-own",
+  );
+  return { archived: report.archived, snapshot: scopedSnapshot };
 }
 
 export async function queryCompiledHistory(
@@ -53,35 +73,25 @@ export async function queryCompiledHistory(
   reports: readonly CompiledHistoryReportRow[];
   archiveCount: number;
 }> {
-  const sectionScope = historySectionScope(session);
-
-  const [reports, archiveCount] = await Promise.all([
+  const [reportCandidates, archiveCount] = await Promise.all([
     prisma.report.findMany({
-      where: historyListWhere(session, sectionScope, includeArchive),
+      where: historyListWhere(session, includeArchive),
       orderBy: { periodStart: "desc" },
       take: COMPILED_HISTORY_PAGE_SIZE,
-      include: {
-        publishedBy: { select: { name: true } },
-        sections: {
-          where: sectionScope,
-          select: {
-            items: {
-              select: { projectId: true, priorityRank: true },
-            },
-            risks: { select: { projectId: true } },
-            decisions: { select: { productId: true } },
-            projectStatuses: {
-              select: { projectId: true, status: true },
-            },
-            stageStatuses: { select: { projectId: true } },
-          },
-        },
+      select: {
+        id: true,
+        archived: true,
+        publishedSnapshot: true,
       },
     }),
     prisma.report.count({
-      where: historyArchiveCountWhere(session, sectionScope),
+      where: historyArchiveCountWhere(session),
     }),
   ]);
+
+  const reports = reportCandidates.map((report) =>
+    toScopedHistoryRow(report, session),
+  );
 
   return { reports, archiveCount };
 }

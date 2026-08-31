@@ -101,8 +101,8 @@ export function createRepository(
       currentSection.value = structuredClone(nextSection);
       return Promise.resolve(structuredClone(currentSection.value));
     },
-    getMyHistoryRows() {
-      return Promise.resolve([]);
+    getMyHistoryPage() {
+      return Promise.resolve({ items: [], nextCursor: null });
     },
   };
 }

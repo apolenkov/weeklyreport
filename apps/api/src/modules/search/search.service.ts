@@ -7,6 +7,7 @@ import {
   type UserSession,
 } from "@customreport/shared";
 
+import { computeAllowedGroupIds } from "../../lib/group-scope.js";
 import { createServiceLogger } from "../../lib/logger-service.js";
 
 // Prisma-free port so unit tests supply an in-memory fake; Prisma impl uses
@@ -15,8 +16,7 @@ export interface SearchRepository {
   readonly search: (params: {
     readonly q: string;
     // 'all' is unfiltered — the service layer enforces the role gate before
-    // calling. 'published' INNER JOINs `Report.periodStatus = 'published'`:
-    // the viewer's read-parity surface (openspec/specs/viewer-published-search).
+    // calling. 'published' reads only immutable publication snapshots.
     readonly scope: "mine" | "all" | "published";
     readonly userId: string;
     // null → no group filter (admin). An empty array never reaches here: the
@@ -36,12 +36,11 @@ export class SearchAuthorizationError extends Error {
   }
 }
 
-// Mirrors groupScopeFilter semantics. A non-null empty array means "no group
-// access" — the caller short-circuits to zero rows rather than querying.
+// Search keeps the repository's null-vs-empty contract: admin is unscoped,
+// while an empty computed scope short-circuits to zero rows.
 function resolveSearchGroupIds(session: UserSession): readonly string[] | null {
   if (session.role === "admin") return null;
-  if (session.role === "viewer") return session.viewerGroupAccess ?? [];
-  return session.reportingGroupId ? [session.reportingGroupId] : [];
+  return computeAllowedGroupIds(session);
 }
 
 // lead + viewer exclude `project`: the only Project destination is /admin,
@@ -59,14 +58,19 @@ export class SearchService {
 
   constructor(private readonly repository: SearchRepository) {}
 
-  // `scope='all'` is head/admin only; `scope='published'` is open to every role
-  // because it can only ever surface published, group-scoped content — that is
-  // the viewer's real surface (openspec/specs/search-contract-precision).
+  // Viewers are confined to immutable published search. `scope='all'` remains
+  // head/admin-only; lead/head/admin retain their existing mine/all behavior.
   async query(
     input: SearchQueryInput,
     session: UserSession,
   ): Promise<SearchQueryOutput> {
     const parsed = searchQueryInputSchema.parse(input);
+
+    if (session.role === "viewer" && parsed.scope !== "published") {
+      throw new SearchAuthorizationError(
+        'viewer sessions require scope="published"',
+      );
+    }
 
     if (
       parsed.scope === "all" &&

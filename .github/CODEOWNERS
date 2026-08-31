@@ -1,5 +1,4 @@
-# The repository owner is the initial accountable reviewer. Replace these
-# entries with team owners before production support becomes shared.
+# Current accountable owner for repository changes.
 * @apolenkov
 
 # Repository policy and automation
@@ -17,6 +16,8 @@
 /docs/operations.md @apolenkov
 /docs/sdlc.md @apolenkov
 
-# Public contracts copied by downstream code
+# Shared and contract-boundary packages
 /packages/shared/ @apolenkov
 /packages/ui/ @apolenkov
+/packages/report-persistence/ @apolenkov
+/packages/migrator-runtime/ @apolenkov

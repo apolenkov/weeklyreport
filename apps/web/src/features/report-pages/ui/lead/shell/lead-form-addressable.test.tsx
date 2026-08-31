@@ -91,28 +91,30 @@ function buildHarness(opts: {
     },
     {
       path: ["reports", "myHistory"],
-      query: [
-        {
-          sectionId: ACTIVE_SECTION_ID,
-          reportId: ACTIVE_REPORT_ID,
-          periodStart: new Date("2026-04-14T00:00:00Z"),
-          periodEnd: new Date("2026-04-20T00:00:00Z"),
-          reportStatus: "open",
-          sectionStatus: "draft",
-          submittedAt: null,
-          publishedAt: null,
-        },
-        {
-          sectionId: PAST_SECTION_ID,
-          reportId: PAST_REPORT_ID,
-          periodStart: new Date("2026-04-07T00:00:00Z"),
-          periodEnd: new Date("2026-04-13T00:00:00Z"),
-          reportStatus: "published",
-          sectionStatus: "submitted",
-          submittedAt: new Date("2026-04-13T20:00:00Z"),
-          publishedAt: new Date("2026-04-14T08:00:00Z"),
-        },
-      ],
+      query: {
+        items: [
+          {
+            sectionId: ACTIVE_SECTION_ID,
+            reportId: ACTIVE_REPORT_ID,
+            periodStart: new Date("2026-04-14T00:00:00Z"),
+            periodEnd: new Date("2026-04-20T00:00:00Z"),
+            reportStatus: "open",
+            sectionStatus: "draft",
+            submittedAt: null,
+            publishedAt: null,
+          },
+          {
+            sectionId: PAST_SECTION_ID,
+            reportId: PAST_REPORT_ID,
+            periodStart: new Date("2026-04-07T00:00:00Z"),
+            periodEnd: new Date("2026-04-13T00:00:00Z"),
+            reportStatus: "published",
+            sectionStatus: "submitted",
+            submittedAt: new Date("2026-04-13T20:00:00Z"),
+            publishedAt: new Date("2026-04-14T08:00:00Z"),
+          },
+        ],
+      },
     },
     {
       path: ["reports", "saveDraft"],

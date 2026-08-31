@@ -10,6 +10,7 @@ import {
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { isUniqueViolation } from "../../lib/prisma-unique-violation";
+import { lockAndValidateProjectOwnership } from "../../lib/user-activity-assignment.js";
 import {
   AdminGroupProductConflictError,
   type ProductGroupOwnership,
@@ -17,7 +18,7 @@ import {
 
 // Name the current owner so the admin can resolve the conflict explicitly.
 async function throwProductOwnershipConflict(
-  prisma: PrismaService,
+  prisma: Pick<PrismaService, "reportingGroup">,
   groupId: string,
 ): Promise<never> {
   const currentGroup = await prisma.reportingGroup.findUnique({
@@ -42,44 +43,54 @@ export async function attachProductToGroup(
   prisma: PrismaService,
   input: GroupProductEdgeInput,
 ): Promise<GroupProduct> {
-  const existing = await prisma.groupProduct.findUnique({
-    where: { productId: input.productId },
+  return prisma.$transaction(async (tx) => {
+    const graph = await lockAndValidateProjectOwnership(tx, {
+      projectId: input.productId,
+      desiredLeadId: (
+        await tx.project.findUniqueOrThrow({
+          where: { id: input.productId },
+          select: { leadId: true },
+        })
+      ).leadId,
+      expectedGroupId: input.groupId,
+      requireDesiredLeadCurrent: true,
+    });
+    if (!graph.project) {
+      throw new AdminGroupProductConflictError(
+        `Project ${input.productId} was not found. Refresh and retry.`,
+      );
+    }
+    const existing = graph.ownership;
+    if (existing?.groupId === input.groupId) {
+      return groupProductSchema.parse(existing);
+    }
+    if (existing) {
+      return throwProductOwnershipConflict(tx, existing.groupId);
+    }
+    try {
+      const row = await tx.groupProduct.create({
+        data: { groupId: input.groupId, productId: input.productId },
+      });
+      return groupProductSchema.parse(row);
+    } catch (error) {
+      if (
+        !isUniqueViolation(error, {
+          index: "GroupProduct_productId_key",
+          columns: ["productId"],
+        })
+      )
+        throw error;
+      const winner = await tx.groupProduct.findUnique({
+        where: { productId: input.productId },
+      });
+      if (winner?.groupId === input.groupId)
+        return groupProductSchema.parse(winner);
+      if (winner) return throwProductOwnershipConflict(tx, winner.groupId);
+      throw new AdminGroupProductConflictError(
+        "Product ownership changed concurrently. Refresh and try again.",
+      );
+    }
   });
-  if (existing?.groupId === input.groupId) {
-    return groupProductSchema.parse(existing);
-  }
-  if (existing) {
-    return throwProductOwnershipConflict(prisma, existing.groupId);
-  }
-
-  try {
-    const row = await prisma.groupProduct.create({
-      data: { groupId: input.groupId, productId: input.productId },
-    });
-    return groupProductSchema.parse(row);
-  } catch (error) {
-    if (
-      !isUniqueViolation(error, {
-        index: "GroupProduct_productId_key",
-        columns: ["productId"],
-      })
-    ) {
-      throw error;
-    }
-
-    const winner = await prisma.groupProduct.findUnique({
-      where: { productId: input.productId },
-    });
-    if (winner?.groupId === input.groupId) {
-      return groupProductSchema.parse(winner);
-    }
-    if (winner) {
-      return throwProductOwnershipConflict(prisma, winner.groupId);
-    }
-    throw new AdminGroupProductConflictError(
-      "Product ownership changed concurrently. Refresh and try again.",
-    );
-  }
 }
 
 // deleteMany so an already-absent edge is a no-op (UI double-click / race safe).

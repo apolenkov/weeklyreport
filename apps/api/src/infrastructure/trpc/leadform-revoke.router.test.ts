@@ -2,10 +2,10 @@ import type { Role } from "@customreport/shared";
 import { TRPCError } from "@trpc/server";
 import { describe, expect, it, vi } from "vitest";
 
-import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
 import { LeadFormService } from "../../modules/report-sections/index.js";
 import { LeadFormPrismaRepository } from "../../modules/report-sections/index.js";
+import { createNullAuditLogger } from "../../test-utils/audit-logger.js";
 import { createAppRouter } from "./trpc.router.js";
 
 // Revoke procedures are headProcedures whose object authz binds to the
@@ -39,7 +39,32 @@ function buildCaller(
     updateMany: vi.fn().mockResolvedValue({ count: 2 }),
     ...prismaOverrides,
   };
-  const prisma = { reportSection };
+  const prisma = {
+    reportSection,
+    $transaction: vi.fn((cb: (tx: unknown) => unknown) =>
+      Promise.resolve(
+        cb({
+          $queryRaw: vi.fn(() =>
+            Promise.resolve([
+              {
+                id: REPORT_ID,
+                status: "draft",
+                periodState: "open",
+                periodStatus: "open",
+                archived: false,
+                autoPublished: false,
+                autoArchived: false,
+                publishedAt: null,
+                publishedById: null,
+                reopenedAt: null,
+              },
+            ]),
+          ),
+          reportSection,
+        }),
+      ),
+    ),
+  };
   const repo = new LeadFormPrismaRepository(prisma as never);
   const leadFormService = new LeadFormService(repo);
   const deps = { leadFormService } as unknown as Parameters<

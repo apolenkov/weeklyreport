@@ -2,7 +2,36 @@ import { z } from "zod";
 
 import { reminderPolicySchema } from "../../admin/reminder-policy.schema";
 import { roleSchema } from "../auth/auth";
-import { reportPeriodSchema } from "../period/period.schema";
+import {
+  MAX_WEEK_LABEL_LENGTH,
+  reportPeriodSchema,
+} from "../period/period.schema";
+import { publishedReportSnapshotSchema } from "../report/report.schema";
+import { validateAdminSnapshotIntegrity } from "./admin-snapshot-integrity";
+import {
+  adminSnapshotReminderExecutionSchema,
+  adminSnapshotReminderRuleSchema,
+} from "./reminder-recovery.schema";
+
+export type {
+  AdminReminderExecution,
+  AdminReminderRule,
+  AdminSnapshotReminderExecution,
+  AdminSnapshotReminderRule,
+  ReminderQueuePayload,
+} from "./reminder-recovery.schema";
+export {
+  adminReminderExecutionSchema,
+  adminReminderExecutionStatusSchema,
+  adminReminderRuleKindSchema,
+  adminReminderRuleSchema,
+  adminReminderRuleStatusSchema,
+  adminSnapshotReminderExecutionSchema,
+  adminSnapshotReminderRuleSchema,
+  reminderDeadlinePayloadSchema,
+  reminderEscalationPayloadSchema,
+  reminderQueuePayloadSchema,
+} from "./reminder-recovery.schema";
 
 const MAX_REPORTING_GROUP_NAME_LENGTH = 200;
 const MAX_REPORTING_GROUP_DESCRIPTION_LENGTH = 500;
@@ -86,81 +115,114 @@ export const groupProductEdgeInputSchema = z
   })
   .readonly();
 
-// 'escalation' fires the T+2h heads-only digest. Bypasses
-// User.notificationOptOut — heads must always be notified.
-/** Reminder rule categories stored by the admin scheduler. */
-export const adminReminderRuleKindSchema = z.enum([
-  "deadline",
-  "follow_up",
-  "escalation",
-]);
-/** Administrative lifecycle of a generated reminder rule. */
-export const adminReminderRuleStatusSchema = z.enum(["active", "paused"]);
+/**
+ * Admin restore period row, including the immutable document for published
+ * lifecycles. This deliberately stays separate from the UI's ReportPeriod:
+ * admin recovery must carry publication data, while editable period surfaces
+ * must not accidentally depend on it.
+ */
+const adminReportPeriodLifecycleSnapshotSchema = z.object({
+  publishedSnapshot: publishedReportSnapshotSchema,
+});
+const adminReportPeriodRecoveryFieldsSchema = z.object({
+  weekLabel: z.string().max(MAX_WEEK_LABEL_LENGTH).nullable(),
+});
 
-/** Validates one generated reminder rule and its optional owning policy. */
-export const adminReminderRuleSchema = z
-  .object({
-    id: z.uuid(),
-    reportId: z.uuid().nullable(),
-    // Null means the rule is not owned by a reminder policy.
-    policyId: z.uuid().nullable().default(null),
-    kind: adminReminderRuleKindSchema,
-    fireAt: z.coerce.date(),
-    timezone: z.string().min(1),
-    status: adminReminderRuleStatusSchema,
-    version: z.number().int().min(1),
+const adminReportPeriodDraftSchema = reportPeriodSchema
+  .and(
+    adminReportPeriodRecoveryFieldsSchema.extend({
+      status: z.literal("draft"),
+      publishedSnapshot: z.null(),
+    }),
+  )
+  .readonly();
+
+const adminReportPeriodPublishedSchema = reportPeriodSchema
+  .and(
+    adminReportPeriodLifecycleSnapshotSchema
+      .extend(adminReportPeriodRecoveryFieldsSchema.shape)
+      .extend({ status: z.literal("published") }),
+  )
+  .superRefine((period, context) => {
+    const { id, publishedSnapshot } = period;
+    const addSnapshotIssue = (path: string, message: string): void => {
+      context.addIssue({
+        code: "custom",
+        path: ["publishedSnapshot", path],
+        message,
+      });
+    };
+    const sameDate = (left: Date | null, right: Date | null): boolean =>
+      left?.getTime() === right?.getTime();
+
+    const identityIssues: readonly [string, boolean, string][] = [
+      [
+        "reportId",
+        publishedSnapshot.reportId !== id,
+        "Published snapshot must belong to the restored report.",
+      ],
+      [
+        "publishedAt",
+        !sameDate(publishedSnapshot.publishedAt, period.publishedAt),
+        "Published snapshot timestamp must match the restored report.",
+      ],
+      [
+        "publishedById",
+        publishedSnapshot.publishedById !== period.publishedById,
+        "Published snapshot publisher must match the restored report.",
+      ],
+    ];
+    for (const [path, invalid, message] of identityIssues) {
+      if (invalid) addSnapshotIssue(path, message);
+    }
+
+    // A reopened report may have a newly edited envelope while retaining its
+    // prior immutable publication. Closed publications must match exactly.
+    if (period.periodStatus === "published") {
+      const closedEnvelopeIssues: readonly [string, boolean, string][] = [
+        [
+          "periodStart",
+          !sameDate(publishedSnapshot.periodStart, period.periodStart),
+          "Published snapshot start must match the closed report.",
+        ],
+        [
+          "periodEnd",
+          !sameDate(publishedSnapshot.periodEnd, period.periodEnd),
+          "Published snapshot end must match the closed report.",
+        ],
+        [
+          "deadline",
+          !sameDate(publishedSnapshot.deadline, period.deadline),
+          "Published snapshot deadline must match the closed report.",
+        ],
+      ];
+      for (const [path, invalid, message] of closedEnvelopeIssues) {
+        if (invalid) addSnapshotIssue(path, message);
+      }
+    }
   })
   .readonly();
 
-/** Delivery lifecycle recorded for one reminder execution. */
-export const adminReminderExecutionStatusSchema = z.enum([
-  "queued",
-  "sending",
-  "sent",
-  "failed",
+/** Validates the lifecycle and immutable publication payload used by recovery. */
+export const adminReportPeriodSchema = z.union([
+  adminReportPeriodDraftSchema,
+  adminReportPeriodPublishedSchema,
 ]);
-
-/** Validates one scheduled reminder delivery attempt. */
-export const adminReminderExecutionSchema = z
-  .object({
-    id: z.uuid(),
-    ruleId: z.uuid(),
-    reportId: z.uuid().nullable(),
-    dedupeKey: z.string().min(1),
-    status: adminReminderExecutionStatusSchema,
-    scheduledFor: z.coerce.date(),
-    sentAt: z.coerce.date().nullable(),
-    recipientEmail: z.string(),
-    errorMessage: z.string().nullable(),
-  })
-  .readonly();
 
 /** Validates the complete admin configuration snapshot. */
 export const adminSnapshotSchema = z
   .object({
     users: z.array(adminUserSchema).readonly(),
-    groups: z.array(reportingGroupSchema).readonly().default([]),
+    groups: z.array(reportingGroupSchema).readonly(),
     projects: z.array(adminProjectSchema).readonly(),
-    periods: z.array(reportPeriodSchema).readonly(),
-    reminderRules: z.array(adminReminderRuleSchema).readonly(),
+    periods: z.array(adminReportPeriodSchema).readonly(),
+    reminderRules: z.array(adminSnapshotReminderRuleSchema).readonly(),
     reminderExecutions: z
-      .array(adminReminderExecutionSchema)
-      .readonly()
-      .default([]),
-    policies: z.array(reminderPolicySchema.readonly()).readonly().default([]),
+      .array(adminSnapshotReminderExecutionSchema)
+      .readonly(),
+    policies: z.array(reminderPolicySchema.readonly()).readonly(),
   })
-  .superRefine((snapshot, ctx) => {
-    snapshot.users.forEach((user, index) => {
-      if (user.role !== "viewer" && user.reportingGroupId == null) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["users", index, "reportingGroupId"],
-          message:
-            "Snapshot users with lead, head, or admin roles require reportingGroupId.",
-        });
-      }
-    });
-  })
+  .superRefine(validateAdminSnapshotIntegrity)
   .readonly();
 
 /** Metadata for one failed queue job; processor payloads stay server-private. */
@@ -196,17 +258,11 @@ export type AdminProject = z.infer<typeof adminProjectSchema>;
 export type GroupProduct = z.infer<typeof groupProductSchema>;
 /** Command that adds or removes one group-product relationship. */
 export type GroupProductEdgeInput = z.infer<typeof groupProductEdgeInputSchema>;
-/** Scheduler rule with lifecycle state and optional owning policy. */
-export type AdminReminderRule = z.infer<typeof adminReminderRuleSchema>;
-/** One reminder delivery attempt and its observable outcome. */
-export type AdminReminderExecution = z.infer<
-  typeof adminReminderExecutionSchema
->;
+/** Lifecycle-complete period row used by admin snapshot export and restore. */
+export type AdminReportPeriod = z.infer<typeof adminReportPeriodSchema>;
 /** Immutable export of users, groups, products, periods, reminders, and policies. */
 export type AdminSnapshot = z.infer<typeof adminSnapshotSchema>;
 /** Failure metadata exposed without server-private processor payloads. */
 export type FailedJob = z.infer<typeof failedJobSchema>;
 /** Offset page of failed jobs with a nullable continuation cursor. */
 export type FailedJobList = z.infer<typeof failedJobListSchema>;
-/** Queue name admitted by the admin failed-job surface. */
-export type QueueName = z.infer<typeof queueNameSchema>;

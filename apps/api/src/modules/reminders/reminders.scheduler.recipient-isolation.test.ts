@@ -23,12 +23,17 @@ describe("RemindersScheduler — per-recipient isolation", () => {
     };
     const attempted: string[] = [];
     const serviceStub = {
-      requestReminderExecution: vi.fn((_ruleId: string, email: string) => {
-        attempted.push(email);
-        return email === "boom@test.local"
-          ? Promise.reject(new Error("dispatch exploded"))
-          : Promise.resolve({ id: email });
-      }),
+      requestReminderExecutionWithOutcome: vi.fn(
+        (_ruleId: string, email: string) => {
+          attempted.push(email);
+          return email === "boom@test.local"
+            ? Promise.reject(new Error("dispatch exploded"))
+            : Promise.resolve({
+                execution: { id: email },
+                outcome: "created" as const,
+              });
+        },
+      ),
     };
     const scheduler = new RemindersScheduler(
       serviceStub as unknown as RemindersService,

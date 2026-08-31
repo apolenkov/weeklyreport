@@ -39,8 +39,7 @@ export function parseDeadlineTime(value: string): DeadlineTime {
   };
 }
 
-// Exported for tests only.
-export function workingDaySet(wd: WorkingDays): ReadonlySet<number> {
+function workingDaySet(wd: WorkingDays): ReadonlySet<number> {
   switch (wd) {
     case "mon-fri":
       return new Set([MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY]);
@@ -59,24 +58,7 @@ export function workingDaySet(wd: WorkingDays): ReadonlySet<number> {
   }
 }
 
-// Wall-clock day in tz matters — not the UTC calendar day of the Date.
-export function isBusinessDay(
-  date: Date,
-  wd: WorkingDays,
-  tz: string,
-): boolean {
-  const dt = DateTime.fromJSDate(date).setZone(tz);
-  if (!dt.isValid) {
-    throw new Error(`business-date: invalid timezone "${tz}"`);
-  }
-  return workingDaySet(wd).has(dt.weekday);
-}
-
-export function nextBusinessDay(date: Date, wd: WorkingDays, tz: string): Date {
-  return addBusinessDays(date, 1, wd, tz);
-}
-
-// n=0 is as-is (no snap); use nextBusinessDay to land on a business day.
+// n=0 is as-is (no snap).
 // n≠0 walks strictly forward/back by |n| business days.
 export function addBusinessDays(
   date: Date,

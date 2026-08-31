@@ -1,4 +1,5 @@
 import {
+  AUTH_COOKIE_NAME,
   DEFAULT_REPORTING_GROUP,
   type UserSession,
 } from "@customreport/shared";
@@ -19,11 +20,11 @@ import {
   readRequestCookie,
   readRequestHeader,
 } from "../../lib/request-boundary.js";
-import { resolveSessionCookieName } from "../../lib/session-cookie.js";
 import { SessionRevocationService } from "../../modules/admin/index.js";
 import { isUserAccessBarred } from "../../modules/auth/index.js";
 import { createAuthController } from "../../modules/auth/index.js";
 import { verifyPdfExportToken } from "../../modules/pdf-export/index.js";
+import type { EnvConfig } from "../config/env.schema.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { hydrateSession } from "./trpc.session-hydration.js";
 
@@ -104,6 +105,8 @@ export interface TrpcContext {
   isPdfExport: boolean;
   // JWT reportId claim; null when isPdfExport is false.
   pdfReportId: string | null;
+  // JWT jobId claim; null when isPdfExport is false.
+  pdfJobId?: string | null;
 }
 
 function readRequestId(header: unknown): string {
@@ -122,15 +125,22 @@ function humanContext(
   deps: RequestScopedDeps,
   session: UserSession | null,
 ): TrpcContext {
-  return { ...deps, session, isPdfExport: false, pdfReportId: null };
+  return {
+    ...deps,
+    session,
+    isPdfExport: false,
+    pdfReportId: null,
+    pdfJobId: null,
+  };
 }
 
 function pdfExportContext(
   deps: RequestScopedDeps,
   session: UserSession,
   pdfReportId: string,
+  pdfJobId: string,
 ): TrpcContext {
-  return { ...deps, session, isPdfExport: true, pdfReportId };
+  return { ...deps, session, isPdfExport: true, pdfReportId, pdfJobId };
 }
 
 // Only a token that fails PDF verification falls through; a rejected session
@@ -138,9 +148,10 @@ function pdfExportContext(
 // propagate to the 500 path, not degrade an authenticated requester to null.
 function parsePdfExportClaims(
   token: string,
+  pdfExportJwtSecret: string | undefined,
 ): ReturnType<typeof verifyPdfExportToken> | null {
   try {
-    return verifyPdfExportToken(token);
+    return verifyPdfExportToken(token, pdfExportJwtSecret);
   } catch {
     return null;
   }
@@ -155,6 +166,7 @@ async function resolveTokenContext(
     HumanSessionDeps,
     "verifySessionToken" | "sessionRevocation"
   >,
+  pdfExportJwtSecret: string | undefined,
 ): Promise<TrpcContext | null> {
   const humanSession = await resolveHumanSession(token, {
     ...sessionDeps,
@@ -164,7 +176,7 @@ async function resolveTokenContext(
 
   // PDF worker: JWT signed with PDF_EXPORT_JWT_SECRET (≠ session secret).
   // Rebuilds requester session; pdfExportGuard still enforces allowlist.
-  const pdfClaims = parsePdfExportClaims(token);
+  const pdfClaims = parsePdfExportClaims(token, pdfExportJwtSecret);
   if (!pdfClaims) {
     return null;
   }
@@ -175,24 +187,35 @@ async function resolveTokenContext(
     sessionDeps.sessionRevocation,
   );
   return pdfSession
-    ? pdfExportContext(deps, pdfSession, pdfClaims.reportId)
+    ? pdfExportContext(deps, pdfSession, pdfClaims.reportId, pdfClaims.jobId)
     : null;
 }
 
 // Dev fallback only when non-prod AND a dev-auth flag is set.
 // Boot fence (dev-auth-fence.ts) doubles this under NODE_ENV=production.
-function isDevAuthEnabled(env: NodeJS.ProcessEnv): boolean {
+function isDevAuthEnabled(
+  env: Pick<
+    EnvConfig,
+    "NODE_ENV" | "AUTH_DEV_MODE" | "AUTH_DEV_MODE_ALLOW_TEST"
+  >,
+): boolean {
   if (env.NODE_ENV === "production") return false;
-  return (
-    env.AUTH_DEV_MODE === "true" || env.AUTH_DEV_MODE_ALLOW_TEST === "true"
-  );
+  return env.AUTH_DEV_MODE || env.AUTH_DEV_MODE_ALLOW_TEST === "true";
 }
 
 export function createContextFactory(
   _app: INestApplication,
   logger: AppLogger,
+  env: Pick<
+    EnvConfig,
+    | "NODE_ENV"
+    | "AUTH_DEV_MODE"
+    | "AUTH_DEV_MODE_ALLOW_TEST"
+    | "AUTH_JWT_SECRET"
+    | "PDF_EXPORT_JWT_SECRET"
+  >,
 ) {
-  const authController = createAuthController(process.env);
+  const authController = createAuthController(env);
   // Resolve PrismaService once (not per request) from the NestJS DI container.
   const prisma = _app.get(PrismaService);
   const auditLogger = createAuditLogger(logger);
@@ -206,21 +229,24 @@ export function createContextFactory(
       auditLogger,
       ip: req.ip ?? UNKNOWN_CLIENT_IP,
     };
-    // Same resolved name as set/clear paths (AUTH_JWT_COOKIE_NAME aware).
-    const token = readRequestCookie(
-      req,
-      resolveSessionCookieName(process.env.AUTH_JWT_COOKIE_NAME),
-    );
+    // Keep request cookie lookup aligned with the API set/clear paths.
+    const token = readRequestCookie(req, AUTH_COOKIE_NAME);
 
     if (token) {
-      const tokenContext = await resolveTokenContext(token, deps, {
-        verifySessionToken: (value) => authController.verifySessionToken(value),
-        sessionRevocation,
-      });
+      const tokenContext = await resolveTokenContext(
+        token,
+        deps,
+        {
+          verifySessionToken: (value) =>
+            authController.verifySessionToken(value),
+          sessionRevocation,
+        },
+        env.PDF_EXPORT_JWT_SECRET,
+      );
       if (tokenContext) return tokenContext;
     }
 
-    if (isDevAuthEnabled(process.env)) {
+    if (isDevAuthEnabled(env)) {
       // Spread keeps DEV_SESSION as a caller-owned baseline (hydrate returns new).
       return humanContext(
         deps,

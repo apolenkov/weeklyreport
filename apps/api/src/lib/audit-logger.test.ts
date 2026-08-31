@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
+import { createNullAuditLogger } from "../test-utils/audit-logger.js";
 import { expectDefined } from "../test-utils/expect-defined.js";
-import { createAuditLogger, createNullAuditLogger } from "./audit-logger.js";
+import { createAuditLogger } from "./audit-logger.js";
 import type { AppLogger } from "./logger.js";
 
 interface Captured {
@@ -117,7 +118,7 @@ describe("createAuditLogger", () => {
   });
 
   // SIEM rules distinguish "no session" (null) from a real role string.
-  it('anonymous logout emits role: null (not the legacy "unknown" literal)', () => {
+  it("anonymous logout emits the canonical null role", () => {
     const { logger, entries } = makeCapturingLogger();
     const audit = createAuditLogger(logger);
 
