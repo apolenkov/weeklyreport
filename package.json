@@ -16,7 +16,7 @@
     "pg": "^8.23.0"
   },
   "scripts": {
-    "dev": "turbo run dev --parallel",
+    "dev": "turbo run dev",
     "dev:watch": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up --watch",
     "build": "turbo run build",
     "lint": "pnpm lint:eslint && pnpm lint:stylelint && pnpm lint:runtime-node && pnpm lint:cleanliness",
