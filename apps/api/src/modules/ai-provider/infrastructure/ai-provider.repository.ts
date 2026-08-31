@@ -26,7 +26,6 @@ import {
   getProviderTestExecution,
   type ProviderExecutionRequest,
   startProviderTestExecution,
-  updateProviderTestExecutionIdentity,
 } from "./ai-provider.repository.executions.js";
 import {
   aiProviderControlInclude,
@@ -227,19 +226,6 @@ export class AiProviderConfigurationRepository {
 
   async startExecution(id: string, executionAttempt = 1): Promise<boolean> {
     return startProviderTestExecution(this.prisma, id, executionAttempt);
-  }
-
-  async updateExecutionIdentity(
-    id: string,
-    identity: string,
-    revisionId: string,
-  ): Promise<boolean> {
-    return updateProviderTestExecutionIdentity(
-      this.prisma,
-      id,
-      identity,
-      revisionId,
-    );
   }
 
   async completeExecution(

@@ -5,7 +5,6 @@ import {
   completeProviderTestExecution,
   createOrReuseProviderExecution,
   startProviderTestExecution,
-  updateProviderTestExecutionIdentity,
 } from "./ai-provider.repository.executions.js";
 
 describe("provider test execution identity", () => {
@@ -111,33 +110,6 @@ describe("provider test execution identity", () => {
       checks: [],
     });
     expect(completionInput?.data.completedAt).toBeInstanceOf(Date);
-  });
-
-  it("preserves the retry suffix when the measured composite identity changes", async () => {
-    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
-    const prisma = {
-      aiProviderTestExecution: {
-        findUnique: vi.fn().mockResolvedValue({
-          identity: "old-composite:revision:revision-failed:retry:1",
-        }),
-        updateMany,
-      },
-    } as unknown as PrismaService;
-
-    await expect(
-      updateProviderTestExecutionIdentity(
-        prisma,
-        "execution-retry",
-        "measured-composite",
-        "revision-failed",
-      ),
-    ).resolves.toBe(true);
-    expect(updateMany).toHaveBeenCalledWith({
-      where: { id: "execution-retry" },
-      data: {
-        identity: "measured-composite:revision:revision-failed:retry:1",
-      },
-    });
   });
 
   it("creates a retry for a completed incompatible execution", async () => {
