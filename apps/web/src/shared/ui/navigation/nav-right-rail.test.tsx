@@ -2,7 +2,9 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render as testingRender, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../../../lib/web-env", () => ({
@@ -10,6 +12,15 @@ vi.mock("../../../lib/web-env", () => ({
 }));
 
 import { NavRightRail } from "./nav-right-rail";
+
+function render(element: ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return testingRender(
+    <QueryClientProvider client={queryClient}>{element}</QueryClientProvider>,
+  );
+}
 
 const RESPONSIVE_GEOMETRY = [
   "h-[var(--toolbar-control-h)]",
