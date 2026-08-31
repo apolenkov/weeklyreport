@@ -4,10 +4,10 @@ import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig, mergeConfig } from "vitest/config";
 
-import baseConfig from "../../vitest.base.config";
+import baseConfig from "../../vitest.base.config.ts";
 
 const require = createRequire(
-  path.resolve(__dirname, "../../packages/shared/package.json"),
+  path.resolve(import.meta.dirname, "../../packages/shared/package.json"),
 );
 
 const webConfig = defineConfig({
@@ -41,15 +41,18 @@ const webConfig = defineConfig({
   resolve: {
     alias: {
       "@customreport/shared": path.resolve(
-        __dirname,
+        import.meta.dirname,
         "../../packages/shared/src",
       ),
-      "@customreport/api": path.resolve(__dirname, "../../apps/api/src"),
+      "@customreport/api": path.resolve(
+        import.meta.dirname,
+        "../../apps/api/src",
+      ),
       zod: path.dirname(require.resolve("zod/package.json")),
       // Replace the `server-only` guard with an empty stub so RSC helper
       // modules can be imported in jsdom tests without throwing.
       "server-only": path.resolve(
-        __dirname,
+        import.meta.dirname,
         "src/test-utils/server-only-mock.ts",
       ),
     },

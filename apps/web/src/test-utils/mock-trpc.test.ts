@@ -73,8 +73,8 @@ describe("createMockTRPC — invalidation is non-vacuous", () => {
       .queryOptions as () => QueryOpts;
     const settingsOpts = settingsQueryOptions();
 
-    await qc.fetchQuery(orgOpts);
-    await qc.fetchQuery(settingsOpts);
+    await qc.query(orgOpts);
+    await qc.query(settingsOpts);
 
     expect(qc.getQueryState(orgOpts.queryKey)?.isInvalidated).toBe(false);
     expect(qc.getQueryState(settingsOpts.queryKey)?.isInvalidated).toBe(false);

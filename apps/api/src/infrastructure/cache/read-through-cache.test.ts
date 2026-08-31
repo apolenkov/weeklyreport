@@ -50,7 +50,7 @@ vi.mock("ioredis", () => {
       return Promise.resolve("OK");
     }
   }
-  return { default: FakeRedis };
+  return { Redis: FakeRedis };
 });
 
 const CONNECTION: Pick<EnvConfig, "REDIS_DB" | "REDIS_HOST" | "REDIS_PORT"> = {

@@ -2,7 +2,7 @@ import type { OnModuleDestroy } from "@nestjs/common";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import type { HealthIndicatorResult } from "@nestjs/terminus";
 import { HealthIndicatorService } from "@nestjs/terminus";
-import Redis from "ioredis";
+import { Redis } from "ioredis";
 
 import { errorMessage } from "../../lib/error-message.js";
 import { ENV_CONFIG } from "../config/config.module";

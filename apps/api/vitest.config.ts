@@ -1,6 +1,6 @@
 import { defineConfig, mergeConfig } from "vitest/config";
 
-import baseConfig from "../../vitest.base.config";
+import baseConfig from "../../vitest.base.config.ts";
 
 // Thresholds live here so CI needs no command-line bloat on the test script.
 export default mergeConfig(

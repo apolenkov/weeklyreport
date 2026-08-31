@@ -1,6 +1,6 @@
 import type { OnModuleDestroy } from "@nestjs/common";
 import { Inject, Injectable } from "@nestjs/common";
-import Redis from "ioredis";
+import { Redis } from "ioredis";
 
 import type { EnvConfig } from "../../infrastructure/config/env.schema";
 import { buildFailOpenRedisConnectionOptions } from "../../infrastructure/config/redis-connection";

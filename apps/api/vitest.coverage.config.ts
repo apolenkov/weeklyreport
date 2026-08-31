@@ -1,7 +1,7 @@
 import { config } from "dotenv";
 import { defineConfig, mergeConfig } from "vitest/config";
 
-import baseConfig from "../../vitest.base.config";
+import baseConfig from "../../vitest.base.config.ts";
 
 // Match the dedicated integration runner locally while preserving explicit CI
 // environment values (`dotenv` does not override variables by default).

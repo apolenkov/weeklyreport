@@ -179,9 +179,10 @@ const assertNativeWebRootEnvironment = (
 ): void => {
   assert.equal(
     scripts.dev,
-    "node scripts/run-next.ts dev --webpack --hostname 127.0.0.1",
+    "node scripts/run-next.ts dev --webpack --hostname 127.0.0.1 --port 3000",
   );
   assert.equal(scripts.build, "node scripts/run-next.ts build --webpack");
+  assert.match(environmentExample, /^PORT=3002$/mu);
   assert.match(environmentExample, /^API_URL=http:\/\/localhost:3002$/mu);
 };
 
@@ -215,6 +216,17 @@ void test("native Web root environment preserves explicit shell precedence", () 
       FILE_ONLY: "yes",
       SHELL_ONLY: "yes",
     },
+  );
+});
+
+void test("native Web uses the standard NODE_ENV for each Next command", () => {
+  assert.equal(
+    mergeNextEnvironment("NODE_ENV=development\n", {}, "build").NODE_ENV,
+    "production",
+  );
+  assert.equal(
+    mergeNextEnvironment("NODE_ENV=production\n", {}, "dev").NODE_ENV,
+    "development",
   );
 });
 

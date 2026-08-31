@@ -6,9 +6,15 @@ import { parseEnv } from "node:util";
 export const mergeNextEnvironment = (
   environmentSource: string | undefined,
   inherited: NodeJS.ProcessEnv,
+  command?: string,
 ): NodeJS.ProcessEnv => ({
   ...(environmentSource === undefined ? {} : parseEnv(environmentSource)),
   ...inherited,
+  ...(command === "build"
+    ? { NODE_ENV: "production" }
+    : command === "dev"
+      ? { NODE_ENV: "development" }
+      : {}),
 });
 
 const main = (): void => {
@@ -26,7 +32,11 @@ const main = (): void => {
     ],
     {
       cwd: webRoot,
-      env: mergeNextEnvironment(environmentSource, process.env),
+      env: mergeNextEnvironment(
+        environmentSource,
+        process.env,
+        process.argv[2],
+      ),
       stdio: "inherit",
     },
   );

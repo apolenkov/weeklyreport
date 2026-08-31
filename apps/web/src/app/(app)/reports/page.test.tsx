@@ -201,7 +201,6 @@ function mockQueries() {
     fetchNextPage: vi.fn(),
     fetchPreviousPage: vi.fn(),
     refetch: vi.fn(),
-    promise: Promise.resolve(data),
   } satisfies ReturnType<typeof useInfiniteQuery>;
   vi.mocked(useInfiniteQuery).mockReturnValue(result);
   vi.mocked(useQuery).mockImplementation((options: unknown) => {

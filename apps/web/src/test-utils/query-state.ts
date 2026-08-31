@@ -67,7 +67,6 @@ export function makeQueryState<TData, TError = Error>(
       isSuccess: false,
       refetch,
       status,
-      promise: new Promise<TData>(() => undefined),
     };
   }
 
@@ -89,7 +88,6 @@ export function makeQueryState<TData, TError = Error>(
         isSuccess: false,
         refetch,
         status: "error",
-        promise: new Promise<TData>(() => undefined),
       };
     }
     return {
@@ -107,7 +105,6 @@ export function makeQueryState<TData, TError = Error>(
       isSuccess: false,
       refetch,
       status: "error",
-      promise: new Promise<TData>(() => undefined),
     };
   }
 
@@ -126,6 +123,5 @@ export function makeQueryState<TData, TError = Error>(
     isSuccess: true,
     refetch,
     status: "success",
-    promise: Promise.resolve(input.data),
   };
 }

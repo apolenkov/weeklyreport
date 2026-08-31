@@ -7,7 +7,7 @@ import rateLimit, {
   type Options,
   type Store,
 } from "express-rate-limit";
-import Redis from "ioredis";
+import { Redis } from "ioredis";
 import { type RedisReply, RedisStore } from "rate-limit-redis";
 
 import { UNKNOWN_CLIENT_IP } from "../../lib/actor-sentinels";

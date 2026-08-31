@@ -2,7 +2,7 @@ import { request } from "node:http";
 import type { AddressInfo } from "node:net";
 
 import express from "express";
-import Redis from "ioredis";
+import { Redis } from "ioredis";
 import { describe, expect, it, vi } from "vitest";
 
 import { type AppLogger, createNullLogger } from "../../lib/logger";

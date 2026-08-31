@@ -5,7 +5,7 @@ import type { AddressInfo } from "node:net";
 import { initTRPC } from "@trpc/server";
 import * as trpcExpress from "@trpc/server/adapters/express";
 import express from "express";
-import type Redis from "ioredis";
+import type { Redis } from "ioredis";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 

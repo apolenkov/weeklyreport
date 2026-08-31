@@ -1,5 +1,5 @@
 import { Logger } from "@nestjs/common";
-import Redis from "ioredis";
+import { Redis } from "ioredis";
 
 import type { EnvConfig } from "../config/env.schema";
 import { buildFailOpenRedisConnectionOptions } from "../config/redis-connection";

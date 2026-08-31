@@ -4,18 +4,18 @@ packages:
 
 catalog:
   "luxon": "^3.7.2"
-  "@types/luxon": "^3.7.2"
+  "@types/luxon": "^3.7.5"
   "@types/node": "24.13.3"
-  "@types/react": "^19.2.17"
-  "tsx": "^4.23.1"
+  "@types/react": "^19.2.18"
+  "tsx": "^4.23.13"
   "@trpc/server": "^11.18.0"
   "react": "^19.2.8"
   "superjson": "^2.2.6"
-  "zod": "^4.4.3"
-  "lucide-react": "^1.27.0"
+  "zod": "^4.5.4"
+  "lucide-react": "^1.37.0"
   "react-dom": "^19.2.8"
   "recharts": "^3.10.1"
-  "sonner": "^2.0.7"
+  "sonner": "^2.0.8"
 
 # pnpm 11+ build script allowlist (native / postinstall tooling).
 allowBuilds:

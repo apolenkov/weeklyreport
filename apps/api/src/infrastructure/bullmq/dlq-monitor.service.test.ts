@@ -27,6 +27,10 @@ const STUB_REGISTRY: QueueRegistryLike = {
     throw new Error("registry never read by these seam tests");
   },
 };
+const STUB_MEMORY_CLIENT = {
+  info: () => Promise.reject(new Error("memory client not used by this test")),
+  disconnect: vi.fn(),
+};
 
 // Seam onto the private, Redis-free logic so it can be tested without a live
 // queue connection.
@@ -43,6 +47,7 @@ function seam(): DlqTestSeam {
   return new DLQMonitorService(
     STUB_REGISTRY,
     STUB_ENV,
+    STUB_MEMORY_CLIENT,
   ) as unknown as DlqTestSeam;
 }
 
@@ -106,7 +111,11 @@ interface PollSeam {
 }
 
 function pollSeam(registry: QueueRegistryLike): PollSeam {
-  return new DLQMonitorService(registry, STUB_ENV) as unknown as PollSeam;
+  return new DLQMonitorService(
+    registry,
+    STUB_ENV,
+    STUB_MEMORY_CLIENT,
+  ) as unknown as PollSeam;
 }
 
 describe("DLQMonitorService.pollQueueMetrics", () => {
@@ -164,6 +173,7 @@ describe("DLQMonitorService.pollQueueMetrics", () => {
 // REDIS_MAXMEMORY_BYTES = 200mb; 80% of it is the warn boundary.
 const REDIS_CAP_BYTES = 209_715_200;
 const MEM_ENV = {
+  REDIS_DB: 15,
   REDIS_HOST: "localhost",
   REDIS_PORT: 6379,
   REDIS_MAXMEMORY_BYTES: REDIS_CAP_BYTES,
@@ -173,21 +183,26 @@ interface MemSeam {
   checkRedisMemory(): Promise<void>;
 }
 
-// Fake QueueRegistry whose shared connection reports the given used_memory via
-// an INFO reply shaped like the real Redis memory section.
-function registryReporting(usedMemory: number): QueueRegistryLike {
+// Fake dedicated Redis probe reports the given used_memory via an INFO reply
+// shaped like the real Redis memory section.
+function memoryClientReporting(usedMemory: number): {
+  readonly info: () => Promise<string>;
+  readonly disconnect: () => void;
+} {
   const info = vi
     .fn()
     .mockResolvedValue(
       `# Memory\r\nused_memory:${usedMemory}\r\nused_memory_rss:${usedMemory + 1}\r\n`,
     );
-  return {
-    get: () => ({ client: Promise.resolve({ info }) }) as unknown as Queue,
-  };
+  return { info, disconnect: vi.fn() };
 }
 
-function memSeam(registry: QueueRegistryLike): MemSeam {
-  return new DLQMonitorService(registry, MEM_ENV) as unknown as MemSeam;
+function memSeam(usedMemory: number): MemSeam {
+  return new DLQMonitorService(
+    STUB_REGISTRY,
+    MEM_ENV,
+    memoryClientReporting(usedMemory),
+  ) as unknown as MemSeam;
 }
 
 describe("DLQMonitorService.checkRedisMemory", () => {
@@ -206,7 +221,7 @@ describe("DLQMonitorService.checkRedisMemory", () => {
     const warn = vi.spyOn(Logger.prototype, "warn");
     const used = Math.floor(REDIS_CAP_BYTES * 0.5);
 
-    await memSeam(registryReporting(used)).checkRedisMemory();
+    await memSeam(used).checkRedisMemory();
 
     expect(set).toHaveBeenCalledExactlyOnceWith(used);
     expect(warn).not.toHaveBeenCalled();
@@ -217,7 +232,7 @@ describe("DLQMonitorService.checkRedisMemory", () => {
     const warn = vi.spyOn(Logger.prototype, "warn");
     const used = Math.floor(REDIS_CAP_BYTES * 0.85);
 
-    await memSeam(registryReporting(used)).checkRedisMemory();
+    await memSeam(used).checkRedisMemory();
 
     expect(set).toHaveBeenCalledExactlyOnceWith(used);
     expect(warn).toHaveBeenCalledOnce();
@@ -228,7 +243,7 @@ describe("DLQMonitorService.checkRedisMemory", () => {
     const warn = vi.spyOn(Logger.prototype, "warn");
     const used = REDIS_CAP_BYTES * 0.8;
 
-    await memSeam(registryReporting(used)).checkRedisMemory();
+    await memSeam(used).checkRedisMemory();
 
     expect(warn).toHaveBeenCalledOnce();
     expect(warn.mock.calls[0]?.[0]).toContain("[redis-mem]");

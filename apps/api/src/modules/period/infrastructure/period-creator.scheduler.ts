@@ -110,9 +110,8 @@ const FUTURE_PERIOD_EXISTS = "future-period-exists" as const;
 
 export const PERIOD_AUTO_CARRY_OVER = Symbol("PeriodAutoCarryOver");
 
-// `@Cron`, not a repeatable queue job: one write/day sits far below the
-// queue/retry/DLQ threshold, and `@nestjs/bullmq` 11 has a DiscoveryService DI
-// bug under NestJS 11 the existing processors work around with a raw `Worker`.
+// `@Cron`, not a repeatable queue job: one idempotent write per day does not
+// need queue retry, retention, or DLQ machinery.
 @Injectable()
 export class PeriodCreatorScheduler {
   private readonly logger = new Logger(PeriodCreatorScheduler.name);

@@ -515,18 +515,16 @@ describe("SdlcPipeline — co-lead blocked locked chip: initials, no counts", ()
   });
 
   it("locked chip is not editable (no status popover on click)", () => {
-    render(
+    const { getByRole } = render(
       <SdlcPipeline
         products={[PRODUCT_WITH_LOCKED_BLOCKED]}
         readOnly={false}
       />,
     );
     // The Testing chip is locked; clicking it must not open a status menu.
-    const lockedBtn = document.querySelector<HTMLButtonElement>(
-      'button[aria-label="Testing: blocked"]',
-    );
-    expect(lockedBtn).toBeInstanceOf(HTMLElement);
-    lockedBtn?.click();
+    const lockedBtn = getByRole("button", { name: "Testing: Blocked" });
+    expect(lockedBtn).toHaveAttribute("aria-disabled", "true");
+    lockedBtn.click();
     expect(document.querySelector('[role="menu"]')).toBeNull();
   });
 });
