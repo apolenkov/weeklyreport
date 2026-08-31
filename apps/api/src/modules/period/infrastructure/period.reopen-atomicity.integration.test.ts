@@ -73,9 +73,7 @@ describe("PeriodPrismaRepository reopen atomicity (integration)", () => {
   }
 
   beforeEach(async () => {
-    await prisma.reportSection.deleteMany();
-    await prisma.report.deleteMany();
-    await prisma.user.deleteMany();
+    await cleanDatabase();
     await createPublishedReport();
   });
 
