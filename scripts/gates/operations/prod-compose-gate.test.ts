@@ -372,9 +372,9 @@ void test("production builders carry the complete dist gate policy", () => {
 });
 
 void test("the migrator target contains only the canonical migration runtime", () => {
-  const start = apiDockerfile.indexOf(
-    "FROM node:24-bookworm@sha256:be23f54a88d34e8824c741b19b91064094f92c1c97b194144bfc8b50d67258e2 AS migrator",
-  );
+  const baseImage = /^FROM (node:\S+) AS base$/mu.exec(apiDockerfile)?.[1];
+  assert.ok(baseImage, "Dockerfile.api must define a pinned Node base image");
+  const start = apiDockerfile.indexOf(`FROM ${baseImage} AS migrator`);
   const end = apiDockerfile.indexOf("\n# Stage 6: Build", start);
   assert.notEqual(start, -1, "Dockerfile.api must define a migrator target");
   assert.notEqual(
@@ -621,10 +621,19 @@ void test("release labels do not invalidate heavyweight runner layers", () => {
   const apiRunner = apiDockerfile.slice(
     apiDockerfile.lastIndexOf("FROM ", apiDockerfile.indexOf(" AS runner")),
   );
-  assert.match(
-    apiRunner,
-    /FROM node:24-bookworm@sha256:[0-9a-f]{64} AS runner/,
-  );
+  for (const [path, dockerfile] of [
+    ["Dockerfile.api", apiDockerfile],
+    ["Dockerfile.web", webDockerfile],
+  ] as const) {
+    const baseImage = /^FROM (node:\S+) AS base$/mu.exec(dockerfile)?.[1];
+    const runnerImage = /^FROM (node:\S+) AS runner$/mu.exec(dockerfile)?.[1];
+    assert.ok(baseImage, `${path} must define a pinned Node base image`);
+    assert.equal(
+      runnerImage,
+      baseImage,
+      `${path} runner must use the same Node image as its base`,
+    );
+  }
   assert.doesNotMatch(apiRunner, /COPY[^\n]*(?:pnpm|turbo)/);
   assert.ok(
     apiRunner.indexOf("LABEL org.opencontainers.image.revision=") >

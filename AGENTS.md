@@ -24,7 +24,7 @@ publishes, and exports a unified report. pnpm + Turbo monorepo:
 
 ## Commands
 
-Use `pnpm` from the repo root (Node 24 LTS, `>=24.0.0 <25.0.0`). Never `npm`/Yarn.
+Use `pnpm` from the repo root (Node 26.8.1 Current, `>=26.0.0 <27.0.0`). Never `npm`/Yarn.
 
 ```bash
 pnpm dev                # run API and web from source

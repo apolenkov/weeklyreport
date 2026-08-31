@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Keep the Node and pnpm versions used by local gates, CI, and shipped images in
-// sync. Node 24 images install the repository's explicit pnpm version.
+// sync. Node 26 images install the repository's explicit pnpm version.
 //
 // Usage: node scripts/gates/environment/check-runtime-node-sync.ts
 // Exits 0 when every declaration agrees, 1 (naming each) when they drift.
@@ -37,9 +37,6 @@ const read = (file: string): string =>
   fs.readFileSync(path.join(repoRoot, file), "utf8");
 
 const ROOT_MANIFEST = "package.json";
-const SUPPORTED_NODE_MAJOR = "24";
-const SUPPORTED_NODE_ENGINE = ">=24.0.0 <25.0.0";
-
 // One declaration, because every manifest resolves `@types/node` through
 // `catalog:` — pnpm enforces the agreement at install time, so this guard only
 // has to check that the single catalogued major matches the runtime.
@@ -65,12 +62,21 @@ const readRootManifest = (): RootManifest =>
 const majorOf = (version: string): string | undefined =>
   /(\d+)/.exec(version)?.[1];
 
-// `FROM node:<major>-<variant>@sha256:… AS base`
-const imageNodeMajors = (): readonly Declaration[] =>
-  DOCKERFILES.map((file) => ({
-    source: `${file} base image`,
-    value: /FROM node:(\d+)-[a-z]+@sha256:[0-9a-f]{64}/.exec(read(file))?.[1],
-  }));
+const imageNodeVersions = (): readonly Declaration[] =>
+  DOCKERFILES.flatMap((file) => {
+    const matches = [
+      ...read(file).matchAll(
+        /^FROM node:([0-9]+\.[0-9]+\.[0-9]+)-[a-z0-9.-]+@sha256:[0-9a-f]{64} AS ([a-z-]+)$/gmu,
+      ),
+    ];
+
+    return matches.length === 0
+      ? [{ source: `${file} Node image`, value: undefined }]
+      : matches.map((match) => ({
+          source: `${file} ${match[2] ?? "Node image"}`,
+          value: match[1],
+        }));
+  });
 
 const catalogTypesNodeMajor = (): Declaration => ({
   source: `${WORKSPACE_MANIFEST} catalog @types/node`,
@@ -79,21 +85,32 @@ const catalogTypesNodeMajor = (): Declaration => ({
   ),
 });
 
-const declarations = (): readonly Declaration[] => [
+const runtimeVersions = (): readonly Declaration[] => [
+  { source: ".nvmrc", value: read(".nvmrc").trim() },
+  ...imageNodeVersions(),
+];
+
+const nodeMajorDeclarations = (): readonly Declaration[] => [
   { source: ".nvmrc", value: majorOf(read(".nvmrc").trim()) },
   {
     source: "package.json engines.node",
     value: majorOf(readRootManifest().engines.node),
   },
-  ...imageNodeMajors(),
   catalogTypesNodeMajor(),
 ];
 
 const nodeEngineOk = (): boolean => {
   const engine = readRootManifest().engines.node;
-  if (engine !== SUPPORTED_NODE_ENGINE) {
+  const runtimeMajor = Number.parseInt(
+    majorOf(read(".nvmrc").trim()) ?? "",
+    10,
+  );
+  const expectedEngine = Number.isNaN(runtimeMajor)
+    ? undefined
+    : `>=${runtimeMajor}.0.0 <${runtimeMajor + 1}.0.0`;
+  if (engine !== expectedEngine) {
     console.error(
-      `package.json engines.node must be the exact supported Node 24 range: ${SUPPORTED_NODE_ENGINE}; found ${engine}`,
+      `package.json engines.node must match the .nvmrc major: ${expectedEngine ?? "unreadable .nvmrc"}; found ${engine}`,
     );
     return false;
   }
@@ -213,16 +230,17 @@ const report = (label: string, entries: readonly Declaration[]): boolean => {
   return true;
 };
 
-const nodeOk = report("Node major", declarations());
+const nodeVersionOk = report("Node runtime version", runtimeVersions());
+const nodeMajorOk = report("Node dependency major", nodeMajorDeclarations());
 const nodeEngineRangeOk = nodeEngineOk();
 const pnpmOk = report("pnpm version", pnpmPins());
 const turboOk = report("Turbo version", turboPins());
 const typescriptCliOk = pinnedTypescriptCliOk();
 
 process.exit(
-  nodeOk &&
+  nodeVersionOk &&
+    nodeMajorOk &&
     nodeEngineRangeOk &&
-    declarations().every((entry) => entry.value === SUPPORTED_NODE_MAJOR) &&
     pnpmOk &&
     turboOk &&
     typescriptCliOk

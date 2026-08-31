@@ -5,7 +5,7 @@ packages:
 catalog:
   "luxon": "^3.7.2"
   "@types/luxon": "^3.7.5"
-  "@types/node": "24.13.3"
+  "@types/node": "26.4.0"
   "@types/react": "^19.2.18"
   "tsx": "^4.23.13"
   "@trpc/server": "^11.18.0"
