@@ -7,7 +7,7 @@ import type {
 } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { AiProviderCardFeedback } from "./ai-provider-card-feedback";
@@ -119,6 +119,9 @@ export function AiProviderCardContent({
   );
   const [expanded, setExpanded] = useState(needsAttention);
   const allBusy = mutationsAreBusy(mutations);
+  const disclosureId = useId();
+  const toggleId = `${disclosureId}-toggle`;
+  const panelId = `${disclosureId}-panel`;
 
   return (
     <div
@@ -126,10 +129,12 @@ export function AiProviderCardContent({
       data-testid="integration-row-ai"
     >
       <button
+        id={toggleId}
         type="button"
         className="group w-full text-left"
         data-expanded={expanded}
         aria-expanded={expanded}
+        aria-controls={panelId}
         aria-label="Toggle AI provider settings"
         onClick={() => setExpanded((value) => !value)}
       >
@@ -139,78 +144,86 @@ export function AiProviderCardContent({
         />
       </button>
 
-      {expanded && (
-        <>
-          <AiProviderForm
-            key={revisionId ?? "new"}
-            initial={toAiProviderForm(revision)}
-            revision={revision}
-            revisionId={revisionId}
-            availability={data.availability}
-            profileCapabilities={data.profileCapabilities}
-            busy={allBusy}
-            savePending={mutations.save.isPending}
-            testPending={mutations.test.isPending}
-            activatePending={mutations.activate.isPending}
-            disablePending={mutations.disable.isPending}
-            onSave={onSave}
-            onTest={(id) => mutations.test.mutate({ revisionId: id })}
-            onActivate={(id) => mutations.activate.mutate({ revisionId: id })}
-            onDisable={() => mutations.disable.mutate()}
-          />
+      <div
+        id={panelId}
+        role="region"
+        aria-labelledby={toggleId}
+        aria-hidden={!expanded}
+        hidden={!expanded}
+      >
+        {expanded && (
+          <>
+            <AiProviderForm
+              key={revisionId ?? "new"}
+              initial={toAiProviderForm(revision)}
+              revision={revision}
+              revisionId={revisionId}
+              availability={data.availability}
+              profileCapabilities={data.profileCapabilities}
+              busy={allBusy}
+              savePending={mutations.save.isPending}
+              testPending={mutations.test.isPending}
+              activatePending={mutations.activate.isPending}
+              disablePending={mutations.disable.isPending}
+              onSave={onSave}
+              onTest={(id) => mutations.test.mutate({ revisionId: id })}
+              onActivate={(id) => mutations.activate.mutate({ revisionId: id })}
+              onDisable={() => mutations.disable.mutate()}
+            />
 
-          <AiProviderCardFeedback
-            revision={revision}
-            message={observedMessage}
-            operationFailed={operationFailed}
-          />
-          {revision && (
-            <details
-              className="group mt-4 border-t border-[var(--color-border)] pt-3"
-              data-testid="ai-provider-diagnostics"
-            >
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-[var(--radius-sm)] py-1 text-sm font-semibold text-[var(--color-foreground)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] [&::-webkit-details-marker]:hidden">
-                <span className="min-w-0">
-                  <span className="block text-xs tracking-[0.12em] text-[var(--color-muted-foreground)] uppercase">
-                    Diagnostics
+            <AiProviderCardFeedback
+              revision={revision}
+              message={observedMessage}
+              operationFailed={operationFailed}
+            />
+            {revision && (
+              <details
+                className="group mt-4 border-t border-[var(--color-border)] pt-3"
+                data-testid="ai-provider-diagnostics"
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-[var(--radius-sm)] py-1 text-sm font-semibold text-[var(--color-foreground)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] [&::-webkit-details-marker]:hidden">
+                  <span className="min-w-0">
+                    <span className="block text-xs tracking-[0.12em] text-[var(--color-muted-foreground)] uppercase">
+                      Diagnostics
+                    </span>
+                    <span className="mt-1 block font-normal text-[var(--color-muted-foreground)]">
+                      Provider metadata and retained revisions
+                    </span>
                   </span>
-                  <span className="mt-1 block font-normal text-[var(--color-muted-foreground)]">
-                    Provider metadata and retained revisions
-                  </span>
-                </span>
-                <ChevronDown
-                  aria-hidden="true"
-                  className="size-4 shrink-0 transition-transform group-open:rotate-180"
-                />
-              </summary>
-              <div className="mt-3 flex flex-col gap-4">
-                <AiProviderRevisionDetails revision={revision} />
-                <AiProviderRetainedRevisions
-                  revisions={data.revisions}
-                  activeRevisionId={data.activeRevisionId}
-                  busy={allBusy}
-                  restorePendingRevisionId={
-                    mutations.restore.isPending
-                      ? mutations.restore.variables.revisionId
-                      : null
-                  }
-                  onRestore={(id) =>
-                    mutations.restore.mutate({ revisionId: id })
-                  }
-                  discardPendingRevisionId={
-                    mutations.discard.isPending
-                      ? mutations.discard.variables.revisionId
-                      : null
-                  }
-                  onDiscard={(id) =>
-                    mutations.discard.mutate({ revisionId: id })
-                  }
-                />
-              </div>
-            </details>
-          )}
-        </>
-      )}
+                  <ChevronDown
+                    aria-hidden="true"
+                    className="size-4 shrink-0 transition-transform group-open:rotate-180"
+                  />
+                </summary>
+                <div className="mt-3 flex flex-col gap-4">
+                  <AiProviderRevisionDetails revision={revision} />
+                  <AiProviderRetainedRevisions
+                    revisions={data.revisions}
+                    activeRevisionId={data.activeRevisionId}
+                    busy={allBusy}
+                    restorePendingRevisionId={
+                      mutations.restore.isPending
+                        ? mutations.restore.variables.revisionId
+                        : null
+                    }
+                    onRestore={(id) =>
+                      mutations.restore.mutate({ revisionId: id })
+                    }
+                    discardPendingRevisionId={
+                      mutations.discard.isPending
+                        ? mutations.discard.variables.revisionId
+                        : null
+                    }
+                    onDiscard={(id) =>
+                      mutations.discard.mutate({ revisionId: id })
+                    }
+                  />
+                </div>
+              </details>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

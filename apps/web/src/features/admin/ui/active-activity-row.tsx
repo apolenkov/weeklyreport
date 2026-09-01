@@ -23,11 +23,15 @@ function ActivitySummary({
   groupName,
   isExpanded,
   onToggleExpand,
+  toggleId,
+  panelId,
 }: {
   readonly activity: ProjectActivity;
   readonly groupName: string;
   readonly isExpanded: boolean;
   readonly onToggleExpand: (id: string) => void;
+  readonly toggleId: string;
+  readonly panelId: string;
 }) {
   const linkedNames = activity.linkedProducts
     .map((link) => link.productName)
@@ -36,11 +40,13 @@ function ActivitySummary({
   return (
     <div className="flex min-w-0 items-center gap-3">
       <button
+        id={toggleId}
         type="button"
         onClick={() => onToggleExpand(activity.id)}
         className="flex h-7 w-7 max-md:min-h-[var(--touch-target-min)] max-md:min-w-[var(--touch-target-min)] items-center justify-center rounded-full text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
         aria-label={`${isExpanded ? "Collapse" : "Expand"} lead attachments for ${activity.name}`}
         aria-expanded={isExpanded}
+        aria-controls={panelId}
       >
         <RotatingChevron expanded={isExpanded} />
       </button>
@@ -114,6 +120,9 @@ export function ActiveActivityRow({
   onArchive,
   isArchiving,
 }: ActiveActivityRowProps) {
+  const toggleId = `admin-activity-${activity.id}-lead-attachments-toggle`;
+  const panelId = `admin-activity-${activity.id}-lead-attachments-panel`;
+
   return (
     <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] transition-shadow hover:shadow-sm">
       <div className="flex flex-col gap-3 px-4 py-3 md:flex-row md:items-center md:justify-between">
@@ -122,6 +131,8 @@ export function ActiveActivityRow({
           groupName={groupName}
           isExpanded={isExpanded}
           onToggleExpand={onToggleExpand}
+          toggleId={toggleId}
+          panelId={panelId}
         />
         <ActivityRowActions
           activity={activity}
@@ -132,6 +143,10 @@ export function ActiveActivityRow({
       </div>
 
       <div
+        id={panelId}
+        role="region"
+        aria-labelledby={toggleId}
+        aria-hidden={!isExpanded}
         className="grid transition-[grid-template-rows] duration-300 motion-reduce:transition-none"
         style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
       >

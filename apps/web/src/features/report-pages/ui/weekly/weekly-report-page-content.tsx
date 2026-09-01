@@ -116,7 +116,7 @@ function LeadSection({
       id={`report-lead-${groupId}`}
       tabIndex={-1}
       aria-label={groupName}
-      className="space-y-3 scroll-mt-4 focus:outline-none"
+      className="space-y-3 scroll-mt-4 rounded-[var(--radius-sm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2"
     >
       <h2 className="font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary)]">
         {groupName}

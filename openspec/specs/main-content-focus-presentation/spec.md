@@ -84,3 +84,17 @@ scan alone MUST NOT be treated as proof of the rendered focus state.
 - **AND** the test proves the full-surface browser-default outline is absent
 - **AND** the test proves at least one subsequent interactive control retains a
   visible focus indicator
+
+### Requirement: Report overview navigation MUST visibly identify its programmatic destination
+
+When a keyboard user activates a by-lead overview card, the report MUST move
+focus to the corresponding lead section and render a tokenized, layout-stable
+focus indicator on that destination. The destination MUST remain
+programmatically focusable without adding it to the sequential Tab order.
+
+#### Scenario: Keyboard user jumps from the overview to a lead section
+
+- **WHEN** a keyboard user activates a lead card in `Leads Overview`
+- **THEN** focus moves to that lead's report section
+- **AND** the section renders a visible design-system focus indicator
+- **AND** the indicator does not change the section's layout geometry
