@@ -29,7 +29,7 @@ NestJS 11 backend with tRPC API, Prisma ORM, and JWT/SAML authentication.
 ## tRPC Routers
 
 All product RPC procedures are served at `/trpc`. Every router procedure uses
-one of the six canonical builders exported by
+one of the seven canonical builders, including `leadProcedure`, exported by
 `src/infrastructure/trpc/trpc.middleware.ts`; each builder owns its exact role
 and scope middleware chain. Conventional HTTP surfaces own authentication,
 health, metrics, browser telemetry/log admission, the Bull Board, and PDF

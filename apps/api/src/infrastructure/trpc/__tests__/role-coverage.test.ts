@@ -113,7 +113,7 @@ function findUncoveredProcedures(router: InspectableRouter): string[] {
 }
 
 describe("default-deny coverage gate", () => {
-  it("every AppRouter leaf procedure uses one of the six recognised role bases", () => {
+  it("every AppRouter leaf procedure uses one of the seven recognised role bases", () => {
     // Build the AppRouter with stub deps — we never invoke any procedure here,
     // we only inspect _def.middlewares identity. The deps shape is satisfied
     // by `{}` casts because nothing reads them at construction time.
@@ -128,7 +128,7 @@ describe("default-deny coverage gate", () => {
           .map((p) => `  - ${p}`)
           .join(
             "\n",
-          )}\nFix: rebuild on publicProcedure / protectedProcedure / headProcedure / adminProcedure / anyRoleProcedure / leadershipProcedure.`,
+          )}\nFix: rebuild on publicProcedure / protectedProcedure / headProcedure / leadProcedure / adminProcedure / anyRoleProcedure / leadershipProcedure.`,
       );
     }
 

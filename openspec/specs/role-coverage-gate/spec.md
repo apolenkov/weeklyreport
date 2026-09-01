@@ -1,13 +1,13 @@
 ## Purpose
 
-Every tRPC procedure in CustomReport MUST be constructed through one of 6 canonical
+Every tRPC procedure in CustomReport MUST be constructed through one of 7 canonical
 middleware-chain builders that live in `apps/api/src/infrastructure/trpc/`. The CI
 role-coverage gate verifies this by reference identity — not structural equality —
 so that copying a builder's body into a local helper still counts as a violation.
 A PR that adds a non-compliant procedure MUST fail CI before the branch can be merged.
 
-The 6 canonical builders are: `publicProcedure`, `protectedProcedure`,
-`headProcedure`, `anyRoleProcedure`, `adminProcedure`, and
+The 7 canonical builders are: `publicProcedure`, `protectedProcedure`,
+`headProcedure`, `leadProcedure`, `anyRoleProcedure`, `adminProcedure`, and
 `leadershipProcedure`. All are exported from
 `apps/api/src/infrastructure/trpc/trpc.middleware.ts`.
 
@@ -20,7 +20,7 @@ file under `.github/workflows/` (enforcement point).
 ### Requirement: Procedures Must Use Canonical Builders
 
 Every tRPC procedure defined in `apps/api/src/**/*.router.ts` MUST be constructed
-using one of the 6 canonical middleware-chain builders exported from
+using one of the 7 canonical middleware-chain builders exported from
 `apps/api/src/infrastructure/trpc/`. Procedures that do not reference a canonical
 builder MUST be rejected by the CI gate.
 
@@ -37,7 +37,7 @@ builder MUST be rejected by the CI gate.
 ### Requirement: Gate Compares Builders by Reference Identity
 
 The CI gate MUST verify that a procedure's builder is the same object reference
-as one of the 6 canonical builders. A developer who copies a canonical builder's
+as one of the 7 canonical builders. A developer who copies a canonical builder's
 middleware chain into a new local helper and uses that helper MUST still fail the
 gate.
 
@@ -51,14 +51,15 @@ gate.
 - **WHEN** a module re-exports a canonical builder under an alias and a router imports that alias
 - **THEN** the gate resolves the alias to the original canonical reference, confirms identity, and CI passes
 
-### Requirement: Gate Allow-List Enumerates All Six Canonical Builders
+### Requirement: Gate Allow-List Enumerates All Seven Canonical Builders
 
-The gate allow-list MUST enumerate exactly the 6 canonical builders named in
+The gate allow-list MUST enumerate exactly the 7 canonical builders named in
 this spec's Purpose: `publicProcedure`, `protectedProcedure`, `headProcedure`,
-`anyRoleProcedure`, `adminProcedure`, and `leadershipProcedure`. The allow-list lives in `ALLOWED_CHAINS` in
+`leadProcedure`, `anyRoleProcedure`, `adminProcedure`, and `leadershipProcedure`.
+The allow-list lives in `ALLOWED_CHAINS` in
 `apps/api/src/infrastructure/trpc/__tests__/role-coverage.test.ts`.
 Documentation that states the builder count (e.g. `openspec/config.yaml`
-conventions) MUST say 6.
+conventions) MUST say 7 and include `leadProcedure`.
 
 The current authorization contract requires the `pdfExport.request` /
 `pdfExport.status` procedures to `leadershipProcedure`
@@ -70,7 +71,7 @@ lead is EXCLUDED (FORBIDDEN) — the lead surface does not show an Export button
 - **WHEN** a `*.router.ts` file defines a procedure with `leadershipProcedure`
 - **THEN** the role-coverage gate reports the procedure as compliant and CI passes
 
-#### Scenario: A seventh builder is exported
+#### Scenario: An eighth builder is exported
 
 - **WHEN** `trpc.middleware.ts` exports a new procedure builder
 - **THEN** the same change MUST add its chain to `ALLOWED_CHAINS` and update
@@ -84,7 +85,7 @@ The shared middleware chain MUST have exactly one definition site:
 the chain (metrics → logging → auth/role → pdf-export guard → mutation audit)
 lives in a local `buildProtectedProcedure(authMiddleware)` factory inside
 `apps/api/src/infrastructure/trpc/trpc.middleware.ts`, and the protected
-canonical builders MUST be created through it. The 6 exported builder
+canonical builders MUST be created through it. The 7 exported builder
 references MUST remain identity-stable so the
 reference-identity gate keeps passing.
 
@@ -135,16 +136,16 @@ a non-plumbing tail disqualifies the match.
 
 - WHEN a procedure is built as
   `t.procedure.use(metricsMiddleware).use(loggingMiddleware).use(<a role
-middleware not equal by reference to any of the 6 canonical role
+middleware not equal by reference to any of the 7 canonical role
 middlewares>)`
 - THEN `findUncoveredProcedures` includes that procedure's path in the
   offending list
 
 #### Scenario: A procedure built on a canonical base still passes
 
-- WHEN a procedure's middleware chain equals one of the 6 canonical chains
+- WHEN a procedure's middleware chain equals one of the 7 canonical chains
   (`publicProcedure`, `protectedProcedure`, `headProcedure`,
-  `adminProcedure`, `anyRoleProcedure`,
+  `leadProcedure`, `adminProcedure`, `anyRoleProcedure`,
   `leadershipProcedure`) at exact length with every
   middleware equal by reference
 - THEN `findUncoveredProcedures` does not include that procedure's path in

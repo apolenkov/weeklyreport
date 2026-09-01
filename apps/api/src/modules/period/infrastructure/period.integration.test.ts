@@ -12,6 +12,7 @@ import {
   PeriodService,
   type ReopenPolicyReader,
 } from "../application/period.service";
+import type { PeriodLifecycleExpectation } from "../domain/period-lifecycle-expectation.js";
 
 const noopInvalidate: AnalyticsCacheInvalidator = () => Promise.resolve();
 const noGatingReopenPolicy: ReopenPolicyReader = () =>
@@ -45,34 +46,68 @@ interface SpyReport {
   archived?: boolean;
 }
 
+const PERIOD_START = new Date("2026-04-06T00:00:00.000Z");
+const PERIOD_END = new Date("2026-04-12T23:59:59.999Z");
+const REOPENED_AT = new Date("2026-04-14T09:00:00.000Z");
+
+function toPeriodLifecycleExpectation(
+  report: SpyReport,
+): PeriodLifecycleExpectation {
+  const isPublished = report.periodStatus !== "open";
+  return {
+    periodStart: new Date(PERIOD_START),
+    periodEnd: new Date(PERIOD_END),
+    periodState: report.archived
+      ? "archived"
+      : report.periodStatus === "published"
+        ? "published"
+        : "open",
+    status: isPublished ? "published" : "draft",
+    periodStatus: report.periodStatus,
+    archived: report.archived ?? false,
+    autoPublished: false,
+    autoArchived: false,
+    publishedAt: isPublished
+      ? new Date(report.publishedAt ?? "2026-04-13T09:00:00.000Z")
+      : null,
+    publishedById: isPublished ? headSession.userId : null,
+    reopenedAt:
+      report.periodStatus === "reopened" ? new Date(REOPENED_AT) : null,
+  };
+}
+
 function createSpyRepository(
   reports: Map<string, SpyReport>,
 ): PeriodRepository & {
   publishPeriod: ReturnType<typeof vi.fn>;
   reopenPeriod: ReturnType<typeof vi.fn>;
 } {
-  const publishFn = vi.fn((id: string) => {
-    const r = reports.get(id);
-    // Mirror the guarded compare-and-set: only a not-yet-published,
-    // non-archived row transitions. A zero-row match splits into "raced" (now
-    // published) vs "archived" (archived inside the window).
-    if (!r || r.periodStatus === "published" || r.archived) {
-      const reason: "raced" | "archived" =
-        r?.periodStatus === "published" ? "raced" : "archived";
-      return Promise.resolve({ transitioned: false as const, reason });
-    }
-    r.periodStatus = "published";
-    r.publishedAt = new Date();
-    return Promise.resolve({ transitioned: true as const });
-  });
+  const publishFn = vi.fn(
+    (id: string, _userId: string, _expected: PeriodLifecycleExpectation) => {
+      const r = reports.get(id);
+      // Mirror the guarded compare-and-set: only a not-yet-published,
+      // non-archived row transitions. A zero-row match splits into "raced" (now
+      // published) vs "archived" (archived inside the window).
+      if (!r || r.periodStatus === "published" || r.archived) {
+        const reason: "raced" | "archived" =
+          r?.periodStatus === "published" ? "raced" : "archived";
+        return Promise.resolve({ transitioned: false as const, reason });
+      }
+      r.periodStatus = "published";
+      r.publishedAt = new Date();
+      return Promise.resolve({ transitioned: true as const });
+    },
+  );
 
-  const reopenFn = vi.fn((id: string) => {
-    const r = reports.get(id);
-    if (r) {
-      r.periodStatus = "reopened";
-    }
-    return Promise.resolve();
-  });
+  const reopenFn = vi.fn(
+    (id: string, _expected: PeriodLifecycleExpectation) => {
+      const r = reports.get(id);
+      if (r) {
+        r.periodStatus = "reopened";
+      }
+      return Promise.resolve();
+    },
+  );
 
   const resolveFirstId = (match: (r: SpyReport) => boolean): string | null =>
     [...reports.values()].find(match)?.id ?? null;
@@ -81,7 +116,7 @@ function createSpyRepository(
     getReportById(id: string) {
       const r = reports.get(id);
       return Promise.resolve(
-        r ? { ...structuredClone(r), archived: r.archived ?? false } : null,
+        r ? { id: r.id, ...toPeriodLifecycleExpectation(r) } : null,
       );
     },
     getCurrentEditableId: () =>
@@ -290,6 +325,9 @@ describe("PeriodService — integration (publish lifecycle)", () => {
     expect(repo.publishPeriod).toHaveBeenCalledWith(
       reportId,
       headSession.userId,
+      expect.objectContaining({
+        periodStatus: "open",
+      }),
     );
   });
 });

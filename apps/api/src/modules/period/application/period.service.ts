@@ -1,10 +1,10 @@
 import {
   isWithinReopenWindow,
   type PeriodStatus,
-  type ReportStatus,
   type UserSession,
 } from "@customreport/shared";
 
+import type { PeriodLifecycleExpectation } from "../domain/period-lifecycle-expectation.js";
 import {
   NOOP_PERIOD_TELEMETRY,
   type PeriodTelemetry,
@@ -37,29 +37,39 @@ export class PeriodNotFoundError extends Error {
   }
 }
 
+export class PeriodStaleStateError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PeriodStaleStateError";
+  }
+}
+
 // Outcome of the guarded manual-publish compare-and-set. A zero-row match is
 // split by an in-transaction re-read so a concurrent publish ("raced",
 // idempotent) never reads as an archive race ("archived", a domain error).
 export type PublishPeriodOutcome =
   | { readonly transitioned: true }
-  | { readonly transitioned: false; readonly reason: "raced" | "archived" };
+  | {
+      readonly transitioned: false;
+      readonly reason: "raced" | "archived" | "stale";
+    };
 
 export interface PeriodRepository {
-  getReportById(reportId: string): Promise<{
-    id: string;
-    status: ReportStatus;
-    periodStatus: PeriodStatus;
-    publishedAt: Date | null;
-    archived: boolean;
-  } | null>;
-  // Guarded compare-and-set keyed on `periodStatus != "published" AND
-  // archived = false`, so post-publish side effects run once per real
-  // transition; PublishPeriodOutcome carries the zero-row split.
+  getReportById(
+    reportId: string,
+  ): Promise<(PeriodLifecycleExpectation & { readonly id: string }) | null>;
+  // Guarded compare-and-set is bound to the exact lifecycle and reporting
+  // envelope authorized by the service, so side effects run once per real
+  // transition; PublishPeriodOutcome carries the zero-row classification.
   publishPeriod(
     reportId: string,
     userId: string,
+    expected: PeriodLifecycleExpectation,
   ): Promise<PublishPeriodOutcome>;
-  reopenPeriod(reportId: string): Promise<void>;
+  reopenPeriod(
+    reportId: string,
+    expected: PeriodLifecycleExpectation,
+  ): Promise<void>;
   // Active editable id (publish target) + latest non-archived published id
   // (reopen target), delegated to the weekly-report resolvers so the head's
   // lifecycle target matches its page — one query definition, no second copy.
@@ -90,9 +100,16 @@ export type ReopenPolicyReader = () => Promise<{
 // A zero-row compare-and-set is either an archive that landed inside the
 // read→write window (fail closed — the pre-write check cannot see it) or a
 // concurrent publish that already reached the desired state (idempotent).
-function assertPublishRaceIsIdempotent(reason: "raced" | "archived"): void {
+function assertPublishRaceIsIdempotent(
+  reason: "raced" | "archived" | "stale",
+): void {
   if (reason === "archived") {
     throw new PeriodScopeError("Archived periods cannot be published.");
+  }
+  if (reason === "stale") {
+    throw new PeriodStaleStateError(
+      "The period changed while it was being published. Reload and retry.",
+    );
   }
 }
 
@@ -142,6 +159,7 @@ export class PeriodService {
     const outcome = await this.repository.publishPeriod(
       reportId,
       session.userId,
+      report,
     );
 
     if (!outcome.transitioned) {
@@ -261,7 +279,7 @@ export class PeriodService {
       }
     }
 
-    await this.repository.reopenPeriod(reportId);
+    await this.repository.reopenPeriod(reportId, report);
     await this.invalidateAnalyticsCache();
 
     return { success: true, reportId };

@@ -56,8 +56,8 @@ context: |
   - File names kebab-case with role suffix (`*.service.ts`,
     `*.prisma-repository.ts`, `*.router.ts`, `*.module.ts`); React component
     files kebab-case, exports PascalCase
-  - tRPC procedures must use one of 6 canonical middleware-chain builders
-    (role-coverage gate; CI compares by reference identity)
+  - tRPC procedures must use one of 7 canonical middleware-chain builders,
+    including `leadProcedure` (role-coverage gate; CI compares by reference identity)
   - Repository interface lives in the service file; Prisma implementation in
     `*.prisma-repository.ts`; wired via `useFactory` in the module
   - Domain errors extend `Error`; map to tRPC errors in

@@ -38,6 +38,7 @@ import {
   PeriodLifecycleIntegrityError,
   PeriodNotFoundError,
   PeriodScopeError,
+  PeriodStaleStateError,
 } from "../../modules/period/index.js";
 import {
   ProjectActivityConflictError,
@@ -506,6 +507,11 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
       code: "BAD_REQUEST",
     },
     {
+      name: "PeriodStaleStateError",
+      make: () => new PeriodStaleStateError("m"),
+      code: "CONFLICT",
+    },
+    {
       name: "PeriodLifecycleIntegrityError",
       make: () => new PeriodLifecycleIntegrityError(),
       code: "INTERNAL_SERVER_ERROR",
@@ -646,6 +652,13 @@ describe("mapDomainError — period lifecycle authz", () => {
 
     expect(mapped.code).toBe("BAD_REQUEST");
     expect(mapped.code).not.toBe("INTERNAL_SERVER_ERROR");
+  });
+
+  it("maps a stale period lifecycle write to CONFLICT", () => {
+    const mapped = mapDomainError(new PeriodStaleStateError("reload"));
+
+    expect(mapped.code).toBe("CONFLICT");
+    expect(mapped.message).toBe("reload");
   });
 });
 

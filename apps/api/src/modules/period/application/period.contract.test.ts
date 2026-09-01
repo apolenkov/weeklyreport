@@ -6,6 +6,7 @@ import type {
 import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
+import type { PeriodLifecycleExpectation } from "../domain/period-lifecycle-expectation.js";
 import {
   type AnalyticsCacheInvalidator,
   PeriodAccessError,
@@ -47,6 +48,36 @@ interface MockReport {
   archived?: boolean;
 }
 
+const PERIOD_START = new Date("2026-04-06T00:00:00.000Z");
+const PERIOD_END = new Date("2026-04-12T23:59:59.999Z");
+const REOPENED_AT = new Date("2026-04-14T09:00:00.000Z");
+
+function toPeriodLifecycleExpectation(
+  report: MockReport,
+): PeriodLifecycleExpectation {
+  const isPublished = report.periodStatus !== "open";
+  return {
+    periodStart: new Date(PERIOD_START),
+    periodEnd: new Date(PERIOD_END),
+    periodState: report.archived
+      ? "archived"
+      : report.periodStatus === "published"
+        ? "published"
+        : "open",
+    status: isPublished ? "published" : "draft",
+    periodStatus: report.periodStatus,
+    archived: report.archived ?? false,
+    autoPublished: false,
+    autoArchived: false,
+    publishedAt: isPublished
+      ? new Date(report.publishedAt ?? "2026-04-13T09:00:00.000Z")
+      : null,
+    publishedById: isPublished ? report.publishedById : null,
+    reopenedAt:
+      report.periodStatus === "reopened" ? new Date(REOPENED_AT) : null,
+  };
+}
+
 function makeReport(overrides: Partial<MockReport> = {}): MockReport {
   return {
     id: reportId,
@@ -78,8 +109,8 @@ function createRepository(report: MockReport | null): PeriodRepository & {
       }
 
       return Promise.resolve({
-        ...structuredClone(current),
-        archived: current.archived ?? false,
+        id: current.id,
+        ...toPeriodLifecycleExpectation(current),
       });
     },
 
@@ -102,7 +133,11 @@ function createRepository(report: MockReport | null): PeriodRepository & {
         matchId((r) => r.periodStatus === "reopened" && !r.archived),
       ),
 
-    publishPeriod(id: string, userId: string) {
+    publishPeriod(
+      id: string,
+      userId: string,
+      _expected: PeriodLifecycleExpectation,
+    ) {
       // Mirror the guarded compare-and-set: only a not-yet-published,
       // non-archived row transitions. A zero-row match splits into "raced" (now
       // published) vs "archived" (archived inside the window).
@@ -125,7 +160,7 @@ function createRepository(report: MockReport | null): PeriodRepository & {
       return Promise.resolve({ transitioned: false as const, reason });
     },
 
-    reopenPeriod(id: string) {
+    reopenPeriod(id: string, _expected: PeriodLifecycleExpectation) {
       if (id === current?.id) {
         current = {
           ...current,

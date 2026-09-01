@@ -13,6 +13,7 @@ import {
   noopInvalidate,
   reportId,
   type SpyReport,
+  toPeriodLifecycleExpectation,
 } from "./__tests__/period-service-harness.js";
 import { type PeriodRepository, PeriodService } from "./period.service";
 
@@ -122,10 +123,13 @@ describe("PeriodService — manual-publish telemetry", () => {
         if (id === reportId) {
           return Promise.resolve({
             id: reportId,
-            status: "draft",
-            periodStatus: "open",
-            publishedAt: null,
-            archived: false,
+            ...toPeriodLifecycleExpectation({
+              id: reportId,
+              status: "draft",
+              periodStatus: "open",
+              publishedAt: null,
+              archived: false,
+            }),
           });
         }
         return Promise.resolve(null);
@@ -179,10 +183,13 @@ describe("PeriodService — manual-publish telemetry", () => {
       getReportById: () =>
         Promise.resolve({
           id: reportId,
-          status: "draft",
-          periodStatus: "open",
-          publishedAt: null,
-          archived: false,
+          ...toPeriodLifecycleExpectation({
+            id: reportId,
+            status: "draft",
+            periodStatus: "open",
+            publishedAt: null,
+            archived: false,
+          }),
         }),
       getCurrentEditableId: () => Promise.resolve(reportId),
       getLatestPublishedNonArchivedId: () => Promise.resolve(null),

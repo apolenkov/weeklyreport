@@ -3,6 +3,7 @@ export {
   PeriodNotFoundError,
   PeriodScopeError,
   PeriodService,
+  PeriodStaleStateError,
 } from "./application/period.service.js";
 export {
   ensureCurrentPeriod,

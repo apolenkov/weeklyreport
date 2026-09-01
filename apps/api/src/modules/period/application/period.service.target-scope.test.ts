@@ -15,6 +15,7 @@ import {
   reopenedReport,
   reportId,
   type SpyReport,
+  toPeriodLifecycleExpectation,
 } from "./__tests__/period-service-harness.js";
 import {
   PeriodNotFoundError,
@@ -43,6 +44,9 @@ describe("PeriodService — publish target scope", () => {
     expect(repo.publishPeriod).toHaveBeenCalledWith(
       reportId,
       headSession.userId,
+      expect.objectContaining({
+        periodStatus: "open",
+      }),
     );
   });
 
@@ -87,6 +91,9 @@ describe("PeriodService — publish target scope", () => {
     expect(repo.publishPeriod).toHaveBeenCalledWith(
       otherReportId,
       adminSession.userId,
+      expect.objectContaining({
+        periodStatus: "open",
+      }),
     );
   });
 
@@ -147,7 +154,11 @@ describe("PeriodService — publish target scope", () => {
       Promise.resolve({ transitioned: true as const }),
     );
     const repo: PeriodRepository = {
-      getReportById: () => Promise.resolve({ ...target, archived: false }),
+      getReportById: () =>
+        Promise.resolve({
+          id: target.id,
+          ...toPeriodLifecycleExpectation(target),
+        }),
       getCurrentEditableId: () => Promise.resolve(null),
       getLatestPublishedNonArchivedId: () => Promise.resolve(null),
       getReopenedNonArchivedId: () => Promise.resolve(null),
@@ -190,7 +201,12 @@ describe("PeriodService — reopen target scope", () => {
       success: true,
       reportId,
     });
-    expect(repo.reopenPeriod).toHaveBeenCalledWith(reportId);
+    expect(repo.reopenPeriod).toHaveBeenCalledWith(
+      reportId,
+      expect.objectContaining({
+        periodStatus: "published",
+      }),
+    );
   });
 
   it("rejects a head reopening a stale published id (not the latest)", async () => {
@@ -229,7 +245,12 @@ describe("PeriodService — reopen target scope", () => {
     await expect(
       service.reopenPeriod(otherReportId, adminSession),
     ).resolves.toEqual({ success: true, reportId: otherReportId });
-    expect(repo.reopenPeriod).toHaveBeenCalledWith(otherReportId);
+    expect(repo.reopenPeriod).toHaveBeenCalledWith(
+      otherReportId,
+      expect.objectContaining({
+        periodStatus: "published",
+      }),
+    );
   });
 
   it("rejects an archived published target for a head", async () => {
@@ -287,7 +308,12 @@ describe("PeriodService — reopen target scope", () => {
     await expect(
       service.reopenPeriod(otherReportId, headSession),
     ).resolves.toEqual({ success: true, reportId: otherReportId });
-    expect(repo.reopenPeriod).toHaveBeenCalledWith(otherReportId);
+    expect(repo.reopenPeriod).toHaveBeenCalledWith(
+      otherReportId,
+      expect.objectContaining({
+        periodStatus: "published",
+      }),
+    );
 
     // The archived newest is itself rejected by the archived guard.
     await expect(
@@ -314,7 +340,11 @@ describe("PeriodService — reopen target scope", () => {
     const reopenPeriod = vi.fn(() => Promise.resolve());
     const invalidate = vi.fn(() => Promise.resolve(undefined));
     const repo: PeriodRepository = {
-      getReportById: () => Promise.resolve({ ...target, archived: false }),
+      getReportById: () =>
+        Promise.resolve({
+          id: target.id,
+          ...toPeriodLifecycleExpectation(target),
+        }),
       getCurrentEditableId: () => Promise.resolve(null),
       getLatestPublishedNonArchivedId: () => Promise.resolve(null),
       getReopenedNonArchivedId: () => Promise.resolve(null),
@@ -350,7 +380,12 @@ describe("PeriodService — reopen → republish & single-active-reopen guard", 
     );
 
     await service.reopenPeriod(reportId, headSession);
-    expect(repo.reopenPeriod).toHaveBeenCalledWith(reportId);
+    expect(repo.reopenPeriod).toHaveBeenCalledWith(
+      reportId,
+      expect.objectContaining({
+        periodStatus: "published",
+      }),
+    );
 
     await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
       {
@@ -361,6 +396,9 @@ describe("PeriodService — reopen → republish & single-active-reopen guard", 
     expect(repo.publishPeriod).toHaveBeenCalledWith(
       reportId,
       headSession.userId,
+      expect.objectContaining({
+        periodStatus: "reopened",
+      }),
     );
   });
 
@@ -400,7 +438,12 @@ describe("PeriodService — reopen → republish & single-active-reopen guard", 
     await expect(service.reopenPeriod(reportId, adminSession)).resolves.toEqual(
       { success: true, reportId },
     );
-    expect(repo.reopenPeriod).toHaveBeenCalledWith(reportId);
+    expect(repo.reopenPeriod).toHaveBeenCalledWith(
+      reportId,
+      expect.objectContaining({
+        periodStatus: "published",
+      }),
+    );
   });
 });
 
@@ -421,6 +464,9 @@ describe("PeriodService — publish reopened-target scope", () => {
     expect(repo.publishPeriod).toHaveBeenCalledWith(
       reportId,
       headSession.userId,
+      expect.objectContaining({
+        periodStatus: "reopened",
+      }),
     );
   });
 
@@ -465,6 +511,9 @@ describe("PeriodService — publish reopened-target scope", () => {
     expect(repo.publishPeriod).toHaveBeenCalledWith(
       otherReportId,
       adminSession.userId,
+      expect.objectContaining({
+        periodStatus: "reopened",
+      }),
     );
   });
 });
@@ -480,10 +529,7 @@ describe("PeriodService — archive-in-window publish outcome", () => {
       getReportById: () =>
         Promise.resolve({
           id: reportId,
-          status: "draft",
-          periodStatus: "open",
-          publishedAt: null,
-          archived: false,
+          ...toPeriodLifecycleExpectation(openReport(reportId)),
         }),
       getCurrentEditableId: () => Promise.resolve(reportId),
       getLatestPublishedNonArchivedId: () => Promise.resolve(null),

@@ -15,6 +15,7 @@ import {
   PeriodAccessError,
   PeriodScopeError,
   PeriodService,
+  PeriodStaleStateError,
 } from "./period.service";
 
 describe("PeriodService — publishPeriod (unit)", () => {
@@ -43,6 +44,9 @@ describe("PeriodService — publishPeriod (unit)", () => {
     expect(repo.publishPeriod).toHaveBeenCalledWith(
       reportId,
       headSession.userId,
+      expect.objectContaining({
+        periodStatus: "open",
+      }),
     );
   });
 
@@ -289,6 +293,40 @@ describe("PeriodService — publishPeriod (unit)", () => {
     expect(invalidate).not.toHaveBeenCalled();
   });
 
+  it("maps a stale compare-and-set outcome to PeriodStaleStateError without side effects", async () => {
+    const reports = new Map<string, SpyReport>([
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "draft",
+          periodStatus: "open",
+          publishedAt: null,
+        },
+      ],
+    ]);
+    const base = createSpyRepository(reports);
+    const publishPeriod = vi.fn(() =>
+      Promise.resolve({
+        transitioned: false as const,
+        reason: "stale" as const,
+      }),
+    );
+    const invalidate = vi.fn(() => Promise.resolve(undefined));
+    const service = new PeriodService(
+      { ...base, publishPeriod },
+      invalidate,
+      noGatingReopenPolicy,
+    );
+
+    await expect(
+      service.publishPeriod(reportId, headSession),
+    ).rejects.toBeInstanceOf(PeriodStaleStateError);
+    expect(publishPeriod).toHaveBeenCalledOnce();
+    expect(invalidate).not.toHaveBeenCalled();
+    expect(reports.get(reportId)?.periodStatus).toBe("open");
+  });
+
   it("different reports are independent", async () => {
     const reports = new Map<string, SpyReport>([
       [
@@ -353,7 +391,12 @@ describe("PeriodService — reopenPeriod (unit)", () => {
     await service.reopenPeriod(reportId, headSession);
 
     expect(repo.reopenPeriod).toHaveBeenCalledOnce();
-    expect(repo.reopenPeriod).toHaveBeenCalledWith(reportId);
+    expect(repo.reopenPeriod).toHaveBeenCalledWith(
+      reportId,
+      expect.objectContaining({
+        periodStatus: "published",
+      }),
+    );
   });
 
   it("does not call repository when period is not published", async () => {

@@ -6,13 +6,15 @@ Guards period reopen and manual archive with atomic compare-and-set writes so a 
 
 ### Requirement: Reopen Is a Guarded Compare-And-Set
 
-Head reopen MUST transition a `Report` through a guarded compare-and-set whose
-predicate is `{ id, archived: false, periodStatus: "published" }`, applied to a
-`report.updateMany`, never through an unconditional `report.update({ where: { id } })`.
-The `archived: false` and `periodStatus: "published"` clauses MUST both remain in
-the predicate — together they are the single point that closes the
-reopen-versus-archive race, so a period archived (or otherwise moved off
-`periodStatus="published"`) inside the read-to-write window is never reopened.
+Head reopen MUST transition a `Report` through a guarded compare-and-set applied
+to `report.updateMany`, never through an unconditional
+`report.update({ where: { id } })`. The service-read report that passed scope,
+single-reopen, and policy gates MUST be supplied as the expected state. The
+predicate MUST contain `id`, `periodStart`, `periodEnd`, and the complete current
+lifecycle tuple. The expected state MUST be non-archived with
+`periodStatus="published"`. Together these conditions close the
+reopen-versus-archive race and reject every other lifecycle or reporting-envelope
+change inside the read-to-write window.
 
 The complete reopen field set MUST continue to come from
 `period-transition.ts::buildTransition("reopen", …)`, preserving the
@@ -23,9 +25,11 @@ guard, not its field set.
 
 - **GIVEN** a `Report` row and a head reopen request
 - **WHEN** the guarded `updateMany` runs
-- **THEN** the row is matched only if it is `periodStatus="published"` AND not
-  `archived`
-- **AND** an already-archived or no-longer-published row matches zero rows.
+- **THEN** the row is matched only if the complete lifecycle tuple and both
+  reporting boundaries still equal the service-read published, non-archived
+  expectation
+- **AND** an archived, no-longer-published, or otherwise changed row does not
+  transition.
 
 #### Scenario: Archive inside the window loses to the guard
 
@@ -38,11 +42,12 @@ guard, not its field set.
 
 ### Requirement: A Zero-Row Reopen Fails Closed
 
-When the guarded reopen write matches zero rows, the caller MUST fail closed —
-raise a domain error — and MUST NOT treat the no-op as a completed reopen. A row
-that no longer satisfies the predicate (archived, or already reopened, or no
-longer published) is not a reopenable target, and reporting success would leave
-the caller believing a transition happened that did not.
+When the guarded reopen write matches zero rows, the caller MUST fail closed and
+MUST NOT treat the no-op as a completed reopen. An archived row retains the
+archived domain outcome; a row that is no longer published retains the
+not-reopenable outcome; a missing row or a still-published, non-archived row
+whose other lifecycle or boundary fields changed MUST produce a typed
+stale-state conflict.
 
 #### Scenario: Raced archive surfaces as a fail-closed error
 
@@ -51,6 +56,14 @@ the caller believing a transition happened that did not.
 - **WHEN** the reopen `updateMany` matches zero rows
 - **THEN** the reopen path raises its domain error and returns no success outcome
 - **AND** no report or section state is mutated by the losing reopen.
+
+#### Scenario: A still-published report changes inside the window
+
+- **GIVEN** a report passed the service's reopen gates
+- **WHEN** a lifecycle field or period boundary changes before the guarded write
+  while the report remains published and non-archived
+- **THEN** the helper reports stale and the caller surfaces a conflict
+- **AND** no report section is reset to draft.
 
 ### Requirement: The Section Draft-Reset Is Gated on the Transition
 

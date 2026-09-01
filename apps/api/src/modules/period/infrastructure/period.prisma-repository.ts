@@ -1,4 +1,4 @@
-import type { PeriodStatus, ReportStatus } from "@customreport/shared";
+import { currentPeriodLifecycleSchema } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
@@ -20,12 +20,17 @@ import {
   WEEKLY_REPORT_LIFECYCLE,
   type WeeklyReportLifecyclePort,
 } from "../../weekly-report/index.js";
-import type {
-  PeriodRepository,
-  PublishPeriodOutcome,
+import {
+  type PeriodRepository,
+  PeriodScopeError,
+  PeriodStaleStateError,
+  type PublishPeriodOutcome,
 } from "../application/period.service.js";
-import { PeriodScopeError } from "../application/period.service.js";
-import { isPeriodOverlapConflict } from "../application/period-factory.js";
+import {
+  isPeriodOverlapConflict,
+  PeriodLifecycleIntegrityError,
+} from "../application/period-factory.js";
+import type { PeriodLifecycleExpectation } from "../domain/period-lifecycle-expectation.js";
 import { buildTransition } from "../domain/period-transition.js";
 
 @Injectable()
@@ -39,25 +44,36 @@ export class PeriodPrismaRepository implements PeriodRepository {
     private readonly weeklyReportRepository: WeeklyReportLifecyclePort,
   ) {}
 
-  async getReportById(reportId: string): Promise<{
-    id: string;
-    status: ReportStatus;
-    periodStatus: PeriodStatus;
-    publishedAt: Date | null;
-    archived: boolean;
-  } | null> {
+  async getReportById(
+    reportId: string,
+  ): Promise<(PeriodLifecycleExpectation & { readonly id: string }) | null> {
     const report = await this.prisma.report.findUnique({
       where: { id: reportId },
       select: {
         id: true,
+        periodStart: true,
+        periodEnd: true,
         status: true,
+        periodState: true,
         periodStatus: true,
-        publishedAt: true,
         archived: true,
+        autoPublished: true,
+        autoArchived: true,
+        publishedAt: true,
+        publishedById: true,
+        reopenedAt: true,
       },
     });
 
-    return report;
+    if (!report) return null;
+    const lifecycle = currentPeriodLifecycleSchema.safeParse(report);
+    if (!lifecycle.success) throw new PeriodLifecycleIntegrityError();
+    return {
+      id: report.id,
+      periodStart: report.periodStart,
+      periodEnd: report.periodEnd,
+      ...lifecycle.data,
+    };
   }
 
   getCurrentEditableId(): Promise<string | null> {
@@ -81,6 +97,7 @@ export class PeriodPrismaRepository implements PeriodRepository {
   async publishPeriod(
     reportId: string,
     userId: string,
+    expected: PeriodLifecycleExpectation,
   ): Promise<PublishPeriodOutcome> {
     return this.prisma.$transaction(async (tx) => {
       const publishAt = new Date();
@@ -112,7 +129,7 @@ export class PeriodPrismaRepository implements PeriodRepository {
           )
         : {};
 
-      const outcome = await publishCompareAndSet(tx, reportId, {
+      const outcome = await publishCompareAndSet(tx, reportId, expected, {
         ...buildTransition("publish", { now: publishAt, userId }),
         publishedSnapshot: provisionalSnapshot,
       });
@@ -143,21 +160,30 @@ export class PeriodPrismaRepository implements PeriodRepository {
     });
   }
 
-  async reopenPeriod(reportId: string): Promise<void> {
+  async reopenPeriod(
+    reportId: string,
+    expected: PeriodLifecycleExpectation,
+  ): Promise<void> {
     const reopenedAt = new Date();
     try {
       await this.prisma.$transaction(async (tx) => {
         const policies = await lockAllReminderPolicies(tx);
-        // CAS on archived+periodStatus closes the reopen-vs-archive race.
-        // Field set from transition builder (period-dual-state).
+        // Full expected lifecycle + boundaries close reopen races against any
+        // competing lifecycle or reporting-window change.
         const outcome = await reopenCompareAndSet(
           tx,
           reportId,
+          expected,
           buildTransition("reopen", { now: reopenedAt }),
         );
 
         if (outcome !== "transitioned") {
           // Fail closed: zero-row match means archive won or already reopened.
+          if (outcome === "stale") {
+            throw new PeriodStaleStateError(
+              "The period changed while it was being reopened. Reload and retry.",
+            );
+          }
           throw new PeriodScopeError(
             outcome === "archived"
               ? "Archived periods cannot be reopened."

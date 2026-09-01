@@ -384,6 +384,18 @@ describe("AdminPrismaRepository (integration)", () => {
         });
       }
 
+      const periodRepository = new PeriodPrismaRepository(
+        prisma as never,
+        new WeeklyReportPrismaRepository(prisma as never),
+      );
+      const lifecycleExpected =
+        operation === "archive"
+          ? null
+          : await periodRepository.getReportById(reportId);
+      if (operation !== "archive" && !lifecycleExpected) {
+        throw new Error(`fixture report ${reportId} was not found`);
+      }
+
       const restoreGate = createPauseGate();
       const restore = prisma.$transaction(async (tx) => {
         await lockAllReminderPolicies(tx);
@@ -418,16 +430,22 @@ describe("AdminPrismaRepository (integration)", () => {
       });
       await restoreGate.paused;
 
-      const periodRepository = new PeriodPrismaRepository(
-        prisma as never,
-        new WeeklyReportPrismaRepository(prisma as never),
-      );
-      const competing =
-        operation === "publish"
-          ? periodRepository.publishPeriod(reportId, testData.head.id)
-          : operation === "archive"
-            ? archivePeriod(prisma as never, reportId)
-            : periodRepository.reopenPeriod(reportId);
+      let competing: Promise<unknown>;
+      if (operation === "archive") {
+        competing = archivePeriod(prisma as never, reportId);
+      } else {
+        if (!lifecycleExpected) {
+          throw new Error(`fixture report ${reportId} was not found`);
+        }
+        competing =
+          operation === "publish"
+            ? periodRepository.publishPeriod(
+                reportId,
+                testData.head.id,
+                lifecycleExpected,
+              )
+            : periodRepository.reopenPeriod(reportId, lifecycleExpected);
+      }
       restoreGate.release();
       await expect(restore).resolves.toBeUndefined();
       await competing;

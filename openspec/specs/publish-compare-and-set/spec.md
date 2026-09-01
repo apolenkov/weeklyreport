@@ -31,27 +31,33 @@ The manual-publish compare-and-set SHALL be implemented once, in the shared help
 
 ### Requirement: Canonical Guarded Predicate
 
-The shared helper SHALL apply exactly the predicate
-`{ id, periodStatus: { not: "published" }, archived: false }` to the report
-`updateMany`. The `archived: false` clause MUST remain in the predicate — it is
-the single point that closes the archive-versus-publish race, so a contradictory
-archived-and-published row is never written.
+The service-read report that passed scope and lifecycle gates MUST be supplied
+to the shared helper as the expected state. The helper SHALL apply one exact
+predicate containing `id`, `periodStart`, `periodEnd`, and every field in the
+current lifecycle tuple (`status`, `periodState`, `periodStatus`, `archived`,
+`autoPublished`, `autoArchived`, `publishedAt`, `publishedById`, and
+`reopenedAt`). The helper MUST reject an archived expectation and treat an
+already-published expectation as the idempotent raced outcome before writing.
+Binding `archived: false` and the complete authorized state closes both the
+archive-versus-publish race and any other lifecycle or envelope change inside
+the read-to-write window.
 
 #### Scenario: Only a not-yet-published, non-archived period transitions
 
 - **GIVEN** a report row
 - **WHEN** the helper runs its guarded `updateMany`
-- **THEN** the row is matched only if it is not already `published` AND not
-  `archived`
-- **AND** an already-published or archived row matches zero rows.
+- **THEN** the row is matched only if its complete lifecycle tuple and both
+  reporting boundaries still equal the service-read expectation
+- **AND** an already-published, archived, or otherwise changed row does not
+  transition.
 
-### Requirement: Zero-Row Disambiguation Into Raced Versus Archived
+### Requirement: Zero-Row Disambiguation Into Raced, Archived, Or Stale
 
-When the guarded write matches zero rows, the helper SHALL re-read the row's
-`periodStatus` to disambiguate: a now-`published` row MUST be reported as an
-idempotent race (a concurrent publish won, this call wrote nothing); any other
-state MUST be reported as archived (the period was archived inside the
-read-to-write window — fail closed).
+When the guarded write matches zero rows, the helper SHALL re-read
+`archived` and `periodStatus`. An archived row MUST be reported as archived
+even if its retained `periodStatus` is `published`; otherwise a now-published
+row MUST be reported as an idempotent race. Any remaining mismatch MUST be
+reported as a typed stale-state outcome. Every zero-row outcome writes nothing.
 
 #### Scenario: Concurrent publish is reported as a race
 
@@ -69,6 +75,14 @@ read-to-write window — fail closed).
   non-published state
 - **THEN** the helper reports the archived outcome and the caller does not
   publish.
+
+#### Scenario: Another lifecycle field changes inside the window
+
+- **GIVEN** the report passed the service's manual-publish gates
+- **WHEN** its lifecycle tuple or period boundary changes before the guarded
+  write without becoming archived or published
+- **THEN** the helper reports the stale outcome
+- **AND** the caller surfaces a conflict and emits no publish side effects.
 
 ### Requirement: Publish Gates Are Ordered Around The Already-Published Fast Return
 
@@ -102,11 +116,12 @@ caller's own `reportId`, on periods a head may already read.
 ### Requirement: Injected Client Preserves Each Caller's Context And Snapshot Strategy
 
 The helper SHALL accept the Prisma client (a transaction client or the base
-client) AND the caller's full `data` field set as parameters, so the manual
-caller keeps its transaction context and the helper remains independent of
-snapshot assembly. The helper MUST apply that caller-supplied `data` inside the
-SINGLE guarded `updateMany` statement and MUST NOT split any field out into a
-separate write. `PeriodPrismaRepository.publishPeriod` runs the helper INSIDE a
+client), the service-read expected lifecycle and reporting envelope, AND the
+caller's full `data` field set as parameters, so the manual caller keeps its
+transaction context and the helper remains independent of snapshot assembly.
+The helper MUST apply that caller-supplied `data` inside the SINGLE guarded
+`updateMany` statement and MUST NOT split any field out into a separate write.
+`PeriodPrismaRepository.publishPeriod` runs the helper INSIDE a
 `$transaction` and re-reads the written row through that same transaction
 client before writing `publishedSnapshot`. The scheduler's
 `PublicationPrismaRepository.saveAutoPublishedReport` is a separate, draft-keyed

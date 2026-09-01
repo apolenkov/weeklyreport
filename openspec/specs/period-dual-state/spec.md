@@ -63,16 +63,29 @@ Report lifecycle writers and MUST NOT write these fields.
 
 ### Requirement: Lifecycle writes are guarded against concurrent changes
 
-Compare-and-set lifecycle operations MUST include the current lifecycle tuple
-and relevant period boundary in their update predicate. A concurrent lifecycle
-change MUST produce a typed stale-state conflict and preserve the winning
-transition.
+A lifecycle compare-and-set that follows an authorization or policy read MUST
+bind the write to the state that was authorized. Manual publish and period
+reopen MUST therefore include the service-read complete lifecycle tuple plus
+`periodStart` and `periodEnd` in their update predicate. A concurrent lifecycle
+or reporting-envelope change MUST produce a typed stale-state conflict and
+preserve the winning transition. A single-statement scheduler or admin state
+gate that has no prior authorization read MAY instead use the complete
+operation-specific identity defined by its durable specification; it MUST still
+fail closed when that identity no longer matches.
 
 #### Scenario: Unarchive loses a race
 
 - **WHEN** another writer changes the report lifecycle after unarchive reads it
 - **THEN** the guarded update affects zero rows and returns a stale-state
   conflict without partially changing the report
+
+#### Scenario: Publish authorization becomes stale
+
+- **WHEN** a report lifecycle field or period boundary changes after the
+  service authorizes a manual publish but before its guarded write
+- **THEN** the exact lifecycle predicate affects zero rows and returns a typed
+  stale-state conflict
+- **AND** the newer lifecycle transition remains unchanged
 
 ### Requirement: Current period payloads are complete and consistent
 
