@@ -15,6 +15,8 @@ const API_URL = requireApiUrl();
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   devIndicators: false,
+  // The repository owns its agent guidance; `next dev` must not create local copies.
+  agentRules: false,
   output: "standalone",
   reactCompiler: true,
   transpilePackages: ["@customreport/ui"],
