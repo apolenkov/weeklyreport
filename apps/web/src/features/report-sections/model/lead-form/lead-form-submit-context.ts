@@ -5,8 +5,9 @@ import {
   applyCrossAuthorStageOverrides,
   buildCrossAuthorStageMap,
 } from "../lead-cross-author";
-import { mapLeadProducts } from "../lead-form";
+import { mapLeadProducts, mapLeadRisks } from "../lead-form";
 import type { DraftSaveContent } from "../lead-section-draft-payload";
+import { deriveLeadSubmitReadiness } from "../lead-submit-readiness";
 import type { KanbanItem, Product } from "../types";
 
 // Plain per-render args for draft callbacks; readiness stays on the live draft.
@@ -57,5 +58,37 @@ export function buildSubmitStages(
       stageId: status.stageId,
       name: ownedStages?.[stageIndex]?.stageName ?? null,
     };
+  });
+}
+
+type ReadinessInput = Parameters<typeof deriveLeadSubmitReadiness>[0];
+
+interface LeadSubmitReadinessArgs {
+  readonly draftSection: ReportSectionReadModel | null;
+  readonly draftPayload: DraftSaveContent | null;
+  readonly products: ReadinessInput["products"];
+  readonly autosaveState: ReadinessInput["autosaveState"];
+  readonly submitPending: boolean;
+}
+
+// The gate reads the live draft, so a lead sees readiness before autosave lands.
+export function buildLeadSubmitReadiness({
+  draftSection,
+  draftPayload,
+  products,
+  autosaveState,
+  submitPending,
+}: LeadSubmitReadinessArgs) {
+  return deriveLeadSubmitReadiness({
+    draftPayload,
+    products,
+    activities: (draftSection?.activities ?? []).map((activity) => ({
+      id: activity.activityId,
+      name: activity.activityName,
+    })),
+    stages: buildSubmitStages(draftPayload, products),
+    ownRisks: draftSection ? mapLeadRisks(draftSection) : [],
+    autosaveState,
+    submitPending,
   });
 }

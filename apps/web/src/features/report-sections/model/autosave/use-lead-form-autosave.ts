@@ -18,14 +18,6 @@ import type {
   UseLeadFormAutosaveArgs,
 } from "./autosave-types";
 
-export { encodeAutosaveComparisonKey } from "./autosave-stable-stringify";
-export type {
-  AutosaveSnapshot,
-  AutosaveState,
-  DraftSaveContent,
-  UseLeadFormAutosaveArgs,
-} from "./autosave-types";
-
 export function useLeadFormAutosave(
   args: UseLeadFormAutosaveArgs,
 ): AutosaveSnapshot {

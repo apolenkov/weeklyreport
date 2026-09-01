@@ -7,21 +7,7 @@ import type {
   DecisionFieldErrors,
   DecisionFormSeed,
 } from "./decision-edit-dialog-helpers";
-
-export interface DecisionFormState {
-  readonly text: string;
-  readonly setText: Dispatch<SetStateAction<string>>;
-  readonly impact: string;
-  readonly setImpact: Dispatch<SetStateAction<string>>;
-  readonly deadline: string;
-  readonly setDeadline: Dispatch<SetStateAction<string>>;
-  readonly parent: RecordParent;
-  readonly setParent: Dispatch<SetStateAction<RecordParent>>;
-  readonly stageNames: string[];
-  readonly setStageNames: Dispatch<SetStateAction<string[]>>;
-  readonly errors: DecisionFieldErrors;
-  readonly setErrors: Dispatch<SetStateAction<DecisionFieldErrors>>;
-}
+import type { DecisionFormState } from "./decision-edit-dialog-model";
 
 export interface DecisionFormFieldsView {
   readonly text: string;

@@ -3,10 +3,8 @@ import { act, renderHook } from "@testing-library/react";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  encodeAutosaveComparisonKey,
-  useLeadFormAutosave,
-} from "./use-lead-form-autosave";
+import { encodeAutosaveComparisonKey } from "./autosave-stable-stringify";
+import { useLeadFormAutosave } from "./use-lead-form-autosave";
 import {
   AUTOSAVE_SECTION_ID as SECTION_ID,
   buildAutosaveHarness as buildHarness,

@@ -1,6 +1,6 @@
 "use client";
 
-import type { CreateSeed } from "../../../shared/hooks/dialogs/use-editable-list-dialog";
+import type { CreateSeed } from "../../../shared/hooks/dialogs/editable-list-dialog.types";
 import type { ItemColumn } from "../model/next-week-columns";
 
 interface BoardColumnHeaderProps {

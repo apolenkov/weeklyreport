@@ -15,9 +15,9 @@ import {
 } from "./decision-edit-dialog-helpers";
 import type {
   DecisionDialogModel,
+  DecisionFormState,
   UseDecisionEditDialogArgs,
 } from "./decision-edit-dialog-model";
-import type { DecisionFormState } from "./use-decision-form-state";
 
 export interface DecisionFocusTargets {
   readonly textRef: RefObject<HTMLTextAreaElement | null>;

@@ -2,11 +2,9 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../../../test-utils/expect-defined.js";
+import type { UnifiedActivityEntry } from "../../model/activity/unified-activity-entry";
 import type { ProductKanbanItem } from "../../model/types";
-import {
-  type UnifiedActivityEntry,
-  UnifiedActivitySection,
-} from "./unified-activity-section";
+import { UnifiedActivitySection } from "./unified-activity-section";
 
 function makeItem(
   overrides: Partial<ProductKanbanItem> & { id: string },

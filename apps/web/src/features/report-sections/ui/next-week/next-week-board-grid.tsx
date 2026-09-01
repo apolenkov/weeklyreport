@@ -1,7 +1,7 @@
 "use client";
 import type { ReactNode } from "react";
 
-import type { CreateSeed } from "../../../../shared/hooks/dialogs/use-editable-list-dialog";
+import type { CreateSeed } from "../../../../shared/hooks/dialogs/editable-list-dialog.types";
 import type { ItemColumn } from "../../model/next-week-columns";
 import type { KanbanItem } from "../../model/types";
 import { BoardGrid } from "../board-grid";
