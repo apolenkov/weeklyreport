@@ -122,6 +122,12 @@ describe("ActiveProductRow controls", () => {
       name: `Expand stage assignments for ${product.name}`,
     });
     expect(expand).toHaveAttribute("aria-expanded", "false");
+    const panelId = expand.getAttribute("aria-controls");
+    expect(panelId).toBeTruthy();
+    const panel = document.getElementById(panelId ?? "");
+    expect(panel).toHaveAttribute("role", "region");
+    expect(panel).toHaveAttribute("aria-labelledby", expand.id);
+    expect(panel).toHaveAttribute("aria-hidden", "true");
     fireEvent.click(expand);
     expect(onToggleExpand).toHaveBeenCalledWith(PRODUCT_ID);
 
@@ -140,11 +146,12 @@ describe("ActiveProductRow controls", () => {
       />,
     );
 
-    expect(
-      screen.getByRole("button", {
-        name: `Collapse stage assignments for ${product.name}`,
-      }),
-    ).toHaveAttribute("aria-expanded", "true");
+    const collapse = screen.getByRole("button", {
+      name: `Collapse stage assignments for ${product.name}`,
+    });
+    expect(collapse).toHaveAttribute("aria-expanded", "true");
+    expect(collapse).toHaveAttribute("aria-controls", panelId);
+    expect(panel).toHaveAttribute("aria-hidden", "false");
     expect(
       screen.getByRole("button", { name: `Edit ${product.name}` }),
     ).toBeEnabled();

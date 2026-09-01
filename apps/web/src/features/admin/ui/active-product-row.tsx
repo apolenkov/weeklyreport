@@ -35,6 +35,9 @@ export function ActiveProductRow({
   onArchive,
   isArchiving,
 }: ActiveProductRowProps) {
+  const toggleId = `admin-product-${product.id}-stage-assignments-toggle`;
+  const panelId = `admin-product-${product.id}-stage-assignments-panel`;
+
   return (
     <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] transition-shadow hover:shadow-sm">
       <div className="flex flex-col gap-3 px-4 py-3 md:flex-row md:items-center md:justify-between">
@@ -43,6 +46,8 @@ export function ActiveProductRow({
           owner={owner}
           isExpanded={isExpanded}
           onToggleExpand={onToggleExpand}
+          toggleId={toggleId}
+          panelId={panelId}
         />
         <ProductRowActions
           product={product}
@@ -58,6 +63,8 @@ export function ActiveProductRow({
         product={product}
         leads={leads}
         isExpanded={isExpanded}
+        id={panelId}
+        labelledBy={toggleId}
       />
     </div>
   );
@@ -68,20 +75,26 @@ function ProductSummary({
   owner,
   isExpanded,
   onToggleExpand,
+  toggleId,
+  panelId,
 }: {
   readonly product: AdminProductView;
   readonly owner: AdminUserView | undefined;
   readonly isExpanded: boolean;
   readonly onToggleExpand: (id: string) => void;
+  readonly toggleId: string;
+  readonly panelId: string;
 }) {
   return (
     <div className="flex min-w-0 items-center gap-3">
       <button
+        id={toggleId}
         type="button"
         onClick={() => onToggleExpand(product.id)}
         className={`flex h-7 w-7 ${PRODUCT_ROW_TOUCH_TARGET_CLASS} items-center justify-center rounded-full text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]`}
         aria-label={`${isExpanded ? "Collapse" : "Expand"} stage assignments for ${product.name}`}
         aria-expanded={isExpanded}
+        aria-controls={panelId}
       >
         <RotatingChevron expanded={isExpanded} />
       </button>
@@ -150,13 +163,21 @@ function StageAssignmentDrawer({
   product,
   leads,
   isExpanded,
+  id,
+  labelledBy,
 }: {
   readonly product: AdminProductView;
   readonly leads: readonly AdminUserView[];
   readonly isExpanded: boolean;
+  readonly id: string;
+  readonly labelledBy: string;
 }) {
   return (
     <div
+      id={id}
+      role="region"
+      aria-labelledby={labelledBy}
+      aria-hidden={!isExpanded}
       className="grid transition-[grid-template-rows] duration-300 motion-reduce:transition-none"
       style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
     >

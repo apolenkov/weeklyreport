@@ -130,7 +130,11 @@ MUST likewise expose one stable toggle-to-region relationship. Its collapsed
 content wrapper MUST be both `inert` and `aria-hidden` so its mounted controls
 cannot remain interactive or enter the accessibility tree. An empty product
 accordion renders no panel and MUST omit `aria-controls` rather than reference
-a missing element.
+a missing element. The Settings AI Provider disclosure and the Admin Product
+stage-assignment and Activity lead-attachment disclosures MUST also expose a
+stable `aria-controls` relationship to a region labelled by the corresponding
+toggle. Admin row regions that stay mounted while collapsed MUST report their
+hidden state to assistive technology.
 
 #### Scenario: QuickAddButton exposes a group disclosure accurately
 
@@ -158,3 +162,11 @@ a missing element.
 - **WHEN** a product report has no renderable content
 - **THEN** its disabled header omits `aria-controls`
 - **AND** no product-content region is rendered for that header
+
+#### Scenario: Settings and Admin disclosures identify their controlled regions
+
+- **WHEN** an administrator inspects the AI Provider, Product stage-assignment,
+  or Activity lead-attachment disclosure
+- **THEN** the toggle's `aria-controls` resolves to the disclosed region
+- **AND** the region's `aria-labelledby` resolves to that toggle
+- **AND** a mounted collapsed Admin row region reports `aria-hidden="true"`

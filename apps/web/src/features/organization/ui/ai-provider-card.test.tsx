@@ -183,6 +183,33 @@ const mutations = () => {
 };
 
 describe("AiProviderCardContent", () => {
+  it("links the provider disclosure to its labelled settings region", () => {
+    render(
+      <AiProviderCardContent
+        data={control(null)}
+        savedRevision={null}
+        message={null}
+        mutations={mutations() as never}
+        onSave={vi.fn()}
+      />,
+    );
+
+    const toggle = screen.getByRole("button", {
+      name: "Toggle AI provider settings",
+    });
+    const panelId = toggle.getAttribute("aria-controls");
+    expect(panelId).toBeTruthy();
+    const panel = document.getElementById(panelId ?? "");
+    expect(panel).toHaveAttribute("role", "region");
+    expect(panel).toHaveAttribute("aria-labelledby", toggle.id);
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(panel).toHaveAttribute("hidden");
+    expect(panel).toHaveAttribute("aria-hidden", "true");
+    expect(document.getElementById(panelId ?? "")).toBe(panel);
+  });
+
   it("renders the fixed mask-only credential metadata", () => {
     const active = revision("active");
     render(

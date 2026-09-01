@@ -1,6 +1,10 @@
 import "@testing-library/jest-dom/vitest";
 
-import { screen, waitForElementToBeRemoved } from "@testing-library/react";
+import {
+  screen,
+  waitFor,
+  waitForElementToBeRemoved,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -65,6 +69,27 @@ describe("WeeklyReportPage visibility states", () => {
     expect(
       document.getElementById(`report-lead-${AUTHOR_ID_A}`),
     ).not.toBeNull();
+  });
+
+  it("shows a tokenized focus indicator after lead overview navigation", async () => {
+    renderWeeklyReportPage(makeWeeklyReportData("open"), {
+      role: "head",
+      scope: "lead",
+    });
+    await waitForReadyPage();
+
+    const section = document.getElementById(`report-lead-${AUTHOR_ID_A}`);
+    if (!section) throw new Error("Lead section was not rendered");
+    expect(section).toHaveClass(
+      "focus-visible:ring-2",
+      "focus-visible:ring-[var(--color-ring)]",
+      "focus-visible:ring-offset-2",
+    );
+
+    const user = userEvent.setup();
+    screen.getByTitle("Jump to Alice's section").focus();
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(section).toHaveFocus());
   });
 
   it("shows the archive link for an empty open report", async () => {

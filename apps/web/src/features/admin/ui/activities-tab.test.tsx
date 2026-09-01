@@ -424,6 +424,20 @@ describe("ActivitiesTab — lead attachment", () => {
     );
   }
 
+  it("links the activity disclosure to its labelled lead region", async () => {
+    renderTab();
+
+    const toggle = await screen.findByRole("button", {
+      name: "Expand lead attachments for Onboarding Revamp",
+    });
+    const panelId = toggle.getAttribute("aria-controls");
+    expect(panelId).toBeTruthy();
+    const panel = document.getElementById(panelId ?? "");
+    expect(panel).toHaveAttribute("role", "region");
+    expect(panel).toHaveAttribute("aria-labelledby", toggle.id);
+    expect(panel).toHaveAttribute("aria-hidden", "true");
+  });
+
   it("attaches a same-group lead", async () => {
     const user = userEvent.setup();
     const { captured } = renderTab();
