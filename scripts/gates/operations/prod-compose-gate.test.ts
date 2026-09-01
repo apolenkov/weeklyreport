@@ -881,6 +881,53 @@ void test("external image policy rejects moving and mismatched references", () =
   );
 });
 
+void test("manual runtime smoke reclaims only reviewed application build space", () => {
+  const workflowModel = parse(workflowContent, { maxAliasCount: 50 }) as {
+    readonly jobs?: Readonly<
+      Record<
+        string,
+        {
+          readonly steps?: readonly {
+            readonly name?: unknown;
+            readonly if?: unknown;
+            readonly run?: unknown;
+          }[];
+        }
+      >
+    >;
+  };
+  const steps = workflowModel.jobs?.["docker-build"]?.steps ?? [];
+  const stepNames = steps.map(({ name }) => name);
+  const releaseIdentityIndex = stepNames.indexOf(
+    "Verify production image release identity",
+  );
+  const reclaimIndex = stepNames.indexOf(
+    "Reclaim Docker build space before runtime smoke",
+  );
+  const runtimeIndex = stepNames.indexOf(
+    "Verify PostgreSQL, pgvector, PgBouncer, Redis, and Caddy",
+  );
+  assert.ok(
+    releaseIdentityIndex !== -1 &&
+      releaseIdentityIndex < reclaimIndex &&
+      reclaimIndex < runtimeIndex,
+    "build outputs must be verified before their space is reclaimed for runtime smoke",
+  );
+
+  const reclaimStep = steps.at(reclaimIndex);
+  assert.ok(reclaimStep);
+  assert.equal(reclaimStep.if, "github.event_name == 'workflow_dispatch'");
+  assert.equal(typeof reclaimStep.run, "string");
+  const reclaimRun = reclaimStep.run as string;
+  assert.match(reclaimRun, /for service in backup migrate api web/u);
+  assert.match(
+    reclaimRun,
+    /docker image rm "customreport-\$\{service\}:\$\{OTEL_SERVICE_VERSION\}"/u,
+  );
+  assert.match(reclaimRun, /docker builder prune --all --force/u);
+  assert.doesNotMatch(reclaimRun, /--volumes|docker system prune/u);
+});
+
 void test("Bugsink persists its SQLite database in the named data volume", () => {
   const model = parse(errorsContent, { maxAliasCount: 50 }) as {
     readonly services?: Readonly<
