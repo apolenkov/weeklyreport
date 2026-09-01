@@ -45,9 +45,9 @@ interface SdlcProductCardProps {
 function ProductHeading({ product }: { readonly product: Product }) {
   return (
     <div className="flex min-w-0 items-center gap-2">
-      <span className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-[var(--color-primary)]">
+      <h3 className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-[var(--color-primary)]">
         {product.name}
-      </span>
+      </h3>
       {product.riskSummary && (
         <span
           className="inline-flex min-w-0 shrink items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-destructive-surface-subtle)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-destructive)]"

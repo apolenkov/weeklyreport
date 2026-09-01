@@ -38,8 +38,8 @@ function AccordionHeading({
   headingId,
 }: AccordionHeadingProps & { readonly headingId: string }) {
   return (
-    <div className="min-w-0">
-      <div className="flex items-center gap-3">
+    <span className="block min-w-0">
+      <span className="flex items-center gap-3">
         {icon}
         <span
           id={headingId}
@@ -56,13 +56,13 @@ function AccordionHeading({
             {badge}
           </span>
         )}
-      </div>
+      </span>
       {subtitle && (
         <span className="mt-1 block text-xs text-[var(--color-muted-foreground)]">
           {subtitle}
         </span>
       )}
-    </div>
+    </span>
   );
 }
 
@@ -143,16 +143,18 @@ function AccordionHeader({
     <div
       className={`flex w-full items-center justify-between gap-3 p-5 transition-colors hover:bg-[var(--color-surface-hover)] ${hasActions ? "max-sm:flex-wrap" : ""}`}
     >
-      <button
-        type="button"
-        className={`flex min-w-0 flex-1 items-center justify-between gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-1 ${hasActions ? "max-sm:basis-full" : ""}`}
-        onClick={onToggle}
-        aria-expanded={expanded}
-        aria-controls={panelId}
-      >
-        <AccordionHeading {...heading} headingId={headingId} />
-        {!actions && <RotatingChevron expanded={expanded} />}
-      </button>
+      <h2 className={`min-w-0 flex-1 ${hasActions ? "max-sm:basis-full" : ""}`}>
+        <button
+          type="button"
+          className="flex w-full min-w-0 items-center justify-between gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-1"
+          onClick={onToggle}
+          aria-expanded={expanded}
+          aria-controls={panelId}
+        >
+          <AccordionHeading {...heading} headingId={headingId} />
+          {!actions && <RotatingChevron expanded={expanded} />}
+        </button>
+      </h2>
       {actions ? (
         <div className="flex shrink-0 items-center gap-2 max-sm:ml-auto">
           {actions}

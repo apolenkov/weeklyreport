@@ -5,7 +5,7 @@
 // never shares the health hue. Tests prove the two signals are independent
 // across all four quadrants.
 
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import type { Product } from "../../report-sections";
@@ -107,6 +107,22 @@ describe("getProductCardStyle — health-only solid left edge", () => {
     expect(getProductCardStyle("empty").borderLeft).toContain(
       "var(--color-border)",
     );
+  });
+});
+
+describe("SdlcPipeline — product navigation", () => {
+  it("exposes each product name as a level-three heading", () => {
+    render(
+      <SdlcPipeline
+        products={[BASE_PRODUCT]}
+        readOnly
+        onStatusChange={() => undefined}
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", { level: 3, name: "Product Alpha" }),
+    ).toBeInTheDocument();
   });
 });
 
@@ -514,7 +530,7 @@ describe("SdlcPipeline — co-lead blocked locked chip: initials, no counts", ()
         readOnly={false}
       />,
     );
-    // The assignee span renders below the chip button; it must contain
+    // The assignee span renders below the status chip; it must contain
     // the initials string set by applyCrossAuthorStageOverrides.
     const allSpans = Array.from(container.querySelectorAll("span"));
     const assigneeSpan = allSpans.find((s) => s.textContent === "AK");
@@ -542,9 +558,10 @@ describe("SdlcPipeline — co-lead blocked locked chip: initials, no counts", ()
       />,
     );
     // The Testing chip is locked; clicking it must not open a status menu.
-    const lockedBtn = getByRole("button", { name: "Testing: Blocked" });
-    expect(lockedBtn).toHaveAttribute("aria-disabled", "true");
-    lockedBtn.click();
+    const lockedIndicator = getByRole("img", { name: /Testing: Blocked/ });
+    expect(lockedIndicator).not.toHaveAttribute("tabindex");
+    expect(lockedIndicator).not.toHaveAttribute("aria-disabled");
+    lockedIndicator.click();
     expect(document.querySelector('[role="menu"]')).toBeNull();
   });
 });
