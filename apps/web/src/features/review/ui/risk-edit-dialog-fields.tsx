@@ -1,6 +1,6 @@
 "use client";
 
-import type { Ref } from "react";
+import { type Ref, useId } from "react";
 
 import { ChoiceChipRow } from "../../../shared/ui/forms/choice-chip-row";
 import { RecordTextareaField } from "../../../shared/ui/forms/record-textarea-field";
@@ -160,9 +160,14 @@ function SeverityChoice({
   severity,
   onSeveritySelect,
 }: Pick<RiskEditDialogFieldsProps, "severity" | "onSeveritySelect">) {
+  const labelId = useId();
+
   return (
     <div>
-      <span className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]">
+      <span
+        id={labelId}
+        className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+      >
         Severity
       </span>
       <p className="mb-1 text-[11px] text-[var(--color-muted-foreground)]">
@@ -173,6 +178,7 @@ function SeverityChoice({
         choices={SEVERITY_CHOICES}
         value={severity}
         onSelect={onSeveritySelect}
+        ariaLabelledBy={labelId}
       />
     </div>
   );

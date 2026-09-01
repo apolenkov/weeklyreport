@@ -291,7 +291,7 @@ describe("LeadForm mode-adaptive trailing control", () => {
     ).toBeInTheDocument();
   });
 
-  it("edit mode with an empty report: the collapse control is reserved but disabled", async () => {
+  it("edit mode with an empty report: enables collapse for the visible sections", async () => {
     const { Wrapper } = buildHarness({
       byPeriodQueryFn: () =>
         Promise.resolve({
@@ -321,13 +321,15 @@ describe("LeadForm mode-adaptive trailing control", () => {
       </Wrapper>,
     );
 
-    // The slot is rendered (not removed) even with nothing to collapse...
+    // Product Status and the other edit sections remain mounted even when the
+    // report has no records, so the group control remains actionable.
+    expect(
+      await screen.findByTestId("lead-section-product-status"),
+    ).toBeInTheDocument();
     const collapseBtn = await screen.findByRole("button", {
       name: "Collapse all sections",
     });
-    // ...and disabled because there is nothing to collapse, so adding a
-    // section in-session enables it in place without shifting the row.
-    expect(collapseBtn).toBeDisabled();
+    expect(collapseBtn).toBeEnabled();
   });
 
   it("slides mode: the trailing slot shows the fullscreen toggle, not a collapse/Toggle-All control", async () => {
