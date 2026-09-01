@@ -5,8 +5,6 @@ import { useState } from "react";
 import type { KanbanItem } from "../types";
 import type { UnifiedActivityEntry } from "./unified-activity-entry";
 
-export type { UnifiedActivityEntry } from "./unified-activity-entry";
-
 export interface UnifiedActivityEditState {
   readonly entry: UnifiedActivityEntry;
   readonly seq: number;

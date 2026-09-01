@@ -5,7 +5,7 @@ import {
   ACTIVITY_BUCKET_ORDER,
   type ActivityBucket,
 } from "../../model/activity/activity-buckets";
-import type { UnifiedActivityEntry } from "../../model/activity/use-unified-activity-editing";
+import type { UnifiedActivityEntry } from "../../model/activity/unified-activity-entry";
 import type { RiskEntry } from "../../model/types";
 import { ItemCard } from "../item-card";
 

@@ -11,7 +11,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 
-import { encodeAutosaveComparisonKey } from "../autosave/use-lead-form-autosave";
+import { encodeAutosaveComparisonKey } from "../autosave/autosave-stable-stringify";
 import { useDraftServerSync } from "../autosave/use-lead-form-server-sync";
 import { sectionToDraftPayload } from "../lead-section-draft-payload";
 import {

@@ -14,8 +14,6 @@ import {
 import type { DecisionEntry, KanbanItem, Product, RiskEntry } from "../types";
 import type { ReportPeriod } from "../types";
 
-export type { UnifiedActivityEntry } from "../activity/unified-activity-entry";
-
 type SectionItem = ReportSectionReadModel["items"][number];
 
 export interface ForeignMergeInput {

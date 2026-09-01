@@ -1,5 +1,5 @@
 import type { EditableListHandlers } from "../../../shared/hooks/dialogs/create-editable-list-handlers";
-import type { UseEditableListDialogResult } from "../../../shared/hooks/dialogs/use-editable-list-dialog";
+import type { UseEditableListDialogResult } from "../../../shared/hooks/dialogs/editable-list-dialog.types";
 import type { KanbanItem, Product, RiskEntry } from "./types";
 
 export interface ItemDialogSectionData {

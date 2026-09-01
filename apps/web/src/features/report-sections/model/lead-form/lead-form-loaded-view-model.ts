@@ -4,6 +4,7 @@ import type {
   ReportSectionReadModel,
 } from "@customreport/shared";
 
+import type { UnifiedActivityEntry } from "../activity/unified-activity-entry";
 import { deriveActivityAlarmFloor } from "../alarms/activity-alarm";
 import type { CrossAuthorRow } from "../lead-cross-author";
 import {
@@ -30,7 +31,6 @@ import {
   type ForeignMergeResult,
   mergeForeignDisplayRecords,
   publishedLockedIds,
-  type UnifiedActivityEntry,
 } from "./lead-form-loaded-view-model-helpers";
 
 // Pure projection input; LeadForm supplies settled query/draft data after its

@@ -2,24 +2,11 @@
 
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
-// Shared open/create/edit/close + add-signal guard for lead list sections.
-// Section-specific prefill/seed stays at the call site (lead-dialog-lifecycle).
-export type EditableListDialogState<TEntity> =
-  | { open: false }
-  | {
-      open: true;
-      mode: "create";
-      seedProductId?: string;
-      seedActivityId?: string;
-    }
-  | { open: true; mode: "edit"; entity: TEntity };
-
-// Product and activity are mutually exclusive: a product column's "+ Add"
-// seeds one, an activity lane's "+ Add" the other.
-export interface CreateSeed {
-  readonly productId?: string | undefined;
-  readonly activityId?: string | undefined;
-}
+import type {
+  CreateSeed,
+  EditableListDialogState,
+  UseEditableListDialogResult,
+} from "./editable-list-dialog.types";
 
 interface UseEditableListDialogOptions {
   readonly readOnly: boolean;
@@ -31,20 +18,6 @@ interface UseEditableListDialogOptions {
   // current/next-week require a seed product to open from the signal (the
   // created item must attach to a product column); risks/decisions do not.
   readonly requireSeed?: boolean | undefined;
-}
-
-export interface UseEditableListDialogResult<TEntity> {
-  readonly dialogState: EditableListDialogState<TEntity>;
-  // openSeq-derived remount key. Repeated opens of the same entity always
-  // remount the dialog with fresh state.
-  readonly dialogKey: string;
-  // The three openers below no-op when readOnly.
-  readonly openCreate: (seed?: CreateSeed) => void;
-  readonly openEdit: (entity: TEntity) => void;
-  readonly close: () => void;
-  readonly pendingDelete: TEntity | null;
-  readonly requestDelete: (entity: TEntity) => void;
-  readonly clearPendingDelete: () => void;
 }
 
 // Sentinel meaning the add-signal effect has not yet handled any signal.

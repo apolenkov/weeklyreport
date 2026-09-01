@@ -1,4 +1,4 @@
-import type { UseEditableListDialogResult } from "./use-editable-list-dialog";
+import type { UseEditableListDialogResult } from "./editable-list-dialog.types";
 
 export interface EditableListHandlerProps<T extends { readonly id: string }> {
   readonly items: readonly T[];

@@ -1,10 +1,8 @@
 "use client";
 
 import { ConfirmDeleteDialog } from "../../../../shared/ui/dialogs/confirm-delete-dialog";
-import type {
-  UnifiedActivityEditState,
-  UnifiedActivityEntry,
-} from "../../model/activity/use-unified-activity-editing";
+import type { UnifiedActivityEntry } from "../../model/activity/unified-activity-entry";
+import type { UnifiedActivityEditState } from "../../model/activity/use-unified-activity-editing";
 import type { KanbanItem, Product, RiskEntry } from "../../model/types";
 import { ItemEditDialog } from "../item-edit-dialog";
 

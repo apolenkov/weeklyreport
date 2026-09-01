@@ -2,10 +2,8 @@ import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { KanbanItem } from "../types";
-import {
-  type UnifiedActivityEntry,
-  useUnifiedActivityEditing,
-} from "./use-unified-activity-editing";
+import type { UnifiedActivityEntry } from "./unified-activity-entry";
+import { useUnifiedActivityEditing } from "./use-unified-activity-editing";
 
 function makeItem(id: string): KanbanItem {
   return {

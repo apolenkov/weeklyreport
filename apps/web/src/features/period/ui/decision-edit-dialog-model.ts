@@ -1,3 +1,5 @@
+import type { Dispatch, SetStateAction } from "react";
+
 import type {
   DecisionEntry,
   ParentActivityOption,
@@ -9,7 +11,10 @@ import {
   isZeroOwnedStageDeadEnd,
   resolveRecordParent,
 } from "../../report-sections";
-import { resolveDecisionProductName } from "./decision-edit-dialog-helpers";
+import {
+  type DecisionFieldErrors,
+  resolveDecisionProductName,
+} from "./decision-edit-dialog-helpers";
 
 export interface UseDecisionEditDialogArgs {
   readonly decision: DecisionEntry | null;
@@ -31,6 +36,21 @@ export interface DecisionDialogModel {
   readonly selectedActivity: ParentActivityOption | undefined;
   readonly selectedProduct: Product | undefined;
   readonly headerProductName: string;
+}
+
+export interface DecisionFormState {
+  readonly text: string;
+  readonly setText: Dispatch<SetStateAction<string>>;
+  readonly impact: string;
+  readonly setImpact: Dispatch<SetStateAction<string>>;
+  readonly deadline: string;
+  readonly setDeadline: Dispatch<SetStateAction<string>>;
+  readonly parent: RecordParent;
+  readonly setParent: Dispatch<SetStateAction<RecordParent>>;
+  readonly stageNames: string[];
+  readonly setStageNames: Dispatch<SetStateAction<string[]>>;
+  readonly errors: DecisionFieldErrors;
+  readonly setErrors: Dispatch<SetStateAction<DecisionFieldErrors>>;
 }
 
 // Parent is product or activity; seeded from the row (edit) or default product

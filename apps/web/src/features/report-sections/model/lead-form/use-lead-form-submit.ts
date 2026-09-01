@@ -1,6 +1,5 @@
 "use client";
 
-import type { ReportSectionReadModel } from "@customreport/shared";
 import {
   type Dispatch,
   type RefObject,
@@ -10,49 +9,10 @@ import {
 import { toast } from "sonner";
 
 import { isConflictError } from "../../../../shared/lib/trpc/trpc";
-import { mapLeadRisks } from "../lead-form";
 import type { DraftSaveContent } from "../lead-section-draft-payload";
-import {
-  buildLeadSubmitPayload,
-  deriveLeadSubmitReadiness,
-} from "../lead-submit-readiness";
+import { buildLeadSubmitPayload } from "../lead-submit-readiness";
 import type { LeadFormDraftSeam } from "./lead-form-draft-seam";
-import {
-  buildSubmitStages,
-  type SubmitOutcome,
-} from "./lead-form-submit-context";
-
-type ReadinessInput = Parameters<typeof deriveLeadSubmitReadiness>[0];
-
-interface LeadSubmitReadinessArgs {
-  readonly draftSection: ReportSectionReadModel | null;
-  readonly draftPayload: DraftSaveContent | null;
-  readonly products: ReadinessInput["products"];
-  readonly autosaveState: ReadinessInput["autosaveState"];
-  readonly submitPending: boolean;
-}
-
-// The gate reads the LIVE draft, so a lead sees readiness before autosave lands.
-export function buildLeadSubmitReadiness({
-  draftSection,
-  draftPayload,
-  products,
-  autosaveState,
-  submitPending,
-}: LeadSubmitReadinessArgs) {
-  return deriveLeadSubmitReadiness({
-    draftPayload,
-    products,
-    activities: (draftSection?.activities ?? []).map((activity) => ({
-      id: activity.activityId,
-      name: activity.activityName,
-    })),
-    stages: buildSubmitStages(draftPayload, products),
-    ownRisks: draftSection ? mapLeadRisks(draftSection) : [],
-    autosaveState,
-    submitPending,
-  });
-}
+import type { SubmitOutcome } from "./lead-form-submit-context";
 
 interface LeadFormSubmitArgs {
   readonly draftPayload: DraftSaveContent | null;

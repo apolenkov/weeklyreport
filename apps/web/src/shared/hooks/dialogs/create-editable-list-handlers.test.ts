@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { createEditableListHandlers } from "./create-editable-list-handlers";
-import type { UseEditableListDialogResult } from "./use-editable-list-dialog";
+import type { UseEditableListDialogResult } from "./editable-list-dialog.types";
 
 interface Item {
   readonly id: string;
