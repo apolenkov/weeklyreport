@@ -155,6 +155,10 @@ describe("LeadReportAssistant", () => {
     });
     expect(trigger).toBeDisabled();
     expect(trigger).toHaveAttribute("aria-busy", "true");
+    expect(trigger.querySelector("svg")).toHaveClass(
+      "animate-spin",
+      "motion-reduce:animate-none",
+    );
   });
 
   it("keeps Chat disabled when availability fails", async () => {
@@ -186,6 +190,12 @@ describe("LeadReportAssistant", () => {
     renderAssistant();
     await openAssistant();
     const question = screen.getByRole("textbox", { name: "Your question" });
+    expect(question).toHaveClass("border-[var(--color-border)]");
+    expect(
+      screen.getByText(
+        /This exchange stays in memory.*Reloading, signing out, or switching accounts clears it\./u,
+      ),
+    ).toBeInTheDocument();
     fireEvent.change(question, { target: { value: "A temporary question" } });
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
 
@@ -358,6 +368,11 @@ describe("LeadReportAssistant", () => {
     await openAssistant();
     submitQuestion();
     expect(screen.getByRole("status")).toHaveTextContent("Reviewing");
+    const spinners = document.querySelectorAll(".animate-spin");
+    expect(spinners).toHaveLength(2);
+    for (const spinner of spinners) {
+      expect(spinner).toHaveClass("motion-reduce:animate-none");
+    }
     expect(
       screen.getByRole("button", { name: "Searching reports" }),
     ).toBeDisabled();

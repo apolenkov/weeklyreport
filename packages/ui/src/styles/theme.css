@@ -148,6 +148,8 @@
   --layer-popover: 50;
   /* Modal dialogs stack above popovers and the slide deck's sticky chrome. */
   --layer-dialog: 100;
+  /* Toasts remain visible when a dialog or Sheet reports an outcome. */
+  --layer-toast: 110;
   --dropdown-menu-min-width: 8rem;
 
   --touch-target-min: 44px;

@@ -105,7 +105,7 @@ export function LeadReportAssistant() {
           >
             {isCheckingAvailability ? (
               <LoaderCircle
-                className="size-4 animate-spin"
+                className="size-4 animate-spin motion-reduce:animate-none"
                 aria-hidden="true"
               />
             ) : (
@@ -161,7 +161,10 @@ export function LeadReportAssistant() {
           className="border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
         >
           {availability.isFetching ? (
-            <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+            <LoaderCircle
+              className="size-4 animate-spin motion-reduce:animate-none"
+              aria-hidden="true"
+            />
           ) : (
             <RefreshCw className="size-4" aria-hidden="true" />
           )}
