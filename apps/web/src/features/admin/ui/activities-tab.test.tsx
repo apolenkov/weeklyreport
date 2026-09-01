@@ -1,6 +1,6 @@
 import type { ProjectActivity } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -250,6 +250,32 @@ describe("ActivitiesTab — create", () => {
     );
     expect(save).toBeEnabled();
   });
+
+  it("keeps the dialog open on Escape and backdrop click while Save is pending", async () => {
+    const user = userEvent.setup();
+    const { captured } = renderTab({ activities: [] });
+    captured["projectActivity.create"]?.mutationFn.mockReturnValue(
+      new Promise<never>(() => undefined),
+    );
+
+    await screen.findByRole("button", { name: "Add new activity" });
+    await user.click(screen.getByRole("button", { name: "Add new activity" }));
+    await user.type(screen.getByLabelText("Activity Name"), "Audit");
+    await user.selectOptions(
+      screen.getByLabelText("Reporting Group"),
+      GROUP_ID,
+    );
+    await user.click(screen.getByRole("button", { name: "Add Activity" }));
+
+    await screen.findByRole("button", { name: "Saving…" });
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("presentation"));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
 });
 
 describe("ActivitiesTab — edit", () => {
@@ -315,6 +341,28 @@ describe("ActivitiesTab — edit", () => {
     );
 
     expect(screen.getByLabelText("Reporting Group")).toBeEnabled();
+  });
+});
+
+describe("ActivitiesTab — focus management", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("focuses the name field on open and restores the trigger after Escape", async () => {
+    const user = userEvent.setup();
+    renderTab();
+    const addButton = await screen.findByRole("button", {
+      name: "Add new activity",
+    });
+    addButton.focus();
+
+    await user.click(addButton);
+    expect(screen.getByLabelText("Activity Name")).toHaveFocus();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(addButton).toHaveFocus();
   });
 });
 

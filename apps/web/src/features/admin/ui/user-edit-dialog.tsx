@@ -35,18 +35,25 @@ export function UserEditDialog({
   onClose,
 }: UserEditDialogProps) {
   const surfaceRef = useRef<HTMLDivElement>(null);
+  const closeIfIdle = () => {
+    if (!isSaving) onClose();
+  };
 
   // Focus trap + Escape-to-close + restore-to-trigger via the shared primitive.
   // The dialog mounts on open, so the hook self-captures the opener at first
   // render and restores focus to it on close.
-  useDialogFocus({ open: true, onClose, containerRef: surfaceRef });
+  useDialogFocus({
+    open: true,
+    onClose: closeIfIdle,
+    containerRef: surfaceRef,
+  });
 
   return (
     <UserEditDialogShell
       surfaceRef={surfaceRef}
       title={editingUser ? "Edit User" : "Add User"}
       ariaLabel={editingUser ? "Edit user" : "Add user"}
-      onClose={onClose}
+      onClose={closeIfIdle}
     >
       <form
         className="flex min-h-0 flex-1 flex-col"
@@ -66,7 +73,7 @@ export function UserEditDialog({
           canSave={canSave}
           isSaving={isSaving}
           saveLabel={editingUser ? "Save Changes" : "Add User"}
-          onClose={onClose}
+          onClose={closeIfIdle}
         />
       </form>
     </UserEditDialogShell>

@@ -219,6 +219,27 @@ describe("GroupsTab — a11y regression", () => {
       expect(screen.getByTestId("crud-sheet")).toBeInTheDocument();
     });
   });
+
+  it("keeps the dialog open on Escape and backdrop click while Save is pending", async () => {
+    const { captured } = renderTab({ groups: [] });
+    expectDefined(
+      captured["admin.saveReportingGroup"],
+    ).mutationFn.mockReturnValue(new Promise<never>(() => undefined));
+    const user = userEvent.setup();
+
+    openAddDialog();
+    await user.type(screen.getByLabelText(/^name$/i), "Platform");
+    await user.click(screen.getByRole("button", { name: "Add Group" }));
+
+    await screen.findByRole("button", { name: "Saving…" });
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("crud-sheet"));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
 });
 
 describe("GroupsTab — focus management", () => {

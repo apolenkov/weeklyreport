@@ -34,16 +34,23 @@ export function ActivityEditDialog({
   onClose,
 }: ActivityEditDialogProps) {
   const surfaceRef = useRef<HTMLDivElement>(null);
+  const closeIfIdle = () => {
+    if (!isSaving) onClose();
+  };
 
   // Focus trap + Escape-to-close + restore-to-trigger via the shared primitive.
   // The dialog mounts on open, so the hook self-captures the opener at first
   // render and restores focus to it on close.
-  useDialogFocus({ open: true, onClose, containerRef: surfaceRef });
+  useDialogFocus({
+    open: true,
+    onClose: closeIfIdle,
+    containerRef: surfaceRef,
+  });
 
   return (
     <DialogSurface
       surfaceRef={surfaceRef}
-      onDismiss={onClose}
+      onDismiss={closeIfIdle}
       surfaceClassName="animate-scale-in mx-4 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl"
       ariaLabel={editingActivity ? "Edit activity" : "Add activity"}
     >
@@ -67,7 +74,7 @@ export function ActivityEditDialog({
           saveLabel={editingActivity !== null ? "Save Changes" : "Add Activity"}
           canSave={canSave}
           isSaving={isSaving}
-          onClose={onClose}
+          onClose={closeIfIdle}
           saveDisabled={isSaving || !canSave}
         />
       </form>

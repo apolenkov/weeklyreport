@@ -140,6 +140,29 @@ describe("UsersTab — dialog keyboard and click behavior", () => {
     expect(screen.getByTestId("crud-sheet")).toBeInTheDocument();
   });
 
+  it("keeps the dialog open on Escape and backdrop click while Save is pending", async () => {
+    const { captured } = renderTab([], [GROUP]);
+    expectDefined(captured["admin.saveUser"]).mutationFn.mockReturnValue(
+      new Promise<never>(() => undefined),
+    );
+    const user = userEvent.setup();
+
+    openDialog();
+    await user.type(screen.getByLabelText(/^last name$/i), "Petrov");
+    await user.type(screen.getByLabelText(/^first name$/i), "Ivan");
+    await user.type(screen.getByLabelText(/^email$/i), "ivan@example.com");
+    await user.click(screen.getByRole("button", { name: "Add User" }));
+
+    await screen.findByRole("button", { name: "Saving…" });
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("crud-sheet"));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
   it("keeps the long user form scrollable inside the viewport", () => {
     renderTab();
 

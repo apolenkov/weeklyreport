@@ -89,7 +89,7 @@ function renderTab(opts?: {
   productFilter?: string | null;
   countsError?: boolean;
 }) {
-  const { proxy } = createMockTRPC([
+  const { proxy, captured } = createMockTRPC([
     {
       path: ["admin", "listStageAssignmentCounts"],
       query: opts?.countsError
@@ -117,7 +117,7 @@ function renderTab(opts?: {
     );
   }
 
-  return render(
+  const result = render(
     <ProductsTab
       products={opts?.products ?? [mockProduct]}
       users={opts?.users ?? [mockLead]}
@@ -125,6 +125,7 @@ function renderTab(opts?: {
     />,
     { wrapper: Wrapper },
   );
+  return { ...result, captured };
 }
 
 describe("ProductsTab — deep-link panel state", () => {
@@ -265,6 +266,25 @@ describe("ProductsTab — Add/Edit dialog a11y", () => {
     // Click the inner dialog container itself — stopPropagation should
     // prevent the backdrop onClick from firing.
     await user.click(dialog);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("keeps the dialog open on Escape and backdrop click while Save is pending", async () => {
+    const { captured } = renderTab({ products: [] });
+    captured["admin.saveProject"]?.mutationFn.mockReturnValue(
+      new Promise<never>(() => undefined),
+    );
+
+    openAddAndPickLead();
+    fireEvent.click(screen.getByRole("button", { name: "Add Product" }));
+
+    await screen.findByRole("button", { name: "Saving…" });
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("presentation"));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 });
