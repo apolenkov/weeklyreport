@@ -121,13 +121,13 @@ export function EndpointField({
 export function CredentialField({
   label,
   value,
-  maskedSuffix,
+  configured,
   busy,
   onChange,
 }: Readonly<{
   label: string;
   value: string;
-  maskedSuffix: string | null | undefined;
+  configured: boolean;
   busy: boolean;
   onChange: (value: string) => void;
 }>) {
@@ -135,9 +135,9 @@ export function CredentialField({
     <Field
       label={label}
       hint={
-        maskedSuffix
+        configured
           ? "Leave blank to keep the saved credential."
-          : "Encrypted at rest; only a masked suffix is shown."
+          : "Encrypted at rest. Diagnostics show a masked suffix."
       }
     >
       <input
@@ -148,7 +148,7 @@ export function CredentialField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         disabled={busy}
-        placeholder={maskedSuffix ?? "Paste the provider key"}
+        placeholder={configured ? "Saved credential" : "Paste the provider key"}
         autoComplete="new-password"
       />
     </Field>

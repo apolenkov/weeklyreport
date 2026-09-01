@@ -48,12 +48,3 @@ export const selectObservedRevision = (
     data.revisions.find(({ id }) => id === savedRevision.id) ?? savedRevision
   );
 };
-
-export const initialAiProviderCardExpanded = (
-  data: AiProviderControlRead,
-  revision: AiProviderConfigurationRead | null,
-  message: string | null,
-): boolean =>
-  !data.active ||
-  ["draft", "failed", "preparing"].includes(revision?.lifecycle ?? "") ||
-  message !== null;
