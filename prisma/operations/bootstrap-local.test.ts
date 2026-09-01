@@ -55,30 +55,45 @@ describe("local disposable database bootstrap", () => {
     }
   });
 
-  it("creates, migrates, and seeds the exact target in order", () => {
+  it("generates the client, creates, migrates, and seeds in order", () => {
     const spawn = vi.fn<LocalBootstrapSpawn>(passingSpawn);
     runLocalBootstrap("minimal", environment, spawn);
-    expect(spawn).toHaveBeenCalledTimes(3);
+    expect(spawn).toHaveBeenCalledTimes(4);
+    expect(spawn.mock.calls[0]?.slice(0, 2)).toEqual([
+      "pnpm",
+      ["--filter", "@customreport/api", "db:generate"],
+    ]);
     expect(
-      spawn.mock.calls.map(([, args]) =>
-        args.find((arg) => arg.endsWith(".ts")),
-      ),
+      spawn.mock.calls
+        .slice(1)
+        .map(([, args]) => args.find((arg) => arg.endsWith(".ts"))),
     ).toEqual([
       expect.stringMatching(/create-e2e-database\.ts$/u),
       expect.stringMatching(/migrate-deploy\.ts$/u),
       expect.stringMatching(/seed-profile\.ts$/u),
     ]);
-    expect(spawn.mock.calls[2]?.[1]).toContain("minimal");
+    expect(spawn.mock.calls[3]?.[1]).toContain("minimal");
+  });
+
+  it("stops before database work when client generation fails", () => {
+    const spawn = vi
+      .fn<LocalBootstrapSpawn>(passingSpawn)
+      .mockReturnValueOnce({ status: 1, signal: null });
+    expect(() => runLocalBootstrap("demo", environment, spawn)).toThrow(
+      /db:generate failed/u,
+    );
+    expect(spawn).toHaveBeenCalledTimes(1);
   });
 
   it("stops before seed when migration fails", () => {
     const spawn = vi
       .fn<LocalBootstrapSpawn>(passingSpawn)
       .mockReturnValueOnce({ status: 0, signal: null })
+      .mockReturnValueOnce({ status: 0, signal: null })
       .mockReturnValueOnce({ status: 1, signal: null });
     expect(() => runLocalBootstrap("demo", environment, spawn)).toThrow(
       /migrate-deploy\.ts failed/u,
     );
-    expect(spawn).toHaveBeenCalledTimes(2);
+    expect(spawn).toHaveBeenCalledTimes(3);
   });
 });

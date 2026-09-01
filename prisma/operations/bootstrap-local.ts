@@ -87,24 +87,42 @@ export function runLocalBootstrap(
   }
 
   const steps = [
-    [operation("./create-e2e-database.ts"), []],
-    [operation("./migrate-deploy.ts"), []],
-    [operation("../seeds/profiles/seed-profile.ts"), [profile]],
+    {
+      command: "pnpm",
+      args: ["--filter", "@customreport/api", "db:generate"],
+      label: "db:generate",
+    },
+    {
+      command: process.execPath,
+      args: ["--import", "tsx", operation("./create-e2e-database.ts")],
+      label: "create-e2e-database.ts",
+    },
+    {
+      command: process.execPath,
+      args: ["--import", "tsx", operation("./migrate-deploy.ts")],
+      label: "migrate-deploy.ts",
+    },
+    {
+      command: process.execPath,
+      args: [
+        "--import",
+        "tsx",
+        operation("../seeds/profiles/seed-profile.ts"),
+        profile,
+      ],
+      label: "seed-profile.ts",
+    },
   ] as const;
-  for (const [script, args] of steps) {
-    const result = spawn(
-      process.execPath,
-      ["--import", "tsx", script, ...args],
-      {
-        cwd: REPO_ROOT,
-        env: { ...environment },
-        shell: false,
-        stdio: "inherit",
-      },
-    );
+  for (const step of steps) {
+    const result = spawn(step.command, step.args, {
+      cwd: REPO_ROOT,
+      env: { ...environment },
+      shell: false,
+      stdio: "inherit",
+    });
     if (result.status !== 0) {
       throw new Error(
-        `[bootstrap-local] ${script.split("/").at(-1) ?? "step"} failed with ` +
+        `[bootstrap-local] ${step.label} failed with ` +
           `exit=${String(result.status)} signal=${String(result.signal)}.`,
       );
     }
