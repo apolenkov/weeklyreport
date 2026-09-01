@@ -13,7 +13,7 @@ import {
   ADMIN_ID,
   DEFAULT_REPORTING_GROUP_ID,
   HEAD_ID,
-  LEAD_1,
+  LEAD_MARIA,
   POLICY_DEADLINE,
   POLICY_ESCALATION,
   REPORT_ACTIVE,
@@ -47,7 +47,8 @@ export async function seedGroupLeaderAndViewer(
   });
 }
 
-// Targets Vasily's published-week section so Admin → Reopen has a pending row.
+// Targets Maria's current submitted-week section so Admin → Reopen has an
+// actionable pending row.
 export async function seedReopenRequest(prisma: PrismaClient): Promise<void> {
   console.log(
     "[seed-simple] Creating one reopen request for Admin → Reopen...",
@@ -55,8 +56,8 @@ export async function seedReopenRequest(prisma: PrismaClient): Promise<void> {
   await prisma.reopenRequest.create({
     data: {
       id: "a0000000-0000-4000-8000-000000000d01",
-      reportSectionId: "a0000000-0000-4000-8000-000000000411",
-      requestedById: LEAD_1,
+      reportSectionId: "a0000000-0000-4000-8000-000000000402",
+      requestedById: LEAD_MARIA,
       reason:
         "Нужно уточнить перенос работ по авторизации после комментариев head review.",
       status: ReopenRequestStatus.pending,

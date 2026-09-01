@@ -81,6 +81,7 @@ describe("AdminTabsMobileSelect", () => {
       "reopen",
       "jobs",
       "actions",
+      "ai",
       "settings",
     ]);
     expect(picker.value).toBe("settings");

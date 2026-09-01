@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import {
+  ADMIN_TAB_LABELS,
   ADMIN_TABS,
   AdminPanel,
   AdminTabsMobileSelect,
@@ -55,7 +56,7 @@ export default async function AdminPage({ searchParams }: Props) {
                   ) : t === "jobs" ? (
                     <JobsTabLabel />
                   ) : (
-                    t
+                    ADMIN_TAB_LABELS[t]
                   )}
                 </Link>
               ))}

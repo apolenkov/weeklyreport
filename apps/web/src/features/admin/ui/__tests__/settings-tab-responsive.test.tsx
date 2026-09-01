@@ -18,7 +18,6 @@ vi.mock("next/navigation", () => ({
 vi.mock("../../../organization", () => ({
   IdentitySubTab: () => <div>Identity panel</div>,
   NotificationsSubTab: () => <div>Notifications panel</div>,
-  SettingsAiSubTab: () => <div>AI panel</div>,
 }));
 vi.mock("../../../period", () => ({
   PeriodsSubTab: () => <div>Periods panel</div>,
@@ -68,7 +67,6 @@ describe("SettingsTab responsive navigation", () => {
       "Periods",
       "Reminders",
       "Notifications",
-      "AI",
     ]);
     expect(
       screen.getByRole("combobox", { name: "Settings section" }),
@@ -90,7 +88,7 @@ describe("SettingsTab responsive navigation", () => {
       within(selector)
         .getAllByRole<HTMLOptionElement>("option")
         .map((option) => option.value),
-    ).toEqual(["identity", "periods", "reminders", "notifications", "ai"]);
+    ).toEqual(["identity", "periods", "reminders", "notifications"]);
 
     fireEvent.change(selector, { target: { value: "notifications" } });
     expect(screen.getByRole("tab", { name: "Notifications" })).toHaveAttribute(
@@ -103,14 +101,14 @@ describe("SettingsTab responsive navigation", () => {
     );
   });
 
-  it("restores an addressed section on a fresh render", () => {
+  it("rejects the removed nested AI address", () => {
     navigation.search = "tab=settings&settingsTab=ai";
     renderSettings();
 
-    expect(screen.getByRole("tab", { name: "AI" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "Identity" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
-    expect(screen.getByText("AI panel")).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "AI" })).not.toBeInTheDocument();
   });
 });

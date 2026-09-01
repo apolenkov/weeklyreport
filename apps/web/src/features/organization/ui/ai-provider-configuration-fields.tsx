@@ -54,13 +54,10 @@ export function AiProviderConfigurationFields({
   );
   return (
     <div
-      className="grid gap-5 lg:grid-cols-12 lg:items-start"
+      className="grid gap-4 lg:grid-cols-2 lg:items-stretch"
       data-testid="ai-provider-configuration-layout"
     >
-      <div
-        className="lg:col-span-7"
-        data-testid="ai-provider-generation-column"
-      >
+      <div data-testid="ai-provider-generation-column">
         <GenerationFields
           form={form.generation}
           busy={busy}
@@ -72,10 +69,7 @@ export function AiProviderConfigurationFields({
           reasoningRef={reasoningRef}
         />
       </div>
-      <div
-        className="lg:col-span-5"
-        data-testid="ai-provider-embeddings-column"
-      >
+      <div data-testid="ai-provider-embeddings-column">
         <EmbeddingFields
           form={form.embeddings}
           busy={busy}

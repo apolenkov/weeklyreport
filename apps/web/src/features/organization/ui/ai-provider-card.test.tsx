@@ -322,19 +322,63 @@ describe("AiProviderCardContent", () => {
     const configuration = screen.getByTestId(
       "ai-provider-configuration-layout",
     );
-    expect(configuration).toHaveClass("grid", "gap-5", "lg:grid-cols-12");
-    expect(screen.getByTestId("ai-provider-generation-column")).toHaveClass(
-      "lg:col-span-7",
+    expect(configuration).toHaveClass(
+      "grid",
+      "gap-4",
+      "lg:grid-cols-2",
+      "lg:items-stretch",
     );
-    expect(screen.getByTestId("ai-provider-embeddings-column")).toHaveClass(
-      "lg:col-span-5",
-    );
-    expect(
+    for (const section of [
       screen.getByTestId("ai-provider-generation-section"),
-    ).toBeInTheDocument();
-    expect(
       screen.getByTestId("ai-provider-embeddings-section"),
-    ).toBeInTheDocument();
+    ]) {
+      expect(section).toHaveClass(
+        "h-full",
+        "rounded-[var(--radius)]",
+        "bg-[var(--color-surface-hover)]/60",
+        "p-4",
+        "sm:p-5",
+      );
+    }
+    expect(screen.getByRole("heading", { name: "Generation" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Embeddings" })).toBeVisible();
+    expect(screen.getByText("Planner and answer models.")).toBeVisible();
+    expect(screen.getByText("Model used for semantic search.")).toBeVisible();
+    expect(screen.getByLabelText("Planner model")).toHaveValue(
+      "mistral-large-latest",
+    );
+    expect(screen.getByLabelText("Answer model")).toHaveValue(
+      "mistral-large-latest",
+    );
+    expect(screen.getByLabelText("Embedding model")).toHaveValue(
+      "mistral-embed",
+    );
+    expect(screen.queryByLabelText("Generation endpoint")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Test capabilities" }),
+    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Activate" })).toBeDisabled();
+  });
+
+  it("reveals the endpoint only for a custom provider without helper copy", () => {
+    render(
+      <AiProviderCardContent
+        data={control(null)}
+        savedRevision={null}
+        message={null}
+        mutations={mutations() as never}
+        onSave={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Generation provider profile"), {
+      target: { value: "custom-openai-compatible" },
+    });
+
+    expect(screen.getByLabelText("Generation endpoint")).toBeEnabled();
+    expect(
+      screen.queryByText("Use an approved OpenAI-compatible endpoint."),
+    ).toBeNull();
   });
 
   it("offers activation recovery while preventing a competing draft", () => {
@@ -399,6 +443,12 @@ describe("AiProviderCardContent", () => {
       name: "Toggle AI provider settings",
     });
     expect(disclosure).toHaveAttribute("aria-expanded", "false");
+    expect(
+      screen.queryByRole("heading", { name: "AI provider" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Connect the models used by report AI."),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("Mistral · answer")).toBeInTheDocument();
     expect(screen.queryByText("••••test")).not.toBeInTheDocument();
     expect(

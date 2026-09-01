@@ -120,7 +120,7 @@ Authority model:
 
 - [ai-prompt-management](./ai-prompt-management/spec.md) — Admin-managed feature prompt revisions remain typed, immutable, versioned, and fail closed at runtime. `[roles: Admin]`
 - [ai-provider-configuration](./ai-provider-configuration/spec.md) — One organization-wide AI provider follows an administrator-only draft, test, activation, disable, and restore lifecycle. `[roles: Admin]`
-- [ai-provider-settings-layout](./ai-provider-settings-layout/spec.md) — Settings → AI keeps provider configuration compact, accessible, responsive, and free of horizontal overflow. `[roles: Admin]`
+- [ai-provider-admin-layout](./ai-provider-admin-layout/spec.md) — The top-level Admin AI surface keeps provider configuration compact, accessible, aligned, responsive, and free of horizontal overflow. `[roles: Admin]`
 - [admin-dialog-focus-management](./admin-dialog-focus-management/spec.md) — Admin CRUD dialogs move focus inside on open and restore it to the initiating control on close. `[roles: Admin]`
 - [admin-reminders-ui](./admin-reminders-ui/spec.md) — Admins configure reminder policies through plain-language cards, inline editing, presets, and explicit permanent removal. `[roles: Admin]`
 - [admin-settings-ui](./admin-settings-ui/spec.md) — Admin Settings provides client-side sub-tabs, honest live policy controls, and resilient unsaved form state. `[roles: Admin]`

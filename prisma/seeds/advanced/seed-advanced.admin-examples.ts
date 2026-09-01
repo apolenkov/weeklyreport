@@ -7,7 +7,7 @@ import {
   SEED_REPORTS,
 } from "../support/seed-constants.js";
 import { LEAD_SLOT_PRIMARY } from "./seed-advanced.anchors.js";
-import { PUBLISHED_SUFFIX, sectionId } from "./seed-advanced.ids.js";
+import { ACTIVE_SUFFIX, sectionId } from "./seed-advanced.ids.js";
 
 const REOPEN_REQUEST_ID = "a0000000-0000-4000-8000-000000000d01";
 const ACTION_LOG_ID = "a0000000-0000-4000-8000-000000000e01";
@@ -20,7 +20,7 @@ const REOPEN_REASON =
 // reset; re-seeding restores it to pending, clearing any earlier review.
 async function seedReopenRequest(prisma: PrismaClient): Promise<void> {
   const identity = {
-    reportSectionId: sectionId(PUBLISHED_SUFFIX, LEAD_SLOT_PRIMARY),
+    reportSectionId: sectionId(ACTIVE_SUFFIX, LEAD_SLOT_PRIMARY),
     requestedById: LEAD_1_ID,
     reason: REOPEN_REASON,
     status: ReopenRequestStatus.pending,

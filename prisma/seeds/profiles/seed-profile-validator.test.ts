@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { provisionalPublishedSnapshot } from "../support/published-snapshot.js";
-import { assertActiveReminderRuleIntegrity } from "./seed-profile-journeys.js";
+import {
+  assertActiveReminderRuleIntegrity,
+  assertPendingReopenRequestIntegrity,
+} from "./seed-profile-journeys.js";
 import {
   assertProjectGroupIntegrity,
   assertPublishedSnapshotIntegrity,
@@ -128,5 +131,43 @@ describe("seed profile reminder integrity", () => {
         { ...baseRule, fireAt: reportDeadline },
       ]),
     ).toThrow(/schedule does not match report and policy/);
+  });
+});
+
+describe("seed profile reopen-request integrity", () => {
+  const actionableRequest = {
+    id: "a0000000-0000-4000-8000-000000000d01",
+    reportSection: {
+      status: "submitted" as const,
+      report: {
+        archived: false,
+        periodState: "open" as const,
+        periodStatus: "open" as const,
+      },
+    },
+  };
+
+  it("accepts one pending request on a current submitted section", () => {
+    expect(() =>
+      assertPendingReopenRequestIntegrity([actionableRequest]),
+    ).not.toThrow();
+  });
+
+  it("rejects a published-period request that cannot be decided", () => {
+    expect(() =>
+      assertPendingReopenRequestIntegrity([
+        {
+          ...actionableRequest,
+          reportSection: {
+            ...actionableRequest.reportSection,
+            report: {
+              ...actionableRequest.reportSection.report,
+              periodState: "published",
+              periodStatus: "published",
+            },
+          },
+        },
+      ]),
+    ).toThrow(/not actionable/);
   });
 });

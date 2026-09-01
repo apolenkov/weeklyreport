@@ -62,6 +62,21 @@ admin journeys.
 - **THEN** the green, yellow, and red product mapping remains unchanged
 - **AND** no unrelated leftover row can satisfy the manifest
 
+### Requirement: Demo reopen example is actionable
+
+The `demo`, `full`, and `stress` profiles MUST contain exactly one pending
+reopen request on a submitted section of the current, non-archived open report.
+The seeded Admin → Reopen example MUST therefore be approvable or rejectable;
+it MUST NOT point to a published or archived report merely to populate the
+queue.
+
+#### Scenario: An administrator opens the seeded reopen queue
+
+- **WHEN** a supported profile is seeded and an administrator opens Admin → Reopen
+- **THEN** the pending example belongs to a submitted section on the current open
+  report
+- **AND** either decision can be completed without a lifecycle error
+
 ### Requirement: Every seed profile is deterministic
 
 Every profile MUST use fixed identifiers and textual content. Reseeding the

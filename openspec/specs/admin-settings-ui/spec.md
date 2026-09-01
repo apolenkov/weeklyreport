@@ -237,13 +237,15 @@ The Settings surface at `/admin?tab=settings` MUST expose every working
 Settings section at 375 CSS px without relying on a visually clipped tab strip
 or an undisclosed horizontal gesture. Its narrow control and wide Radix tab
 list MUST operate the same active panel, preserve the existing section order,
-retain the shared token-driven keyboard focus treatment.
+retain the shared token-driven keyboard focus treatment, and MUST NOT duplicate
+the top-level AI destination.
 
 #### Scenario: Mobile Admin reaches every working Settings section
 
 - **WHEN** an Admin opens Settings at 375 CSS px
 - **THEN** one compact labelled control exposes Identity, Periods, Reminders,
-  Notifications, and Integrations in documented order
+  and Notifications in documented order
+- **AND** AI is absent because it is a top-level Admin destination
 - **AND** the clipped horizontal Settings tab strip is not presented
 
 #### Scenario: Selecting a mobile Settings section changes the active panel
@@ -259,3 +261,28 @@ retain the shared token-driven keyboard focus treatment.
 - **WHEN** an Admin opens Settings at 768 CSS px or wider
 - **THEN** the existing line-variant Radix tab list is visible without clipping
 - **AND** the compact Settings control is not presented
+
+### Requirement: AI Is a Canonical Top-Level Admin Destination
+
+The Admin route MUST expose AI in its canonical wide and compact navigation at
+`/admin?tab=ai`. The destination MUST render the AI Provider and Features
+controls directly, preserve their `aiTab` and `aiFeature` deep-link state, and
+MUST NOT require or emit a `settingsTab` query parameter.
+
+#### Scenario: Administrator opens AI directly
+
+- **WHEN** an Admin opens `/admin?tab=ai`
+- **THEN** the AI destination is marked current in the active Admin navigation
+- **AND** Provider and Features remain reachable without first opening Settings
+
+#### Scenario: Responsive navigation resolves the same AI destination
+
+- **WHEN** an Admin chooses AI through the compact picker or the wide pill strip
+- **THEN** both controls navigate client-side to `/admin?tab=ai`
+- **AND** the AI destination becomes active without a full document reload
+
+#### Scenario: Legacy nested AI address is not retained
+
+- **WHEN** an Admin opens `/admin?tab=settings&settingsTab=ai`
+- **THEN** Settings resolves its canonical default section
+- **AND** the route does not render AI or redirect to a compatibility alias

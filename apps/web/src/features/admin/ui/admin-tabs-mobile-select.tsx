@@ -6,24 +6,13 @@ import { useRouter } from "next/navigation";
 
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { TabCountPill } from "../../../shared/ui/tabs/tab-count-pill";
-import { ADMIN_TABS, type AdminTab } from "../model/admin-tab-dependencies";
+import {
+  ADMIN_TAB_LABELS,
+  ADMIN_TABS,
+  type AdminTab,
+} from "../model/admin-tab-dependencies";
 
 const DLQ_COUNT_POLL_MS = 30_000;
-
-// Keyed by AdminTab so a new canonical tab is a type error here, never a
-// silently missing option; ADMIN_TABS stays the single source of order.
-const TAB_LABELS: Record<AdminTab, string> = {
-  users: "Users",
-  groups: "Groups",
-  products: "Products",
-  activities: "Activities",
-  periods: "Periods",
-  reminders: "Reminders",
-  reopen: "Reopen",
-  jobs: "Jobs",
-  actions: "Actions",
-  settings: "Settings",
-};
 
 interface Props {
   readonly activeTab: AdminTab;
@@ -132,7 +121,7 @@ export function AdminTabsMobileSelect({ activeTab }: Props) {
       >
         {ADMIN_TABS.map((tab) => (
           <option key={tab} value={tab}>
-            {TAB_LABELS[tab]}
+            {ADMIN_TAB_LABELS[tab]}
           </option>
         ))}
       </select>

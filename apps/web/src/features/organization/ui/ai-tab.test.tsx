@@ -14,7 +14,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
-import { SettingsAiSubTab } from "./settings-ai-sub-tab";
+import { AiTab } from "./ai-tab";
 
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
@@ -221,17 +221,17 @@ function renderWorkspace(
       </TRPCProxyContext.Provider>
     </QueryClientProvider>
   );
-  render(<SettingsAiSubTab />, { wrapper: Wrapper });
+  render(<AiTab />, { wrapper: Wrapper });
   return { captured, reads };
 }
 
-describe("SettingsAiSubTab", () => {
+describe("AiTab", () => {
   beforeEach(() => {
     toastSuccess.mockReset();
     toastError.mockReset();
   });
 
-  it("provides safe local navigation and a provider readiness summary", async () => {
+  it("shows provider and feature readiness inside the tab menu", async () => {
     renderWorkspace(
       makeFeature(
         makeBundle({
@@ -243,10 +243,11 @@ describe("SettingsAiSubTab", () => {
       ),
     );
 
-    expect(await screen.findByRole("tab", { name: "Provider" })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: "Features" })).toBeTruthy();
-    expect(await screen.findByText("Active and ready")).toBeTruthy();
-    expect(screen.getByText("1/1 ready")).toBeTruthy();
+    const providerTab = await screen.findByRole("tab", { name: "Provider" });
+    const featuresTab = screen.getByRole("tab", { name: "Features" });
+    await waitFor(() => expect(providerTab).toHaveTextContent("ProviderReady"));
+    expect(featuresTab).toHaveTextContent("Features1/1 ready");
+    expect(screen.queryByText("Active and ready")).toBeNull();
     expect(screen.queryByText(/••••abcd/)).toBeNull();
   });
 
@@ -277,7 +278,9 @@ describe("SettingsAiSubTab", () => {
     await user.click(within(alert).getByRole("button", { name: "Retry" }));
 
     await waitFor(() => expect(reads.list).toBeGreaterThan(initialReads));
-    expect(await screen.findByText("1/1 ready")).toBeTruthy();
+    expect(
+      await screen.findByRole("tab", { name: "Features" }),
+    ).toHaveTextContent("1/1 ready");
   });
 
   it("supports keyboard navigation into the feature workspace", async () => {
