@@ -3,6 +3,7 @@ import "server-only";
 import type { OrganizationPublic } from "@customreport/shared";
 import { DEFAULT_ORGANIZATION_IDENTITY } from "@customreport/shared";
 import * as Sentry from "@sentry/nextjs";
+import { PHASE_PRODUCTION_BUILD } from "next/constants";
 
 import {
   decodeTrpcBatchPayload,
@@ -49,6 +50,12 @@ function decodeOrgPublicResponse(body: unknown): OrganizationPublic | null {
 }
 
 export async function getOrgPublic(): Promise<OrganizationPublic> {
+  // There is no running API while Next prerenders the image. Runtime requests
+  // revalidate the identity, so the build uses the same deliberate fallback
+  // without reporting an expected transport failure as a production error.
+  if (process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD)
+    return DEFAULT_ORGANIZATION_IDENTITY;
+
   const apiUrl = requireApiUrl();
   const url = `${apiUrl}/trpc/org.getPublic?batch=1&input=${TRPC_BATCH_EMPTY_INPUT}`;
 

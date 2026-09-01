@@ -7,6 +7,7 @@ const { captureException } = vi.hoisted(() => ({ captureException: vi.fn() }));
 vi.mock("@sentry/nextjs", () => ({ captureException }));
 
 import { DEFAULT_ORGANIZATION_IDENTITY } from "@customreport/shared";
+import { PHASE_PRODUCTION_BUILD } from "next/constants";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { getOrgPublic } from "./get-org-public";
@@ -50,6 +51,17 @@ describe("getOrgPublic", () => {
     });
 
     await expect(getOrgPublic()).resolves.toEqual(ORG);
+    expect(consoleError).not.toHaveBeenCalled();
+    expect(captureException).not.toHaveBeenCalled();
+  });
+
+  it("uses the generic identity without network or error reporting during production build", async () => {
+    vi.stubEnv("NEXT_PHASE", PHASE_PRODUCTION_BUILD);
+
+    await expect(getOrgPublic()).resolves.toEqual(
+      DEFAULT_ORGANIZATION_IDENTITY,
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(consoleError).not.toHaveBeenCalled();
     expect(captureException).not.toHaveBeenCalled();
   });
