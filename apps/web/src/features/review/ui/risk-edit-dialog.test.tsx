@@ -514,6 +514,22 @@ describe("RiskEditDialog — zero-owned-stage guard", () => {
 });
 
 describe("RiskEditDialog — classification field order", () => {
+  it("gives the severity choices their visible label as an accessible name", () => {
+    render(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={products}
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Development", "Testing"]}
+      />,
+    );
+
+    expect(screen.getByRole("group", { name: "Severity" })).toBeInTheDocument();
+  });
+
   it("orders the classification panel Product → Stages → Severity", () => {
     render(
       <RiskEditDialog

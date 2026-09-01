@@ -92,7 +92,6 @@ export function LeadFormToolbarControls({
               desktopLabels
             />
             <ToolbarTrailingSlot
-              viewModel={viewModel}
               isSlidesMode={isSlidesMode}
               density={density}
               onDensityChange={onDensityChange}
@@ -186,7 +185,6 @@ function ToolbarViewCluster({
 }
 
 interface ToolbarTrailingSlotProps {
-  readonly viewModel: LeadFormLoadedViewModel;
   readonly isSlidesMode: boolean;
   readonly density: SlideDensity;
   readonly onDensityChange: (density: SlideDensity) => void;
@@ -197,11 +195,9 @@ interface ToolbarTrailingSlotProps {
 }
 
 // The trailing cluster keeps density beside fullscreen in slides mode. In edit
-// mode it holds collapse/expand-all: the slot stays reserved and merely
-// disabled when the report has nothing to collapse, so adding or removing
-// sections in-session never shifts the row.
+// mode it holds collapse/expand-all: the slot stays reserved so adding or
+// removing records in-session never shifts the row.
 function ToolbarTrailingSlot({
-  viewModel,
   isSlidesMode,
   density,
   onDensityChange,
@@ -223,11 +219,6 @@ function ToolbarTrailingSlot({
     );
   }
 
-  const hasCollapsibleContent =
-    viewModel.currentWeekItems.length > 0 ||
-    viewModel.nextWeekItems.length > 0 ||
-    viewModel.risks.length > 0 ||
-    viewModel.decisions.length > 0;
   const collapseAllLabel = groupExpanded
     ? "Collapse all sections"
     : "Expand all sections";
@@ -235,9 +226,8 @@ function ToolbarTrailingSlot({
   return (
     <button
       type="button"
-      className="btn-press inline-flex h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] max-md:min-h-[var(--touch-target-min)] max-md:min-w-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+      className="btn-press inline-flex h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] max-md:min-h-[var(--touch-target-min)] max-md:min-w-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)]"
       onClick={() => setGroupExpanded((prev) => !prev)}
-      disabled={!hasCollapsibleContent}
       aria-label={collapseAllLabel}
       title={collapseAllLabel}
     >
