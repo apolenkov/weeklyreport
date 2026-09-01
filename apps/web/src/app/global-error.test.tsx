@@ -35,7 +35,9 @@ describe("GlobalError — global-error.tsx", () => {
 
   it("clicking the recovery button invokes the reset callback", () => {
     const reset = vi.fn();
-    render(<GlobalError error={makeError()} reset={reset} />);
+    render(<GlobalError error={makeError()} reset={reset} />, {
+      container: document,
+    });
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(reset).toHaveBeenCalledOnce();
   });

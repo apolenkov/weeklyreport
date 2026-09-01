@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { SessionState } from "../../../../../shared/lib/auth/session-provider";
 import { SessionContext } from "../../../../../shared/lib/auth/session-provider";
+import { logClientError } from "../../../../../shared/lib/errors/client-error-reporting";
 import { TRPCProxyContext } from "../../../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
 import { useLeadFormData } from "./use-lead-form-data";
@@ -30,6 +31,16 @@ vi.mock("next/navigation", () => ({
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }));
+
+vi.mock(
+  "../../../../../shared/lib/errors/client-error-reporting",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("../../../../../shared/lib/errors/client-error-reporting")
+    >()),
+    logClientError: vi.fn(),
+  }),
+);
 
 const REPORT_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const SECTION_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -200,6 +211,7 @@ function renderData(options: HarnessOptions = {}) {
 }
 
 beforeEach(() => {
+  vi.clearAllMocks();
   installStorageStub();
   navState.replace = vi.fn();
   navState.searchParams = new URLSearchParams();
@@ -308,6 +320,7 @@ describe("useLeadFormData — query enablement", () => {
       expect(result.current.byPeriodFetching).toBe(false);
       expect(result.current.byPeriodData).toBeDefined();
     });
+    expect(logClientError).toHaveBeenCalledTimes(1);
   });
 
   it("keeps the primary-read error after a retry fails again", async () => {
@@ -326,6 +339,7 @@ describe("useLeadFormData — query enablement", () => {
       expect(result.current.byPeriodFetching).toBe(false);
     });
     expect(byPeriodSpy).toHaveBeenCalledTimes(2);
+    expect(logClientError).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -485,6 +499,14 @@ describe("useLeadFormData — auxiliary query failure surfacing", () => {
         expect.stringContaining("Failed to load form settings"),
       ),
     );
+    expect(logClientError).toHaveBeenCalledWith(
+      "leadForm.viewSettings.load_failed",
+      expect.objectContaining({ message: "view settings failed" }),
+      expect.objectContaining({
+        component: "LeadForm",
+        procedure: "leadForm.viewSettings",
+      }),
+    );
   });
 
   it("toasts when the cross-authors query fails instead of silently returning an empty roster", async () => {
@@ -494,6 +516,14 @@ describe("useLeadFormData — auxiliary query failure surfacing", () => {
       expect(toast.error).toHaveBeenCalledWith(
         expect.stringContaining("Failed to load cross-author data"),
       ),
+    );
+    expect(logClientError).toHaveBeenCalledWith(
+      "leadForm.crossAuthors.load_failed",
+      expect.objectContaining({ message: "cross authors failed" }),
+      expect.objectContaining({
+        component: "LeadForm",
+        procedure: "leadForm.crossAuthors",
+      }),
     );
   });
 });

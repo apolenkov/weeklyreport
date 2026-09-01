@@ -4,8 +4,8 @@ import { cn } from "@customreport/ui/lib/utils";
 import type * as React from "react";
 import { ResponsiveContainer, Tooltip } from "recharts";
 
-// Seed positive initialDimension so ResponsiveContainer does not paint width/height -1 (h-64 = 256).
-const CHART_INITIAL_DIMENSION = { width: 0, height: Number("256") } as const;
+// Seed positive dimensions until ResizeObserver reports the real container size.
+const CHART_INITIAL_DIMENSION = { width: 800, height: 256 } as const;
 
 /** Fixed-height chart viewport with positive dimensions on its first layout pass. */
 export function ChartContainer({

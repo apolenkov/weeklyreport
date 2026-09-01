@@ -12,6 +12,7 @@ import { TRPCClientError } from "@trpc/client";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { logClientError } from "../../../../shared/lib/errors/client-error-reporting";
 import { TRPCProxyContext } from "../../../../shared/lib/trpc/trpc-context";
 
 // We mock cache-keys to verify invalidation cascade without actually inspecting
@@ -38,6 +39,16 @@ vi.mock("sonner", () => ({
     info: vi.fn(),
   },
 }));
+
+vi.mock(
+  "../../../../shared/lib/errors/client-error-reporting",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("../../../../shared/lib/errors/client-error-reporting")
+    >()),
+    logClientError: vi.fn(),
+  }),
+);
 
 // Mock Next.js navigation hooks consumed by the fallback PeriodNavigator. We
 // don't drive route changes in these tests — just neutralize the hook calls.
@@ -417,5 +428,15 @@ describe("WeeklyReportPage — load-failure state", () => {
     expect(
       screen.queryByText(/no active reporting period/i),
     ).not.toBeInTheDocument();
+    expect(logClientError).toHaveBeenCalledWith(
+      "weeklyReport.get.load_failed",
+      expect.objectContaining({ message: "Invalid UUID" }),
+      {
+        component: "WeeklyReportPage",
+        procedure: "weeklyReport.get",
+        reportId: "not-a-uuid",
+        authorId: null,
+      },
+    );
   });
 });

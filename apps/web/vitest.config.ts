@@ -15,6 +15,10 @@ const webConfig = defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: ["./vitest.setup"],
+    // Node 25+ exposes process-wide Web Storage by default. jsdom supplies the
+    // browser-scoped implementation these tests need, so keep the Node copy
+    // disabled in workers instead of emitting a warning for every access.
+    execArgv: ["--no-experimental-webstorage"],
     globals: false,
     // Restore every spy/mock to its original after each test so an installed
     // spy (e.g. a stderr silencer) never leaks into an unrelated test.
