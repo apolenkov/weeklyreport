@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
@@ -11,6 +11,12 @@ import { LeadVelocityChart } from "./lead-velocity.chart";
 import { PeriodComparisonChart } from "./period-comparison.chart";
 import { TrafficLightHistoryChart } from "./traffic-light-history.chart";
 
+function installChartBounds(): void {
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(
+    new DOMRect(0, 0, 800, 256),
+  );
+}
+
 describe("TrafficLightHistoryChart", () => {
   it("renders the empty-state message when no periods", () => {
     render(<TrafficLightHistoryChart periods={[]} rows={[]} />);
@@ -18,6 +24,10 @@ describe("TrafficLightHistoryChart", () => {
   });
 
   it("renders populated data through an accessible table", () => {
+    installChartBounds();
+    const consoleWarn = vi
+      .spyOn(console, "warn")
+      .mockImplementation(() => undefined);
     render(
       <TrafficLightHistoryChart
         periods={["Apr 7", "Apr 14"]}
@@ -37,6 +47,7 @@ describe("TrafficLightHistoryChart", () => {
     expect(screen.getByRole("columnheader", { name: "Alpha" })).toBeVisible();
     expect(screen.getByRole("cell", { name: "Green" })).toBeVisible();
     expect(screen.getByRole("cell", { name: "No data" })).toBeVisible();
+    expect(consoleWarn).not.toHaveBeenCalled();
   });
 
   it("keeps a null status cell null in the series point", () => {
@@ -69,6 +80,10 @@ describe("LeadVelocityChart", () => {
   });
 
   it("renders populated data through an accessible table", () => {
+    installChartBounds();
+    const consoleWarn = vi
+      .spyOn(console, "warn")
+      .mockImplementation(() => undefined);
     render(
       <LeadVelocityChart
         rows={[
@@ -93,6 +108,7 @@ describe("LeadVelocityChart", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Alex" })).toBeVisible();
     expect(screen.getByRole("cell", { name: "3" })).toBeVisible();
+    expect(consoleWarn).not.toHaveBeenCalled();
   });
 });
 

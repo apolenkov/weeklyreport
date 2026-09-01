@@ -16,6 +16,7 @@ import { createMockTRPC } from "../../../test-utils/mock-trpc";
 
 const toastSuccess = vi.fn<(...args: unknown[]) => void>();
 const toastError = vi.fn<(...args: unknown[]) => void>();
+const anchorClick = vi.fn();
 vi.mock("sonner", () => ({
   toast: {
     success: (...args: unknown[]) => toastSuccess(...args),
@@ -105,6 +106,10 @@ describe("ExportPdfButton", () => {
   beforeEach(() => {
     toastSuccess.mockClear();
     toastError.mockClear();
+    anchorClick.mockClear();
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(
+      anchorClick,
+    );
     vi.unstubAllGlobals();
     window.sessionStorage.clear();
   });
@@ -229,9 +234,6 @@ describe("ExportPdfButton", () => {
   it("attempts one attachment download and keeps a fallback link with the same URL", async () => {
     const openMock = vi.fn();
     vi.stubGlobal("open", openMock);
-    const anchorClick = vi
-      .spyOn(HTMLAnchorElement.prototype, "click")
-      .mockImplementation(() => undefined);
     const { captured } = renderButton({ statusQuery: COMPLETED_STATUS });
     expectDefined(captured["pdfExport.request"]).mutationFn.mockResolvedValue({
       jobId: JOB_ID,
@@ -278,9 +280,6 @@ describe("ExportPdfButton", () => {
     ).toBe(JOB_ID);
 
     first.unmount();
-    const anchorClick = vi
-      .spyOn(HTMLAnchorElement.prototype, "click")
-      .mockImplementation(() => undefined);
     renderButton({ statusQuery: COMPLETED_STATUS });
 
     expect(

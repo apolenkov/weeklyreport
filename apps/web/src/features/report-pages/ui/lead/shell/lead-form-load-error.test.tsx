@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SessionContext } from "../../../../../shared/lib/auth/session-provider";
+import { logClientError } from "../../../../../shared/lib/errors/client-error-reporting";
 import { TRPCProxyContext } from "../../../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
 import { makeReportSectionFixture } from "../../../../../test-utils/report-section-fixtures";
@@ -15,6 +16,16 @@ import { LeadForm } from "./lead-form";
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }));
+
+vi.mock(
+  "../../../../../shared/lib/errors/client-error-reporting",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("../../../../../shared/lib/errors/client-error-reporting")
+    >()),
+    logClientError: vi.fn(),
+  }),
+);
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
@@ -118,6 +129,17 @@ describe("LeadForm primary-read recovery", () => {
     expect(screen.queryByRole("button", { name: "Submit" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Submit report" })).toBeNull();
     expect(within(alert).getByRole("button", { name: "Retry" })).toBeEnabled();
+    expect(logClientError).toHaveBeenCalledTimes(1);
+    expect(logClientError).toHaveBeenCalledWith(
+      "leadForm.byPeriod.load_failed",
+      expect.objectContaining({ message: "section unavailable" }),
+      {
+        component: "LeadForm",
+        procedure: "leadForm.byPeriod",
+        reportId: "10000000-0000-4000-8000-000000000001",
+        role: "lead",
+      },
+    );
   });
 
   it("disables Retry while fetching and restores the form after success", async () => {
@@ -158,6 +180,7 @@ describe("LeadForm primary-read recovery", () => {
     });
     expect(await screen.findByText("Autosaved")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).toBeNull();
+    expect(logClientError).toHaveBeenCalledTimes(1);
   });
 
   it("keeps Retry available when the next read fails", async () => {
@@ -185,6 +208,7 @@ describe("LeadForm primary-read recovery", () => {
     ).toBeInTheDocument();
     expect(retryButton).toBeEnabled();
     expect(screen.queryByRole("button", { name: "Submit" })).toBeNull();
+    expect(logClientError).toHaveBeenCalledTimes(2);
   });
 
   it("hides cached editable controls when a primary refetch fails", async () => {
@@ -218,5 +242,6 @@ describe("LeadForm primary-read recovery", () => {
       name: "Report form could not be loaded",
     });
     expect(screen.queryByRole("button", { name: "Submit" })).toBeNull();
+    expect(logClientError).toHaveBeenCalledTimes(1);
   });
 });

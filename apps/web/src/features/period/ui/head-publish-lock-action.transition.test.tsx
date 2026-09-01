@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SessionContext } from "../../../shared/lib/auth/session-provider";
+import { logClientError } from "../../../shared/lib/errors/client-error-reporting";
 import { invalidatePeriodLifecycle } from "../../../shared/lib/query/cache-keys";
 import { makeQueryClient } from "../../../shared/lib/query/query-client";
 import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
@@ -24,6 +25,16 @@ vi.mock("../../../shared/lib/query/cache-keys", () => ({
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }));
+
+vi.mock(
+  "../../../shared/lib/errors/client-error-reporting",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("../../../shared/lib/errors/client-error-reporting")
+    >()),
+    logClientError: vi.fn(),
+  }),
+);
 
 vi.mock("../../report-sections", () => ({
   mapWeeklyReport: (data: { reportId: string }) => ({
@@ -177,6 +188,15 @@ async function exposesQueryRecovery(): Promise<void> {
   expect(retry).toHaveAttribute(
     "title",
     "Publish controls could not be loaded",
+  );
+  expect(logClientError).toHaveBeenCalledWith(
+    "period.publish_controls.load_failed",
+    expect.objectContaining({ message: "load failed" }),
+    {
+      component: "HeadPublishLockAction",
+      procedure: "weeklyReport.get",
+      reportId: "report-error",
+    },
   );
 }
 

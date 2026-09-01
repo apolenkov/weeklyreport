@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SessionContext } from "../../../../../shared/lib/auth/session-provider";
+import { logClientError } from "../../../../../shared/lib/errors/client-error-reporting";
 import { TRPCProxyContext } from "../../../../../shared/lib/trpc/trpc-context";
 import { expectDefined } from "../../../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
@@ -15,6 +16,16 @@ import { LeadForm } from "./lead-form";
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }));
+
+vi.mock(
+  "../../../../../shared/lib/errors/client-error-reporting",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("../../../../../shared/lib/errors/client-error-reporting")
+    >()),
+    logClientError: vi.fn(),
+  }),
+);
 
 // Mutable so a test can drive the addressed-route path (`/lead/report/<id>`),
 // which makes LeadSlidesClient resolve inReportMode=true. Vitest allows
@@ -628,6 +639,14 @@ describe("LeadForm mutation wiring", () => {
       expect(toast.error).toHaveBeenCalledWith(
         "Failed to load form. Reference: req-X.",
       ),
+    );
+    expect(logClientError).toHaveBeenCalledWith(
+      "leadForm.byPeriod.load_failed",
+      err,
+      expect.objectContaining({
+        component: "LeadForm",
+        procedure: "leadForm.byPeriod",
+      }),
     );
   });
 
