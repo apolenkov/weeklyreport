@@ -95,7 +95,7 @@ jobs:
 
     services:
       postgres:
-        image: pgvector/pgvector:0.8.2-pg15-bookworm@sha256:bd12d6788a617f4147d5a2ae0b56d07921398adabfe5a033bd3f50c245df55a1
+        image: pgvector/pgvector:0.8.6-pg15-bookworm@sha256:a947c45cdc5906a1bc951f20a8709e321256343ee0f251e4ae00b5e7def4e6da
         env:
           POSTGRES_USER: customreport
           POSTGRES_PASSWORD: localdev
@@ -108,7 +108,7 @@ jobs:
           --health-timeout=5s
           --health-retries=5
       redis:
-        image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
+        image: redis:7.4.11-alpine@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf
         ports:
           - 6379:6379
         options: >-
@@ -117,7 +117,7 @@ jobs:
           --health-timeout=5s
           --health-retries=5
       mailpit:
-        image: axllent/mailpit:latest@sha256:5a49a77c5bdbe7c5474450b4f46348d09949df3695257729c93a30369382d4f6
+        image: axllent/mailpit:v1.31.0@sha256:c96991d9bef73594c246d89ca81411d4e916f03e76a7d2d72fa2ab5dd3c9ce24
         ports:
           - 1025:1025
           - 8025:8025
@@ -341,7 +341,7 @@ jobs:
 
     services:
       postgres:
-        image: pgvector/pgvector:0.8.2-pg15-bookworm@sha256:bd12d6788a617f4147d5a2ae0b56d07921398adabfe5a033bd3f50c245df55a1
+        image: pgvector/pgvector:0.8.6-pg15-bookworm@sha256:a947c45cdc5906a1bc951f20a8709e321256343ee0f251e4ae00b5e7def4e6da
         env:
           POSTGRES_USER: customreport
           POSTGRES_PASSWORD: localdev
@@ -455,6 +455,8 @@ jobs:
       HTTP_PORT: "80"
       HTTPS_PORT: "443"
       HTTPS_PORT_QUIC: "443"
+      GRAFANA_ADMIN_PASSWORD: runtime-smoke-password
+      BUGSINK_SECRET_KEY: runtime-smoke-secret-with-sufficient-ci-entropy-only
 
     steps:
       - name: Checkout
@@ -472,3 +474,163 @@ jobs:
             revision="$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$image_ref")"
             test "$revision" = "$OTEL_SERVICE_VERSION"
           done
+
+      # The optional observability image is deliberately large. Keep this
+      # exact-image compatibility proof on explicit release verification
+      # instead of charging every push.
+      - name: Verify PostgreSQL, pgvector, PgBouncer, Redis, and Caddy
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          POSTGRES_DB: customreport_e2e
+        run: |
+          docker compose --project-name runtime-production \
+            -f docker-compose.prod.yml \
+            up --detach --wait postgres pgbouncer redis
+
+          docker compose --project-name runtime-production \
+            -f docker-compose.prod.yml \
+            exec -T postgres \
+            psql -U customreport -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 \
+            -c 'CREATE EXTENSION IF NOT EXISTS vector'
+          vector_version="$(
+            docker compose --project-name runtime-production \
+              -f docker-compose.prod.yml \
+              exec -T postgres \
+              psql -U customreport -d "$POSTGRES_DB" -tAc \
+              "SELECT extversion FROM pg_extension WHERE extname = 'vector'"
+          )"
+          test "$vector_version" = "0.8.6"
+
+          docker compose --project-name runtime-production \
+            -f docker-compose.prod.yml \
+            exec -T pgbouncer sh -ec \
+            'PGPASSWORD="$DB_PASSWORD" psql -h 127.0.0.1 -p 5432 -U "$DB_USER" -d "$DB_NAME" -w -tAc "SELECT 1"' \
+            | grep -qx '1'
+
+          docker compose --project-name runtime-production \
+            -f docker-compose.prod.yml \
+            exec -T redis redis-cli --raw CONFIG GET appendonly \
+            | tail -n 1 | grep -qx 'yes'
+          docker compose --project-name runtime-production \
+            -f docker-compose.prod.yml \
+            exec -T redis redis-cli --raw CONFIG GET maxmemory-policy \
+            | tail -n 1 | grep -qx 'noeviction'
+
+          docker compose --project-name runtime-production \
+            -f docker-compose.prod.yml \
+            run --rm --no-deps caddy \
+            caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
+      - name: Clean production runtime smoke
+        if: github.event_name == 'workflow_dispatch' && always()
+        env:
+          POSTGRES_DB: customreport_e2e
+        run: |
+          docker compose --project-name runtime-production \
+            -f docker-compose.prod.yml \
+            down --remove-orphans
+
+      - name: Verify mail, telemetry, metrics, and error overlays
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          # The local base stack deliberately owns these fixed disposable
+          # credentials; keep exporter interpolation aligned with that stack.
+          DB_PASSWORD: localdev
+          POSTGRES_DB: customreport_e2e
+        run: |
+          docker compose --project-name runtime-observability \
+            -f docker-compose.yml \
+            -f docker-compose.observability.yml \
+            -f docker-compose.errors.yml \
+            up --detach --wait postgres redis mailpit
+          docker compose --project-name runtime-observability \
+            -f docker-compose.yml \
+            -f docker-compose.observability.yml \
+            -f docker-compose.errors.yml \
+            up --detach otel-lgtm bugsink
+
+          curl --fail --retry 60 --retry-all-errors --retry-delay 2 \
+            http://127.0.0.1:8025/api/v1/messages >/dev/null
+          curl --fail --retry 60 --retry-all-errors --retry-delay 2 \
+            http://127.0.0.1:3003/api/health >/dev/null
+          curl --fail --retry 60 --retry-all-errors --retry-delay 2 \
+            http://127.0.0.1:9090/-/ready >/dev/null
+          curl --fail --retry 60 --retry-all-errors --retry-delay 2 \
+            http://127.0.0.1:3100/ready >/dev/null
+          curl --fail --retry 60 --retry-all-errors --retry-delay 2 \
+            --header 'Content-Type: application/json' \
+            --data '{"resourceSpans":[]}' \
+            http://127.0.0.1:4318/v1/traces >/dev/null
+          curl --fail --retry 60 --retry-all-errors --retry-delay 2 \
+            http://127.0.0.1:8000/ >/dev/null
+
+          docker compose --project-name runtime-observability \
+            -f docker-compose.yml \
+            -f docker-compose.observability.yml \
+            -f docker-compose.errors.yml \
+            exec -T otel-lgtm \
+            curl --fail --retry 30 --retry-all-errors --retry-delay 1 \
+            http://127.0.0.1:3200/ready >/dev/null
+          docker compose --project-name runtime-observability \
+            -f docker-compose.yml \
+            -f docker-compose.observability.yml \
+            -f docker-compose.errors.yml \
+            exec -T otel-lgtm \
+            curl --fail --retry 30 --retry-all-errors --retry-delay 1 \
+            http://127.0.0.1:13133/ready >/dev/null
+          docker compose --project-name runtime-observability \
+            -f docker-compose.yml \
+            -f docker-compose.observability.yml \
+            -f docker-compose.errors.yml \
+            exec -T otel-lgtm \
+            curl --fail --retry 30 --retry-all-errors --retry-delay 1 \
+            http://postgres-exporter:9187/metrics >/dev/null
+          docker compose --project-name runtime-observability \
+            -f docker-compose.yml \
+            -f docker-compose.observability.yml \
+            -f docker-compose.errors.yml \
+            exec -T otel-lgtm \
+            curl --fail --retry 30 --retry-all-errors --retry-delay 1 \
+            http://redis-exporter:9121/metrics >/dev/null
+
+          docker compose --project-name runtime-observability \
+            -f docker-compose.yml \
+            -f docker-compose.observability.yml \
+            -f docker-compose.errors.yml \
+            exec -T bugsink sh -ec \
+            'test -s /data/db.sqlite3 && printf runtime-smoke > /data/runtime-smoke-sentinel'
+          docker compose --project-name runtime-observability \
+            -f docker-compose.yml \
+            -f docker-compose.observability.yml \
+            -f docker-compose.errors.yml \
+            stop bugsink
+          docker compose --project-name runtime-observability \
+            -f docker-compose.yml \
+            -f docker-compose.observability.yml \
+            -f docker-compose.errors.yml \
+            rm --force bugsink
+          docker compose --project-name runtime-observability \
+            -f docker-compose.yml \
+            -f docker-compose.observability.yml \
+            -f docker-compose.errors.yml \
+            up --detach bugsink
+          curl --fail --retry 60 --retry-all-errors --retry-delay 2 \
+            http://127.0.0.1:8000/ >/dev/null
+          docker compose --project-name runtime-observability \
+            -f docker-compose.yml \
+            -f docker-compose.observability.yml \
+            -f docker-compose.errors.yml \
+            exec -T bugsink sh -ec \
+            'test -s /data/db.sqlite3 && test "$(cat /data/runtime-smoke-sentinel)" = runtime-smoke'
+
+      - name: Clean observability runtime smoke
+        if: github.event_name == 'workflow_dispatch' && always()
+        env:
+          DB_PASSWORD: localdev
+          POSTGRES_DB: customreport_e2e
+        run: |
+          docker compose --project-name runtime-observability \
+            -f docker-compose.yml \
+            -f docker-compose.observability.yml \
+            -f docker-compose.errors.yml \
+            down --remove-orphans

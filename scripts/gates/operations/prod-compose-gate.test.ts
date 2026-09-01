@@ -4,6 +4,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { delimiter, join, resolve } from "node:path";
 import test from "node:test";
 
+import { parse } from "yaml";
+
 import { REQUIRED_REPORT_ASSISTANT_ENV_KEYS } from "../../../apps/api/src/infrastructure/config/report-assistant-env-keys.ts";
 
 const prodCompose = resolve("docker-compose.prod.yml");
@@ -13,6 +15,8 @@ const productionEnvironmentTemplate = resolve(
   "deploy/environment/production.env.example",
 );
 const workflow = resolve(".github/workflows/ci.yml");
+const observabilityCompose = resolve("docker-compose.observability.yml");
+const errorsCompose = resolve("docker-compose.errors.yml");
 const gitIgnore = resolve(".gitignore");
 const dockerIgnore = resolve(".dockerignore");
 
@@ -118,6 +122,8 @@ const productionEnvironment = readFileSync(
   "utf8",
 );
 const workflowContent = readFileSync(workflow, "utf8");
+const observabilityContent = readFileSync(observabilityCompose, "utf8");
+const errorsContent = readFileSync(errorsCompose, "utf8");
 const gitIgnoreContent = readFileSync(gitIgnore, "utf8");
 const dockerIgnoreContent = readFileSync(dockerIgnore, "utf8");
 const backupDockerfile = readFileSync(
@@ -126,6 +132,30 @@ const backupDockerfile = readFileSync(
 );
 const apiDockerfile = readFileSync(resolve("Dockerfile.api"), "utf8");
 const webDockerfile = readFileSync(resolve("Dockerfile.web"), "utf8");
+const REVIEWED_EXTERNAL_IMAGES = new Set([
+  "postgres:15.19-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b",
+  "pgvector/pgvector:0.8.6-pg15-bookworm@sha256:a947c45cdc5906a1bc951f20a8709e321256343ee0f251e4ae00b5e7def4e6da",
+  "edoburu/pgbouncer:v1.25.2-p0@sha256:7d7a27d9e90985cab5cf42256f5c13a3120baa4b055b69df37beb272b89b2340",
+  "redis:7.4.11-alpine@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf",
+  "caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648",
+  "axllent/mailpit:v1.31.0@sha256:c96991d9bef73594c246d89ca81411d4e916f03e76a7d2d72fa2ab5dd3c9ce24",
+  "grafana/otel-lgtm:0.32.0@sha256:d6b20e35890ef2f91d13944805939acdaf1e5d3ffbf9f9aed08586312826c815",
+  "prometheuscommunity/postgres-exporter:v0.20.1@sha256:ac5ec343104fae0e2d84a27bb8d69b38430a11910c5382cad85d478d2bab713e",
+  "oliver006/redis_exporter:v1.90.0@sha256:a129504e65b87c54f79bc92f1afc403475e8ff646a3d7512de469904ceddf986",
+  "bugsink/bugsink:2.5.1@sha256:ecdd845877464d70d61244b8adba20d623e1860e88d8338f2808d9cc2925745c",
+]);
+const releaseImageTag =
+  "$" +
+  "{OTEL_SERVICE_VERSION:?set the deployed release version (for example the Git SHA)}";
+const REVIEWED_LOCAL_BUILD_IMAGES = new Map([
+  ["docker-compose.prod.yml:backup", `customreport-backup:${releaseImageTag}`],
+  [
+    "docker-compose.prod.yml:migrate",
+    `customreport-migrate:${releaseImageTag}`,
+  ],
+  ["docker-compose.prod.yml:api", `customreport-api:${releaseImageTag}`],
+  ["docker-compose.prod.yml:web", `customreport-web:${releaseImageTag}`],
+]);
 const turboConfig = JSON.parse(readFileSync(resolve("turbo.json"), "utf8")) as {
   readonly globalEnv?: readonly string[];
 };
@@ -710,7 +740,7 @@ void test("production services pool API connections and preserve direct paths", 
   assert.match(content, /postgresql:\/\/customreport:\$\{DB_PASSWORD:\?/);
   assert.match(
     content,
-    /pgbouncer:[\s\S]*edoburu\/pgbouncer:1\.22\.1-p0@sha256:[0-9a-f]{64}[\s\S]*POOL_MODE: transaction[\s\S]*healthcheck:[\s\S]*SELECT 1/u,
+    /pgbouncer:[\s\S]*edoburu\/pgbouncer:v1\.25\.2-p0@sha256:[0-9a-f]{64}[\s\S]*POOL_MODE: transaction[\s\S]*healthcheck:[\s\S]*SELECT 1/u,
   );
   const migrationDatabaseUrl =
     /DATABASE_URL: postgresql:\/\/customreport:\$\{DB_PASSWORD:\?[^\n]+@postgres:5432\/\$\{POSTGRES_DB:\?[^\n]+/g;
@@ -722,6 +752,155 @@ void test("production services pool API connections and preserve direct paths", 
   assert.match(
     content,
     /backup:[\s\S]*PGHOST: postgres[\s\S]*PGPORT: 5432[\s\S]*depends_on:[\s\S]*postgres:[\s\S]*condition: service_healthy/u,
+  );
+});
+
+function assertReviewedExternalImage(path: string, image: string): void {
+  const digestMarker = "@sha256:";
+  const digestPosition = image.lastIndexOf(digestMarker);
+  const digest = image.slice(digestPosition + digestMarker.length);
+  const tagPosition = image.lastIndexOf(":", digestPosition);
+  const repositoryPosition = image.lastIndexOf("/", digestPosition);
+  assert.ok(
+    digestPosition > 0 &&
+      tagPosition > repositoryPosition &&
+      /^[0-9a-f]{64}$/u.test(digest),
+    `${path}: external image must include a readable tag and digest`,
+  );
+  const tag = image.slice(tagPosition + 1, digestPosition);
+  assert.match(
+    tag,
+    /^v?\d+(?:\.\d+){1,2}(?:[-.][0-9A-Za-z][0-9A-Za-z.-]*)?$/u,
+    `${path}: external image must use an explicit release tag`,
+  );
+  assert.ok(
+    REVIEWED_EXTERNAL_IMAGES.has(image),
+    `${path}: tag and digest must match a reviewed runtime release`,
+  );
+}
+
+function classifyComposeImage(
+  path: string,
+  service: string,
+  definition: { readonly build?: unknown; readonly image?: unknown },
+): string | undefined {
+  if (definition.image === undefined) return undefined;
+  if (typeof definition.image !== "string") {
+    assert.fail(`${path}: ${service} image must be a scalar`);
+  }
+  if (definition.build === undefined) return definition.image;
+
+  const location = `${path}:${service}`;
+  assert.equal(
+    definition.image,
+    REVIEWED_LOCAL_BUILD_IMAGES.get(location),
+    `${location}: build plus image is allowed only for a reviewed repository-built image`,
+  );
+  return undefined;
+}
+
+void test("external Compose and CI images use versioned immutable references", () => {
+  const composeSources = [
+    ["docker-compose.yml", devContent],
+    ["docker-compose.prod.yml", content],
+    ["docker-compose.observability.yml", observabilityContent],
+    ["docker-compose.errors.yml", errorsContent],
+  ] as const;
+  const externalImages: { path: string; image: string }[] = [];
+
+  for (const [path, source] of composeSources) {
+    const model = parse(source, { maxAliasCount: 50 }) as {
+      readonly services?: Readonly<
+        Record<string, { readonly build?: unknown; readonly image?: unknown }>
+      >;
+    };
+    for (const [service, definition] of Object.entries(model.services ?? {})) {
+      const image = classifyComposeImage(path, service, definition);
+      if (image === undefined) continue;
+      externalImages.push({
+        path: `${path}:${service}`,
+        image,
+      });
+    }
+  }
+
+  const workflowModel = parse(workflowContent, { maxAliasCount: 50 }) as {
+    readonly jobs?: Readonly<
+      Record<
+        string,
+        {
+          readonly services?: Readonly<
+            Record<string, { readonly image?: unknown }>
+          >;
+        }
+      >
+    >;
+  };
+  for (const [job, definition] of Object.entries(workflowModel.jobs ?? {})) {
+    for (const [service, serviceDefinition] of Object.entries(
+      definition.services ?? {},
+    )) {
+      if (typeof serviceDefinition.image !== "string") {
+        assert.fail(
+          `.github/workflows/ci.yml:${job}:${service} image must be a scalar`,
+        );
+      }
+      externalImages.push({
+        path: `.github/workflows/ci.yml:${job}:${service}`,
+        image: serviceDefinition.image,
+      });
+    }
+  }
+
+  assert.ok(externalImages.length > 0);
+  const observedImages = new Set<string>();
+  for (const { path, image } of externalImages) {
+    assertReviewedExternalImage(path, image);
+    observedImages.add(image);
+  }
+  assert.deepEqual(observedImages, REVIEWED_EXTERNAL_IMAGES);
+});
+
+void test("external image policy rejects moving and mismatched references", () => {
+  const digest = "a".repeat(64);
+  const variableTag = "$" + "{TAG}";
+  for (const image of [
+    `redis:latest@sha256:${digest}`,
+    `redis:stable@sha256:${digest}`,
+    `redis:7-alpine@sha256:${digest}`,
+    `redis:${variableTag}@sha256:${digest}`,
+    `redis:7.4.11-alpine@sha256:${digest}`,
+  ]) {
+    assert.throws(() => assertReviewedExternalImage("probe", image));
+  }
+  assert.throws(() =>
+    classifyComposeImage("docker-compose.yml", "planted", {
+      build: ".",
+      image: `redis:latest@sha256:${digest}`,
+    }),
+  );
+});
+
+void test("Bugsink persists its SQLite database in the named data volume", () => {
+  const model = parse(errorsContent, { maxAliasCount: 50 }) as {
+    readonly services?: Readonly<
+      Record<
+        string,
+        {
+          readonly environment?: Readonly<Record<string, unknown>>;
+          readonly volumes?: readonly string[];
+        }
+      >
+    >;
+  };
+  const bugsink = model.services?.bugsink;
+  const volumes = bugsink?.volumes ?? [];
+  assert.ok(volumes.includes("bugsinkdata:/data"));
+  assert.ok(!volumes.some((volume) => volume.endsWith(":/app/data")));
+  assert.equal(bugsink?.environment?.SINGLE_USER, "true");
+  assert.ok(
+    !("BUGSINK_SINGLE_USER_MODE" in bugsink.environment),
+    "Bugsink must use the exact upstream single-user setting",
   );
 });
 
@@ -756,7 +935,7 @@ void test("backup entrypoints are baked into the pinned image", () => {
   );
   assert.match(
     backupDockerfile,
-    /FROM postgres:15-alpine@sha256:3d0f7584ed7d04e27fa050d6683a74746608faf21f202be78460d679cc56461f/,
+    /FROM postgres:15\.19-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b/,
   );
   assert.match(
     backupDockerfile,

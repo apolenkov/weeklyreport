@@ -25,7 +25,7 @@ services:
   # any database-dependent service starts instead of silently truncating or
   # misparsing a password containing reserved URL characters.
   config-guard:
-    image: postgres:15-alpine@sha256:3d0f7584ed7d04e27fa050d6683a74746608faf21f202be78460d679cc56461f
+    image: postgres:15.19-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b
     environment:
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
       POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB must be set}
@@ -48,7 +48,7 @@ services:
     restart: "no"
 
   postgres:
-    image: pgvector/pgvector:0.8.2-pg15-bookworm@sha256:bd12d6788a617f4147d5a2ae0b56d07921398adabfe5a033bd3f50c245df55a1
+    image: pgvector/pgvector:0.8.6-pg15-bookworm@sha256:a947c45cdc5906a1bc951f20a8709e321256343ee0f251e4ae00b5e7def4e6da
     environment:
       POSTGRES_USER: customreport
       POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
@@ -78,7 +78,7 @@ services:
   # migrate bypasses it with a DATABASE_URL aimed straight at postgres:5432,
   # since DDL needs session-mode. Pool: ~20 backend conns serving ~100 clients.
   pgbouncer:
-    image: edoburu/pgbouncer:1.22.1-p0@sha256:7f39cf2f872c8d9a0bb0e6a5440c3bf5814036eccf284102870ab08e2603a2c7
+    image: edoburu/pgbouncer:v1.25.2-p0@sha256:7d7a27d9e90985cab5cf42256f5c13a3120baa4b055b69df37beb272b89b2340
     environment:
       DB_USER: customreport
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
@@ -178,7 +178,7 @@ services:
         max-file: "3"
 
   redis:
-    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
+    image: redis:7.4.11-alpine@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf
     command:
       [
         "redis-server",
@@ -418,7 +418,7 @@ services:
   # compose network; everything else -> web.
   # Auto-HTTPS uses Let's Encrypt when CADDY_SITE_ADDRESS resolves publicly.
   caddy:
-    image: caddy:2.8-alpine@sha256:af32e97399febea808609119bb21544d0265c58a02836576e32a2d082c262c17
+    image: caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
     environment:
       CADDY_SITE_ADDRESS: ${CADDY_SITE_ADDRESS:?CADDY_SITE_ADDRESS must be set (e.g. customreport.example.com or http://localhost)}
       CADDY_ACME_EMAIL: ${CADDY_ACME_EMAIL:?CADDY_ACME_EMAIL must be set (ACME account email)}
