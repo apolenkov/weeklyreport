@@ -28,7 +28,7 @@ interface ProductAccordionProps {
 // outside the component so the render body stays within the function budget.
 function surfaceProps(hasContent: boolean, isHighlightActive: boolean) {
   return {
-    className: `card-surface-elevated scroll-mt-28 overflow-hidden rounded-[var(--radius)] border transition-[border-color,box-shadow] ${
+    className: `card-surface-elevated scroll-mt-28 overflow-hidden rounded-[var(--radius)] border transition-[border-color,box-shadow] motion-reduce:transition-none ${
       hasContent
         ? "card-surface-fill"
         : "bg-[var(--color-surface-empty-tint)] opacity-90"
@@ -51,18 +51,29 @@ function ExpandingSections({
   review,
   showNeedsAttention,
   expanded,
+  panelId,
+  toggleId,
 }: {
   readonly report: WeeklyProductReport;
   readonly review: AccordionReviewContext | undefined;
   readonly showNeedsAttention: boolean;
   readonly expanded: boolean;
+  readonly panelId: string;
+  readonly toggleId: string;
 }) {
   return (
     <div
-      className="grid transition-[grid-template-rows] duration-300"
+      id={panelId}
+      role="region"
+      aria-labelledby={toggleId}
+      className="grid transition-[grid-template-rows] duration-300 motion-reduce:transition-none"
       style={{ gridTemplateRows: expanded ? "1fr" : "0fr" }}
     >
-      <div className="min-h-0 overflow-hidden">
+      <div
+        className="min-h-0 overflow-hidden"
+        inert={expanded ? undefined : true}
+        aria-hidden={!expanded}
+      >
         <AccordionSections
           report={report}
           review={review}
@@ -91,6 +102,9 @@ export function ProductAccordion({
   const setExpanded = (value: boolean) => setToggle({ highlighted, value });
   const showNeedsAttention = shouldShowNeedsAttention(report);
   const isHighlightActive = highlighted && hasContent;
+  const rootId = `report-product-${report.id}`;
+  const toggleId = `${rootId}-toggle`;
+  const panelId = `${rootId}-panel`;
 
   useScrollIntoViewOnHighlight(
     report.id,
@@ -99,15 +113,14 @@ export function ProductAccordion({
   );
 
   return (
-    <div
-      id={`report-product-${report.id}`}
-      {...surfaceProps(hasContent, isHighlightActive)}
-    >
+    <div id={rootId} {...surfaceProps(hasContent, isHighlightActive)}>
       <AccordionHeader
         report={report}
         hasContent={hasContent}
         expanded={expanded}
         onToggle={() => setExpanded(!expanded)}
+        toggleId={toggleId}
+        panelId={panelId}
       />
 
       {hasContent ? (
@@ -116,6 +129,8 @@ export function ProductAccordion({
           review={review}
           showNeedsAttention={showNeedsAttention}
           expanded={expanded}
+          panelId={panelId}
+          toggleId={toggleId}
         />
       ) : null}
     </div>

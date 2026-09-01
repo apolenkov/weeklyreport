@@ -172,6 +172,9 @@ fuller team picture, without changing the health or completeness signals.
    status or opening its existing interaction MUST NOT reorder stages, move the product
    header, or change the card's outer width except for the intended content
    change. Focused and hover states MUST remain visible and keyboard reachable.
+   A risk-summary pulse MAY draw attention when motion is allowed, but MUST
+   become a static, still-visible destructive-color signal when the user
+   requests reduced motion.
 8. The collapsed-stage indicator MUST appear ONLY in Mine mode. In Everyone
    mode, where the full stage list already renders, the indicator MUST NOT
    appear. When the lead owns none of a product's stages, the "No stages
@@ -255,6 +258,12 @@ fuller team picture, without changing the health or completeness signals.
 - **THEN** the other stage controls retain canonical order and their responsive
   mode
 - **AND** the product header and top-level card width do not jump
+
+#### Scenario: reduced motion keeps the product risk signal static
+
+- **WHEN** a product has a risk summary and the browser requests reduced motion
+- **THEN** its destructive-color risk dot remains visible without pulsing
+- **AND** the textual risk summary remains unchanged
 
 #### Scenario: no indicator when the lead owns every stage
 

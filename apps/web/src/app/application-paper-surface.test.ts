@@ -34,3 +34,15 @@ describe("desktop application paper surface", () => {
     expect(paperCss).not.toMatch(/content\s*:/);
   });
 });
+
+describe("risk-summary motion preference", () => {
+  it("keeps the risk signal static when reduced motion is requested", () => {
+    expect(appCss).toContain(".risk-pulse {");
+    expect(appCss).toContain(
+      "animation: risk-pulse 1.6s ease-in-out infinite;",
+    );
+    expect(appCss).toMatch(
+      /@media \(prefers-reduced-motion: reduce\)\s*{\s*\.risk-pulse\s*{\s*animation: none;/,
+    );
+  });
+});

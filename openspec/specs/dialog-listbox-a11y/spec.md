@@ -125,7 +125,12 @@ relationship. `AccordionSection`
 (`apps/web/src/shared/ui/report-shell/accordion-section.tsx`) must wire the
 `aria-controls` id on both the header toggle and the trailing icon-button
 toggle when both are rendered for the same panel, and that id must resolve
-to a stable id on the collapsible panel.
+to a stable id on the collapsible panel. A content-bearing `ProductAccordion`
+MUST likewise expose one stable toggle-to-region relationship. Its collapsed
+content wrapper MUST be both `inert` and `aria-hidden` so its mounted controls
+cannot remain interactive or enter the accessibility tree. An empty product
+accordion renders no panel and MUST omit `aria-controls` rather than reference
+a missing element.
 
 #### Scenario: QuickAddButton exposes a group disclosure accurately
 
@@ -139,3 +144,17 @@ to a stable id on the collapsible panel.
   trailing icon-button toggle for the same panel
 - **THEN** both toggles carry `aria-controls` set to that panel's id
 - **AND** the id resolves to the actual collapsible panel element in the DOM
+
+#### Scenario: A collapsed product report keeps mounted content inaccessible
+
+- **WHEN** a content-bearing product report is collapsed
+- **THEN** its toggle references a labelled region through stable
+  `aria-controls` and `aria-labelledby` ids
+- **AND** the region's immediate content wrapper is `inert` and `aria-hidden`
+- **AND** expanding the product removes `inert` and exposes the content again
+
+#### Scenario: An empty product report has no dangling panel relationship
+
+- **WHEN** a product report has no renderable content
+- **THEN** its disabled header omits `aria-controls`
+- **AND** no product-content region is rendered for that header

@@ -109,7 +109,7 @@ function AccordionPanel({
       id={panelId}
       role="region"
       aria-labelledby={headingId}
-      className="grid transition-[grid-template-rows] duration-300"
+      className="grid transition-[grid-template-rows] duration-300 motion-reduce:transition-none"
       style={{ gridTemplateRows: expanded ? "1fr" : "0fr" }}
     >
       <div

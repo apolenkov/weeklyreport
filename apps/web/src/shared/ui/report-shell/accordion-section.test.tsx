@@ -153,6 +153,32 @@ describe("AccordionSection — responsive disclosure geometry", () => {
   });
 });
 
+describe("AccordionSection — reduced motion and collapsed semantics", () => {
+  it("makes collapsed content inert and disables disclosure transitions under reduced motion", () => {
+    render(
+      <AccordionSection
+        icon={HIDDEN_ICON}
+        title="Risks"
+        defaultOpen={false}
+        testId="reduced-motion-accordion"
+      >
+        <button type="button">Panel action</button>
+      </AccordionSection>,
+    );
+
+    const panel = document.getElementById("reduced-motion-accordion-panel");
+    expect(panel).not.toBeNull();
+    expect(panel).toHaveClass("motion-reduce:transition-none");
+    expect(panel?.firstElementChild).toHaveAttribute("inert");
+    expect(panel?.firstElementChild).toHaveAttribute("aria-hidden", "true");
+
+    const chevron = screen
+      .getByRole("button", { name: "Risks" })
+      .querySelector("svg");
+    expect(chevron).toHaveClass("motion-reduce:transition-none");
+  });
+});
+
 function section(groupExpanded: boolean) {
   return (
     <AccordionSection
