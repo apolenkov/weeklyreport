@@ -42,7 +42,7 @@ export function LeadReportAssistantForm({
           maxLength={2000}
           disabled={isBusy}
           aria-busy={isBusy}
-          className="flex min-h-20 w-full resize-none rounded-md border border-[var(--color-input)] bg-[var(--color-background)] px-3 py-2 text-sm outline-none transition-[color,box-shadow] placeholder:text-[var(--color-muted-foreground)] focus-visible:border-[var(--color-ring)] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-ring)_25%,transparent)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex min-h-20 w-full resize-none rounded-md border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm outline-none transition-[color,box-shadow] placeholder:text-[var(--color-muted-foreground)] focus-visible:border-[var(--color-ring)] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-ring)_25%,transparent)] disabled:cursor-not-allowed disabled:opacity-50"
           data-testid="lead-report-assistant-question"
         />
         <Button
@@ -53,14 +53,18 @@ export function LeadReportAssistantForm({
           data-testid="lead-report-assistant-submit"
         >
           {isBusy ? (
-            <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+            <LoaderCircle
+              className="size-4 animate-spin motion-reduce:animate-none"
+              aria-hidden="true"
+            />
           ) : (
             <ArrowRight className="size-4" aria-hidden="true" />
           )}
         </Button>
       </div>
       <p className="mt-2 text-xs text-[var(--color-muted-foreground)]">
-        Nothing from this chat is saved when you close the panel.
+        This exchange stays in memory while you use the app. Reloading, signing
+        out, or switching accounts clears it.
       </p>
     </form>
   );

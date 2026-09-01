@@ -47,7 +47,7 @@ export function LeadReportAssistantBody({
             data-testid="lead-report-assistant-busy"
           >
             <LoaderCircle
-              className="size-4 animate-spin text-[var(--color-primary)]"
+              className="size-4 animate-spin text-[var(--color-primary)] motion-reduce:animate-none"
               aria-hidden="true"
             />
             Reviewing your report context…

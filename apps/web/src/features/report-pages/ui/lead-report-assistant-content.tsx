@@ -10,6 +10,7 @@ import {
 } from "@customreport/ui/components/ui/alert";
 import { Button } from "@customreport/ui/components/ui/button";
 import { AlertCircle, ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 import { LeadReportAssistantMarkdown } from "./lead-report-assistant-markdown";
 
@@ -145,7 +146,7 @@ function AssistantSources({
       </h3>
       <div className="grid gap-2">
         {citations.map((citation) => (
-          <a
+          <Link
             key={citation.sourceId}
             href={citationHref(citation)}
             className="rounded-[var(--radius)] border border-[var(--color-border)] px-3 py-2 text-sm transition-colors hover:border-[var(--color-primary)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
@@ -156,7 +157,7 @@ function AssistantSources({
             <span className="ml-2 text-[var(--color-foreground)]">
               {citation.periodLabel} · {citation.subjectName}
             </span>
-          </a>
+          </Link>
         ))}
       </div>
     </section>

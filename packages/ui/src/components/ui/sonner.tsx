@@ -24,7 +24,9 @@ const Toaster = ({
         info: <InfoIcon className="size-4" />,
         warning: <TriangleAlertIcon className="size-4" />,
         error: <OctagonXIcon className="size-4" />,
-        loading: <Loader2Icon className="size-4 animate-spin" />,
+        loading: (
+          <Loader2Icon className="size-4 animate-spin motion-reduce:animate-none" />
+        ),
       }}
       style={
         {
@@ -35,6 +37,7 @@ const Toaster = ({
           "--success-text": "var(--color-success-foreground)",
           "--success-border": "var(--color-success-foreground)",
           "--border-radius": "var(--radius)",
+          zIndex: "var(--layer-toast)",
           ...styleOverride,
         } as React.CSSProperties
       }
