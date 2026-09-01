@@ -147,16 +147,23 @@ export function ProductEditDialog({
   onClose,
 }: ProductEditDialogProps) {
   const surfaceRef = useRef<HTMLDivElement>(null);
+  const closeIfIdle = () => {
+    if (!isSaving) onClose();
+  };
 
   // Focus trap + Escape-to-close + restore-to-trigger via the shared primitive.
   // The dialog mounts on open, so the hook self-captures the opener at first
   // render and restores focus to it on close.
-  useDialogFocus({ open: true, onClose, containerRef: surfaceRef });
+  useDialogFocus({
+    open: true,
+    onClose: closeIfIdle,
+    containerRef: surfaceRef,
+  });
 
   return (
     <DialogSurface
       surfaceRef={surfaceRef}
-      onDismiss={onClose}
+      onDismiss={closeIfIdle}
       surfaceClassName="animate-scale-in mx-4 flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl"
       ariaLabel={editingProduct ? "Edit product" : "Add product"}
     >
@@ -180,7 +187,7 @@ export function ProductEditDialog({
           saveLabel={editingProduct !== null ? "Save Changes" : "Add Product"}
           isSaving={isSaving}
           canSave={canSave}
-          onClose={onClose}
+          onClose={closeIfIdle}
           saveDisabled={isSaving || !canSave}
         />
       </form>
