@@ -208,7 +208,7 @@ export function AiProviderForm({
 
   return (
     <form
-      className="mt-5 flex flex-col gap-5"
+      className="flex flex-col gap-5"
       aria-busy={props.busy}
       onSubmit={(event) => {
         event.preventDefault();
@@ -228,13 +228,13 @@ export function AiProviderForm({
         form={form}
         busy={props.busy}
         profileCapabilities={props.profileCapabilities}
-        generationCredentialMaskedSuffix={
-          props.revision?.generation.credentialMaskedSuffix
+        generationCredentialConfigured={
+          props.revision?.generation.credentialConfigured ?? false
         }
-        embeddingCredentialMaskedSuffix={
+        embeddingCredentialConfigured={
           props.revision?.embeddings.mode === "separate"
-            ? props.revision.embeddings.credentialMaskedSuffix
-            : undefined
+            ? props.revision.embeddings.credentialConfigured
+            : false
         }
         onChange={(key, value) =>
           setForm((current) =>

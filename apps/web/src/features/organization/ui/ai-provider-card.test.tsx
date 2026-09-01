@@ -12,10 +12,7 @@ import { AiProviderCardContent } from "./ai-provider-card";
 import { providerTestExecutionMessage } from "./ai-provider-mutations";
 import { AiProviderRetainedRevisions } from "./ai-provider-retained-revisions";
 import { AiProviderRevisionDetails } from "./ai-provider-revision-details";
-import {
-  initialAiProviderCardExpanded,
-  selectObservedRevision,
-} from "./ai-provider-revision-selection";
+import { selectObservedRevision } from "./ai-provider-revision-selection";
 
 const revision = (
   lifecycle: AiProviderConfigurationRead["lifecycle"],
@@ -62,7 +59,7 @@ const control = (
   revisions: active ? [active] : [],
 });
 
-describe("initialAiProviderCardExpanded", () => {
+describe("selectObservedRevision", () => {
   it("keeps an in-progress activation ahead of a newer failed draft", () => {
     const preparing = {
       ...revision("preparing"),
@@ -79,37 +76,6 @@ describe("initialAiProviderCardExpanded", () => {
         failed,
       ),
     ).toMatchObject({ id: preparing.id, lifecycle: "preparing" });
-  });
-
-  it("keeps a stable active provider compact", () => {
-    expect(
-      initialAiProviderCardExpanded(
-        control(revision("active")),
-        revision("active"),
-        null,
-      ),
-    ).toBe(false);
-  });
-
-  it.each(["draft", "failed", "preparing"] as const)(
-    "expands a %s attempt",
-    (lifecycle) => {
-      const item = revision(lifecycle);
-      expect(initialAiProviderCardExpanded(control(item), item, null)).toBe(
-        true,
-      );
-    },
-  );
-
-  it("expands an unconfigured or failed operation state", () => {
-    expect(initialAiProviderCardExpanded(control(null), null, null)).toBe(true);
-    expect(
-      initialAiProviderCardExpanded(
-        control(revision("active")),
-        revision("active"),
-        "Failed",
-      ),
-    ).toBe(true);
   });
 });
 
@@ -183,7 +149,7 @@ const mutations = () => {
 };
 
 describe("AiProviderCardContent", () => {
-  it("links the provider disclosure to its labelled settings region", () => {
+  it("renders provider configuration directly without a redundant disclosure", () => {
     render(
       <AiProviderCardContent
         data={control(null)}
@@ -194,20 +160,11 @@ describe("AiProviderCardContent", () => {
       />,
     );
 
-    const toggle = screen.getByRole("button", {
-      name: "Toggle AI provider settings",
-    });
-    const panelId = toggle.getAttribute("aria-controls");
-    expect(panelId).toBeTruthy();
-    const panel = document.getElementById(panelId ?? "");
-    expect(panel).toHaveAttribute("role", "region");
-    expect(panel).toHaveAttribute("aria-labelledby", toggle.id);
-
-    fireEvent.click(toggle);
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(panel).toHaveAttribute("hidden");
-    expect(panel).toHaveAttribute("aria-hidden", "true");
-    expect(document.getElementById(panelId ?? "")).toBe(panel);
+    expect(
+      screen.queryByRole("button", { name: "Toggle AI provider settings" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Generation provider profile")).toBeVisible();
+    expect(screen.getByLabelText("Embedding connection mode")).toBeVisible();
   });
 
   it("renders the fixed mask-only credential metadata", () => {
@@ -284,11 +241,6 @@ describe("AiProviderCardContent", () => {
         onSave={vi.fn()}
       />,
     );
-    const disclosure = screen
-      .getAllByRole("button", { name: "Toggle AI provider settings" })
-      .at(-1);
-    if (!disclosure) throw new Error("Provider disclosure was not rendered");
-    fireEvent.click(disclosure);
     const disableButton = screen
       .getAllByRole("button", { name: "Disable" })
       .at(-1);
@@ -302,7 +254,7 @@ describe("AiProviderCardContent", () => {
     expect(disableMutations.disable.mutate).toHaveBeenCalledWith();
   });
 
-  it("keeps the expanded configuration compact and responsive", () => {
+  it("keeps the direct configuration compact and responsive", () => {
     render(
       <AiProviderCardContent
         data={control(null)}
@@ -314,7 +266,7 @@ describe("AiProviderCardContent", () => {
     );
 
     const card = screen.getByTestId("integration-row-ai");
-    expect(card).toHaveClass("border-t", "pt-4", "sm:pt-5");
+    expect(card).not.toHaveClass("border-t", "pt-4", "sm:pt-5");
     expect(card).not.toHaveClass("rounded-[var(--radius-md)]");
     expect(card).not.toHaveClass("bg-[var(--color-surface)]");
     expect(card).not.toHaveClass("shadow-xs");
@@ -427,7 +379,7 @@ describe("AiProviderCardContent", () => {
     );
   });
 
-  it("provides an accessible compact summary without credentials", () => {
+  it("keeps diagnostics secondary without a redundant provider status row", () => {
     const active = revision("active");
     render(
       <AiProviderCardContent
@@ -439,60 +391,31 @@ describe("AiProviderCardContent", () => {
       />,
     );
 
-    const disclosure = screen.getByRole("button", {
-      name: "Toggle AI provider settings",
-    });
-    expect(disclosure).toHaveAttribute("aria-expanded", "false");
     expect(
       screen.queryByRole("heading", { name: "AI provider" }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByText("Connect the models used by report AI."),
     ).not.toBeInTheDocument();
-    expect(screen.getByText("Mistral · answer")).toBeInTheDocument();
-    expect(screen.queryByText("••••test")).not.toBeInTheDocument();
     expect(
-      screen.getByTestId("ai-provider-disclosure-indicator"),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "Toggle AI provider settings" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("integration-ai-status"),
+    ).not.toBeInTheDocument();
 
-    fireEvent.click(disclosure);
     const diagnostics = screen.getByTestId("ai-provider-diagnostics");
     expect(diagnostics).not.toHaveAttribute("open");
-    fireEvent.click(screen.getByText("Diagnostics", { exact: true }));
+    expect(screen.getByLabelText("Generation credential")).toHaveAttribute(
+      "placeholder",
+      "Saved credential",
+    );
+    expect(screen.queryByText("••••test")).not.toBeInTheDocument();
+    fireEvent.click(
+      within(diagnostics).getByText("Diagnostics", { exact: true }),
+    );
     expect(diagnostics).toHaveAttribute("open");
-  });
-
-  it("preserves an explicit disclosure choice across refetches", () => {
-    const active = revision("active");
-    const view = render(
-      <AiProviderCardContent
-        data={control(active)}
-        savedRevision={null}
-        message={null}
-        mutations={mutations() as never}
-        onSave={vi.fn()}
-      />,
-    );
-    const disclosure = screen.getByRole("button", {
-      name: "Toggle AI provider settings",
-    });
-
-    fireEvent.click(disclosure);
-    expect(disclosure).toHaveAttribute("aria-expanded", "true");
-
-    view.rerender(
-      <AiProviderCardContent
-        data={control(active)}
-        savedRevision={null}
-        message={null}
-        mutations={mutations() as never}
-        onSave={vi.fn()}
-      />,
-    );
-
-    expect(
-      screen.getByRole("button", { name: "Toggle AI provider settings" }),
-    ).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("••••test")).toBeInTheDocument();
   });
 
   it("shows a safe alert when discard fails", () => {

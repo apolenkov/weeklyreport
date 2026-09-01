@@ -17,8 +17,8 @@ type ConfigurationFieldsProps = Readonly<{
   form: AiProviderFormState;
   busy: boolean;
   profileCapabilities: readonly AiProviderProfileCapability[];
-  generationCredentialMaskedSuffix: string | null | undefined;
-  embeddingCredentialMaskedSuffix: string | null | undefined;
+  generationCredentialConfigured: boolean;
+  embeddingCredentialConfigured: boolean;
   onChange: <K extends keyof AiProviderFormState>(
     key: K,
     value: AiProviderFormState[K],
@@ -40,8 +40,8 @@ export function AiProviderConfigurationFields({
   form,
   busy,
   profileCapabilities,
-  generationCredentialMaskedSuffix,
-  embeddingCredentialMaskedSuffix,
+  generationCredentialConfigured,
+  embeddingCredentialConfigured,
   onChange,
   reasoningInvalid,
   reasoningErrorId,
@@ -62,7 +62,7 @@ export function AiProviderConfigurationFields({
           form={form.generation}
           busy={busy}
           profiles={generationProfiles}
-          credentialMaskedSuffix={generationCredentialMaskedSuffix}
+          credentialConfigured={generationCredentialConfigured}
           onChange={(generation) => onChange("generation", generation)}
           reasoningInvalid={reasoningInvalid}
           reasoningErrorId={reasoningErrorId}
@@ -75,7 +75,7 @@ export function AiProviderConfigurationFields({
           busy={busy}
           profiles={embeddingProfiles}
           requiresSeparateEmbeddings={requiresSeparateEmbeddings}
-          credentialMaskedSuffix={embeddingCredentialMaskedSuffix}
+          credentialConfigured={embeddingCredentialConfigured}
           onChange={(embeddings) => onChange("embeddings", embeddings)}
         />
       </div>

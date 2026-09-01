@@ -21,7 +21,7 @@ export function GenerationFields({
   form,
   busy,
   profiles,
-  credentialMaskedSuffix,
+  credentialConfigured,
   onChange,
   reasoningInvalid,
   reasoningErrorId,
@@ -30,7 +30,7 @@ export function GenerationFields({
   form: AiProviderFormState["generation"];
   busy: boolean;
   profiles: readonly AiProviderProfile[];
-  credentialMaskedSuffix: string | null | undefined;
+  credentialConfigured: boolean;
   onChange: (value: AiProviderFormState["generation"]) => void;
   reasoningInvalid: boolean;
   reasoningErrorId: string;
@@ -131,7 +131,7 @@ export function GenerationFields({
       <CredentialField
         label="Generation credential"
         value={form.credential}
-        maskedSuffix={credentialMaskedSuffix}
+        configured={credentialConfigured}
         busy={busy}
         onChange={(credential) => update("credential", credential)}
       />
@@ -144,14 +144,14 @@ export function EmbeddingFields({
   busy,
   profiles,
   requiresSeparateEmbeddings,
-  credentialMaskedSuffix,
+  credentialConfigured,
   onChange,
 }: Readonly<{
   form: AiProviderFormState["embeddings"];
   busy: boolean;
   profiles: readonly AiProviderProfile[];
   requiresSeparateEmbeddings: boolean;
-  credentialMaskedSuffix: string | null | undefined;
+  credentialConfigured: boolean;
   onChange: (value: AiProviderFormState["embeddings"]) => void;
 }>) {
   const update = <K extends keyof AiProviderFormState["embeddings"]>(
@@ -227,7 +227,7 @@ export function EmbeddingFields({
           <CredentialField
             label="Embeddings credential"
             value={form.credential}
-            maskedSuffix={credentialMaskedSuffix}
+            configured={credentialConfigured}
             busy={busy}
             onChange={(credential) => update("credential", credential)}
           />

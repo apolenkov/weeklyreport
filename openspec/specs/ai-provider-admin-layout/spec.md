@@ -11,11 +11,11 @@ the Settings tab strip.
 ### Requirement: AI Provider configuration uses a compact responsive layout
 
 The top-level Admin `AI → Provider` surface rendered by
-`AiProviderCardContent` MUST preserve the existing Provider disclosure, live
-configuration fields, lifecycle actions, capability feedback, and revision
-information while presenting them with one restrained Provider boundary,
-compact copy, and a clear hierarchy. At a large viewport, the Generation and
-Embeddings regions MUST be presented as equal-width peer sections whose
+`AiProviderCardContent` MUST render live configuration fields, lifecycle
+actions, capability feedback, and revision information directly in the primary
+flow. It MUST NOT add a parent Provider disclosure, empty summary row, or
+second status badge: readiness belongs in the Provider tab trigger. At a large
+viewport, the Generation and Embeddings regions MUST be presented as equal-width peer sections whose
 headings and first controls align; at a narrow
 viewport, they MUST stack without page-level horizontal overflow. The separate
 embedding connection fields MUST remain conditional on the selected embedding
@@ -29,20 +29,22 @@ the draft successfully, and explicitly activates it. Save, Test, and Activate
 MUST remain visible as one ordered action sequence; unavailable later steps
 MUST be disabled instead of omitted.
 
-The selected `Provider` tab is the only visible Provider title. Its disclosure
-header MUST contain only the active-configuration summary, readiness state, and
-disclosure affordance; it MUST NOT repeat an `AI provider` heading or explanatory
-copy already supplied by the AI surface.
+The selected `Provider` tab is the only visible Provider title. The direct form
+MUST NOT repeat an `AI provider` heading, explanatory copy, active-configuration
+summary, readiness badge, or disclosure affordance already represented by the
+AI surface and Provider tab trigger.
 
-#### Scenario: Admin scans the expanded Provider at desktop width
+#### Scenario: Admin scans the direct Provider form at desktop width
 
 - **WHEN** an administrator opens `/admin?tab=ai`, selects `Provider`, and
-  expands the Provider surface at a desktop viewport
-- **THEN** the Provider summary, Generation, Embeddings, actions, capability
-  feedback, and revision information are visually distinct without duplicate
-  heavy card chrome
-- **AND** the disclosure header does not repeat the selected Provider title or
-  its explanatory copy
+  views the Provider form at a desktop viewport
+- **THEN** Generation, Embeddings, actions, capability feedback, and revision
+  information are visually distinct without duplicate heavy card chrome or an
+  empty Provider summary row
+- **AND** no parent disclosure or duplicate Provider title, status, or
+  explanatory copy precedes the form
+- **AND** configured credential inputs communicate that a saved credential can
+  be retained without rendering its masked suffix
 - **AND** the two peer sections use concise descriptions and align their first
   controls on the same row
 - **AND** all existing live fields remain available, including generation
@@ -61,15 +63,18 @@ copy already supplied by the AI surface.
 
 ### Requirement: Provider diagnostics remain available as secondary detail
 
-The expanded `AiProviderCardContent` MUST keep capability status, preparation
+The direct `AiProviderCardContent` MUST keep capability status, preparation
 progress, operation feedback, and errors in the primary flow. Revision metadata
 and retained-revision actions MUST be grouped inside an accessible native
 disclosure labelled `Diagnostics`, closed by default, and MUST preserve all
 existing diagnostic values and lifecycle actions when opened.
+Primary credential inputs MUST communicate only whether a saved credential can
+be retained; they MUST NOT render a masked credential suffix before the
+administrator opens Diagnostics.
 
-#### Scenario: Expanded Provider keeps the first viewport focused
+#### Scenario: Direct Provider keeps the first viewport focused
 
-- **WHEN** an administrator expands a Provider revision with capability results
+- **WHEN** an administrator views a Provider revision with capability results
   or retained revisions
 - **THEN** the capability status strip and any current progress, feedback, or
   error message remain visible in the primary flow
