@@ -253,7 +253,7 @@ describe("LeadFormSyncBridge", () => {
     expect(textbox).toBeInTheDocument();
   });
 
-  it("when readOnly=true, stage chips are disabled and risks render as preview cards without edit/add controls", () => {
+  it("when readOnly=true, stage chips are static and risks render as preview cards without edit/add controls", () => {
     const product = buildProduct();
     const risk: RiskEntry = {
       id: "r1",
@@ -273,8 +273,14 @@ describe("LeadFormSyncBridge", () => {
     // Stage chip is non-interactive in readOnly mode (popover cannot open).
     // The non-empty covering risk floors the rendered status to at-risk even
     // on the read-only surface.
-    const devChip = screen.getByRole("button", { name: /^Dev: At risk/ });
-    expect(devChip).toHaveAttribute("aria-disabled", "true");
+    const devChip = screen.getByRole("img", {
+      name: "Dev: At risk by risk — read-only status view",
+    });
+    expect(devChip).not.toHaveAttribute("tabindex");
+    expect(devChip).not.toHaveAttribute("aria-disabled");
+    expect(
+      screen.queryByRole("button", { name: /^Dev: At risk/ }),
+    ).not.toBeInTheDocument();
 
     // Risk text rendered as plain preview, not a form control.
     expect(screen.getByText("existing")).toBeInTheDocument();
@@ -401,9 +407,11 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
 
     // Planning is locked-ownership — the floor never touches it, and nothing is
     // persisted onto the products.
-    expect(
-      await screen.findByRole("button", { name: /^Planning: On track/ }),
-    ).toBeInTheDocument();
+    const planningChip = await screen.findByRole("img", {
+      name: "Planning: On track — locked; owned by PM. You don't have edit permissions",
+    });
+    expect(planningChip).not.toHaveAttribute("tabindex");
+    expect(planningChip).not.toHaveAttribute("aria-disabled");
     expect(onProductsChangeSpy).not.toHaveBeenCalled();
   });
 
