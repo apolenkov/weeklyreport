@@ -475,6 +475,19 @@ jobs:
             test "$revision" = "$OTEL_SERVICE_VERSION"
           done
 
+      # The hosted runner is disposable, while the optional OTEL/Bugsink
+      # images are large. Release identity is already proven, and the runtime
+      # smoke below does not use these four application images or build cache.
+      - name: Reclaim Docker build space before runtime smoke
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          for service in backup migrate api web; do
+            docker image rm "customreport-${service}:${OTEL_SERVICE_VERSION}"
+          done
+          docker builder prune --all --force
+          docker system df
+          df -h /
+
       # The optional observability image is deliberately large. Keep this
       # exact-image compatibility proof on explicit release verification
       # instead of charging every push.
