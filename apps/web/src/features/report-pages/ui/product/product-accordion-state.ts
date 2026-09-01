@@ -45,9 +45,13 @@ export function useScrollIntoViewOnHighlight(
   useEffect(() => {
     if (!highlighted || !enabled) return;
     const handle = window.setTimeout(() => {
+      const prefersReducedMotion =
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const behavior = prefersReducedMotion ? "auto" : "smooth";
       document
         .getElementById(`report-product-${reportId}`)
-        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        ?.scrollIntoView({ behavior, block: "start" });
     }, SCROLL_INTO_VIEW_DELAY_MS);
     return () => window.clearTimeout(handle);
   }, [highlighted, reportId, enabled]);

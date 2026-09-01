@@ -110,6 +110,26 @@ describe("getProductCardStyle — health-only solid left edge", () => {
   });
 });
 
+describe("SdlcPipeline — risk summary motion", () => {
+  it("uses the reduced-motion-aware risk pulse class without inline animation", () => {
+    const { container } = render(
+      <SdlcPipeline
+        products={[
+          {
+            ...BASE_PRODUCT,
+            riskSummary: "Release is blocked by infrastructure capacity",
+          },
+        ]}
+        readOnly={false}
+      />,
+    );
+
+    const riskSignal = container.querySelector<HTMLElement>(".risk-pulse");
+    expect(riskSignal).not.toBeNull();
+    expect(riskSignal?.style.animation).toBe("");
+  });
+});
+
 // ---- Component: SdlcPipeline stripe mode ----
 
 // ---- Live stripe color from own stages ----

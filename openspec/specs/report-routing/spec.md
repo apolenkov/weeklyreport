@@ -58,7 +58,9 @@ target to the same product as the highlighted/expanded accordion panel.
 Both MUST apply the same content filter — the scroll target MUST NOT be
 derived from the author's raw first authored product without that filter,
 since a filtered-out first product produces a scroll target that no visible
-accordion panel satisfies.
+accordion panel satisfies. The delayed deep-link scroll MUST use smooth
+behavior by default and switch to immediate `auto` behavior when the browser
+reports `prefers-reduced-motion: reduce`.
 
 #### Scenario: First authored product is empty, a later one has content
 
@@ -67,6 +69,14 @@ accordion panel satisfies.
 - **WHEN** the weekly-report page renders
 - **THEN** the page scrolls into view the SAME product panel that is
   highlighted/expanded — the content-bearing one, not the empty first one
+
+#### Scenario: Reduced motion keeps the author deep-link deterministic
+
+- **GIVEN** an `?authorId=<id>` deep-link resolves to a visible product panel
+- **WHEN** the browser reports `prefers-reduced-motion: reduce`
+- **THEN** the page scrolls that panel into view with immediate `auto` behavior
+- **AND** the same navigation uses smooth behavior when reduced motion is not
+  requested
 
 ### Requirement: Activity-only draft sections count toward the draft-hidden signal
 

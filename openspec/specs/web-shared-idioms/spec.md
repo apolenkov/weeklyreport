@@ -35,7 +35,10 @@ web file MUST carry a second verbatim copy of the surface class string.
 ### Requirement: The rotating chevron is one shared component over lucide
 
 The web layer SHALL provide a single `RotatingChevron` component that wraps
-`lucide-react`'s `ChevronDown` with the shared rotate transition.
+`lucide-react`'s `ChevronDown` with the shared rotate transition. The shared
+chevron and accordion height transitions MUST disable their transitions when
+the user requests reduced motion; consuming surfaces MUST NOT need a private
+media-query implementation.
 `shared/ui/report-shell/accordion-section.tsx`,
 `features/report-pages/ui/product/product-accordion.tsx`, and
 `features/dashboard/ui/blocked-at-risk-table.tsx` MUST use it. No report-shell
@@ -53,6 +56,16 @@ preservation; it MUST instead import `lucide-react`'s `ChevronDown` directly at
 - **WHEN** the row toggles between collapsed and expanded
 - **THEN** the chevron rotates via the shared transition
 - **AND** no local rotating `ChevronDown` definition exists
+
+#### Scenario: Reduced motion removes disclosure animation
+
+- **GIVEN** an accordion or expandable row consuming the shared disclosure
+  idioms
+- **WHEN** the operating system requests reduced motion
+- **THEN** both the chevron rotation and collapsible grid transition are
+  disabled
+- **AND** the expanded or collapsed state remains visually and semantically
+  accurate
 
 #### Scenario: The static split-button glyph is left non-rotating
 

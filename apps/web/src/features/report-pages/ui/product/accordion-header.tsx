@@ -63,11 +63,15 @@ export function AccordionHeader({
   hasContent,
   expanded,
   onToggle,
+  toggleId,
+  panelId,
 }: {
   readonly report: WeeklyProductReport;
   readonly hasContent: boolean;
   readonly expanded: boolean;
   readonly onToggle: () => void;
+  readonly toggleId: string;
+  readonly panelId: string;
 }) {
   const config = hasContent ? STATUS_CONFIG[report.status] : EMPTY_CONFIG;
   const statusLabel = hasContent ? report.statusLabel : "No updates";
@@ -77,7 +81,8 @@ export function AccordionHeader({
   return (
     <button
       type="button"
-      className={`flex w-full items-center justify-between gap-3 p-4 transition-[background-color,border-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2 ${
+      id={hasContent ? toggleId : undefined}
+      className={`flex w-full items-center justify-between gap-3 p-4 transition-[background-color,border-color,box-shadow] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2 ${
         hasContent
           ? "cursor-pointer hover:bg-[var(--color-surface-muted)]"
           : "cursor-default bg-[var(--color-background)] opacity-65"
@@ -86,6 +91,7 @@ export function AccordionHeader({
       disabled={!hasContent}
       aria-disabled={!hasContent}
       aria-expanded={hasContent ? expanded : false}
+      aria-controls={hasContent ? panelId : undefined}
       data-product-accordion-toggle="true"
     >
       <HeaderIdentity

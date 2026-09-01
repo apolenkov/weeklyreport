@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../../../test-utils/expect-defined.js";
@@ -365,6 +365,7 @@ describe("ProductAccordion — ChevronDown SVG aria-hidden", () => {
     const svg = button?.querySelector("svg");
     expect(svg).not.toBeNull();
     expect(svg).toHaveAttribute("aria-hidden", "true");
+    expect(svg).toHaveClass("motion-reduce:transition-none");
   });
 });
 
@@ -398,6 +399,7 @@ describe("ProductAccordion — expand/collapse grid", () => {
     );
     expect(gridDiv).not.toBeNull();
     expect(gridDiv?.style.gridTemplateRows).toBe("1fr");
+    expect(gridDiv).toHaveClass("motion-reduce:transition-none");
   });
 
   it("gridTemplateRows=0fr when collapsed (defaultOpen=false)", () => {
@@ -410,6 +412,108 @@ describe("ProductAccordion — expand/collapse grid", () => {
     expect(gridDiv).not.toBeNull();
     expect(gridDiv?.style.gridTemplateRows).toBe("0fr");
   });
+});
+
+describe("ProductAccordion — accessible disclosure", () => {
+  it("links the content toggle to a labelled region and makes collapsed content inert", () => {
+    render(<ProductAccordion report={reportWithContent} />);
+
+    const toggle = screen.getByRole("button", { name: /Product Alpha/ });
+    expect(toggle).toHaveAttribute("id", "report-product-p1-toggle");
+    expect(toggle).toHaveAttribute("aria-controls", "report-product-p1-panel");
+    expect(toggle).toHaveClass("motion-reduce:transition-none");
+
+    const panel = screen.getByRole("region", { hidden: true });
+    expect(panel).toHaveAttribute("id", "report-product-p1-panel");
+    expect(panel).toHaveAttribute(
+      "aria-labelledby",
+      "report-product-p1-toggle",
+    );
+    expect(panel.firstElementChild).toHaveAttribute("inert");
+    expect(panel.firstElementChild).toHaveAttribute("aria-hidden", "true");
+
+    fireEvent.click(toggle);
+
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(panel.firstElementChild).not.toHaveAttribute("inert");
+    expect(panel.firstElementChild).toHaveAttribute("aria-hidden", "false");
+  });
+
+  it("does not expose a dangling disclosure relationship for an empty report", () => {
+    render(<ProductAccordion report={makeReport()} />);
+
+    const toggle = screen.getByRole("button", { name: /Product Alpha/ });
+    expect(toggle).toBeDisabled();
+    expect(toggle).not.toHaveAttribute("id");
+    expect(toggle).not.toHaveAttribute("aria-controls");
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+  });
+
+  it("disables the card-surface transition when reduced motion is requested", () => {
+    const { container } = render(
+      <ProductAccordion report={reportWithContent} />,
+    );
+    expect(container.firstElementChild).toHaveClass(
+      "motion-reduce:transition-none",
+    );
+  });
+});
+
+describe("ProductAccordion — highlighted scroll motion", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it.each([
+    { mediaPreference: "reduce", matchMediaMatches: true, behavior: "auto" },
+    {
+      mediaPreference: "no preference",
+      matchMediaMatches: false,
+      behavior: "smooth",
+    },
+    {
+      mediaPreference: "unavailable",
+      matchMediaMatches: undefined,
+      behavior: "smooth",
+    },
+  ] as const)(
+    "uses $behavior scrolling when matchMedia is $mediaPreference",
+    ({ matchMediaMatches, behavior }) => {
+      vi.useFakeTimers();
+      vi.stubGlobal(
+        "matchMedia",
+        matchMediaMatches === undefined
+          ? undefined
+          : vi.fn().mockReturnValue({ matches: matchMediaMatches }),
+      );
+      const scrollIntoView = vi.fn();
+      const report = makeReport({
+        id: "scroll-target",
+        currentWeek: [makeItem({ id: "c1" })],
+      });
+
+      const { container } = render(
+        <ProductAccordion
+          report={report}
+          highlighted
+          scrollIntoViewOnHighlight
+        />,
+      );
+      const root = container.querySelector<HTMLElement>(
+        "#report-product-scroll-target",
+      );
+      if (!root) throw new Error("Product accordion root was not rendered");
+      root.scrollIntoView = scrollIntoView;
+
+      vi.runAllTimers();
+
+      expect(scrollIntoView).toHaveBeenCalledWith({
+        behavior,
+        block: "start",
+      });
+    },
+  );
 });
 
 // Escalation folds into Risks & Blockers as a leading row, not a separate banner.

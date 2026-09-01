@@ -54,10 +54,7 @@ function ProductHeading({ product }: { readonly product: Product }) {
           title={product.riskSummary}
         >
           <span
-            className="inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[var(--color-destructive)]"
-            style={{
-              animation: "risk-pulse 1.6s ease-in-out infinite",
-            }}
+            className="risk-pulse inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[var(--color-destructive)]"
             aria-hidden="true"
           />
           <span className="min-w-0 break-words">{product.riskSummary}</span>
