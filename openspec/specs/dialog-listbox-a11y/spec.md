@@ -130,7 +130,7 @@ MUST likewise expose one stable toggle-to-region relationship. Its collapsed
 content wrapper MUST be both `inert` and `aria-hidden` so its mounted controls
 cannot remain interactive or enter the accessibility tree. An empty product
 accordion renders no panel and MUST omit `aria-controls` rather than reference
-a missing element. The Settings AI Provider disclosure and the Admin Product
+a missing element. The Admin AI Provider disclosure and the Admin Product
 stage-assignment and Activity lead-attachment disclosures MUST also expose a
 stable `aria-controls` relationship to a region labelled by the corresponding
 toggle. Admin row regions that stay mounted while collapsed MUST report their

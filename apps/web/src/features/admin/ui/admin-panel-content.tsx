@@ -1,5 +1,6 @@
 import type { AppSettings } from "@customreport/shared";
 
+import { AiTab } from "../../organization";
 import { PeriodsTab } from "../../period";
 import { ReopenTab } from "../../review";
 import type { AdminTab } from "../model/admin-tab-dependencies";
@@ -118,6 +119,8 @@ function SnapshotContent(props: AdminPanelContentProps) {
 
 export function AdminPanelContent(props: AdminPanelContentProps) {
   switch (props.activeTab) {
+    case "ai":
+      return <AiTab />;
     case "settings":
       return <SettingsContent {...props} />;
     case "reminders":

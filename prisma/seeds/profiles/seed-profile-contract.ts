@@ -72,6 +72,7 @@ const DEMO_CAPABILITIES = [
   "ownership",
   "published-period",
   "reminders",
+  "reopen-flow",
   "submission-contrast",
 ] as const satisfies readonly SeedCapability[];
 
@@ -83,7 +84,6 @@ const FULL_CAPABILITIES = [
   "policy-examples",
   "project-activities",
   "publish-flow",
-  "reopen-flow",
 ] as const satisfies readonly SeedCapability[];
 
 export const SEED_PROFILE_MANIFESTS = {

@@ -2,7 +2,13 @@ import {
   computeReminderFireAt,
   reminderPolicyAppliesTo,
 } from "@customreport/shared";
-import type { PrismaClient, ReminderRuleKind } from "@prisma/client";
+import {
+  type PeriodState,
+  type PeriodStatus,
+  type PrismaClient,
+  type ReminderRuleKind,
+  type ReportSectionStatus,
+} from "@prisma/client";
 
 import {
   ACTION_LOG_IDS,
@@ -42,6 +48,18 @@ interface ActiveReminderRuleJourneyRow {
   };
 }
 
+interface PendingReopenRequestJourneyRow {
+  readonly id: string;
+  readonly reportSection: {
+    readonly status: ReportSectionStatus;
+    readonly report: {
+      readonly archived: boolean;
+      readonly periodState: PeriodState;
+      readonly periodStatus: PeriodStatus;
+    };
+  };
+}
+
 export function assertActiveReminderRuleIntegrity(
   rules: readonly ActiveReminderRuleJourneyRow[],
 ): void {
@@ -67,6 +85,28 @@ export function assertActiveReminderRuleIntegrity(
   requireTrue(
     problems.length === 0,
     `demo reminder integrity failed: ${problems.join("; ")}`,
+  );
+}
+
+export function assertPendingReopenRequestIntegrity(
+  requests: readonly PendingReopenRequestJourneyRow[],
+): void {
+  requireTrue(
+    requests.length === 1,
+    "demo includes exactly one actionable pending reopen request",
+  );
+  const invalidIds = requests
+    .filter(
+      ({ reportSection }) =>
+        reportSection.status !== "submitted" ||
+        reportSection.report.periodState !== "open" ||
+        reportSection.report.periodStatus !== "open" ||
+        reportSection.report.archived,
+    )
+    .map(({ id }) => id);
+  requireTrue(
+    invalidIds.length === 0,
+    `demo pending reopen request is not actionable: ${invalidIds.join(", ")}`,
   );
 }
 
@@ -96,7 +136,7 @@ async function runMinimalJourney(prisma: PrismaClient): Promise<void> {
 async function runDemoJourney(prisma: PrismaClient): Promise<void> {
   await runMinimalJourney(prisma);
   const scope = SEED_PROFILE_SCOPES.demo;
-  const [roles, health, sections, published, reminders, assignments] =
+  const [roles, health, sections, published, reminders, assignments, reopen] =
     await Promise.all([
       prisma.user.groupBy({
         by: ["role"],
@@ -145,6 +185,27 @@ async function runDemoJourney(prisma: PrismaClient): Promise<void> {
         where: { projectId: { in: [...scope.projectIds] } },
         select: { userId: true, project: { select: { leadId: true } } },
       }),
+      prisma.reopenRequest.findMany({
+        where: {
+          status: "pending",
+          reportSection: { reportId: { in: [...scope.reportIds] } },
+        },
+        select: {
+          id: true,
+          reportSection: {
+            select: {
+              status: true,
+              report: {
+                select: {
+                  archived: true,
+                  periodState: true,
+                  periodStatus: true,
+                },
+              },
+            },
+          },
+        },
+      }),
     ]);
   const roleSet = new Set(roles.map(({ role }) => role));
   const healthSet = new Set(health.map(({ status }) => String(status)));
@@ -167,6 +228,7 @@ async function runDemoJourney(prisma: PrismaClient): Promise<void> {
     "demo includes a published period",
   );
   assertActiveReminderRuleIntegrity(reminders);
+  assertPendingReopenRequestIntegrity(reopen);
   requireTrue(
     assignments.some(({ userId, project }) => userId !== project.leadId),
     "demo includes foreign stage ownership",
@@ -203,7 +265,7 @@ async function runFullJourney(prisma: PrismaClient): Promise<void> {
   requireTrue(admin?.role === "admin", "full includes admin identity");
   requireTrue(archived > 0, "full includes archived history");
   requireTrue(activities > 0, "full includes project activities");
-  requireTrue(reopen > 0, "full includes a reopen request");
+  requireTrue(reopen === 1, "full includes exactly one reopen request");
   requireTrue(policies > 0, "full includes policy examples");
   requireTrue(
     actionLogs === ACTION_LOG_IDS.length,

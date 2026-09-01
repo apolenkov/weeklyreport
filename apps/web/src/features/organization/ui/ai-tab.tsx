@@ -49,7 +49,7 @@ const selectionFromSearch = (source: string): AiSettingsSelection => {
 const isAiSettingsTab = (value: string): value is AiSettingsTab =>
   value === "provider" || value === "features";
 
-function AiReadinessSummary({
+function aiReadiness({
   provider,
   catalog,
   providerUnavailable,
@@ -57,44 +57,24 @@ function AiReadinessSummary({
   provider: AiProviderControlRead | undefined;
   catalog: AiPromptCatalogRead | undefined;
   providerUnavailable: boolean;
-}>) {
+}>): Readonly<{ provider: string; features: string }> {
   const features = catalog?.features ?? [];
   const readyFeatures = features.filter(
     (feature) => feature.control.availability === "available",
   ).length;
   const providerReady = provider?.availability === "available";
 
-  return (
-    <div
-      className="grid gap-3 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-surface-hover)]/60 p-4 sm:grid-cols-2"
-      role="status"
-      aria-live="polite"
-    >
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
-          Provider
-        </p>
-        <p className="mt-1 font-semibold text-[var(--color-foreground)]">
-          {providerUnavailable
-            ? "Unavailable"
-            : providerReady
-              ? "Active and ready"
-              : "Setup required"}
-        </p>
-      </div>
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
-          Features
-        </p>
-        <p className="mt-1 font-semibold text-[var(--color-foreground)]">
-          {readyFeatures}/{features.length} ready
-        </p>
-      </div>
-    </div>
-  );
+  return {
+    provider: providerUnavailable
+      ? "Unavailable"
+      : providerReady
+        ? "Ready"
+        : "Setup required",
+    features: `${readyFeatures}/${features.length} ready`,
+  };
 }
 
-export function SettingsAiSubTab() {
+export function AiTab() {
   const trpc = useTRPC();
   const router = useRouter();
   const pathname = usePathname();
@@ -132,6 +112,11 @@ export function SettingsAiSubTab() {
     }),
     enabled: selectedKey !== null,
   });
+  const readiness = aiReadiness({
+    provider: providerQ.data,
+    catalog: catalogQ.data,
+    providerUnavailable: providerQ.isError,
+  });
 
   const refreshFeature = async () => {
     await Promise.all([
@@ -148,15 +133,9 @@ export function SettingsAiSubTab() {
           AI
         </h2>
         <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-          Configure one provider, verify it, then activate report features.
+          Configure a provider, test it, then enable report features.
         </p>
       </div>
-
-      <AiReadinessSummary
-        provider={providerQ.data}
-        catalog={catalogQ.data}
-        providerUnavailable={providerQ.isError}
-      />
 
       {catalogQ.isError && (
         <div className="flex flex-wrap items-center gap-3" role="alert">
@@ -188,8 +167,24 @@ export function SettingsAiSubTab() {
             variant="line"
             className="min-w-max justify-start border-b border-[var(--color-border)]"
           >
-            <TabsTrigger value="provider">Provider</TabsTrigger>
-            <TabsTrigger value="features">Features</TabsTrigger>
+            <TabsTrigger value="provider" aria-label="Provider">
+              <span>Provider</span>
+              <span
+                className="ml-2 text-xs font-medium text-[var(--color-muted-foreground)]"
+                aria-live="polite"
+              >
+                {readiness.provider}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="features" aria-label="Features">
+              <span>Features</span>
+              <span
+                className="ml-2 text-xs font-medium text-[var(--color-muted-foreground)]"
+                aria-live="polite"
+              >
+                {readiness.features}
+              </span>
+            </TabsTrigger>
           </TabsList>
         </div>
 

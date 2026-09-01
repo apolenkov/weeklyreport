@@ -51,7 +51,7 @@ describe("repository cleanliness", () => {
     const root = await repository();
     await writeFile(
       join(root, ".gitignore"),
-      "ignored/**\n.cache/**\n.env\nnode_modules/\n.next-docker-dev/\n",
+      "ignored/**\n.cache/**\n.env\nnode_modules/\n.next-docker-dev/\napps/web/next-env.d.ts\n",
     );
     await mkdir(join(root, "browser-harness"), { recursive: true });
     await writeFile(join(root, "browser-harness/run.json"), "{}");
@@ -63,7 +63,9 @@ describe("repository cleanliness", () => {
     await writeFile(join(root, ".env"), "LOCAL_ONLY=true");
     await mkdir(join(root, "node_modules/pkg"), { recursive: true });
     await mkdir(join(root, ".next-docker-dev/cache"), { recursive: true });
+    await mkdir(join(root, "apps/web"), { recursive: true });
     await writeFile(join(root, ".next-docker-dev/cache/build"), "generated");
+    await writeFile(join(root, "apps/web/next-env.d.ts"), "generated");
     await execFileAsync("git", ["add", ".gitignore"], { cwd: root });
     const inventory = await inventoryRepository(root);
     expect(validateInventory(inventory)).toEqual([

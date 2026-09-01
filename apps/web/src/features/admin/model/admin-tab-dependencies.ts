@@ -1,7 +1,6 @@
 // Order is deliberate: products → activities → periods → reminders mirrors the
-// data flow (the reporting units a period is scoped to drive reminders), and
-// 'jobs' sits after 'reopen' so failure triage lives beside the other reactive
-// admin work.
+// data flow; jobs and actions group operational work, AI owns its first-class
+// configuration surface, and general Settings remains the final destination.
 export const ADMIN_TABS = [
   "users",
   "groups",
@@ -12,10 +11,25 @@ export const ADMIN_TABS = [
   "reopen",
   "jobs",
   "actions",
+  "ai",
   "settings",
 ] as const;
 
 export type AdminTab = (typeof ADMIN_TABS)[number];
+
+export const ADMIN_TAB_LABELS: Readonly<Record<AdminTab, string>> = {
+  users: "Users",
+  groups: "Groups",
+  products: "Products",
+  activities: "Activities",
+  periods: "Periods",
+  reminders: "Reminders",
+  reopen: "Reopen",
+  jobs: "Jobs",
+  actions: "Actions",
+  ai: "AI",
+  settings: "Settings",
+};
 
 interface AdminTabQueryDependencies {
   readonly snapshot: boolean;
@@ -34,6 +48,7 @@ export const ADMIN_TAB_QUERY_DEPENDENCIES = {
   reopen: { snapshot: false, settings: false },
   jobs: { snapshot: false, settings: false },
   actions: { snapshot: false, settings: false },
+  ai: { snapshot: false, settings: false },
   settings: { snapshot: false, settings: true },
 } as const satisfies Record<AdminTab, AdminTabQueryDependencies>;
 

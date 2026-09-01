@@ -12,7 +12,10 @@ import {
   ProfileField,
   SectionHeading,
 } from "./ai-provider-configuration-fields.controls";
-import type { AiProviderFormState } from "./ai-provider-configuration-fields.types";
+import {
+  type AiProviderFormState,
+  CUSTOM_PROVIDER_PROFILE,
+} from "./ai-provider-configuration-fields.types";
 
 export function GenerationFields({
   form,
@@ -39,13 +42,13 @@ export function GenerationFields({
   ) => onChange({ ...form, [key]: value });
   return (
     <section
-      className="flex flex-col gap-3 border-t border-[var(--color-border)] pt-4"
+      className="flex h-full flex-col gap-4 rounded-[var(--radius)] bg-[var(--color-surface-hover)]/60 p-4 sm:p-5"
       data-testid="ai-provider-generation-section"
     >
       <SectionHeading
-        eyebrow="01 · Generation"
-        title="Configure planner and answer generation"
-        description="One generation connection serves planning, repair, answers, and citation repair."
+        eyebrow="01"
+        title="Generation"
+        description="Planner and answer models."
       />
       <div className="grid gap-3 sm:grid-cols-2">
         <ProfileField
@@ -55,13 +58,14 @@ export function GenerationFields({
           busy={busy}
           onChange={(profile) => update("profile", profile)}
         />
-        <EndpointField
-          profile={form.profile}
-          baseUrl={form.baseUrl}
-          busy={busy}
-          label="Generation endpoint"
-          onChange={(baseUrl) => update("baseUrl", baseUrl)}
-        />
+        {form.profile === CUSTOM_PROVIDER_PROFILE && (
+          <EndpointField
+            connectionRole="generation"
+            baseUrl={form.baseUrl}
+            busy={busy}
+            onChange={(baseUrl) => update("baseUrl", baseUrl)}
+          />
+        )}
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Planner model">
@@ -87,10 +91,7 @@ export function GenerationFields({
           />
         </Field>
       </div>
-      <Field
-        label="Reasoning"
-        hint="Provider testing validates this setting with the generation capabilities."
-      >
+      <Field label="Reasoning" hint="Verified during provider testing.">
         <select
           name="generation.reasoningMode"
           aria-label="Generation reasoning"
@@ -159,13 +160,13 @@ export function EmbeddingFields({
   ) => onChange({ ...form, [key]: value });
   return (
     <section
-      className="flex flex-col gap-3 border-t border-[var(--color-border)] pt-4"
+      className="flex h-full flex-col gap-4 rounded-[var(--radius)] bg-[var(--color-surface-hover)]/60 p-4 sm:p-5"
       data-testid="ai-provider-embeddings-section"
     >
       <SectionHeading
-        eyebrow="02 · Embeddings"
-        title="Configure semantic retrieval"
-        description="Use the generation connection or reveal a separate embedding connection. Dimensions are measured by capability testing."
+        eyebrow="02"
+        title="Embeddings"
+        description="Model used for semantic search."
       />
       <Field
         label="Embedding connection"
@@ -188,9 +189,7 @@ export function EmbeddingFields({
           disabled={busy || requiresSeparateEmbeddings}
         >
           {!requiresSeparateEmbeddings && (
-            <option value="reuse_generation">
-              Same connection as generation
-            </option>
+            <option value="reuse_generation">Use generation connection</option>
           )}
           <option value="separate">Separate connection</option>
         </select>
@@ -216,13 +215,14 @@ export function EmbeddingFields({
               busy={busy}
               onChange={(profile) => update("profile", profile)}
             />
-            <EndpointField
-              profile={form.profile}
-              baseUrl={form.baseUrl}
-              busy={busy}
-              label="Embeddings endpoint"
-              onChange={(baseUrl) => update("baseUrl", baseUrl)}
-            />
+            {form.profile === CUSTOM_PROVIDER_PROFILE && (
+              <EndpointField
+                connectionRole="embeddings"
+                baseUrl={form.baseUrl}
+                busy={busy}
+                onChange={(baseUrl) => update("baseUrl", baseUrl)}
+              />
+            )}
           </div>
           <CredentialField
             label="Embeddings credential"

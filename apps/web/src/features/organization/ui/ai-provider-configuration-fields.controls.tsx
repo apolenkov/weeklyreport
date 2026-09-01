@@ -19,7 +19,7 @@ export function Field({
       {label}
       {children}
       {hint && (
-        <span className="mt-1 block text-xs leading-5 font-normal text-[var(--color-muted-foreground)]">
+        <span className="mt-1 block text-xs leading-4 font-normal text-[var(--color-muted-foreground)]">
           {hint}
         </span>
       )}
@@ -68,7 +68,7 @@ export function ProfileField({
   onChange: (value: AiProviderProfile) => void;
 }>) {
   return (
-    <Field label="Provider profile">
+    <Field label="Provider">
       <select
         name={`${connectionRole}.profile`}
         aria-label={`${connectionRole === "generation" ? "Generation" : "Embeddings"} provider profile`}
@@ -88,36 +88,30 @@ export function ProfileField({
 }
 
 export function EndpointField({
-  profile,
+  connectionRole,
   baseUrl,
   busy,
-  label,
   onChange,
 }: Readonly<{
-  profile: AiProviderProfile;
+  connectionRole: AiProviderConnectionRole;
   baseUrl: string;
   busy: boolean;
-  label: string;
   onChange: (value: string) => void;
 }>) {
-  const builtIn = profile !== CUSTOM_PROVIDER_PROFILE;
+  const accessibleLabel =
+    connectionRole === "generation"
+      ? "Generation endpoint"
+      : "Embeddings endpoint";
   return (
-    <Field
-      label={label}
-      hint={
-        builtIn
-          ? "Managed by the selected profile."
-          : "Only an approved OpenAI-compatible endpoint can be used."
-      }
-    >
+    <Field label="Endpoint">
       <input
-        name={`${label.toLowerCase().replaceAll(" ", "-")}.baseUrl`}
+        name={`${connectionRole}.baseUrl`}
         type="url"
-        aria-label={label}
+        aria-label={accessibleLabel}
         className={FIELD_CLASS}
-        value={builtIn ? "Selected by profile" : baseUrl}
+        value={baseUrl}
         onChange={(event) => onChange(event.target.value)}
-        disabled={busy || builtIn}
+        disabled={busy}
         placeholder="https://approved.example.com/v1"
       />
     </Field>
@@ -142,8 +136,8 @@ export function CredentialField({
       label={label}
       hint={
         maskedSuffix
-          ? "Leave blank to retain this credential while the profile and endpoint stay unchanged."
-          : "A credential is encrypted before storage and shown only as a masked suffix."
+          ? "Leave blank to keep the saved credential."
+          : "Encrypted at rest; only a masked suffix is shown."
       }
     >
       <input

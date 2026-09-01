@@ -5,7 +5,7 @@ flowchart LR
     subgraph web["apps/web — Next.js / React"]
         toolbar["Lead toolbar\nКнопка Report chat"]
         sheet["LeadReportAssistant Sheet\nформа, outcomes, citations"]
-        settings["Settings → AI\nProvider · Features"]
+        ai["Admin → AI\nProvider · Features"]
         integrations["Settings → Integrations\nExternal roadmaps only"]
         toolbar --> sheet
     end
@@ -63,9 +63,9 @@ flowchart LR
 
     lead --> toolbar
     sheet -->|"tRPC mutation"| leadRouter
-    admin --> settings
+    admin --> ai
     admin --> integrations
-    settings --> adminRouter
+    ai --> adminRouter
     leadRouter --> schemas
     adminRouter --> schemas
     configRepo --> providerDb

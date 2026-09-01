@@ -10,11 +10,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { TabHeader } from "../../../shared/ui/tabs/tab-header";
-import {
-  IdentitySubTab,
-  NotificationsSubTab,
-  SettingsAiSubTab,
-} from "../../organization";
+import { IdentitySubTab, NotificationsSubTab } from "../../organization";
 import { PeriodsSubTab } from "../../period";
 import { RemindersSubTab } from "./reminders/settings-reminders-sub-tab";
 
@@ -23,7 +19,6 @@ const SETTINGS_SECTIONS = [
   { label: "Periods", value: "periods" },
   { label: "Reminders", value: "reminders" },
   { label: "Notifications", value: "notifications" },
-  { label: "AI", value: "ai" },
 ] as const;
 
 type SettingsSection = (typeof SETTINGS_SECTIONS)[number]["value"];
@@ -78,7 +73,6 @@ function SettingsNavigation({
           <TabsTrigger value="periods">Periods</TabsTrigger>
           <TabsTrigger value="reminders">Reminders</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="ai">AI</TabsTrigger>
         </TabsList>
       </div>
     </>
@@ -111,7 +105,7 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
     <div className="space-y-6">
       <TabHeader
         title="Settings"
-        description="Organization identity, reporting defaults, notifications, and AI configuration."
+        description="Organization identity, reporting defaults, reminders, and notifications."
       />
 
       <Tabs
@@ -138,10 +132,6 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
 
         <TabsContent value="notifications" className="pt-6">
           <NotificationsSubTab serverSettings={serverSettings} />
-        </TabsContent>
-
-        <TabsContent value="ai" className="pt-6">
-          <SettingsAiSubTab />
         </TabsContent>
       </Tabs>
     </div>

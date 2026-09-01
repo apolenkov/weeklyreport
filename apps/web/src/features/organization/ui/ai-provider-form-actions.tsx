@@ -12,10 +12,10 @@ type Confirmation = "activate" | "disable" | null;
 
 const actionCopy = (preparing: boolean, revisionId: string | null): string => {
   if (preparing) {
-    return "Embedding preparation finished or was interrupted. Resume activation to complete the active pointer switch.";
+    return "Embedding preparation is ready to resume.";
   }
-  if (revisionId) return "Test this saved draft before making it active.";
-  return "Save a draft first. It will not affect anyone yet.";
+  if (revisionId) return "Test the draft before activation.";
+  return "Save as draft. Nothing changes until activation.";
 };
 
 const testButtonLabel = (
@@ -58,6 +58,9 @@ function ProviderActionButtons({
 }>) {
   const preparing = revision?.lifecycle === "preparing";
   const executionPending = hasPendingExecution(revision);
+  const canTest = revisionId !== null && !preparing && !executionPending;
+  const canActivate =
+    revision?.lifecycle === "validated" || revision?.lifecycle === "preparing";
   return (
     <div className="flex flex-wrap gap-2">
       <button
@@ -67,30 +70,30 @@ function ProviderActionButtons({
       >
         {savePending ? "Saving…" : "Save draft"}
       </button>
-      {revisionId && (
-        <button
-          type="button"
-          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={busy || preparing || executionPending}
-          onClick={() => onTest(revisionId)}
-        >
-          {testButtonLabel(testPending, revision?.latestExecution?.state)}
-        </button>
-      )}
-      {(revision?.lifecycle === "validated" || preparing) && (
-        <button
-          type="button"
-          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={busy}
-          onClick={() => setConfirmation("activate")}
-        >
-          {activatePending
-            ? "Activating…"
-            : preparing
-              ? "Resume activation"
-              : "Activate"}
-        </button>
-      )}
+      <button
+        type="button"
+        className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+        disabled={busy || !canTest}
+        title={revisionId ? undefined : "Save the draft first"}
+        onClick={() => {
+          if (revisionId) onTest(revisionId);
+        }}
+      >
+        {testButtonLabel(testPending, revision?.latestExecution?.state)}
+      </button>
+      <button
+        type="button"
+        className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+        disabled={busy || !canActivate}
+        title={canActivate ? undefined : "Test the draft successfully first"}
+        onClick={() => setConfirmation("activate")}
+      >
+        {activatePending
+          ? "Activating…"
+          : preparing
+            ? "Resume activation"
+            : "Activate"}
+      </button>
       {availability === "available" && (
         <button
           type="button"

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ADMIN_TAB_LABELS,
   ADMIN_TAB_QUERY_DEPENDENCIES,
   ADMIN_TABS,
   isAdminTab,
@@ -17,6 +18,7 @@ describe("admin tab query dependencies", () => {
     ["reopen", false, false],
     ["jobs", false, false],
     ["actions", false, false],
+    ["ai", false, false],
     ["settings", false, true],
   ] as const)(
     "%s enables snapshot=%s and settings=%s",
@@ -30,6 +32,8 @@ describe("admin tab query dependencies", () => {
 
   it("keeps the dependency table exhaustive", () => {
     expect(Object.keys(ADMIN_TAB_QUERY_DEPENDENCIES)).toEqual(ADMIN_TABS);
+    expect(Object.keys(ADMIN_TAB_LABELS)).toEqual(ADMIN_TABS);
+    expect(ADMIN_TAB_LABELS.ai).toBe("AI");
   });
 
   it("accepts only canonical tab identifiers", () => {

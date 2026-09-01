@@ -9,6 +9,7 @@ const MAX_BUFFER_KIB = 128;
 const MAX_BUFFER_SIZE = MAX_BUFFER_KIB * BYTES_PER_KIB * BYTES_PER_KIB;
 const OPENSPEC_INDEX_PATH = "openspec/specs/README.md";
 const OPENSPEC_SPEC_PATH = /^openspec\/specs\/([^/]+)\/spec\.md$/u;
+const ALLOWED_GENERATED_FILES = new Set(["apps/web/next-env.d.ts"]);
 const IGNORED_DIRECTORY_NAMES = new Set([
   ".git",
   "node_modules",
@@ -92,6 +93,7 @@ function isForbidden(path: string): boolean {
 }
 
 function isAllowedIgnored(path: string): boolean {
+  if (ALLOWED_GENERATED_FILES.has(path)) return true;
   if (/(^|\/)node_modules(?:\/|$)/.test(path)) return true;
   if (
     /(^|\/)(?:\.next(?:-docker-dev)?|dist|coverage|\.turbo)(?:\/|$)/.test(path)

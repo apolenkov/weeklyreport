@@ -7,9 +7,9 @@ exporting reports.
 
 ## Product surfaces
 
-- **Settings → AI → Provider** owns the global configure → test → activate
+- **Admin → AI → Provider** owns the global configure → test → activate
   lifecycle and keeps advanced revision details secondary.
-- **Settings → AI → Features** owns the active prompt bundle for each
+- **Admin → AI → Features** owns the active prompt bundle for each
   code-registered feature.
 - **Report chat** is available only in the Lead report toolbar and returns
   bounded outcomes, Markdown answers, and server-validated citations.

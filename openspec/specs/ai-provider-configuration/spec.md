@@ -8,7 +8,11 @@ Define the organization-wide, administrator-managed AI provider configuration an
 
 ### Requirement: Only administrators manage the global AI integration
 
-The `admin.aiProvider` tRPC surface and Settings → AI → Provider card MUST use the canonical `adminProcedure` for every configuration read, draft write, test, activation, disable, rollback, and progress operation. The system MUST maintain one organization-wide active AI configuration and MUST NOT expose per-user, per-role, or per-feature provider overrides.
+The `admin.aiProvider` tRPC surface and the top-level Admin AI Provider card at
+`/admin?tab=ai` MUST use the canonical `adminProcedure` for every configuration
+read, draft write, test, activation, disable, rollback, and progress operation.
+The system MUST maintain one organization-wide active AI configuration and
+MUST NOT expose per-user, per-role, or per-feature provider overrides.
 
 #### Scenario: Admin manages the integration
 

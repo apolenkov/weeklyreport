@@ -50,47 +50,31 @@ function AiProviderCardHeader({
   active: AiProviderControlRead["active"];
 }>) {
   return (
-    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h3 className="text-lg font-semibold text-[var(--color-foreground)]">
-            AI provider
-          </h3>
-          <p className="text-xs font-semibold tracking-[0.12em] text-[var(--color-starbucks-accent)] uppercase">
-            AI integration
-          </p>
-        </div>
-        <p className="mt-1 max-w-3xl text-sm leading-5 text-[var(--color-muted-foreground)]">
-          Configure the provider used by the Lead assistant and semantic index.
-          A saved draft is isolated until you test and activate it.
-        </p>
-      </div>
-      <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 lg:flex-nowrap lg:justify-end">
-        {active && (
-          <span className="min-w-0 max-w-full truncate text-sm text-[var(--color-muted-foreground)]">
-            {profileLabel(active.generation.profile)} ·{" "}
-            {active.generation.answerModel}
-          </span>
-        )}
-        <span
-          className="inline-flex shrink-0 items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-hover)] px-2.5 py-1 text-sm font-semibold text-[var(--color-foreground)]"
-          data-testid="integration-ai-status"
-        >
-          <span
-            className={
-              availability === "available"
-                ? "size-2 rounded-full bg-[var(--color-primary)]"
-                : "size-2 rounded-full bg-[var(--color-muted-foreground)]"
-            }
-          />
-          {availability === "available" ? "Active" : "Not configured"}
+    <div className="ml-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-x-3 gap-y-2 lg:flex-nowrap">
+      {active && (
+        <span className="min-w-0 max-w-full truncate text-sm text-[var(--color-muted-foreground)]">
+          {profileLabel(active.generation.profile)} ·{" "}
+          {active.generation.answerModel}
         </span>
-        <ChevronDown
-          aria-hidden="true"
-          className="size-4 shrink-0 transition-transform group-data-[expanded=true]:rotate-180"
-          data-testid="ai-provider-disclosure-indicator"
+      )}
+      <span
+        className="inline-flex shrink-0 items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-hover)] px-2.5 py-1 text-sm font-semibold text-[var(--color-foreground)]"
+        data-testid="integration-ai-status"
+      >
+        <span
+          className={
+            availability === "available"
+              ? "size-2 rounded-full bg-[var(--color-primary)]"
+              : "size-2 rounded-full bg-[var(--color-muted-foreground)]"
+          }
         />
-      </div>
+        {availability === "available" ? "Active" : "Not configured"}
+      </span>
+      <ChevronDown
+        aria-hidden="true"
+        className="size-4 shrink-0 transition-transform group-data-[expanded=true]:rotate-180"
+        data-testid="ai-provider-disclosure-indicator"
+      />
     </div>
   );
 }

@@ -22,8 +22,8 @@ const INITIAL_AI_PROVIDER_FORM: AiProviderFormState = {
   generation: {
     profile: "mistral",
     baseUrl: "",
-    plannerModel: "",
-    answerModel: "",
+    plannerModel: "mistral-large-latest",
+    answerModel: "mistral-large-latest",
     reasoningMode: "provider_default",
     reasoningCustomValue: "",
     credential: "",
@@ -32,7 +32,7 @@ const INITIAL_AI_PROVIDER_FORM: AiProviderFormState = {
     mode: "reuse_generation",
     profile: "mistral",
     baseUrl: "",
-    model: "",
+    model: "mistral-embed",
     credential: "",
   },
 };

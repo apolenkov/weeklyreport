@@ -1,31 +1,54 @@
-# ai-provider-settings-layout Specification
+# ai-provider-admin-layout Specification
 
 ## Purpose
 
-Define the compact, accessible layout of the administrator Settings → AI → Provider surface and its horizontal Settings tab strip.
+Define the compact, accessible layout of the top-level Admin AI surface and its
+Provider configuration, while preserving the independent responsive contract of
+the Settings tab strip.
 
 ## Requirements
 
 ### Requirement: AI Provider configuration uses a compact responsive layout
 
-The `Settings → AI → Provider` surface rendered by `AiProviderCardContent` MUST
-preserve the existing Provider disclosure, live configuration fields, lifecycle
-actions, capability feedback, and revision information while presenting them
-with one restrained Provider boundary, compact spacing, and a clear hierarchy.
-At a large viewport, the Generation and Embeddings regions MUST be presented
-as peer sections; at a narrow viewport, they MUST stack without page-level
-horizontal overflow. The separate embedding connection fields MUST remain
-conditional on the selected embedding mode.
+The top-level Admin `AI → Provider` surface rendered by
+`AiProviderCardContent` MUST preserve the existing Provider disclosure, live
+configuration fields, lifecycle actions, capability feedback, and revision
+information while presenting them with one restrained Provider boundary,
+compact copy, and a clear hierarchy. At a large viewport, the Generation and
+Embeddings regions MUST be presented as equal-width peer sections whose
+headings and first controls align; at a narrow
+viewport, they MUST stack without page-level horizontal overflow. The separate
+embedding connection fields MUST remain conditional on the selected embedding
+mode. Built-in profiles MUST NOT render their fixed endpoint as an editable or
+disabled field; a compact endpoint field MUST appear only for the custom
+OpenAI-compatible profile. Provider and feature readiness MUST be displayed in
+the corresponding tab triggers rather than in a separate summary card. An
+unconfigured form MUST visibly prefill the repository's Mistral model preset
+while remaining disabled until the administrator supplies a credential, tests
+the draft successfully, and explicitly activates it. Save, Test, and Activate
+MUST remain visible as one ordered action sequence; unavailable later steps
+MUST be disabled instead of omitted.
+
+The selected `Provider` tab is the only visible Provider title. Its disclosure
+header MUST contain only the active-configuration summary, readiness state, and
+disclosure affordance; it MUST NOT repeat an `AI provider` heading or explanatory
+copy already supplied by the AI surface.
 
 #### Scenario: Admin scans the expanded Provider at desktop width
 
-- **WHEN** an administrator opens `/admin?tab=settings`, selects `AI`, selects
-  `Provider`, and expands the Provider surface at a desktop viewport
+- **WHEN** an administrator opens `/admin?tab=ai`, selects `Provider`, and
+  expands the Provider surface at a desktop viewport
 - **THEN** the Provider summary, Generation, Embeddings, actions, capability
   feedback, and revision information are visually distinct without duplicate
   heavy card chrome
+- **AND** the disclosure header does not repeat the selected Provider title or
+  its explanatory copy
+- **AND** the two peer sections use concise descriptions and align their first
+  controls on the same row
 - **AND** all existing live fields remain available, including generation
-  profile/endpoint/models/credential/reasoning and embedding mode/model
+  provider/models/credential/reasoning and embedding mode/model
+- **AND** the custom endpoint field appears without changing the height of the
+  desktop provider row or adding helper copy below it
 - **AND** separate embedding profile/endpoint/credential fields are shown only
   when the embedding connection mode is `separate`
 

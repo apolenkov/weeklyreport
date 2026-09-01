@@ -39,6 +39,12 @@ describe("Admin responsive navigation contract", () => {
     expect(pickerSource).toContain("<AdminTabsMobileAlerts />");
   });
 
+  it("uses the canonical label registry in the wide navigation", () => {
+    const pageSource = read("app/(app)/admin/page.tsx");
+
+    expect(pageSource).toContain("ADMIN_TAB_LABELS[t]");
+  });
+
   it("keeps the Settings selector and scrollable Radix list on complementary md sides", () => {
     const settingsSource = read("features/admin/ui/settings-tab.tsx");
 
