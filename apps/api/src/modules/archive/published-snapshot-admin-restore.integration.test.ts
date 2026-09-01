@@ -77,9 +77,14 @@ describe("published snapshot scope after admin restore (integration)", () => {
     });
     frozenItemId = frozenItem.id;
     frozenItemStableId = frozenItem.stableId;
+    const expected = await periodRepository.getReportById(testData.report.id);
+    if (!expected) {
+      throw new Error(`fixture report ${testData.report.id} was not found`);
+    }
     const publication = await periodRepository.publishPeriod(
       testData.report.id,
       testData.head.id,
+      expected,
     );
     if (!publication.transitioned) {
       throw new Error(`fixture publication failed: ${publication.reason}`);

@@ -26,6 +26,12 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
   const GROUP = "f0000000-0000-4000-a000-0000000000d2";
   const PROJECT = "f0000000-0000-4000-a000-0000000000d3";
 
+  async function expected(reportId: string) {
+    const report = await repository.getReportById(reportId);
+    if (!report) throw new Error(`Report ${reportId} was not found.`);
+    return report;
+  }
+
   async function createOpenReport(): Promise<void> {
     // The publish transition stamps publishedById, which references User.
     await prisma.user.create({
@@ -63,7 +69,11 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
   });
 
   it("writes identical publication metadata to the report and snapshot", async () => {
-    const result = await repository.publishPeriod(REPORT, USER);
+    const result = await repository.publishPeriod(
+      REPORT,
+      USER,
+      await expected(REPORT),
+    );
 
     expect(result).toEqual({ transitioned: true });
     const reloaded = await prisma.report.findUnique({ where: { id: REPORT } });
@@ -113,9 +123,9 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
       },
     });
 
-    await expect(repository.publishPeriod(REPORT, USER)).resolves.toEqual({
-      transitioned: true,
-    });
+    await expect(
+      repository.publishPeriod(REPORT, USER, await expected(REPORT)),
+    ).resolves.toEqual({ transitioned: true });
     await expect(
       prisma.publishedSectionScope.findMany({ where: { reportId: REPORT } }),
     ).resolves.toEqual([
@@ -137,14 +147,14 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
       }),
     ]);
 
-    await repository.reopenPeriod(REPORT);
+    await repository.reopenPeriod(REPORT, await expected(REPORT));
     await prisma.item.update({
       where: { id: item.id },
       data: { text: "projection second publication" },
     });
-    await expect(repository.publishPeriod(REPORT, USER)).resolves.toEqual({
-      transitioned: true,
-    });
+    await expect(
+      repository.publishPeriod(REPORT, USER, await expected(REPORT)),
+    ).resolves.toEqual({ transitioned: true });
 
     await expect(
       prisma.publishedSearchDocument.findMany({
@@ -180,7 +190,11 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
       },
     });
 
-    const result = await repository.publishPeriod(REPORT, USER);
+    const result = await repository.publishPeriod(
+      REPORT,
+      USER,
+      await expected(REPORT),
+    );
 
     expect(result).toEqual({ transitioned: true });
     const reloaded = await prisma.report.findUnique({ where: { id: REPORT } });
@@ -189,27 +203,26 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
   });
 
   it("reports no transition (raced) for an already-published period", async () => {
-    await repository.publishPeriod(REPORT, USER);
+    await repository.publishPeriod(REPORT, USER, await expected(REPORT));
 
-    await expect(repository.publishPeriod(REPORT, USER)).resolves.toEqual({
-      transitioned: false,
-      reason: "raced",
-    });
+    await expect(
+      repository.publishPeriod(REPORT, USER, await expected(REPORT)),
+    ).resolves.toEqual({ transitioned: false, reason: "raced" });
   });
 
   it("fails closed (reason archived) for a period archived inside the window", async () => {
     // The archive transition leaves periodStatus open, so the pre-write
     // archived check cannot catch an archive landing after it. The `archived:
     // false` predicate closes the race — a zero-row match writes nothing.
+    const beforeArchive = await expected(REPORT);
     await prisma.report.update({
       where: { id: REPORT },
       data: { archived: true, periodState: "archived" },
     });
 
-    await expect(repository.publishPeriod(REPORT, USER)).resolves.toEqual({
-      transitioned: false,
-      reason: "archived",
-    });
+    await expect(
+      repository.publishPeriod(REPORT, USER, beforeArchive),
+    ).resolves.toEqual({ transitioned: false, reason: "archived" });
 
     const reloaded = await prisma.report.findUnique({ where: { id: REPORT } });
     expect(reloaded?.archived).toBe(true);
@@ -220,10 +233,30 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
     expect(reloaded?.publishedSnapshot).toBeNull();
   });
 
+  it("reports stale when the period boundary changes after the expectation read", async () => {
+    const beforeBoundaryMutation = await expected(REPORT);
+    await prisma.report.update({
+      where: { id: REPORT },
+      data: { periodEnd: new Date("2026-05-18T00:00:00.000Z") },
+    });
+
+    await expect(
+      repository.publishPeriod(REPORT, USER, beforeBoundaryMutation),
+    ).resolves.toEqual({ transitioned: false, reason: "stale" });
+
+    const reloaded = await prisma.report.findUniqueOrThrow({
+      where: { id: REPORT },
+    });
+    expect(reloaded.periodEnd).toEqual(new Date("2026-05-18T00:00:00.000Z"));
+    expect(reloaded.periodStatus).toBe("open");
+    expect(reloaded.publishedSnapshot).toBeNull();
+  });
+
   it("transitions exactly once under two concurrent publishes", async () => {
+    const state = await expected(REPORT);
     const [first, second] = await Promise.all([
-      repository.publishPeriod(REPORT, USER),
-      repository.publishPeriod(REPORT, USER),
+      repository.publishPeriod(REPORT, USER, state),
+      repository.publishPeriod(REPORT, USER, state),
     ]);
 
     // Exactly one wins the compare-and-set; the loser matches zero rows.

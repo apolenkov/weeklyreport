@@ -5,6 +5,7 @@ import {
 } from "@customreport/shared";
 import { vi } from "vitest";
 
+import type { PeriodLifecycleExpectation } from "../../domain/period-lifecycle-expectation.js";
 import {
   type AnalyticsCacheInvalidator,
   type PeriodRepository,
@@ -48,33 +49,92 @@ export interface SpyReport {
   archived?: boolean;
 }
 
+const PERIOD_START = new Date("2026-04-06T00:00:00.000Z");
+const PERIOD_END = new Date("2026-04-12T23:59:59.999Z");
+const REOPENED_AT = new Date("2026-04-14T09:00:00.000Z");
+const PUBLISHED_BY_ID = "00000000-0000-4000-8000-000000000001";
+
+/** Converts the compact spy fixture into the complete lifecycle read. */
+export function toPeriodLifecycleExpectation(
+  report: SpyReport,
+): PeriodLifecycleExpectation {
+  const periodStatus = report.periodStatus;
+  const isPublished = periodStatus !== "open";
+  return {
+    periodStart: new Date(PERIOD_START),
+    periodEnd: new Date(PERIOD_END),
+    periodState: report.archived
+      ? "archived"
+      : periodStatus === "published"
+        ? "published"
+        : "open",
+    status: isPublished ? "published" : "draft",
+    periodStatus,
+    archived: report.archived ?? false,
+    autoPublished: false,
+    autoArchived: false,
+    publishedAt:
+      isPublished && report.publishedAt ? new Date(report.publishedAt) : null,
+    publishedById: isPublished ? PUBLISHED_BY_ID : null,
+    reopenedAt: periodStatus === "reopened" ? new Date(REOPENED_AT) : null,
+  };
+}
+
+function matchesExpected(
+  report: SpyReport,
+  expected: PeriodLifecycleExpectation,
+): boolean {
+  const current = toPeriodLifecycleExpectation(report);
+  return (
+    current.periodStart.getTime() === expected.periodStart.getTime() &&
+    current.periodEnd.getTime() === expected.periodEnd.getTime() &&
+    current.periodState === expected.periodState &&
+    current.status === expected.status &&
+    current.periodStatus === expected.periodStatus &&
+    current.archived === expected.archived &&
+    current.autoPublished === expected.autoPublished &&
+    current.autoArchived === expected.autoArchived &&
+    current.publishedAt?.getTime() === expected.publishedAt?.getTime() &&
+    current.publishedById === expected.publishedById &&
+    current.reopenedAt?.getTime() === expected.reopenedAt?.getTime()
+  );
+}
+
 export function createSpyRepository(
   reports: Map<string, SpyReport>,
 ): PeriodRepository & {
   publishPeriod: ReturnType<typeof vi.fn>;
   reopenPeriod: ReturnType<typeof vi.fn>;
 } {
-  const publishFn = vi.fn((id: string) => {
-    const r = reports.get(id);
-    // Mirror the guarded compare-and-set: only a not-yet-published, non-archived
-    // row transitions. A zero-row match is "raced" (already published — no-op)
-    // vs "archived" (archived inside the window — a domain error).
-    if (!r || r.periodStatus === "published" || r.archived) {
-      const reason: "raced" | "archived" =
-        r?.periodStatus === "published" ? "raced" : "archived";
-      return Promise.resolve({ transitioned: false as const, reason });
-    }
-    reports.set(id, {
-      ...r,
-      periodStatus: "published",
-      publishedAt: new Date(),
-    });
-    return Promise.resolve({ transitioned: true as const });
-  });
+  const publishFn = vi.fn(
+    (id: string, _userId: string, expected: PeriodLifecycleExpectation) => {
+      const r = reports.get(id);
+      // Mirror the guarded compare-and-set: only a not-yet-published, non-archived
+      // row transitions. A zero-row match is "raced" (already published — no-op)
+      // vs "archived" (archived inside the window — a domain error).
+      if (!r || !matchesExpected(r, expected)) {
+        return Promise.resolve({
+          transitioned: false as const,
+          reason: "stale" as const,
+        });
+      }
+      if (r.periodStatus === "published" || r.archived) {
+        const reason: "raced" | "archived" =
+          r.periodStatus === "published" ? "raced" : "archived";
+        return Promise.resolve({ transitioned: false as const, reason });
+      }
+      reports.set(id, {
+        ...r,
+        periodStatus: "published",
+        publishedAt: new Date(),
+      });
+      return Promise.resolve({ transitioned: true as const });
+    },
+  );
 
-  const reopenFn = vi.fn((id: string) => {
+  const reopenFn = vi.fn((id: string, expected: PeriodLifecycleExpectation) => {
     const r = reports.get(id);
-    if (r) {
+    if (r && matchesExpected(r, expected)) {
       reports.set(id, { ...r, periodStatus: "reopened" });
     }
     return Promise.resolve();
@@ -89,7 +149,7 @@ export function createSpyRepository(
     getReportById(id: string) {
       const r = reports.get(id);
       return Promise.resolve(
-        r ? { ...structuredClone(r), archived: r.archived ?? false } : null,
+        r ? { id: r.id, ...toPeriodLifecycleExpectation(r) } : null,
       );
     },
     getCurrentEditableId: () =>

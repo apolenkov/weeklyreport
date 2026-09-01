@@ -85,8 +85,9 @@ path must respect them and link the relevant `openspec/specs/` spec.
 - **Period dual-state.** A Report carries canonical `periodState` plus its
   companion lifecycle tuple (`status`, `periodStatus`, `archived`, audit flags,
   and applicable timestamps); lifecycle writers must update them atomically.
-- **Role-coverage gate.** tRPC procedures must use one of the 6 canonical
-  middleware-chain builders (matched by reference identity). Don't hand-roll a chain.
+- **Role-coverage gate.** tRPC procedures must use one of the 7 canonical
+  middleware-chain builders, including `leadProcedure` (matched by reference
+  identity). Don't hand-roll a chain.
 
 ## Conventions
 

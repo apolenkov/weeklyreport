@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import { AdminPeriodOverlapError } from "../../admin/index.js";
 import { WeeklyReportPrismaRepository } from "../../weekly-report/weekly-report.prisma-repository.js";
+import type { PeriodLifecycleExpectation } from "../domain/period-lifecycle-expectation.js";
 import { PeriodPrismaRepository } from "./period.prisma-repository.js";
 
 afterEach(() => {
@@ -26,7 +27,26 @@ describe("PeriodPrismaRepository.publishPeriod", () => {
       publishedById: null,
       publishedBy: null,
       sections: [],
+      periodState: "open",
+      periodStatus: "open",
+      archived: false,
+      autoPublished: false,
+      autoArchived: false,
+      reopenedAt: null,
     };
+    const expected = {
+      periodStart: candidate.periodStart,
+      periodEnd: candidate.periodEnd,
+      status: "draft",
+      periodState: "open",
+      periodStatus: "open",
+      archived: false,
+      autoPublished: false,
+      autoArchived: false,
+      publishedAt: candidate.publishedAt,
+      publishedById: candidate.publishedById,
+      reopenedAt: candidate.reopenedAt,
+    } satisfies PeriodLifecycleExpectation;
     const published = {
       ...candidate,
       status: "published",
@@ -69,11 +89,12 @@ describe("PeriodPrismaRepository.publishPeriod", () => {
     vi.useFakeTimers();
     vi.setSystemTime(publishAt);
 
-    await expect(repository.publishPeriod(reportId, userId)).resolves.toEqual({
-      transitioned: true,
-    });
+    await expect(
+      repository.publishPeriod(reportId, userId, expected),
+    ).resolves.toEqual({ transitioned: true });
 
     const casWrite = updateMany.mock.calls[0]?.[0] as {
+      where: Record<string, unknown>;
       data: {
         status: string;
         publishedAt: Date;
@@ -86,6 +107,20 @@ describe("PeriodPrismaRepository.publishPeriod", () => {
         };
       };
     };
+    expect(casWrite.where).toEqual({
+      id: reportId,
+      periodStart: expected.periodStart,
+      periodEnd: expected.periodEnd,
+      status: expected.status,
+      periodState: expected.periodState,
+      periodStatus: expected.periodStatus,
+      archived: expected.archived,
+      autoPublished: expected.autoPublished,
+      autoArchived: expected.autoArchived,
+      publishedAt: expected.publishedAt,
+      publishedById: expected.publishedById,
+      reopenedAt: expected.reopenedAt,
+    });
     expect(casWrite.data).toMatchObject({
       status: "published",
       publishedAt: publishAt,
@@ -114,6 +149,20 @@ describe("PeriodPrismaRepository.publishPeriod", () => {
 // overlaps, the exclusion constraint rejects the transaction; the repository
 // translates it to AdminPeriodOverlapError (→ BAD_REQUEST).
 describe("PeriodPrismaRepository.reopenPeriod — overlap translation", () => {
+  const publishedExpectation = (): PeriodLifecycleExpectation => ({
+    periodStart: new Date("2026-08-24T00:00:00.000Z"),
+    periodEnd: new Date("2026-08-30T00:00:00.000Z"),
+    status: "published",
+    periodState: "published",
+    periodStatus: "published",
+    archived: false,
+    autoPublished: false,
+    autoArchived: false,
+    publishedAt: new Date("2026-08-31T12:34:56.789Z"),
+    publishedById: "00000000-0000-4000-8000-0000000000d9",
+    reopenedAt: null,
+  });
+
   function periodOverlapP2039(): Prisma.PrismaClientKnownRequestError {
     return new Prisma.PrismaClientKnownRequestError(
       'Database error. Code: `23P01`. Message: `conflicting key value violates exclusion constraint "Report_no_live_period_overlap"`',
@@ -143,9 +192,9 @@ describe("PeriodPrismaRepository.reopenPeriod — overlap translation", () => {
       new WeeklyReportPrismaRepository(prisma),
     );
 
-    await expect(repo.reopenPeriod("report-1")).rejects.toBeInstanceOf(
-      AdminPeriodOverlapError,
-    );
+    await expect(
+      repo.reopenPeriod("report-1", publishedExpectation()),
+    ).rejects.toBeInstanceOf(AdminPeriodOverlapError);
   });
 
   it("reconciles the current policy schedule in the reopen transaction", async () => {
@@ -204,7 +253,9 @@ describe("PeriodPrismaRepository.reopenPeriod — overlap translation", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-09-01T00:00:00.000Z"));
 
-    await expect(repo.reopenPeriod(reportId)).resolves.toBeUndefined();
+    await expect(
+      repo.reopenPeriod(reportId, publishedExpectation()),
+    ).resolves.toBeUndefined();
 
     const createArgs = reminderRule.create.mock.calls[0]?.[0] as unknown as {
       data: Record<string, unknown>;
@@ -226,8 +277,8 @@ describe("PeriodPrismaRepository.reopenPeriod — overlap translation", () => {
       new WeeklyReportPrismaRepository(prisma),
     );
 
-    await expect(repo.reopenPeriod("report-1")).rejects.toThrow(
-      "deadlock detected",
-    );
+    await expect(
+      repo.reopenPeriod("report-1", publishedExpectation()),
+    ).rejects.toThrow("deadlock detected");
   });
 });

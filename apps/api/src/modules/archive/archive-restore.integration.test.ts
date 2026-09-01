@@ -43,9 +43,14 @@ describe("Archive → restore round-trip (integration)", () => {
   beforeEach(async () => {
     await cleanDatabase();
     testData = await seedTestData(prisma);
+    const expected = await periodRepo.getReportById(testData.report.id);
+    if (!expected) {
+      throw new Error(`fixture report ${testData.report.id} was not found`);
+    }
     const publication = await periodRepo.publishPeriod(
       testData.report.id,
       testData.head.id,
+      expected,
     );
     if (!publication.transitioned) {
       throw new Error(`fixture publication failed: ${publication.reason}`);

@@ -10,7 +10,10 @@ import {
 import { AdminPeriodAlreadyArchivedError } from "../../admin/index.js";
 import { archivePeriod } from "../../admin/test-seams/index.js";
 import { WeeklyReportPrismaRepository } from "../../weekly-report/weekly-report.prisma-repository.js";
-import { PeriodScopeError } from "../application/period.service";
+import {
+  PeriodScopeError,
+  PeriodStaleStateError,
+} from "../application/period.service";
 import { PeriodPrismaRepository } from "./period.prisma-repository";
 
 // Real-Postgres coverage for the reopen-versus-archive race: both writers'
@@ -25,6 +28,12 @@ describe("PeriodPrismaRepository reopen atomicity (integration)", () => {
 
   const REPORT = "f0000000-0000-4000-a000-0000000000e1";
   const USER = "00000000-0000-4000-8000-0000000000e9";
+
+  async function expected(reportId: string) {
+    const report = await repository.getReportById(reportId);
+    if (!report) throw new Error(`Report ${reportId} was not found.`);
+    return report;
+  }
 
   async function createPublishedReport(): Promise<void> {
     await prisma.user.create({
@@ -94,7 +103,7 @@ describe("PeriodPrismaRepository reopen atomicity (integration)", () => {
   }
 
   it("reopens a published period once and resets its submitted sections", async () => {
-    await repository.reopenPeriod(REPORT);
+    await repository.reopenPeriod(REPORT, await expected(REPORT));
 
     const { row, sections } = await loadRow();
     expect(row.periodStatus).toBe("reopened");
@@ -143,11 +152,12 @@ describe("PeriodPrismaRepository reopen atomicity (integration)", () => {
     // Archive first (commits), then reopen: the reopen compare-and-set's
     // `archived: false` clause drops it to zero rows, so it fails closed and
     // resets no sections — an archived period is never left editable.
+    const beforeArchive = await expected(REPORT);
     await archivePeriod(prisma as unknown as PrismaService, REPORT);
 
-    await expect(repository.reopenPeriod(REPORT)).rejects.toBeInstanceOf(
-      PeriodScopeError,
-    );
+    await expect(
+      repository.reopenPeriod(REPORT, beforeArchive),
+    ).rejects.toBeInstanceOf(PeriodScopeError);
 
     const { row, sections } = await loadRow();
     expect(row.archived).toBe(true);
@@ -158,11 +168,29 @@ describe("PeriodPrismaRepository reopen atomicity (integration)", () => {
     expect(sections.every((s) => s.status === "submitted")).toBe(true);
   });
 
+  it("returns typed stale when the period boundary changes after the expectation read", async () => {
+    const beforeBoundaryMutation = await expected(REPORT);
+    await prisma.report.update({
+      where: { id: REPORT },
+      data: { periodEnd: new Date("2026-06-15T00:00:00.000Z") },
+    });
+
+    await expect(
+      repository.reopenPeriod(REPORT, beforeBoundaryMutation),
+    ).rejects.toBeInstanceOf(PeriodStaleStateError);
+
+    const { row, sections } = await loadRow();
+    expect(row.periodEnd).toEqual(new Date("2026-06-15T00:00:00.000Z"));
+    expect(row.periodStatus).toBe("published");
+    expect(row.periodState).toBe("published");
+    expect(sections.every((s) => s.status === "submitted")).toBe(true);
+  });
+
   it("fails the archive closed when a reopen already won the row", async () => {
     // Reopen first (flips periodStatus→reopened), then archive: the archive
     // CAS's `periodStatus: { not: "reopened" }` clause drops to zero rows, so
     // it fails closed rather than stranding reset sections behind an archived row.
-    await repository.reopenPeriod(REPORT);
+    await repository.reopenPeriod(REPORT, await expected(REPORT));
 
     await expect(
       archivePeriod(prisma as unknown as PrismaService, REPORT),
@@ -176,8 +204,9 @@ describe("PeriodPrismaRepository reopen atomicity (integration)", () => {
   });
 
   it("commits exactly one writer under a concurrent reopen and archive", async () => {
+    const state = await expected(REPORT);
     const [reopenResult, archiveResult] = await Promise.allSettled([
-      repository.reopenPeriod(REPORT),
+      repository.reopenPeriod(REPORT, state),
       archivePeriod(prisma as unknown as PrismaService, REPORT),
     ]);
 

@@ -37,6 +37,7 @@ import {
   PeriodLifecycleIntegrityError,
   PeriodNotFoundError,
   PeriodScopeError,
+  PeriodStaleStateError,
 } from "../../modules/period/index.js";
 import {
   ProjectActivityConflictError,
@@ -146,6 +147,7 @@ export const DOMAIN_ERROR_CODES: readonly (readonly [
   // classes because they map to different codes.
   [PeriodScopeError, "FORBIDDEN"],
   [PeriodNotFoundError, "NOT_FOUND"],
+  [PeriodStaleStateError, "CONFLICT"],
   // State/policy rejections on a lifecycle write are predictable, client-
   // recoverable failures on an existing resource — BAD_REQUEST, never internal.
   // The messages are fixed and safe to surface verbatim.

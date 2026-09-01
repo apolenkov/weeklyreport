@@ -224,7 +224,14 @@ describe("ArchivePrismaRepository (integration)", () => {
     });
 
     // Archive detail is available only after the explicit archive transition.
-    await periodRepo.publishPeriod(testData.report.id, testData.head.id);
+    const expected = await periodRepo.getReportById(testData.report.id);
+    if (!expected)
+      throw new Error(`fixture report ${testData.report.id} was not found`);
+    await periodRepo.publishPeriod(
+      testData.report.id,
+      testData.head.id,
+      expected,
+    );
     await prisma.report.update({
       where: { id: testData.report.id },
       data: { archived: true, periodState: "archived" },
@@ -329,7 +336,14 @@ describe("ArchivePrismaRepository (integration)", () => {
       },
     });
 
-    await periodRepo.publishPeriod(testData.report.id, testData.head.id);
+    const expected = await periodRepo.getReportById(testData.report.id);
+    if (!expected)
+      throw new Error(`fixture report ${testData.report.id} was not found`);
+    await periodRepo.publishPeriod(
+      testData.report.id,
+      testData.head.id,
+      expected,
+    );
     await prisma.report.update({
       where: { id: testData.report.id },
       data: { archived: true, periodState: "archived" },
@@ -597,7 +611,14 @@ describe("ArchivePrismaRepository (integration)", () => {
   it("snapshot path: a group-scoped session reads only its own group's sections and portfolio", async () => {
     const { sectionBId } = await seedCrossGroupSections();
     // Publish to persist a snapshot spanning BOTH groups, then archive it.
-    await periodRepo.publishPeriod(testData.report.id, testData.head.id);
+    const expected = await periodRepo.getReportById(testData.report.id);
+    if (!expected)
+      throw new Error(`fixture report ${testData.report.id} was not found`);
+    await periodRepo.publishPeriod(
+      testData.report.id,
+      testData.head.id,
+      expected,
+    );
     await prisma.report.update({
       where: { id: testData.report.id },
       data: { archived: true, periodState: "archived" },
