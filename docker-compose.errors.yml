@@ -11,15 +11,15 @@
 
 services:
   bugsink:
-    image: bugsink/bugsink:latest@sha256:bc3a491edb7d94d42ae49be14f586a4b7eefa929389272c37f9bec112f232e78
+    image: bugsink/bugsink:2.5.1@sha256:ecdd845877464d70d61244b8adba20d623e1860e88d8338f2808d9cc2925745c
     ports:
       - "127.0.0.1:${BUGSINK_PORT:-8000}:8000"
     volumes:
-      - bugsinkdata:/app/data
+      - bugsinkdata:/data
     environment:
       SECRET_KEY: ${BUGSINK_SECRET_KEY:?BUGSINK_SECRET_KEY must be set}
       BASE_URL: http://localhost:${BUGSINK_PORT:-8000}
-      BUGSINK_SINGLE_USER_MODE: "true"
+      SINGLE_USER: "true"
       # The pinned image supports CREATE_SUPERUSER=email:password, but Compose
       # deliberately does not persist bootstrap credentials. Use the command above.
     restart: unless-stopped

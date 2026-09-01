@@ -72,7 +72,7 @@ describe("SemanticEmbedding migration contract", () => {
     await disconnectTestPrisma();
   });
 
-  it("installs the vector extension before the cache is used", async () => {
+  it("installs the reviewed vector extension release before cache use", async () => {
     const rows = await prisma.$queryRaw<{ extversion: string }[]>`
       SELECT extversion
       FROM pg_extension
@@ -80,7 +80,7 @@ describe("SemanticEmbedding migration contract", () => {
     `;
 
     expect(rows).toHaveLength(1);
-    expect(rows[0]?.extversion).toMatch(/^0\./u);
+    expect(rows[0]?.extversion).toBe("0.8.6");
   });
 
   it("round-trips a vector and its declared dimensions", async () => {
