@@ -25,7 +25,7 @@ function getFirstCardStyle(container: HTMLElement): string {
 function renderedStageNames(container: HTMLElement): string[] {
   return Array.from(
     container.querySelectorAll(
-      '[data-testid="sdlc-stage-row"] button[aria-label]',
+      '[data-testid="sdlc-stage-row"] [aria-label][role="img"], [data-testid="sdlc-stage-row"] button[aria-label]',
     ),
   ).map(
     (b) => (b.getAttribute("aria-label") ?? "").split(":")[0]?.trim() ?? "",

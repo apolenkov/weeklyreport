@@ -10,6 +10,19 @@ import { AccordionSection } from "./accordion-section";
 const HIDDEN_ICON = <span aria-hidden="true" />;
 
 describe("AccordionSection — aria-controls", () => {
+  it("exposes the disclosure title as a level-two heading", () => {
+    render(
+      <AccordionSection icon={HIDDEN_ICON} title="Risks">
+        <p>Panel body</p>
+      </AccordionSection>,
+    );
+
+    const heading = screen.getByRole("heading", { level: 2, name: "Risks" });
+    expect(heading).toContainElement(
+      screen.getByRole("button", { name: "Risks" }),
+    );
+  });
+
   it("both toggles carry aria-controls pointing at the panel id", () => {
     render(
       <AccordionSection
@@ -105,8 +118,9 @@ describe("AccordionSection — responsive disclosure geometry", () => {
     );
 
     const headerToggle = screen.getByRole("button", { name: "Risks" });
-    expect(headerToggle.className).toContain("max-sm:basis-full");
-    expect(headerToggle.parentElement?.className).toContain("max-sm:flex-wrap");
+    const heading = headerToggle.closest("h2");
+    expect(heading).toHaveClass("max-sm:basis-full");
+    expect(heading?.parentElement).toHaveClass("max-sm:flex-wrap");
     expect(
       screen.getByRole("button", { name: "Add risk" }).parentElement?.className,
     ).toContain("max-sm:ml-auto");

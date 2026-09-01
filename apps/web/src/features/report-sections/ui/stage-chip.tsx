@@ -108,6 +108,19 @@ function chipTitle(stage: StageAssignment, coverageSuffix: string): string {
   return `${baseTooltip}${coverageSuffix}`;
 }
 
+function chipAccessibleName(
+  stage: StageAssignment,
+  coverageSuffix: string,
+  readOnly: boolean,
+): string {
+  const status = `${stage.stageName}: ${statusLabel(stage.status, "screen")}${coverageSuffix}`;
+  if (stage.ownership === "locked") {
+    return `${status} — locked; owned by ${stage.assignee ?? "another lead"}. You don't have edit permissions`;
+  }
+  if (readOnly) return `${status} — read-only status view`;
+  return status;
+}
+
 interface ChipVisualState extends ChipAffordances {
   readonly effectiveRawStatus: StageStatus;
   readonly coveredByRisk: boolean;
@@ -149,6 +162,37 @@ export function StageChip({
     coveredByRisk,
     coverageSuffix,
   } = chipVisualState(stage, readOnly, rawStatus);
+  const accessibleName = chipAccessibleName(stage, coverageSuffix, readOnly);
+  const chip = isEditable ? (
+    <button
+      type="button"
+      className={chipClassName({ isEditable, isEmpty, isLocked })}
+      style={chipStyle({
+        status: stage.status,
+        isEmpty,
+        coveredByRisk,
+      })}
+      aria-label={accessibleName}
+      data-coverage={coveredByRisk ? "risk" : undefined}
+      onClick={handleChipClick}
+    >
+      <StageChipContent stage={stage} isLocked={isLocked} />
+    </button>
+  ) : (
+    <div
+      role="img"
+      className={chipClassName({ isEditable, isEmpty, isLocked })}
+      style={chipStyle({
+        status: stage.status,
+        isEmpty,
+        coveredByRisk,
+      })}
+      aria-label={accessibleName}
+      data-coverage={coveredByRisk ? "risk" : undefined}
+    >
+      <StageChipContent stage={stage} isLocked={isLocked} />
+    </div>
+  );
 
   // Toggle is on-track ⇄ empty off RAW status. Risk-floored chips still fire
   // the click; the sync bridge ignores it and points the lead at Risks.
@@ -162,24 +206,12 @@ export function StageChip({
   return (
     <div className="flex w-full min-w-0 flex-col items-stretch gap-1 lg:items-center">
       <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            className={chipClassName({ isEditable, isEmpty, isLocked })}
-            style={chipStyle({ status: stage.status, isEmpty, coveredByRisk })}
-            aria-label={`${stage.stageName}: ${statusLabel(stage.status, "screen")}${coverageSuffix}`}
-            data-coverage={coveredByRisk ? "risk" : undefined}
-            onClick={handleChipClick}
-            aria-disabled={!isEditable}
-            // Read-only chips remain in the tab order so keyboard users can
-            // discover their status and tooltip; aria-disabled communicates
-            // that activation cannot mutate the report.
-            tabIndex={0}
-          >
-            <StageChipContent stage={stage} isLocked={isLocked} />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent>{chipTitle(stage, coverageSuffix)}</TooltipContent>
+        <TooltipTrigger asChild>{chip}</TooltipTrigger>
+        <TooltipContent>
+          {readOnly && stage.ownership === "mine"
+            ? `${chipTitle(stage, coverageSuffix)} — read-only status view`
+            : chipTitle(stage, coverageSuffix)}
+        </TooltipContent>
       </Tooltip>
 
       <span className="block max-w-full truncate self-start px-2 lg:self-auto lg:px-0 lg:text-center">

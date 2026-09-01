@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-// Locked chips expose the cross-author risk token through their aria-labelled
-// status button; the status glyph is decorative and mirrors the same status.
+// Locked chips expose the cross-author risk token through an aria-labelled
+// static indicator; editable own chips remain buttons. The status glyph is
+// decorative and mirrors the same status.
 import "@testing-library/jest-dom/vitest";
 
 import { TooltipProvider } from "@customreport/ui/components/ui/tooltip";
@@ -27,10 +28,10 @@ describe("StageChip — locked stage color", () => {
   it("locked + empty → chip labelled with no status", () => {
     render(<StageChip stage={{ ...BASE_LOCKED, status: "empty" }} />);
     expect(
-      screen.getByRole("button", { name: "DevOps: No status" }),
+      screen.getByRole("img", { name: /DevOps: No status/ }),
     ).toBeInTheDocument();
     // empty surface token, not a flat gray override
-    expect(screen.getByRole("button").style.background).toBe(
+    expect(screen.getByRole("img").style.background).toBe(
       "var(--color-surface-empty)",
     );
   });
@@ -38,9 +39,9 @@ describe("StageChip — locked stage color", () => {
   it("locked + at-risk → chip labelled with at-risk status and token", () => {
     render(<StageChip stage={{ ...BASE_LOCKED, status: "at-risk" }} />);
     expect(
-      screen.getByRole("button", { name: "DevOps: At risk" }),
+      screen.getByRole("img", { name: /DevOps: At risk/ }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button").style.background).toBe(
+    expect(screen.getByRole("img").style.background).toBe(
       "var(--color-chip-at-risk-bg)",
     );
   });
@@ -48,9 +49,9 @@ describe("StageChip — locked stage color", () => {
   it("locked + blocked → chip labelled with blocked status and token", () => {
     render(<StageChip stage={{ ...BASE_LOCKED, status: "blocked" }} />);
     expect(
-      screen.getByRole("button", { name: "DevOps: Blocked" }),
+      screen.getByRole("img", { name: /DevOps: Blocked/ }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button").style.background).toBe(
+    expect(screen.getByRole("img").style.background).toBe(
       "var(--color-chip-blocked-bg)",
     );
   });
@@ -58,9 +59,9 @@ describe("StageChip — locked stage color", () => {
   it("locked + on-track → chip labelled with on-track status and token", () => {
     render(<StageChip stage={{ ...BASE_LOCKED, status: "on-track" }} />);
     expect(
-      screen.getByRole("button", { name: "DevOps: On track" }),
+      screen.getByRole("img", { name: /DevOps: On track/ }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button").style.background).toBe(
+    expect(screen.getByRole("img").style.background).toBe(
       "var(--color-chip-on-track-bg)",
     );
   });
@@ -81,27 +82,38 @@ describe("StageChip — locked stage color", () => {
         onStatusChange={onStatusChange}
       />,
     );
-    screen.getByRole("button").click();
+    screen.getByRole("img").click();
     expect(onStatusChange).not.toHaveBeenCalled();
+  });
+
+  it("locked chip is a static indicator, not a focusable button", () => {
+    render(<StageChip stage={{ ...BASE_LOCKED, status: "on-track" }} />);
+    const indicator = screen.getByRole("img");
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(indicator).not.toHaveAttribute("tabindex");
+    expect(indicator).not.toHaveAttribute("aria-disabled");
+    expect(indicator).toHaveAccessibleName(
+      "DevOps: On track — locked; owned by Boris. You don't have edit permissions",
+    );
   });
 });
 
 // Chip height must match the arrow wrapper in sdlc-pipeline.tsx so midlines align.
 
 describe("StageChip — chip box height token", () => {
-  it("chip button inline height is 36px", () => {
+  it("chip inline height is 36px", () => {
     render(<StageChip stage={{ ...BASE_LOCKED, status: "on-track" }} />);
-    const button = screen.getByRole("button");
-    expect(button.style.height).toBe("36px");
+    const indicator = screen.getByRole("img");
+    expect(indicator.style.height).toBe("36px");
   });
 
-  it("chip button floors at the touch target below lg", () => {
+  it("chip floors at the touch target below lg", () => {
     // jsdom cannot evaluate media queries; the class assertion is the teeth.
     // min-height beats the 36px inline height below `lg`, so phones and tablets
     // keep the touch floor while desktop keeps the aligned 36px box.
     render(<StageChip stage={{ ...BASE_LOCKED, status: "on-track" }} />);
-    const button = screen.getByRole("button");
-    expect(button.className).toContain(
+    const indicator = screen.getByRole("img");
+    expect(indicator.className).toContain(
       "max-lg:min-h-[var(--touch-target-min)]",
     );
   });
@@ -120,7 +132,7 @@ describe("StageChip — stretched row status visualization", () => {
       />,
     );
     expect(
-      screen.getByRole("button", { name: "Development: On track" }),
+      screen.getByRole("img", { name: /Development: On track/ }),
     ).toBeInTheDocument();
     expect(screen.getByText("Dev")).toHaveClass("lg:hidden");
     expect(screen.getByText("Development")).toHaveClass("hidden", "lg:inline");
@@ -134,13 +146,15 @@ describe("StageChip — stretched row status visualization", () => {
     expect(glyph).toHaveTextContent("✕");
   });
 
-  it("uses a full-width, left-aligned button with a truncation-safe label", () => {
+  it("uses a full-width, left-aligned indicator with a truncation-safe label", () => {
     render(<StageChip stage={{ ...BASE_LOCKED, status: "on-track" }} />);
-    const button = screen.getByRole("button");
-    expect(button.className).toContain("w-full");
-    expect(button.className).toContain("justify-start");
-    expect(button.className).toContain("text-left");
-    expect(button.querySelector("span span")?.className).toContain("truncate");
+    const indicator = screen.getByRole("img");
+    expect(indicator.className).toContain("w-full");
+    expect(indicator.className).toContain("justify-start");
+    expect(indicator.className).toContain("text-left");
+    expect(indicator.querySelector("span span")?.className).toContain(
+      "truncate",
+    );
   });
 
   it("keeps a visible focus treatment for keyboard users", () => {
@@ -238,16 +252,32 @@ describe("StageChip — covered-by-risk vs status-set distinction", () => {
     expect(setButton.dataset.coverage).not.toBe("risk");
   });
 
-  it("locked chip keeps a plain status aria-label (no suffix)", () => {
+  it("locked chip accessible name includes its non-editable reason", () => {
     render(
       <StageChip
         stage={{ ...BASE_LOCKED, status: "blocked" }}
         rawStatus="blocked"
       />,
     );
-    expect(
-      screen.getByRole("button", { name: "DevOps: Blocked" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("img")).toHaveAccessibleName(
+      "DevOps: Blocked — locked; owned by Boris. You don't have edit permissions",
+    );
+  });
+
+  it("read-only mine chip is static and explains the read-only state", () => {
+    render(
+      <StageChip
+        stage={{ ...BASE_MINE, status: "on-track" }}
+        readOnly
+        onStatusChange={vi.fn()}
+      />,
+    );
+    const indicator = screen.getByRole("img");
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(indicator).not.toHaveAttribute("tabindex");
+    expect(indicator).toHaveAccessibleName(
+      "Design: On track — status set — read-only status view",
+    );
   });
 
   it("covered chip with an explicit tooltip still surfaces 'by risk' on focus", async () => {
