@@ -172,18 +172,19 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
     // A reopened period keeps status="published" but flips
     // periodStatus to "reopened". The shared guard keys on periodStatus, not
     // status, so it must still transition here.
+    const publishedAt = new Date("2026-05-17T00:00:00.000Z");
+    const reopenedAt = new Date("2026-05-18T00:00:00.000Z");
     await prisma.report.update({
       where: { id: REPORT },
       data: {
-        status: "published",
-        periodStatus: "reopened",
-        publishedAt: new Date("2026-05-17T00:00:00.000Z"),
+        ...buildTransition("publish", { now: publishedAt, userId: USER }),
+        ...buildTransition("reopen", { now: reopenedAt }),
         publishedSnapshot: publishedSnapshotFixture({
           reportId: REPORT,
           periodStart: "2026-05-11T00:00:00.000Z",
           periodEnd: "2026-05-17T00:00:00.000Z",
           deadline: "2026-05-15T00:00:00.000Z",
-          publishedAt: "2026-05-17T00:00:00.000Z",
+          publishedAt: publishedAt.toISOString(),
           publishedById: USER,
           publishedByName: "Atomicity Head",
         }),
