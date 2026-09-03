@@ -114,6 +114,7 @@ function LeadSection({
     <section
       ref={ref}
       id={`report-lead-${groupId}`}
+      data-feedback-anchor={`report-lead-${groupId}`}
       tabIndex={-1}
       aria-label={groupName}
       className="space-y-3 scroll-mt-4 rounded-[var(--radius-sm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2"

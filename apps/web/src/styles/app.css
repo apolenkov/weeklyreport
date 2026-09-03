@@ -162,10 +162,12 @@
   }
 }
 
-/* A17: hide the DEV role-switcher FAB when any dialog/modal is open so it
-   does not bleed through the semi-transparent backdrop overlay.
+/* A17: hide the DEV role-switcher FAB when an application dialog is open so it
+   does not bleed through the semi-transparent backdrop overlay. SitePing keeps
+   a hidden feedback dialog mounted, so its ignored UI must not trigger this.
    The role-switcher only renders in dev builds (NEXT_PUBLIC_DEV_ROLE_SWITCHER). */
-body:has([role="dialog"]) [data-testid="dev-role-switcher-trigger"] {
+body:has([role="dialog"]:not([data-siteping-ignore]))
+  [data-testid="dev-role-switcher-trigger"] {
   visibility: hidden;
   pointer-events: none;
 }

@@ -19,6 +19,11 @@ const observabilityCompose = resolve("docker-compose.observability.yml");
 const errorsCompose = resolve("docker-compose.errors.yml");
 const gitIgnore = resolve(".gitignore");
 const dockerIgnore = resolve(".dockerignore");
+const rootPackage = JSON.parse(
+  readFileSync(resolve("package.json"), "utf8"),
+) as {
+  readonly scripts?: Readonly<Record<string, string>>;
+};
 
 function resolveExecutable(command: string): string {
   const searchPath = process.env.PATH;
@@ -106,6 +111,9 @@ const REQUIRED_POLICY_INPUTS = [
   "NEXT_PUBLIC_CLIENT_LOG_FORWARDING",
   "NEXT_PUBLIC_WEB_VITALS",
   "CLIENT_LOG_FORWARDING",
+  "NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED",
+  "NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES",
+  "PRODUCT_FEEDBACK_ENABLED",
   "CADDY_SITE_ADDRESS",
   "CADDY_ACME_EMAIL",
   "CADDY_CSP_REPORT_URI",
@@ -158,6 +166,9 @@ const REVIEWED_LOCAL_BUILD_IMAGES = new Map([
 ]);
 const turboConfig = JSON.parse(readFileSync(resolve("turbo.json"), "utf8")) as {
   readonly globalEnv?: readonly string[];
+  readonly tasks?: Readonly<
+    Record<string, { readonly env?: readonly string[] } | undefined>
+  >;
 };
 
 void test("Docker build context excludes TypeScript test harnesses", () => {
@@ -255,6 +266,9 @@ void test("the production template lists every required input as fail-closed", (
     "NEXT_PUBLIC_CLIENT_LOG_FORWARDING",
     "NEXT_PUBLIC_WEB_VITALS",
     "CLIENT_LOG_FORWARDING",
+    "NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED",
+    "NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES",
+    "PRODUCT_FEEDBACK_ENABLED",
     "HTTP_PORT",
     "HTTPS_PORT",
     "HTTPS_PORT_QUIC",
@@ -631,6 +645,24 @@ void test("post-install production tools bypass pnpm dependency preflight", () =
       );
     }
   }
+});
+
+void test("Turbo forwards product feedback switches to source development", () => {
+  const devEnv = turboConfig.tasks?.dev?.env ?? [];
+  assert.ok(devEnv.includes("NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED"));
+  assert.ok(devEnv.includes("NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES"));
+  assert.ok(devEnv.includes("PRODUCT_FEEDBACK_ENABLED"));
+});
+
+void test("feedback dev contour enables role switching and admin inbox", () => {
+  const command = rootPackage.scripts?.["dev:feedback"];
+  assert.ok(command, "package.json must expose dev:feedback");
+  assert.match(command, /AUTH_DEV_MODE=true/u);
+  assert.match(command, /NEXT_PUBLIC_DEV_ROLE_SWITCHER=true/u);
+  assert.match(command, /PRODUCT_FEEDBACK_ENABLED=true/u);
+  assert.match(command, /NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED=true/u);
+  assert.match(command, /NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES=admin/u);
+  assert.match(command, /turbo run dev/u);
 });
 
 void test("production build stages make pnpm explicitly non-interactive", () => {
@@ -1029,6 +1061,9 @@ const FULL_POLICY_ENV: NodeJS.ProcessEnv = {
   NEXT_PUBLIC_CLIENT_LOG_FORWARDING: "false",
   NEXT_PUBLIC_WEB_VITALS: "false",
   CLIENT_LOG_FORWARDING: "false",
+  NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED: "false",
+  NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES: "admin",
+  PRODUCT_FEEDBACK_ENABLED: "false",
   AUTH_JWT_SECRET: "x".repeat(32),
   PDF_EXPORT_JWT_SECRET: "x".repeat(32),
   PDF_BASE_URL: "http://x",

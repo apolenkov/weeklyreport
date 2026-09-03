@@ -124,6 +124,7 @@ services:
       FRONTEND_URL: http://localhost:3000
       APP_BASE_URL: http://localhost:3000
       AUTH_DEV_MODE: "true"
+      PRODUCT_FEEDBACK_ENABLED: "true"
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-change-me-in-development-min-32-chars!!}
       PDF_BASE_URL: http://web:3000
       PDF_OUTPUT_DIR: /app/data/pdfs
@@ -171,6 +172,8 @@ services:
       API_URL: http://api:3002
       NEXT_PUBLIC_AUTH_STUB: "true"
       NEXT_PUBLIC_DEV_ROLE_SWITCHER: "true"
+      NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED: "true"
+      NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES: "admin"
       NEXT_DIST_DIR: .next-docker-dev
     depends_on:
       api:

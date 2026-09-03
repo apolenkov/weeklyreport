@@ -113,7 +113,11 @@ export function ProductAccordion({
   );
 
   return (
-    <div id={rootId} {...surfaceProps(hasContent, isHighlightActive)}>
+    <div
+      id={rootId}
+      data-feedback-anchor={rootId}
+      {...surfaceProps(hasContent, isHighlightActive)}
+    >
       <AccordionHeader
         report={report}
         hasContent={hasContent}

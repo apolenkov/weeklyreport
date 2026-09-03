@@ -10,6 +10,9 @@ export const TRPC_MAX_BODY_BYTES = BYTES_PER_KIB * BYTES_PER_KIB;
 // 128 KiB bounds a public beacon while covering a burst flush; shared with
 // the ingress integration test so a drifted limit fails there, not in prod.
 export const CLIENT_LOGS_JSON_LIMIT = "128kb";
+// SitePing accepts a screenshot data URL up to 1.5 MB plus bounded annotation
+// and diagnostic metadata. Two MiB admits that contract with parser headroom.
+export const PRODUCT_FEEDBACK_JSON_LIMIT = "2mb";
 
 // Load-bearing order: limiter before JSON parse/handler so unauthenticated
 // flood cannot hit the parser or app.log. main.ts and the integration test

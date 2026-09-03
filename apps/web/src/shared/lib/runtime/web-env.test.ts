@@ -14,6 +14,37 @@ describe("webEnvSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("validates the product feedback toggle", () => {
+    expect(
+      webEnvSchema.safeParse({
+        NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED: "enabled",
+      }).success,
+    ).toBe(false);
+    expect(
+      webEnvSchema.safeParse({
+        NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED: "true",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("validates the product feedback inbox role allowlist", () => {
+    expect(
+      webEnvSchema.safeParse({
+        NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES: "admin,head",
+      }).success,
+    ).toBe(true);
+    expect(
+      webEnvSchema.safeParse({
+        NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES: "admin,owner",
+      }).success,
+    ).toBe(false);
+    expect(
+      webEnvSchema.safeParse({
+        NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES: "admin,admin",
+      }).success,
+    ).toBe(false);
+  });
+
   it("accepts an absent toggle (optional, no default)", () => {
     const result = webEnvSchema.safeParse({});
     expect(result.success).toBe(true);
@@ -76,6 +107,20 @@ describe("webEnv getters", () => {
     expect(webEnv.webVitals()).toBe(true);
     vi.stubEnv("NEXT_PUBLIC_WEB_VITALS", "false");
     expect(webEnv.webVitals()).toBe(false);
+  });
+
+  it("keeps product feedback disabled unless explicitly enabled", () => {
+    vi.stubEnv("NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED", undefined);
+    expect(webEnv.productFeedback()).toBe(false);
+    vi.stubEnv("NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED", "true");
+    expect(webEnv.productFeedback()).toBe(true);
+  });
+
+  it("returns a fail-closed feedback inbox role allowlist", () => {
+    vi.stubEnv("NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES", undefined);
+    expect(webEnv.productFeedbackInboxRoles()).toEqual([]);
+    vi.stubEnv("NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES", "admin,head");
+    expect(webEnv.productFeedbackInboxRoles()).toEqual(["admin", "head"]);
   });
 
   it("treats an empty appVersion as unset", () => {

@@ -10,8 +10,10 @@ import {
 } from "./use-weekly-report-page-effects";
 
 const replace = vi.fn();
+let searchParams = new URLSearchParams();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace }),
+  useSearchParams: () => searchParams,
 }));
 
 function sessionProvider(orgName: string | null) {
@@ -36,6 +38,7 @@ function renderWithSession(hook: () => void, orgName: string | null) {
 describe("useCanonicalReportRedirect", () => {
   beforeEach(() => {
     replace.mockReset();
+    searchParams = new URLSearchParams();
   });
 
   const args = {
@@ -63,7 +66,19 @@ describe("useCanonicalReportRedirect", () => {
   it("redirects to the canonical report with the focused author id encoded", () => {
     renderHook(() => useCanonicalReportRedirect(args));
     expect(replace).toHaveBeenCalledWith(
-      "/head/report/report-1?authorId=user%20name%2F%D0%BA%D1%82%D0%BE",
+      "/head/report/report-1?authorId=user+name%2F%D0%BA%D1%82%D0%BE",
+      { scroll: false },
+    );
+  });
+
+  it("preserves SitePing deep-link parameters in the canonical redirect", () => {
+    searchParams = new URLSearchParams({
+      siteping: "feedback_123",
+      sitepingUrl: "/lead/report/report-1",
+    });
+    renderHook(() => useCanonicalReportRedirect(args));
+    expect(replace).toHaveBeenCalledWith(
+      "/head/report/report-1?authorId=user+name%2F%D0%BA%D1%82%D0%BE&siteping=feedback_123&sitepingUrl=%2Flead%2Freport%2Freport-1",
       { scroll: false },
     );
   });

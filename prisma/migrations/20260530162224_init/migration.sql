@@ -1370,3 +1370,73 @@ ALTER TABLE "AiProviderControl"
   ADD CONSTRAINT "AiProviderControl_activeConfigurationId_fkey"
   FOREIGN KEY ("activeConfigurationId") REFERENCES "AiProviderConfiguration"("id")
   ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- Authenticated product-feedback tables. Captures use the bounded SitePing
+-- wire contract and remain protected by the feedback row's access scope.
+CREATE TABLE "SitepingFeedback" (
+    "id" TEXT NOT NULL,
+    "projectName" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "message" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'open',
+    "url" TEXT NOT NULL,
+    "urlPattern" TEXT,
+    "screenshotUrl" TEXT,
+    "screenshotRegion" JSONB,
+    "diagnostics" JSONB,
+    "viewport" TEXT NOT NULL,
+    "userAgent" TEXT NOT NULL,
+    "authorUserId" TEXT NOT NULL,
+    "authorName" TEXT NOT NULL,
+    "authorEmail" TEXT NOT NULL,
+    "authorReportingGroupId" TEXT,
+    "clientId" TEXT NOT NULL,
+    "resolvedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "SitepingFeedback_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "SitepingAnnotation" (
+    "id" TEXT NOT NULL,
+    "feedbackId" TEXT NOT NULL,
+    "cssSelector" TEXT NOT NULL,
+    "xpath" TEXT NOT NULL,
+    "textSnippet" TEXT NOT NULL,
+    "elementTag" TEXT NOT NULL,
+    "elementId" TEXT,
+    "textPrefix" TEXT NOT NULL,
+    "textSuffix" TEXT NOT NULL,
+    "fingerprint" TEXT NOT NULL,
+    "neighborText" TEXT NOT NULL,
+    "anchorKey" TEXT,
+    "xPct" DOUBLE PRECISION NOT NULL,
+    "yPct" DOUBLE PRECISION NOT NULL,
+    "wPct" DOUBLE PRECISION NOT NULL,
+    "hPct" DOUBLE PRECISION NOT NULL,
+    "scrollX" DOUBLE PRECISION NOT NULL,
+    "scrollY" DOUBLE PRECISION NOT NULL,
+    "viewportW" INTEGER NOT NULL,
+    "viewportH" INTEGER NOT NULL,
+    "devicePixelRatio" DOUBLE PRECISION NOT NULL DEFAULT 1,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "SitepingAnnotation_pkey" PRIMARY KEY ("id")
+);
+
+CREATE UNIQUE INDEX "SitepingFeedback_clientId_key" ON "SitepingFeedback"("clientId");
+CREATE INDEX "SitepingFeedback_projectName_status_createdAt_idx" ON "SitepingFeedback"("projectName", "status", "createdAt" DESC);
+CREATE INDEX "SitepingFeedback_projectName_authorUserId_createdAt_idx" ON "SitepingFeedback"("projectName", "authorUserId", "createdAt" DESC);
+CREATE INDEX "SitepingFeedback_projectName_authorReportingGroupId_status_createdAt_idx" ON "SitepingFeedback"("projectName", "authorReportingGroupId", "status", "createdAt" DESC);
+CREATE INDEX "SitepingFeedback_projectName_url_idx" ON "SitepingFeedback"("projectName", "url");
+CREATE INDEX "SitepingAnnotation_feedbackId_idx" ON "SitepingAnnotation"("feedbackId");
+
+ALTER TABLE "SitepingFeedback"
+  ADD CONSTRAINT "SitepingFeedback_authorUserId_fkey"
+  FOREIGN KEY ("authorUserId") REFERENCES "User"("id")
+  ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "SitepingAnnotation"
+  ADD CONSTRAINT "SitepingAnnotation_feedbackId_fkey"
+  FOREIGN KEY ("feedbackId") REFERENCES "SitepingFeedback"("id")
+  ON DELETE CASCADE ON UPDATE CASCADE;

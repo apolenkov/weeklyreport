@@ -312,6 +312,7 @@ services:
       # and retain the typed consumer defaults.
       SENTRY_DSN: ${SENTRY_DSN:-}
       CLIENT_LOG_FORWARDING: ${CLIENT_LOG_FORWARDING:?CLIENT_LOG_FORWARDING must be set (true or false)}
+      PRODUCT_FEEDBACK_ENABLED: ${PRODUCT_FEEDBACK_ENABLED:?PRODUCT_FEEDBACK_ENABLED must be set (true or false)}
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -378,6 +379,8 @@ services:
         API_URL: *production-api-url
         NEXT_PUBLIC_CLIENT_LOG_FORWARDING: ${NEXT_PUBLIC_CLIENT_LOG_FORWARDING:?NEXT_PUBLIC_CLIENT_LOG_FORWARDING must be set (true or false)}
         NEXT_PUBLIC_WEB_VITALS: ${NEXT_PUBLIC_WEB_VITALS:?NEXT_PUBLIC_WEB_VITALS must be set (true or false)}
+        NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED: ${NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED:?NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED must be set (true or false)}
+        NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES: ${NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES:?NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES must be set (for example admin or admin,head)}
     image: customreport-web:${OTEL_SERVICE_VERSION:?set the deployed release version (for example the Git SHA)}
     environment:
       # Only server-side vars (read at runtime) belong here: NEXT_PUBLIC_* is

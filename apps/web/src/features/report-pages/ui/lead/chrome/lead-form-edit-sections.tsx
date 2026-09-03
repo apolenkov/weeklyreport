@@ -60,6 +60,7 @@ export function LeadFormEditSections({
       className="min-w-0 space-y-6"
       data-layout-key="lead-report-body"
       data-layout-stability="position-width"
+      data-feedback-anchor="lead-report-body"
     >
       {/* Reviewer feedback on a returned section surfaces read-only above
           the editable content, so the lead sees what to fix before

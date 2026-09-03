@@ -64,6 +64,21 @@ describe("envSchema — no defaults, every product var required", () => {
     expect(envSchema.safeParse(COMPLETE).success).toBe(true);
   });
 
+  it("validates product feedback as an optional fail-closed toggle", () => {
+    const absent = envSchema.parse(COMPLETE);
+    expect(absent.PRODUCT_FEEDBACK_ENABLED).toBeUndefined();
+    expect(
+      envSchema.parse({ ...COMPLETE, PRODUCT_FEEDBACK_ENABLED: "true" })
+        .PRODUCT_FEEDBACK_ENABLED,
+    ).toBe(true);
+    expect(
+      envSchema.safeParse({
+        ...COMPLETE,
+        PRODUCT_FEEDBACK_ENABLED: "enabled",
+      }).success,
+    ).toBe(false);
+  });
+
   // Each required key, omitted in turn, must fail the parse — proving the
   // schema carries no silent default that would let a missing var slip through.
   it.each([

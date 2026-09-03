@@ -203,6 +203,37 @@ describe("rate-limit middleware — client-logs limiter budget", () => {
   });
 });
 
+describe("rate-limit middleware — product-feedback limiter budget", () => {
+  it("returns 429 over the dedicated 30/minute budget", async () => {
+    const app = express();
+    app.disable("x-powered-by");
+    app.set("trust proxy", 1);
+    const { feedbackLimiter } = await createRateLimits({
+      logger: silentLogger,
+      isTest: false,
+      redis: createFakeRedisCall() as unknown as Redis,
+    });
+    app.use("/api/siteping", feedbackLimiter);
+    app.post("/api/siteping", (_req, res) => res.sendStatus(204));
+
+    const server = app.listen(0);
+    await new Promise<void>((resolve) => server.once("listening", resolve));
+    const { port } = server.address() as AddressInfo;
+    try {
+      const statuses: number[] = [];
+      for (let i = 0; i < 31; i += 1) {
+        statuses.push(await postStatus(port, "/api/siteping"));
+      }
+      expect(statuses.slice(0, 30).every((status) => status === 204)).toBe(
+        true,
+      );
+      expect(statuses[30]).toBe(429);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+});
+
 describe("rate-limit middleware — fail-loud store policy", () => {
   it("awaits readiness for an owned client but not an injected client", async () => {
     const connect = vi.spyOn(Redis.prototype, "connect");

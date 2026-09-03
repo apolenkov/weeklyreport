@@ -14,6 +14,8 @@
     "@customreport/shared": "workspace:*",
     "@customreport/ui": "workspace:*",
     "@sentry/nextjs": "^10.73.0",
+    "@siteping/dashboard": "0.2.5",
+    "@siteping/widget": "0.10.7",
     "@tanstack/react-query": "^5.102.8",
     "@trpc/client": "^11.18.0",
     "@trpc/server": "catalog:",

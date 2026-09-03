@@ -11,7 +11,13 @@ import { type NextRequest, NextResponse } from "next/server";
 // Proxy only gates session-cookie presence; API middleware remains the role and
 // signature boundary. Protected prefixes redirect unauthenticated requests.
 
-const PROTECTED_PATH_PREFIXES = ["/lead", "/head", "/reports", "/admin"];
+const PROTECTED_PATH_PREFIXES = [
+  "/lead",
+  "/head",
+  "/reports",
+  "/admin",
+  "/feedback",
+];
 
 // A JWT has three base64 segments separated by dots (header.payload.signature).
 const JWT_SEGMENT_COUNT = 3;
@@ -67,5 +73,11 @@ export default function proxy(request: NextRequest): NextResponse {
 
 // Explicit allowlist avoids Next.js 16 negative-lookahead matcher quirks.
 export const config = {
-  matcher: ["/lead/:path*", "/head/:path*", "/reports/:path*", "/admin/:path*"],
+  matcher: [
+    "/lead/:path*",
+    "/head/:path*",
+    "/reports/:path*",
+    "/admin/:path*",
+    "/feedback/:path*",
+  ],
 };
