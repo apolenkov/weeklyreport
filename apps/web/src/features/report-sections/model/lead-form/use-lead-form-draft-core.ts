@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { encodeAutosaveComparisonKey } from "../autosave/autosave-stable-stringify";
 import { useDraftServerSync } from "../autosave/use-lead-form-server-sync";
 import { sectionToDraftPayload } from "../lead-section-draft-payload";
+import { buildLeadSubmitPayload } from "../lead-submit-readiness";
 import {
   applyDraftPatch,
   type DraftPatch,
@@ -22,6 +23,9 @@ import {
   type LeadFormGeneration,
   leadFormGenerationOf,
 } from "./lead-form-generation";
+import type { SubmitOutcome } from "./lead-form-submit-context";
+import type { LeadFormWritePort } from "./lead-form-write-port";
+import { isLeadFormWriteConflict } from "./lead-form-write-port";
 
 // Ref mirror of the optimistic-lock version so submit reads the current value
 // without re-creating itself on every autosave bump.
@@ -69,6 +73,7 @@ function useDraftPayloadKeys(
 }
 
 interface LeadFormDraftCoreArgs {
+  readonly writePort: LeadFormWritePort;
   readonly generation: LeadFormGeneration | null;
   readonly serverSection: ReportSectionReadModel | null | undefined;
   readonly sectionIdForActions: string | null;
@@ -97,6 +102,7 @@ function useGenerationBoundApply(
 // The local draft engine: editable section state, its optimistic-lock version,
 // and the autosave/reseed conversation with the server.
 export function useLeadFormDraftCore({
+  writePort,
   generation,
   serverSection,
   sectionIdForActions,
@@ -114,6 +120,7 @@ export function useLeadFormDraftCore({
   );
   const isReadOnlyEarly = isSubmitted || serverReadOnly;
   const autosave = useDraftServerSync({
+    writePort,
     serverSection,
     reportSectionId: sectionIdForActions || null,
     payload: draftPayload,
@@ -126,6 +133,29 @@ export function useLeadFormDraftCore({
     handleConflict,
   });
   const apply = useGenerationBoundApply(generation, setDraftSection);
+  const markUnsubmitted = useCallback(() => setIsSubmitted(false), []);
+  const submit = useCallback(async (): Promise<SubmitOutcome> => {
+    if (!draftPayload) return "no-draft";
+    try {
+      const saved = await writePort.submit(
+        buildLeadSubmitPayload(draftPayload, versionRef.current),
+      );
+      setVersionSafe(saved.version);
+      setIsSubmitted(true);
+      return "submitted";
+    } catch (error: unknown) {
+      if (isLeadFormWriteConflict(error)) {
+        handleConflict();
+        return "conflict";
+      }
+      toast.error(
+        error instanceof Error && error.message
+          ? error.message
+          : "Submit failed",
+      );
+      return "error";
+    }
+  }, [draftPayload, handleConflict, setVersionSafe, versionRef, writePort]);
   return {
     generation,
     draft: draftSection,
@@ -133,12 +163,12 @@ export function useLeadFormDraftCore({
     dirty: autosave.dirty,
     autosave,
     version,
-    versionRef,
     isSubmitted,
-    setIsSubmitted,
+    markUnsubmitted,
     setVersionSafe,
     save: autosave.forceSave,
-    handleConflict,
+    submit,
+    reloadAfterConflict: handleConflict,
     apply,
   };
 }

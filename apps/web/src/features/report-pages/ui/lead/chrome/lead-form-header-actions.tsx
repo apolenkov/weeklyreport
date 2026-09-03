@@ -12,11 +12,11 @@ import {
 } from "./lead-completion-actions";
 
 export interface LeadFormHeaderWriteActions {
-  readonly fillFromMut: { readonly isPending: boolean };
+  readonly fillFromPending: boolean;
   readonly handleFillFrom: (sourceSectionId: string) => void;
-  readonly requestReopenMut: { readonly isPending: boolean };
+  readonly reopenPending: boolean;
   readonly openReopenDialog: () => void;
-  readonly revokeMut: { readonly isPending: boolean };
+  readonly revokePending: boolean;
   readonly handleRevoke: () => void;
 }
 
@@ -119,7 +119,7 @@ function SubmittedSectionAction({
         label="Revoke"
         title="Revoke submission and unlock the section"
         onClick={writeActions.handleRevoke}
-        disabled={writeActions.revokeMut.isPending}
+        disabled={writeActions.revokePending}
       />
     );
   }
@@ -129,7 +129,7 @@ function SubmittedSectionAction({
       label="Request Reopen"
       title="Ask Head to unlock this section"
       onClick={writeActions.openReopenDialog}
-      disabled={writeActions.requestReopenMut.isPending}
+      disabled={writeActions.reopenPending}
     />
   );
 }
@@ -174,7 +174,7 @@ function HeaderActionToolbar({
       {!isReadOnly && (
         <FillFromButton
           periods={visiblePeriods}
-          disabled={writeActions.fillFromMut.isPending}
+          disabled={writeActions.fillFromPending}
           lockedReason={fillFromLocked ? FILL_FROM_LOCKED_REASON : undefined}
           onFillFrom={writeActions.handleFillFrom}
         />

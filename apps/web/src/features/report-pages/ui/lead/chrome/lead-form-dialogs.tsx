@@ -23,19 +23,19 @@ export interface LeadFormDialogsQuickAdd {
 
 export interface LeadFormDialogsWriteActions {
   readonly showSubmitConfirm: boolean;
-  readonly setShowSubmitConfirm: (open: boolean) => void;
+  readonly cancelSubmit: () => void;
   readonly handleConfirmSubmit: () => void;
   readonly submitPending: boolean;
   readonly showReopenDialog: boolean;
-  readonly requestReopenMut: { readonly isPending: boolean };
+  readonly reopenPending: boolean;
   readonly reopenError: string | null;
   readonly handleRequestReopen: (reason: string | undefined) => void;
   readonly closeReopenDialog: () => void;
   readonly showRevokeDialog: boolean;
   readonly confirmRevoke: () => void;
-  readonly setShowRevokeDialog: (open: boolean) => void;
+  readonly cancelRevoke: () => void;
   readonly pendingFillFrom: boolean;
-  readonly fillFromMut: { readonly isPending: boolean };
+  readonly fillFromPending: boolean;
   readonly confirmPendingFillFrom: () => void;
   readonly cancelPendingFillFrom: () => void;
 }
@@ -109,7 +109,7 @@ function SubmitConfirmDialogHost({
       unsetOwnStageCount={unsetOwnStageCount}
       submitPending={writeActions.submitPending}
       onConfirm={writeActions.handleConfirmSubmit}
-      onCancel={() => writeActions.setShowSubmitConfirm(false)}
+      onCancel={writeActions.cancelSubmit}
     />
   );
 }
@@ -137,7 +137,7 @@ export function LeadFormDialogs({
 
       <RequestReopenDialog
         open={writeActions.showReopenDialog}
-        pending={writeActions.requestReopenMut.isPending}
+        pending={writeActions.reopenPending}
         error={writeActions.reopenError}
         onConfirm={writeActions.handleRequestReopen}
         onCancel={writeActions.closeReopenDialog}
@@ -152,7 +152,7 @@ export function LeadFormDialogs({
         confirmLabel="Revoke"
         reversible
         onConfirm={writeActions.confirmRevoke}
-        onCancel={() => writeActions.setShowRevokeDialog(false)}
+        onCancel={writeActions.cancelRevoke}
       />
 
       <ConfirmationDialog
@@ -161,7 +161,7 @@ export function LeadFormDialogs({
         description="Fill from previous replaces the whole draft, including unsaved local edits."
         confirmLabel="Overwrite & Fill"
         variant="destructive"
-        isPending={writeActions.fillFromMut.isPending}
+        isPending={writeActions.fillFromPending}
         onConfirm={writeActions.confirmPendingFillFrom}
         onClose={writeActions.cancelPendingFillFrom}
       />

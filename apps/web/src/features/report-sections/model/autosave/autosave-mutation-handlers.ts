@@ -1,7 +1,7 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import type { Dispatch, SetStateAction } from "react";
 
-import { isConflictError } from "../../../../shared/lib/trpc/trpc";
+import { isLeadFormWriteConflict } from "../lead-form/lead-form-write-port";
 import type { GetAutosaveRefs } from "./autosave-refs";
 import type { AutosaveState, DraftSaveContent } from "./autosave-types";
 
@@ -72,7 +72,7 @@ export function buildSaveDraftHandlers(deps: SaveDraftHandlerDeps): {
       refs.queuedPayload = null;
       deps.setState("error");
       // 409: hand off to the conflict flow (refetch) — retrying the stale version would 409 again.
-      if (deps.onConflict && isConflictError(err)) {
+      if (deps.onConflict && isLeadFormWriteConflict(err)) {
         deps.onConflict();
         return;
       }

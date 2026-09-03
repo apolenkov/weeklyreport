@@ -10,11 +10,11 @@ import type {
   LeadFormGeneration,
   LeadFormLoadedContext,
 } from "../../../../report-sections";
-import type { LeadFormDraftSeam } from "../../../../report-sections/client";
 import {
   useLeadFormDraft,
   useLeadFormQuickAdd,
 } from "../../../../report-sections/client";
+import { InMemoryLeadFormWriteAdapter } from "../../../../report-sections/model/lead-form/lead-form-write-port.in-memory";
 
 const AUTHOR = "11111111-1111-4111-8111-111111111111";
 const PROJECT = "22222222-2222-4222-8222-222222222222";
@@ -41,14 +41,6 @@ function loaded(): LeadFormLoadedContext {
     currentWeekItems: [],
     nextWeekItems: [],
   } satisfies LeadFormLoadedContext;
-}
-
-function makeSeam(): LeadFormDraftSeam {
-  return {
-    submitSection: vi.fn(),
-    submitPending: false,
-    onSubmitSuccess: vi.fn(),
-  };
 }
 
 function makeWrapper() {
@@ -88,7 +80,12 @@ describe("lead-form generation ownership", () => {
   it("rejects a stale quick-add callback before draft mutation or autosave", async () => {
     const reportA = makeSection("report-a", "section-a");
     const reportB = makeSection("report-b", "section-b");
-    const { Wrapper, captured } = makeWrapper();
+    const { Wrapper } = makeWrapper();
+    const writePort = new InMemoryLeadFormWriteAdapter({
+      saveDraft: (input) =>
+        Promise.resolve({ ...reportA, version: input.version + 1 }),
+      submit: () => Promise.resolve(reportA),
+    });
     const rendered = renderHook(
       ({ section, context }) => {
         const draft = useLeadFormDraft({
@@ -97,7 +94,7 @@ describe("lead-form generation ownership", () => {
           sectionIdForActions: section.reportSectionId,
           serverReadOnly: false,
           refetchSection: () => Promise.resolve(),
-          seam: makeSeam(),
+          writePort,
           crossAuthors: [],
           isEveryone: false,
         });
@@ -126,7 +123,7 @@ describe("lead-form generation ownership", () => {
     act(() => staleSave(ITEM));
 
     expect(rendered.result.current.draft?.items).toEqual([]);
-    expect(captured["reports.saveDraft"]?.calls).toEqual([]);
+    expect(writePort.calls.saveDraft).toEqual([]);
     rendered.rerender({ section: reportA, context: loaded() });
     await waitFor(() =>
       expect(rendered.result.current.draft?.reportId).toBe("report-a"),

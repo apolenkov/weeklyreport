@@ -1,11 +1,9 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { invalidateLeadForm } from "../../../shared/lib/query/cache-keys";
-import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import type { LeadFormGeneration } from "../../report-sections";
+import type { LeadFormWritePort } from "../../report-sections/client";
 import { useGenerationState } from "../../report-sections/client";
 
 function useReopenDialog(generation: LeadFormGeneration | null) {
@@ -30,41 +28,38 @@ function useReopenDialog(generation: LeadFormGeneration | null) {
 export function useLeadFormReopenRequest({
   generation,
   sectionIdForActions,
+  writePort,
 }: {
   readonly generation: LeadFormGeneration | null;
   readonly sectionIdForActions: string | null;
+  readonly writePort: LeadFormWritePort;
 }) {
-  const trpc = useTRPC();
-  const qc = useQueryClient();
   const dialog = useReopenDialog(generation);
 
-  const requestReopenMut = useMutation(
-    trpc.leadForm.requestReopen.mutationOptions({
-      onSuccess: () => {
-        dialog.close();
-        invalidateLeadForm(qc, trpc);
-        toast.success("Reopen request sent to Head");
-      },
-      onError: (err: unknown) => {
-        const msg =
-          err instanceof Error ? err.message : "Reopen request failed";
-        dialog.setError(msg);
-      },
-    }),
-  );
+  const requestReopen = async (reason: string | undefined) => {
+    if (!sectionIdForActions) return;
+    try {
+      await writePort.requestReopen({
+        reportSectionId: sectionIdForActions,
+        ...(reason ? { reason } : {}),
+      });
+      dialog.close();
+      toast.success("Reopen request sent to Head");
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Reopen request failed";
+      dialog.setError(message);
+    }
+  };
 
   return {
-    requestReopenMut,
+    reopenPending: writePort.pending.reopen,
     reopenError: dialog.error,
     showReopenDialog: dialog.show,
     openReopenDialog: dialog.open,
     closeReopenDialog: dialog.close,
     handleRequestReopen: (reason: string | undefined) => {
-      if (!sectionIdForActions) return;
-      requestReopenMut.mutate({
-        reportSectionId: sectionIdForActions,
-        ...(reason ? { reason } : {}),
-      });
+      void requestReopen(reason);
     },
   };
 }

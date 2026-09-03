@@ -1,9 +1,9 @@
 import type { DraftSavePayload } from "@customreport/shared";
 import { act, renderHook } from "@testing-library/react";
-import { TRPCClientError } from "@trpc/client";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { LeadFormWriteError } from "../lead-form/lead-form-write-port";
 import { encodeAutosaveComparisonKey } from "./autosave-stable-stringify";
 import { useLeadFormAutosave } from "./use-lead-form-autosave";
 import {
@@ -37,7 +37,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
     // Arrange: first mutation is slow; subsequent ones resolve immediately.
     let resolveMutation!: () => void;
     let callCount = 0;
-    const { wrapper, calls } = buildHarness({
+    const { wrapper, calls, writePort } = buildHarness({
       mutationFn: () => {
         callCount++;
         if (callCount === 1) {
@@ -57,6 +57,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
     const { result, rerender } = renderHook(
       ({ payload }: { payload: DraftSavePayload }) =>
         useLeadFormAutosave({
+          writePort,
           reportSectionId: SECTION_ID,
           payload,
           enabled: true,
@@ -100,12 +101,13 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
   });
 
   it("invalidates leadForm queries after successful save (cross-tab sync)", async () => {
-    const { wrapper, queryClient } = buildHarness();
+    const { wrapper, queryClient, writePort } = buildHarness();
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const { result } = renderHook(
       () =>
         useLeadFormAutosave({
+          writePort,
           reportSectionId: SECTION_ID,
           payload: makePayload("cross-tab"),
           enabled: true,
@@ -133,7 +135,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
     let resolveFirst!: () => void;
     let resolveSecond!: () => void;
     let n = 0;
-    const { wrapper, calls } = buildHarness({
+    const { wrapper, calls, writePort } = buildHarness({
       mutationFn: () => {
         n += 1;
         return new Promise<unknown>((resolve) => {
@@ -145,6 +147,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
     const { result, rerender } = renderHook(
       ({ payload }: { payload: DraftSavePayload }) =>
         useLeadFormAutosave({
+          writePort,
           reportSectionId: SECTION_ID,
           payload,
           enabled: true,
@@ -190,7 +193,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
   it("retries a queued edit after the in-flight save fails", async () => {
     let rejectFirst!: () => void;
     let callCount = 0;
-    const { wrapper, calls } = buildHarness({
+    const { wrapper, calls, writePort } = buildHarness({
       mutationFn: () => {
         callCount += 1;
         if (callCount === 1) {
@@ -204,6 +207,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
     const { result, rerender } = renderHook(
       ({ payload }: { payload: DraftSavePayload }) =>
         useLeadFormAutosave({
+          writePort,
           reportSectionId: SECTION_ID,
           payload,
           enabled: true,
@@ -250,7 +254,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
     try {
       let resolveFirst!: () => void;
       let n = 0;
-      const { wrapper, calls } = buildHarness({
+      const { wrapper, calls, writePort } = buildHarness({
         mutationFn: () => {
           n += 1;
           if (n === 1) {
@@ -264,6 +268,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
       const { result, rerender } = renderHook(
         ({ payload }: { payload: DraftSavePayload }) =>
           useLeadFormAutosave({
+            writePort,
             reportSectionId: SECTION_ID,
             payload,
             enabled: true,
@@ -302,7 +307,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
   it("drains a queued payload to the section it was built for, not the latest section", async () => {
     let resolveFirst!: () => void;
     let n = 0;
-    const { wrapper, calls } = buildHarness({
+    const { wrapper, calls, writePort } = buildHarness({
       mutationFn: () => {
         n += 1;
         if (n === 1) {
@@ -331,6 +336,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
         initialSavedKey: string | null;
       }) =>
         useLeadFormAutosave({
+          writePort,
           reportSectionId,
           payload,
           enabled: true,
@@ -391,7 +397,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
 
   it("a section-A save resolving after navigation to B does not dirty B or schedule a save for it", async () => {
     let resolveFirst!: () => void;
-    const { wrapper, calls } = buildHarness({
+    const { wrapper, calls, writePort } = buildHarness({
       mutationFn: () =>
         new Promise<unknown>((resolve) => {
           resolveFirst = () => resolve({ ok: true });
@@ -410,6 +416,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
         initialSavedKey: string | null;
       }) =>
         useLeadFormAutosave({
+          writePort,
           reportSectionId,
           payload,
           enabled: true,
@@ -454,7 +461,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
   });
 
   it("injects the current version prop into the save payload (not a hardcoded value)", async () => {
-    const { wrapper, calls } = buildHarness();
+    const { wrapper, calls, writePort } = buildHarness();
     const { rerender } = renderHook(
       ({
         payload,
@@ -464,6 +471,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
         version: number;
       }) =>
         useLeadFormAutosave({
+          writePort,
           reportSectionId: SECTION_ID,
           payload,
           enabled: true,
@@ -492,12 +500,13 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
 
   it("reports the server-confirmed version to onVersionChange after a save", async () => {
     const onVersionChange = vi.fn();
-    const { wrapper } = buildHarness({
+    const { wrapper, writePort } = buildHarness({
       mutationFn: () => Promise.resolve({ version: 7 }),
     });
     const { rerender } = renderHook(
       ({ payload }: { payload: DraftSavePayload | null }) =>
         useLeadFormAutosave({
+          writePort,
           reportSectionId: SECTION_ID,
           payload,
           enabled: true,
@@ -518,17 +527,14 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
 
   it("routes a stale-version CONFLICT to onConflict and suppresses the generic toast", async () => {
     const onConflict = vi.fn();
-    const conflictError = new TRPCClientError<never>("stale");
-    Object.defineProperty(conflictError, "data", {
-      value: { httpStatus: 409, code: "CONFLICT" },
-      configurable: true,
-    });
-    const { wrapper } = buildHarness({
+    const conflictError = new LeadFormWriteError("conflict", "stale");
+    const { wrapper, writePort } = buildHarness({
       mutationFn: () => Promise.reject(conflictError),
     });
     const { rerender } = renderHook(
       ({ payload }: { payload: DraftSavePayload | null }) =>
         useLeadFormAutosave({
+          writePort,
           reportSectionId: SECTION_ID,
           payload,
           enabled: true,
@@ -554,12 +560,8 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
   it("a CONFLICT with a queued edit hands off to onConflict without re-arming a retry", async () => {
     const onConflict = vi.fn();
     let rejectFirst!: () => void;
-    const conflictError = new TRPCClientError<never>("stale");
-    Object.defineProperty(conflictError, "data", {
-      value: { httpStatus: 409, code: "CONFLICT" },
-      configurable: true,
-    });
-    const { calls, wrapper } = buildHarness({
+    const conflictError = new LeadFormWriteError("conflict", "stale");
+    const { calls, wrapper, writePort } = buildHarness({
       mutationFn: () =>
         new Promise<unknown>((_resolve, reject) => {
           rejectFirst = () => reject(conflictError);
@@ -568,6 +570,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
     const { rerender } = renderHook(
       ({ payload }: { payload: DraftSavePayload }) =>
         useLeadFormAutosave({
+          writePort,
           reportSectionId: SECTION_ID,
           payload,
           enabled: true,
@@ -608,13 +611,14 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
   });
 
   it("renders idle and clean when initialSavedKey already matches the first payload key", () => {
-    const { wrapper } = buildHarness();
+    const { wrapper, writePort } = buildHarness();
     const payload = makePayload("already-saved");
     const initialSavedKey = encodeAutosaveComparisonKey(payload);
 
     const { result } = renderHook(
       () =>
         useLeadFormAutosave({
+          writePort,
           reportSectionId: SECTION_ID,
           payload,
           enabled: true,

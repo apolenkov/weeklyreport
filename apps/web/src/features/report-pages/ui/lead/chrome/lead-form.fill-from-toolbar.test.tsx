@@ -107,9 +107,19 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
   };
 }
 
-interface MutationCallbacks {
-  onSuccess?: (saved?: unknown) => void;
-  onError?: (err: unknown) => void;
+function submittedHistory(sourceSectionId: string) {
+  return [
+    {
+      sectionId: sourceSectionId,
+      reportId: "99999999-9999-4999-8999-999999999990",
+      periodStart: new Date("2026-06-08T00:00:00Z"),
+      periodEnd: new Date("2026-06-14T00:00:00Z"),
+      reportStatus: "published",
+      sectionStatus: "submitted",
+      submittedAt: new Date("2026-06-13T10:00:00Z"),
+      publishedAt: new Date("2026-06-14T10:00:00Z"),
+    },
+  ];
 }
 
 function buildHarness(
@@ -235,46 +245,76 @@ afterEach(() => {
 
 describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
   it("fillFrom success: invalidates leadForm, fires toast.success", async () => {
-    const { Wrapper, captured, queryClient } = buildHarness();
+    const sourceSectionId = "99999999-9999-4999-8999-999999999999";
+    const { Wrapper, captured, queryClient } = buildHarness({
+      myHistory: submittedHistory(sourceSectionId),
+    });
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const fillFromEntry = expectDefined(captured["leadForm.fillFrom"]);
+    fillFromEntry.mutationFn.mockResolvedValue({
+      success: true,
+      copiedItems: 1,
+    });
     render(
       <Wrapper>
         <LeadForm />
       </Wrapper>,
     );
-    const fillFromEntry = expectDefined(captured["leadForm.fillFrom"]);
-    await waitFor(() => expect(fillFromEntry.lastOptions).toBeDefined());
-
-    const fillFromOpts = fillFromEntry.lastOptions as MutationCallbacks;
+    await screen.findByText("Autosaved");
     act(() => {
-      fillFromOpts.onSuccess?.();
+      screen
+        .getByRole("button", {
+          name: "Fill from most recent submitted period",
+        })
+        .click();
     });
-    expect(toast.success).toHaveBeenCalledWith(
-      "Form filled from selected period",
+    const dialog = await screen.findByRole("alertdialog", {
+      name: /^Fill from Week \d+\?$/,
+    });
+    act(() => {
+      within(dialog).getByRole("button", { name: "Replace & Fill" }).click();
+    });
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith(
+        "Form filled from selected period",
+      ),
     );
     // invalidateLeadForm covers reports.getActive + leadForm.byPeriod.
     expect(invalidateSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
   it("fillFrom CONFLICT (stale target version): surfaces the reload prompt", async () => {
-    const { Wrapper, captured } = buildHarness();
-    render(
-      <Wrapper>
-        <LeadForm />
-      </Wrapper>,
-    );
-    const fillFromEntry = expectDefined(captured["leadForm.fillFrom"]);
-    await waitFor(() => expect(fillFromEntry.lastOptions).toBeDefined());
-
+    const sourceSectionId = "99999999-9999-4999-8999-999999999999";
+    const { Wrapper, captured } = buildHarness({
+      myHistory: submittedHistory(sourceSectionId),
+    });
     const conflict = new TRPCClientError("stale");
     Object.defineProperty(conflict, "data", {
       value: { httpStatus: 409, code: "CONFLICT" },
       configurable: true,
     });
 
-    const fillFromOpts = fillFromEntry.lastOptions as MutationCallbacks;
+    expectDefined(captured["leadForm.fillFrom"]).mutationFn.mockRejectedValue(
+      conflict,
+    );
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    await screen.findByText("Autosaved");
     act(() => {
-      fillFromOpts.onError?.(conflict);
+      screen
+        .getByRole("button", {
+          name: "Fill from most recent submitted period",
+        })
+        .click();
+    });
+    const dialog = await screen.findByRole("alertdialog", {
+      name: /^Fill from Week \d+\?$/,
+    });
+    act(() => {
+      within(dialog).getByRole("button", { name: "Replace & Fill" }).click();
     });
 
     await waitFor(() =>
@@ -286,7 +326,15 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
 
   it("fillFrom sends the current target version after an autosave bump", async () => {
     const sourceSectionId = "99999999-9999-4999-8999-999999999999";
+    let serverVersion = 1;
     const { Wrapper, captured } = buildHarness({
+      byPeriodQueryFn: () =>
+        Promise.resolve({
+          section: { ...makeSection(), version: serverVersion },
+          readOnly: false,
+          canRequestReopen: false,
+          publishedLineage: { itemStableIds: [], decisionStableIds: [] },
+        }),
       myHistory: [
         {
           sectionId: SECTION_ID,
@@ -298,16 +346,7 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
           submittedAt: null,
           publishedAt: null,
         },
-        {
-          sectionId: sourceSectionId,
-          reportId: "99999999-9999-4999-8999-999999999990",
-          periodStart: new Date("2026-06-08T00:00:00Z"),
-          periodEnd: new Date("2026-06-14T00:00:00Z"),
-          reportStatus: "published",
-          sectionStatus: "submitted",
-          submittedAt: new Date("2026-06-13T10:00:00Z"),
-          publishedAt: new Date("2026-06-14T10:00:00Z"),
-        },
+        ...submittedHistory(sourceSectionId),
       ],
     });
     const fillFromEntry = expectDefined(captured["leadForm.fillFrom"]);
@@ -322,13 +361,26 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
     );
     expect(await screen.findByText("Autosaved")).toBeInTheDocument();
 
-    const saveDraftOpts = expectDefined(captured["reports.saveDraft"])
-      .lastOptions as {
-      onSuccess?: (saved: unknown) => void;
-    };
-    act(() => {
-      saveDraftOpts.onSuccess?.({ version: 5 });
+    const saveDraftEntry = expectDefined(captured["reports.saveDraft"]);
+    saveDraftEntry.mutationFn.mockImplementation(() => {
+      serverVersion = 5;
+      return Promise.resolve({ ...makeSection(), version: serverVersion });
     });
+    const editableChip = screen
+      .getAllByRole("button")
+      .find((button) =>
+        /^(Planning|Analysis|Design|Development|Testing|DevOps|Support): (On track|No status)/.test(
+          button.getAttribute("aria-label") ?? "",
+        ),
+      );
+    act(() => {
+      expectDefined(editableChip).click();
+    });
+    await screen.findByText(/Pending|Saving/i);
+    act(() => {
+      screen.getByRole("button", { name: "Save draft now" }).click();
+    });
+    await waitFor(() => expect(saveDraftEntry.mutationFn).toHaveBeenCalled());
 
     const documentActions = screen.getByRole("group", {
       name: "Document actions",
@@ -420,11 +472,12 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
       sectionStatus: "submitted",
     });
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
-    const pendingReopen = new Promise<never>(() => undefined);
     const requestReopenEntry = expectDefined(
       captured["leadForm.requestReopen"],
     );
-    requestReopenEntry.mutationFn.mockReturnValue(pendingReopen);
+    requestReopenEntry.mutationFn.mockRejectedValueOnce(
+      new Error("Request already pending"),
+    );
     render(
       <Wrapper>
         <LeadForm />
@@ -455,16 +508,17 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
       reason: "Need to add a carry-over",
     });
 
-    const reopenOpts = requestReopenEntry.lastOptions as MutationCallbacks;
-    act(() => {
-      reopenOpts.onError?.(new Error("Request already pending"));
-    });
-    expect(screen.getByText("Request already pending")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Request already pending"),
+    ).toBeInTheDocument();
 
+    requestReopenEntry.mutationFn.mockResolvedValueOnce({ success: true });
     act(() => {
-      reopenOpts.onSuccess?.();
+      within(dialog).getByRole("button", { name: "Send Request" }).click();
     });
-    expect(toast.success).toHaveBeenCalledWith("Reopen request sent to Head");
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith("Reopen request sent to Head"),
+    );
     expect(invalidateSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
     await waitFor(() =>
       expect(
@@ -472,28 +526,6 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
       ).toBeNull(),
     );
     expect(screen.queryByText("Request already pending")).toBeNull();
-  });
-
-  it("revoke success preserves invalidations and success toast", async () => {
-    const { Wrapper, captured, queryClient } = buildHarness({
-      sectionStatus: "submitted",
-    });
-    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
-    render(
-      <Wrapper>
-        <LeadForm />
-      </Wrapper>,
-    );
-    const revokeEntry = expectDefined(captured["leadForm.revoke"]);
-    await waitFor(() => expect(revokeEntry.lastOptions).toBeDefined());
-
-    const revokeOpts = revokeEntry.lastOptions as MutationCallbacks;
-    act(() => {
-      revokeOpts.onSuccess?.();
-    });
-
-    expect(toast.success).toHaveBeenCalledWith("Section unlocked");
-    expect(invalidateSpy.mock.calls.length).toBeGreaterThanOrEqual(4);
   });
 
   it("draft: Submit is a document action and view mode is a context control", async () => {

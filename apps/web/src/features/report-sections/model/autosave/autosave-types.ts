@@ -1,5 +1,6 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
+import type { LeadFormWritePort } from "../lead-form/lead-form-write-port";
 import type { DraftSaveContent } from "../lead-section-draft-payload";
 
 export type { DraftSaveContent } from "../lead-section-draft-payload";
@@ -16,6 +17,7 @@ export interface AutosaveSnapshot {
 }
 
 export interface UseLeadFormAutosaveArgs {
+  readonly writePort: LeadFormWritePort;
   readonly reportSectionId: string | null;
   readonly payload: DraftSaveContent | null;
   readonly enabled: boolean;

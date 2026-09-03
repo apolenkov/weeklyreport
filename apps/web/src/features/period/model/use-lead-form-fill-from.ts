@@ -1,13 +1,13 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { invalidateLeadForm } from "../../../shared/lib/query/cache-keys";
-import { isConflictError } from "../../../shared/lib/trpc/trpc";
-import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import type { LeadFormGeneration } from "../../report-sections";
-import { useGenerationState } from "../../report-sections/client";
+import type { LeadFormWritePort } from "../../report-sections/client";
+import {
+  isLeadFormWriteConflict,
+  useGenerationState,
+} from "../../report-sections/client";
 
 interface FillFromInput {
   readonly targetSectionId: string;
@@ -49,33 +49,30 @@ export function useLeadFormFillFrom({
   sectionIdForActions,
   autosaveDirty,
   version,
-  handleConflict,
+  onConflict,
+  writePort,
 }: {
   readonly generation: LeadFormGeneration | null;
   readonly sectionIdForActions: string | null;
   readonly autosaveDirty: boolean;
   readonly version: number;
-  readonly handleConflict: () => void;
+  readonly onConflict: () => void;
+  readonly writePort: LeadFormWritePort;
 }) {
-  const trpc = useTRPC();
-  const qc = useQueryClient();
-
-  const fillFromMut = useMutation(
-    trpc.leadForm.fillFrom.mutationOptions({
-      onSuccess: () => {
-        invalidateLeadForm(qc, trpc);
-        toast.success("Form filled from selected period");
-      },
-      onError: (err: unknown) => {
-        if (isConflictError(err)) {
-          handleConflict();
-          return;
-        }
-        const msg = err instanceof Error ? err.message : "Fill from failed";
-        toast.error(msg);
-      },
-    }),
-  );
+  const fillFrom = async (input: FillFromInput) => {
+    try {
+      await writePort.fillFrom(input);
+      toast.success("Form filled from selected period");
+    } catch (error: unknown) {
+      if (isLeadFormWriteConflict(error)) {
+        onConflict();
+        return;
+      }
+      const message =
+        error instanceof Error ? error.message : "Fill from failed";
+      toast.error(message);
+    }
+  };
 
   const confirmation = useFillFromConfirmation(
     generation,
@@ -84,11 +81,11 @@ export function useLeadFormFillFrom({
       sectionIdForActions
         ? { targetSectionId: sectionIdForActions, sourceSectionId, version }
         : null,
-    (input) => fillFromMut.mutate(input),
+    (input) => void fillFrom(input),
   );
 
   return {
-    fillFromMut,
+    fillFromPending: writePort.pending.fillFrom,
     ...confirmation,
   };
 }

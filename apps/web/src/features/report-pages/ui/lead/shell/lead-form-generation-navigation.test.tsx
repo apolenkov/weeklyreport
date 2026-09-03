@@ -36,10 +36,19 @@ vi.mock("../../../../report-sections/client", async () => {
   >("../../../../report-sections/client");
   return {
     ...actual,
-    useLeadFormDraftSeam: () => ({
-      submitSection: vi.fn(),
-      submitPending: false,
-      onSubmitSuccess: vi.fn(),
+    useLeadFormWritePort: () => ({
+      pending: {
+        saveDraft: false,
+        submit: false,
+        fillFrom: false,
+        revoke: false,
+        reopen: false,
+      },
+      saveDraft: vi.fn(),
+      submit: vi.fn(),
+      fillFrom: vi.fn(),
+      revoke: vi.fn(),
+      requestReopen: vi.fn(),
     }),
     useRecordVisibility: () => ({
       visibility: "mine",

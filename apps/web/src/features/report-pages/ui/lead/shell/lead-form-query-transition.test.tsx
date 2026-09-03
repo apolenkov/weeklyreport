@@ -24,10 +24,19 @@ vi.mock("../../../../report-sections/client", () => ({
     hydrated: true,
     setVisibility: vi.fn(),
   }),
-  useLeadFormDraftSeam: () => ({
-    submitSection: vi.fn(),
-    submitPending: false,
-    onSubmitSuccess: vi.fn(),
+  useLeadFormWritePort: () => ({
+    pending: {
+      saveDraft: false,
+      submit: false,
+      fillFrom: false,
+      revoke: false,
+      reopen: false,
+    },
+    saveDraft: vi.fn(),
+    submit: vi.fn(),
+    fillFrom: vi.fn(),
+    revoke: vi.fn(),
+    requestReopen: vi.fn(),
   }),
   useLeadFormDraft: ({ serverSection }: { serverSection?: unknown }) => ({
     generation: serverSection ? "report-a:section-a" : null,
@@ -37,12 +46,12 @@ vi.mock("../../../../report-sections/client", () => ({
     autosave: {},
     version: 1,
     isSubmitted: false,
-    setIsSubmitted: vi.fn(),
+    markUnsubmitted: vi.fn(),
     save: vi.fn(),
     submit: vi.fn(),
     submitReadiness: READINESS,
     apply: vi.fn(),
-    handleConflict: vi.fn(),
+    reloadAfterConflict: vi.fn(),
   }),
   useLeadFormQuickAdd: () => ({
     quickAdd: vi.fn(),

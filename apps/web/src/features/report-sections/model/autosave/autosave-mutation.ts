@@ -1,11 +1,7 @@
-"use client";
-
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Dispatch, SetStateAction } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { invalidateLeadForm } from "../../../../shared/lib/query/cache-keys";
-import { useTRPC } from "../../../../shared/lib/trpc/trpc-context";
 import { buildSaveDraftHandlers } from "./autosave-mutation-handlers";
 import type { AutosaveMutationHandle, GetAutosaveRefs } from "./autosave-refs";
 import type { AutosaveState, UseLeadFormAutosaveArgs } from "./autosave-types";
@@ -24,11 +20,9 @@ export interface SaveDraftMutationDeps {
 export function useSaveDraftMutation(
   deps: SaveDraftMutationDeps,
 ): AutosaveMutationHandle {
-  const trpc = useTRPC();
-  const qc = useQueryClient();
-
-  const saveDraftMut = useMutation(
-    trpc.reports.saveDraft.mutationOptions(
+  const [pendingCount, setPendingCount] = useState(0);
+  const handlers = useMemo(
+    () =>
       buildSaveDraftHandlers({
         getRefs: deps.getRefs,
         setState: deps.setState,
@@ -39,15 +33,38 @@ export function useSaveDraftMutation(
         onSaved: deps.args.onSaved,
         onConflict: deps.args.onConflict,
         reportSectionId: deps.args.reportSectionId,
-        invalidate: () => invalidateLeadForm(qc, trpc),
+        invalidate: () => undefined,
         reportError: (message) => toast.error(message),
       }),
-    ),
+    [deps],
+  );
+
+  const mutateAsync = useCallback<AutosaveMutationHandle["mutateAsync"]>(
+    async (payload) => {
+      setPendingCount((count) => count + 1);
+      try {
+        const saved = await deps.args.writePort.saveDraft(payload);
+        handlers.onSuccess(saved);
+        return saved;
+      } catch (error: unknown) {
+        handlers.onError(error);
+        throw error;
+      } finally {
+        setPendingCount((count) => count - 1);
+      }
+    },
+    [deps.args.writePort, handlers],
+  );
+  const mutate = useCallback<AutosaveMutationHandle["mutate"]>(
+    (payload) => {
+      void mutateAsync(payload).catch(() => undefined);
+    },
+    [mutateAsync],
   );
 
   return {
-    mutate: saveDraftMut.mutate,
-    mutateAsync: saveDraftMut.mutateAsync,
-    isPending: saveDraftMut.isPending,
+    mutate,
+    mutateAsync,
+    isPending: pendingCount > 0,
   };
 }

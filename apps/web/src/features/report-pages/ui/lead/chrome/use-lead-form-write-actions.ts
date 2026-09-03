@@ -11,10 +11,16 @@ import type {
   LeadFormGeneration,
   SubmitOutcome,
 } from "../../../../report-sections";
+import type { LeadFormWritePort } from "../../../../report-sections/client";
 import {
   useGenerationState,
   useLeadFormRevoke,
 } from "../../../../report-sections/client";
+import type { LeadFormDialogsWriteActions } from "./lead-form-dialogs";
+import type { LeadFormHeaderWriteActions } from "./lead-form-header-actions";
+
+export type LeadFormWriteActions = LeadFormDialogsWriteActions &
+  LeadFormHeaderWriteActions & { readonly handleSubmit: () => void };
 
 interface UseLeadFormWriteActionsArgs {
   readonly generation: LeadFormGeneration | null;
@@ -23,8 +29,9 @@ interface UseLeadFormWriteActionsArgs {
   readonly submitReadiness: LeadSubmitReadiness;
   readonly submit: () => Promise<SubmitOutcome>;
   readonly version: number;
-  readonly setIsSubmitted: (next: boolean) => void;
-  readonly handleConflict: () => void;
+  readonly onRevoked: () => void;
+  readonly onConflict: () => void;
+  readonly writePort: LeadFormWritePort;
 }
 
 // Readiness is re-checked when the dialog is confirmed, not only when it
@@ -76,7 +83,7 @@ function useSubmitConfirmation({
 
   return {
     showSubmitConfirm,
-    setShowSubmitConfirm,
+    cancelSubmit: () => setShowSubmitConfirm(false),
     handleSubmit,
     handleConfirmSubmit,
   };
@@ -90,21 +97,28 @@ export function useLeadFormWriteActions({
   submitReadiness,
   submit,
   version,
-  setIsSubmitted,
-  handleConflict,
-}: UseLeadFormWriteActionsArgs) {
+  onRevoked,
+  onConflict,
+  writePort,
+}: UseLeadFormWriteActionsArgs): LeadFormWriteActions {
   const revoke = useLeadFormRevoke({
     generation,
     sectionIdForActions,
-    setIsSubmitted,
+    onRevoked,
+    writePort,
   });
-  const reopen = useLeadFormReopenRequest({ generation, sectionIdForActions });
+  const reopen = useLeadFormReopenRequest({
+    generation,
+    sectionIdForActions,
+    writePort,
+  });
   const fillFrom = useLeadFormFillFrom({
     generation,
     sectionIdForActions,
     autosaveDirty,
     version,
-    handleConflict,
+    onConflict,
+    writePort,
   });
   const submitConfirmation = useSubmitConfirmation({
     generation,

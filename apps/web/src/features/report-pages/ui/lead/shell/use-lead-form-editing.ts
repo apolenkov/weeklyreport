@@ -9,10 +9,8 @@ import { useState } from "react";
 import type { CrossAuthorRow } from "../../../../report-sections";
 import type { LeadFormGeneration } from "../../../../report-sections";
 import type { DraftSaveContent } from "../../../../report-sections/client";
-import {
-  useLeadFormDraft,
-  useLeadFormDraftSeam,
-} from "../../../../report-sections/client";
+import type { LeadFormWritePort } from "../../../../report-sections/client";
+import { useLeadFormDraft } from "../../../../report-sections/client";
 import { useLeadFormAddSignals } from "../chrome/use-lead-form-add-signals";
 import { useLeadFormChrome } from "../chrome/use-lead-form-chrome";
 import { useLeadFormWriteActions } from "../chrome/use-lead-form-write-actions";
@@ -33,6 +31,7 @@ interface UseLeadFormEditingArgs {
   readonly generation: LeadFormGeneration | null;
   readonly pinnedReportId: string | undefined;
   readonly data: LeadFormEditingData;
+  readonly writePort: LeadFormWritePort;
 }
 
 // Null-traffic own stages auto-promote to On Track at submit (warned first).
@@ -47,8 +46,7 @@ function countUnsetOwnStages(payload: DraftSaveContent | null): number {
 // Draft engine, add-signals, write-action dialogs and page chrome, in the
 // order LeadForm called them — the hook count must not drift across renders.
 export function useLeadFormEditing(args: UseLeadFormEditingArgs) {
-  const { generation, pinnedReportId, data } = args;
-  const seam = useLeadFormDraftSeam();
+  const { generation, pinnedReportId, data, writePort } = args;
   const draft = useLeadFormDraft({
     generation,
     serverSection: data.byPeriodData?.section,
@@ -57,7 +55,7 @@ export function useLeadFormEditing(args: UseLeadFormEditingArgs) {
     refetchSection: data.refetchSection,
     crossAuthors: data.crossAuthors,
     isEveryone: data.isEveryone,
-    seam,
+    writePort,
   });
   const addSignals = useLeadFormAddSignals();
   // Draft dialog lifecycle: submit-confirm, revoke, reopen, fill-from. Calls
@@ -69,8 +67,9 @@ export function useLeadFormEditing(args: UseLeadFormEditingArgs) {
     submitReadiness: draft.submitReadiness,
     submit: draft.submit,
     version: draft.version,
-    setIsSubmitted: draft.setIsSubmitted,
-    handleConflict: draft.handleConflict,
+    onRevoked: draft.markUnsubmitted,
+    onConflict: draft.reloadAfterConflict,
+    writePort,
   });
   // Each toggle flips groupExpanded; AccordionSection mirrors it into local
   // state.
