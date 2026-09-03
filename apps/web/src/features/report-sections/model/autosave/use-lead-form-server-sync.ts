@@ -10,6 +10,7 @@ import {
   useRef,
 } from "react";
 
+import type { LeadFormWritePort } from "../lead-form/lead-form-write-port";
 import { sectionToDraftPayload } from "../lead-section-draft-payload";
 import { encodeAutosaveComparisonKey } from "./autosave-stable-stringify";
 import type { DraftSaveContent } from "./autosave-types";
@@ -160,6 +161,7 @@ function useServerSectionReseed({
 }
 
 interface DraftServerSyncArgs {
+  readonly writePort: LeadFormWritePort;
   readonly serverSection: ReportSectionReadModel | null | undefined;
   readonly reportSectionId: string | null;
   readonly payload: DraftSaveContent | null;
@@ -175,6 +177,7 @@ interface DraftServerSyncArgs {
 // Both directions of the server conversation: autosave writes out, and the
 // reseed effect re-bases the draft when a new server section arrives.
 export function useDraftServerSync({
+  writePort,
   serverSection,
   reportSectionId,
   payload,
@@ -189,6 +192,7 @@ export function useDraftServerSync({
   const ledger = useSaveEchoLedger();
   const onSaved = useSaveEchoRecorder(ledger, setDraftSection);
   const autosave = useLeadFormAutosave({
+    writePort,
     reportSectionId,
     payload,
     enabled,

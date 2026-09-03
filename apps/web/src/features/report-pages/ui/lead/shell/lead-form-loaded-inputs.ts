@@ -105,12 +105,14 @@ export function leadFormViewModelInput(
 // The declared slice LeadFormLoaded and its children read — narrower than the
 // shell data, which also carries LeadForm's own draft/chrome inputs.
 export function buildLeadFormLoadedData(
-  data: LeadFormLoadedData,
+  data: Omit<LeadFormLoadedData, "onRecordVisibilityChange"> & {
+    readonly setRecordVisibility: LeadFormLoadedData["onRecordVisibilityChange"];
+  },
 ): LeadFormLoadedData {
   return {
     byPeriodData: data.byPeriodData,
     toolbarVisibility: data.toolbarVisibility,
-    setRecordVisibility: data.setRecordVisibility,
+    onRecordVisibilityChange: data.setRecordVisibility,
     isForeignSlidesDeck: data.isForeignSlidesDeck,
     targetReportId: data.targetReportId,
     activeReportId: data.activeReportId,

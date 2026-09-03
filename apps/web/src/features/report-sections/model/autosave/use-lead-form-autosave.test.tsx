@@ -30,10 +30,11 @@ afterEach(() => {
 
 describe("useLeadFormAutosave", () => {
   it("starts idle with no payload, transitions to pending then saving", async () => {
-    const { wrapper, calls } = buildHarness();
+    const { wrapper, calls, writePort } = buildHarness();
     const { result, rerender } = renderHook(
       ({ payload }: { payload: DraftSavePayload | null }) =>
         useLeadFormAutosave({
+          writePort,
           reportSectionId: SECTION_ID,
           payload,
           enabled: true,
@@ -63,10 +64,11 @@ describe("useLeadFormAutosave", () => {
   });
 
   it("coalesces two rapid changes within the debounce window into a single mutation call", async () => {
-    const { wrapper, calls } = buildHarness();
+    const { wrapper, calls, writePort } = buildHarness();
     const { result, rerender } = renderHook(
       ({ payload }: { payload: DraftSavePayload | null }) =>
         useLeadFormAutosave({
+          writePort,
           reportSectionId: SECTION_ID,
           payload,
           enabled: true,
@@ -100,10 +102,11 @@ describe("useLeadFormAutosave", () => {
   });
 
   it("does not restart the debounce window on a re-render that leaves the payload unchanged", async () => {
-    const { wrapper, calls } = buildHarness();
+    const { wrapper, calls, writePort } = buildHarness();
     const { rerender } = renderHook(
       ({ payload }: { payload: DraftSavePayload | null }) =>
         useLeadFormAutosave({
+          writePort,
           reportSectionId: SECTION_ID,
           payload,
           enabled: true,
@@ -130,10 +133,11 @@ describe("useLeadFormAutosave", () => {
   });
 
   it('sets state="saved" and lastSavedAt to a Date after success', async () => {
-    const { wrapper } = buildHarness();
+    const { wrapper, writePort } = buildHarness();
     const { result } = renderHook(
       () =>
         useLeadFormAutosave({
+          writePort,
           reportSectionId: SECTION_ID,
           payload: makePayload("hello"),
           enabled: true,
@@ -153,11 +157,12 @@ describe("useLeadFormAutosave", () => {
   });
 
   it("does not fire a mutation when payload deep-equals the previously saved payload", async () => {
-    const { wrapper, calls } = buildHarness();
+    const { wrapper, calls, writePort } = buildHarness();
     const initial = makePayload("same");
     const { result, rerender } = renderHook(
       ({ payload }: { payload: DraftSavePayload | null }) =>
         useLeadFormAutosave({
+          writePort,
           reportSectionId: SECTION_ID,
           payload,
           enabled: true,
@@ -189,10 +194,11 @@ describe("useLeadFormAutosave", () => {
   });
 
   it("does not autosave when enabled=false (e.g. read-only or submitted)", async () => {
-    const { wrapper, calls } = buildHarness();
+    const { wrapper, calls, writePort } = buildHarness();
     const { result } = renderHook(
       () =>
         useLeadFormAutosave({
+          writePort,
           reportSectionId: SECTION_ID,
           payload: makePayload("locked"),
           enabled: false,
@@ -212,7 +218,7 @@ describe("useLeadFormAutosave", () => {
   });
 
   it("keeps a rejected save dirty and surfaces the server error", async () => {
-    const { wrapper } = buildHarness({
+    const { wrapper, writePort } = buildHarness({
       mutationFn: () => {
         return Promise.reject(new Error("Network down"));
       },
@@ -220,6 +226,7 @@ describe("useLeadFormAutosave", () => {
     const { result } = renderHook(
       () =>
         useLeadFormAutosave({
+          writePort,
           reportSectionId: SECTION_ID,
           payload: makePayload("boom"),
           enabled: true,
@@ -243,7 +250,7 @@ describe("useLeadFormAutosave", () => {
     // Failure keeps dirty=true so the user's work is not silently marked
     // saved; the next edit fires saveDraft again.
     let failNext = true;
-    const { wrapper, calls } = buildHarness({
+    const { wrapper, calls, writePort } = buildHarness({
       mutationFn: () => {
         if (failNext) return Promise.reject(new Error("Network down"));
         return Promise.resolve({ ok: true });
@@ -252,6 +259,7 @@ describe("useLeadFormAutosave", () => {
     const { result, rerender } = renderHook(
       ({ payload }: { payload: DraftSavePayload }) =>
         useLeadFormAutosave({
+          writePort,
           reportSectionId: SECTION_ID,
           payload,
           enabled: true,
@@ -284,10 +292,11 @@ describe("useLeadFormAutosave", () => {
   it("blocks beforeunload while dirty and releases the guard after save", async () => {
     // Unsaved edits must arm the beforeunload guard; a successful save
     // must disarm it.
-    const { wrapper } = buildHarness();
+    const { wrapper, writePort } = buildHarness();
     const { result } = renderHook(
       () =>
         useLeadFormAutosave({
+          writePort,
           reportSectionId: SECTION_ID,
           payload: makePayload("guard-me"),
           enabled: true,
@@ -318,10 +327,11 @@ describe("useLeadFormAutosave", () => {
   });
 
   it("exposes dirty=true while a change is pending and dirty=false after success", async () => {
-    const { wrapper } = buildHarness();
+    const { wrapper, writePort } = buildHarness();
     const { result, rerender } = renderHook(
       ({ payload }: { payload: DraftSavePayload | null }) =>
         useLeadFormAutosave({
+          writePort,
           reportSectionId: SECTION_ID,
           payload,
           enabled: true,
@@ -346,10 +356,11 @@ describe("useLeadFormAutosave", () => {
   });
 
   it("forceSave() bypasses debounce and triggers immediate save", async () => {
-    const { wrapper, calls } = buildHarness();
+    const { wrapper, calls, writePort } = buildHarness();
     const { result } = renderHook(
       () =>
         useLeadFormAutosave({
+          writePort,
           reportSectionId: SECTION_ID,
           payload: makePayload("force-me"),
           enabled: true,
@@ -378,7 +389,7 @@ describe("useLeadFormAutosave", () => {
   it("Save button isInFlight becomes true while save is in flight", async () => {
     // Use a slow mutation to hold isPending=true for inspection.
     let resolveMutation!: () => void;
-    const { wrapper } = buildHarness({
+    const { wrapper, writePort } = buildHarness({
       mutationFn: () =>
         new Promise<unknown>((resolve) => {
           resolveMutation = () => resolve({ ok: true });
@@ -388,6 +399,7 @@ describe("useLeadFormAutosave", () => {
     const { result } = renderHook(
       () =>
         useLeadFormAutosave({
+          writePort,
           reportSectionId: SECTION_ID,
           payload: makePayload("in-flight"),
           enabled: true,
@@ -416,10 +428,11 @@ describe("useLeadFormAutosave", () => {
   });
 
   it("Save button shows ✓ Saved after success (state=saved transitions)", async () => {
-    const { wrapper } = buildHarness();
+    const { wrapper, writePort } = buildHarness();
     const { result } = renderHook(
       () =>
         useLeadFormAutosave({
+          writePort,
           reportSectionId: SECTION_ID,
           payload: makePayload("check-saved"),
           enabled: true,

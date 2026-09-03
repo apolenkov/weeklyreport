@@ -4,22 +4,21 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 import { useMemo } from "react";
 
 import type { CrossAuthorRow } from "../lead-cross-author";
-import type { LeadFormDraftSeam } from "./lead-form-draft-seam";
 import type { LeadFormGeneration } from "./lead-form-generation";
 import {
   buildLeadSubmitReadiness,
   buildReadinessProducts,
 } from "./lead-form-submit-context";
+import type { LeadFormWritePort } from "./lead-form-write-port";
 import { useLeadFormDraftCore } from "./use-lead-form-draft-core";
-import { useLeadFormSubmit } from "./use-lead-form-submit";
 
 interface UseLeadFormDraftArgs {
+  readonly writePort: LeadFormWritePort;
   readonly generation: LeadFormGeneration | null;
   readonly serverSection: ReportSectionReadModel | null | undefined;
   readonly sectionIdForActions: string | null;
   readonly serverReadOnly: boolean;
   readonly refetchSection: () => Promise<unknown>;
-  readonly seam: LeadFormDraftSeam;
   // Server-static feed; readiness re-applies its overrides in the Everyone lens.
   readonly crossAuthors: readonly CrossAuthorRow[];
   readonly isEveryone: boolean;
@@ -27,6 +26,7 @@ interface UseLeadFormDraftArgs {
 
 // Live view-model enters as plain `loaded` — no ref crosses into this module.
 export function useLeadFormDraft({
+  writePort,
   generation,
   serverSection,
   sectionIdForActions,
@@ -34,9 +34,9 @@ export function useLeadFormDraft({
   refetchSection,
   crossAuthors,
   isEveryone,
-  seam,
 }: UseLeadFormDraftArgs) {
-  const { versionRef, setVersionSafe, ...core } = useLeadFormDraftCore({
+  const core = useLeadFormDraftCore({
+    writePort,
     generation,
     serverSection,
     sectionIdForActions,
@@ -56,16 +56,7 @@ export function useLeadFormDraft({
     draftPayload: core.draftPayload,
     products: readinessProducts,
     autosaveState: core.autosave.state,
-    submitPending: seam.submitPending,
+    submitPending: writePort.pending.submit,
   });
-  const submit = useLeadFormSubmit({
-    draftPayload: core.draftPayload,
-    seam,
-    versionRef,
-    setVersionSafe,
-    setIsSubmitted: core.setIsSubmitted,
-    handleConflict: core.handleConflict,
-  });
-
-  return { ...core, submit, submitReadiness };
+  return { ...core, submitReadiness };
 }

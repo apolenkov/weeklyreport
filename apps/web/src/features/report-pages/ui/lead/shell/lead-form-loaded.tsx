@@ -1,9 +1,12 @@
 "use client";
 
 import type { ReportSectionReadModel } from "@customreport/shared";
-import type { Dispatch, RefObject, SetStateAction } from "react";
+import { type RefObject, useRef, useState } from "react";
 
-import type { FullscreenHandle } from "../../../../../shared/hooks/browser/use-fullscreen";
+import {
+  type FullscreenHandle,
+  useFullscreen,
+} from "../../../../../shared/hooks/browser/use-fullscreen";
 import { SdlcTooltipProvider } from "../../../../../shared/ui/feedback/sdlc-tooltip";
 import type { CrossAuthorEntry } from "../../../../period";
 import type {
@@ -37,11 +40,11 @@ import {
   useCompletionPresentation,
 } from "./presentation/use-completion-presentation";
 
-type LeadFormLoadedActions = LeadFormEditSectionsActions &
+export type LeadFormLoadedActions = LeadFormEditSectionsActions &
   LeadFormDialogsQuickAdd & {
     readonly onQuickAdd: (kind: QuickAddKind) => void;
   };
-type LeadFormLoadedWriteActions = LeadFormHeaderWriteActions &
+export type LeadFormLoadedWriteActions = LeadFormHeaderWriteActions &
   LeadFormDialogsWriteActions & { readonly handleSubmit: () => void };
 
 // The fixed completion rail owns the only conditional content clearance.
@@ -53,7 +56,7 @@ export interface LeadFormLoadedData {
   readonly byPeriodData:
     { readonly section: ReportSectionReadModel } | undefined;
   readonly toolbarVisibility: RecordVisibility;
-  readonly setRecordVisibility: (next: RecordVisibility) => void;
+  readonly onRecordVisibilityChange: (next: RecordVisibility) => void;
   readonly isForeignSlidesDeck: boolean;
   readonly targetReportId: string | null;
   readonly activeReportId: string | null;
@@ -77,23 +80,28 @@ export interface LeadFormLoadedProps {
   readonly isSubmitted: boolean;
   readonly pinnedReportId?: string | undefined;
   readonly showArchivePeriods: boolean;
-  readonly setShowArchivePeriods: (next: boolean) => void;
+  readonly onShowArchivePeriodsChange: (next: boolean) => void;
+  readonly unsetOwnStageCount: number;
+}
+
+interface LeadFormPresentationState {
   readonly groupExpanded: boolean;
-  readonly setGroupExpanded: Dispatch<SetStateAction<boolean>>;
+  readonly setGroupExpanded: (update: (previous: boolean) => boolean) => void;
   readonly deckRef: RefObject<HTMLDivElement | null>;
   readonly fullscreenToggleRef: RefObject<HTMLButtonElement | null>;
   readonly density: SlideDensity;
   readonly onDensityChange: (density: SlideDensity) => void;
   readonly slidesFullscreen: FullscreenHandle;
-  readonly unsetOwnStageCount: number;
 }
 
 function LoadedChrome({
   props,
+  presentation,
   completion,
   submittedAt,
 }: {
   readonly props: LeadFormLoadedProps;
+  readonly presentation: LeadFormPresentationState;
   readonly completion: CompletionPresentation;
   readonly submittedAt: Date | null;
 }) {
@@ -115,18 +123,18 @@ function LoadedChrome({
         viewModel={viewModel}
         leadSubmittedAt={submittedAt}
         showArchivePeriods={props.showArchivePeriods}
-        onShowArchivePeriodsChange={props.setShowArchivePeriods}
+        onShowArchivePeriodsChange={props.onShowArchivePeriodsChange}
         toolbarVisibility={data.toolbarVisibility}
-        onVisibilityChange={data.setRecordVisibility}
+        onVisibilityChange={data.onRecordVisibilityChange}
         isForeignSlidesDeck={data.isForeignSlidesDeck}
         isSlidesMode={props.isSlidesMode}
         targetReportId={data.targetReportId}
-        density={props.density}
-        onDensityChange={props.onDensityChange}
-        slidesFullscreen={props.slidesFullscreen}
-        fullscreenToggleRef={props.fullscreenToggleRef}
-        groupExpanded={props.groupExpanded}
-        setGroupExpanded={props.setGroupExpanded}
+        density={presentation.density}
+        onDensityChange={presentation.onDensityChange}
+        slidesFullscreen={presentation.slidesFullscreen}
+        fullscreenToggleRef={presentation.fullscreenToggleRef}
+        groupExpanded={presentation.groupExpanded}
+        setGroupExpanded={presentation.setGroupExpanded}
       />
       <LeadFormPastPeriodBanner
         pinnedReportId={props.pinnedReportId}
@@ -139,10 +147,12 @@ function LoadedChrome({
 
 function LoadedReportContent({
   props,
+  presentation,
   completion,
   serverSection,
 }: {
   readonly props: LeadFormLoadedProps;
+  readonly presentation: LeadFormPresentationState;
   readonly completion: CompletionPresentation;
   readonly serverSection: ReportSectionReadModel;
 }) {
@@ -153,13 +163,13 @@ function LoadedReportContent({
         initialReportId={data.targetReportId || props.pinnedReportId || null}
         foreignContent={data.foreignContent}
         foreignContentPending={data.foreignContentPending}
-        deckRef={props.deckRef}
-        isFullscreen={props.slidesFullscreen.isFullscreen}
-        onToggle={props.slidesFullscreen.toggle}
+        deckRef={presentation.deckRef}
+        isFullscreen={presentation.slidesFullscreen.isFullscreen}
+        onToggle={presentation.slidesFullscreen.toggle}
         visibilityMode={data.toolbarVisibility}
         visibilityHydrated={data.visibilityHydrated}
-        density={props.density}
-        onDensityChange={props.onDensityChange}
+        density={presentation.density}
+        onDensityChange={presentation.onDensityChange}
       />
     );
   }
@@ -170,7 +180,7 @@ function LoadedReportContent({
         actions={draftActions}
         draftSection={props.draftSection}
         serverSection={serverSection}
-        groupExpanded={props.groupExpanded}
+        groupExpanded={presentation.groupExpanded}
         unifiedView={data.unifiedView}
         recordVisibility={data.recordVisibility}
         visibilityHydrated={data.visibilityHydrated}
@@ -187,6 +197,24 @@ function LoadedReportContent({
 }
 
 export function LeadFormLoaded(props: LeadFormLoadedProps) {
+  const deckRef = useRef<HTMLDivElement>(null);
+  const fullscreenToggleRef = useRef<HTMLButtonElement>(null);
+  const [density, onDensityChange] = useState<SlideDensity>("document");
+  const [groupExpanded, setGroupExpanded] = useState(true);
+  const slidesFullscreen = useFullscreen(
+    deckRef,
+    fullscreenToggleRef,
+    props.isSlidesMode,
+  );
+  const presentation: LeadFormPresentationState = {
+    groupExpanded,
+    setGroupExpanded,
+    deckRef,
+    fullscreenToggleRef,
+    density,
+    onDensityChange,
+    slidesFullscreen,
+  };
   const completion = useCompletionPresentation({
     autosave: props.autosave,
     products: props.viewModel.products,
@@ -209,11 +237,13 @@ export function LeadFormLoaded(props: LeadFormLoadedProps) {
       >
         <LoadedChrome
           props={props}
+          presentation={presentation}
           completion={completion}
           submittedAt={byPeriod.section.submittedAt ?? null}
         />
         <LoadedReportContent
           props={props}
+          presentation={presentation}
           completion={completion}
           serverSection={byPeriod.section}
         />

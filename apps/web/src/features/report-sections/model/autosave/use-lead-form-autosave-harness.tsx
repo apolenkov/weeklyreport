@@ -1,10 +1,15 @@
-import type { DraftSavePayload } from "@customreport/shared";
+import type {
+  DraftSavePayload,
+  ReportSectionReadModel,
+} from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
+import { invalidateLeadForm } from "../../../../shared/lib/query/cache-keys";
 import { TRPCProxyContext } from "../../../../shared/lib/trpc/trpc-context";
 import { expectDefined } from "../../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../../test-utils/mock-trpc";
+import { InMemoryLeadFormWriteAdapter } from "../lead-form/lead-form-write-port.in-memory";
 
 export const AUTOSAVE_SECTION_ID = "11111111-1111-1111-1111-111111111111";
 const PROJECT_ID = "22222222-2222-2222-2222-222222222222";
@@ -65,6 +70,16 @@ export function buildAutosaveHarness(
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
 
+  const writePort = new InMemoryLeadFormWriteAdapter({
+    saveDraft: async (input) => {
+      calls.push(input);
+      const saved = (await userMutationFn(input)) as ReportSectionReadModel;
+      invalidateLeadForm(queryClient, proxy);
+      return saved;
+    },
+    submit: () => Promise.reject(new Error("Unexpected submit")),
+  });
+
   function wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
@@ -75,5 +90,5 @@ export function buildAutosaveHarness(
     );
   }
 
-  return { wrapper, calls, queryClient };
+  return { wrapper, calls, queryClient, writePort };
 }

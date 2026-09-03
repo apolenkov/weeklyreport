@@ -4,8 +4,9 @@ export type {
   AutosaveSnapshot,
   AutosaveState,
 } from "./model/autosave/autosave-types";
-export type { LeadFormDraftSeam } from "./model/lead-form/lead-form-draft-seam";
-export { useLeadFormDraftSeam } from "./model/lead-form/lead-form-draft-seam";
+export type { LeadFormWritePort } from "./model/lead-form/lead-form-write-port";
+export { isLeadFormWriteConflict } from "./model/lead-form/lead-form-write-port";
+export { useLeadFormWritePort } from "./model/lead-form/lead-form-write-port.trpc-adapter";
 export { useGenerationState } from "./model/lead-form/use-generation-state";
 export { useLeadFormDraft } from "./model/lead-form/use-lead-form-draft";
 export type { QuickAddItem } from "./model/lead-form/use-lead-form-quick-add";

@@ -1,11 +1,17 @@
 import type { DraftSavePayload } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
+import { InMemoryLeadFormWriteAdapter } from "../lead-form/lead-form-write-port.in-memory";
 import { seedAutosaveRefs } from "./autosave-refs";
 import { makeAutosavePayload } from "./use-lead-form-autosave-harness";
 
 function makeArgs() {
+  const writePort = new InMemoryLeadFormWriteAdapter({
+    saveDraft: () => Promise.reject(new Error("Unexpected save")),
+    submit: () => Promise.reject(new Error("Unexpected submit")),
+  });
   return {
+    writePort,
     reportSectionId: "sec-1",
     payload: makeAutosavePayload(),
     enabled: true,

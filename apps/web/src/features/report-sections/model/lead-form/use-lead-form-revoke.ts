@@ -1,58 +1,47 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import {
-  invalidateDashboard,
-  invalidateLeadForm,
-  invalidateLeadHistory,
-} from "../../../../shared/lib/query/cache-keys";
-import { useTRPC } from "../../../../shared/lib/trpc/trpc-context";
 import type { LeadFormGeneration } from "./lead-form-generation";
+import type { LeadFormWritePort } from "./lead-form-write-port";
 import { useGenerationState } from "./use-generation-state";
 
 export function useLeadFormRevoke({
   generation,
   sectionIdForActions,
-  setIsSubmitted,
+  onRevoked,
+  writePort,
 }: {
   readonly generation: LeadFormGeneration | null;
   readonly sectionIdForActions: string | null;
-  readonly setIsSubmitted: (next: boolean) => void;
+  readonly onRevoked: () => void;
+  readonly writePort: LeadFormWritePort;
 }) {
-  const trpc = useTRPC();
-  const qc = useQueryClient();
   const [showRevokeDialog, setShowRevokeDialog] = useGenerationState(
     generation,
     false,
   );
 
-  const revokeMut = useMutation(
-    trpc.leadForm.revoke.mutationOptions({
-      onSuccess: () => {
-        invalidateLeadForm(qc, trpc);
-        invalidateDashboard(qc, trpc);
-        invalidateLeadHistory(qc, trpc);
-        setIsSubmitted(false);
-        toast.success("Section unlocked");
-      },
-      onError: (err: unknown) => {
-        const msg = err instanceof Error ? err.message : "Revoke failed";
-        toast.error(msg);
-      },
-    }),
-  );
+  const revoke = async () => {
+    if (!sectionIdForActions) return;
+    try {
+      await writePort.revoke({ reportSectionId: sectionIdForActions });
+      onRevoked();
+      toast.success("Section unlocked");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Revoke failed";
+      toast.error(message);
+    }
+  };
 
   return {
-    revokeMut,
+    revokePending: writePort.pending.revoke,
     showRevokeDialog,
-    setShowRevokeDialog,
+    cancelRevoke: () => setShowRevokeDialog(false),
     handleRevoke: () => setShowRevokeDialog(true),
     confirmRevoke: () => {
       setShowRevokeDialog(false);
-      if (!sectionIdForActions) return;
-      revokeMut.mutate({ reportSectionId: sectionIdForActions });
+      void revoke();
     },
   };
 }

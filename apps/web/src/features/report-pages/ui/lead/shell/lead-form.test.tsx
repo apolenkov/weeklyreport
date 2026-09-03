@@ -321,7 +321,16 @@ describe("LeadForm mutation wiring", () => {
   });
 
   it("submit after an autosave version bump carries the bumped version, not a stale closure", async () => {
-    const { Wrapper, captured } = buildHarness();
+    let serverVersion = 1;
+    const { Wrapper, captured } = buildHarness({
+      byPeriodQueryFn: () =>
+        Promise.resolve({
+          section: { ...makeSection(), version: serverVersion },
+          readOnly: false,
+          canRequestReopen: false,
+          publishedLineage: { itemStableIds: [], decisionStableIds: [] },
+        }),
+    });
     // The success path reads `.version`; resolve a versioned read model so it
     // does not throw. The assertion targets the submit INPUT, not this value.
     const submitEntry = expectDefined(captured["reports.submit"]);
@@ -336,17 +345,25 @@ describe("LeadForm mutation wiring", () => {
     );
     expect(await screen.findByText("Autosaved")).toBeInTheDocument();
     const saveDraftEntry = expectDefined(captured["reports.saveDraft"]);
-    await waitFor(() => expect(saveDraftEntry.lastOptions).toBeDefined());
-
-    // An autosave succeeds and the server bumps the row to version 5. This
-    // drives the component's version forward through the hook's onVersionChange
-    // exactly as a live save would.
-    const saveDraftOpts = saveDraftEntry.lastOptions as {
-      onSuccess?: (saved: unknown) => void;
-    };
-    act(() => {
-      saveDraftOpts.onSuccess?.({ version: 5 });
+    saveDraftEntry.mutationFn.mockImplementation(() => {
+      serverVersion = 5;
+      return Promise.resolve({ ...makeSection(), version: serverVersion });
     });
+    const editableChip = screen
+      .getAllByRole("button")
+      .find((button) =>
+        /^(Planning|Analysis|Design|Development|Testing|DevOps|Support): (On track|No status)/.test(
+          button.getAttribute("aria-label") ?? "",
+        ),
+      );
+    act(() => {
+      expectDefined(editableChip).click();
+    });
+    await screen.findByText(/Pending|Saving/i);
+    act(() => {
+      screen.getByRole("button", { name: "Save draft now" }).click();
+    });
+    await waitFor(() => expect(saveDraftEntry.mutationFn).toHaveBeenCalled());
 
     // Drive a real submit: toolbar Submit → confirm dialog → confirm.
     act(() => {
