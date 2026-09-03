@@ -9,6 +9,7 @@ export interface NavLink {
   // in their nav — lead-prefix routes are personal lead data, head has
   // their own dashboard for the same intent).
   roles: readonly Role[];
+  feature?: "productFeedback";
 }
 
 const HISTORY_LINK_TITLE = "Past weeks and closed reports";
@@ -18,6 +19,7 @@ export const ADMIN_ROUTE = "/admin";
 export const REPORTS_LATEST_ROUTE = "/reports/latest";
 export const HEAD_DASHBOARD_ROUTE = "/head/dashboard";
 export const HEAD_REPORT_ROUTE = "/head/report";
+export const FEEDBACK_ROUTE = "/feedback";
 
 export const NAV_LINKS: readonly NavLink[] = [
   { href: LEAD_REPORT_ROUTE, label: "Report", roles: ["lead"] },
@@ -60,4 +62,10 @@ export const NAV_LINKS: readonly NavLink[] = [
   // admin tab is admin-only. heads have a dashboard, not an admin panel.
   // The /admin/layout.tsx role gate enforces the same on the route.
   { href: ADMIN_ROUTE, label: "Admin", roles: ["admin"] },
+  {
+    href: FEEDBACK_ROUTE,
+    label: "Feedback",
+    roles: ["lead", "head", "admin", "viewer"],
+    feature: "productFeedback",
+  },
 ];

@@ -28,6 +28,7 @@ const AUTH_LIMIT_PER_MINUTE = 5;
 const TRPC_LIMIT_PER_MINUTE = 200;
 const VITALS_LIMIT_PER_MINUTE = 60;
 const CLIENT_LOGS_LIMIT_PER_MINUTE = 60;
+const PRODUCT_FEEDBACK_LIMIT_PER_MINUTE = 30;
 // Ties *_LIMIT_PER_MINUTE constants to a one-minute window.
 const RATE_LIMIT_WINDOW_MS = 60_000;
 // IETF draft-7 RateLimit response headers (express-rate-limit standardHeaders).
@@ -45,6 +46,7 @@ interface RateLimitHandlers {
   trpcLimiter: RequestHandler;
   vitalsLimiter: RequestHandler;
   clientLogsLimiter: RequestHandler;
+  feedbackLimiter: RequestHandler;
   shutdownRateLimitStore: () => Promise<void>;
 }
 
@@ -226,6 +228,10 @@ export async function createRateLimits(
     vitalsLimiter: limiterFor("vitals", VITALS_LIMIT_PER_MINUTE),
     // Public, Caddy-unmatched ingress: own per-IP bucket caps app.log floods.
     clientLogsLimiter: limiterFor("client-logs", CLIENT_LOGS_LIMIT_PER_MINUTE),
+    feedbackLimiter: limiterFor(
+      "product-feedback",
+      PRODUCT_FEEDBACK_LIMIT_PER_MINUTE,
+    ),
     shutdownRateLimitStore,
   };
 }

@@ -5,9 +5,13 @@ import { AUTH_COOKIE_NAME } from "@customreport/shared";
 import type { INestApplication } from "@nestjs/common";
 import * as trpcExpress from "@trpc/server/adapters/express";
 import type { Express, RequestHandler } from "express";
+import express from "express";
 
 import type { EnvConfig } from "../infrastructure/config/env.schema";
-import { TRPC_MAX_BODY_BYTES } from "../infrastructure/http/ingress-limits";
+import {
+  PRODUCT_FEEDBACK_JSON_LIMIT,
+  TRPC_MAX_BODY_BYTES,
+} from "../infrastructure/http/ingress-limits";
 import type { PrismaService } from "../infrastructure/prisma/prisma.service";
 import { createContextFactory } from "../infrastructure/trpc/trpc.context";
 import type { AppRouter } from "../infrastructure/trpc/trpc.router";
@@ -15,6 +19,10 @@ import type { AppLogger } from "../lib/logger";
 import { SessionRevocationService } from "../modules/admin/index.js";
 import { createAuthController } from "../modules/auth/index.js";
 import { createPdfDownloadHandler } from "../modules/pdf-export/index.js";
+import {
+  createAuthenticatedSitepingHandler,
+  ProductFeedbackPrismaRepository,
+} from "../modules/product-feedback/index.js";
 import { PDF_DOWNLOAD_ROUTE } from "./http-access-log";
 
 export function mountApiIngress(deps: {
@@ -26,6 +34,7 @@ export function mountApiIngress(deps: {
   appRouter: AppRouter;
   trpcLimiter: RequestHandler;
   vitalsLimiter: RequestHandler;
+  feedbackLimiter: RequestHandler;
 }): void {
   const {
     app,
@@ -36,6 +45,7 @@ export function mountApiIngress(deps: {
     appRouter,
     trpcLimiter,
     vitalsLimiter,
+    feedbackLimiter,
   } = deps;
 
   // Same-origin /pdfs/{jobId}.pdf so the session cookie rides; handler authorizes
@@ -61,6 +71,28 @@ export function mountApiIngress(deps: {
     route: PDF_DOWNLOAD_ROUTE,
     pdfDir,
   });
+
+  if (env.PRODUCT_FEEDBACK_ENABLED === true) {
+    const feedbackHandler = createAuthenticatedSitepingHandler({
+      prisma,
+      repository: new ProductFeedbackPrismaRepository(prisma),
+      verifySessionToken: (token) =>
+        pdfAuthController.verifySessionToken(token),
+      sessionRevocation: app.get(SessionRevocationService),
+      frontendOrigin: env.FRONTEND_URL,
+      logger,
+    });
+    expressApp.use(
+      "/api/siteping",
+      feedbackLimiter,
+      feedbackHandler.authenticate,
+      express.json({ limit: PRODUCT_FEEDBACK_JSON_LIMIT }),
+      feedbackHandler.handle,
+    );
+    logger.info("mounted authenticated product feedback handler", {
+      route: "/api/siteping",
+    });
+  }
 
   // `maxBodySize` bounds the tRPC ingress with an explicit, auditable cap so an
   // oversized mutation body is rejected with 413 before the procedure runs.

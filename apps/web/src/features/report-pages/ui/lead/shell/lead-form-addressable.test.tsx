@@ -221,6 +221,24 @@ describe("LeadForm — addressable URLs", () => {
     );
   });
 
+  it("preserves a SitePing deep link while resolving the bare route", async () => {
+    mockSearchParams = new URLSearchParams({
+      siteping: "feedback_123",
+      sitepingUrl: "/lead/report",
+    });
+    const proxy = buildHarness({});
+    render(
+      <Wrapper proxy={proxy}>
+        <LeadForm redirectToCanonical />
+      </Wrapper>,
+    );
+    await waitFor(() =>
+      expect(replace).toHaveBeenCalledWith(
+        `/lead/report/${ACTIVE_REPORT_ID}?siteping=feedback_123&sitepingUrl=%2Flead%2Freport`,
+      ),
+    );
+  });
+
   it("addressed route (reportId prop set) → no redirect, just renders the form", async () => {
     const proxy = buildHarness({
       byPeriodSection: makeSection({

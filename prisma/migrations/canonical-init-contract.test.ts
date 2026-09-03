@@ -186,6 +186,8 @@ describe("canonical init migration", () => {
       "SectionReview",
       "SemanticEmbedding",
       "SemanticSourceState",
+      "SitepingAnnotation",
+      "SitepingFeedback",
       "Stage",
       "StageAssignment",
       "StageStatus",

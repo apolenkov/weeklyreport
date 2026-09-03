@@ -17,6 +17,7 @@ import {
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 // Re-narrow independently each call (not an inline if on result.current).

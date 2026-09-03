@@ -46,6 +46,7 @@ export {
 } from "./schemas/analytics/analytics";
 export * from "./schemas/auth/auth";
 export * from "./schemas/dev/dev";
+export * from "./schemas/feedback/product-feedback";
 export {
   MAX_WEB_VITAL_VALUE,
   resolveNavigationType,

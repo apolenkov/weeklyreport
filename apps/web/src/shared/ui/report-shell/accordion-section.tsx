@@ -220,6 +220,7 @@ export function AccordionSection({
   return (
     <div
       data-testid={testId}
+      data-feedback-anchor={testId}
       className="card-surface card-surface-hover transition-shadow"
     >
       <AccordionHeader

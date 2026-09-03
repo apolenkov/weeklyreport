@@ -36,10 +36,17 @@ function resolveVisibleSession(
   };
 }
 
-function linksForRole(role: Role | null): readonly NavLink[] {
+function linksForRole(
+  role: Role | null,
+  productFeedbackInboxEnabled: boolean,
+): readonly NavLink[] {
   return role === null
     ? []
-    : NAV_LINKS.filter((link) => link.roles.includes(role));
+    : NAV_LINKS.filter(
+        (link) =>
+          link.roles.includes(role) &&
+          (link.feature !== "productFeedback" || productFeedbackInboxEnabled),
+      );
 }
 
 function initialsForUser(user: SessionUser): string {
@@ -70,11 +77,13 @@ export function buildNavBarModel({
   organization,
   sessionLoading,
   hydrated,
+  productFeedbackInboxEnabled = false,
 }: {
   readonly user: SessionState["user"];
   readonly organization: SessionState["organization"];
   readonly sessionLoading: boolean;
   readonly hydrated: boolean;
+  readonly productFeedbackInboxEnabled?: boolean;
 }): NavBarModel {
   const visible = resolveVisibleSession(
     user,
@@ -86,7 +95,7 @@ export function buildNavBarModel({
 
   return {
     role,
-    visibleLinks: linksForRole(role),
+    visibleLinks: linksForRole(role, productFeedbackInboxEnabled),
     initials: initialsForUser(visible.user),
     userName: visible.user?.name ?? null,
     homeLabel: visible.user ? `${visible.user.name} home` : "Profile loading",

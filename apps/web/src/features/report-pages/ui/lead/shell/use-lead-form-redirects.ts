@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect } from "react";
 
 interface UseLeadFormRedirectsInput {
   readonly pinnedReportId: string | undefined;
@@ -19,6 +19,16 @@ export function useLeadFormRedirects({
   shouldRouteHeadLikeAwayFromLeadForm,
 }: UseLeadFormRedirectsInput): void {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const feedbackQuery = useCallback(() => {
+    const next = new URLSearchParams();
+    for (const key of ["siteping", "sitepingUrl"] as const) {
+      const value = searchParams.get(key);
+      if (value) next.set(key, value);
+    }
+    return next;
+  }, [searchParams]);
 
   // Resolve the unpinned entry route once the active reportId is known; skip
   // if already pinned or no active period is available yet.
@@ -27,7 +37,7 @@ export function useLeadFormRedirects({
     if (pinnedReportId) return;
     if (shouldRouteHeadLikeAwayFromLeadForm) return;
     if (!activeReportId) return;
-    const next = new URLSearchParams();
+    const next = feedbackQuery();
     if (isSlidesMode) next.set("mode", "slides");
     const query = next.toString();
     const suffix = query ? `?${query}` : "";
@@ -39,13 +49,27 @@ export function useLeadFormRedirects({
     isSlidesMode,
     shouldRouteHeadLikeAwayFromLeadForm,
     router,
+    feedbackQuery,
   ]);
 
   useEffect(() => {
     if (!shouldRouteHeadLikeAwayFromLeadForm) return;
+    const next = feedbackQuery();
+    const authorId = searchParams.get("authorId");
+    if (authorId) next.set("authorId", authorId);
+    const query = next.toString();
+    const querySuffix = query ? `?${query}` : "";
     const destination = pinnedReportId
-      ? `/head/report/${encodeURIComponent(pinnedReportId)}`
-      : "/head/dashboard";
+      ? `/head/report/${encodeURIComponent(pinnedReportId)}${querySuffix}`
+      : query
+        ? `/head/report?${query}`
+        : "/head/dashboard";
     router.replace(destination);
-  }, [pinnedReportId, router, shouldRouteHeadLikeAwayFromLeadForm]);
+  }, [
+    feedbackQuery,
+    pinnedReportId,
+    router,
+    searchParams,
+    shouldRouteHeadLikeAwayFromLeadForm,
+  ]);
 }

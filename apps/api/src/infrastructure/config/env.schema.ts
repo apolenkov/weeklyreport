@@ -134,6 +134,12 @@ const envObjectSchema = z.object({
   // validation; optional prod opt-in;
   // dev enables the forwarder via NODE_ENV, prod opts in with "true".
   CLIENT_LOG_FORWARDING: z.string().optional(),
+  // Authenticated product feedback is fail-closed: absent and false both keep
+  // the raw ingress unmounted; malformed values fail startup validation.
+  PRODUCT_FEEDBACK_ENABLED: z
+    .enum(["true", "false"])
+    .transform((value) => value === "true")
+    .optional(),
   // PDF generation
   PDF_BASE_URL: z.url(),
   // Directory where the BullMQ worker writes generated PDFs and

@@ -49,8 +49,69 @@ model User {
   recordComments          RecordComment[]         @relation("RecordCommentReviewer")
   // Project Activities this lead is attached to (M:M via the join below).
   projectActivityLeads    ProjectActivityLead[]   @relation("ProjectActivityLeadUser")
+  productFeedback         SitepingFeedback[]      @relation("SitepingFeedbackAuthor")
 
   @@index([reportingGroupId])
+}
+
+// Authenticated product feedback. SitePing-compatible names keep the pinned
+// transport adapter usable while ownership and scope remain WeeklyReport-owned.
+model SitepingFeedback {
+  id                     String               @id @default(cuid())
+  projectName            String
+  type                   String
+  message                String               @db.Text
+  status                 String               @default("open")
+  url                    String
+  urlPattern             String?
+  screenshotUrl          String?              @db.Text
+  screenshotRegion       Json?
+  diagnostics            Json?
+  viewport               String
+  userAgent              String
+  authorUserId           String
+  authorName             String
+  authorEmail            String
+  authorReportingGroupId String?
+  clientId               String               @unique
+  resolvedAt             DateTime?
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  author                 User                 @relation("SitepingFeedbackAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+  annotations            SitepingAnnotation[]
+
+  @@index([projectName, status, createdAt(sort: Desc)])
+  @@index([projectName, authorUserId, createdAt(sort: Desc)])
+  @@index([projectName, authorReportingGroupId, status, createdAt(sort: Desc)])
+  @@index([projectName, url])
+}
+
+model SitepingAnnotation {
+  id               String           @id @default(cuid())
+  feedbackId       String
+  cssSelector      String           @db.Text
+  xpath            String           @db.Text
+  textSnippet      String           @db.Text
+  elementTag       String
+  elementId        String?
+  textPrefix       String           @db.Text
+  textSuffix       String           @db.Text
+  fingerprint      String
+  neighborText     String           @db.Text
+  anchorKey        String?
+  xPct             Float
+  yPct             Float
+  wPct             Float
+  hPct             Float
+  scrollX          Float
+  scrollY          Float
+  viewportW        Int
+  viewportH        Int
+  devicePixelRatio Float            @default(1)
+  createdAt        DateTime         @default(now())
+  feedback         SitepingFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+
+  @@index([feedbackId])
 }
 
 model ReportingGroup {
@@ -877,7 +938,7 @@ model SemanticEmbedding {
 // Immutable, organization-wide provider revisions. Credentials are encrypted
 // application data; only the masked suffix is safe to return from reads.
 model AiProviderConfiguration {
-  id                               String                     @id
+  id                               String                    @id
   generationProfile                AiProviderProfile
   generationBaseUrl                String
   generationEndpointIdentity       String
@@ -905,22 +966,22 @@ model AiProviderConfiguration {
   generationCompatibilityIdentity  String
   embeddingScopeIdentity           String
   compositeTestIdentity            String
-  lifecycle                        AiProviderLifecycle        @default(draft)
+  lifecycle                        AiProviderLifecycle       @default(draft)
   testResult                       Json?
   testedAt                         DateTime?
-  preparationCompleted             Int                        @default(0)
-  preparationTotal                 Int                        @default(0)
-  preparationFailed                Int                        @default(0)
+  preparationCompleted             Int                       @default(0)
+  preparationTotal                 Int                       @default(0)
+  preparationFailed                Int                       @default(0)
   preparationStartedAt             DateTime?
   preparationFinishedAt            DateTime?
-  preparationElapsedMs             Int                        @default(0)
+  preparationElapsedMs             Int                       @default(0)
   preparationSourceFingerprint     String?
   preparationSourceGeneration      BigInt?
   activatedAt                      DateTime?
   supersededAt                     DateTime?
-  createdAt                        DateTime                   @default(now())
-  updatedAt                        DateTime                   @updatedAt
-  activeControl                    AiProviderControl?         @relation("AiProviderControlActive")
+  createdAt                        DateTime                  @default(now())
+  updatedAt                        DateTime                  @updatedAt
+  activeControl                    AiProviderControl?        @relation("AiProviderControlActive")
   testExecutions                   AiProviderTestExecution[] @relation("AiProviderTestExecutionProvider")
 
   @@index([lifecycle, updatedAt(sort: Desc)])
@@ -942,25 +1003,25 @@ model SemanticSourceState {
 // Feature-scoped immutable prompt bundles. The JSON columns are server-owned
 // snapshots; shared contracts validate the shape before any runtime use.
 model AiPromptBundleRevision {
-  id                      String                     @id
-  featureKey              String
-  revision                Int
-  baseRevisionId          String?
-  coreContractVersion     String
-  composerVersion         String
-  servingContractVersion  String?
-  lockedCoreSnapshot      Json
-  promptContents          Json
-  effectiveContentHash    String
-  lifecycle               AiPromptBundleLifecycle    @default(draft)
-  createdBy               String?
-  createdAt               DateTime                   @default(now())
-  updatedAt               DateTime                   @updatedAt
-  activatedAt             DateTime?
-  supersededAt            DateTime?
-  baseRevision            AiPromptBundleRevision?    @relation("AiPromptRevisionBase", fields: [baseRevisionId], references: [id], onDelete: Restrict)
-  derivedRevisions        AiPromptBundleRevision[]   @relation("AiPromptRevisionBase")
-  activeControl           AiFeaturePromptControl?    @relation("AiPromptControlActive")
+  id                     String                   @id
+  featureKey             String
+  revision               Int
+  baseRevisionId         String?
+  coreContractVersion    String
+  composerVersion        String
+  servingContractVersion String?
+  lockedCoreSnapshot     Json
+  promptContents         Json
+  effectiveContentHash   String
+  lifecycle              AiPromptBundleLifecycle  @default(draft)
+  createdBy              String?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  activatedAt            DateTime?
+  supersededAt           DateTime?
+  baseRevision           AiPromptBundleRevision?  @relation("AiPromptRevisionBase", fields: [baseRevisionId], references: [id], onDelete: Restrict)
+  derivedRevisions       AiPromptBundleRevision[] @relation("AiPromptRevisionBase")
+  activeControl          AiFeaturePromptControl?  @relation("AiPromptControlActive")
 
   @@unique([featureKey, revision])
   @@index([featureKey, lifecycle, updatedAt(sort: Desc)])
@@ -984,19 +1045,19 @@ model AiFeaturePromptControl {
 // classifications, and timestamps; secrets, prompts, and raw responses never
 // leave process memory.
 model AiProviderTestExecution {
-  id                 String                    @id @default(uuid())
-  identity           String                    @unique
+  id                 String                       @id @default(uuid())
+  identity           String                       @unique
   providerRevisionId String
   testSuiteVersion   String
   state              AiProviderTestExecutionState @default(queued)
   outcome            AiProviderTestOutcome?
   failureCode        String?
   checks             Json?
-  requestedAt        DateTime                  @default(now())
+  requestedAt        DateTime                     @default(now())
   startedAt          DateTime?
   executionAttempt   Int?
   completedAt        DateTime?
-  providerRevision   AiProviderConfiguration   @relation("AiProviderTestExecutionProvider", fields: [providerRevisionId], references: [id], onDelete: Cascade)
+  providerRevision   AiProviderConfiguration      @relation("AiProviderTestExecutionProvider", fields: [providerRevisionId], references: [id], onDelete: Cascade)
 
   @@index([providerRevisionId, requestedAt(sort: Desc)])
   @@index([state, requestedAt])

@@ -73,6 +73,10 @@ describe("AccordionSection — aria-controls", () => {
       "aria-controls",
       "decisions-accordion-panel",
     );
+    expect(screen.getByTestId("decisions-accordion")).toHaveAttribute(
+      "data-feedback-anchor",
+      "decisions-accordion",
+    );
   });
 });
 

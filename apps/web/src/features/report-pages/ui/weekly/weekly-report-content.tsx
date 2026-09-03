@@ -208,6 +208,7 @@ export function ReportContent(props: ReportContentProps) {
       <div
         data-layout-key="report-body-continuation"
         data-layout-stability="position-width"
+        data-feedback-anchor="weekly-report-sections"
         className="space-y-4"
       >
         {/* Display-only; same submitted-only filter as the accordion body. */}

@@ -144,15 +144,15 @@ describe("apps/web/proxy.ts — auth guard", () => {
 });
 
 describe("apps/web/proxy.ts — config matcher", () => {
-  it("exports a config object with a matcher array of four entries", () => {
+  it("exports a config object with every protected route matcher", () => {
     expect(config).toBeDefined();
     expect(Array.isArray(config.matcher)).toBe(true);
-    expect(config.matcher).toHaveLength(4);
+    expect(config.matcher).toHaveLength(5);
   });
 
-  it("matcher is a positive allowlist of /lead, /head, /reports, /admin prefixes", () => {
+  it("matcher is a positive allowlist of protected prefixes", () => {
     const matcher = config.matcher;
-    // Each entry is one of the four protected prefixes with a :path*
+    // Each entry is one of the protected prefixes with a :path*
     // suffix. Order is not significant; assert membership.
     expect(matcher).toEqual(
       expect.arrayContaining([
@@ -160,11 +160,12 @@ describe("apps/web/proxy.ts — config matcher", () => {
         "/head/:path*",
         "/reports/:path*",
         "/admin/:path*",
+        "/feedback/:path*",
       ]),
     );
     // Every entry begins with one of the protected prefixes.
     for (const entry of matcher) {
-      expect(entry).toMatch(/^\/(lead|head|reports|admin)\//);
+      expect(entry).toMatch(/^\/(lead|head|reports|admin|feedback)\//);
     }
   });
 

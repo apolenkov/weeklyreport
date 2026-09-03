@@ -74,8 +74,16 @@ describe("NavLogoutButton", () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     expect(button).toBeDisabled();
+    expect(screen.getByTestId("nav-logout-spinner")).toHaveClass(
+      "animate-spin",
+      "motion-reduce:animate-none",
+    );
+    expect(screen.queryByTestId("nav-logout-icon")).not.toBeInTheDocument();
 
     logout.reject?.(new Error("offline"));
-    await waitFor(() => expect(button).not.toBeDisabled());
+    await waitFor(() => {
+      expect(button).not.toBeDisabled();
+      expect(screen.getByTestId("nav-logout-icon")).toBeInTheDocument();
+    });
   });
 });

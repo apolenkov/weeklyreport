@@ -22,6 +22,7 @@ export interface DeferredIngressLimiters {
   readonly authLimiter: RequestHandler;
   readonly trpcLimiter: RequestHandler;
   readonly vitalsLimiter: RequestHandler;
+  readonly feedbackLimiter: RequestHandler;
   readonly shutdownRateLimitStore: () => Promise<void>;
 }
 
@@ -58,6 +59,7 @@ export async function configureHttpPipeline(deps: {
     trpcLimiter,
     vitalsLimiter,
     clientLogsLimiter,
+    feedbackLimiter,
     shutdownRateLimitStore,
   } = await createRateLimits({
     logger,
@@ -81,6 +83,7 @@ export async function configureHttpPipeline(deps: {
     authLimiter,
     trpcLimiter,
     vitalsLimiter,
+    feedbackLimiter,
     shutdownRateLimitStore,
   };
 }

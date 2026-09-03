@@ -1,7 +1,7 @@
 "use client";
 
 import { DEFAULT_ORGANIZATION_IDENTITY } from "@customreport/shared";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useContext, useEffect, useMemo } from "react";
 
 import { SessionContext } from "../../../../shared/lib/auth/session-provider";
@@ -27,15 +27,21 @@ export function useCanonicalReportRedirect({
   canonicalBasePath,
 }: CanonicalRedirectArgs): void {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     if (!enabled) return;
     if (reportId) return;
     if (!resolvedReportId) return;
-    const authorQuery = focusedAuthorId
-      ? `?authorId=${encodeURIComponent(focusedAuthorId)}`
-      : "";
-    router.replace(`${canonicalBasePath}/${resolvedReportId}${authorQuery}`, {
+    const next = new URLSearchParams();
+    if (focusedAuthorId) next.set("authorId", focusedAuthorId);
+    for (const key of ["siteping", "sitepingUrl"] as const) {
+      const value = searchParams.get(key);
+      if (value) next.set(key, value);
+    }
+    const query = next.toString();
+    const querySuffix = query ? `?${query}` : "";
+    router.replace(`${canonicalBasePath}/${resolvedReportId}${querySuffix}`, {
       scroll: false,
     });
   }, [
@@ -45,6 +51,7 @@ export function useCanonicalReportRedirect({
     focusedAuthorId,
     router,
     canonicalBasePath,
+    searchParams,
   ]);
 }
 

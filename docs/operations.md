@@ -40,6 +40,7 @@ DDL and `pg_dump` both need a session that outlives a single transaction.
    | `POSTGRES_DB`                                                                                                                                                                             | Database name shared by all consumers; letters, digits, and underscores only.    |
    | `FRONTEND_URL`, `APP_BASE_URL`, `PDF_BASE_URL`                                                                                                                                            | Public origins.                                                                  |
    | `CLIENT_LOG_FORWARDING`, `NEXT_PUBLIC_CLIENT_LOG_FORWARDING`, `NEXT_PUBLIC_WEB_VITALS`                                                                                                    | Explicit server/browser telemetry toggles.                                       |
+   | `PRODUCT_FEEDBACK_ENABLED`, `NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED`, `NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES`                                                                            | Matching API/Web feedback gates and the comma-separated inbox role allowlist.    |
    | `AUTH_JWT_SECRET`, `PDF_EXPORT_JWT_SECRET`                                                                                                                                                | Min 32 chars each, distinct, never the dev values.                               |
    | `AI_PROVIDER_CONFIG_ENCRYPTION_KEY`                                                                                                                                                       | Base64 or hexadecimal key for encrypted provider credentials; required at boot.  |
    | `AI_PROVIDER_CONFIG_KEY_VERSION`, `AI_PROVIDER_ALLOWED_ORIGINS`                                                                                                                           | Current key version and exact upstream origin allowlist.                         |
@@ -60,8 +61,11 @@ DDL and `pg_dump` both need a session that outlives a single transaction.
 
 Optional: `FRONTEND_URLS` (extra CORS origins, no wildcards in production),
 `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`, `SMTP_USER`, `SMTP_PASS`.
-`CLIENT_LOG_FORWARDING`, `NEXT_PUBLIC_CLIENT_LOG_FORWARDING`, and
-`NEXT_PUBLIC_WEB_VITALS` are explicit required toggles. `NEXT_PUBLIC_SENTRY_DSN` is compiled into the Web image; changing
+`CLIENT_LOG_FORWARDING`, `NEXT_PUBLIC_CLIENT_LOG_FORWARDING`,
+`NEXT_PUBLIC_WEB_VITALS`, `PRODUCT_FEEDBACK_ENABLED`,
+`NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED`, and
+`NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES` are explicit required values. The two
+product-feedback values must match. `NEXT_PUBLIC_SENTRY_DSN` is compiled into the Web image; changing
 it requires `up --build`, not a container restart.
 
 The local Bugsink errors overlay accepts `BUGSINK_PORT` (default `8000`) and

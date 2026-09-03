@@ -95,6 +95,14 @@ path must respect them and link the relevant `openspec/specs/` spec.
   `docs/README.md`). Temporary review data and run artifacts stay outside the
   repository.
 
+- **onUI visual review.** Use the external `onui-local` MCP on the canonical
+  WeeklyReport origin `http://localhost:3000`. Before UI edits, list pages and
+  read the relevant annotations at `standard` detail, then name the annotation
+  IDs and your interpretation. Ask about ambiguity in chat. Resolve or delete
+  an annotation only after its literal requirement is tied to changed sources,
+  an applicable automated check, and browser verification; onUI status never
+  changes report or review lifecycle state.
+
 - **OpenSpec is the source of truth.** Read `openspec list` + `openspec/specs/`
   before changing query semantics or behavior; non-trivial work starts as a change.
 - **UI strings stay English** in `apps/web/src/**/*.tsx` (JSX/toast/aria/placeholder).

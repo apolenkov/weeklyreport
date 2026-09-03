@@ -18,12 +18,17 @@ export async function bootstrapApi(
 ): Promise<void> {
   const env = validateEnv();
   const { app, logger } = await createNestApp({ env, otelDecision });
-  const { authLimiter, trpcLimiter, vitalsLimiter, shutdownRateLimitStore } =
-    await configureHttpPipeline({
-      app,
-      env,
-      logger,
-    });
+  const {
+    authLimiter,
+    trpcLimiter,
+    vitalsLimiter,
+    feedbackLimiter,
+    shutdownRateLimitStore,
+  } = await configureHttpPipeline({
+    app,
+    env,
+    logger,
+  });
   const { prisma, autoCarryOver, appRouter } = createAppServices({
     app,
     env,
@@ -41,6 +46,7 @@ export async function bootstrapApi(
     appRouter,
     trpcLimiter,
     vitalsLimiter,
+    feedbackLimiter,
   });
   mountAuthIngress({
     app,

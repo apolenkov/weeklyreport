@@ -442,6 +442,20 @@ describe("useLeadFormData — redirects", () => {
     );
   });
 
+  it("preserves SitePing deep-link parameters in the canonical redirect", async () => {
+    navState.searchParams = new URLSearchParams({
+      siteping: "feedback_123",
+      sitepingUrl: "/lead/report",
+    });
+    renderData({ redirectToCanonical: true });
+
+    await waitFor(() =>
+      expect(navState.replace).toHaveBeenCalledWith(
+        `/lead/report/${REPORT_ID}?siteping=feedback_123&sitepingUrl=%2Flead%2Freport`,
+      ),
+    );
+  });
+
   it("does not redirect when the route is already addressed", async () => {
     const { result } = renderData({
       pinnedReportId: PINNED_REPORT_ID,

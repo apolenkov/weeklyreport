@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 
 import { useHydratedClient } from "../../hooks/browser/use-hydrated-client";
 import { useSession } from "../../lib/auth/session-provider";
+import { webEnv } from "../../lib/runtime/web-env";
 import { DesktopNav } from "./desktop-nav";
 import { MobileNav } from "./mobile-nav";
 import { buildNavBarModel } from "./nav-bar-model";
@@ -14,12 +15,17 @@ export function NavBar() {
   const pathname = usePathname();
   const { user, organization, isLoading: sessionLoading } = useSession();
   const hydrated = useHydratedClient();
+  const feedbackInboxRoles = webEnv.productFeedbackInboxRoles();
 
   const model = buildNavBarModel({
     user,
     organization,
     sessionLoading,
     hydrated,
+    productFeedbackInboxEnabled:
+      webEnv.productFeedback() &&
+      user !== null &&
+      feedbackInboxRoles.includes(user.role),
   });
 
   return (

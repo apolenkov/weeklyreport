@@ -45,7 +45,9 @@ describe("rate-limit Redis readiness", () => {
       isTest: false,
       redis: redis as unknown as Redis,
     });
-    await vi.waitFor(() => expect(call).toHaveBeenCalledTimes(8));
+    // Five independent buckets load their Redis script once (two commands per
+    // store); adding an ingress must deliberately update this readiness count.
+    await vi.waitFor(() => expect(call).toHaveBeenCalledTimes(10));
     app.use(authLimiter);
     app.post("/", (_request, response) => response.sendStatus(204));
 
