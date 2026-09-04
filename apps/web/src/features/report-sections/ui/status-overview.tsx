@@ -3,8 +3,10 @@
 import { useId, useState } from "react";
 
 import type {
+  StatusOverviewCreateTarget,
   StatusOverviewEditTarget,
   StatusOverviewModel,
+  StatusOverviewUnitKind,
 } from "../model/status-overview";
 import {
   STATUS_OVERVIEW_DESKTOP_GRID,
@@ -16,9 +18,19 @@ export interface StatusOverviewProps {
   readonly model: StatusOverviewModel;
   readonly onEditItem?:
     ((target: StatusOverviewEditTarget) => void) | undefined;
+  readonly onAddItem?:
+    ((target: StatusOverviewCreateTarget) => void) | undefined;
   readonly detailsHref?: string | undefined;
   readonly autosaveStatus?: string | undefined;
 }
+
+const UNIT_GROUPS: readonly {
+  readonly kind: StatusOverviewUnitKind;
+  readonly label: string;
+}[] = [
+  { kind: "product", label: "Products" },
+  { kind: "activity", label: "Project activities" },
+];
 
 function ColumnHeading({
   label,
@@ -49,6 +61,7 @@ function expansionKey(
 export function StatusOverview({
   model,
   onEditItem,
+  onAddItem,
   detailsHref,
   autosaveStatus,
 }: StatusOverviewProps) {
@@ -131,24 +144,53 @@ export function StatusOverview({
         </div>
       ) : (
         <div className="min-w-0 overflow-hidden rounded-[var(--radius)] border-y border-[var(--color-border-subtle)] bg-[var(--color-card)]">
-          {model.units.map((unit, index) => {
-            const expandedColumns = new Set<StatusOverviewColumnKey>(
-              (
-                ["previouslyPlanned", "currentWeek", "nextWeek"] as const
-              ).filter((column) =>
-                expandedKeys.has(expansionKey(unit.key, column)),
-              ),
+          {UNIT_GROUPS.map((group) => {
+            const units = model.units.filter(
+              (unit) => unit.kind === group.kind,
             );
+            if (units.length === 0) return null;
+            const groupId = `${idPrefix}-${group.kind}-heading`;
             return (
-              <StatusOverviewUnitRow
-                key={unit.key}
-                unit={unit}
-                periods={model.periods}
-                expandedColumns={expandedColumns}
-                onToggle={(column) => toggle(expansionKey(unit.key, column))}
-                panelId={`${idPrefix}-unit-${String(index)}`}
-                onEditItem={onEditItem}
-              />
+              <section
+                key={group.kind}
+                aria-labelledby={groupId}
+                className="border-t border-[var(--color-border-subtle)] first:border-t-0"
+              >
+                <div className="flex items-center justify-between gap-3 bg-[var(--color-surface-muted)] px-4 py-2">
+                  <h2
+                    id={groupId}
+                    className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--color-foreground)]"
+                  >
+                    {group.label}
+                  </h2>
+                  <span className="text-xs tabular-nums text-[var(--color-muted-foreground)]">
+                    {units.length}
+                  </span>
+                </div>
+                {units.map((unit, index) => {
+                  const expandedColumns = new Set<StatusOverviewColumnKey>(
+                    (
+                      ["previouslyPlanned", "currentWeek", "nextWeek"] as const
+                    ).filter((column) =>
+                      expandedKeys.has(expansionKey(unit.key, column)),
+                    ),
+                  );
+                  return (
+                    <StatusOverviewUnitRow
+                      key={unit.key}
+                      unit={unit}
+                      periods={model.periods}
+                      expandedColumns={expandedColumns}
+                      onToggle={(column) =>
+                        toggle(expansionKey(unit.key, column))
+                      }
+                      panelId={`${idPrefix}-${group.kind}-${String(index)}`}
+                      onEditItem={onEditItem}
+                      onAddItem={onAddItem}
+                    />
+                  );
+                })}
+              </section>
             );
           })}
         </div>

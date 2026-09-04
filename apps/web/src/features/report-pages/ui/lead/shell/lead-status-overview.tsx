@@ -10,15 +10,20 @@ import { useTRPC } from "../../../../../shared/lib/trpc/trpc-context";
 import { ReportToolbar } from "../../../../../shared/ui/report-shell/report-toolbar";
 import { ViewModeToggle } from "../../../../../shared/ui/report-shell/view-mode-toggle";
 import {
-  type DraftPatch,
-  ItemEditDialog,
   type KanbanItem,
-  ownedStagesForProject,
   projectStatusOverview,
   StatusOverview,
+  type StatusOverviewCreateTarget,
   type StatusOverviewEditTarget,
 } from "../../../../report-sections";
 import { autosaveStatusCopy } from "../chrome/autosave-state-copy";
+import {
+  buildStatusOverviewCreatePatch,
+  buildStatusOverviewItemPatch,
+  findEditableItem,
+  OverviewItemDialog,
+  type OverviewItemDialogState,
+} from "./lead-status-overview-item-editor";
 import {
   deriveActiveIds,
   deriveTargetReportId,
@@ -31,11 +36,6 @@ interface LeadStatusOverviewProps {
   readonly redirectToCanonical?: boolean | undefined;
 }
 
-interface OverviewItemDialogState {
-  readonly target: StatusOverviewEditTarget;
-  readonly item: KanbanItem;
-}
-
 export function buildStatusOverviewDetailsHref(
   reportId: string,
   searchParams: Pick<URLSearchParams, "get">,
@@ -46,34 +46,6 @@ export function buildStatusOverviewDetailsHref(
     if (value) next.set(key, value);
   }
   return `/lead/report/${encodeURIComponent(reportId)}?${next.toString()}#report-details`;
-}
-
-export function buildStatusOverviewItemPatch(
-  target: StatusOverviewEditTarget,
-  currentItems: readonly KanbanItem[],
-  nextItems: readonly KanbanItem[],
-  updatedItem: KanbanItem,
-): DraftPatch | null {
-  const sourceItems = target.source === "current" ? currentItems : nextItems;
-  if (!sourceItems.some((item) => item.id === target.recordId)) return null;
-  return {
-    kind: "week-items",
-    week: target.source,
-    items: sourceItems.map((item) =>
-      item.id === target.recordId ? updatedItem : item,
-    ),
-  };
-}
-
-function findEditableItem(
-  editor: Extract<LeadFormEditorHandle, { status: "ready" }>,
-  target: StatusOverviewEditTarget,
-): KanbanItem | null {
-  const items =
-    target.source === "current"
-      ? editor.view.viewModel.ownCurrentWeekItems
-      : editor.view.viewModel.ownNextWeekItems;
-  return items.find((item) => item.id === target.recordId) ?? null;
 }
 
 function OverviewSkeleton() {
@@ -94,8 +66,6 @@ function OverviewSkeleton() {
   );
 }
 
-type ReadyEditor = Extract<LeadFormEditorHandle, { status: "ready" }>;
-
 function EditorAvailabilityNotice({
   editor,
 }: {
@@ -112,38 +82,6 @@ function EditorAvailabilityNotice({
         ? "Editing is temporarily unavailable. Overview remains read-only."
         : "This report section is not editable. Overview is read-only."}
     </p>
-  );
-}
-
-function OverviewItemDialog({
-  editor,
-  dialog,
-  onSave,
-  onCancel,
-}: {
-  readonly editor: ReadyEditor;
-  readonly dialog: OverviewItemDialogState;
-  readonly onSave: (item: KanbanItem) => void;
-  readonly onCancel: () => void;
-}) {
-  const viewModel = editor.view.viewModel;
-  return (
-    <ItemEditDialog
-      key={`${dialog.target.source}:${dialog.target.recordId}`}
-      open
-      item={dialog.item}
-      products={viewModel.products}
-      activities={viewModel.activityOptions}
-      week={dialog.target.source}
-      currentUserName={viewModel.currentUser.name}
-      stagesForProduct={(productId) =>
-        ownedStagesForProject(editor.draft.section, productId)
-      }
-      ownPeriodRanks={viewModel.ownPeriodRanks}
-      risks={viewModel.ownRisks}
-      onSave={onSave}
-      onCancel={onCancel}
-    />
   );
 }
 
@@ -167,16 +105,48 @@ function LeadStatusOverviewContent({
   const handleEditItem = (target: StatusOverviewEditTarget): void => {
     if (!readyEditor || isReadOnly) return;
     const item = findEditableItem(readyEditor, target);
-    if (item) setDialog({ target, item });
+    if (item) {
+      setDialog({
+        mode: "edit",
+        generation: readyEditor.generation,
+        target,
+        item,
+      });
+    }
+  };
+  const handleAddItem = (target: StatusOverviewCreateTarget): void => {
+    if (!readyEditor || isReadOnly) return;
+    const unit = model.units.find(
+      (candidate) =>
+        candidate.kind === target.unitKind && candidate.id === target.unitId,
+    );
+    if (!unit || unit.historical) return;
+    setDialog({
+      mode: "create",
+      generation: readyEditor.generation,
+      target,
+    });
   };
   const handleDialogSave = (updatedItem: KanbanItem): void => {
     if (!readyEditor || !dialog || isReadOnly) return;
-    const patch = buildStatusOverviewItemPatch(
-      dialog.target,
-      readyEditor.view.viewModel.ownCurrentWeekItems,
-      readyEditor.view.viewModel.ownNextWeekItems,
-      updatedItem,
-    );
+    if (dialog.generation !== readyEditor.generation) {
+      setDialog(null);
+      return;
+    }
+    const patch =
+      dialog.mode === "edit"
+        ? buildStatusOverviewItemPatch(
+            dialog.target,
+            readyEditor.view.viewModel.ownCurrentWeekItems,
+            readyEditor.view.viewModel.ownNextWeekItems,
+            updatedItem,
+          )
+        : buildStatusOverviewCreatePatch(
+            dialog.target,
+            readyEditor.view.viewModel.ownCurrentWeekItems,
+            readyEditor.view.viewModel.ownNextWeekItems,
+            updatedItem,
+          );
     if (patch) readyEditor.draft.apply(patch);
     setDialog(null);
   };
@@ -208,6 +178,7 @@ function LeadStatusOverviewContent({
       <StatusOverview
         model={model}
         onEditItem={readyEditor && !isReadOnly ? handleEditItem : undefined}
+        onAddItem={readyEditor && !isReadOnly ? handleAddItem : undefined}
         detailsHref={buildStatusOverviewDetailsHref(
           targetReportId,
           searchParams,
@@ -218,7 +189,10 @@ function LeadStatusOverviewContent({
             : undefined
         }
       />
-      {readyEditor && dialog && !isReadOnly ? (
+      {readyEditor &&
+      dialog &&
+      !isReadOnly &&
+      dialog.generation === readyEditor.generation ? (
         <OverviewItemDialog
           editor={readyEditor}
           dialog={dialog}

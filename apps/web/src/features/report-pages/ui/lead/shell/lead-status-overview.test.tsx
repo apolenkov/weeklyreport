@@ -199,4 +199,38 @@ describe("LeadForm Overview", () => {
       );
     },
   );
+
+  it("opens quick-create with the selected product and saves through the live draft", async () => {
+    const user = userEvent.setup();
+    render(
+      <Wrapper>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Add current week update to Payments",
+      }),
+    );
+
+    expect(
+      screen.getByRole("heading", { name: /Add Item — Payments/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Product")).toHaveValue(
+      `product:${PROJECT_ID}`,
+    );
+
+    const description = screen.getByLabelText(/Description \*/i);
+    await user.type(description, "Created from the overview");
+    await user.click(screen.getByRole("button", { name: "Save Item" }));
+
+    expect(
+      await screen.findByText("Created from the overview"),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /Draft changes pending|Saving draft|Draft saved/,
+    );
+  });
 });

@@ -1,0 +1,5 @@
+schema: spec-driven
+created: 2026-09-04
+goal: Turn feedback cmtmkcxgi00003dw0xod1c64h into a readable, grouped
+  Overview that supports fast per-unit entry and a viewport-contained SitePing
+  submission action without duplicating report write semantics.

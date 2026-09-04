@@ -1,5 +1,8 @@
+import { Plus } from "lucide-react";
+
 import type {
   StatusOverviewColumn,
+  StatusOverviewCreateTarget,
   StatusOverviewEditTarget,
   StatusOverviewItem,
   StatusOverviewModel,
@@ -15,6 +18,13 @@ export type StatusOverviewColumnKey = keyof StatusOverviewUnit["columns"];
 interface EditItemHandler {
   readonly onEditItem?:
     ((target: StatusOverviewEditTarget) => void) | undefined;
+}
+
+interface CreateItemHandler {
+  readonly addTarget: StatusOverviewCreateTarget | null;
+  readonly unitName: string;
+  readonly onAddItem?:
+    ((target: StatusOverviewCreateTarget) => void) | undefined;
 }
 
 function ContinuityBadge({ item }: { readonly item: StatusOverviewItem }) {
@@ -88,12 +98,16 @@ function TimelineColumn({
   additionalId,
   onToggle,
   onEditItem,
+  addTarget,
+  unitName,
+  onAddItem,
 }: {
   readonly column: StatusOverviewColumn;
   readonly expanded: boolean;
   readonly additionalId: string;
   readonly onToggle: () => void;
-} & EditItemHandler) {
+} & EditItemHandler &
+  CreateItemHandler) {
   if (column.availability === "unavailable") {
     return (
       <p className="border-l-2 border-[var(--color-border)] pl-2 text-xs text-[var(--color-muted-foreground)]">
@@ -101,34 +115,34 @@ function TimelineColumn({
       </p>
     );
   }
-  if (column.items.length === 0) {
-    return (
-      <p className="text-xs text-[var(--color-muted-foreground)]">No updates</p>
-    );
-  }
-
   const previews = column.items.slice(0, 2);
   const additional = column.items.slice(2);
   return (
     <>
-      <ul className="min-w-0 divide-y divide-[var(--color-border-subtle)]">
-        {previews.map((item) => (
-          <ItemPreview key={item.key} item={item} onEditItem={onEditItem} />
-        ))}
-        {additional.length > 0 ? (
-          <li id={additionalId} hidden={!expanded} inert={!expanded}>
-            <ul className="divide-y divide-[var(--color-border-subtle)]">
-              {additional.map((item) => (
-                <ItemPreview
-                  key={item.key}
-                  item={item}
-                  onEditItem={onEditItem}
-                />
-              ))}
-            </ul>
-          </li>
-        ) : null}
-      </ul>
+      {column.items.length === 0 ? (
+        <p className="text-xs text-[var(--color-muted-foreground)]">
+          No updates
+        </p>
+      ) : (
+        <ul className="min-w-0 divide-y divide-[var(--color-border-subtle)]">
+          {previews.map((item) => (
+            <ItemPreview key={item.key} item={item} onEditItem={onEditItem} />
+          ))}
+          {additional.length > 0 ? (
+            <li id={additionalId} hidden={!expanded} inert={!expanded}>
+              <ul className="divide-y divide-[var(--color-border-subtle)]">
+                {additional.map((item) => (
+                  <ItemPreview
+                    key={item.key}
+                    item={item}
+                    onEditItem={onEditItem}
+                  />
+                ))}
+              </ul>
+            </li>
+          ) : null}
+        </ul>
+      )}
       {additional.length > 0 ? (
         <button
           type="button"
@@ -138,6 +152,17 @@ function TimelineColumn({
           className="mt-1 min-h-8 rounded-[var(--radius-pill)] px-2 text-xs font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
         >
           {expanded ? "Show less" : `+${String(additional.length)} more`}
+        </button>
+      ) : null}
+      {addTarget && onAddItem ? (
+        <button
+          type="button"
+          aria-label={`Add ${addTarget.source} week update to ${unitName}`}
+          onClick={() => onAddItem(addTarget)}
+          className="mt-2 inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-[var(--radius-pill)] px-2 text-xs font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] md:min-h-8"
+        >
+          <Plus aria-hidden="true" className="size-3.5" />
+          Add update
         </button>
       ) : null}
     </>
@@ -152,6 +177,9 @@ function TimelineCell({
   additionalId,
   onToggle,
   onEditItem,
+  addTarget,
+  unitName,
+  onAddItem,
 }: {
   readonly label: string;
   readonly period: string | null;
@@ -159,7 +187,8 @@ function TimelineCell({
   readonly expanded: boolean;
   readonly additionalId: string;
   readonly onToggle: () => void;
-} & EditItemHandler) {
+} & EditItemHandler &
+  CreateItemHandler) {
   return (
     <div className="min-w-0 border-t border-[var(--color-border-subtle)] px-4 py-3 min-[80rem]:border-t-0 min-[80rem]:border-l">
       <div className="mb-2 min-[80rem]:sr-only">
@@ -176,6 +205,9 @@ function TimelineCell({
         additionalId={additionalId}
         onToggle={onToggle}
         onEditItem={onEditItem}
+        addTarget={addTarget}
+        unitName={unitName}
+        onAddItem={onAddItem}
       />
     </div>
   );
@@ -198,15 +230,22 @@ export function StatusOverviewUnitRow({
   onToggle,
   panelId,
   onEditItem,
+  onAddItem,
 }: {
   readonly unit: StatusOverviewUnit;
   readonly periods: StatusOverviewModel["periods"];
   readonly expandedColumns: ReadonlySet<StatusOverviewColumnKey>;
   readonly onToggle: (column: StatusOverviewColumnKey) => void;
   readonly panelId: string;
-} & EditItemHandler) {
+} & EditItemHandler & {
+    readonly onAddItem?:
+      ((target: StatusOverviewCreateTarget) => void) | undefined;
+  }) {
   return (
-    <article className="min-w-0 overflow-hidden border-t border-[var(--color-border-subtle)] first:border-t-0">
+    <article
+      aria-label={`${unit.kind === "product" ? "Product" : "Activity"} ${unit.name}`}
+      className="min-w-0 overflow-hidden border-t border-[var(--color-border-subtle)] first:border-t-0"
+    >
       <div id={panelId} className={STATUS_OVERVIEW_DESKTOP_GRID}>
         <div className="min-w-0 px-4 py-3">
           <StatusOverviewUnitSummary unit={unit} />
@@ -221,6 +260,19 @@ export function StatusOverviewUnitRow({
             additionalId={`${panelId}-${config.idPart}-additional`}
             onToggle={() => onToggle(config.key)}
             onEditItem={onEditItem}
+            addTarget={
+              onAddItem &&
+              !unit.historical &&
+              config.key !== "previouslyPlanned"
+                ? {
+                    source: config.key === "currentWeek" ? "current" : "next",
+                    unitKind: unit.kind,
+                    unitId: unit.id,
+                  }
+                : null
+            }
+            unitName={unit.name}
+            onAddItem={onAddItem}
           />
         ))}
       </div>

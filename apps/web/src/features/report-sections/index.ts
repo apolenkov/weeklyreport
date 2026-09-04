@@ -66,6 +66,7 @@ export {
 export { canonicalStageNames, riskCoversStage } from "./model/stage-tags";
 export type {
   StatusOverviewColumn,
+  StatusOverviewCreateTarget,
   StatusOverviewEditTarget,
   StatusOverviewItem,
   StatusOverviewModel,
