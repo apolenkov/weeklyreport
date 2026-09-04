@@ -23,9 +23,6 @@ vi.mock("next/navigation", () => ({
   usePathname: () => navigation.pathname,
   useSearchParams: () => navigation.searchParams,
 }));
-vi.mock("./page-feedback-dialog", () => ({
-  PageFeedbackDialog: () => <div>Page feedback</div>,
-}));
 vi.mock("../../../shared/lib/auth/session-provider", () => ({
   useSession: vi.fn(),
 }));
@@ -68,7 +65,6 @@ describe("ProductFeedbackWidget", () => {
       }),
       undefined,
     );
-    expect(screen.getByText("Page feedback")).toBeInTheDocument();
   });
 
   it.each(["lead", "viewer", "head", "admin"] as const)(
@@ -88,7 +84,9 @@ describe("ProductFeedbackWidget", () => {
 
       render(<ProductFeedbackWidget />);
 
-      expect(await screen.findByText("Page feedback")).toBeInTheDocument();
+      expect(
+        await screen.findByText("Agentation endpoint /api/v1/agentation"),
+      ).toBeInTheDocument();
     },
   );
 
@@ -149,6 +147,5 @@ describe("ProductFeedbackWidget", () => {
     render(<ProductFeedbackWidget />);
 
     expect(agentation).not.toHaveBeenCalled();
-    expect(screen.queryByText("Page feedback")).not.toBeInTheDocument();
   });
 });

@@ -15,13 +15,10 @@ import {
 } from "./agentation-inbox.repository.js";
 import { executeAgentationRequest } from "./agentation-wire.js";
 import {
-  parsePageFeedbackCreate,
-  serializeFeedback,
-} from "./page-feedback-wire.js";
-import {
   feedbackAccessFromSession,
   type ProductFeedbackRepository,
 } from "./product-feedback.repository.js";
+import { serializeFeedback } from "./product-feedback-wire.js";
 
 const statusSchema = z.object({ status: feedbackStatusSchema }).strict();
 const commentSchema = z
@@ -30,7 +27,6 @@ const commentSchema = z
   })
   .strict();
 const HTTP_OK = 200;
-const HTTP_CREATED = 201;
 const HTTP_NO_CONTENT = 204;
 const HTTP_NOT_FOUND = 404;
 const DEFAULT_FEEDBACK_LIMIT = 100;
@@ -108,26 +104,6 @@ async function listFeedback(
     feedback,
     total: legacy.total + agentation.total,
   });
-}
-
-async function createFeedback(
-  req: Request,
-  res: Response,
-  session: UserSession,
-  deps: FeedbackRouteDeps,
-): Promise<void> {
-  const created = await deps.repository.create(
-    feedbackAccessFromSession(session),
-    parsePageFeedbackCreate(req),
-  );
-  deps.logger.info("product feedback created", {
-    phase: LOG_PHASE,
-    action: "create",
-    feedbackId: created.id,
-    actorId: session.userId,
-    role: session.role,
-  });
-  res.status(HTTP_CREATED).json(serializeFeedback(created));
 }
 
 async function changeStatus(
@@ -230,9 +206,8 @@ async function executeFeedbackCollectionRoute(
   deps: FeedbackRouteDeps,
 ): Promise<boolean> {
   if (req.path !== FEEDBACK_PATH) return false;
-  if (req.method === "GET") await listFeedback(req, res, session, deps);
-  else if (req.method === "POST") await createFeedback(req, res, session, deps);
-  else return false;
+  if (req.method !== "GET") return false;
+  await listFeedback(req, res, session, deps);
   return true;
 }
 

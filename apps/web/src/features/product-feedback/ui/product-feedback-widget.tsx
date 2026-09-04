@@ -5,7 +5,6 @@ import { usePathname, useSearchParams } from "next/navigation";
 
 import { useSession } from "../../../shared/lib/auth/session-provider";
 import { webEnv } from "../../../shared/lib/runtime/web-env";
-import { PageFeedbackDialog } from "./page-feedback-dialog";
 
 const AGENTATION_ENDPOINT = "/api/v1/agentation";
 
@@ -21,14 +20,11 @@ export function ProductFeedbackWidget() {
   const sessionId = searchParams.get("agentationSession");
 
   return (
-    <>
-      <Agentation
-        copyToClipboard
-        endpoint={AGENTATION_ENDPOINT}
-        key={`${pathname}:${sessionId ?? "new"}`}
-        {...(sessionId ? { sessionId } : {})}
-      />
-      <PageFeedbackDialog />
-    </>
+    <Agentation
+      copyToClipboard
+      endpoint={AGENTATION_ENDPOINT}
+      key={`${pathname}:${sessionId ?? "new"}`}
+      {...(sessionId ? { sessionId } : {})}
+    />
   );
 }

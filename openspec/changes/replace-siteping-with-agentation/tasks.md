@@ -29,6 +29,9 @@
 - [x] 3.3 Keep the role-aware inbox and deterministic page/annotation links;
       verify placement/rearrange and thread/action states without changing report
       review lifecycle.
+- [x] 3.4 Remove the separate page-comment UI and legacy feedback create route;
+      use the unpatched stock Agentation element/area-selection workflow for all
+      new browser feedback while preserving legacy inbox rows.
 
 ## 4. Acceptance and safety
 
@@ -49,3 +52,6 @@
 - [x] 4.5 Validate the forward-only migration statically, and apply it only to
       an exact disposable database explicitly authorized for this run; never reset,
       seed, or mutate production/shared/unknown data.
+- [x] 4.6 Verify the single Agentation capture surface with focused web/API
+      tests and source-built browser checks for an authenticated author and the
+      admin-wide inbox, then rerun the repository gates affected by this delta.

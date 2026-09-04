@@ -64,7 +64,8 @@ Optional: `FRONTEND_URLS` (extra CORS origins, no wildcards in production),
 `CLIENT_LOG_FORWARDING`, `NEXT_PUBLIC_CLIENT_LOG_FORWARDING`,
 `NEXT_PUBLIC_WEB_VITALS`, `PRODUCT_FEEDBACK_ENABLED`,
 `NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED`, and
-`NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES` are explicit required values. The two
+`NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES` are explicit required values. The
+inbox role list must include `admin` whenever feedback is enabled, and the two
 product-feedback values must match. `NEXT_PUBLIC_SENTRY_DSN` is compiled into the Web image; changing
 it requires `up --build`, not a container restart.
 
