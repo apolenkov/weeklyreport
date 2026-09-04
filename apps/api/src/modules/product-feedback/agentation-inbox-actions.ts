@@ -36,10 +36,24 @@ export class AgentationInboxActions {
       const current = await lockVisibleAnnotation(tx, access, id);
       if (!current) throw new FeedbackNotFoundError();
 
-      // Delete the parent first so concurrent FK-backed thread writes cannot
-      // commit after the event cleanup; thread messages follow the cascade.
+      // The row lock closes concurrent thread writes; children follow the
+      // parent cascade and prior event payloads must not retain evidence.
       await tx.agentationAnnotation.delete({ where: { id } });
       await tx.agentationEvent.deleteMany({ where: { annotationId: id } });
+      await emit(tx, {
+        type: ANNOTATION_UPDATED_EVENT,
+        sessionId: current.sessionId,
+        annotationId: id,
+        payload: {
+          id,
+          clientId: current.clientId,
+          authorId: current.authorUserId,
+          kind: current.kind,
+          status: "dismissed",
+          deleted: true,
+        },
+        authorUserId: access.userId,
+      });
     });
   }
 

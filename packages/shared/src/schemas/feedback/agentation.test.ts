@@ -169,6 +169,16 @@ describe("Agentation bounded wire contract", () => {
     expect(agentationAnnotationResponseSchema.parse(annotation)).toMatchObject(
       annotation,
     );
+    for (const resolvedBy of ["human", "agent"])
+      expect(
+        agentationAnnotationResponseSchema.parse({ ...annotation, resolvedBy }),
+      ).toHaveProperty("resolvedBy", resolvedBy);
+    expect(
+      agentationAnnotationResponseSchema.safeParse({
+        ...annotation,
+        resolvedBy: "arbitrary-name",
+      }).success,
+    ).toBe(false);
     const session = {
       id: "session-1",
       url: "https://weeklyreport.test/lead",

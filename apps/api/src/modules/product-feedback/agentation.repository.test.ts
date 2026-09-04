@@ -118,11 +118,18 @@ describe("AgentationPrismaRepository", () => {
     const created = annotationRow();
     const upsert = vi.fn().mockResolvedValue(created);
     const tx = {
+      $queryRaw: vi.fn().mockResolvedValue([{ id: "session-1" }]),
       agentationSession: {
         findFirst: vi.fn().mockResolvedValue(sessionRow()),
       },
-      agentationAnnotation: { upsert },
-      agentationEvent: { create: vi.fn().mockResolvedValue({}) },
+      agentationAnnotation: {
+        upsert,
+        findFirst: vi.fn().mockResolvedValue(null),
+      },
+      agentationEvent: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        create: vi.fn().mockResolvedValue({}),
+      },
     };
 
     const result = await new AgentationPrismaRepository(
@@ -135,6 +142,37 @@ describe("AgentationPrismaRepository", () => {
       rearrange: annotationInput.rearrange,
     });
     expect(upsert).toHaveBeenCalled();
+  });
+
+  it("does not recreate an annotation retained in the deletion tombstone", async () => {
+    const upsert = vi.fn();
+    const tx = {
+      $queryRaw: vi.fn().mockResolvedValue([{ id: "session-1" }]),
+      agentationSession: {
+        findFirst: vi.fn().mockResolvedValue(sessionRow()),
+      },
+      agentationAnnotation: { upsert },
+      agentationEvent: {
+        findFirst: vi.fn().mockResolvedValue({
+          annotationId: "deleted-annotation-1",
+          createdAt: new Date("2026-09-04T11:00:00.000Z"),
+        }),
+        create: vi.fn(),
+      },
+    };
+
+    const result = await new AgentationPrismaRepository(
+      transactionPrisma(tx),
+    ).addAnnotation(leadA, "session-1", annotationInput);
+
+    expect(result).toMatchObject({
+      id: "deleted-annotation-1",
+      clientId: annotationInput.id,
+      status: "dismissed",
+      resolvedAt: "2026-09-04T11:00:00.000Z",
+    });
+    expect(upsert).not.toHaveBeenCalled();
+    expect(tx.agentationEvent.create).not.toHaveBeenCalled();
   });
 
   it("appends thread messages and audits an agent action", async () => {

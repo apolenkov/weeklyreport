@@ -70,7 +70,7 @@ function prismaFor(tx: object): PrismaService {
 }
 
 describe("AgentationInboxActions", () => {
-  it("hard-deletes an annotation and its annotation events in one transaction", async () => {
+  it("hard-deletes annotation evidence and retains a terminal tombstone", async () => {
     const current = row();
     const tx = {
       $queryRaw: vi.fn().mockResolvedValue([{ id: "a-1" }]),
@@ -78,7 +78,10 @@ describe("AgentationInboxActions", () => {
         findFirst: vi.fn().mockResolvedValue(current),
         delete: vi.fn().mockResolvedValue(current),
       },
-      agentationEvent: { deleteMany: vi.fn().mockResolvedValue({ count: 2 }) },
+      agentationEvent: {
+        deleteMany: vi.fn().mockResolvedValue({ count: 2 }),
+        create: vi.fn().mockResolvedValue({}),
+      },
     };
 
     await new AgentationInboxActions(prismaFor(tx)).delete(
@@ -92,14 +95,28 @@ describe("AgentationInboxActions", () => {
     expect(tx.agentationAnnotation.delete).toHaveBeenCalledWith({
       where: { id: "a-1" },
     });
+    expect(tx.agentationEvent.create.mock.calls).toMatchObject([
+      [
+        {
+          data: {
+            type: "annotation.updated",
+            annotationId: "a-1",
+            payload: {
+              id: "a-1",
+              clientId: current.clientId,
+              status: "dismissed",
+              deleted: true,
+            },
+          },
+        },
+      ],
+    ]);
     expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
       tx.agentationAnnotation.delete.mock.invocationCallOrder[0] ?? 0,
     );
     expect(
-      tx.agentationAnnotation.delete.mock.invocationCallOrder[0],
-    ).toBeLessThan(
-      tx.agentationEvent.deleteMany.mock.invocationCallOrder[0] ?? 0,
-    );
+      tx.agentationEvent.deleteMany.mock.invocationCallOrder[0],
+    ).toBeLessThan(tx.agentationEvent.create.mock.invocationCallOrder[0] ?? 0);
   });
 
   it("does not delete an annotation outside the actor scope", async () => {

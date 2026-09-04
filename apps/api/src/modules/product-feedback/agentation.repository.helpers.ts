@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import {
   type AgentationAnnotationCreate,
   type AgentationAnnotationPatch,
+  type AgentationAnnotationResponse,
+  agentationAnnotationResponseSchema,
   type AgentationStatus,
 } from "@customreport/shared";
 import { Prisma, type Prisma as PrismaTypes } from "@prisma/client";
@@ -13,16 +15,109 @@ import type { FeedbackAccess } from "./product-feedback.repository.js";
 
 type Db = Prisma.TransactionClient;
 
+export async function findDeletionForSync(
+  db: Db,
+  access: FeedbackAccess,
+  sessionId: string,
+  id: string,
+) {
+  return db.agentationEvent.findFirst({
+    where: {
+      sessionId,
+      type: "annotation.updated",
+      AND: [
+        {
+          OR: [
+            { annotationId: id },
+            { payload: { path: ["clientId"], equals: id } },
+          ],
+        },
+        { payload: { path: ["authorId"], equals: access.userId } },
+        { payload: { path: ["deleted"], equals: true } },
+      ],
+    },
+    select: { annotationId: true, createdAt: true },
+    orderBy: { sequence: "desc" },
+  });
+}
+
+export async function findAnnotationForSync(
+  db: Db,
+  access: FeedbackAccess,
+  sessionId: string,
+  id: string,
+) {
+  return db.agentationAnnotation.findFirst({
+    where: {
+      sessionId,
+      authorUserId: access.userId,
+      OR: [{ id }, { clientId: id }],
+    },
+    include: { threadMessages: { orderBy: { timestamp: "asc" } } },
+  });
+}
+
+export async function lockAgentationSession(
+  db: Db,
+  sessionId: string,
+): Promise<boolean> {
+  const rows = await db.$queryRaw<{ id: string }[]>`
+    SELECT "id" FROM "AgentationSession" WHERE "id" = ${sessionId} FOR NO KEY UPDATE
+  `;
+  return rows.length > 0;
+}
+
+export function deletedAnnotationResponse(
+  access: FeedbackAccess,
+  session: { readonly url: string },
+  sessionId: string,
+  input: AgentationAnnotationCreate,
+  tombstone: { readonly annotationId: string | null; readonly createdAt: Date },
+): AgentationAnnotationResponse {
+  const deletedAt = tombstone.createdAt.toISOString();
+  return agentationAnnotationResponseSchema.parse({
+    ...input,
+    id: tombstone.annotationId ?? input.id,
+    clientId: input.id,
+    sessionId,
+    url: session.url,
+    kind: input.kind ?? "feedback",
+    status: "dismissed",
+    thread: [],
+    createdAt: deletedAt,
+    updatedAt: deletedAt,
+    resolvedAt: deletedAt,
+    resolvedBy: "human",
+    authorId: access.userId,
+  });
+}
+
 export async function lockVisibleAnnotation(
   db: Db,
   access: FeedbackAccess,
   id: string,
-): Promise<{ id: string; sessionId: string } | null> {
+): Promise<{
+  id: string;
+  sessionId: string;
+  clientId: string;
+  kind: string;
+  authorUserId: string;
+} | null> {
   const current = await db.agentationAnnotation.findFirst({
     where: { id, ...annotationScope(access) },
-    select: { id: true, sessionId: true },
+    select: {
+      id: true,
+      sessionId: true,
+      clientId: true,
+      kind: true,
+      authorUserId: true,
+    },
   });
   if (!current) return null;
+
+  // Serialize replay/deletion even when no annotation row exists. NO KEY UPDATE
+  // remains compatible with FK checks made by concurrent status/edit writers.
+  if (!(await lockAgentationSession(db, current.sessionId))) return null;
 
   // Serialize thread writes with hard deletion so event cleanup observes every
   // committed reply without widening the caller's authorization scope.
@@ -32,7 +127,17 @@ export async function lockVisibleAnnotation(
     WHERE "id" = ${id}
     FOR UPDATE
   `;
-  return locked.length > 0 ? current : null;
+  if (locked.length === 0) return null;
+  return db.agentationAnnotation.findFirst({
+    where: { id, ...annotationScope(access) },
+    select: {
+      id: true,
+      sessionId: true,
+      clientId: true,
+      kind: true,
+      authorUserId: true,
+    },
+  });
 }
 
 const json = (

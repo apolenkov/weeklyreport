@@ -223,7 +223,7 @@ export const agentationAnnotationResponseSchema =
       createdAt: z.iso.datetime(),
       updatedAt: z.iso.datetime(),
       resolvedAt: z.iso.datetime().optional(),
-      resolvedBy: z.string().max(AGENTATION_MAX_ID_LENGTH).optional(),
+      resolvedBy: z.enum(["human", "agent"]).optional(),
       authorId: id,
     })
     .strip();

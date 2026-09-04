@@ -2,6 +2,7 @@
 
 import { Agentation } from "agentation";
 import { usePathname, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { useSession } from "../../../shared/lib/auth/session-provider";
 import { webEnv } from "../../../shared/lib/runtime/web-env";
@@ -13,6 +14,16 @@ export function ProductFeedbackWidget() {
   const enabled = webEnv.productFeedback();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [restoreRevision, setRestoreRevision] = useState(0);
+
+  useEffect(() => {
+    // A cached page can retain a disconnected native stream and stale markers.
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) setRestoreRevision((revision) => revision + 1);
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
 
   if (process.env.NODE_ENV === "production" || !enabled || user === null)
     return null;
@@ -23,7 +34,7 @@ export function ProductFeedbackWidget() {
     <Agentation
       copyToClipboard
       endpoint={AGENTATION_ENDPOINT}
-      key={`${pathname}:${sessionId ?? "new"}`}
+      key={`${pathname}:${sessionId ?? "new"}:${restoreRevision}`}
       {...(sessionId ? { sessionId } : {})}
     />
   );

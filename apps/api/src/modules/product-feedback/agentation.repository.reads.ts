@@ -1,10 +1,31 @@
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
-import { mapAnnotation, mapSession } from "./agentation-mappers.js";
+import { mapAnnotation, mapEvent, mapSession } from "./agentation-mappers.js";
 import { annotationScope, sessionScope } from "./agentation-scope.js";
 import type { FeedbackAccess } from "./product-feedback.repository.js";
 
 export class AgentationReadRepository {
   constructor(protected readonly prisma: PrismaService) {}
+
+  async deletionEvents(
+    access: FeedbackAccess,
+    sessionId: string,
+    after: bigint,
+    through: bigint,
+    limit: number,
+  ): Promise<ReturnType<typeof mapEvent>[]> {
+    const rows = await this.prisma.agentationEvent.findMany({
+      where: {
+        sessionId,
+        session: sessionScope(access),
+        sequence: { gt: after, lte: through },
+        type: "annotation.updated",
+        payload: { path: ["deleted"], equals: true },
+      },
+      orderBy: { sequence: "asc" },
+      take: limit,
+    });
+    return rows.map(mapEvent);
+  }
 
   async listSessions(
     access: FeedbackAccess,
