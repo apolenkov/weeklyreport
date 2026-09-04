@@ -101,9 +101,28 @@ function EditSectionSkeleton({
 export function LeadFormSkeleton({
   mode = "edit",
 }: {
-  readonly mode?: "edit" | "slides";
+  readonly mode?: "overview" | "edit" | "slides";
 }) {
   const isSlidesMode = mode === "slides";
+  if (mode === "overview") {
+    return (
+      <div
+        role="status"
+        aria-busy="true"
+        aria-label="Loading status overview"
+        data-testid="lead-form-skeleton"
+        className="space-y-4"
+      >
+        <ContextToolbarSkeleton />
+        {Array.from({ length: 3 }, (_, index) => (
+          <Skeleton
+            key={index}
+            className="h-28 w-full rounded-[var(--radius)]"
+          />
+        ))}
+      </div>
+    );
+  }
   return (
     <div
       role="status"

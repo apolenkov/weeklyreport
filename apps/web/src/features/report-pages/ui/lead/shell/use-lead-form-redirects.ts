@@ -7,6 +7,7 @@ interface UseLeadFormRedirectsInput {
   readonly pinnedReportId: string | undefined;
   readonly redirectToCanonical: boolean | undefined;
   readonly isSlidesMode: boolean;
+  readonly canonicalMode?: "overview" | "edit" | "slides" | undefined;
   readonly activeReportId: string | null;
   readonly shouldRouteHeadLikeAwayFromLeadForm: boolean;
 }
@@ -15,6 +16,7 @@ export function useLeadFormRedirects({
   pinnedReportId,
   redirectToCanonical,
   isSlidesMode,
+  canonicalMode,
   activeReportId,
   shouldRouteHeadLikeAwayFromLeadForm,
 }: UseLeadFormRedirectsInput): void {
@@ -38,7 +40,8 @@ export function useLeadFormRedirects({
     if (shouldRouteHeadLikeAwayFromLeadForm) return;
     if (!activeReportId) return;
     const next = feedbackQuery();
-    if (isSlidesMode) next.set("mode", "slides");
+    if (canonicalMode) next.set("mode", canonicalMode);
+    else if (isSlidesMode) next.set("mode", "slides");
     const query = next.toString();
     const suffix = query ? `?${query}` : "";
     router.replace(`/lead/report/${activeReportId}${suffix}`);
@@ -47,6 +50,7 @@ export function useLeadFormRedirects({
     pinnedReportId,
     activeReportId,
     isSlidesMode,
+    canonicalMode,
     shouldRouteHeadLikeAwayFromLeadForm,
     router,
     feedbackQuery,

@@ -1,4 +1,6 @@
 import {
+  leadStatusOverviewInputSchema,
+  leadStatusOverviewOutputSchema,
   MAX_REOPEN_REASON_LENGTH,
   reportAssistantOutcomeSchema,
   reportAssistantRequestSchema,
@@ -89,6 +91,24 @@ function byPeriodProcedure(deps: LeadFormRouterDeps) {
           requestedAuthorId: input.authorId ?? null,
           error: describeError(error),
         });
+        throw mapDomainError(error);
+      }
+    });
+}
+
+function statusOverviewProcedure(deps: LeadFormRouterDeps) {
+  return protectedProcedure
+    .input(leadStatusOverviewInputSchema)
+    .output(leadStatusOverviewOutputSchema)
+    .query(async ({ input, ctx }) => {
+      try {
+        return await deps.leadFormService.getStatusOverview(
+          input.reportId,
+          ctx.session.userId,
+          ctx.session.role,
+          input.authorId,
+        );
+      } catch (error) {
         throw mapDomainError(error);
       }
     });
@@ -235,6 +255,7 @@ export function createLeadFormRouter(deps: LeadFormRouterDeps) {
     assistant: assistantProcedure(deps),
     viewSettings: viewSettingsProcedure(deps),
     byPeriod: byPeriodProcedure(deps),
+    statusOverview: statusOverviewProcedure(deps),
     fillFrom: fillFromProcedure(deps),
     revoke: revokeProcedure(deps),
     revokeAllSubmitted: revokeAllSubmittedProcedure(deps),

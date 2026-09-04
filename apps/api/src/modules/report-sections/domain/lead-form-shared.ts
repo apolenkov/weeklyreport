@@ -1,12 +1,22 @@
 import type {
   DbRole,
   ItemWorkflowStatus,
+  LeadStatusOverviewPredecessor,
   PublishedLineage,
   ReportSectionReadModel,
   RiskSeverity,
   Role,
   TrafficLightStatus,
 } from "@customreport/shared";
+
+export interface StatusOverviewPeriodRead {
+  readonly current: {
+    readonly reportId: string;
+    readonly periodStart: Date;
+    readonly periodEnd: Date;
+  };
+  readonly predecessor: LeadStatusOverviewPredecessor;
+}
 
 export class LeadFormDomainError extends Error {
   constructor(message: string) {
@@ -66,6 +76,14 @@ export interface LeadFormRepository {
     readOnly: boolean;
     reopenFacts: ReopenEligibilityFacts;
   } | null>;
+  // One read of selected period identity plus its immediate predecessor.
+  // The implementation applies the same author/report scope as byPeriod.
+  getStatusOverviewPeriods(
+    reportId: string,
+    authorId: string,
+    viewerId: string,
+    role: Role,
+  ): Promise<StatusOverviewPeriodRead | null>;
   // Same rule as canRequestReopen; null when section missing.
   getSectionReopenContext(
     sectionId: string,

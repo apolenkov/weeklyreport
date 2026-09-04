@@ -202,6 +202,7 @@ export {
 export * from "./schemas/report/published-projections";
 export * from "./schemas/report-assistant";
 export * from "./schemas/report-assistant-search-plan";
+export * from "./schemas/report-sections/status-overview.schema";
 export type {
   SearchHit,
   SearchQueryInput,

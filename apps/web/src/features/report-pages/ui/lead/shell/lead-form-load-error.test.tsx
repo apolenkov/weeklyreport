@@ -37,6 +37,10 @@ function buildHarness(opts: { byPeriodQueryFn?: () => unknown } = {}) {
   const section = makeReportSectionFixture();
   const { proxy } = createMockTRPC([
     {
+      path: ["ai", "availability"],
+      query: { availability: "not_configured" },
+    },
+    {
       path: ["reports", "getActive"],
       query: {
         reportId: section.reportId,

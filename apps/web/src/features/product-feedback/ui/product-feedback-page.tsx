@@ -7,58 +7,17 @@ import {
   type FeedbackType,
 } from "@customreport/shared";
 import { useSitepingInbox } from "@siteping/dashboard";
-import {
-  ExternalLink,
-  LoaderCircle,
-  MessageSquareText,
-  Trash2,
-} from "lucide-react";
+import { LoaderCircle, MessageSquareText } from "lucide-react";
 import { useMemo } from "react";
 import { toast } from "sonner";
 
 import { useSession } from "../../../shared/lib/auth/session-provider";
-
-const STATUS_LABELS: Readonly<Record<FeedbackStatus, string>> = {
-  open: "Open",
-  in_progress: "In progress",
-  resolved: "Resolved",
-  wont_fix: "Won't fix",
-};
-
-const TYPE_LABELS: Readonly<Record<FeedbackType, string>> = {
-  question: "Question",
-  change: "Change",
-  bug: "Bug",
-  other: "Other",
-};
-
-function formatSubmitted(value: Date): string {
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(value);
-}
-
-function annotationHref(
-  url: string,
-  feedbackId: string,
-  authorUserId: string | undefined,
-  role: string | undefined,
-): string {
-  const leadReport = /^\/lead\/report(?:\/([^/]+))?$/.exec(url);
-  if (leadReport && authorUserId && (role === "head" || role === "admin")) {
-    const search = new URLSearchParams({
-      authorId: authorUserId,
-      siteping: feedbackId,
-      sitepingUrl: url,
-    });
-    const reportId = leadReport[1];
-    const reportPath = reportId ? `/${encodeURIComponent(reportId)}` : "";
-    return `/head/report${reportPath}?${search.toString()}`;
-  }
-  const search = new URLSearchParams({ siteping: feedbackId });
-  return `${url}?${search.toString()}`;
-}
+import {
+  type FeedbackCardItem,
+  FeedbackRecordCard,
+  STATUS_LABELS,
+  TYPE_LABELS,
+} from "./feedback-record-card";
 
 export function ProductFeedbackPage() {
   const { user } = useSession();
@@ -192,80 +151,15 @@ export function ProductFeedbackPage() {
       {inbox.view === "ready" && (
         <div className="grid gap-3" aria-live="polite">
           {inbox.items.map((feedback) => (
-            <article
-              className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-5"
+            <FeedbackRecordCard
+              canDelete={canDelete}
+              canTriage={canTriage}
+              item={feedback as FeedbackCardItem}
               key={feedback.id}
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <a
-                  aria-label={`Open annotation on ${feedback.url}`}
-                  className="group min-w-0 flex-1 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2"
-                  href={annotationHref(
-                    feedback.url,
-                    feedback.id,
-                    (
-                      feedback as typeof feedback & {
-                        authorUserId?: string;
-                      }
-                    ).authorUserId,
-                    user?.role,
-                  )}
-                >
-                  <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
-                    <span className="rounded-full bg-[var(--color-surface)] px-2 py-1 font-medium">
-                      {TYPE_LABELS[feedback.type]}
-                    </span>
-                    <span>{feedback.url}</span>
-                    <ExternalLink
-                      aria-hidden="true"
-                      className="size-3.5 opacity-60 transition-opacity group-hover:opacity-100"
-                    />
-                  </div>
-                  <p className="whitespace-pre-wrap text-sm text-[var(--color-ink)]">
-                    {feedback.message}
-                  </p>
-                  <p className="mt-3 text-xs text-[var(--color-ink-muted)]">
-                    {feedback.authorName} ·{" "}
-                    {formatSubmitted(feedback.createdAt)}
-                  </p>
-                </a>
-                <div className="flex items-center gap-2">
-                  {canTriage ? (
-                    <select
-                      aria-label={`Status for feedback from ${feedback.authorName}`}
-                      className="rounded-lg border border-[var(--color-border)] bg-transparent px-2 py-1.5 text-sm"
-                      onChange={(event) =>
-                        void changeStatus(
-                          feedback.id,
-                          event.target.value as FeedbackStatus,
-                        )
-                      }
-                      value={feedback.status}
-                    >
-                      {FEEDBACK_STATUSES.map((status) => (
-                        <option key={status} value={status}>
-                          {STATUS_LABELS[status]}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <span className="rounded-full border border-[var(--color-border)] px-2 py-1 text-xs">
-                      {STATUS_LABELS[feedback.status]}
-                    </span>
-                  )}
-                  {canDelete && (
-                    <button
-                      aria-label="Delete feedback"
-                      className="rounded-lg border border-red-200 p-2 text-red-700 hover:bg-red-50"
-                      onClick={() => void remove(feedback.id)}
-                      type="button"
-                    >
-                      <Trash2 aria-hidden="true" className="size-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </article>
+              onChangeStatus={(id, status) => void changeStatus(id, status)}
+              onDelete={(id) => void remove(id)}
+              role={user?.role}
+            />
           ))}
           {inbox.hasMore && (
             <button

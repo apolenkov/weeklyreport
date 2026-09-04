@@ -17,6 +17,7 @@ import {
   assertNoPublishedLineage,
 } from "./fill-from-guards.js";
 import { type GetByPeriodResult, readByPeriod } from "./lead-form-by-period.js";
+import { readStatusOverview } from "./lead-form-status-overview.js";
 import {
   NOOP_REPORT_SECTIONS_TELEMETRY,
   type ReportSectionsTelemetry,
@@ -148,6 +149,21 @@ export class LeadFormService {
     requestedAuthorId?: string,
   ): Promise<GetByPeriodResult> {
     return readByPeriod(
+      this.repository,
+      reportId,
+      userId,
+      role,
+      requestedAuthorId,
+    );
+  }
+
+  async getStatusOverview(
+    reportId: string,
+    userId: string,
+    role: Role,
+    requestedAuthorId?: string,
+  ) {
+    return readStatusOverview(
       this.repository,
       reportId,
       userId,

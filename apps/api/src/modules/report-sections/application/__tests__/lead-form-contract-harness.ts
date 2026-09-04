@@ -78,6 +78,7 @@ export function createMockRepository(
     getUserReportingGroupId: vi.fn().mockResolvedValue(null),
     getSectionForPeriod: vi.fn().mockResolvedValue(null),
     getSectionForPeriodAsGroupPeer: vi.fn().mockResolvedValue(null),
+    getStatusOverviewPeriods: vi.fn().mockResolvedValue(null),
     getSectionReopenContext: vi.fn().mockResolvedValue(null),
     getReportPeriodStatusForSection: vi.fn().mockResolvedValue("open"),
     getPublishedLineage: vi

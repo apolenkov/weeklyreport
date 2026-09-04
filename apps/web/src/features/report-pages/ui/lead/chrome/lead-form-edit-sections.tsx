@@ -57,6 +57,7 @@ export function LeadFormEditSections({
     ownedStagesForProject(draftSection, productId);
   return (
     <div
+      id="report-details"
       className="min-w-0 space-y-6"
       data-layout-key="lead-report-body"
       data-layout-stability="position-width"

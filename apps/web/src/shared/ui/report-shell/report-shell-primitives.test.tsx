@@ -31,6 +31,30 @@ describe("ViewModeToggle", () => {
     expect(slides).toHaveAttribute("href", "/lead/report/abc?mode=slides");
   });
 
+  it("adds an Overview segment only when an overview href is provided", () => {
+    const { rerender } = render(
+      <ViewModeToggle
+        mode="overview"
+        overviewHref="/lead/report/abc"
+        editHref="/lead/report/abc?mode=edit"
+        slidesHref="/lead/report/abc?mode=slides"
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "Overview" })).toHaveAttribute(
+      "href",
+      "/lead/report/abc",
+    );
+
+    rerender(
+      <ViewModeToggle
+        editHref="/head/report/abc"
+        slidesHref="/head/report/abc?mode=slides"
+      />,
+    );
+    expect(screen.queryByRole("link", { name: "Overview" })).toBeNull();
+  });
+
   it("shows mode labels only at desktop when requested", () => {
     render(
       <ViewModeToggle

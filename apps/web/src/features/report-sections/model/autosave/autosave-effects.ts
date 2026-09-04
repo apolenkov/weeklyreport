@@ -8,17 +8,11 @@ import type { AutosaveState, UseLeadFormAutosaveArgs } from "./autosave-types";
 
 const DEFAULT_DEBOUNCE_MS = 5000;
 
-// Warns on unsaved edits. The supported browser matrix still requires the
-// returnValue assignment for the native beforeunload prompt.
 export function useBeforeUnloadGuard(dirty: boolean): void {
   useEffect(() => {
     if (!dirty) return;
-    // The structural shape sidesteps the DOM lib's deprecated returnValue
-    // declaration while preserving the browser event contract.
     const handler: EventListener = (event: Event) => {
       event.preventDefault();
-      const beforeUnload = event as unknown as { returnValue: string };
-      beforeUnload.returnValue = "";
     };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);

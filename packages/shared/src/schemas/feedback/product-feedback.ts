@@ -1,15 +1,18 @@
 import { z } from "zod";
 
-const MAX_PAGE_SCOPE_LENGTH = 2000;
+/** Maximum persisted length of a normalized feedback pathname. */
+export const MAX_FEEDBACK_PAGE_SCOPE_LENGTH = 2000;
 const MAX_SELECTOR_LENGTH = 2000;
 const MAX_TEXT_SNIPPET_LENGTH = 500;
 const MAX_ELEMENT_TAG_LENGTH = 100;
 const MAX_METADATA_LENGTH = 200;
 const MAX_DEVICE_PIXEL_RATIO = 10;
-const MAX_MESSAGE_LENGTH = 5000;
+/** Maximum length of a feedback message accepted by the ingress. */
+export const MAX_FEEDBACK_MESSAGE_LENGTH = 5000;
 const MAX_VIEWPORT_LENGTH = 50;
 const MAX_USER_AGENT_LENGTH = 500;
-const MAX_ANNOTATIONS = 50;
+/** Maximum number of DOM annotations accepted on one feedback record. */
+export const MAX_FEEDBACK_ANNOTATIONS = 50;
 const MAX_SCREENSHOT_DATA_URL_LENGTH = 1_500_000;
 const MAX_CONSOLE_ENTRIES = 50;
 const MAX_NETWORK_ENTRIES = 20;
@@ -48,12 +51,12 @@ export type FeedbackStatus = z.infer<typeof feedbackStatusSchema>;
 /** Validates persisted page identity without browser location metadata. */
 export const feedbackPageScopeSchema = z
   .object({
-    url: z.string().trim().min(1).max(MAX_PAGE_SCOPE_LENGTH),
+    url: z.string().trim().min(1).max(MAX_FEEDBACK_PAGE_SCOPE_LENGTH),
     urlPattern: z
       .string()
       .trim()
       .min(1)
-      .max(MAX_PAGE_SCOPE_LENGTH)
+      .max(MAX_FEEDBACK_PAGE_SCOPE_LENGTH)
       .nullable()
       .optional(),
   })
@@ -122,7 +125,7 @@ const feedbackConsoleDiagnosticSchema = z
 
 const feedbackNetworkDiagnosticSchema = z
   .object({
-    url: z.string().max(MAX_PAGE_SCOPE_LENGTH),
+    url: z.string().max(MAX_FEEDBACK_PAGE_SCOPE_LENGTH),
     method: z.string().max(MAX_NETWORK_METHOD_LENGTH),
     status: z.number().int().min(0).max(MAX_NETWORK_STATUS),
     durationMs: z.number().min(0).max(MAX_NETWORK_DURATION_MS),
@@ -167,14 +170,20 @@ export const feedbackCreateWireSchema = z
   .object({
     projectName: z.string().min(1).max(MAX_METADATA_LENGTH),
     type: feedbackTypeSchema,
-    message: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH),
-    url: z.string().trim().min(1).max(MAX_PAGE_SCOPE_LENGTH),
-    urlPattern: z.string().max(MAX_PAGE_SCOPE_LENGTH).nullable().optional(),
+    message: z.string().trim().min(1).max(MAX_FEEDBACK_MESSAGE_LENGTH),
+    url: z.string().trim().min(1).max(MAX_FEEDBACK_PAGE_SCOPE_LENGTH),
+    urlPattern: z
+      .string()
+      .max(MAX_FEEDBACK_PAGE_SCOPE_LENGTH)
+      .nullable()
+      .optional(),
     viewport: z.string().min(1).max(MAX_VIEWPORT_LENGTH),
     userAgent: z.string().min(1).max(MAX_USER_AGENT_LENGTH),
     authorName: z.string().min(1).max(MAX_METADATA_LENGTH),
     authorEmail: z.email().max(MAX_METADATA_LENGTH),
-    annotations: z.array(feedbackAnnotationWireSchema).max(MAX_ANNOTATIONS),
+    annotations: z
+      .array(feedbackAnnotationWireSchema)
+      .max(MAX_FEEDBACK_ANNOTATIONS),
     clientId: z
       .string()
       .min(1)
@@ -216,7 +225,9 @@ export const feedbackResponseSchema = z
     resolvedAt: z.iso.datetime().nullable(),
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime(),
-    annotations: z.array(feedbackAnnotationResponseSchema),
+    annotations: z
+      .array(feedbackAnnotationResponseSchema)
+      .max(MAX_FEEDBACK_ANNOTATIONS),
     screenshotUrl: feedbackScreenshotDataUrlSchema.nullable(),
     screenshotRegion: feedbackScreenshotRegionSchema.nullable(),
     diagnostics: feedbackDiagnosticsSchema.nullable(),
@@ -229,6 +240,6 @@ export type FeedbackResponse = z.infer<typeof feedbackResponseSchema>;
 export function normalizeFeedbackPath(value: string): string {
   const pathname = new URL(value, "https://weekly-report.invalid").pathname;
   return pathname.startsWith("/")
-    ? pathname.slice(0, MAX_PAGE_SCOPE_LENGTH)
+    ? pathname.slice(0, MAX_FEEDBACK_PAGE_SCOPE_LENGTH)
     : `/${pathname}`;
 }

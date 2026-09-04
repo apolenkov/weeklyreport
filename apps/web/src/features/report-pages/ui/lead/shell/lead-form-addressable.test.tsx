@@ -82,6 +82,10 @@ function buildHarness(opts: {
 }) {
   const { proxy } = createMockTRPC([
     {
+      path: ["ai", "availability"],
+      query: { availability: "not_configured" },
+    },
+    {
       path: ["reports", "getActive"],
       query: {
         reportId: ACTIVE_REPORT_ID,
@@ -209,7 +213,7 @@ describe("LeadForm — addressable URLs", () => {
     document.title = "";
   });
 
-  it("bare route + redirectToCanonical → router.replace(/lead/report/<activeReportId>)", async () => {
+  it("bare editor + redirectToCanonical preserves explicit edit mode", async () => {
     const proxy = buildHarness({});
     render(
       <Wrapper proxy={proxy}>
@@ -217,7 +221,9 @@ describe("LeadForm — addressable URLs", () => {
       </Wrapper>,
     );
     await waitFor(() =>
-      expect(replace).toHaveBeenCalledWith(`/lead/report/${ACTIVE_REPORT_ID}`),
+      expect(replace).toHaveBeenCalledWith(
+        `/lead/report/${ACTIVE_REPORT_ID}?mode=edit`,
+      ),
     );
   });
 
@@ -234,7 +240,7 @@ describe("LeadForm — addressable URLs", () => {
     );
     await waitFor(() =>
       expect(replace).toHaveBeenCalledWith(
-        `/lead/report/${ACTIVE_REPORT_ID}?siteping=feedback_123&sitepingUrl=%2Flead%2Freport`,
+        `/lead/report/${ACTIVE_REPORT_ID}?siteping=feedback_123&sitepingUrl=%2Flead%2Freport&mode=edit`,
       ),
     );
   });

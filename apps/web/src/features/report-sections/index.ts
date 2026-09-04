@@ -64,6 +64,18 @@ export {
   isZeroOwnedStageDeadEnd,
 } from "./model/stage-ownership";
 export { canonicalStageNames, riskCoversStage } from "./model/stage-tags";
+export type {
+  StatusOverviewColumn,
+  StatusOverviewEditTarget,
+  StatusOverviewItem,
+  StatusOverviewModel,
+  StatusOverviewPeriodLabels,
+  StatusOverviewProjectionOptions,
+  StatusOverviewStage,
+  StatusOverviewUnit,
+  StatusOverviewUnitKind,
+} from "./model/status-overview";
+export { projectStatusOverview } from "./model/status-overview";
 export {
   annotateOwnRiskCoverage,
   applyRiskSeverityFloor,
@@ -112,3 +124,4 @@ export { ParentPicker } from "./ui/parent-picker";
 export { PortfolioOverviewTable } from "./ui/portfolio/portfolio-overview-table";
 export { StageChip } from "./ui/stage-chip";
 export { StageStep } from "./ui/stage-step";
+export { StatusOverview } from "./ui/status-overview";

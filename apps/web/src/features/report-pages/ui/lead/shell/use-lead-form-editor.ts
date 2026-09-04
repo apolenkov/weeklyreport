@@ -33,7 +33,7 @@ import { useLeadFormEditing } from "./use-lead-form-editing";
 
 export interface LeadFormEditorInput {
   readonly reportId?: string | undefined;
-  readonly mode?: "edit" | "slides" | undefined;
+  readonly mode?: "overview" | "edit" | "slides" | undefined;
   readonly redirectToCanonical?: boolean | undefined;
 }
 
@@ -44,7 +44,10 @@ export type LeadFormEditorHandle =
       readonly isRetrying: boolean;
       readonly retry: () => void;
     }
-  | { readonly status: "loading"; readonly mode: "edit" | "slides" }
+  | {
+      readonly status: "loading";
+      readonly mode: "overview" | "edit" | "slides";
+    }
   | {
       readonly status: "ready";
       readonly generation: string | null;
@@ -92,6 +95,7 @@ export function useLeadFormEditorWithPort(
     reportId: pinnedReportId,
     redirectToCanonical,
     isSlidesMode,
+    canonicalMode: mode === "overview" ? undefined : mode,
   });
   const generation = data.byPeriodData
     ? leadFormGenerationOf(data.byPeriodData.section)
