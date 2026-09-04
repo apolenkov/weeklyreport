@@ -154,3 +154,90 @@ backend. Existing WeeklyReport PostgreSQL remains the only source of truth;
 stock SQLite is not used by the product. Legacy SitePing rows remain readable,
 while new traffic uses Agentation only. Screenshot/console/network parity is a
 deferred follow-up, not a current Agentation capability.
+
+## Management inbox: official operation matrix and decision
+
+This section answers the current `/feedback` question against the published
+`agentation@3.0.2` and `agentation-mcp@1.2.0` contracts. The official API lists
+`GET /annotations/:id`, `PATCH /annotations/:id`, `DELETE /annotations/:id`,
+and `POST /annotations/:id/thread`; the React API explicitly exposes callbacks
+for add, delete, comment update, clear, copy, and submit. It does **not** expose
+a separate admin-inbox component, admin permissions model, or a documented
+bulk status-management UI ([official API](https://www.agentation.com/api#http-api),
+[official props](https://www.agentation.com/api#props)).
+
+| Inbox capability     | Official support      | Contract / meaning                                                                                                                                                                       | WeeklyReport decision                                                                                                                                                                   |
+| -------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Edit annotation text | Yes                   | `PATCH /annotations/:id` with partial annotation; React callback `onAnnotationUpdate` means the comment was edited                                                                       | The original author may edit; other reviewers reply without rewriting the request                                                                                                       |
+| Acknowledge          | Yes, through MCP      | `PATCH` with `{ status: "acknowledged" }`; means seen and queued for attention ([MCP tool docs](https://www.agentation.com/mcp#mcp-tools))                                               | Prominent non-destructive action for triage                                                                                                                                             |
+| Resolve              | Yes, through MCP      | `PATCH` with `{ status: "resolved", resolvedBy: "agent" }`; optional summary is added as an agent thread message                                                                         | Prominent after fix; retain row and evidence                                                                                                                                            |
+| Dismiss              | Yes, through MCP      | `PATCH` with `{ status: "dismissed", resolvedBy: "agent" }` plus a reason in a thread message                                                                                            | Secondary action; require a reason and confirmation                                                                                                                                     |
+| Human reply / thread | Yes                   | `POST /annotations/:id/thread` with `{ role, content }`; official MCP calls this reply for clarification or progress                                                                     | Secondary, beside the annotation detail                                                                                                                                                 |
+| Delete               | Yes at protocol level | `DELETE /annotations/:id`; official HTTP API describes removal and emits `annotation.deleted` ([events](https://www.agentation.com/api#real-time-events))                                | Admin-only, one visible item at a time; Agentation keeps session, removes stored annotation events, and cascades annotation/thread; legacy ProductFeedback cascades annotation children |
+| Bulk operations      | Format goal only      | Schema page mentions “clear all” and cross-page queries, but the published management contract documents no bulk REST endpoint or admin UI ([schema](https://www.agentation.com/schema)) | No bulk delete                                                                                                                                                                          |
+| Session management   | Partial               | MCP exposes list/get session and pending queries; official types include `active`, `approved`, `closed` session states                                                                   | Show route/session context read-only; session close is not a default feedback-card action                                                                                               |
+
+The official lifecycle is intentionally simple: `pending` → `acknowledged` →
+`resolved`, with `dismissed` as the non-fix outcome. The MCP documentation says
+acknowledge means “seen,” resolve follows addressing the feedback, dismiss
+requires a reason, and reply is for clarification or updates
+([official MCP tool details](https://www.agentation.com/mcp#tool-details)). The
+React package's stock toolbar is a capture/sync surface, not the management
+inbox: its documented props contain callbacks and endpoint/session wiring, but
+no prop for injecting an admin action panel or changing lifecycle labels.
+
+### Recommended `/feedback` hierarchy
+
+For an admin card, make the following visible without opening a menu:
+
+1. Status control with the current state and a clear transition to
+   **Acknowledge** or **Resolve**. This is the primary triage path.
+2. **Reply** near the message/thread, because it preserves clarification in
+   the same record.
+
+Put **Edit** in a secondary “More” menu or an explicit edit mode for the
+original author only. Editing changes the human-authored request and should not
+compete with status triage; other reviewers use Reply, preserving who said what.
+
+Put **Dismiss / Won't fix** in the secondary/destructive visual group. It is
+not data deletion, but it closes the actionable path; require a reason and
+retain that reason in the thread.
+
+`Delete` is a separate admin-only permanent action for exactly one visible item
+from either source and must require explicit confirmation. Agentation keeps its
+session, removes stored annotation events explicitly, and cascades
+annotation/thread children; legacy ProductFeedback cascades annotation
+children. It has no bulk form. `Dismiss` remains the routine non-destructive
+path: it requires a reason and retains the row, thread, and captured evidence.
+
+### Baseline gap addressed by this implementation
+
+Before this change, `/feedback` exposed a status `<select>` for head/admin but
+did not expose Agentation-specific Edit, Acknowledged, Dismissed, Reply/thread,
+or a visible admin-only Delete action for either source in the card. The
+baseline is visible in the previous revisions of
+[`apps/web/src/features/product-feedback/ui/product-feedback-page.tsx`](../../apps/web/src/features/product-feedback/ui/product-feedback-page.tsx:139)
+and
+[`apps/web/src/features/product-feedback/ui/feedback-record-card.tsx`](../../apps/web/src/features/product-feedback/ui/feedback-record-card.tsx:157).
+The API adapter, however, already accepts the corresponding Agentation
+operations and maps the stock widget's DELETE to non-destructive dismissal at
+[`apps/api/src/modules/product-feedback/agentation-wire.ts`](../../apps/api/src/modules/product-feedback/agentation-wire.ts:194).
+
+The implemented inbox-management pass adds those actions and inline
+thread/detail affordances, keeps status transitions prominent, keeps
+edit/reply secondary, adds confirmation-gated admin-only single-item Delete,
+and keeps Dismiss reasoned with retention semantics. This is a product UI
+improvement, not a reason to patch or fork the Agentation package.
+
+### Accessibility implications exposed by official sources
+
+The official schema carries an `accessibility` field containing ARIA/role
+context, which should remain visible in annotation detail when present
+([schema optional context](https://www.agentation.com/schema#optional-context-fields)).
+The published Agentation docs do not specify an admin-inbox keyboard model,
+focus restoration, or screen-reader contract. WeeklyReport must therefore
+accept those locally: every action needs an accessible name, status changes
+must be announced, destructive/dismiss confirmation must be keyboard reachable,
+and annotation context must remain readable inline without sending the reviewer
+to another page. These are WeeklyReport acceptance requirements, not claims
+about stock Agentation behavior.

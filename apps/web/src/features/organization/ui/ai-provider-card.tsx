@@ -7,9 +7,10 @@ import type {
 } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
+import { ConfirmationDialog } from "../../../shared/ui/dialogs/confirmation-dialog";
 import { AiProviderCardFeedback } from "./ai-provider-card-feedback";
 import { AiProviderForm, toAiProviderForm } from "./ai-provider-form";
 import {
@@ -20,8 +21,19 @@ import {
 import { AiProviderRetainedRevisions } from "./ai-provider-retained-revisions";
 import { AiProviderRevisionDetails } from "./ai-provider-revision-details";
 import { selectObservedRevision } from "./ai-provider-revision-selection";
+import { AiProviderStateSummary } from "./ai-provider-state-summary";
 
 type AiProviderMutations = ReturnType<typeof useAiProviderMutations>;
+
+const getAiProviderView = (
+  revision: AiProviderConfigurationRead | null,
+  editing: boolean,
+) => ({
+  lifecycle: revision ? revision.lifecycle : ("none" as const),
+  activeReadOnly: revision
+    ? revision.lifecycle === "active" && !editing
+    : false,
+});
 
 type AiProviderCardContentProps = Readonly<{
   data: AiProviderControlRead;
@@ -54,25 +66,64 @@ export function AiProviderCardContent({
       : (message ?? executionMessage);
   const allBusy = mutationsAreBusy(mutations);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
+  const [editingActiveRevisionId, setEditingActiveRevisionId] = useState<
+    string | null
+  >(null);
+  const [disableRequested, setDisableRequested] = useState(false);
+  useEffect(() => {
+    if (revision?.lifecycle !== "active" && editingActiveRevisionId !== null) {
+      queueMicrotask(() => setEditingActiveRevisionId(null));
+    }
+  }, [editingActiveRevisionId, revision?.lifecycle]);
+  const editing =
+    revision?.lifecycle === "active" && editingActiveRevisionId === revisionId;
+  const { lifecycle, activeReadOnly } = getAiProviderView(revision, editing);
 
   return (
     <div data-testid="integration-row-ai">
-      <AiProviderForm
-        key={revisionId ?? "new"}
-        initial={toAiProviderForm(revision)}
+      <AiProviderStateSummary
+        lifecycle={lifecycle}
         revision={revision}
-        revisionId={revisionId}
-        availability={data.availability}
-        profileCapabilities={data.profileCapabilities}
-        busy={allBusy}
-        savePending={mutations.save.isPending}
-        testPending={mutations.test.isPending}
-        activatePending={mutations.activate.isPending}
-        disablePending={mutations.disable.isPending}
-        onSave={onSave}
-        onTest={(id) => mutations.test.mutate({ revisionId: id })}
-        onActivate={(id) => mutations.activate.mutate({ revisionId: id })}
-        onDisable={() => mutations.disable.mutate()}
+        onEdit={() => setEditingActiveRevisionId(revisionId)}
+        onDisable={() => setDisableRequested(true)}
+        disablePending={allBusy}
+        showActiveActions={activeReadOnly}
+      />
+      {!activeReadOnly && (
+        <AiProviderForm
+          key={revisionId ?? "new"}
+          initial={toAiProviderForm(revision)}
+          revision={revision}
+          revisionId={revisionId}
+          availability={data.availability}
+          profileCapabilities={data.profileCapabilities}
+          busy={allBusy}
+          savePending={mutations.save.isPending}
+          testPending={mutations.test.isPending}
+          activatePending={mutations.activate.isPending}
+          disablePending={mutations.disable.isPending}
+          onSave={onSave}
+          onTest={(id) => mutations.test.mutate({ revisionId: id })}
+          onActivate={(id) => mutations.activate.mutate({ revisionId: id })}
+          onDisable={() => mutations.disable.mutate()}
+          readOnly={false}
+          onCancelEdit={
+            editing ? () => setEditingActiveRevisionId(null) : undefined
+          }
+        />
+      )}
+
+      <ConfirmationDialog
+        open={disableRequested}
+        onClose={() => setDisableRequested(false)}
+        onConfirm={() => {
+          mutations.disable.mutate();
+          setDisableRequested(false);
+        }}
+        title="Disable AI for all users?"
+        description="Turn off AI provider access for all users."
+        confirmLabel="Disable"
+        variant="destructive"
       />
 
       <AiProviderCardFeedback

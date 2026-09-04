@@ -1,12 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { AgentationInboxRepository } from "./agentation-inbox.repository";
+import { AgentationInboxActions } from "./agentation-inbox-actions";
 import {
   agentationInboxId,
-  AgentationInboxRepository,
   type AgentationInboxRow,
   projectAgentation,
-} from "./agentation-inbox.repository";
+} from "./agentation-inbox-projection";
 import type { FeedbackAccess } from "./product-feedback.repository";
 
 const access: FeedbackAccess = {
@@ -143,9 +144,11 @@ describe("AgentationInboxRepository", () => {
         callback(tx),
       ),
     } as unknown as PrismaService;
-    const result = await new AgentationInboxRepository(
-      prisma,
-    ).updateInboxStatus(access, "agentation_a-1", "resolved");
+    const result = await new AgentationInboxActions(prisma).updateStatus(
+      access,
+      "agentation_a-1",
+      "resolved",
+    );
     expect(result.status).toBe("resolved");
     const findArgument = tx.agentationAnnotation.findFirst.mock
       .calls[0]?.[0] as unknown as {
@@ -191,9 +194,11 @@ describe("AgentationInboxRepository", () => {
       ),
     } as unknown as PrismaService;
 
-    const result = await new AgentationInboxRepository(
-      prisma,
-    ).updateInboxStatus(access, "agentation_a-1", "resolved");
+    const result = await new AgentationInboxActions(prisma).updateStatus(
+      access,
+      "agentation_a-1",
+      "resolved",
+    );
 
     expect(result.status).toBe("resolved");
     expect(tx.agentationAnnotation.update).not.toHaveBeenCalled();

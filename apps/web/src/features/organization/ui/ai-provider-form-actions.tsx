@@ -10,8 +10,12 @@ type RevisionRead = AiProviderConfigurationRead;
 
 type Confirmation = "activate" | "disable" | null;
 
-const actionCopy = (preparing: boolean, revisionId: string | null): string => {
-  if (preparing) {
+const actionCopy = (
+  lifecycle: RevisionRead["lifecycle"] | null,
+  revisionId: string | null,
+): string => {
+  if (lifecycle === "validated") return "Activate this tested configuration.";
+  if (lifecycle === "preparing") {
     return "Embedding preparation is ready to resume.";
   }
   if (revisionId) return "Test the draft before activation.";
@@ -43,6 +47,7 @@ function ProviderActionButtons({
   activatePending,
   disablePending,
   onTest,
+  onCancel,
   setConfirmation,
 }: Readonly<{
   revision: RevisionRead | null;
@@ -54,6 +59,7 @@ function ProviderActionButtons({
   activatePending: boolean;
   disablePending: boolean;
   onTest: (revisionId: string) => void;
+  onCancel: (() => void) | undefined;
   setConfirmation: (confirmation: Confirmation) => void;
 }>) {
   const preparing = revision?.lifecycle === "preparing";
@@ -74,7 +80,7 @@ function ProviderActionButtons({
         type="button"
         className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
         disabled={busy || !canTest}
-        title={revisionId ? undefined : "Save the draft first"}
+        aria-describedby="ai-provider-action-guidance"
         onClick={() => {
           if (revisionId) onTest(revisionId);
         }}
@@ -85,7 +91,7 @@ function ProviderActionButtons({
         type="button"
         className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
         disabled={busy || !canActivate}
-        title={canActivate ? undefined : "Test the draft successfully first"}
+        aria-describedby="ai-provider-action-guidance"
         onClick={() => setConfirmation("activate")}
       >
         {activatePending
@@ -104,6 +110,15 @@ function ProviderActionButtons({
           {disablePending ? "Disabling…" : "Disable"}
         </button>
       )}
+      {onCancel && (
+        <button
+          type="button"
+          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+          onClick={onCancel}
+        >
+          Cancel edit
+        </button>
+      )}
     </div>
   );
 }
@@ -120,6 +135,7 @@ export function AiProviderActions({
   onTest,
   onActivate,
   onDisable,
+  onCancel,
 }: Readonly<{
   revision: RevisionRead | null;
   revisionId: string | null;
@@ -132,14 +148,16 @@ export function AiProviderActions({
   onTest: (revisionId: string) => void;
   onActivate: (revisionId: string) => void;
   onDisable: () => void;
+  onCancel: (() => void) | undefined;
 }>) {
   const [confirmation, setConfirmation] = useState<Confirmation>(null);
-  const preparing = revision?.lifecycle === "preparing";
-
   return (
     <div className="flex flex-col gap-3 border-t border-[var(--color-border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-sm text-[var(--color-muted-foreground)]">
-        {actionCopy(preparing, revisionId)}
+      <p
+        id="ai-provider-action-guidance"
+        className="text-sm text-[var(--color-muted-foreground)]"
+      >
+        {actionCopy(revision?.lifecycle ?? null, revisionId)}
       </p>
       <ProviderActionButtons
         revision={revision}
@@ -151,6 +169,7 @@ export function AiProviderActions({
         activatePending={activatePending}
         disablePending={disablePending}
         onTest={onTest}
+        onCancel={onCancel}
         setConfirmation={setConfirmation}
       />
       <ConfirmationDialog

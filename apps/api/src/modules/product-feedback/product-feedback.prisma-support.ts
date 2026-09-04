@@ -52,6 +52,16 @@ export function mapFeedback(row: FeedbackRow): FeedbackRecord {
       row.diagnostics === null
         ? null
         : feedbackDiagnosticsSchema.parse(row.diagnostics),
+    source: "legacy",
+    capabilities: {
+      editOriginal: false,
+      triage: false,
+      reply: false,
+      dismiss: false,
+      delete: false,
+    },
+    thread: [],
+    agentationContext: null,
   };
 }
 

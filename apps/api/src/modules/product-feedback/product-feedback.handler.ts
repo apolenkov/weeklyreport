@@ -12,13 +12,12 @@ import {
 } from "../../lib/human-session.js";
 import type { AppLogger } from "../../lib/logger.js";
 import {
+  FeedbackInvalidStatusError,
   FeedbackNotFoundError,
   type ProductFeedbackRepository,
 } from "./product-feedback.repository.js";
-import {
-  executeFeedbackRequest,
-  type FeedbackRouteDeps,
-} from "./product-feedback.routes.js";
+import type { FeedbackRouteDeps } from "./product-feedback.routes.js";
+import { executeFeedbackRequest } from "./product-feedback-request.js";
 
 const HTTP_BAD_REQUEST = 400;
 const HTTP_UNAUTHORIZED = 401;
@@ -121,7 +120,11 @@ function allowedRequest(req: Request, frontendOrigin: string): boolean {
 }
 
 function invalidRequest(error: unknown): boolean {
-  return error instanceof z.ZodError || error instanceof SyntaxError;
+  return (
+    error instanceof z.ZodError ||
+    error instanceof SyntaxError ||
+    error instanceof FeedbackInvalidStatusError
+  );
 }
 
 export function createAuthenticatedFeedbackHandler(

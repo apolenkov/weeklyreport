@@ -14,6 +14,7 @@ import {
   actorId,
   annotationData,
   emit,
+  lockVisibleAnnotation,
   updateData,
 } from "./agentation.repository.helpers.js";
 import { AgentationReadRepository } from "./agentation.repository.reads.js";
@@ -25,6 +26,15 @@ import {
 } from "./product-feedback.repository.js";
 
 export type AgentationRole = "human" | "agent";
+
+const THREAD_WITH_SESSION_INCLUDE = {
+  session: true,
+  threadMessages: { orderBy: { timestamp: "asc" as const } },
+} as const;
+
+export type AgentationThreadWriteRow = Prisma.AgentationAnnotationGetPayload<{
+  include: typeof THREAD_WITH_SESSION_INCLUDE;
+}>;
 
 export interface AgentationEventRecord {
   readonly sequence: bigint;
@@ -182,10 +192,18 @@ export class AgentationPrismaRepository extends AgentationReadRepository {
     input: AgentationThread | string,
     role: AgentationRole = "human",
   ): Promise<ReturnType<typeof mapAnnotation> | null> {
+    const row = await this.addThreadMessageForInbox(access, id, input, role);
+    return row ? mapAnnotation(row) : null;
+  }
+
+  async addThreadMessageForInbox(
+    access: FeedbackAccess,
+    id: string,
+    input: AgentationThread | string,
+    role: AgentationRole = "human",
+  ): Promise<AgentationThreadWriteRow | null> {
     return this.prisma.$transaction(async (db) => {
-      const current = await db.agentationAnnotation.findFirst({
-        where: { id, ...annotationScope(access) },
-      });
+      const current = await lockVisibleAnnotation(db, access, id);
       if (!current) return null;
       const content = typeof input === "string" ? input : input.content;
       const message = await db.agentationThreadMessage.create({
@@ -207,6 +225,7 @@ export class AgentationPrismaRepository extends AgentationReadRepository {
           role,
           content: message.content,
           timestamp: Number(message.timestamp),
+          authorUserId: message.authorUserId,
         },
         ...(actorId(access, role)
           ? { authorUserId: actorId(access, role) }
@@ -214,9 +233,9 @@ export class AgentationPrismaRepository extends AgentationReadRepository {
       });
       const row = await db.agentationAnnotation.findUnique({
         where: { id },
-        include: { threadMessages: { orderBy: { timestamp: "asc" } } },
+        include: THREAD_WITH_SESSION_INCLUDE,
       });
-      return row ? mapAnnotation(row) : null;
+      return row;
     });
   }
 

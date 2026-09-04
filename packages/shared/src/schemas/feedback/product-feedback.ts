@@ -4,6 +4,13 @@ import { z } from "zod";
 export const MAX_FEEDBACK_PAGE_SCOPE_LENGTH = 2000;
 const MAX_SELECTOR_LENGTH = 2000;
 const MAX_TEXT_SNIPPET_LENGTH = 500;
+/** Maximum length of a persisted thread item. */
+export const MAX_FEEDBACK_THREAD_CONTENT_LENGTH = 5000;
+/** Prefix stored with dismissal evidence in the Agentation thread. */
+export const FEEDBACK_DISMISSAL_PREFIX = "Dismissed: ";
+/** Maximum reason length that keeps persisted dismissal evidence bounded. */
+export const MAX_FEEDBACK_DISMISS_REASON_LENGTH =
+  MAX_FEEDBACK_THREAD_CONTENT_LENGTH - FEEDBACK_DISMISSAL_PREFIX.length;
 const MAX_ELEMENT_TAG_LENGTH = 100;
 const MAX_METADATA_LENGTH = 200;
 const MAX_DEVICE_PIXEL_RATIO = 10;
@@ -45,6 +52,49 @@ export const FEEDBACK_STATUSES = [
 export const feedbackStatusSchema = z.enum(FEEDBACK_STATUSES);
 /** Product feedback workflow state. */
 export type FeedbackStatus = z.infer<typeof feedbackStatusSchema>;
+
+/** Identifies which feedback capture flow produced a record. */
+export const feedbackSourceSchema = z.enum(["legacy", "agentation"]);
+/** Feedback capture source. */
+export type FeedbackSource = z.infer<typeof feedbackSourceSchema>;
+
+const feedbackThreadItemSchema = z
+  .object({
+    id: z.string().min(1),
+    role: z.enum(["human", "agent"]),
+    content: z.string().trim().min(1).max(MAX_FEEDBACK_THREAD_CONTENT_LENGTH),
+    timestamp: z.iso.datetime(),
+    authorUserId: z.string().min(1).nullable(),
+  })
+  .strict();
+/** Durable conversation item attached to an Agentation annotation. */
+export type FeedbackThreadItem = z.infer<typeof feedbackThreadItemSchema>;
+
+const feedbackCapabilitiesSchema = z
+  .object({
+    editOriginal: z.boolean(),
+    triage: z.boolean(),
+    reply: z.boolean(),
+    dismiss: z.boolean(),
+    delete: z.boolean(),
+  })
+  .strict();
+/** Server-derived actions available to the current session. */
+export type FeedbackCapabilities = z.infer<typeof feedbackCapabilitiesSchema>;
+
+const agentationContextSchema = z
+  .object({
+    element: z.string().nullable(),
+    elementPath: z.string().nullable(),
+    selectedText: z.string().nullable(),
+    nearbyText: z.string().nullable(),
+    sourceFile: z.string().nullable(),
+    reactComponents: z.string().nullable(),
+    accessibility: z.string().nullable(),
+  })
+  .strict();
+/** Compact DOM and source context captured by Agentation. */
+export type AgentationContext = z.infer<typeof agentationContextSchema>;
 
 /** Validates persisted page identity without browser location metadata. */
 export const feedbackPageScopeSchema = z
@@ -177,6 +227,10 @@ export const feedbackResponseSchema = z
     diagnostics: feedbackDiagnosticsSchema.nullable(),
     agentationSessionId: z.string().min(1).optional(),
     agentationAnnotationId: z.string().min(1).optional(),
+    source: feedbackSourceSchema,
+    capabilities: feedbackCapabilitiesSchema,
+    thread: z.array(feedbackThreadItemSchema),
+    agentationContext: agentationContextSchema.nullable(),
   })
   .loose();
 /** Serialized feedback record returned to browser clients. */

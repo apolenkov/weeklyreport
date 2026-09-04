@@ -149,6 +149,84 @@ const mutations = () => {
 };
 
 describe("AiProviderCardContent", () => {
+  it("explains the next step for an unconfigured provider without cancel", () => {
+    render(
+      <AiProviderCardContent
+        data={control(null)}
+        savedRevision={null}
+        message={null}
+        mutations={mutations() as never}
+        onSave={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Not configured")).toBeVisible();
+    expect(screen.getByText(/Configure a provider to begin/)).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Cancel edit" })).toBeNull();
+  });
+
+  it("shows the draft test gate and validated activation step", () => {
+    const draft = revision("draft");
+    render(
+      <AiProviderCardContent
+        data={{ ...control(null), revisions: [draft] }}
+        savedRevision={draft}
+        message={null}
+        mutations={mutations() as never}
+        onSave={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Required before activation")).toBeVisible();
+    expect(screen.getByText("Locked until testing passes")).toBeVisible();
+  });
+
+  it("keeps an active revision read-only until explicit edit and cancels locally", async () => {
+    const active = revision("active");
+    const onSave = vi.fn();
+    const { rerender } = render(
+      <AiProviderCardContent
+        data={control(active)}
+        savedRevision={null}
+        message={null}
+        mutations={mutations() as never}
+        onSave={onSave}
+      />,
+    );
+
+    expect(screen.getByTestId("ai-provider-active-summary")).toBeVisible();
+    expect(screen.queryByLabelText("Generation provider profile")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Edit configuration" }));
+    expect(screen.getByLabelText("Generation provider profile")).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel edit" }));
+    expect(screen.getByTestId("ai-provider-active-summary")).toBeVisible();
+    expect(onSave).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Edit configuration" }));
+    expect(screen.getByLabelText("Generation provider profile")).toBeEnabled();
+
+    const id = active.id;
+    const validated = { ...active, lifecycle: "validated" as const, id };
+    rerender(
+      <AiProviderCardContent
+        data={{ ...control(null), revisions: [validated] }}
+        savedRevision={validated}
+        message={null}
+        mutations={mutations() as never}
+        onSave={onSave}
+      />,
+    );
+    await Promise.resolve();
+    rerender(
+      <AiProviderCardContent
+        data={control(active)}
+        savedRevision={null}
+        message={null}
+        mutations={mutations() as never}
+        onSave={onSave}
+      />,
+    );
+    expect(screen.getByTestId("ai-provider-active-summary")).toBeVisible();
+    expect(screen.queryByLabelText("Generation provider profile")).toBeNull();
+  });
+
   it("renders provider configuration directly without a redundant disclosure", () => {
     render(
       <AiProviderCardContent
@@ -406,10 +484,12 @@ describe("AiProviderCardContent", () => {
 
     const diagnostics = screen.getByTestId("ai-provider-diagnostics");
     expect(diagnostics).not.toHaveAttribute("open");
-    expect(screen.getByLabelText("Generation credential")).toHaveAttribute(
-      "placeholder",
-      "Saved credential",
+    expect(screen.getByTestId("ai-provider-active-summary")).toHaveTextContent(
+      "Credentials are saved securely and remain masked.",
     );
+    expect(
+      screen.queryByLabelText("Generation credential"),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText("••••test")).not.toBeInTheDocument();
     fireEvent.click(
       within(diagnostics).getByText("Diagnostics", { exact: true }),

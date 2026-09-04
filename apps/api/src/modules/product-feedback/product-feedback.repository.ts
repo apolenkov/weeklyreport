@@ -1,8 +1,12 @@
 import type {
+  AgentationContext,
   FeedbackAnnotation,
+  FeedbackCapabilities,
   FeedbackDiagnostics,
   FeedbackScreenshotRegion,
+  FeedbackSource,
   FeedbackStatus,
+  FeedbackThreadItem,
   FeedbackType,
   UserSession,
 } from "@customreport/shared";
@@ -63,6 +67,10 @@ export interface FeedbackRecord extends Omit<
   readonly annotations: readonly FeedbackRecordAnnotation[];
   readonly agentationSessionId?: string;
   readonly agentationAnnotationId?: string;
+  readonly source: FeedbackSource;
+  readonly capabilities: FeedbackCapabilities;
+  readonly thread: readonly FeedbackThreadItem[];
+  readonly agentationContext: AgentationContext | null;
 }
 
 export interface FeedbackPage {
@@ -83,6 +91,10 @@ export class FeedbackDuplicateError extends Error {
 
 export class FeedbackNotFoundError extends Error {
   readonly code = "STORE_NOT_FOUND";
+}
+
+export class FeedbackInvalidStatusError extends Error {
+  readonly code = "STORE_INVALID_STATUS";
 }
 
 export interface FeedbackAccess {
@@ -125,6 +137,6 @@ export interface ProductFeedbackRepository {
     input: FeedbackUpdateInput,
   ): Promise<FeedbackRecord>;
   delete(access: FeedbackAccess, id: string): Promise<void>;
-  deleteAll(access: FeedbackAccess): Promise<void>;
   owns(access: FeedbackAccess, id: string): Promise<boolean>;
+  ownsAuthor(access: FeedbackAccess, id: string): Promise<boolean>;
 }

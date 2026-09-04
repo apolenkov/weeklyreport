@@ -148,6 +148,7 @@ describe("AgentationPrismaRepository", () => {
     const withThread = annotationRow({ threadMessages: [threadMessage] });
     const eventCreate = vi.fn().mockResolvedValue({});
     const tx = {
+      $queryRaw: vi.fn().mockResolvedValue([{ id: "annotation-1" }]),
       agentationAnnotation: {
         findFirst: vi.fn().mockResolvedValue(current),
         findUnique: vi.fn().mockResolvedValue(withThread),
@@ -188,6 +189,9 @@ describe("AgentationPrismaRepository", () => {
     expect(eventCreate.mock.calls[1]?.[0]).toMatchObject({
       data: { type: "action.requested", sessionId: "session-1" },
     });
+    expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      tx.agentationThreadMessage.create.mock.invocationCallOrder[0] ?? 0,
+    );
   });
 
   it("applies immutable user and reporting-group scope to reads", async () => {

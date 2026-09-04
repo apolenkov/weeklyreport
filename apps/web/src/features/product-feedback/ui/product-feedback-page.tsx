@@ -23,7 +23,6 @@ export function ProductFeedbackPage() {
   const inbox = useProductFeedbackInbox(() =>
     toast.error("Feedback could not be loaded."),
   );
-  const canTriage = user?.role === "head" || user?.role === "admin";
   const scopeLabel = useMemo(() => {
     if (user?.role === "admin") return "All Weekly Report feedback";
     if (user?.role === "head") return "Your reporting group and your feedback";
@@ -36,6 +35,20 @@ export function ProductFeedbackPage() {
       toast.success("Feedback status updated.");
     } catch {
       toast.error("Feedback status could not be updated.");
+    }
+  };
+
+  const runAction = async (
+    action: () => Promise<void>,
+    success: string,
+    failure: string,
+  ) => {
+    try {
+      await action();
+      toast.success(success);
+    } catch (error) {
+      toast.error(failure);
+      throw error;
     }
   };
 
@@ -140,13 +153,37 @@ export function ProductFeedbackPage() {
         <div className="grid gap-3" aria-live="polite">
           {inbox.items.map((feedback) => (
             <FeedbackRecordCard
-              canDelete={false}
-              canTriage={canTriage}
               item={feedback}
               key={feedback.id}
               onChangeStatus={(id, status) => void changeStatus(id, status)}
-              onDelete={() => undefined}
-              role={user?.role}
+              onEdit={(id, comment) =>
+                runAction(
+                  () => inbox.editOriginal(id, comment),
+                  "Feedback updated.",
+                  "Feedback could not be updated.",
+                )
+              }
+              onReply={(id, content) =>
+                runAction(
+                  () => inbox.reply(id, content),
+                  "Reply added.",
+                  "Reply could not be added.",
+                )
+              }
+              onDismiss={(id, reason) =>
+                runAction(
+                  () => inbox.dismiss(id, reason),
+                  "Feedback dismissed.",
+                  "Feedback could not be dismissed.",
+                )
+              }
+              onDelete={(id) =>
+                runAction(
+                  () => inbox.deleteFeedback(id),
+                  "Feedback deleted.",
+                  "Feedback could not be deleted.",
+                )
+              }
             />
           ))}
         </div>

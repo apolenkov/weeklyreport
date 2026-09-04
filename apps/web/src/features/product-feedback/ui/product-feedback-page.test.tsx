@@ -35,6 +35,16 @@ const pageFeedback = {
   screenshotUrl: null,
   screenshotRegion: null,
   diagnostics: null,
+  source: "legacy",
+  capabilities: {
+    editOriginal: true,
+    triage: false,
+    reply: false,
+    dismiss: false,
+    delete: false,
+  },
+  thread: [],
+  agentationContext: null,
 } as const;
 
 const inboxState = {
@@ -66,6 +76,10 @@ const inboxState = {
   openFeedback: vi.fn(),
   closeFeedback: vi.fn(),
   changeStatus,
+  editOriginal: vi.fn(() => Promise.resolve()),
+  reply: vi.fn(() => Promise.resolve()),
+  dismiss: vi.fn(() => Promise.resolve()),
+  deleteFeedback: vi.fn(() => Promise.resolve()),
   pendingUndo: null,
   undo: vi.fn(() => Promise.resolve()),
 };
@@ -93,6 +107,21 @@ function setRole(role: SessionUser["role"]): void {
     isLoading: false,
     isAuthenticated: true,
   });
+  useProductFeedbackInbox.mockReturnValue({
+    ...inboxState,
+    items: [
+      {
+        ...pageFeedback,
+        capabilities: {
+          editOriginal: role === "lead",
+          triage: role === "head" || role === "admin",
+          reply: role !== "viewer",
+          dismiss: role === "head" || role === "admin",
+          delete: role === "admin",
+        },
+      },
+    ],
+  });
 }
 
 beforeEach(() => {
@@ -102,7 +131,7 @@ beforeEach(() => {
 
 describe("ProductFeedbackPage role controls", () => {
   it.each(["lead", "viewer"] as const)(
-    "shows own feedback read-only for %s",
+    "keeps status triage server-scoped for %s",
     (role) => {
       setRole(role);
       render(<ProductFeedbackPage />);
@@ -113,14 +142,10 @@ describe("ProductFeedbackPage role controls", () => {
         screen.queryByLabelText(/Status for feedback/),
       ).not.toBeInTheDocument();
       expect(
-        screen.queryByRole("button", { name: "Delete feedback" }),
+        screen.queryByRole("button", { name: "Delete" }),
       ).not.toBeInTheDocument();
-      expect(
-        screen.getByRole("link", {
-          name: "Open page feedback on /lead/report/report-1",
-        }),
-      ).toHaveAttribute("href", "/lead/report/report-1");
-      expect(screen.getByText("Page feedback")).toBeInTheDocument();
+      expect(screen.queryByRole("link")).toBeNull();
+      expect(screen.getByText("Legacy feedback")).toBeInTheDocument();
       expect(screen.getByRole("searchbox", { name: "Search" })).toHaveAttribute(
         "name",
         "feedbackSearch",
@@ -141,28 +166,20 @@ describe("ProductFeedbackPage role controls", () => {
     render(<ProductFeedbackPage />);
     expect(screen.getByText(/Your reporting group/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Status for feedback/)).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Delete feedback" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
   });
 
-  it("lets admin triage and delete global feedback", () => {
+  it("lets admin triage global feedback with capability-scoped delete", () => {
     setRole("admin");
     render(<ProductFeedbackPage />);
     expect(screen.getByText(/All Weekly Report feedback/)).toBeInTheDocument();
     expect(screen.getByText(/proposed layout changes/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Status for feedback/)).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Delete feedback" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("link", {
-        name: "Open page feedback on /lead/report/report-1",
-      }),
-    ).toHaveAttribute("href", "/lead/report/report-1");
+    expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
+    expect(screen.queryByRole("link")).toBeNull();
   });
 
-  it("opens captured annotation evidence and keeps a secondary live link", () => {
+  it("opens captured annotation evidence without navigation", () => {
     setRole("admin");
     useProductFeedbackInbox.mockReturnValue({
       ...inboxState,
@@ -193,10 +210,10 @@ describe("ProductFeedbackPage role controls", () => {
 
     render(<ProductFeedbackPage />);
 
-    expect(screen.getByText("Annotation")).toBeInTheDocument();
+    expect(screen.getByText("Legacy feedback")).toBeInTheDocument();
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Review captured annotation on /lead/report/report-1",
+        name: "Details",
       }),
     );
 
@@ -222,15 +239,10 @@ describe("ProductFeedbackPage role controls", () => {
         );
       }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Open live page" }),
-    ).toHaveAttribute(
-      "href",
-      "/head/report/report-1?authorId=lead-user&feedbackUrl=%2Flead%2Freport%2Freport-1&feedback=feedback-1",
-    );
+    expect(screen.queryByRole("link")).toBeNull();
   });
 
-  it("keeps a live deep link when an old annotation has no capture", () => {
+  it("does not expose navigation for an old annotation without capture", () => {
     setRole("admin");
     useProductFeedbackInbox.mockReturnValue({
       ...inboxState,
@@ -244,17 +256,10 @@ describe("ProductFeedbackPage role controls", () => {
 
     render(<ProductFeedbackPage />);
 
-    expect(
-      screen.getByRole("link", {
-        name: "Open annotation on /lead/report/report-1",
-      }),
-    ).toHaveAttribute(
-      "href",
-      "/head/report/report-1?authorId=lead-user&feedbackUrl=%2Flead%2Freport%2Freport-1&feedback=feedback-1",
-    );
+    expect(screen.queryByRole("link")).toBeNull();
   });
 
-  it("joins the Agentation session from a PostgreSQL-backed inbox item", () => {
+  it("keeps Agentation feedback entirely in the inbox", () => {
     setRole("admin");
     useProductFeedbackInbox.mockReturnValue({
       ...inboxState,
@@ -262,6 +267,7 @@ describe("ProductFeedbackPage role controls", () => {
         {
           ...pageFeedback,
           id: "agentation-1",
+          source: "agentation" as const,
           annotations: [{ id: "annotation-1" }],
           agentationSessionId: "session-1",
           agentationAnnotationId: "annotation-1",
@@ -271,13 +277,10 @@ describe("ProductFeedbackPage role controls", () => {
 
     render(<ProductFeedbackPage />);
 
-    expect(
-      screen.getByRole("link", {
-        name: "Open annotation on /lead/report/report-1",
-      }),
-    ).toHaveAttribute(
-      "href",
-      "/head/report/report-1?authorId=lead-user&feedbackUrl=%2Flead%2Freport%2Freport-1&agentationSession=session-1&agentationAnnotation=annotation-1",
-    );
+    expect(screen.getByText("Agentation")).toBeInTheDocument();
+    expect(screen.queryByRole("link")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Details" }));
+    expect(screen.getByText("session-1")).toBeInTheDocument();
+    expect(screen.getByText("annotation-1")).toBeInTheDocument();
   });
 });

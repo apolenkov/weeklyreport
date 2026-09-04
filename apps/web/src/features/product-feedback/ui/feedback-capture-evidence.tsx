@@ -1,30 +1,35 @@
 "use client";
 
-import { ExternalLink } from "lucide-react";
 import Image from "next/image";
 
 export interface FeedbackCaptureItem {
   readonly viewport: string;
-  readonly screenshotUrl?: string | null;
-  readonly screenshotRegion?: {
-    readonly xPct: number;
-    readonly yPct: number;
-    readonly wPct: number;
-    readonly hPct: number;
-  } | null;
-  readonly diagnostics?: {
-    readonly console: readonly {
-      readonly level: string;
-      readonly message: string;
-      readonly timestamp: string;
-    }[];
-    readonly network: readonly {
-      readonly method: string;
-      readonly status: number;
-      readonly url: string;
-      readonly timestamp: string;
-    }[];
-  } | null;
+  readonly screenshotUrl?: string | null | undefined;
+  readonly screenshotRegion?:
+    | {
+        readonly xPct: number;
+        readonly yPct: number;
+        readonly wPct: number;
+        readonly hPct: number;
+      }
+    | null
+    | undefined;
+  readonly diagnostics?:
+    | {
+        readonly console: readonly {
+          readonly level: string;
+          readonly message: string;
+          readonly timestamp: string;
+        }[];
+        readonly network: readonly {
+          readonly method: string;
+          readonly status: number;
+          readonly url: string;
+          readonly timestamp: string;
+        }[];
+      }
+    | null
+    | undefined;
 }
 
 const PERCENT = 100;
@@ -47,10 +52,8 @@ function captureDimensions(viewport: string): {
 
 export function FeedbackCaptureEvidence({
   item,
-  liveHref,
 }: {
   readonly item: FeedbackCaptureItem;
-  readonly liveHref: string;
 }) {
   const region = item.screenshotRegion;
   const consoleEntries = item.diagnostics?.console ?? [];
@@ -136,13 +139,6 @@ export function FeedbackCaptureEvidence({
             </ul>
           </details>
         ) : null}
-        <a
-          className="inline-flex items-center gap-1 font-medium text-[var(--color-starbucks-accent)] underline-offset-4 hover:underline"
-          href={liveHref}
-        >
-          Open live page
-          <ExternalLink aria-hidden="true" className="size-3.5" />
-        </a>
       </div>
     </section>
   );

@@ -287,7 +287,7 @@ describe("authenticated product-feedback ingress", () => {
     }
   });
 
-  it("supports comment edits and non-destructive close", async () => {
+  it("supports author edits and denies hard delete to non-admins", async () => {
     const repository = new ProductFeedbackMemoryRepository();
     const server = await createServer({ repository });
     try {
@@ -304,14 +304,132 @@ describe("authenticated product-feedback ingress", () => {
       expect(
         (await call(server, `/feedback/${created.id}`, { method: "DELETE" }))
           .status,
-      ).toBe(204);
+      ).toBe(404);
       const listed = await call(server, "/feedback?format=internal");
       const page = (await listed.json()) as {
         feedback: readonly { id: string; status: string }[];
       };
       expect(page.feedback).toContainEqual(
-        expect.objectContaining({ id: created.id, status: "wont_fix" }),
+        expect.objectContaining({ id: created.id, status: "open" }),
       );
+    } finally {
+      server.close();
+    }
+  });
+
+  it("keeps status changes and item deletion behind the triage role boundary", async () => {
+    const repository = new ProductFeedbackMemoryRepository();
+    const server = await createServer({ repository });
+    try {
+      const created = await seedLegacyFeedback(repository, "lead");
+      expect(
+        (
+          await call(server, "/feedback", {
+            method: "DELETE",
+            role: "admin",
+          })
+        ).status,
+      ).toBe(404);
+      expect(
+        (
+          await call(server, `/feedback/${created.id}/status`, {
+            method: "PATCH",
+            ...jsonBody({ status: "resolved" }),
+          })
+        ).status,
+      ).toBe(404);
+      expect(
+        (
+          await call(server, `/feedback/${created.id}`, {
+            method: "DELETE",
+            role: "admin",
+          })
+        ).status,
+      ).toBe(204);
+      const inbox = await call(server, "/feedback?format=internal");
+      const body = (await inbox.json()) as {
+        feedback: readonly {
+          capabilities: {
+            editOriginal: boolean;
+            triage: boolean;
+            reply: boolean;
+            dismiss: boolean;
+            delete: boolean;
+          };
+        }[];
+      };
+      expect(body.feedback).toHaveLength(0);
+    } finally {
+      server.close();
+    }
+  });
+
+  it("allows only triage roles to change status and keeps author edits private", async () => {
+    const repository = new ProductFeedbackMemoryRepository();
+    const server = await createServer({ repository });
+    try {
+      const created = await seedLegacyFeedback(repository, "lead");
+      expect(
+        (
+          await call(server, `/feedback/${created.id}/status`, {
+            method: "PATCH",
+            role: "admin",
+            ...jsonBody({ status: "in_progress" }),
+          })
+        ).status,
+      ).toBe(200);
+      expect(
+        (
+          await call(server, `/feedback/${created.id}`, {
+            method: "PUT",
+            role: "admin",
+            ...jsonBody({ comment: "Not the author" }),
+          })
+        ).status,
+      ).toBe(404);
+    } finally {
+      server.close();
+    }
+  });
+
+  it("requires a reason for Agentation dismissal and does not expose its mutation routes to leads", async () => {
+    const server = await createServer({ agentationEnabled: true });
+    try {
+      const wontFix = await call(server, "/feedback/agentation_a-1/status", {
+        method: "PATCH",
+        role: "admin",
+        ...jsonBody({ status: "wont_fix" }),
+      });
+      expect(wontFix.status).toBe(400);
+      const emptyReason = await call(
+        server,
+        "/feedback/agentation_a-1/dismiss",
+        { method: "POST", role: "admin", ...jsonBody({ reason: "  " }) },
+      );
+      expect(emptyReason.status).toBe(400);
+      expect(
+        (
+          await call(server, "/feedback/agentation_a-1/replies", {
+            method: "POST",
+            ...jsonBody({ content: "  " }),
+          })
+        ).status,
+      ).toBe(400);
+      expect(
+        (
+          await call(server, "/feedback/agentation_a-1/dismiss", {
+            method: "POST",
+            ...jsonBody({ reason: "No access" }),
+          })
+        ).status,
+      ).toBe(404);
+      expect(
+        (
+          await call(server, "/feedback/agentation_a-1", {
+            method: "DELETE",
+          })
+        ).status,
+      ).toBe(404);
     } finally {
       server.close();
     }
