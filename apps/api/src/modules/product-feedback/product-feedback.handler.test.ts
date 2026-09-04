@@ -15,6 +15,7 @@ import {
   isLoopbackAddress,
 } from "./product-feedback.handler";
 import { ProductFeedbackMemoryRepository } from "./product-feedback.memory-repository";
+import { feedbackAccessFromSession } from "./product-feedback.repository";
 
 vi.mock("../../lib/human-session", () => ({
   resolveHumanSession: vi.fn(),
@@ -52,6 +53,7 @@ async function createServer(
   options: {
     readonly agentationEnabled?: boolean;
     readonly agentationApiKey?: string;
+    readonly repository?: ProductFeedbackMemoryRepository;
   } = {},
 ): Promise<Server> {
   sessions.mockImplementation((token) => {
@@ -59,17 +61,21 @@ async function createServer(
     if (token === "admin-token") return Promise.resolve(session("admin"));
     return Promise.resolve(null);
   });
+  const {
+    repository = new ProductFeedbackMemoryRepository(),
+    ...handlerOptions
+  } = options;
   const app = express();
   app.disable("x-powered-by");
   app.use(cookieParser());
   const handler = createAuthenticatedFeedbackHandler({
     prisma: {} as PrismaService,
-    repository: new ProductFeedbackMemoryRepository(),
+    repository,
     verifySessionToken: () => session("lead"),
     sessionRevocation: { isRevoked: () => Promise.resolve(false) },
     frontendOrigin: ORIGIN,
     logger: createNullLogger(),
-    ...options,
+    ...handlerOptions,
   });
   app.use(
     "/api/v1",
@@ -104,6 +110,18 @@ function jsonBody(value: unknown): Pick<RequestInit, "body" | "headers"> {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(value),
   };
+}
+
+async function seedLegacyFeedback(
+  repository: ProductFeedbackMemoryRepository,
+  role: UserSession["role"],
+  payload = createPayload(),
+): Promise<{ id: string }> {
+  const created = await repository.create(
+    feedbackAccessFromSession(session(role)),
+    { ...payload, annotations: [] },
+  );
+  return { id: created.id };
 }
 
 afterEach(() => {
@@ -153,69 +171,33 @@ describe("authenticated product-feedback ingress", () => {
     }
   });
 
-  it("derives identity from the session and stores only the pathname", async () => {
-    const server = await createServer();
+  it("returns 404 for the removed legacy POST route without creating feedback", async () => {
+    const repository = new ProductFeedbackMemoryRepository();
+    const server = await createServer({ repository });
     try {
       const response = await call(server, "/feedback", {
         method: "POST",
         ...jsonBody(createPayload()),
       });
-      expect(response.status).toBe(201);
-      const created = (await response.json()) as Record<string, unknown>;
-      expect(created).toMatchObject({
-        projectName: "weekly-report",
-        type: "change",
-        message: "The row is difficult to read",
-        status: "open",
-        url: "/reports/one",
-        authorUserId: "lead-user",
-        authorName: "lead user",
-        authorEmail: "lead@example.test",
-        annotations: [],
-      });
-      expect(JSON.stringify(created)).not.toContain("secret");
-    } finally {
-      server.close();
-    }
-  });
-
-  it("rejects client-supplied identity or product authority", async () => {
-    const server = await createServer();
-    try {
-      const response = await call(server, "/feedback", {
-        method: "POST",
-        ...jsonBody({
-          ...createPayload(),
-          authorUserId: "spoofed-user",
-          projectName: "spoofed-product",
-        }),
-      });
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(404);
+      await expect(
+        repository.list(feedbackAccessFromSession(session("lead")), {}),
+      ).resolves.toMatchObject({ total: 0, feedbacks: [] });
     } finally {
       server.close();
     }
   });
 
   it("partitions the inbox by user while admins see all feedback", async () => {
-    const server = await createServer();
+    const repository = new ProductFeedbackMemoryRepository();
+    const server = await createServer({ repository });
     try {
-      expect(
-        (
-          await call(server, "/feedback", {
-            method: "POST",
-            ...jsonBody(createPayload()),
-          })
-        ).status,
-      ).toBe(201);
-      expect(
-        (
-          await call(server, "/feedback", {
-            method: "POST",
-            role: "admin",
-            ...jsonBody(createPayload("Admin feedback", "page_admin")),
-          })
-        ).status,
-      ).toBe(201);
+      await seedLegacyFeedback(repository, "lead");
+      await seedLegacyFeedback(
+        repository,
+        "admin",
+        createPayload("Admin feedback", "page_admin"),
+      );
 
       const lead = await call(server, "/feedback?format=internal");
       await expect(lead.json()).resolves.toMatchObject({ total: 1 });
@@ -223,28 +205,6 @@ describe("authenticated product-feedback ingress", () => {
         role: "admin",
       });
       await expect(admin.json()).resolves.toMatchObject({ total: 2 });
-    } finally {
-      server.close();
-    }
-  });
-
-  it("returns one row for two requests with the same client ID", async () => {
-    const server = await createServer();
-    try {
-      const request = {
-        method: "POST",
-        ...jsonBody(createPayload()),
-      } as const;
-      const [first, second] = await Promise.all([
-        call(server, "/feedback", request),
-        call(server, "/feedback", request),
-      ]);
-      expect([first.status, second.status]).toEqual([201, 201]);
-      const [firstBody, secondBody] = (await Promise.all([
-        first.json(),
-        second.json(),
-      ])) as [{ id: string }, { id: string }];
-      expect(secondBody.id).toBe(firstBody.id);
     } finally {
       server.close();
     }
@@ -328,13 +288,10 @@ describe("authenticated product-feedback ingress", () => {
   });
 
   it("supports comment edits and non-destructive close", async () => {
-    const server = await createServer();
+    const repository = new ProductFeedbackMemoryRepository();
+    const server = await createServer({ repository });
     try {
-      const createdResponse = await call(server, "/feedback", {
-        method: "POST",
-        ...jsonBody(createPayload()),
-      });
-      const created = (await createdResponse.json()) as { id: string };
+      const created = await seedLegacyFeedback(repository, "lead");
       const updated = await call(server, `/feedback/${created.id}`, {
         method: "PUT",
         ...jsonBody({ comment: "Clearer description" }),

@@ -33,7 +33,9 @@ predicates to sessions, annotations, pending queries, statuses, threads,
 actions, and SSE. No user, product, or group may observe or mutate another
 scope through either the UI or MCP tools. The role-aware `/feedback` inbox and
 the authenticated creation surface remain available only under validated
-configuration and existing role policy.
+configuration and existing role policy. Whenever feedback is enabled, the
+validated inbox role allowlist MUST include `admin`; additional roles remain
+explicitly configurable.
 
 #### Scenario: User scopes and product authority are isolated
 
@@ -96,6 +98,13 @@ configuration and existing role policy.
 - **THEN** the inbox and navigation entry are hidden while the enabled capture
   surface remains fail-closed according to rollout configuration
 
+#### Scenario: Enabled feedback omits the admin inbox
+
+- **WHEN** feedback is enabled but the configured inbox role allowlist omits
+  `admin`
+- **THEN** configuration validation fails before the application serves that
+  inconsistent role policy
+
 #### Scenario: The MCP agent watches a session
 
 - **WHEN** an authenticated agent opens the session or global SSE endpoint
@@ -110,11 +119,32 @@ the adapter paths required by their published contracts. MCP MUST run with
 HTTP server, wildcard CORS, public API-key trust model, and stock SQLite store
 MUST NOT be used as the WeeklyReport product backend.
 
+The unpatched stock Agentation component MUST be the only browser surface that
+creates new feedback. Feedback about an element, selected text, an empty area,
+or the page as a whole MUST use the same Agentation session and same-origin
+adapter. WeeklyReport MUST NOT render a separate page-comment form or accept
+new legacy `POST /feedback` records. The `/feedback` collection MUST remain
+readable as the merged inbox for preserved legacy and Agentation records.
+
 #### Scenario: The widget submits feedback
 
 - **WHEN** the authenticated Agentation widget sends a same-origin payload
 - **THEN** the feedback module authenticates and translates it to PostgreSQL
 - **AND** callers do not coordinate adapter, session, or persistence details
+
+#### Scenario: A user comments on the page as a whole
+
+- **WHEN** an authenticated user activates Agentation and selects the page or
+  an empty page area
+- **THEN** Agentation creates a normal annotation in the current session
+- **AND** no parallel page-feedback record or second feedback dialog is used
+
+#### Scenario: A client attempts legacy feedback creation
+
+- **WHEN** an authenticated client sends `POST /feedback`
+- **THEN** the feedback module rejects the unsupported route without creating a
+  legacy row
+- **AND** existing legacy rows remain visible through `GET /feedback`
 
 #### Scenario: The widget submits through the adapter
 

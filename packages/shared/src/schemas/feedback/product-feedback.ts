@@ -19,8 +19,6 @@ const MAX_CONSOLE_MESSAGE_LENGTH = 600;
 const MAX_NETWORK_METHOD_LENGTH = 20;
 const MAX_NETWORK_STATUS = 599;
 const MAX_NETWORK_DURATION_MS = 600_000;
-const MAX_VIEWPORT_LENGTH = 100;
-const MAX_USER_AGENT_LENGTH = 500;
 
 /** Product identifiers accepted by the shared feedback persistence model. */
 export const FEEDBACK_PRODUCTS = ["weekly-report", "external-product"] as const;
@@ -142,24 +140,6 @@ export const feedbackDiagnosticsSchema = z
   .strict();
 /** Bounded console and failed-network snapshot. */
 export type FeedbackDiagnostics = z.infer<typeof feedbackDiagnosticsSchema>;
-
-/** Validates page-level feedback submitted without an Agentation DOM anchor. */
-export const pageFeedbackCreateSchema = z
-  .object({
-    type: feedbackTypeSchema,
-    message: z.string().trim().min(1).max(MAX_FEEDBACK_MESSAGE_LENGTH),
-    url: z.string().trim().min(1).max(MAX_FEEDBACK_PAGE_SCOPE_LENGTH),
-    viewport: z.string().trim().min(1).max(MAX_VIEWPORT_LENGTH),
-    userAgent: z.string().trim().min(1).max(MAX_USER_AGENT_LENGTH),
-    clientId: z
-      .string()
-      .min(1)
-      .max(MAX_METADATA_LENGTH)
-      .regex(/^[a-zA-Z0-9_-]+$/),
-  })
-  .strict();
-/** Page-level feedback payload accepted by the authenticated ingress. */
-export type PageFeedbackCreate = z.infer<typeof pageFeedbackCreateSchema>;
 
 /** Validates a serialized annotation returned by the feedback endpoint. */
 export const feedbackAnnotationResponseSchema = feedbackAnnotationSchema.extend(

@@ -67,6 +67,20 @@ Legacy SitePing rows remain queryable under their existing ownership rules;
 no backfill or destructive table rewrite is needed. A separate archival or
 retention policy is out of scope.
 
+### One stock capture surface handles element and page feedback
+
+The published Agentation component remains unpatched and is the only UI that
+creates new feedback. Element clicks, text selection, and empty-area selection
+all create annotations in the same Agentation session through the same-origin
+adapter. WeeklyReport does not render a second `Comment on page` dialog and
+does not accept new legacy `POST /feedback` records.
+
+The `/feedback` collection remains a read-only merged inbox boundary so
+existing SitePing/page-feedback rows stay visible alongside Agentation rows.
+Item status and close routes remain available for managing preserved legacy
+records. This removes the parallel creation path without deleting historical
+data or copying Agentation UI behavior into first-party code.
+
 ### Rollout and compatibility
 
 The widget is mounted only on an authenticated development/non-production
@@ -83,6 +97,7 @@ must precede redistribution or public exposure.
 - Identity and role/group predicates remain server-authoritative on every
   method, including pending, thread, action, and SSE paths.
 - Legacy rows and captured evidence are preserved.
+- All new browser-created feedback uses Agentation sessions and annotations.
 - No stock Agentation SQLite file is used by the product or production path.
 - Period dual-state and the tRPC role-coverage gate are unaffected.
 

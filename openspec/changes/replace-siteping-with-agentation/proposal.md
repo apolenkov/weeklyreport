@@ -18,6 +18,10 @@ feedback to the authenticated WeeklyReport user.
   authenticated server session. Ignore or reject client identity fields.
 - Support sessions, annotations, placement/rearrange annotations, status,
   threads, actions, pending queries, and authenticated SSE event replay.
+- Use the stock Agentation element/area-selection workflow as the only new
+  feedback creation surface, including feedback about the page as a whole.
+  Remove the separate first-party page-comment dialog and its legacy create
+  transport.
 - Make deletes non-destructive status transitions and preserve legacy SitePing
   rows and captured evidence.
 - Fail closed unless explicit non-production/development configuration enables

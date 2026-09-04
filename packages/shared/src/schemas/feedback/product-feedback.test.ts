@@ -5,7 +5,6 @@ import {
   MAX_FEEDBACK_ANNOTATIONS,
   MAX_FEEDBACK_PAGE_SCOPE_LENGTH,
   normalizeFeedbackPath,
-  pageFeedbackCreateSchema,
 } from "./product-feedback";
 
 const responseAnnotation = {
@@ -96,36 +95,6 @@ describe("feedbackResponseSchema", () => {
           { length: MAX_FEEDBACK_ANNOTATIONS + 1 },
           () => responseAnnotation,
         ),
-      }).success,
-    ).toBe(false);
-  });
-});
-
-describe("pageFeedbackCreateSchema", () => {
-  const payload = {
-    type: "change",
-    message: "Make the summary easier to scan",
-    url: "/lead/report/123",
-    viewport: "1440x900",
-    userAgent: "test-browser",
-    clientId: "page_123",
-  } as const;
-
-  it("accepts the bounded page-only payload", () => {
-    expect(pageFeedbackCreateSchema.parse(payload)).toEqual(payload);
-  });
-
-  it("rejects client identity and product authority", () => {
-    expect(
-      pageFeedbackCreateSchema.safeParse({
-        ...payload,
-        authorUserId: "spoofed-user",
-      }).success,
-    ).toBe(false);
-    expect(
-      pageFeedbackCreateSchema.safeParse({
-        ...payload,
-        projectName: "spoofed-product",
       }).success,
     ).toBe(false);
   });

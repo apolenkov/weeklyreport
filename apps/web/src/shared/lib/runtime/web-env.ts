@@ -36,19 +36,32 @@ const optionalRoleList = z.preprocess(
     .optional(),
 );
 
-export const webEnvSchema = z.object({
-  NEXT_PUBLIC_APP_VERSION: z.preprocess(
-    emptyToUndefined,
-    z.string().optional(),
-  ),
-  NEXT_PUBLIC_AUTH_STUB: optionalToggle,
-  NEXT_PUBLIC_CLIENT_LOG_FORWARDING: optionalToggle,
-  NEXT_PUBLIC_DEV_ROLE_SWITCHER: optionalToggle,
-  NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED: optionalToggle,
-  NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES: optionalRoleList,
-  NEXT_PUBLIC_SENTRY_DSN: z.preprocess(emptyToUndefined, z.url().optional()),
-  NEXT_PUBLIC_WEB_VITALS: optionalToggle,
-});
+export const webEnvSchema = z
+  .object({
+    NEXT_PUBLIC_APP_VERSION: z.preprocess(
+      emptyToUndefined,
+      z.string().optional(),
+    ),
+    NEXT_PUBLIC_AUTH_STUB: optionalToggle,
+    NEXT_PUBLIC_CLIENT_LOG_FORWARDING: optionalToggle,
+    NEXT_PUBLIC_DEV_ROLE_SWITCHER: optionalToggle,
+    NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED: optionalToggle,
+    NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES: optionalRoleList,
+    NEXT_PUBLIC_SENTRY_DSN: z.preprocess(emptyToUndefined, z.url().optional()),
+    NEXT_PUBLIC_WEB_VITALS: optionalToggle,
+  })
+  .superRefine((env, context) => {
+    if (
+      env.NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED === "true" &&
+      !env.NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES?.includes("admin")
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES"],
+        message: "Must include admin when product feedback is enabled",
+      });
+    }
+  });
 
 // Full literals only — Next string-replaces each occurrence at build so the
 // parsed object holds the inlined values in the browser.

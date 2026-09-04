@@ -23,6 +23,7 @@ describe("webEnvSchema", () => {
     expect(
       webEnvSchema.safeParse({
         NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED: "true",
+        NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES: "admin",
       }).success,
     ).toBe(true);
   });
@@ -43,6 +44,26 @@ describe("webEnvSchema", () => {
         NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES: "admin,admin",
       }).success,
     ).toBe(false);
+  });
+
+  it("requires admin in the inbox allowlist when feedback is enabled", () => {
+    expect(
+      webEnvSchema.safeParse({
+        NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED: "true",
+      }).success,
+    ).toBe(false);
+    expect(
+      webEnvSchema.safeParse({
+        NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED: "true",
+        NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES: "head",
+      }).success,
+    ).toBe(false);
+    expect(
+      webEnvSchema.safeParse({
+        NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED: "true",
+        NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES: "admin,head",
+      }).success,
+    ).toBe(true);
   });
 
   it("accepts an absent toggle (optional, no default)", () => {
@@ -111,7 +132,9 @@ describe("webEnv getters", () => {
 
   it("keeps product feedback disabled unless explicitly enabled", () => {
     vi.stubEnv("NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED", undefined);
+    vi.stubEnv("NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES", undefined);
     expect(webEnv.productFeedback()).toBe(false);
+    vi.stubEnv("NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES", "admin");
     vi.stubEnv("NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED", "true");
     expect(webEnv.productFeedback()).toBe(true);
   });
@@ -119,11 +142,13 @@ describe("webEnv getters", () => {
   it("keeps product feedback disabled in production", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED", "true");
+    vi.stubEnv("NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES", "admin");
 
     expect(webEnv.productFeedback()).toBe(false);
   });
 
   it("returns a fail-closed feedback inbox role allowlist", () => {
+    vi.stubEnv("NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED", undefined);
     vi.stubEnv("NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES", undefined);
     expect(webEnv.productFeedbackInboxRoles()).toEqual([]);
     vi.stubEnv("NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES", "admin,head");
