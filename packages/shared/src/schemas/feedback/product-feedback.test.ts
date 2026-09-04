@@ -52,6 +52,16 @@ const validResponse = {
   screenshotUrl: null,
   screenshotRegion: null,
   diagnostics: null,
+  source: "legacy",
+  capabilities: {
+    editOriginal: true,
+    triage: false,
+    reply: false,
+    dismiss: false,
+    delete: false,
+  },
+  thread: [],
+  agentationContext: null,
 } as const;
 
 describe("normalizeFeedbackPath", () => {
@@ -95,6 +105,54 @@ describe("feedbackResponseSchema", () => {
           { length: MAX_FEEDBACK_ANNOTATIONS + 1 },
           () => responseAnnotation,
         ),
+      }).success,
+    ).toBe(false);
+  });
+
+  it("requires bounded durable thread items and Agentation context", () => {
+    expect(
+      feedbackResponseSchema.safeParse({
+        ...validResponse,
+        source: "agentation",
+        capabilities: {
+          editOriginal: true,
+          triage: true,
+          reply: true,
+          dismiss: true,
+          delete: true,
+        },
+        agentationContext: {
+          element: "button",
+          elementPath: "#save",
+          selectedText: "Save",
+          nearbyText: null,
+          sourceFile: "app.tsx",
+          reactComponents: "SaveButton",
+          accessibility: "button",
+        },
+        thread: [
+          {
+            id: "message-1",
+            role: "human",
+            content: "Looks good",
+            timestamp: "2026-09-04T10:00:00.000Z",
+            authorUserId: "user-1",
+          },
+        ],
+      }).success,
+    ).toBe(true);
+    expect(
+      feedbackResponseSchema.safeParse({
+        ...validResponse,
+        thread: [
+          {
+            id: "message-1",
+            role: "human",
+            content: " ",
+            timestamp: "2026-09-04T10:00:00.000Z",
+            authorUserId: null,
+          },
+        ],
       }).success,
     ).toBe(false);
   });

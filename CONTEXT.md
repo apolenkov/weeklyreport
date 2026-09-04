@@ -170,6 +170,67 @@ _Avoid_: filtering the published snapshot by submission state (the toggle is
 live-period only); conflating it with _Record visibility_ (that is the lead's
 own-vs-everyone axis, not submitted-vs-all).
 
+## Product feedback
+
+**Feedback annotation**:
+An authenticated user's original request anchored by Agentation to a page,
+element, text selection, or area. Its author may correct it; reviewers reply
+rather than rewriting another person's words.
+_Avoid_: review comment (that belongs to report review); ticket (the annotation
+has not entered a separate delivery workflow).
+
+**Feedback inbox**:
+The role-scoped workbench where permitted feedback is understood, discussed,
+viewed with inline context, and triaged without changing report lifecycle
+state. It never navigates to the originating page.
+_Avoid_: Agentation sidebar (that is the capture surface); review queue (product
+feedback is separate from report review).
+
+**Feedback triage**:
+The lifecycle of a feedback annotation: `new` → `acknowledged` → `resolved`, with
+`dismissed` as the retained non-fix outcome. A reply explains progress or asks
+for clarification; it does not change lifecycle by itself.
+_Avoid_: approval (acknowledged means seen, not accepted); free-form status.
+
+**Feedback dismissal**:
+A terminal non-fix decision that preserves the annotation, author, thread, and
+captured evidence together with the reason.
+_Avoid_: treating dismissal as deletion; won't fix (use the canonical lifecycle
+term `dismissed`).
+
+**Feedback deletion**:
+An explicit, confirmed deletion of exactly one visible feedback item from either
+source, available only to an admin. Agentation keeps its session while stored
+annotation events are removed explicitly and annotation/thread children
+cascade; legacy ProductFeedback children cascade.
+It is never offered in bulk.
+
+## AI provider control
+
+**AI provider revision**:
+A saved candidate or retained version of the organization-wide generation and
+embedding configuration. Revisions move through `draft`, `validated`,
+`preparing`, `active`, `failed`, or `superseded` lifecycle states.
+_Avoid_: provider card (a card is presentation, not the configured version).
+
+**Capability test**:
+The synthetic server-side check that establishes whether a revision can perform
+the generation and embedding capabilities WeeklyReport requires.
+_Avoid_: connection test (successful authentication alone is insufficient);
+validation of every provider feature.
+
+**Provider activation**:
+The explicit administrator decision that makes one tested revision the global
+configuration, after any required embedding preparation completes.
+_Avoid_: save (saving creates a draft); enable (activation selects a revision,
+while enablement describes whether the integration serves users).
+
+**Provider disablement**:
+Turning off AI use while retaining the active configuration and its credentials
+for later recovery. A non-active draft or failed revision may instead be
+discarded and cannot be restored.
+_Avoid_: delete provider; deactivate draft.
+
 ## Products, stages, items & scope
 
 **Product**:

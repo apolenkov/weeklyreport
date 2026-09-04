@@ -1,5 +1,6 @@
 import {
   feedbackStatusSchema,
+  MAX_FEEDBACK_DISMISS_REASON_LENGTH,
   MAX_FEEDBACK_MESSAGE_LENGTH,
   normalizeFeedbackPath,
   type UserSession,
@@ -13,7 +14,9 @@ import {
   AgentationInboxRepository,
   annotationIdFromInboxId,
 } from "./agentation-inbox.repository.js";
+import { AgentationInboxActions } from "./agentation-inbox-actions.js";
 import { executeAgentationRequest } from "./agentation-wire.js";
+import { deleteFeedback } from "./product-feedback.delete.js";
 import {
   feedbackAccessFromSession,
   type ProductFeedbackRepository,
@@ -26,9 +29,20 @@ const commentSchema = z
     comment: z.string().trim().min(1).max(MAX_FEEDBACK_MESSAGE_LENGTH),
   })
   .strict();
+const replySchema = z
+  .object({
+    content: z.string().trim().min(1).max(MAX_FEEDBACK_MESSAGE_LENGTH),
+  })
+  .strict();
+const dismissSchema = z
+  .object({
+    reason: z.string().trim().min(1).max(MAX_FEEDBACK_DISMISS_REASON_LENGTH),
+  })
+  .strict();
 const HTTP_OK = 200;
-const HTTP_NO_CONTENT = 204;
 const HTTP_NOT_FOUND = 404;
+const HTTP_BAD_REQUEST = 400;
+const NOT_FOUND_ERROR = "Feedback endpoint not found.";
 const DEFAULT_FEEDBACK_LIMIT = 100;
 const MAX_FEEDBACK_LIMIT = 100;
 const FEEDBACK_PATH = "/feedback";
@@ -62,7 +76,13 @@ function agentationInboxRepository(
     ? new AgentationInboxRepository(deps.prisma)
     : null;
 }
-
+function agentationInboxActions(
+  deps: FeedbackRouteDeps,
+): AgentationInboxActions | null {
+  return deps.agentationEnabled === true && deps.prisma
+    ? new AgentationInboxActions(deps.prisma)
+    : null;
+}
 async function listFeedback(
   req: Request,
   res: Response,
@@ -97,7 +117,7 @@ async function listFeedback(
   const feedback = [...legacy.feedbacks, ...agentation.feedbacks]
     .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
     .slice(0, limit)
-    .map(serializeFeedback);
+    .map((record) => serializeFeedback(record, access));
 
   res.setHeader("cache-control", "no-store");
   res.status(HTTP_OK).json({
@@ -105,7 +125,6 @@ async function listFeedback(
     total: legacy.total + agentation.total,
   });
 }
-
 async function changeStatus(
   req: Request,
   res: Response,
@@ -113,12 +132,25 @@ async function changeStatus(
   deps: FeedbackRouteDeps,
   id: string,
 ): Promise<void> {
+  if (session.role !== "admin" && session.role !== "head") {
+    res
+      .status(HTTP_NOT_FOUND)
+      .json({ error: "not_found", message: NOT_FOUND_ERROR });
+    return;
+  }
   const { status } = statusSchema.parse(req.body);
+  if (status === "wont_fix" && annotationIdFromInboxId(id)) {
+    res.status(HTTP_BAD_REQUEST).json({
+      error: "dismiss_reason_required",
+      message: "Use the dismiss action with a reason.",
+    });
+    return;
+  }
   const access = feedbackAccessFromSession(session);
-  const agentation = agentationInboxRepository(deps);
+  const agentation = agentationInboxActions(deps);
   if (annotationIdFromInboxId(id) && agentation) {
-    const record = await agentation.updateInboxStatus(access, id, status);
-    res.status(HTTP_OK).json(serializeFeedback(record));
+    const record = await agentation.updateStatus(access, id, status);
+    res.status(HTTP_OK).json(serializeFeedback(record, access));
     return;
   }
 
@@ -135,9 +167,8 @@ async function changeStatus(
     role: session.role,
     status,
   });
-  res.status(HTTP_OK).json(serializeFeedback(changed));
+  res.status(HTTP_OK).json(serializeFeedback(changed, access));
 }
-
 async function editFeedback(
   req: Request,
   res: Response,
@@ -146,45 +177,71 @@ async function editFeedback(
   id: string,
 ): Promise<void> {
   const { comment } = commentSchema.parse(req.body);
-  const changed = await deps.repository.update(
-    feedbackAccessFromSession(session),
-    id,
-    { message: comment },
-  );
-  res.status(HTTP_OK).json(serializeFeedback(changed));
+  const access = feedbackAccessFromSession(session);
+  const agentation = agentationInboxActions(deps);
+  if (annotationIdFromInboxId(id) && agentation) {
+    const changed = await agentation.editOriginal(access, id, comment);
+    res.status(HTTP_OK).json(serializeFeedback(changed, access));
+    return;
+  }
+  if (!(await deps.repository.ownsAuthor(access, id))) {
+    res
+      .status(HTTP_NOT_FOUND)
+      .json({ error: "not_found", message: NOT_FOUND_ERROR });
+    return;
+  }
+  const changed = await deps.repository.update(access, id, {
+    message: comment,
+  });
+  res
+    .status(HTTP_OK)
+    .json(serializeFeedback(changed, feedbackAccessFromSession(session)));
 }
-
-async function closeFeedback(
+async function replyFeedback(
+  req: Request,
   res: Response,
   session: UserSession,
   deps: FeedbackRouteDeps,
   id: string,
 ): Promise<void> {
-  const agentation = agentationInboxRepository(deps);
-  if (annotationIdFromInboxId(id) && agentation) {
-    await agentation.updateInboxStatus(
-      feedbackAccessFromSession(session),
-      id,
-      "wont_fix",
-    );
-    res.sendStatus(HTTP_NO_CONTENT);
+  const agentation = agentationInboxActions(deps);
+  if (!agentation) {
+    res.sendStatus(HTTP_NOT_FOUND);
     return;
   }
-  await deps.repository.update(feedbackAccessFromSession(session), id, {
-    status: "wont_fix",
-    resolvedAt: new Date(),
-  });
-  deps.logger.info("product feedback closed", {
-    phase: LOG_PHASE,
-    action: "close",
-    feedbackId: id,
-    actorId: session.userId,
-    role: session.role,
-  });
-  res.sendStatus(HTTP_NO_CONTENT);
+  const { content } = replySchema.parse(req.body);
+  const changed = await agentation.reply(
+    feedbackAccessFromSession(session),
+    id,
+    content,
+  );
+  res
+    .status(HTTP_OK)
+    .json(serializeFeedback(changed, feedbackAccessFromSession(session)));
 }
-
-async function executeAgentationRoute(
+async function dismissFeedback(
+  req: Request,
+  res: Response,
+  session: UserSession,
+  deps: FeedbackRouteDeps,
+  id: string,
+): Promise<void> {
+  const agentation = agentationInboxActions(deps);
+  if (!agentation || (session.role !== "admin" && session.role !== "head")) {
+    res.sendStatus(HTTP_NOT_FOUND);
+    return;
+  }
+  const { reason } = dismissSchema.parse(req.body);
+  const changed = await agentation.dismiss(
+    feedbackAccessFromSession(session),
+    id,
+    reason,
+  );
+  res
+    .status(HTTP_OK)
+    .json(serializeFeedback(changed, feedbackAccessFromSession(session)));
+}
+export async function executeAgentationRoute(
   req: Request,
   res: Response,
   session: UserSession,
@@ -198,8 +255,7 @@ async function executeAgentationRoute(
     frontendOrigin: deps.frontendOrigin,
   });
 }
-
-async function executeFeedbackCollectionRoute(
+export async function executeFeedbackCollectionRoute(
   req: Request,
   res: Response,
   session: UserSession,
@@ -210,8 +266,7 @@ async function executeFeedbackCollectionRoute(
   await listFeedback(req, res, session, deps);
   return true;
 }
-
-async function executeFeedbackItemRoute(
+export async function executeFeedbackItemRoute(
   req: Request,
   res: Response,
   session: UserSession,
@@ -228,25 +283,22 @@ async function executeFeedbackItemRoute(
     await editFeedback(req, res, session, deps, editTarget);
     return true;
   }
-  const closeTarget = req.method === "DELETE" ? feedbackId(req.path) : null;
-  if (!closeTarget) return false;
-  await closeFeedback(res, session, deps, closeTarget);
-  return true;
-}
-
-export async function executeFeedbackRequest(
-  req: Request,
-  res: Response,
-  session: UserSession,
-  deps: FeedbackRouteDeps,
-  agentationAgent = false,
-): Promise<void> {
-  res.setHeader("cache-control", "no-store");
-  if (await executeAgentationRoute(req, res, session, deps, agentationAgent))
-    return;
-  if (await executeFeedbackCollectionRoute(req, res, session, deps)) return;
-  if (await executeFeedbackItemRoute(req, res, session, deps)) return;
-  res
-    .status(HTTP_NOT_FOUND)
-    .json({ error: "not_found", message: "Feedback endpoint not found." });
+  const replyTarget =
+    req.method === "POST" ? feedbackId(req.path, "/replies") : null;
+  if (replyTarget) {
+    await replyFeedback(req, res, session, deps, replyTarget);
+    return true;
+  }
+  const dismissTarget =
+    req.method === "POST" ? feedbackId(req.path, "/dismiss") : null;
+  if (dismissTarget) {
+    await dismissFeedback(req, res, session, deps, dismissTarget);
+    return true;
+  }
+  const deleteTarget = req.method === "DELETE" ? feedbackId(req.path) : null;
+  if (deleteTarget) {
+    await deleteFeedback(res, session, deps, deleteTarget);
+    return true;
+  }
+  return false;
 }

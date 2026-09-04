@@ -108,6 +108,16 @@ export class ProductFeedbackMemoryRepository implements ProductFeedbackRepositor
       screenshotUrl: input.screenshotDataUrl ?? null,
       screenshotRegion: input.screenshotRegion ?? null,
       diagnostics: input.diagnostics ?? null,
+      source: "legacy",
+      capabilities: {
+        editOriginal: false,
+        triage: false,
+        reply: false,
+        dismiss: false,
+        delete: false,
+      },
+      thread: [],
+      agentationContext: null,
     };
     this.rows.set(id, {
       record,
@@ -187,29 +197,20 @@ export class ProductFeedbackMemoryRepository implements ProductFeedbackRepositor
 
   delete(access: FeedbackAccess, id: string): Promise<void> {
     const existing = this.rows.get(id);
-    if (
-      !existing ||
-      (access.role !== "admin" && existing.authorUserId !== access.userId)
-    ) {
+    if (!existing || access.role !== "admin") {
       return Promise.reject(new FeedbackNotFoundError());
     }
     this.rows.delete(id);
     return Promise.resolve();
   }
 
-  deleteAll(access: FeedbackAccess): Promise<void> {
-    if (access.role === "admin") {
-      this.rows.clear();
-      return Promise.resolve();
-    }
-    for (const [id, feedback] of this.rows) {
-      if (feedback.authorUserId === access.userId) this.rows.delete(id);
-    }
-    return Promise.resolve();
-  }
-
   owns(access: FeedbackAccess, id: string): Promise<boolean> {
     const feedback = this.rows.get(id);
     return Promise.resolve(feedback !== undefined && canRead(access, feedback));
+  }
+
+  ownsAuthor(access: FeedbackAccess, id: string): Promise<boolean> {
+    const feedback = this.rows.get(id);
+    return Promise.resolve(feedback?.authorUserId === access.userId);
   }
 }

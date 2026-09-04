@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type FeedbackResponse,
   feedbackResponseSchema,
   type FeedbackStatus,
   type FeedbackType,
@@ -8,6 +9,8 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type FilterValue<T extends string> = T | "all";
+const FEEDBACK_UPDATE_ERROR = "Feedback update failed";
+const SAME_ORIGIN = "same-origin";
 interface FeedbackInboxItem {
   readonly id: string;
   readonly type: FeedbackType;
@@ -17,6 +20,7 @@ interface FeedbackInboxItem {
   readonly authorName: string;
   readonly authorUserId: string;
   readonly createdAt: Date;
+  readonly updatedAt: Date;
   readonly viewport: string;
   readonly annotations: readonly unknown[];
   readonly screenshotUrl: string | null;
@@ -26,21 +30,23 @@ interface FeedbackInboxItem {
     readonly wPct: number;
     readonly hPct: number;
   } | null;
+  readonly diagnostics: FeedbackResponse["diagnostics"];
   readonly agentationSessionId?: string;
   readonly agentationAnnotationId?: string;
-  readonly diagnostics: {
-    readonly console: readonly {
-      readonly level: string;
-      readonly message: string;
-      readonly timestamp: string;
-    }[];
-    readonly network: readonly {
-      readonly method: string;
-      readonly status: number;
-      readonly url: string;
-      readonly timestamp: string;
-    }[];
-  } | null;
+  readonly source: FeedbackResponse["source"];
+  readonly capabilities: FeedbackResponse["capabilities"];
+  readonly thread: FeedbackResponse["thread"];
+  readonly agentationContext: FeedbackResponse["agentationContext"];
+}
+function fromResponse(parsed: FeedbackResponse): FeedbackInboxItem {
+  const { agentationAnnotationId, agentationSessionId, ...record } = parsed;
+  return {
+    ...record,
+    createdAt: new Date(parsed.createdAt),
+    updatedAt: new Date(parsed.updatedAt),
+    ...(agentationSessionId ? { agentationSessionId } : {}),
+    ...(agentationAnnotationId ? { agentationAnnotationId } : {}),
+  };
 }
 
 export function useProductFeedbackInbox(onError: () => void) {
@@ -59,7 +65,7 @@ export function useProductFeedbackInbox(onError: () => void) {
         "/api/v1/feedback?limit=100&format=internal",
         {
           cache: "no-store",
-          credentials: "same-origin",
+          credentials: SAME_ORIGIN,
         },
       );
       if (!response.ok) throw new Error("Feedback request failed");
@@ -67,27 +73,7 @@ export function useProductFeedbackInbox(onError: () => void) {
       setItems(
         payload.feedback.map((value) => {
           const parsed = feedbackResponseSchema.parse(value);
-          return {
-            id: parsed.id,
-            type: parsed.type,
-            status: parsed.status,
-            url: parsed.url,
-            message: parsed.message,
-            authorName: parsed.authorName,
-            authorUserId: parsed.authorUserId,
-            createdAt: new Date(parsed.createdAt),
-            viewport: parsed.viewport,
-            annotations: parsed.annotations,
-            screenshotUrl: parsed.screenshotUrl,
-            screenshotRegion: parsed.screenshotRegion,
-            diagnostics: parsed.diagnostics,
-            ...(parsed.agentationSessionId
-              ? { agentationSessionId: parsed.agentationSessionId }
-              : {}),
-            ...(parsed.agentationAnnotationId
-              ? { agentationAnnotationId: parsed.agentationAnnotationId }
-              : {}),
-          };
+          return fromResponse(parsed);
         }),
       );
     } catch {
@@ -120,7 +106,7 @@ export function useProductFeedbackInbox(onError: () => void) {
       `/api/v1/feedback/${encodeURIComponent(id)}/status`,
       {
         method: "PATCH",
-        credentials: "same-origin",
+        credentials: SAME_ORIGIN,
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ status: nextStatus }),
       },
@@ -131,6 +117,38 @@ export function useProductFeedbackInbox(onError: () => void) {
         item.id === id ? { ...item, status: nextStatus } : item,
       ),
     );
+  };
+
+  const mutate = async (id: string, path: string, body: unknown) => {
+    const response = await fetch(
+      `/api/v1/feedback/${encodeURIComponent(id)}${path}`,
+      {
+        method: path === "/status" ? "PATCH" : path === "" ? "PUT" : "POST",
+        credentials: SAME_ORIGIN,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!response.ok) throw new Error(FEEDBACK_UPDATE_ERROR);
+    const parsed = feedbackResponseSchema.parse(await response.json());
+    setItems((current) =>
+      current.map((item) => (item.id === id ? fromResponse(parsed) : item)),
+    );
+  };
+
+  const editOriginal = (id: string, comment: string) =>
+    mutate(id, "", { comment });
+  const reply = (id: string, content: string) =>
+    mutate(id, "/replies", { content });
+  const dismiss = (id: string, reason: string) =>
+    mutate(id, "/dismiss", { reason });
+  const deleteFeedback = async (id: string) => {
+    const response = await fetch(`/api/v1/feedback/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      credentials: SAME_ORIGIN,
+    });
+    if (!response.ok) throw new Error("Feedback delete failed");
+    setItems((current) => current.filter((item) => item.id !== id));
   };
 
   const view = loading
@@ -152,5 +170,9 @@ export function useProductFeedbackInbox(onError: () => void) {
     view,
     refresh,
     changeStatus,
+    editOriginal,
+    reply,
+    dismiss,
+    deleteFeedback,
   } as const;
 }

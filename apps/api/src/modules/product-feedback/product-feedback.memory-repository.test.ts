@@ -126,7 +126,7 @@ describe("ProductFeedbackMemoryRepository", () => {
     expect(page.total).toBe(21);
   });
 
-  it("allows own and group triage while restricting deletion to author or admin", async () => {
+  it("allows own and group triage while restricting deletion to admin", async () => {
     const repo = new ProductFeedbackMemoryRepository();
     const leadA = feedbackAccessFromSession(session("lead-a", "lead", "g1"));
     const headA = feedbackAccessFromSession(session("head-a", "head", "g1"));
@@ -157,27 +157,10 @@ describe("ProductFeedbackMemoryRepository", () => {
     await expect(repo.delete(headA, feedback.id)).rejects.toMatchObject({
       code: "STORE_NOT_FOUND",
     });
-    await expect(repo.delete(leadA, feedback.id)).resolves.toBeUndefined();
+    await expect(repo.delete(leadA, feedback.id)).rejects.toMatchObject({
+      code: "STORE_NOT_FOUND",
+    });
     await expect(repo.delete(admin, adminTarget.id)).resolves.toBeUndefined();
-  });
-
-  it("deletes all owned feedback for a user and all project feedback for admin", async () => {
-    const repo = new ProductFeedbackMemoryRepository();
-    const leadA = feedbackAccessFromSession(session("lead-a", "lead", "g1"));
-    const leadB = feedbackAccessFromSession(session("lead-b", "lead", "g1"));
-    const admin = feedbackAccessFromSession(session("admin", "admin"));
-    await repo.create(leadA, input("one"));
-    await repo.create(leadA, input("two"));
-    await repo.create(leadB, input("three"));
-
-    await expect(repo.deleteAll(leadA)).resolves.toBeUndefined();
-    await expect(
-      repo.list(admin, { projectName: "weekly-report" }),
-    ).resolves.toMatchObject({ total: 1 });
-    await expect(repo.deleteAll(admin)).resolves.toBeUndefined();
-    await expect(
-      repo.list(admin, { projectName: "weekly-report" }),
-    ).resolves.toMatchObject({ total: 0 });
   });
 
   it("is idempotent only for the same immutable author", async () => {

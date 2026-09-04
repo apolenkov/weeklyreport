@@ -148,23 +148,14 @@ export class ProductFeedbackPrismaRepository implements ProductFeedbackRepositor
   }
 
   async delete(access: FeedbackAccess, id: string): Promise<void> {
+    if (access.role !== "admin") throw new FeedbackNotFoundError();
     const deleted = await this.prisma.productFeedback.deleteMany({
       where: {
         id,
         projectName: WEEKLY_REPORT_FEEDBACK_PRODUCT,
-        ...(access.role === "admin" ? {} : { authorUserId: access.userId }),
       },
     });
     if (deleted.count !== 1) throw new FeedbackNotFoundError();
-  }
-
-  async deleteAll(access: FeedbackAccess): Promise<void> {
-    await this.prisma.productFeedback.deleteMany({
-      where: {
-        projectName: WEEKLY_REPORT_FEEDBACK_PRODUCT,
-        ...(access.role === "admin" ? {} : { authorUserId: access.userId }),
-      },
-    });
   }
 
   async owns(access: FeedbackAccess, id: string): Promise<boolean> {
@@ -173,6 +164,17 @@ export class ProductFeedbackPrismaRepository implements ProductFeedbackRepositor
         id,
         projectName: WEEKLY_REPORT_FEEDBACK_PRODUCT,
         ...accessWhere(access),
+      },
+    });
+    return count === 1;
+  }
+
+  async ownsAuthor(access: FeedbackAccess, id: string): Promise<boolean> {
+    const count = await this.prisma.productFeedback.count({
+      where: {
+        id,
+        projectName: WEEKLY_REPORT_FEEDBACK_PRODUCT,
+        authorUserId: access.userId,
       },
     });
     return count === 1;

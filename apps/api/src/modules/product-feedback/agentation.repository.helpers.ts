@@ -8,9 +8,32 @@ import {
 import { Prisma, type Prisma as PrismaTypes } from "@prisma/client";
 
 import type { AgentationRole } from "./agentation.repository.js";
+import { annotationScope } from "./agentation-scope.js";
 import type { FeedbackAccess } from "./product-feedback.repository.js";
 
 type Db = Prisma.TransactionClient;
+
+export async function lockVisibleAnnotation(
+  db: Db,
+  access: FeedbackAccess,
+  id: string,
+): Promise<{ id: string; sessionId: string } | null> {
+  const current = await db.agentationAnnotation.findFirst({
+    where: { id, ...annotationScope(access) },
+    select: { id: true, sessionId: true },
+  });
+  if (!current) return null;
+
+  // Serialize thread writes with hard deletion so event cleanup observes every
+  // committed reply without widening the caller's authorization scope.
+  const locked = await db.$queryRaw<{ id: string }[]>`
+    SELECT "id"
+    FROM "AgentationAnnotation"
+    WHERE "id" = ${id}
+    FOR UPDATE
+  `;
+  return locked.length > 0 ? current : null;
+}
 
 const json = (
   value: unknown,

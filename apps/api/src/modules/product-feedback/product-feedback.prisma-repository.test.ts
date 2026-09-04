@@ -129,30 +129,29 @@ describe("ProductFeedbackPrismaRepository concurrent create", () => {
   });
 });
 
-describe("ProductFeedbackPrismaRepository bulk deletion", () => {
-  it("scopes a non-admin bulk deletion to the authenticated author", async () => {
-    const deleteMany = vi.fn().mockResolvedValue({ count: 2 });
+describe("ProductFeedbackPrismaRepository single-item deletion", () => {
+  it("lets an admin delete exactly one WeeklyReport item", async () => {
+    const deleteMany = vi.fn().mockResolvedValue({ count: 1 });
     const repository = new ProductFeedbackPrismaRepository({
       productFeedback: { deleteMany },
     } as unknown as PrismaService);
 
-    await repository.deleteAll(access("lead-a"));
+    await repository.delete(access("admin", "admin"), "feedback-1");
 
     expect(deleteMany).toHaveBeenCalledWith({
-      where: { projectName: "weekly-report", authorUserId: "lead-a" },
+      where: { id: "feedback-1", projectName: "weekly-report" },
     });
   });
 
-  it("scopes an admin bulk deletion to the whole WeeklyReport project", async () => {
-    const deleteMany = vi.fn().mockResolvedValue({ count: 3 });
+  it("rejects non-admin deletion before querying the database", async () => {
+    const deleteMany = vi.fn();
     const repository = new ProductFeedbackPrismaRepository({
       productFeedback: { deleteMany },
     } as unknown as PrismaService);
 
-    await repository.deleteAll(access("admin", "admin"));
-
-    expect(deleteMany).toHaveBeenCalledWith({
-      where: { projectName: "weekly-report" },
-    });
+    await expect(
+      repository.delete(access("lead-a"), "feedback-1"),
+    ).rejects.toMatchObject({ code: "STORE_NOT_FOUND" });
+    expect(deleteMany).not.toHaveBeenCalled();
   });
 });
