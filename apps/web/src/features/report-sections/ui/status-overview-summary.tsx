@@ -25,26 +25,24 @@ export function StatusOverviewUnitSummary({
   readonly unit: StatusOverviewUnit;
 }) {
   return (
-    <div className="min-w-0 space-y-1.5">
-      <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-        {unit.kind === "product" ? "Product" : "Activity"}
-        {unit.historical ? " · Historical" : ""}
+    <div className="min-w-0 space-y-2">
+      <p className="break-words font-semibold leading-5 text-[var(--color-foreground)]">
+        {unit.name}
       </p>
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <span className="min-w-0 flex-1 truncate font-semibold text-[var(--color-foreground)]">
-          {unit.name}
-        </span>
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
         <StatusBadge unit={unit} />
         {unit.historical ? (
-          <span className="sr-only">Historical reporting unit</span>
+          <span className="text-[11px] font-semibold text-[var(--color-muted-foreground)]">
+            Historical
+          </span>
+        ) : null}
+        {unit.stages.length > 0 ? (
+          <span className="text-xs text-[var(--color-muted-foreground)]">
+            {unit.stages.length} owned{" "}
+            {unit.stages.length === 1 ? "stage" : "stages"}
+          </span>
         ) : null}
       </div>
-      {unit.stages.length > 0 ? (
-        <p className="text-xs text-[var(--color-muted-foreground)]">
-          {unit.stages.length} owned{" "}
-          {unit.stages.length === 1 ? "stage" : "stages"}
-        </p>
-      ) : null}
       {unit.linkedProducts.length > 0 ? (
         <p className="break-words text-xs text-[var(--color-muted-foreground)]">
           Products: {unit.linkedProducts.join(", ")}

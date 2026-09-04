@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import type { KanbanItem } from "../../../../report-sections";
+import { buildStatusOverviewDetailsHref } from "./lead-status-overview";
 import {
-  buildStatusOverviewDetailsHref,
+  buildStatusOverviewCreatePatch,
   buildStatusOverviewItemPatch,
-} from "./lead-status-overview";
+} from "./lead-status-overview-item-editor";
 
 function productItem(id: string, text: string): KanbanItem {
   return {
@@ -20,7 +21,68 @@ function productItem(id: string, text: string): KanbanItem {
   };
 }
 
+function activityItem(id: string, text: string): KanbanItem {
+  return {
+    id,
+    parent: { kind: "activity", id: "activity-1" },
+    productId: null,
+    productName: "",
+    activityId: "activity-1",
+    activityName: "Incident duty",
+    stageNames: [],
+    status: "planned",
+    text,
+    author: "Test Lead",
+  };
+}
+
 describe("status overview editing bridge", () => {
+  it.each(["current", "next"] as const)(
+    "appends a newly created product item to the %s week only",
+    (source) => {
+      const current = [productItem("current-1", "Current")];
+      const next = [productItem("next-1", "Next")];
+      const created = productItem(`${source}-created`, "Created from overview");
+
+      expect(
+        buildStatusOverviewCreatePatch(
+          { source, unitKind: "product", unitId: "product-1" },
+          current,
+          next,
+          created,
+        ),
+      ).toEqual({
+        kind: "week-items",
+        week: source,
+        items:
+          source === "current" ? [...current, created] : [...next, created],
+      });
+    },
+  );
+
+  it("preserves the activity identity when creating an activity item", () => {
+    const created = activityItem("activity-created", "Created activity update");
+
+    expect(
+      buildStatusOverviewCreatePatch(
+        { source: "next", unitKind: "activity", unitId: "activity-1" },
+        [],
+        [],
+        created,
+      ),
+    ).toEqual({
+      kind: "week-items",
+      week: "next",
+      items: [
+        expect.objectContaining({
+          parent: { kind: "activity", id: "activity-1" },
+          productId: null,
+          activityId: "activity-1",
+        }),
+      ],
+    });
+  });
+
   it.each(["current", "next"] as const)(
     "builds the canonical %s week-items patch without touching the other week",
     (source) => {

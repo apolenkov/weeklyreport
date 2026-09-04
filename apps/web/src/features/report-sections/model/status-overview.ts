@@ -48,6 +48,12 @@ export interface StatusOverviewEditTarget {
   readonly source: "current" | "next";
 }
 
+export interface StatusOverviewCreateTarget {
+  readonly source: "current" | "next";
+  readonly unitKind: "product" | "activity";
+  readonly unitId: string;
+}
+
 export interface StatusOverviewItem {
   readonly key: string;
   readonly recordId: string | null;

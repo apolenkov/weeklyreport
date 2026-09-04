@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -210,5 +210,116 @@ describe("StatusOverview", () => {
     expect(
       screen.getByRole("link", { name: "Edit full report" }),
     ).toHaveAttribute("href", "/report?mode=edit");
+  });
+
+  it("groups products and activities, keeps long names readable, and exposes quick-add targets", async () => {
+    const user = userEvent.setup();
+    const onAddItem = vi.fn();
+    const activity = model.units[0];
+    if (!activity) throw new Error("Expected one overview unit");
+    const longProductName = "Marketing platform with a deliberately long name";
+    const product = {
+      ...activity,
+      key: "product:product-1",
+      id: "product-1",
+      kind: "product" as const,
+      name: longProductName,
+      linkedProducts: [],
+      columns: {
+        ...activity.columns,
+        currentWeek: { availability: "available" as const, items: [] },
+        nextWeek: { availability: "available" as const, items: [] },
+      },
+    };
+
+    render(
+      <StatusOverview
+        model={{ ...model, units: [product, activity] }}
+        onAddItem={onAddItem}
+      />,
+    );
+
+    const products = screen.getByRole("region", { name: "Products" });
+    const activities = screen.getByRole("region", {
+      name: "Project activities",
+    });
+    expect(within(products).getByText("1")).toBeVisible();
+    expect(within(activities).getByText("1")).toBeVisible();
+
+    const longName = screen.getByText(longProductName);
+    expect(longName).not.toHaveClass("truncate");
+    expect(longName).toHaveClass("break-words");
+
+    expect(
+      screen.getByRole("button", {
+        name: `Add current week update to ${longProductName}`,
+      }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", {
+        name: `Add next week update to ${longProductName}`,
+      }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", {
+        name: "Add current week update to Incident duty",
+      }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", {
+        name: "Add next week update to Incident duty",
+      }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("button", {
+        name: `Add previously planned week update to ${longProductName}`,
+      }),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Add current week update to Incident duty",
+      }),
+    );
+    expect(onAddItem).toHaveBeenCalledWith({
+      source: "current",
+      unitKind: "activity",
+      unitId: "activity-1",
+    });
+  });
+
+  it("hides quick-add for historical units even when a handler exists", () => {
+    const onAddItem = vi.fn();
+    const activity = model.units[0];
+    if (!activity) throw new Error("Expected one overview unit");
+    render(
+      <StatusOverview
+        model={{
+          ...model,
+          units: [{ ...activity, historical: true }],
+        }}
+        onAddItem={onAddItem}
+      />,
+    );
+
+    expect(screen.getByText("Work item 1")).toBeVisible();
+    expect(
+      screen.queryByRole("button", {
+        name: "Add current week update to Incident duty",
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "Add next week update to Incident duty",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not render quick-add controls when no create handler is provided", () => {
+    render(<StatusOverview model={model} />);
+
+    expect(
+      screen.queryByRole("button", { name: /Add .* week update/ }),
+    ).toBeNull();
   });
 });

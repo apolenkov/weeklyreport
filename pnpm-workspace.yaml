@@ -71,6 +71,7 @@ overrides:
 
 patchedDependencies:
   "@node-saml/node-saml@5.1.0": patches/@node-saml__node-saml@5.1.0.patch
+  "@siteping/widget@0.10.7": patches/@siteping__widget@0.10.7.patch
   "samlify@2.13.1": patches/samlify@2.13.1.patch
   "xml-crypto@6.1.2": patches/xml-crypto@6.1.2.patch
 
