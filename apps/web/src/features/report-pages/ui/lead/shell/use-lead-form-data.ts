@@ -25,6 +25,7 @@ interface UseLeadFormDataInput {
   // Entry route → addressed URL once the active reportId is known.
   readonly redirectToCanonical?: boolean | undefined;
   readonly isSlidesMode: boolean;
+  readonly canonicalMode?: "overview" | "edit" | "slides" | undefined;
 }
 
 // The input restated with the pinned id under its resolved name.
@@ -32,6 +33,7 @@ interface LeadFormRoute {
   readonly pinnedReportId: string | undefined;
   readonly redirectToCanonical: boolean | undefined;
   readonly isSlidesMode: boolean;
+  readonly canonicalMode?: "overview" | "edit" | "slides" | undefined;
 }
 
 // Effects that contribute nothing to the returned view. Registration order is
@@ -69,6 +71,7 @@ function useLeadFormEffects({
     pinnedReportId: route.pinnedReportId,
     redirectToCanonical: route.redirectToCanonical,
     isSlidesMode: route.isSlidesMode,
+    canonicalMode: route.canonicalMode,
     activeReportId,
     shouldRouteHeadLikeAwayFromLeadForm,
   });
@@ -86,8 +89,14 @@ export function useLeadFormData({
   reportId: pinnedReportId,
   redirectToCanonical,
   isSlidesMode,
+  canonicalMode,
 }: UseLeadFormDataInput) {
-  const route = { pinnedReportId, redirectToCanonical, isSlidesMode };
+  const route = {
+    pinnedReportId,
+    redirectToCanonical,
+    isSlidesMode,
+    canonicalMode,
+  };
   const searchParams = useSearchParams();
   const sessionState = useContext(SessionContext);
   const { sessionRole, currentUserId, shouldDeferForSession } =

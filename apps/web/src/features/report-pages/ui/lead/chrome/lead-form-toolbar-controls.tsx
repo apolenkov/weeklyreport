@@ -166,6 +166,7 @@ function ToolbarViewCluster({
   const editHref = targetReportId
     ? `/lead/report/${encodeURIComponent(targetReportId)}`
     : "/lead/report";
+  const overviewHref = editHref;
   return (
     <>
       {/* Always rendered so trailing controls never shift between modes. */}
@@ -176,7 +177,8 @@ function ToolbarViewCluster({
       />
       <ViewModeToggle
         mode={isSlidesMode ? "slides" : "edit"}
-        editHref={editHref}
+        overviewHref={overviewHref}
+        editHref={`${editHref}?mode=edit`}
         slidesHref={targetReportId ? `${editHref}?mode=slides` : "/lead/report"}
         desktopLabels={desktopLabels}
       />

@@ -4,8 +4,8 @@ import {
 } from "@siteping/adapter-prisma";
 import { describe, expect, it } from "vitest";
 
-describe("pinned SitePing adapter compatibility", () => {
-  it("exposes the handler factory and consumed store methods", () => {
+describe("SitePing adapter contract", () => {
+  it("exposes the handler factory and store APIs used by WeeklyReport", () => {
     expect(createSitepingHandler).toBeTypeOf("function");
     const consumedMethods: readonly (keyof SitepingStore)[] = [
       "createFeedback",

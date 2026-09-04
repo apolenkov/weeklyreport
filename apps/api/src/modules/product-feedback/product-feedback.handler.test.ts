@@ -126,6 +126,7 @@ describe("authenticated SitePing ingress", () => {
         authorEmail: "lead@example.test",
         status: "open",
         url: "/reports/one",
+        annotations: [],
       });
       expect(JSON.stringify(response)).not.toContain("secret");
     } finally {

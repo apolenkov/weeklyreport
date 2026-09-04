@@ -10,7 +10,7 @@ interface Props {
 // once the current period is known.
 export default async function LeadReportPage({ searchParams }: Props) {
   const { mode } = await searchParams;
-  const resolvedMode = mode === "slides" ? "slides" : "edit";
+  const resolvedMode = mode === "slides" || mode === "edit" ? mode : "overview";
 
   return (
     <main

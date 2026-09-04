@@ -49,19 +49,7 @@ export function createMockTRPC(descriptors: ProcedureDescriptor[]): {
 
   const root: Record<string, unknown> = {};
 
-  // The lead shell mounts the optional report assistant for lead sessions.
-  // Keep legacy component harnesses deterministic by modeling the current
-  // default state (AI is not configured) unless a test explicitly overrides
-  // this procedure with its own descriptor.
-  const effectiveDescriptors: ProcedureDescriptor[] = [
-    {
-      path: ["ai", "availability"],
-      query: { availability: "not_configured" },
-    },
-    ...descriptors,
-  ];
-
-  for (const descriptor of effectiveDescriptors) {
+  for (const descriptor of descriptors) {
     const { path, query, queryByInput, mutation } = descriptor;
     const dotted = toDotted(path);
     const qk = toQueryKey(path);

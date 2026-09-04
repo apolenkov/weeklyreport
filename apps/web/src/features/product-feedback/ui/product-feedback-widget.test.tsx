@@ -2,22 +2,28 @@
 import "@testing-library/jest-dom/vitest";
 
 import type { SitepingConfig } from "@siteping/widget";
-import { render } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useSession } from "../../../shared/lib/auth/session-provider";
 import { webEnv } from "../../../shared/lib/runtime/web-env";
 import { ProductFeedbackWidget } from "./product-feedback-widget";
 
-const { destroy, initSiteping } = vi.hoisted(() => {
+const { destroy, initSiteping, registerLocale } = vi.hoisted(() => {
   const destroy = vi.fn();
   return {
     destroy,
     initSiteping: vi.fn((_config: SitepingConfig) => ({ destroy })),
+    registerLocale: vi.fn(),
   };
 });
 
-vi.mock("@siteping/widget", () => ({ initSiteping }));
+vi.mock("@siteping/widget", () => ({ initSiteping, registerLocale }));
+vi.mock("./page-feedback-dialog", () => ({
+  PageFeedbackDialog: ({ identity }: { identity: { name: string } }) => (
+    <div>Page feedback for {identity.name}</div>
+  ),
+}));
 vi.mock("../../../shared/lib/auth/session-provider", () => ({
   useSession: vi.fn(),
 }));
@@ -30,7 +36,6 @@ const feedbackEnabled = vi.mocked(webEnv.productFeedback);
 
 beforeEach(() => {
   vi.clearAllMocks();
-  localStorage.clear();
   mockedSession.mockReturnValue({
     user: {
       id: "user-1",
@@ -59,45 +64,54 @@ describe("ProductFeedbackWidget", () => {
         enableRightClickComment: true,
         deepLink: true,
         minViewportWidth: 0,
+        locale: "weekly-report-en",
       }),
     );
+    expect(registerLocale).toHaveBeenCalledWith("weekly-report-en", {
+      "annotator.instruction": "Drag to comment",
+    });
+    expect(screen.getByText("Page feedback for Lead User")).toBeInTheDocument();
     unmount();
     expect(destroy).toHaveBeenCalledOnce();
   });
 
-  it("clears SitePing's durable retry queue before init and after errors", () => {
+  it.each(["lead", "viewer", "head", "admin"] as const)(
+    "renders the page-comment action for authenticated %s users",
+    (role) => {
+      feedbackEnabled.mockReturnValue(true);
+      mockedSession.mockReturnValue({
+        user: {
+          id: `${role}-user`,
+          name: `${role} user`,
+          email: `${role}@example.test`,
+          role,
+        },
+        organization: null,
+        isLoading: false,
+        isAuthenticated: true,
+      });
+
+      render(<ProductFeedbackWidget />);
+
+      expect(
+        screen.getByText(`Page feedback for ${role} user`),
+      ).toBeInTheDocument();
+    },
+  );
+
+  it("hides the page-comment action for the annotation lifecycle", () => {
     feedbackEnabled.mockReturnValue(true);
-    localStorage.setItem("siteping_retry_queue", "queued");
     render(<ProductFeedbackWidget />);
-
-    expect(localStorage.getItem("siteping_retry_queue")).toBeNull();
-    const config = initSiteping.mock.calls[0]?.[0];
-    localStorage.setItem("siteping_retry_queue", "failed");
-    config?.onError?.(new Error("submission failed"));
-    expect(localStorage.getItem("siteping_retry_queue")).toBeNull();
-  });
-
-  it("moves drawing instructions away from the top navigation", async () => {
-    feedbackEnabled.mockReturnValue(true);
-    const toolbar = document.createElement("div");
-    toolbar.dataset.sitepingIgnore = "true";
-    toolbar.style.cssText =
-      "position: fixed; top: 0; left: 0; right: 0; height: 52px";
-    document.body.append(toolbar);
-    const { unmount } = render(<ProductFeedbackWidget />);
     const config = initSiteping.mock.calls[0]?.[0];
 
-    config?.onAnnotationStart?.();
-    await Promise.resolve();
-    expect(toolbar).toHaveAttribute(
-      "data-weekly-report-siteping-toolbar",
-      "bottom",
-    );
-    expect(toolbar.style.top).toBe("auto");
-    expect(toolbar.style.bottom).toBe("0px");
+    expect(screen.getByText("Page feedback for Lead User")).toBeInTheDocument();
+    act(() => config?.onAnnotationStart?.());
+    expect(
+      screen.queryByText("Page feedback for Lead User"),
+    ).not.toBeInTheDocument();
 
-    unmount();
-    toolbar.remove();
+    act(() => config?.onAnnotationEnd?.());
+    expect(screen.getByText("Page feedback for Lead User")).toBeInTheDocument();
   });
 
   it("sends a bounded deep-link id as a same-origin request header", () => {

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { SessionUser } from "../../../shared/lib/auth/session-provider";
@@ -14,7 +14,31 @@ const { changeStatus, deleteFeedback, useSitepingInbox } = vi.hoisted(() => ({
   useSitepingInbox: vi.fn(),
 }));
 
-useSitepingInbox.mockReturnValue({
+const pageFeedback = {
+  id: "feedback-1",
+  projectName: "weekly-report",
+  type: "bug",
+  message: "The row is difficult to read",
+  status: "open",
+  url: "/lead/report/report-1",
+  urlPattern: null,
+  authorName: "Lead User",
+  authorEmail: "lead@example.test",
+  authorUserId: "lead-user",
+  authorReportingGroupId: "group-1",
+  viewport: "1440x900",
+  userAgent: "test",
+  clientId: "client-one",
+  resolvedAt: null,
+  createdAt: new Date("2026-09-03T08:00:00Z"),
+  updatedAt: new Date("2026-09-03T08:00:00Z"),
+  annotations: [],
+  screenshotUrl: null,
+  screenshotRegion: null,
+  diagnostics: null,
+} as const;
+
+const inboxState = {
   project: "weekly-report",
   projects: ["weekly-report"],
   setProject: vi.fn(),
@@ -24,31 +48,7 @@ useSitepingInbox.mockReturnValue({
   setType: vi.fn(),
   search: "",
   setSearch: vi.fn(),
-  items: [
-    {
-      id: "feedback-1",
-      projectName: "weekly-report",
-      type: "bug",
-      message: "The row is difficult to read",
-      status: "open",
-      url: "/lead/report/report-1",
-      urlPattern: null,
-      authorName: "Lead User",
-      authorEmail: "lead@example.test",
-      authorUserId: "lead-user",
-      authorReportingGroupId: "group-1",
-      viewport: "1440x900",
-      userAgent: "test",
-      clientId: "client-one",
-      resolvedAt: null,
-      createdAt: new Date("2026-09-03T08:00:00Z"),
-      updatedAt: new Date("2026-09-03T08:00:00Z"),
-      annotations: [],
-      screenshotUrl: null,
-      screenshotRegion: null,
-      diagnostics: null,
-    },
-  ],
+  items: [pageFeedback],
   total: 1,
   counts: {},
   loading: false,
@@ -70,7 +70,9 @@ useSitepingInbox.mockReturnValue({
   deleteFeedback,
   pendingUndo: null,
   undo: vi.fn(() => Promise.resolve()),
-});
+};
+
+useSitepingInbox.mockReturnValue(inboxState);
 
 vi.mock("@siteping/dashboard", () => ({ useSitepingInbox }));
 vi.mock("../../../shared/lib/auth/session-provider", () => ({
@@ -95,6 +97,7 @@ function setRole(role: SessionUser["role"]): void {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  useSitepingInbox.mockReturnValue(inboxState);
 });
 
 describe("ProductFeedbackPage role controls", () => {
@@ -114,9 +117,10 @@ describe("ProductFeedbackPage role controls", () => {
       ).not.toBeInTheDocument();
       expect(
         screen.getByRole("link", {
-          name: "Open annotation on /lead/report/report-1",
+          name: "Open page feedback on /lead/report/report-1",
         }),
-      ).toHaveAttribute("href", "/lead/report/report-1?siteping=feedback-1");
+      ).toHaveAttribute("href", "/lead/report/report-1");
+      expect(screen.getByText("Page feedback")).toBeInTheDocument();
     },
   );
 
@@ -139,6 +143,92 @@ describe("ProductFeedbackPage role controls", () => {
     expect(
       screen.getByRole("button", { name: "Delete feedback" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", {
+        name: "Open page feedback on /lead/report/report-1",
+      }),
+    ).toHaveAttribute("href", "/lead/report/report-1");
+  });
+
+  it("opens captured annotation evidence and keeps a secondary live link", () => {
+    setRole("admin");
+    useSitepingInbox.mockReturnValue({
+      ...inboxState,
+      items: [
+        {
+          ...pageFeedback,
+          annotations: [{ id: "annotation-1" }],
+          screenshotUrl: "data:image/png;base64,AAAA",
+          screenshotRegion: {
+            xPct: 0.1,
+            yPct: 0.2,
+            wPct: 0.3,
+            hPct: 0.4,
+          },
+          diagnostics: {
+            console: [
+              {
+                level: "error",
+                message: "Example console failure",
+                timestamp: "2026-09-03T08:00:00Z",
+              },
+            ],
+            network: [],
+          },
+        },
+      ],
+    });
+
+    render(<ProductFeedbackPage />);
+
+    expect(screen.getByText("Annotation")).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Review captured annotation on /lead/report/report-1",
+      }),
+    );
+
+    expect(
+      screen.getByRole("img", {
+        name: "Page screenshot captured with this annotation",
+      }),
+    ).toHaveAttribute("src", "data:image/png;base64,AAAA");
+    expect(screen.getByLabelText("Annotated region")).toHaveStyle({
+      height: "40%",
+      left: "10%",
+      top: "20%",
+      width: "30%",
+    });
+    expect(
+      screen.getByText((_content, element) => {
+        return (
+          element?.tagName === "LI" &&
+          element.textContent.includes("Example console failure")
+        );
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Open live page" }),
+    ).toHaveAttribute(
+      "href",
+      "/head/report/report-1?authorId=lead-user&siteping=feedback-1&sitepingUrl=%2Flead%2Freport%2Freport-1",
+    );
+  });
+
+  it("keeps a live deep link when an old annotation has no capture", () => {
+    setRole("admin");
+    useSitepingInbox.mockReturnValue({
+      ...inboxState,
+      items: [
+        {
+          ...pageFeedback,
+          annotations: [{ id: "annotation-1" }],
+        },
+      ],
+    });
+
+    render(<ProductFeedbackPage />);
+
     expect(
       screen.getByRole("link", {
         name: "Open annotation on /lead/report/report-1",

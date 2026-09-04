@@ -31,6 +31,7 @@ import {
   getSectionForPeriodRead,
 } from "./lead-form-period.reads.js";
 import { getSectionReopenContext } from "./lead-form-reopen-eligibility.query.js";
+import { getStatusOverviewPeriodsRead } from "./lead-form-status-overview.read.js";
 import {
   publishedLineageCandidates,
   queryPublishedLineage,
@@ -125,6 +126,21 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       reportId,
       authorId,
       peerUserId,
+    );
+  }
+
+  getStatusOverviewPeriods(
+    reportId: string,
+    authorId: string,
+    viewerId: string,
+    role: import("@customreport/shared").Role,
+  ): ReturnType<LeadFormRepository["getStatusOverviewPeriods"]> {
+    return getStatusOverviewPeriodsRead(
+      this.prisma,
+      reportId,
+      authorId,
+      viewerId,
+      role,
     );
   }
 

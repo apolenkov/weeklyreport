@@ -1,20 +1,22 @@
 "use client";
 
-import { FileText, LayoutGrid, Pencil } from "lucide-react";
+import { FileText, LayoutGrid, ListTree, Pencil } from "lucide-react";
 import Link from "next/link";
 
 import { segmentClassName, SegmentedToggle } from "./segmented-toggle";
 
 interface ViewModeToggleProps {
+  readonly overviewHref?: string;
   readonly editHref: string;
   readonly slidesHref: string;
-  readonly mode?: "edit" | "slides";
+  readonly mode?: "overview" | "edit" | "slides";
   // Viewer is read-only — pencil "Edit" is misleading; head keeps "Edit".
   readonly readOnly?: boolean;
   readonly desktopLabels?: boolean;
 }
 
 export function ViewModeToggle({
+  overviewHref,
   editHref,
   slidesHref,
   mode = "edit",
@@ -23,8 +25,23 @@ export function ViewModeToggle({
 }: ViewModeToggleProps) {
   // <Link> segments keep middle-click / open-in-new-tab; slides is its own route.
   const reportLabel = readOnly ? "Report" : "Edit";
+  const labelClassName = desktopLabels ? "sr-only lg:not-sr-only" : "sr-only";
   return (
     <SegmentedToggle ariaLabel="View mode">
+      {overviewHref ? (
+        <Link
+          href={overviewHref}
+          scroll={false}
+          title="Overview"
+          className={segmentClassName(mode === "overview", {
+            iconOnly: true,
+            desktopLabels,
+          })}
+        >
+          <ListTree className="h-4 w-4" aria-hidden="true" />
+          <span className={labelClassName}>Overview</span>
+        </Link>
+      ) : null}
       <Link
         href={editHref}
         scroll={false}
@@ -39,9 +56,7 @@ export function ViewModeToggle({
         ) : (
           <Pencil className="h-4 w-4" aria-hidden="true" />
         )}
-        <span className={desktopLabels ? "sr-only lg:not-sr-only" : "sr-only"}>
-          {reportLabel}
-        </span>
+        <span className={labelClassName}>{reportLabel}</span>
       </Link>
       <Link
         href={slidesHref}
@@ -53,9 +68,7 @@ export function ViewModeToggle({
         })}
       >
         <LayoutGrid className="h-4 w-4" aria-hidden="true" />
-        <span className={desktopLabels ? "sr-only lg:not-sr-only" : "sr-only"}>
-          Slides
-        </span>
+        <span className={labelClassName}>Slides</span>
       </Link>
     </SegmentedToggle>
   );

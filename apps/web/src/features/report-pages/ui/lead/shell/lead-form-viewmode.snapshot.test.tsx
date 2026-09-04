@@ -46,6 +46,10 @@ function makeSection() {
 function buildTRPC() {
   const { proxy } = createMockTRPC([
     {
+      path: ["ai", "availability"],
+      query: { availability: "not_configured" },
+    },
+    {
       path: ["reports", "getActive"],
       query: {
         reportId: REPORT_ID,
@@ -152,7 +156,7 @@ describe("LeadForm view-mode toggle", () => {
 
     expect(editLink).toHaveAttribute(
       "href",
-      `/lead/report/${encodeURIComponent(REPORT_ID)}`,
+      `/lead/report/${encodeURIComponent(REPORT_ID)}?mode=edit`,
     );
     expect(slidesLink).toHaveAttribute(
       "href",

@@ -85,6 +85,10 @@ function makeSection() {
 function buildHarness() {
   const { proxy, captured } = createMockTRPC([
     {
+      path: ["ai", "availability"],
+      query: { availability: "not_configured" },
+    },
+    {
       path: ["reports", "getActive"],
       query: {
         reportId: REPORT_ID,

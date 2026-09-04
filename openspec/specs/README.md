@@ -23,6 +23,7 @@ This index maps every durable capability to one canonical home. Product capabili
 
 #### Draft
 
+- [authenticated-product-feedback](./authenticated-product-feedback/spec.md) — Authenticated users capture contextual or page-level feedback while server-owned identity, role scope, diagnostics, inbox actions, and annotation deep links stay protected. `[roles: Lead, Head, Viewer, Admin]`
 - [dialog-listbox-a11y](./dialog-listbox-a11y/spec.md) — Dialogs, period listboxes, popups, and expanders share correct focus, close, and ARIA behavior. `[roles: Lead, Head, Viewer, Admin]`
 - [list-empty-state-fidelity](./list-empty-state-fidelity/spec.md) — Filtered-list counts and empty states derive from the same rows the user can see. `[roles: Lead, Head, Viewer, Admin]`
 - [report-badge-resolution](./report-badge-resolution/spec.md) — Risk and decision badges resolve product names report-wide instead of falling back to Unknown. `[roles: Lead, Head, Viewer, Admin]`

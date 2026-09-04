@@ -1,4 +1,12 @@
-## ADDED Requirements
+# authenticated-product-feedback Specification
+
+## Purpose
+
+Provide authenticated, role-scoped product feedback for WeeklyReport while
+preserving trustworthy author identity, bounded capture data, deterministic
+annotation navigation, and separation from the report review lifecycle.
+
+## Requirements
 
 ### Requirement: Feedback attribution MUST be server-authoritative
 
@@ -79,7 +87,7 @@ WeeklyReport MUST pin `@siteping/adapter-prisma@0.6.4` and consume it only behin
 
 #### Scenario: The widget submits feedback
 
-- **WHEN** the authenticated widget sends a SitePing-compatible payload to the same-origin endpoint
+- **WHEN** the authenticated widget sends a SitePing payload to the same-origin endpoint
 - **THEN** the feedback module performs session resolution and authorization before delegating validation/storage behavior
 - **AND** callers do not coordinate adapter, session, and Prisma details themselves
 
@@ -103,22 +111,12 @@ The WeeklyReport widget MUST enable drawn annotations, right-click comments, scr
 - **WHEN** feedback is created from a URL containing a query or fragment
 - **THEN** only the pathname is stored and returned as page scope
 
-#### Scenario: A user starts a drawn annotation near the top navigation
+#### Scenario: SitePing opens its drawing instruction surface
 
 - **WHEN** SitePing opens its fixed drawing-instruction toolbar
-- **THEN** WeeklyReport places that toolbar at the bottom of the viewport
-- **AND** the top navigation remains visible beneath the annotation canvas
-- **AND** clicking over a visible navigation control draws instead of triggering the control
-
-### Requirement: Failed submissions MUST NOT survive browser reloads
-
-WeeklyReport MUST disable SitePing's durable browser retry queue. It MUST clear the pinned queue before widget initialization and after submission errors so rejected, deleted, or previous-identity payloads cannot be silently recreated on a later page load.
-
-#### Scenario: A feedback POST fails
-
-- **WHEN** the server returns a 4xx, 5xx, or network error and SitePing reports the failure
-- **THEN** no `siteping_retry_queue` payload remains after the error callback
-- **AND** reloading the application does not resubmit that payload
+- **THEN** WeeklyReport uses only the supported locale callback to shorten the instruction
+- **AND** WeeklyReport does not inspect or rewrite SitePing's private injected DOM
+- **AND** SitePing continues to own placement, Cancel, Escape, and drawing interception
 
 ### Requirement: Feedback creation MUST be concurrency-safe
 
@@ -174,7 +172,7 @@ Creating, triaging, resolving, or deleting product feedback MUST NOT mutate repo
 
 The Prisma schema and canonical init migration MUST stay synchronized. Any destructive recreation used to prove the migration MUST target only an exact database accepted by `prisma/guards/_destructive-guard.ts` with fresh per-run consent.
 
-#### Scenario: Migration compatibility is verified
+#### Scenario: Schema recreation is verified
 
 - **WHEN** the schema is recreated for acceptance
 - **THEN** the guard proves the exact disposable target before reset or seed

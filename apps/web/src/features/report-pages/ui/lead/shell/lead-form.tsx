@@ -3,12 +3,13 @@
 import { LeadFormLoadError } from "./lead-form-load-error";
 import { LeadFormLoaded } from "./lead-form-loaded";
 import { LeadFormSkeleton } from "./lead-form-skeleton";
+import { LeadStatusOverview } from "./lead-status-overview";
 import { useLeadFormEditor } from "./use-lead-form-editor";
 
 interface LeadFormProps {
   // Explicit report id from `[reportId]`; bare-route redirect on UseLeadFormDataInput.
   readonly reportId?: string;
-  readonly mode?: "edit" | "slides";
+  readonly mode?: "overview" | "edit" | "slides";
   readonly redirectToCanonical?: boolean;
 }
 
@@ -35,7 +36,11 @@ function LeadFormUnavailable() {
   );
 }
 
-export function LeadForm(props: LeadFormProps) {
+function LeadFormEditor(
+  props: Omit<LeadFormProps, "mode"> & {
+    readonly mode: "edit" | "slides";
+  },
+) {
   const editor = useLeadFormEditor(props);
   if (editor.status === "unavailable") return <LeadFormUnavailable />;
   if (editor.status === "error") {
@@ -47,7 +52,12 @@ export function LeadForm(props: LeadFormProps) {
     );
   }
   if (editor.status === "loading") {
-    return <LeadFormSkeleton mode={editor.mode} />;
+    return <LeadFormSkeleton mode={props.mode} />;
   }
   return <LeadFormLoaded key={editor.generation} {...editor.view} />;
+}
+
+export function LeadForm({ mode = "edit", ...props }: LeadFormProps) {
+  if (mode === "overview") return <LeadStatusOverview {...props} />;
+  return <LeadFormEditor {...props} mode={mode} />;
 }
