@@ -32,6 +32,14 @@ describe("PageFeedbackDialog", () => {
 
     const trigger = screen.getByRole("button", { name: "Comment on page" });
     await user.click(trigger);
+    expect(screen.getByLabelText("Type")).toHaveAttribute(
+      "name",
+      "feedbackType",
+    );
+    expect(screen.getByLabelText("Comment")).toHaveAttribute(
+      "name",
+      "feedbackComment",
+    );
     await user.selectOptions(screen.getByLabelText("Type"), "bug");
     await user.type(screen.getByLabelText("Comment"), "The page feels busy");
     await user.click(screen.getByRole("button", { name: "Send feedback" }));

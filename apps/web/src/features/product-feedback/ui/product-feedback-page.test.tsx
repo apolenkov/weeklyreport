@@ -121,6 +121,18 @@ describe("ProductFeedbackPage role controls", () => {
         }),
       ).toHaveAttribute("href", "/lead/report/report-1");
       expect(screen.getByText("Page feedback")).toBeInTheDocument();
+      expect(screen.getByRole("searchbox", { name: "Search" })).toHaveAttribute(
+        "name",
+        "feedbackSearch",
+      );
+      expect(screen.getByRole("combobox", { name: "Status" })).toHaveAttribute(
+        "name",
+        "feedbackStatus",
+      );
+      expect(screen.getByRole("combobox", { name: "Type" })).toHaveAttribute(
+        "name",
+        "feedbackType",
+      );
     },
   );
 
@@ -199,6 +211,9 @@ describe("ProductFeedbackPage role controls", () => {
       top: "20%",
       width: "30%",
     });
+    expect(
+      screen.getByRole("img", { name: "Annotated region" }),
+    ).toBeInTheDocument();
     expect(
       screen.getByText((_content, element) => {
         return (

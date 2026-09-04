@@ -79,7 +79,9 @@ export function ProductFeedbackPage() {
         <label className="grid gap-1 text-sm font-medium">
           Search
           <input
+            autoComplete="off"
             className="rounded-lg border border-[var(--color-border)] bg-transparent px-3 py-2 font-normal"
+            name="feedbackSearch"
             onChange={(event) => inbox.setSearch(event.target.value)}
             placeholder="Message or author"
             type="search"
@@ -90,6 +92,7 @@ export function ProductFeedbackPage() {
           Status
           <select
             className="rounded-lg border border-[var(--color-border)] bg-transparent px-3 py-2 font-normal"
+            name="feedbackStatus"
             onChange={(event) =>
               inbox.setStatus(event.target.value as FeedbackStatus | "all")
             }
@@ -107,6 +110,7 @@ export function ProductFeedbackPage() {
           Type
           <select
             className="rounded-lg border border-[var(--color-border)] bg-transparent px-3 py-2 font-normal"
+            name="feedbackType"
             onChange={(event) =>
               inbox.setType(event.target.value as FeedbackType | "all")
             }

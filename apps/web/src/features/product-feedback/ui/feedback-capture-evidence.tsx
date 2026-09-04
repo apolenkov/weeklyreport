@@ -75,6 +75,7 @@ export function FeedbackCaptureEvidence({
           <span
             aria-label="Annotated region"
             className="pointer-events-none absolute border-2 border-amber-400 bg-amber-300/15 shadow-[0_0_0_1px_rgba(255,255,255,0.9)]"
+            role="img"
             style={{
               height: `${region.hPct * PERCENT}%`,
               left: `${region.xPct * PERCENT}%`,
