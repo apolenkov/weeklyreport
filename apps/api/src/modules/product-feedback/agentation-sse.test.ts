@@ -21,6 +21,7 @@ function harness(
   req.header = (name) => headers[name.toLowerCase()];
   const responseEvents = new EventEmitter();
   const res = Object.assign(responseEvents, {
+    destroyed: false,
     writableEnded: false,
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis(),
@@ -44,10 +45,93 @@ function source(
     loadEvents: vi.fn(() => Promise.resolve(events)),
     loadPending: vi.fn(() => Promise.resolve(pending)),
     loadLatestSequence: vi.fn(() => Promise.resolve(latest)),
+    loadDeletionEvents: vi.fn(() => Promise.resolve([])),
   };
 }
 
 describe("Agentation SSE transport", () => {
+  it("does not start timers after disconnecting during the initial read", async () => {
+    const { req, res, response } = harness();
+    const s = source();
+    s.loadEvents = () => {
+      response.destroyed = true;
+      response.emit("close");
+      return Promise.resolve([]);
+    };
+    const setIntervalFn = vi.fn();
+    await startAgentationSse({
+      req,
+      res,
+      source: s,
+      agent: false,
+      allowGlobal: true,
+      setIntervalFn,
+    });
+    expect(setIntervalFn).not.toHaveBeenCalled();
+  });
+
+  it("replays all deletion pages before polling beyond the captured snapshot", async () => {
+    const tombstones = [1, 3, 5].map((value) => ({
+      type: "annotation.updated",
+      sequence: BigInt(value),
+      timestamp: "2026-09-04T00:00:00.000Z",
+      payload: { id: `deleted-${value}`, deleted: true, status: "dismissed" },
+    }));
+    const s = source(tombstones);
+    s.loadDeletionEvents = vi.fn<AgentationSseSource["loadDeletionEvents"]>(
+      (_id, after, through, limit) =>
+        Promise.resolve(
+          tombstones
+            .filter(
+              (event) => event.sequence > after && event.sequence <= through,
+            )
+            .slice(0, limit),
+        ),
+    );
+    const { req, res, response } = harness();
+    await startAgentationSse({
+      req,
+      res,
+      source: s,
+      scopedSessionId: "s-1",
+      agent: false,
+      allowGlobal: false,
+      maxBatchSize: 2,
+      setIntervalFn: vi.fn(),
+      clearIntervalFn: vi.fn(),
+    });
+    expect(s.loadDeletionEvents).toHaveBeenNthCalledWith(1, "s-1", 0n, 5n, 2);
+    expect(s.loadDeletionEvents).toHaveBeenNthCalledWith(2, "s-1", 3n, 5n, 2);
+    expect(
+      response.write.mock.calls.filter(([value]) =>
+        String(value).startsWith("id:"),
+      ),
+    ).toHaveLength(3);
+    expect(s.loadEvents).toHaveBeenCalledWith(5n, "s-1");
+    (res as unknown as EventEmitter).emit("close");
+  });
+
+  it("prevents proxy compression and immediately opens the response body", async () => {
+    const { req, res, response } = harness();
+    await startAgentationSse({
+      req,
+      res,
+      source: source(),
+      scopedSessionId: "s-1",
+      agent: false,
+      allowGlobal: false,
+      setIntervalFn: vi.fn(),
+      clearIntervalFn: vi.fn(),
+    });
+    expect(response.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        "cache-control": "no-cache, no-transform",
+      }),
+    );
+    expect(response.write).toHaveBeenCalledWith(": connected\n\n");
+    (res as unknown as EventEmitter).emit("close");
+  });
+
   it("replays after Last-Event-ID in sequence order", async () => {
     const events = [1, 3, 2].map((n) => ({
       type: "annotation.updated",
@@ -76,6 +160,7 @@ describe("Agentation SSE transport", () => {
         .filter((value) => value.startsWith("id:"))
         .map((value) => value.slice(4, 5)),
     ).toEqual(["2", "3"]);
+    expect(s.loadDeletionEvents).not.toHaveBeenCalled();
     (req as unknown as EventEmitter).emit("close");
   });
 
@@ -104,7 +189,7 @@ describe("Agentation SSE transport", () => {
 
     expect(s.loadLatestSequence).toHaveBeenCalledWith("session-1");
     expect(s.loadEvents).toHaveBeenCalledWith(7n, "session-1");
-    expect(response.write).not.toHaveBeenCalled();
+    expect(response.write.mock.calls).toEqual([[": connected\n\n"]]);
     (req as unknown as EventEmitter).emit("close");
   });
 
@@ -148,7 +233,7 @@ describe("Agentation SSE transport", () => {
     });
 
     expect(s.loadPending).not.toHaveBeenCalled();
-    expect(response.write).not.toHaveBeenCalled();
+    expect(response.write.mock.calls).toEqual([[": connected\n\n"]]);
     (req as unknown as EventEmitter).emit("close");
   });
 

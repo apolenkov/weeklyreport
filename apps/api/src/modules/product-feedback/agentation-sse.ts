@@ -15,6 +15,12 @@ export interface AgentationSseSource {
   ): Promise<readonly AgentationSseEvent[]>;
   loadPending(scopedSessionId?: string): Promise<readonly unknown[]>;
   loadLatestSequence(scopedSessionId?: string): Promise<bigint>;
+  loadDeletionEvents(
+    sessionId: string,
+    after: bigint,
+    through: bigint,
+    limit: number,
+  ): Promise<readonly AgentationSseEvent[]>;
 }
 
 export interface AgentationSseOptions {
@@ -140,6 +146,31 @@ function rejectInvalidScope(
   return false;
 }
 
+async function replayInitialDeletions(
+  options: AgentationSseOptions,
+  through: bigint,
+  limit: number,
+): Promise<void> {
+  if (!options.scopedSessionId || options.agent) return;
+  const state = { after: ZERO_SEQUENCE };
+  while (
+    state.after < through &&
+    !options.res.destroyed &&
+    !options.res.writableEnded
+  ) {
+    const batch = await options.source.loadDeletionEvents(
+      options.scopedSessionId,
+      state.after,
+      through,
+      limit,
+    );
+    const last = batch.at(-1);
+    if (!last) return;
+    for (const event of batch) send(options.res, event);
+    state.after = sequence(last.sequence);
+  }
+}
+
 export async function runAgentationSsePoll(
   options: AgentationSseOptions,
   cursor: bigint,
@@ -184,13 +215,17 @@ export async function startAgentationSse(
 
   options.res.status(HTTP_OK).set({
     "content-type": "text/event-stream",
-    "cache-control": "no-cache",
+    // Proxy compression would buffer small events until the stream ends.
+    "cache-control": "no-cache, no-transform",
     connection: "keep-alive",
   });
   options.res.flushHeaders();
+  options.res.write(": connected\n\n");
   const initialCursor =
     replayCursor ??
     (await options.source.loadLatestSequence(options.scopedSessionId));
+  if (replayCursor === undefined)
+    await replayInitialDeletions(options, initialCursor, maxBatchSize);
   if (replayCursor === undefined && !options.scopedSessionId)
     await sendInitialSync(options, domain, maxBatchSize);
   const state = {
@@ -200,6 +235,9 @@ export async function startAgentationSse(
     ),
     polling: false,
   };
+
+  // The peer may disconnect while the initial database reads are pending.
+  if (options.res.destroyed || options.res.writableEnded) return;
 
   const setIntervalFn =
     options.setIntervalFn ??

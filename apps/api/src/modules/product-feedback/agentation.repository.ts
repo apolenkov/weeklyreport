@@ -4,6 +4,8 @@ import {
   type AgentationAction,
   type AgentationAnnotationCreate,
   type AgentationAnnotationPatch,
+  type AgentationAnnotationResponse,
+  agentationAnnotationResponseSchema,
   type AgentationSessionCreate,
   type AgentationThread,
   normalizeAgentationPath,
@@ -13,7 +15,11 @@ import { Prisma } from "@prisma/client";
 import {
   actorId,
   annotationData,
+  deletedAnnotationResponse,
   emit,
+  findAnnotationForSync,
+  findDeletionForSync,
+  lockAgentationSession,
   lockVisibleAnnotation,
   updateData,
 } from "./agentation.repository.helpers.js";
@@ -45,6 +51,7 @@ export interface AgentationEventRecord {
 }
 
 const MAX_EVENT_BATCH = 500;
+
 export class AgentationPrismaRepository extends AgentationReadRepository {
   async latestEventSequence(
     access: FeedbackAccess,
@@ -121,36 +128,65 @@ export class AgentationPrismaRepository extends AgentationReadRepository {
     access: FeedbackAccess,
     sessionId: string,
     input: AgentationAnnotationCreate,
-  ): Promise<ReturnType<typeof mapAnnotation> | null> {
-    return this.prisma.$transaction(async (db) => {
-      const session = await db.agentationSession.findFirst({
-        where: { id: sessionId, ...sessionScope(access) },
-      });
-      if (!session) return null;
-      const proposedId = randomUUID();
-      const row = await db.agentationAnnotation.upsert({
-        where: {
-          sessionId_authorUserId_clientId: {
-            sessionId,
-            authorUserId: access.userId,
-            clientId: input.id,
-          },
-        },
-        update: {},
-        create: annotationData(proposedId, access, session, sessionId, input),
-        include: { threadMessages: { orderBy: { timestamp: "asc" } } },
-      });
-      const annotation = mapAnnotation(row);
-      if (row.id === proposedId)
-        await emit(db, {
-          type: "annotation.created",
-          sessionId,
-          annotationId: row.id,
-          payload: annotation,
-          authorUserId: access.userId,
+  ): Promise<AgentationAnnotationResponse | null> {
+    return this.prisma.$transaction<AgentationAnnotationResponse | null>(
+      async (db) => {
+        const session = await db.agentationSession.findFirst({
+          where: { id: sessionId, ...sessionScope(access) },
         });
-      return annotation;
-    });
+        if (!session) return null;
+        if (!(await lockAgentationSession(db, sessionId))) return null;
+        const tombstone = await findDeletionForSync(
+          db,
+          access,
+          sessionId,
+          input.id,
+        );
+        if (tombstone)
+          return deletedAnnotationResponse(
+            access,
+            session,
+            sessionId,
+            input,
+            tombstone,
+          );
+        const proposedId = randomUUID();
+        const existing = await findAnnotationForSync(
+          db,
+          access,
+          sessionId,
+          input.id,
+        );
+        if (existing)
+          return agentationAnnotationResponseSchema.parse(
+            mapAnnotation(existing),
+          );
+        const row = await db.agentationAnnotation.upsert({
+          where: {
+            sessionId_authorUserId_clientId: {
+              sessionId,
+              authorUserId: access.userId,
+              clientId: input.id,
+            },
+          },
+          update: {},
+          create: annotationData(proposedId, access, session, sessionId, input),
+          include: { threadMessages: { orderBy: { timestamp: "asc" } } },
+        });
+        const annotation = agentationAnnotationResponseSchema.parse(
+          mapAnnotation(row),
+        );
+        if (row.id === proposedId)
+          await emit(db, {
+            type: "annotation.created",
+            sessionId,
+            annotationId: row.id,
+            payload: annotation,
+            authorUserId: access.userId,
+          });
+        return annotation;
+      },
+    );
   }
 
   async updateAnnotation(

@@ -67,6 +67,7 @@
   },
   "devDependencies": {
     "@customreport/migrator-runtime": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.30.0",
     "@nestjs/testing": "^11.2.3",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",

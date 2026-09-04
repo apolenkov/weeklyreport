@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useSession } from "../../../shared/lib/auth/session-provider";
@@ -54,6 +54,24 @@ beforeEach(() => {
 });
 
 describe("ProductFeedbackWidget", () => {
+  it("remounts the native client only when a cached page is restored", () => {
+    const view = render(<ProductFeedbackWidget />);
+    const original = screen.getByText("Agentation endpoint /api/v1/agentation");
+
+    fireEvent(
+      window,
+      new PageTransitionEvent("pageshow", { persisted: false }),
+    );
+    expect(screen.getByText(original.textContent)).toBe(original);
+
+    fireEvent(window, new PageTransitionEvent("pageshow", { persisted: true }));
+    expect(screen.getByText(original.textContent)).not.toBe(original);
+    view.unmount();
+    agentation.mockClear();
+    fireEvent(window, new PageTransitionEvent("pageshow", { persisted: true }));
+    expect(agentation).not.toHaveBeenCalled();
+  });
+
   it("mounts Agentation against the authenticated same-origin API", async () => {
     render(<ProductFeedbackWidget />);
 

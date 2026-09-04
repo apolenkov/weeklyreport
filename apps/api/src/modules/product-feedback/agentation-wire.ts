@@ -87,6 +87,12 @@ async function events(
         repo.events(access, after, id),
       loadPending: (id?: string) => repo.pending(access, id),
       loadLatestSequence: (id?: string) => repo.latestEventSequence(access, id),
+      loadDeletionEvents: (
+        id: string,
+        after: bigint,
+        through: bigint,
+        limit: number,
+      ) => repo.deletionEvents(access, id, after, through, limit),
     },
     ...(sessionId ? { scopedSessionId: sessionId } : {}),
     ...(options.frontendOrigin

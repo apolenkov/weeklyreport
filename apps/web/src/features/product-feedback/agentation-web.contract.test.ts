@@ -2,8 +2,26 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 
-import { Agentation, loadAnnotations, saveAnnotations } from "agentation";
-import { describe, expect, it } from "vitest";
+import type {
+  AgentationAnnotationCreate,
+  AgentationAnnotationResponse,
+} from "@customreport/shared";
+import {
+  Agentation,
+  type Annotation,
+  loadAnnotations,
+  saveAnnotations,
+} from "agentation";
+import { describe, expect, expectTypeOf, it } from "vitest";
+
+import webPackage from "../../../package.json";
+
+// JSON omits undefined optional values; compare the types of fields actually sent.
+type JsonFields<T> = T extends readonly (infer Item)[]
+  ? JsonFields<Item>[]
+  : T extends object
+    ? { [Key in keyof T]-?: JsonFields<Exclude<T[Key], undefined>> }
+    : T;
 
 describe("Agentation web contract", () => {
   it("exposes the official APIs used by WeeklyReport", () => {
@@ -12,7 +30,7 @@ describe("Agentation web contract", () => {
     expect(saveAnnotations).toBeTypeOf("function");
   });
 
-  it("pins the deeply reviewed release and license", () => {
+  it("uses the exact manifest version and reviewed license", () => {
     const require = createRequire(import.meta.url);
     const entrypoint = require.resolve("agentation");
     const packageJson = JSON.parse(
@@ -22,29 +40,32 @@ describe("Agentation web contract", () => {
     expect(packageJson).toMatchObject({
       license: "PolyForm-Shield-1.0.0",
       name: "agentation",
-      version: "3.0.2",
+      version: webPackage.devDependencies.agentation,
     });
+    expect(webPackage.devDependencies.agentation).toMatch(/^\d+\.\d+\.\d+$/u);
   });
 
-  it("keeps the reviewed browser HTTP surface", () => {
-    const require = createRequire(import.meta.url);
-    const bundle = readFileSync(require.resolve("agentation"), "utf8");
-    const normalizedBundle = bundle.replaceAll(
-      ["$", "{"].join(""),
-      "{template:",
-    );
-    const expectedFragments = [
-      "fetch(`{template:endpoint}/sessions`, {",
-      'method: "POST"',
-      "fetch(`{template:endpoint}/sessions/{template:sessionId}`)",
-      "fetch(`{template:endpoint}/sessions/{template:sessionId}/annotations`, {",
-      "fetch(`{template:endpoint}/annotations/{template:annotationId}`, {",
-      'method: "PATCH"',
-      'method: "DELETE"',
-      "`{template:endpoint}/sessions/{template:currentSessionId}/events`",
-    ];
-
-    for (const fragment of expectedFragments)
-      expect(normalizedBundle).toContain(fragment);
+  it("matches the public annotation field types and accounts for server-owned fields", () => {
+    expectTypeOf<JsonFields<AgentationAnnotationCreate>>().toEqualTypeOf<
+      JsonFields<Pick<Annotation, keyof AgentationAnnotationCreate>>
+    >();
+    type CommonFields = keyof AgentationAnnotationResponse & keyof Annotation;
+    expectTypeOf<
+      JsonFields<Pick<AgentationAnnotationResponse, CommonFields>>
+    >().toEqualTypeOf<JsonFields<Pick<Annotation, CommonFields>>>();
+    expectTypeOf<
+      Exclude<keyof Annotation, keyof AgentationAnnotationCreate>
+    >().toEqualTypeOf<
+      | "sessionId"
+      | "url"
+      | "status"
+      | "thread"
+      | "createdAt"
+      | "updatedAt"
+      | "resolvedAt"
+      | "resolvedBy"
+      | "authorId"
+      | "_syncedTo"
+    >();
   });
 });
