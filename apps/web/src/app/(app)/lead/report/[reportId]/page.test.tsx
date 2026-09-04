@@ -29,8 +29,10 @@ const REPORT_ID = "a0000000-0000-4000-8000-000000000001";
 
 async function renderPage(searchParams: {
   readonly mode?: string;
-  readonly siteping?: string;
-  readonly sitepingUrl?: string;
+  readonly feedback?: string;
+  readonly feedbackUrl?: string;
+  readonly agentationSession?: string;
+  readonly agentationAnnotation?: string;
 }) {
   render(
     await LeadReportByIdPage({
@@ -58,15 +60,27 @@ describe("LeadReportByIdPage — URL mode", () => {
     },
   );
 
-  it("canonicalizes an unknown mode without losing SitePing focus", async () => {
+  it("canonicalizes an unknown mode without losing feedback focus", async () => {
     await renderPage({
       mode: "unknown",
-      siteping: "feedback-7",
-      sitepingUrl: "/lead/report",
+      feedback: "feedback-7",
+      feedbackUrl: "/lead/report",
     });
 
     expect(redirect).toHaveBeenCalledWith(
-      `/lead/report/${REPORT_ID}?siteping=feedback-7&sitepingUrl=%2Flead%2Freport`,
+      `/lead/report/${REPORT_ID}?feedback=feedback-7&feedbackUrl=%2Flead%2Freport`,
+    );
+  });
+
+  it("canonicalizes an unknown mode without losing Agentation focus", async () => {
+    await renderPage({
+      mode: "unknown",
+      agentationSession: "session-7",
+      agentationAnnotation: "annotation-9",
+    });
+
+    expect(redirect).toHaveBeenCalledWith(
+      `/lead/report/${REPORT_ID}?agentationSession=session-7&agentationAnnotation=annotation-9`,
     );
   });
 });

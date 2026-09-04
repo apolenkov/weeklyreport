@@ -16,19 +16,15 @@ vi.mock("../model/page-feedback-client", () => ({
 vi.mock("sonner", () => ({ toast: { success: toastSuccess } }));
 
 const submit = vi.mocked(submitPageFeedback);
-const identity = { name: "Lead User", email: "lead@example.test" };
-
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
 describe("PageFeedbackDialog", () => {
   it("submits a supported type and bounded message, then restores focus", async () => {
-    submit.mockResolvedValue(
-      {} as Awaited<ReturnType<typeof submitPageFeedback>>,
-    );
+    submit.mockResolvedValue(undefined);
     const user = userEvent.setup();
-    render(<PageFeedbackDialog identity={identity} />);
+    render(<PageFeedbackDialog />);
 
     const trigger = screen.getByRole("button", { name: "Comment on page" });
     await user.click(trigger);
@@ -45,10 +41,10 @@ describe("PageFeedbackDialog", () => {
     await user.click(screen.getByRole("button", { name: "Send feedback" }));
 
     await waitFor(() => {
-      expect(submit).toHaveBeenCalledWith(
-        { type: "bug", message: "The page feels busy" },
-        identity,
-      );
+      expect(submit).toHaveBeenCalledWith({
+        type: "bug",
+        message: "The page feels busy",
+      });
     });
     expect(toastSuccess).toHaveBeenCalledWith("Page feedback sent.");
     await waitFor(() => expect(trigger).toHaveFocus());
@@ -57,7 +53,7 @@ describe("PageFeedbackDialog", () => {
   it("keeps the dialog open with an actionable error after a failed request", async () => {
     submit.mockRejectedValue(new Error("network failed"));
     const user = userEvent.setup();
-    render(<PageFeedbackDialog identity={identity} />);
+    render(<PageFeedbackDialog />);
 
     await user.click(screen.getByRole("button", { name: "Comment on page" }));
     const send = screen.getByRole("button", { name: "Send feedback" });
@@ -75,7 +71,7 @@ describe("PageFeedbackDialog", () => {
 
   it("closes on Escape and returns focus to the trigger", async () => {
     const user = userEvent.setup();
-    render(<PageFeedbackDialog identity={identity} />);
+    render(<PageFeedbackDialog />);
 
     const trigger = screen.getByRole("button", { name: "Comment on page" });
     await user.click(trigger);

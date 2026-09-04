@@ -227,10 +227,12 @@ describe("LeadForm — addressable URLs", () => {
     );
   });
 
-  it("preserves a SitePing deep link while resolving the bare route", async () => {
+  it("preserves a feedback deep link while resolving the bare route", async () => {
     mockSearchParams = new URLSearchParams({
-      siteping: "feedback_123",
-      sitepingUrl: "/lead/report",
+      feedback: "feedback_123",
+      feedbackUrl: "/lead/report",
+      agentationSession: "session_123",
+      agentationAnnotation: "annotation_123",
     });
     const proxy = buildHarness({});
     render(
@@ -240,7 +242,7 @@ describe("LeadForm — addressable URLs", () => {
     );
     await waitFor(() =>
       expect(replace).toHaveBeenCalledWith(
-        `/lead/report/${ACTIVE_REPORT_ID}?siteping=feedback_123&sitepingUrl=%2Flead%2Freport&mode=edit`,
+        `/lead/report/${ACTIVE_REPORT_ID}?feedback=feedback_123&feedbackUrl=%2Flead%2Freport&agentationSession=session_123&agentationAnnotation=annotation_123&mode=edit`,
       ),
     );
   });

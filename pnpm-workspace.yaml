@@ -25,6 +25,9 @@ allowBuilds:
   # Declined deliberately: the postinstall only resolves a native binding that
   # the platform-specific optional dependency already provides (verified).
   "@swc/core": false
+  # Agentation MCP-only delegates persistence to the product HTTP API, so its
+  # optional local SQLite backend must not run a native install script here.
+  better-sqlite3: false
   esbuild: true
   msgpackr-extract: true
   msw: true
@@ -65,13 +68,8 @@ overrides:
   valibot: ">=1.4.2 <2"
   # Prisma 7.10 pins a recursion-vulnerable 7.x; require the cycle-safe major.
   deepmerge-ts: ">=8.0.2 <9"
-  # SitePing 0.10.7 uses html2canvas 1.4.1, which aborts on Tailwind 4's
-  # CSS Color 4 output. The API-compatible fork handles color()/oklch().
-  html2canvas: "npm:html2canvas-pro@1.6.7"
-
 patchedDependencies:
   "@node-saml/node-saml@5.1.0": patches/@node-saml__node-saml@5.1.0.patch
-  "@siteping/widget@0.10.7": patches/@siteping__widget@0.10.7.patch
   "samlify@2.13.1": patches/samlify@2.13.1.patch
   "xml-crypto@6.1.2": patches/xml-crypto@6.1.2.patch
 

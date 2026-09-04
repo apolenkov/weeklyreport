@@ -213,8 +213,8 @@ describe("rate-limit middleware — product-feedback limiter budget", () => {
       isTest: false,
       redis: createFakeRedisCall() as unknown as Redis,
     });
-    app.use("/api/siteping", feedbackLimiter);
-    app.post("/api/siteping", (_req, res) => res.sendStatus(204));
+    app.use("/api/v1/feedback", feedbackLimiter);
+    app.post("/api/v1/feedback", (_req, res) => res.sendStatus(204));
 
     const server = app.listen(0);
     await new Promise<void>((resolve) => server.once("listening", resolve));
@@ -222,7 +222,7 @@ describe("rate-limit middleware — product-feedback limiter budget", () => {
     try {
       const statuses: number[] = [];
       for (let i = 0; i < 31; i += 1) {
-        statuses.push(await postStatus(port, "/api/siteping"));
+        statuses.push(await postStatus(port, "/api/v1/feedback"));
       }
       expect(statuses.slice(0, 30).every((status) => status === 204)).toBe(
         true,

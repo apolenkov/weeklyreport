@@ -10,7 +10,10 @@ import { PRODUCT_FEEDBACK_JSON_LIMIT } from "../../infrastructure/http/ingress-l
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { resolveHumanSession } from "../../lib/human-session";
 import { createNullLogger } from "../../lib/logger";
-import { createAuthenticatedSitepingHandler } from "./product-feedback.handler";
+import {
+  createAuthenticatedFeedbackHandler,
+  isLoopbackAddress,
+} from "./product-feedback.handler";
 import { ProductFeedbackMemoryRepository } from "./product-feedback.memory-repository";
 
 vi.mock("../../lib/human-session", () => ({
@@ -18,6 +21,7 @@ vi.mock("../../lib/human-session", () => ({
 }));
 
 const ORIGIN = "http://localhost:3000";
+const AGENTATION_TEST_KEY = "agentation-test-key-with-32-characters";
 const sessions = vi.mocked(resolveHumanSession);
 
 function session(role: UserSession["role"]): UserSession {
@@ -30,38 +34,45 @@ function session(role: UserSession["role"]): UserSession {
   };
 }
 
-const payload = {
-  projectName: "spoofed",
-  type: "bug",
-  message: "The row is difficult to read",
-  url: "/reports/one?token=secret#row",
-  urlPattern: null,
-  viewport: "1440x900",
-  userAgent: "test-browser",
-  authorName: "Spoofed Name",
-  authorEmail: "spoofed@example.test",
-  clientId: "client_one",
-  annotations: [],
-  screenshotDataUrl: null,
-  screenshotRegion: null,
-  diagnostics: null,
-} as const;
+function createPayload(
+  message = "The row is difficult to read",
+  clientId = "page_feedback_one",
+) {
+  return {
+    type: "change",
+    message,
+    url: `${ORIGIN}/reports/one?token=secret#row`,
+    viewport: "1000x500",
+    userAgent: "test-browser",
+    clientId,
+  } as const;
+}
 
-async function createServer(role: UserSession["role"]): Promise<Server> {
-  sessions.mockResolvedValue(session(role));
+async function createServer(
+  options: {
+    readonly agentationEnabled?: boolean;
+    readonly agentationApiKey?: string;
+  } = {},
+): Promise<Server> {
+  sessions.mockImplementation((token) => {
+    if (token === "lead-token") return Promise.resolve(session("lead"));
+    if (token === "admin-token") return Promise.resolve(session("admin"));
+    return Promise.resolve(null);
+  });
   const app = express();
   app.disable("x-powered-by");
   app.use(cookieParser());
-  const handler = createAuthenticatedSitepingHandler({
+  const handler = createAuthenticatedFeedbackHandler({
     prisma: {} as PrismaService,
     repository: new ProductFeedbackMemoryRepository(),
-    verifySessionToken: () => session(role),
+    verifySessionToken: () => session("lead"),
     sessionRevocation: { isRevoked: () => Promise.resolve(false) },
     frontendOrigin: ORIGIN,
     logger: createNullLogger(),
+    ...options,
   });
   app.use(
-    "/api/siteping",
+    "/api/v1",
     handler.authenticate,
     express.json({ limit: PRODUCT_FEEDBACK_JSON_LIMIT }),
     handler.handle,
@@ -73,40 +84,54 @@ async function createServer(role: UserSession["role"]): Promise<Server> {
 
 async function call(
   server: Server,
-  method: string,
-  body?: Record<string, unknown>,
-  options: {
-    authenticated?: boolean;
-    origin?: string;
-    focusId?: string;
-    query?: string;
-  } = {},
+  path: string,
+  options: RequestInit & { role?: "lead" | "admin" } = {},
 ): Promise<Response> {
   const { port } = server.address() as AddressInfo;
-  return fetch(`http://127.0.0.1:${port}/api/siteping${options.query ?? ""}`, {
-    method,
+  const { role = "lead", headers, ...request } = options;
+  return fetch(`http://127.0.0.1:${port}/api/v1${path}`, {
+    ...request,
     headers: {
-      ...(body ? { "content-type": "application/json" } : {}),
-      ...(options.authenticated === false
-        ? {}
-        : { cookie: `${AUTH_COOKIE_NAME}=test-token` }),
-      ...(method === "GET" ? {} : { origin: options.origin ?? ORIGIN }),
-      ...(options.focusId ? { "x-siteping-focus-id": options.focusId } : {}),
+      cookie: `${AUTH_COOKIE_NAME}=${role}-token`,
+      ...(request.method && request.method !== "GET" ? { origin: ORIGIN } : {}),
+      ...headers,
     },
-    ...(body ? { body: JSON.stringify(body) } : {}),
   });
+}
+
+function jsonBody(value: unknown): Pick<RequestInit, "body" | "headers"> {
+  return {
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(value),
+  };
 }
 
 afterEach(() => {
   sessions.mockReset();
 });
 
-describe("authenticated SitePing ingress", () => {
-  it("rejects anonymous traffic before feedback parsing", async () => {
-    const server = await createServer("lead");
+describe("authenticated product-feedback ingress", () => {
+  it("accepts MCP credentials only from loopback addresses", () => {
+    expect(isLoopbackAddress("127.0.0.1")).toBe(true);
+    expect(isLoopbackAddress("127.42.0.7")).toBe(true);
+    expect(isLoopbackAddress("::ffff:127.0.0.1")).toBe(true);
+    expect(isLoopbackAddress("::1")).toBe(true);
+    expect(isLoopbackAddress("10.0.0.8")).toBe(false);
+    expect(isLoopbackAddress("::ffff:10.0.0.8")).toBe(false);
+    expect(isLoopbackAddress(undefined)).toBe(false);
+  });
+
+  it("rejects anonymous traffic before parsing feedback", async () => {
+    const server = await createServer();
     try {
-      const response = await call(server, "POST", payload, {
-        authenticated: false,
+      const { port } = server.address() as AddressInfo;
+      const response = await fetch(`http://127.0.0.1:${port}/api/v1/feedback`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: ORIGIN,
+        },
+        body: JSON.stringify(createPayload()),
       });
       expect(response.status).toBe(401);
     } finally {
@@ -114,130 +139,56 @@ describe("authenticated SitePing ingress", () => {
     }
   });
 
-  it("uses server identity/product and pathname-only scope", async () => {
-    const server = await createServer("lead");
+  it("rejects anonymous Agentation traffic", async () => {
+    const server = await createServer({ agentationEnabled: true });
     try {
-      const created = await call(server, "POST", payload);
-      expect(created.status).toBe(201);
-      const response = (await created.json()) as Record<string, unknown>;
-      expect(response).toMatchObject({
-        projectName: "weekly-report",
-        authorName: "lead user",
-        authorEmail: "lead@example.test",
-        status: "open",
-        url: "/reports/one",
-        annotations: [],
-      });
-      expect(JSON.stringify(response)).not.toContain("secret");
+      const { port } = server.address() as AddressInfo;
+      const response = await fetch(
+        `http://127.0.0.1:${port}/api/v1/agentation/health`,
+      );
+
+      expect(response.status).toBe(401);
     } finally {
       server.close();
     }
   });
 
-  it("returns one record for two concurrent same-author submissions", async () => {
-    const server = await createServer("lead");
+  it("derives identity from the session and stores only the pathname", async () => {
+    const server = await createServer();
     try {
-      const [first, second] = await Promise.all([
-        call(server, "POST", payload),
-        call(server, "POST", payload),
-      ]);
-      expect([first.status, second.status]).toEqual([201, 201]);
-      const [firstBody, secondBody] = (await Promise.all([
-        first.json(),
-        second.json(),
-      ])) as [{ id: string }, { id: string }];
-      expect(secondBody.id).toBe(firstBody.id);
-      const listed = await call(server, "GET");
-      expect(listed.headers.get("cache-control")).toBe("no-store");
-      await expect(listed.json()).resolves.toMatchObject({ total: 1 });
-    } finally {
-      server.close();
-    }
-  });
-
-  it("includes an authorized deep-link target outside the first 20", async () => {
-    const server = await createServer("lead");
-    try {
-      const oldest = await call(server, "POST", {
-        ...payload,
-        clientId: "deep_link_oldest",
-      });
-      const oldestBody = (await oldest.json()) as { id: string };
-      for (let index = 0; index < 20; index += 1) {
-        expect(
-          (
-            await call(server, "POST", {
-              ...payload,
-              clientId: `deep_link_newer_${index}`,
-            })
-          ).status,
-        ).toBe(201);
-      }
-
-      const listed = await call(server, "GET", undefined, {
-        focusId: oldestBody.id,
-        query: "?projectName=weekly-report&limit=20&url=%2Freports%2Fone",
-      });
-      const page = (await listed.json()) as {
-        feedbacks: readonly { id: string }[];
-        total: number;
-      };
-      expect(page.feedbacks).toHaveLength(20);
-      expect(page.feedbacks[0]?.id).toBe(oldestBody.id);
-      expect(page.total).toBe(21);
-    } finally {
-      server.close();
-    }
-  });
-
-  it("persists valid screenshot, region, and diagnostics", async () => {
-    const server = await createServer("viewer");
-    try {
-      const response = await call(server, "POST", {
-        ...payload,
-        clientId: "client_capture",
-        screenshotDataUrl: "data:image/png;base64,AA==",
-        screenshotRegion: { xPct: 0.1, yPct: 0.2, wPct: 0.3, hPct: 0.4 },
-        diagnostics: {
-          console: [
-            {
-              level: "error",
-              timestamp: "2026-09-03T10:00:00.000Z",
-              message: "Request failed",
-            },
-          ],
-          network: [
-            {
-              url: "/api/report?period=current",
-              method: "GET",
-              status: 500,
-              durationMs: 25,
-              timestamp: "2026-09-03T10:00:00.000Z",
-            },
-          ],
-        },
+      const response = await call(server, "/feedback", {
+        method: "POST",
+        ...jsonBody(createPayload()),
       });
       expect(response.status).toBe(201);
-      await expect(response.json()).resolves.toMatchObject({
-        screenshotUrl: "data:image/png;base64,AA==",
-        screenshotRegion: { xPct: 0.1, yPct: 0.2, wPct: 0.3, hPct: 0.4 },
-        diagnostics: {
-          console: [{ level: "error" }],
-          network: [{ status: 500 }],
-        },
+      const created = (await response.json()) as Record<string, unknown>;
+      expect(created).toMatchObject({
+        projectName: "weekly-report",
+        type: "change",
+        message: "The row is difficult to read",
+        status: "open",
+        url: "/reports/one",
+        authorUserId: "lead-user",
+        authorName: "lead user",
+        authorEmail: "lead@example.test",
+        annotations: [],
       });
+      expect(JSON.stringify(created)).not.toContain("secret");
     } finally {
       server.close();
     }
   });
 
-  it("rejects malformed capture fields", async () => {
-    const server = await createServer("viewer");
+  it("rejects client-supplied identity or product authority", async () => {
+    const server = await createServer();
     try {
-      const response = await call(server, "POST", {
-        ...payload,
-        clientId: "client_bad_capture",
-        screenshotDataUrl: "https://example.test/image.png",
+      const response = await call(server, "/feedback", {
+        method: "POST",
+        ...jsonBody({
+          ...createPayload(),
+          authorUserId: "spoofed-user",
+          projectName: "spoofed-product",
+        }),
       });
       expect(response.status).toBe(400);
     } finally {
@@ -245,68 +196,167 @@ describe("authenticated SitePing ingress", () => {
     }
   });
 
+  it("partitions the inbox by user while admins see all feedback", async () => {
+    const server = await createServer();
+    try {
+      expect(
+        (
+          await call(server, "/feedback", {
+            method: "POST",
+            ...jsonBody(createPayload()),
+          })
+        ).status,
+      ).toBe(201);
+      expect(
+        (
+          await call(server, "/feedback", {
+            method: "POST",
+            role: "admin",
+            ...jsonBody(createPayload("Admin feedback", "page_admin")),
+          })
+        ).status,
+      ).toBe(201);
+
+      const lead = await call(server, "/feedback?format=internal");
+      await expect(lead.json()).resolves.toMatchObject({ total: 1 });
+      const admin = await call(server, "/feedback?format=internal", {
+        role: "admin",
+      });
+      await expect(admin.json()).resolves.toMatchObject({ total: 2 });
+    } finally {
+      server.close();
+    }
+  });
+
+  it("returns one row for two requests with the same client ID", async () => {
+    const server = await createServer();
+    try {
+      const request = {
+        method: "POST",
+        ...jsonBody(createPayload()),
+      } as const;
+      const [first, second] = await Promise.all([
+        call(server, "/feedback", request),
+        call(server, "/feedback", request),
+      ]);
+      expect([first.status, second.status]).toEqual([201, 201]);
+      const [firstBody, secondBody] = (await Promise.all([
+        first.json(),
+        second.json(),
+      ])) as [{ id: string }, { id: string }];
+      expect(secondBody.id).toBe(firstBody.id);
+    } finally {
+      server.close();
+    }
+  });
+
   it("rejects cross-origin writes", async () => {
-    const server = await createServer("lead");
+    const server = await createServer();
     try {
+      const response = await call(server, "/feedback", {
+        method: "POST",
+        ...jsonBody(createPayload()),
+        headers: {
+          "content-type": "application/json",
+          origin: "https://evil.test",
+        },
+      });
+      expect(response.status).toBe(403);
+    } finally {
+      server.close();
+    }
+  });
+
+  it("rejects a cross-origin Agentation read before repository access", async () => {
+    const server = await createServer({ agentationEnabled: true });
+    try {
+      const response = await call(server, "/agentation/health", {
+        headers: { origin: "https://evil.test" },
+      });
+
+      expect(response.status).toBe(403);
+    } finally {
+      server.close();
+    }
+  });
+
+  it("authenticates MCP health with its separate API key", async () => {
+    const server = await createServer({
+      agentationEnabled: true,
+      agentationApiKey: AGENTATION_TEST_KEY,
+    });
+    try {
+      const { port } = server.address() as AddressInfo;
+      const response = await fetch(
+        `http://127.0.0.1:${port}/api/v1/agentation/health`,
+        { headers: { "x-api-key": AGENTATION_TEST_KEY } },
+      );
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toEqual({
+        status: "ok",
+        mode: "postgres",
+      });
+    } finally {
+      server.close();
+    }
+  });
+
+  it("does not let the MCP key create browser-owned sessions", async () => {
+    const server = await createServer({
+      agentationEnabled: true,
+      agentationApiKey: AGENTATION_TEST_KEY,
+    });
+    try {
+      const { port } = server.address() as AddressInfo;
+      const response = await fetch(
+        `http://127.0.0.1:${port}/api/v1/agentation/sessions`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-api-key": AGENTATION_TEST_KEY,
+          },
+          body: JSON.stringify({ url: `${ORIGIN}/lead/report` }),
+        },
+      );
+
+      expect(response.status).toBe(403);
+    } finally {
+      server.close();
+    }
+  });
+
+  it("supports comment edits and non-destructive close", async () => {
+    const server = await createServer();
+    try {
+      const createdResponse = await call(server, "/feedback", {
+        method: "POST",
+        ...jsonBody(createPayload()),
+      });
+      const created = (await createdResponse.json()) as { id: string };
+      const updated = await call(server, `/feedback/${created.id}`, {
+        method: "PUT",
+        ...jsonBody({ comment: "Clearer description" }),
+      });
+      await expect(updated.json()).resolves.toMatchObject({
+        id: created.id,
+        message: "Clearer description",
+      });
+
       expect(
-        (await call(server, "POST", payload, { origin: "https://evil.test" }))
+        (await call(server, `/feedback/${created.id}`, { method: "DELETE" }))
           .status,
-      ).toBe(403);
+      ).toBe(204);
+      const listed = await call(server, "/feedback?format=internal");
+      const page = (await listed.json()) as {
+        feedback: readonly { id: string; status: string }[];
+      };
+      expect(page.feedback).toContainEqual(
+        expect.objectContaining({ id: created.id, status: "wont_fix" }),
+      );
     } finally {
       server.close();
-    }
-  });
-
-  it("lets an author resolve and delete their own feedback", async () => {
-    const server = await createServer("lead");
-    try {
-      const created = await call(server, "POST", payload);
-      const feedback = (await created.json()) as { id: string };
-      expect(
-        (
-          await call(server, "PATCH", {
-            id: feedback.id,
-            projectName: "weekly-report",
-            status: "resolved",
-          })
-        ).status,
-      ).toBe(200);
-      expect(
-        (
-          await call(server, "DELETE", {
-            id: feedback.id,
-            projectName: "weekly-report",
-          })
-        ).status,
-      ).toBe(200);
-    } finally {
-      server.close();
-    }
-  });
-
-  it("allows scoped bulk deletion for every authenticated role", async () => {
-    const server = await createServer("admin");
-    try {
-      expect((await call(server, "POST", payload)).status).toBe(201);
-      const response = await call(server, "DELETE", {
-        projectName: "weekly-report",
-        deleteAll: true,
-      });
-      expect(response.status).toBe(200);
-    } finally {
-      server.close();
-    }
-
-    const leadServer = await createServer("lead");
-    try {
-      expect((await call(leadServer, "POST", payload)).status).toBe(201);
-      const response = await call(leadServer, "DELETE", {
-        projectName: "weekly-report",
-        deleteAll: true,
-      });
-      expect(response.status).toBe(200);
-    } finally {
-      leadServer.close();
     }
   });
 });

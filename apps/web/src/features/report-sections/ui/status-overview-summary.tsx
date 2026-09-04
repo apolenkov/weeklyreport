@@ -6,6 +6,7 @@ import {
 import type { StatusOverviewUnit } from "../model/status-overview";
 
 function StatusBadge({ unit }: { readonly unit: StatusOverviewUnit }) {
+  if (unit.status !== "blocked" && unit.status !== "at-risk") return null;
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] border px-2 py-0.5 text-[11px] font-semibold ${statusToneClassName(unit.status)}`}

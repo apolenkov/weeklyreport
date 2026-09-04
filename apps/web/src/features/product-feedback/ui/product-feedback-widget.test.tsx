@@ -1,28 +1,30 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import type { SitepingConfig } from "@siteping/widget";
-import { act, render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useSession } from "../../../shared/lib/auth/session-provider";
 import { webEnv } from "../../../shared/lib/runtime/web-env";
 import { ProductFeedbackWidget } from "./product-feedback-widget";
 
-const { destroy, initSiteping, registerLocale } = vi.hoisted(() => {
-  const destroy = vi.fn();
-  return {
-    destroy,
-    initSiteping: vi.fn((_config: SitepingConfig) => ({ destroy })),
-    registerLocale: vi.fn(),
-  };
-});
+const { agentation, navigation } = vi.hoisted(() => ({
+  agentation: vi.fn(({ endpoint }: { endpoint: string }) => (
+    <div>Agentation endpoint {endpoint}</div>
+  )),
+  navigation: {
+    pathname: "/",
+    searchParams: new URLSearchParams(),
+  },
+}));
 
-vi.mock("@siteping/widget", () => ({ initSiteping, registerLocale }));
+vi.mock("agentation", () => ({ Agentation: agentation }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => navigation.pathname,
+  useSearchParams: () => navigation.searchParams,
+}));
 vi.mock("./page-feedback-dialog", () => ({
-  PageFeedbackDialog: ({ identity }: { identity: { name: string } }) => (
-    <div>Page feedback for {identity.name}</div>
-  ),
+  PageFeedbackDialog: () => <div>Page feedback</div>,
 }));
 vi.mock("../../../shared/lib/auth/session-provider", () => ({
   useSession: vi.fn(),
@@ -36,6 +38,11 @@ const feedbackEnabled = vi.mocked(webEnv.productFeedback);
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.unstubAllEnvs();
+  window.history.replaceState({}, "", "/");
+  navigation.pathname = "/";
+  navigation.searchParams = new URLSearchParams();
+  feedbackEnabled.mockReturnValue(true);
   mockedSession.mockReturnValue({
     user: {
       id: "user-1",
@@ -50,35 +57,23 @@ beforeEach(() => {
 });
 
 describe("ProductFeedbackWidget", () => {
-  it("mounts a minimized authenticated widget when explicitly enabled", () => {
-    feedbackEnabled.mockReturnValue(true);
-    const { unmount } = render(<ProductFeedbackWidget />);
+  it("mounts Agentation against the authenticated same-origin API", async () => {
+    render(<ProductFeedbackWidget />);
 
-    expect(initSiteping).toHaveBeenCalledWith(
+    await screen.findByText("Agentation endpoint /api/v1/agentation");
+    expect(agentation).toHaveBeenCalledWith(
       expect.objectContaining({
-        endpoint: "/api/siteping",
-        projectName: "weekly-report",
-        identity: { name: "Lead User", email: "lead@example.test" },
-        enableScreenshot: true,
-        captureDiagnostics: { console: true, network: true },
-        enableRightClickComment: true,
-        deepLink: true,
-        minViewportWidth: 0,
-        locale: "weekly-report-en",
+        copyToClipboard: true,
+        endpoint: "/api/v1/agentation",
       }),
+      undefined,
     );
-    expect(registerLocale).toHaveBeenCalledWith("weekly-report-en", {
-      "annotator.instruction": "Drag to comment",
-    });
-    expect(screen.getByText("Page feedback for Lead User")).toBeInTheDocument();
-    unmount();
-    expect(destroy).toHaveBeenCalledOnce();
+    expect(screen.getByText("Page feedback")).toBeInTheDocument();
   });
 
   it.each(["lead", "viewer", "head", "admin"] as const)(
-    "renders the page-comment action for authenticated %s users",
-    (role) => {
-      feedbackEnabled.mockReturnValue(true);
+    "renders for authenticated %s users",
+    async (role) => {
       mockedSession.mockReturnValue({
         user: {
           id: `${role}-user`,
@@ -93,42 +88,48 @@ describe("ProductFeedbackWidget", () => {
 
       render(<ProductFeedbackWidget />);
 
-      expect(
-        screen.getByText(`Page feedback for ${role} user`),
-      ).toBeInTheDocument();
+      expect(await screen.findByText("Page feedback")).toBeInTheDocument();
     },
   );
 
-  it("hides the page-comment action for the annotation lifecycle", () => {
-    feedbackEnabled.mockReturnValue(true);
-    render(<ProductFeedbackWidget />);
-    const config = initSiteping.mock.calls[0]?.[0];
+  it("joins the server session carried by an inbox deep link", async () => {
+    navigation.pathname = "/lead/report";
+    navigation.searchParams = new URLSearchParams(
+      "agentationSession=session-7",
+    );
 
-    expect(screen.getByText("Page feedback for Lead User")).toBeInTheDocument();
-    act(() => config?.onAnnotationStart?.());
-    expect(
-      screen.queryByText("Page feedback for Lead User"),
-    ).not.toBeInTheDocument();
-
-    act(() => config?.onAnnotationEnd?.());
-    expect(screen.getByText("Page feedback for Lead User")).toBeInTheDocument();
-  });
-
-  it("sends a bounded deep-link id as a same-origin request header", () => {
-    feedbackEnabled.mockReturnValue(true);
-    window.history.replaceState({}, "", "/lead/report?siteping=feedback_123");
     render(<ProductFeedbackWidget />);
 
-    const headers = initSiteping.mock.calls[0]?.[0].headers;
-    expect(typeof headers).toBe("function");
-    if (typeof headers !== "function") return;
-    expect(headers()).toEqual({ "x-siteping-focus-id": "feedback_123" });
+    await screen.findByText("Agentation endpoint /api/v1/agentation");
+    expect(agentation).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionId: "session-7" }),
+      undefined,
+    );
   });
 
-  it("does not initialize while disabled or unauthenticated", () => {
+  it("switches sessions when only the inbox deep-link query changes", async () => {
+    navigation.pathname = "/lead/report";
+    navigation.searchParams = new URLSearchParams(
+      "agentationSession=session-7",
+    );
+    const view = render(<ProductFeedbackWidget />);
+    await screen.findByText("Agentation endpoint /api/v1/agentation");
+
+    navigation.searchParams = new URLSearchParams(
+      "agentationSession=session-8",
+    );
+    view.rerender(<ProductFeedbackWidget />);
+
+    expect(agentation).toHaveBeenLastCalledWith(
+      expect.objectContaining({ sessionId: "session-8" }),
+      undefined,
+    );
+  });
+
+  it("does not initialize while disabled or unauthenticated", async () => {
     feedbackEnabled.mockReturnValue(false);
     const first = render(<ProductFeedbackWidget />);
-    expect(initSiteping).not.toHaveBeenCalled();
+    expect(agentation).not.toHaveBeenCalled();
     first.unmount();
 
     feedbackEnabled.mockReturnValue(true);
@@ -139,6 +140,15 @@ describe("ProductFeedbackWidget", () => {
       isAuthenticated: false,
     });
     render(<ProductFeedbackWidget />);
-    expect(initSiteping).not.toHaveBeenCalled();
+    await waitFor(() => expect(agentation).not.toHaveBeenCalled());
+  });
+
+  it("never mounts the development toolbar in production", () => {
+    vi.stubEnv("NODE_ENV", "production");
+
+    render(<ProductFeedbackWidget />);
+
+    expect(agentation).not.toHaveBeenCalled();
+    expect(screen.queryByText("Page feedback")).not.toBeInTheDocument();
   });
 });

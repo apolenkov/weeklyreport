@@ -10,9 +10,29 @@ interface Props {
   params: Promise<{ reportId: string }>;
   searchParams: Promise<{
     mode?: string;
-    siteping?: string;
-    sitepingUrl?: string;
+    feedback?: string;
+    feedbackUrl?: string;
+    agentationSession?: string;
+    agentationAnnotation?: string;
   }>;
+}
+
+const PRESERVED_QUERY_KEYS = [
+  "feedback",
+  "feedbackUrl",
+  "agentationSession",
+  "agentationAnnotation",
+] as const;
+
+function preservedSearchParams(
+  query: Awaited<Props["searchParams"]>,
+): URLSearchParams {
+  const preserved = new URLSearchParams();
+  for (const key of PRESERVED_QUERY_KEYS) {
+    const value = query[key];
+    if (value) preserved.set(key, value);
+  }
+  return preserved;
 }
 
 // Soft brand wash under the form chrome; fades into page background by 160px.
@@ -29,9 +49,7 @@ export default async function LeadReportByIdPage({
   const resolvedMode = mode === "slides" || mode === "edit" ? mode : "overview";
 
   if (mode && resolvedMode !== mode) {
-    const preserved = new URLSearchParams();
-    if (query.siteping) preserved.set("siteping", query.siteping);
-    if (query.sitepingUrl) preserved.set("sitepingUrl", query.sitepingUrl);
+    const preserved = preservedSearchParams(query);
     const suffix = preserved.size > 0 ? `?${preserved.toString()}` : "";
     redirect(`/lead/report/${encodeURIComponent(reportId)}${suffix}`);
   }

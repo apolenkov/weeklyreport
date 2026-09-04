@@ -201,6 +201,32 @@ describe("StatusOverview", () => {
     expect(screen.getByText("Unplanned")).toBeInTheDocument();
   });
 
+  it.each(["empty", "on-track"] as const)(
+    "suppresses the non-actionable %s health badge",
+    (status) => {
+      const unit = model.units[0];
+      if (!unit) throw new Error("Expected one overview unit");
+      render(
+        <StatusOverview model={{ ...model, units: [{ ...unit, status }] }} />,
+      );
+
+      expect(screen.queryByText("No status")).toBeNull();
+      expect(screen.queryByText("On track")).toBeNull();
+      expect(screen.getByText("Incident duty")).toBeVisible();
+    },
+  );
+
+  it("uses equal desktop tracks and one trailing continuity/edit rail", () => {
+    render(<StatusOverview model={model} onEditItem={vi.fn()} />);
+
+    const edit = screen.getByRole("button", { name: "Edit Work item 1" });
+    expect(edit).toHaveClass("grid-cols-[minmax(0,1fr)_auto]");
+    expect(edit).toHaveTextContent("Unplanned");
+    expect(edit).toHaveTextContent("Edit");
+    const row = edit.closest("article")?.firstElementChild;
+    expect(row).toHaveClass("min-[80rem]:grid-cols-[repeat(4,minmax(0,1fr))]");
+  });
+
   it("offers one full-report edit action instead of repeating it per row", () => {
     render(<StatusOverview model={model} detailsHref="/report?mode=edit" />);
 

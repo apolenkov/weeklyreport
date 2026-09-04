@@ -27,6 +27,7 @@ vi.mock("../../features/report-pages/ui/lead-report-assistant-store", () => ({
 }));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/lead/report",
+  useSearchParams: () => new URLSearchParams(),
 }));
 vi.mock("../../shared/ui/navigation/nav-bar", () => ({
   NavBar: () => null,

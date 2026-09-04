@@ -13,7 +13,7 @@ import {
   WEEKLY_REPORT_FEEDBACK_PRODUCT,
 } from "./product-feedback.repository.js";
 
-export type FeedbackRow = Prisma.SitepingFeedbackGetPayload<{
+export type FeedbackRow = Prisma.ProductFeedbackGetPayload<{
   include: { annotations: true };
 }>;
 
@@ -36,11 +36,13 @@ export function mapFeedback(row: FeedbackRow): FeedbackRecord {
     resolvedAt: row.resolvedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
-    annotations: row.annotations.map((annotation) => ({
-      ...annotation,
-      elementId: annotation.elementId,
-      anchorKey: annotation.anchorKey,
-    })),
+    annotations: row.annotations.map(
+      ({ elementId, anchorKey, ...annotation }) => ({
+        ...annotation,
+        ...(elementId ? { elementId } : {}),
+        ...(anchorKey ? { anchorKey } : {}),
+      }),
+    ),
     screenshotUrl: row.screenshotUrl,
     screenshotRegion:
       row.screenshotRegion === null
@@ -55,7 +57,7 @@ export function mapFeedback(row: FeedbackRow): FeedbackRecord {
 
 export function accessWhere(
   access: FeedbackAccess,
-): Prisma.SitepingFeedbackWhereInput {
+): Prisma.ProductFeedbackWhereInput {
   if (access.role === "admin") return {};
   if (access.role === "head" && access.reportingGroupId !== undefined) {
     return {
@@ -71,7 +73,7 @@ export function accessWhere(
 export function queryWhere(
   access: FeedbackAccess,
   query: FeedbackQuery,
-): Prisma.SitepingFeedbackWhereInput {
+): Prisma.ProductFeedbackWhereInput {
   const statuses = query.statuses?.length
     ? { in: [...query.statuses] }
     : query.status;

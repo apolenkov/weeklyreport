@@ -9,8 +9,6 @@ const MAX_METADATA_LENGTH = 200;
 const MAX_DEVICE_PIXEL_RATIO = 10;
 /** Maximum length of a feedback message accepted by the ingress. */
 export const MAX_FEEDBACK_MESSAGE_LENGTH = 5000;
-const MAX_VIEWPORT_LENGTH = 50;
-const MAX_USER_AGENT_LENGTH = 500;
 /** Maximum number of DOM annotations accepted on one feedback record. */
 export const MAX_FEEDBACK_ANNOTATIONS = 50;
 const MAX_SCREENSHOT_DATA_URL_LENGTH = 1_500_000;
@@ -21,6 +19,8 @@ const MAX_CONSOLE_MESSAGE_LENGTH = 600;
 const MAX_NETWORK_METHOD_LENGTH = 20;
 const MAX_NETWORK_STATUS = 599;
 const MAX_NETWORK_DURATION_MS = 600_000;
+const MAX_VIEWPORT_LENGTH = 100;
+const MAX_USER_AGENT_LENGTH = 500;
 
 /** Product identifiers accepted by the shared feedback persistence model. */
 export const FEEDBACK_PRODUCTS = ["weekly-report", "core-dev"] as const;
@@ -29,23 +29,23 @@ export const feedbackProductSchema = z.enum(FEEDBACK_PRODUCTS);
 /** Feedback product identifier. */
 export type FeedbackProduct = z.infer<typeof feedbackProductSchema>;
 
-/** SitePing feedback categories supported by the pinned wire contract. */
+/** Feedback categories supported by the product feedback domain. */
 export const FEEDBACK_TYPES = ["question", "change", "bug", "other"] as const;
-/** Validates a SitePing feedback category. */
+/** Validates a product feedback category. */
 export const feedbackTypeSchema = z.enum(FEEDBACK_TYPES);
-/** SitePing feedback category. */
+/** Product feedback category. */
 export type FeedbackType = z.infer<typeof feedbackTypeSchema>;
 
-/** SitePing workflow states supported by the pinned wire contract. */
+/** Product feedback workflow states. */
 export const FEEDBACK_STATUSES = [
   "open",
   "in_progress",
   "resolved",
   "wont_fix",
 ] as const;
-/** Validates a SitePing workflow state. */
+/** Validates a product feedback workflow state. */
 export const feedbackStatusSchema = z.enum(FEEDBACK_STATUSES);
-/** SitePing workflow state. */
+/** Product feedback workflow state. */
 export type FeedbackStatus = z.infer<typeof feedbackStatusSchema>;
 
 /** Validates persisted page identity without browser location metadata. */
@@ -80,7 +80,7 @@ export const feedbackAnnotationAnchorSchema = z
   })
   .strict();
 
-/** Validates the flat annotation form persisted by SitePing stores. */
+/** Validates the flat annotation form persisted by feedback repositories. */
 export const feedbackAnnotationSchema = feedbackAnnotationAnchorSchema.extend({
   xPct: z.number().min(0).max(1),
   yPct: z.number().min(0).max(1),
@@ -92,10 +92,10 @@ export const feedbackAnnotationSchema = feedbackAnnotationAnchorSchema.extend({
   viewportH: z.number().int().positive(),
   devicePixelRatio: z.number().positive().max(MAX_DEVICE_PIXEL_RATIO),
 });
-/** Persisted SitePing annotation without database metadata. */
+/** Persisted product feedback annotation without database metadata. */
 export type FeedbackAnnotation = z.infer<typeof feedbackAnnotationSchema>;
 
-/** Validates the bounded screenshot representation accepted by SitePing. */
+/** Validates the bounded screenshot representation accepted by feedback. */
 export const feedbackScreenshotDataUrlSchema = z
   .string()
   .max(MAX_SCREENSHOT_DATA_URL_LENGTH)
@@ -133,7 +133,7 @@ const feedbackNetworkDiagnosticSchema = z
   })
   .strict();
 
-/** Validates the bounded console and failed-network snapshot from SitePing. */
+/** Validates the bounded console and failed-network snapshot. */
 export const feedbackDiagnosticsSchema = z
   .object({
     console: z.array(feedbackConsoleDiagnosticSchema).max(MAX_CONSOLE_ENTRIES),
@@ -143,61 +143,25 @@ export const feedbackDiagnosticsSchema = z
 /** Bounded console and failed-network snapshot. */
 export type FeedbackDiagnostics = z.infer<typeof feedbackDiagnosticsSchema>;
 
-/** Validates the nested annotation form emitted by the SitePing widget. */
-export const feedbackAnnotationWireSchema = z
+/** Validates page-level feedback submitted without an Agentation DOM anchor. */
+export const pageFeedbackCreateSchema = z
   .object({
-    anchor: feedbackAnnotationAnchorSchema,
-    rect: z
-      .object({
-        xPct: z.number().min(0).max(1),
-        yPct: z.number().min(0).max(1),
-        wPct: z.number().min(0).max(1),
-        hPct: z.number().min(0).max(1),
-      })
-      .strict(),
-    scrollX: z.number(),
-    scrollY: z.number(),
-    viewportW: z.number().int().positive(),
-    viewportH: z.number().int().positive(),
-    devicePixelRatio: z.number().positive().max(MAX_DEVICE_PIXEL_RATIO),
-  })
-  .strict();
-
-// This mirrors the pinned SitePing 0.x wire contract. Identity and scope fields
-// are accepted only so the gateway can overwrite them from the human session.
-/** Validates a SitePing create payload before server-owned fields are replaced. */
-export const feedbackCreateWireSchema = z
-  .object({
-    projectName: z.string().min(1).max(MAX_METADATA_LENGTH),
     type: feedbackTypeSchema,
     message: z.string().trim().min(1).max(MAX_FEEDBACK_MESSAGE_LENGTH),
     url: z.string().trim().min(1).max(MAX_FEEDBACK_PAGE_SCOPE_LENGTH),
-    urlPattern: z
-      .string()
-      .max(MAX_FEEDBACK_PAGE_SCOPE_LENGTH)
-      .nullable()
-      .optional(),
-    viewport: z.string().min(1).max(MAX_VIEWPORT_LENGTH),
-    userAgent: z.string().min(1).max(MAX_USER_AGENT_LENGTH),
-    authorName: z.string().min(1).max(MAX_METADATA_LENGTH),
-    authorEmail: z.email().max(MAX_METADATA_LENGTH),
-    annotations: z
-      .array(feedbackAnnotationWireSchema)
-      .max(MAX_FEEDBACK_ANNOTATIONS),
+    viewport: z.string().trim().min(1).max(MAX_VIEWPORT_LENGTH),
+    userAgent: z.string().trim().min(1).max(MAX_USER_AGENT_LENGTH),
     clientId: z
       .string()
       .min(1)
       .max(MAX_METADATA_LENGTH)
       .regex(/^[a-zA-Z0-9_-]+$/),
-    screenshotDataUrl: feedbackScreenshotDataUrlSchema.nullable().optional(),
-    screenshotRegion: feedbackScreenshotRegionSchema.nullable().optional(),
-    diagnostics: feedbackDiagnosticsSchema.nullable().optional(),
   })
   .strict();
-/** SitePing create payload accepted by the authenticated ingress. */
-export type FeedbackCreateWire = z.infer<typeof feedbackCreateWireSchema>;
+/** Page-level feedback payload accepted by the authenticated ingress. */
+export type PageFeedbackCreate = z.infer<typeof pageFeedbackCreateSchema>;
 
-/** Validates a serialized annotation returned by the SitePing endpoint. */
+/** Validates a serialized annotation returned by the feedback endpoint. */
 export const feedbackAnnotationResponseSchema = feedbackAnnotationSchema.extend(
   {
     id: z.string(),
@@ -206,7 +170,7 @@ export const feedbackAnnotationResponseSchema = feedbackAnnotationSchema.extend(
   },
 );
 
-/** Validates a serialized feedback record returned by the SitePing endpoint. */
+/** Validates a serialized record returned by the feedback endpoint. */
 export const feedbackResponseSchema = z
   .object({
     id: z.string().min(1),
@@ -231,6 +195,8 @@ export const feedbackResponseSchema = z
     screenshotUrl: feedbackScreenshotDataUrlSchema.nullable(),
     screenshotRegion: feedbackScreenshotRegionSchema.nullable(),
     diagnostics: feedbackDiagnosticsSchema.nullable(),
+    agentationSessionId: z.string().min(1).optional(),
+    agentationAnnotationId: z.string().min(1).optional(),
   })
   .loose();
 /** Serialized feedback record returned to browser clients. */

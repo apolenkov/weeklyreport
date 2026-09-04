@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, Suspense } from "react";
 
 import { ProductFeedbackWidget } from "../../features/product-feedback";
 import { LeadReportAssistantStore } from "../../features/report-pages/ui/lead-report-assistant-store";
@@ -15,7 +15,9 @@ export default function AppGroupLayout({ children }: AppGroupLayoutProps) {
     <SessionProvider>
       <LeadReportAssistantStore>
         <NavBar />
-        <ProductFeedbackWidget />
+        <Suspense fallback={null}>
+          <ProductFeedbackWidget />
+        </Suspense>
         <div className="operational-paper-shell min-h-screen">
           <SdlcTooltipProvider>{children}</SdlcTooltipProvider>
         </div>

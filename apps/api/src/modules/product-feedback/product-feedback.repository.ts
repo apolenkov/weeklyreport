@@ -1,22 +1,89 @@
-import type { UserSession } from "@customreport/shared";
-import type { SitepingStore } from "@siteping/adapter-prisma";
+import type {
+  FeedbackAnnotation,
+  FeedbackDiagnostics,
+  FeedbackScreenshotRegion,
+  FeedbackStatus,
+  FeedbackType,
+  UserSession,
+} from "@customreport/shared";
 
 export const WEEKLY_REPORT_FEEDBACK_PRODUCT = "weekly-report";
 
-export type FeedbackCreateInput = Parameters<
-  SitepingStore["createFeedback"]
->[0];
-export type FeedbackQuery = Parameters<SitepingStore["getFeedbacks"]>[0];
-export type FeedbackPage = Awaited<ReturnType<SitepingStore["getFeedbacks"]>>;
-export type FeedbackRecord = Awaited<
-  ReturnType<SitepingStore["createFeedback"]>
-> & {
+export interface FeedbackCreateInput {
+  readonly projectName?: string;
+  readonly status?: FeedbackStatus;
+  readonly authorName?: string;
+  readonly authorEmail?: string;
+  readonly type: FeedbackType;
+  readonly message: string;
+  readonly url: string;
+  readonly urlPattern?: string | null;
+  readonly screenshotDataUrl?: string | null;
+  readonly screenshotRegion?: FeedbackScreenshotRegion | null;
+  readonly diagnostics?: FeedbackDiagnostics | null;
+  readonly viewport: string;
+  readonly userAgent: string;
+  readonly clientId: string;
+  readonly annotations: readonly FeedbackAnnotation[];
+}
+
+export interface FeedbackQuery {
+  readonly projectName?: string;
+  readonly page?: number;
+  readonly limit?: number;
+  readonly status?: FeedbackStatus;
+  readonly statuses?: readonly FeedbackStatus[];
+  readonly type?: FeedbackType;
+  readonly search?: string;
+  readonly url?: string;
+  readonly urlPattern?: string;
+}
+
+export interface FeedbackRecordAnnotation extends FeedbackAnnotation {
+  readonly id: string;
+  readonly feedbackId: string;
+  readonly createdAt: Date;
+}
+
+export interface FeedbackRecord extends Omit<
+  FeedbackCreateInput,
+  "annotations"
+> {
+  readonly id: string;
+  readonly projectName: typeof WEEKLY_REPORT_FEEDBACK_PRODUCT;
+  readonly status: FeedbackStatus;
   readonly authorUserId: UserSession["userId"];
   readonly authorReportingGroupId: UserSession["reportingGroupId"] | null;
-};
-export type FeedbackUpdateInput = Parameters<
-  SitepingStore["updateFeedback"]
->[1];
+  readonly authorName: string;
+  readonly authorEmail: string;
+  readonly resolvedAt: Date | null;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+  readonly screenshotUrl: string | null;
+  readonly annotations: readonly FeedbackRecordAnnotation[];
+  readonly agentationSessionId?: string;
+  readonly agentationAnnotationId?: string;
+}
+
+export interface FeedbackPage {
+  readonly feedbacks: FeedbackRecord[];
+  readonly total: number;
+}
+
+export interface FeedbackUpdateInput {
+  readonly status?: FeedbackStatus;
+  readonly message?: string;
+  readonly screenshotDataUrl?: string;
+  readonly resolvedAt?: Date | null;
+}
+
+export class FeedbackDuplicateError extends Error {
+  readonly code = "STORE_DUPLICATE";
+}
+
+export class FeedbackNotFoundError extends Error {
+  readonly code = "STORE_NOT_FOUND";
+}
 
 export interface FeedbackAccess {
   readonly userId: UserSession["userId"];

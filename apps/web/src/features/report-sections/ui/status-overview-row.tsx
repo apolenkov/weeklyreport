@@ -11,7 +11,7 @@ import type {
 import { StatusOverviewUnitSummary } from "./status-overview-summary";
 
 export const STATUS_OVERVIEW_DESKTOP_GRID =
-  "min-[80rem]:grid min-[80rem]:grid-cols-[minmax(13rem,0.8fr)_repeat(3,minmax(0,1fr))]";
+  "min-[80rem]:grid min-[80rem]:grid-cols-[repeat(4,minmax(0,1fr))]";
 
 export type StatusOverviewColumnKey = keyof StatusOverviewUnit["columns"];
 
@@ -46,18 +46,34 @@ function ContinuityBadge({ item }: { readonly item: StatusOverviewItem }) {
 function ItemPreviewContent({ item }: { readonly item: StatusOverviewItem }) {
   return (
     <>
-      <div className="flex min-w-0 flex-wrap items-start gap-1.5">
-        <p className="min-w-0 flex-1 break-words text-sm leading-5 text-[var(--color-foreground)]">
-          {item.text}
-        </p>
-        <ContinuityBadge item={item} />
-      </div>
+      <p className="min-w-0 break-words text-sm leading-5 text-[var(--color-foreground)]">
+        {item.text}
+      </p>
       {item.tag ? (
         <p className="mt-1 truncate text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
           {item.tag}
         </p>
       ) : null}
     </>
+  );
+}
+
+function ItemActionRail({
+  item,
+  editable,
+}: {
+  readonly item: StatusOverviewItem;
+  readonly editable: boolean;
+}) {
+  return (
+    <span className="flex shrink-0 flex-col items-end gap-1.5">
+      <ContinuityBadge item={item} />
+      {editable ? (
+        <span className="text-[11px] font-semibold text-[var(--color-primary)] opacity-70 group-hover:opacity-100">
+          Edit
+        </span>
+      ) : null}
+    </span>
   );
 }
 
@@ -73,21 +89,22 @@ function ItemPreview({
           type="button"
           aria-label={`Edit ${item.text}`}
           onClick={() => onEditItem(target)}
-          className="group flex min-h-[var(--touch-target-min)] w-full min-w-0 items-center gap-2 px-1 py-2 text-left transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-ring)]"
+          className="group grid min-h-[var(--touch-target-min)] w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-2 px-1 py-2 text-left transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-ring)]"
         >
-          <span className="min-w-0 flex-1">
+          <span className="min-w-0">
             <ItemPreviewContent item={item} />
           </span>
-          <span className="shrink-0 text-[11px] font-semibold text-[var(--color-primary)] opacity-70 group-hover:opacity-100">
-            Edit
-          </span>
+          <ItemActionRail item={item} editable />
         </button>
       </li>
     );
   }
   return (
-    <li className="min-w-0 px-1 py-2">
-      <ItemPreviewContent item={item} />
+    <li className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-2 px-1 py-2">
+      <span className="min-w-0">
+        <ItemPreviewContent item={item} />
+      </span>
+      <ItemActionRail item={item} editable={false} />
     </li>
   );
 }

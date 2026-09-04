@@ -239,12 +239,39 @@ they are inlined at build time and a restart will not pick them up.
 `migrate` runs `prisma migrate deploy` on every `up`, applying only pending
 migrations. It never resets.
 
-The MVP uses one canonical init migration synchronized with `schema.prisma`.
+The repository has a canonical init migration followed by forward-only additive
+migrations synchronized with `schema.prisma`. Never rewrite applied migration
+history or fold a new production change back into init. Add a new timestamped
+migration, verify it against an exact disposable target, and deploy it with
+`prisma migrate deploy`.
 Validate every schema rewrite by recreating only an exact disposable target
 listed in `AGENTS.md`, section **Database safety**.
 `prisma/guards/_destructive-guard.ts` must accept the resolved target before any
 destructive command. Product or shared databases are never reset; leave
 `ALLOW_PROD_DESTRUCTIVE` unset.
+
+### Agentation feedback operations
+
+WeeklyReport uses `agentation@3.0.2` for the authenticated development/
+non-production toolbar and `agentation-mcp@1.2.0` for agent access. Both use
+the WeeklyReport adapter and PostgreSQL feedback store; the stock Agentation
+HTTP server and stock SQLite/memory store are not a product persistence path.
+MCP must run as:
+
+```sh
+pnpm agentation:mcp
+# agentation-mcp server --mcp-only --http-url \
+#   http://127.0.0.1:3002/api/v1/agentation
+```
+
+Browser calls are authenticated by the WeeklyReport session cookie. MCP does
+not inherit that cookie, so an adapter-side agent credential is required
+through `AGENTATION_API_KEY` supplied by the local environment. Never place the
+key value in Git, logs, shell history, or this runbook. The adapter accepts the
+key only from a loopback socket and rejects matching remote requests. Keep
+`PRODUCT_FEEDBACK_ENABLED` and `NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED` false in
+production; missing or unsafe configuration must disable the toolbar, inbox,
+mutations, and SSE rather than falling back to SQLite.
 
 ## Rollback
 

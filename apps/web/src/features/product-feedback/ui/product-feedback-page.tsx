@@ -6,14 +6,13 @@ import {
   type FeedbackStatus,
   type FeedbackType,
 } from "@customreport/shared";
-import { useSitepingInbox } from "@siteping/dashboard";
 import { LoaderCircle, MessageSquareText } from "lucide-react";
 import { useMemo } from "react";
 import { toast } from "sonner";
 
 import { useSession } from "../../../shared/lib/auth/session-provider";
+import { useProductFeedbackInbox } from "../model/use-product-feedback-inbox";
 import {
-  type FeedbackCardItem,
   FeedbackRecordCard,
   STATUS_LABELS,
   TYPE_LABELS,
@@ -21,14 +20,10 @@ import {
 
 export function ProductFeedbackPage() {
   const { user } = useSession();
-  const inbox = useSitepingInbox({
-    endpoint: "/api/siteping",
-    projects: "weekly-report",
-    pageSize: 50,
-    onError: () => toast.error("Feedback could not be loaded."),
-  });
+  const inbox = useProductFeedbackInbox(() =>
+    toast.error("Feedback could not be loaded."),
+  );
   const canTriage = user?.role === "head" || user?.role === "admin";
-  const canDelete = user?.role === "admin";
   const scopeLabel = useMemo(() => {
     if (user?.role === "admin") return "All Weekly Report feedback";
     if (user?.role === "head") return "Your reporting group and your feedback";
@@ -44,16 +39,6 @@ export function ProductFeedbackPage() {
     }
   };
 
-  const remove = async (id: string) => {
-    if (!window.confirm("Permanently delete this feedback?")) return;
-    try {
-      await inbox.deleteFeedback(id);
-      toast.success("Feedback deleted.");
-    } catch {
-      toast.error("Feedback could not be deleted.");
-    }
-  };
-
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6 flex items-start gap-3">
@@ -65,9 +50,8 @@ export function ProductFeedbackPage() {
             Feedback
           </h1>
           <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
-            {scopeLabel}. Draw an area with the feedback button, or right-click
-            any element—including top navigation controls—to comment without the
-            drawing toolbar.
+            {scopeLabel}. Use Agentation to mark elements, text, page areas, or
+            proposed layout changes and send structured context to an agent.
           </p>
         </div>
       </div>
@@ -156,25 +140,15 @@ export function ProductFeedbackPage() {
         <div className="grid gap-3" aria-live="polite">
           {inbox.items.map((feedback) => (
             <FeedbackRecordCard
-              canDelete={canDelete}
+              canDelete={false}
               canTriage={canTriage}
-              item={feedback as FeedbackCardItem}
+              item={feedback}
               key={feedback.id}
               onChangeStatus={(id, status) => void changeStatus(id, status)}
-              onDelete={(id) => void remove(id)}
+              onDelete={() => undefined}
               role={user?.role}
             />
           ))}
-          {inbox.hasMore && (
-            <button
-              className="mx-auto rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm"
-              disabled={inbox.loadingMore}
-              onClick={() => void inbox.loadMore()}
-              type="button"
-            >
-              {inbox.loadingMore ? "Loading…" : "Load more"}
-            </button>
-          )}
         </div>
       )}
     </main>

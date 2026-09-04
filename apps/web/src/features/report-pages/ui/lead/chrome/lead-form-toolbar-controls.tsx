@@ -22,6 +22,7 @@ import { CollapseIcon } from "./lead-form-icons";
 import { RecordVisibilityToggle } from "./visibility/record-visibility-toggle";
 
 type SlidesFullscreen = FullscreenHandle;
+const LEAD_REPORT_PATH = "/lead/report";
 type LeadSubmittedAt = ComponentProps<
   typeof PeriodNavigator
 >["leadSubmittedAt"];
@@ -42,6 +43,16 @@ interface LeadFormToolbarControlsProps {
   readonly fullscreenToggleRef: RefObject<HTMLButtonElement | null>;
   readonly groupExpanded: boolean;
   readonly setGroupExpanded: (update: (prev: boolean) => boolean) => void;
+}
+
+interface LeadOverviewToolbarControlsProps {
+  readonly viewModel: LeadFormLoadedViewModel;
+  readonly leadSubmittedAt: LeadSubmittedAt;
+  readonly showArchivePeriods: boolean;
+  readonly onShowArchivePeriodsChange: (next: boolean) => void;
+  readonly toolbarVisibility: RecordVisibility;
+  readonly onVisibilityChange: (next: RecordVisibility) => void;
+  readonly targetReportId: string | null;
 }
 
 export const canShowLeadReportAssistant = (
@@ -99,6 +110,54 @@ export function LeadFormToolbarControls({
               fullscreenToggleRef={fullscreenToggleRef}
               groupExpanded={groupExpanded}
               setGroupExpanded={setGroupExpanded}
+            />
+          </div>
+        </>
+      }
+    />
+  );
+}
+
+export function LeadOverviewToolbarControls({
+  viewModel,
+  leadSubmittedAt,
+  showArchivePeriods,
+  onShowArchivePeriodsChange,
+  toolbarVisibility,
+  onVisibilityChange,
+  targetReportId,
+}: LeadOverviewToolbarControlsProps) {
+  const { user } = useSession();
+  const overviewHref = targetReportId
+    ? `/lead/report/${encodeURIComponent(targetReportId)}`
+    : LEAD_REPORT_PATH;
+
+  return (
+    <ReportToolbar
+      sticky
+      layoutKey="report-context-toolbar"
+      contextControls={
+        <>
+          <div className="flex min-w-0 basis-full items-center gap-1.5 md:basis-auto">
+            <ToolbarPeriodCluster
+              viewModel={viewModel}
+              leadSubmittedAt={leadSubmittedAt}
+              showArchivePeriods={showArchivePeriods}
+              onShowArchivePeriodsChange={onShowArchivePeriodsChange}
+            />
+          </div>
+          <div className="flex min-w-0 basis-full flex-wrap items-center gap-1.5 md:ml-auto md:basis-auto md:flex-nowrap">
+            {canShowLeadReportAssistant(user?.role) && <LeadReportAssistant />}
+            <RecordVisibilityToggle
+              value={toolbarVisibility}
+              onChange={onVisibilityChange}
+            />
+            <ViewModeToggle
+              mode="overview"
+              overviewHref={overviewHref}
+              editHref={`${overviewHref}?mode=edit`}
+              slidesHref={`${overviewHref}?mode=slides`}
+              desktopLabels
             />
           </div>
         </>
@@ -165,7 +224,7 @@ function ToolbarViewCluster({
 }: ToolbarViewClusterProps) {
   const editHref = targetReportId
     ? `/lead/report/${encodeURIComponent(targetReportId)}`
-    : "/lead/report";
+    : LEAD_REPORT_PATH;
   const overviewHref = editHref;
   return (
     <>
@@ -179,7 +238,9 @@ function ToolbarViewCluster({
         mode={isSlidesMode ? "slides" : "edit"}
         overviewHref={overviewHref}
         editHref={`${editHref}?mode=edit`}
-        slidesHref={targetReportId ? `${editHref}?mode=slides` : "/lead/report"}
+        slidesHref={
+          targetReportId ? `${editHref}?mode=slides` : LEAD_REPORT_PATH
+        }
         desktopLabels={desktopLabels}
       />
     </>

@@ -15,7 +15,6 @@ import { MessageSquarePlus } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
-import type { PageFeedbackIdentity } from "../model/page-feedback-client";
 import { submitPageFeedback } from "../model/page-feedback-client";
 
 const TYPE_LABELS: Readonly<Record<FeedbackType, string>> = {
@@ -25,11 +24,7 @@ const TYPE_LABELS: Readonly<Record<FeedbackType, string>> = {
   other: "Other",
 };
 
-interface PageFeedbackDialogProps {
-  readonly identity: PageFeedbackIdentity;
-}
-
-export function PageFeedbackDialog({ identity }: PageFeedbackDialogProps) {
+export function PageFeedbackDialog() {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const messageRef = useRef<HTMLTextAreaElement>(null);
   const [open, setOpen] = useState(false);
@@ -48,7 +43,7 @@ export function PageFeedbackDialog({ identity }: PageFeedbackDialogProps) {
     setSubmitting(true);
     setError(null);
     try {
-      await submitPageFeedback({ type, message }, identity);
+      await submitPageFeedback({ type, message });
       setMessage("");
       setType("other");
       setOpen(false);
@@ -65,7 +60,6 @@ export function PageFeedbackDialog({ identity }: PageFeedbackDialogProps) {
       <button
         ref={triggerRef}
         className="fixed bottom-4 left-4 z-[var(--layer-popover)] inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-2 text-sm font-semibold text-[var(--color-ink)] shadow-lg transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2"
-        data-siteping-ignore="true"
         onClick={() => {
           setError(null);
           setOpen(true);

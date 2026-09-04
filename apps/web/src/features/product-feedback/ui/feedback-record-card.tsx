@@ -39,6 +39,8 @@ export interface FeedbackCardItem extends FeedbackCaptureItem {
   readonly createdAt: Date;
   readonly viewport: string;
   readonly annotations: readonly unknown[];
+  readonly agentationSessionId?: string;
+  readonly agentationAnnotationId?: string;
 }
 
 function formatSubmitted(value: Date): string {
@@ -54,6 +56,14 @@ function feedbackHref(
 ): string {
   const normalizedUrl = normalizeFeedbackPath(item.url);
   if (item.annotations.length === 0) return normalizedUrl;
+  const feedbackParams = item.agentationSessionId
+    ? {
+        agentationSession: item.agentationSessionId,
+        ...(item.agentationAnnotationId
+          ? { agentationAnnotation: item.agentationAnnotationId }
+          : {}),
+      }
+    : { feedback: item.id };
 
   const leadReport = /^\/lead\/report(?:\/([^/]+))?$/.exec(normalizedUrl);
   if (
@@ -63,14 +73,14 @@ function feedbackHref(
   ) {
     const search = new URLSearchParams({
       authorId: item.authorUserId,
-      siteping: item.id,
-      sitepingUrl: normalizedUrl,
+      feedbackUrl: normalizedUrl,
+      ...feedbackParams,
     });
     const reportId = leadReport[1];
     const reportPath = reportId ? `/${encodeURIComponent(reportId)}` : "";
     return `/head/report${reportPath}?${search.toString()}`;
   }
-  const search = new URLSearchParams({ siteping: item.id });
+  const search = new URLSearchParams(feedbackParams);
   return `${normalizedUrl}?${search.toString()}`;
 }
 

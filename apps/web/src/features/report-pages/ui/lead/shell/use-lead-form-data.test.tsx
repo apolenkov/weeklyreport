@@ -442,16 +442,18 @@ describe("useLeadFormData — redirects", () => {
     );
   });
 
-  it("preserves SitePing deep-link parameters in the canonical redirect", async () => {
+  it("preserves feedback deep-link parameters in the canonical redirect", async () => {
     navState.searchParams = new URLSearchParams({
-      siteping: "feedback_123",
-      sitepingUrl: "/lead/report",
+      feedback: "feedback_123",
+      feedbackUrl: "/lead/report",
+      agentationSession: "session_123",
+      agentationAnnotation: "annotation_123",
     });
     renderData({ redirectToCanonical: true });
 
     await waitFor(() =>
       expect(navState.replace).toHaveBeenCalledWith(
-        `/lead/report/${REPORT_ID}?siteping=feedback_123&sitepingUrl=%2Flead%2Freport`,
+        `/lead/report/${REPORT_ID}?feedback=feedback_123&feedbackUrl=%2Flead%2Freport&agentationSession=session_123&agentationAnnotation=annotation_123`,
       ),
     );
   });

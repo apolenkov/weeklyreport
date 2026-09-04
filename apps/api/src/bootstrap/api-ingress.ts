@@ -20,7 +20,7 @@ import { SessionRevocationService } from "../modules/admin/index.js";
 import { createAuthController } from "../modules/auth/index.js";
 import { createPdfDownloadHandler } from "../modules/pdf-export/index.js";
 import {
-  createAuthenticatedSitepingHandler,
+  createAuthenticatedFeedbackHandler,
   ProductFeedbackPrismaRepository,
 } from "../modules/product-feedback/index.js";
 import { PDF_DOWNLOAD_ROUTE } from "./http-access-log";
@@ -72,8 +72,8 @@ export function mountApiIngress(deps: {
     pdfDir,
   });
 
-  if (env.PRODUCT_FEEDBACK_ENABLED === true) {
-    const feedbackHandler = createAuthenticatedSitepingHandler({
+  if (env.PRODUCT_FEEDBACK_ENABLED === true && env.NODE_ENV !== "production") {
+    const feedbackHandler = createAuthenticatedFeedbackHandler({
       prisma,
       repository: new ProductFeedbackPrismaRepository(prisma),
       verifySessionToken: (token) =>
@@ -81,16 +81,20 @@ export function mountApiIngress(deps: {
       sessionRevocation: app.get(SessionRevocationService),
       frontendOrigin: env.FRONTEND_URL,
       logger,
+      ...(env.AGENTATION_API_KEY
+        ? { agentationApiKey: env.AGENTATION_API_KEY }
+        : {}),
+      agentationEnabled: true,
     });
     expressApp.use(
-      "/api/siteping",
+      "/api/v1",
       feedbackLimiter,
       feedbackHandler.authenticate,
       express.json({ limit: PRODUCT_FEEDBACK_JSON_LIMIT }),
       feedbackHandler.handle,
     );
     logger.info("mounted authenticated product feedback handler", {
-      route: "/api/siteping",
+      route: "/api/v1/feedback and /api/v1/agentation",
     });
   }
 

@@ -1,8 +1,3 @@
-import {
-  StoreDuplicateError,
-  StoreNotFoundError,
-} from "@siteping/adapter-prisma";
-
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
 import {
@@ -14,6 +9,8 @@ import {
 import {
   type FeedbackAccess,
   type FeedbackCreateInput,
+  FeedbackDuplicateError,
+  FeedbackNotFoundError,
   type FeedbackPage,
   type FeedbackQuery,
   type FeedbackRecord,
@@ -25,7 +22,6 @@ const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 50;
 
 const CLIENT_ID_UNIQUE_CONSTRAINT = {
-  index: "SitepingFeedback_clientId_key",
   columns: ["clientId"],
 } as const;
 
@@ -36,32 +32,32 @@ export class ProductFeedbackPrismaRepository implements ProductFeedbackRepositor
     access: FeedbackAccess,
     input: FeedbackCreateInput,
   ): Promise<FeedbackRecord> {
-    const existing = await this.prisma.sitepingFeedback.findUnique({
+    const existing = await this.prisma.productFeedback.findUnique({
       where: { clientId: input.clientId },
       include: { annotations: true },
     });
     if (existing) {
       if (existing.authorUserId !== access.userId) {
-        throw new StoreDuplicateError();
+        throw new FeedbackDuplicateError();
       }
       return mapFeedback(existing);
     }
 
     try {
-      const row = await this.prisma.sitepingFeedback.create({
+      const row = await this.prisma.productFeedback.create({
         data: createFeedbackData(access, input),
         include: { annotations: true },
       });
       return mapFeedback(row);
     } catch (error: unknown) {
       if (!isUniqueViolation(error, CLIENT_ID_UNIQUE_CONSTRAINT)) throw error;
-      const winner = await this.prisma.sitepingFeedback.findUnique({
+      const winner = await this.prisma.productFeedback.findUnique({
         where: { clientId: input.clientId },
         include: { annotations: true },
       });
       if (!winner) throw error;
       if (winner.authorUserId !== access.userId) {
-        throw new StoreDuplicateError();
+        throw new FeedbackDuplicateError();
       }
       return mapFeedback(winner);
     }
@@ -80,17 +76,17 @@ export class ProductFeedbackPrismaRepository implements ProductFeedbackRepositor
     const where = queryWhere(access, query);
     const [result, focused] = await Promise.all([
       this.prisma.$transaction([
-        this.prisma.sitepingFeedback.findMany({
+        this.prisma.productFeedback.findMany({
           where,
           include: { annotations: true },
           orderBy: [{ createdAt: "desc" }, { id: "desc" }],
           skip: (page - 1) * limit,
           take: limit,
         }),
-        this.prisma.sitepingFeedback.count({ where }),
+        this.prisma.productFeedback.count({ where }),
       ]),
       page === 1 && focusId
-        ? this.prisma.sitepingFeedback.findFirst({
+        ? this.prisma.productFeedback.findFirst({
             where: { AND: [where, { id: focusId }] },
             include: { annotations: true },
           })
@@ -108,7 +104,7 @@ export class ProductFeedbackPrismaRepository implements ProductFeedbackRepositor
     access: FeedbackAccess,
     clientId: string,
   ): Promise<FeedbackRecord | null> {
-    const row = await this.prisma.sitepingFeedback.findFirst({
+    const row = await this.prisma.productFeedback.findFirst({
       where: {
         clientId,
         projectName: WEEKLY_REPORT_FEEDBACK_PRODUCT,
@@ -125,16 +121,25 @@ export class ProductFeedbackPrismaRepository implements ProductFeedbackRepositor
     input: FeedbackUpdateInput,
   ): Promise<FeedbackRecord> {
     return this.prisma.$transaction(async (tx) => {
-      const changed = await tx.sitepingFeedback.updateMany({
+      const changed = await tx.productFeedback.updateMany({
         where: {
           id,
           projectName: WEEKLY_REPORT_FEEDBACK_PRODUCT,
           ...accessWhere(access),
         },
-        data: { status: input.status, resolvedAt: input.resolvedAt },
+        data: {
+          ...(input.status ? { status: input.status } : {}),
+          ...(input.message ? { message: input.message } : {}),
+          ...(input.screenshotDataUrl
+            ? { screenshotUrl: input.screenshotDataUrl }
+            : {}),
+          ...(input.resolvedAt !== undefined
+            ? { resolvedAt: input.resolvedAt }
+            : {}),
+        },
       });
-      if (changed.count !== 1) throw new StoreNotFoundError();
-      const row = await tx.sitepingFeedback.findUniqueOrThrow({
+      if (changed.count !== 1) throw new FeedbackNotFoundError();
+      const row = await tx.productFeedback.findUniqueOrThrow({
         where: { id },
         include: { annotations: true },
       });
@@ -143,18 +148,18 @@ export class ProductFeedbackPrismaRepository implements ProductFeedbackRepositor
   }
 
   async delete(access: FeedbackAccess, id: string): Promise<void> {
-    const deleted = await this.prisma.sitepingFeedback.deleteMany({
+    const deleted = await this.prisma.productFeedback.deleteMany({
       where: {
         id,
         projectName: WEEKLY_REPORT_FEEDBACK_PRODUCT,
         ...(access.role === "admin" ? {} : { authorUserId: access.userId }),
       },
     });
-    if (deleted.count !== 1) throw new StoreNotFoundError();
+    if (deleted.count !== 1) throw new FeedbackNotFoundError();
   }
 
   async deleteAll(access: FeedbackAccess): Promise<void> {
-    await this.prisma.sitepingFeedback.deleteMany({
+    await this.prisma.productFeedback.deleteMany({
       where: {
         projectName: WEEKLY_REPORT_FEEDBACK_PRODUCT,
         ...(access.role === "admin" ? {} : { authorUserId: access.userId }),
@@ -163,7 +168,7 @@ export class ProductFeedbackPrismaRepository implements ProductFeedbackRepositor
   }
 
   async owns(access: FeedbackAccess, id: string): Promise<boolean> {
-    const count = await this.prisma.sitepingFeedback.count({
+    const count = await this.prisma.productFeedback.count({
       where: {
         id,
         projectName: WEEKLY_REPORT_FEEDBACK_PRODUCT,

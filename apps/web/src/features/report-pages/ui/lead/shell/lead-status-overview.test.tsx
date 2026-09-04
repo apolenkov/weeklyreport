@@ -8,10 +8,12 @@ import { SessionContext } from "../../../../../shared/lib/auth/session-provider"
 import { TRPCProxyContext } from "../../../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
 import { makeReportSectionFixture } from "../../../../../test-utils/report-section-fixtures";
+import { LeadReportAssistantStore } from "../../lead-report-assistant-store";
 import { LeadForm } from "./lead-form";
 
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 vi.mock("next/navigation", () => ({
+  usePathname: () => `/lead/report/${REPORT_ID}`,
   useRouter: () => ({ replace: vi.fn() }),
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -105,6 +107,10 @@ function Wrapper({ children }: { readonly children: ReactNode }) {
     },
     { path: ["leadForm", "crossAuthors"], query: [] },
     { path: ["leadForm", "crossAuthorContent"], query: [] },
+    {
+      path: ["ai", "availability"],
+      query: { availability: "unavailable" },
+    },
     { path: ["reports", "saveDraft"], mutation: true },
     { path: ["reports", "submit"], mutation: true },
     { path: ["leadForm", "revoke"], mutation: true },
@@ -130,7 +136,7 @@ function Wrapper({ children }: { readonly children: ReactNode }) {
             isAuthenticated: true,
           }}
         >
-          {children}
+          <LeadReportAssistantStore>{children}</LeadReportAssistantStore>
         </SessionContext.Provider>
       </TRPCProxyContext.Provider>
     </QueryClientProvider>
@@ -138,7 +144,7 @@ function Wrapper({ children }: { readonly children: ReactNode }) {
 }
 
 describe("LeadForm Overview", () => {
-  it("uses the read-only overview query and exposes explicit edit and slides routes", async () => {
+  it("uses the overview query and exposes the shared authoring chrome", async () => {
     render(
       <Wrapper>
         <LeadForm reportId={REPORT_ID} mode="overview" />
@@ -166,9 +172,15 @@ describe("LeadForm Overview", () => {
       `/lead/report/${REPORT_ID}?mode=edit#report-details`,
     );
     expect(screen.queryByTestId("lead-report-form")).toBeNull();
+    const documentActions = screen.getByRole("group", {
+      name: "Document actions",
+    });
+    expect(documentActions).toBeVisible();
+    expect(screen.getByRole("button", { name: "+ Add" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Submit" })).toBeVisible();
     expect(
-      screen.queryByRole("group", { name: "Document actions" }),
-    ).toBeNull();
+      screen.getByRole("group", { name: "Context controls" }),
+    ).toBeVisible();
   });
 
   it.each([

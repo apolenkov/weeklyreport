@@ -79,6 +79,18 @@ describe("envSchema — no defaults, every product var required", () => {
     ).toBe(false);
   });
 
+  it("accepts an optional non-blank Agentation MCP key", () => {
+    expect(envSchema.parse(COMPLETE).AGENTATION_API_KEY).toBeUndefined();
+    const key = "local-agentation-key-at-least-32-characters";
+    expect(
+      envSchema.parse({ ...COMPLETE, AGENTATION_API_KEY: key })
+        .AGENTATION_API_KEY,
+    ).toBe(key);
+    expect(
+      envSchema.safeParse({ ...COMPLETE, AGENTATION_API_KEY: " " }).success,
+    ).toBe(false);
+  });
+
   // Each required key, omitted in turn, must fail the parse — proving the
   // schema carries no silent default that would let a missing var slip through.
   it.each([

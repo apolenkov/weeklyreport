@@ -85,7 +85,8 @@ export const webEnv = {
     isTrue(readWebEnv().NEXT_PUBLIC_CLIENT_LOG_FORWARDING),
   webVitals: (): boolean => isTrue(readWebEnv().NEXT_PUBLIC_WEB_VITALS),
   productFeedback: (): boolean =>
-    isTrue(readWebEnv().NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED),
+    isTrue(readWebEnv().NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED) &&
+    !isProduction(),
   productFeedbackInboxRoles: (): readonly Role[] =>
     readWebEnv().NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES ?? [],
   appVersion: (): string | undefined => readWebEnv().NEXT_PUBLIC_APP_VERSION,
