@@ -140,6 +140,9 @@ const envObjectSchema = z.object({
     .enum(["true", "false"])
     .transform((value) => value === "true")
     .optional(),
+  // Optional loopback MCP credential. The ingress additionally requires the
+  // explicit feedback gate and a non-production environment.
+  AGENTATION_API_KEY: z.string().trim().min(MIN_JWT_SECRET_LENGTH).optional(),
   // PDF generation
   PDF_BASE_URL: z.url(),
   // Directory where the BullMQ worker writes generated PDFs and

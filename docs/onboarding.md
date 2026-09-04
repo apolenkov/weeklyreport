@@ -44,7 +44,8 @@ WeeklyReport автоматизирует еженедельные статус-
   Prisma CLI и TypeScript не попадают в API runner даже при peer-контекстах
   общего lockfile.
 - **`packages/ui`** — компоненты shadcn/ui и токены Tailwind.
-- **`prisma`** — схема БД, единая canonical init-миграция, сиды,
+- **`prisma`** — схема БД, canonical migration history (init плюс только
+  forward-only additive migrations), сиды,
   защитные guard-ы.
 - **`openspec`** — спецификации поведения продукта (см. раздел 8).
 
@@ -107,11 +108,32 @@ web, чтобы заработала корреляция ошибок с тре
 pnpm dev:feedback
 ```
 
-Команда включает SitePing и dev-only переключатель в верхнем меню. Через него
+Команда включает dev-only панель Agentation и переключатель в верхнем меню. Через него
 можно войти под любым сидированным Lead, Head, Admin или Viewer и выбрать
 `Wipe + Reseed` для профилей minimal, demo, full или stress. Сброс остаётся
 доступен только для точной одноразовой базы, принятой destructive guard;
 первичную базу подготовь штатной командой из следующего раздела.
+
+Agentation `3.0.2` отправляет sessions, annotations, статусы и threads в
+same-origin backend WeeklyReport; источником истины остаётся PostgreSQL.
+Штатный `agentation-mcp` `1.2.0` запускается только как MCP-клиент к этому
+adapter API, без собственного HTTP-сервера и без локальной SQLite:
+
+```bash
+pnpm agentation:mcp
+```
+
+Команда эквивалентна
+`agentation-mcp server --mcp-only --http-url http://127.0.0.1:3002/api/v1/agentation`.
+Браузерная UI-аутентификация идёт через текущую WeeklyReport session-cookie;
+MCP не получает эту cookie автоматически. Для агентского доступа adapter
+должен принимать отдельный agent credential из переменной
+`AGENTATION_API_KEY`, переданной через локальное окружение.
+Adapter принимает этот ключ только от loopback-соединения; совпадающий ключ с
+удалённого адреса получает отказ.
+Само значение ключа не записывай в репозиторий, shell history,
+конфигурацию агента или документацию. Пока ключ не настроен, MCP-команду можно
+использовать только для локального контурного теста, не для production.
 
 ## 5. База данных
 
@@ -136,9 +158,11 @@ PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' \
 `pnpm db:seed:profile demo` с тем же явным согласием; корневой `.env` указывает
 на loopback-порт этой базы.
 
-- Схема — `prisma/schema.prisma`. Любые изменения отражаются одновременно в
-  схеме и единственной canonical init-миграции; DB-native инварианты, которые
-  Prisma не выражает, добавляются прямо в init и закрепляются OpenSpec-контрактом.
+- Схема — `prisma/schema.prisma`. После init любые изменения оформляются
+  отдельной forward-only additive Prisma migration и применяются через
+  `prisma migrate deploy`; init и migration history должны оставаться
+  синхронными. DB-native инварианты, которые Prisma не выражает, добавляются
+  в соответствующую миграцию и закрепляются OpenSpec-контрактом.
 - Профили bootstrap: `demo` для текущего продуктового набора и `stress` для
   проверки объёма данных.
   Внутренние seed-слои остаются деталями реализации.

@@ -1,14 +1,12 @@
 import { randomUUID } from "node:crypto";
 
 import { normalizeFeedbackPath } from "@customreport/shared";
-import {
-  StoreDuplicateError,
-  StoreNotFoundError,
-} from "@siteping/adapter-prisma";
 
 import {
   type FeedbackAccess,
   type FeedbackCreateInput,
+  FeedbackDuplicateError,
+  FeedbackNotFoundError,
   type FeedbackPage,
   type FeedbackQuery,
   type FeedbackRecord,
@@ -75,7 +73,7 @@ export class ProductFeedbackMemoryRepository implements ProductFeedbackRepositor
     );
     if (existing) {
       if (existing.authorUserId !== access.userId) {
-        return Promise.reject(new StoreDuplicateError());
+        return Promise.reject(new FeedbackDuplicateError());
       }
       return Promise.resolve(existing.record);
     }
@@ -105,8 +103,6 @@ export class ProductFeedbackMemoryRepository implements ProductFeedbackRepositor
         id: randomUUID(),
         feedbackId: id,
         ...annotation,
-        elementId: annotation.elementId ?? null,
-        anchorKey: annotation.anchorKey ?? null,
         createdAt: now,
       })),
       screenshotUrl: input.screenshotDataUrl ?? null,
@@ -171,12 +167,18 @@ export class ProductFeedbackMemoryRepository implements ProductFeedbackRepositor
   ): Promise<FeedbackRecord> {
     const existing = this.rows.get(id);
     if (!existing || !canRead(access, existing)) {
-      return Promise.reject(new StoreNotFoundError());
+      return Promise.reject(new FeedbackNotFoundError());
     }
-    const updated = {
+    const updated: FeedbackRecord = {
       ...existing.record,
-      status: input.status,
-      resolvedAt: input.resolvedAt,
+      ...(input.status ? { status: input.status } : {}),
+      ...(input.message ? { message: input.message } : {}),
+      ...(input.screenshotDataUrl
+        ? { screenshotUrl: input.screenshotDataUrl }
+        : {}),
+      ...(input.resolvedAt !== undefined
+        ? { resolvedAt: input.resolvedAt }
+        : {}),
       updatedAt: new Date(),
     };
     this.rows.set(id, { ...existing, record: updated });
@@ -189,7 +191,7 @@ export class ProductFeedbackMemoryRepository implements ProductFeedbackRepositor
       !existing ||
       (access.role !== "admin" && existing.authorUserId !== access.userId)
     ) {
-      return Promise.reject(new StoreNotFoundError());
+      return Promise.reject(new FeedbackNotFoundError());
     }
     this.rows.delete(id);
     return Promise.resolve();

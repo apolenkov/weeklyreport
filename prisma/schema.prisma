@@ -8,63 +8,67 @@ datasource db {
 }
 
 model User {
-  id                      String                  @id @default(uuid())
-  email                   String                  @unique
-  name                    String
+  id                       String                    @id @default(uuid())
+  email                    String                    @unique
+  name                     String
   // Structured ФИО parts (surname-first). `name` stays the stored,
   // denormalized display value recomputed from these on admin write.
   // lastName/firstName are NOT NULL; SAML stubs synthesize them
   // (lastName = whole displayName, firstName = " " placeholder, middleName =
   // null) since the IdP name order isn't known — an admin completes them later.
-  lastName                String
-  firstName               String
-  middleName              String?
+  lastName                 String
+  firstName                String
+  middleName               String?
   // Admin-maintained HR job title (должность), distinct from the access
   // `role`. Free-text, nullable, never sourced from the IdP.
-  position                String?
-  role                    Role
-  samlId                  String                  @unique
-  reportingGroupId        String?
-  createdAt               DateTime                @default(now())
-  updatedAt               DateTime                @updatedAt
-  notificationOptOut      Boolean                 @default(false)
+  position                 String?
+  role                     Role
+  samlId                   String                    @unique
+  reportingGroupId         String?
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  notificationOptOut       Boolean                   @default(false)
   // Soft-deactivation flag. false = deactivated.
   // Sessions are immediately revoked in Redis; Prisma is the authoritative
   // source for the isActive state.
-  isActive                Boolean                 @default(true)
-  reportingGroup          ReportingGroup?         @relation(fields: [reportingGroupId], references: [id])
-  ledProjects             Project[]
-  reopenRequestsRequested ReopenRequest[]         @relation("ReopenRequester")
-  reopenRequestsReviewed  ReopenRequest[]         @relation("ReopenReviewer")
-  publishedReports        Report[]                @relation("PublishedBy")
-  authoredReportSections  ReportSection[]         @relation("ReportSectionAuthor")
-  stageAssignments        StageAssignment[]
+  isActive                 Boolean                   @default(true)
+  reportingGroup           ReportingGroup?           @relation(fields: [reportingGroupId], references: [id])
+  ledProjects              Project[]
+  reopenRequestsRequested  ReopenRequest[]           @relation("ReopenRequester")
+  reopenRequestsReviewed   ReopenRequest[]           @relation("ReopenReviewer")
+  publishedReports         Report[]                  @relation("PublishedBy")
+  authoredReportSections   ReportSection[]           @relation("ReportSectionAuthor")
+  stageAssignments         StageAssignment[]
   // Back-relations for group headship and viewer-group access.
-  ledGroups               ReportingGroup[]        @relation("GroupHead")
-  viewerGroupAccess       ViewerGroupAccess[]     @relation("ViewerGroupAccessViewer")
+  ledGroups                ReportingGroup[]          @relation("GroupHead")
+  viewerGroupAccess        ViewerGroupAccess[]       @relation("ViewerGroupAccessViewer")
   // review-acknowledgement back-relations. A user authors acknowledgement
   // receipts, section verdicts, and record comments as a reviewer.
-  reviewAcknowledgements  ReviewAcknowledgement[] @relation("ReviewAckUser")
-  sectionReviews          SectionReview[]         @relation("SectionReviewReviewer")
-  recordComments          RecordComment[]         @relation("RecordCommentReviewer")
+  reviewAcknowledgements   ReviewAcknowledgement[]   @relation("ReviewAckUser")
+  sectionReviews           SectionReview[]           @relation("SectionReviewReviewer")
+  recordComments           RecordComment[]           @relation("RecordCommentReviewer")
   // Project Activities this lead is attached to (M:M via the join below).
-  projectActivityLeads    ProjectActivityLead[]   @relation("ProjectActivityLeadUser")
-  productFeedback         SitepingFeedback[]      @relation("SitepingFeedbackAuthor")
+  projectActivityLeads     ProjectActivityLead[]     @relation("ProjectActivityLeadUser")
+  productFeedback          ProductFeedback[]         @relation("ProductFeedbackAuthor")
+  agentationSessions       AgentationSession[]
+  agentationAnnotations    AgentationAnnotation[]    @relation("AgentationAnnotationAuthor")
+  agentationEvents         AgentationEvent[]
+  agentationThreadMessages AgentationThreadMessage[]
 
   @@index([reportingGroupId])
 }
 
-// Authenticated product feedback. SitePing-compatible names keep the pinned
-// transport adapter usable while ownership and scope remain WeeklyReport-owned.
-model SitepingFeedback {
-  id                     String               @id @default(cuid())
+// Authenticated product feedback remains in the original tables so replacing
+// the widget transport does not rewrite or discard existing records.
+model ProductFeedback {
+  id                     String                      @id @default(cuid())
   projectName            String
   type                   String
-  message                String               @db.Text
-  status                 String               @default("open")
+  message                String                      @db.Text
+  status                 String                      @default("open")
   url                    String
   urlPattern             String?
-  screenshotUrl          String?              @db.Text
+  screenshotUrl          String?                     @db.Text
   screenshotRegion       Json?
   diagnostics            Json?
   viewport               String
@@ -73,31 +77,32 @@ model SitepingFeedback {
   authorName             String
   authorEmail            String
   authorReportingGroupId String?
-  clientId               String               @unique
+  clientId               String                      @unique
   resolvedAt             DateTime?
-  createdAt              DateTime             @default(now())
-  updatedAt              DateTime             @updatedAt
-  author                 User                 @relation("SitepingFeedbackAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
-  annotations            SitepingAnnotation[]
+  createdAt              DateTime                    @default(now())
+  updatedAt              DateTime                    @updatedAt
+  author                 User                        @relation("ProductFeedbackAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+  annotations            ProductFeedbackAnnotation[]
 
   @@index([projectName, status, createdAt(sort: Desc)])
   @@index([projectName, authorUserId, createdAt(sort: Desc)])
   @@index([projectName, authorReportingGroupId, status, createdAt(sort: Desc)])
   @@index([projectName, url])
+  @@map("SitepingFeedback")
 }
 
-model SitepingAnnotation {
-  id               String           @id @default(cuid())
+model ProductFeedbackAnnotation {
+  id               String          @id @default(cuid())
   feedbackId       String
-  cssSelector      String           @db.Text
-  xpath            String           @db.Text
-  textSnippet      String           @db.Text
+  cssSelector      String          @db.Text
+  xpath            String          @db.Text
+  textSnippet      String          @db.Text
   elementTag       String
   elementId        String?
-  textPrefix       String           @db.Text
-  textSuffix       String           @db.Text
+  textPrefix       String          @db.Text
+  textSuffix       String          @db.Text
   fingerprint      String
-  neighborText     String           @db.Text
+  neighborText     String          @db.Text
   anchorKey        String?
   xPct             Float
   yPct             Float
@@ -107,11 +112,118 @@ model SitepingAnnotation {
   scrollY          Float
   viewportW        Int
   viewportH        Int
-  devicePixelRatio Float            @default(1)
-  createdAt        DateTime         @default(now())
-  feedback         SitepingFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  devicePixelRatio Float           @default(1)
+  createdAt        DateTime        @default(now())
+  feedback         ProductFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
 
   @@index([feedbackId])
+  @@map("SitepingAnnotation")
+}
+
+// Agentation's browser/MCP wire data. Kept separate from the legacy feedback
+// tables so existing ProductFeedback rows and their status semantics remain
+// untouched while the PostgreSQL database becomes the production source of truth.
+model AgentationSession {
+  id                     String                 @id
+  url                    String
+  status                 String                 @default("active")
+  projectId              String                 @default("weekly-report")
+  metadata               Json?
+  authorUserId           String
+  authorReportingGroupId String?
+  authorRole             String
+  authorName             String
+  authorEmail            String
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  author                 User                   @relation(fields: [authorUserId], references: [id], onDelete: Restrict)
+  annotations            AgentationAnnotation[]
+  events                 AgentationEvent[]
+
+  @@unique([authorUserId, url])
+  @@index([authorUserId, createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
+}
+
+model AgentationAnnotation {
+  id                     String                    @id
+  clientId               String
+  sessionId              String
+  x                      Float
+  y                      Float
+  comment                String                    @db.Text
+  element                String                    @db.Text
+  elementPath            String                    @db.Text
+  timestamp              BigInt
+  selectedText           String?                   @db.Text
+  boundingBox            Json?
+  nearbyText             String?                   @db.Text
+  cssClasses             String?                   @db.Text
+  nearbyElements         String?                   @db.Text
+  computedStyles         String?                   @db.Text
+  fullPath               String?                   @db.Text
+  accessibility          String?                   @db.Text
+  isMultiSelect          Boolean                   @default(false)
+  isFixed                Boolean                   @default(false)
+  reactComponents        String?                   @db.Text
+  sourceFile             String?                   @db.Text
+  drawingIndex           Int?
+  elementBoundingBoxes   Json?
+  placement              Json?
+  rearrange              Json?
+  url                    String?
+  kind                   String                    @default("feedback")
+  intent                 String?
+  severity               String?
+  status                 String                    @default("pending")
+  resolvedAt             DateTime?
+  resolvedBy             String?
+  authorUserId           String
+  authorReportingGroupId String?
+  authorRole             String
+  authorName             String
+  authorEmail            String
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
+  session                AgentationSession         @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  author                 User                      @relation("AgentationAnnotationAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+  threadMessages         AgentationThreadMessage[]
+
+  @@unique([sessionId, authorUserId, clientId])
+  @@index([sessionId, timestamp])
+  @@index([status, createdAt])
+  @@index([authorUserId, status, createdAt])
+}
+
+model AgentationEvent {
+  id           String             @id @default(uuid())
+  sequence     BigInt             @unique @default(autoincrement())
+  type         String
+  sessionId    String?
+  annotationId String?
+  payload      Json
+  createdAt    DateTime           @default(now())
+  authorUserId String?
+  author       User?              @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+  session      AgentationSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, sequence])
+  @@index([sequence])
+}
+
+model AgentationThreadMessage {
+  id           String               @id
+  annotationId String
+  role         String
+  content      String               @db.Text
+  timestamp    BigInt
+  authorUserId String?
+  createdAt    DateTime             @default(now())
+  annotation   AgentationAnnotation @relation(fields: [annotationId], references: [id], onDelete: Cascade)
+  author       User?                @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  @@index([annotationId, timestamp])
+  @@index([authorUserId])
 }
 
 model ReportingGroup {

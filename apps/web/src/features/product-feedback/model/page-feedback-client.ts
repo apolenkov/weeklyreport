@@ -1,22 +1,15 @@
 import {
-  feedbackCreateWireSchema,
-  type FeedbackResponse,
-  feedbackResponseSchema,
   type FeedbackType,
   normalizeFeedbackPath,
+  pageFeedbackCreateSchema,
 } from "@customreport/shared";
 
-const PAGE_FEEDBACK_ENDPOINT = "/api/siteping";
+const PAGE_FEEDBACK_ENDPOINT = "/api/v1/feedback";
 const MAX_USER_AGENT_LENGTH = 500;
 
 export interface PageFeedbackDraft {
   readonly type: FeedbackType;
   readonly message: string;
-}
-
-export interface PageFeedbackIdentity {
-  readonly name: string;
-  readonly email: string;
 }
 
 interface PageFeedbackBrowserContext {
@@ -39,33 +32,22 @@ function currentBrowserContext(): PageFeedbackBrowserContext {
 
 export function buildPageFeedbackPayload(
   draft: PageFeedbackDraft,
-  identity: PageFeedbackIdentity,
   context: PageFeedbackBrowserContext,
 ) {
-  return feedbackCreateWireSchema.parse({
-    projectName: "weekly-report",
+  return pageFeedbackCreateSchema.parse({
     type: draft.type,
     message: draft.message,
     url: normalizeFeedbackPath(context.href),
-    urlPattern: null,
     viewport: `${context.viewportWidth}x${context.viewportHeight}`,
     userAgent: context.userAgent.slice(0, MAX_USER_AGENT_LENGTH) || "unknown",
-    authorName: identity.name,
-    authorEmail: identity.email,
-    annotations: [],
     clientId: context.createClientId(),
   });
 }
 
 export async function submitPageFeedback(
   draft: PageFeedbackDraft,
-  identity: PageFeedbackIdentity,
-): Promise<FeedbackResponse> {
-  const payload = buildPageFeedbackPayload(
-    draft,
-    identity,
-    currentBrowserContext(),
-  );
+): Promise<void> {
+  const payload = buildPageFeedbackPayload(draft, currentBrowserContext());
   const response = await fetch(PAGE_FEEDBACK_ENDPOINT, {
     method: "POST",
     credentials: "same-origin",
@@ -76,5 +58,4 @@ export async function submitPageFeedback(
   if (!response.ok) {
     throw new Error(`Page feedback submission failed (${response.status}).`);
   }
-  return feedbackResponseSchema.parse(await response.json());
 }

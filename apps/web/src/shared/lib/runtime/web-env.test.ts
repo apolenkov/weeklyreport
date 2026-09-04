@@ -116,6 +116,13 @@ describe("webEnv getters", () => {
     expect(webEnv.productFeedback()).toBe(true);
   });
 
+  it("keeps product feedback disabled in production", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED", "true");
+
+    expect(webEnv.productFeedback()).toBe(false);
+  });
+
   it("returns a fail-closed feedback inbox role allowlist", () => {
     vi.stubEnv("NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES", undefined);
     expect(webEnv.productFeedbackInboxRoles()).toEqual([]);

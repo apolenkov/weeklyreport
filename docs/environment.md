@@ -14,6 +14,39 @@ safe placeholders only.
 | Production Compose        | `.env.production` passed with `--env-file`                         | `docker-compose.prod.yml` and optional observability overlay       | Copy `deploy/environment/production.env.example`; required values fail Compose rendering. `NEXT_PUBLIC_*` values are build-time, production Compose owns one immutable internal `API_URL` for Next rewrites and server fetches, `DB_PASSWORD` is URL-safe, `POSTGRES_DB` is a simple identifier, and the observability overlay requires `GRAFANA_ADMIN_PASSWORD`. |
 | CI                        | Workflow job `env` blocks and service containers                   | `.github/workflows/ci.yml`                                         | CI uses disposable PostgreSQL `customreport_e2e`, Redis DB `15`, and non-production values. No developer `.env` is uploaded or required.                                                                                                                                                                                                                          |
 
+## Agentation feedback and MCP
+
+The pinned product packages are `agentation@3.0.2` (authenticated browser UI)
+and `agentation-mcp@1.2.0` (agent transport). The UI uses the same-origin
+WeeklyReport adapter and the current authenticated session cookie. The adapter
+maps sessions, annotations, statuses, threads, actions, and SSE to the
+WeeklyReport PostgreSQL feedback store; PostgreSQL is the sole product source
+of truth.
+
+Run MCP only in `--mcp-only --http-url` mode:
+
+```sh
+pnpm agentation:mcp
+# equivalent: agentation-mcp server --mcp-only \
+#   --http-url http://127.0.0.1:3002/api/v1/agentation
+```
+
+MCP does not forward the browser session cookie. The WeeklyReport adapter
+authenticates MCP requests with the optional `x-api-key` value from
+`AGENTATION_API_KEY`; the value is never committed, printed, or placed in this
+file. The adapter accepts this credential only from a loopback socket; remote
+clients are rejected even when the key matches. Do not use the
+stock Agentation HTTP server, wildcard CORS, or its `memory`/`sqlite` store for
+WeeklyReport. Any stock SQLite file is limited to an isolated developer
+experiment and is not an application, shared, staging, or production store.
+
+The toolbar is enabled only by explicit non-production configuration:
+`PRODUCT_FEEDBACK_ENABLED=true` and
+`NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED=true`, with `AUTH_DEV_MODE=true` only
+for local development. Production examples keep both feedback flags false;
+the API must fail closed if required configuration is absent or if a dev flag
+is enabled under `NODE_ENV=production`.
+
 ## Optional local observability overlays
 
 `pnpm observability:up` reads the root `.env`, joins the current local Compose

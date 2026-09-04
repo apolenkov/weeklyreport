@@ -25,6 +25,7 @@
     "dev": {
       "cache": false,
       "env": [
+        "AGENTATION_API_KEY",
         "NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED",
         "NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES",
         "PRODUCT_FEEDBACK_ENABLED"

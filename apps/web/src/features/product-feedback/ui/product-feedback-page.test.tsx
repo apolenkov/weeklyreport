@@ -8,10 +8,9 @@ import type { SessionUser } from "../../../shared/lib/auth/session-provider";
 import { useSession } from "../../../shared/lib/auth/session-provider";
 import { ProductFeedbackPage } from "./product-feedback-page";
 
-const { changeStatus, deleteFeedback, useSitepingInbox } = vi.hoisted(() => ({
+const { changeStatus, useProductFeedbackInbox } = vi.hoisted(() => ({
   changeStatus: vi.fn(() => Promise.resolve()),
-  deleteFeedback: vi.fn(() => Promise.resolve()),
-  useSitepingInbox: vi.fn(),
+  useProductFeedbackInbox: vi.fn(),
 }));
 
 const pageFeedback = {
@@ -67,14 +66,15 @@ const inboxState = {
   openFeedback: vi.fn(),
   closeFeedback: vi.fn(),
   changeStatus,
-  deleteFeedback,
   pendingUndo: null,
   undo: vi.fn(() => Promise.resolve()),
 };
 
-useSitepingInbox.mockReturnValue(inboxState);
+useProductFeedbackInbox.mockReturnValue(inboxState);
 
-vi.mock("@siteping/dashboard", () => ({ useSitepingInbox }));
+vi.mock("../model/use-product-feedback-inbox", () => ({
+  useProductFeedbackInbox,
+}));
 vi.mock("../../../shared/lib/auth/session-provider", () => ({
   useSession: vi.fn(),
 }));
@@ -97,7 +97,7 @@ function setRole(role: SessionUser["role"]): void {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useSitepingInbox.mockReturnValue(inboxState);
+  useProductFeedbackInbox.mockReturnValue(inboxState);
 });
 
 describe("ProductFeedbackPage role controls", () => {
@@ -150,11 +150,11 @@ describe("ProductFeedbackPage role controls", () => {
     setRole("admin");
     render(<ProductFeedbackPage />);
     expect(screen.getByText(/All Weekly Report feedback/)).toBeInTheDocument();
-    expect(screen.getByText(/right-click any element/i)).toBeInTheDocument();
+    expect(screen.getByText(/proposed layout changes/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Status for feedback/)).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Delete feedback" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "Delete feedback" }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("link", {
         name: "Open page feedback on /lead/report/report-1",
@@ -164,7 +164,7 @@ describe("ProductFeedbackPage role controls", () => {
 
   it("opens captured annotation evidence and keeps a secondary live link", () => {
     setRole("admin");
-    useSitepingInbox.mockReturnValue({
+    useProductFeedbackInbox.mockReturnValue({
       ...inboxState,
       items: [
         {
@@ -226,13 +226,13 @@ describe("ProductFeedbackPage role controls", () => {
       screen.getByRole("link", { name: "Open live page" }),
     ).toHaveAttribute(
       "href",
-      "/head/report/report-1?authorId=lead-user&siteping=feedback-1&sitepingUrl=%2Flead%2Freport%2Freport-1",
+      "/head/report/report-1?authorId=lead-user&feedbackUrl=%2Flead%2Freport%2Freport-1&feedback=feedback-1",
     );
   });
 
   it("keeps a live deep link when an old annotation has no capture", () => {
     setRole("admin");
-    useSitepingInbox.mockReturnValue({
+    useProductFeedbackInbox.mockReturnValue({
       ...inboxState,
       items: [
         {
@@ -250,7 +250,34 @@ describe("ProductFeedbackPage role controls", () => {
       }),
     ).toHaveAttribute(
       "href",
-      "/head/report/report-1?authorId=lead-user&siteping=feedback-1&sitepingUrl=%2Flead%2Freport%2Freport-1",
+      "/head/report/report-1?authorId=lead-user&feedbackUrl=%2Flead%2Freport%2Freport-1&feedback=feedback-1",
+    );
+  });
+
+  it("joins the Agentation session from a PostgreSQL-backed inbox item", () => {
+    setRole("admin");
+    useProductFeedbackInbox.mockReturnValue({
+      ...inboxState,
+      items: [
+        {
+          ...pageFeedback,
+          id: "agentation-1",
+          annotations: [{ id: "annotation-1" }],
+          agentationSessionId: "session-1",
+          agentationAnnotationId: "annotation-1",
+        },
+      ],
+    });
+
+    render(<ProductFeedbackPage />);
+
+    expect(
+      screen.getByRole("link", {
+        name: "Open annotation on /lead/report/report-1",
+      }),
+    ).toHaveAttribute(
+      "href",
+      "/head/report/report-1?authorId=lead-user&feedbackUrl=%2Flead%2Freport%2Freport-1&agentationSession=session-1&agentationAnnotation=annotation-1",
     );
   });
 });

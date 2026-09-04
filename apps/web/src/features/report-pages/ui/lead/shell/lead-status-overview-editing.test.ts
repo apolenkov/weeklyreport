@@ -117,15 +117,17 @@ describe("status overview editing bridge", () => {
     ).toBeNull();
   });
 
-  it("builds a deterministic details URL and preserves only SitePing context", () => {
+  it("builds a deterministic details URL and preserves feedback context", () => {
     const params = new URLSearchParams({
-      siteping: "1",
-      sitepingUrl: "/feedback",
+      feedback: "1",
+      feedbackUrl: "/feedback",
+      agentationSession: "session-1",
+      agentationAnnotation: "annotation-1",
       authorId: "foreign-author",
     });
 
     expect(buildStatusOverviewDetailsHref("report/id", params)).toBe(
-      "/lead/report/report%2Fid?mode=edit&siteping=1&sitepingUrl=%2Ffeedback#report-details",
+      "/lead/report/report%2Fid?mode=edit&feedback=1&feedbackUrl=%2Ffeedback&agentationSession=session-1&agentationAnnotation=annotation-1#report-details",
     );
   });
 });

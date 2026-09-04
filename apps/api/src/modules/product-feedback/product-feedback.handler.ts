@@ -1,6 +1,9 @@
+import { timingSafeEqual } from "node:crypto";
+import { isIP } from "node:net";
+
 import { AUTH_COOKIE_NAME, type UserSession } from "@customreport/shared";
-import { createSitepingHandler } from "@siteping/adapter-prisma";
 import type { Request, RequestHandler, Response } from "express";
+import { z } from "zod";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import {
@@ -9,47 +12,36 @@ import {
 } from "../../lib/human-session.js";
 import type { AppLogger } from "../../lib/logger.js";
 import {
-  buildSitepingWebRequest,
-  type FeedbackMethod,
-  forwardSitepingResponse,
-  validateFeedbackBoundary,
-} from "./product-feedback.http.js";
-import {
-  feedbackAccessFromSession,
+  FeedbackNotFoundError,
   type ProductFeedbackRepository,
 } from "./product-feedback.repository.js";
-import { createScopedSitepingStore } from "./product-feedback.siteping-store.js";
+import {
+  executeFeedbackRequest,
+  type FeedbackRouteDeps,
+} from "./product-feedback.routes.js";
 
-const HTTP = {
-  badRequest: 400,
-  unauthorized: 401,
-  serverError: 500,
-} as const;
-const AUTHENTICATION_REQUIRED = "Authentication required.";
-const PRODUCT_FEEDBACK_PHASE = "product-feedback";
-const MAX_FEEDBACK_ID_LENGTH = 200;
+const HTTP_BAD_REQUEST = 400;
+const HTTP_UNAUTHORIZED = 401;
+const HTTP_FORBIDDEN = 403;
+const HTTP_NOT_FOUND = 404;
+const HTTP_SERVER_ERROR = 500;
+const LOG_PHASE = "product-feedback";
+const AGENTATION_AGENT_ID = "00000000-0000-4000-8000-000000000001";
+const IPV4_ADDRESS_FAMILY = 4;
+const IPV4_MAPPED_PREFIX = "::ffff:";
 
-function requestedFocusId(req: Request): string | undefined {
-  if (req.method !== "GET") return undefined;
-  const value = req.headers["x-siteping-focus-id"];
-  return typeof value === "string" &&
-    value.length > 0 &&
-    value.length <= MAX_FEEDBACK_ID_LENGTH &&
-    /^[a-zA-Z0-9_-]+$/.test(value)
-    ? value
-    : undefined;
-}
-
-export interface AuthenticatedSitepingHandlerDeps {
+export interface AuthenticatedFeedbackHandlerDeps extends FeedbackRouteDeps {
   readonly prisma: PrismaService;
   readonly repository: ProductFeedbackRepository;
   readonly verifySessionToken: HumanSessionDeps["verifySessionToken"];
   readonly sessionRevocation: HumanSessionDeps["sessionRevocation"];
   readonly frontendOrigin: string;
   readonly logger: AppLogger;
+  readonly agentationApiKey?: string;
+  readonly agentationEnabled?: boolean;
 }
 
-export interface AuthenticatedSitepingHandler {
+export interface AuthenticatedFeedbackHandler {
   readonly authenticate: RequestHandler;
   readonly handle: RequestHandler;
 }
@@ -70,9 +62,46 @@ function cookieToken(req: Request): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
+function validAgentKey(req: Request, expected?: string): boolean {
+  const supplied = req.header("x-api-key");
+  if (!expected || !supplied) return false;
+  const left = Buffer.from(supplied);
+  const right = Buffer.from(expected);
+  return left.length === right.length && timingSafeEqual(left, right);
+}
+
+export function isLoopbackAddress(address: string | undefined): boolean {
+  if (!address) return false;
+  if (address === "::1") return true;
+  const ipv4 = address.startsWith(IPV4_MAPPED_PREFIX)
+    ? address.slice(IPV4_MAPPED_PREFIX.length)
+    : address;
+  return isIP(ipv4) === IPV4_ADDRESS_FAMILY && ipv4.startsWith("127.");
+}
+
+function agentPathAllowed(req: Request): boolean {
+  if (req.method === "GET")
+    return req.path.startsWith("/agentation/") || req.path === "/agentation";
+  return (
+    (req.method === "PATCH" &&
+      /^\/agentation\/annotations\/[^/]+$/.test(req.path)) ||
+    (req.method === "POST" &&
+      (/^\/agentation\/annotations\/[^/]+\/thread$/.test(req.path) ||
+        /^\/agentation\/sessions\/[^/]+\/action$/.test(req.path)))
+  );
+}
+function agentSession(): UserSession {
+  return {
+    userId: AGENTATION_AGENT_ID,
+    email: "agentation@local",
+    name: "Agentation agent",
+    role: "admin",
+  };
+}
+
 async function resolveRequestSession(
   req: Request,
-  deps: AuthenticatedSitepingHandlerDeps,
+  deps: AuthenticatedFeedbackHandlerDeps,
 ): Promise<UserSession | null> {
   const token = cookieToken(req);
   if (!token) return null;
@@ -83,81 +112,77 @@ async function resolveRequestSession(
   });
 }
 
-async function executeSitepingRequest(
-  req: Request,
-  res: Response,
-  session: UserSession,
-  webRequest: globalThis.Request,
-  deps: AuthenticatedSitepingHandlerDeps,
-  allowedOrigin: string,
-): Promise<void> {
-  const focusFeedbackId = requestedFocusId(req);
-  const store = createScopedSitepingStore({
-    repository: deps.repository,
-    access: feedbackAccessFromSession(session),
-    logger: deps.logger,
-    ...(focusFeedbackId ? { focusFeedbackId } : {}),
-  });
-  const handlers = createSitepingHandler({
-    store,
-    allowedOrigins: [allowedOrigin],
-    requireAuthForDestructive: false,
-    redactUnauthenticatedEmails: false,
-  });
-  try {
-    const method = req.method as FeedbackMethod;
-    const webResponse = await handlers[method](webRequest);
-    await forwardSitepingResponse(webResponse, res);
-  } catch (error: unknown) {
-    deps.logger.error("product feedback request failed", {
-      phase: PRODUCT_FEEDBACK_PHASE,
-      method: req.method,
-      actorId: session.userId,
-      role: session.role,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    sendError(
-      res,
-      HTTP.serverError,
-      "server_error",
-      "Feedback request failed.",
-    );
-  }
+function allowedRequest(req: Request, frontendOrigin: string): boolean {
+  const expectedOrigin = new URL(frontendOrigin).origin;
+  const suppliedOrigin = req.header("origin");
+  if (req.method === "GET" || req.method === "HEAD")
+    return suppliedOrigin === undefined || suppliedOrigin === expectedOrigin;
+  return suppliedOrigin === expectedOrigin;
 }
 
-export function createAuthenticatedSitepingHandler(
-  deps: AuthenticatedSitepingHandlerDeps,
-): AuthenticatedSitepingHandler {
-  const sessions = new WeakMap<Request, UserSession>();
-  const allowedOrigin = new URL(deps.frontendOrigin).origin;
+function invalidRequest(error: unknown): boolean {
+  return error instanceof z.ZodError || error instanceof SyntaxError;
+}
 
+export function createAuthenticatedFeedbackHandler(
+  deps: AuthenticatedFeedbackHandlerDeps,
+): AuthenticatedFeedbackHandler {
+  const principals = new WeakMap<
+    Request,
+    { readonly session: UserSession; readonly agentationAgent: boolean }
+  >();
   const authenticate: RequestHandler = async (req, res, next) => {
-    const rejection = validateFeedbackBoundary(req, allowedOrigin);
-    if (rejection) {
-      sendError(res, rejection.status, rejection.error, rejection.message);
+    const keyedAgentRequest =
+      deps.agentationEnabled &&
+      validAgentKey(req, deps.agentationApiKey) &&
+      agentPathAllowed(req);
+    if (keyedAgentRequest && !isLoopbackAddress(req.socket.remoteAddress)) {
+      sendError(
+        res,
+        HTTP_FORBIDDEN,
+        "forbidden_agent_source",
+        "Agent access is restricted to loopback.",
+      );
+      return;
+    }
+    if (keyedAgentRequest) {
+      principals.set(req, {
+        session: agentSession(),
+        agentationAgent: true,
+      });
+      next();
+      return;
+    }
+    if (!allowedRequest(req, deps.frontendOrigin)) {
+      sendError(
+        res,
+        HTTP_FORBIDDEN,
+        "forbidden_origin",
+        "Request origin is not allowed.",
+      );
       return;
     }
     try {
       const session = await resolveRequestSession(req, deps);
-      if (session) {
-        sessions.set(req, session);
-        next();
+      if (!session) {
+        sendError(
+          res,
+          HTTP_UNAUTHORIZED,
+          "unauthorized",
+          "Authentication required.",
+        );
         return;
       }
-      sendError(
-        res,
-        HTTP.unauthorized,
-        "unauthorized",
-        AUTHENTICATION_REQUIRED,
-      );
+      principals.set(req, { session, agentationAgent: false });
+      next();
     } catch (error: unknown) {
       deps.logger.error("product feedback authentication failed", {
-        phase: PRODUCT_FEEDBACK_PHASE,
+        phase: LOG_PHASE,
         error: error instanceof Error ? error.message : String(error),
       });
       sendError(
         res,
-        HTTP.serverError,
+        HTTP_SERVER_ERROR,
         "server_error",
         "Unable to authenticate request.",
       );
@@ -165,37 +190,48 @@ export function createAuthenticatedSitepingHandler(
   };
 
   const handle: RequestHandler = async (req, res) => {
-    const session = sessions.get(req);
-    sessions.delete(req);
-    if (!session) {
+    const principal = principals.get(req);
+    principals.delete(req);
+    if (!principal) {
       sendError(
         res,
-        HTTP.unauthorized,
+        HTTP_UNAUTHORIZED,
         "unauthorized",
-        AUTHENTICATION_REQUIRED,
+        "Authentication required.",
       );
       return;
     }
-    const webRequest = buildSitepingWebRequest(req, session);
-    if (webRequest === null) {
+    const { agentationAgent, session } = principal;
+    try {
+      await executeFeedbackRequest(req, res, session, deps, agentationAgent);
+    } catch (error: unknown) {
+      if (error instanceof FeedbackNotFoundError) {
+        sendError(res, HTTP_NOT_FOUND, "not_found", "Feedback not found.");
+        return;
+      }
+      if (invalidRequest(error)) {
+        sendError(
+          res,
+          HTTP_BAD_REQUEST,
+          "invalid_request",
+          "Invalid feedback request.",
+        );
+        return;
+      }
+      deps.logger.error("product feedback request failed", {
+        phase: LOG_PHASE,
+        method: req.method,
+        actorId: session.userId,
+        role: session.role,
+        error: error instanceof Error ? error.message : String(error),
+      });
       sendError(
         res,
-        HTTP.badRequest,
-        "invalid_request",
-        "Invalid feedback request.",
+        HTTP_SERVER_ERROR,
+        "server_error",
+        "Feedback request failed.",
       );
-      return;
     }
-
-    await executeSitepingRequest(
-      req,
-      res,
-      session,
-      webRequest,
-      deps,
-      allowedOrigin,
-    );
   };
-
   return { authenticate, handle };
 }

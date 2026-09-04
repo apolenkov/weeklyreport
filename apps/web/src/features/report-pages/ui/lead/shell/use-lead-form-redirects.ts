@@ -25,7 +25,12 @@ export function useLeadFormRedirects({
 
   const feedbackQuery = useCallback(() => {
     const next = new URLSearchParams();
-    for (const key of ["siteping", "sitepingUrl"] as const) {
+    for (const key of [
+      "feedback",
+      "feedbackUrl",
+      "agentationSession",
+      "agentationAnnotation",
+    ] as const) {
       const value = searchParams.get(key);
       if (value) next.set(key, value);
     }

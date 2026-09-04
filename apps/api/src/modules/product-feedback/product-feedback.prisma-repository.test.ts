@@ -14,8 +14,7 @@ const P2002 = {
   meta: {
     driverAdapterError: {
       cause: {
-        originalMessage:
-          'duplicate key value violates unique constraint "SitepingFeedback_clientId_key"',
+        originalMessage: "duplicate key value for clientId",
       },
     },
   },
@@ -88,7 +87,7 @@ function createHarness(
     .mockResolvedValueOnce(null)
     .mockResolvedValueOnce(readWinner);
   const create = vi.fn().mockRejectedValue(createError);
-  const prisma = { sitepingFeedback: { findUnique, create } };
+  const prisma = { productFeedback: { findUnique, create } };
   return {
     repository: new ProductFeedbackPrismaRepository(
       prisma as unknown as PrismaService,
@@ -134,7 +133,7 @@ describe("ProductFeedbackPrismaRepository bulk deletion", () => {
   it("scopes a non-admin bulk deletion to the authenticated author", async () => {
     const deleteMany = vi.fn().mockResolvedValue({ count: 2 });
     const repository = new ProductFeedbackPrismaRepository({
-      sitepingFeedback: { deleteMany },
+      productFeedback: { deleteMany },
     } as unknown as PrismaService);
 
     await repository.deleteAll(access("lead-a"));
@@ -147,7 +146,7 @@ describe("ProductFeedbackPrismaRepository bulk deletion", () => {
   it("scopes an admin bulk deletion to the whole WeeklyReport project", async () => {
     const deleteMany = vi.fn().mockResolvedValue({ count: 3 });
     const repository = new ProductFeedbackPrismaRepository({
-      sitepingFeedback: { deleteMany },
+      productFeedback: { deleteMany },
     } as unknown as PrismaService);
 
     await repository.deleteAll(access("admin", "admin"));

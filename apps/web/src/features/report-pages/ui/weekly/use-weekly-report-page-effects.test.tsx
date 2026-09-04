@@ -71,14 +71,16 @@ describe("useCanonicalReportRedirect", () => {
     );
   });
 
-  it("preserves SitePing deep-link parameters in the canonical redirect", () => {
+  it("preserves feedback deep-link parameters in the canonical redirect", () => {
     searchParams = new URLSearchParams({
-      siteping: "feedback_123",
-      sitepingUrl: "/lead/report/report-1",
+      feedback: "feedback_123",
+      feedbackUrl: "/lead/report/report-1",
+      agentationSession: "session_123",
+      agentationAnnotation: "annotation_123",
     });
     renderHook(() => useCanonicalReportRedirect(args));
     expect(replace).toHaveBeenCalledWith(
-      "/head/report/report-1?authorId=user+name%2F%D0%BA%D1%82%D0%BE&siteping=feedback_123&sitepingUrl=%2Flead%2Freport%2Freport-1",
+      "/head/report/report-1?authorId=user+name%2F%D0%BA%D1%82%D0%BE&feedback=feedback_123&feedbackUrl=%2Flead%2Freport%2Freport-1&agentationSession=session_123&agentationAnnotation=annotation_123",
       { scroll: false },
     );
   });
