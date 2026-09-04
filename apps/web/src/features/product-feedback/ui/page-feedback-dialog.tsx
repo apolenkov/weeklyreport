@@ -103,8 +103,10 @@ export function PageFeedbackDialog({ identity }: PageFeedbackDialogProps) {
           <label className="grid gap-1.5 text-sm font-medium text-[var(--color-ink)]">
             Type
             <select
+              autoComplete="off"
               className="rounded-lg border border-[var(--color-border)] bg-transparent px-3 py-2 font-normal"
               disabled={submitting}
+              name="feedbackType"
               onChange={(event) => setType(event.target.value as FeedbackType)}
               value={type}
             >
@@ -120,9 +122,11 @@ export function PageFeedbackDialog({ identity }: PageFeedbackDialogProps) {
             Comment
             <textarea
               ref={messageRef}
+              autoComplete="off"
               className="min-h-28 resize-y rounded-lg border border-[var(--color-border)] bg-transparent px-3 py-2 font-normal"
               disabled={submitting}
               maxLength={MAX_FEEDBACK_MESSAGE_LENGTH}
+              name="feedbackComment"
               onChange={(event) => setMessage(event.target.value)}
               placeholder="What should we know about this page?"
               required

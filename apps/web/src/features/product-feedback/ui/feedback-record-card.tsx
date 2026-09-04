@@ -149,6 +149,7 @@ export function FeedbackRecordCard({
             <select
               aria-label={`Status for feedback from ${item.authorName}`}
               className="rounded-lg border border-[var(--color-border)] bg-transparent px-2 py-1.5 text-sm"
+              name={`feedbackStatus-${item.id}`}
               onChange={(event) =>
                 onChangeStatus(item.id, event.target.value as FeedbackStatus)
               }
