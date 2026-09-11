@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { resolvableTimeZoneSchema } from "../schemas/time-zone.schema";
+
 /** Wire audience tokens (lowercase-hyphen); Prisma SCREAMING_SNAKE is mapped at the API. */
 export const reminderAudienceSchema = z.enum([
   "lead-with-draft",
@@ -8,16 +10,6 @@ export const reminderAudienceSchema = z.enum([
 
 /** Reminder policy kind. */
 export const reminderPolicyKindSchema = z.enum(["deadline", "escalation"]);
-
-// Resolvability probe: supportedValuesOf omit UTC/GMT/Etc/* the app itself uses.
-const isResolvableTimeZone = (timezone: string): boolean => {
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone: timezone });
-    return true;
-  } catch {
-    return false;
-  }
-};
 
 /**
  * Wire reminder policy; `validUntil` must be on or after `validFrom` when set.
@@ -28,13 +20,7 @@ export const reminderPolicySchema = z
     id: z.uuid(),
     kind: reminderPolicyKindSchema,
     offsetMinutes: z.number().int(),
-    timezone: z
-      .string()
-      .min(1)
-      .refine(
-        isResolvableTimeZone,
-        "timezone must be a valid IANA time zone identifier",
-      ),
+    timezone: resolvableTimeZoneSchema,
     audience: reminderAudienceSchema,
     active: z.boolean(),
     // Required because deriving a validity boundary from parse time makes the

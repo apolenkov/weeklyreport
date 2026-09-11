@@ -444,7 +444,7 @@ describe("ensureCurrentPeriod", () => {
 
     // The period is the durable artifact — a reminder-materialisation failure
     // must not propagate (it would 500 a login). It is logged and left for the
-    // current-period recovery pass.
+    // current-period and hourly missing-rule recovery passes.
     const result = await ensureCurrentPeriod(
       client,
       ANCHOR_MONDAY,
@@ -474,7 +474,6 @@ describe("ensureCurrentPeriod", () => {
 
     expect(policyApplicator.repairToPeriod).toHaveBeenCalledWith(
       "period-existing",
-      ANCHOR_MONDAY,
     );
   });
 });

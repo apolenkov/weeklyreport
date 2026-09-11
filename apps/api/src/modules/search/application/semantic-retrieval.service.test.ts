@@ -117,6 +117,47 @@ const service = (
   });
 
 describe("SemanticRetrievalService", () => {
+  it("embeds a shared hash once and ranks every occurrence in source order", async () => {
+    const first = item("first", "Shared text");
+    const other = item("other", "Other text");
+    const repeated = item("repeated", "Shared text");
+    const sharedInput = buildSemanticInput(first, scope.inputVersion);
+    const otherInput = buildSemanticInput(other, scope.inputVersion);
+    if (!sharedInput || !otherInput)
+      throw new Error("Expected semantic item fixtures");
+    const embeddings = embeddingPort();
+    const repositoryHarness = repository(
+      [],
+      [
+        { contentHash: otherInput.contentHash, similarity: 0.9 },
+        { contentHash: sharedInput.contentHash, similarity: 0.8 },
+      ],
+    );
+
+    const result = await service(
+      embeddings.port,
+      repositoryHarness.port,
+    ).retrieve("topic", [first, other, repeated]);
+
+    expect(embeddings.embedDocuments).toHaveBeenCalledExactlyOnceWith([
+      { contentHash: sharedInput.contentHash, text: "Shared text" },
+      { contentHash: otherInput.contentHash, text: "Other text" },
+    ]);
+    expect(repositoryHarness.findCachedHashes).toHaveBeenCalledWith(scope, [
+      sharedInput.contentHash,
+      otherInput.contentHash,
+    ]);
+    expect(result).toEqual({
+      kind: "ranked",
+      candidates: [
+        { candidate: other, similarity: 0.9 },
+        { candidate: first, similarity: 0.8 },
+        { candidate: repeated, similarity: 0.8 },
+      ],
+      cache: { hitCount: 0, missCount: 2, readThrough: true },
+    });
+  });
+
   it("reads through every missing hash before ranking the complete set", async () => {
     const current = item("current", "Fresh draft text");
     const previous = item("previous", "Published text");

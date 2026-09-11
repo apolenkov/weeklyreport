@@ -5,6 +5,8 @@ import {
 import type {
   PublishedLineage,
   ReportSectionReadModel,
+  ResolvePlanInput,
+  RestorePlanInput,
 } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
 
@@ -15,6 +17,7 @@ import type {
 } from "../application/lead-form.service";
 import { type ReopenEligibilityFacts } from "../domain/lead-form-shared";
 import { fillFromSectionTx } from "./fill-from.transaction.js";
+import { resolvePlanTx, restorePlanTx } from "./item-outcome.transaction.js";
 import { getSharedNonArchivedProductIds } from "./lead-form-cross-author.query.js";
 import {
   getCrossAuthorContentRead,
@@ -26,6 +29,7 @@ import {
   revokeAllSubmittedTx,
   revokeSectionSubmissionTx,
 } from "./lead-form-lifecycle-writes.js";
+import { queryLeadOpenWorkPage } from "./lead-form-open-work.query.js";
 import {
   getSectionForPeriodAsGroupPeerRead,
   getSectionForPeriodRead,
@@ -40,6 +44,22 @@ import {
 @Injectable()
 export class LeadFormPrismaRepository implements LeadFormRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+
+  resolvePlan(command: ResolvePlanInput, userId: string) {
+    return resolvePlanTx(this.prisma, command, userId);
+  }
+
+  restorePlan(command: RestorePlanInput, userId: string) {
+    return restorePlanTx(this.prisma, command, userId);
+  }
+
+  getOpenWorkHistoryPage(
+    reportId: string,
+    authorId: string,
+    pagination: { readonly cursor?: string; readonly limit: number },
+  ): ReturnType<LeadFormRepository["getOpenWorkHistoryPage"]> {
+    return queryLeadOpenWorkPage(this.prisma, reportId, authorId, pagination);
+  }
 
   // The section read model carries no per-section brand label; frontends pull
   // it from `auth.me.organization` (hydrated per request) so the source of

@@ -71,18 +71,24 @@ export function addBusinessDays(
     throw new Error(`business-date: invalid timezone "${tz}"`);
   }
   if (n === 0) return dt.toJSDate();
+  if (!Number.isInteger(n)) {
+    throw new TypeError(`business-date: n must be a finite integer (got ${n})`);
+  }
 
   const set = workingDaySet(wd);
   const step = n > 0 ? 1 : -1;
-  const result = Array.from({ length: MAX_ITER }, (_, index) =>
-    dt.plus({ days: step * (index + 1) }),
-  ).filter((candidate) => set.has(candidate.weekday))[Math.abs(n) - 1];
-  if (result === undefined) {
-    throw new Error(
-      `business-date: addBusinessDays exceeded iteration budget (n=${n}, wd=${wd})`,
-    );
+  const walk = { offset: 0, remaining: Math.abs(n) };
+  while (walk.offset < MAX_ITER) {
+    walk.offset += 1;
+    // Anchor each offset to the original time so a DST gap cannot shift later days.
+    const candidate = dt.plus({ days: step * walk.offset });
+    if (!set.has(candidate.weekday)) continue;
+    walk.remaining -= 1;
+    if (walk.remaining === 0) return candidate.toJSDate();
   }
-  return result.toJSDate();
+  throw new Error(
+    `business-date: addBusinessDays exceeded iteration budget (n=${n}, wd=${wd})`,
+  );
 }
 
 // Discards periodStart clock time and applies an explicit wall-clock time in tz.

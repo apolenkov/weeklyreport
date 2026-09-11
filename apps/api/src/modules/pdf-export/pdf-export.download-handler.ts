@@ -112,12 +112,15 @@ function streamArtifact(
   deps: PdfDownloadDeps,
   jobId: string,
 ): void {
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", "attachment");
   const stream = createReadStream(artifact.filePath, {
     fd: artifact.fd,
     autoClose: true,
   });
+  const stopReading = (): void => {
+    stream.destroy();
+  };
+  res.once("close", stopReading);
+  stream.once("close", () => res.off("close", stopReading));
   stream.on("error", (error: unknown) => {
     // A mid-stream read failure after the no-follow open is rare, but an
     // unhandled stream 'error' would crash the process: 500 if nothing was
@@ -133,6 +136,12 @@ function streamArtifact(
       res.status(HTTP.serverError).end();
     }
   });
+  if (res.destroyed) {
+    stream.destroy();
+    return;
+  }
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", "attachment");
   stream.pipe(res);
 }
 

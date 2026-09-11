@@ -1,10 +1,10 @@
 import { z } from "zod";
 
-/** Longest retry delay the report-assistant resource guard may expose. */
-export const REPORT_ASSISTANT_RESOURCE_RETRY_MAX_SECONDS = 120;
-
 import { safeText } from "./primitives/report-primitives.schema";
 import { searchPlanSchema } from "./report-assistant-search-plan";
+
+/** Longest retry delay the report-assistant resource guard may expose. */
+export const REPORT_ASSISTANT_RESOURCE_RETRY_MAX_SECONDS = 120;
 
 const MAX_RESOLUTION_TOKENS = 20;
 
@@ -12,7 +12,7 @@ const providerRateLimitSchema = z
   .object({ retryAfterSeconds: z.number().int().nonnegative() })
   .strict();
 
-/** Public shared schema or contract constant for source citation schema. */
+/** Identifies a source used to support an assistant answer. */
 export const sourceCitationSchema = z
   .object({
     sourceId: z.string().regex(/^S[1-9]\d*$/u),
@@ -24,7 +24,7 @@ export const sourceCitationSchema = z
   })
   .strict();
 
-/** Public shared schema or contract constant for report assistant request schema. */
+/** User question and bounded search context sent to the assistant. */
 export const reportAssistantRequestSchema = z
   .object({
     question: safeText({ min: 1, max: 2000 }),
@@ -34,7 +34,7 @@ export const reportAssistantRequestSchema = z
   })
   .strict();
 
-/** Public shared schema or contract constant for clarification option schema. */
+/** One selectable clarification offered by the assistant. */
 export const clarificationOptionSchema = z
   .object({
     label: z.string().min(1),
@@ -42,7 +42,7 @@ export const clarificationOptionSchema = z
   })
   .strict();
 
-/** Public shared schema or contract constant for answer metadata schema. */
+/** Metadata attached to an accepted assistant answer. */
 export const answerMetadataSchema = z
   .object({
     truncated: z.boolean(),
@@ -59,7 +59,7 @@ const okOutcomeSchema = z
   })
   .strict();
 
-/** Public shared schema or contract constant for report assistant outcome schema. */
+/** Discriminated result returned by the report assistant. */
 export const reportAssistantOutcomeSchema = z.discriminatedUnion("kind", [
   okOutcomeSchema,
   z
@@ -91,19 +91,19 @@ export const reportAssistantOutcomeSchema = z.discriminatedUnion("kind", [
     .strict(),
 ]);
 
-/** Public shared schema or contract constant for search report entries tool input schema. */
+/** Search-plan input accepted by the report-entries tool. */
 export const searchReportEntriesToolInputSchema = searchPlanSchema;
-/** Public shared type contract for report assistant request. */
+/** Parsed request passed to the report assistant. */
 export type ReportAssistantRequest = z.infer<
   typeof reportAssistantRequestSchema
 >;
-/** Public shared type contract for report assistant outcome. */
+/** Parsed result returned by the report assistant. */
 export type ReportAssistantOutcome = z.infer<
   typeof reportAssistantOutcomeSchema
 >;
-/** Public shared type contract for clarification option. */
+/** Parsed clarification option offered by the assistant. */
 export type ClarificationOption = z.infer<typeof clarificationOptionSchema>;
-/** Public shared type contract for source citation. */
+/** Parsed source citation attached to an assistant answer. */
 export type SourceCitation = z.infer<typeof sourceCitationSchema>;
-/** Public shared type contract for answer metadata. */
+/** Parsed metadata attached to an assistant answer. */
 export type AnswerMetadata = z.infer<typeof answerMetadataSchema>;

@@ -315,7 +315,7 @@ describe("reminders namespace — per-group scope (integration)", () => {
         leadId: LEAD_A2,
       });
       expect(result.reason).toBe("no-matching-section");
-      expect(result.dispatched).toBe(0);
+      expect(result.queued).toBe(0);
     });
 
     // Distinct from the no-section case above: the lead HAS a section on the
@@ -334,7 +334,7 @@ describe("reminders namespace — per-group scope (integration)", () => {
         leadId: TEST_IDS.lead,
       });
       expect(result.reason).toBe("no-matching-section");
-      expect(result.dispatched).toBe(0);
+      expect(result.queued).toBe(0);
     });
 
     it("rejects a deactivated lead before manual recipient discovery", async () => {
@@ -384,7 +384,7 @@ describe("reminders namespace — per-group scope (integration)", () => {
         ruleId: RULE_B,
         leadId: LEAD_B,
       });
-      expect(result.dispatched).toBe(1);
+      expect(result.queued).toBe(1);
     });
   });
 

@@ -2,11 +2,12 @@ import { z } from "zod";
 
 import { reminderAudienceSchema } from "../../admin/reminder-policy.schema";
 import { DAYS_PER_WEEK, HOURS_PER_DAY } from "../../time";
-import { reportDate } from "../primitives/report-primitives.schema";
 import {
   periodStateSchema,
   periodStatusSchema,
+  reportDate,
 } from "../primitives/report-primitives.schema";
+import { resolvableTimeZoneSchema } from "../time-zone.schema";
 import { currentPeriodLifecycleSchema } from "./period-lifecycle.schema";
 
 /** Max length of a reporting period's week label. */
@@ -172,7 +173,7 @@ const appSettingsObjectSchema = z.object({
     .min(0)
     .max(MAX_AUTO_ARCHIVE_WEEKS_AFTER_PUBLISH),
   // ---- Reminders knobs ------------------------------------------------
-  defaultTimezone: z.string().min(1),
+  defaultTimezone: resolvableTimeZoneSchema,
   defaultReminderAudience: reminderAudienceSchema,
   // ---- Notifications knobs --------------------------------------------
   // Nullable email; `''` is rejected (admins can clear by sending null).

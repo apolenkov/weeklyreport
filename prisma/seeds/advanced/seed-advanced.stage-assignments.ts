@@ -25,8 +25,8 @@ interface AssignmentRow {
   readonly projectId: string;
 }
 
-// Every product gets its lead assigned to three consecutive stages, which
-// yields varied pipelines without overlap.
+// Every product gets its lead assigned to three consecutive catalogue stages;
+// the cyclic lookup reuses stages when products outnumber the catalogue.
 const DETERMINISTIC_ROWS: readonly AssignmentRow[] = SEED_PRODUCTS.flatMap(
   (product, productIdx) =>
     CONSECUTIVE_STAGE_OFFSETS.map((offset) => ({
@@ -97,8 +97,8 @@ async function upsertAssignment(
 
 /**
  * Seeds the per-product stage ownership plus the hand-written cross-author
- * rows. Returns the deterministic row count only — the summary line has always
- * reported the generated assignments, not the cross-author demo extras.
+ * rows. Returns the generated assignment count; cross-author demo rows are
+ * seeded in addition and are excluded from that count.
  */
 export async function seedStageAssignments(
   prisma: PrismaClient,

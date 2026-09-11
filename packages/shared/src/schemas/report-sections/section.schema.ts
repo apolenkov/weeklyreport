@@ -21,6 +21,9 @@ import {
   riskReadModelSchema,
   riskWriteSchema,
   sectionActivitySchema,
+  sharedDecisionReadModelSchema,
+  sharedItemReadModelSchema,
+  sharedRiskReadModelSchema,
   stageStatusInputSchema,
 } from "./section-record.schema";
 
@@ -46,11 +49,14 @@ export {
   riskReadModelSchema,
   riskWriteSchema,
   sectionActivitySchema,
+  sharedDecisionReadModelSchema,
+  sharedItemReadModelSchema,
+  sharedRiskReadModelSchema,
   stageStatusInputSchema,
 } from "./section-record.schema";
 
-// Payload guard against pathological section-save array sizes.
-const MAX_RECORDS_PER_SECTION_SAVE = 100;
+/** Maximum number of records accepted for any one section-save collection. */
+export const MAX_RECORDS_PER_SECTION_SAVE = 100;
 
 const draftSaveObjectSchema = z.object({
   reportSectionId: z.uuid(),
@@ -142,6 +148,12 @@ const projectReadModelObjectSchema = z.object({
 /** Describes an author-visible product and its reporting-stage context. */
 export const projectReadModelSchema = projectReadModelObjectSchema.readonly();
 
+const publishedProjectReadModelSchema = projectReadModelObjectSchema
+  .extend({
+    stageSet: z.array(stageSetEntrySchema).readonly(),
+  })
+  .readonly();
+
 // Name-only for products outside author-owned projects — not in `projects` (avoids write leakage).
 /** Identifies a product referenced by records outside the author's products. */
 export const referencedProjectSchema = z
@@ -182,6 +194,19 @@ const reportSectionReadModelObjectSchema = z.object({
 export const reportSectionReadModelSchema =
   reportSectionReadModelObjectSchema.readonly();
 
+const sharedReportSectionReadModelObjectSchema =
+  reportSectionReadModelObjectSchema.extend({
+    items: z.array(sharedItemReadModelSchema).readonly(),
+    risks: z.array(sharedRiskReadModelSchema).readonly(),
+    decisions: z.array(sharedDecisionReadModelSchema).readonly(),
+    activities: z.array(sectionActivitySchema).max(0).readonly(),
+    reviews: z.array(sectionReviewViewSchema.readonly()).max(0).readonly(),
+  });
+
+/** Describes the co-lead shared-product lens with author-private fields absent. */
+export const sharedReportSectionReadModelSchema =
+  sharedReportSectionReadModelObjectSchema.readonly();
+
 /** Identifies published item and decision records that current drafts cannot delete. */
 export const publishedLineageSchema = z
   .object({
@@ -203,9 +228,41 @@ export const publishedReportSectionReadModelSchema =
     .extend({
       groupId: z.uuid(),
       groupName: z.string().min(1),
+      projects: z.array(publishedProjectReadModelSchema).readonly(),
       items: z.array(publishedItemReadModelSchema).readonly(),
       risks: z.array(publishedRiskReadModelSchema).readonly(),
       decisions: z.array(publishedDecisionReadModelSchema).readonly(),
+    })
+    .readonly();
+
+const publishedRecordIdentityFields = {
+  id: z.uuid(),
+  stableId: z.uuid(),
+};
+
+const sharedPublishedItemReadModelSchema = sharedItemReadModelSchema
+  .unwrap()
+  .safeExtend(publishedRecordIdentityFields)
+  .readonly();
+const sharedPublishedRiskReadModelSchema = sharedRiskReadModelSchema
+  .unwrap()
+  .safeExtend(publishedRecordIdentityFields)
+  .readonly();
+const sharedPublishedDecisionReadModelSchema = sharedDecisionReadModelSchema
+  .unwrap()
+  .safeExtend(publishedRecordIdentityFields)
+  .readonly();
+
+/** Describes a frozen publication section through the co-lead shared lens. */
+export const sharedPublishedReportSectionReadModelSchema =
+  sharedReportSectionReadModelObjectSchema
+    .extend({
+      groupId: z.uuid(),
+      groupName: z.string().min(1),
+      projects: z.array(publishedProjectReadModelSchema).readonly(),
+      items: z.array(sharedPublishedItemReadModelSchema).readonly(),
+      risks: z.array(sharedPublishedRiskReadModelSchema).readonly(),
+      decisions: z.array(sharedPublishedDecisionReadModelSchema).readonly(),
     })
     .readonly();
 
@@ -233,11 +290,19 @@ export type SubmitSectionInput = z.infer<typeof submitSectionSchema>;
 export type ReportSectionReadModel = z.infer<
   typeof reportSectionReadModelSchema
 >;
+/** Co-lead shared-product section with author-private fields absent. */
+export type SharedReportSectionReadModel = z.infer<
+  typeof sharedReportSectionReadModelSchema
+>;
 /** Published record identities protected by the resolve-not-delete contract. */
 export type PublishedLineage = z.infer<typeof publishedLineageSchema>;
 /** Complete section state frozen into an immutable publication snapshot. */
 export type PublishedReportSectionReadModel = z.infer<
   typeof publishedReportSectionReadModelSchema
+>;
+/** Frozen publication section through the co-lead shared-product lens. */
+export type SharedPublishedReportSectionReadModel = z.infer<
+  typeof sharedPublishedReportSectionReadModelSchema
 >;
 /** Product context exposed inside a section read model. */
 export type ProjectReadModel = z.infer<typeof projectReadModelSchema>;

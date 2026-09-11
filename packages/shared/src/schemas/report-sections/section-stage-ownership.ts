@@ -6,17 +6,14 @@ import type {
 import type { DraftSaveValidationError } from "./section-validation.types";
 
 interface StageOwnershipRow {
-  readonly stableId?: string;
   readonly projectId: string | undefined;
   readonly stageNames: readonly string[];
 }
 
 const toRow = (
-  stableId: string | undefined,
   projectId: string | undefined,
   stageNames: readonly string[] | undefined,
 ): StageOwnershipRow => ({
-  ...(stableId === undefined ? {} : { stableId }),
   projectId,
   stageNames: stageNames ?? [],
 });
@@ -67,18 +64,14 @@ const validateStageRows = (
 
 const inputRows = (input: DraftSaveInput | SubmitSectionInput) =>
   [
-    input.items.map((row) =>
-      toRow(row.stableId, row.projectId ?? undefined, row.stageNames),
-    ),
-    input.risks.map((row) =>
-      toRow(row.stableId, row.projectId ?? undefined, row.stageNames),
-    ),
+    input.items.map((row) => toRow(row.projectId ?? undefined, row.stageNames)),
+    input.risks.map((row) => toRow(row.projectId ?? undefined, row.stageNames)),
     input.decisions.map((row) =>
-      toRow(row.stableId, row.productId ?? undefined, row.stageNames),
+      toRow(row.productId ?? undefined, row.stageNames),
     ),
   ] as const;
 
-/** Rejects changed record stages that the section author does not own. */
+/** Rejects payload record stages that the section author does not own. */
 export function validateStageOwnership(
   section: ReportSectionReadModel,
   input: DraftSaveInput | SubmitSectionInput,

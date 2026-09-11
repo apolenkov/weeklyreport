@@ -60,7 +60,7 @@ export abstract class RawBullMqProcessor<TData extends JobTraceContext>
   protected abstract readonly onJobFailed: (
     job: Job<TData> | undefined,
     error: Error,
-  ) => void;
+  ) => void | Promise<void>;
 
   protected readonly extraWorkerOptions = (): Partial<WorkerOptions> => ({});
 
@@ -80,7 +80,18 @@ export abstract class RawBullMqProcessor<TData extends JobTraceContext>
     );
 
     worker.on("failed", (job, error) => {
-      this.onJobFailed(job, error);
+      void runInJobTraceContext(
+        job?.data ?? {},
+        `${this.spanName}.failed`,
+        this.cls,
+        async () => {
+          try {
+            await this.onJobFailed(job, error);
+          } catch (failureHandlerError) {
+            Sentry.captureException(failureHandlerError);
+          }
+        },
+      );
     });
     this.lifecycle.start(worker);
     const registration = this.workerLiveness?.register(this.queueName, worker);

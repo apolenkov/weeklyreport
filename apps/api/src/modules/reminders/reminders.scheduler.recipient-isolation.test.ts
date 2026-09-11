@@ -37,9 +37,7 @@ describe("RemindersScheduler — per-recipient isolation", () => {
     };
     const scheduler = new RemindersScheduler(
       serviceStub as unknown as RemindersService,
-      fakeRepository as unknown as ConstructorParameters<
-        typeof RemindersScheduler
-      >[1],
+      fakeRepository,
       fakeOrganizationService,
       schedulerTestEnv,
     );

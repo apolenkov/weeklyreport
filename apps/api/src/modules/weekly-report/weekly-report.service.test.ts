@@ -87,6 +87,7 @@ function makeWeeklyReport(
     periodStart: new Date("2026-04-14"),
     periodEnd: new Date("2026-04-18"),
     deadline: new Date("2026-04-17T15:00:00.000Z"),
+    periodState: "open",
     periodStatus: "open",
     archived: false,
     weekLabel: "W16-2026",
@@ -255,7 +256,11 @@ describe("compiled history immutable snapshots", () => {
         periodStatus: "published",
         ...scope,
       },
-      orderBy: { periodStart: "desc" },
+      orderBy: [
+        { periodStart: "desc" },
+        { publishedAt: "desc" },
+        { id: "desc" },
+      ],
       take: 100,
       select: {
         id: true,
@@ -352,7 +357,10 @@ describe("WeeklyReportService", () => {
       periodStatus: "reopened",
     });
 
-    const published = makeWeeklyReport({ periodStatus: "published" });
+    const published = makeWeeklyReport({
+      periodState: "published",
+      periodStatus: "published",
+    });
     const publishedService = new WeeklyReportService(
       createRepository(new Map([[reportId, published]])),
     );

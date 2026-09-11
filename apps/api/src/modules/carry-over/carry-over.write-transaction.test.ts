@@ -1,5 +1,6 @@
 import type {
   CarryOverExecution,
+  CarryOverRecord,
   ReportSectionReadModel,
 } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
@@ -9,7 +10,8 @@ import { writeCarryOver } from "./carry-over.write-transaction";
 const sourceReportId = "22222222-2222-4222-8222-222222222222";
 const targetReportId = "55555555-5555-4555-8555-555555555555";
 const projectId = "44444444-4444-4444-8444-444444444444";
-const sectionId = "11111111-1111-4111-8111-111111111111";
+const sectionAId = "11111111-1111-4111-8111-111111111111";
+const sectionBId = "11111111-1111-4111-8111-222222222222";
 
 const execution: CarryOverExecution = {
   id: "aaaa0000-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
@@ -20,7 +22,7 @@ const execution: CarryOverExecution = {
   startedAt: new Date("2026-05-04T09:30:00.000Z"),
   completedAt: new Date("2026-05-04T09:30:00.000Z"),
   carriedItemCount: 1,
-  carriedDecisionCount: 0,
+  carriedDecisionCount: 1,
 };
 
 const existingExecution = {
@@ -33,38 +35,141 @@ const existingExecution = {
   updatedAt: new Date("2026-05-04T09:30:00.000Z"),
 };
 
-function targetSectionWithCarriedRow(): ReportSectionReadModel {
+const editableReportLock = {
+  id: targetReportId,
+  status: "draft",
+  periodState: "open",
+  periodStatus: "open",
+  archived: false,
+  autoPublished: false,
+  autoArchived: false,
+  publishedAt: null,
+  publishedById: null,
+  reopenedAt: null,
+};
+
+type Item = ReportSectionReadModel["items"][number];
+type Decision = ReportSectionReadModel["decisions"][number];
+
+function carriedItem({
+  id = "cccc0000-cccc-4ccc-8ccc-cccccccccccc",
+  stableId = "dddd0000-dddd-4ddd-8ddd-dddddddddddd",
+  text = "Carried item",
+}: {
+  readonly id?: string;
+  readonly stableId?: string;
+  readonly text?: string;
+} = {}): Item {
   return {
-    reportSectionId: sectionId,
+    id,
+    stableId,
+    projectId,
+    type: "current",
+    text,
+    tag: "feature",
+    workflowStatus: "planned",
+    carriedOver: true,
+    priorityRank: null,
+    pausedReason: null,
+    nextStepText: null,
+    stageNames: ["Development"],
+  };
+}
+
+function carriedDecision({
+  id = "eeee0000-eeee-4eee-8eee-eeeeeeeeeeee",
+  stableId = "ffff0000-ffff-4fff-8fff-ffffffffffff",
+  text = "Carried decision",
+  resolvedAt = null,
+}: {
+  readonly id?: string;
+  readonly stableId?: string;
+  readonly text?: string;
+  readonly resolvedAt?: Date | null;
+} = {}): Decision {
+  return {
+    id,
+    stableId,
+    productId: projectId,
+    text,
+    owner: "Lead",
+    deadline: null,
+    impact: "Needs a decision",
+    resolvedAt,
+    stageNames: ["Development"],
+  };
+}
+
+function targetSection({
+  id = sectionAId,
+  version = 1,
+  status = "draft",
+  items = [],
+  decisions = [],
+}: {
+  readonly id?: string;
+  readonly version?: number;
+  readonly status?: "draft" | "submitted";
+  readonly items?: readonly Item[];
+  readonly decisions?: readonly Decision[];
+} = {}): ReportSectionReadModel {
+  return {
+    reportSectionId: id,
     reportId: targetReportId,
     authorId: "33333333-3333-4333-8333-333333333333",
     authorName: "Lead",
     authorRole: "lead",
-    version: 1,
-    status: "draft",
-    submittedAt: null,
+    version,
+    status,
+    submittedAt:
+      status === "submitted" ? new Date("2026-05-05T09:30:00.000Z") : null,
     late: false,
     projects: [],
     referencedProjects: [],
-    // A carried row the previous run already persisted: replaying the
-    // execution must NOT re-run this insert.
-    items: [
-      {
-        id: "cccc0000-cccc-4ccc-8ccc-cccccccccccc",
-        stableId: "dddd0000-dddd-4ddd-8ddd-dddddddddddd",
-        projectId,
-        type: "current",
-        text: "Already persisted carried item",
-        tag: "feature",
-        workflowStatus: "in_progress",
-        carriedOver: true,
-        stageNames: ["Development"],
-      },
-    ],
+    items,
     risks: [],
-    decisions: [],
+    decisions,
     activities: [],
     reviews: [],
+  };
+}
+
+function requireRowId(id: string | undefined): string {
+  if (id === undefined) throw new Error("test row requires an id");
+  return id;
+}
+
+function itemCarryRecord(
+  item: Item,
+  id = "27272727-2727-4727-8727-272727272727",
+): CarryOverRecord {
+  return {
+    id,
+    sourceReportId,
+    targetReportId,
+    sourceItemId: "28282828-2828-4828-8828-282828282828",
+    targetItemId: requireRowId(item.id),
+    sourceDecisionId: null,
+    targetDecisionId: null,
+    status: "completed",
+    carriedAt: execution.completedAt,
+  };
+}
+
+function decisionCarryRecord(
+  decision: Decision,
+  id = "29292929-2929-4929-8929-292929292929",
+): CarryOverRecord {
+  return {
+    id,
+    sourceReportId,
+    targetReportId,
+    sourceItemId: null,
+    targetItemId: null,
+    sourceDecisionId: "30303030-3030-4030-8030-303030303030",
+    targetDecisionId: requireRowId(decision.id),
+    status: "completed",
+    carriedAt: execution.completedAt,
   };
 }
 
@@ -78,168 +183,496 @@ function prismaSectionRow(section: ReportSectionReadModel) {
     submittedAt: section.submittedAt,
     late: section.late,
     author: {
+      id: section.authorId,
       name: section.authorName,
       role: section.authorRole,
+      reportingGroupId: null,
       stageAssignments: [],
     },
     projectStatuses: [],
     stageStatuses: [],
     activityStatuses: [],
-    items: [],
+    items: section.items.map((item) => ({
+      id: requireRowId(item.id),
+      stableId: requireRowId(item.stableId),
+      reportSectionId: section.reportSectionId,
+      projectId: item.projectId ?? null,
+      activityId: item.activityId ?? null,
+      type: item.type,
+      text: item.text,
+      tag: item.tag,
+      workflowStatus: item.workflowStatus,
+      carriedOver: item.carriedOver,
+      priorityRank: item.priorityRank ?? null,
+      pausedReason: item.pausedReason ?? null,
+      nextStepText: item.nextStepText ?? null,
+      resolution: item.resolution ?? null,
+      stageNames: [...item.stageNames],
+      project: item.projectId == null ? null : { name: "Product" },
+      recordComments: [],
+    })),
     risks: [],
-    decisions: [],
+    decisions: section.decisions.map((decision) => ({
+      id: requireRowId(decision.id),
+      stableId: requireRowId(decision.stableId),
+      reportSectionId: section.reportSectionId,
+      text: decision.text,
+      owner: decision.owner,
+      deadline: decision.deadline ?? null,
+      impact: decision.impact,
+      resolvedAt: decision.resolvedAt ?? null,
+      stageNames: [...decision.stageNames],
+      productId: decision.productId ?? null,
+      activityId: decision.activityId ?? null,
+      project: decision.productId == null ? null : { name: "Product" },
+      recordComments: [],
+    })),
     sectionReviews: [],
+    itemOutcomeEvents: [],
   };
 }
 
-// Replaying a recorded execution must stay read-only: the winner already
-// persisted its carried rows, so no row write may re-run on a replay.
-describe("writeCarryOver — replay of a completed execution", () => {
-  it("does not re-execute row writes when the execution already exists", async () => {
-    const itemCreateMany = vi.fn();
-    const decisionCreateMany = vi.fn();
-    const tx = {
-      $queryRaw: vi
+function createTransaction({
+  currentSections,
+  readbackSections = currentSections,
+  existing = null,
+  existingRecords = [],
+  itemInsertCounts = [],
+  decisionInsertCounts = [],
+}: {
+  readonly currentSections: readonly ReportSectionReadModel[];
+  readonly readbackSections?: readonly ReportSectionReadModel[];
+  readonly existing?: typeof existingExecution | null;
+  readonly existingRecords?: readonly Record<string, unknown>[];
+  readonly itemInsertCounts?: readonly number[];
+  readonly decisionInsertCounts?: readonly number[];
+}) {
+  const itemCreateMany = vi.fn();
+  for (const count of itemInsertCounts) {
+    itemCreateMany.mockResolvedValueOnce({ count });
+  }
+  const decisionCreateMany = vi.fn();
+  for (const count of decisionInsertCounts) {
+    decisionCreateMany.mockResolvedValueOnce({ count });
+  }
+
+  return {
+    $queryRaw: vi
+      .fn()
+      .mockResolvedValueOnce([editableReportLock])
+      .mockResolvedValueOnce(
+        currentSections.map((section) => ({ id: section.reportSectionId })),
+      ),
+    reportSection: {
+      findMany: vi
         .fn()
-        .mockResolvedValueOnce([
-          {
-            id: targetReportId,
-            status: "draft",
-            periodState: "open",
-            periodStatus: "open",
-            archived: false,
-            autoPublished: false,
-            autoArchived: false,
-            publishedAt: null,
-            publishedById: null,
-            reopenedAt: null,
-          },
-        ])
-        .mockResolvedValueOnce([{ id: sectionId }]),
-      reportSection: {
-        findMany: vi
-          .fn()
-          .mockResolvedValue([prismaSectionRow(targetSectionWithCarriedRow())]),
-      },
-      carryOverExecution: {
-        findFirst: vi.fn().mockResolvedValue(existingExecution),
-      },
-      carryOverRecord: {
-        findMany: vi.fn().mockResolvedValue([]),
-      },
-      item: { createMany: itemCreateMany },
-      decision: {
-        findMany: vi.fn().mockResolvedValue([]),
-        createMany: decisionCreateMany,
-      },
+        .mockResolvedValueOnce(currentSections.map(prismaSectionRow))
+        .mockResolvedValue(readbackSections.map(prismaSectionRow)),
+      update: vi.fn().mockResolvedValue({}),
+    },
+    carryOverExecution: {
+      findFirst: vi.fn().mockResolvedValue(existing),
+      create: vi.fn().mockResolvedValue({}),
+    },
+    carryOverRecord: {
+      findMany: vi.fn().mockResolvedValue(existingRecords),
+      createMany: vi.fn().mockResolvedValue({ count: 0 }),
+    },
+    item: { createMany: itemCreateMany },
+    decision: {
+      findMany: vi.fn().mockResolvedValue([]),
+      createMany: decisionCreateMany,
+    },
+  };
+}
+
+describe("writeCarryOver — replay of a completed execution", () => {
+  it("returns only the winner's persisted rows before merging the loser plan", async () => {
+    const resolvedAt = new Date("2026-05-05T09:30:00.000Z");
+    const winnerDecision = carriedDecision({
+      id: "10101010-1010-4010-8010-101010101010",
+      text: "Winner persisted decision",
+      resolvedAt,
+    });
+    const current = targetSection({ decisions: [winnerDecision] });
+    const loserPlan = targetSection({
+      items: [
+        carriedItem({
+          id: "20202020-2020-4020-8020-202020202020",
+          stableId: "30303030-3030-4030-8030-303030303030",
+          text: "Loser-only phantom item",
+        }),
+      ],
+      decisions: [
+        carriedDecision({
+          id: "40404040-4040-4040-8040-404040404040",
+          stableId: requireRowId(winnerDecision.stableId),
+          text: "Loser clone of winner lineage",
+        }),
+      ],
+    });
+    const winnerRecord = {
+      id: "50505050-5050-4050-8050-505050505050",
+      executionId: existingExecution.id,
+      sourceItemId: null,
+      sourceDecisionId: "60606060-6060-4060-8060-606060606060",
+      targetItemId: null,
+      targetDecisionId: winnerDecision.id,
+      recordType: "decision",
+      createdAt: new Date("2026-05-04T09:30:00.000Z"),
     };
+    const tx = createTransaction({
+      currentSections: [current],
+      existing: existingExecution,
+      existingRecords: [winnerRecord],
+    });
 
     const result = await writeCarryOver(
       tx as never,
       execution,
       [],
-      [targetSectionWithCarriedRow()],
+      [loserPlan],
     );
 
     expect(result.execution.id).toBe(existingExecution.id);
-    expect(itemCreateMany).not.toHaveBeenCalled();
-    expect(decisionCreateMany).not.toHaveBeenCalled();
+    expect(result.records.map((record) => record.id)).toEqual([
+      winnerRecord.id,
+    ]);
+    expect(result.targetSection.items).toEqual([]);
+    expect(result.targetSection.decisions).toEqual([
+      expect.objectContaining({
+        id: winnerDecision.id,
+        text: winnerDecision.text,
+        resolvedAt,
+      }),
+    ]);
+    expect(tx.carryOverExecution.create).not.toHaveBeenCalled();
+    expect(tx.item.createMany).not.toHaveBeenCalled();
+    expect(tx.decision.createMany).not.toHaveBeenCalled();
+    expect(tx.reportSection.update).not.toHaveBeenCalled();
   });
 
-  it("still persists carried rows on the create path (fresh execution)", async () => {
-    const itemCreateMany = vi.fn();
-    const decisionCreateMany = vi.fn();
-    const tx = {
-      $queryRaw: vi
-        .fn()
-        .mockResolvedValueOnce([
-          {
-            id: targetReportId,
-            status: "draft",
-            periodState: "open",
-            periodStatus: "open",
-            archived: false,
-            autoPublished: false,
-            autoArchived: false,
-            publishedAt: null,
-            publishedById: null,
-            reopenedAt: null,
-          },
-        ])
-        .mockResolvedValueOnce([{ id: sectionId }]),
-      reportSection: {
-        findMany: vi
-          .fn()
-          .mockResolvedValue([prismaSectionRow(targetSectionWithCarriedRow())]),
-      },
-      carryOverExecution: {
-        findFirst: vi.fn().mockResolvedValue(null),
-        create: vi.fn().mockResolvedValue({}),
-      },
-      carryOverRecord: {
-        findMany: vi.fn().mockResolvedValue([]),
-        createMany: vi.fn().mockResolvedValue({ count: 0 }),
-      },
-      item: { createMany: itemCreateMany },
-      decision: {
-        findMany: vi.fn().mockResolvedValue([]),
-        createMany: decisionCreateMany,
-      },
-    };
+  it("keeps the submitted gate ahead of replay resolution", async () => {
+    const tx = createTransaction({
+      currentSections: [targetSection({ status: "submitted" })],
+      existing: existingExecution,
+    });
+
+    await expect(
+      writeCarryOver(tx as never, execution, [], [targetSection()]),
+    ).rejects.toThrow(
+      "Carry-over cannot overwrite a submitted target section.",
+    );
+    expect(tx.carryOverExecution.findFirst).not.toHaveBeenCalled();
+    expect(tx.reportSection.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("writeCarryOver — fresh writes and section versions", () => {
+  it("increments once for item and decision inserts and returns the readback", async () => {
+    const item = carriedItem();
+    const decision = carriedDecision();
+    const current = targetSection();
+    const planned = targetSection({ items: [item], decisions: [decision] });
+    const persisted = targetSection({
+      version: 2,
+      items: [item],
+      decisions: [decision],
+    });
+    const tx = createTransaction({
+      currentSections: [current],
+      readbackSections: [persisted],
+      itemInsertCounts: [1],
+      decisionInsertCounts: [1],
+    });
 
     const result = await writeCarryOver(
       tx as never,
       execution,
-      [],
-      [targetSectionWithCarriedRow()],
+      [itemCarryRecord(item), decisionCarryRecord(decision)],
+      [planned],
     );
 
-    expect(result.execution.id).toBe(execution.id);
-    expect(itemCreateMany).toHaveBeenCalledExactlyOnceWith({
+    expect(tx.reportSection.update).toHaveBeenCalledExactlyOnceWith({
+      where: { id: sectionAId },
+      data: { version: { increment: 1 } },
+    });
+    expect(tx.reportSection.findMany).toHaveBeenCalledTimes(2);
+    expect(result.targetSection).toMatchObject({
+      reportSectionId: sectionAId,
+      version: 2,
+      items: [{ id: item.id, stableId: item.stableId }],
+      decisions: [{ id: decision.id, stableId: decision.stableId }],
+    });
+  });
+
+  it("does not resurrect target rows deleted while carry-over waited for the section lock", async () => {
+    const deletedPriorCarriedItem = carriedItem({
+      id: "12121212-1212-4212-8212-121212121212",
+      stableId: "13131313-1313-4313-8313-131313131313",
+      text: "Prior carried item deleted by draft save",
+    });
+    const deletedDecision = carriedDecision({
+      id: "14141414-1414-4414-8414-141414141414",
+      stableId: "15151515-1515-4515-8515-151515151515",
+      text: "Decision deleted by draft save",
+    });
+    const intendedItemClone = carriedItem({
+      id: "16161616-1616-4616-8616-161616161616",
+      stableId: "17171717-1717-4717-8717-171717171717",
+      text: "New carried item",
+    });
+    const intendedDecisionClone = carriedDecision({
+      id: "18181818-1818-4818-8818-181818181818",
+      stableId: "19191919-1919-4919-8919-191919191919",
+      text: "New carried decision",
+    });
+    const freshCurrentEdit: Item = {
+      ...carriedItem({
+        id: "20202020-2020-4020-8020-202020202020",
+        stableId: "21212121-2121-4121-8121-212121212121",
+        text: "Fresh edit committed before the carry-over lock",
+      }),
+      carriedOver: false,
+    };
+    const stalePlannedTarget = targetSection({
+      version: 4,
+      items: [deletedPriorCarriedItem, intendedItemClone],
+      decisions: [deletedDecision, intendedDecisionClone],
+    });
+    const freshLockedTarget = targetSection({
+      version: 5,
+      items: [freshCurrentEdit],
+    });
+    const persisted = targetSection({
+      version: 6,
+      items: [freshCurrentEdit, intendedItemClone],
+      decisions: [intendedDecisionClone],
+    });
+    const records = [
+      itemCarryRecord(
+        intendedItemClone,
+        "23232323-2323-4323-8323-232323232323",
+      ),
+      decisionCarryRecord(
+        intendedDecisionClone,
+        "25252525-2525-4525-8525-252525252525",
+      ),
+    ];
+    const tx = createTransaction({
+      currentSections: [freshLockedTarget],
+      readbackSections: [persisted],
+      itemInsertCounts: [1],
+      decisionInsertCounts: [1],
+    });
+
+    const result = await writeCarryOver(tx as never, execution, records, [
+      stalePlannedTarget,
+    ]);
+
+    expect(tx.item.createMany).toHaveBeenCalledExactlyOnceWith({
       data: [
-        {
-          id: "cccc0000-cccc-4ccc-8ccc-cccccccccccc",
-          stableId: "dddd0000-dddd-4ddd-8ddd-dddddddddddd",
-          reportSectionId: sectionId,
-          projectId,
-          activityId: null,
-          type: "current",
-          text: "Already persisted carried item",
-          tag: "feature",
-          workflowStatus: "in_progress",
-          carriedOver: true,
-          priorityRank: null,
-          stageNames: ["Development"],
-        },
+        expect.objectContaining({
+          id: intendedItemClone.id,
+          stableId: intendedItemClone.stableId,
+        }),
       ],
       skipDuplicates: true,
     });
-    expect(decisionCreateMany).not.toHaveBeenCalled();
+    expect(tx.decision.createMany).toHaveBeenCalledExactlyOnceWith({
+      data: [
+        expect.objectContaining({
+          id: intendedDecisionClone.id,
+          stableId: intendedDecisionClone.stableId,
+        }),
+      ],
+      skipDuplicates: true,
+    });
+    expect(result.targetSection).toMatchObject({
+      version: 6,
+      items: [
+        { id: freshCurrentEdit.id, text: freshCurrentEdit.text },
+        { id: intendedItemClone.id, text: intendedItemClone.text },
+      ],
+      decisions: [
+        {
+          id: intendedDecisionClone.id,
+          text: intendedDecisionClone.text,
+        },
+      ],
+    });
+    expect(result.targetSection.items).not.toContainEqual(
+      expect.objectContaining({ id: deletedPriorCarriedItem.id }),
+    );
+    expect(result.targetSection.decisions).not.toContainEqual(
+      expect.objectContaining({ id: deletedDecision.id }),
+    );
   });
+
+  it("omits metadata for a clone deduplicated by a ResolvePlan winner", async () => {
+    const plannedClone = carriedItem({
+      id: "32323232-3232-4232-8232-323232323232",
+      stableId: "33333333-3333-4333-8333-333333333334",
+      text: "Carry-over clone planned before ResolvePlan",
+    });
+    const resolvedOccurrence: Item = {
+      ...plannedClone,
+      id: "34343434-3434-4434-8434-343434343434",
+      text: "User resolved the prior plan first",
+      workflowStatus: "in_progress",
+      carriedOver: false,
+    };
+    const current = targetSection({
+      version: 5,
+      items: [resolvedOccurrence],
+    });
+    const planned = targetSection({ version: 4, items: [plannedClone] });
+    const plannedExecution = { ...execution, carriedDecisionCount: 0 };
+    const record = itemCarryRecord(plannedClone);
+    const tx = createTransaction({ currentSections: [current] });
+
+    const result = await writeCarryOver(
+      tx as never,
+      plannedExecution,
+      [record],
+      [planned],
+    );
+
+    expect(result.execution).toMatchObject({
+      id: plannedExecution.id,
+      carriedItemCount: 0,
+      carriedDecisionCount: 0,
+    });
+    expect(result.records).toEqual([]);
+    expect(result.targetSection).toMatchObject({
+      version: 5,
+      items: [
+        {
+          id: resolvedOccurrence.id,
+          stableId: resolvedOccurrence.stableId,
+          text: resolvedOccurrence.text,
+          carriedOver: false,
+        },
+      ],
+    });
+    expect(tx.item.createMany).not.toHaveBeenCalled();
+    expect(tx.reportSection.update).not.toHaveBeenCalled();
+    expect(tx.carryOverRecord.createMany).not.toHaveBeenCalled();
+
+    const replayTx = createTransaction({
+      currentSections: [current],
+      existing: {
+        ...existingExecution,
+        id: plannedExecution.id,
+        dedupeKey: plannedExecution.dedupeKey,
+      },
+      existingRecords: [],
+    });
+    const replay = await writeCarryOver(
+      replayTx as never,
+      plannedExecution,
+      [record],
+      [planned],
+    );
+
+    expect(replay.execution).toMatchObject({
+      id: plannedExecution.id,
+      carriedItemCount: 0,
+      carriedDecisionCount: 0,
+    });
+    expect(replay.records).toEqual([]);
+    expect(replay.targetSection.items).toEqual(result.targetSection.items);
+    expect(replayTx.item.createMany).not.toHaveBeenCalled();
+    expect(replayTx.reportSection.update).not.toHaveBeenCalled();
+  });
+
+  it("increments only matched sections with actual inserts", async () => {
+    const sectionAItem = carriedItem();
+    const sectionBItem = carriedItem({
+      id: "70707070-7070-4070-8070-707070707070",
+      stableId: "80808080-8080-4080-8080-808080808080",
+    });
+    const currentA = targetSection({ id: sectionAId });
+    const currentB = targetSection({ id: sectionBId });
+    const plannedA = targetSection({ id: sectionAId, items: [sectionAItem] });
+    const plannedB = targetSection({ id: sectionBId, items: [sectionBItem] });
+    const tx = createTransaction({
+      currentSections: [currentA, currentB],
+      readbackSections: [
+        targetSection({ id: sectionAId, version: 2, items: [sectionAItem] }),
+        currentB,
+      ],
+      itemInsertCounts: [1, 0],
+    });
+
+    await writeCarryOver(
+      tx as never,
+      execution,
+      [
+        itemCarryRecord(sectionAItem),
+        itemCarryRecord(sectionBItem, "31313131-3131-4131-8131-313131313131"),
+      ],
+      [plannedA, plannedB],
+    );
+
+    expect(tx.reportSection.update).toHaveBeenCalledTimes(1);
+    expect(tx.reportSection.update).toHaveBeenCalledWith({
+      where: { id: sectionAId },
+      data: { version: { increment: 1 } },
+    });
+  });
+
+  it.each([
+    {
+      name: "empty plan",
+      current: targetSection(),
+      planned: targetSection(),
+      records: [],
+    },
+    {
+      name: "fully deduplicated plan",
+      current: targetSection({ items: [carriedItem()] }),
+      planned: targetSection({
+        items: [carriedItem({ id: "90909090-9090-4090-8090-909090909090" })],
+      }),
+      records: [
+        itemCarryRecord(
+          carriedItem({ id: "90909090-9090-4090-8090-909090909090" }),
+        ),
+      ],
+    },
+  ])(
+    "leaves the version unchanged for a $name",
+    async ({ current, planned, records }) => {
+      const tx = createTransaction({
+        currentSections: [current],
+        readbackSections: [current],
+        itemInsertCounts: current.items.length === 0 ? [] : [0],
+      });
+
+      const result = await writeCarryOver(tx as never, execution, records, [
+        planned,
+      ]);
+
+      expect(tx.reportSection.update).not.toHaveBeenCalled();
+      expect(result.targetSection.version).toBe(current.version);
+    },
+  );
 });
 
 describe("writeCarryOver — scheduled dual-state interleaving", () => {
   it("rejects a legacy-looking target after archive/unarchive leaves periodState scheduled", async () => {
     const tx = {
-      // The service-level precheck may have observed draft/open/unarchived.
-      // The authoritative transaction lock deterministically observes the
-      // scheduler's canonical state and must fail before any target or write
-      // query can run.
       $queryRaw: vi.fn().mockResolvedValueOnce([
         {
-          id: targetReportId,
-          status: "draft",
+          ...editableReportLock,
           periodState: "scheduled",
-          periodStatus: "open",
-          archived: false,
-          autoPublished: false,
-          autoArchived: false,
-          publishedAt: null,
-          publishedById: null,
-          reopenedAt: null,
         },
       ]),
-      reportSection: { findMany: vi.fn() },
+      reportSection: {
+        findMany: vi.fn(),
+        update: vi.fn(),
+      },
       carryOverExecution: {
         findFirst: vi.fn(),
         create: vi.fn(),
@@ -253,17 +686,13 @@ describe("writeCarryOver — scheduled dual-state interleaving", () => {
     };
 
     await expect(
-      writeCarryOver(
-        tx as never,
-        execution,
-        [],
-        [targetSectionWithCarriedRow()],
-      ),
+      writeCarryOver(tx as never, execution, [], [targetSection()]),
     ).rejects.toThrow("Carry-over target period is no longer editable.");
     expect(tx.reportSection.findMany).not.toHaveBeenCalled();
     expect(tx.carryOverExecution.create).not.toHaveBeenCalled();
     expect(tx.carryOverRecord.createMany).not.toHaveBeenCalled();
     expect(tx.item.createMany).not.toHaveBeenCalled();
     expect(tx.decision.createMany).not.toHaveBeenCalled();
+    expect(tx.reportSection.update).not.toHaveBeenCalled();
   });
 });

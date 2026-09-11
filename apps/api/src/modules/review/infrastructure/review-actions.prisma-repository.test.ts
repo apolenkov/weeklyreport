@@ -11,6 +11,7 @@ const SECTION_ID = "44444444-4444-4444-8444-444444444444";
 const REPORT_ID = "55555555-5555-4555-8555-555555555555";
 const REVIEWER_ID = "66666666-6666-4666-8666-666666666666";
 const AUTHOR_ID = "88888888-8888-4888-8888-888888888888";
+const GROUP_ID = "99999999-9999-4999-8999-999999999999";
 
 const rawAnchorRow = {
   stableId: STABLE_ID,
@@ -71,6 +72,7 @@ function buildRepository({
     },
     user: {
       findUnique: vi.fn().mockResolvedValue({
+        isActive: true,
         role: "admin",
         reportingGroupId: null,
         viewerGroupAccess: [],
@@ -88,6 +90,273 @@ function buildRepository({
     tx,
   };
 }
+
+const editableReportRow = {
+  id: REPORT_ID,
+  status: "draft",
+  periodState: "open",
+  periodStatus: "open",
+  archived: false,
+  autoPublished: false,
+  autoArchived: false,
+  publishedAt: null,
+  publishedById: null,
+  reopenedAt: null,
+};
+
+interface AcknowledgementSetup {
+  readonly currentUser?: {
+    readonly isActive: boolean;
+    readonly role: string;
+    readonly reportingGroupId: string | null;
+    readonly viewerGroupAccess: readonly {
+      readonly groupId: string;
+      readonly canReview: boolean;
+    }[];
+  };
+  readonly currentSection?: {
+    readonly id: string;
+    readonly authorId: string;
+  } | null;
+  readonly reportRow?: typeof editableReportRow;
+}
+
+function buildAcknowledgementRepository({
+  currentUser = {
+    isActive: true,
+    role: "viewer",
+    reportingGroupId: null,
+    viewerGroupAccess: [{ groupId: GROUP_ID, canReview: false }],
+  },
+  currentSection = { id: SECTION_ID, authorId: AUTHOR_ID },
+  reportRow = editableReportRow,
+}: AcknowledgementSetup = {}) {
+  const findFirst = vi
+    .fn()
+    .mockResolvedValueOnce({ id: SECTION_ID, authorId: AUTHOR_ID })
+    .mockResolvedValueOnce(currentSection);
+  const seenAt = new Date("2026-09-06T12:00:00.000Z");
+  const upsert = vi.fn().mockResolvedValue({
+    userId: REVIEWER_ID,
+    reportId: REPORT_ID,
+    groupId: GROUP_ID,
+    seenAt,
+  });
+  const tx = {
+    $queryRaw: vi.fn().mockResolvedValue([reportRow]),
+    reportSection: { findFirst },
+    user: { findUnique: vi.fn().mockResolvedValue(currentUser) },
+    reviewAcknowledgement: { upsert },
+  };
+  const prisma = {
+    $transaction: vi.fn((callback: (client: typeof tx) => Promise<unknown>) =>
+      callback(tx),
+    ),
+  };
+  return {
+    repo: new ReviewActionsPrismaRepository(prisma as never),
+    tx,
+    upsert,
+    seenAt,
+  };
+}
+
+describe("ReviewActionsPrismaRepository.acknowledge", () => {
+  it("allows a current viewer access-holder without reviewer designation", async () => {
+    const { repo, tx, upsert, seenAt } = buildAcknowledgementRepository();
+
+    await expect(
+      repo.acknowledge(
+        { userId: REVIEWER_ID, role: "viewer" },
+        REPORT_ID,
+        GROUP_ID,
+      ),
+    ).resolves.toEqual({
+      userId: REVIEWER_ID,
+      reportId: REPORT_ID,
+      groupId: GROUP_ID,
+      seenAt,
+    });
+    expect(tx.user.findUnique).toHaveBeenCalledWith({
+      where: { id: REVIEWER_ID },
+      select: {
+        isActive: true,
+        role: true,
+        reportingGroupId: true,
+        viewerGroupAccess: {
+          where: { groupId: GROUP_ID },
+          select: { groupId: true },
+        },
+      },
+    });
+    expect(upsert).toHaveBeenCalledOnce();
+  });
+
+  it("rejects a viewer whose current group access was removed without writing", async () => {
+    const { repo, upsert } = buildAcknowledgementRepository({
+      currentUser: {
+        isActive: true,
+        role: "viewer",
+        reportingGroupId: null,
+        viewerGroupAccess: [],
+      },
+    });
+
+    await expect(
+      repo.acknowledge(
+        { userId: REVIEWER_ID, role: "viewer" },
+        REPORT_ID,
+        GROUP_ID,
+      ),
+    ).rejects.toThrow("no longer have access");
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it("rejects an actor deactivated after admission without writing", async () => {
+    const { repo, upsert } = buildAcknowledgementRepository({
+      currentUser: {
+        isActive: false,
+        role: "viewer",
+        reportingGroupId: null,
+        viewerGroupAccess: [{ groupId: GROUP_ID, canReview: false }],
+      },
+    });
+
+    await expect(
+      repo.acknowledge(
+        { userId: REVIEWER_ID, role: "viewer" },
+        REPORT_ID,
+        GROUP_ID,
+      ),
+    ).rejects.toThrow("no longer have access");
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it("does not write when the representative section disappears after locking", async () => {
+    const { repo, upsert } = buildAcknowledgementRepository({
+      currentSection: null,
+    });
+
+    await expect(
+      repo.acknowledge(
+        { userId: REVIEWER_ID, role: "viewer" },
+        REPORT_ID,
+        GROUP_ID,
+      ),
+    ).rejects.toBeInstanceOf(ReviewNotFoundError);
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it("does not write when the representative section changes after locking", async () => {
+    const { repo, upsert } = buildAcknowledgementRepository({
+      currentSection: {
+        id: CURRENT_ITEM_ID,
+        authorId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      },
+    });
+
+    await expect(
+      repo.acknowledge(
+        { userId: REVIEWER_ID, role: "viewer" },
+        REPORT_ID,
+        GROUP_ID,
+      ),
+    ).rejects.toBeInstanceOf(ReviewNotFoundError);
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it("does not write after the report lifecycle becomes non-editable", async () => {
+    const { repo, upsert } = buildAcknowledgementRepository({
+      reportRow: {
+        ...editableReportRow,
+        status: "published",
+        periodState: "closed",
+        periodStatus: "published",
+      },
+    });
+
+    await expect(
+      repo.acknowledge(
+        { userId: REVIEWER_ID, role: "viewer" },
+        REPORT_ID,
+        GROUP_ID,
+      ),
+    ).rejects.toThrow("not editable");
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it("rechecks the same deterministic section when a group has multiple authors", async () => {
+    const firstAuthorId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const otherAuthorId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    const seenAt = new Date("2026-09-06T12:00:00.000Z");
+    const findFirst = vi.fn((args: { orderBy?: { id?: string } }) =>
+      Promise.resolve(
+        args.orderBy?.id === "asc"
+          ? { id: SECTION_ID, authorId: firstAuthorId }
+          : { id: CURRENT_ITEM_ID, authorId: otherAuthorId },
+      ),
+    );
+    const upsert = vi.fn().mockResolvedValue({
+      userId: REVIEWER_ID,
+      reportId: REPORT_ID,
+      groupId: GROUP_ID,
+      seenAt,
+    });
+    const tx = {
+      $queryRaw: vi.fn().mockResolvedValue([
+        {
+          id: REPORT_ID,
+          status: "draft",
+          periodState: "open",
+          periodStatus: "open",
+          archived: false,
+          autoPublished: false,
+          autoArchived: false,
+          publishedAt: null,
+          publishedById: null,
+          reopenedAt: null,
+        },
+      ]),
+      reportSection: { findFirst },
+      user: {
+        findUnique: vi.fn().mockResolvedValue({
+          isActive: true,
+          role: "admin",
+          reportingGroupId: null,
+          viewerGroupAccess: [],
+        }),
+      },
+      reviewAcknowledgement: { upsert },
+    };
+    const prisma = {
+      $transaction: vi.fn((callback: (client: typeof tx) => Promise<unknown>) =>
+        callback(tx),
+      ),
+    };
+    const repo = new ReviewActionsPrismaRepository(prisma as never);
+
+    await expect(
+      repo.acknowledge(
+        { userId: REVIEWER_ID, role: "admin" },
+        REPORT_ID,
+        GROUP_ID,
+      ),
+    ).resolves.toEqual({
+      userId: REVIEWER_ID,
+      reportId: REPORT_ID,
+      groupId: GROUP_ID,
+      seenAt,
+    });
+    expect(findFirst).toHaveBeenCalledTimes(2);
+    expect(findFirst.mock.calls[0]?.[0]).toMatchObject({
+      orderBy: { id: "asc" },
+    });
+    expect(findFirst.mock.calls[1]?.[0]).toMatchObject({
+      orderBy: { id: "asc" },
+    });
+    expect(upsert).toHaveBeenCalledOnce();
+  });
+});
 
 describe("ReviewActionsPrismaRepository.insertComment", () => {
   it("returns ReviewNotFoundError when the raw anchor PK no longer exists", async () => {

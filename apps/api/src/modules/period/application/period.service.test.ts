@@ -13,6 +13,7 @@ import {
 } from "./__tests__/period-service-harness.js";
 import {
   PeriodAccessError,
+  PeriodNotFoundError,
   PeriodScopeError,
   PeriodService,
   PeriodStaleStateError,
@@ -74,7 +75,7 @@ describe("PeriodService — publishPeriod (unit)", () => {
     expect(result.success).toBe(true);
   });
 
-  it("throws plain Error (not PeriodAccessError) when report is missing", async () => {
+  it("throws PeriodNotFoundError when report is missing", async () => {
     const service = new PeriodService(
       createSpyRepository(new Map()),
       noopInvalidate,
@@ -82,12 +83,8 @@ describe("PeriodService — publishPeriod (unit)", () => {
     );
 
     await expect(service.publishPeriod(reportId, headSession)).rejects.toThrow(
-      Error,
+      PeriodNotFoundError,
     );
-
-    await expect(
-      service.publishPeriod(reportId, headSession),
-    ).rejects.not.toBeInstanceOf(PeriodAccessError);
   });
 
   it("returns idempotent success without a write when period is already published", async () => {

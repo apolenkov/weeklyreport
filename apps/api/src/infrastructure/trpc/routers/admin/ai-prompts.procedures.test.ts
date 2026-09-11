@@ -6,7 +6,9 @@ import type {
 import { describe, expect, it, vi } from "vitest";
 
 import { createNullLogger } from "../../../../lib/logger.js";
+import type { AiPromptService } from "../../../../modules/ai-prompts/index.js";
 import { createNullAuditLogger } from "../../../../test-utils/audit-logger.js";
+import { createStubAppRouterDeps } from "../../../../test-utils/stub-app-router-deps.js";
 import { createAppRouter } from "../../trpc.router.js";
 
 const featureKey = "lead-report-assistant" as const;
@@ -83,11 +85,14 @@ const callerFor = (role: "admin" | "lead") => {
     discard: vi
       .fn()
       .mockResolvedValue({ featureKey, revisionId, discarded: true }),
-  };
+  } satisfies Pick<
+    AiPromptService,
+    "list" | "read" | "draft" | "activate" | "restore" | "discard"
+  >;
   return {
-    caller: createAppRouter({
-      aiPromptService: service,
-    } as unknown as Parameters<typeof createAppRouter>[0]).createCaller({
+    caller: createAppRouter(
+      createStubAppRouterDeps({ aiPromptService: service }),
+    ).createCaller({
       session: {
         userId: `${role}-1`,
         email: `${role}@test.local`,

@@ -18,6 +18,7 @@ const GROUP_ID = "99999999-9999-4999-8999-999999999999";
 const REQUEST_ID = "11111111-1111-4111-8111-111111111111";
 const SECTION_ID = "22222222-2222-4222-8222-222222222222";
 const USER_ID = "33333333-3333-4333-8333-333333333333";
+const AUTHOR_ID = "44444444-4444-4444-8444-444444444444";
 const prometheusTelemetry: AdminTelemetry = {
   recordReopenRequestDecision: (decision) => {
     customreportReopenRequestsTotal.inc({ state: decision });
@@ -43,10 +44,13 @@ interface TxCounts {
   findFirstResult?: unknown;
 }
 
-function makeTx(counts: TxCounts) {
+function makeTx(counts: TxCounts, role: Role) {
   return {
-    $queryRaw: vi.fn(() =>
-      Promise.resolve([
+    $queryRaw: vi.fn((strings: TemplateStringsArray, id?: string) => {
+      if (strings.join("").includes('FROM "User"')) {
+        return Promise.resolve([{ id }]);
+      }
+      return Promise.resolve([
         {
           id: "report-1",
           status: "draft",
@@ -59,18 +63,27 @@ function makeTx(counts: TxCounts) {
           publishedById: null,
           reopenedAt: null,
         },
-      ]),
-    ),
+      ]);
+    }),
+    user: {
+      findUnique: vi.fn().mockResolvedValue({
+        isActive: true,
+        role,
+        reportingGroupId: role === "admin" ? null : GROUP_ID,
+      }),
+    },
     reopenRequest: {
       // The scoped re-load inside the decision transaction returns the row
       // under decision; `updateMany` below models the state transition.
-      findFirst: vi
-        .fn()
-        .mockResolvedValue(
-          counts.findFirstResult === undefined
-            ? { id: REQUEST_ID, reportSectionId: SECTION_ID }
-            : counts.findFirstResult,
-        ),
+      findFirst: vi.fn().mockResolvedValue(
+        counts.findFirstResult === undefined
+          ? {
+              id: REQUEST_ID,
+              reportSectionId: SECTION_ID,
+              reportSection: { authorId: AUTHOR_ID },
+            }
+          : counts.findFirstResult,
+      ),
       updateMany: vi
         .fn()
         .mockResolvedValue({ count: counts.reopenUpdateCount ?? 1 }),
@@ -89,7 +102,7 @@ function buildCaller(
   prismaOverrides: Record<string, unknown> = {},
   txCounts: TxCounts = {},
 ) {
-  const tx = makeTx(txCounts);
+  const tx = makeTx(txCounts, role);
   const prisma = {
     reopenRequest: {
       findMany: vi.fn().mockResolvedValue([]),
@@ -133,8 +146,17 @@ async function counterValue(state: string): Promise<number> {
 
 describe("reopen procedures — group-scoped gate", () => {
   it("a head may list and count", async () => {
-    const { caller } = buildCaller("head");
-    await expect(caller.admin.listReopenRequests({})).resolves.toEqual([]);
+    const { caller, prisma } = buildCaller("head");
+    await expect(caller.admin.listReopenRequests()).resolves.toEqual({
+      items: [],
+      nextCursor: null,
+    });
+    expect(prisma.reopenRequest.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: 51,
+      }),
+    );
     await expect(caller.admin.pendingReopenCount()).resolves.toEqual({
       count: 0,
     });
@@ -142,7 +164,10 @@ describe("reopen procedures — group-scoped gate", () => {
 
   it("an admin may list", async () => {
     const { caller } = buildCaller("admin");
-    await expect(caller.admin.listReopenRequests({})).resolves.toEqual([]);
+    await expect(caller.admin.listReopenRequests({})).resolves.toEqual({
+      items: [],
+      nextCursor: null,
+    });
   });
 
   it.each(["lead", "viewer"] as const)(
@@ -191,6 +216,77 @@ describe("reopen procedures — group scope (D8)", () => {
     });
   });
 
+  it("accepts the forward infinite-query transport input through the tRPC caller", async () => {
+    const { caller, prisma } = buildCaller("admin");
+    const cursor = {
+      id: REQUEST_ID,
+      createdAt: "2026-09-06T08:30:00.000Z",
+    };
+
+    await caller.admin.listReopenRequests({
+      status: "rejected",
+      limit: 7,
+      cursor,
+      search: "  weekly 36  ",
+      direction: "forward",
+    });
+
+    const findMany = prisma.reopenRequest.findMany as ReturnType<typeof vi.fn>;
+    const call = findMany.mock.calls[0]?.[0] as
+      | {
+          where?: { status?: unknown; AND?: unknown[] };
+          take?: unknown;
+        }
+      | undefined;
+    expect(call?.where?.status).toBe("rejected");
+    expect(call?.where?.AND?.[0]).toEqual({
+      OR: [
+        { createdAt: { lt: new Date(cursor.createdAt) } },
+        {
+          createdAt: new Date(cursor.createdAt),
+          id: { lt: cursor.id },
+        },
+      ],
+    });
+    expect(call?.where?.AND?.[1]).toEqual({
+      OR: [
+        {
+          requestedBy: {
+            name: { contains: "weekly 36", mode: "insensitive" },
+          },
+        },
+        {
+          requestedBy: {
+            email: { contains: "weekly 36", mode: "insensitive" },
+          },
+        },
+        {
+          reportSection: {
+            report: {
+              weekLabel: {
+                contains: "weekly 36",
+                mode: "insensitive",
+              },
+            },
+          },
+        },
+        {
+          reason: {
+            contains: "weekly 36",
+            mode: "insensitive",
+          },
+        },
+        {
+          reviewNote: {
+            contains: "weekly 36",
+            mode: "insensitive",
+          },
+        },
+      ],
+    });
+    expect(call?.take).toBe(8);
+  });
+
   it("a head count is group-scoped", async () => {
     const { caller, prisma } = buildCaller("head");
     await caller.admin.pendingReopenCount();
@@ -236,6 +332,15 @@ describe("respondReopenRequest — race-safe decision (D6)", () => {
       success: true,
       decision: "approved",
       staleAutoClosed: false,
+    });
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(3);
+    expect(tx.$queryRaw.mock.calls.slice(0, 2).map((call) => call[1])).toEqual([
+      USER_ID,
+      AUTHOR_ID,
+    ]);
+    expect(tx.user.findUnique).toHaveBeenCalledWith({
+      where: { id: USER_ID },
+      select: { isActive: true, role: true, reportingGroupId: true },
     });
     expect(tx.reportSection.updateMany).toHaveBeenCalledTimes(1);
     expect(await counterValue("approved")).toBe(before + 1);

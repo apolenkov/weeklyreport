@@ -144,7 +144,6 @@ describe("mapPrismaToReportSection — referencedProjects", () => {
   });
 });
 
-// stageSet excludes vacant stages; ownedStages stay author-writable only.
 describe("mapPrismaToReportSection — ownerGroupId freeze", () => {
   it("stamps each project entry with its explicit GroupProduct owner", () => {
     const assignment = fullOwnedStageAssignment();
@@ -199,7 +198,7 @@ describe("mapPrismaToReportSection — ownerGroupId freeze", () => {
     );
   });
 
-  it("fails closed when a project has multiple GroupProduct owners", () => {
+  it("fails closed when a loaded row violates the single GroupProduct owner invariant", () => {
     const assignment = fullOwnedStageAssignment();
     const row = baseRow({
       author: {
@@ -284,8 +283,8 @@ describe("mapPrismaToReportSection — assigned-stage set", () => {
   });
 
   it("yields an empty stageSet when the project carries no cross-lead assignment", () => {
-    // baseRow's project has an empty stageAssignments array; the mapper must
-    // not throw and yields an empty set (web falls back to ownedStages).
+    // baseRow's project has an empty stageAssignments array; the mapper returns
+    // an empty display set without throwing.
     const project = expectDefined(
       mapRow(baseRow()).projects.find((p) => p.projectId === OWNED_PROJECT),
     );

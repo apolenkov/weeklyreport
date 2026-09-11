@@ -143,8 +143,8 @@ function foreignSectionWithTwoProducts(): ReportSectionReadModel {
         deadline: null,
         stageNames: ["Development"],
       },
-      // A cross-cutting decision with no product scope (productId null). It is
-      // not "a record on an unshared product", so the co-lead scoping keeps it.
+      // A cross-cutting decision with no product scope (productId null). It has
+      // no shared product identity, so the co-lead filter drops it.
       {
         productId: null,
         text: "Cross-cutting decision",

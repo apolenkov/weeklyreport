@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { updatePeriodManual } from "./manual-update.js";
 
 function sqlText(query: unknown): string {
@@ -81,7 +82,8 @@ describe("updatePeriodManual reminder reconciliation", () => {
         ...lifecycle,
       }),
     };
-    const tx = { $queryRaw, report, reminderRule };
+    const $executeRaw = vi.fn().mockResolvedValue(0);
+    const tx = { $executeRaw, $queryRaw, report, reminderRule };
     const prisma = {
       $transaction: vi.fn((callback: (client: typeof tx) => Promise<unknown>) =>
         callback(tx),
@@ -100,6 +102,13 @@ describe("updatePeriodManual reminder reconciliation", () => {
       ),
     ).resolves.toMatchObject({ deadline: newDeadline });
 
+    expect($executeRaw).toHaveBeenCalledOnce();
+    expect($executeRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      expectDefined($queryRaw.mock.invocationCallOrder[0]),
+    );
+    expect($executeRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      expectDefined(report.updateMany.mock.invocationCallOrder[0]),
+    );
     expect(sql[0]).toContain('FROM "ReminderPolicy"');
     expect(sql[1]).toContain('FROM "Report"');
     expect(reminderRule.update).toHaveBeenCalledWith({

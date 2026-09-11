@@ -10,6 +10,14 @@ import {
   PUBLISHED_REPORT_ID,
 } from "./seed-identifiers.js";
 import { seedReferenceDate } from "./seed-reference-date.js";
+import {
+  endOfDayUTC,
+  fridayDeadlineFor,
+  isoWeekNumber,
+  LAST_DAY_OF_WEEK_OFFSET,
+  mondayOfWeekUTC,
+  plusDaysUTC,
+} from "./utc-period-dates.js";
 
 export interface SeedHistoryReport {
   id: string;
@@ -21,109 +29,29 @@ export interface SeedHistoryReport {
 }
 
 const DAYS_PER_WEEK = 7;
-// 24 * 60 * 60 * 1000 and 7 * that. Written as literals because every operand
-// of the product would otherwise be an unnamed number.
-const MS_PER_DAY = 86_400_000;
-const MS_PER_WEEK = 604_800_000;
-
-// Monday-based day index: getUTCDay() is Sunday-based, so shifting by 6 before
-// the modulo maps Monday to 0 and Sunday to 6.
-const SUNDAY_TO_MONDAY_SHIFT = 6;
-// ISO-8601 anchors: week 1 is the week holding the first Thursday, and Jan 4
-// is by definition always inside it.
-const ISO_THURSDAY_INDEX = 3;
-const ISO_WEEK_ONE_SEED_DAY = 4;
-
-// A period runs Monday..Sunday and is due Friday 15:00 UTC.
-const PERIOD_LAST_DAY_OFFSET = 6;
-const DEADLINE_DAY_OFFSET_FROM_MONDAY = 4;
-const DEADLINE_HOUR_UTC = 15;
-
-const LAST_HOUR_OF_DAY = 23;
-const LAST_MINUTE_OF_HOUR = 59;
-const LAST_SECOND_OF_MINUTE = 59;
-const LAST_MILLISECOND_OF_SECOND = 999;
-
-function utcMidnight(d: Date): Date {
-  return new Date(
-    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
-  );
-}
-
-function mondayBasedDayIndex(d: Date): number {
-  return (d.getUTCDay() + SUNDAY_TO_MONDAY_SHIFT) % DAYS_PER_WEEK;
-}
-
-function plusDays(d: Date, days: number): Date {
-  return new Date(d.getTime() + days * MS_PER_DAY);
-}
-
-function mondayOfWeek(d: Date): Date {
-  return plusDays(utcMidnight(d), -mondayBasedDayIndex(d));
-}
 
 function weekBefore(monday: Date): Date {
-  return plusDays(monday, -DAYS_PER_WEEK);
-}
-
-// Shifting both the date and the year's first ISO week onto their own Thursday
-// makes the week distance a plain division.
-function thursdayOfWeek(d: Date): Date {
-  return plusDays(utcMidnight(d), ISO_THURSDAY_INDEX - mondayBasedDayIndex(d));
-}
-
-function isoWeekNumber(d: Date): number {
-  const thursday = thursdayOfWeek(d);
-  const weekOneThursday = thursdayOfWeek(
-    new Date(Date.UTC(thursday.getUTCFullYear(), 0, ISO_WEEK_ONE_SEED_DAY)),
-  );
-  return (
-    1 +
-    Math.round((thursday.getTime() - weekOneThursday.getTime()) / MS_PER_WEEK)
-  );
-}
-
-function endOfDay(d: Date): Date {
-  return new Date(
-    Date.UTC(
-      d.getUTCFullYear(),
-      d.getUTCMonth(),
-      d.getUTCDate(),
-      LAST_HOUR_OF_DAY,
-      LAST_MINUTE_OF_HOUR,
-      LAST_SECOND_OF_MINUTE,
-      LAST_MILLISECOND_OF_SECOND,
-    ),
-  );
+  return plusDaysUTC(monday, -DAYS_PER_WEEK);
 }
 
 function periodEnd(monday: Date): string {
-  return endOfDay(plusDays(monday, PERIOD_LAST_DAY_OFFSET)).toISOString();
+  return endOfDayUTC(
+    plusDaysUTC(monday, LAST_DAY_OF_WEEK_OFFSET),
+  ).toISOString();
 }
 
 function weeklyDeadline(monday: Date): string {
-  const friday = plusDays(monday, DEADLINE_DAY_OFFSET_FROM_MONDAY);
-  return new Date(
-    Date.UTC(
-      friday.getUTCFullYear(),
-      friday.getUTCMonth(),
-      friday.getUTCDate(),
-      DEADLINE_HOUR_UTC,
-      0,
-      0,
-    ),
-  ).toISOString();
+  return fridayDeadlineFor(monday).toISOString();
 }
 
 function weekLabel(monday: Date): string {
   return `Week ${isoWeekNumber(monday)}`;
 }
 
-// Periods derive from an explicit reference instant (SEED_REFERENCE_DATE, or
-// today when unset as a documented dev convenience) so the same seed commit
-// cannot change identity across days or at a week boundary.
+// An explicit SEED_REFERENCE_DATE makes periods repeatable. When it is unset,
+// current time keeps local development data aligned with the active week.
 const NOW = seedReferenceDate();
-const ACTIVE_MONDAY = mondayOfWeek(NOW);
+const ACTIVE_MONDAY = mondayOfWeekUTC(NOW);
 const PREV_MONDAY = weekBefore(ACTIVE_MONDAY);
 const PREV2_MONDAY = weekBefore(PREV_MONDAY);
 const PREV3_MONDAY = weekBefore(PREV2_MONDAY);

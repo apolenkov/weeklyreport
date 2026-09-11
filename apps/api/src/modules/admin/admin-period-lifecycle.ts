@@ -26,9 +26,8 @@ export { updatePeriodManual } from "./period/manual-update.js";
 
 // Period (Report) lifecycle-transition writes for the Admin Periods tab.
 
-// Mint a Report row with the supplied dates + initial state, mirroring
-// `PeriodCreatorScheduler.runOnce`'s bare create (`status`/`periodStatus` come
-// from DB defaults). Only writes the row; the caller applies reminder rules after.
+// Create the complete scheduled/open lifecycle tuple with the supplied dates.
+// The caller applies reminder rules after creating the report.
 export async function createPeriodManual(
   prisma: PrismaService,
   input: {

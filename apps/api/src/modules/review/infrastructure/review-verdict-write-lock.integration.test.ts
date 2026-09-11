@@ -30,9 +30,7 @@ describe("review verdict published-period write lock (integration)", () => {
     await disconnectTestPrisma();
   });
 
-  it("rejects a verdict on an archived report even while periodStatus stays open", async () => {
-    // The archive transition does not touch periodStatus, so the in-tx gate
-    // must check `archived` itself.
+  it("rejects a verdict on a canonically archived report", async () => {
     const testData = await seedTestData(prisma);
     await prisma.reportSection.update({
       where: { id: testData.section.id },
@@ -43,7 +41,7 @@ describe("review verdict published-period write lock (integration)", () => {
     });
     await prisma.report.update({
       where: { id: testData.report.id },
-      data: { archived: true },
+      data: { archived: true, periodState: "archived" },
     });
     const repo = new ReviewActionsPrismaRepository(prisma as never);
 
@@ -53,7 +51,6 @@ describe("review verdict published-period write lock (integration)", () => {
         reviewerId: testData.head.id,
         verdict: "changes_requested",
         expectedVersion: testData.section.version,
-        currentStatus: "submitted",
       }),
     ).rejects.toBeInstanceOf(ReviewConstraintError);
     await expect(
@@ -63,7 +60,7 @@ describe("review verdict published-period write lock (integration)", () => {
     ).resolves.toBe(0);
   });
 
-  it("reports NOT_FOUND, not a period constraint, for a section deleted mid-flight", async () => {
+  it("reports NOT_FOUND, not a period constraint, for a section deleted before the call", async () => {
     const testData = await seedTestData(prisma);
     const sectionId = testData.section.id;
     const version = testData.section.version;
@@ -76,7 +73,6 @@ describe("review verdict published-period write lock (integration)", () => {
         reviewerId: testData.head.id,
         verdict: "changes_requested",
         expectedVersion: version,
-        currentStatus: "submitted",
       }),
     ).rejects.toBeInstanceOf(ReviewNotFoundError);
   });
@@ -99,7 +95,6 @@ describe("review verdict published-period write lock (integration)", () => {
       reviewerId: testData.head.id,
       verdict: "changes_requested",
       expectedVersion: testData.section.version,
-      currentStatus: "submitted",
     });
 
     await gate.paused;

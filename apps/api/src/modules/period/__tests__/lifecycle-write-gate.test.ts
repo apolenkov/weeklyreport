@@ -90,6 +90,59 @@ describe("lifecycle-write-gate planted negatives", () => {
     ).toEqual(["archived", "status"]);
   });
 
+  it("resolves bound writer aliases and their prebound payloads", () => {
+    expect(
+      fields(`
+        const update = prisma.report.update.bind(prisma.report);
+        update({ data: { status: "published" } });
+        const archive = prisma.report.update.bind(prisma.report, {
+          data: { archived: true },
+        });
+        archive();
+      `),
+    ).toEqual(["archived", "status"]);
+  });
+
+  it("uses the last root spread when it replaces a safe payload", () => {
+    expect(
+      fields(`
+        const unsafe = { data: { status: "published" } };
+        const alias = unsafe;
+        prisma.report.update({ data: buildTransition(), ...alias });
+      `),
+    ).toEqual(["status"]);
+  });
+
+  it("accepts an explicit safe payload after an earlier root spread", () => {
+    expect(
+      fields(`
+        const unsafe = { data: { status: "published" } };
+        prisma.report.update({ ...unsafe, data: buildTransition() });
+        declare const unknownArgs: Record<string, unknown>;
+        prisma.report.update({ ...unknownArgs, data: buildTransition() });
+      `),
+    ).toEqual([]);
+  });
+
+  it("fails closed for an unresolved root spread after the payload", () => {
+    expect(
+      fields(`
+        declare const unknownArgs: Record<string, unknown>;
+        prisma.report.update({ data: buildTransition(), ...unknownArgs });
+      `),
+    ).toEqual(["<unresolved>"]);
+  });
+
+  it("checks both upsert branches supplied by root spreads", () => {
+    expect(
+      fields(`
+        const create = { create: { status: "draft" } };
+        const update = { update: buildTransition() };
+        prisma.report.upsert({ ...create, ...update });
+      `),
+    ).toEqual(["status"]);
+  });
+
   it("fails closed for a dynamically computed report method", () => {
     expect(
       fields(`
@@ -150,6 +203,8 @@ describe("lifecycle-write-gate planted negatives", () => {
         };
         prisma.report.update({ data });
         prisma.report.update({ data: { publishedSnapshot: {} } });
+        const bound = prisma.report.update.bind(prisma.report);
+        bound({ data: buildTransition() });
       `),
     ).toEqual([]);
   });

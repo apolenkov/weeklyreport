@@ -22,13 +22,41 @@ const validSettings = () => ({
 
 describe("appSettingsSchema", () => {
   it("accepts valid settings", () => {
-    const result = appSettingsSchema.safeParse({
-      ...validSettings(),
-      autoCreatePeriods: false,
-      defaultDeadlineDays: 5,
-    });
+    const result = appSettingsSchema.safeParse(validSettings());
     expect(result.success).toBe(true);
   });
+
+  it.each(["Europe/Moscow", "UTC", "Etc/UTC", "Asia/Tokyo"])(
+    "accepts the resolvable default time zone %s",
+    (defaultTimezone) => {
+      expect(
+        appSettingsSchema.safeParse({
+          ...validSettings(),
+          defaultTimezone,
+        }).success,
+      ).toBe(true);
+    },
+  );
+
+  it.each(["Not/A_Timezone", "UTC+3", "MSK"])(
+    "rejects invalid default time zone %s at the settings boundary",
+    (defaultTimezone) => {
+      const result = appSettingsSchema.safeParse({
+        ...validSettings(),
+        defaultTimezone,
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues).toContainEqual(
+          expect.objectContaining({
+            message: "timezone must be a valid IANA time zone identifier",
+            path: ["defaultTimezone"],
+          }),
+        );
+      }
+    },
+  );
 
   it("rejects defaultDeadlineDays below 1", () => {
     const result = appSettingsSchema.safeParse({
@@ -52,7 +80,6 @@ describe("appSettingsSchema", () => {
     const result = appSettingsSchema.safeParse({
       ...validSettings(),
       autoCreatePeriods: "yes",
-      defaultDeadlineDays: 5,
     });
     expect(result.success).toBe(false);
   });
@@ -79,16 +106,12 @@ describe("appSettingsSchema", () => {
     expect(
       appSettingsSchema.safeParse({
         ...validSettings(),
-        autoCreatePeriods: false,
-        defaultDeadlineDays: 5,
         periodLengthDays: 0,
       }).success,
     ).toBe(false);
     expect(
       appSettingsSchema.safeParse({
         ...validSettings(),
-        autoCreatePeriods: false,
-        defaultDeadlineDays: 5,
         periodLengthDays: 32,
       }).success,
     ).toBe(false);
@@ -98,8 +121,6 @@ describe("appSettingsSchema", () => {
     expect(
       appSettingsSchema.safeParse({
         ...validSettings(),
-        autoCreatePeriods: false,
-        defaultDeadlineDays: 5,
         workingDays: "mon-thu",
       }).success,
     ).toBe(false);
@@ -109,16 +130,12 @@ describe("appSettingsSchema", () => {
     expect(
       appSettingsSchema.safeParse({
         ...validSettings(),
-        autoCreatePeriods: false,
-        defaultDeadlineDays: 5,
         gracePeriodHours: -1,
       }).success,
     ).toBe(false);
     expect(
       appSettingsSchema.safeParse({
         ...validSettings(),
-        autoCreatePeriods: false,
-        defaultDeadlineDays: 5,
         gracePeriodHours: 169,
       }).success,
     ).toBe(false);
@@ -128,8 +145,6 @@ describe("appSettingsSchema", () => {
     expect(
       appSettingsSchema.safeParse({
         ...validSettings(),
-        autoCreatePeriods: false,
-        defaultDeadlineDays: 5,
         autoArchiveWeeksAfterPublish: 53,
       }).success,
     ).toBe(false);
@@ -139,16 +154,12 @@ describe("appSettingsSchema", () => {
     expect(
       appSettingsSchema.safeParse({
         ...validSettings(),
-        autoCreatePeriods: false,
-        defaultDeadlineDays: 5,
         notificationFromEmail: null,
       }).success,
     ).toBe(true);
     expect(
       appSettingsSchema.safeParse({
         ...validSettings(),
-        autoCreatePeriods: false,
-        defaultDeadlineDays: 5,
         notificationFromEmail: "reports@example.com",
       }).success,
     ).toBe(true);
@@ -158,8 +169,6 @@ describe("appSettingsSchema", () => {
     expect(
       appSettingsSchema.safeParse({
         ...validSettings(),
-        autoCreatePeriods: false,
-        defaultDeadlineDays: 5,
         notificationFromEmail: "not-an-email",
       }).success,
     ).toBe(false);
@@ -169,8 +178,6 @@ describe("appSettingsSchema", () => {
     expect(
       appSettingsSchema.safeParse({
         ...validSettings(),
-        autoCreatePeriods: false,
-        defaultDeadlineDays: 5,
         defaultReminderAudience: "everyone",
       }).success,
     ).toBe(false);
@@ -180,40 +187,30 @@ describe("appSettingsSchema", () => {
     expect(
       appSettingsSchema.safeParse({
         ...validSettings(),
-        autoCreatePeriods: false,
-        defaultDeadlineDays: 5,
         deadlineTime: "25:00",
       }).success,
     ).toBe(false);
     expect(
       appSettingsSchema.safeParse({
         ...validSettings(),
-        autoCreatePeriods: false,
-        defaultDeadlineDays: 5,
         deadlineTime: "9:30",
       }).success,
     ).toBe(false);
     expect(
       appSettingsSchema.safeParse({
         ...validSettings(),
-        autoCreatePeriods: false,
-        defaultDeadlineDays: 5,
         deadlineTime: "noon",
       }).success,
     ).toBe(false);
     expect(
       appSettingsSchema.safeParse({
         ...validSettings(),
-        autoCreatePeriods: false,
-        defaultDeadlineDays: 5,
         deadlineTime: "00:00",
       }).success,
     ).toBe(true);
     expect(
       appSettingsSchema.safeParse({
         ...validSettings(),
-        autoCreatePeriods: false,
-        defaultDeadlineDays: 5,
         deadlineTime: "23:59",
       }).success,
     ).toBe(true);
@@ -223,16 +220,12 @@ describe("appSettingsSchema", () => {
     expect(
       appSettingsSchema.safeParse({
         ...validSettings(),
-        autoCreatePeriods: false,
-        defaultDeadlineDays: 5,
         reopenWindowHours: -1,
       }).success,
     ).toBe(false);
     expect(
       appSettingsSchema.safeParse({
         ...validSettings(),
-        autoCreatePeriods: false,
-        defaultDeadlineDays: 5,
         reopenWindowHours: 169,
       }).success,
     ).toBe(false);

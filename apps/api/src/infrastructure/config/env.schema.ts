@@ -180,9 +180,8 @@ const addForbiddenDevModeIssue = (
   });
 };
 
-// FRONTEND_URLS (if set) must not include a wildcard. Wildcards are
-// a security smell in production CORS — caller could spoof origin
-// and bypass cookie SameSite= protections.
+// Production CORS accepts only the explicitly configured origins; reject a
+// wildcard so FRONTEND_URLS remains a concrete allowlist.
 const addWildcardOriginIssue = (
   data: ValidatedEnv,
   ctx: z.RefinementCtx,
@@ -199,8 +198,8 @@ const addWildcardOriginIssue = (
   });
 };
 
-// SMTP must be configured in production: without a host EmailService silently
-// drops reminders (jsonTransport), and without a from-address it cannot address
+// SMTP must be configured in production: without a host EmailService uses the
+// no-send development transport, and without a from-address it cannot address
 // an envelope. A whitespace-only value counts as absent.
 const SMTP_PRODUCTION_KEYS = ["SMTP_HOST", "SMTP_FROM"] as const;
 

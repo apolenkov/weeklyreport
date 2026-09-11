@@ -1,4 +1,4 @@
-import { context, propagation, trace } from "@opentelemetry/api";
+import { context, propagation, ROOT_CONTEXT, trace } from "@opentelemetry/api";
 import type { ClsService } from "nestjs-cls";
 
 import type { JobTraceContext } from "../../lib/job-trace-context.js";
@@ -19,7 +19,7 @@ export type { JobTraceContext } from "../../lib/job-trace-context.js";
 export interface JobCls {
   isActive(): boolean;
   get(key: string): unknown;
-  run<T>(fn: () => T): T;
+  runWith<T>(store: Record<string, unknown>, fn: () => T): T;
   set(key: string, value: unknown): void;
 }
 
@@ -51,27 +51,35 @@ export async function runInJobTraceContext<T>(
   cls: JobCls | null,
   body: () => Promise<T>,
 ): Promise<T> {
-  const parent = propagation.extract(context.active(), {
+  const parent = propagation.extract(ROOT_CONTEXT, {
     ...(jobContext.traceparent ? { traceparent: jobContext.traceparent } : {}),
     ...(jobContext.tracestate ? { tracestate: jobContext.tracestate } : {}),
   });
   const parentSpanContext = trace.getSpanContext(parent);
-  const span = trace.getTracer(WORKER_TRACER_NAME).startSpan(spanName, {
-    links: parentSpanContext ? [{ context: parentSpanContext }] : [],
-  });
+  const span = trace.getTracer(WORKER_TRACER_NAME).startSpan(
+    spanName,
+    {
+      links: parentSpanContext ? [{ context: parentSpanContext }] : [],
+    },
+    parent,
+  );
 
   const runSpan = async (): Promise<T> => {
     try {
-      return await context.with(trace.setSpan(context.active(), span), body);
+      return await context.with(trace.setSpan(parent, span), body);
     } finally {
       span.end();
     }
   };
 
-  const { correlationId } = jobContext;
-  if (cls && correlationId !== undefined) {
-    return cls.run(async () => {
-      cls.set(CORRELATION_ID_KEY, correlationId);
+  if (cls) {
+    // BullMQ callbacks may arrive inside an unrelated request scope. Start every
+    // job with an empty store so nestjs-cls cannot inherit that caller's fields.
+    return cls.runWith({}, async () => {
+      const { correlationId } = jobContext;
+      if (correlationId !== undefined) {
+        cls.set(CORRELATION_ID_KEY, correlationId);
+      }
       return runSpan();
     });
   }

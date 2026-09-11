@@ -25,11 +25,7 @@ vi.mock("bullmq", () => ({
 
 import { createNullLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
-import {
-  clearMessages,
-  isMailpitUp,
-  pollForMessage,
-} from "../../test-utils/mailpit.js";
+import { isMailpitUp, pollForMessage } from "../../test-utils/mailpit.js";
 import { EmailReminderProcessor as ProductionEmailReminderProcessor } from "../bullmq/email-reminder.processor.js";
 import type { EnvConfig } from "../config/env.schema.js";
 import { EmailService } from "./email.service.js";
@@ -117,8 +113,6 @@ describe("email-dispatch integration", () => {
 
       const recipient = `deadline-dispatch-${Date.now()}@test.local`;
 
-      await clearMessages();
-
       const emailService = new EmailService(SMTP_ENV);
       const processor = new EmailReminderProcessor(
         remindersStub as never,
@@ -176,8 +170,6 @@ describe("email-dispatch integration", () => {
       }
 
       const headRecipient = `escalation-dispatch-${Date.now()}@test.local`;
-
-      await clearMessages();
 
       const emailService = new EmailService(SMTP_ENV);
       const processor = new EmailReminderProcessor(

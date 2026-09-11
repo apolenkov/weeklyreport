@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  AI_PROMPT_SLOT_KEYS,
   aiFeatureKeySchema,
   aiPromptBundleReadSchema,
   aiPromptContentsSchema,
@@ -16,6 +17,36 @@ const promptContents = {
   "grounded-answer": "Answer from evidence.",
   "citation-repair": "Repair citations.",
 };
+
+const validBundleRead = () => ({
+  id,
+  featureKey: "lead-report-assistant",
+  revision: 1,
+  baseRevisionId: null,
+  coreContractVersion: "report-assistant/v1",
+  composerVersion: "composer/v1",
+  servingContractVersion: "report-assistant/editor-serving/v1",
+  servingStatus: "current",
+  lockedCoreSnapshot: {
+    planner: "Planner contract.",
+    "planner-repair": "Planner repair contract.",
+    "grounded-answer": "Grounded answer contract.",
+    "citation-repair": "Citation repair contract.",
+  },
+  promptContents,
+  slots: AI_PROMPT_SLOT_KEYS.map((slot) => ({
+    slot,
+    lockedCore: "Core contract.",
+    promptContents: promptContents[slot],
+    effectivePrompt: `Core contract.\n${promptContents[slot]}`,
+  })),
+  effectiveContentHash: hash,
+  lifecycle: "active",
+  createdAt: "2026-08-10T00:00:00.000Z",
+  updatedAt: "2026-08-10T00:00:00.000Z",
+  activatedAt: "2026-08-10T00:00:00.000Z",
+  supersededAt: null,
+});
 
 describe("AI prompt management contracts", () => {
   it("accepts only registered feature keys", () => {
@@ -91,24 +122,18 @@ describe("AI prompt management contracts", () => {
   });
 
   it("rejects incomplete bundle slot reads", () => {
-    expect(
-      aiPromptBundleReadSchema.safeParse({
-        id,
-        featureKey: "lead-report-assistant",
-        revision: 1,
-        baseRevisionId: null,
-        coreContractVersion: "report-assistant/v1",
-        composerVersion: "composer/v1",
-        lockedCoreSnapshot: {},
-        promptContents,
-        slots: [],
-        effectiveContentHash: hash,
-        lifecycle: "active",
-        createdAt: "2026-08-10T00:00:00.000Z",
-        updatedAt: "2026-08-10T00:00:00.000Z",
-        activatedAt: null,
-        supersededAt: null,
-      }).success,
-    ).toBe(false);
+    const baseline = validBundleRead();
+    expect(aiPromptBundleReadSchema.safeParse(baseline).success).toBe(true);
+
+    const result = aiPromptBundleReadSchema.safeParse({
+      ...baseline,
+      slots: baseline.slots.slice(0, -1),
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toContainEqual(
+        expect.objectContaining({ path: ["slots"] }),
+      );
+    }
   });
 });

@@ -13,12 +13,15 @@ NestJS 11 backend with tRPC API, Prisma ORM, and JWT/SAML authentication.
 | `auth`             | SAML, dev login, JWT sessions, and role context           |
 | `carry-over`       | Carry unfinished records into the current period          |
 | `email`            | Reminder and notification delivery                        |
+| `ai-prompts`       | Admin-managed feature prompt revisions                    |
+| `ai-provider`      | Organization-wide AI provider configuration               |
 | `observability`    | Web Vitals ingestion                                      |
 | `organization`     | Organization singleton and public identity                |
 | `pdf-export`       | Published-snapshot PDF generation                         |
 | `period`           | Period lifecycle, scheduling, and automation              |
 | `project-activity` | Admin activity provisioning and catalogue CRUD            |
 | `publication`      | Atomic publication and immutable snapshots                |
+| `product-feedback` | Authenticated product feedback and inbox actions          |
 | `reminders`        | Reminder policy evaluation and execution                  |
 | `report-sections`  | Lead drafts, submission, and report assembly              |
 | `review`           | Verdicts, comments, acknowledgements, and reopen requests |

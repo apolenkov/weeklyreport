@@ -3,7 +3,10 @@ import { z } from "zod";
 
 import type { PeriodAdminService } from "../../../modules/admin/index.js";
 import type { ArchiveService } from "../../../modules/archive/index.js";
-import { mapDomainError } from "../trpc.error-mapper.js";
+import {
+  mapDomainError,
+  withDomainErrorMapping,
+} from "../trpc.error-mapper.js";
 import {
   anyRoleProcedure,
   captureMutationAuditInputMiddleware,
@@ -24,13 +27,11 @@ const reportIdInput = z.object({ reportId: z.uuid() });
 function buildListProcedure(deps: ArchiveRouterDeps) {
   return anyRoleProcedure
     .input(paginationInputSchema.optional())
-    .query(async ({ input, ctx }) => {
-      try {
-        return await deps.archiveService.listArchiveReports(input, ctx.session);
-      } catch (error) {
-        throw mapDomainError(error);
-      }
-    });
+    .query(({ input, ctx }) =>
+      withDomainErrorMapping(() =>
+        deps.archiveService.listArchiveReports(input, ctx.session),
+      ),
+    );
 }
 
 function buildDetailProcedure(deps: ArchiveRouterDeps) {
@@ -65,28 +66,24 @@ function buildArchiveReportProcedure(deps: ArchiveRouterDeps) {
   return headProcedure
     .input(reportIdInput)
     .use(captureMutationAuditInputMiddleware)
-    .mutation(async ({ input }) => {
-      try {
+    .mutation(({ input }) =>
+      withDomainErrorMapping(async () => {
         await deps.periodAdminService.archivePeriod(input.reportId);
         return { success: true as const };
-      } catch (error) {
-        throw mapDomainError(error);
-      }
-    });
+      }),
+    );
 }
 
 function buildUnarchiveReportProcedure(deps: ArchiveRouterDeps) {
   return headProcedure
     .input(reportIdInput)
     .use(captureMutationAuditInputMiddleware)
-    .mutation(async ({ input }) => {
-      try {
+    .mutation(({ input }) =>
+      withDomainErrorMapping(async () => {
         await deps.periodAdminService.unarchivePeriod(input.reportId);
         return { success: true as const };
-      } catch (error) {
-        throw mapDomainError(error);
-      }
-    });
+      }),
+    );
 }
 
 export function createArchiveRouter(deps: ArchiveRouterDeps) {

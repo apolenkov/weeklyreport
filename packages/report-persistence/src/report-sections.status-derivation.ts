@@ -1,11 +1,12 @@
 import {
   aggregateTrafficLight,
   canonicalToTrafficLight,
-  riskCoversStage,
   type RiskSeverity,
   riskSeverityToCanonicalFloor,
   type TrafficLightStatus,
 } from "@customreport/shared";
+
+export { deriveEffectiveProductStatus } from "@customreport/shared";
 
 type TrafficLight = TrafficLightStatus;
 
@@ -21,46 +22,6 @@ export function asTraffic(
   return status === "green" || status === "yellow" || status === "red"
     ? status
     : null;
-}
-
-// Risks MUST be product-scoped before the per-stage match: coverage matches
-// stage names only and the 7 SDLC names repeat across products, so an unscoped
-// fold floors the wrong product. Aggregation-only: never writes a status back.
-export function deriveEffectiveProductStatus(project: {
-  projectId: string;
-  trafficLight: TrafficLight | null;
-  ownedStages?:
-    | readonly {
-        stageName: string;
-        status?: string | null | undefined;
-      }[]
-    | undefined;
-  risks?:
-    | readonly {
-        // Nullable/optional: an activity-parented risk carries no product FK — it
-        // never matches a product's projectId below, so it cannot floor product
-        // health.
-        projectId?: string | null | undefined;
-        severity: RiskSeverity;
-        stageNames?: readonly string[] | undefined;
-      }[]
-    | undefined;
-}): TrafficLight | null {
-  const scopedRisks = (project.risks ?? []).filter(
-    (risk) => risk.projectId === project.projectId,
-  );
-  const stageStatuses = (project.ownedStages ?? []).map((stage) => {
-    const coveringSeverity = aggregateTrafficLight(
-      scopedRisks
-        .filter((risk) => riskCoversStage(risk, stage.stageName))
-        .map((risk) =>
-          canonicalToTrafficLight(riskSeverityToCanonicalFloor(risk.severity)),
-        ),
-    );
-    return aggregateTrafficLight([asTraffic(stage.status), coveringSeverity]);
-  });
-
-  return aggregateTrafficLight([project.trafficLight, ...stageStatuses]);
 }
 
 // An activity has no SDLC stage, so its pill is floored by its own risks only.

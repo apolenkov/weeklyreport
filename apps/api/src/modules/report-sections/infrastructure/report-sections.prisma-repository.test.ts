@@ -1,13 +1,19 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
+import { PeriodLifecycleIntegrityError } from "../../period/index.js";
 import {
   ReportSectionDomainError,
   ReportSectionNotFoundError,
   SectionVersionConflictError,
 } from "../application/report-sections.service";
 import type { FabricatedRow } from "./__tests__/report-sections-prisma-harness";
-import { baseRow, mapRow } from "./__tests__/report-sections-prisma-harness";
+import {
+  baseRow,
+  fullItem,
+  mapRow,
+  OWNED_PROJECT,
+} from "./__tests__/report-sections-prisma-harness";
 import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
 
 interface LifecycleGateRow {
@@ -20,6 +26,11 @@ interface LifecycleGateRow {
   publishedAt: Date | null;
   publishedById: string | null;
   reopenedAt: Date | null;
+}
+
+interface PublishedLineageDocumentRow {
+  recordType: "item" | "decision";
+  stableId: string;
 }
 
 const OPEN_LIFECYCLE_ROW: LifecycleGateRow = {
@@ -86,11 +97,22 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
       stageStatus: { deleteMany: noop, createMany: noop },
       activityStatus: { deleteMany: noop, createMany: noop },
       item: {
+        findMany: vi.fn(() => Promise.resolve([])),
         deleteMany: vi.fn(() => Promise.resolve({ count: 0 })),
         createMany: noop,
       },
       risk: { deleteMany: noop, createMany: noop },
-      decision: { deleteMany: noop, createMany: noop },
+      decision: {
+        findMany: vi.fn(() => Promise.resolve([])),
+        deleteMany: noop,
+        createMany: noop,
+      },
+      report: { findMany: vi.fn(() => Promise.resolve([])) },
+      publishedSearchDocument: {
+        findMany: vi.fn((): Promise<PublishedLineageDocumentRow[]> =>
+          Promise.resolve([]),
+        ),
+      },
       // No comments → re-insert skipped (no findMany stubs needed).
       recordComment: {
         findMany: vi.fn(() => Promise.resolve([])),
@@ -123,7 +145,7 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
   const section = mapRow(baseRow());
 
   it("matching version: updates with {id, version} + increment, then runs the child writes", async () => {
-    // Input section carries version 1; the post-commit re-read yields 4. The
+    // Input section carries version 1; the in-transaction re-read yields 4. The
     // returned model must report 4 (from the fresh fetch), proving the new
     // version round-trips to the client rather than echoing the stale input.
     const { repo, tx } = buildRepo(1, 4);
@@ -140,6 +162,10 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
     ]);
     // The compare-and-set matched, so the delete-then-recreate ran.
     expect(tx.item.deleteMany).toHaveBeenCalled();
+    expect(tx.item.findMany).toHaveBeenCalledWith({
+      where: { reportSectionId: section.reportSectionId },
+      select: expect.anything() as unknown,
+    });
     expect(tx.$executeRaw).toHaveBeenCalledOnce();
     // The re-read happened on `tx` (inside the transaction), never on a
     // separate outer client.
@@ -283,6 +309,119 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
     });
   });
 
+  it.each([
+    ["item", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"],
+    ["decision", "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"],
+  ] as const)(
+    "rejects a save after the locked transaction observes newly published %s lineage",
+    async (recordType, stableId) => {
+      const tx = makeTx(1, baseRow({ version: 2 }), [
+        {
+          ...OPEN_LIFECYCLE_ROW,
+          status: "published",
+          periodStatus: "reopened",
+          publishedAt: new Date("2026-09-04T18:00:00.000Z"),
+          reopenedAt: new Date("2026-09-04T19:00:00.000Z"),
+        },
+      ]);
+      tx.item.findMany = vi
+        .fn()
+        .mockResolvedValue(recordType === "item" ? [{ stableId }] : []);
+      tx.decision.findMany = vi
+        .fn()
+        .mockResolvedValue(recordType === "decision" ? [{ stableId }] : []);
+      tx.publishedSearchDocument.findMany.mockResolvedValue([
+        { recordType, stableId },
+      ]);
+      const prisma = {
+        $transaction: vi.fn((callback: (client: typeof tx) => unknown) =>
+          callback(tx),
+        ),
+      };
+      const repo = new ReportSectionsPrismaRepository(
+        prisma as unknown as PrismaService,
+      );
+
+      await expect(repo.saveSection(section, 1)).rejects.toMatchObject({
+        code: "PUBLISHED_RECORD_LOCKED",
+      });
+      expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+        (recordType === "item" ? tx.item.findMany : tx.decision.findMany).mock
+          .invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
+      );
+      expect(tx.reportSection.updateMany).not.toHaveBeenCalled();
+      expect(tx.item.deleteMany).not.toHaveBeenCalled();
+    },
+  );
+
+  it("continues a reopened save when the final section preserves published lineage", async () => {
+    const publishedItem = fullItem({
+      projectId: OWNED_PROJECT,
+      project: { name: "Owned Project" },
+      stageNames: ["Development"],
+    });
+    const preservedSection = mapRow(baseRow({ items: [publishedItem] }));
+    const tx = makeTx(1, baseRow({ items: [publishedItem], version: 2 }), [
+      {
+        ...OPEN_LIFECYCLE_ROW,
+        status: "published",
+        periodStatus: "reopened",
+        publishedAt: new Date("2026-09-04T18:00:00.000Z"),
+        reopenedAt: new Date("2026-09-04T19:00:00.000Z"),
+      },
+    ]);
+    tx.item.findMany = vi.fn().mockResolvedValue([publishedItem]);
+    tx.publishedSearchDocument.findMany.mockResolvedValue([
+      { recordType: "item", stableId: publishedItem.stableId },
+    ]);
+    const prisma = {
+      $transaction: vi.fn((callback: (client: typeof tx) => unknown) =>
+        callback(tx),
+      ),
+    };
+    const repo = new ReportSectionsPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await expect(repo.saveSection(preservedSection, 1)).resolves.toMatchObject({
+      version: 2,
+    });
+    expect(tx.reportSection.updateMany).toHaveBeenCalledOnce();
+    expect(tx.item.deleteMany).toHaveBeenCalledOnce();
+    expect(tx.item.createMany).toHaveBeenCalled();
+  });
+
+  it("allows deleting never-published draft lineage after reopen", async () => {
+    const tx = makeTx(1, baseRow({ version: 2 }), [
+      {
+        ...OPEN_LIFECYCLE_ROW,
+        status: "published",
+        periodStatus: "reopened",
+        publishedAt: new Date("2026-09-04T18:00:00.000Z"),
+        reopenedAt: new Date("2026-09-04T19:00:00.000Z"),
+      },
+    ]);
+    tx.item.findMany = vi
+      .fn()
+      .mockResolvedValue([
+        { stableId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc" },
+      ]);
+    const prisma = {
+      $transaction: vi.fn((callback: (client: typeof tx) => unknown) =>
+        callback(tx),
+      ),
+    };
+    const repo = new ReportSectionsPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await expect(repo.saveSection(section, 1)).resolves.toMatchObject({
+      version: 2,
+    });
+    expect(tx.reportSection.updateMany).toHaveBeenCalledOnce();
+    expect(tx.item.deleteMany).toHaveBeenCalledOnce();
+  });
+
   describe.each([
     { write: "saveDraft", candidate: section },
     {
@@ -295,7 +434,11 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
     },
   ])("$write in-transaction lifecycle gate", ({ candidate }) => {
     it.each([
-      { state: "deleted", rows: [] },
+      {
+        state: "deleted",
+        rows: [],
+        expectedError: ReportSectionNotFoundError,
+      },
       {
         state: "published",
         rows: [
@@ -304,8 +447,10 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
             status: "published",
             periodState: "published",
             periodStatus: "published",
+            publishedAt: new Date("2026-07-31T18:00:00.000Z"),
           },
         ],
+        expectedError: ReportSectionDomainError,
       },
       {
         state: "archived",
@@ -316,6 +461,7 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
             archived: true,
           },
         ],
+        expectedError: ReportSectionDomainError,
       },
       {
         state: "contradictory",
@@ -326,13 +472,16 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
             periodStatus: "published",
           },
         ],
+        expectedError: PeriodLifecycleIntegrityError,
       },
     ])(
       "rejects a concurrently $state report before child writes",
-      async ({ rows }) => {
+      async ({ rows, expectedError }) => {
         const { repo, tx } = buildRepo(1, 2, rows);
 
-        await expect(repo.saveSection(candidate, 1)).rejects.toThrow();
+        await expect(repo.saveSection(candidate, 1)).rejects.toBeInstanceOf(
+          expectedError,
+        );
         expect(tx.$executeRaw).toHaveBeenCalledOnce();
         expect(tx.reportSection.updateMany).not.toHaveBeenCalled();
         expect(tx.item.deleteMany).not.toHaveBeenCalled();

@@ -67,13 +67,6 @@ export const baseSection: ReportSectionReadModel = {
   reviews: [],
 };
 
-// read-model item types stageNames optional;
-// the write payloads below require it. Expose a stage-guaranteed copy.
-const writeItems = baseSection.items.map((it) => ({
-  ...it,
-  stageNames: it.stageNames,
-}));
-
 export function createRepository(
   section: ReportSectionReadModel,
   periodStatus: PeriodStatus | null = "open",
@@ -117,7 +110,7 @@ export function validDraft(
     projectStatuses: [{ projectId: PROJECT_ID_1, status: "green" as const }],
     stageStatuses: [],
     activityStatuses: [],
-    items: writeItems,
+    items: baseSection.items,
     risks: [],
     decisions: [],
     ...overrides,

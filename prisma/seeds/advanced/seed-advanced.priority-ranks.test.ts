@@ -10,12 +10,24 @@ if (!primaryConfig) throw new Error("primary lead config missing");
 
 describe("applyPriorityRanks reconciliation", () => {
   it("clears every existing rank before applying the new set", async () => {
-    const updateMany = vi.fn().mockResolvedValue({ count: 2 });
-    const update = vi.fn().mockResolvedValue({});
+    const clearRanks = Promise.withResolvers<{ count: number }>();
+    const events: string[] = [];
+    const updateMany = vi.fn(async () => {
+      const result = await clearRanks.promise;
+      events.push("cleared");
+      return result;
+    });
+    const update = vi.fn(() => {
+      events.push("ranked");
+      return Promise.resolve({});
+    });
     const prisma = { item: { updateMany, update } } as never;
 
-    await applyPriorityRanks(prisma, primaryConfig);
+    const applyingRanks = applyPriorityRanks(prisma, primaryConfig);
+    clearRanks.resolve({ count: 2 });
+    await applyingRanks;
 
+    expect(events).toEqual(["cleared", "ranked", "ranked", "ranked"]);
     expect(updateMany).toHaveBeenCalledWith({
       where: {
         reportSectionId: sectionId(ACTIVE_SUFFIX, primaryConfig.leadIndex),

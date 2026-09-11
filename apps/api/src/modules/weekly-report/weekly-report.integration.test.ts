@@ -162,7 +162,7 @@ describe("WeeklyReportService with Prisma (integration)", () => {
     );
   });
 
-  it("returns empty collections for a persisted report without sections", async () => {
+  it("returns no lead sections or escalations while retaining portfolio membership", async () => {
     const data = await seedTestData(prisma);
     await prisma.reportSection.delete({ where: { id: data.section.id } });
 
@@ -176,7 +176,7 @@ describe("WeeklyReportService with Prisma (integration)", () => {
     expect(result.submissionCount).toBe(0);
   });
 
-  it("reads a persisted published report without changing its lifecycle", async () => {
+  it("returns snapshot data for a persisted published report", async () => {
     const data = await seedSubmittedReport();
     const publishedAt = new Date("2026-04-10T00:00:00.000Z");
     await prisma.report.update({

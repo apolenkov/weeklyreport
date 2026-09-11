@@ -9,9 +9,8 @@ import type { EnvConfig } from "../config/env.schema.js";
 
 const SLOW_QUERY_MS = 100;
 
-// pg's own defaults, named so an absent `DB_POOL_*` env tunable resolves to an
-// explicit, greppable value. A malformed present value fails boot in
-// `env.schema.ts` and never reaches here.
+// All three DB_POOL_* values are required by env.schema so the resolved pool
+// configuration is explicit in every environment.
 
 interface ResolvedPoolConfig {
   readonly max: number;

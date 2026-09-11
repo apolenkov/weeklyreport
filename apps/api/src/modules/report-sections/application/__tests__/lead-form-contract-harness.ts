@@ -73,6 +73,12 @@ export function createMockRepository(
   overrides: Partial<LeadFormRepository> = {},
 ): LeadFormRepository {
   return {
+    resolvePlan: vi.fn(),
+    restorePlan: vi.fn(),
+    getOpenWorkHistoryPage: vi.fn().mockResolvedValue({
+      occurrences: [],
+      nextCursor: null,
+    }),
     getSectionById: vi.fn().mockResolvedValue(null),
     getSectionByIdScoped: vi.fn().mockResolvedValue(null),
     getUserReportingGroupId: vi.fn().mockResolvedValue(null),
@@ -136,6 +142,5 @@ export function reopenContext(
   };
 }
 
-// A head and its in-group target share this reporting group; the cross-group
-// target below lives in a different one.
+// Shared reporting-group identity for the head and in-group target fixtures.
 export const HEAD_GROUP_ID = "66666666-6666-4666-8666-666666666661";

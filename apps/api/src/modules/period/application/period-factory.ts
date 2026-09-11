@@ -70,7 +70,7 @@ export function isPeriodOverlapConflict(error: unknown): boolean {
 
 // Best-effort: the period is the durable artifact, so failing to reconcile the
 // secondary reminder schedule must NOT fail the caller. The next current-period
-// access retries the complete current schedule through the applicator.
+// access and the independent hourly pass both retry missing-rule creation.
 async function materialiseReminders(
   applicator: ReminderApplicator,
   reportId: string,
@@ -83,7 +83,7 @@ async function materialiseReminders(
     // period barrel must stay side-effect-free (a top-level `new Logger()`
     // couples every barrel consumer to Nest logging and breaks mocked tests).
     new Logger("PeriodFactory").warn(
-      `applyToPeriod failed for period=${reportId}; the next current-period access will retry reminder reconciliation: ${
+      `applyToPeriod failed for period=${reportId}; missing-rule recovery will retry: ${
         error instanceof Error ? error.message : "unknown error"
       }`,
     );
@@ -141,10 +141,9 @@ async function recoverOverlappingCreate(
 async function repairExistingPeriod(
   applicator: ReminderApplicator | undefined,
   period: EnsuredPeriod,
-  now: Date,
 ): Promise<void> {
   if (applicator && period.deadline !== null) {
-    await repairReminders(applicator, period.reportId, now);
+    await repairReminders(applicator, period.reportId);
   }
 }
 
@@ -169,13 +168,13 @@ export async function ensureCurrentPeriod(
     periodEnd,
   );
   if (existing) {
-    await repairExistingPeriod(policyApplicator, existing, now);
+    await repairExistingPeriod(policyApplicator, existing);
     return existing;
   }
 
   const containing = await readContainingPeriod(prisma.report, anchorDate);
   if (containing) {
-    await repairExistingPeriod(policyApplicator, containing, now);
+    await repairExistingPeriod(policyApplicator, containing);
     return containing;
   }
 
@@ -212,10 +211,9 @@ export async function ensureCurrentPeriod(
 async function repairReminders(
   applicator: Pick<PolicyApplicatorService, "repairToPeriod">,
   reportId: string,
-  now: Date,
 ): Promise<void> {
   try {
-    await applicator.repairToPeriod(reportId, now);
+    await applicator.repairToPeriod(reportId);
   } catch (error) {
     new Logger("PeriodFactory").warn(
       `repairToPeriod failed for period=${reportId}: ${

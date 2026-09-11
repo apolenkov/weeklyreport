@@ -2,7 +2,7 @@ import {
   type PrismaReportSectionWithRelations,
   reportSectionFullInclude,
 } from "@customreport/report-persistence";
-import { type Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { isUniqueViolation } from "../../../lib/prisma-unique-violation.js";
@@ -21,6 +21,7 @@ import {
   toFilledItemRows,
   toFilledRiskRows,
 } from "./fill-from.derive.js";
+import { querySectionPublishedLineageTx } from "./published-lineage.transaction.js";
 
 interface CarryableChildRows {
   itemsToCopy: PrismaReportSectionWithRelations["items"];
@@ -45,8 +46,8 @@ async function selectCarryableChildRows(
     ).map((row) => row.activityId),
   );
   return {
-    itemsToCopy: source.items.filter((row) =>
-      isCarryable(row, targetActivityIds),
+    itemsToCopy: source.items.filter(
+      (row) => row.resolution == null && isCarryable(row, targetActivityIds),
     ),
     risksToCopy: source.risks.filter((row) =>
       isCarryable(row, targetActivityIds),
@@ -63,7 +64,7 @@ async function selectCarryableChildRows(
 async function assertTargetSectionEditable(
   tx: Prisma.TransactionClient,
   targetSectionId: string,
-): Promise<void> {
+): Promise<string> {
   const gate = await lockCurrentEditableReport(tx, {
     sectionId: targetSectionId,
   });
@@ -87,6 +88,27 @@ async function assertTargetSectionEditable(
   if (gate.kind === "not-editable") {
     throw new LeadFormConstraintError(
       "Cannot fill a section of a published report.",
+    );
+  }
+  return gate.reportId;
+}
+
+async function assertTargetHasNoPublishedLineage(
+  tx: Prisma.TransactionClient,
+  reportId: string,
+  targetSectionId: string,
+): Promise<void> {
+  const published = await querySectionPublishedLineageTx(tx, {
+    reportId,
+    reportSectionId: targetSectionId,
+  });
+  if (
+    published.itemStableIds.length > 0 ||
+    published.decisionStableIds.length > 0
+  ) {
+    throw new ReportSectionDomainError(
+      "PUBLISHED_RECORD_LOCKED",
+      "Fill from previous cannot replace records that are part of the published report.",
     );
   }
 }
@@ -188,8 +210,21 @@ export async function fillFromSectionTx(
   try {
     await prisma.$transaction(
       async (tx) => {
-        await assertTargetSectionEditable(tx, targetSectionId);
+        const reportId = await assertTargetSectionEditable(tx, targetSectionId);
+        await assertTargetHasNoPublishedLineage(tx, reportId, targetSectionId);
         await bumpTargetSectionVersion(tx, targetSectionId, expectedVersion);
+        const cancelledItem = await tx.item.findFirst({
+          where: {
+            reportSectionId: targetSectionId,
+            NOT: { resolution: { equals: Prisma.DbNull } },
+          },
+          select: { id: true },
+        });
+        if (cancelledItem) {
+          throw new LeadFormConstraintError(
+            "Restore cancelled plans before replacing this section.",
+          );
+        }
         await rebuildOwnedChildRows(tx, targetSectionId, carryable);
       },
       { timeout: 15_000 },

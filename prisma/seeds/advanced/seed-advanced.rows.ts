@@ -1,5 +1,5 @@
-// Upsert shapes shared by the active, published, and archive generations: the
-// natural key decides identity, the surrogate id is only written on create.
+// Upsert shapes shared by the active, published, and archive generations.
+// Sections and project statuses use natural keys; items use their id as key.
 
 import type {
   ItemType,

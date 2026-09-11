@@ -76,7 +76,11 @@ export async function queryCompiledHistory(
   const [reportCandidates, archiveCount] = await Promise.all([
     prisma.report.findMany({
       where: historyListWhere(session, includeArchive),
-      orderBy: { periodStart: "desc" },
+      orderBy: [
+        { periodStart: "desc" },
+        { publishedAt: "desc" },
+        { id: "desc" },
+      ],
       take: COMPILED_HISTORY_PAGE_SIZE,
       select: {
         id: true,

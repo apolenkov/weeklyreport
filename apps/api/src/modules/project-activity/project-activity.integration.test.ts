@@ -154,7 +154,7 @@ describe("ProjectActivity (integration)", () => {
     expect(seeded).toEqual([]);
   });
 
-  it("two leads report independent statuses for one activity, and the save writes no Report period field", async () => {
+  it("saves independent activity statuses without changing the checked report lifecycle fields and bounds", async () => {
     const { sectionId: sectionA } = await ensureLeadSection(
       prisma,
       reportId,
@@ -207,8 +207,7 @@ describe("ProjectActivity (integration)", () => {
     });
     expect(byId.get(sectionB)).toMatchObject({ status: "green", note: null });
 
-    // period-dual-state exemption: the section save writes child rows only —
-    // every Report period/lifecycle field is byte-identical after both saves.
+    // Compare the lifecycle discriminants, archive flag and period bounds.
     const reportAfter = await prisma.report.findUniqueOrThrow({
       where: { id: reportId },
     });
@@ -354,9 +353,7 @@ describe("ProjectActivity (integration)", () => {
     const created = await repo.create({
       name: "Ops rotation upper",
       groupId: groupA,
-      // Postgres's `uuid` type is case-insensitive: an upper/lower pair of the
-      // same id must dedupe to one join row rather than collide on the
-      // (activityId, productId) unique constraint.
+      // The repository lowercases product IDs before deduplicating join rows.
       linkedProductIds: [productId.toUpperCase(), productId],
       jiraAccounts: [],
     });

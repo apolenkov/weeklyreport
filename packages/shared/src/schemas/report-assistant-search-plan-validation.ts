@@ -111,35 +111,30 @@ const validateUniqueArrays = (
   ctx: z.RefinementCtx,
 ): void => {
   const references = [
-    plan.periods.published.references,
-    plan.authors.references,
-    plan.subjects.productReferences,
-    plan.subjects.activityReferences,
-    plan.stages.references,
-  ];
-  references.forEach((values, index) => {
+    [plan.periods.published.references, ["periods", "published", "references"]],
+    [plan.authors.references, ["authors", "references"]],
+    [plan.subjects.productReferences, ["subjects", "productReferences"]],
+    [plan.subjects.activityReferences, ["subjects", "activityReferences"]],
+    [plan.stages.references, ["stages", "references"]],
+  ] as const;
+  references.forEach(([values, path]) => {
     if (!hasUniqueValues(values.map(normalizedReference)))
-      addIssue(
-        ctx,
-        ["references", index],
-        "References must be unique after normalization.",
-      );
+      addIssue(ctx, path, "References must be unique after normalization.");
   });
   const arrays = [
-    plan.subjects.parentKinds,
-    plan.recordKinds,
-    plan.filters.itemTypes,
-    plan.filters.itemWorkflowStatuses,
-    plan.filters.riskSeverities,
-    plan.filters.decisionStates,
-    plan.filters.decisionTiming,
-    plan.filters.canonicalHealth,
-    plan.filters.priorityRanks,
-    plan.output.groupBy,
-  ];
-  arrays.forEach((values, index) => {
-    if (!hasUniqueValues(values))
-      addIssue(ctx, ["unique", index], "Values must be unique.");
+    [plan.subjects.parentKinds, ["subjects", "parentKinds"]],
+    [plan.recordKinds, ["recordKinds"]],
+    [plan.filters.itemTypes, ["filters", "itemTypes"]],
+    [plan.filters.itemWorkflowStatuses, ["filters", "itemWorkflowStatuses"]],
+    [plan.filters.riskSeverities, ["filters", "riskSeverities"]],
+    [plan.filters.decisionStates, ["filters", "decisionStates"]],
+    [plan.filters.decisionTiming, ["filters", "decisionTiming"]],
+    [plan.filters.canonicalHealth, ["filters", "canonicalHealth"]],
+    [plan.filters.priorityRanks, ["filters", "priorityRanks"]],
+    [plan.output.groupBy, ["output", "groupBy"]],
+  ] as const;
+  arrays.forEach(([values, path]) => {
+    if (!hasUniqueValues(values)) addIssue(ctx, path, "Values must be unique.");
   });
 };
 
@@ -209,7 +204,7 @@ const validateRetrievalAndOutput = (
     addIssue(ctx, ["output", "groupBy"], "Comparison requires grouping.");
 };
 
-/** Public shared schema or contract constant for validate search plan. */
+/** Applies cross-field validation rules to a parsed search plan. */
 export const validateSearchPlan = (
   plan: SearchPlanBase,
   ctx: z.RefinementCtx,

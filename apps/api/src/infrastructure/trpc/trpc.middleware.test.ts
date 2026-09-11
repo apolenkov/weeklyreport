@@ -299,7 +299,7 @@ describe("tRPC logging middleware", () => {
     expect(logger.error).not.toHaveBeenCalled();
   });
 
-  it("logs status:'error' with code+message when a procedure throws", async () => {
+  it("logs error status and code when a procedure throws", async () => {
     const logger = makeFakeLogger();
     // null session triggers UNAUTHORIZED inside isAuthed, which runs after
     // loggingMiddleware — so we expect the entry log on info() and the exit

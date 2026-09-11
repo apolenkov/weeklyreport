@@ -1,5 +1,10 @@
+import type { UserSession } from "@customreport/shared";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
+import { createNullLogger } from "../../lib/logger.js";
+import type { AdminTelemetry } from "../../modules/admin/index.js";
+import { AdminPrismaRepository } from "../../modules/admin/index.js";
+import { ReopenRequestAdminService } from "../../modules/admin/index.js";
 import { ReopenRequestError } from "../../modules/report-sections/index.js";
 import { LeadFormPrismaRepository } from "../../modules/report-sections/index.js";
 import {
@@ -122,5 +127,75 @@ describe("ReopenRequest one-pending partial index (integration)", () => {
         },
       }),
     ).resolves.toMatchObject({ status: "pending" });
+  });
+
+  it("traverses 105 equal-time rows after the first-page anchor is deleted", async () => {
+    const createdAt = new Date("2026-09-01T12:00:00.000Z");
+    const requestIds = Array.from(
+      { length: 105 },
+      (_, index) =>
+        `c0000000-0000-4000-a000-${String(index).padStart(12, "0")}`,
+    );
+    await prisma.reopenRequest.createMany({
+      data: requestIds.map((id) => ({
+        id,
+        reportSectionId: testData.section.id,
+        requestedById: testData.lead.id,
+        status: "approved",
+        reviewedById: testData.head.id,
+        reviewedAt: createdAt,
+        reviewNote: "Approved for pagination fixture.",
+        createdAt,
+      })),
+    });
+
+    const telemetry: AdminTelemetry = {
+      recordReopenRequestDecision: () => undefined,
+    };
+    const service = new ReopenRequestAdminService(
+      new AdminPrismaRepository(prisma as never),
+      createNullLogger(),
+      telemetry,
+    );
+    const session: UserSession = {
+      userId: testData.head.id,
+      email: testData.head.email,
+      name: testData.head.name,
+      role: "admin",
+      activeReportId: null,
+      activeReportSectionId: null,
+    };
+    const pages: Awaited<ReturnType<typeof service.listReopenRequests>>[] = [];
+    const returnedIds: string[] = [];
+    let cursor:
+      | Awaited<ReturnType<typeof service.listReopenRequests>>["nextCursor"]
+      | undefined;
+
+    do {
+      const page = await service.listReopenRequests({
+        session,
+        status: "all",
+        limit: 50,
+        ...(cursor ? { cursor } : {}),
+      });
+      pages.push(page);
+      returnedIds.push(...page.items.map((item) => item.id));
+
+      if (pages.length === 1) {
+        const anchor = page.items.at(-1);
+        if (!anchor || !page.nextCursor) {
+          throw new Error("expected a full first page with a continuation");
+        }
+        expect(page.nextCursor.id).toBe(anchor.id);
+        await prisma.reopenRequest.delete({ where: { id: anchor.id } });
+      }
+      cursor = page.nextCursor ?? undefined;
+    } while (cursor);
+
+    expect(pages.map((page) => page.items.length)).toEqual([50, 50, 5]);
+    expect(pages.at(-1)?.nextCursor).toBeNull();
+    expect(returnedIds).toHaveLength(requestIds.length);
+    expect(new Set(returnedIds).size).toBe(requestIds.length);
+    expect(returnedIds).toEqual(requestIds.toReversed());
   });
 });

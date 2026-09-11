@@ -31,8 +31,8 @@ type OwnedProjects = ReadonlyMap<string, AuthorProjectGroup>;
 interface ProjectViewContext {
   readonly stageStatusByKey: ReadonlyMap<string, string | null>;
   readonly projectStatusByProjectId: ReadonlyMap<string, string | null>;
-  // The WHOLE section risk set: deriveEffectiveProductStatus scopes coverage by
-  // projectId itself, so pre-filtering here would change the derived status.
+  // Keep the section risk set here; deriveEffectiveProductStatus owns the
+  // projectId filter when deriving each product's effective status.
   readonly sectionRisks: SectionRisks;
 }
 
@@ -249,7 +249,7 @@ export function mapPrismaToReportSection(
     late: row.late,
     projects: toProjectViews(row, owned),
     referencedProjects: toReferencedProjects(row, owned),
-    items: toItemViews(row.items),
+    items: toItemViews(row.items, row.itemOutcomeEvents),
     risks: toRiskViews(row.risks),
     decisions: toDecisionViews(row.decisions),
     activities: toActivityViews(row.activityStatuses, row.risks),

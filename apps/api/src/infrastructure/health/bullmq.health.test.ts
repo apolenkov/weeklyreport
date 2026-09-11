@@ -27,7 +27,7 @@ describe("BullMQHealthIndicator timeout", () => {
     vi.useRealTimers();
   });
 
-  it("resolves down when both job-count probes never settle", async () => {
+  it("resolves down when all four job-count probes never settle", async () => {
     vi.useFakeTimers();
     const indicator = new BullMQHealthIndicator(
       new QueueRegistry([

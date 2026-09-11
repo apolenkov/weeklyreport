@@ -51,7 +51,6 @@ export interface PostVerdictParams {
   // The client-loaded version drives both the optimistic lock and the version
   // stamped on the verdict, so a stale judgement can never be persisted.
   readonly expectedVersion: number;
-  readonly currentStatus: ReportSectionStatus;
 }
 
 export interface ReviewActionsRepository {
@@ -187,7 +186,6 @@ export class ReviewActionsService {
       reviewerId: session.userId,
       verdict: input.verdict,
       expectedVersion: input.version,
-      currentStatus: context.status,
     });
     return reviewVerdictResultSchema.parse({
       verdict: input.verdict,

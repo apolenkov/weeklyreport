@@ -105,9 +105,8 @@ async function attemptCarryOver(
     return { status: "skipped", targetReportId, reason: "no-prior-period" };
   }
 
-  // Cheap short-circuit BEFORE any section read or materialization: once a
-  // carry ran for this (source, target) pair, every re-entry is one indexed
-  // select.
+  // Read the recorded execution before materializing target sections so a
+  // completed source/target pair is skipped.
   const existingExecution = await deps.repository.findExecutionByDedupeKey(
     `${sourceReportId}:${targetReportId}`,
   );

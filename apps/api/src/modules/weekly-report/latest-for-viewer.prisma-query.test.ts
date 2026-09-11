@@ -12,11 +12,8 @@ const viewer: UserSession = {
   reportingGroupId: "b0000000-0000-4000-8000-000000000001",
 };
 
-describe("queryVisibleReportId lifecycle race gate", () => {
-  it.each([
-    ["archive", "a report archived after current-id resolution"],
-    ["publish", "a report published after current-id resolution"],
-  ])("rejects %s interleaving (%s)", async () => {
+describe("queryVisibleReportId", () => {
+  it("returns null and includes the exact editable lifecycle filter", async () => {
     const findFirst = vi.fn().mockResolvedValue(null);
     const prisma = {
       report: { findFirst },

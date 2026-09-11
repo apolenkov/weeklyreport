@@ -235,12 +235,10 @@ export async function reconcileRestoredReminderRuleStatuses(
     if (!policyById.has(rule.policyId))
       policyById.set(rule.policyId, rule.policy as SchedulePolicy);
   }
-  const rulesByOwner = rules.reduce<
-    ReadonlyMap<string, readonly RestoredRuleStatusRow[]>
-  >((byOwner, rule) => {
-    const owner = `${rule.reportId}\u0000${rule.policyId}`;
-    return new Map(byOwner).set(owner, [...(byOwner.get(owner) ?? []), rule]);
-  }, new Map());
+  const rulesByOwner = Map.groupBy(
+    rules,
+    (rule) => `${rule.reportId}\u0000${rule.policyId}`,
+  );
   const pauseIds = [...rulesByOwner.values()].flatMap((ownerRules) =>
     pauseIdsForOwner(ownerRules, policyById),
   );
@@ -256,15 +254,13 @@ export async function reconcileRestoredReminderRuleStatuses(
 const restoredPolicyIdsByReport = (
   reminderRules: AdminSnapshot["reminderRules"],
 ): ReadonlyMap<string, ReadonlySet<string>> =>
-  reminderRules.reduce<ReadonlyMap<string, ReadonlySet<string>>>(
-    (byReport, rule) => {
-      const policyIds = new Set([
-        ...(byReport.get(rule.reportId) ?? []),
-        rule.policyId,
-      ]);
-      return new Map(byReport).set(rule.reportId, policyIds);
-    },
-    new Map(),
+  new Map(
+    [...Map.groupBy(reminderRules, (rule) => rule.reportId)].map(
+      ([reportId, rules]) => [
+        reportId,
+        new Set(rules.map((rule) => rule.policyId)),
+      ],
+    ),
   );
 
 export async function applyPoliciesToNewPeriods(

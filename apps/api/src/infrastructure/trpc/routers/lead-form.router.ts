@@ -1,9 +1,14 @@
 import {
+  itemOutcomeResultSchema,
+  leadOpenWorkHistoryInputSchema,
+  leadOpenWorkHistoryOutputSchema,
   leadStatusOverviewInputSchema,
   leadStatusOverviewOutputSchema,
   MAX_REOPEN_REASON_LENGTH,
   reportAssistantOutcomeSchema,
   reportAssistantRequestSchema,
+  resolvePlanInputSchema,
+  restorePlanInputSchema,
 } from "@customreport/shared";
 import { z } from "zod";
 
@@ -14,7 +19,10 @@ import {
   type LeadFormService,
 } from "../../../modules/report-sections/index.js";
 import type { ReportAssistantService } from "../../../modules/search/index.js";
-import { mapDomainError } from "../trpc.error-mapper.js";
+import {
+  mapDomainError,
+  withDomainErrorMapping,
+} from "../trpc.error-mapper.js";
 import {
   captureMutationAuditInputMiddleware,
   headProcedure,
@@ -33,14 +41,12 @@ const reportIdInput = z.object({ reportId: z.uuid() });
 
 // AppSettings slice for classic vs unified lead-form view (all auth roles).
 function viewSettingsProcedure(deps: LeadFormRouterDeps) {
-  return protectedProcedure.query(async () => {
-    try {
+  return protectedProcedure.query(() =>
+    withDomainErrorMapping(async () => {
       const settings = await deps.snapshotAdminService.getSettings();
       return { unifiedActivityView: settings.unifiedActivityView };
-    } catch (error) {
-      throw mapDomainError(error);
-    }
-  });
+    }),
+  );
 }
 
 function describeError(error: unknown): { name: string; message: string } {
@@ -100,18 +106,51 @@ function statusOverviewProcedure(deps: LeadFormRouterDeps) {
   return protectedProcedure
     .input(leadStatusOverviewInputSchema)
     .output(leadStatusOverviewOutputSchema)
-    .query(async ({ input, ctx }) => {
-      try {
-        return await deps.leadFormService.getStatusOverview(
+    .query(({ input, ctx }) =>
+      withDomainErrorMapping(() =>
+        deps.leadFormService.getStatusOverview(
           input.reportId,
           ctx.session.userId,
           ctx.session.role,
           input.authorId,
-        );
-      } catch (error) {
-        throw mapDomainError(error);
-      }
-    });
+        ),
+      ),
+    );
+}
+
+function openWorkProcedure(deps: LeadFormRouterDeps) {
+  return leadProcedure
+    .input(leadOpenWorkHistoryInputSchema)
+    .output(leadOpenWorkHistoryOutputSchema)
+    .query(({ input, ctx }) =>
+      withDomainErrorMapping(() =>
+        deps.leadFormService.getOpenWork(input, ctx.session.userId),
+      ),
+    );
+}
+
+function resolvePlanProcedure(deps: LeadFormRouterDeps) {
+  return leadProcedure
+    .input(resolvePlanInputSchema)
+    .output(itemOutcomeResultSchema)
+    .use(captureMutationAuditInputMiddleware)
+    .mutation(({ input, ctx }) =>
+      withDomainErrorMapping(() =>
+        deps.leadFormService.resolvePlan(input, ctx.session.userId),
+      ),
+    );
+}
+
+function restorePlanProcedure(deps: LeadFormRouterDeps) {
+  return leadProcedure
+    .input(restorePlanInputSchema)
+    .output(itemOutcomeResultSchema)
+    .use(captureMutationAuditInputMiddleware)
+    .mutation(({ input, ctx }) =>
+      withDomainErrorMapping(() =>
+        deps.leadFormService.restorePlan(input, ctx.session.userId),
+      ),
+    );
 }
 
 function fillFromProcedure(deps: LeadFormRouterDeps) {
@@ -125,18 +164,16 @@ function fillFromProcedure(deps: LeadFormRouterDeps) {
       }),
     )
     .use(captureMutationAuditInputMiddleware)
-    .mutation(async ({ input, ctx }) => {
-      try {
-        return await deps.leadFormService.fillFrom(
+    .mutation(({ input, ctx }) =>
+      withDomainErrorMapping(() =>
+        deps.leadFormService.fillFrom(
           input.targetSectionId,
           input.sourceSectionId,
           ctx.session.userId,
           input.version,
-        );
-      } catch (error) {
-        throw mapDomainError(error);
-      }
-    });
+        ),
+      ),
+    );
 }
 
 // Object-level authz — a head may only revoke a section authored in its own
@@ -145,17 +182,15 @@ function revokeProcedure(deps: LeadFormRouterDeps) {
   return headProcedure
     .input(z.object({ reportSectionId: z.uuid() }))
     .use(captureMutationAuditInputMiddleware)
-    .mutation(async ({ input, ctx }) => {
-      try {
-        return await deps.leadFormService.revokeSubmission(
+    .mutation(({ input, ctx }) =>
+      withDomainErrorMapping(() =>
+        deps.leadFormService.revokeSubmission(
           input.reportSectionId,
           ctx.session.userId,
           groupScopeFilter(ctx.session, "reportSection"),
-        );
-      } catch (error) {
-        throw mapDomainError(error);
-      }
-    });
+        ),
+      ),
+    );
 }
 
 // Bulk revoke is bounded to the head's own group inside a multi-group report
@@ -164,17 +199,15 @@ function revokeAllSubmittedProcedure(deps: LeadFormRouterDeps) {
   return headProcedure
     .input(reportIdInput)
     .use(captureMutationAuditInputMiddleware)
-    .mutation(async ({ input, ctx }) => {
-      try {
-        return await deps.leadFormService.revokeAllSubmitted(
+    .mutation(({ input, ctx }) =>
+      withDomainErrorMapping(() =>
+        deps.leadFormService.revokeAllSubmitted(
           input.reportId,
           ctx.session.userId,
           groupScopeFilter(ctx.session, "reportSection"),
-        );
-      } catch (error) {
-        throw mapDomainError(error);
-      }
-    });
+        ),
+      ),
+    );
 }
 
 function requestReopenProcedure(deps: LeadFormRouterDeps) {
@@ -186,33 +219,29 @@ function requestReopenProcedure(deps: LeadFormRouterDeps) {
       }),
     )
     .use(captureMutationAuditInputMiddleware)
-    .mutation(async ({ input, ctx }) => {
-      try {
-        return await deps.leadFormService.requestReopen(
+    .mutation(({ input, ctx }) =>
+      withDomainErrorMapping(() =>
+        deps.leadFormService.requestReopen(
           input.reportSectionId,
           ctx.session.userId,
           input.reason,
-        );
-      } catch (error) {
-        throw mapDomainError(error);
-      }
-    });
+        ),
+      ),
+    );
 }
 
 function crossAuthorsProcedure(deps: LeadFormRouterDeps) {
   return protectedProcedure
     .input(reportIdInput)
-    .query(async ({ input, ctx }) => {
-      try {
-        return await deps.leadFormService.getCrossAuthors(
+    .query(({ input, ctx }) =>
+      withDomainErrorMapping(() =>
+        deps.leadFormService.getCrossAuthors(
           input.reportId,
           ctx.session.userId,
           ctx.session.role,
-        );
-      } catch (error) {
-        throw mapDomainError(error);
-      }
-    });
+        ),
+      ),
+    );
 }
 
 // The lead form's "Everyone" visibility lens. Full foreign content, gated by
@@ -221,16 +250,14 @@ function crossAuthorsProcedure(deps: LeadFormRouterDeps) {
 function crossAuthorContentProcedure(deps: LeadFormRouterDeps) {
   return protectedProcedure
     .input(reportIdInput)
-    .query(async ({ input, ctx }) => {
-      try {
-        return await deps.leadFormService.getCrossAuthorContent(
+    .query(({ input, ctx }) =>
+      withDomainErrorMapping(() =>
+        deps.leadFormService.getCrossAuthorContent(
           input.reportId,
           ctx.session.userId,
-        );
-      } catch (error) {
-        throw mapDomainError(error);
-      }
-    });
+        ),
+      ),
+    );
 }
 
 function assistantProcedure(deps: LeadFormRouterDeps) {
@@ -238,16 +265,11 @@ function assistantProcedure(deps: LeadFormRouterDeps) {
     .input(reportAssistantRequestSchema)
     .use(captureMutationAuditInputMiddleware)
     .output(reportAssistantOutcomeSchema)
-    .mutation(async ({ input, ctx }) => {
-      try {
-        return await deps.reportAssistantService.answer(
-          input,
-          ctx.session.userId,
-        );
-      } catch (error) {
-        throw mapDomainError(error);
-      }
-    });
+    .mutation(({ input, ctx }) =>
+      withDomainErrorMapping(() =>
+        deps.reportAssistantService.answer(input, ctx.session.userId),
+      ),
+    );
 }
 
 export function createLeadFormRouter(deps: LeadFormRouterDeps) {
@@ -256,6 +278,9 @@ export function createLeadFormRouter(deps: LeadFormRouterDeps) {
     viewSettings: viewSettingsProcedure(deps),
     byPeriod: byPeriodProcedure(deps),
     statusOverview: statusOverviewProcedure(deps),
+    openWork: openWorkProcedure(deps),
+    resolvePlan: resolvePlanProcedure(deps),
+    restorePlan: restorePlanProcedure(deps),
     fillFrom: fillFromProcedure(deps),
     revoke: revokeProcedure(deps),
     revokeAllSubmitted: revokeAllSubmittedProcedure(deps),

@@ -1,4 +1,7 @@
-import { paginationInputSchema } from "@customreport/shared";
+import {
+  paginationInputSchema,
+  reminderDispatchResultSchema,
+} from "@customreport/shared";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
@@ -64,14 +67,7 @@ function createDispatchPendingProcedure(deps: RemindersRouterDeps) {
       }),
     )
     .use(captureMutationAuditInputMiddleware)
-    .output(
-      z.object({
-        dispatched: z.number().int().nonnegative(),
-        alreadySent: z.number().int().nonnegative(),
-        skipped: z.number().int().nonnegative(),
-        reason: z.string().optional(),
-      }),
-    )
+    .output(reminderDispatchResultSchema)
     .mutation(async ({ input, ctx }) => {
       try {
         const currentEditableReportId =

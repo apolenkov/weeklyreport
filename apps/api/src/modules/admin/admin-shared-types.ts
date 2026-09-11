@@ -1,17 +1,20 @@
 import type {
   PeriodState,
   PeriodStatus,
-  ReopenRequestStatusFilter,
+  ReopenRequestListInput,
   ReportSectionStatus,
   UserSession,
 } from "@customreport/shared";
 
-export type { ReopenRequestStatusFilter } from "@customreport/shared";
+export type {
+  ReopenRequestCursor,
+  ReopenRequestListInput,
+  ReopenRequestStatusFilter,
+} from "@customreport/shared";
 
-export interface ListReopenRequestsInput {
-  readonly status: ReopenRequestStatusFilter;
+export type ListReopenRequestsInput = ReopenRequestListInput & {
   readonly session: UserSession;
-}
+};
 
 export interface DecideReopenRequestInput {
   readonly id: string;

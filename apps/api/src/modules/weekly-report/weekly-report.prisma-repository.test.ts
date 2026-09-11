@@ -20,6 +20,18 @@ const adminSession: UserSession = {
   role: "admin",
 };
 
+function interactivePrisma<T extends object>(tx: T): T & PrismaService {
+  return {
+    ...tx,
+    $transaction: vi.fn(
+      (callback: (client: T) => unknown, options: unknown) => {
+        expect(options).toEqual({ isolationLevel: "RepeatableRead" });
+        return callback(tx);
+      },
+    ),
+  } as T & PrismaService;
+}
+
 function createRepository(findFirst: ReturnType<typeof vi.fn>) {
   const prisma = {
     report: { findFirst },
@@ -106,9 +118,9 @@ describe("WeeklyReportPrismaRepository.getCurrentEditableId", () => {
 describe("WeeklyReportPrismaRepository scoped reads", () => {
   it("rejects a missing session before any weekly-report query", async () => {
     const findUnique = vi.fn();
-    const prisma = {
+    const prisma = interactivePrisma({
       report: { findUnique },
-    } as unknown as PrismaService;
+    });
     const repository = new WeeklyReportPrismaRepository(prisma);
 
     await expect(
@@ -224,6 +236,7 @@ describe("live escalation pipeline (mapPrismaToReportSection -> builder)", () =>
       // arrays — the mapper no longer defends against `undefined` here.
       activityStatuses: [],
       sectionReviews: [],
+      itemOutcomeEvents: [],
     } as unknown as PrismaReportSectionWithRelations;
   }
 
@@ -331,6 +344,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
           // `undefined` here.
           activityStatuses: [],
           sectionReviews: [],
+          itemOutcomeEvents: [],
         },
       ],
     };
@@ -343,8 +357,14 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     const publishedAt = new Date("2026-04-18T18:00:00.000Z");
     return {
       ...makeReportRow(),
+      status: "published",
+      periodState: "published",
       periodStatus: "published",
+      archived: false,
+      autoPublished: false,
+      autoArchived: false,
       publishedAt,
+      publishedById: adminSession.userId,
       publishedSnapshot: {
         reportId: REPORT_ID,
         periodStart: "2026-04-14T00:00:00.000Z",
@@ -352,8 +372,8 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
         deadline: "2026-04-17T15:00:00.000Z",
         status: "published",
         publishedAt: publishedAt.toISOString(),
-        publishedById: null,
-        publishedByName: null,
+        publishedById: adminSession.userId,
+        publishedByName: adminSession.name,
         portfolioOverview: {
           status: "green",
           totals: { green: 0, yellow: 0, red: 0 },
@@ -368,7 +388,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     reportRow = makeReportRow(),
     reminderRuleFindFirst = vi.fn().mockResolvedValue(null),
   ) {
-    const prisma = {
+    const prisma = interactivePrisma({
       report: {
         findUnique: vi.fn().mockResolvedValue(reportRow),
       },
@@ -393,7 +413,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
         ]),
       },
       reminderRule: { findFirst: reminderRuleFindFirst },
-    } as unknown as PrismaService;
+    });
 
     return new WeeklyReportPrismaRepository(prisma);
   }
@@ -498,9 +518,11 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
   it("does not expose an unauthorized published report envelope", async () => {
     const findUnique = vi.fn().mockResolvedValue(makePublishedReportRow());
     const findFirst = vi.fn().mockResolvedValue(null);
-    const repository = new WeeklyReportPrismaRepository({
-      report: { findUnique, findFirst },
-    } as unknown as PrismaService);
+    const repository = new WeeklyReportPrismaRepository(
+      interactivePrisma({
+        report: { findUnique, findFirst },
+      }),
+    );
     const headSession: UserSession = {
       userId: "00000000-0000-4000-8000-000000000002",
       email: "head@example.test",
@@ -528,9 +550,11 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
   it("fails closed when an admitted published report has no scoped snapshot sections", async () => {
     const findUnique = vi.fn().mockResolvedValue(makePublishedReportRow());
     const findFirst = vi.fn().mockResolvedValue({ id: REPORT_ID });
-    const repository = new WeeklyReportPrismaRepository({
-      report: { findUnique, findFirst },
-    } as unknown as PrismaService);
+    const repository = new WeeklyReportPrismaRepository(
+      interactivePrisma({
+        report: { findUnique, findFirst },
+      }),
+    );
     const headSession: UserSession = {
       userId: "00000000-0000-4000-8000-000000000002",
       email: "head@example.test",
@@ -550,9 +574,11 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
       .mockResolvedValueOnce(makeReportRow())
       .mockResolvedValueOnce(makePublishedReportRow());
     const findFirst = vi.fn().mockResolvedValue(null);
-    const repository = new WeeklyReportPrismaRepository({
-      report: { findUnique, findFirst },
-    } as unknown as PrismaService);
+    const repository = new WeeklyReportPrismaRepository(
+      interactivePrisma({
+        report: { findUnique, findFirst },
+      }),
+    );
     const headSession: UserSession = {
       userId: "00000000-0000-4000-8000-000000000002",
       email: "head@example.test",
@@ -574,9 +600,11 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
       .mockResolvedValueOnce(makeReportRow())
       .mockResolvedValueOnce(makePublishedReportRow());
     const findFirst = vi.fn().mockResolvedValue({ id: REPORT_ID });
-    const repository = new WeeklyReportPrismaRepository({
-      report: { findUnique, findFirst },
-    } as unknown as PrismaService);
+    const repository = new WeeklyReportPrismaRepository(
+      interactivePrisma({
+        report: { findUnique, findFirst },
+      }),
+    );
     const headSession: UserSession = {
       userId: "00000000-0000-4000-8000-000000000002",
       email: "head@example.test",
@@ -596,13 +624,13 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     const groupFindMany = vi
       .fn()
       .mockResolvedValue([{ id: GROUP_ID, name: "Finance Platforms" }]);
-    const prisma = {
+    const prisma = interactivePrisma({
       report: { findUnique: vi.fn().mockResolvedValue(report) },
       user: { findMany: vi.fn().mockResolvedValue([{ id: AUTHOR_ID }]) },
       project: { findMany: vi.fn().mockResolvedValue([]) },
       reminderRule: { findFirst: vi.fn().mockResolvedValue(null) },
       reportingGroup: { findMany: groupFindMany },
-    } as unknown as PrismaService;
+    });
 
     const result = await new WeeklyReportPrismaRepository(
       prisma,
@@ -623,12 +651,12 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     const userFindMany = vi.fn().mockReturnValue(usersPending);
     const projectFindMany = vi.fn().mockResolvedValue([]);
     const reminderRuleFindFirst = vi.fn().mockResolvedValue(null);
-    const prisma = {
+    const prisma = interactivePrisma({
       report: { findUnique: vi.fn().mockResolvedValue(makeReportRow()) },
       user: { findMany: userFindMany },
       project: { findMany: projectFindMany },
       reminderRule: { findFirst: reminderRuleFindFirst },
-    } as unknown as PrismaService;
+    });
     const repository = new WeeklyReportPrismaRepository(prisma);
 
     const pending = repository.getWeeklyReport(REPORT_ID, adminSession);
@@ -647,17 +675,14 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     await pending;
   });
 
-  it("keeps the live result coherent when publication commits after lifecycle recheck", async () => {
-    let publicationCommitted = false;
+  it("performs a second report read and returns the live model", async () => {
+    let secondReadObserved = false;
     const report = makeReportRow();
     const findUnique = vi
       .fn()
       .mockResolvedValueOnce(report)
       .mockImplementationOnce(() => {
-        // This is the existing lifecycle/section recheck. A concurrent
-        // publisher commits immediately after it; dependency reads below
-        // must still belong to the same RepeatableRead snapshot.
-        publicationCommitted = true;
+        secondReadObserved = true;
         return report;
       });
     const userFindMany = vi.fn().mockResolvedValue([{ id: AUTHOR_ID }]);
@@ -671,21 +696,13 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
       reportingGroup: { findMany: vi.fn().mockResolvedValue([]) },
       viewerGroupAccess: { findMany: vi.fn().mockResolvedValue([]) },
     };
-    const prisma = {
-      ...tx,
-      $transaction: vi.fn(
-        (callback: (client: typeof tx) => unknown, options: unknown) => {
-          expect(options).toEqual({ isolationLevel: "RepeatableRead" });
-          return callback(tx);
-        },
-      ),
-    } as unknown as PrismaService;
+    const prisma = interactivePrisma(tx);
 
     const result = await new WeeklyReportPrismaRepository(
       prisma,
     ).getWeeklyReport(REPORT_ID, adminSession);
 
-    expect(publicationCommitted).toBe(true);
+    expect(secondReadObserved).toBe(true);
     expect(result?.readModel.leadSections).toHaveLength(1);
     expect(result?.readModel.periodStatus).toBe("open");
     expect(userFindMany).toHaveBeenCalledOnce();
@@ -695,12 +712,12 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
 
   it("includes stageAssignments on the live path and skips the projects query entirely on the published-snapshot path", async () => {
     const projectFindManyLive = vi.fn().mockResolvedValue([]);
-    const livePrisma = {
+    const livePrisma = interactivePrisma({
       report: { findUnique: vi.fn().mockResolvedValue(makeReportRow()) },
       user: { findMany: vi.fn().mockResolvedValue([]) },
       project: { findMany: projectFindManyLive },
       reminderRule: { findFirst: vi.fn().mockResolvedValue(null) },
-    } as unknown as PrismaService;
+    });
     await new WeeklyReportPrismaRepository(livePrisma).getWeeklyReport(
       REPORT_ID,
       adminSession,
@@ -714,14 +731,14 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     expect(liveInclude.include.stageAssignments).toBe(true);
 
     const projectFindManyPublished = vi.fn().mockResolvedValue([]);
-    const publishedPrisma = {
+    const publishedPrisma = interactivePrisma({
       report: {
         findUnique: vi.fn().mockResolvedValue(makePublishedReportRow()),
       },
       user: { findMany: vi.fn().mockResolvedValue([]) },
       project: { findMany: projectFindManyPublished },
       reminderRule: { findFirst: vi.fn().mockResolvedValue(null) },
-    } as unknown as PrismaService;
+    });
     await new WeeklyReportPrismaRepository(publishedPrisma).getWeeklyReport(
       REPORT_ID,
       adminSession,

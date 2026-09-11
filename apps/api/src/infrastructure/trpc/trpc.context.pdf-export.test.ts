@@ -162,7 +162,7 @@ describe("createContextFactory — PDF JWT verifier path", () => {
     expect(ctx.pdfReportId).toBeNull();
   });
 
-  it("garbage cookie token → session=null in production (no DEV_SESSION fallthrough)", async () => {
+  it("garbage cookie token → session=null without DEV_SESSION fallthrough", async () => {
     const factory = createContextFactory(
       makeApp(makePrismaStub()),
       createNullLogger(),

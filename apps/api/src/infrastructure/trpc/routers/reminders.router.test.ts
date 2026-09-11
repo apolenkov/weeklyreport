@@ -22,8 +22,9 @@ const session: UserSession = {
 
 function buildCaller(currentEditableReportId: string | null) {
   const dispatchPendingReminders = vi.fn().mockResolvedValue({
-    dispatched: 1,
-    alreadySent: 0,
+    queued: 1,
+    alreadyRequested: 0,
+    failed: 0,
     skipped: 0,
   });
   const remindersService = {
@@ -47,12 +48,26 @@ function buildCaller(currentEditableReportId: string | null) {
 }
 
 describe("reminders.dispatchPending current editable report gate", () => {
+  it("preserves failed and successful enqueue counts in the public response", async () => {
+    const { caller, dispatchPendingReminders } = buildCaller(CURRENT_REPORT_ID);
+    const outcome = { queued: 1, alreadyRequested: 2, failed: 1, skipped: 3 };
+    dispatchPendingReminders.mockResolvedValue(outcome);
+    await expect(
+      caller.dispatchPending({ reportId: CURRENT_REPORT_ID, ruleId: RULE_ID }),
+    ).resolves.toEqual(outcome);
+  });
+
   it("accepts the current DB report despite a stale session claim", async () => {
     const { caller, dispatchPendingReminders } = buildCaller(CURRENT_REPORT_ID);
 
     await expect(
       caller.dispatchPending({ reportId: CURRENT_REPORT_ID, ruleId: RULE_ID }),
-    ).resolves.toEqual({ dispatched: 1, alreadySent: 0, skipped: 0 });
+    ).resolves.toEqual({
+      queued: 1,
+      alreadyRequested: 0,
+      failed: 0,
+      skipped: 0,
+    });
     expect(dispatchPendingReminders).toHaveBeenCalledWith(
       session,
       CURRENT_REPORT_ID,

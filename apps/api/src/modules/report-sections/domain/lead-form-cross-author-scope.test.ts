@@ -1,10 +1,46 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
+import {
+  type ReportSectionReadModel,
+  sharedPublishedReportSectionReadModelSchema,
+  sharedReportSectionReadModelSchema,
+} from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { filterSectionToSharedProducts } from "./lead-form-cross-author-scope";
 
 const SHARED_PRODUCT_ID = "44444444-4444-4444-8444-444444444441";
 const UNSHARED_PRODUCT_ID = "44444444-4444-4444-8444-444444444442";
+const SHARED_ITEM_ID = "88888888-8888-4888-8888-888888888881";
+const SHARED_ITEM_STABLE_ID = "88888888-8888-4888-8888-888888888882";
+const OUTCOME_EVENT_ID = "88888888-8888-4888-8888-888888888883";
+const OUTCOME_ACTOR_ID = "88888888-8888-4888-8888-888888888884";
+const PRIVATE_AUDIT_SENTINEL = "PRIVATE_NESTED_PAUSE_REASON";
+const PRIVATE_PAUSED_STATE = {
+  type: "current" as const,
+  workflowStatus: "paused" as const,
+  pausedReason: PRIVATE_AUDIT_SENTINEL,
+  nextStepText: null,
+};
+const PRIVATE_RESOLUTION = {
+  kind: "wont_do" as const,
+  eventId: OUTCOME_EVENT_ID,
+  reason: PRIVATE_AUDIT_SENTINEL,
+  actorId: OUTCOME_ACTOR_ID,
+  actorName: PRIVATE_AUDIT_SENTINEL,
+  occurredAt: "2026-09-08T08:00:00.000Z",
+  previousState: PRIVATE_PAUSED_STATE,
+};
+const PRIVATE_OUTCOME_EVENT = {
+  id: OUTCOME_EVENT_ID,
+  stableId: SHARED_ITEM_STABLE_ID,
+  outcome: "wont_do" as const,
+  reason: PRIVATE_AUDIT_SENTINEL,
+  actorId: OUTCOME_ACTOR_ID,
+  actorName: PRIVATE_AUDIT_SENTINEL,
+  occurredAt: "2026-09-08T08:00:00.000Z",
+  beforeState: PRIVATE_PAUSED_STATE,
+  afterState: PRIVATE_PAUSED_STATE,
+  reversesEventId: null,
+};
 const COMMENT = {
   id: "55555555-5555-4555-8555-555555555551",
   reviewerId: "66666666-6666-4666-8666-666666666661",
@@ -48,6 +84,8 @@ function sectionWithComments(): ReportSectionReadModel {
     ],
     items: [
       {
+        id: SHARED_ITEM_ID,
+        stableId: SHARED_ITEM_STABLE_ID,
         projectId: SHARED_PRODUCT_ID,
         type: "current",
         text: "Shared item",
@@ -57,6 +95,8 @@ function sectionWithComments(): ReportSectionReadModel {
         carriedOver: false,
         comments: [{ ...COMMENT }],
         stageNames: ["Development"],
+        resolution: PRIVATE_RESOLUTION,
+        outcomeHistory: [PRIVATE_OUTCOME_EVENT],
       },
       {
         projectId: UNSHARED_PRODUCT_ID,
@@ -155,9 +195,53 @@ describe("filterSectionToSharedProducts", () => {
       sectionWithComments(),
       new Set([SHARED_PRODUCT_ID]),
     );
+    const parsed = sharedReportSectionReadModelSchema.parse(result);
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items.every((row) => !("pausedReason" in row))).toBe(true);
+    expect(parsed.items).toHaveLength(1);
+    expect(parsed.items[0]).toMatchObject({ workflowStatus: "paused" });
+    expect(parsed.items.every((row) => !("pausedReason" in row))).toBe(true);
+  });
+
+  it("strips nested outcome audit from the current co-lead projection", () => {
+    const result = filterSectionToSharedProducts(
+      sectionWithComments(),
+      new Set([SHARED_PRODUCT_ID]),
+    );
+    const item = result.items[0];
+
+    expect(item).toMatchObject({
+      id: SHARED_ITEM_ID,
+      stableId: SHARED_ITEM_STABLE_ID,
+      workflowStatus: "paused",
+    });
+    expect(item).not.toHaveProperty("resolution");
+    expect(item).not.toHaveProperty("outcomeHistory");
+    expect(JSON.stringify(result)).not.toContain(PRIVATE_AUDIT_SENTINEL);
+  });
+
+  it("keeps frozen identities while stripping nested outcome audit", () => {
+    const frozenSource: ReportSectionReadModel = {
+      ...sectionWithComments(),
+      status: "submitted",
+      risks: [],
+      decisions: [],
+      groupId: "99999999-9999-4999-8999-999999999991",
+      groupName: "Frozen group",
+    };
+    const result = filterSectionToSharedProducts(
+      frozenSource,
+      new Set([SHARED_PRODUCT_ID]),
+    );
+    const parsed = sharedPublishedReportSectionReadModelSchema.parse(result);
+
+    expect(parsed.items[0]).toMatchObject({
+      id: SHARED_ITEM_ID,
+      stableId: SHARED_ITEM_STABLE_ID,
+      workflowStatus: "paused",
+    });
+    expect(parsed.items[0]).not.toHaveProperty("resolution");
+    expect(parsed.items[0]).not.toHaveProperty("outcomeHistory");
+    expect(JSON.stringify(parsed)).not.toContain(PRIVATE_AUDIT_SENTINEL);
   });
 
   it("keeps product scoping and referenced-project recomputation unchanged", () => {

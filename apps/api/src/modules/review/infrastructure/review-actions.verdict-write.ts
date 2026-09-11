@@ -1,3 +1,4 @@
+import type { ReportSectionStatus } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
@@ -63,11 +64,9 @@ async function upsertVerdict(
 async function unsubmitOnChangesRequested(
   tx: Prisma.TransactionClient,
   params: PostVerdictParams,
+  currentStatus: ReportSectionStatus,
 ): Promise<boolean> {
-  if (
-    params.verdict !== "changes_requested" ||
-    params.currentStatus !== "submitted"
-  ) {
+  if (params.verdict !== "changes_requested" || currentStatus !== "submitted") {
     return false;
   }
   const count = await applyRevokeTransition(
@@ -128,10 +127,7 @@ export function writeVerdict(
     await lockSectionVersion(tx, params.sectionId, params.expectedVersion);
     await upsertVerdict(tx, params);
     return {
-      unsubmitted: await unsubmitOnChangesRequested(tx, {
-        ...params,
-        currentStatus: section.status,
-      }),
+      unsubmitted: await unsubmitOnChangesRequested(tx, params, section.status),
     };
   });
 }

@@ -90,8 +90,8 @@ export function createReviewRouter(deps: ReviewRouterDeps) {
     dashboard: headProcedure.query(({ ctx }) =>
       withDomainErrorMapping(async () => {
         // Resolve from the DB, not ctx.session.activeReportId (baked into the
-        // JWT at login, can be stale); assembledReport and publish use the same
-        // resolver so all three agree on the target period.
+        // JWT at login, can be stale). assembledReport uses this same current
+        // editable-period resolver.
         const reportId = await deps.weeklyReportService.getCurrentEditableId(
           ctx.session,
         );

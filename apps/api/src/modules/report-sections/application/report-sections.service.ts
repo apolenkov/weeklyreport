@@ -162,7 +162,9 @@ export class ReportSectionsService {
     const section = await this.repository.getSectionById(reportSectionId);
 
     if (!section) {
-      throw new Error(`Report section ${reportSectionId} was not found.`);
+      throw new ReportSectionNotFoundError(
+        `Report section ${reportSectionId} was not found.`,
+      );
     }
 
     return reportSectionReadModelSchema.parse(section);

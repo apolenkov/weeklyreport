@@ -12,6 +12,7 @@ import { configureHttpPipeline } from "./http-pipeline.js";
 import { createNestApp } from "./nest-app.js";
 import { registerProcessErrorHandlers } from "./process-error-handlers.js";
 import { shutdownSentry } from "./sentry-bootstrap.js";
+import { createShutdownCoordinator } from "./shutdown-coordinator.js";
 
 export async function bootstrapApi(
   otelDecision: OtelBootstrapResult,
@@ -64,12 +65,11 @@ export async function bootstrapApi(
     shutdownOtel,
     shutdownSentry,
   };
-  registerProcessErrorHandlers(logger, {
-    shutdown: () => shutdownApi(shutdownDependencies),
-  });
+  const shutdown = createShutdownCoordinator(() =>
+    shutdownApi(shutdownDependencies),
+  );
+  registerProcessErrorHandlers(logger, shutdown);
   await app.listen(env.PORT, env.API_HOST);
   logger.info(`API server listening on ${env.API_HOST}:${env.PORT}`);
-  // This coordinator exclusively owns process signals so Nest lifecycle hooks,
-  // logs, and telemetry drain exactly once in one observable sequence.
-  registerApiShutdown(shutdownDependencies);
+  registerApiShutdown(shutdown);
 }

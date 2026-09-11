@@ -72,9 +72,8 @@ export function deriveScopeFilters(
   return {
     sectionScope: scopeWhere(session, "reportSection"),
     userScope: scopeWhere(session, "user"),
-    // Ownership here is the explicit GroupProduct M:M edge, not the implicit
-    // `lead.reportingGroupId` derivation: a product joined to two groups must
-    // surface in both heads' reports, and a lead rotation must not drop one.
+    // Product scope follows the explicit GroupProduct owner rather than the
+    // lead's group, so lead rotation does not change product ownership.
     projectScope: scopeWhere(session, "project"),
   };
 }
@@ -86,6 +85,7 @@ export function buildSnapshotResult(
 ): WeeklyReportRepositoryResult {
   const scopedSnapshot = requireScopedPublishedSnapshot(snapshot, session);
   const readModel = buildPublishedReadModelFromSnapshot(scopedSnapshot, {
+    periodState: report.periodState,
     periodStatus: report.periodStatus,
     archived: report.archived,
     weekLabel: report.weekLabel,
@@ -111,7 +111,7 @@ export function buildPublishedReadModelFromSnapshot(
   snapshot: PublishedReportSnapshot,
   metadata: Pick<
     WeeklyReportMetadata,
-    "periodStatus" | "archived" | "weekLabel"
+    "periodState" | "periodStatus" | "archived" | "weekLabel"
   >,
 ): WeeklyReportReadModel {
   const leadSections = snapshot.sections;
@@ -120,6 +120,7 @@ export function buildPublishedReadModelFromSnapshot(
     periodStart: snapshot.periodStart,
     periodEnd: snapshot.periodEnd,
     deadline: snapshot.deadline,
+    periodState: metadata.periodState,
     periodStatus: metadata.periodStatus,
     archived: metadata.archived,
     weekLabel: metadata.weekLabel,
@@ -148,8 +149,7 @@ export function buildLiveResult(
   // scoped `projects` list, keeping untouched group-owned products present.
   const portfolioOverview = buildPortfolioOverview(projects, leadSections);
 
-  // The SAME builder the published-snapshot path uses, so the Blocked-&-At-Risk
-  // panel emits identical stage/product output on both surfaces.
+  // Use the shared escalation builder for both live and published read models.
   const escalations = buildEscalationsFromReadSections(leadSections);
 
   return {
@@ -158,6 +158,7 @@ export function buildLiveResult(
       periodStart: report.periodStart,
       periodEnd: report.periodEnd,
       deadline: report.deadline,
+      periodState: report.periodState,
       periodStatus: report.periodStatus,
       archived: report.archived,
       weekLabel: report.weekLabel,

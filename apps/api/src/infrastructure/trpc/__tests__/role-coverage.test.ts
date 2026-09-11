@@ -114,9 +114,8 @@ function findUncoveredProcedures(router: InspectableRouter): string[] {
 
 describe("default-deny coverage gate", () => {
   it("every AppRouter leaf procedure uses one of the seven recognised role bases", () => {
-    // Build the AppRouter with stub deps — we never invoke any procedure here,
-    // we only inspect _def.middlewares identity. The deps shape is satisfied
-    // by `{}` casts because nothing reads them at construction time.
+    // Build the AppRouter with createStubAppRouterDeps; no procedure is invoked
+    // because this gate only inspects _def.middlewares identity.
     const stubDeps = createStubAppRouterDeps();
     const appRouter = createAppRouter(stubDeps);
 

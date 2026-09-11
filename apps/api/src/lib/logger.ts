@@ -6,11 +6,7 @@ import { ClsService } from "nestjs-cls";
 import { z } from "zod";
 
 import { NO_CORRELATION_ID } from "./actor-sentinels.js";
-import {
-  enqueueWrite,
-  type FileSink,
-  processFileSink,
-} from "./logger-file-sink.js";
+import { type FileSink, processFileSink } from "./logger-file-sink.js";
 
 // Single source of truth for the log-level domain: the env schema validates
 // `LOG_LEVEL` with this exact enum, so logger-accepted and env-accepted values
@@ -242,9 +238,8 @@ class AppLoggerImpl implements AppLogger {
     }
 
     if (this.fileSink) {
-      // Fire-and-forget: enqueueWrite chains onto the sink's serialized queue
-      // and swallows errors via the catch inside enqueueWrite.
-      enqueueWrite(this.fileSink, entry);
+      // Fire-and-forget; the sink serializes writes and records failures for flush.
+      this.fileSink.enqueue(entry);
     }
 
     // Forward to OTel log provider (no-op when provider not registered).

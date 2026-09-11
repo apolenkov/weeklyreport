@@ -118,13 +118,10 @@ describe("public contract immutability", () => {
       reminderExecutions: [],
       policies: [],
     });
-    const stageNames = Object.freeze(["Development", "Testing"]);
-
     expect(Object.isFrozen(historyEntry)).toBe(true);
     expect(Object.isFrozen(historyEntry.trafficLights)).toBe(true);
     expect(Object.isFrozen(snapshot)).toBe(true);
     expect(Object.isFrozen(snapshot.users)).toBe(true);
-    expect(Object.isFrozen(stageNames)).toBe(true);
     expect(Object.isFrozen(STAGE)).toBe(true);
     expect(Object.isFrozen(STAGE_NAMES)).toBe(true);
     expect(Object.isFrozen(DEFAULT_REPORTING_GROUP)).toBe(true);

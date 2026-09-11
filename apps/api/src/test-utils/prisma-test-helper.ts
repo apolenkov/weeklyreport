@@ -192,8 +192,6 @@ export function publishedSnapshotFixture(
   };
 }
 
-// Sequential awaits, not Promise.all: each create depends on the previous
-// row's FK.
 async function seedUsers(prisma: PrismaClient, reportingGroupId: string) {
   const head = await prisma.user.create({
     data: {

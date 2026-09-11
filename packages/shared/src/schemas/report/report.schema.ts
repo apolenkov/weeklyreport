@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import {
-  type periodStateSchema,
+  periodStateSchema,
   periodStatusSchema,
   reportDate,
   reportSectionStatusSchema,
@@ -88,44 +88,6 @@ interface ReportIdentitySection {
   readonly decisions: readonly { readonly id?: string | undefined }[];
 }
 
-function findPreviousRecordIdentity(
-  report: { readonly sections: readonly ReportIdentitySection[] },
-  sectionIndex: number,
-  recordType: "item" | "risk" | "decision",
-  recordId: string,
-  recordIndex: number,
-): [number, string, number] | undefined {
-  return report.sections
-    .slice(0, sectionIndex + 1)
-    .flatMap((previousSection, previousSectionIndex) =>
-      (
-        [
-          ["item", previousSection.items],
-          ["risk", previousSection.risks],
-          ["decision", previousSection.decisions],
-        ] as const
-      ).flatMap(([previousType, previousRecords]) =>
-        previousRecords
-          .slice(
-            0,
-            previousSectionIndex === sectionIndex ? recordIndex : undefined,
-          )
-          .flatMap((previousRecord, previousRecordIndex) =>
-            previousType === recordType && previousRecord.id === recordId
-              ? [
-                  [
-                    previousSectionIndex,
-                    `${previousType}s`,
-                    previousRecordIndex,
-                  ] as [number, string, number],
-                ]
-              : [],
-          ),
-      ),
-    )
-    .at(0);
-}
-
 /**
  * Keeps every report snapshot collection addressable without ambiguity.
  * Record ids are namespaced by their frozen collection type: an item and a
@@ -135,13 +97,44 @@ function addReportIdentityIssues(
   report: { readonly sections: readonly ReportIdentitySection[] },
   context: z.RefinementCtx,
 ): void {
+  const firstSectionIndexes = new Map(
+    report.sections
+      .map((section, index) => [section.reportSectionId, index] as const)
+      .toReversed(),
+  );
+  const firstAuthorIndexes = new Map(
+    report.sections
+      .map((section, index) => [section.authorId, index] as const)
+      .toReversed(),
+  );
+  const firstRecordLocations = new Map(
+    report.sections
+      .flatMap((section, sectionIndex) =>
+        (
+          [
+            ["item", section.items],
+            ["risk", section.risks],
+            ["decision", section.decisions],
+          ] as const
+        ).flatMap(([recordType, records]) =>
+          records.flatMap((record, recordIndex) =>
+            record.id === undefined
+              ? []
+              : [
+                  [
+                    `${recordType}:${record.id}`,
+                    [sectionIndex, `${recordType}s`, recordIndex] as const,
+                  ] as const,
+                ],
+          ),
+        ),
+      )
+      .toReversed(),
+  );
+
   report.sections.forEach((section, sectionIndex) => {
-    const previousSection = report.sections
-      .slice(0, sectionIndex)
-      .findIndex(
-        (candidate) => candidate.reportSectionId === section.reportSectionId,
-      );
-    if (previousSection !== -1) {
+    const previousSection = firstSectionIndexes.get(section.reportSectionId);
+    if (previousSection !== undefined && previousSection !== sectionIndex) {
       context.addIssue({
         code: "custom",
         path: ["sections", sectionIndex, "reportSectionId"],
@@ -149,10 +142,8 @@ function addReportIdentityIssues(
       });
     }
 
-    const previousAuthor = report.sections
-      .slice(0, sectionIndex)
-      .findIndex((candidate) => candidate.authorId === section.authorId);
-    if (previousAuthor !== -1) {
+    const previousAuthor = firstAuthorIndexes.get(section.authorId);
+    if (previousAuthor !== undefined && previousAuthor !== sectionIndex) {
       context.addIssue({
         code: "custom",
         path: ["sections", sectionIndex, "authorId"],
@@ -168,15 +159,12 @@ function addReportIdentityIssues(
     collections.forEach(([recordType, records]) => {
       records.forEach((record, recordIndex) => {
         if (record.id === undefined) return;
-        const identity = `${recordType}:${record.id}`;
-        const previous = findPreviousRecordIdentity(
-          report,
-          sectionIndex,
-          recordType,
-          record.id,
-          recordIndex,
-        );
-        if (previous !== undefined) {
+        const identity = `${recordType}:${record.id}` as const;
+        const previous = firstRecordLocations.get(identity);
+        if (
+          previous !== undefined &&
+          (previous[0] !== sectionIndex || previous[2] !== recordIndex)
+        ) {
           context.addIssue({
             code: "custom",
             path: [
@@ -264,33 +252,36 @@ export const portfolioProductOverviewSchema = z
   })
   .readonly();
 
+/** Stable identities prevent display-name collisions in downstream joins. */
+const escalationIdentityShape = {
+  productId: z.uuid(),
+  productName: z.string().min(1),
+  authorId: z.uuid(),
+  leadName: z.string().min(1),
+  description: z.string(),
+};
+
 /** Describes a head-facing call-out that requires attention. */
 export const escalationSchema = z.discriminatedUnion("type", [
   z
     .object({
       type: z.literal("blocked"),
-      productName: z.string().min(1),
+      ...escalationIdentityShape,
       stageName: z.string().min(1),
-      leadName: z.string().min(1),
-      description: z.string(),
     })
     .readonly(),
   z
     .object({
       type: z.literal("unresolved_risk"),
-      productName: z.string().min(1),
+      ...escalationIdentityShape,
       stageName: z.string().min(1),
-      leadName: z.string().min(1),
-      description: z.string(),
     })
     .readonly(),
   z
     .object({
       type: z.literal("at_risk"),
-      productName: z.string().min(1),
+      ...escalationIdentityShape,
       stageName: z.string().nullable(),
-      leadName: z.string().min(1),
-      description: z.string(),
     })
     .readonly(),
 ]);
@@ -302,6 +293,7 @@ export const weeklyReportReadModelSchema = z
     periodStart: reportDate(),
     periodEnd: reportDate(),
     deadline: reportDate().nullable(),
+    periodState: periodStateSchema,
     periodStatus: periodStatusSchema,
     // Archiving leaves `periodStatus` at "published", so this is the only signal
     // that separates an archived report from a live published one.

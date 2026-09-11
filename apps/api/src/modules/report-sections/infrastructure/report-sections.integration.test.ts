@@ -35,7 +35,8 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
   }
 
   beforeAll(() => {
-    // PrismaClient structurally satisfies PrismaService (both extend PrismaClient)
+    // The integration client crosses the repository's PrismaService injection
+    // boundary through this test-only cast.
     repo = new ReportSectionsPrismaRepository(
       prisma as unknown as PrismaService,
     );
@@ -246,7 +247,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     expect(project.trafficLight).toBe("yellow");
   });
 
-  it("saveSection persists stageName on Item / Risk / Decision / Priority", async () => {
+  it("saveSection persists stageNames on Item, Risk and Decision", async () => {
     await assignLeadToProject();
     await prisma.projectStatus.create({
       data: {

@@ -228,7 +228,6 @@ describe("review-actions (integration)", () => {
         reviewerId: testData.head.id,
         verdict: "changes_requested",
         expectedVersion: 1,
-        currentStatus: "submitted",
       });
       expect(result.unsubmitted).toBe(true);
 
@@ -249,7 +248,6 @@ describe("review-actions (integration)", () => {
         reviewerId: testData.head.id,
         verdict: "approved",
         expectedVersion: 1,
-        currentStatus: "submitted",
       });
       expect(result.unsubmitted).toBe(false);
       const after = expectDefined(
@@ -266,7 +264,6 @@ describe("review-actions (integration)", () => {
         reviewerId: testData.head.id,
         verdict: "changes_requested",
         expectedVersion: 1,
-        currentStatus: "draft",
       });
       expect(result.unsubmitted).toBe(false);
       const review = await prisma.sectionReview.findFirst({
@@ -408,7 +405,6 @@ describe("review-actions (integration)", () => {
         reviewerId: actor.userId,
         verdict: "approved",
         expectedVersion: testData.section.version,
-        currentStatus: "submitted",
       });
       await gate.paused;
       await prisma.user.update({
@@ -477,7 +473,6 @@ describe("review-actions (integration)", () => {
           reviewerId: testData.head.id,
           verdict: "approved",
           expectedVersion: 1,
-          currentStatus: "submitted",
         }),
       ).rejects.toMatchObject({ name: "ReviewVersionConflictError" });
 
@@ -494,7 +489,6 @@ describe("review-actions (integration)", () => {
           reviewerId: testData.head.id,
           verdict: "changes_requested",
           expectedVersion: 1,
-          currentStatus: "submitted",
         }),
       ).rejects.toMatchObject({ name: "ReviewVersionConflictError" });
 
@@ -515,7 +509,6 @@ describe("review-actions (integration)", () => {
         reviewerId: testData.head.id,
         verdict: "approved",
         expectedVersion: 1,
-        currentStatus: "submitted",
       });
       expect(result.unsubmitted).toBe(false);
 
@@ -536,7 +529,6 @@ describe("review-actions (integration)", () => {
         reviewerId: testData.head.id,
         verdict: "changes_requested",
         expectedVersion: 1,
-        currentStatus: "submitted",
       });
 
       const returned = expectDefined(
@@ -564,7 +556,6 @@ describe("review-actions (integration)", () => {
           reviewerId,
           verdict: "changes_requested",
           expectedVersion: 1,
-          currentStatus: "submitted",
         });
       // head + admin are two distinct reviewers → two SectionReview rows.
       const [a, b] = await Promise.all([
@@ -590,7 +581,6 @@ describe("review-actions (integration)", () => {
           reviewerId: testData.head.id,
           verdict: "changes_requested",
           expectedVersion: 1,
-          currentStatus: "submitted",
         }),
         applyRevokeTransition(prisma, testData.section.id, admin.id),
       ]);
@@ -709,6 +699,23 @@ describe("review-actions (integration)", () => {
       });
       const targetSection = await prisma.reportSection.create({
         data: { reportId: targetReport.id, authorId: testData.lead.id },
+      });
+      const assignedStage = await prisma.stage.create({
+        data: { name: "dev", sortOrder: 1 },
+      });
+      await prisma.stageAssignment.create({
+        data: {
+          userId: testData.lead.id,
+          projectId: testData.project.id,
+          stageId: assignedStage.id,
+        },
+      });
+      await prisma.projectStatus.create({
+        data: {
+          reportSectionId: targetSection.id,
+          projectId: testData.project.id,
+          status: null,
+        },
       });
 
       const carryService = new CarryOverService(

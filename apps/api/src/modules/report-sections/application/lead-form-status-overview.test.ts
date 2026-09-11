@@ -1,3 +1,4 @@
+import { leadStatusOverviewOutputSchema } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -17,8 +18,26 @@ const PERIOD = {
   periodEnd: new Date("2026-08-30T23:59:59.999Z"),
 };
 
+function firstDraftItem() {
+  const item = draftSection.items.at(0);
+  if (item === undefined) {
+    throw new Error("Expected the contract fixture to contain an item.");
+  }
+  return item;
+}
+
 describe("LeadFormService — getStatusOverview", () => {
   it("returns the authorized selected section with no-predecessor state", async () => {
+    const ownerSection = {
+      ...structuredClone(draftSection),
+      items: [
+        {
+          ...firstDraftItem(),
+          workflowStatus: "paused" as const,
+          pausedReason: "Waiting for author-only approval",
+        },
+      ],
+    };
     const getStatusOverviewPeriods = vi.fn().mockResolvedValue({
       current: PERIOD,
       predecessor: {
@@ -29,7 +48,7 @@ describe("LeadFormService — getStatusOverview", () => {
     const repo = createMockRepository({
       getSectionForPeriod: vi
         .fn()
-        .mockResolvedValue(forPeriod(structuredClone(draftSection), false)),
+        .mockResolvedValue(forPeriod(ownerSection, false)),
       getStatusOverviewPeriods,
     });
 
@@ -39,7 +58,11 @@ describe("LeadFormService — getStatusOverview", () => {
       "lead",
     );
 
-    expect(result.current.section).toEqual(draftSection);
+    expect(result.current.section).toEqual(ownerSection);
+    expect(result.current.section.items[0]).toHaveProperty(
+      "pausedReason",
+      "Waiting for author-only approval",
+    );
     expect(result.predecessor).toEqual({
       availability: "unavailable",
       reason: "no_predecessor",
@@ -78,6 +101,13 @@ describe("LeadFormService — getStatusOverview", () => {
       ...structuredClone(draftSection),
       authorId: OTHER_USER_ID,
       authorName: "Lead Two",
+      items: [
+        {
+          ...firstDraftItem(),
+          workflowStatus: "paused" as const,
+          pausedReason: "Confidential dependency",
+        },
+      ],
     };
     const getStatusOverviewPeriods = vi.fn().mockResolvedValue({
       current: PERIOD,
@@ -106,13 +136,18 @@ describe("LeadFormService — getStatusOverview", () => {
       getStatusOverviewPeriods,
     });
 
-    await new LeadFormService(repo).getStatusOverview(
+    const result = await new LeadFormService(repo).getStatusOverview(
       REPORT_ID,
       AUTHOR_ID,
       "lead",
       OTHER_USER_ID,
     );
 
+    expect(leadStatusOverviewOutputSchema.safeParse(result).success).toBe(true);
+    expect(result.current.section.items[0]).toMatchObject({
+      workflowStatus: "paused",
+    });
+    expect(result.current.section.items[0]).not.toHaveProperty("pausedReason");
     expect(getStatusOverviewPeriods).toHaveBeenCalledWith(
       REPORT_ID,
       OTHER_USER_ID,

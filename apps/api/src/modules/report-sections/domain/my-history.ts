@@ -71,7 +71,7 @@ function countDistinctProducts(s: MyHistorySectionRow): number {
   ]).size;
 }
 
-// Newest touch across the section itself and every child row it owns.
+// Newest touch across the section and the persisted child subsets loaded here.
 function resolveLastEditAt(s: MyHistorySectionRow): Date {
   return [
     s.updatedAt,

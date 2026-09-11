@@ -50,9 +50,8 @@ function isChildRowDuplicate(error: unknown): boolean {
 export class ReportSectionsPrismaRepository implements ReportSectionsRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  // Selects the complete lifecycle gate, never just `Report.status`
-  // column, so reopened reports remain distinguishable while archives fail
-  // closed in both application prechecks.
+  // Selects periodStatus and archived together so reopened reports remain
+  // distinguishable while archives fail closed in application prechecks.
   async getReportPeriodWriteGateForSection(
     sectionId: string,
   ): Promise<ReportPeriodWriteGate | null> {
@@ -91,9 +90,8 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
     return mapPrismaToReportSection(row);
   }
 
-  // Reference set for the resolve-not-delete lock: the union of this report's
-  // frozen `publishedSnapshot` (reopened period) and live rows in other frozen
-  // published/archived reports (carried clone).
+  // Reference set for the resolve-not-delete lock comes from immutable
+  // published snapshots and their search documents.
   getPublishedLineage(
     section: ReportSectionReadModel,
   ): Promise<PublishedLineage> {

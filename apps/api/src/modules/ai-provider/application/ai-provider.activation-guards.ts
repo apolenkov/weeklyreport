@@ -97,10 +97,9 @@ export const verifyCurrentSourceFingerprint = async (
   profile: ReturnType<typeof toSharedProfile>,
   revision: PreparedProviderRevision,
 ): Promise<void> => {
-  const currentSourceFingerprint =
-    dependencies.preparation?.currentSourceFingerprint;
-  if (!currentSourceFingerprint) return;
-  const current = await currentSourceFingerprint(revision);
+  const preparation = dependencies.preparation;
+  if (!preparation?.currentSourceFingerprint) return;
+  const current = await preparation.currentSourceFingerprint(revision);
   if (current !== revision.preparationSourceFingerprint) {
     failActivation(
       dependencies,

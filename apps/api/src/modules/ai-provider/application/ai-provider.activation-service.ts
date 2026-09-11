@@ -47,17 +47,23 @@ export class AiProviderActivationService {
     revisionId: string,
     actorId: string,
   ): Promise<AiProviderControlRead> {
-    return this.activateWithLifecycles(revisionId, actorId, [
-      AiProviderLifecycle.validated,
-      AiProviderLifecycle.preparing,
-      AiProviderLifecycle.failed,
-    ]);
+    return this.activateWithLifecycles(
+      revisionId,
+      actorId,
+      [
+        AiProviderLifecycle.validated,
+        AiProviderLifecycle.preparing,
+        AiProviderLifecycle.failed,
+      ],
+      "activate",
+    );
   }
 
   private async activateWithLifecycles(
     revisionId: string,
     actorId: string,
     allowedLifecycles: readonly AiProviderLifecycle[],
+    operation: "activate" | "restore",
   ): Promise<AiProviderControlRead> {
     const revision = await requireRevision(this.dependencies, revisionId);
     assertRevisionReady(revision, allowedLifecycles);
@@ -152,6 +158,14 @@ export class AiProviderActivationService {
       profile: generationProfile,
       result: "succeeded",
     });
+    if (operation === "restore") {
+      this.dependencies.audit.record({
+        event: "ai_provider.restored",
+        actorId,
+        revisionId,
+        profile: generationProfile,
+      });
+    }
     return this.reader.read();
   }
 
@@ -234,17 +248,11 @@ export class AiProviderActivationService {
         "Only a tested retained revision can be restored",
       );
     }
-    const result = await this.activateWithLifecycles(
+    return this.activateWithLifecycles(
       revisionId,
       actorId,
       RETAINED_LIFECYCLES,
+      "restore",
     );
-    this.dependencies.audit.record({
-      event: "ai_provider.restored",
-      actorId,
-      revisionId,
-      profile: toSharedProfile(revision.generationProfile),
-    });
-    return result;
   }
 }

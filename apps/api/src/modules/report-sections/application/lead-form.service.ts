@@ -1,4 +1,11 @@
-import type { Role } from "@customreport/shared";
+import {
+  type LeadOpenWorkHistoryInput,
+  type ResolvePlanInput,
+  resolvePlanInputSchema,
+  type RestorePlanInput,
+  restorePlanInputSchema,
+  type Role,
+} from "@customreport/shared";
 
 import {
   computeReopenEligibility,
@@ -17,6 +24,7 @@ import {
   assertNoPublishedLineage,
 } from "./fill-from-guards.js";
 import { type GetByPeriodResult, readByPeriod } from "./lead-form-by-period.js";
+import { readLeadOpenWork } from "./lead-form-open-work.js";
 import { readStatusOverview } from "./lead-form-status-overview.js";
 import {
   NOOP_REPORT_SECTIONS_TELEMETRY,
@@ -44,6 +52,24 @@ export class LeadFormService {
     private readonly repository: LeadFormRepository,
     private readonly telemetry: ReportSectionsTelemetry = NOOP_REPORT_SECTIONS_TELEMETRY,
   ) {}
+
+  resolvePlan(command: ResolvePlanInput, userId: string) {
+    return this.repository.resolvePlan(
+      resolvePlanInputSchema.parse(command),
+      userId,
+    );
+  }
+
+  restorePlan(command: RestorePlanInput, userId: string) {
+    return this.repository.restorePlan(
+      restorePlanInputSchema.parse(command),
+      userId,
+    );
+  }
+
+  getOpenWork(input: LeadOpenWorkHistoryInput, userId: string) {
+    return readLeadOpenWork(this.repository, input, userId);
+  }
 
   // Scope-applied load: out-of-group id → NOT_FOUND (no existence oracle).
   async revokeSubmission(

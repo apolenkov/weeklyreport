@@ -57,7 +57,7 @@ function section(authorId: string): ReportSectionReadModel {
         workflowStatus: "paused",
         carriedOver: false,
         priorityRank: null,
-        stageNames: [],
+        stageNames: ["Development"],
         pausedReason: "Private pause reason",
         comments: [],
       },
@@ -69,7 +69,7 @@ function section(authorId: string): ReportSectionReadModel {
         workflowStatus: "in_progress",
         carriedOver: false,
         priorityRank: null,
-        stageNames: [],
+        stageNames: ["Development"],
       },
       {
         activityId: ACTIVITY_ID,

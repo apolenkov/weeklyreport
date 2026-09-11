@@ -11,6 +11,10 @@ import {
   writeStageNamesField,
 } from "../primitives/report-primitives.schema";
 import { recordCommentViewSchema } from "../review/review.schema";
+import {
+  itemOutcomeEventSchema,
+  itemResolutionSchema,
+} from "./item-outcome.schema";
 
 const ITEM_TAG_MAX_LENGTH = 50;
 const DECISION_OWNER_MAX_LENGTH = 200;
@@ -75,6 +79,7 @@ const itemInputObjectSchema = z.object({
   carriedOver: z.boolean().default(false),
   priorityRank: z.number().int().min(1).nullable().optional(),
   pausedReason: safeText().nullable().optional(),
+  nextStepText: safeText().nullable().optional(),
   stageNames: writeStageNamesField,
 });
 
@@ -146,14 +151,28 @@ export const itemInputSchema = itemInputObjectSchema
   .superRefine(addPausedReasonIssues)
   .readonly();
 
-/** Describes an item returned to report clients with review comments. */
-export const itemReadModelSchema = itemInputObjectSchema
-  .extend({
-    stageNames: currentStageNamesField,
-    comments: z.array(recordCommentViewSchema.readonly()).readonly().optional(),
-  })
+const itemReadModelObjectSchema = itemInputObjectSchema.extend({
+  stageNames: currentStageNamesField,
+  comments: z.array(recordCommentViewSchema.readonly()).readonly().optional(),
+  resolution: itemResolutionSchema.nullable().optional(),
+  outcomeHistory: z.array(itemOutcomeEventSchema).readonly().optional(),
+});
+
+/** Describes an item returned to its author-visible report clients. */
+export const itemReadModelSchema = itemReadModelObjectSchema
   .superRefine((value, ctx) => addReadParentXorIssues(value, "projectId", ctx))
   .superRefine(addPausedReasonIssues)
+  .readonly();
+
+/** Describes an item in the co-lead shared lens with private fields omitted. */
+export const sharedItemReadModelSchema = itemReadModelObjectSchema
+  .extend({
+    comments: z.never().optional(),
+    pausedReason: z.never().optional(),
+    resolution: z.never().optional(),
+    outcomeHistory: z.never().optional(),
+  })
+  .superRefine((value, ctx) => addReadParentXorIssues(value, "projectId", ctx))
   .readonly();
 
 const riskInputObjectSchema = z.object({
@@ -171,12 +190,19 @@ const riskInputObjectSchema = z.object({
 /** Accepts the shared fields of a risk draft or read model. */
 export const riskInputSchema = riskInputObjectSchema.readonly();
 
+const riskReadModelObjectSchema = riskInputObjectSchema.extend({
+  stageNames: currentStageNamesField,
+  comments: z.array(recordCommentViewSchema.readonly()).readonly().optional(),
+});
+
 /** Describes a risk returned to report clients with review comments. */
-export const riskReadModelSchema = riskInputObjectSchema
-  .extend({
-    stageNames: currentStageNamesField,
-    comments: z.array(recordCommentViewSchema.readonly()).readonly().optional(),
-  })
+export const riskReadModelSchema = riskReadModelObjectSchema
+  .superRefine((value, ctx) => addReadParentXorIssues(value, "projectId", ctx))
+  .readonly();
+
+/** Describes a risk in the co-lead shared lens with comments omitted. */
+export const sharedRiskReadModelSchema = riskReadModelObjectSchema
+  .extend({ comments: z.never().optional() })
   .superRefine((value, ctx) => addReadParentXorIssues(value, "projectId", ctx))
   .readonly();
 
@@ -196,12 +222,19 @@ const decisionInputObjectSchema = z.object({
 /** Accepts the shared fields of a decision draft or read model. */
 export const decisionInputSchema = decisionInputObjectSchema.readonly();
 
+const decisionReadModelObjectSchema = decisionInputObjectSchema.extend({
+  stageNames: currentStageNamesField,
+  comments: z.array(recordCommentViewSchema.readonly()).readonly().optional(),
+});
+
 /** Describes a decision returned to report clients with review comments. */
-export const decisionReadModelSchema = decisionInputObjectSchema
-  .extend({
-    stageNames: currentStageNamesField,
-    comments: z.array(recordCommentViewSchema.readonly()).readonly().optional(),
-  })
+export const decisionReadModelSchema = decisionReadModelObjectSchema
+  .superRefine((value, ctx) => addReadParentXorIssues(value, "productId", ctx))
+  .readonly();
+
+/** Describes a decision in the co-lead shared lens with comments omitted. */
+export const sharedDecisionReadModelSchema = decisionReadModelObjectSchema
+  .extend({ comments: z.never().optional() })
   .superRefine((value, ctx) => addReadParentXorIssues(value, "productId", ctx))
   .readonly();
 
@@ -248,6 +281,17 @@ export const itemWriteSchema = itemInputObjectSchema
     addParentXorIssues(value, value.projectId, "projectId", ctx);
     addItemTypeStatusIssue(value.type, value.workflowStatus, ctx);
     addPausedReasonIssues(value, ctx);
+    if (
+      value.nextStepText != null &&
+      (value.type !== "current" || value.workflowStatus === "done")
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["nextStepText"],
+        message:
+          "Only unfinished current work may have a next-period commitment.",
+      });
+    }
   })
   .readonly();
 

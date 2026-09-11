@@ -27,7 +27,7 @@ const uniqueReports = (
       ) === index,
   );
 
-/** Select exactly one immutable source per report before section authorization. */
+/** Select exactly one canonical source per report before section authorization. */
 export function selectPeriodSources(
   sources: readonly SelectableReportSource[],
   intent: PeriodIntent,

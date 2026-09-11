@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { AgentationInboxActions } from "./agentation-inbox-actions";
-import type { AgentationInboxRow } from "./agentation-inbox-projection";
+import { makeAgentationInboxRow } from "./agentation-inbox-test-fixtures";
 import type { FeedbackAccess } from "./product-feedback.repository";
 
 const access: FeedbackAccess = {
@@ -13,54 +13,19 @@ const access: FeedbackAccess = {
   reportingGroupId: undefined,
 };
 
-function row(status = "pending"): AgentationInboxRow {
-  const now = new Date("2026-09-04T10:00:00.000Z");
-  return {
-    id: "a-1",
-    clientId: "c-1",
-    sessionId: "s-1",
+function row(status = "pending") {
+  return makeAgentationInboxRow({
     x: 1,
     y: 1,
     comment: "Original",
-    element: "button",
-    elementPath: "#save",
-    timestamp: 1n,
-    selectedText: null,
-    boundingBox: null,
     nearbyText: null,
-    cssClasses: null,
-    nearbyElements: null,
-    computedStyles: null,
-    fullPath: null,
-    accessibility: null,
-    isMultiSelect: false,
-    isFixed: false,
-    reactComponents: null,
-    sourceFile: null,
-    drawingIndex: null,
-    elementBoundingBoxes: null,
-    placement: null,
-    rearrange: null,
     url: "/lead",
-    kind: "feedback",
-    intent: "change",
     severity: null,
     status,
-    threadMessages: [],
-    source: null,
-    context: null,
-    resolvedAt: null,
-    resolvedBy: null,
-    authorUserId: "u-lead",
     authorReportingGroupId: null,
-    authorRole: "lead",
     authorName: "Lead",
-    authorEmail: "lead@example.test",
-    createdAt: now,
-    updatedAt: now,
-    session: { id: "s-1", url: "/lead", status: "active" },
-    author: { name: "Lead", email: "lead@example.test" },
-  } as unknown as AgentationInboxRow;
+    session: { url: "/lead", authorReportingGroupId: null },
+  });
 }
 
 function prismaFor(tx: object): PrismaService {

@@ -41,7 +41,7 @@ function fakePrisma(
 }
 
 function moveTransaction(
-  conflictAt: "activity-read" | "edge-check" | "activity-write" | "none",
+  conflictAt: "lead-count" | "activity-update" | "product-read" | "none",
   attachedLeadCount = 0,
 ): Prisma.TransactionClient {
   const conflict = () => Promise.reject(adapterConflict());
@@ -69,19 +69,19 @@ function moveTransaction(
     projectActivity: {
       findUnique: vi.fn().mockResolvedValue({ groupId: GROUP_A }),
       update:
-        conflictAt === "edge-check"
+        conflictAt === "activity-update"
           ? vi.fn(conflict)
           : vi.fn().mockResolvedValue({ id: ACTIVITY }),
     },
     projectActivityLead: {
       count:
-        conflictAt === "activity-read"
+        conflictAt === "lead-count"
           ? vi.fn(conflict)
           : vi.fn().mockResolvedValue(attachedLeadCount),
     },
     projectActivityProduct: {
       findMany:
-        conflictAt === "activity-write"
+        conflictAt === "product-read"
           ? vi.fn(conflict)
           : vi.fn().mockResolvedValue([]),
       deleteMany: vi.fn(),
@@ -92,7 +92,7 @@ function moveTransaction(
 
 function attachTransaction(
   activityGroup: string,
-  conflictAt: "activity-read" | "lead-read" | "edge-write" | "none",
+  conflictAt: "lead-read" | "edge-upsert" | "transaction-completion" | "none",
 ): Prisma.TransactionClient {
   const conflict = () => Promise.reject(adapterConflict());
   return {
@@ -124,7 +124,7 @@ function attachTransaction(
     },
     user: {
       findUnique:
-        conflictAt === "activity-read"
+        conflictAt === "lead-read"
           ? vi.fn(conflict)
           : vi.fn().mockResolvedValue({
               role: "lead",
@@ -133,7 +133,7 @@ function attachTransaction(
     },
     projectActivityLead: {
       upsert:
-        conflictAt === "lead-read"
+        conflictAt === "edge-upsert"
           ? vi.fn(conflict)
           : vi.fn().mockResolvedValue({}),
     },
@@ -149,9 +149,9 @@ function attachTransaction(
   } as unknown as Prisma.TransactionClient;
 }
 
-describe("ProjectActivityPrismaRepository concurrent boundaries", () => {
-  it.each(["activity-read", "edge-check", "activity-write"] as const)(
-    "revalidates a group move when attachment commits after %s",
+describe("ProjectActivityPrismaRepository conflict retries", () => {
+  it.each(["lead-count", "activity-update", "product-read"] as const)(
+    "rejects a group move when retry after %s observes an attachment",
     async (boundary) => {
       const first = moveTransaction(boundary);
       const retry = moveTransaction("none", 1);
@@ -171,15 +171,15 @@ describe("ProjectActivityPrismaRepository concurrent boundaries", () => {
     },
   );
 
-  it.each(["activity-read", "lead-read", "edge-write"] as const)(
-    "revalidates an attachment when the group move commits after %s",
+  it.each(["lead-read", "edge-upsert", "transaction-completion"] as const)(
+    "rejects an attachment when retry after %s observes another group",
     async (boundary) => {
       const first = attachTransaction(GROUP_A, boundary);
       const retry = attachTransaction(GROUP_B, "none");
       const { prisma, transaction } = fakePrisma(
         first,
         retry,
-        boundary === "edge-write",
+        boundary === "transaction-completion",
       );
       const repository = new ProjectActivityPrismaRepository(prisma);
 

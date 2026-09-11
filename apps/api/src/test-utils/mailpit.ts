@@ -33,8 +33,8 @@ interface MailpitMessagesResponse {
   messages?: MailpitMessage[];
 }
 
-async function listMessages(): Promise<MailpitMessage[]> {
-  const res = await fetch(`${MAILPIT_BASE}/api/v1/messages`);
+async function listMessages(signal: AbortSignal): Promise<MailpitMessage[]> {
+  const res = await fetch(`${MAILPIT_BASE}/api/v1/messages`, { signal });
   if (!res.ok) throw new Error(`Mailpit GET failed: ${res.status}`);
   const body = (await res.json()) as MailpitMessagesResponse;
   return body.messages ?? [];
@@ -53,13 +53,25 @@ export async function pollForMessage(
   intervalMs = 100,
 ): Promise<MailpitMessage | null> {
   const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const all = await listMessages();
-    const match = all.find((m) =>
-      m.To.some((addr) => addr.Address === recipientEmail),
-    );
-    if (match) return match;
-    await new Promise((r) => setTimeout(r, intervalMs));
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    while (Date.now() < deadline) {
+      const all = await listMessages(controller.signal);
+      if (Date.now() >= deadline) return null;
+      const match = all.find((m) =>
+        m.To.some((addr) => addr.Address === recipientEmail),
+      );
+      if (match) return match;
+      await new Promise((resolve) =>
+        setTimeout(resolve, Math.min(intervalMs, deadline - Date.now())),
+      );
+    }
+    return null;
+  } catch (error) {
+    if (controller.signal.aborted) return null;
+    throw error;
+  } finally {
+    clearTimeout(timer);
   }
-  return null;
 }

@@ -279,7 +279,7 @@ function makeCreatePeriodRepository(opts: {
   return {
     ...base,
     findOverlappingPeriod(input) {
-      // Half-open intersect: existingStart <= newEnd && existingEnd >= newStart.
+      // Closed-interval overlap includes touching endpoints.
       const hit = seed
         .filter(
           (p) =>
@@ -490,7 +490,7 @@ function makeUpdatePeriodRepository(opts: {
   return {
     ...base,
     findOverlappingPeriod(input) {
-      // Half-open intersect + optional self-exclusion.
+      // Closed-interval overlap with optional self-exclusion.
       const hit = [...rows.values()]
         .filter((row) => (input.excludeId ? row.id !== input.excludeId : true))
         .filter(

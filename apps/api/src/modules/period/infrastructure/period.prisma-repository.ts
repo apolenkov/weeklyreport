@@ -178,7 +178,7 @@ export class PeriodPrismaRepository implements PeriodRepository {
         );
 
         if (outcome !== "transitioned") {
-          // Fail closed: zero-row match means archive won or already reopened.
+          // Distinguish a stale expected tuple from an ineligible lifecycle.
           if (outcome === "stale") {
             throw new PeriodStaleStateError(
               "The period changed while it was being reopened. Reload and retry.",
@@ -210,7 +210,7 @@ export class PeriodPrismaRepository implements PeriodRepository {
         );
       });
     } catch (error) {
-      // Open-boundary unique index: surface as BAD_REQUEST, never 500.
+      // Translate a period-range overlap into the domain error.
       if (isPeriodOverlapConflict(error)) {
         throw new AdminPeriodOverlapError(
           "A period already exists for these dates.",

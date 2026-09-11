@@ -1,6 +1,24 @@
+import { AsyncLocalStorage } from "node:async_hooks";
+
+import { context, propagation, trace } from "@opentelemetry/api";
+import { W3CTraceContextPropagator } from "@opentelemetry/core";
+import { NodeSDK } from "@opentelemetry/sdk-node";
+import {
+  InMemorySpanExporter,
+  SimpleSpanProcessor,
+} from "@opentelemetry/sdk-trace-base";
 import * as Sentry from "@sentry/nestjs";
 import type { Job, Processor } from "bullmq";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ClsService } from "nestjs-cls";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 const workerState = vi.hoisted(() => ({
   processor: undefined as Processor | undefined,
@@ -54,9 +72,58 @@ vi.mock("bullmq", () => ({
 }));
 vi.mock("./bullmq-options", () => ({ getBullMQOptions: () => ({}) }));
 
+import { createAppLogger } from "../../lib/logger.js";
 import { RawBullMqProcessor } from "./raw-bullmq-processor.js";
 import { WorkerLivenessRegistry } from "./worker-liveness.registry.js";
-import type { JobTraceContext } from "./worker-observability.js";
+import type { JobCls, JobTraceContext } from "./worker-observability.js";
+
+const ENQUEUE_TRACE_ID = "0af7651916cd43dd8448eb211c80319c";
+const ENQUEUE_TRACEPARENT = `00-${ENQUEUE_TRACE_ID}-b7ad6b7169203331-01`;
+const exporter = new InMemorySpanExporter();
+const otelSdk = new NodeSDK({
+  autoDetectResources: false,
+  instrumentations: [],
+  logRecordProcessors: [],
+  metricReaders: [],
+  spanProcessors: [new SimpleSpanProcessor(exporter)],
+  textMapPropagator: new W3CTraceContextPropagator(),
+});
+
+beforeAll(() => {
+  otelSdk.start();
+});
+
+afterAll(async () => {
+  await otelSdk.shutdown();
+  context.disable();
+  propagation.disable();
+  trace.disable();
+});
+
+class AsyncLocalCls implements JobCls {
+  private readonly storage = new AsyncLocalStorage<Record<string, unknown>>();
+
+  run<T>(fn: () => T): T {
+    return this.storage.run({ ...this.storage.getStore() }, fn);
+  }
+
+  runWith<T>(store: Record<string, unknown>, fn: () => T): T {
+    return this.storage.run({ ...store }, fn);
+  }
+
+  set(key: string, value: unknown): void {
+    const store = this.storage.getStore();
+    if (store) store[key] = value;
+  }
+
+  get(key: string): unknown {
+    return this.storage.getStore()?.[key];
+  }
+
+  isActive(): boolean {
+    return this.storage.getStore() !== undefined;
+  }
+}
 
 class FailingProcessor extends RawBullMqProcessor<JobTraceContext> {
   protected readonly queueName = "pdf-export";
@@ -67,9 +134,26 @@ class FailingProcessor extends RawBullMqProcessor<JobTraceContext> {
   protected readonly onJobFailed = vi.fn();
 }
 
+class LoggingFailingProcessor extends RawBullMqProcessor<JobTraceContext> {
+  protected readonly queueName = "pdf-export";
+  protected readonly spanName = "test.process";
+  protected readonly processJob = vi.fn(() =>
+    Promise.reject(new Error("boom")),
+  );
+  protected readonly onJobFailed = (
+    _job: Job<JobTraceContext> | undefined,
+    error: Error,
+  ): void => {
+    void Promise.resolve().then(() => {
+      this.logger.error("test job failed", { error: error.message });
+    });
+  };
+}
+
 describe("RawBullMqProcessor", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    exporter.reset();
     workerState.processor = undefined;
     workerState.worker = undefined;
   });
@@ -88,6 +172,90 @@ describe("RawBullMqProcessor", () => {
       run?.({ data: {} } as Job<JobTraceContext>, "token"),
     ).rejects.toBe(error);
     expect(Sentry.captureException).toHaveBeenCalledWith(error);
+  });
+
+  it("restores trusted trace and correlation context for failed-event continuations", async () => {
+    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    const cls = new AsyncLocalCls();
+    const logger = createAppLogger({
+      minLevel: "debug",
+      clsService: cls as unknown as ClsService,
+    });
+    const processor = new LoggingFailingProcessor(
+      {} as never,
+      logger,
+      cls as unknown as ClsService,
+    );
+    const job = {
+      data: {
+        traceparent: ENQUEUE_TRACEPARENT,
+        correlationId: "corr-failed-job",
+      },
+    } as Job<JobTraceContext>;
+
+    processor.onModuleInit();
+    await expect(workerState.processor?.(job, "token")).rejects.toThrow("boom");
+    expect(cls.isActive()).toBe(false);
+    expect(trace.getActiveSpan()).toBeUndefined();
+
+    workerState.worker?.emit("failed", job, new Error("boom"));
+
+    await vi.waitFor(() => {
+      expect(stderr).toHaveBeenCalled();
+    });
+    const failureEntry = stderr.mock.calls
+      .map(([line]) => JSON.parse(String(line)) as Record<string, unknown>)
+      .find((entry) => entry.message === "test job failed");
+    expect(failureEntry).toMatchObject({
+      correlationId: "corr-failed-job",
+      traceId: ENQUEUE_TRACE_ID,
+      error: "boom",
+    });
+    const failureSpan = exporter
+      .getFinishedSpans()
+      .find((span) => span.name === "test.process.failed");
+    expect(failureSpan?.spanContext().traceId).toBe(ENQUEUE_TRACE_ID);
+    expect(failureSpan?.links[0]?.context.traceId).toBe(ENQUEUE_TRACE_ID);
+
+    logger.error("unrelated failure");
+    const unrelatedEntry = stderr.mock.calls
+      .map(([line]) => JSON.parse(String(line)) as Record<string, unknown>)
+      .find((entry) => entry.message === "unrelated failure");
+    expect(unrelatedEntry).toMatchObject({ correlationId: "no-context" });
+    expect(unrelatedEntry).not.toHaveProperty("traceId");
+
+    await cls.run(async () => {
+      cls.set("correlationId", "corr-unrelated");
+      const unrelatedSpan = trace.getTracer("test").startSpan("unrelated");
+      await context.with(trace.setSpan(context.active(), unrelatedSpan), () => {
+        workerState.worker?.emit(
+          "failed",
+          { data: {} },
+          new Error("carrier missing"),
+        );
+        return vi.waitFor(() => {
+          const missingCarrierEntry = stderr.mock.calls
+            .map(
+              ([line]) => JSON.parse(String(line)) as Record<string, unknown>,
+            )
+            .find(
+              (entry) =>
+                entry.message === "test job failed" &&
+                entry.error === "carrier missing",
+            );
+          expect(missingCarrierEntry?.correlationId).toBe("no-context");
+          expect(missingCarrierEntry?.traceId).toMatch(/^[0-9a-f]{32}$/);
+          expect(missingCarrierEntry?.traceId).not.toBe(
+            unrelatedSpan.spanContext().traceId,
+          );
+        });
+      });
+      unrelatedSpan.end();
+      expect(cls.get("correlationId")).toBe("corr-unrelated");
+    });
+    expect(cls.isActive()).toBe(false);
+
+    stderr.mockRestore();
   });
 
   it("publishes worker ready, connection-error, recovery, and stopped lifecycle", async () => {

@@ -1,14 +1,13 @@
 import ts from "typescript";
 
+import { payloadExpressions } from "./lifecycle-write-payloads.js";
 import {
   analyzeExpression,
   isLifecycleWriteType,
 } from "./lifecycle-write-provenance.js";
 import {
-  declarationExpression,
   propertyName,
   resolvedSymbol,
-  symbolInitializer,
   unwrap,
 } from "./lifecycle-write-symbols.js";
 
@@ -21,7 +20,6 @@ const WRITE_METHODS = new Set([
   "updateManyAndReturn",
   "upsert",
 ]);
-const PAYLOAD_KEYS = new Set(["data", "create", "update"]);
 
 export interface LifecycleViolation {
   readonly file: string;
@@ -34,6 +32,7 @@ export interface LifecycleViolation {
 interface CallTarget {
   readonly method: string | undefined;
   readonly receiver: ts.Expression;
+  readonly boundArguments?: readonly ts.Expression[];
 }
 
 function directCallTarget(expression: ts.Expression): CallTarget | undefined {
@@ -58,15 +57,21 @@ function directCallTarget(expression: ts.Expression): CallTarget | undefined {
 function callTarget(
   checker: ts.TypeChecker,
   rawExpression: ts.Expression,
+  seen: ReadonlySet<ts.Node> = new Set(),
 ): CallTarget | undefined {
   const expression = unwrap(rawExpression);
+  if (seen.has(expression)) return undefined;
+  const nextSeen = new Set([...seen, expression]);
+  if (ts.isCallExpression(expression)) {
+    return boundCallTarget(checker, expression, nextSeen);
+  }
   const direct = directCallTarget(expression);
   if (direct) return direct;
   if (!ts.isIdentifier(expression)) return undefined;
   const declaration = resolvedSymbol(checker, expression)?.valueDeclaration;
   if (declaration && ts.isVariableDeclaration(declaration)) {
     return declaration.initializer
-      ? callTarget(checker, declaration.initializer)
+      ? callTarget(checker, declaration.initializer, nextSeen)
       : undefined;
   }
   if (
@@ -86,6 +91,25 @@ function callTarget(
   return undefined;
 }
 
+function boundCallTarget(
+  checker: ts.TypeChecker,
+  expression: ts.CallExpression,
+  seen: ReadonlySet<ts.Node>,
+): CallTarget | undefined {
+  const binding = directCallTarget(unwrap(expression.expression));
+  if (binding?.method !== "bind") return undefined;
+  const target = callTarget(checker, binding.receiver, seen);
+  return target
+    ? {
+        ...target,
+        boundArguments: [
+          ...(target.boundArguments ?? []),
+          ...expression.arguments.slice(1),
+        ],
+      }
+    : undefined;
+}
+
 function isReportDelegate(
   checker: ts.TypeChecker,
   receiver: ts.Expression,
@@ -93,32 +117,6 @@ function isReportDelegate(
   return checker
     .typeToString(checker.getTypeAtLocation(receiver))
     .includes("ReportDelegate");
-}
-
-function payloadExpressions(
-  checker: ts.TypeChecker,
-  argument: ts.Expression | undefined,
-): readonly ts.Expression[] | undefined {
-  if (!argument) return undefined;
-  const expression = unwrap(argument);
-  const resolved = ts.isObjectLiteralExpression(expression)
-    ? expression
-    : declarationExpression(checker, expression);
-  if (!resolved) return undefined;
-  const object = unwrap(resolved);
-  if (!ts.isObjectLiteralExpression(object)) return undefined;
-  return object.properties.flatMap((property) => {
-    if (ts.isShorthandPropertyAssignment(property)) {
-      if (!PAYLOAD_KEYS.has(property.name.text)) return [];
-      const value = symbolInitializer(
-        checker.getShorthandAssignmentValueSymbol(property),
-      );
-      return [value ?? property.name];
-    }
-    if (!ts.isPropertyAssignment(property)) return [];
-    const name = propertyName(property.name);
-    return name && PAYLOAD_KEYS.has(name) ? [property.initializer] : [];
-  });
 }
 
 export function analyzeLifecycleWrites(
@@ -163,18 +161,22 @@ export function analyzeLifecycleWrites(
     const method = target.method;
     if (!WRITE_METHODS.has(method)) return;
 
-    const payloads = payloadExpressions(checker, call.arguments[0]);
-    if (!payloads || payloads.length === 0) {
-      addViolation(
-        source,
-        call,
-        method,
-        "<unresolved>",
-        "write payload provenance is unresolved",
-      );
-      return;
-    }
+    const payloads = payloadExpressions(
+      checker,
+      target.boundArguments?.[0] ?? call.arguments[0],
+      method,
+    );
     for (const payload of payloads) {
+      if (!payload) {
+        addViolation(
+          source,
+          call,
+          method,
+          "<unresolved>",
+          "write payload provenance is unresolved",
+        );
+        continue;
+      }
       const provenance = analyzeExpression(checker, payload);
       provenance.unsafeFields.forEach((field) =>
         addViolation(

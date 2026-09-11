@@ -32,9 +32,9 @@ const recordKindSchema = z.enum([
   "stage_status",
   "activity_status",
 ]);
-/** Public shared schema or contract constant for decision state schema. */
+/** Allowed decision states for search filters. */
 export const decisionStateSchema = z.enum(["open", "resolved"]);
-/** Public shared schema or contract constant for decision timing schema. */
+/** Allowed decision timing buckets for search filters. */
 export const decisionTimingSchema = z.enum([
   "without_deadline",
   "overdue",
@@ -188,14 +188,14 @@ const searchPlanBaseSchema = z
   })
   .strict();
 
-/** Public shared type contract for search plan base. */
+/** Parsed search-plan fields before cross-field validation. */
 export type SearchPlanBase = z.infer<typeof searchPlanBaseSchema>;
-/** Public shared schema or contract constant for search plan schema. */
+/** Validated search plan with cross-field constraints applied. */
 export const searchPlanSchema =
   searchPlanBaseSchema.superRefine(validateSearchPlan);
-/** Public shared type contract for search plan. */
+/** Fully validated search plan used by assistant retrieval. */
 export type SearchPlan = z.infer<typeof searchPlanSchema>;
-/** Public shared type contract for decision state. */
+/** Decision state value accepted by search filters. */
 export type DecisionState = z.infer<typeof decisionStateSchema>;
-/** Public shared type contract for decision timing. */
+/** Decision timing value accepted by search filters. */
 export type DecisionTiming = z.infer<typeof decisionTimingSchema>;

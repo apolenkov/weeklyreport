@@ -109,6 +109,15 @@ describe("adminSnapshotSchema — reporting group restore integrity", () => {
     ).toBe(true);
   });
 
+  it("requires an explicit user lifecycle flag in a restore snapshot", () => {
+    const { isActive: _omitted, ...withoutLifecycleFlag } = user("viewer");
+
+    expect(
+      adminSnapshotSchema.safeParse(snapshotWithUser(withoutLifecycleFlag))
+        .success,
+    ).toBe(false);
+  });
+
   it("accepts a non-viewer with an explicit reporting group", () => {
     const snapshot = snapshotWithUser({
       ...user("lead"),
@@ -349,6 +358,38 @@ describe("adminSnapshotSchema — deterministic identity and FK closure", () => 
       }
     },
   );
+
+  it("reports repeated business keys in row order against the first row", () => {
+    const snapshot = completeSnapshot();
+    const first = firstUser(snapshot);
+    const result = adminSnapshotSchema.safeParse({
+      ...snapshot,
+      users: [
+        first,
+        { ...first, id: ALTERNATE_ID },
+        {
+          ...first,
+          id: "30000000-0000-4000-8000-000000000003",
+        },
+      ],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(
+        result.error.issues.filter((issue) => issue.path.at(-1) === "email"),
+      ).toEqual([
+        expect.objectContaining({
+          path: ["users", 1, "email"],
+          message: "User email duplicates users[0].",
+        }),
+        expect.objectContaining({
+          path: ["users", 2, "email"],
+          message: "User email duplicates users[0].",
+        }),
+      ]);
+    }
+  });
 
   it.each([
     [

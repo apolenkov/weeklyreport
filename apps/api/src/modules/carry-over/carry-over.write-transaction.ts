@@ -95,21 +95,11 @@ export async function writeCarryOver(
     execution.targetReportId,
     targetSections.map((section) => section.reportSectionId),
   );
-  const writableTargetSections = currentTargetSections.map((current) =>
-    mergePlannedCarriedRows(
-      current,
-      targetSections.find(
-        (planned) => planned.reportSectionId === current.reportSectionId,
-      ),
-    ),
-  );
-  const primaryTargetSection = requirePrimaryTargetSection(
-    writableTargetSections,
+  const primaryCurrentTargetSection = requirePrimaryTargetSection(
+    currentTargetSections,
   );
 
-  if (
-    writableTargetSections.some((section) => section.status === "submitted")
-  ) {
+  if (currentTargetSections.some((section) => section.status === "submitted")) {
     throw new CarryOverConflictError(
       "Carry-over cannot overwrite a submitted target section.",
     );
@@ -125,23 +115,101 @@ export async function writeCarryOver(
   // A committed winner already persisted its rows; replaying it must stay a
   // read-only resolution, never re-execute the carried-row writes.
   if (existing) {
-    return resolveExistingExecution(tx, existing, primaryTargetSection);
+    return resolveExistingExecution(tx, existing, primaryCurrentTargetSection);
   }
 
-  const result = await createNewExecution(
-    tx,
-    execution,
-    records,
-    primaryTargetSection,
+  const writableTargetSections = currentTargetSections.map((current) =>
+    mergePlannedCarriedRows(
+      current,
+      targetSections.find(
+        (planned) => planned.reportSectionId === current.reportSectionId,
+      ),
+      records,
+    ),
   );
 
   // Persist carried rows for EVERY target section on the create path — the
   // inserts are idempotent (skipDuplicates + upstream lineage filtering).
   for (const targetSection of writableTargetSections) {
-    await persistCarriedRowsForSection(tx, targetSection);
+    const { insertedItems, insertedDecisions } =
+      await persistCarriedRowsForSection(tx, targetSection);
+    if (insertedItems + insertedDecisions > 0) {
+      await tx.reportSection.update({
+        where: { id: targetSection.reportSectionId },
+        data: { version: { increment: 1 } },
+      });
+    }
   }
 
-  return result;
+  const persistedTargetSections = await readTargetSections(
+    tx,
+    execution.targetReportId,
+    currentTargetSections.map((section) => section.reportSectionId),
+  );
+  const persistedRecords = recordsForNewPersistedRows(
+    records,
+    currentTargetSections,
+    persistedTargetSections,
+  );
+  const persistedExecution = carryOverExecutionSchema.parse({
+    ...execution,
+    carriedItemCount: persistedRecords.filter(
+      (record) => record.targetItemId !== null,
+    ).length,
+    carriedDecisionCount: persistedRecords.filter(
+      (record) => record.targetDecisionId !== null,
+    ).length,
+  });
+  // Execution metadata follows the verified row readback. It remains atomic:
+  // any metadata failure rolls back the earlier row and version writes.
+  await createNewExecution(tx, persistedExecution, persistedRecords);
+  return {
+    execution: persistedExecution,
+    records: persistedRecords,
+    targetSection: requirePrimaryTargetSection(persistedTargetSections),
+  };
+}
+
+function recordsForNewPersistedRows(
+  records: readonly CarryOverRecord[],
+  before: readonly ReportSectionReadModel[],
+  after: readonly ReportSectionReadModel[],
+): CarryOverRecord[] {
+  const previousItemIds = new Set(
+    before.flatMap((section) =>
+      section.items.flatMap((item) => (item.id === undefined ? [] : [item.id])),
+    ),
+  );
+  const previousDecisionIds = new Set(
+    before.flatMap((section) =>
+      section.decisions.flatMap((decision) =>
+        decision.id === undefined ? [] : [decision.id],
+      ),
+    ),
+  );
+  const newItemIds = new Set(
+    after.flatMap((section) =>
+      section.items.flatMap((item) =>
+        item.id === undefined || previousItemIds.has(item.id) ? [] : [item.id],
+      ),
+    ),
+  );
+  const newDecisionIds = new Set(
+    after.flatMap((section) =>
+      section.decisions.flatMap((decision) =>
+        decision.id === undefined || previousDecisionIds.has(decision.id)
+          ? []
+          : [decision.id],
+      ),
+    ),
+  );
+
+  return records.filter((record) =>
+    record.targetItemId !== null
+      ? newItemIds.has(record.targetItemId)
+      : record.targetDecisionId !== null &&
+        newDecisionIds.has(record.targetDecisionId),
+  );
 }
 
 async function lockAndReadTargetSections(
@@ -159,6 +227,19 @@ async function lockAndReadTargetSections(
     FOR UPDATE`;
   if (lockedRows.length === 0) return [];
 
+  return readTargetSections(
+    tx,
+    targetReportId,
+    lockedRows.map((row) => row.id),
+  );
+}
+
+async function readTargetSections(
+  tx: Prisma.TransactionClient,
+  targetReportId: string,
+  targetSectionIds: readonly string[],
+): Promise<ReportSectionReadModel[]> {
+  if (targetSectionIds.length === 0) return [];
   const rows = await tx.reportSection.findMany({
     where: {
       reportId: targetReportId,
@@ -170,8 +251,8 @@ async function lockAndReadTargetSections(
   const byId = new Map(
     rows.map((row) => [row.id, mapPrismaToReportSection(row)]),
   );
-  return lockedRows.flatMap((row) => {
-    const section = byId.get(row.id);
+  return targetSectionIds.flatMap((sectionId) => {
+    const section = byId.get(sectionId);
     return section === undefined ? [] : [section];
   });
 }
@@ -197,8 +278,7 @@ async function createNewExecution(
   tx: Prisma.TransactionClient,
   execution: CarryOverExecution,
   records: CarryOverRecord[],
-  targetSection: ReportSectionReadModel,
-): Promise<CarryOverResult> {
+): Promise<void> {
   await tx.carryOverExecution.create({
     data: {
       id: execution.id,
@@ -222,6 +302,4 @@ async function createNewExecution(
       })),
     });
   }
-
-  return { execution, records, targetSection };
 }

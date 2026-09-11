@@ -3,6 +3,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import type { INestApplication } from "@nestjs/common";
 
 import type { AppLogger } from "../lib/logger.js";
+import type { ShutdownCoordinator } from "./shutdown-coordinator.js";
 
 export interface ApiShutdownDependencies {
   readonly app: Pick<INestApplication, "close">;
@@ -62,7 +63,7 @@ const attempt = async (
   }
 };
 
-const runShutdownSequence = async (
+export const shutdownApi = async (
   dependencies: ApiShutdownDependencies,
 ): Promise<void> => {
   const closeFailures = await attempt([], "app close", CLOSE_TIMEOUT_MS, () =>
@@ -105,30 +106,8 @@ const runShutdownSequence = async (
     throw new AggregateError(failures, "API shutdown telemetry drain failed");
 };
 
-export const shutdownApi = async (
-  dependencies: ApiShutdownDependencies,
-): Promise<void> => {
-  await runShutdownSequence(dependencies);
-};
-
-export const registerApiShutdown = (
-  dependencies: ApiShutdownDependencies,
-  exit: (code: number) => never = (code) => process.exit(code),
-): void => {
-  const state: { promise: Promise<void> | null } = { promise: null };
-  const shutdown = (): void => {
-    if (state.promise) return;
-    state.promise = shutdownApi(dependencies);
-    void state.promise.then(
-      () => exit(0),
-      (error: unknown) => {
-        process.stderr.write(
-          `[shutdown] ${error instanceof Error ? error.message : "unknown failure"}\n`,
-        );
-        exit(1);
-      },
-    );
-  };
-  process.once("SIGTERM", shutdown);
-  process.once("SIGINT", shutdown);
+export const registerApiShutdown = (coordinator: ShutdownCoordinator): void => {
+  const shutdown = (): void => coordinator.request("signal");
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
 };

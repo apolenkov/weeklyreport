@@ -134,7 +134,7 @@ export async function readPeriodById(
   weekLabel: string | null;
   periodState: PeriodState;
 } | null> {
-  const row = await prisma.report.findUnique({
+  return prisma.report.findUnique({
     where: { id: periodId },
     select: {
       id: true,
@@ -145,15 +145,6 @@ export async function readPeriodById(
       periodState: true,
     },
   });
-  if (!row) return null;
-  return {
-    id: row.id,
-    periodStart: row.periodStart,
-    periodEnd: row.periodEnd,
-    deadline: row.deadline,
-    weekLabel: row.weekLabel,
-    periodState: row.periodState,
-  };
 }
 
 // Delete only while the same database operation proves that the report is a
@@ -191,7 +182,7 @@ export async function deleteReport(
       current.archived
     ) {
       throw new AdminAccessError(
-        "Cannot delete a published or archived period. Reopen it first if needed.",
+        "Only an open, unarchived draft period can be deleted.",
       );
     }
 
@@ -227,7 +218,7 @@ export async function deleteReport(
     // The row was locked and classified above. A zero-row result here means a
     // lifecycle writer violated the guarded contract; fail closed.
     throw new AdminAccessError(
-      "Cannot delete a published or archived period. Reopen it first if needed.",
+      "Only an open, unarchived draft period can be deleted.",
     );
   });
 }

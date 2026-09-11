@@ -36,6 +36,22 @@ describe("periodStatusSchema", () => {
 });
 
 describe("periodStateSchema", () => {
+  const validReportPeriod = {
+    id: randomUUID(),
+    periodStart: "2026-05-11",
+    periodEnd: "2026-05-17",
+    deadline: "2026-05-15",
+    status: "draft" as const,
+    periodState: "open" as const,
+    periodStatus: "open" as const,
+    archived: false,
+    autoPublished: false,
+    autoArchived: false,
+    publishedAt: null,
+    publishedById: null,
+    reopenedAt: null,
+  };
+
   it('accepts "scheduled"', () => {
     expect(periodStateSchema.safeParse("scheduled").success).toBe(true);
   });
@@ -65,32 +81,20 @@ describe("periodStateSchema", () => {
   });
 
   it("reportPeriodSchema: periodState is required", () => {
-    const parsed = reportPeriodSchema.safeParse({
-      id: randomUUID(),
-      periodStart: "2026-05-11",
-      periodEnd: "2026-05-17",
-      deadline: "2026-05-15",
-      status: "draft",
-    });
-    expect(parsed.success).toBe(false);
+    expect(reportPeriodSchema.safeParse(validReportPeriod).success).toBe(true);
+    const { periodState: _periodState, ...withoutPeriodState } =
+      validReportPeriod;
+    const result = reportPeriodSchema.safeParse(withoutPeriodState);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toContainEqual(
+        expect.objectContaining({ path: ["periodState"] }),
+      );
+    }
   });
 
   it("reportPeriodSchema: periodState carries through when supplied", () => {
-    const parsed = reportPeriodSchema.parse({
-      id: randomUUID(),
-      periodStart: "2026-05-11",
-      periodEnd: "2026-05-17",
-      deadline: "2026-05-15",
-      status: "draft",
-      periodState: "open",
-      periodStatus: "open",
-      archived: false,
-      autoPublished: false,
-      autoArchived: false,
-      publishedAt: null,
-      publishedById: null,
-      reopenedAt: null,
-    });
+    const parsed = reportPeriodSchema.parse(validReportPeriod);
     expect(parsed.periodState).toBe("open");
   });
 

@@ -249,4 +249,151 @@ describe("PolicyApplicatorService (integration)", () => {
     });
     expect(rules).toHaveLength(1);
   });
+
+  it("repairs a committed period once when concurrent recovery observes a missing rule", async () => {
+    const deadline = new Date("2099-06-01T18:00:00.000Z");
+    const expectedFireAt = new Date("2099-05-31T18:00:00.000Z");
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: {
+        deadline,
+        periodState: "open",
+        status: "draft",
+        periodStatus: "open",
+        archived: false,
+        autoPublished: false,
+        autoArchived: false,
+        publishedAt: null,
+        publishedById: null,
+        reopenedAt: null,
+      },
+    });
+    await prisma.reminderPolicy.create({
+      data: {
+        id: policyDeadlineId,
+        kind: "deadline",
+        offsetMinutes: -1440,
+        timezone: "Europe/Moscow",
+        audience: "LEAD_WITH_DRAFT",
+        active: true,
+        validFrom: new Date("2098-01-01T00:00:00.000Z"),
+        validUntil: null,
+      },
+    });
+    await expect(
+      prisma.reminderRule.count({
+        where: { reportId: testData.report.id, policyId: policyDeadlineId },
+      }),
+    ).resolves.toBe(0);
+
+    const concurrent = await Promise.all([
+      applicator.repairToPeriod(testData.report.id),
+      applicator.repairToPeriod(testData.report.id),
+    ]);
+    const aggregate = concurrent.reduce(
+      (total, result) => ({
+        created: total.created + result.created,
+        updated: total.updated + result.updated,
+        skipped: total.skipped + result.skipped,
+      }),
+      { created: 0, updated: 0, skipped: 0 },
+    );
+    expect(aggregate).toEqual({ created: 1, updated: 0, skipped: 1 });
+
+    const repairedRules = await prisma.reminderRule.findMany({
+      where: { reportId: testData.report.id, policyId: policyDeadlineId },
+    });
+    expect(repairedRules).toHaveLength(1);
+    expect(repairedRules[0]).toMatchObject({
+      deadline,
+      fireAt: expectedFireAt,
+      kind: "deadline",
+      status: "active",
+      timezone: "Europe/Moscow",
+      version: 1,
+    });
+
+    const repairedRule = repairedRules[0];
+    if (!repairedRule) throw new Error("expected one repaired rule");
+    await expect(
+      applicator.repairToPeriod(testData.report.id),
+    ).resolves.toEqual({ created: 0, updated: 0, skipped: 1 });
+    await expect(
+      prisma.reminderRule.findUniqueOrThrow({
+        where: { id: repairedRule.id },
+      }),
+    ).resolves.toEqual(repairedRule);
+  });
+
+  it("preserves a restored paused rule and its execution history during repair", async () => {
+    const deadline = new Date("2099-06-01T18:00:00.000Z");
+    const restoredRuleId = "b3333333-3333-4333-8333-333333333333";
+    const restoredExecutionId = "b4444444-4444-4444-8444-444444444444";
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: {
+        deadline,
+        periodState: "open",
+        status: "draft",
+        periodStatus: "open",
+        archived: false,
+      },
+    });
+    await prisma.reminderPolicy.create({
+      data: {
+        id: policyDeadlineId,
+        kind: "deadline",
+        offsetMinutes: -1440,
+        timezone: "Europe/Moscow",
+        audience: "LEAD_WITH_DRAFT",
+        active: true,
+        validFrom: new Date("2098-01-01T00:00:00.000Z"),
+        validUntil: null,
+      },
+    });
+    await prisma.reminderRule.create({
+      data: {
+        id: restoredRuleId,
+        reportId: testData.report.id,
+        policyId: policyDeadlineId,
+        kind: "deadline",
+        fireAt: new Date("2098-05-31T18:00:00.000Z"),
+        deadline: new Date("2098-06-01T18:00:00.000Z"),
+        timezone: "Europe/Moscow",
+        status: "paused",
+        version: 1,
+      },
+    });
+    await prisma.reminderExecution.create({
+      data: {
+        id: restoredExecutionId,
+        ruleId: restoredRuleId,
+        recipientEmail: "restored-lead@test.local",
+        dedupeKey: `${restoredRuleId}:deadline:2098-06-01:restored-lead@test.local`,
+        status: "sent",
+        sentAt: new Date("2098-05-31T18:01:00.000Z"),
+        error: null,
+        queuePayload: { contractVersion: 1, source: "restored-fixture" },
+      },
+    });
+    const before = await prisma.reminderRule.findUniqueOrThrow({
+      where: { id: restoredRuleId },
+      include: { executions: true },
+    });
+
+    await expect(
+      applicator.repairToPeriod(testData.report.id),
+    ).resolves.toEqual({ created: 0, updated: 0, skipped: 1 });
+    await expect(
+      prisma.reminderRule.findUniqueOrThrow({
+        where: { id: restoredRuleId },
+        include: { executions: true },
+      }),
+    ).resolves.toEqual(before);
+    await expect(
+      prisma.reminderRule.count({
+        where: { reportId: testData.report.id, policyId: policyDeadlineId },
+      }),
+    ).resolves.toBe(1);
+  });
 });

@@ -44,8 +44,15 @@ export function createClientLogsHandler(deps: {
       res.sendStatus(NO_CONTENT);
       return;
     }
-    const body = req.body as { entries?: unknown };
-    const rawEntries = Array.isArray(body.entries) ? body.entries : [];
+    const body: unknown = req.body;
+    const rawEntries =
+      body !== null &&
+      typeof body === "object" &&
+      !Array.isArray(body) &&
+      "entries" in body &&
+      Array.isArray(body.entries)
+        ? body.entries
+        : [];
     const entries = rawEntries
       .slice(0, MAX_CLIENT_LOG_BATCH_SIZE)
       .map(parseClientLogEntry)

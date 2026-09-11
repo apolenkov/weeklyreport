@@ -2,7 +2,10 @@ import { reminderPolicySchema } from "@customreport/shared";
 import { z } from "zod";
 
 import type { ReminderAdminService } from "../../../../modules/admin/index.js";
-import { mapDomainError } from "../../trpc.error-mapper.js";
+import {
+  mapDomainError,
+  withDomainErrorMapping,
+} from "../../trpc.error-mapper.js";
 import {
   adminProcedure,
   captureMutationAuditInputMiddleware,
@@ -13,13 +16,9 @@ export interface AdminReminderPoliciesDeps {
 }
 
 function buildListPolicies(deps: AdminReminderPoliciesDeps) {
-  return adminProcedure.query(async () => {
-    try {
-      return await deps.reminderAdminService.listPolicies();
-    } catch (error) {
-      throw mapDomainError(error);
-    }
-  });
+  return adminProcedure.query(() =>
+    withDomainErrorMapping(() => deps.reminderAdminService.listPolicies()),
+  );
 }
 
 // Existence check before upsert so audit action is create vs update.

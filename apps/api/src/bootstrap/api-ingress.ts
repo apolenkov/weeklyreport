@@ -52,8 +52,8 @@ export function mountApiIngress(deps: {
   // against the bound report — no unauthenticated path to the bytes.
   const pdfDir = resolve(env.PDF_OUTPUT_DIR);
   mkdirSync(pdfDir, { recursive: true });
-  // Resolve the cookie name once here from the validated env — the handler
-  // must not re-read process.env per request.
+  // Build the verifier from validated configuration once; use the shared
+  // session cookie name for artifact authentication.
   const pdfAuthController = createAuthController(env);
   expressApp.get(
     PDF_DOWNLOAD_ROUTE,

@@ -12,7 +12,7 @@ const SPAWN_BUDGET_MS = 60_000;
 
 describe("AppModule ESM import", () => {
   it(
-    "loads through the production TypeScript loader without a module cycle",
+    "loads source through the tsx ESM loader without a module cycle",
     () => {
       const result = spawnSync(
         process.execPath,

@@ -13,8 +13,6 @@ import {
   PROD_CRM_DATA,
   PROD_CRM_SALES,
   REPORT_ACTIVE,
-  STAGE_DEV,
-  STAGE_TEST,
 } from "./seed-simple.ids.js";
 import { CONTENT_BY_LEAD } from "./seed-simple.lead-content.js";
 import {
@@ -28,21 +26,9 @@ import {
   plusDaysUTC,
   SUBMIT_DAY_OFFSET,
 } from "./seed-simple.period.js";
+import { DEMO_STAGE_ASSIGNMENTS } from "./seed-simple.stages.js";
 
-// Every Item / Risk / Decision carries a stage label so the UI has an explicit
-// stage for each record. Vasily rotates across his 7-stage CRM ownership to
-// exercise per-stage scoping; every other lead sits on "Development", matching
-// the seeded Stage.name and their single StageAssignment.
-const SEED_STAGE_ROTATION = [
-  "Development",
-  "Testing",
-  "Design",
-  "DevOps",
-  "Planning",
-];
-
-// Next-week rows start further along the rotation than current-week rows so a
-// lead's two lists do not land on the same stage label.
+// Offset the next-week rotation within the author's available assignments.
 const NEXT_ITEM_ROTATION_SHIFT = 100;
 const HEX_RADIX = 16;
 const SEQUENCE_HEX_WIDTH = 3;
@@ -71,10 +57,30 @@ export function deterministicSeedRecordId(
   return `${SEED_UUID_PREFIX}000000${SEED_RECORD_KIND[kind]}${lead}${sequence}`;
 }
 
-const stageFor = (leadId: string, idx: number) =>
-  leadId === LEAD_1
-    ? (SEED_STAGE_ROTATION[idx % SEED_STAGE_ROTATION.length] ?? "Development")
-    : "Development";
+function assignmentsFor(
+  leadId: string,
+  projectId?: string,
+): typeof DEMO_STAGE_ASSIGNMENTS {
+  return DEMO_STAGE_ASSIGNMENTS.filter(
+    (assignment) =>
+      assignment.userId === leadId &&
+      (projectId === undefined || assignment.projectId === projectId),
+  );
+}
+
+function requireAssignment(
+  leadId: string,
+  preferredProjectId: string,
+  index: number,
+): (typeof DEMO_STAGE_ASSIGNMENTS)[number] {
+  const preferred = assignmentsFor(leadId, preferredProjectId);
+  const candidates = preferred.length > 0 ? preferred : assignmentsFor(leadId);
+  const assignment = candidates[index % candidates.length];
+  if (assignment === undefined) {
+    throw new Error(`No demo stage assignment found for lead ${leadId}.`);
+  }
+  return assignment;
+}
 
 // Vasily uses his own extra products as secondaries so his items and statuses
 // reference PROD_CRM_SALES / PROD_CRM_DATA rather than another lead's product.
@@ -83,8 +89,8 @@ const secondaryProductsFor = (lead: LeadCfg): readonly string[] =>
     ? [PROD_CRM_SALES, PROD_CRM_DATA]
     : ALL_PRODUCT_IDS.filter((p) => p !== lead.productId).slice(0, 2);
 
-// Vasily's section shows a ProjectStatus for all 4 of his products; everyone
-// else gets their primary product plus two secondaries.
+// Vasily's section covers his primary product and three auxiliary products;
+// everyone else gets their primary product plus two secondaries.
 const statusProductsFor = (
   lead: LeadCfg,
   secondary: readonly string[],
@@ -115,18 +121,25 @@ async function seedProjectStatuses(
   }
 }
 
-// Vasily owns Dev+Test on PROD_CRM; Plan/Analysis/Design belong to Boris, so
-// no StageStatus rows are seeded for those here.
+// Keep Vasily's two populated status examples and one for every other lead;
+// every row is selected from the same catalogue written as StageAssignment.
 async function seedStageStatuses(
   prisma: PrismaClient,
   lead: LeadCfg,
   leadIdx: number,
   sectionId: string,
 ): Promise<void> {
-  const ownedStageIds =
-    lead.id === LEAD_1 ? [STAGE_DEV, STAGE_TEST] : [STAGE_DEV];
+  const ownedAssignments = assignmentsFor(lead.id, lead.productId).slice(
+    0,
+    lead.id === LEAD_1 ? 2 : 1,
+  );
+  if (ownedAssignments.length === 0) {
+    throw new Error(
+      `No primary-product demo stage assignment found for lead ${lead.id}.`,
+    );
+  }
   await prisma.stageStatus.createMany({
-    data: ownedStageIds.map((stageId, sIdx) => ({
+    data: ownedAssignments.map(({ stageId }, sIdx) => ({
       id: `a0000000-0000-4000-8000-0000000f0${leadIdx + 1}1${sIdx + 1}`,
       reportSectionId: sectionId,
       projectId: lead.productId,
@@ -144,43 +157,61 @@ function buildItemRows(
   secondary: readonly string[],
 ) {
   return [
-    ...content.currentItems.map((it, idx) => ({
-      id: `a0000000-0000-4000-8000-00000005${leadIdx + 1}00${idx + 1}`,
-      stableId: deterministicSeedRecordId("item", leadIdx, idx + 1),
-      reportSectionId: sectionId,
-      type: ItemType.current,
-      projectId:
+    ...content.currentItems.map((it, idx) => {
+      const preferredProjectId =
         idx === 0
           ? lead.productId
-          : (secondary[(idx - 1) % secondary.length] ?? lead.productId),
-      text: it.text,
-      tag: it.tag,
-      workflowStatus: it.status,
-      pausedReason: it.pausedReason ?? null,
-      carriedOver: it.carriedOver ?? false,
-      stageNames: [stageFor(lead.id, idx)],
-      priorityRank: idx < content.priorities.length ? idx + 1 : null,
-    })),
-    ...content.nextItems.map((it, idx) => ({
-      id: `a0000000-0000-4000-8000-00000005${leadIdx + 1}01${idx + 1}`,
-      stableId: deterministicSeedRecordId(
-        "item",
-        leadIdx,
-        content.currentItems.length + idx + 1,
-      ),
-      reportSectionId: sectionId,
-      type: ItemType.next,
-      projectId:
+          : (secondary[(idx - 1) % secondary.length] ?? lead.productId);
+      const assignment = requireAssignment(lead.id, preferredProjectId, idx);
+      const stageNames =
+        lead.id === LEAD_1 && idx === 0
+          ? assignmentsFor(lead.id, assignment.projectId).map(
+              (ownedAssignment) => ownedAssignment.stageName,
+            )
+          : [assignment.stageName];
+      return {
+        id: `a0000000-0000-4000-8000-00000005${leadIdx + 1}00${idx + 1}`,
+        stableId: deterministicSeedRecordId("item", leadIdx, idx + 1),
+        reportSectionId: sectionId,
+        type: ItemType.current,
+        projectId: assignment.projectId,
+        text: it.text,
+        tag: it.tag,
+        workflowStatus: it.status,
+        pausedReason: it.pausedReason ?? null,
+        carriedOver: it.carriedOver ?? false,
+        stageNames,
+        priorityRank: idx < content.priorities.length ? idx + 1 : null,
+      };
+    }),
+    ...content.nextItems.map((it, idx) => {
+      const preferredProjectId =
         idx === 0
           ? lead.productId
-          : (secondary[idx % secondary.length] ?? lead.productId),
-      text: it.text,
-      tag: it.tag,
-      // The per-type CHECK constraint allows only planned or postponed here.
-      workflowStatus: it.status ?? ItemWorkflowStatus.planned,
-      carriedOver: false,
-      stageNames: [stageFor(lead.id, idx + NEXT_ITEM_ROTATION_SHIFT)],
-    })),
+          : (secondary[idx % secondary.length] ?? lead.productId);
+      const assignment = requireAssignment(
+        lead.id,
+        preferredProjectId,
+        idx + NEXT_ITEM_ROTATION_SHIFT,
+      );
+      return {
+        id: `a0000000-0000-4000-8000-00000005${leadIdx + 1}01${idx + 1}`,
+        stableId: deterministicSeedRecordId(
+          "item",
+          leadIdx,
+          content.currentItems.length + idx + 1,
+        ),
+        reportSectionId: sectionId,
+        type: ItemType.next,
+        projectId: assignment.projectId,
+        text: it.text,
+        tag: it.tag,
+        // The per-type CHECK constraint allows only planned or postponed here.
+        workflowStatus: it.status ?? ItemWorkflowStatus.planned,
+        carriedOver: false,
+        stageNames: [assignment.stageName],
+      };
+    }),
   ];
 }
 
@@ -192,32 +223,36 @@ async function seedRiskAndDecisions(
   sectionId: string,
 ): Promise<void> {
   if (content.risk) {
+    const assignment = requireAssignment(lead.id, lead.productId, 0);
     await prisma.risk.create({
       data: {
         id: `a0000000-0000-4000-8000-00000000090${leadIdx + 1}`,
         stableId: deterministicSeedRecordId("risk", leadIdx, 1),
         reportSectionId: sectionId,
-        projectId: lead.productId,
+        projectId: assignment.projectId,
         risk: content.risk.risk,
         impact: content.risk.impact,
         mitigation: content.risk.mitigation,
         severity: content.risk.severity,
-        stageNames: [stageFor(lead.id, 0)],
+        stageNames: [assignment.stageName],
       },
     });
   }
   await prisma.decision.createMany({
-    data: content.decisions.map((d, dIdx) => ({
-      id: `a0000000-0000-4000-8000-0000000007${dIdx}${leadIdx + 1}`,
-      stableId: deterministicSeedRecordId("decision", leadIdx, dIdx + 1),
-      reportSectionId: sectionId,
-      productId: lead.productId,
-      text: d.text,
-      owner: lead.name,
-      impact: d.impact,
-      deadline: d.deadline ?? null,
-      stageNames: [stageFor(lead.id, dIdx)],
-    })),
+    data: content.decisions.map((d, dIdx) => {
+      const assignment = requireAssignment(lead.id, lead.productId, dIdx);
+      return {
+        id: `a0000000-0000-4000-8000-0000000007${dIdx}${leadIdx + 1}`,
+        stableId: deterministicSeedRecordId("decision", leadIdx, dIdx + 1),
+        reportSectionId: sectionId,
+        productId: assignment.projectId,
+        text: d.text,
+        owner: lead.name,
+        impact: d.impact,
+        deadline: d.deadline ?? null,
+        stageNames: [assignment.stageName],
+      };
+    }),
   });
 }
 

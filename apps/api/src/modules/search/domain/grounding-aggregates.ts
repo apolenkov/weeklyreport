@@ -39,15 +39,8 @@ const countBy = (
   candidates: readonly SearchCandidate[],
   keyOf: (candidate: SearchCandidate) => string,
 ): readonly CountGroup[] => {
-  const counts = candidates.reduce<ReadonlyMap<string, number>>(
-    (current, candidate) => {
-      const key = keyOf(candidate);
-      return new Map(current).set(key, (current.get(key) ?? 0) + 1);
-    },
-    new Map<string, number>(),
-  );
-  return [...counts.entries()]
-    .map(([key, count]) => ({ key, count }))
+  return [...Map.groupBy(candidates, keyOf)]
+    .map(([key, entries]) => ({ key, count: entries.length }))
     .sort((left, right) => left.key.localeCompare(right.key, "en"));
 };
 

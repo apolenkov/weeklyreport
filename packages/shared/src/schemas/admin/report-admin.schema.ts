@@ -58,8 +58,8 @@ export const adminUserSchema = z
       .max(MAX_REPORTING_GROUP_NAME_LENGTH)
       .nullable()
       .optional(),
-    // Snapshot rows without an explicit lifecycle flag remain active.
-    isActive: z.boolean().default(true),
+    // Restore must preserve the durable lifecycle flag carried by the snapshot.
+    isActive: z.boolean(),
   })
   .readonly();
 

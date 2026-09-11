@@ -18,9 +18,8 @@ import { upsertItem } from "./seed-advanced.rows.js";
 
 const OLGA_DEVOPS_ITEM_SEQ = 6;
 
-// The primary lead's statuses on Olga's Payment gateway are what render as
-// locked cross-author chips in her view: Support red -> blocked, Planning
-// yellow -> at-risk.
+// The primary lead's stored traffic-light values feed Olga's read-only
+// cross-author stage chips; risk-derived alarms are seeded separately.
 const LOCKED_CHIP_STATUSES = [
   {
     id: "a0000000-0000-4000-8000-00000000f901",

@@ -2,6 +2,9 @@ import { z } from "zod";
 
 import { safeText } from "../primitives/report-primitives.schema";
 
+/** Maximum length accepted for a review comment. */
+export const REVIEW_COMMENT_MAX_LENGTH = 2000;
+
 /** Section verdict; requesting changes returns a submitted section to draft. */
 export const reviewVerdictSchema = z.enum(["approved", "changes_requested"]);
 
@@ -50,7 +53,7 @@ export const reviewCommentInputSchema = z
     itemId: z.uuid().optional(),
     riskId: z.uuid().optional(),
     decisionId: z.uuid().optional(),
-    text: safeText({ max: 2000 }),
+    text: safeText({ max: REVIEW_COMMENT_MAX_LENGTH }),
   })
   .superRefine((value, ctx) => {
     const anchors = [value.itemId, value.riskId, value.decisionId].filter(

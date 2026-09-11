@@ -1,18 +1,18 @@
 import { z } from "zod";
 
-/** Public shared schema or contract constant for a i  p r o v i d e r  t e s t  c h e c k  l i m i t. */
+/** Maximum capability checks retained for one provider test execution. */
 export const AI_PROVIDER_TEST_CHECK_LIMIT = 32;
-/** Public shared schema or contract constant for a i  p r o v i d e r  t e s t  f a i l u r e  c o d e  l i m i t. */
+/** Maximum length of bounded provider test check and failure codes. */
 export const AI_PROVIDER_TEST_FAILURE_CODE_LIMIT = 80;
 
-/** Public shared schema or contract constant for ai provider test execution state schema. */
+/** Durable processing states for a provider test execution. */
 export const aiProviderTestExecutionStateSchema = z.enum([
   "queued",
   "running",
   "completed",
 ]);
 
-/** Public shared schema or contract constant for ai provider test outcome schema. */
+/** Safe terminal outcomes exposed for a provider test. */
 export const aiProviderTestOutcomeSchema = z.enum([
   "passed",
   "incompatible",
@@ -20,14 +20,14 @@ export const aiProviderTestOutcomeSchema = z.enum([
   "inconclusive",
 ]);
 
-/** Public shared schema or contract constant for ai provider test check outcome schema. */
+/** Safe outcomes recorded for an individual capability check. */
 export const aiProviderTestCheckOutcomeSchema = z.enum([
   "passed",
   "incompatible",
   "inconclusive",
 ]);
 
-/** Public shared schema or contract constant for ai provider test check schema. */
+/** Bounded result counters for one provider capability check. */
 export const aiProviderTestCheckSchema = z
   .object({
     code: z.string().trim().min(1).max(AI_PROVIDER_TEST_FAILURE_CODE_LIMIT),
@@ -37,7 +37,7 @@ export const aiProviderTestCheckSchema = z
   })
   .strict();
 
-/** Public shared schema or contract constant for ai provider test execution read schema. */
+/** Safe read model for provider test progress and results. */
 export const aiProviderTestExecutionReadSchema = z
   .object({
     id: z.uuid(),
@@ -59,7 +59,7 @@ export const aiProviderTestExecutionReadSchema = z
   })
   .strict();
 
-/** Public shared type contract for ai provider test execution read. */
+/** Provider test execution returned to administrator clients. */
 export type AiProviderTestExecutionRead = z.infer<
   typeof aiProviderTestExecutionReadSchema
 >;

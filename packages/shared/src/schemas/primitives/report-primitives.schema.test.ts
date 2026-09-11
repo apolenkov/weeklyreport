@@ -2,14 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { reportDate } from "./report-primitives.schema";
 
-/**
- * risk-stage-integrity element validation: the strict write field must enforce
- * the "a row carries at least one concrete SDLC stage" intent at the ELEMENT
- * level, not only at the array-length level. `.min(1)` on the array still admits
- * `[""]`, a whitespace-only `[" "]`, a zero-width-only element, or a null-byte
- * element; each defeats the require-a-real-stage intent and a null byte reaches
- * the Postgres write. The element predicates close all four gaps.
- */
+/** Verifies that report dates are evaluated by their UTC calendar year. */
 describe("reportDate — UTC calendar-year semantics", () => {
   it("accepts a date in the year 2000 onward (UTC)", () => {
     expect(reportDate().safeParse("2000-01-01T00:00:00.000Z").success).toBe(

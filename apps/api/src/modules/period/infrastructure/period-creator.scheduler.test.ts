@@ -122,12 +122,7 @@ function makePrismaStub(opts: {
   };
 }
 
-// Cast to never via Nest DI seam — the scheduler types its constructor on
-// PrismaService + settings service; tests pass a minimal shape with only the
-// methods exercised.
-// Pass a partial stub where the real service is expected: `never` erases the
-// contract, so cast through `unknown` to the constructor's parameter type —
-// a signature change in the real class becomes a compile error here.
+// Partial DI stubs supply only the methods exercised by these tests.
 const asStub = <T>(value: unknown, _target?: T): T => value as T;
 
 function createScheduler(
@@ -766,7 +761,7 @@ describe("flipDueScheduledToOpen", () => {
     });
   });
 
-  it("re-throws a non-P2002 error (the tick aborts rather than silently swallowing)", async () => {
+  it("re-throws an unrelated error and aborts the tick", async () => {
     const report: FlipReportStub = {
       findMany: vi.fn().mockResolvedValue([
         {

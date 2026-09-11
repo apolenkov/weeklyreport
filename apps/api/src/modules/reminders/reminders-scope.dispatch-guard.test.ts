@@ -1,6 +1,10 @@
-import type { UserSession } from "@customreport/shared";
+import {
+  adminReminderExecutionSchema,
+  type UserSession,
+} from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
+import { createNullLogger } from "../../lib/logger.js";
 import type { OrganizationService } from "../organization/organization.service.js";
 import { unusedRemindersRepositoryStubs } from "./__tests__/reminders-scope.repository-stub.js";
 import { RemindersService } from "./reminders.service.js";
@@ -65,7 +69,12 @@ describe("RemindersScopeService.dispatchPendingReminders — no-matching-section
 
     // No `reason` key at all: "no-matching-section" belongs to a lead-targeted
     // Remind, and "everyone already submitted" is not a failed dispatch.
-    expect(result).toEqual({ dispatched: 0, alreadySent: 0, skipped: 0 });
+    expect(result).toEqual({
+      queued: 0,
+      alreadyRequested: 0,
+      failed: 0,
+      skipped: 0,
+    });
   });
 
   it("the same empty draft set targeted at one lead reports no-matching-section", async () => {
@@ -77,8 +86,9 @@ describe("RemindersScopeService.dispatchPendingReminders — no-matching-section
     );
 
     expect(result).toEqual({
-      dispatched: 0,
-      alreadySent: 0,
+      queued: 0,
+      alreadyRequested: 0,
+      failed: 0,
       skipped: 0,
       reason: "no-matching-section",
     });
@@ -102,8 +112,24 @@ describe("RemindersScopeService.dispatchPendingReminders — no-matching-section
         }),
       findDraftSectionsForDispatch: () => Promise.resolve(sections),
     } satisfies RemindersRepository;
-    const service = new RemindersScopeService(repository, () =>
-      Promise.resolve({ execution: null, outcome: "created" }),
+    const service = new RemindersScopeService(
+      repository,
+      () =>
+        Promise.resolve({
+          execution: adminReminderExecutionSchema.parse({
+            id: SECTION_ID,
+            ruleId: RULE_ID,
+            reportId: REPORT_ID,
+            dedupeKey: "fixture",
+            status: "queued",
+            scheduledFor: new Date("2026-04-12T09:00:00.000Z"),
+            sentAt: null,
+            recipientEmail: "lead@test.local",
+            errorMessage: null,
+          }),
+          outcome: "created",
+        }),
+      createNullLogger(),
     );
 
     // The dispatch fold keeps memory and work linear in the recipient count.
@@ -113,8 +139,8 @@ describe("RemindersScopeService.dispatchPendingReminders — no-matching-section
       RULE_ID,
     );
 
-    expect(result.dispatched).toBe(COUNT);
-    expect(result.alreadySent).toBe(0);
+    expect(result.queued).toBe(COUNT);
+    expect(result.alreadyRequested).toBe(0);
     expect(result.skipped).toBe(0);
   });
 });

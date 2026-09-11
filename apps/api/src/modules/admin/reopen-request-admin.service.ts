@@ -1,10 +1,13 @@
-import type { UserSession } from "@customreport/shared";
+import type {
+  ReopenRequestCursor,
+  ReopenRequestListInput,
+  UserSession,
+} from "@customreport/shared";
 
 import type { AppLogger } from "../../lib/logger";
 import {
   AdminReopenRequestAlreadyProcessedError,
   type AdminRepository,
-  type ReopenRequestStatusFilter,
 } from "./admin-shared";
 import type { AdminTelemetry } from "./admin-telemetry.port.js";
 import {
@@ -12,9 +15,13 @@ import {
   toReopenRequestListItem,
 } from "./reopen-request/envelope.js";
 
-export interface ListReopenRequestsArgs {
-  readonly status?: ReopenRequestStatusFilter;
+export type ListReopenRequestsArgs = ReopenRequestListInput & {
   readonly session: UserSession;
+};
+
+export interface ReopenRequestListPage {
+  readonly items: ReopenRequestListItem[];
+  readonly nextCursor: ReopenRequestCursor | null;
 }
 
 export interface RespondReopenRequestArgs {
@@ -41,12 +48,17 @@ export class ReopenRequestAdminService {
   // Head sees own group only; admin scope is global.
   async listReopenRequests(
     input: ListReopenRequestsArgs,
-  ): Promise<ReopenRequestListItem[]> {
-    const rows = await this.repository.listReopenRequests({
-      status: input.status ?? "pending",
-      session: input.session,
-    });
-    return rows.map(toReopenRequestListItem);
+  ): Promise<ReopenRequestListPage> {
+    const rows = await this.repository.listReopenRequests(input);
+    const pageRows = rows.slice(0, input.limit);
+    const last = pageRows.at(-1);
+    return {
+      items: pageRows.map(toReopenRequestListItem),
+      nextCursor:
+        rows.length > input.limit && last
+          ? { id: last.id, createdAt: last.createdAt.toISOString() }
+          : null,
+    };
   }
 
   async pendingReopenCount(session: UserSession): Promise<{ count: number }> {

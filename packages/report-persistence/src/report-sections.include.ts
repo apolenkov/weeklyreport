@@ -74,6 +74,9 @@ export const reportSectionFullInclude = {
   sectionReviews: {
     include: { reviewer: { select: { name: true } } },
   },
+  itemOutcomeEvents: {
+    orderBy: [{ occurredAt: "asc" }, { id: "asc" }],
+  },
 } as const satisfies Prisma.ReportSectionInclude;
 
 export type PrismaReportSectionWithRelations = Prisma.ReportSectionGetPayload<{

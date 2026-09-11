@@ -64,14 +64,6 @@ const baseSection: ReportSectionReadModel = {
   reviews: [],
 };
 
-// the read-model item types stageNames as
-// optional, but draft-save/submit payloads require it. Expose a stage-guaranteed
-// copy of the seeded items for the write-path test payloads below.
-const writeItems = baseSection.items.map((it) => ({
-  ...it,
-  stageNames: it.stageNames,
-}));
-
 function validDraftFor(section: ReportSectionReadModel) {
   return {
     reportSectionId: section.reportSectionId,
@@ -85,7 +77,7 @@ function validDraftFor(section: ReportSectionReadModel) {
         status: "green" as const,
       },
     ],
-    items: writeItems,
+    items: baseSection.items,
     risks: [],
     decisions: [],
   };
@@ -164,7 +156,7 @@ describe("ReportSectionsService", () => {
             status: "yellow",
           },
         ],
-        items: writeItems,
+        items: baseSection.items,
         risks: [],
         decisions: [],
       },
@@ -196,7 +188,7 @@ describe("ReportSectionsService", () => {
               status: "yellow",
             },
           ],
-          items: writeItems,
+          items: baseSection.items,
           risks: [],
           decisions: [],
         },
@@ -260,7 +252,7 @@ describe("ReportSectionsService", () => {
               status: "green",
             },
           ],
-          items: writeItems,
+          items: baseSection.items,
           risks: [],
           decisions: [],
         },
@@ -292,7 +284,7 @@ describe("ReportSectionsService", () => {
               status: "green",
             },
           ],
-          items: writeItems,
+          items: baseSection.items,
           risks: [],
           decisions: [],
         },
@@ -321,7 +313,7 @@ describe("ReportSectionsService", () => {
             status: "green",
           },
         ],
-        items: writeItems,
+        items: baseSection.items,
         risks: [],
         decisions: [],
       },
@@ -357,7 +349,7 @@ describe("ReportSectionsService", () => {
                 status: "yellow",
               },
             ],
-            items: writeItems,
+            items: baseSection.items,
             risks: [],
             decisions: [],
           },
@@ -403,7 +395,7 @@ describe("ReportSectionsService", () => {
               status: "green",
             },
           ],
-          items: writeItems,
+          items: baseSection.items,
           risks: [],
           decisions: [],
         },
@@ -414,11 +406,10 @@ describe("ReportSectionsService", () => {
       expect(saved.projects[0]?.trafficLight).toBe("green");
     });
 
-    it("allows editing on a reopened period even while status reads published", async () => {
+    it("allows editing when the write gate reports a reopened period", async () => {
       const repo = createRepository(baseSection);
-      // The reopen transition leaves Report.status at 'published'
-      // while flipping the canonical periodStatus to 'reopened'. The gate must
-      // follow periodStatus regardless of the divergent status value.
+      // The service consumes periodStatus and archived from the write gate;
+      // this fixture supplies the editable reopened combination.
       repo.getReportPeriodWriteGateForSection = () =>
         Promise.resolve({ periodStatus: "reopened", archived: false });
 
@@ -437,7 +428,7 @@ describe("ReportSectionsService", () => {
               status: "green",
             },
           ],
-          items: writeItems,
+          items: baseSection.items,
           risks: [],
           decisions: [],
         },
@@ -472,7 +463,7 @@ describe("ReportSectionsService", () => {
               status: "yellow",
             },
           ],
-          items: writeItems,
+          items: baseSection.items,
           risks: [],
           decisions: [],
         },
@@ -512,7 +503,7 @@ describe("ReportSectionsService", () => {
                 status: "yellow",
               },
             ],
-            items: writeItems,
+            items: baseSection.items,
             risks: [],
             decisions: [],
           },
@@ -548,7 +539,7 @@ describe("ReportSectionsService", () => {
           status: "green" as const,
         },
       ],
-      items: writeItems,
+      items: baseSection.items,
       risks: [],
       decisions: [],
     };
@@ -644,7 +635,7 @@ describe("ReportSectionsService", () => {
               status: "green",
             },
           ],
-          items: writeItems,
+          items: baseSection.items,
           risks: [],
           decisions: [],
         },

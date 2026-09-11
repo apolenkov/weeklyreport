@@ -118,7 +118,7 @@ describe("ReviewService", () => {
     ).toEqual(["draft:Lead 1", "draft:Lead 3", "submitted:Lead 2"]);
   });
 
-  it("rejects non-head access before returning dashboard data", async () => {
+  it("rejects a lead session before returning dashboard data", async () => {
     const service = new ReviewService(createRepository(unsortedRows));
     const caller = buildReviewCaller(service, leadSession);
 
@@ -164,7 +164,7 @@ describe("ReviewService", () => {
   });
 });
 
-// Drive the live review.dashboard procedure so gating hits the wired path.
+// Drive the review.dashboard procedure so gating hits the wired router path.
 function buildReviewCaller(service: ReviewService, session: UserSession) {
   const deps = createStubAppRouterDeps({
     weeklyReportService: {
@@ -183,7 +183,7 @@ function buildReviewCaller(service: ReviewService, session: UserSession) {
   });
 }
 
-describe("review.dashboard (live headProcedure)", () => {
+describe("review.dashboard leadership procedure", () => {
   it("allows a head session to read the active report dashboard", async () => {
     const service = new ReviewService(createRepository(unsortedRows));
     const caller = buildReviewCaller(service, headSession);

@@ -8,6 +8,7 @@ import { lockRestoredReports } from "./admin-snapshot/period-locks.js";
 import { upsertReminderExecutions } from "./admin-snapshot/reminder-execution-restore.js";
 import { lockReminderRestoreGraph } from "./admin-snapshot/reminder-locks.js";
 import {
+  applyPoliciesToNewPeriods,
   reconcileRestoredReminderRuleStatuses,
   upsertReminderPolicies,
   upsertReminderRules,
@@ -687,6 +688,63 @@ describe("reconcileRestoredReminderRuleStatuses — additive restore", () => {
       where: { id: { in: [staleRule.id] }, status: "active" },
       data: { status: "paused" },
     });
+  });
+});
+
+describe("applyPoliciesToNewPeriods — restored policy exclusions", () => {
+  it("deduplicates policies in first-seen order and isolates each report", async () => {
+    const otherReportId = "10000000-0000-4000-8000-000000000018";
+    const firstPolicyId = "10000000-0000-4000-8000-000000000019";
+    const secondPolicyId = "10000000-0000-4000-8000-000000000020";
+    const otherPolicyId = "10000000-0000-4000-8000-000000000021";
+    const reminderRules = [
+      { reportId: REPORT_ID, policyId: secondPolicyId },
+      { reportId: otherReportId, policyId: otherPolicyId },
+      { reportId: REPORT_ID, policyId: firstPolicyId },
+      { reportId: REPORT_ID, policyId: secondPolicyId },
+    ];
+    const calls: (readonly [string, Date, ReadonlySet<string> | undefined])[] =
+      [];
+    const applyToPeriod = vi.fn(
+      (
+        reportId: string,
+        now: Date,
+        excludedPolicyIds: ReadonlySet<string> | undefined,
+      ) => {
+        calls.push([reportId, now, excludedPolicyIds]);
+      },
+    );
+
+    await applyPoliciesToNewPeriods(
+      { applyToPeriod } as never,
+      reminderRules as never,
+      [
+        { id: REPORT_ID, deadline: new Date("2026-04-11T09:00:00.000Z") },
+        {
+          id: otherReportId,
+          deadline: new Date("2026-04-18T09:00:00.000Z"),
+        },
+      ],
+    );
+
+    expect(applyToPeriod).toHaveBeenCalledTimes(2);
+    expect(applyToPeriod).toHaveBeenNthCalledWith(
+      1,
+      REPORT_ID,
+      expect.any(Date),
+      new Set([secondPolicyId, firstPolicyId]),
+    );
+    expect(applyToPeriod).toHaveBeenNthCalledWith(
+      2,
+      otherReportId,
+      expect.any(Date),
+      new Set([otherPolicyId]),
+    );
+    expect(Array.from(calls[0]?.[2] ?? [])).toEqual([
+      secondPolicyId,
+      firstPolicyId,
+    ]);
+    expect(Array.from(calls[1]?.[2] ?? [])).toEqual([otherPolicyId]);
   });
 });
 

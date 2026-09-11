@@ -124,9 +124,9 @@ export function createDevRouter(deps: DevRouterDeps) {
       return users;
     }),
 
-    // Dev-only test affordance (double-gated: dev router mount + AUTH_DEV_MODE
-    // check), not a production capability. Variant is required: a wipe is too
-    // destructive to run on an implicit default an operator did not choose.
+    // Dev-only test affordance guarded by AUTH_DEV_MODE at execution. Variant
+    // is required because a wipe is too destructive to run on an implicit
+    // default an operator did not choose.
     wipeAndReseed: protectedProcedure
       .input(
         z.object({

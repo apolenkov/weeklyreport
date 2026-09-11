@@ -173,7 +173,7 @@ describe("assertPersistableDecisionParents + toDecisionRows", () => {
 });
 
 describe("empty collections yield empty arrays", () => {
-  it("every builder returns [] for an empty section (length>0 guard stays valid)", () => {
+  it("every row builder returns [] for an empty section", () => {
     const s = section({});
     expect(toProjectStatusRows(s, SECTION_ID)).toEqual([]);
     expect(toStageStatusRows(s, SECTION_ID)).toEqual([]);

@@ -21,9 +21,8 @@ vi.mock("../../search/index.js", () => ({
 
 const asAny = (value: unknown): never => value as never;
 
-// Minimal published report — only reportId/publishedAt/publishedById are read
-// (by publishLifecycle); the snapshot helpers are mocked, so the rest of the
-// AssembledReport shape is irrelevant to the compare-and-set under test.
+// Partial report supplies the lifecycle and deadline inputs; graph assembly
+// and serialization are mocked for these repository orchestration tests.
 const autoReport: AssembledReport = asAny({
   reportId: "rep-1",
   deadline: new Date("2026-05-01T00:00:00.000Z"),
@@ -100,8 +99,7 @@ describe("PublicationPrismaRepository.saveAutoPublishedReport", () => {
     expect(updateMany.mock.calls[0]?.[0]).toMatchObject({
       data: { publishedSnapshot: { snapshot: true } },
     });
-    // The snapshot rides a SECOND statement (in-transaction re-read), never the
-    // guarded updateMany — so its bytes reflect the latest committed state.
+    // A separate write replaces the provisional snapshot after the transition.
     expect(update).toHaveBeenCalledOnce();
     const projectionMock = vi.mocked(replacePublishedProjections);
     expect(projectionMock).toHaveBeenCalledOnce();
@@ -135,9 +133,9 @@ describe("PublicationPrismaRepository.saveAutoPublishedReport", () => {
     expect(updateMany).toHaveBeenCalledOnce();
   });
 
-  it("zero-row match → { published: false } and does NOT re-read the row", async () => {
+  it("returns unpublished after a zero-row match without freezing the snapshot", async () => {
     const updateMany = vi.fn().mockResolvedValue({ count: 0 });
-    const findUnique = vi.fn();
+    const findUnique = vi.fn().mockResolvedValue({ id: "rep-1" });
     const findUniqueOrThrow = vi.fn();
     const update = vi.fn();
     const repo = makeRepo({
@@ -150,6 +148,7 @@ describe("PublicationPrismaRepository.saveAutoPublishedReport", () => {
     const result = await repo.saveAutoPublishedReport(autoReport);
 
     expect(result).toEqual({ published: false });
+    expect(updateMany).toHaveBeenCalledOnce();
     expect(findUniqueOrThrow).not.toHaveBeenCalled();
     expect(update).not.toHaveBeenCalled();
     expect(replacePublishedProjections).not.toHaveBeenCalled();

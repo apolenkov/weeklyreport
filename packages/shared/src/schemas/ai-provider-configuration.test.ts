@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  AI_PROVIDER_PROFILE_CAPABILITIES,
   aiProviderAvailabilityReadSchema,
   aiProviderCapabilityTestResultSchema,
   aiProviderConfigurationReadSchema,
@@ -20,6 +21,20 @@ const draft = {
     credential: "secret-value",
   },
   embeddings: { mode: "reuse_generation" as const, model: "embed-1" },
+};
+
+const builtInGeneration = (profile: "jina" | "groq") => {
+  const { baseUrl: _baseUrl, ...generation } = draft.generation;
+  return { ...generation, profile };
+};
+
+const validGroqWithJina = {
+  generation: builtInGeneration("groq"),
+  embeddings: {
+    mode: "separate" as const,
+    profile: "jina" as const,
+    model: "embed-1",
+  },
 };
 
 describe("ai provider contracts", () => {
@@ -63,28 +78,51 @@ describe("ai provider contracts", () => {
   });
 
   it("rejects role-incompatible provider pairs before provider work", () => {
-    expect(
-      aiProviderDraftSchema.safeParse({
-        ...draft,
-        generation: { ...draft.generation, profile: "jina" },
-      }).success,
-    ).toBe(false);
-    expect(
-      aiProviderDraftSchema.safeParse({
-        ...draft,
-        generation: { ...draft.generation, profile: "groq" },
-      }).success,
-    ).toBe(false);
-    expect(
-      aiProviderDraftSchema.safeParse({
-        ...draft,
-        embeddings: {
-          mode: "separate",
-          profile: "groq",
-          model: "embed-1",
+    expect(aiProviderDraftSchema.safeParse(validGroqWithJina).success).toBe(
+      true,
+    );
+    const cases = [
+      {
+        input: {
+          ...validGroqWithJina,
+          generation: {
+            ...validGroqWithJina.generation,
+            profile: "jina" as const,
+          },
         },
-      }).success,
-    ).toBe(false);
+        path: ["generation", "profile"],
+      },
+      {
+        input: {
+          ...validGroqWithJina,
+          embeddings: {
+            ...validGroqWithJina.embeddings,
+            profile: "groq" as const,
+          },
+        },
+        path: ["embeddings", "profile"],
+      },
+      {
+        input: {
+          ...validGroqWithJina,
+          embeddings: {
+            mode: "reuse_generation" as const,
+            model: validGroqWithJina.embeddings.model,
+          },
+        },
+        path: ["embeddings", "mode"],
+      },
+    ];
+
+    cases.forEach(({ input, path }) => {
+      const result = aiProviderDraftSchema.safeParse(input);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues).toContainEqual(
+          expect.objectContaining({ path }),
+        );
+      }
+    });
   });
 
   it("accepts only the explicit discard result", () => {
@@ -337,11 +375,33 @@ describe("ai provider contracts", () => {
   });
 
   it("requires an explicit revision collection on the admin control read", () => {
+    const baseline = {
+      enabled: false,
+      availability: "not_configured" as const,
+      activeRevisionId: null,
+      profileCapabilities: AI_PROVIDER_PROFILE_CAPABILITIES,
+      active: null,
+      revisions: [],
+    };
+    expect(aiProviderControlReadSchema.safeParse(baseline).success).toBe(true);
+
+    const { revisions: _revisions, ...withoutRevisions } = baseline;
+    const result = aiProviderControlReadSchema.safeParse(withoutRevisions);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toContainEqual(
+        expect.objectContaining({ path: ["revisions"] }),
+      );
+    }
+  });
+
+  it("rejects unknown fields on the admin control read", () => {
     expect(
       aiProviderControlReadSchema.safeParse({
         enabled: false,
         availability: "not_configured",
         activeRevisionId: null,
+        profileCapabilities: AI_PROVIDER_PROFILE_CAPABILITIES,
         active: null,
         revisions: [],
         unexpected: true,

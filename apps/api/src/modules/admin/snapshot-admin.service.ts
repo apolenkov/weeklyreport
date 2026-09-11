@@ -35,8 +35,8 @@ export class SnapshotAdminService {
 
   async upsertUser(user: AdminUser): Promise<AdminSnapshot> {
     const parsedUser = adminUserSchema.parse(user);
-    this.logger.info("upserted user", { userId: parsedUser.id });
     await this.repository.upsertUser(parsedUser);
+    this.logger.info("upserted user", { userId: parsedUser.id });
     return this.getSnapshot();
   }
 

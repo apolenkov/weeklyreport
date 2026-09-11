@@ -4,9 +4,11 @@ import type { Prisma } from "@prisma/client";
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { groupScopeFilter } from "../../lib/group-scope.js";
 import { lockCurrentEditableReport } from "../../lib/report-lifecycle.js";
+import { lockUser } from "../../lib/user-activity-assignment.js";
 import { PeriodLifecycleIntegrityError } from "../period/index.js";
 import { LeadFormConstraintError } from "../report-sections/index.js";
 import {
+  AdminAccessError,
   AdminReopenRequestNotFoundError,
   type DecideReopenRequestInput,
   type ListReopenRequestsInput,
@@ -15,9 +17,7 @@ import {
 } from "./admin-shared.js";
 
 // Group-scoped list/count + race-safe decide for reopen requests.
-
-// Soft cap: list is newest-first; UI shows a page, not the full history.
-const REOPEN_REQUEST_LIST_CAP = 100;
+const REQUEST_NOT_FOUND = "Reopen request not found.";
 
 // Scope is ReportSectionWhereInput, so it nests under reportSection.
 export async function listReopenRequests(
@@ -26,10 +26,53 @@ export async function listReopenRequests(
 ): Promise<ReopenRequestRow[]> {
   const statusFilter = input.status === "all" ? {} : { status: input.status };
   const scope = groupScopeFilter(input.session, "reportSection");
+  const cursorFilter: Prisma.ReopenRequestWhereInput | undefined = input.cursor
+    ? {
+        OR: [
+          { createdAt: { lt: new Date(input.cursor.createdAt) } },
+          {
+            createdAt: new Date(input.cursor.createdAt),
+            id: { lt: input.cursor.id },
+          },
+        ],
+      }
+    : undefined;
+  const searchFilter: Prisma.ReopenRequestWhereInput | undefined = input.search
+    ? {
+        OR: [
+          {
+            requestedBy: {
+              name: { contains: input.search, mode: "insensitive" },
+            },
+          },
+          {
+            requestedBy: {
+              email: { contains: input.search, mode: "insensitive" },
+            },
+          },
+          {
+            reportSection: {
+              report: {
+                weekLabel: { contains: input.search, mode: "insensitive" },
+              },
+            },
+          },
+          { reason: { contains: input.search, mode: "insensitive" } },
+          { reviewNote: { contains: input.search, mode: "insensitive" } },
+        ],
+      }
+    : undefined;
+  const additionalFilters = [cursorFilter, searchFilter].filter(
+    (filter): filter is Prisma.ReopenRequestWhereInput => filter !== undefined,
+  );
   const rows = await prisma.reopenRequest.findMany({
-    where: { ...statusFilter, reportSection: scope },
-    orderBy: { createdAt: "desc" },
-    take: REOPEN_REQUEST_LIST_CAP,
+    where: {
+      ...statusFilter,
+      reportSection: scope,
+      ...(additionalFilters.length > 0 ? { AND: additionalFilters } : {}),
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: input.limit + 1,
     include: {
       requestedBy: { select: { id: true, name: true, email: true } },
       reviewedBy: { select: { id: true, name: true, email: true } },
@@ -145,9 +188,9 @@ async function applyDecision(
   return applyApproval(tx, req, input);
 }
 
-// Re-loading the scoped request row INSIDE the same transaction as the decision
-// closes the TOCTOU window: a group-scope change between read and write cannot
-// let an out-of-scope decision through.
+// User locks exclude actor/author reassignment until the decision commits.
+// Keep the shared User -> Report order, then re-read current entitlement.
+// Contract: openspec/specs/reopen-requests/spec.md (current group scope).
 export async function decideReopenRequest(
   prisma: PrismaService,
   input: DecideReopenRequestInput,
@@ -156,10 +199,22 @@ export async function decideReopenRequest(
   return prisma.$transaction(async (tx) => {
     const req = await tx.reopenRequest.findFirst({
       where: { id: input.id, reportSection: scope },
-      select: { id: true, reportSectionId: true },
+      select: {
+        id: true,
+        reportSectionId: true,
+        reportSection: { select: { authorId: true } },
+      },
     });
     if (!req) {
-      throw new AdminReopenRequestNotFoundError("Reopen request not found.");
+      throw new AdminReopenRequestNotFoundError(REQUEST_NOT_FOUND);
+    }
+    const userIds = [
+      ...new Set([input.session.userId, req.reportSection.authorId]),
+    ].sort((left, right) => left.localeCompare(right));
+    for (const userId of userIds) {
+      if (!(await lockUser(tx, userId))) {
+        throw new AdminReopenRequestNotFoundError(REQUEST_NOT_FOUND);
+      }
     }
     const gate = await lockCurrentEditableReport(tx, {
       sectionId: req.reportSectionId,
@@ -172,6 +227,38 @@ export async function decideReopenRequest(
         "Cannot decide a reopen request outside an editable report.",
       );
     }
-    return applyDecision(tx, req, input);
+    const actor = await tx.user.findUnique({
+      where: { id: input.session.userId },
+      select: { isActive: true, role: true, reportingGroupId: true },
+    });
+    if (
+      !actor?.isActive ||
+      (actor.role !== "head" && actor.role !== "admin") ||
+      input.decidedBy !== input.session.userId
+    ) {
+      throw new AdminAccessError("You can no longer decide reopen requests.");
+    }
+    const current = await tx.reopenRequest.findFirst({
+      where: {
+        id: req.id,
+        reportSectionId: req.reportSectionId,
+        reportSection: {
+          ...groupScopeFilter(
+            {
+              role: actor.role,
+              reportingGroupId: actor.reportingGroupId ?? undefined,
+              viewerGroupAccess: [],
+            },
+            "reportSection",
+          ),
+          authorId: req.reportSection.authorId,
+        },
+      },
+      select: { id: true, reportSectionId: true },
+    });
+    if (!current) {
+      throw new AdminReopenRequestNotFoundError(REQUEST_NOT_FOUND);
+    }
+    return applyDecision(tx, current, input);
   });
 }

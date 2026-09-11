@@ -1,6 +1,6 @@
 import type { UserSession } from "@customreport/shared";
 import jwt from "jsonwebtoken";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAuthController } from "../../modules/auth/index.js";
 import { PrismaService } from "../prisma/prisma.service";
@@ -62,15 +62,15 @@ function makePrisma(opts: PrismaStubOptions = {}): PrismaService {
 
 describe("resolveHumanSession", () => {
   beforeEach(() => {
-    process.env.AUTH_JWT_SECRET = SESSION_SECRET;
-    process.env.PDF_EXPORT_JWT_SECRET = PDF_SECRET;
+    vi.stubEnv("AUTH_JWT_SECRET", SESSION_SECRET);
+    vi.stubEnv("PDF_EXPORT_JWT_SECRET", PDF_SECRET);
     // Prove the resolver ignores dev-mode: it must reject regardless of flags.
-    process.env.AUTH_DEV_MODE = "true";
-    process.env.NODE_ENV = "test";
+    vi.stubEnv("AUTH_DEV_MODE", "true");
+    vi.stubEnv("NODE_ENV", "test");
   });
 
   afterEach(() => {
-    delete process.env.AUTH_DEV_MODE;
+    vi.unstubAllEnvs();
   });
 
   it("rejects a PDF-export worker token (not a human session)", async () => {

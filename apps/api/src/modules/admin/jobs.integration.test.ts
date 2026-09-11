@@ -15,7 +15,7 @@ import {
 } from "../../test-utils/prisma-test-helper";
 import { JobsService } from "./jobs.service";
 
-// getBullMQConnectionOptions reads only REDIS_HOST/REDIS_PORT; a partial stub
+// getBullMQConnectionOptions reads REDIS_HOST, REDIS_PORT and REDIS_DB; a partial stub
 // from the live test env avoids validateEnv() (which parses the full schema
 // and process.exit(1)s under the minimal integration env).
 const REDIS_ENV = {

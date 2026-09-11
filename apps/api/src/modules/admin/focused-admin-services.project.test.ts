@@ -1,7 +1,7 @@
 import type { AdminSnapshot } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { createNullLogger } from "../../lib/logger.js";
+import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   createRepository,
@@ -20,6 +20,45 @@ class SnapshotAdminService extends ProductionSnapshotAdminService {
     super(repository, createNullLogger());
   }
 }
+
+function createLoggerSpy(): AppLogger & { info: ReturnType<typeof vi.fn> } {
+  const info = vi.fn();
+  return { ...createNullLogger(), info };
+}
+
+describe("ProjectAdminService — success logging", () => {
+  it("does not log an archived group when the repository rejects", async () => {
+    const logger = createLoggerSpy();
+    const repository = {
+      ...createRepository(initialSnapshot),
+      archiveReportingGroup: vi.fn(() =>
+        Promise.reject(new Error("archive failed")),
+      ),
+    };
+    const service = new ProjectAdminService(repository, logger);
+
+    await expect(
+      service.archiveReportingGroup(defaultGroup.id),
+    ).rejects.toThrow("archive failed");
+
+    expect(logger.info).not.toHaveBeenCalledWith("archived reporting group", {
+      groupId: defaultGroup.id,
+    });
+  });
+
+  it("logs an archived group after the repository succeeds", async () => {
+    const logger = createLoggerSpy();
+    const repository = createRepository(initialSnapshot);
+    const service = new ProjectAdminService(repository, logger);
+
+    const archived = await service.archiveReportingGroup(defaultGroup.id);
+
+    expect(archived.archived).toBe(true);
+    expect(logger.info).toHaveBeenCalledWith("archived reporting group", {
+      groupId: defaultGroup.id,
+    });
+  });
+});
 
 describe("ProjectAdminService — stage assignments", () => {
   const USER_ID = "11111111-1111-4111-8111-111111111111";

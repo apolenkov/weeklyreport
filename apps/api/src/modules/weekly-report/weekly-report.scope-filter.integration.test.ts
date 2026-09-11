@@ -303,6 +303,7 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
                   projectName: project.projectName,
                   ownerGroupId: project.ownerGroupId,
                   trafficLight: "green",
+                  stageSet: [],
                 })),
                 referencedProjects: [],
                 items: [],

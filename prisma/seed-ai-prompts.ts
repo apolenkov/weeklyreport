@@ -7,7 +7,7 @@ import {
 
 const BASELINE_REVISION_ID = "a0000000-0000-4000-8000-00000000a001";
 
-/** Ensure the AI control plane starts explicitly disabled and unconfigured. */
+/** Create disabled control only when absent; preserve existing operator state. */
 export async function seedAiProviderControl(
   prisma: PrismaClient,
 ): Promise<void> {

@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import type { AuditLogger } from "../../lib/audit-logger.js";
 import { type AppLogger, createNullLogger } from "../../lib/logger.js";
+import { createNullAuditLogger } from "../../test-utils/audit-logger.js";
 import { auditPersistFailuresTotal } from "../metrics/metrics.registry.js";
 import {
   adminProcedure,
@@ -19,27 +20,8 @@ function makeAuditSpy(): {
 } {
   const mutation = vi.fn();
   const audit: AuditLogger = {
-    loginSuccess: vi.fn(),
-    loginFail: vi.fn(),
-    logout: vi.fn(),
-    roleDenied: vi.fn(),
-    scopeDenied: vi.fn(),
+    ...createNullAuditLogger(),
     mutation,
-    policySave: vi.fn(),
-    policyRemove: vi.fn(),
-    organizationUpdate: vi.fn(),
-    periodAutoCreate: vi.fn(),
-    periodAutoPublish: vi.fn(),
-    periodAutoArchive: vi.fn(),
-    // emitted only by `admin.createPeriodManual` (router-level audit,
-    // parallel to the policySave pattern). Mocked here to satisfy the
-    // AuditLogger interface; assertions live in audit-logger.test.ts.
-    periodManualCreate: vi.fn(),
-    // emitted only by `admin.updatePeriodManual`. Same rationale as the
-    // create event above — mocked for interface compliance.
-    periodManualEdit: vi.fn(),
-    // scope-accessed: emitted at weeklyReport.get — not exercised here.
-    scopeAccessed: vi.fn(),
   };
   return { audit, mutation };
 }

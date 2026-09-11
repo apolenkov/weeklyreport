@@ -71,31 +71,17 @@ function makeApp(prisma: ReturnType<typeof makePrismaStub>): INestApplication {
   return app as unknown as INestApplication;
 }
 
-function makeReq(cookieToken?: string): CreateExpressContextOptions {
+function makeReq(
+  options: {
+    cookieToken?: string;
+    requestId?: string;
+  } = {},
+): CreateExpressContextOptions {
   const req = {
-    headers: {},
-    cookies: cookieToken ? { [AUTH_COOKIE_NAME]: cookieToken } : {},
-  } as unknown as Request;
-  const res = {} as Response;
-  return {
-    req,
-    res,
-    info: {
-      accept: null,
-      type: "query",
-      isBatchCall: false,
-      calls: [],
-      connectionParams: null,
-      signal: new AbortController().signal,
-      url: null,
-    },
-  };
-}
-
-function makeReqWithRequestId(requestId: string): CreateExpressContextOptions {
-  const req = {
-    headers: { "x-request-id": requestId },
-    cookies: {},
+    headers: options.requestId ? { "x-request-id": options.requestId } : {},
+    cookies: options.cookieToken
+      ? { [AUTH_COOKIE_NAME]: options.cookieToken }
+      : {},
   } as unknown as Request;
   const res = {} as Response;
   return {
@@ -258,7 +244,7 @@ describe("createContextFactory — dev-mode flag matrix", () => {
       makeApp(makePrismaStub()),
       createNullLogger(),
     );
-    const ctx = await factory(makeReqWithRequestId("req-context-1"));
+    const ctx = await factory(makeReq({ requestId: "req-context-1" }));
 
     expect(ctx.correlationId).toBe("req-context-1");
   });
@@ -272,7 +258,7 @@ describe("createContextFactory — dev-mode flag matrix", () => {
       makeApp(makePrismaStub()),
       createNullLogger(),
     );
-    const ctx = await factory(makeReq("not-a-real-jwt"));
+    const ctx = await factory(makeReq({ cookieToken: "not-a-real-jwt" }));
 
     expect(ctx.session).not.toBeNull();
     expect(ctx.session?.role).toBe("head");

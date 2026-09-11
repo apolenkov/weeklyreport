@@ -63,7 +63,8 @@ export class SessionRevocationService implements OnModuleDestroy {
     try {
       await this.redis.srem(SessionRevocationService.KEY, userId);
     } catch (error) {
-      // Non-fatal: subsequent request hits Prisma isActive anyway.
+      // Non-fatal to activation, but the revoked-set entry may remain until a
+      // later restore succeeds.
       this.observeFailure("restore", error);
     }
   };

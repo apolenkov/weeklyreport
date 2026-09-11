@@ -204,10 +204,9 @@ describe("ReportSectionsService — stage-ownership guard", () => {
     expect(saved.risks).toHaveLength(1);
   });
 
-  it("scopes to the section author's owned stages even on an on-behalf edit", async () => {
-    // The guard references the SECTION AUTHOR's ownedStages, never actorUserId,
-    // so a head/admin on-behalf edit (which bypasses the self-check) also cannot
-    // inject an unowned stage — the author does not own it.
+  it("scopes stage validation to the section author's owned stages", async () => {
+    // The fixture supplies the section author as actor and verifies that the
+    // author's ownedStages reject an unowned stage.
     const service = new ReportSectionsService(
       createRepository(testingOwner),
       testGraceSettings,

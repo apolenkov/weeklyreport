@@ -1,18 +1,16 @@
 import { SEED_REPORTS } from "../support/seed-constants.js";
 
-// Anchors for date-relative sample timestamps. Both period starts are computed
-// once in seed-constants; mirroring that derivation here keeps submittedAt /
-// decision.deadline / risk.openedAt inside the period the user actually sees.
+// Anchors for deterministic sample timestamps. Callers choose offsets for
+// submissions and follow-up dates relative to the seeded period start.
 export const ACTIVE_PERIOD_START = new Date(SEED_REPORTS.active.periodStart);
 const PUBLISHED_PERIOD_START = new Date(SEED_REPORTS.published.periodStart);
 
 const DEFAULT_OFFSET_HOUR_UTC = 10;
 
-// The department the demo data models works Moscow time.
+// Default timezone for the demo organization and its reminder policies.
 export const MOSCOW_TIMEZONE = "Europe/Moscow";
 
-// Sections are submitted Mon-Fri of their period, one hour later per lead, so a
-// reseed reproduces the same spread without a clock read.
+// Submission fixtures span five weekdays with deterministic UTC times per lead.
 export const SUBMIT_DAY_SPAN = 5;
 export const FIRST_SUBMIT_HOUR_UTC = 10;
 

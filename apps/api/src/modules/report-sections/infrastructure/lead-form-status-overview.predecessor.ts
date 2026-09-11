@@ -8,10 +8,11 @@ import {
   type LeadStatusOverviewPredecessor,
   leadStatusOverviewPredecessorSchema,
   type PublishedReportSectionReadModel,
-  publishedReportSectionReadModelSchema,
   type PublishedReportSnapshot,
   reportSectionReadModelSchema,
   type Role,
+  type SharedPublishedReportSectionReadModel,
+  sharedPublishedReportSectionReadModelSchema,
 } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
@@ -75,7 +76,10 @@ function isPublishedScopeAdmitted(
 }
 
 type PublishedSectionResolution =
-  | { readonly section: PublishedReportSectionReadModel }
+  | {
+      readonly section:
+        PublishedReportSectionReadModel | SharedPublishedReportSectionReadModel;
+    }
   | {
       readonly reason: "section_unavailable" | "invalid_published_snapshot";
     };
@@ -98,7 +102,7 @@ function scopePublishedSectionForViewer(
   return sharedProjectIds.size === 0
     ? { reason: "section_unavailable" }
     : {
-        section: publishedReportSectionReadModelSchema.parse(
+        section: sharedPublishedReportSectionReadModelSchema.parse(
           filterSectionToSharedProducts(target, sharedProjectIds),
         ),
       };
@@ -225,7 +229,7 @@ async function submittedPredecessor(
   const mapped = mapPrismaToReportSection(row);
   const section =
     sharedScope.projectIds === null
-      ? mapped
+      ? reportSectionReadModelSchema.parse(mapped)
       : filterSectionToSharedProducts(mapped, sharedScope.projectIds);
 
   return leadStatusOverviewPredecessorSchema.parse({
@@ -234,7 +238,7 @@ async function submittedPredecessor(
     reportId: report.id,
     periodStart: report.periodStart,
     periodEnd: report.periodEnd,
-    section: reportSectionReadModelSchema.parse(section),
+    section,
   });
 }
 

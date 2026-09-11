@@ -1,12 +1,5 @@
 import type { UserSession } from "@customreport/shared";
 
-export interface DispatchPendingResult {
-  readonly dispatched: number;
-  readonly alreadySent: number;
-  readonly skipped: number;
-  readonly reason?: string;
-}
-
 export interface RemindersScopeRepository {
   readonly getRuleReportId: (ruleId: string) => Promise<string | null>;
   readonly findInScopeSectionId: (

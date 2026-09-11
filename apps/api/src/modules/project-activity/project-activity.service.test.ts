@@ -43,8 +43,7 @@ function makeActivity(
 const toLinkedProducts = (linkedProductIds: readonly string[]) =>
   linkedProductIds.map((productId) => ({ productId, productName: productId }));
 
-// In-memory repository: the service owns reference/group validation, so the
-// fake only answers lookups and records the attach/detach calls.
+// In-memory repository with lookup, mutation and attachment guards for service tests.
 function createRepository(fixture: Fixture = {}) {
   const activities = new Map(
     (fixture.activities ?? [makeActivity()]).map((a) => [a.id, a] as const),
@@ -213,7 +212,7 @@ describe("ProjectActivityService — create/update/archive", () => {
     ).rejects.toBeInstanceOf(ProjectActivityNotFoundError);
   });
 
-  it("archives and unarchives via the archived flag", async () => {
+  it("archives via the archived flag", async () => {
     const activity = makeActivity();
     const { repository } = createRepository({ activities: [activity] });
     const service = new ProjectActivityService(repository);

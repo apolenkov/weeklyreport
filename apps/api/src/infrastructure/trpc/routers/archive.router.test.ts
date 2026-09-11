@@ -7,8 +7,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { AuditLogger } from "../../../lib/audit-logger.js";
 import { createNullLogger } from "../../../lib/logger.js";
-import type { PeriodAdminService } from "../../../modules/admin/index.js";
 import type { ArchiveService } from "../../../modules/archive/index.js";
+import { createNullAuditLogger } from "../../../test-utils/audit-logger.js";
+import { createStubAppRouterDeps } from "../../../test-utils/stub-app-router-deps.js";
 import { createArchiveRouter } from "./archive.router.js";
 
 const REPORT_ID = "22222222-2222-4222-8222-222222222222";
@@ -79,27 +80,14 @@ function makeDetail(sectionCount: number): ArchiveReportDetail {
 function makeAuditSpy() {
   const scopeDenied = vi.fn();
   const auditLogger: AuditLogger = {
-    loginSuccess: vi.fn(),
-    loginFail: vi.fn(),
-    logout: vi.fn(),
-    roleDenied: vi.fn(),
+    ...createNullAuditLogger(),
     scopeDenied,
-    mutation: vi.fn(),
-    policySave: vi.fn(),
-    policyRemove: vi.fn(),
-    organizationUpdate: vi.fn(),
-    periodAutoCreate: vi.fn(),
-    periodAutoPublish: vi.fn(),
-    periodAutoArchive: vi.fn(),
-    periodManualCreate: vi.fn(),
-    periodManualEdit: vi.fn(),
-    scopeAccessed: vi.fn(),
   };
   return { auditLogger, scopeDenied };
 }
 
 function buildCaller(
-  detail: ArchiveReportDetail | null,
+  detail: ArchiveReportDetail,
   totalSectionCount: number,
   auditLogger: AuditLogger,
   session: UserSession,
@@ -111,12 +99,10 @@ function buildCaller(
     listArchiveReports: vi.fn(() =>
       Promise.resolve({ items: [], nextCursor: null }),
     ),
-  } as unknown as ArchiveService;
-  const periodAdminService = {} as unknown as PeriodAdminService;
-  return createArchiveRouter({
-    archiveService,
-    periodAdminService,
-  }).createCaller({
+  } satisfies Pick<ArchiveService, "getArchiveReport" | "listArchiveReports">;
+  return createArchiveRouter(
+    createStubAppRouterDeps({ archiveService }),
+  ).createCaller({
     session,
     logger: createNullLogger(),
     auditLogger,

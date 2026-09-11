@@ -1,4 +1,7 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type {
+  CarryOverRecord,
+  ReportSectionReadModel,
+} from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
 // Empty list is a broken caller invariant — fail loud (service pre-validates).
@@ -17,33 +20,62 @@ export function requirePrimaryTargetSection(
 export function mergePlannedCarriedRows(
   current: ReportSectionReadModel,
   planned: ReportSectionReadModel | undefined,
+  records: readonly CarryOverRecord[],
 ): ReportSectionReadModel {
   if (planned === undefined) return current;
 
-  const existingItemKeys = new Set(
-    current.items.flatMap((item) =>
-      item.stableId === undefined ? [item.id] : [item.stableId],
+  // The plan also contains its pre-transaction target snapshot. Record target
+  // ids identify the clones this execution may add after the locked re-read.
+  const plannedTargetItemIds = new Set(
+    records.flatMap((record) =>
+      record.targetItemId === null ? [] : [record.targetItemId],
     ),
   );
+  const plannedTargetDecisionIds = new Set(
+    records.flatMap((record) =>
+      record.targetDecisionId === null ? [] : [record.targetDecisionId],
+    ),
+  );
+
+  const existingItemKeys = new Set(
+    current.items.flatMap((item) => {
+      const key = item.stableId ?? item.id;
+      return key === undefined ? [] : [key];
+    }),
+  );
   const carriedItems = planned.items.filter((item) => {
-    if (!item.carriedOver) return false;
+    if (
+      !item.carriedOver ||
+      item.id === undefined ||
+      !plannedTargetItemIds.has(item.id)
+    ) {
+      return false;
+    }
     const key = item.stableId ?? item.id;
     if (existingItemKeys.has(key)) return false;
     existingItemKeys.add(key);
     return true;
   });
 
-  const existingDecisionIds = new Set(
-    current.decisions.map((decision) => decision.id),
+  const existingDecisionKeys = new Set(
+    current.decisions.flatMap((decision) => {
+      const key = decision.stableId ?? decision.id;
+      return key === undefined ? [] : [key];
+    }),
   );
   const carriedDecisions = planned.decisions.filter((decision) => {
-    if (decision.resolvedAt !== null && decision.resolvedAt !== undefined) {
+    if (
+      decision.id === undefined ||
+      !plannedTargetDecisionIds.has(decision.id) ||
+      (decision.resolvedAt !== null && decision.resolvedAt !== undefined)
+    ) {
       return false;
     }
-    if (decision.id === undefined || existingDecisionIds.has(decision.id)) {
+    const key = decision.stableId ?? decision.id;
+    if (existingDecisionKeys.has(key)) {
       return false;
     }
-    existingDecisionIds.add(decision.id);
+    existingDecisionKeys.add(key);
     return true;
   });
 
@@ -55,28 +87,29 @@ export function mergePlannedCarriedRows(
 }
 
 // skipDuplicates on stableId unique — defense-in-depth if lineage filter races.
-// Items land before decisions: the decision pass reads back existing rows, so
-// the two writes must stay sequential in this order.
+// Keep the established deterministic item-then-decision write order; both
+// passes report the database's actual inserted-row count.
 export async function persistCarriedRowsForSection(
   tx: Prisma.TransactionClient,
   targetSection: ReportSectionReadModel,
-): Promise<void> {
-  await insertCarriedItems(tx, targetSection);
-  await insertCarriedDecisions(tx, targetSection);
+): Promise<{ insertedItems: number; insertedDecisions: number }> {
+  const insertedItems = await insertCarriedItems(tx, targetSection);
+  const insertedDecisions = await insertCarriedDecisions(tx, targetSection);
+  return { insertedItems, insertedDecisions };
 }
 
 async function insertCarriedItems(
   tx: Prisma.TransactionClient,
   targetSection: ReportSectionReadModel,
-): Promise<void> {
+): Promise<number> {
   const carriedItems = targetSection.items.filter((i) => i.carriedOver);
-  if (carriedItems.length === 0) return;
+  if (carriedItems.length === 0) return 0;
 
-  await tx.item.createMany({
+  const result = await tx.item.createMany({
     data: carriedItems.map((i) => ({
       ...(i.id === undefined ? {} : { id: i.id }),
       // Item replay defense relies on the non-null stableId unique index;
-      // decisions also have explicit id-based dedupe below.
+      // decisions use the same durable lineage key below.
       stableId: requireStableItemId(i.stableId),
       reportSectionId: targetSection.reportSectionId,
       // XOR parent preserved onto the clone (product FK null for an
@@ -89,30 +122,34 @@ async function insertCarriedItems(
       workflowStatus: i.workflowStatus,
       carriedOver: true,
       priorityRank: i.priorityRank ?? null,
+      pausedReason: i.pausedReason ?? null,
+      nextStepText: i.nextStepText ?? null,
       stageNames: [...i.stageNames],
     })),
     skipDuplicates: true,
   });
+  return result.count;
 }
 
 async function insertCarriedDecisions(
   tx: Prisma.TransactionClient,
   targetSection: ReportSectionReadModel,
-): Promise<void> {
+): Promise<number> {
   const carriedDecisions = targetSection.decisions.filter((d) => !d.resolvedAt);
-  const existingDecisionIds = new Set(
+  const existingDecisionKeys = new Set(
     (
       await tx.decision.findMany({
         where: { reportSectionId: targetSection.reportSectionId },
-        select: { id: true },
+        select: { id: true, stableId: true },
       })
-    ).map((d) => d.id),
+    ).map((d) => d.stableId),
   );
 
-  const newDecisions = carriedDecisions.filter(
-    (d) => d.id && !existingDecisionIds.has(d.id),
-  );
-  if (newDecisions.length === 0) return;
+  const newDecisions = carriedDecisions.filter((d) => {
+    const key = d.stableId ?? d.id;
+    return key !== undefined && !existingDecisionKeys.has(key);
+  });
+  if (newDecisions.length === 0) return 0;
 
   // The DB CHECK guarantees exactly one parent (product XOR activity); a
   // decision with neither cannot persist — fail loud, never drop it silently.
@@ -125,7 +162,7 @@ async function insertCarriedDecisions(
     );
   }
 
-  await tx.decision.createMany({
+  const result = await tx.decision.createMany({
     data: newDecisions.map((d) => ({
       ...(d.id === undefined ? {} : { id: d.id }),
       // Carry the source decision's durable lineage key onto the
@@ -145,6 +182,7 @@ async function insertCarriedDecisions(
     })),
     skipDuplicates: true,
   });
+  return result.count;
 }
 
 function requireStableItemId(stableId: string | undefined): string {

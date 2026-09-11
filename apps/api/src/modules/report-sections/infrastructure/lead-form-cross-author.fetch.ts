@@ -78,8 +78,7 @@ export function fetchForeignContentAssignments(
 }
 
 // Foreign sections with full item/risk/decision text + covering risks.
-// The select shape is data, not logic — hoisted so the fetch function itself
-// stays inside the 50-line function budget.
+// Keep the complete full-content select shape explicit and reusable.
 const foreignContentSectionSelect = {
   authorId: true,
   items: {

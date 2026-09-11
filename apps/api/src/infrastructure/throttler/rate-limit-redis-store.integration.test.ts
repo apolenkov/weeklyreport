@@ -6,6 +6,7 @@ import express from "express";
 import { Redis } from "ioredis";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
+import { assertE2eRuntimeDestructiveTarget } from "../../../../../prisma/guards/_destructive-guard.js";
 import { requireEnv } from "../../lib/env";
 import { createNullLogger } from "../../lib/logger";
 import type { EnvConfig } from "../config/env.schema";
@@ -20,6 +21,26 @@ const REDIS_ENV: Pick<EnvConfig, "REDIS_DB" | "REDIS_HOST" | "REDIS_PORT"> = {
   REDIS_HOST: requireEnv(process.env, "REDIS_HOST"),
   REDIS_PORT: Number(requireEnv(process.env, "REDIS_PORT")),
 };
+const REDIS_OPTIONS = {
+  db: REDIS_ENV.REDIS_DB,
+  host: REDIS_ENV.REDIS_HOST,
+  port: REDIS_ENV.REDIS_PORT,
+  maxRetriesPerRequest: 1,
+} as const;
+const SCRIPT_NAME = "rate-limit-redis-store.integration";
+
+function assertSafeRedisMutation(): void {
+  assertE2eRuntimeDestructiveTarget(
+    SCRIPT_NAME,
+    requireEnv(process.env, "E2E_DATABASE_URL"),
+    process.env,
+  );
+  if (REDIS_ENV.REDIS_DB !== 15) {
+    throw new Error(
+      `[${SCRIPT_NAME}] REDIS_DB must be exactly 15 before Redis access.`,
+    );
+  }
+}
 
 // Documentation IP (RFC 5737) so the keyed bucket never collides with a real
 // client. `trust proxy: 1` makes X-Forwarded-For the resolved req.ip.
@@ -32,18 +53,22 @@ const AUTH_BUDGET = 5;
 // connection's lifecycle (no leaked ioredis sockets keeping vitest alive).
 const clients: Redis[] = [];
 function ownedClient(): Redis {
-  const client = new Redis({ ...REDIS_ENV, maxRetriesPerRequest: 1 });
+  assertSafeRedisMutation();
+  const client = new Redis(REDIS_OPTIONS);
   clients.push(client);
   return client;
 }
 
-const admin = new Redis({ ...REDIS_ENV, maxRetriesPerRequest: 1 });
+assertSafeRedisMutation();
+const admin = new Redis(REDIS_OPTIONS);
 
 beforeEach(async () => {
+  assertSafeRedisMutation();
   await admin.del(AUTH_KEY, TRPC_KEY);
 });
 
 afterAll(async () => {
+  assertSafeRedisMutation();
   await admin.del(AUTH_KEY, TRPC_KEY);
   await admin.quit();
   await Promise.all(clients.map((client) => client.quit()));

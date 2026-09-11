@@ -111,9 +111,9 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
       // after manual revival cannot send its stale payload.
       await this.dispatchEmail(durableData);
     } catch (error: unknown) {
-      // The send never happened, so the row must not stay `sending`. On the
-      // last attempt `failed` is terminal; earlier, release the claim back to
-      // the pre-claim status the retry's CAS matches, or the retry cannot send.
+      // Dispatch rejected, so the row must not stay `sending`. On the last
+      // attempt `failed` is terminal; earlier, release the claim back to the
+      // pre-claim status the retry's CAS matches, or the retry cannot send.
       const message = errorMessage(error);
       const maxAttempts = job.opts.attempts ?? 1;
       // This catch runs before BullMQ's moveToFailed increments attemptsMade,

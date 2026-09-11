@@ -47,6 +47,7 @@ describe("admin-settings.queries.getSettings", () => {
     expect(settings.autoCreatePeriods).toBe(true);
     expect(settings.workingDays).toBe("mon-fri");
     expect(settings.deadlineTime).toBe("18:00");
+    expect(settings.unifiedActivityView).toBe(false);
   });
 });
 
@@ -60,11 +61,14 @@ describe("admin-settings.queries.updateSettings", () => {
     } as unknown as PrismaService;
 
     await expect(
-      updateSettings(prisma, { defaultDeadlineDays: 7 }),
+      updateSettings(prisma, {
+        defaultDeadlineDays: 7,
+        unifiedActivityView: true,
+      }),
     ).rejects.toBe(missing);
     expect(update).toHaveBeenCalledWith({
       where: { id: "singleton" },
-      data: { defaultDeadlineDays: 7 },
+      data: { defaultDeadlineDays: 7, unifiedActivityView: true },
     });
     expect(upsert).not.toHaveBeenCalled();
   });

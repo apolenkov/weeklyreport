@@ -24,6 +24,7 @@ function makeReadModel() {
     periodStart: new Date("2026-04-14"),
     periodEnd: new Date("2026-04-18"),
     deadline: new Date("2026-04-17T15:00:00.000Z"),
+    periodState: "published",
     periodStatus: "published",
     archived: false,
     weekLabel: "W16-2026",

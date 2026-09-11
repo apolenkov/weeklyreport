@@ -47,7 +47,7 @@ interface SeedSummary {
 const countLabel = (count: number, singular: string): string =>
   `${count} ${singular}${count === 1 ? "" : "s"}`;
 
-/** Prints the one-line run report the seed has always ended with. */
+/** Prints the seed run counts in one line. */
 export function logSeedSummary(summary: SeedSummary): void {
   const { sections } = summary;
   console.log(

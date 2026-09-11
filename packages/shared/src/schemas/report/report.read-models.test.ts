@@ -11,13 +11,7 @@ import {
   reportPeriodSchema,
 } from "../report";
 
-// ---------------------------------------------------------------------------
-// archiveReportSummarySchema — reportDate usage
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
 // Fixtures
-// ---------------------------------------------------------------------------
 
 const uuid = () => randomUUID();
 describe("carryOverStatusSchema", () => {
@@ -45,9 +39,7 @@ describe("carryOverStatusSchema", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // Date validation — reportDate()
-// ---------------------------------------------------------------------------
 
 describe("reportDate via assembledReportSchema", () => {
   const validAssembled = () => ({
@@ -151,9 +143,7 @@ describe("reportDate via reportPeriodSchema", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // projectStatusInputSchema
-// ---------------------------------------------------------------------------
 
 describe("projectStatusInputSchema", () => {
   it("accepts valid projectId with optional status", () => {
@@ -178,9 +168,7 @@ describe("projectStatusInputSchema", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // portfolioOverviewSchema
-// ---------------------------------------------------------------------------
 
 describe("portfolioOverviewSchema", () => {
   it("accepts valid overview", () => {
@@ -208,9 +196,7 @@ describe("portfolioOverviewSchema", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // archiveReportSummarySchema — reportDate usage
-// ---------------------------------------------------------------------------
 
 describe("archiveReportSummarySchema", () => {
   it("accepts valid archive summary", () => {

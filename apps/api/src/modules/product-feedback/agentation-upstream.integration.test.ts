@@ -1,14 +1,30 @@
 import { randomUUID } from "node:crypto";
+import { Server as HttpServer } from "node:http";
 
 import {
   agentationAnnotationResponseSchema,
   agentationSessionResponseSchema,
   agentationSseEventSchema,
 } from "@customreport/shared";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import pg from "pg";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { z } from "zod";
 
 import { startAgentationContractServer } from "../../test-utils/agentation-contract-server";
+import {
+  createTestPrisma,
+  disconnectTestPrisma,
+} from "../../test-utils/prisma-test-helper";
 import { getAgentationSseConnectionCounts } from "./agentation-sse";
 
 describe("installed Agentation MCP against the authenticated adapter", () => {
@@ -21,6 +37,31 @@ describe("installed Agentation MCP against the authenticated adapter", () => {
   afterAll(async () => {
     await closeServer?.();
   });
+
+  async function expectHttpStatus(
+    response: Response,
+    expected: number,
+  ): Promise<void> {
+    if (response.status === expected) return;
+    const body: unknown = await response
+      .clone()
+      .json()
+      .catch(() => null);
+    const error =
+      typeof body === "object" && body !== null && "error" in body
+        ? body.error
+        : undefined;
+    const message =
+      typeof body === "object" && body !== null && "message" in body
+        ? body.message
+        : undefined;
+    const errorContext = typeof error === "string" ? `; error=${error}` : "";
+    const messageContext =
+      typeof message === "string" ? `; message=${message}` : "";
+    throw new Error(
+      `Expected HTTP ${expected}, received ${response.status}${errorContext}${messageContext}`,
+    );
+  }
 
   async function tool(name: string, args: Record<string, unknown> = {}) {
     const result = await server.client.callTool({ name, arguments: args });
@@ -40,7 +81,7 @@ describe("installed Agentation MCP against the authenticated adapter", () => {
         url: `http://localhost:3000/contract/${randomUUID()}?private=discard#fragment`,
       },
     );
-    expect(sessionResponse.status).toBe(201);
+    await expectHttpStatus(sessionResponse, 201);
     const session = agentationSessionResponseSchema.parse(
       await sessionResponse.json(),
     );
@@ -60,7 +101,7 @@ describe("installed Agentation MCP against the authenticated adapter", () => {
       "POST",
       { ...input, authorId: server.actors[1]?.userId, status: "resolved" },
     );
-    expect(create.status).toBe(201);
+    await expectHttpStatus(create, 201);
     const annotation = agentationAnnotationResponseSchema.parse(
       await create.json(),
     );
@@ -117,7 +158,7 @@ describe("installed Agentation MCP against the authenticated adapter", () => {
 
   it("exposes the nine required stock tools without a custom MCP implementation", async () => {
     const status = await server.request("/agentation/status", server.actors[0]);
-    expect(status.status).toBe(200);
+    await expectHttpStatus(status, 200);
     expect(await status.json()).toMatchObject({
       mode: "postgres",
       webhooksConfigured: false,
@@ -215,6 +256,79 @@ describe("installed Agentation MCP against the authenticated adapter", () => {
     expect(JSON.stringify(await watching)).toContain(created.id);
   });
 
+  it("recovers from an SSE timeout and replays one stock MCP update", async () => {
+    const { session, annotation } = await fixture();
+    const identity = await server.prisma.agentationAnnotation.findUnique({
+      where: { id: annotation.id },
+      select: {
+        id: true,
+        clientId: true,
+        sessionId: true,
+        authorUserId: true,
+      },
+    });
+    const latest = await server.prisma.agentationEvent.aggregate({
+      where: { sessionId: session.id },
+      _max: { sequence: true },
+    });
+    const cursor = latest._max.sequence ?? BigInt(0);
+    const listenerBaseline = getAgentationSseConnectionCounts().activeListeners;
+    const timedOut = nextEvent(
+      session.id,
+      "event.withheld.for.timeout",
+      String(cursor),
+    );
+
+    await vi.waitFor(() =>
+      expect(
+        getAgentationSseConnectionCounts().activeListeners,
+      ).toBeGreaterThan(listenerBaseline),
+    );
+    await expect(timedOut).rejects.toMatchObject({ name: "TimeoutError" });
+    await vi.waitFor(() =>
+      expect(getAgentationSseConnectionCounts().activeListeners).toBe(
+        listenerBaseline,
+      ),
+    );
+
+    await tool("agentation_acknowledge", { annotationId: annotation.id });
+    const persistedEvents = await server.prisma.agentationEvent.findMany({
+      where: {
+        sessionId: session.id,
+        annotationId: annotation.id,
+        type: "annotation.updated",
+        sequence: { gt: cursor },
+      },
+    });
+    expect(persistedEvents).toHaveLength(1);
+
+    const replay = await nextEvent(
+      session.id,
+      "annotation.updated",
+      String(cursor),
+    );
+    expect(replay).toMatchObject({
+      sequence: Number(persistedEvents[0]?.sequence),
+      payload: { id: annotation.id, status: "acknowledged" },
+    });
+    expect(
+      await server.prisma.agentationAnnotation.findUnique({
+        where: { id: annotation.id },
+        select: {
+          id: true,
+          clientId: true,
+          sessionId: true,
+          authorUserId: true,
+        },
+      }),
+    ).toEqual(identity);
+    await vi.waitFor(() =>
+      expect(getAgentationSseConnectionCounts().activeListeners).toBe(
+        listenerBaseline,
+      ),
+    );
+  }, 15_000);
+
   it("retains ownership, non-destructive toolbar delete and admin-only hard deletion", async () => {
     const { session, annotation, input, author } = await fixture();
     expect(
@@ -290,7 +404,7 @@ describe("installed Agentation MCP against the authenticated adapter", () => {
       "POST",
       { output: "Handle these annotations" },
     );
-    expect(action.status).toBe(200);
+    await expectHttpStatus(action, 200);
     expect(
       (await nextEvent(session.id, "action.requested", cursor)).payload,
     ).toMatchObject({
@@ -318,5 +432,68 @@ describe("installed Agentation MCP against the authenticated adapter", () => {
       status: "dismissed",
     });
     expect(deleted.payload).not.toHaveProperty("comment");
+  }, 15_000);
+});
+
+describe("Agentation contract fixture failure cleanup", () => {
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await disconnectTestPrisma();
+  });
+
+  it("preserves startup and close failures after releasing real resources", async () => {
+    const startupFailure = new Error("injected post-connect startup failure");
+    const closeFailure = new Error("injected post-close failure");
+    const listenerClose = vi.spyOn(HttpServer.prototype, "close");
+    const transportClose = vi.spyOn(StdioClientTransport.prototype, "close");
+    const poolEnd = vi.spyOn(pg.Pool.prototype, "end");
+    const prisma = createTestPrisma();
+    const fixtureUsersBefore = await prisma.user.count({
+      where: { name: "Upstream contract" },
+    });
+    const prismaDisconnect = vi.spyOn(prisma, "$disconnect");
+
+    const connect = vi.spyOn(Client.prototype, "connect");
+    connect.mockImplementationOnce(async function (
+      this: Client,
+      transport,
+      options,
+    ) {
+      connect.mockRestore();
+      await this.connect(transport, options);
+      throw startupFailure;
+    });
+    vi.spyOn(Client.prototype, "close").mockRejectedValueOnce(closeFailure);
+
+    const failure = await startAgentationContractServer().then(
+      async (started) => {
+        await started.close();
+        return new Error("Expected contract fixture startup to fail");
+      },
+      (error: unknown) => error,
+    );
+
+    expect(failure).toBeInstanceOf(AggregateError);
+    expect((failure as AggregateError).errors).toEqual([
+      startupFailure,
+      closeFailure,
+    ]);
+    expect(transportClose).toHaveBeenCalledOnce();
+    expect(
+      (transportClose.mock.contexts[0] as StdioClientTransport).pid,
+    ).toBeNull();
+    expect(listenerClose).toHaveBeenCalledOnce();
+    expect((listenerClose.mock.contexts[0] as HttpServer).listening).toBe(
+      false,
+    );
+    expect(prismaDisconnect).toHaveBeenCalledOnce();
+    expect(poolEnd).toHaveBeenCalledOnce();
+
+    const verificationPrisma = createTestPrisma();
+    expect(
+      await verificationPrisma.user.count({
+        where: { name: "Upstream contract" },
+      }),
+    ).toBe(fixtureUsersBefore);
   });
 });

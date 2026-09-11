@@ -13,6 +13,8 @@ import {
   ReportSectionNotFoundError,
   SectionVersionConflictError,
 } from "../application/report-sections.service";
+import { findPublishedRecordViolation } from "../domain/published-record-guard.js";
+import { querySectionPublishedLineageTx } from "./published-lineage.transaction.js";
 import {
   captureRecordComments,
   reinsertRecordComments,
@@ -27,6 +29,10 @@ import {
   toRiskRows,
   toStageStatusRows,
 } from "./save-section.derive";
+import {
+  itemResolutionGuardSelect,
+  preserveResolvedItemJson,
+} from "./save-section.item-resolutions";
 
 // Publish/save mutual exclusion: lock the parent report row FIRST (same lock
 // order as the publish tx — consistent ordering, no deadlock). A concurrent
@@ -78,10 +84,35 @@ async function bumpSectionVersion(
   }
 }
 
+async function assertPublishedLineagePreserved(
+  tx: Prisma.TransactionClient,
+  section: ReportSectionReadModel,
+): Promise<void> {
+  const published = await querySectionPublishedLineageTx(tx, {
+    reportId: section.reportId,
+    reportSectionId: section.reportSectionId,
+  });
+  const violation = findPublishedRecordViolation(published, {
+    reportSectionId: section.reportSectionId,
+    version: section.version,
+    status: "draft",
+    projectStatuses: [],
+    stageStatuses: [],
+    activityStatuses: [],
+    items: section.items,
+    risks: section.risks,
+    decisions: section.decisions,
+  });
+  if (violation) {
+    throw new ReportSectionDomainError(violation.code, violation.message);
+  }
+}
+
 async function recreateChildRows(
   tx: Prisma.TransactionClient,
   section: ReportSectionReadModel,
   sectionId: string,
+  resolutionByStableId: ReadonlyMap<string, Prisma.InputJsonValue>,
 ): Promise<void> {
   const projectData = toProjectStatusRows(section, sectionId);
   if (projectData.length > 0) {
@@ -102,7 +133,9 @@ async function recreateChildRows(
   }
 
   if (section.items.length > 0) {
-    await tx.item.createMany({ data: toItemRows(section, sectionId) });
+    await tx.item.createMany({
+      data: toItemRows(section, sectionId, resolutionByStableId),
+    });
   }
 
   if (section.risks.length > 0) {
@@ -154,7 +187,20 @@ export async function applySaveSection(
   const sectionId = section.reportSectionId;
 
   await lockReportForSave(tx, section.reportId);
+  await assertPublishedLineagePreserved(tx, section);
   await bumpSectionVersion(tx, section, sectionId, expectedVersion);
+
+  // The version CAS holds the section row before we inspect the rows that a
+  // delete-recreate would otherwise erase. Client read metadata is ignored;
+  // only this authoritative JSON may survive an unchanged cancelled lineage.
+  const persistedItems = await tx.item.findMany({
+    where: { reportSectionId: sectionId },
+    select: itemResolutionGuardSelect,
+  });
+  const resolutionByStableId = preserveResolvedItemJson(
+    section.items,
+    persistedItems,
+  );
 
   // Comment-aware save: lift reviewer comments out before the child
   // delete-recreate cascades them away, keyed by the record's durable lineage
@@ -162,7 +208,7 @@ export async function applySaveSection(
   const capturedComments = await captureRecordComments(tx, sectionId);
 
   await clearSectionChildRows(tx, sectionId);
-  await recreateChildRows(tx, section, sectionId);
+  await recreateChildRows(tx, section, sectionId, resolutionByStableId);
   // Atomic with the version bump above.
   await reinsertRecordComments(tx, sectionId, capturedComments);
 

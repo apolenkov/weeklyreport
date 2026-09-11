@@ -1,12 +1,17 @@
+import { once } from "node:events";
 import {
   createReadStream,
+  fstatSync,
+  mkdirSync,
   mkdtempSync,
+  type ReadStream,
+  rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Readable, Writable } from "node:stream";
+import { Writable } from "node:stream";
 
 import {
   AUTH_COOKIE_NAME,
@@ -94,9 +99,15 @@ function asResponse(res: MockResponse): Response {
   return res as unknown as Response;
 }
 
-function makeReq(opts: { cookie?: string; file?: string }): Request {
+function makeReq(opts: {
+  cookie?: string;
+  cookieName?: string;
+  file?: string;
+}): Request {
   return {
-    cookies: opts.cookie ? { [AUTH_COOKIE_NAME]: opts.cookie } : {},
+    cookies: opts.cookie
+      ? { [opts.cookieName ?? AUTH_COOKIE_NAME]: opts.cookie }
+      : {},
     params: { file: opts.file ?? `${JOB_ID}.pdf` },
   } as unknown as Request;
 }
@@ -159,6 +170,18 @@ function completedJob(requestedBy = headSession.userId) {
 }
 
 let pdfDir: string;
+let fixtureRoot: string;
+const ownedStreams: ReadStream[] = [];
+const realFs = await vi.importActual<typeof import("node:fs")>("node:fs");
+
+function failNextRead(): void {
+  vi.mocked(createReadStream).mockImplementationOnce((path, options) => {
+    const stream = realFs.createReadStream(path, options);
+    ownedStreams.push(stream);
+    stream._read = () => stream.destroy(new Error("read failed"));
+    return stream;
+  });
+}
 
 function makeDeps(overrides: Partial<PdfDownloadDeps> = {}): PdfDownloadDeps {
   return {
@@ -173,16 +196,73 @@ function makeDeps(overrides: Partial<PdfDownloadDeps> = {}): PdfDownloadDeps {
 }
 
 beforeEach(() => {
-  pdfDir = mkdtempSync(join(tmpdir(), "pdf-handler-"));
-  process.env.AUTH_JWT_SECRET = SESSION_SECRET;
-  process.env.PDF_EXPORT_JWT_SECRET = PDF_SECRET;
+  fixtureRoot = mkdtempSync(join(tmpdir(), "pdf-handler-"));
+  pdfDir = join(fixtureRoot, "artifacts");
+  mkdirSync(pdfDir);
+  vi.mocked(createReadStream).mockImplementation((path, options) => {
+    const stream = realFs.createReadStream(path, options);
+    ownedStreams.push(stream);
+    return stream;
+  });
+  vi.stubEnv("AUTH_JWT_SECRET", SESSION_SECRET);
+  vi.stubEnv("PDF_EXPORT_JWT_SECRET", PDF_SECRET);
 });
 
-afterEach(() => {
-  delete process.env.AUTH_DEV_MODE;
+afterEach(async () => {
+  await Promise.all(
+    ownedStreams.splice(0).map(async (stream) => {
+      if (stream.closed) return;
+      const closed = new Promise<void>((resolve) =>
+        stream.once("close", resolve),
+      );
+      stream.destroy();
+      await closed;
+    }),
+  );
+  rmSync(fixtureRoot, { recursive: true, force: true });
+  vi.unstubAllEnvs();
+  vi.clearAllMocks();
 });
 
 describe("handlePdfDownload", () => {
+  it.each(["during delivery", "before stream connection"])(
+    "closes the real file descriptor when the response closes %s",
+    async (timing) => {
+      const bytes = Buffer.alloc(1024 * 1024, "p");
+      writeFileSync(join(pdfDir, `${JOB_ID}.pdf`), bytes);
+      const res = new MockResponse();
+      if (timing === "before stream connection") res.destroy();
+      else {
+        res._write = (chunk, _encoding, callback) => {
+          expect(chunk.length).toBeLessThan(bytes.length);
+          res.destroy();
+          callback();
+        };
+      }
+
+      await handlePdfDownload(
+        makeReq({ cookie: "valid" }),
+        asResponse(res),
+        makeDeps({ prisma: makePrisma({ job: completedJob() }) }),
+      );
+      const stream = ownedStreams[0];
+      const options = vi.mocked(createReadStream).mock.calls[0]?.[1];
+      const fd =
+        options && typeof options === "object" ? options.fd : undefined;
+      if (!stream || typeof fd !== "number") {
+        throw new Error("Expected an owned file readable and descriptor");
+      }
+      if (!stream.closed) await once(stream, "close");
+
+      expect(stream.destroyed).toBe(true);
+      expect(stream.readableEnded).toBe(false);
+      expect(() => fstatSync(fd)).toThrow(
+        expect.objectContaining({ code: "EBADF" }),
+      );
+      expect(res.listenerCount("close")).toBe(0);
+    },
+  );
+
   it("streams the PDF for an authenticated, in-scope caller (200)", async () => {
     writeFileSync(join(pdfDir, `${JOB_ID}.pdf`), "PDF-BYTES");
     const res = new MockResponse();
@@ -214,9 +294,10 @@ describe("handlePdfDownload", () => {
     const finished = new Promise<void>((r) => res.on("finish", () => r()));
 
     await handlePdfDownload(
-      makeReq({ cookie: "valid" }),
+      makeReq({ cookie: "valid", cookieName: "test_pdf_session" }),
       asResponse(res),
       makeDeps({
+        sessionCookieName: "test_pdf_session",
         verifySessionToken: () => viewerSession,
         prisma: makePrisma({
           job: completedJob(viewerSession.userId),
@@ -344,7 +425,7 @@ describe("handlePdfDownload", () => {
   it("refuses to serve an artifact that is a symlink planted in the artifacts dir (404)", async () => {
     // A symlink at `{jobId}.pdf` must be rejected at open (O_NOFOLLOW), never
     // followed outside the pdfDir root.
-    const outside = join(tmpdir(), "pdf-handler-outside-secret.txt");
+    const outside = join(fixtureRoot, "outside.txt");
     writeFileSync(outside, "SECRET-OUTSIDE-BYTES");
     symlinkSync(outside, join(pdfDir, `${JOB_ID}.pdf`));
     const res = new MockResponse();
@@ -442,7 +523,7 @@ describe("handlePdfDownload", () => {
   });
 
   it("dev-mode does not authorize a download (401 on an invalid token even with AUTH_DEV_MODE=true)", async () => {
-    process.env.AUTH_DEV_MODE = "true";
+    vi.stubEnv("AUTH_DEV_MODE", "true");
     const authController = createAuthController(process.env);
     const res = new MockResponse();
 
@@ -460,13 +541,7 @@ describe("handlePdfDownload", () => {
 
   it("returns 500 when the PDF read fails before headers are sent", async () => {
     writeFileSync(join(pdfDir, `${JOB_ID}.pdf`), "PDF-BYTES");
-    vi.mocked(createReadStream).mockReturnValueOnce(
-      new Readable({
-        read() {
-          this.destroy(new Error("read failed"));
-        },
-      }) as unknown as ReturnType<typeof createReadStream>,
-    );
+    failNextRead();
     const res = new MockResponse();
     const finished = new Promise<void>((resolve) => {
       res.on("finish", resolve);
@@ -487,13 +562,7 @@ describe("handlePdfDownload", () => {
 
   it("destroys the response when the PDF read fails after headers were sent", async () => {
     writeFileSync(join(pdfDir, `${JOB_ID}.pdf`), "PDF-BYTES");
-    vi.mocked(createReadStream).mockReturnValueOnce(
-      new Readable({
-        read() {
-          this.destroy(new Error("read failed"));
-        },
-      }) as unknown as ReturnType<typeof createReadStream>,
-    );
+    failNextRead();
     const res = new MockResponse();
     res.headersSent = true;
     const closed = new Promise<void>((resolve) => {
@@ -515,13 +584,7 @@ describe("handlePdfDownload", () => {
 
   it("logs a PDF stream failure with the job id (observable, not silent)", async () => {
     writeFileSync(join(pdfDir, `${JOB_ID}.pdf`), "PDF-BYTES");
-    vi.mocked(createReadStream).mockReturnValueOnce(
-      new Readable({
-        read() {
-          this.destroy(new Error("read failed"));
-        },
-      }) as unknown as ReturnType<typeof createReadStream>,
-    );
+    failNextRead();
     const error = vi.fn();
     const logger = { error, child: () => logger } as unknown as AppLogger;
     const res = new MockResponse();

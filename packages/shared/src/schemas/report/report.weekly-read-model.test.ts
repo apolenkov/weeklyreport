@@ -17,6 +17,7 @@ const validWeeklyReport = () => ({
   periodStart: "2026-04-14",
   periodEnd: "2026-04-18",
   deadline: "2026-04-17T15:00:00.000Z",
+  periodState: "open" as const,
   periodStatus: "open" as const,
   archived: false,
   weekLabel: "W16-2026",
@@ -59,8 +60,10 @@ describe("weeklyReportReadModelSchema", () => {
       escalations: [
         {
           type: "blocked" as const,
+          productId: uuid(),
           productName: "CRM Platform",
           stageName: null,
+          authorId: uuid(),
           leadName: "Alice Lead",
           description: "Blocked",
         },
@@ -78,6 +81,22 @@ describe("weeklyReportReadModelSchema", () => {
   it("requires the archived lifecycle fact", () => {
     const { archived: _archived, ...report } = validWeeklyReport();
     expect(weeklyReportReadModelSchema.safeParse(report).success).toBe(false);
+  });
+
+  it("requires the canonical period state", () => {
+    const { periodState: _periodState, ...report } = validWeeklyReport();
+    expect(weeklyReportReadModelSchema.safeParse(report).success).toBe(false);
+  });
+
+  it("preserves a scheduled period independently from its open companion status", () => {
+    const report = weeklyReportReadModelSchema.parse({
+      ...validWeeklyReport(),
+      periodState: "scheduled",
+      periodStatus: "open",
+    });
+
+    expect(report.periodState).toBe("scheduled");
+    expect(report.periodStatus).toBe("open");
   });
 
   it("preserves an archived report", () => {
@@ -190,8 +209,10 @@ describe("portfolioProductOverviewSchema", () => {
 describe("escalationSchema", () => {
   const validEscalation = (overrides: Record<string, unknown> = {}) => ({
     type: "blocked" as const,
+    productId: uuid(),
     productName: "CRM",
     stageName: "Development",
+    authorId: uuid(),
     leadName: "Alice",
     description: "ETL memory leak",
     ...overrides,
@@ -200,6 +221,18 @@ describe("escalationSchema", () => {
   it("accepts an escalation with a stage", () => {
     expect(escalationSchema.safeParse(validEscalation()).success).toBe(true);
   });
+
+  it.each(["productId", "authorId"] as const)(
+    "requires stable %s identity",
+    (identityField) => {
+      expect(
+        escalationSchema.safeParse({
+          ...validEscalation(),
+          [identityField]: undefined,
+        }).success,
+      ).toBe(false);
+    },
+  );
 
   it("accepts a product-level at-risk escalation without a stage", () => {
     expect(

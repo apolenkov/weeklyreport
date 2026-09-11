@@ -178,8 +178,7 @@ export async function queryDueEscalationRules(
 
   return rules.flatMap((rule) => {
     const report = rule.report;
-    // The where-clause already excludes cleared deadlines; this re-check
-    // narrows the type and covers a clear racing the query.
+    // Validate the loaded deadline and rule identity against the current policy.
     if (!isCurrentPolicyRule(rule, rule.policy, report.deadline)) return [];
     const { groups, unresolved } = buildEscalationGroups({
       ...report,

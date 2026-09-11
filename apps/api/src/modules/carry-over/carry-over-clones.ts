@@ -22,9 +22,16 @@ export function cloneCarriedItem(
       id: targetItemId,
       type: "current",
       carriedOver: true,
-      // The type flips next → current, so the status must land in the
-      // current vocabulary: a carried planned item is being worked on now.
-      workflowStatus: "in_progress",
+      // A commitment entering its period is not evidence that work started.
+      workflowStatus: "planned",
+      // Legacy next-period plans continue unchanged. Only a current-period
+      // result consumes its explicit next-period commitment as the new text.
+      text:
+        item.type === "current" && item.nextStepText?.trim()
+          ? item.nextStepText
+          : item.text,
+      nextStepText: null,
+      pausedReason: null,
     },
     record: carryOverRecordSchema.parse({
       id: crypto.randomUUID(),

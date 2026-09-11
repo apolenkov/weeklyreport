@@ -474,6 +474,7 @@ model ReportSection {
   late             Boolean             @default(false)
   decisions        Decision[]
   items            Item[]
+  itemOutcomeEvents ItemOutcomeEvent[]
   projectStatuses  ProjectStatus[]
   reopenRequests   ReopenRequest[]
   author           User                @relation("ReportSectionAuthor", fields: [authorId], references: [id])
@@ -628,6 +629,10 @@ model Item {
   // every other workflow status must leave this field null. The shared write
   // schema and the canonical init CHECK enforce the same invariant.
   pausedReason    String?
+  // Next-period intent is independent of this period's reported result.
+  nextStepText    String?
+  // Server-owned cancellation state; ordinary draft saves preserve it by lineage.
+  resolution      Json?
   createdAt       DateTime                 @default(now())
   updatedAt       DateTime                 @updatedAt
   searchTsv       Unsupported("tsvector")? @default(dbgenerated("to_tsvector('russian'::regconfig, COALESCE(text, ''::text))"))
@@ -647,6 +652,28 @@ model Item {
   @@index([reportSectionId, priorityRank])
   @@index([stableId])
   @@index([searchTsv], type: Gin)
+}
+
+// Append-preserving command receipt and domain audit. No Item FK: section saves
+// recreate Item ids, while the stableId and these events must survive.
+model ItemOutcomeEvent {
+  id              String        @id
+  reportSectionId String
+  stableId        String
+  requestHash     String
+  outcome         String
+  reason          String?
+  actorId         String
+  actorName       String
+  occurredAt      DateTime      @default(now())
+  sourceReportId  String?
+  beforeState     Json
+  afterState      Json
+  reversesEventId String?
+  reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+
+  @@index([reportSectionId, stableId, occurredAt])
+  @@index([stableId, occurredAt])
 }
 
 model Risk {
@@ -1278,7 +1305,7 @@ enum ItemType {
 
 // Progress only — alarms (at-risk/blocked) are never stored on an item, they
 // derive from covering risks (record-status-derivation). Per-type vocabulary:
-// current → in_progress | paused | done; next → planned | postponed.
+// current → planned | in_progress | paused | done; next → planned | postponed.
 // Enforced by shared Zod + a hand-written CHECK in the init migration.
 enum ItemWorkflowStatus {
   planned

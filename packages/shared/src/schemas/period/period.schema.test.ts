@@ -33,12 +33,26 @@ const validPeriod = {
 
 describe("reportPeriodSchema — publishedById", () => {
   it("rejects a non-UUID publisher id", () => {
-    expect(() =>
-      reportPeriodSchema.parse({
-        ...validPeriod,
-        publishedById: "not-a-uuid",
-      }),
-    ).toThrow();
+    const baseline = {
+      ...validPeriod,
+      status: "published" as const,
+      periodState: "published" as const,
+      periodStatus: "published" as const,
+      publishedAt: new Date("2026-07-13T18:00:00.000Z"),
+      publishedById: PUBLISHER_ID,
+    };
+    expect(reportPeriodSchema.safeParse(baseline).success).toBe(true);
+
+    const result = reportPeriodSchema.safeParse({
+      ...baseline,
+      publishedById: "not-a-uuid",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toContainEqual(
+        expect.objectContaining({ path: ["publishedById"] }),
+      );
+    }
   });
 
   it("accepts a UUID publisher id", () => {

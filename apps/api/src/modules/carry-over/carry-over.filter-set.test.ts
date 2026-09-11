@@ -66,8 +66,7 @@ const sourceSection: ReportSectionReadModel = {
       deadline: null,
       impact: "Needs follow-up",
       resolvedAt: null,
-      // Decision.productId is a NOT-NULL product FK; a carried decision needs
-      // a product to persist (and therefore to be counted).
+      // This decision's product parent is present in the target section.
       productId: "44444444-4444-4444-8444-444444444444",
       stageNames: ["Development"],
     },
@@ -207,6 +206,7 @@ describe("CarryOverService — carry filter set (pin)", () => {
     items?: ReportSectionReadModel["items"];
     decisions?: ReportSectionReadModel["decisions"];
     targetActivities?: ReportSectionReadModel["activities"];
+    targetProjects?: ReportSectionReadModel["projects"];
     targetItems?: ReportSectionReadModel["items"];
     targetDecisions?: ReportSectionReadModel["decisions"];
   }): CarryOverRepository {
@@ -226,6 +226,7 @@ describe("CarryOverService — carry filter set (pin)", () => {
       submittedAt: null,
       items: opts.targetItems ?? [],
       decisions: opts.targetDecisions ?? [],
+      projects: opts.targetProjects ?? source.projects,
       activities: opts.targetActivities ?? [],
     };
     return {
@@ -275,6 +276,82 @@ describe("CarryOverService — carry filter set (pin)", () => {
       opts: { items: [nextItem({ carriedOver: true })] },
       items: 0,
     },
+    ...(["current", "next"] as const).map((type) => ({
+      name: `excludes a cancelled ${type} commitment`,
+      opts: {
+        items: [
+          nextItem({
+            type,
+            workflowStatus: "planned",
+            nextStepText: type === "current" ? "Continue validation" : null,
+            resolution: {
+              kind: "wont_do" as const,
+              eventId: LINEAGE,
+              reason: "No longer required",
+              actorId: AUTHOR,
+              actorName: "Lead",
+              occurredAt: "2026-09-04T10:00:00.000Z",
+              previousState: {
+                type,
+                workflowStatus: "planned" as const,
+                pausedReason: null,
+                nextStepText: null,
+              },
+            },
+          }),
+        ],
+      },
+      items: 0,
+    })),
+    {
+      name: "carries a current result with a non-blank next-period commitment",
+      opts: {
+        items: [
+          nextItem({
+            type: "current",
+            carriedOver: true,
+            text: "Delivered result",
+            nextStepText: "Continue validation",
+          }),
+        ],
+      },
+      items: 1,
+    },
+    {
+      name: "excludes a current item without a next-period commitment",
+      opts: { items: [nextItem({ type: "current", carriedOver: true })] },
+      items: 0,
+    },
+    {
+      name: "excludes a paused current commitment until it is explicitly resumed",
+      opts: {
+        items: [
+          nextItem({
+            type: "current",
+            carriedOver: true,
+            workflowStatus: "paused",
+            pausedReason: "Waiting on legal review",
+            nextStepText: "Deploy after approval",
+          }),
+        ],
+      },
+      items: 0,
+    },
+    {
+      name: "carries a resumed current commitment",
+      opts: {
+        items: [
+          nextItem({
+            type: "current",
+            carriedOver: true,
+            workflowStatus: "in_progress",
+            pausedReason: null,
+            nextStepText: "Deploy after approval",
+          }),
+        ],
+      },
+      items: 1,
+    },
     {
       name: "excludes a current (non-next) item",
       opts: { items: [nextItem({ type: "current" })] },
@@ -293,6 +370,11 @@ describe("CarryOverService — carry filter set (pin)", () => {
       opts: {
         items: [nextItem({ projectId: undefined, activityId: ACTIVITY })],
       },
+      items: 0,
+    },
+    {
+      name: "excludes a product item whose product is not attached to the target",
+      opts: { items: [nextItem()], targetProjects: [] },
       items: 0,
     },
     {
@@ -346,6 +428,11 @@ describe("CarryOverService — carry filter set (pin)", () => {
           unresolvedDecision({ productId: undefined, activityId: ACTIVITY }),
         ],
       },
+      decisions: 0,
+    },
+    {
+      name: "excludes a product decision whose product is not attached to the target",
+      opts: { decisions: [unresolvedDecision()], targetProjects: [] },
       decisions: 0,
     },
   ])("$name", async ({ opts, decisions }) => {

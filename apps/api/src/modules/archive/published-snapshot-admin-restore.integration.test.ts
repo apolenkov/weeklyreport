@@ -230,7 +230,7 @@ describe("published snapshot scope after admin restore (integration)", () => {
       prisma.item.count({ where: { stableId: frozenItemStableId } }),
     ).resolves.toBe(0);
 
-    const published = await queryPublishedLineage(prisma as never, {
+    const published = await queryPublishedLineage(prisma, {
       reportId: "99999999-9999-4999-8999-999999999991",
       reportSectionId: "99999999-9999-4999-8999-999999999992",
       itemStableIds: [frozenItemStableId],

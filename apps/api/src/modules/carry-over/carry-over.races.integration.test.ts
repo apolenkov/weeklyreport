@@ -193,6 +193,23 @@ describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races
         status: "draft",
       },
     });
+    const assignedStage = await prisma.stage.create({
+      data: { name: "Development", sortOrder: 1 },
+    });
+    await prisma.stageAssignment.create({
+      data: {
+        userId: testData.lead.id,
+        projectId: testData.project.id,
+        stageId: assignedStage.id,
+      },
+    });
+    await prisma.projectStatus.create({
+      data: {
+        reportSectionId: matchedTarget.id,
+        projectId: testData.project.id,
+        status: null,
+      },
+    });
     const unrelatedSubmitted = await prisma.reportSection.create({
       data: {
         reportId: targetReport.id,
@@ -444,7 +461,14 @@ describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races
         periodEnd: new Date("2026-04-20"),
         deadline: new Date("2026-04-18"),
         status: "draft",
+        periodState: "archived",
+        periodStatus: "open",
         archived: true,
+        autoPublished: false,
+        autoArchived: false,
+        publishedAt: null,
+        publishedById: null,
+        reopenedAt: null,
       },
     });
     const targetSection = await prisma.reportSection.create({

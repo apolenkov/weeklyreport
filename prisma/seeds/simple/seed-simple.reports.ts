@@ -3,7 +3,6 @@ import {
   PeriodStatus,
   type PrismaClient,
   ReportStatus,
-  TrafficLightStatus,
 } from "@prisma/client";
 
 import { provisionalPublishedSnapshot } from "../support/published-snapshot.js";
@@ -22,30 +21,6 @@ import {
   PREV_MONDAY,
   PREV_SUNDAY,
 } from "./seed-simple.period.js";
-
-function demoPublishedSnapshot(input: {
-  reportId: string;
-  periodStart: Date;
-  periodEnd: Date;
-  deadline: Date;
-  publishedAt: Date;
-}) {
-  return {
-    reportId: input.reportId,
-    periodStart: input.periodStart.toISOString(),
-    periodEnd: input.periodEnd.toISOString(),
-    deadline: input.deadline.toISOString(),
-    status: ReportStatus.published,
-    publishedAt: input.publishedAt.toISOString(),
-    publishedById: HEAD_ID,
-    publishedByName: "Елена Р.",
-    portfolioOverview: {
-      status: TrafficLightStatus.green,
-      totals: { green: 1, yellow: 0, red: 0 },
-    },
-    sections: [],
-  };
-}
 
 const REPORT_ROWS = [
   {
@@ -69,12 +44,14 @@ const REPORT_ROWS = [
     publishedAt: PREV_SUNDAY,
     publishedById: HEAD_ID,
     periodState: PeriodState.published,
-    publishedSnapshot: demoPublishedSnapshot({
+    publishedSnapshot: provisionalPublishedSnapshot({
       reportId: REPORT_PUBLISHED,
       periodStart: PREV_MONDAY,
       periodEnd: PREV_SUNDAY,
       deadline: PREV_FRIDAY_DEADLINE,
       publishedAt: PREV_SUNDAY,
+      publishedById: HEAD_ID,
+      publishedByName: "Елена Р.",
     }),
   },
   ...EXTRA_REPORTS.map((r) => {

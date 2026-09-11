@@ -19,6 +19,7 @@ import type {
 import { insertCoordinatedComment } from "./review-actions.comment-write.js";
 import { writeVerdict } from "./review-actions.verdict-write.js";
 import {
+  assertAcknowledgementAccess,
   assertReviewEntitlement,
   lockEditableReport,
   lockReviewUsers,
@@ -61,12 +62,13 @@ export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
       await lockEditableReport(tx, reportId);
       const currentSection = await tx.reportSection.findFirst({
         where: { reportId, author: { reportingGroupId: groupId } },
+        orderBy: { id: "asc" },
         select: { id: true, authorId: true },
       });
       if (currentSection?.authorId !== section.authorId) {
         throw new ReviewNotFoundError(REVIEW_GROUP_NOT_FOUND);
       }
-      await assertReviewEntitlement(tx, actor, groupId);
+      await assertAcknowledgementAccess(tx, actor, groupId);
       return tx.reviewAcknowledgement.upsert({
         where: {
           userId_reportId_groupId: {

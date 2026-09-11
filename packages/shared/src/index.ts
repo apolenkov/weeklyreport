@@ -22,6 +22,10 @@ export { omitUndefinedProperties } from "./object/omit-undefined-properties";
 export * from "./organization/default-reporting-group";
 export * from "./period/reopen-window";
 export * from "./schemas/admin/action-log.schema";
+export {
+  type ReminderDispatchResult,
+  reminderDispatchResultSchema,
+} from "./schemas/admin/reminder-dispatch.schema";
 export type { ReminderRecoverySnapshot } from "./schemas/admin/reminder-recovery.validation";
 export * from "./schemas/admin/reopen-request.schema";
 export * from "./schemas/ai-prompt-management";
@@ -86,6 +90,10 @@ export type {
   FailedJobList,
   GroupProduct,
   GroupProductEdgeInput,
+  ItemOutcomeEvent,
+  ItemOutcomeResult,
+  ItemOutcomeState,
+  ItemResolution,
   ItemWorkflowStatus,
   LatestForViewerReport,
   MyHistoryEntry,
@@ -111,6 +119,8 @@ export type {
   ReportSectionReadModel,
   ReportSectionStatus,
   ReportStatus,
+  ResolvePlanInput,
+  RestorePlanInput,
   ReviewAcknowledgementView,
   ReviewCommentInput,
   ReviewVerdict,
@@ -118,6 +128,8 @@ export type {
   RiskSeverity,
   SectionActivity,
   SectionReviewView,
+  SharedPublishedReportSectionReadModel,
+  SharedReportSectionReadModel,
   StageAssignment,
   SubmissionDashboardRow,
   SubmitSectionInput,
@@ -158,8 +170,13 @@ export {
   failedJobSchema,
   groupProductEdgeInputSchema,
   groupProductSchema,
+  itemOutcomeEventSchema,
+  itemOutcomeResultSchema,
+  itemOutcomeStateSchema,
+  itemResolutionSchema,
   itemWorkflowStatusSchema,
   latestForViewerReportSchema,
+  MAX_RECORDS_PER_SECTION_SAVE,
   MAX_WEEK_LABEL_LENGTH,
   myHistoryEntrySchema,
   paginationInputSchema,
@@ -179,6 +196,10 @@ export {
   reportDate,
   reportingGroupSchema,
   reportSectionReadModelSchema,
+  resolvePlanInputSchema,
+  resolvePlanSourceSchema,
+  restorePlanInputSchema,
+  REVIEW_COMMENT_MAX_LENGTH,
   reviewAcknowledgeInputSchema,
   reviewAcknowledgementViewSchema,
   reviewCommentInputSchema,
@@ -187,8 +208,11 @@ export {
   reviewVerdictInputSchema,
   reviewVerdictResultSchema,
   riskSeveritySchema,
+  SAFE_TEXT_MAX_LENGTH,
   safeText,
   SEMANTIC_INDEX_QUEUE_NAME,
+  sharedPublishedReportSectionReadModelSchema,
+  sharedReportSectionReadModelSchema,
   stageAssignmentSchema,
   submissionDashboardRowSchema,
   submitSectionSchema,
@@ -201,8 +225,20 @@ export {
   weeklyReportReadModelSchema,
 } from "./schemas/report";
 export * from "./schemas/report/published-projections";
+export { buildEscalationsFromReadSections } from "./schemas/report/report-escalations";
+export { buildPortfolioProductsFromSnapshotSections } from "./schemas/report/report-portfolio-products";
 export * from "./schemas/report-assistant";
 export * from "./schemas/report-assistant-search-plan";
+export type {
+  LeadOpenWorkHistoryInput,
+  LeadOpenWorkHistoryOccurrence,
+  LeadOpenWorkHistoryOutput,
+} from "./schemas/report-sections/open-work-history.schema";
+export {
+  leadOpenWorkHistoryInputSchema,
+  leadOpenWorkHistoryOccurrenceSchema,
+  leadOpenWorkHistoryOutputSchema,
+} from "./schemas/report-sections/open-work-history.schema";
 export * from "./schemas/report-sections/status-overview.schema";
 export type {
   SearchHit,
@@ -217,5 +253,6 @@ export type { StageName } from "./schemas/stages/stage-names";
 export { riskCoversStage, STAGE_NAMES } from "./schemas/stages/stage-names";
 export * from "./schemas/status/canonical-status";
 export * from "./schemas/telemetry/telemetry";
+export { deriveEffectiveProductStatus } from "./status/effective-product-status";
 export * from "./status/traffic-light-aggregation";
 export * from "./time";

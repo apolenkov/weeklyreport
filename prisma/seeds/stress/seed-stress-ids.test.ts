@@ -1,14 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  STRESS_ID_KIND,
-  stressId,
-  type StressIdKind,
-} from "./seed-stress-ids.js";
+import { STRESS_ID_KIND, stressId } from "./seed-stress-ids.js";
 
-// The union is derived from the catalogue; an out-of-catalogue literal must not
-// typecheck.
-const kindValues = Object.values(STRESS_ID_KIND) as readonly number[];
+const kindValues = Object.values(STRESS_ID_KIND);
 
 describe("stress id kind catalogue", () => {
   it("covers exactly the canonical kinds", () => {
@@ -16,9 +10,7 @@ describe("stress id kind catalogue", () => {
   });
 
   it("accepts every canonical kind and produces distinct id ranges", () => {
-    const ids = new Set(
-      kindValues.map((kind) => stressId(kind as StressIdKind, 1)),
-    );
+    const ids = new Set(kindValues.map((kind) => stressId(kind, 1)));
     expect(ids.size).toBe(kindValues.length);
   });
 

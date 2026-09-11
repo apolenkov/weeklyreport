@@ -2,7 +2,9 @@ import { TRPCError } from "@trpc/server";
 import { describe, expect, it, vi } from "vitest";
 
 import { createNullLogger } from "../../../lib/logger.js";
+import type { LeadFormService } from "../../../modules/report-sections/index.js";
 import { createNullAuditLogger } from "../../../test-utils/audit-logger.js";
+import { createStubAppRouterDeps } from "../../../test-utils/stub-app-router-deps.js";
 import { createLeadFormRouter } from "./lead-form.router.js";
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
@@ -39,10 +41,18 @@ const output = {
   },
 };
 
-function caller(getStatusOverview: ReturnType<typeof vi.fn>) {
-  const router = createLeadFormRouter({
-    leadFormService: { getStatusOverview },
-  } as never);
+function caller(
+  getStatusOverview: Pick<
+    LeadFormService,
+    "getStatusOverview"
+  >["getStatusOverview"],
+) {
+  const leadFormService = {
+    getStatusOverview,
+  } satisfies Pick<LeadFormService, "getStatusOverview">;
+  const router = createLeadFormRouter(
+    createStubAppRouterDeps({ leadFormService }),
+  );
   return router.createCaller({
     session: {
       userId: USER_ID,

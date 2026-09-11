@@ -152,10 +152,8 @@ export class PublicationService {
     );
 
     if (!result.published) {
-      // Compare-and-set matched zero rows: the period was archived (or already
-      // published) after candidate selection. Expected no-op — emit no metrics
-      // and invalidate no cache.
-      this.logger.info("auto-publish skipped: archived after selection", {
+      // The repository did not publish the candidate; skip publication effects.
+      this.logger.info("auto-publish skipped: candidate no longer eligible", {
         activeReportId,
       });
       return { published: false };

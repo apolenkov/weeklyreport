@@ -7,6 +7,7 @@ import {
 import type { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
+import { lockStatusGraph } from "../../../lib/status-graph-lock.js";
 import { PeriodLifecycleIntegrityError } from "../../period/index.js";
 import {
   lockAllReminderPolicies,
@@ -130,6 +131,9 @@ export async function updatePeriodManual(
 ) {
   return periodOverlapGuarded(() =>
     prisma.$transaction(async (tx) => {
+      // Period coordinates order outcome lineage, so envelope moves share the
+      // same barrier as section writes before either side locks Report rows.
+      await lockStatusGraph(tx);
       // Deadline writers share the same policy-first order as policy saves and
       // the applicator. A week-label/envelope-only edit needs no policy lock.
       const policies =

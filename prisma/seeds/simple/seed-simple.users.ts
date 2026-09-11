@@ -110,9 +110,8 @@ const USER_ROWS = [
     reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
   },
   {
-    // Finance group lead — Olga and Sergey are in Finance so the
-    // Software Development head (Антон К.) does NOT see them in their
-    // dashboard. This proves group-scope isolation end-to-end.
+    // Olga and Sergey belong to Finance, outside the Software Development head's
+    // report scope.
     id: LEAD_OLGA,
     email: "olga@customreport.local",
     name: "Незабудкина Ольга Сергеевна",

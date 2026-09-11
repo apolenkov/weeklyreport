@@ -159,7 +159,9 @@ describe("insertExecutionOnConflict editable-report lock", () => {
     expect(sql).toContain('rule."kind" = ?::"ReminderRuleKind"');
     expect(sql).toContain('rule."policyId" = ?');
     expect(sql).toContain('rule."deadline" = ?');
-    expect(sql).toContain('to_char(rule."fireAt"');
+    expect(sql).toContain('rule."fireAt"::date = ?::date');
+    expect(sql).not.toContain("AT TIME ZONE");
+    expect(sql).not.toContain("to_char(");
     expect(sql).toContain('policy."active" = true');
     expect(sql).toContain('report."deadline" = rule."deadline"');
     expect(eligibilityCall.slice(1)).toEqual(

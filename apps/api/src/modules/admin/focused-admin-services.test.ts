@@ -1,7 +1,7 @@
 import type { AdminSnapshot } from "@customreport/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { createNullLogger } from "../../lib/logger.js";
+import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import {
   adminSession,
   buildAdminCaller,
@@ -31,6 +31,47 @@ class SnapshotAdminService extends ProductionSnapshotAdminService {
     super(repository, createNullLogger());
   }
 }
+
+function createLoggerSpy(): AppLogger & { info: ReturnType<typeof vi.fn> } {
+  const info = vi.fn();
+  return { ...createNullLogger(), info };
+}
+
+describe("ReminderAdminService — success logging", () => {
+  const policyId = "77777777-7777-4777-8777-777777777777";
+
+  it("does not log a deleted policy when the repository rejects", async () => {
+    const logger = createLoggerSpy();
+    const repository = {
+      ...createRepository(initialSnapshot),
+      deleteReminderPolicy: vi.fn(() =>
+        Promise.reject(new Error("delete failed")),
+      ),
+    };
+    const service = new ProductionReminderAdminService(repository, logger);
+
+    await expect(service.removePolicy(policyId)).rejects.toThrow(
+      "delete failed",
+    );
+
+    expect(logger.info).not.toHaveBeenCalledWith("deleted reminder policy", {
+      policyId,
+    });
+  });
+
+  it("logs a deleted policy after the repository succeeds", async () => {
+    const logger = createLoggerSpy();
+    const repository = createRepository(initialSnapshot);
+    const service = new ProductionReminderAdminService(repository, logger);
+
+    await service.removePolicy(policyId);
+
+    expect(repository.deleteReminderPolicy).toHaveBeenCalledWith(policyId);
+    expect(logger.info).toHaveBeenCalledWith("deleted reminder policy", {
+      policyId,
+    });
+  });
+});
 
 describe("focused admin services", () => {
   it("checks reminder-policy existence without listing policies", async () => {
