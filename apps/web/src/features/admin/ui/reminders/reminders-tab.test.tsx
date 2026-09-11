@@ -575,6 +575,24 @@ describe("RemindersTab — add / edit form", () => {
     ).not.toHaveBeenCalled();
   });
 
+  it("keeps Save blocked when the offset unit changes after the magnitude is cleared", async () => {
+    const user = userEvent.setup();
+    renderTab({ policies: [policyDeadline] });
+
+    await user.click(screen.getByTestId(`edit-${policyDeadline.id}`));
+    const offsetInput = screen.getByLabelText<HTMLInputElement>(
+      /reminder offset amount/i,
+    );
+    await user.clear(offsetInput);
+    expect(screen.getByTestId("policy-save-button")).toBeDisabled();
+
+    await user.selectOptions(
+      screen.getByLabelText(/reminder offset unit/i),
+      "days",
+    );
+    expect(screen.getByTestId("policy-save-button")).toBeDisabled();
+  });
+
   it("never persists the invalid deadline→head-of-late pair from a fresh form", async () => {
     const user = userEvent.setup();
     // Org default audience no longer reaches the pairing. A fresh reminder
