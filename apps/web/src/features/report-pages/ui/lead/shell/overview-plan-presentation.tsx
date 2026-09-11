@@ -30,6 +30,7 @@ interface PlanActions {
 interface ItemActions {
   readonly editItem: (target: StatusOverviewEditTarget) => void;
   readonly addItem: (target: StatusOverviewCreateTarget) => void;
+  readonly quickEditText: (item: StatusOverviewItem, text: string) => void;
 }
 
 function planSlot(
@@ -89,6 +90,7 @@ export function overviewItemActions(
     ? {
         onEditItem: editor.editItem,
         onAddItem: editor.addItem,
+        onQuickEditText: editor.quickEditText,
         onResolvePlan: plan.resolve,
         onRestorePlan: plan.restore,
       }

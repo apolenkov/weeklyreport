@@ -1,5 +1,3 @@
-import { Plus } from "lucide-react";
-
 import type { ReportHealthUnit } from "../model/report-health-pulse";
 import type {
   StatusOverviewCreateTarget,
@@ -26,37 +24,36 @@ import {
   idleTimelineLaneClass,
   type StatusOverviewEditorSlot,
 } from "./status-overview-editor-slot";
+import {
+  STATUS_OVERVIEW_COLUMNS,
+  STATUS_OVERVIEW_DESKTOP_GRID,
+  type StatusOverviewColumnKey,
+  TIMELINE_CELL as CELL,
+  TIMELINE_GRID,
+} from "./status-overview-layout";
 import { StatusOverviewUnitSummary } from "./status-overview-summary";
+import { TimelineFooter } from "./status-overview-timeline-footer";
 
-export const STATUS_OVERVIEW_DESKTOP_GRID =
-  "min-[80rem]:grid min-[80rem]:grid-cols-[repeat(4,minmax(0,1fr))]";
-
-export type StatusOverviewColumnKey = keyof StatusOverviewUnit["columns"];
-
-export const STATUS_OVERVIEW_COLUMNS = [
-  { key: "previouslyPlanned", source: "previous", label: "Previously planned" },
-  { key: "currentWeek", source: "current", label: "Current week" },
-  { key: "nextWeek", source: "next", label: "Next week" },
-] as const;
+export { STATUS_OVERVIEW_COLUMNS, STATUS_OVERVIEW_DESKTOP_GRID };
+export type { StatusOverviewColumnKey };
 
 interface ItemHandlers {
   readonly editorSlot?: StatusOverviewEditorSlot | undefined;
   readonly onEditItem?:
     ((target: StatusOverviewEditTarget) => void) | undefined;
+  readonly onQuickEditText?:
+    ((item: StatusOverviewItem, text: string) => void) | undefined;
   readonly onAddItem?:
     ((target: StatusOverviewCreateTarget) => void) | undefined;
   readonly onResolvePlan?: ((item: StatusOverviewItem) => void) | undefined;
   readonly onRestorePlan?: ((item: StatusOverviewItem) => void) | undefined;
 }
 
-const TIMELINE_GRID = "md:grid md:grid-cols-3";
-const CELL =
-  "min-w-0 px-4 py-3 md:border-l md:border-[var(--color-border-subtle)]";
-
 function LineageRow({
   row,
   activeColumn,
   onEditItem,
+  onQuickEditText,
   onResolvePlan,
   onRestorePlan,
   editorSlot,
@@ -65,7 +62,11 @@ function LineageRow({
   readonly activeColumn: StatusOverviewColumnKey;
 } & Pick<
   ItemHandlers,
-  "onEditItem" | "onResolvePlan" | "onRestorePlan" | "editorSlot"
+  | "onEditItem"
+  | "onQuickEditText"
+  | "onResolvePlan"
+  | "onRestorePlan"
+  | "editorSlot"
 >) {
   const selected = STATUS_OVERVIEW_COLUMNS.find(
     (column) => column.key === activeColumn,
@@ -103,6 +104,7 @@ function LineageRow({
                 <ReportItemSlot
                   item={item}
                   onEditItem={onEditItem}
+                  onQuickEditText={onQuickEditText}
                   onResolvePlan={onResolvePlan}
                   onRestorePlan={onRestorePlan}
                   editorSlot={editorSlot}
@@ -111,66 +113,6 @@ function LineageRow({
             ) : (
               <span className="sr-only">No linked update</span>
             )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function TimelineFooter({
-  unit,
-  activeColumn,
-  onAddItem,
-  editorSlot,
-}: {
-  readonly unit: StatusOverviewUnit;
-  readonly activeColumn: StatusOverviewColumnKey;
-} & Pick<ItemHandlers, "onAddItem" | "editorSlot">) {
-  const createSource =
-    editorSlot?.recordId === null ? editorSlot.source : undefined;
-  return (
-    <div
-      className={`${TIMELINE_GRID} border-t border-[var(--color-border-subtle)]`}
-      data-testid="report-unit-footer"
-    >
-      {STATUS_OVERVIEW_COLUMNS.map((column) => {
-        const matchesEditor = createSource === column.source;
-        const layout = editorLaneClass(
-          matchesEditor,
-          createSource !== undefined,
-          idleTimelineLaneClass(column.key === activeColumn),
-        );
-        return (
-          <div
-            key={column.key}
-            data-overview-footer-lane={column.source}
-            className={`${CELL} ${layout}`}
-          >
-            {matchesEditor ? (
-              editorSlot?.content
-            ) : onAddItem &&
-              !unit.historical &&
-              column.source !== "previous" ? (
-              <button
-                type="button"
-                aria-label={`Add ${column.source} week update to ${unit.name}`}
-                data-overview-focus={`add:${unit.key}:${column.source}`}
-                onClick={() =>
-                  onAddItem({
-                    source: column.source === "current" ? "current" : "next",
-                    unitKind: unit.kind,
-                    unitId: unit.id,
-                  })
-                }
-                className="inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-[var(--radius-sm)] px-2 text-sm font-semibold text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
-              >
-                <Plus aria-hidden="true" className="size-4" />
-                {column.source === "current"
-                  ? "Add current update"
-                  : "Plan next week"}
-              </button>
-            ) : null}
           </div>
         );
       })}
@@ -192,6 +134,7 @@ export function StatusOverviewUnitRow({
   onToggle,
   panelId,
   onEditItem,
+  onQuickEditText,
   onAddItem,
   onResolvePlan,
   onRestorePlan,
@@ -261,6 +204,7 @@ export function StatusOverviewUnitRow({
                   row={row}
                   activeColumn={activeColumn}
                   onEditItem={onEditItem}
+                  onQuickEditText={onQuickEditText}
                   onResolvePlan={onResolvePlan}
                   onRestorePlan={onRestorePlan}
                   editorSlot={editorSlot}
@@ -273,6 +217,7 @@ export function StatusOverviewUnitRow({
             expanded={expanded}
             activeColumn={activeColumn}
             onEditItem={onEditItem}
+            onQuickEditText={onQuickEditText}
             onResolvePlan={onResolvePlan}
             onRestorePlan={onRestorePlan}
             editorSlot={editorSlot}

@@ -5,6 +5,7 @@ import type {
   StatusOverviewCreateTarget,
   StatusOverviewEditorSlot,
   StatusOverviewEditTarget,
+  StatusOverviewItem,
   StatusOverviewModel,
 } from "../../../../report-sections";
 import {
@@ -234,6 +235,11 @@ export function useOverviewItemEditor(
       },
     });
   };
+  const quickEditText = (item: StatusOverviewItem, text: string): void => {
+    if (!editor || isReadOnly) return;
+    const itemId = item.recordId ?? item.stableId ?? item.key;
+    editor.draft.apply({ kind: "item-patch", itemId, patch: { text } });
+  };
   return {
     dialog,
     error:
@@ -244,6 +250,7 @@ export function useOverviewItemEditor(
     recoveryReason,
     editItem,
     addItem,
+    quickEditText,
     save,
     close: () => {
       startedAttempt.current = null;
