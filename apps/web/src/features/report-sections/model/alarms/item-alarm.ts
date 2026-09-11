@@ -1,3 +1,8 @@
+import {
+  riskSeverityToCanonicalFloor,
+  worstCanonicalStatus,
+} from "@customreport/shared";
+
 import { riskCoversStage } from "../stage-tags";
 
 // Item-card alarm is the roll-up of covering risk/blocker rows — never a free
@@ -42,9 +47,11 @@ export function coveringRisksForItem<T extends AlarmRisk>(
 }
 
 export function highestAlarmSeverity(risks: readonly AlarmRisk[]): ItemAlarm {
-  if (risks.some((risk) => risk.severity === "blocked")) return "blocked";
-  if (risks.some((risk) => risk.severity === "at-risk")) return "at-risk";
-  return null;
+  if (risks.length === 0) return null;
+  const worst = worstCanonicalStatus(
+    risks.map((risk) => riskSeverityToCanonicalFloor(risk.severity)),
+  );
+  return worst === "blocked" ? "blocked" : "at-risk";
 }
 
 export function deriveItemAlarmFromRisks(

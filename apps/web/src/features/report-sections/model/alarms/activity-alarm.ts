@@ -1,6 +1,12 @@
 // Mirror the server alarm floor from live draft risks: blocked => red,
 // at-risk => yellow, and blank placeholder risks cover nothing.
 
+import {
+  canonicalToTrafficLight,
+  riskSeverityToCanonicalFloor,
+  worstCanonicalStatus,
+} from "@customreport/shared";
+
 export type ActivityAlarmFloor = "yellow" | "red" | null;
 
 interface ActivityAlarmRisk {
@@ -17,7 +23,11 @@ export function deriveActivityAlarmFloor(
   const covering = risks.filter(
     (risk) => risk.activityId === activityId && risk.text.trim().length > 0,
   );
-  if (covering.some((risk) => risk.severity === "blocked")) return "red";
-  if (covering.length > 0) return "yellow";
-  return null;
+  if (covering.length === 0) return null;
+  const floor = canonicalToTrafficLight(
+    worstCanonicalStatus(
+      covering.map((risk) => riskSeverityToCanonicalFloor(risk.severity)),
+    ),
+  );
+  return floor === "red" || floor === "yellow" ? floor : null;
 }

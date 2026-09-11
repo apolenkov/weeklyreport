@@ -1,6 +1,10 @@
 // Maps weeklyReport.get into aggregate and per-lead presentation slices.
 import type { WeeklyReportReadModel } from "@customreport/shared";
-import { shortNameFromName } from "@customreport/shared";
+import {
+  CANONICAL_STATUS_PRECEDENCE,
+  shortNameFromName,
+  worstCanonicalStatus,
+} from "@customreport/shared";
 
 import {
   formatPeriodRangeWithYear,
@@ -210,35 +214,17 @@ export function mapWeeklyReportLeadGroups(
     .filter((group) => group.products.length > 0);
 }
 
-const PRODUCT_STATUS_PRECEDENCE: Readonly<Record<WeeklyProductStatus, number>> =
-  Object.freeze({
-    empty: 0,
-    "on-track": 1,
-    "at-risk": 2,
-    blocked: 3,
-  });
-
 function compareProductStatus(
   left: WeeklyProductStatus,
   right: WeeklyProductStatus,
 ): number {
-  return PRODUCT_STATUS_PRECEDENCE[right] - PRODUCT_STATUS_PRECEDENCE[left];
+  return CANONICAL_STATUS_PRECEDENCE[right] - CANONICAL_STATUS_PRECEDENCE[left];
 }
 
 function worstProductStatus(
   products: readonly WeeklyProductReport[],
 ): WeeklyProductStatus {
-  const first = products[0];
-  if (!first) return "empty";
-  return products
-    .slice(1)
-    .reduce(
-      (worst, product) =>
-        compareProductStatus(product.status, worst) < 0
-          ? product.status
-          : worst,
-      first.status,
-    );
+  return worstCanonicalStatus(products.map((product) => product.status));
 }
 
 // Overview rows inherit the groups' content filter (decisions-only leads keep a
