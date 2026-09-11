@@ -167,6 +167,12 @@ export class ProjectActivityPrismaRepository implements ProjectActivityRepositor
         })),
         skipDuplicates: true,
       });
+      // Bump the affected drafts so an in-flight save holding a pre-attach model
+      // fails its version CAS instead of erasing the freshly created status rows.
+      await tx.reportSection.updateMany({
+        where: { id: { in: sections.map((section) => section.id) } },
+        data: { version: { increment: 1 } },
+      });
     });
   }
 
@@ -187,6 +193,12 @@ export class ProjectActivityPrismaRepository implements ProjectActivityRepositor
           activityId: edge.activityId,
           reportSectionId: { in: sections.map((section) => section.id) },
         },
+      });
+      // Bump the affected drafts so an in-flight save holding a pre-detach model
+      // fails its version CAS instead of recreating an orphan status row.
+      await tx.reportSection.updateMany({
+        where: { id: { in: sections.map((section) => section.id) } },
+        data: { version: { increment: 1 } },
       });
     });
   }
