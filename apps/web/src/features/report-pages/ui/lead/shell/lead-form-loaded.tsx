@@ -218,6 +218,7 @@ export function LeadFormLoaded(props: LeadFormLoadedProps) {
   const completion = useCompletionPresentation({
     autosave: props.autosave,
     products: props.viewModel.products,
+    activityCount: props.viewModel.activityOptions.length,
     onQuickAdd: props.draftActions.onQuickAdd,
     handleSubmit: props.writeActions.handleSubmit,
     readiness: props.submitReadiness,
@@ -257,6 +258,7 @@ export function LeadFormLoaded(props: LeadFormLoadedProps) {
         writeActions={props.writeActions}
         unsetOwnStageCount={props.unsetOwnStageCount}
         draftSection={props.draftSection}
+        isSlidesMode={props.isSlidesMode}
       />
     </SdlcTooltipProvider>
   );

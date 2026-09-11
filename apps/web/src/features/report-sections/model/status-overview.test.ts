@@ -11,6 +11,22 @@ const LINKED_PRODUCT_A = "10000000-0000-4000-8000-000000000014";
 const LINKED_PRODUCT_B = "10000000-0000-4000-8000-000000000015";
 const STABLE_CONTINUED = "10000000-0000-4000-8000-000000000020";
 const STABLE_UNPLANNED = "10000000-0000-4000-8000-000000000021";
+const RESOLVED_STABLE = "10000000-0000-4000-8000-000000000024";
+
+const WON_T_DO_RESOLUTION = {
+  kind: "wont_do" as const,
+  eventId: "10000000-0000-4000-8000-000000000025",
+  reason: "The dependency closed.",
+  actorId: "10000000-0000-4000-8000-000000000026",
+  actorName: "Lead",
+  occurredAt: "2026-09-05T12:00:00.000Z",
+  previousState: {
+    type: "current" as const,
+    workflowStatus: "in_progress" as const,
+    pausedReason: null,
+    nextStepText: null,
+  },
+};
 
 function item(overrides: {
   readonly id: string;
@@ -327,5 +343,172 @@ describe("projectStatusOverview", () => {
     expect(
       readOnly.units[0]?.columns.currentWeek.items[0]?.editTarget,
     ).toBeNull();
+    expect(readOnly.units[0]?.columns.currentWeek.items[0]?.canResolve).toBe(
+      false,
+    );
+  });
+
+  it("preserves resolution audit metadata, keeps cancelled plans non-editable, and excludes them from active counts", () => {
+    const currentSection = makeReportSectionFixture({
+      projects: [
+        {
+          projectId: CURRENT_PRODUCT,
+          projectName: "Payments",
+          trafficLight: "green",
+        },
+      ],
+      items: [
+        {
+          id: "10000000-0000-4000-8000-000000000027",
+          stableId: RESOLVED_STABLE,
+          projectId: CURRENT_PRODUCT,
+          type: "current",
+          text: "Cancelled delivery",
+          tag: "delivery",
+          workflowStatus: "done",
+          carriedOver: false,
+          resolution: WON_T_DO_RESOLUTION,
+          outcomeHistory: [],
+        },
+      ],
+    });
+    const previousSection = {
+      ...makeReportSectionFixture({
+        projects: [
+          {
+            projectId: CURRENT_PRODUCT,
+            projectName: "Payments",
+            trafficLight: "green",
+          },
+        ],
+        items: [
+          {
+            id: "10000000-0000-4000-8000-000000000028",
+            stableId: RESOLVED_STABLE,
+            projectId: CURRENT_PRODUCT,
+            type: "current",
+            text: "Cancelled prior commitment",
+            tag: "delivery",
+            workflowStatus: "done",
+            carriedOver: false,
+            resolution: WON_T_DO_RESOLUTION,
+            outcomeHistory: [],
+          },
+        ],
+      }),
+      status: "submitted" as const,
+    };
+
+    const result = projectStatusOverview(
+      {
+        current: {
+          reportId: currentSection.reportId,
+          periodStart: new Date("2026-08-31T00:00:00.000Z"),
+          periodEnd: new Date("2026-09-06T00:00:00.000Z"),
+          section: currentSection,
+        },
+        predecessor: {
+          availability: "available",
+          source: "submitted",
+          reportId: previousSection.reportId,
+          periodStart: new Date("2026-08-24T00:00:00.000Z"),
+          periodEnd: new Date("2026-08-30T00:00:00.000Z"),
+          section: previousSection,
+        },
+      },
+      { currentItemsEditable: true },
+    );
+
+    const unit = result.units[0];
+    expect(unit?.columns.previouslyPlanned.items[0]).toMatchObject({
+      resolution: WON_T_DO_RESOLUTION,
+      canResolve: false,
+      canRestore: false,
+    });
+    expect(unit?.columns.currentWeek.items[0]).toMatchObject({
+      resolution: WON_T_DO_RESOLUTION,
+      editTarget: null,
+      canResolve: false,
+      canRestore: true,
+    });
+    expect(result.sourceCounts).toEqual({
+      previouslyPlanned: 0,
+      currentWeek: 0,
+      nextWeek: 0,
+    });
+  });
+
+  it("offers prior resolution only when no current record already owns its stable identity", () => {
+    const currentSection = makeReportSectionFixture({
+      projects: [
+        {
+          projectId: CURRENT_PRODUCT,
+          projectName: "Payments",
+          trafficLight: "green",
+        },
+      ],
+      items: [
+        item({
+          id: "10000000-0000-4000-8000-000000000029",
+          stableId: STABLE_CONTINUED,
+          projectId: CURRENT_PRODUCT,
+          type: "current",
+          text: "Already resolved from prior",
+        }),
+      ],
+    });
+    const previousSection = {
+      ...makeReportSectionFixture({
+        projects: [
+          {
+            projectId: CURRENT_PRODUCT,
+            projectName: "Payments",
+            trafficLight: "green",
+          },
+        ],
+        items: [
+          item({
+            id: "10000000-0000-4000-8000-000000000030",
+            stableId: STABLE_CONTINUED,
+            projectId: CURRENT_PRODUCT,
+            type: "next",
+            text: "Linked prior plan",
+          }),
+          item({
+            id: "10000000-0000-4000-8000-000000000031",
+            stableId: STABLE_UNPLANNED,
+            projectId: CURRENT_PRODUCT,
+            type: "next",
+            text: "Unlinked prior plan",
+          }),
+        ],
+      }),
+      status: "submitted" as const,
+    };
+
+    const result = projectStatusOverview(
+      {
+        current: {
+          reportId: currentSection.reportId,
+          periodStart: new Date("2026-08-31T00:00:00.000Z"),
+          periodEnd: new Date("2026-09-06T00:00:00.000Z"),
+          section: currentSection,
+        },
+        predecessor: {
+          availability: "available",
+          source: "submitted",
+          reportId: previousSection.reportId,
+          periodStart: new Date("2026-08-24T00:00:00.000Z"),
+          periodEnd: new Date("2026-08-30T00:00:00.000Z"),
+          section: previousSection,
+        },
+      },
+      { currentItemsEditable: true },
+    );
+
+    expect(result.units[0]?.columns.previouslyPlanned.items).toMatchObject([
+      { text: "Linked prior plan", canResolve: false },
+      { text: "Unlinked prior plan", canResolve: true },
+    ]);
   });
 });

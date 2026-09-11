@@ -16,9 +16,8 @@ import {
   makeReportSectionFixture,
   type ReportSectionFixture,
 } from "../../../test-utils/report-section-fixtures";
-import type { KanbanItem } from "../../report-sections";
+import type { KanbanItem, MappedLeadForm } from "../../report-sections";
 import type { GridRowEditableRef } from "../model/slide-grid-rows";
-import type { LeadSlideFormData } from "./lead-slide-form-data";
 import { useSlideInlineEditor } from "./use-slide-inline-editor";
 
 const toastError = vi.fn();
@@ -208,7 +207,7 @@ function makeSection(over: ReportSectionFixture = {}): ReportSectionReadModel {
   });
 }
 
-function makeFormData(): LeadSlideFormData {
+function makeFormData(): MappedLeadForm {
   return {
     products: [
       { id: PRODUCT_ID, name: "Alpha", overallStatus: "on-track", stages: [] },
@@ -277,7 +276,7 @@ function Harness({
   activateRef,
 }: {
   readonly section: ReportSectionReadModel | null;
-  readonly formData: LeadSlideFormData | null;
+  readonly formData: MappedLeadForm | null;
   readonly canInlineEdit: boolean;
   readonly refetchSection: () => Promise<unknown>;
   readonly activateRef: GridRowEditableRef;
@@ -312,7 +311,7 @@ function renderHarness({
   activateRef = ITEM_REF,
 }: {
   readonly section?: ReportSectionReadModel | null;
-  readonly formData?: LeadSlideFormData | null;
+  readonly formData?: MappedLeadForm | null;
   readonly canInlineEdit?: boolean;
   readonly activateRef?: GridRowEditableRef;
 } = {}) {

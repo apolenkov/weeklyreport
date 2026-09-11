@@ -31,7 +31,10 @@ import HeadReportByIdPage from "./page";
 
 const REPORT_ID = "a0000000-0000-4000-8000-000000000001";
 
-async function renderPage(searchParams: { mode?: string; authorId?: string }) {
+async function renderPage(searchParams: {
+  mode?: string | string[];
+  authorId?: string | string[];
+}) {
   const ui = await HeadReportByIdPage({
     params: Promise.resolve({ reportId: REPORT_ID }),
     searchParams: Promise.resolve(searchParams),
@@ -60,5 +63,14 @@ describe("HeadReportByIdPage — URL → view-mode mapping", () => {
   it("threads the authorId through to the shell", async () => {
     const shell = await renderPage({ authorId: "lead-7" });
     expect(shell).toHaveAttribute("data-author", "lead-7");
+  });
+
+  it("ignores repeated mode and author values", async () => {
+    const shell = await renderPage({
+      mode: ["slides", "form"],
+      authorId: ["lead-7", "lead-8"],
+    });
+    expect(shell).toHaveAttribute("data-mode", "form");
+    expect(shell).toHaveAttribute("data-author", "");
   });
 });

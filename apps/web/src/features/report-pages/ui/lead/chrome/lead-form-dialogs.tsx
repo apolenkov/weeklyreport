@@ -1,24 +1,36 @@
 "use client";
 
 import type { ReportSectionReadModel } from "@customreport/shared";
-import type { ComponentProps } from "react";
+import { type ComponentProps, useEffect, useReducer, useRef } from "react";
 
+import { useEditableListDialog } from "../../../../../shared/hooks/dialogs/use-editable-list-dialog";
 import { ConfirmDeleteDialog } from "../../../../../shared/ui/dialogs/confirm-delete-dialog";
 import { ConfirmationDialog } from "../../../../../shared/ui/dialogs/confirmation-dialog";
-import { RequestReopenDialog } from "../../../../period";
-import type { LeadFormLoadedViewModel } from "../../../../report-sections";
+import { DecisionEditDialog, RequestReopenDialog } from "../../../../period";
+import type {
+  DecisionEntry,
+  LeadFormLoadedViewModel,
+  RiskEntry,
+  RiskPrefillRequest,
+} from "../../../../report-sections";
 import {
   ItemEditDialog,
   type KanbanItem,
   ownedStagesForProject,
 } from "../../../../report-sections";
 import type { QuickAddItem } from "../../../../report-sections/client";
+import { RiskEditDialog } from "../../../../review";
 import { SubmitConfirmDialog } from "./submit-confirm-dialog";
 
 export interface LeadFormDialogsQuickAdd {
   readonly quickAddItem: QuickAddItem | null;
   readonly onQuickAddSave: (item: KanbanItem) => void;
   readonly onQuickAddCancel: () => void;
+  readonly risksAddSignal: number;
+  readonly decisionsAddSignal: number;
+  readonly riskPrefill: RiskPrefillRequest | null;
+  readonly onRisksChange: (next: readonly RiskEntry[]) => void;
+  readonly onDecisionsChange: (next: readonly DecisionEntry[]) => void;
 }
 
 export interface LeadFormDialogsWriteActions {
@@ -51,11 +63,11 @@ interface LeadFormDialogsProps {
   // Same count that feeds submit coercion — warning and coercion cannot disagree.
   readonly unsetOwnStageCount: number;
   readonly draftSection: ReportSectionReadModel;
+  readonly isSlidesMode: boolean;
 }
 
-// Quick-add item dialog host — the EXISTING item dialog opened by the picker for
-// current-item / next-item. The risk / blocker / decision quick-adds open the
-// dialogs the sections already host (a blocker rides the blocked-risk prefill).
+// Current and Next share this form-level host in both public views. Overview
+// sections own the support dialogs; Slides mounts their form-level counterparts.
 function QuickAddItemDialog({
   viewModel,
   quickAdd,
@@ -85,6 +97,129 @@ function QuickAddItemDialog({
       onSave={quickAdd.onQuickAddSave}
       onCancel={quickAdd.onQuickAddCancel}
     />
+  );
+}
+
+function SlidesQuickAddRiskDialog({
+  viewModel,
+  quickAdd,
+  draftSection,
+}: {
+  readonly viewModel: LeadFormLoadedViewModel;
+  readonly quickAdd: LeadFormDialogsQuickAdd;
+  readonly draftSection: ReportSectionReadModel;
+}) {
+  const dialog = useEditableListDialog<RiskEntry>({
+    readOnly: viewModel.isReadOnly,
+    addSignal: quickAdd.risksAddSignal,
+    seedProductId: viewModel.products[0]?.id,
+  });
+  const { openCreate } = dialog;
+  const lastPrefillSignal = useRef(quickAdd.riskPrefill?.signal ?? 0);
+  const [activePrefill, setActivePrefill] = useReducer(
+    (_current: RiskPrefillRequest | null, next: RiskPrefillRequest | null) =>
+      next,
+    null,
+  );
+
+  useEffect(() => {
+    const prefill = quickAdd.riskPrefill;
+    if (!prefill || prefill.signal <= lastPrefillSignal.current) return;
+    lastPrefillSignal.current = prefill.signal;
+    setActivePrefill(prefill);
+    openCreate({
+      ...(prefill.productId ? { productId: prefill.productId } : {}),
+      ...(prefill.activityId ? { activityId: prefill.activityId } : {}),
+    });
+  }, [quickAdd.riskPrefill, openCreate]);
+
+  const close = () => {
+    setActivePrefill(null);
+    dialog.close();
+  };
+  const state = dialog.dialogState;
+  const createState = state.open && state.mode === "create" ? state : null;
+
+  return (
+    <RiskEditDialog
+      key={dialog.dialogKey}
+      open={state.open}
+      risk={null}
+      products={viewModel.products}
+      activities={viewModel.activityOptions}
+      defaultProductId={createState?.seedProductId}
+      defaultActivityId={createState?.seedActivityId}
+      initialStageNames={activePrefill?.stageNames}
+      initialSeverity={activePrefill?.severity}
+      stagesForProduct={(productId) =>
+        ownedStagesForProject(draftSection, productId)
+      }
+      onSave={(saved) => {
+        quickAdd.onRisksChange([...viewModel.ownRisks, saved]);
+        close();
+      }}
+      onCancel={close}
+    />
+  );
+}
+
+function SlidesQuickAddDecisionDialog({
+  viewModel,
+  quickAdd,
+  draftSection,
+}: {
+  readonly viewModel: LeadFormLoadedViewModel;
+  readonly quickAdd: LeadFormDialogsQuickAdd;
+  readonly draftSection: ReportSectionReadModel;
+}) {
+  const dialog = useEditableListDialog<DecisionEntry>({
+    readOnly: viewModel.isReadOnly,
+    addSignal: quickAdd.decisionsAddSignal,
+  });
+
+  return (
+    <DecisionEditDialog
+      key={dialog.dialogKey}
+      open={dialog.dialogState.open}
+      decision={null}
+      defaultOwner={viewModel.currentUser.name}
+      stagesForProduct={(productId) =>
+        ownedStagesForProject(draftSection, productId)
+      }
+      products={viewModel.products}
+      activities={viewModel.activityOptions}
+      defaultProductId={viewModel.products[0]?.id}
+      onSave={(saved) => {
+        quickAdd.onDecisionsChange([...viewModel.ownDecisions, saved]);
+        dialog.close();
+      }}
+      onCancel={dialog.close}
+    />
+  );
+}
+
+function SlidesQuickAddDialogs({
+  viewModel,
+  quickAdd,
+  draftSection,
+}: {
+  readonly viewModel: LeadFormLoadedViewModel;
+  readonly quickAdd: LeadFormDialogsQuickAdd;
+  readonly draftSection: ReportSectionReadModel;
+}) {
+  return (
+    <>
+      <SlidesQuickAddRiskDialog
+        viewModel={viewModel}
+        quickAdd={quickAdd}
+        draftSection={draftSection}
+      />
+      <SlidesQuickAddDecisionDialog
+        viewModel={viewModel}
+        quickAdd={quickAdd}
+        draftSection={draftSection}
+      />
+    </>
   );
 }
 
@@ -120,6 +255,7 @@ export function LeadFormDialogs({
   writeActions,
   unsetOwnStageCount,
   draftSection,
+  isSlidesMode,
 }: LeadFormDialogsProps) {
   return (
     <>
@@ -134,6 +270,14 @@ export function LeadFormDialogs({
         quickAdd={quickAdd}
         draftSection={draftSection}
       />
+
+      {isSlidesMode && (
+        <SlidesQuickAddDialogs
+          viewModel={viewModel}
+          quickAdd={quickAdd}
+          draftSection={draftSection}
+        />
+      )}
 
       <RequestReopenDialog
         open={writeActions.showReopenDialog}

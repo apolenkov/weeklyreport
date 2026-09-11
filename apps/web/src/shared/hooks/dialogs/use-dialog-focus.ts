@@ -1,4 +1,4 @@
-import { type RefObject, useEffect, useMemo } from "react";
+import { type RefObject, useEffect, useEffectEvent, useMemo } from "react";
 
 const FOCUSABLE_SELECTOR = [
   "a[href]",
@@ -9,26 +9,84 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(",");
 
+const MODAL_SURFACE_SELECTOR =
+  '[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]';
+
+interface KeyboardOwner {
+  readonly containerRef: RefObject<HTMLElement | null>;
+  readonly mode: DialogFocusMode;
+}
+
+type DialogFocusMode = "modal" | "nonmodal";
+
+const keyboardOwnersByDocument = new WeakMap<Document, KeyboardOwner[]>();
+
+function registerKeyboardOwner(
+  ownerDocument: Document,
+  owner: KeyboardOwner,
+): () => void {
+  const owners = keyboardOwnersByDocument.get(ownerDocument) ?? [];
+  if (owners.length === 0) keyboardOwnersByDocument.set(ownerDocument, owners);
+  owners.push(owner);
+
+  return () => {
+    const ownerIndex = owners.lastIndexOf(owner);
+    if (ownerIndex !== -1) owners.splice(ownerIndex, 1);
+    if (owners.length === 0) keyboardOwnersByDocument.delete(ownerDocument);
+  };
+}
+
+function isKeyboardEventOwner(
+  ownerDocument: Document,
+  owner: KeyboardOwner,
+  event: KeyboardEvent,
+): boolean {
+  const owners = keyboardOwnersByDocument.get(ownerDocument) ?? [];
+  const eligibleOwners =
+    event.key === "Tab"
+      ? owners.filter((candidate) => candidate.mode === "modal")
+      : owners;
+  const eventModal = closestModalSurface(eventElement(event));
+  if (!eventModal) return eligibleOwners.at(-1) === owner;
+  return (
+    eligibleOwners
+      .filter(
+        (candidate) =>
+          closestModalSurface(candidate.containerRef.current) === eventModal,
+      )
+      .at(-1) === owner
+  );
+}
+
 function focusableWithin(container: HTMLElement): HTMLElement[] {
-  return [...container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)];
+  return [
+    ...container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+  ].filter((element) => !element.matches(":disabled"));
 }
 
 function trapTab(event: KeyboardEvent, container: HTMLElement): void {
   const focusable = focusableWithin(container);
   const first = focusable.at(0);
   const last = focusable.at(-1);
-  if (first === undefined || last === undefined) return;
+  if (first === undefined || last === undefined) {
+    event.preventDefault();
+    container.focus();
+    return;
+  }
   const active = document.activeElement;
 
-  const focusMovedToFirst =
-    (!event.shiftKey && active === last) ||
-    (active !== null && !container.contains(active));
+  const activeIsFocusable =
+    active instanceof HTMLElement && focusable.includes(active);
+  if (!activeIsFocusable) {
+    event.preventDefault();
+    (event.shiftKey ? last : first).focus();
+    return;
+  }
+
   if (event.shiftKey && active === first) {
     event.preventDefault();
     last.focus();
-  } else if (focusMovedToFirst) {
-    // Wrap forward from the last element, or pull focus back in after a
-    // content swap dropped it to the body — both land on the first element.
+  } else if (!event.shiftKey && active === last) {
     event.preventDefault();
     first.focus();
   }
@@ -39,6 +97,7 @@ interface DialogFocusOptions {
   readonly onClose: () => void;
   readonly containerRef: RefObject<HTMLElement | null>;
   readonly triggerRef?: RefObject<HTMLElement | null> | undefined;
+  readonly mode?: DialogFocusMode;
 }
 
 const getActiveElement = (): HTMLElement | null =>
@@ -48,6 +107,15 @@ const getActiveElement = (): HTMLElement | null =>
 
 const activeElementForDialog = (open: boolean): HTMLElement | null =>
   open ? getActiveElement() : null;
+
+function closestModalSurface(element: Element | null): HTMLElement | null {
+  return element?.closest<HTMLElement>(MODAL_SURFACE_SELECTOR) ?? null;
+}
+
+function eventElement(event: KeyboardEvent): Element | null {
+  if (event.target instanceof Element) return event.target;
+  return getActiveElement();
+}
 
 function resolveRestoreTarget(
   container: HTMLElement | null,
@@ -68,14 +136,21 @@ function focusDialogSurface(
   (focusableWithin(container)[0] ?? container).focus();
 }
 
-// Shared non-Radix modal focus: trap Tab, Escape-close, restore to opener.
+// Shared non-Radix focus lifecycle. Modal surfaces also move and trap focus;
+// nonmodal popups retain only Escape ownership and focus restoration.
 export function useDialogFocus({
   open,
   onClose,
   containerRef,
   triggerRef,
+  mode = "modal",
 }: DialogFocusOptions): void {
   const opener = useMemo(() => activeElementForDialog(open), [open]);
+  const keyboardOwner = useMemo<KeyboardOwner>(
+    () => ({ containerRef, mode }),
+    [containerRef, mode],
+  );
+  const closeDialog = useEffectEvent(onClose);
 
   useEffect(() => {
     if (!open) return;
@@ -87,31 +162,44 @@ export function useDialogFocus({
       opener,
       triggerRef?.current ?? null,
     );
-    focusDialogSurface(container, activeElement);
+    if (mode === "modal") focusDialogSurface(container, activeElement);
 
     return () => {
       restoreTarget?.focus();
     };
-  }, [open, containerRef, triggerRef, opener]);
+  }, [open, containerRef, triggerRef, opener, mode]);
 
   useEffect(() => {
     if (!open) return;
 
+    const ownerDocument = document;
+    const unregisterKeyboardOwner = registerKeyboardOwner(
+      ownerDocument,
+      keyboardOwner,
+    );
+
     function handleKeyDown(event: KeyboardEvent): void {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onClose();
+      const container = containerRef.current;
+      if (
+        event.defaultPrevented ||
+        !isKeyboardEventOwner(ownerDocument, keyboardOwner, event)
+      ) {
         return;
       }
-      const container = containerRef.current;
-      if (event.key === "Tab" && container) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeDialog();
+        return;
+      }
+      if (event.key === "Tab" && mode === "modal" && container) {
         trapTab(event, container);
       }
     }
 
-    document.addEventListener("keydown", handleKeyDown);
+    ownerDocument.addEventListener("keydown", handleKeyDown);
     return () => {
-      document.removeEventListener("keydown", handleKeyDown);
+      unregisterKeyboardOwner();
+      ownerDocument.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open, onClose, containerRef]);
+  }, [open, containerRef, keyboardOwner, mode]);
 }

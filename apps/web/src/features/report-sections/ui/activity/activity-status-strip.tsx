@@ -5,7 +5,10 @@ import type {
   ReportSectionReadModel,
   SectionActivity,
 } from "@customreport/shared";
-import { trafficLightToCanonical } from "@customreport/shared";
+import {
+  shortNameFromName,
+  trafficLightToCanonical,
+} from "@customreport/shared";
 
 type ActivitySectionSlice = Pick<
   ReportSectionReadModel,
@@ -125,7 +128,7 @@ function ActivityBodyCard({ card }: { readonly card: ActivityCardModel }) {
           {TONE_LABEL[card.tone]}
         </span>
         <span className="text-xs text-[var(--color-muted-foreground)]">
-          {card.authorName}
+          {shortNameFromName(card.authorName)}
         </span>
         {linkedNames ? (
           <span className="text-xs text-[var(--color-muted-foreground)]">

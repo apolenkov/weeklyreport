@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import type { RecordCommentView } from "@customreport/shared";
+import {
+  type RecordCommentView,
+  REVIEW_COMMENT_MAX_LENGTH,
+} from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   fireEvent,
@@ -10,6 +13,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -20,6 +24,7 @@ const mutationCalls = vi.hoisted(() => ({
   deleteComment: [] as unknown[],
   commentError: null as Error | null,
   deleteError: null as Error | null,
+  commentPending: null as Promise<unknown> | null,
 }));
 
 vi.mock("../../../../shared/lib/query/cache-keys", () => ({
@@ -34,6 +39,9 @@ vi.mock("../../../../shared/lib/trpc/trpc-context", () => ({
           ...options,
           mutationFn: (input: unknown) => {
             mutationCalls.comment.push(input);
+            if (mutationCalls.commentPending != null) {
+              return mutationCalls.commentPending;
+            }
             if (mutationCalls.commentError) {
               return Promise.reject(mutationCalls.commentError);
             }
@@ -72,6 +80,7 @@ beforeEach(() => {
   mutationCalls.deleteComment.length = 0;
   mutationCalls.commentError = null;
   mutationCalls.deleteError = null;
+  mutationCalls.commentPending = null;
 });
 
 afterEach(() => {
@@ -98,6 +107,144 @@ function renderComments() {
 }
 
 describe("RecordComments — mutation success", () => {
+  it("scopes character descriptions to each rendered composer", () => {
+    renderWithClient(
+      <>
+        <RecordComments
+          anchor={{ itemId: "11111111-1111-4111-8111-111111111111" }}
+          comments={[]}
+          canReview
+          currentUserId={REVIEWER_ID}
+          isAdmin={false}
+          onMutated={vi.fn()}
+        />
+        <RecordComments
+          anchor={{ riskId: "55555555-5555-4555-8555-555555555555" }}
+          comments={[]}
+          canReview
+          currentUserId={REVIEWER_ID}
+          isAdmin={false}
+          onMutated={vi.fn()}
+        />
+      </>,
+    );
+    const [first, second] = screen.getAllByRole("textbox", {
+      name: "Add a review comment",
+    });
+    if (!first || !second) throw new Error("Expected two comment composers");
+
+    fireEvent.change(first, { target: { value: "Short" } });
+    fireEvent.change(second, {
+      target: { value: "A".repeat(REVIEW_COMMENT_MAX_LENGTH + 1) },
+    });
+
+    const firstDescriptionIds = first.getAttribute("aria-describedby");
+    const secondDescriptionIds = second.getAttribute("aria-describedby");
+    if (firstDescriptionIds === null || secondDescriptionIds === null) {
+      throw new Error("Expected associated composer descriptions");
+    }
+    expect(firstDescriptionIds).not.toBe(secondDescriptionIds);
+    expect(first).toHaveAccessibleDescription("5 / 2000");
+    expect(second).toHaveAccessibleDescription(
+      "2001 / 2000 Comment must be 2000 characters or fewer.",
+    );
+    for (const id of `${firstDescriptionIds} ${secondDescriptionIds}`.split(
+      " ",
+    )) {
+      expect(document.getElementById(id)).not.toBeNull();
+    }
+  });
+
+  it.each([
+    ["empty", ""],
+    ["ordinary whitespace", " ".repeat(3)],
+    ["zero-width space", "\u200B"],
+    ["zero-width non-joiner", "\u200C"],
+    ["zero-width joiner", "\u200D"],
+  ])(
+    "retains and locally rejects an invisible-only draft: %s",
+    (_label, draftValue) => {
+      renderComments();
+      const draft = screen.getByRole("textbox", {
+        name: "Add a review comment",
+      });
+      fireEvent.change(draft, { target: { value: draftValue } });
+      const form = draft.closest("form");
+      if (form === null) throw new Error("Expected comment form");
+      fireEvent.submit(form);
+
+      expect(draft).toHaveValue(draftValue);
+      expect(draft).toHaveAttribute("aria-invalid", "true");
+      expect(draft).toHaveAccessibleDescription(
+        `${draftValue.length} / ${REVIEW_COMMENT_MAX_LENGTH} Comment must contain visible characters.`,
+      );
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Comment must contain visible characters.",
+      );
+      expect(screen.getByRole("button", { name: "Comment" })).toBeDisabled();
+      expect(mutationCalls.comment).toHaveLength(0);
+    },
+  );
+
+  it.each([1, REVIEW_COMMENT_MAX_LENGTH])(
+    "submits exactly %i visible characters with the valid anchor",
+    async (length) => {
+      renderComments();
+      const boundary = "A".repeat(length);
+      const draft = screen.getByRole("textbox", {
+        name: "Add a review comment",
+      });
+      fireEvent.change(draft, { target: { value: boundary } });
+      fireEvent.click(screen.getByRole("button", { name: "Comment" }));
+
+      await waitFor(() => {
+        expect(mutationCalls.comment).toEqual([
+          {
+            itemId: "11111111-1111-4111-8111-111111111111",
+            text: boundary,
+          },
+        ]);
+      });
+    },
+  );
+
+  it("keeps 2,001 pasted characters and blocks mutation locally", () => {
+    renderComments();
+    const overLimit = "A".repeat(REVIEW_COMMENT_MAX_LENGTH + 1);
+    const draft = screen.getByRole("textbox", {
+      name: "Add a review comment",
+    });
+    fireEvent.change(draft, { target: { value: overLimit } });
+
+    expect(draft).toHaveValue(overLimit);
+    expect(draft).toHaveAttribute("aria-invalid", "true");
+    expect(draft).toHaveAccessibleDescription(
+      `${REVIEW_COMMENT_MAX_LENGTH + 1} / ${REVIEW_COMMENT_MAX_LENGTH} Comment must be ${REVIEW_COMMENT_MAX_LENGTH} characters or fewer.`,
+    );
+    expect(screen.getByRole("button", { name: "Comment" })).toBeDisabled();
+    expect(mutationCalls.comment).toHaveLength(0);
+  });
+
+  it("does not render serialized validation details from the server", async () => {
+    mutationCalls.commentError = new Error(
+      '[{"code":"too_big","maximum":2000,"path":["text"]}]',
+    );
+    renderComments();
+    const draft = screen.getByRole("textbox", {
+      name: "Add a review comment",
+    });
+    fireEvent.change(draft, { target: { value: "Keep this draft" } });
+    fireEvent.click(screen.getByRole("button", { name: "Comment" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Comment could not be saved. Check its content and try again.",
+      );
+      expect(screen.getByRole("alert")).not.toHaveTextContent("too_big");
+      expect(draft).toHaveValue("Keep this draft");
+    });
+  });
+
   it("clears the draft and reports a successful add", async () => {
     const onMutated = vi.fn();
     renderWithClient(
@@ -127,6 +274,75 @@ describe("RecordComments — mutation success", () => {
           text: "Ready to publish.",
         },
       ]);
+    });
+  });
+
+  it("keeps draft text while submit is pending and clears it after success", async () => {
+    const commentPending = Promise.withResolvers<unknown>();
+    mutationCalls.commentPending = commentPending.promise;
+    const user = userEvent.setup();
+    renderComments();
+
+    const draft = screen.getByRole("textbox", {
+      name: "Add a review comment",
+    });
+    await user.type(draft, "Alpha");
+    await user.click(screen.getByRole("button", { name: "Comment" }));
+
+    expect(draft).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Adding…" })).toBeInTheDocument();
+
+    await user.type(draft, "Beta");
+    expect(draft).toHaveValue("Alpha");
+
+    commentPending.resolve({});
+
+    await waitFor(() => {
+      expect(mutationCalls.comment).toHaveLength(1);
+      expect(mutationCalls.comment).toEqual([
+        {
+          itemId: "11111111-1111-4111-8111-111111111111",
+          text: "Alpha",
+        },
+      ]);
+      expect(screen.getByRole("status")).toHaveTextContent("Comment added.");
+      expect(draft).toHaveValue("");
+      expect(draft).not.toBeDisabled();
+    });
+  });
+
+  it("keeps draft text while pending and retains it after add failure", async () => {
+    const commentPending = Promise.withResolvers<unknown>();
+    mutationCalls.commentPending = commentPending.promise;
+    mutationCalls.commentError = new Error("Comment could not be saved");
+    const user = userEvent.setup();
+    renderComments();
+
+    const draft = screen.getByRole("textbox", {
+      name: "Add a review comment",
+    });
+    await user.type(draft, "Alpha");
+    await user.click(screen.getByRole("button", { name: "Comment" }));
+
+    expect(draft).toBeDisabled();
+    await user.type(draft, "Beta");
+    expect(draft).toHaveValue("Alpha");
+
+    commentPending.reject(mutationCalls.commentError);
+
+    await waitFor(() => {
+      expect(mutationCalls.comment).toHaveLength(1);
+      expect(mutationCalls.comment).toEqual([
+        {
+          itemId: "11111111-1111-4111-8111-111111111111",
+          text: "Alpha",
+        },
+      ]);
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Comment could not be saved",
+      );
+      expect(draft).toHaveValue("Alpha");
+      expect(draft).not.toBeDisabled();
     });
   });
 

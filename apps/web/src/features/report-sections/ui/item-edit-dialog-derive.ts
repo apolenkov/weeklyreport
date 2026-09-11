@@ -1,3 +1,7 @@
+import type {
+  ParentActivityOption,
+  RecordParent,
+} from "../model/record-parent";
 import {
   computeEffectiveStageNames,
   isZeroOwnedStageDeadEnd,
@@ -14,7 +18,6 @@ import {
   resolveStatusSlot,
   type StatusSlot,
 } from "./item-edit-dialog-helpers";
-import type { ParentActivityOption, RecordParent } from "./parent-picker";
 
 interface DeriveItemEditFieldsArgs {
   readonly isCreate: boolean;
@@ -113,9 +116,6 @@ export function deriveItemEditFields(
   const stage = deriveItemStageFields(args, parent);
 
   const ranks = args.ownPeriodRanks ?? [];
-  if (new Set(ranks).size !== ranks.length) {
-    throw new Error("Duplicate priority ranks are invalid");
-  }
   // Ranks already taken by OTHER items. The item's own current rank is
   // excluded so the user can keep it without seeing a false "taken" marker.
   const takenRanks = new Set(

@@ -22,9 +22,8 @@ export function BoardColumnHeader({
     !readOnly && (col.parent.kind === "activity" || showProductAdd);
   return (
     <div className="mb-3 flex min-w-0 items-center gap-2">
-      {/* gap-2 (not justify-between) keeps the `+ Add` button glued next to
-          the label so the header reads as a tight unit even when the column
-          is wide. */}
+      {/* The label consumes remaining width; gap-2 keeps minimum separation
+          from the fixed-size Add button. */}
       <div className="min-w-0 flex-1 truncate font-[family-name:var(--font-sans)] text-[12px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
         {col.productName}
       </div>

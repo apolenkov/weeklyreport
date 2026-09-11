@@ -1,70 +1,30 @@
-import type { TrafficLightStatus } from "@customreport/shared";
+import type { WeeklyReportReadModel } from "@customreport/shared";
 
-// The weekly-report page suite is split across four files by concern. The
-// `vi.mock` calls cannot be shared (vitest hoists them per module), but this
-// fixture is a plain factory and is shared from here so the four stay in step.
+import {
+  makeWeeklyReportFixture,
+  type WeeklyReportFixture,
+} from "../../../../../test-utils/report-section-fixtures";
 
 export const REPORT_ID = "11111111-1111-4111-8111-111111111111";
 export const AUTHOR_ID_A = "11111111-1111-4111-8111-aaaaaaaaaaaa";
 export const PRODUCT_ID_A = "11111111-1111-4111-8111-cccccccccccc";
 export const PRODUCT_ID_B = "11111111-1111-4111-8111-dddddddddddd";
+
 export function makeWeeklyReportData(
   periodStatus: "open" | "published" | "reopened",
-  overrides?: {
-    readonly portfolioOverview?: {
-      readonly productId: string;
-      readonly productName: string;
-      readonly worstStatus: TrafficLightStatus | "empty";
-      readonly stageCount: number;
-      readonly leadIds: string[];
-      readonly leadNames: string[];
-    }[];
-    readonly leadSections?: {
-      readonly reportSectionId: string;
-      readonly reportId: string;
-      readonly authorId: string;
-      readonly authorName: string;
-      readonly status: "submitted" | "draft" | "locked";
-      readonly submittedAt: Date | null;
-      readonly projects: { projectId: string; projectName: string }[];
-      readonly items: {
-        readonly id: string;
-        readonly projectId: string;
-        readonly type: "current" | "next";
-        readonly text: string;
-        readonly tag: string;
-        readonly workflowStatus:
-          "in_progress" | "done" | "blocked" | "canceled" | "not_started";
-        readonly stageNames: readonly string[];
-        readonly carriedOver: boolean;
-        readonly completed: boolean;
-      }[];
-      readonly risks: never[];
-      readonly decisions: never[];
-      readonly priorities: never[];
-      readonly activities?: {
-        readonly activityId: string;
-        readonly activityName: string;
-        readonly status: TrafficLightStatus | null;
-        readonly note?: string | null;
-        readonly linkedProducts?: readonly {
-          readonly productId: string;
-          readonly productName: string;
-        }[];
-      }[];
-    }[];
-  },
-) {
-  return {
+  overrides: WeeklyReportFixture = {},
+): WeeklyReportReadModel {
+  return makeWeeklyReportFixture({
     reportId: REPORT_ID,
     periodStart: new Date("2026-04-14T00:00:00Z"),
     periodEnd: new Date("2026-04-20T00:00:00Z"),
+    periodState: periodStatus === "published" ? "published" : "open",
     periodStatus,
     archived: false,
     weekLabel: "Week 16",
     submissionCount: 4,
     totalLeads: 6,
-    portfolioOverview: overrides?.portfolioOverview ?? [
+    portfolioOverview: [
       {
         productId: PRODUCT_ID_A,
         productName: "Product Alpha",
@@ -74,14 +34,7 @@ export function makeWeeklyReportData(
         leadIds: ["5ccd4f78-2a3d-58e4-889a-e9ad6be0b941"],
       },
     ],
-    leadSections: overrides?.leadSections?.map((section) => ({
-      ...section,
-      activities:
-        section.activities?.map((activity) => ({
-          ...activity,
-          linkedProducts: activity.linkedProducts ?? [],
-        })) ?? [],
-    })) ?? [
+    leadSections: [
       {
         reportSectionId: "22222222-2222-4222-8222-aaaaaaaaaaa1",
         reportId: REPORT_ID,
@@ -93,6 +46,7 @@ export function makeWeeklyReportData(
           {
             projectId: PRODUCT_ID_A,
             projectName: "Product Alpha",
+            trafficLight: "green",
           },
         ],
         items: [
@@ -105,17 +59,16 @@ export function makeWeeklyReportData(
             workflowStatus: "done",
             stageNames: ["Development"],
             carriedOver: false,
-            completed: true,
           },
         ],
         risks: [],
         decisions: [],
-        priorities: [],
         activities: [],
       },
     ],
     escalations: [],
-  };
+    ...overrides,
+  });
 }
 
 export type WeeklyReportData = ReturnType<typeof makeWeeklyReportData>;

@@ -2,8 +2,10 @@ import type {
   PortfolioProductOverview,
   WeeklyReportReadModel,
 } from "@customreport/shared";
+import { shortNameFromName } from "@customreport/shared";
 
 import { statusLabel } from "../../../shared/lib/status/status-presentation";
+import { reportHasContent } from "./report-content";
 import {
   buildProjectNameMap,
   groupItemsByProject,
@@ -69,9 +71,9 @@ export function buildWeeklyReportProjectionContext(
 
 function attentionProperties(
   report: WeeklyReportReadModel,
-  productName: string,
+  productId: string,
 ): ProductAttention {
-  const attention = findNeedsAttention(report, productName);
+  const attention = findNeedsAttention(report, productId);
   const needsAttention = attention.needsAttention;
   const needsAttentionSeverity = attention.needsAttentionSeverity;
   // The pair travels together: text without a severity would be an invented
@@ -95,7 +97,7 @@ export function projectWeeklyProduct(
   const priorities = context.prioritiesByProject.get(overview.productId) ?? [];
   const leads =
     overview.leadNames.length > 0
-      ? overview.leadNames.join(" · ")
+      ? overview.leadNames.map(shortNameFromName).join(" · ")
       : "unassigned";
   const identity = {
     id: overview.productId,
@@ -104,7 +106,7 @@ export function projectWeeklyProduct(
     status,
     leads,
   } as const;
-  const attention = attentionProperties(context.report, overview.productName);
+  const attention = attentionProperties(context.report, overview.productId);
   const productBase = {
     ...identity,
     authorIds: context.authorsByProject.get(overview.productId) ?? [],
@@ -128,6 +130,7 @@ export function projectWeeklyProduct(
   return {
     portfolio: {
       ...identity,
+      hasContent: reportHasContent(product),
       statusLabel: statusLabelFor(status, overview.leadNames),
       currentWeekCount: items.current.length,
       nextWeekCount: items.next.length,

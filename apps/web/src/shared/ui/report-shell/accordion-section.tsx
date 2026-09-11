@@ -4,6 +4,9 @@ import { useId, useState } from "react";
 
 import { RotatingChevron } from "./rotating-chevron";
 
+/** Identifies an event that should reveal a collapsed accordion section. */
+export type AccordionOpenSignal = number | string | undefined;
+
 interface AccordionSectionProps {
   readonly icon: React.ReactNode;
   readonly title: string;
@@ -14,6 +17,9 @@ interface AccordionSectionProps {
   readonly defaultOpen?: boolean;
   // Set by the parent's "Toggle All" to force every section into one state.
   readonly groupExpanded?: boolean | undefined;
+  // A changed signal opens the section. Its initial value only establishes the
+  // baseline, so mounting with an existing signal preserves defaultOpen.
+  readonly openSignal?: AccordionOpenSignal;
   readonly testId?: string | undefined;
   readonly actions?: React.ReactNode | undefined;
   readonly children: React.ReactNode;
@@ -173,24 +179,37 @@ function AccordionHeader({
 }
 
 // Each `groupExpanded` change clears the individual override, so a group command
-// wins; a later local click overrides it again until the next group change.
+// wins; a later local click overrides it again until the next group change. A
+// subsequent `openSignal` change opens the section even after a local collapse.
 function useAccordionExpansion(
   groupExpanded: boolean | undefined,
   defaultOpen: boolean,
+  openSignal: AccordionOpenSignal,
 ): { readonly expanded: boolean; readonly toggleExpanded: () => void } {
   const [expansion, setExpansion] = useState<{
     readonly groupExpanded: boolean | undefined;
+    readonly openSignal: AccordionOpenSignal;
     readonly override: boolean | null;
-  }>({ groupExpanded, override: null });
+  }>({ groupExpanded, openSignal, override: null });
   const groupChanged = expansion.groupExpanded !== groupExpanded;
-  if (groupChanged) {
-    setExpansion({ groupExpanded, override: null });
+  const signalChanged = expansion.openSignal !== openSignal;
+  if (groupChanged || signalChanged) {
+    setExpansion({
+      groupExpanded,
+      openSignal,
+      override: signalChanged ? true : null,
+    });
   }
-  const currentOverride = groupChanged ? null : expansion.override;
+  const currentOverride = signalChanged
+    ? true
+    : groupChanged
+      ? null
+      : expansion.override;
   const expanded = currentOverride ?? groupExpanded ?? defaultOpen;
   return {
     expanded,
-    toggleExpanded: () => setExpansion({ groupExpanded, override: !expanded }),
+    toggleExpanded: () =>
+      setExpansion({ groupExpanded, openSignal, override: !expanded }),
   };
 }
 
@@ -203,6 +222,7 @@ export function AccordionSection({
   subtitle,
   defaultOpen = true,
   groupExpanded,
+  openSignal,
   testId,
   actions,
   children,
@@ -210,6 +230,7 @@ export function AccordionSection({
   const { expanded, toggleExpanded } = useAccordionExpansion(
     groupExpanded,
     defaultOpen,
+    openSignal,
   );
   // Stable id on the collapsible panel so both toggles can point their
   // aria-controls at it; derived from testId when present, else a unique id.

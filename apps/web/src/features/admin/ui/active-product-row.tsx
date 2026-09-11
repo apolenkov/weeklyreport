@@ -98,7 +98,7 @@ function ProductSummary({
       >
         <RotatingChevron expanded={isExpanded} />
       </button>
-      <div className="min-w-0 flex-1 flex-col gap-1">
+      <div className="min-w-0 flex-1">
         <div>
           <span className="break-words text-sm font-semibold text-[var(--color-foreground)]">
             {product.name}

@@ -1,6 +1,8 @@
 import type { MapWeeklyReportResult } from "../../../features/report-sections";
-import { PrintLeadSection } from "./print-lead-section";
+import type { PrintActivityReport } from "./print-activity-projection";
+import { PrintActivitySection } from "./print-activity-section";
 import { PrintPortfolioTable } from "./print-portfolio-table";
+import { PrintProductSection } from "./print-product-section";
 import {
   BORDER_LIGHT,
   printStatusColor,
@@ -52,6 +54,7 @@ export function PrintProductReports({
       <div className="page-break-before" />
       <section>
         <h2
+          className="print-section-heading"
           style={{
             margin: "0 0 12px",
             fontSize: "15px",
@@ -62,10 +65,36 @@ export function PrintProductReports({
           Product Reports
         </h2>
         {view.products.map((report) => (
-          <PrintLeadSection key={report.id} report={report} />
+          <PrintProductSection key={report.id} report={report} />
         ))}
       </section>
     </>
+  );
+}
+
+export function PrintActivityReports({
+  reports,
+}: {
+  readonly reports: readonly PrintActivityReport[];
+}) {
+  if (reports.length === 0) return null;
+  return (
+    <section>
+      <h2
+        className="print-section-heading"
+        style={{
+          margin: "0 0 12px",
+          fontSize: "15px",
+          fontWeight: 600,
+          color: printStatusColor("on-track"),
+        }}
+      >
+        Activity Reports
+      </h2>
+      {reports.map((report) => (
+        <PrintActivitySection key={report.id} report={report} />
+      ))}
+    </section>
   );
 }
 
@@ -77,6 +106,7 @@ export function PrintPortfolioOverview({
   return (
     <section style={{ marginBottom: "20px" }}>
       <h2
+        className="print-section-heading"
         style={{
           margin: "0 0 8px",
           fontSize: "15px",

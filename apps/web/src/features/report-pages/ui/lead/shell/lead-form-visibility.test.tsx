@@ -10,6 +10,7 @@ import { expectDefined } from "../../../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
 import { LeadReportAssistantStore } from "../../lead-report-assistant-store";
 import { LeadForm } from "./lead-form";
+import { makeLeadFormSectionFixture } from "./lead-form-test-fixtures";
 
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -43,7 +44,7 @@ function keyFor(userId: string, reportId: string): string {
   return `leadRecordVisibility:${userId}:${reportId}`;
 }
 
-// Node 22 + jsdom in this repo do not expose window.localStorage; the hook is
+// jsdom in this test environment does not expose window.localStorage; the hook is
 // exercised against an in-memory Storage stub (same approach as the hook test).
 function installStorageStub(): void {
   const store = new Map<string, string>();
@@ -69,15 +70,10 @@ function installStorageStub(): void {
 }
 
 function makeSection() {
-  return {
+  return makeLeadFormSectionFixture({
     reportSectionId: SECTION_ID,
     reportId: REPORT_ID,
     authorId: AUTHOR_ID,
-    authorName: "Test Lead",
-    authorRole: "lead" as const,
-    status: "draft" as const,
-    submittedAt: null,
-    referencedProjects: [],
     projects: [
       {
         projectId: PROJECT_ID,
@@ -118,19 +114,17 @@ function makeSection() {
         carriedOver: false,
       },
     ],
-    risks: [],
     decisions: [
       {
         id: "77777777-7777-4777-8777-777777777777",
+        productId: PROJECT_ID,
         text: "OwnDecisionABC",
         stageNames: ["Development"],
         owner: "Test Lead",
         impact: "Impact",
       },
     ],
-    priorities: [],
-    activities: [],
-  };
+  });
 }
 
 // Status-only row: co-lead red "Testing" (unassigned for this lead). Health
@@ -242,6 +236,9 @@ function buildHarness(opts: BuildOpts = {}) {
     { path: ["leadForm", "revoke"], mutation: true },
     { path: ["leadForm", "fillFrom"], mutation: true },
     { path: ["leadForm", "requestReopen"], mutation: true },
+    { path: ["leadForm", "assistant"], mutation: true },
+    { path: ["leadForm", "resolvePlan"], mutation: true },
+    { path: ["leadForm", "restorePlan"], mutation: true },
     {
       path: ["ai", "availability"],
       query: { availability: "not_configured" },
@@ -432,7 +429,7 @@ describe("LeadForm — Record visibility: view-only submit", () => {
     // submit resolves the persisted read model; the onSuccess handler reads its
     // `.version`, so give it one (the test asserts on the INPUT payload).
     submit.mutationFn.mockResolvedValue({ version: 2 });
-    render(
+    const { unmount } = render(
       <Wrapper>
         <LeadForm />
       </Wrapper>,
@@ -462,7 +459,9 @@ describe("LeadForm — Record visibility: view-only submit", () => {
       confirmBtn.click();
     });
     await waitFor(() => expect(submit.calls.length).toBeGreaterThan(0));
-    return submit.calls[0];
+    const payload = submit.calls[0];
+    unmount();
+    return payload;
   }
 
   it("Everyone: submitted payload carries own records only (no foreign rows)", async () => {
@@ -552,6 +551,9 @@ describe("LeadForm — Record visibility: purge on toggle/identity/report", () =
       { path: ["leadForm", "revoke"], mutation: true },
       { path: ["leadForm", "fillFrom"], mutation: true },
       { path: ["leadForm", "requestReopen"], mutation: true },
+      { path: ["leadForm", "assistant"], mutation: true },
+      { path: ["leadForm", "resolvePlan"], mutation: true },
+      { path: ["leadForm", "restorePlan"], mutation: true },
       {
         path: ["ai", "availability"],
         query: { availability: "not_configured" },
@@ -618,7 +620,7 @@ describe("LeadForm — Record visibility: purge on toggle/identity/report", () =
 });
 
 describe("LeadForm — Record visibility: publish/export independence", () => {
-  it("the lead export control is inert and slides reuse the loaded Everyone content", async () => {
+  it("slides reuse the loaded Everyone content without another read", async () => {
     // The form owns the privileged read. Slides receive its settled result;
     // they must not issue a second cross-author query or hide the rows.
     const { Wrapper, contentFetch } = buildHarness({

@@ -10,7 +10,11 @@ import {
   type LeadSubmitReadiness,
   type SubmitOutcome,
 } from "../../../../report-sections";
-import type { AutosaveSnapshot } from "../../../../report-sections/client";
+import type {
+  AutosaveSaveReceipt,
+  AutosaveSnapshot,
+  LeadFormOutcomeActions,
+} from "../../../../report-sections/client";
 import {
   type LeadFormWritePort,
   useLeadFormQuickAdd,
@@ -39,6 +43,7 @@ export interface LeadFormEditorInput {
 
 export type LeadFormEditorHandle =
   | { readonly status: "unavailable" }
+  | { readonly status: "no-active" }
   | {
       readonly status: "error";
       readonly isRetrying: boolean;
@@ -52,6 +57,7 @@ export type LeadFormEditorHandle =
       readonly status: "ready";
       readonly generation: string | null;
       readonly draft: LeadFormEditorDraftHandle;
+      readonly outcomes: LeadFormOutcomeActions;
       readonly writes: LeadFormWriteActions;
       readonly view: LeadFormLoadedProps;
     };
@@ -61,6 +67,7 @@ export interface LeadFormEditorDraftHandle extends LeadFormDraftHandle {
   readonly dirty: boolean;
   readonly version: number;
   readonly autosave: AutosaveSnapshot;
+  readonly lastSaveReceipt: AutosaveSaveReceipt | null;
   readonly submitReadiness: LeadSubmitReadiness;
   readonly apply: (patch: DraftPatch) => void;
   readonly save: () => Promise<void>;
@@ -106,9 +113,10 @@ export function useLeadFormEditorWithPort(
     data,
     writePort,
   });
-  const loaded = data.byPeriodError
-    ? null
-    : resolveLeadFormLoaded(data, editing.draft.draft);
+  const loaded =
+    data.readState.status === "ready"
+      ? resolveLeadFormLoaded(data, editing.draft.draft)
+      : null;
   const viewModel = loaded
     ? buildLeadFormLoadedViewModel(
         leadFormViewModelInput(data, loaded, editing),
@@ -121,13 +129,22 @@ export function useLeadFormEditorWithPort(
   });
   const draft = { ...editing.draft, ...quickAdd };
 
-  if (data.sectionUnavailable) return { status: "unavailable" };
-  if (data.byPeriodError) {
+  if (data.awaitingRoleRedirect || data.awaitingCanonicalRedirect) {
+    return { status: "loading", mode };
+  }
+  if (
+    data.readState.status === "unavailable" ||
+    data.readState.status === "no-active"
+  ) {
+    return { status: data.readState.status };
+  }
+  if (data.readState.status === "error") {
+    const { isRetrying, retry } = data.readState;
     return {
       status: "error",
-      isRetrying: data.byPeriodFetching,
+      isRetrying,
       retry: () => {
-        if (!data.byPeriodFetching) void data.retrySection();
+        if (!isRetrying) void retry();
       },
     };
   }
@@ -138,11 +155,13 @@ export function useLeadFormEditorWithPort(
   return {
     status: "ready",
     generation: draft.generation,
+    outcomes: draft.outcomes,
     draft: {
       section: loaded.draftSection,
       dirty: draft.dirty,
       version: draft.version,
       autosave: draft.autosave,
+      lastSaveReceipt: draft.lastSaveReceipt,
       submitReadiness: draft.submitReadiness,
       apply: draft.apply,
       save: draft.save,

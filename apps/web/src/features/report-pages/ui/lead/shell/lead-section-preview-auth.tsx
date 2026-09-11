@@ -17,9 +17,9 @@ export function LeadSectionPreviewAuth({ reportId }: Props) {
   const meQ = useQuery(trpc.auth.me.queryOptions());
   const authorId = meQ.data?.userId ?? undefined;
 
-  // Render the same skeleton the page's Suspense fallback uses. A bespoke
-  // inline skeleton here diverged from the server-streamed fallback and caused
-  // a hydration mismatch on /lead/report/[reportId]/preview.
+  // Render the same skeleton as the page Suspense fallback uses. A bespoke inline
+  // skeleton here can diverge from server-streamed output on preview and trigger
+  // hydration issues.
   if (meQ.isLoading) {
     return <WeeklyReportSkeleton />;
   }

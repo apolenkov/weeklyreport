@@ -41,7 +41,7 @@ function HeaderSkeleton({ isSlidesMode }: { readonly isSlidesMode: boolean }) {
   );
 }
 
-function ContextToolbarSkeleton() {
+function ContextToolbarSkeleton({ isSlidesMode = false } = {}) {
   return (
     <div
       data-testid="lead-skeleton-context-toolbar"
@@ -63,6 +63,14 @@ function ContextToolbarSkeleton() {
         <Skeleton className="h-[var(--toolbar-control-h)] w-28 rounded-[var(--radius-pill)]" />
         <Skeleton className="h-[var(--toolbar-control-h)] w-20 rounded-[var(--radius-pill)]" />
         <Skeleton className="h-[var(--toolbar-control-h)] w-20 rounded-[var(--radius-pill)]" />
+        {isSlidesMode ? (
+          <div
+            data-testid="lead-skeleton-density-control"
+            className="inline-flex rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] p-1"
+          >
+            <Skeleton className="h-[var(--toolbar-control-h)] w-44 rounded-[var(--radius-pill)]" />
+          </div>
+        ) : null}
         <Skeleton className="h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] rounded-[var(--radius-pill)]" />
       </div>
     </div>
@@ -134,9 +142,9 @@ export function LeadFormSkeleton({
       data-layout-stability="position-width"
     >
       <HeaderSkeleton isSlidesMode={isSlidesMode} />
-      <ContextToolbarSkeleton />
+      <ContextToolbarSkeleton isSlidesMode={isSlidesMode} />
       {isSlidesMode ? (
-        <SlideSkeleton mode="lead" announce={false} />
+        <SlideSkeleton mode="lead" announce={false} toolbar="none" />
       ) : (
         <div
           data-testid="lead-skeleton-body"

@@ -72,9 +72,8 @@ export function describeRecipient(
   }
 }
 
-export type OffsetUnit = "minutes" | "hours" | "days";
-
-export const OFFSET_UNITS: readonly OffsetUnit[] = ["minutes", "hours", "days"];
+export const OFFSET_UNITS = ["minutes", "hours", "days"] as const;
+export type OffsetUnit = (typeof OFFSET_UNITS)[number];
 
 export function offsetUnitFactor(unit: OffsetUnit): number {
   switch (unit) {

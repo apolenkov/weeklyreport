@@ -156,6 +156,74 @@ describe("buildSlideGridModel — status marks and columns", () => {
     expect(cols.decisions.map((r) => r.tone)).toEqual(["note"]);
   });
 
+  it("projects supplied risk and decision prose into read-only row details", () => {
+    const model = buildSlideGridModel({
+      section: section({
+        risks: [
+          risk({
+            risk: "Release dependency",
+            impact: "  Customer rollout pauses  ",
+            mitigation: "  Escalate to the platform lead  ",
+          }),
+        ],
+        decisions: [
+          decision({
+            text: "Keep the current rollout window",
+            impact: "  Support retains a stable handoff  ",
+          }),
+          decision({ text: "No supporting prose", impact: " ".repeat(3) }),
+        ],
+      }),
+    });
+    const cols = productLevelOf(cardOf(model, "p1")).columns;
+
+    expect(cols.risks[0]?.details).toEqual([
+      { label: "Impact", text: "Customer rollout pauses" },
+      { label: "Mitigation", text: "Escalate to the platform lead" },
+    ]);
+    expect(cols.decisions[0]?.details).toEqual([
+      { label: "Impact", text: "Support retains a stable handoff" },
+    ]);
+    expect(cols.decisions[1]?.details).toBeUndefined();
+  });
+
+  it("preserves supplied supporting prose on foreign rows", () => {
+    const rows = buildForeignRows([
+      foreignRow({
+        risks: [
+          {
+            id: "foreign-risk",
+            projectId: "p1",
+            risk: "Shared dependency",
+            impact: "Delivery pauses",
+            mitigation: "Use the fallback",
+            severity: "at-risk",
+            stageNames: [],
+          },
+        ],
+        decisions: [
+          {
+            id: "foreign-decision",
+            productId: "p1",
+            text: "Keep the fallback",
+            owner: "Co-owner",
+            impact: "No customer interruption",
+            deadline: null,
+            stageNames: [],
+          },
+        ],
+      }),
+    ]);
+
+    expect(rows.map(({ row }) => row.details)).toEqual([
+      [
+        { label: "Impact", text: "Delivery pauses" },
+        { label: "Mitigation", text: "Use the fallback" },
+      ],
+      [{ label: "Impact", text: "No customer interruption" }],
+    ]);
+  });
+
   it("collects the slide's stage names once, in canonical order", () => {
     const model = buildSlideGridModel({
       section: section({
@@ -235,7 +303,7 @@ describe("buildSlideGridModel — sorting and author series", () => {
     expect(texts).toEqual(["planning", "development", "support", "no stage"]);
   });
 
-  it("collapses consecutive same-author rows to one badge", () => {
+  it("keeps consecutive same-author rows in stable author order", () => {
     const foreign = foreignRow({
       items: [
         {
@@ -261,15 +329,11 @@ describe("buildSlideGridModel — sorting and author series", () => {
       foreign: [foreign],
     });
     const rows = productLevelOf(cardOf(model, "p1")).columns.current;
-    // Same stage rank → owner first, then the foreign series collapses.
-    expect(rows.map((r) => [r.authorId, r.showAuthorBadge])).toEqual([
-      ["lead-1", true],
-      ["co-1", true],
-      ["co-1", false],
-    ]);
+    // Same stage rank → owner first, then the complete foreign series.
+    expect(rows.map((row) => row.authorId)).toEqual(["lead-1", "co-1", "co-1"]);
   });
 
-  it("suppresses only the selected owner when the single-author scope is explicit", () => {
+  it("keeps row authors while suppressing scope-level owner marks", () => {
     const foreign = foreignRow({
       items: [
         {
@@ -290,10 +354,7 @@ describe("buildSlideGridModel — sorting and author series", () => {
     const rows = productLevelOf(cardOf(model, "p1")).columns.current;
 
     expect(model.showOwnerMarks).toBe(false);
-    expect(rows.map((row) => [row.authorId, row.showAuthorBadge])).toEqual([
-      ["lead-1", false],
-      ["co-1", true],
-    ]);
+    expect(rows.map((row) => row.authorId)).toEqual(["lead-1", "co-1"]);
   });
 });
 
@@ -400,14 +461,14 @@ describe("buildSlideGridModel — activity subsections", () => {
     expect(card.noData).toBe(false);
   });
 
-  it("keeps a record-less product collapsed when it has no activities either", () => {
+  it("keeps a product without updates or status collapsed", () => {
     const model = buildSlideGridModel({
       section: section({
         activities: [activity()],
         items: [item({ projectId: null, activityId: "a1" })],
       }),
     });
-    expect(cardOf(model, "p2").noData).toBe(true);
+    expect(cardOf(model, "p2")).toMatchObject({ status: null, noData: true });
   });
 
   it("sorts multiple activity subsections under the same product by name", () => {
@@ -506,7 +567,7 @@ describe("buildSlideGridModel — authors and header stats", () => {
     ]);
   });
 
-  it("derives worst status, on-track chip, and noData collapse", () => {
+  it("keeps a record-less product with a derived status out of no-data copy", () => {
     const model = buildSlideGridModel({
       section: section({ items: [item()] }),
       productStatuses: new Map([
@@ -515,9 +576,11 @@ describe("buildSlideGridModel — authors and header stats", () => {
       ]),
     });
     expect(model.worstStatus).toBe("red");
-    // p2 has a status but no rows → collapsed, excluded from the chip.
-    expect(cardOf(model, "p2").noData).toBe(true);
-    expect(model.onTrack).toEqual({ on: 0, total: 1 });
+    expect(cardOf(model, "p2")).toMatchObject({
+      status: "green",
+      noData: false,
+    });
+    expect(model.onTrack).toEqual({ on: 1, total: 2 });
   });
 
   it("drops foreign rows on products the deck does not show", () => {

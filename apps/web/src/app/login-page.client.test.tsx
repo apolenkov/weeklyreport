@@ -50,7 +50,7 @@ const STUB_ORG = {
 
 beforeEach(() => {
   // AUTH_STUB is read at module-eval time — set before importing the module.
-  process.env.NEXT_PUBLIC_AUTH_STUB = "false";
+  vi.stubEnv("NEXT_PUBLIC_AUTH_STUB", "false");
 
   useQueryMock.mockImplementation((opts: { queryKey?: readonly unknown[] }) => {
     const key = opts.queryKey?.at(0);
@@ -64,6 +64,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.resetModules();
+  vi.unstubAllEnvs();
   useQueryMock.mockReset();
   useSearchParamsMock.mockReset();
 });
@@ -74,6 +75,25 @@ async function loadLoginPageClient() {
 }
 
 describe("Primary CTA accessibility", () => {
+  it.each([
+    [
+      "next=%2Freports%2Freport-1",
+      "/auth/saml/login?next=%2Freports%2Freport-1",
+    ],
+    [
+      "next=%2Freports%2Freport-1&next=%2Freports%2Freport-2",
+      "/auth/saml/login",
+    ],
+  ])("uses only a scalar next destination: %s", async (query, href) => {
+    useSearchParamsMock.mockReturnValue(new URLSearchParams(query));
+    const LoginPageClient = await loadLoginPageClient();
+    render(<LoginPageClient initialOrg={STUB_ORG} />);
+    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute(
+      "href",
+      href,
+    );
+  });
+
   it("SVG inside primary CTA link has aria-hidden='true'", async () => {
     const LoginPageClient = await loadLoginPageClient();
     const { container } = render(<LoginPageClient initialOrg={STUB_ORG} />);
@@ -85,23 +105,21 @@ describe("Primary CTA accessibility", () => {
     expect(svgEl).toHaveAttribute("aria-hidden", "true");
   });
 
-  it("the explicit aria-label wins over the link's own visible text in the accessible name", async () => {
+  it("uses the concise visible sign-in label as its accessible name", async () => {
     const LoginPageClient = await loadLoginPageClient();
     render(<LoginPageClient initialOrg={STUB_ORG} />);
 
-    // Explicit aria-label wins over descendant text; assert label ≠ visible text.
     const cta = screen.getByRole("link", {
-      name: "Sign in with corporate SSO",
+      name: "Sign in",
     });
-    expect(cta).toHaveAccessibleName("Sign in with corporate SSO");
-    expect(cta.textContent.trim()).toBe("Sign in with SSO");
-    expect(cta.textContent.trim()).not.toBe("Sign in with corporate SSO");
+    expect(cta).toHaveAccessibleName("Sign in");
+    expect(cta).toHaveTextContent("Sign in");
   });
 });
 
 describe("Dev-mode role picker (AUTH_STUB=true, no stored hint)", () => {
   it("shows the direct role picker instead of collapsing the block", async () => {
-    process.env.NEXT_PUBLIC_AUTH_STUB = "true";
+    vi.stubEnv("NEXT_PUBLIC_AUTH_STUB", "true");
     const LoginPageClient = await loadLoginPageClient();
     render(<LoginPageClient initialOrg={STUB_ORG} />);
 

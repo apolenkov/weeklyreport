@@ -85,6 +85,19 @@ describe("useCanonicalReportRedirect", () => {
     );
   });
 
+  it("preserves scalar feedback and omits a repeated focus parameter", () => {
+    searchParams = new URLSearchParams(
+      "feedback=feedback_123&agentationAnnotation=first&agentationAnnotation=second",
+    );
+
+    renderHook(() => useCanonicalReportRedirect(args));
+
+    expect(replace).toHaveBeenCalledWith(
+      "/head/report/report-1?authorId=user+name%2F%D0%BA%D1%82%D0%BE&feedback=feedback_123",
+      { scroll: false },
+    );
+  });
+
   it("omits the author query when no author is focused", () => {
     renderHook(() =>
       useCanonicalReportRedirect({ ...args, focusedAuthorId: null }),

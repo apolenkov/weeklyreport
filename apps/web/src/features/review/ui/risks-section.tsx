@@ -17,7 +17,7 @@ interface RisksSectionProps {
   readonly readOnly?: boolean | undefined;
   readonly onChange?: ((next: readonly RiskEntry[]) => void) | undefined;
   readonly addPrefill?: RiskAddPrefill | undefined;
-  // Absent/empty disables +Add Risk (dialog needs a project picker seed).
+  // Products provide picker options and the default create parent.
   readonly products?: readonly Product[] | undefined;
   readonly activities?: readonly ParentActivityOption[] | undefined;
   // Owned stages for the dialog stage selector, scoped per project.

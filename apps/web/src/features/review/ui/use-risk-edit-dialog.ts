@@ -25,8 +25,6 @@ interface UseRiskEditDialogArgs {
   readonly onCancel: () => void;
   readonly defaultProductId?: string | undefined;
   readonly defaultActivityId?: string | undefined;
-  readonly initialImpact?: string | undefined;
-  readonly initialMitigation?: string | undefined;
   readonly initialStageNames?: readonly string[] | undefined;
   readonly initialSeverity?: RiskSeverity | undefined;
   readonly stagesForProduct?:
@@ -68,8 +66,8 @@ export function useRiskEditDialog(args: UseRiskEditDialogArgs) {
 
   const fields = useRiskEditFields({
     initialText: risk?.text ?? "",
-    initialImpact: args.initialImpact,
-    initialMitigation: args.initialMitigation,
+    initialImpact: risk?.impact,
+    initialMitigation: risk?.mitigation,
   });
 
   const parentStage = useRiskEditParentStage({ ...args, isCreate });

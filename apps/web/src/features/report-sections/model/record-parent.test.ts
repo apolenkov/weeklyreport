@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { ParentActivityOption } from "../ui/parent-picker";
+import type { ParentActivityOption } from "./record-parent";
 import { resolveRecordParent } from "./record-parent";
 
 const ACTIVITIES: readonly ParentActivityOption[] = [

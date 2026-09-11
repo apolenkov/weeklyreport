@@ -1,25 +1,28 @@
-import { useEffect } from "react";
+import { type RefObject, useEffect } from "react";
 
 import type { WeeklyProductReport } from "../../../report-sections";
 import { SCROLL_INTO_VIEW_DELAY_MS } from "./accordion-tokens";
 
-// Toggle is paired with the highlight it was made under: a new search-jump
-// highlight invalidates it (force-open); collapse while highlighted sticks.
+// Toggle is paired with the navigation that preceded it: manual collapse sticks
+// through ordinary renders, while the next explicit jump force-opens the target.
 export interface AccordionToggle {
-  readonly highlighted: boolean;
+  readonly navigationEpoch: number | undefined;
   readonly value: boolean;
 }
 
 export function resolveExpanded(
   toggle: AccordionToggle | null,
+  navigationEpoch: number | undefined,
   highlighted: boolean,
   hasContent: boolean,
   defaultOpen: boolean,
 ): boolean {
-  if (toggle !== null && toggle.highlighted === highlighted) {
+  if (toggle !== null && toggle.navigationEpoch === navigationEpoch) {
     return toggle.value;
   }
-  return (highlighted && hasContent) || defaultOpen;
+  const explicitlyNavigated =
+    navigationEpoch !== undefined && navigationEpoch > 0;
+  return ((highlighted || explicitlyNavigated) && hasContent) || defaultOpen;
 }
 
 // Skip escalation when its text already appears as a row (derived from blocked
@@ -38,9 +41,10 @@ export function shouldShowNeedsAttention(report: WeeklyProductReport): boolean {
 }
 
 export function useScrollIntoViewOnHighlight(
-  reportId: string,
+  rootRef: RefObject<HTMLElement | null>,
   highlighted: boolean,
   enabled: boolean,
+  navigationEpoch: number | undefined,
 ): void {
   useEffect(() => {
     if (!highlighted || !enabled) return;
@@ -49,10 +53,8 @@ export function useScrollIntoViewOnHighlight(
         typeof window.matchMedia === "function" &&
         window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       const behavior = prefersReducedMotion ? "auto" : "smooth";
-      document
-        .getElementById(`report-product-${reportId}`)
-        ?.scrollIntoView({ behavior, block: "start" });
+      rootRef.current?.scrollIntoView({ behavior, block: "start" });
     }, SCROLL_INTO_VIEW_DELAY_MS);
     return () => window.clearTimeout(handle);
-  }, [highlighted, reportId, enabled]);
+  }, [highlighted, enabled, navigationEpoch, rootRef]);
 }

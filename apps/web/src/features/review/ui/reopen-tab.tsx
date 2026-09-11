@@ -2,6 +2,10 @@
 
 import type { ReopenDecision } from "../../../shared/ui/forms/reopen-respond-form";
 import { TabHeader, TabSearch } from "../../../shared/ui/tabs/tab-header";
+import {
+  LoadMoreRequestsButton,
+  ReopenNextPageIssue,
+} from "./reopen-pagination-controls";
 import { type ReopenRequest, ReopenRequestCard } from "./reopen-request-card";
 import {
   type ReopenFilterStatus,
@@ -90,13 +94,13 @@ function ReopenRequestList({
 }
 
 function ReopenTabHeader({
-  matchCount,
+  countLabel,
   filter,
   setFilter,
   search,
   setSearch,
 }: {
-  readonly matchCount: number;
+  readonly countLabel: string;
   readonly filter: ReopenFilterStatus;
   readonly setFilter: (next: ReopenFilterStatus) => void;
   readonly search: string;
@@ -106,7 +110,7 @@ function ReopenTabHeader({
     <TabHeader
       title="Reopen Requests"
       description="Leads ask for permission to edit a submitted section."
-      count={`${matchCount} requests`}
+      count={countLabel}
       search={
         <TabSearch
           value={search}
@@ -120,6 +124,16 @@ function ReopenTabHeader({
   );
 }
 
+function reopenCountLabel(
+  isPending: boolean,
+  hasNextPage: boolean,
+  count: number,
+): string {
+  if (isPending) return "Loading…";
+  if (hasNextPage) return `${count} loaded`;
+  return `${count} ${count === 1 ? "request" : "requests"}`;
+}
+
 export function ReopenTab() {
   const {
     filter,
@@ -127,7 +141,6 @@ export function ReopenTab() {
     search,
     setSearch,
     requests,
-    filteredRequests,
     listQuery,
     respondingId,
     note,
@@ -142,7 +155,11 @@ export function ReopenTab() {
   return (
     <div className="space-y-4">
       <ReopenTabHeader
-        matchCount={filteredRequests.length}
+        countLabel={reopenCountLabel(
+          listQuery.isPending,
+          listQuery.hasNextPage,
+          requests.length,
+        )}
         filter={filter}
         setFilter={setFilter}
         search={search}
@@ -151,14 +168,21 @@ export function ReopenTab() {
 
       <ReopenListStatus
         isPending={listQuery.isPending}
-        errorMessage={listQuery.isError ? listQuery.error.message : null}
-        isEmpty={filteredRequests.length === 0}
-        hasUnfilteredRequests={requests.length > 0}
+        errorMessage={
+          listQuery.isError && requests.length === 0
+            ? listQuery.error.message
+            : null
+        }
+        isEmpty={requests.length === 0}
+        hasSearch={search.trim().length > 0}
         filter={filter}
+        onRetry={() => {
+          void listQuery.refetch({ cancelRefetch: false });
+        }}
       />
 
       <ReopenRequestList
-        requests={filteredRequests}
+        requests={requests}
         respondingId={respondingId}
         note={note}
         isSaving={isSaving}
@@ -168,6 +192,27 @@ export function ReopenTab() {
         cancelRespond={cancelRespond}
         respond={respond}
       />
+
+      {listQuery.isError && requests.length > 0 ? (
+        <ReopenNextPageIssue
+          errorMessage={listQuery.error.message}
+          isRetrying={listQuery.isFetching}
+          onRetry={() => {
+            if (listQuery.isFetchNextPageError) {
+              void listQuery.fetchNextPage({ cancelRefetch: false });
+            } else {
+              void listQuery.refetch({ cancelRefetch: false });
+            }
+          }}
+        />
+      ) : listQuery.hasNextPage ? (
+        <LoadMoreRequestsButton
+          isLoading={listQuery.isFetchingNextPage}
+          onLoadMore={() => {
+            void listQuery.fetchNextPage({ cancelRefetch: false });
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -178,14 +223,16 @@ function ReopenListStatus({
   isPending,
   errorMessage,
   isEmpty,
-  hasUnfilteredRequests,
+  hasSearch,
   filter,
+  onRetry,
 }: {
   readonly isPending: boolean;
   readonly errorMessage: string | null;
   readonly isEmpty: boolean;
-  readonly hasUnfilteredRequests: boolean;
+  readonly hasSearch: boolean;
   readonly filter: ReopenFilterStatus;
+  readonly onRetry: () => void;
 }) {
   if (isPending) {
     return (
@@ -205,23 +252,30 @@ function ReopenListStatus({
         role="alert"
         className="rounded-[var(--radius)] border border-[var(--color-destructive)] bg-[var(--color-status-blocked-bg)] p-4 text-sm text-[var(--color-destructive)]"
       >
-        Failed to load requests: {errorMessage}
+        <p>Failed to load requests: {errorMessage}</p>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-3 rounded-[var(--radius-pill)] border border-current px-3 py-1.5 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2"
+        >
+          Retry
+        </button>
       </div>
     );
   }
   if (!isEmpty) return null;
   return (
     <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
-      {emptyStateMessage(hasUnfilteredRequests, filter)}
+      {emptyStateMessage(hasSearch, filter)}
     </div>
   );
 }
 
 function emptyStateMessage(
-  hasUnfilteredRequests: boolean,
+  hasSearch: boolean,
   filter: ReopenFilterStatus,
 ): string {
-  if (hasUnfilteredRequests) return "No requests match the search.";
+  if (hasSearch) return "No requests match the search.";
   return filter === "pending"
     ? "No pending reopen requests."
     : "Nothing here yet.";

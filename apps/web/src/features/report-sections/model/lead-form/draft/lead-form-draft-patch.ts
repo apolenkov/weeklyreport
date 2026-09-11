@@ -18,7 +18,8 @@ import {
   patchDraftItem,
 } from "./lead-form-draft-merge-helpers";
 
-// Functional-updater patches: concurrent handlers compose instead of clobbering.
+// Each patch applies to the latest section; collection patches replace their
+// owned collection, while item patches update one identified row.
 export type DraftPatch =
   | { readonly kind: "products"; readonly products: readonly Product[] }
   | {

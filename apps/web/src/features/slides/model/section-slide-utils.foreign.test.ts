@@ -213,12 +213,12 @@ describe("crossAuthorContentToSlideForeign", () => {
 describe("mergeForeignSlideContent", () => {
   const foreign: SlideForeignContent = {
     currentItems: [
-      { projectId: PRODUCT_ID, text: "Foreign current", blocked: true },
+      { projectId: PRODUCT_ID, text: "Foreign current", blocked: false },
     ],
     nextItems: [
       { projectId: PRODUCT_ID, text: "Foreign next", blocked: false },
     ],
-    risks: [{ projectId: PRODUCT_ID, text: "Foreign risk", blocked: false }],
+    risks: [{ projectId: PRODUCT_ID, text: "Foreign risk", blocked: true }],
     decisions: [{ projectId: PRODUCT_ID, text: "Foreign decision" }],
   };
 
@@ -231,10 +231,10 @@ describe("mergeForeignSlideContent", () => {
     expect(merged.nextCount).toBe(base.nextCount + 1);
     expect(merged.riskCount).toBe(base.riskCount + 1);
     expect(merged.decisionCount).toBe(base.decisionCount + 1);
-    // Foreign blocked current item lifts the blocked KPI; foreign at-risk risk
-    // lifts at-risk. Health-derived priorities stay own-only.
+    // A foreign blocked risk contributes to blocked, while the disjoint at-risk
+    // counter and health-derived priorities stay unchanged.
     expect(merged.blockedCount).toBe(base.blockedCount + 1);
-    expect(merged.atRiskCount).toBe(base.atRiskCount + 1);
+    expect(merged.atRiskCount).toBe(base.atRiskCount);
     expect(merged.priorityCount).toBe(base.priorityCount);
 
     const product = merged.productSlides.find((p) => p.id === PRODUCT_ID);
@@ -244,9 +244,7 @@ describe("mergeForeignSlideContent", () => {
     expect(product?.decisions).toContain("Foreign decision");
   });
 
-  it("counts a foreign blocked item exactly like an own blocked risk (parity)", () => {
-    // Blocked-ness lives only on risks now (rework-item-status-model), so the
-    // "own" side of the parity is a blocked-severity risk, not an item status.
+  it("counts a foreign blocked risk exactly like an own blocked risk", () => {
     const ownBlocked = buildSectionSlideModel(
       makeSection({
         risks: [
@@ -269,15 +267,15 @@ describe("mergeForeignSlideContent", () => {
     const base = buildSectionSlideModel(makeSection());
     const mergedBlocked = mergeForeignSlideContent(base, {
       ...EMPTY_SLIDE_FOREIGN_CONTENT,
-      currentItems: [
+      risks: [
         { projectId: PRODUCT_ID, text: "Foreign blocked", blocked: true },
       ],
     });
-    // own blocked risk vs foreign blocked item contribute the same +1 to the blocked KPI.
+    // Own and foreign blocked risks contribute the same +1 to the blocked KPI.
     expect(mergedBlocked.blockedCount).toBe(ownBlocked.blockedCount);
   });
 
-  it("NEVER mutates the input model or its section (view-only invariant)", () => {
+  it("preserves the input model and section references it reads", () => {
     const section = makeSection();
     const itemsRef = section.items;
     const itemsLenBefore = section.items.length;
@@ -287,10 +285,10 @@ describe("mergeForeignSlideContent", () => {
 
     mergeForeignSlideContent(base, foreign);
 
-    // The cached section the draft serializes is byte-for-byte unchanged.
+    // The section item collection retains its reference and length.
     expect(section.items).toBe(itemsRef);
     expect(section.items).toHaveLength(itemsLenBefore);
-    // The base slide model is not mutated either (new objects only).
+    // The base model retains its product collection and counters.
     expect(base.productSlides).toBe(baseProductsRef);
     expect(base.currentCount).toBe(baseCurrentBefore);
     const baseProduct = base.productSlides.find((p) => p.id === PRODUCT_ID);

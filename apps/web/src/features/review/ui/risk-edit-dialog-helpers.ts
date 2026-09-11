@@ -1,3 +1,6 @@
+import { SAFE_TEXT_MAX_LENGTH } from "@customreport/shared";
+
+import { getRequiredProseError } from "../../../shared/ui/forms/record-prose-validation";
 import type {
   ParentActivityOption,
   Product,
@@ -64,15 +67,22 @@ export function collectRiskErrors(args: {
   // Only the failing fields get a key, so `Object.keys(...).length === 0`
   // still reads as "valid".
   return {
-    ...(args.text.length === 0 ? { text: "Risk description is required" } : {}),
-    ...(args.impact.length === 0 ? { impact: "Impact is required" } : {}),
-    ...(args.mitigation.length === 0
-      ? { mitigation: "Mitigation is required" }
-      : {}),
+    ...proseError("Risk description", args.text, "text"),
+    ...proseError("Impact", args.impact, "impact"),
+    ...proseError("Mitigation", args.mitigation, "mitigation"),
     ...(!args.isActivityParent && args.effectiveStageNames.length === 0
       ? { stageNames: "Select at least one stage." }
       : {}),
   };
+}
+
+function proseError(
+  label: string,
+  value: string,
+  field: "text" | "impact" | "mitigation",
+): RiskFieldErrors {
+  const error = getRequiredProseError(value, label, SAFE_TEXT_MAX_LENGTH);
+  return error ? { [field]: error } : {};
 }
 
 export function resolveRiskParentName(args: {
@@ -164,8 +174,6 @@ export function deriveRiskDialogSeedProps(
       defaultActivityId: undefined,
       initialStageNames: undefined,
       initialSeverity: undefined,
-      initialImpact: "",
-      initialMitigation: "",
     };
   }
 
@@ -176,8 +184,6 @@ export function deriveRiskDialogSeedProps(
       defaultActivityId: undefined,
       initialStageNames: undefined,
       initialSeverity: undefined,
-      initialImpact: dialogState.entity.impact,
-      initialMitigation: dialogState.entity.mitigation,
     };
   }
 
@@ -187,7 +193,5 @@ export function deriveRiskDialogSeedProps(
     defaultActivityId: dialogState.seedActivityId,
     initialStageNames: createPrefill?.stageNames,
     initialSeverity: createPrefill?.severity,
-    initialImpact: "",
-    initialMitigation: "",
   };
 }

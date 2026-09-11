@@ -9,6 +9,7 @@ import {
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
+import { getScalarSearchParam } from "../../../shared/lib/navigation/scalar-search-param";
 import { TabHeader } from "../../../shared/ui/tabs/tab-header";
 import { IdentitySubTab, NotificationsSubTab } from "../../organization";
 import { PeriodsSubTab } from "../../period";
@@ -33,7 +34,10 @@ function isSettingsSection(value: string): value is SettingsSection {
 }
 
 function sectionFromSearch(source: string): SettingsSection {
-  const value = new URLSearchParams(source).get("settingsTab");
+  const value = getScalarSearchParam(
+    new URLSearchParams(source),
+    "settingsTab",
+  );
   return value !== null && isSettingsSection(value) ? value : "identity";
 }
 
@@ -89,10 +93,14 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
       section: sectionFromSearch(searchState),
       source: searchState,
     }));
+  const urlSection = sectionFromSearch(searchState);
+  if (optimisticSelection.source !== searchState) {
+    setOptimisticSelection({ section: urlSection, source: searchState });
+  }
   const activeSection =
     optimisticSelection.source === searchState
       ? optimisticSelection.section
-      : sectionFromSearch(searchState);
+      : urlSection;
   const activateSection = (value: string) => {
     if (!isSettingsSection(value)) return;
     setOptimisticSelection({ section: value, source: searchState });

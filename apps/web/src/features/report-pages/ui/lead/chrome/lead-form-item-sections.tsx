@@ -48,6 +48,7 @@ function UnifiedActivityAccordion({
   stagesForProduct,
 }: WeekSectionProps) {
   const {
+    activityOptions,
     currentUser,
     currentWeekItems,
     nextWeekItems,
@@ -65,7 +66,11 @@ function UnifiedActivityAccordion({
       icon={<CalendarIcon />}
       title="Activity"
       badge={`${currentWeekItems.length + nextWeekItems.length} items`}
-      subtitle="Current and next week items in one list, grouped by state. Use + Add to create records."
+      subtitle={
+        isReadOnly
+          ? "Current and next week items in one list, grouped by state."
+          : "Current and next week items in one list, grouped by state. Use + Add to create records."
+      }
     >
       <UnifiedActivitySection
         entries={unifiedEntries}
@@ -78,6 +83,7 @@ function UnifiedActivityAccordion({
         }
         currentUserName={currentUser.name}
         products={products}
+        activities={activityOptions}
         stagesForProduct={stagesForProduct}
         ownPeriodRanks={ownPeriodRanks}
         publishedLockedIds={publishedLockedItemIds}
@@ -112,7 +118,12 @@ function CurrentWeekAccordion({
       title="Current Week"
       badge={`${currentWeekItems.length} items`}
       subtitle="Work completed or still in progress this week, grouped by product and SDLC stage."
-      actions={addItemAction(isReadOnly, actions.addCurrentWeekItem, products)}
+      actions={addItemAction(
+        isReadOnly,
+        actions.addCurrentWeekItem,
+        products,
+        activityOptions,
+      )}
     >
       <CurrentWeekSection
         items={currentWeekItems}
@@ -158,7 +169,12 @@ function NextWeekAccordion({
       title="Next Week"
       badge={`${nextWeekItems.length} items`}
       subtitle="Planned work for the next reporting week, scoped to product and SDLC stage."
-      actions={addItemAction(isReadOnly, actions.addNextWeekItem, products)}
+      actions={addItemAction(
+        isReadOnly,
+        actions.addNextWeekItem,
+        products,
+        activityOptions,
+      )}
     >
       <NextWeekSection
         items={nextWeekItems}

@@ -130,4 +130,19 @@ describe("status overview editing bridge", () => {
       "/lead/report/report%2Fid?mode=edit&feedback=1&feedbackUrl=%2Ffeedback&agentationSession=session-1&agentationAnnotation=annotation-1#report-details",
     );
   });
+
+  it.each([
+    "feedback",
+    "feedbackUrl",
+    "agentationSession",
+    "agentationAnnotation",
+  ])("drops repeated %s from the details handoff", (key) => {
+    const params = new URLSearchParams([
+      [key, "first"],
+      [key, "second"],
+    ]);
+    expect(buildStatusOverviewDetailsHref("report-1", params)).toBe(
+      "/lead/report/report-1?mode=edit#report-details",
+    );
+  });
 });

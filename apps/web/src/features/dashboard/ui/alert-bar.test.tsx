@@ -4,20 +4,13 @@
 // link is admin-only; non-admin sessions never see it when reminders are off.
 import "@testing-library/jest-dom/vitest";
 
-import type { Role } from "@customreport/shared";
+import type { ReminderDispatchResult, Role } from "@customreport/shared";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const useQueryMock = vi.fn();
 const useMutationMock = vi.fn();
-
-interface DispatchResult {
-  readonly dispatched: number;
-  readonly alreadySent: number;
-  readonly skipped: number;
-  readonly reason: "no-active-rule" | null;
-}
 
 vi.mock("@tanstack/react-query", () => ({
   useQuery: (...args: unknown[]) => useQueryMock(...args) as unknown,
@@ -79,9 +72,9 @@ const baseProps = {
 };
 const RULE_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
-function dispatchResult(result: DispatchResult): void {
+function dispatchResult(result: ReminderDispatchResult): void {
   useMutationMock.mockImplementation(
-    (options: { onSuccess: (value: DispatchResult) => void }) => ({
+    (options: { onSuccess: (value: ReminderDispatchResult) => void }) => ({
       mutate: () => options.onSuccess(result),
       isPending: false,
     }),
@@ -184,8 +177,9 @@ describe("AlertBar — role gating", () => {
     {
       name: "reports a missing active rule",
       result: {
-        dispatched: 0,
-        alreadySent: 0,
+        queued: 0,
+        alreadyRequested: 0,
+        failed: 0,
         skipped: 0,
         reason: "no-active-rule",
       },
@@ -196,52 +190,72 @@ describe("AlertBar — role gating", () => {
     {
       name: "reports an empty pending queue",
       result: {
-        dispatched: 0,
-        alreadySent: 0,
+        queued: 0,
+        alreadyRequested: 0,
+        failed: 0,
         skipped: 0,
-        reason: null,
       },
       toastKind: "info",
       message: "No pending leads to remind.",
     },
     {
-      name: "reports that every reminder was already sent",
+      name: "reports that every reminder was already requested",
       result: {
-        dispatched: 0,
-        alreadySent: 2,
+        queued: 0,
+        alreadyRequested: 2,
+        failed: 0,
         skipped: 0,
-        reason: null,
       },
       toastKind: "info",
-      message: "All 2 pending leads already received this cycle's reminder.",
+      message: "Reminders already requested for 2 leads this cycle.",
     },
     {
       name: "includes partial dispatch extras",
       result: {
-        dispatched: 1,
-        alreadySent: 2,
+        queued: 1,
+        alreadyRequested: 2,
+        failed: 0,
         skipped: 3,
-        reason: null,
       },
       toastKind: "success",
       message:
-        "Reminder sent to 1 lead (2 already sent this cycle, 3 opted out).",
+        "Reminder queued for 1 lead (2 already requested this cycle, 3 skipped).",
     },
     {
       name: "reports a successful dispatch",
       result: {
-        dispatched: 2,
-        alreadySent: 0,
+        queued: 2,
+        alreadyRequested: 0,
+        failed: 0,
         skipped: 0,
-        reason: null,
       },
       toastKind: "success",
-      message: "Reminder sent to 2 leads.",
+      message: "Reminder queued for 2 leads.",
+    },
+    {
+      name: "preserves successful recipients when another enqueue fails",
+      result: { queued: 1, alreadyRequested: 2, failed: 1, skipped: 3 },
+      toastKind: "error",
+      message:
+        "Reminders queued for 1 lead; failed for 1 (2 already requested this cycle, 3 skipped). Retry to request the failed reminders.",
+    },
+    {
+      name: "reports an entirely failed batch without a success toast",
+      result: { queued: 0, alreadyRequested: 0, failed: 2, skipped: 0 },
+      toastKind: "error",
+      message:
+        "Reminders queued for 0 leads; failed for 2. Retry to request the failed reminders.",
+    },
+    {
+      name: "reports skipped recipients without claiming success",
+      result: { queued: 0, alreadyRequested: 0, failed: 0, skipped: 2 },
+      toastKind: "info",
+      message: "2 leads skipped; no reminders queued.",
     },
   ] satisfies readonly {
     readonly name: string;
-    readonly result: DispatchResult;
-    readonly toastKind: "info" | "success";
+    readonly result: ReminderDispatchResult;
+    readonly toastKind: "info" | "success" | "error";
     readonly message: string;
   }[])("$name", ({ result, toastKind, message }) => {
     mockRole("head");
@@ -250,6 +264,7 @@ describe("AlertBar — role gating", () => {
     sendReminder();
 
     expect(toast[toastKind]).toHaveBeenCalledWith(message);
+    if (toastKind !== "success") expect(toast.success).not.toHaveBeenCalled();
   });
 
   it("surfaces dispatch failures as an error toast", () => {

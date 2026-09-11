@@ -10,6 +10,7 @@ import type { ReactElement, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrintRouteContext } from "../../../features/pdf-export/server";
+import { makeWeeklyReportFixture } from "../../../test-utils/report-section-fixtures";
 
 /* ---- Module mocks (must be hoisted above all imports of the SUT) ---- */
 
@@ -30,6 +31,10 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
   usePathname: () => "/reports/test-report-001",
   useSearchParams: () => new URLSearchParams(),
+}));
+
+vi.mock("../../lib/auth/session-provider", () => ({
+  useSession: () => ({ user: { role: "viewer" } }),
 }));
 
 // The /print server gate reads the cookie once via this helper; mock it
@@ -91,19 +96,19 @@ vi.mock("@tanstack/react-query", async () => {
   );
   return {
     ...actual,
-    // The viewer shell's displayed-period query needs a real published period so
-    // its Export-PDF + period navigator render; every other surface keeps the
-    // prior generic `{ status: "open" }` shape.
     useQuery: vi.fn((opts: { queryKey?: unknown[] }) => {
-      if (opts.queryKey?.[0] === "weeklyReport.get") {
+      if (
+        opts.queryKey?.[0] === "weeklyReport.get" ||
+        opts.queryKey?.[0] === "pdfExport.render"
+      ) {
         return {
-          data: {
-            status: "active",
+          data: makeWeeklyReportFixture({
             reportId: "test-report-001",
-            periodStart: "2026-06-08T00:00:00.000Z",
-            periodEnd: "2026-06-14T00:00:00.000Z",
+            periodStart: new Date("2026-06-08T00:00:00.000Z"),
+            periodEnd: new Date("2026-06-14T00:00:00.000Z"),
+            periodState: "published",
             periodStatus: "published",
-          },
+          }),
           isLoading: false,
           isError: false,
           error: null,
@@ -190,12 +195,6 @@ vi.mock("../../../features/report-sections", () => ({
   }),
 }));
 
-// React.use() stub — resolves Promise params synchronously for client pages.
-vi.mock("react", async () => {
-  const actual = await vi.importActual<typeof import("react")>("react");
-  return { ...actual, use: <T,>(v: T): T => v };
-});
-
 /* ---- Imports under test (after all vi.mock registrations) ---- */
 
 import PublishedReportPage from "../../../app/(app)/reports/[reportId]/page";
@@ -204,9 +203,7 @@ import PrintReportPage from "../../../app/print/[reportId]/page";
 /* ---- Helpers ---- */
 
 function paramsOf(reportId: string): Promise<{ reportId: string }> {
-  // Passed as a plain object; React.use() is stubbed to return it as-is.
-  // Async server component pages use `await params` which also resolves fine
-  // with a real Promise.
+  // Both route components await this real Promise, matching their Props contract.
   return Promise.resolve({ reportId });
 }
 

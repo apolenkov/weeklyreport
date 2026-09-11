@@ -2,6 +2,8 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { makeWeeklyReportFixture } from "../../../../test-utils/report-section-fixtures";
+import { mapWeeklyReport } from "../../model/weekly-report";
 import type {
   LeadOverviewRow,
   WeeklyPortfolioProduct,
@@ -17,6 +19,7 @@ function makeProduct(
     id: "p1",
     initials: "PA",
     name: "Product Alpha",
+    hasContent: true,
     status: "on-track",
     statusLabel: "On track",
     leads: "Alice",
@@ -100,8 +103,16 @@ describe("PortfolioOverviewTable — scope-adaptive (by lead)", () => {
       <PortfolioOverviewTable
         scope="lead"
         leads={[
-          makeLeadRow({ id: "L1", name: "Anna", worstStatus: "blocked" }),
-          makeLeadRow({ id: "L2", name: "Boris", worstStatus: "on-track" }),
+          makeLeadRow({
+            id: "L1",
+            name: "Иванова Анна Петровна",
+            worstStatus: "blocked",
+          }),
+          makeLeadRow({
+            id: "L2",
+            name: "Кузнецов Борис Сергеевич",
+            worstStatus: "on-track",
+          }),
         ]}
         onNavigate={NOOP_NAVIGATE}
       />,
@@ -109,8 +120,8 @@ describe("PortfolioOverviewTable — scope-adaptive (by lead)", () => {
 
     expect(screen.getByText("Leads Overview")).toBeInTheDocument();
     expect(screen.getByText("2 leads")).toBeInTheDocument();
-    expect(screen.getByText("Anna")).toBeInTheDocument();
-    expect(screen.getByText("Boris")).toBeInTheDocument();
+    expect(screen.getByText("Иванова А.П.")).toBeInTheDocument();
+    expect(screen.getByText("Кузнецов Б.С.")).toBeInTheDocument();
     // Product-scope heading is absent.
     expect(screen.queryByText("Portfolio Overview")).toBeNull();
   });
@@ -160,13 +171,38 @@ describe("PortfolioOverviewTable — scope-adaptive (by lead)", () => {
     });
   });
 
+  it("keeps a product with no detailed content muted and disabled", () => {
+    const onNavigate = vi.fn();
+    render(
+      <PortfolioOverviewTable
+        products={[
+          makeProduct({
+            hasContent: false,
+            currentWeekCount: 0,
+            nextWeekCount: 0,
+            riskCount: 0,
+            status: "empty",
+            statusLabel: "No status",
+          }),
+        ]}
+        onNavigate={onNavigate}
+      />,
+    );
+
+    const card = screen.getByRole("button", { name: /Product Alpha/u });
+    expect(card).toBeDisabled();
+    expect(card).toHaveTextContent("No updates");
+    fireEvent.click(card);
+    expect(onNavigate).not.toHaveBeenCalled();
+  });
+
   it("renders lead cards in the order given (the mapper pre-sorts them)", () => {
     render(
       <PortfolioOverviewTable
         scope="lead"
         leads={[
-          makeLeadRow({ id: "L1", name: "Zoe" }),
-          makeLeadRow({ id: "L2", name: "Amir" }),
+          makeLeadRow({ id: "L1", name: "Зорина Зоя Ильинична" }),
+          makeLeadRow({ id: "L2", name: "Андреев Амир Романович" }),
         ]}
         onNavigate={NOOP_NAVIGATE}
       />,
@@ -174,7 +210,7 @@ describe("PortfolioOverviewTable — scope-adaptive (by lead)", () => {
     const names = screen
       .getAllByRole("button")
       .map((b) => b.querySelector(".truncate")?.textContent);
-    expect(names).toEqual(["Zoe", "Amir"]);
+    expect(names).toEqual(["Зорина З.И.", "Андреев А.Р."]);
   });
 
   it("a lead card click lifts the lead id to the report surface, never poking the DOM", () => {
@@ -190,12 +226,12 @@ describe("PortfolioOverviewTable — scope-adaptive (by lead)", () => {
     render(
       <PortfolioOverviewTable
         scope="lead"
-        leads={[makeLeadRow({ id: "L1", name: "Anna" })]}
+        leads={[makeLeadRow({ id: "L1", name: "Иванова Анна Петровна" })]}
         onNavigate={onNavigate}
       />,
     );
 
-    fireEvent.click(screen.getByText("Anna"));
+    fireEvent.click(screen.getByText("Иванова А.П."));
     expect(onNavigate).toHaveBeenCalledWith("L1");
     expect(scrollSpy).not.toHaveBeenCalled();
   });
@@ -214,6 +250,83 @@ describe("PortfolioOverviewTable — scope-adaptive (by lead)", () => {
     expect(card).toHaveAttribute("aria-controls", "report-product-p1");
     fireEvent.click(card);
     expect(onNavigate).toHaveBeenCalledWith("p1");
+  });
+
+  it("keeps a decision-only mapped product enabled and navigable", () => {
+    const projectId = "10000000-0000-4000-8000-000000000004";
+    const authorId = "10000000-0000-4000-8000-000000000003";
+    const projected = mapWeeklyReport(
+      makeWeeklyReportFixture({
+        portfolioOverview: [
+          {
+            productId: projectId,
+            productName: "Payments",
+            worstStatus: "green",
+            stageCount: 1,
+            leadNames: ["Test Lead"],
+            leadIds: [authorId],
+          },
+        ],
+        leadSections: [
+          {
+            authorId,
+            projects: [
+              {
+                projectId,
+                projectName: "Payments",
+                trafficLight: "green",
+                ownedStages: [
+                  {
+                    stageId: "stage-planning",
+                    stageName: "Planning",
+                    sortOrder: 0,
+                    status: "green",
+                  },
+                ],
+                stageSet: [
+                  {
+                    stageId: "stage-planning",
+                    stageName: "Planning",
+                    sortOrder: 0,
+                  },
+                ],
+              },
+            ],
+            decisions: [
+              {
+                id: "decision-1",
+                productId: projectId,
+                text: "Approve fallback",
+                owner: "Test Lead",
+                impact: "Keep payments live",
+                stageNames: ["Planning"],
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    expect(
+      projected.products[0]?.decisions.map((decision) => decision.text),
+    ).toEqual(["Approve fallback"]);
+    const onNavigate = vi.fn();
+    render(
+      <PortfolioOverviewTable
+        products={projected.portfolio}
+        mountedProductIds={new Set([projectId])}
+        onNavigate={onNavigate}
+      />,
+    );
+
+    const card = screen.getByRole("button", { name: /Payments/u });
+    expect(card).toBeEnabled();
+    expect(card).not.toHaveTextContent("No updates");
+    expect(card).toHaveAttribute(
+      "aria-controls",
+      `report-product-${projectId}`,
+    );
+    fireEvent.click(card);
+    expect(onNavigate).toHaveBeenCalledWith(projectId);
   });
 
   it("omits aria-controls until the product details target is mounted", () => {

@@ -60,7 +60,10 @@ function periodMutationCallbacks(
 
 function useWeeklyReportForPublish(reportId: string) {
   const trpc = useTRPC();
-  const query = useQuery(trpc.weeklyReport.get.queryOptions({ reportId }));
+  const query = useQuery({
+    ...trpc.weeklyReport.get.queryOptions({ reportId }),
+    retryOnMount: false,
+  });
   useQueryErrorHandler(query, {
     component: "HeadPublishLockAction",
     context: { reportId },

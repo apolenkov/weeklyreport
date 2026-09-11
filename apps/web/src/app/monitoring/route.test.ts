@@ -65,7 +65,7 @@ describe("same-origin Sentry tunnel route", () => {
 
   it("forwards the raw envelope to the configured endpoint", async () => {
     vi.stubEnv("SENTRY_DSN", "https://public-key@bugsink.test/42");
-    const fetchMock = vi.fn(() =>
+    const fetchMock = vi.fn<typeof fetch>(() =>
       Promise.resolve(new Response(null, { status: 200 })),
     );
     vi.stubGlobal("fetch", fetchMock);
@@ -75,10 +75,13 @@ describe("same-origin Sentry tunnel route", () => {
     );
 
     expect(res.status).toBe(200);
-    const [input, init] = fetchMock.mock.calls[0] as unknown as [
-      URL,
-      RequestInit,
-    ];
+    const call = fetchMock.mock.calls[0];
+    expect(call).toBeDefined();
+    if (!call) throw new TypeError("Expected fetch call");
+    const [input, init] = call;
+    expect(input).toBeInstanceOf(URL);
+    if (!(input instanceof URL)) throw new TypeError("Expected a URL input");
+    if (!init) throw new TypeError("Expected fetch options");
     expect(input.toString()).toBe(
       "https://bugsink.test/api/42/envelope/?sentry_version=7&sentry_key=public-key",
     );

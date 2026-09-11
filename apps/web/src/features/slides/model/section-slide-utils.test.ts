@@ -68,32 +68,7 @@ function makeSection(
 }
 
 describe("section slide utilities", () => {
-  it("carries the section's activities as a status-pill lane", () => {
-    const slide = buildSectionSlideModel(
-      makeSection({
-        activities: [
-          {
-            activityId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-            activityName: "Jira triage duty",
-            status: "red",
-            linkedProducts: [],
-            derivedStatus: null,
-          },
-        ],
-      }),
-    );
-
-    expect(slide.activities).toEqual([
-      {
-        id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-        name: "Jira triage duty",
-        status: "red",
-        linkedProducts: [],
-      },
-    ]);
-  });
-
-  it("excludes activity-parented records from the product-slide aggregates", () => {
+  it("summarizes every activity-parented row rendered by the grid", () => {
     const activityId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
     const slide = buildSectionSlideModel(
       makeSection({
@@ -116,6 +91,28 @@ describe("section slide utilities", () => {
             tag: "ops",
             workflowStatus: "in_progress",
             carriedOver: false,
+            priorityRank: 2,
+          },
+        ],
+        risks: [
+          {
+            id: "88888888-8888-4888-8888-888888888888",
+            projectId: null,
+            activityId,
+            risk: "Activity dependency blocked",
+            impact: "Triage stops",
+            mitigation: "Escalate",
+            severity: "blocked",
+          },
+        ],
+        decisions: [
+          {
+            id: "99999999-9999-4999-8999-999999999999",
+            productId: null,
+            activityId,
+            text: "Rotate triage ownership",
+            owner: "Alex Lead",
+            impact: "Restore coverage",
           },
         ],
         activities: [
@@ -130,13 +127,43 @@ describe("section slide utilities", () => {
       }),
     );
 
-    // The activity record rides the pills lane only — never the product quadrants.
-    expect(slide.currentItems).toEqual(["Product current item"]);
-    expect(slide.currentCount).toBe(1);
-    // blockedCount derives only from derived product status/risks, never
-    // items, so an activity-parented record can never inflate it.
-    expect(slide.blockedCount).toBe(0);
-    expect(slide.activities?.map((a) => a.name)).toEqual(["Jira triage duty"]);
+    const visibleRows = slide.grid?.products
+      .flatMap((product) => product.subsections)
+      .flatMap((subsection) => [
+        ...subsection.columns.current,
+        ...subsection.columns.next,
+        ...subsection.columns.risks,
+        ...subsection.columns.decisions,
+      ]);
+    expect(visibleRows?.map((row) => row.text)).toEqual([
+      "Product current item",
+      "Activity current item",
+      "Activity dependency blocked",
+      "Rotate triage ownership",
+    ]);
+    expect(slide.currentItems).toEqual([
+      "Product current item",
+      "Activity current item",
+    ]);
+    expect(slide.currentCount).toBe(2);
+    expect(slide.riskCount).toBe(1);
+    expect(slide.decisionCount).toBe(1);
+    expect(slide.priorityCount).toBe(1);
+    expect(slide.blockedCount).toBe(1);
+    expect(slide.tone).toBe("blocked");
+    expect(slide.grid?.worstStatus).toBe("red");
+    expect(
+      slide.grid?.products.find((product) => product.id === PRODUCT_ID)?.status,
+    ).toBe("green");
+    expect(slide.grid?.onTrack).toEqual({ on: 1, total: 1 });
+    expect(slide.readiness).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "current", status: "ready" }),
+        expect.objectContaining({ id: "risks", status: "ready" }),
+        expect.objectContaining({ id: "priorities", status: "ready" }),
+        expect.objectContaining({ id: "decisions", status: "ready" }),
+      ]),
+    );
   });
 
   it("builds a ready owner slide from a complete section", () => {

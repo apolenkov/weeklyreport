@@ -8,8 +8,6 @@ import {
 } from "./accordion-tokens";
 
 const EMPTY_CONFIG: StatusConfig = {
-  bg: CSS.muted,
-  text: CSS.mutedForeground,
   avatarBg: CSS.muted,
   avatarText: CSS.mutedForeground,
 };

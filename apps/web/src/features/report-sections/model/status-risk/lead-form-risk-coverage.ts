@@ -2,7 +2,7 @@ import { deriveEffectiveStageStatus } from "../../../../shared/lib/status/stage-
 import { riskCoversStage } from "../stage-tags";
 import type { Product, RiskEntry } from "../types";
 
-// Own non-empty risks covering the stage (same predicate as computeUnbackedStages).
+// Own non-empty risks whose selected stages cover this stage.
 export function coveringRisksForStage(
   risks: readonly RiskEntry[],
   productId: string,

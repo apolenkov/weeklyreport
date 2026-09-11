@@ -36,9 +36,9 @@ function useFillFromConfirmation(
     },
     confirmPendingFillFrom: () => {
       if (pendingInput === null) return;
-      const input = pendingInput;
+      const input = createInput(pendingInput.sourceSectionId);
       setPendingInput(null);
-      fillFrom(input);
+      if (input !== null) fillFrom(input);
     },
     cancelPendingFillFrom: () => setPendingInput(null),
   };

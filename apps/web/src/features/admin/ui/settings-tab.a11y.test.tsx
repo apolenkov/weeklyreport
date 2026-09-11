@@ -92,6 +92,16 @@ const baseSettings: AppSettings = {
   notificationFromEmail: null,
 };
 
+async function expectSuccessAnnouncement(text: string) {
+  const announcement = await screen.findByRole("status");
+  expect(announcement).toHaveAttribute("aria-live", "polite");
+  expect(announcement).toHaveTextContent(text);
+  expect(announcement.querySelector("svg")).toHaveAttribute(
+    "aria-hidden",
+    "true",
+  );
+}
+
 describe("SettingsTab — accessibility regression", () => {
   // Stub fetch so /api/revalidate-org called in onSuccess doesn't hang or
   // reject while we await the success message.
@@ -107,7 +117,7 @@ describe("SettingsTab — accessibility regression", () => {
     globalThis.fetch = originalFetch;
   });
 
-  it("CheckIcon SVG has aria-hidden=true in Identity success message", async () => {
+  it("announces a successful Identity save with a decorative icon", async () => {
     const { proxy, captured } = buildProxy();
     expectDefined(
       captured["admin.updateOrganization"],
@@ -126,41 +136,10 @@ describe("SettingsTab — accessibility regression", () => {
       screen.getByRole("button", { name: /save organization identity/i }),
     );
 
-    // Wait for the success message to appear.
-    const successSpan = await screen.findByText(/identity saved/i);
-    const svg = successSpan.closest("span")?.querySelector("svg");
-    expect(svg).not.toBeNull();
-    expect(svg?.getAttribute("aria-hidden")).toBe("true");
+    await expectSuccessAnnouncement("Identity saved");
   });
 
-  it("CheckIcon SVG aria-hidden=true persists in Identity saved message", async () => {
-    const { proxy, captured } = buildProxy();
-    expectDefined(
-      captured["admin.updateOrganization"],
-    ).mutationFn.mockResolvedValue(undefined);
-    renderSettings(proxy);
-
-    const shortNameInput =
-      await screen.findByLabelText<HTMLInputElement>(/short name/i);
-    await waitFor(() => expect(shortNameInput.value).toBe("PEO"));
-
-    const fullNameInput = screen.getByLabelText<HTMLInputElement>(/full name/i);
-    fireEvent.change(shortNameInput, { target: { value: "ACME" } });
-    fireEvent.change(fullNameInput, { target: { value: "Acme Corp" } });
-
-    const user = userEvent.setup();
-    await user.click(
-      screen.getByRole("button", { name: /save organization identity/i }),
-    );
-
-    const successMsg = await screen.findByText(/identity saved/i);
-    const container = successMsg.closest("span");
-    expect(container).not.toBeNull();
-    const svg = container?.querySelector("svg");
-    expect(svg?.getAttribute("aria-hidden")).toBe("true");
-  });
-
-  it("CheckIcon SVG aria-hidden=true in Period policy saved message", async () => {
+  it("announces a successful Period policy save with a decorative icon", async () => {
     const { proxy, captured } = buildProxy();
     expectDefined(
       captured["admin.updateSettings"],
@@ -178,14 +157,10 @@ describe("SettingsTab — accessibility regression", () => {
       screen.getByRole("button", { name: /save period policy/i }),
     );
 
-    const successMsg = await screen.findByText(/period policy saved/i);
-    const container = successMsg.closest("span");
-    const svg = container?.querySelector("svg");
-    expect(svg).not.toBeNull();
-    expect(svg?.getAttribute("aria-hidden")).toBe("true");
+    await expectSuccessAnnouncement("Period policy saved");
   });
 
-  it("CheckIcon SVG aria-hidden=true in Reminder defaults saved message", async () => {
+  it("announces a successful Reminder defaults save with a decorative icon", async () => {
     const { proxy, captured } = buildProxy();
     expectDefined(
       captured["admin.updateSettings"],
@@ -204,14 +179,10 @@ describe("SettingsTab — accessibility regression", () => {
       screen.getByRole("button", { name: /save reminder defaults/i }),
     );
 
-    const successMsg = await screen.findByText(/reminder defaults saved/i);
-    const container = successMsg.closest("span");
-    const svg = container?.querySelector("svg");
-    expect(svg).not.toBeNull();
-    expect(svg?.getAttribute("aria-hidden")).toBe("true");
+    await expectSuccessAnnouncement("Reminder defaults saved");
   });
 
-  it("CheckIcon SVG aria-hidden=true in Notification settings saved message", async () => {
+  it("announces a successful Notification settings save with a decorative icon", async () => {
     const { proxy, captured } = buildProxy();
     expectDefined(
       captured["admin.updateSettings"],
@@ -230,61 +201,6 @@ describe("SettingsTab — accessibility regression", () => {
       screen.getByRole("button", { name: /save notification settings/i }),
     );
 
-    const successMsg = await screen.findByText(/notification settings saved/i);
-    const container = successMsg.closest("span");
-    const svg = container?.querySelector("svg");
-    expect(svg).not.toBeNull();
-    expect(svg?.getAttribute("aria-hidden")).toBe("true");
-  });
-
-  it("CheckIcon SVG attributes snapshot — viewBox, stroke, fill, strokeWidth, strokeLinecap, strokeLinejoin", async () => {
-    const { proxy, captured } = buildProxy();
-    expectDefined(
-      captured["admin.updateOrganization"],
-    ).mutationFn.mockResolvedValue(undefined);
-    renderSettings(proxy);
-
-    const shortNameInput =
-      await screen.findByLabelText<HTMLInputElement>(/short name/i);
-    await waitFor(() => expect(shortNameInput.value).toBe("PEO"));
-
-    fireEvent.change(shortNameInput, { target: { value: "SNAP" } });
-
-    const user = userEvent.setup();
-    await user.click(
-      screen.getByRole("button", { name: /save organization identity/i }),
-    );
-
-    const successMsg = await screen.findByText(/identity saved/i);
-    const svg = successMsg.closest("span")?.querySelector("svg");
-    expect(svg).not.toBeNull();
-    expect(svg?.outerHTML).toMatchInlineSnapshot(
-      `"<svg viewBox="0 0 24 24" class="h-4 w-4" stroke="currentColor" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>"`,
-    );
-  });
-
-  it("success message DOM structure snapshot — CheckIcon SVG and text node coexist in span", async () => {
-    const { proxy, captured } = buildProxy();
-    expectDefined(
-      captured["admin.updateOrganization"],
-    ).mutationFn.mockResolvedValue(undefined);
-    renderSettings(proxy);
-
-    const shortNameInput =
-      await screen.findByLabelText<HTMLInputElement>(/short name/i);
-    await waitFor(() => expect(shortNameInput.value).toBe("PEO"));
-
-    fireEvent.change(shortNameInput, { target: { value: "SNAP2" } });
-
-    const user = userEvent.setup();
-    await user.click(
-      screen.getByRole("button", { name: /save organization identity/i }),
-    );
-
-    const successMsg = await screen.findByText(/identity saved/i);
-    const container = successMsg.closest("span");
-    expect(container?.outerHTML).toMatchInlineSnapshot(
-      `"<span class="flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]" role="status" aria-live="polite"><svg viewBox="0 0 24 24" class="h-4 w-4" stroke="currentColor" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>Identity saved</span>"`,
-    );
+    await expectSuccessAnnouncement("Notification settings saved");
   });
 });

@@ -143,6 +143,10 @@ function mergeItemRow(
       ...existing,
       ...parentFields,
       text: item.text,
+      nextStepText:
+        item.nextStepText === undefined
+          ? (existing.nextStepText ?? null)
+          : item.nextStepText,
       workflowStatus,
       priorityRank: item.priorityRank ?? null,
       pausedReason,
@@ -153,6 +157,7 @@ function mergeItemRow(
     ...parentFields,
     type: itemType,
     text: item.text,
+    nextStepText: item.nextStepText ?? null,
     tag: "general",
     workflowStatus,
     carriedOver: false,

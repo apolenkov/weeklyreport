@@ -29,31 +29,33 @@ function TrafficLightHistoryDataTable({
   rows,
 }: TrafficLightHistoryOutput) {
   return (
-    <table className="sr-only">
-      <caption>Traffic-light history data</caption>
-      <thead>
-        <tr>
-          <th scope="col">Period</th>
-          {rows.map((row) => (
-            <th key={row.projectId} scope="col">
-              {row.projectName}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {periods.map((period, periodIndex) => (
-          <tr key={period}>
-            <th scope="row">{period}</th>
+    <div className="sr-only">
+      <table>
+        <caption>Traffic-light history data</caption>
+        <thead>
+          <tr>
+            <th scope="col">Period</th>
             {rows.map((row) => (
-              <td key={row.projectId}>
-                {formatTrafficLightStatus(row.statuses[periodIndex] ?? null)}
-              </td>
+              <th key={row.projectId} scope="col">
+                {row.projectName}
+              </th>
             ))}
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {periods.map((period, periodIndex) => (
+            <tr key={period}>
+              <th scope="row">{period}</th>
+              {rows.map((row) => (
+                <td key={row.projectId}>
+                  {formatTrafficLightStatus(row.statuses[periodIndex] ?? null)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -73,8 +75,8 @@ export function TrafficLightHistoryChart({
 
   return (
     <>
-      <ChartContainer aria-hidden="true">
-        <LineChart data={data}>
+      <ChartContainer>
+        <LineChart data={data} aria-label="Traffic-light history">
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="period" />
           <YAxis
@@ -83,7 +85,13 @@ export function TrafficLightHistoryChart({
             tickFormatter={formatTrafficLightStatusLevel}
             width={64}
           />
-          <ChartTooltip />
+          <ChartTooltip
+            formatter={(value) =>
+              typeof value === "number"
+                ? formatTrafficLightStatusLevel(value)
+                : value
+            }
+          />
           <Legend />
           {/* connectNulls={false}: periods a project did NOT report stay visible
               gaps instead of being bridged by a line through them. */}

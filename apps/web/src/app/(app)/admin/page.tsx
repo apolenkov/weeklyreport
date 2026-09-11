@@ -8,18 +8,20 @@ import {
   isAdminTab,
   JobsTabLabel,
 } from "../../../features/admin";
-// ReopenTabLabel lives in the review slice; the route composes it directly
-// until the review slice registers and exposes a barrel.
-import { ReopenTabLabel } from "../../../features/review/ui/reopen-tab-label";
+import { ReopenTabLabel } from "../../../features/review";
 
 interface Props {
-  searchParams: Promise<{ tab?: string; filter?: string }>;
+  searchParams: Promise<{
+    tab?: string | string[];
+    filter?: string | string[];
+  }>;
 }
 
 // Tab order lives with ADMIN_TABS (admin-tab-dependencies.ts).
 export default async function AdminPage({ searchParams }: Props) {
-  const { tab = "users", filter = null } = await searchParams;
-  const activeTab = isAdminTab(tab) ? tab : "users";
+  const { tab, filter } = await searchParams;
+  const activeTab = typeof tab === "string" && isAdminTab(tab) ? tab : "users";
+  const productFilter = typeof filter === "string" ? filter : null;
 
   return (
     <main
@@ -64,7 +66,7 @@ export default async function AdminPage({ searchParams }: Props) {
           </nav>
 
           <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-sm">
-            <AdminPanel activeTab={activeTab} productFilter={filter} />
+            <AdminPanel activeTab={activeTab} productFilter={productFilter} />
           </div>
         </div>
       </div>

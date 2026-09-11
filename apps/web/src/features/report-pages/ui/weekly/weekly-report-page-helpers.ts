@@ -1,6 +1,8 @@
-import type {
-  ReportSectionReadModel,
-  WeeklyReportReadModel,
+import {
+  buildEscalationsFromReadSections,
+  buildPortfolioProductsFromSnapshotSections,
+  type ReportSectionReadModel,
+  type WeeklyReportReadModel,
 } from "@customreport/shared";
 
 import { getClientErrorDetails } from "../../../../shared/lib/errors/client-error-reporting";
@@ -62,14 +64,14 @@ export interface AccordionModel {
 
 // Touched activity = alarm (yellow/red), note, or owned records. GREEN alone
 // does not count: seed defaults every attached activity to green on create.
-// Without the fold an all-activity period would read empty and could not publish.
+// Without the fold an activity-only period would render as empty.
 function sectionHasActivityContent(
-  // Optional so a pre-activity fixture omitting it is no-activity, not a crash.
-  section: Pick<ReportSectionReadModel, "items" | "risks" | "decisions"> & {
-    readonly activities?: ReportSectionReadModel["activities"];
-  },
+  section: Pick<
+    ReportSectionReadModel,
+    "items" | "risks" | "decisions" | "activities"
+  >,
 ): boolean {
-  const activities = section.activities ?? [];
+  const activities = section.activities;
   if (activities.length === 0) return false;
   const ownsRecord = (activityId: string): boolean =>
     section.items.some((i) => i.activityId === activityId) ||
@@ -123,9 +125,13 @@ export function buildAccordionModel(params: {
       draftCount: 0,
     };
   }
+  const submittedSections = reportData.leadSections.filter(isSubmittedSection);
   const submittedData: WeeklyReportReadModel = {
     ...reportData,
-    leadSections: reportData.leadSections.filter(isSubmittedSection),
+    leadSections: submittedSections,
+    escalations: buildEscalationsFromReadSections(submittedSections),
+    portfolioOverview:
+      buildPortfolioProductsFromSnapshotSections(submittedSections),
   };
   const draftSections = reportData.leadSections.filter(
     (section) => !isSubmittedSection(section),

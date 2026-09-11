@@ -4,8 +4,6 @@ import type {
 } from "../../../report-sections";
 
 export interface StatusConfig {
-  bg: string;
-  text: string;
   avatarBg: string;
   avatarText: string;
 }
@@ -25,26 +23,18 @@ export const CSS = {
 // hardcoded status hex.
 export const STATUS_CONFIG = {
   "on-track": {
-    bg: CSS.success,
-    text: "var(--color-primary)",
     avatarBg: CSS.success,
     avatarText: "var(--color-primary)",
   },
   "at-risk": {
-    bg: CSS.muted,
-    text: "var(--color-foreground)",
     avatarBg: CSS.muted,
     avatarText: "var(--color-foreground)",
   },
   blocked: {
-    bg: CSS.statusBlockedBg,
-    text: CSS.destructive,
     avatarBg: CSS.statusBlockedBg,
     avatarText: CSS.destructive,
   },
   empty: {
-    bg: CSS.muted,
-    text: CSS.mutedForeground,
     avatarBg: CSS.muted,
     avatarText: CSS.mutedForeground,
   },

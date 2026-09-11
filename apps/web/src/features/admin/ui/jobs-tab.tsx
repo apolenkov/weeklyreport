@@ -2,35 +2,32 @@
 
 import {
   EMAIL_REMINDER_QUEUE_NAME,
+  type FailedJob,
   QUEUE_NAMES,
   type QueueName,
 } from "@customreport/shared";
 import {
-  type InfiniteData,
+  type QueryClient,
   useInfiniteQuery,
-  type UseInfiniteQueryOptions,
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";
+import type { TRPCProxy } from "../../../shared/lib/trpc/trpc";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { ConfirmDeleteDialog } from "../../../shared/ui/dialogs/confirm-delete-dialog";
-import { type FailedJob, JobsTabView } from "./jobs/jobs-tab-view";
+import { JobsTabView } from "./jobs/jobs-tab-view";
 
 const DEFAULT_QUEUE: QueueName = EMAIL_REMINDER_QUEUE_NAME;
-
-interface FailedJobsPage {
-  readonly jobs: readonly FailedJob[];
-  readonly nextCursor: number | null;
-}
 
 interface FailedJobsPagination {
   readonly jobs: readonly FailedJob[];
   readonly isLoading: boolean;
   readonly isError: boolean;
-  readonly error: Error | null;
+  readonly error: Readonly<{ message: string }> | null;
   readonly hasNextPage: boolean;
   readonly isFetchingNextPage: boolean;
   readonly fetchNextPage: () => void;
@@ -40,23 +37,20 @@ interface FailedJobsPagination {
 // page, so a single query would leave every older failure unreachable.
 function useFailedJobsPagination(queue: QueueName): FailedJobsPagination {
   const trpc = useTRPC();
-  // The tRPC branded options are not directly assignable to useInfiniteQuery
-  // under exactOptionalPropertyTypes (initialData optionality); widen through
-  // the same seam use-cursor-pagination uses.
   const query = useInfiniteQuery(
     trpc.admin.jobs.listFailed.infiniteQueryOptions(
       { queue },
       {
-        getNextPageParam: (lastPage: FailedJobsPage) => lastPage.nextCursor,
+        getNextPageParam: (lastPage) => lastPage.nextCursor,
       },
-    ) as unknown as UseInfiniteQueryOptions<
-      FailedJobsPage,
-      Error,
-      InfiniteData<FailedJobsPage, number | null>,
-      readonly unknown[],
-      number | null
-    >,
+    ),
   );
+  useQueryErrorHandler(query, {
+    component: "JobsTab",
+    event: "admin.jobs.list_failed",
+    procedure: "admin.jobs.listFailed",
+    context: { queue },
+  });
   const jobs = useMemo(() => {
     if (query.status !== "success") return [];
     return query.data.pages.flatMap((page) => page.jobs);
@@ -74,6 +68,19 @@ function useFailedJobsPagination(queue: QueueName): FailedJobsPagination {
   };
 }
 
+function refreshFailedJobs(
+  qc: QueryClient,
+  trpc: TRPCProxy,
+  queue: QueueName,
+): void {
+  void Promise.all([
+    qc.invalidateQueries(
+      trpc.admin.jobs.listFailed.infiniteQueryFilter({ queue }),
+    ),
+    qc.invalidateQueries(trpc.admin.dlqCount.pathFilter()),
+  ]).catch(() => undefined);
+}
+
 // Retry of a single failed job plus the id currently in flight, so the row
 // that was clicked is the only one showing a spinner.
 function useRetryFailedJob(queue: QueueName) {
@@ -83,7 +90,7 @@ function useRetryFailedJob(queue: QueueName) {
 
   const retryMut = useMutation(
     trpc.admin.jobs.retryFailed.mutationOptions({
-      onSuccess: (result) => {
+      onSuccess: (result, variables) => {
         if (result.removed) {
           toast.info(
             result.reason ?? `Job ${result.jobId} removed from failed jobs.`,
@@ -95,18 +102,7 @@ function useRetryFailedJob(queue: QueueName) {
           // retried elsewhere). Surface as a soft warning, not an error.
           toast.info(`Job ${result.jobId} no longer exists; list refreshed.`);
         }
-        void qc
-          .invalidateQueries({
-            queryKey: trpc.admin.jobs.listFailed.queryKey(),
-          })
-          .catch(() => undefined);
-        // Also nudge the Jobs tab count so it tracks the new failed-jobs
-        // total without waiting for its 30s poll.
-        void qc
-          .invalidateQueries({
-            queryKey: trpc.admin.dlqCount.queryKey(),
-          })
-          .catch(() => undefined);
+        refreshFailedJobs(qc, trpc, variables.queue);
         setRetryingId(null);
       },
       onError: (err) => {
@@ -133,22 +129,13 @@ function useRemoveFailedJob(onSuccess: () => void) {
 
   const removeMut = useMutation(
     trpc.admin.jobs.removeFailed.mutationOptions({
-      onSuccess: (result) => {
+      onSuccess: (result, variables) => {
         if (result.removed) {
           toast.success(`Job ${result.jobId} removed from failed jobs.`);
         } else {
           toast.info(`Job ${result.jobId} no longer exists; list refreshed.`);
         }
-        void qc
-          .invalidateQueries({
-            queryKey: trpc.admin.jobs.listFailed.queryKey(),
-          })
-          .catch(() => undefined);
-        void qc
-          .invalidateQueries({
-            queryKey: trpc.admin.dlqCount.queryKey(),
-          })
-          .catch(() => undefined);
+        refreshFailedJobs(qc, trpc, variables.queue);
         setRemovingId(null);
         onSuccess();
       },

@@ -14,22 +14,13 @@ import { makeQueryState } from "../../../../test-utils/query-state";
 
 /* ---- Module mocks (hoisted above all imports of the SUT) ---- */
 
-// Deck no longer surfaces a focus href; stub exposes the shell-owned density
-// state without introducing a second control row into this shell test.
+// Keep the deck stub focused on shell routing; fullscreen is asserted through
+// the real context-toolbar control below.
 vi.mock("../../../slides", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../slides")>();
   return {
     ...actual,
-    HeadSlidesClient: ({
-      density,
-    }: {
-      density?: "document" | "presentation";
-    }) => (
-      <div
-        data-testid="head-slides-client-stub"
-        data-density={density ?? "uncontrolled"}
-      />
-    ),
+    HeadSlidesClient: () => <div data-testid="head-slides-client-stub" />,
   };
 });
 
@@ -185,39 +176,21 @@ describe("HeadReportShell layout", () => {
     ).toBeInTheDocument();
   });
 
-  it("keeps shell-owned density reversible in the single slides context toolbar", async () => {
-    const user = userEvent.setup();
+  it("hosts fullscreen beside scope controls and omits slide density", () => {
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="slides" />);
 
     const contextControls = screen.getByRole("group", {
       name: "Context controls",
     });
     expect(
-      within(contextControls).getAllByRole("group", { name: "Slide density" }),
-    ).toHaveLength(1);
-    expect(screen.getByTestId("head-slides-client-stub")).toHaveAttribute(
-      "data-density",
-      "document",
-    );
-
-    await user.click(
-      within(contextControls).getByRole("button", { name: "Presentation" }),
-    );
-    expect(screen.getByTestId("head-slides-client-stub")).toHaveAttribute(
-      "data-density",
-      "presentation",
-    );
-
-    await user.click(
-      within(contextControls).getByRole("button", { name: "Document" }),
-    );
-    expect(screen.getByTestId("head-slides-client-stub")).toHaveAttribute(
-      "data-density",
-      "document",
-    );
+      within(contextControls).getByRole("button", {
+        name: "Enter fullscreen",
+      }),
+    ).toBeInTheDocument();
+    expect(within(contextControls).getByRole("radiogroup")).toBeInTheDocument();
     expect(
-      screen.getAllByRole("group", { name: "Slide density" }),
-    ).toHaveLength(1);
+      screen.queryByRole("group", { name: "Slide density" }),
+    ).not.toBeInTheDocument();
   });
 
   it("reserves period navigation and document-action geometry while slides load", () => {

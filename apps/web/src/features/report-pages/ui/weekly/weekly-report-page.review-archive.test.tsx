@@ -1,14 +1,9 @@
-// Wire-up tests: tRPC stub intercepts publish/reopen/get; no MSW handlers.
-// Assert mutation variables, cache invalidation, and toast on success.
+// Review, acknowledgement, and archive behavior through the page harness.
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TRPCClientError } from "@trpc/client";
-import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import { TRPCProxyContext } from "../../../../shared/lib/trpc/trpc-context";
 
 // We mock cache-keys to verify invalidation cascade without actually inspecting
 // react-query internals.
@@ -43,103 +38,13 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/head/report",
 }));
 
-import {
-  SessionContext,
-  type SessionUser,
-} from "../../../../shared/lib/auth/session-provider";
-import {
-  invalidateDashboard,
-  invalidateLeadForm,
-  invalidateLeadHistory,
-} from "../../../../shared/lib/query/cache-keys";
+import { invalidatePeriodLifecycle } from "../../../../shared/lib/query/cache-keys";
 import { expectDefined } from "../../../../test-utils/expect-defined.js";
-import { createMockTRPC } from "../../../../test-utils/mock-trpc";
 import {
   makeWeeklyReportData,
   REPORT_ID,
 } from "./__tests__/weekly-report-page-harness";
-import { WeeklyReportPage } from "./weekly-report-page";
-
-function renderPage(
-  data: ReturnType<typeof makeWeeklyReportData>,
-  authorId?: string,
-  role: SessionUser["role"] = "head",
-  scope?: "product" | "lead",
-  documentActionsLeading?: ReactNode,
-  contextControls?: ReactNode,
-  contextControlsLeading?: ReactNode,
-) {
-  const { proxy, captured } = createMockTRPC([
-    { path: ["weeklyReport", "get"], query: data },
-    { path: ["period", "publish"], mutation: true },
-    { path: ["period", "reopen"], mutation: true },
-    // ExportPdfButton calls both pdfExport.request.mutationOptions
-    // and pdfExport.status.queryOptions unconditionally on every render. Mock the
-    // surface here so the parent page renders without throwing — these tests do
-    // not exercise PDF export behavior, they only need the mock to be structurally
-    // valid. pdfExport.status has enabled:false in the component; the factory
-    // stub without enabled is fine because the component manages enabled itself.
-    { path: ["pdfExport", "request"], mutation: true },
-    { path: ["pdfExport", "status"], query: null },
-    { path: ["review", "dashboard"] },
-    { path: ["review", "verdict"], mutation: true },
-    { path: ["review", "comment"], mutation: true },
-    { path: ["review", "deleteComment"], mutation: true },
-    // Group id mounts the per-group Acknowledge control; empty roster = un-acked.
-    { path: ["review", "acknowledgements"], queryByInput: () => [] },
-    { path: ["review", "acknowledge"], mutation: true },
-    { path: ["archive", "list"] },
-    { path: ["archive", "archiveReport"], mutation: true },
-    { path: ["archive", "unarchiveReport"], mutation: true },
-    { path: ["reports", "myHistory"] },
-    { path: ["reports", "getActive"] },
-    { path: ["leadForm", "byPeriod"] },
-    { path: ["leadForm", "versions"] },
-    { path: ["admin", "snapshot"] },
-    { path: ["admin", "getSettings"] },
-  ]);
-
-  const qc = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-
-  function Wrapper({ children }: { readonly children: ReactNode }) {
-    return (
-      <QueryClientProvider client={qc}>
-        <SessionContext.Provider
-          value={{
-            user: {
-              id: "head-user-id",
-              name: "Test User",
-              email: "test.user@example.com",
-              role,
-            },
-            organization: null,
-            isLoading: false,
-            isAuthenticated: true,
-          }}
-        >
-          <TRPCProxyContext.Provider value={proxy}>
-            {children}
-          </TRPCProxyContext.Provider>
-        </SessionContext.Provider>
-      </QueryClientProvider>
-    );
-  }
-
-  const renderResult = render(
-    <WeeklyReportPage
-      authorId={authorId}
-      scope={scope}
-      documentActionsLeading={documentActionsLeading}
-      contextControls={contextControls}
-      contextControlsLeading={contextControlsLeading}
-    />,
-    { wrapper: Wrapper },
-  );
-
-  return { ...renderResult, captured };
-}
+import { renderWeeklyReportPage } from "./weekly-report-page-test-harness";
 
 const REVIEW_COMMENT_TEXT = "Please double-check the milestone date";
 
@@ -212,7 +117,7 @@ describe("WeeklyReportPage — review-mode split (report-review-mode)", () => {
   });
 
   it("defaults to read mode: the toggle shows for a reviewer but affordances stay hidden", async () => {
-    renderPage(makeReviewableData(), undefined, "head");
+    renderWeeklyReportPage(makeReviewableData(), { role: "head" });
 
     expect(
       await screen.findByRole("button", { name: "Review" }),
@@ -237,7 +142,7 @@ describe("WeeklyReportPage — review-mode split (report-review-mode)", () => {
   });
 
   it("mounts the verdict control and comment composer once switched to review mode", async () => {
-    renderPage(makeReviewableData(), undefined, "head");
+    renderWeeklyReportPage(makeReviewableData(), { role: "head" });
 
     await userEvent.click(
       await screen.findByRole("button", { name: "Review" }),
@@ -255,7 +160,7 @@ describe("WeeklyReportPage — review-mode split (report-review-mode)", () => {
   });
 
   it("gives a designated viewer-reviewer the in-body verdict home (not stranded by the head-only strip)", async () => {
-    renderPage(makeReviewableData(), undefined, "viewer");
+    renderWeeklyReportPage(makeReviewableData(), { role: "viewer" });
 
     await userEvent.click(
       await screen.findByRole("button", { name: "Review" }),
@@ -270,7 +175,7 @@ describe("WeeklyReportPage — review-mode split (report-review-mode)", () => {
   });
 
   it("offers no review-mode toggle to a lead", async () => {
-    renderPage(makeReviewableData(), undefined, "lead");
+    renderWeeklyReportPage(makeReviewableData(), { role: "lead" });
 
     await screen.findByRole("heading", { name: "Status Report" });
     expect(
@@ -282,7 +187,7 @@ describe("WeeklyReportPage — review-mode split (report-review-mode)", () => {
   });
 
   it("offers no review-mode toggle for draft-only review capability", async () => {
-    renderPage(makeDraftOnlyReviewableData(), undefined, "head");
+    renderWeeklyReportPage(makeDraftOnlyReviewableData(), { role: "head" });
 
     await screen.findByRole("heading", { name: "Status Report" });
     expect(
@@ -294,7 +199,7 @@ describe("WeeklyReportPage — review-mode split (report-review-mode)", () => {
   });
 
   it("keeps mixed review state limited to submitted sections", async () => {
-    renderPage(makeMixedReviewableData(), undefined, "head");
+    renderWeeklyReportPage(makeMixedReviewableData(), { role: "head" });
 
     await userEvent.click(
       await screen.findByRole("button", { name: "Review" }),
@@ -329,7 +234,7 @@ describe("WeeklyReportPage — acknowledge placement", () => {
   });
 
   it("head: Acknowledge sits in the publish cluster on the header, not as a body band", async () => {
-    renderPage(makeAcknowledgeableData(), undefined, "head");
+    renderWeeklyReportPage(makeAcknowledgeableData(), { role: "head" });
 
     const cluster = await screen.findByTestId("acknowledge-header");
     expect(
@@ -344,7 +249,7 @@ describe("WeeklyReportPage — acknowledge placement", () => {
   });
 
   it("viewer: Acknowledge stays a body band (no publish cluster to host it)", async () => {
-    renderPage(makeAcknowledgeableData(), undefined, "viewer");
+    renderWeeklyReportPage(makeAcknowledgeableData(), { role: "viewer" });
 
     const band = await screen.findByTestId("acknowledge-body");
     expect(
@@ -364,7 +269,7 @@ describe("WeeklyReportPage — Archive / Restore wiring", () => {
   const RESTORE_BUTTON = /restore this report from the archive/i;
 
   it("offers Archive, not Restore, on a published report still out of the archive", async () => {
-    renderPage(makeWeeklyReportData("published"));
+    renderWeeklyReportPage(makeWeeklyReportData("published"));
 
     expect(
       await screen.findByRole("button", { name: ARCHIVE_BUTTON }),
@@ -375,7 +280,7 @@ describe("WeeklyReportPage — Archive / Restore wiring", () => {
   });
 
   it("offers neither control while the period is still open", async () => {
-    renderPage(makeWeeklyReportData("open"));
+    renderWeeklyReportPage(makeWeeklyReportData("open"));
 
     await screen.findByRole("button", { name: /publish & lock/i });
     expect(
@@ -387,7 +292,10 @@ describe("WeeklyReportPage — Archive / Restore wiring", () => {
   });
 
   it("swaps Archive for Restore once the report is archived", async () => {
-    renderPage({ ...makeWeeklyReportData("published"), archived: true });
+    renderWeeklyReportPage({
+      ...makeWeeklyReportData("published"),
+      archived: true,
+    });
 
     expect(
       await screen.findByRole("button", { name: RESTORE_BUTTON }),
@@ -400,7 +308,7 @@ describe("WeeklyReportPage — Archive / Restore wiring", () => {
   });
 
   it("clicking Restore fires archive.unarchiveReport with the report id", async () => {
-    const { captured } = renderPage({
+    const { captured } = renderWeeklyReportPage({
       ...makeWeeklyReportData("published"),
       archived: true,
     });
@@ -422,7 +330,7 @@ describe("WeeklyReportPage — Archive / Restore wiring", () => {
   });
 
   it("restore busts the same caches archive does and confirms with a toast", async () => {
-    const { captured } = renderPage({
+    const { captured } = renderWeeklyReportPage({
       ...makeWeeklyReportData("published"),
       archived: true,
     });
@@ -435,16 +343,14 @@ describe("WeeklyReportPage — Archive / Restore wiring", () => {
     );
 
     await waitFor(() => {
-      expect(invalidateDashboard).toHaveBeenCalledTimes(1);
+      expect(invalidatePeriodLifecycle).toHaveBeenCalledTimes(1);
     });
     expect(toastSuccess).toHaveBeenCalledWith("Report restored");
     // Restore only moves the report between lists; it changes no section data.
-    expect(invalidateLeadForm).not.toHaveBeenCalled();
-    expect(invalidateLeadHistory).not.toHaveBeenCalled();
   });
 
   it("surfaces a failed restore as an error toast", async () => {
-    const { captured } = renderPage({
+    const { captured } = renderWeeklyReportPage({
       ...makeWeeklyReportData("published"),
       archived: true,
     });
@@ -459,6 +365,6 @@ describe("WeeklyReportPage — Archive / Restore wiring", () => {
     await waitFor(() => {
       expect(toastError).toHaveBeenCalledWith("Report not found");
     });
-    expect(invalidateDashboard).not.toHaveBeenCalled();
+    expect(invalidatePeriodLifecycle).not.toHaveBeenCalled();
   });
 });

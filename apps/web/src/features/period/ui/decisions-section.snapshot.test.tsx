@@ -158,5 +158,10 @@ describe("DecisionsSection — own decision stays editable despite owner/name mi
     expect(
       screen.queryByRole("button", { name: "Edit decision" }),
     ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("img", {
+        name: "Read-only — authored by Мария К.",
+      }),
+    ).toBeInTheDocument();
   });
 });

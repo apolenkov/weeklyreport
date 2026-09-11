@@ -62,6 +62,12 @@ function PeriodLifecycleActions({
   );
 }
 
+function reportLifecycleLabel(page: ReadyWeeklyReportPage): string {
+  if (page.archived) return "Archived";
+  if (page.periodStatus === "published") return "Published";
+  return "Live";
+}
+
 function WeeklyReportHeader({
   page,
   documentActionsLeading,
@@ -82,7 +88,8 @@ function WeeklyReportHeader({
           Status Report
         </h1>
         <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-1 text-xs font-semibold text-[var(--color-primary)]">
-          Live &middot; {page.submitted}/{page.total} Submitted
+          {reportLifecycleLabel(page)} &middot; {page.submitted}/{page.total}{" "}
+          Submitted
         </span>
         {page.showPublishHint && (
           <span className="text-xs text-[var(--color-muted-foreground)]">
@@ -137,25 +144,35 @@ function WeeklyReportContextToolbar({
 function WeeklyReportBody({
   page,
   scope,
+  initialFocusedLeadId,
 }: {
   readonly page: ReadyWeeklyReportPage;
   readonly scope: "product" | "lead";
+  readonly initialFocusedLeadId: string | undefined;
 }) {
   // Overview-card clicks lift their target into React state here; the accordion
   // and lead sections react to it. No component reaches into another's DOM.
-  const [focusedTargetId, setFocusedTargetId] = useState<string | undefined>(
-    undefined,
-  );
+  const [overviewNavigation, setOverviewNavigation] = useState<{
+    readonly targetId: string | undefined;
+    readonly epochs: ReadonlyMap<string, number>;
+  }>({ targetId: undefined, epochs: new Map() });
+  const focusedTargetId = overviewNavigation.targetId;
   const focusedProductId = focusedTargetId ?? page.focusedProductId;
-  const focusedLeadId = scope === "lead" ? focusedTargetId : undefined;
+  const focusedLeadId =
+    scope === "lead" ? (focusedTargetId ?? initialFocusedLeadId) : undefined;
   const navigateOverview = (targetId: string): void => {
     if (page.submittedOnly) page.handlers.setSubmissionFilter("all");
-    setFocusedTargetId(targetId);
+    setOverviewNavigation((current) => {
+      const epochs = new Map(current.epochs);
+      epochs.set(targetId, (epochs.get(targetId) ?? 0) + 1);
+      return { targetId, epochs };
+    });
   };
 
   return (
     <ReportContent
       hasAnyContent={page.hasAnyContent}
+      submissionCount={page.submitted}
       periodStatus={page.periodStatus}
       periodLabel={page.periodLabel}
       scope={scope}
@@ -175,6 +192,7 @@ function WeeklyReportBody({
       focusedProductId={focusedProductId}
       scrollTargetProductId={focusedProductId}
       focusedLeadId={focusedLeadId}
+      overviewNavigationEpochs={overviewNavigation.epochs}
       onNavigateOverview={navigateOverview}
     />
   );
@@ -226,7 +244,11 @@ export function WeeklyReportPage({
         contextControls={contextControls}
         contextControlsLeading={contextControlsLeading}
       />
-      <WeeklyReportBody page={page} scope={scope} />
+      <WeeklyReportBody
+        page={page}
+        scope={scope}
+        initialFocusedLeadId={authorId}
+      />
     </div>
   );
 }

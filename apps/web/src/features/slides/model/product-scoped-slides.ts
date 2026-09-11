@@ -7,6 +7,7 @@ import {
 import { SHARED_PRODUCT_ID } from "./product-scoped-activity-home";
 import type { SectionSlideModel } from "./section-slide-contracts";
 import { buildSectionSlideModel } from "./section-slide-model";
+import { buildSlideRecordAttribution } from "./slide-record-attribution";
 
 function toProductSlide(
   accumulator: ProductAccumulator,
@@ -25,16 +26,19 @@ function toProductSlide(
         : "draft",
     submittedAt: accumulator.latestSubmittedAt,
     late: false,
-    projects: [
-      {
-        projectId: accumulator.projectId,
-        projectName: accumulator.projectName,
-        trafficLight: accumulator.trafficLight,
-        ownedStages: [...accumulator.ownedStages.values()],
-        stageSet: [...accumulator.ownedStages.values()],
-        ownerGroupId: null,
-      },
-    ],
+    projects:
+      accumulator.projectId === SHARED_PRODUCT_ID
+        ? []
+        : [
+            {
+              projectId: accumulator.projectId,
+              projectName: accumulator.projectName,
+              trafficLight: accumulator.trafficLight,
+              ownedStages: [...accumulator.ownedStages.values()],
+              stageSet: [...accumulator.ownedStages.values()],
+              ownerGroupId: null,
+            },
+          ],
     referencedProjects: [],
     items: [...accumulator.items],
     risks: [...accumulator.risks],
@@ -42,7 +46,9 @@ function toProductSlide(
     activities: [...accumulator.activities],
     reviews: [],
   };
-  const model = buildSectionSlideModel(section);
+  const model = buildSectionSlideModel(section, {
+    recordAttribution: buildSlideRecordAttribution(accumulator.sourceSections),
+  });
   return {
     ...model,
     ownerName: accumulator.projectName,

@@ -100,14 +100,66 @@ describe("WeeklyReportPage visibility states", () => {
       }),
       submissionCount: 0,
     });
-    const emptyState = await screen.findByTestId("empty-submissions-state");
+    const emptyState = await screen.findByTestId("empty-report-state");
     expect(emptyState).toBeInTheDocument();
-    expect(emptyState).toHaveTextContent(/no submissions yet for week 16/i);
+    expect(emptyState).toHaveTextContent(/no report content for week 16/i);
+    expect(emptyState).toHaveTextContent(
+      "No sections have been submitted for this period.",
+    );
     expect(
       screen.getByRole("link", { name: /view report history/i }),
     ).toHaveAttribute("href", "/reports");
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
+
+  it("reports an empty submitted section accurately while preserving publish eligibility", async () => {
+    renderWeeklyReportPage(
+      makeWeeklyReportData("open", {
+        submissionCount: 1,
+        totalLeads: 1,
+        portfolioOverview: [],
+        leadSections: [
+          {
+            reportSectionId: "22222222-2222-4222-8222-aaaaaaaaaaa1",
+            authorId: AUTHOR_ID_A,
+            status: "submitted",
+            submittedAt: new Date("2026-04-14T09:00:00Z"),
+            projects: [],
+            items: [],
+            risks: [],
+            decisions: [],
+            activities: [],
+          },
+        ],
+      }),
+    );
+    expect(await screen.findByTestId("empty-report-state")).toHaveTextContent(
+      "Submitted sections contain no report content.",
+    );
+    expect(screen.getByText(/Live.*1\/1 Submitted/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /publish & lock/i }),
+    ).toBeEnabled();
+    expect(
+      screen.queryByText(/No sections have been submitted/),
+    ).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["open", false, "Live"],
+    ["reopened", false, "Live"],
+    ["published", false, "Published"],
+    ["published", true, "Archived"],
+    ["open", true, "Archived"],
+  ] as const)(
+    "labels %s (archived=%s) as %s",
+    async (periodStatus, archived, label) => {
+      renderWeeklyReportPage(makeWeeklyReportData(periodStatus, { archived }));
+      expect(
+        await screen.findByText(`${label} · 4/6 Submitted`),
+      ).toBeInTheDocument();
+    },
+  );
 
   it("keeps the normal layout for an empty published report", async () => {
     renderWeeklyReportPage({
@@ -118,9 +170,7 @@ describe("WeeklyReportPage visibility states", () => {
       submissionCount: 0,
     });
     await screen.findByRole("button", { name: /reopen period/i });
-    expect(
-      screen.queryByTestId("empty-submissions-state"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId("empty-report-state")).not.toBeInTheDocument();
   });
 
   it("hides draft content until Show all and keeps publishing gated", async () => {
@@ -146,7 +196,11 @@ describe("WeeklyReportPage visibility states", () => {
               status: "draft",
               submittedAt: null,
               projects: [
-                { projectId: PRODUCT_ID_A, projectName: "Product Alpha" },
+                {
+                  projectId: PRODUCT_ID_A,
+                  projectName: "Product Alpha",
+                  trafficLight: "green",
+                },
               ],
               items: [
                 {
@@ -158,12 +212,10 @@ describe("WeeklyReportPage visibility states", () => {
                   workflowStatus: "in_progress",
                   stageNames: ["Development"],
                   carriedOver: false,
-                  completed: false,
                 },
               ],
               risks: [],
               decisions: [],
-              priorities: [],
             },
           ],
         }),
@@ -176,9 +228,7 @@ describe("WeeklyReportPage visibility states", () => {
       screen.queryByText("Draft task in progress"),
     ).not.toBeInTheDocument();
     expect(screen.getByTestId("draft-hidden-signal")).toBeInTheDocument();
-    expect(
-      screen.queryByTestId("empty-submissions-state"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId("empty-report-state")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /show all/i }));
     expect(
       await screen.findByText("Draft task in progress"),

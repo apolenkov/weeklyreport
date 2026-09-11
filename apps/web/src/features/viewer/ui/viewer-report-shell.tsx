@@ -6,6 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useMemo } from "react";
 
+import { isLead } from "../../../shared/lib/auth/role-predicates";
+import { useSession } from "../../../shared/lib/auth/session-provider";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import {
   DocumentActionGroup,
@@ -159,7 +161,10 @@ function ViewerReportBody({
 
 // A no-period response carries neither an authority state nor an exportable
 // reportId, so both chrome slots stay empty for it.
-function deriveViewerDisplay(displayed: WeeklyReportGetResponse | undefined): {
+function deriveViewerDisplay(
+  displayed: WeeklyReportGetResponse | undefined,
+  canExportPdf: boolean,
+): {
   readonly headerContextLabel: ReactNode;
   readonly exportPdf: ReactNode;
 } {
@@ -172,12 +177,12 @@ function deriveViewerDisplay(displayed: WeeklyReportGetResponse | undefined): {
         authority={deriveViewerAuthority(displayed.periodStatus)}
       />
     ),
-    exportPdf: (
+    exportPdf: canExportPdf ? (
       <ExportPdfButton
         reportId={displayed.reportId}
         periodStatus={displayed.periodStatus}
       />
-    ),
+    ) : undefined,
   };
 }
 
@@ -187,6 +192,7 @@ export function ViewerReportShell({
   authorId,
 }: ViewerReportShellProps) {
   const trpc = useTRPC();
+  const { user } = useSession();
 
   // Status recovery markers belong only to the entry URL. Strip them from every
   // in-shell navigation so a later failure cannot be mistaken for that race.
@@ -212,7 +218,10 @@ export function ViewerReportShell({
   }
 
   const chrome: ViewerChrome = {
-    ...deriveViewerDisplay(displayedQ.data),
+    ...deriveViewerDisplay(
+      displayedQ.data,
+      user !== null && !isLead(user.role),
+    ),
     isLoading: displayedQ.isLoading,
     contextControls: (
       <ViewerShellControls

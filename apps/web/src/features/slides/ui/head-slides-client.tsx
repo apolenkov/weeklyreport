@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { type ReactElement, useMemo, useState } from "react";
+import { type ReactElement, type RefObject, useMemo, useState } from "react";
 
 import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
@@ -9,11 +9,7 @@ import { buildActivitySlideModel } from "../model/activity-slide-model";
 import { buildProductScopedSlides } from "../model/product-scoped-slides";
 import { buildSectionSlideModel } from "../model/section-slide-model";
 import { sortSlidesForReview } from "../model/section-slide-pagination";
-import {
-  type SlideDensity,
-  slidesForDensity,
-} from "../model/slide-density-pagination";
-import { SlideDensityControl } from "./slide-density-control";
+import { slidesForDensity } from "../model/slide-density-pagination";
 import { SlideEmptyState } from "./slide-empty-state";
 import { SlideSkeleton } from "./slide-skeleton";
 import { StatusSlideDeck } from "./status-slide-deck";
@@ -25,45 +21,38 @@ interface HeadSlidesClientBaseProps {
   readonly scope?: "lead" | "product";
   // Viewer shell passes false so the empty-report fallback never hits a head-only procedure.
   readonly enableActivity?: boolean;
+  // Head shell hosts fullscreen controls in its context toolbar.
+  readonly deckRef?: RefObject<HTMLDivElement | null>;
+  readonly fullscreenToggleRef?: RefObject<HTMLButtonElement | null>;
+  readonly isFullscreen?: boolean;
+  readonly onToggle?: () => void;
 }
 
-type HeadSlidesClientProps =
-  | (HeadSlidesClientBaseProps & {
-      readonly density?: undefined;
-      readonly onDensityChange?: undefined;
-    })
-  | (HeadSlidesClientBaseProps & {
-      readonly density: SlideDensity;
-      readonly onDensityChange: (density: SlideDensity) => void;
-    });
+type HeadSlidesClientProps = HeadSlidesClientBaseProps;
 
 interface SlideDeckArgs {
   readonly reportId: string | undefined;
   readonly scope: "lead" | "product";
   readonly enableActivity: boolean;
-  readonly density: SlideDensity;
 }
 
-function useHeadSlideDeck({
-  reportId,
-  scope,
-  enableActivity,
-  density,
-}: SlideDeckArgs) {
+function useHeadSlideDeck({ reportId, scope, enableActivity }: SlideDeckArgs) {
   const trpc = useTRPC();
 
   const weeklyQ = useQuery(
     trpc.weeklyReport.get.queryOptions(reportId ? { reportId } : {}),
   );
-  const activityQ = useQuery({
-    ...trpc.activity.live.queryOptions(),
-    enabled: enableActivity,
-  });
   const needsActivityFallback =
     enableActivity &&
     weeklyQ.data !== undefined &&
     weeklyQ.data.status !== "no-period" &&
+    !weeklyQ.data.archived &&
+    weeklyQ.data.periodStatus !== "published" &&
     weeklyQ.data.leadSections.length === 0;
+  const activityQ = useQuery({
+    ...trpc.activity.live.queryOptions(),
+    enabled: needsActivityFallback,
+  });
 
   useQueryErrorHandler(weeklyQ, {
     event: "headSlides.weeklyReport.load_failed",
@@ -82,14 +71,18 @@ function useHeadSlideDeck({
             );
       return sortSlidesForReview(base);
     }
-    if (!needsActivityFallback) return [];
+    if (
+      !needsActivityFallback ||
+      activityQ.data?.reportId !== weeklyQ.data.reportId
+    )
+      return [];
     return sortSlidesForReview(
-      (activityQ.data?.rows ?? []).map((row) => buildActivitySlideModel(row)),
+      activityQ.data.rows.map((row) => buildActivitySlideModel(row)),
     );
   }, [weeklyQ.data, activityQ.data, scope, needsActivityFallback]);
   const slides = useMemo(
-    () => slidesForDensity(documentSlides, density),
-    [documentSlides, density],
+    () => slidesForDensity(documentSlides, "document"),
+    [documentSlides],
   );
 
   return { weeklyQ, activityQ, needsActivityFallback, slides };
@@ -106,8 +99,12 @@ interface SlideDeckState {
 
 // The non-deck states, in the order they must win: the weekly report gates
 // everything, and the activity fallback only gates when it is the source.
-function slideDeckFallback(state: SlideDeckState): ReactElement | null {
-  if (state.isWeeklyLoading) return <SlideSkeleton mode="head" />;
+function slideDeckFallback(
+  state: SlideDeckState,
+  toolbar: Parameters<typeof SlideSkeleton>[0]["toolbar"],
+): ReactElement | null {
+  if (state.isWeeklyLoading)
+    return <SlideSkeleton mode="head" toolbar={toolbar} />;
 
   if (state.isWeeklyError) {
     return (
@@ -129,7 +126,8 @@ function slideDeckFallback(state: SlideDeckState): ReactElement | null {
 
   if (!state.needsActivityFallback) return null;
 
-  if (state.isActivityLoading) return <SlideSkeleton mode="head" />;
+  if (state.isActivityLoading)
+    return <SlideSkeleton mode="head" toolbar={toolbar} />;
 
   if (state.isActivityError) {
     return (
@@ -151,36 +149,36 @@ export function HeadSlidesClient({
   reportId,
   scope = "lead",
   enableActivity = true,
-  density,
-  onDensityChange,
+  deckRef,
+  fullscreenToggleRef,
+  isFullscreen,
+  onToggle,
 }: HeadSlidesClientProps = {}) {
   const [rawSelectedIndex, setSelectedIndex] = useState(0);
-  const [internalDensity, setInternalDensity] =
-    useState<SlideDensity>("document");
-  const activeDensity = density ?? internalDensity;
-  const handleDensityChange = onDensityChange ?? setInternalDensity;
 
   const { weeklyQ, activityQ, needsActivityFallback, slides } =
     useHeadSlideDeck({
       reportId,
       scope,
       enableActivity,
-      density: activeDensity,
     });
 
-  // Two-sided clamp derived at render — see lead-slides-client: a negative
-  // index from an empty-deck arrow press must clamp too, not just an
-  // out-of-range one.
+  // Clamp both stale upper bounds and defensive negative selections at render.
   const selectedIndex = clampSelectedIndex(rawSelectedIndex, slides.length);
 
-  const fallback = slideDeckFallback({
-    isWeeklyLoading: weeklyQ.isLoading,
-    isWeeklyError: weeklyQ.isError,
-    hasPeriod: !!weeklyQ.data && weeklyQ.data.status !== "no-period",
-    needsActivityFallback,
-    isActivityLoading: activityQ.isLoading,
-    isActivityError: activityQ.isError,
-  });
+  const fallback = slideDeckFallback(
+    {
+      isWeeklyLoading: weeklyQ.isLoading,
+      isWeeklyError: weeklyQ.isError,
+      hasPeriod: !!weeklyQ.data && weeklyQ.data.status !== "no-period",
+      needsActivityFallback,
+      isActivityLoading: activityQ.isLoading,
+      isActivityError: activityQ.isError,
+    },
+    isFullscreen !== undefined && onToggle !== undefined
+      ? "none"
+      : "fullscreen",
+  );
   if (fallback) return fallback;
 
   return (
@@ -189,14 +187,10 @@ export function HeadSlidesClient({
       selectedIndex={selectedIndex}
       onSelect={setSelectedIndex}
       mode="head"
-      toolbar={
-        density === undefined ? (
-          <SlideDensityControl
-            value={activeDensity}
-            onChange={handleDensityChange}
-          />
-        ) : undefined
-      }
+      deckRef={deckRef}
+      fullscreenToggleRef={fullscreenToggleRef}
+      isFullscreen={isFullscreen}
+      onToggle={onToggle}
     />
   );
 }

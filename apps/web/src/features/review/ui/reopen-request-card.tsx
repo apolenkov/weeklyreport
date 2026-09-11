@@ -119,13 +119,16 @@ function ReopenRequestNotes({
 
 function RespondButton({
   onStartRespond,
+  isSaving,
 }: {
   readonly onStartRespond: () => void;
+  readonly isSaving: boolean;
 }) {
   return (
     <div className="flex gap-2">
       <button
         type="button"
+        disabled={isSaving}
         onClick={onStartRespond}
         className="btn-press inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] bg-transparent px-3 py-1.5 text-xs font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2"
       >
@@ -163,7 +166,7 @@ export function ReopenRequestCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <ReopenRequestMeta request={r} />
         {r.status === "pending" && !isResponding && (
-          <RespondButton onStartRespond={onStartRespond} />
+          <RespondButton onStartRespond={onStartRespond} isSaving={isSaving} />
         )}
       </div>
 

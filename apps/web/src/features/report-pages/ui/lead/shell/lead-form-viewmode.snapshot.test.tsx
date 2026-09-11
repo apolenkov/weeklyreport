@@ -10,6 +10,7 @@ import { TRPCProxyContext } from "../../../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
 import { LeadReportAssistantStore } from "../../lead-report-assistant-store";
 import { LeadForm } from "./lead-form";
+import { makeLeadFormSectionFixture } from "./lead-form-test-fixtures";
 
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -25,22 +26,11 @@ const REPORT_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const SECTION_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
 function makeSection() {
-  return {
+  return makeLeadFormSectionFixture({
     reportSectionId: SECTION_ID,
     reportId: REPORT_ID,
     authorId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
-    authorName: "Test Lead",
-    authorRole: "lead" as const,
-    status: "draft" as const,
-    submittedAt: null,
-    referencedProjects: [],
-    projects: [],
-    items: [],
-    risks: [],
-    decisions: [],
-    priorities: [],
-    activities: [],
-  };
+  });
 }
 
 function buildTRPC() {
@@ -95,6 +85,18 @@ function buildTRPC() {
       mutation: true,
     },
     {
+      path: ["leadForm", "assistant"],
+      mutation: true,
+    },
+    {
+      path: ["leadForm", "resolvePlan"],
+      mutation: true,
+    },
+    {
+      path: ["leadForm", "restorePlan"],
+      mutation: true,
+    },
+    {
       path: ["leadForm", "crossAuthors"],
       query: [],
     },
@@ -138,7 +140,7 @@ describe("LeadForm view-mode toggle", () => {
     document.title = "";
   });
 
-  it("shows Edit link and Slides link in edit mode", async () => {
+  it("shows canonical Report and Slides links without an Edit mode", async () => {
     render(
       <Wrapper>
         <LeadForm reportId={REPORT_ID} mode="edit" />
@@ -146,23 +148,24 @@ describe("LeadForm view-mode toggle", () => {
     );
 
     // findByRole is act-wrapped by RTL — waits for the query cascade to settle.
-    const editLink = await screen.findByRole("link", { name: /^Edit$/i });
+    const reportLink = await screen.findByRole("link", { name: /^Report$/i });
     const slidesLink = screen.queryByRole("link", {
       name: /^Slides$/i,
     });
 
-    expect(editLink).toBeInTheDocument();
+    expect(reportLink).toBeInTheDocument();
     expect(slidesLink).toBeInTheDocument();
 
-    expect(editLink).toHaveAttribute(
+    expect(reportLink).toHaveAttribute(
       "href",
-      `/lead/report/${encodeURIComponent(REPORT_ID)}?mode=edit`,
+      `/lead/report/${encodeURIComponent(REPORT_ID)}`,
     );
     expect(slidesLink).toHaveAttribute(
       "href",
       `/lead/report/${encodeURIComponent(REPORT_ID)}?mode=slides`,
     );
-    for (const link of [editLink, slidesLink]) {
+    expect(screen.queryByRole("link", { name: /^Edit$/i })).toBeNull();
+    for (const link of [reportLink, slidesLink]) {
       expect(link).toHaveClass(
         "max-md:min-h-[var(--touch-target-min)]",
         "max-md:min-w-[var(--touch-target-min)]",

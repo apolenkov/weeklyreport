@@ -3,6 +3,7 @@
 import type { KeyboardEventHandler, ReactNode, RefObject } from "react";
 
 interface DialogSurfaceProps {
+  readonly isPending?: boolean | undefined;
   readonly surfaceRef: RefObject<HTMLDivElement | null>;
   readonly onDismiss: () => void;
   readonly children: ReactNode;
@@ -24,6 +25,7 @@ const DEFAULT_BACKDROP_CLASS =
 // provide layout and labelling while clicks inside never need propagation
 // handlers or accessibility suppressions.
 export function DialogSurface({
+  isPending,
   surfaceRef,
   onDismiss,
   children,
@@ -41,23 +43,31 @@ export function DialogSurface({
     <div
       className={backdropClassName}
       onClick={(event) => {
-        if (event.target === event.currentTarget) onDismiss();
+        if (!isPending && event.target === event.currentTarget) onDismiss();
       }}
-      onKeyDown={onBackdropKeyDown}
+      onKeyDown={isPending ? undefined : onBackdropKeyDown}
       role="presentation"
       data-testid={testId}
       data-dialog-mode={mode}
     >
       <div
         ref={surfaceRef}
+        tabIndex={-1}
         className={surfaceClassName}
         role={role}
         aria-modal="true"
+        aria-busy={isPending ? true : undefined}
         aria-label={ariaLabel}
         aria-labelledby={ariaLabelledBy}
         aria-describedby={ariaDescribedBy}
       >
-        {children}
+        {isPending === undefined ? (
+          children
+        ) : (
+          <fieldset disabled={isPending} className="contents">
+            {children}
+          </fieldset>
+        )}
       </div>
     </div>
   );

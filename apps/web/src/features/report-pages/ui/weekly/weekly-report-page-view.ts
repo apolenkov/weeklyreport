@@ -132,6 +132,7 @@ function buildFallbackPeriodNav(
       weekLabel: period.weekLabel,
       dateRange: period.dateRange,
       isCurrent: period.isCurrent,
+      periodState: period.periodState,
       isSubmitted: true,
     },
   ];
@@ -163,8 +164,7 @@ function deriveRoleFacet(
   return {
     currentRole,
     canMutatePeriod,
-    // head/admin/viewer get real export; lead is FORBIDDEN (pdfExport on
-    // Leads do not have the leadership export capability.
+    // Export is available to every report-viewing role except lead.
     canExportPdf: currentRole !== null && !isLead(currentRole),
     canPublishReport,
     // Publish hint for head-like roles while unpublished and not yet publishable.

@@ -19,10 +19,16 @@ interface BucketCardProps {
   readonly onMoveToNextWeek?: ((id: string) => void) | undefined;
 }
 
-export function EmptyActivityPlaceholder() {
+export function EmptyActivityPlaceholder({
+  readOnly = false,
+}: {
+  readonly readOnly?: boolean;
+}) {
   return (
     <div className="rounded-lg border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-empty)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
-      No items yet — use the + Add button to create one.
+      {readOnly
+        ? "No activity items in this report."
+        : "No items yet — use the + Add button to create one."}
     </div>
   );
 }
@@ -78,7 +84,6 @@ function ActivityBucketGroup({
             item={entry.item}
             risks={risks}
             readOnly={readOnly}
-            isEditing={false}
             publishedLocked={publishedLockedIds?.has(entry.item.id)}
             onEdit={() => onEdit(entry)}
             onDelete={() => onDelete(entry)}

@@ -1,16 +1,15 @@
 "use client";
 
-import type { ReactNode } from "react";
-
 import { createEditableListHandlers } from "../../../../shared/hooks/dialogs/create-editable-list-handlers";
 import { useEditableListDialog } from "../../../../shared/hooks/dialogs/use-editable-list-dialog";
 import { buildItemDialogProps } from "../../model/item-dialog-props";
 import type { NextWeekSectionProps } from "../../model/next-week/next-week-section.types";
 import { isBoardEmpty, splitItemBoard } from "../../model/next-week-columns";
 import type { KanbanItem, Product } from "../../model/types";
+import { BoardEmptyState } from "../board-empty-state";
+import { BoardGrid } from "../board-grid";
 import { ItemCard } from "../item-card";
 import { ItemDialogStack } from "../item-dialog-stack";
-import { NextWeekBoardGrid } from "./next-week-board-grid";
 type NextWeekItemHandlers = ReturnType<
   typeof createEditableListHandlers<KanbanItem>
 >;
@@ -45,32 +44,6 @@ function AddItemButton({
   );
 }
 
-// Empty-state mirror of CurrentWeekSection: without a stand-alone CTA the
-// section ends up dead with no way to start filling it.
-function NextWeekEmptyState({
-  readOnly,
-  addButton,
-}: {
-  readonly readOnly: boolean;
-  readonly addButton: ReactNode;
-}) {
-  if (readOnly) {
-    return (
-      <div className="rounded-lg border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-empty)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
-        No next-week items.
-      </div>
-    );
-  }
-  return (
-    <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-empty)] p-8 text-center">
-      <p className="text-sm text-[var(--color-muted-foreground)]">
-        No next-week items yet.
-      </p>
-      {addButton}
-    </div>
-  );
-}
-
 // Bind a card renderer to this section's props; the grid calls it per item.
 function createItemRenderer({
   props,
@@ -85,7 +58,6 @@ function createItemRenderer({
       item={item}
       risks={props.risks}
       readOnly={props.readOnly ?? false}
-      isEditing={false}
       publishedLocked={props.publishedLockedIds?.has(item.id)}
       onEdit={handlers.handleEdit}
       onDelete={handlers.handleDelete}
@@ -97,7 +69,8 @@ function createItemRenderer({
 export function NextWeekSection(props: NextWeekSectionProps) {
   const { items, products, activities } = props;
   const { readOnly = false, addSignal = 0 } = props;
-  const defaultProduct = products?.[0];
+  const defaultProduct = products[0];
+  const defaultActivityId = defaultProduct ? undefined : activities?.[0]?.id;
 
   // The shared lifecycle ignores add signals while read-only and remounts the
   // dialog for each open. This section requires a product column for create mode.
@@ -105,6 +78,7 @@ export function NextWeekSection(props: NextWeekSectionProps) {
     readOnly,
     addSignal,
     seedProductId: defaultProduct?.id,
+    seedActivityId: defaultActivityId,
     requireSeed: true,
   });
 
@@ -112,8 +86,10 @@ export function NextWeekSection(props: NextWeekSectionProps) {
 
   if (isBoardEmpty(items, products, activities)) {
     return (
-      <NextWeekEmptyState
+      <BoardEmptyState
         readOnly={readOnly}
+        readOnlyLabel="No next-week items."
+        editableLabel="No next-week items yet."
         addButton={
           <AddItemButton
             defaultProduct={defaultProduct}
@@ -136,11 +112,11 @@ export function NextWeekSection(props: NextWeekSectionProps) {
       className="max-md:max-h-none max-md:overflow-visible md:max-h-[420px] md:overflow-y-auto"
       style={{ scrollbarWidth: "thin" }}
     >
-      <NextWeekBoardGrid
+      <BoardGrid
         productColumns={board.productColumns}
         activityLanes={board.activityLanes}
         readOnly={readOnly}
-        hasMultipleProducts={products !== undefined && products.length > 1}
+        hasMultipleProducts={products.length > 1}
         onAdd={dialog.openCreate}
         renderItem={createItemRenderer({ props, handlers })}
       />

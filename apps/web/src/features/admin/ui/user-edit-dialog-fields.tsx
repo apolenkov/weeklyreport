@@ -1,6 +1,6 @@
 "use client";
 
-import type { DbRole } from "@customreport/shared";
+import { type DbRole, ROLE_LABEL } from "@customreport/shared";
 import { type FocusEventHandler, type SyntheticEvent, useState } from "react";
 
 import type { AdminGroupView } from "../model/admin-types";
@@ -185,10 +185,10 @@ function RoleField({
         }
         className={CONTROL_CLASS}
       >
-        <option value="lead">Lead</option>
-        <option value="head">Head</option>
-        <option value="admin">Admin</option>
-        <option value="viewer">Viewer</option>
+        <option value="lead">{ROLE_LABEL.lead}</option>
+        <option value="head">{ROLE_LABEL.head}</option>
+        <option value="admin">{ROLE_LABEL.admin}</option>
+        <option value="viewer">{ROLE_LABEL.viewer}</option>
       </select>
     </div>
   );

@@ -1,3 +1,5 @@
+import type { AdminActionLogEvent } from "@customreport/shared";
+
 import { formatDateTime } from "../../../shared/lib/format/format-date";
 
 // The guard stays here: `formatDateTime` renders an unparseable value as
@@ -13,27 +15,34 @@ export function truncate(value: string, max: number): string {
   return `${value.slice(0, max - 1).trimEnd()}…`;
 }
 
-// Friendlier "Namespace: Action" label so admins need not parse camelCase.
-export function humanizeProcedure(procedure: string): string {
-  const [ns, action] = procedure.split(".");
-  if (!ns || !action) return procedure;
-  const titleNs = ns.charAt(0).toUpperCase() + ns.slice(1);
-  const spaced = action
+function humanizeProcedureSegment(segment: string): string {
+  return segment
     .replaceAll(/([A-Z])/g, " $1")
-    .replace(/^./, (c) => c.toUpperCase())
-    .trim();
-  return `${titleNs}: ${spaced}`;
+    .replace(/^./, (character) => character.toUpperCase())
+    .trim()
+    .replaceAll(/\bAi\b/g, "AI")
+    .replaceAll(/\bId\b/g, "ID");
 }
 
-const STATUS_LABEL: Record<string, string> = {
+// Friendlier "Namespace · Context: Action" label with every segment retained.
+export function humanizeProcedure(procedure: string): string {
+  const segments = procedure.split(".");
+  if (segments.length < 2 || segments.some((segment) => segment.length === 0)) {
+    return procedure;
+  }
+  const action = segments.at(-1);
+  if (action === undefined) return procedure;
+  const context = segments.slice(0, -1).map(humanizeProcedureSegment);
+  return `${context.join(" · ")}: ${humanizeProcedureSegment(action)}`;
+}
+
+const STATUS_LABEL: Readonly<Record<AdminActionLogEvent["status"], string>> = {
   success: "OK",
   fail: "Error",
-  failure: "Error",
-  failed: "Error",
 };
 
-export function statusLabel(value: string): string {
-  return STATUS_LABEL[value] ?? value;
+export function statusLabel(value: AdminActionLogEvent["status"]): string {
+  return STATUS_LABEL[value];
 }
 
 export async function copyToClipboard(text: string): Promise<boolean> {

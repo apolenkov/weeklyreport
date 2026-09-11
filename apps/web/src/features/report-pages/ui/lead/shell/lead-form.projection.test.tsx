@@ -12,6 +12,7 @@ import { makeReportSectionFixture } from "../../../../../test-utils/report-secti
 import { sectionToDraftPayload } from "../../../../report-sections";
 import { LeadReportAssistantStore } from "../../lead-report-assistant-store";
 import { LeadForm } from "./lead-form";
+import { makeLeadFormSectionFixture } from "./lead-form-test-fixtures";
 
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -34,12 +35,10 @@ const PROJECT_ID = "22222222-2222-2222-2222-222222222222";
 const AUTHOR_ID = "44444444-4444-4444-4444-444444444444";
 
 function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
-  return makeReportSectionFixture({
+  return makeLeadFormSectionFixture({
     reportSectionId: SECTION_ID,
     reportId: REPORT_ID,
     authorId: AUTHOR_ID,
-    authorName: "Test Lead",
-    authorRole: "lead" as const,
     status: overrides.status ?? ("draft" as const),
     projects: [
       {
@@ -127,7 +126,7 @@ function buildHarness(
               : { status: opts.sectionStatus },
           ),
           readOnly: opts.byPeriodReadOnly ?? false,
-          // Server-computed; default true so Request-Reopen tests have a precondition.
+          // Server-computed; defaults to false unless the section is submitted.
           canRequestReopen:
             opts.canRequestReopen ?? opts.sectionStatus === "submitted",
           publishedLineage: { itemStableIds: [], decisionStableIds: [] },
@@ -149,6 +148,9 @@ function buildHarness(
       path: ["leadForm", "requestReopen"],
       mutation: true,
     },
+    { path: ["leadForm", "assistant"], mutation: true },
+    { path: ["leadForm", "resolvePlan"], mutation: true },
+    { path: ["leadForm", "restorePlan"], mutation: true },
     {
       path: ["leadForm", "crossAuthors"],
       query: [],
@@ -312,7 +314,6 @@ describe("LeadForm mode-adaptive trailing control", () => {
             items: [],
             risks: [],
             decisions: [],
-            priorities: [],
             activities: [],
           },
           readOnly: false,
@@ -405,7 +406,7 @@ describe("LeadForm mode-adaptive trailing control", () => {
       name: "Context controls",
     });
     expect(screen.getByText("Existing item")).toBeInTheDocument();
-    expect(within(contextControls).getByText("Edit")).toHaveClass(
+    expect(within(contextControls).getByText("Report")).toHaveClass(
       "sr-only",
       "lg:not-sr-only",
     );
@@ -543,6 +544,7 @@ describe("sectionToDraftPayload — durable stableId round-trip", () => {
     };
     const payload = sectionToDraftPayload(withNewItem);
     expect(expectDefined(payload.items[0]).stableId).toBeUndefined();
+    expect("bucket" in payload).toBe(false);
   });
 });
 

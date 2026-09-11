@@ -11,16 +11,16 @@ import {
   useSyncAutosaveRefs,
 } from "./autosave-refs";
 import { runForceSave } from "./autosave-save-runner";
-import { encodeAutosaveComparisonKey } from "./autosave-stable-stringify";
 import type {
-  AutosaveSnapshot,
+  AutosaveController,
   AutosaveState,
   UseLeadFormAutosaveArgs,
 } from "./autosave-types";
+import { encodeDraftSaveComparisonKey } from "./draft-save-comparison-key";
 
 export function useLeadFormAutosave(
   args: UseLeadFormAutosaveArgs,
-): AutosaveSnapshot {
+): AutosaveController {
   const [state, setState] = useState<AutosaveState>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [queuedRetryRevision, setQueuedRetryRevision] = useState(0);
@@ -29,8 +29,8 @@ export function useLeadFormAutosave(
   const [lastSavedKey, setLastSavedKey] = useState("");
 
   const [refs] = useState<AutosaveRefs>(() => seedAutosaveRefs(args));
-  // Stable accessor: effects can list it as a dep without restarting, and a
-  // callee can only resolve the bundle at event or effect time, never at render.
+  // Stable accessor keeps effect dependencies stable while the sync hook
+  // updates the mutable bundle with the latest inputs.
   const getRefs = useCallback(() => refs, [refs]);
 
   const saveDraft = useSaveDraftMutation({
@@ -45,7 +45,7 @@ export function useLeadFormAutosave(
   usePrimedBaseline(getRefs, args.initialSavedKey ?? null, setLastSavedKey);
 
   const payloadKey =
-    args.payload === null ? "" : encodeAutosaveComparisonKey(args.payload);
+    args.payload === null ? "" : encodeDraftSaveComparisonKey(args.payload);
   const dirty =
     args.enabled &&
     args.payload !== null &&
@@ -67,11 +67,36 @@ export function useLeadFormAutosave(
     [getRefs, setState],
   );
 
+  const primeBaseline = useCallback(
+    (savedKey: string) => {
+      getRefs().lastSaved = savedKey;
+      setLastSavedKey(savedKey);
+    },
+    [getRefs],
+  );
+  const adoptBaseline = useCallback(
+    (savedKey: string, source: "read" | "write") => {
+      const live = getRefs();
+      if (live.debounceTimer !== null) {
+        clearTimeout(live.debounceTimer);
+        live.debounceTimer = null;
+      }
+      live.lastSaved = savedKey;
+      if (live.queued?.generation === live.generation) live.queued = null;
+      setLastSavedKey(savedKey);
+      setState(source === "write" ? "saved" : "idle");
+      setLastSavedAt(source === "write" ? new Date() : null);
+    },
+    [getRefs],
+  );
+
   return {
     state,
     lastSavedAt,
     dirty,
     isInFlight: saveDraft.isPending,
     forceSave,
+    primeBaseline,
+    adoptBaseline,
   };
 }

@@ -26,10 +26,14 @@ vi.mock("sonner", () => ({
   },
 }));
 
+const navigation = vi.hoisted(() => ({
+  search: "tab=settings",
+  replace: vi.fn(),
+}));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: vi.fn() }),
+  useRouter: () => ({ replace: navigation.replace }),
   usePathname: () => "/admin",
-  useSearchParams: () => new URLSearchParams("tab=settings"),
+  useSearchParams: () => new URLSearchParams(navigation.search),
 }));
 
 const ACTIVE_ID = "11111111-1111-4111-8111-111111111111";
@@ -173,15 +177,19 @@ function renderWorkspace(
   feature: AiPromptFeatureRead,
   additionalFeatures: AiPromptFeatureRead[] = [],
   catalogRead?: () => Readonly<{ features: AiPromptFeatureRead[] }>,
+  readOverrides?: Readonly<{
+    provider?: () => AiProviderControlRead;
+    feature?: (featureKey: string) => AiPromptFeatureRead;
+  }>,
 ) {
   const features = [feature, ...additionalFeatures];
-  const reads = { provider: 0, list: 0 };
+  const reads = { provider: 0, list: 0, feature: 0 };
   const { proxy, captured } = createMockTRPC([
     {
       path: ["admin", "aiProvider", "get"],
       query: () => {
         reads.provider += 1;
-        return providerControl;
+        return readOverrides?.provider?.() ?? providerControl;
       },
     },
     { path: ["admin", "aiProvider", "save"], mutation: true },
@@ -199,12 +207,15 @@ function renderWorkspace(
     },
     {
       path: ["admin", "aiPrompts", "get"],
-      queryByInput: (input) =>
-        features.find(
-          (candidate) =>
-            candidate.featureKey ===
-            (input as { featureKey: string }).featureKey,
-        ) ?? feature,
+      queryByInput: (input) => {
+        reads.feature += 1;
+        const featureKey = (input as { featureKey: string }).featureKey;
+        return (
+          readOverrides?.feature?.(featureKey) ??
+          features.find((candidate) => candidate.featureKey === featureKey) ??
+          feature
+        );
+      },
     },
     { path: ["admin", "aiPrompts", "draft"], mutation: true },
     { path: ["admin", "aiPrompts", "activate"], mutation: true },
@@ -221,14 +232,89 @@ function renderWorkspace(
       </TRPCProxyContext.Provider>
     </QueryClientProvider>
   );
-  render(<AiTab />, { wrapper: Wrapper });
-  return { captured, reads };
+  const view = render(<AiTab />, { wrapper: Wrapper });
+  return {
+    captured,
+    reads,
+    rerender: () => view.rerender(<AiTab />),
+  };
 }
 
 describe("AiTab", () => {
   beforeEach(() => {
     toastSuccess.mockReset();
     toastError.mockReset();
+    navigation.search = "tab=settings";
+    navigation.replace.mockReset();
+  });
+
+  it("ignores repeated AI selection and drops it on the next tab change", async () => {
+    navigation.search =
+      "tab=ai&aiTab=features&aiTab=provider&aiFeature=lead-report-assistant&aiFeature=lead-report-assistant&tag=a&tag=b";
+    renderWorkspace(
+      makeFeature(
+        makeBundle({
+          id: CANDIDATE_ID,
+          revision: 2,
+          lifecycle: "draft",
+          hash: HASH_B,
+        }),
+      ),
+    );
+    expect(screen.getByRole("tab", { name: "Provider" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await userEvent
+      .setup()
+      .click(screen.getByRole("tab", { name: "Features" }));
+    expect(screen.getByRole("tab", { name: "Features" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(navigation.replace).toHaveBeenCalledWith(
+      "/admin?tab=ai&tag=a&tag=b&aiTab=features",
+      { scroll: false },
+    );
+  });
+
+  it("expires an optimistic tab after URL commit before same-tab re-entry", async () => {
+    navigation.search = "tab=ai";
+    const { rerender } = renderWorkspace(
+      makeFeature(
+        makeBundle({
+          id: CANDIDATE_ID,
+          revision: 2,
+          lifecycle: "draft",
+          hash: HASH_B,
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("tab", { name: "Features" }));
+    expect(screen.getByRole("tab", { name: "Features" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(navigation.replace).toHaveBeenCalledWith(
+      "/admin?tab=ai&aiTab=features",
+      { scroll: false },
+    );
+
+    navigation.search = "tab=ai&aiTab=features";
+    rerender();
+    expect(screen.getByRole("tab", { name: "Features" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+
+    navigation.search = "tab=ai";
+    rerender();
+    expect(screen.getByRole("tab", { name: "Provider" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
   });
 
   it("shows provider and feature readiness inside the tab menu", async () => {
@@ -249,6 +335,64 @@ describe("AiTab", () => {
     expect(featuresTab).toHaveTextContent("Features1/1 ready");
     expect(screen.queryByText("Active and ready")).toBeNull();
     expect(screen.queryByText(/••••abcd/)).toBeNull();
+  });
+
+  it("refreshes feature readiness and selected feature after disabling the provider", async () => {
+    const availableFeature = makeFeature(
+      makeBundle({
+        id: CANDIDATE_ID,
+        revision: 2,
+        lifecycle: "draft",
+        hash: HASH_B,
+      }),
+    );
+    const unavailableFeature: AiPromptFeatureRead = {
+      ...availableFeature,
+      control: {
+        ...availableFeature.control,
+        availability: "not_configured",
+      },
+    };
+    let providerAvailable = true;
+    const currentFeature = () =>
+      providerAvailable ? availableFeature : unavailableFeature;
+    const { captured, reads } = renderWorkspace(
+      availableFeature,
+      [],
+      () => ({ features: [currentFeature()] }),
+      {
+        provider: () => ({
+          ...providerControl,
+          enabled: providerAvailable,
+          availability: providerAvailable ? "available" : "not_configured",
+        }),
+        feature: () => currentFeature(),
+      },
+    );
+    const disableMutation = captured["admin.aiProvider.disable"];
+    if (!disableMutation) throw new Error("Disable mutation was not captured");
+    disableMutation.mutationFn.mockImplementation(() => {
+      providerAvailable = false;
+      return Promise.resolve({ disabled: true });
+    });
+    const user = userEvent.setup();
+    const providerTab = await screen.findByRole("tab", { name: "Provider" });
+    const featuresTab = screen.getByRole("tab", { name: "Features" });
+    await waitFor(() => expect(providerTab).toHaveTextContent("Ready"));
+    expect(featuresTab).toHaveTextContent("1/1 ready");
+    const initialListReads = reads.list;
+    const initialFeatureReads = reads.feature;
+
+    await user.click(screen.getByRole("button", { name: "Disable" }));
+    const dialog = await screen.findByRole("alertdialog");
+    await user.click(within(dialog).getByRole("button", { name: "Disable" }));
+
+    await waitFor(() =>
+      expect(providerTab).toHaveTextContent("Setup required"),
+    );
+    await waitFor(() => expect(featuresTab).toHaveTextContent("0/1 ready"));
+    expect(reads.list).toBeGreaterThan(initialListReads);
+    expect(reads.feature).toBeGreaterThan(initialFeatureReads);
   });
 
   it("recovers the feature catalog through the settings retry action", async () => {

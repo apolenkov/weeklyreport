@@ -44,7 +44,7 @@ function SummaryCard({
   readonly title: string;
   readonly stats: HistoryStats;
 }) {
-  const { submitted, total, onTimeRate, avgItems, totalRisks, draftCount } =
+  const { submitted, total, completionRate, avgItems, totalRisks, draftCount } =
     stats;
   return (
     <SidebarCard title={title}>
@@ -56,7 +56,7 @@ function SummaryCard({
         />
         <Stat
           label="Completion rate"
-          value={`${onTimeRate}%`}
+          value={`${completionRate}%`}
           accent="primary"
         />
         <Stat

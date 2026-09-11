@@ -14,8 +14,10 @@ import {
   joinPeriodLabel,
 } from "../../../shared/lib/format/format-date";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
+import { buildPrintActivityReports } from "./print-activity-projection";
 import { PrintExecutiveSummary } from "./print-executive-summary";
 import {
+  PrintActivityReports,
   PrintPortfolioOverview,
   PrintProductReports,
   PrintReportFooter,
@@ -31,18 +33,25 @@ import { PrintReportStyles } from "./print-report-styles";
 
 interface PrintReportTemplateProps {
   readonly reportId: string;
-  readonly jobId?: string;
+  readonly jobId: string;
 }
 
-function ReadyReport({ view }: { readonly view: MapWeeklyReportResult }) {
-  const blockedCount = view.products.filter(
-    (product) => product.status === "blocked",
+function ReadyReport({
+  view,
+  activityReports,
+}: {
+  readonly view: MapWeeklyReportResult;
+  readonly activityReports: ReturnType<typeof buildPrintActivityReports>;
+}) {
+  const summaryReports = [...view.products, ...activityReports];
+  const blockedCount = summaryReports.filter(
+    (report) => report.status === "blocked",
   ).length;
-  const atRiskCount = view.products.filter(
-    (product) => product.status === "at-risk",
+  const atRiskCount = summaryReports.filter(
+    (report) => report.status === "at-risk",
   ).length;
-  const decisionCount = view.products.reduce(
-    (sum, product) => sum + product.decisions.length,
+  const decisionCount = summaryReports.reduce(
+    (sum, report) => sum + report.decisions.length,
     0,
   );
   const periodLabel = joinPeriodLabel(
@@ -71,6 +80,7 @@ function ReadyReport({ view }: { readonly view: MapWeeklyReportResult }) {
         />
         <PrintPortfolioOverview view={view} />
         <PrintProductReports view={view} />
+        <PrintActivityReports reports={activityReports} />
         <PrintReportFooter
           generatedAt={formatDateTime(new Date())}
           reportId={view.period.reportId}
@@ -80,13 +90,10 @@ function ReadyReport({ view }: { readonly view: MapWeeklyReportResult }) {
   );
 }
 
-function PrintReportForJob({
+export function PrintReportTemplate({
   reportId,
   jobId,
-}: {
-  readonly reportId: string;
-  readonly jobId: string;
-}) {
+}: PrintReportTemplateProps) {
   const trpc = useTRPC();
   const weeklyQuery = useQuery(
     trpc.pdfExport.render.queryOptions({ jobId, reportId }),
@@ -106,39 +113,10 @@ function PrintReportForJob({
   if (weeklyQuery.isLoading || !weeklyQuery.data) {
     return <LoadingShell reportId={reportId} />;
   }
-  return <ReadyReport view={mapWeeklyReport(weeklyQuery.data)} />;
-}
-
-function PrintReportForLiveReport({ reportId }: { readonly reportId: string }) {
-  const trpc = useTRPC();
-  const weeklyQuery = useQuery(
-    trpc.weeklyReport.get.queryOptions({ reportId }),
-  );
-
-  useEffect(() => {
-    if (weeklyQuery.isError) {
-      toast.error(
-        formatClientErrorMessage("Failed to load report", weeklyQuery.error),
-      );
-    }
-  }, [weeklyQuery.isError, weeklyQuery.error]);
-
-  if (weeklyQuery.isError || weeklyQuery.data?.status === "no-period") {
-    return <ErrorShell reportId={reportId} />;
-  }
-  if (weeklyQuery.isLoading || !weeklyQuery.data) {
-    return <LoadingShell reportId={reportId} />;
-  }
-  return <ReadyReport view={mapWeeklyReport(weeklyQuery.data)} />;
-}
-
-export function PrintReportTemplate({
-  reportId,
-  jobId,
-}: PrintReportTemplateProps) {
-  return jobId ? (
-    <PrintReportForJob reportId={reportId} jobId={jobId} />
-  ) : (
-    <PrintReportForLiveReport reportId={reportId} />
+  return (
+    <ReadyReport
+      view={mapWeeklyReport(weeklyQuery.data)}
+      activityReports={buildPrintActivityReports(weeklyQuery.data.leadSections)}
+    />
   );
 }

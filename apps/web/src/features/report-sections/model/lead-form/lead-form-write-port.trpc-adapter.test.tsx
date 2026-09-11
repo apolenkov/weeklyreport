@@ -23,6 +23,8 @@ function buildHarness() {
     { path: ["reports", "saveDraft"], mutation: true },
     { path: ["reports", "submit"], mutation: true },
     { path: ["leadForm", "fillFrom"], mutation: true },
+    { path: ["leadForm", "resolvePlan"], mutation: true },
+    { path: ["leadForm", "restorePlan"], mutation: true },
     { path: ["leadForm", "revoke"], mutation: true },
     { path: ["leadForm", "requestReopen"], mutation: true },
     { path: ["reports", "getActive"] },
@@ -81,6 +83,12 @@ describe("useLeadFormWritePort", () => {
     });
     await waitFor(() => expect(result.current.pending.saveDraft).toBe(false));
     expect(invalidate).toHaveBeenCalledTimes(2);
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: [["reports", "getActive"]],
+    });
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: [["leadForm", "byPeriod"]],
+    });
   });
 
   it("normalizes transport conflicts at the seam", async () => {
@@ -144,6 +152,15 @@ describe("useLeadFormWritePort", () => {
       }),
     );
     expect(invalidate).toHaveBeenCalledTimes(6);
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: [["reports", "getActive"]],
+    });
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: [["review", "dashboard"]],
+    });
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: [["reports", "myHistory"]],
+    });
 
     invalidate.mockClear();
     await act(() =>
@@ -154,12 +171,21 @@ describe("useLeadFormWritePort", () => {
       }),
     );
     expect(invalidate).toHaveBeenCalledTimes(2);
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: [["leadForm", "byPeriod"]],
+    });
 
     invalidate.mockClear();
     await act(() =>
       result.current.revoke({ reportSectionId: section.reportSectionId }),
     );
     expect(invalidate).toHaveBeenCalledTimes(6);
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: [["weeklyReport", "get"]],
+    });
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: [["reports", "myHistory"]],
+    });
 
     invalidate.mockClear();
     await act(() =>
@@ -169,6 +195,59 @@ describe("useLeadFormWritePort", () => {
       }),
     );
     expect(invalidate).toHaveBeenCalledTimes(2);
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: [["reports", "getActive"]],
+    });
+  });
+
+  it("keeps outcome transport and lead-form invalidation in one seam", async () => {
+    const { Wrapper, captured, queryClient } = buildHarness();
+    const outcome = {
+      section: { ...section, version: 2 },
+      stableId: "55555555-5555-4555-8555-555555555555",
+      replayed: false,
+    };
+    expectDefined(
+      captured["leadForm.resolvePlan"],
+    ).mutationFn.mockResolvedValue(outcome);
+    expectDefined(
+      captured["leadForm.restorePlan"],
+    ).mutationFn.mockResolvedValue({ ...outcome, replayed: true });
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(useLeadFormWritePort, { wrapper: Wrapper });
+
+    await act(() =>
+      result.current.resolvePlan({
+        reportSectionId: section.reportSectionId,
+        version: 1,
+        commandId: "66666666-6666-4666-8666-666666666666",
+        source: {
+          kind: "prior",
+          reportId: section.reportId,
+          recordId: "77777777-7777-4777-8777-777777777777",
+        },
+        outcome: "done",
+        stageNames: [],
+      }),
+    );
+    expect(invalidate).toHaveBeenCalledTimes(2);
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: [["leadForm", "byPeriod"]],
+    });
+
+    invalidate.mockClear();
+    await act(() =>
+      result.current.restorePlan({
+        reportSectionId: section.reportSectionId,
+        version: 2,
+        commandId: "88888888-8888-4888-8888-888888888888",
+        recordId: "99999999-9999-4999-8999-999999999999",
+      }),
+    );
+    expect(invalidate).toHaveBeenCalledTimes(2);
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: [["reports", "getActive"]],
+    });
   });
 
   it("normalizes generic transport failures at the seam", async () => {

@@ -30,6 +30,7 @@ import { pdfExportRefetchInterval } from "./use-pdf-export-job";
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
 const JOB_ID = "22222222-2222-4222-8222-222222222222";
 const ARTIFACT_URL = `/pdfs/${JOB_ID}.pdf`;
+const ACTIVE_JOB_STORAGE_KEY = `weeklyreport:pdf-export:active:${REPORT_ID}`;
 const DISABLED_REASON = "Publish or re-publish the report to export PDF.";
 const STATUS_POLL_INTERVAL_MS = 2000;
 
@@ -62,6 +63,19 @@ function renderButton(options: {
     { path: ["pdfExport", "status"], query: options.statusQuery },
   ]);
 
+  const statusProcedure = proxy.pdfExport.status;
+  const baseQueryOptions = statusProcedure.queryOptions;
+  Object.defineProperty(statusProcedure, "queryOptions", {
+    configurable: true,
+    value: (
+      input: Parameters<typeof baseQueryOptions>[0],
+      queryOptions?: Parameters<typeof baseQueryOptions>[1],
+    ) => ({
+      ...baseQueryOptions(input),
+      ...queryOptions,
+    }),
+  });
+
   const qc = makeQueryClient();
 
   function Wrapper({ children }: { readonly children: ReactNode }) {
@@ -82,7 +96,7 @@ function renderButton(options: {
     { wrapper: Wrapper },
   );
 
-  return { captured, ...rendered };
+  return { captured, queryClient: qc, ...rendered };
 }
 
 describe("pdfExportRefetchInterval", () => {
@@ -288,6 +302,69 @@ describe("ExportPdfButton", () => {
     expect(anchorClick).toHaveBeenCalledTimes(1);
     expect(window.sessionStorage).toHaveLength(0);
   });
+
+  it.each([
+    {
+      name: "a status query error",
+      expectedMessage: "PDF export status check failed. Please try again.",
+      statusQuery: () => {
+        throw new Error("poll failed");
+      },
+    },
+    {
+      name: "a failed status",
+      expectedMessage: "PDF export failed. Please try again.",
+      statusQuery: () => ({
+        jobId: JOB_ID,
+        reportId: REPORT_ID,
+        status: "failed" as const,
+        artifactUrl: null,
+        requestedAt: new Date("2026-04-14T00:00:00Z"),
+        completedAt: new Date("2026-04-14T00:00:02Z"),
+        checksum: null,
+        templateVersion: "1",
+      }),
+    },
+  ])(
+    "cleans up a restored job after $name without a fresh enqueue",
+    async ({ expectedMessage, statusQuery }) => {
+      window.sessionStorage.setItem(ACTIVE_JOB_STORAGE_KEY, JOB_ID);
+
+      const statusQueryFactory = vi.fn(statusQuery);
+      const { captured, queryClient } = renderButton({
+        statusQuery: statusQueryFactory,
+      });
+      const requestMutation = expectDefined(
+        captured["pdfExport.request"],
+      ).mutationFn;
+      const button = screen.getByRole("button", { name: "Export PDF" });
+
+      await waitFor(() => {
+        expect(toastError).toHaveBeenCalledWith(expectedMessage);
+        expect(button).toHaveAttribute("aria-busy", "false");
+        expect(button).toBeEnabled();
+      });
+
+      expect(requestMutation).not.toHaveBeenCalled();
+      expect(window.sessionStorage.getItem(ACTIVE_JOB_STORAGE_KEY)).toBeNull();
+
+      const statusQueryCache = queryClient.getQueryCache().find({
+        queryKey: [["pdfExport", "status"]],
+      });
+      expect(statusQueryCache).toBeDefined();
+      const statusObserver = statusQueryCache?.observers[0];
+      expect(statusObserver?.getCurrentResult().isEnabled).toBe(false);
+      expect(statusObserver?.getCurrentResult().isFetching).toBe(false);
+
+      const statusQueryCallsAfterCleanup = statusQueryFactory.mock.calls.length;
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, STATUS_POLL_INTERVAL_MS + 50);
+      });
+      expect(statusQueryFactory.mock.calls).toHaveLength(
+        statusQueryCallsAfterCleanup,
+      );
+    },
+  );
 
   it("uses a reduced-motion-safe spinner while the export request is pending", async () => {
     const { captured } = renderButton({ statusQuery: COMPLETED_STATUS });

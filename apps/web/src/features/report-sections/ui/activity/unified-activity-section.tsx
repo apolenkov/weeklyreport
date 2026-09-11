@@ -3,6 +3,7 @@
 import type { UnifiedActivityEntry } from "../../model/activity/unified-activity-entry";
 import { useUnifiedActivityEditing } from "../../model/activity/use-unified-activity-editing";
 import type { KanbanItem, Product, RiskEntry } from "../../model/types";
+import type { ItemEditDialogProps } from "../item-edit-dialog";
 import {
   ActivityBucketList,
   EmptyActivityPlaceholder,
@@ -20,6 +21,7 @@ interface UnifiedActivitySectionProps {
     ((week: "current" | "next", items: KanbanItem[]) => void) | undefined;
   readonly currentUserName?: string | undefined;
   readonly products?: readonly Product[] | undefined;
+  readonly activities?: ItemEditDialogProps["activities"];
   readonly stagesForProduct?:
     ((productId: string) => readonly string[]) | undefined;
   readonly ownPeriodRanks?: readonly number[] | undefined;
@@ -36,6 +38,7 @@ export function UnifiedActivitySection({
   onWeekItemsChange,
   currentUserName,
   products,
+  activities,
   stagesForProduct,
   ownPeriodRanks,
   publishedLockedIds,
@@ -49,7 +52,7 @@ export function UnifiedActivitySection({
   });
 
   if (entries.length === 0) {
-    return <EmptyActivityPlaceholder />;
+    return <EmptyActivityPlaceholder readOnly={readOnly} />;
   }
 
   return (
@@ -68,6 +71,7 @@ export function UnifiedActivitySection({
         editState={editing.editState}
         pendingDelete={editing.pendingDelete}
         products={products ?? []}
+        activities={activities}
         currentUserName={currentUserName}
         stagesForProduct={stagesForProduct}
         ownPeriodRanks={ownPeriodRanks}

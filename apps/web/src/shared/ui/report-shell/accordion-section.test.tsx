@@ -109,6 +109,31 @@ describe("AccordionSection — group commands", () => {
   });
 });
 
+describe("AccordionSection — open signal", () => {
+  it("preserves a collapsed initial state when mounted with a signal", () => {
+    render(signalSection("risk:4"));
+
+    expect(screen.getByRole("button", { name: "Risks" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+  });
+
+  it("opens on every later signal, including after a manual collapse", () => {
+    const { rerender } = render(signalSection("risk:4"));
+    const toggle = screen.getByRole("button", { name: "Risks" });
+
+    rerender(signalSection("risk:5"));
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+    rerender(signalSection("risk:6"));
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+  });
+});
+
 describe("AccordionSection — responsive disclosure geometry", () => {
   it("moves action controls to a second mobile header row", () => {
     render(
@@ -211,4 +236,17 @@ function section(groupExpanded: boolean) {
 
 function renderSection(groupExpanded: boolean) {
   return render(section(groupExpanded));
+}
+
+function signalSection(openSignal: string) {
+  return (
+    <AccordionSection
+      icon={HIDDEN_ICON}
+      title="Risks"
+      defaultOpen={false}
+      openSignal={openSignal}
+    >
+      <p>Panel body</p>
+    </AccordionSection>
+  );
 }

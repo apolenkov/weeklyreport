@@ -12,7 +12,7 @@ const section = makeReportSectionFixture({
 });
 
 describe("InMemoryLeadFormWriteAdapter", () => {
-  it("records every command and exposes configured pending state", async () => {
+  it("records lifecycle commands and exposes configured submit pending state", async () => {
     const adapter = new InMemoryLeadFormWriteAdapter(
       {
         saveDraft: () => Promise.resolve(section),
@@ -63,4 +63,42 @@ describe("InMemoryLeadFormWriteAdapter", () => {
       expect(adapter.calls.saveDraft).toHaveLength(1);
     },
   );
+
+  it("records configured outcome commands and fails loudly without handlers", async () => {
+    const outcome = {
+      section: { ...section, version: 2 },
+      stableId: "55555555-5555-4555-8555-555555555555",
+      replayed: false,
+    };
+    const configured = new InMemoryLeadFormWriteAdapter({
+      saveDraft: () => Promise.resolve(section),
+      submit: () => Promise.resolve(section),
+      resolvePlan: () => Promise.resolve(outcome),
+      restorePlan: () => Promise.resolve({ ...outcome, replayed: true }),
+    });
+    const resolveInput = {
+      reportSectionId: section.reportSectionId,
+      version: 1,
+      commandId: "66666666-6666-4666-8666-666666666666",
+      source: {
+        kind: "prior" as const,
+        reportId: section.reportId,
+        recordId: "77777777-7777-4777-8777-777777777777",
+      },
+      outcome: "done" as const,
+      stageNames: [],
+    };
+    await expect(configured.resolvePlan(resolveInput)).resolves.toEqual(
+      outcome,
+    );
+    expect(configured.calls.resolvePlan).toEqual([resolveInput]);
+
+    const unsupported = new InMemoryLeadFormWriteAdapter({
+      saveDraft: () => Promise.resolve(section),
+      submit: () => Promise.resolve(section),
+    });
+    await expect(unsupported.resolvePlan(resolveInput)).rejects.toThrow(
+      "In-memory resolvePlan handler is not configured",
+    );
+  });
 });

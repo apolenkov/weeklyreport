@@ -1,6 +1,7 @@
 "use client";
 
 import type {
+  PeriodComparisonInput,
   PeriodComparisonOutput,
   TrafficLightCell,
 } from "@customreport/shared";
@@ -25,7 +26,11 @@ function deltaClass(delta: number): string {
   return "text-muted-foreground";
 }
 
-export function PeriodComparisonChart({ rows }: PeriodComparisonOutput) {
+export function PeriodComparisonChart({
+  rows,
+  periodA,
+  periodB,
+}: PeriodComparisonOutput & PeriodComparisonInput) {
   if (rows.length === 0) {
     return <p className="text-sm text-muted-foreground">No comparison data.</p>;
   }
@@ -33,14 +38,18 @@ export function PeriodComparisonChart({ rows }: PeriodComparisonOutput) {
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full border-collapse text-sm">
+        <caption className="pb-3 text-left text-muted-foreground">
+          Periods ending {periodA} (previous) and {periodB} (latest). Risk
+          change is latest minus previous.
+        </caption>
         <thead>
           <tr className="border-b text-left">
             <th className="px-3 py-2">Project</th>
-            <th className="px-3 py-2">Status A</th>
-            <th className="px-3 py-2">Status B</th>
-            <th className="px-3 py-2">Risks A</th>
-            <th className="px-3 py-2">Risks B</th>
-            <th className="px-3 py-2">Δ Risks</th>
+            <th className="px-3 py-2">Previous status</th>
+            <th className="px-3 py-2">Latest status</th>
+            <th className="px-3 py-2">Previous risks</th>
+            <th className="px-3 py-2">Latest risks</th>
+            <th className="px-3 py-2">Risk change</th>
           </tr>
         </thead>
         <tbody>

@@ -22,20 +22,29 @@ export interface AdminUserFormInput {
   // Structured ФИО parts. `middleName`/`position` hold "" when empty; the
   // mapper trims them to `null`. `name` is recomputed from the parts, never
   // entered directly.
-  lastName: string;
-  firstName: string;
-  middleName: string;
-  position: string;
-  email: string;
-  role: DbRole;
+  readonly lastName: string;
+  readonly firstName: string;
+  readonly middleName: string;
+  readonly position: string;
+  readonly email: string;
+  readonly role: DbRole;
   // null = no owning group (viewer, or none selectable).
-  groupId: string | null;
+  readonly groupId: string | null;
+}
+
+export class MissingUserGroupError extends Error {
+  override readonly name = "MissingUserGroupError";
+
+  constructor() {
+    super("A non-viewer user requires an owning group");
+  }
 }
 
 // existingId omitted → client mints UUID; name recomputed from ФИО parts.
 export function toAdminUserInput(
   form: AdminUserFormInput,
   existingId?: string,
+  isActive = true,
 ): {
   id: string;
   email: string;
@@ -46,10 +55,15 @@ export function toAdminUserInput(
   position: string | null;
   role: DbRole;
   reportingGroupId: string | null;
+  isActive: boolean;
 } {
   const lastName = form.lastName.trim();
   const firstName = form.firstName.trim();
   const middleName = form.middleName.trim() || null;
+  const groupId = form.groupId?.trim() || null;
+  if (form.role !== "viewer" && groupId === null) {
+    throw new MissingUserGroupError();
+  }
   return {
     id: existingId ?? newId(),
     email: form.email.trim(),
@@ -59,7 +73,8 @@ export function toAdminUserInput(
     middleName,
     position: form.position.trim() || null,
     role: form.role,
-    reportingGroupId: form.groupId || null,
+    reportingGroupId: form.role === "viewer" ? null : groupId,
+    isActive,
   };
 }
 

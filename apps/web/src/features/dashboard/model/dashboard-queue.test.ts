@@ -1,6 +1,9 @@
+import { reportSectionReadModelSchema } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import { mapReviewDashboardData } from "./dashboard";
+import { expectDefined } from "../../../test-utils/expect-defined";
+import { contentSummary } from "../ui/lead-row-format";
+import { mapReviewDashboardData, mapWeeklyDashboardData } from "./dashboard";
 import {
   QUEUE_NOW,
   queueActivity,
@@ -13,6 +16,104 @@ import {
 } from "./dashboard-queue.fixtures";
 
 describe("dashboard lead queue", () => {
+  it("suppresses a red roll-up only for its exact product id", () => {
+    const firstProductId = "50000000-0000-4000-8000-000000000001";
+    const secondProductId = "50000000-0000-4000-8000-000000000002";
+    const sharedProductName = "Platform";
+    const weeklyReport = {
+      ...queueReport([]),
+      escalations: [
+        {
+          type: "blocked" as const,
+          productId: firstProductId,
+          productName: sharedProductName,
+          stageName: "Development",
+          authorId: queueLeadId(1),
+          leadName: "Alex Lead",
+          description: "Concrete first-product blocker",
+        },
+        {
+          type: "at_risk" as const,
+          productId: firstProductId,
+          productName: sharedProductName,
+          stageName: null,
+          authorId: queueLeadId(1),
+          leadName: "Alex Lead",
+          description: "Red roll-up for first product",
+        },
+        {
+          type: "at_risk" as const,
+          productId: secondProductId,
+          productName: sharedProductName,
+          stageName: null,
+          authorId: queueLeadId(2),
+          leadName: "Alex Lead",
+          description: "Red roll-up for second product",
+        },
+      ],
+    };
+
+    expect(
+      mapWeeklyDashboardData({ weeklyReport }).blockedAtRisk.map(
+        ({ productId, description }) => ({ productId, description }),
+      ),
+    ).toEqual([
+      {
+        productId: firstProductId,
+        description: "Concrete first-product blocker",
+      },
+      {
+        productId: secondProductId,
+        description: "Red roll-up for second product",
+      },
+    ]);
+  });
+
+  it("counts a prioritized product item as one record and one priority", () => {
+    const row = queueReviewRow(queueLeadId(1), "Priya Priority");
+    const section = reportSectionReadModelSchema.parse({
+      ...queueSection(row.leadId, row.leadName, "draft"),
+      projects: [
+        {
+          projectId: "40000000-0000-4000-8000-000000000001",
+          projectName: "Priority product",
+          trafficLight: null,
+          ownedStages: [],
+          stageSet: [],
+          ownerGroupId: null,
+        },
+      ],
+      items: [
+        {
+          id: "40000000-0000-4000-8000-000000000002",
+          projectId: "40000000-0000-4000-8000-000000000001",
+          activityId: null,
+          type: "current",
+          text: "One prioritized product item",
+          tag: "priority",
+          workflowStatus: "done",
+          carriedOver: false,
+          priorityRank: 1,
+          stageNames: ["Planning"],
+        },
+      ],
+    });
+    const mapped = mapReviewDashboardData({
+      review: [row],
+      weeklyReport: queueReport([section]),
+      now: QUEUE_NOW,
+    });
+    const lead = expectDefined(mapped.leads[0]);
+
+    expect(lead).toMatchObject({
+      reportContentCount: 1,
+      currentItemCount: 1,
+      priorityCount: 1,
+      activityCount: 0,
+    });
+    expect(contentSummary(lead)).toBe("1 record · No signal");
+  });
+
   it("joins scoped identity, weekly review state, and activity freshness once", () => {
     const missingId = queueLeadId(1);
     const draft = queueReviewRow(queueLeadId(2), "Dana Draft");

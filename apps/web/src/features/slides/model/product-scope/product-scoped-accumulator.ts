@@ -31,6 +31,7 @@ export interface ProductAccumulator {
   readonly contributors: readonly string[];
   readonly contributorIds: ReadonlySet<string>;
   readonly sectionIds: ReadonlySet<string>;
+  readonly sourceSections: readonly ReportSectionReadModel[];
   readonly anySubmitted: boolean;
   readonly allSubmitted: boolean;
   readonly latestSubmittedAt: Date | null;
@@ -52,6 +53,7 @@ function createAccumulator(
     contributors: [],
     contributorIds: new Set(),
     sectionIds: new Set(),
+    sourceSections: [],
     anySubmitted: false,
     allSubmitted: true,
     latestSubmittedAt: null,
@@ -81,6 +83,7 @@ function registerContribution(
       ? new Set([...accumulator.contributorIds, section.authorId])
       : accumulator.contributorIds,
     sectionIds: new Set([...accumulator.sectionIds, section.reportSectionId]),
+    sourceSections: [...accumulator.sourceSections, section],
     anySubmitted: accumulator.anySubmitted || submitted,
     allSubmitted: accumulator.allSubmitted && submitted,
     latestSubmittedAt,
@@ -170,23 +173,28 @@ function accumulateActivities(
       result,
       home,
       ownedProducts.get(home) ?? CROSS_PRODUCT_LABEL,
-      (accumulator) => ({
-        ...accumulator,
-        activities: [...accumulator.activities, activity],
-      }),
+      (accumulator) =>
+        registerContribution(
+          {
+            ...accumulator,
+            activities: [...accumulator.activities, activity],
+          },
+          section,
+        ),
     );
   }, products);
 }
 
-function addSection(products: ProductMap, section: ReportSectionReadModel) {
-  const ownedProducts = new Map(
-    section.projects.map((project) => [project.projectId, project.projectName]),
-  );
+function addSection(
+  products: ProductMap,
+  section: ReportSectionReadModel,
+  knownProducts: ReadonlyMap<string, string>,
+) {
   const activityHomeById = buildActivityHomeById(
     section,
-    new Set(ownedProducts.keys()),
+    new Set(knownProducts.keys()),
   );
-  const identityFor = makeIdentityResolver(ownedProducts, activityHomeById);
+  const identityFor = makeIdentityResolver(knownProducts, activityHomeById);
   const withProjects = section.projects.reduce(
     (result, project) => addProject(result, project, section),
     products,
@@ -217,7 +225,7 @@ function addSection(products: ProductMap, section: ReportSectionReadModel) {
     withRisks,
     section,
     activityHomeById,
-    ownedProducts,
+    knownProducts,
   );
   return section.decisions.reduce(
     (result, decision) =>
@@ -232,8 +240,33 @@ function addSection(products: ProductMap, section: ReportSectionReadModel) {
   );
 }
 
+function buildProductCatalog(
+  sections: readonly ReportSectionReadModel[],
+): ReadonlyMap<string, string> {
+  const owned = new Map(
+    sections.flatMap((section) =>
+      section.projects.map(
+        (project) => [project.projectId, project.projectName] as const,
+      ),
+    ),
+  );
+  return sections
+    .flatMap((section) => section.referencedProjects)
+    .reduce<ReadonlyMap<string, string>>(
+      (catalog, project) =>
+        catalog.has(project.projectId)
+          ? catalog
+          : new Map(catalog).set(project.projectId, project.projectName),
+      owned,
+    );
+}
+
 export function accumulateProductSections(
   sections: readonly ReportSectionReadModel[],
 ): ReadonlyMap<string, ProductAccumulator> {
-  return sections.reduce<ProductMap>(addSection, new Map());
+  const knownProducts = buildProductCatalog(sections);
+  return sections.reduce<ProductMap>(
+    (products, section) => addSection(products, section, knownProducts),
+    new Map(),
+  );
 }

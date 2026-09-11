@@ -1,6 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { formatTimestamp, statusLabel } from "./action-log-format";
+import {
+  formatTimestamp,
+  humanizeProcedure,
+  statusLabel,
+} from "./action-log-format";
 
 // `formatTimestamp` renders in the viewer's zone, so the expected strings only
 // hold with the zone pinned; each block restores the ambient TZ afterwards.
@@ -54,7 +58,32 @@ describe("formatTimestamp on unusable input", () => {
 });
 
 describe("statusLabel", () => {
-  it("maps the durable fail status to Error", () => {
+  it("maps both durable statuses", () => {
+    expect(statusLabel("success")).toBe("OK");
     expect(statusLabel("fail")).toBe("Error");
   });
+});
+
+describe("humanizeProcedure", () => {
+  it("preserves the existing two-segment label", () => {
+    expect(humanizeProcedure("admin.updateUser")).toBe("Admin: Update User");
+  });
+
+  it.each([
+    ["admin.aiProvider.activate", "Admin · AI Provider: Activate"],
+    ["admin.aiProvider.candidate", "Admin · AI Provider: Candidate"],
+    [
+      "admin.reminderPolicy.recovery.retryFailed",
+      "Admin · Reminder Policy · Recovery: Retry Failed",
+    ],
+  ])("keeps every segment in %s", (procedure, expected) => {
+    expect(humanizeProcedure(procedure)).toBe(expected);
+  });
+
+  it.each(["admin", "admin..activate", ".activate"])(
+    "leaves malformed procedure %s unchanged",
+    (procedure) => {
+      expect(humanizeProcedure(procedure)).toBe(procedure);
+    },
+  );
 });

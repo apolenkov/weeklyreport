@@ -1,42 +1,42 @@
+import type { ReminderPolicy } from "@customreport/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { toIsoDateString } from "../../../shared/lib/format/format-date";
 import { invalidateAdmin } from "../../../shared/lib/query/cache-keys";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
-import { toReminderPolicyInput } from "./admin";
 import type { AdminReminderPolicyView } from "./admin-types";
 
-export function toggledPayload(policy: AdminReminderPolicyView) {
-  return toReminderPolicyInput(
-    {
-      kind: policy.kind,
-      offsetMinutes: policy.offsetMinutes,
-      timezone: policy.timezone,
-      audience: policy.audience,
-      active: !policy.active,
-      validFromIso: toIsoDateString(policy.validFrom),
-      validUntilIso:
-        policy.validUntil === null ? null : toIsoDateString(policy.validUntil),
-    },
-    policy.id,
-  );
+export function toggledPayload(
+  policy: AdminReminderPolicyView,
+): ReminderPolicy {
+  return {
+    id: policy.id,
+    kind: policy.kind,
+    offsetMinutes: policy.offsetMinutes,
+    timezone: policy.timezone,
+    audience: policy.audience,
+    active: !policy.active,
+    validFrom: policy.validFrom,
+    validUntil: policy.validUntil,
+  };
 }
 
 export function useReminderPolicyMutations() {
   const trpc = useTRPC();
   const qc = useQueryClient();
 
-  const saveMut = useMutation(
-    trpc.admin.savePolicy.mutationOptions({
-      onSuccess: () => invalidateAdmin(qc, trpc),
-      onError: (err: unknown) => {
-        const message =
-          err instanceof Error ? err.message : "Failed to save reminder";
-        toast.error(message);
-      },
-    }),
-  );
+  const savePolicyMutationOptions = trpc.admin.savePolicy.mutationOptions({
+    onSuccess: () => invalidateAdmin(qc, trpc),
+    onError: (err: unknown) => {
+      const message =
+        err instanceof Error ? err.message : "Failed to save reminder";
+      toast.error(message);
+    },
+  });
+  // Editor saves and row toggles share transport behavior but keep independent
+  // pending state and per-call completion ownership.
+  const editorSaveMut = useMutation(savePolicyMutationOptions);
+  const toggleMut = useMutation(savePolicyMutationOptions);
 
   const removeMut = useMutation(
     trpc.admin.removePolicy.mutationOptions({
@@ -52,5 +52,5 @@ export function useReminderPolicyMutations() {
     }),
   );
 
-  return { saveMut, removeMut };
+  return { editorSaveMut, toggleMut, removeMut };
 }

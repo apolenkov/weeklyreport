@@ -6,7 +6,7 @@ export interface NextWeekSectionProps {
   readonly readOnly?: boolean | undefined;
   readonly onItemsChange?: ((items: readonly KanbanItem[]) => void) | undefined;
   readonly currentUserName?: string | undefined;
-  readonly products?: readonly Product[] | undefined;
+  readonly products: readonly Product[];
   readonly activities?: readonly { id: string; name: string }[] | undefined;
   readonly stagesForProduct?:
     ((productId: string) => readonly string[]) | undefined;

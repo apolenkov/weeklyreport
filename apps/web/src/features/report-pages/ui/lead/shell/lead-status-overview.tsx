@@ -6,12 +6,16 @@ import { useContext } from "react";
 import { useQueryErrorHandler } from "../../../../../shared/hooks/query/use-query-error-handler";
 import { SessionContext } from "../../../../../shared/lib/auth/session-provider";
 import { useTRPC } from "../../../../../shared/lib/trpc/trpc-context";
+import { LeadFormLoadError } from "./lead-form-load-error";
 import { LeadStatusOverviewContent } from "./lead-status-overview-content";
 import {
   deriveActiveIds,
   deriveTargetReportId,
 } from "./use-lead-form-data-helpers";
-import { useLeadFormEditor } from "./use-lead-form-editor";
+import {
+  type LeadFormEditorHandle,
+  useLeadFormEditor,
+} from "./use-lead-form-editor";
 
 export { buildStatusOverviewDetailsHref } from "./lead-status-overview-content";
 
@@ -36,6 +40,31 @@ function OverviewSkeleton() {
       ))}
     </div>
   );
+}
+
+function OverviewWithoutTarget({
+  editor,
+  activeAbsent,
+}: {
+  readonly editor: LeadFormEditorHandle;
+  readonly activeAbsent: boolean;
+}) {
+  if (editor.status === "error") {
+    return (
+      <LeadFormLoadError
+        isRetrying={editor.isRetrying}
+        onRetry={editor.retry}
+      />
+    );
+  }
+  if (activeAbsent) {
+    return (
+      <section className="card-surface p-6" role="status">
+        No active reporting period is available.
+      </section>
+    );
+  }
+  return <OverviewSkeleton />;
 }
 
 export function LeadStatusOverview({
@@ -77,18 +106,17 @@ export function LeadStatusOverview({
   });
 
   if (session?.isLoading || shouldRouteAway) return <OverviewSkeleton />;
-  if (!targetReportId && activeQ.isLoading) return <OverviewSkeleton />;
-  if (!targetReportId) {
+  if (!targetReportId)
     return (
-      <section className="card-surface p-6" role="status">
-        No active reporting period is available.
-      </section>
+      <OverviewWithoutTarget
+        editor={editor}
+        activeAbsent={activeQ.data === null}
+      />
     );
-  }
-  if (overviewQ.isLoading || editor.status === "loading") {
+  if (overviewQ.isLoading) {
     return <OverviewSkeleton />;
   }
-  if (overviewQ.isError || !overviewQ.data) {
+  if (!overviewQ.data) {
     return (
       <section className="card-surface space-y-3 p-6" role="alert">
         <h1 className="text-xl font-semibold text-[var(--color-primary)]">
@@ -110,6 +138,8 @@ export function LeadStatusOverview({
       targetReportId={targetReportId}
       output={overviewQ.data}
       editor={editor}
+      refreshError={overviewQ.isError}
+      onRefresh={() => void overviewQ.refetch()}
     />
   );
 }

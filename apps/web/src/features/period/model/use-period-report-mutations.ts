@@ -11,8 +11,7 @@ interface PeriodReportMutations {
   readonly isPublishOrReopenPending: boolean;
 }
 
-// Publish and reopen are period lifecycle transitions; archive actions stay in
-// the report-page adapter because they also invalidate the dashboard listing.
+// Shared publish/reopen actions used by period controls and report pages.
 export function usePeriodReportMutations(): PeriodReportMutations {
   const trpc = useTRPC();
   const qc = useQueryClient();

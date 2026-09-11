@@ -102,6 +102,10 @@ function usePeriodPolicyForm(serverSettings: AppSettings) {
   const [invalidFields, setInvalidFields] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
+  const [saveAcknowledgement, setSaveAcknowledgement] = useState<{
+    readonly sequence: number;
+    readonly reopenWindowHours: number;
+  } | null>(null);
 
   function handleValidityChange(id: string, valid: boolean) {
     setInvalidFields((previous) => {
@@ -112,9 +116,14 @@ function usePeriodPolicyForm(serverSettings: AppSettings) {
   }
 
   function handleSave() {
-    updateSettingsMut.mutate(toPeriodPolicyPatch(draft), {
+    const submitted = toPeriodPolicyPatch(draft);
+    updateSettingsMut.mutate(submitted, {
       onSuccess: () => {
         markClean();
+        setSaveAcknowledgement((current) => ({
+          sequence: (current?.sequence ?? 0) + 1,
+          reopenWindowHours: submitted.reopenWindowHours,
+        }));
         setShowSaved(true);
       },
     });
@@ -125,6 +134,9 @@ function usePeriodPolicyForm(serverSettings: AppSettings) {
     setDraft(next);
   };
 
+  // The shared draft hook installs only accepted clean server values by reference.
+  const acceptedServerSeed = draft === serverSettings ? serverSettings : null;
+
   const firstInvalidFieldId = [...invalidFields][0];
   useEffect(() => {
     if (firstInvalidFieldId !== undefined) {
@@ -133,12 +145,14 @@ function usePeriodPolicyForm(serverSettings: AppSettings) {
   }, [firstInvalidFieldId]);
 
   return {
+    acceptedServerSeed,
     draft,
     handleValidityChange,
     handleSave,
     hasInvalidField: invalidFields.size > 0,
     isSaving: updateSettingsMut.isPending,
     isSaved: showSaved,
+    saveAcknowledgement,
     updateDraft,
   };
 }
@@ -149,6 +163,7 @@ export function PeriodsSubTab({
   readonly serverSettings: AppSettings;
 }) {
   const {
+    acceptedServerSeed,
     draft,
     updateDraft,
     handleValidityChange,
@@ -156,10 +171,11 @@ export function PeriodsSubTab({
     hasInvalidField,
     isSaving,
     isSaved,
+    saveAcknowledgement,
   } = usePeriodPolicyForm(serverSettings);
 
   return (
-    <div className="max-w-lg space-y-5">
+    <fieldset disabled={isSaving} className="min-w-0 max-w-lg space-y-5">
       <PeriodBaseFields
         draft={draft}
         setDraft={updateDraft}
@@ -167,7 +183,9 @@ export function PeriodsSubTab({
       />
 
       <PeriodCycleFields
+        acceptedServerSeed={acceptedServerSeed}
         draft={draft}
+        saveAcknowledgement={saveAcknowledgement}
         setDraft={updateDraft}
         onValidityChange={handleValidityChange}
       />
@@ -194,6 +212,6 @@ export function PeriodsSubTab({
         disabled={hasInvalidField}
         onSave={handleSave}
       />
-    </div>
+    </fieldset>
   );
 }

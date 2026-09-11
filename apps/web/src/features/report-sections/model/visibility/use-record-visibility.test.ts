@@ -12,9 +12,8 @@ function keyFor(userId: string, reportId: string): string {
   return `leadRecordVisibility:${userId}:${reportId}`;
 }
 
-// Node 22 + jsdom in this repo do not provide window.localStorage, so the hook
-// is exercised against an in-memory Storage stub. The hook's runtime guard
-// (readStored/writeStored) tolerates the store being absent entirely.
+// Use an isolated in-memory Storage so persistence cases do not share state.
+// The hook's runtime guard also tolerates storage being absent entirely.
 function installStorageStub(): void {
   const store = new Map<string, string>();
   const stub: Storage = {

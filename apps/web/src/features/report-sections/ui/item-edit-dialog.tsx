@@ -3,15 +3,16 @@
 import { DialogSurface } from "../../../shared/ui/dialogs/dialog-surface";
 import { DocumentBodyPortal } from "../../../shared/ui/dialogs/document-body-portal";
 import { RecordDialogFooter } from "../../../shared/ui/forms/record-dialog-footer";
+import type { ParentActivityOption } from "../model/record-parent";
 import type { KanbanItem, Product, RiskEntry } from "../model/types";
 import { ItemEditDialogFields } from "./item-edit-dialog-fields";
 import { CURRENT_WEEK_CHOICES, NEXT_WEEK_CHOICES } from "./item-status-choices";
-import type { ParentActivityOption } from "./parent-picker";
 import { useItemEditDialog } from "./use-item-edit-dialog";
 
 const EMPTY_ACTIVITIES: readonly ParentActivityOption[] = [];
 
-interface ItemEditDialogProps {
+export interface ItemEditDialogProps {
+  readonly isPending?: boolean | undefined;
   readonly open: boolean;
   // null = create (append); non-null = edit (upsert by id).
   readonly item: KanbanItem | null;
@@ -21,13 +22,13 @@ interface ItemEditDialogProps {
   // Next week omits Completed/Blocked — those are in-flight, not yet-to-start.
   readonly week: "current" | "next";
   readonly currentUserName?: string | undefined;
-  // Preselect column product; without it create would misleadingly use products[0].
+  // Requested product seed; a missing or stale ID leaves the parent unresolved.
   readonly defaultProductId?: string | undefined;
-  // Activity-lane create; XOR with defaultProductId.
+  // Activity seed takes precedence when both parent seeds are supplied.
   readonly defaultActivityId?: string | undefined;
   readonly stagesForProduct?:
     ((productId: string) => readonly string[]) | undefined;
-  // Ranks in use this period (own item's rank excluded). Collisions stay visible, never crash.
+  // Ranks in use this period; duplicate values violate the input contract.
   readonly ownPeriodRanks?: readonly number[] | undefined;
   // Covering risk floors status chips to a locked message (alarm is risk-derived).
   readonly risks?: readonly RiskEntry[] | undefined;
@@ -36,9 +37,7 @@ interface ItemEditDialogProps {
   readonly onDelete?: (() => void) | undefined;
 }
 
-// Mount/unmount resets state (react-compiler-safe). stagesForProduct is not in
-// deps — useState seeds once from the mount snapshot so parent re-renders
-// with a new stagesForProduct ref never wipe typed text.
+// One mounted dialog owns one draft store; remounting seeds a fresh draft.
 export function ItemEditDialog({ open, ...rest }: ItemEditDialogProps) {
   if (!open) return null;
   return <ItemEditDialogContent {...rest} />;
@@ -81,6 +80,7 @@ function ItemEditDialogContent(props: ItemEditDialogContentProps) {
   return (
     <DocumentBodyPortal>
       <DialogSurface
+        isPending={props.isPending}
         surfaceRef={dialogSurfaceRef}
         onDismiss={onCancel}
         onBackdropKeyDown={handleKeyDown}

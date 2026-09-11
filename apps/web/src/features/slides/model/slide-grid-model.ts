@@ -19,6 +19,7 @@ import {
   type SlideTrafficStatus,
   sortStageNames,
 } from "./slide-grid-rows";
+import type { SlideRecordAttribution } from "./slide-record-attribution";
 
 export type { GridPriorityCard } from "./slide-grid-priority";
 export type {
@@ -53,6 +54,7 @@ export interface SlideGridModel {
 }
 
 export interface SlideGridInput {
+  readonly recordAttribution?: SlideRecordAttribution | undefined;
   readonly section: ReportSectionReadModel;
   // Optional server/model-computed risk floors for product statuses.
   readonly productStatuses?: ReadonlyMap<string, SlideTrafficStatus>;
@@ -117,7 +119,8 @@ type HeaderSummary = Pick<
   "counters" | "onTrack" | "worstStatus"
 >;
 
-// Header counts and worst status use real product cards, never the Shared card.
+// Product status and on-track totals use real products; counters and urgency
+// include visible rows from the Shared card too.
 function buildHeaderSummary(
   realCards: readonly GridProductCard[],
   products: readonly GridProductCard[],
@@ -130,7 +133,14 @@ function buildHeaderSummary(
     card.subsections.map((subsection) => subsection.columns),
   );
   return {
-    worstStatus: worstTrafficStatus(realCards.map((card) => card.status)),
+    worstStatus: worstTrafficStatus([
+      ...realCards.map((card) => card.status),
+      ...allColumns.flatMap((columns) =>
+        columns.risks.map((risk) =>
+          risk.tone === "blocked" ? ("red" as const) : ("yellow" as const),
+        ),
+      ),
+    ]),
     counters: {
       current: allColumns.reduce((sum, c) => sum + c.current.length, 0),
       risks: allColumns.reduce((sum, c) => sum + c.risks.length, 0),
@@ -150,8 +160,9 @@ export function buildSlideGridModel(input: SlideGridInput): SlideGridModel {
     input.productStatuses ?? new Map<string, SlideTrafficStatus>();
 
   const roster = buildAuthorRoster(section, foreign);
+  const authors = input.recordAttribution?.authors ?? roster.authors;
   const authorOrder = new Map(
-    roster.authors.map((author, index) => [author.id, index]),
+    authors.map((author, index) => [author.id, index]),
   );
   const { realProducts, knownProductIds, productNameById } =
     deriveProductLookup(section);
@@ -159,6 +170,7 @@ export function buildSlideGridModel(input: SlideGridInput): SlideGridModel {
   const { productLevel, activityCells } = collectCells({
     section,
     owner: roster.owner,
+    recordAttribution: input.recordAttribution,
     foreignRows: buildForeignRows(foreign),
     knownProductIds,
     sharedCardId: SHARED_CARD_ID,
@@ -172,9 +184,6 @@ export function buildSlideGridModel(input: SlideGridInput): SlideGridModel {
     activityHomeById,
     authorOrder,
     sharedCardId: SHARED_CARD_ID,
-    ...(input.showOwnerBadges === false
-      ? { hiddenAuthorId: roster.owner.id }
-      : {}),
   });
   const { realCards, products } = deriveProductCards({
     realProducts,
@@ -186,6 +195,7 @@ export function buildSlideGridModel(input: SlideGridInput): SlideGridModel {
 
   const priorityStrip = buildPriorityStrip({
     section,
+    recordAttribution: input.recordAttribution,
     knownProductIds,
     productNameById,
     activityHomeById,
@@ -194,7 +204,7 @@ export function buildSlideGridModel(input: SlideGridInput): SlideGridModel {
   });
 
   return {
-    authors: roster.authors,
+    authors,
     showOwnerMarks: input.showOwnerBadges !== false,
     priorityStrip,
     products,

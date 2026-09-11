@@ -22,11 +22,7 @@ const BASE = {
   errorUpdateCount: 0,
   isFetched: true,
   isFetchedAfterMount: true,
-  isFetching: false,
-  isInitialLoading: false,
-  isPaused: false,
   isPlaceholderData: false,
-  isRefetching: false,
   isStale: false,
 } as const;
 
@@ -47,8 +43,14 @@ export function makeQueryState<TData, TError = Error>(
   const status =
     input.status ??
     (input.isLoading ? "pending" : error !== null ? "error" : "success");
-  const fetchStatus = input.fetchStatus ?? "idle";
+  const fetchStatus =
+    input.fetchStatus ?? (input.isLoading ? "fetching" : "idle");
   const isFetching = fetchStatus === "fetching";
+  const isPending = status === "pending";
+  const isLoading = isPending && isFetching;
+  const isInitialLoading = isLoading;
+  const isPaused = fetchStatus === "paused";
+  const isRefetching = isFetching && !isPending;
   const refetch = resolveRefetch(input);
 
   if (status === "pending") {
@@ -60,10 +62,13 @@ export function makeQueryState<TData, TError = Error>(
       fetchStatus,
       isError: false,
       isFetching,
-      isLoading: true,
+      isInitialLoading,
+      isLoading,
       isLoadingError: false,
+      isPaused,
       isPending: true,
       isRefetchError: false,
+      isRefetching,
       isSuccess: false,
       refetch,
       status,
@@ -81,10 +86,13 @@ export function makeQueryState<TData, TError = Error>(
         fetchStatus,
         isError: true,
         isFetching,
+        isInitialLoading,
         isLoading: false,
         isLoadingError: true,
+        isPaused,
         isPending: false,
         isRefetchError: false,
+        isRefetching,
         isSuccess: false,
         refetch,
         status: "error",
@@ -98,10 +106,13 @@ export function makeQueryState<TData, TError = Error>(
       fetchStatus,
       isError: true,
       isFetching,
+      isInitialLoading,
       isLoading: false,
       isLoadingError: false,
+      isPaused,
       isPending: false,
       isRefetchError: true,
+      isRefetching,
       isSuccess: false,
       refetch,
       status: "error",
@@ -116,10 +127,13 @@ export function makeQueryState<TData, TError = Error>(
     fetchStatus,
     isError: false,
     isFetching,
+    isInitialLoading,
     isLoading: false,
     isLoadingError: false,
+    isPaused,
     isPending: false,
     isRefetchError: false,
+    isRefetching,
     isSuccess: true,
     refetch,
     status: "success",

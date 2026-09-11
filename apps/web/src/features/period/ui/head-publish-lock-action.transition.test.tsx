@@ -2,8 +2,9 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { TRPCClientError } from "@trpc/client";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
@@ -13,7 +14,10 @@ import { SessionContext } from "../../../shared/lib/auth/session-provider";
 import { logClientError } from "../../../shared/lib/errors/client-error-reporting";
 import { invalidatePeriodLifecycle } from "../../../shared/lib/query/cache-keys";
 import { makeQueryClient } from "../../../shared/lib/query/query-client";
-import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
+import {
+  TRPCProxyContext,
+  useTRPC,
+} from "../../../shared/lib/trpc/trpc-context";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import { HeadPublishLockAction } from "./head-publish-lock-action";
@@ -79,11 +83,13 @@ function reportQueryFixture(input: unknown) {
   return pending;
 }
 
-function makeHarness() {
+function makeHarness(
+  queryByInput: (input: unknown) => unknown = reportQueryFixture,
+) {
   const { proxy, captured } = createMockTRPC([
     {
       path: ["weeklyReport", "get"],
-      queryByInput: reportQueryFixture,
+      queryByInput,
     },
     { path: ["period", "publish"], mutation: true },
     { path: ["period", "reopen"], mutation: true },
@@ -115,6 +121,17 @@ function makeHarness() {
   }
 
   return { Providers, captured };
+}
+
+function ConditionalPublishAction({ reportId }: { readonly reportId: string }) {
+  const trpc = useTRPC();
+  const ownerQ = useQuery(trpc.weeklyReport.get.queryOptions({ reportId }));
+
+  return ownerQ.isLoading ? (
+    <span>Header loading</span>
+  ) : (
+    <HeadPublishLockAction reportId={reportId} />
+  );
 }
 
 async function removesStalePublishTrigger(): Promise<void> {
@@ -200,6 +217,35 @@ async function exposesQueryRecovery(): Promise<void> {
   );
 }
 
+async function requiresExplicitRetryAfterTerminalError(): Promise<void> {
+  const queryByInput = vi.fn((input: unknown) => {
+    const reportId = (input as { reportId: string }).reportId;
+    if (reportId !== "report-error") return pending;
+    return queryByInput.mock.calls.length === 1
+      ? Promise.reject(makeBadRequestError())
+      : Promise.resolve({ status: "active", reportId });
+  });
+  const { Providers } = makeHarness(queryByInput);
+  const user = userEvent.setup();
+
+  render(<ConditionalPublishAction reportId="report-error" />, {
+    wrapper: Providers,
+  });
+
+  const retry = await screen.findByRole("button", {
+    name: "Retry loading publish controls",
+  });
+  expect(queryByInput).toHaveBeenCalledTimes(1);
+
+  await user.click(retry);
+  await waitFor(() => {
+    expect(
+      screen.getByRole("button", { name: "Publish & Lock" }),
+    ).toBeEnabled();
+    expect(queryByInput).toHaveBeenCalledTimes(2);
+  });
+}
+
 describe("HeadPublishLockAction report-key transitions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -224,5 +270,9 @@ describe("HeadPublishLockAction report-key transitions", () => {
   it(
     "keeps a visible recovery action after the report query fails",
     exposesQueryRecovery,
+  );
+  it(
+    "requires an explicit retry after a cached terminal report error",
+    requiresExplicitRetryAfterTerminalError,
   );
 });

@@ -1,7 +1,9 @@
 import { type AdminSnapshot, adminSnapshotSchema } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import { mapAdminSnapshot } from "./admin";
+import { expectDefined } from "../../../test-utils/expect-defined";
+import { mapAdminSnapshot, toAdminUserInput } from "./admin";
+import { formFromUser } from "./user-form";
 
 // Valid v4-shape UUIDs (variant 8/9/a/b in 19th hex char, version 4 in 13th).
 const UUID_A = "11111111-1111-4111-8111-111111111111";
@@ -9,6 +11,30 @@ const UUID_B = "22222222-2222-4222-8222-222222222222";
 const UUID_C = "33333333-3333-4333-8333-333333333333";
 const UUID_D = "44444444-4444-4444-8444-444444444444";
 const UUID_GROUP = "55555555-5555-4555-8555-555555555555";
+
+const REMINDER_EXECUTION = {
+  id: "66666666-6666-4666-8666-666666666666",
+  ruleId: UUID_A,
+  reportId: UUID_B,
+  dedupeKey: `${UUID_A}:deadline:2026-04-24:lead@example.com`,
+  status: "sending" as const,
+  scheduledFor: new Date("2026-04-24T18:00:00.000Z"),
+  sentAt: null,
+  recipientEmail: "lead@example.com",
+  errorMessage: null,
+  queuePayload: {
+    kind: "deadline" as const,
+    contractVersion: 1 as const,
+    cycleDate: "2026-04-24",
+    leadName: "Lead Person",
+    reportPeriod: "Apr 20–26",
+    deadlineIso: "2026-04-25T18:00:00.000Z",
+    sectionUrl: `https://example.com/lead/report/${UUID_B}`,
+    organization: { shortName: "CR", fullName: "CustomReport" },
+  },
+  createdAt: new Date("2026-04-25T17:00:00.000Z"),
+  updatedAt: new Date("2026-04-25T17:01:00.000Z"),
+};
 
 const OPEN_LIFECYCLE = {
   status: "draft" as const,
@@ -68,6 +94,7 @@ function makeSnapshot(overrides: Partial<AdminSnapshot> = {}): AdminSnapshot {
         middleName: null,
         position: null,
         role: "lead",
+        isActive: true,
         reportingGroupId: UUID_GROUP,
         reportingGroupName: "Core Development",
       },
@@ -80,6 +107,7 @@ function makeSnapshot(overrides: Partial<AdminSnapshot> = {}): AdminSnapshot {
         middleName: null,
         position: null,
         role: "head",
+        isActive: true,
         reportingGroupId: UUID_GROUP,
         reportingGroupName: "Core Development",
       },
@@ -92,6 +120,7 @@ function makeSnapshot(overrides: Partial<AdminSnapshot> = {}): AdminSnapshot {
         middleName: null,
         position: null,
         role: "viewer",
+        isActive: true,
         reportingGroupId: null,
         reportingGroupName: null,
       },
@@ -175,8 +204,8 @@ describe("mapAdminSnapshot", () => {
     expect(mapped.users).toEqual([]);
     expect(mapped.groups).toEqual([]);
     expect(mapped.products).toEqual([]);
-    expect(mapped.periods).toEqual([]);
     expect(mapped.reminders).toEqual([]);
+    expect(mapped.executions).toEqual([]);
   });
 
   it("maps users preserving role enum and group display", () => {
@@ -189,8 +218,19 @@ describe("mapAdminSnapshot", () => {
     expect(viewer?.role).toBe("viewer");
     expect(lead?.groupId).toBe(UUID_GROUP);
     expect(lead?.department).toBe("Core Development");
-    expect(viewer?.groupId).toBe("");
+    expect(viewer?.groupId).toBeNull();
     expect(viewer?.department).toBe("No owning group");
+  });
+
+  it("round-trips a valid owning group from snapshot through form submit", () => {
+    const lead = expectDefined(
+      mapAdminSnapshot(makeSnapshot()).users.find((user) => user.id === UUID_A),
+    );
+
+    const submitted = toAdminUserInput(formFromUser(lead), lead.id);
+
+    expect(submitted.reportingGroupId).toBe(UUID_GROUP);
+    expect(submitted.role).toBe("lead");
   });
 
   it("translates project archived flag to mock status", () => {
@@ -221,23 +261,6 @@ describe("mapAdminSnapshot", () => {
     }
   });
 
-  it("maps period status: published passthrough, 'draft' -> 'open'", () => {
-    const mapped = mapAdminSnapshot(makeSnapshot());
-    const published = mapped.periods.find((p) => p.id === UUID_A);
-    const draft = mapped.periods.find((p) => p.id === UUID_B);
-    expect(published?.status).toBe("published");
-    expect(draft?.status).toBe("open");
-  });
-
-  it("synthesizes weekLabel and ISO date strings from period dates", () => {
-    const mapped = mapAdminSnapshot(makeSnapshot());
-    const period = mapped.periods.find((p) => p.id === UUID_A);
-    expect(period?.weekLabel).toBe("Week 16, Apr 13–19, 2026");
-    expect(period?.startDate).toBe("2026-04-13");
-    expect(period?.endDate).toBe("2026-04-19");
-    expect(period?.deadline).toBe("2026-04-18");
-  });
-
   it("maps generated rules only to the fields used by reminder cards", () => {
     const mapped = mapAdminSnapshot(makeSnapshot());
     expect(mapped.reminders).toStrictEqual([
@@ -245,6 +268,25 @@ describe("mapAdminSnapshot", () => {
         policyId: UUID_D,
         fireAt: new Date("2026-04-24T18:00:00.000Z"),
         active: true,
+      },
+    ]);
+  });
+
+  it("keeps durable reminder execution outcomes for the delivery activity view", () => {
+    const mapped = mapAdminSnapshot(
+      makeSnapshot({ reminderExecutions: [REMINDER_EXECUTION] }),
+    );
+
+    expect(mapped.executions).toStrictEqual([
+      {
+        id: REMINDER_EXECUTION.id,
+        ruleId: REMINDER_EXECUTION.ruleId,
+        reportId: REMINDER_EXECUTION.reportId,
+        status: "sending",
+        scheduledFor: new Date(REMINDER_EXECUTION.scheduledFor),
+        sentAt: null,
+        recipientEmail: REMINDER_EXECUTION.recipientEmail,
+        errorMessage: null,
       },
     ]);
   });

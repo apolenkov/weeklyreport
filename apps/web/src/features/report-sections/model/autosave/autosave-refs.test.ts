@@ -1,8 +1,7 @@
-import type { DraftSavePayload } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { InMemoryLeadFormWriteAdapter } from "../lead-form/lead-form-write-port.in-memory";
-import { seedAutosaveRefs } from "./autosave-refs";
+import { type AutosaveRequest, seedAutosaveRefs } from "./autosave-refs";
 import { makeAutosavePayload } from "./use-lead-form-autosave-harness";
 
 function makeArgs() {
@@ -23,14 +22,14 @@ function makeArgs() {
 describe("seedAutosaveRefs — pre-bind mutation capability", () => {
   it("throws on pre-bind mutate instead of silently doing nothing", () => {
     const refs = seedAutosaveRefs(makeArgs());
-    expect(() => refs.mutate({} as DraftSavePayload)).toThrow(
+    expect(() => refs.mutate({} as AutosaveRequest)).toThrow(
       /sync effect bound the live handle/,
     );
   });
 
   it("rejects pre-bind mutateAsync instead of resolving as a valid no-op save", async () => {
     const refs = seedAutosaveRefs(makeArgs());
-    await expect(refs.mutateAsync({} as DraftSavePayload)).rejects.toThrow(
+    await expect(refs.mutateAsync({} as AutosaveRequest)).rejects.toThrow(
       /sync effect bound the live handle/,
     );
   });

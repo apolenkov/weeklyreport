@@ -90,13 +90,10 @@ function emitRiskSave(args: RiskSaveArgs, prose: TrimmedProse): void {
 export function saveRisk(args: RiskSaveArgs): void {
   const { fields, parentStage } = args;
   if (parentStage.isDeadEnd) return;
-  const prose: TrimmedProse = {
-    text: fields.text.trim(),
-    impact: fields.impact.trim(),
-    mitigation: fields.mitigation.trim(),
-  };
   const errors = collectRiskErrors({
-    ...prose,
+    text: fields.text,
+    impact: fields.impact,
+    mitigation: fields.mitigation,
     isActivityParent: parentStage.isActivityParent,
     effectiveStageNames: parentStage.effectiveStageNames,
   });
@@ -104,5 +101,10 @@ export function saveRisk(args: RiskSaveArgs): void {
     reportRiskErrors(args, errors);
     return;
   }
+  const prose: TrimmedProse = {
+    text: fields.text.trim(),
+    impact: fields.impact.trim(),
+    mitigation: fields.mitigation.trim(),
+  };
   emitRiskSave(args, prose);
 }

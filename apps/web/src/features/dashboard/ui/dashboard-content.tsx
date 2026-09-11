@@ -63,6 +63,7 @@ interface DashboardPanelsProps {
   readonly activitySource: DashboardSourceState;
   readonly queue?: ReturnType<typeof mapReviewDashboardData> | undefined;
   readonly queueSource: DashboardSourceState;
+  readonly reviewReady: boolean;
   readonly reviewSource: DashboardSourceState;
   readonly weeklySource: DashboardSourceState;
   readonly weekly?: ReturnType<typeof mapWeeklyDashboardData> | undefined;
@@ -100,7 +101,10 @@ function DashboardQueuePanel(props: DashboardPanelsProps) {
             reportId={reportId}
             onMutated={props.onRefreshDashboard}
           />
-          <DashboardReviewIssue source={props.reviewSource} />
+          <DashboardReviewIssue
+            ready={props.reviewReady}
+            source={props.reviewSource}
+          />
           <DashboardActivityIssue source={props.activitySource} />
         </div>
       ) : null}
@@ -195,6 +199,7 @@ function dashboardPanelModel(
     queue,
     activitySource: props.activityState,
     queueSource: weeklyState,
+    reviewReady: review !== undefined,
     // Review failure must surface in the queue panel that consumes it, even
     // while the weekly-backed panels stay available.
     reviewSource: props.reviewState,

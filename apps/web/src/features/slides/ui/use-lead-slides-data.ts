@@ -6,9 +6,9 @@ import { useMemo } from "react";
 import {
   type CrossAuthorContentRow,
   mapLeadFormData,
+  type MappedLeadForm,
 } from "../../report-sections";
 import { type SectionSlideModel } from "../model/section-slide-contracts";
-import type { LeadSlideFormData } from "./lead-slide-form-data";
 import {
   useLeadDeckPeriod,
   useLeadDeckRequest,
@@ -31,7 +31,7 @@ interface LeadSlidesData {
   readonly isError: boolean;
   readonly slides: readonly SectionSlideModel[];
   readonly section: ReportSectionReadModel | null;
-  readonly formData: LeadSlideFormData | null;
+  readonly formData: MappedLeadForm | null;
   readonly canInlineEdit: boolean;
   readonly refetchSection: () => Promise<unknown>;
 }
@@ -43,7 +43,7 @@ function canEditInlineRecord({
 }: {
   readonly targetReportId: string;
   readonly isOwnDeck: boolean;
-  readonly formData: LeadSlideFormData | null;
+  readonly formData: MappedLeadForm | null;
 }): boolean {
   return (
     targetReportId !== "" &&
@@ -53,10 +53,10 @@ function canEditInlineRecord({
   );
 }
 
-function useLeadSlideFormData(
+function useMappedLeadForm(
   byPeriod: Parameters<typeof mapLeadFormData>[0]["byPeriod"] | undefined,
   history: Parameters<typeof mapLeadFormData>[0]["history"] | undefined,
-): LeadSlideFormData | null {
+): MappedLeadForm | null {
   return useMemo(() => {
     if (!byPeriod?.section) return null;
     return mapLeadFormData({
@@ -88,7 +88,7 @@ export function useLeadSlidesData({
     isEveryone: request.isEveryone,
     visibilityHydrated,
   });
-  const formData = useLeadSlideFormData(queries.byPeriodQ.data, period.history);
+  const formData = useMappedLeadForm(queries.byPeriodQ.data, period.history);
 
   return {
     inReportMode: request.inReportMode,
@@ -104,6 +104,6 @@ export function useLeadSlidesData({
       isOwnDeck: request.isOwnDeck,
       formData,
     }),
-    refetchSection: () => queries.byPeriodQ.refetch(),
+    refetchSection: () => queries.byPeriodQ.refetch({ throwOnError: true }),
   };
 }

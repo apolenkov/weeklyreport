@@ -1,13 +1,8 @@
 "use client";
 
-import type {
-  MyHistoryEntry,
-  MyHistoryResult,
-  Role,
-} from "@customreport/shared";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import type { CompiledHistoryResult, Role } from "@customreport/shared";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
 
 import {
   isHeadLike,
@@ -15,7 +10,6 @@ import {
   isViewer,
 } from "../../../shared/lib/auth/role-predicates";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
-import { useCursorPagination } from "../../admin";
 import {
   type HistoryEntry,
   mapCompiledHistoryEntries,
@@ -27,6 +21,10 @@ export interface HistoryView {
   readonly entries: readonly HistoryEntry[];
   readonly archiveCount: number;
   readonly isLoading: boolean;
+  readonly failure: {
+    readonly isRetrying: boolean;
+    readonly retry: () => void;
+  } | null;
   readonly includeArchive: boolean;
   readonly setIncludeArchive: (nextValue: boolean) => void;
 }
@@ -38,52 +36,37 @@ function useHistoryQueryState(role: Role | null) {
 
   // History defaults to the current (non-archived) view for every role; the
   // archive toggle is local state only, never derived from the URL.
-  const [includeArchive, setIncludeArchive] = useState(false);
+  const [includeArchive, setArchiveScope] = useState(false);
+  const [previousCompiledData, setPreviousCompiledData] =
+    useState<CompiledHistoryResult>();
 
-  const historyQ = useCursorPagination(
-    (input) =>
-      trpc.reports.myHistory.infiniteQueryOptions(
-        input as never,
-        {
-          getNextPageParam: (lastPage: MyHistoryResult) => lastPage.nextCursor,
-        } as never,
-      ) as never,
-    { limit: 50 },
-    { enabled: isLead },
-  );
+  const historyQ = useInfiniteQuery({
+    ...trpc.reports.myHistory.infiniteQueryOptions(
+      { limit: 50 },
+      { getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined },
+    ),
+    enabled: isLead,
+  });
 
   const compiledHistoryQ = useQuery({
     ...trpc.reports.compiledHistory.queryOptions({ includeArchive }),
     enabled: usesCompiledHistory,
-    placeholderData: keepPreviousData,
+    placeholderData: (previousData) => previousData ?? previousCompiledData,
   });
+  // Query placeholders disappear on failure; keep the displayed result across
+  // archive scope changes until that scope returns its own data.
+  const compiledData = compiledHistoryQ.data ?? previousCompiledData;
+  const setIncludeArchive = (nextValue: boolean) => {
+    setPreviousCompiledData(compiledData);
+    setArchiveScope(nextValue);
+  };
 
+  const { hasNextPage, isError, isFetching, fetchNextPage } = historyQ;
   useEffect(() => {
-    if (isLead && historyQ.hasNextPage && !historyQ.isFetchingNextPage) {
-      historyQ.fetchNextPage();
+    if (isLead && hasNextPage && !isError && !isFetching) {
+      void fetchNextPage({ cancelRefetch: false });
     }
-    if (isLead && historyQ.isError) {
-      toast.error(
-        historyQ.error instanceof Error
-          ? historyQ.error.message
-          : "History unavailable.",
-      );
-    }
-    if (usesCompiledHistory && compiledHistoryQ.isError) {
-      toast.error(compiledHistoryQ.error.message);
-    }
-  }, [
-    compiledHistoryQ.error,
-    compiledHistoryQ.isError,
-    historyQ.error,
-    historyQ.isError,
-    historyQ.hasNextPage,
-    historyQ.isFetchingNextPage,
-    historyQ.fetchNextPage,
-    historyQ,
-    isLead,
-    usesCompiledHistory,
-  ]);
+  }, [hasNextPage, isError, isFetching, fetchNextPage, isLead]);
 
   return {
     isLead,
@@ -92,11 +75,11 @@ function useHistoryQueryState(role: Role | null) {
     setIncludeArchive,
     historyQ,
     compiledHistoryQ,
+    compiledData,
   };
 }
 
-// One role-defaulted history view: a lead reads their personal history, every
-// other role reads the compiled one. Only the enabled query ever has data.
+// Role selection also applies to cached data from disabled queries.
 export function useHistoryData(role: Role | null): HistoryView {
   const {
     isLead,
@@ -105,24 +88,41 @@ export function useHistoryData(role: Role | null): HistoryView {
     setIncludeArchive,
     historyQ,
     compiledHistoryQ,
+    compiledData: loadedCompiledData,
   } = useHistoryQueryState(role);
 
   const allEntries = useMemo(() => {
-    const history = isLead ? (historyQ.items as readonly MyHistoryEntry[]) : [];
+    const history = isLead
+      ? (historyQ.data?.pages.flatMap((page) => page.items) ?? [])
+      : [];
     return mapHistoryEntries(history);
-  }, [historyQ.items, isLead]);
+  }, [historyQ.data?.pages, isLead]);
 
-  // A lead's archived rows are filtered client-side; the compiled query already
-  // returns exactly the rows its includeArchive argument asked for.
+  // Personal archive filtering applies locally. Compiled rows follow the server
+  // scope, retaining the previous result while that scope loads or fails.
   const leadEntries = includeArchive
     ? allEntries
     : allEntries.filter((entry) => !entry.archived);
 
-  const compiledData = usesCompiledHistory ? compiledHistoryQ.data : undefined;
+  const compiledData = usesCompiledHistory ? loadedCompiledData : undefined;
   const compiledEntries = useMemo(
     () => mapCompiledHistoryEntries(compiledData?.entries ?? []),
     [compiledData?.entries],
   );
+  const query = isLead ? historyQ : compiledHistoryQ;
+  const failure =
+    (isLead || usesCompiledHistory) && query.isError
+      ? {
+          isRetrying: query.isFetching,
+          retry: () => {
+            if (isLead && historyQ.isFetchNextPageError) {
+              void historyQ.fetchNextPage({ cancelRefetch: false });
+            } else {
+              void query.refetch({ cancelRefetch: false });
+            }
+          },
+        }
+      : null;
 
   return {
     isLead,
@@ -130,6 +130,7 @@ export function useHistoryData(role: Role | null): HistoryView {
     archiveCount: isLead
       ? allEntries.filter((entry) => entry.archived).length
       : (compiledData?.archiveCount ?? 0),
+    failure,
     isLoading: isLead
       ? historyQ.isLoading
       : usesCompiledHistory

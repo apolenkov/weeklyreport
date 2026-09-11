@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import type { HistoryEntry } from "../../report-sections";
+import type { HistoryView } from "../model/use-report-history-data";
 import { LeadHistoryList } from "./lead-history-list";
 import { LeadHistorySidebar } from "./lead-history-sidebar";
 import { LeadHistorySkeleton } from "./lead-history-skeleton";
@@ -13,6 +14,7 @@ interface HistoryPanelProps {
   readonly entries: readonly HistoryEntry[];
   readonly includeArchive: boolean;
   readonly isLoading: boolean;
+  readonly failure: HistoryView["failure"];
   readonly summaryTitle: string;
   readonly isLead: boolean;
 }
@@ -59,11 +61,12 @@ export function HistoryPanel({
   entries,
   includeArchive,
   isLoading,
+  failure,
   summaryTitle,
   isLead,
 }: HistoryPanelProps) {
-  // "Show all" is stored PAIRED with the archive scope it was pressed in, so
-  // flipping the scope naturally collapses the list again — no reset effect.
+  // "Show all" is paired with its archive scope. Switching scope collapses the
+  // list; switching back restores that scope's expansion without a reset effect.
   const [showAllScope, setShowAllScope] = useState<boolean | null>(null);
   const showAll = showAllScope === includeArchive;
 
@@ -76,34 +79,59 @@ export function HistoryPanel({
     return <LeadHistorySkeleton />;
   }
 
-  return (
+  const errorNotice = failure && (
     <div
-      data-testid="history-panel-grid"
-      className="grid items-stretch gap-6 lg:grid-cols-[minmax(0,1fr)_280px]"
+      role="alert"
+      className="space-y-3 rounded-[var(--radius)] border border-[var(--color-destructive)] bg-[var(--color-card)] p-4 text-sm"
     >
-      <div
-        data-testid="history-panel-list"
-        className="flex min-h-0 flex-col gap-6"
+      <p>
+        {entries.length > 0
+          ? "History could not be fully loaded. The list and summary show loaded reports only."
+          : "History could not be loaded."}
+      </p>
+      <button
+        type="button"
+        onClick={failure.retry}
+        disabled={failure.isRetrying}
+        className="btn-press min-h-[44px] rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-2 font-semibold disabled:opacity-50"
       >
-        {entries.length > 0 ? (
-          <LeadHistoryList entries={visibleEntries} />
-        ) : (
-          <HistoryEmptyState includeArchive={includeArchive} />
-        )}
-        {hasMore && (
-          <ShowAllButton
-            total={entries.length}
-            onClick={() => setShowAllScope(includeArchive)}
+        {failure.isRetrying ? "Retrying history…" : "Retry history"}
+      </button>
+    </div>
+  );
+  if (failure && entries.length === 0) return errorNotice;
+
+  return (
+    <div className="space-y-4">
+      {errorNotice}
+      <div
+        data-testid="history-panel-grid"
+        className="grid items-stretch gap-6 lg:grid-cols-[minmax(0,1fr)_280px]"
+      >
+        <div
+          data-testid="history-panel-list"
+          className="flex min-h-0 flex-col gap-6"
+        >
+          {entries.length > 0 ? (
+            <LeadHistoryList entries={visibleEntries} />
+          ) : (
+            <HistoryEmptyState includeArchive={includeArchive} />
+          )}
+          {hasMore && (
+            <ShowAllButton
+              total={entries.length}
+              onClick={() => setShowAllScope(includeArchive)}
+            />
+          )}
+        </div>
+        <div className="space-y-4">
+          <LeadHistorySidebar
+            entries={entries}
+            summaryTitle={summaryTitle}
+            showStatus
+            viewerMode={!isLead}
           />
-        )}
-      </div>
-      <div className="space-y-4">
-        <LeadHistorySidebar
-          entries={entries}
-          summaryTitle={summaryTitle}
-          showStatus
-          viewerMode={!isLead}
-        />
+        </div>
       </div>
     </div>
   );

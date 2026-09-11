@@ -4,11 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { type ReactNode, Suspense, useEffect } from "react";
 
+import { getScalarSearchParam } from "../../../../shared/lib/navigation/scalar-search-param";
 import { useTRPC } from "../../../../shared/lib/trpc/trpc-context";
 
-// A client redirect rather than a server `redirect()`: the web app has no
-// server-side data path — every authenticated read goes through the browser
-// tRPC client over cookies (`lib/trpc.ts`).
+// Resolve the viewer-specific destination through the existing browser tRPC
+// query, then preserve the recovery marker while replacing this entry route.
 function ReportsLatestShell({ children }: { readonly children: ReactNode }) {
   return (
     <main
@@ -39,7 +39,8 @@ function ReportsLatestContent() {
   const trpc = useTRPC();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const recovery = searchParams.get("recovery") === "1" ? "1" : "0";
+  const recovery =
+    getScalarSearchParam(searchParams, "recovery") === "1" ? "1" : "0";
 
   const latestQ = useQuery(trpc.reports.latestForViewer.queryOptions());
 

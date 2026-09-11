@@ -17,7 +17,6 @@ function loadedState(
     isLoading: false,
     awaitingRoleRedirect: false,
     awaitingCanonicalRedirect: false,
-    sectionUnavailable: false,
     activeData: serverSection,
     byPeriodData: {
       section: serverSection,

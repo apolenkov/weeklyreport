@@ -9,79 +9,19 @@ import {
 
 import { deriveEffectiveStageStatus } from "../../../shared/lib/status/stage-status";
 import type {
-  StatusOverviewItem,
   StatusOverviewProjectionSource,
   StatusOverviewSection,
   StatusOverviewStage,
   StatusOverviewUnit,
   StatusOverviewUnitKind,
 } from "./status-overview";
+import {
+  buildStatusOverviewColumns,
+  statusOverviewItemParent,
+} from "./status-overview-items";
 
-type SectionItem = ReportSectionReadModel["items"][number];
 type SectionProject = ReportSectionReadModel["projects"][number];
 type SectionActivity = ReportSectionReadModel["activities"][number];
-
-function itemParent(item: SectionItem): {
-  readonly kind: StatusOverviewUnitKind;
-  readonly id: string;
-} | null {
-  if (item.projectId != null) return { kind: "product", id: item.projectId };
-  if (item.activityId != null) return { kind: "activity", id: item.activityId };
-  return null;
-}
-
-export function hasStatusOverviewParent(item: SectionItem): boolean {
-  return itemParent(item) != null;
-}
-
-function itemStableId(item: SectionItem): string | null {
-  return typeof item.stableId === "string" && item.stableId.length > 0
-    ? item.stableId
-    : null;
-}
-
-function toOverviewItem(
-  item: SectionItem,
-  source: "previous" | "current" | "next",
-  index: number,
-  priorStableIds: ReadonlySet<string>,
-  editable: boolean,
-): StatusOverviewItem {
-  const stableId = itemStableId(item);
-  const recordId = item.id ?? null;
-  const wasPreviouslyPlanned = stableId != null && priorStableIds.has(stableId);
-  return {
-    key: `${source}:${stableId ?? item.id ?? String(index)}`,
-    recordId,
-    source,
-    editTarget:
-      editable && recordId != null && source !== "previous"
-        ? { recordId, source }
-        : null,
-    stableId,
-    text: item.text,
-    tag: item.tag,
-    workflowStatus: item.workflowStatus,
-    continuity:
-      source === "current"
-        ? wasPreviouslyPlanned
-          ? "continued"
-          : "unplanned"
-        : null,
-  };
-}
-
-function itemsForUnit(
-  items: readonly SectionItem[],
-  type: "current" | "next",
-  kind: StatusOverviewUnitKind,
-  id: string,
-): readonly SectionItem[] {
-  return items.filter((item) => {
-    const parent = itemParent(item);
-    return item.type === type && parent?.kind === kind && parent.id === id;
-  });
-}
 
 function projectStatus(
   section: StatusOverviewSection,
@@ -126,7 +66,7 @@ function collectParentIds(
 ): readonly string[] {
   return sections.flatMap((section) =>
     section.items.flatMap((item) => {
-      const parent = itemParent(item);
+      const parent = statusOverviewItemParent(item);
       return parent?.kind === kind ? [parent.id] : [];
     }),
   );
@@ -228,64 +168,6 @@ function buildActivityPresentation(
   };
 }
 
-function buildColumns(
-  kind: StatusOverviewUnitKind,
-  id: string,
-  input: StatusOverviewProjectionSource,
-  previous: StatusOverviewSection | null,
-): StatusOverviewUnit["columns"] {
-  const previousItems = previous
-    ? itemsForUnit(previous.items, "next", kind, id)
-    : [];
-  const priorStableIds = new Set(
-    previousItems.flatMap((item) => {
-      const stableId = itemStableId(item);
-      return stableId == null ? [] : [stableId];
-    }),
-  );
-  const mapItems = (
-    items: readonly SectionItem[],
-    source: "previous" | "current" | "next",
-  ): readonly StatusOverviewItem[] =>
-    items.map((item, index) =>
-      toOverviewItem(
-        item,
-        source,
-        index,
-        priorStableIds,
-        input.currentItemsEditable,
-      ),
-    );
-  const previousColumn =
-    input.previousPlan.availability === "available"
-      ? ({
-          availability: "available",
-          items: mapItems(previousItems, "previous"),
-        } as const)
-      : ({
-          availability: "unavailable",
-          reason: input.previousPlan.reason,
-          items: [],
-        } as const);
-  return {
-    previouslyPlanned: previousColumn,
-    currentWeek: {
-      availability: "available",
-      items: mapItems(
-        itemsForUnit(input.currentSection.items, "current", kind, id),
-        "current",
-      ),
-    },
-    nextWeek: {
-      availability: "available",
-      items: mapItems(
-        itemsForUnit(input.currentSection.items, "next", kind, id),
-        "next",
-      ),
-    },
-  };
-}
-
 export function buildStatusOverviewUnit(
   kind: StatusOverviewUnitKind,
   id: string,
@@ -301,6 +183,6 @@ export function buildStatusOverviewUnit(
     id,
     kind,
     ...presentation,
-    columns: buildColumns(kind, id, input, previous),
+    columns: buildStatusOverviewColumns(kind, id, input, previous),
   };
 }

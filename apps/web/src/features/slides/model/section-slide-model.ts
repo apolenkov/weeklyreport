@@ -2,32 +2,18 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 import { shortNameFromName } from "@customreport/shared";
 
 import type { CrossAuthorContentRow } from "../../report-sections";
-import type {
-  SectionSlideModel,
-  SlideActivityPill,
-} from "./section-slide-contracts";
+import type { SectionSlideModel } from "./section-slide-contracts";
 import { applyForeignProductHealth } from "./section-slide-foreign";
 import { buildSectionProductProjection } from "./section-slide-product-projection";
 import { buildSectionSlideHealth } from "./section-slide-readiness";
 import { buildSlideGridModel } from "./slide-grid-model";
+import type { SlideRecordAttribution } from "./slide-record-attribution";
 
 interface BuildSectionSlideOptions {
+  readonly recordAttribution?: SlideRecordAttribution | undefined;
   readonly foreign?: readonly CrossAuthorContentRow[];
   readonly foreignHealth?: Parameters<typeof applyForeignProductHealth>[1];
   readonly showOwnerBadges?: boolean;
-}
-
-function projectActivities(
-  section: ReportSectionReadModel,
-): SlideActivityPill[] {
-  return section.activities.map((activity) => ({
-    id: activity.activityId,
-    name: activity.activityName,
-    status: activity.derivedStatus ?? activity.status,
-    linkedProducts: activity.linkedProducts.map(
-      (product) => product.productName,
-    ),
-  }));
 }
 
 export function buildSectionSlideModel(
@@ -67,9 +53,9 @@ export function buildSectionSlideModel(
     risks: projection.risks,
     decisions: projection.decisions,
     priorities: projection.priorities,
-    activities: projectActivities(section),
     grid: buildSlideGridModel({
       section,
+      recordAttribution: options.recordAttribution,
       productStatuses: new Map(
         productSlides.map((product) => [product.id, product.status]),
       ),

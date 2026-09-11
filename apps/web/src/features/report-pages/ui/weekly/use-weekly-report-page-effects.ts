@@ -9,6 +9,7 @@ import {
   formatPeriodRangeWithYear,
   isoWeekNumber,
 } from "../../../../shared/lib/format/format-date";
+import { getScalarSearchParam } from "../../../../shared/lib/navigation/scalar-search-param";
 
 interface CanonicalRedirectArgs {
   readonly enabled: boolean | undefined;
@@ -41,7 +42,7 @@ export function useCanonicalReportRedirect({
       "agentationSession",
       "agentationAnnotation",
     ] as const) {
-      const value = searchParams.get(key);
+      const value = getScalarSearchParam(searchParams, key);
       if (value) next.set(key, value);
     }
     const query = next.toString();

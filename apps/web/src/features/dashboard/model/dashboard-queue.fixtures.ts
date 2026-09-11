@@ -117,6 +117,7 @@ export function queueReport(
     periodStart: new Date("2026-07-13T00:00:00.000Z"),
     periodEnd: new Date("2026-07-19T23:59:59.000Z"),
     deadline: new Date("2026-07-17T15:00:00.000Z"),
+    periodState: periodStatus === "published" ? "published" : "open",
     periodStatus,
     archived: false,
     weekLabel: "Week 29",

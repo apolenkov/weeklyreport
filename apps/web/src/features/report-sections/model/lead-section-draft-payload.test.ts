@@ -79,6 +79,18 @@ function makeItem(
 }
 
 describe("sectionToDraftPayload", () => {
+  it("keeps the weekly result and next commitment distinct in the save payload", () => {
+    const payload = sectionToDraftPayload(
+      makeSection({
+        items: [makeItem({ nextStepText: "Test it next period" })],
+      }),
+    );
+    expect(payload.items[0]).toMatchObject({
+      text: "Implement the report",
+      nextStepText: "Test it next period",
+      stableId: STABLE_ITEM_ID,
+    });
+  });
   it("maps product, stage, and activity statuses", () => {
     const payload = sectionToDraftPayload(
       makeSection({

@@ -89,26 +89,28 @@ export function PolicyForm({
       data-testid="policy-form"
       className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
     >
-      <div className="grid gap-4 md:grid-cols-2">
-        <ReminderTypeField form={form} onChange={onChange} />
-        <ReminderOffsetRow
+      <fieldset disabled={isSaving} className="m-0 min-w-0 border-0 p-0">
+        <div className="grid gap-4 md:grid-cols-2">
+          <ReminderTypeField form={form} onChange={onChange} />
+          <ReminderOffsetRow
+            form={form}
+            onChange={onChange}
+            onValidityChange={onOffsetValidityChange}
+          />
+        </div>
+
+        <PolicyFormAdvancedFields form={form} onChange={onChange} />
+
+        <PolicyFormFooter
           form={form}
           onChange={onChange}
-          onValidityChange={onOffsetValidityChange}
+          editing={editing}
+          isSaving={isSaving}
+          validityValid={validityValid}
+          onCancel={onCancel}
+          onSave={onSave}
         />
-      </div>
-
-      <PolicyFormAdvancedFields form={form} onChange={onChange} />
-
-      <PolicyFormFooter
-        form={form}
-        onChange={onChange}
-        editing={editing}
-        isSaving={isSaving}
-        validityValid={validityValid}
-        onCancel={onCancel}
-        onSave={onSave}
-      />
+      </fieldset>
     </div>
   );
 }

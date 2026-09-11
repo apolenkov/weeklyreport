@@ -1,5 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -238,6 +245,34 @@ describe("GroupsTab — a11y regression", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("crud-sheet"));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("locks the submitted draft while pending and unlocks it unchanged after failure", async () => {
+    const deferred = Promise.withResolvers<unknown>();
+    const { captured } = renderTab({ groups: [] });
+    expectDefined(
+      captured["admin.saveReportingGroup"],
+    ).mutationFn.mockReturnValue(deferred.promise);
+    const user = userEvent.setup();
+
+    openAddDialog();
+    const name = screen.getByLabelText(/^name$/i);
+    await user.type(name, "Platform");
+    await user.click(screen.getByRole("button", { name: "Add Group" }));
+
+    await screen.findByRole("button", { name: "Saving…" });
+    expect(name).toBeDisabled();
+    await user.click(name);
+    await user.keyboard("Unsent replacement");
+    expect(name).toHaveValue("Platform");
+    expect(
+      expectDefined(captured["admin.saveReportingGroup"]).calls[0],
+    ).toMatchObject({ name: "Platform" });
+
+    act(() => deferred.reject(new Error("save failed")));
+    await waitFor(() => expect(name).toBeEnabled());
+    expect(name).toHaveValue("Platform");
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 });

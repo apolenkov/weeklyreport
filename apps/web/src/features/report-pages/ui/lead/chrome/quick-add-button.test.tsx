@@ -1,8 +1,33 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useRef, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import { useDialogFocus } from "../../../../../shared/hooks/dialogs/use-dialog-focus";
 import { QuickAddButton } from "./quick-add-button";
+
+function FocusDialog({ onClose }: { readonly onClose: () => void }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus({ open: true, onClose, containerRef: dialogRef });
+  return (
+    <div ref={dialogRef} role="dialog" aria-label="Quick-add editor">
+      <input aria-label="Editor field" />
+      <button type="button" onClick={onClose}>
+        Cancel editor
+      </button>
+    </div>
+  );
+}
+
+function FocusRestorationHarness() {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  return (
+    <>
+      <QuickAddButton onPick={() => setDialogOpen(true)} />
+      {dialogOpen ? <FocusDialog onClose={() => setDialogOpen(false)} /> : null}
+    </>
+  );
+}
 
 describe("QuickAddButton", () => {
   it("the trigger carries no aria-haspopup — a role='group' popup is a disclosure, not a menu", () => {
@@ -62,6 +87,40 @@ describe("QuickAddButton", () => {
       screen.queryByRole("group", { name: "Quick-add record type" }),
     ).not.toBeInTheDocument();
   });
+
+  it.each(
+    [
+      "Current week item",
+      "Next week item",
+      "Blocker",
+      "Risk",
+      "Decision",
+    ].flatMap((optionName) => [
+      [optionName, "Escape"],
+      [optionName, "Cancel"],
+    ]),
+  )(
+    "restores focus to the local trigger after the %s editor closes with %s",
+    async (optionName, closeMethod) => {
+      const user = userEvent.setup();
+      render(<FocusRestorationHarness />);
+      const trigger = screen.getByRole("button", { name: "+ Add" });
+
+      await user.click(trigger);
+      await user.click(screen.getByRole("button", { name: optionName }));
+      expect(screen.getByLabelText("Editor field")).toHaveFocus();
+
+      if (closeMethod === "Escape") {
+        await user.keyboard("{Escape}");
+      } else {
+        await user.click(screen.getByRole("button", { name: "Cancel editor" }));
+      }
+      expect(
+        screen.queryByRole("dialog", { name: "Quick-add editor" }),
+      ).toBeNull();
+      expect(trigger).toHaveFocus();
+    },
+  );
 
   it("renders an unavailable kind inert and never fires onPick for it", () => {
     const onPick = vi.fn();

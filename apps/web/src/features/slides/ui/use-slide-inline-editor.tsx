@@ -7,6 +7,7 @@ import { useState } from "react";
 import {
   type DecisionEntry,
   type KanbanItem,
+  type MappedLeadForm,
   type RiskEntry,
 } from "../../report-sections";
 import type { GridRowEditableRef } from "../model/slide-grid-rows";
@@ -24,14 +25,13 @@ import {
   SlideInlineEditorDialogs,
 } from "./slide-inline-editor-dialogs";
 import {
-  type LeadSlideFormData,
   useInlineEditDialogData,
   useSlideDraftSaveMutation,
 } from "./use-slide-inline-editor-support";
 
 interface UseSlideInlineEditorArgs {
   readonly section: ReportSectionReadModel | null;
-  readonly formData: LeadSlideFormData | null;
+  readonly formData: MappedLeadForm | null;
   readonly canInlineEdit: boolean;
   readonly refetchSection: () => Promise<unknown>;
 }
@@ -42,6 +42,10 @@ interface SlideInlineEditor {
 }
 
 type ActiveRecord = { readonly ref: GridRowEditableRef } | null;
+type ScopedRecordRef = {
+  readonly sectionId: string;
+  readonly ref: GridRowEditableRef;
+} | null;
 type ApplyEdit<T> = (
   section: ReportSectionReadModel,
   stableId: string,
@@ -77,7 +81,7 @@ interface InlineSaveHandlersArgs {
   readonly saveDraftSection: SaveDraftSection;
 }
 
-function useInlineSaveHandlers({
+function createInlineSaveHandlers({
   section,
   inlineEditRecord,
   pendingDeleteRef,
@@ -132,14 +136,16 @@ function useInlineEditCommands({
   canInlineEdit,
   refetchSection,
 }: UseSlideInlineEditorArgs) {
-  const [inlineEditRef, setInlineEditRef] = useState<GridRowEditableRef | null>(
-    null,
-  );
+  const [inlineEdit, setInlineEdit] = useState<ScopedRecordRef>(null);
   const [pendingDeleteRef, setPendingDeleteRef] =
-    useState<GridRowEditableRef | null>(null);
-  const clearActive = () => {
-    setInlineEditRef(null);
-    setPendingDeleteRef(null);
+    useState<ScopedRecordRef>(null);
+  const clearActive = (sectionId: string) => {
+    setInlineEdit((current) =>
+      current?.sectionId === sectionId ? null : current,
+    );
+    setPendingDeleteRef((current) =>
+      current?.sectionId === sectionId ? null : current,
+    );
   };
   const { saveDraftSection, isPending } = useSlideDraftSaveMutation({
     refetchSection,
@@ -148,28 +154,39 @@ function useInlineEditCommands({
   const dialogData = useInlineEditDialogData({
     section,
     formData,
-    inlineEditRef,
-    pendingDeleteRef,
+    inlineEditRef:
+      inlineEdit?.sectionId === section?.reportSectionId
+        ? (inlineEdit?.ref ?? null)
+        : null,
+    pendingDeleteRef:
+      pendingDeleteRef?.sectionId === section?.reportSectionId
+        ? (pendingDeleteRef?.ref ?? null)
+        : null,
   });
-  const saveHandlers = useInlineSaveHandlers({
+  const saveHandlers = createInlineSaveHandlers({
     section,
     inlineEditRecord: dialogData.inlineEditRecord,
-    pendingDeleteRef,
+    pendingDeleteRef: dialogData.pendingDeleteRecord?.ref ?? null,
     saveDraftSection,
   });
 
   function handleRowActivate(ref: GridRowEditableRef) {
-    if (!canInlineEdit || section === null || formData === null) return;
+    if (isPending || !canInlineEdit || section === null || formData === null)
+      return;
     if (resolveSlideInlineRecord(section, formData, ref) === null) return;
-    setInlineEditRef(ref);
+    setInlineEdit({ sectionId: section.reportSectionId, ref });
   }
 
   function requestInlineDelete() {
-    if (dialogData.inlineEditRecord === null) return;
+    if (isPending || section === null || dialogData.inlineEditRecord === null)
+      return;
     // Close the edit dialog when the delete confirmation takes over, so the
     // confirm never renders on top of a still-mounted, still-open editor.
-    setInlineEditRef(null);
-    setPendingDeleteRef(dialogData.inlineEditRecord.ref);
+    setInlineEdit(null);
+    setPendingDeleteRef({
+      sectionId: section.reportSectionId,
+      ref: dialogData.inlineEditRecord.ref,
+    });
   }
 
   return {
@@ -177,9 +194,13 @@ function useInlineEditCommands({
     ...saveHandlers,
     isPending,
     onRowActivate: canInlineEdit ? handleRowActivate : undefined,
-    onCancelEdit: () => setInlineEditRef(null),
+    onCancelEdit: () => {
+      if (!isPending) setInlineEdit(null);
+    },
     onRequestDelete: requestInlineDelete,
-    onCancelDelete: () => setPendingDeleteRef(null),
+    onCancelDelete: () => {
+      if (!isPending) setPendingDeleteRef(null);
+    },
   };
 }
 

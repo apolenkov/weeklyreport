@@ -30,6 +30,22 @@ function allCombos(): BucketInput[] {
 }
 
 describe("deriveActivityBucket", () => {
+  it("distinguishes current not-started work from next-period commitments", () => {
+    expect(
+      deriveActivityBucket({
+        type: "current",
+        workflowStatus: "planned",
+        carriedOver: true,
+      }),
+    ).toBe("planned-current");
+    expect(
+      deriveActivityBucket({
+        type: "next",
+        workflowStatus: "planned",
+        carriedOver: false,
+      }),
+    ).toBe("planned-next");
+  });
   it("is total: every (type × workflowStatus × carriedOver) combo lands in exactly one bucket", () => {
     const known = new Set<ActivityBucket>(ACTIVITY_BUCKET_ORDER);
     for (const combo of allCombos()) {
@@ -53,7 +69,11 @@ describe("deriveActivityBucket", () => {
       in_progress: "in-progress",
     };
     for (const combo of allCombos()) {
-      expect(deriveActivityBucket(combo)).toBe(EXPECTED[combo.workflowStatus]);
+      const expected =
+        combo.workflowStatus === "planned" && combo.type === "current"
+          ? "planned-current"
+          : EXPECTED[combo.workflowStatus];
+      expect(deriveActivityBucket(combo)).toBe(expected);
     }
   });
 

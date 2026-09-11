@@ -3,14 +3,14 @@ import { Suspense } from "react";
 import { LeadForm, LeadFormSkeleton } from "../../../../features/report-pages";
 
 interface Props {
-  searchParams: Promise<{ mode?: string }>;
+  searchParams: Promise<{ mode?: string | string[] }>;
 }
 
 // Addressable entry route: the form replaces it with the active report URL
 // once the current period is known.
 export default async function LeadReportPage({ searchParams }: Props) {
   const { mode } = await searchParams;
-  const resolvedMode = mode === "slides" || mode === "edit" ? mode : "overview";
+  const resolvedMode = mode === "slides" ? mode : "overview";
 
   return (
     <main

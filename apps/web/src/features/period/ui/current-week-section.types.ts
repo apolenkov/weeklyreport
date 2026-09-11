@@ -17,7 +17,7 @@ export interface CurrentWeekSectionProps {
   readonly currentUserName?: string | undefined;
   // Seeds the empty-state + Add target after all items are deleted; without a
   // product the section would have no group to attach the action to.
-  readonly products?: readonly Product[] | undefined;
+  readonly products: readonly Product[];
   // Supplies the author's activities to ItemEditDialog's parent picker.
   readonly activities?: readonly ParentActivityOption[] | undefined;
   // Scopes the stage dropdown to stages owned on the selected product.

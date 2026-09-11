@@ -1,8 +1,12 @@
-import type { DraftSavePayload } from "@customreport/shared";
+import type {
+  DraftSavePayload,
+  ReportSectionReadModel,
+} from "@customreport/shared";
 import { act, renderHook } from "@testing-library/react";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { expectDefined } from "../../../../test-utils/expect-defined.js";
 import { LeadFormWriteError } from "../lead-form/lead-form-write-port";
 import { encodeAutosaveComparisonKey } from "./autosave-stable-stringify";
 import { useLeadFormAutosave } from "./use-lead-form-autosave";
@@ -11,6 +15,7 @@ import {
   buildAutosaveHarness as buildHarness,
   makeAutosavePayload as makePayload,
   makeAutosavePayloadFor as makePayloadFor,
+  makeAutosaveResponse as makeResponse,
 } from "./use-lead-form-autosave-harness";
 
 vi.mock("sonner", () => ({
@@ -38,21 +43,22 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
     let resolveMutation!: () => void;
     let callCount = 0;
     const { wrapper, calls, writePort } = buildHarness({
-      mutationFn: () => {
+      mutationFn: (request) => {
         callCount++;
         if (callCount === 1) {
           // First call: slow — held until we call resolveMutation().
-          return new Promise<unknown>((resolve) => {
-            resolveMutation = () => resolve({ ok: true });
+          return new Promise<ReportSectionReadModel>((resolve) => {
+            resolveMutation = () => resolve(makeResponse(request));
           });
         }
         // Subsequent calls (queued save): resolve immediately.
-        return Promise.resolve({ ok: true });
+        return Promise.resolve(makeResponse(request));
       },
     });
 
     const payloadP1 = makePayload("payload-p1");
     const payloadP2 = makePayload("payload-p2");
+    const payloadP3 = makePayload("payload-p3");
 
     const { result, rerender } = renderHook(
       ({ payload }: { payload: DraftSavePayload }) =>
@@ -87,20 +93,21 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
     // Still in flight (mutation not resolved yet), no second mutation fired.
     expect(calls).toHaveLength(1);
 
+    // A later render must not replace the P2 payload already stashed for drain.
+    rerender({ payload: payloadP3 });
+
     // Resolve P1 — the queued save (P2) should fire automatically and complete.
     await act(async () => {
       resolveMutation();
-      await vi.runAllTimersAsync();
+      await vi.advanceTimersByTimeAsync(0);
     });
 
-    // Second mutation must have fired with the P2 payload.
     expect(calls).toHaveLength(2);
-    // After both saves complete the hook should not be dirty.
-    // (dirty = payloadKey !== lastSavedRef; lastSavedRef is set to P2's key)
-    expect(result.current.dirty).toBe(false);
+    expect(calls[1]).toEqual({ ...payloadP2, version: 2 });
+    expect(result.current.dirty).toBe(true);
   });
 
-  it("invalidates leadForm queries after successful save (cross-tab sync)", async () => {
+  it("invalidates leadForm query projections after a successful save", async () => {
     const { wrapper, queryClient, writePort } = buildHarness();
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
@@ -136,11 +143,11 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
     let resolveSecond!: () => void;
     let n = 0;
     const { wrapper, calls, writePort } = buildHarness({
-      mutationFn: () => {
+      mutationFn: (request) => {
         n += 1;
-        return new Promise<unknown>((resolve) => {
-          if (n === 1) resolveFirst = () => resolve({ ok: true });
-          else resolveSecond = () => resolve({ ok: true });
+        return new Promise<ReportSectionReadModel>((resolve) => {
+          if (n === 1) resolveFirst = () => resolve(makeResponse(request));
+          else resolveSecond = () => resolve(makeResponse(request));
         });
       },
     });
@@ -194,14 +201,14 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
     let rejectFirst!: () => void;
     let callCount = 0;
     const { wrapper, calls, writePort } = buildHarness({
-      mutationFn: () => {
+      mutationFn: (request) => {
         callCount += 1;
         if (callCount === 1) {
-          return new Promise<unknown>((_resolve, reject) => {
+          return new Promise<ReportSectionReadModel>((_resolve, reject) => {
             rejectFirst = () => reject(new Error("save A failed"));
           });
         }
-        return Promise.resolve({ version: 2 });
+        return Promise.resolve(makeResponse(request));
       },
     });
     const { result, rerender } = renderHook(
@@ -244,7 +251,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
       await vi.advanceTimersByTimeAsync(1);
     });
     expect(calls).toHaveLength(2);
-    expect((calls[1] as DraftSavePayload).items[0]?.text).toBe("edit B");
+    expect(expectDefined(calls[1]).items[0]?.text).toBe("edit B");
     expect(result.current.dirty).toBe(false);
   });
 
@@ -255,11 +262,11 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
       let resolveFirst!: () => void;
       let n = 0;
       const { wrapper, calls, writePort } = buildHarness({
-        mutationFn: () => {
+        mutationFn: (request) => {
           n += 1;
           if (n === 1) {
-            return new Promise<unknown>((resolve) => {
-              resolveFirst = () => resolve({ ok: true });
+            return new Promise<ReportSectionReadModel>((resolve) => {
+              resolveFirst = () => resolve(makeResponse(request));
             });
           }
           return Promise.reject(new Error("queued save failed"));
@@ -308,16 +315,16 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
     let resolveFirst!: () => void;
     let n = 0;
     const { wrapper, calls, writePort } = buildHarness({
-      mutationFn: () => {
+      mutationFn: (request) => {
         n += 1;
         if (n === 1) {
-          return new Promise<unknown>((resolve) => {
+          return new Promise<ReportSectionReadModel>((resolve) => {
             // First save advances the row to version 2; the queued drain must
             // rebase onto THIS value, not the stale prop (version 1).
-            resolveFirst = () => resolve({ version: 2 });
+            resolveFirst = () => resolve(makeResponse(request, 2));
           });
         }
-        return Promise.resolve({ version: 3 });
+        return Promise.resolve(makeResponse(request, 3));
       },
     });
     // Section B is freshly loaded + clean, so it never autosaves on its own —
@@ -387,7 +394,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
       await vi.runAllTimersAsync();
     });
     expect(calls).toHaveLength(2);
-    const drained = calls[1] as DraftSavePayload;
+    const drained = expectDefined(calls[1]);
     expect(drained.reportSectionId).toBe(SECTION_ID);
     expect(drained.items[0]?.text).toBe("a2");
     // Guardrail: the drain carries the version the FIRST save bumped to (2),
@@ -398,9 +405,9 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
   it("a section-A save resolving after navigation to B does not dirty B or schedule a save for it", async () => {
     let resolveFirst!: () => void;
     const { wrapper, calls, writePort } = buildHarness({
-      mutationFn: () =>
-        new Promise<unknown>((resolve) => {
-          resolveFirst = () => resolve({ ok: true });
+      mutationFn: (request) =>
+        new Promise<ReportSectionReadModel>((resolve) => {
+          resolveFirst = () => resolve(makeResponse(request));
         }),
     });
     const bPayload = makePayloadFor(SECTION_B, "b-clean");
@@ -495,13 +502,13 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
 
     // The expected version sent to the server is the prop the owner holds — the
     // value the re-seed effect sets from the freshly-loaded/refetched row.
-    expect((calls[0] as DraftSavePayload).version).toBe(42);
+    expect(expectDefined(calls[0]).version).toBe(42);
   });
 
   it("reports the server-confirmed version to onVersionChange after a save", async () => {
     const onVersionChange = vi.fn();
     const { wrapper, writePort } = buildHarness({
-      mutationFn: () => Promise.resolve({ version: 7 }),
+      mutationFn: (request) => Promise.resolve(makeResponse(request, 7)),
     });
     const { rerender } = renderHook(
       ({ payload }: { payload: DraftSavePayload | null }) =>
@@ -563,7 +570,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
     const conflictError = new LeadFormWriteError("conflict", "stale");
     const { calls, wrapper, writePort } = buildHarness({
       mutationFn: () =>
-        new Promise<unknown>((_resolve, reject) => {
+        new Promise<ReportSectionReadModel>((_resolve, reject) => {
           rejectFirst = () => reject(conflictError);
         }),
     });

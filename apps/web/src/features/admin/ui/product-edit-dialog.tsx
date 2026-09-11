@@ -113,14 +113,20 @@ function ProductFormFields({
   onFormChange,
   leads,
   leadProductCount,
+  isSaving,
 }: {
   readonly form: ProductFormData;
   readonly onFormChange: (form: ProductFormData) => void;
   readonly leads: readonly AdminUserView[];
   readonly leadProductCount: number;
+  readonly isSaving: boolean;
 }) {
   return (
-    <div className="mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
+    <fieldset
+      disabled={isSaving}
+      aria-label="Product fields"
+      className="mt-4 min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto pr-1"
+    >
       <ProductNameField
         value={form.name}
         onChange={(name) => onFormChange({ ...form, name })}
@@ -131,7 +137,7 @@ function ProductFormFields({
         leads={leads}
         leadProductCount={leadProductCount}
       />
-    </div>
+    </fieldset>
   );
 }
 
@@ -182,13 +188,13 @@ export function ProductEditDialog({
           onFormChange={onFormChange}
           leads={leads}
           leadProductCount={leadProductCount}
+          isSaving={isSaving}
         />
         <AdminEntityDialogActions
           saveLabel={editingProduct !== null ? "Save Changes" : "Add Product"}
           isSaving={isSaving}
           canSave={canSave}
           onClose={closeIfIdle}
-          saveDisabled={isSaving || !canSave}
         />
       </form>
     </DialogSurface>

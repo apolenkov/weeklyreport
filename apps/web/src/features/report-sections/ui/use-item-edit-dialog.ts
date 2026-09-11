@@ -1,10 +1,13 @@
+import type { ParentActivityOption } from "../model/record-parent";
 import type { KanbanItem, Product, RiskEntry } from "../model/types";
 import { deriveItemEditFields } from "./item-edit-dialog-derive";
-import type { ParentActivityOption } from "./parent-picker";
+import type { ItemEditDraftStore } from "./item-edit-draft-store";
 import { useItemEditFormState } from "./use-item-edit-form-state";
 import { useItemEditSave } from "./use-item-edit-save";
 
 interface UseItemEditDialogArgs {
+  readonly presentation?: "dialog" | "inline" | undefined;
+  readonly draftStore?: ItemEditDraftStore | undefined;
   readonly item: KanbanItem | null;
   readonly products: readonly Product[];
   readonly activities: readonly ParentActivityOption[];
@@ -41,6 +44,12 @@ function buildItemEditHandle(
       formState.setErrors((prev) => ({ ...prev, text: undefined }));
     },
     textError: formState.errors.text,
+    nextStepText: formState.nextStepText,
+    nextStepTextError: formState.errors.nextStepText,
+    onNextStepTextChange: (v: string) => {
+      formState.setNextStepText(v);
+      formState.setErrors((prev) => ({ ...prev, nextStepText: undefined }));
+    },
     priorityRank: formState.priorityRank,
     onPriorityRankChange: formState.setPriorityRank,
     rankOptions: derived.rankOptions,
@@ -80,6 +89,8 @@ export function useItemEditDialog(args: UseItemEditDialogArgs) {
     defaultProductId: args.defaultProductId,
     defaultActivityId: args.defaultActivityId,
     onCancel: args.onCancel,
+    presentation: args.presentation,
+    draftStore: args.draftStore,
   });
 
   const derived = deriveItemEditFields({
@@ -103,6 +114,7 @@ export function useItemEditDialog(args: UseItemEditDialogArgs) {
     currentUserName: args.currentUserName,
     dialogSurfaceRef: formState.dialogSurfaceRef,
     text: formState.text,
+    nextStepText: formState.nextStepText,
     status: formState.status,
     pausedReason: formState.pausedReason,
     priorityRank: formState.priorityRank,

@@ -182,7 +182,20 @@ describe("lead form draft merge helpers", () => {
   });
 
   it("merges product and activity status updates without changing unrelated rows", () => {
-    const section = makeDraftMergeSection();
+    const baseSection = makeDraftMergeSection();
+    const unrelatedActivity = {
+      activityId: "aaaaaaaa-1111-4111-8111-111111111111",
+      activityName: "Release coordination",
+      status: "red" as const,
+      jiraAccounts: [],
+      linkedProducts: [],
+      derivedStatus: "red" as const,
+      alarmFloor: "red" as const,
+    };
+    const section = {
+      ...baseSection,
+      activities: [...baseSection.activities, unrelatedActivity],
+    };
     const products: Product[] = [
       {
         id: PROJECT_ID,
@@ -221,6 +234,11 @@ describe("lead form draft merge helpers", () => {
       activityId: ACTIVITY_ID,
       status: "yellow",
     });
+    expect(
+      activityResult.activities.find(
+        (activity) => activity.activityId === unrelatedActivity.activityId,
+      ),
+    ).toEqual(unrelatedActivity);
   });
 
   it("patches an existing item by id so published-lineage identity survives move actions", () => {

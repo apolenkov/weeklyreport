@@ -18,7 +18,7 @@ import {
   ReviewModeToggle,
   SubmissionFilterToggle,
 } from "../../../review";
-import { NoSubmissionsEmptyState } from "./weekly-report-empty-state";
+import { ReportEmptyState } from "./weekly-report-empty-state";
 import {
   AcknowledgeSurface,
   ReportAccordionBody,
@@ -30,6 +30,7 @@ import { isSubmittedSection } from "./weekly-report-page-helpers";
 
 export interface ReportContentProps {
   readonly hasAnyContent: boolean;
+  readonly submissionCount: number;
   readonly periodStatus: PeriodStatus;
   readonly periodLabel: string;
   readonly scope: "product" | "lead";
@@ -52,6 +53,7 @@ export interface ReportContentProps {
   readonly focusedProductId: string | undefined;
   readonly scrollTargetProductId: string | undefined;
   readonly focusedLeadId: string | undefined;
+  readonly overviewNavigationEpochs: ReadonlyMap<string, number>;
   readonly onNavigateOverview: (targetId: string) => void;
 }
 
@@ -141,7 +143,8 @@ type SectionsSurfaceKeys =
   | "scope"
   | "focusedProductId"
   | "scrollTargetProductId"
-  | "focusedLeadId";
+  | "focusedLeadId"
+  | "overviewNavigationEpochs";
 
 function ReportSectionsSurface({
   reviewEnabled,
@@ -152,6 +155,7 @@ function ReportSectionsSurface({
   focusedProductId,
   scrollTargetProductId,
   focusedLeadId,
+  overviewNavigationEpochs,
   ...toolbar
 }: SectionsToolbarProps & Pick<ReportContentProps, SectionsSurfaceKeys>) {
   return (
@@ -178,6 +182,7 @@ function ReportSectionsSurface({
         focusedProductId={focusedProductId}
         scrollTargetProductId={scrollTargetProductId}
         focusedLeadId={focusedLeadId}
+        overviewNavigationEpochs={overviewNavigationEpochs}
         review={
           toolbar.reviewMode === "review" ? reviewModel.context : undefined
         }
@@ -190,7 +195,12 @@ function ReportSectionsSurface({
 // submitted count; otherwise review surfaces + submitted-only-filtered accordion.
 export function ReportContent(props: ReportContentProps) {
   if (!props.hasAnyContent && props.periodStatus !== "published") {
-    return <NoSubmissionsEmptyState periodLabel={props.periodLabel} />;
+    return (
+      <ReportEmptyState
+        periodLabel={props.periodLabel}
+        submissionCount={props.submissionCount}
+      />
+    );
   }
 
   return (
@@ -229,6 +239,7 @@ export function ReportContent(props: ReportContentProps) {
           focusedProductId={props.focusedProductId}
           scrollTargetProductId={props.scrollTargetProductId}
           focusedLeadId={props.focusedLeadId}
+          overviewNavigationEpochs={props.overviewNavigationEpochs}
           canReviewAny={props.canReviewAny}
           reviewMode={props.reviewMode}
           onReviewModeChange={props.onReviewModeChange}

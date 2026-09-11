@@ -17,7 +17,7 @@ const BASE_PROPS = {
 };
 
 describe("StageStep", () => {
-  it("renders the required stage multi-select with the given props", () => {
+  it("renders the stage multi-select with the given props", () => {
     const onChange = vi.fn();
     render(<StageStep {...BASE_PROPS} onChange={onChange} />);
 

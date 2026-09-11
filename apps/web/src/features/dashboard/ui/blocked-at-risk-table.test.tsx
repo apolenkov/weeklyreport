@@ -8,7 +8,8 @@ import { BlockedAtRiskTable } from "./blocked-at-risk-table";
 
 const oneItem = [
   {
-    id: "risk-1",
+    productId: "10000000-0000-4000-8000-000000000001",
+    authorId: "10000000-0000-4000-8000-000000000002",
     severity: "blocked" as const,
     product: "Billing",
     stage: "Testing",
@@ -45,7 +46,8 @@ describe("BlockedAtRiskTable — aria-hidden on decorative SVG icons", () => {
 describe("BlockedAtRiskTable — grouping by product", () => {
   const sameProduct = [
     {
-      id: "r1",
+      productId: "10000000-0000-4000-8000-000000000001",
+      authorId: "10000000-0000-4000-8000-000000000002",
       severity: "blocked" as const,
       product: "Marketing Portal",
       stage: "Dev",
@@ -53,7 +55,8 @@ describe("BlockedAtRiskTable — grouping by product", () => {
       description: "Vendor patch pending",
     },
     {
-      id: "r2",
+      productId: "10000000-0000-4000-8000-000000000001",
+      authorId: "10000000-0000-4000-8000-000000000003",
       severity: "at-risk" as const,
       product: "Marketing Portal",
       stage: "Testing",
@@ -83,7 +86,8 @@ describe("BlockedAtRiskTable — grouping by product", () => {
         items={[
           ...sameProduct,
           {
-            id: "r3",
+            productId: "10000000-0000-4000-8000-000000000004",
+            authorId: "10000000-0000-4000-8000-000000000005",
             severity: "at-risk",
             product: "Billing",
             stage: "Dev",
@@ -104,6 +108,33 @@ describe("BlockedAtRiskTable — grouping by product", () => {
     // Total count badge sums across groups, not per-group.
     expect(screen.getByText("3 issues")).toBeVisible();
   });
+
+  it("renders separate cards for distinct products with the same display name", () => {
+    const first = sameProduct[0];
+    const second = sameProduct[1];
+    if (!first || !second) throw new Error("expected two product fixtures");
+
+    render(
+      <BlockedAtRiskTable
+        items={[
+          first,
+          {
+            ...second,
+            productId: "10000000-0000-4000-8000-000000000006",
+            description: "Other same-name product",
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /blocked & at risk/i }));
+
+    expect(
+      screen.getAllByRole("heading", { name: "Marketing Portal" }),
+    ).toHaveLength(2);
+    expect(screen.getByText("Vendor patch pending")).toBeVisible();
+    expect(screen.getByText("Other same-name product")).toBeVisible();
+  });
 });
 
 describe("BlockedAtRiskTable", () => {
@@ -120,10 +151,12 @@ describe("BlockedAtRiskTable", () => {
   });
 
   it("is collapsed by default and expands on click when issues exist", () => {
-    render(
+    const { container } = render(
       <BlockedAtRiskTable
         items={[
           {
+            productId: "10000000-0000-4000-8000-000000000001",
+            authorId: "10000000-0000-4000-8000-000000000002",
             severity: "blocked",
             product: "Billing",
             stage: "Testing",
@@ -141,10 +174,20 @@ describe("BlockedAtRiskTable", () => {
     // Collapsed by default — the report below carries the same content.
     expect(trigger).not.toBeDisabled();
     expect(trigger).toHaveAttribute("aria-expanded", "false");
+    const panel = container.querySelector("[style*='grid-template-rows']");
+    expect(panel).toHaveClass("motion-reduce:transition-none");
+    expect(panel).toHaveStyle({ gridTemplateRows: "0fr" });
+    expect(trigger.querySelector("svg.lucide-chevron-down")).toHaveClass(
+      "motion-reduce:transition-none",
+    );
 
     fireEvent.click(trigger);
 
     expect(trigger).toHaveAttribute("aria-expanded", "true");
+    expect(panel).toHaveStyle({ gridTemplateRows: "1fr" });
     expect(screen.getByText("Needs approval")).toBeVisible();
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(panel).toHaveStyle({ gridTemplateRows: "0fr" });
   });
 });

@@ -16,7 +16,8 @@ interface SaveNowButtonProps {
   autosave: SaveNowButtonState;
 }
 
-// State → label/icon mapping, kept out of the component for complexity budget.
+// In-flight presentation takes precedence, followed by the saved flash, error,
+// and the idle/pending Save presentation.
 function deriveSaveView(
   state: SaveState,
   isSaving: boolean,

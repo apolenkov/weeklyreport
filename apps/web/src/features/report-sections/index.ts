@@ -51,8 +51,10 @@ export {
   splitItemBoard,
 } from "./model/next-week-columns";
 export { sortByPriorityRank } from "./model/priority/priority-sort";
+export type { ParentActivityOption, RecordParent } from "./model/record-parent";
 export { resolveRecordParent } from "./model/record-parent";
 export { reportHasContent } from "./model/report-content";
+export { projectReportHealthPulse } from "./model/report-health-pulse";
 export { toNavigationPeriod } from "./model/report-period";
 export {
   STAGE_CHIP_BOX_HEIGHT,
@@ -119,10 +121,15 @@ export { PublishedRecordMarker } from "./ui/item-card-actions";
 export { ItemDialogStack } from "./ui/item-dialog-stack";
 export { ItemEditDialog } from "./ui/item-edit-dialog";
 export { resolveSaveProduct } from "./ui/item-edit-dialog-helpers";
+export {
+  createItemEditDraftStore,
+  type ItemEditDraftStore,
+} from "./ui/item-edit-draft-store";
+export { ItemInlineEditor } from "./ui/item-inline-editor";
 export { NextWeekSection } from "./ui/next-week/next-week-section";
-export type { ParentActivityOption, RecordParent } from "./ui/parent-picker";
 export { ParentPicker } from "./ui/parent-picker";
 export { PortfolioOverviewTable } from "./ui/portfolio/portfolio-overview-table";
 export { StageChip } from "./ui/stage-chip";
 export { StageStep } from "./ui/stage-step";
 export { StatusOverview } from "./ui/status-overview";
+export type { StatusOverviewEditorSlot } from "./ui/status-overview-editor-slot";

@@ -151,8 +151,7 @@ function useGroupCommands(dialog: GroupDialogState) {
     archive: () => {
       if (!archiveTarget) return;
       archiveGroupMut.mutate({ groupId: archiveTarget.id });
-      // Close immediately (same pattern as users/reminders): the confirm dialog
-      // has no pending state, so leaving it open would allow a double-fire.
+      // This command closes after dispatch; cache refresh reports the result.
       dialog.setArchiveTarget(null);
     },
   };

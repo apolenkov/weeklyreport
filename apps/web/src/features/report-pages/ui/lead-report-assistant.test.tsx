@@ -358,6 +358,32 @@ describe("LeadReportAssistant", () => {
     ]);
   });
 
+  it("retries provider unavailability with the submitted question and tokens", async () => {
+    const mutation = renderAssistant();
+    mutation.mutationFn
+      .mockResolvedValueOnce({
+        kind: "clarification_required",
+        options: [{ label: "CRM Portal", token: "token-crm" }],
+      })
+      .mockResolvedValueOnce({ kind: "provider_unavailable" })
+      .mockResolvedValueOnce(successOutcome);
+    await openAssistant();
+    submitQuestion("What changed in CRM?");
+
+    fireEvent.click(await screen.findByRole("button", { name: "CRM Portal" }));
+    expect(
+      await screen.findByText(/AI service is temporarily unavailable/u),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    await screen.findByText("The release is on track.");
+
+    expect(mutation.calls).toEqual([
+      { question: "What changed in CRM?", resolutionTokens: [] },
+      { question: "What changed in CRM?", resolutionTokens: ["token-crm"] },
+      { question: "What changed in CRM?", resolutionTokens: ["token-crm"] },
+    ]);
+  });
+
   it("shows busy state, prevents duplicate submit, and supports retry after errors", async () => {
     const mutation = renderAssistant();
     let resolveFirst: ((value: unknown) => void) | undefined;

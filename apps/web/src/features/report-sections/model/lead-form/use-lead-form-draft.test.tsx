@@ -1,11 +1,7 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
-import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 
-import { TRPCProxyContext } from "../../../../shared/lib/trpc/trpc-context";
-import { createMockTRPC } from "../../../../test-utils/mock-trpc";
 import { makeReportSectionFixture } from "../../../../test-utils/report-section-fixtures";
 import type { LeadFormLoadedContext } from "./lead-form-submit-context";
 import { InMemoryLeadFormWriteAdapter } from "./lead-form-write-port.in-memory";
@@ -41,47 +37,28 @@ const LOADED: LeadFormLoadedContext = {
 };
 
 function renderDraft(loaded: LeadFormLoadedContext = LOADED) {
-  const { proxy } = createMockTRPC([
-    { path: ["reports", "saveDraft"], mutation: true },
-    { path: ["leadForm", "byPeriod"] },
-  ]);
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  function Wrapper({ children }: { readonly children: ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <TRPCProxyContext.Provider value={proxy}>
-          {children}
-        </TRPCProxyContext.Provider>
-      </QueryClientProvider>
-    );
-  }
   const writePort = new InMemoryLeadFormWriteAdapter({
     saveDraft: () => Promise.resolve({ ...makeSection(), version: 2 }),
     submit: () => Promise.resolve({ ...makeSection(), version: 2 }),
   });
-  const rendered = renderHook(
-    () => {
-      const draft = useLeadFormDraft({
-        generation: `${REPORT_ID}:${SECTION_ID}`,
-        serverSection: makeSection(),
-        sectionIdForActions: SECTION_ID,
-        serverReadOnly: false,
-        refetchSection: () => Promise.resolve(),
-        crossAuthors: [],
-        isEveryone: false,
-        writePort,
-      });
-      const quickAdd = useLeadFormQuickAdd({
-        apply: draft.apply,
-        generation: draft.generation,
-        loaded,
-      });
-      return { ...draft, ...quickAdd };
-    },
-    { wrapper: Wrapper },
-  );
+  const rendered = renderHook(() => {
+    const draft = useLeadFormDraft({
+      generation: `${REPORT_ID}:${SECTION_ID}`,
+      serverSection: makeSection(),
+      sectionIdForActions: SECTION_ID,
+      serverReadOnly: false,
+      refetchSection: () => Promise.resolve(),
+      crossAuthors: [],
+      isEveryone: false,
+      writePort,
+    });
+    const quickAdd = useLeadFormQuickAdd({
+      apply: draft.apply,
+      generation: draft.generation,
+      loaded,
+    });
+    return { ...draft, ...quickAdd };
+  });
   return rendered;
 }
 

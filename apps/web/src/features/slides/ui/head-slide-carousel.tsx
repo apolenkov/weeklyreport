@@ -84,12 +84,12 @@ function keepSelectedCardVisible(
   const viewportRect = viewport.getBoundingClientRect();
   const selectedCardRect = selectedCard.getBoundingClientRect();
   const currentScrollLeft = viewport.scrollLeft;
+  // Match snap-start so snapping cannot undo a right-edge visibility scroll.
   const targetScrollLeft =
-    selectedCardRect.left < viewportRect.left
+    selectedCardRect.left < viewportRect.left ||
+    selectedCardRect.right > viewportRect.right
       ? currentScrollLeft + selectedCardRect.left - viewportRect.left
-      : selectedCardRect.right > viewportRect.right
-        ? currentScrollLeft + selectedCardRect.right - viewportRect.right
-        : currentScrollLeft;
+      : currentScrollLeft;
   if (targetScrollLeft === currentScrollLeft) return;
 
   const prefersReducedMotion =

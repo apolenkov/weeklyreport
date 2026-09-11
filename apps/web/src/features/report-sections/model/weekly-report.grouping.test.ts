@@ -26,6 +26,88 @@ function baseReport(
 }
 
 describe("mapWeeklyReport — grouping, severity & escalation", () => {
+  it("preserves a current result's next commitment and immutable outcome audit", () => {
+    const report = baseReport({
+      portfolioOverview: [
+        {
+          productId: PROJECT_A,
+          productName: "CRM Platform",
+          worstStatus: "green",
+          stageCount: 1,
+          leadNames: ["Lead One"],
+          leadIds: [AUTHOR_A],
+        },
+      ],
+      leadSections: [
+        {
+          activities: [],
+          reportSectionId: SECTION_A,
+          reportId: REPORT_ID,
+          authorId: AUTHOR_A,
+          authorName: "Lead One",
+          version: 1,
+          status: "submitted",
+          submittedAt: new Date("2026-04-19T18:00:00Z"),
+          projects: [
+            {
+              projectId: PROJECT_A,
+              projectName: "CRM Platform",
+              trafficLight: "green",
+            },
+          ],
+          items: [
+            {
+              id: "10000000-0000-4000-8000-000000000101",
+              stableId: "10000000-0000-4000-8000-000000000102",
+              projectId: PROJECT_A,
+              type: "current",
+              text: "Delivered API endpoints",
+              tag: "delivery",
+              workflowStatus: "in_progress",
+              carriedOver: false,
+              nextStepText: "Validate production metrics",
+              outcomeHistory: [
+                {
+                  id: "10000000-0000-4000-8000-000000000103",
+                  stableId: "10000000-0000-4000-8000-000000000102",
+                  outcome: "continue",
+                  reason: null,
+                  actorId: AUTHOR_A,
+                  actorName: "Lead One",
+                  occurredAt: "2026-04-19T18:00:00.000Z",
+                  beforeState: {
+                    type: "next",
+                    workflowStatus: "planned",
+                    pausedReason: null,
+                    nextStepText: null,
+                  },
+                  afterState: {
+                    type: "current",
+                    workflowStatus: "in_progress",
+                    pausedReason: null,
+                    nextStepText: "Validate production metrics",
+                  },
+                  reversesEventId: null,
+                },
+              ],
+            },
+          ],
+          risks: [],
+          decisions: [],
+        },
+      ],
+    });
+
+    const item = expectDefined(
+      mapWeeklyReport(report).products[0]?.currentWeek[0],
+    );
+
+    expect(item.nextStepText).toBe("Validate production metrics");
+    expect(item.outcomeHistory).toMatchObject([
+      { outcome: "continue", actorName: "Lead One" },
+    ]);
+  });
+
   it("groups items by project across multiple lead sections", () => {
     const report = baseReport({
       submissionCount: 2,
@@ -36,7 +118,10 @@ describe("mapWeeklyReport — grouping, severity & escalation", () => {
           productName: "CRM Platform",
           worstStatus: "yellow",
           stageCount: 7,
-          leadNames: ["Тимлид 1", "Maria K."],
+          leadNames: [
+            "Иванов Василий Петрович",
+            "Кузнецова Мария Александровна",
+          ],
           leadIds: [
             "695cfa6a-0dd8-50a5-84e5-06c474e139fd",
             "3ca366dd-180e-5668-be68-d0e0d1c65b9b",
@@ -139,7 +224,7 @@ describe("mapWeeklyReport — grouping, severity & escalation", () => {
     expect(result.portfolio).toHaveLength(2);
     const crm = result.portfolio.find((p) => p.id === PROJECT_A);
     expect(crm?.status).toBe("at-risk");
-    expect(crm?.leads).toBe("Тимлид 1 \u00B7 Maria K.");
+    expect(crm?.leads).toBe("Иванов В.П. \u00B7 Кузнецова М.А.");
     expect(crm?.currentWeekCount).toBe(1);
     expect(crm?.nextWeekCount).toBe(1);
     expect(crm?.riskCount).toBe(1);
@@ -157,7 +242,9 @@ describe("mapWeeklyReport — grouping, severity & escalation", () => {
     expect(expectDefined(crmReport?.currentWeek[0]).stageLead).toBe(
       "Dev+Testing \u00B7 Т1",
     );
-    expect(expectDefined(crmReport?.nextWeek[0]).stageLead).toBe("Planned");
+    expect(expectDefined(crmReport?.nextWeek[0]).stageLead).toBe(
+      "Planning \u00B7 Т1",
+    );
     expect(crmReport?.risks).toHaveLength(1);
     expect(expectDefined(crmReport?.risks[0]).severity).toBe("at-risk");
   });
@@ -212,15 +299,14 @@ describe("mapWeeklyReport — grouping, severity & escalation", () => {
     expect(expectDefined(crmReport?.risks[0]).severity).toBe("blocked");
   });
 
-  it("a blocking risk does NOT floor product status — export status follows the traffic light", () => {
-    // Head/PDF export uses server worstStatus from traffic lights only (no stage
-    // grid). Risks color live-form chips; they must not floor exported status.
+  it("uses the supplied portfolio status when a section also has a blocking risk", () => {
+    // This mapper projects the supplied portfolio status independently from
+    // the section risk rows.
     const report = baseReport({
       portfolioOverview: [
         {
           productId: PROJECT_A,
           productName: "CRM",
-          // Server aggregates worstStatus from traffic lights only (green here).
           worstStatus: "green",
           stageCount: 7,
           leadNames: ["Тимлид 1"],
@@ -324,8 +410,10 @@ describe("mapWeeklyReport — grouping, severity & escalation", () => {
       escalations: [
         {
           type: "at_risk",
+          productId: PROJECT_A,
           productName: "CRM",
           stageName: "Dev",
+          authorId: AUTHOR_A,
           leadName: "Тимлид 1",
           description: "OAuth slow due to vendor.",
         },
@@ -338,7 +426,50 @@ describe("mapWeeklyReport — grouping, severity & escalation", () => {
     expect(crmReport?.needsAttentionSeverity).toBe("at-risk");
   });
 
-  it("attaches a section's decisions and priorities to the section's first project", () => {
+  it("joins aggregate attention by product id when product names collide", () => {
+    const report = baseReport({
+      portfolioOverview: [
+        {
+          productId: PROJECT_A,
+          productName: "Platform",
+          worstStatus: "green",
+          stageCount: 1,
+          leadNames: [],
+          leadIds: [],
+        },
+        {
+          productId: PROJECT_B,
+          productName: "Platform",
+          worstStatus: "yellow",
+          stageCount: 1,
+          leadNames: ["Lead One"],
+          leadIds: [AUTHOR_A],
+        },
+      ],
+      escalations: [
+        {
+          type: "unresolved_risk",
+          productId: PROJECT_B,
+          productName: "Platform",
+          stageName: "Testing",
+          authorId: AUTHOR_A,
+          leadName: "Lead One",
+          description: "Second product only",
+        },
+      ],
+    });
+
+    const result = mapWeeklyReport(report);
+    expect(
+      result.products.find((product) => product.id === PROJECT_A),
+    ).not.toHaveProperty("needsAttention");
+    expect(
+      result.products.find((product) => product.id === PROJECT_B)
+        ?.needsAttention,
+    ).toBe("Second product only");
+  });
+
+  it("attaches explicitly product-scoped decisions and priorities", () => {
     const report = baseReport({
       portfolioOverview: [
         {
@@ -481,7 +612,9 @@ describe("mapWeeklyReport — grouping, severity & escalation", () => {
   });
 
   it("preserves period info from the API", () => {
-    const result = mapWeeklyReport(baseReport({ periodStatus: "published" }));
+    const result = mapWeeklyReport(
+      baseReport({ periodState: "published", periodStatus: "published" }),
+    );
     expect(result.period.id).toBe(REPORT_ID);
     expect(result.period.dateRange).toBe("Apr 14–20, 2026");
     expect(result.period.isCurrent).toBe(false); // published periods aren't "current"

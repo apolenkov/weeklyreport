@@ -6,6 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { makeQueryState } from "../../../../test-utils/query-state";
+
 const mockReplace = vi.fn();
 let searchParamsValue = new URLSearchParams();
 vi.mock("next/navigation", () => ({
@@ -39,11 +41,9 @@ afterEach(() => {
 
 describe("ReportsLatestPage — redirect / empty / error wiring", () => {
   it("redirects to the resolved report with source=status&recovery=0 and shows resolving copy", () => {
-    vi.mocked(useQuery).mockReturnValue({
-      data: { reportId: REPORT_ID },
-      isLoading: false,
-      isError: false,
-    } as unknown as ReturnType<typeof useQuery>);
+    vi.mocked(useQuery).mockReturnValue(
+      makeQueryState({ data: { reportId: REPORT_ID } }),
+    );
 
     render(<ReportsLatestPage />);
 
@@ -58,11 +58,9 @@ describe("ReportsLatestPage — redirect / empty / error wiring", () => {
 
   it("PROPAGATES an incoming recovery=1 onto the resolved URL (loop guard)", () => {
     searchParamsValue = new URLSearchParams({ recovery: "1" });
-    vi.mocked(useQuery).mockReturnValue({
-      data: { reportId: REPORT_ID },
-      isLoading: false,
-      isError: false,
-    } as unknown as ReturnType<typeof useQuery>);
+    vi.mocked(useQuery).mockReturnValue(
+      makeQueryState({ data: { reportId: REPORT_ID } }),
+    );
 
     render(<ReportsLatestPage />);
 
@@ -72,12 +70,22 @@ describe("ReportsLatestPage — redirect / empty / error wiring", () => {
     );
   });
 
+  it("ignores a repeated recovery marker when resolving the destination", () => {
+    searchParamsValue = new URLSearchParams("recovery=1&recovery=0");
+    vi.mocked(useQuery).mockReturnValue(
+      makeQueryState({ data: { reportId: REPORT_ID } }),
+    );
+    render(<ReportsLatestPage />);
+    expect(mockReplace).toHaveBeenCalledWith(
+      `/reports/${REPORT_ID}?source=status&recovery=0`,
+      { scroll: false },
+    );
+  });
+
   it("shows the empty state and does not redirect when no report qualifies", () => {
-    vi.mocked(useQuery).mockReturnValue({
-      data: { reportId: null },
-      isLoading: false,
-      isError: false,
-    } as unknown as ReturnType<typeof useQuery>);
+    vi.mocked(useQuery).mockReturnValue(
+      makeQueryState({ data: { reportId: null } }),
+    );
 
     render(<ReportsLatestPage />);
 
@@ -91,11 +99,9 @@ describe("ReportsLatestPage — redirect / empty / error wiring", () => {
   });
 
   it("shows the error copy when the query errors", () => {
-    vi.mocked(useQuery).mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      isError: true,
-    } as unknown as ReturnType<typeof useQuery>);
+    vi.mocked(useQuery).mockReturnValue(
+      makeQueryState({ data: undefined, error: new Error("unavailable") }),
+    );
 
     render(<ReportsLatestPage />);
 
@@ -111,12 +117,13 @@ describe("ReportsLatestPage — redirect / empty / error wiring", () => {
 
   it("offers a real retry that refetches on the error state", () => {
     const refetch = vi.fn().mockResolvedValue(undefined);
-    vi.mocked(useQuery).mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      isError: true,
-      refetch,
-    } as unknown as ReturnType<typeof useQuery>);
+    vi.mocked(useQuery).mockReturnValue(
+      makeQueryState({
+        data: undefined,
+        error: new Error("unavailable"),
+        refetch,
+      }),
+    );
 
     render(<ReportsLatestPage />);
 
@@ -126,11 +133,9 @@ describe("ReportsLatestPage — redirect / empty / error wiring", () => {
   });
 
   it("shows the resolving copy while the query is loading", () => {
-    vi.mocked(useQuery).mockReturnValue({
-      data: undefined,
-      isLoading: true,
-      isError: false,
-    } as unknown as ReturnType<typeof useQuery>);
+    vi.mocked(useQuery).mockReturnValue(
+      makeQueryState({ data: undefined, isLoading: true }),
+    );
 
     render(<ReportsLatestPage />);
 

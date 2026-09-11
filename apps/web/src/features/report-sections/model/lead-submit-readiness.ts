@@ -1,3 +1,9 @@
+import {
+  type ReportSectionReadModel,
+  submitSectionSchema,
+  validateSubmitInput,
+} from "@customreport/shared";
+
 import type { AutosaveState } from "./autosave/autosave-types";
 import type { DraftSaveContent } from "./lead-section-draft-payload";
 import { computeCoupling, validateCoupling } from "./status-risk/coupling";
@@ -15,6 +21,7 @@ interface LeadSubmitBlockingIssue {
 }
 
 export interface LeadSubmitReadinessInput {
+  readonly draftSection: ReportSectionReadModel | null;
   readonly draftPayload: DraftSaveContent | null;
   readonly products: readonly Product[];
   readonly activities: readonly { id: string; name: string }[];
@@ -58,6 +65,29 @@ function couplingIssues(
       id: `risk-stage:${entry.productId}`,
       label: `${entry.productName}: specify stages for committed risks.`,
     }));
+}
+
+function submissionIssues(
+  input: LeadSubmitReadinessInput,
+): LeadSubmitBlockingIssue[] {
+  if (!input.draftSection || !input.draftPayload) return [];
+
+  const submitInput = submitSectionSchema.safeParse(
+    buildLeadSubmitPayload(input.draftPayload, input.draftSection.version),
+  );
+  if (!submitInput.success) {
+    return submitInput.error.issues.map((issue, index) => ({
+      id: `submit-schema:${issue.path.join(".")}:${issue.code}:${index}`,
+      label: issue.message,
+    }));
+  }
+
+  return validateSubmitInput(input.draftSection, submitInput.data).map(
+    (issue, index) => ({
+      id: `submit-validation:${issue.code}:${index}`,
+      label: issue.message,
+    }),
+  );
 }
 
 function statusLabelMaps(input: LeadSubmitReadinessInput) {
@@ -126,24 +156,6 @@ function stagePromotions(
   });
 }
 
-function unsetStatuses(
-  input: LeadSubmitReadinessInput,
-  promotions: readonly LeadSubmitStatusIdentity[],
-): LeadSubmitStatusIdentity[] {
-  const unsetIds = new Set([
-    ...(input.draftPayload?.projectStatuses ?? [])
-      .filter((status) => status.status == null)
-      .map((status) => `product:${status.projectId}`),
-    ...(input.draftPayload?.activityStatuses ?? [])
-      .filter((status) => status.status == null)
-      .map((status) => `activity:${status.activityId}`),
-    ...(input.draftPayload?.stageStatuses ?? [])
-      .filter((status) => status.status == null)
-      .map((status) => `stage:${status.projectId}:${status.stageId}`),
-  ]);
-  return promotions.filter((status) => unsetIds.has(status.id));
-}
-
 export function deriveLeadSubmitReadiness(
   input: LeadSubmitReadinessInput,
 ): LeadSubmitReadiness {
@@ -157,10 +169,11 @@ export function deriveLeadSubmitReadiness(
     ...(input.draftPayload
       ? []
       : [{ id: "missing-draft", label: "The report draft is not available." }]),
+    ...submissionIssues(input),
     ...couplingIssues(input.products, input.ownRisks),
   ];
   return {
-    unsetStatuses: unsetStatuses(input, willAutoPromote),
+    unsetStatuses: willAutoPromote,
     willAutoPromote,
     blockingIssues,
     autosaveState: input.autosaveState,

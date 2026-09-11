@@ -1,5 +1,8 @@
 "use client";
 
+import { shortNameFromName } from "@customreport/shared";
+import { type RefObject, useEffect, useRef } from "react";
+
 import {
   formatDateTime,
   formatPeriodRangeWithYear,
@@ -35,18 +38,22 @@ interface ReopenRequestRowProps {
 function ReopenRequestHeader({
   request: r,
   isResponding,
+  isPending,
   onStartRespond,
+  triggerRef,
 }: {
   readonly request: DashboardReopenRequest;
   readonly isResponding: boolean;
+  readonly isPending: boolean;
   readonly onStartRespond: () => void;
+  readonly triggerRef: RefObject<HTMLButtonElement | null>;
 }) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="space-y-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-semibold text-[var(--color-foreground)]">
-            {r.requestedBy.name}
+            {shortNameFromName(r.requestedBy.name)}
           </span>
           <span className="text-xs text-[var(--color-muted-foreground)]">
             {joinPeriodLabel(
@@ -64,7 +71,9 @@ function ReopenRequestHeader({
       </div>
       {!isResponding && (
         <button
+          ref={triggerRef}
           type="button"
+          disabled={isPending}
           onClick={onStartRespond}
           className="btn-press inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] bg-transparent px-3 py-1.5 text-xs font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2"
         >
@@ -87,12 +96,30 @@ export function ReopenRequestRow({
   isPending,
   pendingDecision,
 }: ReopenRequestRowProps) {
+  const respondButtonRef = useRef<HTMLButtonElement>(null);
+  const responseFieldRef = useRef<HTMLTextAreaElement>(null);
+  const restoreFocusAfterCancelRef = useRef(false);
+
+  useEffect(() => {
+    if (isResponding) {
+      responseFieldRef.current?.focus();
+      return;
+    }
+
+    if (restoreFocusAfterCancelRef.current) {
+      restoreFocusAfterCancelRef.current = false;
+      respondButtonRef.current?.focus();
+    }
+  }, [isResponding]);
+
   return (
     <li className="rounded-[var(--radius)] border border-[var(--color-border)] p-3">
       <ReopenRequestHeader
         request={r}
         isResponding={isResponding}
+        isPending={isPending}
         onStartRespond={onStartRespond}
+        triggerRef={respondButtonRef}
       />
 
       {r.reason && (
@@ -105,8 +132,12 @@ export function ReopenRequestRow({
         <ReopenRespondForm
           requestId={r.id}
           note={note}
+          textareaRef={responseFieldRef}
           onNoteChange={onNoteChange}
-          onCancel={onCancel}
+          onCancel={() => {
+            restoreFocusAfterCancelRef.current = true;
+            onCancel();
+          }}
           onReject={onReject}
           onApprove={onApprove}
           isPending={isPending}

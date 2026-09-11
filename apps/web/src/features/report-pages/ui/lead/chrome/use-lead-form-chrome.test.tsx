@@ -2,7 +2,6 @@
 
 import type { MyHistoryEntry } from "@customreport/shared";
 import { render } from "@testing-library/react";
-import { useEffect } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { SessionContext } from "../../../../../shared/lib/auth/session-provider";
@@ -34,7 +33,6 @@ function ChromeHarness({
     byPeriodData,
     history: HISTORY,
   });
-  useEffect(() => () => undefined, []);
   return null;
 }
 

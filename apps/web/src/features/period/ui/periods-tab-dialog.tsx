@@ -196,7 +196,7 @@ export function CreatePeriodDialog({
   const copy = DIALOG_COPY[isEdit ? "edit" : "create"];
 
   function handleSubmit() {
-    if (values.periodStart === "") return;
+    if (!validation.canSubmit) return;
     onSubmit(buildCreatePeriodValues(values, isEdit));
   }
 
@@ -208,20 +208,22 @@ export function CreatePeriodDialog({
       onCancel={guardedCancel}
       surfaceRef={surfaceRef}
     >
-      <CreatePeriodFields
-        periodStart={values.periodStart}
-        onPeriodStartChange={setters.setPeriodStart}
-        periodEnd={values.periodEnd}
-        onPeriodEndChange={setters.setPeriodEnd}
-        isEdit={isEdit}
-        periodEndError={validation.periodEndError}
-        deadline={values.deadline}
-        onDeadlineChange={setters.setDeadline}
-        deadlineError={validation.deadlineError}
-        deadlineClearHint={validation.deadlineClearHint}
-        weekLabel={values.weekLabel}
-        onWeekLabelChange={setters.setWeekLabel}
-      />
+      <fieldset disabled={isPending} className="m-0 min-w-0 border-0 p-0">
+        <CreatePeriodFields
+          periodStart={values.periodStart}
+          onPeriodStartChange={setters.setPeriodStart}
+          periodEnd={values.periodEnd}
+          onPeriodEndChange={setters.setPeriodEnd}
+          isEdit={isEdit}
+          periodEndError={validation.periodEndError}
+          deadline={values.deadline}
+          onDeadlineChange={setters.setDeadline}
+          deadlineError={validation.deadlineError}
+          deadlineClearHint={validation.deadlineClearHint}
+          weekLabel={values.weekLabel}
+          onWeekLabelChange={setters.setWeekLabel}
+        />
+      </fieldset>
       <PeriodDialogActions
         onCancel={guardedCancel}
         onSubmit={handleSubmit}

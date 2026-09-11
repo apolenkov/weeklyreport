@@ -3,6 +3,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const replace = vi.fn();
@@ -21,16 +22,18 @@ vi.mock("next/navigation", () => ({
 import type { ReportPeriod } from "../../report-sections";
 import { PeriodNavigator } from "./period-navigator";
 
+const CURRENT_PERIOD: ReportPeriod = {
+  id: "2026-W17",
+  periodStart: new Date("2026-04-21T00:00:00.000Z"),
+  sourceSectionId: "sec-W17",
+  weekLabel: "Week 17",
+  dateRange: "Apr 21–27, 2026",
+  isCurrent: true,
+  isSubmitted: false,
+};
+
 const PERIODS: ReportPeriod[] = [
-  {
-    id: "2026-W17",
-    periodStart: new Date("2026-04-21T00:00:00.000Z"),
-    sourceSectionId: "sec-W17",
-    weekLabel: "Week 17",
-    dateRange: "Apr 21–27, 2026",
-    isCurrent: true,
-    isSubmitted: false,
-  },
+  CURRENT_PERIOD,
   {
     id: "2026-W16",
     periodStart: new Date("2026-04-14T00:00:00.000Z"),
@@ -50,6 +53,19 @@ const PERIODS: ReportPeriod[] = [
     isSubmitted: true,
     archived: true,
   },
+];
+
+const SCHEDULED_PERIODS: ReportPeriod[] = [
+  CURRENT_PERIOD,
+  {
+    id: "2026-W18",
+    periodStart: new Date("2026-04-28T00:00:00.000Z"),
+    weekLabel: "Week 18",
+    dateRange: "Apr 28–May 4, 2026",
+    isCurrent: false,
+    periodState: "scheduled",
+  },
+  ...PERIODS.slice(1),
 ];
 
 function getTrigger() {
@@ -257,6 +273,31 @@ describe("PeriodNavigator (lead)", () => {
       expect(document.activeElement).toBe(trigger);
     });
 
+    it.each([
+      { shift: false, neighbor: "Next period" },
+      { shift: true, neighbor: "Previous period" },
+    ])(
+      "lets focus leave the open trigger with Tab (shift=$shift)",
+      async ({ shift, neighbor }) => {
+        const user = userEvent.setup();
+        navigationState.pathname = "/lead/report/2026-W16";
+        render(<PeriodNavigator periods={PERIODS} />);
+        const trigger = getTrigger();
+        await user.click(trigger);
+        expect(screen.getByRole("listbox")).toBeInTheDocument();
+
+        await user.tab({ shift });
+
+        expect(screen.getByRole("button", { name: neighbor })).toHaveFocus();
+        expect(screen.getByRole("listbox")).toBeInTheDocument();
+
+        await user.keyboard("{Escape}");
+
+        expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+        expect(trigger).toHaveFocus();
+      },
+    );
+
     it("scrolls the active option into view on ArrowDown", () => {
       // scrollIntoView is a global no-op stub (jsdom omits it); spy on it so
       // the hook's keep-active-option-visible effect is observable.
@@ -290,6 +331,36 @@ describe("PeriodNavigator (lead)", () => {
     navigationState.pathname = "/lead/report/2026-W16";
     render(<PeriodNavigator periods={PERIODS} />);
     expect(getTrigger()).toHaveTextContent("Apr 14–20, 2026");
+  });
+
+  it("labels an addressed scheduled period without moving the Current marker", () => {
+    navigationState.pathname = "/head/report/2026-W18";
+    render(
+      <PeriodNavigator
+        periods={SCHEDULED_PERIODS}
+        urlBuilder={(periodId) => `/head/report/${periodId}`}
+      />,
+    );
+
+    expect(getTrigger()).toHaveTextContent("Apr 28–May 4, 2026 (Scheduled)");
+    expect(getTrigger()).not.toHaveTextContent("(Current)");
+
+    fireEvent.click(getTrigger());
+    expect(
+      screen.getByRole("option", {
+        name: /Apr 21–27, 2026 \(Current\)/,
+      }),
+    ).toHaveAttribute("aria-selected", "false");
+    expect(
+      screen.getByRole("option", {
+        name: /Apr 28–May 4, 2026 \(Scheduled\)/,
+      }),
+    ).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: "Previous period" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next period" }));
+    expect(push).toHaveBeenNthCalledWith(1, "/head/report/2026-W16");
+    expect(push).toHaveBeenNthCalledWith(2, "/head/report/2026-W17");
   });
 
   it("trigger shows the Archived badge when the selected period is archived", () => {
@@ -330,6 +401,12 @@ describe("PeriodNavigator (lead)", () => {
     expect(addressedOption).toHaveAttribute("aria-selected", "true");
     expect(newestOption).toHaveAttribute("aria-selected", "false");
 
+    fireEvent.mouseDown(newestOption);
+    expect(push).toHaveBeenCalledWith("/reports/2026-W17");
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+
+    // Keep the adjacent-navigation assertions independent from the direct pick.
+    push.mockClear();
     fireEvent.click(screen.getByRole("button", { name: "Previous period" }));
     fireEvent.click(screen.getByRole("button", { name: "Next period" }));
     expect(push).toHaveBeenNthCalledWith(1, "/reports/2026-W15");
@@ -354,6 +431,17 @@ describe("PeriodNavigator (lead)", () => {
     render(<PeriodNavigator periods={PERIODS} />);
     // No path-segment id → defaults to PERIODS[0] (2026-W17, the current week).
     expect(getTrigger()).toHaveTextContent("Apr 21–27, 2026 (Current)");
+  });
+
+  it("does not carry repeated report scalars into another period", () => {
+    navigationState.searchParams = new URLSearchParams(
+      "mode=slides&mode=edit&feedback=a&feedback=b&archive=1&tag=a&tag=b",
+    );
+    render(<PeriodNavigator periods={PERIODS} />);
+    fireEvent.click(screen.getByRole("button", { name: /previous period/i }));
+    expect(push).toHaveBeenCalledWith(
+      "/lead/report/2026-W16?archive=1&tag=a&tag=b",
+    );
   });
 
   // Two navigators can coexist on one page. Module-level constant ids would

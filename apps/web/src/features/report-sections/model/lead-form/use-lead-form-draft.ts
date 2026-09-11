@@ -24,7 +24,8 @@ interface UseLeadFormDraftArgs {
   readonly isEveryone: boolean;
 }
 
-// Live view-model enters as plain `loaded` — no ref crosses into this module.
+// Compose the core draft lifecycle with readiness derived from the current
+// draft and cross-author inputs.
 export function useLeadFormDraft({
   writePort,
   generation,

@@ -1,10 +1,29 @@
 "use client";
 
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 
 import type { LeadFormGeneration } from "./lead-form-generation";
 import type { LeadFormWritePort } from "./lead-form-write-port";
 import { useGenerationState } from "./use-generation-state";
+
+function useCommittedGenerationCapture(generation: LeadFormGeneration | null) {
+  const activation = useMemo(() => ({ generation }), [generation]);
+  const currentActivation = useRef<typeof activation | null>(null);
+
+  useEffect(() => {
+    currentActivation.current = activation;
+    return () => {
+      currentActivation.current = null;
+    };
+  }, [activation]);
+
+  return useCallback(() => {
+    return generation !== null && currentActivation.current === activation
+      ? () => currentActivation.current === activation
+      : null;
+  }, [activation, generation]);
+}
 
 export function useLeadFormRevoke({
   generation,
@@ -21,14 +40,18 @@ export function useLeadFormRevoke({
     generation,
     false,
   );
+  const captureGeneration = useCommittedGenerationCapture(generation);
 
   const revoke = async () => {
-    if (!sectionIdForActions) return;
+    const isCurrent = captureGeneration();
+    if (!sectionIdForActions || !isCurrent) return;
     try {
       await writePort.revoke({ reportSectionId: sectionIdForActions });
+      if (!isCurrent()) return;
       onRevoked();
       toast.success("Section unlocked");
     } catch (error: unknown) {
+      if (!isCurrent()) return;
       const message = error instanceof Error ? error.message : "Revoke failed";
       toast.error(message);
     }

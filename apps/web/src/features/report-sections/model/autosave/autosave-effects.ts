@@ -40,8 +40,13 @@ export function useDebouncedSave(deps: DebouncedSaveArgs): void {
     if (!enabled || !dirty || !reportSectionId) {
       // A pending announcement whose edit is no longer dirty is stale (first
       // render races the baseline-priming effect; undo restores saved content).
-      // Only pending→idle is ours — the mutation callbacks own the rest.
-      setState((current) => (current === "pending" ? "idle" : current));
+      // Undoing a failed change to the confirmed baseline clears its error.
+      setState((current) => {
+        if (current === "pending") return "idle";
+        if (current === "error" && !dirty && getRefs().lastSaved === payloadKey)
+          return "idle";
+        return current;
+      });
       return;
     }
 

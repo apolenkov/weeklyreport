@@ -100,9 +100,8 @@ describe("LeadSlidesClient selected-index clamp", () => {
     );
   });
 
-  it("recovers from a negative index stored by an empty-deck arrow press once slides arrive", async () => {
-    // status-slide-deck stores Math.min(length - 1, next) — on an empty deck
-    // an ArrowRight lands at -1, which an upper-bound-only clamp accepts.
+  it("recovers from an invalid negative downstream selection once slides arrive", async () => {
+    // The mocked deck exercises the defensive lower bound through onSelect.
     holder.slides = [];
     const { rerender } = render(
       <LeadSlidesClient

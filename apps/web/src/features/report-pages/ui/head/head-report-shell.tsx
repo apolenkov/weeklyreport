@@ -2,8 +2,9 @@
 
 import type { WeeklyReportGetResponse } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { type RefObject, useMemo, useRef } from "react";
 
+import { useFullscreen } from "../../../../shared/hooks/browser/use-fullscreen";
 import { useTRPC } from "../../../../shared/lib/trpc/trpc-context";
 import { ReportToolbar } from "../../../../shared/ui/report-shell/report-toolbar";
 import {
@@ -13,7 +14,7 @@ import {
 import { ExportPdfButton } from "../../../pdf-export";
 import { deriveHeadPeriods } from "../../../period";
 import type { ReportPeriod } from "../../../report-sections";
-import { HeadSlidesClient, type SlideDensity } from "../../../slides";
+import { DeckToolbarControls, HeadSlidesClient } from "../../../slides";
 import { WeeklyReportPage } from "../weekly/weekly-report-page";
 import {
   HEAD_DEPARTMENT_LABEL,
@@ -78,8 +79,10 @@ function renderExportPdf(
 
 interface HeadReportBodyProps extends HeadReportShellProps {
   readonly scope: ReportShellScopeValue;
-  readonly density: SlideDensity;
-  readonly onDensityChange: (density: SlideDensity) => void;
+  readonly deckRef: RefObject<HTMLDivElement | null>;
+  readonly fullscreenToggleRef: RefObject<HTMLButtonElement | null>;
+  readonly isFullscreen: boolean;
+  readonly onToggleFullscreen: () => void;
   readonly isLoading: boolean;
   readonly exportPdf: React.ReactNode;
   readonly contextControls: React.ReactNode;
@@ -109,8 +112,10 @@ function HeadReportBody(props: HeadReportBodyProps) {
           <HeadSlidesClient
             reportId={props.reportId}
             scope={props.scope}
-            density={props.density}
-            onDensityChange={props.onDensityChange}
+            deckRef={props.deckRef}
+            fullscreenToggleRef={props.fullscreenToggleRef}
+            isFullscreen={props.isFullscreen}
+            onToggle={props.onToggleFullscreen}
           />
         </>
       ) : (
@@ -137,7 +142,13 @@ export function HeadReportShell({
 }: HeadReportShellProps) {
   // Scope + archive filter in the URL so refresh/shared links restore them.
   const urlState = useReportShellUrlState({ stripParams: HEAD_STRIP_PARAMS });
-  const [density, setDensity] = useState<SlideDensity>("document");
+  const deckRef = useRef<HTMLDivElement>(null);
+  const fullscreenToggleRef = useRef<HTMLButtonElement>(null);
+  const fullscreen = useFullscreen(
+    deckRef,
+    fullscreenToggleRef,
+    mode === "slides",
+  );
   const { periods, displayed, historyError, isLoading } = useHeadPeriodData(
     reportId,
     urlState.includeArchive,
@@ -152,8 +163,15 @@ export function HeadReportShell({
       urlState={urlState}
       historyError={historyError}
       historyLoading={isLoading}
-      density={density}
-      onDensityChange={setDensity}
+      fullscreenControl={
+        mode === "slides" ? (
+          <DeckToolbarControls
+            isFullscreen={fullscreen.isFullscreen}
+            onToggle={fullscreen.toggle}
+            toggleRef={fullscreenToggleRef}
+          />
+        ) : undefined
+      }
     />
   );
 
@@ -163,8 +181,10 @@ export function HeadReportShell({
       mode={mode}
       authorId={authorId}
       scope={urlState.scope}
-      density={density}
-      onDensityChange={setDensity}
+      deckRef={deckRef}
+      fullscreenToggleRef={fullscreenToggleRef}
+      isFullscreen={fullscreen.isFullscreen}
+      onToggleFullscreen={fullscreen.toggle}
       isLoading={isLoading}
       exportPdf={exportPdf}
       contextControls={contextControls}

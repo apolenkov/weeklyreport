@@ -1,6 +1,8 @@
 import type {
   DraftSavePayload,
   ReportSectionReadModel,
+  ResolvePlanInput,
+  RestorePlanInput,
   SubmitSectionPayload,
 } from "@customreport/shared";
 
@@ -18,6 +20,8 @@ export interface InMemoryLeadFormWriteHandlers {
   readonly submit: (
     input: SubmitSectionPayload,
   ) => Promise<ReportSectionReadModel>;
+  readonly resolvePlan?: LeadFormWritePort["resolvePlan"];
+  readonly restorePlan?: LeadFormWritePort["restorePlan"];
   readonly fillFrom?: LeadFormWritePort["fillFrom"];
   readonly revoke?: LeadFormWritePort["revoke"];
   readonly requestReopen?: LeadFormWritePort["requestReopen"];
@@ -26,6 +30,8 @@ export interface InMemoryLeadFormWriteHandlers {
 export interface InMemoryLeadFormWriteCalls {
   readonly saveDraft: DraftSavePayload[];
   readonly submit: SubmitSectionPayload[];
+  readonly resolvePlan: ResolvePlanInput[];
+  readonly restorePlan: RestorePlanInput[];
   readonly fillFrom: LeadFormFillFromInput[];
   readonly revoke: { readonly reportSectionId: string }[];
   readonly requestReopen: LeadFormReopenInput[];
@@ -34,6 +40,8 @@ export interface InMemoryLeadFormWriteCalls {
 const IDLE: LeadFormWritePending = {
   saveDraft: false,
   submit: false,
+  resolvePlan: false,
+  restorePlan: false,
   fillFrom: false,
   revoke: false,
   reopen: false,
@@ -45,6 +53,8 @@ export class InMemoryLeadFormWriteAdapter implements LeadFormWritePort {
   readonly calls: InMemoryLeadFormWriteCalls = {
     saveDraft: [],
     submit: [],
+    resolvePlan: [],
+    restorePlan: [],
     fillFrom: [],
     revoke: [],
     requestReopen: [],
@@ -65,6 +75,22 @@ export class InMemoryLeadFormWriteAdapter implements LeadFormWritePort {
   submit = async (input: SubmitSectionPayload) => {
     this.calls.submit.push(input);
     return this.handlers.submit(input);
+  };
+
+  resolvePlan = async (input: ResolvePlanInput) => {
+    this.calls.resolvePlan.push(input);
+    if (!this.handlers.resolvePlan) {
+      throw new Error("In-memory resolvePlan handler is not configured");
+    }
+    return this.handlers.resolvePlan(input);
+  };
+
+  restorePlan = async (input: RestorePlanInput) => {
+    this.calls.restorePlan.push(input);
+    if (!this.handlers.restorePlan) {
+      throw new Error("In-memory restorePlan handler is not configured");
+    }
+    return this.handlers.restorePlan(input);
   };
 
   fillFrom = async (input: LeadFormFillFromInput) => {

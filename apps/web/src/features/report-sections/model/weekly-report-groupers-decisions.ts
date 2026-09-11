@@ -138,9 +138,11 @@ export function buildProductToAuthorMap(
 // First escalation targeting the product, surfaced as the needsAttention banner.
 export function findNeedsAttention(
   api: WeeklyReportReadModel,
-  productName: string,
+  productId: string,
 ): { needsAttention?: string; needsAttentionSeverity?: "blocked" | "at-risk" } {
-  const escalation = api.escalations.find((e) => e.productName === productName);
+  const escalation = api.escalations.find(
+    (candidate) => candidate.productId === productId,
+  );
   if (!escalation) return {};
   return {
     needsAttention: escalation.description,

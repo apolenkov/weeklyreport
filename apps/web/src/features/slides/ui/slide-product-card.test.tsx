@@ -1,7 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import type { GridAuthor } from "../model/slide-grid-model";
+import { expectDefined } from "../../../test-utils/expect-defined";
+import { makeReportSectionFixture } from "../../../test-utils/report-section-fixtures";
+import {
+  buildSlideGridModel,
+  type GridAuthor,
+} from "../model/slide-grid-model";
 import type { GridProductCard } from "../model/slide-grid-products";
 import { SlideProductCard } from "./slide-article-grid";
 
@@ -39,6 +44,56 @@ function productCard(
 }
 
 describe("SlideProductCard status presentation", () => {
+  it.each([
+    { linkedProducts: [], label: null },
+    {
+      linkedProducts: [{ productId: "p1", productName: "Alpha" }],
+      label: "Linked products: Alpha",
+    },
+    {
+      linkedProducts: [
+        { productId: "p1", productName: "Alpha" },
+        { productId: "p2", productName: "Beta" },
+      ],
+      label: "Linked products: Alpha, Beta",
+    },
+  ])(
+    "retains Activity product labels on its Product or Shared card: $label",
+    ({ linkedProducts, label }) => {
+      const grid = buildSlideGridModel({
+        section: makeReportSectionFixture({
+          projects: [
+            { projectId: "p1", projectName: "Alpha", trafficLight: "green" },
+            { projectId: "p2", projectName: "Beta", trafficLight: "green" },
+          ],
+          activities: [
+            {
+              activityId: "activity-1",
+              activityName: "Operations",
+              status: "green",
+              linkedProducts,
+            },
+          ],
+        }),
+      });
+      const card = expectDefined(
+        grid.products.find((product) =>
+          product.subsections.some(
+            (subsection) => subsection.id === "activity-1",
+          ),
+        ),
+      );
+      render(<SlideProductCard card={card} authorsById={authorsById} />);
+      expect(screen.getByText("Operations")).toBeInTheDocument();
+      expect(card.id).toBe(
+        linkedProducts.length === 1 ? "p1" : "cross-product",
+      );
+      if (label) expect(screen.getByText(label)).toBeInTheDocument();
+      else
+        expect(screen.queryByText(/Linked products:/)).not.toBeInTheDocument();
+    },
+  );
+
   it.each(STATUS_CASES)(
     "exposes $label as the accessible mark and names the card with it",
     ({ status, label, stripe }) => {

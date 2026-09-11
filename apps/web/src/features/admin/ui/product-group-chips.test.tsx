@@ -1,12 +1,23 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-// Mock the @tanstack/react-query useQuery hook and the tRPC context so
-// the component reads from a stub instead of a real network round-trip.
-// Same pattern as other client query component tests.
-const useQueryMock = vi.fn();
+interface GroupQueryResult {
+  readonly data:
+    | readonly {
+        readonly id: string;
+        readonly name: string;
+        readonly description: string | null;
+        readonly archived: boolean;
+        readonly headUserId: string | null;
+      }[]
+    | undefined;
+  readonly isError?: boolean;
+  readonly isLoading: boolean;
+}
+
+const useQueryMock = vi.fn<() => GroupQueryResult>();
 vi.mock("@tanstack/react-query", () => ({
-  useQuery: (opts: unknown) => useQueryMock(opts) as Record<string, unknown>,
+  useQuery: () => useQueryMock(),
 }));
 vi.mock("../../../shared/lib/trpc/trpc-context", () => ({
   useTRPC: () => ({
@@ -57,7 +68,7 @@ describe("ProductGroupChips", () => {
     expect(document.querySelector('[aria-busy="true"]')).toBeNull();
   });
 
-  it("renders one pill per attached group, preserving server order", () => {
+  it("renders the product's owning group", () => {
     useQueryMock.mockReturnValue({
       isLoading: false,
       data: [
@@ -68,21 +79,13 @@ describe("ProductGroupChips", () => {
           archived: false,
           headUserId: null,
         },
-        {
-          id: "g-b",
-          name: "Integrations",
-          description: null,
-          archived: false,
-          headUserId: null,
-        },
       ],
     });
     render(<ProductGroupChips productId={PRODUCT_ID} />);
     const list = screen.getByTestId("product-group-chips");
     const items = list.querySelectorAll("li");
-    expect(items).toHaveLength(2);
+    expect(items).toHaveLength(1);
     expect(Array.from(items).at(0)?.textContent).toBe("Platform");
-    expect(Array.from(items).at(1)?.textContent).toBe("Integrations");
     expect(document.querySelector('[aria-busy="true"]')).toBeNull();
   });
 });

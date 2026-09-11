@@ -1,4 +1,11 @@
-import { act, cleanup, render, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import {
   Agentation,
   type Annotation,
@@ -7,11 +14,13 @@ import {
 } from "agentation";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { useAgentationDeliveryStatus } from "./ui/use-agentation-delivery-status";
+
 const ENDPOINT = "/api/v1/agentation";
 const SESSION_ID = "upstream-contract-session";
 const streams: ContractEventSource[] = [];
 
-// Only the browser transport is simulated; Agentation's sync and storage code runs unchanged.
+// Only the browser transport is simulated; the installed Agentation package owns sync and storage.
 class ContractEventSource extends EventTarget {
   constructor(readonly url: string) {
     super();
@@ -22,7 +31,9 @@ class ContractEventSource extends EventTarget {
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  Reflect.deleteProperty(document, "elementFromPoint");
   localStorage.clear();
   streams.length = 0;
 });
@@ -37,15 +48,25 @@ const annotation = (id: string): Annotation => ({
   timestamp: Date.now(),
 });
 
-function respond(sessionAnnotations: Annotation[], replayStatus = "pending") {
+function respond(
+  sessionAnnotations: Annotation[],
+  replayStatus = "pending",
+  failReadbackAfterInitialSync = false,
+) {
   vi.stubGlobal("EventSource", ContractEventSource);
+  let sessionReadCount = 0;
+  let annotationWriteCount = 0;
   const fetcher = vi.fn((url: string, options?: RequestInit) => {
     if (url === `${ENDPOINT}/health`)
       return Promise.resolve(Response.json({ status: "ok" }));
-    if (url === `${ENDPOINT}/sessions/${SESSION_ID}`)
+    if (url === `${ENDPOINT}/sessions/${SESSION_ID}`) {
+      sessionReadCount += 1;
+      if (failReadbackAfterInitialSync && sessionReadCount > 1)
+        return Promise.resolve(Response.json({}, { status: 503 }));
       return Promise.resolve(
         Response.json({ id: SESSION_ID, annotations: sessionAnnotations }),
       );
+    }
     if (
       url === `${ENDPOINT}/sessions/${SESSION_ID}/annotations` &&
       options?.method === "POST"
@@ -53,35 +74,249 @@ function respond(sessionAnnotations: Annotation[], replayStatus = "pending") {
       if (typeof options.body !== "string")
         throw new Error("Expected a JSON request body");
       const input = JSON.parse(options.body) as Annotation;
+      annotationWriteCount += 1;
       return Promise.resolve(
         Response.json({
           ...input,
-          id: "server-id",
+          clientId: input.clientId ?? input.id,
+          id: `server-id-${annotationWriteCount}`,
           sessionId: SESSION_ID,
           status: replayStatus,
         }),
       );
     }
+    if (
+      url.startsWith(`${ENDPOINT}/annotations/server-id-`) &&
+      options?.method === "DELETE"
+    )
+      return Promise.resolve(new Response(null, { status: 204 }));
     throw new Error(`Unexpected public Agentation request: ${url}`);
   });
   vi.stubGlobal("fetch", fetcher);
   return fetcher;
 }
 
-describe("unmodified Agentation browser sync", () => {
+describe("pinned Agentation browser sync", () => {
   it("uploads a retained local annotation and adopts its server ID", async () => {
     const fetcher = respond([]);
     saveAnnotations(location.pathname, [annotation("client-id")]);
     render(<Agentation endpoint={ENDPOINT} sessionId={SESSION_ID} />);
     await waitFor(() =>
       expect(loadAnnotations(location.pathname).map((item) => item.id)).toEqual(
-        ["server-id"],
+        ["server-id-1"],
       ),
     );
     expect(fetcher).toHaveBeenCalledWith(
       `${ENDPOINT}/sessions/${SESSION_ID}/annotations`,
       expect.objectContaining({ method: "POST" }),
     );
+  });
+
+  it("adopts the server ID and retains the original client ID", async () => {
+    const fetcher = respond([]);
+    const onAnnotationAdd = vi.fn();
+    render(
+      <>
+        <button data-testid="feedback-target" type="button">
+          Feedback target
+        </button>
+        <Agentation
+          endpoint={ENDPOINT}
+          onAnnotationAdd={onAnnotationAdd}
+          sessionId={SESSION_ID}
+        />
+      </>,
+    );
+    const target = screen.getByTestId("feedback-target");
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => target),
+    });
+    await waitFor(() =>
+      expect(fetcher).toHaveBeenCalledWith(
+        `${ENDPOINT}/sessions/${SESSION_ID}`,
+      ),
+    );
+
+    fireEvent.click(screen.getByTitle("Start feedback mode"));
+    fireEvent.click(target, { clientX: 10, clientY: 20 });
+    fireEvent.change(
+      await screen.findByPlaceholderText("What should change?"),
+      {
+        target: { value: "Live contract annotation" },
+      },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    await waitFor(() => expect(onAnnotationAdd).toHaveBeenCalledOnce());
+    const clientId = (onAnnotationAdd.mock.calls[0]?.[0] as Annotation).id;
+    await waitFor(() =>
+      expect(
+        loadAnnotations(location.pathname).map(({ clientId, id }) => ({
+          clientId,
+          id,
+        })),
+      ).toEqual([{ clientId, id: "server-id-1" }]),
+    );
+    expect(fetcher).toHaveBeenCalledWith(
+      `${ENDPOINT}/sessions/${SESSION_ID}/annotations`,
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("preserves exact identity through failed readback and native delete or clear", async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
+    const fetcher = respond([], "pending", true);
+    const onAnnotationAdd = vi.fn();
+    const onAnnotationDelete = vi.fn();
+    const onAnnotationsClear = vi.fn();
+
+    function DeliveryHarness() {
+      const delivery = useAgentationDeliveryStatus({
+        authorUserId: "author-1",
+        initialSessionId: SESSION_ID,
+        scopeKey: `${location.pathname}:${SESSION_ID}`,
+      });
+      return (
+        <>
+          <button data-testid="feedback-target" type="button">
+            Feedback target
+          </button>
+          <Agentation
+            endpoint={ENDPOINT}
+            onAnnotationAdd={(item) => {
+              onAnnotationAdd(item);
+              delivery.onAnnotationAdd(item);
+            }}
+            onAnnotationDelete={(item) => {
+              onAnnotationDelete(item);
+              delivery.onAnnotationDelete(item);
+            }}
+            onAnnotationsClear={(items) => {
+              onAnnotationsClear(items);
+              delivery.onAnnotationsClear(items);
+            }}
+            sessionId={SESSION_ID}
+          />
+          <output data-testid="delivery-status">{delivery.status}</output>
+        </>
+      );
+    }
+
+    render(<DeliveryHarness />);
+    const target = screen.getByTestId("feedback-target");
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => target),
+    });
+    await waitFor(() =>
+      expect(fetcher).toHaveBeenCalledWith(
+        `${ENDPOINT}/sessions/${SESSION_ID}`,
+      ),
+    );
+
+    fireEvent.click(screen.getByTitle("Start feedback mode"));
+    fireEvent.click(target, { clientX: 10, clientY: 20 });
+    fireEvent.change(
+      await screen.findByPlaceholderText("What should change?"),
+      {
+        target: { value: "Delete after failed readback" },
+      },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    await waitFor(() => expect(onAnnotationAdd).toHaveBeenCalledTimes(1));
+    const deleteClientId = (onAnnotationAdd.mock.calls[0]?.[0] as Annotation)
+      .id;
+    await waitFor(() =>
+      expect(loadAnnotations(location.pathname)).toEqual([
+        expect.objectContaining({
+          clientId: deleteClientId,
+          id: "server-id-1",
+        }),
+      ]),
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("delivery-status")).toHaveTextContent(
+        "checking",
+      ),
+    );
+    await waitFor(
+      () =>
+        expect(
+          fetcher.mock.calls.filter(
+            ([url, options]) =>
+              url === `${ENDPOINT}/sessions/${SESSION_ID}` &&
+              options?.cache === "no-store",
+          ),
+        ).toHaveLength(1),
+      { timeout: 1500 },
+    );
+
+    const deleteMarker = document.querySelector("[data-annotation-marker]");
+    if (!deleteMarker) throw new Error("Expected the synced native marker");
+    fireEvent.click(deleteMarker);
+    const editPopup = (
+      await screen.findByPlaceholderText("Edit your feedback...")
+    ).closest("[data-annotation-popup]");
+    const deleteButton = editPopup?.querySelector<HTMLButtonElement>(
+      'button[class*="deleteButton"]',
+    );
+    if (!deleteButton) throw new Error("Expected the native delete action");
+    fireEvent.click(deleteButton);
+
+    expect(onAnnotationDelete).toHaveBeenCalledWith(
+      expect.objectContaining({
+        clientId: deleteClientId,
+        id: "server-id-1",
+      }),
+    );
+    expect(screen.getByTestId("delivery-status")).toHaveTextContent("idle");
+    await waitFor(() => expect(loadAnnotations(location.pathname)).toEqual([]));
+
+    fireEvent.click(target, { clientX: 20, clientY: 30 });
+    fireEvent.change(
+      await screen.findByPlaceholderText("What should change?"),
+      {
+        target: { value: "Clear after failed readback" },
+      },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    await waitFor(() => expect(onAnnotationAdd).toHaveBeenCalledTimes(2));
+    const clearClientId = (onAnnotationAdd.mock.calls[1]?.[0] as Annotation).id;
+    await waitFor(() =>
+      expect(loadAnnotations(location.pathname)).toEqual([
+        expect.objectContaining({
+          clientId: clearClientId,
+          id: "server-id-2",
+        }),
+      ]),
+    );
+    await waitFor(
+      () =>
+        expect(
+          fetcher.mock.calls.filter(
+            ([url, options]) =>
+              url === `${ENDPOINT}/sessions/${SESSION_ID}` &&
+              options?.cache === "no-store",
+          ),
+        ).toHaveLength(2),
+      { timeout: 1500 },
+    );
+
+    const clearButton = screen
+      .getByText("Clear all")
+      .parentElement?.querySelector<HTMLButtonElement>("button");
+    if (!clearButton) throw new Error("Expected the native clear action");
+    fireEvent.click(clearButton);
+
+    expect(onAnnotationsClear).toHaveBeenCalledWith([
+      expect.objectContaining({
+        clientId: clearClientId,
+        id: "server-id-2",
+      }),
+    ]);
+    expect(screen.getByTestId("delivery-status")).toHaveTextContent("idle");
   });
 
   it.each(["client-id", "server-id"])(

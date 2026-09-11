@@ -2,11 +2,12 @@
 
 import type { AppSettings } from "@customreport/shared";
 import type { Dispatch, SetStateAction } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // Same 0..168 (one week) bound used for grace-period hours.
 const REOPEN_WINDOW_HOURS_MIN = 0;
 const REOPEN_WINDOW_HOURS_MAX = 168;
+const REOPEN_WINDOW_FIELD_ID = "reopen-window-hours";
 
 const FIELD_INPUT_CLASS =
   "w-40 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]";
@@ -21,14 +22,64 @@ interface DraftFieldProps {
   readonly onValidityChange?: (id: string, valid: boolean) => void;
 }
 
+interface AcceptedServerSeedProps {
+  readonly acceptedServerSeed: AppSettings | null;
+  readonly saveAcknowledgement: {
+    readonly sequence: number;
+    readonly reopenWindowHours: number;
+  } | null;
+}
+
+function parseReopenWindow(text: string): number | null {
+  const parsed = /^\d+$/.test(text.trim())
+    ? Number.parseInt(text.trim(), 10)
+    : null;
+  return parsed !== null &&
+    parsed >= REOPEN_WINDOW_HOURS_MIN &&
+    parsed <= REOPEN_WINDOW_HOURS_MAX
+    ? parsed
+    : null;
+}
+
 function useReopenWindowState({
   draft,
   setDraft,
   onValidityChange,
-}: DraftFieldProps) {
+  acceptedServerSeed,
+  saveAcknowledgement,
+}: DraftFieldProps & AcceptedServerSeedProps) {
   const [raw, setRaw] = useState(() => String(draft.reopenWindowHours));
   const [error, setError] = useState<string | null>(null);
   const [committedValue, setCommittedValue] = useState(draft.reopenWindowHours);
+  const acceptedServerSeedRef = useRef(acceptedServerSeed);
+  const saveAcknowledgementRef = useRef(saveAcknowledgement);
+
+  useEffect(() => {
+    if (
+      acceptedServerSeed === null ||
+      acceptedServerSeedRef.current === acceptedServerSeed
+    ) {
+      return;
+    }
+    acceptedServerSeedRef.current = acceptedServerSeed;
+    setCommittedValue(acceptedServerSeed.reopenWindowHours);
+    setRaw(String(acceptedServerSeed.reopenWindowHours));
+    setError(null);
+  }, [acceptedServerSeed]);
+
+  useEffect(() => {
+    if (
+      saveAcknowledgement === null ||
+      saveAcknowledgementRef.current === saveAcknowledgement
+    ) {
+      return;
+    }
+    saveAcknowledgementRef.current = saveAcknowledgement;
+    setCommittedValue(saveAcknowledgement.reopenWindowHours);
+    setRaw(String(saveAcknowledgement.reopenWindowHours));
+    setError(null);
+  }, [saveAcknowledgement]);
+
   if (committedValue !== draft.reopenWindowHours) {
     setCommittedValue(draft.reopenWindowHours);
     setRaw(String(draft.reopenWindowHours));
@@ -37,22 +88,18 @@ function useReopenWindowState({
 
   function handleChange(text: string) {
     setRaw(text);
-    const parsed = /^\d+$/.test(text.trim())
-      ? Number.parseInt(text.trim(), 10)
-      : null;
-    if (
-      parsed === null ||
-      parsed < REOPEN_WINDOW_HOURS_MIN ||
-      parsed > REOPEN_WINDOW_HOURS_MAX
-    ) {
+    const parsed = parseReopenWindow(text);
+    if (parsed === null) {
+      // Invalid raw text is still an unsaved edit; keep server reseeds suspended.
+      setDraft((current) => current);
       setError(
         `Whole number between ${REOPEN_WINDOW_HOURS_MIN} and ${REOPEN_WINDOW_HOURS_MAX} required`,
       );
-      onValidityChange?.("reopen-window-hours", false);
+      onValidityChange?.(REOPEN_WINDOW_FIELD_ID, false);
       return;
     }
     setError(null);
-    onValidityChange?.("reopen-window-hours", true);
+    onValidityChange?.(REOPEN_WINDOW_FIELD_ID, true);
     setDraft({ ...draft, reopenWindowHours: parsed });
   }
 
@@ -81,27 +128,36 @@ function DeadlineTimeField({ draft, setDraft }: DraftFieldProps) {
         className={FIELD_INPUT_CLASS}
       />
       <p className={FIELD_HINT_CLASS}>
-        Default deadline time for manually created periods, applied at
-        whole-hour precision (minutes are ignored). HH:MM in the default
-        timezone (Reminders tab).
+        Used for manually created and scheduled auto-created periods, with HH:MM
+        minute precision in the default timezone (Reminders tab).
       </p>
     </div>
   );
 }
 
-function AllowReopenField({ draft, setDraft }: DraftFieldProps) {
+function AllowReopenField({
+  draft,
+  setDraft,
+  onValidityChange,
+  reopenWindowValid,
+}: DraftFieldProps & { readonly reopenWindowValid: boolean }) {
   return (
     <label className="flex items-start gap-3 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] p-3 text-sm text-[var(--color-foreground)]">
       <input
         name="allow-reopen-after-publish"
         type="checkbox"
         checked={draft.allowReopenAfterPublish}
-        onChange={(e) =>
+        onChange={(e) => {
+          const enabled = e.target.checked;
+          onValidityChange?.(
+            REOPEN_WINDOW_FIELD_ID,
+            enabled ? reopenWindowValid : true,
+          );
           setDraft({
             ...draft,
-            allowReopenAfterPublish: e.target.checked,
-          })
-        }
+            allowReopenAfterPublish: enabled,
+          });
+        }}
         className="mt-1 h-4 w-4 rounded border-[var(--color-border)] accent-[var(--color-starbucks-accent)]"
       />
       <span>
@@ -119,15 +175,12 @@ function AllowReopenField({ draft, setDraft }: DraftFieldProps) {
 // input surfaces an inline error instead of silently becoming 0 (no-fallback).
 function ReopenWindowField({
   draft,
-  setDraft,
-  onValidityChange,
-}: DraftFieldProps) {
-  const { raw, error, handleChange } = useReopenWindowState({
-    draft,
-    setDraft,
-    ...(onValidityChange === undefined ? {} : { onValidityChange }),
-  });
-
+  state,
+}: {
+  readonly draft: AppSettings;
+  readonly state: ReturnType<typeof useReopenWindowState>;
+}) {
+  const { raw, error, handleChange } = state;
   return (
     <div
       className={
@@ -138,27 +191,31 @@ function ReopenWindowField({
         Reopen window (hours)
       </label>
       <input
-        id="reopen-window-hours"
-        name="reopen-window-hours"
+        id={REOPEN_WINDOW_FIELD_ID}
+        name={REOPEN_WINDOW_FIELD_ID}
         type="number"
         inputMode="numeric"
         min={REOPEN_WINDOW_HOURS_MIN}
         max={REOPEN_WINDOW_HOURS_MAX}
         disabled={!draft.allowReopenAfterPublish}
-        aria-invalid={error !== null}
-        aria-describedby={error ? "reopen-window-hours-error" : undefined}
+        aria-invalid={draft.allowReopenAfterPublish && error !== null}
+        aria-describedby={
+          draft.allowReopenAfterPublish && error
+            ? `${REOPEN_WINDOW_FIELD_ID}-error`
+            : undefined
+        }
         value={raw}
         onChange={(e) => handleChange(e.target.value)}
         className={`${FIELD_INPUT_CLASS} disabled:cursor-not-allowed`}
       />
-      {error === null ? (
+      {!draft.allowReopenAfterPublish || error === null ? (
         <p className={FIELD_HINT_CLASS}>
           How long after publish a period can still be reopened. 0..168 (one
           week). Greyed out when «allow reopen» is off.
         </p>
       ) : (
         <p
-          id="reopen-window-hours-error"
+          id={`${REOPEN_WINDOW_FIELD_ID}-error`}
           className={FIELD_ERROR_CLASS}
           role="alert"
         >
@@ -169,22 +226,33 @@ function ReopenWindowField({
   );
 }
 
-// Live consumers: deadlineTime (manual-create default), allowReopenAfterPublish
-// + reopenWindowHours (period.service reopen gate).
+// Live consumers: deadlineTime (manual and scheduled period creation),
+// allowReopenAfterPublish + reopenWindowHours (period.service reopen gate).
 export function PeriodCycleFields({
   draft,
   setDraft,
   onValidityChange,
-}: DraftFieldProps) {
+  acceptedServerSeed,
+  saveAcknowledgement,
+}: DraftFieldProps & AcceptedServerSeedProps) {
+  const reopenWindowState = useReopenWindowState({
+    draft,
+    setDraft,
+    acceptedServerSeed,
+    saveAcknowledgement,
+    ...(onValidityChange === undefined ? {} : { onValidityChange }),
+  });
+
   return (
     <>
       <DeadlineTimeField draft={draft} setDraft={setDraft} />
-      <AllowReopenField draft={draft} setDraft={setDraft} />
-      <ReopenWindowField
+      <AllowReopenField
         draft={draft}
         setDraft={setDraft}
+        reopenWindowValid={reopenWindowState.error === null}
         {...(onValidityChange === undefined ? {} : { onValidityChange })}
       />
+      <ReopenWindowField draft={draft} state={reopenWindowState} />
     </>
   );
 }

@@ -22,7 +22,7 @@ describe("ActivityStatusStrip", () => {
   it("renders one row per (activity, author) with the status label", () => {
     const sections = [
       sectionWithActivities({
-        authorName: "Lead A",
+        authorName: "Иванов Василий Петрович",
         activities: [
           {
             activityId: ACTIVITY_ID_A,
@@ -37,7 +37,7 @@ describe("ActivityStatusStrip", () => {
       sectionWithActivities({
         reportSectionId: "99999999-9999-4999-8999-999999999999",
         authorId: "88888888-8888-4888-8888-888888888888",
-        authorName: "Lead B",
+        authorName: "Кузнецова Мария Александровна",
         activities: [
           {
             activityId: ACTIVITY_ID_A,
@@ -56,8 +56,9 @@ describe("ActivityStatusStrip", () => {
     expect(screen.getAllByText("Jira triage duty")).toHaveLength(2);
     expect(screen.getByText("Blocked")).toBeInTheDocument();
     expect(screen.getByText("On Track")).toBeInTheDocument();
-    expect(screen.getByText("Lead A")).toBeInTheDocument();
-    expect(screen.getByText("Lead B")).toBeInTheDocument();
+    expect(screen.getByText("Иванов В.П.")).toBeInTheDocument();
+    expect(screen.getByText("Кузнецова М.А.")).toBeInTheDocument();
+    expect(screen.queryByText("Иванов Василий Петрович")).toBeNull();
     expect(screen.getByText("Blocked on vendor")).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { level: 2, name: "Project Activities" }),
@@ -167,9 +168,9 @@ describe("ActivityStatusStrip", () => {
       strip.querySelector(":scope > ul")?.children ?? [],
     );
     expect(cards.map((card) => card.textContent)).toEqual([
-      expect.stringContaining("Alpha dutyAt RiskLead A· Products: Payments"),
-      expect.stringContaining("Alpha dutyOn TrackLead B"),
-      expect.stringContaining("Zulu dutyOn TrackLead B"),
+      expect.stringContaining("Alpha dutyAt RiskLead A.· Products: Payments"),
+      expect.stringContaining("Alpha dutyOn TrackLead B."),
+      expect.stringContaining("Zulu dutyOn TrackLead B."),
     ]);
     expect(cards[0]).toHaveTextContent("CurrentLead A current item");
     expect(cards[0]).toHaveTextContent("Risks & BlockersLead A blocker");

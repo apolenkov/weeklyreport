@@ -1,3 +1,4 @@
+import { NextRequest } from "next/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../../shared/server/transport/api-url", () => ({
@@ -10,8 +11,8 @@ import { POST } from "./route";
 function makeRequest(
   headers: Record<string, string>,
   body = JSON.stringify({ entries: [] }),
-): Request {
-  return new Request("http://web.test/api/client-logs", {
+): NextRequest {
+  return new NextRequest("http://web.test/api/client-logs", {
     method: "POST",
     headers,
     body,
@@ -28,41 +29,42 @@ describe("client-logs proxy route", () => {
   });
 
   it("passes the edge proxy's X-Forwarded-For chain through to the API", async () => {
-    const fetchMock = vi.fn(() =>
+    const fetchMock = vi.fn<typeof fetch>(() =>
       Promise.resolve(new Response(null, { status: 202 })),
     );
     vi.stubGlobal("fetch", fetchMock);
 
     const res = await POST(
-      // NextRequest is structurally a Request for this handler's usage.
       makeRequest({
         "content-type": "application/json",
         "x-forwarded-for": "203.0.113.7",
-      }) as never,
+      }),
     );
 
     expect(res.status).toBe(202);
-    const [, init] = fetchMock.mock.calls[0] as unknown as [
-      string,
-      RequestInit,
-    ];
+    const call = fetchMock.mock.calls[0];
+    expect(call).toBeDefined();
+    if (!call) throw new TypeError("Expected fetch call");
+    const [, init] = call;
+    if (!init) throw new TypeError("Expected fetch options");
     expect(new Headers(init.headers).get("x-forwarded-for")).toBe(
       "203.0.113.7",
     );
   });
 
   it("omits X-Forwarded-For when the incoming request carries none", async () => {
-    const fetchMock = vi.fn(() =>
+    const fetchMock = vi.fn<typeof fetch>(() =>
       Promise.resolve(new Response(null, { status: 204 })),
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    await POST(makeRequest({ "content-type": "application/json" }) as never);
+    await POST(makeRequest({ "content-type": "application/json" }));
 
-    const [, init] = fetchMock.mock.calls[0] as unknown as [
-      string,
-      RequestInit,
-    ];
+    const call = fetchMock.mock.calls[0];
+    expect(call).toBeDefined();
+    if (!call) throw new TypeError("Expected fetch call");
+    const [, init] = call;
+    if (!init) throw new TypeError("Expected fetch options");
     expect(new Headers(init.headers).get("x-forwarded-for")).toBeNull();
   });
 
@@ -74,7 +76,7 @@ describe("client-logs proxy route", () => {
       makeRequest(
         { "content-type": "application/json" },
         "x".repeat(CLIENT_LOGS_MAX_BODY_BYTES + 1),
-      ) as never,
+      ),
     );
 
     expect(res.status).toBe(413);
@@ -90,7 +92,7 @@ describe("client-logs proxy route", () => {
     });
     const textSpy = vi.spyOn(req, "text");
 
-    const res = await POST(req as never);
+    const res = await POST(req);
 
     expect(res.status).toBe(413);
     expect(textSpy).not.toHaveBeenCalled();

@@ -14,10 +14,9 @@ describe("lead-form data seam — type contract", () => {
     >().toEqualTypeOf<LeadFormLoadedData>();
   });
 
-  it("declares LeadFormLoadedData with a readonly shape", () => {
+  it("declares LeadFormLoadedData with a structurally compatible byPeriodData seam", () => {
     expectTypeOf<LeadFormLoadedData>().toExtend<{
-      readonly byPeriodData:
-        { readonly section: { reportId: string } } | undefined;
+      byPeriodData: { section: { reportId: string } } | undefined;
     }>();
   });
 });

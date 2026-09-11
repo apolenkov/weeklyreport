@@ -1,5 +1,6 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
+import type { LeadFormGeneration } from "../lead-form/lead-form-generation";
 import type { LeadFormWritePort } from "../lead-form/lead-form-write-port";
 import type { DraftSaveContent } from "../lead-section-draft-payload";
 
@@ -16,6 +17,28 @@ export interface AutosaveSnapshot {
   readonly forceSave: () => Promise<void>;
 }
 
+export interface SavedDraftRecordIdentity {
+  readonly clientId: string;
+  readonly serverId: string;
+  readonly stableId: string | null;
+}
+
+export interface AutosaveSaveReceipt {
+  readonly sequence: number;
+  readonly generation: LeadFormGeneration;
+  readonly reportSectionId: string;
+  readonly version: number;
+  readonly itemIdentities: readonly SavedDraftRecordIdentity[];
+}
+
+// Internal write-coordinator controls. The public Lead Form exposes only the
+// snapshot above; authoritative non-autosave commands use these controls to
+// replace the saved baseline without scheduling a redundant draft save.
+export interface AutosaveController extends AutosaveSnapshot {
+  readonly primeBaseline: (savedKey: string) => void;
+  readonly adoptBaseline: (savedKey: string, source: "read" | "write") => void;
+}
+
 export interface UseLeadFormAutosaveArgs {
   readonly writePort: LeadFormWritePort;
   readonly reportSectionId: string | null;
@@ -29,11 +52,17 @@ export interface UseLeadFormAutosaveArgs {
   readonly version: number;
   // Propagate each server-confirmed version so submit/fillFrom use the current lock.
   readonly onVersionChange: (version: number) => void;
-  // Reports the server-confirmed section and persisted payload.
+  // Reconcile confirmed identities in both the visible draft and queued write.
   readonly onSaved?: (
     section: ReportSectionReadModel,
     payload: DraftSaveContent,
-  ) => void;
+    queuedPayload: DraftSaveContent | null,
+  ) => SavedDraftReconciliation;
   // Conflict handler lets the caller refetch and suppress the generic toast.
   readonly onConflict?: () => void;
+}
+
+export interface SavedDraftReconciliation {
+  readonly savedKey: string;
+  readonly queuedPayload: DraftSaveContent | null;
 }

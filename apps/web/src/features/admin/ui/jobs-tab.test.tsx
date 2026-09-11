@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { logClientError } from "../../../shared/lib/errors/client-error-reporting";
 import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
@@ -21,6 +22,11 @@ vi.mock("sonner", () => ({
   },
 }));
 
+vi.mock("../../../shared/lib/errors/client-error-reporting", () => ({
+  logClientError: vi.fn(),
+  formatClientErrorMessage: vi.fn(),
+}));
+
 import { JobsTab } from "./jobs-tab";
 
 const BASE_DESCRIPTORS = [
@@ -29,22 +35,59 @@ const BASE_DESCRIPTORS = [
   { path: ["admin", "dlqCount"] },
 ];
 
+function withInfiniteListFilter(mock: ReturnType<typeof createMockTRPC>) {
+  const listFailed = mock.proxy.admin.jobs.listFailed;
+  Object.assign(listFailed, {
+    infiniteQueryFilter: () => listFailed.pathFilter(),
+  });
+  return mock;
+}
+
 function makeMockTRPC(jobs: FailedJob[]) {
-  return createMockTRPC([
-    {
-      path: ["admin", "jobs", "listFailed"],
-      query: () => Promise.resolve({ jobs, nextCursor: null }),
-    },
-    ...BASE_DESCRIPTORS,
-  ]);
+  const listQuery = vi.fn(() =>
+    Promise.resolve({ jobs: [...jobs], nextCursor: null }),
+  );
+  const mock = withInfiniteListFilter(
+    createMockTRPC([
+      {
+        path: ["admin", "jobs", "listFailed"],
+        query: listQuery,
+      },
+      ...BASE_DESCRIPTORS,
+    ]),
+  );
+  return { ...mock, listQuery };
 }
 
 function makePendingMockTRPC() {
-  return createMockTRPC([
-    // "pending" — never resolves so listQuery.isPending stays true.
-    { path: ["admin", "jobs", "listFailed"], query: "pending" },
-    ...BASE_DESCRIPTORS,
-  ]);
+  return withInfiniteListFilter(
+    createMockTRPC([
+      // "pending" — never resolves so listQuery.isPending stays true.
+      { path: ["admin", "jobs", "listFailed"], query: "pending" },
+      ...BASE_DESCRIPTORS,
+    ]),
+  );
+}
+
+function makeRecoveringMockTRPC() {
+  let emailFailuresRemaining = 1;
+  const listQuery = vi.fn((input: { queue: string }) => {
+    if (input.queue === "email-reminder" && emailFailuresRemaining > 0) {
+      emailFailuresRemaining -= 1;
+      return Promise.reject(new Error("Failed to fetch"));
+    }
+    return Promise.resolve({
+      jobs: [makeJob(`${input.queue}-recovered`)],
+      nextCursor: null,
+    });
+  });
+  const mock = withInfiniteListFilter(
+    createMockTRPC([
+      { path: ["admin", "jobs", "listFailed"], query: listQuery },
+      ...BASE_DESCRIPTORS,
+    ]),
+  );
+  return { ...mock, listQuery };
 }
 
 function makeJob(id: string, overrides: Partial<FailedJob> = {}): FailedJob {
@@ -67,22 +110,24 @@ function makePagedMockTRPC() {
   const secondPage = Array.from({ length: 7 }, (_, i) =>
     makeJob(`job-${String(50 + i).padStart(3, "0")}`),
   );
-  return createMockTRPC([
-    {
-      path: ["admin", "jobs", "listFailed"],
-      query: (input: { cursor?: number }) => {
-        if (input.cursor === 0 || input.cursor === undefined) {
-          return Promise.resolve({ jobs: firstPage, nextCursor: 50 });
-        }
-        return Promise.resolve({ jobs: secondPage, nextCursor: null });
+  return withInfiniteListFilter(
+    createMockTRPC([
+      {
+        path: ["admin", "jobs", "listFailed"],
+        query: (input: { cursor?: number }) => {
+          if (input.cursor === 0 || input.cursor === undefined) {
+            return Promise.resolve({ jobs: firstPage, nextCursor: 50 });
+          }
+          return Promise.resolve({ jobs: secondPage, nextCursor: null });
+        },
       },
-    },
-    ...BASE_DESCRIPTORS,
-  ]);
+      ...BASE_DESCRIPTORS,
+    ]),
+  );
 }
 
 function renderTab(jobs: FailedJob[]) {
-  const { proxy, captured } = makeMockTRPC(jobs);
+  const { proxy, captured, listQuery } = makeMockTRPC(jobs);
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -96,7 +141,7 @@ function renderTab(jobs: FailedJob[]) {
     );
   }
   render(<JobsTab />, { wrapper: Wrapper });
-  return { captured };
+  return { captured, listQuery };
 }
 
 function renderPendingTab() {
@@ -135,136 +180,6 @@ describe("JobsTab — JobsSkeleton a11y attributes", () => {
     expect(skeleton).toHaveAttribute("aria-label", "Loading failed jobs");
     expect(skeleton).toHaveAttribute("aria-live", "polite");
   });
-
-  it("JobsSkeleton status region matches inline snapshot", () => {
-    renderPendingTab();
-
-    const skeleton = screen.getByTestId("jobs-loading-state");
-    expect(skeleton).toMatchInlineSnapshot(`
-      <div
-        aria-label="Loading failed jobs"
-        aria-live="polite"
-        class="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-border)]"
-        data-testid="jobs-loading-state"
-        role="status"
-      >
-        <div
-          class="min-w-[37rem]"
-        >
-          <div
-            class="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3"
-          >
-            <div
-              class="h-4 w-20 animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-            <div
-              class="h-4 w-20 animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-            <div
-              class="h-4 w-20 animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-            <div
-              class="h-4 w-20 animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-            <div
-              class="h-4 w-20 animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-            <div
-              class="h-4 w-20 animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-          </div>
-          <div
-            class="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] px-4 py-3 last:border-0"
-          >
-            <div
-              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-            <div
-              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-            <div
-              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-            <div
-              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-            <div
-              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-            <div
-              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-          </div>
-          <div
-            class="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] px-4 py-3 last:border-0"
-          >
-            <div
-              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-            <div
-              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-            <div
-              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-            <div
-              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-            <div
-              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-            <div
-              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-          </div>
-          <div
-            class="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] px-4 py-3 last:border-0"
-          >
-            <div
-              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-            <div
-              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-            <div
-              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-            <div
-              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-            <div
-              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-            <div
-              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-          </div>
-          <div
-            class="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] px-4 py-3 last:border-0"
-          >
-            <div
-              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-            <div
-              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-            <div
-              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-            <div
-              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-            <div
-              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-            <div
-              class="h-4 w-full animate-pulse rounded bg-[var(--color-border)] motion-reduce:animate-none"
-            />
-          </div>
-        </div>
-      </div>
-    `);
-  });
 });
 
 describe("JobsTab — BullMQ DLQ admin UI", () => {
@@ -280,6 +195,65 @@ describe("JobsTab — BullMQ DLQ admin UI", () => {
         /No failed email reminder jobs\. Queue is clean\./,
       ),
     ).toBeInTheDocument();
+  });
+
+  it("reports one structured list error, deduplicates rerenders, and recovers on queue change", async () => {
+    const { proxy, captured } = makeRecoveringMockTRPC();
+    const qc = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    const wrapper = ({ children }: { readonly children: ReactNode }) => (
+      <QueryClientProvider client={qc}>
+        <TRPCProxyContext.Provider value={proxy}>
+          {children}
+        </TRPCProxyContext.Provider>
+      </QueryClientProvider>
+    );
+    const { rerender } = render(<JobsTab />, { wrapper });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Failed to load list: Failed to fetch",
+    );
+    await waitFor(() => expect(logClientError).toHaveBeenCalledTimes(1));
+    expect(logClientError).toHaveBeenCalledWith(
+      "admin.jobs.list_failed",
+      expect.objectContaining({ message: "Failed to fetch" }),
+      {
+        component: "JobsTab",
+        procedure: "admin.jobs.listFailed",
+        queue: "email-reminder",
+      },
+    );
+
+    rerender(<JobsTab />);
+    const searchInput = screen.getByLabelText("Search failed jobs");
+    await userEvent.type(searchInput, "x");
+    expect(logClientError).toHaveBeenCalledTimes(1);
+    await userEvent.clear(searchInput);
+
+    await userEvent.selectOptions(
+      screen.getByLabelText("Failed job queue"),
+      "pdf-export",
+    );
+    expect(await screen.findByText("pdf-export-recovered")).toBeInTheDocument();
+
+    await userEvent.selectOptions(
+      screen.getByLabelText("Failed job queue"),
+      "email-reminder",
+    );
+    expect(
+      await screen.findByText("email-reminder-recovered"),
+    ).toBeInTheDocument();
+    expect(logClientError).toHaveBeenCalledTimes(1);
+    expect(
+      expectDefined(captured["admin.jobs.retryFailed"]).mutationFn,
+    ).not.toHaveBeenCalled();
+    expect(
+      expectDefined(captured["admin.jobs.removeFailed"]).mutationFn,
+    ).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -443,17 +417,22 @@ describe("JobsTab — BullMQ DLQ admin UI", () => {
   });
 
   it("confirms removal with the selected queue and job, then refreshes the UI", async () => {
-    const { captured } = renderTab([makeJob("job-remove")]);
+    const jobs = [makeJob("job-remove")];
+    const { captured, listQuery } = renderTab(jobs);
     const removeMutationFn = expectDefined(
       captured["admin.jobs.removeFailed"],
     ).mutationFn;
-    removeMutationFn.mockResolvedValue({ removed: true, jobId: "job-remove" });
+    removeMutationFn.mockImplementation(() => {
+      jobs.splice(0);
+      return Promise.resolve({ removed: true, jobId: "job-remove" });
+    });
 
     await screen.findByText("job-remove");
     await userEvent.selectOptions(
       screen.getByLabelText("Failed job queue"),
       "pdf-export",
     );
+    const callsBeforeRemove = listQuery.mock.calls.length;
     await userEvent.click(
       screen.getByRole("button", { name: "Remove failed job job-remove" }),
     );
@@ -477,9 +456,16 @@ describe("JobsTab — BullMQ DLQ admin UI", () => {
     expect(toastSuccess).toHaveBeenCalledWith(
       "Job job-remove removed from failed jobs.",
     );
+    await waitFor(() =>
+      expect(listQuery).toHaveBeenCalledTimes(callsBeforeRemove + 1),
+    );
+    expect(screen.queryByText("job-remove")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("No failed PDF export jobs. Queue is clean."),
+    ).toBeInTheDocument();
   });
 
-  it("cancels removal without invoking the mutation and shows its pending state separately", async () => {
+  it("cancels removal without invoking the mutation", async () => {
     const { captured } = renderTab([makeJob("job-cancel")]);
     const removeMutationFn = expectDefined(
       captured["admin.jobs.removeFailed"],

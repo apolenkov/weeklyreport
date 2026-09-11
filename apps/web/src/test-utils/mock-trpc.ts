@@ -64,6 +64,11 @@ export function createMockTRPC(descriptors: ProcedureDescriptor[]): {
 
     leaf.pathFilter = () => ({ queryKey: qk });
     leaf.queryKey = () => qk;
+    leaf.infiniteQueryKey = (input: unknown) => infiniteQueryKey(qk, input);
+    leaf.infiniteQueryFilter = (
+      input: unknown,
+      filters: Record<string, unknown> = {},
+    ) => ({ ...filters, queryKey: infiniteQueryKey(qk, input) });
 
     if (query !== undefined) {
       buildQuery(leaf, qk, query);
@@ -115,9 +120,8 @@ function buildQuery(
 ): void {
   const queryFn = resolveQueryFn(query);
   leaf.queryOptions = () => ({ queryKey: qk, queryFn });
-  // Cursor-paginated procedures read the merged `{...input, cursor: pageParam}`
-  // (tRPC's infiniteQueryOptions injects the page param as `cursor`); the stub
-  // factory receives that merged input so tests can page.
+  // Cursor-paginated procedures receive cursor and direction from tRPC's
+  // infinite-query context; the stub factory sees that actual server input.
   leaf.infiniteQueryOptions = (
     input: unknown,
     opts: {
@@ -125,12 +129,19 @@ function buildQuery(
       readonly getNextPageParam?: (lastPage: unknown) => unknown;
     } = {},
   ) => ({
-    queryKey: qk,
-    queryFn: ({ pageParam }: { pageParam: unknown }) => {
+    queryKey: infiniteQueryKey(qk, input),
+    queryFn: ({
+      pageParam,
+      direction = "forward",
+    }: {
+      pageParam: unknown;
+      direction?: "forward" | "backward";
+    }) => {
       if (query === "pending") return new Promise<never>(() => undefined);
       const merged = {
         ...(input as Record<string, unknown>),
-        cursor: pageParam,
+        ...(pageParam === undefined ? {} : { cursor: pageParam }),
+        direction,
       };
       return typeof query === "function"
         ? Promise.resolve((query as (i: unknown) => unknown)(merged))
@@ -142,6 +153,19 @@ function buildQuery(
       opts.initialPageParam ?? (input as Record<string, unknown>).cursor,
     getNextPageParam: opts.getNextPageParam,
   });
+}
+
+function infiniteQueryKey(
+  qk: [[...string[]]],
+  input: unknown,
+): readonly unknown[] {
+  if (input === undefined) return [...qk, { type: "infinite" }];
+  const keyInput = Object.fromEntries(
+    Object.entries(input as Record<string, unknown>).filter(
+      ([key]) => key !== "cursor" && key !== "direction",
+    ),
+  );
+  return [...qk, { input: keyInput, type: "infinite" }];
 }
 
 function buildMutation(

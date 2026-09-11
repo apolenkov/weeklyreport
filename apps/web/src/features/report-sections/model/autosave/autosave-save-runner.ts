@@ -1,8 +1,8 @@
 import type { Dispatch, SetStateAction } from "react";
 
 import type { GetAutosaveRefs } from "./autosave-refs";
-import { encodeAutosaveComparisonKey } from "./autosave-stable-stringify";
 import type { AutosaveState } from "./autosave-types";
+import { encodeDraftSaveComparisonKey } from "./draft-save-comparison-key";
 
 export interface DebounceSaveDeps {
   readonly getRefs: GetAutosaveRefs;
@@ -20,17 +20,19 @@ export function runDebouncedSaveTick(deps: DebounceSaveDeps): void {
   const current = refs.payload;
   if (current === null) return;
   if (refs.isPending) {
-    refs.queuedKey = deps.payloadKey;
-    refs.queuedPayload = current;
+    refs.queued = {
+      key: deps.payloadKey,
+      payload: current,
+      generation: refs.generation,
+      version: refs.version,
+    };
     return;
   }
   deps.setState("saving");
-  refs.inFlight = deps.payloadKey;
-  refs.inFlightPayload = current;
-  refs.inFlightSection = deps.reportSectionId;
   refs.mutate({
-    ...current,
-    reportSectionId: deps.reportSectionId,
+    key: deps.payloadKey,
+    payload: { ...current, reportSectionId: deps.reportSectionId },
+    generation: refs.generation,
     version: refs.version,
   });
 }
@@ -47,7 +49,7 @@ export async function runForceSave(deps: ForceSaveDeps): Promise<void> {
   const refs = deps.getRefs();
   const current = refs.payload;
   const currentKey =
-    current === null ? "" : encodeAutosaveComparisonKey(current);
+    current === null ? "" : encodeDraftSaveComparisonKey(current);
   const sectionId = refs.sectionId;
 
   if (!refs.enabled || current === null || currentKey === "" || !sectionId) {
@@ -63,19 +65,21 @@ export async function runForceSave(deps: ForceSaveDeps): Promise<void> {
 
   if (refs.isPending) {
     // A mutation is already in flight. Queue for after success.
-    refs.queuedKey = currentKey;
-    refs.queuedPayload = current;
+    refs.queued = {
+      key: currentKey,
+      payload: current,
+      generation: refs.generation,
+      version: refs.version,
+    };
     return;
   }
 
   deps.setState("saving");
-  refs.inFlight = currentKey;
-  refs.inFlightPayload = current;
-  refs.inFlightSection = sectionId;
   try {
     await refs.mutateAsync({
-      ...current,
-      reportSectionId: sectionId,
+      key: currentKey,
+      payload: { ...current, reportSectionId: sectionId },
+      generation: refs.generation,
       version: refs.version,
     });
   } catch {

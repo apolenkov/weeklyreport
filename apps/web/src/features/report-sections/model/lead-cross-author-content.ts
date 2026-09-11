@@ -118,7 +118,7 @@ export function mapForeignItems(
   });
 }
 
-// Foreign risks: non-'blocked' severity renders as 'at-risk' presentation-side.
+// Foreign risks retain the server-provided at-risk or blocked severity.
 export function mapForeignRisks(
   rows: readonly CrossAuthorContentRow[],
   productNameById: ReadonlyMap<string, string>,

@@ -24,7 +24,6 @@ export interface LeadFormLoadingState {
   readonly isLoading: boolean;
   readonly awaitingRoleRedirect: boolean;
   readonly awaitingCanonicalRedirect: boolean;
-  readonly sectionUnavailable: boolean;
   readonly activeData: ReportSectionReadModel | null | undefined;
   readonly byPeriodData: LeadFormByPeriodLoaded | undefined;
   readonly historyData: readonly MyHistoryEntry[] | undefined;
@@ -51,8 +50,8 @@ export interface LeadFormPresentationState {
   readonly showArchivePeriods: boolean;
 }
 
-// Null until every query settles and the draft mirror exists; LeadForm renders
-// its skeleton on null, and the non-null bundle carries the narrowed rows.
+// Called after required reads are ready; the mirrored draft must still match
+// the server generation before it can enter the loaded editor.
 export function resolveLeadFormLoaded(
   data: LeadFormLoadingState,
   draftSection: ReportSectionReadModel | null,

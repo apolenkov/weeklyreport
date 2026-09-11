@@ -5,8 +5,8 @@ import { afterEach } from "vitest";
 
 // Radix UI primitives open a Popper layer that calls ResizeObserver and
 // pointer-capture/scroll APIs jsdom omits.
-// The DOM lib types declare these as always present, so the stubs are installed
-// through loose casts and assigned unconditionally (test environment only).
+// Install the ResizeObserver stub only when absent, and guard Element-dependent
+// stubs because this setup can also load in tests without a DOM.
 const noop = (): void => undefined;
 
 class ResizeObserverStub {
@@ -20,8 +20,6 @@ const globalForStubs = globalThis as unknown as {
 };
 globalForStubs.ResizeObserver ??= ResizeObserverStub;
 
-// Guard on Element so node-environment unit tests (no DOM) do not throw here;
-// only jsdom tests render Radix and need the pointer/scroll stubs.
 if (globalForStubs.Element) {
   const elementProto = globalForStubs.Element.prototype;
   elementProto.hasPointerCapture = () => false;

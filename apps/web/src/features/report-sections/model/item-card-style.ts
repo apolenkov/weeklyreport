@@ -62,21 +62,15 @@ export function cardContainerStyle(opts: {
   isPlanned: boolean;
   isBlocked: boolean;
   foreign: boolean;
-  isEditing: boolean;
 }): CSSProperties {
-  const { isPlanned, isBlocked, foreign, isEditing } = opts;
+  const { isPlanned, isBlocked, foreign } = opts;
   const borderStyle = isPlanned ? "dashed" : "solid";
   // Faint blocked border uses the destructive token at 20%.
   const borderColor = isBlocked
     ? "color-mix(in srgb, var(--color-destructive) 20%, transparent)"
     : "var(--color-muted)";
   return {
-    // The reference height is fixed for the static render; inline edit
-    // relaxes it to a floor so the textarea can grow past it to show the
-    // full untruncated text (never clipped while editing).
-    ...(isEditing
-      ? { minHeight: ITEM_CARD_REFERENCE_HEIGHT }
-      : { height: ITEM_CARD_REFERENCE_HEIGHT }),
+    height: ITEM_CARD_REFERENCE_HEIGHT,
     borderTop: `1px ${borderStyle} ${borderColor}`,
     borderRight: `1px ${borderStyle} ${borderColor}`,
     borderBottom: `1px ${borderStyle} ${borderColor}`,

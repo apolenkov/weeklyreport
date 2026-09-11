@@ -88,6 +88,7 @@ function buildWrapper() {
       path: ["leadForm", "viewSettings"],
       query: { unifiedActivityView: false },
     },
+    { path: ["leadForm", "assistant"], mutation: true },
     { path: ["leadForm", "crossAuthors"], query: [] },
     { path: ["leadForm", "crossAuthorContent"], query: [] },
   ]);

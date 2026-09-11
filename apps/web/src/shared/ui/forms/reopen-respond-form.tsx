@@ -1,5 +1,7 @@
 "use client";
 
+import type { Ref } from "react";
+
 export type ReopenDecision = "approved" | "rejected";
 
 export interface ReopenRespondFormProps {
@@ -11,6 +13,7 @@ export interface ReopenRespondFormProps {
   readonly onApprove: () => void;
   readonly isPending: boolean;
   readonly pendingDecision: ReopenDecision | undefined;
+  readonly textareaRef?: Ref<HTMLTextAreaElement> | undefined;
 }
 
 // Matches admin.respondReopenRequest note cap on the API.
@@ -67,6 +70,7 @@ export function ReopenRespondForm({
   onApprove,
   isPending,
   pendingDecision,
+  textareaRef,
 }: ReopenRespondFormProps) {
   return (
     <div className="mt-3 space-y-2 rounded-[var(--radius)] border border-[var(--color-starbucks-accent)] bg-[var(--color-approval-surface)] p-3">
@@ -77,10 +81,12 @@ export function ReopenRespondForm({
         {`Comment (optional, up to ${MAX_REOPEN_NOTE_LENGTH} characters)`}
       </label>
       <textarea
+        ref={textareaRef}
         id={`reopen-note-${requestId}`}
         name="reopen-note"
         autoComplete="off"
         value={note}
+        disabled={isPending}
         onChange={(event) => onNoteChange(event.target.value)}
         maxLength={MAX_REOPEN_NOTE_LENGTH}
         placeholder="Example: approved, please update the report…"

@@ -38,9 +38,7 @@ function setRole(role: Role | null): void {
   if (role === null) {
     useSessionMock.mockReturnValue({
       user: null,
-      // nav-bar consumes `organization.shortName`. For the
-      // "unauthenticated" case there is no session and thus no org — the
-      // consumer falls back to the seeded 'PEO' default.
+      // The loading session has no resolved user or organization identity.
       organization: null,
       isLoading: true,
       isAuthenticated: false,

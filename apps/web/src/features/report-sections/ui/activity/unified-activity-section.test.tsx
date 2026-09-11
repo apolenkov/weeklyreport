@@ -50,6 +50,24 @@ const entries: UnifiedActivityEntry[] = [
   },
 ];
 
+const activityEntry: UnifiedActivityEntry = {
+  week: "current",
+  bucket: "in-progress",
+  item: {
+    id: "i-activity",
+    parent: { kind: "activity", id: "activity-a" },
+    productId: null,
+    productName: "Hiring",
+    activityId: "activity-a",
+    activityName: "Hiring",
+    status: "in-progress",
+    text: "Interview candidates",
+    author: "Lead 1",
+    stageNames: [],
+    priorityRank: null,
+  },
+};
+
 function findCardByText(text: string): HTMLElement {
   const card = screen
     .getAllByTestId("item-card")
@@ -59,6 +77,19 @@ function findCardByText(text: string): HTMLElement {
 }
 
 describe("UnifiedActivitySection", () => {
+  it("uses readonly copy without advertising an unavailable Add action", () => {
+    render(<UnifiedActivitySection entries={[]} readOnly />);
+    expect(screen.getByText("No activity items in this report.")).toBeVisible();
+    expect(screen.queryByText(/\+ Add/)).toBeNull();
+  });
+
+  it("retains Add guidance in the editable empty state", () => {
+    render(<UnifiedActivitySection entries={[]} />);
+    expect(
+      screen.getByText("No items yet — use the + Add button to create one."),
+    ).toBeVisible();
+  });
+
   it("renders one group per non-empty bucket with counts", () => {
     render(<UnifiedActivitySection entries={entries} readOnly />);
     const section = screen.getByTestId("unified-activity-section");
@@ -89,7 +120,7 @@ describe("UnifiedActivitySection", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("routes a delete to the record's PHYSICAL week list (type storage untouched)", () => {
+  it("routes a delete through the entry's week collection", () => {
     const onWeekItemsChange = vi.fn();
     render(
       <UnifiedActivitySection
@@ -143,5 +174,28 @@ describe("UnifiedActivitySection", () => {
       expectDefined(screen.getAllByLabelText("Move to next week")[1]),
     );
     expect(onMoveToNextWeek).toHaveBeenCalledWith("i-paused");
+  });
+
+  it("edits an activity item with its current parent and alternatives", () => {
+    render(
+      <UnifiedActivitySection
+        entries={[activityEntry]}
+        products={[]}
+        activities={[
+          { id: "activity-a", name: "Hiring" },
+          { id: "activity-b", name: "Triage" },
+        ]}
+        onWeekItemsChange={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(
+      within(findCardByText("Interview candidates")).getByLabelText("Edit"),
+    );
+
+    const parent = screen.getByRole("combobox", { name: "Parent" });
+    expect(parent).toBeEnabled();
+    expect(parent).toHaveValue("activity:activity-a");
+    expect(screen.getByRole("option", { name: "Triage" })).toBeInTheDocument();
   });
 });

@@ -21,6 +21,7 @@ export interface LeadFormHeaderWriteActions {
 }
 
 interface LeadFormHeaderActionsProps {
+  readonly pendingInput?: boolean | undefined;
   readonly viewModel: LeadFormLoadedViewModel;
   readonly writeActions: LeadFormHeaderWriteActions;
   readonly completionActions: LeadCompletionActionContract;
@@ -137,10 +138,19 @@ function SubmittedSectionAction({
 function HeaderStatusBadge({
   isSubmitted,
   autosave,
+  pendingInput,
 }: {
+  readonly pendingInput?: boolean | undefined;
   readonly isSubmitted: boolean;
   readonly autosave: HeaderAutosave;
 }) {
+  if (pendingInput) {
+    return (
+      <span className="text-xs font-medium text-[var(--color-muted-foreground)]">
+        Unsaved update
+      </span>
+    );
+  }
   // Light-teal success badge reads as progress, not a locked signal.
   if (isSubmitted) {
     return (
@@ -215,10 +225,19 @@ export function LeadFormHeaderActions({
           <HeaderStatusBadge
             isSubmitted={header.isSubmitted}
             autosave={header.completionActions.autosave}
+            pendingInput={header.pendingInput}
           />
         )}
       </div>
-      <HeaderActionToolbar {...header} />
+      <fieldset disabled={header.pendingInput} className="min-w-0 border-0 p-0">
+        <legend className="sr-only">Report actions</legend>
+        <HeaderActionToolbar {...header} />
+        {header.pendingInput ? (
+          <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+            Save or cancel the open update before using report actions.
+          </p>
+        ) : null}
+      </fieldset>
     </header>
   );
 }

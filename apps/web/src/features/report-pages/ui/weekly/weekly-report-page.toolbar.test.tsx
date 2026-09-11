@@ -1,5 +1,4 @@
-// Wire-up tests: tRPC stub intercepts publish/reopen/get; no MSW handlers.
-// Assert mutation variables, cache invalidation, and toast on success.
+// Header and toolbar composition through the page harness.
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -58,94 +57,11 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/head/report",
 }));
 
-import {
-  SessionContext,
-  type SessionUser,
-} from "../../../../shared/lib/auth/session-provider";
+import { SessionContext } from "../../../../shared/lib/auth/session-provider";
 import { createMockTRPC } from "../../../../test-utils/mock-trpc";
 import { makeWeeklyReportData } from "./__tests__/weekly-report-page-harness";
 import { WeeklyReportPage } from "./weekly-report-page";
-
-function renderPage(
-  data: ReturnType<typeof makeWeeklyReportData>,
-  authorId?: string,
-  role: SessionUser["role"] = "head",
-  scope?: "product" | "lead",
-  documentActionsLeading?: ReactNode,
-  contextControls?: ReactNode,
-  contextControlsLeading?: ReactNode,
-) {
-  const { proxy, captured } = createMockTRPC([
-    { path: ["weeklyReport", "get"], query: data },
-    { path: ["period", "publish"], mutation: true },
-    { path: ["period", "reopen"], mutation: true },
-    // ExportPdfButton calls both pdfExport.request.mutationOptions
-    // and pdfExport.status.queryOptions unconditionally on every render. Mock the
-    // surface here so the parent page renders without throwing — these tests do
-    // not exercise PDF export behavior, they only need the mock to be structurally
-    // valid. pdfExport.status has enabled:false in the component; the factory
-    // stub without enabled is fine because the component manages enabled itself.
-    { path: ["pdfExport", "request"], mutation: true },
-    { path: ["pdfExport", "status"], query: null },
-    { path: ["review", "dashboard"] },
-    { path: ["review", "verdict"], mutation: true },
-    { path: ["review", "comment"], mutation: true },
-    { path: ["review", "deleteComment"], mutation: true },
-    // Group id mounts the per-group Acknowledge control; empty roster = un-acked.
-    { path: ["review", "acknowledgements"], queryByInput: () => [] },
-    { path: ["review", "acknowledge"], mutation: true },
-    { path: ["archive", "list"] },
-    { path: ["archive", "archiveReport"], mutation: true },
-    { path: ["archive", "unarchiveReport"], mutation: true },
-    { path: ["reports", "myHistory"] },
-    { path: ["reports", "getActive"] },
-    { path: ["leadForm", "byPeriod"] },
-    { path: ["leadForm", "versions"] },
-    { path: ["admin", "snapshot"] },
-    { path: ["admin", "getSettings"] },
-  ]);
-
-  const qc = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-
-  function Wrapper({ children }: { readonly children: ReactNode }) {
-    return (
-      <QueryClientProvider client={qc}>
-        <SessionContext.Provider
-          value={{
-            user: {
-              id: "head-user-id",
-              name: "Test User",
-              email: "test.user@example.com",
-              role,
-            },
-            organization: null,
-            isLoading: false,
-            isAuthenticated: true,
-          }}
-        >
-          <TRPCProxyContext.Provider value={proxy}>
-            {children}
-          </TRPCProxyContext.Provider>
-        </SessionContext.Provider>
-      </QueryClientProvider>
-    );
-  }
-
-  const renderResult = render(
-    <WeeklyReportPage
-      authorId={authorId}
-      scope={scope}
-      documentActionsLeading={documentActionsLeading}
-      contextControls={contextControls}
-      contextControlsLeading={contextControlsLeading}
-    />,
-    { wrapper: Wrapper },
-  );
-
-  return { ...renderResult, captured };
-}
+import { renderWeeklyReportPage } from "./weekly-report-page-test-harness";
 
 async function waitForReadyPage(): Promise<void> {
   await waitForElementToBeRemoved(() =>
@@ -159,12 +75,11 @@ describe("WeeklyReportPage — async Export PDF button role gating", () => {
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
   });
 
-  // Real export for head/admin/viewer (viewer slice is requester-scoped).
-  // pdfExport is leadershipProcedure — lead is FORBIDDEN.
+  // The page exposes the shared export control to non-lead report viewers.
   it.each(["head", "admin", "viewer"] as const)(
     "renders the async Export PDF button for %s",
     async (role) => {
-      renderPage(makeWeeklyReportData("published"), undefined, role);
+      renderWeeklyReportPage(makeWeeklyReportData("published"), { role });
       expect(
         await screen.findByRole("button", { name: /export pdf/i }),
       ).toBeInTheDocument();
@@ -183,7 +98,7 @@ describe("WeeklyReportPage — shared period toolbar", () => {
   });
 
   it("renders document actions on the header line and the context bar below it", async () => {
-    renderPage(makeWeeklyReportData("open"));
+    renderWeeklyReportPage(makeWeeklyReportData("open"));
     await waitForReadyPage();
     const heading = screen.getByRole("heading", { name: /status report/i });
     // The bordered toolbar IS the Context-control bar (one labeled group).
@@ -222,14 +137,9 @@ describe("WeeklyReportPage — shared period toolbar", () => {
   });
 
   it("renders shell-composed context controls in the bottom row (full override)", async () => {
-    renderPage(
-      makeWeeklyReportData("open"),
-      undefined,
-      "head",
-      undefined,
-      undefined,
-      <div data-testid="shell-context" />,
-    );
+    renderWeeklyReportPage(makeWeeklyReportData("open"), {
+      contextControls: <div data-testid="shell-context" />,
+    });
     await waitForReadyPage();
     const contextRow = screen.getByRole("group", { name: "Context controls" });
     expect(within(contextRow).getByTestId("shell-context")).toBeInTheDocument();
@@ -238,13 +148,9 @@ describe("WeeklyReportPage — shared period toolbar", () => {
   it("renders a shell-supplied leading document action before the built-in lifecycle actions", async () => {
     // documentActionsLeading replaces the default export and renders before the
     // page's own Publish & Lock lifecycle action in the Document action row.
-    renderPage(
-      makeWeeklyReportData("open"),
-      undefined,
-      "head",
-      undefined,
-      <a href="/custom-action">Custom action</a>,
-    );
+    renderWeeklyReportPage(makeWeeklyReportData("open"), {
+      documentActionsLeading: <a href="/custom-action">Custom action</a>,
+    });
     const customAction = await screen.findByRole("link", {
       name: /custom action/i,
     });
@@ -263,7 +169,7 @@ describe("WeeklyReportPage — Export-PDF relocation + publish hint", () => {
   });
 
   it("renders exactly one Export-PDF, on the header line (not inside the toolbar)", async () => {
-    renderPage(makeWeeklyReportData("published"));
+    renderWeeklyReportPage(makeWeeklyReportData("published"));
     await waitForReadyPage();
 
     const exportButtons = screen.getAllByRole("button", {
@@ -288,7 +194,7 @@ describe("WeeklyReportPage — Export-PDF relocation + publish hint", () => {
   });
 
   it("shows the publish precondition hint on the status row, NOT the action row", async () => {
-    renderPage({
+    renderWeeklyReportPage({
       ...makeWeeklyReportData("open", {
         portfolioOverview: [],
         leadSections: [],
@@ -326,7 +232,7 @@ describe("WeeklyReportPage — Export-PDF relocation + publish hint", () => {
   });
 
   it("hides the publish hint from the viewer (no publish capability)", async () => {
-    renderPage(
+    renderWeeklyReportPage(
       {
         ...makeWeeklyReportData("open", {
           portfolioOverview: [],
@@ -334,8 +240,7 @@ describe("WeeklyReportPage — Export-PDF relocation + publish hint", () => {
         }),
         submissionCount: 0,
       },
-      undefined,
-      "viewer",
+      { role: "viewer" },
     );
     await waitForReadyPage();
     expect(

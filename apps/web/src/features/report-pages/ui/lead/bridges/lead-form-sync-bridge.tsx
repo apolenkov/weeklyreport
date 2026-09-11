@@ -135,8 +135,8 @@ function useBridgeHandlers(
   return { handleStageStatusChange, handleRisksChange };
 }
 
-// Optional entries are spread in only when present: consumers branch on
-// `!== undefined`, so an absent key and a present-but-undefined key differ.
+// Include optional context fields only when they have values, matching the
+// context's exact optional-property types.
 function useBridgeContextValue(
   props: LeadFormSyncBridgeProviderProps,
   riskPrefill: RiskPrefillRequest | null,

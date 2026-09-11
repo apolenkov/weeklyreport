@@ -3,10 +3,12 @@
 import { useEffect, useRef } from "react";
 
 import type {
+  AdminReminderExecutionView,
   AdminReminderPolicyView,
   AdminReminderView,
 } from "../../model/admin-types";
 import { PolicyForm } from "./policy-form";
+import { ReminderExecutionList } from "./reminder-execution-list";
 import { RemindersDeleteDialog } from "./reminders-delete-dialog";
 import { RemindersPolicyList } from "./reminders-policy-list";
 import { RemindersTabHeader } from "./reminders-tab-header";
@@ -18,6 +20,7 @@ interface RemindersTabProps {
   readonly derivedRulesByPolicyId: Readonly<
     Record<string, readonly AdminReminderView[]>
   >;
+  readonly executions: readonly AdminReminderExecutionView[];
   // New reminders are seeded with this organisation-wide timezone.
   readonly defaultTimezone: string;
 }
@@ -25,6 +28,7 @@ interface RemindersTabProps {
 export function RemindersTab({
   policies,
   derivedRulesByPolicyId,
+  executions,
   defaultTimezone,
 }: RemindersTabProps) {
   const state = useRemindersTabState(policies, defaultTimezone);
@@ -59,7 +63,7 @@ export function RemindersTab({
         search={state.search}
         onSearchChange={state.setSearch}
         onNewReminder={state.handleNewReminder}
-        newReminderDisabled={state.editor.mode === "add"}
+        newReminderDisabled={state.editor.mode === "add" || state.isSaving}
       />
 
       {state.editor.mode === "add" && (
@@ -79,6 +83,8 @@ export function RemindersTab({
         onEdit={state.handleEditReminder}
         onRemove={state.setPendingDelete}
       />
+
+      <ReminderExecutionList executions={executions} />
 
       <RemindersDeleteDialog
         policy={state.pendingDelete}

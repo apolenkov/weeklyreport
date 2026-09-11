@@ -74,11 +74,19 @@ export function DashboardActivityIssue({
 }
 
 export function DashboardReviewIssue({
+  ready,
   source,
 }: {
+  readonly ready: boolean;
   readonly source: DashboardSourceState;
 }) {
-  if (!source.isError && !source.stalled) return null;
+  if (!source.isError && !source.stalled) {
+    return ready ? null : (
+      <p role="status" className="text-sm text-[var(--color-muted-foreground)]">
+        Loading review data…
+      </p>
+    );
+  }
   return (
     <DashboardPanelIssue
       kind="leads"

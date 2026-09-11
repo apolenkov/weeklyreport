@@ -12,6 +12,7 @@ Next.js 16 frontend with App Router, React 19, shadcn/ui, and Tailwind CSS v4.
 | `/lead/report/[reportId]`                            | lead, head, admin         | Structured section editing                                     |
 | `/lead/report`                                       | lead, head, admin         | Current lead report entrypoint                                 |
 | `/lead/report/[reportId]/preview`                    | lead                      | Read-only lead preview                                         |
+| `/feedback`                                          | lead, head, viewer, admin | Feature-gated product feedback                                 |
 | `/reports`, `/reports/[reportId]`, `/reports/trends` | lead, head, admin, viewer | Published archive, detail, and trend analysis                  |
 | `/reports/latest`                                    | viewer                    | Viewer landing status                                          |
 | `/print/[reportId]`                                  | export token              | Print source; human sessions are redirected to their role view |

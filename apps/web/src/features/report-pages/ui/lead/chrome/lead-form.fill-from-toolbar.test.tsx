@@ -1,3 +1,4 @@
+import type { DraftSavePayload } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
@@ -7,6 +8,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { TRPCClientError } from "@trpc/client";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
@@ -34,10 +36,10 @@ vi.mock("next/navigation", () => ({
   usePathname: () => mockPathname,
 }));
 
-const SECTION_ID = "11111111-1111-1111-1111-111111111111";
-const REPORT_ID = "33333333-3333-3333-3333-333333333333";
-const PROJECT_ID = "22222222-2222-2222-2222-222222222222";
-const AUTHOR_ID = "44444444-4444-4444-4444-444444444444";
+const SECTION_ID = "11111111-1111-4111-8111-111111111111";
+const REPORT_ID = "33333333-3333-4333-8333-333333333333";
+const PROJECT_ID = "22222222-2222-4222-8222-222222222222";
+const AUTHOR_ID = "44444444-4444-4444-8444-444444444444";
 
 function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
   return {
@@ -74,7 +76,7 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
     ],
     items: [
       {
-        id: "55555555-5555-5555-5555-555555555555",
+        id: "55555555-5555-4555-8555-555555555555",
         stableId: "5a5a5a5a-5a5a-4a5a-8a5a-5a5a5a5a5a5a",
         projectId: PROJECT_ID,
         type: "current" as const,
@@ -88,8 +90,9 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
     risks: [],
     decisions: [
       {
-        id: "66666666-6666-6666-6666-666666666666",
+        id: "66666666-6666-4666-8666-666666666666",
         stableId: "6a6a6a6a-6a6a-4a6a-8a6a-6a6a6a6a6a6a",
+        productId: PROJECT_ID,
         text: "Existing decision",
         stageNames: ["Development"],
         owner: "Owner",
@@ -98,7 +101,7 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
     ],
     priorities: [
       {
-        id: "77777777-7777-7777-7777-777777777777",
+        id: "77777777-7777-4777-8777-777777777777",
         rank: 1,
         text: "Priority text",
       },
@@ -191,6 +194,9 @@ function buildHarness(
       path: ["leadForm", "requestReopen"],
       mutation: true,
     },
+    { path: ["leadForm", "assistant"], mutation: true },
+    { path: ["leadForm", "resolvePlan"], mutation: true },
+    { path: ["leadForm", "restorePlan"], mutation: true },
     {
       path: ["leadForm", "crossAuthors"],
       query: [],
@@ -331,10 +337,22 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
   it("fillFrom sends the current target version after an autosave bump", async () => {
     const sourceSectionId = "99999999-9999-4999-8999-999999999999";
     let serverVersion = 1;
+    let stageStatus: "green" | "yellow" | "red" | null = null;
+    const currentServerSection = () => ({
+      ...makeSection(),
+      version: serverVersion,
+      projects: makeSection().projects.map((project) => ({
+        ...project,
+        ownedStages: project.ownedStages.map((stage) => ({
+          ...stage,
+          status: stageStatus,
+        })),
+      })),
+    });
     const { Wrapper, captured } = buildHarness({
       byPeriodQueryFn: () =>
         Promise.resolve({
-          section: { ...makeSection(), version: serverVersion },
+          section: currentServerSection(),
           readOnly: false,
           canRequestReopen: false,
           publishedLineage: { itemStableIds: [], decisionStableIds: [] },
@@ -366,9 +384,11 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
     expect(await screen.findByText("Autosaved")).toBeInTheDocument();
 
     const saveDraftEntry = expectDefined(captured["reports.saveDraft"]);
-    saveDraftEntry.mutationFn.mockImplementation(() => {
+    saveDraftEntry.mutationFn.mockImplementation((input) => {
       serverVersion = 5;
-      return Promise.resolve({ ...makeSection(), version: serverVersion });
+      stageStatus =
+        (input as DraftSavePayload).stageStatuses?.[0]?.status ?? null;
+      return Promise.resolve(currentServerSection());
     });
     const editableChip = screen
       .getAllByRole("button")
@@ -431,6 +451,90 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
     expect(mobileRows).toHaveLength(2);
     expect(mobileRows.every((row) => row.className.includes("min-w-0"))).toBe(
       true,
+    );
+  });
+
+  it("keeps every Lead Slides toolbar target in reading order as clusters reflow", async () => {
+    const user = userEvent.setup();
+    mockPathname = `/lead/report/${REPORT_ID}`;
+    const historyEntry = (
+      reportId: string,
+      sectionId: string,
+      periodStart: string,
+      archived = false,
+    ) => ({
+      sectionId,
+      reportId,
+      periodStart: new Date(periodStart),
+      periodEnd: new Date(
+        new Date(periodStart).getTime() + 6 * 24 * 60 * 60 * 1000,
+      ),
+      reportStatus: "open" as const,
+      sectionStatus: "draft" as const,
+      submittedAt: null,
+      publishedAt: null,
+      archived,
+    });
+    const { Wrapper } = buildHarness({
+      myHistory: [
+        historyEntry(
+          "99999999-9999-4999-8999-999999999991",
+          "99999999-9999-4999-8999-999999999981",
+          "2026-06-22T00:00:00Z",
+        ),
+        historyEntry(REPORT_ID, SECTION_ID, "2026-06-15T00:00:00Z"),
+        historyEntry(
+          "99999999-9999-4999-8999-999999999990",
+          "99999999-9999-4999-8999-999999999980",
+          "2026-06-08T00:00:00Z",
+          true,
+        ),
+      ],
+    });
+    render(
+      <Wrapper>
+        <LeadForm reportId={REPORT_ID} mode="slides" />
+      </Wrapper>,
+    );
+
+    const toolbar = await screen.findByRole("group", {
+      name: "Context controls",
+    });
+    const orderedTargets = [
+      within(toolbar).getByRole("combobox", {
+        name: "Select reporting period",
+      }),
+      within(toolbar).getByRole("button", { name: "Next period" }),
+      within(toolbar).getByRole("switch", {
+        name: "Show closed (archived) report periods",
+      }),
+      within(toolbar).getByRole("button", { name: "Mine only" }),
+      within(toolbar).getByRole("button", { name: "Everyone" }),
+      within(toolbar).getByRole("link", { name: "Report" }),
+      within(toolbar).getByRole("link", { name: "Slides" }),
+      within(toolbar).getByRole("button", { name: "Document" }),
+      within(toolbar).getByRole("button", { name: "Presentation" }),
+      within(toolbar).getByRole("button", { name: "Enter fullscreen" }),
+    ];
+    expect(orderedTargets[1]).toBeEnabled();
+
+    const firstTarget = expectDefined(orderedTargets[0]);
+    const lastTarget = expectDefined(orderedTargets.at(-1));
+    firstTarget.focus();
+    const tabOrder: Element[] = [firstTarget];
+    for (let step = 0; step < 20; step += 1) {
+      if (document.activeElement === lastTarget) break;
+      await user.tab();
+      if (document.activeElement !== null)
+        tabOrder.push(document.activeElement);
+    }
+
+    const targetPositions = orderedTargets.map((target) =>
+      tabOrder.indexOf(target),
+    );
+    expect(targetPositions.every((position) => position >= 0)).toBe(true);
+    expect(targetPositions).toEqual(
+      [...targetPositions].toSorted((a, b) => a - b),
     );
   });
 
@@ -669,11 +773,9 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
     const documentActions = screen.getByRole("group", {
       name: "Document actions",
     });
-    expect(
-      within(documentActions).queryByRole("button", {
-        name: /submit section/i,
-      }),
-    ).toBeNull();
+    expect(screen.queryAllByRole("button", { name: /^Submit$/i })).toHaveLength(
+      0,
+    );
     expect(
       within(documentActions).queryByRole("button", { name: /fill from/i }),
     ).toBeNull();

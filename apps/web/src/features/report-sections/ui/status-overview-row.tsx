@@ -1,13 +1,31 @@
 import { Plus } from "lucide-react";
 
+import type { ReportHealthUnit } from "../model/report-health-pulse";
 import type {
-  StatusOverviewColumn,
   StatusOverviewCreateTarget,
   StatusOverviewEditTarget,
   StatusOverviewItem,
   StatusOverviewModel,
   StatusOverviewUnit,
 } from "../model/status-overview";
+import type { StatusOverviewLineageRow } from "../model/status-overview-lineage";
+import { isLinkedOverviewRow } from "../model/status-overview-lineage";
+import {
+  type OpenHealthDetail,
+  ReportHealthDetail,
+} from "./report-health-pulse";
+import {
+  REPORT_PREVIEW_COUNT,
+  reportHiddenRowCount,
+  ReportItemSlot,
+  StatusOverviewAdditionalUpdates,
+} from "./status-overview-additional-updates";
+import {
+  editorLaneClass,
+  editorSlotMatchesItem,
+  idleTimelineLaneClass,
+  type StatusOverviewEditorSlot,
+} from "./status-overview-editor-slot";
 import { StatusOverviewUnitSummary } from "./status-overview-summary";
 
 export const STATUS_OVERVIEW_DESKTOP_GRID =
@@ -15,284 +33,276 @@ export const STATUS_OVERVIEW_DESKTOP_GRID =
 
 export type StatusOverviewColumnKey = keyof StatusOverviewUnit["columns"];
 
-interface EditItemHandler {
+export const STATUS_OVERVIEW_COLUMNS = [
+  { key: "previouslyPlanned", source: "previous", label: "Previously planned" },
+  { key: "currentWeek", source: "current", label: "Current week" },
+  { key: "nextWeek", source: "next", label: "Next week" },
+] as const;
+
+interface ItemHandlers {
+  readonly editorSlot?: StatusOverviewEditorSlot | undefined;
   readonly onEditItem?:
     ((target: StatusOverviewEditTarget) => void) | undefined;
-}
-
-interface CreateItemHandler {
-  readonly addTarget: StatusOverviewCreateTarget | null;
-  readonly unitName: string;
   readonly onAddItem?:
     ((target: StatusOverviewCreateTarget) => void) | undefined;
+  readonly onResolvePlan?: ((item: StatusOverviewItem) => void) | undefined;
+  readonly onRestorePlan?: ((item: StatusOverviewItem) => void) | undefined;
 }
 
-function ContinuityBadge({ item }: { readonly item: StatusOverviewItem }) {
-  if (item.continuity == null) return null;
-  const unplanned = item.continuity === "unplanned";
+const TIMELINE_GRID = "md:grid md:grid-cols-3";
+const CELL =
+  "min-w-0 px-4 py-3 md:border-l md:border-[var(--color-border-subtle)]";
+
+function LineageRow({
+  row,
+  activeColumn,
+  onEditItem,
+  onResolvePlan,
+  onRestorePlan,
+  editorSlot,
+}: {
+  readonly row: StatusOverviewLineageRow;
+  readonly activeColumn: StatusOverviewColumnKey;
+} & Pick<
+  ItemHandlers,
+  "onEditItem" | "onResolvePlan" | "onRestorePlan" | "editorSlot"
+>) {
+  const selected = STATUS_OVERVIEW_COLUMNS.find(
+    (column) => column.key === activeColumn,
+  );
+  const hasVisibleContent = selected ? row[selected.source] !== null : false;
+  const matchedColumn = STATUS_OVERVIEW_COLUMNS.find((column) => {
+    const item = row[column.source];
+    return item ? editorSlotMatchesItem(editorSlot, item) : false;
+  });
   return (
-    <span
-      className={
-        unplanned
-          ? "rounded-[var(--radius-pill)] bg-[var(--color-status-at-risk-bg)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-status-at-risk-fg)]"
-          : "rounded-[var(--radius-pill)] bg-[var(--color-success)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]"
-      }
+    <div
+      className={`${TIMELINE_GRID} ${hasVisibleContent ? "" : "hidden md:grid"} border-b border-[var(--color-border-subtle)]`}
     >
-      {unplanned ? "Unplanned" : "Continued"}
-    </span>
-  );
-}
-
-function ItemPreviewContent({ item }: { readonly item: StatusOverviewItem }) {
-  return (
-    <>
-      <p className="min-w-0 break-words text-sm leading-5 text-[var(--color-foreground)]">
-        {item.text}
-      </p>
-      {item.tag ? (
-        <p className="mt-1 truncate text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
-          {item.tag}
-        </p>
-      ) : null}
-    </>
-  );
-}
-
-function ItemActionRail({
-  item,
-  editable,
-}: {
-  readonly item: StatusOverviewItem;
-  readonly editable: boolean;
-}) {
-  return (
-    <span className="flex shrink-0 flex-col items-end gap-1.5">
-      <ContinuityBadge item={item} />
-      {editable ? (
-        <span className="text-[11px] font-semibold text-[var(--color-primary)] opacity-70 group-hover:opacity-100">
-          Edit
-        </span>
-      ) : null}
-    </span>
-  );
-}
-
-function ItemPreview({
-  item,
-  onEditItem,
-}: { readonly item: StatusOverviewItem } & EditItemHandler) {
-  const target = item.editTarget;
-  if (target && onEditItem) {
-    return (
-      <li className="min-w-0">
-        <button
-          type="button"
-          aria-label={`Edit ${item.text}`}
-          onClick={() => onEditItem(target)}
-          className="group grid min-h-[var(--touch-target-min)] w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-2 px-1 py-2 text-left transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-ring)]"
-        >
-          <span className="min-w-0">
-            <ItemPreviewContent item={item} />
-          </span>
-          <ItemActionRail item={item} editable />
-        </button>
-      </li>
-    );
-  }
-  return (
-    <li className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-2 px-1 py-2">
-      <span className="min-w-0">
-        <ItemPreviewContent item={item} />
-      </span>
-      <ItemActionRail item={item} editable={false} />
-    </li>
-  );
-}
-
-function TimelineColumn({
-  column,
-  expanded,
-  additionalId,
-  onToggle,
-  onEditItem,
-  addTarget,
-  unitName,
-  onAddItem,
-}: {
-  readonly column: StatusOverviewColumn;
-  readonly expanded: boolean;
-  readonly additionalId: string;
-  readonly onToggle: () => void;
-} & EditItemHandler &
-  CreateItemHandler) {
-  if (column.availability === "unavailable") {
-    return (
-      <p className="border-l-2 border-[var(--color-border)] pl-2 text-xs text-[var(--color-muted-foreground)]">
-        {column.reason}
-      </p>
-    );
-  }
-  const previews = column.items.slice(0, 2);
-  const additional = column.items.slice(2);
-  return (
-    <>
-      {column.items.length === 0 ? (
-        <p className="text-xs text-[var(--color-muted-foreground)]">
-          No updates
-        </p>
-      ) : (
-        <ul className="min-w-0 divide-y divide-[var(--color-border-subtle)]">
-          {previews.map((item) => (
-            <ItemPreview key={item.key} item={item} onEditItem={onEditItem} />
-          ))}
-          {additional.length > 0 ? (
-            <li id={additionalId} hidden={!expanded} inert={!expanded}>
-              <ul className="divide-y divide-[var(--color-border-subtle)]">
-                {additional.map((item) => (
-                  <ItemPreview
-                    key={item.key}
-                    item={item}
-                    onEditItem={onEditItem}
-                  />
-                ))}
-              </ul>
-            </li>
-          ) : null}
-        </ul>
-      )}
-      {additional.length > 0 ? (
-        <button
-          type="button"
-          aria-expanded={expanded}
-          aria-controls={additionalId}
-          onClick={onToggle}
-          className="mt-1 min-h-8 rounded-[var(--radius-pill)] px-2 text-xs font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
-        >
-          {expanded ? "Show less" : `+${String(additional.length)} more`}
-        </button>
-      ) : null}
-      {addTarget && onAddItem ? (
-        <button
-          type="button"
-          aria-label={`Add ${addTarget.source} week update to ${unitName}`}
-          onClick={() => onAddItem(addTarget)}
-          className="mt-2 inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-[var(--radius-pill)] px-2 text-xs font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] md:min-h-8"
-        >
-          <Plus aria-hidden="true" className="size-3.5" />
-          Add update
-        </button>
-      ) : null}
-    </>
-  );
-}
-
-function TimelineCell({
-  label,
-  period,
-  column,
-  expanded,
-  additionalId,
-  onToggle,
-  onEditItem,
-  addTarget,
-  unitName,
-  onAddItem,
-}: {
-  readonly label: string;
-  readonly period: string | null;
-  readonly column: StatusOverviewColumn;
-  readonly expanded: boolean;
-  readonly additionalId: string;
-  readonly onToggle: () => void;
-} & EditItemHandler &
-  CreateItemHandler) {
-  return (
-    <div className="min-w-0 border-t border-[var(--color-border-subtle)] px-4 py-3 min-[80rem]:border-t-0 min-[80rem]:border-l">
-      <div className="mb-2 min-[80rem]:sr-only">
-        <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-          {label}
-        </p>
-        <p className="text-xs text-[var(--color-muted-foreground)]">
-          {period ?? "Period unavailable"}
-        </p>
-      </div>
-      <TimelineColumn
-        column={column}
-        expanded={expanded}
-        additionalId={additionalId}
-        onToggle={onToggle}
-        onEditItem={onEditItem}
-        addTarget={addTarget}
-        unitName={unitName}
-        onAddItem={onAddItem}
-      />
+      {STATUS_OVERVIEW_COLUMNS.map((column) => {
+        const item = row[column.source];
+        const matchesEditor = matchedColumn?.key === column.key;
+        const layout = editorLaneClass(
+          matchesEditor,
+          matchedColumn !== undefined,
+          idleTimelineLaneClass(column.key === activeColumn),
+        );
+        return (
+          <div
+            key={column.key}
+            data-overview-lineage-lane={column.source}
+            className={`${CELL} ${layout}`}
+          >
+            {item ? (
+              <>
+                {column.source === "previous" && row.previousParent ? (
+                  <p className="mb-1 break-words text-xs text-[var(--color-muted-foreground)]">
+                    Previously in {row.previousParent}
+                  </p>
+                ) : null}
+                <ReportItemSlot
+                  item={item}
+                  onEditItem={onEditItem}
+                  onResolvePlan={onResolvePlan}
+                  onRestorePlan={onRestorePlan}
+                  editorSlot={editorSlot}
+                />
+              </>
+            ) : (
+              <span className="sr-only">No linked update</span>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-const COLUMN_CONFIG: readonly {
-  readonly key: StatusOverviewColumnKey;
-  readonly label: string;
-  readonly idPart: string;
-}[] = [
-  { key: "previouslyPlanned", label: "Previously planned", idPart: "previous" },
-  { key: "currentWeek", label: "Current week", idPart: "current" },
-  { key: "nextWeek", label: "Next week", idPart: "next" },
-];
+function TimelineFooter({
+  unit,
+  activeColumn,
+  onAddItem,
+  editorSlot,
+}: {
+  readonly unit: StatusOverviewUnit;
+  readonly activeColumn: StatusOverviewColumnKey;
+} & Pick<ItemHandlers, "onAddItem" | "editorSlot">) {
+  const createSource =
+    editorSlot?.recordId === null ? editorSlot.source : undefined;
+  return (
+    <div
+      className={`${TIMELINE_GRID} border-t border-[var(--color-border-subtle)]`}
+      data-testid="report-unit-footer"
+    >
+      {STATUS_OVERVIEW_COLUMNS.map((column) => {
+        const matchesEditor = createSource === column.source;
+        const layout = editorLaneClass(
+          matchesEditor,
+          createSource !== undefined,
+          idleTimelineLaneClass(column.key === activeColumn),
+        );
+        return (
+          <div
+            key={column.key}
+            data-overview-footer-lane={column.source}
+            className={`${CELL} ${layout}`}
+          >
+            {matchesEditor ? (
+              editorSlot?.content
+            ) : onAddItem &&
+              !unit.historical &&
+              column.source !== "previous" ? (
+              <button
+                type="button"
+                aria-label={`Add ${column.source} week update to ${unit.name}`}
+                data-overview-focus={`add:${unit.key}:${column.source}`}
+                onClick={() =>
+                  onAddItem({
+                    source: column.source === "current" ? "current" : "next",
+                    unitKind: unit.kind,
+                    unitId: unit.id,
+                  })
+                }
+                className="inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-[var(--radius-sm)] px-2 text-sm font-semibold text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+              >
+                <Plus aria-hidden="true" className="size-4" />
+                {column.source === "current"
+                  ? "Add current update"
+                  : "Plan next week"}
+              </button>
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export function StatusOverviewUnitRow({
+  health,
+  healthPanelId,
+  healthExpanded,
+  onInspect,
+  onCloseHealth,
   unit,
+  rows,
   periods,
-  expandedColumns,
+  expanded,
+  activeColumn,
   onToggle,
   panelId,
   onEditItem,
   onAddItem,
+  onResolvePlan,
+  onRestorePlan,
+  editorSlot,
 }: {
+  readonly health?: ReportHealthUnit | undefined;
+  readonly healthPanelId: string;
+  readonly healthExpanded: boolean;
+  readonly onInspect: OpenHealthDetail;
+  readonly onCloseHealth: () => void;
   readonly unit: StatusOverviewUnit;
+  readonly rows: readonly StatusOverviewLineageRow[];
   readonly periods: StatusOverviewModel["periods"];
-  readonly expandedColumns: ReadonlySet<StatusOverviewColumnKey>;
-  readonly onToggle: (column: StatusOverviewColumnKey) => void;
+  readonly expanded: boolean;
+  readonly activeColumn: StatusOverviewColumnKey;
+  readonly onToggle: () => void;
   readonly panelId: string;
-} & EditItemHandler & {
-    readonly onAddItem?:
-      ((target: StatusOverviewCreateTarget) => void) | undefined;
-  }) {
+} & ItemHandlers) {
+  const more = reportHiddenRowCount(rows);
   return (
     <article
       aria-label={`${unit.kind === "product" ? "Product" : "Activity"} ${unit.name}`}
-      className="min-w-0 overflow-hidden border-t border-[var(--color-border-subtle)] first:border-t-0"
+      className="min-w-0 border-t border-[var(--color-border-subtle)] first:border-t-0"
     >
       <div id={panelId} className={STATUS_OVERVIEW_DESKTOP_GRID}>
         <div className="min-w-0 px-4 py-3">
-          <StatusOverviewUnitSummary unit={unit} />
-        </div>
-        {COLUMN_CONFIG.map((config) => (
-          <TimelineCell
-            key={config.key}
-            label={config.label}
-            period={periods[config.key]}
-            column={unit.columns[config.key]}
-            expanded={expandedColumns.has(config.key)}
-            additionalId={`${panelId}-${config.idPart}-additional`}
-            onToggle={() => onToggle(config.key)}
-            onEditItem={onEditItem}
-            addTarget={
-              onAddItem &&
-              !unit.historical &&
-              config.key !== "previouslyPlanned"
-                ? {
-                    source: config.key === "currentWeek" ? "current" : "next",
-                    unitKind: unit.kind,
-                    unitId: unit.id,
-                  }
-                : null
-            }
-            unitName={unit.name}
-            onAddItem={onAddItem}
+          <StatusOverviewUnitSummary
+            unit={unit}
+            health={health}
+            healthExpanded={healthExpanded}
+            healthPanelId={healthPanelId}
+            onInspect={onInspect}
           />
-        ))}
+        </div>
+        <div className="min-w-0 min-[80rem]:col-span-3">
+          <div className={`${TIMELINE_GRID} min-[80rem]:sr-only`}>
+            {STATUS_OVERVIEW_COLUMNS.map((column) => (
+              <div
+                key={column.key}
+                className={`${CELL} ${idleTimelineLaneClass(column.key === activeColumn)}`}
+              >
+                <p className="text-xs font-semibold">{column.label}</p>
+                <p className="text-xs text-[var(--color-muted-foreground)]">
+                  {periods[column.key] ?? "Period unavailable"}
+                </p>
+              </div>
+            ))}
+          </div>
+          {unit.columns.previouslyPlanned.availability === "unavailable" ? (
+            <p className="px-4 py-2 text-xs text-[var(--color-muted-foreground)]">
+              {unit.columns.previouslyPlanned.reason}
+            </p>
+          ) : null}
+          {rows.length === 0 ? (
+            <p className="px-4 py-3 text-sm text-[var(--color-muted-foreground)]">
+              No updates yet
+            </p>
+          ) : null}
+          <ul className="min-w-0">
+            {rows.filter(isLinkedOverviewRow).map((row, index) => (
+              <li
+                key={row.key}
+                hidden={index >= REPORT_PREVIEW_COUNT && !expanded}
+                inert={index >= REPORT_PREVIEW_COUNT && !expanded}
+              >
+                <LineageRow
+                  row={row}
+                  activeColumn={activeColumn}
+                  onEditItem={onEditItem}
+                  onResolvePlan={onResolvePlan}
+                  onRestorePlan={onRestorePlan}
+                  editorSlot={editorSlot}
+                />
+              </li>
+            ))}
+          </ul>
+          <StatusOverviewAdditionalUpdates
+            rows={rows}
+            expanded={expanded}
+            activeColumn={activeColumn}
+            onEditItem={onEditItem}
+            onResolvePlan={onResolvePlan}
+            onRestorePlan={onRestorePlan}
+            editorSlot={editorSlot}
+          />
+          {more > 0 ? (
+            <button
+              type="button"
+              aria-expanded={expanded}
+              aria-controls={panelId}
+              onClick={onToggle}
+              className="mx-4 min-h-[var(--touch-target-min)] rounded-[var(--radius-sm)] px-2 text-sm font-semibold text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+            >
+              {expanded ? "Show less" : `+${String(more)} more`}
+            </button>
+          ) : null}
+          <TimelineFooter
+            unit={unit}
+            activeColumn={activeColumn}
+            onAddItem={onAddItem}
+            editorSlot={editorSlot}
+          />
+        </div>
       </div>
+      {health && healthExpanded ? (
+        <ReportHealthDetail
+          unit={health}
+          panelId={healthPanelId}
+          onClose={onCloseHealth}
+        />
+      ) : null}
     </article>
   );
 }

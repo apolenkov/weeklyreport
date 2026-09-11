@@ -22,29 +22,31 @@ function LeadVelocityDataTable({
   readonly series: readonly ChartSeries[];
 }) {
   return (
-    <table className="sr-only">
-      <caption>Lead velocity data in submitted sections</caption>
-      <thead>
-        <tr>
-          <th scope="col">Period</th>
-          {series.map((lead) => (
-            <th key={lead.dataKey} scope="col">
-              {lead.name}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {data.map((point) => (
-          <tr key={String(point.period)}>
-            <th scope="row">{point.period}</th>
+    <div className="sr-only">
+      <table>
+        <caption>Lead velocity data in submitted sections</caption>
+        <thead>
+          <tr>
+            <th scope="col">Period</th>
             {series.map((lead) => (
-              <td key={lead.dataKey}>{point[lead.dataKey] ?? 0}</td>
+              <th key={lead.dataKey} scope="col">
+                {lead.name}
+              </th>
             ))}
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {data.map((point) => (
+            <tr key={String(point.period)}>
+              <th scope="row">{point.period}</th>
+              {series.map((lead) => (
+                <td key={lead.dataKey}>{point[lead.dataKey] ?? 0}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -65,8 +67,8 @@ export function LeadVelocityChart({
 
   return (
     <>
-      <ChartContainer aria-hidden="true">
-        <BarChart data={data}>
+      <ChartContainer>
+        <BarChart data={data} aria-label="Lead velocity">
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="period" />
           <YAxis allowDecimals={false} />

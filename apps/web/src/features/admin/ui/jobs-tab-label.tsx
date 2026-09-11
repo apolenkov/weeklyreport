@@ -6,8 +6,7 @@ import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-erro
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { TabCountPill } from "../../../shared/ui/tabs/tab-count-pill";
 
-// DLQ depth is a background health signal, not a live counter; a slow poll
-// keeps the badge fresh without a per-render query on every admin tab.
+// DLQ depth is a background health signal; refresh its cached query on a slow poll.
 const DLQ_COUNT_POLL_MS = 30_000;
 
 function formatDlqCountLabel(count: number, unavailable: boolean): string {

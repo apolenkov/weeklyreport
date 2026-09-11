@@ -1,18 +1,23 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
+import type { ReminderDispatchResult } from "@customreport/shared";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
   useMutationMock,
   invalidateQueries,
+  invalidateLeadForm,
+  invalidateLeadHistory,
   invalidateReview,
   invalidateSubmissionDashboard,
   mutate,
 } = vi.hoisted(() => ({
   useMutationMock: vi.fn(),
   invalidateQueries: vi.fn(),
+  invalidateLeadForm: vi.fn(),
+  invalidateLeadHistory: vi.fn(),
   invalidateReview: vi.fn(),
   invalidateSubmissionDashboard: vi.fn(),
   mutate: vi.fn(),
@@ -26,6 +31,8 @@ vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }));
 vi.mock("../../../shared/lib/query/cache-keys", () => ({
+  invalidateLeadForm,
+  invalidateLeadHistory,
   invalidateReview,
   invalidateSubmissionDashboard,
 }));
@@ -95,13 +102,6 @@ function callbacksFor(
   return callbacks;
 }
 
-interface RemindResult {
-  readonly reason: "no-matching-section" | null;
-  readonly dispatched: number;
-  readonly alreadySent: number;
-  readonly skipped: number;
-}
-
 beforeEach(() => {
   vi.clearAllMocks();
   useMutationMock.mockImplementation((configuration: MockMutationOptions) => ({
@@ -110,7 +110,7 @@ beforeEach(() => {
       mutate(input);
       const result =
         configuration.kind === "remind"
-          ? { reason: null, dispatched: 1, alreadySent: 0, skipped: 0 }
+          ? { queued: 1, alreadyRequested: 0, failed: 0, skipped: 0 }
           : configuration.kind === "review"
             ? { verdict: "changes_requested", unsubmitted: true }
             : undefined;
@@ -146,35 +146,36 @@ describe("dashboard queue mutation transitions", () => {
       name: "shows no matched sections",
       result: {
         reason: "no-matching-section",
-        dispatched: 0,
-        alreadySent: 0,
+        queued: 0,
+        alreadyRequested: 0,
+        failed: 0,
         skipped: 0,
       },
       label: "No sections matched",
     },
     {
-      name: "shows a dispatched reminder",
+      name: "shows a queued reminder",
       result: {
-        reason: null,
-        dispatched: 1,
-        alreadySent: 0,
+        queued: 1,
+        alreadyRequested: 0,
+        failed: 0,
         skipped: 0,
       },
-      label: "Sent",
+      label: "Queued",
     },
     {
-      name: "shows an already-sent reminder",
+      name: "shows an already-requested reminder",
       result: {
-        reason: null,
-        dispatched: 0,
-        alreadySent: 1,
+        queued: 0,
+        alreadyRequested: 1,
+        failed: 0,
         skipped: 0,
       },
-      label: "Already sent",
+      label: "Already requested",
     },
   ] satisfies readonly {
     readonly name: string;
-    readonly result: RemindResult;
+    readonly result: ReminderDispatchResult;
     readonly label: string;
   }[])("$name and disables repeat dispatch", ({ result, label }) => {
     const onMutated = vi.fn();
@@ -236,6 +237,42 @@ describe("dashboard queue mutation transitions", () => {
     expect(onMutated).not.toHaveBeenCalled();
   });
 
+  it("keeps retry available when a completed mutation reports an enqueue failure", () => {
+    const onMutated = vi.fn();
+    useMutationMock.mockImplementation(
+      (configuration: MockMutationOptions) => ({
+        isPending: false,
+        mutate: (_input: unknown, callOptions?: MutationCallbacks) =>
+          callbacksFor(configuration, callOptions).onSuccess({
+            queued: 0,
+            alreadyRequested: 0,
+            failed: 1,
+            skipped: 0,
+          } satisfies ReminderDispatchResult),
+      }),
+    );
+    render(
+      <RemindLeadButton
+        reportId="10000000-0000-4000-8000-000000000001"
+        ruleId={RULE_ID}
+        leadId="20000000-0000-4000-8000-000000000001"
+        leadName="Alice Lead"
+        onMutated={onMutated}
+      />,
+    );
+    const button = screen.getByRole("button", {
+      name: "Send reminder to Alice Lead",
+    });
+    fireEvent.click(button);
+    expect(button).toHaveTextContent("Retry");
+    expect(button).toBeEnabled();
+    expect(
+      screen.getByText("Reminder to Alice Lead failed; retry available"),
+    ).toBeInTheDocument();
+    expect(button.querySelector(".lucide-check")).toBeNull();
+    expect(onMutated).toHaveBeenCalledOnce();
+  });
+
   it("posts the existing changes-requested verdict and refreshes the queue", () => {
     const onMutated = vi.fn();
     render(
@@ -257,7 +294,7 @@ describe("dashboard queue mutation transitions", () => {
     expect(onMutated).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps per-lead revoke confirmed and refreshes the queue on success", () => {
+  it("refreshes lead, dashboard and history projections after per-lead revoke", () => {
     const onMutated = vi.fn();
     render(
       <RevokeLeadButton
@@ -272,6 +309,8 @@ describe("dashboard queue mutation transitions", () => {
     expect(mutate).toHaveBeenCalledWith({
       reportSectionId: "30000000-0000-4000-8000-000000000001",
     });
+    expect(invalidateLeadForm).toHaveBeenCalledTimes(1);
+    expect(invalidateLeadHistory).toHaveBeenCalledTimes(1);
     expect(invalidateSubmissionDashboard).toHaveBeenCalledTimes(1);
     expect(onMutated).toHaveBeenCalledTimes(1);
   });

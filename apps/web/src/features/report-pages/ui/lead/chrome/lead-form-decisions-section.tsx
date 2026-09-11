@@ -23,8 +23,8 @@ interface LeadFormDecisionsSectionProps {
   readonly stagesForProduct: StagesForProduct;
 }
 
-// Outside the sync bridge: decisions carry their own change handler and never
-// participate in the product/risk two-way sync.
+// Decisions use their own change handler outside the bridge; risk coverage only
+// contributes a one-way display floor to product stages.
 export function LeadFormDecisionsSection({
   viewModel,
   actions,

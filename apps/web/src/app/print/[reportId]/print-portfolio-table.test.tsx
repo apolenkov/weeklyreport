@@ -11,6 +11,7 @@ function makeProduct(
     id: `product-${status}`,
     initials: "PR",
     name: `Product ${status}`,
+    hasContent: true,
     status,
     statusLabel: status,
     leads: "Alex Lead",

@@ -3,15 +3,19 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
+import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SessionContext } from "../../../../../shared/lib/auth/session-provider";
+import { invalidateLeadForm } from "../../../../../shared/lib/query/cache-keys";
 import { TRPCProxyContext } from "../../../../../shared/lib/trpc/trpc-context";
 import { expectDefined } from "../../../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
 import { LeadReportAssistantStore } from "../../lead-report-assistant-store";
 import { LeadForm } from "./lead-form";
+import { makeLeadFormSectionFixture } from "./lead-form-test-fixtures";
 
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -39,16 +43,11 @@ const AUTHOR_ID = "44444444-4444-4444-4444-444444444444";
 const STAGE_ID = "88888888-8888-4888-8888-888888888888";
 
 function makeSection() {
-  return {
+  return makeLeadFormSectionFixture({
     reportSectionId: SECTION_ID,
     reportId: REPORT_ID,
     authorId: AUTHOR_ID,
-    authorName: "Test Lead",
-    authorRole: "lead" as const,
     version: 1,
-    status: "draft" as const,
-    submittedAt: null,
-    referencedProjects: [],
     projects: [
       {
         projectId: PROJECT_ID,
@@ -75,14 +74,14 @@ function makeSection() {
         carriedOver: false,
       },
     ],
-    risks: [],
-    decisions: [],
-    priorities: [],
-    activities: [],
-  };
+  });
 }
 
-function buildHarness() {
+function buildHarness(
+  section: () =>
+    | ReturnType<typeof makeSection>
+    | Promise<ReturnType<typeof makeSection>> = makeSection,
+) {
   const { proxy, captured } = createMockTRPC([
     {
       path: ["ai", "availability"],
@@ -102,8 +101,8 @@ function buildHarness() {
     { path: ["reports", "submit"], mutation: true },
     {
       path: ["leadForm", "byPeriod"],
-      query: () => ({
-        section: makeSection(),
+      query: async () => ({
+        section: await section(),
         readOnly: false,
         canRequestReopen: false,
         publishedLineage: { itemStableIds: [], decisionStableIds: [] },
@@ -116,6 +115,9 @@ function buildHarness() {
     { path: ["leadForm", "revoke"], mutation: true },
     { path: ["leadForm", "fillFrom"], mutation: true },
     { path: ["leadForm", "requestReopen"], mutation: true },
+    { path: ["leadForm", "assistant"], mutation: true },
+    { path: ["leadForm", "resolvePlan"], mutation: true },
+    { path: ["leadForm", "restorePlan"], mutation: true },
     { path: ["leadForm", "crossAuthors"], query: [] },
     { path: ["leadForm", "crossAuthorContent"], query: [] },
     { path: ["review", "dashboard"] },
@@ -161,8 +163,12 @@ async function flush() {
   await act(() => vi.advanceTimersByTimeAsync(0));
 }
 
-async function renderLoaded() {
-  const harness = buildHarness();
+async function renderLoaded(
+  section: () =>
+    | ReturnType<typeof makeSection>
+    | Promise<ReturnType<typeof makeSection>> = makeSection,
+) {
+  const harness = buildHarness(section);
   render(
     <harness.Wrapper>
       <LeadForm />
@@ -238,4 +244,167 @@ describe("lead-form draft: autosave cadence", () => {
       expectDefined(captured["reports.saveDraft"]).mutationFn,
     ).toHaveBeenCalledTimes(1);
   });
+
+  it("preserves edits typed during a same-save echo and autosaves them with its version", async () => {
+    vi.useRealTimers();
+    const user = userEvent.setup();
+    let serverSection = makeSection();
+    let queryCount = 0;
+    let resolveRefetch!: (section: ReturnType<typeof makeSection>) => void;
+    const refetchSection = new Promise<ReturnType<typeof makeSection>>(
+      (resolve) => {
+        resolveRefetch = resolve;
+      },
+    );
+    const { Wrapper, captured } = buildHarness(() =>
+      queryCount++ === 0 ? serverSection : refetchSection,
+    );
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    expect(await screen.findByText("Autosaved")).toBeInTheDocument();
+    let resolveFirstSave!: (section: ReturnType<typeof makeSection>) => void;
+    const saveDraft = expectDefined(captured["reports.saveDraft"]).mutationFn;
+    saveDraft.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveFirstSave = resolve;
+        }),
+    );
+    vi.mocked(invalidateLeadForm).mockImplementationOnce((queryClient) => {
+      void queryClient.invalidateQueries();
+    });
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    const firstDescription = screen.getByRole("textbox", {
+      name: /Description/,
+    });
+    await user.clear(firstDescription);
+    await user.type(firstDescription, "Saved A");
+    await user.click(screen.getByRole("button", { name: "Save Item" }));
+    await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledTimes(1), {
+      timeout: 7000,
+    });
+    expect(saveDraft.mock.calls[0]?.[0]).toMatchObject({
+      version: 1,
+      items: [{ text: "Saved A" }],
+    });
+
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    const secondDescription = screen.getByRole("textbox", {
+      name: /Description/,
+    });
+    await user.clear(secondDescription);
+    await user.type(secondDescription, "Local B");
+    await user.click(screen.getByRole("button", { name: "Save Item" }));
+    expect(screen.getByText("Local B")).toBeInTheDocument();
+
+    const savedA = {
+      ...makeSection(),
+      version: 2,
+      items: makeSection().items.map((item) => ({ ...item, text: "Saved A" })),
+    };
+    serverSection = savedA;
+    act(() => {
+      resolveFirstSave(savedA);
+    });
+    await vi.waitFor(() => expect(queryCount).toBeGreaterThanOrEqual(2));
+    expect(screen.getByText("Local B")).toBeInTheDocument();
+    await act(() => {
+      resolveRefetch(serverSection);
+      return Promise.resolve();
+    });
+
+    await vi.waitFor(() =>
+      expect(screen.getByText("Local B")).toBeInTheDocument(),
+    );
+    await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledTimes(2), {
+      timeout: 7000,
+    });
+    expect(saveDraft.mock.calls[1]?.[0]).toMatchObject({
+      version: 2,
+      items: [{ text: "Local B" }],
+    });
+  }, 15_000);
+
+  it("surfaces a conflict when a newer external refetch arrives during dirty editing", async () => {
+    vi.useRealTimers();
+    const user = userEvent.setup();
+    let queryCount = 0;
+    let resolveRefetch!: (section: ReturnType<typeof makeSection>) => void;
+    const refetchSection = new Promise<ReturnType<typeof makeSection>>(
+      (resolve) => {
+        resolveRefetch = resolve;
+      },
+    );
+    const { Wrapper, captured } = buildHarness(() =>
+      queryCount++ === 0 ? makeSection() : refetchSection,
+    );
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    expect(await screen.findByText("Autosaved")).toBeInTheDocument();
+
+    let resolveFirstSave!: (section: ReturnType<typeof makeSection>) => void;
+    const saveDraft = expectDefined(captured["reports.saveDraft"]).mutationFn;
+    saveDraft.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveFirstSave = resolve;
+        }),
+    );
+    vi.mocked(invalidateLeadForm).mockImplementationOnce((queryClient) => {
+      void queryClient.invalidateQueries();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    const firstDescription = screen.getByRole("textbox", {
+      name: /Description/,
+    });
+    await user.clear(firstDescription);
+    await user.type(firstDescription, "Saved A");
+    await user.click(screen.getByRole("button", { name: "Save Item" }));
+    await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledTimes(1), {
+      timeout: 7000,
+    });
+
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    const secondDescription = screen.getByRole("textbox", {
+      name: /Description/,
+    });
+    await user.clear(secondDescription);
+    await user.type(secondDescription, "Local B");
+    await user.click(screen.getByRole("button", { name: "Save Item" }));
+    expect(screen.getByText("Local B")).toBeInTheDocument();
+
+    const savedA = {
+      ...makeSection(),
+      version: 2,
+      items: makeSection().items.map((item) => ({ ...item, text: "Saved A" })),
+    };
+    const external = {
+      ...savedA,
+      version: 3,
+      items: savedA.items.map((item) => ({ ...item, text: "External C" })),
+    };
+    act(() => {
+      resolveFirstSave(savedA);
+    });
+    await vi.waitFor(() => expect(queryCount).toBeGreaterThanOrEqual(2));
+    await act(() => {
+      resolveRefetch(external);
+      return Promise.resolve();
+    });
+
+    await vi.waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        "This section was changed elsewhere. Reloaded the latest version — re-apply your changes and save again.",
+      ),
+    );
+    expect(screen.getByText("External C")).toBeInTheDocument();
+    expect(screen.queryByText("Local B")).toBeNull();
+  }, 15_000);
 });

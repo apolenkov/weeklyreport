@@ -7,6 +7,7 @@ import { useEditableListDialog } from "../../../shared/hooks/dialogs/use-editabl
 import type { KanbanItem, Product } from "../../report-sections";
 import {
   BoardEmptyState,
+  BoardGrid,
   buildItemDialogProps,
   isBoardEmpty,
   ItemCard,
@@ -16,7 +17,6 @@ import {
 import { usePauseReason } from "../model/controls/use-pause-reason";
 import { useScrollFade } from "../model/controls/use-scroll-fade";
 import { AddItemButton } from "./current-week-add-button";
-import { CurrentWeekBoardGrid } from "./current-week-board-grid";
 import type { CurrentWeekSectionProps } from "./current-week-section.types";
 import { PauseReasonDialog } from "./pause-reason-dialog";
 type CurrentWeekItemHandlers = ReturnType<
@@ -40,7 +40,6 @@ function createItemRenderer({
       item={item}
       risks={props.risks}
       readOnly={props.readOnly ?? false}
-      isEditing={false}
       publishedLocked={props.publishedLockedIds?.has(item.id)}
       onEdit={handlers.handleEdit}
       onDelete={handlers.handleDelete}
@@ -105,7 +104,8 @@ export function CurrentWeekSection(props: CurrentWeekSectionProps) {
   // The pause-reason prompt lifecycle lives in a hook so
   // a card's Pause button only needs to name the item.
   const pause = usePauseReason<KanbanItem>(props.onPauseItem);
-  const defaultProduct = products?.[0];
+  const defaultProduct = products[0];
+  const defaultActivityId = defaultProduct ? undefined : activities?.[0]?.id;
 
   // Shared dialog lifecycle (DialogState union, readOnly-ref add-signal
   // effect, openSeq remount key, pending-delete). requireSeed: this section
@@ -114,6 +114,7 @@ export function CurrentWeekSection(props: CurrentWeekSectionProps) {
     readOnly,
     addSignal,
     seedProductId: defaultProduct?.id,
+    seedActivityId: defaultActivityId,
     requireSeed: true,
   });
 
@@ -132,8 +133,7 @@ export function CurrentWeekSection(props: CurrentWeekSectionProps) {
   }
 
   // One column per assigned product (including empty) so `+ Add` stays visible.
-  // Falls back to non-empty groups when products is omitted. Activity lanes
-  // sit below the grid, never as peer product columns.
+  // Activity lanes sit below the grid, never as peer product columns.
   const board = splitItemBoard(products, items, activities);
   const dialogProps = buildItemDialogProps({
     section: props,
@@ -152,11 +152,11 @@ export function CurrentWeekSection(props: CurrentWeekSectionProps) {
         className="max-md:max-h-none max-md:overflow-visible md:max-h-[420px] md:overflow-y-auto"
         style={{ scrollbarWidth: "thin" }}
       >
-        <CurrentWeekBoardGrid
+        <BoardGrid
           productColumns={board.productColumns}
           activityLanes={board.activityLanes}
           readOnly={readOnly}
-          hasMultipleProducts={products != null && products.length > 1}
+          hasMultipleProducts={products.length > 1}
           onAdd={dialog.openCreate}
           renderItem={createItemRenderer({ props, handlers, pause })}
         />

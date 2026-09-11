@@ -13,7 +13,7 @@ export interface ForeignGridRow {
 }
 
 // Author identity shared by every row of one co-owner.
-type ForeignRowBase = Pick<GridRow, "authorId" | "showAuthorBadge">;
+type ForeignRowBase = Pick<GridRow, "authorId">;
 
 const toForeignItemRow =
   (base: ForeignRowBase) =>
@@ -37,6 +37,14 @@ const toForeignRiskRow =
   (base: ForeignRowBase) =>
   (risk: CrossAuthorContentRow["risks"][number]): ForeignGridRow => {
     const blocked = risk.severity === "blocked";
+    const details = [
+      ...(risk.impact.trim().length > 0
+        ? [{ label: "Impact" as const, text: risk.impact.trim() }]
+        : []),
+      ...(risk.mitigation.trim().length > 0
+        ? [{ label: "Mitigation" as const, text: risk.mitigation.trim() }]
+        : []),
+    ];
     return {
       productId: risk.projectId,
       column: "risks",
@@ -46,6 +54,7 @@ const toForeignRiskRow =
         text: risk.risk.trim(),
         tone: blocked ? "blocked" : "at-risk",
         hoverLabel: blocked ? "Blocked" : "At risk",
+        ...(details.length === 0 ? {} : { details }),
         stageNames: sortStageNames(risk.stageNames),
       },
     };
@@ -53,18 +62,24 @@ const toForeignRiskRow =
 
 const toForeignDecisionRow =
   (base: ForeignRowBase) =>
-  (decision: CrossAuthorContentRow["decisions"][number]): ForeignGridRow => ({
-    productId: decision.productId,
-    column: "decisions",
-    row: {
-      ...base,
-      id: decision.id,
-      text: decision.text.trim(),
-      tone: "note",
-      hoverLabel: "Decision",
-      stageNames: sortStageNames(decision.stageNames),
-    },
-  });
+  (decision: CrossAuthorContentRow["decisions"][number]): ForeignGridRow => {
+    const impact = decision.impact.trim();
+    return {
+      productId: decision.productId,
+      column: "decisions",
+      row: {
+        ...base,
+        id: decision.id,
+        text: decision.text.trim(),
+        tone: "note",
+        hoverLabel: "Decision",
+        ...(impact.length === 0
+          ? {}
+          : { details: [{ label: "Impact", text: impact }] }),
+        stageNames: sortStageNames(decision.stageNames),
+      },
+    };
+  };
 
 // Everyone-mode co-owner rows keep real author identity; foreign rows are never ranked.
 export function buildForeignRows(
@@ -73,7 +88,6 @@ export function buildForeignRows(
   return foreign.flatMap((ca) => {
     const base: ForeignRowBase = {
       authorId: ca.authorId,
-      showAuthorBadge: true,
     };
     return [
       ...ca.items.map(toForeignItemRow(base)),

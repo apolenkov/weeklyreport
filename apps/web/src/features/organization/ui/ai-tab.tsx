@@ -16,6 +16,10 @@ import { useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
+import {
+  copyScalarSearchParams,
+  getScalarSearchParam,
+} from "../../../shared/lib/navigation/scalar-search-param";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { AiProviderCard } from "./ai-provider-card";
 import { SettingsAiFeatureDetail } from "./settings-ai-feature-detail";
@@ -41,8 +45,8 @@ const selectionFromSearch = (source: string): AiSettingsSelection => {
   const params = new URLSearchParams(source);
   return {
     source,
-    tab: tabFromSearch(params.get("aiTab")),
-    feature: featureKeyFromSearch(params.get("aiFeature")),
+    tab: tabFromSearch(getScalarSearchParam(params, "aiTab")),
+    feature: featureKeyFromSearch(getScalarSearchParam(params, "aiFeature")),
   };
 };
 
@@ -82,10 +86,14 @@ export function AiTab() {
   const searchState = searchParams.toString();
   const [optimisticSelection, setOptimisticSelection] =
     useState<AiSettingsSelection>(() => selectionFromSearch(searchState));
+  const urlSelection = selectionFromSearch(searchState);
+  if (optimisticSelection.source !== searchState) {
+    setOptimisticSelection(urlSelection);
+  }
   const selection =
     optimisticSelection.source === searchState
       ? optimisticSelection
-      : selectionFromSearch(searchState);
+      : urlSelection;
   const { feature: featureKey, tab: activeTab } = selection;
 
   const setAiState = (values: {
@@ -97,7 +105,7 @@ export function AiTab() {
       tab: values.tab ?? activeTab,
       feature: values.feature ?? featureKey,
     });
-    const params = new URLSearchParams(searchState);
+    const params = copyScalarSearchParams(searchParams, ["aiTab", "aiFeature"]);
     if (values.tab) params.set("aiTab", values.tab);
     if (values.feature) params.set("aiFeature", values.feature);
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
@@ -124,6 +132,11 @@ export function AiTab() {
       providerQ.refetch(),
       featureQ.refetch(),
     ]);
+  };
+  const refreshProviderDependents = async () => {
+    const refreshes: Promise<unknown>[] = [catalogQ.refetch()];
+    if (selectedKey !== null) refreshes.push(featureQ.refetch());
+    await Promise.all(refreshes);
   };
 
   return (
@@ -189,7 +202,7 @@ export function AiTab() {
         </div>
 
         <TabsContent value="provider" className="pt-6">
-          <AiProviderCard />
+          <AiProviderCard onRefreshDependents={refreshProviderDependents} />
         </TabsContent>
 
         <TabsContent value="features" className="space-y-5 pt-6">

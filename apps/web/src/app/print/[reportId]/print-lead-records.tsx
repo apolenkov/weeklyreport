@@ -1,7 +1,9 @@
 import type { CSSProperties } from "react";
 
-import type { WeeklyProductReport } from "../../../features/report-sections";
-import { STATUS_BADGE } from "../../../features/report-sections";
+import {
+  STATUS_BADGE,
+  type WeeklyProductReport,
+} from "../../../features/report-sections";
 import {
   ATTENTION_BG,
   DECISION_ACCENT,
@@ -10,9 +12,19 @@ import {
   TEXT_SECONDARY,
 } from "./print-report-theme";
 
-interface RecordListProps {
-  readonly report: WeeklyProductReport;
+export interface PrintRecordCollections {
+  readonly currentWeek: readonly WeeklyProductReport["currentWeek"][number][];
+  readonly nextWeek: readonly WeeklyProductReport["nextWeek"][number][];
+  readonly risks: readonly WeeklyProductReport["risks"][number][];
+  readonly decisions: readonly WeeklyProductReport["decisions"][number][];
+  readonly priorities?: readonly WeeklyProductReport["priorities"][number][];
 }
+
+interface RecordListProps {
+  readonly report: PrintRecordCollections;
+}
+
+type PrintItem = WeeklyProductReport["currentWeek"][number];
 
 const RECORD_GROUP_STYLE: CSSProperties = { marginBottom: "6px" };
 const RECORD_TITLE_STYLE: CSSProperties = {
@@ -26,6 +38,7 @@ const RECORD_LIST_STYLE: CSSProperties = {
   paddingLeft: "16px",
   fontSize: "11px",
   lineHeight: "1.6",
+  overflowWrap: "anywhere",
 };
 
 // Soft badge fills (text colors reuse printStatusColor where they match).
@@ -44,6 +57,50 @@ const BADGE_BASE: CSSProperties = {
   padding: "1px 4px",
   borderRadius: "4px",
 };
+
+const OUTCOME_LABELS = {
+  done: "Completed",
+  continue: "Continued",
+  plan_next: "Planned next step",
+  restore: "Restored plan",
+  wont_do: "Marked Won't do",
+} as const;
+
+function auditTimestamp(occurredAt: string): string {
+  return occurredAt.replace("T", " ").replace(/:\d{2}(?:\.\d+)?Z$/, " UTC");
+}
+
+function PrintItemOutcome({ item }: { readonly item: PrintItem }) {
+  const events = item.outcomeHistory ?? [];
+  if (!item.nextStepText && item.resolution == null && events.length === 0)
+    return null;
+  return (
+    <div style={{ marginTop: "2px", color: TEXT_SECONDARY, fontSize: "10px" }}>
+      {item.nextStepText ? (
+        <div>Next commitment: {item.nextStepText}</div>
+      ) : null}
+      {item.resolution ? (
+        <div>Won&apos;t do: {item.resolution.reason}</div>
+      ) : null}
+      {events.length > 0 ? (
+        <ul style={{ margin: "2px 0 0", paddingLeft: "14px" }}>
+          {events.map((event) => (
+            <li key={event.id}>
+              {OUTCOME_LABELS[event.outcome]} by {event.actorName} ·{" "}
+              {auditTimestamp(event.occurredAt)}
+              {event.reason ? ` · ${event.reason}` : ""}
+            </li>
+          ))}
+        </ul>
+      ) : item.resolution ? (
+        <div>
+          Marked Won&apos;t do by {item.resolution.actorName} ·{" "}
+          {auditTimestamp(item.resolution.occurredAt)}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 function workflowStatusBadgeStyle(status: string): CSSProperties {
   if (status === "completed") {
@@ -84,6 +141,12 @@ const DECISION_BADGE_STYLE: CSSProperties = {
   fontWeight: 600,
 };
 
+function PrintPriorityRank({ item }: { readonly item: PrintItem }) {
+  return item.priorityRank == null ? null : (
+    <span style={DECISION_BADGE_STYLE}>P{item.priorityRank}</span>
+  );
+}
+
 export function CurrentWeekRecords({ report }: RecordListProps) {
   if (report.currentWeek.length === 0) return null;
   return (
@@ -95,10 +158,13 @@ export function CurrentWeekRecords({ report }: RecordListProps) {
             <span style={{ color: TEXT_SECONDARY, fontSize: "10px" }}>
               [{item.stageLead}]
             </span>{" "}
-            {item.text}{" "}
-            <span style={workflowStatusBadgeStyle(item.status)}>
-              {STATUS_BADGE[item.status].label}
-            </span>
+            {item.text} <PrintPriorityRank item={item} />{" "}
+            {item.resolution ? null : (
+              <span style={workflowStatusBadgeStyle(item.status)}>
+                {STATUS_BADGE[item.status].label}
+              </span>
+            )}
+            <PrintItemOutcome item={item} />
           </li>
         ))}
       </ul>
@@ -113,7 +179,16 @@ export function NextWeekRecords({ report }: RecordListProps) {
       <h4 style={RECORD_TITLE_STYLE}>Next Week</h4>
       <ul style={RECORD_LIST_STYLE}>
         {report.nextWeek.map((item) => (
-          <li key={item.id}>{item.text}</li>
+          <li key={item.id}>
+            <span style={{ color: TEXT_SECONDARY, fontSize: "10px" }}>
+              [{item.stageLead}]
+            </span>{" "}
+            {item.text} <PrintPriorityRank item={item} />{" "}
+            <span style={workflowStatusBadgeStyle(item.status)}>
+              {STATUS_BADGE[item.status].label}
+            </span>
+            <PrintItemOutcome item={item} />
+          </li>
         ))}
       </ul>
     </div>
@@ -157,7 +232,7 @@ export function DecisionRecords({ report }: RecordListProps) {
 }
 
 export function PriorityRecords({ report }: RecordListProps) {
-  if (report.priorities.length === 0) return null;
+  if (!report.priorities || report.priorities.length === 0) return null;
   return (
     <div style={RECORD_GROUP_STYLE}>
       <h4 style={RECORD_TITLE_STYLE}>Priorities</h4>

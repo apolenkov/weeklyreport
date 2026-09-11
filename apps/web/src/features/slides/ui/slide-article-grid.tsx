@@ -124,10 +124,18 @@ function SubsectionHeader({
     );
   }
   return (
-    <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+    <span className="flex min-w-0 flex-wrap items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
       <CornerDownRight aria-hidden="true" className="h-3 w-3" />
       <StatusDot status={subsection.status} />
       {subsection.name}
+      {subsection.linkedProducts.length > 0 && (
+        <span className="min-w-0 break-words font-normal normal-case tracking-normal">
+          Linked products:{" "}
+          {subsection.linkedProducts
+            .map((product) => product.productName)
+            .join(", ")}
+        </span>
+      )}
     </span>
   );
 }

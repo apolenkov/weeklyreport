@@ -198,8 +198,8 @@ export function GroupProductsEditor({
         Products attached
       </legend>
       <p className="mb-2 text-xs text-[var(--color-muted-foreground)]">
-        Explicit Group ↔ Product mapping. Toggle to attach or detach free
-        products. Products already attached to another group are locked here.
+        Choose which available products belong to this group. Products owned by
+        another group are locked here.
       </p>
       {state.attachedLoading ? (
         <div

@@ -7,8 +7,8 @@ import type { ReactNode } from "react";
 
 import { invalidateLeadForm } from "../../../../shared/lib/query/cache-keys";
 import { TRPCProxyContext } from "../../../../shared/lib/trpc/trpc-context";
-import { expectDefined } from "../../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../../test-utils/mock-trpc";
+import { makeReportSectionFixture } from "../../../../test-utils/report-section-fixtures";
 import { InMemoryLeadFormWriteAdapter } from "../lead-form/lead-form-write-port.in-memory";
 
 export const AUTOSAVE_SECTION_ID = "11111111-1111-1111-1111-111111111111";
@@ -46,25 +46,31 @@ export function makeAutosavePayloadFor(
   return { ...makeAutosavePayload(text), reportSectionId: sectionId };
 }
 
+export function makeAutosaveResponse(
+  request: DraftSavePayload,
+  version = request.version + 1,
+): ReportSectionReadModel {
+  return makeReportSectionFixture({
+    reportSectionId: request.reportSectionId,
+    version,
+  });
+}
+
 export function buildAutosaveHarness(
-  opts: { mutationFn?: (vars: unknown) => Promise<unknown> } = {},
+  opts: {
+    mutationFn?: (vars: DraftSavePayload) => Promise<ReportSectionReadModel>;
+  } = {},
 ) {
-  const calls: unknown[] = [];
+  const calls: DraftSavePayload[] = [];
   const userMutationFn =
-    opts.mutationFn ?? (() => Promise.resolve({ version: 2 }));
-  const { proxy, captured } = createMockTRPC([
-    { path: ["reports", "saveDraft"], mutation: true },
+    opts.mutationFn ??
+    ((request: DraftSavePayload) =>
+      Promise.resolve(makeAutosaveResponse(request)));
+  const { proxy } = createMockTRPC([
     { path: ["reports", "getActive"] },
     { path: ["reports", "myHistory"] },
     { path: ["leadForm", "byPeriod"] },
   ]);
-
-  expectDefined(captured["reports.saveDraft"]).mutationFn.mockImplementation(
-    async (vars: unknown) => {
-      calls.push(vars);
-      return userMutationFn(vars);
-    },
-  );
 
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -73,7 +79,7 @@ export function buildAutosaveHarness(
   const writePort = new InMemoryLeadFormWriteAdapter({
     saveDraft: async (input) => {
       calls.push(input);
-      const saved = (await userMutationFn(input)) as ReportSectionReadModel;
+      const saved = await userMutationFn(input);
       invalidateLeadForm(queryClient, proxy);
       return saved;
     },

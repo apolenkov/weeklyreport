@@ -194,17 +194,15 @@ describe("ItemCard — uniform height", () => {
     expect(longCard.style.minHeight).toBe("");
   });
 
-  it("the fixed chrome (status pill row, author, stage tags) is never clipped by the reference height", () => {
+  it("applies shrink guards to the fixed chrome within the reference height", () => {
     const { container } = render(
       <ItemCard
         item={{ ...BASE_ITEM, priorityRank: 1, stageNames: ["S1", "S2"] }}
       />,
     );
     const card = within(container).getByTestId("item-card");
-    // Top row (status pill + actions) and footer row (author + stage tags)
-    // opt out of the flex column's shrink pressure via `shrink-0`, so the
-    // fixed card height never compresses them below their natural size;
-    // only the body text region in between (line-clamp-3) is flexible.
+    // The top and footer rows opt out of flex shrink; jsdom proves the CSS
+    // contract here, while browser layout remains outside this unit test.
     const rows = Array.from(card.children);
     expect(rows[0]).toHaveClass("shrink-0");
     expect(rows[2]).toHaveClass("shrink-0");
@@ -222,12 +220,6 @@ describe("ItemCard — body text truncation + tooltip", () => {
     const body = screen.getByTitle(LONG_TEXT);
     expect(body).toHaveClass("line-clamp-3");
     expect(body).toHaveTextContent(LONG_TEXT);
-  });
-
-  it("inline edit shows the full, untruncated text in the textarea", () => {
-    render(<ItemCard item={{ ...BASE_ITEM, text: LONG_TEXT }} isEditing />);
-    const textarea = screen.getByRole("textbox", { name: "Edit item text" });
-    expect(textarea).toHaveValue(LONG_TEXT);
   });
 });
 

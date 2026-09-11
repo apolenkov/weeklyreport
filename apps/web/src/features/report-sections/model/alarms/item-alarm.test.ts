@@ -99,7 +99,7 @@ describe("deriveItemAlarmFromRisks", () => {
   it("never floors a planned (next-week) item", () => {
     expect(
       deriveItemAlarmFromRisks({ ...inProgress, status: "planned" }, [
-        risk({ stageNames: [], severity: "blocked" }),
+        risk({ stageNames: ["Development"], severity: "blocked" }),
       ]),
     ).toBeNull();
   });

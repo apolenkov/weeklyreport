@@ -73,7 +73,7 @@ export function RemindersSubTab({
   const isSaving = updateSettingsMut.isPending;
 
   return (
-    <div className="max-w-lg space-y-5">
+    <fieldset disabled={isSaving} className="min-w-0 max-w-lg space-y-5">
       <p className="text-sm text-[var(--color-muted-foreground)]">
         Default timezone applied when an admin creates a new reminder. Existing
         reminders keep their own timezone.
@@ -108,6 +108,6 @@ export function RemindersSubTab({
           </span>
         )}
       </div>
-    </div>
+    </fieldset>
   );
 }

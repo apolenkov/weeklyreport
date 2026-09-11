@@ -5,13 +5,13 @@ import {
   type Dispatch,
   type SetStateAction,
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
 import { toast } from "sonner";
 
-import { encodeAutosaveComparisonKey } from "../autosave/autosave-stable-stringify";
 import { useDraftServerSync } from "../autosave/use-lead-form-server-sync";
 import { sectionToDraftPayload } from "../lead-section-draft-payload";
 import { buildLeadSubmitPayload } from "../lead-submit-readiness";
@@ -26,50 +26,100 @@ import {
 import type { SubmitOutcome } from "./lead-form-submit-context";
 import type { LeadFormWritePort } from "./lead-form-write-port";
 import { isLeadFormWriteConflict } from "./lead-form-write-port";
+import {
+  type LeadFormOutcomeActions,
+  useLeadFormOutcomeCoordinator,
+} from "./use-lead-form-outcome-coordinator";
 
 // Ref mirror of the optimistic-lock version so submit reads the current value
 // without re-creating itself on every autosave bump.
-function useDraftVersion() {
+function useDraftVersion(sectionId: string | null) {
   const [version, setVersion] = useState(1);
   const versionRef = useRef(1);
-  const setVersionSafe = useCallback((next: number) => {
-    versionRef.current = next;
-    setVersion(next);
-  }, []);
-  return { version, versionRef, setVersionSafe };
+  const acceptedRef = useRef<{ sectionId: string | null; version: number }>({
+    sectionId: null,
+    version: 1,
+  });
+  const acceptVersion = useCallback(
+    (candidateSectionId: string, next: number) => {
+      const accepted = acceptedRef.current;
+      if (
+        accepted.sectionId === candidateSectionId &&
+        next < accepted.version
+      ) {
+        return false;
+      }
+      acceptedRef.current = { sectionId: candidateSectionId, version: next };
+      versionRef.current = next;
+      setVersion(next);
+      return true;
+    },
+    [],
+  );
+  const setVersionSafe = useCallback(
+    (next: number) => {
+      if (sectionId !== null) acceptVersion(sectionId, next);
+    },
+    [acceptVersion, sectionId],
+  );
+  return { version, versionRef, setVersionSafe, acceptVersion };
 }
 
-// The reload promise settles before the user is told it happened, so the
-// announcement is never premature and a failed refetch is surfaced as such.
-function useConflictReload(refetchSection: () => Promise<unknown>) {
+// Capture the committed activation, so returning to the same section is distinct.
+function useGenerationCapture(generation: LeadFormGeneration | null) {
+  const scope = useMemo(() => ({ generation }), [generation]);
+  const liveScope = useRef<{ generation: LeadFormGeneration | null } | null>(
+    null,
+  );
+  useEffect(() => {
+    liveScope.current = scope;
+    return () => {
+      liveScope.current = null;
+    };
+  }, [scope]);
   return useCallback(() => {
+    return liveScope.current === scope
+      ? () => liveScope.current === scope
+      : null;
+  }, [scope]);
+}
+
+// Announce only after the refetch settles while the originating section is active.
+function useConflictReload(
+  refetchSection: () => Promise<unknown>,
+  captureGeneration: ReturnType<typeof useGenerationCapture>,
+) {
+  return useCallback(() => {
+    const isCurrent = captureGeneration();
+    if (!isCurrent) return;
     void refetchSection()
       .then(() => {
+        if (!isCurrent()) return;
         toast.error(
           "This section was changed elsewhere. Reloaded the latest version — re-apply your changes and save again.",
         );
       })
       .catch(() => {
+        if (!isCurrent()) return;
         toast.error(
           "This section was changed elsewhere. Reload failed — refresh the page and re-apply your changes.",
         );
       });
-  }, [refetchSection]);
+  }, [captureGeneration, refetchSection]);
 }
 
-function useDraftPayloadKeys(
-  draftSection: ReportSectionReadModel | null,
-  serverSection: ReportSectionReadModel | null | undefined,
-) {
+function useDraftPayload(draftSection: ReportSectionReadModel | null) {
   const draftPayload = useMemo(
     () => (draftSection ? sectionToDraftPayload(draftSection) : null),
     [draftSection],
   );
-  const initialSavedKey = useMemo(() => {
-    if (!serverSection) return null;
-    return encodeAutosaveComparisonKey(sectionToDraftPayload(serverSection));
-  }, [serverSection]);
-  return { draftPayload, initialSavedKey };
+  return draftPayload;
+}
+
+function submitErrorMessage(error: unknown): string {
+  return error instanceof Error && error.message
+    ? error.message
+    : "Submit failed";
 }
 
 interface LeadFormDraftCoreArgs {
@@ -84,9 +134,11 @@ interface LeadFormDraftCoreArgs {
 function useGenerationBoundApply(
   generation: LeadFormGeneration | null,
   setDraftSection: Dispatch<SetStateAction<ReportSectionReadModel | null>>,
+  isOutcomeLocked: () => boolean,
 ) {
   return useCallback(
     (patch: DraftPatch) => {
+      if (isOutcomeLocked()) return;
       setDraftSection((current) =>
         current !== null &&
         generation !== null &&
@@ -95,7 +147,7 @@ function useGenerationBoundApply(
           : current,
       );
     },
-    [generation, setDraftSection],
+    [generation, isOutcomeLocked, setDraftSection],
   );
 }
 
@@ -112,61 +164,111 @@ export function useLeadFormDraftCore({
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [draftSection, setDraftSection] =
     useState<ReportSectionReadModel | null>(null);
-  const { version, versionRef, setVersionSafe } = useDraftVersion();
-  const handleConflict = useConflictReload(refetchSection);
-  const { draftPayload, initialSavedKey } = useDraftPayloadKeys(
-    draftSection,
-    serverSection,
-  );
+  const { version, versionRef, setVersionSafe, acceptVersion } =
+    useDraftVersion(sectionIdForActions);
+  const captureGeneration = useGenerationCapture(generation);
+  const handleConflict = useConflictReload(refetchSection, captureGeneration);
+  const draftPayload = useDraftPayload(draftSection);
   const isReadOnlyEarly = isSubmitted || serverReadOnly;
-  const autosave = useDraftServerSync({
+  const serverSync = useDraftServerSync({
     writePort,
     serverSection,
     reportSectionId: sectionIdForActions || null,
     payload: draftPayload,
     enabled: !isReadOnlyEarly && draftSection !== null,
-    initialSavedKey,
     version,
     setVersionSafe,
+    acceptVersion,
     setIsSubmitted,
     setDraftSection,
     handleConflict,
   });
-  const apply = useGenerationBoundApply(generation, setDraftSection);
+  const outcomeCoordinator = useLeadFormOutcomeCoordinator({
+    writePort,
+    generation,
+    sectionId: sectionIdForActions,
+    draftSection,
+    version,
+    autosave: serverSync.autosave,
+    readOnly: serverReadOnly,
+    submitted: isSubmitted,
+    acceptVersion,
+    adoptServerSection: serverSync.adoptServerSection,
+  });
+  const apply = useGenerationBoundApply(
+    generation,
+    setDraftSection,
+    outcomeCoordinator.isLocked,
+  );
+  const outcomes = useMemo<LeadFormOutcomeActions>(
+    () => ({
+      pending: outcomeCoordinator.pending,
+      canExecute: outcomeCoordinator.canExecute,
+      blockedReason: outcomeCoordinator.blockedReason,
+      resolve: outcomeCoordinator.resolve,
+      restore: outcomeCoordinator.restore,
+    }),
+    [outcomeCoordinator],
+  );
   const markUnsubmitted = useCallback(() => setIsSubmitted(false), []);
+  const draftGeneration =
+    draftSection === null ? null : leadFormGenerationOf(draftSection);
   const submit = useCallback(async (): Promise<SubmitOutcome> => {
+    if (outcomeCoordinator.isLocked()) return "not-ready";
     if (!draftPayload) return "no-draft";
+    const isCurrent = captureGeneration();
+    if (
+      !isCurrent ||
+      draftGeneration !== generation ||
+      draftPayload.reportSectionId !== sectionIdForActions
+    )
+      return "not-ready";
     try {
       const saved = await writePort.submit(
         buildLeadSubmitPayload(draftPayload, versionRef.current),
       );
-      setVersionSafe(saved.version);
+      if (
+        !isCurrent() ||
+        saved.reportSectionId !== draftPayload.reportSectionId ||
+        !acceptVersion(saved.reportSectionId, saved.version)
+      )
+        return "not-ready";
       setIsSubmitted(true);
       return "submitted";
     } catch (error: unknown) {
+      if (!isCurrent()) return "not-ready";
       if (isLeadFormWriteConflict(error)) {
         handleConflict();
         return "conflict";
       }
-      toast.error(
-        error instanceof Error && error.message
-          ? error.message
-          : "Submit failed",
-      );
+      toast.error(submitErrorMessage(error));
       return "error";
     }
-  }, [draftPayload, handleConflict, setVersionSafe, versionRef, writePort]);
+  }, [
+    acceptVersion,
+    captureGeneration,
+    draftPayload,
+    draftGeneration,
+    generation,
+    handleConflict,
+    outcomeCoordinator,
+    sectionIdForActions,
+    versionRef,
+    writePort,
+  ]);
   return {
     generation,
     draft: draftSection,
     draftPayload,
-    dirty: autosave.dirty,
-    autosave,
+    dirty: serverSync.autosave.dirty,
+    autosave: serverSync.autosave,
+    lastSaveReceipt: serverSync.lastSaveReceipt,
+    outcomes,
     version,
     isSubmitted,
     markUnsubmitted,
     setVersionSafe,
-    save: autosave.forceSave,
+    save: serverSync.autosave.forceSave,
     submit,
     reloadAfterConflict: handleConflict,
     apply,

@@ -179,6 +179,27 @@ describe("AiProviderCardContent", () => {
     expect(screen.getByText("Locked until testing passes")).toBeVisible();
   });
 
+  it("keeps draft guidance when another provider revision is globally active", () => {
+    const active = revision("active");
+    const draft = {
+      ...revision("draft"),
+      updatedAt: new Date(active.updatedAt.getTime() + 1),
+    };
+    render(
+      <AiProviderCardContent
+        data={{ ...control(active), revisions: [active, draft] }}
+        savedRevision={draft}
+        message={null}
+        mutations={mutations() as never}
+        onSave={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Draft")).toBeVisible();
+    expect(screen.getByText("Required before activation")).toBeVisible();
+    expect(screen.queryByText("Disabled")).toBeNull();
+  });
+
   it("keeps an active revision read-only until explicit edit and cancels locally", async () => {
     const active = revision("active");
     const onSave = vi.fn();
@@ -193,6 +214,12 @@ describe("AiProviderCardContent", () => {
     );
 
     expect(screen.getByTestId("ai-provider-active-summary")).toBeVisible();
+    expect(screen.getByText("Active")).toBeVisible();
+    expect(
+      screen.getByText("This provider is available to report AI."),
+    ).toBeVisible();
+    expect(screen.getByText("Already active")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Disable" })).toBeVisible();
     expect(screen.queryByLabelText("Generation provider profile")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Edit configuration" }));
     expect(screen.getByLabelText("Generation provider profile")).toBeEnabled();
@@ -225,6 +252,66 @@ describe("AiProviderCardContent", () => {
     );
     expect(screen.getByTestId("ai-provider-active-summary")).toBeVisible();
     expect(screen.queryByLabelText("Generation provider profile")).toBeNull();
+  });
+
+  it("shows a retained active revision as disabled when provider access is unavailable", () => {
+    const active = revision("active");
+    render(
+      <AiProviderCardContent
+        data={{
+          ...control(active),
+          enabled: false,
+          availability: "not_configured",
+        }}
+        savedRevision={null}
+        message={null}
+        mutations={mutations() as never}
+        onSave={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Disabled")).toBeVisible();
+    expect(
+      screen.getByText(
+        "This retained provider configuration is not available to report AI.",
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByText(/Edit the retained configuration to create a new draft/),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Edit configuration" }),
+    ).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Disable" })).toBeNull();
+    expect(screen.queryByText("Already active")).toBeNull();
+    expect(screen.getByText("Unavailable while disabled")).toBeVisible();
+  });
+
+  it("keeps disabled retained-provider guidance while editing", () => {
+    const active = revision("active");
+    render(
+      <AiProviderCardContent
+        data={{
+          ...control(active),
+          enabled: false,
+          availability: "not_configured",
+        }}
+        savedRevision={null}
+        message={null}
+        mutations={mutations() as never}
+        onSave={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit configuration" }));
+
+    expect(screen.getByText("Disabled")).toBeVisible();
+    expect(screen.getByLabelText("Generation provider profile")).toBeEnabled();
+    expect(
+      screen.getByText("Test this configuration or save a new draft."),
+    ).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Disable" })).toBeNull();
+    expect(screen.queryByText("Already active")).toBeNull();
   });
 
   it("renders provider configuration directly without a redundant disclosure", () => {
@@ -483,6 +570,26 @@ describe("AiProviderCardContent", () => {
     ).not.toBeInTheDocument();
 
     const diagnostics = screen.getByTestId("ai-provider-diagnostics");
+    const summary = within(diagnostics)
+      .getByText("Diagnostics", { exact: true })
+      .closest("summary");
+    expect(summary).not.toBeNull();
+    if (!summary) {
+      throw new Error("Diagnostics summary is missing");
+    }
+    const panelId = summary.getAttribute("aria-controls");
+    expect(panelId).toBeTruthy();
+    const panel = panelId ? document.getElementById(panelId) : null;
+    expect(panel).not.toBeNull();
+    if (!panel) {
+      throw new Error("Diagnostics panel is missing");
+    }
+    expect(summary).toHaveAttribute("id");
+    expect(summary).toHaveAttribute("aria-controls", panel.id);
+    expect(summary).toHaveAttribute("aria-expanded", "false");
+    expect(panel).toHaveAttribute("role", "region");
+    expect(panel).toHaveAttribute("aria-labelledby", summary.id);
+    expect(panel).toHaveAttribute("aria-hidden", "true");
     expect(diagnostics).not.toHaveAttribute("open");
     expect(screen.getByTestId("ai-provider-active-summary")).toHaveTextContent(
       "Credentials are saved securely and remain masked.",
@@ -495,6 +602,8 @@ describe("AiProviderCardContent", () => {
       within(diagnostics).getByText("Diagnostics", { exact: true }),
     );
     expect(diagnostics).toHaveAttribute("open");
+    expect(summary).toHaveAttribute("aria-expanded", "true");
+    expect(panel).toHaveAttribute("aria-hidden", "false");
     expect(screen.getByText("••••test")).toBeInTheDocument();
   });
 

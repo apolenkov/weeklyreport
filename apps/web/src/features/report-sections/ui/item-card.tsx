@@ -8,7 +8,6 @@ import type { KanbanItem, RiskEntry } from "../model/types";
 import { ItemCardActions } from "./item-card-actions";
 import { ItemCardBadges } from "./item-card-badges";
 import { ItemCardStageTagsRow } from "./item-card-stage-tags";
-import { ItemInlineTextEditor } from "./item-inline-text-editor";
 
 interface ItemCardProps {
   readonly item: KanbanItem;
@@ -21,37 +20,17 @@ interface ItemCardProps {
   readonly onMoveToCurrentWeek?: ((id: string) => void) | undefined;
   readonly onPause?: ((id: string) => void) | undefined;
   readonly readOnly?: boolean | undefined;
-  // Parent owns editingId so only one card is editable at a time.
-  readonly isEditing?: boolean | undefined;
-  // Escape re-sends original text as a no-op-but-close signal.
-  readonly onTextSave?: ((id: string, nextText: string) => void) | undefined;
-  // At-risk/blocked pill is derived from covering risks (not free status).
-  // Activity sections pass none — severity stays isolated by design.
+  // At-risk/blocked display is derived from applicable product-stage risks.
   readonly risks?: readonly RiskEntry[] | undefined;
 }
 
 export function ItemCard(props: ItemCardProps) {
-  const {
-    item,
-    risks,
-    publishedLocked = false,
-    readOnly = false,
-    isEditing = false,
-    onTextSave,
-  } = props;
+  const { item, risks, publishedLocked = false, readOnly = false } = props;
   const { displayStatus, isBlocked, isPlanned, alarmLocked, lockAuthorName } =
     deriveCardStatus(item, risks);
   const badge = STATUS_BADGE[displayStatus];
   const locked = readOnly || item.foreign === true;
-  // Same gate as the render branch below — the style must track whichever
-  // branch actually renders so an editable-but-locked card still gets the
-  // fixed reference height instead of the edit-mode floor.
-  const showEditor = isEditing && !locked;
   const stageTagsState = deriveItemCardStageTags(item);
-
-  function commit(next: string) {
-    onTextSave?.(item.id, next);
-  }
 
   return (
     <div
@@ -61,7 +40,6 @@ export function ItemCard(props: ItemCardProps) {
         isPlanned,
         isBlocked,
         foreign: item.foreign === true,
-        isEditing: showEditor,
       })}
     >
       <ItemCardHeaderRow
@@ -70,17 +48,12 @@ export function ItemCard(props: ItemCardProps) {
         alarmLocked={alarmLocked}
         lockAuthorName={lockAuthorName}
         locked={locked}
-        isEditing={isEditing}
         publishedLocked={publishedLocked}
       />
 
-      <ItemCardText
-        text={item.text}
-        showEditor={showEditor}
-        onCommit={commit}
-      />
+      <ItemCardText text={item.text} />
 
-      {!showEditor && displayStatus === "paused" && (
+      {displayStatus === "paused" && (
         <PausedReasonNote reason={item.pausedReason} />
       )}
 
@@ -89,16 +62,12 @@ export function ItemCard(props: ItemCardProps) {
   );
 }
 
-// Card top line: status on the left, item actions on the right. shrink-0 keeps
-// this row at its natural height so the fixed card height never clips it — only
-// the body text region below flexes.
+// The status/action row opts out of flex shrink; the body region below flexes.
 interface ItemCardHeaderRowProps extends ItemCardProps {
   readonly badge: StatusBadge;
   readonly alarmLocked: boolean;
   readonly lockAuthorName: string | undefined;
   readonly locked: boolean;
-  // Resolved from ItemCardProps' optional counterparts by ItemCard.
-  readonly isEditing: boolean;
   readonly publishedLocked: boolean;
 }
 
@@ -119,23 +88,8 @@ function ItemCardHeaderRow(props: ItemCardHeaderRowProps) {
   );
 }
 
-// Item text — editable when in edit mode, static otherwise. The textarea always
-// shows the full, untruncated text (seeded into `draft`); only the static
-// render clamps.
-function ItemCardText({
-  text,
-  showEditor,
-  onCommit,
-}: {
-  readonly text: string;
-  readonly showEditor: boolean;
-  readonly onCommit: (next: string) => void;
-}) {
-  if (showEditor) {
-    return (
-      <ItemInlineTextEditor key={text} initialText={text} onCommit={onCommit} />
-    );
-  }
+// The card body stays compact; editing uses the full item dialog.
+function ItemCardText({ text }: { readonly text: string }) {
   // flex-1 min-h-0 absorbs the space left by the shrink-0 chrome rows instead of
   // growing the card; line-clamp-3 then clips inside it, and native title shows
   // the full text without a Tooltip dependency.
@@ -166,8 +120,7 @@ function PausedReasonNote({
   );
 }
 
-// Author on the left, compact stage tags on the right. shrink-0 mirrors the top
-// row — never compressed by the fixed height.
+// The author/stage row opts out of flex shrink like the header row.
 function ItemCardFooter({
   author,
   stageTagsState,

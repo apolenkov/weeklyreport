@@ -137,28 +137,39 @@ export function useRemindersTabState(
 ) {
   const editorState = useReminderEditor(policies, defaultTimezone);
   const listState = useRemindersListState(policies);
-  const { saveMut, removeMut } = useReminderPolicyMutations();
+  const { editorSaveMut, toggleMut, removeMut } = useReminderPolicyMutations();
 
   return {
     ...editorState,
     ...listState,
-    isSaving: saveMut.isPending,
+    isSaving: editorSaveMut.isPending,
+    handleNewReminder: () => {
+      if (editorSaveMut.isPending) return;
+      editorState.handleNewReminder();
+    },
+    handleEditReminder: (policy: AdminReminderPolicyView) => {
+      if (editorSaveMut.isPending) return;
+      editorState.handleEditReminder(policy);
+    },
     handleSave: () => {
       if (!editorState.validityValid) {
         toast.error("End date must be after start date");
         return;
       }
       const wasEditing = editorState.editor.mode === "edit";
-      saveMut.mutate(policyPayload(editorState.form, editorState.editor), {
-        onSuccess: () => {
-          toast.success(wasEditing ? "Reminder updated" : "Reminder created");
-          editorState.closeEditor();
+      editorSaveMut.mutate(
+        policyPayload(editorState.form, editorState.editor),
+        {
+          onSuccess: () => {
+            toast.success(wasEditing ? "Reminder updated" : "Reminder created");
+            editorState.closeEditor();
+          },
         },
-      });
+      );
     },
     handleToggleActive: (policy: AdminReminderPolicyView) => {
       listState.setBusyId(policy.id);
-      saveMut.mutate(toggledPayload(policy), {
+      toggleMut.mutate(toggledPayload(policy), {
         onSuccess: () => toast.success("Reminder updated"),
         onSettled: () => listState.setBusyId(null),
       });

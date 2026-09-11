@@ -4,7 +4,14 @@ const PRINT_STYLES = `
               body nav, body .no-print { display: none; }
               * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
               .page-break-before { page-break-before: always; }
-              section { page-break-inside: avoid; }
+              .print-section-heading, .print-entity-header {
+                break-after: avoid-page;
+                page-break-after: avoid;
+              }
+              .print-entity-header {
+                break-inside: avoid;
+                page-break-inside: avoid;
+              }
               table { page-break-inside: avoid; }
             }
             @page {

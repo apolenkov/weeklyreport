@@ -1,10 +1,12 @@
-// Asserts invalidate helpers against QueryClient.invalidateQueries rather than
-// a full UI render — component tests cover the UI path; this pins the helper routing.
-
-import { QueryClient } from "@tanstack/react-query";
+import {
+  QueryClient,
+  type QueryKey,
+  QueryObserver,
+} from "@tanstack/react-query";
+import { waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { TRPCProxy } from "../trpc/trpc";
+import { makeTRPCProxy } from "../trpc/trpc";
 import {
   invalidateAdmin,
   invalidateDashboard,
@@ -15,201 +17,166 @@ import {
   invalidateSubmissionDashboard,
 } from "./cache-keys";
 
-// Build a stub trpc proxy where each `pathFilter()` returns a tagged object so
-// we can assert which filters were passed to `invalidateQueries`.
-function makeStubTrpc(): TRPCProxy {
-  return {
-    review: {
-      dashboard: { pathFilter: () => ({ tag: "review.dashboard" }) },
-    },
-    archive: {
-      list: { pathFilter: () => ({ tag: "archive.list" }) },
-    },
-    weeklyReport: {
-      get: { pathFilter: () => ({ tag: "weeklyReport.get" }) },
-    },
-    reports: {
-      getActive: { pathFilter: () => ({ tag: "reports.getActive" }) },
-      myHistory: { pathFilter: () => ({ tag: "reports.myHistory" }) },
-    },
-    leadForm: {
-      byPeriod: { pathFilter: () => ({ tag: "leadForm.byPeriod" }) },
-    },
-    activity: {
-      live: { pathFilter: () => ({ tag: "activity.live" }) },
-    },
-    admin: {
-      snapshot: { pathFilter: () => ({ tag: "admin.snapshot" }) },
-      getSettings: { pathFilter: () => ({ tag: "admin.getSettings" }) },
-      // invalidateAdmin also flushes the org caches so brand renames
-      // propagate immediately after a Save in the Identity tab.
-      getOrganization: { pathFilter: () => ({ tag: "admin.getOrganization" }) },
-    },
-    auth: {
-      me: { pathFilter: () => ({ tag: "auth.me" }) },
-    },
-    org: {
-      getPublic: { pathFilter: () => ({ tag: "org.getPublic" }) },
-    },
-  } as unknown as TRPCProxy;
-}
+const routes = {
+  dashboard: ["review.dashboard", "archive.list", "weeklyReport.get"],
+  lead: ["reports.getActive", "leadForm.byPeriod"],
+  history: ["reports.myHistory"],
+};
 
-describe("cache-keys helpers", () => {
-  it("invalidateDashboard fires invalidateQueries for review.dashboard, archive.list, weeklyReport.get", () => {
-    const qc = new QueryClient();
-    const spy = vi
-      .spyOn(qc, "invalidateQueries")
-      .mockReturnValue(Promise.resolve());
-    const trpc = makeStubTrpc();
+const cases = [
+  ["dashboard", invalidateDashboard, routes.dashboard],
+  ["lead form", invalidateLeadForm, routes.lead],
+  ["lead history", invalidateLeadHistory, routes.history],
+  [
+    "period lifecycle",
+    invalidatePeriodLifecycle,
+    [
+      ...routes.dashboard,
+      ...routes.lead,
+      ...routes.history,
+      "leadForm.statusOverview",
+      "leadForm.openWork",
+      "reports.compiledHistory",
+      "admin.listPeriodsByState",
+      "admin.snapshot",
+    ],
+  ],
+  [
+    "submission",
+    invalidateSubmissionDashboard,
+    [...routes.dashboard, "activity.live"],
+  ],
+  [
+    "admin",
+    invalidateAdmin,
+    [
+      "admin.snapshot",
+      "admin.getSettings",
+      "admin.getOrganization",
+      "org.getPublic",
+      "auth.me",
+      "weeklyReport.get",
+    ],
+  ],
+  [
+    "review",
+    invalidateReview,
+    ["weeklyReport.get", "leadForm.byPeriod", "reports.getActive"],
+  ],
+] as const;
 
-    invalidateDashboard(qc, trpc);
+describe("cache-keys helpers with the real tRPC proxy", () => {
+  it.each(cases)(
+    "%s invalidates exactly its query families",
+    (_name, invalidate, paths) => {
+      const client = new QueryClient();
+      const spy = vi.spyOn(client, "invalidateQueries").mockResolvedValue();
+      invalidate(client, makeTRPCProxy(client));
+      expect(spy.mock.calls.map(([filter]) => filter)).toEqual(
+        paths.map((path) => ({ queryKey: [path.split(".")] })),
+      );
+      client.clear();
+    },
+  );
 
-    const tags = spy.mock.calls.map(
-      (c) => (c.at(0) as { tag?: string } | undefined)?.tag,
+  it("marks every history and period-list variant stale without touching settings or organization", () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { staleTime: 30_000 } },
+    });
+    const trpc = makeTRPCProxy(client);
+    const keys: QueryKey[] = [
+      ...[false, true].map((includeArchive) =>
+        trpc.reports.compiledHistory.queryKey({ includeArchive }),
+      ),
+      ...[25, 50].map((limit) =>
+        trpc.reports.myHistory.infiniteQueryKey({ limit }),
+      ),
+      ...(["active", "archive"] as const).map((bucket) =>
+        trpc.admin.listPeriodsByState.queryKey({ bucket }),
+      ),
+      trpc.admin.snapshot.queryKey(),
+      trpc.leadForm.statusOverview.queryKey({ reportId: "report-a" }),
+      trpc.leadForm.openWork.infiniteQueryKey({
+        reportId: "report-a",
+        limit: 25,
+      }),
+    ];
+    const unrelated: QueryKey[] = [
+      trpc.admin.getSettings.queryKey(),
+      trpc.admin.getOrganization.queryKey(),
+      trpc.org.getPublic.queryKey(),
+    ];
+    for (const key of [...keys, ...unrelated])
+      client.setQueryData(key, "cached");
+    invalidatePeriodLifecycle(client, trpc);
+    expect(keys.map((key) => client.getQueryState(key)?.isInvalidated)).toEqual(
+      keys.map(() => true),
     );
-    expect(tags).toContain("review.dashboard");
-    expect(tags).toContain("archive.list");
-    expect(tags).toContain("weeklyReport.get");
-    expect(spy).toHaveBeenCalledTimes(3);
+    expect(
+      unrelated.map((key) => client.getQueryState(key)?.isInvalidated),
+    ).toEqual(unrelated.map(() => false));
+    client.clear();
   });
 
-  it("invalidateLeadForm covers reports.getActive + leadForm.byPeriod", () => {
-    const qc = new QueryClient();
-    const spy = vi
-      .spyOn(qc, "invalidateQueries")
-      .mockReturnValue(Promise.resolve());
-    invalidateLeadForm(qc, makeStubTrpc());
+  it.each(["compiledHistory", "statusOverview", "openWork"] as const)(
+    "refetches an observed %s through its real query key",
+    async (projection) => {
+      const client = new QueryClient({
+        defaultOptions: { queries: { staleTime: 30_000, retry: false } },
+      });
+      const trpc = makeTRPCProxy(client);
+      const projectionKeys = {
+        compiledHistory: trpc.reports.compiledHistory.queryKey({
+          includeArchive: true,
+        }),
+        statusOverview: trpc.leadForm.statusOverview.queryKey({
+          reportId: "report-a",
+        }),
+        openWork: trpc.leadForm.openWork.infiniteQueryKey({
+          reportId: "report-a",
+          limit: 25,
+        }),
+      };
+      const queryKey: QueryKey = projectionKeys[projection];
+      client.setQueryData(queryKey, "before mutation");
+      const queryFn = vi.fn().mockResolvedValue("after mutation");
+      const observer = new QueryObserver(client, { queryKey, queryFn });
+      const unsubscribe = observer.subscribe(() => undefined);
+      try {
+        expect(queryFn).not.toHaveBeenCalled();
+        invalidatePeriodLifecycle(client, trpc);
+        await waitFor(() =>
+          expect(client.getQueryData(queryKey)).toBe("after mutation"),
+        );
+        expect(queryFn).toHaveBeenCalledTimes(1);
+      } finally {
+        unsubscribe();
+        client.clear();
+      }
+    },
+  );
 
-    const tags = spy.mock.calls.map(
-      (c) => (c.at(0) as { tag?: string } | undefined)?.tag,
-    );
-    expect(tags).toEqual(
-      expect.arrayContaining(["reports.getActive", "leadForm.byPeriod"]),
-    );
-    expect(spy).toHaveBeenCalledTimes(2);
-  });
-
-  it("invalidateLeadHistory targets reports.myHistory", () => {
-    const qc = new QueryClient();
-    const spy = vi
-      .spyOn(qc, "invalidateQueries")
-      .mockReturnValue(Promise.resolve());
-    invalidateLeadHistory(qc, makeStubTrpc());
-
-    expect(spy.mock.calls[0]?.[0]).toEqual({ tag: "reports.myHistory" });
-  });
-
-  it("invalidatePeriodLifecycle covers all report-facing projections", () => {
-    const qc = new QueryClient();
-    const spy = vi
-      .spyOn(qc, "invalidateQueries")
-      .mockReturnValue(Promise.resolve());
-
-    invalidatePeriodLifecycle(qc, makeStubTrpc());
-
-    const tags = spy.mock.calls.map(
-      (c) => (c.at(0) as { tag?: string } | undefined)?.tag,
-    );
-    expect(tags).toEqual(
-      expect.arrayContaining([
-        "review.dashboard",
-        "archive.list",
-        "weeklyReport.get",
-        "reports.getActive",
-        "leadForm.byPeriod",
-        "reports.myHistory",
-      ]),
-    );
-    expect(spy).toHaveBeenCalledTimes(6);
-  });
-
-  it("invalidateSubmissionDashboard also covers the live activity stream", () => {
-    const qc = new QueryClient();
-    const spy = vi
-      .spyOn(qc, "invalidateQueries")
-      .mockReturnValue(Promise.resolve());
-
-    invalidateSubmissionDashboard(qc, makeStubTrpc());
-
-    const tags = spy.mock.calls.map(
-      (c) => (c.at(0) as { tag?: string } | undefined)?.tag,
-    );
-    expect(tags).toEqual(
-      expect.arrayContaining([
-        "review.dashboard",
-        "archive.list",
-        "weeklyReport.get",
-        "activity.live",
-      ]),
-    );
-    expect(spy).toHaveBeenCalledTimes(4);
-  });
-
-  it("invalidateAdmin targets admin.snapshot + admin.getSettings + org caches", () => {
-    const qc = new QueryClient();
-    const spy = vi
-      .spyOn(qc, "invalidateQueries")
-      .mockReturnValue(Promise.resolve());
-    invalidateAdmin(qc, makeStubTrpc());
-
-    const tags = spy.mock.calls.map(
-      (c) => (c.at(0) as { tag?: string } | undefined)?.tag,
-    );
-    expect(tags).toEqual(
-      expect.arrayContaining([
-        "admin.snapshot",
-        "admin.getSettings",
-        // Brand rename must invalidate the org caches and the auth.me
-        // session so the chrome refreshes.
-        "admin.getOrganization",
-        "org.getPublic",
-        "auth.me",
-        "weeklyReport.get",
-      ]),
-    );
-    expect(spy).toHaveBeenCalledTimes(6);
-  });
-
-  it("invalidateReview covers weeklyReport.get + leadForm.byPeriod + reports.getActive", () => {
-    const qc = new QueryClient();
-    const spy = vi
-      .spyOn(qc, "invalidateQueries")
-      .mockReturnValue(Promise.resolve());
-    invalidateReview(qc, makeStubTrpc());
-
-    const tags = spy.mock.calls.map(
-      (c) => (c.at(0) as { tag?: string } | undefined)?.tag,
-    );
-    expect(tags).toEqual(
-      expect.arrayContaining([
-        "weeklyReport.get",
-        "leadForm.byPeriod",
-        "reports.getActive",
-      ]),
-    );
-    expect(spy).toHaveBeenCalledTimes(3);
-  });
-
-  it("handles a rejecting invalidateQueries instead of leaking an unhandled rejection", async () => {
-    const qc = new QueryClient();
+  it("handles rejected invalidations without an unhandled rejection", async () => {
+    const client = new QueryClient();
     const errorSpy = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
-    vi.spyOn(qc, "invalidateQueries").mockReturnValue(
-      Promise.reject(new Error("invalidate failed")),
+    vi.spyOn(client, "invalidateQueries").mockRejectedValue(
+      new Error("invalidate failed"),
     );
     const unhandledRejection = vi.fn();
     window.addEventListener("unhandledrejection", unhandledRejection);
-
-    invalidateDashboard(qc, makeStubTrpc());
-    await new Promise((resolve) => setTimeout(resolve, 10));
-
-    expect(unhandledRejection).not.toHaveBeenCalled();
-    expect(errorSpy).toHaveBeenCalledWith(
-      "[cache-keys] invalidateQueries failed",
-      expect.any(Error),
-    );
-
-    window.removeEventListener("unhandledrejection", unhandledRejection);
+    try {
+      invalidateDashboard(client, makeTRPCProxy(client));
+      await waitFor(() => expect(errorSpy).toHaveBeenCalledTimes(3));
+      expect(unhandledRejection).not.toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalledWith(
+        "[cache-keys] invalidateQueries failed",
+        expect.any(Error),
+      );
+    } finally {
+      window.removeEventListener("unhandledrejection", unhandledRejection);
+      client.clear();
+    }
   });
 });

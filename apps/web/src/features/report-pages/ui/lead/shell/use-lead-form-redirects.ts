@@ -3,6 +3,8 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect } from "react";
 
+import { getScalarSearchParam } from "../../../../../shared/lib/navigation/scalar-search-param";
+
 interface UseLeadFormRedirectsInput {
   readonly pinnedReportId: string | undefined;
   readonly redirectToCanonical: boolean | undefined;
@@ -31,7 +33,7 @@ export function useLeadFormRedirects({
       "agentationSession",
       "agentationAnnotation",
     ] as const) {
-      const value = searchParams.get(key);
+      const value = getScalarSearchParam(searchParams, key);
       if (value) next.set(key, value);
     }
     return next;
@@ -64,7 +66,7 @@ export function useLeadFormRedirects({
   useEffect(() => {
     if (!shouldRouteHeadLikeAwayFromLeadForm) return;
     const next = feedbackQuery();
-    const authorId = searchParams.get("authorId");
+    const authorId = getScalarSearchParam(searchParams, "authorId");
     if (authorId) next.set("authorId", authorId);
     const query = next.toString();
     const querySuffix = query ? `?${query}` : "";

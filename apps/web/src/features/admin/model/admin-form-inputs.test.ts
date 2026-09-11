@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   type AdminUserFormInput,
+  MissingUserGroupError,
   toAdminProjectInput,
   toAdminUserInput,
   UnresolvedProjectLeadError,
@@ -61,6 +62,30 @@ describe("toAdminUserInput", () => {
   it("uses the supplied existingId when editing", () => {
     const result = toAdminUserInput(baseForm, "the-existing-id");
     expect(result.id).toBe("the-existing-id");
+    expect(result.isActive).toBe(true);
+  });
+
+  it("preserves an inactive user's lifecycle flag while editing", () => {
+    const result = toAdminUserInput(baseForm, "the-existing-id", false);
+    expect(result.isActive).toBe(false);
+  });
+
+  it.each([null, "", " "])(
+    "rejects a non-viewer without a non-empty group (%s)",
+    (groupId) => {
+      expect(() =>
+        toAdminUserInput({ ...baseForm, groupId }, "existing-id"),
+      ).toThrow(new MissingUserGroupError());
+    },
+  );
+
+  it("keeps a viewer group nullable through submit", () => {
+    expect(
+      toAdminUserInput(
+        { ...baseForm, role: "viewer", groupId: null },
+        "viewer-id",
+      ).reportingGroupId,
+    ).toBeNull();
   });
 });
 

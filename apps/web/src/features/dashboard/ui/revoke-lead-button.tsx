@@ -5,7 +5,11 @@ import { RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { invalidateSubmissionDashboard } from "../../../shared/lib/query/cache-keys";
+import {
+  invalidateLeadForm,
+  invalidateLeadHistory,
+  invalidateSubmissionDashboard,
+} from "../../../shared/lib/query/cache-keys";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { ConfirmationDialog } from "../../../shared/ui/dialogs/confirmation-dialog";
 
@@ -24,6 +28,8 @@ function useRevokeMutation(leadName: string, onMutated: () => void) {
       onSuccess: () => {
         toast.success(`${leadName}'s submission revoked.`);
         invalidateSubmissionDashboard(queryClient, trpc);
+        invalidateLeadForm(queryClient, trpc);
+        invalidateLeadHistory(queryClient, trpc);
         onMutated();
       },
       onError: (err) => {

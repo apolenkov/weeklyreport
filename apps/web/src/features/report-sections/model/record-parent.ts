@@ -1,5 +1,12 @@
-import type { ParentActivityOption, RecordParent } from "../ui/parent-picker";
-import type { KanbanItemParent } from "./types";
+import type { KanbanItem } from "./types";
+
+// A record has one parent; unresolved keeps missing ownership explicit.
+export type RecordParent = KanbanItem["parent"];
+
+export interface ParentActivityOption {
+  readonly id: string;
+  readonly name: string;
+}
 
 // Create-mode seed has at most one parent side set, matching the row invariant.
 export interface RecordParentSeed {
@@ -12,7 +19,7 @@ export interface RecordParentSeed {
 // an activity-lane create must still win over that baked default.
 export function resolveRecordParent(
   row: {
-    readonly parent?: KanbanItemParent | undefined;
+    readonly parent?: RecordParent | undefined;
     readonly activityId?: string | null | undefined;
     readonly productId?: string | null | undefined;
   },

@@ -1,11 +1,11 @@
 "use client";
 
 import type { AdminActionLogEvent } from "@customreport/shared";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { TabHeader, TabSearch } from "../../../shared/ui/tabs/tab-header";
-import { useCursorPagination } from "../client";
 import { matchesActionLogSearch } from "../model/action-log-model";
 import { ActionLogRow } from "./action-log-row";
 import { ActionLogSkeleton } from "./action-log-skeleton";
@@ -101,17 +101,29 @@ function LoadMoreButton({
 
 function useActionLogPagination() {
   const trpc = useTRPC();
-  return useCursorPagination<AdminActionLogEvent>(
-    (input) =>
-      trpc.admin.actionLog.list.infiniteQueryOptions(
-        { limit: input.limit ?? PAGE_SIZE },
-        {
-          getNextPageParam: (last: { nextCursor: string | null }) =>
-            last.nextCursor ?? undefined,
-        },
-      ),
-    { limit: PAGE_SIZE },
+  const query = useInfiniteQuery(
+    trpc.admin.actionLog.list.infiniteQueryOptions(
+      { limit: PAGE_SIZE },
+      {
+        getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+      },
+    ),
   );
+  const items = useMemo(
+    () => query.data?.pages.flatMap((page) => page.items) ?? [],
+    [query.data?.pages],
+  );
+  return {
+    items,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    error: query.error,
+    hasNextPage: query.hasNextPage,
+    isFetchingNextPage: query.isFetchingNextPage,
+    fetchNextPage: () => {
+      void query.fetchNextPage({ cancelRefetch: false });
+    },
+  };
 }
 
 function useActionLogRows(
@@ -128,17 +140,17 @@ export function ActionLogTab() {
   const [search, setSearch] = useState("");
   const pagination = useActionLogPagination();
   const visibleRows = useActionLogRows(pagination.items, search);
+  const loadedCount = `${pagination.items.length} loaded${pagination.hasNextPage ? "+" : ""}`;
+  const count = search.trim()
+    ? `${visibleRows.length} matches · ${loadedCount}`
+    : loadedCount;
 
   return (
     <div className="space-y-4" data-testid="action-log-tab">
       <TabHeader
         title="Action Log"
         description="Latest product actions with support reference ids. Search covers loaded rows only."
-        count={
-          pagination.isLoading
-            ? "Loading…"
-            : `${visibleRows.length} loaded${pagination.hasNextPage ? "+" : ""}`
-        }
+        count={pagination.isLoading ? "Loading…" : count}
         search={
           <TabSearch
             value={search}

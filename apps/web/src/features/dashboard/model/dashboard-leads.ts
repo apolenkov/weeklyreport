@@ -11,7 +11,7 @@ import { toIsoDateString } from "../../../shared/lib/format/format-date";
 import { initialsFromName } from "../../../shared/lib/format/user-initials";
 import {
   countActivityRecords,
-  countProductContent,
+  countProductRecords,
   productColumnCounts,
 } from "./dashboard-counts";
 import { attentionLabel, type LeadInfo } from "./dashboard-lead-presentation";
@@ -79,7 +79,7 @@ function buildLeadInfo(
     isStale: state.isStale,
     isCurrentUser: context.currentUserId === row.leadId,
     productCount: row.projectNames.length,
-    reportContentCount: state.section ? countProductContent(state.section) : 0,
+    reportContentCount: state.section ? countProductRecords(state.section) : 0,
     ...productColumnCounts(state.section),
     activityCount: state.section ? countActivityRecords(state.section) : 0,
     submittedAtLabel: sectionSubmittedAt
