@@ -89,5 +89,9 @@ export function deriveHeadPeriods(
     { list: [], seen: new Set(historyPeriods.map((period) => period.id)) },
   );
 
-  return [...prepended, ...historyPeriods];
+  // Newest-first; a stable sort keeps the active-then-displayed prepend order
+  // for same-week ties.
+  return [...prepended, ...historyPeriods].sort(
+    (left, right) => right.periodStart.getTime() - left.periodStart.getTime(),
+  );
 }

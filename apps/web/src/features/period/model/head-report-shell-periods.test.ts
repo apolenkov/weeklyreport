@@ -152,4 +152,25 @@ describe("deriveHeadPeriods", () => {
       },
     ]);
   });
+
+  it("orders a displayed older period newest-first against history", () => {
+    const newerHistory: CompiledHistoryEntry = {
+      ...historyEntry("hist-newer"),
+      periodStart: new Date("2026-06-22T00:00:00.000Z"),
+      periodEnd: new Date("2026-06-28T00:00:00.000Z"),
+    };
+
+    const periods = deriveHeadPeriods(
+      [newerHistory],
+      undefined,
+      activeReport("displayed-older", {
+        periodState: "published",
+        periodStatus: "published",
+        archived: false,
+      }),
+      "displayed-older",
+    );
+
+    expect(periods.map((p) => p.id)).toEqual(["hist-newer", "displayed-older"]);
+  });
 });

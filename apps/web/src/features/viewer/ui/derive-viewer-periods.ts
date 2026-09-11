@@ -32,8 +32,9 @@ export function deriveViewerPeriods(
           id: reportId,
           periodStart: displayed.periodStart,
           periodEnd: displayed.periodEnd,
-          archived: false,
+          archived: displayed.archived,
           isCurrent: false,
+          periodState: displayed.periodState,
         })
       : undefined;
 
