@@ -95,7 +95,7 @@ export class AiProviderActivationService {
         "Embedding preparation is not configured",
       );
     const preparationFailure = await this.prepareIfChanged(
-      changed && !preparationAlreadyCompleted(revision),
+      changed && !(await this.preparationIsFresh(revision)),
       revisionId,
       actorId,
       embeddingScope,
@@ -167,6 +167,19 @@ export class AiProviderActivationService {
       });
     }
     return this.reader.read();
+  }
+
+  // Completed preparation is reusable only while its source fingerprint still
+  // matches the current sources; a stale fingerprint must re-prepare so retries
+  // are not permanently stuck on "activation must be retried".
+  private async preparationIsFresh(
+    revision: Awaited<ReturnType<typeof requireRevision>>,
+  ): Promise<boolean> {
+    if (!preparationAlreadyCompleted(revision)) return false;
+    const preparation = this.dependencies.preparation;
+    if (!preparation?.currentSourceFingerprint) return true;
+    const current = await preparation.currentSourceFingerprint(revision);
+    return current === revision.preparationSourceFingerprint;
   }
 
   private async prepareIfChanged(
