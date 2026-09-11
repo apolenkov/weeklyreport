@@ -646,6 +646,17 @@ describe("RemindersTab — add / edit form", () => {
     expect(screen.getByTestId("policy-save-button")).toBeDisabled();
   });
 
+  it("disables Save when Valid from is cleared", async () => {
+    const user = userEvent.setup();
+    renderTab({ policies: [], derivedRulesByPolicyId: {} });
+
+    const validFrom = screen.getByLabelText<HTMLInputElement>(/Valid from/i);
+    await user.clear(validFrom);
+
+    expect(validFrom.value).toBe("");
+    expect(screen.getByTestId("policy-save-button")).toBeDisabled();
+  });
+
   it("unchecking forever does not silently acquire today's end date", async () => {
     const user = userEvent.setup();
     renderTab({ policies: [], derivedRulesByPolicyId: {} });

@@ -44,14 +44,18 @@ export async function attachProductToGroup(
   input: GroupProductEdgeInput,
 ): Promise<GroupProduct> {
   return prisma.$transaction(async (tx) => {
+    const project = await tx.project.findUnique({
+      where: { id: input.productId },
+      select: { leadId: true },
+    });
+    if (project === null) {
+      throw new AdminGroupProductConflictError(
+        `Project ${input.productId} was not found. Refresh and retry.`,
+      );
+    }
     const graph = await lockAndValidateProjectOwnership(tx, {
       projectId: input.productId,
-      desiredLeadId: (
-        await tx.project.findUniqueOrThrow({
-          where: { id: input.productId },
-          select: { leadId: true },
-        })
-      ).leadId,
+      desiredLeadId: project.leadId,
       expectedGroupId: input.groupId,
       requireDesiredLeadCurrent: true,
     });
