@@ -27,19 +27,24 @@ export function applySlideInlineItemEdit(
       };
   return {
     ...section,
-    items: section.items.map((existing) =>
-      existing.stableId === stableId
-        ? {
-            ...existing,
-            ...parentFields,
-            text: item.text,
-            workflowStatus,
-            priorityRank: item.priorityRank ?? null,
-            pausedReason:
-              workflowStatus === "paused" ? (item.pausedReason ?? null) : null,
-          }
-        : existing,
-    ),
+    items: section.items.map((existing) => {
+      if (existing.stableId !== stableId) return existing;
+      // A next-period commitment is persisted only for unfinished current work,
+      // so an edited next step must be carried through here (and cleared when
+      // the row is completed or moved).
+      const keepsNextStep =
+        existing.type === "current" && workflowStatus !== "done";
+      return {
+        ...existing,
+        ...parentFields,
+        text: item.text,
+        workflowStatus,
+        priorityRank: item.priorityRank ?? null,
+        pausedReason:
+          workflowStatus === "paused" ? (item.pausedReason ?? null) : null,
+        nextStepText: keepsNextStep ? (item.nextStepText ?? null) : null,
+      };
+    }),
   };
 }
 

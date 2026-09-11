@@ -31,6 +31,7 @@ describe("moveToNextWeekPatch", () => {
       type: "next",
       workflowStatus: "postponed",
       carriedOver: false,
+      nextStepText: null,
     });
   });
 
@@ -67,10 +68,22 @@ describe("moveToCurrentWeekPatch", () => {
 });
 
 describe("markCompletePatch", () => {
-  it("marks the item done in place", () => {
+  it("marks the item done in place and drops any next-period commitment", () => {
     expect(markCompletePatch()).toEqual({
       workflowStatus: "done",
+      nextStepText: null,
     });
+  });
+});
+
+describe("next-period commitment normalization", () => {
+  it("clears nextStepText when completing or deferring an item that had one", () => {
+    const withNextStep = { ...carriedItem(), nextStepText: "Follow up" };
+
+    expect({ ...withNextStep, ...markCompletePatch() }.nextStepText).toBeNull();
+    expect(
+      { ...withNextStep, ...moveToNextWeekPatch() }.nextStepText,
+    ).toBeNull();
   });
 });
 
