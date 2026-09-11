@@ -127,6 +127,7 @@ vi.mock("../../../../report-sections", async () => {
       ownRisks: [],
       currentWeekItems: [],
       nextWeekItems: [],
+      visiblePeriods: [],
     }),
   };
 });

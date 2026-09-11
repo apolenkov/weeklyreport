@@ -106,11 +106,19 @@ function LoadedChrome({
   readonly submittedAt: Date | null;
 }) {
   const { data, viewModel, writeActions } = props;
+  const selectedPeriod =
+    viewModel.visiblePeriods.find(
+      (period) => period.id === props.draftSection.reportId,
+    ) ?? viewModel.visiblePeriods[0];
+  const periodLabel = selectedPeriod
+    ? `${selectedPeriod.weekLabel}, ${selectedPeriod.dateRange}`
+    : undefined;
   return (
     <>
       <LeadFormHeaderActions
         viewModel={viewModel}
         writeActions={writeActions}
+        periodLabel={periodLabel}
         completionActions={completion.completionActions}
         completionSentinelRef={completion.sentinelRef}
         showCompletionActions={
