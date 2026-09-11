@@ -39,3 +39,33 @@ unfiltered, never carrying over the previous session's query.
 - **WHEN** the user reopens the dropdown
 - **THEN** the search field is empty and the full period list is shown
   unfiltered
+
+### Requirement: Fill From confirmation returns focus to its initiating segment
+
+The direct Fill From path MUST return focus to the primary split-button segment
+when its confirmation closes. The picker path MUST return focus to the chevron
+split-button segment after the selected row is removed and its confirmation
+closes. Escape and Cancel MUST have the same return behavior and MUST NOT invoke
+the fill mutation. Focus restoration MUST remain inert when the intended segment
+is disabled or unmounted before the confirmation closes, without delayed focus
+work that can escape the component lifecycle.
+
+#### Scenario: direct confirmation is dismissed
+
+- **WHEN** a keyboard user opens the confirmation from the primary Fill From segment
+- **AND** dismisses it with Escape or Cancel
+- **THEN** the fill mutation is not requested
+- **AND** focus returns to the primary segment
+
+#### Scenario: picker confirmation is dismissed
+
+- **WHEN** a keyboard user opens the picker and selects a source period
+- **AND** dismisses the resulting confirmation with Escape or Cancel
+- **THEN** the fill mutation is not requested
+- **AND** focus returns to the chevron segment that opened the picker
+
+#### Scenario: the return target becomes unavailable
+
+- **WHEN** the initiating split-button segment becomes disabled or unmounts before dismissal
+- **THEN** closing the confirmation does not move focus to another Fill From control
+- **AND** no delayed focus work runs after the lifecycle change

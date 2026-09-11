@@ -8,7 +8,7 @@ Current consumer map (all paths are repository-relative): lead-form status cards
 live in `apps/web/src/features/period/ui/activity-status-section.tsx`, editable
 activity records in
 `apps/web/src/features/report-sections/ui/activity/unified-activity-section.tsx`,
-slide grouping in `apps/web/src/features/slides/ui/slide-activity-pills.tsx`,
+slide grouping in `apps/web/src/features/slides/ui/lead/lead-slides-deck-view.tsx`,
 and the head report in
 `apps/web/src/features/report-pages/ui/weekly/weekly-report-page.tsx`.
 The API entry points are
@@ -86,13 +86,14 @@ product MAY back several activities, and an activity MAY have no linked product.
 
 ### Requirement: The record dialog lets the lead choose an activity or a product parent
 
-The Item, Risk, and Blocker/Decision entry dialogs MUST let the lead pick a
+The Item, Risk/Blocker, and Decision entry dialogs MUST let the lead pick a
 project ACTIVITY, not only a product, as the record's parent. The parent picker
 MUST offer the section author's products AND attached activities. When the
 chosen parent is an activity, the dialog MUST hide the SDLC Stages selector and
 MUST NOT apply the stage-required rule — an activity has no stage to pick. The
-same parent-picker behaviour applies to items, risks, and blockers (a blocker is
-an item with `workflowStatus=blocked`, entered through the same dialog).
+same parent-picker behaviour applies to items, risks, blockers, and decisions.
+A blocker is a risk with severity `blocked`; item workflow stores progress only
+(see [record-status-derivation](../record-status-derivation/spec.md)).
 
 #### Scenario: choosing an activity hides the stage selector
 
@@ -118,8 +119,7 @@ an item with `workflowStatus=blocked`, entered through the same dialog).
 
 An activity's traffic-light status MUST be derived from the activity's OWN risks
 and blockers, never from SDLC stages (it has none) and never from a linked
-product. When the activity owns a blocked item its status MUST be floored to red
-(blocked); when it owns an at-risk or blocked risk its status MUST be floored to
+product. When the activity owns an at-risk or blocked risk its status MUST be floored to
 at least that severity (precedence: blocked > at-risk). The lead MUST NOT be able
 to lower the pill below the floor manually; the surface MUST explain the floor
 with a message telling the lead to remove the risk/blocker first.
@@ -134,9 +134,9 @@ the pill up. The interactive pill MUST derive its alarm floor from the live
 draft risks so a just-created activity risk floors the pill without a
 save/refetch round-trip.
 
-#### Scenario: a blocked item forces the activity red
+#### Scenario: a blocked-severity risk forces the activity red
 
-- **GIVEN** an activity that owns one item with `workflowStatus=blocked`
+- **GIVEN** an activity that owns one risk with severity `blocked`
 - **WHEN** the lead tries to set the activity's pill to on-track (green)
 - **THEN** the pill stays red and the manual change is refused with a
   remove-the-blocker-first message
@@ -188,8 +188,10 @@ Decisions, and the unified by-state view when enabled), grouped under an
 activity lane keyed by `activityId` and labeled with the activity name — the
 same grouping treatment product records get, without a stage lane. On the lead
 slides, `lead/lead-slides-deck-view.tsx` renders the current section-slide and
-grid model projections, with `slide-activity-pills.tsx` grouping activities by
-traffic-light status. On the head report
+grid model projections. Each Activity retains a named subsection, status and
+linked-product labels under its single known Product home or Shared context
+when it has zero, multiple or unknown Product links; Activities MUST NOT form
+a separate status-grouped pill lane. On the head report
 (`activity-status-strip.tsx`, `weekly-report-page.tsx`) each activity renders in
 the report body like a product — its records and linked product(s) — instead of a
 status-only strip. Every surface MUST show the activity's linked product(s).
@@ -232,10 +234,13 @@ status-only strip. Every surface MUST show the activity's linked product(s).
 - **THEN** the activity-parented item appears in its state bucket alongside
   product items, and its alarm derivation stays isolated (Q1)
 
-#### Scenario: the slides group the lead's activities by status
+#### Scenario: the slides retain named activity subsections
 
 - **WHEN** the lead slides render for a section carrying activities
-- **THEN** the activities appear on the slides grouped by traffic-light status
+- **THEN** each activity appears as a named subsection under its single known
+  Product home or Shared context for zero, multiple or unknown Product links
+- **AND** each subsection retains the activity's status and linked-product labels
+- **AND** activities do not form a separate lane grouped by traffic-light status
 
 #### Scenario: the head report renders each activity like a product
 
@@ -254,7 +259,7 @@ from product-parented records.
 
 #### Scenario: a blocked activity leaves a linked product on-track
 
-- **GIVEN** an activity linked to a product, the activity owning a blocked item,
+- **GIVEN** an activity linked to a product, the activity owning a blocked-severity risk,
   the product owning no blocker of its own
 - **WHEN** both render
 - **THEN** the activity's pill is red and the linked product's status stays
@@ -263,7 +268,7 @@ from product-parented records.
 #### Scenario: activity risks do not inflate the product-level escalation count
 
 - **GIVEN** a product with no red-flag record and a linked activity that owns a
-  blocked item
+  blocked-severity risk
 - **WHEN** `buildEscalationsFromReadSections` runs
 - **THEN** no product-level flagged-red escalation is emitted for that product on
   account of the activity's blocker
@@ -476,3 +481,65 @@ considered sufficient coverage for this method.
 - **WHEN** `getLiveActivity` computes that lead's row
 - **THEN** `lastEditAt` equals the maximum timestamp across all of those
   records, not merely the section's own `updatedAt`
+
+### Requirement: General record entry accepts activity-only sections
+
+Generic current/next item, risk and quick-add controls MUST be available to an
+editable section with at least one assigned product or attached activity. A
+section with neither MUST keep generic entry disabled with explanatory copy.
+Read-only sections MUST retain their existing entry restrictions. The existing
+product-prefilled Blocker quick-add shortcut MUST remain disabled without a
+product; activity risk entry continues to support blocked severity.
+
+#### Scenario: An activity-only lead opens record entry
+
+- **GIVEN** an editable section with no products and an attached activity
+- **WHEN** the lead uses current/next Add Item, Add Risk or generic quick add
+- **THEN** the requested editor opens and offers the attached activity as a parent
+- **AND** activity item entry does not require an SDLC stage
+
+#### Scenario: Empty and read-only sections retain entry restrictions
+
+- **GIVEN** a section with no available parent or a read-only section
+- **WHEN** the section renders record entry controls
+- **THEN** no unavailable generic entry action can be activated
+
+#### Scenario: The product Blocker shortcut keeps its prefill contract
+
+- **GIVEN** an editable activity-only section with generic quick add available
+- **WHEN** the lead opens quick add
+- **THEN** the product-prefilled Blocker shortcut remains disabled
+- **AND** the Risk action remains available
+
+### Requirement: Unified item editing preserves activity parent context
+
+The unified activity layout MUST pass the section's available activity parent
+options into the existing item editor. When an activity-backed item is edited,
+the parent picker MUST select its current activity and MUST offer the other
+available activity parents. The unified adapter MUST NOT replace source-parent
+semantics, locking, or shared item-dialog save behavior.
+
+#### Scenario: Lead edits an activity-backed item in the unified layout
+
+- **GIVEN** an activity-backed item and two activities available to its section
+- **WHEN** the lead opens that item from the unified activity list
+- **THEN** the shared Parent picker selects the item's current activity
+- **AND** it offers the other activity as an alternative
+
+### Requirement: Unified activity copy names only available actions
+
+Readonly unified activity empty-state and accordion copy MUST NOT instruct the
+user to use Add because no Add action is available. Editable unified activity
+copy MUST retain its Add guidance.
+
+#### Scenario: Readonly unified activity is empty
+
+- **WHEN** a readonly unified activity section has no items
+- **THEN** its empty state describes the absence of activity items
+- **AND** neither the empty state nor its accordion subtitle advertises Add
+
+#### Scenario: Editable unified activity is empty
+
+- **WHEN** an editable unified activity section has no items
+- **THEN** its empty state and accordion subtitle retain the existing Add
+  guidance

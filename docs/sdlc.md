@@ -45,9 +45,9 @@ dispatch. Repository files do not prove that `main` is protected or that
 GitHub security settings are enabled. Those external settings are
 **unverified** until an authorized read-back confirms them.
 
-The pre-production MVP may continue with the explicit direct-push authorization
-in `AGENTS.md`, but it MUST NOT call current CI an enforced merge gate. The local
-pre-push hook is defense in depth, not server-side enforcement.
+Any direct push requires explicit authorization for the task. The pre-production
+MVP MUST NOT call current CI an enforced merge gate. The local pre-push hook is
+defense in depth, not server-side enforcement.
 
 ## First-production stop condition
 

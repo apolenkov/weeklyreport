@@ -299,15 +299,41 @@ substitute for a real composition test.
 
 When the previous source period is published, auto carry-over MUST derive its
 source sections and author set from that period's validated immutable
-`publishedSnapshot`. It MUST NOT require mutable source sections or active user
-rows to exist. Draft and reopened source periods continue to use their live
-sections and active authors.
+`publishedSnapshot`. It MUST NOT require mutable source sections to exist.
+Before materializing target sections, it MUST intersect the frozen author ids
+with current existing active users, as defined by `carry-over-automation`.
+Missing or deactivated historical authors MUST neither receive target sections
+nor abort carry-over for eligible authors. Draft and reopened source periods
+continue to use their live sections and active authors.
 
 #### Scenario: Published source survives recovery and later mutation
 
 - **GIVEN** the previous period is published and its live section graph is
   absent or has changed after publication
 - **WHEN** auto carry-over opens the next period
-- **THEN** it copies the authors and carryable records from the validated
-  publication snapshot
+- **THEN** it copies carryable records from the validated publication snapshot
+  for frozen authors who still exist and are active
 - **AND** it does not read the mutable published source graph
+
+### Requirement: Daily period lifecycle schedulers run in UTC
+
+The daily `PeriodCreatorScheduler` and `AutoArchiverScheduler` cron jobs MUST
+use the existing `5 0 * * *` and `15 0 * * *` expressions with an explicit
+`timeZone: "UTC"` option. Their wall-clock execution MUST therefore remain
+00:05 UTC and 00:15 UTC regardless of the API host process timezone.
+
+#### Scenario: The creator keeps its UTC boundary
+
+- **WHEN** the Nest Schedule metadata for `PeriodCreatorScheduler.runDaily` is
+  registered
+- **THEN** its cron expression is `5 0 * * *`
+- **AND** its timezone is `UTC`
+- **AND** its next execution from a fixed UTC instant is 00:05 UTC
+
+#### Scenario: The archiver keeps its UTC boundary
+
+- **WHEN** the Nest Schedule metadata for `AutoArchiverScheduler.runDaily` is
+  registered
+- **THEN** its cron expression is `15 0 * * *`
+- **AND** its timezone is `UTC`
+- **AND** its next execution from a fixed UTC instant is 00:15 UTC

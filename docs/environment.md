@@ -73,10 +73,13 @@ one named YAML anchor for `API_URL`, rather than an operator env value, so the
 Next build and Web runtime cannot diverge. Native API and Web scripts both
 load the root `.env`; an already exported shell variable takes precedence.
 Next `NEXT_PUBLIC_*` values are compiled into the Web bundle, so changing them
-requires a rebuild. Server-only `API_URL` is read at runtime by Next; it is the only API origin. API values are validated by
+requires a rebuild. Server-only `API_URL` and `FRONTEND_URL` are read at runtime
+by Next: `API_URL` selects the only API origin, while `FRONTEND_URL` supplies the
+public origin for browser-origin checks. API values are validated by
 `apps/api/src/infrastructure/config/env.schema.ts`; web toggles are validated by
-`apps/web/src/shared/lib/runtime/web-env.ts`, and API URL selection is owned by
-`apps/web/src/shared/server/transport/api-url.ts`.
+`apps/web/src/shared/lib/runtime/web-env.ts`, API URL selection is owned by
+`apps/web/src/shared/server/transport/api-url.ts`, and the Web public origin is
+validated by `apps/web/src/shared/server/transport/public-web-origin.ts`.
 
 Native listeners fail on a port collision instead of terminating an unrelated
 process. Docker explicitly binds API and Web to `0.0.0.0` inside the private

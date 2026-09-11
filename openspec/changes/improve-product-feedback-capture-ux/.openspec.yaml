@@ -1,4 +1,0 @@
-schema: spec-driven
-created: 2026-09-03
-goal: Add honest page-level feedback and non-obstructive contextual capture for
-  the fourth feedback record without forking SitePing or inventing DOM anchors.

@@ -51,3 +51,22 @@ silently diverging the live graph from that immutable document.
 - **WHEN** `fillFromSection` runs with no concurrent publish
 - **THEN** the lock check passes, the version CAS proceeds, and the target's
   rows are replaced with the carryable rows from the source section
+
+### Requirement: Fill From rechecks published lineage while holding the Report lock
+
+After locking and validating the target section's parent Report, `fillFromSection` MUST resolve the target's current item and decision stable IDs against published lineage inside the same transaction. It MUST perform this check before the target section version compare-and-set and before deleting or creating child rows. Finding any published item or decision lineage MUST raise the existing typed `PUBLISHED_RECORD_LOCKED` denial and MUST write nothing.
+
+#### Scenario: Publish and reopen finish after the service precheck
+
+- **GIVEN** the service precheck found no published lineage for a target section
+- **AND** publish and reopen commit before Fill From locks the target Report without changing the target section version
+- **WHEN** Fill From acquires the Report lock and rechecks the target's current lineage
+- **THEN** it observes the newly published item or decision identity
+- **AND** it raises `PUBLISHED_RECORD_LOCKED` before the version compare-and-set or child deletion
+
+#### Scenario: Reopened target has no published item or decision lineage
+
+- **GIVEN** a target in a valid reopened lifecycle whose current item and decision identities have never been published
+- **WHEN** Fill From performs its locked lineage recheck
+- **THEN** the lineage check passes
+- **AND** the existing version compare-and-set and replacement flow continue

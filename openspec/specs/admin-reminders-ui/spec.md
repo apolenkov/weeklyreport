@@ -28,8 +28,9 @@ CONTEXT.md).
 - **THEN** the card shows an enabled on/off control, the timing phrase
   "24h before deadline", and a recipient line naming the leads who still have a
   draft
-- **AND** the card does not render the strings "lead-with-draft", "deadline",
-  "T-1440min", or "policy"
+- **AND** the card does not render the raw strings "lead-with-draft",
+  "T-1440min", or "policy"; "deadline" is allowed within the human-readable
+  timing phrase
 
 #### Scenario: Toggling the card enables or disables the reminder
 
@@ -181,3 +182,53 @@ adding a persisted presentation-only field.
 - **THEN** the persisted policy carries a valid `kind`, `audience`,
   `offsetMinutes`, `timezone`, `active`, and validity window
 - **AND** no presentation-only field is persisted
+
+### Requirement: A reminder toggle changes only its active flag
+
+The reminder card on/off action MUST preserve every existing policy field except
+`active`. In particular, `validFrom` and a non-null `validUntil` MUST retain their
+exact instants, including milliseconds, and a null upper bound MUST remain null.
+The toggle MUST NOT use the date-only form editor conversion.
+
+#### Scenario: Disabling preserves an open-ended validity interval
+
+- **GIVEN** an active reminder with a non-midnight start and no upper bound
+- **WHEN** the admin disables it using its card
+- **THEN** the save payload changes only active to false
+- **AND** its exact start instant and null upper bound are preserved
+
+#### Scenario: Enabling preserves both validity instants
+
+- **GIVEN** an inactive reminder with non-midnight start and end instants
+- **WHEN** the admin enables it using its card
+- **THEN** the save payload changes only active to true
+- **AND** both original validity instants are preserved
+
+### Requirement: Delivery activity exposes durable execution outcomes
+
+The Reminders tab MUST render the reminder executions returned by the admin
+snapshot as a read-only delivery-activity table. Each row MUST show the
+recipient, scheduled time, lifecycle status, sent time when present, and the
+recorded error when present. The status vocabulary MUST include `Queued`,
+`Sending`, `Sent`, and `Failed`; the UI MUST preserve the distinction between
+an in-flight send and a confirmed delivery. An empty execution collection MUST
+render an explicit empty state rather than a missing section.
+
+#### Scenario: An in-flight execution remains observable
+
+- **WHEN** the snapshot contains an execution with status `sending`
+- **THEN** the delivery-activity table renders that recipient with the label
+  `Sending`
+- **AND** it does not show a sent timestamp or claim that delivery completed
+
+#### Scenario: A failed execution preserves its recovery fact
+
+- **WHEN** the snapshot contains a `failed` execution with an error message
+- **THEN** the table renders `Failed` and the recorded error text
+- **AND** the policy cards remain available for ordinary reminder management
+
+#### Scenario: No executions are available yet
+
+- **WHEN** the snapshot contains no reminder executions
+- **THEN** the Reminders tab renders `No reminder deliveries yet.` in the
+  delivery-activity section

@@ -96,7 +96,8 @@ than competing fills, and the status signal legible without a legend.
 
 - **WHEN** the head opens a product card with items, risks, and a decision
 - **THEN** each section reads as a distinct block with no repeated content
-- **AND** the alarm hue (red) appears only on blocked content
+- **AND** status indicators use the alarm hue (red) only for blocked content
+- **AND** the structured `Impact` field label retains its explicit alarm-hue treatment for every risk, independently of severity
 
 ### Requirement: Product-card rows share a uniform aligned anatomy
 
@@ -225,3 +226,48 @@ product overview already uses, so the overview never reshuffles unpredictably.
   report surface
 - **THEN** the overview groups by lead identically to the head surface, because
   both render the same scope-adaptive overview component
+
+### Requirement: Every overview activation repeats its destination action
+
+Each activation of an active report overview card MUST be treated as fresh
+navigation intent, including consecutive activations of the same card. In
+product scope, explicit navigation MUST open the targeted content-bearing
+product accordion and scroll it into view. A manual collapse after that
+navigation MUST remain in effect through ordinary rerenders, and the next
+explicit activation of that product's overview card MUST reopen and scroll it.
+The activation MUST NOT reset another product accordion's local disclosure
+state.
+
+In lead scope, every activation MUST scroll to and focus the targeted lead
+section, including repeated activation of the same lead. Lead navigation MUST
+continue to leave product accordion disclosure states unchanged.
+
+#### Scenario: Repeated product navigation follows a manual collapse
+
+- **GIVEN** a user navigated to a content-bearing product from the overview and
+  then manually collapsed its accordion
+- **WHEN** the user activates the same product overview card again
+- **THEN** that product accordion reopens and scrolls into view again
+- **AND** unrelated product accordions retain their local disclosure state
+
+#### Scenario: Ordinary rendering preserves a manual collapse
+
+- **GIVEN** a user manually collapsed an overview-targeted product accordion
+- **WHEN** the report rerenders without another overview activation for that
+  product
+- **THEN** the product accordion remains collapsed
+
+#### Scenario: Navigating elsewhere preserves the previous product state
+
+- **GIVEN** overview navigation opened one product and the user either retained
+  that state or made an explicit disclosure choice
+- **WHEN** the user activates another product overview card
+- **THEN** the first product keeps its open or collapsed disclosure state
+- **AND** the newly targeted product opens and scrolls into view
+
+#### Scenario: Repeated lead navigation repeats focus and scroll
+
+- **GIVEN** a user already navigated to a lead section from the overview
+- **WHEN** the user activates the same lead overview card again
+- **THEN** the page scrolls to and focuses that lead section again
+- **AND** no product accordion is force-expanded or reset

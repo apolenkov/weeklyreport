@@ -60,8 +60,8 @@ ships.
     independently, with NO "requires Auto-create periods" dependency
   - `autoArchiveWeeksAfterPublish` — the auto-archiver archives a published period
     this many weeks after publish (0 = never)
-  - `deadlineTime` — manual-creation default applied at whole-hour precision
-    (minutes ignored); scheduled auto-creation currently uses a fixed 18:00
+  - `deadlineTime` — configured `HH:MM` in `defaultTimezone`, applied with
+    minute precision by both manual creation and scheduled auto-creation
   - `allowReopenAfterPublish` — the reopen request-path gate rejects reopen when
     off
   - `reopenWindowHours` — the reopen gate rejects reopen beyond this many hours
@@ -286,3 +286,84 @@ MUST NOT require or emit a `settingsTab` query parameter.
 - **WHEN** an Admin opens `/admin?tab=settings&settingsTab=ai`
 - **THEN** Settings resolves its canonical default section
 - **AND** the route does not render AI or redirect to a compatibility alias
+
+### Requirement: A pending settings save owns its visible draft
+
+Identity, Notifications, Periods and Reminders settings forms MUST disable their
+editable controls while their own save is pending. An edit handler MUST NOT reset
+an in-flight mutation and allow an earlier save to clear newer input.
+
+#### Scenario: Settings save is pending
+
+- **GIVEN** a settings form submits its current draft
+- **WHEN** the save has not settled
+- **THEN** its editable controls and repeated save action are disabled
+- **AND** the submitted values remain visible
+
+#### Scenario: Settings save fails
+
+- **WHEN** the pending settings save fails
+- **THEN** the controls become editable again
+- **AND** the draft remains available for correction or retry
+
+### Requirement: Disabled reopen policy ignores inactive window errors
+
+The Settings → Periods form MUST exclude `reopenWindowHours` raw-input errors
+from its save gate while `allowReopenAfterPublish` is false. Disabling the
+policy MUST preserve the last valid committed numeric window in the settings
+draft. If an invalid raw window is retained for later correction, enabling the
+policy again MUST validate that raw value before allowing another save.
+
+#### Scenario: Admin disables reopening after entering an invalid window
+
+- **GIVEN** the committed reopen window is valid
+- **AND** the admin has entered an invalid raw reopen-window value
+- **WHEN** the admin turns off “Allow reopen after publish”
+- **THEN** the disabled window no longer blocks Save
+- **AND** saving submits `allowReopenAfterPublish: false`
+- **AND** the submitted `reopenWindowHours` remains the last valid committed
+  value
+
+#### Scenario: Admin enables reopening with suspended invalid input
+
+- **GIVEN** an invalid raw reopen-window value was suspended while reopening
+  was disabled
+- **WHEN** the admin turns on “Allow reopen after publish”
+- **THEN** the invalid raw value is shown as invalid again
+- **AND** Save remains disabled until the admin enters a valid window
+
+#### Scenario: Server echo replaces suspended invalid input
+
+- **GIVEN** the admin saved a disabled reopen policy after suspending an
+  invalid raw window
+- **WHEN** fresh server settings provide a valid committed reopen window
+- **THEN** the form replaces the suspended raw value with the committed value
+- **AND** enabling reopening leaves the field valid and Save enabled
+
+### Requirement: Default timezone is validated at the shared settings boundary
+
+The complete AppSettings schema and an explicit `defaultTimezone` in the partial update schema MUST accept only identifiers resolvable by the runtime's IANA timezone database. Validation MUST use the same resolution contract as `ReminderPolicy.timezone`. Invalid non-empty values MUST fail at `defaultTimezone` before settings persistence or period deadline calculation. The complete settings schema MUST still require the field, while omission from a partial update MUST leave the property absent and MUST NOT manufacture a default.
+
+#### Scenario: Complete settings contain a supported timezone
+
+- **WHEN** complete settings contain a runtime-resolvable timezone such as `Europe/Moscow`, `UTC`, `Etc/UTC`, or `Asia/Tokyo`
+- **THEN** shared settings validation accepts the value
+- **AND** the validated value remains usable by the existing deadline calculation
+
+#### Scenario: Complete settings contain an invalid timezone
+
+- **WHEN** complete settings contain a non-empty but unresolvable `defaultTimezone`
+- **THEN** validation rejects the settings at the `defaultTimezone` path
+- **AND** the value cannot reach deadline calculation
+
+#### Scenario: Partial update explicitly supplies an invalid timezone
+
+- **WHEN** a partial settings update supplies an unresolvable `defaultTimezone`
+- **THEN** validation rejects the update at the `defaultTimezone` path
+- **AND** no settings writer receives the invalid value
+
+#### Scenario: Partial update omits the timezone
+
+- **WHEN** a partial settings update omits `defaultTimezone`
+- **THEN** validation accepts the update
+- **AND** the parsed patch still has no `defaultTimezone` property

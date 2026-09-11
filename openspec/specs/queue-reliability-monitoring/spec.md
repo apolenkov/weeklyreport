@@ -177,3 +177,30 @@ bounded timeout rather than hanging `/health/ready`.
   never resolves or rejects
 - **THEN** `isHealthy` resolves `down()` within the configured timeout bound
 - **AND** `/health/ready` does not hang indefinitely as a result
+
+### Requirement: Failed-job actions refresh the displayed list and count
+
+After Retry or Remove returns successfully, the Jobs surface MUST invalidate the
+failed-job list actually used by its infinite query and refresh the failed-job
+count. The list MUST reflect the server's new result without a page reload. A
+failed action MUST preserve its error feedback and MUST NOT imply success.
+Existing queue selection, pagination, confirmation and authorization MUST remain
+unchanged.
+
+#### Scenario: Removing a failed job updates the list
+
+- **GIVEN** a failed job is visible in the selected queue
+- **WHEN** its confirmed removal succeeds and the list read completes
+- **THEN** the removed row disappears and the failed-job count is refreshed
+
+#### Scenario: Retrying a failed job updates the list
+
+- **GIVEN** a failed job is visible in the selected queue
+- **WHEN** retry succeeds and the queue no longer returns it as failed
+- **THEN** the next list read removes that row and refreshes the count
+
+#### Scenario: A rejected action does not masquerade as success
+
+- **WHEN** retry or removal fails
+- **THEN** the existing failure feedback remains available and no success result
+  is fabricated

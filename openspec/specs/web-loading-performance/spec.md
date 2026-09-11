@@ -29,8 +29,8 @@ The head dashboard MUST render its page shell immediately and MUST let each pane
 #### Scenario: Weekly report is ready before review dashboard
 
 - **WHEN** `weeklyReport.get` resolves while `review.dashboard` remains pending
-- **THEN** the weekly-backed Period Summary/review context can render
-- **AND** review-backed KPI/escalation panels retain only their own loading state
+- **THEN** the weekly-backed Period Summary, KPI and escalation panels can render
+- **AND** pending review-specific information is identified locally without hiding those ready panels
 
 #### Scenario: One dashboard query fails
 
@@ -78,3 +78,27 @@ Data-heavy route pages that use non-suspending TanStack `useQuery` hooks MUST ex
 
 - **WHEN** a lazy/dynamic component suspends while its code is fetched
 - **THEN** its local Suspense or dynamic loading fallback may render
+
+### Requirement: Dashboard Recovery Replaces Stalled Initial Reads
+
+Manual Retry, the initial-load stall timeout and unsettled history restoration
+SHALL start a new attempt when a dashboard query has no data and its request
+remains in flight. Recovery SHALL cancel only that exact query before restarting
+it. Settled reads SHALL retain their ordinary refetch behavior.
+
+#### Scenario: A dashboard initial read does not settle
+
+- **WHEN** recovery targets an unresolved initial review, weekly-report or activity read
+- **THEN** a replacement request starts
+- **AND** its successful result replaces the stalled state
+- **AND** a late result from the cancelled attempt does not overwrite it
+
+#### Scenario: A sibling dashboard read is already ready
+
+- **WHEN** recovery restarts another stalled read
+- **THEN** the ready sibling retains its data and is not restarted
+
+#### Scenario: A settled dashboard read is retried
+
+- **WHEN** a completed or failed read is explicitly retried
+- **THEN** it follows ordinary refetch behavior without cancelling unrelated queries

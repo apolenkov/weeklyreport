@@ -1,5 +1,0 @@
-schema: spec-driven
-created: 2026-09-03
-goal: Turn three linked lead-report feedback records into an ACL-safe compact
-  Previous/Current/Next reporting-unit overview without changing write or
-  lifecycle semantics.

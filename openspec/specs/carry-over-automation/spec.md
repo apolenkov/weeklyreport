@@ -13,10 +13,18 @@ automatically when the lead's section for that period is established, with no
 manual head action. Carry-over MUST use
 (`CarryOverService.executeCarryOver` in
 `apps/api/src/modules/carry-over/carry-over.service.ts`): an eligible item
-(`type: "next"`, not already `carriedOver`, and `workflowStatus` is neither
-`done` nor `postponed`) is cloned into the new section as a `current` item with
-`carriedOver: true` and its `priorityRank` preserved; an unresolved decision (no
-`resolvedAt`, carrying a `productId`) is cloned with `resolvedAt: null`. The
+(`type: "next"`, not already `carriedOver`, or `type: "current"` with a
+nonblank `nextStepText`, and `workflowStatus` is neither `done`, `postponed`
+nor `paused`) is cloned into the new section as a `current` item with
+`carriedOver: true`, `workflowStatus: planned` and its `priorityRank` preserved;
+entering the target period MUST NOT assert that work has started. A current
+item's explicit next step becomes the target's text; the source result remains
+unchanged. The clone preserves stableId and clears nextStepText, so consuming a
+commitment does not manufacture another future commitment. A current item may
+make a new commitment even when its own occurrence was previously carried.
+Items and unresolved decisions MUST have their Product or Activity attached to
+the target section. An unresolved decision (no `resolvedAt`) is cloned with
+`resolvedAt: null`. The
 write-integrity guard MUST hold: carry-over writes only into an exact editable
 lifecycle tuple (`status: 'draft'`, `periodState: 'open'`,
 `periodStatus: 'open'`, or `status: 'published'`, `periodState: 'open'`,
@@ -69,6 +77,28 @@ target section or abort carry-over for the remaining active authors.
   `workflowStatus: "postponed"`
 - **THEN** that item is not carried into the new period
 - **AND** the lead can replan it manually when it becomes relevant
+
+#### Scenario: an explicit next step preserves the current result
+
+- **GIVEN** a current item has a weekly result and a distinct nextStepText
+- **WHEN** its eligible commitment carries into the next period
+- **THEN** the new current item contains the next-step text, has planned status,
+  keeps the same stableId and has no nextStepText
+- **AND** the source occurrence and published snapshot remain unchanged
+
+#### Scenario: paused commitments remain suspended
+
+- **GIVEN** a paused current item retains nextStepText
+- **WHEN** automatic carry-over runs
+- **THEN** it does not create an active target occurrence for that item
+- **AND** resuming work requires an explicit user action
+
+#### Scenario: a missing target parent receives no carried records
+
+- **GIVEN** the source item's or unresolved decision's Product or Activity is
+  absent from the target section
+- **WHEN** automatic carry-over runs
+- **THEN** it does not create that item or decision in the target section
 
 #### Scenario: re-establishing the section does not duplicate
 
@@ -160,3 +190,39 @@ submitted sections, MUST neither block the carry-over nor be mutated.
 - **WHEN** carry-over executes
 - **THEN** the write is rejected with the canonical carry-over conflict
 - **AND** no execution, record, or carried row is committed
+
+### Requirement: Carry-over results and section versions reflect committed row writes
+
+The carry-over write transaction MUST return a target section assembled from rows persisted for the winning execution. It MUST NOT merge caller-planned rows into a replay result after a committed execution is found. On a fresh execution, each matched target section MUST increment `ReportSection.version` exactly once when at least one item or decision is actually inserted. The transaction MUST use database-reported insert counts: an empty or fully deduplicated write MUST leave the version unchanged. The fresh primary result MUST be re-read after row writes and expose the persisted identities and resulting version. Carried decisions MUST deduplicate by durable `stableId`, retaining the current target occurrence and its current resolved state.
+
+#### Scenario: Concurrent loser returns only the winner's persisted target
+
+- **GIVEN** a winning execution and carried rows already exist
+- **WHEN** a racing loser reaches the transaction with different clone ids or additional planned rows
+- **THEN** it returns the winner's execution and records with the current persisted primary target section
+- **AND** it performs no carried-row insert or section-version update
+
+#### Scenario: Actual inserts advance one section revision
+
+- **WHEN** a fresh carry-over inserts one or more item or decision rows into a matched target section
+- **THEN** that section's version increments exactly once
+- **AND** the returned primary target section contains the persisted rows and incremented version
+
+#### Scenario: Empty or deduplicated carry does not create a revision
+
+- **WHEN** a fresh carry-over has no rows to insert, or every attempted row is skipped as a duplicate
+- **THEN** the matched section version remains unchanged
+
+#### Scenario: Multi-section carry updates only changed sections
+
+- **GIVEN** a fresh carry-over matches multiple target sections
+- **WHEN** rows are actually inserted into only a subset of them
+- **THEN** only that subset receives one version increment per section
+- **AND** unrelated target sections remain unread and unmodified by the carry-over write
+
+#### Scenario: A stale client cannot erase never-published carried rows
+
+- **GIVEN** a client loaded target section version N before a fresh carry-over inserts never-published item or decision lineage
+- **WHEN** the client attempts a complete section save with version N
+- **THEN** the save is rejected by the existing section-version conflict
+- **AND** the carried rows remain present

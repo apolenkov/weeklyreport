@@ -147,6 +147,8 @@ Draft and reopened live periods MAY use their current rows.
 - **WHEN** a lead's published section or child records are changed or removed
   after publication
 - **THEN** the lead's history entry retains the published section status and
+  record counts from the immutable publication snapshot
+- **AND** later edits to the mutable report graph do not alter that history entry
 
 ### Requirement: Personal history is explicitly cursor-paginated
 
@@ -170,8 +172,7 @@ than restarting at the first page.
 #### Scenario: Pagination terminates explicitly
 
 - **WHEN** the final page is returned
-- **THEN** `nextCursor` is `null`; the API never silently truncates history
-  counts from the immutable snapshot
+- **THEN** `nextCursor` is `null`, and the API never silently truncates history
 - **AND** the query does not fall back to the mutable published graph
 
 #### Scenario: Personal history uses one repeatable-read snapshot
@@ -183,3 +184,74 @@ than restarting at the first page.
   according to that snapshot
 - **AND** a cursor never skips or duplicates an entry because publication
   occurred between the two source statements.
+
+### Requirement: History load failures remain distinguishable and recoverable
+
+The history page MUST distinguish a failed load from a successful empty result.
+An initial personal or compiled history failure MUST show a persistent failure
+state with a Retry action and MUST NOT claim that no history exists. If history
+rows are already available, a later failure MUST retain them and identify the
+list and summary as partial. Retry MUST use the existing role and archive scope.
+
+#### Scenario: Initial history load fails and then recovers
+
+- **GIVEN** the selected role's history query fails before returning data
+- **WHEN** the history page renders
+- **THEN** it shows a persistent failure and Retry without an empty-history claim
+- **AND** a successful Retry replaces the failure with the returned history
+
+#### Scenario: A later page fails after history rows were loaded
+
+- **GIVEN** a personal history page has loaded and advertises a next cursor
+- **WHEN** the following page fails
+- **THEN** already loaded rows remain visible with a partial-history explanation
+- **AND** the failed cursor is not repeatedly requested by automatic pagination
+
+#### Scenario: Switching compiled archive scope fails
+
+- **GIVEN** compiled history rows are displayed for the current archive scope
+- **WHEN** the user changes the archive scope and its request fails
+- **THEN** the previously displayed rows remain with a partial-history explanation
+- **AND** Retry requests the newly selected archive scope
+
+### Requirement: Personal history advances only while successful and idle
+
+Automatic personal history pagination MUST stop after a page error and MUST NOT
+start a next-page request while another query fetch is active. A deliberate
+Retry after a next-page failure MUST retry that page while preserving earlier
+pages. Successful pagination MUST continue to the explicit terminal cursor.
+
+#### Scenario: Retry appends the previously failed page
+
+- **GIVEN** the next personal history page failed after earlier pages loaded
+- **WHEN** the user retries and the page succeeds
+- **THEN** its records append to earlier pages without replacing them
+- **AND** no further page is requested when nextCursor is null
+
+#### Scenario: An active request cannot be duplicated by rendering
+
+- **GIVEN** a history request is pending
+- **WHEN** the page rerenders
+- **THEN** no additional automatic next-page request starts
+
+### Requirement: History waits for the session before presenting results
+
+While the session is loading and no role-scoped history result is available,
+the History page MUST show its loading presentation. Disabled history queries
+MUST NOT be presented as a successful empty history or a zero summary. After
+the session resolves, the page MUST follow the selected role's history loading,
+data, error or empty state. The existing session provider error boundary MUST
+remain responsible for a failed session read.
+
+#### Scenario: Session resolves before a role-scoped history result
+
+- **GIVEN** the History page is mounted while its session is pending
+- **WHEN** the session resolves to Lead, Head, Admin or Viewer
+- **THEN** no successful empty history or summary appears before resolution
+- **AND** the page proceeds to the appropriate personal or compiled history
+
+#### Scenario: Session fails to load
+
+- **WHEN** the session read fails
+- **THEN** the existing session error and retry replace the History page
+- **AND** the failure is not shown as an empty history

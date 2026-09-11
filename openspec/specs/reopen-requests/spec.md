@@ -255,3 +255,144 @@ nor rejection may mutate a closed report.
   transaction locks the parent report
 - **THEN** approval fails closed, the request stays pending, and the section
   stays submitted
+
+### Requirement: A pending reopen response retains its draft owner
+
+The dashboard and admin reopen queues MUST disable Respond controls for other
+rows while a response is pending. The active response textarea MUST be disabled
+until that response settles. A failed response MUST keep its note and become
+editable again.
+
+#### Scenario: Another request cannot replace a pending response draft
+
+- **GIVEN** Alice's response with a note is pending
+- **WHEN** Bob's request is also visible
+- **THEN** Bob's Respond button is disabled
+- **AND** Alice's note cannot be edited before the response settles
+
+#### Scenario: A failed response preserves its note
+
+- **WHEN** Alice's response fails
+- **THEN** Alice's note remains visible and editable
+- **AND** Respond controls become available again
+
+### Requirement: Reopen-request history is completely and deterministically traversable
+
+The reopen-request list MUST expose cursor pagination that makes every request
+within the caller's existing role scope and status filter reachable, including
+more than 100 historical rows. Rows MUST be ordered newest first by `createdAt`
+and then by request `id`, both descending. A page cursor MUST identify that
+compound position without requiring the cursor row to still exist. An exact
+last page MUST return no next cursor.
+
+Both the admin Reopen Requests tab and the head dashboard queue MUST offer Load
+more when another page exists. A filter or search change MUST reset traversal.
+Counts attached to a paged list MUST describe loaded rows rather than claim a
+full total. The dashboard's actual pending total MUST continue to come from the
+existing pending-count endpoint.
+
+#### Scenario: More than 100 requests remain reachable
+
+- **GIVEN** more than 100 requests match the caller's role scope and status filter
+- **WHEN** the caller follows each returned cursor to the terminal page
+- **THEN** every matching request is returned exactly once
+- **AND** the terminal page has no next cursor
+
+#### Scenario: Equal timestamps have stable order
+
+- **GIVEN** several matching requests share the same creation timestamp
+- **WHEN** a page boundary falls between those requests
+- **THEN** descending request id breaks the tie
+- **AND** following the compound cursor skips or duplicates none of them
+
+#### Scenario: A cursor anchor is deleted
+
+- **GIVEN** a page has returned a next cursor
+- **AND** its anchor row is deleted before the next request
+- **WHEN** the caller requests that next page
+- **THEN** traversal continues below the cursor tuple without looking up the deleted row
+
+### Requirement: Reopen-request search applies to the full scoped history
+
+The reopen-request list MUST apply a trimmed, case-insensitive substring search
+on the server before selecting a page. Search MUST match the current rendered
+requester name or email, report week label, reason, or review note while
+preserving the existing role scope and status filter.
+
+#### Scenario: Search finds a row beyond the former cap
+
+- **GIVEN** a matching request is older than the newest 100 scoped requests
+- **WHEN** a head or admin searches for text from any supported rendered field
+- **THEN** the matching request is included in the paginated search result
+
+#### Scenario: Search cannot escape role scope or status
+
+- **GIVEN** text matches requests both inside and outside the caller's group or selected status
+- **WHEN** the caller searches for that text
+- **THEN** only requests admitted by both the existing scope and status filter are returned
+
+### Requirement: Later-page failures preserve reachable reopen-request rows
+
+If a later reopen-request page fails, both UI surfaces MUST retain all rows from
+earlier successful pages, identify that the loaded list is partial, and offer a
+Retry action for the failed page. Retrying MUST append the recovered page rather
+than replacing prior rows.
+
+#### Scenario: Admin later-page request fails and recovers
+
+- **GIVEN** the admin tab has loaded at least one page with another cursor
+- **WHEN** Load more fails and the admin retries successfully
+- **THEN** the prior rows remain visible throughout
+- **AND** the recovered rows append to them
+
+#### Scenario: Dashboard later-page request fails and recovers
+
+- **GIVEN** the head dashboard queue has loaded at least one page with another cursor
+- **WHEN** Load more fails and the head retries successfully
+- **THEN** the prior rows remain visible throughout
+- **AND** the recovered rows append to them
+
+### Requirement: Dashboard response focus stays with the selected row
+
+The dashboard reopen queue MUST move focus from a row's Respond action to that
+row's response field when its inline form opens. Cancelling MUST close the form
+without submitting a decision and return focus to the same row's remounted
+Respond action. Focus handling MUST remain scoped to the selected row when
+multiple requests are visible.
+
+#### Scenario: keyboard opens a response form
+
+- **WHEN** a keyboard user focuses a row's Respond action and presses Enter
+- **THEN** that row's inline form opens
+- **AND** its response field receives focus
+
+#### Scenario: Cancel restores the selected row action
+
+- **WHEN** a keyboard user cancels an open response form while multiple requests are visible
+- **THEN** no decision mutation is requested
+- **AND** the form closes
+- **AND** focus returns to that same row's Respond action
+
+### Requirement: Reopen decisions refresh dependent live report views
+
+After a reopen decision settles on the dashboard or review/admin surface, the
+client MUST refresh the request queue and count together with dependent live
+report and review reads. An approved section MUST become visibly editable and
+its dashboard row, valid actions, and submission total MUST reflect the server
+state without a reload or navigation. A failed decision MUST retain the active
+response note while refreshing potentially stale server state.
+
+#### Scenario: Approval refreshes the dashboard report state
+
+- **GIVEN** the dashboard shows a submitted section with a pending reopen request
+- **WHEN** the head approves that request
+- **THEN** the pending request leaves the queue
+- **AND** the section's row and submission total reflect Draft without navigation
+- **AND** actions requiring a submitted section are no longer offered for that row
+
+#### Scenario: A failed decision refreshes state without discarding the note
+
+- **GIVEN** a response note is being submitted from either reopen surface
+- **WHEN** the decision request fails
+- **THEN** the response note remains available for correction or retry
+- **AND** dependent live report reads are refreshed alongside the request queue and count

@@ -1,3 +1,0 @@
-schema: spec-driven
-created: 2026-09-04
-goal: Prevent a hard-deleted Agentation item from being recreated by stale client storage.

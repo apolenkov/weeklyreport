@@ -183,20 +183,21 @@ lock on every concurrent cold request.
 - **THEN** it throws a descriptive missing-singleton error and performs no
   write
 
-### Requirement: Weekly-report reminder-policy count runs alongside the other independent reads
+### Requirement: Weekly-report active deadline lookup runs alongside the other independent reads
 
-`getWeeklyReport` MUST dispatch its `reminderPolicy.count` query concurrently
-with the `leadUsers` and `projects` queries (in the same `Promise.all`
-batch) rather than awaiting it afterward as a separate round-trip, since it
-depends only on the already-fetched `report.deadline`.
+`getWeeklyReport` MUST dispatch its active deadline `reminderRule.findFirst`
+lookup concurrently with the `leadUsers` and `projects` queries (in the same
+`Promise.all` batch) rather than awaiting it afterward as a separate round-trip.
+The lookup depends only on the already-fetched `report.deadline` and its own
+report/policy predicates.
 
-#### Scenario: Reminder-policy count is part of the concurrent batch
+#### Scenario: Active deadline lookup is part of the concurrent batch
 
 - **GIVEN** a request that builds a weekly report
 - **WHEN** the repository fetches `leadUsers`, `projects`, and the active
-  `reminderPolicy` count
+  deadline reminder rule
 - **THEN** all three queries are dispatched concurrently and awaited
-  together, not with the count issued as a subsequent serial `await`
+  together, not with the deadline lookup issued as a subsequent serial `await`
 
 ### Requirement: Published weekly-report reads use only the frozen snapshot
 

@@ -170,3 +170,43 @@ hidden state to assistive technology.
 - **THEN** the toggle's `aria-controls` resolves to the disclosed region
 - **AND** the region's `aria-labelledby` resolves to that toggle
 - **AND** a mounted collapsed Admin row region reports `aria-hidden="true"`
+
+### Requirement: Nested dialogs MUST give keyboard ownership to the active surface
+
+The shared `useDialogFocus` primitive MUST route Escape and Tab handling to the
+active dialog surface. A lower shared-hook dialog MUST ignore a keyboard event
+owned by a nested modal or already handled by another dialog implementation.
+Nested shared-hook surfaces MUST close one level per Escape. Existing
+single-dialog Escape dismissal, Tab containment and focus restoration MUST
+remain unchanged.
+
+#### Scenario: Users group confirmation owns the first Escape
+
+- **GIVEN** an administrator has changed a user's group and other form fields
+- **AND** the group-change confirmation is open above the edit dialog
+- **WHEN** the administrator presses Escape
+- **THEN** only the confirmation closes
+- **AND** the edit dialog retains its changed group and other draft fields
+- **AND** no save mutation is sent
+- **WHEN** the administrator presses Escape again
+- **THEN** the edit dialog closes
+
+#### Scenario: Tab remains in the nested confirmation
+
+- **GIVEN** the Users group-change confirmation is open above the edit dialog
+- **WHEN** the administrator navigates forward across the confirmation actions
+- **THEN** focus stays within the confirmation
+- **AND** the lower edit dialog focus trap does not move focus into its fields
+
+#### Scenario: Nested shared-hook dialogs close one level at a time
+
+- **GIVEN** two shared-hook dialog surfaces are open with focus in the inner one
+- **WHEN** the user presses Escape
+- **THEN** only the inner surface closes
+- **AND** a second Escape closes the outer surface
+
+#### Scenario: An already handled Escape is ignored
+
+- **GIVEN** an earlier keyboard owner prevented the Escape event's default
+- **WHEN** the event reaches `useDialogFocus`
+- **THEN** the shared hook does not invoke its close callback

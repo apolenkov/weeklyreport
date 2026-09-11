@@ -12,10 +12,15 @@ while keeping the workflow compact and using the canonical submission path.
 
 The editable lead form MUST render a compact, non-sticky summary at the end of
 the form that first answers whether the report can be submitted and, when it
-cannot, identifies what the lead must fix. The summary MUST NOT use `Submit
-readiness`, a bare `Ready`, or another internal readiness label as its primary
-user-facing explanation. It MUST share the existing readiness derivation and
-Submit handler rather than introducing a second validator or submission path.
+cannot, identifies what the lead must fix. Readiness MUST apply the canonical
+shared submit validation to the lead's own live draft and the same promoted
+payload shape used by submission, including the requirement that every project
+in the canonical section has at least one Current Week item. Display-only
+foreign or referenced products MUST NOT expand that validation denominator. The
+summary MUST NOT use `Submit readiness`, a bare `Ready`, or another internal
+readiness label as its primary user-facing explanation. It MUST share the
+existing readiness derivation and Submit handler rather than introducing a
+second validator or submission path.
 
 #### Scenario: The report can be submitted
 
@@ -29,6 +34,21 @@ Submit handler rather than introducing a second validator or submission path.
 - **THEN** the summary tells the lead to complete the listed items before submitting
 - **AND** each issue is visible under a `Fix before submitting` heading
 - **AND** the final Submit action remains disabled from the shared derivation
+
+#### Scenario: An assigned project has no Current Week item
+
+- **GIVEN** the lead's canonical section includes an assigned project
+- **AND** the live own draft has no Current Week item for that project
+- **WHEN** submit readiness is derived
+- **THEN** readiness shows the canonical missing-current-item validation message
+- **AND** the submit confirmation cannot open
+
+#### Scenario: Display-only products do not block submission
+
+- **GIVEN** the visible report includes a foreign or referenced product outside the lead's canonical section projects
+- **AND** every project in the canonical section satisfies submit validation
+- **WHEN** submit readiness is derived
+- **THEN** the display-only product does not add a missing-current-item blocker
 
 #### Scenario: Submission is already in progress
 

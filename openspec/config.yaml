@@ -58,8 +58,10 @@ context: |
     files kebab-case, exports PascalCase
   - tRPC procedures must use one of 7 canonical middleware-chain builders,
     including `leadProcedure` (role-coverage gate; CI compares by reference identity)
-  - Repository interface lives in the service file; Prisma implementation in
-    `*.prisma-repository.ts`; wired via `useFactory` in the module
+  - Repository interfaces stay within their owning module, in the service or
+    focused `*.port.ts` / `*.ports.ts` files. Follow the explicit-contract
+    boundary principle in `docs/exemplary-code-standard.md`. Prisma implementations
+    live in `*.prisma-repository.ts` and are wired via `useFactory` in the module
   - Domain errors extend `Error`; map to tRPC errors in
     `apps/api/src/infrastructure/trpc/trpc.error-mapper.ts`; never leak
     internal messages to clients

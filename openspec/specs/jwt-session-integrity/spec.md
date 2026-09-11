@@ -10,9 +10,10 @@ Protect session identity with pinned JWT algorithms, strong secrets, explicit st
 
 Every verification of a session JWT MUST pass an explicit `algorithms` allow-list
 of `["HS256"]` to `jwt.verify`, so a token presenting any other `alg` is rejected
-regardless of the secret. This applies to all verify sites, including
-`apps/api/src/modules/auth/auth.controller.ts` and
-`apps/api/src/modules/pdf-export/pdf-export.service.ts`.
+regardless of the secret. This applies to the session verify sites, including
+`apps/api/src/modules/auth/auth.controller.ts`, while the separate PDF artifact
+token is verified in `apps/api/src/modules/pdf-export/pdf-export.token.ts` with
+its own pinned algorithm.
 
 #### Scenario: A non-HS256 token is rejected
 

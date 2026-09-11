@@ -58,3 +58,35 @@ revoke, reopen-request, and fill-from.
 - **WHEN** `leadForm.revoke` succeeds
 - **THEN** the hook invalidates lead-form, dashboard, and lead-history data
 - **AND** the submitted state becomes false
+
+### Requirement: Revoke completion effects belong to the initiating form activation
+
+The lead report form's revoke action MUST associate each started request with the exact committed form activation that initiated it. The transport and its cache invalidation MUST be allowed to finish after navigation or unmount. After the request settles, the React revoke action MUST invoke the unlock callback or show a success/error announcement only while that same activation remains current. It MUST NOT use report-section identity alone to authorize completion effects.
+
+#### Scenario: Current revoke succeeds
+
+- **GIVEN** a revoke request was started from the current form activation
+- **WHEN** it succeeds while that activation remains current
+- **THEN** the form invokes its unlock callback once
+- **AND** it announces that the section was unlocked
+
+#### Scenario: Current revoke fails
+
+- **GIVEN** a revoke request was started from the current form activation
+- **WHEN** it fails while that activation remains current
+- **THEN** the form announces the error
+- **AND** it does not invoke the unlock callback
+
+#### Scenario: Revoke settles after another activation is current
+
+- **GIVEN** activation A1 started a revoke request
+- **WHEN** another activation is current or the form is unmounted before the request settles
+- **THEN** the transport and cache invalidation may finish
+- **AND** A1's completion invokes no unlock callback and shows no success or error announcement
+
+#### Scenario: Returning to the same section creates a distinct owner
+
+- **GIVEN** activation A1 started a revoke request
+- **WHEN** navigation changes A1→B→A2 before that request settles
+- **THEN** A2 is a distinct committed activation even though its generation string matches A1
+- **AND** A1's completion invokes no callback and shows no announcement in A2
