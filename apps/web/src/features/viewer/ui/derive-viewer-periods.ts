@@ -6,7 +6,9 @@ import type {
 import type { ReportPeriod } from "../../report-sections";
 import { toNavigationPeriod } from "../../report-sections";
 
-// Prepend the displayed period when the archive toggle hides it from compiledHistory.
+// Prepend the displayed period when the archive toggle hides it from
+// compiledHistory, then keep the combined list newest-first: the period
+// navigator treats index order as chronology for Prev/Next.
 export function deriveViewerPeriods(
   historyEntries: readonly CompiledHistoryEntry[] | undefined,
   displayed: WeeklyReportGetResponse | undefined,
@@ -24,17 +26,22 @@ export function deriveViewerPeriods(
   );
 
   const seen = new Set(historyPeriods.map((p) => p.id));
-  if (displayed && displayed.status !== "no-period" && !seen.has(reportId)) {
-    return [
-      toNavigationPeriod({
-        id: reportId,
-        periodStart: displayed.periodStart,
-        periodEnd: displayed.periodEnd,
-        archived: false,
-        isCurrent: false,
-      }),
-      ...historyPeriods,
-    ];
-  }
-  return historyPeriods;
+  const displayedPeriod =
+    displayed && displayed.status !== "no-period" && !seen.has(reportId)
+      ? toNavigationPeriod({
+          id: reportId,
+          periodStart: displayed.periodStart,
+          periodEnd: displayed.periodEnd,
+          archived: false,
+          isCurrent: false,
+        })
+      : undefined;
+
+  const combined =
+    displayedPeriod === undefined
+      ? historyPeriods
+      : [displayedPeriod, ...historyPeriods];
+  return [...combined].sort(
+    (left, right) => right.periodStart.getTime() - left.periodStart.getTime(),
+  );
 }
