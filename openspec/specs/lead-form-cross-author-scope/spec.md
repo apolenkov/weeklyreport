@@ -50,3 +50,48 @@ that section.
   stripped (empty or absent)
 - **AND** every retained item has its `pausedReason` stripped
 - **AND** reviewer identity and comment text are not disclosed to the co-lead
+
+### Requirement: Shared paused records remain readable without private reasons
+
+Every cross-author section response MUST validate against an explicit shared
+read contract after `filterSectionToSharedProducts` removes author-private
+fields. A retained item with `workflowStatus: paused` MUST remain readable even
+though its `pausedReason` is absent. The shared contract MUST reject
+`pausedReason` and record comments rather than making them conditionally
+available. Author-visible reads MUST retain the existing strict requirement for
+a paused reason.
+
+This rule applies to the selected Overview section and to both authoritative
+predecessor sources: an immutable published snapshot and a submitted live
+section fallback. The published shared contract MUST retain frozen record and
+group identities, and the submitted shared contract MUST still require
+`status: submitted`.
+
+#### Scenario: Co-lead opens a current paused item
+
+- **WHEN** an authorized co-lead opens another author's Overview and a retained
+  shared-product item is paused with an author-private reason
+- **THEN** the Overview returns the paused item through the shared contract
+- **AND** the response omits its `pausedReason` and comments
+
+#### Scenario: Published predecessor contains a paused item
+
+- **WHEN** an authorized co-lead's immediate predecessor is a valid published
+  snapshot containing a paused shared-product item
+- **THEN** Previously planned can read the redacted item through the published
+  shared contract
+- **AND** frozen group, section, and record identities remain required
+
+#### Scenario: Submitted predecessor contains a paused item
+
+- **WHEN** no published snapshot exists and the authorized immediate predecessor
+  has a submitted section containing a paused shared-product item
+- **THEN** Previously planned can read the redacted item through the submitted
+  shared contract
+- **AND** a draft predecessor remains unavailable
+
+#### Scenario: Author reads their own paused item
+
+- **WHEN** an author reads their own paused item through the strict section
+  contract
+- **THEN** its `pausedReason` remains required and visible

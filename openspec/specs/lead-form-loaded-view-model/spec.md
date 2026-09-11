@@ -83,7 +83,8 @@ Current/Next layout MUST remain the default when the flag is off. Activity card
 alarm floors MUST derive from the live own-risk draft rows. Unified activity
 entries for own rows MUST derive a total bucket mapping from raw item workflow
 fields: `done` to `done`, `in_progress` to `in-progress`, `paused` to `paused`,
-`planned` to `planned-next`, and `postponed` to `deferred`. `carriedOver` MUST
+current `planned` to `planned-current` (Not started), next `planned` to
+`planned-next`, and `postponed` to `deferred`. `carriedOver` MUST
 remain provenance only and MUST NOT alter the bucket. Foreign rows MUST derive
 buckets from presentation status because their raw draft rows are unavailable.
 

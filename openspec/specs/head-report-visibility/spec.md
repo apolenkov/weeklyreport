@@ -13,9 +13,46 @@ gate for publish and rollback actions.
 The head edit/dashboard surface for a live current period MUST default to submitted-only,
 but every authorized draft section MUST remain reachable through the explicit
 draft-hidden signal and `Show all` action. Submission status MUST NOT remove a
-draft from the head's authorized read model. The "No submissions yet" empty state
-MUST render only when the report has no section content at all — NOT merely when
-the submitted count is zero. Slide mode is outside this presentation requirement.
+draft from the head's authorized read model. The no-content empty state MUST
+render only when the report has no section content at all, not merely when the
+submitted count is zero. Its copy MUST distinguish absent content from absent
+submissions and MUST NOT claim no submissions when a submitted section exists.
+Slide mode is outside this presentation requirement.
+
+#### Scenario: a draft risk shares a product with a submitted section
+
+- **GIVEN** one draft risk and one submitted contribution target the same product
+- **WHEN** the head views the submitted-only Sections body
+- **THEN** the draft risk is absent as both a record and a derived signal
+- **AND** genuine submitted blocked, unresolved-risk, and red-product signals
+  remain eligible
+- **AND** the Portfolio Overview still reflects the full authorized report
+- **AND** activating `Show all` renders the draft risk exactly once
+
+#### Scenario: a submitted risk floors its product to red
+
+- **GIVEN** a submitted section owns a product whose stored status is green
+- **AND** a blocked risk covers one of that section's owned product stages
+- **WHEN** the head views the submitted-only Sections body
+- **THEN** the canonical submitted projection retains the effective-red product
+  signal alongside the product-parented risk signals
+
+#### Scenario: the full-report red representative belongs to a draft co-owner
+
+- **GIVEN** a draft section and a submitted section co-own the same red product
+- **AND** full-report deduplication attributed the red signal to the draft lead
+- **WHEN** the head views the submitted-only Sections body in Product or Leads
+  scope
+- **THEN** the red signal is re-derived from the submitted section and remains
+  eligible
+
+#### Scenario: a draft co-owner has worse health than a submitted co-owner
+
+- **GIVEN** a draft red contribution and a submitted green contribution target
+  the same product
+- **WHEN** the head views the submitted-only Sections body in Product scope
+- **THEN** the Product header is on track and names only the submitted lead
+- **AND** the Portfolio Overview remains blocked and retains both leads
 
 #### Scenario: head opens a report with drafts and zero submissions
 
@@ -24,12 +61,19 @@ the submitted count is zero. Slide mode is outside this presentation requirement
 - **THEN** the default submitted-only view shows a draft-hidden signal rather than
   the empty state
 - **AND** activating `Show all` reveals the current draft content of each section
-- **AND** the "No submissions yet" empty state is NOT shown
+- **AND** the no-content empty state is not shown
 
 #### Scenario: head opens a report with no content at all
 
 - **WHEN** the head opens a live report where no section has any content
-- **THEN** the empty state renders (there is genuinely nothing to show)
+- **THEN** the empty state identifies that there is no report content
+
+#### Scenario: an empty submitted section remains a submission
+
+- **WHEN** a live report has one submitted section and no section content
+- **THEN** its empty state says that submitted sections contain no report content
+- **AND** the header retains the submitted count and Publish remains enabled
+- **AND** no message claims that leads have not submitted their sections
 
 ### Requirement: Submission gates publish and rollback, not authorization to access drafts
 
@@ -71,3 +115,20 @@ exists. A review capability on a draft section MUST NOT expose verdict actions.
 - **THEN** the Read/Review mode toggle is available
 - **AND** verdict controls are rendered only for the submitted sections
 - **AND** draft content remains reachable through `Show all` without verdict controls
+
+### Requirement: Consolidated report labels reflect its lifecycle
+
+The report header MUST display Archived when the report is archived, Published
+when its period status is published and it is not archived, and Live otherwise.
+The submission ratio MUST remain visible for each lifecycle. Label selection
+MUST NOT change report lifecycle or publish eligibility.
+
+#### Scenario: Published report is not labeled Live
+
+- **WHEN** the report is published and not archived
+- **THEN** the header shows Published alongside its submission ratio
+
+#### Scenario: Archived label takes precedence
+
+- **WHEN** the report is archived, including a previously published report
+- **THEN** the header shows Archived alongside its submission ratio

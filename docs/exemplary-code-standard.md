@@ -31,7 +31,8 @@ applicable rules.
 
 ## Verification
 
-Before delivery, run the repository commands from `README.md`:
+For changes to application code, build tooling, dependencies, or runtime
+configuration, run the repository commands from `README.md` before delivery:
 
 ```bash
 pnpm format:check
@@ -41,6 +42,13 @@ pnpm test
 pnpm build
 pnpm spec:check
 ```
+
+For changes limited to prose or agent instructions, check formatting of the
+changed files (`pnpm exec prettier --check <files>`), verify referenced paths
+and commands against their owning sources, and run `git diff --check` on those
+files. Run `pnpm spec:check` when OpenSpec files change. This narrower local
+acceptance does not replace CI or apply to executable examples, generated
+contracts, or configuration that affects runtime behaviour.
 
 Run the relevant application locally when a boot or integration path changes.
 Keep the verification result tied to the exact commit being reviewed.

@@ -81,3 +81,58 @@ set; a missing `project.stageSet` is a snapshot-integrity error.
 - **THEN** the published card's `stageCount` equals
   `project.stageAssignments.length` as computed by the live
   `buildPortfolioOverview`
+
+### Requirement: Published lineage excludes never-published archives
+
+Published-lineage lookup MUST select snapshot sources whose canonical report
+status is `published`. This MUST include a current publication, a reopened
+report retaining its prior publication, and a published report that was later
+archived. Archiving an unpublished draft MUST NOT make it a publication source
+or require a publication snapshot. Snapshot validation for selected
+publication sources MUST remain mandatory.
+
+#### Scenario: Unpublished archive coexists with an editable section
+
+- **WHEN** an archived draft retains `status: draft` and has no publication snapshot
+- **AND** another populated section requests its published lineage
+- **THEN** the archived draft is excluded from snapshot lineage sources and does not make that lookup fail
+
+#### Scenario: Publication-derived lifecycles retain record lineage
+
+- **WHEN** lineage lookup encounters current published, reopened, and archived-published reports
+- **THEN** every validated snapshot continues contributing published record identities
+
+#### Scenario: Genuine publication has a corrupt snapshot
+
+- **WHEN** a selected report with `status: published` has a missing or malformed publication snapshot
+- **THEN** lineage lookup raises the existing snapshot-integrity error rather than silently skipping that publication
+
+### Requirement: Frozen referenced Products remain in published display membership
+
+`buildPortfolioProductsFromSnapshotSections` SHALL include each Product named
+by a frozen section's `referencedProjects` in the published portfolio's
+display-only membership. A referenced-only Product SHALL use its frozen real
+name, null health, zero stages, and empty health-contributing lead ids and
+names. It MUST NOT contribute to published portfolio health totals or acquire
+editable stage ownership.
+
+When the same Product is stage-owned in any section, owned Product metadata
+SHALL take precedence and the builder SHALL preserve its existing health,
+stage-union, lead-attribution, deduplication, and totals behavior.
+
+#### Scenario: Referenced-only records survive Product and PDF projection
+
+- **GIVEN** a frozen section has no stage-owned Product but names a Product in
+  `referencedProjects`
+- **AND** the section contains an item, risk, or decision parented to that Product
+- **WHEN** the published portfolio and weekly-report Product projection are built
+- **THEN** one Product card with the frozen real name contains those records
+- **AND** its portfolio metadata has null health, zero stages, and no health-contributing leads
+
+#### Scenario: Owned metadata wins over referenced metadata
+
+- **GIVEN** one section stage-owns a Product and another section references the
+  same Product with conflicting frozen metadata
+- **WHEN** the published portfolio is built
+- **THEN** the Product appears exactly once using the owned Product name
+- **AND** only owned occurrences contribute health, stages, and lead attribution

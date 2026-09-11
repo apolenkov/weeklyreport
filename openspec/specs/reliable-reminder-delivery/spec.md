@@ -207,39 +207,30 @@ while preserving the at-most-once DB claim guarantee.
 
 ### Requirement: One dedupe-key shape across manual and automated dispatch
 
-Every caller of `requestReminderExecution` for the `deadline` reminder kind MUST derive its dedupe key from the same builder, keyed by `{ ruleId, cycleDate, recipientEmail }` where `cycleDate` is the UTC `YYYY-MM-DD` truncation of the rule's `fireAt`.
-
-This applies equally to the scheduler's automated tick (`RemindersScheduler.dispatchRule`) and the head-triggered manual dispatch (`RemindersScopeService.dispatchDraftSections`, reached via `reminders.dispatchPending`). Neither caller may build its own independent key shape for the same rule/recipient/cycle.
+Every deadline reminder caller MUST use the same dedupe key builder, keyed by
+`{ ruleId, cycleDate, recipientEmail }`, where `cycleDate` is the UTC date of the
+rule's `fireAt`. Manual and scheduler requests MUST share that identity.
 
 #### Scenario: Manual Remind after the automated reminder already fired
 
-- **GIVEN** a reminder rule has already dispatched its automated deadline
-  reminder to a lead for today's cycle
-- **WHEN** a head triggers a manual `Remind` (`dispatchPendingReminders`)
-  for that same rule and lead within the same cycle
-- **THEN** no new `ReminderExecution` row is inserted and no second email is
-  sent
-- **AND** the response's `alreadySent` count includes that lead, not
-  `dispatched`
+- **GIVEN** the cycle's execution is queued, sending or sent
+- **WHEN** a head manually requests the same rule and recipient
+- **THEN** no new execution or second queue job is created
+- **AND** `alreadyRequested` includes that recipient, not `queued`
 
 #### Scenario: Manual Remind before any automated reminder has fired
 
-- **GIVEN** a reminder rule has not yet dispatched any reminder to a lead
-  for the current cycle
-- **WHEN** a head triggers a manual `Remind` for that rule and lead
-- **THEN** exactly one `ReminderExecution` row is inserted and one email is
-  sent
-- **AND** a subsequent automated scheduler tick for the same rule/lead/cycle
-  deduplicates against it instead of sending a second email
+- **WHEN** a head successfully queues the first reminder for the rule and cycle
+- **THEN** one execution and queue job are created
+- **AND** a subsequent automatic tick deduplicates against that execution
 
 #### Scenario: The dedupe key is internally consistent within one dispatch
 
-- **GIVEN** `RemindersScopeService.dispatchDraftSections` processes a draft
-  section during a manual dispatch
-- **WHEN** it computes its own local key for the race-safe read-back and
-  calls `requestReminderExecution` for the same rule/recipient
-- **THEN** the locally computed key and the key `requestReminderExecution`
-  builds internally are byte-identical
+- **WHEN** manual or automatic dispatch records an execution for the same rule,
+  recipient and cycle
+- **THEN** the shared builder derives the same dedupe key for both callers
+- **AND** counting the returned outcome does not construct a second key or
+  depend on execution timestamps
 
 ### Requirement: `dispatchPending` gates on the DB-resolved current editable report
 
@@ -530,9 +521,10 @@ each policy row with `SELECT ... FOR UPDATE`, then re-read and revalidate its
 active flag and validity window before creating or updating a rule. Policy
 writes and materialization therefore share the same row-lock boundary. Admin
 recovery MUST use that same policy-first, derived-rules-second lock order.
-Repair materialization MUST recheck the latest rule version only after acquiring
-the policy and report locks, then reconcile it according to the immutable
-version contract above.
+Explicit schedule reconciliation MUST recheck the latest rule version only after
+acquiring the policy and report locks, then reconcile it according to the
+immutable version contract above. Missing-rule recovery MUST instead preserve
+any existing rule version and create only absent policy-report pairs.
 
 #### Scenario: Disable wins after due discovery
 
@@ -633,3 +625,107 @@ terminal `failed` with an explicit unknown-delivery error. It MUST NOT fabricate
 - **THEN** the indistinguishable execution receives the same unknown-delivery
   terminal failure and observability signal
 - **AND** only an explicit manual decision can redispatch it
+
+### Requirement: Dispatch results distinguish enqueue success from delivery
+
+The reminder service MUST expose a failed outcome when enqueue fails or the
+request resolves to an existing terminal failed execution. Scheduler totals MUST
+count it as failed, never requested. The remaining recipients MUST continue
+after a handled enqueue failure.
+
+Manual dispatch MUST expose one shared response contract with `queued`,
+`alreadyRequested`, `failed` and `skipped` nonnegative counts. An eligible
+recipient MUST contribute to exactly one count. Dashboard confirmations MUST
+describe successful enqueue as queued and deduplication as already requested;
+neither outcome alone proves email delivery. Failed batches MUST retain and
+display their successful counts and provide retry feedback.
+
+#### Scenario: A newly created execution cannot enter the queue
+
+- **WHEN** enqueue fails after the execution row is created
+- **THEN** the execution is persisted as failed and the request reports failed
+- **AND** manual and scheduler totals do not count it as successful
+- **AND** the individual reminder control offers retry without a success check
+
+#### Scenario: A batch contains both queue success and failure
+
+- **WHEN** one recipient's enqueue fails and the next recipient succeeds
+- **THEN** both recipients are attempted and their separate outcomes are counted
+- **AND** batch feedback shows the queued and failed counts
+
+#### Scenario: Manual revival fails to enqueue again
+
+- **WHEN** an explicitly retried failed execution is revived but enqueue fails
+- **THEN** it returns to failed and contributes only to the failed count
+- **AND** a subsequent successful manual retry may queue that same execution
+
+### Requirement: Cycle-date eligibility is independent of the SQL session timezone
+
+The atomic reminder-execution write guard MUST compare the payload's UTC
+`cycleDate` with the date portion stored in the UTC-authored
+`ReminderRule.fireAt` timestamp. It MUST NOT convert that timestamp into a
+session-zone-aware value before comparing the date. The result MUST be the same
+under every supported PostgreSQL session timezone, while all other rule,
+policy, report lifecycle, lock, and conflict predicates remain in force.
+
+#### Scenario: Fire time is just after UTC midnight
+
+- **GIVEN** an otherwise eligible rule whose `fireAt` is 00:30 UTC and whose
+  payload carries that UTC calendar date
+- **WHEN** execution creation runs under UTC, Europe/Moscow, or
+  America/New_York as the PostgreSQL session timezone
+- **THEN** the cycle-date predicate accepts the rule in every session
+- **AND** execution creation remains subject to every other eligibility check
+
+#### Scenario: Fire time is just before UTC midnight
+
+- **GIVEN** an otherwise eligible rule whose `fireAt` is 23:30 UTC and whose
+  payload carries that UTC calendar date
+- **WHEN** execution creation runs under UTC, Europe/Moscow, or
+  America/New_York as the PostgreSQL session timezone
+- **THEN** the cycle-date predicate accepts the rule in every session
+- **AND** execution creation remains subject to every other eligibility check
+
+### Requirement: Missing reminder rules have an independent recovery schedule
+
+Missing policy-derived rules MUST be eligible for an independent hourly recovery
+pass across every unarchived scheduled/open/reopened report with a deadline,
+including manually created or restored periods that no user visits. The pass
+MUST run independently of automatic period creation and reminder dispatch. It
+MUST traverse all pages of its bounded report set and continue after an
+individual report fails. A failed report MUST remain eligible on a later pass.
+
+Recovery MUST lock policies in stable order before the Report and re-read rule
+existence, policy validity and the full live lifecycle under those locks. It
+MUST preserve every existing rule version without updating its status, schedule,
+or delivery identity. Only absent pairs with an applicable policy and a computed
+fire time strictly later than a clock read after the existence query MAY create
+a rule. Recovery MUST NOT backfill elapsed dispatches. Explicit policy, deadline
+and lifecycle writers continue to reconcile schedule versions.
+
+#### Scenario: a committed period loses its post-commit rule hook
+
+- **GIVEN** period creation or admin recovery commits and its rule hook fails
+- **WHEN** a later recovery pass processes that still-eligible report
+- **THEN** it creates each still-future missing policy rule once
+- **AND** existing versions and executions remain unchanged
+
+#### Scenario: a failed report does not starve later pages
+
+- **GIVEN** one report fails during recovery and more report pages remain
+- **WHEN** the pass continues
+- **THEN** later reports are still processed
+- **AND** a later pass can retry the failed report
+
+#### Scenario: the fire time passes while locks are awaited
+
+- **GIVEN** a missing rule appeared future-due when the pass started
+- **WHEN** its fire time is reached before locked recovery checks the clock
+- **THEN** recovery creates no rule for that elapsed instant
+
+#### Scenario: a historical deadline still has a future positive-offset rule
+
+- **GIVEN** an editable report has a historical deadline and an applicable
+  policy whose positive offset produces a future fire time
+- **WHEN** hourly recovery processes the report
+- **THEN** it may create that missing rule without requiring current-period access

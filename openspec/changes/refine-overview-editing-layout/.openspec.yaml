@@ -1,0 +1,5 @@
+schema: spec-driven
+created: 2026-09-06
+goal: Preserve the compact Status Overview reading grid while giving one
+  explicitly selected Current or Next editor the complete timeline width and
+  clarifying independent updates without changing record identity or writes.

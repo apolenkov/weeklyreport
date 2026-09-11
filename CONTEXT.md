@@ -288,14 +288,48 @@ marker saying why. See ADR 0015.
 _Avoid_: English "position" (that is the HR job title); deleting a published позиция
 to make it go away (resolve or carry it forward instead).
 
+**Tracked work**:
+A piece of work whose identity continues across reporting periods until it is
+completed or explicitly abandoned. Its weekly wording, stage and next step may
+change without turning it into unrelated work.
+_Avoid_: clone (continuing existing work is not creating a separate task).
+
+**Weekly update**:
+An author's account of what happened to tracked work during one reporting
+period. A later plan does not replace that account, and a published account
+remains part of the historical record.
+_Avoid_: task status used without a period when describing historical progress.
+
+**Next-period commitment**:
+An explicit intention to work on tracked work in the next reporting period,
+distinct from the result reported for the current period. Repeating the same
+commitment continues the work; creating a genuinely separate task does not.
+_Avoid_: duplicate; treating an intention as evidence that work has started.
+
+**Open-work register**:
+Outstanding tracked work, including paused and deferred work, that remains
+discoverable even when absent from the next period's committed plan.
+_Avoid_: next-week plan (not every unfinished task is a commitment for next week).
+
+**Item resolution**:
+An explicit final decision about tracked work: completion reports delivery,
+while Won't do records that the work will not be performed and why.
+_Avoid_: deletion, postponement, or another progress status for Won't do.
+
+**Restore plan**:
+A correction of a Won't do decision while the author's section is editable,
+returning the work to its previous state without erasing the decision's history.
+_Avoid_: reopening a published report; later resumption is a new weekly occurrence.
+
 **Progress (item status)**:
 The stored `workflowStatus` of an item — what the lead SAYS about the work:
 `planned | in_progress | paused | postponed | done`. Each item type owns a
-subset: current-week → in progress / paused / done; next-week → planned /
+subset: current-week → planned (not started) / in progress / paused / done; next-week → planned /
 postponed. **Paused** = on hold, the lead intends to resume. **Postponed** =
 consciously pushed beyond this period; postponed work is NOT auto-carried —
 re-planning it is an explicit call. Neither paused nor postponed raises any
-alarm. (Model locked in the `record-status-derivation` spec.)
+alarm. A commitment entering its reporting period stays planned until its
+author confirms progress. (Model locked in the `record-status-derivation` spec.)
 _Avoid_: blocked as an item status (that is an Alarm, see below); "completed"
 as a separate flag (done-ness lives in the status); stage (a stage is the SDLC
 phase, not the progress state); "workflow status" as a separate term (this IS

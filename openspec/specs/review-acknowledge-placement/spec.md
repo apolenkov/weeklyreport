@@ -14,11 +14,13 @@ complete editable lifecycle (`periodStatus` is `open` or `reopened` and
 `archived` is false). The transaction MUST then resolve the requested live
 section and its reporting group from the current graph, reject an absent or
 mismatched group, and re-check the reviewer's current database entitlement
-before writing. Application-level pre-reads are advisory only and MUST NOT
-authorize a write after a concurrent move, publish, archive, or entitlement
-change. Acknowledgements MUST target a group that has an actual section in the
-live report; no report/group-shaped receipt may be created for an unrelated
-pair.
+before writing. When an acknowledgement uses a representative section to lock
+and recheck a report/group pair that has multiple eligible sections, both
+lookups MUST use the same deterministic ordering. Application-level pre-reads
+are advisory only and MUST NOT authorize a write after a concurrent move,
+publish, archive, or entitlement change. Acknowledgements MUST target a group
+that has an actual section in the live report; no report/group-shaped receipt
+may be created for an unrelated pair.
 
 #### Scenario: Acknowledgement cannot outlive a lifecycle transition
 
@@ -26,6 +28,14 @@ pair.
   request's application precheck but before its transaction acquires the report
   lock
 - **THEN** the acknowledgement is rejected and no receipt is written
+
+#### Scenario: Multi-author group retains its acknowledgement anchor
+
+- **WHEN** a live report group has eligible sections from multiple authors
+- **THEN** the acknowledgement transaction selects the same deterministic
+  representative section before and after acquiring its locks
+- **AND** the presence of another eligible section does not produce a false
+  missing-group result
 
 #### Scenario: Comment cannot cross a moved section or revoked designation
 

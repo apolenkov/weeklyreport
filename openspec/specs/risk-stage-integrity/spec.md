@@ -10,8 +10,8 @@ of a silent placeholder.
 
 A PRODUCT-parented risk, item, and decision MUST each reference at least one
 concrete SDLC stage at every layer: the edit dialog blocks saving a stage-less
-row, the shared write schemas (`riskInputSchema`, `itemInputSchema`,
-`decisionInputSchema`) enforce the product/activity stage rule through
+row, the shared write schemas (`riskWriteSchema`, `itemWriteSchema`,
+`decisionWriteSchema`) enforce the product/activity stage rule through
 `writeStageNamesField` and parent-aware superRefine checks, and seed data writes explicit stages on every seeded
 product-parented risk, item, and decision. Empty selection MUST NOT mean
 "applies to all assigned stages" for items or decisions; "all stages" is
@@ -48,13 +48,13 @@ activity parent.
 
 - **WHEN** a draft-save or submit payload contains a PRODUCT-parented item whose
   `stageNames` is missing or empty
-- **THEN** validation fails and the payload is rejected by `itemInputSchema`
+- **THEN** validation fails and the payload is rejected by `itemWriteSchema`
 
 #### Scenario: the API receives a decision without stages
 
 - **WHEN** a draft-save or submit payload contains a PRODUCT-parented decision
   whose `stageNames` is missing or empty
-- **THEN** validation fails and the payload is rejected by `decisionInputSchema`
+- **THEN** validation fails and the payload is rejected by `decisionWriteSchema`
 
 #### Scenario: an activity-parented record is accepted without stages
 
@@ -155,3 +155,29 @@ exactly as the item and risk dialogs do.
 - **WHEN** a lead changes the Product picker in the Add Decision dialog
 - **THEN** the stage options update to the newly selected product's owned stages
 - **AND** the previous stage selection is cleared
+
+### Requirement: Item and risk stage errors follow the current parent
+
+Changing the parent in an item or risk editor MUST clear the stage-validation
+error produced for the previous parent and reset its selected stages. It MUST
+preserve unrelated prose errors and unsaved text. The next save MUST validate
+the currently selected parent under the existing product/activity rules.
+
+#### Scenario: A single-stage product replaces a failed multi-stage selection
+
+- **WHEN** an item or risk save fails because no stage was selected for a
+  multi-stage product and the user switches to a single-stage product
+- **THEN** the old stage error disappears and the new stage is applied automatically
+- **AND** saving valid prose emits the new product and its single stage
+
+#### Scenario: Parent changes preserve unrelated validation
+
+- **WHEN** an item or risk has both prose and stage errors and its parent changes
+- **THEN** only the previous parent's stage error is cleared
+- **AND** unrelated prose errors remain until their fields are corrected
+
+#### Scenario: Returning to a multi-stage product validates its new selection
+
+- **WHEN** the user switches back to a multi-stage product and saves without
+  selecting a stage
+- **THEN** saving is rejected with the current missing-stage error

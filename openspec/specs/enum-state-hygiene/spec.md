@@ -28,7 +28,7 @@ implemented (writer + test) or deleted.
 - **WHEN** a persisted enum value is audited
 - **THEN** its current production writer, reader, schema mirror, and mapper are
   covered together; a value without that contract is removed consistently
-- **WHEN** `ReminderRuleStatus.paused` is read by the scheduler and rendered by
-  the derived-rules panel
+- **WHEN** a reminder rule is read by the scheduler and represented in the
+  admin reminder card's next-send projection
 - **THEN** policy save writes `active ? "active" : "paused"` to its derived
-  rules, so pausing or archiving stops dispatch immediately
+  rules, so enabling or pausing a policy controls dispatch immediately

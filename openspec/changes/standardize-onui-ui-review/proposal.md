@@ -1,14 +1,14 @@
 ## Why
 
-Development already uses onUI for local visual review, while WeeklyReport has no canonical annotation workflow and retired Agentation data remains on the workstation. One local workflow is needed so feedback reaches Codex consistently without adding review tooling to either product bundle.
+Development already used onUI for developer-local visual review, while WeeklyReport needed the same canonical developer workflow. A retired user-level Agentation SQLite store also remained on the workstation. One local workflow was needed so review feedback would reach Codex consistently without changing either product's feedback surface.
 
 ## What Changes
 
 - Standardize `onui-local` as the developer-local visual-review interface for active repositories `/home/user/work/Development` and `/home/user/work/weeklyreport`.
 - Fix canonical review origins at `http://127.0.0.1:4177` for Development and `http://localhost:3000` for WeeklyReport.
 - Add the minimal WeeklyReport agent guidance for reading, tracing, verifying, and closing onUI annotations.
-- Retire the dormant Agentation store at `~/.agentation` without archive or import, after an exact-target check confirms no active Agentation process/configuration.
-- Keep SitePing outside this capability: it owns authenticated product feedback under the linked `add-authenticated-siteping-feedback` change.
+- Retire the dormant user-level Agentation store at `~/.agentation` without archive or import, after an exact-target check confirms it is the intended local-tooling path for the retired SQLite store.
+- Keep onUI external to the product. Preserve WeeklyReport's active Agentation product feedback, PostgreSQL adapter, and durable [authenticated-product-feedback](../../specs/authenticated-product-feedback/spec.md) contract.
 
 ### Non-goals
 
@@ -30,5 +30,5 @@ None.
 ## Impact
 
 - WeeklyReport: `AGENTS.md`, OpenSpec artifacts, local acceptance only.
-- User environment: existing `onui-local` registration and explicit removal of dormant `~/.agentation` data.
+- User environment: existing `onui-local` registration and explicit scope of the dormant `~/.agentation` data in local-tooling cleanup actions.
 - Development: read-only conformance reference at `AGENTS.md` and `docs/research/onui-unification-agentation-replacement-2026-09-03.md`.

@@ -53,3 +53,42 @@ may be required for CI acceptance.
 - **WHEN** the CI workflow runs in a fresh runner checkout
 - **THEN** all required checks execute from the workflow and do not invoke a
   local Git hook
+
+### Requirement: Web typecheck covers maintained TypeScript entrypoints
+
+The existing web TypeScript project MUST typecheck maintained first-party
+TypeScript under `src` and `scripts` plus root web runtime, framework, build,
+test configuration, setup, and test files. Framework-required root placement
+MUST remain intact. The repository MUST NOT create a duplicate TypeScript
+project solely to cover these files.
+
+#### Scenario: web typecheck enumerates maintained root files
+
+- **WHEN** the web TypeScript compiler lists its program files
+- **THEN** the root Next.js, Vitest, instrumentation-client, Sentry options, setup, and test TypeScript files are present
+- **AND** the server instrumentation hook under `src` is present
+
+#### Scenario: framework configuration remains at the application root
+
+- **WHEN** root web files are added to typecheck coverage
+- **THEN** Next.js and Vitest configuration files remain in their framework-required locations
+- **AND** the existing web typecheck command compiles them
+
+### Requirement: Production output checks require runtime entrypoints
+
+The production output gate MUST reject a missing or non-file runtime entrypoint. API mode MUST require the emitted API main module and the embedded shared and report-persistence package indexes. Shared mode MUST require the standalone shared package index. Combined mode MUST require both output sets. Merely existing or empty output directories MUST NOT establish a successful build check.
+
+#### Scenario: API output is incomplete
+
+- **WHEN** the API output directory exists but its main module or either embedded package index is missing
+- **THEN** API and combined checks fail and identify missing entrypoints
+
+#### Scenario: Shared output is empty
+
+- **WHEN** the standalone shared output directory exists without its index module
+- **THEN** shared and combined checks fail
+
+#### Scenario: Selected output is complete
+
+- **WHEN** the selected mode has every required regular entrypoint file and satisfies existing output policy checks
+- **THEN** the production output gate succeeds

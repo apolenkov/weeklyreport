@@ -5,6 +5,36 @@ This file provides guidance to Codex when working with code in this repository.
 Global language and response-style preferences live in `~/.codex/AGENTS.md`.
 Keep this file limited to WeeklyReport-specific context.
 
+## Autonomy in the local MVP
+
+- Treat this checkout as an actively developed MVP, not a production release.
+  Within the requested task, proceed with local implementation, diagnostics,
+  tests, browser checks, and recoverable changes to identified synthetic test
+  records without asking for each step. This includes creating/editing records
+  and exercising submit, review, and reopen flows in a verified local test
+  environment. `localhost` alone does not prove that its backend is disposable.
+- Preserve the task boundary: an audit does not authorize product fixes, and
+  explicit read-only instructions override the test-record permission above.
+  Do not expand local permission to production, shared/unknown data, credentials,
+  paid actions, external messages, or publication. Database safety below still applies.
+- Inspect the actual handler before activating a UI control whose side effects
+  are unclear. Distinguish opening a form from submitting it and local input from
+  autosave. Use known fixtures and record the relevant pre-state before lifecycle
+  tests; never infer reversibility from a button label.
+- If a test unexpectedly changes state, disclose the effect once, inspect it,
+  and recover autonomously when the recovery is known, scoped, and authorized.
+  Otherwise isolate that record/scenario and continue independent checks. An
+  optional rollback or one unavailable fixture must not block the entire task.
+- Resolve routine choices from code, specs, existing data, and tools. Ask only
+  when a material decision or new authority is genuinely necessary; name the
+  exact affected step and continue all work that does not depend on the answer.
+  Do not repeatedly request confirmation for an already authorized action.
+- Keep acceptance evidence proportional and explicit: define the finite test
+  matrix, reuse equivalent evidence without hiding exclusions, and report gaps.
+  Finish the requested outcome; do not replace it with repeated plans, status
+  messages, or an arbitrary screenshot count. Do not mark a goal blocked while
+  meaningful independent work remains, or complete while required checks remain.
+
 ## Project
 
 WeeklyReport automates weekly status reports for a software department.
@@ -31,17 +61,18 @@ pnpm dev                # run API and web from source
 pnpm dev:watch          # docker compose dev with --watch
 pnpm typecheck          # Prisma/scripts tsc + turbo package typechecks
 pnpm lint               # ESLint, Stylelint, runtime sync, repository cleanliness
+pnpm format:check       # Prettier check without rewriting files
 pnpm test               # package unit suites plus root safety tests
 pnpm build              # turbo run build
 pnpm spec:check         # strict validation of all durable OpenSpec specs
 ```
 
-- `pnpm lint` runs every configured check and exits non-zero on a failure. Each
+- `pnpm lint` runs its checks sequentially and stops at the first failure. Each
   check is runnable alone through its package script.
 - Run one unit test: `cd apps/web && pnpm exec vitest run src/path/to/file.test.tsx`
   (same in `apps/api`).
-- If TS errors reference a known Prisma model (e.g. TS2339), run
-  `pnpm --filter @customreport/api db:generate` — pnpm ops wipe the `.prisma` client.
+- If the generated Prisma client is missing or out of sync with the schema, run
+  `pnpm --filter @customreport/api db:generate` before retrying the affected check.
 - Product tests are colocated under each package. The root `pnpm test` runs the
   unit and repository-safety suites; API database integration tests run with
   `pnpm --filter @customreport/api test:integration` against an explicitly
@@ -52,8 +83,9 @@ pnpm spec:check         # strict validation of all durable OpenSpec specs
 - Web `http://localhost:3000`, API `http://localhost:3002`, Mailpit UI `http://localhost:8025`.
 - Dev auth: `AUTH_DEV_MODE=true` + `/auth/dev-login`; refused at boot when `NODE_ENV=production`.
 - `NEXT_PUBLIC_DEV_ROLE_SWITCHER=true` shows the dev-only role switcher.
-- The docker `web`/`api` containers serve a STALE built image; to live-verify new
-  code, run the app from source using `docs/onboarding.md` or `pnpm dev`.
+- Verify that the running app includes the changed sources before browser
+  acceptance. An existing Docker image may predate the change; use the source
+  workflow in `docs/onboarding.md` or `pnpm dev` when appropriate.
 
 ## Database safety
 
@@ -121,4 +153,24 @@ path must respect them and link the relevant `openspec/specs/` spec.
 ## Gates
 
 CI (`.github/workflows/ci.yml`) runs on every push to `main`, on pull requests,
-and on manual dispatch. Run the matching local commands before pushing.
+and on manual dispatch. Use `docs/exemplary-code-standard.md#verification`
+for local acceptance; the workflow is authoritative for CI jobs and conditions.
+
+## Task completion
+
+- Before editing, inspect the working tree and identify the files owned by this
+  task. Preserve pre-existing and concurrent edits, including edits in the same
+  file. Stage only task-owned changes; never clean up another task's work to
+  obtain a clean status.
+- Derive acceptance from the user's requested outcome and the relevant OpenSpec
+  contract. Include required checks and any requested commit, push, publication,
+  or live verification. Existing authorization remains valid within its scope;
+  do not add external delivery to a local task.
+- Tie results to the tested commit and relevant uncommitted changes. Reuse prior
+  passing checks only when their inputs remain applicable. Record unavailable
+  checks and exclusions explicitly; do not present them as passes.
+- Before finishing, inspect the task diff, remove temporary artifacts created
+  by this task, and reconcile affected instructions and specs with the result.
+  Report what changed, what passed, and the actual commit/push/publication state.
+  Completion requires every agreed delivery step; locally saved progress alone
+  does not complete a task whose requested delivery is still pending.

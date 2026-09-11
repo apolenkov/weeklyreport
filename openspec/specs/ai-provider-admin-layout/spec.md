@@ -10,67 +10,79 @@ the Settings tab strip.
 
 ### Requirement: AI Provider configuration uses a compact responsive layout
 
-The top-level Admin `AI → Provider` surface rendered by
-`AiProviderCardContent` MUST render live configuration fields, lifecycle
-actions, capability feedback, and revision information directly in the primary
-flow. It MUST NOT add a parent Provider disclosure, empty summary row, or
-second status badge: readiness belongs in the Provider tab trigger. At a large
-viewport, the Generation and Embeddings regions MUST be presented as equal-width peer sections whose
-headings and first controls align; at a narrow
-viewport, they MUST stack without page-level horizontal overflow. The separate
-embedding connection fields MUST remain conditional on the selected embedding
-mode. Built-in profiles MUST NOT render their fixed endpoint as an editable or
-disabled field; a compact endpoint field MUST appear only for the custom
-OpenAI-compatible profile. Provider and feature readiness MUST be displayed in
-the corresponding tab triggers rather than in a separate summary card. An
-unconfigured form MUST visibly prefill the repository's Mistral model preset
-while remaining disabled until the administrator supplies a credential, tests
-the draft successfully, and explicitly activates it. Save, Test, and Activate
-MUST remain visible as one ordered action sequence; unavailable later steps
-MUST be disabled instead of omitted.
-
-The selected `Provider` tab is the only visible Provider title. The direct form
-MUST NOT repeat an `AI provider` heading, explanatory copy, active-configuration
-summary, readiness badge, or disclosure affordance already represented by the
-AI surface and Provider tab trigger.
+The Provider surface MUST present Generation and Embeddings as distinct
+peer-level configuration cards in the primary flow. Existing fields and
+conditional separate-embedding behavior MUST remain available. An active
+revision MUST open in a read/summary mode until the administrator chooses
+`Edit configuration`; an unconfigured, draft, or failed revision MUST open in
+edit mode. The layout MUST preserve the Demo visual language and remain usable
+without page-level horizontal overflow at supported narrow widths. Built-in
+profiles MUST NOT expose their fixed endpoint as an editable field; the custom
+OpenAI-compatible profile MUST retain its bounded endpoint field. Configured
+credential inputs MUST communicate that the stored credential can be retained
+without rendering the masked suffix in the primary flow.
 
 #### Scenario: Admin scans the direct Provider form at desktop width
 
 - **WHEN** an administrator opens `/admin?tab=ai`, selects `Provider`, and
-  views the Provider form at a desktop viewport
-- **THEN** Generation, Embeddings, actions, capability feedback, and revision
-  information are visually distinct without duplicate heavy card chrome or an
-  empty Provider summary row
-- **AND** no parent disclosure or duplicate Provider title, status, or
-  explanatory copy precedes the form
-- **AND** configured credential inputs communicate that a saved credential can
-  be retained without rendering its masked suffix
-- **AND** the two peer sections use concise descriptions and align their first
-  controls on the same row
-- **AND** all existing live fields remain available, including generation
-  provider/models/credential/reasoning and embedding mode/model
-- **AND** the custom endpoint field appears without changing the height of the
-  desktop provider row or adding helper copy below it
-- **AND** separate embedding profile/endpoint/credential fields are shown only
-  when the embedding connection mode is `separate`
+  enters or continues configuration at a desktop viewport
+- **THEN** the state summary and ordered lifecycle explain whether the provider
+  is serving and what action comes next
+- **AND** Generation and Embeddings use aligned peer regions with all existing
+  provider, model, reasoning, credential, and embedding-mode controls
+- **AND** the custom endpoint field appears only for the custom
+  OpenAI-compatible profile
+- **AND** separate embedding connection controls appear only in `separate`
+  mode
+
+#### Scenario: Administrator edits an active revision
+
+- **WHEN** the administrator activates `Edit configuration` for an active
+  revision
+- **THEN** the existing editable fields become available as a draft workflow
+- **AND** cancelling edit mode leaves the active revision and service
+  availability unchanged
+
+#### Scenario: Administrator chooses separate embeddings
+
+- **WHEN** the administrator selects the existing separate embedding mode
+- **THEN** the separate provider, endpoint, credential, and model controls
+  appear in the Embeddings card
+- **AND** those controls remain absent when embeddings reuse the generation
+  connection
+
+#### Scenario: Administrator views a disabled retained configuration
+
+- **GIVEN** the retained revision has lifecycle `active` but global provider
+  availability is `not_configured`
+- **WHEN** the administrator views its summary or edits the configuration
+- **THEN** the summary identifies AI as disabled and the configuration as retained
+- **AND** it does not claim that AI is available or already active
+- **AND** editing remains available without offering another disable operation
+- **AND** the feature readiness count and selected feature availability refresh
+  after provider changes without a page reload
 
 #### Scenario: Provider layout remains usable on a narrow viewport
 
-- **WHEN** the same Provider surface is opened at a narrow viewport
-- **THEN** Generation and Embeddings stack in a readable order
+- **WHEN** the same Provider workflow is opened at a narrow viewport
+- **THEN** its summary, lifecycle steps, Generation, and Embeddings regions
+  stack in a readable order
 - **AND** controls, validation messages, feedback, and lifecycle actions remain
   reachable without horizontal page scrolling
 
 ### Requirement: Provider diagnostics remain available as secondary detail
 
-The direct `AiProviderCardContent` MUST keep capability status, preparation
-progress, operation feedback, and errors in the primary flow. Revision metadata
-and retained-revision actions MUST be grouped inside an accessible native
-disclosure labelled `Diagnostics`, closed by default, and MUST preserve all
-existing diagnostic values and lifecycle actions when opened.
-Primary credential inputs MUST communicate only whether a saved credential can
-be retained; they MUST NOT render a masked credential suffix before the
-administrator opens Diagnostics.
+The existing Diagnostics disclosure MUST remain closed by default and retain
+revision metadata, capability results, preparation details, masked credential
+metadata, and eligible Restore/Discard actions. The primary summary and
+lifecycle cards MUST expose the next action without requiring Diagnostics to be
+opened, and opening Diagnostics MUST NOT change provider lifecycle state.
+
+#### Scenario: Administrator opens diagnostics after scanning the workflow
+
+- **WHEN** the administrator opens the native `Diagnostics` disclosure
+- **THEN** the retained diagnostic values and eligible revision actions are
+  available without changing the active pointer or configuration state
 
 #### Scenario: Direct Provider keeps the first viewport focused
 
@@ -110,3 +122,41 @@ selection behavior.
 - **WHEN** the Settings tab triggers fit within the available width
 - **THEN** the outer tablist has no unnecessary scroll area and remains a
   single horizontal row
+
+### Requirement: AI Provider administration presents an explicit lifecycle workflow
+
+The Admin `AI → Provider` surface MUST present a summary of the current
+availability/revision state before the configuration controls and MUST expose
+the existing lifecycle as visible ordered steps: `Configure`, `Test
+capabilities`, and `Activate`. The steps MUST derive eligibility from existing
+API state; an unavailable step MUST remain visible, disabled, and accompanied
+by an actionable reason. The surface MUST show loading, async test progress,
+preparation progress, and operation errors in accessible regions without
+inventing a new lifecycle state or changing server semantics.
+
+#### Scenario: Administrator scans an active provider
+
+- **WHEN** an administrator opens `/admin?tab=ai` with an active revision
+- **THEN** the first card identifies that AI is active and presents
+  `Edit configuration` as the primary configuration action
+- **AND** the Configure, Test capabilities, and Activate steps remain visible
+  with Activate unavailable unless a new tested draft is selected
+- **AND** Disable remains available through the existing active-service action
+
+#### Scenario: Administrator continues an unconfigured or draft setup
+
+- **WHEN** no active revision exists or the selected revision is `draft` or
+  `failed`
+- **THEN** the editable configuration form is initially available
+- **AND** the summary states what is missing or failed and the next action
+  explains why later steps are disabled
+
+#### Scenario: Administrator observes asynchronous work
+
+- **WHEN** a provider test is queued/running or an activation is preparing
+- **THEN** the UI identifies the operation state and disables duplicate or
+  conflicting actions
+- **AND** test lanes or preparation completed/total/failed/elapsed values are
+  shown from the existing read model
+- **AND** a recoverable error includes an actionable next step without exposing
+  provider response bodies or credentials

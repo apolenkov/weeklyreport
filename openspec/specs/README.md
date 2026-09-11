@@ -12,6 +12,8 @@ This index maps every durable capability to one canonical home. Product capabili
 - [saml-provisioning](./saml-provisioning/spec.md) — First SAML login creates a least-privilege viewer while later logins never overwrite locally governed identity or access fields. `[roles: Shared, Admin]`
 - [ui-role-route-access](./ui-role-route-access/spec.md) — Role denials use one in-page wall and return each visitor to the correct role home without redundant nested gates. `[roles: Lead, Head, Viewer, Admin]`
 - [user-name-display](./user-name-display/spec.md) — Each surface uses its canonical full or short user-name form, including cross-author owner labels. `[roles: Lead, Head, Viewer, Admin]`
+- [route-error-recovery](./route-error-recovery/spec.md) — Route and global error boundaries expose consistent recovery without promising unverified data preservation. `[roles: Lead, Head, Viewer, Admin]`
+- [route-query-normalization](./route-query-normalization/spec.md) — Optional route query values remain scalar and predictable for deep links and repeated-parameter fallbacks. `[roles: Lead, Head, Viewer, Admin]`
 
 #### Prepare
 
@@ -27,6 +29,7 @@ This index maps every durable capability to one canonical home. Product capabili
 - [dialog-listbox-a11y](./dialog-listbox-a11y/spec.md) — Dialogs, period listboxes, popups, and expanders share correct focus, close, and ARIA behavior. `[roles: Lead, Head, Viewer, Admin]`
 - [list-empty-state-fidelity](./list-empty-state-fidelity/spec.md) — Filtered-list counts and empty states derive from the same rows the user can see. `[roles: Lead, Head, Viewer, Admin]`
 - [report-badge-resolution](./report-badge-resolution/spec.md) — Risk and decision badges resolve product names report-wide instead of falling back to Unknown. `[roles: Lead, Head, Viewer, Admin]`
+- [dashboard-record-count](./dashboard-record-count/spec.md) — Review-dashboard totals count each persisted product item, risk, and decision exactly once. `[roles: Head, Admin]`
 - [report-toolbar-layout](./report-toolbar-layout/spec.md) — Header actions and context controls remain stable, grouped, reachable, and accessible across roles and viewport widths. `[roles: Lead, Head, Viewer, Admin]`
 - [compact-overflow-containment](./compact-overflow-containment/spec.md) — Dense report content stays usable without horizontal overflow. `[roles: Lead, Head, Viewer, Admin]`
 - [desktop-surface-composition](./desktop-surface-composition/spec.md) — Desktop report surfaces preserve their intended composition and hierarchy. `[roles: Lead, Head, Viewer, Admin]`
@@ -59,6 +62,10 @@ This index maps every durable capability to one canonical home. Product capabili
 - [lead-item-card-uniformity](./lead-item-card-uniformity/spec.md) — Lead item cards keep uniform height and expose truncated content through a full-text tooltip. `[roles: Lead]`
 - [lead-pipeline-card](./lead-pipeline-card/spec.md) — Product health remains risk-derived and distinct from the lead's own Mine-scope stage completeness. `[roles: Lead]`
 - [lead-report-controls-integrity](./lead-report-controls-integrity/spec.md) — Lead report controls avoid no-ops, accidental dialogs, clipped popovers, stale busy states, and mismatched summary populations. `[roles: Lead]`
+- [unified-report-authoring](./unified-report-authoring/spec.md) — Lead report authoring keeps inline editing, lineage, recovery, and progress semantics coherent across sections. `[roles: Lead]`
+- [lead-report-health-pulse](./lead-report-health-pulse/spec.md) — A read-only, problem-first pulse opens contextual unit health without interrupting report authoring. `[roles: Lead]`
+- [lead-status-overview](./lead-status-overview/spec.md) — Lead Overview groups reporting units clearly and keeps editable Current and Next cells on the canonical item editor path. `[roles: Lead]`
+- [lead-product-accordion-identity](./lead-product-accordion-identity/spec.md) — Repeated lead-scope product accordions keep stable, instance-local accessible identity. `[roles: Lead]`
 - [lead-surface-name-resolution](./lead-surface-name-resolution/spec.md) — Lead cards resolve every report-known product name without placeholder fallback. `[roles: Lead]`
 - [record-dialog-layout](./record-dialog-layout/spec.md) — Item, risk, and decision editors share one consistent two-column layout. `[roles: Lead]`
 - [record-status-derivation](./record-status-derivation/spec.md) — Item alarms derive from covering risks while progress, blocker creation, pause reasons, and escalation counts remain coherent. `[roles: Lead, Head]`
@@ -75,6 +82,7 @@ This index maps every durable capability to one canonical home. Product capabili
 - [lead-report-assistant](./lead-report-assistant/spec.md) — Leads ask bounded questions over authorized report evidence through a grounded, fail-closed assistant. `[roles: Lead]`
 - [lead-history-summary](./lead-history-summary/spec.md) — Lead history is period-ordered, aggregates only completed periods, and never fabricates a missing submission for compiled reports. `[roles: Lead]`
 - [lead-slide-by-product-grid](./lead-slide-by-product-grid/spec.md) — One auto-height by-product slide article renders lead, head, and viewer content with priorities, contributors, stages, and full record order. `[roles: Lead, Head, Viewer]`
+- [by-lead-referenced-content](./by-lead-referenced-content/spec.md) — Read-only by-lead reports preserve referenced-product contributions without changing ownership or mixing authors. `[roles: Lead, Head, Viewer]`
 - [slide-inline-record-editing](./slide-inline-record-editing/spec.md) — Leads edit or delete their own slide rows through the existing form write path while read-only rows ignore activation. `[roles: Lead]`
 - [status-slide-rendering](./status-slide-rendering/spec.md) — Lead slides preserve fullscreen exit, Mine/Everyone scope, row-state language, and selected-index safety. `[roles: Lead, Head, Viewer]`
 
@@ -125,21 +133,23 @@ Authority model:
 - [admin-dialog-focus-management](./admin-dialog-focus-management/spec.md) — Admin CRUD dialogs move focus inside on open and restore it to the initiating control on close. `[roles: Admin]`
 - [admin-reminders-ui](./admin-reminders-ui/spec.md) — Admins configure reminder policies through plain-language cards, inline editing, presets, and explicit permanent removal. `[roles: Admin]`
 - [admin-settings-ui](./admin-settings-ui/spec.md) — Admin Settings provides client-side sub-tabs, honest live policy controls, and resilient unsaved form state. `[roles: Admin]`
-- [admin-snapshot-restore](./admin-snapshot-restore/spec.md) — Whole-database snapshot restore preserves reporting-group head assignments. `[roles: Admin]`
+- [admin-snapshot-restore](./admin-snapshot-restore/spec.md) — Admin snapshot restore recovers selected admin entities, reminder delivery state, and immutable published report documents while preserving reporting-group head assignments. `[roles: Admin]`
 - [admin-stage-assignment](./admin-stage-assignment/spec.md) — Stage-to-lead assignment saves atomically against the composite uniqueness rule. `[roles: Admin]`
 - [slide-capacity-signals](./slide-capacity-signals/spec.md) — Product assignment warns an admin when a lead's ownership load becomes presentation-heavy. `[roles: Admin]`
+- [admin-user-group-form](./admin-user-group-form/spec.md) — Admin user forms preserve explicit group absence while keeping role-specific validation and payloads consistent. `[roles: Admin]`
 - [structured-user-name](./structured-user-name/spec.md) — Admin-managed surname, given name, patronymic, display name, short form, and initials derive consistently. `[roles: Admin, Shared]`
 - [user-position](./user-position/spec.md) — Admins maintain a user's job title in the contract, table, and edit form. `[roles: Admin]`
 
 #### Prepare
 
-- [reliable-reminder-delivery](./reliable-reminder-delivery/spec.md) — Scheduled reminders remain exactly-once under retries, enqueue failures, concurrent workers, and crashed pods. `[roles: Admin, Lead, Head]`
+- [reliable-reminder-delivery](./reliable-reminder-delivery/spec.md) — Reminder retries use atomic claims and surface uncertain SMTP delivery explicitly under worker and database failures. `[roles: Admin, Lead, Head]`
 
 ## Engineering governance
 
 ### Architecture and module boundaries
 
 - [auth-module-layering](./auth-module-layering/spec.md) — Keeps authentication ownership narrow and delegates period creation to the sanctioned lifecycle writer.
+- [api-shutdown-coordination](./api-shutdown-coordination/spec.md) — Coordinates API termination, fatal-error handling, ordered resource draining, and one bounded exit outcome.
 - [queue-worker-architecture](./queue-worker-architecture/spec.md) — Standardizes BullMQ worker bases and gives queue job defaults one production source.
 - [report-section-prisma-payload](./report-section-prisma-payload/spec.md) — Types report-section mapping and post-save reads from generated Prisma payloads without nullable drift.
 - [role-type](./role-type/spec.md) — Keeps role vocabulary, database enum, labels, and membership guards on shared sources of truth.
@@ -206,6 +216,7 @@ Authority model:
 - [fill-from-write-lock](./fill-from-write-lock/spec.md) — Fill operations preserve write-lock ownership and concurrency guarantees.
 - [group-scope-isolation-gaps](./group-scope-isolation-gaps/spec.md) — Group-scoped reads and writes remain isolated at every repository boundary.
 - [published-portfolio-snapshot](./published-portfolio-snapshot/spec.md) — Published portfolio content is frozen and recoverable as one snapshot.
+- [portfolio-content-presence](./portfolio-content-presence/spec.md) — Portfolio navigation remains enabled for products with meaningful detailed content, including decisions, priorities, and attention text.
 - [published-section-order-determinism](./published-section-order-determinism/spec.md) — Published section order is deterministic across reads and recovery.
 - [report-record-ordering](./report-record-ordering/spec.md) — Report records retain deterministic ordering across lifecycle operations.
 

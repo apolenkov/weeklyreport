@@ -23,12 +23,14 @@ placement is unchanged; no slide data or status semantics change.
 
 The head dashboard SHALL render `KpiCards` with the three current signals
 (Submissions / Deadline / Risks & Blockers) before the `LeadSummaryTable`, and
-keep the queue within its container with no horizontal scroll at every width.
+keep the action queue within its container with no page-level horizontal scroll
+at every width.
 
 The `LeadSummaryTable` MUST stack as per-lead cards below the `lg` (1024px) breakpoint and MUST
-engage its aligned multi-column grid only at and above `lg`, where the six count columns fit
-the container — the grid's ~970px minimum overflows the narrower `md` container, so engaging
-it at `md` reintroduces a horizontal scrollbar in the 768–1023px band. `BlockedAtRiskTable`
+engage its aligned six-track action queue only at and above `lg`, where the
+identity, badges, freshness, content summary, primary action, and toggle tracks
+MUST fit the desktop container. Below `lg`, the stacked layout MUST prevent
+page-level overflow. `BlockedAtRiskTable`
 state correctness MUST be verified against the escalation/`at_risk` flagged-red roll-up, not
 redesigned.
 

@@ -195,6 +195,13 @@ and production recovery remain BLOCKED.
 short-lived token the PDF renderer uses. Rotating either **invalidates every
 live session or in-flight export** — there is no dual-key grace period.
 
+To rotate `AUTH_JWT_SECRET`:
+
+1. Announce that signed-in users will need to log in again.
+2. Put the new `AUTH_JWT_SECRET` value in the environment file.
+3. Run `docker compose --env-file .env.production -f docker-compose.prod.yml up -d api`
+   to recreate the API with the new key.
+
 `AI_PROVIDER_CONFIG_ENCRYPTION_KEY` and `AI_PROVIDER_CONFIG_KEY_VERSION` have
 an even narrower current-MVP boundary: the credential codec has exactly one
 active key and decrypts only records with that same version. Do **not** treat a
@@ -211,6 +218,14 @@ be recovered and every provider credential must be entered again under the new
 pair. Treat that outcome as provider reconfiguration, not a reversible key
 rotation.
 
+`DB_PASSWORD` is referenced by the config guard, postgres, pgbouncer, migrate
+and backup, so rotating it means changing the role password in Postgres and
+recreating those services together. It must contain only URL-safe unreserved
+characters (`A-Z a-z 0-9 . - _ ~`); `POSTGRES_DB` must contain only letters,
+digits, and underscores. The config guard validates both before any
+database-dependent service starts. `NEXT_PUBLIC_*` changes need a **rebuild** —
+they are inlined at build time and a restart will not pick them up.
+
 ### API shutdown budget
 
 The API completes its ordered shutdown phases within a 12.5-second worst-case
@@ -221,19 +236,6 @@ disconnecting does not delete active jobs; BullMQ's stalled-job recovery can
 reclaim them on the next worker start. Production Compose grants the API a
 20-second `stop_grace_period`, leaving margin for signal delivery and runtime
 teardown while preserving the final log and telemetry phases.
-
-1. Put the new value in the environment file.
-2. `docker compose --env-file .env.production -f docker-compose.prod.yml up -d api`
-   (recreates the api only).
-3. Expect every signed-in user to be bounced to login. Announce it first.
-
-`DB_PASSWORD` is referenced by the config guard, postgres, pgbouncer, migrate
-and backup, so rotating it means changing the role password in Postgres and
-recreating those services together. It must contain only URL-safe unreserved
-characters (`A-Z a-z 0-9 . - _ ~`); `POSTGRES_DB` must contain only letters,
-digits, and underscores. The config guard validates both before any
-database-dependent service starts. `NEXT_PUBLIC_*` changes need a **rebuild** —
-they are inlined at build time and a restart will not pick them up.
 
 ## Migrations
 

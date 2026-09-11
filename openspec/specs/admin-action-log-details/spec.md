@@ -121,3 +121,57 @@ executed and verified without production data.
 - **THEN** `Load more` is available
 - **AND** loading the next page adds the remaining events without a duplicate or
   omission
+
+### Requirement: Action Log counts MUST distinguish loaded rows from visible matches
+
+The Action Log header MUST derive the loaded-row count from all cursor-loaded items. While a non-empty search is active, it MUST separately show the number of visible matches within those loaded items. The existing plus marker MUST continue to indicate an available next page and MUST NOT imply a server total.
+
+#### Scenario: Search filters loaded actions
+
+- **WHEN** an administrator searches twenty loaded actions and two match
+- **THEN** the header shows two visible matches and twenty loaded actions
+- **AND** the loaded-row marker continues to show whether another cursor page is available
+
+#### Scenario: Search has no match
+
+- **WHEN** a non-empty search matches no loaded action
+- **THEN** the header shows zero visible matches without calling zero the loaded count
+- **AND** the no-match empty state remains visible
+
+#### Scenario: Another page is loaded
+
+- **WHEN** an administrator loads another cursor page and clears the search
+- **THEN** the loaded count increases by the number of appended actions
+- **AND** no server total is invented
+
+### Requirement: Displayed procedure labels preserve every action segment
+
+The Action Log MUST produce a readable label from every segment of a valid
+dot-separated procedure. The final segment MUST be displayed as the action and
+all preceding segments MUST remain visible as its context. Existing
+two-segment `Namespace: Action` labels MUST remain unchanged. The raw procedure
+MUST remain available in the row title, details, copy output, and loaded-row
+search.
+
+#### Scenario: Two nested procedures share context but differ in action
+
+- **WHEN** loaded rows contain `admin.aiProvider.activate` and
+  `admin.aiProvider.candidate`
+- **THEN** both labels retain the Admin and AI Provider context
+- **AND** their final displayed actions are respectively Activate and Candidate
+
+#### Scenario: Existing two-segment procedure is displayed
+
+- **WHEN** a row contains `admin.updateUser`
+- **THEN** its label remains `Admin: Update User`
+
+### Requirement: Displayed status labels match the durable status contract
+
+The Action Log status formatter MUST accept the durable event status union
+`success | fail`. It MUST display `success` as `OK` and `fail` as `Error`
+without maintaining aliases outside the event contract.
+
+#### Scenario: A durable event status is displayed
+
+- **WHEN** an Action Log row has status `success` or `fail`
+- **THEN** its status label is respectively `OK` or `Error`

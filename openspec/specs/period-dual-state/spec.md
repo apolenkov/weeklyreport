@@ -67,8 +67,12 @@ A lifecycle compare-and-set that follows an authorization or policy read MUST
 bind the write to the state that was authorized. Manual publish and period
 reopen MUST therefore include the service-read complete lifecycle tuple plus
 `periodStart` and `periodEnd` in their update predicate. A concurrent lifecycle
-or reporting-envelope change MUST produce a typed stale-state conflict and
-preserve the winning transition. A single-statement scheduler or admin state
+or reporting-envelope change MUST preserve the winning transition. Except for
+the zero-row manual-publish outcomes defined by `publish-compare-and-set`, it
+MUST produce a typed stale-state conflict. Manual publish MUST classify an
+archived row as archived, a non-archived now-published row as idempotent success,
+and every remaining mismatch as stale, without performing another write.
+A single-statement scheduler or admin state
 gate that has no prior authorization read MAY instead use the complete
 operation-specific identity defined by its durable specification; it MUST still
 fail closed when that identity no longer matches.
@@ -82,7 +86,8 @@ fail closed when that identity no longer matches.
 #### Scenario: Publish authorization becomes stale
 
 - **WHEN** a report lifecycle field or period boundary changes after the
-  service authorizes a manual publish but before its guarded write
+  service authorizes a manual publish but before its guarded write, without
+  the report becoming archived or published
 - **THEN** the exact lifecycle predicate affects zero rows and returns a typed
   stale-state conflict
 - **AND** the newer lifecycle transition remains unchanged
@@ -110,3 +115,39 @@ produce consistent rows.
 
 - **WHEN** a lifecycle write fails before commit
 - **THEN** `periodState` and every companion lifecycle field remain unchanged
+
+### Requirement: The repository check follows effective write payloads
+
+The test-time Report lifecycle writer check MUST resolve bound writer aliases
+and arguments supplied at binding time. It MUST evaluate root write-argument
+properties and resolved spreads in their source order. Unresolved effective
+payloads MUST be reported rather than treated as transition-owned. Upsert's
+create and update payloads MUST be checked independently.
+
+#### Scenario: A bound writer supplies direct lifecycle fields
+
+- **WHEN** a Report writer is invoked through `bind` with directly assembled lifecycle fields in its effective payload
+- **THEN** the repository check reports those governed fields
+- **AND** it handles a payload supplied either when binding or when invoking the bound writer
+
+#### Scenario: A later root spread replaces safe data
+
+- **WHEN** a root argument spread follows a transition-owned `data` property and supplies unsafe replacement data
+- **THEN** the repository check reports the replacement's governed fields
+
+#### Scenario: An explicit payload supersedes an earlier spread
+
+- **WHEN** a transition-owned `data` property follows and replaces an earlier root argument spread
+- **THEN** the effective data payload is accepted
+- **AND** discarded earlier data is not reported as the executed payload
+
+#### Scenario: A later root spread has unresolved provenance
+
+- **WHEN** a spread that could replace a write payload cannot be resolved and no later property replaces that payload
+- **THEN** the repository check reports unresolved write provenance
+
+#### Scenario: Upsert spreads supply separate payload branches
+
+- **WHEN** root argument spreads supply create and update payloads for an upsert
+- **THEN** both effective branches are checked independently
+- **AND** a safe update branch does not conceal unsafe create fields

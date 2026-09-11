@@ -9,21 +9,24 @@
 - [ ] 2.2 On `http://localhost:3000`, create one disposable annotation, read it through MCP, trace it to its rendered target, update it only after verification, and remove it; require zero residual test annotations.
 - [x] 2.3 Read back the existing Development onUI contract and canonical `http://127.0.0.1:4177` page without modifying its dirty worktree or annotation state.
 
-## 3. Agentation Retirement
+## 3. Legacy Local Agentation Tooling Retirement
 
-- [x] 3.1 Inventory active Agentation processes, MCP configuration, launch services, global packages, and active-repository imports; distinguish historical documentation from runtime.
+- [x] 3.1 Inventory legacy user-level Agentation processes, MCP configuration, launch services, global packages, and local SQLite consumers; distinguish them from WeeklyReport's active product integration and historical documentation.
 - [x] 3.2 Resolve `~/.agentation` immediately before deletion, prove it contains only the known SQLite store files, then delete that exact directory without backup or import as explicitly authorized by the owner.
-- [x] 3.3 Prove `~/.agentation` is absent and the active-runtime inventory is empty while historical repository evidence remains unchanged.
+- [x] 3.3 Prove `~/.agentation` is absent and the legacy user-level runtime inventory is empty while WeeklyReport's active product integration and historical repository evidence remain unchanged.
 
 ## 4. Verification
 
 - [x] 4.1 Run `pnpm format:check`, `pnpm lint`, and `pnpm spec:check`; require every command to pass.
-- [x] 4.2 Audit the final diff: only WeeklyReport agent guidance, the two linked OpenSpec changes, and the exact-pinned SitePing adapter dependency slice may change; no product bundle, Development dirty file, archive, onUI source, or product lifecycle contract may change.
+- [x] 4.2 Audit the final diff: only WeeklyReport agent guidance and the linked OpenSpec changes may change; no product dependency, product bundle, Development dirty file, archive, onUI source, or product lifecycle contract may change.
 
 ## Verification Evidence
 
+- The completed inventory and environment statements below are historical
+  evidence from this change; this specification reconciliation did not refresh
+  them, and they MUST NOT be treated as a current runtime snapshot.
 - Both linked changes passed strict validation immediately after creation.
-- Exact Agentation deletion target contained only `store.db`, `store.db-shm`, and `store.db-wal`; after explicit deletion, the directory is absent and process, MCP/config, global-package, and active-repository inventories are empty.
+- The exact legacy local Agentation deletion target contained only `store.db`, `store.db-shm`, and `store.db-wal`; after explicit deletion, the directory is absent and the user-level process, MCP/config, global-package, and SQLite-consumer inventories are empty.
 - Historical Agentation references under Development `delivery/` remain untouched.
 - `pnpm format:check`, `pnpm lint`, and `pnpm spec:check` passed after staging the scoped change set for the repository-cleanliness denominator.
 - `onui-local` is enabled at the pinned v2.2.3 entrypoint; the Chrome native host is executable, the local JSON store is writable, and MCP Standard reports are readable. The Development contract and live `http://127.0.0.1:4177/analytics-process-sdd.html?feedback=1` page were read without mutation.

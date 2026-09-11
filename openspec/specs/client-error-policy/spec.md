@@ -24,8 +24,8 @@ synthetic errors (e.g. the dashboard watchdog sites) remain direct
 
 - **WHEN** a `useQuery` on a page surface transitions to `isError`
 - **THEN** exactly one `logClientError` entry is emitted with the
-  site's event, component, and procedure, and it reaches
-  `apps/api/.logs/app.log` via the `client-logger.ts` forwarder
+  site's event, component, and procedure, and it reaches the configured
+  application log sink via the `client-logger.ts` forwarder
 
 #### Scenario: a rerender occurs while the error persists
 

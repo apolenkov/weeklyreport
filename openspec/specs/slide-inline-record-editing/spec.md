@@ -12,7 +12,7 @@ lead edit form.
 
 ### Requirement: Double-click opens the record editor on own slide rows
 
-The lead slide grid (`SlideArticle` on `/lead/report/[id]?mode=slides`) MUST open an edit dialog for the underlying record when the author double-clicks, presses Enter on a focused, or presses Space on a focused own item, risk, or decision row. The dialog MUST be pre-filled with the record's current values and reuse the lead form's field editors and existing tRPC save mutations -- the system MUST NOT introduce new write endpoints for this surface.
+The lead slide grid (`SlideArticle` on `/lead/report/[id]?mode=slides`) MUST open an edit dialog for the underlying record when the author double-clicks an editable own item, risk, or decision row, or activates its explicit Edit action after expanding the prose. The Edit action MUST be keyboard reachable and support Enter and Space. Click, Enter and Space on the prose itself MUST change only its reading disclosure, as specified in `lead-slide-by-product-grid`. The dialog MUST be pre-filled with the record's current values and reuse the lead form's field editors and existing tRPC save mutations -- the system MUST NOT introduce new write endpoints for this surface.
 
 #### Scenario: Author edits an item from the slide
 
@@ -28,12 +28,12 @@ The lead slide grid (`SlideArticle` on `/lead/report/[id]?mode=slides`) MUST ope
 - **THEN** the record is removed via the existing delete path and the row
   disappears from the Risks column
 
-#### Scenario: Author activates a focused row with Space
+#### Scenario: Author reads and edits a row with the keyboard
 
-- **WHEN** the author tabs to their own focusable row and presses the Space
-  key
-- **THEN** the edit dialog opens exactly as it would on Enter
-- **AND** the page does not scroll as a side effect of the keypress
+- **WHEN** the author focuses their own row's prose and presses Space or Enter
+- **THEN** its full details expand without opening an editor or changing data
+- **AND** activating the expanded Edit action with Space or Enter opens the editor
+- **AND** Space activation does not scroll the page
 
 ### Requirement: Read-only rows and surfaces ignore double-click
 
@@ -51,3 +51,42 @@ the same editability rules as the lead Edit form.
 - **WHEN** the author double-clicks their row after the section was submitted
 - **THEN** no dialog opens (the affordance is disabled exactly where the Edit
   form would refuse the write)
+
+### Requirement: Pending slide writes preserve the submitted editor
+
+While an inline save or delete is pending, the slide editor MUST prevent field
+changes, duplicate submission, cancellation and activation of another record.
+Failure MUST retain the submitted values and restore editing. Editor references
+MUST belong to a specific report section, and successful completion MUST close
+only that section's editor.
+
+#### Scenario: A pending save cannot discard later text
+
+- **GIVEN** an author submits an item, risk or decision edit
+- **WHEN** its save is pending
+- **THEN** the fields and actions are disabled and dismissal is ignored
+- **AND** the submitted values remain visible until success or failure
+
+#### Scenario: A failed save restores editing
+
+- **WHEN** the pending save fails
+- **THEN** the same draft remains open and editable for retry
+
+#### Scenario: Switching sections isolates editor identity
+
+- **GIVEN** an editor belongs to one report section
+- **WHEN** another section becomes current with the same record stable ID
+- **THEN** the previous editor is not shown for the new section
+- **AND** an earlier completion cannot clear a different section's editor
+
+### Requirement: Conflict reload messages reflect query completion
+
+The slide editor MUST announce a successful conflict reload only after the
+section query succeeds. A failed read MUST display the reload failure message.
+
+#### Scenario: Conflict reload fails
+
+- **GIVEN** a slide save returns a version conflict
+- **WHEN** the subsequent section read fails
+- **THEN** the reload failure message is shown without claiming the latest
+  version was loaded

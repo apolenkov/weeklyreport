@@ -49,44 +49,44 @@ for rendering after reopen or republish.
 
 ### Requirement: The print template exposes a machine-detectable render outcome
 
-The print template MUST stamp a stable `data-print-state` attribute on the root
-element of every render branch, with exactly one of three values —
-`loading`, `error`, or `ready` — so an out-of-band consumer (the PDF worker's
-headless browser) can distinguish a successfully rendered report from a page that
-is still loading or has terminally failed. A terminal query error, and the
-`no-period` sentinel, MUST render a distinct, visible error state carrying
-`data-print-state="error"` rather than the perpetual loading shell. The
-successful render path MUST carry `data-print-state="ready"`, and only that path.
+The print template MUST request the frozen publication through
+`pdfExport.render({ jobId, reportId })` and MUST stamp a stable
+`data-print-state` attribute on the root element of every render branch, with
+exactly one of three values — `loading`, `error`, or `ready` — so the PDF worker
+can distinguish a successfully rendered report from a pending or failed render.
+A terminal render-query error MUST produce a distinct, visible error state
+carrying `data-print-state="error"`, including when the bound job or its frozen
+snapshot is unavailable. The renderer MUST NOT fall back to a live report query
+or an active-period sentinel. The successful render path MUST carry
+`data-print-state="ready"`, and only that path.
 
 #### Scenario: Successful render is marked ready
 
-- **GIVEN** the `weeklyReport.get` query resolves with a renderable report
+- **GIVEN** the job-bound `pdfExport.render` query resolves with a renderable frozen report
 - **WHEN** the print template renders
 - **THEN** its root element carries `data-print-state="ready"`
-- **AND** neither `data-print-state="loading"` nor `data-print-state="error"` is
-  present
+- **AND** neither `data-print-state="loading"` nor `data-print-state="error"` is present
 
 #### Scenario: Terminal query error renders a visible error state
 
-- **GIVEN** the `weeklyReport.get` query settles into an error after its retries
-  are exhausted
+- **GIVEN** the job-bound `pdfExport.render` query settles into an error after its applicable retry budget
 - **WHEN** the print template renders
-- **THEN** it returns a distinct, visible terminal error state (not the loading
-  shell) whose root carries `data-print-state="error"`
+- **THEN** it returns a distinct, visible terminal error state (not the loading shell) whose root carries `data-print-state="error"`
 - **AND** the failure is conveyed on the page itself, not only through a toast
 
-#### Scenario: No-period sentinel renders the error state, not a spinner
+#### Scenario: Unavailable job data renders the error state, not a spinner
 
-- **GIVEN** the query resolves with the `no-period` sentinel payload
+- **GIVEN** the bound job or its frozen publication snapshot is unavailable and the render query settles into an error
 - **WHEN** the print template renders
-- **THEN** it returns the terminal error state with `data-print-state="error"`
-  rather than the loading shell
+- **THEN** it returns the terminal error state with `data-print-state="error"` rather than the loading shell
+- **AND** it does not substitute the current live report or an active-period lookup
 
 ### Requirement: The PDF worker asserts readiness before capturing the page
 
 The PDF export worker MUST assert the print template's `ready` marker before
-calling `page.pdf()`. After navigation reaches network idle and before capture,
-the worker MUST wait for `[data-print-state="ready"]` within a bounded timeout,
+calling `page.pdf()`. After navigation reaches DOM content loaded and before
+capture, the worker MUST wait for `[data-print-state="ready"]` within a bounded
+timeout without waiting for unrelated browser connections,
 and MUST fail the job — throwing so the existing `onJobFailed → markExportFailed`
 path records the failure — when the `error` marker is present or the ready marker
 never appears. `page.pdf()`, the file write, and `markExportCompleted` MUST run
@@ -559,3 +559,117 @@ After a successful enqueue, the web PDF export action MUST preserve the opaque a
 - **WHEN** the restored status query errors or returns `failed`
 - **THEN** the stored active job ID is removed
 - **AND** the control returns to retryable idle with the existing clear error message
+
+### Requirement: Printed reports preserve bounded layout content across page boundaries
+
+The job-bound print template MUST keep every accepted bounded Product and
+Activity value within the printable page. Unbroken attention text, entity names,
+and contributor names MUST wrap without clipping, truncation, or hiding the
+entity status and contributor metadata. Product and Activity sections whose
+records exceed one page MUST paginate instead of being treated as indivisible.
+Each Product Reports or Activity Reports heading MUST remain on the same page as
+its first entity header.
+
+#### Scenario: An unbroken attention value stays within the printable edge
+
+- **GIVEN** a frozen Product with an accepted 500-character unbroken attention value
+- **WHEN** the job template renders the Product report
+- **THEN** the complete attention value remains visible within the printable page
+- **AND** no part of the value is clipped at the right edge
+
+#### Scenario: A long entity header preserves all metadata
+
+- **GIVEN** a frozen Product or Activity with an accepted 200-character unbroken name and contributor name
+- **WHEN** the job template renders its entity header
+- **THEN** the complete entity name, status, and contributor name remain visible within the printable page
+
+#### Scenario: An oversized report section paginates without an orphan heading
+
+- **GIVEN** a Product or Activity report whose accepted records require more than one page
+- **WHEN** the job template paginates that report
+- **THEN** its records continue across page boundaries without being suppressed
+- **AND** the Product Reports or Activity Reports heading remains with the first entity header instead of occupying an otherwise empty page
+
+### Requirement: Job print preserves frozen Activity content
+
+The job-bound print projection MUST render Activity-parented items, risks, and
+decisions exclusively from the validated frozen publication snapshot. It MUST
+preserve each record identity exactly once, identify its Activity, and retain
+the persisted section author's id, name, and initials in the projection. A
+status-only Activity MUST remain visible with its canonical frozen status.
+Ranked Activity items MUST retain their priority rank on the printed record.
+The print path MUST NOT read mutable live sections or merge display-only
+Everyone content.
+The Executive Summary MUST count blocked and at-risk Activities alongside
+Products, and its decision total MUST include Activity-parented decisions.
+
+#### Scenario: frozen Activity has records from multiple authors
+
+- **GIVEN** a job snapshot whose own sections contain records for one Activity
+  from multiple authors
+- **WHEN** the print template reaches its ready state
+- **THEN** every Activity item, risk, and decision is rendered exactly once
+- **AND** the Activity name and each contributing author remain identifiable
+- **AND** no mutable live or Everyone-only record is included
+
+#### Scenario: frozen Activity has status but no records
+
+- **GIVEN** a job snapshot containing a status-only Activity
+- **WHEN** the print template renders Activity reports
+- **THEN** the Activity and its canonical frozen status remain visible
+- **AND** its section author remains identifiable as a contributor
+
+#### Scenario: Activity content contributes to the executive summary
+
+- **GIVEN** a frozen snapshot with an at-risk Activity and an Activity decision
+- **WHEN** the print template renders the Executive Summary
+- **THEN** the at-risk total includes the Activity
+- **AND** the decision total includes the Activity decision
+
+### Requirement: Printed next items preserve workflow meaning
+
+Every printed next-week item MUST show a visible English workflow label. In
+particular, Planned and Postponed MUST remain distinguishable through text so
+their meaning survives grayscale printing. A ranked next item MUST also retain
+its visible priority rank.
+
+#### Scenario: planned and postponed items print together
+
+- **GIVEN** a frozen snapshot with one Planned and one Postponed next item
+- **WHEN** the job template renders the next-week list
+- **THEN** each row shows its corresponding English workflow label
+- **AND** the distinction does not rely on color
+
+### Requirement: PDF download streams release resources when the response closes
+
+The download handler MUST destroy its owned file readable when the response closes before delivery completes, including when the response closed while the artifact was being opened. The readable MUST close its owned file descriptor. Normal completion MUST deliver the complete artifact. A read error MUST retain the existing 500 response before headers and response destruction after headers.
+
+#### Scenario: Client closes during delivery
+
+- **WHEN** a client closes the response after receiving only part of an artifact
+- **THEN** the file readable is destroyed and its descriptor is closed
+- **AND** no further artifact bytes are delivered
+
+#### Scenario: Response closes before the stream is connected
+
+- **WHEN** asynchronous artifact lookup or open completes after the response has closed
+- **THEN** the newly owned readable is destroyed and its descriptor is closed
+
+#### Scenario: Normal delivery and read errors
+
+- **WHEN** the artifact is read without interruption
+- **THEN** the response contains the complete artifact and the descriptor closes
+- **WHEN** reading fails before headers are sent
+- **THEN** the handler responds with 500
+- **WHEN** reading fails after headers are sent
+- **THEN** the handler destroys the partial response
+
+### Requirement: Startup PDF reconciliation failure is recoverable
+
+The non-blocking startup terminal-job reconciliation pass MUST handle and log its own promise rejection. A failed startup pass MUST leave the existing scheduled retry available and MUST NOT install or rely on a global unhandled-rejection suppressor.
+
+#### Scenario: Queue read fails during startup
+
+- **WHEN** the startup reconciliation queue read rejects
+- **THEN** the scheduler logs that pass's failure without an unhandled promise rejection
+- **AND** a later scheduled pass can read the queue and reconcile retained terminal jobs

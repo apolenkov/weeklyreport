@@ -89,9 +89,10 @@ the existing no-active-span requirement.
 
 Worker processors MUST emit their logs through `AppLogger` rather than
 hand-building JSON to `process.stderr`, so every worker log entry carries the
-job's `correlationId` (and trace id) and is forwarded to the OTLP/Loki and file
-sinks like in-request logs. The PDF export path MUST additionally emit per-step
-duration logs and apply an explicit timeout to `page.goto`.
+job's `correlationId` (and trace id) and is forwarded to the configured
+application log sinks like in-request logs. The PDF export path MUST
+additionally emit per-step duration logs and apply an explicit timeout to
+`page.goto`.
 
 #### Scenario: A worker failure log carries correlation context
 
@@ -99,7 +100,7 @@ duration logs and apply an explicit timeout to `page.goto`.
   `correlationId`
 - **WHEN** the job fails and the worker logs the failure
 - **THEN** the entry is produced by `AppLogger`, carries the job's
-  `correlationId`, and reaches the OTLP/Loki and file sinks (not only
+  `correlationId`, and reaches the configured application log sinks (not only
   `process.stderr`)
 
 #### Scenario: PDF export emits step timing and bounds page navigation
@@ -113,20 +114,21 @@ duration logs and apply an explicit timeout to `page.goto`.
 ### Requirement: AppLogger redacts PII-shaped context fields
 
 `AppLogger` MUST redact known PII-shaped context fields (starting with
-`recipientEmail`) before an entry reaches any sink, so a caller cannot leak
-personal data into stdout, the rotating file sink, or the OTLP/Loki forwarder
-by passing it as a log context value. Redaction MUST apply at the single
+`recipientEmail`) before an entry reaches any configured sink, so a caller
+cannot leak personal data into stdout, the rotating file sink when configured,
+or the OTLP/Loki forwarder when configured by passing it as a log context
+value. Redaction MUST apply at the single
 `emit` call site inside `AppLoggerImpl`, not per call site, so no log call can
 bypass it.
 
-#### Scenario: A log call with a recipient email is redacted at every sink
+#### Scenario: A log call with a recipient email is redacted at every configured sink
 
 - **GIVEN** a call to `logger.info` (or `warn`/`error`) with a context object
   containing `recipientEmail`
 - **WHEN** the entry is emitted
-- **THEN** the value written to stdout/stderr, the file sink, and the OTel
-  log forwarder for that key is a fixed redaction marker, not the original
-  email address
+- **THEN** the value written to each configured stdout/stderr, file, or OTel
+  log sink for that key is a fixed redaction marker, not the original email
+  address
 
 #### Scenario: A log call without PII-shaped keys is unaffected
 
@@ -134,3 +136,39 @@ bypass it.
   non-PII fields (for example `ruleId`, `executionId`)
 - **WHEN** the entry is emitted
 - **THEN** every field's value is unchanged
+
+### Requirement: Next.js loads server error instrumentation
+
+The web application MUST place its server instrumentation hook where the
+configured Next.js `src/app` layout discovers it. The hook MUST initialize the
+matching Sentry server configuration for Node.js and Edge runtimes and MUST
+forward Next.js request errors to `Sentry.captureRequestError`. A final
+integrated production build MUST emit the server instrumentation artifact.
+Acceptance tests MUST spy on the local SDK boundary and MUST NOT transmit
+telemetry to an external service.
+
+#### Scenario: Node.js runtime registers server instrumentation
+
+- **GIVEN** Next.js invokes `register` with `NEXT_RUNTIME=nodejs`
+- **WHEN** the hook runs
+- **THEN** the Node.js Sentry initializer runs exactly once
+- **AND** the Edge initializer does not run
+
+#### Scenario: Edge runtime registers server instrumentation
+
+- **GIVEN** Next.js invokes `register` with `NEXT_RUNTIME=edge`
+- **WHEN** the hook runs
+- **THEN** the Edge Sentry initializer runs exactly once
+- **AND** the Node.js initializer does not run
+
+#### Scenario: Next.js reports a server request error
+
+- **GIVEN** a controlled server request error and a spied Sentry SDK
+- **WHEN** Next.js calls the exported request-error hook
+- **THEN** the hook forwards the original arguments to `Sentry.captureRequestError`
+- **AND** no external telemetry request is made
+
+#### Scenario: production build includes the hook
+
+- **WHEN** the final integrated Next.js production build completes
+- **THEN** its emitted server output contains the instrumentation artifact

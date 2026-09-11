@@ -129,3 +129,59 @@ policy MUST continue to report the failure.
 - **WHEN** a lead activates `Retry` and `leadForm.byPeriod` fails again
 - **THEN** the terminal error state remains visible
 - **AND** the `Retry` action remains available after the request settles
+
+### Requirement: Required Lead reads expose recoverable terminal outcomes
+
+The Lead form MUST distinguish pending reads from settled failures of the active
+period, by-period section and personal history. A required-read failure MUST show
+persistent recovery without exposing stale editable controls. Retry MUST request
+the failed required reads and MUST NOT refetch successful independent reads.
+Repeated Retry while its request is pending MUST reuse that operation. A retry
+for an earlier report MUST NOT change the recovery state of the current report.
+
+#### Scenario: A supporting required read fails
+
+- **GIVEN** the active-period or personal-history query fails
+- **WHEN** the error settles
+- **THEN** the Lead editor replaces its loading skeleton with persistent Retry
+- **AND** the existing centralized error reporting records the failure
+
+#### Scenario: A supporting read recovers after Retry
+
+- **GIVEN** a required read is in error
+- **WHEN** the lead retries
+- **THEN** recovery remains visible and Retry is disabled while the request runs
+- **AND** success reveals the current matching draft, or another failure leaves Retry available
+
+#### Scenario: Navigation occurs during a retry
+
+- **GIVEN** report A has a pending retry
+- **WHEN** the lead navigates to report B and A's request later settles
+- **THEN** B's read and recovery state is unaffected by A's completion
+
+### Requirement: Missing active periods are terminal empty results
+
+A successful active-period read returning null MUST show that no active reporting
+period is available in edit, slides and Overview. It MUST NOT remain a loading
+skeleton or fabricate active data from a cached draft. An active-query failure
+MUST NOT be presented as the same empty result.
+
+#### Scenario: The active read succeeds without an active period
+
+- **WHEN** the active-period read returns null
+- **THEN** the Lead page displays a no-active-period state without error telemetry
+- **AND** no editable draft is shown in edit or slides
+
+### Requirement: Overview exposes editor read recovery independently
+
+An available Overview MUST remain readable when a required editor read fails.
+Its editing controls MUST stay unavailable and it MUST expose a Retry action for
+the failed editor reads. Failure to resolve the active period without a target
+MUST show load recovery instead of the no-active-period message.
+
+#### Scenario: History fails while Overview is available
+
+- **GIVEN** the Overview query succeeds but personal history fails
+- **WHEN** Overview renders
+- **THEN** its content remains read-only with a Retry for editor loading
+- **AND** recovery of history restores editing when the other editor inputs are ready

@@ -85,3 +85,58 @@ from losing the visible operation context or starting a conflicting edit.
   dialog
 - **AND** an edit that routes either path around the pending-save guard fails
   the test
+
+### Requirement: Period dialogs remain keyboard reachable in a zoomed viewport
+
+The create/edit period dialog MUST fit within the dynamic viewport and expose
+an internal vertical scroll path when its content is taller than the available
+space. Its existing focus, dismissal, pending, and action behavior remains.
+
+#### Scenario: period form exceeds the available viewport height
+
+- **WHEN** browser zoom or viewport height leaves less space than the form needs
+- **THEN** the dialog surface is bounded by the dynamic viewport
+- **AND** the user can scroll within the dialog to reach Cancel and Submit
+
+### Requirement: A pending entity save locks its editable draft
+
+Users, products, activities and groups dialogs MUST disable their editable form
+controls while their own save is pending. Existing pending dismissal guards MUST
+remain in effect. A failed save MUST preserve the draft and release the controls.
+Tab and Shift+Tab MUST remain inside the dialog even when every control is
+disabled; its surface MUST provide the focus target in that state.
+
+#### Scenario: Entity save is pending
+
+- **GIVEN** an entity dialog submits its current draft
+- **WHEN** the save has not settled
+- **THEN** the editable fields cannot accept unsent replacement values
+- **AND** the dialog remains open with the submitted values visible
+
+#### Scenario: Entity save fails
+
+- **WHEN** the pending entity save fails
+- **THEN** the same draft remains in the open dialog
+- **AND** the controls become editable for correction or retry
+
+#### Scenario: Keyboard focus stays inside a pending dialog
+
+- **GIVEN** every control in a pending entity dialog is disabled
+- **WHEN** the admin presses Tab or Shift+Tab
+- **THEN** focus stays on the dialog surface instead of moving to the page behind it
+- **AND** after the save settles, keyboard navigation reaches enabled controls again
+
+### Requirement: Destructive period confirmation MUST identify the selected period
+
+The period deletion confirmation MUST show the selected period label and date range together with the existing permanent-deletion consequence. Opening or cancelling the confirmation MUST NOT execute the deletion command.
+
+#### Scenario: An administrator reviews period deletion
+
+- **WHEN** an administrator opens Delete for a period
+- **THEN** the confirmation shows that selected period's label and date range
+- **AND** no deletion occurs before explicit confirmation
+
+#### Scenario: An administrator cancels period deletion
+
+- **WHEN** an administrator cancels the selected period's deletion confirmation
+- **THEN** the dialog closes without executing deletion

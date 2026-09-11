@@ -148,3 +148,18 @@ the populated draft products of every seeded lead whose edit form is populated.
 - **WHEN** a seeded product points to a reporting group different from its seeded lead's effective reporting group
 - **THEN** profile validation exits nonzero
 - **AND** the profile is not accepted as executable product proof
+
+### Requirement: Demo authored records respect seeded stage ownership
+
+Every active authored demo item, risk and decision MUST use stages assigned to
+its author on its parent product. This MUST include cross-author overlay rows.
+Stage-status fixtures MUST reference an assignment owned by their section author.
+The fixture writer MUST NOT grant additional assignments to make invalid rows
+pass the product guard.
+
+#### Scenario: A lead saves a populated demo draft
+
+- **WHEN** a lead edits and saves their draft after the demo profile is seeded
+- **THEN** the complete authored payload passes stage-ownership validation
+- **AND** unchanged base and overlay records do not block the save
+- **AND** foreign co-owner records remain separately authored read-only content

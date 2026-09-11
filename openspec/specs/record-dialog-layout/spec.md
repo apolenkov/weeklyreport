@@ -55,3 +55,19 @@ selector, and the Status/Severity control.
 - **AND** the saved decision still carries an `owner` derived from the author (the
   current lead on create, the unchanged saved owner on edit), keeping the
   mine/foreign and `LockBadge` logic intact
+
+### Requirement: Risk and decision prose MUST expose and enforce the shared text boundary
+
+Every risk text, impact, and mitigation field and every decision text and impact field MUST expose an associated 500-character limit derived from the shared report-text schema. Empty or invisible-only prose and prose over the limit MUST block save with a concise field error. Over-limit input MUST remain in the field for correction and MUST NOT be silently truncated.
+
+#### Scenario: A lead pastes prose over the limit
+
+- **WHEN** a lead pastes 501 characters into a risk or decision prose field and saves
+- **THEN** the complete draft remains visible and the invalid field receives focus
+- **AND** a concise associated error identifies the 500-character limit
+- **AND** no save callback runs
+
+#### Scenario: A lead enters boundary-valid prose
+
+- **WHEN** every required prose field contains visible text of at most 500 characters and the remaining form is valid
+- **THEN** the dialog permits save with the expected trimmed payload

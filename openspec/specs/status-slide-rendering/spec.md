@@ -146,17 +146,19 @@ The Everyone merge MUST treat foreign records by the exact same rules as own rec
 
 ### Requirement: Paused and postponed rows keep the frame language
 
-The lead slide grid MUST render `paused` and `postponed` items inside the shipped no-status-words frame language: both keep the dashed in-flight frame, `paused` adds a pause glyph and `postponed` a forward glyph with muted text — plus sr-only "Paused"/"Postponed" labels so screen readers and grayscale print keep the distinction. Glyph shapes (not hue) MUST carry the difference.
+The lead slide grid MUST render `paused` and `postponed` items inside the row language governed by `lead-slide-by-product-grid`: both keep the dashed in-flight frame, and `postponed` uses muted text. Neither adds a visible status glyph. The row MUST retain the sr-only "Paused"/"Postponed" label and expose the specific status in its accessible and hover descriptions and expanded details, so identifying the status does not depend on color alone.
 
 #### Scenario: paused item on the slide
 
 - **WHEN** a current item with status `paused` renders on the lead slide
-- **THEN** the row shows the dashed frame with a pause glyph, no status words, and an sr-only "Paused" label
+- **THEN** the collapsed row shows the dashed frame without a visible status glyph or status words
+- **AND** its sr-only label and accessible/hover descriptions identify "Paused"
 
 #### Scenario: postponed item is distinct from planned
 
 - **WHEN** a next item with status `postponed` renders beside a `planned` one
-- **THEN** the two rows are visually distinguishable without color (glyph + muted text vs plain dashed)
+- **THEN** the postponed row retains its muted treatment without a visible status glyph
+- **AND** accessible/hover descriptions and expanded details identify the distinct statuses
 
 ### Requirement: The lead slide deck clamps an out-of-range selected index
 
@@ -180,3 +182,52 @@ slides still exist at lower indexes.
 - **WHEN** `slides` refreshes but still contains the currently selected index
 - **THEN** `selectedIndex` is left unchanged and the same slide keeps
   rendering
+
+### Requirement: Fullscreen keyboard shortcut preserves browser and editor input
+
+The shared fullscreen shortcut MUST toggle a deck only for an unmodified `f` or
+`F` keydown outside form controls and contenteditable content. It MUST ignore
+Ctrl, Meta, Alt or Shift modifiers, composing input, repeated keydowns and events
+already handled with preventDefault. Ignored events MUST retain their browser or
+editor behavior. Fullscreen buttons and exit focus MUST remain unchanged.
+
+#### Scenario: Browser Find does not toggle the deck
+
+- **WHEN** a user presses Ctrl+F or Meta+F while a deck is available
+- **THEN** the fullscreen listener neither toggles fullscreen nor prevents Find
+
+#### Scenario: Plain F remains available
+
+- **WHEN** a user presses an unmodified non-repeated `f` or `F` outside an editor
+- **THEN** the shared listener toggles fullscreen exactly once
+
+#### Scenario: Other handled or non-shortcut input is ignored
+
+- **WHEN** F is modified by Alt or Shift, composing, repeated, already prevented,
+  or entered in a form control or contenteditable element
+- **THEN** the fullscreen listener does not toggle the deck or consume the event
+
+### Requirement: Fallback slides retain report period identity
+
+The head deck MAY use activity rows when its requested report is open or
+reopened and contains no lead sections. It MUST request that fallback only
+when needed and enabled by its host. It MUST render fallback rows only when
+the activity response report ID matches the weekly report ID. Published and
+archived reports without sections MUST remain empty.
+
+#### Scenario: Another period is current
+
+- **GIVEN** the selected report contains no sections
+- **WHEN** activity resolves for a different report ID
+- **THEN** none of those activity rows appears in the selected deck
+
+#### Scenario: Activity belongs to the empty editable report
+
+- **WHEN** an empty open or reopened report receives activity for its own ID
+- **THEN** the deck may show those activity rows
+
+#### Scenario: Activity fallback is unnecessary
+
+- **WHEN** the report is populated, published, archived, absent or still loading,
+  or its host disables activity fallback
+- **THEN** the deck does not enable the activity read

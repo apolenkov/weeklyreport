@@ -86,11 +86,11 @@ the stage-chip foreign handling in `status-risk-unification`.
 - **THEN** no free at-risk/blocked chip is offered
 - **AND** an inline message states the status is locked and to resolve the covering risk/blocker first
 
-#### Scenario: clearing a covered blocked item from the card is refused
+#### Scenario: a covered current item offers no card alarm-edit control
 
-- **GIVEN** a blocked item covered by an own risk
-- **WHEN** the lead attempts to mark it in-progress from the card
-- **THEN** the change is not applied
+- **GIVEN** an in-progress current item whose alarm is derived from an own covering risk
+- **WHEN** the item card renders its status actions
+- **THEN** no card control can directly edit, clear, or downgrade the derived alarm
 - **AND** a message directs the lead to resolve the covering risk/blocker first
 
 #### Scenario: a foreign covering risk locks the alarm with attribution
@@ -158,7 +158,7 @@ blocker, so the roll-up count does not inflate.
 
 ### Requirement: The item dialog and quick-add surface the derived-alarm UX in full
 
-The item edit dialog MUST offer exactly the item type's status vocabulary (current → In Progress | Paused | Completed; next → Planned | Postponed) and MUST NOT offer an in-dialog "mark as blocked" affordance — the only path to a blocked item is creating a blocker in Risks & Blockers (the quick-add "Blocker" entry keeps creating a blocked-severity risk). The covered-status lock stays: when a covering risk floors the item, an inline message replaces the status chips, stating the status is set by the covering risk/blocker and to resolve it to change.
+The item edit dialog MUST offer exactly the item type's status vocabulary (current → Not started | In Progress | Paused | Completed; next → Planned | Postponed) and MUST NOT offer an in-dialog "mark as blocked" affordance — the only path to a blocked item is creating a blocker in Risks & Blockers (the quick-add "Blocker" entry keeps creating a blocked-severity risk). The covered-status lock stays: when a covering risk floors the item, an inline message replaces the status chips, stating the status is set by the covering risk/blocker and to resolve it to change.
 
 #### Scenario: a covered item's dialog shows the locked message
 
@@ -187,7 +187,7 @@ The item edit dialog MUST offer exactly the item type's status vocabulary (curre
 
 ### Requirement: One stored progress status per item, with per-type vocabularies
 
-`ItemWorkflowStatus` (Prisma enum + shared Zod item schemas) MUST be the single stored source of an item's progress: `planned | in_progress | paused | postponed | done`. The system MUST NOT store `blocked` on an item (alarms derive from covering risks) and MUST NOT define or persist a separate `Item.completed` flag. Shared Zod MUST reject a status outside the item type's vocabulary: current → `in_progress | paused | done`; next → `planned | postponed`. `paused` and `postponed` roll up as not-done and MUST NOT feed the blocked/at-risk escalation paths.
+`ItemWorkflowStatus` (Prisma enum + shared Zod item schemas) MUST be the single stored source of an item's progress: `planned | in_progress | paused | postponed | done`. The system MUST NOT store `blocked` on an item (alarms derive from covering risks) and MUST NOT define or persist a separate `Item.completed` flag. Shared Zod MUST reject a status outside the item type's vocabulary: current → `planned | in_progress | paused | done`; next → `planned | postponed`. Current `planned` means Not started. `paused` and `postponed` roll up as not-done and MUST NOT feed the blocked/at-risk escalation paths.
 
 #### Scenario: next item accepts only its vocabulary
 
@@ -199,10 +199,10 @@ The item edit dialog MUST offer exactly the item type's status vocabulary (curre
 - **WHEN** a section contains only `paused`/`postponed` items and no risks
 - **THEN** the dashboard blocked/at-risk tables and product health show no escalation caused by those items
 
-#### Scenario: carry-over materializes as in-progress; postponed stays behind
+#### Scenario: carry-over stays planned until progress is confirmed; postponed stays behind
 
 - **WHEN** the carry-over run copies a `planned` next item into the new period
-- **THEN** the created current item is `in_progress`
+- **THEN** the created current item is `planned`, not automatically `in_progress`
 - **AND** `postponed` items are not carried — re-planning them is an explicit lead action
 
 ### Requirement: Pausing an item requires and records a reason

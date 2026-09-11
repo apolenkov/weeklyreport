@@ -93,27 +93,35 @@ popover MUST NOT be silently clipped by an ancestor.
 - **THEN** the full panel is visible regardless of toolbar overflow
 - **AND** it tracks the trigger position on scroll and resize
 
-### Requirement: The product card stripe reflects the lead's own stages live
+### Requirement: The product card separates live health from own-input completeness
 
-The lead edit-view product card stripe MUST derive its color live from
-the worst status among the stages owned by the current lead (blocked >
-at-risk > on-track); when every own stage is unset the stripe MUST be
-neutral. The stripe MUST NOT read the persisted traffic-light value,
-so the stripe and the visible chips can never contradict. The stripe
-renders DASHED while any own stage is unset and solid once all own
-stages carry a status; head dashboards and slides keep consuming the
+The lead edit-view product card MUST derive its left-edge health live from
+the highest covering risk or blocker severity contributed by any stage owner
+(blocked > at-risk > on-track). The left edge MUST remain a solid health
+signal and MUST NOT read the persisted traffic-light value, so the health
+edge and visible risk-derived chips cannot contradict. The current lead's
+own-input completeness MUST remain a separate neutral affordance: an exact
+N/M counter with a dashed ring while incomplete, with the ring removed or
+non-dashed when complete. Head dashboards and slides keep consuming the
 persisted traffic light unchanged.
 
 #### Scenario: a fresh week with no own statuses set
 
 - **WHEN** the product card renders and the persisted traffic light is
-  amber but every own stage is unset
-- **THEN** the stripe is neutral and dashed, not amber
+  amber, no covering risk or blocker makes the product amber or blocked,
+  and every own stage is unset
+- **THEN** the left health edge follows the live risk-derived health and
+  remains solid rather than inheriting amber from persisted data
+- **AND** the separate completeness affordance shows the incomplete N/M
+  state with its dashed ring
 
-#### Scenario: an own stage turns blocked
+#### Scenario: a covering blocker changes product health
 
-- **WHEN** the lead sets one of their stages to blocked
-- **THEN** the stripe immediately renders the blocked color
+- **WHEN** a covering blocker is present for any stage of the product,
+  including a stage owned by another lead
+- **THEN** the left health edge immediately renders the blocked severity
+- **AND** the current lead's own-input completeness remains independent and
+  changes only when that lead's own stage input changes
 
 ### Requirement: In-flight control actions show a visible busy state
 

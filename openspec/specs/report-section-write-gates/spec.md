@@ -143,10 +143,11 @@ published, and archived behavior.
 - **WHEN** either section write path cannot resolve a complete owning report lifecycle tuple
 - **THEN** it rejects before deleting or recreating child rows and returns the typed not-found or integrity error
 
-#### Scenario: Period changes while a section write is pending
+#### Scenario: Period loses write eligibility while a section write is pending
 
-- **WHEN** archive, publish, reopen, or deletion commits after an application pre-check but before the section mutation
+- **WHEN** a concurrent change leaves the locked report noneditable, missing, or inconsistent, or makes the section version stale after an application pre-check
 - **THEN** the transaction predicate no longer matches, the entire section mutation rolls back, and a typed stale/lifecycle error is returned
+- **AND** a publish followed by reopen that restores a complete editable tuple MUST instead recheck published lineage under the Report lock as defined by `report-record-ordering`; preserving that lineage permits the version-guarded write to continue
 
 #### Scenario: Reopened period remains editable
 
@@ -199,3 +200,18 @@ MUST NOT fall back to provisioning the stale report.
   the transaction
 - **THEN** provisioning may return the existing lead section or create and seed
   one new section atomically
+
+### Requirement: Missing initial section returns NOT_FOUND
+
+When the initial `getActiveSection` lookup finds no section, the application MUST raise `ReportSectionNotFoundError` and the tRPC mapper MUST return `NOT_FOUND`. This applies to direct reads and the initial lookup shared by draft save and submit. No later persistence work may run. A section that disappears after a successful initial lookup remains subject to the existing version compare-and-set contract and its `CONFLICT` result.
+
+#### Scenario: Initial lookup finds no section
+
+- **WHEN** a read, draft save, or submit starts with a section ID that the repository cannot resolve
+- **THEN** the application raises `ReportSectionNotFoundError`
+- **AND** the actual transport mapper returns `NOT_FOUND` before any section write
+
+#### Scenario: Section disappears after initial lookup
+
+- **WHEN** an initially loaded section disappears before the save version compare-and-set
+- **THEN** the existing `SectionVersionConflictError` maps to `CONFLICT`
