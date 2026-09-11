@@ -10,7 +10,7 @@
   "panels": [
     {
       "id": 1,
-      "title": "Reports submitted (weekly)",
+      "title": "Reports published (weekly)",
       "type": "timeseries",
       "gridPos": { "x": 0, "y": 0, "w": 12, "h": 7 },
       "datasource": "Prometheus",
@@ -125,7 +125,7 @@
       "type": "piechart",
       "gridPos": { "x": 0, "y": 14, "w": 12, "h": 8 },
       "datasource": "Prometheus",
-      "description": "PDF export requests grouped by requesting role over the last 24 hours. Healthy product sees viewer + head pulling exports; an unhealthy one sees only head pulling on behalf of the director.",
+      "description": "PDF export requests grouped by requesting role over the last 24 hours. Use the role distribution to ask whether intended viewers request exports directly or rely on heads to export for them.",
       "targets": [
         {
           "expr": "sum by (role) (rate(customreport_pdf_export_requests_total{job=\"customreport-api\"}[1d]))",
@@ -142,7 +142,7 @@
       "type": "heatmap",
       "gridPos": { "x": 12, "y": 14, "w": 12, "h": 8 },
       "datasource": "Prometheus",
-      "description": "Heatmap of (deadline − submittedAt). Buckets to the left of 0 = submitted early; buckets to the right = late. A heavy left-side mass is healthy; a creeping right-side tail is the early warning for missed deadlines.",
+      "description": "Heatmap of (observation time − deadline), sampled after a successful section submission. Negative values mean the observation was before the deadline; positive values mean it was after the deadline.",
       "targets": [
         {
           "expr": "sum by (le) (rate(customreport_section_submission_latency_seconds_bucket{job=\"customreport-api\"}[7d]))",

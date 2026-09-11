@@ -118,6 +118,7 @@ services:
     environment:
       NODE_ENV: development
       API_URL: http://api:3002
+      FRONTEND_URL: http://localhost:3000
       NEXT_PUBLIC_AUTH_STUB: "true"
       NEXT_PUBLIC_DEV_ROLE_SWITCHER: "true"
       # Sentry/Bugsink error tracking — reads the canonical root environment.

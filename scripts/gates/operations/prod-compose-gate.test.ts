@@ -647,8 +647,9 @@ void test("post-install production tools bypass pnpm dependency preflight", () =
   }
 });
 
-void test("Turbo forwards product feedback switches to source development", () => {
+void test("Turbo forwards dev auth and product feedback switches", () => {
   const devEnv = turboConfig.tasks?.dev?.env ?? [];
+  assert.ok(devEnv.includes("AUTH_DEV_MODE"));
   assert.ok(devEnv.includes("NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED"));
   assert.ok(devEnv.includes("NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES"));
   assert.ok(devEnv.includes("PRODUCT_FEEDBACK_ENABLED"));

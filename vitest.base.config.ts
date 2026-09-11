@@ -1,9 +1,6 @@
 import { defineConfig } from "vitest/config";
 
-type VitestReportingEnvironment = Readonly<{
-  GITHUB_ACTIONS?: string;
-  VITEST_JSON_OUTPUT_FILE?: string;
-}>;
+type VitestReportingEnvironment = Readonly<Record<string, string | undefined>>;
 
 type VitestReporter =
   | "default"

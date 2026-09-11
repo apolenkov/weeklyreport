@@ -15,7 +15,7 @@
   <rect x="42" y="86" width="6" height="150" rx="3" fill="#d8ece4" opacity="0.4"/>
   <text class="m" x="66" y="126" font-size="20" letter-spacing="1.2" fill="#d8ece4">LEAD</text>
   <text class="s" x="66" y="172" font-size="30" font-weight="600" fill="#f2f0eb">Заполняет секцию</text>
-  <text class="m" x="66" y="210" font-size="22" fill="rgba(242,240,235,0.6)">draft → submitted</text>
+  <text class="m" x="66" y="210" font-size="22" fill="rgba(242,240,235,0.7)">draft → submitted</text>
 
   <line x1="392" y1="161" x2="412" y2="161" stroke="#4a9470" stroke-width="2.5"/>
   <polygon points="412,153 426,161 412,169" fill="#4a9470"/>
@@ -25,7 +25,7 @@
   <rect x="430" y="86" width="6" height="150" rx="3" fill="#d8ece4" opacity="0.7"/>
   <text class="m" x="454" y="126" font-size="20" letter-spacing="1.2" fill="#d8ece4">HEAD</text>
   <text class="s" x="454" y="172" font-size="30" font-weight="600" fill="#f2f0eb">Проверяет и сводит</text>
-  <text class="m" x="454" y="210" font-size="22" fill="rgba(242,240,235,0.6)">approved / changes</text>
+  <text class="m" x="454" y="210" font-size="22" fill="rgba(242,240,235,0.7)">approved / changes</text>
 
   <line x1="780" y1="161" x2="800" y2="161" stroke="#4a9470" stroke-width="2.5"/>
   <polygon points="800,153 814,161 800,169" fill="#4a9470"/>
@@ -35,5 +35,5 @@
   <rect x="818" y="86" width="6" height="150" rx="3" fill="#d8ece4"/>
   <text class="m" x="842" y="126" font-size="20" letter-spacing="1.2" fill="#d8ece4">HEAD</text>
   <text class="s" x="842" y="172" font-size="30" font-weight="600" fill="#f2f0eb">Публикует период</text>
-  <text class="m" x="842" y="210" font-size="22" fill="rgba(242,240,235,0.6)">published → pdf</text>
+  <text class="m" x="842" y="210" font-size="22" fill="rgba(242,240,235,0.7)">published → pdf</text>
 </svg>

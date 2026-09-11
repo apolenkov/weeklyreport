@@ -9,11 +9,11 @@
   "panels": [
     {
       "id": 1,
-      "title": "tRPC latency p50 / p95 / p99 (top 5 procedures by p95)",
+      "title": "tRPC latency p50 / p95 / p99 (independent top 5 per percentile)",
       "type": "timeseries",
       "gridPos": { "x": 0, "y": 0, "w": 24, "h": 9 },
       "datasource": "Prometheus",
-      "description": "Per-procedure latency quantiles. Top 5 series by current p95 — anything slow leaks into the legend without scrolling. Use the legend toggle to compare procedures side-by-side.",
+      "description": "Per-procedure latency quantiles. Each percentile independently selects its current top 5 procedures, so the p50, p95, and p99 cohorts can differ. Use the legend toggle to compare visible procedures side-by-side.",
       "targets": [
         {
           "expr": "topk(5, histogram_quantile(0.50, sum by (le, procedure) (rate(trpc_request_duration_seconds_bucket{job=\"customreport-api\"}[5m]))))",

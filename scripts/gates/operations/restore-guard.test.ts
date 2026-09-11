@@ -5,14 +5,23 @@ import {
   chmodSync,
   mkdtempSync,
   readFileSync,
+  rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import test from "node:test";
+import test, { afterEach } from "node:test";
 
 const restoreScript = resolve("deploy/postgres/restore.sh");
+const fixtureRoots = new Set<string>();
+
+afterEach(() => {
+  for (const root of fixtureRoots) {
+    rmSync(root, { recursive: true, force: true });
+  }
+  fixtureRoots.clear();
+});
 
 void test("compose-mounted restore entrypoint is executable", () => {
   assert.notEqual(statSync(restoreScript).mode & 0o111, 0);
@@ -20,6 +29,7 @@ void test("compose-mounted restore entrypoint is executable", () => {
 
 function runRestore(overrides: NodeJS.ProcessEnv = {}) {
   const directory = mkdtempSync(join(tmpdir(), "restore-guard-"));
+  fixtureRoots.add(directory);
   const log = join(directory, "pg-restore.log");
   const fakeRestore = join(directory, "pg_restore");
   const dump = join(directory, "backup.dump");

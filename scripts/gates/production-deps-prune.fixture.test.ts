@@ -5,17 +5,27 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  rm,
   symlink,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import test from "node:test";
+import test, { afterEach } from "node:test";
 
 const script = resolve("scripts/gates/production-deps-prune.ts");
+const fixtureRoots = new Set<string>();
+
+afterEach(async () => {
+  await Promise.all(
+    [...fixtureRoots].map((root) => rm(root, { recursive: true, force: true })),
+  );
+  fixtureRoots.clear();
+});
 
 async function makeDeployRoot(name = "@customreport/api"): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "weeklyreport-prune-fixture-"));
+  fixtureRoots.add(root);
   await writeFile(
     join(root, "package.json"),
     JSON.stringify({ name, private: name === "@customreport/api" }),

@@ -5,15 +5,24 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import test from "node:test";
+import test, { afterEach } from "node:test";
 
 const backupScript = resolve("deploy/postgres/backup-loop.sh");
 const backupHealthScript = resolve("deploy/postgres/backup-health.sh");
 const fixtureCredential = "fixture-only";
+const fixtureRoots = new Set<string>();
+
+afterEach(() => {
+  for (const root of fixtureRoots) {
+    rmSync(root, { recursive: true, force: true });
+  }
+  fixtureRoots.clear();
+});
 
 const writeCommandStub = (
   bin: string,
@@ -41,6 +50,7 @@ const runBackup = (
   commandStubs: BackupCommandStubs = {},
 ) => {
   const directory = mkdtempSync(join(tmpdir(), "backup-loop-"));
+  fixtureRoots.add(directory);
   const probeLog = join(directory, "probe.log");
   const bin = join(directory, "bin");
   mkdirSync(bin);
@@ -80,6 +90,7 @@ const runBackup = (
 
 const runBackupHealth = (interval: string) => {
   const directory = mkdtempSync(join(tmpdir(), "backup-health-"));
+  fixtureRoots.add(directory);
   const probeLog = join(directory, "probe.log");
   const bin = join(directory, "bin");
   mkdirSync(bin);

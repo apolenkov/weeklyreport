@@ -3,7 +3,7 @@ import { createTypeScriptImportResolver } from "eslint-import-resolver-typescrip
 import importX from "eslint-plugin-import-x";
 
 const apiModulesDir = "apps/api/src/modules";
-const apiModules = [
+export const apiModules = [
   "activity",
   "admin",
   "analytics",
@@ -17,6 +17,7 @@ const apiModules = [
   "organization",
   "pdf-export",
   "period",
+  "product-feedback",
   "project-activity",
   "publication",
   "reminders",
@@ -66,7 +67,7 @@ const apiInfrastructureModuleZones = [
 // within their own slice or through a sibling's public index.ts/client.ts
 // entrypoint; any slice-to-slice coupling not through a barrel is a lint error.
 const webFeaturesDir = "apps/web/src/features";
-const webSlices = [
+export const webSlices = [
   "admin",
   "analytics",
   "dashboard",
@@ -74,6 +75,7 @@ const webSlices = [
   "organization",
   "pdf-export",
   "period",
+  "product-feedback",
   "report-pages",
   "report-sections",
   "review",
@@ -148,6 +150,7 @@ export const boundaryConfig: Linter.Config[] = [
   {
     files: [
       "apps/api/src/infrastructure/**/*.ts",
+      "apps/api/src/bootstrap/**/*.ts",
       "apps/api/src/main.ts",
       "apps/api/src/app.module.ts",
     ],
