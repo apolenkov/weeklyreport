@@ -1,5 +1,6 @@
 import {
   type LeadOpenWorkHistoryInput,
+  type ReportSectionReadModel,
   type ResolvePlanInput,
   resolvePlanInputSchema,
   type RestorePlanInput,
@@ -115,7 +116,11 @@ export class LeadFormService {
     userId: string,
     // Client-loaded target version for OCC; fresh-fetch would no-op the lock.
     expectedVersion: number,
-  ): Promise<{ success: true; copiedItems: number }> {
+  ): Promise<{
+    success: true;
+    copiedItems: number;
+    section?: ReportSectionReadModel;
+  }> {
     const target = await assertFillableTarget(
       this.repository,
       targetSectionId,
@@ -133,7 +138,12 @@ export class LeadFormService {
       expectedVersion,
     );
 
-    return { success: true, copiedItems };
+    const section = await this.repository.getSectionById(targetSectionId);
+    return {
+      success: true,
+      copiedItems,
+      ...(section ? { section } : {}),
+    };
   }
 
   async requestReopen(

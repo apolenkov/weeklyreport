@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReportSectionReadModel } from "@customreport/shared";
 import { toast } from "sonner";
 
 import type { LeadFormGeneration } from "../../report-sections";
@@ -50,6 +51,7 @@ export function useLeadFormFillFrom({
   autosaveDirty,
   version,
   onConflict,
+  onFilled,
   writePort,
 }: {
   readonly generation: LeadFormGeneration | null;
@@ -57,11 +59,15 @@ export function useLeadFormFillFrom({
   readonly autosaveDirty: boolean;
   readonly version: number;
   readonly onConflict: () => void;
+  readonly onFilled: (section: ReportSectionReadModel) => void;
   readonly writePort: LeadFormWritePort;
 }) {
   const fillFrom = async (input: FillFromInput) => {
     try {
-      await writePort.fillFrom(input);
+      const result = await writePort.fillFrom(input);
+      // Adopt the authoritative result as a self-write so the follow-up refetch
+      // is not misreported as an external conflict.
+      if (result.section) onFilled(result.section);
       toast.success("Form filled from selected period");
     } catch (error: unknown) {
       if (isLeadFormWriteConflict(error)) {

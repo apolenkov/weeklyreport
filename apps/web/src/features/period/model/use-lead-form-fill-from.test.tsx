@@ -18,6 +18,7 @@ describe("useLeadFormFillFrom", () => {
           autosaveDirty: true,
           version,
           onConflict: () => undefined,
+          onFilled: () => undefined,
           writePort,
         }),
       { initialProps: { version: 4 } },
@@ -47,6 +48,7 @@ describe("useLeadFormFillFrom", () => {
         autosaveDirty: true,
         version: 4,
         onConflict: () => undefined,
+        onFilled: () => undefined,
         writePort,
       }),
     );
@@ -66,5 +68,30 @@ describe("useLeadFormFillFrom", () => {
         },
       ]),
     );
+  });
+
+  it("adopts the returned section so the follow-up refetch is not an external conflict", async () => {
+    const adopted: unknown[] = [];
+    const section = { reportSectionId: "target" } as never;
+    const writePort = new InMemoryLeadFormWriteAdapter({
+      saveDraft: () => Promise.reject(new Error("Unexpected save")),
+      submit: () => Promise.reject(new Error("Unexpected submit")),
+      fillFrom: () =>
+        Promise.resolve({ success: true, copiedItems: 2, section }),
+    });
+    const { result } = renderHook(() =>
+      useLeadFormFillFrom({
+        generation: "report-a:section-a",
+        sectionIdForActions: "target",
+        autosaveDirty: false,
+        version: 4,
+        onConflict: () => undefined,
+        onFilled: (next) => adopted.push(next),
+        writePort,
+      }),
+    );
+
+    act(() => result.current.handleFillFrom("source"));
+    await waitFor(() => expect(adopted).toEqual([section]));
   });
 });

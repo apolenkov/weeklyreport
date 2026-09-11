@@ -271,6 +271,7 @@ export function useLeadFormDraftCore({
     save: serverSync.autosave.forceSave,
     submit,
     reloadAfterConflict: handleConflict,
+    adoptServerSection: serverSync.adoptServerSection,
     apply,
   };
 }

@@ -50,9 +50,13 @@ export interface LeadFormWritePort {
   ) => Promise<ReportSectionReadModel>;
   readonly resolvePlan: (input: ResolvePlanInput) => Promise<ItemOutcomeResult>;
   readonly restorePlan: (input: RestorePlanInput) => Promise<ItemOutcomeResult>;
-  readonly fillFrom: (
-    input: LeadFormFillFromInput,
-  ) => Promise<{ readonly success: true; readonly copiedItems: number }>;
+  readonly fillFrom: (input: LeadFormFillFromInput) => Promise<{
+    readonly success: true;
+    readonly copiedItems: number;
+    // Authoritative post-fill section, so the caller can adopt it as a
+    // self-write baseline instead of reporting a spurious external conflict.
+    readonly section?: ReportSectionReadModel;
+  }>;
   readonly revoke: (input: {
     readonly reportSectionId: string;
   }) => Promise<{ readonly success: true }>;
