@@ -48,7 +48,7 @@ function buildSqlContext(params: SearchParams): SearchSqlContext {
   const projectGroupFilter =
     groupIds === null
       ? Prisma.empty
-      : Prisma.sql`AND p."leadId" IN (SELECT "id" FROM "User" WHERE "reportingGroupId" IN (${Prisma.join(groupIds)}))`;
+      : Prisma.sql`AND p."id" IN (SELECT "productId" FROM "GroupProduct" WHERE "groupId" IN (${Prisma.join(groupIds)}))`;
   return {
     q,
     headlineOpts: "MaxWords=12,MinWords=4,StartSel=<<,StopSel=>>",
