@@ -6,7 +6,7 @@ import {
   type FeedbackStatus,
   type FeedbackType,
 } from "@customreport/shared";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type FilterValue<T extends string> = T | "all";
 const FEEDBACK_UPDATE_ERROR = "Feedback update failed";
@@ -57,6 +57,13 @@ export function useProductFeedbackInbox(onError: () => void) {
   const [status, setStatus] = useState<FilterValue<FeedbackStatus>>("all");
   const [type, setType] = useState<FilterValue<FeedbackType>>("all");
 
+  // Hold the caller's handler in a ref so `refresh` stays stable across renders;
+  // an inline `onError` must not re-trigger the mount fetch loop.
+  const onErrorRef = useRef(onError);
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
+
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(false);
@@ -78,11 +85,11 @@ export function useProductFeedbackInbox(onError: () => void) {
       );
     } catch {
       setError(true);
-      onError();
+      onErrorRef.current();
     } finally {
       setLoading(false);
     }
-  }, [onError]);
+  }, []);
 
   useEffect(() => {
     const refreshTimer = window.setTimeout(() => void refresh(), 0);

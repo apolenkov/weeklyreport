@@ -33,6 +33,7 @@ export function ViewModeToggle({
           href={overviewHref}
           scroll={false}
           title="Overview"
+          aria-current={mode === "overview" ? "page" : undefined}
           className={segmentClassName(mode === "overview", {
             iconOnly: true,
             desktopLabels,
@@ -46,6 +47,7 @@ export function ViewModeToggle({
         href={editHref}
         scroll={false}
         title={reportLabel}
+        aria-current={mode === "edit" ? "page" : undefined}
         className={segmentClassName(mode === "edit", {
           iconOnly: true,
           desktopLabels,
@@ -62,6 +64,7 @@ export function ViewModeToggle({
         href={slidesHref}
         scroll={false}
         title="Slides"
+        aria-current={mode === "slides" ? "page" : undefined}
         className={segmentClassName(mode === "slides", {
           iconOnly: true,
           desktopLabels,

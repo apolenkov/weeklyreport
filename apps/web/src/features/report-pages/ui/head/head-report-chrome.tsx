@@ -56,6 +56,7 @@ function HeadContextTrailing({
         value={scope}
         onChange={setScope}
         allowedScopes={["product", "lead"]}
+        ariaLabel="Record scope"
       />
       {fullscreenControl}
       <ViewModeToggle
