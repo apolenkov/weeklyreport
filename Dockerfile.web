@@ -28,6 +28,9 @@ RUN --mount=type=cache,id=customreport-pnpm-store-v11,target=/pnpm/store,sharing
     pnpm install --frozen-lockfile --store-dir=/pnpm/store --network-concurrency=4
 COPY --from=pruner /app/out/full/ .
 COPY tsconfig.base.json ./tsconfig.base.json
+# The web tsconfig now typechecks its own config files, so vitest.config.ts
+# resolves this root base config during the Next build.
+COPY vitest.base.config.ts ./vitest.base.config.ts
 
 # Stage 4: Build for production
 FROM installer AS builder

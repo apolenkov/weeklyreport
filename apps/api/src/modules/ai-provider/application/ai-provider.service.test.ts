@@ -922,7 +922,7 @@ describe("AiProviderConfigurationService", () => {
     );
   });
 
-  it("rejects activation when sources changed after preparation", async () => {
+  it("re-prepares instead of failing forever when sources changed after preparation", async () => {
     const candidate = revision(revisionId, {
       lifecycle: AiProviderLifecycle.preparing,
       preparationCompleted: 120,
@@ -936,8 +936,17 @@ describe("AiProviderConfigurationService", () => {
     const repository = repositoryFor({ control: null, draft: candidate });
     repository.getRevision.mockResolvedValue(candidate);
     const preparation = {
-      prepare: vi.fn(),
-      currentSourceFingerprint: vi.fn().mockResolvedValue("changed-source"),
+      prepare: vi.fn().mockResolvedValue({
+        completed: 120,
+        total: 120,
+        failed: 0,
+        elapsedMs: 2000,
+      }),
+      // Stale on the freshness probe, current again after re-preparation.
+      currentSourceFingerprint: vi
+        .fn()
+        .mockResolvedValueOnce("changed-source")
+        .mockResolvedValue("prepared-source"),
     };
     const service = new AiProviderConfigurationService(
       repository as never,
@@ -947,9 +956,10 @@ describe("AiProviderConfigurationService", () => {
       preparation,
     );
 
-    await expect(service.activate(revisionId, "admin-1")).rejects.toThrow(
-      "sources changed",
-    );
-    expect(repository.activateRevision).not.toHaveBeenCalled();
+    await expect(
+      service.activate(revisionId, "admin-1"),
+    ).resolves.toBeDefined();
+    expect(preparation.prepare).toHaveBeenCalledOnce();
+    expect(repository.activateRevision).toHaveBeenCalledOnce();
   });
 });
