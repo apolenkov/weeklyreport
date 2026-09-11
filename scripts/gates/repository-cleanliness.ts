@@ -17,6 +17,10 @@ const IGNORED_DIRECTORY_NAMES = new Set([
   ".next-docker-dev",
   "dist",
   "coverage",
+  ".opencode",
+  ".playwright-cli",
+  ".playwright-mcp",
+  "output",
 ]);
 const FORBIDDEN_PATHS = [
   /^openspec\/changes\/archive(?:\/|$)/,
@@ -100,6 +104,13 @@ function isAllowedIgnored(path: string): boolean {
   )
     return true;
   if (/(^|\/)(?:\.env|\.env\.[^/]+)$/.test(path)) return true;
+  if (
+    /(^|\/)(?:\.opencode|\.playwright-cli|\.playwright-mcp|output)(?:\/|$)/.test(
+      path,
+    )
+  )
+    return true;
+  if (/(^|\/)codex-session-[^/]+\.md$/.test(path)) return true;
   return path.endsWith(".tsbuildinfo");
 }
 
