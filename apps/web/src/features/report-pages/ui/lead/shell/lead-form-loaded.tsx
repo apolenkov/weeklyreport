@@ -14,6 +14,7 @@ import type {
   LeadFormLoadedViewModel,
   LeadSubmitReadiness,
 } from "../../../../report-sections";
+import { leadPeriodLabel } from "../../../../report-sections";
 import type { AutosaveSnapshot } from "../../../../report-sections/client";
 import type { RecordVisibility } from "../../../../report-sections/client";
 import { LeadSlidesClient, type SlideDensity } from "../../../../slides";
@@ -106,13 +107,7 @@ function LoadedChrome({
   readonly submittedAt: Date | null;
 }) {
   const { data, viewModel, writeActions } = props;
-  const selectedPeriod =
-    viewModel.visiblePeriods.find(
-      (period) => period.id === props.draftSection.reportId,
-    ) ?? viewModel.visiblePeriods[0];
-  const periodLabel = selectedPeriod
-    ? `${selectedPeriod.weekLabel}, ${selectedPeriod.dateRange}`
-    : undefined;
+  const periodLabel = leadPeriodLabel(viewModel, props.draftSection.reportId);
   return (
     <>
       <LeadFormHeaderActions

@@ -35,6 +35,7 @@ export type {
   LeadFormLoadedContext,
   SubmitOutcome,
 } from "./model/lead-form/lead-form-submit-context";
+export { leadPeriodLabel } from "./model/lead-form/lead-period-label";
 export type { RiskPrefillRequest } from "./model/lead-form/risk-prefill";
 export type { HistoryEntry } from "./model/lead-history";
 export {

@@ -5,6 +5,7 @@ import type { ComponentProps } from "react";
 
 import { SdlcTooltipProvider } from "../../../../../shared/ui/feedback/sdlc-tooltip";
 import {
+  leadPeriodLabel,
   projectReportHealthPulse,
   projectStatusOverview,
   StatusOverview,
@@ -76,6 +77,10 @@ function ReadyOverviewHeader({
         pendingInput={pendingInput}
         viewModel={editor.view.viewModel}
         writeActions={editor.view.writeActions}
+        periodLabel={leadPeriodLabel(
+          editor.view.viewModel,
+          editor.view.data.byPeriodData?.section.reportId,
+        )}
         completionActions={completionActions}
         completionSentinelRef={completionSentinelRef}
         showCompletionActions
