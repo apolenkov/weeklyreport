@@ -387,6 +387,9 @@ services:
       # inlined at BUILD time via build.args above, so a runtime line for it
       # would be a no-op. Keep this identical to the build-time rewrite origin.
       API_URL: *production-api-url
+      # Cache-revalidation CSRF checks compare browser Origin to this public
+      # origin instead of the container's internal listener address.
+      FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL must be set}
       # Feeds sentry.server.config.ts, so Server-Component failures (root
       # generateMetadata, getOrgPublic) and instrumentation.ts onRequestError
       # reach the configured Sentry-compatible endpoint. Optional like the api's: unset means log-only, and every

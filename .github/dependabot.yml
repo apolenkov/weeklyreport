@@ -5,16 +5,16 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
-    # Group compatible updates; majors stay separate so breaking bumps get their
-    # own review. OTel packages move together because their versions are coupled.
+    # Keep coupled OTel updates together, including majors. Other npm packages
+    # share minor/patch groups and retain individual major-update reviews.
     groups:
+      opentelemetry:
+        patterns:
+          - "@opentelemetry/*"
       npm-minor-patch:
         update-types:
           - "minor"
           - "patch"
-      opentelemetry:
-        patterns:
-          - "@opentelemetry/*"
 
   - package-ecosystem: "docker"
     directories:

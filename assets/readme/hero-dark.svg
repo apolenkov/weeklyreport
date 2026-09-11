@@ -29,7 +29,7 @@
   <text class="m" x="1061" y="108" font-size="17" fill="#d8ece4" text-anchor="middle">открыт</text>
   <line x1="617" y1="136" x2="1112" y2="136" stroke="#3a6359" stroke-width="1.5"/>
 
-  <text class="m" x="617" y="164" font-size="16" letter-spacing="1.4" fill="rgba(242,240,235,0.6)">СЕКЦИИ ЛИДОВ</text>
+  <text class="m" x="617" y="164" font-size="16" letter-spacing="1.4" fill="rgba(242,240,235,0.7)">СЕКЦИИ ЛИДОВ</text>
 
   <!-- section rows: traffic light + submit state -->
   <circle cx="630" cy="196" r="7" fill="#7fc8a4"/>
@@ -53,6 +53,6 @@
   <text class="m" x="1062" y="333" font-size="17" fill="rgba(242,240,235,0.6)" text-anchor="middle">черновик</text>
 
   <line x1="617" y1="358" x2="1112" y2="358" stroke="#3a6359" stroke-width="1.5"/>
-  <text class="m" x="617" y="386" font-size="18" fill="rgba(242,240,235,0.6)">2 из 4 отправлено</text>
+  <text class="m" x="617" y="386" font-size="18" fill="rgba(242,240,235,0.7)">2 из 4 отправлено</text>
   <text class="s" x="1112" y="386" font-size="19" font-weight="600" fill="#d8ece4" text-anchor="end">head публикует →</text>
 </svg>

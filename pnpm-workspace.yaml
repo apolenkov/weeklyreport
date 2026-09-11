@@ -70,6 +70,7 @@ overrides:
   deepmerge-ts: ">=8.0.2 <9"
 patchedDependencies:
   "@node-saml/node-saml@5.1.0": patches/@node-saml__node-saml@5.1.0.patch
+  agentation@3.0.2: patches/agentation@3.0.2.patch
   "samlify@2.13.1": patches/samlify@2.13.1.patch
   "xml-crypto@6.1.2": patches/xml-crypto@6.1.2.patch
 
