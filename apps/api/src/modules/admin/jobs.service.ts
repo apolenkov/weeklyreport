@@ -30,6 +30,9 @@ export interface RemoveFailedResult {
 
 interface JobsServiceOptions {
   reminderExecutionExists: (executionId: string) => Promise<boolean>;
+  // Revives a terminal-failed execution so the worker's pending-only claim CAS
+  // can pick it up again; absent means the caller opted out of revival.
+  reviveFailedReminderExecution?: (executionId: string) => Promise<void>;
 }
 
 function assertQueueMatch(expected: QueueName, actual: QueueName): void {
@@ -124,6 +127,9 @@ export class JobsService {
           jobId: input.jobId,
         };
       }
+      // A terminal-failed row would otherwise be rejected by the worker's
+      // pending-only claim CAS, making the retry a silent no-op. Revive it.
+      await this.options.reviveFailedReminderExecution?.(executionId);
     }
 
     // A retry only requeues the domain reference. The owning worker claims

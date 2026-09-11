@@ -41,6 +41,14 @@ export function createBootstrapJobsService(deps: {
         });
         return execution !== null;
       },
+      reviveFailedReminderExecution: async (executionId) => {
+        // Only a terminal failure is revived; sent/pending rows are left alone,
+        // and the worker's pending-only CAS keeps a re-sent row idempotent.
+        await prisma.reminderExecution.updateMany({
+          where: { id: executionId, status: "failed" },
+          data: { status: "pending", error: null },
+        });
+      },
     },
     logger,
   );
