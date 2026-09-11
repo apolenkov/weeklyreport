@@ -60,6 +60,7 @@ export function StatusOverviewAdditionalUpdates({
   expanded,
   activeColumn,
   onEditItem,
+  onQuickEditText,
   onResolvePlan,
   onRestorePlan,
   editorSlot,
@@ -69,6 +70,8 @@ export function StatusOverviewAdditionalUpdates({
   readonly activeColumn: "previouslyPlanned" | "currentWeek" | "nextWeek";
   readonly onEditItem?:
     ((target: StatusOverviewEditTarget) => void) | undefined;
+  readonly onQuickEditText?:
+    ((item: StatusOverviewItem, text: string) => void) | undefined;
   readonly onResolvePlan?: ((item: StatusOverviewItem) => void) | undefined;
   readonly onRestorePlan?: ((item: StatusOverviewItem) => void) | undefined;
   readonly editorSlot?: StatusOverviewEditorSlot | undefined;
@@ -138,6 +141,7 @@ export function StatusOverviewAdditionalUpdates({
                     item={item}
                     editorSlot={editorSlot}
                     onEditItem={onEditItem}
+                    onQuickEditText={onQuickEditText}
                     onResolvePlan={onResolvePlan}
                     onRestorePlan={onRestorePlan}
                   />
@@ -155,6 +159,7 @@ export function ReportItemSlot({
   item,
   editorSlot,
   onEditItem,
+  onQuickEditText,
   onResolvePlan,
   onRestorePlan,
 }: {
@@ -162,6 +167,8 @@ export function ReportItemSlot({
   readonly editorSlot?: StatusOverviewEditorSlot | undefined;
   readonly onEditItem?:
     ((target: StatusOverviewEditTarget) => void) | undefined;
+  readonly onQuickEditText?:
+    ((item: StatusOverviewItem, text: string) => void) | undefined;
   readonly onResolvePlan?: ((item: StatusOverviewItem) => void) | undefined;
   readonly onRestorePlan?: ((item: StatusOverviewItem) => void) | undefined;
 }) {
@@ -174,6 +181,7 @@ export function ReportItemSlot({
         <StatusOverviewItemPreview
           item={item}
           onEditItem={onEditItem}
+          onQuickEditText={onQuickEditText}
           onResolvePlan={onResolvePlan}
           onRestorePlan={onRestorePlan}
         />

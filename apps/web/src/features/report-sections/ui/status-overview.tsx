@@ -26,6 +26,8 @@ export interface StatusOverviewProps {
   readonly model: StatusOverviewModel;
   readonly onEditItem?:
     ((target: StatusOverviewEditTarget) => void) | undefined;
+  readonly onQuickEditText?:
+    ((item: StatusOverviewItem, text: string) => void) | undefined;
   readonly onAddItem?:
     ((target: StatusOverviewCreateTarget) => void) | undefined;
   readonly onResolvePlan?: ((item: StatusOverviewItem) => void) | undefined;
@@ -102,6 +104,7 @@ function buildAddItemHandler(
 export function StatusOverview({
   model,
   onEditItem,
+  onQuickEditText,
   onAddItem,
   onResolvePlan,
   onRestorePlan,
@@ -272,6 +275,7 @@ export function StatusOverview({
                       panelId={`${idPrefix}-${group.kind}-${String(index)}`}
                       onEditItem={onEditItem}
                       onAddItem={addItem}
+                      onQuickEditText={onQuickEditText}
                       onResolvePlan={onResolvePlan}
                       onRestorePlan={onRestorePlan}
                       editorSlot={
