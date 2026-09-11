@@ -110,7 +110,9 @@ function renderViewer() {
 describe("report shell report-key transitions", () => {
   it("hides report A content and head actions while report B is pending", async () => {
     const rendered = renderHead();
-    expect(await screen.findByText(/Report A period/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/No report content for Report A period/),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /nothing to publish/i }),
     ).toBeInTheDocument();
@@ -135,7 +137,9 @@ describe("report shell report-key transitions", () => {
 
   it("hides report A content and viewer export while report B is pending", async () => {
     const rendered = renderViewer();
-    expect(await screen.findByText(/Report A period/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/No report content for Report A period/),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /export report-a/i }),
     ).toBeEnabled();

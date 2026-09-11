@@ -2,6 +2,7 @@
 
 import { type ReactNode, useState } from "react";
 
+import { ReportBreadcrumb } from "../../../../shared/ui/report-shell/report-breadcrumb";
 import {
   DocumentActionGroup,
   ReportToolbar,
@@ -83,20 +84,23 @@ function WeeklyReportHeader({
       data-layout-stability="position-size"
       className="flex flex-wrap items-center justify-between gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_auto]"
     >
-      <div className="flex min-w-0 flex-wrap items-center gap-3">
-        <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
-          Status Report
-        </h1>
-        <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-1 text-xs font-semibold text-[var(--color-primary)]">
-          {reportLifecycleLabel(page)} &middot; {page.submitted}/{page.total}{" "}
-          Submitted
-        </span>
-        {page.showPublishHint && (
-          <span className="text-xs text-[var(--color-muted-foreground)]">
-            Publish requires at least one submitted section.
+      <div className="flex min-w-0 flex-col gap-1">
+        <ReportBreadcrumb label={page.periodLabel} />
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
+          <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
+            Status Report
+          </h1>
+          <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-1 text-xs font-semibold text-[var(--color-primary)]">
+            {reportLifecycleLabel(page)} &middot; {page.submitted}/{page.total}{" "}
+            Submitted
           </span>
-        )}
-        {headerContextLabel}
+          {page.showPublishHint && (
+            <span className="text-xs text-[var(--color-muted-foreground)]">
+              Publish requires at least one submitted section.
+            </span>
+          )}
+          {headerContextLabel}
+        </div>
       </div>
       <DocumentActionGroup>
         {documentActionsLeading ?? (

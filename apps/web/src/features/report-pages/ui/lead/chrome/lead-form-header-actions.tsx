@@ -3,6 +3,7 @@
 import type { Ref } from "react";
 
 import { isLead } from "../../../../../shared/lib/auth/role-predicates";
+import { ReportBreadcrumb } from "../../../../../shared/ui/report-shell/report-breadcrumb";
 import { DocumentActionGroup } from "../../../../../shared/ui/report-shell/report-toolbar";
 import { FillFromButton } from "../../../../period";
 import type { LeadFormLoadedViewModel } from "../../../../report-sections";
@@ -29,6 +30,7 @@ interface LeadFormHeaderActionsProps {
   readonly showCompletionActions: boolean;
   readonly isSlidesMode: boolean;
   readonly isSubmitted: boolean;
+  readonly periodLabel?: string | undefined;
 }
 
 type HeaderAutosave = LeadCompletionActionContract["autosave"];
@@ -66,9 +68,14 @@ function AutosaveBadge({ autosave }: { readonly autosave: HeaderAutosave }) {
   );
 }
 
-function ReportTitleBlock() {
+function ReportTitleBlock({
+  periodLabel,
+}: {
+  readonly periodLabel?: string | undefined;
+}) {
   return (
-    <div className="min-w-0">
+    <div className="flex min-w-0 flex-col gap-1">
+      <ReportBreadcrumb label={periodLabel ?? "My Report"} />
       <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
         My Report
       </h1>
@@ -220,7 +227,7 @@ export function LeadFormHeaderActions({
       className="flex flex-wrap items-center justify-between gap-4"
     >
       <div className="flex min-w-0 flex-wrap items-center gap-3">
-        <ReportTitleBlock />
+        <ReportTitleBlock periodLabel={header.periodLabel} />
         {!isSlidesMode && (
           <HeaderStatusBadge
             isSubmitted={header.isSubmitted}
