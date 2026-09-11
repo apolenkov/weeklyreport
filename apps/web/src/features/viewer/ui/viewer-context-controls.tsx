@@ -60,6 +60,7 @@ export function ViewerContextControls({
         value={scope}
         onChange={setScope}
         allowedScopes={["product", "lead"]}
+        ariaLabel="Record scope"
       />
       <ViewModeToggle
         editHref={editHref}

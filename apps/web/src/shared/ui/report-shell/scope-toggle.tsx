@@ -14,6 +14,7 @@ interface ScopeToggleProps<T extends ScopeValue> {
   onChange: (next: T) => void;
   allowedScopes: readonly T[];
   size?: "sm" | "lg";
+  ariaLabel?: string;
 }
 
 // Slide layout "own" is labeled "Summary" so it is not confused with the
@@ -29,6 +30,7 @@ export function ScopeToggle<T extends ScopeValue>({
   onChange,
   allowedScopes,
   size = "sm",
+  ariaLabel = "Slide scope",
 }: ScopeToggleProps<T>) {
   const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -54,7 +56,7 @@ export function ScopeToggle<T extends ScopeValue>({
   }
 
   return (
-    <SegmentedToggle role="radiogroup" ariaLabel="Slide scope" size={size}>
+    <SegmentedToggle role="radiogroup" ariaLabel={ariaLabel} size={size}>
       {allowedScopes.map((s, index) => (
         <button
           key={s}
