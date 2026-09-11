@@ -139,6 +139,7 @@ function attachTransaction(
     },
     reportSection: {
       findMany: vi.fn().mockResolvedValue([]),
+      updateMany: vi.fn().mockResolvedValue({ count: 0 }),
     },
     project: {
       findMany: vi.fn().mockResolvedValue([]),
@@ -189,4 +190,49 @@ describe("ProjectActivityPrismaRepository conflict retries", () => {
       expect(transaction).toHaveBeenCalledTimes(2);
     },
   );
+
+  it("bumps the affected draft versions when a lead is detached", async () => {
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const tx = {
+      report: {
+        findMany: vi
+          .fn()
+          .mockResolvedValue([{ id: "55555555-5555-4555-8555-555555555555" }]),
+      },
+      $executeRaw: vi.fn().mockResolvedValue(0),
+      $queryRaw: vi.fn().mockResolvedValue([
+        {
+          id: "55555555-5555-4555-8555-555555555555",
+          status: "draft",
+          periodState: "open",
+          periodStatus: "open",
+          archived: false,
+          autoPublished: false,
+          autoArchived: false,
+          publishedAt: null,
+          publishedById: null,
+          reopenedAt: null,
+        },
+      ]),
+      projectActivityLead: {
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+      reportSection: {
+        findMany: vi.fn().mockResolvedValue([{ id: "section-1" }]),
+        updateMany,
+      },
+      activityStatus: { deleteMany: vi.fn().mockResolvedValue({ count: 1 }) },
+    } as unknown as Prisma.TransactionClient;
+    const prisma = {
+      $transaction: vi.fn((operation: TransactionOperation) => operation(tx)),
+    } as unknown as PrismaService;
+    const repository = new ProjectActivityPrismaRepository(prisma);
+
+    await repository.detachLead({ activityId: ACTIVITY, leadId: LEAD });
+
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ["section-1"] } },
+      data: { version: { increment: 1 } },
+    });
+  });
 });
