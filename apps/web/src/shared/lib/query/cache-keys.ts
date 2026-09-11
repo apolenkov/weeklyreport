@@ -76,4 +76,8 @@ export function invalidateReview(qc: QueryClient, trpc: TRPCProxy): void {
   invalidate(qc, trpc.weeklyReport.get.pathFilter());
   invalidate(qc, trpc.leadForm.byPeriod.pathFilter());
   invalidate(qc, trpc.reports.getActive.pathFilter());
+  // A `changes_requested` verdict un-submits the section, so the dashboard
+  // submission row/total and the live activity feed must drop too.
+  invalidate(qc, trpc.review.dashboard.pathFilter());
+  invalidate(qc, trpc.activity.live.pathFilter());
 }

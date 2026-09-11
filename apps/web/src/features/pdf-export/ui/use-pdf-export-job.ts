@@ -86,6 +86,11 @@ export function usePdfExportJob({
   const statusQ = useJobStatusPoll(jobId);
 
   useEffect(() => {
+    // A report switch owns a fresh artifact surface: drop the previous report's
+    // fallback link and one-shot delivery guard before restoring this report's
+    // stored job.
+    setFallbackUrl(null);
+    lastDownloadedJobIdRef.current = null;
     const storedJobId = readStoredActiveJob(reportId);
     setActiveJob(
       storedJobId === null ? null : { reportId, jobId: storedJobId },

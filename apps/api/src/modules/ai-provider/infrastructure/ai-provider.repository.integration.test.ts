@@ -355,7 +355,7 @@ describe("AI provider control-plane database states", () => {
       );
       await repository.startExecution(first.id);
       const checkOutcome =
-        terminalOutcome === "incompatible" ? "failed" : "inconclusive";
+        terminalOutcome === "incompatible" ? "incompatible" : "inconclusive";
       await repository.completeExecution(
         first.id,
         terminalOutcome,

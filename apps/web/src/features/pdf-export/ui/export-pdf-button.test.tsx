@@ -28,6 +28,7 @@ import { ExportPdfButton } from "./export-pdf-button";
 import { pdfExportRefetchInterval } from "./use-pdf-export-job";
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
+const SECOND_REPORT_ID = "33333333-3333-4333-8333-333333333333";
 const JOB_ID = "22222222-2222-4222-8222-222222222222";
 const ARTIFACT_URL = `/pdfs/${JOB_ID}.pdf`;
 const ACTIVE_JOB_STORAGE_KEY = `weeklyreport:pdf-export:active:${REPORT_ID}`;
@@ -301,6 +302,28 @@ describe("ExportPdfButton", () => {
     ).toHaveAttribute("href", ARTIFACT_URL);
     expect(anchorClick).toHaveBeenCalledTimes(1);
     expect(window.sessionStorage).toHaveLength(0);
+  });
+
+  it("clears the previous report's fallback link when the report id changes", async () => {
+    const { captured, rerender } = renderButton({
+      statusQuery: COMPLETED_STATUS,
+    });
+    expectDefined(captured["pdfExport.request"]).mutationFn.mockResolvedValue({
+      jobId: JOB_ID,
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "Export PDF" }));
+    expect(
+      await screen.findByRole("link", { name: "Download PDF" }),
+    ).toHaveAttribute("href", ARTIFACT_URL);
+
+    rerender(
+      <ExportPdfButton reportId={SECOND_REPORT_ID} periodStatus="published" />,
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByRole("link", { name: "Download PDF" })).toBeNull();
+    });
   });
 
   it.each([

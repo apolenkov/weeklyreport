@@ -136,7 +136,7 @@ export const executeAiProviderTest = async (
   return safeRevision(tested, dependencies.codec);
 };
 
-const providerChecksFor = (result: Record<string, unknown>) =>
+export const providerChecksFor = (result: Record<string, unknown>) =>
   ["generation", "embeddings"].flatMap((lane) => {
     const value = result[lane];
     if (!value || typeof value !== "object" || Array.isArray(value)) return [];
@@ -161,11 +161,13 @@ const providerChecksFor = (result: Record<string, unknown>) =>
       return [
         {
           code: `${lane}.${item.capability}`,
+          // A failed capability is an incompatible check in the persisted
+          // contract; only passed/inconclusive map through unchanged.
           outcome: passed
             ? "passed"
             : item.status === "inconclusive"
               ? "inconclusive"
-              : "failed",
+              : "incompatible",
           passedCount: passed ? 1 : 0,
           failedCount: passed ? 0 : 1,
         },
