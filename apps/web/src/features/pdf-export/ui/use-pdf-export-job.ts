@@ -76,8 +76,13 @@ export function usePdfExportJob({
     null,
   );
   const jobId = activeJob?.reportId === reportId ? activeJob.jobId : null;
-  // Held so the fallback link stays visible after jobId is cleared.
-  const [fallbackUrl, setFallbackUrl] = useState<string | null>(null);
+  // Held so the fallback link stays visible after jobId is cleared; keyed by
+  // reportId so a report switch never offers the previous report's artifact.
+  const [fallback, setFallback] = useState<{
+    readonly reportId: string;
+    readonly url: string;
+  } | null>(null);
+  const fallbackUrl = fallback?.reportId === reportId ? fallback.url : null;
   // One-shot guard: delivery fires exactly once per completed jobId regardless
   // of how many times tanstack-query re-runs the effect.
   const lastDownloadedJobIdRef = useRef<string | null>(null);
@@ -86,10 +91,9 @@ export function usePdfExportJob({
   const statusQ = useJobStatusPoll(jobId);
 
   useEffect(() => {
-    // A report switch owns a fresh artifact surface: drop the previous report's
-    // fallback link and one-shot delivery guard before restoring this report's
-    // stored job.
-    setFallbackUrl(null);
+    // A report switch owns a fresh artifact surface: reset the one-shot
+    // delivery guard and restore this report's stored job. The fallback link is
+    // derived from reportId, so the previous report's link cannot leak.
     lastDownloadedJobIdRef.current = null;
     const storedJobId = readStoredActiveJob(reportId);
     setActiveJob(
@@ -111,7 +115,9 @@ export function usePdfExportJob({
 
     if (lastDownloadedJobIdRef.current === outcome.jobId) return;
     lastDownloadedJobIdRef.current = outcome.jobId;
-    deliverArtifact(outcome.artifactUrl, setFallbackUrl);
+    deliverArtifact(outcome.artifactUrl, (url) =>
+      setFallback({ reportId, url }),
+    );
     removeStoredActiveJob(reportId);
     setActiveJob(null);
   }, [statusQ.data, statusQ.isError, jobId, reportId]);
@@ -122,7 +128,7 @@ export function usePdfExportJob({
 
   function handleExport() {
     if (disabled) return;
-    setFallbackUrl(null);
+    setFallback(null);
     requestMut.mutate(
       { reportId },
       exportRequestHandlers((nextJobId) => {
