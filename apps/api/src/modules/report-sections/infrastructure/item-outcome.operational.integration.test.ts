@@ -385,21 +385,24 @@ describe("item outcome operational recovery (real PostgreSQL)", () => {
     );
     const before = await readFixtureState(prisma, testData.section.id);
     const faultedPrisma = failAfterTransactionBody(prisma, async (tx) => {
-      const [section, event, item] = await Promise.all([
-        tx.reportSection.findUniqueOrThrow({
-          where: { id: testData.section.id },
-          select: { version: true },
-        }),
-        tx.itemOutcomeEvent.findUnique({ where: { id: command.commandId } }),
-        tx.item.findUniqueOrThrow({
-          where: {
-            reportSectionId_stableId: {
-              reportSectionId: testData.section.id,
-              stableId: prepared.item.stableId,
-            },
+      // Sequential reads: the interactive transaction runs on one pg client, and
+      // concurrent queries on it trip pg's "already executing a query"
+      // deprecation, which is fatal under NODE_OPTIONS=--throw-deprecation.
+      const section = await tx.reportSection.findUniqueOrThrow({
+        where: { id: testData.section.id },
+        select: { version: true },
+      });
+      const event = await tx.itemOutcomeEvent.findUnique({
+        where: { id: command.commandId },
+      });
+      const item = await tx.item.findUniqueOrThrow({
+        where: {
+          reportSectionId_stableId: {
+            reportSectionId: testData.section.id,
+            stableId: prepared.item.stableId,
           },
-        }),
-      ]);
+        },
+      });
       expect(section.version).toBe(2);
       expect(event).toMatchObject({
         id: command.commandId,
