@@ -64,10 +64,10 @@ function renderHookInProvider(
 
 function baseDescriptors() {
   return [
-    { path: ["admin", "listStages"], query: [] as unknown[] },
+    { path: ["admin", "listStages"], query: [] },
     {
       path: ["admin", "listStageAssignments"],
-      queryByInput: () => [] as unknown[],
+      queryByInput: () => [],
     },
   ] as Parameters<typeof createMockTRPC>[0];
 }
@@ -109,7 +109,9 @@ describe("useStageAssignmentData — lead scoping", () => {
       },
     ]);
 
-    await waitFor(() => expect(result.current.filteredLeads).toEqual([]));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.isError).toBe(false);
+    expect(result.current.filteredLeads).toEqual([]);
     expect(result.current.filteredLeads).not.toEqual(leads);
   });
 });

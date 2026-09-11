@@ -168,8 +168,9 @@ export function useRiskEditParentStage(args: UseRiskEditParentStageArgs) {
 
   const setParentAndStages = (nextParent: RecordParent) => {
     state.setParent(nextParent);
-    // Never default to all owned stages — that caused inflated completeness.
+    // Stage selection and its validation belong to the selected parent.
     state.setStageNames([]);
+    state.setStageError(undefined);
   };
 
   return {

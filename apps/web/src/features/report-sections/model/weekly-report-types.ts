@@ -1,6 +1,8 @@
 // Presentation types for the Weekly Report pages, produced by mapWeeklyReport.
 import type {
   CanonicalStatus,
+  ItemOutcomeEvent,
+  ItemResolution,
   RecordCommentView,
   WeeklyReportReadModel,
 } from "@customreport/shared";
@@ -13,6 +15,7 @@ export interface WeeklyPortfolioProduct {
   id: string;
   initials: string;
   name: string;
+  hasContent: boolean;
   status: WeeklyProductStatus;
   statusLabel: string;
   leads: string;
@@ -31,6 +34,10 @@ export interface WeeklyReportItem {
   priorityRank?: number | null;
   comments?: readonly RecordCommentView[];
   canReview?: boolean;
+  // Server-owned outcome context remains read-only on report and export views.
+  nextStepText?: string | null;
+  resolution?: ItemResolution | null;
+  outcomeHistory?: readonly ItemOutcomeEvent[];
 }
 
 export interface WeeklyReportRisk {
@@ -109,6 +116,7 @@ export interface WeeklyReportPeriod {
   // Explicit so publish/reopen consumers need not rely on id === reportId.
   reportId: string;
   // Lifecycle state for Publish & Lock / Reopen toggle.
+  periodState: WeeklyReportReadModel["periodState"];
   periodStatus: WeeklyReportReadModel["periodStatus"];
   // Orthogonal to periodStatus: an archived report stays "published".
   archived: boolean;

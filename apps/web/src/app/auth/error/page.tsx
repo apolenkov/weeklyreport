@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 interface Props {
-  searchParams: Promise<{ reason?: string }>;
+  searchParams: Promise<{ reason?: string | string[] }>;
 }
 
 const AUTH_ERROR_MESSAGES: Readonly<Record<string, string>> = {
@@ -12,9 +12,10 @@ const AUTH_ERROR_MESSAGES: Readonly<Record<string, string>> = {
 
 export default async function AuthErrorPage({ searchParams }: Props) {
   const { reason } = await searchParams;
+  const resolvedReason = typeof reason === "string" ? reason : "";
 
   const message =
-    AUTH_ERROR_MESSAGES[reason ?? ""] ?? "An authentication error occurred.";
+    AUTH_ERROR_MESSAGES[resolvedReason] ?? "An authentication error occurred.";
 
   return (
     <main

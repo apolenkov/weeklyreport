@@ -1,20 +1,12 @@
 "use client";
 
+import type {
+  ParentActivityOption,
+  RecordParent,
+} from "../model/record-parent";
 import type { Product } from "../model/types";
 
-type ResolvedRecordParentKind = "product" | "activity";
-
-// XOR: a record parents to either a product or an activity, never both.
-// `unresolved` is the explicit absence of a selectable parent (no row, seed,
-// or activity option) — never a product/activity with an empty id.
-export type RecordParent =
-  | { readonly kind: ResolvedRecordParentKind; readonly id: string }
-  | { readonly kind: "unresolved" };
-
-export interface ParentActivityOption {
-  readonly id: string;
-  readonly name: string;
-}
+type ResolvedRecordParentKind = Exclude<RecordParent["kind"], "unresolved">;
 
 interface ParentPickerProps {
   readonly id: string;

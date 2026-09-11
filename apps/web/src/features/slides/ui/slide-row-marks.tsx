@@ -1,4 +1,3 @@
-import { Check, ChevronsRight, Pause } from "lucide-react";
 import { useRef } from "react";
 
 import { useSdlcTooltip } from "../../../shared/ui/feedback/sdlc-tooltip";
@@ -29,13 +28,11 @@ export function authorSlotBackground(author: GridAuthor): string {
 
 export function AuthorBadge({
   author,
-  show,
 }: {
   readonly author: GridAuthor | undefined;
-  readonly show: boolean;
 }) {
-  // Hooks precede the early return (rules-of-hooks); the label mirrors the
-  // footer legend entry so hover answers "who" without leaving the row.
+  // The tooltip label mirrors the footer legend entry for pointer users
+  // inspecting the persistent row marker.
   const unknown = author === undefined;
   const label = unknown
     ? "Unknown author"
@@ -43,15 +40,12 @@ export function AuthorBadge({
       ? author.name
       : `${author.name} · ${author.role}`;
   const tooltip = useHoverTooltip(label);
-  // Inline in the text flow — no reserved column, the text wraps around it.
-  // A missing author must still surface the foreign-record marker (as unknown),
-  // never drop the indicator silently.
-  if (!show) return null;
+  // A missing author still surfaces the foreign-record marker as unknown.
   return (
     <span
       {...tooltip}
       data-testid="slide-author-badge"
-      className="mr-1 inline-flex h-[15px] w-[22px] translate-y-[-1px] items-center justify-center rounded align-middle text-[8px] font-semibold text-[var(--color-foreground)]"
+      className="inline-flex h-[15px] w-[22px] shrink-0 items-center justify-center rounded text-[8px] font-semibold text-[var(--color-foreground)]"
       style={
         unknown
           ? { background: "var(--color-muted)" }
@@ -77,7 +71,7 @@ export const TONE_BORDER: Record<GridTone, string> = {
     "border-dashed border-[var(--color-border-strong)] text-[var(--color-muted-foreground)]",
 };
 
-// sr-only status so frame hue remains readable for screen readers and print.
+// The hidden label gives screen readers the status conveyed by the frame tint.
 export const TONE_SR_LABEL: Record<GridTone, string | null> = {
   neutral: null,
   note: null,
@@ -88,38 +82,12 @@ export const TONE_SR_LABEL: Record<GridTone, string | null> = {
   postponed: "Postponed",
 };
 
-// Glyph shape survives grayscale print when the frame fill does not.
-const TONE_GLYPH: Partial<
-  Record<GridTone, { readonly Icon: typeof Check; readonly className: string }>
-> = {
-  completed: { Icon: Check, className: "text-[var(--color-primary)]" },
-  paused: { Icon: Pause, className: "text-[var(--color-muted-foreground)]" },
-  postponed: {
-    Icon: ChevronsRight,
-    className: "text-[var(--color-muted-foreground)]",
-  },
-};
-
-export function ToneMark({ tone }: { readonly tone: GridTone }) {
-  const entry = TONE_GLYPH[tone];
-  if (!entry) return null;
-  const { Icon, className } = entry;
-  return (
-    <span
-      aria-hidden="true"
-      className={`ml-1 inline-flex translate-y-[-1px] align-middle ${className}`}
-    >
-      <Icon className="h-3 w-3" />
-    </span>
-  );
-}
-
 function StageWatermark({ stageName }: { readonly stageName: string }) {
   const tooltip = useHoverTooltip(stageName);
   const Icon = STAGE_ICONS[stageName];
   if (!Icon) return null;
   return (
-    <span {...tooltip}>
+    <span {...tooltip} className="inline-flex shrink-0">
       <Icon className="h-[11px] w-[11px]" />
     </span>
   );
@@ -134,7 +102,8 @@ export function StageWatermarks({
   return (
     <span
       aria-hidden="true"
-      className="mr-1 inline-flex translate-y-[1px] items-center gap-0.5 align-baseline opacity-[0.28]"
+      data-testid="slide-stage-watermarks"
+      className="inline-flex min-w-0 max-w-full flex-wrap items-center justify-end gap-0.5 opacity-[0.28]"
     >
       {stageNames.map((stageName) => (
         <StageWatermark key={stageName} stageName={stageName} />

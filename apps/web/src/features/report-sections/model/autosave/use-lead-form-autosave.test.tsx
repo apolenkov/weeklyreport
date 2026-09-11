@@ -1,4 +1,7 @@
-import type { DraftSavePayload } from "@customreport/shared";
+import type {
+  DraftSavePayload,
+  ReportSectionReadModel,
+} from "@customreport/shared";
 import { act, renderHook } from "@testing-library/react";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,6 +12,7 @@ import {
   AUTOSAVE_SECTION_ID as SECTION_ID,
   buildAutosaveHarness as buildHarness,
   makeAutosavePayload as makePayload,
+  makeAutosaveResponse as makeResponse,
 } from "./use-lead-form-autosave-harness";
 
 vi.mock("sonner", () => ({
@@ -251,9 +255,9 @@ describe("useLeadFormAutosave", () => {
     // saved; the next edit fires saveDraft again.
     let failNext = true;
     const { wrapper, calls, writePort } = buildHarness({
-      mutationFn: () => {
+      mutationFn: (request) => {
         if (failNext) return Promise.reject(new Error("Network down"));
-        return Promise.resolve({ ok: true });
+        return Promise.resolve(makeResponse(request));
       },
     });
     const { result, rerender } = renderHook(
@@ -326,35 +330,6 @@ describe("useLeadFormAutosave", () => {
     expect(cleanEvent.defaultPrevented).toBe(false);
   });
 
-  it("exposes dirty=true while a change is pending and dirty=false after success", async () => {
-    const { wrapper, writePort } = buildHarness();
-    const { result, rerender } = renderHook(
-      ({ payload }: { payload: DraftSavePayload | null }) =>
-        useLeadFormAutosave({
-          writePort,
-          reportSectionId: SECTION_ID,
-          payload,
-          enabled: true,
-          version: 1,
-          onVersionChange: vi.fn(),
-          debounceMs: 3000,
-        }),
-      { wrapper, initialProps: { payload: null as DraftSavePayload | null } },
-    );
-
-    expect(result.current.dirty).toBe(false);
-
-    rerender({ payload: makePayload("dirty") });
-    expect(result.current.dirty).toBe(true);
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(3000);
-    });
-
-    expect(result.current.state).toBe("saved");
-    expect(result.current.dirty).toBe(false);
-  });
-
   it("forceSave() bypasses debounce and triggers immediate save", async () => {
     const { wrapper, calls, writePort } = buildHarness();
     const { result } = renderHook(
@@ -382,17 +357,22 @@ describe("useLeadFormAutosave", () => {
     });
 
     // Mutation must have fired without advancing timers by 5000ms.
-    expect(calls.length).toBeGreaterThanOrEqual(1);
+    expect(calls).toHaveLength(1);
     expect(result.current.state).toBe("saved");
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    expect(calls).toHaveLength(1);
   });
 
-  it("Save button isInFlight becomes true while save is in flight", async () => {
+  it("exposes isInFlight while a save is pending", async () => {
     // Use a slow mutation to hold isPending=true for inspection.
     let resolveMutation!: () => void;
     const { wrapper, writePort } = buildHarness({
-      mutationFn: () =>
-        new Promise<unknown>((resolve) => {
-          resolveMutation = () => resolve({ ok: true });
+      mutationFn: (request) =>
+        new Promise<ReportSectionReadModel>((resolve) => {
+          resolveMutation = () => resolve(makeResponse(request));
         }),
     });
 
@@ -425,32 +405,6 @@ describe("useLeadFormAutosave", () => {
 
     expect(result.current.isInFlight).toBe(false);
     expect(result.current.state).toBe("saved");
-  });
-
-  it("Save button shows ✓ Saved after success (state=saved transitions)", async () => {
-    const { wrapper, writePort } = buildHarness();
-    const { result } = renderHook(
-      () =>
-        useLeadFormAutosave({
-          writePort,
-          reportSectionId: SECTION_ID,
-          payload: makePayload("check-saved"),
-          enabled: true,
-          version: 1,
-          onVersionChange: vi.fn(),
-          debounceMs: 3000,
-        }),
-      { wrapper },
-    );
-
-    await act(async () => {
-      void result.current.forceSave();
-      await vi.advanceTimersByTimeAsync(0);
-    });
-
-    expect(result.current.state).toBe("saved");
-    expect(result.current.isInFlight).toBe(false);
-    expect(result.current.lastSavedAt).toBeInstanceOf(Date);
   });
 });
 

@@ -20,7 +20,10 @@ import { DASHBOARD_LOAD_STALL_MS } from "./use-dashboard-query-recovery";
 vi.mock("@tanstack/react-query", () => ({
   useQuery: vi.fn(),
   useMutation: vi.fn(() => ({ isPending: false, mutate: vi.fn() })),
-  useQueryClient: vi.fn(() => ({ invalidateQueries: vi.fn() })),
+  useQueryClient: vi.fn(() => ({
+    invalidateQueries: vi.fn(),
+    getQueryState: vi.fn(),
+  })),
 }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock("../../../shared/lib/errors/client-error-reporting", () => ({
@@ -131,7 +134,7 @@ describe("DashboardPage progressive readiness", () => {
       fetchStatus: "fetching",
     });
     setQueryState("weeklyReport.get", { data: ACTIVE_WEEKLY });
-    render(<DashboardPage />);
+    const { rerender } = render(<DashboardPage />);
     expect(screen.getByText("Lead summary")).toBeInTheDocument();
     expect(screen.getByText("Alerts")).toBeInTheDocument();
     const bulkActions = screen.getByText("Bulk actions");
@@ -142,9 +145,17 @@ describe("DashboardPage progressive readiness", () => {
     ).toBeVisible();
     expect(screen.getByText("KPI")).toBeInTheDocument();
     expect(screen.getByText("Blocked")).toBeInTheDocument();
+    expect(screen.getByText("Loading review data…")).toHaveAttribute(
+      "role",
+      "status",
+    );
     expect(
       document.querySelector("[data-dashboard-loading='true']"),
     ).not.toBeInTheDocument();
+
+    setQueryState("review.dashboard", { data: [] });
+    rerender(<DashboardPage />);
+    expect(screen.queryByText("Loading review data…")).not.toBeInTheDocument();
   });
 
   it("keeps self-contained panels visible while weekly context is pending", () => {

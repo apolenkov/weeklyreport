@@ -1,4 +1,7 @@
-import type { AiProviderConfigurationRead } from "@customreport/shared";
+import type {
+  AiProviderAvailability,
+  AiProviderConfigurationRead,
+} from "@customreport/shared";
 import { Pencil } from "lucide-react";
 
 import { profileLabel } from "./ai-provider-form";
@@ -44,8 +47,36 @@ export const lifecycleCopy: Record<
   },
 };
 
+const disabledActiveCopy = {
+  label: "Disabled",
+  detail: "This retained provider configuration is not available to report AI.",
+  next: "Edit the retained configuration to create a new draft.",
+};
+
+const providerStateCopy = (
+  lifecycle: AiProviderConfigurationRead["lifecycle"] | "none",
+  providerAvailable: boolean,
+) =>
+  lifecycle === "active" && !providerAvailable
+    ? disabledActiveCopy
+    : lifecycleCopy[lifecycle];
+
+const activationStepDetail = (
+  lifecycle: AiProviderConfigurationRead["lifecycle"] | "none",
+  providerAvailable: boolean,
+): string => {
+  if (lifecycle === "validated" || lifecycle === "preparing") {
+    return "Available";
+  }
+  if (lifecycle === "active") {
+    return providerAvailable ? "Already active" : "Unavailable while disabled";
+  }
+  return "Locked until testing passes";
+};
+
 export function AiProviderStateSummary({
   lifecycle,
+  availability,
   revision,
   onEdit,
   onDisable,
@@ -53,13 +84,15 @@ export function AiProviderStateSummary({
   showActiveActions,
 }: Readonly<{
   lifecycle: AiProviderConfigurationRead["lifecycle"] | "none";
+  availability: AiProviderAvailability;
   revision: AiProviderConfigurationRead | null;
   onEdit: () => void;
   onDisable: () => void;
   disablePending: boolean;
   showActiveActions: boolean;
 }>) {
-  const state = lifecycleCopy[lifecycle];
+  const providerAvailable = availability === "available";
+  const state = providerStateCopy(lifecycle, providerAvailable);
   const active = lifecycle === "active" && revision;
   return (
     <>
@@ -107,12 +140,7 @@ export function AiProviderStateSummary({
             },
             {
               label: "Activate",
-              detail:
-                lifecycle === "validated" || lifecycle === "preparing"
-                  ? "Available"
-                  : lifecycle === "active"
-                    ? "Already active"
-                    : "Locked until testing passes",
+              detail: activationStepDetail(lifecycle, providerAvailable),
             },
           ].map(({ label, detail }, index) => (
             <li
@@ -159,14 +187,16 @@ export function AiProviderStateSummary({
                 <Pencil aria-hidden="true" className="size-4" />
                 Edit configuration
               </button>
-              <button
-                type="button"
-                className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] disabled:cursor-not-allowed disabled:opacity-50"
-                onClick={onDisable}
-                disabled={disablePending}
-              >
-                Disable
-              </button>
+              {providerAvailable && (
+                <button
+                  type="button"
+                  className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={onDisable}
+                  disabled={disablePending}
+                >
+                  Disable
+                </button>
+              )}
             </div>
           )}
         </div>

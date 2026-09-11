@@ -379,6 +379,98 @@ describe("FillFromButton — icon triggers keep the fill flow", () => {
   });
 });
 
+describe("FillFromButton — confirmation focus restoration", () => {
+  type OpeningPath = "primary" | "picker";
+
+  function openConfirmation(path: OpeningPath) {
+    const primary = screen.getByRole("button", {
+      name: "Fill from most recent submitted period",
+    });
+    const chevron = screen.getByRole("button", {
+      name: "Choose past report to fill from",
+    });
+
+    if (path === "primary") {
+      primary.focus();
+      fireEvent.click(primary);
+      return primary;
+    }
+
+    chevron.focus();
+    fireEvent.click(chevron);
+    const row = screen.getByRole("button", { name: /Week 16/ });
+    row.focus();
+    fireEvent.click(row);
+    return chevron;
+  }
+
+  it.each([
+    ["primary", "Escape"],
+    ["primary", "Cancel"],
+    ["picker", "Escape"],
+    ["picker", "Cancel"],
+  ] as const)(
+    "returns focus to the %s segment after %s without filling",
+    async (path, dismissal) => {
+      const onFillFrom = vi.fn();
+      render(<FillFromButton periods={[pastPeriod]} onFillFrom={onFillFrom} />);
+      const returnTarget = openConfirmation(path);
+
+      expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+
+      if (dismissal === "Escape") {
+        fireEvent.keyDown(document, { key: "Escape" });
+      } else {
+        fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+      }
+
+      await waitFor(() =>
+        expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
+      );
+      await waitFor(() => expect(returnTarget).toHaveFocus());
+      expect(onFillFrom).not.toHaveBeenCalled();
+    },
+  );
+
+  it("does not move focus to another segment when the return target becomes disabled", async () => {
+    const onFillFrom = vi.fn();
+    const { rerender } = render(
+      <FillFromButton periods={[pastPeriod]} onFillFrom={onFillFrom} />,
+    );
+    const primary = openConfirmation("primary");
+
+    rerender(
+      <FillFromButton
+        periods={[pastPeriod]}
+        onFillFrom={onFillFrom}
+        disabled={true}
+      />,
+    );
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    await waitFor(() =>
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
+    );
+    expect(primary).toBeDisabled();
+    expect(primary).not.toHaveFocus();
+    expect(
+      screen.getByRole("button", { name: "Choose past report to fill from" }),
+    ).not.toHaveFocus();
+    expect(onFillFrom).not.toHaveBeenCalled();
+  });
+
+  it("does not leave focus on a detached target when the control unmounts", () => {
+    const { unmount } = render(<FillFromButton periods={[pastPeriod]} />);
+    const chevron = openConfirmation("picker");
+
+    unmount();
+
+    expect(chevron).not.toBeInTheDocument();
+    expect(chevron).not.toHaveFocus();
+    expect(document.body).toHaveFocus();
+  });
+});
+
 describe("FillFromButton — 'Previous' badge keyed by identity, not filtered index", () => {
   const week16: ReportPeriod = makePeriod({
     id: "2026-W16",

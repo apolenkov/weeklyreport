@@ -1,9 +1,19 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const useQueryMock = vi.fn();
+interface CountQueryOptions {
+  readonly refetchInterval?: number;
+}
+
+interface CountQueryResult {
+  readonly data: Readonly<{ count: number }> | undefined;
+  readonly error?: Error;
+  readonly isError?: boolean;
+}
+
+const useQueryMock = vi.fn<(options: CountQueryOptions) => CountQueryResult>();
 vi.mock("@tanstack/react-query", () => ({
-  useQuery: (opts: unknown): unknown => useQueryMock(opts) as unknown,
+  useQuery: (options: CountQueryOptions) => useQueryMock(options),
 }));
 vi.mock("../../../shared/lib/trpc/trpc-context", () => ({
   useTRPC: () => ({
@@ -76,10 +86,7 @@ describe("admin tab alert labels", () => {
     );
     expect(screen.getByText("2 failed jobs in DLQ")).toHaveClass("sr-only");
 
-    const callArg = useQueryMock.mock.calls.at(-1)?.[0] as {
-      refetchInterval?: number;
-    };
-    expect(callArg.refetchInterval).toBe(30_000);
+    expect(useQueryMock.mock.calls.at(-1)?.[0].refetchInterval).toBe(30_000);
   });
 
   it("caps large tab counts without growing the tab", () => {

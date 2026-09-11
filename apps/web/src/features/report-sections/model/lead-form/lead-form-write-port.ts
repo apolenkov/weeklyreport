@@ -1,6 +1,9 @@
 import type {
   DraftSavePayload,
+  ItemOutcomeResult,
   ReportSectionReadModel,
+  ResolvePlanInput,
+  RestorePlanInput,
   SubmitSectionPayload,
 } from "@customreport/shared";
 
@@ -18,6 +21,8 @@ export interface LeadFormReopenInput {
 export interface LeadFormWritePending {
   readonly saveDraft: boolean;
   readonly submit: boolean;
+  readonly resolvePlan: boolean;
+  readonly restorePlan: boolean;
   readonly fillFrom: boolean;
   readonly revoke: boolean;
   readonly reopen: boolean;
@@ -43,6 +48,8 @@ export interface LeadFormWritePort {
   readonly submit: (
     input: SubmitSectionPayload,
   ) => Promise<ReportSectionReadModel>;
+  readonly resolvePlan: (input: ResolvePlanInput) => Promise<ItemOutcomeResult>;
+  readonly restorePlan: (input: RestorePlanInput) => Promise<ItemOutcomeResult>;
   readonly fillFrom: (
     input: LeadFormFillFromInput,
   ) => Promise<{ readonly success: true; readonly copiedItems: number }>;

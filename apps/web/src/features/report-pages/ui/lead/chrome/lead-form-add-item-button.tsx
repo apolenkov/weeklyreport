@@ -5,29 +5,29 @@ import type { ReactNode } from "react";
 import type { LeadFormLoadedViewModel } from "../../../../report-sections";
 import { LeadFormAddButton } from "./lead-form-add-button";
 
-export const NO_PRODUCTS_ASSIGNED_MESSAGE =
-  "No products assigned — contact admin";
+export const NO_RECORD_PARENTS_MESSAGE =
+  "No products or activities assigned — contact admin";
 
 type AssignedProducts = LeadFormLoadedViewModel["products"];
 
-// Disabled with an explanatory title when the lead owns no product, so the
-// dead-end is legible instead of an inert button.
 function AddItemButton({
   onClick,
   products,
+  activities,
 }: {
   readonly onClick: () => void;
   readonly products: AssignedProducts;
+  readonly activities: LeadFormLoadedViewModel["activityOptions"];
 }) {
-  const firstProduct = products[0];
+  const parent = products[0] ?? activities[0];
   return (
     <LeadFormAddButton
       onClick={onClick}
-      disabled={products.length === 0}
+      disabled={parent === undefined}
       title={
-        firstProduct !== undefined
-          ? `Add item to ${firstProduct.name}`
-          : NO_PRODUCTS_ASSIGNED_MESSAGE
+        parent !== undefined
+          ? `Add item to ${parent.name}`
+          : NO_RECORD_PARENTS_MESSAGE
       }
     >
       + Add Item
@@ -41,8 +41,13 @@ export function addItemAction(
   readOnly: boolean,
   onClick: () => void,
   products: AssignedProducts,
+  activities: LeadFormLoadedViewModel["activityOptions"],
 ): ReactNode {
   return readOnly ? null : (
-    <AddItemButton onClick={onClick} products={products} />
+    <AddItemButton
+      onClick={onClick}
+      products={products}
+      activities={activities}
+    />
   );
 }

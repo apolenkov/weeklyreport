@@ -5,7 +5,6 @@ import {
   buildOwnDecisionRow,
   buildOwnItemRow,
   buildOwnRiskRow,
-  collapseAuthorSeries,
   type GridAuthor,
   type GridColumnKey,
   type GridColumns,
@@ -13,6 +12,11 @@ import {
   hasText,
   sortCellRows,
 } from "./slide-grid-rows";
+import {
+  attributedRecordAuthor,
+  type SlideRecordAttribution,
+  type SlideSourceRecord,
+} from "./slide-record-attribution";
 
 export type CellBuckets = GridColumns;
 
@@ -84,10 +88,11 @@ function bucketsByKey(
 }
 
 type ResolveProductKey = (productId: string | null | undefined) => string;
+type ResolveAuthor = (record: SlideSourceRecord) => GridAuthor;
 
 function ownItemPlacements(
   section: ReportSectionReadModel,
-  owner: GridAuthor,
+  owner: ResolveAuthor,
   resolveProductKey: ResolveProductKey,
 ): readonly RowPlacement[] {
   return section.items
@@ -97,14 +102,14 @@ function ownItemPlacements(
         resolveProductKey(item.projectId),
         item.activityId,
         item.type === "current" ? "current" : "next",
-        buildOwnItemRow(item, owner, index),
+        buildOwnItemRow(item, owner(item), index),
       ),
     );
 }
 
 function ownRiskPlacements(
   section: ReportSectionReadModel,
-  owner: GridAuthor,
+  owner: ResolveAuthor,
   resolveProductKey: ResolveProductKey,
 ): readonly RowPlacement[] {
   return section.risks
@@ -114,14 +119,14 @@ function ownRiskPlacements(
         resolveProductKey(risk.projectId),
         risk.activityId,
         "risks",
-        buildOwnRiskRow(risk, owner, index),
+        buildOwnRiskRow(risk, owner(risk), index),
       ),
     );
 }
 
 function ownDecisionPlacements(
   section: ReportSectionReadModel,
-  owner: GridAuthor,
+  owner: ResolveAuthor,
   resolveProductKey: ResolveProductKey,
 ): readonly RowPlacement[] {
   return section.decisions
@@ -131,7 +136,7 @@ function ownDecisionPlacements(
         resolveProductKey(decision.productId),
         decision.activityId,
         "decisions",
-        buildOwnDecisionRow(decision, owner, index),
+        buildOwnDecisionRow(decision, owner(decision), index),
       ),
     );
 }
@@ -155,6 +160,7 @@ function foreignPlacements(
 // Own unknown-product rows fold into Shared; foreign rows remain limited to
 // products already present in the deck.
 export function collectCells(input: {
+  readonly recordAttribution?: SlideRecordAttribution | undefined;
   readonly section: ReportSectionReadModel;
   readonly owner: GridAuthor;
   readonly foreignRows: readonly ForeignGridRow[];
@@ -162,15 +168,19 @@ export function collectCells(input: {
   readonly sharedCardId: string;
 }): CollectedCells {
   const { section, owner, foreignRows, knownProductIds, sharedCardId } = input;
+  const recordOwner: ResolveAuthor = (record) =>
+    input.recordAttribution
+      ? attributedRecordAuthor(record, input.recordAttribution)
+      : owner;
   const resolveProductKey: ResolveProductKey = (productId) =>
     productId != null && knownProductIds.has(productId)
       ? productId
       : sharedCardId;
 
   const placements = [
-    ...ownItemPlacements(section, owner, resolveProductKey),
-    ...ownRiskPlacements(section, owner, resolveProductKey),
-    ...ownDecisionPlacements(section, owner, resolveProductKey),
+    ...ownItemPlacements(section, recordOwner, resolveProductKey),
+    ...ownRiskPlacements(section, recordOwner, resolveProductKey),
+    ...ownDecisionPlacements(section, recordOwner, resolveProductKey),
     ...foreignPlacements(foreignRows, knownProductIds),
   ];
 
@@ -185,10 +195,9 @@ export function collectCells(input: {
 export function finalizeColumns(
   cells: CellBuckets,
   authorOrder: ReadonlyMap<string, number>,
-  hiddenAuthorId?: string,
 ): GridColumns {
   const finalize = (rows: readonly GridRow[]): readonly GridRow[] =>
-    collapseAuthorSeries(sortCellRows(rows, authorOrder), hiddenAuthorId);
+    sortCellRows(rows, authorOrder);
   return {
     current: finalize(cells.current),
     next: finalize(cells.next),

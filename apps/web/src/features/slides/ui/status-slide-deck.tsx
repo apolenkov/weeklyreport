@@ -5,10 +5,14 @@ import { type ReactNode, type RefObject, useRef } from "react";
 
 import { useFullscreen } from "../../../shared/hooks/browser/use-fullscreen";
 import type { SectionSlideModel } from "../model/section-slide-contracts";
-import { DeckFullscreenOverlay } from "./deck-fullscreen-overlay";
+import {
+  DeckFullscreenOverlay,
+  DeckToolbarControls,
+} from "./deck-fullscreen-overlay";
 import { HeadSlideCarousel } from "./head-slide-carousel";
 import { SlideArticle } from "./slide-article";
 import type { SlideRowActivateHandler } from "./slide-article-rows";
+import { SlideEmptyState } from "./slide-empty-state";
 
 interface StatusSlideDeckProps {
   readonly slides: readonly SectionSlideModel[];
@@ -16,6 +20,13 @@ interface StatusSlideDeckProps {
   readonly onSelect: (index: number) => void;
   readonly mode: "lead" | "head";
   readonly toolbar?: ReactNode | undefined;
+  // The head shell may host fullscreen state and its toggle in the context
+  // toolbar. When omitted, the standalone head deck owns both locally.
+  readonly deckRef?: RefObject<HTMLDivElement | null> | undefined;
+  readonly fullscreenToggleRef?:
+    RefObject<HTMLButtonElement | null> | undefined;
+  readonly isFullscreen?: boolean | undefined;
+  readonly onToggle?: (() => void) | undefined;
   readonly heroControls?: ReactNode | undefined;
   readonly onRowActivate?: SlideRowActivateHandler | undefined;
 }
@@ -83,19 +94,6 @@ function HeadSlideFrame({
         key={`${slide.id}:${String(slide.pageIndex ?? 0)}`}
         slide={slide}
       />
-    </div>
-  );
-}
-
-function EmptyDeckState() {
-  return (
-    <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] px-6 py-16 text-center">
-      <p className="text-base font-semibold text-[var(--color-foreground)]">
-        No slides available
-      </p>
-      <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-        There is no report section in the current scope.
-      </p>
     </div>
   );
 }
@@ -194,7 +192,10 @@ function DeckBody(props: DeckBodyProps) {
       {props.toolbar ? <div>{props.toolbar}</div> : null}
 
       {!slide ? (
-        <EmptyDeckState />
+        <SlideEmptyState
+          title="No slides available"
+          message="There is no report section in the current scope."
+        />
       ) : (
         <>
           {isLead ? (
@@ -226,9 +227,38 @@ export function StatusSlideDeck(props: StatusSlideDeckProps) {
   // Hoisted to the persistent root (never remounted by `selectedIndex`
   // changes) so arrow-key/carousel navigation cannot tear down the actual
   // fullscreened element. Disabled on the lead branch, which owns its own
-  // fullscreen instance in `LeadSlidesClient` (single-listener invariant).
-  const frameRef = useRef<HTMLDivElement>(null);
-  const fullscreen = useFullscreen(frameRef, frameRef, props.mode !== "lead");
+  // fullscreen instance in `LeadSlidesClient`, and on a controlled Head
+  // branch (single-listener invariant).
+  const internalFrameRef = useRef<HTMLDivElement>(null);
+  const internalFullscreenToggleRef = useRef<HTMLButtonElement>(null);
+  const frameRef = props.deckRef ?? internalFrameRef;
+  const fullscreenToggleRef =
+    props.fullscreenToggleRef ?? internalFullscreenToggleRef;
+  const externalFullscreen =
+    props.mode === "head" &&
+    props.isFullscreen !== undefined &&
+    props.onToggle !== undefined;
+  const localFullscreen = useFullscreen(
+    frameRef,
+    fullscreenToggleRef,
+    props.mode !== "lead" && !externalFullscreen,
+  );
+  const fullscreen = externalFullscreen
+    ? { isFullscreen: props.isFullscreen, toggle: props.onToggle }
+    : localFullscreen;
+  const toolbar =
+    props.mode === "head" && !externalFullscreen ? (
+      <div className="flex items-center justify-between gap-3">
+        {props.toolbar}
+        <DeckToolbarControls
+          isFullscreen={fullscreen.isFullscreen}
+          onToggle={fullscreen.toggle}
+          toggleRef={fullscreenToggleRef}
+        />
+      </div>
+    ) : (
+      props.toolbar
+    );
 
   return (
     <section
@@ -245,7 +275,12 @@ export function StatusSlideDeck(props: StatusSlideDeckProps) {
         props.onSelect,
       )}
     >
-      <DeckBody {...props} frameRef={frameRef} fullscreen={fullscreen} />
+      <DeckBody
+        {...props}
+        toolbar={toolbar}
+        frameRef={frameRef}
+        fullscreen={fullscreen}
+      />
     </section>
   );
 }

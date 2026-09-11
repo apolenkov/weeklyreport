@@ -1,4 +1,5 @@
 import type { PeriodStatus } from "@customreport/shared";
+import { shortNameFromName } from "@customreport/shared";
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 
@@ -43,6 +44,7 @@ export function ReportAccordionBody({
   focusedProductId,
   scrollTargetProductId,
   focusedLeadId,
+  overviewNavigationEpochs,
   review,
 }: {
   readonly scope: "product" | "lead";
@@ -51,18 +53,31 @@ export function ReportAccordionBody({
   readonly focusedProductId: string | undefined;
   readonly scrollTargetProductId: string | undefined;
   readonly focusedLeadId: string | undefined;
+  readonly overviewNavigationEpochs: ReadonlyMap<string, number>;
   readonly review: ReviewModel["context"];
 }) {
-  const renderAccordion = (report: WeeklyProductReport) => (
-    <ProductAccordion
-      key={report.id}
-      report={report}
-      defaultOpen={focusedProductId === report.id}
-      highlighted={focusedProductId === report.id}
-      scrollIntoViewOnHighlight={scrollTargetProductId === report.id}
-      review={review}
-    />
-  );
+  const renderAccordion = (report: WeeklyProductReport, leadId?: string) => {
+    const targetsInstance = leadId === undefined || focusedLeadId === leadId;
+    const targetsProduct = focusedProductId === report.id && targetsInstance;
+    return (
+      <ProductAccordion
+        key={report.id}
+        report={report}
+        instanceRootId={
+          leadId === undefined
+            ? undefined
+            : `report-lead-${leadId}-product-${report.id}`
+        }
+        defaultOpen={targetsProduct}
+        highlighted={targetsProduct}
+        scrollIntoViewOnHighlight={
+          scrollTargetProductId === report.id && targetsInstance
+        }
+        navigationEpoch={overviewNavigationEpochs.get(report.id) ?? 0}
+        review={review}
+      />
+    );
+  };
 
   if (scope === "lead") {
     return (
@@ -74,15 +89,20 @@ export function ReportAccordionBody({
             groupId={group.id}
             groupName={group.name}
             focused={focusedLeadId === group.id}
+            navigationEpoch={overviewNavigationEpochs.get(group.id) ?? 0}
           >
-            {group.products.map(renderAccordion)}
+            {group.products.map((report) => renderAccordion(report, group.id))}
           </LeadSection>
         ))}
       </div>
     );
   }
 
-  return <div className="space-y-3">{products.map(renderAccordion)}</div>;
+  return (
+    <div className="space-y-3">
+      {products.map((report) => renderAccordion(report))}
+    </div>
+  );
 }
 
 // React-driven scroll/focus for a lead section targeted from the overview band —
@@ -91,14 +111,17 @@ function LeadSection({
   groupId,
   groupName,
   focused,
+  navigationEpoch,
   children,
 }: {
   readonly groupId: string;
   readonly groupName: string;
   readonly focused: boolean;
+  readonly navigationEpoch: number | undefined;
   readonly children: ReactNode;
 }) {
   const ref = useRef<HTMLElement | null>(null);
+  const groupDisplayName = shortNameFromName(groupName);
   useEffect(() => {
     if (!focused) return;
     const handle = window.setTimeout(() => {
@@ -108,7 +131,7 @@ function LeadSection({
       if (el instanceof HTMLElement) el.focus({ preventScroll: true });
     }, SCROLL_INTO_VIEW_DELAY_MS);
     return () => window.clearTimeout(handle);
-  }, [focused, groupId]);
+  }, [focused, groupId, navigationEpoch]);
 
   return (
     <section
@@ -116,11 +139,11 @@ function LeadSection({
       id={`report-lead-${groupId}`}
       data-feedback-anchor={`report-lead-${groupId}`}
       tabIndex={-1}
-      aria-label={groupName}
+      aria-label={groupDisplayName}
       className="space-y-3 scroll-mt-4 rounded-[var(--radius-sm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2"
     >
       <h2 className="font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary)]">
-        {groupName}
+        {groupDisplayName}
       </h2>
       {children}
     </section>

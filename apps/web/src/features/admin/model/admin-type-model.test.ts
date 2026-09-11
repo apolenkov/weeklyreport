@@ -54,7 +54,7 @@ describe("EMPTY_ACTIVITY_FORM — absent group stays null", () => {
     expect(EMPTY_ACTIVITY_FORM.groupId).toBeNull();
   });
 
-  it("parses jira accounts into a readonly collection", () => {
+  it("trims, uppercases, and preserves the order of Jira accounts", () => {
     const accounts = parseJiraAccounts(" ACME , PLATFORM ");
     expect(accounts).toEqual(["ACME", "PLATFORM"]);
   });

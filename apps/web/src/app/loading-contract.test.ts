@@ -62,7 +62,7 @@ export function hasSuspenseBoundaryInSource(
         ts.isJsxElement(node) &&
         node.openingElement.tagName.getText(file) === "Suspense" &&
         hasFallback(node) &&
-        containsJsxElement(node, owner)
+        node.children.some((child) => containsJsxElement(child, owner))
       ) {
         found = true;
       }
@@ -127,7 +127,9 @@ describe("App Router loading ownership — predicate probes", () => {
       export default function Page() {
         return (
           <>
-            <Suspense fallback={<Loading />} />
+            <Suspense fallback={<HeadReportShell />}>
+              <OtherContent />
+            </Suspense>
             <HeadReportShell />
           </>
         );

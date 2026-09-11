@@ -4,12 +4,13 @@ import { ConfirmDeleteDialog } from "../../../../shared/ui/dialogs/confirm-delet
 import type { UnifiedActivityEntry } from "../../model/activity/unified-activity-entry";
 import type { UnifiedActivityEditState } from "../../model/activity/use-unified-activity-editing";
 import type { KanbanItem, Product, RiskEntry } from "../../model/types";
-import { ItemEditDialog } from "../item-edit-dialog";
+import { ItemEditDialog, type ItemEditDialogProps } from "../item-edit-dialog";
 
 interface UnifiedActivityDialogsProps {
   readonly editState: UnifiedActivityEditState | null;
   readonly pendingDelete: UnifiedActivityEntry | null;
   readonly products: readonly Product[];
+  readonly activities?: ItemEditDialogProps["activities"];
   readonly currentUserName?: string | undefined;
   readonly stagesForProduct?:
     ((productId: string) => readonly string[]) | undefined;
@@ -25,6 +26,7 @@ export function UnifiedActivityDialogs({
   editState,
   pendingDelete,
   products,
+  activities,
   currentUserName,
   stagesForProduct,
   ownPeriodRanks,
@@ -36,13 +38,14 @@ export function UnifiedActivityDialogs({
 }: UnifiedActivityDialogsProps) {
   return (
     <>
-      {/* The EXISTING per-type item dialog; `week` follows the record's
-          physical type so the status chips match its storage. */}
+      {/* `week` follows the record's physical type so the status controls
+          match its storage. */}
       <ItemEditDialog
         key={editState?.seq ?? 0}
         open={editState !== null}
         item={editState?.entry.item ?? null}
         products={products}
+        activities={activities}
         week={editState?.entry.week ?? "current"}
         currentUserName={currentUserName}
         stagesForProduct={stagesForProduct}

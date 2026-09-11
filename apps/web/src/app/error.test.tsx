@@ -22,6 +22,10 @@ describe("ErrorBoundary — error.tsx", () => {
 
     // role=alert makes the boundary an assertive live region for screen readers.
     expect(screen.getByRole("alert")).toHaveTextContent("Something went wrong");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "An unexpected error interrupted this page. Try again to continue.",
+    );
+    expect(screen.queryByText(/Your data is safe/i)).toBeNull();
     const btn = screen.getByRole("button", { name: "Try again" });
     expect(btn).toHaveAttribute("type", "button");
   });

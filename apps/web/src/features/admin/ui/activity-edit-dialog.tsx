@@ -63,19 +63,20 @@ export function ActivityEditDialog({
         <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
           {editingActivity ? "Edit Activity" : "Add Activity"}
         </h3>
-        <ActivityFormFields
-          form={form}
-          onFormChange={onFormChange}
-          groups={groups}
-          products={products}
-          groupLockedByLeads={(editingActivity?.leadIds.length ?? 0) > 0}
-        />
+        <fieldset disabled={isSaving} className="contents">
+          <ActivityFormFields
+            form={form}
+            onFormChange={onFormChange}
+            groups={groups}
+            products={products}
+            groupLockedByLeads={(editingActivity?.leadIds.length ?? 0) > 0}
+          />
+        </fieldset>
         <AdminEntityDialogActions
           saveLabel={editingActivity !== null ? "Save Changes" : "Add Activity"}
           canSave={canSave}
           isSaving={isSaving}
           onClose={closeIfIdle}
-          saveDisabled={isSaving || !canSave}
         />
       </form>
     </DialogSurface>

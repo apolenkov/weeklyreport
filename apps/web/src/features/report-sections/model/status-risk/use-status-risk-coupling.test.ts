@@ -94,7 +94,7 @@ describe("computeCoupling", () => {
     // Simulate what handleSubmit does: filter out empty rows before coupling check.
     const allRisks = [
       makeRisk("r1", "p1", ["planning"]), // filled + staged
-      { ...makeRisk("r2", "p1", ["Planning"]), text: "", mitigation: "" }, // empty, not committed
+      { ...makeRisk("r2", "p1", []), text: "", mitigation: "" }, // incomplete and stage-less, not committed
     ];
     const result = computeCoupling(products, committedRisks(allRisks));
     // Only r1 remains after filter; r1 has stageNames → no coupling violation

@@ -19,6 +19,7 @@ interface RecordTextareaFieldProps {
   readonly focusOnMount?: boolean | undefined;
   readonly textareaRef?: Ref<HTMLTextAreaElement> | undefined;
   readonly hint?: ReactNode | undefined;
+  readonly characterLimit?: number | undefined;
   // When true, wrapper and textarea take flex-1 to fill a multi-field column;
   // false for a lone field with no height to share.
   readonly fill?: boolean | undefined;
@@ -81,9 +82,11 @@ export function RecordTextareaField({
   focusOnMount = false,
   textareaRef,
   hint,
+  characterLimit,
   fill = true,
 }: RecordTextareaFieldProps) {
   const errorId = `${id}-error`;
+  const limitId = `${id}-limit`;
   const ownRef = useRef<HTMLTextAreaElement | null>(null);
   // React writes the element into this ref (the caller's when given, else the
   // field's own), so the focus effect only ever READS .current.
@@ -107,13 +110,28 @@ export function RecordTextareaField({
         ref={elementRef}
         required={required}
         aria-invalid={error ? "true" : "false"}
-        aria-describedby={error ? errorId : undefined}
+        aria-describedby={
+          [
+            characterLimit === undefined ? undefined : limitId,
+            error ? errorId : undefined,
+          ]
+            .filter(Boolean)
+            .join(" ") || undefined
+        }
         className={textareaClassName(fill, Boolean(error))}
         style={minHeightStyle(minHeightPx)}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
       />
+      {characterLimit !== undefined && (
+        <p
+          id={limitId}
+          className="mt-1 text-xs text-[var(--color-muted-foreground)]"
+        >
+          {value.length} / {characterLimit} characters
+        </p>
+      )}
       {error && <FieldErrorMessage id={errorId} error={error} />}
     </div>
   );

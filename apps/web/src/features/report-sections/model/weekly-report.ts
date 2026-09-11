@@ -1,6 +1,6 @@
-// Maps weeklyReport.get into page slices; re-slices leadSections by projectId
-// and re-exports types/groupers so existing importers stay stable.
+// Maps weeklyReport.get into aggregate and per-lead presentation slices.
 import type { WeeklyReportReadModel } from "@customreport/shared";
+import { shortNameFromName } from "@customreport/shared";
 
 import {
   formatPeriodRangeWithYear,
@@ -41,11 +41,13 @@ function buildWeeklyReportPeriod(
     id: api.reportId,
     periodStart: api.periodStart,
     reportId: api.reportId,
+    periodState: api.periodState,
     periodStatus: api.periodStatus,
     archived: api.archived,
     weekLabel: api.weekLabel ?? formatWeekLabel(api.periodStart),
     dateRange: formatPeriodRangeWithYear(api.periodStart, api.periodEnd),
-    isCurrent: api.periodStatus !== "published",
+    // This projection has no actual-active identity, so it cannot claim Current.
+    isCurrent: false,
   };
 }
 
@@ -77,6 +79,42 @@ export function mapWeeklyReport(
 
 type LeadSection = WeeklyReportReadModel["leadSections"][number];
 type LeadProject = LeadSection["projects"][number];
+type LeadProductCandidate = Pick<
+  LeadProject,
+  "projectId" | "projectName" | "trafficLight"
+>;
+
+function leadProductCandidates(
+  section: LeadSection,
+  projectNames: ReadonlyMap<string, string>,
+): LeadProductCandidate[] {
+  const candidates = new Map<string, LeadProductCandidate>(
+    section.projects.map((project) => [project.projectId, project]),
+  );
+  const addReferenced = (projectId: string, projectName?: string) => {
+    if (candidates.has(projectId)) return;
+    candidates.set(projectId, {
+      projectId,
+      projectName: projectNames.get(projectId) ?? projectName ?? "Unknown",
+      trafficLight: null,
+    });
+  };
+
+  section.referencedProjects.forEach((project) =>
+    addReferenced(project.projectId, project.projectName),
+  );
+  section.items.forEach((item) => {
+    if (item.projectId) addReferenced(item.projectId);
+  });
+  section.risks.forEach((risk) => {
+    if (risk.projectId) addReferenced(risk.projectId);
+  });
+  section.decisions.forEach((decision) => {
+    if (decision.productId) addReferenced(decision.productId);
+  });
+
+  return [...candidates.values()];
+}
 
 // Records the lead filed for one of their products, already sliced by project.
 interface LeadProductRecords {
@@ -91,14 +129,15 @@ interface LeadProductRecords {
 
 function buildLeadProductReport(
   section: LeadSection,
-  proj: LeadProject,
+  proj: LeadProductCandidate,
   records: LeadProductRecords,
   escalations: WeeklyReportReadModel["escalations"],
 ): WeeklyProductReport {
   const status = trafficToProductStatus(proj.trafficLight);
   const attention = escalations.find(
-    (e) =>
-      e.productName === proj.projectName && e.leadName === section.authorName,
+    (escalation) =>
+      escalation.productId === proj.projectId &&
+      escalation.authorId === section.authorId,
   );
 
   return {
@@ -108,7 +147,7 @@ function buildLeadProductReport(
     name: proj.projectName,
     status,
     statusLabel: statusLabel(status, "print"),
-    leads: section.authorName,
+    leads: shortNameFromName(section.authorName),
     ...(attention
       ? {
           needsAttention: attention.description,
@@ -144,7 +183,10 @@ export function mapWeeklyReportLeadGroups(
       const decisionsByProject = groupDecisionsByProject(single, projectNames);
       const prioritiesByProject = groupPrioritiesByProject(single);
 
-      const products: WeeklyProductReport[] = section.projects
+      const products: WeeklyProductReport[] = leadProductCandidates(
+        section,
+        projectNames,
+      )
         .map((proj) =>
           buildLeadProductReport(
             section,

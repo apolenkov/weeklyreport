@@ -123,6 +123,7 @@ vi.mock("../../../../report-sections", async () => {
     }) => ({
       marker: draftSection.marker,
       products: [],
+      activityOptions: [],
       ownRisks: [],
       currentWeekItems: [],
       nextWeekItems: [],
@@ -221,6 +222,9 @@ describe("LeadForm report-key transitions", () => {
     rendered.rerender(<LeadForm reportId="report-b" />);
 
     await waitFor(() => {
+      expect(
+        screen.getByRole("status", { name: "Loading report form" }),
+      ).toBeInTheDocument();
       expect(screen.queryByText("Report A body")).not.toBeInTheDocument();
     });
     expect(screen.queryByText("Report A marker")).toBeNull();

@@ -21,8 +21,8 @@ function productItem(
     text: "row",
     author: "Тимлид 1",
     priorityRank: null,
-    ...overrides,
     stageNames: [],
+    ...overrides,
   };
 }
 
@@ -40,8 +40,8 @@ function activityItem(
     text: "row",
     author: "Тимлид 1",
     priorityRank: null,
-    ...overrides,
     stageNames: [],
+    ...overrides,
   };
 }
 

@@ -3,10 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import proxy, { config } from "./src/proxy";
 
-// ---------------------------------------------------------------------------
 // Helpers — build a request-shaped stub that satisfies the subset of
 // NextRequest the proxy actually touches.
-// ---------------------------------------------------------------------------
 
 type CookieJar = Record<string, string>;
 
@@ -34,9 +32,7 @@ function makeRequest(
   } as unknown as import("next/server").NextRequest;
 }
 
-// ---------------------------------------------------------------------------
 // Env helpers
-// ---------------------------------------------------------------------------
 
 const ORIGINAL_AUTH_STUB = process.env.NEXT_PUBLIC_AUTH_STUB;
 
@@ -54,11 +50,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
-describe("apps/web/proxy.ts — auth guard", () => {
+describe("apps/web/src/proxy.ts — auth guard", () => {
   it("redirects to /?next=<path> when no session cookie and AUTH_STUB!=true", () => {
     const req = makeRequest("/lead/report");
     const response = proxy(req);
@@ -143,7 +135,7 @@ describe("apps/web/proxy.ts — auth guard", () => {
   });
 });
 
-describe("apps/web/proxy.ts — config matcher", () => {
+describe("apps/web/src/proxy.ts — config matcher", () => {
   it("exports a config object with every protected route matcher", () => {
     expect(config).toBeDefined();
     expect(Array.isArray(config.matcher)).toBe(true);

@@ -8,16 +8,26 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 
+import { leadFormGenerationOf } from "../lead-form/lead-form-generation";
 import type { LeadFormWritePort } from "../lead-form/lead-form-write-port";
 import { sectionToDraftPayload } from "../lead-section-draft-payload";
-import { encodeAutosaveComparisonKey } from "./autosave-stable-stringify";
-import type { DraftSaveContent } from "./autosave-types";
+import type {
+  AutosaveController,
+  AutosaveSaveReceipt,
+  AutosaveSnapshot,
+  DraftSaveContent,
+} from "./autosave-types";
+import { encodeDraftSaveComparisonKey } from "./draft-save-comparison-key";
 import {
   classifyReseed,
   type PendingSaveEcho,
   reconcileSavedIdentities,
+  reconcileSavedPayloadIdentities,
+  reconcileServerOutcomeMetadata,
+  savedRecordIdentityPairs,
 } from "./lead-form-draft-reconcile";
 import { useLeadFormAutosave } from "./use-lead-form-autosave";
 
@@ -27,9 +37,14 @@ type SetDraftSection = Dispatch<SetStateAction<ReportSectionReadModel | null>>;
 // Mutation stays inside the owning hook so no caller writes through a ref.
 interface SaveEchoLedger {
   readonly lastKey: () => string | null;
+  readonly lastRevision: () => string | null;
   readonly find: (serverDraftKey: string) => PendingSaveEcho | undefined;
   readonly record: (echo: PendingSaveEcho) => void;
-  readonly consume: (serverDraftKey: string) => void;
+  readonly consume: (serverDraftKey: string, revision: string) => void;
+}
+
+function sectionRevision(section: ReportSectionReadModel): string {
+  return `${section.reportSectionId}:${section.version}`;
 }
 
 function withoutEcho(
@@ -42,9 +57,11 @@ function withoutEcho(
 function useSaveEchoLedger(): SaveEchoLedger {
   const echoesRef = useRef<readonly PendingSaveEcho[]>([]);
   const lastKeyRef = useRef<string | null>(null);
+  const lastRevisionRef = useRef<string | null>(null);
   return useMemo(
     () => ({
       lastKey: () => lastKeyRef.current,
+      lastRevision: () => lastRevisionRef.current,
       find: (serverDraftKey) =>
         echoesRef.current.find(
           (pending) => pending.serverDraftKey === serverDraftKey,
@@ -55,13 +72,28 @@ function useSaveEchoLedger(): SaveEchoLedger {
           echo,
         ];
       },
-      consume: (serverDraftKey) => {
+      consume: (serverDraftKey, revision) => {
         lastKeyRef.current = serverDraftKey;
+        lastRevisionRef.current = revision;
         echoesRef.current = withoutEcho(echoesRef.current, serverDraftKey);
       },
     }),
     [],
   );
+}
+
+function findExactSaveEcho(
+  ledger: SaveEchoLedger,
+  serverDraftKey: string,
+  revision: string,
+  sameSection: boolean,
+): PendingSaveEcho | undefined {
+  const candidate = ledger.find(serverDraftKey);
+  return sameSection &&
+    candidate &&
+    sectionRevision(candidate.savedSection) === revision
+    ? candidate
+    : undefined;
 }
 
 function reconcileOnSave(
@@ -88,19 +120,41 @@ function reconcileWithEcho(echo: PendingSaveEcho) {
 function useSaveEchoRecorder(
   ledger: SaveEchoLedger,
   setDraftSection: SetDraftSection,
+  setLastSaveReceipt: Dispatch<SetStateAction<AutosaveSaveReceipt | null>>,
 ) {
   return useCallback(
     (
       savedSection: ReportSectionReadModel,
       persistedPayload: DraftSaveContent,
+      queuedPayload: DraftSaveContent | null,
     ) => {
-      const serverDraftKey = encodeAutosaveComparisonKey(
-        sectionToDraftPayload(savedSection),
-      );
+      const savedPayload = sectionToDraftPayload(savedSection);
+      const serverDraftKey = encodeDraftSaveComparisonKey(savedPayload);
       ledger.record({ persistedPayload, savedSection, serverDraftKey });
+      setLastSaveReceipt((current) => ({
+        sequence: (current?.sequence ?? 0) + 1,
+        generation: leadFormGenerationOf(savedSection),
+        reportSectionId: savedSection.reportSectionId,
+        version: savedSection.version,
+        itemIdentities: savedRecordIdentityPairs(
+          persistedPayload.items,
+          savedPayload.items,
+        ),
+      }));
       setDraftSection(reconcileOnSave(savedSection, persistedPayload));
+      return {
+        savedKey: serverDraftKey,
+        queuedPayload:
+          queuedPayload === null
+            ? null
+            : reconcileSavedPayloadIdentities(
+                queuedPayload,
+                savedPayload,
+                persistedPayload,
+              ),
+      };
     },
-    [ledger, setDraftSection],
+    [ledger, setDraftSection, setLastSaveReceipt],
   );
 }
 
@@ -108,7 +162,8 @@ interface ServerSectionReseedArgs {
   readonly serverSection: ReportSectionReadModel | null | undefined;
   readonly dirty: boolean;
   readonly ledger: SaveEchoLedger;
-  readonly setVersionSafe: (next: number) => void;
+  readonly acceptVersion: (sectionId: string, next: number) => boolean;
+  readonly autosave: AutosaveController;
   readonly setIsSubmitted: Dispatch<SetStateAction<boolean>>;
   readonly setDraftSection: SetDraftSection;
   readonly handleConflict: () => void;
@@ -120,43 +175,66 @@ function useServerSectionReseed({
   serverSection,
   dirty,
   ledger,
-  setVersionSafe,
+  acceptVersion,
+  autosave,
   setIsSubmitted,
   setDraftSection,
   handleConflict,
 }: ServerSectionReseedArgs) {
   useEffect(() => {
     if (!serverSection) return;
-    setVersionSafe(serverSection.version);
+    if (!acceptVersion(serverSection.reportSectionId, serverSection.version)) {
+      return;
+    }
     setIsSubmitted(serverSection.status === "submitted");
 
-    const serverDraftKey = encodeAutosaveComparisonKey(
+    const serverDraftKey = encodeDraftSaveComparisonKey(
       sectionToDraftPayload(serverSection),
     );
-    const saveEcho = ledger.find(serverDraftKey);
+    const revision = sectionRevision(serverSection);
+    const sameSection =
+      ledger.lastRevision()?.startsWith(`${serverSection.reportSectionId}:`) ??
+      false;
+    const saveEcho = findExactSaveEcho(
+      ledger,
+      serverDraftKey,
+      revision,
+      sameSection,
+    );
     const trigger = classifyReseed(
       serverDraftKey,
-      ledger.lastKey(),
-      dirty,
+      sameSection ? ledger.lastKey() : null,
+      dirty && sameSection,
       saveEcho !== undefined,
     );
-    if (trigger === "unchanged") return;
+    if (trigger === "unchanged") {
+      if (ledger.lastRevision() !== revision) {
+        ledger.consume(serverDraftKey, revision);
+        setDraftSection((current) =>
+          reconcileServerOutcomeMetadata(current, serverSection),
+        );
+      }
+      return;
+    }
 
-    ledger.consume(serverDraftKey);
+    ledger.consume(serverDraftKey, revision);
     if (trigger === "save-echo" && dirty && saveEcho) {
+      autosave.primeBaseline(serverDraftKey);
       setDraftSection(reconcileWithEcho(saveEcho));
       return;
     }
     if (trigger === "external-dirty") handleConflict();
+    autosave.adoptBaseline(serverDraftKey, "read");
     setDraftSection(serverSection);
   }, [
+    acceptVersion,
+    autosave,
     dirty,
     handleConflict,
     ledger,
     serverSection,
     setDraftSection,
     setIsSubmitted,
-    setVersionSafe,
   ]);
 }
 
@@ -166,9 +244,9 @@ interface DraftServerSyncArgs {
   readonly reportSectionId: string | null;
   readonly payload: DraftSaveContent | null;
   readonly enabled: boolean;
-  readonly initialSavedKey: string | null;
   readonly version: number;
   readonly setVersionSafe: (next: number) => void;
+  readonly acceptVersion: (sectionId: string, next: number) => boolean;
   readonly setIsSubmitted: Dispatch<SetStateAction<boolean>>;
   readonly setDraftSection: SetDraftSection;
   readonly handleConflict: () => void;
@@ -182,21 +260,26 @@ export function useDraftServerSync({
   reportSectionId,
   payload,
   enabled,
-  initialSavedKey,
   version,
   setVersionSafe,
+  acceptVersion,
   setIsSubmitted,
   setDraftSection,
   handleConflict,
 }: DraftServerSyncArgs) {
   const ledger = useSaveEchoLedger();
-  const onSaved = useSaveEchoRecorder(ledger, setDraftSection);
+  const [lastSaveReceipt, setLastSaveReceipt] =
+    useState<AutosaveSaveReceipt | null>(null);
+  const onSaved = useSaveEchoRecorder(
+    ledger,
+    setDraftSection,
+    setLastSaveReceipt,
+  );
   const autosave = useLeadFormAutosave({
     writePort,
     reportSectionId,
     payload,
     enabled,
-    initialSavedKey,
     version,
     onVersionChange: setVersionSafe,
     onSaved,
@@ -206,10 +289,35 @@ export function useDraftServerSync({
     serverSection,
     dirty: autosave.dirty,
     ledger,
-    setVersionSafe,
+    acceptVersion,
+    autosave,
     setIsSubmitted,
     setDraftSection,
     handleConflict,
   });
-  return autosave;
+  const adoptServerSection = useCallback(
+    (section: ReportSectionReadModel) => {
+      const savedKey = encodeDraftSaveComparisonKey(
+        sectionToDraftPayload(section),
+      );
+      ledger.consume(savedKey, sectionRevision(section));
+      autosave.adoptBaseline(savedKey, "write");
+      setIsSubmitted(section.status === "submitted");
+      setDraftSection(section);
+    },
+    [autosave, ledger, setDraftSection, setIsSubmitted],
+  );
+
+  return useMemo<{
+    readonly autosave: AutosaveSnapshot;
+    readonly lastSaveReceipt: AutosaveSaveReceipt | null;
+    readonly adoptServerSection: (section: ReportSectionReadModel) => void;
+  }>(
+    () => ({
+      autosave,
+      lastSaveReceipt,
+      adoptServerSection,
+    }),
+    [adoptServerSection, autosave, lastSaveReceipt],
+  );
 }

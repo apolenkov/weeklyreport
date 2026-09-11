@@ -13,7 +13,16 @@ import { SessionContext } from "../../../../../shared/lib/auth/session-provider"
 import { logClientError } from "../../../../../shared/lib/errors/client-error-reporting";
 import { TRPCProxyContext } from "../../../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
+import { makeLeadFormSectionFixture } from "./lead-form-test-fixtures";
 import { useLeadFormData } from "./use-lead-form-data";
+import type { LeadFormRequiredReadState } from "./use-lead-form-required-reads";
+
+function retryRequiredRead(state: LeadFormRequiredReadState) {
+  if (state.status !== "error") {
+    throw new Error("Expected a failed required read");
+  }
+  return state.retry();
+}
 
 const navState: {
   replace: ReturnType<typeof vi.fn>;
@@ -50,7 +59,7 @@ const PINNED_REPORT_ID = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
 
 const VISIBILITY_KEY = `leadRecordVisibility:${USER_ID}:${REPORT_ID}`;
 
-// Node 22 + jsdom in this repo do not provide window.localStorage, so the
+// jsdom in this test environment does not expose window.localStorage, so the
 // persisted-visibility path is exercised against an in-memory Storage stub
 // (same recipe as use-record-visibility.test.ts).
 function installStorageStub(): void {
@@ -77,21 +86,11 @@ function installStorageStub(): void {
 }
 
 function makeSection() {
-  return {
+  return makeLeadFormSectionFixture({
     reportSectionId: SECTION_ID,
     reportId: REPORT_ID,
     authorId: USER_ID,
-    authorName: "Test Lead",
-    authorRole: "lead" as const,
-    status: "draft" as const,
-    submittedAt: null,
-    projects: [],
-    items: [],
-    risks: [],
-    decisions: [],
-    priorities: [],
-    activities: [],
-  };
+  });
 }
 
 function makeSession(
@@ -124,6 +123,9 @@ function buildTRPC(
   const byPeriodSpy = vi.fn();
   const contentSpy = vi.fn();
   const { proxy } = createMockTRPC([
+    { path: ["leadForm", "assistant"], mutation: true },
+    { path: ["leadForm", "resolvePlan"], mutation: true },
+    { path: ["leadForm", "restorePlan"], mutation: true },
     { path: ["reports", "getActive"], query: active },
     { path: ["reports", "myHistory"], query: { items: [] } },
     {
@@ -288,21 +290,21 @@ describe("useLeadFormData — query enablement", () => {
       },
     });
 
-    await waitFor(() => expect(result.current.byPeriodError).toBe(true));
+    await waitFor(() => expect(result.current.readState.status).toBe("error"));
     expect(result.current.byPeriodData).toBeUndefined();
-    expect(result.current.byPeriodFetching).toBe(false);
+    expect(result.current.readState).not.toMatchObject({ isRetrying: true });
 
     shouldFail = false;
     let retry!: Promise<unknown>;
     let duplicateRetry!: Promise<unknown>;
     act(() => {
-      retry = result.current.retrySection();
-      duplicateRetry = result.current.retrySection();
+      retry = retryRequiredRead(result.current.readState);
+      duplicateRetry = retryRequiredRead(result.current.readState);
     });
     expect(duplicateRetry).toBe(retry);
     await waitFor(() => {
-      expect(result.current.byPeriodError).toBe(true);
-      expect(result.current.byPeriodFetching).toBe(true);
+      expect(result.current.readState.status).toBe("error");
+      expect(result.current.readState).toMatchObject({ isRetrying: true });
     });
     expect(byPeriodSpy).toHaveBeenCalledTimes(2);
 
@@ -316,8 +318,8 @@ describe("useLeadFormData — query enablement", () => {
       await retry;
     });
     await waitFor(() => {
-      expect(result.current.byPeriodError).toBe(false);
-      expect(result.current.byPeriodFetching).toBe(false);
+      expect(result.current.readState.status).toBe("ready");
+      expect(result.current.readState).not.toMatchObject({ isRetrying: true });
       expect(result.current.byPeriodData).toBeDefined();
     });
     expect(logClientError).toHaveBeenCalledTimes(1);
@@ -329,14 +331,14 @@ describe("useLeadFormData — query enablement", () => {
     );
     const { result, byPeriodSpy } = renderData({ byPeriodQueryFn });
 
-    await waitFor(() => expect(result.current.byPeriodError).toBe(true));
+    await waitFor(() => expect(result.current.readState.status).toBe("error"));
     await act(async () => {
-      await result.current.retrySection();
+      await retryRequiredRead(result.current.readState);
     });
 
     await waitFor(() => {
-      expect(result.current.byPeriodError).toBe(true);
-      expect(result.current.byPeriodFetching).toBe(false);
+      expect(result.current.readState.status).toBe("error");
+      expect(result.current.readState).not.toMatchObject({ isRetrying: true });
     });
     expect(byPeriodSpy).toHaveBeenCalledTimes(2);
     expect(logClientError).toHaveBeenCalledTimes(2);
@@ -373,6 +375,20 @@ describe("useLeadFormData — full-content gating", () => {
     expect(result.current.recordVisibility).toBe("everyone");
     expect(result.current.toolbarVisibility).toBe("mine");
     expect(contentSpy).not.toHaveBeenCalled();
+  });
+
+  it("treats a repeated slides author as absent", async () => {
+    window.localStorage.setItem(VISIBILITY_KEY, "everyone");
+    navState.searchParams = new URLSearchParams(
+      `authorId=${OTHER_USER_ID}&authorId=${USER_ID}`,
+    );
+    const { result, contentSpy } = renderData({ isSlidesMode: true });
+
+    await waitFor(() =>
+      expect(contentSpy).toHaveBeenCalledWith({ reportId: REPORT_ID }),
+    );
+    expect(result.current.isForeignSlidesDeck).toBe(false);
+    expect(result.current.toolbarVisibility).toBe("everyone");
   });
 });
 
@@ -458,6 +474,19 @@ describe("useLeadFormData — redirects", () => {
     );
   });
 
+  it("omits repeated feedback parameters from the canonical redirect", async () => {
+    navState.searchParams = new URLSearchParams(
+      "feedback=first&feedback=second&agentationSession=session_123",
+    );
+    renderData({ redirectToCanonical: true });
+
+    await waitFor(() =>
+      expect(navState.replace).toHaveBeenCalledWith(
+        `/lead/report/${REPORT_ID}?agentationSession=session_123`,
+      ),
+    );
+  });
+
   it("does not redirect when the route is already addressed", async () => {
     const { result } = renderData({
       pinnedReportId: PINNED_REPORT_ID,
@@ -494,6 +523,29 @@ describe("useLeadFormData — redirects", () => {
           name: "Test Admin",
           email: "admin@example.com",
           role: "admin",
+        },
+      }),
+    });
+
+    await waitFor(() =>
+      expect(navState.replace).toHaveBeenCalledWith(
+        `/head/report/${encodeURIComponent(PINNED_REPORT_ID)}`,
+      ),
+    );
+  });
+
+  it("omits repeated author and feedback parameters from a head redirect", async () => {
+    navState.searchParams = new URLSearchParams(
+      `authorId=${OTHER_USER_ID}&authorId=${USER_ID}&feedback=first&feedback=second`,
+    );
+    renderData({
+      pinnedReportId: PINNED_REPORT_ID,
+      session: makeSession({
+        user: {
+          id: USER_ID,
+          name: "Test Head",
+          email: "head@example.com",
+          role: "head",
         },
       }),
     });

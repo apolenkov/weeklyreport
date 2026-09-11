@@ -1,3 +1,5 @@
+import type { PeriodState } from "@customreport/shared";
+
 import {
   formatPeriodRangeWithYear,
   formatWeekLabel,
@@ -14,6 +16,7 @@ export function toNavigationPeriod(args: {
   readonly periodEnd: Date | string;
   readonly archived: boolean;
   readonly isCurrent: boolean;
+  readonly periodState?: PeriodState | undefined;
 }): ReportPeriod {
   return {
     id: args.id,
@@ -25,5 +28,8 @@ export function toNavigationPeriod(args: {
     dateRange: formatPeriodRangeWithYear(args.periodStart, args.periodEnd),
     archived: args.archived,
     isCurrent: args.isCurrent,
+    ...(args.periodState === undefined
+      ? {}
+      : { periodState: args.periodState }),
   };
 }

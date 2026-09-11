@@ -11,6 +11,13 @@ const CHIP_IDLE_BORDER = "var(--color-border-strong)";
 // No free Blocked chip — alarm is derived from a covering risk (Risks & Blockers).
 export const CURRENT_WEEK_CHOICES: readonly ChipChoice<ItemStatus>[] = [
   {
+    value: "planned",
+    label: "Not started",
+    bg: CSS_MUTED,
+    color: CSS_MUTED_FG,
+    border: CHIP_IDLE_BORDER,
+  },
+  {
     value: IN_PROGRESS_STATUS,
     label: "! In Progress",
     bg: "var(--color-success)",

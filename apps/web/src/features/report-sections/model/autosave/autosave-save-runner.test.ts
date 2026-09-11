@@ -6,13 +6,10 @@ import { makeAutosavePayload } from "./use-lead-form-autosave-harness";
 
 function makeRefs(overrides: Partial<AutosaveRefs> = {}): AutosaveRefs {
   return {
+    generation: Symbol("test-generation"),
     version: 1,
     lastSaved: "",
-    inFlight: "",
-    inFlightPayload: null,
-    inFlightSection: null,
-    queuedKey: null,
-    queuedPayload: null,
+    queued: null,
     debounceTimer: null,
     payload: makeAutosavePayload(),
     sectionId: "sec-1",
@@ -55,6 +52,6 @@ describe("runForceSave — failure ownership", () => {
     const setState = vi.fn();
     await runForceSave({ getRefs: () => refs, setState });
     expect(refs.mutateAsync).not.toHaveBeenCalled();
-    expect(refs.queuedPayload).not.toBeNull();
+    expect(refs.queued).not.toBeNull();
   });
 });

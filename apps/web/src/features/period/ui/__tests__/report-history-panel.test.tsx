@@ -26,6 +26,7 @@ describe("HistoryPanel desktop empty composition", () => {
         entries={[] satisfies readonly HistoryEntry[]}
         includeArchive={false}
         isLoading={false}
+        failure={null}
         summaryTitle="History Summary"
         isLead={false}
       />,

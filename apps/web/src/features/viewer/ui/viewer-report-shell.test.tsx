@@ -10,6 +10,19 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { makeQueryState } from "../../../test-utils/query-state";
 
+const { mockCurrentRole } = vi.hoisted(() => ({
+  mockCurrentRole: vi.fn<() => "admin" | "head" | "lead" | "viewer" | null>(
+    () => "viewer",
+  ),
+}));
+
+vi.mock("../../../shared/lib/auth/session-provider", () => ({
+  useSession: () => {
+    const role = mockCurrentRole();
+    return { user: role === null ? null : { role } };
+  },
+}));
+
 vi.mock("../../slides", () => ({
   HeadSlidesClient: (props: { enableActivity?: boolean }) => (
     <div
@@ -135,6 +148,8 @@ import { ViewerReportShell } from "./viewer-report-shell";
 const REPORT_ID = "test-report-001";
 
 afterEach(() => {
+  mockCurrentRole.mockReset();
+  mockCurrentRole.mockReturnValue("viewer");
   mockPathname.mockReturnValue("/reports/test-report-001");
   mockSearchParams.mockReturnValue(new URLSearchParams());
   mockReplace.mockReset();
@@ -183,19 +198,65 @@ describe("ViewerReportShell — read-only toolbar parity", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("renders exactly one Export-PDF, in the document-action row (viewer gets the real export)", () => {
-    render(<ViewerReportShell reportId={REPORT_ID} mode="form" />);
-    const exportButtons = screen.getAllByRole("button", {
-      name: /export pdf/i,
-    });
-    expect(exportButtons).toHaveLength(1);
-    const documentActions = screen.getByRole("group", {
-      name: "Document actions",
-    });
-    expect(
-      within(documentActions).getByRole("button", { name: /export pdf/i }),
-    ).toBeInTheDocument();
-  });
+  it.each(["head", "admin", "viewer"] as const)(
+    "renders one published Export-PDF for the %s role in the document-action row",
+    (role) => {
+      mockCurrentRole.mockReturnValue(role);
+      render(<ViewerReportShell reportId={REPORT_ID} mode="form" />);
+      const exportButtons = screen.getAllByRole("button", {
+        name: /export pdf/i,
+      });
+      expect(exportButtons).toHaveLength(1);
+      const documentActions = screen.getByRole("group", {
+        name: "Document actions",
+      });
+      expect(
+        within(documentActions).getByRole("button", { name: /export pdf/i }),
+      ).toBeEnabled();
+    },
+  );
+
+  it.each(["lead", null] as const)(
+    "hides Export PDF when the caller role is %s",
+    (role) => {
+      mockCurrentRole.mockReturnValue(role);
+      render(<ViewerReportShell reportId={REPORT_ID} mode="form" />);
+
+      expect(
+        screen.queryByRole("button", { name: /export pdf/i }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it.each(["head", "admin", "viewer"] as const)(
+    "keeps the non-published export explanation for the %s role",
+    (role) => {
+      mockCurrentRole.mockReturnValue(role);
+      vi.mocked(useQuery).mockImplementation((options) => {
+        if (options.queryKey[0] === "weeklyReport.get") {
+          return makeQueryState({
+            data: {
+              status: "active",
+              reportId: REPORT_ID,
+              periodStart: "2026-06-08T00:00:00.000Z",
+              periodEnd: "2026-06-14T00:00:00.000Z",
+              periodStatus: "reopened",
+            },
+          });
+        }
+        return makeQueryState({ data: { entries: [] } });
+      });
+
+      render(<ViewerReportShell reportId={REPORT_ID} mode="form" />);
+
+      expect(
+        screen.getByRole("button", { name: /export pdf/i }),
+      ).toBeDisabled();
+      expect(
+        screen.getByText("Publish or re-publish the report to export PDF."),
+      ).toBeInTheDocument();
+    },
+  );
 
   it("renders NO mutation affordance (no Publish / Lock / Reopen)", () => {
     render(<ViewerReportShell reportId={REPORT_ID} mode="form" />);
@@ -469,6 +530,21 @@ describe("ViewerReportShell — one-shot race recovery", () => {
 
     expect(mockReplace).not.toHaveBeenCalled();
   });
+
+  it.each([
+    { query: "source=status&source=history&recovery=0", recover: false },
+    { query: "source=status&recovery=1&recovery=0", recover: true },
+  ])(
+    "treats repeated status-entry markers as absent: $query",
+    ({ query, recover }) => {
+      mockSearchParams.mockReturnValue(new URLSearchParams(query));
+      vi.mocked(useQuery).mockImplementation(makeGetErrorImpl());
+      render(<ViewerReportShell reportId={REPORT_ID} mode="form" />);
+      if (recover)
+        expect(mockReplace).toHaveBeenCalledWith("/reports/latest?recovery=1");
+      else expect(mockReplace).not.toHaveBeenCalled();
+    },
+  );
 
   it("does NOT redirect on a direct/History NOT_FOUND (no source=status)", () => {
     mockSearchParams.mockReturnValue(new URLSearchParams());

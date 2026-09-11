@@ -1,5 +1,7 @@
 import type {
   CanonicalStatus,
+  ItemOutcomeEvent,
+  ItemResolution,
   LeadStatusOverviewOutput,
   ReportSectionReadModel,
 } from "@customreport/shared";
@@ -7,9 +9,12 @@ import { MS_PER_WEEK } from "@customreport/shared";
 
 import { formatPeriodRangeWithYear } from "../../../shared/lib/format/format-date";
 import {
+  hasNextCommitment,
+  hasStatusOverviewParent,
+} from "./status-overview-items";
+import {
   buildStatusOverviewUnit,
   collectOrderedStatusOverviewUnitIds,
-  hasStatusOverviewParent,
 } from "./status-overview-projector";
 
 export type StatusOverviewSection = Pick<
@@ -44,6 +49,7 @@ export interface StatusOverviewProjectionSource {
 export type StatusOverviewUnitKind = "product" | "activity";
 
 export interface StatusOverviewEditTarget {
+  readonly focusNextStep?: boolean | undefined;
   readonly recordId: string;
   readonly source: "current" | "next";
 }
@@ -62,6 +68,14 @@ export interface StatusOverviewItem {
   readonly stableId: string | null;
   readonly text: string;
   readonly tag: string;
+  readonly stageNames: readonly string[];
+  readonly pausedReason: string | null;
+  /** Server-owned cancellation metadata; absent on legacy read models. */
+  readonly resolution?: ItemResolution | null | undefined;
+  /** Server-owned append-only outcome audit; absent on legacy read models. */
+  readonly outcomeHistory?: readonly ItemOutcomeEvent[] | undefined;
+  readonly canResolve: boolean;
+  readonly canRestore: boolean;
   readonly workflowStatus: ReportSectionReadModel["items"][number]["workflowStatus"];
   readonly continuity: "continued" | "unplanned" | null;
 }
@@ -199,13 +213,22 @@ export function projectStatusOverview(
     sourceCounts: {
       previouslyPlanned:
         previousSection?.items.filter(
-          (item) => item.type === "next" && hasStatusOverviewParent(item),
+          (item) =>
+            hasNextCommitment(item) &&
+            item.resolution == null &&
+            hasStatusOverviewParent(item),
         ).length ?? 0,
       currentWeek: input.currentSection.items.filter(
-        (item) => item.type === "current" && hasStatusOverviewParent(item),
+        (item) =>
+          item.type === "current" &&
+          item.resolution == null &&
+          hasStatusOverviewParent(item),
       ).length,
       nextWeek: input.currentSection.items.filter(
-        (item) => item.type === "next" && hasStatusOverviewParent(item),
+        (item) =>
+          hasNextCommitment(item) &&
+          item.resolution == null &&
+          hasStatusOverviewParent(item),
       ).length,
     },
   };

@@ -1,14 +1,8 @@
 "use client";
 
-import type { ReportSectionReadModel } from "@customreport/shared";
-
 import type { SectionReviewRow } from "../model/section-review-rows";
 import { isSubmittedReviewableSection } from "../model/section-review-rows";
 import { SectionVerdictControl } from "./section-verdict-control";
-
-function statusLabel(status: ReportSectionReadModel["status"]): string {
-  return status === "submitted" ? "Submitted" : "Draft";
-}
 
 // In-report section verdicts for designated reviewers; no publish/lock control
 // (viewer-reviewers judge only). Self-suppresses when nothing is reviewable.
@@ -40,14 +34,14 @@ export function ReviewVerdictBand({
               {section.authorName}
             </span>
             <span className="text-[11px] text-[var(--color-muted-foreground)]">
-              {statusLabel(section.status)}
+              Submitted
             </span>
           </span>
           <SectionVerdictControl
             reportSectionId={section.reportSectionId}
             version={section.version}
             reviews={section.reviews}
-            canReview={isSubmittedReviewableSection(section)}
+            canReview
             onMutated={onMutated}
           />
         </div>

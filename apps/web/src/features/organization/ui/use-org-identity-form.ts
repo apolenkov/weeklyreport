@@ -108,16 +108,19 @@ export function useOrgIdentityForm() {
       orgQuery.isError,
     ),
     editShortName: (shortName: string) => {
+      if (updateMutation.isPending) return;
       updateMutation.reset();
       setSubmitted(undefined);
       setDraft({ shortName, fullName: value.fullName });
     },
     editFullName: (fullName: string) => {
+      if (updateMutation.isPending) return;
       updateMutation.reset();
       setSubmitted(undefined);
       setDraft({ shortName: value.shortName, fullName });
     },
     save: () => {
+      if (updateMutation.isPending) return;
       const input = {
         shortName: value.shortName.trim(),
         fullName: value.fullName.trim(),

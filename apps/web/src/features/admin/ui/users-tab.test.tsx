@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -16,8 +17,8 @@ import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import type { AdminGroupView, AdminUserView } from "../model/admin-types";
 import { UsersTab } from "./users-tab";
 
-// Silence toast calls — the mutations resolve async; these tests don't wait
-// for them, so keeping stubs here prevents unhandled-call noise.
+// Mutation behavior is asserted through callbacks and UI state; toast output is
+// stubbed so those assertions stay focused on the Users flow.
 vi.mock("sonner", () => ({
   toast: {
     success: vi.fn(),
@@ -83,7 +84,7 @@ function renderTab(
   }
 
   render(<UsersTab users={users} groups={groups} />, { wrapper: Wrapper });
-  return { qc, captured };
+  return { qc, captured, proxy };
 }
 
 function openDialog() {
@@ -163,6 +164,33 @@ describe("UsersTab — dialog keyboard and click behavior", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
+  it("locks the submitted draft while pending and unlocks it unchanged after failure", async () => {
+    const deferred = Promise.withResolvers<unknown>();
+    const { captured } = renderTab([], [GROUP]);
+    const saveUser = expectDefined(captured["admin.saveUser"]);
+    saveUser.mutationFn.mockReturnValue(deferred.promise);
+    const user = userEvent.setup();
+
+    openDialog();
+    const lastName = screen.getByLabelText(/^last name$/i);
+    await user.type(lastName, "Petrov");
+    await user.type(screen.getByLabelText(/^first name$/i), "Ivan");
+    await user.type(screen.getByLabelText(/^email$/i), "ivan@example.com");
+    await user.click(screen.getByRole("button", { name: "Add User" }));
+
+    await screen.findByRole("button", { name: "Saving…" });
+    expect(lastName).toBeDisabled();
+    await user.click(lastName);
+    await user.keyboard("Unsent replacement");
+    expect(lastName).toHaveValue("Petrov");
+    expect(saveUser.calls[0]).toMatchObject({ lastName: "Petrov" });
+
+    act(() => deferred.reject(new Error("save failed")));
+    await waitFor(() => expect(lastName).toBeEnabled());
+    expect(lastName).toHaveValue("Petrov");
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
   it("keeps the long user form scrollable inside the viewport", () => {
     renderTab();
 
@@ -217,7 +245,7 @@ describe("UsersTab — invalidation contract", () => {
   });
 
   it("Save user invalidates admin.getOrganization by its specific queryKey", async () => {
-    const { qc, captured } = renderTab([], [GROUP]);
+    const { qc, captured, proxy } = renderTab([], [GROUP]);
     expectDefined(captured["admin.saveUser"]).mutationFn.mockResolvedValue(
       undefined,
     );
@@ -232,15 +260,9 @@ describe("UsersTab — invalidation contract", () => {
 
     await user.click(screen.getByRole("button", { name: /^add user$/i }));
 
-    // invalidateAdmin fires synchronously inside onSuccess; wait for it.
-    const orgQueryKey = [["admin", "getOrganization"]];
+    const organizationFilter = proxy.admin.getOrganization.pathFilter();
     await waitFor(() => {
-      const calledKeys = invalidateSpy.mock.calls.map((c) =>
-        JSON.stringify(c[0]),
-      );
-      expect(
-        calledKeys.some((k) => k.includes(JSON.stringify(orgQueryKey))),
-      ).toBe(true);
+      expect(invalidateSpy).toHaveBeenCalledWith(organizationFilter);
     });
   });
 });
@@ -292,6 +314,103 @@ describe("UsersTab — group change confirmation", () => {
     );
   });
 
+  it("gives the nested confirmation exclusive Tab and first-Escape ownership", async () => {
+    const otherGroup: AdminGroupView = {
+      ...GROUP,
+      id: "g2",
+      name: "Beta",
+    };
+    const { captured } = renderTab([USER], [GROUP, otherGroup]);
+    const saveUser = expectDefined(captured["admin.saveUser"]);
+    const user = userEvent.setup();
+
+    await user.click(
+      screen.getByRole("button", { name: /edit ivanova alice/i }),
+    );
+    const lastName = screen.getByLabelText(/^last name$/i);
+    await user.clear(lastName);
+    await user.type(lastName, "Petrova");
+    await user.selectOptions(screen.getByLabelText(/owning group/i), "g2");
+    await user.click(screen.getByRole("button", { name: /save changes/i }));
+
+    const confirmation = screen.getByRole("alertdialog", {
+      name: /change this user's group/i,
+    });
+    const cancel = within(confirmation).getByRole("button", {
+      name: /cancel/i,
+    });
+    const confirm = within(confirmation).getByRole("button", {
+      name: /change group/i,
+    });
+    await waitFor(() => expect(cancel).toHaveFocus());
+    expect(saveUser.mutationFn).not.toHaveBeenCalled();
+
+    await user.tab();
+    expect(confirm).toHaveFocus();
+    await user.tab();
+    expect(cancel).toHaveFocus();
+
+    await user.keyboard("{Escape}");
+
+    expect(
+      screen.queryByRole("alertdialog", {
+        name: /change this user's group/i,
+      }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: /edit user/i })).toBeVisible();
+    expect(screen.getByLabelText(/^last name$/i)).toHaveValue("Petrova");
+    expect(screen.getByLabelText(/owning group/i)).toHaveValue("g2");
+    expect(saveUser.mutationFn).not.toHaveBeenCalled();
+
+    await user.keyboard("{Escape}");
+
+    expect(
+      screen.queryByRole("dialog", { name: /edit user/i }),
+    ).not.toBeInTheDocument();
+    expect(saveUser.mutationFn).not.toHaveBeenCalled();
+  });
+
+  it("assigns the only active group when a groupless viewer becomes a lead", async () => {
+    const viewer: AdminUserView = {
+      ...USER,
+      role: "viewer",
+      groupId: null,
+      department: "No owning group",
+    };
+    const { captured } = renderTab([viewer], [GROUP]);
+    const saveUser = expectDefined(captured["admin.saveUser"]);
+    saveUser.mutationFn.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+
+    await user.click(
+      screen.getByRole("button", { name: /edit ivanova alice/i }),
+    );
+    await user.selectOptions(screen.getByLabelText(/^role$/i), "lead");
+
+    const groupSelect = screen.getByLabelText(/owning group/i);
+    expect(groupSelect).toBeDisabled();
+    expect(groupSelect).toHaveValue(GROUP.id);
+
+    await user.click(screen.getByRole("button", { name: /save changes/i }));
+    const confirm = screen.getByRole("alertdialog", {
+      name: /change this user's group/i,
+    });
+    await user.click(
+      within(confirm).getByRole("button", { name: /change group/i }),
+    );
+
+    await waitFor(() =>
+      expect(saveUser.mutationFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: viewer.id,
+          role: "lead",
+          reportingGroupId: GROUP.id,
+        }),
+        expect.anything(),
+      ),
+    );
+  });
+
   it("keeps an archived selected group visible while allowing a switch to an active group", async () => {
     const archivedGroup: AdminGroupView = {
       ...GROUP,
@@ -331,13 +450,12 @@ describe("UsersTab — focus management", () => {
     vi.clearAllMocks();
   });
 
-  it("last-name input receives focus when the dialog opens (autoFocus)", () => {
+  it("last-name input receives focus when the dialog opens", () => {
     renderTab();
     openDialog();
 
     const input = screen.getByLabelText(/^last name$/i);
-    // React honours autoFocus on conditionally-mounted elements in jsdom;
-    // dropping the autoFocus wiring in production code fails this assert.
+    // The shared dialog focus hook targets the first enabled form control.
     expect(input).toHaveFocus();
   });
 

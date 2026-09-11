@@ -8,6 +8,7 @@ import { TRPCProxyContext } from "../../../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
 import { LeadReportAssistantStore } from "../../lead-report-assistant-store";
 import { LeadForm } from "./lead-form";
+import { makeLeadFormSectionFixture } from "./lead-form-test-fixtures";
 
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -37,15 +38,11 @@ function makeSection(
     status?: "draft" | "submitted";
   } = {},
 ) {
-  return {
+  return makeLeadFormSectionFixture({
     reportSectionId: opts.reportSectionId ?? ACTIVE_SECTION_ID,
     reportId: opts.reportId ?? ACTIVE_REPORT_ID,
     authorId: AUTHOR_ID,
-    authorName: "Test Lead",
-    authorRole: "lead" as const,
     status: opts.status ?? ("draft" as const),
-    submittedAt: null,
-    referencedProjects: [],
     projects: [
       {
         projectId: PROJECT_ID,
@@ -67,12 +64,7 @@ function makeSection(
         ],
       },
     ],
-    items: [],
-    risks: [],
-    decisions: [],
-    priorities: [],
-    activities: [],
-  };
+  });
 }
 
 function buildHarness(opts: {
@@ -156,6 +148,9 @@ function buildHarness(opts: {
       path: ["leadForm", "requestReopen"],
       mutation: true,
     },
+    { path: ["leadForm", "assistant"], mutation: true },
+    { path: ["leadForm", "resolvePlan"], mutation: true },
+    { path: ["leadForm", "restorePlan"], mutation: true },
     {
       path: ["leadForm", "crossAuthors"],
       query: [],
@@ -282,7 +277,8 @@ describe("LeadForm — addressable URLs", () => {
               email: "head@example.test",
               role: "head",
             },
-            // Null org: brand hydration is not under test.
+            // Organization is intentionally absent to exercise fallback brand
+            // rendering in this redirect-focused scenario.
             organization: null,
             isLoading: false,
             isAuthenticated: true,
@@ -313,8 +309,9 @@ describe("LeadForm — addressable URLs", () => {
         <LeadForm reportId={PAST_REPORT_ID} />
       </Wrapper>,
     );
-    // History entry for PAST_REPORT_ID → Apr 7–13, 2026, ISO Week 15. No
-    // session provider → organization falls back to the neutral placeholder.
+    // History entry for PAST_REPORT_ID → Apr 7–13, 2026, ISO Week 15. The
+    // provided session has no organization, so title branding falls back to
+    // neutral placeholder text.
     await waitFor(() => expect(document.title).toContain("Week 15"));
     expect(document.title).toContain("Apr 7–13, 2026");
     expect(document.title).toContain("Organization");

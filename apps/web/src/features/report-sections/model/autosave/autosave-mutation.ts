@@ -33,21 +33,23 @@ export function useSaveDraftMutation(
         onSaved: deps.args.onSaved,
         onConflict: deps.args.onConflict,
         reportSectionId: deps.args.reportSectionId,
-        invalidate: () => undefined,
         reportError: (message) => toast.error(message),
       }),
     [deps],
   );
 
   const mutateAsync = useCallback<AutosaveMutationHandle["mutateAsync"]>(
-    async (payload) => {
+    async (request) => {
       setPendingCount((count) => count + 1);
       try {
-        const saved = await deps.args.writePort.saveDraft(payload);
-        handlers.onSuccess(saved);
+        const saved = await deps.args.writePort.saveDraft({
+          ...request.payload,
+          version: request.version,
+        });
+        handlers.onSuccess(saved, request);
         return saved;
       } catch (error: unknown) {
-        handlers.onError(error);
+        handlers.onError(error, request.generation);
         throw error;
       } finally {
         setPendingCount((count) => count - 1);
@@ -56,8 +58,8 @@ export function useSaveDraftMutation(
     [deps.args.writePort, handlers],
   );
   const mutate = useCallback<AutosaveMutationHandle["mutate"]>(
-    (payload) => {
-      void mutateAsync(payload).catch(() => undefined);
+    (request) => {
+      void mutateAsync(request).catch(() => undefined);
     },
     [mutateAsync],
   );

@@ -28,7 +28,22 @@ function baseReport(
 describe("buildWeeklyReportPageView — authorId scroll target", () => {
   it("keeps a submitted empty section publishable", () => {
     const view = buildWeeklyReportPageView(
-      baseReport({ portfolioOverview: [], leadSections: [] }),
+      baseReport({
+        portfolioOverview: [],
+        leadSections: [
+          {
+            reportSectionId: SECTION_A,
+            authorId: AUTHOR_A,
+            status: "submitted",
+            submittedAt: new Date("2026-04-14T09:00:00Z"),
+            projects: [],
+            items: [],
+            risks: [],
+            decisions: [],
+            activities: [],
+          },
+        ],
+      }),
       {
         scope: "product",
         currentRole: "head",

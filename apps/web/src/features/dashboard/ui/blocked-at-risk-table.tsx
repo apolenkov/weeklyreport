@@ -110,13 +110,13 @@ function GroupPanel({
 }) {
   return (
     <div
-      className="grid transition-[grid-template-rows] duration-300"
+      className="grid transition-[grid-template-rows] duration-300 motion-reduce:transition-none"
       style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
     >
       <div className="min-h-0 overflow-hidden">
         <div className="space-y-3 px-4 pb-4 pt-4">
           {groups.map((group) => (
-            <ProductCard key={group.product} group={group} />
+            <ProductCard key={group.productId} group={group} />
           ))}
         </div>
       </div>

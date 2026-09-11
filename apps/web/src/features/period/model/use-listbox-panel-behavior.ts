@@ -68,6 +68,7 @@ export function useListboxPanelBehavior({
     onClose: () => setOpen(false),
     containerRef: triggerRef,
     triggerRef,
+    mode: "nonmodal",
   });
 
   // The panel is portalled, so a press inside either the trigger or the panel

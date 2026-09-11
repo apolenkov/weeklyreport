@@ -18,9 +18,8 @@ export function useHeaderActionsVisibility() {
     return () => observer.disconnect();
   }, [target]);
 
-  // No sentinel (or no IntersectionObserver) ⇒ visible, derived at render
-  // instead of set in the effect. A stale `observedVisible` from a previous
-  // sentinel is harmless: the observer callback fires immediately on observe.
+  // Without a sentinel or observer, actions remain visible. After observing a
+  // target, the last measurement remains until the asynchronous callback runs.
   const headerActionsVisible =
     !target || typeof IntersectionObserver === "undefined"
       ? true

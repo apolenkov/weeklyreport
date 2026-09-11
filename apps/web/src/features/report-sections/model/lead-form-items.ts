@@ -26,6 +26,7 @@ function buildLeadItemCommon(
     stageNames: item.stageNames,
     priorityRank: item.priorityRank ?? null,
     pausedReason: item.pausedReason ?? null,
+    nextStepText: item.nextStepText ?? null,
   };
 }
 

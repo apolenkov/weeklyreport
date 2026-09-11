@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
@@ -23,7 +24,7 @@ describe("TrafficLightHistoryChart", () => {
     expect(screen.getByText(/no published periods/i)).toBeInTheDocument();
   });
 
-  it("renders populated data through an accessible table", () => {
+  it("renders populated data through an accessible table and a named chart", async () => {
     installChartBounds();
     const consoleWarn = vi
       .spyOn(console, "warn")
@@ -48,6 +49,44 @@ describe("TrafficLightHistoryChart", () => {
     expect(screen.getByRole("cell", { name: "Green" })).toBeVisible();
     expect(screen.getByRole("cell", { name: "No data" })).toBeVisible();
     expect(consoleWarn).not.toHaveBeenCalled();
+    const chart = screen.getByRole("application", {
+      name: "Traffic-light history",
+    });
+    expect(chart.closest('[aria-hidden="true"]')).toBeNull();
+    await userEvent.tab();
+    expect(chart).toHaveFocus();
+  });
+
+  it("shows domain status labels when navigating points with the keyboard", async () => {
+    installChartBounds();
+    render(
+      <TrafficLightHistoryChart
+        periods={["2026-08-16", "2026-08-23", "2026-08-30"]}
+        rows={[
+          {
+            projectId: "product-1",
+            projectName: "Alpha",
+            statuses: ["red", "yellow", "green"],
+          },
+        ]}
+      />,
+    );
+    const chart = screen.getByRole("application", {
+      name: "Traffic-light history",
+    });
+    await userEvent.tab();
+    expect(chart).toHaveFocus();
+    expect(
+      within(await screen.findByRole("status")).getByText("Red"),
+    ).toBeVisible();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(
+      within(await screen.findByRole("status")).getByText("Yellow"),
+    ).toBeVisible();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(
+      within(await screen.findByRole("status")).getByText("Green"),
+    ).toBeVisible();
   });
 
   it("keeps a null status cell null in the series point", () => {
@@ -79,7 +118,7 @@ describe("LeadVelocityChart", () => {
     expect(screen.getByText(/no velocity data/i)).toBeInTheDocument();
   });
 
-  it("renders populated data through an accessible table", () => {
+  it("renders populated data through an accessible table and a named chart", async () => {
     installChartBounds();
     const consoleWarn = vi
       .spyOn(console, "warn")
@@ -109,6 +148,14 @@ describe("LeadVelocityChart", () => {
     expect(screen.getByRole("columnheader", { name: "Alex" })).toBeVisible();
     expect(screen.getByRole("cell", { name: "3" })).toBeVisible();
     expect(consoleWarn).not.toHaveBeenCalled();
+    const chart = screen.getByRole("application", { name: "Lead velocity" });
+    expect(chart.closest('[aria-hidden="true"]')).toBeNull();
+    await userEvent.tab();
+    expect(chart).toHaveFocus();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(
+      within(await screen.findByRole("status")).getByText("3"),
+    ).toBeVisible();
   });
 });
 
@@ -186,13 +233,21 @@ describe("buildTrafficLightHistoryChartData", () => {
 
 describe("PeriodComparisonChart", () => {
   it("renders the empty-state message when no rows", () => {
-    render(<PeriodComparisonChart rows={[]} />);
+    render(
+      <PeriodComparisonChart
+        rows={[]}
+        periodA="2026-08-23"
+        periodB="2026-08-30"
+      />,
+    );
     expect(screen.getByText(/no comparison data/i)).toBeInTheDocument();
   });
 
   it("renders null cells as en-dash and zero cells as 0", () => {
     render(
       <PeriodComparisonChart
+        periodA="2026-08-23"
+        periodB="2026-08-30"
         rows={[
           {
             projectId: "11111111-1111-4111-8111-111111111111",
@@ -213,27 +268,47 @@ describe("PeriodComparisonChart", () => {
     expect(zeros.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("renders positive delta with + prefix and red colour class", () => {
-    render(
-      <PeriodComparisonChart
-        rows={[
-          {
-            projectId: "11111111-1111-4111-8111-111111111111",
-            projectName: "Alpha",
-            statusA: "green",
-            statusB: "red",
-            riskCountA: 1,
-            riskCountB: 4,
-            riskDelta: 3,
-          },
-        ]}
-      />,
-    );
-    // Scoped to the delta cell itself, not container-wide, so this cannot
-    // pass on the unrelated statusB="red" status cell if deltaClass's
-    // red-mapping breaks. The semantic destructive token stands in for the
-    // raw red utility so theme swaps cannot silently break the assertion.
-    const deltaCell = screen.getByText("+3");
-    expect(deltaCell.className).toContain("text-[var(--color-destructive)]");
-  });
+  it.each([
+    { periodA: "2026-08-23", periodB: "2026-08-30" },
+    { periodA: "2026-08-30", periodB: "2026-09-06" },
+  ])(
+    "identifies $periodA → $periodB and labels the positive risk change",
+    ({ periodA, periodB }) => {
+      render(
+        <PeriodComparisonChart
+          periodA={periodA}
+          periodB={periodB}
+          rows={[
+            {
+              projectId: "11111111-1111-4111-8111-111111111111",
+              projectName: "Alpha",
+              statusA: "green",
+              statusB: "red",
+              riskCountA: 1,
+              riskCountB: 4,
+              riskDelta: 3,
+            },
+          ]}
+        />,
+      );
+      // Scoped to the delta cell itself, not container-wide, so this cannot
+      // pass on the unrelated statusB="red" status cell if deltaClass's
+      // red-mapping breaks. The semantic destructive token stands in for the
+      // raw red utility so theme swaps cannot silently break the assertion.
+      const deltaCell = screen.getByText("+3");
+      expect(deltaCell.className).toContain("text-[var(--color-destructive)]");
+      expect(screen.getByRole("table")).toHaveAccessibleName(
+        `Periods ending ${periodA} (previous) and ${periodB} (latest). Risk change is latest minus previous.`,
+      );
+      expect(
+        screen.getByRole("columnheader", { name: "Previous status" }),
+      ).toBeVisible();
+      expect(
+        screen.getByRole("columnheader", { name: "Latest status" }),
+      ).toBeVisible();
+      expect(
+        screen.getByRole("columnheader", { name: "Risk change" }),
+      ).toBeVisible();
+    },
+  );
 });

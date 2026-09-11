@@ -132,7 +132,7 @@ function IdentityLoading() {
 
 function IdentityFields({ form }: { readonly form: OrgIdentityFormModel }) {
   return (
-    <div className="max-w-lg space-y-5">
+    <fieldset disabled={form.isSaving} className="min-w-0 max-w-lg space-y-5">
       <p className="text-sm text-[var(--color-muted-foreground)]">
         These values brand the application chrome: the nav-bar shows the short
         name, the landing page hero shows both, and PDF report headers use the
@@ -165,7 +165,7 @@ function IdentityFields({ form }: { readonly form: OrgIdentityFormModel }) {
         isSaved={form.isSaved}
         onSave={form.save}
       />
-    </div>
+    </fieldset>
   );
 }
 

@@ -144,6 +144,49 @@ describe("useEditableListDialog", () => {
     });
   });
 
+  it("opens from the signal with an activity seed when no product seed exists", () => {
+    const { result, rerender } = renderHook(
+      ({ addSignal }) =>
+        useEditableListDialog<TestEntity>({
+          readOnly: false,
+          addSignal,
+          seedActivityId: "triage",
+          requireSeed: true,
+        }),
+      { initialProps: { addSignal: 0 } },
+    );
+
+    rerender({ addSignal: 1 });
+
+    expect(result.current.dialogState).toEqual({
+      open: true,
+      mode: "create",
+      seedActivityId: "triage",
+    });
+  });
+
+  it("keeps the product seed when both seed inputs are supplied", () => {
+    const { result, rerender } = renderHook(
+      ({ addSignal }) =>
+        useEditableListDialog<TestEntity>({
+          readOnly: false,
+          addSignal,
+          seedProductId: "crm",
+          seedActivityId: "triage",
+          requireSeed: true,
+        }),
+      { initialProps: { addSignal: 0 } },
+    );
+
+    rerender({ addSignal: 1 });
+
+    expect(result.current.dialogState).toEqual({
+      open: true,
+      mode: "create",
+      seedProductId: "crm",
+    });
+  });
+
   it("increments dialogKey monotonically across repeated opens", () => {
     const { result } = renderHook(() =>
       useEditableListDialog<TestEntity>({ readOnly: false, addSignal: 0 }),

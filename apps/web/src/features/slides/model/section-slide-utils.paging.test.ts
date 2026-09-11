@@ -134,6 +134,77 @@ function makeForeignRow(
 }
 
 describe("section slide utilities — paging, risk stories & transposition", () => {
+  it.each([
+    { linked: true, severity: "blocked" as const, urgency: "red" },
+    { linked: false, severity: "blocked" as const, urgency: "red" },
+    { linked: true, severity: "at-risk" as const, urgency: "yellow" },
+    { linked: false, severity: "at-risk" as const, urgency: "yellow" },
+  ])(
+    "keeps page-local Activity urgency without changing Product health: %j",
+    ({ linked, severity, urgency }) => {
+      const activityId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+      const model = buildSectionSlideModel(
+        makeSection({
+          projects: [
+            {
+              projectId: PRODUCT_ID,
+              projectName: "Core Product",
+              trafficLight: "green",
+              ownedStages: [
+                {
+                  stageId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+                  stageName: "Planning",
+                  sortOrder: 0,
+                  status: "green",
+                },
+              ],
+            },
+          ],
+          activities: [
+            {
+              activityId,
+              activityName: "Operations",
+              status: "green",
+              derivedStatus: null,
+              linkedProducts: linked
+                ? [{ productId: PRODUCT_ID, productName: "Core Product" }]
+                : [],
+            },
+          ],
+          risks: [
+            {
+              id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+              projectId: null,
+              activityId,
+              risk: "Activity dependency",
+              impact: "Delivery delayed",
+              mitigation: "Escalate",
+              severity,
+            },
+          ],
+        }),
+      );
+      const pages = paginateSectionSlides(model, 1);
+      const riskPage = expectDefined(
+        pages.find((page) => page.riskCount === 1),
+      );
+      expect(riskPage.grid?.worstStatus).toBe(urgency);
+      expect(riskPage.grid?.products[0]?.status).toBe(linked ? "green" : null);
+      expect(riskPage.grid?.onTrack).toEqual(
+        linked ? { on: 1, total: 1 } : { on: 0, total: 0 },
+      );
+      expect(
+        pages
+          .filter((page) => page.riskCount === 0)
+          .every((page) => page.grid?.worstStatus === "green"),
+      ).toBe(true);
+      expect(
+        model.grid?.products.find((product) => product.id === PRODUCT_ID)
+          ?.status,
+      ).toBe("green");
+    },
+  );
+
   it("paginates product-first and preserves every stable record identity", () => {
     const model = buildSectionSlideModel(
       makeSection({
@@ -405,6 +476,7 @@ describe("section slide utilities — paging, risk stories & transposition", () 
     const blocked = buildSectionSlideModel(
       makeSection({
         authorName: "Blocked",
+        items: [],
         // Blocked tone must be risk-backed: a bare persisted red without a
         // risk derives green and no longer sorts first.
         risks: [
@@ -420,6 +492,10 @@ describe("section slide utilities — paging, risk stories & transposition", () 
         ],
       }),
     );
+
+    expect(blocked.currentCount).toBe(0);
+    expect(blocked.nextCount).toBe(0);
+    expect(blocked.blockedCount).toBeGreaterThan(0);
 
     expect(
       sortSlidesForReview([ready, warning, blocked]).map((s) => s.tone),

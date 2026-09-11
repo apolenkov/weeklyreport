@@ -18,6 +18,9 @@ const actionCopy = (
   if (lifecycle === "preparing") {
     return "Embedding preparation is ready to resume.";
   }
+  if (lifecycle === "active") {
+    return "Test this configuration or save a new draft.";
+  }
   if (revisionId) return "Test the draft before activation.";
   return "Save as draft. Nothing changes until activation.";
 };

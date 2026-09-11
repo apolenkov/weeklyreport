@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReminderDispatchResult } from "@customreport/shared";
 import { useMutation } from "@tanstack/react-query";
 import { Bell, BellRing, Check } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -17,7 +18,12 @@ interface RemindLeadButtonProps {
 const NO_SECTION_CONFIRM_STATE = "no-section";
 
 type ConfirmState =
-  "idle" | "sent" | "already" | typeof NO_SECTION_CONFIRM_STATE | "error";
+  | "idle"
+  | "queued"
+  | "already"
+  | "skipped"
+  | typeof NO_SECTION_CONFIRM_STATE
+  | "error";
 
 const CONFIRM_HOLD_MS = 2400;
 
@@ -25,21 +31,24 @@ const CONFIRM_HOLD_MS = 2400;
 // back to the busy/idle pair.
 const CONFIRM_LABELS: Record<ConfirmState, string | null> = {
   idle: null,
-  sent: "Sent",
-  already: "Already sent",
+  queued: "Queued",
+  already: "Already requested",
+  skipped: "Skipped",
   [NO_SECTION_CONFIRM_STATE]: "No sections matched",
   error: "Retry",
 };
 
-// aria-live surfaces sent/error transitions to assistive tech without
+// aria-live surfaces request/error transitions to assistive tech without
 // duplicating the button label (sr-only sibling avoids visual noise).
 const CONFIRM_LIVE_MESSAGES: Record<
   ConfirmState,
   (leadName: string) => string
 > = {
   idle: () => "",
-  sent: (leadName) => `Reminder sent to ${leadName}`,
-  already: (leadName) => `Reminder already sent to ${leadName} this cycle`,
+  queued: (leadName) => `Reminder queued for ${leadName}`,
+  already: (leadName) =>
+    `Reminder already requested for ${leadName} this cycle`,
+  skipped: (leadName) => `Reminder for ${leadName} was skipped`,
   [NO_SECTION_CONFIRM_STATE]: (leadName) =>
     `No sections matched this lead for ${leadName}`,
   error: (leadName) => `Reminder to ${leadName} failed; retry available`,
@@ -47,22 +56,22 @@ const CONFIRM_LIVE_MESSAGES: Record<
 
 // States where re-sending is pointless or would duplicate: the button locks.
 const SETTLED_CONFIRM_STATES: ReadonlySet<ConfirmState> = new Set<ConfirmState>(
-  ["sent", "already", NO_SECTION_CONFIRM_STATE],
+  ["queued", "already", "skipped", NO_SECTION_CONFIRM_STATE],
 );
 
-// Only a delivered/deduplicated reminder earns the check glyph.
+// Only accepted or deduplicated requests earn the check glyph.
 const CHECKED_CONFIRM_STATES: ReadonlySet<ConfirmState> = new Set<ConfirmState>(
-  ["sent", "already"],
+  ["queued", "already"],
 );
 
-const confirmStateFromDispatch = (result: {
-  readonly reason?: string | undefined;
-  readonly dispatched: number;
-  readonly alreadySent: number;
-}): ConfirmState => {
+const confirmStateFromDispatch = (
+  result: ReminderDispatchResult,
+): ConfirmState => {
   if (result.reason === "no-matching-section") return NO_SECTION_CONFIRM_STATE;
-  if (result.dispatched > 0) return "sent";
-  if (result.alreadySent > 0) return "already";
+  if (result.failed > 0) return "error";
+  if (result.queued > 0) return "queued";
+  if (result.alreadyRequested > 0) return "already";
+  if (result.skipped > 0) return "skipped";
   return "error";
 };
 
@@ -159,7 +168,7 @@ export function RemindLeadButton({
     leadId,
     onMutated,
   });
-  const label = CONFIRM_LABELS[confirm] ?? (busy ? "Sending" : "Remind");
+  const label = CONFIRM_LABELS[confirm] ?? (busy ? "Requesting" : "Remind");
   const liveMessage = CONFIRM_LIVE_MESSAGES[confirm](leadName);
 
   return (

@@ -11,6 +11,9 @@ import {
 const GROUP_A = "11111111-1111-4111-8111-111111111111";
 const GROUP_B = "22222222-2222-4222-8222-222222222222";
 const USER_ID = "33333333-3333-4333-8333-333333333333";
+const SECTION_A = "44444444-4444-4444-8444-444444444441";
+const SECTION_B = "44444444-4444-4444-8444-444444444442";
+const SECTION_C = "44444444-4444-4444-8444-444444444443";
 
 describe("isReviewEnabled", () => {
   it.each([
@@ -90,18 +93,21 @@ describe("buildReviewModel", () => {
     const report = makeWeeklyReportFixture({
       leadSections: [
         {
+          reportSectionId: SECTION_A,
           groupId: GROUP_A,
           groupName: "Software Development",
           status: "submitted",
           canReview: true,
         },
         {
+          reportSectionId: SECTION_B,
           groupId: GROUP_A,
           groupName: "Software Development",
           status: "draft",
           canReview: false,
         },
         {
+          reportSectionId: SECTION_C,
           groupId: GROUP_B,
           groupName: "Finance Platforms",
           status: "submitted",
@@ -135,19 +141,19 @@ describe("buildReviewModel", () => {
       })),
     ).toEqual([
       {
-        reportSectionId: "10000000-0000-4000-8000-000000000002",
+        reportSectionId: SECTION_A,
         status: "submitted",
         canReview: true,
         groupId: GROUP_A,
       },
       {
-        reportSectionId: "10000000-0000-4000-8000-000000000002",
+        reportSectionId: SECTION_B,
         status: "draft",
         canReview: false,
         groupId: GROUP_A,
       },
       {
-        reportSectionId: "10000000-0000-4000-8000-000000000002",
+        reportSectionId: SECTION_C,
         status: "submitted",
         canReview: true,
         groupId: GROUP_B,

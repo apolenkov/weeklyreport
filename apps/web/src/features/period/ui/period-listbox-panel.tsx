@@ -1,5 +1,6 @@
 "use client";
 
+import type { PeriodState } from "@customreport/shared";
 import { type KeyboardEvent as ReactKeyboardEvent } from "react";
 
 import { DocumentBodyPortal } from "../../../shared/ui/dialogs/document-body-portal";
@@ -14,6 +15,7 @@ interface PeriodOption {
   readonly id: string;
   readonly dateRange: string;
   readonly isCurrent: boolean;
+  readonly periodState?: PeriodState | undefined;
   readonly archived: boolean;
   // Per-lead submitted marker. Only ever true for the lead surface and only on
   // the currently-selected period (the navigator has a submittedAt value for

@@ -94,8 +94,8 @@ function buildQuickAddHandler(
     "next-item": () => draft.quickAdd("next"),
     blocker: () => {
       const productId = products[0]?.id;
-      // A blocker is a product-scoped risk; without a product there is no
-      // valid parent, so the quick-add stays inert (menu disables it).
+      // This shortcut prefills a product; activity blockers use the activity
+      // risk editor. The menu disables this shortcut without a product.
       if (!productId) return;
       draft.routeToBlocker({
         productId,

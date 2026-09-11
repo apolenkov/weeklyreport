@@ -91,7 +91,7 @@ describe("WeeklyReportPage publish and reopen mutations", () => {
     ).not.toBeInTheDocument();
     await userEvent.click(publishButton);
     expect(
-      screen.queryByRole("dialog", { name: /confirm publish/i }),
+      screen.queryByRole("alertdialog", { name: /publish & lock report/i }),
     ).not.toBeInTheDocument();
     expect(
       expectDefined(captured["period.publish"]).mutationFn,

@@ -28,11 +28,11 @@ import LeadReportByIdPage from "./page";
 const REPORT_ID = "a0000000-0000-4000-8000-000000000001";
 
 async function renderPage(searchParams: {
-  readonly mode?: string;
-  readonly feedback?: string;
-  readonly feedbackUrl?: string;
-  readonly agentationSession?: string;
-  readonly agentationAnnotation?: string;
+  readonly mode?: string | string[];
+  readonly feedback?: string | string[];
+  readonly feedbackUrl?: string | string[];
+  readonly agentationSession?: string | string[];
+  readonly agentationAnnotation?: string | string[];
 }) {
   render(
     await LeadReportByIdPage({
@@ -52,13 +52,30 @@ describe("LeadReportByIdPage — URL mode", () => {
     expect(form).toHaveAttribute("data-report-id", REPORT_ID);
   });
 
-  it.each(["edit", "slides"] as const)(
-    "preserves explicit %s mode",
-    async (mode) => {
-      expect(await renderPage({ mode })).toHaveAttribute("data-mode", mode);
-      expect(redirect).not.toHaveBeenCalled();
-    },
-  );
+  it("canonicalizes legacy edit mode to the Report URL", async () => {
+    await renderPage({ mode: "edit" });
+    expect(redirect).toHaveBeenCalledWith(`/lead/report/${REPORT_ID}`);
+  });
+
+  it("canonicalizes legacy edit mode without losing feedback focus", async () => {
+    await renderPage({
+      mode: "edit",
+      feedback: "feedback-7",
+      feedbackUrl: "/lead/report",
+    });
+
+    expect(redirect).toHaveBeenCalledWith(
+      `/lead/report/${REPORT_ID}?feedback=feedback-7&feedbackUrl=%2Flead%2Freport`,
+    );
+  });
+
+  it("preserves explicit Slides mode", async () => {
+    expect(await renderPage({ mode: "slides" })).toHaveAttribute(
+      "data-mode",
+      "slides",
+    );
+    expect(redirect).not.toHaveBeenCalled();
+  });
 
   it("canonicalizes an unknown mode without losing feedback focus", async () => {
     await renderPage({
@@ -81,6 +98,26 @@ describe("LeadReportByIdPage — URL mode", () => {
 
     expect(redirect).toHaveBeenCalledWith(
       `/lead/report/${REPORT_ID}?agentationSession=session-7&agentationAnnotation=annotation-9`,
+    );
+  });
+
+  it("ignores repeated mode values without redirecting", async () => {
+    expect(await renderPage({ mode: ["slides", "overview"] })).toHaveAttribute(
+      "data-mode",
+      "overview",
+    );
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it("drops repeated focus values while preserving scalar focus", async () => {
+    await renderPage({
+      mode: "unknown",
+      feedback: ["feedback-7", "feedback-8"],
+      feedbackUrl: "/lead/report",
+    });
+
+    expect(redirect).toHaveBeenCalledWith(
+      `/lead/report/${REPORT_ID}?feedbackUrl=%2Flead%2Freport`,
     );
   });
 });

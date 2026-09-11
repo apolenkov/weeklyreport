@@ -43,10 +43,7 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-function renderLayout(org: OrganizationPublic): Document {
-  // layout.tsx imports getOrgPublic at module scope (generateMetadata).
-  vi.mocked(getOrgPublic).mockResolvedValue(org);
-
+function renderLayout(): Document {
   const html = renderToStaticMarkup(RootLayout({ children: null }));
   return new DOMParser().parseFromString(html, "text/html");
 }
@@ -65,23 +62,18 @@ describe("RootLayout metadata, fonts, and inline-script safety", () => {
   });
 
   it("emits no inline __org_data script element", () => {
-    const doc = renderLayout(STUB_ORG);
+    const doc = renderLayout();
     expect(doc.getElementById("__org_data")).toBeNull();
   });
 
-  it("embeds no raw org string in an inline script, even for a breakout fullName", () => {
-    const doc = renderLayout({
-      shortName: "x",
-      fullName: "</script><img src=x onerror=alert(1)>",
-    });
+  it("renders no inline script from layout-owned markup", () => {
+    const doc = renderLayout();
     expect(doc.querySelector("img")).toBeNull();
-    for (const script of doc.querySelectorAll("script")) {
-      expect(script.textContent).not.toContain("onerror");
-    }
+    expect(doc.querySelectorAll("script")).toHaveLength(0);
   });
 
   it("applies self-hosted font variables without Google stylesheet links", () => {
-    const doc = renderLayout(STUB_ORG);
+    const doc = renderLayout();
     expect(doc.documentElement.className.split(" ")).toEqual([
       "font-fraunces",
       "font-lexend",
@@ -91,8 +83,8 @@ describe("RootLayout metadata, fonts, and inline-script safety", () => {
     expect(doc.querySelector('link[href*="fonts.gstatic.com"]')).toBeNull();
   });
 
-  it("keeps remote inspection tools out of every environment", () => {
-    const doc = renderLayout(STUB_ORG);
+  it("does not render a remote inspection script in the root layout", () => {
+    const doc = renderLayout();
     expect(doc.querySelector("[data-next-script-src]")).toBeNull();
   });
 });

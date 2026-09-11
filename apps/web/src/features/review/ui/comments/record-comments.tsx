@@ -1,12 +1,17 @@
 "use client";
 
-import type { RecordCommentView } from "@customreport/shared";
+import {
+  type RecordCommentView,
+  REVIEW_COMMENT_MAX_LENGTH,
+  reviewCommentInputSchema,
+} from "@customreport/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { invalidateReview } from "../../../../shared/lib/query/cache-keys";
 import { useTRPC } from "../../../../shared/lib/trpc/trpc-context";
+import { RecordCommentComposer } from "./record-comment-composer";
 import {
   CommentDeleteDialog,
   type CommentFeedback,
@@ -42,7 +47,16 @@ function anchorId(anchor: RecordCommentAnchor): string | undefined {
 }
 
 function reviewErrorMessage(err: unknown, fallback: string): string {
-  return err instanceof Error && err.message ? err.message : fallback;
+  if (!(err instanceof Error) || !err.message) return fallback;
+  try {
+    const parsed: unknown = JSON.parse(err.message);
+    if (Array.isArray(parsed)) {
+      return "Comment could not be saved. Check its content and try again.";
+    }
+  } catch {
+    // Ordinary error messages remain useful to the reviewer.
+  }
+  return err.message;
 }
 
 function commentDeleteLabel(comment: RecordCommentView): string {
@@ -55,6 +69,19 @@ function commentDeleteLabel(comment: RecordCommentView): string {
   return shortened
     ? `Delete comment by ${author}: ${shortened}`
     : `Delete comment by ${author}`;
+}
+
+function commentValidationError(
+  draft: string,
+  validationSucceeded: boolean,
+  validationAttempted: boolean,
+): string | undefined {
+  if (validationSucceeded || (draft.length === 0 && !validationAttempted)) {
+    return undefined;
+  }
+  return draft.length > REVIEW_COMMENT_MAX_LENGTH
+    ? `Comment must be ${REVIEW_COMMENT_MAX_LENGTH} characters or fewer.`
+    : "Comment must contain visible characters.";
 }
 
 function useRecordCommentMutations(
@@ -100,56 +127,6 @@ function useRecordCommentMutations(
     deleteComment: (commentId: string) => deleteMut.mutate({ commentId }),
     isDeletePending: deleteMut.isPending,
   };
-}
-
-interface CommentComposerFormProps {
-  readonly draft: string;
-  readonly onDraftChange: (value: string) => void;
-  readonly onSubmit: () => void;
-  readonly submitDisabled: boolean;
-  readonly isPending: boolean;
-  readonly feedbackId?: string;
-}
-
-function CommentComposerForm({
-  draft,
-  onDraftChange,
-  onSubmit,
-  submitDisabled,
-  isPending,
-  feedbackId,
-}: CommentComposerFormProps) {
-  return (
-    <form
-      className="flex flex-col gap-1.5"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (submitDisabled) return;
-        onSubmit();
-      }}
-    >
-      <textarea
-        className="min-h-[52px] w-full resize-y rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-background)] px-2.5 py-1.5 text-[12.5px] text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)]"
-        placeholder="Add a review comment…"
-        name="review-comment"
-        autoComplete="off"
-        value={draft}
-        onChange={(event) => onDraftChange(event.target.value)}
-        aria-label="Add a review comment"
-        aria-describedby={feedbackId}
-      />
-      <div className="flex justify-end">
-        <button
-          type="submit"
-          className="btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-3 py-1 text-[12px] font-semibold text-[var(--color-primary-foreground)] transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={submitDisabled}
-          aria-busy={isPending || undefined}
-        >
-          {isPending ? "Adding…" : "Comment"}
-        </button>
-      </div>
-    </form>
-  );
 }
 
 interface RecordCommentThreadProps {
@@ -220,6 +197,7 @@ export function RecordComments({
   readonly onMutated: () => void;
 }) {
   const [draft, setDraft] = useState("");
+  const [validationAttempted, setValidationAttempted] = useState(false);
   const [feedback, setFeedback] = useState<CommentFeedback | null>(null);
   const [deleteCandidate, setDeleteCandidate] =
     useState<RecordCommentView | null>(null);
@@ -230,6 +208,7 @@ export function RecordComments({
       anchor,
       () => {
         setDraft("");
+        setValidationAttempted(false);
         setFeedback({ message: "Comment added.", tone: "success" });
       },
       onMutated,
@@ -255,8 +234,26 @@ export function RecordComments({
   const hasComments = comments.length > 0;
   if (!hasComments && !canCompose) return null;
 
-  const trimmed = draft.trim();
-  const submitDisabled = trimmed.length === 0 || isCommentPending;
+  const validationResult = reviewCommentInputSchema.safeParse({
+    ...anchor,
+    text: draft,
+  });
+  const validationError = commentValidationError(
+    draft,
+    validationResult.success,
+    validationAttempted,
+  );
+  const submitDisabled = !validationResult.success || isCommentPending;
+
+  const submitDraft = () => {
+    setValidationAttempted(true);
+    const currentResult = reviewCommentInputSchema.safeParse({
+      ...anchor,
+      text: draft,
+    });
+    if (!currentResult.success || isCommentPending) return;
+    submitComment(currentResult.data.text.trim());
+  };
 
   const requestDelete = (commentId: string) => {
     setDeleteCandidate(
@@ -282,15 +279,17 @@ export function RecordComments({
       <CommentFeedbackMessage feedback={feedback} id={feedbackId} />
 
       {canCompose ? (
-        <CommentComposerForm
+        <RecordCommentComposer
           draft={draft}
           onDraftChange={(value) => {
             setDraft(value);
+            setValidationAttempted(false);
             setFeedback(null);
           }}
-          onSubmit={() => submitComment(trimmed)}
+          onSubmit={submitDraft}
           submitDisabled={submitDisabled}
           isPending={isCommentPending}
+          validationError={validationError}
           {...(feedback ? { feedbackId } : {})}
         />
       ) : null}

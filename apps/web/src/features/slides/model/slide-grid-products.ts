@@ -13,6 +13,7 @@ export interface GridSubsection {
   readonly kind: "product-level" | "project";
   readonly id: string;
   readonly name: string;
+  readonly linkedProducts: ReportSectionReadModel["activities"][number]["linkedProducts"];
   // Activity status; product-level subsections carry none.
   readonly status: SlideTrafficStatus;
   // Activity records cannot carry stages by schema rule.
@@ -24,7 +25,7 @@ export interface GridProductCard {
   readonly id: string;
   readonly name: string;
   readonly status: SlideTrafficStatus;
-  // True when the product has no records or status-only activity this period.
+  // True when the product has neither updates nor a derived status this period.
   readonly noData: boolean;
   readonly subsections: readonly GridSubsection[];
 }
@@ -36,7 +37,6 @@ interface BuildProductSubsectionsInput {
   readonly activityHomeById: ReadonlyMap<string, string>;
   readonly authorOrder: ReadonlyMap<string, number>;
   readonly sharedCardId: string;
-  readonly hiddenAuthorId?: string | undefined;
 }
 
 interface HomedSubsection {
@@ -56,7 +56,6 @@ function buildActivityEntries(
     activityHomeById,
     authorOrder,
     sharedCardId,
-    hiddenAuthorId,
   } = input;
   const recordOnlyActivityIds = [...activityCells.keys()].filter(
     (activityId) => !activityMeta.has(activityId),
@@ -73,12 +72,12 @@ function buildActivityEntries(
           kind: "project" as const,
           id: activityId,
           name: meta?.activityName ?? "Activity",
+          linkedProducts: meta?.linkedProducts ?? [],
           status: meta ? (meta.derivedStatus ?? meta.status) : null,
           showStages: false,
           columns: finalizeColumns(
             activityCells.get(activityId) ?? emptyBuckets(),
             authorOrder,
-            hiddenAuthorId,
           ),
         },
       };
@@ -92,7 +91,7 @@ function buildActivityEntries(
 export function buildProductSubsections(
   input: BuildProductSubsectionsInput,
 ): ReadonlyMap<string, readonly GridSubsection[]> {
-  const { section, productLevel, authorOrder, hiddenAuthorId } = input;
+  const { section, productLevel, authorOrder } = input;
   const activityMeta = new Map(
     section.activities.map((activity) => [activity.activityId, activity]),
   );
@@ -104,9 +103,10 @@ export function buildProductSubsections(
         kind: "product-level" as const,
         id: `${productId}-product-level`,
         name: "Product-level",
+        linkedProducts: [],
         status: null,
         showStages: true,
-        columns: finalizeColumns(cells, authorOrder, hiddenAuthorId),
+        columns: finalizeColumns(cells, authorOrder),
       },
     }),
   );
@@ -151,6 +151,7 @@ export function deriveProductCards(
   } = input;
   const toCard = (id: string, name: string): GridProductCard => {
     const subsections = subsectionsByProduct.get(id) ?? [];
+    const status = productStatuses.get(id) ?? null;
     const rowCount = subsections.reduce(
       (sum, subsection) => sum + columnsRowCount(subsection.columns),
       0,
@@ -158,9 +159,12 @@ export function deriveProductCards(
     return {
       id,
       name,
-      status: productStatuses.get(id) ?? null,
-      // A status-only project header is data: keep the card open for it.
-      noData: rowCount === 0 && !subsections.some((s) => s.kind === "project"),
+      status,
+      // A product or activity status is a current-period signal even without updates.
+      noData:
+        status === null &&
+        rowCount === 0 &&
+        !subsections.some((s) => s.kind === "project"),
       subsections,
     };
   };

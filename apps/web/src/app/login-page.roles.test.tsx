@@ -76,11 +76,15 @@ const HEAD_ROLE = {
 
 // One holder for the whole file; beforeEach empties it instead of rebinding.
 const storage = makeMemoryStorage();
+const originalLocalStorageDescriptor = Object.getOwnPropertyDescriptor(
+  window,
+  "localStorage",
+);
 
 beforeEach(() => {
   // AUTH_STUB is gated on `process.env.NEXT_PUBLIC_AUTH_STUB === 'true'`
   // at the module top-level — set BEFORE importing the client module.
-  process.env.NEXT_PUBLIC_AUTH_STUB = "true";
+  vi.stubEnv("NEXT_PUBLIC_AUTH_STUB", "true");
 
   storage.clear();
   Object.defineProperty(window, "localStorage", {
@@ -102,6 +106,14 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.resetModules();
+  vi.unstubAllEnvs();
+  if (originalLocalStorageDescriptor) {
+    Object.defineProperty(
+      window,
+      "localStorage",
+      originalLocalStorageDescriptor,
+    );
+  }
   vi.mocked(useQueryMock).mockReset();
   vi.mocked(useSearchParamsMock).mockReset();
 });
@@ -115,8 +127,8 @@ function storeLastRole(record: object) {
   storage.setItem(LAST_ROLE_STORAGE_KEY, JSON.stringify(record));
 }
 
-// AUTH_STUB last-role section holds min-height via skeleton to prevent CLS.
-describe("Landing page — CLS skeleton", () => {
+// AUTH_STUB last-role states share the same reserved minimum height.
+describe("Landing page — last-role placeholder", () => {
   it("renders an aria-hidden last-role skeleton before hydration", async () => {
     const LoginPageClient = await loadLoginPageClient();
     const markup = renderToStaticMarkup(
@@ -130,12 +142,11 @@ describe("Landing page — CLS skeleton", () => {
     );
     expect(skeleton).not.toBeNull();
     expect(skeleton).toHaveAttribute("aria-hidden", "true");
+    expect(skeleton).toHaveClass("min-h-[129px]");
   });
 
   it("does not render last-role-hint section in production mode (no AUTH_STUB)", async () => {
-    // In production AUTH_STUB=false; the entire hint block is never rendered,
-    // so there is nothing to cause CLS on the real login page.
-    process.env.NEXT_PUBLIC_AUTH_STUB = "false";
+    vi.stubEnv("NEXT_PUBLIC_AUTH_STUB", "false");
 
     const LoginPageClient = await loadLoginPageClient();
     render(<LoginPageClient initialOrg={STUB_ORG} />);
@@ -178,6 +189,7 @@ describe("Landing page — last-role hint", () => {
 
     const hint = await screen.findByTestId("last-role-hint");
     expect(hint).toBeInTheDocument();
+    expect(hint).toHaveClass("min-h-[129px]");
     expect(hint).toHaveTextContent("Антон К.");
     expect(hint).toHaveTextContent("Head");
   });

@@ -67,10 +67,16 @@ describe("LeadFormSkeleton", () => {
       screen.queryByTestId("lead-skeleton-section-product-status"),
     ).not.toBeInTheDocument();
     expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(screen.getByTestId("lead-skeleton-density-control")).toHaveClass(
+      "border",
+      "p-1",
+    );
   });
 
   it("mirrors compact loaded toolbar clusters", () => {
     render(<LeadFormSkeleton />);
+
+    expect(screen.queryByTestId("lead-skeleton-density-control")).toBeNull();
 
     expect(screen.getByTestId("lead-skeleton-context-toolbar")).toHaveClass(
       "px-2",

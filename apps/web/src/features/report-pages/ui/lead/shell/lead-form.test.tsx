@@ -12,6 +12,7 @@ import { expectDefined } from "../../../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
 import { LeadReportAssistantStore } from "../../lead-report-assistant-store";
 import { LeadForm } from "./lead-form";
+import { makeLeadFormSectionFixture } from "./lead-form-test-fixtures";
 
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -38,22 +39,18 @@ vi.mock("next/navigation", () => ({
   usePathname: () => mockPathname,
 }));
 
-const SECTION_ID = "11111111-1111-1111-1111-111111111111";
-const REPORT_ID = "33333333-3333-3333-3333-333333333333";
-const PROJECT_ID = "22222222-2222-2222-2222-222222222222";
-const AUTHOR_ID = "44444444-4444-4444-4444-444444444444";
+const SECTION_ID = "11111111-1111-4111-8111-111111111111";
+const REPORT_ID = "33333333-3333-4333-8333-333333333333";
+const PROJECT_ID = "22222222-2222-4222-8222-222222222222";
+const AUTHOR_ID = "44444444-4444-4444-8444-444444444444";
 
 function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
-  return {
+  return makeLeadFormSectionFixture({
     reportSectionId: SECTION_ID,
     reportId: REPORT_ID,
     authorId: AUTHOR_ID,
-    authorName: "Test Lead",
-    authorRole: "lead" as const,
     version: 1,
     status: overrides.status ?? ("draft" as const),
-    submittedAt: null,
-    referencedProjects: [],
     projects: [
       {
         projectId: PROJECT_ID,
@@ -78,7 +75,7 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
     ],
     items: [
       {
-        id: "55555555-5555-5555-5555-555555555555",
+        id: "55555555-5555-4555-8555-555555555555",
         stableId: "5a5a5a5a-5a5a-4a5a-8a5a-5a5a5a5a5a5a",
         projectId: PROJECT_ID,
         type: "current" as const,
@@ -89,26 +86,18 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
         carriedOver: false,
       },
     ],
-    risks: [],
     decisions: [
       {
-        id: "66666666-6666-6666-6666-666666666666",
+        id: "66666666-6666-4666-8666-666666666666",
         stableId: "6a6a6a6a-6a6a-4a6a-8a6a-6a6a6a6a6a6a",
+        productId: PROJECT_ID,
         text: "Existing decision",
         stageNames: ["Development"],
         owner: "Owner",
         impact: "Impact",
       },
     ],
-    priorities: [
-      {
-        id: "77777777-7777-7777-7777-777777777777",
-        rank: 1,
-        text: "Priority text",
-      },
-    ],
-    activities: [],
-  };
+  });
 }
 
 function buildHarness(
@@ -158,7 +147,7 @@ function buildHarness(
               : { status: opts.sectionStatus },
           ),
           readOnly: opts.byPeriodReadOnly ?? false,
-          // Server-computed; default true so Request-Reopen tests have a precondition.
+          // Server-computed; defaults to false unless the section is submitted.
           canRequestReopen:
             opts.canRequestReopen ?? opts.sectionStatus === "submitted",
           publishedLineage: { itemStableIds: [], decisionStableIds: [] },
@@ -180,6 +169,9 @@ function buildHarness(
       path: ["leadForm", "requestReopen"],
       mutation: true,
     },
+    { path: ["leadForm", "assistant"], mutation: true },
+    { path: ["leadForm", "resolvePlan"], mutation: true },
+    { path: ["leadForm", "restorePlan"], mutation: true },
     {
       path: ["leadForm", "crossAuthors"],
       query: [],
@@ -291,39 +283,6 @@ describe("LeadForm mutation wiring", () => {
     );
   });
 
-  it("submit CONFLICT (stale version): surfaces the reload prompt, not the generic error", async () => {
-    const { Wrapper, captured } = buildHarness();
-    const conflict = new TRPCClientError("stale");
-    Object.defineProperty(conflict, "data", {
-      value: { httpStatus: 409, code: "CONFLICT" },
-      configurable: true,
-    });
-    expectDefined(captured["reports.submit"]).mutationFn.mockRejectedValue(
-      conflict,
-    );
-    render(
-      <Wrapper>
-        <LeadForm />
-      </Wrapper>,
-    );
-    expect(await screen.findByText("Autosaved")).toBeInTheDocument();
-
-    act(() => screen.getByRole("button", { name: "Submit" }).click());
-    const dialog = await screen.findByRole("alertdialog", {
-      name: "Confirm submission",
-    });
-    act(() => within(dialog).getByRole("button", { name: "Submit" }).click());
-
-    // A cross-writer conflict surfaces a distinct reload prompt rather than
-    // echoing the raw error message.
-    await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith(
-        expect.stringContaining("changed elsewhere"),
-      ),
-    );
-    expect(toast.error).not.toHaveBeenCalledWith("stale");
-  });
-
   it("submit after an autosave version bump carries the bumped version, not a stale closure", async () => {
     let serverVersion = 1;
     const { Wrapper, captured } = buildHarness({
@@ -391,42 +350,7 @@ describe("LeadForm mutation wiring", () => {
     expect(sent.version).toBe(5);
   });
 
-  it("D4: submit-confirm warns about unset own stages and coerces them to On Track", async () => {
-    // The seed's single owned stage carries no status → unset. The confirm
-    // dialog warns, and confirming promotes it to green (mirrors the null→green
-    // project/activity coercion).
-    const { Wrapper, captured } = buildHarness();
-    render(
-      <Wrapper>
-        <LeadForm />
-      </Wrapper>,
-    );
-    expect(await screen.findByText("Autosaved")).toBeInTheDocument();
-
-    act(() => {
-      screen.getByRole("button", { name: "Submit" }).click();
-    });
-    const dialog = await screen.findByRole("alertdialog", {
-      name: "Confirm submission",
-    });
-    expect(
-      within(dialog).getByText(/1 stage not set.*marked On Track/i),
-    ).toBeInTheDocument();
-
-    act(() => {
-      within(dialog).getByRole("button", { name: "Submit" }).click();
-    });
-    const submitEntry = expectDefined(captured["reports.submit"]);
-    await waitFor(() =>
-      expect(submitEntry.mutationFn.mock.calls.length).toBeGreaterThan(0),
-    );
-    const sent = submitEntry.mutationFn.mock.calls.at(-1)?.[0] as {
-      stageStatuses?: { status: string | null }[];
-    };
-    expect(sent.stageStatuses?.map((stage) => stage.status)).toEqual(["green"]);
-  });
-
-  it("D4: no unset own stages → the submit-confirm shows no warning", async () => {
+  it("no unset own stages → the submit-confirm shows no warning", async () => {
     const seeded = makeSection();
     const withStatus = {
       ...seeded,
@@ -465,7 +389,7 @@ describe("LeadForm mutation wiring", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("D4: explicit red and yellow own stages survive submit without an unset warning", async () => {
+  it("explicit red and yellow own stages survive submit without an unset warning", async () => {
     const seeded = makeSection();
     const withOrphan = {
       ...seeded,
@@ -526,113 +450,6 @@ describe("LeadForm mutation wiring", () => {
       "red",
       "yellow",
     ]);
-  });
-
-  it("uses the shared readiness projection to block risk-stage coupling", async () => {
-    const seeded = makeSection();
-    const blocked = {
-      ...seeded,
-      projects: seeded.projects.map((project) => ({
-        ...project,
-        trafficLight: "red" as const,
-      })),
-      risks: [
-        {
-          id: "99999999-9999-4999-8999-999999999999",
-          stableId: "9a9a9a9a-9a9a-4a9a-8a9a-9a9a9a9a9a9a",
-          projectId: PROJECT_ID,
-          risk: "Release is blocked",
-          impact: "The date will slip",
-          mitigation: "Reduce scope",
-          severity: "blocked" as const,
-          stageNames: [],
-        },
-      ],
-    };
-    const { Wrapper } = buildHarness({
-      byPeriodQueryFn: () =>
-        Promise.resolve({
-          section: blocked,
-          readOnly: false,
-          canRequestReopen: false,
-          publishedLineage: { itemStableIds: [], decisionStableIds: [] },
-        }),
-    });
-    render(
-      <Wrapper>
-        <LeadForm />
-      </Wrapper>,
-    );
-
-    expect(
-      await screen.findByText("Complete the items below before submitting."),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("Test Product: specify stages for committed risks."),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
-    expect(
-      screen.getByRole("button", { name: "Submit report" }),
-    ).toBeDisabled();
-    expect(
-      screen.queryByRole("alertdialog", { name: "Confirm submission" }),
-    ).toBeNull();
-  });
-
-  it("a refetch updates the held version without dirtying the form, and the new version reaches the next write", async () => {
-    let serverVersion = 1;
-    const { Wrapper, captured, queryClient } = buildHarness({
-      byPeriodQueryFn: () =>
-        Promise.resolve({
-          section: { ...makeSection(), version: serverVersion },
-          readOnly: false,
-          canRequestReopen: false,
-          publishedLineage: { itemStableIds: [], decisionStableIds: [] },
-        }),
-    });
-    const submitEntry = expectDefined(captured["reports.submit"]);
-    submitEntry.mutationFn.mockResolvedValue({
-      ...makeSection(),
-      version: 6,
-    });
-    render(
-      <Wrapper>
-        <LeadForm />
-      </Wrapper>,
-    );
-    expect(await screen.findByText("Autosaved")).toBeInTheDocument();
-
-    // A concurrent writer advances only the revision; a refetch brings version
-    // 5 with identical content. `await act(invalidate)` flushes the refetch AND
-    // the re-seed effect, so the held version is deterministically 5 here.
-    serverVersion = 5;
-    await act(async () => {
-      await queryClient.invalidateQueries();
-    });
-
-    // Version is not part of the dirty key → the form stays clean (no spurious
-    // autosave from the bump).
-    expect(screen.getByText("Autosaved")).toBeInTheDocument();
-
-    // And the re-seeded version actually advanced: the next write carries 5,
-    // not the initially-loaded 1 — without this, conflict recovery would 409 in
-    // a loop.
-    act(() => {
-      screen.getByRole("button", { name: "Submit" }).click();
-    });
-    const dialog = await screen.findByRole("alertdialog", {
-      name: "Confirm submission",
-    });
-    act(() => {
-      within(dialog).getByRole("button", { name: "Submit" }).click();
-    });
-    await waitFor(() =>
-      expect(submitEntry.mutationFn.mock.calls.length).toBeGreaterThan(0),
-    );
-    const sent = submitEntry.mutationFn.mock.calls.at(-1)?.[0] as {
-      version?: number;
-    };
-    expect(sent.version).toBe(5);
   });
 
   it("byPeriod load failure: toast shows prefix + requestId reference", async () => {

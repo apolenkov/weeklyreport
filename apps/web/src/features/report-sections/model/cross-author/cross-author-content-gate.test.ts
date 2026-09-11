@@ -14,10 +14,8 @@ describe("crossAuthorContentFetchEnabled", () => {
     expect(crossAuthorContentFetchEnabled(ALL_TRUE)).toBe(true);
   });
 
-  it("NEVER fires on a foreign deck, even in Everyone (the tail-1 invariant)", () => {
-    // isOwnDeck:false is the foreign-deck row — the read must stay disabled
-    // regardless of the persisted Everyone toggle. This is the single guard
-    // both LeadSlidesClient and LeadForm rely on for the "every host" clause.
+  it("is disabled on a foreign deck even when Everyone is selected", () => {
+    // Foreign-deck content is outside this query's display scope.
     expect(
       crossAuthorContentFetchEnabled({ ...ALL_TRUE, isOwnDeck: false }),
     ).toBe(false);

@@ -211,6 +211,80 @@ describe("ProductAccordion prioritized items", () => {
 });
 
 describe("ProductAccordion — item status badge", () => {
+  it("renders a next commitment, cancellation reason, and expandable outcome audit", () => {
+    render(
+      <ProductAccordion
+        defaultOpen
+        report={makeReport({
+          currentWeek: [
+            makeItem({
+              id: "continued",
+              text: "Delivered API endpoints",
+              nextStepText: "Validate production metrics",
+            }),
+            makeItem({
+              id: "cancelled",
+              text: "Migrate the legacy client",
+              resolution: {
+                kind: "wont_do",
+                eventId: "10000000-0000-4000-8000-000000000101",
+                reason: "The dependency was retired",
+                actorId: "10000000-0000-4000-8000-000000000102",
+                actorName: "Alex Lead",
+                occurredAt: "2026-09-05T08:30:00.000Z",
+                previousState: {
+                  type: "next",
+                  workflowStatus: "planned",
+                  pausedReason: null,
+                  nextStepText: null,
+                },
+              },
+              outcomeHistory: [
+                {
+                  id: "10000000-0000-4000-8000-000000000103",
+                  stableId: "10000000-0000-4000-8000-000000000104",
+                  outcome: "wont_do",
+                  reason: "The dependency was retired",
+                  actorId: "10000000-0000-4000-8000-000000000102",
+                  actorName: "Alex Lead",
+                  occurredAt: "2026-09-05T08:30:00.000Z",
+                  beforeState: {
+                    type: "next",
+                    workflowStatus: "planned",
+                    pausedReason: null,
+                    nextStepText: null,
+                  },
+                  afterState: {
+                    type: "next",
+                    workflowStatus: "planned",
+                    pausedReason: null,
+                    nextStepText: null,
+                  },
+                  reversesEventId: null,
+                },
+              ],
+            }),
+          ],
+        })}
+      />,
+    );
+
+    expect(
+      screen.getByText("Next commitment: Validate production metrics"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Won't do: The dependency was retired"),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("In Progress")).toHaveLength(1);
+
+    fireEvent.click(screen.getByText("Outcome history"));
+    expect(
+      screen.getByText(
+        /Marked Won't do by Alex Lead.*The dependency was retired/,
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("maps each workflow status to its badge label", () => {
     render(
       <ProductAccordion
@@ -496,12 +570,13 @@ describe("ProductAccordion — highlighted scroll motion", () => {
       const { container } = render(
         <ProductAccordion
           report={report}
+          instanceRootId="report-lead-lead-2-product-scroll-target"
           highlighted
           scrollIntoViewOnHighlight
         />,
       );
       const root = container.querySelector<HTMLElement>(
-        "#report-product-scroll-target",
+        "#report-lead-lead-2-product-scroll-target",
       );
       if (!root) throw new Error("Product accordion root was not rendered");
       root.scrollIntoView = scrollIntoView;
@@ -514,6 +589,39 @@ describe("ProductAccordion — highlighted scroll motion", () => {
       });
     },
   );
+
+  it("keeps a manual collapse until the next explicit navigation", () => {
+    const { rerender } = render(
+      <ProductAccordion
+        report={reportWithContent}
+        highlighted
+        navigationEpoch={1}
+      />,
+    );
+    const toggle = screen.getByRole("button", { name: /Product Alpha/ });
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+    rerender(
+      <ProductAccordion
+        report={{ ...reportWithContent }}
+        highlighted
+        navigationEpoch={1}
+      />,
+    );
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+    rerender(
+      <ProductAccordion
+        report={{ ...reportWithContent }}
+        highlighted
+        navigationEpoch={2}
+      />,
+    );
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+  });
 });
 
 // Escalation folds into Risks & Blockers as a leading row, not a separate banner.

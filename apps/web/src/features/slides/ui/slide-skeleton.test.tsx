@@ -6,6 +6,22 @@ import { describe, expect, it } from "vitest";
 import { SlideSkeleton } from "./slide-skeleton";
 
 describe("SlideSkeleton", () => {
+  it.each([
+    ["head", undefined, "fullscreen"],
+    ["lead", undefined, "density"],
+    ["head", "none", null],
+    ["lead", "none", null],
+    ["lead", "fullscreen", "fullscreen"],
+  ] as const)("matches the %s deck toolbar %s", (mode, toolbar, expected) => {
+    render(<SlideSkeleton mode={mode} toolbar={toolbar} />);
+
+    for (const kind of ["density", "fullscreen"] as const) {
+      expect(screen.queryByTestId(`slide-skeleton-${kind}`) !== null).toBe(
+        kind === expected,
+      );
+    }
+  });
+
   it("exposes the loading status region with busy state and label", () => {
     render(<SlideSkeleton />);
 
@@ -45,7 +61,7 @@ describe("SlideSkeleton", () => {
     );
   });
 
-  it("renders the head horizontal selector without the retired sidebar", () => {
+  it("renders the head selector in the full-width skeleton layout", () => {
     const { container } = render(<SlideSkeleton mode="head" />);
 
     expect(screen.getByTestId("slide-skeleton-head-carousel")).toBeVisible();

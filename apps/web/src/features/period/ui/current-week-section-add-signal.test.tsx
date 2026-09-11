@@ -8,6 +8,7 @@ import { MOCK_PRODUCTS } from "../../../test-utils/mock-products";
 import { CurrentWeekSection } from "./current-week-section";
 
 const products = MOCK_PRODUCTS.slice(0, 1);
+const activities = [{ id: "activity-1", name: "Jira triage" }];
 
 describe("CurrentWeekSection — addSignal snapshot regression", () => {
   it("does not reopen the dialog when readOnly toggles false→true→false with stale addSignal", () => {
@@ -58,6 +59,91 @@ describe("CurrentWeekSection — addSignal snapshot regression", () => {
         readOnly={false}
       />,
     );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("opens activity-only create with the first activity as parent", () => {
+    const { rerender } = render(
+      <CurrentWeekSection
+        items={[]}
+        products={[]}
+        activities={activities}
+        addSignal={0}
+      />,
+    );
+
+    rerender(
+      <CurrentWeekSection
+        items={[]}
+        products={[]}
+        activities={activities}
+        addSignal={1}
+      />,
+    );
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByLabelText<HTMLSelectElement>("Parent").value).toBe(
+      "activity:activity-1",
+    );
+  });
+
+  it("keeps the product as the default parent when activities also exist", () => {
+    const product = products[0];
+    if (!product) throw new Error("Expected a product fixture");
+    const { rerender } = render(
+      <CurrentWeekSection
+        items={[]}
+        products={products}
+        activities={activities}
+        addSignal={0}
+      />,
+    );
+
+    rerender(
+      <CurrentWeekSection
+        items={[]}
+        products={products}
+        activities={activities}
+        addSignal={1}
+      />,
+    );
+
+    expect(screen.getByLabelText<HTMLSelectElement>("Parent").value).toBe(
+      `product:${product.id}`,
+    );
+  });
+
+  it("does not open from the signal without a product or activity parent", () => {
+    const { rerender } = render(
+      <CurrentWeekSection items={[]} products={[]} addSignal={0} />,
+    );
+
+    rerender(<CurrentWeekSection items={[]} products={[]} addSignal={1} />);
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("does not open an activity-only create dialog while read-only", () => {
+    const { rerender } = render(
+      <CurrentWeekSection
+        items={[]}
+        products={[]}
+        activities={activities}
+        addSignal={0}
+        readOnly
+      />,
+    );
+
+    rerender(
+      <CurrentWeekSection
+        items={[]}
+        products={[]}
+        activities={activities}
+        addSignal={1}
+        readOnly
+      />,
+    );
+
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

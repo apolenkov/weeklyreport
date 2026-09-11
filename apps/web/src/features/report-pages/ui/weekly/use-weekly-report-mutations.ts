@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { toastMutationError } from "../../../../shared/lib/errors/mutation-error-message";
-import { invalidateDashboard } from "../../../../shared/lib/query/cache-keys";
+import { invalidatePeriodLifecycle } from "../../../../shared/lib/query/cache-keys";
 import { useTRPC } from "../../../../shared/lib/trpc/trpc-context";
 import { usePeriodReportMutations } from "../../../period/client";
 
@@ -23,7 +23,7 @@ function useArchiveMutations() {
   const qc = useQueryClient();
 
   const onArchivalSuccess = (message: string) => () => {
-    invalidateDashboard(qc, trpc);
+    invalidatePeriodLifecycle(qc, trpc);
     toast.success(message);
   };
 

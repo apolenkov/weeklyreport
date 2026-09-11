@@ -1,20 +1,19 @@
 "use client";
 
-import type { QueryClient } from "@tanstack/react-query";
+import type {
+  InvalidateQueryFilters,
+  QueryClient,
+} from "@tanstack/react-query";
 
 import type { TRPCProxy } from "../trpc/trpc";
 
 // Cache-buster helper: fire-and-forget invalidation inside event handlers.
 // The promise is intentionally not awaited, but a rejection is still handled
 // (logged) so it never surfaces as an unhandled rejection.
-function invalidate(qc: QueryClient, filter: unknown): void {
-  void qc
-    .invalidateQueries(
-      filter as Parameters<QueryClient["invalidateQueries"]>[0],
-    )
-    .catch((error: unknown) => {
-      console.error("[cache-keys] invalidateQueries failed", error);
-    });
+function invalidate(qc: QueryClient, filter: InvalidateQueryFilters): void {
+  void qc.invalidateQueries(filter).catch((error: unknown) => {
+    console.error("[cache-keys] invalidateQueries failed", error);
+  });
 }
 
 export function invalidateDashboard(qc: QueryClient, trpc: TRPCProxy): void {
@@ -44,8 +43,8 @@ export function invalidateLeadHistory(qc: QueryClient, trpc: TRPCProxy): void {
   invalidate(qc, trpc.reports.myHistory.pathFilter());
 }
 
-// Publishing and reopening change every report-facing projection, regardless
-// of which screen initiated the lifecycle transition.
+// Period edits and lifecycle transitions change report and period projections,
+// regardless of which screen initiated the mutation.
 export function invalidatePeriodLifecycle(
   qc: QueryClient,
   trpc: TRPCProxy,
@@ -53,6 +52,11 @@ export function invalidatePeriodLifecycle(
   invalidateDashboard(qc, trpc);
   invalidateLeadForm(qc, trpc);
   invalidateLeadHistory(qc, trpc);
+  invalidate(qc, trpc.leadForm.statusOverview.pathFilter());
+  invalidate(qc, trpc.leadForm.openWork.pathFilter());
+  invalidate(qc, trpc.reports.compiledHistory.pathFilter());
+  invalidate(qc, trpc.admin.listPeriodsByState.pathFilter());
+  invalidate(qc, trpc.admin.snapshot.pathFilter());
 }
 
 // Submission revocation changes both report projections and the live activity

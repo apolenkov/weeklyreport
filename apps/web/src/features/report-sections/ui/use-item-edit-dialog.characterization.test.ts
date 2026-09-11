@@ -3,8 +3,8 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import type { ParentActivityOption } from "../model/record-parent";
 import type { KanbanItem, Product } from "../model/types";
-import type { ParentActivityOption } from "./parent-picker";
 import { useItemEditDialog } from "./use-item-edit-dialog";
 
 const PRODUCT: Product = {

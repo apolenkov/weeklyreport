@@ -20,7 +20,6 @@ function state(isPending: boolean): ReopenTabState {
     search: "",
     setSearch: vi.fn(),
     requests: [],
-    filteredRequests: [],
     listQuery: {
       isPending,
       isError: false,

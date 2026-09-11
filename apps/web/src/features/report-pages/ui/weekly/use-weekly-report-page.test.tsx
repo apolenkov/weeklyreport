@@ -10,6 +10,7 @@ import {
 } from "../../../../shared/lib/auth/session-provider";
 import { TRPCProxyContext } from "../../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../../test-utils/mock-trpc";
+import { makeWeeklyReportFixture } from "../../../../test-utils/report-section-fixtures";
 import {
   useWeeklyReportPage,
   type WeeklyReportPageState,
@@ -38,98 +39,100 @@ const PRODUCT_ID_B = "44444444-4444-4444-8444-444444444444";
 function makeActiveReportData() {
   return {
     status: "active" as const,
-    reportId: REPORT_ID,
-    periodStart: new Date("2026-04-14T00:00:00Z"),
-    periodEnd: new Date("2026-04-20T00:00:00Z"),
-    deadline: new Date("2026-04-17T15:00:00Z"),
-    periodStatus: "open" as const,
-    weekLabel: "Week 16",
-    submissionCount: 1,
-    totalLeads: 1,
-    activeDeadlineReminderRuleId: "a0000000-0000-4000-a000-000000000600",
-    portfolioOverview: [
-      {
-        productId: PRODUCT_ID,
-        productName: "Product Alpha",
-        worstStatus: "green" as const,
-        stageCount: 1,
-        leadNames: ["Alice"],
-        leadIds: ["5ccd4f78-2a3d-58e4-889a-e9ad6be0b941"],
-      },
-      {
-        productId: PRODUCT_ID_B,
-        productName: "Product Beta",
-        worstStatus: "green" as const,
-        stageCount: 1,
-        leadNames: ["Alice"],
-        leadIds: ["5ccd4f78-2a3d-58e4-889a-e9ad6be0b941"],
-      },
-    ],
-    leadSections: [
-      {
-        reportSectionId: "55555555-5555-4555-8555-555555555555",
-        reportId: REPORT_ID,
-        authorId: AUTHOR_ID,
-        authorName: "Alice",
-        version: 1,
-        status: "submitted" as const,
-        submittedAt: new Date("2026-04-14T09:00:00Z"),
-        projects: [
-          {
-            projectId: PRODUCT_ID,
-            projectName: "Product Alpha",
-            trafficLight: "green" as const,
-          },
-        ],
-        items: [
-          {
-            id: "item-1",
-            projectId: PRODUCT_ID,
-            type: "current" as const,
-            text: "Submitted work",
-            tag: "Dev",
-            workflowStatus: "done" as const,
-            stageNames: ["Development"],
-            carriedOver: false,
-          },
-        ],
-        risks: [],
-        decisions: [],
-        activities: [],
-      },
-      {
-        reportSectionId: "66666666-6666-4666-8666-666666666666",
-        reportId: REPORT_ID,
-        authorId: AUTHOR_ID,
-        authorName: "Alice",
-        version: 1,
-        status: "draft" as const,
-        submittedAt: null,
-        projects: [
-          {
-            projectId: PRODUCT_ID_B,
-            projectName: "Product Beta",
-            trafficLight: "green" as const,
-          },
-        ],
-        items: [
-          {
-            id: "item-2",
-            projectId: PRODUCT_ID_B,
-            type: "current" as const,
-            text: "Draft work",
-            tag: "Dev",
-            workflowStatus: "in_progress" as const,
-            stageNames: ["Development"],
-            carriedOver: false,
-          },
-        ],
-        risks: [],
-        decisions: [],
-        activities: [],
-      },
-    ],
-    escalations: [],
+    ...makeWeeklyReportFixture({
+      reportId: REPORT_ID,
+      periodStart: new Date("2026-04-14T00:00:00Z"),
+      periodEnd: new Date("2026-04-20T00:00:00Z"),
+      deadline: new Date("2026-04-17T15:00:00Z"),
+      periodStatus: "open" as const,
+      weekLabel: "Week 16",
+      submissionCount: 1,
+      totalLeads: 1,
+      activeDeadlineReminderRuleId: "a0000000-0000-4000-a000-000000000600",
+      portfolioOverview: [
+        {
+          productId: PRODUCT_ID,
+          productName: "Product Alpha",
+          worstStatus: "green" as const,
+          stageCount: 1,
+          leadNames: ["Alice"],
+          leadIds: ["5ccd4f78-2a3d-58e4-889a-e9ad6be0b941"],
+        },
+        {
+          productId: PRODUCT_ID_B,
+          productName: "Product Beta",
+          worstStatus: "green" as const,
+          stageCount: 1,
+          leadNames: ["Alice"],
+          leadIds: ["5ccd4f78-2a3d-58e4-889a-e9ad6be0b941"],
+        },
+      ],
+      leadSections: [
+        {
+          reportSectionId: "55555555-5555-4555-8555-555555555555",
+          reportId: REPORT_ID,
+          authorId: AUTHOR_ID,
+          authorName: "Alice",
+          version: 1,
+          status: "submitted" as const,
+          submittedAt: new Date("2026-04-14T09:00:00Z"),
+          projects: [
+            {
+              projectId: PRODUCT_ID,
+              projectName: "Product Alpha",
+              trafficLight: "green" as const,
+            },
+          ],
+          items: [
+            {
+              id: "item-1",
+              projectId: PRODUCT_ID,
+              type: "current" as const,
+              text: "Submitted work",
+              tag: "Dev",
+              workflowStatus: "done" as const,
+              stageNames: ["Development"],
+              carriedOver: false,
+            },
+          ],
+          risks: [],
+          decisions: [],
+          activities: [],
+        },
+        {
+          reportSectionId: "66666666-6666-4666-8666-666666666666",
+          reportId: REPORT_ID,
+          authorId: AUTHOR_ID,
+          authorName: "Alice",
+          version: 1,
+          status: "draft" as const,
+          submittedAt: null,
+          projects: [
+            {
+              projectId: PRODUCT_ID_B,
+              projectName: "Product Beta",
+              trafficLight: "green" as const,
+            },
+          ],
+          items: [
+            {
+              id: "item-2",
+              projectId: PRODUCT_ID_B,
+              type: "current" as const,
+              text: "Draft work",
+              tag: "Dev",
+              workflowStatus: "in_progress" as const,
+              stageNames: ["Development"],
+              carriedOver: false,
+            },
+          ],
+          risks: [],
+          decisions: [],
+          activities: [],
+        },
+      ],
+      escalations: [],
+    }),
   };
 }
 

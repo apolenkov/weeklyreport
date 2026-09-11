@@ -6,8 +6,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import { useSdlcTooltip } from "../../shared/ui/feedback/sdlc-tooltip";
 
-// The layout wraps its content in SessionProvider + NavBar; both are
-// passthroughs here so the tooltip-provider contract is what gets tested.
+// Keep session state inert and omit navigation so the provider contract is
+// exercised without unrelated application behavior.
 vi.mock("../../shared/lib/auth/session-provider", () => ({
   SessionProvider: ({ children }: { readonly children: React.ReactNode }) =>
     children,

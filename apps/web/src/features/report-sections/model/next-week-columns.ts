@@ -12,7 +12,6 @@ type BoardColumnParent = Exclude<
 
 // One column per assigned product so empty products still get a "+ Add" CTA;
 // an explicitly empty assignment list still groups stored rows by product id.
-// Stage-tag grouping is only for callers that do not supply product data.
 export interface ItemColumn {
   readonly key: string;
   readonly parent: BoardColumnParent;
@@ -59,19 +58,6 @@ function activityLanes(
   });
 }
 
-function groupKeyFor(item: ProductKanbanItem): string {
-  const tags = item.stageNames;
-  return tags.length > 0
-    ? `${item.parent.id} · ${tags.join(", ")}`
-    : item.parent.id;
-}
-
-function groupByProduct(
-  items: readonly ProductKanbanItem[],
-): Map<string, ProductKanbanItem[]> {
-  return Map.groupBy(items, groupKeyFor);
-}
-
 function productColumnsFor(
   products: readonly Product[],
   productRows: readonly ProductKanbanItem[],
@@ -106,7 +92,7 @@ function productColumnsFor(
 // Product columns in the shared grid; activity lanes in a lighter block below
 // (activities are their own row, never peer product columns).
 export function splitItemBoard(
-  products: readonly Product[] | undefined,
+  products: readonly Product[],
   items: readonly KanbanItem[],
   activities: readonly LaneActivity[] = [],
 ): { productColumns: ItemColumn[]; activityLanes: ItemColumn[] } {
@@ -117,29 +103,8 @@ export function splitItemBoard(
     (it): it is ActivityKanbanItem => it.parent.kind === "activity",
   );
   const lanes = activityLanes(activityRows, activities);
-  if (products !== undefined) {
-    return {
-      productColumns: productColumnsFor(products, productRows),
-      activityLanes: lanes,
-    };
-  }
   return {
-    productColumns: [...groupByProduct(productRows).entries()].flatMap(
-      ([productName, gItems]) => {
-        const first = gItems.at(0);
-        if (!first) return [];
-        return [
-          {
-            key: productName,
-            parent: first.parent,
-            productId: first.productId,
-            productName: first.productName,
-            activityId: null,
-            items: gItems,
-          },
-        ];
-      },
-    ),
+    productColumns: productColumnsFor(products, productRows),
     activityLanes: lanes,
   };
 }

@@ -1,11 +1,13 @@
 // Stage selection is required for a product parent (empty = validation error);
 // options come from the lead's StageAssignment rows via stagesForProduct.
 
+import { SAFE_TEXT_MAX_LENGTH } from "@customreport/shared";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { Product, RiskEntry } from "../../report-sections";
 import { RiskEditDialog } from "./risk-edit-dialog";
+import { collectRiskErrors } from "./risk-edit-dialog-helpers";
 
 const products: Product[] = [
   {
@@ -15,6 +17,100 @@ const products: Product[] = [
     stages: [],
   },
 ];
+
+describe("RiskEditDialog prose limits", () => {
+  it.each(["text", "impact", "mitigation"] as const)(
+    "validates the shared boundary for %s",
+    (field) => {
+      const base = {
+        text: "Valid risk",
+        impact: "Valid impact",
+        mitigation: "Valid mitigation",
+        isActivityParent: true,
+        effectiveStageNames: [] as string[],
+      };
+      for (const [value, expected] of [
+        ["", "required"],
+        [" ".repeat(3), "required"],
+        ["A", undefined],
+        ["A".repeat(SAFE_TEXT_MAX_LENGTH), undefined],
+        ["A".repeat(SAFE_TEXT_MAX_LENGTH + 1), "characters"],
+      ] as const) {
+        const errors = collectRiskErrors({ ...base, [field]: value });
+        if (expected === undefined) expect(errors[field]).toBeUndefined();
+        else expect(errors[field]).toContain(expected);
+      }
+    },
+  );
+
+  it("keeps and focuses over-limit pasted risk text without saving", () => {
+    const onSave = vi.fn();
+    const overLimit = `${"R".repeat(SAFE_TEXT_MAX_LENGTH)} `;
+    render(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={products}
+        onSave={onSave}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev"]}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/^Risk \*/i), {
+      target: { value: overLimit },
+    });
+    fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
+      target: { value: "Impact" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Mitigation \*/i), {
+      target: { value: "Mitigation" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save Risk" }));
+
+    expect(screen.getByLabelText(/^Risk \*/i)).toHaveValue(overLimit);
+    expect(screen.getByLabelText(/^Risk \*/i)).toHaveFocus();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      `Risk description must be ${SAFE_TEXT_MAX_LENGTH} characters or fewer.`,
+    );
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("retains invisible-only risk text with an associated error and does not save", () => {
+    const onSave = vi.fn();
+    const invisibleOnly = "\u200B";
+    render(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={products}
+        onSave={onSave}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev"]}
+      />,
+    );
+
+    const riskText = screen.getByLabelText(/^Risk \*/i);
+    fireEvent.change(riskText, { target: { value: invisibleOnly } });
+    fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
+      target: { value: "Impact" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Mitigation \*/i), {
+      target: { value: "Mitigation" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save Risk" }));
+
+    expect(riskText).toHaveValue(invisibleOnly);
+    expect(riskText).toHaveAttribute("aria-invalid", "true");
+    expect(riskText).toHaveAccessibleDescription(
+      `1 / ${SAFE_TEXT_MAX_LENGTH} characters Risk description must contain visible text.`,
+    );
+    expect(riskText).toHaveFocus();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+});
 
 describe("RiskEditDialog — compact touch floor", () => {
   it("footer actions and severity chips floor at the touch target below md", () => {
@@ -241,8 +337,6 @@ describe("RiskEditDialog — cross-stage product preservation", () => {
         products={products}
         onSave={onSave}
         onCancel={() => undefined}
-        initialImpact="Payments blocked"
-        initialMitigation="Escalate to vendor"
         stagesForProduct={(productId) =>
           productId === "p1" ? ["Dev", "Testing"] : []
         }
@@ -444,8 +538,6 @@ describe("RiskEditDialog — zero-owned-stage guard", () => {
         products={products}
         onSave={onSave}
         onCancel={() => undefined}
-        initialImpact="Payments blocked"
-        initialMitigation="Escalate to vendor"
         stagesForProduct={(productId) => (productId === "p1" ? ["Dev"] : [])}
       />,
     );

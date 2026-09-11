@@ -144,4 +144,26 @@ describe("RecordTextareaField", () => {
     );
     expect(textarea).not.toHaveClass("flex-1");
   });
+
+  it("associates a character count without truncating over-limit input", () => {
+    const overLimit = "A".repeat(501);
+    const onChange = vi.fn();
+    render(
+      <RecordTextareaField
+        id="bounded-prose"
+        label="Prose"
+        value={overLimit}
+        onChange={onChange}
+        characterLimit={500}
+        error="Prose must be 500 characters or fewer."
+      />,
+    );
+
+    const textarea = screen.getByLabelText("Prose");
+    expect(textarea).toHaveValue(overLimit);
+    expect(textarea).not.toHaveAttribute("maxlength");
+    expect(textarea).toHaveAccessibleDescription(
+      "501 / 500 characters Prose must be 500 characters or fewer.",
+    );
+  });
 });

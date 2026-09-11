@@ -55,6 +55,17 @@ export function useFullscreen(
       wasFullscreenRef.current = next;
     }
     function onKey(e: KeyboardEvent) {
+      if (
+        e.ctrlKey ||
+        e.metaKey ||
+        e.altKey ||
+        e.shiftKey ||
+        e.isComposing ||
+        e.repeat ||
+        e.defaultPrevented
+      ) {
+        return;
+      }
       const target = e.target as HTMLElement | null;
       const tag = target?.tagName;
       if (

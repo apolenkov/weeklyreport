@@ -71,6 +71,7 @@ function RemindersContent(props: AdminPanelContentProps) {
     <RemindersTab
       policies={props.data.policies}
       derivedRulesByPolicyId={groupRulesByPolicyId(props.data.reminders)}
+      executions={props.data.executions}
       defaultTimezone={props.settings.defaultTimezone}
     />
   );

@@ -61,7 +61,7 @@ export function useStageAssignmentData(
   const assignmentsQuery = useQuery(
     trpc.admin.listStageAssignments.queryOptions({ projectId }),
   );
-  // @@unique([groupId]) on GroupProduct: each product has one owning group.
+  // GroupProduct is unique by productId, so this returns at most one owner.
   const productGroupsQuery = useQuery(
     trpc.admin.listProductGroups.queryOptions({ productId: projectId }),
   );
@@ -74,7 +74,9 @@ export function useStageAssignmentData(
     if (productGroupsQuery.isLoading || productGroupsQuery.isError) return [];
     if (groups.length === 0) return [];
     const groupIds = new Set(groups.map((g) => g.id));
-    return leads.filter((lead) => groupIds.has(lead.groupId));
+    return leads.filter(
+      (lead) => lead.groupId !== null && groupIds.has(lead.groupId),
+    );
   }, [
     leads,
     productGroupsQuery.data,

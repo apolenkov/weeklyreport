@@ -99,7 +99,10 @@ let previousCompiledData: CompiledHistoryData | undefined;
 function setRole(role: Role) {
   sessionMock.mockReturnValue({
     user: { id: "u1", name: "Test User", email: "t@test.local", role },
-  });
+    organization: null,
+    isAuthenticated: true,
+    isLoading: false,
+  } satisfies SessionState);
 }
 
 function historyEntry(overrides: Partial<MyHistoryEntry>): MyHistoryEntry {
@@ -254,6 +257,53 @@ describe("ReportsPage history archive toggle", () => {
     previousCompiledData = undefined;
     mockQueries();
   });
+
+  it.each(["lead", "head", "admin", "viewer"] as const)(
+    "waits for the session before showing %s history",
+    (role) => {
+      sessionMock.mockReturnValue({
+        user: null,
+        organization: null,
+        isAuthenticated: false,
+        isLoading: true,
+      } satisfies SessionState);
+      const { rerender } = render(<ReportsPage />);
+
+      expect(
+        screen.getByRole("status", { name: "Loading history" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("history-empty-state"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("history-panel-grid"),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText(/History Summary/)).not.toBeInTheDocument();
+      expect(vi.mocked(useInfiniteQuery).mock.calls.at(-1)?.[0]).toEqual(
+        expect.objectContaining({ enabled: false }),
+      );
+      expect(vi.mocked(useQuery).mock.calls.at(-1)?.[0]).toEqual(
+        expect.objectContaining({ enabled: false }),
+      );
+
+      setRole(role);
+      rerender(<ReportsPage />);
+
+      expect(
+        screen.queryByRole("status", { name: "Loading history" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByText(
+          role === "lead"
+            ? "Week 20, May 11–17, 2026"
+            : "Week 19, May 4–10, 2026",
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("history-empty-state"),
+      ).not.toBeInTheDocument();
+    },
+  );
 
   it("hides lead archived rows until Show archive is checked", () => {
     setRole("lead");

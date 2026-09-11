@@ -151,8 +151,8 @@ function PeriodComparisonTrendsSection({
       isRetrying={history.isFetching || comparison.isFetching}
       onRetry={retry}
     >
-      {comparison.data !== undefined ? (
-        <PeriodComparisonChart {...comparison.data} />
+      {comparison.data !== undefined && periodPair !== null ? (
+        <PeriodComparisonChart {...comparison.data} {...periodPair} />
       ) : null}
     </TrendsSection>
   );

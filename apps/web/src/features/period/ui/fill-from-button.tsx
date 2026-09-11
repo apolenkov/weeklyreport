@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
-import { type RefObject, useId } from "react";
+import { type RefObject, useId, useRef } from "react";
 
 import type { ReportPeriod } from "../../report-sections";
 import { sortMostRecentFirst } from "./fill-from-button-helpers";
@@ -55,6 +55,7 @@ function SplitButton({
   lockedReason,
   copyDisabled,
   chevronDisabled,
+  copyRef,
   chevronRef,
   dropdownId,
   dropdownOpen,
@@ -65,6 +66,7 @@ function SplitButton({
   readonly lockedReason: string | undefined;
   readonly copyDisabled: boolean;
   readonly chevronDisabled: boolean;
+  readonly copyRef: RefObject<HTMLButtonElement | null>;
   readonly chevronRef: RefObject<HTMLButtonElement | null>;
   readonly dropdownId: string;
   readonly dropdownOpen: boolean;
@@ -75,6 +77,7 @@ function SplitButton({
     <div className="relative inline-flex items-center" ref={wrapRef}>
       <div className={SPLIT_BUTTON_CONTAINER_CLASS}>
         <button
+          ref={copyRef}
           type="button"
           aria-label="Fill from most recent submitted period"
           title={lockedReason ?? "Fill from most recent submitted period"}
@@ -128,11 +131,22 @@ export function FillFromButton({
   const dropdown = useFillFromDropdown();
   const dropdownId = useId();
   const fill = useFillFromConfirmation(onFillFrom);
+  const copyRef = useRef<HTMLButtonElement>(null);
   const pastPeriods = submittedPastPeriods(periods);
   const previousPeriod = pastPeriods.at(0);
+
+  const requestConfirmation = (
+    period: ReportPeriod | undefined,
+    returnFocusRef: RefObject<HTMLButtonElement | null>,
+  ) => {
+    if (!period) return;
+    returnFocusRef.current?.focus();
+    fill.request(period);
+  };
+
   const handleSelect = (period: ReportPeriod) => {
     dropdown.close();
-    fill.request(period);
+    requestConfirmation(period, dropdown.triggerRef);
   };
 
   return (
@@ -142,10 +156,11 @@ export function FillFromButton({
         lockedReason={lockedReason}
         copyDisabled={disabled || locked || !previousPeriod}
         chevronDisabled={disabled || locked}
+        copyRef={copyRef}
         chevronRef={dropdown.triggerRef}
         dropdownId={dropdownId}
         dropdownOpen={dropdown.open}
-        onCopy={() => fill.request(previousPeriod)}
+        onCopy={() => requestConfirmation(previousPeriod, copyRef)}
         onToggleDropdown={dropdown.toggle}
       />
 

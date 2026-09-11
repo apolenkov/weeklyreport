@@ -150,7 +150,7 @@ describe("HeadSlideCarousel — collision-free keys across paginated pages", () 
       "true",
     );
     expect(scrollToMock).toHaveBeenCalledWith({
-      left: 240,
+      left: 460,
       behavior: "smooth",
     });
     expect(scrollIntoViewMock).not.toHaveBeenCalled();

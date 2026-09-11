@@ -1,4 +1,4 @@
-import { type KeyboardEvent, type ReactNode } from "react";
+import { type ReactNode, type RefObject, useId, useRef, useState } from "react";
 
 import type {
   GridAuthor,
@@ -10,7 +10,6 @@ import {
   StageWatermarks,
   TONE_BORDER,
   TONE_SR_LABEL,
-  ToneMark,
   useHoverTooltip,
 } from "./slide-row-marks";
 
@@ -19,7 +18,7 @@ export { authorSlotBackground, StageLegend } from "./slide-row-marks";
 export type SlideRowActivateHandler = (ref: GridRowEditableRef) => void;
 
 // Activation is inert without editable lineage or a caller handler.
-function useRowActivation({
+function createRowActivation({
   editableRef,
   onRowActivate,
 }: {
@@ -31,44 +30,39 @@ function useRowActivation({
     if (editableRef === undefined) return;
     onRowActivate?.(editableRef);
   };
-  const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    // Mouse editing stays deliberate (double-click), while native activation
-    // keys remain a single-step accessible path.
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    activate();
-  };
-  return { activatable, activate, handleKeyDown };
+  return { activatable, activate };
 }
 
-// Keep the two-line box identical; only editable rows gain button semantics.
+// The prose is the disclosure for every row. Editable rows retain deliberate
+// double-click editing and gain an explicit keyboard path after expansion.
 function RowBody({
-  activatable,
   ariaLabel,
-  onActivate,
-  onKeyDown,
+  controls,
+  expanded,
+  onEdit,
+  onToggle,
+  buttonRef,
   children,
 }: {
-  readonly activatable: boolean;
   readonly ariaLabel: string;
-  readonly onActivate: () => void;
-  readonly onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void;
+  readonly controls: string;
+  readonly expanded: boolean;
+  readonly onEdit: (() => void) | undefined;
+  readonly onToggle: () => void;
+  readonly buttonRef: RefObject<HTMLButtonElement | null>;
   readonly children: ReactNode;
 }) {
-  if (!activatable) {
-    return (
-      <span className="line-clamp-2 min-h-[34px] whitespace-normal break-words">
-        {children}
-      </span>
-    );
-  }
+  const bodyClassName = `${expanded ? "" : "line-clamp-2"} min-h-[34px] whitespace-normal break-words`;
   return (
     <button
+      ref={buttonRef}
       type="button"
+      aria-controls={controls}
+      aria-expanded={expanded}
       aria-label={ariaLabel}
-      onDoubleClick={onActivate}
-      onKeyDown={onKeyDown}
-      className="line-clamp-2 min-h-[34px] cursor-pointer whitespace-normal break-words rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"
+      onClick={onToggle}
+      onDoubleClick={onEdit}
+      className={`${bodyClassName} w-full cursor-pointer rounded-sm text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]`}
     >
       {children}
     </button>
@@ -86,45 +80,96 @@ function ItemRow({
   readonly showStages: boolean;
   readonly onRowActivate?: SlideRowActivateHandler | undefined;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const detailsId = useId();
+  const bodyRef = useRef<HTMLButtonElement>(null);
   const srLabel = TONE_SR_LABEL[row.tone];
-  const { activatable, activate, handleKeyDown } = useRowActivation({
+  const { activatable, activate } = createRowActivation({
     editableRef: row.editableRef,
     onRowActivate,
   });
-  // Two-line card always: hover shows status + full text so a clamped row never
-  // hides its tail; badges/icons ride inline so nothing indents the body.
-  const statusTooltip = useHoverTooltip<HTMLLIElement>(
-    `${row.hoverLabel}\n${row.text}`,
+  // Keep the card at two lines; pointer hover exposes its status and full text.
+  // The metadata rail cannot change the prose's stable left edge.
+  const detailLines = (row.details ?? []).map(
+    ({ label, text }) => `${label}: ${text}`,
   );
-  const content = (
-    <>
-      <AuthorBadge author={author} show={row.showAuthorBadge} />
-      {showStages && <StageWatermarks stageNames={row.stageNames} />}
-      {row.text}
-      <ToneMark tone={row.tone} />
-      {srLabel !== null && <span className="sr-only">{srLabel}</span>}
-    </>
+  const statusTooltip = useHoverTooltip<HTMLLIElement>(
+    [row.hoverLabel, row.text, ...detailLines].join("\n"),
   );
   return (
     <li
       {...statusTooltip}
-      className={`min-w-0 rounded-md border px-2 py-1 text-[13px] leading-[1.3] ${TONE_BORDER[row.tone]}`}
+      onKeyDown={(event) => {
+        if (!expanded || event.key !== "Escape") return;
+        event.preventDefault();
+        setExpanded(false);
+        bodyRef.current?.focus();
+      }}
+      className={`grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-stretch gap-x-1.5 rounded-md border px-2 py-1 text-[13px] leading-[1.3] ${TONE_BORDER[row.tone]}`}
     >
-      {/* min-h = 2 lines at 13px x 1.3 line-height. */}
-      <RowBody
-        activatable={activatable}
-        ariaLabel={`Edit ${row.hoverLabel}: ${row.text}`}
-        onActivate={activate}
-        onKeyDown={handleKeyDown}
+      <div data-testid="slide-row-content" className="min-w-0">
+        {/* min-h = 2 lines at 13px x 1.3 line-height. */}
+        <RowBody
+          ariaLabel={`${expanded ? "Collapse" : "Expand"} full details for ${row.hoverLabel}: ${row.text}`}
+          controls={detailsId}
+          expanded={expanded}
+          onEdit={activatable ? activate : undefined}
+          onToggle={() => setExpanded((current) => !current)}
+          buttonRef={bodyRef}
+        >
+          {row.text}
+          {srLabel !== null && <span className="sr-only">{srLabel}</span>}
+        </RowBody>
+        <div
+          id={detailsId}
+          hidden={!expanded}
+          className="mt-1 space-y-1 border-t border-current/15 pt-1 text-[12px]"
+        >
+          {expanded && (
+            <>
+              <p className="font-medium">{row.hoverLabel}</p>
+              {(row.details ?? []).map(({ label, text }) => (
+                <p key={label}>
+                  <span className="font-medium">{label}:</span> {text}
+                </p>
+              ))}
+              {activatable && (
+                <button
+                  type="button"
+                  aria-label={`Edit ${row.hoverLabel}: ${row.text}`}
+                  onClick={activate}
+                  className="rounded-sm px-1 py-0.5 font-medium text-[var(--color-muted-foreground)] underline-offset-2 hover:text-[var(--color-foreground)] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--color-primary)]"
+                >
+                  Edit
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+      <div
+        data-testid="slide-row-metadata"
+        className="flex w-6 min-w-0 flex-col justify-between gap-1 self-stretch"
       >
-        {content}
-      </RowBody>
+        <div
+          data-testid="slide-row-metadata-top"
+          className="flex items-start justify-end"
+        >
+          <AuthorBadge author={author} />
+        </div>
+        <div
+          data-testid="slide-row-metadata-bottom"
+          className="mt-auto flex flex-wrap items-end justify-end gap-0.5"
+        >
+          {showStages && <StageWatermarks stageNames={row.stageNames} />}
+        </div>
+      </div>
     </li>
   );
 }
 
-// One grid cell: the sorted, author-collapsed rows of a single column, or the
-// muted em-dash placeholder when the cell is empty.
+// One grid cell: sorted rows of a single column, or the muted em-dash
+// placeholder when the cell is empty.
 export function SlideCell({
   rows,
   authorsById,

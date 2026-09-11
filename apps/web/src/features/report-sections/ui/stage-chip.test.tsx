@@ -281,9 +281,7 @@ describe("StageChip — covered-by-risk vs status-set distinction", () => {
   });
 
   it("covered chip with an explicit tooltip still surfaces 'by risk' on focus", async () => {
-    // A pre-set tooltip must NOT swallow the coverage cue: a sighted hover
-    // user gets the dashed border AND the "by risk" explanation, now revealed
-    // receives both the dashed border and the "by risk" explanation.
+    // The custom tooltip retains the coverage cue for hover and focus users.
     render(
       <StageChip
         stage={{

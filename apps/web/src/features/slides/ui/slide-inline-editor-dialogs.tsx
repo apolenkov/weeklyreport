@@ -11,15 +11,12 @@ import { ItemEditDialog } from "../../report-sections";
 import { RiskEditDialog } from "../../review";
 import type {
   ownPeriodRanks,
-  resolveSlideInlineRecord,
+  SlideInlineEditRecord,
   toDialogActivities,
   toDialogProducts,
   toDialogRisks,
 } from "../model/slide-inline-edit";
 
-export type SlideInlineEditRecord = NonNullable<
-  ReturnType<typeof resolveSlideInlineRecord>
->;
 export type SlideInlineItemRecord = Extract<
   SlideInlineEditRecord,
   { kind: "item" }
@@ -75,6 +72,7 @@ export function SlideInlineEditorDialogs(props: SlideInlineEditorDialogsProps) {
   // The three edit dialogs differ only in the record they bind; catalogs and
   // cancel/delete wiring are identical for all of them.
   const shared = {
+    isPending: props.isPending,
     products: props.dialogProducts,
     activities: props.dialogActivities,
     stagesForProduct: props.stagesForProduct,
@@ -113,6 +111,7 @@ export function SlideInlineEditorDialogs(props: SlideInlineEditorDialogsProps) {
         onSave={props.onDecisionSave}
       />
       <ConfirmDeleteDialog
+        isPending={props.isPending}
         open={pendingDeleteRecord !== null}
         title={pendingDeleteRecord?.deleteTitle ?? "Delete record?"}
         preview={pendingDeleteRecord?.deletePreview ?? ""}
@@ -125,6 +124,7 @@ export function SlideInlineEditorDialogs(props: SlideInlineEditorDialogsProps) {
 }
 
 function InlineItemDialog({
+  isPending,
   record,
   currentUserName,
   products,
@@ -136,6 +136,7 @@ function InlineItemDialog({
   onCancel,
   onDelete,
 }: {
+  readonly isPending: boolean;
   readonly record: SlideInlineItemRecord | null;
   readonly currentUserName?: string | undefined;
   readonly products: ReturnType<typeof toDialogProducts>;
@@ -149,6 +150,7 @@ function InlineItemDialog({
 }) {
   return (
     <ItemEditDialog
+      isPending={isPending}
       key={record ? `slide-item-${record.ref.stableId}` : "slide-item"}
       open={record !== null}
       item={record?.item ?? null}
@@ -167,6 +169,7 @@ function InlineItemDialog({
 }
 
 function InlineRiskDialog({
+  isPending,
   record,
   products,
   activities,
@@ -175,6 +178,7 @@ function InlineRiskDialog({
   onCancel,
   onDelete,
 }: {
+  readonly isPending: boolean;
   readonly record: SlideInlineRiskRecord | null;
   readonly products: ReturnType<typeof toDialogProducts>;
   readonly activities: ReturnType<typeof toDialogActivities>;
@@ -185,14 +189,13 @@ function InlineRiskDialog({
 }) {
   return (
     <RiskEditDialog
+      isPending={isPending}
       key={record ? `slide-risk-${record.ref.stableId}` : "slide-risk"}
       open={record !== null}
       risk={record?.risk ?? null}
       products={products}
       activities={activities}
       stagesForProduct={stagesForProduct}
-      initialImpact={record?.risk.impact ?? ""}
-      initialMitigation={record?.risk.mitigation ?? ""}
       onSave={onSave}
       onCancel={onCancel}
       onDelete={onDelete}
@@ -201,6 +204,7 @@ function InlineRiskDialog({
 }
 
 function InlineDecisionDialog({
+  isPending,
   record,
   currentUserName,
   products,
@@ -210,6 +214,7 @@ function InlineDecisionDialog({
   onCancel,
   onDelete,
 }: {
+  readonly isPending: boolean;
   readonly record: SlideInlineDecisionRecord | null;
   readonly currentUserName?: string | undefined;
   readonly products: ReturnType<typeof toDialogProducts>;
@@ -221,6 +226,7 @@ function InlineDecisionDialog({
 }) {
   return (
     <DecisionEditDialog
+      isPending={isPending}
       key={record ? `slide-decision-${record.ref.stableId}` : "slide-decision"}
       open={record !== null}
       decision={record?.decision ?? null}

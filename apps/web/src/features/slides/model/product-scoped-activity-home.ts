@@ -1,8 +1,9 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
+import { CROSS_PRODUCT_ID } from "./section-slide-model-helpers";
 import { activityHomeProduct } from "./slide-grid-cells";
 
-export const SHARED_PRODUCT_ID = "shared-context";
+export const SHARED_PRODUCT_ID = CROSS_PRODUCT_ID;
 export const CROSS_PRODUCT_LABEL = "Shared context";
 
 // Activity-linked rows have no projectId of their own; their home product

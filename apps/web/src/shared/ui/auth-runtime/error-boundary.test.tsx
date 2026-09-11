@@ -28,6 +28,7 @@ class BoomChild extends Component<{ readonly text: string }, object> {
 
 describe("QueryErrorBoundary", () => {
   beforeEach(() => {
+    thrower.armed = true;
     toastError.mockClear();
     vi.spyOn(console, "error").mockImplementation(() => undefined);
   });
@@ -58,7 +59,6 @@ describe("QueryErrorBoundary", () => {
   });
 
   it("offers a working recovery button that re-renders children", () => {
-    thrower.armed = true;
     render(
       <QueryErrorBoundary>
         <BoomChild text="child" />

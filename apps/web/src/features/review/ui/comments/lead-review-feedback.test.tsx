@@ -1,9 +1,9 @@
 // Lead read-only feedback surface — no composer (lead has no review capability).
 
-import type { ReportSectionReadModel } from "@customreport/shared";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { makeReportSectionFixture } from "../../../../test-utils/report-section-fixtures";
 import type { LeadReviewFeedbackRecord } from "../../../report-sections";
 import { mapLeadReviewFeedback } from "../../../report-sections";
 import { LeadReviewFeedback } from "./lead-review-feedback";
@@ -20,31 +20,15 @@ function comment(id: string, text: string) {
   };
 }
 
-// Fixture must include activities: [] so the mapper can label activity-parented rows.
 function sectionWith(
-  overrides: Partial<
-    Pick<
-      ReportSectionReadModel,
-      | "projects"
-      | "referencedProjects"
-      | "items"
-      | "risks"
-      | "decisions"
-      | "activities"
-    >
-  >,
-): ReportSectionReadModel {
-  return {
+  overrides: Parameters<typeof makeReportSectionFixture>[0],
+) {
+  return makeReportSectionFixture({
     projects: [
       { projectId: "p1", projectName: "Product Alpha", trafficLight: null },
     ],
-    referencedProjects: [],
-    items: [],
-    risks: [],
-    decisions: [],
-    activities: [],
     ...overrides,
-  } as unknown as ReportSectionReadModel;
+  });
 }
 
 describe("mapLeadReviewFeedback", () => {
@@ -73,7 +57,7 @@ describe("mapLeadReviewFeedback", () => {
           stageNames: ["Development"],
           comments: [],
         },
-      ] as unknown as ReportSectionReadModel["items"],
+      ],
     });
 
     const result = mapLeadReviewFeedback(section);
@@ -101,7 +85,7 @@ describe("mapLeadReviewFeedback", () => {
           stageNames: ["Development"],
           comments: [],
         },
-      ] as unknown as ReportSectionReadModel["risks"],
+      ],
     });
 
     expect(mapLeadReviewFeedback(section)).toEqual([]);
@@ -118,7 +102,7 @@ describe("mapLeadReviewFeedback", () => {
           note: null,
           linkedProducts: [],
         },
-      ] as unknown as ReportSectionReadModel["activities"],
+      ],
       decisions: [
         {
           id: "d1",

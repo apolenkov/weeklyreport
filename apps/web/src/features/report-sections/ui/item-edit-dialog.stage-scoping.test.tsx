@@ -1,6 +1,3 @@
-// Typed text must survive parent re-renders that replace the stage-selector
-// callback during the autosave/invalidation cycle.
-
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -34,7 +31,7 @@ const defaultA11yProps = {
 } as const;
 
 describe("ItemEditDialog — backdrop keyboard and click behavior", () => {
-  it("Escape on the backdrop div calls onCancel (noStaticElementInteractions justification)", () => {
+  it("Escape on the backdrop calls onCancel", () => {
     const onCancel = vi.fn();
     render(<ItemEditDialog {...defaultA11yProps} onCancel={onCancel} />);
 
@@ -70,7 +67,7 @@ describe("ItemEditDialog — backdrop keyboard and click behavior", () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
-  it("Cancel button click calls onCancel (keyboard-closable alternative justification)", () => {
+  it("Cancel button calls onCancel", () => {
     const onCancel = vi.fn();
     render(<ItemEditDialog {...defaultA11yProps} onCancel={onCancel} />);
 
@@ -100,7 +97,7 @@ describe("ItemEditDialog — backdrop keyboard and click behavior", () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
-  it("item-text textarea receives document focus on mount (initial modal focus via autoFocus)", () => {
+  it("focuses the item-text textarea when the dialog opens", () => {
     render(<ItemEditDialog {...defaultA11yProps} onCancel={vi.fn()} />);
 
     const textarea = document.getElementById("item-text");
@@ -219,6 +216,66 @@ describe("ItemEditDialog — stage-ownership scoping", () => {
 
     expect(screen.queryByRole("checkbox", { name: "Testing" })).toBeNull();
     expect(screen.getByText("Analysis")).toBeInTheDocument();
+  });
+
+  it("clears only the old parent's stage error and validates the selected parent on save", () => {
+    const onSave = vi.fn();
+    const twoProducts: Product[] = [
+      { id: "p1", name: "CRM", overallStatus: "on-track", stages: [] },
+      { id: "p2", name: "Billing", overallStatus: "on-track", stages: [] },
+    ];
+    render(
+      <ItemEditDialog
+        open
+        item={null}
+        products={twoProducts}
+        week="current"
+        defaultProductId="p1"
+        stagesForProduct={(id) =>
+          id === "p1" ? ["Development", "Testing"] : ["Analysis"]
+        }
+        onSave={onSave}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    const save = screen.getByRole("button", { name: "Save Item" });
+    fireEvent.click(save);
+    expect(screen.getByText("Select at least one stage.")).toBeInTheDocument();
+    expect(screen.getByText("Description is required")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Product"), {
+      target: { value: "product:p2" },
+    });
+    expect(
+      screen.queryByText("Select at least one stage."),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Description is required")).toBeInTheDocument();
+    expect(screen.getByText("Applied automatically")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole("textbox", { name: /Description/ }), {
+      target: { value: "Ship billing changes" },
+    });
+    fireEvent.change(screen.getByLabelText("Product"), {
+      target: { value: "product:p1" },
+    });
+    fireEvent.click(save);
+    expect(screen.getByText("Select at least one stage.")).toBeInTheDocument();
+    expect(onSave).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText("Product"), {
+      target: { value: "product:p2" },
+    });
+    expect(
+      screen.queryByText("Select at least one stage."),
+    ).not.toBeInTheDocument();
+    fireEvent.click(save);
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+      text: "Ship billing changes",
+      productId: "p2",
+      stageNames: ["Analysis"],
+    });
   });
 
   const foreignItem: KanbanItem = {
@@ -469,7 +526,7 @@ describe("ItemEditDialog — status lock and blocker routing", () => {
       within(status)
         .getAllByRole("button")
         .map((button) => button.textContent),
-    ).toEqual(["! In Progress", "‖ Paused", "✓ Completed"]);
+    ).toEqual(["Not started", "! In Progress", "‖ Paused", "✓ Completed"]);
   });
 
   it("offers exactly the item type's vocabulary — next chips", () => {
@@ -516,7 +573,7 @@ describe("ItemEditDialog — activity-lane + Add preselects the activity", () =>
       />,
     );
 
-    // The seed activity beats the baked-in default product.
+    // An explicit activity seed takes precedence over the product seed.
     const parentSelect = screen.getByLabelText<HTMLSelectElement>("Parent");
     expect(parentSelect.value).toBe("activity:act-1");
     // An activity parent owns no SDLC stage — the stage step is hidden.

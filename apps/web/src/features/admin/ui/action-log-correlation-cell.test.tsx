@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CorrelationCell } from "./action-log-correlation-cell";
@@ -55,13 +55,18 @@ describe("CorrelationCell", () => {
   it("clears the feedback timer on unmount", async () => {
     copyToClipboard.mockResolvedValue(true);
     vi.useFakeTimers();
+    const clearTimeout = vi.spyOn(window, "clearTimeout");
     const { unmount } = render(<CorrelationCell value="req-123" />);
 
-    fireEvent.click(screen.getByRole("button", { name: /copy reference id/i }));
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: /copy reference id/i }),
+      );
+      await Promise.resolve();
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("Copied");
     unmount();
 
-    // If the timer leaked, it would fire setState on an unmounted component.
-    await vi.advanceTimersByTimeAsync(2000);
-    expect(() => unmount()).not.toThrow();
+    expect(clearTimeout).toHaveBeenCalledOnce();
   });
 });

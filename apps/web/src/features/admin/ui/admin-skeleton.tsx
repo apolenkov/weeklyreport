@@ -18,7 +18,7 @@ const tableBodyRowIndexes = Array.from(
   (_, i) => i,
 );
 
-// Sized to final UI to prevent CLS when the snapshot query resolves.
+// Stable placeholders preserve the form/table shape while the snapshot loads.
 export function AdminTabSkeleton({ variant }: AdminTabSkeletonProps) {
   if (variant === "form") {
     return (

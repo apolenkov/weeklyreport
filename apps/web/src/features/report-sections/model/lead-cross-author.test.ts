@@ -1,5 +1,4 @@
-// Characterization for cross-author mappers. Stage-map fixtures pin current
-// behavior byte-for-byte (not idealized). Foreign-content mappers are live.
+// Cross-author mapper tests cover server-provided stage and content rows.
 
 import { describe, expect, it } from "vitest";
 

@@ -8,7 +8,7 @@ import { SlideFullscreenButton } from "./slide-fullscreen-button";
 const ESC_HINT_MS = 3000;
 
 // Must render inside the fullscreened element (else invisible); top-center
-// avoids the floating exit pill at top-right.
+// avoids the floating exit control at top-right.
 function SlideEscHint({ isFullscreen }: { readonly isFullscreen: boolean }) {
   const [autoHidden, setAutoHidden] = useState(false);
   const [prevFullscreen, setPrevFullscreen] = useState(isFullscreen);
@@ -30,8 +30,8 @@ function SlideEscHint({ isFullscreen }: { readonly isFullscreen: boolean }) {
 
   const show = !autoHidden;
 
-  // Keep the live region mounted while fullscreen and toggle only its text —
-  // some screen readers miss a region that mounts already populated.
+  // Keep the live region mounted while the hint auto-hides so its text change
+  // remains available to assistive technology.
   return (
     <div
       role="status"
@@ -47,7 +47,7 @@ function SlideEscHint({ isFullscreen }: { readonly isFullscreen: boolean }) {
   );
 }
 
-// Floating exit pill + Esc hint; both must live inside the fullscreened element.
+// Floating exit control + Esc hint; both must live inside the fullscreened element.
 export function DeckFullscreenOverlay({
   isFullscreen,
   onToggle,

@@ -1,5 +1,6 @@
 "use client";
 
+import { SAFE_TEXT_MAX_LENGTH } from "@customreport/shared";
 import type { Ref } from "react";
 
 import { RecordTextareaField } from "../../../shared/ui/forms/record-textarea-field";
@@ -84,6 +85,7 @@ function DecisionTextField({
       minHeightPx={60}
       focusOnMount
       textareaRef={textRef}
+      characterLimit={SAFE_TEXT_MAX_LENGTH}
       fill={false}
       hint={
         <p className="mb-1 text-[11px] text-[var(--color-muted-foreground)]">
@@ -156,6 +158,7 @@ function DecisionProseColumn({
         placeholder="What changes when this is decided?"
         minHeightPx={50}
         textareaRef={impactRef}
+        characterLimit={SAFE_TEXT_MAX_LENGTH}
       />
     </div>
   );

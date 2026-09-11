@@ -19,10 +19,7 @@ export function ReviewedRow({
   };
   readonly children: ReactNode;
 }) {
-  // Mount the comments block ONLY when there is something to show — existing
-  // comments or a review capability. This keeps the review data-layer (its
-  // tRPC hooks) out of every non-reviewer render, so the print/PDF path and a
-  // plain read never pull it in.
+  // Mount comment controls only when comments exist or the record is reviewable.
   const hasReviewContent =
     (record.comments?.length ?? 0) > 0 || (record.canReview ?? false);
   return (

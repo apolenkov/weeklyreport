@@ -25,6 +25,11 @@ export interface GridRowEditableRef {
   readonly stableId: string;
 }
 
+export interface GridRowDetail {
+  readonly label: "Impact" | "Mitigation";
+  readonly text: string;
+}
+
 export interface GridAuthor {
   readonly id: string;
   readonly name: string;
@@ -38,11 +43,11 @@ export interface GridRow {
   readonly id: string;
   readonly text: string;
   readonly authorId: string;
-  // Repeated same-author rows omit the badge after the first row.
-  readonly showAuthorBadge: boolean;
   readonly tone: GridTone;
   // Hover combines this status with full text while the row body stays clamped.
   readonly hoverLabel: string;
+  // Supporting prose stays out of the compact card and appears in full-text disclosure.
+  readonly details?: readonly GridRowDetail[];
   readonly stageNames: readonly string[];
   readonly editableRef?: GridRowEditableRef;
 }
@@ -126,7 +131,6 @@ export function buildOwnItemRow(
     id: rowId(item.id, item.stableId, "item", index),
     text: item.text.trim(),
     authorId: owner.id,
-    showAuthorBadge: true,
     tone,
     hoverLabel,
     stageNames: sortStageNames(item.stageNames),
@@ -140,13 +144,21 @@ export function buildOwnRiskRow(
   index: number,
 ): GridRow {
   const blocked = risk.severity === "blocked";
+  const details: GridRowDetail[] = [
+    ...(hasText(risk.impact)
+      ? [{ label: "Impact" as const, text: risk.impact.trim() }]
+      : []),
+    ...(hasText(risk.mitigation)
+      ? [{ label: "Mitigation" as const, text: risk.mitigation.trim() }]
+      : []),
+  ];
   return {
     id: rowId(risk.id, risk.stableId, "risk", index),
     text: risk.risk.trim(),
     authorId: owner.id,
-    showAuthorBadge: true,
     tone: blocked ? "blocked" : "at-risk",
     hoverLabel: blocked ? "Blocked" : "At risk",
+    ...(details.length === 0 ? {} : { details }),
     stageNames: sortStageNames(risk.stageNames),
     ...editableRef("risk", risk.stableId),
   };
@@ -157,14 +169,17 @@ export function buildOwnDecisionRow(
   owner: GridAuthor,
   index: number,
 ): GridRow {
+  const details: GridRowDetail[] = hasText(decision.impact)
+    ? [{ label: "Impact", text: decision.impact.trim() }]
+    : [];
   return {
     id: rowId(decision.id, decision.stableId, "decision", index),
     text: decision.text.trim(),
     authorId: owner.id,
-    showAuthorBadge: true,
     // Decisions are facts, not work in flight — solid quiet frame.
     tone: "note",
     hoverLabel: "Decision",
+    ...(details.length === 0 ? {} : { details }),
     stageNames: sortStageNames(decision.stageNames),
     ...editableRef("decision", decision.stableId),
   };
@@ -193,17 +208,4 @@ export function sortCellRows(
       authorRank(a) - authorRank(b) ||
       (position.get(a.id) ?? 0) - (position.get(b.id) ?? 0),
   );
-}
-
-// Show a badge only on the first row of each consecutive author series.
-export function collapseAuthorSeries(
-  rows: readonly GridRow[],
-  hiddenAuthorId?: string,
-): readonly GridRow[] {
-  return rows.map((row, index) => ({
-    ...row,
-    showAuthorBadge:
-      row.authorId !== hiddenAuthorId &&
-      (index === 0 || rows[index - 1]?.authorId !== row.authorId),
-  }));
 }

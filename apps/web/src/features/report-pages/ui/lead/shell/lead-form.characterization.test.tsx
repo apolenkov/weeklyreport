@@ -16,6 +16,7 @@ import { expectDefined } from "../../../../../test-utils/expect-defined";
 import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
 import { LeadReportAssistantStore } from "../../lead-report-assistant-store";
 import { LeadForm } from "./lead-form";
+import { makeLeadFormSectionFixture } from "./lead-form-test-fixtures";
 
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -36,24 +37,20 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/lead/report",
 }));
 
-const SECTION_ID = "11111111-1111-1111-1111-111111111111";
-const REPORT_ID = "33333333-3333-3333-3333-333333333333";
-const PROJECT_ID = "22222222-2222-2222-2222-222222222222";
-const AUTHOR_ID = "44444444-4444-4444-4444-444444444444";
+const SECTION_ID = "11111111-1111-4111-8111-111111111111";
+const REPORT_ID = "33333333-3333-4333-8333-333333333333";
+const PROJECT_ID = "22222222-2222-4222-8222-222222222222";
+const AUTHOR_ID = "44444444-4444-4444-8444-444444444444";
 const STAGE_ID = "88888888-8888-4888-8888-888888888888";
 const RISK_ID = "99999999-9999-4999-8999-999999999999";
 
 function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
-  return {
+  return makeLeadFormSectionFixture({
     reportSectionId: SECTION_ID,
     reportId: REPORT_ID,
     authorId: AUTHOR_ID,
-    authorName: "Test Lead",
-    authorRole: "lead" as const,
     version: 1,
     status: overrides.status ?? ("draft" as const),
-    submittedAt: null,
-    referencedProjects: [],
     projects: [
       {
         projectId: PROJECT_ID,
@@ -69,7 +66,7 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
     ],
     items: [
       {
-        id: "55555555-5555-5555-5555-555555555555",
+        id: "55555555-5555-4555-8555-555555555555",
         stableId: "5a5a5a5a-5a5a-4a5a-8a5a-5a5a5a5a5a5a",
         projectId: PROJECT_ID,
         type: "current" as const,
@@ -80,11 +77,7 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
         carriedOver: false,
       },
     ],
-    risks: [],
-    decisions: [],
-    priorities: [],
-    activities: [],
-  };
+  });
 }
 
 function byPeriodPayload(section: unknown, readOnly = false) {
@@ -140,6 +133,9 @@ function buildHarness(
     { path: ["leadForm", "revoke"], mutation: true },
     { path: ["leadForm", "fillFrom"], mutation: true },
     { path: ["leadForm", "requestReopen"], mutation: true },
+    { path: ["leadForm", "assistant"], mutation: true },
+    { path: ["leadForm", "resolvePlan"], mutation: true },
+    { path: ["leadForm", "restorePlan"], mutation: true },
     { path: ["leadForm", "crossAuthors"], query: [] },
     { path: ["leadForm", "crossAuthorContent"], query: [] },
     { path: ["review", "dashboard"] },

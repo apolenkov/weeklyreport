@@ -33,13 +33,22 @@ export interface SectionProductProjection extends SectionRecordSummary {
   readonly productSlides: SlideProduct[];
 }
 
+function itemDisplayText(item: SectionItem): string {
+  const text = item.text.trim();
+  if (item.resolution != null)
+    return `${text} — Won't do: ${item.resolution.reason}`;
+  if (item.nextStepText?.trim())
+    return `${text} — Next: ${item.nextStepText.trim()}`;
+  return text;
+}
+
 function itemTexts(
   section: ReportSectionReadModel,
   predicate: (item: SectionItem) => boolean,
 ): string[] {
   return section.items
     .filter((item) => predicate(item) && nonEmpty(item.text))
-    .map((item) => item.text.trim());
+    .map(itemDisplayText);
 }
 
 function riskTexts(
@@ -81,7 +90,7 @@ function priorityRanks(
     section.items.flatMap<readonly [string, number]>((item) => {
       const rank = item.priorityRank;
       return item.projectId === projectId && rank != null && nonEmpty(item.text)
-        ? [[item.text.trim(), rank]]
+        ? [[itemDisplayText(item), rank]]
         : [];
     }),
   );
@@ -144,23 +153,11 @@ function buildSectionRecordSummary(
   section: ReportSectionReadModel,
 ): SectionRecordSummary {
   return {
-    currentItems: itemTexts(
-      section,
-      (item) => item.type === "current" && item.projectId != null,
-    ),
-    nextItems: itemTexts(
-      section,
-      (item) => item.type === "next" && item.projectId != null,
-    ),
-    risks: riskTexts(section, (risk) => risk.projectId != null),
-    decisions: decisionTexts(
-      section,
-      (decision) => decision.activityId == null,
-    ),
-    priorities: itemTexts(
-      section,
-      (item) => item.priorityRank != null && item.projectId != null,
-    ),
+    currentItems: itemTexts(section, (item) => item.type === "current"),
+    nextItems: itemTexts(section, (item) => item.type === "next"),
+    risks: riskTexts(section, () => true),
+    decisions: decisionTexts(section, () => true),
+    priorities: itemTexts(section, (item) => item.priorityRank != null),
   };
 }
 

@@ -50,9 +50,10 @@ function deckPlaceholder(state: {
   readonly isLoading: boolean;
   readonly isError: boolean;
   readonly hasTargetReport: boolean;
+  readonly toolbar: Parameters<typeof SlideSkeleton>[0]["toolbar"];
 }): ReactElement | null {
   if (state.isLoading) {
-    return <SlideSkeleton mode="lead" />;
+    return <SlideSkeleton mode="lead" toolbar={state.toolbar} />;
   }
   if (state.isError) {
     return (
@@ -73,8 +74,7 @@ function deckPlaceholder(state: {
   return null;
 }
 
-// Two-sided clamp at render: shrink can strand the index past the end, and an
-// empty-deck ArrowRight stores -1, which a one-sided upper bound would accept.
+// Clamp both stale upper bounds and defensive negative selections at render.
 function clampSelectedIndex(raw: number, slideCount: number): number {
   return raw >= 0 && raw < slideCount ? raw : 0;
 }
@@ -110,6 +110,7 @@ function useLeadSlidesDeck({
   visibilityMode,
   visibilityHydrated,
   density,
+  showDensityControl,
 }: {
   readonly initialReportId: string | null;
   readonly foreignContent: readonly CrossAuthorContentRow[] | undefined;
@@ -117,6 +118,7 @@ function useLeadSlidesDeck({
   readonly visibilityMode: "mine" | "everyone";
   readonly visibilityHydrated: boolean;
   readonly density: SlideDensity;
+  readonly showDensityControl: boolean;
 }) {
   const leadSlides = useLeadSlidesData({
     initialReportId,
@@ -145,6 +147,11 @@ function useLeadSlidesDeck({
       isLoading: leadSlides.isLoading,
       isError: leadSlides.isError,
       hasTargetReport: Boolean(leadSlides.targetReportId),
+      toolbar: showDensityControl
+        ? "density"
+        : leadSlides.inReportMode
+          ? "none"
+          : "fullscreen",
     }),
   };
 }
@@ -165,6 +172,7 @@ export function LeadSlidesClient({
   const [internalDensity, setInternalDensity] =
     useState<SlideDensity>("document");
   const activeDensity = density ?? internalDensity;
+  const showDensityControl = density === undefined;
   const handleDensityChange = onDensityChange ?? setInternalDensity;
   const internalDeckRef = useRef<HTMLDivElement>(null);
   const toggleButtonRef = useRef<HTMLButtonElement>(null);
@@ -181,6 +189,7 @@ export function LeadSlidesClient({
     visibilityMode,
     visibilityHydrated,
     density: activeDensity,
+    showDensityControl,
   });
 
   if (deck.placeholder !== null) {
@@ -194,7 +203,7 @@ export function LeadSlidesClient({
       fullscreen={fullscreen}
       deck={deck}
       density={activeDensity}
-      showDensityControl={density === undefined}
+      showDensityControl={showDensityControl}
       onDensityChange={handleDensityChange}
       selectedIndex={clampSelectedIndex(rawSelectedIndex, deck.slides.length)}
       onSelect={setSelectedIndex}

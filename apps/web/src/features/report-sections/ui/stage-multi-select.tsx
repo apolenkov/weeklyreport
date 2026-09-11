@@ -7,7 +7,6 @@ interface StageMultiSelectProps {
   readonly error?: string | undefined;
   readonly onChange: (next: string[]) => void;
   readonly previewSeverity?: "at-risk" | "blocked" | undefined;
-  readonly required?: boolean | undefined;
 }
 
 function computeBannerText(

@@ -7,7 +7,7 @@ import { render as testingRender, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("../../../lib/web-env", () => ({
+vi.mock("../../lib/runtime/web-env", () => ({
   webEnv: { devRoleSwitcher: vi.fn(() => false) },
 }));
 

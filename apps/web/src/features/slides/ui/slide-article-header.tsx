@@ -1,4 +1,7 @@
-import { trafficLightToCanonical } from "@customreport/shared";
+import {
+  shortNameFromName,
+  trafficLightToCanonical,
+} from "@customreport/shared";
 import type { ReactNode } from "react";
 
 import type {
@@ -9,10 +12,12 @@ import type {
 import { authorSlotBackground } from "./slide-article-rows";
 import { SlideStatusBadge } from "./slide-status-badge";
 
-function metric(count: number, label: string) {
+function metric(count: number, singular: string, plural = singular) {
+  const label = count === 1 ? singular : plural;
   return (
     <span
       key={label}
+      data-testid={`slide-metric-${singular}`}
       className="whitespace-nowrap text-xs text-[var(--color-muted-foreground)]"
     >
       <span className="text-sm font-bold tabular-nums text-[var(--color-foreground)]">
@@ -55,9 +60,9 @@ export function SlideGridHeader({
       <span className="ml-auto flex items-center gap-2">
         {metric(grid.counters.current, "current")}
         <span aria-hidden="true">·</span>
-        {metric(grid.counters.risks, "risks")}
+        {metric(grid.counters.risks, "risk", "risks")}
         <span aria-hidden="true">·</span>
-        {metric(grid.counters.priorities, "priorities")}
+        {metric(grid.counters.priorities, "priority", "priorities")}
       </span>
       {grid.onTrack.total > 0 && (
         <span
@@ -199,7 +204,7 @@ export function SlideLegend({
           >
             {author.initials}
           </span>
-          {author.name}
+          {shortNameFromName(author.name)}
           {author.role === undefined ? "" : ` · ${author.role}`}
         </span>
       ))}

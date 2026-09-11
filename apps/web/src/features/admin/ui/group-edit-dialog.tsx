@@ -141,13 +141,21 @@ function GroupFormFields({
   headCandidates,
   products,
   editingGroup,
+  isSaving,
 }: Pick<
   GroupEditDialogProps,
-  "form" | "onFormChange" | "headCandidates" | "products" | "editingGroup"
+  | "form"
+  | "onFormChange"
+  | "headCandidates"
+  | "products"
+  | "editingGroup"
+  | "isSaving"
 >) {
   return (
-    <div
-      className="mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto pr-1"
+    <fieldset
+      disabled={isSaving}
+      aria-label="Group fields"
+      className="mt-4 min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto pr-1"
       data-testid="group-dialog-body"
     >
       <GroupNameField form={form} onFormChange={onFormChange} />
@@ -163,7 +171,7 @@ function GroupFormFields({
       {editingGroup && (
         <GroupProductsEditor groupId={editingGroup.id} products={products} />
       )}
-    </div>
+    </fieldset>
   );
 }
 
@@ -207,6 +215,7 @@ export function GroupEditDialog(props: GroupEditDialogProps) {
           headCandidates={props.headCandidates}
           products={props.products}
           editingGroup={editingGroup}
+          isSaving={isSaving}
         />
         <AdminEntityDialogActions
           saveLabel={editingGroup ? "Save Changes" : "Add Group"}

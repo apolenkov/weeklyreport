@@ -42,6 +42,13 @@ function LeadFormEditor(
   },
 ) {
   const editor = useLeadFormEditor(props);
+  if (editor.status === "no-active") {
+    return (
+      <section className="card-surface p-6" role="status">
+        No active reporting period is available.
+      </section>
+    );
+  }
   if (editor.status === "unavailable") return <LeadFormUnavailable />;
   if (editor.status === "error") {
     return (

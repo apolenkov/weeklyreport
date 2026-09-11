@@ -3,6 +3,9 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 
+import { copyReportSearchParams } from "../../lib/navigation/report-search-params";
+import { getScalarSearchParam } from "../../lib/navigation/scalar-search-param";
+
 export type ReportShellScopeValue = "product" | "lead";
 
 export interface ReportShellUrlState {
@@ -29,7 +32,7 @@ export function useReportShellUrlState({
 
   const buildQuery = useCallback(
     (overrides: Record<string, string | null>) => {
-      const next = new URLSearchParams(searchParams.toString());
+      const next = copyReportSearchParams(searchParams);
       for (const key of stripParams) next.delete(key);
       for (const [key, value] of Object.entries(overrides)) {
         if (value === null || value === "") next.delete(key);
@@ -41,7 +44,7 @@ export function useReportShellUrlState({
     [searchParams, stripParams],
   );
 
-  const includeArchive = searchParams.get("archive") === "1";
+  const includeArchive = getScalarSearchParam(searchParams, "archive") === "1";
   const setIncludeArchive = useCallback(
     (value: boolean) => {
       router.replace(
@@ -55,7 +58,7 @@ export function useReportShellUrlState({
   );
 
   const scope: ReportShellScopeValue =
-    searchParams.get("scope") === "lead" ? "lead" : "product";
+    getScalarSearchParam(searchParams, "scope") === "lead" ? "lead" : "product";
   const setScope = useCallback(
     (value: ReportShellScopeValue) => {
       router.replace(

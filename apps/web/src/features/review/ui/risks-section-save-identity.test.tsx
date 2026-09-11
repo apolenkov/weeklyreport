@@ -55,10 +55,9 @@ function fillProse(text: string): void {
   });
 }
 
-// The server delete-recreates a section's risk rows from exactly the list this
-// callback emits, so a list that grows on edit is a duplicate row in the
-// database — the row-count arithmetic the e2e suite polls cannot come out right.
-describe("RisksSection — the emitted list decides how many rows a save writes", () => {
+// The server replaces risk rows from this list; edits must replace their entry
+// without appending a duplicate.
+describe("RisksSection save identity", () => {
   it("saving an edit keeps one entry, carrying the edited risk's id", () => {
     const onChange = vi.fn<(next: readonly RiskEntry[]) => void>();
     renderSection(onChange);
@@ -78,8 +77,7 @@ describe("RisksSection — the emitted list decides how many rows a save writes"
     const onChange = vi.fn<(next: readonly RiskEntry[]) => void>();
     const { rerender } = renderSection(onChange);
 
-    // An add-signal bump is the only way in: the +Add Risk control lives in the
-    // parent form, not in this section.
+    // The parent form requests creation by advancing addSignal.
     rerender(
       <SdlcTooltipProvider>
         <RisksSection
@@ -92,8 +90,7 @@ describe("RisksSection — the emitted list decides how many rows a save writes"
       </SdlcTooltipProvider>,
     );
 
-    // A lone owned stage is applied without a checkbox group, so the prose is
-    // the whole form here.
+    // A lone owned stage is applied automatically.
     fillProse("Second vendor at risk");
     fireEvent.click(screen.getByRole("button", { name: /^Save Risk$/ }));
 

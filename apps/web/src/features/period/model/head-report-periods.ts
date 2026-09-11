@@ -13,25 +13,35 @@ interface PrependCandidate {
   readonly data: ActivePeriodData;
 }
 
-function historyEntryToPeriod(entry: CompiledHistoryEntry): ReportPeriod {
+function historyEntryToPeriod(
+  entry: CompiledHistoryEntry,
+  activeReportId: string | null,
+  lifecycleCandidate: PrependCandidate | undefined,
+): ReportPeriod {
   return toNavigationPeriod({
     id: entry.reportId,
     periodStart: entry.periodStart,
     periodEnd: entry.periodEnd,
-    archived: entry.archived,
-    isCurrent: false,
+    archived: lifecycleCandidate?.data.archived ?? entry.archived,
+    isCurrent: entry.reportId === activeReportId,
+    periodState:
+      lifecycleCandidate?.data.periodState ??
+      (entry.archived ? "archived" : "published"),
   });
 }
 
-function candidateToPeriod(candidate: PrependCandidate): ReportPeriod {
+function candidateToPeriod(
+  candidate: PrependCandidate,
+  activeReportId: string | null,
+): ReportPeriod {
   const { data } = candidate;
   return toNavigationPeriod({
     id: candidate.id,
     periodStart: data.periodStart,
     periodEnd: data.periodEnd,
-    archived: false,
-    // Mirror mapWeeklyReport: a non-published period is the current week.
-    isCurrent: data.periodStatus !== "published",
+    archived: data.archived,
+    isCurrent: candidate.id === activeReportId,
+    periodState: data.periodState,
   });
 }
 
@@ -43,7 +53,8 @@ export function deriveHeadPeriods(
   displayed: WeeklyReportGetResponse | undefined,
   reportId: string,
 ): readonly ReportPeriod[] {
-  const historyPeriods = historyEntries.map(historyEntryToPeriod);
+  const activeReportId =
+    active && active.status !== "no-period" ? active.reportId : null;
 
   const activeCandidate: PrependCandidate | null =
     active && active.status !== "no-period"
@@ -56,6 +67,13 @@ export function deriveHeadPeriods(
   const candidates = [activeCandidate, displayedCandidate].filter(
     (candidate): candidate is PrependCandidate => candidate !== null,
   );
+  const historyPeriods = historyEntries.map((entry) =>
+    historyEntryToPeriod(
+      entry,
+      activeReportId,
+      candidates.find((candidate) => candidate.id === entry.reportId),
+    ),
+  );
 
   const { list: prepended } = candidates.reduce<{
     readonly list: readonly ReportPeriod[];
@@ -65,7 +83,7 @@ export function deriveHeadPeriods(
       acc.seen.has(candidate.id)
         ? acc
         : {
-            list: [...acc.list, candidateToPeriod(candidate)],
+            list: [...acc.list, candidateToPeriod(candidate, activeReportId)],
             seen: new Set([...acc.seen, candidate.id]),
           },
     { list: [], seen: new Set(historyPeriods.map((period) => period.id)) },

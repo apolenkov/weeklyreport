@@ -42,13 +42,6 @@ export interface SlideProduct {
   readonly itemRanks?: Readonly<Record<string, number>>;
 }
 
-export interface SlideActivityPill {
-  readonly id: string;
-  readonly name: string;
-  readonly status: SlideStageStatus;
-  readonly linkedProducts: readonly string[];
-}
-
 export interface SectionSlideModel {
   readonly id: string;
   readonly ownerId: string;
@@ -77,6 +70,5 @@ export interface SectionSlideModel {
   readonly pageIndex?: number;
   readonly pageTotal?: number;
   readonly pageLabel?: string;
-  readonly activities?: readonly SlideActivityPill[];
   readonly grid?: SlideGridModel;
 }

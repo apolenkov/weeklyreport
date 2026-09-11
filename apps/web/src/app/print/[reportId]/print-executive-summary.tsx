@@ -66,10 +66,16 @@ export function PrintExecutiveSummary({
         <SummaryCard color={SUBMITTED_COLOR} label="Submitted">
           {submitted}/{total}
         </SummaryCard>
-        <SummaryCard color={BLOCKED_COLOR} label="Blocked">
+        <SummaryCard
+          color={BLOCKED_COLOR}
+          label="Blocked products / activities"
+        >
           {blockedCount}
         </SummaryCard>
-        <SummaryCard color={AT_RISK_COLOR} label="At Risk">
+        <SummaryCard
+          color={AT_RISK_COLOR}
+          label="At-risk products / activities"
+        >
           {atRiskCount}
         </SummaryCard>
         <SummaryCard color={DECISION_ACCENT} label="Decisions">

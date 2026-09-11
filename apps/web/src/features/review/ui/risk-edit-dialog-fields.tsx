@@ -1,5 +1,6 @@
 "use client";
 
+import { SAFE_TEXT_MAX_LENGTH } from "@customreport/shared";
 import { type Ref, useId } from "react";
 
 import { ChoiceChipRow } from "../../../shared/ui/forms/choice-chip-row";
@@ -76,6 +77,7 @@ function RiskProseColumn(props: RiskProseColumnProps) {
         minHeightPx={RISK_TEXT_MIN_HEIGHT_PX}
         focusOnMount
         textareaRef={props.textRef}
+        characterLimit={SAFE_TEXT_MAX_LENGTH}
       />
       <RecordTextareaField
         id="risk-impact"
@@ -87,6 +89,7 @@ function RiskProseColumn(props: RiskProseColumnProps) {
         placeholder="e.g. Delays Q3 launch by 2 weeks; 4 downstream teams idle"
         minHeightPx={RISK_FOLLOW_UP_MIN_HEIGHT_PX}
         textareaRef={props.impactRef}
+        characterLimit={SAFE_TEXT_MAX_LENGTH}
       />
       <RecordTextareaField
         id="risk-mitigation"
@@ -98,6 +101,7 @@ function RiskProseColumn(props: RiskProseColumnProps) {
         placeholder="e.g. Vendor escalation in progress; ETA 48h"
         minHeightPx={RISK_FOLLOW_UP_MIN_HEIGHT_PX}
         textareaRef={props.mitigationRef}
+        characterLimit={SAFE_TEXT_MAX_LENGTH}
       />
     </div>
   );

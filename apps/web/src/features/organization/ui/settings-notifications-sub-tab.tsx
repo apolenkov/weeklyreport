@@ -152,7 +152,7 @@ export function NotificationsSubTab({
   const isSaving = updateSettingsMut.isPending;
 
   return (
-    <div className="max-w-lg space-y-5">
+    <fieldset disabled={isSaving} className="min-w-0 max-w-lg space-y-5">
       <p className="text-sm text-[var(--color-muted-foreground)]">
         Used as the From: address on outgoing reminder + escalation emails.
         Leave blank to fall back to the per-mailer default.
@@ -174,6 +174,6 @@ export function NotificationsSubTab({
         disabled={isSaving || !isValidEmail}
         showSaved={showSaved}
       />
-    </div>
+    </fieldset>
   );
 }

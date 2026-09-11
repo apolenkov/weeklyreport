@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import type { SectionSlideModel } from "../model/section-slide-contracts";
 import type { GridAuthor, SlideGridModel } from "../model/slide-grid-model";
 import { collectStageNames } from "../model/slide-grid-model";
-import { SlideActivityPills } from "./slide-activity-pills";
 import { SlideColumnHeaderRow, SlideProductCard } from "./slide-article-grid";
 import {
   SlideGridHeader,
@@ -17,8 +16,8 @@ import {
   StageLegend,
 } from "./slide-article-rows";
 
-// Activity-feed fallback slides carry no section, hence no grid: render
-// the identity line and the activity pill lane only.
+// Activity-feed fallback slides carry no section or grid, so only their
+// available identity is rendered.
 function ActivityFeedSlide({ slide }: { readonly slide: SectionSlideModel }) {
   return (
     <article
@@ -29,9 +28,6 @@ function ActivityFeedSlide({ slide }: { readonly slide: SectionSlideModel }) {
       <h2 className="text-xl font-semibold text-[var(--color-foreground)]">
         {slide.ownerName}
       </h2>
-      <div className="mt-3">
-        <SlideActivityPills activities={slide.activities} />
-      </div>
     </article>
   );
 }

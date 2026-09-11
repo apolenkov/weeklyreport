@@ -37,8 +37,8 @@ function mapRisk(
   };
 }
 
-// `text` is only the risk field — impact/mitigation stay on the row but are not
-// shown. Handlers keep non-empty defaults for safeText({min:1}) on those fields.
+// The mapper copies risk, impact, and mitigation independently; write
+// validation enforces the required non-empty fields.
 export function mapLeadRisks(section: ReportSectionReadModel): LeadRiskEntry[] {
   const projectIndex = buildProjectIndex(section);
   const activityNameById = buildActivityIndex(section);

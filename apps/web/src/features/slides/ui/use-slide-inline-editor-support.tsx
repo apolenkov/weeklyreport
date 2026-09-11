@@ -6,7 +6,10 @@ import { toast } from "sonner";
 import { invalidateLeadForm } from "../../../shared/lib/query/cache-keys";
 import { isConflictError } from "../../../shared/lib/trpc/trpc";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
-import { sectionToDraftPayload } from "../../report-sections";
+import {
+  type MappedLeadForm,
+  sectionToDraftPayload,
+} from "../../report-sections";
 import type { GridRowEditableRef } from "../model/slide-grid-rows";
 import {
   ownedStagesForProduct,
@@ -16,9 +19,6 @@ import {
   toDialogProducts,
   toDialogRisks,
 } from "../model/slide-inline-edit";
-import type { LeadSlideFormData } from "./lead-slide-form-data";
-
-export type { LeadSlideFormData } from "./lead-slide-form-data";
 export type SaveOperation = "saved" | "deleted";
 
 // Single write path for inline save/delete; conflict reloads rather than toast-retrying.
@@ -27,7 +27,7 @@ export function useSlideDraftSaveMutation({
   onSaved,
 }: {
   readonly refetchSection: () => Promise<unknown>;
-  readonly onSaved: () => void;
+  readonly onSaved: (sectionId: string) => void;
 }) {
   const trpc = useTRPC();
   const qc = useQueryClient();
@@ -48,7 +48,7 @@ export function useSlideDraftSaveMutation({
         onSuccess: () => {
           invalidateLeadForm(qc, trpc);
           void refetchSection().catch(() => undefined);
-          onSaved();
+          onSaved(section.reportSectionId);
           toast.success(
             operation === "deleted"
               ? "Slide record deleted"
@@ -85,7 +85,7 @@ export function useSlideDraftSaveMutation({
 // underlying record; null until section, formData and the row ref all exist.
 function useSlideInlineRecord(
   section: ReportSectionReadModel | null,
-  formData: LeadSlideFormData | null,
+  formData: MappedLeadForm | null,
   rowRef: GridRowEditableRef | null,
 ) {
   return useMemo(
@@ -105,7 +105,7 @@ export function useInlineEditDialogData({
   pendingDeleteRef,
 }: {
   readonly section: ReportSectionReadModel | null;
-  readonly formData: LeadSlideFormData | null;
+  readonly formData: MappedLeadForm | null;
   readonly inlineEditRef: GridRowEditableRef | null;
   readonly pendingDeleteRef: GridRowEditableRef | null;
 }) {

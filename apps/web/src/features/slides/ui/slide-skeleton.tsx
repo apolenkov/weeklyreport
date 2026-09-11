@@ -9,8 +9,8 @@ function DensitySkeleton() {
       data-testid="slide-skeleton-density"
       className="inline-flex rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] p-1"
     >
-      <Skeleton className="h-10 w-24 rounded-[var(--radius-pill)]" />
-      <Skeleton className="h-10 w-28 rounded-[var(--radius-pill)]" />
+      <Skeleton className="h-[var(--toolbar-control-h)] w-24 rounded-[var(--radius-pill)]" />
+      <Skeleton className="h-[var(--toolbar-control-h)] w-28 rounded-[var(--radius-pill)]" />
     </div>
   );
 }
@@ -122,9 +122,11 @@ function ArticleSkeleton() {
 export function SlideSkeleton({
   mode = "head",
   announce = true,
+  toolbar = mode === "head" ? "fullscreen" : "density",
 }: {
   readonly mode?: "lead" | "head";
   readonly announce?: boolean;
+  readonly toolbar?: "density" | "fullscreen" | "none" | undefined;
 }) {
   return (
     <div
@@ -136,7 +138,13 @@ export function SlideSkeleton({
       data-layout-key="status-slide-deck"
       data-layout-stability="position-width"
     >
-      <DensitySkeleton />
+      {toolbar === "density" ? <DensitySkeleton /> : null}
+      {toolbar === "fullscreen" ? (
+        <Skeleton
+          data-testid="slide-skeleton-fullscreen"
+          className="h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] rounded-[var(--radius-pill)]"
+        />
+      ) : null}
       {mode === "head" ? <HeadCarouselSkeleton /> : <LeadCarouselSkeleton />}
       <ArticleSkeleton />
     </div>

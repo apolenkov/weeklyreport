@@ -120,10 +120,10 @@ function statusCounts(
     (slide) => slide.status === "yellow",
   ).length;
   const blockedRiskCount = section.risks.filter(
-    (risk) => risk.severity === "blocked" && risk.projectId != null,
+    (risk) => risk.severity === "blocked",
   ).length;
   const atRiskRiskCount = section.risks.filter(
-    (risk) => risk.severity === "at-risk" && risk.projectId != null,
+    (risk) => risk.severity === "at-risk",
   ).length;
   return {
     blockedCount: blockedProjectCount + blockedRiskCount,

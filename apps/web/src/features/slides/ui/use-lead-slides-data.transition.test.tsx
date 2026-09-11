@@ -3,7 +3,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SessionContext } from "../../../shared/lib/auth/session-provider";
 import { makeQueryClient } from "../../../shared/lib/query/query-client";
@@ -22,9 +22,17 @@ const buildLeadDeckModelMock = vi.hoisted(() =>
   ),
 );
 
+const { byPeriodInputMock, navigation } = vi.hoisted(() => ({
+  byPeriodInputMock: vi.fn(),
+  navigation: {
+    pathname: "/lead/report/report-a",
+    searchParams: new URLSearchParams(),
+  },
+}));
+
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/lead/report/report-a",
-  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => navigation.pathname,
+  useSearchParams: () => navigation.searchParams,
 }));
 
 vi.mock("../../../shared/hooks/query/use-query-error-handler", () => ({
@@ -56,10 +64,12 @@ function makeProviders() {
     { path: ["reports", "myHistory"], query: [] },
     {
       path: ["leadForm", "byPeriod"],
-      queryByInput: (input) =>
-        (input as { reportId: string }).reportId === "report-a"
+      queryByInput: (input) => {
+        byPeriodInputMock(input);
+        return (input as { reportId: string }).reportId === "report-a"
           ? { section: { id: "section-a", marker: "Report A slide" } }
-          : pending,
+          : pending;
+      },
     },
     { path: ["leadForm", "crossAuthors"], queryByInput: () => [] },
   ]);
@@ -90,7 +100,79 @@ function makeProviders() {
   };
 }
 
+beforeEach(() => {
+  byPeriodInputMock.mockClear();
+  navigation.pathname = "/lead/report/report-a";
+  navigation.searchParams = new URLSearchParams();
+});
+
 describe("useLeadSlidesData report-key transitions", () => {
+  it.each([
+    {
+      label: "keeps one author",
+      query: "authorId=foreign-author",
+      expectedAuthorId: "foreign-author",
+    },
+    {
+      label: "ignores repeated authors",
+      query: "authorId=foreign-author&authorId=other-author",
+      expectedAuthorId: undefined,
+    },
+  ])("$label in the deck request", async ({ query, expectedAuthorId }) => {
+    navigation.searchParams = new URLSearchParams(query);
+
+    renderHook(
+      () =>
+        useLeadSlidesData({
+          initialReportId: "report-a",
+          foreignContent: undefined,
+          foreignContentPending: false,
+          visibilityMode: "mine",
+          visibilityHydrated: true,
+        }),
+      { wrapper: makeProviders() },
+    );
+
+    await waitFor(() =>
+      expect(byPeriodInputMock).toHaveBeenCalledWith({
+        reportId: "report-a",
+        authorId: expectedAuthorId,
+      }),
+    );
+  });
+
+  it.each([
+    {
+      label: "keeps one report",
+      query: "reportId=report-a",
+      expectedReportId: "report-a",
+    },
+    {
+      label: "ignores repeated reports",
+      query: "reportId=report-a&reportId=report-b",
+      expectedReportId: "",
+    },
+  ])("$label in the deck request", async ({ query, expectedReportId }) => {
+    navigation.pathname = "/lead/slides";
+    navigation.searchParams = new URLSearchParams(query);
+
+    const rendered = renderHook(
+      () =>
+        useLeadSlidesData({
+          initialReportId: null,
+          foreignContent: undefined,
+          foreignContentPending: false,
+          visibilityMode: "mine",
+          visibilityHydrated: true,
+        }),
+      { wrapper: makeProviders() },
+    );
+
+    await waitFor(() =>
+      expect(rendered.result.current.targetReportId).toBe(expectedReportId),
+    );
+  });
+
   it("drops report A slides and edit state while report B is pending", async () => {
     const rendered = renderHook(
       ({ reportId }) =>

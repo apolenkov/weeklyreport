@@ -15,8 +15,10 @@ interface UseEditableListDialogOptions {
   // Seed product for signal-opened create mode. Stays in the effect deps —
   // canonical across all four section copies.
   readonly seedProductId?: string | undefined;
-  // current/next-week require a seed product to open from the signal (the
-  // created item must attach to a product column); risks/decisions do not.
+  // Activity is the fallback parent when no product seed exists.
+  readonly seedActivityId?: string | undefined;
+  // current/next-week require a product or activity parent to open from the
+  // signal; risks/decisions do not.
   readonly requireSeed?: boolean | undefined;
 }
 
@@ -61,6 +63,7 @@ export function useEditableListDialog<TEntity extends { id: string }>({
   readOnly,
   addSignal,
   seedProductId,
+  seedActivityId,
   requireSeed = false,
 }: UseEditableListDialogOptions): UseEditableListDialogResult<TEntity> {
   type DialogState = EditableListDialogState<TEntity>;
@@ -77,7 +80,7 @@ export function useEditableListDialog<TEntity extends { id: string }>({
   // See lead-dialog-lifecycle.
   const lastHandledSignal = useRef(addSignal);
 
-  // Identity-stable across readOnly so chip-raise can list it without reopening on snapshot.
+  // The callback follows readOnly so every caller uses the current edit guard.
   const openCreate = useCallback(
     (seed?: CreateSeed) => {
       if (readOnly) return;
@@ -104,15 +107,18 @@ export function useEditableListDialog<TEntity extends { id: string }>({
     if (addSignal === NO_SIGNAL_HANDLED) return;
     if (addSignal <= lastHandledSignal.current) return;
     if (readOnly) return;
-    if (requireSeed && !seedProductId) return;
+    if (requireSeed && !seedProductId && !seedActivityId) return;
     lastHandledSignal.current = addSignal;
     advanceOpenSeq();
     setDialogState({
       open: true,
       mode: "create",
       ...(seedProductId === undefined ? {} : { seedProductId }),
+      ...(seedProductId !== undefined || seedActivityId === undefined
+        ? {}
+        : { seedActivityId }),
     });
-  }, [addSignal, readOnly, seedProductId, requireSeed]);
+  }, [addSignal, readOnly, seedProductId, seedActivityId, requireSeed]);
 
   const dialogKey = buildDialogKey(openSeq, dialogState);
 

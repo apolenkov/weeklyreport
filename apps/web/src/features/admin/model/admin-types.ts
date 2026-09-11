@@ -1,6 +1,6 @@
 import type {
+  AdminSnapshot,
   DbRole,
-  PeriodStatus,
   ReminderAudience,
   ReminderPolicyKind,
 } from "@customreport/shared";
@@ -20,7 +20,7 @@ export interface AdminUserView {
   position: string | null;
   email: string;
   role: DbRole;
-  groupId: string;
+  groupId: string | null;
   // Reporting-group display label (NOT an HR field — distinct from `position`).
   department: string;
   // Soft-deactivation flag from the API.
@@ -48,18 +48,6 @@ export interface AdminProductView {
   status: "active" | "archived";
 }
 
-export type { PeriodStatus } from "@customreport/shared";
-
-export interface AdminPeriodView {
-  id: string;
-  weekLabel: string;
-  startDate: string;
-  endDate: string;
-  // ISO date, or null when the period's deadline was cleared.
-  deadline: string | null;
-  status: PeriodStatus;
-}
-
 export interface AdminReminderView {
   policyId: string;
   fireAt: Date;
@@ -79,11 +67,24 @@ export interface AdminReminderPolicyView {
   validUntil: Date | null;
 }
 
+/** Read-only delivery facts shown alongside reminder policies. */
+export type AdminReminderExecutionView = Pick<
+  AdminSnapshot["reminderExecutions"][number],
+  | "id"
+  | "ruleId"
+  | "reportId"
+  | "status"
+  | "scheduledFor"
+  | "sentAt"
+  | "recipientEmail"
+  | "errorMessage"
+>;
+
 export interface MappedAdminSnapshot {
   groups: AdminGroupView[];
   users: AdminUserView[];
   products: AdminProductView[];
-  periods: AdminPeriodView[];
   reminders: AdminReminderView[];
   policies: AdminReminderPolicyView[];
+  executions: AdminReminderExecutionView[];
 }

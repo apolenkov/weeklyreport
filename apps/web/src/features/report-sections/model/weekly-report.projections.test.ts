@@ -72,12 +72,67 @@ describe("trafficToProductStatus", () => {
 
 describe("statusLabelFor", () => {
   it("joins lead names with ', ' and prefixes the status", () => {
-    expect(statusLabelFor("at-risk", ["Тимлид 1", "Maria K."])).toBe(
-      "At Risk \u00B7 Тимлид 1, Maria K.",
-    );
+    expect(
+      statusLabelFor("at-risk", [
+        "Иванов Василий Петрович",
+        "Каштанова Мария Александровна",
+      ]),
+    ).toBe("At Risk \u00B7 Иванов В.П., Каштанова М.А.");
   });
   it('falls back to "unassigned" when no leads', () => {
     expect(statusLabelFor("on-track", [])).toBe("On Track \u00B7 unassigned");
+  });
+
+  it("shortens every product lead while preserving source names, ids, and order", () => {
+    const leadNames = [
+      "Иванов Василий Петрович",
+      "Каштанова Мария Александровна",
+    ] as const;
+    const report = baseReport({
+      portfolioOverview: [
+        {
+          productId: PROJECT_A,
+          productName: "CRM",
+          worstStatus: "yellow",
+          stageCount: 2,
+          leadNames,
+          leadIds: [AUTHOR_A, AUTHOR_B],
+        },
+      ],
+      leadSections: [
+        {
+          authorId: AUTHOR_A,
+          authorName: leadNames[0],
+          projects: [
+            {
+              projectId: PROJECT_A,
+              projectName: "CRM",
+              trafficLight: "yellow",
+            },
+          ],
+        },
+        {
+          authorId: AUTHOR_B,
+          authorName: leadNames[1],
+          projects: [
+            {
+              projectId: PROJECT_A,
+              projectName: "CRM",
+              trafficLight: "yellow",
+            },
+          ],
+        },
+      ],
+    });
+
+    const result = mapWeeklyReport(report);
+    const product = expectDefined(result.products[0]);
+    expect(product).toMatchObject({
+      status: "at-risk",
+      leads: "Иванов В.П. · Каштанова М.А.",
+      authorIds: [AUTHOR_A, AUTHOR_B],
+    });
+    expect(report.portfolioOverview[0]?.leadNames).toEqual(leadNames);
   });
 });
 
@@ -152,11 +207,245 @@ describe("product name resolution", () => {
   });
 });
 
+describe("portfolio content presence", () => {
+  it("inherits decision and true-empty presence from the detailed product", () => {
+    const decisionOnly = mapWeeklyReport(
+      baseReport({
+        portfolioOverview: [
+          {
+            productId: PROJECT_A,
+            productName: "CRM Platform",
+            worstStatus: "green",
+            stageCount: 1,
+            leadNames: ["Lead One"],
+            leadIds: [AUTHOR_A],
+          },
+          {
+            productId: PROJECT_B,
+            productName: "Mobile",
+            worstStatus: null,
+            stageCount: 0,
+            leadNames: [],
+            leadIds: [],
+          },
+        ],
+        leadSections: [
+          {
+            authorId: AUTHOR_A,
+            authorName: "Lead One",
+            projects: [],
+            items: [],
+            risks: [],
+            decisions: [
+              {
+                id: "decision-only",
+                productId: PROJECT_A,
+                text: "Approve fallback",
+                owner: "Lead One",
+                impact: "Keep service live",
+              },
+            ],
+          },
+        ],
+      }),
+    );
+
+    expect(decisionOnly.portfolio).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: PROJECT_A, hasContent: true }),
+        expect.objectContaining({ id: PROJECT_B, hasContent: false }),
+      ]),
+    );
+  });
+});
+
 // "By lead" slices each product to the viewing lead's OWN contribution. A
 // product authored by two leads must NOT repeat the merged card under each —
 // each lead's card shows only their own items.
 
 describe("mapWeeklyReportLeadGroups (by-lead slice)", () => {
+  it("joins attention by stable author and product identities when names collide", () => {
+    const sharedAuthorName = "Alex Lead";
+    const sharedProductName = "Platform";
+    const report = baseReport({
+      portfolioOverview: [
+        {
+          productId: PROJECT_A,
+          productName: sharedProductName,
+          worstStatus: "red",
+          stageCount: 1,
+          leadNames: [sharedAuthorName],
+          leadIds: [AUTHOR_A],
+        },
+        {
+          productId: PROJECT_B,
+          productName: sharedProductName,
+          worstStatus: "yellow",
+          stageCount: 1,
+          leadNames: [sharedAuthorName],
+          leadIds: [AUTHOR_B],
+        },
+      ],
+      leadSections: [
+        {
+          reportSectionId: SECTION_A,
+          reportId: REPORT_ID,
+          authorId: AUTHOR_A,
+          authorName: sharedAuthorName,
+          projects: [
+            {
+              projectId: PROJECT_A,
+              projectName: sharedProductName,
+              trafficLight: "red",
+            },
+          ],
+        },
+        {
+          reportSectionId: SECTION_B,
+          reportId: REPORT_ID,
+          authorId: AUTHOR_B,
+          authorName: sharedAuthorName,
+          projects: [
+            {
+              projectId: PROJECT_B,
+              projectName: sharedProductName,
+              trafficLight: "yellow",
+            },
+          ],
+        },
+      ],
+      escalations: [
+        {
+          type: "at_risk",
+          productId: PROJECT_A,
+          productName: sharedProductName,
+          stageName: null,
+          authorId: AUTHOR_A,
+          leadName: sharedAuthorName,
+          description: "First product attention",
+        },
+        {
+          type: "unresolved_risk",
+          productId: PROJECT_B,
+          productName: sharedProductName,
+          stageName: "Testing",
+          authorId: AUTHOR_B,
+          leadName: sharedAuthorName,
+          description: "Second product attention",
+        },
+      ],
+    });
+
+    const groups = mapWeeklyReportLeadGroups(report);
+    expect(
+      groups.find((group) => group.id === AUTHOR_A)?.products[0]
+        ?.needsAttention,
+    ).toBe("First product attention");
+    expect(
+      groups.find((group) => group.id === AUTHOR_B)?.products[0]
+        ?.needsAttention,
+    ).toBe("Second product attention");
+  });
+
+  it("keeps referenced-only records under their own lead without cross-author mixing", () => {
+    const report = baseReport({
+      portfolioOverview: [
+        {
+          productId: PROJECT_B,
+          productName: "Payments Gateway",
+          worstStatus: "yellow",
+          stageCount: 1,
+          leadNames: ["Lead One", "Lead Two"],
+          leadIds: [AUTHOR_A, AUTHOR_B],
+        },
+      ],
+      leadSections: [
+        {
+          reportSectionId: SECTION_A,
+          reportId: REPORT_ID,
+          authorId: AUTHOR_A,
+          authorName: "Lead One",
+          version: 1,
+          status: "submitted",
+          submittedAt: new Date("2026-04-19T18:00:00Z"),
+          projects: [],
+          referencedProjects: [
+            { projectId: PROJECT_B, projectName: "Stale referenced name" },
+          ],
+          items: [],
+          risks: [
+            {
+              id: "risk-a",
+              projectId: PROJECT_B,
+              risk: "Vendor outage",
+              impact: "Payments stop",
+              mitigation: "Escalate vendor",
+              severity: "blocked",
+              stageNames: ["Planning"],
+            },
+          ],
+          decisions: [],
+        },
+        {
+          reportSectionId: SECTION_B,
+          reportId: REPORT_ID,
+          authorId: AUTHOR_B,
+          authorName: "Lead Two",
+          version: 1,
+          status: "submitted",
+          submittedAt: new Date("2026-04-19T18:00:00Z"),
+          projects: [
+            {
+              projectId: PROJECT_B,
+              projectName: "Payments Gateway",
+              trafficLight: "yellow",
+            },
+          ],
+          referencedProjects: [],
+          items: [],
+          risks: [],
+          decisions: [
+            {
+              id: "decision-b",
+              productId: PROJECT_B,
+              text: "Approve fallback",
+              owner: "Lead Two",
+              impact: "Keep payments live",
+              stageNames: ["Planning"],
+            },
+          ],
+        },
+      ],
+    });
+
+    const groups = mapWeeklyReportLeadGroups(report);
+    const firstProduct = expectDefined(
+      groups.find((group) => group.id === AUTHOR_A)?.products[0],
+    );
+    const secondProduct = expectDefined(
+      groups.find((group) => group.id === AUTHOR_B)?.products[0],
+    );
+
+    expect(firstProduct).toMatchObject({
+      id: PROJECT_B,
+      name: "Payments Gateway",
+      status: "empty",
+    });
+    expect(firstProduct.risks.map((risk) => risk.problem)).toEqual([
+      "Vendor outage",
+    ]);
+    expect(firstProduct.decisions).toEqual([]);
+    expect(secondProduct).toMatchObject({
+      id: PROJECT_B,
+      name: "Payments Gateway",
+      status: "at-risk",
+    });
+    expect(secondProduct.risks).toEqual([]);
+    expect(secondProduct.decisions.map((decision) => decision.text)).toEqual([
+      "Approve fallback",
+    ]);
+  });
+
   it("a lead with two products gets two scoped cards", () => {
     const report = baseReport({
       leadSections: [
@@ -287,8 +576,14 @@ describe("mapWeeklyReportLeadGroups (by-lead slice)", () => {
 
 // Per-lead overview rows derived from the already-grouped lead data.
 describe("mapWeeklyReportLeadOverview", () => {
-  const item = (text: string): WeeklyReportItem =>
-    ({ id: text, text, status: "in-progress" }) as WeeklyReportItem;
+  const item = (text: string): WeeklyReportItem => ({
+    id: text,
+    stageLead: "Planning · Lead",
+    stage: "Planning",
+    owner: "Lead",
+    text,
+    status: "in-progress",
+  });
 
   function product(
     overrides: Partial<WeeklyProductReport> = {},
@@ -374,7 +669,11 @@ describe("mapWeeklyReportLeadOverview", () => {
         }),
       ]),
       group("N", "Needs Attention Only", [
-        product({ status: "blocked", needsAttention: "Escalated" }),
+        product({
+          status: "blocked",
+          needsAttention: "Escalated",
+          needsAttentionSeverity: "blocked",
+        }),
       ]),
     ]);
 

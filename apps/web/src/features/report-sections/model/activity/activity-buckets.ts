@@ -3,7 +3,12 @@
 // `carriedOver` is provenance and must not discriminate into deferred.
 
 export type ActivityBucket =
-  "done" | "in-progress" | "paused" | "planned-next" | "deferred";
+  | "done"
+  | "in-progress"
+  | "paused"
+  | "planned-current"
+  | "planned-next"
+  | "deferred";
 
 export interface BucketInput {
   readonly type: "current" | "next";
@@ -13,6 +18,7 @@ export interface BucketInput {
 }
 
 export const ACTIVITY_BUCKET_ORDER: readonly ActivityBucket[] = [
+  "planned-current",
   "in-progress",
   "paused",
   "planned-next",
@@ -25,6 +31,7 @@ export const ACTIVITY_BUCKET_LABELS: Readonly<Record<ActivityBucket, string>> =
     done: "Done",
     "in-progress": "In Progress",
     paused: "Paused",
+    "planned-current": "Not started",
     "planned-next": "Planned Next",
     deferred: "Deferred",
   };
@@ -38,7 +45,7 @@ export function deriveActivityBucket(input: BucketInput): ActivityBucket {
     case "postponed":
       return "deferred";
     case "planned":
-      return "planned-next";
+      return input.type === "current" ? "planned-current" : "planned-next";
     case "in_progress":
       return "in-progress";
   }

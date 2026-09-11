@@ -98,7 +98,7 @@ interface RiskCardSummaryProps {
   readonly risk: RiskEntry;
 }
 
-// Dialog is the only edit surface — summary is always read-only.
+// Risk prose and stage assignments are edited through the dialog.
 export function RiskCardSummary({ risk }: RiskCardSummaryProps) {
   return (
     <div className="space-y-2 text-sm text-[var(--color-foreground)]">

@@ -1,6 +1,5 @@
 // Maps admin wire models to tab-owned presentation models. Snapshot products
-// get an empty stage grid because assignments load separately; draft periods
-// map to the UI's open status.
+// get an empty stage grid because assignments load separately.
 
 import type {
   AdminProject,
@@ -8,23 +7,17 @@ import type {
   AdminUser,
   ReminderPolicy,
   ReportingGroup,
-  ReportPeriod,
 } from "@customreport/shared";
 import { STAGE_NAMES } from "@customreport/shared";
 
-import {
-  formatPeriodLabel,
-  toIsoDateString,
-} from "../../../shared/lib/format/format-date";
 import { mapReminder } from "./admin-reminder-mapper";
 import type {
   AdminGroupView,
-  AdminPeriodView,
   AdminProductView,
+  AdminReminderExecutionView,
   AdminReminderPolicyView,
   AdminUserView,
   MappedAdminSnapshot,
-  PeriodStatus,
   StageAssignment,
 } from "./admin-types";
 
@@ -53,7 +46,7 @@ function mapUser(api: AdminUser): AdminUserView {
     position: api.position,
     email: api.email,
     role: api.role,
-    groupId: api.reportingGroupId ?? "",
+    groupId: api.reportingGroupId ?? null,
     department: api.reportingGroupName ?? "No owning group",
     isActive: api.isActive,
   };
@@ -81,22 +74,6 @@ function mapProject(api: AdminProject): AdminProductView {
   };
 }
 
-function mapPeriod(api: ReportPeriod): AdminPeriodView {
-  // adminSnapshotSchema ships reportPeriodSchema (status: 'draft' | 'published').
-  // Admin UI expects 'open' | 'published' | 'reopened'. This snapshot endpoint
-  // exposes report status, so its draft value maps to the UI's open state.
-  const status: PeriodStatus =
-    api.status === "published" ? "published" : "open";
-  return {
-    id: api.id,
-    weekLabel: formatPeriodLabel(api.periodStart, api.periodEnd),
-    startDate: toIsoDateString(api.periodStart),
-    endDate: toIsoDateString(api.periodEnd),
-    deadline: api.deadline === null ? null : toIsoDateString(api.deadline),
-    status,
-  };
-}
-
 // Keep validity bounds as Dates so every editor input uses one formatter.
 function mapReminderPolicy(api: ReminderPolicy): AdminReminderPolicyView {
   return {
@@ -111,6 +88,21 @@ function mapReminderPolicy(api: ReminderPolicy): AdminReminderPolicyView {
   };
 }
 
+function mapReminderExecution(
+  api: AdminSnapshot["reminderExecutions"][number],
+): AdminReminderExecutionView {
+  return {
+    id: api.id,
+    ruleId: api.ruleId,
+    reportId: api.reportId,
+    status: api.status,
+    scheduledFor: api.scheduledFor,
+    sentAt: api.sentAt,
+    recipientEmail: api.recipientEmail,
+    errorMessage: api.errorMessage,
+  };
+}
+
 // ---- Public mappers ----
 
 // Reminder status collapses to the tab's active boolean.
@@ -119,9 +111,9 @@ export function mapAdminSnapshot(api: AdminSnapshot): MappedAdminSnapshot {
     groups: api.groups.map(mapGroup),
     users: api.users.map(mapUser),
     products: api.projects.map(mapProject),
-    periods: api.periods.map(mapPeriod),
     reminders: api.reminderRules.map(mapReminder),
     // Policies are emitted by `admin.snapshot`.
     policies: api.policies.map(mapReminderPolicy),
+    executions: api.reminderExecutions.map(mapReminderExecution),
   };
 }

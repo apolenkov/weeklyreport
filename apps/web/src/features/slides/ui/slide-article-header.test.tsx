@@ -22,4 +22,30 @@ describe("SlideGridHeader", () => {
       "bg-[var(--color-status-blocked-bg)]",
     );
   });
+
+  it.each([
+    { count: 0, riskLabel: "0 risks", priorityLabel: "0 priorities" },
+    { count: 1, riskLabel: "1 risk", priorityLabel: "1 priority" },
+    { count: 2, riskLabel: "2 risks", priorityLabel: "2 priorities" },
+  ])(
+    "inflects risk and priority labels for count $count",
+    ({ count, riskLabel, priorityLabel }) => {
+      render(
+        <SlideGridHeader
+          ownerName="Owner"
+          grid={{
+            ...offTrackGrid,
+            counters: { current: 1, risks: count, priorities: count },
+          }}
+        />,
+      );
+
+      expect(screen.getByTestId("slide-metric-risk")).toHaveTextContent(
+        riskLabel,
+      );
+      expect(screen.getByTestId("slide-metric-priority")).toHaveTextContent(
+        priorityLabel,
+      );
+    },
+  );
 });

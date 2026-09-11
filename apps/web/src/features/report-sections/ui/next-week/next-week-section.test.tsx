@@ -7,6 +7,62 @@ import { describe, expect, it } from "vitest";
 import { MOCK_PRODUCTS } from "../../../../test-utils/mock-products";
 import { NextWeekSection } from "./next-week-section";
 
+const activities = [{ id: "activity-1", name: "Jira triage" }];
+
+describe("NextWeekSection — activity add signal", () => {
+  it("opens activity-only create with the first activity as parent", () => {
+    const { rerender } = render(
+      <NextWeekSection
+        items={[]}
+        products={[]}
+        activities={activities}
+        addSignal={0}
+      />,
+    );
+
+    rerender(
+      <NextWeekSection
+        items={[]}
+        products={[]}
+        activities={activities}
+        addSignal={1}
+      />,
+    );
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByLabelText<HTMLSelectElement>("Parent").value).toBe(
+      "activity:activity-1",
+    );
+  });
+
+  it("keeps the product as the default parent when activities also exist", () => {
+    const products = MOCK_PRODUCTS.slice(0, 1);
+    const product = products[0];
+    if (!product) throw new Error("Expected a product fixture");
+    const { rerender } = render(
+      <NextWeekSection
+        items={[]}
+        products={products}
+        activities={activities}
+        addSignal={0}
+      />,
+    );
+
+    rerender(
+      <NextWeekSection
+        items={[]}
+        products={products}
+        activities={activities}
+        addSignal={1}
+      />,
+    );
+
+    expect(screen.getByLabelText<HTMLSelectElement>("Parent").value).toBe(
+      `product:${product.id}`,
+    );
+  });
+});
+
 describe("NextWeekSection — compact touch floor (responsive-compact-layout)", () => {
   it("removes the nested mobile scroll while retaining the desktop cap", () => {
     render(<NextWeekSection items={[]} products={MOCK_PRODUCTS.slice(0, 1)} />);

@@ -5,14 +5,17 @@ import type {
   TrafficLightStatus,
 } from "@customreport/shared";
 
-import { AccordionSection } from "../../../../../shared/ui/report-shell/accordion-section";
+import {
+  type AccordionOpenSignal,
+  AccordionSection,
+} from "../../../../../shared/ui/report-shell/accordion-section";
 import { ActivityStatusSection } from "../../../../period";
 import type {
   LeadActivityCard,
   LeadFormLoadedViewModel,
 } from "../../../../report-sections";
 import { LeadFormAddButton } from "../chrome/lead-form-add-button";
-import { NO_PRODUCTS_ASSIGNED_MESSAGE } from "../chrome/lead-form-add-item-button";
+import { NO_RECORD_PARENTS_MESSAGE } from "../chrome/lead-form-add-item-button";
 import { AlertIcon, GridIcon } from "../chrome/lead-form-icons";
 import {
   LeadFormItemSections,
@@ -35,7 +38,7 @@ export interface LeadFormBridgeAccordionsActions extends LeadFormItemSectionsAct
   readonly addRisk: () => void;
 }
 
-function ProductStatusAccordion({
+export function ProductStatusAccordion({
   groupExpanded,
   productCount,
 }: {
@@ -58,7 +61,7 @@ function ProductStatusAccordion({
 
 // Stage-less units beside products. Attachment is admin-provisioned, so the
 // section offers no add control.
-function ProjectActivitiesAccordion({
+export function ProjectActivitiesAccordion({
   groupExpanded,
   activities,
   attachedCount,
@@ -98,22 +101,27 @@ function ProjectActivitiesAccordion({
   );
 }
 
-function RisksAccordion({
+export function RisksAccordion({
   groupExpanded,
+  openSignal,
   riskCount,
   productCount,
+  activityCount,
   readOnly,
   onAddRisk,
 }: {
   readonly groupExpanded: boolean;
+  readonly openSignal?: AccordionOpenSignal;
   readonly riskCount: number;
   readonly productCount: number;
+  readonly activityCount: number;
   readonly readOnly: boolean;
   readonly onAddRisk: () => void;
 }) {
   return (
     <AccordionSection
       groupExpanded={groupExpanded}
+      openSignal={openSignal}
       testId="lead-section-risks"
       icon={<AlertIcon />}
       title="Risks & Blockers"
@@ -128,8 +136,12 @@ function RisksAccordion({
         !readOnly ? (
           <LeadFormAddButton
             onClick={onAddRisk}
-            disabled={productCount === 0}
-            title={productCount > 0 ? undefined : NO_PRODUCTS_ASSIGNED_MESSAGE}
+            disabled={productCount + activityCount === 0}
+            title={
+              productCount + activityCount > 0
+                ? undefined
+                : NO_RECORD_PARENTS_MESSAGE
+            }
           >
             + Add Risk
           </LeadFormAddButton>
@@ -189,6 +201,7 @@ export function LeadFormBridgeAccordions({
         groupExpanded={groupExpanded}
         riskCount={risks.length}
         productCount={products.length}
+        activityCount={viewModel.activityOptions.length}
         readOnly={isReadOnly}
         onAddRisk={actions.addRisk}
       />

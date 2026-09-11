@@ -14,6 +14,7 @@ import { TRPCProxyContext } from "../../../../shared/lib/trpc/trpc-context";
 import { expectDefined } from "../../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../../test-utils/mock-trpc";
 import type {
+  AdminReminderExecutionView,
   AdminReminderPolicyView,
   AdminReminderView,
 } from "../../model/admin-types";
@@ -38,7 +39,7 @@ const policyDeadline: AdminReminderPolicyView = {
   timezone: "Europe/Moscow",
   audience: "lead-with-draft",
   active: true,
-  validFrom: new Date("2026-05-01T00:00:00.000Z"),
+  validFrom: new Date("2026-05-01T12:34:56.789Z"),
   validUntil: null,
 };
 
@@ -49,8 +50,8 @@ const policyEscalation: AdminReminderPolicyView = {
   timezone: "Europe/Moscow",
   audience: "head-of-late",
   active: false,
-  validFrom: new Date("2026-05-01T00:00:00.000Z"),
-  validUntil: new Date("2026-12-31T00:00:00.000Z"),
+  validFrom: new Date("2026-05-01T09:12:34.567+03:00"),
+  validUntil: new Date("2026-12-31T23:59:59.999Z"),
 };
 
 // Far-future fire time so the next-send line is deterministic whatever day the
@@ -64,6 +65,7 @@ const futureRule: AdminReminderView = {
 function renderTab(args?: {
   policies?: AdminReminderPolicyView[];
   derivedRulesByPolicyId?: Record<string, AdminReminderView[]>;
+  executions?: AdminReminderExecutionView[];
   defaultTimezone?: string;
 }) {
   const { proxy, captured } = createMockTRPC([
@@ -91,6 +93,7 @@ function renderTab(args?: {
     [policyDeadline.id]: [futureRule],
     [policyEscalation.id]: [],
   };
+  const executions = args?.executions ?? [];
 
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -110,12 +113,24 @@ function renderTab(args?: {
     <RemindersTab
       policies={policies}
       derivedRulesByPolicyId={derivedRulesByPolicyId}
+      executions={executions}
       defaultTimezone={args?.defaultTimezone ?? "Europe/Moscow"}
     />,
     { wrapper: Wrapper },
   );
   return { ...result, captured };
 }
+
+const executionBase: AdminReminderExecutionView = {
+  id: "c0000000-0000-4000-8000-000000000001",
+  ruleId: "c0000000-0000-4000-8000-000000000002",
+  reportId: "c0000000-0000-4000-8000-000000000003",
+  status: "failed",
+  scheduledFor: new Date("2026-05-07T10:00:00.000Z"),
+  sentAt: null,
+  recipientEmail: "lead@example.com",
+  errorMessage: "SMTP unavailable",
+};
 
 describe("RemindersTab — empty-state bell SVG a11y", () => {
   it("bell SVG in empty state has aria-hidden='true'", () => {
@@ -138,6 +153,40 @@ describe("RemindersTab — empty-state bell SVG a11y", () => {
     const emptyStateScope = within(emptyState);
     expect(emptyStateScope.queryAllByRole("img")).toHaveLength(0);
     expect(emptyStateScope.queryAllByRole("graphics-symbol")).toHaveLength(0);
+  });
+});
+
+describe("RemindersTab — delivery activity", () => {
+  it("renders durable queued, sending, sent and failed outcomes", () => {
+    renderTab({
+      executions: [
+        { ...executionBase, status: "queued", errorMessage: null },
+        {
+          ...executionBase,
+          id: "c0000000-0000-4000-8000-000000000004",
+          status: "sending",
+          errorMessage: null,
+        },
+        {
+          ...executionBase,
+          id: "c0000000-0000-4000-8000-000000000005",
+          status: "sent",
+          sentAt: new Date("2026-05-07T10:01:00.000Z"),
+          errorMessage: null,
+        },
+        { ...executionBase, id: "c0000000-0000-4000-8000-000000000006" },
+      ],
+    });
+
+    const activity = screen.getByRole("region", {
+      name: "Delivery activity",
+    });
+    expect(activity).toHaveTextContent("4 executions");
+    expect(activity).toHaveTextContent("Queued");
+    expect(activity).toHaveTextContent("Sending");
+    expect(activity).toHaveTextContent("Sent");
+    expect(activity).toHaveTextContent("Failed");
+    expect(activity).toHaveTextContent("SMTP unavailable");
   });
 });
 
@@ -191,13 +240,10 @@ describe("RemindersTab — plain-language cards", () => {
     await waitFor(() => {
       expect(savePolicyEntry.mutationFn).toHaveBeenCalledTimes(1);
     });
-    const arg = savePolicyEntry.mutationFn.mock.calls[0]?.[0] as
-      Record<string, unknown> | undefined;
-    expect(arg?.id).toBe(policyDeadline.id);
-    // policyDeadline is active → toggle writes active=false.
-    expect(arg?.active).toBe(false);
-    expect(arg?.kind).toBe("deadline");
-    expect(arg?.audience).toBe("lead-with-draft");
+    expect(savePolicyEntry.mutationFn.mock.calls[0]?.[0]).toEqual({
+      ...policyDeadline,
+      active: false,
+    });
     await waitFor(() =>
       expect(toastSuccess).toHaveBeenCalledWith("Reminder updated"),
     );
@@ -214,12 +260,10 @@ describe("RemindersTab — plain-language cards", () => {
     await waitFor(() => {
       expect(savePolicyEntry.mutationFn).toHaveBeenCalledTimes(1);
     });
-    const arg = savePolicyEntry.mutationFn.mock.calls[0]?.[0] as
-      Record<string, unknown> | undefined;
-    expect(arg?.id).toBe(policyEscalation.id);
-    expect(arg?.active).toBe(true);
-    expect(arg?.kind).toBe("escalation");
-    expect(arg?.audience).toBe("head-of-late");
+    expect(savePolicyEntry.mutationFn.mock.calls[0]?.[0]).toEqual({
+      ...policyEscalation,
+      active: true,
+    });
   });
 
   it("gates next-send on the active flag even when a future rule exists", () => {
@@ -335,6 +379,147 @@ describe("RemindersTab — add / edit form", () => {
 
     expect(screen.getByTestId("policy-form")).toBeInTheDocument();
     expect(offsetInput).toHaveValue(3);
+  });
+
+  it("locks the submitted reminder draft until its save succeeds", async () => {
+    const user = userEvent.setup();
+    const { captured } = renderTab();
+    const savePolicyEntry = expectDefined(captured["admin.savePolicy"]);
+    const pendingSave = Promise.withResolvers<unknown>();
+    savePolicyEntry.mutationFn.mockReturnValue(pendingSave.promise);
+
+    await user.click(screen.getByTestId(`edit-${policyDeadline.id}`));
+    const offsetInput = screen.getByLabelText<HTMLInputElement>(
+      /reminder offset amount/i,
+    );
+    await user.click(screen.getByTestId("policy-save-button"));
+    await waitFor(() =>
+      expect(savePolicyEntry.mutationFn).toHaveBeenCalledOnce(),
+    );
+
+    await waitFor(() => expect(offsetInput).toBeDisabled());
+    expect(screen.getByLabelText(/Reminder type/i)).toBeDisabled();
+    expect(screen.getByLabelText(/reminder offset unit/i)).toBeDisabled();
+    expect(screen.getByLabelText(/before or after deadline/i)).toBeDisabled();
+    expect(screen.getByLabelText(/Timezone/i)).toBeDisabled();
+    expect(screen.getByLabelText(/Valid from/i)).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: "Active" })).toBeDisabled();
+    expect(screen.getByTestId("policy-save-button")).toBeDisabled();
+    expect(screen.getByTestId("new-policy-button")).toBeDisabled();
+
+    await user.click(screen.getByTestId(`edit-${policyEscalation.id}`));
+    expect(offsetInput).toHaveValue(24);
+
+    pendingSave.resolve(undefined);
+    await waitFor(() =>
+      expect(screen.queryByTestId("policy-form")).not.toBeInTheDocument(),
+    );
+    expect(screen.getByTestId(`edit-${policyDeadline.id}`)).toHaveFocus();
+  });
+
+  it("re-enables the same reminder draft when its save fails", async () => {
+    const user = userEvent.setup();
+    const { captured } = renderTab({ policies: [policyDeadline] });
+    const savePolicyEntry = expectDefined(captured["admin.savePolicy"]);
+    const pendingSave = Promise.withResolvers<unknown>();
+    savePolicyEntry.mutationFn.mockReturnValue(pendingSave.promise);
+
+    await user.click(screen.getByTestId(`edit-${policyDeadline.id}`));
+    const offsetInput = screen.getByLabelText<HTMLInputElement>(
+      /reminder offset amount/i,
+    );
+    await user.clear(offsetInput);
+    await user.type(offsetInput, "3");
+    await user.click(screen.getByTestId("policy-save-button"));
+    await waitFor(() => expect(offsetInput).toBeDisabled());
+
+    pendingSave.reject(new Error("save failed"));
+
+    await waitFor(() => expect(offsetInput).not.toBeDisabled());
+    expect(offsetInput).toHaveValue(3);
+    expect(screen.getByTestId("policy-save-button")).not.toBeDisabled();
+    expect(screen.getByTestId("new-policy-button")).not.toBeDisabled();
+    expect(toastError).toHaveBeenCalledWith("save failed");
+  });
+
+  it("keeps the editor locked until its own save succeeds after a faster row toggle", async () => {
+    const user = userEvent.setup();
+    const { captured } = renderTab();
+    const savePolicyEntry = expectDefined(captured["admin.savePolicy"]);
+    const editorSave = Promise.withResolvers<unknown>();
+    const toggleSave = Promise.withResolvers<unknown>();
+    savePolicyEntry.mutationFn
+      .mockReturnValueOnce(editorSave.promise)
+      .mockReturnValueOnce(toggleSave.promise);
+
+    await user.click(screen.getByTestId(`edit-${policyDeadline.id}`));
+    const offsetInput = screen.getByLabelText<HTMLInputElement>(
+      /reminder offset amount/i,
+    );
+    await user.click(screen.getByTestId("policy-save-button"));
+    await waitFor(() => expect(offsetInput).toBeDisabled());
+
+    await user.click(screen.getByTestId(`toggle-${policyEscalation.id}`));
+    await waitFor(() =>
+      expect(savePolicyEntry.mutationFn).toHaveBeenCalledTimes(2),
+    );
+    toggleSave.resolve(undefined);
+
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledTimes(1));
+    expect(toastSuccess).toHaveBeenLastCalledWith("Reminder updated");
+    expect(offsetInput).toBeDisabled();
+    expect(screen.getByTestId("policy-save-button")).toBeDisabled();
+    expect(screen.getByTestId("new-policy-button")).toBeDisabled();
+    expect(screen.getByTestId("policy-form")).toBeInTheDocument();
+
+    editorSave.resolve(undefined);
+
+    await waitFor(() =>
+      expect(screen.queryByTestId("policy-form")).not.toBeInTheDocument(),
+    );
+    expect(toastSuccess).toHaveBeenCalledTimes(2);
+    expect(toastSuccess).toHaveBeenLastCalledWith("Reminder updated");
+    expect(screen.getByTestId(`edit-${policyDeadline.id}`)).toHaveFocus();
+  });
+
+  it("retains the editor draft when its save fails after a faster row toggle", async () => {
+    const user = userEvent.setup();
+    const { captured } = renderTab();
+    const savePolicyEntry = expectDefined(captured["admin.savePolicy"]);
+    const editorSave = Promise.withResolvers<unknown>();
+    const toggleSave = Promise.withResolvers<unknown>();
+    savePolicyEntry.mutationFn
+      .mockReturnValueOnce(editorSave.promise)
+      .mockReturnValueOnce(toggleSave.promise);
+
+    await user.click(screen.getByTestId(`edit-${policyDeadline.id}`));
+    const offsetInput = screen.getByLabelText<HTMLInputElement>(
+      /reminder offset amount/i,
+    );
+    await user.clear(offsetInput);
+    await user.type(offsetInput, "3");
+    await user.click(screen.getByTestId("policy-save-button"));
+    await waitFor(() => expect(offsetInput).toBeDisabled());
+
+    await user.click(screen.getByTestId(`toggle-${policyEscalation.id}`));
+    await waitFor(() =>
+      expect(savePolicyEntry.mutationFn).toHaveBeenCalledTimes(2),
+    );
+    toggleSave.resolve(undefined);
+
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledTimes(1));
+    expect(offsetInput).toBeDisabled();
+    expect(screen.getByTestId("new-policy-button")).toBeDisabled();
+
+    editorSave.reject(new Error("editor save failed"));
+
+    await waitFor(() => expect(offsetInput).toBeEnabled());
+    expect(screen.getByTestId("policy-form")).toBeInTheDocument();
+    expect(offsetInput).toHaveValue(3);
+    expect(screen.getByTestId("policy-save-button")).toBeEnabled();
+    expect(screen.getByTestId("new-policy-button")).toBeEnabled();
+    expect(toastError).toHaveBeenCalledWith("editor save failed");
+    expect(toastSuccess).toHaveBeenCalledTimes(1);
   });
 
   it("seeds the preset selector from the policy on Edit", async () => {

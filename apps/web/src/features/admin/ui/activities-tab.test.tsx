@@ -1,11 +1,18 @@
 import type { ProjectActivity } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   type CapturedMutation,
   createMockTRPC,
@@ -274,6 +281,36 @@ describe("ActivitiesTab — create", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("presentation"));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("locks the submitted draft while pending and unlocks it unchanged after failure", async () => {
+    const deferred = Promise.withResolvers<unknown>();
+    const { captured } = renderTab({ activities: [] });
+    const create = expectDefined(captured["projectActivity.create"]);
+    create.mutationFn.mockReturnValue(deferred.promise);
+    const user = userEvent.setup();
+
+    await screen.findByRole("button", { name: "Add new activity" });
+    await user.click(screen.getByRole("button", { name: "Add new activity" }));
+    const name = screen.getByLabelText("Activity Name");
+    await user.type(name, "Audit");
+    await user.selectOptions(
+      screen.getByLabelText("Reporting Group"),
+      GROUP_ID,
+    );
+    await user.click(screen.getByRole("button", { name: "Add Activity" }));
+
+    await screen.findByRole("button", { name: "Saving…" });
+    expect(name).toBeDisabled();
+    await user.click(name);
+    await user.keyboard("Unsent replacement");
+    expect(name).toHaveValue("Audit");
+    expect(create.calls[0]).toMatchObject({ name: "Audit" });
+
+    act(() => deferred.reject(new Error("save failed")));
+    await waitFor(() => expect(name).toBeEnabled());
+    expect(name).toHaveValue("Audit");
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 });

@@ -1,11 +1,13 @@
 // Typed text survives autosave-driven parent renders with a new stages ref;
 // the ref is not form state. Also covers backdrop Escape and autofocus a11y.
 
+import { SAFE_TEXT_MAX_LENGTH } from "@customreport/shared";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { DecisionEntry, Product } from "../../report-sections";
 import { DecisionEditDialog } from "./decision-edit-dialog";
+import { collectDecisionErrors } from "./decision-edit-dialog-helpers";
 
 const products: Product[] = [
   {
@@ -22,6 +24,95 @@ const products: Product[] = [
     ],
   },
 ];
+
+describe("DecisionEditDialog prose limits", () => {
+  it.each(["text", "impact"] as const)(
+    "validates the shared boundary for %s",
+    (field) => {
+      const base = {
+        text: "Valid decision",
+        impact: "Valid impact",
+        availableStages: [] as string[],
+        effectiveStageNames: [] as string[],
+      };
+      for (const [value, expected] of [
+        ["", "required"],
+        [" ".repeat(3), "required"],
+        ["A", undefined],
+        ["A".repeat(SAFE_TEXT_MAX_LENGTH), undefined],
+        ["A".repeat(SAFE_TEXT_MAX_LENGTH + 1), "characters"],
+      ] as const) {
+        const errors = collectDecisionErrors({ ...base, [field]: value });
+        if (expected === undefined) expect(errors[field]).toBeUndefined();
+        else expect(errors[field]).toContain(expected);
+      }
+    },
+  );
+
+  it("keeps and focuses over-limit pasted impact without saving", () => {
+    const onSave = vi.fn();
+    const overLimit = `${"I".repeat(SAFE_TEXT_MAX_LENGTH)} `;
+    render(
+      <DecisionEditDialog
+        open
+        decision={null}
+        defaultOwner="Test Lead"
+        products={products}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Development"]}
+        onSave={onSave}
+        onCancel={() => undefined}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/^Decision \*/i), {
+      target: { value: "Approve the plan" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
+      target: { value: overLimit },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save Decision" }));
+
+    expect(screen.getByLabelText(/^Impact \*/i)).toHaveValue(overLimit);
+    expect(screen.getByLabelText(/^Impact \*/i)).toHaveFocus();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      `Impact must be ${SAFE_TEXT_MAX_LENGTH} characters or fewer.`,
+    );
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("retains invisible-only impact with an associated error and does not save", () => {
+    const onSave = vi.fn();
+    const invisibleOnly = "\u200C\u200D";
+    render(
+      <DecisionEditDialog
+        open
+        decision={null}
+        defaultOwner="Test Lead"
+        products={products}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Development"]}
+        onSave={onSave}
+        onCancel={() => undefined}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/^Decision \*/i), {
+      target: { value: "Approve the plan" },
+    });
+    const impact = screen.getByLabelText(/^Impact \*/i);
+    fireEvent.change(impact, { target: { value: invisibleOnly } });
+    fireEvent.click(screen.getByRole("button", { name: "Save Decision" }));
+
+    expect(impact).toHaveValue(invisibleOnly);
+    expect(impact).toHaveAttribute("aria-invalid", "true");
+    expect(impact).toHaveAccessibleDescription(
+      `2 / ${SAFE_TEXT_MAX_LENGTH} characters Impact must contain visible text.`,
+    );
+    expect(impact).toHaveFocus();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+});
 
 describe("DecisionEditDialog — form-race regression", () => {
   it("preserves typed text when parent re-renders with a new stagesForProduct ref", () => {

@@ -1,5 +1,6 @@
 "use client";
 
+import { shortNameFromName } from "@customreport/shared";
 import type { CSSProperties } from "react";
 
 import type {
@@ -43,8 +44,7 @@ const EMPTY_CARD_TEXT = "var(--color-muted-foreground)";
 const EMPTY_BADGE_BG = "var(--color-surface-empty-badge)";
 const EMPTY_BADGE_BORDER = "var(--color-border-strong)";
 
-// Class strings are const-lifted verbatim so the emitted `class` attribute
-// stays byte-identical to the inline templates they replaced.
+// Shared class tokens keep the interactive and empty product cards aligned.
 const PRODUCT_CARD_BASE =
   "group grid min-h-[76px] w-full grid-cols-[1.75rem_minmax(0,1fr)_1.5rem] items-center gap-2 overflow-hidden rounded-lg p-2.5 text-left transition-[box-shadow,border-color,background-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2";
 const PRODUCT_CARD_EMPTY =
@@ -103,7 +103,9 @@ export function LeadOverviewCard({
         {STATUS_ICON[lead.worstStatus]}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">{lead.name}</div>
+        <div className="truncate text-sm font-medium">
+          {shortNameFromName(lead.name)}
+        </div>
         <div className="text-xs text-[var(--color-muted-foreground)]">
           {STATUS_LABEL[lead.worstStatus]}
         </div>
@@ -145,14 +147,6 @@ function ProductCardBody({
   );
 }
 
-function isProductEmpty(product: WeeklyPortfolioProduct): boolean {
-  return (
-    product.currentWeekCount === 0 &&
-    product.nextWeekCount === 0 &&
-    product.riskCount === 0
-  );
-}
-
 export function ProductOverviewCard({
   product,
   onNavigate,
@@ -162,7 +156,7 @@ export function ProductOverviewCard({
   readonly onNavigate: (productId: string) => void;
   readonly controlsDetails: boolean;
 }) {
-  const isEmpty = isProductEmpty(product);
+  const isEmpty = !product.hasContent;
   return (
     <button
       type="button"

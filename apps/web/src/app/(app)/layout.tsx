@@ -1,6 +1,7 @@
 import { type ReactNode, Suspense } from "react";
 
 import { ProductFeedbackWidget } from "../../features/product-feedback";
+import { OverviewInputProvider } from "../../features/report-pages/ui/lead/shell/overview-input-provider";
 import { LeadReportAssistantStore } from "../../features/report-pages/ui/lead-report-assistant-store";
 import { SessionProvider } from "../../shared/lib/auth/session-provider";
 import { SdlcTooltipProvider } from "../../shared/ui/feedback/sdlc-tooltip";
@@ -13,15 +14,17 @@ type AppGroupLayoutProps = Readonly<{
 export default function AppGroupLayout({ children }: AppGroupLayoutProps) {
   return (
     <SessionProvider>
-      <LeadReportAssistantStore>
-        <NavBar />
-        <Suspense fallback={null}>
-          <ProductFeedbackWidget />
-        </Suspense>
-        <div className="operational-paper-shell min-h-screen">
-          <SdlcTooltipProvider>{children}</SdlcTooltipProvider>
-        </div>
-      </LeadReportAssistantStore>
+      <OverviewInputProvider>
+        <LeadReportAssistantStore>
+          <NavBar />
+          <Suspense fallback={null}>
+            <ProductFeedbackWidget />
+          </Suspense>
+          <div className="operational-paper-shell min-h-screen">
+            <SdlcTooltipProvider>{children}</SdlcTooltipProvider>
+          </div>
+        </LeadReportAssistantStore>
+      </OverviewInputProvider>
     </SessionProvider>
   );
 }

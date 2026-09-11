@@ -5,6 +5,36 @@ import { InMemoryLeadFormWriteAdapter } from "../../report-sections/model/lead-f
 import { useLeadFormFillFrom } from "./use-lead-form-fill-from";
 
 describe("useLeadFormFillFrom", () => {
+  it("confirms with the latest version after autosave advances it", async () => {
+    const writePort = new InMemoryLeadFormWriteAdapter({
+      saveDraft: () => Promise.reject(new Error("Unexpected save")),
+      submit: () => Promise.reject(new Error("Unexpected submit")),
+    });
+    const { result, rerender } = renderHook(
+      ({ version }) =>
+        useLeadFormFillFrom({
+          generation: "report-a:section-a",
+          sectionIdForActions: "target",
+          autosaveDirty: true,
+          version,
+          onConflict: () => undefined,
+          writePort,
+        }),
+      { initialProps: { version: 4 } },
+    );
+
+    act(() => result.current.handleFillFrom("source"));
+    rerender({ version: 5 });
+    expect(writePort.calls.fillFrom).toEqual([]);
+
+    act(() => result.current.confirmPendingFillFrom());
+    await waitFor(() =>
+      expect(writePort.calls.fillFrom).toEqual([
+        { targetSectionId: "target", sourceSectionId: "source", version: 5 },
+      ]),
+    );
+  });
+
   it("keeps an unsaved overwrite pending until the shared dialog confirms it", async () => {
     const writePort = new InMemoryLeadFormWriteAdapter({
       saveDraft: () => Promise.reject(new Error("Unexpected save")),

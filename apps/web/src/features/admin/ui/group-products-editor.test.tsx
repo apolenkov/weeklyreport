@@ -1,11 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import type { AdminProductView } from "../model/admin-types";
 
-// Mock @tanstack/react-query — two useQuery calls (attached-products list
-// and the batched ownership lookup, routed by queryKey), the useMutation
-// pair for attach/detach, and useQueryClient for the invalidation call.
 const attachedQueryMock = vi.fn();
 const ownershipQueryMock = vi.fn();
 const attachMutate = vi.fn();
@@ -194,8 +192,8 @@ describe("GroupProductsEditor", () => {
     });
     expect(detachMutate).not.toHaveBeenCalled();
 
-    const callbacks = attachMutationOptions.mock.calls[0]?.[0];
-    await callbacks?.onSuccess?.();
+    const callbacks = expectDefined(attachMutationOptions.mock.calls[0])[0];
+    await expectDefined(callbacks.onSuccess)();
 
     expect(invalidate).toHaveBeenNthCalledWith(1, {
       queryKey: ["admin", "listGroupProducts"],
@@ -288,8 +286,8 @@ describe("GroupProductsEditor", () => {
     });
     expect(attachMutate).not.toHaveBeenCalled();
 
-    const callbacks = detachMutationOptions.mock.calls[0]?.[0];
-    await callbacks?.onSuccess?.();
+    const callbacks = expectDefined(detachMutationOptions.mock.calls[0])[0];
+    await expectDefined(callbacks.onSuccess)();
 
     expect(invalidate).toHaveBeenNthCalledWith(1, {
       queryKey: ["admin", "listGroupProducts", GROUP_ID],

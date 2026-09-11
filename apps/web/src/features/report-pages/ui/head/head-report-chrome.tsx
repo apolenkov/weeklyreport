@@ -1,7 +1,7 @@
 "use client";
 
 import { Skeleton } from "@customreport/ui/components/ui/skeleton";
-import { useCallback, useContext } from "react";
+import { type ReactNode, useCallback, useContext } from "react";
 
 import { SessionContext } from "../../../../shared/lib/auth/session-provider";
 import { ArchiveToggle } from "../../../../shared/ui/report-shell/archive-toggle";
@@ -18,7 +18,6 @@ import {
   PeriodNavigator,
 } from "../../../period";
 import type { ReportPeriod } from "../../../report-sections";
-import { type SlideDensity, SlideDensityControl } from "../../../slides";
 
 const FALLBACK_DEPARTMENT_LABEL = "CustomReport";
 
@@ -40,14 +39,12 @@ function HeadContextTrailing({
   urlState,
   reportId,
   mode,
-  density,
-  onDensityChange,
+  fullscreenControl,
 }: {
   readonly urlState: ReportShellUrlState;
   readonly reportId: string;
   readonly mode: HeadReportMode;
-  readonly density: SlideDensity;
-  readonly onDensityChange: (density: SlideDensity) => void;
+  readonly fullscreenControl?: ReactNode;
 }) {
   const { buildQuery, scope, setScope } = urlState;
   return (
@@ -60,15 +57,13 @@ function HeadContextTrailing({
         onChange={setScope}
         allowedScopes={["product", "lead"]}
       />
+      {fullscreenControl}
       <ViewModeToggle
         editHref={`/head/report/${encodeURIComponent(reportId)}${buildQuery({ mode: null })}`}
         slidesHref={`/head/report/${encodeURIComponent(reportId)}${buildQuery({ mode: "slides" })}`}
         mode={mode === "slides" ? "slides" : "edit"}
         desktopLabels
       />
-      {mode === "slides" ? (
-        <SlideDensityControl value={density} onChange={onDensityChange} />
-      ) : null}
     </div>
   );
 }
@@ -80,8 +75,7 @@ export function HeadContextControls({
   urlState,
   historyError,
   historyLoading,
-  density,
-  onDensityChange,
+  fullscreenControl,
 }: {
   readonly periods: readonly ReportPeriod[];
   readonly reportId: string;
@@ -89,8 +83,7 @@ export function HeadContextControls({
   readonly urlState: ReportShellUrlState;
   readonly historyError: boolean;
   readonly historyLoading: boolean;
-  readonly density: SlideDensity;
-  readonly onDensityChange: (density: SlideDensity) => void;
+  readonly fullscreenControl?: ReactNode;
 }) {
   const { buildQuery, includeArchive, setIncludeArchive } = urlState;
   const urlBuilder = useCallback(
@@ -101,27 +94,28 @@ export function HeadContextControls({
 
   return (
     <>
-      {historyError ? (
-        <span
-          className="text-xs font-medium text-[var(--color-destructive)]"
-          role="alert"
-          data-testid="head-history-error"
-        >
-          Period history unavailable
-        </span>
-      ) : historyLoading ? (
-        <PeriodNavigationSkeleton testId="head-period-navigation-skeleton" />
-      ) : periods.length > 0 ? (
-        <PeriodNavigator periods={periods} urlBuilder={urlBuilder} />
-      ) : null}
-      <ArchiveToggle checked={includeArchive} onChange={setIncludeArchive} />
+      <div className="flex min-w-max shrink-0 items-center gap-1.5">
+        {historyError ? (
+          <span
+            className="text-xs font-medium text-[var(--color-destructive)]"
+            role="alert"
+            data-testid="head-history-error"
+          >
+            Period history unavailable
+          </span>
+        ) : historyLoading ? (
+          <PeriodNavigationSkeleton testId="head-period-navigation-skeleton" />
+        ) : periods.length > 0 ? (
+          <PeriodNavigator periods={periods} urlBuilder={urlBuilder} />
+        ) : null}
+        <ArchiveToggle checked={includeArchive} onChange={setIncludeArchive} />
+      </div>
       <div className="grow" aria-hidden="true" />
       <HeadContextTrailing
         urlState={urlState}
         reportId={reportId}
         mode={mode}
-        density={density}
-        onDensityChange={onDensityChange}
+        fullscreenControl={fullscreenControl}
       />
     </>
   );

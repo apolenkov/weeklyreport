@@ -1,8 +1,8 @@
 import { riskCoversStage } from "../stage-tags";
 
 // Item-card alarm is the roll-up of covering risk/blocker rows — never a free
-// per-item choice. Same one-source rule as stage chips (`lib/stage-status.ts`).
-// See openspec/specs/record-status-derivation and status-risk-unification.
+// per-item choice. See openspec/specs/record-status-derivation and
+// status-risk-unification.
 export type ItemAlarm = "at-risk" | "blocked" | null;
 
 export interface AlarmItem {
@@ -25,10 +25,6 @@ export interface AlarmRisk {
   readonly text: string;
 }
 
-function itemStageNames(item: AlarmItem): readonly string[] {
-  return item.stageNames;
-}
-
 // Coverage: same product + explicit stage overlap. Only `in-progress` is
 // floored — finished/not-in-flight work is not.
 export function coveringRisksForItem<T extends AlarmRisk>(
@@ -36,7 +32,7 @@ export function coveringRisksForItem<T extends AlarmRisk>(
   risks: readonly T[],
 ): T[] {
   if (item.status !== "in-progress") return [];
-  const stages = itemStageNames(item);
+  const stages = item.stageNames;
   return risks.filter((risk) => {
     if (risk.productId !== item.productId) return false;
     if (risk.text.trim().length === 0) return false;

@@ -1,8 +1,10 @@
 "use client";
 
+import type { PeriodState } from "@customreport/shared";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useId, useMemo } from "react";
 
+import { copyReportSearchParams } from "../../../shared/lib/navigation/report-search-params";
 import type { ReportPeriod } from "../../report-sections";
 import { usePeriodListboxNav } from "./use-period-listbox-nav";
 
@@ -23,6 +25,7 @@ interface PeriodListboxOption {
   readonly id: string;
   readonly dateRange: string;
   readonly isCurrent: boolean;
+  readonly periodState?: PeriodState | undefined;
   readonly archived: boolean;
   readonly submitted: boolean;
 }
@@ -30,8 +33,13 @@ interface PeriodListboxOption {
 export function periodLabel(period: {
   readonly dateRange: string;
   readonly isCurrent: boolean;
+  readonly periodState?: PeriodState | undefined;
 }): string {
-  return period.isCurrent ? `${period.dateRange} (Current)` : period.dateRange;
+  if (period.isCurrent) return `${period.dateRange} (Current)`;
+  if (period.periodState === "scheduled") {
+    return `${period.dateRange} (Scheduled)`;
+  }
+  return period.dateRange;
 }
 
 export interface PeriodNavigatorSelection {
@@ -59,6 +67,7 @@ function toPeriodOptions(
     id: p.id,
     dateRange: p.dateRange,
     isCurrent: p.isCurrent,
+    ...(p.periodState === undefined ? {} : { periodState: p.periodState }),
     archived: p.archived ?? false,
     submitted: selectedSubmitted && p.id === selectedPeriodId,
   }));
@@ -84,7 +93,7 @@ function useNavigateTo(urlBuilder: ((periodId: string) => string) | undefined) {
         return;
       }
       // Default: lead path-segment URLs — bookmarkable, back-button-friendly.
-      const next = new URLSearchParams(searchParams.toString());
+      const next = copyReportSearchParams(searchParams);
       const query = next.toString();
       const suffix = query ? `?${query}` : "";
       router.push(`${LEAD_REPORT_BASE}/${periodId}${suffix}`);

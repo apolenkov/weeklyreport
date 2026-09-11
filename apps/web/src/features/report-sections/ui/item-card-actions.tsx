@@ -50,7 +50,6 @@ function ActionButton({
 interface ItemCardActionsProps {
   readonly item: KanbanItem;
   readonly locked: boolean;
-  readonly isEditing: boolean;
   // Resolve-not-delete (ADR 0015): published-lineage records withhold Delete.
   readonly publishedLocked?: boolean | undefined;
   readonly onEdit?: ((id: string) => void) | undefined;
@@ -169,8 +168,8 @@ function EditDeleteActions({
 }
 
 export function ItemCardActions(props: ItemCardActionsProps) {
-  const { item, locked, isEditing } = props;
-  if (locked || isEditing) {
+  const { item, locked } = props;
+  if (locked) {
     return item.foreign === true ? (
       <div className="flex shrink-0 gap-1">
         <LockBadge authorName={item.author} variant="slim" />

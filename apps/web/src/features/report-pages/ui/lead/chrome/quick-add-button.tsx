@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useDismissOnOutsidePointer } from "../../../../../shared/hooks/browser/use-dismiss-on-outside-pointer";
 
-// "blocker" is a current item pre-set to workflowStatus=blocked, not a type.
+// "blocker" routes to the risk editor with blocked severity; it is a shortcut,
+// not a separate record type.
 export type QuickAddKind =
   "current-item" | "next-item" | "decision" | "risk" | "blocker";
 
@@ -103,6 +104,9 @@ export function QuickAddButton({
 
   function handlePick(kind: QuickAddKind) {
     if (disabledKinds.has(kind)) return;
+    // The option disappears with the popup. Establish the local trigger as
+    // the durable opener before the selected dialog captures focus.
+    triggerRef.current?.focus();
     setOpen(false);
     onPick(kind);
   }

@@ -23,7 +23,7 @@ export function PeriodDialogSurface({
     <DialogSurface
       surfaceRef={surfaceRef}
       onDismiss={onCancel}
-      surfaceClassName="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl"
+      surfaceClassName="animate-scale-in mx-4 max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl"
       ariaLabel={title}
       testId="periods-create-dialog"
       mode={mode}

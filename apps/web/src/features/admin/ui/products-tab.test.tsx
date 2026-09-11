@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -94,7 +100,7 @@ function renderTab(opts?: {
       path: ["admin", "listStageAssignmentCounts"],
       query: opts?.countsError
         ? Promise.reject(new Error("counts failed"))
-        : ([] as unknown[]),
+        : [],
     },
     { path: ["admin", "saveProject"], mutation: true },
     { path: ["admin", "deleteProject"], mutation: true },
@@ -287,6 +293,32 @@ describe("ProductsTab — Add/Edit dialog a11y", () => {
     fireEvent.click(screen.getByRole("presentation"));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
+
+  it("locks the submitted draft while pending and unlocks it unchanged after failure", async () => {
+    const deferred = Promise.withResolvers<unknown>();
+    const { captured } = renderTab({ products: [] });
+    captured["admin.saveProject"]?.mutationFn.mockReturnValue(deferred.promise);
+    const user = userEvent.setup();
+
+    openAddAndPickLead();
+    const name = screen.getByLabelText(/product name/i);
+    await user.click(screen.getByRole("button", { name: "Add Product" }));
+
+    await screen.findByRole("button", { name: "Saving…" });
+    expect(name).toBeDisabled();
+    await user.click(name);
+    await user.keyboard("Unsent replacement");
+    expect(name).toHaveValue("New Product");
+    expect(captured["admin.saveProject"]?.calls[0]).toMatchObject({
+      name: "New Product",
+      leadId: LEAD_ID,
+    });
+
+    act(() => deferred.reject(new Error("save failed")));
+    await waitFor(() => expect(name).toBeEnabled());
+    expect(name).toHaveValue("New Product");
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
 });
 
 describe("ProductsTab — focus management", () => {
@@ -294,15 +326,14 @@ describe("ProductsTab — focus management", () => {
     vi.clearAllMocks();
   });
 
-  it("product-name input receives focus when the dialog opens (autoFocus)", async () => {
+  it("moves focus to the product name when the dialog opens", async () => {
     const user = userEvent.setup();
     renderTab();
 
     await user.click(screen.getByRole("button", { name: /add new product/i }));
 
     const input = screen.getByLabelText(/product name/i);
-    // React honours autoFocus on conditionally-mounted elements in jsdom;
-    // dropping the autoFocus wiring in production code fails this assert.
+    // The shared dialog-focus hook moves focus to the first enabled control.
     expect(input).toHaveFocus();
   });
 

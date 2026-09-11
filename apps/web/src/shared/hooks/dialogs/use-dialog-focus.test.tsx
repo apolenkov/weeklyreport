@@ -1,8 +1,32 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { useRef, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import { DialogSurface } from "../../ui/dialogs/dialog-surface";
 import { useDialogFocus } from "./use-dialog-focus";
+
+function PendingDialog({ pending }: { readonly pending: boolean }) {
+  const surfaceRef = useRef<HTMLDivElement>(null);
+  useDialogFocus({ open: true, onClose: vi.fn(), containerRef: surfaceRef });
+  return (
+    <>
+      <button type="button">Background before</button>
+      <DialogSurface
+        surfaceRef={surfaceRef}
+        onDismiss={vi.fn()}
+        surfaceClassName=""
+        ariaLabel="Pending form"
+      >
+        <fieldset disabled={pending}>
+          <input aria-label="Pending field" />
+          <button type="button">Save</button>
+        </fieldset>
+      </DialogSurface>
+      <button type="button">Background after</button>
+    </>
+  );
+}
 
 function Dialog({
   onClose,
@@ -51,6 +75,42 @@ function Harness({ autoFocusField }: { autoFocusField: boolean }) {
         />
       ) : null}
     </>
+  );
+}
+
+function CustomDialog({
+  label,
+  onClose,
+  children,
+}: {
+  readonly label: string;
+  readonly onClose: () => void;
+  readonly children: React.ReactNode;
+}) {
+  const surfaceRef = useRef<HTMLDivElement>(null);
+  useDialogFocus({ open: true, onClose, containerRef: surfaceRef });
+  return (
+    <div ref={surfaceRef} role="dialog" aria-modal="true" aria-label={label}>
+      {children}
+    </div>
+  );
+}
+
+function NestedCustomDialogHarness() {
+  const [outerOpen, setOuterOpen] = useState(true);
+  const [innerOpen, setInnerOpen] = useState(false);
+  if (!outerOpen) return <p>Closed</p>;
+  return (
+    <CustomDialog label="Outer dialog" onClose={() => setOuterOpen(false)}>
+      <button type="button" onClick={() => setInnerOpen(true)}>
+        Open inner
+      </button>
+      {innerOpen ? (
+        <CustomDialog label="Inner dialog" onClose={() => setInnerOpen(false)}>
+          <button type="button">Inner action</button>
+        </CustomDialog>
+      ) : null}
+    </CustomDialog>
   );
 }
 
@@ -118,6 +178,39 @@ describe("useDialogFocus focus restore", () => {
 });
 
 describe("useDialogFocus keyboard handling", () => {
+  it.each([false, true])(
+    "contains Tab with all fields disabled (shift=%s) and resumes after settlement",
+    async (shift) => {
+      const user = userEvent.setup();
+      const { rerender } = render(<PendingDialog pending={false} />);
+      screen.getByRole("button", { name: "Save" }).focus();
+      rerender(<PendingDialog pending />);
+      expect(screen.getByLabelText("Pending field")).toBeDisabled();
+
+      await user.tab({ shift });
+      expect(
+        screen.getByRole("dialog", { name: "Pending form" }),
+      ).toHaveFocus();
+      await user.tab({ shift });
+      expect(
+        screen.getByRole("dialog", { name: "Pending form" }),
+      ).toHaveFocus();
+
+      rerender(<PendingDialog pending={false} />);
+      await user.tab({ shift });
+      expect(
+        shift
+          ? screen.getByRole("button", { name: "Save" })
+          : screen.getByLabelText("Pending field"),
+      ).toHaveFocus();
+    },
+  );
+
+  it("focuses the surface when a dialog opens with no enabled controls", () => {
+    render(<PendingDialog pending />);
+    expect(screen.getByRole("dialog", { name: "Pending form" })).toHaveFocus();
+  });
+
   it("wraps focus in both directions at the dialog boundaries", () => {
     render(<Harness autoFocusField={false} />);
     fireEvent.click(screen.getByTestId("trigger"));
@@ -186,5 +279,40 @@ describe("useDialogFocus keyboard handling", () => {
     fireEvent.keyDown(document, { key: "Escape" });
 
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("ignores an Escape already claimed by an earlier keyboard owner", () => {
+    const onClose = vi.fn();
+    render(<Dialog onClose={onClose} autoFocusField={false} />);
+    const event = new KeyboardEvent("keydown", {
+      key: "Escape",
+      bubbles: true,
+      cancelable: true,
+    });
+    event.preventDefault();
+
+    document.dispatchEvent(event);
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("gives a nested custom dialog the first Escape", async () => {
+    const user = userEvent.setup();
+    render(<NestedCustomDialogHarness />);
+    await user.click(screen.getByRole("button", { name: "Open inner" }));
+    expect(screen.getByRole("dialog", { name: "Inner dialog" })).toBeVisible();
+
+    await user.keyboard("{Escape}");
+
+    expect(
+      screen.queryByRole("dialog", { name: "Inner dialog" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Outer dialog" })).toBeVisible();
+
+    await user.keyboard("{Escape}");
+
+    expect(
+      screen.queryByRole("dialog", { name: "Outer dialog" }),
+    ).not.toBeInTheDocument();
   });
 });

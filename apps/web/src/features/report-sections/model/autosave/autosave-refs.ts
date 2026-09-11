@@ -1,6 +1,5 @@
 "use client";
 
-import type { DraftSavePayload } from "@customreport/shared";
 import { useEffect } from "react";
 
 import type {
@@ -8,60 +7,56 @@ import type {
   UseLeadFormAutosaveArgs,
 } from "./autosave-types";
 
-// The subset of the TanStack mutation the autosave engine drives.
+// The mutation port used by the autosave engine.
 export interface AutosaveMutationHandle {
-  readonly mutate: (payload: DraftSavePayload) => void;
-  readonly mutateAsync: (payload: DraftSavePayload) => Promise<unknown>;
+  readonly mutate: (request: AutosaveRequest) => void;
+  readonly mutateAsync: (request: AutosaveRequest) => Promise<unknown>;
   readonly isPending: boolean;
+}
+
+export interface AutosaveRequest {
+  readonly key: string;
+  readonly payload: DraftSaveContent;
+  readonly version: number;
+  readonly generation: symbol;
 }
 
 // Every mutable value the save engine reads at event time, in one bundle: the
 // effects and runners take a single accessor instead of a dozen ref arguments.
 export interface AutosaveRefs {
+  // Each section activation owns its asynchronous completions, including A→B→A.
+  generation: symbol;
   // Live optimistic-lock version, advanced synchronously in onSuccess before the
   // queued drain fires — so a drained save rebases onto the bumped version
   // instead of self-409ing on the writer's own previous save.
   version: number;
   lastSaved: string;
-  inFlight: string;
-  inFlightPayload: DraftSaveContent | null;
-  // Section the in-flight save was sent to, captured at mutate time. Guards
-  // onSuccess from stamping a baseline onto a section the lead navigated to
-  // mid-flight, which would clobber that section's primed baseline.
-  inFlightSection: string | null;
-  // Payload key + snapshot stashed when a save is requested while one is in
-  // flight; onSuccess drains the original queued payload, not a later edit.
-  queuedKey: string | null;
-  queuedPayload: DraftSaveContent | null;
+  // The latest queued request retains its own target, activation and version.
+  queued: AutosaveRequest | null;
   // Active debounce timer id, so forceSave can cancel it.
   debounceTimer: ReturnType<typeof setTimeout> | null;
   payload: DraftSaveContent | null;
   sectionId: string | null;
-  mutate: (payload: DraftSavePayload) => void;
-  mutateAsync: (payload: DraftSavePayload) => Promise<unknown>;
+  mutate: AutosaveMutationHandle["mutate"];
+  mutateAsync: AutosaveMutationHandle["mutateAsync"];
   isPending: boolean;
   enabled: boolean;
 }
 
-// Accessor over the bundle. Passing the ref itself would let a callee read it
-// during render; a closure can only resolve at event or effect time.
+// A stable accessor lets effects and event handlers read the current bundle.
 export type GetAutosaveRefs = () => AutosaveRefs;
 
-// Initial bundle. The owning hook keeps this stable object in lazy state and
-// exposes it only through an event/effect-time accessor.
+// The owning hook keeps this bundle stable while effects refresh live values.
 export function seedAutosaveRefs(args: UseLeadFormAutosaveArgs): AutosaveRefs {
   // Pre-bind invocation must fail loud: the sync effect replaces these handles
   // before any timer or event fires, so a hit here is a wiring/ordering bug.
   const unboundMessage =
     "Autosave mutation invoked before the sync effect bound the live handle";
   return {
+    generation: Symbol("autosave-generation"),
     version: args.version,
     lastSaved: "",
-    inFlight: "",
-    inFlightPayload: null,
-    inFlightSection: null,
-    queuedKey: null,
-    queuedPayload: null,
+    queued: null,
     debounceTimer: null,
     payload: args.payload,
     sectionId: args.reportSectionId,
@@ -81,6 +76,9 @@ function stampLiveValues(
   args: UseLeadFormAutosaveArgs,
   mutation: AutosaveMutationHandle,
 ): void {
+  if (refs.sectionId !== args.reportSectionId) {
+    refs.generation = Symbol("autosave-generation");
+  }
   refs.payload = args.payload;
   refs.sectionId = args.reportSectionId;
   refs.enabled = args.enabled;
@@ -102,6 +100,15 @@ export function useSyncAutosaveRefs(
   useEffect(() => {
     stampLiveValues(getRefs(), args, mutation);
   });
+  useEffect(
+    () => () => {
+      const refs = getRefs();
+      refs.generation = Symbol("unmounted-autosave");
+      refs.enabled = false;
+      refs.queued = null;
+    },
+    [getRefs],
+  );
 }
 
 // Lets the LeadForm say "this freshly-loaded server payload is already saved",

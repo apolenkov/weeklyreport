@@ -1,19 +1,29 @@
 import type { ReopenRequestStatusFilter } from "@customreport/shared";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  type QueryClient,
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import {
+  invalidateLeadForm,
+  invalidateSubmissionDashboard,
+} from "../../../shared/lib/query/cache-keys";
+import type { TRPCProxy } from "../../../shared/lib/trpc/trpc";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 
 export type ReopenFilterStatus = ReopenRequestStatusFilter;
+const MAX_REOPEN_SEARCH_LENGTH = 500;
 
-// Free-text match across every field the row renders, so what the admin reads
-// is what the search box searches.
-function matchesSearch(
-  fields: readonly (string | null | undefined)[],
-  query: string,
-): boolean {
-  return fields.filter(Boolean).join(" ").toLowerCase().includes(query);
+function listInput(filter: ReopenFilterStatus, search: string) {
+  const normalizedSearch = search.trim();
+  return {
+    status: filter,
+    ...(normalizedSearch ? { search: normalizedSearch } : {}),
+  };
 }
 
 // The response draft: which request is open in the respond form, plus its note.
@@ -36,6 +46,16 @@ function useRespondDraft() {
   };
 }
 
+function refreshReopenRequests(
+  queryClient: QueryClient,
+  trpc: TRPCProxy,
+): void {
+  void Promise.all([
+    queryClient.invalidateQueries(trpc.admin.listReopenRequests.pathFilter()),
+    queryClient.invalidateQueries(trpc.admin.pendingReopenCount.pathFilter()),
+  ]).catch(() => undefined);
+}
+
 function useRespondReopenMutation(onResponded: () => void) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
@@ -49,19 +69,14 @@ function useRespondReopenMutation(onResponded: () => void) {
             : "Request rejected.",
         );
         onResponded();
-        void queryClient
-          .invalidateQueries({
-            queryKey: trpc.admin.listReopenRequests.queryKey(),
-          })
-          .catch(() => undefined);
-        void queryClient
-          .invalidateQueries({
-            queryKey: trpc.admin.pendingReopenCount.queryKey(),
-          })
-          .catch(() => undefined);
       },
       onError: (err) => {
         toast.error(`Failed to process request: ${err.message}`);
+      },
+      onSettled: () => {
+        refreshReopenRequests(queryClient, trpc);
+        invalidateSubmissionDashboard(queryClient, trpc);
+        invalidateLeadForm(queryClient, trpc);
       },
     }),
   );
@@ -69,42 +84,54 @@ function useRespondReopenMutation(onResponded: () => void) {
 
 export function useReopenTabState() {
   const trpc = useTRPC();
-  const [filter, setFilter] = useState<ReopenFilterStatus>("pending");
-  const [search, setSearch] = useState("");
+  const queryClient = useQueryClient();
+  const [filter, setFilterState] = useState<ReopenFilterStatus>("pending");
+  const [search, setSearchState] = useState("");
   const draft = useRespondDraft();
 
-  const listQuery = useQuery(
-    trpc.admin.listReopenRequests.queryOptions({ status: filter }),
+  const listQuery = useInfiniteQuery(
+    trpc.admin.listReopenRequests.infiniteQueryOptions(
+      listInput(filter, search),
+      {
+        getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+      },
+    ),
   );
 
   const respondMut = useRespondReopenMutation(draft.reset);
 
-  const requests = useMemo(() => listQuery.data ?? [], [listQuery.data]);
-
-  const filteredRequests = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return requests;
-    return requests.filter((r) =>
-      matchesSearch(
-        [
-          r.requestedBy.name,
-          r.requestedBy.email,
-          r.report.weekLabel,
-          r.reason,
-          r.reviewNote,
-        ],
-        q,
-      ),
-    );
-  }, [requests, search]);
+  const requests = useMemo(
+    () => listQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    [listQuery.data?.pages],
+  );
 
   return {
     filter,
-    setFilter,
+    setFilter: (next: ReopenFilterStatus) => {
+      if (next === filter) return;
+      queryClient.removeQueries(
+        trpc.admin.listReopenRequests.infiniteQueryFilter(
+          listInput(next, search),
+          { exact: true },
+        ),
+      );
+      setFilterState(next);
+    },
     search,
-    setSearch,
+    setSearch: (next: string) => {
+      const capped = next.slice(0, MAX_REOPEN_SEARCH_LENGTH);
+      if (capped === search) return;
+      if (capped.trim() !== search.trim()) {
+        queryClient.removeQueries(
+          trpc.admin.listReopenRequests.infiniteQueryFilter(
+            listInput(filter, capped),
+            { exact: true },
+          ),
+        );
+      }
+      setSearchState(capped);
+    },
     requests,
-    filteredRequests,
     listQuery,
     respondingId: draft.respondingId,
     note: draft.note,

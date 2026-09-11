@@ -1,17 +1,12 @@
 // @vitest-environment jsdom
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
-import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { SessionContext } from "../../../../../shared/lib/auth/session-provider";
 import { logClientError } from "../../../../../shared/lib/errors/client-error-reporting";
-import { TRPCProxyContext } from "../../../../../shared/lib/trpc/trpc-context";
-import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
 import { makeReportSectionFixture } from "../../../../../test-utils/report-section-fixtures";
-import { LeadReportAssistantStore } from "../../lead-report-assistant-store";
 import { LeadForm } from "./lead-form";
+import { buildLeadLoadHarness } from "./lead-form-load-test-harness";
 
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -33,77 +28,6 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/lead/report",
 }));
 
-function buildHarness(opts: { byPeriodQueryFn?: () => unknown } = {}) {
-  const section = makeReportSectionFixture();
-  const { proxy } = createMockTRPC([
-    {
-      path: ["ai", "availability"],
-      query: { availability: "not_configured" },
-    },
-    {
-      path: ["reports", "getActive"],
-      query: {
-        reportId: section.reportId,
-        reportSectionId: section.reportSectionId,
-        authorName: section.authorName,
-        authorRole: section.authorRole,
-      },
-    },
-    { path: ["reports", "myHistory"], query: { items: [] } },
-    { path: ["reports", "saveDraft"], mutation: true },
-    { path: ["reports", "submit"], mutation: true },
-    {
-      path: ["leadForm", "byPeriod"],
-      query:
-        opts.byPeriodQueryFn ??
-        (() => ({
-          section,
-          readOnly: false,
-          canRequestReopen: false,
-          publishedLineage: { itemStableIds: [], decisionStableIds: [] },
-        })),
-    },
-    {
-      path: ["leadForm", "viewSettings"],
-      query: { unifiedActivityView: false },
-    },
-    { path: ["leadForm", "revoke"], mutation: true },
-    { path: ["leadForm", "fillFrom"], mutation: true },
-    { path: ["leadForm", "requestReopen"], mutation: true },
-    { path: ["leadForm", "crossAuthors"], query: [] },
-    { path: ["leadForm", "crossAuthorContent"], query: [] },
-  ]);
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-
-  function Wrapper({ children }: { readonly children: ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <TRPCProxyContext.Provider value={proxy}>
-          <SessionContext.Provider
-            value={{
-              user: {
-                id: "test-lead",
-                name: "Test Lead",
-                email: "lead@example.test",
-                role: "lead",
-              },
-              organization: null,
-              isLoading: false,
-              isAuthenticated: true,
-            }}
-          >
-            <LeadReportAssistantStore>{children}</LeadReportAssistantStore>
-          </SessionContext.Provider>
-        </TRPCProxyContext.Provider>
-      </QueryClientProvider>
-    );
-  }
-
-  return { Wrapper, queryClient, section };
-}
-
 beforeEach(() => vi.clearAllMocks());
 
 afterEach(() => {
@@ -113,7 +37,7 @@ afterEach(() => {
 
 describe("LeadForm primary-read recovery", () => {
   it("renders persistent guidance without stale editable controls after failure", async () => {
-    const { Wrapper } = buildHarness({
+    const { Wrapper } = buildLeadLoadHarness({
       byPeriodQueryFn: () => Promise.reject(new Error("section unavailable")),
     });
     render(
@@ -152,7 +76,7 @@ describe("LeadForm primary-read recovery", () => {
     const retryPromise = new Promise<unknown>((resolve) => {
       resolveRetry = resolve;
     });
-    const { Wrapper } = buildHarness({
+    const { Wrapper } = buildLeadLoadHarness({
       byPeriodQueryFn: () => {
         attempt += 1;
         return attempt === 1
@@ -189,7 +113,7 @@ describe("LeadForm primary-read recovery", () => {
 
   it("keeps Retry available when the next read fails", async () => {
     let attempt = 0;
-    const { Wrapper } = buildHarness({
+    const { Wrapper } = buildLeadLoadHarness({
       byPeriodQueryFn: () => {
         attempt += 1;
         return Promise.reject(new Error("section unavailable"));
@@ -217,7 +141,7 @@ describe("LeadForm primary-read recovery", () => {
 
   it("hides cached editable controls when a primary refetch fails", async () => {
     let shouldFail = false;
-    const { Wrapper, queryClient } = buildHarness({
+    const { Wrapper, queryClient } = buildLeadLoadHarness({
       byPeriodQueryFn: () =>
         shouldFail
           ? Promise.reject(new Error("section unavailable"))

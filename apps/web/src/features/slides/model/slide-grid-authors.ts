@@ -26,6 +26,22 @@ export interface AuthorRoster {
   readonly authors: readonly GridAuthor[];
 }
 
+export function buildContributorRoster(
+  sections: readonly ReportSectionReadModel[],
+): readonly GridAuthor[] {
+  const contributors = new Map(
+    sections.map((section) => [section.authorId, section]),
+  );
+  return [...contributors.values()].map((section, index) => ({
+    id: section.authorId,
+    name: section.authorName,
+    role: section.authorRole,
+    initials: initialsOf(section.authorName),
+    colorIndex: index % AUTHOR_COLOR_COUNT,
+    isOwner: false,
+  }));
+}
+
 export function buildAuthorRoster(
   section: ReportSectionReadModel,
   foreign: readonly CrossAuthorContentRow[],

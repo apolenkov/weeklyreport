@@ -12,8 +12,8 @@ import {
 
 const LOGIN_HAIRLINE_CLASSNAME = "border-[var(--color-border-warm)]";
 
-// Shared min-height (~role-picker height) so AUTH_STUB card swaps do not CLS.
-const STUB_CARD_CLASSNAME = `min-h-[113px] rounded-md border ${LOGIN_HAIRLINE_CLASSNAME} bg-[var(--color-surface-empty)] px-3 py-2.5 text-left`;
+// Reserve room for the last-session state while AUTH_STUB resolves it.
+const STUB_CARD_CLASSNAME = `min-h-[129px] rounded-md border ${LOGIN_HAIRLINE_CLASSNAME} bg-[var(--color-surface-empty)] px-3 py-2.5 text-left`;
 
 const PRIMARY_CTA_MIN_HEIGHT = "52px";
 
@@ -64,7 +64,7 @@ export function PrimaryCta({ authStub, lastRole, ssoHref }: PrimaryCtaProps) {
           ? lastRole
             ? `Enter application as ${lastRole.name} (${ROLE_LABEL[lastRole.role]})`
             : "Enter application as admin"
-          : "Sign in with corporate SSO"
+          : "Sign in"
       }
       data-testid="primary-cta"
     >
@@ -83,7 +83,7 @@ export function PrimaryCta({ authStub, lastRole, ssoHref }: PrimaryCtaProps) {
         <polyline points="10 17 15 12 10 7" />
         <line x1="15" y1="12" x2="3" y2="12" />
       </svg>
-      {authStub ? "Enter Application" : "Sign in with SSO"}
+      {authStub ? "Enter Application" : "Sign in"}
     </a>
   );
 }
@@ -93,7 +93,7 @@ interface LastRoleCardProps {
   readonly lastRole: LastRoleRecord | null;
 }
 
-// Fixed height via STUB_CARD_CLASSNAME: no collapse CLS; always a role path.
+// The shared minimum height keeps each AUTH_STUB state visually stable.
 export function LastRoleCard({ lastRoleLoaded, lastRole }: LastRoleCardProps) {
   return !lastRoleLoaded ? (
     <div
@@ -115,7 +115,7 @@ export function LastRoleCard({ lastRoleLoaded, lastRole }: LastRoleCardProps) {
         <span className="font-semibold text-[var(--color-foreground)]">
           {lastRole.name}
         </span>{" "}
-        · {ROLE_LABEL[lastRole.role]}
+        <span className="whitespace-nowrap">· {ROLE_LABEL[lastRole.role]}</span>
       </p>
       <RoleOptionsList />
     </div>

@@ -1,22 +1,29 @@
 "use client";
 
+import type { Ref } from "react";
+
 import type { ChipChoice } from "../../../shared/ui/forms/choice-chip-row";
 import { RecordTextareaField } from "../../../shared/ui/forms/record-textarea-field";
+import type {
+  ParentActivityOption,
+  RecordParent,
+} from "../model/record-parent";
 import type { ItemStatus, Product } from "../model/types";
 import type { StatusSlot } from "./item-edit-dialog-helpers";
+import { NextStepField } from "./item-next-step-field";
 import { PausedReasonField } from "./item-paused-reason-field";
 import { StatusSlotView } from "./item-status-slot";
-import {
-  type ParentActivityOption,
-  ParentPicker,
-  type RecordParent,
-} from "./parent-picker";
+import { ParentPicker } from "./parent-picker";
 import { StageStep } from "./stage-step";
 
 export interface ItemEditDialogFieldsProps {
   readonly text: string;
   readonly onTextChange: (value: string) => void;
   readonly textError: string | undefined;
+  readonly nextStepText: string;
+  readonly nextStepTextError: string | undefined;
+  readonly onNextStepTextChange: (value: string) => void;
+  readonly nextStepTextareaRef?: Ref<HTMLTextAreaElement> | undefined;
   readonly priorityRank: number | null;
   readonly onPriorityRankChange: (next: number | null) => void;
   readonly rankOptions: readonly number[];
@@ -47,6 +54,15 @@ type ItemDescriptionProps = Pick<
   "text" | "onTextChange" | "textError" | "week"
 >;
 
+type ItemNextStepProps = Pick<
+  ItemEditDialogFieldsProps,
+  | "nextStepText"
+  | "nextStepTextError"
+  | "onNextStepTextChange"
+  | "nextStepTextareaRef"
+  | "status"
+>;
+
 type ItemPriorityRankProps = Pick<
   ItemEditDialogFieldsProps,
   "priorityRank" | "onPriorityRankChange" | "rankOptions" | "takenRanks"
@@ -54,7 +70,7 @@ type ItemPriorityRankProps = Pick<
 
 type ItemClassificationProps = ItemParentStageProps & ItemStatusProps;
 
-function ItemDescriptionField({
+export function ItemDescriptionField({
   text,
   onTextChange,
   textError,
@@ -79,7 +95,25 @@ function ItemDescriptionField({
   );
 }
 
-function ItemPriorityRankField({
+export function ItemNextStepField({
+  nextStepText,
+  nextStepTextError,
+  onNextStepTextChange,
+  nextStepTextareaRef,
+  status,
+}: ItemNextStepProps) {
+  return (
+    <NextStepField
+      value={nextStepText}
+      error={nextStepTextError}
+      status={status}
+      onChange={onNextStepTextChange}
+      textareaRef={nextStepTextareaRef}
+    />
+  );
+}
+
+export function ItemPriorityRankField({
   priorityRank,
   onPriorityRankChange,
   rankOptions,
@@ -185,7 +219,7 @@ function ItemParentStageFields({
   );
 }
 
-function ItemStatusFields({
+export function ItemStatusFields({
   statusSlot,
   choices,
   status,
@@ -232,6 +266,7 @@ export function ItemEditDialogFields(props: ItemEditDialogFieldsProps) {
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:items-stretch">
       <div className="flex flex-1 flex-col gap-4">
         <ItemDescriptionField {...props} />
+        {props.week === "current" ? <ItemNextStepField {...props} /> : null}
         <ItemPriorityRankField {...props} />
       </div>
       <ItemClassificationColumn {...props} />

@@ -54,6 +54,82 @@ describe("createMockTRPC — pathFilter shape (contract pin)", () => {
   });
 });
 
+describe("createMockTRPC — infinite query keys", () => {
+  it("separates traversal state by input while preserving the path prefix", () => {
+    const { proxy } = createMockTRPC([
+      { path: ["admin", "listReopenRequests"], query: [] },
+    ]);
+    const procedure = leaf(proxy, "admin", "listReopenRequests");
+    const infiniteQueryOptions = procedure.infiniteQueryOptions as (
+      input: Record<string, unknown>,
+    ) => { queryKey: unknown };
+
+    const pending = infiniteQueryOptions({ status: "pending", cursor: null });
+    const searched = infiniteQueryOptions({
+      status: "pending",
+      search: "alice",
+      cursor: { id: "cursor-id" },
+      direction: "forward",
+    });
+
+    expect(pending.queryKey).toEqual([
+      ["admin", "listReopenRequests"],
+      { input: { status: "pending" }, type: "infinite" },
+    ]);
+    expect(searched.queryKey).toEqual([
+      ["admin", "listReopenRequests"],
+      {
+        input: { status: "pending", search: "alice" },
+        type: "infinite",
+      },
+    ]);
+    expect(searched.queryKey).not.toEqual(pending.queryKey);
+    expect(procedure.pathFilter).toBeTypeOf("function");
+    expect((procedure.pathFilter as () => unknown)()).toEqual({
+      queryKey: [["admin", "listReopenRequests"]],
+    });
+    expect(
+      (
+        procedure.infiniteQueryFilter as (
+          input: unknown,
+          filters: Record<string, unknown>,
+        ) => unknown
+      )({ status: "pending" }, { exact: true }),
+    ).toEqual({
+      exact: true,
+      queryKey: [
+        ["admin", "listReopenRequests"],
+        { input: { status: "pending" }, type: "infinite" },
+      ],
+    });
+  });
+
+  it("passes the implicit forward direction and page cursor to the server stub", async () => {
+    const query = vi.fn(() => Promise.resolve({ items: [], nextCursor: null }));
+    const { proxy } = createMockTRPC([
+      { path: ["admin", "listReopenRequests"], query },
+    ]);
+    const procedure = leaf(proxy, "admin", "listReopenRequests");
+    const options = (
+      procedure.infiniteQueryOptions as (input: Record<string, unknown>) => {
+        queryFn: (context: {
+          pageParam: unknown;
+          direction: "forward";
+        }) => Promise<unknown>;
+      }
+    )({ status: "pending" });
+    const cursor = { id: "cursor-id", createdAt: "2026-04-06T12:00:00Z" };
+
+    await options.queryFn({ pageParam: cursor, direction: "forward" });
+
+    expect(query).toHaveBeenCalledWith({
+      status: "pending",
+      cursor,
+      direction: "forward",
+    });
+  });
+});
+
 describe("createMockTRPC — invalidation is non-vacuous", () => {
   it("invalidateQueries via pathFilter() marks only the matching query stale", async () => {
     const { proxy } = createMockTRPC([

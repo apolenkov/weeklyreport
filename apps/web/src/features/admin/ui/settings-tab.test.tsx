@@ -19,13 +19,22 @@ vi.mock("sonner", () => ({
     info: vi.fn(),
   },
 }));
+const navigation = vi.hoisted(() => ({
+  search: "tab=settings",
+  replace: vi.fn(),
+}));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/admin",
-  useRouter: () => ({ replace: vi.fn() }),
-  useSearchParams: () => new URLSearchParams("tab=settings"),
+  useRouter: () => ({ replace: navigation.replace }),
+  useSearchParams: () => new URLSearchParams(navigation.search),
 }));
 
 import { SettingsTab } from "./settings-tab";
+
+beforeEach(() => {
+  navigation.search = "tab=settings";
+  navigation.replace.mockReset();
+});
 
 // Org data returned by admin.getOrganization.
 const ORG_DATA = {
@@ -61,15 +70,16 @@ function renderSettings(
     return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
   }
 
-  render(
+  const renderView = () => (
     <Wrapper>
       <TRPCProxyContext.Provider value={proxy}>
         <SettingsTab settings={{ ...baseSettings, ...settingsOverride }} />
       </TRPCProxyContext.Provider>
-    </Wrapper>,
+    </Wrapper>
   );
+  const view = render(renderView());
 
-  return { qc };
+  return { qc, rerender: () => view.rerender(renderView()) };
 }
 
 // Defaults mirror SQL defaults so Periods / Reminders / Notifications
@@ -97,6 +107,54 @@ describe("SettingsTab — Identity sub-tab", () => {
   beforeEach(() => {
     toastSuccess.mockReset();
     toastError.mockReset();
+  });
+
+  it("ignores repeated settings sections instead of selecting the first", async () => {
+    navigation.search =
+      "tab=settings&settingsTab=periods&settingsTab=identity&tag=a&tag=b";
+    renderSettings(buildProxy().proxy);
+    expect(
+      await screen.findByRole("tab", { name: "Identity" }),
+    ).toHaveAttribute("aria-selected", "true");
+
+    await userEvent.setup().click(screen.getByRole("tab", { name: "Periods" }));
+    expect(screen.getByRole("tab", { name: "Periods" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(navigation.replace).toHaveBeenCalledWith(
+      "/admin?tab=settings&settingsTab=periods&tag=a&tag=b",
+      { scroll: false },
+    );
+  });
+
+  it("expires an optimistic section after URL commit before same-tab re-entry", async () => {
+    const { rerender } = renderSettings(buildProxy().proxy);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("tab", { name: "Periods" }));
+    expect(screen.getByRole("tab", { name: "Periods" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(navigation.replace).toHaveBeenCalledWith(
+      "/admin?tab=settings&settingsTab=periods",
+      { scroll: false },
+    );
+
+    navigation.search = "tab=settings&settingsTab=periods";
+    rerender();
+    expect(screen.getByRole("tab", { name: "Periods" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+
+    navigation.search = "tab=settings";
+    rerender();
+    expect(screen.getByRole("tab", { name: "Identity" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
   });
 
   it("loads the organization row into the Identity form", async () => {

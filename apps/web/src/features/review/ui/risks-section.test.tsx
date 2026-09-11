@@ -134,26 +134,6 @@ describe("RisksSection LockBadge", () => {
 });
 
 describe("RisksSection — aria-hidden decorative icons", () => {
-  it("EditIcon SVG has aria-hidden='true'", () => {
-    render(<RisksSection risks={[{ ...baseRisk, stageNames: [] }]} />);
-
-    const editBtn = screen.getByRole("button", { name: /Edit risk for CRM/i });
-    const svg = editBtn.querySelector("svg");
-    expect(svg).not.toBeNull();
-    expect(svg).toHaveAttribute("aria-hidden", "true");
-  });
-
-  it("DeleteIcon SVG has aria-hidden='true'", () => {
-    render(<RisksSection risks={[baseRisk]} />);
-
-    const deleteBtn = screen.getByRole("button", {
-      name: /Delete risk for CRM/i,
-    });
-    const svg = deleteBtn.querySelector("svg");
-    expect(svg).not.toBeNull();
-    expect(svg).toHaveAttribute("aria-hidden", "true");
-  });
-
   it("Edit button has correct aria-label and its child SVG has aria-hidden='true'", () => {
     render(<RisksSection risks={[baseRisk]} />);
 
@@ -180,64 +160,6 @@ describe("RisksSection — aria-hidden decorative icons", () => {
     );
     const svg = deleteBtn.querySelector("svg");
     expect(svg).toHaveAttribute("aria-hidden", "true");
-  });
-
-  it("snapshot: Edit and Delete buttons with decorative aria-hidden SVGs", () => {
-    render(<RisksSection risks={[baseRisk]} />);
-
-    const editBtn = screen.getByRole("button", {
-      name: /Edit risk for CRM/i,
-    });
-    const deleteBtn = screen.getByRole("button", {
-      name: /Delete risk for CRM/i,
-    });
-    expect(editBtn).toMatchInlineSnapshot(`
-      <button
-        aria-label="Edit risk for CRM"
-        class="flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] md:min-h-[34px] md:min-w-[34px] items-center justify-center rounded-full border border-[var(--card-surface-border)] bg-[var(--color-card)] p-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="h-4 w-4"
-          fill="none"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-        >
-          <path
-            d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"
-          />
-          <path
-            d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
-          />
-        </svg>
-      </button>
-    `);
-    expect(deleteBtn).toMatchInlineSnapshot(`
-      <button
-        aria-label="Delete risk for CRM"
-        class="flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] md:min-h-[34px] md:min-w-[34px] items-center justify-center rounded-full border border-[var(--card-surface-border)] bg-[var(--color-card)] p-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2 text-[var(--color-muted-foreground)] transition-colors hover:border-[color-mix(in_srgb,var(--color-destructive)_20%,transparent)] hover:bg-[color-mix(in_srgb,var(--color-destructive)_10%,transparent)] hover:text-[var(--color-destructive)]"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="h-4 w-4"
-          fill="none"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-        >
-          <path
-            d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"
-          />
-        </svg>
-      </button>
-    `);
   });
 });
 

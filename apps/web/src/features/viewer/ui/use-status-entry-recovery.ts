@@ -2,6 +2,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 
 import { getClientErrorDetails } from "../../../shared/lib/errors/client-error-reporting";
+import { getScalarSearchParam } from "../../../shared/lib/navigation/scalar-search-param";
 
 // Module-scope so the reference is stable across renders. The viewer strips
 // one-shot Status-entry markers on every in-shell navigation.
@@ -22,8 +23,8 @@ export function useStatusEntryRecovery(displayedQuery: {
     getClientErrorDetails(displayedQuery.error).isInvalidLink;
   const shouldRecover =
     isInvalidLink &&
-    searchParams.get("source") === "status" &&
-    searchParams.get("recovery") !== "1";
+    getScalarSearchParam(searchParams, "source") === "status" &&
+    getScalarSearchParam(searchParams, "recovery") !== "1";
 
   useEffect(() => {
     if (shouldRecover) {

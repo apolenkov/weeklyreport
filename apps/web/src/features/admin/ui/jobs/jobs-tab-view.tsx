@@ -1,17 +1,15 @@
 import {
   AI_PROVIDER_TEST_QUEUE_NAME,
   EMAIL_REMINDER_QUEUE_NAME,
+  type FailedJob,
   PDF_EXPORT_QUEUE_NAME,
   type QueueName,
   SEMANTIC_INDEX_QUEUE_NAME,
 } from "@customreport/shared";
-import { type ComponentProps } from "react";
 
 import { TabHeader, TabSearch } from "../../../../shared/ui/tabs/tab-header";
 import { JobsSkeleton } from "../jobs-skeleton";
 import { JobsTableRow } from "../jobs-table-row";
-
-export type FailedJob = ComponentProps<typeof JobsTableRow>["job"];
 
 interface JobsTabViewProps {
   readonly queue: QueueName;
@@ -19,7 +17,7 @@ interface JobsTabViewProps {
   readonly filteredJobs: readonly FailedJob[];
   readonly isLoading: boolean;
   readonly isError: boolean;
-  readonly error: Error | null;
+  readonly error: Readonly<{ message: string }> | null;
   readonly hasNextPage: boolean;
   readonly isFetchingNextPage: boolean;
   readonly fetchNextPage: () => void;

@@ -11,6 +11,7 @@ import { useHeaderActionsVisibility } from "../../chrome/use-header-actions-visi
 interface CompletionPresentationInput {
   readonly autosave: AutosaveSnapshot;
   readonly products: readonly Product[];
+  readonly activityCount: number;
   readonly onQuickAdd: (kind: QuickAddKind) => void;
   readonly handleSubmit: () => void;
   readonly readiness: LeadSubmitReadiness;
@@ -42,7 +43,7 @@ export function useCompletionPresentation(
   const completionActions = {
     autosave: input.autosave,
     onAdd: input.onQuickAdd,
-    addDisabled: input.products.length === 0,
+    addDisabled: input.products.length + input.activityCount === 0,
     disabledQuickAddKinds:
       input.products.length === 0
         ? new Set<QuickAddKind>(["blocker"])

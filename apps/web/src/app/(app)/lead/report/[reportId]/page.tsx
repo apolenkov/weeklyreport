@@ -9,11 +9,11 @@ import {
 interface Props {
   params: Promise<{ reportId: string }>;
   searchParams: Promise<{
-    mode?: string;
-    feedback?: string;
-    feedbackUrl?: string;
-    agentationSession?: string;
-    agentationAnnotation?: string;
+    mode?: string | string[];
+    feedback?: string | string[];
+    feedbackUrl?: string | string[];
+    agentationSession?: string | string[];
+    agentationAnnotation?: string | string[];
   }>;
 }
 
@@ -30,7 +30,7 @@ function preservedSearchParams(
   const preserved = new URLSearchParams();
   for (const key of PRESERVED_QUERY_KEYS) {
     const value = query[key];
-    if (value) preserved.set(key, value);
+    if (typeof value === "string" && value) preserved.set(key, value);
   }
   return preserved;
 }
@@ -46,9 +46,9 @@ export default async function LeadReportByIdPage({
   const { reportId } = await params;
   const query = await searchParams;
   const { mode } = query;
-  const resolvedMode = mode === "slides" || mode === "edit" ? mode : "overview";
+  const resolvedMode = mode === "slides" ? mode : "overview";
 
-  if (mode && resolvedMode !== mode) {
+  if (typeof mode === "string" && mode && resolvedMode !== mode) {
     const preserved = preservedSearchParams(query);
     const suffix = preserved.size > 0 ? `?${preserved.toString()}` : "";
     redirect(`/lead/report/${encodeURIComponent(reportId)}${suffix}`);

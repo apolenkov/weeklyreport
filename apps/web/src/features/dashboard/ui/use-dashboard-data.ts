@@ -1,7 +1,12 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback } from "react";
+import {
+  type QueryKey,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
 
 import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";
@@ -20,24 +25,36 @@ interface DashboardRecoveryQuery {
   readonly status: string;
 }
 
-function recoveryInput(
+function useQueryRecovery(
   name: "activity" | "review" | "weeklyReport",
   query: DashboardRecoveryQuery,
+  queryKey: QueryKey,
 ) {
-  return {
+  const client = useQueryClient();
+  const { refetch } = query;
+  const restart = useCallback(async () => {
+    const state = client.getQueryState(queryKey);
+    // An initial refetch reuses its pending request unless it is cancelled first.
+    if (state?.data === undefined && state?.fetchStatus === "fetching") {
+      await client.cancelQueries({ queryKey, exact: true });
+    }
+    return refetch();
+  }, [client, queryKey, refetch]);
+  return useDashboardQueryRecovery({
     name,
     hasData: query.data !== undefined,
     isError: query.isError,
     status: query.status,
     fetchStatus: query.fetchStatus,
-    refetch: query.refetch,
-  };
+    refetch: restart,
+  });
 }
 
 function useReviewDashboardQuery() {
   const trpc = useTRPC();
+  const options = useMemo(() => trpc.review.dashboard.queryOptions(), [trpc]);
   const query = useQuery({
-    ...trpc.review.dashboard.queryOptions(),
+    ...options,
     staleTime: 60_000,
   });
   useQueryErrorHandler(query, {
@@ -46,14 +63,15 @@ function useReviewDashboardQuery() {
     procedure: "review.dashboard",
     toastPrefix: "Failed to load dashboard",
   });
-  const recovery = useDashboardQueryRecovery(recoveryInput("review", query));
+  const recovery = useQueryRecovery("review", query, options.queryKey);
   return { query, recovery };
 }
 
 function useWeeklyDashboardQuery() {
   const trpc = useTRPC();
+  const options = useMemo(() => trpc.weeklyReport.get.queryOptions({}), [trpc]);
   const query = useQuery({
-    ...trpc.weeklyReport.get.queryOptions({}),
+    ...options,
     staleTime: 60_000,
   });
   useQueryErrorHandler(query, {
@@ -63,16 +81,15 @@ function useWeeklyDashboardQuery() {
     context: { reportId: null },
     toastPrefix: "Failed to load status report",
   });
-  const recovery = useDashboardQueryRecovery(
-    recoveryInput("weeklyReport", query),
-  );
+  const recovery = useQueryRecovery("weeklyReport", query, options.queryKey);
   return { query, recovery };
 }
 
 function useActivityDashboardQuery() {
   const trpc = useTRPC();
+  const options = useMemo(() => trpc.activity.live.queryOptions(), [trpc]);
   const query = useQuery({
-    ...trpc.activity.live.queryOptions(),
+    ...options,
     refetchInterval: ACTIVITY_POLL_INTERVAL_MS,
     refetchOnWindowFocus: true,
   });
@@ -82,7 +99,7 @@ function useActivityDashboardQuery() {
     procedure: "activity.live",
     toastPrefix: "Failed to load dashboard freshness",
   });
-  const recovery = useDashboardQueryRecovery(recoveryInput("activity", query));
+  const recovery = useQueryRecovery("activity", query, options.queryKey);
   return { query, recovery };
 }
 

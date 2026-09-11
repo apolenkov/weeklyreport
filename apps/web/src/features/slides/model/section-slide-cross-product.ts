@@ -5,6 +5,17 @@ import { CROSS_PRODUCT_ID, nonEmpty } from "./section-slide-model-helpers";
 
 type ProductPredicate = (productId: string | null | undefined) => boolean;
 
+function itemDisplayText(
+  item: ReportSectionReadModel["items"][number],
+): string {
+  const text = item.text.trim();
+  if (item.resolution != null)
+    return `${text} — Won't do: ${item.resolution.reason}`;
+  if (item.nextStepText?.trim())
+    return `${text} — Next: ${item.nextStepText.trim()}`;
+  return text;
+}
+
 function crossProductSlices(
   section: ReportSectionReadModel,
   isCrossProduct: ProductPredicate,
@@ -18,7 +29,7 @@ function crossProductSlices(
           isCrossProduct(item.projectId) &&
           nonEmpty(item.text),
       )
-      .map((item) => item.text.trim());
+      .map(itemDisplayText);
   const rankedItems = section.items.filter(
     (item) =>
       item.priorityRank != null &&
@@ -45,12 +56,12 @@ function crossProductSlices(
           nonEmpty(decision.text),
       )
       .map((decision) => decision.text.trim()),
-    priorities: rankedItems.map((item) => item.text.trim()),
+    priorities: rankedItems.map(itemDisplayText),
     itemRanks: Object.fromEntries(
       rankedItems.flatMap<readonly [string, number]>((item) =>
         item.priorityRank == null
           ? []
-          : [[item.text.trim(), item.priorityRank]],
+          : [[itemDisplayText(item), item.priorityRank]],
       ),
     ),
   };

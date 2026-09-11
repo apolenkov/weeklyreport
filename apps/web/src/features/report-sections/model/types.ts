@@ -1,3 +1,5 @@
+import type { PeriodState } from "@customreport/shared";
+
 import type { StageStatus } from "./traffic-light";
 
 export type { StageStatus } from "./traffic-light";
@@ -32,11 +34,6 @@ export interface Product {
   readonly riskCount?: number | undefined;
 }
 
-export type KanbanItemParent =
-  | { readonly kind: "product"; readonly id: string }
-  | { readonly kind: "activity"; readonly id: string }
-  | { readonly kind: "unresolved" };
-
 interface KanbanItemFields {
   readonly id: string;
   readonly stageNames: readonly string[];
@@ -48,6 +45,7 @@ interface KanbanItemFields {
   readonly priorityRank?: number | null | undefined;
   // Required in UI when pausing.
   readonly pausedReason?: string | null | undefined;
+  readonly nextStepText?: string | null | undefined;
 }
 
 export type ProductKanbanItem = KanbanItemFields & {
@@ -131,6 +129,8 @@ export interface ReportPeriod {
   readonly weekLabel: string;
   readonly dateRange: string;
   readonly isCurrent: boolean;
+  // Present when the source read carries canonical lifecycle state.
+  readonly periodState?: PeriodState | undefined;
   // Per-lead submission marker; absent on head/viewer navigation periods,
   // where the navigator's leadSubmittedAt is the only submission source.
   readonly isSubmitted?: boolean | undefined;

@@ -1,6 +1,10 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
 import { hasText } from "./slide-grid-rows";
+import {
+  attributedRecordAuthor,
+  type SlideRecordAttribution,
+} from "./slide-record-attribution";
 
 export interface GridPriorityCard {
   // null when the item carries neither id nor stableId — the render key falls
@@ -16,6 +20,7 @@ export interface GridPriorityCard {
 // Own ranked items only (foreign rows never carry a rank), ascending rank;
 // ties keep input order — the section author is the only rank source today.
 export function buildPriorityStrip(input: {
+  readonly recordAttribution?: SlideRecordAttribution | undefined;
   readonly section: ReportSectionReadModel;
   readonly knownProductIds: ReadonlySet<string>;
   readonly productNameById: ReadonlyMap<string, string>;
@@ -40,7 +45,9 @@ export function buildPriorityStrip(input: {
         rank,
         text: item.text.trim(),
         productName: productNameById.get(homeProductId) ?? input.sharedCardName,
-        authorId: section.authorId,
+        authorId: input.recordAttribution
+          ? attributedRecordAuthor(item, input.recordAttribution).id
+          : section.authorId,
       },
     ];
   });

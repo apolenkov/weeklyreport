@@ -36,14 +36,11 @@ export function statusTone(model: {
   readonly blockedCount: number;
   readonly atRiskCount: number;
 }): SlideTone {
-  if (model.currentCount === 0 && model.nextCount === 0) return "empty";
   if (model.blockedCount > 0) return "blocked";
-  if (
-    model.atRiskCount > 0 ||
-    model.riskCount > 0 ||
-    model.priorityCount === 0
-  ) {
+  if (model.atRiskCount > 0 || model.riskCount > 0) {
     return "warning";
   }
+  if (model.currentCount === 0 && model.nextCount === 0) return "empty";
+  if (model.priorityCount === 0) return "warning";
   return "ready";
 }

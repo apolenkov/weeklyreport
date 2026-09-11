@@ -24,8 +24,16 @@ vi.mock("../../../features/pdf-export/server", () => ({
   getPrintRouteContext: getPrintRouteContextMock,
 }));
 vi.mock("./print-report-template", () => ({
-  PrintReportTemplate: ({ reportId }: { readonly reportId: string }) => (
-    <div data-testid="print-report-template">{reportId}</div>
+  PrintReportTemplate: ({
+    reportId,
+    jobId,
+  }: {
+    readonly reportId: string;
+    readonly jobId: string;
+  }) => (
+    <div data-testid="print-report-template">
+      {reportId}:{jobId}
+    </div>
   ),
 }));
 
@@ -63,7 +71,7 @@ describe("PrintReportPage server gate", () => {
     render(await renderPage());
 
     expect(screen.getByTestId("print-report-template")).toHaveTextContent(
-      REPORT_ID,
+      `${REPORT_ID}:job-123`,
     );
     expect(redirectMock).not.toHaveBeenCalled();
   });

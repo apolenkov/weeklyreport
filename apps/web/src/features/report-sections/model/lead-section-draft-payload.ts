@@ -23,6 +23,7 @@ function toItemDrafts(items: ReportSectionReadModel["items"]) {
       type: it.type,
       text: it.text,
       tag: it.tag,
+      nextStepText: it.nextStepText ?? null,
       workflowStatus: it.workflowStatus,
       carriedOver: it.carriedOver,
       stageNames: it.stageNames,

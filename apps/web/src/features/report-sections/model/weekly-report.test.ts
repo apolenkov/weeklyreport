@@ -27,11 +27,12 @@ describe("mapWeeklyReport", () => {
       period: {
         id: REPORT_ID,
         reportId: REPORT_ID,
+        periodState: "open",
         periodStatus: "open",
         archived: false,
         weekLabel: "Week 16",
         dateRange: "Apr 14–20, 2026",
-        isCurrent: true,
+        isCurrent: false,
         periodStart: new Date("2026-04-14T00:00:00Z"),
       },
       portfolio: [],
@@ -55,7 +56,7 @@ describe("mapWeeklyReport", () => {
           productName: "Core",
           worstStatus: null,
           stageCount: 1,
-          leadNames: ["Alex Lead"],
+          leadNames: ["Иванов Алексей Петрович"],
           leadIds: ["fdbe9b32-8141-593c-9cad-f8f26def402f"],
         },
       ],
@@ -65,7 +66,7 @@ describe("mapWeeklyReport", () => {
           reportSectionId: SECTION_A,
           reportId: REPORT_ID,
           authorId: AUTHOR_A,
-          authorName: "Alex Lead",
+          authorName: "Иванов Алексей Петрович",
           version: 1,
           status: "submitted",
           submittedAt: new Date("2026-04-19T18:00:00Z"),
@@ -124,9 +125,11 @@ describe("mapWeeklyReport", () => {
       escalations: [
         {
           type: "blocked",
+          productId: PROJECT_A,
           productName: "Core",
           stageName: "Build",
-          leadName: "Alex Lead",
+          authorId: AUTHOR_A,
+          leadName: "Иванов Алексей Петрович",
           description: "Launch needs approval.",
         },
       ],
@@ -136,11 +139,12 @@ describe("mapWeeklyReport", () => {
       period: {
         id: REPORT_ID,
         reportId: REPORT_ID,
+        periodState: "open",
         periodStatus: "reopened",
         archived: false,
         weekLabel: "Week 16",
         dateRange: "Apr 14–20, 2026",
-        isCurrent: true,
+        isCurrent: false,
         periodStart: new Date("2026-04-14T00:00:00Z"),
       },
       portfolio: [
@@ -148,9 +152,10 @@ describe("mapWeeklyReport", () => {
           id: PROJECT_A,
           initials: "CO",
           name: "Core",
+          hasContent: true,
           status: "empty",
-          statusLabel: "No status · Alex Lead",
-          leads: "Alex Lead",
+          statusLabel: "No status · Иванов А.П.",
+          leads: "Иванов А.П.",
           currentWeekCount: 1,
           nextWeekCount: 1,
           riskCount: 1,
@@ -164,15 +169,15 @@ describe("mapWeeklyReport", () => {
           name: "Core",
           status: "empty",
           statusLabel: "No status",
-          leads: "Alex Lead",
+          leads: "Иванов А.П.",
           needsAttention: "Launch needs approval.",
           needsAttentionSeverity: "blocked",
           currentWeek: [
             {
               id: "current-1",
-              stageLead: "Build · AL",
+              stageLead: "Build · ИА",
               stage: "Build",
-              owner: "AL",
+              owner: "ИА",
               text: "Ship release",
               status: "blocked",
               priorityRank: 2,
@@ -183,9 +188,9 @@ describe("mapWeeklyReport", () => {
           nextWeek: [
             {
               id: "next-1",
-              stageLead: "Planned",
+              stageLead: "Planning · ИА",
               stage: "Planning",
-              owner: "AL",
+              owner: "ИА",
               text: "Plan follow-up",
               status: "planned",
               priorityRank: null,
@@ -198,7 +203,7 @@ describe("mapWeeklyReport", () => {
               id: "risk-1",
               badge: "Core · Build",
               stage: "Build",
-              owner: "AL",
+              owner: "ИА",
               severity: "blocked",
               text: "Vendor delay — Impact: Release slips — Mitigation: Escalate",
               problem: "Vendor delay",
@@ -212,7 +217,7 @@ describe("mapWeeklyReport", () => {
             {
               id: "decision-1",
               badge: "Core",
-              owner: "AL",
+              owner: "ИА",
               text: "Approve launch",
               comments: [],
               canReview: false,
@@ -228,21 +233,27 @@ describe("mapWeeklyReport", () => {
     });
   });
 
-  it("surfaces reportId and periodStatus on the period object", () => {
-    const result = mapWeeklyReport(baseReport({ periodStatus: "open" }));
+  it("surfaces canonical lifecycle on the period object", () => {
+    const result = mapWeeklyReport(
+      baseReport({ periodState: "scheduled", periodStatus: "open" }),
+    );
     expect(result.period.reportId).toBe(REPORT_ID);
+    expect(result.period.periodState).toBe("scheduled");
     expect(result.period.periodStatus).toBe("open");
+    expect(result.period.isCurrent).toBe(false);
   });
 
   it("reflects published periodStatus on the period object", () => {
-    const result = mapWeeklyReport(baseReport({ periodStatus: "published" }));
+    const result = mapWeeklyReport(
+      baseReport({ periodState: "published", periodStatus: "published" }),
+    );
     expect(result.period.periodStatus).toBe("published");
     expect(result.period.isCurrent).toBe(false);
   });
 
-  it("reflects reopened periodStatus on the period object", () => {
+  it("does not invent current identity for a reopened standalone projection", () => {
     const result = mapWeeklyReport(baseReport({ periodStatus: "reopened" }));
     expect(result.period.periodStatus).toBe("reopened");
-    expect(result.period.isCurrent).toBe(true);
+    expect(result.period.isCurrent).toBe(false);
   });
 });

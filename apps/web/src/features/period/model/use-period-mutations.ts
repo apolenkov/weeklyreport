@@ -3,10 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import {
-  invalidateAdmin,
-  invalidatePeriodLifecycle,
-} from "../../../shared/lib/query/cache-keys";
+import { invalidatePeriodLifecycle } from "../../../shared/lib/query/cache-keys";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 
 // Server messages pipe through verbatim (overlap ranges, policy rejections, etc.).
@@ -14,42 +11,36 @@ function notifyError(err: { readonly message: string }) {
   toast.error(err.message);
 }
 
-type NotifyDone = (
-  message: string,
-  closeDialog?: () => void,
-  invalidatesReportViews?: boolean,
-) => () => void;
+type NotifyDone = (message: string, closeDialog?: () => void) => () => void;
 
 function usePeriodDoneNotifier(): NotifyDone {
   const trpc = useTRPC();
   const qc = useQueryClient();
 
-  return (message, closeDialog, invalidatesReportViews = false) =>
-    () => {
-      void qc
-        .invalidateQueries(trpc.admin.listPeriodsByState.pathFilter())
-        .catch(() => undefined);
-      invalidateAdmin(qc, trpc);
-      if (invalidatesReportViews) invalidatePeriodLifecycle(qc, trpc);
-      toast.success(message);
-      closeDialog?.();
-    };
+  return (message, closeDialog) => () => {
+    invalidatePeriodLifecycle(qc, trpc);
+    toast.success(message);
+    closeDialog?.();
+  };
 }
 
-// Lifecycle transitions of an existing period; no dialog to dismiss.
-function usePeriodStateMutations(notifyDone: NotifyDone) {
+// Reopen dismisses its confirmation only after the transition succeeds.
+function usePeriodStateMutations(
+  notifyDone: NotifyDone,
+  onReopenSuccess: () => void,
+) {
   const trpc = useTRPC();
 
   return {
     publishMut: useMutation(
       trpc.period.publish.mutationOptions({
-        onSuccess: notifyDone("Period published", undefined, true),
+        onSuccess: notifyDone("Period published"),
         onError: notifyError,
       }),
     ),
     reopenMut: useMutation(
       trpc.period.reopen.mutationOptions({
-        onSuccess: notifyDone("Period reopened", undefined, true),
+        onSuccess: notifyDone("Period reopened", onReopenSuccess),
         onError: notifyError,
       }),
     ),
@@ -103,14 +94,16 @@ function usePeriodRecordMutations(
 export function usePeriodMutations({
   onCreateSuccess,
   onEditSuccess,
+  onReopenSuccess,
   onDeleteSuccess,
 }: {
   readonly onCreateSuccess: () => void;
   readonly onEditSuccess: () => void;
+  readonly onReopenSuccess: () => void;
   readonly onDeleteSuccess: () => void;
 }) {
   const notifyDone = usePeriodDoneNotifier();
-  const stateMutations = usePeriodStateMutations(notifyDone);
+  const stateMutations = usePeriodStateMutations(notifyDone, onReopenSuccess);
   const recordMutations = usePeriodRecordMutations(
     notifyDone,
     onCreateSuccess,

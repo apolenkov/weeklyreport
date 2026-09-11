@@ -7,6 +7,7 @@ import { useContext, useMemo } from "react";
 
 import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";
 import { SessionContext } from "../../../shared/lib/auth/session-provider";
+import { getScalarSearchParam } from "../../../shared/lib/navigation/scalar-search-param";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import {
   buildLeadSlidePeriodOptions,
@@ -42,7 +43,7 @@ export function useLeadDeckRequest(
   const session = useContext(SessionContext);
 
   const inReportMode = pathname.startsWith("/lead/report/");
-  const authorId = searchParams.get("authorId") ?? undefined;
+  const authorId = getScalarSearchParam(searchParams, "authorId") ?? undefined;
   const currentUserId = session?.user?.id ?? null;
   const isOwnDeck = isOwnLeadDeck(authorId, currentUserId);
 
@@ -50,7 +51,7 @@ export function useLeadDeckRequest(
     inReportMode,
     requestedReportId: inReportMode
       ? initialReportId
-      : searchParams.get("reportId"),
+      : getScalarSearchParam(searchParams, "reportId"),
     authorId,
     currentUserId,
     isOwnDeck,
@@ -58,8 +59,8 @@ export function useLeadDeckRequest(
   };
 }
 
-// Which period the deck shows: the requested one when it is still in the
-// lead's history, else the active report.
+// Preserve an explicit report request; otherwise select the active or newest
+// available history option according to the period resolver.
 export function useLeadDeckPeriod(requestedReportId: string | null) {
   const trpc = useTRPC();
   const activeQ = useQuery(trpc.reports.getActive.queryOptions());

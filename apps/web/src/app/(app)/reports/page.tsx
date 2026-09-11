@@ -12,13 +12,14 @@ import { useSession } from "../../../shared/lib/auth/session-provider";
 // compiled. No tab state and no `tab` query parameter; Archive is local, non-URL
 // state so the address bar stays stable when the switch is flipped.
 export default function ReportsPage() {
-  const { user } = useSession();
+  const { user, isLoading: isSessionLoading } = useSession();
   const role = user?.role ?? null;
 
   const {
     entries,
     archiveCount,
     isLoading,
+    failure,
     includeArchive,
     setIncludeArchive,
     isLead,
@@ -51,7 +52,8 @@ export default function ReportsPage() {
           <HistoryPanel
             entries={entries}
             includeArchive={includeArchive}
-            isLoading={isLoading}
+            isLoading={isSessionLoading || isLoading}
+            failure={failure}
             summaryTitle={isLead ? "My History Summary" : "History Summary"}
             isLead={isLead}
           />

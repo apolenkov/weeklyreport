@@ -13,6 +13,8 @@ vi.mock("@sentry/nextjs", () => ({
 // itself; vitest cannot process the Tailwind stylesheet.
 vi.mock("../styles/app.css", () => ({}));
 
+import * as Sentry from "@sentry/nextjs";
+
 import GlobalError from "./global-error";
 
 function makeError(message = "Test error"): Error & { digest?: string } {
@@ -29,16 +31,22 @@ describe("GlobalError — global-error.tsx", () => {
     expect(doc.documentElement.getAttribute("lang")).toBe("en");
     const alert = doc.querySelector('[role="alert"]');
     expect(alert?.textContent).toContain("Something went wrong");
+    expect(alert?.textContent).toContain(
+      "An unexpected error interrupted this page. Try again to continue.",
+    );
+    expect(alert?.textContent).not.toContain("Your data is safe");
     const btn = doc.querySelector("button");
     expect(btn?.getAttribute("type")).toBe("button");
   });
 
   it("clicking the recovery button invokes the reset callback", () => {
     const reset = vi.fn();
-    render(<GlobalError error={makeError()} reset={reset} />, {
+    const error = makeError();
+    render(<GlobalError error={error} reset={reset} />, {
       container: document,
     });
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(reset).toHaveBeenCalledOnce();
+    expect(vi.mocked(Sentry.captureException)).toHaveBeenCalledWith(error);
   });
 });

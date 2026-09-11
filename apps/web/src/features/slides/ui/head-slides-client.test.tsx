@@ -3,13 +3,17 @@
 import "@testing-library/jest-dom/vitest";
 
 import { useQuery } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 interface ActivityQueryResult {
   readonly data:
-    { readonly rows: readonly { readonly id: string }[] } | undefined;
+    | {
+        readonly reportId: string;
+        readonly rows: readonly { readonly id: string }[];
+      }
+    | undefined;
   readonly isLoading: boolean;
   readonly isError: boolean;
 }
@@ -74,9 +78,7 @@ vi.mock("../../../shared/lib/trpc/trpc-context", () => ({
   }),
 }));
 
-// A published report with NO lead sections + two activity rows available: the
-// only thing standing between the viewer and the forbidden activity fallback is
-// the enableActivity gate.
+// An empty editable report and same-period activity rows exercise the host gate.
 const ACTIVITY_ROWS = [{ id: "a1" }, { id: "a2" }];
 
 vi.mock("@tanstack/react-query", () => ({
@@ -89,6 +91,9 @@ vi.mock("@tanstack/react-query", () => ({
       return {
         data: {
           status: "active",
+          reportId: opts.queryKey?.[1] ?? "current-report",
+          periodStatus: "open",
+          archived: false,
           leadSections:
             opts.queryKey?.[1] === "report-a"
               ? [{ id: "report-a-slide", label: "Report A slide" }]
@@ -117,7 +122,7 @@ function activityQueryCall() {
 
 beforeEach(() => {
   mockActivityQuery.mockReturnValue({
-    data: { rows: ACTIVITY_ROWS },
+    data: { reportId: "current-report", rows: ACTIVITY_ROWS },
     isLoading: false,
     isError: false,
   });
@@ -129,7 +134,7 @@ afterEach(() => {
 });
 
 describe("HeadSlidesClient — enableActivity gating", () => {
-  it("viewer (enableActivity=false): activity.live query is disabled and never fires", () => {
+  it("viewer (enableActivity=false): activity.live query is marked disabled", () => {
     render(<HeadSlidesClient enableActivity={false} />);
     const activityCall = activityQueryCall();
     expect(activityCall).toBeDefined();
@@ -156,32 +161,8 @@ describe("HeadSlidesClient — enableActivity gating", () => {
 });
 
 describe("HeadSlidesClient — density control", () => {
-  it("exposes a reversible Document/Presentation state on viewer and head decks", () => {
+  it("does not expose a density control on head decks", () => {
     render(<HeadSlidesClient reportId="report-a" enableActivity={false} />);
-    const document = screen.getByRole("button", { name: "Document" });
-    const presentation = screen.getByRole("button", {
-      name: "Presentation",
-    });
-
-    expect(document).toHaveAttribute("aria-pressed", "true");
-    expect(presentation).toHaveAttribute("aria-pressed", "false");
-    fireEvent.click(presentation);
-    expect(document).toHaveAttribute("aria-pressed", "false");
-    expect(presentation).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(document);
-    expect(document).toHaveAttribute("aria-pressed", "true");
-  });
-
-  it("accepts shell-owned density without rendering a second deck toolbar", () => {
-    render(
-      <HeadSlidesClient
-        reportId="report-a"
-        enableActivity={false}
-        density="presentation"
-        onDensityChange={vi.fn()}
-      />,
-    );
-
     expect(
       screen.queryByRole("group", { name: "Slide density" }),
     ).not.toBeInTheDocument();

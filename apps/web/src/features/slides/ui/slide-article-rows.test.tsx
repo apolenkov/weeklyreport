@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { SdlcTooltipProvider } from "../../../shared/ui/feedback/sdlc-tooltip";
@@ -24,7 +25,6 @@ const ROW: GridRow = {
   id: "row-1",
   text: "A long onboarding write-up that clamps at two lines on the slide",
   authorId: AUTHOR.id,
-  showAuthorBadge: false,
   tone: "paused",
   hoverLabel: "Paused",
   stageNames: [],
@@ -48,7 +48,8 @@ describe("SlideCell row hover", () => {
     expect(tooltip.textContent).toContain(ROW.text);
   });
 
-  it("activates editable rows on double-click and Enter", () => {
+  it("opens editable rows on double-click and through the expanded Edit action", async () => {
+    const user = userEvent.setup();
     const onRowActivate = vi.fn();
     const editableRow: GridRow = {
       ...ROW,
@@ -65,17 +66,106 @@ describe("SlideCell row hover", () => {
         />
       </SdlcTooltipProvider>,
     );
-    const button = screen.getByRole("button", { name: /edit paused/i });
-    fireEvent.doubleClick(button);
-    fireEvent.keyDown(button, { key: "Enter" });
-    expect(onRowActivate).toHaveBeenCalledTimes(2);
+    const disclosure = screen.getByRole("button", {
+      name: /expand full details for paused/i,
+    });
+    await user.dblClick(disclosure);
+    expect(onRowActivate).toHaveBeenCalledTimes(1);
     expect(onRowActivate).toHaveBeenNthCalledWith(1, {
       kind: "item",
       stableId: "item-stable-1",
     });
+
+    await user.click(disclosure);
+    await user.click(screen.getByRole("button", { name: /edit paused/i }));
+    expect(onRowActivate).toHaveBeenCalledTimes(2);
   });
 
-  it("activates editable rows on Space and prevents the default page scroll", () => {
+  it("keeps full risk prose open for keyboard reading and restores disclosure focus on Escape", async () => {
+    const user = userEvent.setup();
+    const riskRow: GridRow = {
+      ...ROW,
+      id: "risk-1",
+      text: "A release dependency with enough context to require persistent reading",
+      tone: "at-risk",
+      hoverLabel: "At risk",
+      details: [
+        { label: "Impact", text: "The customer rollout pauses" },
+        { label: "Mitigation", text: "Escalate to the platform lead" },
+      ],
+    };
+    render(
+      <SdlcTooltipProvider>
+        <SlideCell
+          rows={[riskRow]}
+          authorsById={authorsById}
+          showStages={false}
+          label="Risks"
+        />
+      </SdlcTooltipProvider>,
+    );
+
+    const disclosure = screen.getByRole("button", {
+      name: /expand full details for at risk/i,
+    });
+    const controlledId = disclosure.getAttribute("aria-controls");
+    expect(controlledId).not.toBeNull();
+    const controlled = document.getElementById(controlledId ?? "");
+    expect(controlled).not.toBeNull();
+    expect(screen.getByText(riskRow.text)).toHaveClass("line-clamp-2");
+    expect(disclosure).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.mouseEnter(screen.getByRole("listitem"));
+    const tooltip = await screen.findByTestId("sdlc-tooltip");
+    expect(tooltip).toHaveTextContent("Impact: The customer rollout pauses");
+    expect(tooltip).toHaveTextContent(
+      "Mitigation: Escalate to the platform lead",
+    );
+    fireEvent.mouseLeave(screen.getByRole("listitem"));
+
+    await user.tab();
+    expect(disclosure).toHaveFocus();
+    await user.keyboard("{Enter}");
+
+    expect(disclosure).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText(riskRow.text)).not.toHaveClass("line-clamp-2");
+    expect(screen.getByText("The customer rollout pauses")).toBeVisible();
+    expect(screen.getByText("Escalate to the platform lead")).toBeVisible();
+
+    await user.keyboard("{Escape}");
+    expect(disclosure).toHaveAttribute("aria-expanded", "false");
+    expect(disclosure).toHaveFocus();
+    expect(controlled).not.toBeVisible();
+    expect(screen.queryByText("The customer rollout pauses")).toBeNull();
+  });
+
+  it.each([
+    ["Next", "Prepare a detailed rollout and support handoff"],
+    ["Decision", "Keep the current release window and fallback"],
+  ])(
+    "offers the same persistent disclosure for long %s rows",
+    (label, text) => {
+      render(
+        <SdlcTooltipProvider>
+          <SlideCell
+            rows={[{ ...ROW, id: label, text, hoverLabel: label }]}
+            authorsById={authorsById}
+            showStages={false}
+            label={label}
+          />
+        </SdlcTooltipProvider>,
+      );
+
+      expect(
+        screen.getByRole("button", {
+          name: new RegExp(`expand full details for ${label}`, "i"),
+        }),
+      ).toHaveAttribute("aria-expanded", "false");
+    },
+  );
+
+  it("keeps disclosure separate from editable row activation", async () => {
+    const user = userEvent.setup();
     const onRowActivate = vi.fn();
     const editableRow: GridRow = {
       ...ROW,
@@ -92,15 +182,42 @@ describe("SlideCell row hover", () => {
         />
       </SdlcTooltipProvider>,
     );
-    const button = screen.getByRole("button", { name: /edit paused/i });
-    const event = fireEvent.keyDown(button, { key: " " });
-    expect(onRowActivate).toHaveBeenCalledWith({
-      kind: "item",
-      stableId: "item-stable-1",
+
+    await user.click(
+      screen.getByRole("button", { name: /expand full details for paused/i }),
+    );
+    expect(onRowActivate).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("button", { name: /edit paused/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("uses Space to read an editable row without opening the editor", async () => {
+    const user = userEvent.setup();
+    const onRowActivate = vi.fn();
+    const editableRow: GridRow = {
+      ...ROW,
+      editableRef: { kind: "item", stableId: "item-stable-1" },
+    };
+    render(
+      <SdlcTooltipProvider>
+        <SlideCell
+          rows={[editableRow]}
+          authorsById={authorsById}
+          showStages={false}
+          label="Current work"
+          onRowActivate={onRowActivate}
+        />
+      </SdlcTooltipProvider>,
+    );
+    const disclosure = screen.getByRole("button", {
+      name: /expand full details for paused/i,
     });
-    // fireEvent.keyDown returns false when the dispatched event's default was
-    // prevented — Space's native default (page scroll) must be suppressed.
-    expect(event).toBe(false);
+    await user.tab();
+    expect(disclosure).toHaveFocus();
+    await user.keyboard(" ");
+    expect(disclosure).toHaveAttribute("aria-expanded", "true");
+    expect(onRowActivate).not.toHaveBeenCalled();
   });
 
   it("keeps rows inert when the activation handler or editable ref is absent", () => {
@@ -119,7 +236,7 @@ describe("SlideCell row hover", () => {
         />
       </SdlcTooltipProvider>,
     );
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("button", { name: /edit paused/i })).toBeNull();
 
     rerender(
       <SdlcTooltipProvider>
@@ -132,7 +249,7 @@ describe("SlideCell row hover", () => {
         />
       </SdlcTooltipProvider>,
     );
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("button", { name: /edit paused/i })).toBeNull();
     expect(onRowActivate).not.toHaveBeenCalled();
   });
 
@@ -141,7 +258,6 @@ describe("SlideCell row hover", () => {
       ...ROW,
       id: "row-orphan",
       authorId: "author-not-in-roster",
-      showAuthorBadge: true,
     };
     render(
       <SdlcTooltipProvider>
@@ -157,6 +273,62 @@ describe("SlideCell row hover", () => {
     const badge = screen.getByTestId("slide-author-badge");
     expect(badge).toHaveTextContent("?");
     expect(badge).toHaveTextContent("Unknown author");
+  });
+
+  it.each(["Current work", "Next focus", "Risks", "Decisions"])(
+    "keeps %s prose in the left lane and persistent marks in the right rail",
+    (label) => {
+      render(
+        <SdlcTooltipProvider>
+          <SlideCell
+            rows={[
+              {
+                ...ROW,
+                tone: "completed",
+                stageNames: ["Analysis", "Development", "Testing"],
+              },
+            ]}
+            authorsById={authorsById}
+            showStages
+            label={label}
+          />
+        </SdlcTooltipProvider>,
+      );
+
+      const content = screen.getByTestId("slide-row-content");
+      const metadata = screen.getByTestId("slide-row-metadata");
+      const top = within(metadata).getByTestId("slide-row-metadata-top");
+      const bottom = within(metadata).getByTestId("slide-row-metadata-bottom");
+
+      expect(content).toHaveTextContent(ROW.text);
+      expect(within(content).queryByTestId("slide-author-badge")).toBeNull();
+      expect(within(top).queryByRole("button")).toBeNull();
+      expect(within(top).getByTestId("slide-author-badge")).toHaveTextContent(
+        AUTHOR.initials,
+      );
+      const stages = within(bottom).getByTestId("slide-stage-watermarks");
+      expect(stages).toBeVisible();
+      expect(stages.querySelectorAll("svg")).toHaveLength(3);
+      expect(within(bottom).queryByTestId("slide-tone-mark")).toBeNull();
+    },
+  );
+
+  it("shows the record author on every row in a repeated series", () => {
+    render(
+      <SdlcTooltipProvider>
+        <SlideCell
+          rows={[
+            ROW,
+            { ...ROW, id: "row-2", text: "A second row by the same author" },
+          ]}
+          authorsById={authorsById}
+          showStages={false}
+          label="Current work"
+        />
+      </SdlcTooltipProvider>,
+    );
+
+    expect(screen.getAllByTestId("slide-author-badge")).toHaveLength(2);
   });
 });
 

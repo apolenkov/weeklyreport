@@ -1,4 +1,7 @@
+import { safeText } from "@customreport/shared";
+
 import { deriveItemAlarmFromRisks } from "../model/alarms/item-alarm";
+import type { ParentActivityOption } from "../model/record-parent";
 import { canonicalStageNames } from "../model/stage-tags";
 import type {
   ItemStatus,
@@ -7,7 +10,8 @@ import type {
   RiskEntry,
 } from "../model/types";
 import { IN_PROGRESS_STATUS } from "./item-status-choices";
-import type { ParentActivityOption } from "./parent-picker";
+
+const itemDescriptionSchema = safeText();
 
 // Stage is required only for product parents with owned stages.
 export function collectItemErrors(args: {
@@ -20,22 +24,32 @@ export function collectItemErrors(args: {
     !args.isActivityParent &&
     args.availableStages.length > 0 &&
     args.effectiveStageNames.length === 0;
+  const description = itemDescriptionSchema.safeParse(args.trimmed);
+  const textError =
+    args.trimmed.length === 0
+      ? "Description is required"
+      : description.success
+        ? undefined
+        : description.error.issues[0]?.message;
   return {
-    ...(args.trimmed.length === 0 ? { text: "Description is required" } : {}),
+    ...(textError ? { text: textError } : {}),
     ...(stageRequired ? { stageNames: "Select at least one stage." } : {}),
   };
 }
 
-// Focus order: text → stage → pausedReason; later errors never jump past earlier.
+// Focus order: text → next step → stage → paused reason; later errors never
+// jump past earlier fields.
 export function firstInvalidControl(
   next: {
     text?: string | undefined;
+    nextStepText?: string | undefined;
     stageNames?: string | undefined;
     pausedReason?: string | undefined;
   },
   surface: HTMLElement | null,
 ): HTMLElement | null {
   if (next.text) return document.getElementById("item-text");
+  if (next.nextStepText) return document.getElementById("item-next-step");
   if (next.stageNames) {
     return (
       surface?.querySelector<HTMLElement>('fieldset input[type="checkbox"]') ??
@@ -77,9 +91,8 @@ export function resolveStatusSlot(args: CoverageArgs): StatusSlot {
   return isItemCovered(args) ? "locked" : "chips";
 }
 
-// A cross-stage record may name a product outside the lead's stage-owned list —
-// keep that original assignment instead of reassigning. products.at(0) applies
-// only when the picker was never touched and the record has no product of its own.
+// Resolve the explicitly selected product, or preserve the matching product
+// identity carried by an existing cross-stage record.
 export function resolveSaveProduct(
   products: readonly Product[],
   record: {
@@ -155,6 +168,7 @@ interface ItemSaveCommonArgs {
   readonly status: ItemStatus;
   readonly currentUserName: string | undefined;
   readonly priorityRank: number | null;
+  readonly trimmedNextStepText: string;
   readonly trimmedPausedReason: string;
 }
 
@@ -165,6 +179,8 @@ function buildItemSaveCommon(args: ItemSaveCommonArgs) {
     status: args.status,
     author: args.item?.author ?? args.currentUserName ?? "",
     priorityRank: args.priorityRank ?? null,
+    nextStepText:
+      args.trimmedNextStepText.length === 0 ? null : args.trimmedNextStepText,
     pausedReason: args.status === "paused" ? args.trimmedPausedReason : null,
   };
 }

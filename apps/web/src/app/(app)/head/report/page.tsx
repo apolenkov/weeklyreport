@@ -1,13 +1,14 @@
 import { WeeklyReportPage } from "../../../../features/report-pages";
 
 interface Props {
-  searchParams: Promise<{ authorId?: string }>;
+  searchParams: Promise<{ authorId?: string | string[] }>;
 }
 
 // Addressable entry route: the page replaces it with the active report URL
 // once the current period is known.
 export default async function HeadReportPage({ searchParams }: Props) {
   const { authorId } = await searchParams;
+  const resolvedAuthorId = typeof authorId === "string" ? authorId : undefined;
 
   return (
     <main
@@ -16,7 +17,7 @@ export default async function HeadReportPage({ searchParams }: Props) {
       className="min-h-screen bg-[var(--color-background)]"
     >
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <WeeklyReportPage authorId={authorId} redirectToCanonical />
+        <WeeklyReportPage authorId={resolvedAuthorId} redirectToCanonical />
       </div>
     </main>
   );

@@ -100,11 +100,9 @@ export function runDecisionSave(args: {
   // surface the unsatisfiable "Select at least one stage." error. The
   // Ctrl/Cmd+Enter shortcut routes through here, so it inherits the guard.
   if (args.model.isDeadEnd) return;
-  const text = args.fields.text.trim();
-  const impact = args.fields.impact.trim();
   const errors = collectDecisionErrors({
-    text,
-    impact,
+    text: args.fields.text,
+    impact: args.fields.impact,
     availableStages: args.model.availableStages,
     effectiveStageNames: args.model.effectiveStageNames,
   });
@@ -113,6 +111,8 @@ export function runDecisionSave(args: {
     focusFirstInvalidField(errors, args.focusTargets);
     return;
   }
+  const text = args.fields.text.trim();
+  const impact = args.fields.impact.trim();
   emitDecisionSave({
     decision: args.input.decision,
     text,

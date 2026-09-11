@@ -1,23 +1,28 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { createEditableListHandlers } from "./create-editable-list-handlers";
-import type { UseEditableListDialogResult } from "./editable-list-dialog.types";
+import type {
+  CreateSeed,
+  UseEditableListDialogResult,
+} from "./editable-list-dialog.types";
 
 interface Item {
   readonly id: string;
 }
 
-function createDialog(pendingDelete: Item | null) {
+function createDialog(
+  pendingDelete: Item | null,
+): UseEditableListDialogResult<Item> {
   return {
     dialogState: { open: false },
     dialogKey: "dialog",
-    openCreate: vi.fn(),
-    openEdit: vi.fn(),
-    close: vi.fn(),
+    openCreate: vi.fn<(seed?: CreateSeed) => void>(),
+    openEdit: vi.fn<(entity: Item) => void>(),
+    close: vi.fn<() => void>(),
     pendingDelete,
-    requestDelete: vi.fn(),
-    clearPendingDelete: vi.fn(),
-  } as unknown as UseEditableListDialogResult<Item>;
+    requestDelete: vi.fn<(entity: Item) => void>(),
+    clearPendingDelete: vi.fn<() => void>(),
+  } satisfies UseEditableListDialogResult<Item>;
 }
 
 describe("createEditableListHandlers", () => {

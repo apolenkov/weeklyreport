@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import {
   reportHasContent,
@@ -21,11 +21,13 @@ interface ProductAccordionProps {
   readonly defaultOpen?: boolean | undefined;
   readonly highlighted?: boolean | undefined;
   readonly scrollIntoViewOnHighlight?: boolean | undefined;
+  readonly navigationEpoch?: number | undefined;
+  readonly instanceRootId?: string | undefined;
   readonly review?: AccordionReviewContext | undefined;
 }
 
-// Empty cards render dimmed; an active highlight gets the accent ring. Kept
-// outside the component so the render body stays within the function budget.
+// Empty cards render dimmed; an active highlight gets the accent ring.
+// This helper keeps the render body focused on state wiring.
 function surfaceProps(hasContent: boolean, isHighlightActive: boolean) {
   return {
     className: `card-surface-elevated scroll-mt-28 overflow-hidden rounded-[var(--radius)] border transition-[border-color,box-shadow] motion-reduce:transition-none ${
@@ -44,8 +46,8 @@ function surfaceProps(hasContent: boolean, isHighlightActive: boolean) {
   };
 }
 
-// Height animates through a 0fr→1fr grid row so the collapsed panel keeps its
-// content mounted (anchor links and in-page search still reach it).
+// Keep the collapsed panel mounted while height animates through a 0fr→1fr grid
+// row; only visibility and interaction state change while hidden.
 function ExpandingSections({
   report,
   review,
@@ -89,31 +91,37 @@ export function ProductAccordion({
   defaultOpen = false,
   highlighted = false,
   scrollIntoViewOnHighlight = false,
+  navigationEpoch,
+  instanceRootId,
   review,
 }: ProductAccordionProps) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const [toggle, setToggle] = useState<AccordionToggle | null>(null);
   const hasContent = reportHasContent(report);
   const expanded = resolveExpanded(
     toggle,
+    navigationEpoch,
     highlighted,
     hasContent,
     defaultOpen,
   );
-  const setExpanded = (value: boolean) => setToggle({ highlighted, value });
+  const setExpanded = (value: boolean) => setToggle({ navigationEpoch, value });
   const showNeedsAttention = shouldShowNeedsAttention(report);
   const isHighlightActive = highlighted && hasContent;
-  const rootId = `report-product-${report.id}`;
+  const rootId = instanceRootId ?? `report-product-${report.id}`;
   const toggleId = `${rootId}-toggle`;
   const panelId = `${rootId}-panel`;
 
   useScrollIntoViewOnHighlight(
-    report.id,
+    rootRef,
     highlighted,
     scrollIntoViewOnHighlight,
+    navigationEpoch,
   );
 
   return (
     <div
+      ref={rootRef}
       id={rootId}
       data-feedback-anchor={rootId}
       {...surfaceProps(hasContent, isHighlightActive)}

@@ -11,8 +11,8 @@ import {
   TRPC_BATCH_EMPTY_INPUT,
 } from "../transport/api-url";
 
-// force-cache + org-public tag: identity is deploy-stable; the tag invalidates
-// on admin rename.
+// Request timed revalidation every 60 seconds. After an admin rename,
+// /api/revalidate-org also calls revalidatePath("/", "layout").
 const ORG_PUBLIC_REVALIDATE_SECONDS = 60;
 
 // Named branches so a report says which step failed, not just that one did.

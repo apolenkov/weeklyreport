@@ -1,9 +1,6 @@
 "use client";
 
-import type {
-  ReportAssistantOutcome,
-  ReportAssistantRequest,
-} from "@customreport/shared";
+import type { ReportAssistantOutcome } from "@customreport/shared";
 import { useMutation } from "@tanstack/react-query";
 import {
   createContext,
@@ -17,14 +14,7 @@ import {
 } from "react";
 
 import { useSession } from "../../../shared/lib/auth/session-provider";
-import type { TRPCProxy } from "../../../shared/lib/trpc/trpc";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
-
-type AssistantProcedure = TRPCProxy["leadForm"]["assistant"];
-type AssistantMutationOptions = Omit<
-  ReturnType<AssistantProcedure["mutationOptions"]>,
-  "mutationKey" | "trpc"
->;
 
 type AssistantExchange = Readonly<{
   question: string;
@@ -64,17 +54,7 @@ export function LeadReportAssistantStore({
   const previousUserId = useRef<string | null>(null);
   const latestRequestId = useRef(0);
   const requestInFlight = useRef(false);
-  const assistantProcedure = (
-    trpc as unknown as Readonly<{
-      leadForm?: Readonly<{ assistant?: AssistantProcedure }>;
-    }>
-  ).leadForm?.assistant;
-  const mutationOptions: AssistantMutationOptions =
-    assistantProcedure?.mutationOptions() ?? {
-      mutationFn: (_input: ReportAssistantRequest) =>
-        Promise.reject(new Error("Report assistant procedure is unavailable")),
-    };
-  const mutation = useMutation(mutationOptions);
+  const mutation = useMutation(trpc.leadForm.assistant.mutationOptions());
 
   const submitQuestion = (
     nextQuestion: string,

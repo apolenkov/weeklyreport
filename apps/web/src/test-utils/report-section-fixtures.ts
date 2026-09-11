@@ -128,6 +128,7 @@ export function makeWeeklyReportFixture(
     periodStart: new Date("2026-04-14T00:00:00Z"),
     periodEnd: new Date("2026-04-20T00:00:00Z"),
     deadline: new Date("2026-04-17T15:00:00Z"),
+    periodState: "open",
     periodStatus: "open",
     archived: false,
     weekLabel: "Week 16",

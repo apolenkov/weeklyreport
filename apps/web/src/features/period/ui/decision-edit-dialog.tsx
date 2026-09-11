@@ -16,6 +16,7 @@ import { useDecisionEditDialog } from "./use-decision-edit-dialog";
 const EMPTY_ACTIVITIES: readonly ParentActivityOption[] = [];
 
 interface DecisionEditDialogProps {
+  readonly isPending?: boolean | undefined;
   readonly open: boolean;
   readonly decision: DecisionEntry | null;
   readonly defaultOwner?: string | undefined;
@@ -36,12 +37,14 @@ export function DecisionEditDialog(props: DecisionEditDialogProps) {
 }
 
 function DecisionDialogShell({
+  isPending,
   surfaceRef,
   headerVerb,
   onCancel,
   onKeyDown,
   children,
 }: {
+  readonly isPending?: boolean | undefined;
   readonly surfaceRef: RefObject<HTMLDivElement | null>;
   readonly headerVerb: string;
   readonly onCancel: () => void;
@@ -50,6 +53,7 @@ function DecisionDialogShell({
 }) {
   return (
     <DialogSurface
+      isPending={isPending}
       surfaceRef={surfaceRef}
       onDismiss={onCancel}
       onBackdropKeyDown={onKeyDown}
@@ -65,6 +69,7 @@ function DecisionDialogShell({
 }
 
 function DecisionEditDialogContent({
+  isPending,
   decision,
   defaultOwner,
   stagesForProduct,
@@ -89,6 +94,7 @@ function DecisionEditDialogContent({
   return (
     <DocumentBodyPortal>
       <DecisionDialogShell
+        isPending={isPending}
         surfaceRef={dialog.dialogSurfaceRef}
         headerVerb={dialog.headerVerb}
         onCancel={onCancel}

@@ -1,3 +1,6 @@
+import { SAFE_TEXT_MAX_LENGTH } from "@customreport/shared";
+
+import { getRequiredProseError } from "../../../shared/ui/forms/record-prose-validation";
 import type {
   DecisionEntry,
   ParentActivityOption,
@@ -20,10 +23,19 @@ export function collectDecisionErrors(args: {
   const stageRequired =
     args.availableStages.length > 0 && args.effectiveStageNames.length === 0;
   return {
-    ...(args.text.length === 0 ? { text: "Decision text is required" } : {}),
-    ...(args.impact.length === 0 ? { impact: "Impact is required" } : {}),
+    ...decisionProseError("Decision text", args.text, "text"),
+    ...decisionProseError("Impact", args.impact, "impact"),
     ...(stageRequired ? { stageNames: "Select at least one stage." } : {}),
   };
+}
+
+function decisionProseError(
+  label: string,
+  value: string,
+  field: "text" | "impact",
+): DecisionFieldErrors {
+  const error = getRequiredProseError(value, label, SAFE_TEXT_MAX_LENGTH);
+  return error ? { [field]: error } : {};
 }
 
 export interface DecisionFormSeed {

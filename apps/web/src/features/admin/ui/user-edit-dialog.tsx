@@ -62,13 +62,15 @@ export function UserEditDialog({
           if (!isSaving && canSave) onSave();
         }}
       >
-        <UserEditDialogFields
-          form={form}
-          onFormChange={onFormChange}
-          groupOptions={groupOptions}
-          activeGroups={activeGroups}
-          groups={groups}
-        />
+        <fieldset disabled={isSaving} className="contents">
+          <UserEditDialogFields
+            form={form}
+            onFormChange={onFormChange}
+            groupOptions={groupOptions}
+            activeGroups={activeGroups}
+            groups={groups}
+          />
+        </fieldset>
         <AdminEntityDialogActions
           canSave={canSave}
           isSaving={isSaving}

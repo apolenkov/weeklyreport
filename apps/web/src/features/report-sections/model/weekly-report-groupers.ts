@@ -4,6 +4,7 @@ import type {
   PortfolioProductOverview,
   ReportSectionReadModel,
 } from "@customreport/shared";
+import { shortNameFromName } from "@customreport/shared";
 
 import { initialsFromName } from "../../../shared/lib/format/user-initials";
 import { statusLabel } from "../../../shared/lib/status/status-presentation";
@@ -45,7 +46,10 @@ export function statusLabelFor(
   status: WeeklyProductStatus,
   leadNames: readonly string[],
 ): string {
-  const leads = leadNames.length > 0 ? leadNames.join(", ") : "unassigned";
+  const leads =
+    leadNames.length > 0
+      ? leadNames.map(shortNameFromName).join(", ")
+      : "unassigned";
   return `${statusLabel(status, "print")} · ${leads}`;
 }
 
@@ -58,10 +62,9 @@ export function buildProjectNameMap(
 ): Map<string, string> {
   return new Map([
     ...sections.flatMap((section) =>
-      section.projects.map((project): [string, string] => [
-        project.projectId,
-        project.projectName,
-      ]),
+      [...section.projects, ...section.referencedProjects].map(
+        (project): [string, string] => [project.projectId, project.projectName],
+      ),
     ),
     ...portfolioOverview.map((overview): [string, string] => [
       overview.productId,
@@ -81,8 +84,7 @@ function deriveWeeklyReportItem(
   return {
     id: requireId(item),
     // stageLead for print `[{stageLead}]`; accordion reads stage/owner.
-    // Next-week stays "Planned" in stageLead.
-    stageLead: item.type === "next" ? "Planned" : stageLead,
+    stageLead,
     stage: stagePart,
     owner: initials,
     text: item.text,
@@ -98,6 +100,11 @@ function deriveWeeklyReportItem(
     priorityRank: item.priorityRank ?? null,
     comments: item.comments ?? [],
     canReview: section.canReview ?? false,
+    ...(item.nextStepText ? { nextStepText: item.nextStepText } : {}),
+    ...(item.resolution ? { resolution: item.resolution } : {}),
+    ...(item.outcomeHistory?.length
+      ? { outcomeHistory: item.outcomeHistory }
+      : {}),
   };
 }
 

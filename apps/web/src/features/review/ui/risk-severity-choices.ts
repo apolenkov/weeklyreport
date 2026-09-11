@@ -7,8 +7,7 @@ export const SEVERITY_CHOICES: readonly ChipChoice<RiskSeverity>[] = [
     label: "! At Risk",
     bg: "var(--color-status-at-risk-bg)",
     color: "var(--color-status-at-risk-fg)",
-    // border reuses the at-risk dot token (named for this #d4a017 gold accent);
-    // the at-risk-border token is a different shade, an unsigned pixel shift.
+    // Match the at-risk status accent used by the severity indicator.
     border: "var(--color-status-dot-at-risk)",
   },
   {

@@ -62,12 +62,10 @@ function mapBlockedAtRisk(
   const stageKeyedProducts = new Set(
     weeklyReport.escalations
       .filter((e) => e.type === "blocked" || e.type === "unresolved_risk")
-      .map((e) => e.productName),
+      .map((e) => e.productId),
   );
   return weeklyReport.escalations
-    .filter(
-      (e) => e.type !== "at_risk" || !stageKeyedProducts.has(e.productName),
-    )
+    .filter((e) => e.type !== "at_risk" || !stageKeyedProducts.has(e.productId))
     .map((e) => escalationToBlockedItem(e));
 }
 

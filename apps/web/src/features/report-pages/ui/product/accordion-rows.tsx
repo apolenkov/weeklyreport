@@ -11,6 +11,47 @@ import {
 } from "./accordion-row-primitives";
 import { CSS, itemRailTone, ROW_GRID } from "./accordion-tokens";
 
+const OUTCOME_LABELS = {
+  done: "Completed",
+  continue: "Continued",
+  plan_next: "Planned next step",
+  restore: "Restored plan",
+  wont_do: "Marked Won't do",
+} as const;
+
+function auditTimestamp(occurredAt: string): string {
+  return occurredAt.replace("T", " ").replace(/:\d{2}(?:\.\d+)?Z$/, " UTC");
+}
+
+function ItemOutcomeDetails({ item }: { readonly item: WeeklyReportItem }) {
+  const events = item.outcomeHistory ?? [];
+  const resolution = item.resolution;
+  if (events.length === 0 && resolution == null) return null;
+  return (
+    <details className="mt-1.5 text-xs text-[var(--color-muted-foreground)]">
+      <summary className="cursor-pointer font-medium text-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]">
+        Outcome history
+      </summary>
+      <ul className="mt-1 space-y-1">
+        {events.length > 0 ? (
+          events.map((event) => (
+            <li key={event.id} className="[overflow-wrap:anywhere]">
+              {OUTCOME_LABELS[event.outcome]} by {event.actorName} ·{" "}
+              {auditTimestamp(event.occurredAt)}
+              {event.reason ? ` · ${event.reason}` : ""}
+            </li>
+          ))
+        ) : resolution ? (
+          <li className="[overflow-wrap:anywhere]">
+            Marked Won&apos;t do by {resolution.actorName} ·{" "}
+            {auditTimestamp(resolution.occurredAt)}
+          </li>
+        ) : null}
+      </ul>
+    </details>
+  );
+}
+
 export function ItemRow({ item }: { readonly item: WeeklyReportItem }) {
   return (
     <div className={ROW_GRID} data-accordion-row="item">
@@ -19,12 +60,27 @@ export function ItemRow({ item }: { readonly item: WeeklyReportItem }) {
           <RankMark rank={item.priorityRank} />
         ) : null}
       </span>
-      <Rail tone={itemRailTone(item.status)} />
+      <Rail tone={item.resolution ? CSS.muted : itemRailTone(item.status)} />
       <Gutter stage={item.stage} owner={item.owner} />
-      <span className="pt-px text-[14.5px] leading-normal text-[var(--color-foreground)]">
-        {item.text}
-      </span>
-      <StatusBadge status={item.status} />
+      <div className="min-w-0 pt-px text-[14.5px] leading-normal text-[var(--color-foreground)]">
+        <p className="[overflow-wrap:anywhere]">{item.text}</p>
+        {item.nextStepText ? (
+          <p className="mt-1 text-[13px] text-[var(--color-muted-foreground)] [overflow-wrap:anywhere]">
+            Next commitment: {item.nextStepText}
+          </p>
+        ) : null}
+        {item.resolution ? (
+          <p className="mt-1 text-[13px] text-[var(--color-muted-foreground)] [overflow-wrap:anywhere]">
+            Won&apos;t do: {item.resolution.reason}
+          </p>
+        ) : null}
+        <ItemOutcomeDetails item={item} />
+      </div>
+      {item.resolution ? (
+        <span aria-hidden="true" />
+      ) : (
+        <StatusBadge status={item.status} />
+      )}
     </div>
   );
 }

@@ -194,14 +194,12 @@ type AiProviderFormProps = Readonly<{
   onTest: (revisionId: string) => void;
   onActivate: (revisionId: string) => void;
   onDisable: () => void;
-  readOnly?: boolean;
   onCancelEdit: (() => void) | undefined;
 }>;
 
 export function AiProviderForm({
   initial,
   onSave,
-  readOnly = false,
   onCancelEdit,
   ...props
 }: AiProviderFormProps) {
@@ -230,7 +228,7 @@ export function AiProviderForm({
     >
       <AiProviderConfigurationFields
         form={form}
-        busy={props.busy || readOnly}
+        busy={props.busy}
         profileCapabilities={props.profileCapabilities}
         generationCredentialConfigured={
           props.revision?.generation.credentialConfigured ?? false
@@ -258,7 +256,7 @@ export function AiProviderForm({
           {reasoningError}
         </p>
       )}
-      {!readOnly && <AiProviderActions {...props} onCancel={onCancelEdit} />}
+      <AiProviderActions {...props} onCancel={onCancelEdit} />
     </form>
   );
 }

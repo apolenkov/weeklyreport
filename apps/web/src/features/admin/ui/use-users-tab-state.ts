@@ -174,7 +174,11 @@ export function useUsersTabState(
     deactivatePending: deactivateUserMut.isPending,
     activatePending: activateUserMut.isPending,
     handleSave: () => {
-      const input = toAdminUserInput(dialog.form, dialog.editingUser?.id);
+      const input = toAdminUserInput(
+        dialog.form,
+        dialog.editingUser?.id,
+        dialog.editingUser?.isActive ?? true,
+      );
       if (changesUserGroup(dialog.editingUser, dialog.form)) {
         setPendingGroupChange(input);
         return;

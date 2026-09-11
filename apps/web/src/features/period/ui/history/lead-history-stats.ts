@@ -10,7 +10,7 @@ const PERCENT_MAX = 100;
 export interface HistoryStats {
   readonly total: number;
   readonly submitted: number;
-  readonly onTimeRate: number;
+  readonly completionRate: number;
   readonly draftCount: number;
   readonly totalGreen: number;
   readonly totalYellow: number;
@@ -40,7 +40,8 @@ export function deriveHistoryStats(
   return {
     total,
     submitted,
-    onTimeRate: total === 0 ? 0 : Math.round((submitted / total) * PERCENT_MAX),
+    completionRate:
+      total === 0 ? 0 : Math.round((submitted / total) * PERCENT_MAX),
     draftCount: total - submitted,
     totalGreen: sum((entry) => entry.trafficLights.green),
     totalYellow: sum((entry) => entry.trafficLights.yellow),

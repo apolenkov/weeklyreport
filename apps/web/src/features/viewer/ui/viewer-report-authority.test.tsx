@@ -41,6 +41,10 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
+vi.mock("../../../shared/lib/auth/session-provider", () => ({
+  useSession: () => ({ user: { role: "viewer" } }),
+}));
+
 vi.mock("../../../shared/lib/trpc/trpc-context", () => ({
   useTRPC: () => ({
     reports: {

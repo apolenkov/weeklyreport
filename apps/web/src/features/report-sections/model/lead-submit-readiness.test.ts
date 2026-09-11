@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
+import { makeReportSectionFixture } from "../../../test-utils/report-section-fixtures";
 import type { DraftSaveContent } from "./lead-section-draft-payload";
 import {
   buildLeadSubmitPayload,
@@ -9,23 +10,45 @@ import {
 } from "./lead-submit-readiness";
 import type { Product, RiskEntry } from "./types";
 
+const SECTION_ID = "10000000-0000-4000-8000-000000000001";
+const PRODUCT_ID = "10000000-0000-4000-8000-000000000002";
+const ACTIVITY_ID = "10000000-0000-4000-8000-000000000003";
+const STAGE_ONE_ID = "10000000-0000-4000-8000-000000000004";
+const STAGE_TWO_ID = "10000000-0000-4000-8000-000000000005";
+const STAGE_THREE_ID = "10000000-0000-4000-8000-000000000006";
+const STAGE_FOUR_ID = "10000000-0000-4000-8000-000000000007";
+
 const draft: DraftSaveContent = {
-  reportSectionId: "section-1",
+  reportSectionId: SECTION_ID,
   status: "draft",
-  projectStatuses: [{ projectId: "product-1", status: undefined }],
-  activityStatuses: [{ activityId: "activity-1", status: null, note: null }],
+  projectStatuses: [{ projectId: PRODUCT_ID, status: undefined }],
+  activityStatuses: [{ activityId: ACTIVITY_ID, status: null, note: null }],
   stageStatuses: [
-    { projectId: "product-1", stageId: "stage-1", status: null },
-    { projectId: "product-1", stageId: "stage-2", status: "red" },
+    { projectId: PRODUCT_ID, stageId: STAGE_ONE_ID, status: null },
+    { projectId: PRODUCT_ID, stageId: STAGE_TWO_ID, status: "red" },
   ],
-  items: [],
+  items: [
+    {
+      projectId: PRODUCT_ID,
+      activityId: null,
+      type: "current",
+      text: "Implement the report",
+      tag: "delivery",
+      nextStepText: null,
+      workflowStatus: "in_progress",
+      carriedOver: false,
+      stageNames: ["Development"],
+      priorityRank: 1,
+      pausedReason: null,
+    },
+  ],
   risks: [],
   decisions: [],
 };
 
 const products: Product[] = [
   {
-    id: "product-1",
+    id: PRODUCT_ID,
     name: "Portal",
     overallStatus: "on-track",
     stages: [
@@ -40,12 +63,23 @@ const products: Product[] = [
 ];
 
 const baseInput: LeadSubmitReadinessInput = {
+  draftSection: makeReportSectionFixture({
+    reportSectionId: SECTION_ID,
+    version: 7,
+    projects: [
+      {
+        projectId: PRODUCT_ID,
+        projectName: "Portal",
+        trafficLight: null,
+      },
+    ],
+  }),
   draftPayload: draft,
   products,
-  activities: [{ id: "activity-1", name: "Hiring" }],
+  activities: [{ id: ACTIVITY_ID, name: "Hiring" }],
   stages: [
-    { projectId: "product-1", stageId: "stage-1", name: "Development" },
-    { projectId: "product-1", stageId: "stage-2", name: "Testing" },
+    { projectId: PRODUCT_ID, stageId: STAGE_ONE_ID, name: "Development" },
+    { projectId: PRODUCT_ID, stageId: STAGE_TWO_ID, name: "Testing" },
   ],
   ownRisks: [],
   autosaveState: "idle",
@@ -72,7 +106,7 @@ describe("deriveLeadSubmitReadiness", () => {
   it("names the product whose committed risk lacks a stage link", () => {
     const risk: RiskEntry = {
       id: "risk-1",
-      productId: "product-1",
+      productId: PRODUCT_ID,
       productName: "Portal",
       severity: "blocked",
       text: "Release risk",
@@ -89,11 +123,33 @@ describe("deriveLeadSubmitReadiness", () => {
 
     expect(readiness.blockingIssues).toEqual([
       {
-        id: "risk-stage:product-1",
+        id: `risk-stage:${PRODUCT_ID}`,
         label: "Portal: specify stages for committed risks.",
       },
     ]);
     expect(readiness.autosaveState).toBe("error");
+    expect(readiness.canOpenConfirmation).toBe(false);
+  });
+
+  it("blocks confirmation when a section project has no Current Week item", () => {
+    const readiness = deriveLeadSubmitReadiness({
+      ...baseInput,
+      draftPayload: {
+        ...draft,
+        items: draft.items.map((item) => ({
+          ...item,
+          type: "next",
+          workflowStatus: "planned",
+        })),
+      },
+    });
+
+    expect(readiness.blockingIssues).toEqual([
+      {
+        id: "submit-validation:MISSING_CURRENT_ITEM:0",
+        label: "Project Portal needs at least one Current Week item.",
+      },
+    ]);
     expect(readiness.canOpenConfirmation).toBe(false);
   });
 
@@ -115,8 +171,8 @@ describe("deriveLeadSubmitReadiness", () => {
 });
 
 describe("buildLeadSubmitPayload", () => {
-  // "Risks are the single source of truth for at-risk/blocked": submit stores
-  // chip-authored stage state as On Track; risk rows carry any severity floor.
+  // Submit preserves explicit red/yellow/green stage choices and promotes only
+  // unset statuses to green; risks apply their separate severity floor.
   it("promotes an unset stage to green and includes it in the warning", () => {
     const payload = buildLeadSubmitPayload(draft, 7);
     const readiness = deriveLeadSubmitReadiness(baseInput);
@@ -126,7 +182,7 @@ describe("buildLeadSubmitPayload", () => {
     expect(payload.activityStatuses[0]?.status).toBe("green");
     expect(payload.stageStatuses[0]?.status).toBe("green");
     expect(readiness.unsetStatuses.map((status) => status.id)).toContain(
-      "stage:product-1:stage-1",
+      `stage:${PRODUCT_ID}:${STAGE_ONE_ID}`,
     );
     expect(payload.confirmed).toBe(true);
   });
@@ -137,8 +193,8 @@ describe("buildLeadSubmitPayload", () => {
         ...draft,
         stageStatuses: [
           ...(draft.stageStatuses ?? []),
-          { projectId: "product-1", stageId: "stage-3", status: "yellow" },
-          { projectId: "product-1", stageId: "stage-4", status: "green" },
+          { projectId: PRODUCT_ID, stageId: STAGE_THREE_ID, status: "yellow" },
+          { projectId: PRODUCT_ID, stageId: STAGE_FOUR_ID, status: "green" },
         ],
       },
       7,
@@ -152,7 +208,7 @@ describe("buildLeadSubmitPayload", () => {
       "green",
     ]);
     expect(readiness.unsetStatuses.map((status) => status.id)).not.toContain(
-      "stage:product-1:stage-2",
+      `stage:${PRODUCT_ID}:${STAGE_TWO_ID}`,
     );
   });
 });

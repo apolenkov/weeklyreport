@@ -150,7 +150,7 @@ function DeadlineField({
   return (
     <div>
       <FieldLabel htmlFor="period-deadline">
-        Deadline <OptionalHint />
+        Deadline (UTC) <OptionalHint />
       </FieldLabel>
       <input
         id="period-deadline"
@@ -160,10 +160,22 @@ function DeadlineField({
         value={deadline}
         onChange={(e) => onDeadlineChange(e.target.value)}
         aria-invalid={deadlineError !== null}
-        aria-describedby={deadlineError ? "period-deadline-error" : undefined}
+        aria-describedby={`period-deadline-timeframe-hint${
+          deadlineError
+            ? " period-deadline-error"
+            : deadlineClearHint
+              ? " period-deadline-hint"
+              : ""
+        }`}
         data-testid="periods-create-deadline"
         className={deadlineError ? INVALID_FIELD_CLASS : FIELD_CLASS}
       />
+      <p
+        id="period-deadline-timeframe-hint"
+        className="mt-1 text-xs text-[var(--color-muted-foreground)]"
+      >
+        Enter the deadline date and time in UTC.
+      </p>
       {deadlineError && (
         <FieldError
           id="period-deadline-error"

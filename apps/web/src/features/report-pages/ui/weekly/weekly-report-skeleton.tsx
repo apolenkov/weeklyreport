@@ -212,7 +212,11 @@ export function WeeklyReportSkeleton({
       <HeaderSkeleton audience={audience} mode={mode} />
       <ContextToolbarSkeleton />
       {mode === "slides" ? (
-        <SlideSkeleton mode="head" announce={false} />
+        <SlideSkeleton
+          mode="head"
+          announce={false}
+          toolbar={audience === "head" ? "none" : "fullscreen"}
+        />
       ) : (
         <>
           {audience === "viewer" ? <ViewerAcknowledgeSkeleton /> : null}

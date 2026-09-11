@@ -80,6 +80,7 @@ export function buildLeadSubmitReadiness({
   submitPending,
 }: LeadSubmitReadinessArgs) {
   return deriveLeadSubmitReadiness({
+    draftSection,
     draftPayload,
     products,
     activities: (draftSection?.activities ?? []).map((activity) => ({

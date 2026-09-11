@@ -25,6 +25,71 @@ const products: Product[] = [
 ];
 
 describe("RiskEditDialog - SDLC stage selector", () => {
+  it("clears only the old parent's stage error and validates the selected parent on save", () => {
+    const onSave = vi.fn();
+    const twoProducts: Product[] = [
+      { id: "p1", name: "CRM", overallStatus: "on-track", stages: [] },
+      { id: "p2", name: "Billing", overallStatus: "on-track", stages: [] },
+    ];
+    render(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={twoProducts}
+        defaultProductId="p1"
+        stagesForProduct={(id) =>
+          id === "p1" ? ["Development", "Testing"] : ["Analysis"]
+        }
+        onSave={onSave}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    const save = screen.getByRole("button", { name: "Save Risk" });
+    fireEvent.click(save);
+    expect(screen.getByText("Select at least one stage.")).toBeInTheDocument();
+    const text = screen.getByLabelText(/^Risk \*/i);
+    expect(text).toHaveAttribute("aria-invalid", "true");
+    fireEvent.change(screen.getByLabelText("Product"), {
+      target: { value: "product:p2" },
+    });
+    expect(
+      screen.queryByText("Select at least one stage."),
+    ).not.toBeInTheDocument();
+    expect(text).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText("Applied automatically")).toBeInTheDocument();
+
+    fireEvent.change(text, { target: { value: "Vendor delay" } });
+    fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
+      target: { value: "Delivery slips" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Mitigation \*/i), {
+      target: { value: "Escalate" },
+    });
+    fireEvent.change(screen.getByLabelText("Product"), {
+      target: { value: "product:p1" },
+    });
+    fireEvent.click(save);
+    expect(screen.getByText("Select at least one stage.")).toBeInTheDocument();
+    expect(onSave).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText("Product"), {
+      target: { value: "product:p2" },
+    });
+    expect(
+      screen.queryByText("Select at least one stage."),
+    ).not.toBeInTheDocument();
+    fireEvent.click(save);
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+      text: "Vendor delay",
+      impact: "Delivery slips",
+      mitigation: "Escalate",
+      productId: "p2",
+      stageNames: ["Analysis"],
+    });
+  });
+
   it("starts with empty stage selection when no stages are flagged in create mode", () => {
     const onSave = vi.fn();
     render(
@@ -57,54 +122,6 @@ describe("RiskEditDialog - SDLC stage selector", () => {
     fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
 
     // Required stage validation: onSave not called, error message shown.
-    expect(onSave).not.toHaveBeenCalled();
-    expect(screen.getByText(/Select at least one stage/i)).toBeInTheDocument();
-  });
-
-  it("does NOT pre-select stages on create even when pipeline has flagged ones", () => {
-    const onSave = vi.fn();
-    const productsWithRiskyStage: Product[] = [
-      {
-        id: "p1",
-        name: "CRM",
-        overallStatus: "at-risk",
-        stages: [
-          {
-            stageName: "Development",
-            status: "blocked",
-            ownership: "mine",
-            assignee: "Lead",
-          },
-          {
-            stageName: "Testing",
-            status: "on-track",
-            ownership: "mine",
-            assignee: "Lead",
-          },
-        ],
-      },
-    ];
-
-    render(
-      <RiskEditDialog
-        open
-        risk={null}
-        products={productsWithRiskyStage}
-        onSave={onSave}
-        onCancel={() => undefined}
-        defaultProductId="p1"
-        stagesForProduct={() => ["Development", "Testing"]}
-      />,
-    );
-
-    // Stage checkboxes start empty on create regardless of pipeline flags.
-    expect(
-      screen.getByRole("checkbox", { name: "Development" }),
-    ).not.toBeChecked();
-    expect(screen.getByRole("checkbox", { name: "Testing" })).not.toBeChecked();
-
-    fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
-    // Required stage validation fires since no stages are selected.
     expect(onSave).not.toHaveBeenCalled();
     expect(screen.getByText(/Select at least one stage/i)).toBeInTheDocument();
   });
@@ -233,49 +250,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
     ]);
   });
 
-  it("does NOT pre-select stages on create when pipeline has flagged stages", () => {
-    const productsWithAlias: Product[] = [
-      {
-        id: "p1",
-        name: "CRM",
-        overallStatus: "blocked",
-        stages: [
-          {
-            stageName: "Development",
-            status: "blocked",
-            ownership: "mine",
-            assignee: "Lead",
-          },
-          {
-            stageName: "Testing",
-            status: "on-track",
-            ownership: "mine",
-            assignee: "Lead",
-          },
-        ],
-      },
-    ];
-
-    render(
-      <RiskEditDialog
-        open
-        risk={null}
-        products={productsWithAlias}
-        onSave={vi.fn()}
-        onCancel={() => undefined}
-        defaultProductId="p1"
-        stagesForProduct={() => ["Development", "Testing"]}
-      />,
-    );
-
-    // Stage checkboxes start empty on create regardless of pipeline aliases.
-    expect(
-      screen.getByRole("checkbox", { name: "Development" }),
-    ).not.toBeChecked();
-    expect(screen.getByRole("checkbox", { name: "Testing" })).not.toBeChecked();
-  });
-
-  it("renders context strip showing pre-selected stages from pipeline", () => {
+  it("shows flagged pipeline stages without selecting them for a new risk", () => {
     const productsWithFlags: Product[] = [
       {
         id: "p1",
@@ -316,6 +291,10 @@ describe("RiskEditDialog - SDLC stage selector", () => {
     ).toBeInTheDocument();
     // Strip header mentions at least one flagged stage.
     expect(screen.getByText(/CRM →/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("checkbox", { name: "Development" }),
+    ).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Testing" })).not.toBeChecked();
   });
 
   it("hides context strip when no stages are flagged in pipeline", () => {

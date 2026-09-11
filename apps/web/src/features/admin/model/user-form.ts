@@ -1,17 +1,7 @@
-import type { DbRole } from "@customreport/shared";
-
+import type { AdminUserFormInput } from "./admin-form-inputs";
 import type { AdminGroupView, AdminUserView } from "./admin-types";
 
-export interface UserFormData {
-  readonly lastName: string;
-  readonly firstName: string;
-  readonly middleName: string;
-  readonly position: string;
-  readonly email: string;
-  readonly role: DbRole;
-  // null = no owning group (viewer, or none selectable); never an empty id.
-  readonly groupId: string | null;
-}
+export type UserFormData = AdminUserFormInput;
 
 export function emptyForm(groups: readonly AdminGroupView[]): UserFormData {
   return {

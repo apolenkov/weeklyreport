@@ -34,17 +34,16 @@ interface UseLeadFormEditingArgs {
   readonly writePort: LeadFormWritePort;
 }
 
-// Null-traffic own stages auto-promote to On Track at submit (warned first).
-// stageStatuses is own-only, so null means genuinely unset; warning and
-// coercion share this count so they cannot disagree.
+// Own stages with a null status are treated as unset at submit (warned first).
+// Warning and coercion derive from the same own-stage count.
 function countUnsetOwnStages(payload: DraftSaveContent | null): number {
   return (payload?.stageStatuses ?? []).filter(
     (status) => status.status == null,
   ).length;
 }
 
-// Draft engine, add-signals, write-action dialogs and page chrome, in the
-// order LeadForm called them — the hook count must not drift across renders.
+// Draft engine, add-signals, write-action dialogs and page chrome are wired in
+// the same order LeadForm expects; hook order must stay stable across renders.
 export function useLeadFormEditing(args: UseLeadFormEditingArgs) {
   const { generation, pinnedReportId, data, writePort } = args;
   const draft = useLeadFormDraft({

@@ -1,8 +1,5 @@
-import type { PeriodListItem } from "@customreport/shared";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
 import {
   afterAll,
   beforeAll,
@@ -13,10 +10,7 @@ import {
   vi,
 } from "vitest";
 
-import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
-import { createMockTRPC } from "../../../test-utils/mock-trpc";
-import { PeriodsTab } from "./periods-tab";
 
 // ----- mocks ---------------------------------------------------------
 
@@ -35,151 +29,13 @@ vi.mock("sonner", () => ({
   },
 }));
 
-// ----- fixtures ------------------------------------------------------
-
-function makeRow(overrides: Partial<PeriodListItem>): PeriodListItem {
-  return {
-    id: "11111111-1111-4111-8111-111111111111",
-    periodStart: new Date("2026-05-04T00:00:00Z"),
-    periodEnd: new Date("2026-05-10T23:59:59Z"),
-    deadline: new Date("2026-05-09T18:00:00Z"),
-    publishedAt: null,
-    periodState: "open",
-    periodStatus: "open",
-    archived: false,
-    autoPublished: false,
-    autoArchived: false,
-    submittedCount: 3,
-    totalCount: 6,
-    canReopen: false,
-    canArchive: false,
-    ...overrides,
-  };
-}
-
-const openRow = makeRow({
-  id: "11111111-1111-4111-8111-111111111101",
-  periodState: "open",
-  periodStatus: "open",
-});
-const publishedFresh = makeRow({
-  id: "11111111-1111-4111-8111-111111111102",
-  periodState: "published",
-  periodStatus: "published",
-  publishedAt: new Date(Date.now() - 2 * 3_600_000),
-  submittedCount: 6,
-  totalCount: 6,
-  canReopen: true,
-  canArchive: true,
-});
-const publishedStale = makeRow({
-  id: "11111111-1111-4111-8111-111111111103",
-  periodState: "published",
-  periodStatus: "published",
-  publishedAt: new Date(Date.now() - 200 * 3_600_000),
-  canReopen: false,
-  canArchive: true,
-});
-const archivedRow = makeRow({
-  id: "11111111-1111-4111-8111-111111111104",
-  periodState: "archived",
-  periodStatus: "published",
-  archived: true,
-});
-
-// ----- tRPC test double ----------------------------------------------
-
-function renderTab(args?: {
-  active?: PeriodListItem[];
-  archive?: PeriodListItem[];
-}) {
-  const activeRows = args?.active ?? [openRow, publishedFresh, publishedStale];
-  const archiveRows = args?.archive ?? [archivedRow];
-
-  const { proxy, captured } = createMockTRPC([
-    { path: ["admin", "snapshot"] },
-    { path: ["admin", "getSettings"] },
-    { path: ["admin", "getOrganization"] },
-    {
-      path: ["admin", "listPeriodsByState"],
-      // Input-parameterized: active vs archive caches stay independent.
-      queryByInput: (input: unknown) => {
-        const { bucket } = input as { bucket: string };
-        return bucket === "archive" ? archiveRows : activeRows;
-      },
-    },
-    { path: ["admin", "archivePeriod"], mutation: true },
-    { path: ["admin", "unarchivePeriod"], mutation: true },
-    // admin.createPeriodManual mutation surface.
-    { path: ["admin", "createPeriodManual"], mutation: true },
-    // Edit-period mutation surface used by the row-level Edit icon.
-    { path: ["admin", "updatePeriodManual"], mutation: true },
-    // Delete period (draft/scheduled only).
-    { path: ["admin", "deleteReport"], mutation: true },
-    { path: ["period", "publish"], mutation: true },
-    { path: ["period", "reopen"], mutation: true },
-    { path: ["org", "getPublic"] },
-    { path: ["auth", "me"] },
-    { path: ["weeklyReport", "get"] },
-  ]);
-
-  // Seed default mock resolved values for mutation fns.
-  expectDefined(captured["admin.archivePeriod"]).mutationFn.mockResolvedValue({
-    success: true,
-  });
-  expectDefined(captured["admin.unarchivePeriod"]).mutationFn.mockResolvedValue(
-    {
-      success: true,
-    },
-  );
-  expectDefined(captured["admin.deleteReport"]).mutationFn.mockResolvedValue({
-    success: true,
-  });
-  // createPeriodManual server returns the new row's shape.
-  expectDefined(
-    captured["admin.createPeriodManual"],
-  ).mutationFn.mockResolvedValue({
-    periodId: "11111111-1111-4111-8111-111111111199",
-    periodStart: new Date("2026-05-18T00:00:00Z"),
-    periodEnd: new Date("2026-05-24T23:59:59Z"),
-    deadline: new Date("2026-05-22T15:00:00Z"),
-    periodState: "scheduled",
-  });
-  // updatePeriodManual server returns the updated row.
-  expectDefined(
-    captured["admin.updatePeriodManual"],
-  ).mutationFn.mockResolvedValue({
-    periodId: "11111111-1111-4111-8111-111111111102",
-    periodStart: new Date("2026-05-04T00:00:00Z"),
-    periodEnd: new Date("2026-05-10T23:59:59Z"),
-    deadline: new Date("2026-05-09T18:00:00Z"),
-    periodState: "published",
-    weekLabel: null,
-  });
-  expectDefined(captured["period.publish"]).mutationFn.mockResolvedValue({
-    success: true,
-  });
-  expectDefined(captured["period.reopen"]).mutationFn.mockResolvedValue({
-    success: true,
-  });
-
-  const qc = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-
-  function Wrapper({ children }: { readonly children: ReactNode }) {
-    return (
-      <QueryClientProvider client={qc}>
-        <TRPCProxyContext.Provider value={proxy}>
-          {children}
-        </TRPCProxyContext.Provider>
-      </QueryClientProvider>
-    );
-  }
-
-  const result = render(<PeriodsTab />, { wrapper: Wrapper });
-  return { ...result, captured };
-}
+import {
+  makeRow,
+  openRow,
+  publishedFresh,
+  publishedStale,
+  renderTab,
+} from "./periods-tab.test-harness";
 
 // ----- tests ---------------------------------------------------------
 
@@ -251,8 +107,7 @@ describe("PeriodsTab — «Edit period» dialog", () => {
       await screen.findByTestId(`action-edit-${publishedFresh.id}`),
     );
 
-    // Change the deadline only — submit and assert payload carries the
-    // reportId from the edited row plus the new deadline.
+    // Change the label only and keep the edited row identity in the payload.
     const labelInput = screen.getByTestId("periods-create-label");
     await user.type(labelInput, "Q2 close");
 
@@ -356,6 +211,91 @@ describe("PeriodsTab — «New period» dialog period-end semantics", () => {
     expect(endInput).not.toBeRequired();
     expect(endInput).toHaveAttribute("aria-required", "false");
   });
+});
+
+describe.each([
+  {
+    mode: "create",
+    mutation: "admin.createPeriodManual",
+    triggerTestId: "periods-new-button",
+    pendingLabel: "Creating…",
+  },
+  {
+    mode: "edit",
+    mutation: "admin.updatePeriodManual",
+    triggerTestId: `action-edit-${openRow.id}`,
+    pendingLabel: "Saving…",
+  },
+] as const)("PeriodsTab — $mode pending draft", (scenario) => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it.each(["success", "failure"] as const)(
+    "locks the submitted draft until %s settles",
+    async (outcome) => {
+      const user = userEvent.setup();
+      const { captured } = renderTab();
+      const mutation = expectDefined(captured[scenario.mutation]);
+      const pending = Promise.withResolvers<unknown>();
+      mutation.mutationFn.mockReturnValueOnce(pending.promise);
+
+      await user.click(await screen.findByTestId(scenario.triggerTestId));
+      const labelInput = screen.getByTestId("periods-create-label");
+      await user.type(labelInput, "Submitted label");
+      await user.click(screen.getByTestId("periods-create-submit"));
+
+      await waitFor(() => {
+        expect(mutation.mutationFn).toHaveBeenCalledTimes(1);
+      });
+      expect(mutation.mutationFn.mock.calls[0]?.[0]).toMatchObject({
+        weekLabel: "Submitted label",
+      });
+
+      for (const testId of [
+        "periods-create-start",
+        "periods-create-end",
+        "periods-create-deadline",
+        "periods-create-label",
+      ]) {
+        expect(screen.getByTestId(testId)).toBeDisabled();
+      }
+      expect(screen.getByTestId("periods-create-cancel")).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: scenario.pendingLabel }),
+      ).toBeDisabled();
+
+      await user.type(labelInput, " ignored");
+      await user.click(
+        screen.getByRole("button", { name: scenario.pendingLabel }),
+      );
+      expect(labelInput).toHaveValue("Submitted label");
+      expect(mutation.mutationFn).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        if (outcome === "success") pending.resolve(undefined);
+        else pending.reject(new Error("Save failed"));
+        await pending.promise.catch(() => undefined);
+      });
+
+      if (outcome === "success") {
+        await waitFor(() => {
+          expect(
+            screen.queryByTestId("periods-create-dialog"),
+          ).not.toBeInTheDocument();
+        });
+        return;
+      }
+
+      await waitFor(() => {
+        expect(labelInput).toBeEnabled();
+      });
+      expect(screen.getByTestId("periods-create-dialog")).toBeInTheDocument();
+      expect(labelInput).toHaveValue("Submitted label");
+      await user.type(labelInput, " retry");
+      expect(labelInput).toHaveValue("Submitted label retry");
+    },
+  );
 });
 
 // A11y dialog behavioral regressions for periods-tab.tsx:
@@ -532,6 +472,53 @@ describe("PeriodsTab — a11y dialog behavioral regressions", () => {
   });
 });
 
+describe("PeriodsTab — delete confirmation identity", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it.each([
+    {
+      row: makeRow({
+        id: "11111111-1111-4111-8111-111111111171",
+        weekLabel: "Week 38",
+        periodStart: new Date("2026-09-14T00:00:00.000Z"),
+        periodEnd: new Date("2026-09-20T23:59:59.000Z"),
+      }),
+      label: "Week 38",
+      range: "Sep 14–20, 2026",
+    },
+    {
+      row: makeRow({
+        id: "11111111-1111-4111-8111-111111111172",
+        weekLabel: "Quarter close",
+        periodStart: new Date("2026-09-21T00:00:00.000Z"),
+        periodEnd: new Date("2026-09-27T23:59:59.000Z"),
+      }),
+      label: "Quarter close",
+      range: "Sep 21–27, 2026",
+    },
+  ])(
+    "identifies $label and cancels without deleting",
+    async ({ row, label, range }) => {
+      const user = userEvent.setup();
+      const { captured } = renderTab({ active: [row] });
+      const deletePeriod = expectDefined(captured["admin.deleteReport"]);
+
+      await user.click(await screen.findByTestId(`action-delete-${row.id}`));
+
+      expect(screen.getByRole("alertdialog")).toHaveTextContent(label);
+      expect(screen.getByRole("alertdialog")).toHaveTextContent(range);
+      expect(deletePeriod.mutationFn).not.toHaveBeenCalled();
+
+      await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+      expect(deletePeriod.mutationFn).not.toHaveBeenCalled();
+    },
+  );
+});
+
 describe("PeriodsTab — focus management", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -647,6 +634,10 @@ describe("PeriodsTab — deadline UTC round-trip under a non-UTC timezone", () =
     // Confirm the field prefilled with the UTC wall-clock display.
     const deadlineInput = screen.getByTestId<HTMLInputElement>(
       "periods-create-deadline",
+    );
+    expect(deadlineInput).toHaveAccessibleName(/deadline.*utc/i);
+    expect(deadlineInput).toHaveAccessibleDescription(
+      "Enter the deadline date and time in UTC.",
     );
     expect(deadlineInput.value).toBe("2026-05-09T18:00");
 

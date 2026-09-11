@@ -132,6 +132,32 @@ describe("StatusSlideDeck — by-product grid article", () => {
     renderDeck(makeSection(), "head");
 
     expect(screen.getByTestId("head-slide-carousel")).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Enter fullscreen" }),
+    ).toBeVisible();
+  });
+
+  it("does not add a second fullscreen control when the head shell hosts it", () => {
+    const slide = buildSectionSlideModel(makeSection());
+
+    render(
+      <StatusSlideDeck
+        slides={[slide]}
+        selectedIndex={0}
+        onSelect={vi.fn()}
+        mode="head"
+        isFullscreen={false}
+        onToggle={vi.fn()}
+        toolbar={<button type="button">Hosted fullscreen</button>}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Hosted fullscreen" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Enter fullscreen" }),
+    ).not.toBeInTheDocument();
   });
 
   it("renders one column-header row and one card per product", () => {
@@ -186,17 +212,17 @@ describe("StatusSlideDeck — by-product grid article", () => {
     expect(empty).toHaveTextContent("no status for this period");
   });
 
-  it("shows the author badge only on the first row of a same-author series", () => {
+  it("shows the record author on every row of a same-author series", () => {
     renderDeck(
       makeSection({
         items: [item({ text: "first" }), item({ text: "second" })],
       }),
     );
     const card = expectDefined(screen.getAllByTestId("slide-product-card")[0]);
-    expect(within(card).getAllByTestId("slide-author-badge")).toHaveLength(1);
+    expect(within(card).getAllByTestId("slide-author-badge")).toHaveLength(2);
   });
 
-  it("omits the already-selected owner marks across a Mine slide model", () => {
+  it("keeps row attribution while omitting scope-level owner marks in Mine", () => {
     const slide = buildSectionSlideModel(
       makeSection({
         items: [item({ text: "mine row", priorityRank: 1 })],
@@ -213,7 +239,7 @@ describe("StatusSlideDeck — by-product grid article", () => {
     );
 
     expect(screen.getAllByText("mine row")).toHaveLength(2);
-    expect(screen.queryByTestId("slide-author-badge")).not.toBeInTheDocument();
+    expect(screen.getByTestId("slide-author-badge")).toHaveTextContent("ИВ");
     expect(
       screen.queryByTestId("slide-priority-author-badge"),
     ).not.toBeInTheDocument();
@@ -270,12 +296,8 @@ describe("StatusSlideDeck — by-product grid article", () => {
     expect(screen.getByTestId("slide-priority-rank-badge")).toHaveStyle({
       background: "var(--slide-author-0)",
     });
-    expect(screen.getByTestId("slide-legend")).toHaveTextContent(
-      "Иванов Василий Петрович",
-    );
-    expect(screen.getByTestId("slide-legend")).toHaveTextContent(
-      "Петров Пётр Павлович",
-    );
+    expect(screen.getByTestId("slide-legend")).toHaveTextContent("Иванов В.П.");
+    expect(screen.getByTestId("slide-legend")).toHaveTextContent("Петров П.П.");
   });
 
   it("keeps multi-author attribution in the shared Head/Viewer deck", () => {
@@ -293,12 +315,8 @@ describe("StatusSlideDeck — by-product grid article", () => {
     );
 
     expect(screen.getAllByTestId("slide-author-badge")).toHaveLength(2);
-    expect(screen.getByTestId("slide-legend")).toHaveTextContent(
-      "Иванов Василий Петрович",
-    );
-    expect(screen.getByTestId("slide-legend")).toHaveTextContent(
-      "Петров Пётр Павлович",
-    );
+    expect(screen.getByTestId("slide-legend")).toHaveTextContent("Иванов В.П.");
+    expect(screen.getByTestId("slide-legend")).toHaveTextContent("Петров П.П.");
   });
 
   it("keeps the wide lead canvas inside a local horizontal scroll host", () => {
@@ -558,7 +576,9 @@ describe("StatusSlideDeck — by-product grid article", () => {
     );
 
     fireEvent.doubleClick(
-      screen.getByRole("button", { name: "Edit In progress: own item" }),
+      screen.getByRole("button", {
+        name: "Expand full details for In progress: own item",
+      }),
     );
 
     expect(onRowActivate).toHaveBeenCalledWith({
@@ -589,7 +609,7 @@ describe("StatusSlideDeck — by-product grid article", () => {
     expect(onRowActivate).not.toHaveBeenCalled();
   });
 
-  describe("fullscreen persists across slide navigation", () => {
+  describe("fullscreen overlay state during slide navigation", () => {
     function setFullscreenElement(el: Element | null) {
       Object.defineProperty(document, "fullscreenElement", {
         configurable: true,
@@ -601,16 +621,14 @@ describe("StatusSlideDeck — by-product grid article", () => {
       setFullscreenElement(null);
     });
 
-    it("keeps the fullscreen overlay active after an ArrowRight slide change", () => {
+    it("keeps the overlay active after navigation while fullscreenElement remains set", () => {
       const slideA = buildSectionSlideModel(makeSection({ items: [item()] }));
       const slideB = buildSectionSlideModel(
         makeSection({ reportSectionId: "sec-2", authorName: "Петров М.К." }),
       );
 
-      // A controlled wrapper: `StatusSlideDeck` is fully controlled by
-      // `selectedIndex`, so the arrow-key navigation only actually changes
-      // slides — and can only actually remount the article/frame — if
-      // `onSelect` feeds back into the prop, as it does in the real app.
+      // Feed onSelect back into the controlled selectedIndex prop so the key
+      // event changes the rendered slide during this component test.
       function ControlledDeck() {
         const [selectedIndex, setSelectedIndex] = useState(0);
         return (
@@ -625,9 +643,8 @@ describe("StatusSlideDeck — by-product grid article", () => {
 
       render(<ControlledDeck />);
 
-      // Enter fullscreen the same way the deck-level `useFullscreen` owner
-      // observes it: via the native `fullscreenchange` event, not the toggle
-      // (jsdom does not implement `Element.requestFullscreen`).
+      // jsdom lacks requestFullscreen, so set its observable document state
+      // and dispatch the event consumed by the deck hook.
       const deck = screen.getByTestId("head-slides-deck");
       const frame = deck.querySelector('[tabindex="-1"]');
       expect(frame).not.toBeNull();
@@ -636,17 +653,16 @@ describe("StatusSlideDeck — by-product grid article", () => {
         document.dispatchEvent(new Event("fullscreenchange"));
       });
       expect(
-        screen.getByRole("button", { name: "Exit fullscreen" }),
-      ).toBeInTheDocument();
+        screen.getAllByRole("button", { name: "Exit fullscreen" }),
+      ).toHaveLength(2);
 
       fireEvent.keyDown(deck, { key: "ArrowRight" });
 
-      // If the fullscreened wrapper had been remounted by the navigation, the
-      // real Fullscreen API — and this overlay, which self-gates on
-      // `isFullscreen` — would drop out. It must still be present.
+      // The overlay follows the mocked fullscreen state across the controlled
+      // slide change. Native Fullscreen API persistence is browser-owned.
       expect(
-        screen.getByRole("button", { name: "Exit fullscreen" }),
-      ).toBeInTheDocument();
+        screen.getAllByRole("button", { name: "Exit fullscreen" }),
+      ).toHaveLength(2);
     });
   });
 });

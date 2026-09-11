@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReminderDispatchResult } from "@customreport/shared";
 import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -37,48 +38,56 @@ function pluralSuffix(count: number): string {
   return count === 1 ? "" : "s";
 }
 
-// Parenthesised tail listing the leads the dispatch did NOT newly notify.
-function formatDispatchExtras(alreadySent: number, skipped: number): string {
+function formatDispatchExtras(
+  alreadyRequested: number,
+  skipped: number,
+): string {
   const extras = [
-    alreadySent > 0 ? `${alreadySent} already sent this cycle` : null,
-    skipped > 0 ? `${skipped} opted out` : null,
+    alreadyRequested > 0
+      ? `${alreadyRequested} already requested this cycle`
+      : null,
+    skipped > 0 ? `${skipped} skipped` : null,
   ].filter((extra) => extra !== null);
   return extras.length > 0 ? ` (${extras.join(", ")})` : "";
 }
 
-// Primitive-typed mirror of the dispatch result so the copy lives outside the
-// component without importing the tRPC output type.
-interface DispatchOutcome {
-  readonly dispatched: number;
-  readonly alreadySent: number;
-  readonly skipped: number;
-  readonly noActiveRule: boolean;
-}
-
 function toastDispatchOutcome({
-  dispatched,
-  alreadySent,
+  queued,
+  alreadyRequested,
+  failed,
   skipped,
-  noActiveRule,
-}: DispatchOutcome): void {
-  if (noActiveRule) {
+  reason,
+}: ReminderDispatchResult): void {
+  if (reason === "no-active-rule") {
     toast.info(
       "Reminder rule is not configured for this period. Configure it in Admin → Reminders.",
     );
     return;
   }
-  if (dispatched === 0 && alreadySent === 0 && skipped === 0) {
+  if (failed > 0) {
+    toast.error(
+      `Reminders queued for ${queued} lead${pluralSuffix(queued)}; failed for ${failed}${formatDispatchExtras(alreadyRequested, skipped)}. Retry to request the failed reminders.`,
+    );
+    return;
+  }
+  if (queued === 0 && alreadyRequested === 0 && skipped === 0) {
     toast.info("No pending leads to remind.");
     return;
   }
-  if (dispatched === 0 && alreadySent > 0) {
+  if (queued === 0 && alreadyRequested > 0) {
     toast.info(
-      `All ${alreadySent} pending lead${pluralSuffix(alreadySent)} already received this cycle's reminder.`,
+      `Reminders already requested for ${alreadyRequested} lead${pluralSuffix(alreadyRequested)} this cycle${formatDispatchExtras(0, skipped)}.`,
+    );
+    return;
+  }
+  if (queued === 0) {
+    toast.info(
+      `${skipped} lead${pluralSuffix(skipped)} skipped; no reminders queued.`,
     );
     return;
   }
   toast.success(
-    `Reminder sent to ${dispatched} lead${pluralSuffix(dispatched)}${formatDispatchExtras(alreadySent, skipped)}.`,
+    `Reminder queued for ${queued} lead${pluralSuffix(queued)}${formatDispatchExtras(alreadyRequested, skipped)}.`,
   );
 }
 
@@ -99,14 +108,7 @@ export function AlertBar({ pendingLeads, reportId, ruleId }: AlertBarProps) {
   const trpc = useTRPC();
   const dispatchMut = useMutation(
     trpc.reminders.dispatchPending.mutationOptions({
-      onSuccess: ({ dispatched, alreadySent, skipped, reason }) => {
-        toastDispatchOutcome({
-          dispatched,
-          alreadySent,
-          skipped,
-          noActiveRule: reason === "no-active-rule",
-        });
-      },
+      onSuccess: toastDispatchOutcome,
       onError: (err) => {
         toast.error(
           err instanceof Error ? err.message : "Failed to send reminder",
@@ -142,7 +144,7 @@ export function AlertBar({ pendingLeads, reportId, ruleId }: AlertBarProps) {
         className="btn-press ml-auto inline-flex min-h-[36px] items-center rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-3.5 py-1.5 font-[family-name:var(--font-sans)] text-[13px] font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
         title={ruleId ? undefined : "Active deadline reminder required."}
       >
-        {dispatchMut.isPending ? "Sending…" : "Send Reminder"}
+        {dispatchMut.isPending ? "Requesting…" : "Send Reminder"}
       </button>
       {!ruleId && <ConfigureRemindersLink />}
     </div>

@@ -6,6 +6,7 @@ import { useContext } from "react";
 import { isHeadLike } from "../../../../../shared/lib/auth/role-predicates";
 import type { SessionUser } from "../../../../../shared/lib/auth/session-provider";
 import { SessionContext } from "../../../../../shared/lib/auth/session-provider";
+import { getScalarSearchParam } from "../../../../../shared/lib/navigation/scalar-search-param";
 import {
   useCrossAuthorContent,
   useDeckVisibility,
@@ -84,7 +85,7 @@ function useLeadFormEffects({
   });
 }
 
-// Feature-local reads/gating only — not a cross-role ReportDataCoordinator.
+// Feature-local orchestration for lead-form reads and record visibility.
 export function useLeadFormData({
   reportId: pinnedReportId,
   redirectToCanonical,
@@ -113,7 +114,7 @@ export function useLeadFormData({
     currentUserId,
     targetReportId: view.targetReportId,
     isSlidesMode,
-    slidesAuthorId: searchParams.get("authorId"),
+    slidesAuthorId: getScalarSearchParam(searchParams, "authorId"),
   });
 
   const foreignContent = useCrossAuthorContent({

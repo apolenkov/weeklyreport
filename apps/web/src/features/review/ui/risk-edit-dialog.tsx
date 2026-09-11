@@ -13,6 +13,7 @@ import type { RiskSeverity } from "./risk-edit-dialog-helpers";
 import { useRiskEditDialog } from "./use-risk-edit-dialog";
 
 interface RiskEditDialogProps {
+  readonly isPending?: boolean | undefined;
   readonly open: boolean;
   // null = create mode, RiskEntry = edit mode.
   readonly risk: RiskEntry | null;
@@ -26,10 +27,6 @@ interface RiskEditDialogProps {
   readonly defaultProductId?: string | undefined;
   // Create-mode activity parent seed (XOR with product); activity pill raise.
   readonly defaultActivityId?: string | undefined;
-  // Impact/mitigation are not on presentation RiskEntry but the lead-form
-  // writes them onto section.risks, so the dialog returns a richer object.
-  readonly initialImpact?: string | undefined;
-  readonly initialMitigation?: string | undefined;
   // Chip-raise create prefill; ignored in edit mode (risk values win).
   readonly initialStageNames?: readonly string[] | undefined;
   readonly initialSeverity?: RiskSeverity | undefined;
@@ -39,8 +36,7 @@ interface RiskEditDialogProps {
   readonly onDelete?: (() => void) | undefined;
 }
 
-// Mount/unmount shell: closed returns null so open remounts fresh useState
-// (parent openSeq dialogKey forces a clean snapshot of stagesForProduct).
+// Unmount closed dialogs so each open starts from the supplied seed values.
 export function RiskEditDialog(props: RiskEditDialogProps) {
   if (!props.open) return null;
   return <RiskEditDialogContent {...props} />;
@@ -141,6 +137,7 @@ function RiskDialogBody({
 }
 
 interface RiskDialogSurfaceProps {
+  readonly isPending?: boolean | undefined;
   readonly dialog: RiskDialogState;
   readonly surfaceRef: RiskDialog["dialogSurfaceRef"];
   readonly onCancel: () => void;
@@ -149,6 +146,7 @@ interface RiskDialogSurfaceProps {
 }
 
 function RiskDialogSurface({
+  isPending,
   dialog,
   surfaceRef,
   onCancel,
@@ -157,6 +155,7 @@ function RiskDialogSurface({
 }: RiskDialogSurfaceProps) {
   return (
     <DialogSurface
+      isPending={isPending}
       surfaceRef={surfaceRef}
       onDismiss={onCancel}
       onBackdropKeyDown={dialog.handleKeyDown}
@@ -197,8 +196,6 @@ function RiskEditDialogContent(props: RiskEditDialogProps) {
       onCancel: props.onCancel,
       defaultProductId: props.defaultProductId,
       defaultActivityId: props.defaultActivityId,
-      initialImpact: props.initialImpact,
-      initialMitigation: props.initialMitigation,
       initialStageNames: props.initialStageNames,
       initialSeverity: props.initialSeverity,
       stagesForProduct: props.stagesForProduct,
@@ -207,6 +204,7 @@ function RiskEditDialogContent(props: RiskEditDialogProps) {
   return (
     <DocumentBodyPortal>
       <RiskDialogSurface
+        isPending={props.isPending}
         dialog={dialog}
         surfaceRef={dialogSurfaceRef}
         onCancel={props.onCancel}

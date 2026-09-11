@@ -89,16 +89,62 @@ describe("useFullscreen — behaviour", () => {
     return { ref: { current: el }, requestFullscreen };
   }
 
-  it("pressing `f` toggles fullscreen exactly once via the target element", () => {
+  it.each(["f", "F"])(
+    "pressing unmodified `%s` toggles fullscreen exactly once via the target element",
+    (key) => {
+      setFullscreenElement(null);
+      const { ref, requestFullscreen } = stubTarget();
+      renderHook(() => useFullscreen(ref));
+
+      act(() => {
+        document.dispatchEvent(new KeyboardEvent("keydown", { key }));
+      });
+
+      expect(requestFullscreen).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each([
+    { name: "Ctrl+F", init: { ctrlKey: true } },
+    { name: "Meta+F", init: { metaKey: true } },
+    { name: "Alt+F", init: { altKey: true } },
+    { name: "Shift+F", init: { shiftKey: true } },
+    { name: "composing F", init: { isComposing: true } },
+    { name: "repeated F", init: { repeat: true } },
+  ])("ignores $name without preventing its default behavior", ({ init }) => {
     setFullscreenElement(null);
     const { ref, requestFullscreen } = stubTarget();
     renderHook(() => useFullscreen(ref));
 
+    const event = new KeyboardEvent("keydown", {
+      key: "f",
+      cancelable: true,
+      ...init,
+    });
     act(() => {
-      document.dispatchEvent(new KeyboardEvent("keydown", { key: "f" }));
+      document.dispatchEvent(event);
     });
 
-    expect(requestFullscreen).toHaveBeenCalledTimes(1);
+    expect(requestFullscreen).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it("ignores an already-prevented F event", () => {
+    setFullscreenElement(null);
+    const { ref, requestFullscreen } = stubTarget();
+    renderHook(() => useFullscreen(ref));
+
+    const event = new KeyboardEvent("keydown", {
+      key: "f",
+      cancelable: true,
+    });
+    event.preventDefault();
+    act(() => {
+      document.dispatchEvent(event);
+    });
+
+    expect(requestFullscreen).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(true);
   });
 
   it("ignores `f` typed into a form field", () => {

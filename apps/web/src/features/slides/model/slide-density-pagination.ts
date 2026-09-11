@@ -1,3 +1,4 @@
+import { worstTrafficStatus } from "../../../shared/lib/status/status-presentation";
 import type {
   SectionSlideModel,
   SlideProduct,
@@ -155,7 +156,12 @@ function pageGrid(
   const scored = !product.noData && product.status !== null;
   return {
     ...source,
-    worstStatus: product.status,
+    worstStatus: worstTrafficStatus([
+      product.status,
+      ...page.risks.map((risk) =>
+        risk.tone === "blocked" ? ("red" as const) : ("yellow" as const),
+      ),
+    ]),
     counters: {
       current: page.current.length,
       risks: page.risks.length,

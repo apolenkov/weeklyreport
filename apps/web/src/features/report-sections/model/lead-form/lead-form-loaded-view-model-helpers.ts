@@ -128,7 +128,10 @@ export function buildUnifiedEntries(
     return {
       item,
       week,
-      bucket: PRESENTATION_STATUS_BUCKETS[item.status],
+      bucket:
+        item.status === "planned" && week === "current"
+          ? "planned-current"
+          : PRESENTATION_STATUS_BUCKETS[item.status],
     };
   };
   return [

@@ -1,5 +1,9 @@
 import type { Dispatch, RefObject, SetStateAction } from "react";
 
+import type {
+  ParentActivityOption,
+  RecordParent,
+} from "../model/record-parent";
 import type { ItemStatus, KanbanItem, Product } from "../model/types";
 import {
   buildActivityItemSave,
@@ -8,7 +12,6 @@ import {
   firstInvalidControl,
   resolveSaveProduct,
 } from "./item-edit-dialog-helpers";
-import type { ParentActivityOption, RecordParent } from "./parent-picker";
 import type { ItemEditErrors } from "./use-item-edit-form-state";
 
 interface UseItemEditSaveArgs {
@@ -18,6 +21,7 @@ interface UseItemEditSaveArgs {
   readonly currentUserName?: string | undefined;
   readonly dialogSurfaceRef: RefObject<HTMLDivElement | null>;
   readonly text: string;
+  readonly nextStepText: string;
   readonly status: ItemStatus;
   readonly pausedReason: string;
   readonly priorityRank: number | null;
@@ -35,8 +39,11 @@ interface UseItemEditSaveArgs {
 
 interface TrimmedSaveText {
   readonly trimmed: string;
+  readonly trimmedNextStepText: string;
   readonly trimmedPausedReason: string;
 }
+
+const NEXT_STEP_MAX_LENGTH = 500;
 
 function collectSaveErrors(
   args: UseItemEditSaveArgs,
@@ -48,9 +55,21 @@ function collectSaveErrors(
     availableStages: args.availableStages,
     effectiveStageNames: args.effectiveStageNames,
   });
-  return args.status === "paused" && text.trimmedPausedReason.length === 0
-    ? { ...errors, pausedReason: "A reason is required to pause an item." }
-    : errors;
+  return {
+    ...errors,
+    ...(text.trimmedNextStepText.length > NEXT_STEP_MAX_LENGTH
+      ? { nextStepText: "Next step must be 500 characters or fewer." }
+      : {}),
+    ...(args.status === "completed" && text.trimmedNextStepText.length > 0
+      ? {
+          nextStepText:
+            "A completed item cannot have a next step. Resume it or clear the plan.",
+        }
+      : {}),
+    ...(args.status === "paused" && text.trimmedPausedReason.length === 0
+      ? { pausedReason: "A reason is required to pause an item." }
+      : {}),
+  };
 }
 
 // `null` when no product can be resolved for a product-parented item; the caller
@@ -65,6 +84,7 @@ function buildSavePayload(
     status: args.status,
     currentUserName: args.currentUserName,
     priorityRank: args.priorityRank,
+    trimmedNextStepText: text.trimmedNextStepText,
     trimmedPausedReason: text.trimmedPausedReason,
   };
   if (args.parent.kind === "activity") {
@@ -91,6 +111,7 @@ export function useItemEditSave(args: UseItemEditSaveArgs) {
     args.setParent(nextParent);
     // Clear stages on parent switch — never default to all owned stages.
     args.setStageNames([]);
+    args.setErrors((previous) => ({ ...previous, stageNames: undefined }));
   }
 
   function handleSave() {
@@ -98,6 +119,7 @@ export function useItemEditSave(args: UseItemEditSaveArgs) {
     if (args.isDeadEnd) return;
     const text: TrimmedSaveText = {
       trimmed: args.text.trim(),
+      trimmedNextStepText: args.nextStepText.trim(),
       trimmedPausedReason: args.pausedReason.trim(),
     };
     const errors = collectSaveErrors(args, text);

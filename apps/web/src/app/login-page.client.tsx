@@ -11,6 +11,7 @@ import {
   readLastRole,
 } from "../shared/lib/auth/last-role";
 import { sanitizeNext } from "../shared/lib/navigation/safe-next";
+import { getScalarSearchParam } from "../shared/lib/navigation/scalar-search-param";
 import { webEnv } from "../shared/lib/runtime/web-env";
 import { useTRPC } from "../shared/lib/trpc/trpc-context";
 import { LastRoleCard, PrimaryCta } from "./login-page-controls";
@@ -104,7 +105,7 @@ function LastRoleStatus({
 }: {
   readonly lastRole: LastRoleRecord | null;
 }) {
-  if (!AUTH_STUB) return <p>Keycloak · SAML 2.0 · Corporate SSO</p>;
+  if (!AUTH_STUB) return <p>Secure organization sign-in</p>;
   return (
     <p>
       {lastRole
@@ -178,8 +179,8 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
   const searchParams = useSearchParams();
   const trpc = useTRPC();
 
-  // auth.me is publicProcedure — returns null when no session, never
-  // throws. Safe to fire on the public landing page.
+  // The public session query distinguishes a signed-out response from a
+  // transport failure, which the panel reports separately below.
   const sessionQ = useQuery(trpc.auth.me.queryOptions());
   const sessionRole = getSessionRole(sessionQ.data);
 
@@ -191,9 +192,9 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
   });
   const org = orgQ.data;
 
-  const stayOnLanding = searchParams.get("stay") === "1";
+  const stayOnLanding = getScalarSearchParam(searchParams, "stay") === "1";
   const safeNext = sanitizeNext(
-    searchParams.get("next") ?? null,
+    getScalarSearchParam(searchParams, "next"),
     defaultRedirectFor(sessionRole),
   );
 

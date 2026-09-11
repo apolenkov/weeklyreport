@@ -8,7 +8,6 @@ import type { FullscreenHandle } from "../../../../../shared/hooks/browser/use-f
 import { useSession } from "../../../../../shared/lib/auth/session-provider";
 import { ArchiveToggle } from "../../../../../shared/ui/report-shell/archive-toggle";
 import { ReportToolbar } from "../../../../../shared/ui/report-shell/report-toolbar";
-import { ViewModeToggle } from "../../../../../shared/ui/report-shell/view-mode-toggle";
 import { PeriodNavigator } from "../../../../period";
 import type { LeadFormLoadedViewModel } from "../../../../report-sections";
 import type { RecordVisibility } from "../../../../report-sections/client";
@@ -19,6 +18,7 @@ import {
 } from "../../../../slides";
 import { LeadReportAssistant } from "../../lead-report-assistant";
 import { CollapseIcon } from "./lead-form-icons";
+import { LeadReportViewModeToggle } from "./lead-report-view-mode-toggle";
 import { RecordVisibilityToggle } from "./visibility/record-visibility-toggle";
 
 type SlidesFullscreen = FullscreenHandle;
@@ -84,7 +84,7 @@ export function LeadFormToolbarControls({
       layoutKey="report-context-toolbar"
       contextControls={
         <>
-          <div className="flex min-w-0 basis-full items-center gap-1.5 md:basis-auto">
+          <div className="flex min-w-0 basis-full flex-wrap items-center gap-1.5 md:basis-auto md:shrink-0 md:flex-nowrap">
             <ToolbarPeriodCluster
               viewModel={viewModel}
               leadSubmittedAt={leadSubmittedAt}
@@ -92,7 +92,7 @@ export function LeadFormToolbarControls({
               onShowArchivePeriodsChange={onShowArchivePeriodsChange}
             />
           </div>
-          <div className="flex min-w-0 basis-full flex-wrap items-center gap-1.5 md:ml-auto md:basis-auto md:flex-nowrap">
+          <div className="flex min-w-0 basis-full flex-wrap items-center gap-1.5 md:ml-auto md:basis-0 md:grow md:justify-end">
             {canShowLeadReportAssistant(user?.role) && <LeadReportAssistant />}
             <ToolbarViewCluster
               toolbarVisibility={toolbarVisibility}
@@ -138,7 +138,7 @@ export function LeadOverviewToolbarControls({
       layoutKey="report-context-toolbar"
       contextControls={
         <>
-          <div className="flex min-w-0 basis-full items-center gap-1.5 md:basis-auto">
+          <div className="flex min-w-0 basis-full flex-wrap items-center gap-1.5 md:basis-auto md:shrink-0 md:flex-nowrap">
             <ToolbarPeriodCluster
               viewModel={viewModel}
               leadSubmittedAt={leadSubmittedAt}
@@ -146,16 +146,15 @@ export function LeadOverviewToolbarControls({
               onShowArchivePeriodsChange={onShowArchivePeriodsChange}
             />
           </div>
-          <div className="flex min-w-0 basis-full flex-wrap items-center gap-1.5 md:ml-auto md:basis-auto md:flex-nowrap">
+          <div className="flex min-w-0 basis-full flex-wrap items-center gap-1.5 md:ml-auto md:basis-0 md:grow md:justify-end">
             {canShowLeadReportAssistant(user?.role) && <LeadReportAssistant />}
             <RecordVisibilityToggle
               value={toolbarVisibility}
               onChange={onVisibilityChange}
             />
-            <ViewModeToggle
-              mode="overview"
-              overviewHref={overviewHref}
-              editHref={`${overviewHref}?mode=edit`}
+            <LeadReportViewModeToggle
+              mode="report"
+              reportHref={overviewHref}
               slidesHref={`${overviewHref}?mode=slides`}
               desktopLabels
             />
@@ -222,10 +221,9 @@ function ToolbarViewCluster({
   targetReportId,
   desktopLabels,
 }: ToolbarViewClusterProps) {
-  const editHref = targetReportId
+  const reportHref = targetReportId
     ? `/lead/report/${encodeURIComponent(targetReportId)}`
     : LEAD_REPORT_PATH;
-  const overviewHref = editHref;
   return (
     <>
       {/* Always rendered so trailing controls never shift between modes. */}
@@ -234,12 +232,11 @@ function ToolbarViewCluster({
         onChange={onVisibilityChange}
         disabled={isForeignSlidesDeck}
       />
-      <ViewModeToggle
-        mode={isSlidesMode ? "slides" : "edit"}
-        overviewHref={overviewHref}
-        editHref={`${editHref}?mode=edit`}
+      <LeadReportViewModeToggle
+        mode={isSlidesMode ? "slides" : "report"}
+        reportHref={reportHref}
         slidesHref={
-          targetReportId ? `${editHref}?mode=slides` : LEAD_REPORT_PATH
+          targetReportId ? `${reportHref}?mode=slides` : LEAD_REPORT_PATH
         }
         desktopLabels={desktopLabels}
       />

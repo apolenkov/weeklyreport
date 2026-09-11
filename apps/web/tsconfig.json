@@ -1,6 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "allowImportingTsExtensions": true,
     "experimentalDecorators": true,
     "jsx": "preserve",
     "incremental": true,
@@ -19,6 +20,7 @@
   },
   "include": [
     "next-env.d.ts",
+    "*.ts",
     "scripts/**/*.ts",
     "src/**/*.ts",
     "src/**/*.tsx",

@@ -7,7 +7,7 @@ import type {
 } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { ConfirmationDialog } from "../../../shared/ui/dialogs/confirmation-dialog";
@@ -66,6 +66,9 @@ export function AiProviderCardContent({
       : (message ?? executionMessage);
   const allBusy = mutationsAreBusy(mutations);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
+  const diagnosticsBaseId = useId();
+  const diagnosticsSummaryId = `${diagnosticsBaseId}-summary`;
+  const diagnosticsPanelId = `${diagnosticsBaseId}-panel`;
   const [editingActiveRevisionId, setEditingActiveRevisionId] = useState<
     string | null
   >(null);
@@ -83,6 +86,7 @@ export function AiProviderCardContent({
     <div data-testid="integration-row-ai">
       <AiProviderStateSummary
         lifecycle={lifecycle}
+        availability={data.availability}
         revision={revision}
         onEdit={() => setEditingActiveRevisionId(revisionId)}
         onDisable={() => setDisableRequested(true)}
@@ -106,7 +110,6 @@ export function AiProviderCardContent({
           onTest={(id) => mutations.test.mutate({ revisionId: id })}
           onActivate={(id) => mutations.activate.mutate({ revisionId: id })}
           onDisable={() => mutations.disable.mutate()}
-          readOnly={false}
           onCancelEdit={
             editing ? () => setEditingActiveRevisionId(null) : undefined
           }
@@ -138,6 +141,9 @@ export function AiProviderCardContent({
           open={diagnosticsOpen}
         >
           <summary
+            id={diagnosticsSummaryId}
+            aria-controls={diagnosticsPanelId}
+            aria-expanded={diagnosticsOpen}
             className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-[var(--radius-sm)] py-1 text-sm font-semibold text-[var(--color-foreground)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] [&::-webkit-details-marker]:hidden"
             onClick={(event) => {
               event.preventDefault();
@@ -157,9 +163,17 @@ export function AiProviderCardContent({
               className="size-4 shrink-0 transition-transform group-open:rotate-180"
             />
           </summary>
-          {diagnosticsOpen && (
-            <div className="mt-3 flex flex-col gap-4">
+          <div
+            id={diagnosticsPanelId}
+            role="region"
+            aria-labelledby={diagnosticsSummaryId}
+            aria-hidden={!diagnosticsOpen}
+            className="mt-3 flex flex-col gap-4"
+          >
+            {diagnosticsOpen && (
               <AiProviderRevisionDetails revision={revision} />
+            )}
+            {diagnosticsOpen && (
               <AiProviderRetainedRevisions
                 revisions={data.revisions}
                 activeRevisionId={data.activeRevisionId}
@@ -177,15 +191,19 @@ export function AiProviderCardContent({
                 }
                 onDiscard={(id) => mutations.discard.mutate({ revisionId: id })}
               />
-            </div>
-          )}
+            )}
+          </div>
         </details>
       )}
     </div>
   );
 }
 
-export function AiProviderCard() {
+export function AiProviderCard({
+  onRefreshDependents,
+}: Readonly<{
+  onRefreshDependents?: () => Promise<unknown> | void;
+}> = {}) {
   const pollIntervalMs = 1500;
   const trpc = useTRPC();
   const aiQ = useQuery({
@@ -207,6 +225,7 @@ export function AiProviderCard() {
     trpc,
     refresh: () => {
       void aiQ.refetch();
+      void onRefreshDependents?.();
     },
     setSavedRevision,
     setMessage,

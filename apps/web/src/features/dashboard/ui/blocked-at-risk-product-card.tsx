@@ -134,7 +134,7 @@ export function ProductCard({ group }: { readonly group: ProductGroup }) {
       <div className="space-y-1 border-t border-[var(--color-border-subtle)] px-4 py-3">
         {group.items.map((item) => (
           <IssueRow
-            key={`${item.product}|${item.stage}|${item.assignee}|${item.description}`}
+            key={`${item.productId}|${item.authorId}|${item.stage}|${item.severity}|${item.description}`}
             item={item}
           />
         ))}

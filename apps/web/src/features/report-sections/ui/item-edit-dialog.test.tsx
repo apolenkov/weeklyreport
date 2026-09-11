@@ -1,5 +1,4 @@
-// Typed text must survive parent re-renders that replace the stage-selector
-// callback during the autosave/invalidation cycle.
+// One mounted dialog retains its draft across parent callback identity changes.
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
@@ -37,7 +36,7 @@ describe("ItemEditDialog — form state across parent renders", () => {
     });
     expect(textField).toHaveValue("user typed this — must survive");
 
-    // Simulate autosave parent re-render: new function reference, same return value.
+    // Parent re-render: new function reference, same available stages.
     const stagesV2 = () => ["Dev", "Testing"] as const;
     rerender(
       <ItemEditDialog
@@ -52,8 +51,35 @@ describe("ItemEditDialog — form state across parent renders", () => {
       />,
     );
 
-    // A new callback identity must not reset the user's local draft.
+    // The mounted draft remains unchanged.
     expect(textField).toHaveValue("user typed this — must survive");
+  });
+
+  it("shows an existing next step in the modal editor", () => {
+    render(
+      <ItemEditDialog
+        open={true}
+        item={{
+          id: "item-plan",
+          parent: { kind: "product", id: "p1" },
+          productId: "p1",
+          productName: "DevOps Tools",
+          activityId: null,
+          stageNames: [],
+          status: "in-progress",
+          text: "Deploy the pipeline",
+          author: "Test Lead",
+          nextStepText: "Watch the first deployment",
+        }}
+        products={products}
+        week="current"
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("textbox", { name: /Next step/ })).toHaveValue(
+      "Watch the first deployment",
+    );
   });
 });
 
@@ -224,7 +250,7 @@ describe("ItemEditDialog — reopen reset", () => {
 
 describe("ItemEditDialog — save and reopen status reset", () => {
   it("shows updated item.status on reopen after save, not the previously-edited draft status", () => {
-    const onSave = vi.fn();
+    const onSave = vi.fn<(item: KanbanItem) => void>();
     const onCancel = vi.fn();
     const baseItem: KanbanItem = {
       id: "item-d12",
@@ -235,7 +261,7 @@ describe("ItemEditDialog — save and reopen status reset", () => {
       text: "Deploy pipeline",
       status: "completed",
       author: "Test Lead",
-      stageNames: [],
+      stageNames: ["Dev"],
     };
 
     const { rerender } = render(
@@ -244,6 +270,7 @@ describe("ItemEditDialog — save and reopen status reset", () => {
         item={baseItem}
         products={products}
         week="current"
+        stagesForProduct={() => ["Dev"]}
         onSave={onSave}
         onCancel={onCancel}
       />,
@@ -258,9 +285,20 @@ describe("ItemEditDialog — save and reopen status reset", () => {
     expect(
       screen.getByRole("button", { name: /In Progress/i }),
     ).toHaveAttribute("aria-pressed", "true");
+    fireEvent.change(screen.getByRole("textbox", { name: /Next step/i }), {
+      target: { value: "Watch the deployment" },
+    });
     fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
 
-    const savedItem: KanbanItem = { ...baseItem, status: "in-progress" };
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+      status: "in-progress",
+      nextStepText: "Watch the deployment",
+    });
+    const savedItem = onSave.mock.calls[0]?.[0];
+    if (!savedItem) {
+      throw new Error("expected onSave to emit the item used for reopen");
+    }
 
     rerender(
       <ItemEditDialog
@@ -268,6 +306,7 @@ describe("ItemEditDialog — save and reopen status reset", () => {
         item={savedItem}
         products={products}
         week="current"
+        stagesForProduct={() => ["Dev"]}
         onSave={onSave}
         onCancel={onCancel}
       />,
@@ -279,6 +318,7 @@ describe("ItemEditDialog — save and reopen status reset", () => {
         item={savedItem}
         products={products}
         week="current"
+        stagesForProduct={() => ["Dev"]}
         onSave={onSave}
         onCancel={onCancel}
       />,
@@ -296,6 +336,37 @@ describe("ItemEditDialog — save and reopen status reset", () => {
 });
 
 describe("ItemEditDialog — unique rank picker", () => {
+  it("keeps the editor usable when different products reuse a rank", () => {
+    const item: KanbanItem = {
+      id: "item-rank-duplicate",
+      parent: { kind: "product", id: "p1" },
+      productId: "p1",
+      productName: "DevOps Tools",
+      activityId: null,
+      text: "Deploy pipeline",
+      status: "in-progress",
+      author: "Test Lead",
+      priorityRank: 1,
+      stageNames: [],
+    };
+
+    render(
+      <ItemEditDialog
+        open={true}
+        item={item}
+        products={products}
+        week="current"
+        ownPeriodRanks={[1, 1, 2]}
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+      />,
+    );
+
+    expect(
+      screen.getByLabelText<HTMLSelectElement>(/Priority rank/i),
+    ).toHaveValue("1");
+  });
+
   it("disables taken ranks in the select while keeping the own current rank selectable", () => {
     const item: KanbanItem = {
       id: "item-rank",

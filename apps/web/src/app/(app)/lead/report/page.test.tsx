@@ -16,7 +16,7 @@ vi.mock("../../../../features/report-pages", () => ({
 
 import LeadReportPage from "./page";
 
-async function renderPage(mode?: string) {
+async function renderPage(mode?: string | string[]) {
   render(
     await LeadReportPage({
       searchParams: Promise.resolve(mode === undefined ? {} : { mode }),
@@ -30,15 +30,23 @@ describe("LeadReportPage — URL mode", () => {
     expect(await renderPage()).toHaveAttribute("data-mode", "overview");
   });
 
-  it.each(["edit", "slides"] as const)(
-    "preserves explicit %s mode",
-    async (mode) => {
-      expect(await renderPage(mode)).toHaveAttribute("data-mode", mode);
-    },
-  );
+  it("normalizes the legacy edit mode to Overview", async () => {
+    expect(await renderPage("edit")).toHaveAttribute("data-mode", "overview");
+  });
+
+  it("preserves explicit Slides mode", async () => {
+    expect(await renderPage("slides")).toHaveAttribute("data-mode", "slides");
+  });
 
   it("maps unknown modes to Overview", async () => {
     expect(await renderPage("unknown")).toHaveAttribute(
+      "data-mode",
+      "overview",
+    );
+  });
+
+  it("ignores repeated mode values", async () => {
+    expect(await renderPage(["slides", "overview"])).toHaveAttribute(
       "data-mode",
       "overview",
     );
