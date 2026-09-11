@@ -18,11 +18,11 @@ function prismaWith(
       findUnique: vi
         .fn()
         .mockResolvedValueOnce({ leadId: "lead-1" })
+        .mockResolvedValueOnce({ leadId: "lead-1" })
         .mockResolvedValueOnce({
           leadId: "lead-1",
           lead: { role: "lead", reportingGroupId: OWNER_GROUP },
         }),
-      findUniqueOrThrow: vi.fn().mockResolvedValue({ leadId: "lead-1" }),
     },
     user: {
       findUnique: vi
@@ -80,5 +80,21 @@ describe("attachProductToGroup — ownership-conflict naming", () => {
       /already attached to group aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/,
     );
     await expect(attempt).rejects.toThrow(/group's row is missing/);
+  });
+
+  it("reports a never-existing product as a typed conflict, not a raw Prisma error", async () => {
+    const tx = { project: { findUnique: vi.fn().mockResolvedValue(null) } };
+    const prisma = {
+      $transaction: vi.fn((operation: (client: typeof tx) => unknown) =>
+        Promise.resolve(operation(tx)),
+      ),
+    } as unknown as PrismaService;
+
+    await expect(
+      attachProductToGroup(prisma, {
+        groupId: OTHER_GROUP,
+        productId: PRODUCT_ID,
+      }),
+    ).rejects.toBeInstanceOf(AdminGroupProductConflictError);
   });
 });

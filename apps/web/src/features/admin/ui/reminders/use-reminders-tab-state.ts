@@ -73,6 +73,9 @@ function useReminderEditor(
   const [offsetValid, setOffsetValid] = useState(true);
   const validityValid = useMemo(() => {
     if (!offsetValid) return false;
+    // A clearable date input yields an empty string; it must block Save even
+    // when the forever checkbox or an absent end date would otherwise pass.
+    if (form.validFromIso === "") return false;
     if (form.foreverChecked) return true;
     if (form.validUntilIso === null) return true;
     return form.validUntilIso >= form.validFromIso;
