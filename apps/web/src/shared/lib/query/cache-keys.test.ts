@@ -61,7 +61,13 @@ const cases = [
   [
     "review",
     invalidateReview,
-    ["weeklyReport.get", "leadForm.byPeriod", "reports.getActive"],
+    [
+      "weeklyReport.get",
+      "leadForm.byPeriod",
+      "reports.getActive",
+      "review.dashboard",
+      "activity.live",
+    ],
   ],
 ] as const;
 

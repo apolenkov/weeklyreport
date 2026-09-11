@@ -7,6 +7,7 @@ import {
   type ReportingGroup,
   reportingGroupSchema,
 } from "@customreport/shared";
+import type { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { isUniqueViolation } from "../../lib/prisma-unique-violation";
@@ -37,6 +38,24 @@ async function throwProductOwnershipConflict(
   );
 }
 
+// A never-existing product must surface as the typed conflict, not a raw
+// Prisma not-found raised before the ownership graph is read.
+async function requireProjectLead(
+  tx: Prisma.TransactionClient,
+  projectId: string,
+): Promise<string> {
+  const project = await tx.project.findUnique({
+    where: { id: projectId },
+    select: { leadId: true },
+  });
+  if (project === null) {
+    throw new AdminGroupProductConflictError(
+      `Project ${projectId} was not found. Refresh and retry.`,
+    );
+  }
+  return project.leadId;
+}
+
 // One group per product: same group is idempotent; different group rejects
 // (no silent ownership move — UI must detach first).
 export async function attachProductToGroup(
@@ -44,18 +63,9 @@ export async function attachProductToGroup(
   input: GroupProductEdgeInput,
 ): Promise<GroupProduct> {
   return prisma.$transaction(async (tx) => {
-    const project = await tx.project.findUnique({
-      where: { id: input.productId },
-      select: { leadId: true },
-    });
-    if (project === null) {
-      throw new AdminGroupProductConflictError(
-        `Project ${input.productId} was not found. Refresh and retry.`,
-      );
-    }
     const graph = await lockAndValidateProjectOwnership(tx, {
       projectId: input.productId,
-      desiredLeadId: project.leadId,
+      desiredLeadId: await requireProjectLead(tx, input.productId),
       expectedGroupId: input.groupId,
       requireDesiredLeadCurrent: true,
     });
