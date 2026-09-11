@@ -19,6 +19,13 @@ test-results/
 
 .logs/
 
+# Local agent and browser-tool artifacts: never committed.
+.opencode/
+.playwright-cli/
+.playwright-mcp/
+codex-session-*.md
+output/
+
 apps/api/storage/
 
 apps/web/next-env.d.ts
