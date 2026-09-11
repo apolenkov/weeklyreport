@@ -217,9 +217,13 @@ describe("JobsService — DLQ admin surface", () => {
       id: "job-live",
       reminderExecutionId: "existing-execution",
     });
+    const reviveFailedReminderExecution = vi.fn().mockResolvedValue(undefined);
     const service = new JobsService(
       makeRegistry(makeQueue({ failed: [job] })),
-      { reminderExecutionExists: vi.fn().mockResolvedValue(true) },
+      {
+        reminderExecutionExists: vi.fn().mockResolvedValue(true),
+        reviveFailedReminderExecution,
+      },
     );
 
     const result = await service.retryFailed({
@@ -228,6 +232,9 @@ describe("JobsService — DLQ admin surface", () => {
     });
 
     expect(job.remove).not.toHaveBeenCalled();
+    expect(reviveFailedReminderExecution).toHaveBeenCalledWith(
+      "existing-execution",
+    );
     expect(job.retry).toHaveBeenCalledTimes(1);
     expect(result).toEqual({ retried: true, jobId: "job-live" });
   });
