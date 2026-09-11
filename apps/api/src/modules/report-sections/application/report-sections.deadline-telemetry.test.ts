@@ -69,14 +69,6 @@ const baseSection: ReportSectionReadModel = {
   reviews: [],
 };
 
-// the read-model item types stageNames as
-// optional, but draft-save/submit payloads require it. Expose a stage-guaranteed
-// copy of the seeded items for the write-path test payloads below.
-const writeItems = baseSection.items.map((it) => ({
-  ...it,
-  stageNames: it.stageNames,
-}));
-
 describe("ReportSectionsService — deadline gate", () => {
   function createGracedRepository(opts: {
     section?: ReportSectionReadModel;
@@ -136,7 +128,7 @@ describe("ReportSectionsService — deadline gate", () => {
           status: "green" as const,
         },
       ],
-      items: writeItems,
+      items: baseSection.items,
       risks: [],
       decisions: [],
     };

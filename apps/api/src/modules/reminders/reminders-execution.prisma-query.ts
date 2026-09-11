@@ -82,7 +82,7 @@ export async function insertExecutionOnConflict(
         AND rule."fireAt" = ${execution.scheduledFor}
         AND rule."kind" = ${queuePayload.kind}::"ReminderRuleKind"
         AND rule."deadline" = ${executionDeadline}
-        AND to_char(rule."fireAt" AT TIME ZONE 'UTC', 'YYYY-MM-DD') = ${queuePayload.cycleDate}
+        AND rule."fireAt"::date = ${queuePayload.cycleDate}::date
         AND rule."status" = 'active'::"ReminderRuleStatus"
         AND policy."active" = true
         AND policy."kind" = rule."kind"

@@ -6,6 +6,7 @@ import * as Sentry from "@sentry/nestjs";
 
 import { createNullLogger } from "../lib/logger.js";
 import { registerProcessErrorHandlers } from "./process-error-handlers.js";
+import { createShutdownCoordinator } from "./shutdown-coordinator.js";
 
 const originalUncaughtListeners = process.listeners("uncaughtException");
 const originalRejectionListeners = process.listeners("unhandledRejection");
@@ -32,7 +33,10 @@ describe("registerProcessErrorHandlers", () => {
     const captureSpy = vi.spyOn(Sentry, "captureException");
     const shutdown = vi.fn(() => Promise.resolve());
 
-    registerProcessErrorHandlers(logger, { shutdown, exit: exitSpy });
+    registerProcessErrorHandlers(
+      logger,
+      createShutdownCoordinator(shutdown, { exit: exitSpy }),
+    );
     const listener = process.listeners("unhandledRejection").at(-1);
     if (!listener)
       throw new Error("unhandledRejection listener not registered");
@@ -55,11 +59,13 @@ describe("registerProcessErrorHandlers", () => {
   it("falls back to stderr when the fatal drain exceeds its deadline", async () => {
     const stderrSpy = vi.spyOn(process.stderr, "write").mockReturnValue(true);
     const exit = vi.fn<(code: number) => never>(() => undefined as never);
-    registerProcessErrorHandlers(createNullLogger(), {
-      shutdown: () => new Promise<void>(() => undefined),
-      exit,
-      deadlineMs: 1,
-    });
+    registerProcessErrorHandlers(
+      createNullLogger(),
+      createShutdownCoordinator(() => new Promise<void>(() => undefined), {
+        exit,
+        fatalDeadlineMs: 1,
+      }),
+    );
     const listener = process.listeners("uncaughtException").at(-1);
     if (!listener) throw new Error("uncaughtException listener not registered");
     listener(new Error("boom"), "uncaughtException");

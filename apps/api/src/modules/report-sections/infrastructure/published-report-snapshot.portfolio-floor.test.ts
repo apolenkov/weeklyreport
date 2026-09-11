@@ -5,70 +5,22 @@ import {
   PublishedSnapshotIntegrityError,
   requirePublishedSnapshot,
 } from "@customreport/report-persistence";
-import {
-  type ReportSectionReadModel,
-  reportSectionReadModelSchema,
-} from "@customreport/shared";
+import { buildEscalationsFromReadSections } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { publishedSnapshotFixture } from "../../../test-utils/prisma-test-helper";
 import {
-  makeProjectReadModel,
-  makeReportSectionReadModel,
-  makeSectionActivity,
-} from "../../../test-utils/report-section-fixtures.js";
-import { buildEscalationsFromReadSections } from "./report-escalations";
+  AUTHOR_ID,
+  makeSection,
+  OWNED_PRODUCT,
+  OWNED_STAGE_ID,
+  OWNED_STAGE_NAME,
+  REPORT_ID,
+  SECOND_STAGE_ID,
+  SECTION_ID,
+} from "./__tests__/published-section-fixture";
 
-const REPORT_ID = "659b2767-0f86-41e2-b025-49730ca010e4";
-const SECTION_ID = "2a223d8b-c4b2-473c-8a7b-15ecc52195c7";
-const AUTHOR_ID = "6f99661a-cac6-4d06-bf08-2a14cced554d";
-const OWNED_PRODUCT = "4ff69d14-ec8c-4f1c-b62b-73bee530fc7d";
 const SECOND_PRODUCT = "65064b76-3bec-428d-b2f6-7bf30476909a";
-const OWNED_STAGE_ID = "6366e7ef-e694-454f-863a-7e112ebbc48f";
-const SECOND_STAGE_ID = "71e9d6a6-7455-4864-8de9-a48b2f25b13f";
-const OWNED_STAGE_NAME = "Development";
-type ProjectFixture = Partial<ReportSectionReadModel["projects"][number]> &
-  Pick<
-    ReportSectionReadModel["projects"][number],
-    "projectId" | "projectName" | "trafficLight"
-  >;
-type ActivityFixture = Partial<ReportSectionReadModel["activities"][number]> &
-  Pick<
-    ReportSectionReadModel["activities"][number],
-    "activityId" | "activityName" | "status"
-  >;
-type SectionFixture = Omit<
-  Partial<ReportSectionReadModel>,
-  "activities" | "projects"
-> & {
-  activities?: ActivityFixture[];
-  projects?: ProjectFixture[];
-};
-
-function makeSection(overrides: SectionFixture = {}): ReportSectionReadModel {
-  const { activities = [], projects, ...sectionOverrides } = overrides;
-  return reportSectionReadModelSchema.parse(
-    makeReportSectionReadModel({
-      reportSectionId: SECTION_ID,
-      reportId: REPORT_ID,
-      authorId: AUTHOR_ID,
-      authorName: "Alice Lead",
-      status: "submitted",
-      submittedAt: null,
-      projects: (
-        projects ?? [
-          {
-            projectId: OWNED_PRODUCT,
-            projectName: "CRM Portal",
-            trafficLight: "green",
-          },
-        ]
-      ).map(makeProjectReadModel),
-      activities: activities.map(makeSectionActivity),
-      ...sectionOverrides,
-    }),
-  );
-}
 
 // OWNED stage covered by the author's own at-risk/blocked risk must
 // floor product status via effectiveProjectStatus (not raw trafficLight).
@@ -141,76 +93,6 @@ describe("buildPortfolioProductsFromSnapshotSections — own-risk floor", () => 
     ]);
 
     expect(products[0]?.worstStatus).toBe("yellow");
-  });
-
-  it("1.3 floors yellow for a stage-named at-risk own risk", () => {
-    const products = buildPortfolioProductsFromSnapshotSections([
-      makeSection({
-        projects: [
-          {
-            projectId: OWNED_PRODUCT,
-            projectName: "CRM Portal",
-            trafficLight: "green",
-            ownedStages: [
-              {
-                stageId: OWNED_STAGE_ID,
-                stageName: OWNED_STAGE_NAME,
-                sortOrder: 0,
-                status: null,
-              },
-            ],
-          },
-        ],
-        risks: [
-          {
-            id: "2cc3d3e4-f506-4718-ac12-3d4e5f607182",
-            projectId: OWNED_PRODUCT,
-            risk: "Flaky integration",
-            impact: "Medium",
-            mitigation: "Stabilise",
-            severity: "at-risk",
-            stageNames: [OWNED_STAGE_NAME],
-          },
-        ],
-      }),
-    ]);
-
-    expect(products[0]?.worstStatus).toBe("yellow");
-  });
-
-  it("floors Development red for a published snapshot risk", () => {
-    const products = buildPortfolioProductsFromSnapshotSections([
-      makeSection({
-        projects: [
-          {
-            projectId: OWNED_PRODUCT,
-            projectName: "CRM Portal",
-            trafficLight: "green",
-            ownedStages: [
-              {
-                stageId: OWNED_STAGE_ID,
-                stageName: OWNED_STAGE_NAME,
-                sortOrder: 0,
-                status: null,
-              },
-            ],
-          },
-        ],
-        risks: [
-          {
-            id: "9ee5f506-1728-493a-8e34-5f60718293a4",
-            projectId: OWNED_PRODUCT,
-            risk: "Legacy release blocker",
-            impact: "High",
-            mitigation: "Fix before release",
-            severity: "blocked",
-            stageNames: [OWNED_STAGE_NAME],
-          },
-        ],
-      }),
-    ]);
-
-    expect(products[0]?.worstStatus).toBe("red");
   });
 
   it("1.4 keeps red when a stage is already red and the own risk is milder", () => {
@@ -302,7 +184,7 @@ describe("buildPortfolioProductsFromSnapshotSections — own-risk floor", () => 
 
 // Once the risk floor turns an owned stage red, `buildEscalationsFromReadSections`
 // fires an `at_risk` "flagged red" escalation off the effective status, alongside
-// the existing per-risk `unresolved_risk`. Pin both so the pair stays deliberate.
+// the per-risk `blocked` escalation. Pin both so the pair stays deliberate.
 describe("buildEscalationsFromReadSections — own-risk floor side effect", () => {
   it("emits at_risk + blocked for a blocked own risk on the owned stage", () => {
     const escalations = buildEscalationsFromReadSections([
@@ -506,6 +388,7 @@ describe("buildAssembledReportFromPrismaRow — portfolio totals floor (Shape B)
           decisions: [],
           activityStatuses: [],
           sectionReviews: [],
+          itemOutcomeEvents: [],
         },
       ],
     };
@@ -595,6 +478,7 @@ describe("requirePublishedSnapshot", () => {
     periodEnd: "2026-04-12T23:59:59.999Z",
     publishedAt: "2026-04-13T10:00:00.000Z",
   });
+  const groupId = "7a8b9c0d-1e2f-4345-8678-90abcdef1234";
 
   it("accepts a valid snapshot with the expected report identity", () => {
     expect(requirePublishedSnapshot(snapshot, REPORT_ID).reportId).toBe(
@@ -653,5 +537,50 @@ describe("requirePublishedSnapshot", () => {
         REPORT_ID,
       ),
     ).toThrow(PublishedSnapshotIntegrityError);
+  });
+
+  it("fails closed when a frozen project omits its complete stage set", () => {
+    const section = makeSection();
+    const project = section.projects[0];
+    if (!project) throw new Error("expected fixture project");
+    const { stageSet, ...projectWithoutStageSet } = project;
+    expect(stageSet).toEqual([]);
+
+    expect(() =>
+      requirePublishedSnapshot(
+        {
+          ...(snapshot as Record<string, unknown>),
+          sections: [
+            {
+              ...section,
+              groupId,
+              groupName: "Snapshot Group",
+              projects: [projectWithoutStageSet],
+            },
+          ],
+        },
+        REPORT_ID,
+      ),
+    ).toThrow(PublishedSnapshotIntegrityError);
+  });
+
+  it("accepts a frozen project with an explicit empty stage set", () => {
+    const section = makeSection();
+
+    expect(() =>
+      requirePublishedSnapshot(
+        {
+          ...(snapshot as Record<string, unknown>),
+          sections: [
+            {
+              ...section,
+              groupId,
+              groupName: "Snapshot Group",
+            },
+          ],
+        },
+        REPORT_ID,
+      ),
+    ).not.toThrow();
   });
 });

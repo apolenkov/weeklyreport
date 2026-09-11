@@ -183,7 +183,7 @@ export const customreportSectionsSubmittedTotal = new Counter({
 // cover the useful range for a weekly reporting cadence.
 export const customreportSectionSubmissionLatencySeconds = new Histogram({
   name: "customreport_section_submission_latency_seconds",
-  help: "Signed seconds (deadline − submittedAt) at submit time. Negative = early, positive = late.",
+  help: "Signed seconds (observation time − deadline), sampled after a successful section submission. Negative = early, positive = late.",
   buckets: SUBMISSION_LATENCY_BUCKETS,
   registers: [metricsRegistry],
 });
@@ -213,8 +213,8 @@ export const customreportReopenRequestsTotal = new Counter({
   registers: [metricsRegistry],
 });
 
-// PDF export requests, labelled by requesting role. Engagement
-// signal: a healthy product sees viewers + heads pulling exports.
+// PDF export requests by role support checking whether intended viewers request
+// exports directly or rely on heads to export for them.
 export const customreportPdfExportRequestsTotal = new Counter({
   name: "customreport_pdf_export_requests_total",
   help: "Total PDF export requests, labelled by requesting role",

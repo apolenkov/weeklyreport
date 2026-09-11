@@ -17,12 +17,17 @@ export class PdfExportReconciliationScheduler {
   private readonly logger = new Logger(PdfExportReconciliationScheduler.name);
 
   constructor(
-    @Inject(PdfExportService) private readonly service: PdfExportService,
-    @Inject(QueueRegistry) private readonly queues: QueueRegistry,
+    @Inject(PdfExportService)
+    private readonly service: Pick<PdfExportService, "reconcileTerminalState">,
+    @Inject(QueueRegistry) private readonly queues: Pick<QueueRegistry, "get">,
   ) {}
 
   onModuleInit(): void {
-    void this.runOnce();
+    void this.runOnce().catch((error: unknown) => {
+      this.logger.error("pdf-export startup reconciliation failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
   }
 
   @Cron(CronExpression.EVERY_10_MINUTES)
@@ -49,13 +54,16 @@ export class PdfExportReconciliationScheduler {
   }
 
   private async reconcileOne(job: Job<unknown>): Promise<boolean> {
-    const state = toTerminalState(job);
-    if (!state) return false;
     try {
+      const state = toTerminalState(job, await job.getState());
+      if (!state) return false;
       return await this.service.reconcileTerminalState(state);
     } catch (error: unknown) {
+      const jobData = asRecord(job.data);
+      const payloadJobId =
+        typeof jobData?.jobId === "string" ? jobData.jobId : undefined;
       this.logger.error("pdf-export terminal reconciliation failed", {
-        jobId: state.jobId,
+        jobId: job.id ?? payloadJobId,
         error: error instanceof Error ? error.message : String(error),
       });
       return false;
@@ -63,12 +71,20 @@ export class PdfExportReconciliationScheduler {
   }
 }
 
-function toTerminalState(job: Job<unknown>): PdfExportTerminalState | null {
+function toTerminalState(
+  job: Job<unknown>,
+  queueState: Awaited<ReturnType<Job["getState"]>>,
+): PdfExportTerminalState | null {
+  if (queueState !== "completed" && queueState !== "failed") return null;
   const jobData = asRecord(job.data);
   const identity = terminalIdentity(job, jobData);
   if (!identity) return null;
-  if (job.failedReason) {
-    return { ...identity, status: "failed", error: job.failedReason };
+  if (queueState === "failed") {
+    return {
+      ...identity,
+      status: "failed",
+      ...(job.failedReason ? { error: job.failedReason } : {}),
+    };
   }
   return completedState(job, identity);
 }
@@ -81,8 +97,7 @@ function terminalIdentity(
   const reportId = typeof data?.reportId === "string" ? data.reportId : "";
   const requestedBy =
     typeof data?.requestedBy === "string" ? data.requestedBy : "";
-  if (!jobId || !reportId || !requestedBy || job.finishedOn === undefined)
-    return null;
+  if (!jobId || !reportId || !requestedBy) return null;
   return job.id === undefined || job.id === jobId
     ? { jobId, reportId, requestedBy }
     : null;

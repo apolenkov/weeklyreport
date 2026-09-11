@@ -136,9 +136,8 @@ describe("PdfExportPrismaRepository (integration)", () => {
   });
 });
 
-// Floor against real Prisma (no browser): enqueued job carries a JWT bound
-// to reportId under AUTH_DEV_MODE=false / AUTH_DEV_MODE_ALLOW_TEST=true.
-describe("cookie seam — service against real Prisma repo", () => {
+// Verify queued export identity through the service and real Prisma repository.
+describe("PDF enqueue — service against real Prisma repo", () => {
   const prisma = createTestPrisma();
   let repo: PdfExportPrismaRepository;
 

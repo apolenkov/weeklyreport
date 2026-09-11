@@ -6,132 +6,82 @@ import {
   aiProviderPreparationProgressSchema,
   aiProviderRevisionInputSchema,
 } from "@customreport/shared";
-import { TRPCError } from "@trpc/server";
 
 import type { AiProviderConfigurationService } from "../../../../modules/ai-provider/index.js";
-import { mapDomainError } from "../../trpc.error-mapper.js";
+import { withDomainErrorMapping } from "../../trpc.error-mapper.js";
 import {
   adminProcedure,
   captureMutationAuditInputMiddleware,
 } from "../../trpc.middleware.js";
 
 export interface AdminAiProviderDeps {
-  aiProviderService?: AiProviderConfigurationService;
+  aiProviderService: AiProviderConfigurationService;
 }
-
-const requireService = (
-  service: AiProviderConfigurationService | undefined,
-): AiProviderConfigurationService => {
-  if (!service) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "AI provider configuration is not wired into the tRPC router.",
-    });
-  }
-  return service;
-};
 
 export function createAdminAiProviderProcedures(deps: AdminAiProviderDeps) {
   return {
-    get: adminProcedure.output(aiProviderControlReadSchema).query(async () => {
-      try {
-        return await requireService(deps.aiProviderService).read();
-      } catch (error) {
-        throw mapDomainError(error);
-      }
-    }),
+    get: adminProcedure
+      .output(aiProviderControlReadSchema)
+      .query(() => withDomainErrorMapping(() => deps.aiProviderService.read())),
     save: adminProcedure
       .input(aiProviderDraftSchema)
       .use(captureMutationAuditInputMiddleware)
       .output(aiProviderConfigurationReadSchema)
-      .mutation(async ({ input, ctx }) => {
-        try {
-          return await requireService(deps.aiProviderService).save(
-            input,
-            ctx.session.userId,
-          );
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+      .mutation(({ input, ctx }) =>
+        withDomainErrorMapping(() =>
+          deps.aiProviderService.save(input, ctx.session.userId),
+        ),
+      ),
     test: adminProcedure
       .input(aiProviderRevisionInputSchema)
       .use(captureMutationAuditInputMiddleware)
       .output(aiProviderConfigurationReadSchema)
-      .mutation(async ({ input, ctx }) => {
-        try {
-          return await requireService(deps.aiProviderService).test(
-            input.revisionId,
-            ctx.session.userId,
-          );
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+      .mutation(({ input, ctx }) =>
+        withDomainErrorMapping(() =>
+          deps.aiProviderService.test(input.revisionId, ctx.session.userId),
+        ),
+      ),
     activate: adminProcedure
       .input(aiProviderRevisionInputSchema)
       .use(captureMutationAuditInputMiddleware)
       .output(aiProviderControlReadSchema)
-      .mutation(async ({ input, ctx }) => {
-        try {
-          return await requireService(deps.aiProviderService).activate(
-            input.revisionId,
-            ctx.session.userId,
-          );
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+      .mutation(({ input, ctx }) =>
+        withDomainErrorMapping(() =>
+          deps.aiProviderService.activate(input.revisionId, ctx.session.userId),
+        ),
+      ),
     disable: adminProcedure
       .output(aiProviderControlReadSchema)
-      .mutation(async ({ ctx }) => {
-        try {
-          return await requireService(deps.aiProviderService).disable(
-            ctx.session.userId,
-          );
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+      .mutation(({ ctx }) =>
+        withDomainErrorMapping(() =>
+          deps.aiProviderService.disable(ctx.session.userId),
+        ),
+      ),
     restore: adminProcedure
       .input(aiProviderRevisionInputSchema)
       .use(captureMutationAuditInputMiddleware)
       .output(aiProviderControlReadSchema)
-      .mutation(async ({ input, ctx }) => {
-        try {
-          return await requireService(deps.aiProviderService).restore(
-            input.revisionId,
-            ctx.session.userId,
-          );
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+      .mutation(({ input, ctx }) =>
+        withDomainErrorMapping(() =>
+          deps.aiProviderService.restore(input.revisionId, ctx.session.userId),
+        ),
+      ),
     discard: adminProcedure
       .input(aiProviderRevisionInputSchema)
       .use(captureMutationAuditInputMiddleware)
       .output(aiProviderDiscardResultSchema)
-      .mutation(async ({ input, ctx }) => {
-        try {
-          return await requireService(deps.aiProviderService).discard(
-            input.revisionId,
-            ctx.session.userId,
-          );
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+      .mutation(({ input, ctx }) =>
+        withDomainErrorMapping(() =>
+          deps.aiProviderService.discard(input.revisionId, ctx.session.userId),
+        ),
+      ),
     progress: adminProcedure
       .input(aiProviderRevisionInputSchema)
       .output(aiProviderPreparationProgressSchema)
-      .query(async ({ input }) => {
-        try {
-          return await requireService(deps.aiProviderService).progress(
-            input.revisionId,
-          );
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+      .query(({ input }) =>
+        withDomainErrorMapping(() =>
+          deps.aiProviderService.progress(input.revisionId),
+        ),
+      ),
   };
 }

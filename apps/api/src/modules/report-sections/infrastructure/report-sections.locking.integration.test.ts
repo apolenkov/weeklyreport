@@ -39,7 +39,8 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
   }
 
   beforeAll(() => {
-    // PrismaClient structurally satisfies PrismaService (both extend PrismaClient)
+    // The integration client crosses the repository's PrismaService injection
+    // boundary through this test-only cast.
     repo = new ReportSectionsPrismaRepository(
       prisma as unknown as PrismaService,
     );
@@ -212,7 +213,7 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
       expect(expectDefined(second.items[0]).stableId).toBe(minted);
     });
 
-    it("gives two records in one section distinct stableIds that survive a re-save", async () => {
+    it("keeps two distinct stableIds after a re-save", async () => {
       const original = expectDefined(
         await repo.getSectionById(testData.section.id),
       );
@@ -232,9 +233,8 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
       const ids = saved.items.map((i) => expectDefined(i.stableId));
       expect(new Set(ids).size).toBe(2);
 
-      // Re-save round-tripping both stableIds: the delete-recreate happens inside
-      // one transaction, so the @@unique([reportSectionId, stableId]) guard must
-      // not trip on the reinserted rows.
+      // Re-saving the reread rows must retain two distinct stableIds without
+      // tripping the @@unique([reportSectionId, stableId]) guard.
       const roundTrip = expectDefined(
         await repo.getSectionById(testData.section.id),
       );
@@ -244,9 +244,10 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
       const reread = expectDefined(
         await repo.getSectionById(testData.section.id),
       );
-      expect(
-        new Set(reread.items.map((i) => expectDefined(i.stableId))).size,
-      ).toBe(2);
+      const rereadIds = new Set(
+        reread.items.map((item) => expectDefined(item.stableId)),
+      );
+      expect(rereadIds).toEqual(new Set(ids));
     });
 
     it("round-trips stableId through the saveDraft service path (input optional, read model preserved)", async () => {

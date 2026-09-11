@@ -22,10 +22,38 @@ describe("appSettingsUpdateSchema", () => {
     ).toBe(false);
   });
 
-  it("omits unifiedActivityView when the key is absent", () => {
+  it.each(["Europe/Moscow", "UTC", "Etc/UTC", "Asia/Tokyo"])(
+    "accepts the resolvable default time zone %s in a partial update",
+    (defaultTimezone) => {
+      expect(
+        appSettingsUpdateSchema.parse({ defaultTimezone }).defaultTimezone,
+      ).toBe(defaultTimezone);
+    },
+  );
+
+  it.each(["Not/A_Timezone", "UTC+3", "MSK"])(
+    "rejects invalid default time zone %s in a partial update",
+    (defaultTimezone) => {
+      const result = appSettingsUpdateSchema.safeParse({ defaultTimezone });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues).toContainEqual(
+          expect.objectContaining({
+            message: "timezone must be a valid IANA time zone identifier",
+            path: ["defaultTimezone"],
+          }),
+        );
+      }
+    },
+  );
+
+  it("omits optional settings when their keys are absent", () => {
     const parsed = appSettingsUpdateSchema.parse({ defaultDeadlineDays: 7 });
     expect("unifiedActivityView" in parsed).toBe(false);
     expect(parsed.unifiedActivityView).toBeUndefined();
+    expect("defaultTimezone" in parsed).toBe(false);
+    expect(parsed.defaultTimezone).toBeUndefined();
   });
 
   it("keeps explicit values", () => {

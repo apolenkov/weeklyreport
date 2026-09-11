@@ -63,6 +63,27 @@ const baseInput: DraftSaveInput = {
 const NOW = new Date("2026-05-29T12:00:00.000Z");
 
 describe("mergeSection traffic-light aggregation", () => {
+  const greenSection: ReportSectionReadModel = {
+    ...section,
+    projects: [
+      {
+        projectId: PROJECT_ID,
+        projectName: "CRM Portal",
+        trafficLight: null,
+        ownedStages: [
+          {
+            stageId: STAGE_ID,
+            stageName: "Development",
+            sortOrder: 0,
+            status: "green",
+          },
+        ],
+        stageSet: [],
+        ownerGroupId: null,
+      },
+    ],
+  };
+
   it("aggregates an already-derived red stage status into the project", () => {
     const merged = mergeSection(
       section,
@@ -99,29 +120,8 @@ describe("mergeSection traffic-light aggregation", () => {
   });
 
   it("keeps the persisted stage status when an entry omits status (never clears)", () => {
-    const seeded: ReportSectionReadModel = {
-      ...section,
-      projects: [
-        {
-          projectId: PROJECT_ID,
-          projectName: "CRM Portal",
-          trafficLight: null,
-          ownedStages: [
-            {
-              stageId: STAGE_ID,
-              stageName: "Development",
-              sortOrder: 0,
-              status: "green",
-            },
-          ],
-          stageSet: [],
-          ownerGroupId: null,
-        },
-      ],
-    };
-
     const merged = mergeSection(
-      seeded,
+      greenSection,
       {
         ...baseInput,
         stageStatuses: [{ projectId: PROJECT_ID, stageId: STAGE_ID }],
@@ -135,7 +135,7 @@ describe("mergeSection traffic-light aggregation", () => {
 
   it("clears the stage status on an explicit null (not omitted)", () => {
     const merged = mergeSection(
-      section,
+      greenSection,
       {
         ...baseInput,
         stageStatuses: [
@@ -147,6 +147,7 @@ describe("mergeSection traffic-light aggregation", () => {
     );
 
     expect(merged.projects[0]?.ownedStages[0]?.status).toBeNull();
+    expect(greenSection.projects[0]?.ownedStages[0]?.status).toBe("green");
   });
 
   it("stamps the injected now as submittedAt on submit (deterministic seam)", () => {

@@ -100,38 +100,36 @@ describe("fetchForeignContentSections", () => {
   });
 });
 
-describe("published cross-author assignment races", () => {
-  it("grant-after-publish does NOT grant frozen foreign access", () => {
+describe("published cross-author frozen projections", () => {
+  it("repeated shared-product projection uses the same frozen input", () => {
     const snapshot = frozenCrossAuthorSnapshot();
-    const beforeGrant = getPublishedSharedNonArchivedProductIds(
+    const firstIds = getPublishedSharedNonArchivedProductIds(
       snapshot,
       AUTHOR_A,
       AUTHOR_B,
     );
-    // A new live StageAssignment/project grant is intentionally not an input
-    // to this pure published projection read.
-    const afterGrant = getPublishedSharedNonArchivedProductIds(
+    // This projection receives the frozen snapshot, with no live query seam.
+    const secondIds = getPublishedSharedNonArchivedProductIds(
       snapshot,
       AUTHOR_A,
       AUTHOR_B,
     );
-    expect(afterGrant).toEqual(beforeGrant);
+    expect(secondIds).toEqual(firstIds);
     expect(
       getPublishedCrossAuthorContent(snapshot, AUTHOR_A).rows,
     ).toHaveLength(1);
   });
 
-  it("revoke-after-publish does NOT revoke frozen coownership or content", () => {
+  it("repeated content projection is stable for the same frozen input", () => {
     const snapshot = frozenCrossAuthorSnapshot();
-    const beforeRevoke = getPublishedCrossAuthorContent(snapshot, AUTHOR_A);
-    // Removing the live assignment after publication cannot alter immutable
-    // ownedStages or the frozen cross-author result.
-    const afterRevoke = getPublishedCrossAuthorContent(snapshot, AUTHOR_A);
-    expect(afterRevoke).toEqual(beforeRevoke);
-    expect(afterRevoke.coOwnsShared).toBe(true);
+    const firstContent = getPublishedCrossAuthorContent(snapshot, AUTHOR_A);
+    // Repeating a pure projection checks result stability, not concurrent writes.
+    const secondContent = getPublishedCrossAuthorContent(snapshot, AUTHOR_A);
+    expect(secondContent).toEqual(firstContent);
+    expect(secondContent.coOwnsShared).toBe(true);
   });
 
-  it("publish/reopen between former authorization and content calls cannot mix states", () => {
+  it("shared product identifiers agree with the content projection", () => {
     const snapshot = frozenCrossAuthorSnapshot();
     const frozenIds = getPublishedSharedNonArchivedProductIds(
       snapshot,

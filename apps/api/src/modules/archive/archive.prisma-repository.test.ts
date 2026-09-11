@@ -34,7 +34,6 @@ function archiveRow() {
   return {
     id: REPORT_ID,
     publishedAt,
-    publishedBy: null,
     publishedSnapshot: publishedReportSnapshotSchema.parse({
       reportId: REPORT_ID,
       periodStart: new Date("2026-08-17T00:00:00.000Z"),
@@ -102,7 +101,11 @@ describe("ArchivePrismaRepository published floor", () => {
 
     expect(findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        include: { publishedBy: true },
+        select: {
+          id: true,
+          publishedAt: true,
+          publishedSnapshot: true,
+        },
         orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
         take: 21,
       }),
@@ -137,6 +140,11 @@ describe("ArchivePrismaRepository published floor", () => {
 
     expect(findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
+        select: {
+          id: true,
+          publishedAt: true,
+          publishedSnapshot: true,
+        },
         where: {
           id: reportId,
           status: "published",

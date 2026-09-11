@@ -183,6 +183,7 @@ export class PdfExportService {
       throw new PdfExportDomainError(`PDF export job ${jobId} was not found.`);
     }
     return buildPublishedReadModelFromSnapshot(snapshot, {
+      periodState: "published",
       periodStatus: "published",
       archived: false,
       weekLabel: null,

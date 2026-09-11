@@ -56,6 +56,13 @@ export interface ReminderExecutionRecordResult {
   readonly outcome: "created" | "revived" | "deduplicated";
 }
 
+export type ReminderExecutionResult =
+  | {
+      readonly execution: AdminReminderExecution;
+      readonly outcome: "created" | "revived" | "deduplicated" | "failed";
+    }
+  | { readonly execution: null; readonly outcome: "skipped" };
+
 export interface ClaimedReminderExecution {
   readonly recipientEmail: string;
   readonly queuePayload: ReminderQueuePayload;

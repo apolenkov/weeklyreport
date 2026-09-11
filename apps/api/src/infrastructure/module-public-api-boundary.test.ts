@@ -1,10 +1,23 @@
 import { execFile } from "node:child_process";
-import { copyFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  copyFile,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+
+import {
+  apiModules,
+  boundaryConfig,
+  webSlices,
+} from "../../../../eslint-config/boundaries.js";
 
 const REPOSITORY_ROOT = fileURLToPath(new URL("../../../../", import.meta.url));
 const FIXTURE_PATH = resolve(
@@ -52,7 +65,10 @@ function runEslint(source?: string, filename = FIXTURE_PATH): Promise<string> {
 
 function parseMessages(output: string) {
   const [result] = JSON.parse(output) as {
-    readonly messages: readonly { readonly message: string }[];
+    readonly messages: readonly {
+      readonly message: string;
+      readonly ruleId: string | null;
+    }[];
   }[];
   if (!result) throw new Error("ESLint returned no file results");
   return result.messages;
@@ -85,6 +101,28 @@ async function lintTemporaryInternalImport() {
 const ESLINT_RUN_BUDGET_MS = 240_000;
 
 describe("API module public boundary", () => {
+  it("covers every API module, web slice, and bootstrap source", async () => {
+    const directoryNames = async (path: string) =>
+      (await readdir(resolve(REPOSITORY_ROOT, path), { withFileTypes: true }))
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
+        .sort();
+
+    await expect(directoryNames("apps/api/src/modules")).resolves.toEqual(
+      [...apiModules].sort(),
+    );
+    await expect(directoryNames("apps/web/src/features")).resolves.toEqual(
+      [...webSlices].sort(),
+    );
+    expect(
+      boundaryConfig.some(
+        (config) =>
+          Array.isArray(config.files) &&
+          config.files.includes("apps/api/src/bootstrap/**/*.ts"),
+      ),
+    ).toBe(true);
+  });
+
   it(
     "allows infrastructure to import a module public barrel",
     async () => {
@@ -119,6 +157,62 @@ describe("API module public boundary", () => {
         await runEslint(MODULE_BOUNDARY_SOURCE, MODULE_FIXTURE_PATH),
       );
       expect(publicMessages).toEqual([]);
+    },
+    ESLINT_RUN_BUDGET_MS,
+  );
+
+  it(
+    "enforces product-feedback and bootstrap boundaries through public facades",
+    async () => {
+      const cases = [
+        {
+          filename: resolve(
+            REPOSITORY_ROOT,
+            "apps/api/src/modules/product-feedback/index.ts",
+          ),
+          internal: "../report-sections/application/ensure-lead-section.js",
+          facade: "../report-sections/index.js",
+        },
+        {
+          filename: resolve(
+            REPOSITORY_ROOT,
+            "apps/web/src/features/product-feedback/index.ts",
+          ),
+          internal: "../report-sections/model/status-overview.js",
+          facade: "../report-sections/index.js",
+        },
+        {
+          filename: resolve(
+            REPOSITORY_ROOT,
+            "apps/api/src/bootstrap/api-ingress.ts",
+          ),
+          internal:
+            "../modules/report-sections/application/ensure-lead-section.js",
+          facade: "../modules/report-sections/index.js",
+        },
+      ];
+
+      for (const boundaryCase of cases) {
+        const internalMessages = parseMessages(
+          await runEslint(
+            `import "${boundaryCase.internal}";\n`,
+            boundaryCase.filename,
+          ),
+        );
+        expect(internalMessages).toEqual([
+          expect.objectContaining({
+            ruleId: "import-x/no-restricted-paths",
+          }),
+        ]);
+        expect(
+          parseMessages(
+            await runEslint(
+              `import "${boundaryCase.facade}";\n`,
+              boundaryCase.filename,
+            ),
+          ),
+        ).toEqual([]);
+      }
     },
     ESLINT_RUN_BUDGET_MS,
   );

@@ -6,7 +6,7 @@ import {
 } from "./citation-validator.js";
 import type { GroundingBundle } from "./context-builder.js";
 
-const bundle = {
+const bundle: GroundingBundle = {
   aggregates: {
     totalCount: 0,
     byKind: [],
@@ -25,9 +25,16 @@ const bundle = {
         subjectName: "Portal",
         recordKind: "item",
       },
-      candidate: {},
+      record: {
+        kind: "item",
+        text: "Release prepared",
+        itemType: "current",
+        workflowStatus: "in_progress",
+        carriedOver: false,
+        priorityRank: null,
+        stages: ["Development"],
+      },
       role: "primary",
-      estimatedTokens: 1,
     },
     {
       source: {
@@ -38,14 +45,20 @@ const bundle = {
         subjectName: "Portal",
         recordKind: "risk",
       },
-      candidate: {},
+      record: {
+        kind: "risk",
+        risk: "Release delayed",
+        impact: "high",
+        mitigation: "Confirm the release date",
+        severity: "at-risk",
+        stages: ["Development"],
+      },
       role: "primary",
-      estimatedTokens: 1,
     },
   ],
   truncated: false,
   estimatedTokens: 2,
-} as unknown as GroundingBundle;
+};
 
 const answer = (
   answerMarkdown: string,

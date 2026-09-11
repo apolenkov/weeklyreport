@@ -42,19 +42,20 @@ function validateUniqueKey<Row>(
   label: string,
   context: z.RefinementCtx,
 ): void {
-  rows.reduce<ReadonlyMap<string, number>>((seen, row, index) => {
+  const firstIndexes = new Map(
+    rows.map((row, index) => [keyOf(row), index] as const).toReversed(),
+  );
+  rows.forEach((row, index) => {
     const key = keyOf(row);
-    const firstIndex = seen.get(key);
-    if (firstIndex !== undefined) {
+    const firstIndex = firstIndexes.get(key);
+    if (firstIndex !== undefined && firstIndex !== index) {
       context.addIssue({
         code: "custom",
         path: [collection, index, field],
         message: `${label} duplicates ${collection}[${firstIndex}].`,
       });
-      return seen;
     }
-    return new Map(seen).set(key, index);
-  }, new Map());
+  });
 }
 
 function validateIds(

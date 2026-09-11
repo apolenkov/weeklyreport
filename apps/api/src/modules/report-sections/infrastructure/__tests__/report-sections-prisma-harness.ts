@@ -24,6 +24,7 @@ export type FabricatedRow = Pick<
   | "decisions"
   | "activityStatuses"
   | "sectionReviews"
+  | "itemOutcomeEvents"
 > & {
   id: string;
   reportId: string;
@@ -113,6 +114,7 @@ export function baseRow(overrides: Partial<FabricatedRow> = {}): FabricatedRow {
     decisions: [],
     activityStatuses: [],
     sectionReviews: [],
+    itemOutcomeEvents: [],
     ...overrides,
   };
 }
@@ -151,6 +153,7 @@ export function fullItem(
     carriedOver: boolean;
     priorityRank: number | null;
     pausedReason: string | null;
+    nextStepText: string | null;
     stageNames: string[];
     project: { name: string } | null;
   }> = {},
@@ -168,6 +171,8 @@ export function fullItem(
     carriedOver: overrides.carriedOver ?? false,
     priorityRank: overrides.priorityRank ?? null,
     pausedReason: overrides.pausedReason ?? null,
+    nextStepText: overrides.nextStepText ?? null,
+    resolution: null,
     createdAt: FIXED_TIMESTAMP,
     updatedAt: FIXED_TIMESTAMP,
     stageNames: overrides.stageNames ?? [],

@@ -38,6 +38,10 @@ const STAGE_ROWS = [
   { id: STAGE_SUPPORT, name: "Support", sortOrder: 6 },
 ];
 
+const stageNameById = new Map(
+  STAGE_ROWS.map(({ id, name }) => [id, name] as const),
+);
+
 const ALL_STAGE_IDS = [
   STAGE_PLAN,
   STAGE_ANALYSIS,
@@ -48,12 +52,12 @@ const ALL_STAGE_IDS = [
   STAGE_SUPPORT,
 ];
 
-// Vasily owns only the tech stages (4/7) on PROD_CRM; Boris (LEAD_MOBILE_PM)
-// owns the PM stages (3/7), demonstrating cross-author read-only visibility.
+// Vasily owns the technical stages on PROD_CRM. The three PM leads split its
+// Planning, Analysis and Design stages for cross-author visibility.
 const VASILY_CRM_STAGES = [STAGE_DEV, STAGE_TEST, STAGE_DEVOPS, STAGE_SUPPORT];
 
-// Ids stay deterministic per product block so a re-run is idempotent: the last
-// segment is a fixed 10-char block prefix plus the two-digit stage position.
+// Assignment ids stay stable per product block: the last segment is a fixed
+// 10-character block prefix plus the two-digit stage position.
 const blockAssignmentId = (blockPrefix: string, idx: number) =>
   `b0000000-0000-4000-8000-${blockPrefix}${(idx + 1).toString().padStart(2, "0")}`;
 
@@ -197,17 +201,37 @@ const STAGE_ASSIGNMENT_ROWS = [
   },
 ];
 
+function requireStageName(stageId: string): string {
+  const stageName = stageNameById.get(stageId);
+  if (stageName === undefined) {
+    throw new Error(
+      `No demo stage name found for assignment stage ${stageId}.`,
+    );
+  }
+  return stageName;
+}
+
+export const DEMO_STAGE_ASSIGNMENTS = STAGE_ASSIGNMENT_ROWS.map((assignment) =>
+  Object.freeze({
+    ...assignment,
+    stageName: requireStageName(assignment.stageId),
+  }),
+);
+
 export async function seedStages(prisma: PrismaClient): Promise<void> {
   console.log("[seed-simple] Creating stages...");
   await prisma.stage.createMany({ data: STAGE_ROWS });
 }
 
-// A full 7-stage single-owner example exists (Vasily on PROD_CRM_DATA /
-// PROD_CRM_360) so "lead assigned everywhere renders correctly on /lead/report"
-// is exercised end-to-end; other leads keep a single-Development assignment.
+// PROD_CRM_DATA and PROD_CRM_360 give Vasily complete stage coverage. Other
+// technical leads keep a single Development assignment on their own product.
 export async function seedStageAssignments(
   prisma: PrismaClient,
 ): Promise<void> {
   console.log("[seed-simple] Creating stage assignments...");
-  await prisma.stageAssignment.createMany({ data: STAGE_ASSIGNMENT_ROWS });
+  await prisma.stageAssignment.createMany({
+    data: DEMO_STAGE_ASSIGNMENTS.map(
+      ({ stageName, ...assignment }) => assignment,
+    ),
+  });
 }

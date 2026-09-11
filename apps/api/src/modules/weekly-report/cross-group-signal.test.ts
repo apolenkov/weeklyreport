@@ -42,9 +42,9 @@ describe("computeCrossGroupSignal", () => {
     });
   });
 
-  it("does NOT count a product the caller's own group owns (owned-but-joined-elsewhere)", () => {
-    // Owner group == caller's group → not cross-group, no matter which
-    // other groups the product is also joined to via GroupProduct.
+  it("does NOT count a caller-group product that surfaces elsewhere", () => {
+    // The product's single owner group matches the caller's group, so it is not
+    // a cross-group signal regardless of where the product surfaces.
     const signal = computeCrossGroupSignal(headA, [
       project(PRODUCT_1, GROUP_A),
     ]);

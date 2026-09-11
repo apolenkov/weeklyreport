@@ -628,34 +628,22 @@ describe("PublicationService", () => {
           return Promise.resolve({ published: false as const });
         },
       };
+      const telemetry = {
+        recordPublishedReport: vi.fn(),
+        recordPeriodPublished: vi.fn(),
+      };
       const service = new PublicationService(
         repository,
         createNullLogger(),
         noopInvalidateAnalyticsCache,
-      );
-      const submittedBefore = await getCounterValue(
-        customreportReportsSubmittedTotal,
-        { state: "published" },
-      );
-      const transitionsBefore = await getCounterValue(
-        customreportPeriodStateTransitionsTotal,
-        { from: "open", to: "published" },
+        telemetry,
       );
 
       const result = await service.publishAuto(reportId, publishAt);
 
       expect(result).toEqual({ published: false });
-      expect(
-        await getCounterValue(customreportReportsSubmittedTotal, {
-          state: "published",
-        }),
-      ).toBe(submittedBefore);
-      expect(
-        await getCounterValue(customreportPeriodStateTransitionsTotal, {
-          from: "open",
-          to: "published",
-        }),
-      ).toBe(transitionsBefore);
+      expect(telemetry.recordPublishedReport).not.toHaveBeenCalled();
+      expect(telemetry.recordPeriodPublished).not.toHaveBeenCalled();
     });
 
     // published:false skip must not invalidate analytics — only the real

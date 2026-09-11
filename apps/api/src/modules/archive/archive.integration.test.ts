@@ -60,6 +60,8 @@ describe("ArchivePrismaRepository (integration)", () => {
       where: { id: testData.report.id },
       data: {
         status: "published",
+        periodState: "archived",
+        periodStatus: "published",
         publishedSnapshot: publishedSnapshotFixture({
           reportId: testData.report.id,
           periodStart: testData.report.periodStart,
@@ -72,6 +74,9 @@ describe("ArchivePrismaRepository (integration)", () => {
         publishedAt: new Date("2026-04-12T10:00:00.000Z"),
         publishedById: testData.head.id,
         archived: true,
+        autoPublished: false,
+        autoArchived: false,
+        reopenedAt: null,
       },
     });
 
@@ -118,6 +123,8 @@ describe("ArchivePrismaRepository (integration)", () => {
       where: { id: testData.report.id },
       data: {
         status: "published",
+        periodState: "published",
+        periodStatus: "published",
         publishedSnapshot: publishedSnapshotFixture({
           reportId: testData.report.id,
           periodStart: testData.report.periodStart,
@@ -129,7 +136,10 @@ describe("ArchivePrismaRepository (integration)", () => {
         }),
         publishedAt: new Date("2026-04-12T10:00:00.000Z"),
         publishedById: testData.head.id,
-        // archived remains false (default)
+        archived: false,
+        autoPublished: false,
+        autoArchived: false,
+        reopenedAt: null,
       },
     });
 
@@ -154,6 +164,8 @@ describe("ArchivePrismaRepository (integration)", () => {
       where: { id: testData.report.id },
       data: {
         status: "published",
+        periodState: "archived",
+        periodStatus: "published",
         publishedSnapshot: publishedSnapshotFixture({
           reportId: testData.report.id,
           periodStart: testData.report.periodStart,
@@ -166,6 +178,9 @@ describe("ArchivePrismaRepository (integration)", () => {
         publishedAt: new Date("2026-04-12T10:00:00.000Z"),
         publishedById: testData.head.id,
         archived: true,
+        autoPublished: false,
+        autoArchived: false,
+        reopenedAt: null,
       },
     });
 
@@ -397,6 +412,9 @@ describe("ArchivePrismaRepository (integration)", () => {
           publishedByName: testData.head.name,
         }),
         archived: true,
+        autoPublished: false,
+        autoArchived: false,
+        reopenedAt: null,
       },
     });
     const section = await prisma.reportSection.create({

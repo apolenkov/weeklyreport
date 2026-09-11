@@ -42,9 +42,8 @@ export interface DevLoginDeps {
 const readQueryParam = (value: unknown): string | undefined =>
   typeof value === "string" ? value : undefined;
 
-// ONE WHATWG `new URL` parse against the app origin is the gate — it normalizes
-// backslash bypasses a string-prefix check misses. It returns only pathname+
-// search+hash so the caller rebuilds from that SAME parse.
+// Parse against the app origin to normalize forms a string-prefix check misses.
+// Return only pathname+search+hash for the caller's relative-path handoff.
 export function safeRedirectPath(
   candidate: string | undefined,
   frontendUrl: string,
@@ -61,8 +60,7 @@ export function safeRedirectPath(
   }
 }
 
-// Validate and build from the SAME parse (see safeRedirectPath) so a value
-// cannot pass the origin gate yet resolve off-origin at the sink.
+// Rebuild from the normalized relative path returned by safeRedirectPath.
 export function resolveDevLoginRedirectUrl(
   candidate: string | undefined,
   fallbackPath: string,

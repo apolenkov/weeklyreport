@@ -577,7 +577,7 @@ describe("requestReminderExecution — failed execution revival", () => {
       testPayload,
     );
 
-    expect(result.outcome).toBe("deduplicated");
+    expect(result.outcome).toBe("failed");
     expect(result.execution?.status).toBe("failed");
     expect(requeueCalls).toHaveLength(0);
     expect(addCalls).toHaveLength(0);

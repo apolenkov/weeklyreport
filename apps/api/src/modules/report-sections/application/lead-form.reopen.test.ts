@@ -16,6 +16,7 @@ import {
   LeadFormService,
   ReopenRequestError,
 } from "./lead-form.service";
+import { NOOP_REPORT_SECTIONS_TELEMETRY } from "./report-sections-telemetry.port.js";
 
 // ---------------------------------------------------------------------------
 // computeReopenEligibility — the single source of truth
@@ -225,27 +226,23 @@ describe("LeadFormService — requestReopen", () => {
     ).toBe(before + 1);
   });
 
-  it("does not increment the counter when the lifecycle guard rejects", async () => {
+  it("does not record a reopen request when the lifecycle guard rejects", async () => {
     const repo = createMockRepository({
       getSectionReopenContext: vi
         .fn()
         .mockResolvedValue(reopenContext({ periodStatus: "published" })),
     });
-    const service = new LeadFormService(repo);
-
-    const before = await getCounterValue(customreportReopenRequestsTotal, {
-      state: "requested",
+    const recordReopenRequest = vi.fn();
+    const service = new LeadFormService(repo, {
+      ...NOOP_REPORT_SECTIONS_TELEMETRY,
+      recordReopenRequest,
     });
 
-    await expect(
-      service.requestReopen(SECTION_ID, AUTHOR_ID),
-    ).rejects.toThrow();
+    await expect(service.requestReopen(SECTION_ID, AUTHOR_ID)).rejects.toThrow(
+      ReopenRequestError,
+    );
 
-    expect(
-      await getCounterValue(customreportReopenRequestsTotal, {
-        state: "requested",
-      }),
-    ).toBe(before);
+    expect(recordReopenRequest).not.toHaveBeenCalled();
   });
 });
 

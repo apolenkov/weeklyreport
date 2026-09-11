@@ -7,7 +7,15 @@ import {
   InMemorySpanExporter,
   SimpleSpanProcessor,
 } from "@opentelemetry/sdk-trace-base";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import {
   captureJobTraceContext,
@@ -33,6 +41,11 @@ beforeAll(() => {
 
 beforeEach(() => {
   exporter.reset();
+});
+
+afterAll(() => {
+  propagation.disable();
+  trace.disable();
 });
 
 describe("captureJobTraceContext", () => {
@@ -89,18 +102,23 @@ describe("extractTraceId", () => {
 });
 
 class AsyncLocalCls {
-  private readonly storage = new AsyncLocalStorage<Map<string, unknown>>();
+  private readonly storage = new AsyncLocalStorage<Record<string, unknown>>();
 
   run<T>(fn: () => T): T {
-    return this.storage.run(new Map(), fn);
+    return this.storage.run({ ...this.storage.getStore() }, fn);
+  }
+
+  runWith<T>(store: Record<string, unknown>, fn: () => T): T {
+    return this.storage.run({ ...store }, fn);
   }
 
   set(key: string, value: unknown): void {
-    this.storage.getStore()?.set(key, value);
+    const store = this.storage.getStore();
+    if (store) store[key] = value;
   }
 
   get(key: string): unknown {
-    return this.storage.getStore()?.get(key);
+    return this.storage.getStore()?.[key];
   }
 
   isActive(): boolean {
@@ -142,6 +160,7 @@ describe("runInJobTraceContext", () => {
       .getFinishedSpans()
       .find((s) => s.name === "worker.process");
     expect(span).toBeDefined();
+    expect(span?.spanContext().traceId).toBe(ENQUEUE_TRACE_ID);
     expect(span?.links).toHaveLength(1);
     expect(span?.links[0]?.context.traceId).toBe(ENQUEUE_TRACE_ID);
   });
@@ -190,21 +209,32 @@ describe("runInJobTraceContext", () => {
     expect(cls.isActive()).toBe(false);
   });
 
-  it("does not create a CLS scope without a correlation id", async () => {
-    const run = vi.fn();
+  it("creates an empty CLS scope without a correlation id", async () => {
+    const cls = new AsyncLocalCls();
+    const runWith = vi.spyOn(cls, "runWith");
 
-    await runInJobTraceContext(
-      {},
-      "worker.process",
-      {
-        isActive: () => false,
-        get: () => undefined,
-        run,
-        set: () => undefined,
-      },
-      async () => Promise.resolve(),
+    await runInJobTraceContext({}, "worker.process", cls, async () =>
+      Promise.resolve(),
     );
 
-    expect(run).not.toHaveBeenCalled();
+    expect(runWith).toHaveBeenCalledExactlyOnceWith({}, expect.any(Function));
+    runWith.mockRestore();
+  });
+
+  it("replaces an ambient CLS store for a carrier-less job and restores it afterward", async () => {
+    const cls = new AsyncLocalCls();
+
+    await cls.run(async () => {
+      cls.set("correlationId", "corr-unrelated");
+
+      await runInJobTraceContext({}, "worker.process", cls, () => {
+        expect(cls.get("correlationId")).toBeUndefined();
+        return Promise.resolve();
+      });
+
+      expect(cls.get("correlationId")).toBe("corr-unrelated");
+    });
+
+    expect(cls.isActive()).toBe(false);
   });
 });

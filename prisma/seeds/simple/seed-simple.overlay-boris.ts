@@ -5,7 +5,7 @@ import {
   TrafficLightStatus,
 } from "@prisma/client";
 
-import { PROD_CRM, PROD_CRM_SALES, PROD_PAYMENTS } from "./seed-simple.ids.js";
+import { PROD_CRM, PROD_CRM_SALES, PROD_MOBILE } from "./seed-simple.ids.js";
 
 // Boris authors the Planning slice of the cross-author overlay. His own ACTIVE
 // section (index 7 of LEADS) already exists; these rows are the content Vasily
@@ -110,16 +110,15 @@ async function seedCrmSlice(prisma: PrismaClient): Promise<void> {
   });
 }
 
-// Boris owns NO StageAssignment on PROD_PAYMENTS, so this pair sits outside his
-// stage-owned `projects` and must still render the real product name through
-// the read model's name-only `referencedProjects`.
-async function seedPaymentsSlice(prisma: PrismaClient): Promise<void> {
+// These dependencies belong to Boris's Mobile Planning slice; Payments is
+// the partner team, not a product whose stages Boris may author.
+async function seedMobileDependencies(prisma: PrismaClient): Promise<void> {
   await prisma.risk.create({
     data: {
       id: "a0000000-0000-4000-8000-000000009003",
       stableId: "a0000000-0000-4000-8000-000000009003",
       reportSectionId: SECTION_ID,
-      projectId: PROD_PAYMENTS,
+      projectId: PROD_MOBILE,
       risk: "Интеграция с платёжным шлюзом не согласована с командой Ольги",
       impact: "Мобильный чек-аут не сможет принимать платежи в релизе",
       mitigation: "Борис назначает синк с командой Платёжного шлюза",
@@ -132,7 +131,7 @@ async function seedPaymentsSlice(prisma: PrismaClient): Promise<void> {
       id: "a0000000-0000-4000-8000-000000007005",
       stableId: "a0000000-0000-4000-8000-000000007005",
       reportSectionId: SECTION_ID,
-      productId: PROD_PAYMENTS,
+      productId: PROD_MOBILE,
       text: "Согласовать SLA платёжного API для мобильного чек-аута",
       owner: "Семёнов Борис",
       impact: "Снимает блокер интеграции до начала Dev-фазы",
@@ -144,5 +143,5 @@ async function seedPaymentsSlice(prisma: PrismaClient): Promise<void> {
 export async function seedBorisOverlay(prisma: PrismaClient): Promise<void> {
   await seedSalesSlice(prisma);
   await seedCrmSlice(prisma);
-  await seedPaymentsSlice(prisma);
+  await seedMobileDependencies(prisma);
 }

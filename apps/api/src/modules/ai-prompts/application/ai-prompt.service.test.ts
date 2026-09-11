@@ -99,20 +99,18 @@ const bundle = (
 
 const control = (
   revision: StoredAiPromptBundleRevision | null,
-): StoredAiFeaturePromptControl =>
-  ({
-    id: "959b2767-0f86-41e2-b025-49730ca010e4",
-    featureKey: "lead-report-assistant",
-    activeRevisionId:
-      revision?.lifecycle === AiPromptBundleLifecycle.active
-        ? revision.id
-        : null,
-    createdAt: now,
-    updatedAt: now,
-    activeRevision:
-      revision?.lifecycle === AiPromptBundleLifecycle.active ? revision : null,
-    latestRevision: revision,
-  }) as StoredAiFeaturePromptControl;
+): StoredAiFeaturePromptControl => ({
+  id: "959b2767-0f86-41e2-b025-49730ca010e4",
+  featureKey: "lead-report-assistant",
+  activeRevisionId:
+    revision?.lifecycle === AiPromptBundleLifecycle.active ? revision.id : null,
+  createdAt: now,
+  updatedAt: now,
+  activeRevision:
+    revision?.lifecycle === AiPromptBundleLifecycle.active ? revision : null,
+  latestRevision: revision,
+  history: revision ? [revision] : [],
+});
 
 const serviceFor = (values: {
   revision?: StoredAiPromptBundleRevision;
@@ -145,6 +143,7 @@ const serviceFor = (values: {
   };
   return {
     repository: promptRepository,
+    providerRepository,
     service: new AiPromptService(
       promptRepository as unknown as AiPromptRepository,
       providerRepository as never,
@@ -155,28 +154,40 @@ const serviceFor = (values: {
 
 describe("AiPromptService", () => {
   it("creates an immutable draft from the selected base", async () => {
-    const harness = serviceFor({
-      revision: bundle(AiPromptBundleLifecycle.active),
-    });
-
+    const base = bundle(AiPromptBundleLifecycle.active);
+    const draft: StoredAiPromptBundleRevision = {
+      ...bundle(AiPromptBundleLifecycle.draft),
+      id: "859b2767-0f86-41e2-b025-49730ca010e4",
+      revision: 2,
+      baseRevisionId: base.id,
+    };
+    const harness = serviceFor({ revision: base });
+    harness.repository.createDraft.mockResolvedValue(draft);
+    const promptContents = aiFeaturePromptCatalog.require(
+      "lead-report-assistant",
+    ).defaultEditableInstructions;
     const result = await harness.service.draft(
       {
         featureKey: "lead-report-assistant",
-        baseRevisionId: revisionId,
-        promptContents: baseline.slots.reduce(
-          (values, slot) => ({
-            ...values,
-            [slot.slot]: slot.promptContents,
-          }),
-          {},
-        ) as never,
+        baseRevisionId: base.id,
+        promptContents,
       },
       "admin-1",
     );
-
-    expect(result.lifecycle).toBe("active");
+    expect(result).toMatchObject({
+      id: draft.id,
+      lifecycle: "draft",
+      revision: 2,
+      baseRevisionId: base.id,
+    });
+    expect(result.id).not.toBe(base.id);
     expect(harness.repository.createDraft).toHaveBeenCalledWith(
-      expect.objectContaining({ baseRevisionId: revisionId }),
+      expect.objectContaining({
+        featureKey: "lead-report-assistant",
+        baseRevisionId: base.id,
+        promptContents,
+        createdBy: "admin-1",
+      }),
     );
   });
 
@@ -222,6 +233,48 @@ describe("AiPromptService", () => {
     expect(result.control.availability).toBe("not_configured");
   });
 
+  it.each([
+    {
+      operation: "activate" as const,
+      lifecycle: AiPromptBundleLifecycle.draft,
+    },
+    {
+      operation: "restore" as const,
+      lifecycle: AiPromptBundleLifecycle.superseded,
+    },
+  ])(
+    "rejects $operation for a revision from a retired serving contract",
+    async ({ operation, lifecycle }) => {
+      const candidate = {
+        ...bundle(lifecycle),
+        servingContractVersion: "report-assistant/editor-serving/v0",
+      };
+      const harness = serviceFor({ revision: candidate });
+      const input = {
+        featureKey: "lead-report-assistant" as const,
+        revisionId: candidate.id,
+      };
+      let failure: unknown;
+
+      try {
+        if (operation === "activate") {
+          await harness.service.activate(input, "admin-1");
+        } else {
+          await harness.service.restore(input, "admin-1");
+        }
+      } catch (error) {
+        failure = error;
+      }
+
+      expect(failure).toBeInstanceOf(AiPromptConfigurationError);
+      expect(failure).toHaveProperty(
+        "message",
+        "This prompt revision belongs to a retired serving contract",
+      );
+      expect(harness.repository.activate).not.toHaveBeenCalled();
+    },
+  );
+
   it("activates a structurally valid current revision", async () => {
     const candidate = bundle(AiPromptBundleLifecycle.validated);
     const harness = serviceFor({ revision: candidate });
@@ -236,6 +289,33 @@ describe("AiPromptService", () => {
       ),
     ).resolves.toMatchObject({ lifecycle: "active" });
     expect(harness.repository.activate).toHaveBeenCalled();
+  });
+
+  it("activates a current draft without requiring a configured provider", async () => {
+    const candidate = bundle(AiPromptBundleLifecycle.draft);
+    const harness = serviceFor({ revision: candidate, provider: null });
+
+    await expect(
+      harness.service.activate(
+        {
+          featureKey: "lead-report-assistant",
+          revisionId: candidate.id,
+        },
+        "admin-1",
+      ),
+    ).resolves.toMatchObject({
+      featureKey: "lead-report-assistant",
+      revisionId: candidate.id,
+      lifecycle: "active",
+    });
+    expect(harness.providerRepository.getControl).not.toHaveBeenCalled();
+    expect(harness.repository.activate).toHaveBeenCalledWith(
+      "lead-report-assistant",
+      candidate.id,
+      expect.arrayContaining([AiPromptBundleLifecycle.draft]),
+      expect.any(Date),
+      { servingContractVersion: baseline.servingContractVersion },
+    );
   });
 
   it("refuses protected prompt discard", async () => {

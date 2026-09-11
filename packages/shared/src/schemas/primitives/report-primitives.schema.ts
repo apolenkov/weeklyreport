@@ -6,7 +6,8 @@ const noInvisibleOnly = (val: string) =>
 
 const noNullBytes = (val: string) => !val.includes("\u0000");
 
-const DEFAULT_SAFE_TEXT_MAX_LENGTH = 500;
+/** Maximum length for report prose validated by safeText defaults. */
+export const SAFE_TEXT_MAX_LENGTH = 500;
 
 /** Zod string for user-facing text: rejects null bytes and invisible-only values. */
 export const safeText = (
@@ -15,7 +16,7 @@ export const safeText = (
   z
     .string()
     .min(opts.min ?? 1)
-    .max(opts.max ?? DEFAULT_SAFE_TEXT_MAX_LENGTH)
+    .max(opts.max ?? SAFE_TEXT_MAX_LENGTH)
     .refine(noNullBytes, { message: "Text must not contain null bytes" })
     .refine(noInvisibleOnly, {
       message: "Text must contain visible characters",
@@ -38,7 +39,7 @@ export type TrafficLightStatus = z.infer<typeof trafficLightStatusSchema>;
 export const itemTypeSchema = z.enum(["current", "next"]);
 // Progress only — alarms (at-risk/blocked) derive from covering risks and are
 // never stored on an item. Per-type vocabulary below; the write superRefine in
-// section.schema.ts enforces it (DB CHECK is the defence-in-depth backstop).
+// section-record.schema.ts enforces it (DB CHECK is the defence-in-depth backstop).
 /** Defines the progress states valid across both item types. */
 export const itemWorkflowStatusSchema = z.enum([
   "planned",
@@ -51,6 +52,7 @@ export const itemWorkflowStatusSchema = z.enum([
 export type ItemWorkflowStatus = z.infer<typeof itemWorkflowStatusSchema>;
 /** Progress states accepted for current-period items. */
 export const CURRENT_ITEM_STATUSES = Object.freeze([
+  "planned",
   "in_progress",
   "paused",
   "done",
@@ -128,7 +130,7 @@ export const currentStageNamesField = z
 
 // The conditional rule (at least one stage for a product parent and none for
 // an activity parent) is enforced by the record superRefine in
-// section.schema.ts because it depends on the parent kind.
+// section-record.schema.ts because it depends on the parent kind.
 /** Accepts a validated stage array whose cardinality is checked with its parent. */
 export const writeStageNamesField = z
   .array(stageNameElement)

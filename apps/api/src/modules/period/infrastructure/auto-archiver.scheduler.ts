@@ -47,7 +47,7 @@ export class AutoArchiverScheduler {
     @Inject(AUDIT_LOGGER) private readonly auditLogger: AuditLogger,
   ) {}
 
-  @Cron("15 0 * * *")
+  @Cron("15 0 * * *", { timeZone: "UTC" })
   async runDaily(): Promise<void> {
     await this.runOnce(new Date());
   }

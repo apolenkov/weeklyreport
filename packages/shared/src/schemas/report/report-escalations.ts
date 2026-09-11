@@ -1,91 +1,15 @@
-import { effectiveProjectStatus } from "@customreport/report-persistence";
-import type { Escalation, ReportSectionReadModel } from "@customreport/shared";
-
-// Single builder for live and published-snapshot paths (identical roll-up).
+import { deriveEffectiveProductStatus } from "../../status/effective-product-status";
+import type { ReportSectionReadModel } from "../report-sections/section.schema";
+import type { Escalation } from "./report.schema";
 
 const UNKNOWN_PRODUCT_NAME = "Unknown";
 const STAGE_NAME_SEPARATOR = ", ";
 
-// stageNames holds stage NAMES, not UUIDs — hence a plain join, no lookup.
 function resolveStageName(stageNames: readonly string[]): string {
   if (stageNames.length === 0) {
     throw new Error("Escalation source must carry at least one stage name");
   }
   return stageNames.join(STAGE_NAME_SEPARATOR);
-}
-
-interface FlaggedRedRollUp {
-  readonly escalations: readonly Escalation[];
-  // Dedup co-owned red products to one at_risk per projectId (first lead wins);
-  // carried across sections, so it grows rather than being rebuilt per section.
-  readonly seenProjectIds: ReadonlySet<string>;
-}
-
-// Effective status (not stale trafficLight); one at_risk per projectId.
-function flaggedRedRollUp(
-  section: ReportSectionReadModel,
-  seenProjectIds: ReadonlySet<string>,
-): FlaggedRedRollUp {
-  return section.projects.reduce<FlaggedRedRollUp>(
-    (acc, project) => {
-      if (effectiveProjectStatus(section, project) !== "red") return acc;
-      if (acc.seenProjectIds.has(project.projectId)) return acc;
-      return {
-        escalations: [
-          ...acc.escalations,
-          {
-            type: "at_risk",
-            productName: project.projectName,
-            stageName: null,
-            leadName: section.authorName,
-            description: `Project ${project.projectName} is flagged red.`,
-          },
-        ],
-        seenProjectIds: new Set([...acc.seenProjectIds, project.projectId]),
-      };
-    },
-    { escalations: [], seenProjectIds },
-  );
-}
-
-// Blocked escalation from blocked-severity risks only; skip null projectId activities.
-function blockedRiskEscalations(
-  section: ReportSectionReadModel,
-  productNames: ReadonlyMap<string, string>,
-): Escalation[] {
-  return section.risks.flatMap((risk) => {
-    if (risk.severity !== "blocked" || !risk.projectId) return [];
-    return [
-      {
-        type: "blocked" as const,
-        productName: productNames.get(risk.projectId) ?? UNKNOWN_PRODUCT_NAME,
-        stageName: resolveStageName(risk.stageNames),
-        leadName: section.authorName,
-        description: risk.risk,
-      },
-    ];
-  });
-}
-
-// A blocked-severity risk already escalates as `blocked` (above), so this emits
-// `unresolved_risk` only for the remaining (at-risk) severities — a single risk
-// never produces both escalation types.
-function unresolvedRiskEscalations(
-  section: ReportSectionReadModel,
-  productNames: ReadonlyMap<string, string>,
-): Escalation[] {
-  return section.risks.flatMap((risk) => {
-    if (risk.severity === "blocked" || !risk.projectId) return [];
-    return [
-      {
-        type: "unresolved_risk" as const,
-        productName: productNames.get(risk.projectId) ?? UNKNOWN_PRODUCT_NAME,
-        stageName: resolveStageName(risk.stageNames),
-        leadName: section.authorName,
-        description: risk.risk,
-      },
-    ];
-  });
 }
 
 function productNamesFor(
@@ -98,6 +22,92 @@ function productNamesFor(
   );
 }
 
+function blockedRiskEscalations(
+  section: ReportSectionReadModel,
+  productNames: ReadonlyMap<string, string>,
+): Escalation[] {
+  return section.risks.flatMap((risk) => {
+    if (risk.severity !== "blocked" || !risk.projectId) return [];
+    return [
+      {
+        type: "blocked" as const,
+        productId: risk.projectId,
+        productName: productNames.get(risk.projectId) ?? UNKNOWN_PRODUCT_NAME,
+        stageName: resolveStageName(risk.stageNames),
+        authorId: section.authorId,
+        leadName: section.authorName,
+        description: risk.risk,
+      },
+    ];
+  });
+}
+
+function unresolvedRiskEscalations(
+  section: ReportSectionReadModel,
+  productNames: ReadonlyMap<string, string>,
+): Escalation[] {
+  return section.risks.flatMap((risk) => {
+    if (risk.severity === "blocked" || !risk.projectId) return [];
+    return [
+      {
+        type: "unresolved_risk" as const,
+        productId: risk.projectId,
+        productName: productNames.get(risk.projectId) ?? UNKNOWN_PRODUCT_NAME,
+        stageName: resolveStageName(risk.stageNames),
+        authorId: section.authorId,
+        leadName: section.authorName,
+        description: risk.risk,
+      },
+    ];
+  });
+}
+
+interface FlaggedRedRollUp {
+  readonly escalations: readonly Escalation[];
+  readonly seenProjectIds: ReadonlySet<string>;
+}
+
+function flaggedRedRollUp(
+  section: ReportSectionReadModel,
+  seenProjectIds: ReadonlySet<string>,
+): FlaggedRedRollUp {
+  return section.projects.reduce<FlaggedRedRollUp>(
+    (acc, project) => {
+      if (
+        deriveEffectiveProductStatus({
+          projectId: project.projectId,
+          trafficLight: project.trafficLight,
+          ownedStages: project.ownedStages,
+          risks: section.risks,
+        }) !== "red" ||
+        acc.seenProjectIds.has(project.projectId)
+      ) {
+        return acc;
+      }
+      return {
+        escalations: [
+          ...acc.escalations,
+          {
+            type: "at_risk",
+            productId: project.projectId,
+            productName: project.projectName,
+            stageName: null,
+            authorId: section.authorId,
+            leadName: section.authorName,
+            description: `Project ${project.projectName} is flagged red.`,
+          },
+        ],
+        seenProjectIds: new Set([...acc.seenProjectIds, project.projectId]),
+      };
+    },
+    { escalations: [], seenProjectIds },
+  );
+}
+
+/**
+ * Builds the canonical escalation projection for report sections in input
+ * order, including one effective-red signal per owned product ID.
+ */
 export function buildEscalationsFromReadSections(
   sections: readonly ReportSectionReadModel[],
 ): Escalation[] {

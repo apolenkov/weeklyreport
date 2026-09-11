@@ -1,5 +1,5 @@
 import type { ActivityService } from "../../../modules/activity/index.js";
-import { mapDomainError } from "../trpc.error-mapper.js";
+import { withDomainErrorMapping } from "../trpc.error-mapper.js";
 import { headProcedure, router } from "../trpc.middleware.js";
 
 export interface ActivityRouterDeps {
@@ -8,12 +8,10 @@ export interface ActivityRouterDeps {
 
 export function createActivityRouter(deps: ActivityRouterDeps) {
   return router({
-    live: headProcedure.query(async ({ ctx }) => {
-      try {
-        return await deps.activityService.getLiveActivity(ctx.session);
-      } catch (error) {
-        throw mapDomainError(error);
-      }
-    }),
+    live: headProcedure.query(({ ctx }) =>
+      withDomainErrorMapping(() =>
+        deps.activityService.getLiveActivity(ctx.session),
+      ),
+    ),
   });
 }

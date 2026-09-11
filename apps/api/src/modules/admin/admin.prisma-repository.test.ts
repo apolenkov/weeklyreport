@@ -109,6 +109,7 @@ describe("AdminPrismaRepository period writers — overlap translation", () => {
     return {
       $transaction: vi.fn((run: (tx: unknown) => Promise<unknown>) =>
         run({
+          $executeRaw: vi.fn().mockResolvedValue(0),
           $queryRaw: vi.fn(() =>
             Promise.resolve([
               {
@@ -601,7 +602,11 @@ describe("AdminPrismaRepository — reopen-request lifecycle", () => {
       reopenRequest: { findMany },
     } as unknown as PrismaService);
 
-    await repo.listReopenRequests({ status: "pending", session: headSession });
+    await repo.listReopenRequests({
+      status: "pending",
+      limit: 50,
+      session: headSession,
+    });
 
     const call = findMany.mock.calls[0]?.[0] as { where?: unknown };
     expect(call.where).toEqual({
@@ -618,6 +623,7 @@ describe("AdminPrismaRepository — reopen-request lifecycle", () => {
 
     await repo.listReopenRequests({
       status: "pending",
+      limit: 50,
       session: adminSession,
     });
 
@@ -634,10 +640,111 @@ describe("AdminPrismaRepository — reopen-request lifecycle", () => {
       reopenRequest: { findMany },
     } as unknown as PrismaService);
 
-    await repo.listReopenRequests({ status: "all", session: adminSession });
+    await repo.listReopenRequests({
+      status: "all",
+      limit: 50,
+      session: adminSession,
+    });
 
     const call = findMany.mock.calls[0]?.[0] as { where?: unknown };
     expect(call.where).toEqual({ reportSection: {} });
+  });
+
+  it("continues below a compound cursor without looking up its anchor row", async () => {
+    const findMany = vi.fn((..._args: unknown[]) => Promise.resolve([]));
+    const repo = new AdminPrismaRepository({
+      reopenRequest: { findMany },
+    } as unknown as PrismaService);
+    const cursor = {
+      id: "11111111-1111-4111-8111-111111111111",
+      createdAt: "2026-09-06T08:30:00.000Z",
+    };
+
+    await repo.listReopenRequests({
+      status: "approved",
+      limit: 25,
+      cursor,
+      session: adminSession,
+    });
+
+    const call = findMany.mock.calls[0]?.[0] as {
+      where?: unknown;
+      orderBy?: unknown;
+      take?: unknown;
+    };
+    const cursorDate = new Date(cursor.createdAt);
+    expect(call).toMatchObject({
+      where: {
+        status: "approved",
+        reportSection: {},
+        AND: [
+          {
+            OR: [
+              { createdAt: { lt: cursorDate } },
+              { createdAt: cursorDate, id: { lt: cursor.id } },
+            ],
+          },
+        ],
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: 26,
+    });
+    expect(findMany).toHaveBeenCalledTimes(1);
+  });
+
+  it("applies case-insensitive rendered-field search in where before the probe take", async () => {
+    const findMany = vi.fn((..._args: unknown[]) => Promise.resolve([]));
+    const repo = new AdminPrismaRepository({
+      reopenRequest: { findMany },
+    } as unknown as PrismaService);
+
+    await repo.listReopenRequests({
+      status: "all",
+      limit: 2,
+      search: "Weekly 36",
+      session: adminSession,
+    });
+
+    const call = findMany.mock.calls[0]?.[0] as {
+      where?: unknown;
+      take?: unknown;
+    };
+    expect(call.where).toEqual({
+      reportSection: {},
+      AND: [
+        {
+          OR: [
+            {
+              requestedBy: {
+                name: { contains: "Weekly 36", mode: "insensitive" },
+              },
+            },
+            {
+              requestedBy: {
+                email: { contains: "Weekly 36", mode: "insensitive" },
+              },
+            },
+            {
+              reportSection: {
+                report: {
+                  weekLabel: {
+                    contains: "Weekly 36",
+                    mode: "insensitive",
+                  },
+                },
+              },
+            },
+            {
+              reason: { contains: "Weekly 36", mode: "insensitive" },
+            },
+            {
+              reviewNote: { contains: "Weekly 36", mode: "insensitive" },
+            },
+          ],
+        },
+      ],
+    });
+    expect(call.take).toBe(3);
   });
 
   it("countPendingReopenRequests scopes a head to its own group", async () => {
@@ -656,10 +763,17 @@ describe("AdminPrismaRepository — reopen-request lifecycle", () => {
   });
 
   it("decideReopenRequest re-checks group scope INSIDE the decision transaction", async () => {
-    // A scope change between a pre-transaction read and the write must be
-    // caught: the scoped re-load lives in the same transaction as the
-    // decision, so an out-of-scope request is rejected and nothing is written.
+    // An initially out-of-scope request is rejected before locks or writes.
     const tx = {
+      user: {
+        findUnique: vi.fn(() =>
+          Promise.resolve({
+            isActive: true,
+            role: "head",
+            reportingGroupId: "group-1",
+          }),
+        ),
+      },
       $queryRaw: editableGate(),
       reopenRequest: {
         findFirst: vi.fn(() => Promise.resolve(null)),
@@ -694,7 +808,11 @@ describe("AdminPrismaRepository — reopen-request lifecycle", () => {
           author: { reportingGroupId: { in: ["group-1"] } },
         },
       },
-      select: { id: true, reportSectionId: true },
+      select: {
+        id: true,
+        reportSectionId: true,
+        reportSection: { select: { authorId: true } },
+      },
     });
     expect(tx.reopenRequest.updateMany).not.toHaveBeenCalled();
     expect(tx.reportSection.updateMany).not.toHaveBeenCalled();
@@ -702,10 +820,23 @@ describe("AdminPrismaRepository — reopen-request lifecycle", () => {
 
   it("decideReopenRequest: a loser of a concurrent decision reports already-processed", async () => {
     const tx = {
+      user: {
+        findUnique: vi.fn(() =>
+          Promise.resolve({
+            isActive: true,
+            role: "head",
+            reportingGroupId: "group-1",
+          }),
+        ),
+      },
       $queryRaw: editableGate(),
       reopenRequest: {
         findFirst: vi.fn(() =>
-          Promise.resolve({ id: "req-1", reportSectionId: "sec-1" }),
+          Promise.resolve({
+            id: "req-1",
+            reportSectionId: "sec-1",
+            reportSection: { authorId: "lead-1" },
+          }),
         ),
         updateMany: vi.fn(() => Promise.resolve({ count: 0 })),
       },
@@ -729,10 +860,23 @@ describe("AdminPrismaRepository — reopen-request lifecycle", () => {
 
   it("decideReopenRequest: a winning approve flips the section", async () => {
     const tx = {
+      user: {
+        findUnique: vi.fn(() =>
+          Promise.resolve({
+            isActive: true,
+            role: "head",
+            reportingGroupId: "group-1",
+          }),
+        ),
+      },
       $queryRaw: editableGate(),
       reopenRequest: {
         findFirst: vi.fn(() =>
-          Promise.resolve({ id: "req-1", reportSectionId: "sec-1" }),
+          Promise.resolve({
+            id: "req-1",
+            reportSectionId: "sec-1",
+            reportSection: { authorId: "lead-1" },
+          }),
         ),
         updateMany: vi.fn(() => Promise.resolve({ count: 1 })),
       },
@@ -763,6 +907,15 @@ describe("AdminPrismaRepository — reopen-request lifecycle", () => {
 
   it("decideReopenRequest: publish wins before approval and no row changes", async () => {
     const tx = {
+      user: {
+        findUnique: vi.fn(() =>
+          Promise.resolve({
+            isActive: true,
+            role: "head",
+            reportingGroupId: "group-1",
+          }),
+        ),
+      },
       $queryRaw: vi.fn(() =>
         Promise.resolve([
           {
@@ -781,7 +934,11 @@ describe("AdminPrismaRepository — reopen-request lifecycle", () => {
       ),
       reopenRequest: {
         findFirst: vi.fn(() =>
-          Promise.resolve({ id: "req-1", reportSectionId: "sec-1" }),
+          Promise.resolve({
+            id: "req-1",
+            reportSectionId: "sec-1",
+            reportSection: { authorId: "lead-1" },
+          }),
         ),
         updateMany: vi.fn(() => Promise.resolve({ count: 1 })),
       },
@@ -810,10 +967,23 @@ describe("AdminPrismaRepository — reopen-request lifecycle", () => {
 
   it("decideReopenRequest: a stale approve auto-closes to rejected", async () => {
     const tx = {
+      user: {
+        findUnique: vi.fn(() =>
+          Promise.resolve({
+            isActive: true,
+            role: "head",
+            reportingGroupId: "group-1",
+          }),
+        ),
+      },
       $queryRaw: editableGate(),
       reopenRequest: {
         findFirst: vi.fn(() =>
-          Promise.resolve({ id: "req-1", reportSectionId: "sec-1" }),
+          Promise.resolve({
+            id: "req-1",
+            reportSectionId: "sec-1",
+            reportSection: { authorId: "lead-1" },
+          }),
         ),
         updateMany: vi.fn(() => Promise.resolve({ count: 1 })),
         update: vi.fn(() => Promise.resolve({})),
@@ -842,10 +1012,23 @@ describe("AdminPrismaRepository — reopen-request lifecycle", () => {
 
   it("decideReopenRequest: a reject skips the section flip entirely", async () => {
     const tx = {
+      user: {
+        findUnique: vi.fn(() =>
+          Promise.resolve({
+            isActive: true,
+            role: "head",
+            reportingGroupId: "group-1",
+          }),
+        ),
+      },
       $queryRaw: editableGate(),
       reopenRequest: {
         findFirst: vi.fn(() =>
-          Promise.resolve({ id: "req-1", reportSectionId: "sec-1" }),
+          Promise.resolve({
+            id: "req-1",
+            reportSectionId: "sec-1",
+            reportSection: { authorId: "lead-1" },
+          }),
         ),
         updateMany: vi.fn(() => Promise.resolve({ count: 1 })),
       },

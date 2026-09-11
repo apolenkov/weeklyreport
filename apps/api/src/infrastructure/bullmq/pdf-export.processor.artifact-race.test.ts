@@ -130,14 +130,14 @@ interface ProcessorArtifactSeam {
     jobId: string;
     outputDir: string;
     pdfBuffer: Buffer;
-  }): Promise<void>;
+  }): Promise<{ artifactUrl: string; checksum: string }>;
 }
 
 function persist(
   processor: PdfExportProcessor,
   jobId: string,
   pdfBuffer: Buffer,
-): Promise<void> {
+): Promise<{ artifactUrl: string; checksum: string }> {
   return (
     processor as unknown as ProcessorArtifactSeam
   ).persistCompletedArtifact({

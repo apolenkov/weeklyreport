@@ -39,6 +39,7 @@ function makeWeeklyReport(
     periodStart: new Date("2026-04-14"),
     periodEnd: new Date("2026-04-18"),
     deadline: new Date("2026-04-17T15:00:00.000Z"),
+    periodState: "open",
     periodStatus: "open",
     archived: false,
     weekLabel: "W16-2026",
@@ -140,6 +141,7 @@ describe("WeeklyReportService — contract tests", () => {
     if (result.status !== "active") throw new Error("expected active");
 
     expect(result.reportId).toBe(reportId);
+    expect(result.periodState).toBe("open");
     expect(result.periodStatus).toBe("open");
     expect(result.weekLabel).toBe("W16-2026");
     expect(result.submissionCount).toBe(1);
@@ -200,27 +202,33 @@ describe("WeeklyReportService — contract tests", () => {
     });
   });
 
-  it("returns report with escalations (blocked items and at-risk projects)", async () => {
+  it("returns repository-provided escalations", async () => {
     const report = makeWeeklyReport({
       escalations: [
         {
           type: "blocked",
+          productId: projectId,
           productName: "Project Alpha",
           stageName: "Development",
+          authorId,
           leadName: "Lead A",
           description: "Blocked by external dependency",
         },
         {
           type: "at_risk",
+          productId: projectId,
           productName: "Project Alpha",
           stageName: "Development",
+          authorId,
           leadName: "Lead A",
           description: "Project Project Alpha is flagged red.",
         },
         {
           type: "unresolved_risk",
+          productId: projectId,
           productName: "Project Alpha",
           stageName: "Development",
+          authorId,
           leadName: "Lead A",
           description: "Key developer may leave",
         },
@@ -241,7 +249,7 @@ describe("WeeklyReportService — contract tests", () => {
     ]);
   });
 
-  it("returns report with multiple portfolio products and worst status computed", async () => {
+  it("returns repository-provided portfolio products and statuses", async () => {
     const secondProjectId = "88888888-8888-4888-8888-888888888888";
     const report = makeWeeklyReport({
       portfolioOverview: [
@@ -305,5 +313,23 @@ describe("WeeklyReportService — contract tests", () => {
     if (parsed.status !== "active") throw new Error("expected active");
     expect(parsed.reportId).toBe(reportId);
     expect(parsed.leadSections).toHaveLength(1);
+  });
+
+  it("preserves a scheduled canonical state in the public response", async () => {
+    const report = makeWeeklyReport({
+      periodState: "scheduled",
+      periodStatus: "open",
+    });
+    const service = new WeeklyReportService(
+      createRepository(new Map([[reportId, report]])),
+    );
+
+    const result = await service.getWeeklyReport(reportId, caller);
+
+    expect(result).toMatchObject({
+      status: "active",
+      periodState: "scheduled",
+      periodStatus: "open",
+    });
   });
 });

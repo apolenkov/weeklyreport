@@ -52,11 +52,6 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     reportId: string,
     session: UserSession,
   ): Promise<WeeklyReportRepositoryResult | null> {
-    // Keep lightweight repository unit doubles usable; the injected
-    // production PrismaService always exposes $transaction.
-    if (typeof this.prisma.$transaction !== "function") {
-      return this.getWeeklyReportInTransaction(reportId, session, this.prisma);
-    }
     return this.prisma.$transaction(
       (tx) => this.getWeeklyReportInTransaction(reportId, session, tx),
       { isolationLevel: "RepeatableRead" },

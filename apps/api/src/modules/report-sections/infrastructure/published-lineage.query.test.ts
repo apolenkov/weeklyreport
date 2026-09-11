@@ -1,3 +1,4 @@
+import { PublishedSnapshotIntegrityError } from "@customreport/report-persistence";
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
@@ -16,6 +17,24 @@ const candidates = {
     "draft-decision",
   ],
 };
+
+function emptyPublishedSnapshot(reportId: string) {
+  return {
+    reportId,
+    periodStart: "2026-04-07T00:00:00.000Z",
+    periodEnd: "2026-04-13T00:00:00.000Z",
+    deadline: null,
+    status: "published",
+    publishedAt: "2026-04-14T10:00:00.000Z",
+    publishedById: null,
+    publishedByName: null,
+    portfolioOverview: {
+      status: "green",
+      totals: { green: 0, yellow: 0, red: 0 },
+    },
+    sections: [],
+  };
+}
 
 function createPrisma() {
   const documentFindMany = vi.fn().mockResolvedValue([
@@ -37,6 +56,99 @@ function createPrisma() {
 }
 
 describe("queryPublishedLineage", () => {
+  it("excludes an archived draft while retaining every published lifecycle", async () => {
+    const lifecycleRows = [
+      {
+        label: "published",
+        id: "20000000-0000-4000-8000-000000000001",
+        status: "published",
+        periodStatus: "published",
+        archived: false,
+        publishedSnapshot: emptyPublishedSnapshot(
+          "20000000-0000-4000-8000-000000000001",
+        ),
+      },
+      {
+        label: "reopened",
+        id: "20000000-0000-4000-8000-000000000002",
+        status: "published",
+        periodStatus: "reopened",
+        archived: false,
+        publishedSnapshot: emptyPublishedSnapshot(
+          "20000000-0000-4000-8000-000000000002",
+        ),
+      },
+      {
+        label: "archived-published",
+        id: "20000000-0000-4000-8000-000000000003",
+        status: "published",
+        periodStatus: "published",
+        archived: true,
+        publishedSnapshot: emptyPublishedSnapshot(
+          "20000000-0000-4000-8000-000000000003",
+        ),
+      },
+      {
+        label: "archived-draft",
+        id: "20000000-0000-4000-8000-000000000004",
+        status: "draft",
+        periodStatus: "open",
+        archived: true,
+        publishedSnapshot: null,
+      },
+    ] as const;
+    const selectedLabels: string[] = [];
+    const reportFindMany = vi.fn((query: { where: { status: string } }) => {
+      const selected = lifecycleRows.filter(
+        (report) => report.status === query.where.status,
+      );
+      selectedLabels.push(...selected.map((report) => report.label));
+      return Promise.resolve(
+        selected.map(({ id, publishedSnapshot }) => ({
+          id,
+          publishedSnapshot,
+        })),
+      );
+    });
+    const prisma = {
+      publishedSearchDocument: { findMany: vi.fn().mockResolvedValue([]) },
+      report: { findMany: reportFindMany },
+    } as unknown as PrismaService;
+
+    await expect(queryPublishedLineage(prisma, candidates)).resolves.toEqual({
+      itemStableIds: [],
+      decisionStableIds: [],
+    });
+
+    expect(reportFindMany).toHaveBeenCalledWith({
+      where: { status: "published" },
+      select: { id: true, publishedSnapshot: true },
+    });
+    expect(selectedLabels).toEqual([
+      "published",
+      "reopened",
+      "archived-published",
+    ]);
+  });
+
+  it("rejects a missing snapshot on a genuine publication", async () => {
+    const fixture = createPrisma();
+    fixture.reportFindMany.mockResolvedValue([
+      {
+        id: candidates.reportId,
+        status: "published",
+        periodStatus: "published",
+        archived: true,
+        publishedAt: new Date("2026-04-14T10:00:00.000Z"),
+        publishedSnapshot: null,
+      },
+    ]);
+
+    await expect(
+      queryPublishedLineage(fixture.prisma, candidates),
+    ).rejects.toBeInstanceOf(PublishedSnapshotIntegrityError);
+  });
+
   it("short-circuits without database reads when candidates are empty", async () => {
     const fixture = createPrisma();
 

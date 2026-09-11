@@ -5,6 +5,7 @@ import {
   lockAllReminderPolicies,
   lockReminderReport,
   reconcileLockedPolicyForReport,
+  repairMissingRuleForLockedReport,
 } from "./reminder-rule-reconcile.prisma.js";
 
 type PolicyApplyTally = Record<"created" | "skipped" | "updated", number>;
@@ -26,11 +27,22 @@ export class PolicyApplicatorService {
     return this.reconcilePeriod(reportId, now, excludePolicyIds);
   }
 
-  async repairToPeriod(
-    reportId: string,
-    now?: Date,
-  ): Promise<PolicyApplyTally> {
-    return this.reconcilePeriod(reportId, now);
+  async repairToPeriod(reportId: string): Promise<PolicyApplyTally> {
+    return this.prisma.$transaction(async (tx) => {
+      const policies = await lockAllReminderPolicies(tx);
+      const report = await lockReminderReport(tx, reportId);
+      const tally: PolicyApplyTally = { created: 0, updated: 0, skipped: 0 };
+      if (!report) return { ...tally, skipped: policies.length };
+      for (const policy of policies) {
+        const outcome = await repairMissingRuleForLockedReport(
+          tx,
+          policy,
+          report,
+        );
+        tally[outcome] += 1;
+      }
+      return tally;
+    });
   }
 
   private async reconcilePeriod(

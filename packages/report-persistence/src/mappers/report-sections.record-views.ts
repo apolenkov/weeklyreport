@@ -1,3 +1,9 @@
+import {
+  type ItemOutcomeEvent,
+  itemOutcomeEventSchema,
+  itemResolutionSchema,
+} from "@customreport/shared";
+
 import type {
   PrismaReportSectionWithRelations as SectionRow,
   RecordCommentRow,
@@ -26,8 +32,29 @@ export const toReviewViews = (
     createdAt: review.createdAt,
   }));
 
-export const toItemViews = (items: SectionRow["items"]) =>
-  items.map((item) => ({
+export const toItemViews = (
+  items: SectionRow["items"],
+  events: SectionRow["itemOutcomeEvents"],
+) => {
+  const history = new Map<string, ItemOutcomeEvent[]>();
+  for (const event of events) {
+    const entry = itemOutcomeEventSchema.parse({
+      id: event.id,
+      stableId: event.stableId,
+      outcome: event.outcome,
+      reason: event.reason,
+      actorId: event.actorId,
+      actorName: event.actorName,
+      occurredAt: event.occurredAt.toISOString(),
+      beforeState: event.beforeState,
+      afterState: event.afterState,
+      reversesEventId: event.reversesEventId,
+    });
+    const entries = history.get(event.stableId) ?? [];
+    entries.push(entry);
+    history.set(event.stableId, entries);
+  }
+  return items.map((item) => ({
     id: item.id,
     stableId: item.stableId,
     projectId: item.projectId,
@@ -39,9 +66,16 @@ export const toItemViews = (items: SectionRow["items"]) =>
     carriedOver: item.carriedOver,
     priorityRank: item.priorityRank ?? null,
     pausedReason: item.pausedReason ?? null,
+    nextStepText: item.nextStepText ?? null,
+    resolution:
+      item.resolution == null
+        ? null
+        : itemResolutionSchema.parse(item.resolution),
+    outcomeHistory: history.get(item.stableId) ?? [],
     stageNames: item.stageNames,
     comments: toCommentViews(item.recordComments),
   }));
+};
 
 export const toRiskViews = (risks: SectionRow["risks"]) =>
   risks.map((risk) => ({

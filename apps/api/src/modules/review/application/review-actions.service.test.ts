@@ -7,7 +7,6 @@ import {
   ReviewNotFoundError,
 } from "./review.service";
 import {
-  type PostVerdictParams,
   type RecordAnchor,
   type ReviewActionsRepository,
   ReviewActionsService,
@@ -55,13 +54,7 @@ function buildRepo(overrides: RepoOverrides = {}) {
         ...anchor,
       }),
   );
-  const postVerdict = vi.fn((params: PostVerdictParams) =>
-    Promise.resolve({
-      unsubmitted:
-        params.verdict === "changes_requested" &&
-        params.currentStatus === "submitted",
-    }),
-  );
+  const postVerdict = vi.fn<ReviewActionsRepository["postVerdict"]>();
   const acknowledge = vi.fn((actor: { userId: string }) =>
     Promise.resolve({
       userId: actor.userId,
@@ -192,6 +185,7 @@ describe("ReviewActionsService — reviewer designation (comment)", () => {
 describe("ReviewActionsService — verdict", () => {
   it("judges the section's CURRENT version and un-submits on changes_requested", async () => {
     const { repo, postVerdict } = buildRepo();
+    postVerdict.mockResolvedValueOnce({ unsubmitted: true });
     const service = new ReviewActionsService(repo);
     const result = await service.verdict(headA, {
       reportSectionId: SECTION,
@@ -204,12 +198,12 @@ describe("ReviewActionsService — verdict", () => {
       reviewerId: headA.userId,
       verdict: "changes_requested",
       expectedVersion: 3,
-      currentStatus: "submitted",
     });
   });
 
   it("approved records the verdict without un-submitting", async () => {
-    const { repo } = buildRepo();
+    const { repo, postVerdict } = buildRepo();
+    postVerdict.mockResolvedValueOnce({ unsubmitted: false });
     const service = new ReviewActionsService(repo);
     const result = await service.verdict(headA, {
       reportSectionId: SECTION,

@@ -1,85 +1,26 @@
 import { PeriodStatus, ReportStatus } from "@prisma/client";
 
 import { seedReferenceDate } from "../support/seed-reference-date.js";
+import {
+  endOfDayUTC,
+  fridayDeadlineFor,
+  isoWeekNumber,
+  LAST_DAY_OF_WEEK_OFFSET,
+  mondayOfWeekUTC,
+  plusDaysUTC,
+} from "../support/utc-period-dates.js";
 
 const DAYS_PER_WEEK = 7;
-// Shifts JS's Sunday=0 week onto the ISO Monday=0 week.
-const MONDAY_FIRST_SHIFT = 6;
-export const LAST_DAY_OF_WEEK_OFFSET = 6;
 // Sections are seeded as submitted on the Thursday of their period.
 export const SUBMIT_DAY_OFFSET = 3;
-const THURSDAY_OFFSET = 3;
-const FRIDAY_OFFSET = 4;
-const DEADLINE_HOUR_UTC = 15;
-const LAST_HOUR = 23;
-const LAST_MINUTE = 59;
-const LAST_SECOND = 59;
-// ISO 8601: week 1 is the week containing January 4th.
-const ISO_FIRST_WEEK_DAY_OF_YEAR = 4;
-const MS_PER_WEEK = 604_800_000;
 
-// The active period is anchored to the *current* UTC week so weeklyReport.get
-// always finds an open report covering today; a static window would drift into
-// the past and every page load would fail with 'No active report period found'.
-// Mirrors the derivation in prisma/seeds/support/seed-periods.ts so both seeds agree, and
-// reads the same explicit SEED_REFERENCE_DATE (defaulting to today) so a pinned
-// run is reproducible.
-function mondayOfWeekUTC(d: Date): Date {
-  const monday = new Date(
-    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
-  );
-  const dayNum = (monday.getUTCDay() + MONDAY_FIRST_SHIFT) % DAYS_PER_WEEK;
-  monday.setUTCDate(monday.getUTCDate() - dayNum);
-  monday.setUTCHours(0, 0, 0, 0);
-  return monday;
-}
-
-export function plusDaysUTC(d: Date, days: number): Date {
-  const r = new Date(d);
-  r.setUTCDate(r.getUTCDate() + days);
-  return r;
-}
-
-export function endOfDayUTC(d: Date): Date {
-  const r = new Date(d);
-  r.setUTCHours(LAST_HOUR, LAST_MINUTE, LAST_SECOND, 0);
-  return r;
-}
-
-export function isoWeekNumber(d: Date): number {
-  const t = new Date(
-    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
-  );
-  const dayNum = (t.getUTCDay() + MONDAY_FIRST_SHIFT) % DAYS_PER_WEEK;
-  // Both dates shift to the Thursday of their week, which is what makes the
-  // week difference below exact.
-  t.setUTCDate(t.getUTCDate() - dayNum + THURSDAY_OFFSET);
-  const firstThursday = new Date(
-    Date.UTC(t.getUTCFullYear(), 0, ISO_FIRST_WEEK_DAY_OF_YEAR),
-  );
-  const firstThursdayDayNum =
-    (firstThursday.getUTCDay() + MONDAY_FIRST_SHIFT) % DAYS_PER_WEEK;
-  firstThursday.setUTCDate(
-    firstThursday.getUTCDate() - firstThursdayDayNum + THURSDAY_OFFSET,
-  );
-  return 1 + Math.round((t.getTime() - firstThursday.getTime()) / MS_PER_WEEK);
-}
-
-// Submission deadline: Friday 15:00 UTC of the given week.
-export function fridayDeadlineFor(monday: Date): Date {
-  const friday = plusDaysUTC(monday, FRIDAY_OFFSET);
-  return new Date(
-    Date.UTC(
-      friday.getUTCFullYear(),
-      friday.getUTCMonth(),
-      friday.getUTCDate(),
-      DEADLINE_HOUR_UTC,
-      0,
-      0,
-      0,
-    ),
-  );
-}
+export {
+  endOfDayUTC,
+  fridayDeadlineFor,
+  isoWeekNumber,
+  LAST_DAY_OF_WEEK_OFFSET,
+  plusDaysUTC,
+};
 
 export const ACTIVE_MONDAY = mondayOfWeekUTC(seedReferenceDate());
 export const ACTIVE_SUNDAY = endOfDayUTC(

@@ -1,7 +1,9 @@
 import {
   type LeadStatusOverviewOutput,
   leadStatusOverviewOutputSchema,
+  reportSectionReadModelSchema,
   type Role,
+  sharedReportSectionReadModelSchema,
 } from "@customreport/shared";
 
 import {
@@ -39,8 +41,16 @@ export async function readStatusOverview(
     throw new LeadFormDomainError(`Report ${reportId} not found.`);
   }
 
+  const usesSharedLeadLens =
+    role === "lead" &&
+    requestedAuthorId !== undefined &&
+    requestedAuthorId !== viewerId;
+  const currentSection = usesSharedLeadLens
+    ? sharedReportSectionReadModelSchema.parse(selected.section)
+    : reportSectionReadModelSchema.parse(selected.section);
+
   return leadStatusOverviewOutputSchema.parse({
-    current: { ...periods.current, section: selected.section },
+    current: { ...periods.current, section: currentSection },
     predecessor: periods.predecessor,
   });
 }

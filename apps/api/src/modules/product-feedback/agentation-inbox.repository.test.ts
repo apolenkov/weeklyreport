@@ -5,9 +5,9 @@ import { AgentationInboxRepository } from "./agentation-inbox.repository";
 import { AgentationInboxActions } from "./agentation-inbox-actions";
 import {
   agentationInboxId,
-  type AgentationInboxRow,
   projectAgentation,
 } from "./agentation-inbox-projection";
+import { makeAgentationInboxRow } from "./agentation-inbox-test-fixtures";
 import type { FeedbackAccess } from "./product-feedback.repository";
 
 const access: FeedbackAccess = {
@@ -18,64 +18,11 @@ const access: FeedbackAccess = {
   reportingGroupId: "g-1",
 };
 
-function row(overrides: Partial<AgentationInboxRow> = {}): AgentationInboxRow {
-  const now = new Date("2026-09-04T10:00:00.000Z");
-  return {
-    id: "a-1",
-    clientId: "c-1",
-    sessionId: "s-1",
-    x: 20,
-    y: 30,
-    comment: "Move this button",
-    element: "button",
-    elementPath: "#save",
-    timestamp: 1n,
-    selectedText: null,
-    boundingBox: null,
-    nearbyText: "Save",
-    cssClasses: null,
-    nearbyElements: null,
-    computedStyles: null,
-    fullPath: null,
-    accessibility: null,
-    isMultiSelect: false,
-    isFixed: false,
-    reactComponents: null,
-    sourceFile: null,
-    drawingIndex: null,
-    elementBoundingBoxes: null,
-    placement: null,
-    rearrange: null,
-    url: "https://app.example.test/report?x=1",
-    kind: "feedback",
-    intent: "change",
-    severity: "important",
-    status: "pending",
-    threadMessages: [],
-    source: null,
-    context: null,
-    resolvedAt: null,
-    resolvedBy: null,
-    authorUserId: "u-lead",
-    authorReportingGroupId: "g-1",
-    authorRole: "lead",
-    authorName: "Lead Snapshot",
-    authorEmail: "lead@example.test",
-    createdAt: now,
-    updatedAt: now,
-    session: {
-      id: "s-1",
-      url: "https://app.example.test/report",
-      status: "active",
-    },
-    author: { name: "Mutable User", email: "mutable@example.test" },
-    ...overrides,
-  } as AgentationInboxRow;
-}
-
 describe("AgentationInboxRepository", () => {
   it("projects a complete stable FeedbackRecord using immutable annotation author snapshots", () => {
-    const projected = projectAgentation(row());
+    const inboxRow = makeAgentationInboxRow();
+    expect(inboxRow.session.authorName).not.toBe(inboxRow.authorName);
+    const projected = projectAgentation(inboxRow);
     expect(projected).toMatchObject({
       id: agentationInboxId("a-1"),
       authorName: "Lead Snapshot",
@@ -90,7 +37,7 @@ describe("AgentationInboxRepository", () => {
   });
 
   it("applies head scope and URL filter before take and count", async () => {
-    const findMany = vi.fn().mockResolvedValue([row()]);
+    const findMany = vi.fn().mockResolvedValue([makeAgentationInboxRow()]);
     const count = vi.fn().mockResolvedValue(1);
     const prisma = {
       agentationAnnotation: { findMany, count },
@@ -127,14 +74,14 @@ describe("AgentationInboxRepository", () => {
   });
 
   it("updates status and emits an event atomically as the human actor", async () => {
-    const changed = row({
+    const changed = makeAgentationInboxRow({
       status: "resolved",
       resolvedAt: new Date(),
       resolvedBy: "human",
     });
     const tx = {
       agentationAnnotation: {
-        findFirst: vi.fn().mockResolvedValue(row()),
+        findFirst: vi.fn().mockResolvedValue(makeAgentationInboxRow()),
         update: vi.fn().mockResolvedValue(changed),
       },
       agentationEvent: { create: vi.fn().mockResolvedValue({}) },
@@ -176,7 +123,7 @@ describe("AgentationInboxRepository", () => {
   });
 
   it("does not emit another event when a status retry changes nothing", async () => {
-    const unchanged = row({
+    const unchanged = makeAgentationInboxRow({
       status: "resolved",
       resolvedAt: new Date("2026-09-04T10:01:00.000Z"),
       resolvedBy: "human",

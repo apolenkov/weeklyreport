@@ -1,4 +1,9 @@
-import type { ReportSectionReadModel, Role } from "@customreport/shared";
+import {
+  type ReportSectionReadModel,
+  type Role,
+  type SharedReportSectionReadModel,
+  sharedReportSectionReadModelSchema,
+} from "@customreport/shared";
 
 import {
   LeadFormAccessError,
@@ -96,7 +101,7 @@ export async function readSectionForByPeriod(
 export function filterSectionToSharedProducts(
   section: ReportSectionReadModel,
   sharedProductIds: ReadonlySet<string>,
-): ReportSectionReadModel {
+): SharedReportSectionReadModel {
   const items = section.items
     .filter((i) => i.projectId != null && sharedProductIds.has(i.projectId))
     .map(stripItemAuthorPrivateFields);
@@ -120,7 +125,7 @@ export function filterSectionToSharedProducts(
   // Strip the fields the Everyone lens omits before the spread carries them:
   // `reviews` is dropped as a rest sibling, `activities` is re-set to empty.
   const { activities, reviews, ...rest } = section;
-  return {
+  return sharedReportSectionReadModelSchema.parse({
     ...rest,
     items,
     risks,
@@ -129,7 +134,7 @@ export function filterSectionToSharedProducts(
     referencedProjects,
     activities: [],
     reviews: [],
-  };
+  });
 }
 
 // Comments stay with the author; co-lead lens omits them.
@@ -140,10 +145,18 @@ function stripRecordComments<T extends { comments?: unknown }>(
   return restOfRow;
 }
 
-// pausedReason is author free text; Everyone lens omits it.
+// Author-only pause and outcome audit fields are absent from the Everyone lens.
 function stripItemAuthorPrivateFields<
-  T extends { comments?: unknown; pausedReason?: unknown },
->(row: T): Omit<T, "comments" | "pausedReason"> {
-  const { comments, pausedReason, ...restOfRow } = row;
+  T extends {
+    comments?: unknown;
+    pausedReason?: unknown;
+    resolution?: unknown;
+    outcomeHistory?: unknown;
+  },
+>(
+  row: T,
+): Omit<T, "comments" | "pausedReason" | "resolution" | "outcomeHistory"> {
+  const { comments, pausedReason, resolution, outcomeHistory, ...restOfRow } =
+    row;
   return restOfRow;
 }

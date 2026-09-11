@@ -227,6 +227,38 @@ describe("searchPlanSchema", () => {
 
   it.each([
     [
+      "normalized author references",
+      {
+        ...validPlan(),
+        authors: {
+          mode: "selected",
+          includeSelf: false,
+          references: ["Jane Doe", "jane   doe"],
+        },
+      },
+      ["authors", "references"],
+    ],
+    [
+      "record kinds",
+      { ...validPlan(), recordKinds: ["item", "item"] },
+      ["recordKinds"],
+    ],
+  ] as const)(
+    "reports duplicate %s on its input field",
+    (_name, plan, path) => {
+      const result = searchPlanSchema.safeParse(plan);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues).toContainEqual(
+          expect.objectContaining({ path: [...path] }),
+        );
+      }
+    },
+  );
+
+  it.each([
+    [
       "published all with a count",
       () => ({
         ...validPlan(),

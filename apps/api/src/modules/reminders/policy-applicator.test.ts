@@ -2,7 +2,7 @@ import {
   computeReminderFireAt,
   reminderPolicyAppliesTo,
 } from "@customreport/shared";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { PolicyApplicatorService } from "./policy-applicator.service";
@@ -176,7 +176,7 @@ describe("PolicyApplicatorService", () => {
     const stub = makePrisma({ current });
 
     await expect(
-      new PolicyApplicatorService(stub.prisma).repairToPeriod("report-1"),
+      new PolicyApplicatorService(stub.prisma).applyToPeriod("report-1"),
     ).resolves.toEqual({ created: 0, updated: 1, skipped: 0 });
 
     const updateArgs = stub.reminderRule.update.mock
@@ -212,7 +212,7 @@ describe("PolicyApplicatorService", () => {
     const stub = makePrisma({ current });
 
     await expect(
-      new PolicyApplicatorService(stub.prisma).repairToPeriod("report-1"),
+      new PolicyApplicatorService(stub.prisma).applyToPeriod("report-1"),
     ).resolves.toEqual({ created: 1, updated: 0, skipped: 0 });
 
     expect(stub.reminderRule.update).toHaveBeenCalledWith({
@@ -286,7 +286,7 @@ describe("PolicyApplicatorService", () => {
     });
 
     await expect(
-      new PolicyApplicatorService(stub.prisma).repairToPeriod(REPORT.id),
+      new PolicyApplicatorService(stub.prisma).applyToPeriod(REPORT.id),
     ).resolves.toEqual({ created: 0, updated: 1, skipped: 0 });
     expect(stub.reminderRule.update).toHaveBeenCalledWith({
       where: { id: current.id },
@@ -309,5 +309,118 @@ describe("PolicyApplicatorService", () => {
     await expect(
       new PolicyApplicatorService(missing.prisma).repairToPeriod("missing"),
     ).resolves.toEqual({ created: 0, updated: 0, skipped: 1 });
+  });
+});
+
+describe("missing reminder recovery", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-30T18:00:00.000Z"));
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it("creates a missing future rule from the locked Report and skips it on retry", async () => {
+    const stub = makePrisma();
+    const service = new PolicyApplicatorService(stub.prisma);
+    await expect(service.repairToPeriod(REPORT.id)).resolves.toEqual({
+      created: 1,
+      skipped: 0,
+      updated: 0,
+    });
+    expect(stub.sql[0]).toContain('FROM "ReminderPolicy"');
+    expect(stub.sql[1]).toContain('FROM "Report"');
+    expect(stub.reminderRule.create).toHaveBeenCalledWith({
+      data: {
+        reportId: REPORT.id,
+        policyId: POLICY.id,
+        kind: POLICY.kind,
+        deadline: DEADLINE,
+        fireAt: new Date("2026-05-31T18:00:00.000Z"),
+        timezone: POLICY.timezone,
+        status: "active",
+        version: 1,
+      },
+    });
+    stub.reminderRule.findFirst.mockResolvedValue({ id: "rule-created" });
+    await expect(service.repairToPeriod(REPORT.id)).resolves.toEqual({
+      created: 0,
+      skipped: 1,
+      updated: 0,
+    });
+    expect(stub.reminderRule.create).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["active", "paused"] as const)(
+    "preserves an existing %s version with a stale schedule",
+    async (status) => {
+      const stub = makePrisma({
+        current: {
+          id: "restored",
+          reportId: REPORT.id,
+          policyId: POLICY.id,
+          kind: POLICY.kind,
+          fireAt: new Date("2026-05-01T00:00:00.000Z"),
+          deadline: DEADLINE,
+          timezone: "UTC",
+          status,
+          version: 4,
+          _count: { executions: 1 },
+        },
+      });
+      await expect(
+        new PolicyApplicatorService(stub.prisma).repairToPeriod(REPORT.id),
+      ).resolves.toEqual({ created: 0, updated: 0, skipped: 1 });
+      expect(stub.reminderRule.update).not.toHaveBeenCalled();
+      expect(stub.reminderRule.updateMany).not.toHaveBeenCalled();
+      expect(stub.reminderRule.create).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    { report: { ...REPORT, archived: true } },
+    { report: { ...REPORT, periodState: "published" as const } },
+    {
+      report: {
+        ...REPORT,
+        status: "published" as const,
+        periodStatus: "published" as const,
+      },
+    },
+    { report: { ...REPORT, deadline: null } },
+    { policies: [{ ...POLICY, active: false }] },
+    {
+      policies: [
+        { ...POLICY, validUntil: new Date("2026-05-31T00:00:00.000Z") },
+      ],
+    },
+  ])("skips an inapplicable locked state: %j", async (input) => {
+    const stub = makePrisma(input);
+    await expect(
+      new PolicyApplicatorService(stub.prisma).repairToPeriod(REPORT.id),
+    ).resolves.toEqual({ created: 0, updated: 0, skipped: 1 });
+    expect(stub.reminderRule.create).not.toHaveBeenCalled();
+  });
+
+  it.each([0, 1])(
+    "skips a fire time reached during the existence query (%s ms later)",
+    async (elapsedMs) => {
+      const stub = makePrisma();
+      stub.reminderRule.findFirst.mockImplementation(() => {
+        vi.setSystemTime(
+          new Date(new Date("2026-05-31T18:00:00.000Z").getTime() + elapsedMs),
+        );
+        return Promise.resolve(null);
+      });
+      await new PolicyApplicatorService(stub.prisma).repairToPeriod(REPORT.id);
+      expect(stub.reminderRule.create).not.toHaveBeenCalled();
+    },
+  );
+
+  it("allows future positive offsets after a historical deadline", async () => {
+    vi.setSystemTime(new Date("2026-06-02T00:00:00.000Z"));
+    const stub = makePrisma({ policies: [{ ...POLICY, offsetMinutes: 1440 }] });
+    await expect(
+      new PolicyApplicatorService(stub.prisma).repairToPeriod(REPORT.id),
+    ).resolves.toEqual({ created: 1, updated: 0, skipped: 0 });
   });
 });

@@ -12,6 +12,7 @@ import { APP_LOGGER } from "../../lib/audit-logger.js";
 import type { AppLogger } from "../../lib/logger.js";
 import { OrganizationModule } from "../organization/index.js";
 import { OrganizationService } from "../organization/index.js";
+import { PolicyApplicatorService } from "./policy-applicator.service.js";
 import {
   REMINDERS_ENQUEUER,
   REMINDERS_TELEMETRY,
@@ -22,6 +23,7 @@ import { RemindersPrismaRepository } from "./reminders.prisma-repository";
 import { RemindersScheduler } from "./reminders.scheduler";
 import { RemindersService } from "./reminders.service";
 import { RemindersBullmqEnqueuer } from "./reminders-bullmq-enqueuer.adapter.js";
+import { RemindersPolicyRepairScheduler } from "./reminders-policy-repair.scheduler.js";
 import { RemindersReaperScheduler } from "./reminders-reaper.scheduler";
 import { RemindersInfrastructureTelemetry } from "./reminders-telemetry.adapter.js";
 
@@ -71,6 +73,8 @@ import { RemindersInfrastructureTelemetry } from "./reminders-telemetry.adapter.
     },
     // Hourly @Cron deadline reminder dispatcher.
     RemindersScheduler,
+    PolicyApplicatorService,
+    RemindersPolicyRepairScheduler,
     // Periodic @Cron sweep that re-enqueues executions stranded in `queued`.
     RemindersReaperScheduler,
   ],

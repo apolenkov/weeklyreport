@@ -78,7 +78,7 @@ export type ProjectActivity = z.infer<typeof projectActivitySchema>;
 export type ProjectActivityCreateInput = z.infer<
   typeof projectActivityCreateSchema
 >;
-/** Update command keyed by activity id; omitted editable fields remain unchanged. */
+/** Update command keyed by activity id; name and groupId are supplied, while omitted editable arrays default to empty. */
 export type ProjectActivityUpdateInput = z.infer<
   typeof projectActivityUpdateSchema
 >;

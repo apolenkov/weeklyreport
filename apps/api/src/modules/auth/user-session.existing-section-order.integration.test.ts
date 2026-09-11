@@ -12,8 +12,7 @@ import {
 } from "./user-session";
 
 // Nothing at the DB layer enforces "only one draft report", so this fixture
-// builds two whose insertion order and `createdAt` order disagree: without the
-// explicit `orderBy` the lookup binds the session to the stale report's section.
+// builds two and verifies that the explicit ordering selects the newer report.
 describe("existingSection lookup — draft-report ordering", () => {
   const prisma = createTestPrisma();
   const failIfProvisioned: ProvisionLeadWorkspace = () => {
@@ -69,8 +68,8 @@ describe("existingSection lookup — draft-report ordering", () => {
         createdAt: new Date("2026-06-08T00:00:00Z"),
       },
     });
-    // Old report's section written first on purpose: an unordered `findFirst`
-    // returns insertion order, not report recency.
+    // Create the old section first and the new section second, matching their
+    // report recency; the query's explicit orderBy determines the selection.
     await prisma.reportSection.create({
       data: {
         id: IDS.sectionOld,

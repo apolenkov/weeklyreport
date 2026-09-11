@@ -1,6 +1,7 @@
 // Characterization pins for the fill-from row-mappers and predicates extracted
 // from LeadFormPrismaRepository.fillFromSection: the next→current status remap
 // table, the activityId carry rule, and the exact createMany field mapping.
+import { draftSaveSchema } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -11,7 +12,7 @@ import {
   toFilledRiskRows,
 } from "./fill-from.derive";
 
-const TARGET = "tttttttt-tttt-4ttt-8ttt-tttttttttttt";
+const TARGET = "22222222-2222-4222-8222-222222222222";
 const PROJECT = "11111111-1111-4111-8111-111111111111";
 const ACTIVITY = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 
@@ -56,6 +57,7 @@ describe("toFilledItemRows", () => {
           text: "Ship it",
           tag: "feature",
           workflowStatus: "planned",
+          pausedReason: null,
           stageNames: ["Development"],
         },
         {
@@ -64,6 +66,7 @@ describe("toFilledItemRows", () => {
           text: "Triage",
           tag: "chore",
           workflowStatus: "paused",
+          pausedReason: "Waiting for the upstream delivery",
           stageNames: [],
         },
       ],
@@ -79,6 +82,7 @@ describe("toFilledItemRows", () => {
         text: "Ship it",
         tag: "feature",
         workflowStatus: "in_progress",
+        pausedReason: null,
         carriedOver: false,
         stageNames: ["Development"],
       },
@@ -90,10 +94,21 @@ describe("toFilledItemRows", () => {
         text: "Triage",
         tag: "chore",
         workflowStatus: "paused",
+        pausedReason: "Waiting for the upstream delivery",
         carriedOver: false,
         stageNames: [],
       },
     ]);
+    expect(
+      draftSaveSchema.safeParse({
+        reportSectionId: TARGET,
+        version: 1,
+        projectStatuses: [],
+        items: rows,
+        risks: [],
+        decisions: [],
+      }).success,
+    ).toBe(true);
   });
 });
 

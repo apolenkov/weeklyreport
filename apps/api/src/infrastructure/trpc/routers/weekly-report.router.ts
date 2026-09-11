@@ -105,8 +105,8 @@ function emitScopeAudit(
 }
 
 // weeklyReport.get uses anyRoleProcedure because
-// viewers, leads, heads, and admins all consume this surface. The
-// service layer scopes the read to published periods for viewers.
+// viewers, leads, heads, and admins all consume this surface. The service and
+// repository apply the caller's scope to the resolved report.
 
 export function createWeeklyReportRouter(deps: WeeklyReportRouterDeps) {
   return router({

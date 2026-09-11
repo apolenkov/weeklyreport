@@ -20,6 +20,7 @@ import {
   ACTIVE_REPORT_ID,
   ADMIN_USER_ID,
   LEAD_1_ID,
+  LEAD_OLGA_ID,
   PUBLISHED_REPORT_ID,
 } from "../support/seed-constants.js";
 import type { SeedProfile } from "./seed-profile-contract.js";
@@ -110,31 +111,38 @@ export function assertPendingReopenRequestIntegrity(
   );
 }
 
-async function runMinimalJourney(prisma: PrismaClient): Promise<void> {
+async function runMinimalJourney(
+  prisma: PrismaClient,
+  leadId = LEAD_1_ID,
+  profileLabel = "minimal",
+): Promise<void> {
   const active = await prisma.report.findUnique({
     where: { id: ACTIVE_REPORT_ID },
     select: {
       periodState: true,
       sections: {
-        where: { authorId: LEAD_1_ID },
+        where: { authorId: leadId },
         select: { status: true, items: { select: { id: true } } },
       },
     },
   });
-  requireTrue(active?.periodState === "open", "minimal active report is open");
+  const message = (value: string): string => `${profileLabel} ${value}`;
+  requireTrue(active?.periodState === "open", message("active report is open"));
   requireTrue(
     (active?.sections.length ?? 0) > 0,
-    "minimal lead section exists",
+    message("lead section exists"),
   );
   const section = active?.sections[0];
-  requireTrue(
-    (section?.items.length ?? 0) > 0,
-    "minimal section has an editable item",
-  );
+  requireTrue(section?.status === "draft", message("lead section is draft"));
+  requireTrue((section?.items.length ?? 0) > 0, message("draft has an item"));
 }
 
-async function runDemoJourney(prisma: PrismaClient): Promise<void> {
-  await runMinimalJourney(prisma);
+async function runDemoJourney(
+  prisma: PrismaClient,
+  draftLeadId: string = LEAD_1_ID,
+  profileLabel = "minimal",
+): Promise<void> {
+  await runMinimalJourney(prisma, draftLeadId, profileLabel);
   const scope = SEED_PROFILE_SCOPES.demo;
   const [roles, health, sections, published, reminders, assignments, reopen] =
     await Promise.all([
@@ -236,7 +244,7 @@ async function runDemoJourney(prisma: PrismaClient): Promise<void> {
 }
 
 async function runFullJourney(prisma: PrismaClient): Promise<void> {
-  await runDemoJourney(prisma);
+  await runDemoJourney(prisma, LEAD_OLGA_ID, "full");
   const scope = SEED_PROFILE_SCOPES.full;
   const [admin, archived, activities, reopen, policies, actionLogs, settings] =
     await Promise.all([

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import type { PeriodService } from "../../../modules/period/index.js";
-import { mapDomainError } from "../trpc.error-mapper.js";
+import { withDomainErrorMapping } from "../trpc.error-mapper.js";
 import {
   captureMutationAuditInputMiddleware,
   headProcedure,
@@ -17,29 +17,19 @@ export function createPeriodRouter(deps: PeriodRouterDeps) {
     publish: headProcedure
       .input(z.object({ reportId: z.uuid() }))
       .use(captureMutationAuditInputMiddleware)
-      .mutation(async ({ input, ctx }) => {
-        try {
-          return await deps.periodService.publishPeriod(
-            input.reportId,
-            ctx.session,
-          );
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+      .mutation(({ input, ctx }) =>
+        withDomainErrorMapping(() =>
+          deps.periodService.publishPeriod(input.reportId, ctx.session),
+        ),
+      ),
 
     reopen: headProcedure
       .input(z.object({ reportId: z.uuid() }))
       .use(captureMutationAuditInputMiddleware)
-      .mutation(async ({ input, ctx }) => {
-        try {
-          return await deps.periodService.reopenPeriod(
-            input.reportId,
-            ctx.session,
-          );
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+      .mutation(({ input, ctx }) =>
+        withDomainErrorMapping(() =>
+          deps.periodService.reopenPeriod(input.reportId, ctx.session),
+        ),
+      ),
   });
 }

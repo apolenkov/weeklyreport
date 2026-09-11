@@ -82,16 +82,18 @@ const collectSemanticCandidates = (
 const groupByHash = (
   candidates: readonly SemanticCandidate[],
 ): readonly SemanticGroup[] => {
-  const groups = candidates.reduce<ReadonlyMap<string, SemanticGroup>>(
-    (current, item) => {
-      const previous = current.get(item.input.contentHash);
-      const next = previous
-        ? { ...previous, candidates: [...previous.candidates, item.candidate] }
-        : { input: item.input, candidates: [item.candidate] };
-      return new Map(current).set(item.input.contentHash, next);
-    },
-    new Map<string, SemanticGroup>(),
-  );
+  const groups = new Map<
+    string,
+    { input: SemanticInput; candidates: SearchCandidate[] }
+  >();
+  for (const { input, candidate } of candidates) {
+    const group = groups.get(input.contentHash);
+    if (group) {
+      group.candidates.push(candidate);
+    } else {
+      groups.set(input.contentHash, { input, candidates: [candidate] });
+    }
+  }
   return [...groups.values()];
 };
 

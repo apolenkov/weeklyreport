@@ -19,11 +19,8 @@ import type {
   PublicationRepository,
 } from "../application/publication.service";
 
-// Re-read the just-published row through the SAME transaction client and freeze
-// its `publishedSnapshot` as a second statement. The guarded lifecycle write
-// also carries a provisional non-null snapshot because the database rejects a
-// published row without one; this second statement replaces it with the exact
-// post-CAS state (`update` has no include).
+// Replace the guarded write's required provisional snapshot with the full
+// post-transition graph, read and frozen through the same transaction client.
 async function freezeSnapshotInTx(
   tx: PrismaTypes.TransactionClient,
   reportId: string,

@@ -71,12 +71,12 @@ describe("queryMyHistoryPage", () => {
   });
 
   it.each([
-    ["publish after the live statement", "live"],
-    ["publish before the published statement", "published"],
+    ["the transaction snapshot contains live rows", "live"],
+    ["the transaction snapshot contains published rows", "published"],
   ] as const)(
-    "keeps the merged page on one repeatable-read snapshot when %s",
+    "reads one repeatable-read snapshot when %s",
     async (_label, initialSource) => {
-      const live =
+      const liveRows =
         initialSource === "live"
           ? [
               liveRow(
@@ -86,7 +86,7 @@ describe("queryMyHistoryPage", () => {
               ),
             ]
           : [];
-      const published =
+      const publishedRows =
         initialSource === "published"
           ? [
               publishedRow(
@@ -96,39 +96,22 @@ describe("queryMyHistoryPage", () => {
               ),
             ]
           : [];
-      const initialLive = [...live];
-      const initialPublished = [...published];
       let transactionOptions: unknown;
-      const client = {
+      const transactionClient = {
         reportSection: {
-          findMany: vi.fn(() => {
-            live.splice(0);
-            return Promise.resolve(initialLive);
-          }),
+          findMany: vi.fn(() => Promise.resolve(liveRows)),
         },
         report: {
-          findMany: vi.fn(() => {
-            published.splice(0);
-            return Promise.resolve(initialPublished);
-          }),
+          findMany: vi.fn(() => Promise.resolve(publishedRows)),
         },
       };
       const prisma = {
         $transaction: async (
-          operation: (tx: typeof client) => Promise<unknown>,
+          operation: (tx: typeof transactionClient) => Promise<unknown>,
           options: unknown,
         ) => {
           transactionOptions = options;
-          const snapshotLive = [...live];
-          const snapshotPublished = [...published];
-          return operation({
-            reportSection: {
-              findMany: vi.fn(() => Promise.resolve(snapshotLive)),
-            },
-            report: {
-              findMany: vi.fn(() => Promise.resolve(snapshotPublished)),
-            },
-          });
+          return operation(transactionClient);
         },
       } as never;
 

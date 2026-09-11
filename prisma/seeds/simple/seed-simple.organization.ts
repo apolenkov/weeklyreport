@@ -38,8 +38,7 @@ export async function seedReportingGroups(prisma: PrismaClient): Promise<void> {
       description: "Default reporting group for CustomReport demo users",
     },
   });
-  // Finance group — LEAD_OLGA + LEAD_SERGEY assigned here so head (in
-  // Core Development) only sees 4 leads, proving group-scope isolation.
+  // Keep the Finance leads outside the Core Development head's report scope.
   await prisma.reportingGroup.create({
     data: {
       id: FINANCE_GROUP_ID,

@@ -22,19 +22,17 @@ export {
   publishedReportScopeWhere,
   requireScopedPublishedSnapshot,
 } from "./infrastructure/published-report-scope.js";
-export { buildEscalationsFromReadSections } from "./infrastructure/report-escalations.js";
 export { ReportSectionsModule } from "./report-sections.module.js";
-export { PublishedSnapshotIntegrityError } from "@customreport/report-persistence";
 export {
   buildAssembledReportFromPrismaRow,
   buildPortfolioProductsFromSnapshotSections,
   computeWorstStatus,
+  mapPrismaToReportSection,
+  type PrismaReportSectionWithRelations,
+  PublishedSnapshotIntegrityError,
   reportFullIncludeForSnapshot,
+  reportSectionFullInclude,
   requirePublishedSnapshot,
   toPublishedSnapshotJson,
 } from "@customreport/report-persistence";
-export {
-  type PrismaReportSectionWithRelations,
-  reportSectionFullInclude,
-} from "@customreport/report-persistence";
-export { mapPrismaToReportSection } from "@customreport/report-persistence";
+export { buildEscalationsFromReadSections } from "@customreport/shared";

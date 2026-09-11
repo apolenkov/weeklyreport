@@ -20,6 +20,8 @@ import {
 } from "./reminders.ports.js";
 import type {
   ReminderExecutionPayload,
+  ReminderExecutionRecordResult,
+  ReminderExecutionResult,
   RemindersRepository,
 } from "./reminders.types.js";
 import {
@@ -42,12 +44,13 @@ const ISO_DATE_LENGTH = 10;
 
 export { ReminderDomainError, ReminderScopeError };
 
-type ReminderExecutionResult =
-  | {
-      readonly execution: AdminReminderExecution;
-      readonly outcome: "created" | "revived" | "deduplicated";
-    }
-  | { readonly execution: null; readonly outcome: "skipped" };
+function toDispatchResult(
+  record: ReminderExecutionRecordResult,
+): ReminderExecutionResult {
+  return record.execution.status === "failed"
+    ? { execution: record.execution, outcome: "failed" }
+    : record;
+}
 
 export class RemindersService {
   private readonly logger: AppLogger;
@@ -74,6 +77,7 @@ export class RemindersService {
           await this.buildManualPayload(ruleId, deadline, leadName),
           "manual",
         ),
+      this.logger,
     );
   }
 
@@ -125,7 +129,7 @@ export class RemindersService {
     return execution;
   }
 
-  // Returns created | revived | deduplicated from the atomic insert — counters need this.
+  // Combine the atomic record outcome with enqueue failure before callers tally.
   async requestReminderExecutionWithOutcome(
     ruleId: string,
     recipientEmail: string,
@@ -157,7 +161,7 @@ export class RemindersService {
         );
       }
       this.logger.debug("deduplicated reminder execution", { ruleId });
-      return { execution, outcome };
+      return toDispatchResult(recorded);
     }
 
     this.logger.info(`${outcome} reminder execution`, { ruleId });
@@ -170,18 +174,16 @@ export class RemindersService {
         outcome,
       };
     }
-    return {
-      execution: await enqueueOrMarkFailed(
-        this.enqueueContext(this.emailQueue),
-        execution,
-        recipientEmail,
-        queuePayload,
-        outcome === "revived"
-          ? `${execution.id}:revive:${crypto.randomUUID()}`
-          : undefined,
-      ),
-      outcome,
-    };
+    const enqueued = await enqueueOrMarkFailed(
+      this.enqueueContext(this.emailQueue),
+      execution,
+      recipientEmail,
+      queuePayload,
+      outcome === "revived"
+        ? `${execution.id}:revive:${crypto.randomUUID()}`
+        : undefined,
+    );
+    return toDispatchResult({ execution: enqueued, outcome });
   }
 
   private async loadActiveRule(ruleId: string) {

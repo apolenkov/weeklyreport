@@ -36,24 +36,27 @@ export class ProjectAdminService {
 
   async upsertReportingGroup(group: ReportingGroup): Promise<ReportingGroup> {
     const parsedGroup = reportingGroupSchema.parse(group);
-    this.logger.info("upserted reporting group", { groupId: parsedGroup.id });
-    return reportingGroupSchema.parse(
+    const savedGroup = reportingGroupSchema.parse(
       await this.repository.saveReportingGroup(parsedGroup),
     );
+    this.logger.info("upserted reporting group", { groupId: parsedGroup.id });
+    return savedGroup;
   }
 
   async archiveReportingGroup(groupId: string): Promise<ReportingGroup> {
-    this.logger.info("archived reporting group", { groupId });
-    return reportingGroupSchema.parse(
+    const archivedGroup = reportingGroupSchema.parse(
       await this.repository.archiveReportingGroup(groupId),
     );
+    this.logger.info("archived reporting group", { groupId });
+    return archivedGroup;
   }
 
   async upsertProject(project: AdminProject): Promise<AdminSnapshot> {
     const parsedProject = adminProjectSchema.parse(project);
-    this.logger.info("upserted project", { projectId: parsedProject.id });
     await this.repository.upsertProject(parsedProject);
-    return this.getSnapshot();
+    const snapshot = await this.getSnapshot();
+    this.logger.info("upserted project", { projectId: parsedProject.id });
+    return snapshot;
   }
 
   async removeProject(projectId: string): Promise<AdminSnapshot> {
@@ -85,18 +88,19 @@ export class ProjectAdminService {
   async attachProductToGroup(
     input: GroupProductEdgeInput,
   ): Promise<GroupProduct> {
-    this.logger.info("attached product to group", input);
-    return groupProductSchema.parse(
+    const groupProduct = groupProductSchema.parse(
       await this.repository.attachProductToGroup(input),
     );
+    this.logger.info("attached product to group", input);
+    return groupProduct;
   }
 
   // No-op when the edge is already absent.
   async detachProductFromGroup(
     input: GroupProductEdgeInput,
   ): Promise<{ success: true }> {
-    this.logger.info("detached product from group", input);
     await this.repository.detachProductFromGroup(input);
+    this.logger.info("detached product from group", input);
     return { success: true };
   }
 

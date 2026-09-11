@@ -38,7 +38,7 @@ describe("ReportSectionsService — getActiveSection", () => {
 
     await expect(
       service.getActiveSection("99999999-9999-4999-8999-999999999999"),
-    ).rejects.toThrow("was not found");
+    ).rejects.toBeInstanceOf(ReportSectionNotFoundError);
   });
 
   it("returns submitted section (read-only, no error)", async () => {
@@ -259,7 +259,7 @@ describe("ReportSectionsService — saveDraft error paths", () => {
         }),
         AUTHOR_ID,
       ),
-    ).rejects.toThrow("was not found");
+    ).rejects.toBeInstanceOf(ReportSectionNotFoundError);
   });
 
   it("thrown error is ReportSectionDomainError for business rule violations", async () => {
@@ -428,12 +428,6 @@ describe("ReportSectionsService — multi-project", () => {
     ],
   };
 
-  // stage-guaranteed copy for write payloads.
-  const multiWriteItems = multiProjectSection.items.map((it) => ({
-    ...it,
-    stageNames: it.stageNames,
-  }));
-
   it("saveDraft updates traffic lights for multiple projects", async () => {
     const service = new ReportSectionsService(
       createRepository(multiProjectSection),
@@ -450,7 +444,7 @@ describe("ReportSectionsService — multi-project", () => {
           { projectId: PROJECT_ID_1, status: "green" },
           { projectId: PROJECT_ID_2, status: "yellow" },
         ],
-        items: multiWriteItems,
+        items: multiProjectSection.items,
         risks: [],
         decisions: [],
       },
@@ -477,7 +471,7 @@ describe("ReportSectionsService — multi-project", () => {
           stageStatuses: [],
           activityStatuses: [],
           projectStatuses: [{ projectId: PROJECT_ID_1, status: "green" }],
-          items: multiWriteItems,
+          items: multiProjectSection.items,
           risks: [],
           decisions: [],
         },
@@ -541,7 +535,7 @@ describe("ReportSectionsService — multi-project", () => {
           { projectId: PROJECT_ID_1, status: "green" },
           { projectId: PROJECT_ID_2, status: "red" },
         ],
-        items: multiWriteItems,
+        items: multiProjectSection.items,
         risks: [],
         decisions: [],
       },

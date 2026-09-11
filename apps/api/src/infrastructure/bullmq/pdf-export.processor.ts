@@ -169,7 +169,7 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
       );
       // Positive readiness gate: capture, write, and mark-completed run only once
       // the template reports "ready" — a spinner or error page throws instead,
-      // routing through onJobFailed → markExportFailed.
+      // routing through onJobFailed → terminal-state reconciliation.
       await this.assertPrintReady(page, jobId);
       await this.timed(jobId, "wait.fonts", () =>
         page.waitForFunction(

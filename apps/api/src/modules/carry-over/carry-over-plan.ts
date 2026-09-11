@@ -20,12 +20,18 @@ export interface CarriedAuthorEntry {
   }[];
 }
 
-// Activity-parented only if re-attached on the target; product-parented always qualifies.
-function isActivityCarryable(
+// A carried record must keep a valid target parent. A product/activity which
+// is no longer attached to the target section cannot receive carried work.
+function isParentCarryable(
+  productId: string | null | undefined,
   activityId: string | null | undefined,
+  targetProjectIds: ReadonlySet<string>,
   targetActivityIds: ReadonlySet<string>,
 ): boolean {
-  return activityId == null || targetActivityIds.has(activityId);
+  if (productId != null) {
+    return targetProjectIds.has(productId);
+  }
+  return activityId != null && targetActivityIds.has(activityId);
 }
 
 // Lineages the target already holds — skipping them keeps counts accurate and
@@ -42,29 +48,43 @@ function stableIdSet(
 
 function isCarryableItem(
   item: SourceItem,
+  targetProjectIds: ReadonlySet<string>,
   targetActivityIds: ReadonlySet<string>,
   targetItemLineage: ReadonlySet<string>,
 ): boolean {
   return (
-    item.type === "next" &&
-    !item.carriedOver &&
+    ((item.type === "next" && !item.carriedOver) ||
+      (item.type === "current" && Boolean(item.nextStepText?.trim()))) &&
     // Finished work is closed; postponed work was explicitly pushed beyond
     // this period — the lead re-plans it by hand, never auto.
     item.workflowStatus !== "done" &&
     item.workflowStatus !== "postponed" &&
-    isActivityCarryable(item.activityId, targetActivityIds) &&
+    item.workflowStatus !== "paused" &&
+    item.resolution == null &&
+    isParentCarryable(
+      item.projectId,
+      item.activityId,
+      targetProjectIds,
+      targetActivityIds,
+    ) &&
     !(item.stableId !== undefined && targetItemLineage.has(item.stableId))
   );
 }
 
 function isCarryableDecision(
   decision: SourceDecision,
+  targetProjectIds: ReadonlySet<string>,
   targetActivityIds: ReadonlySet<string>,
   targetDecisionLineage: ReadonlySet<string>,
 ): boolean {
   return (
     !decision.resolvedAt &&
-    isActivityCarryable(decision.activityId, targetActivityIds) &&
+    isParentCarryable(
+      decision.productId,
+      decision.activityId,
+      targetProjectIds,
+      targetActivityIds,
+    ) &&
     !(
       decision.stableId !== undefined &&
       targetDecisionLineage.has(decision.stableId)
@@ -79,8 +99,10 @@ function carryEntryForAuthor(
   targetReportId: string,
   carriedAt: Date,
 ): CarriedAuthorEntry {
-  // Activities re-attached to this author's target section — an
-  // activity-parented source record carries only when its parent is here.
+  // Records can only carry into parents attached to this target section.
+  const targetProjectIds = new Set(
+    targetSection.projects.map((project) => project.projectId),
+  );
   const targetActivityIds = new Set(
     targetSection.activities.map((activity) => activity.activityId),
   );
@@ -91,14 +113,24 @@ function carryEntryForAuthor(
     authorId: targetSection.authorId,
     items: sourceSection.items
       .filter((item) =>
-        isCarryableItem(item, targetActivityIds, targetItemLineage),
+        isCarryableItem(
+          item,
+          targetProjectIds,
+          targetActivityIds,
+          targetItemLineage,
+        ),
       )
       .map((item) =>
         cloneCarriedItem(sourceReportId, targetReportId, item, carriedAt),
       ),
     decisions: sourceSection.decisions
       .filter((decision) =>
-        isCarryableDecision(decision, targetActivityIds, targetDecisionLineage),
+        isCarryableDecision(
+          decision,
+          targetProjectIds,
+          targetActivityIds,
+          targetDecisionLineage,
+        ),
       )
       .map((decision) =>
         cloneUnresolvedDecision(
@@ -111,7 +143,7 @@ function carryEntryForAuthor(
   };
 }
 
-// Only authors with a target section; activity-parented needs re-attachment.
+// Only authors with a target section; every carried record needs a target parent.
 export function planCarriedEntries(
   sourceSections: readonly ReportSectionReadModel[],
   targetSections: readonly ReportSectionReadModel[],
@@ -189,8 +221,7 @@ export function collectCarryOverRecords(
   ];
 }
 
-// Deterministic — timestamps arrive via the boundary-provided `now`, never
-// minted here (mirrors the period transition module's no-new-Date contract).
+// Allocate a fresh execution identity while using the caller's timestamp.
 export function buildCarryOverExecution(input: {
   sourceReportId: string;
   targetReportId: string;

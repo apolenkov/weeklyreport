@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-/** Public shared schema or contract constant for m a x  r e v i s i o n s. */
+/** Maximum provider revisions returned in administrator history. */
 export const MAX_REVISIONS = 100;
 const MAX_MODEL_LENGTH = 200;
 const MAX_ENDPOINT_LENGTH = 500;
@@ -8,7 +8,7 @@ const MAX_CREDENTIAL_LENGTH = 4096;
 const MAX_REASONING_VALUE_LENGTH = 64;
 const CUSTOM_PROVIDER_PROFILE = "custom-openai-compatible" as const;
 
-/** Public shared schema or contract constant for ai provider profile schema. */
+/** Provider profiles supported by generation or embedding connections. */
 export const aiProviderProfileSchema = z.enum([
   "mistral",
   "openrouter",
@@ -18,13 +18,13 @@ export const aiProviderProfileSchema = z.enum([
   CUSTOM_PROVIDER_PROFILE,
 ]);
 
-/** Public shared schema or contract constant for ai provider connection role schema. */
+/** Capabilities assigned to provider connections. */
 export const aiProviderConnectionRoleSchema = z.enum([
   "generation",
   "embeddings",
 ]);
 
-/** Public shared schema or contract constant for ai provider profile capability schema. */
+/** Validates the capabilities supported by one provider profile. */
 export const aiProviderProfileCapabilitySchema = z
   .object({
     profile: aiProviderProfileSchema,
@@ -32,7 +32,7 @@ export const aiProviderProfileCapabilitySchema = z
   })
   .strict();
 
-/** Public shared schema or contract constant for a i  p r o v i d e r  p r o f i l e  c a p a b i l i t i e s. */
+/** Canonical capability registry for every supported provider profile. */
 export const AI_PROVIDER_PROFILE_CAPABILITIES = [
   { profile: "mistral", roles: ["generation", "embeddings"] },
   { profile: "openrouter", roles: ["generation", "embeddings"] },
@@ -47,7 +47,7 @@ export const AI_PROVIDER_PROFILE_CAPABILITIES = [
   typeof aiProviderProfileCapabilitySchema
 >[];
 
-/** Public shared schema or contract constant for profile supports role. */
+/** Returns whether a provider profile supports a connection capability. */
 export const profileSupportsRole = (
   profile: z.infer<typeof aiProviderProfileSchema>,
   role: z.infer<typeof aiProviderConnectionRoleSchema>,
@@ -60,7 +60,7 @@ export const profileSupportsRole = (
       ).includes(role),
   );
 
-/** Public shared schema or contract constant for ai provider lifecycle schema. */
+/** Lifecycle states of an immutable provider configuration revision. */
 export const aiProviderLifecycleSchema = z.enum([
   "draft",
   "validated",
@@ -70,46 +70,46 @@ export const aiProviderLifecycleSchema = z.enum([
   "superseded",
 ]);
 
-/** Public shared schema or contract constant for ai provider availability schema. */
+/** Runtime availability derived from the active provider configuration. */
 export const aiProviderAvailabilitySchema = z.enum([
   "available",
   "not_configured",
 ]);
 
-/** Public shared schema or contract constant for ai provider reasoning mode schema. */
+/** Supported reasoning controls for generation models. */
 export const aiProviderReasoningModeSchema = z.enum([
   "provider_default",
   "off",
   "custom",
 ]);
 
-/** Public shared schema or contract constant for ai provider embedding mode schema. */
+/** Whether embeddings reuse generation or use a separate connection. */
 export const aiProviderEmbeddingModeSchema = z.enum([
   "reuse_generation",
   "separate",
 ]);
 
-/** Public shared schema or contract constant for reasoning custom value schema. */
+/** Validates a non-empty provider-specific reasoning value. */
 export const reasoningCustomValueSchema = z
   .string()
   .trim()
   .min(1)
   .max(MAX_REASONING_VALUE_LENGTH);
-/** Public shared schema or contract constant for model identifier schema. */
+/** Validates a provider model identifier. */
 export const modelIdentifierSchema = z
   .string()
   .trim()
   .min(1)
   .max(MAX_MODEL_LENGTH);
-/** Public shared schema or contract constant for endpoint schema. */
+/** Validates the configured custom-provider endpoint text. */
 export const endpointSchema = z.string().trim().min(1).max(MAX_ENDPOINT_LENGTH);
-/** Public shared schema or contract constant for credential schema. */
+/** Validates the length of a submitted provider credential. */
 export const credentialSchema = z.string().min(1).max(MAX_CREDENTIAL_LENGTH);
 /** Public fixed mask used when a credential is too short for a safe suffix. */
 export const AI_PROVIDER_CREDENTIAL_MASK = "••••";
 /** Public suffix length used only when plaintext remains hidden. */
 export const AI_PROVIDER_CREDENTIAL_MASK_SUFFIX_LENGTH = 4;
-/** Public shared schema or contract constant for masked credential schema. */
+/** Accepts only the fixed credential mask with an optional four-character suffix. */
 export const maskedCredentialSchema = z
   .string()
   .trim()
@@ -122,10 +122,10 @@ export const maskedCredentialSchema = z
     { message: "Credential metadata must use the safe masked format" },
   )
   .nullable();
-/** Public shared schema or contract constant for embedding dimensions schema. */
+/** Accepts measured embedding dimensions or an unmeasured null state. */
 export const embeddingDimensionsSchema = z.number().int().positive().nullable();
 
-/** Public shared schema or contract constant for validate endpoint. */
+/** Enforces that only custom profiles supply an explicit base URL. */
 export const validateEndpoint = (
   value: { profile: string; baseUrl?: string | undefined },
   ctx: z.RefinementCtx,

@@ -1,9 +1,13 @@
 import type {
   DbRole,
+  ItemOutcomeResult,
   ItemWorkflowStatus,
+  LeadOpenWorkHistoryOutput,
   LeadStatusOverviewPredecessor,
   PublishedLineage,
   ReportSectionReadModel,
+  ResolvePlanInput,
+  RestorePlanInput,
   RiskSeverity,
   Role,
   TrafficLightStatus,
@@ -49,6 +53,22 @@ export class LeadFormConstraintError extends Error {
 }
 
 export interface LeadFormRepository {
+  resolvePlan(
+    command: ResolvePlanInput,
+    userId: string,
+  ): Promise<ItemOutcomeResult>;
+  restorePlan(
+    command: RestorePlanInput,
+    userId: string,
+  ): Promise<ItemOutcomeResult>;
+  getOpenWorkHistoryPage(
+    reportId: string,
+    authorId: string,
+    pagination: {
+      readonly cursor?: string | undefined;
+      readonly limit: number;
+    },
+  ): Promise<LeadOpenWorkHistoryOutput | null>;
   getSectionById(sectionId: string): Promise<ReportSectionReadModel | null>;
   // Scoped load for revoke; out-of-group → null (no existence oracle).
   getSectionByIdScoped(
@@ -202,7 +222,8 @@ export type ReopenBlockedReason =
   | "period_closed"
   | "pending_request_exists";
 
-// Shared by canRequestReopen UI and requestReopen guard — check archived first.
+// Shared eligibility precedence: submission state, archive flag, period state,
+// then an existing pending request.
 export function computeReopenEligibility(facts: ReopenEligibilityFacts): {
   canRequestReopen: boolean;
   reason: ReopenBlockedReason | null;

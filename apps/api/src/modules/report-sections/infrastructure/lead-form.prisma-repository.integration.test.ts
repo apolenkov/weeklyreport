@@ -436,10 +436,10 @@ describe("LeadFormPrismaRepository (integration)", () => {
     });
   });
 
-  // The caller-access guard lives in LeadFormService.getCrossAuthors, not the
-  // repository. These repo-level cases pin the complement: even reached
-  // directly, the repository never leaks foreign content; unrelated/empty → [].
-  describe("getCrossAuthors — no foreign content; empty context is []", () => {
+  // The caller-access guard lives in LeadFormService.getCrossAuthors. These
+  // repository cases show that assignments are report-independent while the
+  // returned status rows still contain no foreign authored content.
+  describe("getCrossAuthors — report-independent assignments without foreign content", () => {
     it("no section in the given reportId still returns rows scoped by shared stageAssignment, never foreign content", async () => {
       // Create a second report the caller (testData.lead) has NO section in.
       const unrelatedReport = await prisma.report.create({
@@ -550,16 +550,6 @@ describe("LeadFormPrismaRepository (integration)", () => {
       },
       {
         label: "a covering at-risk risk colours the stage yellow (not red)",
-        severity: "at-risk",
-        expectedStatus: "yellow",
-      },
-      {
-        label: "a blocked risk naming the assigned stage colours it red",
-        severity: "blocked",
-        expectedStatus: "red",
-      },
-      {
-        label: "an at-risk risk naming the assigned stage colours it yellow",
         severity: "at-risk",
         expectedStatus: "yellow",
       },

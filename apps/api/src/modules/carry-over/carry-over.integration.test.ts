@@ -308,7 +308,23 @@ describe("CarryOverPrismaRepository (integration)", () => {
       reviews: [],
     };
 
-    await repo.saveCarryOver(execution, [], [targetSectionReadModel]);
+    await repo.saveCarryOver(
+      execution,
+      [
+        {
+          id: TEST_IDS.carryRecord,
+          sourceReportId: testData.report.id,
+          targetReportId: targetReport.id,
+          sourceItemId: null,
+          targetItemId: TEST_IDS.carryTargetItem,
+          sourceDecisionId: null,
+          targetDecisionId: null,
+          status: "completed",
+          carriedAt: new Date(),
+        },
+      ],
+      [targetSectionReadModel],
+    );
 
     const persisted = expectDefined(
       (

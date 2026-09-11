@@ -60,9 +60,7 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
     );
     const scheduler = new RemindersScheduler(
       service,
-      fakeRepository as unknown as ConstructorParameters<
-        typeof RemindersScheduler
-      >[1],
+      fakeRepository,
       fakeOrganizationService,
       schedulerTestEnv,
     );
@@ -114,7 +112,7 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
           Promise.resolve([dueRuleFromRecipients([recipient])]),
         ),
         findDueEscalationRules: vi.fn(() => Promise.resolve([])),
-      } as unknown as ConstructorParameters<typeof RemindersScheduler>[1],
+      },
       fakeOrganizationService,
       schedulerTestEnv,
     );
@@ -141,9 +139,7 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
     );
     const scheduler = new RemindersScheduler(
       service,
-      fakeRepository as unknown as ConstructorParameters<
-        typeof RemindersScheduler
-      >[1],
+      fakeRepository,
       fakeOrganizationService,
       schedulerTestEnv,
     );
@@ -171,9 +167,7 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
     );
     const scheduler = new RemindersScheduler(
       service,
-      fakeRepository as unknown as ConstructorParameters<
-        typeof RemindersScheduler
-      >[1],
+      fakeRepository,
       fakeOrganizationService,
       schedulerTestEnv,
     );
@@ -203,9 +197,7 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
     );
     const scheduler = new RemindersScheduler(
       service,
-      fakeRepository as unknown as ConstructorParameters<
-        typeof RemindersScheduler
-      >[1],
+      fakeRepository,
       fakeOrganizationService,
       schedulerTestEnv,
     );
@@ -245,9 +237,7 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
       );
       const scheduler = new RemindersScheduler(
         service,
-        fakeRepository as unknown as ConstructorParameters<
-          typeof RemindersScheduler
-        >[1],
+        fakeRepository,
         fakeOrganizationService,
         schedulerTestEnv,
       );
@@ -311,9 +301,7 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
     );
     const scheduler = new RemindersScheduler(
       service,
-      fakeRepository as unknown as ConstructorParameters<
-        typeof RemindersScheduler
-      >[1],
+      fakeRepository,
       fakeOrganizationService,
       schedulerTestEnv,
     );
@@ -460,9 +448,7 @@ describe("RemindersScheduler — escalation dispatch", () => {
     );
     const scheduler = new RemindersScheduler(
       service,
-      fakeRepository as unknown as ConstructorParameters<
-        typeof RemindersScheduler
-      >[1],
+      fakeRepository,
       fakeOrganizationService,
       schedulerTestEnv,
     );
@@ -509,9 +495,7 @@ describe("RemindersScheduler — escalation dispatch", () => {
     );
     const scheduler = new RemindersScheduler(
       service,
-      fakeRepository as unknown as ConstructorParameters<
-        typeof RemindersScheduler
-      >[1],
+      fakeRepository,
       fakeOrganizationService,
       schedulerTestEnv,
     );
@@ -564,9 +548,7 @@ describe("RemindersScheduler — escalation dispatch", () => {
     );
     const scheduler = new RemindersScheduler(
       service,
-      fakeRepository as unknown as ConstructorParameters<
-        typeof RemindersScheduler
-      >[1],
+      fakeRepository,
       fakeOrganizationService,
       schedulerTestEnv,
     );
@@ -642,9 +624,7 @@ describe("RemindersScheduler — opt-out", () => {
     );
     const scheduler = new RemindersScheduler(
       service,
-      fakeRepository as unknown as ConstructorParameters<
-        typeof RemindersScheduler
-      >[1],
+      fakeRepository,
       fakeOrganizationService,
       schedulerTestEnv,
     );
@@ -725,9 +705,7 @@ describe("RemindersScheduler — opt-out", () => {
     );
     const scheduler = new RemindersScheduler(
       service,
-      fakeRepository as unknown as ConstructorParameters<
-        typeof RemindersScheduler
-      >[1],
+      fakeRepository,
       fakeOrganizationService,
       schedulerTestEnv,
     );

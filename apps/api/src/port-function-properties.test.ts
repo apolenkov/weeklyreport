@@ -170,9 +170,9 @@ function isReadonly(member: ts.Node): boolean {
     : false;
 }
 
-describe("detachable application ports", () => {
+describe("application port declaration shapes", () => {
   it.each(Object.entries(PORT_INTERFACES))(
-    "%s exposes operations as readonly function properties",
+    "%s declares no method signatures and marks properties readonly",
     (path, interfaceNames) => {
       const declarations = sourceFile(path).statements.filter(
         ts.isInterfaceDeclaration,
@@ -194,7 +194,7 @@ describe("detachable application ports", () => {
   );
 
   it.each(Object.entries(ADAPTER_CLASSES))(
-    "%s implements operations as bound fields",
+    "%s declares no prototype methods",
     (path, className) => {
       const declaration = sourceFile(path)
         .statements.filter(ts.isClassDeclaration)
@@ -208,7 +208,7 @@ describe("detachable application ports", () => {
   );
 
   it.each(Object.entries(TARGETED_CLASSES))(
-    "%s keeps selected operations as bound readonly fields",
+    "%s keeps selected operations as readonly properties",
     (path, { className, operations }) => {
       const declaration = sourceFile(path)
         .statements.filter(ts.isClassDeclaration)

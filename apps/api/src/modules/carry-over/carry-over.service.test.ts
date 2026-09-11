@@ -70,8 +70,7 @@ const sourceSection: ReportSectionReadModel = {
       deadline: null,
       impact: "Needs follow-up",
       resolvedAt: null,
-      // Decision.productId is a NOT-NULL product FK; a carried decision needs
-      // a product to persist (and therefore to be counted).
+      // This decision's product parent is present in the target section.
       productId: "44444444-4444-4444-8444-444444444444",
       stageNames: ["Development"],
     },
@@ -226,6 +225,52 @@ describe("CarryOverService", () => {
     expect(first.records).toHaveLength(2);
     expect(second.execution.id).toBe(first.execution.id);
     expect(second.targetSection.items).toHaveLength(1);
+  });
+
+  it("deduplicates a retry of a current item's next-period commitment", async () => {
+    const stableId = "a0000000-0000-4000-8000-0000000000ae";
+    const sourceWithCommitment: ReportSectionReadModel = {
+      ...sourceSection,
+      items: [
+        {
+          id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          stableId,
+          projectId: "44444444-4444-4444-8444-444444444444",
+          type: "current",
+          text: "Delivered API",
+          nextStepText: "Validate API",
+          tag: "feature",
+          workflowStatus: "in_progress",
+          carriedOver: true,
+          stageNames: ["Development"],
+        },
+      ],
+      decisions: [],
+    };
+    const service = new CarryOverService(
+      createRepository(sourceWithCommitment),
+    );
+
+    const first = await service.executeCarryOver(
+      sourceReportId,
+      targetReportId,
+    );
+    const retry = await service.executeCarryOver(
+      sourceReportId,
+      targetReportId,
+    );
+
+    expect(first.targetSection.items).toMatchObject([
+      {
+        stableId,
+        text: "Validate API",
+        nextStepText: null,
+        workflowStatus: "planned",
+      },
+    ]);
+    expect(retry.execution.id).toBe(first.execution.id);
+    expect(retry.records).toEqual([]);
+    expect(retry.targetSection.items).toHaveLength(1);
   });
 
   it("rejects carry-over when source and target report are identical", async () => {

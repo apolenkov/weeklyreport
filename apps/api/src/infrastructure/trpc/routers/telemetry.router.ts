@@ -4,7 +4,7 @@ import { leadershipProcedure, router } from "../trpc.middleware.js";
 
 export interface TelemetryRouterDeps {
   // Required: a missing service must fail loud (resolver throws), never
-  // fabricate a valid-looking zero payload. buildAppRouter always wires it.
+  // fabricate a valid-looking zero payload. createAppRouter always wires it.
   telemetryService: TelemetryService;
 }
 

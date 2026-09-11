@@ -15,9 +15,8 @@ export function encodeArchiveCursor(publishedAt: Date, id: string): string {
   ).toString("base64");
 }
 
-// Decode a keyset cursor back to its coordinate; null on a malformed token.
-// The caller rejects a present-but-malformed cursor with a 400 rather than
-// silently restarting pagination (id is a UUID, ISO date carries no separator).
+// Decode the date and nonempty row id; the caller rejects invalid coordinates
+// with a 400 instead of silently restarting pagination.
 export function decodeArchiveCursor(cursor: string): ArchiveCursor | null {
   const decoded = Buffer.from(cursor, "base64").toString("utf8");
   const separatorAt = decoded.indexOf(CURSOR_SEPARATOR);

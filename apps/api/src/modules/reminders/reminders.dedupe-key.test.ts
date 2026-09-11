@@ -51,7 +51,7 @@ describe("resolveReminderDedupeKey", () => {
   });
 });
 
-// Manual Remind after automated send must report alreadySent, not duplicate.
+// Manual Remind after automated send must report alreadyRequested, not duplicate.
 describe("RemindersScopeService.dispatchDraftSections — manual dispatch after an automated send (regression)", () => {
   const REPORT_ID = "22222222-2222-4222-8222-222222222222";
   const rule: AdminReminderRule = {
@@ -161,7 +161,7 @@ describe("RemindersScopeService.dispatchDraftSections — manual dispatch after 
     };
   }
 
-  it("reports alreadySent (not a new dispatch) for a manual Remind following the automated cycle send", async () => {
+  it("reports alreadyRequested (not a new dispatch) for a manual Remind following the automated cycle send", async () => {
     const organizationService = {
       getPublic: () =>
         Promise.resolve({
@@ -202,12 +202,12 @@ describe("RemindersScopeService.dispatchDraftSections — manual dispatch after 
       rule.id,
     );
 
-    expect(result.dispatched).toBe(0);
-    expect(result.alreadySent).toBe(1);
+    expect(result.queued).toBe(0);
+    expect(result.alreadyRequested).toBe(1);
     expect(result.skipped).toBe(0);
   });
 
-  it("classifies a fresh insert as dispatched regardless of DB timestamps", async () => {
+  it("classifies a fresh insert as queued regardless of DB timestamps", async () => {
     const insertedPayloads: ReminderQueuePayload[] = [];
     const organizationService = {
       getPublic: () =>
@@ -233,8 +233,8 @@ describe("RemindersScopeService.dispatchDraftSections — manual dispatch after 
       rule.id,
     );
 
-    expect(result.dispatched).toBe(1);
-    expect(result.alreadySent).toBe(0);
+    expect(result.queued).toBe(1);
+    expect(result.alreadyRequested).toBe(0);
     expect(result.skipped).toBe(0);
     const insertedPayload = insertedPayloads[0];
     if (insertedPayload?.kind !== "deadline") {

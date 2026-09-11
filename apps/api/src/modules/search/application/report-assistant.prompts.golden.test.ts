@@ -43,7 +43,7 @@ const emptyGrounding = {
 const prompts = baselineReportAssistantPrompts();
 
 describe("report assistant prompt goldens", () => {
-  it("keeps English and Russian planner envelopes identical apart from data", () => {
+  it("keeps planner envelopes stable across configured timezones", () => {
     for (const input of plannerCases) {
       const prompt = buildPlannerPrompt(input, prompts);
       const data = JSON.parse(prompt.data) as Record<string, unknown>;

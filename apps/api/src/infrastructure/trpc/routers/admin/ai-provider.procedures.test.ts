@@ -6,7 +6,9 @@ import {
 import { describe, expect, it, vi } from "vitest";
 
 import { createNullLogger } from "../../../../lib/logger.js";
+import type { AiProviderConfigurationService } from "../../../../modules/ai-provider/index.js";
 import { createNullAuditLogger } from "../../../../test-utils/audit-logger.js";
+import { createStubAppRouterDeps } from "../../../../test-utils/stub-app-router-deps.js";
 import { createAppRouter } from "../../trpc.router.js";
 
 const revisionId = "11111111-1111-4111-8111-111111111111";
@@ -74,11 +76,21 @@ const callerFor = (role: "admin" | "lead") => {
     restore: vi.fn().mockResolvedValue(control),
     discard: vi.fn().mockResolvedValue({ discarded: true }),
     progress: vi.fn().mockResolvedValue(progress),
-  };
+  } satisfies Pick<
+    AiProviderConfigurationService,
+    | "read"
+    | "save"
+    | "test"
+    | "activate"
+    | "disable"
+    | "restore"
+    | "discard"
+    | "progress"
+  >;
   return {
-    caller: createAppRouter({
-      aiProviderService: service,
-    } as unknown as Parameters<typeof createAppRouter>[0]).createCaller({
+    caller: createAppRouter(
+      createStubAppRouterDeps({ aiProviderService: service }),
+    ).createCaller({
       session: {
         userId: `${role}-1`,
         email: `${role}@test.local`,

@@ -145,13 +145,9 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
       orderBy: { periodEnd: "asc" },
     });
 
-    const reports = reportRows
-      .map((row) => mapPublishedAnalyticsReport(row, session, input.leadId))
-      .filter((report) =>
-        session.role === "admin" && input.leadId === undefined
-          ? true
-          : report.sections.length > 0,
-      );
+    const reports = reportRows.map((row) =>
+      mapPublishedAnalyticsReport(row, session, input.leadId),
+    );
 
     const periods = Array.from(
       new Set(reports.map((r) => isoDateOnly(r.periodEnd))),

@@ -43,9 +43,8 @@ vi.mock("../../modules/reminders/index.js", () => ({
   },
 }));
 
-// SnapshotAdminService is an optional constructor dependency of
-// EmailReminderProcessor. Mocking the module keeps the test isolated from
-// Prisma + Nest DI.
+// SnapshotAdminService is a required constructor dependency. Mocking its module
+// keeps this processor unit isolated from Prisma and Nest DI.
 vi.mock("../../modules/admin/index.js", () => ({
   SnapshotAdminService: class {
     getSettings = vi.fn();
@@ -117,7 +116,7 @@ function createMockJob(
   } as Job<EmailReminderJobData>;
 }
 
-// Test seam — `processJob` is `private` on the class, but tests need to invoke
+// Test seam — `processJob` is `protected` on the class, but tests need to invoke
 // it directly. Cast through this interface to call without `as any`.
 interface ProcessorTestSeam {
   processJob(job: Job<EmailReminderJobData>): Promise<void>;
@@ -459,8 +458,11 @@ describe("EmailReminderProcessor.processJob", () => {
     expect(mockReminders.markReminderSent).not.toHaveBeenCalled();
   });
 
-  it("claims the execution before sending", async () => {
+  it("waits for the execution claim to resolve before sending", async () => {
     const mockReminders = createMockRemindersService();
+    const { promise: claimPending, resolve: resolveClaim } =
+      Promise.withResolvers<EmailReminderJobData>();
+    mockReminders.claimExecutionForSending.mockReturnValue(claimPending);
     const mockEmail = createMockEmailService();
     const processor = new EmailReminderProcessor(
       mockReminders as never,
@@ -470,11 +472,19 @@ describe("EmailReminderProcessor.processJob", () => {
     );
     const job = createMockJob(defaultJobData);
 
-    await (processor as unknown as ProcessorTestSeam).processJob(job);
+    const processing = (processor as unknown as ProcessorTestSeam).processJob(
+      job,
+    );
 
     expect(mockReminders.claimExecutionForSending).toHaveBeenCalledWith(
       "exec-1",
     );
+    expect(mockEmail.sendMailMultipart).not.toHaveBeenCalled();
+
+    resolveClaim(defaultJobData);
+    await processing;
+
+    expect(mockEmail.sendMailMultipart).toHaveBeenCalledOnce();
   });
 
   it('renders and sends the deadline template for kind: "deadline" jobs', async () => {

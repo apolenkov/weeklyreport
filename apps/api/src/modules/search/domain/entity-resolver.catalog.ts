@@ -17,39 +17,34 @@ import type {
 
 const MAX_CLARIFICATION_OPTIONS = 20;
 
-export const uniqueStrings = (values: readonly string[]): readonly string[] =>
-  values.filter((value, index) => values.indexOf(value) === index);
+export const uniqueStrings = (values: readonly string[]): readonly string[] => [
+  ...new Set(values),
+];
 
 export const referenceKey = (kind: AliasKind, reference: string): string =>
   `${kind}:${normalizeEntityReference(reference)}`;
 
-const mergeAccessibleEntity = (
+const mergeEntityGroup = (
   entities: readonly AccessibleEntity[],
-  next: AccessibleEntity,
 ): readonly AccessibleEntity[] => {
-  const existingIndex = entities.findIndex(
-    (entity) => entity.kind === next.kind && entity.id === next.id,
-  );
-  if (existingIndex === -1) return [...entities, next];
-
-  return entities.map((entity, index) =>
-    index === existingIndex
-      ? {
-          ...entity,
-          aliases: uniqueStrings([...entity.aliases, ...next.aliases]),
-        }
-      : entity,
-  );
+  const [first] = entities;
+  if (!first) return [];
+  if (entities.length === 1) return [first];
+  return [
+    {
+      ...first,
+      aliases: uniqueStrings(entities.flatMap(({ aliases }) => aliases)),
+    },
+  ];
 };
 
 /** Build an alias catalog from occurrences already filtered by current ACL. */
 export const buildAccessibleEntityCatalog = (
   entities: readonly AccessibleEntity[],
 ): AccessibleEntityCatalog => {
-  const merged = entities.reduce<readonly AccessibleEntity[]>(
-    mergeAccessibleEntity,
-    [],
-  );
+  const merged = [
+    ...Map.groupBy(entities, ({ kind, id }) => `${kind}:${id}`).values(),
+  ].flatMap(mergeEntityGroup);
   return {
     entities: merged,
     index: buildEntityAliasIndex(

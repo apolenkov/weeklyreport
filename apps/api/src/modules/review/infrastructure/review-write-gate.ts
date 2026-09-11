@@ -23,6 +23,37 @@ export async function lockEditableReport(
   }
 }
 
+/** Re-check current group access for a group-level acknowledgement. */
+export async function assertAcknowledgementAccess(
+  tx: Prisma.TransactionClient,
+  actor: ReviewWriteActor,
+  groupId: string,
+): Promise<void> {
+  const user = await tx.user.findUnique({
+    where: { id: actor.userId },
+    select: {
+      isActive: true,
+      role: true,
+      reportingGroupId: true,
+      viewerGroupAccess: {
+        where: { groupId },
+        select: { groupId: true },
+      },
+    },
+  });
+  if (!user) throw new ReviewAccessError("Reviewer no longer exists.");
+  const allowed =
+    user.isActive &&
+    (user.role === "admin" ||
+      (user.role === "head" && user.reportingGroupId === groupId) ||
+      (user.role === "viewer" && user.viewerGroupAccess.length > 0));
+  if (!allowed) {
+    throw new ReviewAccessError(
+      "You no longer have access to this group's report.",
+    );
+  }
+}
+
 /** Re-check the actor's current database entitlement inside the same tx. */
 export function assertReviewEntitlement(
   tx: Prisma.TransactionClient,
@@ -41,6 +72,7 @@ export async function assertReviewEntitlementByUserId(
   const user = await tx.user.findUnique({
     where: { id: userId },
     select: {
+      isActive: true,
       role: true,
       reportingGroupId: true,
       viewerGroupAccess: {
@@ -51,9 +83,11 @@ export async function assertReviewEntitlementByUserId(
   });
   if (!user) throw new ReviewAccessError("Reviewer no longer exists.");
   const allowed =
-    user.role === "admin" ||
-    (user.role === "head" && user.reportingGroupId === groupId) ||
-    (user.role === "viewer" && user.viewerGroupAccess[0]?.canReview === true);
+    user.isActive &&
+    (user.role === "admin" ||
+      (user.role === "head" && user.reportingGroupId === groupId) ||
+      (user.role === "viewer" &&
+        user.viewerGroupAccess[0]?.canReview === true));
   if (!allowed) {
     throw new ReviewAccessError(
       "You are no longer a designated reviewer for this group.",

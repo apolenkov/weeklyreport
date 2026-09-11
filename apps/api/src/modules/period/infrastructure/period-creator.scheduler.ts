@@ -142,7 +142,7 @@ export class PeriodCreatorScheduler {
 
   // One global reconciliation tick at 00:05 UTC keeps lifecycle transitions
   // deterministic and avoids the 00:00 backup boundary.
-  @Cron("5 0 * * *")
+  @Cron("5 0 * * *", { timeZone: "UTC" })
   async runDaily(): Promise<void> {
     await this.runOnce(new Date());
   }

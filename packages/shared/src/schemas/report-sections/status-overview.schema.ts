@@ -4,6 +4,8 @@ import { reportDate } from "../primitives/report-primitives.schema";
 import {
   publishedReportSectionReadModelSchema,
   reportSectionReadModelSchema,
+  sharedPublishedReportSectionReadModelSchema,
+  sharedReportSectionReadModelSchema,
 } from "./section.schema";
 
 /** Identifies the selected report and optional section author for Overview. */
@@ -24,7 +26,12 @@ const periodIdentitySchema = z
 
 const currentStatusOverviewPeriodSchema = periodIdentitySchema
   .unwrap()
-  .extend({ section: reportSectionReadModelSchema })
+  .extend({
+    section: z.union([
+      sharedReportSectionReadModelSchema,
+      reportSectionReadModelSchema,
+    ]),
+  })
   .readonly();
 
 const publishedPredecessorSchema = periodIdentitySchema
@@ -32,14 +39,25 @@ const publishedPredecessorSchema = periodIdentitySchema
   .extend({
     availability: z.literal("available"),
     source: z.literal("published"),
-    section: publishedReportSectionReadModelSchema,
+    section: z.union([
+      sharedPublishedReportSectionReadModelSchema,
+      publishedReportSectionReadModelSchema,
+    ]),
   })
   .readonly();
 
-const submittedSectionSchema = reportSectionReadModelSchema
+const submittedAuthorSectionSchema = reportSectionReadModelSchema
   .unwrap()
   .extend({ status: z.literal("submitted") })
   .readonly();
+const submittedSharedSectionSchema = sharedReportSectionReadModelSchema
+  .unwrap()
+  .extend({ status: z.literal("submitted") })
+  .readonly();
+const submittedSectionSchema = z.union([
+  submittedSharedSectionSchema,
+  submittedAuthorSectionSchema,
+]);
 
 const submittedPredecessorSchema = periodIdentitySchema
   .unwrap()

@@ -153,8 +153,8 @@ export function deadlineTimeFromSetting(deadlineTime: string): {
 }
 
 // Resolve the virtual buckets `'active' | 'archive'` to concrete `PeriodState`
-// values: active excludes `archived` + published-out-of-window rows (surfaced
-// via post-fetch `canReopen`), archive is the inverse.
+// values: active selects scheduled, open and published; archive selects only
+// archived. Reopen eligibility is derived separately on returned rows.
 export function resolveBucketStates(bucket: PeriodListBucket): PeriodState[] {
   switch (bucket) {
     case "active":

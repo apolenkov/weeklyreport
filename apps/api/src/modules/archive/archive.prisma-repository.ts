@@ -26,16 +26,18 @@ import { decodeArchiveCursor, encodeArchiveCursor } from "./archive-cursor.js";
 // Hard floor: published + archived only; callers may narrow, never widen.
 const PUBLISHED_FLOOR = { status: "published" as const, archived: true };
 
-// Display sentinel when snapshot and publisher name are both missing.
+// Display sentinel when the frozen snapshot has no publisher name.
 const UNKNOWN_PUBLISHER_NAME = "Unknown";
 const DEFAULT_ARCHIVE_PAGE_SIZE = 20;
 
-// Archive reads load only the report envelope and immutable publication JSON;
-// restored reports do not need live ReportSection rows.
+const archiveReportSelect = {
+  id: true,
+  publishedAt: true,
+  publishedSnapshot: true,
+} as const;
+
 type ArchiveListRow = Prisma.ReportGetPayload<{
-  include: {
-    publishedBy: true;
-  };
+  select: typeof archiveReportSelect;
 }>;
 
 @Injectable()
@@ -81,14 +83,10 @@ export class ArchivePrismaRepository implements ArchiveRepository {
       { publishedAt: "desc" },
       { id: "desc" },
     ];
-    const include = {
-      publishedBy: true,
-    } satisfies Prisma.ReportInclude;
-
     const { cursor, limit } = pagination;
     return this.prisma.report.findMany({
       where: cursor ? withArchiveKeyset(where, cursor) : where,
-      include,
+      select: archiveReportSelect,
       orderBy,
       take: limit + 1,
     });
@@ -98,9 +96,9 @@ export class ArchivePrismaRepository implements ArchiveRepository {
     rows: ArchiveListRow[],
     session: ArchiveScopeSession,
   ): ArchiveReportSummary[] {
-    return rows.flatMap((row) => {
+    return rows.map((row) => {
       const assembled = readScopedSnapshot(row, session);
-      return [toArchiveSummaryFromSnapshot(assembled, row.id)];
+      return toArchiveSummaryFromSnapshot(assembled, row.id);
     });
   }
 
@@ -109,7 +107,6 @@ export class ArchivePrismaRepository implements ArchiveRepository {
     filter: ArchiveReadFilter | undefined,
     session: ArchiveScopeSession,
   ): Promise<ArchiveDetailRead> => {
-    // findFirst: status is non-unique so WhereUniqueInput cannot take it.
     const report = await this.prisma.report.findFirst({
       where: {
         id: reportId,
@@ -117,9 +114,7 @@ export class ArchivePrismaRepository implements ArchiveRepository {
         ...PUBLISHED_FLOOR,
         ...publishedReportScopeWhere(session),
       },
-      include: {
-        publishedBy: true,
-      },
+      select: archiveReportSelect,
     });
 
     if (!report) {

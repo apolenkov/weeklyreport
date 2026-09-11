@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-/** Public shared schema or contract constant for a i  p r o m p t  s l o t  k e y s. */
+/** Prompt stages required in every managed prompt bundle. */
 export const AI_PROMPT_SLOT_KEYS = [
   "planner",
   "planner-repair",
@@ -8,24 +8,24 @@ export const AI_PROMPT_SLOT_KEYS = [
   "citation-repair",
 ] as const;
 
-/** Public shared schema or contract constant for a i  p r o m p t  f e a t u r e  k e y s. */
+/** Product features whose prompts can be managed by administrators. */
 export const AI_PROMPT_FEATURE_KEYS = ["lead-report-assistant"] as const;
 
-/** Public shared schema or contract constant for a i  p r o m p t  s l o t  c o n t e n t  l i m i t. */
+/** Maximum editable characters in one prompt slot. */
 export const AI_PROMPT_SLOT_CONTENT_LIMIT = 12_000;
-/** Public shared schema or contract constant for a i  p r o m p t  b u n d l e  e f f e c t i v e  l i m i t. */
+/** Maximum combined effective prompt size across a bundle. */
 export const AI_PROMPT_BUNDLE_EFFECTIVE_LIMIT = 48_000;
-/** Public shared schema or contract constant for a i  p r o m p t  c o r e  l i m i t. */
+/** Maximum locked-core characters retained for one prompt slot. */
 export const AI_PROMPT_CORE_LIMIT = 24_000;
-/** Public shared schema or contract constant for a i  p r o m p t  h a s h  l e n g t h. */
+/** Character length of a lowercase SHA-256 content hash. */
 export const AI_PROMPT_HASH_LENGTH = 64;
-/** Public shared schema or contract constant for a i  p r o m p t  v e r s i o n  l i m i t. */
+/** Maximum length of a prompt contract or composer version. */
 export const AI_PROMPT_VERSION_LIMIT = 120;
-/** Public shared schema or contract constant for a i  p r o m p t  d i s p l a y  n a m e  l i m i t. */
+/** Maximum display-name length for prompt features and slots. */
 export const AI_PROMPT_DISPLAY_NAME_LIMIT = 120;
-/** Public shared schema or contract constant for a i  p r o m p t  d e s c r i p t i o n  l i m i t. */
+/** Maximum prompt-feature description length. */
 export const AI_PROMPT_DESCRIPTION_LIMIT = 500;
-/** Public shared schema or contract constant for a i  p r o m p t  h i s t o r y  l i m i t. */
+/** Maximum number of prompt revisions returned in feature history. */
 export const AI_PROMPT_HISTORY_LIMIT = 100;
 
 const CONTROL_CHARACTER_PATTERN =
@@ -47,11 +47,11 @@ const contentHashSchema = z
   .string()
   .regex(HASH_PATTERN, "Content hash must be a lowercase SHA-256 hex digest");
 
-/** Public shared schema or contract constant for ai feature key schema. */
+/** Accepts a registered prompt-managed feature. */
 export const aiFeatureKeySchema = z.enum(AI_PROMPT_FEATURE_KEYS);
-/** Public shared schema or contract constant for ai prompt slot schema. */
+/** Accepts a registered prompt slot. */
 export const aiPromptSlotSchema = z.enum(AI_PROMPT_SLOT_KEYS);
-/** Public shared schema or contract constant for ai prompt bundle lifecycle schema. */
+/** Lifecycle states of an immutable prompt bundle revision. */
 export const aiPromptBundleLifecycleSchema = z.enum([
   "draft",
   "validated",
@@ -59,16 +59,16 @@ export const aiPromptBundleLifecycleSchema = z.enum([
   "failed",
   "superseded",
 ]);
-/** Public shared schema or contract constant for ai prompt availability schema. */
+/** Availability states exposed by prompt administration. */
 export const aiPromptAvailabilitySchema = z.enum([
   "available",
   "not_configured",
   "provider_incompatible",
 ]);
-/** Public shared schema or contract constant for ai prompt serving status schema. */
+/** Whether a prompt revision matches the current serving contract. */
 export const aiPromptServingStatusSchema = z.enum(["current", "incompatible"]);
 
-/** Public shared schema or contract constant for ai prompt slot definition schema. */
+/** Describes one required, catalog-owned prompt slot. */
 export const aiPromptSlotDefinitionSchema = z
   .object({
     slot: aiPromptSlotSchema,
@@ -77,7 +77,7 @@ export const aiPromptSlotDefinitionSchema = z
   })
   .strict();
 
-/** Public shared schema or contract constant for ai prompt contents schema. */
+/** Validates the complete editable contents of a prompt bundle. */
 export const aiPromptContentsSchema = z
   .object({
     planner: safePromptText(AI_PROMPT_SLOT_CONTENT_LIMIT),
@@ -87,7 +87,7 @@ export const aiPromptContentsSchema = z
   })
   .strict();
 
-/** Public shared schema or contract constant for ai prompt slot read schema. */
+/** Read model for one composed prompt slot. */
 export const aiPromptSlotReadSchema = z
   .object({
     slot: aiPromptSlotSchema,
@@ -97,7 +97,7 @@ export const aiPromptSlotReadSchema = z
   })
   .strict();
 
-/** Public shared schema or contract constant for ai prompt bundle read schema. */
+/** Read model for an immutable prompt bundle revision. */
 export const aiPromptBundleReadSchema = z
   .object({
     id: z.uuid(),
@@ -133,7 +133,7 @@ export const aiPromptBundleReadSchema = z
     }
   });
 
-/** Public shared schema or contract constant for ai prompt feature control read schema. */
+/** Active, latest, and historical state for one prompt-managed feature. */
 export const aiPromptFeatureControlReadSchema = z
   .object({
     featureKey: aiFeatureKeySchema,
@@ -145,7 +145,7 @@ export const aiPromptFeatureControlReadSchema = z
   })
   .strict();
 
-/** Public shared schema or contract constant for ai prompt feature read schema. */
+/** Catalog metadata and revision control state for one feature. */
 export const aiPromptFeatureReadSchema = z
   .object({
     featureKey: aiFeatureKeySchema,
@@ -158,12 +158,12 @@ export const aiPromptFeatureReadSchema = z
   })
   .strict();
 
-/** Public shared schema or contract constant for ai prompt catalog read schema. */
+/** Administrator-visible catalog of prompt-managed features. */
 export const aiPromptCatalogReadSchema = z
   .object({ features: z.array(aiPromptFeatureReadSchema).min(1) })
   .strict();
 
-/** Public shared schema or contract constant for ai prompt feature input schema. */
+/** Selects one registered prompt-managed feature. */
 export const aiPromptFeatureInputSchema = z
   .object({ featureKey: aiFeatureKeySchema })
   .strict();
@@ -171,10 +171,10 @@ export const aiPromptFeatureInputSchema = z
 const revisionInputSchema = () =>
   z.object({ featureKey: aiFeatureKeySchema, revisionId: z.uuid() }).strict();
 
-/** Public shared schema or contract constant for ai prompt revision input schema. */
+/** Selects one immutable revision of a prompt-managed feature. */
 export const aiPromptRevisionInputSchema = revisionInputSchema();
 
-/** Public shared schema or contract constant for ai prompt draft input schema. */
+/** Validates editable contents used to create a draft revision. */
 export const aiPromptDraftInputSchema = z
   .object({
     featureKey: aiFeatureKeySchema,
@@ -183,22 +183,14 @@ export const aiPromptDraftInputSchema = z
   })
   .strict();
 
-const activationInputSchema = () =>
-  z
-    .object({
-      featureKey: aiFeatureKeySchema,
-      revisionId: z.uuid(),
-    })
-    .strict();
-
-/** Public shared schema or contract constant for ai prompt activation input schema. */
-export const aiPromptActivationInputSchema = activationInputSchema();
-/** Public shared schema or contract constant for ai prompt restore input schema. */
-export const aiPromptRestoreInputSchema = activationInputSchema();
-/** Public shared schema or contract constant for ai prompt discard input schema. */
+/** Selects the revision to make active for a feature. */
+export const aiPromptActivationInputSchema = revisionInputSchema();
+/** Selects the historical revision to restore for a feature. */
+export const aiPromptRestoreInputSchema = revisionInputSchema();
+/** Selects the inactive revision to discard for a feature. */
 export const aiPromptDiscardInputSchema = revisionInputSchema();
 
-/** Public shared schema or contract constant for ai prompt discard result schema. */
+/** Confirms that an inactive prompt revision was discarded. */
 export const aiPromptDiscardResultSchema = z
   .object({
     featureKey: aiFeatureKeySchema,
@@ -207,7 +199,7 @@ export const aiPromptDiscardResultSchema = z
   })
   .strict();
 
-/** Public shared schema or contract constant for ai prompt operation result schema. */
+/** Reports the resulting lifecycle of a prompt revision operation. */
 export const aiPromptOperationResultSchema = z
   .object({
     featureKey: aiFeatureKeySchema,

@@ -7,7 +7,11 @@ import type { EnvConfig } from "../../infrastructure/config/env.schema";
 import { OrganizationService } from "../organization/index.js";
 import { RemindersPrismaRepository } from "./reminders.prisma-repository";
 import { RemindersService } from "./reminders.service";
-import type { DueDeadlineRule, DueEscalationRule } from "./reminders.types";
+import type {
+  DueDeadlineRule,
+  DueEscalationRule,
+  ReminderExecutionResult,
+} from "./reminders.types";
 import { toReminderCycleDate } from "./reminders-dedupe-key.js";
 
 interface ReminderRecipientFailure {
@@ -42,7 +46,10 @@ export class RemindersScheduler {
   constructor(
     @Inject(RemindersService) private readonly service: RemindersService,
     @Inject(RemindersPrismaRepository)
-    private readonly repository: RemindersPrismaRepository,
+    private readonly repository: Pick<
+      RemindersPrismaRepository,
+      "findDueDeadlineRules" | "findDueEscalationRules"
+    >,
     // Brand snapshot is fetched once per `runOnce` (not per-recipient) so a
     // single tick that fans out to all 6+ leads hits the `Organization` table
     // exactly once, not 6 times.
@@ -70,6 +77,23 @@ export class RemindersScheduler {
     };
   }
 
+  private recordDispatchOutcome(
+    tally: RuleDispatchOutcome,
+    result: ReminderExecutionResult,
+    recipientUserId: string,
+  ): RuleDispatchOutcome {
+    if (result.outcome === "failed") {
+      return this.recordDispatchFailure(
+        tally,
+        recipientUserId,
+        result.execution.errorMessage ?? "Reminder request failed",
+      );
+    }
+    return result.outcome === "skipped"
+      ? tally
+      : { ...tally, requested: tally.requested + 1 };
+  }
+
   @Cron(CronExpression.EVERY_HOUR)
   async dispatchDueReminders(): Promise<RemindersSchedulerResult> {
     return this.runOnce(new Date());
@@ -81,8 +105,8 @@ export class RemindersScheduler {
     const dueEscalationRules =
       await this.repository.findDueEscalationRules(now);
 
-    // Skip the org fetch entirely when nothing is due — keeps idle ticks
-    // a no-op against the DB.
+    // Due-rule queries have already run; when both return empty, skip the
+    // organization read and every dispatch.
     if (dueDeadlineRules.length === 0 && dueEscalationRules.length === 0) {
       return EMPTY_DISPATCH_RESULT;
     }
@@ -133,23 +157,20 @@ export class RemindersScheduler {
           return tally;
         }
         try {
-          const { outcome } =
-            await this.service.requestReminderExecutionWithOutcome(
-              rule.id,
-              recipient.email,
-              {
-                kind: "deadline",
-                cycleDate,
-                leadName: recipient.name,
-                reportPeriod: rule.reportPeriodLabel,
-                deadlineIso,
-                sectionUrl,
-                organization,
-              },
-            );
-          return outcome === "skipped"
-            ? tally
-            : { ...tally, requested: tally.requested + 1 };
+          const result = await this.service.requestReminderExecutionWithOutcome(
+            rule.id,
+            recipient.email,
+            {
+              kind: "deadline",
+              cycleDate,
+              leadName: recipient.name,
+              reportPeriod: rule.reportPeriodLabel,
+              deadlineIso,
+              sectionUrl,
+              organization,
+            },
+          );
+          return this.recordDispatchOutcome(tally, result, recipient.userId);
         } catch (error: unknown) {
           return this.recordDispatchFailure(tally, recipient.userId, error);
         }
@@ -169,22 +190,19 @@ export class RemindersScheduler {
       async (pending, group) => {
         const tally = await pending;
         try {
-          const { outcome } =
-            await this.service.requestReminderExecutionWithOutcome(
-              rule.id,
-              group.head.email,
-              {
-                kind: "escalation",
-                cycleDate,
-                headName: group.head.name,
-                reportPeriod: rule.reportPeriodLabel,
-                lateLeads: group.lateLeads,
-                organization,
-              },
-            );
-          return outcome === "skipped"
-            ? tally
-            : { ...tally, requested: tally.requested + 1 };
+          const result = await this.service.requestReminderExecutionWithOutcome(
+            rule.id,
+            group.head.email,
+            {
+              kind: "escalation",
+              cycleDate,
+              headName: group.head.name,
+              reportPeriod: rule.reportPeriodLabel,
+              lateLeads: group.lateLeads,
+              organization,
+            },
+          );
+          return this.recordDispatchOutcome(tally, result, group.head.userId);
         } catch (error: unknown) {
           return this.recordDispatchFailure(tally, group.head.userId, error);
         }

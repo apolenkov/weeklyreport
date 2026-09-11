@@ -72,9 +72,9 @@ import { WeeklyReportDomainError } from "../../modules/weekly-report/index.js";
 // A domain error class, matched against the thrown error via `instanceof`.
 type DomainErrorCtor = abstract new (...args: never[]) => Error;
 
-// Table (not if-chain) for the complexity lint ceiling. Order is irrelevant:
+// The table keeps class-to-code mappings explicit. Order is irrelevant because
 // every class extends Error directly, so no thrown error can match two rows.
-// Non-obvious codes carry an inline WHY.
+// Non-obvious codes carry an inline rationale.
 export const DOMAIN_ERROR_CODES: readonly (readonly [
   DomainErrorCtor,
   TRPCError["code"],

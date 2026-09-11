@@ -1,5 +1,5 @@
 import type { OrganizationService } from "../../../modules/organization/index.js";
-import { mapDomainError } from "../trpc.error-mapper.js";
+import { withDomainErrorMapping } from "../trpc.error-mapper.js";
 import { publicProcedure, router } from "../trpc.middleware.js";
 
 export interface OrganizationRouterDeps {
@@ -11,12 +11,8 @@ export interface OrganizationRouterDeps {
 
 export function createOrganizationRouter(deps: OrganizationRouterDeps) {
   return router({
-    getPublic: publicProcedure.query(async () => {
-      try {
-        return await deps.organizationService.getPublic();
-      } catch (error) {
-        throw mapDomainError(error);
-      }
-    }),
+    getPublic: publicProcedure.query(() =>
+      withDomainErrorMapping(() => deps.organizationService.getPublic()),
+    ),
   });
 }

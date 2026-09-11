@@ -6,7 +6,3 @@ export * from "./seed-catalog.js";
 export * from "./seed-identifiers.js";
 export * from "./seed-people.js";
 export * from "./seed-periods.js";
-
-// Literal mirror of the shared role vocabulary: the Prisma toolchain's
-// isolated tsconfig cannot resolve workspace packages, so it lives here.
-export type SeedRole = "head" | "viewer" | "admin" | "lead";

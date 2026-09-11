@@ -3,7 +3,6 @@ import {
   type AssembledReport,
   assembledReportSchema,
   type PortfolioOverview,
-  type PortfolioProductOverview,
   type PublishedReportSectionReadModel,
   publishedReportSectionReadModelSchema,
   publishedReportSnapshotSchema,
@@ -128,15 +127,6 @@ function groupProjectOccurrences(
   );
 }
 
-function computePublishedStageCount(
-  occurrences: readonly ProjectOccurrence[],
-): number {
-  return Math.max(
-    0,
-    ...occurrences.map(({ project }) => project.stageSet.length),
-  );
-}
-
 export function computePortfolioOverviewFromReadSections(
   sections: readonly ReportSectionReadModel[],
 ): PortfolioOverview {
@@ -164,44 +154,7 @@ export function computePortfolioOverviewFromReadSections(
   return { status, totals };
 }
 
-export function buildPortfolioProductsFromSnapshotSections(
-  sections: readonly ReportSectionReadModel[],
-): PortfolioProductOverview[] {
-  return [...groupProjectOccurrences(sections).values()]
-    .flatMap((occurrences) => {
-      const representative = occurrences[0];
-      if (!representative) return [];
-
-      const contributions = occurrences.map(({ project, section }) => ({
-        leadId: section.authorId,
-        leadName: section.authorName,
-        status: effectiveProjectStatus(section, project),
-      }));
-      const statuses = contributions.flatMap(({ status }) =>
-        status === null ? [] : [status],
-      );
-      const leadIds = contributions.flatMap(({ leadId, status }) =>
-        status === null ? [] : [leadId],
-      );
-      const leadNames = contributions.flatMap(({ leadName, status }) =>
-        status === null ? [] : [leadName],
-      );
-
-      return [
-        {
-          productId: representative.project.projectId,
-          productName: representative.project.projectName,
-          worstStatus: computeWorstStatus(statuses),
-          stageCount: computePublishedStageCount(occurrences),
-          leadIds: [...new Set(leadIds)],
-          leadNames: [...new Set(leadNames)].sort((a, b) =>
-            a.localeCompare(b, "ru"),
-          ),
-        },
-      ];
-    })
-    .sort((a, b) => a.productName.localeCompare(b.productName, "ru"));
-}
+export { buildPortfolioProductsFromSnapshotSections } from "@customreport/shared";
 
 export const computeWorstStatus: (
   statuses: readonly TrafficLightStatus[],

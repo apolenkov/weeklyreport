@@ -34,8 +34,7 @@ function createPdfExportService(
   telemetry: PdfExportTelemetry = NOOP_PDF_EXPORT_TELEMETRY,
 ): PdfExportService {
   return new PdfExportService(repository, logger, queue, telemetry, {
-    // Deliberately preserve undefined here so the no-fallback contract test
-    // exercises the required environment value.
+    // An absent URL remains invalid for the required-value contract test.
     PDF_BASE_URL: process.env.PDF_BASE_URL ?? "",
     PDF_EXPORT_JWT_SECRET: process.env.PDF_EXPORT_JWT_SECRET ?? TEST_PDF_SECRET,
   });
@@ -195,14 +194,14 @@ describe("PdfExportService — contract tests", () => {
 
         expect(mockQueue.enqueue).toHaveBeenCalledTimes(1);
         expect(mockQueue.enqueue).toHaveBeenCalledWith(
-          expect.objectContaining({
+          {
             reportId,
             jobId: job.jobId,
             requestedBy: requesterSession.userId,
-          }),
+          },
           {},
         );
-        const serialized = JSON.stringify(mockQueue.enqueue.mock.calls[0]?.[1]);
+        const serialized = JSON.stringify(mockQueue.enqueue.mock.calls[0]?.[0]);
         expect(serialized).not.toContain("authToken");
         expect(serialized).not.toMatch(/eyJ/);
       } finally {
@@ -214,7 +213,7 @@ describe("PdfExportService — contract tests", () => {
       }
     });
 
-    it("works without a queue (null queue)", async () => {
+    it("creates a queued job with the no-op enqueuer", async () => {
       const service = createPdfExportService(createRepository(publishedReport));
       const job = await service.requestPdfExport(reportId, requesterSession);
 

@@ -1,9 +1,14 @@
-import { publishedReportSnapshotSchema } from "@customreport/shared";
+import {
+  leadStatusOverviewPredecessorSchema,
+  publishedReportSnapshotSchema,
+} from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import {
   AUTHOR_ID,
   baseRow,
+  fullItem,
+  OWNED_PROJECT,
 } from "./__tests__/report-sections-prisma-harness.js";
 import { getStatusOverviewPeriodsRead } from "./lead-form-status-overview.read.js";
 
@@ -14,6 +19,10 @@ const VIEWER_ID = AUTHOR_ID;
 const HEAD_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const GROUP_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const OTHER_GROUP_ID = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+const FOREIGN_AUTHOR_ID = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+const VIEWER_SECTION_ID = "ffffffff-ffff-4fff-8fff-ffffffffffff";
+const PAUSED_ITEM_ID = "99999999-9999-4999-8999-999999999999";
+const STAGE_ID = "88888888-8888-4888-8888-888888888881";
 
 const current = {
   id: CURRENT_REPORT_ID,
@@ -21,20 +30,60 @@ const current = {
   periodEnd: new Date("2026-08-30T23:59:59.999Z"),
 };
 
-function publishedSection() {
+function publishedProject() {
+  const stage = {
+    stageId: STAGE_ID,
+    stageName: "Development",
+    sortOrder: 1,
+    status: "green" as const,
+  };
   return {
-    reportSectionId: SECTION_ID,
+    projectId: OWNED_PROJECT,
+    projectName: "Shared product",
+    trafficLight: "green" as const,
+    ownedStages: [stage],
+    stageSet: [stage],
+    ownerGroupId: null,
+  };
+}
+
+function publishedSection(
+  options: {
+    authorId?: string;
+    reportSectionId?: string;
+    pausedItem?: boolean;
+    sharedProject?: boolean;
+  } = {},
+) {
+  return {
+    reportSectionId: options.reportSectionId ?? SECTION_ID,
     reportId: PREVIOUS_REPORT_ID,
-    authorId: AUTHOR_ID,
+    authorId: options.authorId ?? AUTHOR_ID,
     authorName: "Lead One",
     authorRole: "lead" as const,
     version: 1,
     status: "submitted" as const,
     submittedAt: new Date("2026-08-23T12:00:00.000Z"),
     late: false,
-    projects: [],
+    projects: options.sharedProject ? [publishedProject()] : [],
     referencedProjects: [],
-    items: [],
+    items: options.pausedItem
+      ? [
+          {
+            id: PAUSED_ITEM_ID,
+            stableId: PAUSED_ITEM_ID,
+            projectId: OWNED_PROJECT,
+            type: "current" as const,
+            text: "Paused published work",
+            tag: "feature",
+            workflowStatus: "paused" as const,
+            pausedReason: "Confidential published dependency",
+            carriedOver: false,
+            priorityRank: null,
+            stageNames: ["Development"],
+          },
+        ]
+      : [],
     risks: [],
     decisions: [],
     activities: [],
@@ -44,7 +93,7 @@ function publishedSection() {
   };
 }
 
-function snapshot() {
+function snapshot(sections = [publishedSection()]) {
   return publishedReportSnapshotSchema.parse({
     reportId: PREVIOUS_REPORT_ID,
     periodStart: new Date("2026-08-17T00:00:00.000Z"),
@@ -58,7 +107,7 @@ function snapshot() {
       status: "green",
       totals: { green: 0, yellow: 0, red: 0 },
     },
-    sections: [publishedSection()],
+    sections,
   });
 }
 
@@ -86,13 +135,17 @@ function reader(options: {
   previous: ReturnType<typeof predecessor> | null;
   liveSection?: ReturnType<typeof baseRow> | null;
   reportingGroupId?: string | null;
+  sharedProjectId?: string;
+  viewerSectionExists?: boolean;
 }) {
   const reportFindUnique = vi.fn().mockResolvedValue(current);
   const reportFindFirst = vi.fn().mockResolvedValue(options.previous);
   const sectionFindFirst = vi
     .fn()
     .mockResolvedValue(options.liveSection ?? null);
-  const sectionFindUnique = vi.fn().mockResolvedValue(null);
+  const sectionFindUnique = vi
+    .fn()
+    .mockResolvedValue(options.viewerSectionExists ? { id: SECTION_ID } : null);
   const userFindUnique = vi.fn().mockResolvedValue({
     reportingGroupId: options.reportingGroupId ?? null,
   });
@@ -104,7 +157,15 @@ function reader(options: {
       findUnique: sectionFindUnique,
     },
     user: { findUnique: userFindUnique },
-    stageAssignment: { findMany: vi.fn().mockResolvedValue([]) },
+    stageAssignment: {
+      findMany: vi
+        .fn()
+        .mockResolvedValue(
+          options.sharedProjectId === undefined
+            ? []
+            : [{ projectId: options.sharedProjectId }],
+        ),
+    },
   };
   const prisma = {
     $transaction: async (
@@ -156,6 +217,62 @@ describe("getStatusOverviewPeriodsRead", () => {
     expect(transactionOptions()).toEqual({ isolationLevel: "RepeatableRead" });
   });
 
+  it("returns a redacted paused item from a shared published predecessor", async () => {
+    const publishedViewer = publishedSection({
+      authorId: VIEWER_ID,
+      reportSectionId: VIEWER_SECTION_ID,
+      sharedProject: true,
+    });
+    const publishedForeign = publishedSection({
+      authorId: FOREIGN_AUTHOR_ID,
+      pausedItem: true,
+      sharedProject: true,
+    });
+    const { prisma } = reader({
+      previous: predecessor({
+        publishedSnapshot: snapshot([publishedViewer, publishedForeign]),
+        publishedSectionScopes: [
+          {
+            authorId: VIEWER_ID,
+            reportSectionId: VIEWER_SECTION_ID,
+            groupId: GROUP_ID,
+          },
+          {
+            authorId: FOREIGN_AUTHOR_ID,
+            reportSectionId: SECTION_ID,
+            groupId: GROUP_ID,
+          },
+        ],
+      }),
+    });
+
+    const result = await getStatusOverviewPeriodsRead(
+      prisma,
+      CURRENT_REPORT_ID,
+      FOREIGN_AUTHOR_ID,
+      VIEWER_ID,
+      "lead",
+    );
+
+    expect(
+      leadStatusOverviewPredecessorSchema.safeParse(result?.predecessor)
+        .success,
+    ).toBe(true);
+    expect(result?.predecessor).toMatchObject({
+      availability: "available",
+      source: "published",
+    });
+    if (result?.predecessor.availability !== "available") {
+      throw new Error("Expected an available published predecessor.");
+    }
+    expect(result.predecessor.section.items[0]).toMatchObject({
+      workflowStatus: "paused",
+    });
+    expect(result.predecessor.section.items[0]).not.toHaveProperty(
+      "pausedReason",
+    );
+  });
+
   it("falls back only to a submitted live section when no snapshot exists", async () => {
     const live = baseRow({
       status: "submitted",
@@ -183,6 +300,56 @@ describe("getStatusOverviewPeriodsRead", () => {
     const input = firstCall?.[0] as
       { readonly where?: { readonly status?: unknown } } | undefined;
     expect(input?.where?.status).toBe("submitted");
+  });
+
+  it("returns a redacted paused item from a shared submitted predecessor", async () => {
+    const liveSection = baseRow({
+      authorId: FOREIGN_AUTHOR_ID,
+      status: "submitted",
+      submittedAt: new Date("2026-08-23T12:00:00.000Z"),
+      items: [
+        fullItem({
+          id: PAUSED_ITEM_ID,
+          projectId: OWNED_PROJECT,
+          workflowStatus: "paused",
+          pausedReason: "Confidential live dependency",
+          stageNames: ["Development"],
+          project: { name: "Shared product" },
+        }),
+      ],
+    });
+    const { prisma } = reader({
+      previous: predecessor(),
+      liveSection,
+      sharedProjectId: OWNED_PROJECT,
+      viewerSectionExists: true,
+    });
+
+    const result = await getStatusOverviewPeriodsRead(
+      prisma,
+      CURRENT_REPORT_ID,
+      FOREIGN_AUTHOR_ID,
+      VIEWER_ID,
+      "lead",
+    );
+
+    expect(
+      leadStatusOverviewPredecessorSchema.safeParse(result?.predecessor)
+        .success,
+    ).toBe(true);
+    expect(result?.predecessor).toMatchObject({
+      availability: "available",
+      source: "submitted",
+    });
+    if (result?.predecessor.availability !== "available") {
+      throw new Error("Expected an available submitted predecessor.");
+    }
+    expect(result.predecessor.section.items[0]).toMatchObject({
+      workflowStatus: "paused",
+    });
+    expect(result.predecessor.section.items[0]).not.toHaveProperty(
+      "pausedReason",
+    );
   });
 
   it("returns unavailable when the immediate predecessor has only a draft", async () => {

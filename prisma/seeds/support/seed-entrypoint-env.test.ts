@@ -1,9 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-// The seed entrypoints construct their pg pool at module-evaluation time via
-// requireEnv("DATABASE_URL") (CONFIG-BOUNDARY-002). A missing or blank value
-// must abort the import with the canonical missing-variable error instead of
-// reaching the driver as `undefined`.
+// Seed entrypoints validate DATABASE_URL before their guarded main functions
+// construct a pg pool. A missing or blank value must abort the import with the
+// canonical missing-variable error instead of reaching the driver as undefined.
 async function expectSeedRefusesBlankUrl(modulePath: string): Promise<void> {
   vi.stubEnv("DATABASE_URL", "");
   await expect(import(modulePath)).rejects.toThrow(

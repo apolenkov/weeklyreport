@@ -1,5 +1,5 @@
 import { DateTime } from "luxon";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   addBusinessDays,
@@ -120,6 +120,51 @@ describe("business-date: addBusinessDays — n = 0 and negative", () => {
 });
 
 describe("business-date: addBusinessDays — boundaries", () => {
+  it("stops date arithmetic after finding a nearby business day", () => {
+    const start = inZone("2026-05-08T09:00:00", TZ_MSK);
+    const plus = vi.spyOn(DateTime.prototype, "plus");
+    try {
+      const result = addBusinessDays(start, 1, "mon-fri", TZ_MSK);
+      expectWallClock(result, "2026-05-11T09:00:00", TZ_MSK);
+      expect(plus.mock.calls.length).toBeLessThanOrEqual(7);
+    } finally {
+      plus.mockRestore();
+    }
+  });
+
+  it.each([
+    { start: "2026-03-28T02:30:00", days: 2, expected: "2026-03-30T02:30:00" },
+    { start: "2026-03-30T02:30:00", days: -2, expected: "2026-03-28T02:30:00" },
+  ])(
+    "preserves the original clock past a DST gap for $days days",
+    ({ start, days, expected }) => {
+      const result = addBusinessDays(
+        inZone(start, TZ_BER),
+        days,
+        "mon-sun",
+        TZ_BER,
+      );
+      expectWallClock(result, expected, TZ_BER);
+    },
+  );
+
+  it.each([
+    0.5,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+  ])("rejects a non-integer shift %s", (days) => {
+    expect(() =>
+      addBusinessDays(new Date("2026-05-04T09:00:00Z"), days, "mon-fri", "UTC"),
+    ).toThrow("n must be a finite integer");
+  });
+
+  it("retains the maximum calendar-day walk budget", () => {
+    expect(() =>
+      addBusinessDays(new Date("2026-05-04T09:00:00Z"), 3661, "mon-sun", "UTC"),
+    ).toThrow("exceeded iteration budget");
+  });
+
   it("month boundary: Apr 30 (Thu) + 2 business days = May 4 (Mon) mon-fri", () => {
     // 2026-04-30 is a Thursday → +1bd = Fri May 1 → +2bd = Mon May 4.
     const start = inZone("2026-04-30T09:00:00", TZ_MSK);

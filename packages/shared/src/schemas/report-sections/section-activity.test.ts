@@ -40,11 +40,11 @@ const payload = (activityStatuses: readonly unknown[]) =>
   });
 
 describe("section activities read model", () => {
-  it("normalizes an omitted activities slice on a stored section", () => {
+  it("preserves an empty activities slice on a stored section", () => {
     expect(makeSection([]).activities).toEqual([]);
   });
 
-  it("normalizes omitted write slices on an unversioned draft", () => {
+  it("defaults omitted activity statuses on a versioned draft", () => {
     const parsed = draftSaveSchema.parse({
       reportSectionId: SECTION_ID,
       version: 1,

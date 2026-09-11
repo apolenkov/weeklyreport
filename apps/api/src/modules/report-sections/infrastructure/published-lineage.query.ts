@@ -3,13 +3,18 @@ import type {
   PublishedLineage,
   ReportSectionReadModel,
 } from "@customreport/shared";
+import type { Prisma } from "@prisma/client";
 
-import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import {
   EMPTY_PUBLISHED_LINEAGE,
   type LineageCandidates,
   resolvePublishedLineage,
 } from "../application/published-lineage.js";
+
+type PublishedLineageQueryClient = Pick<
+  Prisma.TransactionClient,
+  "report" | "publishedSearchDocument"
+>;
 
 export function publishedLineageCandidates(
   section: ReportSectionReadModel,
@@ -54,7 +59,7 @@ function lineageWhere(candidates: LineageCandidates) {
  * projection. Closed and reopened reports never require live record rows.
  */
 export async function queryPublishedLineage(
-  prisma: PrismaService,
+  prisma: PublishedLineageQueryClient,
   candidates: LineageCandidates,
 ): Promise<PublishedLineage> {
   if (
@@ -67,11 +72,7 @@ export async function queryPublishedLineage(
   const [reports, rows] = await Promise.all([
     prisma.report.findMany({
       where: {
-        OR: [
-          { periodStatus: "published" },
-          { periodStatus: "reopened" },
-          { archived: true },
-        ],
+        status: "published",
       },
       select: { id: true, publishedSnapshot: true },
     }),

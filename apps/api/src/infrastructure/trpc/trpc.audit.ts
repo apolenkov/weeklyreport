@@ -22,9 +22,8 @@ const TARGET_ID_KEYS = [
   "userId",
   "productId",
   "groupId",
-  // Keys appended (not inserted) so the precedence of the original set is
-  // unchanged: review anchors, section verdicts, and activity edges name
-  // their subject by keys the generic set never covered.
+  // These specific subject keys follow the generic identities above, preserving
+  // the generic key as the primary target when both appear in one input.
   "reportSectionId",
   "itemId",
   "riskId",

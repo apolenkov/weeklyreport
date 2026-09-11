@@ -19,33 +19,29 @@ export const normalizeEntityReference = (reference: string): string =>
     .trim()
     .toLocaleLowerCase("und");
 
-const addAlias = (
-  index: ReadonlyMap<string, readonly AliasEntry[]>,
-  alias: string,
-  entry: AliasEntry,
-): ReadonlyMap<string, readonly AliasEntry[]> => {
-  const normalized = normalizeEntityReference(alias);
-  if (!normalized) return index;
-  const existing = index.get(normalized) ?? [];
-  const hasEntry = existing.some(
-    (candidate) => candidate.kind === entry.kind && candidate.id === entry.id,
-  );
-  return hasEntry
-    ? index
-    : new Map(index).set(normalized, [...existing, entry]);
-};
-
 export const buildEntityAliasIndex = (
   entries: readonly AliasEntry[],
-): EntityAliasIndex =>
-  entries.reduce<EntityAliasIndex>(
-    (index, entry) =>
-      entry.aliases.reduce<EntityAliasIndex>(
-        (next, alias) => addAlias(next, alias, entry),
-        index,
-      ),
-    new Map<string, readonly AliasEntry[]>(),
+): EntityAliasIndex => {
+  const aliases = entries.flatMap((entry) =>
+    entry.aliases.flatMap((alias) => {
+      const normalized = normalizeEntityReference(alias);
+      return normalized ? [{ normalized, entry }] : [];
+    }),
   );
+  return new Map(
+    [...Map.groupBy(aliases, ({ normalized }) => normalized)].map(
+      ([alias, occurrences]) => [
+        alias,
+        [
+          ...Map.groupBy(
+            occurrences.map(({ entry }) => entry),
+            ({ kind, id }) => `${kind}:${id}`,
+          ).values(),
+        ].flatMap((matches) => matches.slice(0, 1)),
+      ],
+    ),
+  );
+};
 
 export const resolveExactAlias = (
   index: EntityAliasIndex,

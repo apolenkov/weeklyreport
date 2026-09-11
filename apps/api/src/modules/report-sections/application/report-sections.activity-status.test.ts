@@ -157,7 +157,7 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
     ]);
   });
 
-  it("keeps every seeded status when the payload omits the slice entirely", async () => {
+  it("keeps every seeded status when the payload supplies an empty slice", async () => {
     const service = new ReportSectionsService(
       createRepository([baseSection]),
       testGraceSettings,

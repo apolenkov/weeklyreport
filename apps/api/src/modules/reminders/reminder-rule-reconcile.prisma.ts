@@ -201,6 +201,38 @@ async function reconcileCurrentRule(
   return "updated";
 }
 
+// Recovery preserves every existing version, including deliberately paused rules.
+// Caller holds sorted policy locks followed by the owning Report lock.
+export async function repairMissingRuleForLockedReport(
+  tx: Prisma.TransactionClient,
+  policy: ReminderPolicy,
+  report: LockedReminderReport,
+): Promise<"created" | "skipped"> {
+  const existing = await tx.reminderRule.findFirst({
+    where: { reportId: report.id, policyId: policy.id },
+    select: { id: true },
+  });
+  if (existing || !isLiveReport(report) || report.deadline === null)
+    return "skipped";
+  const now = new Date();
+  if (!reminderPolicyAppliesTo(policy, report.deadline)) return "skipped";
+  const fireAt = computeReminderFireAt(
+    report.deadline,
+    policy.offsetMinutes,
+    policy.timezone,
+  );
+  if (fireAt.getTime() <= now.getTime()) return "skipped";
+  await createRuleVersion(
+    tx,
+    policy,
+    { ...report, deadline: report.deadline },
+    fireAt,
+    "active",
+    1,
+  );
+  return "created";
+}
+
 export async function reconcileLockedPolicyForReport(
   tx: Prisma.TransactionClient,
   policy: ReminderPolicy,

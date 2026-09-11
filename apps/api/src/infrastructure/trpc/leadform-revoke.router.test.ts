@@ -6,6 +6,7 @@ import { createNullLogger } from "../../lib/logger.js";
 import { LeadFormService } from "../../modules/report-sections/index.js";
 import { LeadFormPrismaRepository } from "../../modules/report-sections/index.js";
 import { createNullAuditLogger } from "../../test-utils/audit-logger.js";
+import { createStubAppRouterDeps } from "../../test-utils/stub-app-router-deps.js";
 import { createAppRouter } from "./trpc.router.js";
 
 // Revoke procedures are headProcedures whose object authz binds to the
@@ -67,9 +68,7 @@ function buildCaller(
   };
   const repo = new LeadFormPrismaRepository(prisma as never);
   const leadFormService = new LeadFormService(repo);
-  const deps = { leadFormService } as unknown as Parameters<
-    typeof createAppRouter
-  >[0];
+  const deps = createStubAppRouterDeps({ leadFormService });
   const caller = createAppRouter(deps).createCaller({
     session: makeSession(role),
     logger: createNullLogger(),

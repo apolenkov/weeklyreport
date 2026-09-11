@@ -22,11 +22,22 @@ import {
 import { saveReminderPolicy } from "../admin/admin-reminder-policy.queries.js";
 import { RemindersPrismaRepository } from "./reminders.prisma-repository";
 import { RemindersService } from "./reminders.service.js";
-import { UNCERTAIN_DELIVERY_ERROR } from "./reminders-execution.prisma-query.js";
+import {
+  insertExecutionOnConflict,
+  UNCERTAIN_DELIVERY_ERROR,
+} from "./reminders-execution.prisma-query.js";
 import type { ReminderQueuePayload } from "./reminders-queue-payload.js";
 
 const DEADLINE_POLICY_ID = "a0000000-0000-4000-a000-000000000703";
 const ESCALATION_POLICY_ID = "a0000000-0000-4000-a000-000000000704";
+const CYCLE_DATE_TIMEZONE_CASES = [
+  { sessionZone: "UTC", fireAtIso: "2026-04-07T00:30:00.000Z" },
+  { sessionZone: "Europe/Moscow", fireAtIso: "2026-04-07T00:30:00.000Z" },
+  { sessionZone: "America/New_York", fireAtIso: "2026-04-07T00:30:00.000Z" },
+  { sessionZone: "UTC", fireAtIso: "2026-04-07T23:30:00.000Z" },
+  { sessionZone: "Europe/Moscow", fireAtIso: "2026-04-07T23:30:00.000Z" },
+  { sessionZone: "America/New_York", fireAtIso: "2026-04-07T23:30:00.000Z" },
+] as const;
 
 describe("RemindersPrismaRepository (integration)", () => {
   const prisma = createTestPrisma();
@@ -146,6 +157,62 @@ describe("RemindersPrismaRepository (integration)", () => {
     });
     expect(allExecutions).toHaveLength(1);
   });
+
+  it.each(CYCLE_DATE_TIMEZONE_CASES)(
+    "keeps UTC cycle-date eligibility in $sessionZone for $fireAtIso",
+    async ({ sessionZone, fireAtIso }) => {
+      const fireAt = new Date(fireAtIso);
+      const cycleDate = "2026-04-07";
+      const dedupeKey = `timezone-${sessionZone}-${fireAtIso}`;
+      const edgePayload: ReminderQueuePayload = {
+        ...queuePayload,
+        cycleDate,
+        deadlineIso: fireAtIso,
+      };
+
+      await prisma.reminderPolicy.update({
+        where: { id: DEADLINE_POLICY_ID },
+        data: { offsetMinutes: 0, timezone: "UTC" },
+      });
+      await prisma.report.update({
+        where: { id: testData.report.id },
+        data: { deadline: fireAt },
+      });
+      await prisma.reminderRule.update({
+        where: { id: TEST_IDS.reminderRule },
+        data: { deadline: fireAt, fireAt, timezone: "UTC" },
+      });
+
+      const result = await prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT set_config('TimeZone', ${sessionZone}, true)`;
+        const transactionBoundPrisma = {
+          $transaction: (callback: (client: typeof tx) => Promise<unknown>) =>
+            callback(tx),
+        };
+
+        return insertExecutionOnConflict(
+          transactionBoundPrisma as never,
+          {
+            id: TEST_IDS.reminderExec1,
+            ruleId: TEST_IDS.reminderRule,
+            reportId: testData.report.id,
+            dedupeKey,
+            status: "queued",
+            scheduledFor: fireAt,
+            sentAt: null,
+            recipientEmail: "timezone-edge@example.test",
+            errorMessage: null,
+          },
+          edgePayload,
+        );
+      });
+
+      expect(result.outcome).toBe("created");
+      await expect(
+        prisma.reminderExecution.count({ where: { dedupeKey } }),
+      ).resolves.toBe(1);
+    },
+  );
 
   it("creates nothing when publish wins after due discovery, then allows reopened delivery", async () => {
     const due = await repo.findDueDeadlineRules(

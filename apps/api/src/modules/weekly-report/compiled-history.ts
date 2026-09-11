@@ -6,8 +6,8 @@ import {
 // Display sentinel when publisher is missing from the read model.
 const UNKNOWN_PUBLISHER_NAME = "Unknown";
 
-// Frozen, already-scoped report shape for getCompiledHistory; kept Prisma-free
-// so Zone-4b weekly-report.service never imports @prisma/client.
+// Frozen, already-scoped report shape keeps compiled-history projection
+// independent of Prisma query types.
 export interface CompiledHistoryReportRow {
   readonly archived: boolean;
   readonly snapshot: AssembledReport;

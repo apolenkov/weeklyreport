@@ -35,8 +35,8 @@ function applyStageStatuses(
   };
 }
 
-// Owned-stage statuses aggregate into the project light; the client's
-// per-project status is only the fallback for a project with no owned stages.
+// Concrete owned-stage statuses aggregate into the project light. The client's
+// per-project status is the fallback when no owned stage has a status.
 function withAggregatedTrafficLight(
   project: SectionProject,
   projectStatuses: SectionWritePayload["projectStatuses"],

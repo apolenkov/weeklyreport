@@ -1,8 +1,13 @@
 import type { AppSettings } from "@customreport/shared";
+import type { Report } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
+import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
+import type { AuditLogger } from "../../../lib/audit-logger.js";
 import { createNullAuditLogger } from "../../../test-utils/audit-logger.js";
 import { silenceNestLogger } from "../../../test-utils/silence-logs";
+import type { SnapshotAdminService } from "../../admin/index.js";
+import type { PublicationService } from "../../publication/index.js";
 import { AutoPublisherScheduler } from "./auto-publisher.scheduler.js";
 
 function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
@@ -27,35 +32,72 @@ function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
   };
 }
 
-// Pass a partial stub where the real service is expected: `never` erases the
-// contract, so cast through `unknown` to the constructor's parameter type —
-// a signature change in the real class becomes a compile error here.
-const asStub = <T>(value: unknown, _target?: T): T => value as T;
+type SchedulerReportFindMany = (
+  ...args: Parameters<PrismaService["report"]["findMany"]>
+) => Promise<readonly Pick<Report, "id" | "deadline">[]>;
+type SchedulerReportSectionCount = (
+  ...args: Parameters<PrismaService["reportSection"]["count"]>
+) => Promise<number>;
+type PublishAutoResult = Awaited<ReturnType<PublicationService["publishAuto"]>>;
+type SchedulerPublishAutoResult =
+  | Pick<Extract<PublishAutoResult, { published: false }>, "published">
+  | Pick<
+      Extract<PublishAutoResult, { published: true }>,
+      "published" | "wasAlreadyPublished"
+    >;
+type SchedulerPublishAuto = (
+  ...args: Parameters<PublicationService["publishAuto"]>
+) => Promise<SchedulerPublishAutoResult>;
+
+interface SchedulerPrismaStub {
+  readonly report: { readonly findMany: SchedulerReportFindMany };
+  readonly reportSection: { readonly count: SchedulerReportSectionCount };
+}
+
+interface SchedulerPublicationStub {
+  readonly publishAuto: SchedulerPublishAuto;
+}
+
+function createScheduler(
+  prisma: SchedulerPrismaStub,
+  admin: Pick<SnapshotAdminService, "getSettings">,
+  publication: SchedulerPublicationStub,
+  audit: Pick<AuditLogger, "periodAutoPublish">,
+): AutoPublisherScheduler {
+  return new AutoPublisherScheduler(
+    prisma as unknown as PrismaService,
+    admin as unknown as SnapshotAdminService,
+    publication as unknown as PublicationService,
+    audit as AuditLogger,
+  );
+}
+
+const mockReportFindMany = () => vi.fn<SchedulerReportFindMany>();
+const mockReportSectionCount = () => vi.fn<SchedulerReportSectionCount>();
+const mockGetSettings = () => vi.fn<SnapshotAdminService["getSettings"]>();
+const mockPublishAuto = () => vi.fn<SchedulerPublishAuto>();
+const mockPeriodAutoPublish = () => vi.fn<AuditLogger["periodAutoPublish"]>();
+
 const overdueDeadline = new Date("2026-05-01T15:00:00.000Z");
 
 describe("AutoPublisherScheduler", () => {
   it("skip-when-disabled: autoPublishAfterDeadline=false → no DB scan", async () => {
     const prisma = {
-      report: { findMany: vi.fn() },
-      reportSection: { count: vi.fn() },
+      report: { findMany: mockReportFindMany() },
+      reportSection: { count: mockReportSectionCount() },
     };
     const admin = {
-      getSettings: vi
-        .fn()
-        .mockResolvedValue(makeSettings({ autoPublishAfterDeadline: false })),
+      getSettings: mockGetSettings().mockResolvedValue(
+        makeSettings({ autoPublishAfterDeadline: false }),
+      ),
     };
-    const publication = { publishAuto: vi.fn() };
+    const publication = { publishAuto: mockPublishAuto() };
     const audit = {
       ...createNullAuditLogger(),
-      periodAutoPublish: vi.fn(),
+      periodAutoPublish: mockPeriodAutoPublish(),
     };
 
-    const scheduler = new AutoPublisherScheduler(
-      asStub(prisma),
-      asStub(admin),
-      asStub(publication),
-      asStub(audit),
-    );
+    const scheduler = createScheduler(prisma, admin, publication, audit);
 
     const result = await scheduler.runOnce(new Date("2026-05-12T12:00:00Z"));
 
@@ -68,33 +110,27 @@ describe("AutoPublisherScheduler", () => {
   it("fire-when-eligible: draft past deadline+grace → publishAuto + emits audit with missingSectionsCount", async () => {
     const prisma = {
       report: {
-        findMany: vi
-          .fn()
-          .mockResolvedValue([{ id: "rep-1", deadline: overdueDeadline }]),
+        findMany: mockReportFindMany().mockResolvedValue([
+          { id: "rep-1", deadline: overdueDeadline },
+        ]),
       },
-      reportSection: { count: vi.fn().mockResolvedValue(2) },
+      reportSection: { count: mockReportSectionCount().mockResolvedValue(2) },
     };
     const admin = {
-      getSettings: vi.fn().mockResolvedValue(makeSettings()),
+      getSettings: mockGetSettings().mockResolvedValue(makeSettings()),
     };
     const publication = {
-      publishAuto: vi.fn().mockResolvedValue({
+      publishAuto: mockPublishAuto().mockResolvedValue({
         published: true,
         wasAlreadyPublished: false,
-        report: {},
       }),
     };
     const audit = {
       ...createNullAuditLogger(),
-      periodAutoPublish: vi.fn(),
+      periodAutoPublish: mockPeriodAutoPublish(),
     };
 
-    const scheduler = new AutoPublisherScheduler(
-      asStub(prisma),
-      asStub(admin),
-      asStub(publication),
-      asStub(audit),
-    );
+    const scheduler = createScheduler(prisma, admin, publication, audit);
 
     const result = await scheduler.runOnce(new Date("2026-05-12T12:00:00Z"));
 
@@ -129,24 +165,19 @@ describe("AutoPublisherScheduler", () => {
 
   it("idempotent: no eligible drafts → no-op, no publishAuto, no audit", async () => {
     const prisma = {
-      report: { findMany: vi.fn().mockResolvedValue([]) },
-      reportSection: { count: vi.fn() },
+      report: { findMany: mockReportFindMany().mockResolvedValue([]) },
+      reportSection: { count: mockReportSectionCount() },
     };
     const admin = {
-      getSettings: vi.fn().mockResolvedValue(makeSettings()),
+      getSettings: mockGetSettings().mockResolvedValue(makeSettings()),
     };
-    const publication = { publishAuto: vi.fn() };
+    const publication = { publishAuto: mockPublishAuto() };
     const audit = {
       ...createNullAuditLogger(),
-      periodAutoPublish: vi.fn(),
+      periodAutoPublish: mockPeriodAutoPublish(),
     };
 
-    const scheduler = new AutoPublisherScheduler(
-      asStub(prisma),
-      asStub(admin),
-      asStub(publication),
-      asStub(audit),
-    );
+    const scheduler = createScheduler(prisma, admin, publication, audit);
 
     const result = await scheduler.runOnce(new Date("2026-05-12T12:00:00Z"));
 
@@ -159,19 +190,18 @@ describe("AutoPublisherScheduler", () => {
     silenceNestLogger();
     const prisma = {
       report: {
-        findMany: vi.fn().mockResolvedValue([
+        findMany: mockReportFindMany().mockResolvedValue([
           { id: "rep-bad", deadline: overdueDeadline },
           { id: "rep-good", deadline: overdueDeadline },
         ]),
       },
-      reportSection: { count: vi.fn().mockResolvedValue(0) },
+      reportSection: { count: mockReportSectionCount().mockResolvedValue(0) },
     };
     const admin = {
-      getSettings: vi.fn().mockResolvedValue(makeSettings()),
+      getSettings: mockGetSettings().mockResolvedValue(makeSettings()),
     };
     const publication = {
-      publishAuto: vi
-        .fn()
+      publishAuto: mockPublishAuto()
         .mockImplementationOnce(() => {
           return Promise.reject(new Error("db transient"));
         })
@@ -179,21 +209,15 @@ describe("AutoPublisherScheduler", () => {
           Promise.resolve({
             published: true,
             wasAlreadyPublished: false,
-            report: {},
           }),
         ),
     };
     const audit = {
       ...createNullAuditLogger(),
-      periodAutoPublish: vi.fn(),
+      periodAutoPublish: mockPeriodAutoPublish(),
     };
 
-    const scheduler = new AutoPublisherScheduler(
-      asStub(prisma),
-      asStub(admin),
-      asStub(publication),
-      asStub(audit),
-    );
+    const scheduler = createScheduler(prisma, admin, publication, audit);
 
     const result = await scheduler.runOnce(new Date("2026-05-12T12:00:00Z"));
 
@@ -216,24 +240,19 @@ describe("AutoPublisherScheduler", () => {
   // result, so it cannot pass vacuously on an empty mock return.
   it("excludes archived periods: candidate query carries archived:false", async () => {
     const prisma = {
-      report: { findMany: vi.fn().mockResolvedValue([]) },
-      reportSection: { count: vi.fn() },
+      report: { findMany: mockReportFindMany().mockResolvedValue([]) },
+      reportSection: { count: mockReportSectionCount() },
     };
     const admin = {
-      getSettings: vi.fn().mockResolvedValue(makeSettings()),
+      getSettings: mockGetSettings().mockResolvedValue(makeSettings()),
     };
-    const publication = { publishAuto: vi.fn() };
+    const publication = { publishAuto: mockPublishAuto() };
     const audit = {
       ...createNullAuditLogger(),
-      periodAutoPublish: vi.fn(),
+      periodAutoPublish: mockPeriodAutoPublish(),
     };
 
-    const scheduler = new AutoPublisherScheduler(
-      asStub(prisma),
-      asStub(admin),
-      asStub(publication),
-      asStub(audit),
-    );
+    const scheduler = createScheduler(prisma, admin, publication, audit);
 
     await scheduler.runOnce(new Date("2026-05-12T12:00:00Z"));
 
@@ -249,29 +268,24 @@ describe("AutoPublisherScheduler", () => {
   it("skip outcome: {published:false} emits no audit, no count, no periodIds", async () => {
     const prisma = {
       report: {
-        findMany: vi
-          .fn()
-          .mockResolvedValue([{ id: "rep-skip", deadline: overdueDeadline }]),
+        findMany: mockReportFindMany().mockResolvedValue([
+          { id: "rep-skip", deadline: overdueDeadline },
+        ]),
       },
-      reportSection: { count: vi.fn() },
+      reportSection: { count: mockReportSectionCount() },
     };
     const admin = {
-      getSettings: vi.fn().mockResolvedValue(makeSettings()),
+      getSettings: mockGetSettings().mockResolvedValue(makeSettings()),
     };
     const publication = {
-      publishAuto: vi.fn().mockResolvedValue({ published: false }),
+      publishAuto: mockPublishAuto().mockResolvedValue({ published: false }),
     };
     const audit = {
       ...createNullAuditLogger(),
-      periodAutoPublish: vi.fn(),
+      periodAutoPublish: mockPeriodAutoPublish(),
     };
 
-    const scheduler = new AutoPublisherScheduler(
-      asStub(prisma),
-      asStub(admin),
-      asStub(publication),
-      asStub(audit),
-    );
+    const scheduler = createScheduler(prisma, admin, publication, audit);
 
     const result = await scheduler.runOnce(new Date("2026-05-12T12:00:00Z"));
 
@@ -290,37 +304,30 @@ describe("AutoPublisherScheduler", () => {
   it("mixed tick: skipped id excluded from periodIds, published id kept", async () => {
     const prisma = {
       report: {
-        findMany: vi.fn().mockResolvedValue([
+        findMany: mockReportFindMany().mockResolvedValue([
           { id: "rep-skip", deadline: overdueDeadline },
           { id: "rep-ok", deadline: overdueDeadline },
         ]),
       },
-      reportSection: { count: vi.fn().mockResolvedValue(1) },
+      reportSection: { count: mockReportSectionCount().mockResolvedValue(1) },
     };
     const admin = {
-      getSettings: vi.fn().mockResolvedValue(makeSettings()),
+      getSettings: mockGetSettings().mockResolvedValue(makeSettings()),
     };
     const publication = {
-      publishAuto: vi
-        .fn()
+      publishAuto: mockPublishAuto()
         .mockResolvedValueOnce({ published: false })
         .mockResolvedValueOnce({
           published: true,
           wasAlreadyPublished: false,
-          report: {},
         }),
     };
     const audit = {
       ...createNullAuditLogger(),
-      periodAutoPublish: vi.fn(),
+      periodAutoPublish: mockPeriodAutoPublish(),
     };
 
-    const scheduler = new AutoPublisherScheduler(
-      asStub(prisma),
-      asStub(admin),
-      asStub(publication),
-      asStub(audit),
-    );
+    const scheduler = createScheduler(prisma, admin, publication, audit);
 
     const result = await scheduler.runOnce(new Date("2026-05-12T12:00:00Z"));
 
@@ -343,33 +350,27 @@ describe("AutoPublisherScheduler", () => {
   it("raced outcome: wasAlreadyPublished=true emits no audit, no log, no count, excluded from periodIds", async () => {
     const prisma = {
       report: {
-        findMany: vi
-          .fn()
-          .mockResolvedValue([{ id: "rep-race", deadline: overdueDeadline }]),
+        findMany: mockReportFindMany().mockResolvedValue([
+          { id: "rep-race", deadline: overdueDeadline },
+        ]),
       },
-      reportSection: { count: vi.fn() },
+      reportSection: { count: mockReportSectionCount() },
     };
     const admin = {
-      getSettings: vi.fn().mockResolvedValue(makeSettings()),
+      getSettings: mockGetSettings().mockResolvedValue(makeSettings()),
     };
     const publication = {
-      publishAuto: vi.fn().mockResolvedValue({
+      publishAuto: mockPublishAuto().mockResolvedValue({
         published: true,
         wasAlreadyPublished: true,
-        report: {},
       }),
     };
     const audit = {
       ...createNullAuditLogger(),
-      periodAutoPublish: vi.fn(),
+      periodAutoPublish: mockPeriodAutoPublish(),
     };
 
-    const scheduler = new AutoPublisherScheduler(
-      asStub(prisma),
-      asStub(admin),
-      asStub(publication),
-      asStub(audit),
-    );
+    const scheduler = createScheduler(prisma, admin, publication, audit);
 
     const result = await scheduler.runOnce(new Date("2026-05-12T12:00:00Z"));
 
@@ -388,41 +389,33 @@ describe("AutoPublisherScheduler", () => {
   it("mixed tick: raced id excluded from periodIds, genuinely auto-published id still audited", async () => {
     const prisma = {
       report: {
-        findMany: vi.fn().mockResolvedValue([
+        findMany: mockReportFindMany().mockResolvedValue([
           { id: "rep-race", deadline: overdueDeadline },
           { id: "rep-ok", deadline: overdueDeadline },
         ]),
       },
-      reportSection: { count: vi.fn().mockResolvedValue(3) },
+      reportSection: { count: mockReportSectionCount().mockResolvedValue(3) },
     };
     const admin = {
-      getSettings: vi.fn().mockResolvedValue(makeSettings()),
+      getSettings: mockGetSettings().mockResolvedValue(makeSettings()),
     };
     const publication = {
-      publishAuto: vi
-        .fn()
+      publishAuto: mockPublishAuto()
         .mockResolvedValueOnce({
           published: true,
           wasAlreadyPublished: true,
-          report: {},
         })
         .mockResolvedValueOnce({
           published: true,
           wasAlreadyPublished: false,
-          report: {},
         }),
     };
     const audit = {
       ...createNullAuditLogger(),
-      periodAutoPublish: vi.fn(),
+      periodAutoPublish: mockPeriodAutoPublish(),
     };
 
-    const scheduler = new AutoPublisherScheduler(
-      asStub(prisma),
-      asStub(admin),
-      asStub(publication),
-      asStub(audit),
-    );
+    const scheduler = createScheduler(prisma, admin, publication, audit);
 
     const result = await scheduler.runOnce(new Date("2026-05-12T12:00:00Z"));
 

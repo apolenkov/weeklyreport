@@ -186,14 +186,17 @@ function validateRules(
   policiesById: ReadonlyMap<string, RecoveryPolicy>,
   context: z.RefinementCtx,
 ): void {
-  const groups = snapshot.reminderRules.reduce<
-    ReadonlyMap<string, readonly IndexedRule[]>
-  >((result, rule, index) => {
-    const entry = { index, rule };
+  const indexedRules = snapshot.reminderRules.map((rule, index) => ({
+    index,
+    rule,
+  }));
+  indexedRules.forEach((entry) => {
     validateRuleOwners(entry, reportsById, policiesById, context);
-    const key = `${rule.reportId}\u0000${rule.policyId}`;
-    return new Map(result).set(key, [...(result.get(key) ?? []), entry]);
-  }, new Map());
+  });
+  const groups = Map.groupBy(
+    indexedRules,
+    ({ rule }) => `${rule.reportId}\u0000${rule.policyId}`,
+  );
   groups.forEach((entries) =>
     validateVersionGroup(entries, reportsById, policiesById, context),
   );

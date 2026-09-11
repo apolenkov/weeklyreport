@@ -5,7 +5,7 @@ import {
 } from "@customreport/shared";
 
 import type { AnalyticsService } from "../../../modules/analytics/index.js";
-import { mapDomainError } from "../trpc.error-mapper.js";
+import { withDomainErrorMapping } from "../trpc.error-mapper.js";
 import { anyRoleProcedure, router } from "../trpc.middleware.js";
 
 export interface AnalyticsRouterDeps {
@@ -19,36 +19,24 @@ export function createAnalyticsRouter(deps: AnalyticsRouterDeps) {
   return router({
     trafficLightHistory: anyRoleProcedure
       .input(trafficLightHistoryInputSchema)
-      .query(async ({ input, ctx }) => {
-        try {
-          return await deps.analyticsService.trafficLightHistory(
-            input,
-            ctx.session,
-          );
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+      .query(({ input, ctx }) =>
+        withDomainErrorMapping(() =>
+          deps.analyticsService.trafficLightHistory(input, ctx.session),
+        ),
+      ),
     leadVelocity: anyRoleProcedure
       .input(leadVelocityInputSchema)
-      .query(async ({ input, ctx }) => {
-        try {
-          return await deps.analyticsService.leadVelocity(input, ctx.session);
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+      .query(({ input, ctx }) =>
+        withDomainErrorMapping(() =>
+          deps.analyticsService.leadVelocity(input, ctx.session),
+        ),
+      ),
     periodComparison: anyRoleProcedure
       .input(periodComparisonInputSchema)
-      .query(async ({ input, ctx }) => {
-        try {
-          return await deps.analyticsService.periodComparison(
-            input,
-            ctx.session,
-          );
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+      .query(({ input, ctx }) =>
+        withDomainErrorMapping(() =>
+          deps.analyticsService.periodComparison(input, ctx.session),
+        ),
+      ),
   });
 }

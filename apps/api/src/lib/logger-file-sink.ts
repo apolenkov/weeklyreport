@@ -165,12 +165,3 @@ export function processFileSink(
   processFileSinks.set(key, { opts: { ...opts }, sink });
   return sink;
 }
-
-// Free-function façade over the sink closure that owns the write state, so
-// logger.ts calls a plain function rather than reaching for the method.
-export function enqueueWrite(
-  sink: FileSink,
-  entry: Record<string, unknown>,
-): void {
-  sink.enqueue(entry);
-}

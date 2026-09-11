@@ -1,8 +1,8 @@
 // The 9 canonical seed identities (1 head, 1 viewer, 1 admin, 6 leads) and the
 // reporting group they belong to.
 
-import { DEFAULT_REPORTING_GROUP } from "../../../packages/shared/src/organization/default-reporting-group.js";
-import type { SeedRole } from "./seed-constants.js";
+import { type DbRole, DEFAULT_REPORTING_GROUP } from "@customreport/shared";
+
 import {
   ADMIN_EMAIL,
   ADMIN_USER_ID,
@@ -29,7 +29,7 @@ export interface SeedUser {
   middleName: string | null;
   position: string | null;
   email: string;
-  role: SeedRole;
+  role: DbRole;
   samlId: string;
   reportingGroupId: string | null;
 }

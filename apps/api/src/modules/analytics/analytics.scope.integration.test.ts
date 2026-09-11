@@ -148,7 +148,12 @@ describe("Analytics day-range matching (integration)", () => {
         status: "published",
         periodState: "published",
         periodStatus: "published",
+        archived: false,
+        autoPublished: false,
+        autoArchived: false,
         publishedAt,
+        publishedById: null,
+        reopenedAt: null,
         publishedSnapshot: publishedSnapshotFixture({
           reportId: args.id,
           periodStart: args.periodStart,
@@ -430,8 +435,14 @@ describe("Analytics group scoping (integration)", () => {
       where: { id: testData.report.id },
       data: {
         status: "published",
+        periodState: "published",
         periodStatus: "published",
+        archived: false,
+        autoPublished: false,
+        autoArchived: false,
         publishedAt,
+        publishedById: null,
+        reopenedAt: null,
         publishedSnapshot: publishedSnapshotFixture({
           reportId: testData.report.id,
           periodStart: testData.report.periodStart,

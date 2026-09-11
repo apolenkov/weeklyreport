@@ -9,9 +9,7 @@ import {
   riskSeveritySchema,
 } from "../report";
 
-// ---------------------------------------------------------------------------
 // Fixtures
-// ---------------------------------------------------------------------------
 
 const uuid = () => randomUUID();
 const validItem = () => ({
@@ -134,9 +132,7 @@ describe("itemInputSchema — safeText", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // riskInputSchema — safeText on risk/impact/mitigation
-// ---------------------------------------------------------------------------
 
 describe("riskInputSchema — safeText", () => {
   it("accepts a valid risk", () => {
@@ -189,10 +185,8 @@ describe("riskInputSchema — safeText", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// risks, items, AND decisions must each carry a concrete SDLC stage when
-// product-parented; activity-parented rows intentionally carry no stages.
-// ---------------------------------------------------------------------------
+// Product-parented decision fixtures include a concrete SDLC stage; activity-
+// parented records would intentionally omit stages.
 
 describe("decisionInputSchema — safeText", () => {
   it("accepts a valid decision", () => {

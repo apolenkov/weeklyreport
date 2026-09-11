@@ -53,7 +53,6 @@ describe("ReviewActionsPrismaRepository.postVerdict write lock", () => {
         reviewerId: "55555555-5555-4555-8555-555555555555",
         verdict: "changes_requested",
         expectedVersion: 1,
-        currentStatus: "submitted",
       }),
     ).rejects.toBeInstanceOf(ReviewConstraintError);
     expect(tx.$queryRaw.mock.calls.length).toBeGreaterThanOrEqual(3);

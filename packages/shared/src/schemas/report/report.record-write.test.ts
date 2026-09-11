@@ -55,18 +55,42 @@ const validDraft = () => ({
 });
 
 describe("itemWriteSchema progress vocabulary", () => {
-  const currentStatuses = ["in_progress", "paused", "done"] as const;
-  const nextStatuses = ["planned", "postponed"] as const;
+  it("preserves a next step separately from the current result", () => {
+    const value = itemWriteSchema.parse({
+      ...validItem(),
+      nextStepText: "Test the delivered API",
+    });
+    expect(value.text).toBe("Ship feature X");
+    expect(value.nextStepText).toBe("Test the delivered API");
+  });
 
-  it.each(currentStatuses)("accepts %s on a current item", (workflowStatus) => {
+  it.each([
+    { type: "next", workflowStatus: "planned" },
+    { type: "current", workflowStatus: "done" },
+  ])("rejects a second plan on terminal or next-only work: %j", (state) => {
     expect(
       itemWriteSchema.safeParse({
         ...validItem(),
-        workflowStatus,
-        ...(workflowStatus === "paused" ? { pausedReason: "Waiting" } : {}),
+        ...state,
+        nextStepText: "Another step",
       }).success,
-    ).toBe(true);
+    ).toBe(false);
   });
+  const currentStatuses = ["in_progress", "paused", "done"] as const;
+  const nextStatuses = ["planned", "postponed"] as const;
+
+  it.each(["planned", ...currentStatuses] as const)(
+    "accepts %s on a current item",
+    (workflowStatus) => {
+      expect(
+        itemWriteSchema.safeParse({
+          ...validItem(),
+          workflowStatus,
+          ...(workflowStatus === "paused" ? { pausedReason: "Waiting" } : {}),
+        }).success,
+      ).toBe(true);
+    },
+  );
 
   it.each(nextStatuses)("accepts %s on a next item", (workflowStatus) => {
     expect(
@@ -78,7 +102,7 @@ describe("itemWriteSchema progress vocabulary", () => {
     ).toBe(true);
   });
 
-  it.each(nextStatuses)(
+  it.each(["postponed"])(
     "rejects next-only status %s on a current item",
     (workflowStatus) => {
       expect(
@@ -90,13 +114,18 @@ describe("itemWriteSchema progress vocabulary", () => {
   it.each(currentStatuses)(
     "rejects current-only status %s on a next item",
     (workflowStatus) => {
-      expect(
-        itemWriteSchema.safeParse({
-          ...validItem(),
-          type: "next",
-          workflowStatus,
-        }).success,
-      ).toBe(false);
+      const result = itemWriteSchema.safeParse({
+        ...validItem(),
+        type: "next",
+        workflowStatus,
+        ...(workflowStatus === "paused" ? { pausedReason: "Waiting" } : {}),
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues).toContainEqual(
+          expect.objectContaining({ path: ["workflowStatus"] }),
+        );
+      }
     },
   );
 

@@ -7,6 +7,7 @@ import {
   type JobsService,
 } from "../../../../modules/admin/index.js";
 import { createNullAuditLogger } from "../../../../test-utils/audit-logger.js";
+import { createStubAppRouterDeps } from "../../../../test-utils/stub-app-router-deps.js";
 import { createAppRouter } from "../../trpc.router.js";
 
 const ACTION_ROW = {
@@ -43,7 +44,7 @@ function buildAdminCaller() {
 }
 
 function buildActionLogCaller(actionLogService: ActionLogService, role: Role) {
-  const deps = { actionLogService } as Parameters<typeof createAppRouter>[0];
+  const deps = createStubAppRouterDeps({ actionLogService });
   return createAppRouter(deps).createCaller({
     session: {
       userId: "44444444-4444-4444-8444-444444444444",
@@ -60,7 +61,7 @@ function buildActionLogCaller(actionLogService: ActionLogService, role: Role) {
 }
 
 function buildJobsCaller(jobsService: JobsService, role: Role) {
-  const deps = { jobsService } as Parameters<typeof createAppRouter>[0];
+  const deps = createStubAppRouterDeps({ jobsService });
   return createAppRouter(deps).createCaller({
     session: {
       userId: "44444444-4444-4444-8444-444444444444",

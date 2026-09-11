@@ -493,9 +493,8 @@ describe("LeadFormService — fillFrom", () => {
     ).rejects.toThrow("Can only fill your own section.");
   });
 
-  // fillFrom must refuse a published period — the only post-publish path that
-  // mutates live Item/Risk/Decision rows. Allowing the rewrite would leak
-  // content absent from the report the viewer can open.
+  // A closed published period must reject fillFrom so its live records cannot
+  // diverge from the published snapshot. Reopened periods remain editable.
   it("fails for a section in a published report", async () => {
     const repo = createMockRepository({
       getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),

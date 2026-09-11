@@ -619,7 +619,7 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
   });
 });
 
-// PeriodAccessError stays unmapped (state/policy 500s are a separate concern).
+// Period lifecycle failures retain distinct mappings by failure type.
 
 describe("mapDomainError — period lifecycle authz", () => {
   it("maps lifecycle corruption to a fixed internal message", () => {

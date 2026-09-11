@@ -268,7 +268,7 @@ describe("PeriodPrismaRepository.reopenPeriod — overlap translation", () => {
     });
   });
 
-  it("re-throws a non-P2002 error unchanged", async () => {
+  it("re-throws an unrelated error unchanged", async () => {
     const prisma = {
       $transaction: vi.fn(() => Promise.reject(new Error("deadlock detected"))),
     } as unknown as PrismaService;

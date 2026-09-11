@@ -75,15 +75,12 @@ export async function finalizePublishedSnapshots(
         include: reportFullIncludeForSnapshot,
       });
       const snapshot = buildAssembledReportFromPrismaRow(report);
+      const snapshotJson = toPublishedSnapshotJson(snapshot);
       await tx.report.update({
         where: { id },
-        data: { publishedSnapshot: toPublishedSnapshotJson(snapshot) },
+        data: { publishedSnapshot: snapshotJson },
       });
-      await replaceSeedPublishedProjections(
-        tx,
-        id,
-        toPublishedSnapshotJson(snapshot),
-      );
+      await replaceSeedPublishedProjections(tx, id, snapshotJson);
     });
   }
 }

@@ -28,16 +28,17 @@ export class ReminderAdminService {
 
   async savePolicy(policy: ReminderPolicy): Promise<ReminderPolicy> {
     const parsed = reminderPolicySchema.parse(policy);
-    this.logger.info("upserted reminder policy", { policyId: parsed.id });
-    return reminderPolicySchema.parse(
+    const savedPolicy = reminderPolicySchema.parse(
       await this.repository.saveReminderPolicy(parsed),
     );
+    this.logger.info("upserted reminder policy", { policyId: parsed.id });
+    return savedPolicy;
   }
 
   // Hard-delete; no soft-delete fallback.
   async removePolicy(policyId: string): Promise<{ success: true }> {
-    this.logger.info("deleted reminder policy", { policyId });
     await this.repository.deleteReminderPolicy(policyId);
+    this.logger.info("deleted reminder policy", { policyId });
     return { success: true };
   }
 }

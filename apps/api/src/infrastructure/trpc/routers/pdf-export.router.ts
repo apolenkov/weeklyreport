@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import type { PdfExportService } from "../../../modules/pdf-export/index.js";
-import { mapDomainError } from "../trpc.error-mapper.js";
+import { withDomainErrorMapping } from "../trpc.error-mapper.js";
 import {
   captureMutationAuditInputMiddleware,
   leadershipProcedure,
@@ -20,43 +20,37 @@ export function createPdfExportRouter(deps: PdfExportRouterDeps) {
     request: leadershipProcedure
       .input(z.object({ reportId: z.uuid() }))
       .use(captureMutationAuditInputMiddleware)
-      .mutation(async ({ input, ctx }) => {
-        try {
-          return await deps.pdfExportService.requestPdfExport(
+      .mutation(({ input, ctx }) =>
+        withDomainErrorMapping(() =>
+          deps.pdfExportService.requestPdfExport(
             input.reportId,
             ctx.session,
             ctx.session.role,
-          );
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+          ),
+        ),
+      ),
 
     status: leadershipProcedure
       .input(z.object({ jobId: z.uuid() }))
-      .query(async ({ input, ctx }) => {
-        try {
-          return await deps.pdfExportService.getPdfExportStatus(
+      .query(({ input, ctx }) =>
+        withDomainErrorMapping(() =>
+          deps.pdfExportService.getPdfExportStatus(
             input.jobId,
             ctx.session.userId,
-          );
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+          ),
+        ),
+      ),
 
     render: leadershipProcedure
       .input(z.object({ jobId: z.uuid(), reportId: z.uuid() }))
-      .query(async ({ input, ctx }) => {
-        try {
-          return await deps.pdfExportService.getPdfExportRender(
+      .query(({ input, ctx }) =>
+        withDomainErrorMapping(() =>
+          deps.pdfExportService.getPdfExportRender(
             input.jobId,
             ctx.session.userId,
             input.reportId,
-          );
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+          ),
+        ),
+      ),
   });
 }

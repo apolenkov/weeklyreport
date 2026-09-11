@@ -17,7 +17,7 @@ export const ACTIVE_SUFFIX: ReportSuffix = "1";
 export const PUBLISHED_SUFFIX: ReportSuffix = "2";
 export const HISTORY_SUFFIXES: readonly ReportSuffix[] = ["3", "4", "5"];
 
-// 0000000040{r}{N} -> 10 + 1 + 1 = 12
+// 0000000040{r}{N}: active, published, and history suffix plus lead slot.
 export function sectionId(
   reportSuffix: ReportSuffix,
   leadIndex: number,
@@ -25,7 +25,7 @@ export function sectionId(
   return `${UUID_PREFIX}0000000040${reportSuffix}${leadIndex}`;
 }
 
-// 000000005{r}{N}{S} -> 9 + 1 + 1 + 1 = 12
+// 000000005{r}{N}{S}: report suffix, lead slot, and item sequence.
 export function itemId(
   reportSuffix: ReportSuffix,
   leadIndex: number,
@@ -34,7 +34,7 @@ export function itemId(
   return `${UUID_PREFIX}000000005${reportSuffix}${leadIndex}${itemSeq}`;
 }
 
-// 000000006{r}{N}{P} -> 9 + 1 + 1 + 1 = 12
+// 000000006{r}{N}{P}: report suffix, lead slot, and product sequence.
 export function projectStatusId(
   reportSuffix: ReportSuffix,
   leadIndex: number,
@@ -48,26 +48,24 @@ export function stageStatusId(
   prodSeq: number,
   stageSeq: number,
 ): string {
-  // "f0" marker (2) + lead(2) + prod(4) + stage(4) = 12 hex chars. Each field is
-  // zero-padded so the (leadIndex, prodSeq, stageSeq) -> id mapping stays
-  // injective: fixed-width segments keep identifiers unique for every lead count.
+  // The fixture's lead, product, and stage slots fit these minimum-width segments.
   const lead = leadIndex.toString().padStart(LEAD_FIELD_WIDTH, "0");
   const prod = prodSeq.toString().padStart(PROD_FIELD_WIDTH, "0");
   const stage = stageSeq.toString().padStart(STAGE_FIELD_WIDTH, "0");
   return `${UUID_PREFIX}f0${lead}${prod}${stage}`;
 }
 
-// 0000000009 (10) + 2-digit seq = 12
+// Risk rows use a fixed marker followed by the bounded risk sequence.
 export function riskId(seq: number): string {
   return `${UUID_PREFIX}0000000009${seq.toString().padStart(RISK_SEQ_WIDTH, "0")}`;
 }
 
-// 00000000000a (12) + seq would overflow; use 00000000a (9) + 3-digit pad = 12
+// Decision rows use a distinct marker followed by the bounded decision sequence.
 export function decisionId(seq: number): string {
   return `${UUID_PREFIX}00000000a${seq.toString().padStart(DECISION_SEQ_WIDTH, "0")}`;
 }
 
-// 00000000b0{P}{S} -> 10 + 1 + 1 = 12 (P is hex 0..b)
+// Stage assignments use a distinct marker followed by product and stage slots.
 export function stageAssignmentId(prodSeq: number, stageSeq: number): string {
   return `${UUID_PREFIX}00000000b0${prodSeq.toString(HEX_RADIX)}${stageSeq}`;
 }

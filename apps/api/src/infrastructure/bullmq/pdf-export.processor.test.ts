@@ -466,7 +466,7 @@ describe("PdfExportProcessor.processJob", () => {
     expect(mockService.markExportCompleted).not.toHaveBeenCalled();
   });
 
-  it("removes the artifact when completion persistence fails", async () => {
+  it("cleans up the attempt when completion persistence fails", async () => {
     const { mockBrowser } = setupMocks();
     const mockService = createMockPdfExportService();
     const artifactStore = createMockArtifactStore();
@@ -561,7 +561,7 @@ describe("PdfExportProcessor.onModuleInit", () => {
       new Error("browser missing") as never,
     );
 
-    expect(mockService.markExportFailed).not.toHaveBeenCalled();
+    expect(mockService.reconcileTerminalState).not.toHaveBeenCalled();
 
     // The true terminal failure reports attemptsMade=3 (== attempts).
     failedHandler?.(

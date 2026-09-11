@@ -5,8 +5,8 @@ import nodemailer from "nodemailer";
 import { ENV_CONFIG } from "../config/config.module";
 import type { EnvConfig } from "../config/env.schema";
 
-// Dev/test stream transport has no configured SMTP_FROM; this placeholder only
-// labels the envelope in the logged dev payload (the transport never sends).
+// The no-send dev/test transport has no configured SMTP_FROM; this placeholder
+// only labels the envelope in the logged development payload.
 const DEV_STREAM_TRANSPORT_FROM = "noreply@example.com";
 // nodemailer's conventional submission port when SMTP_PORT is left unset.
 const DEFAULT_SMTP_PORT = 587;
@@ -41,7 +41,8 @@ export interface EmailPort {
 
 export const EMAIL_PORT = Symbol("EMAIL_PORT");
 
-// Absent SMTP_HOST uses jsonTransport (dev only); production fails closed in env.schema.
+// Absent SMTP_HOST uses the no-send development transport; production fails
+// closed in env.schema.
 @Injectable()
 export class EmailService implements EmailPort {
   private readonly transporter: EmailTransport;

@@ -5,7 +5,10 @@ import type {
   SessionRevocationService,
   SnapshotAdminService,
 } from "../../../../modules/admin/index.js";
-import { mapDomainError } from "../../trpc.error-mapper.js";
+import {
+  mapDomainError,
+  withDomainErrorMapping,
+} from "../../trpc.error-mapper.js";
 import {
   adminProcedure,
   captureMutationAuditInputMiddleware,
@@ -23,24 +26,20 @@ export function createAdminUsersProcedures(deps: AdminUsersDeps) {
     saveUser: adminProcedure
       .input(adminUserSchema)
       .use(captureMutationAuditInputMiddleware)
-      .mutation(async ({ input }) => {
-        try {
-          return await deps.snapshotAdminService.upsertUser(input);
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+      .mutation(({ input }) =>
+        withDomainErrorMapping(() =>
+          deps.snapshotAdminService.upsertUser(input),
+        ),
+      ),
 
     deleteUser: adminProcedure
       .input(z.object({ userId: z.uuid() }))
       .use(captureMutationAuditInputMiddleware)
-      .mutation(async ({ input }) => {
-        try {
-          return await deps.snapshotAdminService.removeUser(input.userId);
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+      .mutation(({ input }) =>
+        withDomainErrorMapping(() =>
+          deps.snapshotAdminService.removeUser(input.userId),
+        ),
+      ),
 
     // Redis revoke so in-flight JWTs fail immediately (not only JWT TTL).
     deactivateUser: adminProcedure

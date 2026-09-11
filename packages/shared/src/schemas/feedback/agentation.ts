@@ -94,22 +94,14 @@ export const agentationPlacementSchema = z
   })
   .strip();
 
-const rearrangeRect = z
-  .object({
-    x: boundedCoordinate,
-    y: boundedCoordinate,
-    width: finite.min(0).max(AGENTATION_MAX_COORDINATE),
-    height: finite.min(0).max(AGENTATION_MAX_COORDINATE),
-  })
-  .strip();
 /** Validates rearrange capture metadata. */
 export const agentationRearrangeSchema = z
   .object({
     selector: boundedString,
     label: boundedString,
     tagName: boundedString,
-    originalRect: rearrangeRect,
-    currentRect: rearrangeRect,
+    originalRect: rect,
+    currentRect: rect,
   })
   .strip();
 

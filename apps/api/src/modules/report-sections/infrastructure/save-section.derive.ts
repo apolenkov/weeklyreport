@@ -42,29 +42,43 @@ export function toActivityStatusRows(
   }));
 }
 
-export function toItemRows(section: ReportSectionReadModel, sectionId: string) {
-  return section.items.map((i) => ({
-    // The DB mints the id — rows are recreated wholesale, so trusting a
-    // client-supplied PK only risks a cross-section P2002 collision.
-    reportSectionId: sectionId,
-    // Preserve the durable lineage key through the recreate. Undefined for a
-    // brand-new record → omitted so the `@default(uuid())` mints one; never
-    // `?? null` (the column is NOT NULL).
-    ...(i.stableId === undefined ? {} : { stableId: i.stableId }),
-    // XOR parent: product-parented rows write projectId; activity-parented rows
-    // write activityId (product FK null). The hand-written CHECK is the
-    // backstop; the write schema already enforced XOR.
-    projectId: i.projectId ?? null,
-    activityId: i.activityId ?? null,
-    type: i.type,
-    text: i.text,
-    tag: i.tag,
-    workflowStatus: i.workflowStatus,
-    carriedOver: i.carriedOver,
-    priorityRank: i.priorityRank ?? null,
-    pausedReason: i.pausedReason ?? null,
-    stageNames: [...i.stageNames],
-  }));
+export function toItemRows(
+  section: ReportSectionReadModel,
+  sectionId: string,
+  resolutionByStableId: ReadonlyMap<string, Prisma.InputJsonValue> = new Map(),
+) {
+  return section.items.map((i) => {
+    const resolution =
+      i.stableId === undefined
+        ? undefined
+        : resolutionByStableId.get(i.stableId);
+    return {
+      // The DB mints the id — rows are recreated wholesale, so trusting a
+      // client-supplied PK only risks a cross-section P2002 collision.
+      reportSectionId: sectionId,
+      // Preserve the durable lineage key through the recreate. Undefined for a
+      // brand-new record → omitted so the `@default(uuid())` mints one; never
+      // `?? null` (the column is NOT NULL).
+      ...(i.stableId === undefined ? {} : { stableId: i.stableId }),
+      // XOR parent: product-parented rows write projectId; activity-parented rows
+      // write activityId (product FK null). The hand-written CHECK is the
+      // backstop; the write schema already enforced XOR.
+      projectId: i.projectId ?? null,
+      activityId: i.activityId ?? null,
+      type: i.type,
+      text: i.text,
+      tag: i.tag,
+      workflowStatus: i.workflowStatus,
+      carriedOver: i.carriedOver,
+      priorityRank: i.priorityRank ?? null,
+      pausedReason: i.pausedReason ?? null,
+      nextStepText: i.nextStepText ?? null,
+      // Ordinary writes cannot author resolution/history. The transaction passes
+      // only authoritative JSON for an unchanged cancelled lineage.
+      ...(resolution === undefined ? {} : { resolution }),
+      stageNames: [...i.stageNames],
+    };
+  });
 }
 
 export function toRiskRows(section: ReportSectionReadModel, sectionId: string) {

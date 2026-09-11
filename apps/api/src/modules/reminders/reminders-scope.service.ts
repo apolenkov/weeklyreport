@@ -1,27 +1,31 @@
-import type { AdminReminderExecution, UserSession } from "@customreport/shared";
+import type { ReminderDispatchResult, UserSession } from "@customreport/shared";
 
+import { errorMessage } from "../../lib/error-message.js";
+import type { AppLogger } from "../../lib/logger.js";
 import { ReminderScopeError } from "./reminders.errors.js";
-import type {
-  DispatchPendingResult,
-  RemindersScopeRepository,
-} from "./reminders-scope.types.js";
+import type { ReminderExecutionResult } from "./reminders.types.js";
+import type { RemindersScopeRepository } from "./reminders-scope.types.js";
 
 const REMINDER_RULE_OUT_OF_SCOPE_MESSAGE = "reminder-rule-out-of-scope";
 
-type SectionDispatchOutcome = "alreadySent" | "dispatched" | "skipped";
+type SectionDispatchOutcome =
+  "alreadyRequested" | "queued" | "failed" | "skipped";
 
 function tallyDispatchOutcomes(
   outcomes: readonly SectionDispatchOutcome[],
-): Pick<DispatchPendingResult, "alreadySent" | "dispatched" | "skipped"> {
+): ReminderDispatchResult {
   return {
-    dispatched: outcomes.filter((outcome) => outcome === "dispatched").length,
-    alreadySent: outcomes.filter((outcome) => outcome === "alreadySent").length,
+    queued: outcomes.filter((outcome) => outcome === "queued").length,
+    alreadyRequested: outcomes.filter(
+      (outcome) => outcome === "alreadyRequested",
+    ).length,
+    failed: outcomes.filter((outcome) => outcome === "failed").length,
     skipped: outcomes.filter((outcome) => outcome === "skipped").length,
   };
 }
 
-function noDispatchResult(reason: string): DispatchPendingResult {
-  return { dispatched: 0, alreadySent: 0, skipped: 0, reason };
+function noDispatchResult(reason: string): ReminderDispatchResult {
+  return { queued: 0, alreadyRequested: 0, failed: 0, skipped: 0, reason };
 }
 
 // Scope-authorization + dispatch for the reminders namespace. requestReminderExecution
@@ -34,10 +38,8 @@ export class RemindersScopeService {
       recipientEmail: string,
       deadline: Date,
       leadName?: string,
-    ) => Promise<{
-      execution: AdminReminderExecution | null;
-      outcome: "created" | "revived" | "deduplicated" | "skipped";
-    }>,
+    ) => Promise<ReminderExecutionResult>,
+    private readonly logger: AppLogger,
   ) {}
 
   // Fail closed: missing/reportless rule is out of reach for non-admin.
@@ -99,7 +101,7 @@ export class RemindersScopeService {
     reportId: string,
     ruleId: string,
     leadId?: string,
-  ): Promise<DispatchPendingResult> {
+  ): Promise<ReminderDispatchResult> {
     if (session.role !== "admin") {
       await this.assertReportHasInScopeSection(session, reportId);
     }
@@ -121,7 +123,7 @@ export class RemindersScopeService {
     return this.dispatchDraftSections(rule, draftSections);
   }
 
-  // Classify from the atomic insert outcome (dedupeKey unique index); no clocks.
+  // Include the enqueue outcome; a persisted failure is never a successful request.
   private async classifySectionDispatch(
     rule: { id: string; fireAt: Date; deadline: Date },
     section: { email: string; name?: string; notificationOptOut: boolean },
@@ -134,7 +136,8 @@ export class RemindersScopeService {
       section.name,
     );
     if (outcome === "skipped") return "skipped";
-    return outcome === "deduplicated" ? "alreadySent" : "dispatched";
+    if (outcome === "failed") return "failed";
+    return outcome === "deduplicated" ? "alreadyRequested" : "queued";
   }
 
   // Sequential so enqueue/revive outcomes resolve in deterministic order; the
@@ -147,10 +150,18 @@ export class RemindersScopeService {
       name?: string;
       notificationOptOut: boolean;
     }[],
-  ): Promise<DispatchPendingResult> {
+  ): Promise<ReminderDispatchResult> {
     const outcomes: SectionDispatchOutcome[] = [];
     for (const section of draftSections) {
-      outcomes.push(await this.classifySectionDispatch(rule, section));
+      try {
+        outcomes.push(await this.classifySectionDispatch(rule, section));
+      } catch (error: unknown) {
+        this.logger.error("manual reminder request failed", {
+          ruleId: rule.id,
+          error: errorMessage(error),
+        });
+        outcomes.push("failed");
+      }
     }
     return tallyDispatchOutcomes(outcomes);
   }

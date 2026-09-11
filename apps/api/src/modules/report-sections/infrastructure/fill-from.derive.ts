@@ -3,7 +3,7 @@
 // plain createMany payloads and the carry/remap decisions, leaving the
 // transaction/lock-order/CAS/P2002 handling in the repository method.
 
-// planned/postponed → in_progress when next flips to current (same as carry-over).
+// Fill From maps copied next-period suggestions into current work.
 export function remapNextToCurrentStatus<WF extends string>(
   status: WF,
 ): WF | "in_progress" {
@@ -26,6 +26,7 @@ interface SourceItem<WF extends string> {
   readonly text: string;
   readonly tag: string;
   readonly workflowStatus: WF;
+  readonly pausedReason: string | null;
   readonly stageNames: string[];
 }
 
@@ -41,6 +42,7 @@ export function toFilledItemRows<WF extends string>(
     text: i.text,
     tag: i.tag,
     workflowStatus: remapNextToCurrentStatus(i.workflowStatus),
+    pausedReason: i.pausedReason,
     carriedOver: false,
     stageNames: i.stageNames,
   }));

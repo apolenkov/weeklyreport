@@ -7,11 +7,11 @@ import {
   disconnectTestPrisma,
   seedTestData,
   TEST_IDS,
-} from "../../test-utils/prisma-test-helper";
-import { canReadReport } from "../../test-utils/report-read-access.js";
+} from "./prisma-test-helper";
+import { canReadReport } from "./report-read-access.js";
 
-// The shared report-read access predicate is true only when the caller's group
-// scope intersects the report; a revoked viewer must not pull the artifact.
+// Exercise report visibility against persisted rows. Artifact downloads use
+// their separate immutable job-owner contract.
 describe("report-read-access canReadReport (integration)", () => {
   const prisma = createTestPrisma();
   let testData: Awaited<ReturnType<typeof seedTestData>>;
