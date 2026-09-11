@@ -114,7 +114,6 @@ function OffsetUnitSelect({
   unit,
   beforeDeadline,
   applyOffset,
-  onValidityChange,
 }: OffsetControlProps) {
   return (
     <select
@@ -123,7 +122,6 @@ function OffsetUnitSelect({
       aria-label="reminder offset unit"
       value={unit}
       onChange={(e) => {
-        onValidityChange?.(true);
         // The option list and the union stay in lockstep via OFFSET_UNITS;
         // a value outside it is rejected rather than asserted.
         const nextUnit = (OFFSET_UNITS as readonly string[]).includes(
@@ -149,7 +147,6 @@ function OffsetDirectionSelect({
   unit,
   beforeDeadline,
   applyOffset,
-  onValidityChange,
 }: OffsetControlProps) {
   return (
     <select
@@ -158,7 +155,6 @@ function OffsetDirectionSelect({
       aria-label="before or after deadline"
       value={beforeDeadline ? "before" : "after"}
       onChange={(e) => {
-        onValidityChange?.(true);
         applyOffset(magnitude, unit, e.target.value === "before");
       }}
       className={POLICY_FORM_INPUT_CLASS}
