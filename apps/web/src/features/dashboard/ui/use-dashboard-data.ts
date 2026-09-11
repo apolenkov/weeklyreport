@@ -11,7 +11,11 @@ import { toast } from "sonner";
 
 import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";
 import { logClientError } from "../../../shared/lib/errors/client-error-reporting";
-import { invalidateSubmissionDashboard } from "../../../shared/lib/query/cache-keys";
+import {
+  invalidateLeadForm,
+  invalidateLeadHistory,
+  invalidateSubmissionDashboard,
+} from "../../../shared/lib/query/cache-keys";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { useDashboardQueryRecovery } from "./use-dashboard-query-recovery";
 
@@ -144,6 +148,10 @@ function useRevokeAllSubmitted() {
           `${result.revokedCount} submission${result.revokedCount === 1 ? "" : "s"} revoked.`,
         );
         invalidateSubmissionDashboard(queryClient, trpc);
+        // Bulk revoke changes the same lead-form and history projections as the
+        // per-lead revoke, so refresh those caches too.
+        invalidateLeadForm(queryClient, trpc);
+        invalidateLeadHistory(queryClient, trpc);
       },
       onError: (error) => toast.error(`Revoke All failed: ${error.message}`),
     }),
