@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReportSectionReadModel } from "@customreport/shared";
 import { toast } from "sonner";
 
 import {
@@ -31,6 +32,7 @@ interface UseLeadFormWriteActionsArgs {
   readonly version: number;
   readonly onRevoked: () => void;
   readonly onConflict: () => void;
+  readonly adoptServerSection: (section: ReportSectionReadModel) => void;
   readonly writePort: LeadFormWritePort;
 }
 
@@ -99,6 +101,7 @@ export function useLeadFormWriteActions({
   version,
   onRevoked,
   onConflict,
+  adoptServerSection,
   writePort,
 }: UseLeadFormWriteActionsArgs): LeadFormWriteActions {
   const revoke = useLeadFormRevoke({
@@ -118,6 +121,7 @@ export function useLeadFormWriteActions({
     autosaveDirty,
     version,
     onConflict,
+    onFilled: adoptServerSection,
     writePort,
   });
   const submitConfirmation = useSubmitConfirmation({

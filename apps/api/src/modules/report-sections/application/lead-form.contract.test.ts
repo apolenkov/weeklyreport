@@ -196,7 +196,8 @@ describe("LeadFormService — fillFrom published-lineage lock", () => {
       AUTHOR_ID,
       1,
     );
-    expect(result).toEqual({ success: true, copiedItems: 5 });
+    expect(result).toMatchObject({ success: true, copiedItems: 5 });
+    expect(result.section).toBeDefined();
     expect(repo.fillFromSection).toHaveBeenCalled();
   });
 });
@@ -474,7 +475,8 @@ describe("LeadFormService — fillFrom", () => {
       1,
     );
 
-    expect(result).toEqual({ success: true, copiedItems: 7 });
+    expect(result).toMatchObject({ success: true, copiedItems: 7 });
+    expect(result.section).toBeDefined();
     expect(repo.fillFromSection).toHaveBeenCalledWith(
       SECTION_ID,
       SOURCE_SECTION_ID,
@@ -524,7 +526,8 @@ describe("LeadFormService — fillFrom", () => {
       1,
     );
 
-    expect(result).toEqual({ success: true, copiedItems: 3 });
+    expect(result).toMatchObject({ success: true, copiedItems: 3 });
+    expect(result.section).toBeDefined();
   });
 
   it("fails for a submitted section", async () => {

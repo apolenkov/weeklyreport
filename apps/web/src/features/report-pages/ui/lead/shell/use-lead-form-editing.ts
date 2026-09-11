@@ -68,6 +68,7 @@ export function useLeadFormEditing(args: UseLeadFormEditingArgs) {
     version: draft.version,
     onRevoked: draft.markUnsubmitted,
     onConflict: draft.reloadAfterConflict,
+    adoptServerSection: draft.adoptServerSection,
     writePort,
   });
   // Each toggle flips groupExpanded; AccordionSection mirrors it into local
