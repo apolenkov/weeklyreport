@@ -23,17 +23,35 @@ export function additionalItems(
   );
 }
 
+// The two-preview cap is per temporal column: linked lineage cells plus the
+// independent "additional updates" share the same budget, so a mixed unit never
+// shows more than two previews in one column.
+export function previewBudget(rows: readonly StatusOverviewLineageRow[]): {
+  readonly current: number;
+  readonly next: number;
+  readonly hiddenLinked: number;
+} {
+  const linked = rows.filter(isLinkedOverviewRow);
+  const visibleLinked = linked.slice(0, REPORT_PREVIEW_COUNT);
+  const linkedCurrent = visibleLinked.filter(
+    (row) => row.current !== null,
+  ).length;
+  const linkedNext = visibleLinked.filter((row) => row.next !== null).length;
+  return {
+    current: Math.max(0, REPORT_PREVIEW_COUNT - linkedCurrent),
+    next: Math.max(0, REPORT_PREVIEW_COUNT - linkedNext),
+    hiddenLinked: Math.max(0, linked.length - REPORT_PREVIEW_COUNT),
+  };
+}
+
 export function reportHiddenRowCount(
   rows: readonly StatusOverviewLineageRow[],
 ): number {
-  const counts = [
-    rows.filter(isLinkedOverviewRow).length,
-    additionalItems(rows, "current").length,
-    additionalItems(rows, "next").length,
-  ];
-  return counts.reduce(
-    (total, count) => total + Math.max(0, count - REPORT_PREVIEW_COUNT),
-    0,
+  const budget = previewBudget(rows);
+  return (
+    budget.hiddenLinked +
+    Math.max(0, additionalItems(rows, "current").length - budget.current) +
+    Math.max(0, additionalItems(rows, "next").length - budget.next)
   );
 }
 
@@ -56,6 +74,7 @@ export function StatusOverviewAdditionalUpdates({
   readonly editorSlot?: StatusOverviewEditorSlot | undefined;
 }) {
   if (rows.every(isLinkedOverviewRow)) return null;
+  const budget = previewBudget(rows);
   const itemsBySource = {
     current: additionalItems(rows, "current"),
     next: additionalItems(rows, "next"),
@@ -82,6 +101,8 @@ export function StatusOverviewAdditionalUpdates({
         const visible =
           activeColumn === (source === "current" ? "currentWeek" : "nextWeek");
         const matchesEditor = matchedSource === source;
+        const visibleCount =
+          source === "current" ? budget.current : budget.next;
         const layout = editorLaneClass(
           matchesEditor,
           matchedSource !== undefined,
@@ -109,8 +130,8 @@ export function StatusOverviewAdditionalUpdates({
               {items.map((item, index) => (
                 <li
                   key={item.stableId ?? item.key}
-                  hidden={index >= REPORT_PREVIEW_COUNT && !expanded}
-                  inert={index >= REPORT_PREVIEW_COUNT && !expanded}
+                  hidden={index >= visibleCount && !expanded}
+                  inert={index >= visibleCount && !expanded}
                   className="min-w-0 px-4 py-3"
                 >
                   <ReportItemSlot
