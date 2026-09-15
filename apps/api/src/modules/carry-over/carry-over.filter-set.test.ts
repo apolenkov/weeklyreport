@@ -296,6 +296,7 @@ describe("CarryOverService — carry filter set (pin)", () => {
                 workflowStatus: "planned" as const,
                 pausedReason: null,
                 nextStepText: null,
+                text: null,
               },
             },
           }),

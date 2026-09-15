@@ -156,3 +156,78 @@ describe("mergeSection traffic-light aggregation", () => {
     expect(merged.submittedAt?.toISOString()).toBe(NOW.toISOString());
   });
 });
+
+describe("mergeSection activity title override", () => {
+  const ACTIVITY_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const baseActivity: ReportSectionReadModel["activities"][number] = {
+    activityId: ACTIVITY_ID,
+    activityName: "Catalogue duty",
+    status: "green",
+    jiraAccounts: [],
+    linkedProducts: [],
+    derivedStatus: null,
+    alarmFloor: null,
+  };
+  const activitySection: ReportSectionReadModel = {
+    ...section,
+    activities: [baseActivity],
+  };
+  const withOverrideActivity: ReportSectionReadModel["activities"][number] = {
+    ...baseActivity,
+    titleOverride: "Kept",
+  };
+
+  it("folds a written title override onto the seeded activity", () => {
+    const merged = mergeSection(
+      activitySection,
+      {
+        ...baseInput,
+        activityStatuses: [
+          { activityId: ACTIVITY_ID, titleOverride: "Weekly duty" },
+        ],
+      },
+      "draft",
+      NOW,
+    );
+
+    expect(merged.activities[0]?.titleOverride).toBe("Weekly duty");
+    expect(merged.activities[0]?.activityName).toBe("Catalogue duty");
+  });
+
+  it("preserves a persisted override when the entry omits it", () => {
+    const withOverride: ReportSectionReadModel = {
+      ...activitySection,
+      activities: [withOverrideActivity],
+    };
+    const merged = mergeSection(
+      withOverride,
+      {
+        ...baseInput,
+        activityStatuses: [{ activityId: ACTIVITY_ID, status: "red" }],
+      },
+      "draft",
+      NOW,
+    );
+
+    expect(merged.activities[0]?.titleOverride).toBe("Kept");
+  });
+
+  it("clears the override on an explicit null", () => {
+    const withOverride: ReportSectionReadModel = {
+      ...activitySection,
+      activities: [withOverrideActivity],
+    };
+    const merged = mergeSection(
+      withOverride,
+      {
+        ...baseInput,
+        activityStatuses: [{ activityId: ACTIVITY_ID, titleOverride: null }],
+      },
+      "draft",
+      NOW,
+    );
+
+    expect(merged.activities[0]?.titleOverride).toBeNull();
+    expect(activitySection.activities[0]?.titleOverride).toBeUndefined();
+  });
+});

@@ -38,6 +38,7 @@ export function toActivityStatusRows(
     reportSectionId: sectionId,
     activityId: activity.activityId,
     status: activity.status,
+    titleOverride: activity.titleOverride ?? null,
     note: activity.note ?? null,
   }));
 }

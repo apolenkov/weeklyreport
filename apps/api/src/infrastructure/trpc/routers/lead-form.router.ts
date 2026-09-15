@@ -5,6 +5,7 @@ import {
   leadStatusOverviewInputSchema,
   leadStatusOverviewOutputSchema,
   MAX_REOPEN_REASON_LENGTH,
+  promotePlanInputSchema,
   reportAssistantOutcomeSchema,
   reportAssistantRequestSchema,
   resolvePlanInputSchema,
@@ -153,6 +154,18 @@ function restorePlanProcedure(deps: LeadFormRouterDeps) {
     );
 }
 
+function promotePlanProcedure(deps: LeadFormRouterDeps) {
+  return leadProcedure
+    .input(promotePlanInputSchema)
+    .output(itemOutcomeResultSchema)
+    .use(captureMutationAuditInputMiddleware)
+    .mutation(({ input, ctx }) =>
+      withDomainErrorMapping(() =>
+        deps.leadFormService.promotePlan(input, ctx.session.userId),
+      ),
+    );
+}
+
 function fillFromProcedure(deps: LeadFormRouterDeps) {
   return protectedProcedure
     .input(
@@ -281,6 +294,7 @@ export function createLeadFormRouter(deps: LeadFormRouterDeps) {
     openWork: openWorkProcedure(deps),
     resolvePlan: resolvePlanProcedure(deps),
     restorePlan: restorePlanProcedure(deps),
+    promotePlan: promotePlanProcedure(deps),
     fillFrom: fillFromProcedure(deps),
     revoke: revokeProcedure(deps),
     revokeAllSubmitted: revokeAllSubmittedProcedure(deps),

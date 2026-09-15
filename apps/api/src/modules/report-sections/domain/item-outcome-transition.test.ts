@@ -5,9 +5,11 @@ import type {
 import { describe, expect, it } from "vitest";
 
 import {
+  promoteItemTransition,
   resolveItemTransition,
   restoreItemTransition,
 } from "./item-outcome-transition.js";
+import { LeadFormConstraintError } from "./lead-form-shared.js";
 
 const id = "11111111-1111-4111-8111-111111111111";
 const item: ReportSectionReadModel["items"][number] = {
@@ -50,6 +52,7 @@ describe("atomic item outcome transitions", () => {
         workflowStatus: "planned",
         pausedReason: null,
         nextStepText: null,
+        text: "Validate the integration",
       });
       expect(item.text).toBe("Delivered the API");
       if (outcome === "wont_do")
@@ -67,8 +70,19 @@ describe("atomic item outcome transitions", () => {
       workflowStatus: "in_progress",
       pausedReason: null,
       nextStepText: "Ship the UI",
+      text: "Delivered the API",
     });
     expect(item.nextStepText).toBe("Validate the integration");
+  });
+
+  it("archives the replaced result text on a transition that rewrites it", () => {
+    const result = resolveItemTransition(
+      item,
+      command("continue", { text: "Promoted next step" }),
+    );
+
+    expect(result.beforeState.text).toBe("Delivered the API");
+    expect(result.afterState.text).toBe("Promoted next step");
   });
 
   it.each(["done", "continue", "plan_next"] as const)(
@@ -109,6 +123,7 @@ describe("atomic item outcome transitions", () => {
       workflowStatus: "done",
       pausedReason: null,
       nextStepText: null,
+      text: "Delivered the API",
     });
   });
 
@@ -174,5 +189,99 @@ describe("atomic item outcome transitions", () => {
         command("plan_next"),
       ),
     ).toThrow("explicitly");
+  });
+
+  it("promotes the linked continuation over the active result", () => {
+    const result = promoteItemTransition(item);
+
+    expect(result.afterState).toEqual({
+      type: "current",
+      workflowStatus: "in_progress",
+      pausedReason: null,
+      nextStepText: null,
+      text: "Validate the integration",
+    });
+    expect(result.beforeState).toMatchObject({
+      text: "Delivered the API",
+      nextStepText: "Validate the integration",
+    });
+  });
+
+  it("preserves an active pause when paused work is moved to Current", () => {
+    const result = promoteItemTransition({
+      ...item,
+      workflowStatus: "paused",
+      pausedReason: "Waiting for approval.",
+    });
+
+    expect(result.afterState).toMatchObject({
+      workflowStatus: "paused",
+      pausedReason: "Waiting for approval.",
+      text: "Validate the integration",
+    });
+    expect(result.beforeState).toMatchObject({
+      workflowStatus: "paused",
+      pausedReason: "Waiting for approval.",
+      text: "Delivered the API",
+    });
+  });
+
+  it("moves a linked continuation to Next without changing its workflow status", () => {
+    const result = promoteItemTransition(
+      {
+        ...item,
+        workflowStatus: "paused",
+        pausedReason: "Waiting for approval.",
+      },
+      "next",
+    );
+
+    expect(result.beforeState).toEqual({
+      type: "current",
+      workflowStatus: "paused",
+      pausedReason: "Waiting for approval.",
+      nextStepText: "Validate the integration",
+      text: "Delivered the API",
+    });
+    expect(result.afterState).toEqual({
+      type: "next",
+      workflowStatus: "paused",
+      pausedReason: "Waiting for approval.",
+      nextStepText: null,
+      text: "Validate the integration",
+    });
+  });
+
+  it("rejects promotion of completed, cancelled or commitment-free work", () => {
+    const promoted = () => promoteItemTransition({ ...item });
+    const cancelled = {
+      ...item,
+      resolution: {
+        kind: "wont_do" as const,
+        eventId: id,
+        reason: "Retired",
+        actorId: id,
+        actorName: "Lead",
+        occurredAt: "2026-09-05T12:00:00.000Z",
+        previousState: {
+          type: "current" as const,
+          workflowStatus: "in_progress" as const,
+          pausedReason: null,
+          nextStepText: null,
+          text: "Delivered the API",
+        },
+      },
+    };
+
+    expect(() =>
+      promoteItemTransition({ ...item, workflowStatus: "done" }),
+    ).toThrow(LeadFormConstraintError);
+    expect(() =>
+      promoteItemTransition({ ...item, nextStepText: " ".repeat(3) }),
+    ).toThrow(LeadFormConstraintError);
+    expect(() => promoteItemTransition(cancelled)).toThrow(
+      LeadFormConstraintError,
+    );
+    expect(promoted).not.toThrow();
   });
 });

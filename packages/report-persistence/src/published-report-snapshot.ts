@@ -63,6 +63,10 @@ function freezeSectionOwnership(
 
   return publishedReportSectionReadModelSchema.parse({
     ...section,
+    activities: section.activities.map((activity) => ({
+      ...activity,
+      activityName: activity.titleOverride?.trim() || activity.activityName,
+    })),
     groupId,
     groupName: group.name,
   });

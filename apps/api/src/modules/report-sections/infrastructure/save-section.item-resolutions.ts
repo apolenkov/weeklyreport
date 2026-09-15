@@ -45,7 +45,8 @@ function matchesResolvedItem(
     incoming.text === persisted.text &&
     incoming.tag === persisted.tag &&
     incoming.workflowStatus === persisted.workflowStatus &&
-    incoming.carriedOver === persisted.carriedOver &&
+    (incoming.carriedOver === persisted.carriedOver ||
+      (persisted.carriedOver && !incoming.carriedOver)) &&
     (incoming.priorityRank ?? null) === persisted.priorityRank &&
     (incoming.pausedReason ?? null) === persisted.pausedReason &&
     (incoming.nextStepText ?? null) === persisted.nextStepText &&
@@ -61,8 +62,9 @@ function resolutionLockedError(): ReportSectionDomainError {
 }
 
 /**
- * Rejects ordinary writes that alter or delete a cancelled item, and returns
- * only the authoritative JSON that must survive the delete-recreate cycle.
+ * Rejects ordinary writes that alter or delete a cancelled item. The sole
+ * exception confirms a legacy carried marker from true to false. Returns only
+ * the authoritative JSON that must survive the delete-recreate cycle.
  */
 export function preserveResolvedItemJson(
   items: readonly ReportSectionReadModel["items"][number][],

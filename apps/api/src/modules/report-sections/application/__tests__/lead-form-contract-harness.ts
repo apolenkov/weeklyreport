@@ -75,6 +75,7 @@ export function createMockRepository(
   return {
     resolvePlan: vi.fn(),
     restorePlan: vi.fn(),
+    promotePlan: vi.fn(),
     getOpenWorkHistoryPage: vi.fn().mockResolvedValue({
       occurrences: [],
       nextCursor: null,

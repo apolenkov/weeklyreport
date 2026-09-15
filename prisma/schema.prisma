@@ -576,6 +576,9 @@ model ActivityStatus {
   reportSectionId String
   activityId      String
   status          TrafficLightStatus?
+  // Weekly override of the catalogue activity name; null means "use catalogue".
+  titleOverride   String?
+  // Weekly description; the catalogue has no description field to override.
   note            String?
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
@@ -1305,7 +1308,7 @@ enum ItemType {
 
 // Progress only — alarms (at-risk/blocked) are never stored on an item, they
 // derive from covering risks (record-status-derivation). Per-type vocabulary:
-// current → planned | in_progress | paused | done; next → planned | postponed.
+// Week placement and progress are independent; both types accept every value.
 // Enforced by shared Zod + a hand-written CHECK in the init migration.
 enum ItemWorkflowStatus {
   planned

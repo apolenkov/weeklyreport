@@ -73,7 +73,7 @@ describe("carry-over preserves planning intent", () => {
       stableId: source.stableId,
       text: "Run integration tests",
       nextStepText: null,
-      workflowStatus: "planned",
+      workflowStatus: "in_progress",
     });
     expect(source.text).toBe("API implemented");
     expect(source.nextStepText).toBe("Run integration tests");
@@ -159,7 +159,7 @@ describe("carry-over preserves planning intent", () => {
     },
   );
 
-  it("continues one stable lineage across successive period commitments", () => {
+  it("carries an explicitly replanned occurrence across A to B to C", () => {
     const sourceReportId = randomUUID();
     const middleReportId = randomUUID();
     const targetReportId = randomUUID();
@@ -171,12 +171,12 @@ describe("carry-over preserves planning intent", () => {
           id: randomUUID(),
           stableId,
           projectId: randomUUID(),
-          type: "current",
-          text: "API implementation completed",
-          nextStepText: "Validate the API",
+          type: "next",
+          text: "Validate the API",
           tag: "feature",
           workflowStatus: "in_progress",
-          carriedOver: true,
+          carriedOver: false,
+          priorityRank: 2,
           stageNames: ["Development"],
         },
       ],
@@ -197,14 +197,15 @@ describe("carry-over preserves planning intent", () => {
     );
     const firstClone = expectDefined(firstEntry.items[0]).item;
 
+    // The lead explicitly moves the unconfirmed Current B occurrence back to
+    // Next B. This is a plan, so only placement and the marker change.
     const middleSource = {
       ...middleTarget,
       items: [
         {
           ...firstClone,
-          text: "API validation completed",
-          nextStepText: "Release the API",
-          workflowStatus: "in_progress" as const,
+          type: "next" as const,
+          carriedOver: false,
         },
       ],
     };
@@ -228,21 +229,22 @@ describe("carry-over preserves planning intent", () => {
       stableId,
       text: "Validate the API",
       nextStepText: null,
-      workflowStatus: "planned",
+      workflowStatus: "in_progress",
+      priorityRank: 2,
+      carriedOver: true,
     });
     expect(secondClone).toMatchObject({
       stableId,
-      text: "Release the API",
+      text: "Validate the API",
       nextStepText: null,
-      workflowStatus: "planned",
+      workflowStatus: "in_progress",
+      priorityRank: 2,
+      carriedOver: true,
     });
     expect(firstClone.id).not.toBe(expectDefined(firstSource.items[0]).id);
     expect(secondClone.id).not.toBe(firstClone.id);
-    expect(expectDefined(firstSource.items[0]).text).toBe(
-      "API implementation completed",
-    );
-    expect(expectDefined(middleSource.items[0]).text).toBe(
-      "API validation completed",
-    );
+    expect(expectDefined(firstSource.items[0]).text).toBe("Validate the API");
+    expect(expectDefined(firstSource.items[0]).carriedOver).toBe(false);
+    expect(expectDefined(middleSource.items[0]).carriedOver).toBe(false);
   });
 });

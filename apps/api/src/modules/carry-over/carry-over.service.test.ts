@@ -265,7 +265,7 @@ describe("CarryOverService", () => {
         stableId,
         text: "Validate API",
         nextStepText: null,
-        workflowStatus: "planned",
+        workflowStatus: "in_progress",
       },
     ]);
     expect(retry.execution.id).toBe(first.execution.id);

@@ -71,6 +71,16 @@ export function validateSubmitInput(
   const projectErrors = section.projects.flatMap((project) =>
     validateProjectSubmission(project, input),
   );
+  const confirmationErrors = input.items.some(
+    (item) => item.type === "current" && item.carriedOver,
+  )
+    ? [
+        validationError(
+          "UNCONFIRMED_CARRIED_ITEM",
+          "Confirm carried Current Week items before submitting.",
+        ),
+      ]
+    : [];
 
   // Activities need a traffic light at submit; schema alone cannot catch an omitted entry.
   const activityErrors = section.activities.flatMap((activity) => {
@@ -88,7 +98,11 @@ export function validateSubmitInput(
         ];
   });
 
-  return Object.freeze([...projectErrors, ...activityErrors]);
+  return Object.freeze([
+    ...projectErrors,
+    ...confirmationErrors,
+    ...activityErrors,
+  ]);
 }
 
 /**

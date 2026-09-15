@@ -1,6 +1,7 @@
 import {
   type ItemOutcomeState,
   itemOutcomeStateSchema,
+  type PromotePlanInput,
   type ReportSectionReadModel,
   type ResolvePlanInput,
 } from "@customreport/shared";
@@ -34,6 +35,7 @@ export function outcomeState(item: Item): ItemOutcomeState {
     workflowStatus: item.workflowStatus,
     pausedReason: item.pausedReason ?? null,
     nextStepText: item.nextStepText ?? null,
+    text: item.text,
   });
 }
 
@@ -52,6 +54,7 @@ function nextPlanState(
       workflowStatus: "planned",
       pausedReason: null,
       nextStepText: null,
+      text: source.text,
     };
   }
   if (source.workflowStatus === "done") {
@@ -73,6 +76,7 @@ function resolvedState(
         workflowStatus: "done",
         pausedReason: null,
         nextStepText: null,
+        text: source.text,
       };
     case "continue":
       return {
@@ -85,6 +89,7 @@ function resolvedState(
             : command.source.kind === "current"
               ? (source.nextStepText ?? null)
               : null,
+        text: source.text,
       };
     case "plan_next":
       return nextPlanState(source, command);
@@ -110,10 +115,16 @@ export function resolveItemTransition(
     (command.outcome === "plan_next" &&
       command.source.kind === "current" &&
       source.type === "current");
+  const text = preservesText ? source.text : (command.text ?? source.text);
   return {
+    // The superseded result stays readable in the audit event: beforeState keeps
+    // the previous text and afterState the text this transition commits.
     beforeState: outcomeState(source),
-    afterState: itemOutcomeStateSchema.parse(resolvedState(source, command)),
-    text: preservesText ? source.text : (command.text ?? source.text),
+    afterState: itemOutcomeStateSchema.parse({
+      ...resolvedState(source, command),
+      text,
+    }),
+    text,
   };
 }
 
@@ -123,7 +134,43 @@ export function restoreItemTransition(source: Item) {
   }
   return {
     beforeState: outcomeState(source),
-    afterState: itemOutcomeStateSchema.parse(source.resolution.previousState),
+    // Events written before the state carried text fall back to the live text so
+    // a restore never blanks the result it is recovering.
+    afterState: itemOutcomeStateSchema.parse({
+      ...source.resolution.previousState,
+      text: source.resolution.previousState.text ?? source.text,
+    }),
     reversesEventId: source.resolution.eventId,
+  };
+}
+
+// The linked commitment becomes the selected week's active text while the
+// superseded result stays readable in the event's before-state. Completed and
+// cancelled records cannot be promoted, and a blank commitment is not a move.
+export function promoteItemTransition(
+  source: Item,
+  target: PromotePlanInput["target"] = "current",
+) {
+  if (source.workflowStatus === "done") {
+    throw new LeadFormConstraintError("Completed work cannot be promoted.");
+  }
+  if (source.resolution != null) {
+    throw new LeadFormConstraintError("Restore this plan before promoting it.");
+  }
+  const continuation = source.nextStepText?.trim() ?? "";
+  if (continuation === "") {
+    throw new LeadFormConstraintError(
+      "This record has no next step to promote.",
+    );
+  }
+  return {
+    beforeState: outcomeState(source),
+    afterState: itemOutcomeStateSchema.parse({
+      type: target,
+      workflowStatus: source.workflowStatus,
+      pausedReason: source.pausedReason ?? null,
+      nextStepText: null,
+      text: continuation,
+    }),
   };
 }

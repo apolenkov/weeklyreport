@@ -44,6 +44,7 @@ export {
   itemReadModelSchema,
   itemWriteSchema,
   linkedProductSchema,
+  MAX_ACTIVITY_NAME_LENGTH,
   projectStatusInputSchema,
   riskInputSchema,
   riskReadModelSchema,

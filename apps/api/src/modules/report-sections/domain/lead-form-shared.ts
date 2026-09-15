@@ -4,6 +4,7 @@ import type {
   ItemWorkflowStatus,
   LeadOpenWorkHistoryOutput,
   LeadStatusOverviewPredecessor,
+  PromotePlanInput,
   PublishedLineage,
   ReportSectionReadModel,
   ResolvePlanInput,
@@ -59,6 +60,10 @@ export interface LeadFormRepository {
   ): Promise<ItemOutcomeResult>;
   restorePlan(
     command: RestorePlanInput,
+    userId: string,
+  ): Promise<ItemOutcomeResult>;
+  promotePlan(
+    command: PromotePlanInput,
     userId: string,
   ): Promise<ItemOutcomeResult>;
   getOpenWorkHistoryPage(

@@ -988,6 +988,7 @@ CREATE TABLE "ActivityStatus" (
     "reportSectionId" TEXT NOT NULL,
     "activityId" TEXT NOT NULL,
     "status" "TrafficLightStatus",
+    "titleOverride" TEXT,
     "note" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -1055,16 +1056,16 @@ ALTER TABLE "Item"
     ("activityId" IS NOT NULL AND cardinality("stageNames") = 0)
   );
 
--- Per-type progress vocabulary (rework-item-status-model): current items may
--- only hold in_progress/paused/done, next items only planned/postponed.
+-- Week placement and progress are independent; both Item types accept the
+-- complete progress vocabulary.
 -- Prisma cannot express a CHECK, so it is hand-written here as defence-in-depth
 -- behind the Zod refinement in the shared item schema.
 ALTER TABLE "Item"
   ADD CONSTRAINT "Item_type_status_check"
   CHECK (
-    ("type" = 'current' AND "workflowStatus" IN ('in_progress', 'paused', 'done'))
+    ("type" = 'current' AND "workflowStatus" IN ('planned', 'in_progress', 'paused', 'postponed', 'done'))
     OR
-    ("type" = 'next' AND "workflowStatus" IN ('planned', 'postponed'))
+    ("type" = 'next' AND "workflowStatus" IN ('planned', 'in_progress', 'paused', 'postponed', 'done'))
   );
 
 -- Every paused item explains why it is paused; non-paused items carry no

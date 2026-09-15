@@ -219,3 +219,42 @@ describe("toProjectStatusRows / toStageStatusRows", () => {
     ]);
   });
 });
+
+describe("toActivityStatusRows", () => {
+  it("persists the weekly title override and nulls an absent one", () => {
+    const s = section({
+      activities: [
+        {
+          activityId: ACTIVITY,
+          activityName: "Catalogue duty",
+          titleOverride: "Weekly duty",
+          status: "green",
+          note: "Weekly description",
+          jiraAccounts: [],
+          linkedProducts: [],
+          derivedStatus: null,
+          alarmFloor: null,
+        },
+        {
+          activityId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+          activityName: "No override",
+          status: "red",
+          jiraAccounts: [],
+          linkedProducts: [],
+          derivedStatus: null,
+          alarmFloor: null,
+        },
+      ],
+    });
+
+    const rows = toActivityStatusRows(s, SECTION_ID);
+    expect(rows[0]).toEqual({
+      reportSectionId: SECTION_ID,
+      activityId: ACTIVITY,
+      status: "green",
+      titleOverride: "Weekly duty",
+      note: "Weekly description",
+    });
+    expect(rows[1]?.titleOverride).toBeNull();
+  });
+});

@@ -4,6 +4,7 @@ import {
 } from "@customreport/report-persistence";
 import type {
   ItemOutcomeResult,
+  PromotePlanInput,
   ResolvePlanInput,
   RestorePlanInput,
 } from "@customreport/shared";
@@ -16,17 +17,45 @@ import {
   LeadFormConstraintError,
   LeadFormDomainError,
 } from "../domain/lead-form-shared.js";
-import { outcomeCommandHash } from "./item-outcome-command-hash.js";
+import {
+  outcomeCommandHash,
+  type OutcomeCommandOperation,
+} from "./item-outcome-command-hash.js";
 
-type Command = ResolvePlanInput | RestorePlanInput;
+type Command = ResolvePlanInput | RestorePlanInput | PromotePlanInput;
 const SECTION_UNAVAILABLE = "The report section is not available.";
 const VERSION_CONFLICT =
   "This section changed. Reload it before resolving the plan.";
+
+function receiptMatches(
+  receipt: {
+    readonly reportSectionId: string;
+    readonly actorId: string;
+    readonly outcome: string;
+    readonly requestHash: string;
+  },
+  reportSectionId: string,
+  userId: string,
+  operation: OutcomeCommandOperation,
+  requestHash: string,
+  legacyPromotionHash: string | null,
+): boolean {
+  return (
+    receipt.reportSectionId === reportSectionId &&
+    receipt.actorId === userId &&
+    (operation !== "restore" || receipt.outcome === "restore") &&
+    (receipt.requestHash === requestHash ||
+      (receipt.outcome === "promote" &&
+        legacyPromotionHash !== null &&
+        receipt.requestHash === legacyPromotionHash))
+  );
+}
 
 export async function loadOutcomeTarget(
   tx: Prisma.TransactionClient,
   command: Command,
   userId: string,
+  operation: OutcomeCommandOperation,
 ) {
   // Prisma's callback deadline cannot interrupt an in-flight pg lock wait.
   await tx.$executeRaw`SET LOCAL lock_timeout = '15s'`;
@@ -47,15 +76,24 @@ export async function loadOutcomeTarget(
   });
   if (!actor?.isActive) throw new LeadFormDomainError(SECTION_UNAVAILABLE);
   const section = mapPrismaToReportSection(row);
-  const requestHash = outcomeCommandHash(command);
+  const requestHash = outcomeCommandHash(command, operation);
   const receipt = await tx.itemOutcomeEvent.findUnique({
     where: { id: command.commandId },
   });
   if (receipt) {
+    const legacyPromotionHash =
+      operation === "promote" && (command as PromotePlanInput).target !== "next"
+        ? outcomeCommandHash(command, "restore")
+        : null;
     if (
-      receipt.reportSectionId !== row.id ||
-      receipt.actorId !== userId ||
-      receipt.requestHash !== requestHash
+      !receiptMatches(
+        receipt,
+        row.id,
+        userId,
+        operation,
+        requestHash,
+        legacyPromotionHash,
+      )
     ) {
       throw new LeadFormConstraintError(
         "This command identifier has already been used for another action.",

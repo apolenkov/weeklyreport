@@ -1,9 +1,11 @@
 import { z } from "zod";
 
 import { safeText } from "../primitives/report-primitives.schema";
-import { linkedProductSchema } from "../report-sections/section.schema";
+import {
+  linkedProductSchema,
+  MAX_ACTIVITY_NAME_LENGTH,
+} from "../report-sections/section.schema";
 
-const MAX_ACTIVITY_NAME_LENGTH = 200;
 const MAX_JIRA_ACCOUNT_LENGTH = 100;
 const MAX_LINKED_PRODUCTS = 50;
 const MAX_JIRA_ACCOUNTS = 20;

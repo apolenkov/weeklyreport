@@ -6,6 +6,7 @@ import {
   itemInputSchema,
   itemTypeSchema,
   itemWorkflowStatusSchema,
+  itemWriteSchema,
   reportSectionStatusSchema,
   reportStatusSchema,
   trafficLightStatusSchema,
@@ -42,6 +43,30 @@ describe("itemInputSchema priorityRank", () => {
     expect(
       itemInputSchema.safeParse({ ...validItem(), priorityRank }).success,
     ).toBe(false);
+  });
+});
+
+describe("itemWriteSchema week and workflow status", () => {
+  it.each([
+    ["current", "planned", true],
+    ["current", "in_progress", true],
+    ["current", "paused", true],
+    ["current", "postponed", true],
+    ["current", "done", true],
+    ["next", "planned", true],
+    ["next", "in_progress", true],
+    ["next", "paused", true],
+    ["next", "postponed", true],
+    ["next", "done", true],
+  ] as const)("accepts %s/%s = %s", (type, workflowStatus, accepted) => {
+    expect(
+      itemWriteSchema.safeParse({
+        ...validItem(),
+        type,
+        workflowStatus,
+        pausedReason: workflowStatus === "paused" ? "Waiting" : null,
+      }).success,
+    ).toBe(accepted);
   });
 });
 

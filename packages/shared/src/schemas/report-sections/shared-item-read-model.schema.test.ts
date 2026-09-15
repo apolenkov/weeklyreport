@@ -18,6 +18,7 @@ const pausedState = {
   workflowStatus: "paused" as const,
   pausedReason: PRIVATE_SENTINEL,
   nextStepText: null,
+  text: null,
 };
 const resolution = {
   kind: "wont_do" as const,

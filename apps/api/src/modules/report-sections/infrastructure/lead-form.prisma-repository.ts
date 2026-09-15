@@ -3,6 +3,7 @@ import {
   reportSectionFullInclude,
 } from "@customreport/report-persistence";
 import type {
+  PromotePlanInput,
   PublishedLineage,
   ReportSectionReadModel,
   ResolvePlanInput,
@@ -17,7 +18,11 @@ import type {
 } from "../application/lead-form.service";
 import { type ReopenEligibilityFacts } from "../domain/lead-form-shared";
 import { fillFromSectionTx } from "./fill-from.transaction.js";
-import { resolvePlanTx, restorePlanTx } from "./item-outcome.transaction.js";
+import {
+  promotePlanTx,
+  resolvePlanTx,
+  restorePlanTx,
+} from "./item-outcome.transaction.js";
 import { getSharedNonArchivedProductIds } from "./lead-form-cross-author.query.js";
 import {
   getCrossAuthorContentRead,
@@ -51,6 +56,10 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
 
   restorePlan(command: RestorePlanInput, userId: string) {
     return restorePlanTx(this.prisma, command, userId);
+  }
+
+  promotePlan(command: PromotePlanInput, userId: string) {
+    return promotePlanTx(this.prisma, command, userId);
   }
 
   getOpenWorkHistoryPage(
