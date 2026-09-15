@@ -20,7 +20,7 @@ function useFillFromConfirmation(
   generation: LeadFormGeneration | null,
   autosaveDirty: boolean,
   createInput: (sourceSectionId: string) => FillFromInput | null,
-  fillFrom: (input: FillFromInput) => void,
+  fillFrom: (input: FillFromInput) => Promise<void>,
 ) {
   const [pendingInput, setPendingInput] =
     useGenerationState<FillFromInput | null>(generation, null);
@@ -33,13 +33,13 @@ function useFillFromConfirmation(
         setPendingInput(input);
         return;
       }
-      fillFrom(input);
+      return fillFrom(input);
     },
     confirmPendingFillFrom: () => {
       if (pendingInput === null) return;
       const input = createInput(pendingInput.sourceSectionId);
       setPendingInput(null);
-      if (input !== null) fillFrom(input);
+      if (input !== null) void fillFrom(input).catch(() => undefined);
     },
     cancelPendingFillFrom: () => setPendingInput(null),
   };
@@ -77,6 +77,7 @@ export function useLeadFormFillFrom({
       const message =
         error instanceof Error ? error.message : "Fill from failed";
       toast.error(message);
+      throw error instanceof Error ? error : new Error(message);
     }
   };
 
@@ -87,7 +88,7 @@ export function useLeadFormFillFrom({
       sectionIdForActions
         ? { targetSectionId: sectionIdForActions, sourceSectionId, version }
         : null,
-    (input) => void fillFrom(input),
+    fillFrom,
   );
 
   return {

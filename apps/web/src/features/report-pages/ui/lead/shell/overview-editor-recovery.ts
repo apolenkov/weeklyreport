@@ -1,11 +1,85 @@
 import type {
-  KanbanItem,
-  StatusOverviewModel,
+  LeadStatusOverviewOutput,
+  ReportSectionReadModel,
+} from "@customreport/shared";
+
+import {
+  type KanbanItem,
+  mapLeadItems,
+  type StatusOverviewCreateTarget,
+  type StatusOverviewItem,
+  type StatusOverviewModel,
 } from "../../../../report-sections";
 import type { OverviewItemDialogState } from "./lead-status-overview-item-editor";
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
 
 type ReadyEditor = Extract<LeadFormEditorHandle, { status: "ready" }>;
+
+export function buildPriorPlanSeed(
+  output: LeadStatusOverviewOutput | undefined,
+  currentSection: ReportSectionReadModel,
+  model: StatusOverviewModel,
+  item: StatusOverviewItem,
+): { target: StatusOverviewCreateTarget; seed: KanbanItem } | null {
+  if (
+    output?.predecessor.availability !== "available" ||
+    item.source !== "previous" ||
+    !item.recordId ||
+    !item.stableId
+  )
+    return null;
+  const recordId = item.recordId;
+  const stableId = item.stableId;
+  if (currentSection.items.some((candidate) => candidate.stableId === stableId))
+    return null;
+  const unit = model.units.find(
+    (candidate) =>
+      !candidate.historical &&
+      candidate.columns.previouslyPlanned.items.some(
+        (candidateItem) => candidateItem.key === item.key,
+      ),
+  );
+  const predecessor = output.predecessor.section.items.find(
+    (candidate) => candidate.id === recordId && candidate.stableId === stableId,
+  );
+  const mapped = predecessor
+    ? mapLeadItems(output.predecessor.section, predecessor.type).find(
+        (candidate) => candidate.id === predecessor.id,
+      )
+    : undefined;
+  if (!unit || !mapped) return null;
+  const target: StatusOverviewCreateTarget = {
+    source: "current",
+    unitKind: unit.kind,
+    unitId: unit.id,
+  };
+  const seed: KanbanItem =
+    unit.kind === "activity"
+      ? {
+          ...mapped,
+          stableId,
+          text: item.text,
+          nextStepText: null,
+          parent: { kind: "activity", id: unit.id },
+          productId: null,
+          productName: unit.name,
+          activityId: unit.id,
+          activityName: unit.name,
+          stageNames: [],
+        }
+      : {
+          ...mapped,
+          stableId,
+          text: item.text,
+          nextStepText: null,
+          parent: { kind: "product", id: unit.id },
+          productId: unit.id,
+          productName: unit.name,
+          activityId: null,
+          activityName: undefined,
+        };
+  return { target, seed };
+}
 
 function authoredFields(item: KanbanItem) {
   return JSON.stringify({
@@ -20,7 +94,7 @@ function authoredFields(item: KanbanItem) {
 }
 
 function projectedItems(editor: ReadyEditor, dialog: OverviewItemDialogState) {
-  return dialog.target.source === "current"
+  return dialog.week === "current"
     ? editor.view.viewModel.ownCurrentWeekItems
     : editor.view.viewModel.ownNextWeekItems;
 }
@@ -137,7 +211,7 @@ export function overviewEditorRecoveryReason(
   const parent =
     dialog.mode === "create"
       ? { kind: dialog.target.unitKind, id: dialog.target.unitId }
-      : dialog.item.parent;
+      : (dialog.submission?.item.parent ?? dialog.item.parent);
   if (
     parent.kind === "unresolved" ||
     !model.units.some(
@@ -159,21 +233,21 @@ function editedItemRecoveryReason(
   parent: { readonly kind: "product" | "activity"; readonly id: string },
 ): string | null {
   const item = findOverviewDraftItem(editor, dialog);
-  if (item?.type !== dialog.target.source)
+  const expectedWeek = dialog.submission ? dialog.week : dialog.target.source;
+  if (item?.type !== expectedWeek)
     return "This update is no longer in the selected week. Your unsaved input is kept below.";
   const parentId = parent.kind === "product" ? item.projectId : item.activityId;
   if (parentId !== parent.id)
     return "This update has moved to another reporting unit. Your unsaved input is kept below.";
   const currentItems =
-    dialog.target.source === "current"
+    expectedWeek === "current"
       ? editor.view.viewModel.ownCurrentWeekItems
       : editor.view.viewModel.ownNextWeekItems;
   const current = currentItems.find((row) => row.id === item.id);
   const submittedReason = submittedEditRecoveryReason(dialog, current);
   if (dialog.submission) return submittedReason;
-  if (dialog.target.focusNextStep && !item.nextStepText?.trim())
-    return "The next step was removed from the draft. Your unsaved input is kept below.";
-  if (!current || !overviewItemFieldsUnchanged(dialog.item, current))
+  const baseline = dialog.promotion?.sourceItem ?? dialog.item;
+  if (!current || !overviewItemFieldsUnchanged(baseline, current))
     return "This update changed while you were editing. Your unsaved input is kept below and has not overwritten those changes.";
   return null;
 }

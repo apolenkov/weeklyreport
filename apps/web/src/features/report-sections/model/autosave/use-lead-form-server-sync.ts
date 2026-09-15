@@ -17,7 +17,6 @@ import { sectionToDraftPayload } from "../lead-section-draft-payload";
 import type {
   AutosaveController,
   AutosaveSaveReceipt,
-  AutosaveSnapshot,
   DraftSaveContent,
 } from "./autosave-types";
 import { encodeDraftSaveComparisonKey } from "./draft-save-comparison-key";
@@ -121,6 +120,7 @@ function useSaveEchoRecorder(
   ledger: SaveEchoLedger,
   setDraftSection: SetDraftSection,
   setLastSaveReceipt: Dispatch<SetStateAction<AutosaveSaveReceipt | null>>,
+  receiptScope: string,
 ) {
   return useCallback(
     (
@@ -133,6 +133,7 @@ function useSaveEchoRecorder(
       ledger.record({ persistedPayload, savedSection, serverDraftKey });
       setLastSaveReceipt((current) => ({
         sequence: (current?.sequence ?? 0) + 1,
+        scope: receiptScope,
         generation: leadFormGenerationOf(savedSection),
         reportSectionId: savedSection.reportSectionId,
         version: savedSection.version,
@@ -154,7 +155,7 @@ function useSaveEchoRecorder(
               ),
       };
     },
-    [ledger, setDraftSection, setLastSaveReceipt],
+    [ledger, receiptScope, setDraftSection, setLastSaveReceipt],
   );
 }
 
@@ -239,6 +240,7 @@ function useServerSectionReseed({
 }
 
 interface DraftServerSyncArgs {
+  readonly receiptScope: string;
   readonly writePort: LeadFormWritePort;
   readonly serverSection: ReportSectionReadModel | null | undefined;
   readonly reportSectionId: string | null;
@@ -255,6 +257,7 @@ interface DraftServerSyncArgs {
 // Both directions of the server conversation: autosave writes out, and the
 // reseed effect re-bases the draft when a new server section arrives.
 export function useDraftServerSync({
+  receiptScope,
   writePort,
   serverSection,
   reportSectionId,
@@ -274,6 +277,7 @@ export function useDraftServerSync({
     ledger,
     setDraftSection,
     setLastSaveReceipt,
+    receiptScope,
   );
   const autosave = useLeadFormAutosave({
     writePort,
@@ -308,16 +312,13 @@ export function useDraftServerSync({
     [autosave, ledger, setDraftSection, setIsSubmitted],
   );
 
-  return useMemo<{
-    readonly autosave: AutosaveSnapshot;
-    readonly lastSaveReceipt: AutosaveSaveReceipt | null;
-    readonly adoptServerSection: (section: ReportSectionReadModel) => void;
-  }>(
+  return useMemo(
     () => ({
       autosave,
       lastSaveReceipt,
+      receiptScope,
       adoptServerSection,
     }),
-    [adoptServerSection, autosave, lastSaveReceipt],
+    [adoptServerSection, autosave, lastSaveReceipt, receiptScope],
   );
 }

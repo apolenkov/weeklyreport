@@ -3,10 +3,16 @@ export { FOREIGN_ENTRY_OPACITY, STATUS_BADGE } from "./model/item-card-style";
 export { buildItemDialogProps } from "./model/item-dialog-props";
 export { persistableItemStatusToWorkflow } from "./model/item-status";
 export {
+  buildConfirmCarriedItemPatch,
+  buildMoveItemPatch,
+  canContinueOrPromote,
+  continuationConflict,
+  continueToNextPatch,
   markCompletePatch,
   moveToCurrentWeekPatch,
   moveToNextWeekPatch,
   pauseItemPatch,
+  promoteContinuationPatch,
 } from "./model/lead-actions/lead-item-actions";
 export type { CrossAuthorRow } from "./model/lead-cross-author";
 export type { CrossAuthorContentRow } from "./model/lead-cross-author-content";
@@ -20,6 +26,7 @@ export type {
 } from "./model/lead-form";
 export {
   mapLeadFormData,
+  mapLeadItems,
   mapLeadReviewFeedback,
   ownedStagesForProject,
 } from "./model/lead-form";
@@ -72,9 +79,12 @@ export type {
   StatusOverviewCreateTarget,
   StatusOverviewEditTarget,
   StatusOverviewItem,
+  StatusOverviewLinkedDraft,
+  StatusOverviewLinkedMemory,
   StatusOverviewModel,
   StatusOverviewPeriodLabels,
   StatusOverviewProjectionOptions,
+  StatusOverviewQuickEditMemory,
   StatusOverviewStage,
   StatusOverviewUnit,
   StatusOverviewUnitKind,

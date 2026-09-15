@@ -14,6 +14,8 @@ type ReadyEditor = Extract<LeadFormEditorHandle, { status: "ready" }>;
 
 interface OverviewComposerState {
   readonly generation: string | null;
+  readonly stableId: string | null;
+  readonly week: "current" | "next";
   readonly draftStore: ItemEditDraftStore;
   readonly editorAtOpen: ReadyEditor;
   readonly submission: OverviewItemSubmission | null;
@@ -32,9 +34,16 @@ export interface OverviewItemSubmission {
 
 interface OverviewEditDialogState extends OverviewComposerState {
   readonly mode: "edit";
-  readonly stableId: string | null;
   readonly target: StatusOverviewEditTarget;
   readonly item: KanbanItem;
+  readonly promotion?:
+    | {
+        readonly target: "current" | "next";
+        readonly commandId: string;
+        readonly sourceItem: KanbanItem;
+        readonly pending: boolean;
+      }
+    | undefined;
 }
 
 interface OverviewCreateDialogState extends OverviewComposerState {
@@ -54,6 +63,8 @@ export function createOverviewComposerState(
   const createTarget = "unitKind" in target ? target : null;
   return {
     generation: editor.generation,
+    stableId: item?.stableId ?? null,
+    week: target.source,
     editorAtOpen: editor,
     submission: null,
     draftStore: createItemEditDraftStore({
@@ -117,12 +128,14 @@ export function OverviewItemDialog({
   dialog,
   onSave,
   onCancel,
+  onWeekChange,
   saveDisabled = false,
 }: {
   readonly editor: ReadyEditor;
   readonly dialog: OverviewItemDialogState;
   readonly onSave: (item: KanbanItem) => void;
   readonly onCancel: () => void;
+  readonly onWeekChange?: ((week: "current" | "next") => void) | undefined;
   readonly saveDisabled?: boolean | undefined;
 }) {
   const viewModel = editor.view.viewModel;
@@ -131,18 +144,19 @@ export function OverviewItemDialog({
     <ItemInlineEditor
       key={
         dialog.mode === "edit"
-          ? `edit:${dialog.target.source}:${dialog.target.recordId}`
-          : `create:${dialog.target.source}:${dialog.target.unitKind}:${dialog.target.unitId}`
+          ? `edit:${dialog.week}:${dialog.target.recordId}`
+          : `create:${dialog.week}:${dialog.target.unitKind}:${dialog.target.unitId}`
       }
       item={dialog.mode === "edit" ? dialog.item : null}
       draftStore={dialog.draftStore}
       saveDisabled={saveDisabled}
       products={viewModel.products}
       activities={viewModel.activityOptions}
-      week={dialog.target.source}
-      focusNextStep={
-        dialog.mode === "edit" && dialog.target.focusNextStep === true
-      }
+      week={dialog.week}
+      onWeekChange={onWeekChange}
+      showNextStep={false}
+      showPriority={false}
+      confirmationOnly={dialog.mode === "edit" && dialog.promotion != null}
       currentUserName={viewModel.currentUser.name}
       defaultProductId={
         createTarget?.unitKind === "product" ? createTarget.unitId : undefined
@@ -158,6 +172,39 @@ export function OverviewItemDialog({
       onSave={onSave}
       onCancel={onCancel}
     />
+  );
+}
+
+export function OverviewEditorDialog({
+  editor,
+  dialog,
+  isReadOnly,
+  saveDisabled,
+  onSave,
+  onCancel,
+  onWeekChange,
+}: {
+  readonly editor: ReadyEditor | null;
+  readonly dialog: OverviewItemDialogState | null;
+  readonly isReadOnly: boolean;
+  readonly saveDisabled: boolean;
+  readonly onSave: (item: KanbanItem) => void;
+  readonly onCancel: () => void;
+  readonly onWeekChange: (week: "current" | "next") => void;
+}) {
+  if (!editor || !dialog || isReadOnly) return null;
+  if (dialog.generation !== editor.generation) return null;
+  return (
+    <fieldset disabled={saveDisabled} className="min-w-0 border-0 p-0">
+      <OverviewItemDialog
+        editor={editor}
+        dialog={dialog}
+        saveDisabled={saveDisabled}
+        onSave={onSave}
+        onCancel={onCancel}
+        onWeekChange={onWeekChange}
+      />
+    </fieldset>
   );
 }
 

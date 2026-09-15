@@ -8,6 +8,7 @@ import type { SavedDraftRecordIdentity } from "./autosave-types";
 type DraftRecord = Readonly<{
   id?: string | undefined;
   stableId?: string | undefined;
+  nextStepText?: string | null | undefined;
 }>;
 
 type SectionItem = ReportSectionReadModel["items"][number];
@@ -107,6 +108,9 @@ export function savedRecordIdentityPairs(
         clientId: record.id,
         serverId: confirmed.id,
         stableId: confirmed.stableId ?? null,
+        ...(record.nextStepText === undefined
+          ? {}
+          : { persistedNextStepText: record.nextStepText }),
       },
     ];
   });

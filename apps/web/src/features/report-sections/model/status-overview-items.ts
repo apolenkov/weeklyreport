@@ -150,6 +150,11 @@ function toOverviewItem(
     pausedReason: item.pausedReason ?? null,
     resolution,
     outcomeHistory: item.outcomeHistory ?? [],
+    // Only the derived Next projection is a second rendering of the same
+    // record's commitment; the Previous lane is that record's only projection,
+    // so its comments stay.
+    comments:
+      source === "next" && nextStep !== null ? [] : (item.comments ?? []),
     canResolve: canResolvePlan(
       source,
       stableId,
@@ -160,6 +165,8 @@ function toOverviewItem(
     ),
     canRestore: canRestorePlan(source, stableId, recordId, resolution, input),
     workflowStatus: overviewWorkflowStatus(item, nextStep),
+    needsConfirmation:
+      source === "current" && item.type === "current" && item.carriedOver,
     continuity:
       source === "current" ? priorContinuity(item, input, priorIds) : null,
   };

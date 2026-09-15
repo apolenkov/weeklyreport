@@ -1,5 +1,6 @@
 import type {
   DraftSavePayload,
+  PromotePlanInput,
   ReportSectionReadModel,
   ResolvePlanInput,
   RestorePlanInput,
@@ -22,6 +23,7 @@ export interface InMemoryLeadFormWriteHandlers {
   ) => Promise<ReportSectionReadModel>;
   readonly resolvePlan?: LeadFormWritePort["resolvePlan"];
   readonly restorePlan?: LeadFormWritePort["restorePlan"];
+  readonly promotePlan?: LeadFormWritePort["promotePlan"];
   readonly fillFrom?: LeadFormWritePort["fillFrom"];
   readonly revoke?: LeadFormWritePort["revoke"];
   readonly requestReopen?: LeadFormWritePort["requestReopen"];
@@ -32,6 +34,7 @@ export interface InMemoryLeadFormWriteCalls {
   readonly submit: SubmitSectionPayload[];
   readonly resolvePlan: ResolvePlanInput[];
   readonly restorePlan: RestorePlanInput[];
+  readonly promotePlan: PromotePlanInput[];
   readonly fillFrom: LeadFormFillFromInput[];
   readonly revoke: { readonly reportSectionId: string }[];
   readonly requestReopen: LeadFormReopenInput[];
@@ -42,6 +45,7 @@ const IDLE: LeadFormWritePending = {
   submit: false,
   resolvePlan: false,
   restorePlan: false,
+  promotePlan: false,
   fillFrom: false,
   revoke: false,
   reopen: false,
@@ -55,6 +59,7 @@ export class InMemoryLeadFormWriteAdapter implements LeadFormWritePort {
     submit: [],
     resolvePlan: [],
     restorePlan: [],
+    promotePlan: [],
     fillFrom: [],
     revoke: [],
     requestReopen: [],
@@ -91,6 +96,14 @@ export class InMemoryLeadFormWriteAdapter implements LeadFormWritePort {
       throw new Error("In-memory restorePlan handler is not configured");
     }
     return this.handlers.restorePlan(input);
+  };
+
+  promotePlan = async (input: PromotePlanInput) => {
+    this.calls.promotePlan.push(input);
+    if (!this.handlers.promotePlan) {
+      throw new Error("In-memory promotePlan handler is not configured");
+    }
+    return this.handlers.promotePlan(input);
   };
 
   fillFrom = async (input: LeadFormFillFromInput) => {

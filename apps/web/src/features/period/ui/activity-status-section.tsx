@@ -42,6 +42,16 @@ interface ActivityStatusHandlers {
     activityId: string,
     severity: "at-risk" | "blocked",
   ) => void;
+  // Weekly title override; null resets to the catalogue name.
+  readonly onTitleChange: (
+    activityId: string,
+    titleOverride: string | null,
+  ) => void;
+  // Weekly description (the note column).
+  readonly onDescriptionChange: (
+    activityId: string,
+    note: string | null,
+  ) => void;
 }
 
 interface ActivityStatusSectionProps extends ActivityStatusHandlers {
@@ -126,12 +136,19 @@ function StatusPill({
   );
 }
 
+interface ActivityPillsProps extends ActivityStatusHandlers {
+  readonly card: LeadActivityCard;
+}
+
 function ActivityStatusPills({
   card,
   readOnly,
   onStatusChange,
   onRaiseRequiresRisk,
-}: ActivityCardProps) {
+}: Pick<
+  ActivityPillsProps,
+  "card" | "readOnly" | "onStatusChange" | "onRaiseRequiresRisk"
+>) {
   const [refused, setRefused] = useState(false);
   // The enforceable floor is the RECORD-ONLY alarmFloor (covering risks/blockers),
   // NOT derivedStatus — which folds in the lead's own stored choice and would
@@ -185,12 +202,15 @@ function ActivityStatusPills({
   );
 }
 
-// Status-only card; full records live under the activity lane, not here.
+// Status-only card plus the weekly title/description overrides; full records
+// live under the activity lane, not here.
 function ActivityCard({
   card,
   readOnly,
   onStatusChange,
   onRaiseRequiresRisk,
+  onTitleChange,
+  onDescriptionChange,
 }: ActivityCardProps) {
   const linkedNames = card.linkedProducts.map((p) => p.productName).join(", ");
   return (
@@ -198,7 +218,11 @@ function ActivityCard({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <span className="block truncate text-sm font-medium text-[var(--color-foreground)]">
-            {card.activityName}
+            {card.displayTitle}
+          </span>
+          {/* Catalogue identity stays visible beside the weekly override. */}
+          <span className="block truncate text-xs text-[var(--color-muted-foreground)]">
+            Catalogue activity: {card.activityName}
           </span>
           {linkedNames ? (
             <span className="block truncate text-xs text-[var(--color-muted-foreground)]">
@@ -213,6 +237,46 @@ function ActivityCard({
           onRaiseRequiresRisk={onRaiseRequiresRisk}
         />
       </div>
+      <div className="mt-3 grid gap-2 md:grid-cols-2">
+        <label className="block text-xs font-medium text-[var(--color-muted-foreground)]">
+          Weekly title
+          <input
+            type="text"
+            value={card.titleOverride ?? ""}
+            placeholder={card.activityName}
+            disabled={readOnly}
+            onChange={(event) =>
+              onTitleChange(card.activityId, event.target.value)
+            }
+            data-testid={`activity-title-${card.activityId}`}
+            className="mt-1 block w-full rounded-[var(--radius)] border border-[var(--card-surface-border)] bg-[var(--color-card)] px-2 py-1 text-sm text-[var(--color-foreground)] disabled:opacity-60"
+          />
+        </label>
+        <label className="block text-xs font-medium text-[var(--color-muted-foreground)]">
+          Description
+          <textarea
+            value={card.note ?? ""}
+            rows={2}
+            disabled={readOnly}
+            onChange={(event) =>
+              onDescriptionChange(card.activityId, event.target.value)
+            }
+            data-testid={`activity-description-${card.activityId}`}
+            className="mt-1 block w-full rounded-[var(--radius)] border border-[var(--card-surface-border)] bg-[var(--color-card)] px-2 py-1 text-sm text-[var(--color-foreground)] disabled:opacity-60"
+          />
+        </label>
+        {card.titleOverride != null ? (
+          <button
+            type="button"
+            disabled={readOnly}
+            onClick={() => onTitleChange(card.activityId, null)}
+            data-testid={`activity-title-reset-${card.activityId}`}
+            className="justify-self-start rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] px-3 py-1 text-xs font-semibold text-[var(--color-muted-foreground)] hover:border-[var(--color-border)] hover:bg-[var(--color-card)] disabled:opacity-60"
+          >
+            Reset to catalogue name
+          </button>
+        ) : null}
+      </div>
     </li>
   );
 }
@@ -223,6 +287,8 @@ export function ActivityStatusSection({
   readOnly,
   onStatusChange,
   onRaiseRequiresRisk,
+  onTitleChange,
+  onDescriptionChange,
 }: ActivityStatusSectionProps) {
   if (activities.length === 0) return null;
 
@@ -235,6 +301,8 @@ export function ActivityStatusSection({
           readOnly={readOnly}
           onStatusChange={onStatusChange}
           onRaiseRequiresRisk={onRaiseRequiresRisk}
+          onTitleChange={onTitleChange}
+          onDescriptionChange={onDescriptionChange}
         />
       ))}
     </ul>

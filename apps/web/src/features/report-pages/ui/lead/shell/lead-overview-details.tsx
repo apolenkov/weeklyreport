@@ -16,7 +16,7 @@ export function LeadOverviewDetails({
   const serverSection = view.data.byPeriodData?.section;
   if (!serverSection) return null;
   return (
-    <div id="report-details" className="min-w-0 space-y-6">
+    <div id="report-details" tabIndex={-1} className="min-w-0 space-y-6">
       <LeadOverviewSupportSections
         viewModel={view.viewModel}
         actions={view.draftActions}
@@ -39,6 +39,7 @@ export function LeadOverviewDetails({
         <LeadSubmitReadinessSummary
           readiness={view.submitReadiness}
           onSubmit={view.writeActions.handleSubmit}
+          showSubmitAction
         />
       ) : null}
     </div>

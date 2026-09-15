@@ -23,8 +23,8 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/lead/report",
 }));
 
-describe("LeadForm quick-add navigation", () => {
-  it("closes report A's real item dialog when report B loads without saving", async () => {
+describe("LeadForm local add navigation", () => {
+  it("closes report A's item dialog when report B loads without saving", async () => {
     const reportA = makeLeadFormSectionFixture({
       reportId: "10000000-0000-4000-8000-00000000000a",
       reportSectionId: "20000000-0000-4000-8000-00000000000a",
@@ -69,9 +69,8 @@ describe("LeadForm quick-add navigation", () => {
 
     expect(await screen.findAllByText("Report A product")).not.toHaveLength(0);
     fireEvent.click(
-      expectDefined(screen.getAllByRole("button", { name: "+ Add" })[0]),
+      expectDefined(screen.getAllByRole("button", { name: "+ Add Item" })[0]),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Current week item" }));
     expect(
       await screen.findByRole("dialog", { name: "Add Item dialog" }),
     ).toBeInTheDocument();

@@ -51,6 +51,7 @@ describe("mapLeadItems", () => {
       items: [
         {
           id: "item-1",
+          stableId: "stable-item-1",
           projectId: PROJECT_A,
           type: "current",
           text: "Wire OAuth2 callback",
@@ -63,6 +64,8 @@ describe("mapLeadItems", () => {
 
     const mapped = mapLeadItems(section, "current").at(0);
     expect(mapped?.status).toBe("in-progress");
+    expect(mapped?.stableId).toBe("stable-item-1");
+    expect(mapped?.tag).toBe("auth");
     expect(mapped?.text).toBe("Wire OAuth2 callback");
     expect(mapped?.productName).toBe("CRM");
     expect(mapped?.author).toBe("Тимлид 1");
@@ -266,6 +269,55 @@ describe("mapLeadRisks / mapLeadDecisions / mapLeadPriorities", () => {
     expect(decision.activityId).toBe(ACTIVITY_A);
     expect(decision.productId).toBe("");
     expect(decision.productName).toBe("Jira triage duty");
+  });
+
+  it("uses the effective weekly Activity title for every record-family index", () => {
+    const section = baseSection({
+      activities: [
+        {
+          ...activityA,
+          titleOverride: "Weekly triage",
+        },
+      ],
+      items: [
+        {
+          id: "act-item-title",
+          activityId: ACTIVITY_A,
+          projectId: null,
+          type: "current",
+          text: "Triage queue",
+          tag: "ops",
+          workflowStatus: "in_progress",
+          carriedOver: false,
+        },
+      ],
+      risks: [
+        {
+          id: "act-risk-title",
+          activityId: ACTIVITY_A,
+          projectId: null,
+          risk: "Queue risk",
+          impact: "Delay",
+          mitigation: "Staff backup",
+          severity: "at-risk",
+        },
+      ],
+      decisions: [
+        {
+          id: "act-decision-title",
+          activityId: ACTIVITY_A,
+          text: "Keep triage weekly",
+          owner: "Тимлид 1",
+          impact: "Stable response",
+        },
+      ],
+    });
+
+    expect(mapLeadItems(section, "current")[0]?.activityName).toBe(
+      "Weekly triage",
+    );
+    expect(mapLeadRisks(section)[0]?.productName).toBe("Weekly triage");
+    expect(mapLeadDecisions(section)[0]?.productName).toBe("Weekly triage");
   });
 
   it("derives priorities from positive integer ranks, sorted by rank", () => {

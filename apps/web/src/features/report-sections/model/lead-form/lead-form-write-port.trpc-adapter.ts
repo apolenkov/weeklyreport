@@ -39,6 +39,9 @@ export function useLeadFormWritePort(): LeadFormWritePort {
   const restorePlanMutation = useMutation(
     trpc.leadForm.restorePlan.mutationOptions({}),
   );
+  const promotePlanMutation = useMutation(
+    trpc.leadForm.promotePlan.mutationOptions({}),
+  );
   const fillFromMutation = useMutation(
     trpc.leadForm.fillFrom.mutationOptions({}),
   );
@@ -97,6 +100,18 @@ export function useLeadFormWritePort(): LeadFormWritePort {
     },
     [queryClient, restorePlanMutation, trpc],
   );
+  const promotePlan = useCallback<LeadFormWritePort["promotePlan"]>(
+    async (input) => {
+      try {
+        const result = await promotePlanMutation.mutateAsync(input);
+        invalidateLeadForm(queryClient, trpc);
+        return result;
+      } catch (error: unknown) {
+        throw normalizeWriteError(error);
+      }
+    },
+    [queryClient, promotePlanMutation, trpc],
+  );
   const fillFrom = useCallback<LeadFormWritePort["fillFrom"]>(
     async (input) => {
       try {
@@ -143,6 +158,7 @@ export function useLeadFormWritePort(): LeadFormWritePort {
         submit: submitMutation.isPending,
         resolvePlan: resolvePlanMutation.isPending,
         restorePlan: restorePlanMutation.isPending,
+        promotePlan: promotePlanMutation.isPending,
         fillFrom: fillFromMutation.isPending,
         revoke: revokeMutation.isPending,
         reopen: reopenMutation.isPending,
@@ -151,6 +167,7 @@ export function useLeadFormWritePort(): LeadFormWritePort {
       submit,
       resolvePlan,
       restorePlan,
+      promotePlan,
       fillFrom,
       revoke,
       requestReopen,
@@ -158,6 +175,8 @@ export function useLeadFormWritePort(): LeadFormWritePort {
     [
       fillFrom,
       fillFromMutation.isPending,
+      promotePlan,
+      promotePlanMutation.isPending,
       reopenMutation.isPending,
       requestReopen,
       resolvePlan,

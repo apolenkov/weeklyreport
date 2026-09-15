@@ -25,7 +25,10 @@ export type DraftPatch =
   | {
       readonly kind: "activity-status";
       readonly activityId: string;
-      readonly status: TrafficLightStatus;
+      // Partial activity fields: omitted keys preserve the persisted value.
+      readonly status?: TrafficLightStatus;
+      readonly titleOverride?: string | null;
+      readonly note?: string | null;
     }
   | { readonly kind: "risks"; readonly risks: readonly RiskEntry[] }
   | { readonly kind: "decisions"; readonly decisions: readonly DecisionEntry[] }
@@ -48,7 +51,13 @@ export function applyDraftPatch(
     case "products":
       return mergeProductDraft(section, patch.products);
     case "activity-status":
-      return mergeActivityStatusDraft(section, patch.activityId, patch.status);
+      return mergeActivityStatusDraft(section, patch.activityId, {
+        ...(patch.status === undefined ? {} : { status: patch.status }),
+        ...(patch.titleOverride === undefined
+          ? {}
+          : { titleOverride: patch.titleOverride }),
+        ...(patch.note === undefined ? {} : { note: patch.note }),
+      });
     case "risks":
       return mergeRiskDraft(section, patch.risks);
     case "decisions":

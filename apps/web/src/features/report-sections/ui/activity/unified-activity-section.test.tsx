@@ -90,6 +90,32 @@ describe("UnifiedActivitySection", () => {
     ).toBeVisible();
   });
 
+  it("opens the Current Week item editor when the add signal advances", () => {
+    const props = {
+      entries: [] as UnifiedActivityEntry[],
+      products: [
+        {
+          id: "p1",
+          name: "Product 1",
+          overallStatus: "on-track" as const,
+          stages: [],
+        },
+      ],
+      onWeekItemsChange: vi.fn(),
+    };
+    const { rerender } = render(
+      <UnifiedActivitySection {...props} addSignal={0} />,
+    );
+
+    expect(
+      screen.queryByRole("dialog", { name: "Add Item dialog" }),
+    ).toBeNull();
+    rerender(<UnifiedActivitySection {...props} addSignal={1} />);
+    expect(
+      screen.getByRole("dialog", { name: "Add Item dialog" }),
+    ).toBeInTheDocument();
+  });
+
   it("renders one group per non-empty bucket with counts", () => {
     render(<UnifiedActivitySection entries={entries} readOnly />);
     const section = screen.getByTestId("unified-activity-section");

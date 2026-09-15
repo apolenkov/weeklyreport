@@ -10,6 +10,8 @@ import {
   trafficLightToCanonical,
 } from "@customreport/shared";
 
+import { activityDisplayTitle } from "../../../../shared/lib/activity/activity-display";
+
 type ActivitySectionSlice = Pick<
   ReportSectionReadModel,
   "authorId" | "authorName" | "activities" | "items" | "risks" | "decisions"
@@ -53,7 +55,7 @@ function toActivityCard(
   const items = section.items.filter((i) => owns(i.activityId));
   return {
     key: `${activity.activityId}::${section.authorId}`,
-    activityName: activity.activityName,
+    activityName: activityDisplayTitle(activity),
     authorName: section.authorName,
     // Render the risk/blocker-derived floor, falling back to the stored status.
     tone: trafficLightToCanonical(activity.derivedStatus ?? activity.status),

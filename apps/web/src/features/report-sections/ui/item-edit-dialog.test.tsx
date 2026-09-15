@@ -108,7 +108,7 @@ describe("ItemEditDialog — compact touch floor", () => {
 
     const statusChip = screen.getByRole("button", { name: /In Progress/i });
     expect(statusChip.className).toContain("min-h-[var(--touch-target-min)]");
-    expect(statusChip.className).toContain("md:min-h-[34px]");
+    expect(statusChip.className).not.toContain("md:min-h-[34px]");
 
     const prioritySelect = document.querySelector("#item-priority-rank");
     expect(prioritySelect?.className).toContain(

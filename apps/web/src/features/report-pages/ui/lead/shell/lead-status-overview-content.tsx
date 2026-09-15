@@ -1,29 +1,32 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import type { ComponentProps } from "react";
+import { useCallback, useState } from "react";
 
 import { SdlcTooltipProvider } from "../../../../../shared/ui/feedback/sdlc-tooltip";
 import {
-  leadPeriodLabel,
   projectReportHealthPulse,
   projectStatusOverview,
   StatusOverview,
+  type StatusOverviewItem,
 } from "../../../../report-sections";
 import { autosaveStatusCopy } from "../chrome/autosave-state-copy";
 import { LeadFormDialogs } from "../chrome/lead-form-dialogs";
-import { LeadFormHeaderActions } from "../chrome/lead-form-header-actions";
-import { LeadOverviewToolbarControls } from "../chrome/lead-form-toolbar-controls";
 import { EditorAvailabilityNotice } from "./lead-editor-availability-notice";
 import { LeadOverviewDetails } from "./lead-overview-details";
 export { buildStatusOverviewDetailsHref } from "./lead-status-overview-content-helpers";
 import { buildStatusOverviewDetailsHref } from "./lead-status-overview-content-helpers";
-import { OverviewInputRecovery } from "./lead-status-overview-item-editor";
+import { ReadyOverviewHeader } from "./lead-status-overview-header";
+import {
+  OverviewInputRecovery,
+  type OverviewItemDialogState,
+} from "./lead-status-overview-item-editor";
 import { OpenWorkRegister } from "./open-work-register";
 import {
   openWorkDisabledReason,
   openWorkOutsideTimeline,
 } from "./open-work-register-model";
+import { buildActivityFieldsChange } from "./overview-activity-fields";
 import {
   overviewItemActions,
   overviewPlanPresentation,
@@ -40,10 +43,23 @@ import { useOverviewPlanActions } from "./use-overview-plan-actions";
 type AvailableEditor = LeadFormEditorHandle;
 type ReadyEditor = Extract<AvailableEditor, { status: "ready" }>;
 
+interface OverviewDialogSlice {
+  readonly dialog: OverviewItemDialogState | null;
+  readonly recoveryReason: string | null;
+  readonly close: () => void;
+  readonly moveItem: (
+    item: StatusOverviewItem,
+    target: "current" | "next",
+    focusKey?: string,
+  ) => void;
+  readonly confirmItem: (item: StatusOverviewItem) => void;
+}
+
 const FALLBACK_AUTOSAVE = {
   state: "idle" as const,
   lastSavedAt: null,
   dirty: false,
+  currentPayloadMatchesSavedBaseline: false,
   isInFlight: false,
   forceSave: () => Promise.resolve(),
 };
@@ -55,52 +71,6 @@ const FALLBACK_READINESS = {
   unsetStatuses: [],
   autosaveState: "idle" as const,
 };
-
-function ReadyOverviewHeader({
-  editor,
-  pendingInput,
-  completionActions,
-  completionSentinelRef,
-}: {
-  readonly pendingInput: boolean;
-  readonly editor: ReadyEditor;
-  readonly completionActions: ComponentProps<
-    typeof LeadFormHeaderActions
-  >["completionActions"];
-  readonly completionSentinelRef: ComponentProps<
-    typeof LeadFormHeaderActions
-  >["completionSentinelRef"];
-}) {
-  return (
-    <>
-      <LeadFormHeaderActions
-        pendingInput={pendingInput}
-        viewModel={editor.view.viewModel}
-        writeActions={editor.view.writeActions}
-        periodLabel={leadPeriodLabel(
-          editor.view.viewModel,
-          editor.view.data.byPeriodData?.section.reportId,
-        )}
-        completionActions={completionActions}
-        completionSentinelRef={completionSentinelRef}
-        showCompletionActions
-        isSlidesMode={false}
-        isSubmitted={editor.view.isSubmitted}
-      />
-      <LeadOverviewToolbarControls
-        viewModel={editor.view.viewModel}
-        leadSubmittedAt={
-          editor.view.data.byPeriodData?.section.submittedAt ?? null
-        }
-        showArchivePeriods={editor.view.showArchivePeriods}
-        onShowArchivePeriodsChange={editor.view.onShowArchivePeriodsChange}
-        toolbarVisibility={editor.view.data.toolbarVisibility}
-        onVisibilityChange={editor.view.data.onRecordVisibilityChange}
-        targetReportId={editor.view.data.targetReportId}
-      />
-    </>
-  );
-}
 
 function useOverviewCompletion(
   editor: ReadyEditor | null,
@@ -154,6 +124,50 @@ function OverviewRefreshWarning({
   );
 }
 
+function OverviewEditorRecovery({
+  dialog,
+}: {
+  readonly dialog: OverviewDialogSlice;
+}) {
+  if (!dialog.dialog || !dialog.recoveryReason) return null;
+  return (
+    <OverviewInputRecovery
+      dialog={dialog.dialog}
+      reason={dialog.recoveryReason}
+      onCancel={dialog.close}
+    />
+  );
+}
+
+function OverviewEditorError({ error }: { readonly error: string | null }) {
+  if (!error) return null;
+  return (
+    <p role="alert" className="text-sm text-[var(--color-destructive)]">
+      {error}
+    </p>
+  );
+}
+
+function OverviewDialogs({ editor }: { readonly editor: ReadyEditor | null }) {
+  if (!editor) return null;
+  return (
+    <LeadFormDialogs
+      viewModel={editor.view.viewModel}
+      quickAdd={editor.view.draftActions}
+      writeActions={editor.view.writeActions}
+      unsetOwnStageCount={editor.view.unsetOwnStageCount}
+      draftSection={editor.view.draftSection}
+      isSlidesMode={false}
+    />
+  );
+}
+
+function overviewDirectActions(enabled: boolean, dialog: OverviewDialogSlice) {
+  return enabled
+    ? { onMoveItem: dialog.moveItem, onConfirmItem: dialog.confirmItem }
+    : {};
+}
+
 export function LeadStatusOverviewContent({
   targetReportId,
   output,
@@ -168,6 +182,21 @@ export function LeadStatusOverviewContent({
   readonly onRefresh: () => void;
 }) {
   const searchParams = useSearchParams();
+  const [pendingActivityIds, setPendingActivityIds] = useState<
+    ReadonlySet<string>
+  >(() => new Set());
+  const onActivityFieldsPendingChange = useCallback(
+    (activityId: string, pending: boolean): void => {
+      setPendingActivityIds((current) => {
+        if (current.has(activityId) === pending) return current;
+        const next = new Set(current);
+        if (pending) next.add(activityId);
+        else next.delete(activityId);
+        return next;
+      });
+    },
+    [],
+  );
   const readyEditor = editor.status === "ready" ? editor : null;
   const isReadOnly = readyEditor?.view.viewModel.isReadOnly ?? true;
   const canEdit = readyEditor !== null && !isReadOnly;
@@ -181,6 +210,7 @@ export function LeadStatusOverviewContent({
     isReadOnly,
     model,
     targetReportId,
+    output,
   );
   const plan = useOverviewPlanActions(
     readyEditor,
@@ -196,8 +226,12 @@ export function LeadStatusOverviewContent({
       dialog.recoveryReason ? null : dialog.dialog,
       dialog.save,
       dialog.close,
+      dialog.changeWeek,
     );
-  const pendingInput = dialog.dialog !== null || plan.dialog !== null;
+  const pendingInput =
+    dialog.dialog !== null ||
+    plan.dialog !== null ||
+    pendingActivityIds.size > 0;
   const canStartAction = canEdit && !pendingInput;
   const openWork = useOpenWorkRegister(
     targetReportId,
@@ -208,6 +242,7 @@ export function LeadStatusOverviewContent({
     pendingInput,
     plan.blockedReason,
   );
+  const onActivityFieldsChange = buildActivityFieldsChange(readyEditor);
   const overview = (
     <div
       className="min-w-0 space-y-6"
@@ -226,18 +261,8 @@ export function LeadStatusOverviewContent({
       <EditorAvailabilityNotice editor={editor} />
       <OverviewRefreshWarning failed={refreshError} onRetry={onRefresh} />
       {planPresentation.recovery}
-      {dialog.dialog && dialog.recoveryReason ? (
-        <OverviewInputRecovery
-          dialog={dialog.dialog}
-          reason={dialog.recoveryReason}
-          onCancel={dialog.close}
-        />
-      ) : null}
-      {dialog.error ? (
-        <p role="alert" className="text-sm text-[var(--color-destructive)]">
-          {dialog.error}
-        </p>
-      ) : null}
+      <OverviewEditorRecovery dialog={dialog} />
+      <OverviewEditorError error={dialog.error} />
       <StatusOverview
         model={model}
         health={projectReportHealthPulse(
@@ -246,11 +271,16 @@ export function LeadStatusOverviewContent({
         )}
         editorSlot={editorSlot}
         {...overviewItemActions(canStartAction, dialog, plan)}
+        onQuickEditText={undefined}
+        {...overviewDirectActions(canStartAction, dialog)}
         detailsHref={
           readyEditor
             ? "#report-details"
             : buildStatusOverviewDetailsHref(targetReportId, searchParams)
         }
+        activityFieldsEditable={canEdit}
+        onActivityFieldsChange={onActivityFieldsChange}
+        onActivityFieldsPendingChange={onActivityFieldsPendingChange}
         autosaveStatus={overviewSaveStatus(
           readyEditor,
           pendingInput,
@@ -276,16 +306,7 @@ export function LeadStatusOverviewContent({
   return (
     <SdlcTooltipProvider>
       {overview}
-      {readyEditor ? (
-        <LeadFormDialogs
-          viewModel={readyEditor.view.viewModel}
-          quickAdd={readyEditor.view.draftActions}
-          writeActions={readyEditor.view.writeActions}
-          unsetOwnStageCount={readyEditor.view.unsetOwnStageCount}
-          draftSection={readyEditor.view.draftSection}
-          isSlidesMode={false}
-        />
-      ) : null}
+      <OverviewDialogs editor={readyEditor} />
     </SdlcTooltipProvider>
   );
 }

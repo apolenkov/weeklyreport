@@ -2,13 +2,9 @@
 
 import { SaveNowButton } from "../../../../../shared/ui/report-shell/save-now-button";
 import type { AutosaveSnapshot } from "../../../../report-sections/client";
-import { QuickAddButton, type QuickAddKind } from "./quick-add-button";
 
 export interface LeadCompletionActionContract {
   readonly autosave: AutosaveSnapshot;
-  readonly onAdd: (kind: QuickAddKind) => void;
-  readonly addDisabled: boolean;
-  readonly disabledQuickAddKinds?: ReadonlySet<QuickAddKind> | undefined;
   readonly onSubmit: () => void;
   readonly submitDisabled: boolean;
   readonly submitDisabledReason?: string | undefined;
@@ -21,9 +17,6 @@ interface LeadCompletionActionsProps extends LeadCompletionActionContract {
 
 export function LeadCompletionActions({
   autosave,
-  onAdd,
-  addDisabled,
-  disabledQuickAddKinds,
   onSubmit,
   submitDisabled,
   submitDisabledReason,
@@ -41,12 +34,6 @@ export function LeadCompletionActions({
       }`}
     >
       <SaveNowButton autosave={autosave} />
-      <QuickAddButton
-        onPick={onAdd}
-        disabled={addDisabled}
-        disabledKinds={disabledQuickAddKinds}
-        placement={compact ? "above" : "below"}
-      />
       <button
         type="button"
         className="btn-press inline-flex h-[var(--toolbar-control-h)] min-h-10 items-center justify-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"

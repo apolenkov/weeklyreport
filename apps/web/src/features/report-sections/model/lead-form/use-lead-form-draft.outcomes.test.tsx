@@ -113,6 +113,7 @@ describe("useLeadFormDraftCore outcome coordination", () => {
         workflowStatus: "in_progress" as const,
         pausedReason: null,
         nextStepText: null,
+        text: null,
       },
     };
     harness.rerender({

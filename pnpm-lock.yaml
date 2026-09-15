@@ -440,6 +440,12 @@ importers:
       '@customreport/api':
         specifier: workspace:*
         version: link:../api
+      '@reticlehq/next':
+        specifier: 2.14.0
+        version: 2.14.0(next@16.3.3(@babel/core@7.29.7(supports-color@10.2.2))(@opentelemetry/api@1.9.1)(@types/node@26.4.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(supports-color@10.2.2)
+      '@reticlehq/react':
+        specifier: 2.14.0
+        version: 2.14.0(react@19.2.8)
       '@tailwindcss/postcss':
         specifier: ^4.3.3
         version: 4.3.3
@@ -2750,6 +2756,32 @@ packages:
         optional: true
       react-redux:
         optional: true
+
+  '@reticlehq/babel-plugin@2.14.0':
+    resolution: {integrity: sha512-7WN/AukV1t6SrS+l4E2fbKth35joezaMX7EaX7d0eiwfAOzoUKlwVHgIhdUeJr0pXo4k6O3b6BO2cIAzyj+9NA==}
+    engines: {node: '>=20.0.0'}
+    peerDependencies:
+      '@babel/core': ^7
+
+  '@reticlehq/browser@2.14.0':
+    resolution: {integrity: sha512-6qTzgbzNySsjdKGmvvbWmd5w8h7wZPLvXK5k+vtp2NVv6MkC65977MRbalhOlJqRp9FP4sPt31rsELcg6KYRHw==}
+    engines: {node: '>=20.0.0'}
+
+  '@reticlehq/core@2.14.0':
+    resolution: {integrity: sha512-UZAUc9QryKKqq185N6jcD39fzn/4qQejNr6PJytXFPvdGmPYpWMfxKUM9O1o1KaY7szs5+Cv1DfY6BkD7c4I9A==}
+    engines: {node: '>=20.0.0'}
+
+  '@reticlehq/next@2.14.0':
+    resolution: {integrity: sha512-Dc2OcZl1xXEipeNVkS3wI5q/wQx7YyGR64Vf3cRpoKxSpxsRP/IzYHxQUeolcgPQiW+m3SXORtgiFmVa5Ow/0w==}
+    engines: {node: '>=20.0.0'}
+    peerDependencies:
+      next: '>=13'
+
+  '@reticlehq/react@2.14.0':
+    resolution: {integrity: sha512-B706E+UhdKh19esKp3NOA3KpSg0CVFd3WjY4p33AqB9fp4eoRcMJfLbBVWZ+vA/2qMShnSv+aXwfD1CjjsrVQA==}
+    engines: {node: '>=20.0.0'}
+    peerDependencies:
+      react: '>=18'
 
   '@rolldown/binding-android-arm-eabi@1.2.6':
     resolution: {integrity: sha512-b+jTcARdTiFLI6jB4a5XjTm0RWd6KcRfQj/I2356fxUZemiho9zQLxo0RtCuMDAyKcLo6cEltkgbQp6d1+sjjQ==}
@@ -9888,6 +9920,33 @@ snapshots:
     optionalDependencies:
       react: 19.2.8
       react-redux: 9.3.0(@types/react@19.2.18)(react@19.2.8)(redux@5.0.1)
+
+  '@reticlehq/babel-plugin@2.14.0(@babel/core@7.29.7(supports-color@10.2.2))':
+    dependencies:
+      '@babel/core': 7.29.7(supports-color@10.2.2)
+      '@reticlehq/core': 2.14.0
+
+  '@reticlehq/browser@2.14.0':
+    dependencies:
+      '@reticlehq/core': 2.14.0
+
+  '@reticlehq/core@2.14.0':
+    dependencies:
+      zod: 3.25.76
+
+  '@reticlehq/next@2.14.0(next@16.3.3(@babel/core@7.29.7(supports-color@10.2.2))(@opentelemetry/api@1.9.1)(@types/node@26.4.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(supports-color@10.2.2)':
+    dependencies:
+      '@babel/core': 7.29.7(supports-color@10.2.2)
+      '@reticlehq/babel-plugin': 2.14.0(@babel/core@7.29.7(supports-color@10.2.2))
+      next: 16.3.3(@babel/core@7.29.7(supports-color@10.2.2))(@opentelemetry/api@1.9.1)(@types/node@26.4.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+    transitivePeerDependencies:
+      - supports-color
+
+  '@reticlehq/react@2.14.0(react@19.2.8)':
+    dependencies:
+      '@reticlehq/browser': 2.14.0
+      '@reticlehq/core': 2.14.0
+      react: 19.2.8
 
   '@rolldown/binding-android-arm-eabi@1.2.6':
     optional: true

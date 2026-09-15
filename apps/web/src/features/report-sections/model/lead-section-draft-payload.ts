@@ -1,6 +1,7 @@
 import type {
   DraftSavePayload,
   ReportSectionReadModel,
+  TrafficLightStatus,
 } from "@customreport/shared";
 
 // The draft producer owns content without optimistic-lock metadata; writers
@@ -86,13 +87,35 @@ export function sectionToDraftPayload(
         status: stage.status ?? null,
       })),
     ),
-    activityStatuses: section.activities.map((activity) => ({
-      activityId: activity.activityId,
-      status: activity.status,
-      note: activity.note ?? null,
-    })),
+    activityStatuses: section.activities.map(toActivityStatusPayload),
     items: toItemDrafts(section.items),
     risks: toRiskDrafts(section.risks),
     decisions: toDecisionDrafts(section.decisions),
+  };
+}
+
+// One owner for the activityStatuses payload shape: draft save and submit both
+// project through it, so a new activity field cannot drift between them. The
+// draft payload types titleOverride through the schema's preprocessing input
+// (unknown), so normalize it here rather than re-listing keys at each caller.
+export function toActivityStatusPayload<
+  S extends TrafficLightStatus | null,
+>(row: {
+  readonly activityId: string;
+  readonly status: S;
+  readonly titleOverride?: unknown;
+  readonly note?: string | null | undefined;
+}): {
+  activityId: string;
+  status: S;
+  titleOverride: string | null;
+  note: string | null;
+} {
+  return {
+    activityId: row.activityId,
+    status: row.status,
+    titleOverride:
+      typeof row.titleOverride === "string" ? row.titleOverride : null,
+    note: row.note ?? null,
   };
 }

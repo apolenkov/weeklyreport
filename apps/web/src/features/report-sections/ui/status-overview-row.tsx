@@ -1,13 +1,9 @@
 import type { ReportHealthUnit } from "../model/report-health-pulse";
 import type {
-  StatusOverviewCreateTarget,
-  StatusOverviewEditTarget,
-  StatusOverviewItem,
   StatusOverviewModel,
   StatusOverviewUnit,
 } from "../model/status-overview";
 import type { StatusOverviewLineageRow } from "../model/status-overview-lineage";
-import { isLinkedOverviewRow } from "../model/status-overview-lineage";
 import {
   type OpenHealthDetail,
   ReportHealthDetail,
@@ -16,19 +12,15 @@ import {
   REPORT_PREVIEW_COUNT,
   reportHiddenRowCount,
   ReportItemSlot,
-  StatusOverviewAdditionalUpdates,
 } from "./status-overview-additional-updates";
+import { editorLaneClass } from "./status-overview-editor-slot";
+import type { ItemHandlers } from "./status-overview-item-handlers";
 import {
-  editorLaneClass,
-  editorSlotMatchesItem,
-  idleTimelineLaneClass,
-  type StatusOverviewEditorSlot,
-} from "./status-overview-editor-slot";
-import {
+  STATUS_OVERVIEW_COLUMN_HEADER_IDS,
   STATUS_OVERVIEW_COLUMNS,
   STATUS_OVERVIEW_DESKTOP_GRID,
   type StatusOverviewColumnKey,
-  TIMELINE_CELL as CELL,
+  TIMELINE_CELL,
   TIMELINE_GRID,
 } from "./status-overview-layout";
 import { StatusOverviewUnitSummary } from "./status-overview-summary";
@@ -37,64 +29,73 @@ import { TimelineFooter } from "./status-overview-timeline-footer";
 export { STATUS_OVERVIEW_COLUMNS, STATUS_OVERVIEW_DESKTOP_GRID };
 export type { StatusOverviewColumnKey };
 
-interface ItemHandlers {
-  readonly editorSlot?: StatusOverviewEditorSlot | undefined;
-  readonly onEditItem?:
-    ((target: StatusOverviewEditTarget) => void) | undefined;
-  readonly onQuickEditText?:
-    ((item: StatusOverviewItem, text: string) => void) | undefined;
-  readonly onAddItem?:
-    ((target: StatusOverviewCreateTarget) => void) | undefined;
-  readonly onResolvePlan?: ((item: StatusOverviewItem) => void) | undefined;
-  readonly onRestorePlan?: ((item: StatusOverviewItem) => void) | undefined;
+function MobileWeekLabel({
+  label,
+  period,
+}: {
+  readonly label: string;
+  readonly period: string | null;
+}) {
+  return (
+    <div className="mb-2 flex items-baseline justify-between gap-2 md:hidden">
+      <p className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--color-foreground)]">
+        {label}
+      </p>
+      <p className="text-xs text-[var(--color-muted-foreground)]">
+        {period ?? "Period unavailable"}
+      </p>
+    </div>
+  );
 }
 
 function LineageRow({
   row,
-  activeColumn,
-  onEditItem,
-  onQuickEditText,
-  onResolvePlan,
-  onRestorePlan,
+  periods,
   editorSlot,
+  ...handlers
 }: {
   readonly row: StatusOverviewLineageRow;
-  readonly activeColumn: StatusOverviewColumnKey;
-} & Pick<
-  ItemHandlers,
-  | "onEditItem"
-  | "onQuickEditText"
-  | "onResolvePlan"
-  | "onRestorePlan"
-  | "editorSlot"
->) {
-  const selected = STATUS_OVERVIEW_COLUMNS.find(
-    (column) => column.key === activeColumn,
+  readonly periods: StatusOverviewModel["periods"];
+} & Omit<ItemHandlers, "onAddItem">) {
+  const editorBelongsToRow = Boolean(
+    editorSlot &&
+    editorSlot.mode !== "create" &&
+    (editorSlot.stableId
+      ? STATUS_OVERVIEW_COLUMNS.some(
+          (column) => row[column.source]?.stableId === editorSlot.stableId,
+        )
+      : editorSlot.recordId &&
+        STATUS_OVERVIEW_COLUMNS.some(
+          (column) => row[column.source]?.recordId === editorSlot.recordId,
+        )),
   );
-  const hasVisibleContent = selected ? row[selected.source] !== null : false;
-  const matchedColumn = STATUS_OVERVIEW_COLUMNS.find((column) => {
-    const item = row[column.source];
-    return item ? editorSlotMatchesItem(editorSlot, item) : false;
-  });
+  const matchedColumn = editorBelongsToRow
+    ? STATUS_OVERVIEW_COLUMNS.find(
+        (column) => column.source === editorSlot?.source,
+      )
+    : undefined;
   return (
     <div
-      className={`${TIMELINE_GRID} ${hasVisibleContent ? "" : "hidden md:grid"} border-b border-[var(--color-border-subtle)]`}
+      className={`${TIMELINE_GRID} mx-3 my-3 overflow-hidden rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)] bg-[var(--color-card)] md:m-0 md:rounded-none md:border-0 md:border-b md:items-stretch`}
     >
       {STATUS_OVERVIEW_COLUMNS.map((column) => {
         const item = row[column.source];
         const matchesEditor = matchedColumn?.key === column.key;
-        const layout = editorLaneClass(
-          matchesEditor,
-          matchedColumn !== undefined,
-          idleTimelineLaneClass(column.key === activeColumn),
-        );
         return (
           <div
             key={column.key}
             data-overview-lineage-lane={column.source}
-            className={`${CELL} ${layout}`}
+            role="group"
+            aria-labelledby={STATUS_OVERVIEW_COLUMN_HEADER_IDS[column.key]}
+            className={`${TIMELINE_CELL} ${editorLaneClass(matchesEditor, matchedColumn !== undefined, "block")} border-t border-[var(--color-border-subtle)] first:border-t-0 md:min-h-36 md:flex-col md:border-t-0 ${matchedColumn !== undefined && !matchesEditor ? "" : "md:flex"} ${item ? "" : "bg-[var(--color-surface-muted)]"}`}
           >
-            {item ? (
+            <MobileWeekLabel
+              label={column.label}
+              period={periods[column.key]}
+            />
+            {matchesEditor ? (
+              editorSlot?.content
+            ) : item ? (
               <>
                 {column.source === "previous" && row.previousParent ? (
                   <p className="mb-1 break-words text-xs text-[var(--color-muted-foreground)]">
@@ -103,15 +104,14 @@ function LineageRow({
                 ) : null}
                 <ReportItemSlot
                   item={item}
-                  onEditItem={onEditItem}
-                  onQuickEditText={onQuickEditText}
-                  onResolvePlan={onResolvePlan}
-                  onRestorePlan={onRestorePlan}
                   editorSlot={editorSlot}
+                  {...handlers}
                 />
               </>
             ) : (
-              <span className="sr-only">No linked update</span>
+              <p className="text-xs text-[var(--color-muted-foreground)]">
+                No item
+              </p>
             )}
           </div>
         );
@@ -130,15 +130,10 @@ export function StatusOverviewUnitRow({
   rows,
   periods,
   expanded,
-  activeColumn,
   onToggle,
   panelId,
-  onEditItem,
-  onQuickEditText,
-  onAddItem,
-  onResolvePlan,
-  onRestorePlan,
   editorSlot,
+  ...handlers
 }: {
   readonly health?: ReportHealthUnit | undefined;
   readonly healthPanelId: string;
@@ -149,7 +144,6 @@ export function StatusOverviewUnitRow({
   readonly rows: readonly StatusOverviewLineageRow[];
   readonly periods: StatusOverviewModel["periods"];
   readonly expanded: boolean;
-  readonly activeColumn: StatusOverviewColumnKey;
   readonly onToggle: () => void;
   readonly panelId: string;
 } & ItemHandlers) {
@@ -170,12 +164,11 @@ export function StatusOverviewUnitRow({
           />
         </div>
         <div className="min-w-0 min-[80rem]:col-span-3">
-          <div className={`${TIMELINE_GRID} min-[80rem]:sr-only`}>
+          <div
+            className={`${TIMELINE_GRID} min-[80rem]:sr-only bg-[var(--color-surface-muted)]`}
+          >
             {STATUS_OVERVIEW_COLUMNS.map((column) => (
-              <div
-                key={column.key}
-                className={`${CELL} ${idleTimelineLaneClass(column.key === activeColumn)}`}
-              >
+              <div key={column.key} className={TIMELINE_CELL}>
                 <p className="text-xs font-semibold">{column.label}</p>
                 <p className="text-xs text-[var(--color-muted-foreground)]">
                   {periods[column.key] ?? "Period unavailable"}
@@ -190,38 +183,26 @@ export function StatusOverviewUnitRow({
           ) : null}
           {rows.length === 0 ? (
             <p className="px-4 py-3 text-sm text-[var(--color-muted-foreground)]">
-              No updates yet
+              No items yet
             </p>
-          ) : null}
-          <ul className="min-w-0">
-            {rows.filter(isLinkedOverviewRow).map((row, index) => (
-              <li
-                key={row.key}
-                hidden={index >= REPORT_PREVIEW_COUNT && !expanded}
-                inert={index >= REPORT_PREVIEW_COUNT && !expanded}
-              >
-                <LineageRow
-                  row={row}
-                  activeColumn={activeColumn}
-                  onEditItem={onEditItem}
-                  onQuickEditText={onQuickEditText}
-                  onResolvePlan={onResolvePlan}
-                  onRestorePlan={onRestorePlan}
-                  editorSlot={editorSlot}
-                />
-              </li>
-            ))}
-          </ul>
-          <StatusOverviewAdditionalUpdates
-            rows={rows}
-            expanded={expanded}
-            activeColumn={activeColumn}
-            onEditItem={onEditItem}
-            onQuickEditText={onQuickEditText}
-            onResolvePlan={onResolvePlan}
-            onRestorePlan={onRestorePlan}
-            editorSlot={editorSlot}
-          />
+          ) : (
+            <ul className="min-w-0">
+              {rows.map((row, index) => (
+                <li
+                  key={row.key}
+                  hidden={index >= REPORT_PREVIEW_COUNT && !expanded}
+                  inert={index >= REPORT_PREVIEW_COUNT && !expanded}
+                >
+                  <LineageRow
+                    row={row}
+                    periods={periods}
+                    editorSlot={editorSlot}
+                    {...handlers}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
           {more > 0 ? (
             <button
               type="button"
@@ -235,8 +216,7 @@ export function StatusOverviewUnitRow({
           ) : null}
           <TimelineFooter
             unit={unit}
-            activeColumn={activeColumn}
-            onAddItem={onAddItem}
+            onAddItem={handlers.onAddItem}
             editorSlot={editorSlot}
           />
         </div>

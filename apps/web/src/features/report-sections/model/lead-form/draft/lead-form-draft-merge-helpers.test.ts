@@ -25,6 +25,41 @@ import {
 } from "./lead-form-draft-merge-test-fixtures";
 
 describe("lead form draft merge helpers", () => {
+  it("keeps a predecessor lineage when a new physical item is merged", () => {
+    const section = makeDraftMergeSection();
+    const stableId = "abababab-abab-4bab-8bab-abababababab";
+    const physicalId = "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcdcd";
+    const created: KanbanItem = {
+      id: physicalId,
+      stableId,
+      parent: { kind: "product", id: PROJECT_ID },
+      productId: PROJECT_ID,
+      productName: "Test Product",
+      activityId: null,
+      stageNames: ["Development"],
+      status: "paused",
+      text: "Authoritative prior plan",
+      tag: "delivery",
+      author: "Test Lead",
+      priorityRank: 6,
+      pausedReason: "Waiting for approval",
+    };
+
+    const result = mergeItemsDraft(section, "next", [created]);
+
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: physicalId,
+        stableId,
+        type: "next",
+        workflowStatus: "paused",
+        pausedReason: "Waiting for approval",
+        priorityRank: 6,
+        tag: "delivery",
+      }),
+    );
+  });
+
   it("merges item edits while preserving parent semantics, priority, and own-only filtering", () => {
     const section = makeDraftMergeSection();
     const next: KanbanItem[] = [
@@ -222,7 +257,7 @@ describe("lead form draft merge helpers", () => {
     const activityResult = mergeActivityStatusDraft(
       productResult,
       ACTIVITY_ID,
-      "yellow",
+      { status: "yellow" },
     );
 
     expect(productResult.projects[0]?.trafficLight).toBe("red");

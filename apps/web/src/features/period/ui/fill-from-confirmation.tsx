@@ -5,29 +5,59 @@ import { useState } from "react";
 import { ConfirmationDialog } from "../../../shared/ui/dialogs/confirmation-dialog";
 import type { ReportPeriod } from "../../report-sections";
 
+export type FillFromHandler = (sourceSectionId: string) => void | Promise<void>;
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error && error.message
+    ? error.message
+    : "Fill from failed. Try again.";
+}
+
 export function useFillFromConfirmation(
-  onFillFrom: ((sourceSectionId: string) => void) | undefined,
+  onFillFrom: FillFromHandler | undefined,
 ) {
   const [period, setPeriod] = useState<ReportPeriod | null>(null);
   const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const dismiss = () => {
     setOpen(false);
     setPeriod(null);
+    setError(null);
   };
 
   return {
     period,
     open,
+    pending,
+    error,
     // No period means there is nothing to fill from — stay closed.
     request: (next: ReportPeriod | undefined) => {
       if (!next) return;
       setPeriod(next);
+      setError(null);
       setOpen(true);
     },
     confirm: () => {
-      if (period?.sourceSectionId) onFillFrom?.(period.sourceSectionId);
-      dismiss();
+      const sourceSectionId = period?.sourceSectionId;
+      if (!sourceSectionId || !onFillFrom) {
+        dismiss();
+        return;
+      }
+      setPending(true);
+      setError(null);
+      const runFillFrom = async () => {
+        try {
+          await onFillFrom(sourceSectionId);
+          dismiss();
+        } catch (error_: unknown) {
+          setError(errorMessage(error_));
+        } finally {
+          setPending(false);
+        }
+      };
+      void runFillFrom();
     },
     cancel: dismiss,
   };
@@ -36,11 +66,15 @@ export function useFillFromConfirmation(
 export function FillFromConfirmDialog({
   period,
   open,
+  pending,
+  error,
   onConfirm,
   onClose,
 }: {
   readonly period: ReportPeriod | null;
   readonly open: boolean;
+  readonly pending: boolean;
+  readonly error: string | null;
   readonly onConfirm: () => void;
   readonly onClose: () => void;
 }) {
@@ -60,8 +94,15 @@ export function FillFromConfirmDialog({
         </>
       }
       confirmLabel="Replace & Fill"
+      isPending={pending}
       onConfirm={onConfirm}
       onClose={onClose}
-    />
+    >
+      {error ? (
+        <p role="alert" className="text-sm text-[var(--color-destructive)]">
+          {error}
+        </p>
+      ) : null}
+    </ConfirmationDialog>
   );
 }

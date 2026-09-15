@@ -9,6 +9,7 @@ import type {
 } from "@customreport/shared";
 import { ROLE_LABEL } from "@customreport/shared";
 
+import { activityDisplayTitle } from "../../../shared/lib/activity/activity-display";
 import { initialsFromName } from "../../../shared/lib/format/user-initials";
 import { mapLeadDecisions, mapLeadPriorities } from "./lead-form-decisions";
 import { mapLeadItems } from "./lead-form-items";
@@ -52,6 +53,12 @@ export interface LeadCurrentUser {
 export interface LeadActivityCard {
   readonly activityId: string;
   readonly activityName: string;
+  // Weekly override of the catalogue name; null renders the catalogue name.
+  readonly titleOverride: string | null;
+  // Effective weekly title: a non-blank override, else the catalogue name.
+  readonly displayTitle: string;
+  // Weekly description persisted beside the status (the note column).
+  readonly note: string | null;
   readonly status: TrafficLightStatus | null;
   // Server-derived risk floor used by read-only surfaces.
   readonly derivedStatus: TrafficLightStatus | null;
@@ -66,14 +73,20 @@ export interface LeadActivityCard {
 function mapLeadActivityCards(
   section: ReportSectionReadModel,
 ): LeadActivityCard[] {
-  return section.activities.map((activity) => ({
-    activityId: activity.activityId,
-    activityName: activity.activityName,
-    status: activity.status,
-    derivedStatus: activity.derivedStatus,
-    alarmFloor: activity.alarmFloor ?? null,
-    linkedProducts: activity.linkedProducts,
-  }));
+  return section.activities.map((activity) => {
+    const titleOverride = activity.titleOverride ?? null;
+    return {
+      activityId: activity.activityId,
+      activityName: activity.activityName,
+      titleOverride,
+      displayTitle: activityDisplayTitle(activity),
+      note: activity.note ?? null,
+      status: activity.status,
+      derivedStatus: activity.derivedStatus,
+      alarmFloor: activity.alarmFloor ?? null,
+      linkedProducts: activity.linkedProducts,
+    };
+  });
 }
 
 // ---- Composer ----

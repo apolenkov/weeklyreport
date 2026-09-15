@@ -1,0 +1,199 @@
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+
+import { StatusOverviewActivityEditor } from "./status-overview-activity-editor";
+
+const ACTIVITY_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+
+function renderEditor(
+  overrides: Partial<{
+    titleOverride: string | null;
+    description: string | null;
+    onChange: (activityId: string, next: unknown) => void;
+  }> = {},
+) {
+  const onChange = overrides.onChange ?? vi.fn();
+  render(
+    <StatusOverviewActivityEditor
+      activityId={ACTIVITY_ID}
+      values={{
+        titleOverride: overrides.titleOverride ?? null,
+        description: overrides.description ?? null,
+        catalogueName: "Catalogue duty",
+      }}
+      onChange={onChange}
+    />,
+  );
+  return { onChange };
+}
+
+describe("StatusOverviewActivityEditor", () => {
+  it("shows the weekly override and the catalogue placeholder", () => {
+    renderEditor({ titleOverride: "Weekly duty", description: "Ship it" });
+
+    expect(screen.getByTestId(`activity-title-${ACTIVITY_ID}`)).toHaveValue(
+      "Weekly duty",
+    );
+    expect(
+      screen.getByTestId(`activity-description-${ACTIVITY_ID}`),
+    ).toHaveValue("Ship it");
+    expect(screen.getByTestId(`activity-title-${ACTIVITY_ID}`)).toHaveAttribute(
+      "placeholder",
+      "Catalogue duty",
+    );
+  });
+
+  it("saves trimmed values and normalizes blanks to null", async () => {
+    const { onChange } = renderEditor();
+    const user = userEvent.setup();
+
+    await user.type(
+      screen.getByTestId(`activity-title-${ACTIVITY_ID}`),
+      "  Weekly duty  ",
+    );
+    await user.click(screen.getByTestId(`activity-fields-save-${ACTIVITY_ID}`));
+
+    expect(onChange).toHaveBeenCalledWith(ACTIVITY_ID, {
+      titleOverride: "Weekly duty",
+      description: null,
+    });
+  });
+
+  it("drafts a catalogue reset without discarding the description", async () => {
+    const { onChange } = renderEditor({
+      titleOverride: "Weekly duty",
+      description: "Ship it",
+    });
+    const user = userEvent.setup();
+
+    await user.click(
+      screen.getByTestId(`activity-fields-reset-${ACTIVITY_ID}`),
+    );
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByTestId(`activity-title-${ACTIVITY_ID}`)).toHaveValue("");
+    expect(
+      screen.getByTestId(`activity-description-${ACTIVITY_ID}`),
+    ).toHaveValue("Ship it");
+
+    await user.click(screen.getByTestId(`activity-fields-save-${ACTIVITY_ID}`));
+    expect(onChange).toHaveBeenCalledWith(ACTIVITY_ID, {
+      titleOverride: null,
+      description: "Ship it",
+    });
+  });
+
+  it("cancels a drafted catalogue reset", async () => {
+    const { onChange } = renderEditor({
+      titleOverride: "Weekly duty",
+      description: "Ship it",
+    });
+    const user = userEvent.setup();
+
+    await user.click(
+      screen.getByTestId(`activity-fields-reset-${ACTIVITY_ID}`),
+    );
+    await user.click(
+      screen.getByTestId(`activity-fields-cancel-${ACTIVITY_ID}`),
+    );
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByTestId(`activity-title-${ACTIVITY_ID}`)).toHaveValue(
+      "Weekly duty",
+    );
+    expect(
+      screen.getByTestId(`activity-description-${ACTIVITY_ID}`),
+    ).toHaveValue("Ship it");
+  });
+
+  it("syncs a clean draft before a later one-field save", async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <StatusOverviewActivityEditor
+        activityId={ACTIVITY_ID}
+        values={{
+          titleOverride: "Old weekly title",
+          description: "Old description",
+          catalogueName: "Catalogue duty",
+        }}
+        onChange={onChange}
+      />,
+    );
+
+    rerender(
+      <StatusOverviewActivityEditor
+        activityId={ACTIVITY_ID}
+        values={{
+          titleOverride: "Refetched weekly title",
+          description: "Refetched description",
+          catalogueName: "Catalogue duty",
+        }}
+        onChange={onChange}
+      />,
+    );
+
+    const title = screen.getByTestId(`activity-title-${ACTIVITY_ID}`);
+    expect(title).toHaveValue("Refetched weekly title");
+    expect(
+      screen.getByTestId(`activity-description-${ACTIVITY_ID}`),
+    ).toHaveValue("Refetched description");
+    expect(
+      screen.getByTestId(`activity-fields-save-${ACTIVITY_ID}`),
+    ).toBeDisabled();
+
+    await user.clear(title);
+    await user.type(title, "Edited weekly title");
+    await user.click(screen.getByTestId(`activity-fields-save-${ACTIVITY_ID}`));
+
+    expect(onChange).toHaveBeenCalledWith(ACTIVITY_ID, {
+      titleOverride: "Edited weekly title",
+      description: "Refetched description",
+    });
+  });
+
+  it("keeps pending input when server values rerender", async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <StatusOverviewActivityEditor
+        activityId={ACTIVITY_ID}
+        values={{
+          titleOverride: null,
+          description: null,
+          catalogueName: "Catalogue duty",
+        }}
+        onChange={onChange}
+      />,
+    );
+
+    await user.type(
+      screen.getByTestId(`activity-title-${ACTIVITY_ID}`),
+      "Pending title",
+    );
+    await user.type(
+      screen.getByTestId(`activity-description-${ACTIVITY_ID}`),
+      "Pending description",
+    );
+
+    rerender(
+      <StatusOverviewActivityEditor
+        activityId={ACTIVITY_ID}
+        values={{
+          titleOverride: "Older server title",
+          description: "Older server description",
+          catalogueName: "Catalogue duty",
+        }}
+        onChange={onChange}
+      />,
+    );
+
+    expect(screen.getByTestId(`activity-title-${ACTIVITY_ID}`)).toHaveValue(
+      "Pending title",
+    );
+    expect(
+      screen.getByTestId(`activity-description-${ACTIVITY_ID}`),
+    ).toHaveValue("Pending description");
+  });
+});

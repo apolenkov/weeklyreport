@@ -11,8 +11,10 @@ import {
   outcomeScopeOf,
   portOutcomePending,
   type PreparedOutcomeCommand,
+  preparePromoteCommand,
   prepareResolveCommand,
   prepareRestoreCommand,
+  type PromotePlanCommandInput,
   type ResolvePlanCommandInput,
   type RestorePlanCommandInput,
   resultMatchesScope,
@@ -20,6 +22,7 @@ import {
 } from "./lead-form-outcome-coordinator-helpers";
 
 export type {
+  PromotePlanCommandInput,
   ResolvePlanCommandInput,
   RestorePlanCommandInput,
 } from "./lead-form-outcome-coordinator-helpers";
@@ -36,12 +39,18 @@ export interface LeadFormOutcomeActions {
     input: RestorePlanCommandInput,
     stableId: string,
   ) => Promise<ItemOutcomeResult>;
+  readonly promote: (
+    input: PromotePlanCommandInput,
+    stableId: string,
+  ) => Promise<ItemOutcomeResult>;
 }
 
 interface ActiveCommand {
   readonly token: symbol;
   readonly scopeKey: string;
 }
+
+const SECTION_UNAVAILABLE = "This report section is unavailable.";
 
 // Coordinates explicit lineage commands with the ordinary draft writer. A
 // command is accepted only from a clean saved baseline, and its first prepared
@@ -145,7 +154,7 @@ export function useLeadFormOutcomeCoordinator(
   const resolve = useCallback<LeadFormOutcomeActions["resolve"]>(
     async (input, sourceStableId) => {
       if (scope === null || args.draftSection === null) {
-        throw commandError("This report section is unavailable.");
+        throw commandError(SECTION_UNAVAILABLE);
       }
       const token = acquire(scope);
       try {
@@ -170,7 +179,7 @@ export function useLeadFormOutcomeCoordinator(
   const restore = useCallback<LeadFormOutcomeActions["restore"]>(
     async (input, stableId) => {
       if (scope === null || args.draftSection === null) {
-        throw commandError("This report section is unavailable.");
+        throw commandError(SECTION_UNAVAILABLE);
       }
       const token = acquire(scope);
       try {
@@ -183,6 +192,33 @@ export function useLeadFormOutcomeCoordinator(
           args.version,
         );
         const result = await args.writePort.restorePlan(prepared);
+        adoptIfCurrent(result, scope, token);
+        return result;
+      } finally {
+        release(token, scope);
+      }
+    },
+    [acquire, adoptIfCurrent, args, prepareRegistry, release, scope],
+  );
+
+  // MOVE-NEXT-CURRENT: the recorded commitment is promoted through the same
+  // command registry, so an idempotent retry keeps its original physical id.
+  const promote = useCallback<LeadFormOutcomeActions["promote"]>(
+    async (input, stableId) => {
+      if (scope === null || args.draftSection === null) {
+        throw commandError(SECTION_UNAVAILABLE);
+      }
+      const token = acquire(scope);
+      try {
+        const prepared = preparePromoteCommand(
+          prepareRegistry(scope),
+          input,
+          stableId,
+          scope,
+          args.draftSection,
+          args.version,
+        );
+        const result = await args.writePort.promotePlan(prepared);
         adoptIfCurrent(result, scope, token);
         return result;
       } finally {
@@ -207,8 +243,17 @@ export function useLeadFormOutcomeCoordinator(
       blockedReason,
       resolve,
       restore,
+      promote,
       isLocked,
     }),
-    [args.writePort, blockedReason, isLocked, locallyPending, resolve, restore],
+    [
+      args.writePort,
+      blockedReason,
+      isLocked,
+      locallyPending,
+      promote,
+      resolve,
+      restore,
+    ],
   );
 }

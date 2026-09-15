@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import type { Product } from "../model/types";
+import type { KanbanItem, Product } from "../model/types";
 import { createItemEditDraftStore } from "./item-edit-draft-store";
 import { ItemInlineEditor } from "./item-inline-editor";
 
@@ -32,6 +32,84 @@ const base = {
 };
 
 describe("ItemInlineEditor", () => {
+  it("offers a simplified overview editor without legacy planning fields", async () => {
+    const user = userEvent.setup();
+    const onWeekChange = vi.fn();
+    render(
+      <ItemInlineEditor
+        {...base}
+        onSave={vi.fn()}
+        onWeekChange={onWeekChange}
+        showNextStep={false}
+        showPriority={false}
+      />,
+    );
+
+    expect(screen.queryByRole("textbox", { name: /Next step/ })).toBeNull();
+    expect(screen.queryByLabelText(/Priority rank/)).toBeNull();
+    expect(
+      screen.getByRole("radiogroup", { name: "Active week" }),
+    ).toBeVisible();
+
+    const nextWeek = screen.getByRole("radio", { name: "Next week" });
+    nextWeek.focus();
+    expect(nextWeek).toHaveFocus();
+    expect(nextWeek.closest("label")).toHaveClass(
+      "focus-within:ring-2",
+      "focus-within:ring-[var(--color-ring)]",
+    );
+
+    await user.click(nextWeek);
+    expect(onWeekChange).toHaveBeenCalledWith("next");
+  });
+
+  it("hides a legacy next-week field in the basic editor without clearing its value", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    const legacyItem: KanbanItem = {
+      id: "legacy-current",
+      parent: { kind: "product", id: "product" },
+      productId: "product",
+      productName: "Payments",
+      activityId: null,
+      stageNames: ["Development"],
+      status: "in-progress",
+      text: "Current result",
+      nextStepText: "Preserve this next-week plan",
+      author: "Lead",
+    };
+    const draftStore = createItemEditDraftStore({
+      ...base,
+      activities: [],
+      item: legacyItem,
+    });
+    render(
+      <ItemInlineEditor
+        {...base}
+        item={legacyItem}
+        draftStore={draftStore}
+        onSave={onSave}
+        showNextStep={false}
+        showPriority={false}
+      />,
+    );
+
+    expect(screen.queryByLabelText(/Next step/)).toBeNull();
+    await user.click(screen.getByText("✓ Completed"));
+    await user.click(screen.getByText("Save update"));
+    expect(onSave).not.toHaveBeenCalled();
+    const guidance = document.querySelector<HTMLElement>('[role="alert"]');
+    expect(guidance).not.toBeNull();
+    expect(guidance).toHaveTextContent(
+      "Cancel, then choose More actions → Update status.",
+    );
+    expect(guidance).toHaveFocus();
+    expect(draftStore.getSnapshot()).toMatchObject({
+      text: "Current result",
+      nextStepText: "Preserve this next-week plan",
+    });
+  });
+
   it("retains entered result and plan when its timeline row is remounted", async () => {
     const user = userEvent.setup();
     const onSave = vi.fn();
@@ -96,7 +174,7 @@ describe("ItemInlineEditor", () => {
       screen.getByRole("textbox", { name: /Description/ }),
       "Start API implementation",
     );
-    await user.click(screen.getByRole("button", { name: "Not started" }));
+    await user.click(screen.getByRole("button", { name: "○ Planned" }));
     await user.click(screen.getByRole("button", { name: "Save update" }));
     expect(onSave).toHaveBeenCalledWith(
       expect.objectContaining({ status: "planned", pausedReason: null }),

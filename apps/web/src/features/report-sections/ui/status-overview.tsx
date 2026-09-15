@@ -2,39 +2,18 @@
 
 import { useEffect, useId, useState } from "react";
 
-import type { ReportHealthPulse } from "../model/report-health-pulse";
-import type {
-  StatusOverviewCreateTarget,
-  StatusOverviewEditTarget,
-  StatusOverviewItem,
-  StatusOverviewModel,
-  StatusOverviewUnitKind,
-} from "../model/status-overview";
+import type { StatusOverviewUnitKind } from "../model/status-overview";
 import { buildStatusOverviewLineage } from "../model/status-overview-lineage";
 import { ReportHealthPulseView } from "./report-health-pulse";
-import type { StatusOverviewEditorSlot } from "./status-overview-editor-slot";
+import { StatusOverviewActivityEditor } from "./status-overview-activity-editor";
+import { STATUS_OVERVIEW_COLUMN_HEADER_IDS } from "./status-overview-layout";
+import type { StatusOverviewProps } from "./status-overview-props";
 import {
-  STATUS_OVERVIEW_COLUMNS,
   STATUS_OVERVIEW_DESKTOP_GRID,
-  type StatusOverviewColumnKey,
   StatusOverviewUnitRow,
 } from "./status-overview-row";
 
-export interface StatusOverviewProps {
-  readonly health?: ReportHealthPulse | undefined;
-  readonly editorSlot?: StatusOverviewEditorSlot | undefined;
-  readonly model: StatusOverviewModel;
-  readonly onEditItem?:
-    ((target: StatusOverviewEditTarget) => void) | undefined;
-  readonly onQuickEditText?:
-    ((item: StatusOverviewItem, text: string) => void) | undefined;
-  readonly onAddItem?:
-    ((target: StatusOverviewCreateTarget) => void) | undefined;
-  readonly onResolvePlan?: ((item: StatusOverviewItem) => void) | undefined;
-  readonly onRestorePlan?: ((item: StatusOverviewItem) => void) | undefined;
-  readonly detailsHref?: string | undefined;
-  readonly autosaveStatus?: string | undefined;
-}
+export type { StatusOverviewProps } from "./status-overview-props";
 
 const UNIT_GROUPS: readonly {
   readonly kind: StatusOverviewUnitKind;
@@ -45,14 +24,19 @@ const UNIT_GROUPS: readonly {
 ];
 
 function ColumnHeading({
+  id,
   label,
   period,
 }: {
+  readonly id: string;
   readonly label: string;
   readonly period: string | null;
 }) {
   return (
-    <div className="min-w-0 border-l border-[var(--color-border-subtle)] px-4 pb-3">
+    <div
+      id={id}
+      className="min-w-0 border-l border-[var(--color-border-subtle)] px-4 pb-3"
+    >
       <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
         {label}
       </p>
@@ -61,15 +45,6 @@ function ColumnHeading({
       </p>
     </div>
   );
-}
-
-function resolveDisplayedColumn(
-  active: StatusOverviewColumnKey,
-  editorSlot: StatusOverviewEditorSlot | undefined,
-): StatusOverviewColumnKey {
-  if (!editorSlot) return active;
-  if (editorSlot.source === "previous") return "previouslyPlanned";
-  return editorSlot.source === "next" ? "nextWeek" : "currentWeek";
 }
 
 function useHealthInspection(idPrefix: string) {
@@ -105,20 +80,24 @@ export function StatusOverview({
   model,
   onEditItem,
   onQuickEditText,
+  quickEditMemory,
   onAddItem,
+  onPlanItem,
+  onMoveItem,
+  onConfirmItem,
   onResolvePlan,
   onRestorePlan,
   detailsHref,
   autosaveStatus,
   editorSlot,
   health,
+  activityFieldsEditable,
+  onActivityFieldsChange,
+  onActivityFieldsPendingChange,
 }: StatusOverviewProps) {
   const idPrefix = useId();
   const { closeInspection, healthPanelId, inspection, setInspection } =
     useHealthInspection(idPrefix);
-  const [activeColumn, setActiveColumn] =
-    useState<StatusOverviewColumnKey>("currentWeek");
-  const displayedColumn = resolveDisplayedColumn(activeColumn, editorSlot);
   const lineage = buildStatusOverviewLineage(model.units);
   const [expandedKeys, setExpandedKeys] = useState<ReadonlySet<string>>(
     () => new Set(),
@@ -174,7 +153,7 @@ export function StatusOverview({
           {detailsHref ? (
             <a
               href={detailsHref}
-              className="inline-flex min-h-8 items-center rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] px-3 text-xs font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+              className="inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] px-3 text-xs font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
             >
               Risks &amp; decisions
             </a>
@@ -189,39 +168,23 @@ export function StatusOverview({
         />
       ) : null}
 
-      <div
-        role="group"
-        aria-label="Displayed week"
-        className="mb-3 flex flex-wrap gap-1 md:hidden"
-      >
-        {STATUS_OVERVIEW_COLUMNS.map((column) => (
-          <button
-            key={column.key}
-            type="button"
-            aria-pressed={displayedColumn === column.key}
-            disabled={Boolean(editorSlot) && displayedColumn !== column.key}
-            onClick={() => setActiveColumn(column.key)}
-            className={`min-h-[var(--touch-target-min)] rounded-[var(--radius-sm)] px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] disabled:opacity-50 ${displayedColumn === column.key ? "bg-[var(--color-toggle-active)] text-[var(--color-primary-foreground)]" : "text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)]"}`}
-          >
-            {column.label}
-          </button>
-        ))}
-      </div>
-
-      <div
-        aria-hidden="true"
-        className={`mb-1 hidden ${STATUS_OVERVIEW_DESKTOP_GRID}`}
-      >
+      <div className={`mb-1 hidden ${STATUS_OVERVIEW_DESKTOP_GRID}`}>
         <div />
         <ColumnHeading
+          id={STATUS_OVERVIEW_COLUMN_HEADER_IDS.previouslyPlanned}
           label="Previously planned"
           period={model.periods.previouslyPlanned}
         />
         <ColumnHeading
+          id={STATUS_OVERVIEW_COLUMN_HEADER_IDS.currentWeek}
           label="Current week"
           period={model.periods.currentWeek}
         />
-        <ColumnHeading label="Next week" period={model.periods.nextWeek} />
+        <ColumnHeading
+          id={STATUS_OVERVIEW_COLUMN_HEADER_IDS.nextWeek}
+          label="Next week"
+          period={model.periods.nextWeek}
+        />
       </div>
 
       {model.units.length === 0 ? (
@@ -255,35 +218,50 @@ export function StatusOverview({
                 </div>
                 {units.map((unit, index) => {
                   return (
-                    <StatusOverviewUnitRow
-                      key={unit.key}
-                      unit={unit}
-                      health={health?.units.find(
-                        (entry) => entry.key === unit.key,
-                      )}
-                      healthPanelId={healthPanelId}
-                      healthExpanded={inspection?.key === unit.key}
-                      onInspect={(key, opener) =>
-                        setInspection({ key, opener })
-                      }
-                      onCloseHealth={closeInspection}
-                      rows={lineage.get(unit.key) ?? []}
-                      periods={model.periods}
-                      expanded={expandedKeys.has(unit.key)}
-                      activeColumn={displayedColumn}
-                      onToggle={() => toggle(unit.key)}
-                      panelId={`${idPrefix}-${group.kind}-${String(index)}`}
-                      onEditItem={onEditItem}
-                      onAddItem={addItem}
-                      onQuickEditText={onQuickEditText}
-                      onResolvePlan={onResolvePlan}
-                      onRestorePlan={onRestorePlan}
-                      editorSlot={
-                        editorSlot?.unitKey === unit.key
-                          ? editorSlot
-                          : undefined
-                      }
-                    />
+                    <div key={unit.key} className="min-w-0">
+                      <StatusOverviewUnitRow
+                        unit={unit}
+                        health={health?.units.find(
+                          (entry) => entry.key === unit.key,
+                        )}
+                        healthPanelId={healthPanelId}
+                        healthExpanded={inspection?.key === unit.key}
+                        onInspect={(key, opener) =>
+                          setInspection({ key, opener })
+                        }
+                        onCloseHealth={closeInspection}
+                        rows={lineage.get(unit.key) ?? []}
+                        periods={model.periods}
+                        expanded={expandedKeys.has(unit.key)}
+                        onToggle={() => toggle(unit.key)}
+                        panelId={`${idPrefix}-${group.kind}-${String(index)}`}
+                        onEditItem={onEditItem}
+                        onAddItem={addItem}
+                        onPlanItem={onPlanItem}
+                        onMoveItem={onMoveItem}
+                        onConfirmItem={onConfirmItem}
+                        onQuickEditText={onQuickEditText}
+                        quickEditMemory={quickEditMemory}
+                        onResolvePlan={onResolvePlan}
+                        onRestorePlan={onRestorePlan}
+                        editorSlot={
+                          editorSlot?.unitKey === unit.key
+                            ? editorSlot
+                            : undefined
+                        }
+                      />
+                      {group.kind === "activity" &&
+                      activityFieldsEditable === true &&
+                      onActivityFieldsChange !== undefined &&
+                      unit.activityFields !== undefined ? (
+                        <StatusOverviewActivityEditor
+                          activityId={unit.id}
+                          values={unit.activityFields}
+                          onChange={onActivityFieldsChange}
+                          onPendingChange={onActivityFieldsPendingChange}
+                        />
+                      ) : null}
+                    </div>
                   );
                 })}
               </section>

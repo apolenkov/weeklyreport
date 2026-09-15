@@ -1,5 +1,7 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
+import { activityDisplayTitle } from "../../../shared/lib/activity/activity-display";
+
 interface ProjectIndexEntry {
   name: string;
   trafficLight: ReportSectionReadModel["projects"][number]["trafficLight"];
@@ -29,5 +31,10 @@ export function buildProjectIndex(
 export function buildActivityIndex(
   section: ReportSectionReadModel,
 ): Map<string, string> {
-  return new Map(section.activities.map((a) => [a.activityId, a.activityName]));
+  return new Map(
+    section.activities.map((activity) => [
+      activity.activityId,
+      activityDisplayTitle(activity),
+    ]),
+  );
 }

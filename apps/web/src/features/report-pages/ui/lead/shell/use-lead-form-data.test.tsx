@@ -126,6 +126,7 @@ function buildTRPC(
     { path: ["leadForm", "assistant"], mutation: true },
     { path: ["leadForm", "resolvePlan"], mutation: true },
     { path: ["leadForm", "restorePlan"], mutation: true },
+    { path: ["leadForm", "promotePlan"], mutation: true },
     { path: ["reports", "getActive"], query: active },
     { path: ["reports", "myHistory"], query: { items: [] } },
     {

@@ -10,19 +10,17 @@ const autosave: AutosaveSnapshot = {
   state: "pending",
   lastSavedAt: null,
   dirty: true,
+  currentPayloadMatchesSavedBaseline: false,
   isInFlight: false,
   forceSave: vi.fn(() => Promise.resolve()),
 };
 
 describe("LeadCompletionActions", () => {
-  it("uses one keyboard-reachable action set and the same handlers in RTL", async () => {
+  it("keeps global completion actions limited to save and submit", async () => {
     const user = userEvent.setup();
-    const onAdd = vi.fn();
     const onSubmit = vi.fn();
     const props = {
       autosave,
-      onAdd,
-      addDisabled: false,
       onSubmit,
       submitDisabled: false,
     };
@@ -35,13 +33,11 @@ describe("LeadCompletionActions", () => {
       name: "Header completion actions",
     });
 
-    await user.click(within(header).getByRole("button", { name: "+ Add" }));
-    await user.click(screen.getByRole("button", { name: "Current week item" }));
+    expect(within(header).queryByRole("button", { name: "+ Add" })).toBeNull();
     await user.click(within(header).getByRole("button", { name: "Submit" }));
     await user.click(
       within(header).getByRole("button", { name: "Save draft now" }),
     );
-    expect(onAdd).toHaveBeenCalledOnce();
     expect(onSubmit).toHaveBeenCalledOnce();
     expect(autosave.forceSave).toHaveBeenCalledOnce();
 
@@ -60,10 +56,8 @@ describe("LeadCompletionActions", () => {
     const sticky = screen.getByRole("group", {
       name: "Sticky completion actions",
     });
-    await user.click(within(sticky).getByRole("button", { name: "+ Add" }));
-    await user.click(screen.getByRole("button", { name: "Current week item" }));
+    expect(within(sticky).queryByRole("button", { name: "+ Add" })).toBeNull();
     await user.click(within(sticky).getByRole("button", { name: "Submit" }));
-    expect(onAdd).toHaveBeenCalledTimes(2);
     expect(onSubmit).toHaveBeenCalledTimes(2);
   });
 
@@ -72,8 +66,6 @@ describe("LeadCompletionActions", () => {
       <LeadStickyCompletionActions
         actions={{
           autosave: { ...autosave, state: "error" },
-          onAdd: vi.fn(),
-          addDisabled: false,
           onSubmit: vi.fn(),
           submitDisabled: false,
         }}
@@ -94,8 +86,6 @@ describe("LeadCompletionActions", () => {
       <LeadStickyCompletionActions
         actions={{
           autosave,
-          onAdd: vi.fn(),
-          addDisabled: false,
           onSubmit: vi.fn(),
           submitDisabled: false,
         }}

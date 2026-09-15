@@ -17,6 +17,7 @@ const STAGE_ONE_ID = "10000000-0000-4000-8000-000000000004";
 const STAGE_TWO_ID = "10000000-0000-4000-8000-000000000005";
 const STAGE_THREE_ID = "10000000-0000-4000-8000-000000000006";
 const STAGE_FOUR_ID = "10000000-0000-4000-8000-000000000007";
+const CARRIED_ITEM_ID = "10000000-0000-4000-8000-000000000008";
 
 const draft: DraftSaveContent = {
   reportSectionId: SECTION_ID,
@@ -125,6 +126,7 @@ describe("deriveLeadSubmitReadiness", () => {
       {
         id: `risk-stage:${PRODUCT_ID}`,
         label: "Portal: specify stages for committed risks.",
+        overviewFocus: "report-details",
       },
     ]);
     expect(readiness.autosaveState).toBe("error");
@@ -148,9 +150,59 @@ describe("deriveLeadSubmitReadiness", () => {
       {
         id: "submit-validation:MISSING_CURRENT_ITEM:0",
         label: "Project Portal needs at least one Current Week item.",
+        overviewFocus: `add:product:${PRODUCT_ID}`,
       },
     ]);
     expect(readiness.canOpenConfirmation).toBe(false);
+  });
+
+  it("blocks confirmation until carried Current work is confirmed", () => {
+    const readiness = deriveLeadSubmitReadiness({
+      ...baseInput,
+      draftPayload: {
+        ...draft,
+        items: draft.items.map((item) => ({
+          ...item,
+          stableId: CARRIED_ITEM_ID,
+          carriedOver: true,
+        })),
+      },
+    });
+
+    expect(readiness.blockingIssues).toEqual([
+      {
+        id: `submit-validation:UNCONFIRMED_CARRIED_ITEM:${CARRIED_ITEM_ID}`,
+        label: 'Confirm "Implement the report" for this week.',
+        overviewFocus: `confirm:current:${CARRIED_ITEM_ID}`,
+      },
+    ]);
+    expect(readiness.canOpenConfirmation).toBe(false);
+  });
+
+  it("links an invalid Next plan to its matching Overview editor", () => {
+    const readiness = deriveLeadSubmitReadiness({
+      ...baseInput,
+      draftPayload: {
+        ...draft,
+        items: draft.items.map((item) => ({
+          ...item,
+          id: CARRIED_ITEM_ID,
+          stableId: CARRIED_ITEM_ID,
+          type: "next",
+          workflowStatus: "planned",
+          nextStepText: "A second next plan",
+        })),
+      },
+    });
+
+    expect(readiness.blockingIssues).toEqual([
+      {
+        id: "submit-schema:items.0.nextStepText:custom:0",
+        label:
+          "Only unfinished current work may have a next-period commitment.",
+        overviewFocus: `edit:next:${CARRIED_ITEM_ID}`,
+      },
+    ]);
   });
 
   it("blocks an absent draft and disables confirmation while submit is pending", () => {

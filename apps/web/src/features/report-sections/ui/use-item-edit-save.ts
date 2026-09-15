@@ -80,6 +80,8 @@ function buildSavePayload(
 ): KanbanItem | null {
   const common = {
     item: args.item,
+    stableId: args.initial.stableId,
+    tag: args.initial.tag,
     trimmed: text.trimmed,
     status: args.status,
     currentUserName: args.currentUserName,
@@ -126,7 +128,16 @@ export function useItemEditSave(args: UseItemEditSaveArgs) {
     if (Object.keys(errors).length > 0) {
       args.setErrors(errors);
       // Focus first invalid control so errors are discoverable by keyboard/AT.
-      firstInvalidControl(errors, args.dialogSurfaceRef.current)?.focus();
+      const invalidControl = firstInvalidControl(
+        errors,
+        args.dialogSurfaceRef.current,
+      );
+      if (invalidControl) invalidControl.focus();
+      else {
+        queueMicrotask(() => {
+          firstInvalidControl(errors, args.dialogSurfaceRef.current)?.focus();
+        });
+      }
       return;
     }
     const payload = buildSavePayload(args, text);

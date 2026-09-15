@@ -4,6 +4,7 @@ import type {
   ReportSectionReadModel,
 } from "@customreport/shared";
 
+import { activityDisplayTitle } from "../../../../shared/lib/activity/activity-display";
 import type { UnifiedActivityEntry } from "../activity/unified-activity-entry";
 import { deriveActivityAlarmFloor } from "../alarms/activity-alarm";
 import type { CrossAuthorRow } from "../lead-cross-author";
@@ -116,7 +117,7 @@ const toActivityOptions = (
 ): readonly { id: string; name: string }[] =>
   section.activities.map((activity) => ({
     id: activity.activityId,
-    name: activity.activityName,
+    name: activityDisplayTitle(activity),
   }));
 
 // The interactive pill's floor is re-derived from the LIVE draft risks: the

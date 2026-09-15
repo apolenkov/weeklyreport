@@ -3,6 +3,7 @@ import type {
   ItemOutcomeEvent,
   ItemResolution,
   LeadStatusOverviewOutput,
+  RecordCommentView,
   ReportSectionReadModel,
 } from "@customreport/shared";
 import { MS_PER_WEEK } from "@customreport/shared";
@@ -74,10 +75,76 @@ export interface StatusOverviewItem {
   readonly resolution?: ItemResolution | null | undefined;
   /** Server-owned append-only outcome audit; absent on legacy read models. */
   readonly outcomeHistory?: readonly ItemOutcomeEvent[] | undefined;
+  /** Scoped review comments on this record; absent on legacy read models. */
+  readonly comments?: readonly RecordCommentView[] | undefined;
   readonly canResolve: boolean;
   readonly canRestore: boolean;
   readonly workflowStatus: ReportSectionReadModel["items"][number]["workflowStatus"];
+  /** True only for the live Current occurrence awaiting explicit lead confirmation. */
+  readonly needsConfirmation?: boolean;
   readonly continuity: "continued" | "unplanned" | null;
+}
+
+export interface StatusOverviewQuickEditMemory {
+  readonly read: (item: StatusOverviewItem) => string | null;
+  readonly write: (item: StatusOverviewItem, draft: string | null) => void;
+}
+
+export function isLinkedContinuationLocked(item: StatusOverviewItem): boolean {
+  return (
+    item.editTarget === null ||
+    item.resolution != null ||
+    item.workflowStatus === "done"
+  );
+}
+
+/** Retained linked-continuation editor state for one stable lineage. */
+export interface StatusOverviewLinkedDraft {
+  readonly open: boolean;
+  readonly draft: string;
+  readonly baseline: string;
+  /** Receipt sequence observed before this submitted intent. */
+  readonly submittedReceiptSequence?: number | undefined;
+  /** Receipt scope observed before this submitted intent. */
+  readonly submittedReceiptScope?: string | null | undefined;
+}
+
+/** Session-scoped retention for linked-continuation editors, keyed by lineage. */
+export interface StatusOverviewLinkedMemory {
+  readonly read: (item: StatusOverviewItem) => StatusOverviewLinkedDraft | null;
+  readonly write: (
+    item: StatusOverviewItem,
+    next: StatusOverviewLinkedDraft | null,
+  ) => void;
+  /** Store-derived gate: true while any retained linked draft exists. */
+  readonly pending: boolean;
+  /** Latest successful autosave receipt sequence for this report/section. */
+  readonly receiptSequence?: number | undefined;
+  /** Scope of the current report-section editor activation. */
+  readonly receiptScope?: string | null | undefined;
+  /** Current canonical payload equals the autosave coordinator's saved baseline. */
+  readonly currentPayloadMatchesSavedBaseline?: boolean | undefined;
+  /** Whether the latest scoped receipt persisted this exact linked value. */
+  readonly receiptConfirms?:
+    ((item: StatusOverviewItem, text: string) => boolean) | undefined;
+}
+
+export function linkedDraftSubmissionResolved(
+  item: StatusOverviewItem,
+  draft: StatusOverviewLinkedDraft | null,
+  existingNextText: string,
+  memory: StatusOverviewLinkedMemory | undefined,
+): boolean {
+  if (existingNextText !== draft?.draft) return false;
+  if (memory?.currentPayloadMatchesSavedBaseline === true) return true;
+  const submittedSequence = draft.submittedReceiptSequence;
+  return (
+    submittedSequence !== undefined &&
+    (memory?.receiptSequence ?? 0) > submittedSequence &&
+    (draft.submittedReceiptScope === undefined ||
+      draft.submittedReceiptScope === (memory?.receiptScope ?? null)) &&
+    memory?.receiptConfirms?.(item, draft.draft) === true
+  );
 }
 
 export type StatusOverviewColumn =
@@ -105,6 +172,15 @@ export interface StatusOverviewUnit {
   readonly status: CanonicalStatus;
   readonly stages: readonly StatusOverviewStage[];
   readonly linkedProducts: readonly string[];
+  /** Weekly title/description overrides; present for activity units only. */
+  readonly activityFields?:
+    | {
+        readonly titleOverride: string | null;
+        readonly description: string | null;
+        /** Catalogue identity shown beside the weekly override. */
+        readonly catalogueName: string;
+      }
+    | undefined;
   readonly columns: {
     readonly previouslyPlanned: StatusOverviewColumn;
     readonly currentWeek: StatusOverviewColumn;

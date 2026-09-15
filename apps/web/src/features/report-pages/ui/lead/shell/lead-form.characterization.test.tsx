@@ -136,6 +136,7 @@ function buildHarness(
     { path: ["leadForm", "assistant"], mutation: true },
     { path: ["leadForm", "resolvePlan"], mutation: true },
     { path: ["leadForm", "restorePlan"], mutation: true },
+    { path: ["leadForm", "promotePlan"], mutation: true },
     { path: ["leadForm", "crossAuthors"], query: [] },
     { path: ["leadForm", "crossAuthorContent"], query: [] },
     { path: ["review", "dashboard"] },
@@ -322,8 +323,8 @@ describe("lead-form draft: save-echo + optimistic lock", () => {
   });
 });
 
-describe("lead-form draft: quick-add + routeToBlocker", () => {
-  it("quick-add current-week item opens the item dialog for the current week", async () => {
+describe("lead-form draft: local section add", () => {
+  it("Current Week add opens the item dialog for the current week", async () => {
     const { Wrapper } = buildHarness();
     render(
       <Wrapper>
@@ -332,18 +333,17 @@ describe("lead-form draft: quick-add + routeToBlocker", () => {
     );
     expect(await screen.findByText("Autosaved")).toBeInTheDocument();
 
-    act(() => screen.getAllByRole("button", { name: "+ Add" })[0]?.click());
     act(() =>
-      screen.getByRole("button", { name: "Current week item" }).click(),
+      screen.getAllByRole("button", { name: "+ Add Item" })[0]?.click(),
     );
-    // The quick-add host opens the shared item editor, whose accessible name
+    // The section action opens the shared item editor, whose accessible name
     // ends in "dialog" (distinct from the "Confirm submission" dialog).
     expect(
       await screen.findByRole("dialog", { name: /dialog$/i }),
     ).toBeInTheDocument();
   });
 
-  it("quick-add blocker routes to a blocked-severity risk prefill dialog", async () => {
+  it("Risk add keeps Blocked available as the blocker path", async () => {
     const { Wrapper } = buildHarness();
     render(
       <Wrapper>
@@ -352,13 +352,11 @@ describe("lead-form draft: quick-add + routeToBlocker", () => {
     );
     expect(await screen.findByText("Autosaved")).toBeInTheDocument();
 
-    act(() => screen.getAllByRole("button", { name: "+ Add" })[0]?.click());
-    act(() => screen.getByRole("button", { name: "Blocker" }).click());
-    // routeToBlocker opens the risk editor prefilled as a blocker — a distinct
-    // dialog from the quick-add item host.
+    act(() => screen.getByRole("button", { name: "+ Add Risk" }).click());
+    const dialog = await screen.findByRole("dialog", { name: /risk/i });
     expect(
-      await screen.findByRole("dialog", { name: /risk|blocker/i }),
-    ).toBeInTheDocument();
+      within(dialog).getByRole("button", { name: /Blocked/i }),
+    ).toBeEnabled();
   });
 });
 

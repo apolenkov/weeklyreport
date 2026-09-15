@@ -170,7 +170,12 @@ export function useLeadFormDraftCore({
   const handleConflict = useConflictReload(refetchSection, captureGeneration);
   const draftPayload = useDraftPayload(draftSection);
   const isReadOnlyEarly = isSubmitted || serverReadOnly;
+  const receiptScope = useMemo(
+    () => `${generation ?? "inactive"}:${crypto.randomUUID()}`,
+    [generation],
+  );
   const serverSync = useDraftServerSync({
+    receiptScope,
     writePort,
     serverSection,
     reportSectionId: sectionIdForActions || null,
@@ -207,6 +212,7 @@ export function useLeadFormDraftCore({
       blockedReason: outcomeCoordinator.blockedReason,
       resolve: outcomeCoordinator.resolve,
       restore: outcomeCoordinator.restore,
+      promote: outcomeCoordinator.promote,
     }),
     [outcomeCoordinator],
   );
@@ -262,6 +268,7 @@ export function useLeadFormDraftCore({
     draftPayload,
     dirty: serverSync.autosave.dirty,
     autosave: serverSync.autosave,
+    receiptScope: serverSync.receiptScope,
     lastSaveReceipt: serverSync.lastSaveReceipt,
     outcomes,
     version,

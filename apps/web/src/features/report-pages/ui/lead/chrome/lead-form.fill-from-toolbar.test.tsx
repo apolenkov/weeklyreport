@@ -197,6 +197,7 @@ function buildHarness(
     { path: ["leadForm", "assistant"], mutation: true },
     { path: ["leadForm", "resolvePlan"], mutation: true },
     { path: ["leadForm", "restorePlan"], mutation: true },
+    { path: ["leadForm", "promotePlan"], mutation: true },
     {
       path: ["leadForm", "crossAuthors"],
       query: [],
@@ -668,7 +669,7 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
     ).toBeInTheDocument();
   });
 
-  it("report-toolbar-layout: + Add renders after Save and Fill-From, immediately before Submit", async () => {
+  it("report-toolbar-layout: keeps creation local to sections", async () => {
     const { Wrapper } = buildHarness();
     render(
       <Wrapper>
@@ -686,9 +687,6 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
     const saveButton = within(documentActions).getByRole("button", {
       name: "Save draft now",
     });
-    const quickAddButton = within(documentActions).getByRole("button", {
-      name: "+ Add",
-    });
     const submitButton = within(documentActions).getByRole("button", {
       name: "Submit",
     });
@@ -696,16 +694,11 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
     const orderedButtons = within(documentActions).getAllByRole("button");
     const indexOf = (button: HTMLElement) => orderedButtons.indexOf(button);
 
-    expect(indexOf(fillFromButton)).toBeLessThan(indexOf(quickAddButton));
-    expect(indexOf(saveButton)).toBeLessThan(indexOf(quickAddButton));
-    expect(indexOf(quickAddButton)).toBeLessThan(indexOf(submitButton));
-
-    // Neutral/outline treatment: "+ Add" never carries the resting solid
-    // brand-accent fill reserved for Submit.
-    expect(quickAddButton.className).toContain("bg-transparent");
-    expect(quickAddButton.className).not.toContain(
-      "bg-[var(--color-starbucks-accent)]",
-    );
+    expect(indexOf(fillFromButton)).toBeLessThan(indexOf(submitButton));
+    expect(indexOf(saveButton)).toBeLessThan(indexOf(submitButton));
+    expect(
+      within(documentActions).queryByRole("button", { name: "+ Add" }),
+    ).toBeNull();
   });
 
   it("hands completion actions to the sticky bar with no duplicate active set", async () => {

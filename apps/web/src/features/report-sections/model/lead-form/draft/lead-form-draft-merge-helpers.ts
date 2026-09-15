@@ -16,12 +16,18 @@ type ResolvedKanbanItem = Exclude<
 export function mergeActivityStatusDraft(
   section: DraftSection,
   activityId: string,
-  status: TrafficLightStatus,
+  fields: {
+    readonly status?: TrafficLightStatus;
+    readonly titleOverride?: string | null;
+    readonly note?: string | null;
+  },
 ): DraftSection {
   return {
     ...section,
     activities: section.activities.map((activity) =>
-      activity.activityId === activityId ? { ...activity, status } : activity,
+      activity.activityId === activityId
+        ? { ...activity, ...fields }
+        : activity,
     ),
   };
 }
@@ -154,11 +160,12 @@ function mergeItemRow(
   }
   return {
     id: item.id,
+    stableId: item.stableId,
     ...parentFields,
     type: itemType,
     text: item.text,
     nextStepText: item.nextStepText ?? null,
-    tag: "general",
+    tag: item.tag ?? "general",
     workflowStatus,
     carriedOver: false,
     priorityRank: item.priorityRank ?? null,

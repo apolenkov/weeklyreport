@@ -5,7 +5,10 @@ import {
 } from "@customreport/shared";
 
 import type { AutosaveState } from "./autosave/autosave-types";
-import type { DraftSaveContent } from "./lead-section-draft-payload";
+import {
+  type DraftSaveContent,
+  toActivityStatusPayload,
+} from "./lead-section-draft-payload";
 import { computeCoupling, validateCoupling } from "./status-risk/coupling";
 import type { Product, RiskEntry } from "./types";
 
@@ -18,6 +21,7 @@ interface LeadSubmitStatusIdentity {
 interface LeadSubmitBlockingIssue {
   readonly id: string;
   readonly label: string;
+  readonly overviewFocus?: string | undefined;
 }
 
 export interface LeadSubmitReadinessInput {
@@ -64,30 +68,84 @@ function couplingIssues(
     .map((entry) => ({
       id: `risk-stage:${entry.productId}`,
       label: `${entry.productName}: specify stages for committed risks.`,
+      overviewFocus: "report-details",
     }));
 }
 
 function submissionIssues(
   input: LeadSubmitReadinessInput,
 ): LeadSubmitBlockingIssue[] {
-  if (!input.draftSection || !input.draftPayload) return [];
+  const draftPayload = input.draftPayload;
+  if (!input.draftSection || !draftPayload) return [];
 
   const submitInput = submitSectionSchema.safeParse(
-    buildLeadSubmitPayload(input.draftPayload, input.draftSection.version),
+    buildLeadSubmitPayload(draftPayload, input.draftSection.version),
   );
   if (!submitInput.success) {
-    return submitInput.error.issues.map((issue, index) => ({
-      id: `submit-schema:${issue.path.join(".")}:${issue.code}:${index}`,
-      label: issue.message,
-    }));
+    return submitInput.error.issues.map((issue, index) => {
+      const itemIndex = issue.path[0] === "items" ? issue.path[1] : undefined;
+      const item =
+        typeof itemIndex === "number"
+          ? draftPayload.items[itemIndex]
+          : undefined;
+      const identity = item?.stableId ?? item?.id;
+      return {
+        id: `submit-schema:${issue.path.join(".")}:${issue.code}:${index}`,
+        label: issue.message,
+        ...(item && identity
+          ? { overviewFocus: `edit:${item.type}:${identity}` }
+          : {}),
+      };
+    });
   }
 
-  return validateSubmitInput(input.draftSection, submitInput.data).map(
-    (issue, index) => ({
-      id: `submit-validation:${issue.code}:${index}`,
-      label: issue.message,
-    }),
+  const validationIssues = validateSubmitInput(
+    input.draftSection,
+    submitInput.data,
   );
+  const missingCurrentProjectIds = input.draftSection.projects
+    .filter(
+      (project) =>
+        !submitInput.data.items.some(
+          (item) =>
+            item.projectId === project.projectId && item.type === "current",
+        ),
+    )
+    .map((project) => project.projectId);
+  return validationIssues.flatMap((issue, index) => {
+    if (issue.code !== "UNCONFIRMED_CARRIED_ITEM") {
+      const missingCurrentIndex = validationIssues
+        .slice(0, index)
+        .filter(
+          (candidate) => candidate.code === "MISSING_CURRENT_ITEM",
+        ).length;
+      const missingCurrentProjectId =
+        issue.code === "MISSING_CURRENT_ITEM"
+          ? missingCurrentProjectIds[missingCurrentIndex]
+          : undefined;
+      return [
+        {
+          id: `submit-validation:${issue.code}:${index}`,
+          label: issue.message,
+          ...(missingCurrentProjectId
+            ? {
+                overviewFocus: `add:product:${missingCurrentProjectId}`,
+              }
+            : {}),
+        },
+      ];
+    }
+    return draftPayload.items
+      .filter((item) => item.type === "current" && item.carriedOver)
+      .map((item, itemIndex) => {
+        const identity = item.stableId ?? item.id;
+        return {
+          id: `submit-validation:${issue.code}:${identity ?? String(itemIndex)}`,
+          label: `Confirm "${item.text}" for this week.`,
+          ...(identity ? { overviewFocus: `confirm:current:${identity}` } : {}),
+        };
+      });
+  });
 }
 
 function statusLabelMaps(input: LeadSubmitReadinessInput) {
@@ -193,11 +251,9 @@ export function buildLeadSubmitPayload(
       projectId: status.projectId,
       status: status.status ?? ("green" as const),
     })),
-    activityStatuses: (draftPayload.activityStatuses ?? []).map((status) => ({
-      activityId: status.activityId,
-      status: status.status ?? ("green" as const),
-      note: status.note ?? null,
-    })),
+    activityStatuses: (draftPayload.activityStatuses ?? []).map((status) =>
+      toActivityStatusPayload({ ...status, status: status.status ?? "green" }),
+    ),
     stageStatuses: (draftPayload.stageStatuses ?? []).map((status) => ({
       ...status,
       status: status.status ?? ("green" as const),

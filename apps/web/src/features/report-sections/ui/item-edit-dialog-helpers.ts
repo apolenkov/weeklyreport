@@ -164,6 +164,8 @@ export function resolveItemParentName(args: {
 
 interface ItemSaveCommonArgs {
   readonly item: KanbanItem | null;
+  readonly stableId?: string | undefined;
+  readonly tag?: string | undefined;
   readonly trimmed: string;
   readonly status: ItemStatus;
   readonly currentUserName: string | undefined;
@@ -175,6 +177,8 @@ interface ItemSaveCommonArgs {
 function buildItemSaveCommon(args: ItemSaveCommonArgs) {
   return {
     id: args.item?.id ?? crypto.randomUUID(),
+    stableId: args.item?.stableId ?? args.stableId,
+    tag: args.item?.tag ?? args.tag,
     text: args.trimmed,
     status: args.status,
     author: args.item?.author ?? args.currentUserName ?? "",

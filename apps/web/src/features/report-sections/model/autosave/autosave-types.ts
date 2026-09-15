@@ -12,6 +12,8 @@ export interface AutosaveSnapshot {
   readonly state: AutosaveState;
   readonly lastSavedAt: Date | null;
   readonly dirty: boolean;
+  /** Exact payload/baseline equality, independent of whether saves are enabled. */
+  readonly currentPayloadMatchesSavedBaseline: boolean;
   readonly isInFlight: boolean;
   // Cancel the debounce timer and trigger an immediate save.
   readonly forceSave: () => Promise<void>;
@@ -21,10 +23,14 @@ export interface SavedDraftRecordIdentity {
   readonly clientId: string;
   readonly serverId: string;
   readonly stableId: string | null;
+  /** Exact next-step value carried by the persisted item payload, when present. */
+  readonly persistedNextStepText?: string | null | undefined;
 }
 
 export interface AutosaveSaveReceipt {
   readonly sequence: number;
+  /** Unique to one report-section editor activation. */
+  readonly scope?: string | undefined;
   readonly generation: LeadFormGeneration;
   readonly reportSectionId: string;
   readonly version: number;

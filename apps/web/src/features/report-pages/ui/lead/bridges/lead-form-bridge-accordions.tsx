@@ -31,6 +31,14 @@ export interface LeadFormBridgeAccordionsActions extends LeadFormItemSectionsAct
     activityId: string,
     status: TrafficLightStatus,
   ) => void;
+  readonly onActivityTitleChange: (
+    activityId: string,
+    titleOverride: string | null,
+  ) => void;
+  readonly onActivityDescriptionChange: (
+    activityId: string,
+    note: string | null,
+  ) => void;
   readonly onActivityRaiseRequiresRisk: (
     activityId: string,
     severity: "at-risk" | "blocked",
@@ -68,6 +76,8 @@ export function ProjectActivitiesAccordion({
   readOnly,
   onStatusChange,
   onRaiseRequiresRisk,
+  onTitleChange,
+  onDescriptionChange,
 }: {
   readonly groupExpanded: boolean;
   readonly activities: LeadActivityCard[];
@@ -80,6 +90,14 @@ export function ProjectActivitiesAccordion({
   readonly onRaiseRequiresRisk: (
     activityId: string,
     severity: "at-risk" | "blocked",
+  ) => void;
+  readonly onTitleChange: (
+    activityId: string,
+    titleOverride: string | null,
+  ) => void;
+  readonly onDescriptionChange: (
+    activityId: string,
+    note: string | null,
   ) => void;
 }) {
   return (
@@ -96,6 +114,8 @@ export function ProjectActivitiesAccordion({
         readOnly={readOnly}
         onStatusChange={onStatusChange}
         onRaiseRequiresRisk={onRaiseRequiresRisk}
+        onTitleChange={onTitleChange}
+        onDescriptionChange={onDescriptionChange}
       />
     </AccordionSection>
   );
@@ -185,6 +205,8 @@ export function LeadFormBridgeAccordions({
           readOnly={isReadOnly}
           onStatusChange={actions.onActivityStatusChange}
           onRaiseRequiresRisk={actions.onActivityRaiseRequiresRisk}
+          onTitleChange={actions.onActivityTitleChange}
+          onDescriptionChange={actions.onActivityDescriptionChange}
         />
       )}
       {/* Classic Current/Next two-section format by default; the opt-in

@@ -404,6 +404,24 @@ describe("published lineage and period affordances", () => {
 });
 
 describe("unified activity and activity alarm derivations", () => {
+  it("offers effective weekly Activity titles to record selectors", () => {
+    const section = makeSection();
+    const withTitle: ReportSectionReadModel = {
+      ...section,
+      activities: section.activities.map((activity) => ({
+        ...activity,
+        titleOverride: "Weekly triage",
+      })),
+    };
+    const vm = buildLeadFormLoadedViewModel(
+      makeInput({ active: withTitle, draftSection: withTitle }),
+    );
+
+    expect(vm.activityOptions).toEqual([
+      { id: ACTIVITY_ID, name: "Weekly triage" },
+    ]);
+  });
+
   it.each([
     ["blocked", "red"],
     ["at-risk", "yellow"],

@@ -46,11 +46,11 @@ export function useLeadFormAutosave(
 
   const payloadKey =
     args.payload === null ? "" : encodeDraftSaveComparisonKey(args.payload);
+  const hasPayload = args.payload !== null && payloadKey !== "";
+  const currentPayloadMatchesSavedBaseline =
+    hasPayload && payloadKey === lastSavedKey;
   const dirty =
-    args.enabled &&
-    args.payload !== null &&
-    payloadKey !== "" &&
-    payloadKey !== lastSavedKey;
+    args.enabled && hasPayload && !currentPayloadMatchesSavedBaseline;
 
   useDebouncedSave({
     getRefs,
@@ -94,6 +94,7 @@ export function useLeadFormAutosave(
     state,
     lastSavedAt,
     dirty,
+    currentPayloadMatchesSavedBaseline,
     isInFlight: saveDraft.isPending,
     forceSave,
     primeBaseline,

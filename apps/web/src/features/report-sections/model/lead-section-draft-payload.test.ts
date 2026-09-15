@@ -6,6 +6,7 @@ import {
   type ReportSectionFixture,
 } from "../../../test-utils/report-section-fixtures";
 import { sectionToDraftPayload } from "./lead-section-draft-payload";
+import { buildLeadSubmitPayload } from "./lead-submit-readiness";
 
 const PROJECT_ID = "11111111-1111-4111-8111-111111111111";
 const ITEM_ID = "99999999-9999-4999-8999-999999999999";
@@ -113,6 +114,7 @@ describe("sectionToDraftPayload", () => {
           {
             activityId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
             activityName: "Hiring",
+            titleOverride: "Hiring pipeline",
             status: "green",
             note: "Two interviews",
             linkedProducts: [],
@@ -136,6 +138,7 @@ describe("sectionToDraftPayload", () => {
       {
         activityId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
         status: "green",
+        titleOverride: "Hiring pipeline",
         note: "Two interviews",
       },
     ]);
@@ -205,5 +208,68 @@ describe("sectionToDraftPayload", () => {
     );
 
     expect(payload.decisions).toEqual([]);
+  });
+});
+
+describe("activityStatuses projection shared by draft save and submit", () => {
+  const ACTIVITY_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+
+  it("emits identical keys and values in both payloads", () => {
+    const section = makeSection({
+      activities: [
+        {
+          activityId: ACTIVITY_ID,
+          activityName: "Hiring",
+          titleOverride: "Hiring pipeline",
+          status: "yellow",
+          note: "Two interviews",
+          linkedProducts: [],
+          derivedStatus: null,
+        },
+      ],
+    });
+
+    const draft = sectionToDraftPayload(section);
+    const submit = buildLeadSubmitPayload(draft, 3);
+
+    expect(draft.activityStatuses).toEqual([
+      {
+        activityId: ACTIVITY_ID,
+        status: "yellow",
+        titleOverride: "Hiring pipeline",
+        note: "Two interviews",
+      },
+    ]);
+    expect(submit.activityStatuses).toEqual(draft.activityStatuses);
+  });
+
+  it("applies the green default only at submit and keeps a null override", () => {
+    const section = makeSection({
+      activities: [
+        {
+          activityId: ACTIVITY_ID,
+          activityName: "Hiring",
+          status: null,
+          linkedProducts: [],
+          derivedStatus: null,
+        },
+      ],
+    });
+
+    const draft = sectionToDraftPayload(section);
+    const submit = buildLeadSubmitPayload(draft, 3);
+
+    expect(draft.activityStatuses?.[0]).toEqual({
+      activityId: ACTIVITY_ID,
+      status: null,
+      titleOverride: null,
+      note: null,
+    });
+    expect(submit.activityStatuses[0]).toEqual({
+      activityId: ACTIVITY_ID,
+      status: "green",
+      titleOverride: null,
+      note: null,
+    });
   });
 });
