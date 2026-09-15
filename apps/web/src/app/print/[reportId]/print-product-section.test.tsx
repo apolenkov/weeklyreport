@@ -92,6 +92,7 @@ describe("PrintProductSection — item outcome context", () => {
               workflowStatus: "planned",
               pausedReason: null,
               nextStepText: null,
+              text: null,
             },
           },
           outcomeHistory: [
@@ -108,12 +109,14 @@ describe("PrintProductSection — item outcome context", () => {
                 workflowStatus: "planned",
                 pausedReason: null,
                 nextStepText: null,
+                text: null,
               },
               afterState: {
                 type: "next",
                 workflowStatus: "planned",
                 pausedReason: null,
                 nextStepText: null,
+                text: null,
               },
               reversesEventId: null,
             },
