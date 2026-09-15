@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { ChoiceChipRow } from "./choice-chip-row";
@@ -27,12 +28,18 @@ describe("ChoiceChipRow", () => {
     render(
       <ChoiceChipRow choices={CHOICES} value="at-risk" onSelect={vi.fn()} />,
     );
-    expect(
-      screen.getByRole("button", { name: "! At Risk" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "✕ Blocked" }),
-    ).toBeInTheDocument();
+    for (const button of screen.getAllByRole("button")) {
+      expect(button).toHaveClass("min-h-[var(--touch-target-min)]");
+      expect(button).not.toHaveClass("md:min-h-[34px]");
+    }
+    expect(screen.getByRole("button", { name: "! At Risk" })).toHaveAttribute(
+      "type",
+      "button",
+    );
+    expect(screen.getByRole("button", { name: "✕ Blocked" })).toHaveAttribute(
+      "type",
+      "button",
+    );
   });
 
   it("marks the selected choice aria-pressed=true and others false", () => {
@@ -49,12 +56,15 @@ describe("ChoiceChipRow", () => {
     );
   });
 
-  it("calls onSelect with the clicked choice's value", () => {
+  it("calls onSelect when a labelled choice is activated from the keyboard", async () => {
+    const user = userEvent.setup();
     const onSelect = vi.fn();
     render(
       <ChoiceChipRow choices={CHOICES} value="at-risk" onSelect={onSelect} />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "✕ Blocked" }));
+    await user.tab();
+    await user.tab();
+    await user.keyboard("{Enter}");
     expect(onSelect).toHaveBeenCalledWith("blocked");
   });
 

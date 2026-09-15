@@ -24,7 +24,9 @@ describe("useLeadFormFillFrom", () => {
       { initialProps: { version: 4 } },
     );
 
-    act(() => result.current.handleFillFrom("source"));
+    await act(async () => {
+      await result.current.handleFillFrom("source");
+    });
     rerender({ version: 5 });
     expect(writePort.calls.fillFrom).toEqual([]);
 
@@ -53,7 +55,9 @@ describe("useLeadFormFillFrom", () => {
       }),
     );
 
-    act(() => result.current.handleFillFrom("source"));
+    await act(async () => {
+      await result.current.handleFillFrom("source");
+    });
     expect(result.current.pendingFillFrom).toBe(true);
     expect(writePort.calls.fillFrom).toEqual([]);
 
@@ -91,7 +95,34 @@ describe("useLeadFormFillFrom", () => {
       }),
     );
 
-    act(() => result.current.handleFillFrom("source"));
+    await act(async () => {
+      await result.current.handleFillFrom("source");
+    });
     await waitFor(() => expect(adopted).toEqual([section]));
+  });
+
+  it("returns the failed write so the source confirmation can stay open", async () => {
+    const writePort = new InMemoryLeadFormWriteAdapter({
+      saveDraft: () => Promise.reject(new Error("Unexpected save")),
+      submit: () => Promise.reject(new Error("Unexpected submit")),
+      fillFrom: () => Promise.reject(new Error("Fill from failed. Try again.")),
+    });
+    const { result } = renderHook(() =>
+      useLeadFormFillFrom({
+        generation: "report-a:section-a",
+        sectionIdForActions: "target",
+        autosaveDirty: false,
+        version: 4,
+        onConflict: () => undefined,
+        onFilled: () => undefined,
+        writePort,
+      }),
+    );
+
+    await act(async () => {
+      await expect(result.current.handleFillFrom("source")).rejects.toThrow(
+        "Fill from failed. Try again.",
+      );
+    });
   });
 });

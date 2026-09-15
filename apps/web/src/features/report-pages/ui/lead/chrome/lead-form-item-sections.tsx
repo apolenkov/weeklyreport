@@ -18,6 +18,7 @@ export interface LeadFormItemSectionsActions {
   readonly onNextWeekItemsChange: (items: readonly KanbanItem[]) => void;
   readonly onMarkComplete: (itemId: string) => void;
   readonly onMoveToNextWeek: (itemId: string) => void;
+  readonly onContinueToNext: (itemId: string, nextText: string) => void;
   readonly onMoveToCurrentWeek: (itemId: string) => void;
   readonly onPauseItem: (itemId: string, reason: string) => void;
   readonly addCurrentWeekItem: () => void;
@@ -71,6 +72,12 @@ function UnifiedActivityAccordion({
           ? "Current and next week items in one list, grouped by state."
           : "Current and next week items in one list, grouped by state. Use + Add to create records."
       }
+      actions={addItemAction(
+        isReadOnly,
+        actions.addCurrentWeekItem,
+        products,
+        activityOptions,
+      )}
     >
       <UnifiedActivitySection
         entries={unifiedEntries}
@@ -86,6 +93,7 @@ function UnifiedActivityAccordion({
         activities={activityOptions}
         stagesForProduct={stagesForProduct}
         ownPeriodRanks={ownPeriodRanks}
+        addSignal={actions.currentWeekAddSignal}
         publishedLockedIds={publishedLockedItemIds}
         onMarkComplete={actions.onMarkComplete}
         onMoveToNextWeek={actions.onMoveToNextWeek}

@@ -7,6 +7,7 @@ import {
   worstCanonicalStatus,
 } from "@customreport/shared";
 
+import { activityDisplayTitle } from "../../../shared/lib/activity/activity-display";
 import { deriveEffectiveStageStatus } from "../../../shared/lib/status/stage-status";
 import type {
   StatusOverviewProjectionSource,
@@ -143,7 +144,12 @@ function buildActivityPresentation(
   previous: StatusOverviewSection | null,
 ): Pick<
   StatusOverviewUnit,
-  "name" | "historical" | "status" | "stages" | "linkedProducts"
+  | "name"
+  | "historical"
+  | "status"
+  | "stages"
+  | "linkedProducts"
+  | "activityFields"
 > {
   const currentActivity = current.activities.find(
     (entry) => entry.activityId === id,
@@ -154,7 +160,7 @@ function buildActivityPresentation(
   const activity: SectionActivity | undefined =
     currentActivity ?? previousActivity;
   return {
-    name: activity?.activityName ?? "Historical activity",
+    name: activity ? activityDisplayTitle(activity) : "Historical activity",
     historical: currentActivity == null,
     status: trafficLightToCanonical(
       activity?.derivedStatus ?? activity?.status,
@@ -165,6 +171,11 @@ function buildActivityPresentation(
         activity?.linkedProducts.map((product) => product.productName) ?? [],
       ),
     ],
+    activityFields: {
+      titleOverride: activity?.titleOverride ?? null,
+      description: activity?.note ?? null,
+      catalogueName: activity?.activityName ?? "Historical activity",
+    },
   };
 }
 

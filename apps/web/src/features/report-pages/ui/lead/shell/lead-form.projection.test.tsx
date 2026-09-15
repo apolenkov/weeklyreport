@@ -151,6 +151,7 @@ function buildHarness(
     { path: ["leadForm", "assistant"], mutation: true },
     { path: ["leadForm", "resolvePlan"], mutation: true },
     { path: ["leadForm", "restorePlan"], mutation: true },
+    { path: ["leadForm", "promotePlan"], mutation: true },
     {
       path: ["leadForm", "crossAuthors"],
       query: [],
@@ -438,7 +439,7 @@ describe("LeadForm mode-adaptive trailing control", () => {
     expect(screen.getByText("Existing item")).toBeInTheDocument();
   });
 
-  it("+ Add stays present (and enabled) when the lead switches to slides mode", async () => {
+  it("slides mode keeps Report as the explicit path back to editing", async () => {
     mockPathname = `/lead/report/${REPORT_ID}`;
     const { Wrapper } = buildHarness({
       myHistory: [
@@ -463,11 +464,13 @@ describe("LeadForm mode-adaptive trailing control", () => {
     const documentActions = await screen.findByRole("group", {
       name: "Document actions",
     });
-    const quickAddButton = within(documentActions).getByRole("button", {
-      name: "+ Add",
-    });
-    expect(quickAddButton).toBeInTheDocument();
-    expect(quickAddButton).toBeEnabled();
+    expect(
+      within(documentActions).queryByRole("button", { name: "+ Add" }),
+    ).toBeNull();
+    expect(screen.getByRole("link", { name: /^Report$/i })).toHaveAttribute(
+      "href",
+      `/lead/report/${REPORT_ID}`,
+    );
   });
 });
 
@@ -501,11 +504,13 @@ describe("sectionToDraftPayload — activity-status slice", () => {
       {
         activityId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         status: "red",
+        titleOverride: null,
         note: "Blocked on vendor",
       },
       {
         activityId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
         status: null,
+        titleOverride: null,
         note: null,
       },
     ]);

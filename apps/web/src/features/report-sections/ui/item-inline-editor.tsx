@@ -11,7 +11,7 @@ import {
   ItemStatusFields,
 } from "./item-edit-dialog-fields";
 import type { ItemEditDraftStore } from "./item-edit-draft-store";
-import { CURRENT_WEEK_CHOICES, NEXT_WEEK_CHOICES } from "./item-status-choices";
+import { OVERVIEW_STATUS_CHOICES } from "./item-status-choices";
 import { ParentPicker } from "./parent-picker";
 import { StageStep } from "./stage-step";
 import { useInlineEditUnloadGuard } from "./use-inline-edit-unload-guard";
@@ -19,14 +19,26 @@ import { useItemEditDialog } from "./use-item-edit-dialog";
 
 const EMPTY_ACTIVITIES: readonly ParentActivityOption[] = [];
 
+function overviewWeekLabel(week: "current" | "next"): string {
+  return week === "current" ? "Current week" : "Next week";
+}
+
 export function ItemInlineEditor({
   focusNextStep = false,
   saveDisabled = false,
+  showNextStep = true,
+  showPriority = true,
+  confirmationOnly = false,
+  onWeekChange,
   ...props
 }: Omit<ItemEditDialogProps, "open" | "onDelete"> & {
   readonly focusNextStep?: boolean | undefined;
   readonly draftStore?: ItemEditDraftStore | undefined;
   readonly saveDisabled?: boolean | undefined;
+  readonly showNextStep?: boolean | undefined;
+  readonly showPriority?: boolean | undefined;
+  readonly confirmationOnly?: boolean | undefined;
+  readonly onWeekChange?: ((week: "current" | "next") => void) | undefined;
 }) {
   useInlineEditUnloadGuard();
   const activities = props.activities ?? EMPTY_ACTIVITIES;
@@ -45,12 +57,11 @@ export function ItemInlineEditor({
         if (!saveDisabled) props.onSave(item);
       },
     });
-  const choices =
-    props.week === "current" ? CURRENT_WEEK_CHOICES : NEXT_WEEK_CHOICES;
+  const activeWeekLabel = overviewWeekLabel(props.week);
   return (
     <div ref={dialogSurfaceRef} className="min-w-0">
       <form
-        aria-label={`${props.week === "current" ? "Current week" : "Next week"} update for ${form.parentName}`}
+        aria-label={`${activeWeekLabel} update for ${form.parentName}`}
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
@@ -66,30 +77,75 @@ export function ItemInlineEditor({
         className="min-w-0 space-y-3"
       >
         <p className="break-words text-xs font-semibold text-[var(--color-muted-foreground)]">
-          {form.parentName} ·{" "}
-          {props.week === "current" ? "Current week" : "Next week"}
+          {form.parentName} · {activeWeekLabel}
         </p>
-        <ItemDescriptionField {...form} week={props.week} />
-        {props.week === "current" ? (
-          <ItemNextStepField
-            {...form}
-            nextStepTextareaRef={nextStepTextareaRef}
-          />
-        ) : null}
-        {!form.isActivityParent ? (
-          <StageStep
-            id="item-stage"
-            stageNames={form.stageNames}
-            availableStages={form.availableStages}
-            isDeadEnd={form.isDeadEnd}
-            error={form.stageError}
-            deadEndNotice={`No stages assigned on ${form.parentName}. Contact your administrator.`}
-            onChange={(next) => form.onStageChange([...next])}
-          />
-        ) : null}
-        <div>
-          <ItemStatusFields {...form} choices={choices} />
-        </div>
+        <fieldset
+          disabled={confirmationOnly}
+          className="min-w-0 space-y-3 border-0 p-0"
+        >
+          {onWeekChange ? (
+            <fieldset>
+              <legend className="text-xs font-semibold text-[var(--color-muted-foreground)]">
+                Active week
+              </legend>
+              <div
+                role="radiogroup"
+                aria-label="Active week"
+                className="mt-1 flex gap-2"
+              >
+                {(["current", "next"] as const).map((week) => (
+                  <label
+                    key={week}
+                    className={`inline-flex min-h-[var(--touch-target-min)] flex-1 cursor-pointer items-center justify-center rounded-[var(--radius-sm)] border px-3 text-sm font-semibold focus-within:ring-2 focus-within:ring-[var(--color-ring)] ${props.week === week ? "border-[var(--color-toggle-active)] bg-[var(--color-toggle-active)] text-[var(--color-primary-foreground)]" : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-foreground)]"}`}
+                  >
+                    <input
+                      type="radio"
+                      name="overview-active-week"
+                      value={week}
+                      checked={props.week === week}
+                      onChange={() => onWeekChange(week)}
+                      className="sr-only"
+                    />
+                    {overviewWeekLabel(week)}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          ) : null}
+          <ItemDescriptionField {...form} week={props.week} />
+          {showNextStep && props.week === "current" ? (
+            <div className="space-y-1">
+              <ItemNextStepField
+                {...form}
+                nextStepTextareaRef={nextStepTextareaRef}
+              />
+            </div>
+          ) : null}
+          {!showNextStep && form.nextStepTextError ? (
+            <p
+              id="item-next-step"
+              role="alert"
+              tabIndex={-1}
+              className="text-xs text-[var(--color-destructive)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+            >
+              Cancel, then choose More actions → Update status.
+            </p>
+          ) : null}
+          {!form.isActivityParent ? (
+            <StageStep
+              id="item-stage"
+              stageNames={form.stageNames}
+              availableStages={form.availableStages}
+              isDeadEnd={form.isDeadEnd}
+              error={form.stageError}
+              deadEndNotice={`No stages assigned on ${form.parentName}. Contact your administrator.`}
+              onChange={(next) => form.onStageChange([...next])}
+            />
+          ) : null}
+          <div>
+            <ItemStatusFields {...form} choices={OVERVIEW_STATUS_CHOICES} />
+          </div>
+        </fieldset>
         <div className="flex flex-wrap gap-2">
           <button
             type="submit"
@@ -106,23 +162,27 @@ export function ItemInlineEditor({
             Cancel
           </button>
         </div>
-        <details>
-          <summary className="min-h-[var(--touch-target-min)] cursor-pointer py-3 text-xs font-semibold text-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]">
-            Edit details
-          </summary>
-          <div className="space-y-3 pt-2">
-            <ParentPicker
-              id="item-product"
-              value={form.parent}
-              products={props.products}
-              activities={activities}
-              onChange={form.onParentChange}
-            />
-            <ItemPriorityRankField {...form} />
-          </div>
-        </details>
+        <fieldset disabled={confirmationOnly} className="min-w-0 border-0 p-0">
+          <details>
+            <summary className="min-h-[var(--touch-target-min)] cursor-pointer py-3 text-xs font-semibold text-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]">
+              Edit details
+            </summary>
+            <div className="space-y-3 pt-2">
+              <ParentPicker
+                id="item-product"
+                value={form.parent}
+                products={props.products}
+                activities={activities}
+                onChange={form.onParentChange}
+              />
+              {showPriority ? <ItemPriorityRankField {...form} /> : null}
+            </div>
+          </details>
+        </fieldset>
         <p className="text-xs text-[var(--color-muted-foreground)]">
-          Unsaved edit · Ctrl/⌘ + Enter to save
+          {confirmationOnly
+            ? "No changes are made until you save."
+            : "Unsaved edit · Ctrl/⌘ + Enter to save"}
         </p>
       </form>
     </div>

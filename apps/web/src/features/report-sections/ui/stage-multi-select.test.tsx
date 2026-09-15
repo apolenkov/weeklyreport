@@ -2,18 +2,21 @@
 import "@testing-library/jest-dom/vitest";
 
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { StageMultiSelect } from "./stage-multi-select";
 
 describe("StageMultiSelect", () => {
-  it("shows checkboxes checked for each selected stage, no duplicate scope pills", () => {
+  it("keeps labelled stage checkboxes keyboard-operable with 44px targets", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
     render(
       <StageMultiSelect
         id="stages"
         value={["Dev", "Testing", "Release"]}
         stages={["Dev", "Testing", "Release"]}
-        onChange={vi.fn()}
+        onChange={onChange}
       />,
     );
 
@@ -24,10 +27,15 @@ describe("StageMultiSelect", () => {
       true,
     );
 
-    // Touch-target floor below md; jsdom cannot eval media queries — class is the teeth.
+    // jsdom cannot evaluate media queries; the class assertions are the teeth.
     const chipLabel = checkboxes[0]?.closest("label");
     expect(chipLabel?.className).toContain("min-h-[var(--touch-target-min)]");
-    expect(chipLabel?.className).toContain("md:min-h-[34px]");
+    expect(chipLabel?.className).not.toContain("md:min-h-[34px]");
+
+    const devCheckbox = screen.getByRole("checkbox", { name: "Dev" });
+    devCheckbox.focus();
+    await user.keyboard(" ");
+    expect(onChange).toHaveBeenCalledWith(["Testing", "Release"]);
 
     // No duplicate "Scope:" summary when stages are selected.
     expect(screen.queryByText("Scope:")).not.toBeInTheDocument();

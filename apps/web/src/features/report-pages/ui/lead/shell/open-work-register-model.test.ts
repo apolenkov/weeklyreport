@@ -109,6 +109,7 @@ describe("projectOpenWorkRegister", () => {
                 workflowStatus: "paused",
                 pausedReason: "Waiting for legal",
                 nextStepText: null,
+                text: null,
               },
             },
           }),

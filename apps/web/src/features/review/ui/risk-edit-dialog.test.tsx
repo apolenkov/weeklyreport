@@ -113,9 +113,9 @@ describe("RiskEditDialog prose limits", () => {
 });
 
 describe("RiskEditDialog — compact touch floor", () => {
-  it("footer actions and severity chips floor at the touch target below md", () => {
+  it("keeps severity chips at the touch target across breakpoints", () => {
     // jsdom cannot evaluate media queries; the class assertions are the teeth.
-    // Desktop density is untouched (md:min-h restores the 40px/34px values).
+    // Dialog actions stay compact on desktop; interactive chips keep 44px.
     render(
       <RiskEditDialog
         open
@@ -137,7 +137,7 @@ describe("RiskEditDialog — compact touch floor", () => {
     for (const name of [/At Risk$/, /Blocked$/]) {
       const chip = screen.getByRole("button", { name });
       expect(chip.className).toContain("min-h-[var(--touch-target-min)]");
-      expect(chip.className).toContain("md:min-h-[34px]");
+      expect(chip.className).not.toContain("md:min-h-[34px]");
     }
   });
 });

@@ -70,6 +70,7 @@ export function buildLeadLoadHarness(
     { path: ["leadForm", "requestReopen"], mutation: true },
     { path: ["leadForm", "resolvePlan"], mutation: true },
     { path: ["leadForm", "restorePlan"], mutation: true },
+    { path: ["leadForm", "promotePlan"], mutation: true },
     { path: ["leadForm", "assistant"], mutation: true },
     { path: ["leadForm", "crossAuthors"], query: [] },
     { path: ["leadForm", "crossAuthorContent"], query: [] },

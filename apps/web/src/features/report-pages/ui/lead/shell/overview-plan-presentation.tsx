@@ -23,14 +23,14 @@ interface PlanActions {
   readonly change: (patch: Partial<OverviewPlanFields>) => void;
   readonly submit: () => void;
   readonly close: () => void;
-  readonly resolve: (item: StatusOverviewItem) => void;
-  readonly restore: (item: StatusOverviewItem) => void;
+  readonly resolve: (item: StatusOverviewItem, focusKey?: string) => void;
+  readonly restore: (item: StatusOverviewItem, focusKey?: string) => void;
 }
 
 interface ItemActions {
   readonly editItem: (target: StatusOverviewEditTarget) => void;
   readonly addItem: (target: StatusOverviewCreateTarget) => void;
-  readonly quickEditText: (item: StatusOverviewItem, text: string) => void;
+  readonly planItem: (item: StatusOverviewItem) => void;
 }
 
 function planSlot(
@@ -49,6 +49,7 @@ function planSlot(
   );
   if (!visible) return undefined;
   return {
+    mode: "resolve",
     unitKey: unit.key,
     source: state.item.source,
     recordId: state.item.recordId,
@@ -90,7 +91,7 @@ export function overviewItemActions(
     ? {
         onEditItem: editor.editItem,
         onAddItem: editor.addItem,
-        onQuickEditText: editor.quickEditText,
+        onPlanItem: editor.planItem,
         onResolvePlan: plan.resolve,
         onRestorePlan: plan.restore,
       }

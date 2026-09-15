@@ -377,6 +377,36 @@ describe("FillFromButton — icon triggers keep the fill flow", () => {
     expect(onFillFrom).toHaveBeenCalledOnce();
     expect(onFillFrom).toHaveBeenCalledWith("sec-W16");
   });
+
+  it("keeps the selected period open with an inline error and retries it", async () => {
+    const onFillFrom = vi
+      .fn<(sourceSectionId: string) => Promise<void>>()
+      .mockRejectedValueOnce(new Error("Fill from failed. Try again."))
+      .mockResolvedValueOnce();
+    render(<FillFromButton periods={[pastPeriod]} onFillFrom={onFillFrom} />);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Fill from most recent submitted period",
+      }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Replace & Fill" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Fill from failed. Try again.",
+    );
+    expect(
+      screen.getByRole("alertdialog", { name: "Fill from Week 16?" }),
+    ).toBeInTheDocument();
+    expect(onFillFrom).toHaveBeenNthCalledWith(1, "sec-W16");
+
+    fireEvent.click(screen.getByRole("button", { name: "Replace & Fill" }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
+    );
+    expect(onFillFrom).toHaveBeenNthCalledWith(2, "sec-W16");
+  });
 });
 
 describe("FillFromButton — confirmation focus restoration", () => {

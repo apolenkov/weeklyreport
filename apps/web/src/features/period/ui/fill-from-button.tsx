@@ -7,6 +7,7 @@ import type { ReportPeriod } from "../../report-sections";
 import { sortMostRecentFirst } from "./fill-from-button-helpers";
 import {
   FillFromConfirmDialog,
+  type FillFromHandler,
   useFillFromConfirmation,
 } from "./fill-from-confirmation";
 import { FillFromDropdownPanel } from "./fill-from-dropdown-panel";
@@ -27,7 +28,7 @@ const SPLIT_BUTTON_CHEVRON_CLASS = `${SPLIT_BUTTON_SEGMENT_CLASS} border-l borde
 interface FillFromButtonProps {
   readonly periods: ReportPeriod[];
   // Uses section ids so the parent can wire fillFrom's target/source contract.
-  readonly onFillFrom?: ((sourceSectionId: string) => void) | undefined;
+  readonly onFillFrom?: FillFromHandler | undefined;
   readonly disabled?: boolean | undefined;
   // Published-lineage records disable both segments; the server guard remains
   // the enforcement point and this string is surfaced as the tooltip.
@@ -180,6 +181,8 @@ export function FillFromButton({
       <FillFromConfirmDialog
         period={fill.period}
         open={fill.open}
+        pending={fill.pending}
+        error={fill.error}
         onConfirm={fill.confirm}
         onClose={fill.cancel}
       />

@@ -11,9 +11,14 @@ const ACTIVITY_A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const ACTIVITY_B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
 function makeCard(overrides: Partial<LeadActivityCard>): LeadActivityCard {
+  const titleOverride = overrides.titleOverride ?? null;
+  const activityName = overrides.activityName ?? "Jira triage duty";
   return {
     activityId: ACTIVITY_A,
-    activityName: "Jira triage duty",
+    activityName,
+    titleOverride,
+    displayTitle: titleOverride?.trim() || activityName,
+    note: null,
     status: "green",
     derivedStatus: null,
     alarmFloor: null,
@@ -45,6 +50,8 @@ function renderSection(
       activityId: string,
       severity: "at-risk" | "blocked",
     ) => void;
+    onTitleChange?: (activityId: string, titleOverride: string | null) => void;
+    onDescriptionChange?: (activityId: string, note: string | null) => void;
   },
 ) {
   return render(
@@ -53,6 +60,8 @@ function renderSection(
       readOnly={opts?.readOnly ?? false}
       onStatusChange={opts?.onStatusChange ?? vi.fn()}
       onRaiseRequiresRisk={opts?.onRaiseRequiresRisk ?? vi.fn()}
+      onTitleChange={opts?.onTitleChange ?? vi.fn()}
+      onDescriptionChange={opts?.onDescriptionChange ?? vi.fn()}
     />,
   );
 }
@@ -207,5 +216,54 @@ describe("ActivityStatusSection", () => {
     expect(buttons.every((button) => button.hasAttribute("disabled"))).toBe(
       true,
     );
+  });
+});
+
+describe("ActivityStatusSection weekly title and description", () => {
+  it("shows the effective override title and keeps the catalogue identity", () => {
+    renderSection([makeCard({ titleOverride: "Weekly duty" })]);
+
+    expect(screen.getByText("Weekly duty")).toBeInTheDocument();
+    expect(
+      screen.getByText("Catalogue activity: Jira triage duty"),
+    ).toBeInTheDocument();
+  });
+
+  it("emits title and description changes for the activity", async () => {
+    const onTitleChange = vi.fn();
+    const onDescriptionChange = vi.fn();
+    const user = userEvent.setup();
+    renderSection([makeCard({})], { onTitleChange, onDescriptionChange });
+
+    await user.type(screen.getByTestId(`activity-title-${ACTIVITY_A}`), "W");
+    expect(onTitleChange).toHaveBeenLastCalledWith(ACTIVITY_A, "W");
+
+    await user.type(
+      screen.getByTestId(`activity-description-${ACTIVITY_A}`),
+      "D",
+    );
+    expect(onDescriptionChange).toHaveBeenLastCalledWith(ACTIVITY_A, "D");
+  });
+
+  it("resets the title to the catalogue name via the reset control", async () => {
+    const onTitleChange = vi.fn();
+    const user = userEvent.setup();
+    renderSection([makeCard({ titleOverride: "Weekly duty" })], {
+      onTitleChange,
+    });
+
+    await user.click(screen.getByTestId(`activity-title-reset-${ACTIVITY_A}`));
+    expect(onTitleChange).toHaveBeenCalledWith(ACTIVITY_A, null);
+  });
+
+  it("disables the weekly overrides in read-only mode", () => {
+    renderSection([makeCard({ titleOverride: "Weekly duty" })], {
+      readOnly: true,
+    });
+
+    expect(screen.getByTestId(`activity-title-${ACTIVITY_A}`)).toBeDisabled();
+    expect(
+      screen.getByTestId(`activity-description-${ACTIVITY_A}`),
+    ).toBeDisabled();
   });
 });

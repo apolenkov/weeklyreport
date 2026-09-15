@@ -190,7 +190,53 @@ export function useOverviewPlanActions(
     }
   };
 
-  const open = (item: StatusOverviewItem, mode: "resolve" | "restore") => {
+  // MOVE-NEXT-CURRENT: promotion needs no dialog — it consumes the commitment
+  // that is already recorded and archives the superseded result server-side.
+  const promote = async (item: StatusOverviewItem): Promise<void> => {
+    if (
+      !editor ||
+      editor.view.viewModel.isReadOnly ||
+      otherInputOpen ||
+      item.recordId === null ||
+      item.stableId === null
+    )
+      return;
+    if (running.current) return;
+    const recovery = overviewPlanRecoveryReason(editor, null, owner);
+    if (recovery || !editor.outcomes.canExecute) {
+      setError(
+        recovery ??
+          editor.outcomes.blockedReason ??
+          "The report context changed. Try again.",
+      );
+      return;
+    }
+    running.current = true;
+    setPending(true);
+    setError(null);
+    try {
+      await editor.outcomes.promote(
+        { recordId: item.recordId, commandId: crypto.randomUUID() },
+        item.stableId,
+      );
+      if (active.current) toast.success("Item moved to this week");
+    } catch (error_) {
+      setError(
+        error_ instanceof Error
+          ? error_.message
+          : "The item could not be moved to this week. Try again.",
+      );
+    } finally {
+      running.current = false;
+      setPending(false);
+    }
+  };
+
+  const open = (
+    item: StatusOverviewItem,
+    mode: "resolve" | "restore",
+    focusKey?: string,
+  ) => {
     if (
       !editor ||
       editor.view.viewModel.isReadOnly ||
@@ -201,7 +247,7 @@ export function useOverviewPlanActions(
       return;
     const next = capturePlan(editor, output, model, item, mode);
     if (!next) return;
-    rememberFocus();
+    rememberFocus(focusKey);
     setError(null);
     setDialog(next);
     if (mode === "restore") void execute(next);
@@ -229,8 +275,13 @@ export function useOverviewPlanActions(
     blockedReason: editor
       ? editor.outcomes.blockedReason
       : "Editing is unavailable.",
-    resolve: (item: StatusOverviewItem) => open(item, "resolve"),
-    restore: (item: StatusOverviewItem) => open(item, "restore"),
+    resolve: (item: StatusOverviewItem, focusKey?: string) =>
+      open(item, "resolve", focusKey),
+    restore: (item: StatusOverviewItem, focusKey?: string) =>
+      open(item, "restore", focusKey),
+    promote: (item: StatusOverviewItem): void => {
+      void promote(item);
+    },
     openWork,
     change: (patch: Partial<OverviewPlanFields>) => {
       if (!running.current)

@@ -38,7 +38,7 @@ export function ChoiceChipRow<T extends string>({
             key={c.value}
             type="button"
             onClick={() => onSelect(c.value)}
-            className="inline-flex min-h-[var(--touch-target-min)] md:min-h-[34px] items-center gap-1 rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-[background-color,border-color,color,opacity]"
+            className="inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-[background-color,border-color,color,opacity]"
             style={{
               background: selected ? c.bg : "transparent",
               color: selected ? c.color : "var(--color-foreground)",

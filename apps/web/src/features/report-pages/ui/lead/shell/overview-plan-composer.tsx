@@ -25,6 +25,9 @@ const CHOICES = [
   { value: "plan_next", label: "Plan next" },
   { value: "wont_do", label: "Won't do" },
 ] as const;
+const ACTIVE_ITEM_CHOICES = CHOICES.filter(
+  ({ value }) => value === "done" || value === "wont_do",
+);
 
 interface ComposerProps {
   readonly state: OverviewPlanState;
@@ -214,6 +217,7 @@ export function OverviewPlanComposer(props: ComposerProps) {
   const restore = state.mode === "restore";
   const title = restore ? "Restore plan" : "Resolve plan";
   const canSubmit = !pending && !blockedReason && !recoveryReason;
+  const choices = state.unitKey === null ? CHOICES : ACTIVE_ITEM_CHOICES;
   return (
     <form
       aria-label={title}
@@ -241,7 +245,7 @@ export function OverviewPlanComposer(props: ComposerProps) {
               aria-label="Plan outcome"
               className="flex flex-wrap gap-2"
             >
-              {CHOICES.map((choice, index) => (
+              {choices.map((choice, index) => (
                 <button
                   key={choice.value}
                   ref={index === 0 ? firstChoice : undefined}

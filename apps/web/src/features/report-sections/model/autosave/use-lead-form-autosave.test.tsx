@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { encodeAutosaveComparisonKey } from "./autosave-stable-stringify";
+import { encodeDraftSaveComparisonKey } from "./draft-save-comparison-key";
 import { useLeadFormAutosave } from "./use-lead-form-autosave";
 import {
   AUTOSAVE_SECTION_ID as SECTION_ID,
@@ -33,6 +34,62 @@ afterEach(() => {
 });
 
 describe("useLeadFormAutosave", () => {
+  it("compares the saved baseline even when a failed draft becomes read-only", async () => {
+    const { wrapper, calls, writePort } = buildHarness({
+      mutationFn: () => Promise.reject(new Error("Network down")),
+    });
+    const baseline = makePayload("server");
+    const edited = makePayload("unsaved N");
+    const { result, rerender } = renderHook<
+      ReturnType<typeof useLeadFormAutosave>,
+      { payload: DraftSavePayload | null; enabled: boolean }
+    >(
+      ({ payload, enabled }) =>
+        useLeadFormAutosave({
+          writePort,
+          reportSectionId: SECTION_ID,
+          payload,
+          enabled,
+          version: 1,
+          onVersionChange: vi.fn(),
+          initialSavedKey: encodeDraftSaveComparisonKey(baseline),
+        }),
+      {
+        wrapper,
+        initialProps: {
+          payload: baseline,
+          enabled: true,
+        },
+      },
+    );
+    expect(result.current.currentPayloadMatchesSavedBaseline).toBe(true);
+    rerender({ payload: edited, enabled: true });
+    await act(async () => {
+      await result.current.forceSave();
+    });
+    expect(result.current.state).toBe("error");
+    expect(result.current.dirty).toBe(true);
+    expect(result.current.currentPayloadMatchesSavedBaseline).toBe(false);
+
+    rerender({ payload: edited, enabled: false });
+    expect(result.current.dirty).toBe(false);
+    expect(result.current.currentPayloadMatchesSavedBaseline).toBe(false);
+
+    // A refetch adopting N, unlike disabling writes, proves it is saved.
+    act(() =>
+      result.current.adoptBaseline(
+        encodeDraftSaveComparisonKey(edited),
+        "read",
+      ),
+    );
+    expect(result.current.currentPayloadMatchesSavedBaseline).toBe(true);
+    expect(calls).toHaveLength(1);
+    rerender({ payload: null, enabled: false });
+    act(() => result.current.primeBaseline(""));
+    expect(result.current.currentPayloadMatchesSavedBaseline).toBe(false);
+    expect(calls).toHaveLength(1);
+  });
+
   it("starts idle with no payload, transitions to pending then saving", async () => {
     const { wrapper, calls, writePort } = buildHarness();
     const { result, rerender } = renderHook(

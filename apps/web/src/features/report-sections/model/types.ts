@@ -36,6 +36,8 @@ export interface Product {
 
 interface KanbanItemFields {
   readonly id: string;
+  readonly stableId?: string | undefined;
+  readonly tag?: string | undefined;
   readonly stageNames: readonly string[];
   readonly status: ItemStatus;
   readonly text: string;

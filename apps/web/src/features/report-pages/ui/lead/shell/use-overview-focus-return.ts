@@ -28,7 +28,9 @@ function findFocusTarget(
   return buttons.find((element) => element.dataset.overviewFocus === key);
 }
 
-export function useOverviewFocusReturn(open: boolean): () => void {
+export function useOverviewFocusReturn(
+  open: boolean,
+): (explicitOriginKey?: string) => void {
   const originKey = useRef<string | null>(null);
   const fallbackKey = useRef<string | null>(null);
   const previouslyOpen = useRef(false);
@@ -58,14 +60,15 @@ export function useOverviewFocusReturn(open: boolean): () => void {
     destination?.focus({ preventScroll: true });
   }, [open]);
 
-  return () => {
+  return (explicitOriginKey?: string) => {
     const origin = document.activeElement;
     originKey.current =
-      origin instanceof HTMLElement
+      explicitOriginKey ??
+      (origin instanceof HTMLElement
         ? (origin.dataset.overviewFocus ?? null)
-        : null;
+        : null);
     fallbackKey.current =
-      origin instanceof HTMLElement
+      explicitOriginKey === undefined && origin instanceof HTMLElement
         ? (origin.dataset.overviewFocusFallback ?? null)
         : null;
   };

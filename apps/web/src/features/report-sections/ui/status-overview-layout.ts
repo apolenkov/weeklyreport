@@ -4,6 +4,11 @@ export const STATUS_OVERVIEW_DESKTOP_GRID =
   "min-[80rem]:grid min-[80rem]:grid-cols-[repeat(4,minmax(0,1fr))]";
 
 export type StatusOverviewColumnKey = keyof StatusOverviewUnit["columns"];
+export const STATUS_OVERVIEW_COLUMN_HEADER_IDS = {
+  previouslyPlanned: "status-overview-previously-planned-heading",
+  currentWeek: "status-overview-current-week-heading",
+  nextWeek: "status-overview-next-week-heading",
+} as const;
 
 export const STATUS_OVERVIEW_COLUMNS = [
   { key: "previouslyPlanned", source: "previous", label: "Previously planned" },

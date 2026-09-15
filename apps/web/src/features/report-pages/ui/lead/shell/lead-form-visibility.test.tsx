@@ -239,6 +239,7 @@ function buildHarness(opts: BuildOpts = {}) {
     { path: ["leadForm", "assistant"], mutation: true },
     { path: ["leadForm", "resolvePlan"], mutation: true },
     { path: ["leadForm", "restorePlan"], mutation: true },
+    { path: ["leadForm", "promotePlan"], mutation: true },
     {
       path: ["ai", "availability"],
       query: { availability: "not_configured" },
@@ -554,6 +555,7 @@ describe("LeadForm — Record visibility: purge on toggle/identity/report", () =
       { path: ["leadForm", "assistant"], mutation: true },
       { path: ["leadForm", "resolvePlan"], mutation: true },
       { path: ["leadForm", "restorePlan"], mutation: true },
+      { path: ["leadForm", "promotePlan"], mutation: true },
       {
         path: ["ai", "availability"],
         query: { availability: "not_configured" },

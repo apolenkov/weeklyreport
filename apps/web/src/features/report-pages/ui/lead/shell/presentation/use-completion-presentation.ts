@@ -22,9 +22,6 @@ interface CompletionPresentationInput {
 export interface CompletionPresentation {
   readonly completionActions: {
     readonly autosave: AutosaveSnapshot;
-    readonly onAdd: (kind: QuickAddKind) => void;
-    readonly addDisabled: boolean;
-    readonly disabledQuickAddKinds: ReadonlySet<QuickAddKind> | undefined;
     readonly onSubmit: () => void;
     readonly submitDisabled: boolean;
     readonly submitDisabledReason: string | undefined;
@@ -42,12 +39,6 @@ export function useCompletionPresentation(
   const { headerActionsVisible, sentinelRef } = useHeaderActionsVisibility();
   const completionActions = {
     autosave: input.autosave,
-    onAdd: input.onQuickAdd,
-    addDisabled: input.products.length + input.activityCount === 0,
-    disabledQuickAddKinds:
-      input.products.length === 0
-        ? new Set<QuickAddKind>(["blocker"])
-        : undefined,
     onSubmit: input.handleSubmit,
     submitDisabled: !input.readiness.canOpenConfirmation,
     submitDisabledReason: input.readiness.blockingIssues[0]?.label,

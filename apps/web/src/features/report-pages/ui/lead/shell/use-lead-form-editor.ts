@@ -67,6 +67,7 @@ export interface LeadFormEditorDraftHandle extends LeadFormDraftHandle {
   readonly dirty: boolean;
   readonly version: number;
   readonly autosave: AutosaveSnapshot;
+  readonly receiptScope: string;
   readonly lastSaveReceipt: AutosaveSaveReceipt | null;
   readonly submitReadiness: LeadSubmitReadiness;
   readonly apply: (patch: DraftPatch) => void;
@@ -161,6 +162,7 @@ export function useLeadFormEditorWithPort(
       dirty: draft.dirty,
       version: draft.version,
       autosave: draft.autosave,
+      receiptScope: draft.receiptScope,
       lastSaveReceipt: draft.lastSaveReceipt,
       submitReadiness: draft.submitReadiness,
       apply: draft.apply,

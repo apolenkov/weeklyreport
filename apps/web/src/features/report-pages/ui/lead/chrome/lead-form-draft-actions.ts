@@ -14,10 +14,12 @@ import type {
   RiskPrefillRequest,
 } from "../../../../report-sections";
 import {
+  continueToNextPatch,
   markCompletePatch,
   moveToCurrentWeekPatch,
   moveToNextWeekPatch,
   pauseItemPatch,
+  promoteContinuationPatch,
 } from "../../../../report-sections";
 import type { QuickAddItem } from "../../../../report-sections/client";
 import type { QuickAddKind } from "./quick-add-button";
@@ -64,13 +66,29 @@ function buildItemPatchActions(draft: LeadFormDraftHandle) {
       patchItem(itemId, moveToCurrentWeekPatch()),
     onPauseItem: (itemId: string, reason: string) =>
       patchItem(itemId, pauseItemPatch(reason)),
+    // Accepted retain-Current continuation: keeps the row and records the Next
+    // intent. Callers resolve `continuationConflict`/`canContinueOrPromote`
+    // before invoking.
+    onContinueToNext: (itemId: string, nextText: string) =>
+      patchItem(itemId, continueToNextPatch(nextText)),
+    onPromoteContinuation: (itemId: string, nextText: string) =>
+      patchItem(itemId, promoteContinuationPatch(nextText)),
   };
 }
 
 function buildActivityActions(draft: LeadFormDraftHandle) {
+  const ACTIVITY_STATUS_PATCH = "activity-status" as const;
   return {
     onActivityStatusChange: (activityId: string, status: TrafficLightStatus) =>
-      draft.apply({ kind: "activity-status", activityId, status }),
+      draft.apply({ kind: ACTIVITY_STATUS_PATCH, activityId, status }),
+    onActivityTitleChange: (activityId: string, titleOverride: string | null) =>
+      draft.apply({
+        kind: ACTIVITY_STATUS_PATCH,
+        activityId,
+        titleOverride,
+      }),
+    onActivityDescriptionChange: (activityId: string, note: string | null) =>
+      draft.apply({ kind: ACTIVITY_STATUS_PATCH, activityId, note }),
     onActivityRaiseRequiresRisk: (
       activityId: string,
       severity: "at-risk" | "blocked",

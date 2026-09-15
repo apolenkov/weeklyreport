@@ -60,6 +60,7 @@ const CLEAN_AUTOSAVE: AutosaveSnapshot = {
   state: "saved",
   lastSavedAt: null,
   dirty: false,
+  currentPayloadMatchesSavedBaseline: true,
   isInFlight: false,
   forceSave: () => Promise.resolve(),
 };
@@ -217,13 +218,14 @@ describe("useLeadFormOutcomeCoordinator", () => {
     expect(result.current.pending).toBe(false);
   });
 
-  it("keeps a prior source id immutable and remaps restore by current stable identity", async () => {
+  it("keeps a prior source id immutable and remaps restore and promotion by stable identity", async () => {
     const section = makeSection({ items: [makeItem({ id: REMINTED_ID })] });
     const writePort = new InMemoryLeadFormWriteAdapter({
       saveDraft: () => Promise.resolve(section),
       submit: () => Promise.resolve(section),
       resolvePlan: () => Promise.resolve(outcome(section)),
       restorePlan: () => Promise.resolve(outcome(section)),
+      promotePlan: () => Promise.resolve(outcome(section)),
     });
     const args = buildArgs({ writePort, draftSection: section });
     const { result } = renderHook(() => useLeadFormOutcomeCoordinator(args));
@@ -256,6 +258,22 @@ describe("useLeadFormOutcomeCoordinator", () => {
 
     expect(writePort.calls.resolvePlan[0]?.source.recordId).toBe(priorRecordId);
     expect(writePort.calls.restorePlan[0]?.recordId).toBe(REMINTED_ID);
+
+    await act(() =>
+      result.current.promote(
+        {
+          commandId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          recordId: RECORD_ID,
+        },
+        STABLE_ID,
+      ),
+    );
+
+    expect(writePort.calls.promotePlan[0]).toMatchObject({
+      recordId: REMINTED_ID,
+      reportSectionId: section.reportSectionId,
+      version: section.version,
+    });
   });
 
   it.each(

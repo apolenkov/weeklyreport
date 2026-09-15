@@ -1,6 +1,7 @@
 import type {
   DraftSavePayload,
   ItemOutcomeResult,
+  PromotePlanInput,
   ReportSectionReadModel,
   ResolvePlanInput,
   RestorePlanInput,
@@ -23,6 +24,7 @@ export interface LeadFormWritePending {
   readonly submit: boolean;
   readonly resolvePlan: boolean;
   readonly restorePlan: boolean;
+  readonly promotePlan: boolean;
   readonly fillFrom: boolean;
   readonly revoke: boolean;
   readonly reopen: boolean;
@@ -50,6 +52,7 @@ export interface LeadFormWritePort {
   ) => Promise<ReportSectionReadModel>;
   readonly resolvePlan: (input: ResolvePlanInput) => Promise<ItemOutcomeResult>;
   readonly restorePlan: (input: RestorePlanInput) => Promise<ItemOutcomeResult>;
+  readonly promotePlan: (input: PromotePlanInput) => Promise<ItemOutcomeResult>;
   readonly fillFrom: (input: LeadFormFillFromInput) => Promise<{
     readonly success: true;
     readonly copiedItems: number;

@@ -25,6 +25,7 @@ function buildHarness() {
     { path: ["leadForm", "fillFrom"], mutation: true },
     { path: ["leadForm", "resolvePlan"], mutation: true },
     { path: ["leadForm", "restorePlan"], mutation: true },
+    { path: ["leadForm", "promotePlan"], mutation: true },
     { path: ["leadForm", "revoke"], mutation: true },
     { path: ["leadForm", "requestReopen"], mutation: true },
     { path: ["reports", "getActive"] },

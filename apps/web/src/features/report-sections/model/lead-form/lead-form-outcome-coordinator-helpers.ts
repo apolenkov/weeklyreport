@@ -1,5 +1,6 @@
 import type {
   ItemOutcomeResult,
+  PromotePlanInput,
   ReportSectionReadModel,
   ResolvePlanInput,
   RestorePlanInput,
@@ -21,8 +22,14 @@ export type RestorePlanCommandInput = Omit<
   RestorePlanInput,
   "reportSectionId" | "version"
 >;
+export type PromotePlanCommandInput = Omit<
+  PromotePlanInput,
+  "reportSectionId" | "version"
+>;
 
 const WAIT_FOR_OUTCOME = "Wait for the current outcome update to finish.";
+
+const COMMAND_ID_REUSED = "This command id is already used by another action.";
 
 export interface OutcomeScope {
   readonly key: string;
@@ -41,6 +48,11 @@ export type PreparedOutcomeCommand =
       readonly kind: "restore";
       readonly scopeKey: string;
       readonly input: RestorePlanInput;
+    }
+  | {
+      readonly kind: "promote";
+      readonly scopeKey: string;
+      readonly input: PromotePlanInput;
     };
 
 export interface OutcomeCoordinatorArgs {
@@ -78,7 +90,11 @@ export function outcomeScopeOf(
 }
 
 export function portOutcomePending(writePort: LeadFormWritePort): boolean {
-  return writePort.pending.resolvePlan || writePort.pending.restorePlan;
+  return (
+    writePort.pending.resolvePlan ||
+    writePort.pending.restorePlan ||
+    writePort.pending.promotePlan
+  );
 }
 
 export function blockedReasonOf(
@@ -144,7 +160,7 @@ export function prepareResolveCommand(
   const existing = registry.get(input.commandId);
   if (existing) {
     if (existing.kind !== "resolve") {
-      throw commandError("This command id is already used by another action.");
+      throw commandError(COMMAND_ID_REUSED);
     }
     return existing.input;
   }
@@ -185,7 +201,7 @@ export function prepareRestoreCommand(
   const existing = registry.get(input.commandId);
   if (existing) {
     if (existing.kind !== "restore") {
-      throw commandError("This command id is already used by another action.");
+      throw commandError(COMMAND_ID_REUSED);
     }
     return existing.input;
   }
@@ -197,6 +213,35 @@ export function prepareRestoreCommand(
   };
   registry.set(input.commandId, {
     kind: "restore",
+    scopeKey: scope.key,
+    input: prepared,
+  });
+  return prepared;
+}
+
+export function preparePromoteCommand(
+  registry: Map<string, PreparedOutcomeCommand>,
+  input: PromotePlanCommandInput,
+  stableId: string,
+  scope: OutcomeScope,
+  draftSection: ReportSectionReadModel,
+  version: number,
+): PromotePlanInput {
+  const existing = registry.get(input.commandId);
+  if (existing) {
+    if (existing.kind !== "promote") {
+      throw commandError(COMMAND_ID_REUSED);
+    }
+    return existing.input;
+  }
+  const prepared: PromotePlanInput = {
+    ...input,
+    recordId: currentRecordId(draftSection, stableId),
+    reportSectionId: scope.sectionId,
+    version,
+  };
+  registry.set(input.commandId, {
+    kind: "promote",
     scopeKey: scope.key,
     input: prepared,
   });

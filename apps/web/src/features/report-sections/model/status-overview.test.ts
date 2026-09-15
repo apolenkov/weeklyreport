@@ -25,6 +25,7 @@ const WON_T_DO_RESOLUTION = {
     workflowStatus: "in_progress" as const,
     pausedReason: null,
     nextStepText: null,
+    text: "Cancelled delivery",
   },
 };
 
@@ -35,6 +36,13 @@ function item(overrides: {
   readonly activityId?: string;
   readonly type: "current" | "next";
   readonly text: string;
+  readonly comments?: readonly {
+    readonly id: string;
+    readonly reviewerId: string;
+    readonly reviewerName: string;
+    readonly text: string;
+    readonly createdAt: Date;
+  }[];
 }) {
   return {
     ...overrides,
@@ -61,6 +69,7 @@ describe("projectStatusOverview", () => {
         {
           activityId: CURRENT_ACTIVITY,
           activityName: "Current activity",
+          titleOverride: "Weekly override",
           status: "green",
           linkedProducts: [
             { productId: LINKED_PRODUCT_A, productName: "Alpha" },
@@ -103,6 +112,7 @@ describe("projectStatusOverview", () => {
           {
             activityId: CURRENT_ACTIVITY,
             activityName: "Current activity",
+            titleOverride: "Weekly override",
             status: "green",
           },
           {
@@ -161,7 +171,7 @@ describe("projectStatusOverview", () => {
     expect(result.units.map((unit) => [unit.kind, unit.name])).toEqual([
       ["product", "Current product"],
       ["product", "Retired product"],
-      ["activity", "Current activity"],
+      ["activity", "Weekly override"],
       ["activity", "Former duty"],
     ]);
     expect(
@@ -310,6 +320,7 @@ describe("projectStatusOverview", () => {
       items: serverSection.items.map((entry) => ({
         ...entry,
         text: "Unsaved editor text",
+        carriedOver: true,
       })),
     };
     const output = {
@@ -341,8 +352,14 @@ describe("projectStatusOverview", () => {
       editable.units[0]?.columns.currentWeek.items[0]?.editTarget,
     ).not.toBeNull();
     expect(
+      editable.units[0]?.columns.currentWeek.items[0]?.needsConfirmation,
+    ).toBe(true);
+    expect(
       readOnly.units[0]?.columns.currentWeek.items[0]?.editTarget,
     ).toBeNull();
+    expect(
+      readOnly.units[0]?.columns.currentWeek.items[0]?.needsConfirmation,
+    ).toBe(true);
     expect(readOnly.units[0]?.columns.currentWeek.items[0]?.canResolve).toBe(
       false,
     );
@@ -510,5 +527,236 @@ describe("projectStatusOverview", () => {
       { text: "Linked prior plan", canResolve: false },
       { text: "Unlinked prior plan", canResolve: true },
     ]);
+  });
+
+  // MOVE-ORDER: reuse the collection order and preserve text/status plus the
+  // linked source identity — no re-sorting, no fractional index, no date sort.
+  it("reuses the collection order for continuation and promotion", () => {
+    const records = [
+      {
+        id: "10000000-0000-4000-8000-000000000031",
+        stableId: "10000000-0000-4000-8000-000000000041",
+        projectId: CURRENT_PRODUCT,
+        type: "current" as const,
+        text: "First result",
+      },
+      {
+        id: "10000000-0000-4000-8000-000000000032",
+        stableId: "10000000-0000-4000-8000-000000000042",
+        projectId: CURRENT_PRODUCT,
+        type: "current" as const,
+        text: "Second result",
+      },
+    ];
+    const project = (
+      items: readonly ReturnType<typeof item>[],
+    ): ReturnType<typeof projectStatusOverview> =>
+      projectStatusOverview({
+        current: {
+          reportId: "10000000-0000-4000-8000-000000000051",
+          periodStart: new Date("2026-08-31T00:00:00.000Z"),
+          periodEnd: new Date("2026-09-06T00:00:00.000Z"),
+          section: makeReportSectionFixture({
+            projects: [
+              {
+                projectId: CURRENT_PRODUCT,
+                projectName: "Current product",
+                trafficLight: "green",
+              },
+            ],
+            items: [...items],
+          }),
+        },
+        predecessor: {
+          availability: "unavailable",
+          reason: "no_predecessor",
+        },
+      });
+    const lane = (result: ReturnType<typeof projectStatusOverview>) =>
+      result.units[0]?.columns.currentWeek.items ?? [];
+
+    const plain = project(records.map((record) => item(record)));
+    const continued = project(
+      records.map((record, index) =>
+        index === 1
+          ? { ...item(record), nextStepText: "Linked next step" }
+          : item(record),
+      ),
+    );
+    const promoted = project(
+      records.map((record, index) =>
+        index === 1
+          ? {
+              ...item(record),
+              text: "Promoted next step",
+              nextStepText: null,
+            }
+          : item(record),
+      ),
+    );
+
+    expect(lane(continued).map((entry) => entry.stableId)).toEqual(
+      lane(plain).map((entry) => entry.stableId),
+    );
+    expect(lane(promoted).map((entry) => entry.stableId)).toEqual(
+      lane(plain).map((entry) => entry.stableId),
+    );
+    expect(lane(plain)[0]).toMatchObject({
+      text: "First result",
+      workflowStatus: "in_progress",
+    });
+    expect(lane(continued)[1]).toMatchObject({
+      stableId: records[1]?.stableId,
+      text: "Second result",
+      workflowStatus: "in_progress",
+    });
+    // The linked commitment is projected into the Next lane under the same
+    // lineage while its source record keeps its place in Current.
+    expect(
+      continued.units[0]?.columns.nextWeek.items.find(
+        (entry) => entry.text === "Linked next step",
+      ),
+    ).toMatchObject({
+      stableId: records[1]?.stableId,
+      source: "next",
+      text: "Linked next step",
+    });
+    expect(lane(promoted)[1]).toMatchObject({
+      stableId: records[1]?.stableId,
+      text: "Promoted next step",
+      workflowStatus: "in_progress",
+    });
+  });
+
+  it("keeps lineage comments on the lane that owns the record", () => {
+    const records = [
+      {
+        id: "10000000-0000-4000-8000-000000000041",
+        stableId: "10000000-0000-4000-8000-000000000051",
+      },
+      {
+        id: "10000000-0000-4000-8000-000000000042",
+        stableId: "10000000-0000-4000-8000-000000000052",
+      },
+    ];
+    const comment = {
+      id: "10000000-0000-4000-8000-000000000061",
+      reviewerId: "10000000-0000-4000-8000-000000000062",
+      reviewerName: "Head",
+      text: "Please clarify the rollout",
+      createdAt: new Date("2026-09-10T09:00:00.000Z"),
+    };
+    const project = (
+      nextStepText: string | null,
+    ): ReturnType<typeof projectStatusOverview> =>
+      projectStatusOverview({
+        current: {
+          reportId: "10000000-0000-4000-8000-000000000051",
+          periodStart: new Date("2026-08-31T00:00:00.000Z"),
+          periodEnd: new Date("2026-09-06T00:00:00.000Z"),
+          section: makeReportSectionFixture({
+            projects: [
+              {
+                projectId: CURRENT_PRODUCT,
+                projectName: "Current product",
+                trafficLight: "green",
+              },
+            ],
+            items: records.map((record, index) =>
+              item({
+                ...record,
+                projectId: CURRENT_PRODUCT,
+                type: "current" as const,
+                text: `Result ${index + 1}`,
+                comments: [comment],
+                ...(index === 1 ? { nextStepText } : {}),
+              }),
+            ),
+          }),
+        },
+        predecessor: {
+          availability: "unavailable",
+          reason: "no_predecessor",
+        },
+      });
+
+    const continued = project("Linked next step");
+    const second = records[1];
+    if (!second) throw new Error("Expected a second seeded record");
+    const currentRow = continued.units[0]?.columns.currentWeek.items.find(
+      (entry) => entry.stableId === second.stableId,
+    );
+    const linkedRow = continued.units[0]?.columns.nextWeek.items.find(
+      (entry) => entry.text === "Linked next step",
+    );
+
+    expect(currentRow?.comments).toHaveLength(1);
+    // The linked Next projection resolves to the same record, so the lineage's
+    // comments stay on the owning lane instead of rendering twice in one row.
+    expect(linkedRow?.stableId).toBe(second.stableId);
+    expect(linkedRow?.comments).toEqual([]);
+  });
+
+  it("keeps previous-lane comments, the only projection of that record", () => {
+    const comment = {
+      id: "10000000-0000-4000-8000-000000000071",
+      reviewerId: "10000000-0000-4000-8000-000000000072",
+      reviewerName: "Head",
+      text: "Carry this into the next period",
+      createdAt: new Date("2026-09-10T09:00:00.000Z"),
+    };
+    const previousSection = {
+      ...makeReportSectionFixture({
+        projects: [
+          {
+            projectId: CURRENT_PRODUCT,
+            projectName: "Payments",
+            trafficLight: "green",
+          },
+        ],
+        items: [
+          item({
+            id: "10000000-0000-4000-8000-000000000073",
+            stableId: "10000000-0000-4000-8000-000000000074",
+            projectId: CURRENT_PRODUCT,
+            type: "next",
+            text: "Previous period result",
+            comments: [comment],
+          }),
+        ],
+      }),
+      status: "submitted" as const,
+    };
+    const result = projectStatusOverview({
+      current: {
+        reportId: "10000000-0000-4000-8000-000000000051",
+        periodStart: new Date("2026-08-31T00:00:00.000Z"),
+        periodEnd: new Date("2026-09-06T00:00:00.000Z"),
+        section: makeReportSectionFixture({
+          projects: [
+            {
+              projectId: CURRENT_PRODUCT,
+              projectName: "Payments",
+              trafficLight: "green",
+            },
+          ],
+          items: [],
+        }),
+      },
+      predecessor: {
+        availability: "available",
+        source: "submitted",
+        reportId: previousSection.reportId,
+        periodStart: new Date("2026-08-24T00:00:00.000Z"),
+        periodEnd: new Date("2026-08-30T00:00:00.000Z"),
+        section: previousSection,
+      },
+    });
+
+    const previous = result.units[0]?.columns.previouslyPlanned.items.find(
+      (entry) => entry.text === "Previous period result",
+    );
+    expect(previous?.source).toBe("previous");
+    expect(previous?.comments).toHaveLength(1);
   });
 });

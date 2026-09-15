@@ -41,8 +41,9 @@ function shouldConfirmNavigation(event: MouseEvent): boolean {
 }
 
 // An open composer owns values that are not yet part of the autosaved draft.
-export function useInlineEditUnloadGuard(): void {
+export function useInlineEditUnloadGuard(enabled = true): void {
   useEffect(() => {
+    if (!enabled) return;
     const preventUnload = (event: BeforeUnloadEvent): void => {
       event.preventDefault();
     };
@@ -62,5 +63,5 @@ export function useInlineEditUnloadGuard(): void {
       window.removeEventListener("beforeunload", preventUnload);
       document.removeEventListener("click", preventNavigation, true);
     };
-  }, []);
+  }, [enabled]);
 }

@@ -17,6 +17,8 @@ function buildLeadItemCommon(
 ) {
   return {
     id: requireItemId(item),
+    stableId: item.stableId,
+    tag: item.tag,
     status: deriveItemStatus({
       workflowStatus: item.workflowStatus,
       type: item.type,

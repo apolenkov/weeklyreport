@@ -56,3 +56,41 @@ export const NEXT_WEEK_CHOICES: readonly ChipChoice<ItemStatus>[] = [
     border: CHIP_IDLE_BORDER,
   },
 ];
+
+export const OVERVIEW_STATUS_CHOICES: readonly ChipChoice<ItemStatus>[] = [
+  {
+    value: "planned",
+    label: "○ Planned",
+    bg: CSS_MUTED,
+    color: CSS_MUTED_FG,
+    border: CHIP_IDLE_BORDER,
+  },
+  {
+    value: IN_PROGRESS_STATUS,
+    label: "! In Progress",
+    bg: "var(--color-success)",
+    color: CSS_PRIMARY,
+    border: "var(--color-starbucks-accent)",
+  },
+  {
+    value: "paused",
+    label: "‖ Paused",
+    bg: CSS_MUTED,
+    color: CSS_MUTED_FG,
+    border: CHIP_IDLE_BORDER,
+  },
+  {
+    value: "postponed",
+    label: "» Postponed",
+    bg: CSS_MUTED,
+    color: CSS_MUTED_FG,
+    border: CHIP_IDLE_BORDER,
+  },
+  {
+    value: "completed",
+    label: "✓ Completed",
+    bg: CSS_PRIMARY,
+    color: "var(--color-primary-foreground)",
+    border: CSS_PRIMARY,
+  },
+];

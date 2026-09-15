@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { StatusOverviewItem } from "../model/status-overview";
 
 export interface StatusOverviewEditorSlot {
+  readonly mode: "create" | "edit" | "resolve";
   readonly unitKey: string;
   readonly source: "previous" | "current" | "next";
   readonly recordId: string | null;
@@ -14,6 +15,7 @@ export function editorSlotMatchesItem(
   editorSlot: StatusOverviewEditorSlot | undefined,
   item: StatusOverviewItem,
 ): boolean {
+  if (editorSlot?.mode === "create") return false;
   if (editorSlot?.source !== item.source) return false;
   return editorSlot.stableId
     ? editorSlot.stableId === item.stableId

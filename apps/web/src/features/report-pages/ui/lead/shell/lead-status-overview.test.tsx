@@ -1,4 +1,5 @@
 import type {
+  ItemOutcomeResult,
   LeadOpenWorkHistoryOccurrence,
   ReportSectionReadModel,
 } from "@customreport/shared";
@@ -15,6 +16,7 @@ import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
 import { makeReportSectionFixture } from "../../../../../test-utils/report-section-fixtures";
 import { LeadReportAssistantStore } from "../../lead-report-assistant-store";
 import { LeadForm } from "./lead-form";
+import { OverviewInputProvider } from "./overview-input-provider";
 
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock("next/navigation", () => ({
@@ -26,6 +28,10 @@ vi.mock("next/navigation", () => ({
 const REPORT_ID = "a0000000-0000-4000-8000-000000000001";
 const PROJECT_ID = "a0000000-0000-4000-8000-000000000002";
 const STAGE_ID = "a0000000-0000-4000-8000-000000000003";
+const SECOND_PROJECT_ID = "a0000000-0000-4000-8000-000000000004";
+const SECOND_STAGE_ID = "a0000000-0000-4000-8000-000000000005";
+const ACTIVITY_ID = "a0000000-0000-4000-8000-000000000006";
+const PREDECESSOR_REPORT_ID = "a0000000-0000-4000-8000-000000000007";
 
 function createSectionStore(initial: ReportSectionReadModel) {
   let current = initial;
@@ -43,8 +49,15 @@ function Wrapper({
   client,
   failOverview,
   resolvePlan,
+  promotePlan,
   saveDraft,
   openWork = [],
+  inputProvider = false,
+  legacyNextText,
+  withActivity = false,
+  currentWorkflowStatus = "in_progress",
+  nextWorkflowStatus = "planned",
+  predecessorItem,
 }: {
   readonly children: ReactNode;
   readonly client?: QueryClient;
@@ -53,11 +66,24 @@ function Wrapper({
     input: unknown,
     section: ReportSectionReadModel,
   ) => Promise<unknown>;
+  readonly promotePlan?: (
+    input: unknown,
+    current: ReportSectionReadModel,
+  ) => Promise<ItemOutcomeResult>;
   readonly saveDraft?: (
     input: unknown,
     current: ReportSectionReadModel,
   ) => Promise<ReportSectionReadModel>;
   readonly openWork?: readonly LeadOpenWorkHistoryOccurrence[];
+  readonly inputProvider?: boolean;
+  readonly legacyNextText?: string | undefined;
+  readonly withActivity?: boolean | undefined;
+  readonly currentWorkflowStatus?:
+    "planned" | "in_progress" | "paused" | "postponed" | "done";
+  readonly nextWorkflowStatus?:
+    "planned" | "in_progress" | "paused" | "postponed" | "done";
+  readonly predecessorItem?:
+    ReportSectionReadModel["items"][number] | undefined;
 }) {
   const section = makeReportSectionFixture({
     reportId: REPORT_ID,
@@ -82,7 +108,37 @@ function Wrapper({
           },
         ],
       },
+      {
+        projectId: SECOND_PROJECT_ID,
+        projectName: "Analytics",
+        trafficLight: "green",
+        ownedStages: [
+          {
+            stageId: SECOND_STAGE_ID,
+            stageName: "Analysis",
+            sortOrder: 0,
+            status: "green",
+          },
+        ],
+        stageSet: [
+          {
+            stageId: SECOND_STAGE_ID,
+            stageName: "Analysis",
+            sortOrder: 0,
+          },
+        ],
+      },
     ],
+    activities: withActivity
+      ? [
+          {
+            activityId: ACTIVITY_ID,
+            activityName: "Operational duty",
+            status: "green",
+            note: "Keep this description",
+          },
+        ]
+      : [],
     items: [
       {
         id: "a0000000-0000-4000-8000-000000000010",
@@ -92,8 +148,11 @@ function Wrapper({
         type: "current",
         text: "Current work",
         tag: "delivery",
-        workflowStatus: "in_progress",
+        workflowStatus: currentWorkflowStatus,
+        pausedReason:
+          currentWorkflowStatus === "paused" ? "Waiting for access" : null,
         carriedOver: false,
+        nextStepText: legacyNextText ?? null,
         stageNames: ["Development"],
       },
       {
@@ -104,7 +163,9 @@ function Wrapper({
         type: "next",
         text: "Next work",
         tag: "delivery",
-        workflowStatus: "planned",
+        workflowStatus: nextWorkflowStatus,
+        pausedReason:
+          nextWorkflowStatus === "paused" ? "Waiting for access" : null,
         carriedOver: false,
         stageNames: ["Development"],
       },
@@ -128,8 +189,30 @@ function Wrapper({
             section: sectionStore.read(),
           },
           predecessor: {
-            availability: "unavailable",
-            reason: "no_predecessor",
+            ...(predecessorItem
+              ? {
+                  availability: "available" as const,
+                  source: "published" as const,
+                  reportId: PREDECESSOR_REPORT_ID,
+                  periodStart: new Date("2026-08-24T00:00:00.000Z"),
+                  periodEnd: new Date("2026-08-30T00:00:00.000Z"),
+                  section: makeReportSectionFixture({
+                    reportId: PREDECESSOR_REPORT_ID,
+                    projects: section.projects.map((project) => ({
+                      projectId: project.projectId,
+                      projectName: project.projectName,
+                      trafficLight: project.trafficLight,
+                      ownedStages: project.ownedStages,
+                      stageSet: project.stageSet,
+                    })),
+                    activities: section.activities,
+                    items: [predecessorItem],
+                  }),
+                }
+              : {
+                  availability: "unavailable" as const,
+                  reason: "no_predecessor" as const,
+                }),
           },
         };
       },
@@ -166,6 +249,7 @@ function Wrapper({
     { path: ["leadForm", "assistant"], mutation: true },
     { path: ["leadForm", "resolvePlan"], mutation: true },
     { path: ["leadForm", "restorePlan"], mutation: true },
+    { path: ["leadForm", "promotePlan"], mutation: true },
   ]);
   captured["reports.saveDraft"]?.mutationFn.mockImplementation(
     async (input: unknown) => {
@@ -197,6 +281,14 @@ function Wrapper({
     captured["leadForm.resolvePlan"]?.mutationFn.mockImplementation((input) =>
       resolvePlan(input, section),
     );
+  if (promotePlan)
+    captured["leadForm.promotePlan"]?.mutationFn.mockImplementation(
+      async (input) => {
+        const result = await promotePlan(input, sectionStore.read());
+        sectionStore.write(result.section);
+        return result;
+      },
+    );
   const queryClient =
     client ??
     new QueryClient({
@@ -218,14 +310,201 @@ function Wrapper({
             isAuthenticated: true,
           }}
         >
-          <LeadReportAssistantStore>{children}</LeadReportAssistantStore>
+          {inputProvider ? (
+            <OverviewInputProvider>
+              <LeadReportAssistantStore>{children}</LeadReportAssistantStore>
+            </OverviewInputProvider>
+          ) : (
+            <LeadReportAssistantStore>{children}</LeadReportAssistantStore>
+          )}
         </SessionContext.Provider>
       </TRPCProxyContext.Provider>
     </QueryClientProvider>
   );
 }
 
+async function chooseMove(
+  user: ReturnType<typeof userEvent.setup>,
+  text: string,
+  destination: "this week" | "next week",
+) {
+  await user.click(await screen.findByRole("button", { name: `Move ${text}` }));
+  await user.click(
+    screen.getByRole("menuitem", { name: `Move to ${destination}` }),
+  );
+}
+
+async function chooseUpdateStatus(
+  user: ReturnType<typeof userEvent.setup>,
+  text: string,
+) {
+  await user.click(
+    await screen.findByRole("button", { name: `More actions for ${text}` }),
+  );
+  await user.click(screen.getByRole("menuitem", { name: "Update status" }));
+}
+
 describe("LeadForm Overview", () => {
+  it("plans an authoritative prior-only lineage through the canonical item editor", async () => {
+    const user = userEvent.setup();
+    const stableId = "a0000000-0000-4000-8000-000000000030";
+    const predecessorItem: ReportSectionReadModel["items"][number] = {
+      id: "a0000000-0000-4000-8000-000000000031",
+      stableId,
+      projectId: PROJECT_ID,
+      activityId: null,
+      type: "next",
+      text: "Authoritative prior plan",
+      tag: "delivery",
+      workflowStatus: "paused",
+      pausedReason: "Waiting for approval",
+      carriedOver: false,
+      priorityRank: 4,
+      stageNames: ["Development"],
+    };
+    const saveDraft = vi.fn(
+      (input: unknown, current: ReportSectionReadModel) => {
+        const draft = input as {
+          readonly version: number;
+          readonly items: ReportSectionReadModel["items"];
+        };
+        return Promise.resolve({
+          ...current,
+          version: draft.version + 1,
+          items: draft.items,
+        });
+      },
+    );
+    render(
+      <Wrapper predecessorItem={predecessorItem} saveDraft={saveDraft}>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "Plan this work" }),
+    );
+    expect(
+      screen.getByRole("form", {
+        name: "Current week update for Payments",
+      }),
+    ).toBeVisible();
+    expect(
+      screen.getAllByRole("form", {
+        name: "Current week update for Payments",
+      }),
+    ).toHaveLength(1);
+    expect(screen.getByRole("radio", { name: "Current week" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Next week" })).toBeVisible();
+    expect(screen.getByRole("textbox", { name: /Description/ })).toHaveValue(
+      "Authoritative prior plan",
+    );
+    expect(screen.getByRole("button", { name: /Paused/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByLabelText(/Pause reason/)).toHaveValue(
+      "Waiting for approval",
+    );
+    expect(screen.getAllByText("Authoritative prior plan")).toHaveLength(2);
+    expect(saveDraft).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("radio", { name: "Next week" }));
+    await user.click(screen.getByRole("button", { name: "Save update" }));
+
+    await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledOnce());
+    const occurrences = (
+      saveDraft.mock.calls[0]?.[0] as {
+        readonly items: ReportSectionReadModel["items"];
+      }
+    ).items.filter((candidate) => candidate.stableId === stableId);
+    expect(occurrences[0]?.id).not.toBe(predecessorItem.id);
+    expect(occurrences).toEqual([
+      expect.objectContaining({
+        stableId,
+        type: "next",
+        text: "Authoritative prior plan",
+        workflowStatus: "paused",
+        pausedReason: "Waiting for approval",
+        priorityRank: 4,
+        tag: "delivery",
+        projectId: PROJECT_ID,
+        stageNames: ["Development"],
+      }),
+    ]);
+    expect(screen.getAllByText("Authoritative prior plan")).toHaveLength(2);
+  });
+
+  it("cancels prior planning without a write and returns focus to Plan this work", async () => {
+    const user = userEvent.setup();
+    const predecessorItem: ReportSectionReadModel["items"][number] = {
+      id: "a0000000-0000-4000-8000-000000000032",
+      stableId: "a0000000-0000-4000-8000-000000000033",
+      projectId: PROJECT_ID,
+      activityId: null,
+      type: "next",
+      text: "Cancel this prior plan",
+      tag: "delivery",
+      workflowStatus: "planned",
+      carriedOver: false,
+      stageNames: ["Development"],
+    };
+    const saveDraft = vi.fn();
+    render(
+      <Wrapper predecessorItem={predecessorItem} saveDraft={saveDraft}>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+
+    const plan = await screen.findByRole("button", { name: "Plan this work" });
+    await user.click(plan);
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(saveDraft).not.toHaveBeenCalled();
+    expect(
+      await screen.findByRole("button", { name: "Plan this work" }),
+    ).toHaveFocus();
+    expect(screen.getByText("Cancel this prior plan")).toBeInTheDocument();
+  });
+
+  it("keeps only audited terminal outcomes for an authoritative prior-only row", async () => {
+    const user = userEvent.setup();
+    const predecessorItem: ReportSectionReadModel["items"][number] = {
+      id: "a0000000-0000-4000-8000-000000000034",
+      stableId: "a0000000-0000-4000-8000-000000000035",
+      projectId: PROJECT_ID,
+      activityId: null,
+      type: "next",
+      text: "Resolve this prior plan",
+      tag: "delivery",
+      workflowStatus: "planned",
+      carriedOver: false,
+      stageNames: ["Development"],
+    };
+    render(
+      <Wrapper predecessorItem={predecessorItem}>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "More actions for Resolve this prior plan",
+      }),
+    );
+    await user.click(screen.getByRole("menuitem", { name: "Update status" }));
+    const composer = screen.getByRole("form", { name: "Resolve plan" });
+    expect(
+      within(composer).getByRole("button", { name: "Done" }),
+    ).toBeVisible();
+    expect(
+      within(composer).getByRole("button", { name: "Won't do" }),
+    ).toBeVisible();
+    expect(within(composer).queryByText("Continue")).toBeNull();
+    expect(within(composer).queryByText("Plan next")).toBeNull();
+    expect(within(composer).queryByText(/Next step/)).toBeNull();
+  });
+
   it("replans historical open work through immutable prior lineage", async () => {
     const user = userEvent.setup();
     const sourceReportId = "a0000000-0000-4000-8000-000000000020";
@@ -305,7 +584,7 @@ describe("LeadForm Overview", () => {
     );
   });
 
-  it("adopts Done immediately and does not replace it with an older query echo", async () => {
+  it("limits active items to terminal outcomes and adopts Done immediately", async () => {
     const user = userEvent.setup();
     const resolvePlan = vi.fn(
       (_input: unknown, section: ReportSectionReadModel) =>
@@ -328,15 +607,15 @@ describe("LeadForm Overview", () => {
         <LeadForm reportId={REPORT_ID} mode="overview" />
       </Wrapper>,
     );
-    await user.click(
-      await screen.findByRole("button", { name: "Resolve plan: Next work" }),
-    );
-    await user.click(
-      within(screen.getByRole("form", { name: "Resolve plan" })).getByRole(
-        "button",
-        { name: "Done" },
-      ),
-    );
+    await chooseUpdateStatus(user, "Next work");
+    const composer = screen.getByRole("form", { name: "Resolve plan" });
+    expect(
+      within(composer).queryByRole("button", { name: "Continue" }),
+    ).toBeNull();
+    expect(
+      within(composer).queryByRole("button", { name: "Plan next" }),
+    ).toBeNull();
+    await user.click(within(composer).getByRole("button", { name: "Done" }));
     await vi.waitFor(() =>
       expect(
         screen.queryByRole("form", { name: "Resolve plan" }),
@@ -348,14 +627,20 @@ describe("LeadForm Overview", () => {
       text: "Next work",
     });
     expect(
-      screen.getByRole("button", { name: "Resolve plan: Next work" }),
+      screen.getByRole("button", { name: "More actions for Next work" }),
     ).toHaveAttribute(
       "data-overview-focus",
       "resolve:current:a0000000-0000-4000-8000-000000000013",
     );
-    expect(screen.getByText(/^Done · Development/)).toBeInTheDocument();
+    // The metadata line renders an icon per fact, so the progress and stage
+    // labels are separate nodes rather than one "Done · Development" string.
+    const preview = screen
+      .getByRole("button", { name: "Edit update: Next work" })
+      .closest("[data-overview-item-preview]");
+    expect(preview).toHaveTextContent("Done");
+    expect(preview).toHaveTextContent("Development");
     expect(
-      await screen.findByRole("button", { name: "Edit Next work" }),
+      await screen.findByRole("button", { name: "Edit update: Next work" }),
     ).toBeInTheDocument();
   });
 
@@ -371,9 +656,7 @@ describe("LeadForm Overview", () => {
         <LeadForm reportId={REPORT_ID} mode="overview" />
       </Wrapper>,
     );
-    await user.click(
-      await screen.findByRole("button", { name: "Resolve plan: Next work" }),
-    );
+    await chooseUpdateStatus(user, "Next work");
     const form = screen.getByRole("form", { name: "Resolve plan" });
     await user.click(within(form).getByRole("button", { name: "Won't do" }));
     const reason = within(form).getByRole("textbox");
@@ -410,7 +693,7 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
     await user.click(
-      await screen.findByRole("button", { name: "Edit Current work" }),
+      await screen.findByRole("button", { name: "Edit update: Current work" }),
     );
     const text = screen.getByRole("textbox", { name: /Description/ });
     await user.clear(text);
@@ -446,15 +729,13 @@ describe("LeadForm Overview", () => {
         </Wrapper>,
       );
       await user.click(
-        await screen.findByRole("button", { name: "Edit Current work" }),
+        await screen.findByRole("button", {
+          name: "Edit update: Current work",
+        }),
       );
       const text = screen.getByRole("textbox", { name: /Description/ });
       await user.clear(text);
       await user.type(text, "My unsaved result");
-      await user.type(
-        screen.getByRole("textbox", { name: /Next step/ }),
-        "My unsaved plan",
-      );
       const queryKey = [["leadForm", "byPeriod"]];
       const loaded = client.getQueryData<{ section: ReportSectionReadModel }>(
         queryKey,
@@ -489,9 +770,7 @@ describe("LeadForm Overview", () => {
       expect(
         recovery.getByRole("textbox", { name: /Description/ }),
       ).toHaveValue("My unsaved result");
-      expect(recovery.getByRole("textbox", { name: /Next step/ })).toHaveValue(
-        "My unsaved plan",
-      );
+      expect(recovery.queryByRole("textbox", { name: /Next step/ })).toBeNull();
       expect(
         recovery.getByRole("button", { name: "Save update" }),
       ).toBeDisabled();
@@ -510,51 +789,6 @@ describe("LeadForm Overview", () => {
     },
   );
 
-  it("keeps the current result while editing its linked next step", async () => {
-    const user = userEvent.setup();
-    render(
-      <Wrapper>
-        <LeadForm reportId={REPORT_ID} mode="overview" />
-      </Wrapper>,
-    );
-    await user.click(
-      await screen.findByRole("button", { name: "Edit Current work" }),
-    );
-    await user.type(
-      screen.getByRole("textbox", { name: /Next step/ }),
-      "Test the delivered API",
-    );
-    await user.click(screen.getByRole("button", { name: "Save update" }));
-    expect(
-      await screen.findByRole("button", { name: "Edit Current work" }),
-    ).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "Next week" }));
-    await user.click(
-      screen.getByRole("button", { name: "Edit Test the delivered API" }),
-    );
-    expect(screen.getByRole("button", { name: "Next week" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    expect(screen.getByRole("button", { name: "Current week" })).toBeDisabled();
-    expect(screen.getByRole("textbox", { name: /Next step/ })).toHaveFocus();
-    expect(screen.getByRole("textbox", { name: /Description/ })).toHaveValue(
-      "Current work",
-    );
-    await user.clear(screen.getByRole("textbox", { name: /Next step/ }));
-    await user.click(screen.getByRole("button", { name: "Save update" }));
-    expect(
-      await screen.findByRole("button", { name: "Edit Current work" }),
-    ).toBeVisible();
-    expect(
-      screen.queryByRole("button", { name: "Edit Test the delivered API" }),
-    ).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Current week" })).toBeEnabled();
-    expect(
-      screen.getByRole("button", { name: "Edit Current work" }),
-    ).toHaveFocus();
-  });
-
   it("retains the submitted inline value when the save coordinator refetches after a conflict", async () => {
     const user = userEvent.setup();
     const conflict = new TRPCClientError("stale version");
@@ -571,7 +805,7 @@ describe("LeadForm Overview", () => {
             version: current.version + 1,
             items: current.items.map((item) =>
               item.text === "Current work"
-                ? { ...item, nextStepText: "Saved in the other tab" }
+                ? { ...item, text: "Saved in the other tab" }
                 : item,
             ),
           },
@@ -585,18 +819,19 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
     await user.click(
-      await screen.findByRole("button", { name: "Edit Current work" }),
+      await screen.findByRole("button", { name: "Edit update: Current work" }),
     );
-    const nextStep = screen.getByRole("textbox", { name: /Next step/ });
-    await user.type(nextStep, "Keep my submitted next step");
+    const description = screen.getByRole("textbox", { name: /Description/ });
+    await user.clear(description);
+    await user.type(description, "Keep my submitted update");
     await user.click(screen.getByRole("button", { name: "Save update" }));
 
     const recovery = within(
       await screen.findByRole("region", { name: "Unsaved update recovery" }),
     );
     expect(saveDraft).toHaveBeenCalledOnce();
-    expect(recovery.getByRole("textbox", { name: /Next step/ })).toHaveValue(
-      "Keep my submitted next step",
+    expect(recovery.getByRole("textbox", { name: /Description/ })).toHaveValue(
+      "Keep my submitted update",
     );
     expect(
       recovery.getByRole("button", { name: "Save update" }),
@@ -634,10 +869,13 @@ describe("LeadForm Overview", () => {
         </Wrapper>,
       );
       await user.click(
-        await screen.findByRole("button", { name: "Edit Current work" }),
+        await screen.findByRole("button", {
+          name: "Edit update: Current work",
+        }),
       );
-      const nextStep = screen.getByRole("textbox", { name: /Next step/ });
-      await user.type(nextStep, "Retained retry value");
+      const description = screen.getByRole("textbox", { name: /Description/ });
+      await user.clear(description);
+      await user.type(description, "Retained retry value");
       await user.click(screen.getByRole("button", { name: "Save update" }));
       expect(
         await screen.findByText(
@@ -645,11 +883,11 @@ describe("LeadForm Overview", () => {
         ),
       ).toBeInTheDocument();
       if (editAfterFailure) {
-        const retainedNextStep = screen.getByRole("textbox", {
-          name: /Next step/,
+        const retainedDescription = screen.getByRole("textbox", {
+          name: /Description/,
         });
-        await user.type(retainedNextStep, " plus correction");
-        expect(retainedNextStep).toHaveValue(
+        await user.type(retainedDescription, " plus correction");
+        expect(retainedDescription).toHaveValue(
           "Retained retry value plus correction",
         );
       }
@@ -663,12 +901,12 @@ describe("LeadForm Overview", () => {
       expect(
         (
           saveDraft.mock.calls[1]?.[0] as {
-            items: readonly { nextStepText?: string | null }[];
+            items: readonly { text: string }[];
           }
-        ).items.map((item) => item.nextStepText),
+        ).items.map((item) => item.text),
       ).toContain(expected);
       expect(
-        await screen.findByRole("button", { name: `Edit ${expected}` }),
+        await screen.findByRole("button", { name: `Edit update: ${expected}` }),
       ).toBeInTheDocument();
     },
   );
@@ -700,11 +938,46 @@ describe("LeadForm Overview", () => {
       name: "Document actions",
     });
     expect(documentActions).toBeVisible();
-    expect(screen.getByRole("button", { name: "+ Add" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Submit" })).toBeVisible();
     expect(
       screen.getByRole("group", { name: "Context controls" }),
     ).toBeVisible();
+  });
+
+  it("guards unsaved Activity weekly fields until they are cancelled", async () => {
+    const user = userEvent.setup();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(
+      <Wrapper withActivity>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+
+    const title = await screen.findByTestId(`activity-title-${ACTIVITY_ID}`);
+    await user.type(title, "Unsaved weekly title");
+
+    expect(
+      within(screen.getByTestId("status-overview")).getByRole("status"),
+    ).toHaveTextContent("Unsaved update");
+    expect(screen.queryByText("Autosaved")).toBeNull();
+    expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+
+    await user.click(screen.getByRole("link", { name: "Slides" }));
+    expect(confirm).toHaveBeenCalledOnce();
+    expect(title).toHaveValue("Unsaved weekly title");
+
+    await user.click(
+      screen.getByTestId(`activity-fields-cancel-${ACTIVITY_ID}`),
+    );
+    expect(
+      within(screen.getByTestId("status-overview")).getByRole("status"),
+    ).toHaveTextContent("Draft saved");
+    expect(
+      screen.getByRole("button", { name: "Submit" }).closest("fieldset"),
+    ).not.toHaveAttribute("disabled");
+    const unload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(unload);
+    expect(unload.defaultPrevented).toBe(false);
   });
 
   it.each([
@@ -721,7 +994,7 @@ describe("LeadForm Overview", () => {
       );
 
       await user.click(
-        await screen.findByRole("button", { name: `Edit ${initial}` }),
+        await screen.findByRole("button", { name: `Edit update: ${initial}` }),
       );
       expect(screen.queryByTestId("lead-submit-readiness")).toBeNull();
       expect(
@@ -737,7 +1010,7 @@ describe("LeadForm Overview", () => {
 
       expect(await screen.findByText(updated)).toBeInTheDocument();
       expect(
-        await screen.findByRole("button", { name: `Edit ${updated}` }),
+        await screen.findByRole("button", { name: `Edit update: ${updated}` }),
       ).toHaveFocus();
       expect(await screen.findByTestId("lead-submit-readiness")).toBeVisible();
       expect(
@@ -784,7 +1057,7 @@ describe("LeadForm Overview", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "Add current week update to Payments",
+        name: "Add item to Payments",
       }),
     );
 
@@ -796,7 +1069,6 @@ describe("LeadForm Overview", () => {
     ).toHaveTextContent("Unsaved update");
     expect(screen.queryByText("Autosaved")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "+ Add" })).toBeDisabled();
     expect(screen.getByLabelText("Product")).toHaveValue(
       `product:${PROJECT_ID}`,
     );
@@ -834,7 +1106,7 @@ describe("LeadForm Overview", () => {
       expect.objectContaining({ id: serverItemId, stableId: serverStableId }),
     ]);
     expect(
-      screen.getAllByRole("button", { name: "Edit Current work" }),
+      screen.getAllByRole("button", { name: "Edit update: Current work" }),
     ).toHaveLength(2);
     expect(
       screen.queryByRole("region", { name: "Unsaved update recovery" }),
@@ -845,142 +1117,10 @@ describe("LeadForm Overview", () => {
     ).toHaveTextContent(/Draft changes pending|Saving draft|Draft saved/);
     expect(
       screen.getByRole("button", {
-        name: "Add current week update to Payments",
+        name: "Add item to Payments",
       }),
     ).toHaveFocus();
   });
-
-  it("waits for the queued create receipt and retries it without a duplicate", async () => {
-    const user = userEvent.setup();
-    interface SaveRequest {
-      readonly version: number;
-      readonly items: ReportSectionReadModel["items"];
-    }
-    const requests: SaveRequest[] = [];
-    const firstSave = Promise.withResolvers<ReportSectionReadModel>();
-    const queuedSave = Promise.withResolvers<ReportSectionReadModel>();
-    let firstResponse!: ReportSectionReadModel;
-    const saveDraft = vi.fn(
-      (input: unknown, current: ReportSectionReadModel) => {
-        const request = input as SaveRequest;
-        requests.push(request);
-        if (requests.length === 1) {
-          firstResponse = {
-            ...current,
-            version: request.version + 1,
-            items: request.items.map((item) =>
-              item.stableId
-                ? item
-                : {
-                    ...item,
-                    id: "a0000000-0000-4000-8000-000000000050",
-                    stableId: "a0000000-0000-4000-8000-000000000051",
-                  },
-            ),
-          };
-          return firstSave.promise;
-        }
-        if (requests.length === 2) return queuedSave.promise;
-        return Promise.resolve({
-          ...current,
-          version: request.version + 1,
-          items: request.items.map((item) =>
-            item.stableId
-              ? item
-              : {
-                  ...item,
-                  id: "a0000000-0000-4000-8000-000000000052",
-                  stableId: "a0000000-0000-4000-8000-000000000053",
-                },
-          ),
-        });
-      },
-    );
-    render(
-      <Wrapper saveDraft={saveDraft}>
-        <LeadForm reportId={REPORT_ID} mode="overview" />
-      </Wrapper>,
-    );
-
-    await user.click(await screen.findByRole("button", { name: "+ Add" }));
-    await user.click(screen.getByRole("button", { name: "Current week item" }));
-    await user.type(screen.getByLabelText(/Description \*/i), "Parallel twins");
-    await user.click(screen.getByRole("button", { name: "Save Item" }));
-    await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledOnce(), {
-      timeout: 10_000,
-    });
-
-    await user.click(
-      screen.getByRole("button", {
-        name: "Add current week update to Payments",
-      }),
-    );
-    await user.type(screen.getByLabelText(/Description \*/i), "Parallel twins");
-    await user.click(screen.getByRole("button", { name: "Save update" }));
-    expect(saveDraft).toHaveBeenCalledOnce();
-    await act(() => {
-      firstSave.resolve(firstResponse);
-      return Promise.resolve();
-    });
-    await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledTimes(2));
-    expect(
-      screen.getByRole("form", {
-        name: "Current week update for Payments",
-      }),
-    ).toBeInTheDocument();
-
-    const queuedRequest = requests[1];
-    if (!queuedRequest) throw new Error("Expected the queued save request");
-    const queuedTemporaryTwins = queuedRequest.items.filter(
-      (item) => item.text === "Parallel twins" && !item.stableId,
-    );
-    expect(queuedTemporaryTwins).toHaveLength(1);
-    await act(() => {
-      queuedSave.reject(new Error("Queued save deliberately failed"));
-      return Promise.resolve();
-    });
-    expect(
-      await screen.findByText(
-        "Save failed. Your update is still here; try saving again.",
-      ),
-    ).toBeVisible();
-    expect(screen.getByLabelText(/Description \*/i)).toHaveValue(
-      "Parallel twins",
-    );
-    await user.type(screen.getByLabelText(/Description \*/i), " retry");
-    expect(
-      screen.queryByRole("region", { name: "Unsaved update recovery" }),
-    ).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Save update" })).toBeEnabled();
-
-    await user.click(screen.getByRole("button", { name: "Save update" }));
-    await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledTimes(3));
-    await vi.waitFor(() =>
-      expect(
-        screen.queryByRole("form", {
-          name: "Current week update for Payments",
-        }),
-      ).not.toBeInTheDocument(),
-    );
-
-    const retryRequest = requests[2];
-    if (!retryRequest) throw new Error("Expected the retry save request");
-    const retryTemporaryTwins = retryRequest.items.filter(
-      (item) => !item.stableId,
-    );
-    expect(retryTemporaryTwins).toHaveLength(1);
-    expect(retryTemporaryTwins[0]?.id).toBe(queuedTemporaryTwins[0]?.id);
-    expect(retryTemporaryTwins[0]?.text).toBe("Parallel twins retry");
-    expect(
-      screen.getByRole("button", { name: "Edit Parallel twins" }),
-    ).toBeVisible();
-    expect(
-      screen.getByRole("button", { name: "Edit Parallel twins retry" }),
-    ).toBeVisible();
-    expect(
-      screen.queryByRole("region", { name: "Unsaved update recovery" }),
-    ).not.toBeInTheDocument();
-  }, 20_000);
 
   it("returns focus and restores report actions when an inline edit is cancelled", async () => {
     const user = userEvent.setup();
@@ -990,17 +1130,438 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
     await user.click(
-      await screen.findByRole("button", { name: "Edit Current work" }),
+      await screen.findByRole("button", { name: "Edit update: Current work" }),
     );
     await user.type(screen.getByLabelText(/Description \*/i), " unsaved");
-    expect(screen.getByRole("button", { name: "+ Add" })).toBeDisabled();
     await user.keyboard("{Escape}");
     expect(
-      screen.getByRole("button", { name: "Edit Current work" }),
+      screen.getByRole("button", { name: "Edit update: Current work" }),
     ).toHaveFocus();
-    expect(screen.getByRole("button", { name: "+ Add" })).toBeEnabled();
     expect(
       within(screen.getByTestId("status-overview")).getByRole("status"),
     ).toHaveTextContent("Draft saved");
   });
+
+  it("accepts a saved parent change as the new editor baseline", async () => {
+    const user = userEvent.setup();
+    render(
+      <Wrapper>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Edit update: Current work" }),
+    );
+    await user.click(screen.getByText("Edit details"));
+    await user.selectOptions(
+      screen.getByLabelText("Product"),
+      `product:${SECOND_PROJECT_ID}`,
+    );
+    await user.click(screen.getByRole("button", { name: "Save update" }));
+
+    await vi.waitFor(() =>
+      expect(
+        screen.queryByRole("form", {
+          name: "Current week update for Analytics",
+        }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(
+      screen.queryByRole("region", { name: "Unsaved update recovery" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Edit update: Current work" }),
+    ).toHaveFocus();
+  });
+
+  it("retries a failed parent-change save against the submitted parent", async () => {
+    const user = userEvent.setup();
+    let attempt = 0;
+    const saveDraft = vi.fn(
+      (input: unknown, current: ReportSectionReadModel) => {
+        attempt += 1;
+        if (attempt === 1) return Promise.reject(new Error("network failure"));
+        const request = input as {
+          readonly version: number;
+          readonly items: ReportSectionReadModel["items"];
+        };
+        return Promise.resolve({
+          ...current,
+          version: request.version + 1,
+          items: request.items,
+        });
+      },
+    );
+    render(
+      <Wrapper saveDraft={saveDraft}>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Edit update: Current work" }),
+    );
+    await user.click(screen.getByText("Edit details"));
+    await user.selectOptions(
+      screen.getByLabelText("Product"),
+      `product:${SECOND_PROJECT_ID}`,
+    );
+    await user.click(screen.getByRole("button", { name: "Save update" }));
+
+    expect(
+      await screen.findByText(
+        "Save failed. Your update is still here; try saving again.",
+      ),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("region", { name: "Unsaved update recovery" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("form", { name: "Current week update for Analytics" }),
+    ).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Save update" }));
+
+    await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() =>
+      expect(
+        screen.queryByRole("form", {
+          name: "Current week update for Analytics",
+        }),
+      ).not.toBeInTheDocument(),
+    );
+  });
+
+  it("moves an item through the canonical editor without writing before Save", async () => {
+    const user = userEvent.setup();
+    const saveDraft = vi.fn(
+      (input: unknown, current: ReportSectionReadModel) => {
+        const draft = input as {
+          readonly version: number;
+          readonly items: ReportSectionReadModel["items"];
+        };
+        return Promise.resolve({
+          ...current,
+          version: draft.version + 1,
+          items: draft.items,
+        });
+      },
+    );
+    render(
+      <Wrapper saveDraft={saveDraft}>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+
+    await chooseMove(user, "Current work", "next week");
+    expect(screen.getByRole("radio", { name: "Next week" })).toBeChecked();
+    expect(screen.getByRole("textbox", { name: /Description/ })).toHaveValue(
+      "Current work",
+    );
+    expect(saveDraft).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Save update" }));
+    await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledOnce());
+    const moved = (
+      saveDraft.mock.calls[0]?.[0] as {
+        readonly items: ReportSectionReadModel["items"];
+      }
+    ).items.find((item) => item.text === "Current work");
+    expect(moved).toMatchObject({
+      type: "next",
+      workflowStatus: "in_progress",
+      carriedOver: false,
+    });
+  });
+
+  it("returns focus to the exact Move opener after cancelling the editor", async () => {
+    const user = userEvent.setup();
+    const saveDraft = vi.fn();
+    render(
+      <Wrapper saveDraft={saveDraft}>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+
+    const opener = await screen.findByRole("button", {
+      name: "Move Current work",
+    });
+    await user.click(opener);
+    const move = screen.getByRole("menuitem", { name: "Move to next week" });
+    expect(move).toHaveAttribute(
+      "data-overview-focus",
+      "move:current:a0000000-0000-4000-8000-000000000011",
+    );
+    move.blur();
+    fireEvent.click(move);
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(saveDraft).not.toHaveBeenCalled();
+    expect(
+      await screen.findByRole("button", { name: "Move Current work" }),
+    ).toHaveFocus();
+  });
+
+  it("returns focus to More after cancelling Update status when the menu item lost focus", async () => {
+    const user = userEvent.setup();
+    const saveDraft = vi.fn();
+    const resolvePlan = vi.fn(() => Promise.resolve({}));
+    render(
+      <Wrapper saveDraft={saveDraft} resolvePlan={resolvePlan}>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+
+    const opener = await screen.findByRole("button", {
+      name: "More actions for Next work",
+    });
+    await user.click(opener);
+    const updateStatus = screen.getByRole("menuitem", {
+      name: "Update status",
+    });
+    updateStatus.blur();
+    fireEvent.click(updateStatus);
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(saveDraft).not.toHaveBeenCalled();
+    expect(resolvePlan).not.toHaveBeenCalled();
+    expect(
+      await screen.findByRole("button", {
+        name: "More actions for Next work",
+      }),
+    ).toHaveFocus();
+  });
+
+  it("opens a legacy derived Next item in the canonical editor before promotion", async () => {
+    const user = userEvent.setup();
+    const saveDraft = vi.fn();
+    render(
+      <Wrapper legacyNextText="Legacy next-week plan" saveDraft={saveDraft}>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+
+    await chooseMove(user, "Legacy next-week plan", "this week");
+    expect(
+      screen.getByRole("form", { name: "Current week update for Payments" }),
+    ).toBeVisible();
+    expect(screen.getByRole("textbox", { name: /Description/ })).toHaveValue(
+      "Legacy next-week plan",
+    );
+    expect(screen.getByRole("textbox", { name: /Description/ })).toBeDisabled();
+    expect(saveDraft).not.toHaveBeenCalled();
+  });
+
+  it("moves a legacy next-week commitment through the audited command only on Save", async () => {
+    const user = userEvent.setup();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const saveDraft = vi.fn();
+    const promotePlan = vi.fn(
+      (_input: unknown, current: ReportSectionReadModel) => {
+        const source = current.items.find(
+          (item) => item.text === "Current work",
+        );
+        if (!source?.stableId || !source.nextStepText)
+          throw new Error("Expected a linked next-week commitment");
+        const occurredAt = "2026-09-14T18:45:00.000Z";
+        const moved = {
+          ...source,
+          type: "next" as const,
+          text: source.nextStepText,
+          nextStepText: null,
+          carriedOver: false,
+          outcomeHistory: [
+            ...(source.outcomeHistory ?? []),
+            {
+              id: "a0000000-0000-4000-8000-000000000030",
+              stableId: source.stableId,
+              outcome: "plan_next" as const,
+              reason: null,
+              actorId: current.authorId,
+              actorName: current.authorName,
+              occurredAt,
+              beforeState: {
+                type: source.type,
+                workflowStatus: source.workflowStatus,
+                pausedReason: source.pausedReason ?? null,
+                nextStepText: source.nextStepText,
+                text: source.text,
+              },
+              afterState: {
+                type: "next" as const,
+                workflowStatus: source.workflowStatus,
+                pausedReason: source.pausedReason ?? null,
+                nextStepText: null,
+                text: source.nextStepText,
+              },
+              reversesEventId: null,
+            },
+          ],
+        };
+        return Promise.resolve({
+          section: {
+            ...current,
+            version: current.version + 1,
+            items: current.items.map((item) =>
+              item.id === source.id ? moved : item,
+            ),
+          },
+          stableId: source.stableId,
+          replayed: false,
+        });
+      },
+    );
+    render(
+      <Wrapper
+        client={client}
+        legacyNextText="Legacy next-week plan"
+        promotePlan={promotePlan}
+        saveDraft={saveDraft}
+      >
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+
+    await chooseMove(user, "Current work", "next week");
+    expect(
+      screen.getByRole("form", { name: "Next week update for Payments" }),
+    ).toBeVisible();
+    expect(screen.getByRole("textbox", { name: /Description/ })).toHaveValue(
+      "Legacy next-week plan",
+    );
+    expect(screen.getByRole("textbox", { name: /Description/ })).toBeDisabled();
+    expect(screen.queryByRole("textbox", { name: /Next step/ })).toBeNull();
+    expect(promotePlan).not.toHaveBeenCalled();
+    expect(saveDraft).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Save update" }));
+
+    await vi.waitFor(() => expect(promotePlan).toHaveBeenCalledOnce());
+    expect(promotePlan.mock.calls[0]?.[0]).toMatchObject({ target: "next" });
+    expect(saveDraft).not.toHaveBeenCalled();
+    await vi.waitFor(() =>
+      expect(
+        screen.queryByRole("form", { name: "Next week update for Payments" }),
+      ).not.toBeInTheDocument(),
+    );
+
+    await act(async () => {
+      await client.refetchQueries({
+        queryKey: [["leadForm", "statusOverview"]],
+      });
+    });
+    expect(
+      await screen.findByRole("button", {
+        name: "Edit update: Legacy next-week plan",
+      }),
+    ).toBeInTheDocument();
+    const preview = screen
+      .getByRole("button", { name: "Edit update: Legacy next-week plan" })
+      .closest("[data-overview-item-preview]");
+    expect(preview).toHaveTextContent("In progress");
+    await user.click(screen.getByText("History"));
+    expect(screen.getByText(/Moved to next week by Test Lead/)).toBeVisible();
+    expect(screen.getByText(/Previous: Current work/)).toBeVisible();
+  });
+
+  it.each([
+    {
+      initial: "Current work",
+      target: "next" as const,
+      destination: "next week" as const,
+    },
+    {
+      initial: "Next work",
+      target: "current" as const,
+      destination: "this week" as const,
+    },
+  ])(
+    "retries an edited $target move from the latest draft without a duplicate",
+    async ({ initial, target, destination }) => {
+      const user = userEvent.setup();
+      let attempt = 0;
+      const saveDraft = vi.fn(
+        (input: unknown, current: ReportSectionReadModel) => {
+          attempt += 1;
+          if (attempt === 1)
+            return Promise.reject(new Error("move network failure"));
+          const request = input as {
+            readonly version: number;
+            readonly items: ReportSectionReadModel["items"];
+          };
+          return Promise.resolve({
+            ...current,
+            version: request.version + 1,
+            items: request.items,
+          });
+        },
+      );
+      render(
+        <Wrapper saveDraft={saveDraft}>
+          <LeadForm reportId={REPORT_ID} mode="overview" />
+        </Wrapper>,
+      );
+
+      await chooseMove(user, initial, destination);
+      await user.click(screen.getByRole("button", { name: "Save update" }));
+      expect(
+        await screen.findByText(
+          "Save failed. Your update is still here; try saving again.",
+        ),
+      ).toBeVisible();
+      const description = screen.getByRole("textbox", { name: /Description/ });
+      await user.type(description, " after retry");
+      await user.click(screen.getByRole("button", { name: "Save update" }));
+
+      await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledTimes(2));
+      const retryItems = (
+        saveDraft.mock.calls[1]?.[0] as {
+          readonly items: ReportSectionReadModel["items"];
+        }
+      ).items;
+      const moved = retryItems.filter(
+        (item) =>
+          item.text === `${initial} after retry` && item.type === target,
+      );
+      expect(moved).toHaveLength(1);
+      expect(
+        retryItems.filter((item) => item.stableId === moved[0]?.stableId),
+      ).toHaveLength(1);
+    },
+  );
+
+  it.each([
+    ["current", "next", "in_progress", "! In Progress"],
+    ["next", "current", "in_progress", "! In Progress"],
+    ["current", "next", "paused", "‖ Paused"],
+    ["next", "current", "paused", "‖ Paused"],
+    ["current", "next", "postponed", "» Postponed"],
+    ["next", "current", "postponed", "» Postponed"],
+  ] as const)(
+    "keeps %s status %s selected while moving to %s",
+    async (source, target, status, statusLabel) => {
+      const user = userEvent.setup();
+      const text = source === "current" ? "Current work" : "Next work";
+      render(
+        <Wrapper
+          {...(source === "current"
+            ? { currentWorkflowStatus: status }
+            : { nextWorkflowStatus: status })}
+        >
+          <LeadForm reportId={REPORT_ID} mode="overview" />
+        </Wrapper>,
+      );
+
+      await chooseMove(
+        user,
+        text,
+        target === "next" ? "next week" : "this week",
+      );
+
+      expect(screen.getByRole("button", { name: statusLabel })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+    },
+  );
 });

@@ -9,13 +9,16 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("../../../../../shared/ui/report-shell/accordion-section", () => ({
   AccordionSection: ({
     subtitle,
+    actions,
     children,
   }: {
     subtitle?: string;
+    actions?: ReactNode;
     children: ReactNode;
   }) => (
     <section>
       <p>{subtitle}</p>
+      {actions}
       {children}
     </section>
   ),
@@ -25,10 +28,12 @@ vi.mock("../../../../report-sections", () => ({
   NextWeekSection: () => null,
   UnifiedActivitySection: ({
     activities,
+    addSignal,
   }: {
     activities?: readonly { id: string; name: string }[];
+    addSignal?: number;
   }) => (
-    <div data-testid="unified-host">
+    <div data-add-signal={addSignal} data-testid="unified-host">
       {activities?.map((activity) => activity.name).join(",")}
     </div>
   ),
@@ -45,6 +50,7 @@ const actions: LeadFormItemSectionsActions = {
   onNextWeekItemsChange: vi.fn(),
   onMarkComplete: vi.fn(),
   onMoveToNextWeek: vi.fn(),
+  onContinueToNext: vi.fn(),
   onMoveToCurrentWeek: vi.fn(),
   onPauseItem: vi.fn(),
   addCurrentWeekItem: vi.fn(),
@@ -110,12 +116,13 @@ describe("LeadFormItemSections — unified activity adapter", () => {
     expect(screen.queryByText(/\+ Add/)).toBeNull();
   });
 
-  it("retains Add guidance for the editable unified view", () => {
+  it("offers one local Add Item action wired to the current-week signal", () => {
+    const addCurrentWeekItem = vi.fn();
     render(
       <LeadFormItemSections
         unifiedView
         viewModel={unifiedViewModel(false)}
-        actions={actions}
+        actions={{ ...actions, addCurrentWeekItem, currentWeekAddSignal: 7 }}
         groupExpanded
         stagesForProduct={() => []}
       />,
@@ -126,5 +133,11 @@ describe("LeadFormItemSections — unified activity adapter", () => {
         "Current and next week items in one list, grouped by state. Use + Add to create records.",
       ),
     ).toBeVisible();
+    expect(screen.getByTestId("unified-host")).toHaveAttribute(
+      "data-add-signal",
+      "7",
+    );
+    screen.getByRole("button", { name: "+ Add Item" }).click();
+    expect(addCurrentWeekItem).toHaveBeenCalledOnce();
   });
 });

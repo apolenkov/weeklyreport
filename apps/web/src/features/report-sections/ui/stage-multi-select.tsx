@@ -158,7 +158,7 @@ function StageChoices({
 }
 
 const STAGE_CHOICE_CLASS =
-  "inline-flex min-h-[var(--touch-target-min)] md:min-h-[34px] items-center gap-2 rounded-[var(--radius-pill)] border px-3 py-1 text-xs font-semibold transition-colors";
+  "inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] border px-3 py-1 text-xs font-semibold transition-colors";
 const STAGE_CHOICE_CHECKED_CLASS =
   "border-[var(--color-starbucks-accent)] bg-[var(--color-success)] text-[var(--color-primary)]";
 const STAGE_CHOICE_UNCHECKED_CLASS =

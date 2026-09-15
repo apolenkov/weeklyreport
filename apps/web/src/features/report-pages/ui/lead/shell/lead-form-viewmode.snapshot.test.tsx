@@ -97,6 +97,10 @@ function buildTRPC() {
       mutation: true,
     },
     {
+      path: ["leadForm", "promotePlan"],
+      mutation: true,
+    },
+    {
       path: ["leadForm", "crossAuthors"],
       query: [],
     },
