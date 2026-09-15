@@ -119,6 +119,7 @@ describe("buildSectionProductProjection — cross-product slide", () => {
                 workflowStatus: "planned",
                 pausedReason: null,
                 nextStepText: null,
+                text: null,
               },
             },
           },

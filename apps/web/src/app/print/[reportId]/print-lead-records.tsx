@@ -62,6 +62,7 @@ const OUTCOME_LABELS = {
   done: "Completed",
   continue: "Continued",
   plan_next: "Planned next step",
+  promote: "Promoted next step",
   restore: "Restored plan",
   wont_do: "Marked Won't do",
 } as const;

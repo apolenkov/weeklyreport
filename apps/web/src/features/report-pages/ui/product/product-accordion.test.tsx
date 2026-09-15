@@ -237,6 +237,7 @@ describe("ProductAccordion — item status badge", () => {
                   workflowStatus: "planned",
                   pausedReason: null,
                   nextStepText: null,
+                  text: null,
                 },
               },
               outcomeHistory: [
@@ -253,12 +254,14 @@ describe("ProductAccordion — item status badge", () => {
                     workflowStatus: "planned",
                     pausedReason: null,
                     nextStepText: null,
+                    text: null,
                   },
                   afterState: {
                     type: "next",
                     workflowStatus: "planned",
                     pausedReason: null,
                     nextStepText: null,
+                    text: null,
                   },
                   reversesEventId: null,
                 },
