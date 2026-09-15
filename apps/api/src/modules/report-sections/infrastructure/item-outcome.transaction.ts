@@ -2,6 +2,7 @@ import {
   draftSaveSchema,
   type ItemOutcomeResult,
   MAX_RECORDS_PER_SECTION_SAVE,
+  type PromotePlanInput,
   type ReportSectionReadModel,
   type ResolvePlanInput,
   type RestorePlanInput,
@@ -13,6 +14,7 @@ import { Prisma } from "@prisma/client";
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import { ReportSectionDomainError } from "../application/report-sections.service.js";
 import {
+  promoteItemTransition,
   resolveItemTransition,
   restoreItemTransition,
 } from "../domain/item-outcome-transition.js";
@@ -58,7 +60,9 @@ function outcomeCandidate(
       command.priorityRank !== undefined
         ? command.priorityRank
         : (source.priorityRank ?? null),
-    carriedOver: command.source.kind === "current" ? source.carriedOver : false,
+    // Every explicit outcome acknowledges the carried occurrence. Clear the
+    // marker in the same transaction as the outcome and its audit event.
+    carriedOver: false,
     resolution: null,
     outcomeHistory: [],
   };
@@ -90,7 +94,7 @@ export async function resolvePlanTx(
 ): Promise<ItemOutcomeResult> {
   return prisma.$transaction(
     async (tx) => {
-      const target = await loadOutcomeTarget(tx, command, userId);
+      const target = await loadOutcomeTarget(tx, command, userId, "resolve");
       if (target.replay) return target.replay;
       const source = await resolveOutcomeSource(tx, target.section, command);
       const stableId = source.stableId;
@@ -183,7 +187,7 @@ export async function restorePlanTx(
 ): Promise<ItemOutcomeResult> {
   return prisma.$transaction(
     async (tx) => {
-      const target = await loadOutcomeTarget(tx, command, userId);
+      const target = await loadOutcomeTarget(tx, command, userId, "restore");
       if (target.replay) return target.replay;
       const source = target.section.items.find(
         (item) => item.id === command.recordId,
@@ -196,6 +200,7 @@ export async function restorePlanTx(
       validateOutcomeItem(target.section, {
         ...source,
         ...transition.afterState,
+        text: transition.afterState.text ?? source.text,
         resolution: null,
       });
       await advanceOutcomeVersion(tx, command);
@@ -220,7 +225,76 @@ export async function restorePlanTx(
             stableId: source.stableId,
           },
         },
-        data: { ...transition.afterState, resolution: Prisma.DbNull },
+        data: {
+          ...transition.afterState,
+          text: transition.afterState.text ?? source.text,
+          resolution: Prisma.DbNull,
+        },
+      });
+      return readOutcomeResult(
+        tx,
+        target.section.reportSectionId,
+        source.stableId,
+      );
+    },
+    { timeout: 15_000 },
+  );
+}
+
+// One transaction replaces the active result with the linked commitment,
+// consumes it and appends the audit event whose before-state keeps the
+// superseded result readable. Moving to Next preserves workflow state.
+export async function promotePlanTx(
+  prisma: PrismaService,
+  command: PromotePlanInput,
+  userId: string,
+): Promise<ItemOutcomeResult> {
+  return prisma.$transaction(
+    async (tx) => {
+      const target = await loadOutcomeTarget(tx, command, userId, "promote");
+      if (target.replay) return target.replay;
+      const source = target.section.items.find(
+        (item) => item.id === command.recordId,
+      );
+      if (!source?.stableId)
+        throw new LeadFormDomainError(
+          "This record is no longer available. Reload the report.",
+        );
+      const transition = promoteItemTransition(source, command.target);
+      validateOutcomeItem(target.section, {
+        ...source,
+        ...transition.afterState,
+        text: transition.afterState.text ?? source.text,
+        resolution: null,
+      });
+      await advanceOutcomeVersion(tx, command);
+      await tx.itemOutcomeEvent.create({
+        data: {
+          id: command.commandId,
+          reportSectionId: target.section.reportSectionId,
+          stableId: source.stableId,
+          requestHash: target.requestHash,
+          outcome: command.target === "next" ? "plan_next" : "promote",
+          actorId: target.actor.id,
+          actorName: target.actor.name,
+          beforeState: transition.beforeState,
+          afterState: transition.afterState,
+          reversesEventId: null,
+        },
+      });
+      await tx.item.update({
+        where: {
+          reportSectionId_stableId: {
+            reportSectionId: target.section.reportSectionId,
+            stableId: source.stableId,
+          },
+        },
+        data: {
+          ...transition.afterState,
+          text: transition.afterState.text ?? source.text,
+          carriedOver: false,
+          resolution: Prisma.DbNull,
+        },
       });
       return readOutcomeResult(
         tx,

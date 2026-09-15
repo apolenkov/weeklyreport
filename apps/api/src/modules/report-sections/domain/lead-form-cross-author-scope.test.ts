@@ -19,6 +19,7 @@ const PRIVATE_PAUSED_STATE = {
   workflowStatus: "paused" as const,
   pausedReason: PRIVATE_AUDIT_SENTINEL,
   nextStepText: null,
+  text: null,
 };
 const PRIVATE_RESOLUTION = {
   kind: "wont_do" as const,

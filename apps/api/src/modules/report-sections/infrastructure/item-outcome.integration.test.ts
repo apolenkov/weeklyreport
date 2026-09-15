@@ -17,7 +17,10 @@ import {
   ReportSectionsService,
   SectionVersionConflictError,
 } from "../application/report-sections.service";
-import { LeadFormDomainError } from "../domain/lead-form-shared";
+import {
+  LeadFormConstraintError,
+  LeadFormDomainError,
+} from "../domain/lead-form-shared";
 import {
   assignOutcomeStage,
   OUTCOME_CASES,
@@ -27,7 +30,11 @@ import {
   seedOutcomeItem,
   unchangedDraftPayload,
 } from "./item-outcome.integration.fixtures";
-import { resolvePlanTx, restorePlanTx } from "./item-outcome.transaction";
+import {
+  promotePlanTx,
+  resolvePlanTx,
+  restorePlanTx,
+} from "./item-outcome.transaction";
 import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
 
 const graceSettings = () =>
@@ -289,5 +296,119 @@ describe("item outcomes (real database)", () => {
       workflowStatus: "planned",
       carriedOver: true,
     });
+  });
+
+  it("promotes a linked next step atomically and keeps the superseded result in history", async () => {
+    const prepared = await prepareOutcomeSource(prisma, testData, "current");
+    const planned = await resolvePlanTx(
+      prismaService,
+      outcomeCommand(testData.section.id, prepared.source, "plan_next"),
+      testData.lead.id,
+    );
+    const plannedItem = resolvedItem(planned);
+    const previousText = plannedItem.text;
+    expect(plannedItem.nextStepText).toBe("Verify the next-period metrics");
+
+    const promoted = await promotePlanTx(
+      prismaService,
+      {
+        reportSectionId: testData.section.id,
+        version: planned.section.version,
+        commandId: crypto.randomUUID(),
+        recordId: expectDefined(plannedItem.id),
+      },
+      testData.lead.id,
+    );
+    const item = resolvedItem(promoted);
+
+    expect(item).toMatchObject({
+      stableId: prepared.item.stableId,
+      type: "current",
+      workflowStatus: "in_progress",
+      nextStepText: null,
+      text: "Verify the next-period metrics",
+      carriedOver: false,
+      resolution: null,
+    });
+    const promotion = item.outcomeHistory?.at(-1);
+    expect(promotion).toMatchObject({ outcome: "promote" });
+    expect(promotion?.beforeState).toMatchObject({
+      text: previousText,
+      nextStepText: "Verify the next-period metrics",
+    });
+    expect(promotion?.afterState).toMatchObject({
+      text: "Verify the next-period metrics",
+      nextStepText: null,
+    });
+  });
+
+  it("keeps the displaced commitment in history when a continuation is replaced", async () => {
+    const prepared = await prepareOutcomeSource(prisma, testData, "current");
+    const planned = await resolvePlanTx(
+      prismaService,
+      outcomeCommand(testData.section.id, prepared.source, "plan_next"),
+      testData.lead.id,
+    );
+    const plannedItem = resolvedItem(planned);
+    expect(plannedItem.nextStepText).toBe("Verify the next-period metrics");
+
+    const replaced = await resolvePlanTx(
+      prismaService,
+      outcomeCommand(testData.section.id, prepared.source, "continue", {
+        version: planned.section.version,
+        nextStepText: "Replacement commitment",
+      }),
+      testData.lead.id,
+    );
+    const item = resolvedItem(replaced);
+
+    expect(item).toMatchObject({
+      text: "Outcome source",
+      nextStepText: "Replacement commitment",
+    });
+    const replacement = item.outcomeHistory?.at(-1);
+    expect(replacement).toMatchObject({ outcome: "continue" });
+    expect(replacement?.beforeState).toMatchObject({
+      nextStepText: "Verify the next-period metrics",
+    });
+    expect(replacement?.afterState).toMatchObject({
+      nextStepText: "Replacement commitment",
+    });
+  });
+
+  it("rejects promotion without a commitment or from completed work", async () => {
+    const prepared = await prepareOutcomeSource(prisma, testData, "current");
+    const withoutCommitment = () =>
+      promotePlanTx(
+        prismaService,
+        {
+          reportSectionId: testData.section.id,
+          version: 1,
+          commandId: crypto.randomUUID(),
+          recordId: prepared.item.id,
+        },
+        testData.lead.id,
+      );
+
+    await expect(withoutCommitment()).rejects.toThrow(LeadFormConstraintError);
+
+    const completed = await seedOutcomeItem(prisma, {
+      sectionId: testData.section.id,
+      projectId: testData.project.id,
+      workflowStatus: "done",
+      text: "Completed work",
+    });
+    await expect(
+      promotePlanTx(
+        prismaService,
+        {
+          reportSectionId: testData.section.id,
+          version: 1,
+          commandId: crypto.randomUUID(),
+          recordId: completed.id,
+        },
+        testData.lead.id,
+      ),
+    ).rejects.toThrow(LeadFormConstraintError);
   });
 });

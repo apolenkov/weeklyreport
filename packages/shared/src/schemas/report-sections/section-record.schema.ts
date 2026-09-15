@@ -6,6 +6,7 @@ import {
   itemTypeSchema,
   itemWorkflowStatusSchema,
   riskSeveritySchema,
+  SAFE_TEXT_MAX_LENGTH,
   safeText,
   trafficLightStatusSchema,
   writeStageNamesField,
@@ -19,6 +20,39 @@ import {
 const ITEM_TAG_MAX_LENGTH = 50;
 const DECISION_OWNER_MAX_LENGTH = 200;
 
+/** Maximum length of the catalogue activity name and its weekly title override. */
+export const MAX_ACTIVITY_NAME_LENGTH = 200;
+
+// Blank/whitespace override resets to null (fall back to the catalogue name);
+// a non-blank value is trimmed to the catalogue-name limit.
+const titleOverrideField = z.preprocess(
+  (value) => {
+    if (typeof value !== "string") return value;
+    const trimmed = value.trim();
+    return trimmed === "" ? null : trimmed;
+  },
+  safeText({ max: MAX_ACTIVITY_NAME_LENGTH }).nullable().optional(),
+);
+
+// The form emits an empty string when a lead clears the description. Accept
+// only blank strings as the reset branch; non-blank notes retain safeText's
+// existing null-byte, visible-character, and length checks.
+const activityNoteField = z
+  .union([
+    safeText(),
+    z
+      .string()
+      .max(SAFE_TEXT_MAX_LENGTH)
+      .refine((value) => value.trim() === "", {
+        message: "Blank text resets the Activity description.",
+      }),
+    z.null(),
+  ])
+  .transform((value) =>
+    typeof value === "string" && value.trim() === "" ? null : value,
+  )
+  .optional();
+
 /** Accepts a lead-authored traffic-light status for one product. */
 export const projectStatusInputSchema = z
   .object({
@@ -27,12 +61,13 @@ export const projectStatusInputSchema = z
   })
   .readonly();
 
-/** Accepts a lead-authored status and note for one department activity. */
+/** Accepts a lead-authored status, weekly title override and note for one activity. */
 export const activityStatusInputSchema = z
   .object({
     activityId: z.uuid(),
     status: trafficLightStatusSchema.nullable().optional(),
-    note: safeText().nullable().optional(),
+    titleOverride: titleOverrideField,
+    note: activityNoteField,
   })
   .readonly();
 
@@ -49,6 +84,12 @@ export const sectionActivitySchema = z
   .object({
     activityId: z.uuid(),
     activityName: z.string().min(1),
+    // Weekly override of activityName; null/absent renders the catalogue name.
+    titleOverride: z
+      .string()
+      .max(MAX_ACTIVITY_NAME_LENGTH)
+      .nullable()
+      .optional(),
     status: trafficLightStatusSchema.nullable(),
     note: z.string().nullable().optional(),
     jiraAccounts: z.array(z.string().min(1)).readonly(),

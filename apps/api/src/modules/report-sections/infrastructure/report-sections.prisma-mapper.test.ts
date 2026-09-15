@@ -412,6 +412,7 @@ describe("mapPrismaToReportSection — activity derived-status floor", () => {
           updatedAt: FIXED_TIMESTAMP,
           activityId: ACTIVITY_ID,
           status: over.storedStatus ?? "green",
+          titleOverride: null,
           note: null,
           activity: {
             name: "Jira triage duty",

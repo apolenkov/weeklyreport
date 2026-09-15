@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import { SAFE_TEXT_MAX_LENGTH } from "../primitives/report-primitives.schema";
 import {
   draftSaveSchema,
+  MAX_ACTIVITY_NAME_LENGTH,
   reportSectionReadModelSchema,
 } from "./section.schema";
 import { validateActivityStatuses } from "./section-validation.schema";
@@ -90,5 +92,76 @@ describe("validateActivityStatuses", () => {
       payload([{ activityId: ACTIVITY_ID, status: "green" }]),
     );
     expect(errors).toHaveLength(1);
+  });
+});
+
+describe("activity weekly title override", () => {
+  it("trims a non-blank override and preserves omission", () => {
+    const parsed = payload([
+      {
+        activityId: ACTIVITY_ID,
+        status: "green",
+        titleOverride: "  Weekly duty  ",
+      },
+      { activityId: OTHER_ACTIVITY_ID, status: "green" },
+    ]);
+    expect(parsed.activityStatuses[0]?.titleOverride).toBe("Weekly duty");
+    expect(parsed.activityStatuses[1]?.titleOverride).toBeUndefined();
+  });
+
+  it("normalizes blank and whitespace overrides to null", () => {
+    const parsed = payload([
+      { activityId: ACTIVITY_ID, status: "green", titleOverride: "" },
+      {
+        activityId: OTHER_ACTIVITY_ID,
+        status: "green",
+        titleOverride: " ".repeat(3),
+      },
+    ]);
+    expect(parsed.activityStatuses[0]?.titleOverride).toBeNull();
+    expect(parsed.activityStatuses[1]?.titleOverride).toBeNull();
+  });
+
+  it("normalizes a cleared description to null while preserving a note", () => {
+    const parsed = payload([
+      { activityId: ACTIVITY_ID, status: "green", note: "" },
+      { activityId: OTHER_ACTIVITY_ID, status: "green", note: "  " },
+      { activityId: ACTIVITY_ID, status: "green", note: "Weekly context" },
+    ]);
+    expect(parsed.activityStatuses.map((status) => status.note)).toEqual([
+      null,
+      null,
+      "Weekly context",
+    ]);
+  });
+
+  it("rejects an override longer than the catalogue name limit", () => {
+    const tooLong = "x".repeat(MAX_ACTIVITY_NAME_LENGTH + 1);
+    expect(() =>
+      payload([
+        { activityId: ACTIVITY_ID, status: "green", titleOverride: tooLong },
+      ]),
+    ).toThrow();
+  });
+
+  it("rejects a description longer than the existing safe-text limit", () => {
+    const tooLong = "x".repeat(SAFE_TEXT_MAX_LENGTH + 1);
+    expect(() =>
+      payload([{ activityId: ACTIVITY_ID, status: "green", note: tooLong }]),
+    ).toThrow();
+  });
+
+  it("carries the override on the stored section read model", () => {
+    const section = makeSection([
+      {
+        activityId: ACTIVITY_ID,
+        activityName: "Weekly duty",
+        titleOverride: "Weekly duty",
+        status: "green",
+        jiraAccounts: [],
+      },
+    ]);
+    expect(section.activities[0]?.titleOverride).toBe("Weekly duty");
+    expect(section.activities[0]?.activityName).toBe("Weekly duty");
   });
 });

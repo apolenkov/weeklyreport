@@ -1,15 +1,21 @@
 import {
   type ItemOutcomeResult,
   MAX_RECORDS_PER_SECTION_SAVE,
+  type PromotePlanInput,
   type ReportSectionReadModel,
   type ResolvePlanInput,
   type RestorePlanInput,
+  validateSubmitInput,
 } from "@customreport/shared";
 import { Prisma } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LeadFormConstraintError } from "../domain/lead-form-shared";
-import { resolvePlanTx, restorePlanTx } from "./item-outcome.transaction";
+import {
+  promotePlanTx,
+  resolvePlanTx,
+  restorePlanTx,
+} from "./item-outcome.transaction";
 
 const mocked = vi.hoisted(() => ({
   loadOutcomeTarget: vi.fn(),
@@ -149,6 +155,18 @@ function resolveCommand(
 function restoreCommand(
   overrides: Partial<RestorePlanInput> = {},
 ): RestorePlanInput {
+  return {
+    reportSectionId: SECTION_ID,
+    version: 1,
+    commandId: COMMAND_ID,
+    recordId: RECORD_ID,
+    ...overrides,
+  };
+}
+
+function promoteCommand(
+  overrides: Partial<PromotePlanInput> = {},
+): PromotePlanInput {
   return {
     reportSectionId: SECTION_ID,
     version: 1,
@@ -380,7 +398,7 @@ describe("item outcome transactions", () => {
     expect(tx.item.create).not.toHaveBeenCalled();
   });
 
-  it("records server actor/time and resolution metadata for won't do", async () => {
+  it("atomically cancels carried work and leaves it ready to submit", async () => {
     const source = item();
     const tx = transaction();
     const client = prisma(tx);
@@ -406,6 +424,26 @@ describe("item outcome transactions", () => {
       AUTHOR_ID,
     );
 
+    const write = tx.item.update.mock.calls[0]?.[0] as
+      { readonly data: { readonly carriedOver: boolean } } | undefined;
+    if (!write) throw new Error("Expected the cancelled item update.");
+    const cancelled = { ...source, carriedOver: write.data.carriedOver };
+    const submitErrors = validateSubmitInput(section([cancelled]), {
+      reportSectionId: SECTION_ID,
+      version: 1,
+      status: "draft",
+      projectStatuses: [{ projectId: PROJECT_ID, status: "green" }],
+      stageStatuses: [],
+      activityStatuses: [],
+      items: [cancelled],
+      risks: [],
+      decisions: [],
+      confirmed: true,
+    });
+    expect(submitErrors).not.toContainEqual(
+      expect.objectContaining({ code: "UNCONFIRMED_CARRIED_ITEM" }),
+    );
+
     expect(tx.item.update.mock.calls).toMatchObject([
       [
         {
@@ -416,6 +454,7 @@ describe("item outcome transactions", () => {
             },
           },
           data: {
+            carriedOver: false,
             resolution: {
               kind: "wont_do",
               eventId: COMMAND_ID,
@@ -436,6 +475,73 @@ describe("item outcome transactions", () => {
     ]);
   });
 
+  it("atomically archives the current result and moves its continuation to Next", async () => {
+    const source = item({
+      workflowStatus: "paused",
+      pausedReason: "Waiting for approval.",
+      nextStepText: "Validate the integration",
+    });
+    const tx = transaction();
+    const client = prisma(tx);
+    mocked.loadOutcomeTarget.mockResolvedValue(target(section([source])));
+    mocked.readOutcomeResult.mockResolvedValue({
+      section: section([source]),
+      stableId: STABLE_ID,
+      replayed: false,
+    });
+    tx.itemOutcomeEvent.create.mockResolvedValue({});
+    tx.item.update.mockResolvedValue({});
+
+    await promotePlanTx(
+      client as never,
+      promoteCommand({ target: "next" }),
+      AUTHOR_ID,
+    );
+
+    expect(tx.itemOutcomeEvent.create.mock.calls).toMatchObject([
+      [
+        {
+          data: {
+            outcome: "plan_next",
+            stableId: STABLE_ID,
+            beforeState: {
+              type: "current",
+              workflowStatus: "paused",
+              pausedReason: "Waiting for approval.",
+              nextStepText: "Validate the integration",
+              text: "Current delivery result",
+            },
+            afterState: {
+              type: "next",
+              workflowStatus: "paused",
+              pausedReason: "Waiting for approval.",
+              nextStepText: null,
+              text: "Validate the integration",
+            },
+          },
+        },
+      ],
+    ]);
+    expect(tx.item.update).toHaveBeenCalledWith({
+      where: {
+        reportSectionId_stableId: {
+          reportSectionId: SECTION_ID,
+          stableId: STABLE_ID,
+        },
+      },
+      data: {
+        type: "next",
+        workflowStatus: "paused",
+        pausedReason: "Waiting for approval.",
+        nextStepText: null,
+        text: "Validate the integration",
+        carriedOver: false,
+        resolution: Prisma.DbNull,
+      },
+    });
+    expect(tx.item.create).not.toHaveBeenCalled();
+  });
+
   it("restores the stored tuple, clears resolution and records its reversal", async () => {
     const cancelled = item({
       resolution: {
@@ -450,6 +556,7 @@ describe("item outcome transactions", () => {
           workflowStatus: "paused",
           pausedReason: "Waiting for approval.",
           nextStepText: null,
+          text: null,
         },
       },
     });
@@ -488,6 +595,8 @@ describe("item outcome transactions", () => {
         workflowStatus: "paused",
         pausedReason: "Waiting for approval.",
         nextStepText: null,
+        // The stored event predates retained text, so the live result is kept.
+        text: "Current delivery result",
         resolution: Prisma.DbNull,
       },
     });

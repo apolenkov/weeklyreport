@@ -38,8 +38,7 @@ export type TrafficLightStatus = z.infer<typeof trafficLightStatusSchema>;
 /** Defines whether an item belongs to current work or next-period plans. */
 export const itemTypeSchema = z.enum(["current", "next"]);
 // Progress only — alarms (at-risk/blocked) derive from covering risks and are
-// never stored on an item. Per-type vocabulary below; the write superRefine in
-// section-record.schema.ts enforces it (DB CHECK is the defence-in-depth backstop).
+// never stored on an item. Week placement and progress are independent.
 /** Defines the progress states valid across both item types. */
 export const itemWorkflowStatusSchema = z.enum([
   "planned",
@@ -55,12 +54,16 @@ export const CURRENT_ITEM_STATUSES = Object.freeze([
   "planned",
   "in_progress",
   "paused",
+  "postponed",
   "done",
 ] as const);
 /** Progress states accepted for next-period items. */
 export const NEXT_ITEM_STATUSES = Object.freeze([
   "planned",
+  "in_progress",
+  "paused",
   "postponed",
+  "done",
 ] as const);
 
 /** Adds a Zod issue when a workflow status is illegal for the item type. */

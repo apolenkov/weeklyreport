@@ -18,7 +18,7 @@ type TestData = Awaited<ReturnType<typeof seedTestData>>;
 
 export const OUTCOME_STAGE = {
   id: "a1000000-0000-4000-a000-000000000001",
-  name: "Development",
+  name: "Item outcome fixture",
 } as const;
 
 export const OUTCOME_CASES = (["current", "prior"] as const).flatMap(

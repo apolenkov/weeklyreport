@@ -138,6 +138,27 @@ describe("validateSubmitInput", () => {
     expect(errors).toHaveLength(0);
   });
 
+  it("blocks an unconfirmed carried Current Week item", () => {
+    const section = makeSection();
+    const input = {
+      ...validSubmit(),
+      projectStatuses: [{ projectId: PROJECT_UUID, status: "green" as const }],
+      items: [
+        {
+          ...validItem(),
+          projectId: PROJECT_UUID,
+          type: "current" as const,
+          carriedOver: true,
+        },
+      ],
+    };
+
+    expect(validateSubmitInput(section, input)).toContainEqual({
+      code: "UNCONFIRMED_CARRIED_ITEM",
+      message: "Confirm carried Current Week items before submitting.",
+    });
+  });
+
   // Every attached activity must carry a traffic light at submit —
   // server-authoritative (a schema `.min` can't catch an OMITTED entry).
   it("requires a status for every attached activity", () => {

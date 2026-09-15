@@ -182,6 +182,7 @@ function toActivityViews(
       activityName: status.activity.name,
       status: asTraffic(status.status),
       note: status.note,
+      titleOverride: status.titleOverride,
       jiraAccounts: status.activity.jiraAccounts,
       linkedProducts: status.activity.activityProducts
         .map((link) => ({

@@ -76,58 +76,27 @@ describe("itemWriteSchema progress vocabulary", () => {
       }).success,
     ).toBe(false);
   });
-  const currentStatuses = ["in_progress", "paused", "done"] as const;
-  const nextStatuses = ["planned", "postponed"] as const;
-
-  it.each(["planned", ...currentStatuses] as const)(
-    "accepts %s on a current item",
-    (workflowStatus) => {
-      expect(
-        itemWriteSchema.safeParse({
-          ...validItem(),
-          workflowStatus,
-          ...(workflowStatus === "paused" ? { pausedReason: "Waiting" } : {}),
-        }).success,
-      ).toBe(true);
-    },
-  );
-
-  it.each(nextStatuses)("accepts %s on a next item", (workflowStatus) => {
+  it.each([
+    ["current", "planned"],
+    ["current", "in_progress"],
+    ["current", "paused"],
+    ["current", "postponed"],
+    ["current", "done"],
+    ["next", "planned"],
+    ["next", "in_progress"],
+    ["next", "paused"],
+    ["next", "postponed"],
+    ["next", "done"],
+  ] as const)("accepts %s/%s", (type, workflowStatus) => {
     expect(
       itemWriteSchema.safeParse({
         ...validItem(),
-        type: "next",
+        type,
         workflowStatus,
+        ...(workflowStatus === "paused" ? { pausedReason: "Waiting" } : {}),
       }).success,
     ).toBe(true);
   });
-
-  it.each(["postponed"])(
-    "rejects next-only status %s on a current item",
-    (workflowStatus) => {
-      expect(
-        itemWriteSchema.safeParse({ ...validItem(), workflowStatus }).success,
-      ).toBe(false);
-    },
-  );
-
-  it.each(currentStatuses)(
-    "rejects current-only status %s on a next item",
-    (workflowStatus) => {
-      const result = itemWriteSchema.safeParse({
-        ...validItem(),
-        type: "next",
-        workflowStatus,
-        ...(workflowStatus === "paused" ? { pausedReason: "Waiting" } : {}),
-      });
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.issues).toContainEqual(
-          expect.objectContaining({ path: ["workflowStatus"] }),
-        );
-      }
-    },
-  );
 
   it("rejects blocked as a progress value", () => {
     expect(

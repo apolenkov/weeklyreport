@@ -5,6 +5,7 @@ import {
   itemOutcomeResultSchema,
   itemOutcomeStateSchema,
   itemResolutionSchema,
+  promotePlanInputSchema,
   resolvePlanInputSchema,
   restorePlanInputSchema,
 } from "../../index";
@@ -27,6 +28,7 @@ const currentState = {
   workflowStatus: "in_progress" as const,
   pausedReason: null,
   nextStepText: null,
+  text: "Delivered the API",
 };
 
 const resolution = {
@@ -213,7 +215,7 @@ describe("item outcome contracts", () => {
         ...currentState,
         workflowStatus: "postponed",
       }).success,
-    ).toBe(false);
+    ).toBe(true);
     expect(
       itemOutcomeStateSchema.safeParse({
         ...currentState,
@@ -253,6 +255,53 @@ describe("item outcome contracts", () => {
     expect(publishedItemReadModelSchema.safeParse(readItem).success).toBe(true);
     expect(written).not.toHaveProperty("resolution");
     expect(written).not.toHaveProperty("outcomeHistory");
+  });
+
+  it("defaults the retained transition text for older stored events", () => {
+    const withText = { ...currentState, text: "Delivered the API" };
+    const replaced = itemOutcomeEventSchema.parse({
+      ...outcomeEvent,
+      beforeState: withText,
+      afterState: { ...withText, text: "Promoted next step" },
+    });
+
+    const legacyState = {
+      type: "current" as const,
+      workflowStatus: "in_progress" as const,
+      pausedReason: null,
+      nextStepText: null,
+    };
+
+    expect(itemOutcomeStateSchema.parse(legacyState).text).toBeNull();
+    expect(itemOutcomeStateSchema.safeParse(withText).success).toBe(true);
+    expect(replaced.beforeState.text).toBe("Delivered the API");
+    expect(replaced.afterState.text).toBe("Promoted next step");
+  });
+
+  it("accepts the promotion command shape and rejects stray keys", () => {
+    const promotion = {
+      reportSectionId: IDs.stable,
+      version: 1,
+      commandId: IDs.event,
+      recordId: IDs.actor,
+    };
+
+    expect(promotePlanInputSchema.safeParse(promotion).success).toBe(true);
+    expect(
+      promotePlanInputSchema.safeParse({ ...promotion, target: "next" })
+        .success,
+    ).toBe(true);
+    expect(
+      promotePlanInputSchema.safeParse({ ...promotion, target: "later" })
+        .success,
+    ).toBe(false);
+    expect(
+      promotePlanInputSchema.safeParse({ ...promotion, text: "Not allowed" })
+        .success,
+    ).toBe(false);
+    expect(
+      promotePlanInputSchema.safeParse({ ...promotion, version: 0 }).success,
+    ).toBe(false);
   });
 
   it("validates server-owned resolution/audit metadata and reconciled results", () => {

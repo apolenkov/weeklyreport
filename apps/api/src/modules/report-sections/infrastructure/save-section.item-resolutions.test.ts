@@ -24,6 +24,7 @@ const FORGED_RESOLUTION = {
     workflowStatus: "in_progress" as const,
     pausedReason: null,
     nextStepText: null,
+    text: null,
   },
 } satisfies NonNullable<Item["resolution"]>;
 
@@ -118,6 +119,23 @@ describe("preserveResolvedItemJson", () => {
 
     expect(preserved.get(STABLE_ID)).toBe(canonicalResolution);
     expect(rows[0]).toMatchObject({ resolution: canonicalResolution });
+  });
+
+  it("recovers an existing cancelled carried item by clearing only its marker", () => {
+    const canonicalResolution: Prisma.JsonValue = {
+      source: "authoritative",
+    };
+    const preserved = preserveResolvedItemJson(
+      [item({ carriedOver: false })],
+      [
+        persistedItem({
+          carriedOver: true,
+          resolution: canonicalResolution,
+        }),
+      ],
+    );
+
+    expect(preserved.get(STABLE_ID)).toBe(canonicalResolution);
   });
 
   it.each([

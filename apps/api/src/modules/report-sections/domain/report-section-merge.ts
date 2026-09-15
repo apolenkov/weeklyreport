@@ -111,6 +111,9 @@ export function mergeSection(
       return {
         ...activity,
         ...(written.status === undefined ? {} : { status: written.status }),
+        ...(written.titleOverride === undefined
+          ? {}
+          : { titleOverride: written.titleOverride }),
         ...(written.note === undefined ? {} : { note: written.note }),
       };
     }),

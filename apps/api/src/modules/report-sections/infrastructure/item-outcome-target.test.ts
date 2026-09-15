@@ -1,4 +1,8 @@
-import type { ResolvePlanInput } from "@customreport/shared";
+import type {
+  PromotePlanInput,
+  ResolvePlanInput,
+  RestorePlanInput,
+} from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { SectionVersionConflictError } from "../application/report-sections.service";
@@ -48,6 +52,7 @@ interface Receipt {
   readonly stableId: string;
   readonly actorId: string;
   readonly requestHash: string;
+  readonly outcome?: string;
 }
 
 function createTransaction({
@@ -114,7 +119,7 @@ describe("loadOutcomeTarget", () => {
     });
 
     await expect(
-      loadOutcomeTarget(transaction as never, command, AUTHOR_ID),
+      loadOutcomeTarget(transaction as never, command, AUTHOR_ID, "resolve"),
     ).rejects.toBeInstanceOf(LeadFormDomainError);
     expect(transaction.user.findUnique).not.toHaveBeenCalled();
     expect(transaction.reportSection.updateMany).not.toHaveBeenCalled();
@@ -126,7 +131,7 @@ describe("loadOutcomeTarget", () => {
     });
 
     await expect(
-      loadOutcomeTarget(transaction as never, command, AUTHOR_ID),
+      loadOutcomeTarget(transaction as never, command, AUTHOR_ID, "resolve"),
     ).rejects.toBeInstanceOf(LeadFormDomainError);
     expect(transaction.itemOutcomeEvent.findUnique).not.toHaveBeenCalled();
     expect(transaction.reportSection.updateMany).not.toHaveBeenCalled();
@@ -152,7 +157,7 @@ describe("loadOutcomeTarget", () => {
     const { transaction } = createTransaction({ row, report });
 
     await expect(
-      loadOutcomeTarget(transaction as never, command, AUTHOR_ID),
+      loadOutcomeTarget(transaction as never, command, AUTHOR_ID, "resolve"),
     ).rejects.toBeInstanceOf(LeadFormConstraintError);
     expect(transaction.itemOutcomeEvent.findUnique).toHaveBeenCalledOnce();
     expect(transaction.reportSection.updateMany).not.toHaveBeenCalled();
@@ -166,7 +171,7 @@ describe("loadOutcomeTarget", () => {
         reportSectionId: SECTION_ID,
         stableId,
         actorId: AUTHOR_ID,
-        requestHash: outcomeCommandHash(command),
+        requestHash: outcomeCommandHash(command, "resolve"),
       },
       updateCount: 0,
     });
@@ -175,6 +180,7 @@ describe("loadOutcomeTarget", () => {
       transaction as never,
       command,
       AUTHOR_ID,
+      "resolve",
     );
 
     expect(target.replay).toMatchObject({ stableId, replayed: true });
@@ -194,7 +200,7 @@ describe("loadOutcomeTarget", () => {
         reportSectionId: SECTION_ID,
         stableId: RECORD_ID,
         actorId: AUTHOR_ID,
-        requestHash: outcomeCommandHash(command),
+        requestHash: outcomeCommandHash(command, "resolve"),
       },
       updateCount: 0,
     });
@@ -202,6 +208,7 @@ describe("loadOutcomeTarget", () => {
       transaction as never,
       command,
       AUTHOR_ID,
+      "resolve",
     );
     expect(target.replay).toMatchObject({
       stableId: RECORD_ID,
@@ -226,23 +233,101 @@ describe("loadOutcomeTarget", () => {
         reportSectionId: SECTION_ID,
         stableId: RECORD_ID,
         actorId: OTHER_USER_ID,
-        requestHash: outcomeCommandHash(command),
+        requestHash: outcomeCommandHash(command, "resolve"),
       },
     },
   ])("rejects a receipt bound to $name", async ({ receipt }) => {
     const { transaction } = createTransaction({ receipt });
 
     await expect(
-      loadOutcomeTarget(transaction as never, command, AUTHOR_ID),
+      loadOutcomeTarget(transaction as never, command, AUTHOR_ID, "resolve"),
     ).rejects.toBeInstanceOf(LeadFormConstraintError);
     expect(transaction.reportSection.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects a Restore receipt reused at the promotion endpoint", async () => {
+    const promotion: PromotePlanInput = {
+      reportSectionId: SECTION_ID,
+      version: 2,
+      commandId: COMMAND_ID,
+      recordId: RECORD_ID,
+    };
+    const { transaction } = createTransaction({
+      row: baseRow({ version: 2 }),
+      receipt: {
+        reportSectionId: SECTION_ID,
+        stableId: RECORD_ID,
+        actorId: AUTHOR_ID,
+        requestHash: outcomeCommandHash(promotion, "restore"),
+        outcome: "restore",
+      },
+    });
+
+    await expect(
+      loadOutcomeTarget(transaction as never, promotion, AUTHOR_ID, "promote"),
+    ).rejects.toBeInstanceOf(LeadFormConstraintError);
+  });
+
+  it("rejects a legacy promotion receipt reused at the Restore endpoint", async () => {
+    const restore: RestorePlanInput = {
+      reportSectionId: SECTION_ID,
+      version: 2,
+      commandId: COMMAND_ID,
+      recordId: RECORD_ID,
+    };
+    const { transaction } = createTransaction({
+      row: baseRow({ version: 2 }),
+      receipt: {
+        reportSectionId: SECTION_ID,
+        stableId: RECORD_ID,
+        actorId: AUTHOR_ID,
+        requestHash: outcomeCommandHash(restore, "restore"),
+        outcome: "promote",
+      },
+    });
+
+    await expect(
+      loadOutcomeTarget(transaction as never, restore, AUTHOR_ID, "restore"),
+    ).rejects.toBeInstanceOf(LeadFormConstraintError);
+  });
+
+  it("replays a legacy omitted-target promotion receipt as explicit Current", async () => {
+    const promotion: PromotePlanInput = {
+      reportSectionId: SECTION_ID,
+      version: 2,
+      commandId: COMMAND_ID,
+      recordId: RECORD_ID,
+      target: "current",
+    };
+    const legacyPromotion: PromotePlanInput = {
+      reportSectionId: promotion.reportSectionId,
+      version: promotion.version,
+      commandId: promotion.commandId,
+      recordId: promotion.recordId,
+    };
+    const { transaction } = createTransaction({
+      row: baseRow({ version: 2 }),
+      receipt: {
+        reportSectionId: SECTION_ID,
+        stableId: RECORD_ID,
+        actorId: AUTHOR_ID,
+        requestHash: outcomeCommandHash(legacyPromotion, "restore"),
+        outcome: "promote",
+      },
+    });
+
+    await expect(
+      loadOutcomeTarget(transaction as never, promotion, AUTHOR_ID, "promote"),
+    ).resolves.toMatchObject({
+      replay: { stableId: RECORD_ID, replayed: true },
+    });
   });
 
   it("fails a stale command before any item or outcome-event write", async () => {
     const { transaction } = createTransaction({ row: baseRow({ version: 2 }) });
 
     await expect(
-      loadOutcomeTarget(transaction as never, command, AUTHOR_ID),
+      loadOutcomeTarget(transaction as never, command, AUTHOR_ID, "resolve"),
     ).rejects.toBeInstanceOf(SectionVersionConflictError);
     expect(transaction.item.create).not.toHaveBeenCalled();
     expect(transaction.itemOutcomeEvent.create).not.toHaveBeenCalled();
@@ -269,6 +354,7 @@ describe("loadOutcomeTarget", () => {
       transaction as never,
       command,
       AUTHOR_ID,
+      "resolve",
     );
 
     expect(target.replay).toBeNull();

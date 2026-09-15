@@ -16,6 +16,7 @@ const state = {
   workflowStatus: "in_progress",
   pausedReason: null,
   nextStepText: null,
+  text: null,
 };
 const resolution = {
   kind: "wont_do",

@@ -1,45 +1,58 @@
 import { createHash } from "node:crypto";
 
-import type { ResolvePlanInput, RestorePlanInput } from "@customreport/shared";
+import type {
+  PromotePlanInput,
+  ResolvePlanInput,
+  RestorePlanInput,
+} from "@customreport/shared";
+
+export type OutcomeCommandOperation = "resolve" | "restore" | "promote";
+type OutcomeCommand = ResolvePlanInput | RestorePlanInput | PromotePlanInput;
 
 // Version is a concurrency precondition, not command intent: a retry after
 // reconciling the latest section must return the original receipt unchanged.
 export function outcomeCommandHash(
-  command: ResolvePlanInput | RestorePlanInput,
+  command: OutcomeCommand,
+  operation: OutcomeCommandOperation,
 ): string {
+  const resolve = command as ResolvePlanInput;
+  const transition = command as PromotePlanInput | RestorePlanInput;
   const intent =
-    "outcome" in command
+    operation === "resolve"
       ? {
           operation: "resolve",
-          reportSectionId: command.reportSectionId,
+          reportSectionId: resolve.reportSectionId,
           source:
-            command.source.kind === "current"
-              ? { kind: "current", recordId: command.source.recordId }
+            resolve.source.kind === "current"
+              ? { kind: "current", recordId: resolve.source.recordId }
               : {
                   kind: "prior",
-                  reportId: command.source.reportId,
-                  recordId: command.source.recordId,
+                  reportId: resolve.source.reportId,
+                  recordId: resolve.source.recordId,
                 },
-          outcome: command.outcome,
-          text: command.text,
-          nextStepText: command.nextStepText,
+          outcome: resolve.outcome,
+          text: resolve.text,
+          nextStepText: resolve.nextStepText,
           stageNames:
-            command.stageNames === undefined
+            resolve.stageNames === undefined
               ? undefined
-              : [...new Set(command.stageNames)].sort((a, b) =>
+              : [...new Set(resolve.stageNames)].sort((a, b) =>
                   a.localeCompare(b),
                 ),
-          priorityRank: command.priorityRank,
+          priorityRank: resolve.priorityRank,
           parent:
-            command.parent === undefined
+            resolve.parent === undefined
               ? undefined
-              : { kind: command.parent.kind, id: command.parent.id },
-          reason: command.reason,
+              : { kind: resolve.parent.kind, id: resolve.parent.id },
+          reason: resolve.reason,
         }
       : {
-          operation: "restore",
-          reportSectionId: command.reportSectionId,
-          recordId: command.recordId,
+          operation,
+          reportSectionId: transition.reportSectionId,
+          recordId: transition.recordId,
+          ...(operation === "promote"
+            ? { target: (transition as PromotePlanInput).target ?? "current" }
+            : {}),
         };
   return createHash("sha256").update(JSON.stringify(intent)).digest("hex");
 }

@@ -1,3 +1,8 @@
+import {
+  type DraftSaveInput,
+  draftSaveSchema,
+  type ReportSectionReadModel,
+} from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
@@ -7,12 +12,16 @@ import {
   ReportSectionNotFoundError,
   SectionVersionConflictError,
 } from "../application/report-sections.service";
+import { mergeSection } from "../domain/report-section-merge";
 import type { FabricatedRow } from "./__tests__/report-sections-prisma-harness";
 import {
+  AUTHOR_ID,
   baseRow,
+  FIXED_TIMESTAMP,
   fullItem,
   mapRow,
   OWNED_PROJECT,
+  SECTION_ID,
 } from "./__tests__/report-sections-prisma-harness";
 import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
 
@@ -70,6 +79,9 @@ describe("ReportSectionsPrismaRepository.getReportPeriodWriteGateForSection", ()
 });
 
 describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set", () => {
+  const ACTIVITY_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const CATALOGUE_NAME = "Catalogue duty";
+
   function makeTx(
     updateCount: number,
     reReadResult: FabricatedRow | null,
@@ -95,7 +107,10 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
       },
       projectStatus: { deleteMany: noop, createMany: noop },
       stageStatus: { deleteMany: noop, createMany: noop },
-      activityStatus: { deleteMany: noop, createMany: noop },
+      activityStatus: {
+        deleteMany: vi.fn(() => Promise.resolve({ count: 0 })),
+        createMany: vi.fn(() => Promise.resolve({ count: 0 })),
+      },
       item: {
         findMany: vi.fn(() => Promise.resolve([])),
         deleteMany: vi.fn(() => Promise.resolve({ count: 0 })),
@@ -138,6 +153,112 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
       prisma as unknown as PrismaService,
     );
     return { repo, tx };
+  }
+
+  function buildActivityStore(input: {
+    sectionId: string;
+    reportId: string;
+    authorId: string;
+  }) {
+    interface ActivityWriteRow {
+      reportSectionId: string;
+      activityId: string;
+      status: "green" | "red" | null;
+      titleOverride: string | null;
+      note: string | null;
+    }
+
+    let version = 1;
+    let activityStatuses = [
+      toActivityStatusRow({
+        reportSectionId: input.sectionId,
+        activityId: ACTIVITY_ID,
+        status: "green",
+        titleOverride: null,
+        note: null,
+      }),
+    ];
+    const currentRow = () =>
+      baseRow({
+        id: input.sectionId,
+        reportId: input.reportId,
+        authorId: input.authorId,
+        version,
+        activityStatuses,
+      });
+    const tx = makeTx(1, null);
+    tx.reportSection.updateMany.mockImplementation((...args: unknown[]) => {
+      const update = args[0] as { where: { version: number } };
+      if (update.where.version !== version) {
+        return Promise.resolve({ count: 0 });
+      }
+      version += 1;
+      return Promise.resolve({ count: 1 });
+    });
+    tx.activityStatus.deleteMany.mockImplementation(() => {
+      activityStatuses = [];
+      return Promise.resolve({ count: 1 });
+    });
+    tx.activityStatus.createMany.mockImplementation((...args: unknown[]) => {
+      const create = args[0] as { data: ActivityWriteRow[] };
+      activityStatuses = create.data.map(toActivityStatusRow);
+      return Promise.resolve({ count: activityStatuses.length });
+    });
+    tx.reportSection.findUnique.mockImplementation(() =>
+      Promise.resolve(currentRow()),
+    );
+    const prisma = {
+      $transaction: vi.fn((callback: (client: typeof tx) => unknown) =>
+        callback(tx),
+      ),
+    };
+    const repo = new ReportSectionsPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    function read(): ReportSectionReadModel {
+      return mapRow(currentRow());
+    }
+
+    async function save(
+      activityInput: DraftSaveInput["activityStatuses"],
+      expectedVersion = version,
+    ): Promise<ReportSectionReadModel> {
+      const current = read();
+      const parsed = draftSaveSchema.parse({
+        reportSectionId: current.reportSectionId,
+        version: current.version,
+        status: "draft",
+        projectStatuses: [],
+        stageStatuses: [],
+        activityStatuses: activityInput,
+        items: [],
+        risks: [],
+        decisions: [],
+      });
+      return repo.saveSection(
+        mergeSection(current, parsed, "draft", FIXED_TIMESTAMP),
+        expectedVersion,
+      );
+    }
+
+    return { read, repo, save, tx };
+
+    function toActivityStatusRow(
+      row: ActivityWriteRow,
+    ): FabricatedRow["activityStatuses"][number] {
+      return {
+        id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        createdAt: FIXED_TIMESTAMP,
+        updatedAt: FIXED_TIMESTAMP,
+        ...row,
+        activity: {
+          name: CATALOGUE_NAME,
+          jiraAccounts: [],
+          activityProducts: [],
+        },
+      };
+    }
   }
 
   // A read model to write; saveSection takes the EXPECTED version separately,
@@ -186,6 +307,150 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
     );
     // Conflict aborts BEFORE any deleteMany — no child rows touched.
     expect(tx.item.deleteMany).not.toHaveBeenCalled();
+    expect(tx.activityStatus.deleteMany).not.toHaveBeenCalled();
+    expect(tx.activityStatus.createMany).not.toHaveBeenCalled();
+  });
+
+  it("round-trips Activity presentation through merge, captured writes, and mapper reread", async () => {
+    const store = buildActivityStore({
+      sectionId: SECTION_ID,
+      reportId: "22222222-2222-4222-8222-222222222222",
+      authorId: AUTHOR_ID,
+    });
+
+    let saved = await store.save([
+      {
+        activityId: ACTIVITY_ID,
+        status: "green",
+        titleOverride: "  Weekly duty  ",
+        note: "Weekly context",
+      },
+    ]);
+    expect(saved.activities[0]).toMatchObject({
+      activityName: CATALOGUE_NAME,
+      titleOverride: "Weekly duty",
+      note: "Weekly context",
+    });
+
+    saved = await store.save([{ activityId: ACTIVITY_ID, status: "red" }]);
+    expect(saved.activities[0]).toMatchObject({
+      status: "red",
+      titleOverride: "Weekly duty",
+      note: "Weekly context",
+    });
+
+    saved = await store.save([{ activityId: ACTIVITY_ID, note: null }]);
+    expect(saved.activities[0]).toMatchObject({
+      titleOverride: "Weekly duty",
+      note: null,
+    });
+
+    saved = await store.save([
+      { activityId: ACTIVITY_ID, note: "Restored context" },
+    ]);
+    expect(saved.activities[0]).toMatchObject({
+      titleOverride: "Weekly duty",
+      note: "Restored context",
+    });
+
+    saved = await store.save([
+      { activityId: ACTIVITY_ID, titleOverride: null },
+    ]);
+    expect(saved.activities[0]).toMatchObject({
+      titleOverride: null,
+      note: "Restored context",
+    });
+
+    const writesBeforeStaleSave =
+      store.tx.activityStatus.createMany.mock.calls.length;
+    await expect(store.save([], saved.version - 1)).rejects.toBeInstanceOf(
+      SectionVersionConflictError,
+    );
+    expect(store.tx.activityStatus.createMany).toHaveBeenCalledTimes(
+      writesBeforeStaleSave,
+    );
+  });
+
+  it("persists one lead-week Activity edit without changing the other three sections", async () => {
+    const WEEK_1 = "11111111-1111-4111-8111-111111111111";
+    const WEEK_2 = "22222222-2222-4222-8222-222222222222";
+    const LEAD_A = "aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa";
+    const LEAD_B = "bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb";
+    const stores = [
+      buildActivityStore({
+        sectionId: "10000000-0000-4000-8000-000000000001",
+        reportId: WEEK_1,
+        authorId: LEAD_A,
+      }),
+      buildActivityStore({
+        sectionId: "10000000-0000-4000-8000-000000000002",
+        reportId: WEEK_1,
+        authorId: LEAD_B,
+      }),
+      buildActivityStore({
+        sectionId: "10000000-0000-4000-8000-000000000003",
+        reportId: WEEK_2,
+        authorId: LEAD_A,
+      }),
+      buildActivityStore({
+        sectionId: "10000000-0000-4000-8000-000000000004",
+        reportId: WEEK_2,
+        authorId: LEAD_B,
+      }),
+    ];
+
+    await stores[0]?.save([
+      {
+        activityId: ACTIVITY_ID,
+        titleOverride: "Lead A week one",
+        note: "Only A/W1",
+      },
+    ]);
+
+    expect(
+      stores.map((store) => ({
+        reportId: store.read().reportId,
+        authorId: store.read().authorId,
+        activity: store.read().activities[0],
+      })),
+    ).toMatchObject([
+      {
+        reportId: WEEK_1,
+        authorId: LEAD_A,
+        activity: {
+          activityName: CATALOGUE_NAME,
+          titleOverride: "Lead A week one",
+          note: "Only A/W1",
+        },
+      },
+      {
+        reportId: WEEK_1,
+        authorId: LEAD_B,
+        activity: {
+          activityName: CATALOGUE_NAME,
+          titleOverride: null,
+          note: null,
+        },
+      },
+      {
+        reportId: WEEK_2,
+        authorId: LEAD_A,
+        activity: {
+          activityName: CATALOGUE_NAME,
+          titleOverride: null,
+          note: null,
+        },
+      },
+      {
+        reportId: WEEK_2,
+        authorId: LEAD_B,
+        activity: {
+          activityName: CATALOGUE_NAME,
+          titleOverride: null,
+          note: null,
+        },
+      },
+    ]);
   });
 
   it("concurrent deletion: an empty in-transaction re-read throws SectionVersionConflictError, not a crash", async () => {

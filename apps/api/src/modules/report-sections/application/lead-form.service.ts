@@ -1,5 +1,7 @@
 import {
   type LeadOpenWorkHistoryInput,
+  type PromotePlanInput,
+  promotePlanInputSchema,
   type ReportSectionReadModel,
   type ResolvePlanInput,
   resolvePlanInputSchema,
@@ -64,6 +66,13 @@ export class LeadFormService {
   restorePlan(command: RestorePlanInput, userId: string) {
     return this.repository.restorePlan(
       restorePlanInputSchema.parse(command),
+      userId,
+    );
+  }
+
+  promotePlan(command: PromotePlanInput, userId: string) {
+    return this.repository.promotePlan(
+      promotePlanInputSchema.parse(command),
       userId,
     );
   }

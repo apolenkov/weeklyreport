@@ -16,6 +16,9 @@ const itemOutcomeStateObjectSchema = z
     workflowStatus: itemWorkflowStatusSchema,
     pausedReason: safeText().nullable(),
     nextStepText: safeText().nullable(),
+    // Retained result text so a transition can present the superseded work.
+    // Defaulted to null so events written before this field still parse.
+    text: safeText().nullable().default(null),
   })
   .strict();
 
@@ -142,14 +145,22 @@ export const resolvePlanInputSchema = resolvePlanInputObjectSchema
   })
   .readonly();
 
-/** Accepts an optimistic command to restore a cancelled current occurrence. */
-export const restorePlanInputSchema = z
+const itemPlanTransitionInputObjectSchema = z
   .object({
     reportSectionId: z.uuid(),
     version: z.number().int().min(1),
     commandId: z.uuid(),
     recordId: z.uuid(),
   })
+  .strict();
+
+/** Accepts an optimistic command to restore a cancelled current occurrence. */
+export const restorePlanInputSchema =
+  itemPlanTransitionInputObjectSchema.readonly();
+
+/** Accepts an optimistic command to activate a linked next step in either week. */
+export const promotePlanInputSchema = itemPlanTransitionInputObjectSchema
+  .extend({ target: z.enum(["current", "next"]).optional() })
   .strict()
   .readonly();
 
@@ -172,7 +183,11 @@ export const itemOutcomeEventSchema = z
   .object({
     id: z.uuid(),
     stableId: z.uuid(),
-    outcome: z.union([itemOutcomeSchema, z.literal("restore")]),
+    outcome: z.union([
+      itemOutcomeSchema,
+      z.literal("restore"),
+      z.literal("promote"),
+    ]),
     reason: safeText().nullable(),
     actorId: z.uuid(),
     actorName: z.string().trim().min(1),
@@ -188,6 +203,8 @@ export const itemOutcomeEventSchema = z
 export type ResolvePlanInput = z.infer<typeof resolvePlanInputSchema>;
 /** Validated input for restoring a cancelled current occurrence. */
 export type RestorePlanInput = z.infer<typeof restorePlanInputSchema>;
+/** Validated input for activating a linked next step in the selected week. */
+export type PromotePlanInput = z.infer<typeof promotePlanInputSchema>;
 /** Canonical item state retained in a server-owned outcome record. */
 export type ItemOutcomeState = z.infer<typeof itemOutcomeStateSchema>;
 /** Server-owned Won't-do resolution metadata returned with an item. */
