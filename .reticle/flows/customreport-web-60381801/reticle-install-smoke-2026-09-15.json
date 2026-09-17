@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "name": "reticle-install-smoke-2026-09-15",
+  "projectId": "customreport-web-60381801",
+  "createdAt": 1789482077356,
+  "steps": [
+    {
+      "tool": "reticle_act",
+      "anchor": {
+        "kind": "role",
+        "role": "link",
+        "name": "Skip to content"
+      },
+      "args": {},
+      "action": "click",
+      "expect": {
+        "state": {
+          "path": "auth,me/[object Object].status",
+          "store": "queryClient",
+          "equals": "success"
+        }
+      }
+    }
+  ],
+  "startPath": "/",
+  "success": {
+    "state": {
+      "path": "auth,me/[object Object].status",
+      "store": "queryClient",
+      "equals": "success"
+    }
+  },
+  "intent": "The WeeklyReport landing page resolves the current user and its skip link reaches the main content.",
+  "intentId": "flow:reticle-install-smoke-2026-09-15"
+}

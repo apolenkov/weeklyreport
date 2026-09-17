@@ -43,6 +43,11 @@ describe("Archive → restore round-trip (integration)", () => {
   beforeEach(async () => {
     await cleanDatabase();
     testData = await seedTestData(prisma);
+    // Publishing requires a submitted section; the shared fixture seeds a draft.
+    await prisma.reportSection.update({
+      where: { id: testData.section.id },
+      data: { status: "submitted" },
+    });
     const expected = await periodRepo.getReportById(testData.report.id);
     if (!expected) {
       throw new Error(`fixture report ${testData.report.id} was not found`);

@@ -239,6 +239,11 @@ describe("ArchivePrismaRepository (integration)", () => {
     });
 
     // Archive detail is available only after the explicit archive transition.
+    // Publishing requires a submitted section; the shared fixture seeds a draft.
+    await prisma.reportSection.update({
+      where: { id: testData.section.id },
+      data: { status: "submitted" },
+    });
     const expected = await periodRepo.getReportById(testData.report.id);
     if (!expected)
       throw new Error(`fixture report ${testData.report.id} was not found`);
@@ -354,6 +359,11 @@ describe("ArchivePrismaRepository (integration)", () => {
     const expected = await periodRepo.getReportById(testData.report.id);
     if (!expected)
       throw new Error(`fixture report ${testData.report.id} was not found`);
+    // Publishing requires a submitted section; the shared fixture seeds a draft.
+    await prisma.reportSection.update({
+      where: { id: testData.section.id },
+      data: { status: "submitted" },
+    });
     await periodRepo.publishPeriod(
       testData.report.id,
       testData.head.id,

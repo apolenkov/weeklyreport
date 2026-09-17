@@ -5,7 +5,10 @@ import {
   makeReportSectionFixture,
   type ReportSectionFixture,
 } from "../../../test-utils/report-section-fixtures";
-import { sectionToDraftPayload } from "./lead-section-draft-payload";
+import {
+  countLocalOnlyRows,
+  sectionToDraftPayload,
+} from "./lead-section-draft-payload";
 import { buildLeadSubmitPayload } from "./lead-submit-readiness";
 
 const PROJECT_ID = "11111111-1111-4111-8111-111111111111";
@@ -271,5 +274,52 @@ describe("activityStatuses projection shared by draft save and submit", () => {
       titleOverride: null,
       note: null,
     });
+  });
+});
+
+describe("countLocalOnlyRows", () => {
+  it("counts a partially typed risk the payload cannot carry", () => {
+    const section = makeSection({ risks: [makeRisk("")] });
+
+    expect(sectionToDraftPayload(section).risks).toEqual([]);
+    expect(countLocalOnlyRows(section)).toBe(1);
+  });
+
+  it("ignores fully blank rows and rows the payload already carries", () => {
+    expect(
+      countLocalOnlyRows(
+        makeSection({
+          risks: [{ ...makeRisk(""), risk: "", mitigation: "" }],
+        }),
+      ),
+    ).toBe(0);
+    expect(
+      countLocalOnlyRows(makeSection({ risks: [makeRisk("Impact")] })),
+    ).toBe(0);
+  });
+
+  it("counts a partially typed decision", () => {
+    const section = makeSection({
+      decisions: [makeDecision({ owner: "", impact: "" })],
+    });
+
+    expect(sectionToDraftPayload(section).decisions).toEqual([]);
+    expect(countLocalOnlyRows(section)).toBe(1);
+  });
+
+  it("counts a next commitment typed on a row with no result text", () => {
+    const section = makeSection({
+      items: [makeItem({ text: "", nextStepText: "Ask the vendor" })],
+    });
+
+    expect(sectionToDraftPayload(section).items).toEqual([]);
+    expect(countLocalOnlyRows(section)).toBe(1);
+  });
+
+  it("does not treat a complete row without a next commitment as local-only", () => {
+    const section = makeSection({ items: [makeItem({ nextStepText: null })] });
+
+    expect(sectionToDraftPayload(section).items).toHaveLength(1);
+    expect(countLocalOnlyRows(section)).toBe(0);
   });
 });

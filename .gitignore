@@ -24,6 +24,7 @@ test-results/
 .playwright-cli/
 .playwright-mcp/
 codex-session-*.md
+pi-session-*.html
 output/
 
 apps/api/storage/
@@ -32,3 +33,10 @@ apps/web/next-env.d.ts
 
 # macOS Finder metadata
 .DS_Store
+
+# Pi agent runtime state: goal ledgers, locks, and pool snapshots are
+# per-machine. Committable project configuration under .pi/ (for example
+# .pi/agents/ or .pi/settings.json) stays visible to git.
+.pi/goals/
+.pi/.goals-pool-snapshot.json
+.pi/pi-goal-x-settings.json

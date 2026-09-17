@@ -12,6 +12,9 @@ type DraftRecord = Readonly<{
 }>;
 
 type SectionItem = ReportSectionReadModel["items"][number];
+type SectionRisk = ReportSectionReadModel["risks"][number];
+type SectionDecision = ReportSectionReadModel["decisions"][number];
+type SectionRecord = SectionItem | SectionRisk | SectionDecision;
 
 export type ReseedTrigger =
   "unchanged" | "save-echo" | "external-clean" | "external-dirty";
@@ -27,14 +30,52 @@ function itemIdentity(item: SectionItem): string | null {
   return item.id ? `id:${item.id}` : null;
 }
 
-function itemOutcomeMetadataKey(item: SectionItem): string {
+// Reviewer feedback arrives on a record without moving the section version, so a
+// refetch that produces the same draft payload still has to refresh it — the
+// lead surface renders comments from the draft, not from the server copy.
+function commentsKey(comments: SectionRecord["comments"]): string {
+  return encodeAutosaveComparisonKey(comments ?? []);
+}
+
+function mergeServerComments<T extends SectionRecord>(
+  current: readonly T[],
+  server: readonly T[],
+): readonly T[] {
+  if (current.length === 0) return current;
+  const serverItems = new Map<string, T>();
+  for (const record of server) {
+    const identity = itemIdentity(record as SectionItem);
+    if (identity !== null) serverItems.set(identity, record);
+  }
+  const merged = current.map((record) => {
+    const identity = itemIdentity(record as SectionItem);
+    const serverRecord =
+      identity === null ? undefined : serverItems.get(identity);
+    if (
+      serverRecord?.comments === undefined ||
+      commentsKey(serverRecord.comments) === commentsKey(record.comments)
+    ) {
+      return record;
+    }
+    return { ...record, comments: serverRecord.comments };
+  });
+  return merged.some((record, index) => record !== current[index])
+    ? merged
+    : current;
+}
+
+function itemMetadataKey(
+  item: SectionItem,
+  comments: SectionItem["comments"] = item.comments,
+): string {
   return encodeAutosaveComparisonKey({
     resolution: item.resolution,
     outcomeHistory: item.outcomeHistory,
+    comments: comments ?? [],
   });
 }
 
-export function reconcileServerOutcomeMetadata(
+export function reconcileServerRecordMetadata(
   current: ReportSectionReadModel | null,
   serverSection: ReportSectionReadModel,
 ): ReportSectionReadModel | null {
@@ -50,20 +91,32 @@ export function reconcileServerOutcomeMetadata(
     const identity = itemIdentity(item);
     const serverItem =
       identity === null ? undefined : serverItems.get(identity);
-    if (
-      serverItem === undefined ||
-      itemOutcomeMetadataKey(item) === itemOutcomeMetadataKey(serverItem)
-    ) {
+    if (serverItem === undefined) return item;
+    // An absent `comments` key means the server projection does not carry
+    // reviewer feedback; keeping the draft's array avoids clearing it.
+    const comments = serverItem.comments ?? item.comments;
+    if (itemMetadataKey(serverItem, comments) === itemMetadataKey(item)) {
       return item;
     }
     return {
       ...item,
       resolution: serverItem.resolution,
       outcomeHistory: serverItem.outcomeHistory,
+      comments,
     };
   });
-  return items.some((item, index) => item !== current.items[index])
-    ? { ...current, items }
+  const risks = mergeServerComments(current.risks, serverSection.risks);
+  const decisions = mergeServerComments(
+    current.decisions,
+    serverSection.decisions,
+  );
+  const itemsChanged = items.some(
+    (item, index) => item !== current.items[index],
+  );
+  return itemsChanged ||
+    risks !== current.risks ||
+    decisions !== current.decisions
+    ? { ...current, items, risks, decisions }
     : current;
 }
 

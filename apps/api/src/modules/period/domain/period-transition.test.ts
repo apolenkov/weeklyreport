@@ -67,6 +67,7 @@ describe("buildTransition — publish", () => {
       status: "published",
       periodStatus: "published",
       periodState: "published",
+      autoPublished: false,
       publishedAt: NOW,
       publishedById: "user-1",
     });
@@ -92,20 +93,23 @@ describe("buildTransition — reopen (intentional asymmetry)", () => {
   it("periodState reverts to open while periodStatus carries 'reopened'", () => {
     // The reopen transition deliberately diverges: periodState='open' (editable
     // again) but periodStatus='reopened' so consumers can discriminate a reopen
-    // from a fresh open. The companion status/archive fields stay current.
+    // from a fresh open. The ended publication's audit flag is cleared, so the
+    // reopened row never claims an automatic publication it no longer has.
     expect(buildTransition("reopen", { now: NOW })).toEqual({
       periodStatus: "reopened",
       periodState: "open",
+      autoPublished: false,
       reopenedAt: NOW,
     });
   });
 });
 
 describe("buildTransition — archive / autoArchive", () => {
-  it("archive flips archived + periodState only", () => {
+  it("archive flips archived + periodState and records manual provenance", () => {
     expect(buildTransition("archive", {})).toEqual({
       archived: true,
       periodState: "archived",
+      autoArchived: false,
     });
   });
 
@@ -119,16 +123,21 @@ describe("buildTransition — archive / autoArchive", () => {
 });
 
 describe("buildTransition — unarchive", () => {
-  it("clears archived and sets the caller-derived next state (published)", () => {
+  it("clears archived and the auto-archive flag (published)", () => {
     expect(
       buildTransition("unarchive", { nextPeriodState: "published" }),
-    ).toEqual({ archived: false, periodState: "published" });
+    ).toEqual({
+      archived: false,
+      periodState: "published",
+      autoArchived: false,
+    });
   });
 
-  it("clears archived and sets the caller-derived next state (open)", () => {
+  it("clears archived and the auto-archive flag (open)", () => {
     expect(buildTransition("unarchive", { nextPeriodState: "open" })).toEqual({
       archived: false,
       periodState: "open",
+      autoArchived: false,
     });
   });
 });

@@ -94,6 +94,35 @@ export function sectionToDraftPayload(
   };
 }
 
+/**
+ * Rows the user started typing that cannot reach the payload yet because a
+ * required field is still blank. The autosave comparison key cannot see them, so
+ * callers treat them as local edits: a server reseed then reports the conflict
+ * instead of discarding them silently. Fully blank rows are not user content and
+ * are not counted.
+ */
+export function countLocalOnlyRows(section: ReportSectionReadModel): number {
+  const partiallyFilled = (values: readonly (string | null | undefined)[]) =>
+    values.some((value) => hasText(value)) &&
+    !values.every((value) => hasText(value));
+  // Items need only `text`; the other fields are optional, so a row is local-only
+  // exactly when the payload drops it while the user typed text into it anyway.
+  const itemsAwaitingText = section.items.filter(
+    (it) =>
+      !hasText(it.text) &&
+      (hasText(it.nextStepText) || hasText(it.pausedReason)),
+  ).length;
+  return (
+    itemsAwaitingText +
+    section.risks.filter((r) =>
+      partiallyFilled([r.risk, r.impact, r.mitigation]),
+    ).length +
+    section.decisions.filter((d) =>
+      partiallyFilled([d.text, d.owner, d.impact]),
+    ).length
+  );
+}
+
 // One owner for the activityStatuses payload shape: draft save and submit both
 // project through it, so a new activity field cannot drift between them. The
 // draft payload types titleOverride through the schema's preprocessing input

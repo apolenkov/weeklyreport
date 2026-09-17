@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "name": "reticle-lead-read-flow",
+  "projectId": "customreport-web-60381801",
+  "createdAt": 1789483267098,
+  "steps": [
+    {
+      "tool": "reticle_act",
+      "anchor": {
+        "kind": "testid",
+        "value": "last-role-option-lead",
+        "source": {
+          "file": "src/app/login-page-controls.tsx",
+          "line": 28,
+          "column": 10
+        }
+      },
+      "args": {},
+      "action": "click"
+    }
+  ],
+  "startPath": "/",
+  "success": {
+    "state": {
+      "path": "auth,me/[object Object].data.role",
+      "store": "queryClient",
+      "equals": "lead"
+    }
+  },
+  "intent": "A Lead can enter the local app and reach their own working report with authenticated query state loaded.",
+  "intentId": "flow:reticle-lead-read-flow"
+}

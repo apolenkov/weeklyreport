@@ -6,6 +6,7 @@ import { sectionToDraftPayload } from "../lead-section-draft-payload";
 import {
   classifyReseed,
   reconcileSavedIdentities,
+  reconcileServerRecordMetadata,
 } from "./lead-form-draft-reconcile";
 
 const SECTION_ID = "11111111-1111-4111-8111-111111111111";
@@ -317,5 +318,62 @@ describe("reconcileSavedIdentities", () => {
       stableId: realDecisionStable,
       text: "newer local decision text",
     });
+  });
+});
+
+// Reviewer feedback arrives on records without moving the section version, so the
+// draft keeps rendering stale comments unless this merge runs on every delivery.
+describe("reconcileServerRecordMetadata", () => {
+  const COMMENT = {
+    id: "99999999-9999-4999-8999-999999999999",
+    reviewerId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    reviewerName: "Head",
+    text: "Please add the impact",
+    createdAt: new Date("2026-09-17T00:00:00.000Z"),
+  };
+
+  it("merges reviewer comments for items, risks and decisions", () => {
+    const current = baseSection({
+      items: [makeItem({ id: "i1", text: "Item" })],
+      risks: [makeRisk({ id: "r1", risk: "Risk" })],
+      decisions: [makeDecision({ id: "d1", text: "Decision", deadline: null })],
+    });
+    const server = baseSection({
+      items: [makeItem({ id: "i1", text: "Item", comments: [COMMENT] })],
+      risks: [makeRisk({ id: "r1", risk: "Risk", comments: [COMMENT] })],
+      decisions: [
+        makeDecision({
+          id: "d1",
+          text: "Decision",
+          deadline: null,
+          comments: [COMMENT],
+        }),
+      ],
+    });
+
+    const merged = reconcileServerRecordMetadata(current, server);
+
+    expect(merged?.items[0]?.comments).toHaveLength(1);
+    expect(merged?.risks[0]?.comments).toHaveLength(1);
+    expect(merged?.decisions[0]?.comments).toHaveLength(1);
+  });
+
+  it("keeps draft comments when the server projection omits the field", () => {
+    const current = baseSection({
+      items: [makeItem({ id: "i1", text: "Item", comments: [COMMENT] })],
+    });
+    const server = baseSection({
+      items: [makeItem({ id: "i1", text: "Item" })],
+    });
+
+    expect(reconcileServerRecordMetadata(current, server)).toBe(current);
+  });
+
+  it("returns the current object when nothing differs", () => {
+    const section = baseSection({
+      items: [makeItem({ id: "i1", text: "Item" })],
+    });
+
+    expect(reconcileServerRecordMetadata(section, section)).toBe(section);
   });
 });

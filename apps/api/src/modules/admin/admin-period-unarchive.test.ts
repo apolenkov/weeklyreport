@@ -120,7 +120,7 @@ describe("unarchivePeriod lifecycle compare-and-set", () => {
     });
     expect(updateMany.mock.calls[0]?.[0]).toEqual({
       where: { id: "report-1", ...ARCHIVED_ROW },
-      data: { archived: false, periodState: "scheduled" },
+      data: { archived: false, periodState: "scheduled", autoArchived: false },
     });
   });
 
@@ -195,7 +195,7 @@ describe("unarchivePeriod lifecycle compare-and-set", () => {
     });
     expect(updateMany.mock.calls[0]?.[0]).toEqual({
       where: { id: "report-1", ...ARCHIVED_ROW },
-      data: { archived: false, periodState: "open" },
+      data: { archived: false, periodState: "open", autoArchived: false },
     });
   });
 
@@ -215,7 +215,7 @@ describe("unarchivePeriod lifecycle compare-and-set", () => {
     });
     expect(updateMany.mock.calls[0]?.[0]).toEqual({
       where: { id: "report-1", ...published },
-      data: { archived: false, periodState: "published" },
+      data: { archived: false, periodState: "published", autoArchived: false },
     });
   });
 

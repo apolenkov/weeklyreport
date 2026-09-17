@@ -84,14 +84,16 @@ export function initialPeriodState(
   return periodStart.getTime() > now.getTime() ? "scheduled" : "open";
 }
 
-// The lifecycle set both publish paths share. The scheduler path passes a null
-// publisher and adds its own `autoPublished` flag; the manual path must not
-// carry that key at all, so it is never defaulted here.
+// The lifecycle set both publish paths share. Each publication records its own
+// provenance: the scheduler path adds `autoPublished: true`, the manual path
+// clears it, so a row republished by a head never reports the earlier automatic
+// publication (schema.prisma:371-376).
 function publishWrite(now: Date, publishedById: string | null): LifecycleWrite {
   return lifecycleWrite({
     status: "published",
     periodStatus: "published",
     periodState: "published",
+    autoPublished: false,
     publishedAt: now,
     publishedById,
   });
@@ -105,9 +107,12 @@ function autoPublishWrite(now: Date): LifecycleWrite {
 }
 
 function reopenWrite(now: Date): LifecycleWrite {
+  // Reopening ends the publication, so the ended publication's audit flag must
+  // not survive into the reopened (unpublished) state.
   return lifecycleWrite({
     periodStatus: "reopened",
     periodState: "open",
+    autoPublished: false,
     reopenedAt: now,
   });
 }
@@ -128,7 +133,12 @@ const transitionBuilders: {
   // periodStatus carries the 'reopened' marker so consumers can still
   // discriminate a reopen from a fresh open. The companion state stays current.
   reopen: ({ now }) => reopenWrite(now),
-  archive: () => lifecycleWrite({ archived: true, periodState: "archived" }),
+  archive: () =>
+    lifecycleWrite({
+      archived: true,
+      periodState: "archived",
+      autoArchived: false,
+    }),
   autoArchive: () =>
     lifecycleWrite({
       archived: true,
@@ -136,7 +146,12 @@ const transitionBuilders: {
       autoArchived: true,
     }),
   unarchive: ({ nextPeriodState }) =>
-    lifecycleWrite({ archived: false, periodState: nextPeriodState }),
+    // Un-archiving is an explicit action that ends the archived state.
+    lifecycleWrite({
+      archived: false,
+      periodState: nextPeriodState,
+      autoArchived: false,
+    }),
   restore: ({ lifecycle }) => lifecycleWrite(lifecycle),
 };
 

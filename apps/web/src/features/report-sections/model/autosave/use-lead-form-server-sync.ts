@@ -5,7 +5,6 @@ import {
   type Dispatch,
   type SetStateAction,
   useCallback,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -14,37 +13,21 @@ import {
 import { leadFormGenerationOf } from "../lead-form/lead-form-generation";
 import type { LeadFormWritePort } from "../lead-form/lead-form-write-port";
 import { sectionToDraftPayload } from "../lead-section-draft-payload";
-import type {
-  AutosaveController,
-  AutosaveSaveReceipt,
-  DraftSaveContent,
-} from "./autosave-types";
+import type { AutosaveSaveReceipt, DraftSaveContent } from "./autosave-types";
 import { encodeDraftSaveComparisonKey } from "./draft-save-comparison-key";
 import {
-  classifyReseed,
   type PendingSaveEcho,
   reconcileSavedIdentities,
   reconcileSavedPayloadIdentities,
-  reconcileServerOutcomeMetadata,
   savedRecordIdentityPairs,
 } from "./lead-form-draft-reconcile";
 import { useLeadFormAutosave } from "./use-lead-form-autosave";
-
-type SetDraftSection = Dispatch<SetStateAction<ReportSectionReadModel | null>>;
-
-// The echoes of our own writes, plus the last server key we re-based on.
-// Mutation stays inside the owning hook so no caller writes through a ref.
-interface SaveEchoLedger {
-  readonly lastKey: () => string | null;
-  readonly lastRevision: () => string | null;
-  readonly find: (serverDraftKey: string) => PendingSaveEcho | undefined;
-  readonly record: (echo: PendingSaveEcho) => void;
-  readonly consume: (serverDraftKey: string, revision: string) => void;
-}
-
-function sectionRevision(section: ReportSectionReadModel): string {
-  return `${section.reportSectionId}:${section.version}`;
-}
+import {
+  type SaveEchoLedger,
+  sectionRevision,
+  type SetDraftSection,
+  useServerSectionReseed,
+} from "./use-server-section-reseed";
 
 function withoutEcho(
   echoes: readonly PendingSaveEcho[],
@@ -81,20 +64,6 @@ function useSaveEchoLedger(): SaveEchoLedger {
   );
 }
 
-function findExactSaveEcho(
-  ledger: SaveEchoLedger,
-  serverDraftKey: string,
-  revision: string,
-  sameSection: boolean,
-): PendingSaveEcho | undefined {
-  const candidate = ledger.find(serverDraftKey);
-  return sameSection &&
-    candidate &&
-    sectionRevision(candidate.savedSection) === revision
-    ? candidate
-    : undefined;
-}
-
 function reconcileOnSave(
   savedSection: ReportSectionReadModel,
   persistedPayload: DraftSaveContent,
@@ -102,17 +71,6 @@ function reconcileOnSave(
   return (current: ReportSectionReadModel | null) =>
     current?.reportSectionId === savedSection.reportSectionId
       ? reconcileSavedIdentities(current, savedSection, persistedPayload)
-      : current;
-}
-
-function reconcileWithEcho(echo: PendingSaveEcho) {
-  return (current: ReportSectionReadModel | null) =>
-    current
-      ? reconcileSavedIdentities(
-          current,
-          echo.savedSection,
-          echo.persistedPayload,
-        )
       : current;
 }
 
@@ -159,86 +117,6 @@ function useSaveEchoRecorder(
   );
 }
 
-interface ServerSectionReseedArgs {
-  readonly serverSection: ReportSectionReadModel | null | undefined;
-  readonly dirty: boolean;
-  readonly ledger: SaveEchoLedger;
-  readonly acceptVersion: (sectionId: string, next: number) => boolean;
-  readonly autosave: AutosaveController;
-  readonly setIsSubmitted: Dispatch<SetStateAction<boolean>>;
-  readonly setDraftSection: SetDraftSection;
-  readonly handleConflict: () => void;
-}
-
-// Server-section arrival re-bases the local draft engine (version, submitted
-// flag, baseline) — an external-data sync, hence the state writes in an effect.
-function useServerSectionReseed({
-  serverSection,
-  dirty,
-  ledger,
-  acceptVersion,
-  autosave,
-  setIsSubmitted,
-  setDraftSection,
-  handleConflict,
-}: ServerSectionReseedArgs) {
-  useEffect(() => {
-    if (!serverSection) return;
-    if (!acceptVersion(serverSection.reportSectionId, serverSection.version)) {
-      return;
-    }
-    setIsSubmitted(serverSection.status === "submitted");
-
-    const serverDraftKey = encodeDraftSaveComparisonKey(
-      sectionToDraftPayload(serverSection),
-    );
-    const revision = sectionRevision(serverSection);
-    const sameSection =
-      ledger.lastRevision()?.startsWith(`${serverSection.reportSectionId}:`) ??
-      false;
-    const saveEcho = findExactSaveEcho(
-      ledger,
-      serverDraftKey,
-      revision,
-      sameSection,
-    );
-    const trigger = classifyReseed(
-      serverDraftKey,
-      sameSection ? ledger.lastKey() : null,
-      dirty && sameSection,
-      saveEcho !== undefined,
-    );
-    if (trigger === "unchanged") {
-      if (ledger.lastRevision() !== revision) {
-        ledger.consume(serverDraftKey, revision);
-        setDraftSection((current) =>
-          reconcileServerOutcomeMetadata(current, serverSection),
-        );
-      }
-      return;
-    }
-
-    ledger.consume(serverDraftKey, revision);
-    if (trigger === "save-echo" && dirty && saveEcho) {
-      autosave.primeBaseline(serverDraftKey);
-      setDraftSection(reconcileWithEcho(saveEcho));
-      return;
-    }
-    if (trigger === "external-dirty") handleConflict();
-    autosave.adoptBaseline(serverDraftKey, "read");
-    setDraftSection(serverSection);
-  }, [
-    acceptVersion,
-    autosave,
-    dirty,
-    handleConflict,
-    ledger,
-    serverSection,
-    setDraftSection,
-    setIsSubmitted,
-  ]);
-}
-
 interface DraftServerSyncArgs {
   readonly receiptScope: string;
   readonly writePort: LeadFormWritePort;
@@ -247,6 +125,7 @@ interface DraftServerSyncArgs {
   readonly payload: DraftSaveContent | null;
   readonly enabled: boolean;
   readonly version: number;
+  readonly localOnlyRows: number;
   readonly setVersionSafe: (next: number) => void;
   readonly acceptVersion: (sectionId: string, next: number) => boolean;
   readonly setIsSubmitted: Dispatch<SetStateAction<boolean>>;
@@ -264,6 +143,7 @@ export function useDraftServerSync({
   payload,
   enabled,
   version,
+  localOnlyRows,
   setVersionSafe,
   acceptVersion,
   setIsSubmitted,
@@ -284,6 +164,7 @@ export function useDraftServerSync({
     reportSectionId,
     payload,
     enabled,
+    localOnlyRows,
     version,
     onVersionChange: setVersionSafe,
     onSaved,
@@ -291,7 +172,7 @@ export function useDraftServerSync({
   });
   useServerSectionReseed({
     serverSection,
-    dirty: autosave.dirty,
+    hasLocalEdits: autosave.dirty || localOnlyRows > 0,
     ledger,
     acceptVersion,
     autosave,

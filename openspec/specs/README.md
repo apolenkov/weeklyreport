@@ -148,6 +148,7 @@ Authority model:
 
 ### Architecture and module boundaries
 
+- [module-import-boundaries](./module-import-boundaries/spec.md) — Keeps API modules and web slices on facade entrypoints and the domain layer free of infrastructure imports.
 - [auth-module-layering](./auth-module-layering/spec.md) — Keeps authentication ownership narrow and delegates period creation to the sanctioned lifecycle writer.
 - [api-shutdown-coordination](./api-shutdown-coordination/spec.md) — Coordinates API termination, fatal-error handling, ordered resource draining, and one bounded exit outcome.
 - [queue-worker-architecture](./queue-worker-architecture/spec.md) — Standardizes BullMQ worker bases and gives queue job defaults one production source.
