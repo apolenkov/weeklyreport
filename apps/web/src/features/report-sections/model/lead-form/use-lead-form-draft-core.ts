@@ -13,7 +13,10 @@ import {
 import { toast } from "sonner";
 
 import { useDraftServerSync } from "../autosave/use-lead-form-server-sync";
-import { sectionToDraftPayload } from "../lead-section-draft-payload";
+import {
+  countLocalOnlyRows,
+  sectionToDraftPayload,
+} from "../lead-section-draft-payload";
 import { buildLeadSubmitPayload } from "../lead-submit-readiness";
 import {
   applyDraftPatch,
@@ -169,6 +172,10 @@ export function useLeadFormDraftCore({
   const captureGeneration = useGenerationCapture(generation);
   const handleConflict = useConflictReload(refetchSection, captureGeneration);
   const draftPayload = useDraftPayload(draftSection);
+  // Partially typed rows never reach the payload, so the autosave key cannot see
+  // them. The reseed and unload paths still treat them as local edits.
+  const localOnlyRows =
+    draftSection === null ? 0 : countLocalOnlyRows(draftSection);
   const isReadOnlyEarly = isSubmitted || serverReadOnly;
   const receiptScope = useMemo(
     () => `${generation ?? "inactive"}:${crypto.randomUUID()}`,
@@ -181,6 +188,7 @@ export function useLeadFormDraftCore({
     reportSectionId: sectionIdForActions || null,
     payload: draftPayload,
     enabled: !isReadOnlyEarly && draftSection !== null,
+    localOnlyRows,
     version,
     setVersionSafe,
     acceptVersion,

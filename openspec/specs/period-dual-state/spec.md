@@ -39,6 +39,16 @@ for that transition. The transition MUST keep `periodState`, `status`,
   `periodStatus` becomes `reopened` in one transaction
 - **AND** the reopen timestamp is written with that transition
 
+#### Scenario: An audit flag describes the transition that produced the current cycle
+
+- **WHEN** a transition writes the lifecycle tuple
+- **THEN** it also writes the audit flag that transition owns, so
+  `autoPublished` is `true` only while the row's current publication came from
+  the auto-publish scheduler and `autoArchived` is `true` only while the
+  current archived state came from the auto-archiver
+- **AND** a manual publish, reopen, archive, or unarchive clears the matching
+  flag instead of inheriting it from an earlier cycle
+
 ### Requirement: All lifecycle writers use the transition module
 
 Period creation, scheduling, publication, archive, unarchive, snapshot restore,

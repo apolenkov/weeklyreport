@@ -248,3 +248,134 @@ describe("draft save echo with recreated database rows", () => {
     },
   );
 });
+
+// A row the payload cannot carry (a required field is still blank) is unsaved
+// user content. Without this the draft comparison key calls the section clean and
+// an external update replaces the draft with no notice.
+describe("draft rows the payload cannot carry", () => {
+  const RISK = "88888888-8888-4888-8888-888888888888";
+
+  function changeElsewhere(section: ReportSectionReadModel) {
+    return {
+      ...section,
+      version: section.version + 1,
+      items: section.items.map((item) => ({
+        ...item,
+        text: "Changed elsewhere",
+      })),
+    };
+  }
+
+  function addHalfTypedRisk(result: {
+    current: ReturnType<typeof useLeadFormDraftCore>;
+  }) {
+    act(() => {
+      result.current.apply({
+        kind: "risks",
+        risks: [
+          {
+            id: RISK,
+            productId: PRODUCT,
+            productName: "Product",
+            activityId: null,
+            stageNames: [],
+            severity: "at-risk",
+            text: "Half typed risk",
+            impact: "",
+            mitigation: "Mitigate later",
+          },
+        ],
+      });
+    });
+  }
+
+  it("reports a conflict instead of replacing a partially typed row in silence", () => {
+    const section = makeSection();
+    const saveDraft = vi.fn<LeadFormWritePort["saveDraft"]>();
+    const { result, rerender, refetchSection } = renderDraft(
+      section,
+      saveDraft,
+    );
+
+    addHalfTypedRisk(result);
+    expect(result.current.draft?.risks).toHaveLength(1);
+    expect(result.current.autosave.dirty).toBe(false);
+
+    rerender({ section: changeElsewhere(section) });
+
+    expect(refetchSection).toHaveBeenCalledTimes(1);
+  });
+
+  it("still adopts a changed server section when nothing is typed locally", () => {
+    const section = makeSection();
+    const saveDraft = vi.fn<LeadFormWritePort["saveDraft"]>();
+    const { result, rerender, refetchSection } = renderDraft(
+      section,
+      saveDraft,
+    );
+
+    expect(result.current.autosave.dirty).toBe(false);
+
+    rerender({ section: changeElsewhere(section) });
+
+    expect(refetchSection).not.toHaveBeenCalled();
+    expect(result.current.draft?.items[0]?.text).toBe("Changed elsewhere");
+  });
+});
+
+// A reviewer comment does not move the section version, so the refetch keeps
+// the same draft payload. The lead surface renders comments from the draft, which
+// means the reseed still has to refresh them or feedback stays invisible.
+describe("reviewer feedback arriving without a payload change", () => {
+  const COMMENT = "99999999-9999-4999-8999-999999999999";
+  const REVIEWER = "a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0";
+
+  function withComment(
+    items: ReportSectionReadModel["items"],
+  ): ReportSectionReadModel["items"] {
+    return items.map((item) => ({
+      ...item,
+      comments: [
+        {
+          id: COMMENT,
+          reviewerId: REVIEWER,
+          reviewerName: "Head",
+          text: "Please add the impact",
+          createdAt: new Date("2026-09-17T00:00:00.000Z"),
+        },
+      ],
+    }));
+  }
+
+  it("refreshes comments on an existing record without a save", () => {
+    const section = makeSection();
+    const saveDraft = vi.fn<LeadFormWritePort["saveDraft"]>();
+    const { result, rerender } = renderDraft(section, saveDraft);
+
+    expect(result.current.draft?.items[0]?.comments ?? []).toHaveLength(0);
+
+    // A comment write does not move the section version, so the refetch arrives
+    // at the same revision and the merge must still run.
+    rerender({ section: { ...section, items: withComment(section.items) } });
+
+    expect(result.current.draft?.items[0]?.comments).toHaveLength(1);
+    expect(result.current.autosave.dirty).toBe(false);
+    expect(saveDraft).not.toHaveBeenCalled();
+  });
+
+  it("refreshes comments when the section version also advanced", () => {
+    const section = makeSection();
+    const saveDraft = vi.fn<LeadFormWritePort["saveDraft"]>();
+    const { result, rerender } = renderDraft(section, saveDraft);
+
+    rerender({
+      section: {
+        ...section,
+        version: section.version + 1,
+        items: withComment(section.items),
+      },
+    });
+
+    expect(result.current.draft?.items[0]?.comments).toHaveLength(1);
+  });
+});

@@ -66,6 +66,10 @@ export interface UseLeadFormAutosaveArgs {
   ) => SavedDraftReconciliation;
   // Conflict handler lets the caller refetch and suppress the generic toast.
   readonly onConflict?: () => void;
+  // Partially typed rows the payload cannot carry yet. They arm the unload
+  // guard without scheduling a save, because that save would send the same
+  // payload and mint a new version for nothing.
+  readonly localOnlyRows?: number;
 }
 
 export interface SavedDraftReconciliation {

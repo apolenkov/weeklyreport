@@ -388,6 +388,11 @@ describe("AdminPrismaRepository (integration)", () => {
         prisma as never,
         new WeeklyReportPrismaRepository(prisma as never),
       );
+      // Publishing requires a submitted section; the shared fixture seeds a draft.
+      await prisma.reportSection.update({
+        where: { id: testData.section.id },
+        data: { status: "submitted" },
+      });
       const lifecycleExpected =
         operation === "archive"
           ? null

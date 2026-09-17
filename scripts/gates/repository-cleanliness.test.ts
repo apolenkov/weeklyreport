@@ -119,6 +119,47 @@ describe("repository cleanliness", () => {
     ]);
   });
 
+  it("allows per-machine Pi runtime state and session exports", async () => {
+    const root = await repository();
+    await writeFile(
+      join(root, ".gitignore"),
+      ".pi/goals/\n.pi/.goals-pool-snapshot.json\n.pi/pi-goal-x-settings.json\npi-session-*.html\n",
+    );
+    await mkdir(join(root, ".pi/goals/.locks"), { recursive: true });
+    await writeFile(join(root, ".pi/goals/goal_events.jsonl"), "{}\n");
+    await writeFile(join(root, ".pi/.goals-pool-snapshot.json"), "{}\n");
+    await writeFile(join(root, ".pi/pi-goal-x-settings.json"), "{}\n");
+    await writeFile(
+      join(root, "pi-session-2026-09-16T21-19-40-299Z_test.html"),
+      "<html></html>",
+    );
+    await execFileAsync("git", ["add", ".gitignore"], { cwd: root });
+
+    expect(validateInventory(await inventoryRepository(root))).toEqual([]);
+  });
+
+  it("allows Reticle per-machine diagnostics next to committed flows", async () => {
+    const root = await repository();
+    await mkdir(join(root, ".reticle/capsules"), { recursive: true });
+    await mkdir(join(root, ".reticle/sessions/lease-1"), { recursive: true });
+    await mkdir(join(root, ".reticle/visual"), { recursive: true });
+    await writeFile(
+      join(root, ".reticle/.gitignore"),
+      "sessions/\nruns/\nvisual/\ncapsules/\nintent.json\nimpact.json\nproject.json\n",
+    );
+    await writeFile(join(root, ".reticle/capsules/1-e1.json"), "{}\n");
+    await writeFile(
+      join(root, ".reticle/sessions/lease-1/actions.jsonl"),
+      "{}\n",
+    );
+    await writeFile(join(root, ".reticle/intent.json"), "{}\n");
+    await writeFile(join(root, ".reticle/impact.json"), "{}\n");
+    await writeFile(join(root, ".reticle/project.json"), "{}\n");
+    await execFileAsync("git", ["add", ".reticle/.gitignore"], { cwd: root });
+
+    expect(validateInventory(await inventoryRepository(root))).toEqual([]);
+  });
+
   it("accepts a minimal current repository", async () => {
     const root = await repository();
     await mkdir(join(root, "openspec/specs/current"), { recursive: true });

@@ -81,6 +81,11 @@ describe("published snapshot scope after admin restore (integration)", () => {
     if (!expected) {
       throw new Error(`fixture report ${testData.report.id} was not found`);
     }
+    // Publishing requires a submitted section; the shared fixture seeds a draft.
+    await prisma.reportSection.update({
+      where: { id: testData.section.id },
+      data: { status: "submitted" },
+    });
     const publication = await periodRepository.publishPeriod(
       testData.report.id,
       testData.head.id,

@@ -9,7 +9,29 @@ const MAX_BUFFER_KIB = 128;
 const MAX_BUFFER_SIZE = MAX_BUFFER_KIB * BYTES_PER_KIB * BYTES_PER_KIB;
 const OPENSPEC_INDEX_PATH = "openspec/specs/README.md";
 const OPENSPEC_SPEC_PATH = /^openspec\/specs\/([^/]+)\/spec\.md$/u;
-const ALLOWED_GENERATED_FILES = new Set(["apps/web/next-env.d.ts"]);
+const ALLOWED_IGNORED_FILES = new Set([
+  "apps/web/next-env.d.ts",
+  ".reticle/ambient.json",
+  ".reticle/assertion-tiers.json",
+  ".reticle/envelopes.json",
+  ".reticle/flake.json",
+  ".reticle/impact.json",
+  ".reticle/intent.json",
+  ".reticle/project.json",
+  ".pi/.goals-pool-snapshot.json",
+  ".pi/pi-goal-x-settings.json",
+]);
+const ALLOWED_IGNORED_PATHS = [
+  /(^|\/)node_modules(?:\/|$)/u,
+  /(^|\/)(?:\.next(?:-docker-dev)?|dist|coverage|\.turbo)(?:\/|$)/u,
+  /(^|\/)(?:\.env|\.env\.[^/]+)$/u,
+  /(^|\/)(?:\.opencode|\.playwright-cli|\.playwright-mcp|output)(?:\/|$)/u,
+  /(^|\/)codex-session-[^/]+\.md$/u,
+  /(^|\/)pi-session-[^/]+\.html$/u,
+  /(^|\/)\.reticle\/(?:sessions|runs|visual|capsules)(?:\/|$)/u,
+  /(^|\/)\.pi\/(?:goals|subagents)(?:\/|$)/u,
+];
+const ALLOWED_EMPTY_DIRECTORIES = new Set(["openspec/changes/archive"]);
 const IGNORED_DIRECTORY_NAMES = new Set([
   ".git",
   "node_modules",
@@ -21,6 +43,8 @@ const IGNORED_DIRECTORY_NAMES = new Set([
   ".playwright-cli",
   ".playwright-mcp",
   "output",
+  ".pi",
+  ".reticle",
 ]);
 const FORBIDDEN_PATHS = [
   /^openspec\/changes\/archive(?:\/|$)/,
@@ -51,6 +75,7 @@ async function findEmptyDirectories(root: string): Promise<string[]> {
   const findings: string[] = [];
   const isAllowedDirectory = (directory: string): boolean => {
     const path = relative(root, directory);
+    if (ALLOWED_EMPTY_DIRECTORIES.has(path)) return true;
     return /(^|\/)(?:node_modules|\.next(?:-docker-dev)?|dist|coverage|\.turbo)(?:\/|$)/.test(
       path,
     );
@@ -97,21 +122,9 @@ function isForbidden(path: string): boolean {
 }
 
 function isAllowedIgnored(path: string): boolean {
-  if (ALLOWED_GENERATED_FILES.has(path)) return true;
-  if (/(^|\/)node_modules(?:\/|$)/.test(path)) return true;
-  if (
-    /(^|\/)(?:\.next(?:-docker-dev)?|dist|coverage|\.turbo)(?:\/|$)/.test(path)
-  )
-    return true;
-  if (/(^|\/)(?:\.env|\.env\.[^/]+)$/.test(path)) return true;
-  if (
-    /(^|\/)(?:\.opencode|\.playwright-cli|\.playwright-mcp|output)(?:\/|$)/.test(
-      path,
-    )
-  )
-    return true;
-  if (/(^|\/)codex-session-[^/]+\.md$/.test(path)) return true;
-  return path.endsWith(".tsbuildinfo");
+  if (path.endsWith(".tsbuildinfo")) return true;
+  if (ALLOWED_IGNORED_FILES.has(path)) return true;
+  return ALLOWED_IGNORED_PATHS.some((pattern) => pattern.test(path));
 }
 
 export function validateInventory(inventory: RepositoryInventory): string[] {
@@ -175,7 +188,7 @@ export async function assertRepositoryClean(root: string): Promise<void> {
 
 if (
   process.argv[1] &&
-  resolve(process.argv[1]) === resolve(new URL(import.meta.url).pathname)
+  resolve(process.argv[1]) === resolve(import.meta.filename)
 ) {
   await assertRepositoryClean(process.cwd());
 }

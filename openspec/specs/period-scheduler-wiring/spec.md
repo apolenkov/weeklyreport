@@ -128,6 +128,24 @@ overwritten back to `open`.
 - **THEN** the row transitions to `open` via the full governed
   `buildTransition('open', {})` field set
 
+### Requirement: Auto-archive asserts the exact published identity before writing
+
+`AutoArchiverScheduler` MUST select and write its archive through one guarded
+predicate on the row's `id`, `archived: false`, `periodStatus: 'published'`
+and the `publishedAt` value captured by the selection scan — never by `id`
+alone. Matching `publishedAt` keeps a stale scan from archiving a row that a
+concurrent writer republished under the same id, and a zero-row write means
+the row left the eligible state concurrently and is skipped, never forced.
+The write applies the governed `buildTransition('autoArchive', {})` field set.
+
+#### Scenario: A republished row is not archived by a stale scan
+
+- **GIVEN** an archived-eligible row that a concurrent writer republishes
+  before the archive write executes
+- **WHEN** `AutoArchiverScheduler` processes it
+- **THEN** the guarded write affects zero rows
+- **AND** the row remains published with its new `publishedAt`
+
 ### Requirement: At most one row per scheduling boundary across scheduled and open states
 
 The database MUST NOT permit two rows sharing the same `(periodStart,

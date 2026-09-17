@@ -60,7 +60,9 @@ export function useLeadFormAutosave(
     dirty,
     queuedRetryRevision,
   });
-  useBeforeUnloadGuard(dirty);
+  // A partially typed row is unsaved user content even though it cannot change
+  // the payload yet, so leaving the page still warns about it.
+  useBeforeUnloadGuard(dirty || (args.localOnlyRows ?? 0) > 0);
 
   const forceSave = useCallback(
     () => runForceSave({ getRefs, setState }),
