@@ -110,11 +110,24 @@ export function useGroupProducts({ groupId, products }: GroupProductsArgs) {
     [products],
   );
 
+  const visibleProducts = useMemo(
+    () =>
+      products.filter(
+        (product) =>
+          product.status !== "archived" || attachedIds.has(product.id),
+      ),
+    [attachedIds, products],
+  );
+
   const { owningGroupByProductId, ownershipLoading, ownershipError } =
     useProductOwnership(activeProducts);
   const { attach, detach, mutating } = useGroupProductMutations(groupId);
 
   function toggle(productId: string, nextChecked: boolean): void {
+    if (attachedQuery.isError) {
+      return;
+    }
+
     const owner = owningGroupByProductId.get(productId);
     if (nextChecked && owner && owner.id !== groupId) {
       toast.error(`Already attached to ${owner.name}`);
@@ -130,7 +143,8 @@ export function useGroupProducts({ groupId, products }: GroupProductsArgs) {
 
   return {
     attachedLoading: attachedQuery.isLoading,
-    activeProducts,
+    attachedError: attachedQuery.isError,
+    visibleProducts,
     attachedIds,
     owningGroupByProductId,
     ownershipLoading,

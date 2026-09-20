@@ -264,6 +264,110 @@ describe("GroupProductsEditor", () => {
     ).toBeGreaterThan(0);
   });
 
+  it("fail-closes the toggles when the attached-products query fails", () => {
+    attachedQueryMock.mockReturnValue({
+      isLoading: false,
+      data: undefined,
+      isError: true,
+    });
+    render(
+      <GroupProductsEditor
+        groupId={GROUP_ID}
+        products={[PRODUCT_A, PRODUCT_B]}
+      />,
+    );
+
+    const a = screen.getByLabelText(/Toggle Платформа интеграций/);
+    const b = screen.getByLabelText(/Toggle Partner portal/);
+    expect(a).toBeDisabled();
+    expect(b).toBeDisabled();
+    expect(a).toHaveAccessibleDescription("Could not load attached products");
+    expect(b).toHaveAccessibleDescription("Could not load attached products");
+
+    fireEvent.click(a);
+
+    expect(attachMutate).not.toHaveBeenCalled();
+    expect(detachMutate).not.toHaveBeenCalled();
+    expect(
+      screen.getAllByText(/Could not load attached products/).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("shows the attached-products error when no product rows are available", () => {
+    attachedQueryMock.mockReturnValue({
+      isLoading: false,
+      data: undefined,
+      isError: true,
+    });
+    render(
+      <GroupProductsEditor groupId={GROUP_ID} products={[PRODUCT_ARCHIVED]} />,
+    );
+
+    expect(
+      screen.getByRole("alert", { name: "Could not load attached products" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/No active products yet/)).toBeNull();
+  });
+
+  it("uses one description node when attached and ownership reads both fail", () => {
+    attachedQueryMock.mockReturnValue({
+      isLoading: false,
+      data: [],
+      isError: true,
+    });
+    ownershipQueryMock.mockReturnValue({
+      isLoading: false,
+      data: [
+        {
+          productId: PRODUCT_B.id,
+          group: { id: "group-other", name: "Platform Group" },
+        },
+      ],
+      isError: true,
+    });
+    render(<GroupProductsEditor groupId={GROUP_ID} products={[PRODUCT_B]} />);
+
+    const product = screen.getByLabelText(/Toggle Partner portal/);
+    const hintId = `group-product-hint-${PRODUCT_B.id}`;
+    expect(product).toHaveAttribute("aria-describedby", hintId);
+    expect(document.querySelectorAll(`#${hintId}`)).toHaveLength(1);
+    expect(product).toHaveAccessibleDescription(
+      "Already attached to Platform Group Could not load attached products Could not load group assignment",
+    );
+  });
+
+  it("keeps an attached archived product visible and detachable", () => {
+    attachedQueryMock.mockReturnValue({
+      isLoading: false,
+      data: [
+        {
+          id: PRODUCT_ARCHIVED.id,
+          name: PRODUCT_ARCHIVED.name,
+          archived: true,
+          leadId: "u-1",
+          leadName: "Lead",
+        },
+      ],
+    });
+    render(
+      <GroupProductsEditor
+        groupId={GROUP_ID}
+        products={[PRODUCT_A, PRODUCT_ARCHIVED]}
+      />,
+    );
+
+    const archived = screen.getByLabelText(/Toggle Old retired product/);
+    expect(archived).toBeChecked();
+
+    fireEvent.click(archived);
+
+    expect(detachMutate).toHaveBeenCalledWith({
+      groupId: GROUP_ID,
+      productId: PRODUCT_ARCHIVED.id,
+    });
+    expect(attachMutate).not.toHaveBeenCalled();
+  });
+
   it("detaching a product refreshes its group list and ownership caches", async () => {
     attachedQueryMock.mockReturnValue({
       isLoading: false,
