@@ -48,8 +48,11 @@ peerDependencyRules:
 overrides:
   # Upper bounds are load-bearing on EVERY entry here: an open-ended floor let
   # `pnpm update` carry vite across a major silently, which is a decision, not a
-  # currency bump. Below 1.0 the minor is the breaking axis, hence `<0.10`.
-  "@xmldom/xmldom": ">=0.8.13 <0.10"
+  # currency bump. Below 1.0 the minor is the breaking axis, hence `<0.9`:
+  # node-saml, samlify, xml-crypto, and xml-encryption all declare `^0.8.x`
+  # and break on the 0.9 parser API (removed errorHandler object, required
+  # parseFromString mimeType), so the override must stay inside the 0.8 line.
+  "@xmldom/xmldom": ">=0.8.13 <0.9"
   protobufjs: ">=8.0.2 <9"
   vite: ">=8.1.5 <9"
   # Keep both brace-expansion ranges: the graph contains incompatible 1.x and
@@ -68,11 +71,6 @@ overrides:
   valibot: ">=1.4.2 <2"
   # Prisma 7.10 pins a recursion-vulnerable 7.x; require the cycle-safe major.
   deepmerge-ts: ">=8.0.2 <9"
-patchedDependencies:
-  "@node-saml/node-saml@5.1.0": patches/@node-saml__node-saml@5.1.0.patch
-  agentation@3.0.2: patches/agentation@3.0.2.patch
-  "samlify@2.13.1": patches/samlify@2.13.1.patch
-  "xml-crypto@6.1.2": patches/xml-crypto@6.1.2.patch
 
 # These same-day releases were explicitly selected and reviewed. Remove each
 # exemption once the package ages out of pnpm's supply-chain quarantine.

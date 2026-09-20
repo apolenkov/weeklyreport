@@ -47,7 +47,7 @@ catalogs:
       version: 4.5.4
 
 overrides:
-  '@xmldom/xmldom': '>=0.8.13 <0.10'
+  '@xmldom/xmldom': '>=0.8.13 <0.9'
   protobufjs: '>=8.0.2 <9'
   vite: '>=8.1.5 <9'
   brace-expansion@<2: '>=1.1.18 <2'
@@ -60,12 +60,6 @@ overrides:
   postcss: '>=8.5.23 <9'
   valibot: '>=1.4.2 <2'
   deepmerge-ts: '>=8.0.2 <9'
-
-patchedDependencies:
-  '@node-saml/node-saml@5.1.0': e8f5b85af7a272de18e6a649f8bf6526dc1c6ea63d608ad13ef565d04073da41
-  agentation@3.0.2: cf4fc5665468bb3dcf97a6bc769ccf5ce75b948dce3f1a7b90bd745631ad80a3
-  samlify@2.13.1: 8e105a712b2aba117815edb9c46ec1bab2f57d7a5a7c64a9c5227969316ed4e6
-  xml-crypto@6.1.2: d2f558a8e1e39f986c05ed230de16e931ad6547e6dd686a44b509f5dce25347f
 
 importers:
 
@@ -94,8 +88,8 @@ importers:
         specifier: ^4.7.2
         version: 4.7.2(eslint@10.9.1(jiti@2.7.0)(supports-color@10.2.2))
       '@fission-ai/openspec':
-        specifier: 1.11.0
-        version: 1.11.0(@types/node@26.4.0)
+        specifier: 1.13.0
+        version: 1.13.0(@types/node@26.4.0)
       '@next/eslint-plugin-next':
         specifier: ^16.3.3
         version: 16.3.3(eslint@10.9.1(jiti@2.7.0)(supports-color@10.2.2))
@@ -378,7 +372,7 @@ importers:
         version: 19.2.18
       samlify:
         specifier: ^2.13.1
-        version: 2.13.1(patch_hash=8e105a712b2aba117815edb9c46ec1bab2f57d7a5a7c64a9c5227969316ed4e6)
+        version: 2.13.1
       tsx:
         specifier: 'catalog:'
         version: 4.23.13
@@ -466,7 +460,7 @@ importers:
         version: 6.1.1(babel-plugin-react-compiler@1.0.0)(vite@8.2.2(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.13)(yaml@2.9.0))
       agentation:
         specifier: 3.0.2
-        version: 3.0.2(patch_hash=cf4fc5665468bb3dcf97a6bc769ccf5ce75b948dce3f1a7b90bd745631ad80a3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+        version: 3.0.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       babel-plugin-react-compiler:
         specifier: ^1.0.0
         version: 1.0.0
@@ -1036,8 +1030,8 @@ packages:
       '@noble/hashes':
         optional: true
 
-  '@fission-ai/openspec@1.11.0':
-    resolution: {integrity: sha512-P9h8H4Snit8I7tHmCopjg3QDwBllIlObxb+/DebvBwhWTj6YEPPYRYkC4n5GqG4PdQnKMA6E1AlEOI9FT4G7FA==}
+  '@fission-ai/openspec@1.13.0':
+    resolution: {integrity: sha512-1b1VbjELIUHPz8BLnkVxqPu4pAYS6BhfrLcmUIM7Bd0iJXQDvE+e/LBofE1kydegfxmG7R1xCMRXsl5VtZD+0w==}
     engines: {node: '>=20.19.0'}
     hasBin: true
 
@@ -3908,9 +3902,9 @@ packages:
     resolution: {integrity: sha512-CJDxIgE5I0FH+ttq/Fxy6nRpxP70+e2O048EPe85J2use3XKdatVM7dDVvFNjQudd9B49NPoZ+8PG49zj4Er8Q==}
     engines: {node: '>= 16'}
 
-  '@xmldom/xmldom@0.9.12':
-    resolution: {integrity: sha512-5AXjrcMClTryPe9LgZrygpB1lj7s0S9E0+W+AHaVKAVyHanafK86iPSvG5xHVSp/jC+VH1UXu0TAEmY279xH7A==}
-    engines: {node: '>=14.6'}
+  '@xmldom/xmldom@0.8.15':
+    resolution: {integrity: sha512-/5NV/vDALVFDXgLmfsy9TRCBlKwO2LNBFzpzvb9iIj+jR+eSc6DLYYvVOdivT/jm7MtU6TebYuRmzEOI7w40UA==}
+    engines: {node: '>=10.0.0'}
 
   '@xtuc/ieee754@1.2.0':
     resolution: {integrity: sha512-DX8nKgqcGwsc0eJSqYt5lwP4DH5FlHnmuWWBRy7X0NcaGR0ZtuyeESgMwTYVEtxmsNGY+qit4QYT/MIYTOTPeA==}
@@ -7670,7 +7664,7 @@ snapshots:
 
   '@authenio/xml-encryption@2.0.2':
     dependencies:
-      '@xmldom/xmldom': 0.9.12
+      '@xmldom/xmldom': 0.8.15
       escape-html: 1.0.3
       xpath: 0.0.32
 
@@ -8095,7 +8089,7 @@ snapshots:
 
   '@exodus/bytes@1.15.1': {}
 
-  '@fission-ai/openspec@1.11.0(@types/node@26.4.0)':
+  '@fission-ai/openspec@1.13.0(@types/node@26.4.0)':
     dependencies:
       '@inquirer/core': 11.2.1(@types/node@26.4.0)
       '@inquirer/prompts': 8.7.0(@types/node@26.4.0)
@@ -8616,16 +8610,16 @@ snapshots:
   '@next/swc-win32-x64-msvc@16.3.3':
     optional: true
 
-  '@node-saml/node-saml@5.1.0(patch_hash=e8f5b85af7a272de18e6a649f8bf6526dc1c6ea63d608ad13ef565d04073da41)(supports-color@10.2.2)':
+  '@node-saml/node-saml@5.1.0(supports-color@10.2.2)':
     dependencies:
       '@types/debug': 4.1.13
       '@types/qs': 6.15.1
       '@types/xml-encryption': 1.2.4
       '@types/xml2js': 0.4.14
       '@xmldom/is-dom-node': 1.0.1
-      '@xmldom/xmldom': 0.9.12
+      '@xmldom/xmldom': 0.8.15
       debug: 4.4.3(supports-color@10.2.2)
-      xml-crypto: 6.1.2(patch_hash=d2f558a8e1e39f986c05ed230de16e931ad6547e6dd686a44b509f5dce25347f)
+      xml-crypto: 6.1.2
       xml-encryption: 3.1.0
       xml2js: 0.6.2
       xmlbuilder: 15.1.1
@@ -8635,7 +8629,7 @@ snapshots:
 
   '@node-saml/passport-saml@5.1.0(supports-color@10.2.2)':
     dependencies:
-      '@node-saml/node-saml': 5.1.0(patch_hash=e8f5b85af7a272de18e6a649f8bf6526dc1c6ea63d608ad13ef565d04073da41)(supports-color@10.2.2)
+      '@node-saml/node-saml': 5.1.0(supports-color@10.2.2)
       '@types/express': 4.17.25
       '@types/passport': 1.0.17
       '@types/passport-strategy': 0.2.38
@@ -11020,7 +11014,7 @@ snapshots:
 
   '@xmldom/is-dom-node@1.0.1': {}
 
-  '@xmldom/xmldom@0.9.12': {}
+  '@xmldom/xmldom@0.8.15': {}
 
   '@xtuc/ieee754@1.2.0': {}
 
@@ -11061,7 +11055,7 @@ snapshots:
       - '@cfworker/json-schema'
       - supports-color
 
-  agentation@3.0.2(patch_hash=cf4fc5665468bb3dcf97a6bc769ccf5ce75b948dce3f1a7b90bd745631ad80a3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
+  agentation@3.0.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
     optionalDependencies:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
@@ -14089,13 +14083,13 @@ snapshots:
 
   safer-buffer@2.1.2: {}
 
-  samlify@2.13.1(patch_hash=8e105a712b2aba117815edb9c46ec1bab2f57d7a5a7c64a9c5227969316ed4e6):
+  samlify@2.13.1:
     dependencies:
       '@authenio/xml-encryption': 2.0.2
-      '@xmldom/xmldom': 0.9.12
+      '@xmldom/xmldom': 0.8.15
       node-rsa: 1.1.1
       xml: 1.0.1
-      xml-crypto: 6.1.2(patch_hash=d2f558a8e1e39f986c05ed230de16e931ad6547e6dd686a44b509f5dce25347f)
+      xml-crypto: 6.1.2
       xml-escape: 1.1.0
       xpath: 0.0.34
 
@@ -15044,15 +15038,15 @@ snapshots:
 
   ws@8.21.3: {}
 
-  xml-crypto@6.1.2(patch_hash=d2f558a8e1e39f986c05ed230de16e931ad6547e6dd686a44b509f5dce25347f):
+  xml-crypto@6.1.2:
     dependencies:
       '@xmldom/is-dom-node': 1.0.1
-      '@xmldom/xmldom': 0.9.12
+      '@xmldom/xmldom': 0.8.15
       xpath: 0.0.33
 
   xml-encryption@3.1.0:
     dependencies:
-      '@xmldom/xmldom': 0.9.12
+      '@xmldom/xmldom': 0.8.15
       escape-html: 1.0.3
       xpath: 0.0.32
 

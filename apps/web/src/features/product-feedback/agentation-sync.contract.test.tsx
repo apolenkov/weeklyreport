@@ -52,6 +52,7 @@ function respond(
   sessionAnnotations: Annotation[],
   replayStatus = "pending",
   failReadbackAfterInitialSync = false,
+  holdAnnotationSync = false,
 ) {
   vi.stubGlobal("EventSource", ContractEventSource);
   let sessionReadCount = 0;
@@ -75,10 +76,14 @@ function respond(
         throw new Error("Expected a JSON request body");
       const input = JSON.parse(options.body) as Annotation;
       annotationWriteCount += 1;
+      if (holdAnnotationSync)
+        return new Promise<Response>(() => {
+          // Held open to model a pending Agentation annotation sync.
+        });
       return Promise.resolve(
         Response.json({
           ...input,
-          clientId: input.clientId ?? input.id,
+          clientId: input.id,
           id: `server-id-${annotationWriteCount}`,
           sessionId: SESSION_ID,
           status: replayStatus,
@@ -86,7 +91,7 @@ function respond(
       );
     }
     if (
-      url.startsWith(`${ENDPOINT}/annotations/server-id-`) &&
+      url.startsWith(`${ENDPOINT}/annotations/`) &&
       options?.method === "DELETE"
     )
       return Promise.resolve(new Response(null, { status: 204 }));
@@ -112,7 +117,7 @@ describe("pinned Agentation browser sync", () => {
     );
   });
 
-  it("adopts the server ID and retains the original client ID", async () => {
+  it("adopts the server ID without preserving the client-local ID", async () => {
     const fetcher = respond([]);
     const onAnnotationAdd = vi.fn();
     render(
@@ -149,14 +154,13 @@ describe("pinned Agentation browser sync", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
     await waitFor(() => expect(onAnnotationAdd).toHaveBeenCalledOnce());
-    const clientId = (onAnnotationAdd.mock.calls[0]?.[0] as Annotation).id;
     await waitFor(() =>
-      expect(
-        loadAnnotations(location.pathname).map(({ clientId, id }) => ({
-          clientId,
-          id,
-        })),
-      ).toEqual([{ clientId, id: "server-id-1" }]),
+      expect(loadAnnotations(location.pathname).map(({ id }) => id)).toEqual([
+        "server-id-1",
+      ]),
+    );
+    expect(loadAnnotations(location.pathname)[0]).not.toHaveProperty(
+      "clientId",
     );
     expect(fetcher).toHaveBeenCalledWith(
       `${ENDPOINT}/sessions/${SESSION_ID}/annotations`,
@@ -164,9 +168,9 @@ describe("pinned Agentation browser sync", () => {
     );
   });
 
-  it("preserves exact identity through failed readback and native delete or clear", async () => {
+  it("clears delivery state on native delete or clear while sync is pending", async () => {
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
-    const fetcher = respond([], "pending", true);
+    const fetcher = respond([], "pending", true, true);
     const onAnnotationAdd = vi.fn();
     const onAnnotationDelete = vi.fn();
     const onAnnotationsClear = vi.fn();
@@ -230,10 +234,7 @@ describe("pinned Agentation browser sync", () => {
       .id;
     await waitFor(() =>
       expect(loadAnnotations(location.pathname)).toEqual([
-        expect.objectContaining({
-          clientId: deleteClientId,
-          id: "server-id-1",
-        }),
+        expect.objectContaining({ id: deleteClientId }),
       ]),
     );
     await waitFor(() =>
@@ -254,7 +255,7 @@ describe("pinned Agentation browser sync", () => {
     );
 
     const deleteMarker = document.querySelector("[data-annotation-marker]");
-    if (!deleteMarker) throw new Error("Expected the synced native marker");
+    if (!deleteMarker) throw new Error("Expected the retained native marker");
     fireEvent.click(deleteMarker);
     const editPopup = (
       await screen.findByPlaceholderText("Edit your feedback...")
@@ -266,10 +267,7 @@ describe("pinned Agentation browser sync", () => {
     fireEvent.click(deleteButton);
 
     expect(onAnnotationDelete).toHaveBeenCalledWith(
-      expect.objectContaining({
-        clientId: deleteClientId,
-        id: "server-id-1",
-      }),
+      expect.objectContaining({ id: deleteClientId }),
     );
     expect(screen.getByTestId("delivery-status")).toHaveTextContent("idle");
     await waitFor(() => expect(loadAnnotations(location.pathname)).toEqual([]));
@@ -278,7 +276,7 @@ describe("pinned Agentation browser sync", () => {
     fireEvent.change(
       await screen.findByPlaceholderText("What should change?"),
       {
-        target: { value: "Clear after failed readback" },
+        target: { value: "Clear while sync is pending" },
       },
     );
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
@@ -286,10 +284,7 @@ describe("pinned Agentation browser sync", () => {
     const clearClientId = (onAnnotationAdd.mock.calls[1]?.[0] as Annotation).id;
     await waitFor(() =>
       expect(loadAnnotations(location.pathname)).toEqual([
-        expect.objectContaining({
-          clientId: clearClientId,
-          id: "server-id-2",
-        }),
+        expect.objectContaining({ id: clearClientId }),
       ]),
     );
     await waitFor(
@@ -311,10 +306,7 @@ describe("pinned Agentation browser sync", () => {
     fireEvent.click(clearButton);
 
     expect(onAnnotationsClear).toHaveBeenCalledWith([
-      expect.objectContaining({
-        clientId: clearClientId,
-        id: "server-id-2",
-      }),
+      expect.objectContaining({ id: clearClientId }),
     ]);
     expect(screen.getByTestId("delivery-status")).toHaveTextContent("idle");
   });
