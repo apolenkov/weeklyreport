@@ -24,6 +24,11 @@ Browser and acceptance checks are performed against the running application;
 they are not a separate product surface. The guarded disposable database is
 used only for local and CI verification.
 
+Browser acceptance drives a real browser session against the running app: each
+check names its expected observable consequence before acting and confirms it
+with DOM, network, or screenshot evidence. Deterministic tests and gates remain
+the acceptance authority; no custom replacement gate substitutes for them.
+
 ## Lifecycle control map
 
 | Stage   | Present control                                                                                                                         | Acceptance evidence now                                                     | First-production prerequisite                                                                                                          |
@@ -82,37 +87,6 @@ source-bound evidence:
 If any item is absent, unverified, or represented only by a placeholder, the
 project remains pre-production. Do not add a decorative deployment workflow to
 make this list appear complete.
-
-## Reticle specification coverage gate
-
-The Reticle coverage gate (`pnpm spec:reticle`) keeps two obligations apart. It
-always verifies that `.reticle/spec-coverage.json` still matches
-`openspec/specs/`: every normative outcome is present once, with unchanged
-scenario and outcome fingerprints and outcome text. It requires valid proofs
-only for outcomes that no owner-signed exclusion names.
-
-`.reticle/spec-coverage-exclusions.json` is that owner decision. Each excluded
-type or outcome carries a reason, the declaration names an existing decision
-document and a hard floor of mandatory outcomes, and everything the declaration
-does not name stays mandatory. The gate reports excluded outcomes, excluded
-proof objects, unclassified outcomes, and the mandatory count separately, so a
-reader can tell proven coverage from declared exclusions.
-
-On 2026-09-17 the declared core held 20 outcomes: the three `ci-merge-gate` and
-three `role-coverage-gate` outcomes that already carried references, plus every
-outcome of `audit-target-coverage`, `manual-publish-telemetry`,
-`section-save-payload-bounds`, `search-contract-precision` and
-`published-section-order-determinism` (two of its three outcomes; the third
-carries a recorded outcome-level exclusion because no first-party test asserts
-read-to-read order stability yet). The remaining 3,104 outcomes stay excluded
-while their proofs are re-established, so the gate proves registry integrity
-and those 20 proofs, not browser coverage of the product. The declared floor is
-20, which makes narrowing the core a failing change rather than a quiet edit.
-
-`pnpm spec:check` runs strict OpenSpec validation only. The Reticle gate runs as
-a separate, currently non-blocking CI step, and `pnpm test:reticle` covers the
-validator itself. Retire the non-blocking step when the declared mandatory core
-covers the product's critical surface.
 
 ## Related durable sources
 

@@ -11,13 +11,6 @@ const OPENSPEC_INDEX_PATH = "openspec/specs/README.md";
 const OPENSPEC_SPEC_PATH = /^openspec\/specs\/([^/]+)\/spec\.md$/u;
 const ALLOWED_IGNORED_FILES = new Set([
   "apps/web/next-env.d.ts",
-  ".reticle/ambient.json",
-  ".reticle/assertion-tiers.json",
-  ".reticle/envelopes.json",
-  ".reticle/flake.json",
-  ".reticle/impact.json",
-  ".reticle/intent.json",
-  ".reticle/project.json",
   ".pi/.goals-pool-snapshot.json",
   ".pi/pi-goal-x-settings.json",
 ]);
@@ -28,7 +21,6 @@ const ALLOWED_IGNORED_PATHS = [
   /(^|\/)(?:\.opencode|\.playwright-cli|\.playwright-mcp|output)(?:\/|$)/u,
   /(^|\/)codex-session-[^/]+\.md$/u,
   /(^|\/)pi-session-[^/]+\.html$/u,
-  /(^|\/)\.reticle\/(?:sessions|runs|visual|capsules)(?:\/|$)/u,
   /(^|\/)\.pi\/(?:goals|subagents)(?:\/|$)/u,
 ];
 const ALLOWED_EMPTY_DIRECTORIES = new Set(["openspec/changes/archive"]);
@@ -44,7 +36,6 @@ const IGNORED_DIRECTORY_NAMES = new Set([
   ".playwright-mcp",
   "output",
   ".pi",
-  ".reticle",
 ]);
 const FORBIDDEN_PATHS = [
   /^openspec\/changes\/archive(?:\/|$)/,

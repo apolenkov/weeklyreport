@@ -1,6 +1,5 @@
 import { resolve } from "node:path";
 
-import { withReticle } from "@reticlehq/next";
 import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
@@ -46,9 +45,7 @@ const nextConfig: NextConfig = {
 // Wrap with Sentry so the SDK's build-time instrumentation (client config
 // detection and server hooks) is applied. Source-map upload stays disabled;
 // `silent` outside CI keeps the dev build quiet.
-export default withReticle(
-  withSentryConfig(nextConfig, {
-    silent: !process.env.CI,
-    sourcemaps: { disable: true },
-  }),
-);
+export default withSentryConfig(nextConfig, {
+  silent: !process.env.CI,
+  sourcemaps: { disable: true },
+});

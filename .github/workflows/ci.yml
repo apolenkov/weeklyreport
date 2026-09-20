@@ -66,13 +66,6 @@ jobs:
       - name: Validate OpenSpec
         run: pnpm spec:check
 
-      # Reticle coverage is not yet a blocking gate: the current registry predates
-      # the four-key deterministic proof contract, and the mandatory scope is
-      # being narrowed to a declared manifest. Kept visible until that lands.
-      - name: Reticle spec coverage (non-blocking)
-        continue-on-error: true
-        run: pnpm spec:reticle
-
       - name: Typecheck
         run: pnpm typecheck
 
