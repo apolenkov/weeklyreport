@@ -693,9 +693,10 @@ describe("LeadForm Overview", () => {
     );
     await user.click(within(editor).getByRole("button", { name: "Cancel" }));
 
-    await user.click(within(preview).getByText("More actions"));
+    const settled = await itemPreview("Current work");
+    await user.click(within(settled).getByText("More actions"));
     await user.click(
-      within(preview).getByRole("button", {
+      within(settled).getByRole("button", {
         name: "Update status: Current work",
       }),
     );
@@ -1375,16 +1376,11 @@ describe("LeadForm Overview", () => {
     );
 
     await chooseMove(user, "Current work", "next week");
-    expect(
-      screen.queryByRole("radiogroup", { name: "Active week" }),
-    ).toBeNull();
+    expect(screen.getByRole("radio", { name: "Next week" })).toBeChecked();
     expect(screen.getByRole("textbox", { name: /Description/ })).toHaveValue(
       "Current work",
     );
-    await user.type(
-      screen.getByRole("textbox", { name: /Next step/ }),
-      "Continue next week",
-    );
+    expect(screen.queryByRole("textbox", { name: /Next step/ })).toBeNull();
     expect(saveDraft).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Save update" }));
@@ -1395,9 +1391,8 @@ describe("LeadForm Overview", () => {
       }
     ).items.find((item) => item.text === "Current work");
     expect(moved).toMatchObject({
-      type: "current",
+      type: "next",
       text: "Current work",
-      nextStepText: "Continue next week",
       workflowStatus: "in_progress",
       carriedOver: false,
     });
@@ -1688,21 +1683,46 @@ describe("LeadForm Overview", () => {
 
     await chooseMove(user, "Current work", "next week");
     expect(
-      screen.getByRole("form", { name: "Current week update for Payments" }),
+      screen.getByRole("form", { name: "Next week update for Payments" }),
     ).toBeVisible();
-    expect(screen.getByRole("textbox", { name: /Next step/ })).toHaveValue(
+    expect(screen.getByRole("textbox", { name: /Description/ })).toHaveValue(
       "Legacy next-week plan",
     );
-    expect(screen.getByRole("textbox", { name: /Description/ })).toHaveValue(
-      "Current work",
+    expect(screen.getByRole("textbox", { name: /Description/ })).toBeDisabled();
+    expect(screen.queryByRole("textbox", { name: /Next step/ })).toBeNull();
+    expect(promotePlan).not.toHaveBeenCalled();
+    expect(saveDraft).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Save update" }));
+
+    await vi.waitFor(() => expect(promotePlan).toHaveBeenCalledOnce());
+    expect(promotePlan.mock.calls[0]?.[0]).toMatchObject({ target: "next" });
+    expect(saveDraft).not.toHaveBeenCalled();
+    await vi.waitFor(() =>
+      expect(
+        screen.queryByRole("form", { name: "Next week update for Payments" }),
+      ).not.toBeInTheDocument(),
     );
-    expect(promotePlan).not.toHaveBeenCalled();
-    expect(saveDraft).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
-
-    expect(promotePlan).not.toHaveBeenCalled();
-    expect(saveDraft).not.toHaveBeenCalled();
+    await act(async () => {
+      await client.refetchQueries({
+        queryKey: [["leadForm", "statusOverview"]],
+      });
+    });
+    expect(
+      await screen.findByRole("button", {
+        name: "Update progress for Legacy next-week plan",
+      }),
+    ).toBeInTheDocument();
+    const preview = screen
+      .getByRole("button", {
+        name: "Update progress for Legacy next-week plan",
+      })
+      .closest("[data-overview-item-preview]");
+    expect(preview).toHaveTextContent("In progress");
+    await user.click(screen.getByText("History"));
+    expect(screen.getByText(/Moved to next week by Test Lead/)).toBeVisible();
+    expect(screen.getByText(/Previous: Current work/)).toBeVisible();
   });
 
   it.each([
@@ -1744,21 +1764,13 @@ describe("LeadForm Overview", () => {
       );
 
       await chooseMove(user, initial, destination);
-      if (target === "next") {
-        await user.type(
-          screen.getByRole("textbox", { name: /Next step/ }),
-          "Continue next week",
-        );
-      }
       await user.click(screen.getByRole("button", { name: "Save update" }));
       expect(
         await screen.findByText(
           "Save failed. Your update is still here; try saving again.",
         ),
       ).toBeVisible();
-      const editedField = screen.getByRole("textbox", {
-        name: target === "next" ? /Next step/ : /Description/,
-      });
+      const editedField = screen.getByRole("textbox", { name: /Description/ });
       await user.type(editedField, " after retry");
       await user.click(screen.getByRole("button", { name: "Save update" }));
 
@@ -1768,12 +1780,8 @@ describe("LeadForm Overview", () => {
           readonly items: ReportSectionReadModel["items"];
         }
       ).items;
-      const moved = retryItems.filter((item) =>
-        target === "next"
-          ? item.text === initial &&
-            item.type === "current" &&
-            item.nextStepText === "Continue next week after retry"
-          : item.text === `${initial} after retry` && item.type === target,
+      const moved = retryItems.filter(
+        (item) => item.text === `${initial} after retry` && item.type === target,
       );
       expect(moved).toHaveLength(1);
       expect(
