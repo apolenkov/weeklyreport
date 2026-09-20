@@ -249,8 +249,14 @@ pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && p
 Тесты живут рядом с продуктовым кодом. Корневой `pnpm test` запускает unit-тесты
 workspace, Prisma-тесты и проверки repository cleanliness и operations. Он не
 запускает интеграционные тесты API с базой данных: их запускают отдельно через
-`pnpm --filter @customreport/api test:integration`. Отдельной браузерной,
-каталожной платформы в репозитории нет.
+`pnpm --filter @customreport/api test:integration`.
+
+Пользовательские сценарии проверяют в работающем приложении через реальный
+браузер по разделу [Browser verification](../AGENTS.md#browser-verification):
+перед действием называют ожидаемое наблюдаемое следствие и подтверждают его
+DOM-, сетевыми наблюдениями или снимком экрана. Результат «неизвестно» или
+«не удалось» успехом не считается; решающим критерием приёмки остаются
+детерминированные проверки — unit/integration-тесты и гейты из раздела 7.
 
 ## 9. Отладка
 

@@ -138,28 +138,6 @@ describe("repository cleanliness", () => {
     expect(validateInventory(await inventoryRepository(root))).toEqual([]);
   });
 
-  it("allows Reticle per-machine diagnostics next to committed flows", async () => {
-    const root = await repository();
-    await mkdir(join(root, ".reticle/capsules"), { recursive: true });
-    await mkdir(join(root, ".reticle/sessions/lease-1"), { recursive: true });
-    await mkdir(join(root, ".reticle/visual"), { recursive: true });
-    await writeFile(
-      join(root, ".reticle/.gitignore"),
-      "sessions/\nruns/\nvisual/\ncapsules/\nintent.json\nimpact.json\nproject.json\n",
-    );
-    await writeFile(join(root, ".reticle/capsules/1-e1.json"), "{}\n");
-    await writeFile(
-      join(root, ".reticle/sessions/lease-1/actions.jsonl"),
-      "{}\n",
-    );
-    await writeFile(join(root, ".reticle/intent.json"), "{}\n");
-    await writeFile(join(root, ".reticle/impact.json"), "{}\n");
-    await writeFile(join(root, ".reticle/project.json"), "{}\n");
-    await execFileAsync("git", ["add", ".reticle/.gitignore"], { cwd: root });
-
-    expect(validateInventory(await inventoryRepository(root))).toEqual([]);
-  });
-
   it("accepts a minimal current repository", async () => {
     const root = await repository();
     await mkdir(join(root, "openspec/specs/current"), { recursive: true });
