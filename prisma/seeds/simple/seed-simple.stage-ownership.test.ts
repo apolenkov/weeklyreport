@@ -104,6 +104,7 @@ describe("demo record stage ownership", () => {
       ...source,
       reportSectionId: source.id,
       authorName: lead.name,
+      authorRole: "lead",
       version: 1,
       projects,
       items: demo.items.filter((row) => row.reportSectionId === source.id),

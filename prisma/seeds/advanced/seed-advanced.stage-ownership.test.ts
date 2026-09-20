@@ -223,6 +223,7 @@ describe("advanced authored stage ownership", () => {
         ...source,
         reportSectionId: source.id,
         authorName: source.authorId,
+        authorRole: "lead",
         version: 1,
         projects: ownedProjects(demo, source.authorId),
         items: demo.items.filter((row) => row.reportSectionId === source.id),

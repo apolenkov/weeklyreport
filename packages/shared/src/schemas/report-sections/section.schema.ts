@@ -169,7 +169,7 @@ const reportSectionReadModelObjectSchema = z.object({
   reportId: z.uuid(),
   authorId: z.uuid(),
   authorName: z.string().min(1),
-  authorRole: roleSchema.default("lead"),
+  authorRole: roleSchema,
   // Optimistic concurrency: client echoes this; repository bumps on each write.
   version: z.number().int().min(1),
   status: reportSectionStatusSchema,

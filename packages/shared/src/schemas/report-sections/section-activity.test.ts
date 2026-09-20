@@ -20,6 +20,7 @@ const makeSection = (activities: readonly unknown[]) =>
     reportId: REPORT_ID,
     authorId: LEAD_ID,
     authorName: "Lead 1",
+    authorRole: "lead",
     version: 1,
     status: "draft",
     submittedAt: null,

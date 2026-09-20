@@ -24,6 +24,7 @@ function section(input: {
     reportId: REPORT_ID,
     authorId: input.authorId,
     authorName: "Same Lead",
+    authorRole: "lead",
     version: 1,
     status: "submitted",
     submittedAt: null,
