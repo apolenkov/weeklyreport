@@ -19,11 +19,19 @@ class SnapshotAdminService extends ProductionSnapshotAdminService {
 }
 
 describe("SnapshotAdminService — settings", () => {
-  it("returns default settings when nothing has been configured", async () => {
-    const service = new SnapshotAdminService(createRepository(initialSnapshot));
-    const result = await service.getSettings();
+  it("propagates the missing-settings error when nothing has been configured", async () => {
+    const repository = createRepository(initialSnapshot);
+    repository.getSettings = () =>
+      Promise.reject(
+        new Error(
+          "AppSettings singleton row 'singleton' is missing — apply the canonical init migration or restore the row.",
+        ),
+      );
+    const service = new SnapshotAdminService(repository);
 
-    expect(result).toEqual(defaultSettings);
+    await expect(service.getSettings()).rejects.toThrow(
+      /AppSettings singleton row 'singleton' is missing/,
+    );
   });
 
   it("round-trips the extended AppSettings fields", async () => {
@@ -90,8 +98,10 @@ describe("SnapshotAdminService — settings", () => {
     expect(result.allowLateSubmissions).toBe(true);
   });
 
-  it("returns period-cycle defaults when nothing has been configured", async () => {
-    const service = new SnapshotAdminService(createRepository(initialSnapshot));
+  it("reads configured period-cycle defaults", async () => {
+    const service = new SnapshotAdminService(
+      createRepository(initialSnapshot, defaultSettings),
+    );
     const result = await service.getSettings();
 
     expect(result.deadlineTime).toBe("18:00");
