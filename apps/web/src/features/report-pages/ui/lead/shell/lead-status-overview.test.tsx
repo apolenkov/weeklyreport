@@ -1781,7 +1781,8 @@ describe("LeadForm Overview", () => {
         }
       ).items;
       const moved = retryItems.filter(
-        (item) => item.text === `${initial} after retry` && item.type === target,
+        (item) =>
+          item.text === `${initial} after retry` && item.type === target,
       );
       expect(moved).toHaveLength(1);
       expect(

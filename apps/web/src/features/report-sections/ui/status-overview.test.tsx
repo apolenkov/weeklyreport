@@ -670,9 +670,8 @@ describe("StatusOverview", () => {
       screen.getByText("Current other").closest("[data-overview-lineage-lane]"),
     ).not.toHaveClass("md:col-span-3");
     const otherRow =
-      screen
-        .getByText("Current other")
-        .closest("[data-overview-lineage-lane]")?.parentElement ?? null;
+      screen.getByText("Current other").closest("[data-overview-lineage-lane]")
+        ?.parentElement ?? null;
     expect(otherRow).not.toContainElement(editor);
     expect(screen.getAllByRole("form")).toHaveLength(1);
 
