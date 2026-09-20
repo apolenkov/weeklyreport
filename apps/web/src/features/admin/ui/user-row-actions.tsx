@@ -40,7 +40,7 @@ function UserActivationButton(
         pending: props.deactivatePending,
         action: props.onDeactivate,
         className:
-          "text-[var(--color-status-at-risk-fg)] hover:border-[var(--color-status-at-risk-border)] hover:bg-[var(--color-status-at-risk-bg)]",
+          "text-[var(--color-destructive)] hover:border-[var(--color-destructive)] hover:bg-[var(--color-destructive-surface-subtle)]",
       }
     : {
         label: "Activate",
