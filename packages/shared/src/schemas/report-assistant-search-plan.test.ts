@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { searchPlanSchema } from "./report-assistant-search-plan";
+import { normalizeEntityReference } from "./report-assistant-search-plan-validation";
 
 const validPlan = () => ({
   periods: {
@@ -327,5 +328,19 @@ describe("searchPlanSchema", () => {
     expect(jsonSchema.properties?.periods).toMatchObject({
       default: validPlan().periods,
     });
+  });
+});
+
+describe("normalizeEntityReference", () => {
+  it("normalizes NFKC, every supported dash, whitespace, and trim", () => {
+    expect(normalizeEntityReference("\u00A0ＯＰＳ‐‑‒–—―−Team\u2003\n")).toBe(
+      "ops-------team",
+    );
+  });
+
+  it("lowercases with locale-independent Unicode semantics", () => {
+    expect(normalizeEntityReference("I")).toBe("i");
+    expect(normalizeEntityReference("İ")).toBe("i\u0307");
+    expect(normalizeEntityReference("ı")).toBe("ı");
   });
 });

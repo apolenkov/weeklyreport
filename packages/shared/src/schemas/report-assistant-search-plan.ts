@@ -9,6 +9,8 @@ import {
 import { validateSearchPlan } from "./report-assistant-search-plan-validation";
 import { canonicalStatusSchema } from "./status/canonical-status";
 
+export { normalizeEntityReference } from "./report-assistant-search-plan-validation";
+
 const MAX_REFERENCES = 20;
 /** Maximum number of published periods a search may inspect. */
 export const MAX_PUBLISHED_PERIODS = 52;

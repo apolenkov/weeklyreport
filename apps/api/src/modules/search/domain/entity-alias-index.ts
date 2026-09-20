@@ -1,3 +1,7 @@
+import { normalizeEntityReference } from "@customreport/shared";
+
+export { normalizeEntityReference };
+
 export type AliasKind = "author" | "product" | "activity" | "period";
 
 export type AliasEntry = Readonly<{
@@ -7,17 +11,6 @@ export type AliasEntry = Readonly<{
 }>;
 
 export type EntityAliasIndex = ReadonlyMap<string, readonly AliasEntry[]>;
-
-const DASHES = /[‐‑‒–—―−]/gu;
-const WHITESPACE = /\s+/gu;
-
-export const normalizeEntityReference = (reference: string): string =>
-  reference
-    .normalize("NFKC")
-    .replaceAll(DASHES, "-")
-    .replaceAll(WHITESPACE, " ")
-    .trim()
-    .toLocaleLowerCase("und");
 
 export const buildEntityAliasIndex = (
   entries: readonly AliasEntry[],
