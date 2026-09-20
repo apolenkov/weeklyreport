@@ -12,10 +12,23 @@ function hasVisibleAncestors(element: HTMLElement): boolean {
   return parent === null || hasVisibleAncestors(parent);
 }
 
+function insideClosedDisclosure(element: HTMLElement): boolean {
+  const parent = element.parentElement;
+  if (parent === null) return false;
+  if (
+    parent.tagName === "DETAILS" &&
+    element.tagName !== "SUMMARY" &&
+    !(parent as HTMLDetailsElement).open
+  )
+    return true;
+  return insideClosedDisclosure(parent);
+}
+
 function isVisibleAction(button: HTMLButtonElement): boolean {
   return (
     !button.disabled &&
     !button.closest("[hidden], [inert]") &&
+    !insideClosedDisclosure(button) &&
     hasVisibleAncestors(button)
   );
 }

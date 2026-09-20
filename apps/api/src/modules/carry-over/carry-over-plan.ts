@@ -46,6 +46,21 @@ function stableIdSet(
   );
 }
 
+// An explicit next-period commitment: a Next plan not already carried, or a
+// Current item holding a nonblank nextStepText.
+function isExplicitCommitment(item: SourceItem): boolean {
+  return (
+    (item.type === "next" && !item.carriedOver) ||
+    (item.type === "current" && Boolean(item.nextStepText?.trim()))
+  );
+}
+
+// The fallback continuation: a Current item still in progress with no
+// explicit commitment.
+function isContinuation(item: SourceItem): boolean {
+  return item.type === "current" && item.workflowStatus === "in_progress";
+}
+
 function isCarryableItem(
   item: SourceItem,
   targetProjectIds: ReadonlySet<string>,
@@ -53,8 +68,7 @@ function isCarryableItem(
   targetItemLineage: ReadonlySet<string>,
 ): boolean {
   return (
-    ((item.type === "next" && !item.carriedOver) ||
-      (item.type === "current" && Boolean(item.nextStepText?.trim()))) &&
+    (isExplicitCommitment(item) || isContinuation(item)) &&
     // Finished work is closed; postponed work was explicitly pushed beyond
     // this period — the lead re-plans it by hand, never auto.
     item.workflowStatus !== "done" &&
@@ -69,6 +83,46 @@ function isCarryableItem(
     ) &&
     !(item.stableId !== undefined && targetItemLineage.has(item.stableId))
   );
+}
+
+// At most one active target per lineage, independent of source order: the
+// first explicit commitment wins; only without one does the first in-progress
+// continuation carry. Occurrences without a stableId are singleton lineages.
+function selectRolloverItems(
+  items: readonly SourceItem[],
+  targetProjectIds: ReadonlySet<string>,
+  targetActivityIds: ReadonlySet<string>,
+  targetItemLineage: ReadonlySet<string>,
+): SourceItem[] {
+  const lineages = new Map<string | SourceItem, SourceItem[]>();
+  for (const item of items) {
+    if (
+      !isCarryableItem(
+        item,
+        targetProjectIds,
+        targetActivityIds,
+        targetItemLineage,
+      )
+    ) {
+      continue;
+    }
+    const key = item.stableId ?? item;
+    const lineage = lineages.get(key);
+    if (lineage === undefined) {
+      lineages.set(key, [item]);
+    } else {
+      lineage.push(item);
+    }
+  }
+  const selected: SourceItem[] = [];
+  for (const lineage of lineages.values()) {
+    const winner =
+      lineage.find(isExplicitCommitment) ?? lineage.find(isContinuation);
+    if (winner !== undefined) {
+      selected.push(winner);
+    }
+  }
+  return selected;
 }
 
 function isCarryableDecision(
@@ -111,18 +165,14 @@ function carryEntryForAuthor(
 
   return {
     authorId: targetSection.authorId,
-    items: sourceSection.items
-      .filter((item) =>
-        isCarryableItem(
-          item,
-          targetProjectIds,
-          targetActivityIds,
-          targetItemLineage,
-        ),
-      )
-      .map((item) =>
-        cloneCarriedItem(sourceReportId, targetReportId, item, carriedAt),
-      ),
+    items: selectRolloverItems(
+      sourceSection.items,
+      targetProjectIds,
+      targetActivityIds,
+      targetItemLineage,
+    ).map((item) =>
+      cloneCarriedItem(sourceReportId, targetReportId, item, carriedAt),
+    ),
     decisions: sourceSection.decisions
       .filter((decision) =>
         isCarryableDecision(

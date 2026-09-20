@@ -319,9 +319,9 @@ describe("CarryOverService — carry filter set (pin)", () => {
       items: 1,
     },
     {
-      name: "excludes a current item without a next-period commitment",
+      name: "continues a carried in-progress current item without a commitment",
       opts: { items: [nextItem({ type: "current", carriedOver: true })] },
-      items: 0,
+      items: 1,
     },
     {
       name: "excludes a paused current commitment until it is explicitly resumed",
@@ -354,9 +354,59 @@ describe("CarryOverService — carry filter set (pin)", () => {
       items: 1,
     },
     {
-      name: "excludes a current (non-next) item",
+      name: "continues a fresh in-progress current item without a commitment",
       opts: { items: [nextItem({ type: "current" })] },
+      items: 1,
+    },
+    {
+      name: "excludes an uncommitted planned current item",
+      opts: {
+        items: [nextItem({ type: "current", workflowStatus: "planned" })],
+      },
       items: 0,
+    },
+    {
+      name: "excludes a done current item even with a next-period commitment",
+      opts: {
+        items: [
+          nextItem({
+            type: "current",
+            workflowStatus: "done",
+            nextStepText: "Ship the beta",
+          }),
+        ],
+      },
+      items: 0,
+    },
+    {
+      name: "carries one clone for duplicate eligible occurrences of one stableId",
+      opts: {
+        items: [
+          nextItem({ stableId: LINEAGE }),
+          nextItem({ stableId: LINEAGE, text: "Restated duplicate" }),
+        ],
+      },
+      items: 1,
+    },
+    {
+      name: "lets an explicit commitment win over an in-progress twin of one stableId",
+      opts: {
+        items: [
+          nextItem({ type: "current", stableId: LINEAGE }),
+          nextItem({ stableId: LINEAGE, text: "Committed plan" }),
+        ],
+      },
+      items: 1,
+    },
+    {
+      name: "continues an in-progress twin whose next plan was already carried",
+      opts: {
+        items: [
+          nextItem({ stableId: LINEAGE, carriedOver: true }),
+          nextItem({ type: "current", stableId: LINEAGE, carriedOver: true }),
+        ],
+      },
+      items: 1,
     },
     {
       name: "carries an activity item when the activity is re-attached",

@@ -119,12 +119,16 @@ describe("LeadSubmitReadinessSummary", () => {
     expect(document.getElementById("report-details")).toHaveFocus();
   });
 
-  it("links a carried-item blocker to its exact Overview confirmation", async () => {
+  it("links a carried-item blocker to its exact Overview progress control", async () => {
     const overviewFocus = "confirm:current:carried-item";
     render(
       <>
-        <button data-overview-focus={overviewFocus}>
-          Confirm for this week
+        <button
+          id={overviewFocus}
+          aria-label="Update progress for Carried work"
+          data-overview-focus={overviewFocus}
+        >
+          Update progress
         </button>
         <LeadSubmitReadinessSummary
           readiness={{
@@ -132,7 +136,7 @@ describe("LeadSubmitReadinessSummary", () => {
             blockingIssues: [
               {
                 id: "submit-validation:UNCONFIRMED_CARRIED_ITEM:carried-item",
-                label: 'Confirm "Carried work" for this week.',
+                label: 'Update progress for "Carried work".',
                 overviewFocus,
               },
             ],
@@ -144,12 +148,12 @@ describe("LeadSubmitReadinessSummary", () => {
     );
 
     const link = screen.getByRole("link", {
-      name: 'Confirm "Carried work" for this week.',
+      name: 'Update progress for "Carried work".',
     });
     expect(link).toHaveAttribute("href", `#${overviewFocus}`);
     await userEvent.click(link);
     expect(
-      screen.getByRole("button", { name: "Confirm for this week" }),
+      screen.getByRole("button", { name: "Update progress for Carried work" }),
     ).toHaveFocus();
   });
 
@@ -158,8 +162,12 @@ describe("LeadSubmitReadinessSummary", () => {
     window.history.replaceState(null, "", "/lead/report/report-1");
     render(
       <>
-        <button data-overview-focus={overviewFocus}>
-          Confirm for this week
+        <button
+          id={overviewFocus}
+          aria-label="Update progress for Carried work"
+          data-overview-focus={overviewFocus}
+        >
+          Update progress
         </button>
         <LeadSubmitReadinessSummary
           readiness={{
@@ -167,7 +175,7 @@ describe("LeadSubmitReadinessSummary", () => {
             blockingIssues: [
               {
                 id: "submit-validation:UNCONFIRMED_CARRIED_ITEM:carried-item",
-                label: 'Confirm "Carried work" for this week.',
+                label: 'Update progress for "Carried work".',
                 overviewFocus,
               },
             ],
@@ -179,11 +187,11 @@ describe("LeadSubmitReadinessSummary", () => {
     );
 
     const target = screen.getByRole("button", {
-      name: "Confirm for this week",
+      name: "Update progress for Carried work",
     });
     const allowed = fireEvent.click(
       screen.getByRole("link", {
-        name: 'Confirm "Carried work" for this week.',
+        name: 'Update progress for "Carried work".',
       }),
       { metaKey: true },
     );
@@ -193,7 +201,7 @@ describe("LeadSubmitReadinessSummary", () => {
     expect(window.location.hash).toBe("");
   });
 
-  it("expands a collapsed unit before focusing its exact carried confirmation", async () => {
+  it("expands a collapsed unit before focusing its exact carried progress control", async () => {
     const overviewFocus = "confirm:current:carried-third";
     window.history.replaceState(null, "", "/lead/report/report-1");
     const currentItem = (index: number, stableId: string, text: string) => ({
@@ -250,14 +258,14 @@ describe("LeadSubmitReadinessSummary", () => {
     };
     render(
       <>
-        <StatusOverview model={model} onConfirmItem={vi.fn()} />
+        <StatusOverview model={model} onEditItem={vi.fn()} />
         <LeadSubmitReadinessSummary
           readiness={{
             ...ready,
             blockingIssues: [
               {
                 id: "submit-validation:UNCONFIRMED_CARRIED_ITEM:carried-third",
-                label: 'Confirm "Third carried work" for this week.',
+                label: 'Update progress for "Third carried work".',
                 overviewFocus,
               },
             ],
@@ -269,22 +277,22 @@ describe("LeadSubmitReadinessSummary", () => {
     );
 
     const disclosure = screen.getByRole("button", { name: "+1 more" });
-    const confirm = screen.getByRole("button", {
-      name: "Confirm Third carried work for this week",
+    const progress = screen.getByRole("button", {
+      name: "Update progress for Third carried work",
       hidden: true,
     });
     expect(disclosure).toHaveAttribute("aria-expanded", "false");
-    expect(confirm).not.toBeVisible();
+    expect(progress).not.toBeVisible();
 
     await userEvent.click(
       screen.getByRole("link", {
-        name: 'Confirm "Third carried work" for this week.',
+        name: 'Update progress for "Third carried work".',
       }),
     );
 
     expect(disclosure).toHaveAttribute("aria-expanded", "true");
-    expect(confirm).toBeVisible();
-    expect(confirm).toHaveFocus();
+    expect(progress).toBeVisible();
+    expect(progress).toHaveFocus();
     expect(window.location.hash).toBe(`#${overviewFocus}`);
   });
 

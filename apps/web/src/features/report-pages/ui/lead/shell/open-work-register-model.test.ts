@@ -155,4 +155,73 @@ describe("projectOpenWorkRegister", () => {
     ]);
     expect(projected.terminalItems).toEqual([]);
   });
+
+  it("projects an uncommitted current planned occurrence once as automatically paused without mutating it", () => {
+    const uncommitted = occurrence(
+      "20000000-0000-4000-8000-000000000006",
+      "planned",
+    );
+    const register = projectOpenWorkRegister([uncommitted], []);
+
+    expect(register.openItems).toHaveLength(1);
+    const projected = register.openItems[0];
+    expect(projected?.automaticPauseReason).toBe(
+      "Not scheduled for the new week",
+    );
+    expect(projected?.action).toEqual({
+      kind: "resume",
+      label: "Resume paused work",
+    });
+    // Projection only: the historical occurrence keeps its stored tuple.
+    expect(projected?.occurrence.item.workflowStatus).toBe("planned");
+    expect(projected?.occurrence.item.pausedReason).toBeNull();
+  });
+
+  it("keeps a planned item with an explicit commitment out of the automatic pause", () => {
+    const committed = occurrence(
+      "20000000-0000-4000-8000-000000000007",
+      "planned",
+      { nextStepText: "Ship the staged rollout" },
+    );
+    const register = projectOpenWorkRegister([committed], []);
+
+    expect(register.openItems[0]?.automaticPauseReason).toBeNull();
+    expect(register.openItems[0]?.action).toEqual({
+      kind: "plan",
+      label: "Plan this work",
+    });
+  });
+
+  it("does not auto-pause a next-period planned commitment", () => {
+    const nextPlan = occurrence(
+      "20000000-0000-4000-8000-000000000008",
+      "planned",
+      { type: "next" },
+    );
+    const register = projectOpenWorkRegister([nextPlan], []);
+
+    expect(register.openItems[0]?.automaticPauseReason).toBeNull();
+    expect(register.openItems[0]?.action).toEqual({
+      kind: "plan",
+      label: "Plan this work",
+    });
+  });
+
+  it("auto-pauses only the newest occurrence of a lineage", () => {
+    const stableId = "20000000-0000-4000-8000-000000000009";
+    const register = projectOpenWorkRegister(
+      [occurrence(stableId, "in_progress"), occurrence(stableId, "planned")],
+      [],
+    );
+
+    expect(register.openItems).toHaveLength(1);
+    expect(register.openItems[0]?.occurrence.item.workflowStatus).toBe(
+      "in_progress",
+    );
+    expect(register.openItems[0]?.automaticPauseReason).toBeNull();
+    expect(register.openItems[0]?.action).toEqual({
+      kind: "continue",
+      label: "Continue work",
+    });
+  });
 });

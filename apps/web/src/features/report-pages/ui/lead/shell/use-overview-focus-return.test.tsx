@@ -27,6 +27,34 @@ describe("overview focus recovery", () => {
     hook.rerender({ open: false });
     expect(screen.getByRole("heading")).toHaveFocus();
   });
+  it("skips an origin inside a closed disclosure and falls back by identity", () => {
+    render(
+      <>
+        <details>
+          <summary>More actions</summary>
+          <button data-overview-focus="move:current:stable">Move</button>
+        </details>
+        <button data-overview-focus="edit:current:stable">
+          Update progress
+        </button>
+        <h2 tabIndex={-1} data-overview-focus-heading>
+          Report
+        </h2>
+      </>,
+    );
+    const hook = renderHook(({ open }) => useOverviewFocusReturn(open), {
+      initialProps: { open: false },
+    });
+    screen.getByRole("button", { name: "Move" }).focus();
+    act(() => hook.result.current());
+    hook.rerender({ open: true });
+    // The disclosure closed when the editor opened: the exact origin key now
+    // belongs to a hidden control, so the visible same-item button wins.
+    hook.rerender({ open: false });
+    expect(
+      screen.getByRole("button", { name: "Update progress" }),
+    ).toHaveFocus();
+  });
   it("returns to the report heading after closing a composer retained across navigation", () => {
     render(
       <h2 tabIndex={-1} data-overview-focus-heading>

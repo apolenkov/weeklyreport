@@ -10,6 +10,7 @@ function sourceLabel(item: OpenWorkRegisterItem): string {
 
 function progressLabel(item: OpenWorkRegisterItem): string {
   if (item.occurrence.item.resolution != null) return "Cancelled";
+  if (item.automaticPauseReason != null) return "Paused";
   switch (item.occurrence.item.workflowStatus) {
     case "paused":
       return "Paused";
@@ -30,6 +31,13 @@ function OpenWorkReason({ item }: { readonly item: OpenWorkRegisterItem }) {
     return (
       <p className="break-words text-xs text-[var(--color-muted-foreground)]">
         Cancellation reason: {historical.resolution.reason}
+      </p>
+    );
+  }
+  if (item.automaticPauseReason != null) {
+    return (
+      <p className="break-words text-xs text-[var(--color-muted-foreground)]">
+        Pause reason: {item.automaticPauseReason}
       </p>
     );
   }

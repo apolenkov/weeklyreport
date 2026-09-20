@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { makeReportSectionFixture } from "../../../test-utils/report-section-fixtures";
-import { projectStatusOverview } from "./status-overview";
+import { statusOverviewProgressLabel } from "../ui/status-overview-item-metadata";
+import {
+  projectStatusOverview,
+  type StatusOverviewItem,
+} from "./status-overview";
+import { statusOverviewItemActions } from "./status-overview-items";
 
 const CURRENT_PRODUCT = "10000000-0000-4000-8000-000000000010";
 const HISTORICAL_PRODUCT = "10000000-0000-4000-8000-000000000011";
@@ -758,5 +763,217 @@ describe("projectStatusOverview", () => {
     );
     expect(previous?.source).toBe("previous");
     expect(previous?.comments).toHaveLength(1);
+  });
+});
+
+function overviewActionItem(
+  overrides: Partial<StatusOverviewItem>,
+): StatusOverviewItem {
+  return {
+    key: "current:stable-1",
+    recordId: "record-1",
+    source: "current",
+    editTarget: { recordId: "record-1", source: "current" },
+    stableId: "stable-1",
+    text: "Tracked work",
+    tag: "delivery",
+    stageNames: [],
+    pausedReason: null,
+    resolution: null,
+    canResolve: true,
+    canRestore: false,
+    workflowStatus: "in_progress",
+    continuity: null,
+    ...overrides,
+  };
+}
+
+describe("statusOverviewItemActions", () => {
+  it("gives an editable active item one primary progress action and one quiet overflow", () => {
+    expect(statusOverviewItemActions(overviewActionItem({}))).toEqual({
+      primary: "progress",
+      secondary: ["edit", "move"],
+      recovery: [],
+    });
+  });
+
+  it("keeps the same primary progress action on unconfirmed carried items", () => {
+    for (const workflowStatus of ["planned", "in_progress"] as const) {
+      expect(
+        statusOverviewItemActions(
+          overviewActionItem({ needsConfirmation: true, workflowStatus }),
+        ),
+      ).toEqual({
+        primary: "progress",
+        secondary: ["edit", "move"],
+        recovery: [],
+      });
+    }
+  });
+
+  it("keeps a carried item confirmable even when it is already done", () => {
+    expect(
+      statusOverviewItemActions(
+        overviewActionItem({
+          needsConfirmation: true,
+          workflowStatus: "done",
+        }),
+      ).primary,
+    ).toBe("progress");
+  });
+
+  it("withholds the primary progress action from done and read-only items", () => {
+    expect(
+      statusOverviewItemActions(overviewActionItem({ workflowStatus: "done" })),
+    ).toEqual({
+      primary: null,
+      secondary: ["edit"],
+      recovery: [],
+    });
+    expect(
+      statusOverviewItemActions(
+        overviewActionItem({ canResolve: false, editTarget: null }),
+      ),
+    ).toEqual({ primary: null, secondary: [], recovery: [] });
+  });
+
+  it("keeps an uneditable carried item confirmable through the same primary", () => {
+    expect(
+      statusOverviewItemActions(
+        overviewActionItem({
+          needsConfirmation: true,
+          editTarget: null,
+          canResolve: false,
+          canRestore: true,
+          resolution: WON_T_DO_RESOLUTION,
+        }),
+      ),
+    ).toEqual({
+      primary: "progress",
+      secondary: [],
+      recovery: ["restore"],
+    });
+  });
+
+  it("keeps paused and postponed items on the same single primary action", () => {
+    for (const workflowStatus of ["paused", "postponed"] as const) {
+      expect(
+        statusOverviewItemActions(
+          overviewActionItem({
+            workflowStatus,
+            pausedReason:
+              workflowStatus === "paused" ? "Waiting for legal" : null,
+          }),
+        ),
+      ).toEqual({
+        primary: "progress",
+        secondary: ["edit", "move"],
+        recovery: [],
+      });
+    }
+  });
+
+  it("keeps the linked next-step projection movable but not separately editable", () => {
+    expect(
+      statusOverviewItemActions(
+        overviewActionItem({
+          source: "next",
+          workflowStatus: "planned",
+          editTarget: {
+            recordId: "record-1",
+            source: "current",
+            focusNextStep: true,
+          },
+        }),
+      ),
+    ).toEqual({
+      primary: "progress",
+      secondary: ["move"],
+      recovery: [],
+    });
+  });
+
+  it("keeps Previous informational with only the explicit replan action", () => {
+    expect(
+      statusOverviewItemActions(
+        overviewActionItem({
+          source: "previous",
+          editTarget: null,
+          canResolve: true,
+        }),
+      ),
+    ).toEqual({ primary: null, secondary: [], recovery: ["replan"] });
+    expect(
+      statusOverviewItemActions(
+        overviewActionItem({
+          source: "previous",
+          editTarget: null,
+          canResolve: false,
+        }),
+      ),
+    ).toEqual({ primary: null, secondary: [], recovery: [] });
+  });
+
+  it("keeps a resolved item restorable without competing primaries", () => {
+    expect(
+      statusOverviewItemActions(
+        overviewActionItem({
+          resolution: WON_T_DO_RESOLUTION,
+          editTarget: null,
+          canResolve: false,
+          canRestore: true,
+        }),
+      ),
+    ).toEqual({ primary: null, secondary: [], recovery: ["restore"] });
+  });
+});
+
+describe("statusOverviewProgressLabel", () => {
+  it("states that carried planned work was not updated this week", () => {
+    expect(
+      statusOverviewProgressLabel(
+        overviewActionItem({
+          needsConfirmation: true,
+          workflowStatus: "planned",
+        }),
+      ),
+    ).toBe("Planned · not updated this week");
+  });
+
+  it("states that carried in-progress work continued but was not updated", () => {
+    expect(
+      statusOverviewProgressLabel(
+        overviewActionItem({
+          needsConfirmation: true,
+          workflowStatus: "in_progress",
+        }),
+      ),
+    ).toBe("Continued · not updated this week");
+  });
+
+  it("keeps ordinary progress labels untouched", () => {
+    expect(
+      statusOverviewProgressLabel(
+        overviewActionItem({ workflowStatus: "planned" }),
+      ),
+    ).toBe("Not started");
+    expect(
+      statusOverviewProgressLabel(
+        overviewActionItem({ source: "next", workflowStatus: "planned" }),
+      ),
+    ).toBe("Planned");
+    expect(
+      statusOverviewProgressLabel(
+        overviewActionItem({ workflowStatus: "in_progress" }),
+      ),
+    ).toBe("In progress");
+    expect(
+      statusOverviewProgressLabel(
+        overviewActionItem({
+          workflowStatus: "paused",
+          pausedReason: "Waiting for legal",
+        }),
+      ),
+    ).toBe("Paused");
   });
 });
