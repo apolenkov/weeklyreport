@@ -532,6 +532,28 @@ describe("RemindersTab — add / edit form", () => {
     expect(typeSelect.value).toBe("escalation-head");
   });
 
+  it("keeps an edited draft mounted when search hides its reminder", async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    await user.click(screen.getByTestId(`edit-${policyDeadline.id}`));
+    expect(
+      screen.queryByTestId(`policy-row-${policyDeadline.id}`),
+    ).not.toBeInTheDocument();
+    const form = screen.getByTestId("policy-form");
+    const offsetInput = screen.getByLabelText<HTMLInputElement>(
+      /reminder offset amount/i,
+    );
+    await user.clear(offsetInput);
+
+    await user.type(screen.getByLabelText(/Search reminders/i), "head");
+
+    expect(screen.getByTestId("policy-form")).toBe(form);
+    expect(screen.getByLabelText(/reminder offset amount/i)).toBe(offsetInput);
+    expect(offsetInput.value).toBe("");
+    expect(screen.getByTestId("policy-save-button")).toBeDisabled();
+  });
+
   it("returns focus to the edit trigger after cancelling the inline editor", async () => {
     const user = userEvent.setup();
     renderTab();
