@@ -110,16 +110,13 @@ const mutationAuditMiddleware = t.middleware(
     });
     const duration = Math.round(performance.now() - start);
 
-    await recordMutationAudit(
-      { ...ctx, pdfJobId: ctx.pdfJobId ?? null },
-      {
-        procedure: path,
-        decodedInput: inputState.captured ? inputState.decodedInput : undefined,
-        status: result.ok ? "success" : "fail",
-        failureCode: result.ok ? null : result.error.code,
-        durationMs: duration,
-      },
-    );
+    await recordMutationAudit(ctx, {
+      procedure: path,
+      decodedInput: inputState.captured ? inputState.decodedInput : undefined,
+      status: result.ok ? "success" : "fail",
+      failureCode: result.ok ? null : result.error.code,
+      durationMs: duration,
+    });
 
     return result;
   },

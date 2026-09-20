@@ -95,7 +95,7 @@ interface UserActionLogEntry {
 // as an error AND a metric, never propagated, so audit bookkeeping cannot fail
 // the mutation that already succeeded. No-op without a Prisma client (unit).
 async function persistUserActionLog(
-  ctx: TrpcContext,
+  ctx: MutationAuditContext,
   entry: UserActionLogEntry,
 ): Promise<void> {
   if (!ctx.prisma?.userActionLog) return;
@@ -120,6 +120,11 @@ async function persistUserActionLog(
   }
 }
 
+type MutationAuditContext = Pick<
+  TrpcContext,
+  "session" | "logger" | "auditLogger" | "ip" | "prisma" | "correlationId"
+>;
+
 interface MutationAuditRecord {
   readonly procedure: string;
   // Only the procedure parser's output may reach target extraction. Raw
@@ -137,7 +142,7 @@ interface MutationAuditRecord {
 // row. The envelope carries the primary target plus every resolved identity and
 // no before/after diff — outcome is success|fail with the failure reason only.
 export async function recordMutationAudit(
-  ctx: TrpcContext,
+  ctx: MutationAuditContext,
   record: MutationAuditRecord,
 ): Promise<void> {
   const targets = extractAuditTargets(record.decodedInput);
