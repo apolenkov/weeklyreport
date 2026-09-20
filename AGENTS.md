@@ -131,6 +131,11 @@ path must respect them and link the relevant `openspec/specs/` spec.
 - **Role-coverage gate.** tRPC procedures must use one of the 7 canonical
   middleware-chain builders, including `leadProcedure` (matched by reference
   identity). Don't hand-roll a chain.
+- **Weekly-cycle rollover.** Rollover creates at most one active W+1 item per
+  `stableId`: an explicit Next commitment wins, otherwise unfinished Current
+  in-progress continues. Previous stays read-only, and editable Current/Next
+  items take one primary `Update progress` action through the canonical
+  editor.
 
 ## Conventions
 

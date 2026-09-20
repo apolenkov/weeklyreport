@@ -73,7 +73,7 @@ describe("carry-over preserves planning intent", () => {
       stableId: source.stableId,
       text: "Run integration tests",
       nextStepText: null,
-      workflowStatus: "in_progress",
+      workflowStatus: "planned",
     });
     expect(source.text).toBe("API implemented");
     expect(source.nextStepText).toBe("Run integration tests");
@@ -229,7 +229,7 @@ describe("carry-over preserves planning intent", () => {
       stableId,
       text: "Validate the API",
       nextStepText: null,
-      workflowStatus: "in_progress",
+      workflowStatus: "planned",
       priorityRank: 2,
       carriedOver: true,
     });
@@ -237,7 +237,7 @@ describe("carry-over preserves planning intent", () => {
       stableId,
       text: "Validate the API",
       nextStepText: null,
-      workflowStatus: "in_progress",
+      workflowStatus: "planned",
       priorityRank: 2,
       carriedOver: true,
     });
@@ -246,5 +246,294 @@ describe("carry-over preserves planning intent", () => {
     expect(expectDefined(firstSource.items[0]).text).toBe("Validate the API");
     expect(expectDefined(firstSource.items[0]).carriedOver).toBe(false);
     expect(expectDefined(middleSource.items[0]).carriedOver).toBe(false);
+  });
+});
+
+// Selection is per lineage (stableId), never per source row: at most one
+// active target occurrence, an explicit commitment beating the in-progress
+// continuation regardless of source order.
+describe("carry-over selects one rollover target per lineage", () => {
+  const sourceItem = (
+    over: Partial<ReportSectionReadModel["items"][number]> = {},
+  ): ReportSectionReadModel["items"][number] => ({
+    id: randomUUID(),
+    stableId: randomUUID(),
+    type: "current",
+    workflowStatus: "in_progress",
+    text: "candidate",
+    tag: "feature",
+    carriedOver: false,
+    stageNames: ["Development"],
+    ...over,
+  });
+
+  const emptyTargetFor = (
+    source: ReportSectionReadModel,
+    reportId: string,
+    items: ReportSectionReadModel["items"] = [],
+  ): ReportSectionReadModel => ({
+    ...section({ reportId, items }),
+    authorId: source.authorId,
+    projects: source.projects,
+  });
+
+  const plan = (
+    source: ReportSectionReadModel,
+    target: ReportSectionReadModel,
+  ) =>
+    planCarriedEntries(
+      [source],
+      [target],
+      source.reportId,
+      target.reportId,
+      new Date("2026-09-14T00:00:00.000Z"),
+    );
+
+  it("continues a bare in-progress Current item once as in_progress", () => {
+    const stableId = randomUUID();
+    const sourceReportId = randomUUID();
+    const targetReportId = randomUUID();
+    const source = section({
+      reportId: sourceReportId,
+      items: [
+        sourceItem({
+          stableId,
+          text: "API integration still running",
+          carriedOver: true,
+          priorityRank: 4,
+          pausedReason: null,
+          nextStepText: null,
+        }),
+      ],
+    });
+    const snapshot = structuredClone(source);
+
+    const entry = expectDefined(
+      plan(source, emptyTargetFor(source, targetReportId))[0],
+    );
+
+    expect(entry.items).toHaveLength(1);
+    const clone = expectDefined(entry.items[0]);
+    expect(clone.item).toMatchObject({
+      stableId,
+      type: "current",
+      workflowStatus: "in_progress",
+      text: "API integration still running",
+      tag: "feature",
+      carriedOver: true,
+      priorityRank: 4,
+      pausedReason: null,
+      nextStepText: null,
+      stageNames: ["Development"],
+    });
+    expect(clone.item.id).not.toBe(expectDefined(source.items[0]).id);
+    expect(clone.record.sourceItemId).toBe(expectDefined(source.items[0]).id);
+    expect(clone.record.targetItemId).toBe(clone.item.id);
+    expect(
+      draftSaveSchema.safeParse({
+        reportSectionId: randomUUID(),
+        version: 1,
+        status: "draft",
+        projectStatuses: [],
+        stageStatuses: [],
+        activityStatuses: [],
+        items: [clone.item],
+        risks: [],
+        decisions: [],
+      }).success,
+    ).toBe(true);
+    expect(source).toEqual(snapshot);
+  });
+
+  it.each(["commitment first", "fallback first"] as const)(
+    "lets an explicit next commitment win over an in-progress twin (%s)",
+    (order) => {
+      const stableId = randomUUID();
+      const continuation = sourceItem({
+        stableId,
+        text: "Beta still running",
+        carriedOver: true,
+        priorityRank: 1,
+      });
+      const commitment = sourceItem({
+        stableId,
+        type: "next",
+        workflowStatus: "planned",
+        text: "Ship the beta",
+        priorityRank: 2,
+      });
+      const source = section({
+        reportId: randomUUID(),
+        items:
+          order === "commitment first"
+            ? [commitment, continuation]
+            : [continuation, commitment],
+      });
+      const targetReportId = randomUUID();
+
+      const entry = expectDefined(
+        plan(source, emptyTargetFor(source, targetReportId))[0],
+      );
+
+      expect(entry.items).toHaveLength(1);
+      const clone = expectDefined(entry.items[0]);
+      expect(clone.item).toMatchObject({
+        stableId,
+        type: "current",
+        workflowStatus: "planned",
+        text: "Ship the beta",
+        carriedOver: true,
+        nextStepText: null,
+        pausedReason: null,
+      });
+      expect(clone.record.sourceItemId).toBe(commitment.id);
+      expect(source.items).toHaveLength(2);
+    },
+  );
+
+  it("prefers a Current next-step commitment over its in-progress twin", () => {
+    const stableId = randomUUID();
+    const continuation = sourceItem({
+      stableId,
+      text: "Beta still running",
+    });
+    const commitment = sourceItem({
+      stableId,
+      workflowStatus: "planned",
+      text: "Beta",
+      nextStepText: "Ship the beta",
+    });
+    const source = section({
+      reportId: randomUUID(),
+      items: [continuation, commitment],
+    });
+    const targetReportId = randomUUID();
+
+    const entry = expectDefined(
+      plan(source, emptyTargetFor(source, targetReportId))[0],
+    );
+
+    expect(entry.items).toHaveLength(1);
+    const clone = expectDefined(entry.items[0]);
+    expect(clone.item).toMatchObject({
+      stableId,
+      type: "current",
+      workflowStatus: "planned",
+      text: "Ship the beta",
+      carriedOver: true,
+      nextStepText: null,
+    });
+    expect(clone.record.sourceItemId).toBe(commitment.id);
+  });
+
+  it("clones duplicate eligible occurrences of one lineage only once", () => {
+    const stableId = randomUUID();
+    const first = sourceItem({
+      stableId,
+      type: "next",
+      workflowStatus: "planned",
+      text: "Ship the beta",
+    });
+    const duplicate = sourceItem({
+      stableId,
+      type: "next",
+      text: "Ship the beta (restated)",
+    });
+    const source = section({
+      reportId: randomUUID(),
+      items: [first, duplicate],
+    });
+    const targetReportId = randomUUID();
+
+    const entry = expectDefined(
+      plan(source, emptyTargetFor(source, targetReportId))[0],
+    );
+
+    expect(entry.items).toHaveLength(1);
+    expect(expectDefined(entry.items[0]).record.sourceItemId).toBe(first.id);
+  });
+
+  it("continues the in-progress twin when its next plan was already carried", () => {
+    const stableId = randomUUID();
+    const continuation = sourceItem({
+      stableId,
+      text: "Beta still running",
+      carriedOver: true,
+    });
+    const source = section({
+      reportId: randomUUID(),
+      items: [
+        sourceItem({
+          stableId,
+          type: "next",
+          workflowStatus: "planned",
+          text: "Old next plan",
+          carriedOver: true,
+        }),
+        continuation,
+      ],
+    });
+    const targetReportId = randomUUID();
+
+    const entry = expectDefined(
+      plan(source, emptyTargetFor(source, targetReportId))[0],
+    );
+
+    expect(entry.items).toHaveLength(1);
+    const clone = expectDefined(entry.items[0]);
+    expect(clone.item).toMatchObject({
+      stableId,
+      type: "current",
+      workflowStatus: "in_progress",
+      text: "Beta still running",
+      carriedOver: true,
+      nextStepText: null,
+    });
+    expect(clone.record.sourceItemId).toBe(continuation.id);
+  });
+
+  it("creates no active clone for uncommitted planned work", () => {
+    const source = section({
+      reportId: randomUUID(),
+      items: [
+        sourceItem({
+          workflowStatus: "planned",
+          text: "Not scheduled for the new week",
+        }),
+      ],
+    });
+    const targetReportId = randomUUID();
+
+    const entry = expectDefined(
+      plan(source, emptyTargetFor(source, targetReportId))[0],
+    );
+
+    expect(entry.items).toHaveLength(0);
+  });
+
+  it("does not clone a lineage the target section already holds", () => {
+    const stableId = randomUUID();
+    const source = section({
+      reportId: randomUUID(),
+      items: [
+        sourceItem({
+          stableId,
+          text: "Beta still running",
+          carriedOver: true,
+        }),
+      ],
+    });
+    const targetReportId = randomUUID();
+    const target = emptyTargetFor(source, targetReportId, [
+      sourceItem({
+        stableId,
+        text: "Already carried occurrence",
+        carriedOver: true,
+      }),
+    ]);
+
+    const entry = expectDefined(plan(source, target)[0]);
+
+    expect(entry.items).toHaveLength(0);
   });
 });

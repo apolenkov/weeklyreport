@@ -18,6 +18,11 @@ export interface OpenWorkRegisterItem {
   readonly key: string;
   readonly occurrence: LeadOpenWorkHistoryOccurrence;
   readonly periodLabel: string;
+  /**
+   * System reason for work the rollover paused automatically. Projection
+   * only: the stored occurrence keeps its original status tuple.
+   */
+  readonly automaticPauseReason?: string | null;
   readonly action: OpenWorkAction;
 }
 
@@ -49,9 +54,26 @@ function isTerminal(item: LeadOpenWorkHistoryOccurrence["item"]): boolean {
   return item.workflowStatus === "done" || item.resolution != null;
 }
 
+const AUTOMATIC_PAUSE_REASON = "Not scheduled for the new week";
+
+/**
+ * A Current planned item with no explicit next-period commitment does not
+ * become active work on rollover; the register shows it as paused instead.
+ */
+function isAutomaticallyPaused(
+  item: LeadOpenWorkHistoryOccurrence["item"],
+): boolean {
+  return (
+    item.type === "current" &&
+    item.workflowStatus === "planned" &&
+    !item.nextStepText?.trim()
+  );
+}
+
 function registerItem(
   occurrence: LeadOpenWorkHistoryOccurrence,
   action: OpenWorkAction,
+  automaticPauseReason: string | null = null,
 ): OpenWorkRegisterItem {
   return {
     key: occurrence.item.stableId,
@@ -60,6 +82,7 @@ function registerItem(
       occurrence.periodStart,
       occurrence.periodEnd,
     ),
+    automaticPauseReason,
     action,
   };
 }
@@ -89,6 +112,16 @@ export function projectOpenWorkRegister(
           kind: "reopen",
           label: "Reopen in this report",
         }),
+      );
+      continue;
+    }
+    if (isAutomaticallyPaused(occurrence.item)) {
+      open.push(
+        registerItem(
+          occurrence,
+          { kind: "resume", label: "Resume paused work" },
+          AUTOMATIC_PAUSE_REASON,
+        ),
       );
       continue;
     }

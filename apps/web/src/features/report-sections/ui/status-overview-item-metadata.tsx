@@ -11,7 +11,14 @@ const PROGRESS_LABELS: Readonly<
   done: "Done",
 };
 
-function progressLabel(item: StatusOverviewItem): string {
+/** Visible progress text, including the not-yet-confirmed carried states. */
+export function statusOverviewProgressLabel(item: StatusOverviewItem): string {
+  if (item.needsConfirmation === true) {
+    if (item.workflowStatus === "planned")
+      return "Planned · not updated this week";
+    if (item.workflowStatus === "in_progress")
+      return "Continued · not updated this week";
+  }
   if (item.source === "current" && item.workflowStatus === "planned")
     return "Not started";
   return PROGRESS_LABELS[item.workflowStatus];
@@ -38,7 +45,7 @@ export function PreviewMetadata({
           <span className="break-words">
             {resolution
               ? `Won't do · ${resolution.reason}`
-              : progressLabel(item)}
+              : statusOverviewProgressLabel(item)}
           </span>
         </MetaFact>
         {item.stageNames.length > 0 ? (

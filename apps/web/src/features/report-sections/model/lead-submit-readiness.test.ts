@@ -156,7 +156,7 @@ describe("deriveLeadSubmitReadiness", () => {
     expect(readiness.canOpenConfirmation).toBe(false);
   });
 
-  it("blocks confirmation until carried Current work is confirmed", () => {
+  it("blocks confirmation until carried Current work has a progress update", () => {
     const readiness = deriveLeadSubmitReadiness({
       ...baseInput,
       draftPayload: {
@@ -172,7 +172,7 @@ describe("deriveLeadSubmitReadiness", () => {
     expect(readiness.blockingIssues).toEqual([
       {
         id: `submit-validation:UNCONFIRMED_CARRIED_ITEM:${CARRIED_ITEM_ID}`,
-        label: 'Confirm "Implement the report" for this week.',
+        label: 'Update progress for "Implement the report".',
         overviewFocus: `confirm:current:${CARRIED_ITEM_ID}`,
       },
     ]);
