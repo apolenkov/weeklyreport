@@ -65,6 +65,7 @@ describe("same-origin Sentry tunnel route", () => {
 
   it("forwards the raw envelope to the configured endpoint", async () => {
     vi.stubEnv("SENTRY_DSN", "https://public-key@bugsink.test/42");
+    vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://other-key@other.test/99");
     const fetchMock = vi.fn<typeof fetch>(() =>
       Promise.resolve(new Response(null, { status: 200 })),
     );
@@ -90,6 +91,25 @@ describe("same-origin Sentry tunnel route", () => {
       "application/x-sentry-envelope",
     );
     expect(await new Response(init.body).text()).toBe('{"envelope":true}');
+  });
+
+  it("falls back to the public DSN through the web env accessor", async () => {
+    vi.stubEnv("SENTRY_DSN", undefined);
+    vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://public-key@bugsink.test/42");
+    const fetchMock = vi.fn<typeof fetch>(() =>
+      Promise.resolve(new Response(null, { status: 200 })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await POST(makeRequest());
+
+    expect(res.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledWith(
+      new URL(
+        "https://bugsink.test/api/42/envelope/?sentry_version=7&sentry_key=public-key",
+      ),
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 
   it("does not make an upstream request when telemetry is unconfigured", async () => {
