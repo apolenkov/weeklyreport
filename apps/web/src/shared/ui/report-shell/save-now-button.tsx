@@ -2,6 +2,8 @@
 
 import { type ReactNode, useEffect, useReducer, useRef } from "react";
 
+import { CheckIcon as SharedCheckIcon } from "../icons/action-icons";
+
 const SAVED_REVERT_MS = 1500;
 
 type SaveState = "idle" | "pending" | "saving" | "saved" | "error";
@@ -171,20 +173,9 @@ function SpinnerIcon() {
 
 function CheckIcon() {
   return (
-    <svg
-      data-testid="save-now-check"
-      aria-hidden="true"
-      width="14"
-      height="14"
-      viewBox="0 0 12 12"
-      fill="none"
-      stroke="var(--color-success-foreground)"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="2 6 5 9 10 3" />
-    </svg>
+    <span data-testid="save-now-check" className="inline-flex">
+      <SharedCheckIcon className="h-[14px] w-[14px] text-[var(--color-success-foreground)]" />
+    </span>
   );
 }
 

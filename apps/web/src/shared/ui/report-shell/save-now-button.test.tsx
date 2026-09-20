@@ -1,6 +1,12 @@
 import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("../icons/action-icons", () => ({
+  CheckIcon: ({ className }: { readonly className?: string }) => (
+    <svg data-testid="shared-action-check" className={className} />
+  ),
+}));
+
 import { SaveNowButton, type SaveNowButtonState } from "./save-now-button";
 
 type SnapshotFixture = SaveNowButtonState & {
@@ -146,6 +152,32 @@ describe("SaveNowButton", () => {
     const btn = screen.getByRole<HTMLButtonElement>("button");
     expect(btn.getAttribute("aria-label")).toBe("Save draft now");
     expect(screen.getByTestId("save-now-disc")).toBeDefined();
+  });
+
+  it("renders the canonical shared check icon with saved-state sizing and color", () => {
+    const { rerender } = render(
+      <SaveNowButton
+        autosave={makeSnapshot({ state: "pending", dirty: true })}
+      />,
+    );
+
+    rerender(
+      <SaveNowButton
+        autosave={makeSnapshot({
+          state: "saved",
+          dirty: false,
+          isInFlight: false,
+        })}
+      />,
+    );
+
+    const sharedCheck = screen.getByTestId("shared-action-check");
+    expect(screen.getByTestId("save-now-check")).toContainElement(sharedCheck);
+    expect(sharedCheck).toHaveClass(
+      "h-[14px]",
+      "w-[14px]",
+      "text-[var(--color-success-foreground)]",
+    );
   });
 
   it("clears the saved indicator synchronously when state leaves saved before the revert timer", () => {
