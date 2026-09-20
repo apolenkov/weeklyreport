@@ -1,3 +1,4 @@
+import { normalizeEntityReference as normalizeSharedReference } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -10,6 +11,15 @@ describe("normalizeEntityReference", () => {
   it("normalizes NFKC, dashes, whitespace, and case", () => {
     expect(normalizeEntityReference("  ＯＰＳ—Team\n")).toBe("ops-team");
   });
+
+  it.each(["I", "İ", "ı", "  ＯＰＳ−Team\u2003\n"])(
+    "matches the shared canonical normalizer for %j",
+    (reference) => {
+      expect(normalizeEntityReference(reference)).toBe(
+        normalizeSharedReference(reference),
+      );
+    },
+  );
 });
 
 describe("buildEntityAliasIndex", () => {

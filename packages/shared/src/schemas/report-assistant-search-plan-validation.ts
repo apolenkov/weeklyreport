@@ -13,6 +13,17 @@ const statusRecordKinds = new Set([
   "stage_status",
   "activity_status",
 ]);
+const DASHES = /[‐‑‒–—―−]/gu;
+const WHITESPACE = /\s+/gu;
+
+/** Normalizes an assistant search reference for exact, locale-independent matching. */
+export const normalizeEntityReference = (value: string): string =>
+  value
+    .normalize("NFKC")
+    .replaceAll(DASHES, "-")
+    .replaceAll(WHITESPACE, " ")
+    .trim()
+    .toLowerCase();
 
 const addIssue = (
   ctx: z.RefinementCtx,
@@ -21,14 +32,6 @@ const addIssue = (
 ): void => {
   ctx.addIssue({ code: "custom", path: [...path], message });
 };
-
-const normalizedReference = (value: string): string =>
-  value
-    .normalize("NFKC")
-    .replaceAll(/[‐‑‒–—―]/gu, "-")
-    .trim()
-    .replaceAll(/\s+/gu, " ")
-    .toLocaleLowerCase();
 
 const hasUniqueValues = (values: readonly unknown[]): boolean =>
   new Set(values).size === values.length;
@@ -118,7 +121,7 @@ const validateUniqueArrays = (
     [plan.stages.references, ["stages", "references"]],
   ] as const;
   references.forEach(([values, path]) => {
-    if (!hasUniqueValues(values.map(normalizedReference)))
+    if (!hasUniqueValues(values.map(normalizeEntityReference)))
       addIssue(ctx, path, "References must be unique after normalization.");
   });
   const arrays = [
