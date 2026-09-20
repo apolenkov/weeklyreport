@@ -1,12 +1,22 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it } from "vitest";
+import { toast } from "sonner";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import type { AdminUserView } from "../model/admin-types";
-import { useStageAssignmentData } from "./use-stage-assignments";
+import {
+  useStageAssignmentData,
+  useStageAssignmentMutations,
+} from "./use-stage-assignments";
+
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
 
 const PROJECT_ID = "p-1";
 const GROUP_ID = "g-1";
@@ -62,6 +72,46 @@ function renderHookInProvider(
   return rendered;
 }
 
+function renderMutationHook() {
+  const { proxy, captured } = createMockTRPC([
+    { path: ["admin", "listStageAssignments"] },
+    { path: ["admin", "listStageAssignmentCounts"] },
+    { path: ["admin", "saveStageAssignment"], mutation: true },
+    { path: ["admin", "deleteStageAssignment"], mutation: true },
+  ]);
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  const assignmentKey = proxy.admin.listStageAssignments.queryKey({
+    projectId: PROJECT_ID,
+  });
+  const countsKey = proxy.admin.listStageAssignmentCounts.queryKey();
+  qc.setQueryData(assignmentKey, []);
+  qc.setQueryData(countsKey, []);
+
+  function Wrapper({ children }: { readonly children: ReactNode }) {
+    return (
+      <QueryClientProvider client={qc}>
+        <TRPCProxyContext.Provider value={proxy}>
+          {children}
+        </TRPCProxyContext.Provider>
+      </QueryClientProvider>
+    );
+  }
+
+  const rendered = renderHook(() => useStageAssignmentMutations(), {
+    wrapper: Wrapper,
+  });
+  return { ...rendered, captured, qc, assignmentKey, countsKey };
+}
+
+const SAVE_INPUT = {
+  userId: "00000000-0000-4000-8000-000000000001",
+  stageId: "00000000-0000-4000-8000-000000000002",
+  projectId: PROJECT_ID,
+};
+const DELETE_INPUT = { id: "00000000-0000-4000-8000-000000000003" };
+
 function baseDescriptors() {
   return [
     { path: ["admin", "listStages"], query: [] },
@@ -113,5 +163,81 @@ describe("useStageAssignmentData — lead scoping", () => {
     expect(result.current.isError).toBe(false);
     expect(result.current.filteredLeads).toEqual([]);
     expect(result.current.filteredLeads).not.toEqual(leads);
+  });
+});
+
+describe("useStageAssignmentMutations", () => {
+  it("save success invalidates assignment and coverage queries and shows a success toast", async () => {
+    const hook = renderMutationHook();
+
+    await act(async () => {
+      await hook.result.current.saveMut.mutateAsync(SAVE_INPUT);
+    });
+
+    await waitFor(() => {
+      expect(hook.qc.getQueryState(hook.assignmentKey)?.isInvalidated).toBe(
+        true,
+      );
+      expect(hook.qc.getQueryState(hook.countsKey)?.isInvalidated).toBe(true);
+    });
+    expect(toast.success).toHaveBeenCalledWith("Stage assignment saved");
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("delete success invalidates assignment and coverage queries and shows a success toast", async () => {
+    const hook = renderMutationHook();
+
+    await act(async () => {
+      await hook.result.current.deleteMut.mutateAsync(DELETE_INPUT);
+    });
+
+    await waitFor(() => {
+      expect(hook.qc.getQueryState(hook.assignmentKey)?.isInvalidated).toBe(
+        true,
+      );
+      expect(hook.qc.getQueryState(hook.countsKey)?.isInvalidated).toBe(true);
+    });
+    expect(toast.success).toHaveBeenCalledWith("Stage assignment removed");
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("save failure shows the server error without invalidating queries", async () => {
+    const hook = renderMutationHook();
+    hook.captured["admin.saveStageAssignment"]?.mutationFn.mockRejectedValue(
+      new Error("save failed"),
+    );
+
+    await act(async () => {
+      await expect(
+        hook.result.current.saveMut.mutateAsync(SAVE_INPUT),
+      ).rejects.toThrow("save failed");
+    });
+
+    expect(hook.qc.getQueryState(hook.assignmentKey)?.isInvalidated).toBe(
+      false,
+    );
+    expect(hook.qc.getQueryState(hook.countsKey)?.isInvalidated).toBe(false);
+    expect(toast.error).toHaveBeenCalledWith("save failed");
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it("delete failure shows the server error without invalidating queries", async () => {
+    const hook = renderMutationHook();
+    hook.captured["admin.deleteStageAssignment"]?.mutationFn.mockRejectedValue(
+      new Error("delete failed"),
+    );
+
+    await act(async () => {
+      await expect(
+        hook.result.current.deleteMut.mutateAsync(DELETE_INPUT),
+      ).rejects.toThrow("delete failed");
+    });
+
+    expect(hook.qc.getQueryState(hook.assignmentKey)?.isInvalidated).toBe(
+      false,
+    );
+    expect(hook.qc.getQueryState(hook.countsKey)?.isInvalidated).toBe(false);
+    expect(toast.error).toHaveBeenCalledWith("delete failed");
+    expect(toast.success).not.toHaveBeenCalled();
   });
 });
