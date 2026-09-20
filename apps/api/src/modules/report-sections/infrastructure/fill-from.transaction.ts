@@ -33,7 +33,7 @@ interface CarryableChildRows {
 // XOR parent: an activity-parented record carries ONLY when its activity is
 // still attached to the target (else the XOR CHECK aborts the whole fill).
 async function selectCarryableChildRows(
-  prisma: PrismaService,
+  prisma: Prisma.TransactionClient,
   targetSectionId: string,
   source: PrismaReportSectionWithRelations,
 ): Promise<CarryableChildRows> {
@@ -197,20 +197,19 @@ export async function fillFromSectionTx(
     );
   }
 
-  const carryable = await selectCarryableChildRows(
-    prisma,
-    targetSectionId,
-    source,
-  );
-  const copiedItems =
-    carryable.itemsToCopy.length +
-    carryable.risksToCopy.length +
-    carryable.decisionsToCopy.length;
-
   try {
-    await prisma.$transaction(
+    return await prisma.$transaction(
       async (tx) => {
         const reportId = await assertTargetSectionEditable(tx, targetSectionId);
+        const carryable = await selectCarryableChildRows(
+          tx,
+          targetSectionId,
+          source,
+        );
+        const copiedItems =
+          carryable.itemsToCopy.length +
+          carryable.risksToCopy.length +
+          carryable.decisionsToCopy.length;
         await assertTargetHasNoPublishedLineage(tx, reportId, targetSectionId);
         await bumpTargetSectionVersion(tx, targetSectionId, expectedVersion);
         const cancelledItem = await tx.item.findFirst({
@@ -226,6 +225,7 @@ export async function fillFromSectionTx(
           );
         }
         await rebuildOwnedChildRows(tx, targetSectionId, carryable);
+        return copiedItems;
       },
       { timeout: 15_000 },
     );
@@ -244,6 +244,4 @@ export async function fillFromSectionTx(
     }
     throw error;
   }
-
-  return copiedItems;
 }

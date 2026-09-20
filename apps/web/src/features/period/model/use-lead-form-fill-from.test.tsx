@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import { LeadFormWriteError } from "../../report-sections/model/lead-form/lead-form-write-port";
 import { InMemoryLeadFormWriteAdapter } from "../../report-sections/model/lead-form/lead-form-write-port.in-memory";
 import { useLeadFormFillFrom } from "./use-lead-form-fill-from";
 
@@ -124,5 +125,88 @@ describe("useLeadFormFillFrom", () => {
         "Fill from failed. Try again.",
       );
     });
+  });
+
+  it("routes a write conflict to the conflict callback", async () => {
+    const onConflict = vi.fn();
+    const writePort = new InMemoryLeadFormWriteAdapter({
+      saveDraft: () => Promise.reject(new Error("Unexpected save")),
+      submit: () => Promise.reject(new Error("Unexpected submit")),
+      fillFrom: () =>
+        Promise.reject(new LeadFormWriteError("conflict", "Section changed")),
+    });
+    const { result } = renderHook(() =>
+      useLeadFormFillFrom({
+        generation: "report-a:section-a",
+        sectionIdForActions: "target",
+        autosaveDirty: false,
+        version: 4,
+        onConflict,
+        onFilled: () => undefined,
+        writePort,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.handleFillFrom("source");
+    });
+
+    expect(onConflict).toHaveBeenCalledTimes(1);
+    expect(writePort.calls.fillFrom).toEqual([
+      { targetSectionId: "target", sourceSectionId: "source", version: 4 },
+    ]);
+  });
+
+  it("cancels a pending overwrite without writing", async () => {
+    const writePort = new InMemoryLeadFormWriteAdapter({
+      saveDraft: () => Promise.reject(new Error("Unexpected save")),
+      submit: () => Promise.reject(new Error("Unexpected submit")),
+    });
+    const { result } = renderHook(() =>
+      useLeadFormFillFrom({
+        generation: "report-a:section-a",
+        sectionIdForActions: "target",
+        autosaveDirty: true,
+        version: 4,
+        onConflict: () => undefined,
+        onFilled: () => undefined,
+        writePort,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.handleFillFrom("source");
+    });
+    expect(result.current.pendingFillFrom).toBe(true);
+
+    act(() => result.current.cancelPendingFillFrom());
+
+    expect(result.current.pendingFillFrom).toBe(false);
+    expect(writePort.calls.fillFrom).toEqual([]);
+  });
+
+  it("does not write when the action section is unavailable", async () => {
+    const writePort = new InMemoryLeadFormWriteAdapter({
+      saveDraft: () => Promise.reject(new Error("Unexpected save")),
+      submit: () => Promise.reject(new Error("Unexpected submit")),
+    });
+    const { result } = renderHook(() =>
+      useLeadFormFillFrom({
+        generation: "report-a:section-a",
+        sectionIdForActions: null,
+        autosaveDirty: false,
+        version: 4,
+        onConflict: () => undefined,
+        onFilled: () => undefined,
+        writePort,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.handleFillFrom("source");
+    });
+
+    expect(result.current.pendingFillFrom).toBe(false);
+    expect(writePort.calls.fillFrom).toEqual([]);
   });
 });

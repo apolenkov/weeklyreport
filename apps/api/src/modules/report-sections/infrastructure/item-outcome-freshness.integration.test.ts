@@ -8,6 +8,7 @@ import {
   disconnectTestPrisma,
   seedTestData,
 } from "../../../test-utils/prisma-test-helper";
+import { buildTransition } from "../../period/index.js";
 import { LeadFormConstraintError } from "../domain/lead-form-shared";
 import {
   assignOutcomeStage,
@@ -162,5 +163,196 @@ describe("item outcome source freshness (real database)", () => {
       { publishedSnapshot: older.snapshot },
       { publishedSnapshot: latestSnapshot },
     ]);
+  });
+
+  it("does not let a foreign author with the same stableId shadow the source", async () => {
+    const older = await seedPriorPlan(prisma, testData);
+    const foreignAuthor = await prisma.user.create({
+      data: {
+        email: "foreign-lead@test.local",
+        name: "Foreign Lead",
+        lastName: "Foreign",
+        firstName: "Lead",
+        role: "lead",
+        samlId: "foreign-lead-test",
+        reportingGroupId: expectDefined(testData.lead.reportingGroupId),
+      },
+    });
+    const foreignSection = await prisma.reportSection.create({
+      data: {
+        reportId: testData.report.id,
+        authorId: foreignAuthor.id,
+        status: "submitted",
+        submittedAt: new Date("2026-04-13T18:00:00.000Z"),
+      },
+    });
+    await seedOutcomeItem(prisma, {
+      sectionId: foreignSection.id,
+      projectId: testData.project.id,
+      stableId: older.item.stableId,
+      type: "current",
+      workflowStatus: "done",
+      text: "Foreign newer result",
+    });
+
+    const target = await createOutcomePeriod(prisma, testData, 1);
+    const result = await resolvePlanTx(
+      prismaService,
+      outcomeCommand(
+        target.section.id,
+        {
+          kind: "prior",
+          reportId: older.report.id,
+          recordId: older.item.id,
+        },
+        "done",
+      ),
+      testData.lead.id,
+    );
+
+    expect(result).toMatchObject({
+      replayed: false,
+      stableId: older.item.stableId,
+      section: {
+        version: 2,
+        items: [
+          {
+            stableId: older.item.stableId,
+            text: "Published prior promise",
+            type: "current",
+            workflowStatus: "done",
+          },
+        ],
+      },
+    });
+  });
+
+  it("uses the frozen snapshot when a prior report has been reopened", async () => {
+    const older = await seedPriorPlan(prisma, testData);
+    const reopenedAt = new Date("2027-01-01T18:00:00.000Z");
+    await prisma.report.update({
+      where: { id: older.report.id },
+      data: buildTransition("reopen", { now: reopenedAt }),
+    });
+
+    await expect(
+      prisma.report.findUniqueOrThrow({
+        where: { id: older.report.id },
+        select: {
+          status: true,
+          periodState: true,
+          periodStatus: true,
+          publishedSnapshot: true,
+        },
+      }),
+    ).resolves.toEqual({
+      status: "published",
+      periodState: "open",
+      periodStatus: "reopened",
+      publishedSnapshot: older.snapshot,
+    });
+
+    const target = await createOutcomePeriod(prisma, testData, 1);
+    const result = await resolvePlanTx(
+      prismaService,
+      outcomeCommand(
+        target.section.id,
+        {
+          kind: "prior",
+          reportId: older.report.id,
+          recordId: older.item.id,
+        },
+        "done",
+      ),
+      testData.lead.id,
+    );
+
+    expect(result).toMatchObject({
+      replayed: false,
+      stableId: older.item.stableId,
+      section: {
+        version: 2,
+        items: [
+          {
+            stableId: older.item.stableId,
+            text: "Published prior promise",
+            type: "current",
+            workflowStatus: "done",
+          },
+        ],
+      },
+    });
+    await expect(
+      prisma.item.findUniqueOrThrow({
+        where: { id: older.item.id },
+        select: { text: true, workflowStatus: true },
+      }),
+    ).resolves.toEqual({
+      text: "Drifted live row",
+      workflowStatus: "postponed",
+    });
+  });
+
+  it("does not let an intermediate draft duplicate shadow the source", async () => {
+    const older = await seedPriorPlan(prisma, testData);
+    await seedOutcomeItem(prisma, {
+      sectionId: testData.section.id,
+      projectId: testData.project.id,
+      stableId: older.item.stableId,
+      type: "current",
+      workflowStatus: "done",
+      text: "Intermediate draft duplicate",
+    });
+
+    const target = await createOutcomePeriod(prisma, testData, 1);
+    const result = await resolvePlanTx(
+      prismaService,
+      outcomeCommand(
+        target.section.id,
+        {
+          kind: "prior",
+          reportId: older.report.id,
+          recordId: older.item.id,
+        },
+        "done",
+      ),
+      testData.lead.id,
+    );
+
+    expect(result).toMatchObject({
+      replayed: false,
+      stableId: older.item.stableId,
+      section: {
+        version: 2,
+        items: [
+          {
+            stableId: older.item.stableId,
+            text: "Published prior promise",
+            type: "current",
+            workflowStatus: "done",
+          },
+        ],
+      },
+    });
+    await expect(
+      prisma.reportSection.findUniqueOrThrow({
+        where: { id: testData.section.id },
+        select: { status: true, version: true },
+      }),
+    ).resolves.toEqual({ status: "draft", version: 1 });
+    await expect(
+      prisma.item.findUniqueOrThrow({
+        where: {
+          reportSectionId_stableId: {
+            reportSectionId: testData.section.id,
+            stableId: older.item.stableId,
+          },
+        },
+        select: { text: true, workflowStatus: true },
+      }),
+    ).resolves.toEqual({
+      text: "Intermediate draft duplicate",
+      workflowStatus: "done",
+    });
   });
 });

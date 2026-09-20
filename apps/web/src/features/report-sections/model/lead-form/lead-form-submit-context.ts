@@ -36,27 +36,26 @@ export function buildReadinessProducts(
 export type SubmitOutcome =
   "submitted" | "conflict" | "error" | "not-ready" | "no-draft";
 
-// Locked stages never appear in the draft payload — exclude them from the
-// positional label lookup so owned-stage names stay aligned. A stage whose
-// label cannot be resolved is null (never the raw stage id dressed as copy).
+// Resolve labels from the server-owned stage identity. A stage whose label
+// cannot be resolved is null (never the raw stage id dressed as copy).
 export function buildSubmitStages(
   draftPayload: DraftSaveContent | null,
-  products: readonly Product[],
+  draftSection: Pick<ReportSectionReadModel, "projects"> | null,
 ): { projectId: string; stageId: string; name: string | null }[] {
-  return (draftPayload?.stageStatuses ?? []).map((status, index, statuses) => {
-    const product = products.find(
-      (candidate) => candidate.id === status.projectId,
-    );
-    const stageIndex = statuses
-      .slice(0, index)
-      .filter((candidate) => candidate.projectId === status.projectId).length;
-    const ownedStages = product?.stages.filter(
-      (stage) => stage.ownership === "mine",
-    );
+  const stageNamesByProject = new Map(
+    (draftSection?.projects ?? []).map((project) => [
+      project.projectId,
+      new Map(
+        project.ownedStages.map((stage) => [stage.stageId, stage.stageName]),
+      ),
+    ]),
+  );
+  return (draftPayload?.stageStatuses ?? []).map((status) => {
     return {
       projectId: status.projectId,
       stageId: status.stageId,
-      name: ownedStages?.[stageIndex]?.stageName ?? null,
+      name:
+        stageNamesByProject.get(status.projectId)?.get(status.stageId) ?? null,
     };
   });
 }
@@ -87,7 +86,7 @@ export function buildLeadSubmitReadiness({
       id: activity.activityId,
       name: activity.activityName,
     })),
-    stages: buildSubmitStages(draftPayload, products),
+    stages: buildSubmitStages(draftPayload, draftSection),
     ownRisks: draftSection ? mapLeadRisks(draftSection) : [],
     autosaveState,
     submitPending,
