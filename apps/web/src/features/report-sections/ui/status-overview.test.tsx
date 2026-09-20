@@ -78,9 +78,15 @@ describe("StatusOverview", () => {
     expect(screen.getAllByText("Current week").length).toBeGreaterThan(1);
     expect(screen.getAllByText("Next week").length).toBeGreaterThan(1);
 
-    await user.click(screen.getByRole("button", { name: "Move Work item 1" }));
+    const preview = screen
+      .getByText("Work item 1")
+      .closest<HTMLElement>("[data-overview-item-preview]");
+    if (!preview) throw new Error("Expected the item preview");
+    await user.click(within(preview).getByText("More actions"));
     await user.click(
-      screen.getByRole("menuitem", { name: "Move to next week" }),
+      within(preview).getByRole("button", {
+        name: "Move Work item 1 to next week",
+      }),
     );
     expect(onMoveItem).toHaveBeenCalledWith(
       expect.objectContaining({ recordId: "item-1" }),
@@ -89,9 +95,11 @@ describe("StatusOverview", () => {
     );
   });
 
-  it("hides status resolution while carried Current work awaits confirmation", async () => {
+  it("routes carried Current work through the same canonical progress editor", async () => {
     const user = userEvent.setup();
     const onConfirmItem = vi.fn();
+    const onResolvePlan = vi.fn();
+    const onEditItem = vi.fn();
     const unit = model.units[0];
     if (!unit) throw new Error("Expected one overview unit");
     const carried = { ...overviewItem(1), needsConfirmation: true };
@@ -110,37 +118,109 @@ describe("StatusOverview", () => {
           ],
         }}
         onConfirmItem={onConfirmItem}
-        onEditItem={vi.fn()}
+        onResolvePlan={onResolvePlan}
+        onEditItem={onEditItem}
         onMoveItem={vi.fn()}
-        onResolvePlan={vi.fn()}
       />,
     );
 
-    const confirm = screen.getByRole("button", {
-      name: "Confirm Work item 1 for this week",
+    // The carried primary keeps the confirm anchor so the submit-readiness
+    // deep link still resolves, but it opens the canonical editor like every
+    // other Update progress control.
+    const progress = screen.getByRole("button", {
+      name: "Update progress for Work item 1",
     });
-    expect(confirm).toHaveAttribute("id", "confirm:current:item-1");
+    expect(progress).toHaveAttribute("id", "confirm:current:item-1");
+    expect(progress).toHaveAttribute(
+      "data-overview-focus",
+      "confirm:current:item-1",
+    );
     expect(
-      screen.getByRole("button", { name: "Edit update: Work item 1" }),
-    ).toBeVisible();
-    expect(
-      screen.getByRole("button", { name: "Move Work item 1" }),
-    ).toBeVisible();
-    expect(
-      screen.queryByRole("button", { name: "More actions for Work item 1" }),
+      screen.queryByRole("button", {
+        name: "Confirm Work item 1 for this week",
+      }),
     ).toBeNull();
-    await user.click(confirm);
-    expect(onConfirmItem).toHaveBeenCalledWith(carried);
+    await user.click(progress);
+    expect(onEditItem).toHaveBeenCalledWith({
+      recordId: "item-1",
+      source: "current",
+    });
+    expect(onConfirmItem).not.toHaveBeenCalled();
+    expect(onResolvePlan).not.toHaveBeenCalled();
+
+    const preview = screen
+      .getByText("Work item 1")
+      .closest<HTMLElement>("[data-overview-item-preview]");
+    if (!preview) throw new Error("Expected the item preview");
+    await user.click(within(preview).getByText("More actions"));
+    expect(
+      within(preview).getByRole("button", {
+        name: "Edit details: Work item 1",
+      }),
+    ).toBeVisible();
+    expect(
+      within(preview).getByRole("button", {
+        name: "Move Work item 1 to next week",
+      }),
+    ).toBeVisible();
+    // The unconfirmed carry offers no terminal outcome entry: Update progress
+    // through the canonical editor is the only way to clear it.
+    expect(
+      within(preview).queryByRole("button", {
+        name: "Update status: Work item 1",
+      }),
+    ).toBeNull();
   });
 
-  it("keeps the one-way confirmation recovery for a locked cancelled carry", async () => {
+  it("keeps the terminal Update status entry inside More actions", async () => {
     const user = userEvent.setup();
+    const onResolvePlan = vi.fn();
+    const onEditItem = vi.fn();
+    render(
+      <StatusOverview
+        model={model}
+        onResolvePlan={onResolvePlan}
+        onEditItem={onEditItem}
+      />,
+    );
+
+    const preview = screen
+      .getByText("Work item 1")
+      .closest<HTMLElement>("[data-overview-item-preview]");
+    if (!preview) throw new Error("Expected the item preview");
+    // Exactly one primary; the outcome path stays inside the quiet overflow.
+    expect(
+      within(preview).getByRole("button", {
+        name: "Update progress for Work item 1",
+      }),
+    ).toBeInTheDocument();
+
+    await user.click(within(preview).getByText("More actions"));
+    const updateStatus = within(preview).getByRole("button", {
+      name: "Update status: Work item 1",
+    });
+    // The entry is confined to the disclosure — never a standalone control.
+    expect(updateStatus.closest("details")).toContainElement(
+      within(preview).getByText("More actions"),
+    );
+    await user.click(updateStatus);
+
+    expect(onResolvePlan).toHaveBeenCalledWith(
+      expect.objectContaining({ recordId: "item-1" }),
+      "resolve:current:item-1",
+    );
+    expect(onEditItem).not.toHaveBeenCalled();
+  });
+
+  it("keeps a locked cancelled carry informational without mutation controls", () => {
     const onConfirmItem = vi.fn();
+    const onResolvePlan = vi.fn();
     const baseUnit = model.units[0];
     if (!baseUnit) throw new Error("Expected one overview unit");
     const cancelledCarry = {
       ...overviewItem(1),
       editTarget: null,
+      canResolve: false,
       needsConfirmation: true,
       resolution: {
         kind: "wont_do" as const,
@@ -176,18 +256,24 @@ describe("StatusOverview", () => {
           ],
         }}
         onConfirmItem={onConfirmItem}
+        onResolvePlan={onResolvePlan}
         onEditItem={vi.fn()}
         onMoveItem={vi.fn()}
       />,
     );
 
+    expect(screen.getByText(/Won't do · No longer needed/)).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: /Update progress/ }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /Confirm .* for this week/ }),
+    ).toBeNull();
     expect(screen.queryByRole("button", { name: /^Edit / })).toBeNull();
     expect(screen.queryByRole("button", { name: /^Move / })).toBeNull();
-    const confirm = screen.getByRole("button", {
-      name: "Confirm Work item 1 for this week",
-    });
-    await user.click(confirm);
-    expect(onConfirmItem).toHaveBeenCalledWith(cancelledCarry);
+    expect(screen.queryByText("More actions")).toBeNull();
+    expect(onConfirmItem).not.toHaveBeenCalled();
+    expect(onResolvePlan).not.toHaveBeenCalled();
   });
 
   it("keeps blocked and missing locations visible and names an empty activity", () => {
@@ -465,12 +551,15 @@ describe("StatusOverview", () => {
     render(<StatusOverview model={model} onEditItem={onEditItem} />);
 
     const text = screen.getByText("Work item 1");
-    const edit = screen.getByRole("button", {
-      name: "Edit update: Work item 1",
+    const preview = text.closest<HTMLElement>("[data-overview-item-preview]");
+    if (!preview) throw new Error("Expected the item preview");
+    await user.click(within(preview).getByText("More actions"));
+    const edit = within(preview).getByRole("button", {
+      name: "Edit details: Work item 1",
     });
     expect(edit.closest("li")).not.toHaveClass("rounded-[var(--radius-sm)]");
-    expect(edit).toHaveAccessibleName("Edit update: Work item 1");
-    expect(edit).toHaveTextContent("Edit");
+    expect(edit).toHaveAccessibleName("Edit details: Work item 1");
+    expect(edit).toHaveTextContent("Edit details");
     expect(edit).toHaveAttribute("data-overview-focus", "edit:current:item-1");
     expect(text.tagName).toBe("BUTTON");
     expect(text).toHaveAccessibleName("Edit item: Work item 1");
@@ -490,7 +579,7 @@ describe("StatusOverview", () => {
     });
   });
 
-  it("widens only the exact linked editor row and keeps unmatched lineage rows", () => {
+  it("keeps the three-week lineage visible above the exact linked editor", () => {
     const unit = model.units[0];
     if (!unit) throw new Error("Expected one overview unit");
     const item = (
@@ -556,25 +645,23 @@ describe("StatusOverview", () => {
     );
 
     const editor = screen.getByRole("form", { name: "Resolve plan editor" });
-    const editorLane = editor.closest("[data-overview-lineage-lane]");
-    expect(editorLane).toHaveAttribute("data-overview-lineage-lane", "current");
-    expect(editorLane).toHaveClass("md:col-span-3");
+    expect(editor.parentElement).toHaveClass("md:col-span-3");
     expect(
       screen
         .getByText("Previous shared")
         .closest("[data-overview-lineage-lane]"),
-    ).toHaveClass("hidden");
+    ).not.toHaveClass("hidden");
     expect(
       screen.getByText("Next shared").closest("[data-overview-lineage-lane]"),
-    ).toHaveClass("hidden");
+    ).not.toHaveClass("hidden");
     expect(
       screen
         .getByText("Previous shared")
         .closest("[data-overview-lineage-lane]"),
-    ).not.toHaveClass("md:flex");
+    ).toHaveClass("md:flex");
     expect(
       screen.getByText("Next shared").closest("[data-overview-lineage-lane]"),
-    ).not.toHaveClass("md:flex");
+    ).toHaveClass("md:flex");
     expect(
       screen.getByText("Current other").closest("[data-overview-lineage-lane]"),
     ).not.toHaveClass("md:col-span-3");
@@ -806,31 +893,33 @@ describe("StatusOverview", () => {
     );
   });
 
-  it("emits the projected plan source to the resolution callback", async () => {
+  it("opens the canonical editor from the single Update progress action", async () => {
     const user = userEvent.setup();
+    const onEditItem = vi.fn();
     const onResolvePlan = vi.fn();
-    render(<StatusOverview model={model} onResolvePlan={onResolvePlan} />);
+    render(
+      <StatusOverview
+        model={model}
+        onEditItem={onEditItem}
+        onResolvePlan={onResolvePlan}
+      />,
+    );
 
-    const resolve = screen.getByRole("button", {
-      name: "More actions for Work item 1",
+    const progress = screen.getByRole("button", {
+      name: "Update progress for Work item 1",
     });
-    expect(resolve).toHaveAttribute(
+    expect(progress).toHaveAttribute(
       "data-overview-focus",
-      "resolve:current:item-1",
+      "edit:current:item-1",
     );
 
-    await user.click(resolve);
-    await user.click(screen.getByRole("menuitem", { name: "Update status" }));
+    await user.click(progress);
 
-    expect(onResolvePlan).toHaveBeenCalledWith(
-      expect.objectContaining({
-        source: "current",
-        recordId: "item-1",
-        stableId: "item-1",
-        text: "Work item 1",
-      }),
-      "resolve:current:item-1",
-    );
+    expect(onEditItem).toHaveBeenCalledWith({
+      recordId: "item-1",
+      source: "current",
+    });
+    expect(onResolvePlan).not.toHaveBeenCalled();
   });
 
   it("shows cancelled plans as non-editable, with reason, audit, and restore callback", async () => {
@@ -911,7 +1000,7 @@ describe("StatusOverview", () => {
     expect(screen.queryByText("In progress")).toBeNull();
     expect(screen.getByText(/Won't do · The dependency closed/)).toBeVisible();
     const restore = screen.getByRole("button", {
-      name: "More actions for Work item 1",
+      name: "Restore Work item 1",
     });
     expect(restore).toHaveAttribute(
       "data-overview-focus",
@@ -919,7 +1008,6 @@ describe("StatusOverview", () => {
     );
 
     await user.click(restore);
-    await user.click(screen.getByRole("menuitem", { name: "Restore" }));
     expect(onRestorePlan).toHaveBeenCalledWith(
       expect.objectContaining({ text: "Work item 1" }),
       "restore:current:item-1",
@@ -1054,19 +1142,22 @@ describe("StatusOverview", () => {
   it("keeps progress and continuity readable outside the edit action", () => {
     render(<StatusOverview model={model} onEditItem={vi.fn()} />);
 
-    const edit = screen.getByRole("button", {
-      name: "Edit update: Work item 1",
+    const progress = screen.getByRole("button", {
+      name: "Update progress for Work item 1",
     });
-    expect(edit).toHaveAccessibleName("Edit update: Work item 1");
-    expect(edit).toHaveTextContent("Edit");
-    expect(edit).toHaveAttribute("data-overview-focus", "edit:current:item-1");
-    expect(edit.closest("[data-overview-item-preview]")).toHaveTextContent(
+    expect(progress).toHaveAccessibleName("Update progress for Work item 1");
+    expect(progress).toHaveTextContent("Update progress");
+    expect(progress).toHaveAttribute(
+      "data-overview-focus",
+      "edit:current:item-1",
+    );
+    expect(progress.closest("[data-overview-item-preview]")).toHaveTextContent(
       "In progress",
     );
-    expect(edit.closest("[data-overview-item-preview]")).not.toHaveTextContent(
-      "Not in prior plan",
-    );
-    const row = edit.closest("article")?.firstElementChild;
+    expect(
+      progress.closest("[data-overview-item-preview]"),
+    ).not.toHaveTextContent("Not in prior plan");
+    const row = progress.closest("article")?.firstElementChild;
     expect(row).toHaveClass("min-[80rem]:grid-cols-[repeat(4,minmax(0,1fr))]");
   });
 

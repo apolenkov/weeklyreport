@@ -141,7 +141,7 @@ function submissionIssues(
         const identity = item.stableId ?? item.id;
         return {
           id: `submit-validation:${issue.code}:${identity ?? String(itemIndex)}`,
-          label: `Confirm "${item.text}" for this week.`,
+          label: `Update progress for "${item.text}".`,
           ...(identity ? { overviewFocus: `confirm:current:${identity}` } : {}),
         };
       });
