@@ -39,9 +39,9 @@ const USER: AdminUserView = {
 };
 
 describe("emptyForm — no fabricated empty group id", () => {
-  it("falls back through live then archived groups to an explicit null", () => {
+  it("chooses an active group or null for a new user", () => {
     expect(emptyForm([GROUP, ARCHIVED_GROUP]).groupId).toBe("g1");
-    expect(emptyForm([ARCHIVED_GROUP]).groupId).toBe("g2");
+    expect(emptyForm([ARCHIVED_GROUP]).groupId).toBeNull();
   });
 
   it("returns null (not '') when no group is selectable", () => {
