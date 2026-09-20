@@ -82,6 +82,7 @@ const inactiveLead: AdminUserView = {
   ...mockLead,
   id: INACTIVE_LEAD_ID,
   name: "Bob",
+  lastName: "Bob",
   isActive: false,
 };
 
@@ -500,10 +501,12 @@ describe("ProductsTab — retained owner in edit dialog", () => {
     const select = screen.getByLabelText(/lead owner/i);
     expect(select).toHaveValue(INACTIVE_LEAD_ID);
     expect(within(select).getAllByRole("option")).toHaveLength(2);
-    const retained = within(select).getByRole("option", { name: "Bob" });
+    const retained = within(select).getByRole("option", { name: "Bob L." });
     expect(retained).toHaveValue(INACTIVE_LEAD_ID);
     expect(retained).toBeDisabled();
-    expect(within(select).getByRole("option", { name: "Alice" })).toBeEnabled();
+    expect(
+      within(select).getByRole("option", { name: "Alice L." }),
+    ).toBeEnabled();
   });
 });
 
@@ -517,6 +520,7 @@ describe("ProductsTab — unresolved lead owner", () => {
       ...mockLead,
       id: "u-lead-2",
       name: "Carol",
+      lastName: "Carol",
     };
     const user = userEvent.setup();
     const { rerender, captured } = renderTab({
@@ -544,7 +548,9 @@ describe("ProductsTab — unresolved lead owner", () => {
     });
     expect(staleOption).toHaveValue(LEAD_ID);
     expect(staleOption).toBeDisabled();
-    expect(within(select).getByRole("option", { name: "Carol" })).toBeEnabled();
+    expect(
+      within(select).getByRole("option", { name: "Carol L." }),
+    ).toBeEnabled();
 
     // Save is still blocked instead of silently submitting Carol.
     await user.click(screen.getByRole("button", { name: "Add Product" }));
