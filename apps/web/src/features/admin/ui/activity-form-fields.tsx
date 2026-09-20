@@ -73,8 +73,8 @@ function ReportingGroupField({
           </option>
         )}
         {groups.map((group) => (
-          <option key={group.id} value={group.id}>
-            {group.name}
+          <option key={group.id} value={group.id} disabled={group.archived}>
+            {group.archived ? `${group.name} (archived)` : group.name}
           </option>
         ))}
       </select>

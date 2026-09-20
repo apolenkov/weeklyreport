@@ -6,6 +6,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
@@ -113,6 +114,7 @@ const activity: ProjectActivity = {
 
 function renderTab(opts?: {
   activities?: ProjectActivity[];
+  groups?: AdminGroupView[];
   users?: AdminUserView[];
 }): { captured: Record<string, CapturedMutation> } {
   const { proxy, captured } = createMockTRPC([
@@ -143,7 +145,7 @@ function renderTab(opts?: {
 
   render(
     <ActivitiesTab
-      groups={[group, otherGroup]}
+      groups={opts?.groups ?? [group, otherGroup]}
       users={opts?.users ?? [lead, otherGroupLead]}
       products={[product]}
     />,
@@ -379,6 +381,48 @@ describe("ActivitiesTab — edit", () => {
     );
 
     expect(screen.getByLabelText("Reporting Group")).toBeEnabled();
+  });
+
+  it("retains an archived current group as a disabled option", async () => {
+    const user = userEvent.setup();
+    const archivedGroup: AdminGroupView = {
+      ...group,
+      id: "77777777-7777-4777-8777-777777777777",
+      name: "Legacy",
+      archived: true,
+    };
+    const archivedActivity = { ...activity, groupId: archivedGroup.id };
+    const { captured } = renderTab({
+      activities: [archivedActivity],
+      groups: [group, otherGroup, archivedGroup],
+    });
+
+    await screen.findByText("Onboarding Revamp");
+    await user.click(
+      screen.getByRole("button", { name: "Edit Onboarding Revamp" }),
+    );
+
+    const groupSelect = screen.getByLabelText("Reporting Group");
+    expect(groupSelect).toHaveValue(archivedGroup.id);
+    expect(
+      within(groupSelect).getByRole("option", {
+        name: `${archivedGroup.name} (archived)`,
+      }),
+    ).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "Save Changes" }));
+
+    await waitFor(() => {
+      expect(captured["projectActivity.update"]?.calls).toEqual([
+        {
+          id: ACTIVITY_ID,
+          name: "Onboarding Revamp",
+          groupId: archivedGroup.id,
+          linkedProductIds: [PRODUCT_ID],
+          jiraAccounts: ["ACME"],
+        },
+      ]);
+    });
   });
 });
 
