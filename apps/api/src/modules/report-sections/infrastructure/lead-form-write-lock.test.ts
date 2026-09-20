@@ -47,12 +47,12 @@ describe("LeadFormPrismaRepository.fillFromSection write lock", () => {
         deleteMany,
       },
       decision: { findMany: vi.fn().mockResolvedValue([]) },
+      activityStatus: { findMany: vi.fn().mockResolvedValue([]) },
     };
     const prisma = {
       reportSection: {
         findUnique: vi.fn().mockResolvedValue(emptySource()),
       },
-      activityStatus: { findMany: vi.fn().mockResolvedValue([]) },
       $transaction: vi.fn((callback: (client: typeof tx) => Promise<unknown>) =>
         callback(tx),
       ),
@@ -84,7 +84,6 @@ describe("LeadFormPrismaRepository.fillFromSection write lock", () => {
       reportSection: {
         findUnique: vi.fn().mockResolvedValue(emptySource()),
       },
-      activityStatus: { findMany: vi.fn().mockResolvedValue([]) },
       $transaction: vi.fn((callback: (client: typeof tx) => Promise<unknown>) =>
         callback(tx),
       ),
@@ -135,10 +134,10 @@ describe("LeadFormPrismaRepository.fillFromSection write lock", () => {
           deleteMany,
         },
         risk: { deleteMany },
+        activityStatus: { findMany: vi.fn().mockResolvedValue([]) },
       };
       const prisma = {
         reportSection: { findUnique: vi.fn().mockResolvedValue(emptySource()) },
-        activityStatus: { findMany: vi.fn().mockResolvedValue([]) },
         $transaction: vi.fn(
           (callback: (client: typeof tx) => Promise<unknown>) => callback(tx),
         ),
@@ -166,6 +165,7 @@ describe("LeadFormPrismaRepository.fillFromSection write lock", () => {
     const itemDeleteMany = vi.fn().mockResolvedValue({ count: 1 });
     const decisionDeleteMany = vi.fn().mockResolvedValue({ count: 1 });
     const riskDeleteMany = vi.fn().mockResolvedValue({ count: 0 });
+    const activityStatusFindMany = vi.fn().mockResolvedValue([]);
     const tx = {
       $queryRaw: vi.fn().mockResolvedValue([REOPENED_REPORT]),
       report: { findMany: vi.fn().mockResolvedValue([]) },
@@ -181,10 +181,10 @@ describe("LeadFormPrismaRepository.fillFromSection write lock", () => {
         deleteMany: decisionDeleteMany,
       },
       risk: { deleteMany: riskDeleteMany },
+      activityStatus: { findMany: activityStatusFindMany },
     };
     const prisma = {
       reportSection: { findUnique: vi.fn().mockResolvedValue(emptySource()) },
-      activityStatus: { findMany: vi.fn().mockResolvedValue([]) },
       $transaction: vi.fn((callback: (client: typeof tx) => Promise<unknown>) =>
         callback(tx),
       ),
@@ -195,5 +195,9 @@ describe("LeadFormPrismaRepository.fillFromSection write lock", () => {
     expect(updateMany).toHaveBeenCalledOnce();
     expect(itemDeleteMany).toHaveBeenCalledOnce();
     expect(decisionDeleteMany).toHaveBeenCalledOnce();
+    expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      activityStatusFindMany.mock.invocationCallOrder[0] ??
+        Number.POSITIVE_INFINITY,
+    );
   });
 });
