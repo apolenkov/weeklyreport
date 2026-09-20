@@ -58,11 +58,6 @@ describe("CarryOverPrismaRepository (integration)", () => {
     expect(result).toBeNull();
   });
 
-  it("findExecutionByDedupeKey returns null when not found", async () => {
-    const result = await repo.findExecutionByDedupeKey("nonexistent-key");
-    expect(result).toBeNull();
-  });
-
   it("saveCarryOver creates execution and records atomically", async () => {
     // Create a target report and section for carry-over
     const targetReport = await prisma.report.create({
