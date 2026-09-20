@@ -116,6 +116,46 @@ describe("AdminTabsMobileSelect", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("shows unavailable alerts when either operational count query fails", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {
+      /* expected client error telemetry */
+    });
+    useQueryMock.mockReturnValue({
+      data: undefined,
+      error: new Error("unavailable"),
+      isError: true,
+    });
+
+    try {
+      render(<AdminTabsMobileSelect activeTab="users" />);
+
+      const alerts = screen.getByRole("navigation", { name: "Admin alerts" });
+      expect(screen.getByRole("link", { name: /reopen/i })).toHaveAttribute(
+        "href",
+        "/admin?tab=reopen",
+      );
+      expect(screen.getByTestId("mobile-reopen-tab-count")).toHaveTextContent(
+        "!",
+      );
+      expect(screen.getByText("Pending reopen count unavailable")).toHaveClass(
+        "sr-only",
+      );
+      expect(screen.getByRole("link", { name: /jobs/i })).toHaveAttribute(
+        "href",
+        "/admin?tab=jobs",
+      );
+      expect(screen.getByTestId("mobile-jobs-tab-count")).toHaveTextContent(
+        "!",
+      );
+      expect(screen.getByText("Failed job count unavailable")).toHaveClass(
+        "sr-only",
+      );
+      expect(alerts).toHaveClass("lg:hidden");
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
   it("links both non-zero counts to canonical responsive destinations", () => {
     useQueryMock.mockImplementation((options: unknown) => ({
       data: { count: countForQuery(options) },
