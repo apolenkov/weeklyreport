@@ -1,5 +1,10 @@
 import type { CanonicalStatus } from "@customreport/shared";
-import { AlertTriangle } from "lucide-react";
+import {
+  AlertTriangle,
+  CircleCheck,
+  OctagonX,
+  TriangleAlert,
+} from "lucide-react";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -65,6 +70,12 @@ describe("statusIcon", () => {
     expect(statusIcon("at-risk")).toBe(AlertTriangle);
     expect(statusIcon("on-track")).toBeNull();
     expect(statusIcon("empty")).toBeNull();
+  });
+
+  it("preserves the shape-distinct product icons", () => {
+    expect(statusIcon("on-track", "product")).toBe(CircleCheck);
+    expect(statusIcon("at-risk", "product")).toBe(TriangleAlert);
+    expect(statusIcon("blocked", "product")).toBe(OctagonX);
   });
 });
 
