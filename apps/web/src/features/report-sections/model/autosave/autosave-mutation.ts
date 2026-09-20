@@ -1,61 +1,52 @@
-import type { Dispatch, SetStateAction } from "react";
-import { useCallback, useMemo, useState } from "react";
-import { toast } from "sonner";
+import type { ReportSectionReadModel } from "@customreport/shared";
+import { useCallback, useState } from "react";
 
-import { buildSaveDraftHandlers } from "./autosave-mutation-handlers";
-import type { AutosaveMutationHandle, GetAutosaveRefs } from "./autosave-refs";
-import type { AutosaveState, UseLeadFormAutosaveArgs } from "./autosave-types";
+import type { LeadFormWritePort } from "../lead-form/lead-form-write-port";
+import type { AutosaveRequest } from "./autosave-types";
 
-export interface SaveDraftMutationDeps {
-  readonly getRefs: GetAutosaveRefs;
-  readonly setState: Dispatch<SetStateAction<AutosaveState>>;
-  readonly setLastSavedAt: Dispatch<SetStateAction<Date | null>>;
-  readonly setLastSavedKey: (next: string) => void;
-  readonly setQueuedRetryRevision: Dispatch<SetStateAction<number>>;
-  readonly args: UseLeadFormAutosaveArgs;
+// The mutation port used by the autosave engine.
+export interface AutosaveMutationHandle {
+  readonly mutate: (request: AutosaveRequest) => void;
+  readonly mutateAsync: (request: AutosaveRequest) => Promise<unknown>;
+  readonly isPending: boolean;
 }
 
-// The narrowed return type also breaks the inference cycle between the mutation
-// and the handlers built from it.
+export interface SaveDraftMutationDeps {
+  readonly writePort: LeadFormWritePort;
+  readonly onSuccess: (
+    saved: ReportSectionReadModel,
+    request: AutosaveRequest,
+  ) => void;
+  readonly onError: (error: unknown, generation: symbol) => void;
+}
+
+// Pure mutation transport: the write-port call plus in-flight bookkeeping.
+// All live autosave state stays with the caller — this hook receives only
+// ordinary values and result callbacks.
 export function useSaveDraftMutation(
   deps: SaveDraftMutationDeps,
 ): AutosaveMutationHandle {
   const [pendingCount, setPendingCount] = useState(0);
-  const handlers = useMemo(
-    () =>
-      buildSaveDraftHandlers({
-        getRefs: deps.getRefs,
-        setState: deps.setState,
-        setLastSavedAt: deps.setLastSavedAt,
-        setLastSavedKey: deps.setLastSavedKey,
-        setQueuedRetryRevision: deps.setQueuedRetryRevision,
-        onVersionChange: deps.args.onVersionChange,
-        onSaved: deps.args.onSaved,
-        onConflict: deps.args.onConflict,
-        reportSectionId: deps.args.reportSectionId,
-        reportError: (message) => toast.error(message),
-      }),
-    [deps],
-  );
+  const { writePort, onSuccess, onError } = deps;
 
   const mutateAsync = useCallback<AutosaveMutationHandle["mutateAsync"]>(
     async (request) => {
       setPendingCount((count) => count + 1);
       try {
-        const saved = await deps.args.writePort.saveDraft({
+        const saved = await writePort.saveDraft({
           ...request.payload,
           version: request.version,
         });
-        handlers.onSuccess(saved, request);
+        onSuccess(saved, request);
         return saved;
       } catch (error: unknown) {
-        handlers.onError(error, request.generation);
+        onError(error, request.generation);
         throw error;
       } finally {
         setPendingCount((count) => count - 1);
       }
     },
-    [deps.args.writePort, handlers],
+    [writePort, onSuccess, onError],
   );
   const mutate = useCallback<AutosaveMutationHandle["mutate"]>(
     (request) => {

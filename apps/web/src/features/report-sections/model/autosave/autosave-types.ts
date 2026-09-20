@@ -8,6 +8,15 @@ export type { DraftSaveContent } from "../lead-section-draft-payload";
 
 export type AutosaveState = "idle" | "pending" | "saving" | "saved" | "error";
 
+// One save attempt: the comparison key it was scheduled under, the content to
+// persist, and the optimistic-lock version plus activation it belongs to.
+export interface AutosaveRequest {
+  readonly key: string;
+  readonly payload: DraftSaveContent;
+  readonly version: number;
+  readonly generation: symbol;
+}
+
 export interface AutosaveSnapshot {
   readonly state: AutosaveState;
   readonly lastSavedAt: Date | null;

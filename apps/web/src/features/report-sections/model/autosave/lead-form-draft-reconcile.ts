@@ -2,8 +2,9 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 
 import { sectionToDraftPayload } from "../lead-section-draft-payload";
 import { encodeAutosaveComparisonKey } from "./autosave-stable-stringify";
-import type { DraftSaveContent } from "./autosave-types";
+import type { AutosaveRequest, DraftSaveContent } from "./autosave-types";
 import type { SavedDraftRecordIdentity } from "./autosave-types";
+import { encodeDraftSaveComparisonKey } from "./draft-save-comparison-key";
 
 type DraftRecord = Readonly<{
   id?: string | undefined;
@@ -237,6 +238,43 @@ export function reconcileSavedPayloadIdentities(
       persisted.decisions,
       saved.decisions,
     ),
+  };
+}
+
+// Re-keys a queued save against freshly confirmed server identities so the
+// drain writes the merged content, not the stale pre-save rows. Returns null
+// when the queue no longer belongs to the save's activation.
+export function reconcileQueuedRequest(
+  queued: AutosaveRequest | null,
+  generation: symbol,
+  saved: ReportSectionReadModel,
+  persistedPayload: DraftSaveContent,
+): AutosaveRequest | null {
+  if (queued?.generation !== generation) return null;
+  return rebaseQueuedRequest(
+    queued,
+    reconcileSavedPayloadIdentities(
+      queued.payload,
+      sectionToDraftPayload(saved),
+      persistedPayload,
+    ),
+    saved.version,
+  );
+}
+
+// Rebuilds a queued request with a rebased payload; a null payload drops the
+// queue entry entirely.
+export function rebaseQueuedRequest(
+  queued: AutosaveRequest,
+  next: DraftSaveContent | null,
+  savedVersion: number,
+): AutosaveRequest | null {
+  if (next === null) return null;
+  return {
+    ...queued,
+    payload: next,
+    key: encodeDraftSaveComparisonKey(next),
+    version: Math.max(queued.version, savedVersion),
   };
 }
 
