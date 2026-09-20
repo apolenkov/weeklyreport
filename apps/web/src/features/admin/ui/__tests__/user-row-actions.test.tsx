@@ -23,6 +23,52 @@ const user: AdminUserView = {
 };
 
 describe("UserRowActions", () => {
+  it("keeps activation actions in the admin token domains", () => {
+    const { rerender } = render(
+      <UserRowActions
+        user={user}
+        deactivatePending={false}
+        activatePending={false}
+        onEdit={vi.fn()}
+        onDeactivate={vi.fn()}
+        onActivate={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    const deactivate = screen.getByRole("button", {
+      name: "Deactivate Alice Lead",
+    });
+    expect(deactivate).toHaveClass(
+      "text-[var(--color-destructive)]",
+      "hover:border-[var(--color-destructive)]",
+      "hover:bg-[var(--color-destructive-surface-subtle)]",
+    );
+    expect(deactivate.className).not.toMatch(/color-status-/);
+
+    rerender(
+      <UserRowActions
+        user={{ ...user, isActive: false }}
+        deactivatePending={false}
+        activatePending={false}
+        onEdit={vi.fn()}
+        onDeactivate={vi.fn()}
+        onActivate={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    const activate = screen.getByRole("button", {
+      name: "Activate Alice Lead",
+    });
+    expect(activate).toHaveClass(
+      "text-[var(--color-starbucks-accent)]",
+      "hover:border-[var(--color-border-accent-hover)]",
+      "hover:bg-[var(--color-success)]",
+    );
+    expect(activate.className).not.toMatch(/color-status-/);
+  });
+
   it("gives every user action the mobile touch-target floor", async () => {
     render(
       <UserRowActions
