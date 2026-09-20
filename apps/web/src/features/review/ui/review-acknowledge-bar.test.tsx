@@ -14,12 +14,22 @@ import { createMockTRPC } from "../../../test-utils/mock-trpc";
 
 const toastSuccess = vi.fn<(...args: unknown[]) => void>();
 const toastError = vi.fn<(...args: unknown[]) => void>();
+const clientErrorReporting = vi.hoisted(() => ({
+  logClientError: vi.fn(),
+  formatClientErrorMessage: vi.fn(
+    (prefix: string, _error: unknown): string => `${prefix}.`,
+  ),
+}));
 vi.mock("sonner", () => ({
   toast: {
     success: (...args: unknown[]) => toastSuccess(...args),
     error: (...args: unknown[]) => toastError(...args),
   },
 }));
+vi.mock(
+  "../../../shared/lib/errors/client-error-reporting",
+  () => clientErrorReporting,
+);
 
 import { ReviewAcknowledgeBar } from "./review-acknowledge-bar";
 
@@ -93,6 +103,8 @@ describe("ReviewAcknowledgeBar", () => {
   beforeEach(() => {
     toastSuccess.mockClear();
     toastError.mockClear();
+    clientErrorReporting.logClientError.mockClear();
+    clientErrorReporting.formatClientErrorMessage.mockClear();
   });
 
   it("renders nothing when there are no reviewable groups", () => {
@@ -207,5 +219,18 @@ describe("ReviewAcknowledgeBar", () => {
     const button = screen.getByRole("button", { name: /^Acknowledge/ });
     expect(button).toBeDisabled();
     expect(screen.queryByText(/^Seen by/)).not.toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(clientErrorReporting.logClientError).toHaveBeenCalledWith(
+        "review.acknowledgements.load_failed",
+        expect.objectContaining({ message: "roster query failed" }),
+        {
+          component: "ReviewAcknowledgeBar",
+          procedure: "review.acknowledgements",
+          reportId: REPORT_ID,
+          groupId: GROUP_ID,
+        },
+      );
+    });
   });
 });
