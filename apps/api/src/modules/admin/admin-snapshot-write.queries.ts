@@ -139,12 +139,12 @@ export async function saveSnapshot(
     // Apply group head assignments now that every head's User row exists;
     // upsertGroups only wrote name/description/archived.
     await applyGroupHeads(tx, parsedSnapshot.groups);
+    const periods = await upsertPeriods(tx, parsedSnapshot.periods);
     await upsertRestoredProjects(
       tx,
       parsedSnapshot.projects,
       previousLeadByProject,
     );
-    const periods = await upsertPeriods(tx, parsedSnapshot.periods);
     await replaceRestoredPublishedProjections(
       tx,
       parsedSnapshot.periods.map((period) => ({

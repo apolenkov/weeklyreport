@@ -29,6 +29,7 @@ const AUTHOR_ID = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 const GROUP_ID = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
 const STABLE_ID = "ffffffff-ffff-4fff-8fff-ffffffffffff";
 const ACTIVITY_ID = "10000000-0000-4000-8000-000000000001";
+const PROJECT_ID = "10000000-0000-4000-8000-000000000002";
 
 describe("saveSnapshot — reporting-group integrity", () => {
   it("rejects a groupless lead before opening a restore transaction", async () => {
@@ -801,5 +802,121 @@ describe("writePeriodRow — publication recovery", () => {
       data: dataMatcher,
     });
     expect(report.create).toHaveBeenCalledWith(createMatcher);
+  });
+});
+
+describe("saveSnapshot — lifecycle ordering", () => {
+  it("restores period lifecycle before reconciling project assignments", async () => {
+    const events: string[] = [];
+    const snapshot = {
+      users: [
+        {
+          id: USER_ID,
+          email: "lead@example.test",
+          name: "Lead Example",
+          lastName: "Lead",
+          firstName: "Example",
+          middleName: null,
+          position: null,
+          role: "lead",
+          reportingGroupId: GROUP_ID,
+          reportingGroupName: "Recovery Group",
+          isActive: true,
+        },
+      ],
+      groups: [
+        {
+          id: GROUP_ID,
+          name: "Recovery Group",
+          description: null,
+          archived: false,
+          headUserId: null,
+        },
+      ],
+      projects: [
+        {
+          id: PROJECT_ID,
+          name: "Recovered Project",
+          archived: false,
+          leadId: USER_ID,
+          leadName: "Lead Example",
+        },
+      ],
+      periods: [
+        {
+          id: REPORT_ID,
+          periodStart: new Date("2026-04-13T00:00:00.000Z"),
+          periodEnd: new Date("2026-04-19T23:59:59.000Z"),
+          deadline: null,
+          weekLabel: null,
+          status: "draft",
+          periodState: "open",
+          periodStatus: "open",
+          archived: false,
+          autoPublished: false,
+          autoArchived: false,
+          publishedAt: null,
+          publishedById: null,
+          reopenedAt: null,
+          publishedSnapshot: null,
+        },
+      ],
+      reminderRules: [],
+      reminderExecutions: [],
+      policies: [],
+    };
+    const tx = {
+      $executeRaw: vi.fn().mockResolvedValue(0),
+      $queryRaw: vi.fn().mockResolvedValue([]),
+      user: {
+        findMany: vi.fn().mockResolvedValue([]),
+        create: vi.fn().mockResolvedValue(undefined),
+      },
+      reportingGroup: {
+        findMany: vi.fn().mockResolvedValue([]),
+        create: vi.fn().mockResolvedValue(undefined),
+        update: vi.fn().mockResolvedValue(undefined),
+      },
+      project: {
+        findMany: vi.fn().mockResolvedValue([]),
+        upsert: vi.fn().mockResolvedValue(undefined),
+      },
+      projectActivityLead: { findMany: vi.fn().mockResolvedValue([]) },
+      report: {
+        findMany: vi.fn((query?: { where?: { archived?: boolean } }) => {
+          if (query?.where?.archived === false)
+            events.push("project-assignment-reconciliation");
+          return [];
+        }),
+        findUnique: vi.fn().mockResolvedValue({ id: REPORT_ID }),
+        update: vi.fn().mockImplementation(() => {
+          events.push("period-lifecycle-restored");
+        }),
+      },
+      reminderRule: { findMany: vi.fn().mockResolvedValue([]) },
+      publishedSearchDocument: {
+        deleteMany: vi.fn().mockResolvedValue(undefined),
+      },
+      publishedSectionScope: {
+        deleteMany: vi.fn().mockResolvedValue(undefined),
+      },
+    };
+    const transaction = vi
+      .fn()
+      .mockImplementationOnce(
+        async (callback: (client: unknown) => Promise<unknown>) => callback(tx),
+      )
+      .mockResolvedValueOnce(snapshot);
+
+    await saveSnapshot(
+      { $transaction: transaction } as unknown as PrismaService,
+      undefined,
+      snapshot as never,
+    );
+
+    expect(events).toEqual([
+      "period-lifecycle-restored",
+      "project-assignment-reconciliation",
+    ]);
   });
 });
