@@ -29,12 +29,26 @@ interface ActivitiesTabProps {
 function useActivityPickerData(
   groups: readonly AdminGroupView[],
   products: readonly AdminProductView[],
+  selectedGroupId: string | null,
 ) {
+  const activeGroups = useMemo(
+    () => groups.filter((group) => !group.archived),
+    [groups],
+  );
+
   return {
-    activeGroups: useMemo(
-      () => groups.filter((group) => !group.archived),
-      [groups],
-    ),
+    groupOptions: useMemo(() => {
+      if (
+        !selectedGroupId ||
+        activeGroups.some((group) => group.id === selectedGroupId)
+      ) {
+        return activeGroups;
+      }
+      const selectedGroup = groups.find(
+        (group) => group.id === selectedGroupId,
+      );
+      return selectedGroup ? [...activeGroups, selectedGroup] : activeGroups;
+    }, [activeGroups, groups, selectedGroupId]),
     activeProducts: useMemo(
       () => products.filter((product) => product.status === "active"),
       [products],
@@ -47,11 +61,12 @@ function useActivityPickerData(
 }
 
 export function ActivitiesTab({ groups, users, products }: ActivitiesTabProps) {
-  const { activeGroups, activeProducts, groupNameById } = useActivityPickerData(
+  const state = useActivitiesTabState();
+  const { groupOptions, activeProducts, groupNameById } = useActivityPickerData(
     groups,
     products,
+    state.form.groupId,
   );
-  const state = useActivitiesTabState();
 
   if (state.isError) {
     return (
@@ -93,7 +108,7 @@ export function ActivitiesTab({ groups, users, products }: ActivitiesTabProps) {
 
       <ActivitiesTabDialogs
         {...state}
-        groups={activeGroups}
+        groups={groupOptions}
         products={activeProducts}
       />
     </>
