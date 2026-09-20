@@ -423,6 +423,30 @@ describe("useLeadFormAutosave", () => {
     expect(calls).toHaveLength(1);
   });
 
+  it("forceSave() does not invoke the mutation when the payload is absent", async () => {
+    const { wrapper, calls, writePort } = buildHarness();
+    const { result } = renderHook(
+      () =>
+        useLeadFormAutosave({
+          writePort,
+          reportSectionId: SECTION_ID,
+          payload: null,
+          enabled: true,
+          version: 1,
+          onVersionChange: vi.fn(),
+          debounceMs: 3000,
+        }),
+      { wrapper },
+    );
+
+    await act(async () => {
+      await result.current.forceSave();
+    });
+
+    expect(calls).toHaveLength(0);
+    expect(result.current.state).toBe("idle");
+  });
+
   it("exposes isInFlight while a save is pending", async () => {
     // Use a slow mutation to hold isPending=true for inspection.
     let resolveMutation!: () => void;
