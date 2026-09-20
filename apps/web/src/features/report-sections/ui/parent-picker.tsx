@@ -11,6 +11,7 @@ type ResolvedRecordParentKind = Exclude<RecordParent["kind"], "unresolved">;
 interface ParentPickerProps {
   readonly id: string;
   readonly value: RecordParent;
+  readonly error?: string | undefined;
   readonly products: readonly Product[];
   // kind drives stage required (product) vs forbidden (activity). Omit for product-only.
   readonly activities?: readonly ParentActivityOption[];
@@ -72,6 +73,7 @@ function ParentOptionGroup({
 export function ParentPicker({
   id,
   value,
+  error,
   products,
   activities = [],
   onChange,
@@ -94,8 +96,10 @@ export function ParentPicker({
       </label>
       <select
         id={id}
-        className="select-chevron w-full max-md:min-h-[var(--touch-target-min)] rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-card)] py-2.5 pl-3 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_var(--color-ring)] focus:outline-none"
+        className={`select-chevron w-full max-md:min-h-[var(--touch-target-min)] rounded-xl border bg-[var(--color-card)] py-2.5 pl-3 text-sm text-[var(--color-foreground)] focus:outline-none ${error ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[var(--shadow-focus-destructive)]" : "border-[var(--color-border-strong)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_var(--color-ring)]"}`}
         value={encodeParent(value)}
+        aria-invalid={error ? "true" : "false"}
+        aria-describedby={error ? `${id}-error` : undefined}
         onChange={(e) =>
           onChange(decodeParent(e.target.value, products, activities))
         }
@@ -121,6 +125,15 @@ export function ParentPicker({
           />
         )}
       </select>
+      {error && (
+        <p
+          id={`${id}-error`}
+          role="alert"
+          className="mt-1 text-xs text-[var(--color-destructive)]"
+        >
+          {error}
+        </p>
+      )}
     </div>
   );
 }

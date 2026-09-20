@@ -55,6 +55,7 @@ function buildItemEditHandle(
     rankOptions: derived.rankOptions,
     takenRanks: derived.takenRanks,
     parent: formState.parent,
+    parentError: formState.errors.parent,
     onParentChange: save.setParentAndStages,
     isActivityParent: derived.isActivityParent,
     stageNames: formState.stageNames,

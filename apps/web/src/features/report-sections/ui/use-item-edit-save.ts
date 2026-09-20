@@ -113,7 +113,11 @@ export function useItemEditSave(args: UseItemEditSaveArgs) {
     args.setParent(nextParent);
     // Clear stages on parent switch — never default to all owned stages.
     args.setStageNames([]);
-    args.setErrors((previous) => ({ ...previous, stageNames: undefined }));
+    args.setErrors((previous) => ({
+      ...previous,
+      parent: undefined,
+      stageNames: undefined,
+    }));
   }
 
   function handleSave() {
@@ -142,7 +146,18 @@ export function useItemEditSave(args: UseItemEditSaveArgs) {
     }
     const payload = buildSavePayload(args, text);
     if (!payload) {
-      args.setErrors({ text: "No product available" });
+      const errors = { parent: "No product available" };
+      args.setErrors(errors);
+      const invalidControl = firstInvalidControl(
+        errors,
+        args.dialogSurfaceRef.current,
+      );
+      if (invalidControl) invalidControl.focus();
+      else {
+        queueMicrotask(() => {
+          firstInvalidControl(errors, args.dialogSurfaceRef.current)?.focus();
+        });
+      }
       return;
     }
     args.onSave(payload);

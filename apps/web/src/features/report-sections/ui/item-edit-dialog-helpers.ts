@@ -43,6 +43,7 @@ export function firstInvalidControl(
   next: {
     text?: string | undefined;
     nextStepText?: string | undefined;
+    parent?: string | undefined;
     stageNames?: string | undefined;
     pausedReason?: string | undefined;
   },
@@ -50,6 +51,7 @@ export function firstInvalidControl(
 ): HTMLElement | null {
   if (next.text) return document.getElementById("item-text");
   if (next.nextStepText) return document.getElementById("item-next-step");
+  if (next.parent) return document.getElementById("item-product");
   if (next.stageNames) {
     return (
       surface?.querySelector<HTMLElement>('fieldset input[type="checkbox"]') ??

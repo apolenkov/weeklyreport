@@ -30,6 +30,7 @@ export interface ItemEditDialogFieldsProps {
   readonly takenRanks: ReadonlySet<number>;
   readonly week: "current" | "next";
   readonly parent: RecordParent;
+  readonly parentError: string | undefined;
   readonly products: readonly Product[];
   readonly activities: readonly ParentActivityOption[];
   readonly onParentChange: (next: RecordParent) => void;
@@ -157,6 +158,7 @@ export function ItemPriorityRankField({
 type ItemParentStageProps = Pick<
   ItemEditDialogFieldsProps,
   | "parent"
+  | "parentError"
   | "products"
   | "activities"
   | "onParentChange"
@@ -182,6 +184,7 @@ type ItemStatusProps = Pick<
 
 function ItemParentStageFields({
   parent,
+  parentError,
   products,
   activities,
   onParentChange,
@@ -198,6 +201,7 @@ function ItemParentStageFields({
       <ParentPicker
         id="item-product"
         value={parent}
+        error={parentError}
         products={products}
         activities={activities}
         onChange={onParentChange}

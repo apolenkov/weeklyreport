@@ -30,6 +30,8 @@ function OverviewSkeleton() {
       role="status"
       aria-label="Loading status overview"
       className="space-y-3"
+      data-layout-key="report-page"
+      data-layout-stability="position-width"
     >
       <div className="h-12 animate-pulse rounded-[var(--radius)] bg-[var(--color-muted)]" />
       {Array.from({ length: 3 }, (_, index) => (
