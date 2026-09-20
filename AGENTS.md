@@ -29,6 +29,17 @@ Keep this file limited to WeeklyReport-specific context.
   when a material decision or new authority is genuinely necessary; name the
   exact affected step and continue all work that does not depend on the answer.
   Do not repeatedly request confirmation for an already authorized action.
+- After at least two explicit requests for the same owner decision receive no
+  answer and all independent work is exhausted, invoke one bounded read-only
+  `independent_advisor` on that unresolved choice. For reversible local-MVP product,
+  architecture, risk, scope, or trade-off decisions, the coordinator may adopt
+  a clear advisor recommendation and continue autonomously, recording the
+  reason, verdict, assumptions, and resulting decision in Backlog/OpenSpec as
+  applicable. An inconclusive or conflicting verdict still returns to the
+  owner. This delegation does not authorize production/shared/unknown data,
+  credentials, paid actions, external messages or publication, destructive
+  operations without separate applicable owner authorization, or changes to
+  agreed acceptance criteria.
 - Keep acceptance evidence proportional and explicit: define the finite test
   matrix, reuse equivalent evidence without hiding exclusions, and report gaps.
   Finish the requested outcome; do not replace it with repeated plans, status
