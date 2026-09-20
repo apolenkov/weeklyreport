@@ -506,7 +506,7 @@ describe("ItemEditDialog — status lock and blocker routing", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("offers exactly the item type's vocabulary — current chips", () => {
+  it("offers all progress states for current work", () => {
     render(
       <ItemEditDialog
         open
@@ -526,10 +526,16 @@ describe("ItemEditDialog — status lock and blocker routing", () => {
       within(status)
         .getAllByRole("button")
         .map((button) => button.textContent),
-    ).toEqual(["Not started", "! In Progress", "‖ Paused", "✓ Completed"]);
+    ).toEqual([
+      "Not started",
+      "! In Progress",
+      "‖ Paused",
+      "» Postponed",
+      "✓ Completed",
+    ]);
   });
 
-  it("offers exactly the item type's vocabulary — next chips", () => {
+  it("offers all progress states for next-week work", () => {
     render(
       <ItemEditDialog
         open
@@ -542,16 +548,63 @@ describe("ItemEditDialog — status lock and blocker routing", () => {
         onCancel={vi.fn()}
       />,
     );
+    const status = screen.getByText("Status").parentElement;
+    if (!status) throw new Error("status controls not found");
     expect(
-      screen.getByRole("button", { name: /Planned/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /Postponed/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /In Progress/i }),
-    ).not.toBeInTheDocument();
+      within(status)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual([
+      "○ Planned",
+      "! In Progress",
+      "‖ Paused",
+      "» Postponed",
+      "✓ Completed",
+    ]);
   });
+
+  it.each([
+    { week: "next", status: "in-progress", label: /In Progress/i },
+    { week: "next", status: "paused", label: /Paused/i },
+    { week: "next", status: "completed", label: /Completed/i },
+    { week: "current", status: "postponed", label: /Postponed/i },
+  ] as const)(
+    "shows and preserves $status after placement in $week",
+    ({ week, status, label }) => {
+      const onSave = vi.fn();
+      const pausedReason = status === "paused" ? "Waiting for input" : null;
+      render(
+        <ItemEditDialog
+          open
+          item={{ ...coveredItem, status, pausedReason }}
+          products={products}
+          week={week}
+          risks={[]}
+          stagesForProduct={() => ["Development"]}
+          onSave={onSave}
+          onCancel={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByRole("button", { name: label })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      fireEvent.change(screen.getByLabelText(/Description \*/i), {
+        target: { value: "Updated work description" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
+
+      expect(onSave).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          id: coveredItem.id,
+          text: "Updated work description",
+          status,
+          pausedReason,
+        }),
+      );
+    },
+  );
 });
 
 describe("ItemEditDialog — activity-lane + Add preselects the activity", () => {

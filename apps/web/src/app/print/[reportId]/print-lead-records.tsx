@@ -118,6 +118,13 @@ function workflowStatusBadgeStyle(status: string): CSSProperties {
       color: printStatusColor("blocked"),
     };
   }
+  if (status === "at-risk") {
+    return {
+      ...BADGE_BASE,
+      backgroundColor: BADGE_BG.atRisk,
+      color: printStatusColor("at-risk"),
+    };
+  }
   return {
     ...BADGE_BASE,
     backgroundColor: BADGE_BG.default,

@@ -88,16 +88,18 @@ export function publishedLockedIds(
 // Foreign rows have no raw draft row; bucket from presentation status.
 // The map covers the full ItemStatus vocabulary, so an unknown status is a
 // compile error instead of a silent in-progress fallback.
+const IN_PROGRESS_BUCKET: ActivityBucket = "in-progress";
 const PRESENTATION_STATUS_BUCKETS: Record<
   KanbanItem["status"],
   ActivityBucket
 > = {
-  "in-progress": "in-progress",
+  "in-progress": IN_PROGRESS_BUCKET,
   completed: "done",
   paused: "paused",
   postponed: "deferred",
   planned: "planned-next",
-  blocked: "in-progress",
+  blocked: IN_PROGRESS_BUCKET,
+  "at-risk": IN_PROGRESS_BUCKET,
 };
 
 // Pure projection over raw fields; foreign rows fall back to presentation status.

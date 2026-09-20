@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  applyBlockedRiskOverlay,
+  applyRiskAlarmOverlay,
   deriveHeadItemStatus,
   deriveItemStatus,
   itemStatusToWorkflow,
   type ItemWorkflowStatus,
+  persistableItemStatusToWorkflow,
   workflowToItemStatus,
 } from "./item-status";
 
@@ -107,7 +108,7 @@ describe("deriveItemStatus", () => {
 describe("risk overlay", () => {
   it("floors an in-progress base status to blocked", () => {
     expect(
-      applyBlockedRiskOverlay(
+      applyRiskAlarmOverlay(
         "in-progress",
         { projectId: "product-1", stageNames: ["Development"] },
         [BLOCKING_RISK],
@@ -115,15 +116,69 @@ describe("risk overlay", () => {
     ).toBe("blocked");
   });
 
-  it("leaves the base status unchanged for an at-risk covering risk", () => {
+  it("floors an in-progress base status to at-risk for a covering at-risk risk", () => {
     expect(
-      applyBlockedRiskOverlay(
+      applyRiskAlarmOverlay(
         "in-progress",
         { projectId: "product-1", stageNames: ["Development"] },
         [{ ...BLOCKING_RISK, severity: "at-risk" }],
       ),
+    ).toBe("at-risk");
+  });
+
+  it("lets a covering blocked risk outrank a covering at-risk risk", () => {
+    expect(
+      applyRiskAlarmOverlay(
+        "in-progress",
+        { projectId: "product-1", stageNames: ["Development"] },
+        [{ ...BLOCKING_RISK, severity: "at-risk" }, BLOCKING_RISK],
+      ),
+    ).toBe("blocked");
+  });
+
+  it("returns the base status when no risk covers the item", () => {
+    expect(
+      applyRiskAlarmOverlay(
+        "in-progress",
+        { projectId: "product-1", stageNames: ["Development"] },
+        [],
+      ),
+    ).toBe("in-progress");
+    expect(
+      applyRiskAlarmOverlay(
+        "in-progress",
+        { projectId: "product-2", stageNames: ["Development"] },
+        [BLOCKING_RISK],
+      ),
+    ).toBe("in-progress");
+    expect(
+      applyRiskAlarmOverlay(
+        "in-progress",
+        { projectId: "product-1", stageNames: ["Testing"] },
+        [BLOCKING_RISK],
+      ),
+    ).toBe("in-progress");
+    expect(
+      applyRiskAlarmOverlay(
+        "in-progress",
+        { projectId: "product-1", stageNames: ["Development"] },
+        [{ ...BLOCKING_RISK, text: " ".repeat(3) }],
+      ),
     ).toBe("in-progress");
   });
+
+  it.each(["planned", "completed", "paused", "postponed"] as const)(
+    "keeps a non-in-progress base '%s' unchanged under a covering risk",
+    (base) => {
+      expect(
+        applyRiskAlarmOverlay(
+          base,
+          { projectId: "product-1", stageNames: ["Development"] },
+          [BLOCKING_RISK],
+        ),
+      ).toBe(base);
+    },
+  );
 
   it("derives the head status from stored progress and covering risks", () => {
     expect(
@@ -137,5 +192,40 @@ describe("risk overlay", () => {
         [BLOCKING_RISK],
       ),
     ).toBe("blocked");
+  });
+
+  it("derives the head at-risk status from a covering at-risk risk", () => {
+    expect(
+      deriveHeadItemStatus(
+        {
+          workflowStatus: "in_progress",
+          type: "next",
+          projectId: "product-1",
+          stageNames: ["Development"],
+        },
+        [{ ...BLOCKING_RISK, severity: "at-risk" }],
+      ),
+    ).toBe("at-risk");
+  });
+});
+
+describe("persistableItemStatusToWorkflow", () => {
+  it.each(["blocked", "at-risk"] as const)(
+    "persists the display alarm '%s' as in_progress",
+    (status) => {
+      expect(persistableItemStatusToWorkflow(status)).toBe("in_progress");
+    },
+  );
+
+  it.each([
+    "planned",
+    "in-progress",
+    "paused",
+    "postponed",
+    "completed",
+  ] as const)("persists the progress status '%s' unchanged", (status) => {
+    expect(persistableItemStatusToWorkflow(status)).toBe(
+      itemStatusToWorkflow(status),
+    );
   });
 });

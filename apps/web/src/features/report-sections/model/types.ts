@@ -4,10 +4,10 @@ import type { StageStatus } from "./traffic-light";
 
 export type { StageStatus } from "./traffic-light";
 
-// Progress values plus the risk-derived display-only "blocked".
+// Progress values plus the risk-derived display-only alarms.
 import type { ItemStatus } from "./item-status";
 
-export type { ItemStatus } from "./item-status";
+export type { ItemProgressStatus, ItemStatus } from "./item-status";
 
 // A stage is the lead's own ("mine") or another lead's ("locked", read-only).
 // Stages with no assignment are excluded from the grid (see buildStageGrid).

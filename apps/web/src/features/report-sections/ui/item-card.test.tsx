@@ -5,6 +5,8 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+import { expectDefined } from "../../../test-utils/expect-defined.js";
+import { mapForeignItems } from "../model/lead-cross-author-content";
 import type { KanbanItem, RiskEntry } from "../model/types";
 import { ItemCard } from "./item-card";
 
@@ -309,6 +311,52 @@ describe("ItemCard — risk-derived alarm status", () => {
       />,
     );
     expect(screen.getByText("Blocked")).toBeInTheDocument();
+  });
+
+  it("renders the mapper's foreign at-risk item with the amber badge", () => {
+    const foreignItem = expectDefined(
+      mapForeignItems(
+        [
+          {
+            authorId: "author-foreign",
+            authorName: "Bob Lead",
+            authorRole: "lead",
+            items: [
+              {
+                id: "foreign-item",
+                projectId: "p1",
+                type: "current",
+                text: "Foreign work",
+                workflowStatus: "in_progress",
+                stageNames: ["Development"],
+              },
+            ],
+            risks: [
+              {
+                id: "foreign-risk",
+                projectId: "p1",
+                risk: "Vendor outage",
+                impact: "Delivery slips",
+                mitigation: "Failover plan",
+                severity: "at-risk",
+                stageNames: ["Development"],
+              },
+            ],
+            decisions: [],
+          },
+        ],
+        new Map([["p1", "DevOps Tools"]]),
+        "current",
+      )[0],
+    );
+
+    render(<ItemCard item={foreignItem} />);
+
+    const badge = screen.getByText("At Risk");
+    expect(badge).toHaveStyle({
+      background: "var(--color-status-at-risk-bg)",
+      color: "var(--color-status-at-risk-fg)",
+    });
   });
 });
 

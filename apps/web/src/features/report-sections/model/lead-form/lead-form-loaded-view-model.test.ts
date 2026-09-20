@@ -531,4 +531,44 @@ describe("unified activity and activity alarm derivations", () => {
     );
     expect(blocked?.bucket).toBe("in-progress");
   });
+
+  it("buckets an at-risk foreign item as explicit in-progress", () => {
+    const foreignContent: CrossAuthorContentRow[] = [
+      {
+        authorId: FOREIGN_AUTHOR_ID,
+        authorName: "Foreign Lead",
+        authorRole: "lead",
+        items: [
+          {
+            id: "fi-at-risk",
+            projectId: PROJECT_ID,
+            type: "current",
+            text: "At-risk foreign item",
+            workflowStatus: "in_progress",
+            stageNames: ["Development"],
+          },
+        ],
+        risks: [
+          {
+            id: "fr-at-risk",
+            projectId: PROJECT_ID,
+            risk: "Slipping vendor",
+            impact: "Impact",
+            mitigation: "",
+            severity: "at-risk",
+            stageNames: ["Development"],
+          },
+        ],
+        decisions: [],
+      },
+    ];
+    const vm = buildLeadFormLoadedViewModel(
+      makeEveryoneInput({ foreignContent }),
+    );
+    const atRisk = vm.unifiedEntries.find(
+      (entry) => entry.item.id === `foreign:${FOREIGN_AUTHOR_ID}:fi-at-risk`,
+    );
+    expect(atRisk?.item.status).toBe("at-risk");
+    expect(atRisk?.bucket).toBe("in-progress");
+  });
 });

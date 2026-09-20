@@ -3,6 +3,7 @@ import {
   worstCanonicalStatus,
 } from "@customreport/shared";
 
+import type { ItemStatus } from "../item-status";
 import { riskCoversStage } from "../stage-tags";
 
 // Item-card alarm is the roll-up of covering risk/blocker rows — never a free
@@ -13,13 +14,8 @@ export type ItemAlarm = "at-risk" | "blocked" | null;
 export interface AlarmItem {
   readonly productId: string;
   readonly stageNames: readonly string[];
-  readonly status:
-    | "in-progress"
-    | "completed"
-    | "planned"
-    | "paused"
-    | "postponed"
-    | "blocked";
+  // Accepts the display status; only `in-progress` is alarm-eligible.
+  readonly status: ItemStatus;
 }
 
 export interface AlarmRisk {

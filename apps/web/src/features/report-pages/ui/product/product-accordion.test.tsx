@@ -308,6 +308,29 @@ describe("ProductAccordion — item status badge", () => {
     expect(screen.getByText("Planned")).toBeInTheDocument();
   });
 
+  it("renders an at-risk item with the amber At Risk badge and neutral rail", () => {
+    const { container } = render(
+      <ProductAccordion
+        defaultOpen
+        report={makeReport({
+          currentWeek: [
+            makeItem({ id: "r", text: "Risky one", status: "at-risk" }),
+          ],
+        })}
+      />,
+    );
+    const badge = screen.getByText("At Risk");
+    expect(badge).toHaveStyle({
+      background: "var(--color-status-at-risk-bg)",
+      color: "var(--color-status-at-risk-fg)",
+    });
+    const row = itemRows(container).find((r) =>
+      r.textContent.includes("Risky one"),
+    );
+    const rail = row?.children[1] as HTMLElement | undefined;
+    expect(rail?.getAttribute("style") ?? "").toContain("var(--color-border)");
+  });
+
   it("blocked item gets a red rail; non-blocked gets a neutral rail", () => {
     const { container } = render(
       <ProductAccordion

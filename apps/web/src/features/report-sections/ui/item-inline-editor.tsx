@@ -11,7 +11,7 @@ import {
   ItemStatusFields,
 } from "./item-edit-dialog-fields";
 import type { ItemEditDraftStore } from "./item-edit-draft-store";
-import { OVERVIEW_STATUS_CHOICES } from "./item-status-choices";
+import { ITEM_STATUS_CHOICES } from "./item-status-choices";
 import { ParentPicker } from "./parent-picker";
 import { StageStep } from "./stage-step";
 import { useInlineEditUnloadGuard } from "./use-inline-edit-unload-guard";
@@ -143,7 +143,7 @@ export function ItemInlineEditor({
             />
           ) : null}
           <div>
-            <ItemStatusFields {...form} choices={OVERVIEW_STATUS_CHOICES} />
+            <ItemStatusFields {...form} choices={ITEM_STATUS_CHOICES} />
           </div>
         </fieldset>
         <div className="flex flex-wrap gap-2">

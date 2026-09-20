@@ -14,7 +14,7 @@ function isProductItem(item: KanbanItem): item is ProductKanbanItem {
 }
 
 interface DerivedCardStatus {
-  displayStatus: ItemStatus | "at-risk";
+  displayStatus: ItemStatus;
   isBlocked: boolean;
   isPlanned: boolean;
   alarmLocked: boolean;
@@ -62,7 +62,7 @@ export function deriveCardStatus(
   // pure Progress. `blocked` appears only as the risk-derived alarm below.
   const covering = coveringRisksForItem(item, risks);
   const derivedAlarm = highestAlarmSeverity(covering);
-  const displayStatus: ItemStatus | "at-risk" = derivedAlarm ?? item.status;
+  const displayStatus: ItemStatus = derivedAlarm ?? item.status;
   const lockAuthorName = foreignLockAuthor(covering, derivedAlarm);
   return {
     displayStatus,

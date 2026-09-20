@@ -274,6 +274,88 @@ describe("mapForeignItems", () => {
     expect(mapped.status).toBe("blocked");
   });
 
+  it("applies the author's own covering at-risk risk as the at-risk overlay", () => {
+    const row = makeContentRow({
+      items: [
+        {
+          id: "item-1",
+          projectId: PROJECT_ID,
+          type: "current",
+          text: "In-flight work",
+          workflowStatus: "in_progress",
+          stageNames: ["Development"],
+        },
+      ],
+      risks: [
+        {
+          id: "risk-1",
+          projectId: PROJECT_ID,
+          risk: "Vendor outage",
+          impact: "Delivery slips",
+          mitigation: "Failover plan",
+          severity: "at-risk",
+          stageNames: ["Development"],
+        },
+      ],
+    });
+
+    const mapped = expectDefined(
+      mapForeignItems([row], PRODUCT_NAMES, "current")[0],
+    );
+
+    expect(mapped.status).toBe("at-risk");
+    expect(mapped.foreign).toBe(true);
+    expect(mapped.authorId).toBe(AUTHOR_ID);
+    expect(mapped.pausedReason).toBeNull();
+    expect(mapped.priorityRank).toBeNull();
+  });
+
+  it("scopes the overlay to each author when product and stage are shared", () => {
+    const sharedItem = {
+      projectId: PROJECT_ID,
+      type: "current" as const,
+      workflowStatus: "in_progress" as const,
+      stageNames: ["Development"],
+    };
+    const rows: CrossAuthorContentRow[] = [
+      makeContentRow({
+        authorId: "author-at-risk",
+        items: [{ ...sharedItem, id: "item-at-risk", text: "Alice work" }],
+        risks: [
+          {
+            id: "risk-at-risk",
+            projectId: PROJECT_ID,
+            risk: "Vendor outage",
+            impact: "Delivery slips",
+            mitigation: "Failover plan",
+            severity: "at-risk",
+            stageNames: ["Development"],
+          },
+        ],
+      }),
+      makeContentRow({
+        authorId: "author-clear",
+        items: [{ ...sharedItem, id: "item-clear", text: "Bob work" }],
+      }),
+    ];
+
+    const mapped = mapForeignItems(rows, PRODUCT_NAMES, "current");
+
+    expect(mapped).toHaveLength(2);
+    expect(mapped).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "foreign:author-at-risk:item-at-risk",
+          status: "at-risk",
+        }),
+        expect.objectContaining({
+          id: "foreign:author-clear:item-clear",
+          status: "in-progress",
+        }),
+      ]),
+    );
+  });
+
   it("does not apply the overlay when no covering risk exists", () => {
     const row = makeContentRow({
       items: [

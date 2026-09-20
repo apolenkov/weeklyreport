@@ -136,6 +136,28 @@ describe("lead form draft merge helpers", () => {
     });
   });
 
+  it("persists an at-risk display status as in_progress like any covering-risk overlay", () => {
+    const section = makeDraftMergeSection();
+    const result = mergeItemsDraft(section, "current", [
+      {
+        id: CURRENT_ITEM_ID,
+        parent: { kind: "product", id: PROJECT_ID },
+        productId: PROJECT_ID,
+        productName: "Test Product",
+        activityId: null,
+        stageNames: ["Development"],
+        status: "at-risk",
+        text: "At-risk item",
+        author: "Test Lead",
+        priorityRank: null,
+      },
+    ]);
+
+    expect(
+      result.items.find((item) => item.id === CURRENT_ITEM_ID),
+    ).toMatchObject({ workflowStatus: "in_progress" });
+  });
+
   it("merges risks and decisions with activity-parent XOR fields and foreign rows stripped", () => {
     const section = makeDraftMergeSection();
     const risks: RiskEntry[] = [

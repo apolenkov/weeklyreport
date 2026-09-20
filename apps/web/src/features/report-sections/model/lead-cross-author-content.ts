@@ -7,7 +7,7 @@ import { shortNameFromName } from "@customreport/shared";
 
 import { toIsoDateString } from "../../../shared/lib/format/format-date";
 import {
-  applyBlockedRiskOverlay,
+  applyRiskAlarmOverlay,
   type ItemWorkflowStatus,
   workflowToItemStatus,
 } from "./item-status";
@@ -86,7 +86,7 @@ export function mapForeignItems(
   itemType: "current" | "next",
 ): ForeignKanbanItem[] {
   return rows.flatMap((ca) => {
-    // Blocked derives from the author's own covering risks (same lead-card rule).
+    // The alarm derives from the author's own covering risks (same lead-card rule).
     const alarmRisks = ca.risks.map((r) => ({
       productId: r.projectId,
       stageNames: r.stageNames,
@@ -102,7 +102,7 @@ export function mapForeignItems(
         productName: requireProductName(productNameById, i.projectId),
         activityId: null,
         stageNames: i.stageNames,
-        status: applyBlockedRiskOverlay(
+        status: applyRiskAlarmOverlay(
           workflowToItemStatus(i.workflowStatus),
           { projectId: i.projectId, stageNames: i.stageNames },
           alarmRisks,
