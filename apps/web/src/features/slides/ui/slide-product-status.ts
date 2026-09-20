@@ -1,12 +1,10 @@
 import type { TrafficLightStatus } from "@customreport/shared";
-import {
-  CircleCheck,
-  type LucideIcon,
-  OctagonX,
-  TriangleAlert,
-} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-import { statusLabel } from "../../../shared/lib/status/status-presentation";
+import {
+  statusIcon,
+  statusLabel,
+} from "../../../shared/lib/status/status-presentation";
 
 interface SlideProductStatusPresentation {
   readonly Icon: LucideIcon;
@@ -16,17 +14,17 @@ interface SlideProductStatusPresentation {
 
 export const SLIDE_PRODUCT_STATUS_PRESENTATION = {
   green: {
-    Icon: CircleCheck,
+    Icon: statusIcon("on-track", "product"),
     label: statusLabel("on-track", "print"),
     stripeClassName: "border-l-4 border-l-[var(--color-chip-on-track-border)]",
   },
   yellow: {
-    Icon: TriangleAlert,
+    Icon: statusIcon("at-risk", "product"),
     label: statusLabel("at-risk", "print"),
     stripeClassName: "border-l-4 border-l-[var(--color-status-dot-at-risk)]",
   },
   red: {
-    Icon: OctagonX,
+    Icon: statusIcon("blocked", "product"),
     label: statusLabel("blocked", "print"),
     stripeClassName: "border-l-4 border-l-[var(--color-destructive)]",
   },

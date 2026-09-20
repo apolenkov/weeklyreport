@@ -12,18 +12,13 @@ The system MUST derive a workflow status's tone-token key, icon, and dot class
 from one canonical map keyed on the canonical status set (`blocked` / `at-risk`
 / `on-track` / `empty`), so no in-scope surface re-derives tone, icon, or dot
 from its own `Record<status, …>`. The canonical map lives in a single module
-at `apps/web/src/shared/lib/status/status-presentation.ts`. The enumerated consumers — `status-slide-deck`,
-`slide-activity-pills`, `slide-product-chips`, `lead-slide-hero`,
-`lead-product-grid`, `blocked-at-risk-product-card` (its `SEVERITY_BADGE`
-label/tone only), and the label helpers in `weekly-report` /
-`weekly-report-groupers` — MUST read tone/icon/dot from it rather than hold a
-private copy.
+at `apps/web/src/shared/lib/status/status-presentation.ts`. Status-bearing
+consumers MUST read tone/icon/dot from it rather than hold a private copy.
 
 Labels are variant-aware, not collapsed to one string per status. The map holds
-the label variants required by the surfaces (screen sentence-case `On track` /
+the label variants required by current surfaces (screen sentence-case `On track` /
 `At risk` / `Blocked` / `No status`; print Title-case `On Track` / `At Risk`;
-`status-slide-deck`'s section-readiness vocabulary `Ready` / `Review` / `Blocked`
-/ `Empty`; `lead-slide-hero`'s `Blockers`), addressed through a variant key
+the worst-status pill's `Blockers`), addressed through a variant key
 (`statusLabel(status, variant)`), so parity is preserved by reproducing each
 existing label — not by unifying them. Which surface uses which variant is part
 of this canonical contract.
@@ -36,7 +31,7 @@ lookup, and is explicitly permitted; the private-copy prohibition targets
 label/tone/icon/dot records, not the enum-to-key normalizers.
 
 Adding a new status-bearing surface MUST reuse the canonical map — this clause
-holds repo-wide, not only for the enumerated consumers — and MUST NOT introduce
+holds repo-wide — and MUST NOT introduce
 a second tone/icon/dot lookup for the canonical status set.
 
 The color values themselves stay owned by `web-status-color-tokens`; this map
@@ -44,7 +39,7 @@ keys onto those tokens and does not restate the token rule.
 
 #### Scenario: an in-scope surface renders a status tone, icon, or dot
 
-- **WHEN** an enumerated consumer renders a canonical workflow status's tone
+- **WHEN** a status-bearing consumer renders a canonical workflow status's tone
   class, icon, or dot
 - **THEN** the value is read from the canonical status map
 - **AND** the surface holds no private tone/icon/dot `Record<status, …>` of its
@@ -91,8 +86,8 @@ private literal or move a color onto an unrelated surface.
 The system MUST render the slide status badge through one shared
 `SlideStatusBadge` component and the empty status section through one shared
 `SlideEmptyState` component, so the badge and empty-section markup are defined
-once. `lead-product-grid`, `status-slide-deck`, and every other in-scope slide
-surface MUST render those shared components instead of private badge or empty
+once. Any in-scope slide surface that renders a status badge or empty status
+section MUST use those shared components instead of private badge or empty
 placeholder markup. `SlideStatusBadge` MUST take
 a canonical status (plus its label variant) and resolve label, icon, and tone
 through the canonical map — it MUST NOT accept a pre-formatted tone/color prop
