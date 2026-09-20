@@ -700,6 +700,28 @@ describe("UsersTab — delete modal focus management", () => {
 });
 
 describe("UsersTab — role label rendering", () => {
+  const ROLE_BADGE_TOKENS = [
+    [
+      "lead",
+      "Lead",
+      "var(--color-chip-on-track-bg)",
+      "var(--color-chip-on-track-text)",
+    ],
+    [
+      "head",
+      "Head",
+      "var(--color-chip-at-risk-bg)",
+      "var(--color-chip-at-risk-text)",
+    ],
+    [
+      "admin",
+      "Admin",
+      "var(--color-chip-blocked-bg)",
+      "var(--color-chip-blocked-text)",
+    ],
+    ["viewer", "Viewer", "var(--color-muted)", "var(--color-muted-foreground)"],
+  ] as const;
+
   it("contains the wide table in its local horizontal scroll surface", () => {
     renderTab();
 
@@ -717,6 +739,26 @@ describe("UsersTab — role label rendering", () => {
     expect(row).not.toBeNull();
     const badge = within(row as HTMLElement).getByText(/^Head$/);
     expect(badge.textContent).toBe("Head");
+  });
+
+  it("uses the non-status identity token family for every role badge", () => {
+    const users = ROLE_BADGE_TOKENS.map(([role]) => ({
+      ...USER,
+      id: `user-${role}`,
+      email: `${role}@example.com`,
+      role,
+    }));
+    renderTab(users);
+
+    for (const [role, label, backgroundColor, color] of ROLE_BADGE_TOKENS) {
+      const row = screen.getByText(`${role}@example.com`).closest("tr");
+      expect(row).not.toBeNull();
+      const badge = within(row as HTMLElement).getByText(label);
+
+      expect(badge.style.backgroundColor).toBe(backgroundColor);
+      expect(badge.style.color).toBe(color);
+      expect(badge.getAttribute("style")).not.toContain("var(--color-status-");
+    }
   });
 
   it("uses semantic muted tokens for the inactive badge", () => {

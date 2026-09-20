@@ -31,14 +31,17 @@ const COLUMNS: readonly {
 const ROLE_STYLES: Readonly<
   Record<DbRole, { readonly bg: string; readonly text: string }>
 > = {
-  lead: { bg: "var(--color-success)", text: "var(--color-primary)" },
+  lead: {
+    bg: "var(--color-chip-on-track-bg)",
+    text: "var(--color-chip-on-track-text)",
+  },
   head: {
-    bg: "var(--color-status-in-progress-bg)",
-    text: "var(--color-status-in-progress-fg)",
+    bg: "var(--color-chip-at-risk-bg)",
+    text: "var(--color-chip-at-risk-text)",
   },
   admin: {
-    bg: "var(--color-status-at-risk-bg)",
-    text: "var(--color-status-at-risk-fg)",
+    bg: "var(--color-chip-blocked-bg)",
+    text: "var(--color-chip-blocked-text)",
   },
   viewer: { bg: "var(--color-muted)", text: "var(--color-muted-foreground)" },
 };
