@@ -3,6 +3,7 @@ import {
   submissionDashboardRowSchema,
 } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import { groupScopeFilter } from "../../../lib/group-scope.js";
@@ -10,6 +11,17 @@ import type {
   DashboardScopeSession,
   ReviewRepository,
 } from "../application/review.service.js";
+
+const submissionDashboardInclude = {
+  author: {
+    include: {
+      ledProjects: {
+        where: { archived: false },
+        select: { name: true },
+      },
+    },
+  },
+} as const satisfies Prisma.ReportSectionInclude;
 
 @Injectable()
 export class ReviewPrismaRepository implements ReviewRepository {
@@ -22,32 +34,16 @@ export class ReviewPrismaRepository implements ReviewRepository {
     const scope = groupScopeFilter(session, "reportSection");
     const sections = await this.prisma.reportSection.findMany({
       where: { reportId: activeReportId, ...scope },
-      include: {
-        author: {
-          include: {
-            ledProjects: {
-              where: { archived: false },
-              select: { name: true },
-            },
-          },
-        },
-      },
+      include: submissionDashboardInclude,
     });
 
     return sections.map(toDashboardRow);
   };
 }
 
-type SectionWithAuthor = Awaited<
-  ReturnType<PrismaService["reportSection"]["findMany"]>
->[number] & {
-  readonly author: {
-    readonly id: string;
-    readonly name: string;
-    readonly role: string;
-    readonly ledProjects: readonly { readonly name: string }[];
-  };
-};
+type SectionWithAuthor = Prisma.ReportSectionGetPayload<{
+  include: typeof submissionDashboardInclude;
+}>;
 
 function toDashboardRow(section: SectionWithAuthor): SubmissionDashboardRow {
   return submissionDashboardRowSchema.parse({
