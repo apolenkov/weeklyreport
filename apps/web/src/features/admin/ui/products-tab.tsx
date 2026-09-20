@@ -66,6 +66,7 @@ interface ProductsTabDialogsProps {
   readonly form: ProductFormData;
   readonly setForm: (form: ProductFormData) => void;
   readonly leads: readonly AdminUserView[];
+  readonly retainedOwner: AdminUserView | undefined;
   readonly leadProductCount: number;
   readonly canSave: boolean;
   readonly isSaving: boolean;
@@ -82,6 +83,7 @@ function ProductsTabDialogs({
   form,
   setForm,
   leads,
+  retainedOwner,
   leadProductCount,
   canSave,
   isSaving,
@@ -99,6 +101,7 @@ function ProductsTabDialogs({
           form={form}
           onFormChange={setForm}
           leads={leads}
+          retainedOwner={retainedOwner}
           leadProductCount={leadProductCount}
           canSave={canSave}
           isSaving={isSaving}
