@@ -108,12 +108,22 @@ describe("Archive → restore round-trip (integration)", () => {
     expect(restored).toEqual({ success: true, periodState: "published" });
     const row = await prisma.report.findUniqueOrThrow({
       where: { id: testData.report.id },
-      select: { archived: true, periodState: true, periodStatus: true },
+      select: {
+        archived: true,
+        periodState: true,
+        periodStatus: true,
+        status: true,
+        autoPublished: true,
+        autoArchived: true,
+      },
     });
     expect(row).toEqual({
       archived: false,
       periodState: "published",
       periodStatus: "published",
+      status: "published",
+      autoPublished: false,
+      autoArchived: false,
     });
   });
 });

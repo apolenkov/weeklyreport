@@ -16,7 +16,10 @@ import {
   baselineReportAssistantPrompts,
 } from "./ai-feature-prompt-catalog.js";
 import { AiPromptService } from "./ai-prompt.service.js";
-import { AiPromptConfigurationError } from "./ai-prompt.service-support.js";
+import {
+  AiPromptConfigurationError,
+  AiPromptConflictError,
+} from "./ai-prompt.service-support.js";
 
 const revisionId = "659b2767-0f86-41e2-b025-49730ca010e4";
 const providerId = "759b2767-0f86-41e2-b025-49730ca010e4";
@@ -141,13 +144,19 @@ const serviceFor = (values: {
           },
     ),
   };
+  const audit = { record: vi.fn() };
+  const metrics = { record: vi.fn() };
   return {
     repository: promptRepository,
     providerRepository,
+    audit,
+    metrics,
     service: new AiPromptService(
       promptRepository as unknown as AiPromptRepository,
       providerRepository as never,
       aiFeaturePromptCatalog,
+      audit,
+      metrics,
     ),
   };
 };
@@ -289,6 +298,41 @@ describe("AiPromptService", () => {
       ),
     ).resolves.toMatchObject({ lifecycle: "active" });
     expect(harness.repository.activate).toHaveBeenCalled();
+    expect(harness.audit.record).toHaveBeenCalledWith({
+      event: "ai_prompt.activated",
+      actorId: "admin-1",
+      featureKey: "lead-report-assistant",
+      revisionId: candidate.id,
+      contentHash: candidate.effectiveContentHash,
+      contractVersion: candidate.coreContractVersion,
+    });
+    expect(harness.metrics.record).toHaveBeenCalledWith({
+      feature: "lead-report-assistant",
+      operation: "activation",
+      outcome: "passed",
+    });
+  });
+
+  it("reports an activation conflict through the public service", async () => {
+    const candidate = bundle(AiPromptBundleLifecycle.validated);
+    const harness = serviceFor({ revision: candidate });
+    harness.repository.activate.mockResolvedValue(false);
+
+    await expect(
+      harness.service.activate(
+        {
+          featureKey: "lead-report-assistant",
+          revisionId: candidate.id,
+        },
+        "admin-1",
+      ),
+    ).rejects.toMatchObject({
+      name: AiPromptConflictError.name,
+      message: "Prompt activation lost a lifecycle race",
+    });
+    expect(harness.repository.activate).toHaveBeenCalled();
+    expect(harness.audit.record).not.toHaveBeenCalled();
+    expect(harness.metrics.record).not.toHaveBeenCalled();
   });
 
   it("activates a current draft without requiring a configured provider", async () => {
@@ -333,9 +377,8 @@ describe("AiPromptService", () => {
   });
 
   it("discards a failed prompt attempt", async () => {
-    const harness = serviceFor({
-      revision: bundle(AiPromptBundleLifecycle.failed),
-    });
+    const candidate = bundle(AiPromptBundleLifecycle.failed);
+    const harness = serviceFor({ revision: candidate });
     harness.repository.discardDisposable.mockResolvedValue(true);
 
     await expect(
@@ -348,5 +391,41 @@ describe("AiPromptService", () => {
       "lead-report-assistant",
       revisionId,
     );
+    expect(harness.audit.record).toHaveBeenCalledWith({
+      event: "ai_prompt.discarded",
+      actorId: "admin-1",
+      featureKey: "lead-report-assistant",
+      revisionId,
+      contentHash: candidate.effectiveContentHash,
+      contractVersion: candidate.coreContractVersion,
+    });
+    expect(harness.metrics.record).toHaveBeenCalledWith({
+      feature: "lead-report-assistant",
+      operation: "discard",
+      outcome: "passed",
+    });
+  });
+
+  it("reports a discard conflict through the public service", async () => {
+    const harness = serviceFor({
+      revision: bundle(AiPromptBundleLifecycle.failed),
+    });
+    harness.repository.discardDisposable.mockResolvedValue(false);
+
+    await expect(
+      harness.service.discard(
+        { featureKey: "lead-report-assistant", revisionId },
+        "admin-1",
+      ),
+    ).rejects.toMatchObject({
+      name: AiPromptConflictError.name,
+      message: "AI prompt attempt could not be discarded",
+    });
+    expect(harness.repository.discardDisposable).toHaveBeenCalledWith(
+      "lead-report-assistant",
+      revisionId,
+    );
+    expect(harness.audit.record).not.toHaveBeenCalled();
+    expect(harness.metrics.record).not.toHaveBeenCalled();
   });
 });
