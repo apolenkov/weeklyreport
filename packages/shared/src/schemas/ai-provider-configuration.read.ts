@@ -68,6 +68,7 @@ export const aiProviderConfigurationReadSchema = z
         total: z.number().int().nonnegative(),
         failed: z.number().int().nonnegative(),
         elapsedMs: z.number().int().nonnegative(),
+        finishedAt: z.coerce.date().nullable(),
       })
       .strict(),
     createdAt: z.coerce.date(),

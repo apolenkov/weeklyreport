@@ -18,6 +18,7 @@ const now = new Date("2026-08-10T00:00:00.000Z");
 const storedRevision = (
   id: string,
   lifecycle: AiProviderLifecycle,
+  preparationFinishedAt: Date | null = null,
 ): StoredAiProviderRevision => ({
   id,
   generationProfile: AiProviderProfile.mistral,
@@ -55,7 +56,7 @@ const storedRevision = (
   preparationTotal: 0,
   preparationFailed: 0,
   preparationStartedAt: null,
-  preparationFinishedAt: null,
+  preparationFinishedAt,
   preparationElapsedMs: 0,
   preparationSourceFingerprint: null,
   preparationSourceGeneration: null,
@@ -69,6 +70,7 @@ const control = (): StoredAiProviderControl => {
   const active = storedRevision(
     "11111111-1111-4111-8111-111111111111",
     AiProviderLifecycle.active,
+    now,
   );
   const historical = storedRevision(
     "22222222-2222-4222-8222-222222222222",
@@ -114,6 +116,8 @@ describe("AiProviderConfigurationService read boundary", () => {
       credentialMaskedSuffix: "••••cret",
     });
     expect(result.revisions).toHaveLength(2);
+    expect(result.active?.progress.finishedAt).toEqual(now);
+    expect(result.revisions[1]?.progress.finishedAt).toBeNull();
     expect(serialized).not.toContain("ciphertext-secret");
     expect(serialized).not.toContain("nonce-secret");
     expect(serialized).not.toContain("tag-secret");

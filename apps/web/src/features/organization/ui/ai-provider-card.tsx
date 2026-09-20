@@ -24,6 +24,7 @@ import { selectObservedRevision } from "./ai-provider-revision-selection";
 import { AiProviderStateSummary } from "./ai-provider-state-summary";
 
 type AiProviderMutations = ReturnType<typeof useAiProviderMutations>;
+type ActivationOperation = "activate" | "restore";
 
 const getAiProviderView = (
   revision: AiProviderConfigurationRead | null,
@@ -46,6 +47,9 @@ type AiProviderCardContentProps = Readonly<{
 
 const mutationsAreBusy = (mutations: AiProviderMutations): boolean =>
   Object.values(mutations).some((mutation) => mutation.isPending);
+
+const preparationIsPending = (revision: AiProviderConfigurationRead): boolean =>
+  revision.lifecycle === "preparing" && revision.progress.finishedAt === null;
 
 export function AiProviderCardContent({
   data,
@@ -205,12 +209,29 @@ export function AiProviderCard({
   onRefreshDependents?: () => Promise<unknown> | void;
 }> = {}) {
   const pollIntervalMs = 1500;
+  const [activationPending, setActivationPending] = useState({
+    activate: false,
+    restore: false,
+  });
+  const onActivationPendingChange = (
+    operation: ActivationOperation,
+    pending: boolean,
+  ) => {
+    setActivationPending((current) =>
+      current[operation] === pending
+        ? current
+        : { ...current, [operation]: pending },
+    );
+  };
   const trpc = useTRPC();
   const aiQ = useQuery({
     ...trpc.admin.aiProvider.get.queryOptions(),
     refetchInterval: (query) =>
+      activationPending.activate ||
+      activationPending.restore ||
       query.state.data?.revisions.some(
         (revision) =>
+          preparationIsPending(revision) ||
           revision.latestExecution?.state === "queued" ||
           revision.latestExecution?.state === "running",
       )
@@ -223,6 +244,7 @@ export function AiProviderCard({
   const [operationFailed, setOperationFailed] = useState(false);
   const mutations = useAiProviderMutations({
     trpc,
+    onActivationPendingChange,
     refresh: () => {
       void aiQ.refetch();
       void onRefreshDependents?.();

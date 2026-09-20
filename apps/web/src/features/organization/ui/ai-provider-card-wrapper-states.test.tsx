@@ -1,11 +1,15 @@
-import type { AiProviderControlRead } from "@customreport/shared";
-import { fireEvent, render, screen } from "@testing-library/react";
+import type {
+  AiProviderConfigurationRead,
+  AiProviderControlRead,
+} from "@customreport/shared";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   useQuery: vi.fn(),
   useTRPC: vi.fn(),
   useAiProviderMutations: vi.fn(),
+  useAiProviderMutationsInput: vi.fn(),
   refetch: vi.fn(),
   queryOptions: vi.fn(() => ({ queryKey: ["admin", "aiProvider", "get"] })),
 }));
@@ -71,13 +75,84 @@ const dataWithExecutionState = (
     revisions: [{ latestExecution: { state } }],
   }) as unknown as AiProviderControlRead;
 
+const dataWithPreparationState = (
+  lifecycle: AiProviderConfigurationRead["lifecycle"],
+  progress: Partial<
+    AiProviderConfigurationRead["progress"] & { finishedAt: Date | null }
+  >,
+): AiProviderControlRead =>
+  ({
+    revisions: [
+      {
+        lifecycle,
+        progress: {
+          completed: 0,
+          total: 0,
+          failed: 0,
+          elapsedMs: 0,
+          finishedAt: null,
+          ...progress,
+        },
+      },
+    ],
+  }) as unknown as AiProviderControlRead;
+
+const validatedControl = (): AiProviderControlRead => {
+  const finishedAt = new Date("2026-09-20T13:00:00.000Z");
+  return {
+    enabled: false,
+    availability: "not_configured",
+    activeRevisionId: null,
+    profileCapabilities: [],
+    active: null,
+    revisions: [
+      {
+        id: "11111111-1111-4111-8111-111111111111",
+        lifecycle: "validated",
+        generation: {
+          profile: "mistral",
+          baseUrl: "https://api.mistral.ai/v1",
+          plannerModel: "planner",
+          answerModel: "answer",
+          reasoningMode: "provider_default",
+          reasoningCustomValue: null,
+          credentialConfigured: true,
+          credentialMaskedSuffix: "••••test",
+        },
+        embeddings: {
+          mode: "reuse_generation",
+          model: "embed",
+          dimensions: 3,
+        },
+        generationCompatibilityIdentity: "generation-identity",
+        semanticInputVersion: "v1",
+        testResult: null,
+        latestExecution: null,
+        progress: {
+          completed: 0,
+          total: 0,
+          failed: 0,
+          elapsedMs: 0,
+          finishedAt,
+        },
+        createdAt: finishedAt,
+        updatedAt: finishedAt,
+        activatedAt: null,
+      },
+    ],
+  };
+};
+
 describe("AiProviderCard wrapper states", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.useTRPC.mockReturnValue({
       admin: { aiProvider: { get: { queryOptions: mocks.queryOptions } } },
     });
-    mocks.useAiProviderMutations.mockReturnValue(mutations());
+    mocks.useAiProviderMutations.mockImplementation((input) => {
+      mocks.useAiProviderMutationsInput(input);
+      return mutations();
+    });
   });
 
   it("renders loading feedback while the provider query is in flight", () => {
@@ -132,4 +207,134 @@ describe("AiProviderCard wrapper states", () => {
       ).toBe(expected);
     },
   );
+
+  it.each([
+    [
+      "preparing with no discovered work",
+      "preparing",
+      { completed: 0, total: 0, failed: 0, finishedAt: null },
+      1500,
+    ],
+    [
+      "preparing with incomplete work",
+      "preparing",
+      { completed: 2, total: 5, failed: 0, finishedAt: null },
+      1500,
+    ],
+    [
+      "preparing after zero-work completion",
+      "preparing",
+      {
+        completed: 0,
+        total: 0,
+        failed: 0,
+        finishedAt: new Date("2026-09-20T13:00:00.000Z"),
+      },
+      false,
+    ],
+    [
+      "failed preparation",
+      "failed",
+      {
+        completed: 2,
+        total: 5,
+        failed: 1,
+        finishedAt: new Date("2026-09-20T13:00:00.000Z"),
+      },
+      false,
+    ],
+    [
+      "validated revision",
+      "validated",
+      { completed: 5, total: 5, failed: 0, finishedAt: null },
+      false,
+    ],
+  ] as const)(
+    "uses the expected polling interval for %s",
+    (_name, lifecycle, progress, expected) => {
+      mocks.useQuery.mockReturnValue(queryResult({ isLoading: true }));
+
+      render(<AiProviderCard />);
+
+      const options = mocks.useQuery.mock.calls.at(-1)?.[0] as
+        QueryOptions | undefined;
+      const refetchInterval = options?.refetchInterval;
+
+      expect(refetchInterval).toBeTypeOf("function");
+      expect(
+        refetchInterval?.({
+          state: {
+            data: dataWithPreparationState(lifecycle, progress),
+          },
+        }),
+      ).toBe(expected);
+    },
+  );
+
+  it("polls when any revision still has unfinished preparation", () => {
+    mocks.useQuery.mockReturnValue(queryResult({ isLoading: true }));
+
+    render(<AiProviderCard />);
+
+    const options = mocks.useQuery.mock.calls.at(-1)?.[0] as
+      QueryOptions | undefined;
+    const refetchInterval = options?.refetchInterval;
+
+    expect(refetchInterval).toBeTypeOf("function");
+    expect(
+      refetchInterval?.({
+        state: {
+          data: {
+            revisions: [
+              dataWithPreparationState("failed", {
+                completed: 5,
+                total: 5,
+                failed: 1,
+                finishedAt: new Date("2026-09-20T13:00:00.000Z"),
+              }).revisions[0],
+              dataWithPreparationState("preparing", {
+                completed: 2,
+                total: 5,
+                failed: 0,
+                finishedAt: null,
+              }).revisions[0],
+            ],
+          } as AiProviderControlRead,
+        },
+      }),
+    ).toBe(1500);
+  });
+
+  it("polls cached validated data while activation or restore is pending", () => {
+    const validated = validatedControl();
+    mocks.useQuery.mockReturnValue(queryResult({ data: validated }));
+
+    const { rerender } = render(<AiProviderCard />);
+    const interval = () => {
+      const options = mocks.useQuery.mock.calls.at(-1)?.[0] as
+        QueryOptions | undefined;
+      return options?.refetchInterval?.({ state: { data: validated } });
+    };
+    const input = mocks.useAiProviderMutationsInput.mock.calls.at(-1)?.[0] as {
+      onActivationPendingChange: (
+        operation: "activate" | "restore",
+        pending: boolean,
+      ) => void;
+    };
+
+    expect(interval()).toBe(false);
+
+    act(() => input.onActivationPendingChange("activate", true));
+    rerender(<AiProviderCard />);
+    expect(interval()).toBe(1500);
+
+    act(() => input.onActivationPendingChange("restore", true));
+    act(() => input.onActivationPendingChange("activate", false));
+    rerender(<AiProviderCard />);
+    expect(interval()).toBe(1500);
+
+    act(() => input.onActivationPendingChange("restore", false));
+    rerender(<AiProviderCard />);
+    expect(interval()).toBe(false);
+  });
 });

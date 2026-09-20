@@ -92,6 +92,7 @@ export const safeRevision = (
       total: revision.preparationTotal,
       failed: revision.preparationFailed,
       elapsedMs: revision.preparationElapsedMs,
+      finishedAt: revision.preparationFinishedAt,
     },
     createdAt: revision.createdAt,
     updatedAt: revision.updatedAt,
