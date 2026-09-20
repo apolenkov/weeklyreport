@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-query";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { TRPCClientError } from "@trpc/client";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -18,12 +19,25 @@ import type { ReopenRequest } from "./reopen-request-card";
 import { ReopenTab } from "./reopen-tab";
 import { ReopenTabLabel } from "./reopen-tab-label";
 
+const clientErrorReporting = vi.hoisted(() => ({
+  logClientError: vi.fn(),
+}));
 vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
+vi.mock(
+  "../../../shared/lib/errors/client-error-reporting",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("../../../shared/lib/errors/client-error-reporting")
+    >()),
+    logClientError: clientErrorReporting.logClientError,
+  }),
+);
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  clientErrorReporting.logClientError.mockClear();
 });
 
 const requests: readonly ReopenRequest[] = ["Alice", "Bob"].map(
@@ -339,12 +353,41 @@ describe("Admin reopen pagination", () => {
     let attempts = 0;
     renderAdminList(() => {
       attempts += 1;
-      if (attempts === 1) return Promise.reject(new Error("history failed"));
+      if (attempts === 1) {
+        const error = new TRPCClientError(
+          JSON.stringify([
+            {
+              code: "invalid_format",
+              pattern: "/^uuid$/",
+              path: ["reportId"],
+            },
+          ]),
+        );
+        Object.defineProperty(error, "data", {
+          value: { code: "BAD_REQUEST", httpStatus: 400 },
+          configurable: true,
+        });
+        return Promise.reject(error);
+      }
       return Promise.resolve({ items: [requests[0]], nextCursor: null });
     });
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "history failed",
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(
+      "Failed to load requests: This link is invalid or the report no longer exists.",
+    );
+    expect(alert).not.toHaveTextContent("pattern");
+    expect(clientErrorReporting.logClientError).toHaveBeenCalledWith(
+      "admin.reopen_requests.list_failed",
+      expect.objectContaining({
+        data: { code: "BAD_REQUEST", httpStatus: 400 },
+      }),
+      {
+        component: "ReopenTab",
+        procedure: "admin.listReopenRequests",
+        status: "pending",
+        search: null,
+      },
     );
     await userEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(await screen.findByText("Alice")).toBeInTheDocument();

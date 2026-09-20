@@ -37,7 +37,7 @@ export function ReopenNextPageIssue({
       role="alert"
       className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius)] border border-[var(--color-destructive)] bg-[var(--color-status-blocked-bg)] p-4 text-sm text-[var(--color-destructive)]"
     >
-      <span>Some requests could not be loaded: {errorMessage}</span>
+      <span>{errorMessage}</span>
       <button
         type="button"
         disabled={isRetrying}

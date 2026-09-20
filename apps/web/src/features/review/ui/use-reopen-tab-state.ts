@@ -8,6 +8,7 @@ import {
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";
 import {
   invalidateLeadForm,
   invalidateSubmissionDashboard,
@@ -97,6 +98,12 @@ export function useReopenTabState() {
       },
     ),
   );
+  useQueryErrorHandler(listQuery, {
+    event: "admin.reopen_requests.list_failed",
+    component: "ReopenTab",
+    procedure: "admin.listReopenRequests",
+    context: { status: filter, search: search.trim() || null },
+  });
 
   const respondMut = useRespondReopenMutation(draft.reset);
 

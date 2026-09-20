@@ -1,5 +1,6 @@
 "use client";
 
+import { formatClientErrorMessage } from "../../../shared/lib/errors/client-error-reporting";
 import type { ReopenDecision } from "../../../shared/ui/forms/reopen-respond-form";
 import { TabHeader, TabSearch } from "../../../shared/ui/tabs/tab-header";
 import {
@@ -170,7 +171,10 @@ export function ReopenTab() {
         isPending={listQuery.isPending}
         errorMessage={
           listQuery.isError && requests.length === 0
-            ? listQuery.error.message
+            ? formatClientErrorMessage(
+                "Failed to load requests",
+                listQuery.error,
+              )
             : null
         }
         isEmpty={requests.length === 0}
@@ -195,7 +199,10 @@ export function ReopenTab() {
 
       {listQuery.isError && requests.length > 0 ? (
         <ReopenNextPageIssue
-          errorMessage={listQuery.error.message}
+          errorMessage={formatClientErrorMessage(
+            "Some requests could not be loaded",
+            listQuery.error,
+          )}
           isRetrying={listQuery.isFetching}
           onRetry={() => {
             if (listQuery.isFetchNextPageError) {
@@ -252,7 +259,7 @@ function ReopenListStatus({
         role="alert"
         className="rounded-[var(--radius)] border border-[var(--color-destructive)] bg-[var(--color-status-blocked-bg)] p-4 text-sm text-[var(--color-destructive)]"
       >
-        <p>Failed to load requests: {errorMessage}</p>
+        <p>{errorMessage}</p>
         <button
           type="button"
           onClick={onRetry}

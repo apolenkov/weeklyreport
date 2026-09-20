@@ -4,6 +4,7 @@ import type { ReviewAcknowledgementView } from "@customreport/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 
 export interface AcknowledgeGroup {
@@ -50,6 +51,12 @@ function useAcknowledgeGroup(
   const acksQ = useQuery(
     trpc.review.acknowledgements.queryOptions({ reportId, groupId }),
   );
+  useQueryErrorHandler(acksQ, {
+    event: "review.acknowledgements.load_failed",
+    component: "ReviewAcknowledgeBar",
+    procedure: "review.acknowledgements",
+    context: { reportId, groupId },
+  });
   // A failed roster must not read as "nobody acknowledged" — withhold it and inert the control.
   const acks: ReviewAcknowledgementView[] = acksQ.isError
     ? []
