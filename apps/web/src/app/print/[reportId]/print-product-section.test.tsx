@@ -140,6 +140,34 @@ describe("PrintProductSection — item outcome context", () => {
   });
 });
 
+describe("PrintProductSection — item status badge", () => {
+  it("prints an at-risk item badge with the amber palette", () => {
+    render(
+      <PrintProductSection
+        report={{
+          ...makeReport("on-track"),
+          currentWeek: [
+            {
+              id: "item-risk",
+              stageLead: "Build · AL",
+              stage: "Build",
+              owner: "AL",
+              text: "Ship behind schedule",
+              status: "at-risk",
+            },
+          ],
+        }}
+      />,
+    );
+
+    const badge = screen.getByText("At Risk");
+    expect(badge).toHaveStyle({
+      backgroundColor: "#fef9e7",
+      color: "#daa520",
+    });
+  });
+});
+
 describe("PrintProductSection — next workflow meaning", () => {
   it("prints Planned and Postponed labels without relying on color", () => {
     render(

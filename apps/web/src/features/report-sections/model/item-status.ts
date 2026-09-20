@@ -1,6 +1,7 @@
 // Bridges stored ItemWorkflowStatus with UI ItemStatus. Stored enum is the
-// sole progress source: no completed flag, no stored blocked. `blocked` is a
-// covering-risk display overlay only — never settable or persistable.
+// sole progress source: no completed flag, no stored blocked. `at-risk` and
+// `blocked` are covering-risk display overlays only — never settable or
+// persistable.
 
 import type { ItemWorkflowStatus } from "@customreport/shared";
 
@@ -10,13 +11,14 @@ const IN_PROGRESS_STATUS = "in-progress";
 
 export type { ItemWorkflowStatus } from "@customreport/shared";
 export type ItemType = "current" | "next";
-export type ItemStatus =
-  "in-progress" | "completed" | "planned" | "paused" | "postponed" | "blocked";
+export type ItemProgressStatus =
+  "in-progress" | "completed" | "planned" | "paused" | "postponed";
+export type ItemStatus = ItemProgressStatus | "at-risk" | "blocked";
 
-// Never produces 'blocked' — that is the risk-derived overlay only.
+// Never produces an alarm — those are the risk-derived overlay only.
 export function workflowToItemStatus(
   ws: ItemWorkflowStatus,
-): Exclude<ItemStatus, "blocked"> {
+): ItemProgressStatus {
   switch (ws) {
     case "done":
       return "completed";
@@ -31,9 +33,9 @@ export function workflowToItemStatus(
   }
 }
 
-// 'blocked' excluded at the type level (a blocker is a risk, never an item status).
+// Alarms excluded at the type level (a blocker is a risk, never an item status).
 export function itemStatusToWorkflow(
-  status: Exclude<ItemStatus, "blocked">,
+  status: ItemProgressStatus,
 ): ItemWorkflowStatus {
   switch (status) {
     case "completed":
@@ -49,13 +51,13 @@ export function itemStatusToWorkflow(
   }
 }
 
-// Save path: 'blocked' is the covering-risk overlay, so what persists is the
-// progress underneath it — in-progress.
+// Save path: alarms are the covering-risk overlay, so what persists is the
+// progress underneath them — in-progress.
 export function persistableItemStatusToWorkflow(
   status: ItemStatus,
 ): ItemWorkflowStatus {
   return itemStatusToWorkflow(
-    status === "blocked" ? IN_PROGRESS_STATUS : status,
+    status === "blocked" || status === "at-risk" ? IN_PROGRESS_STATUS : status,
   );
 }
 
@@ -66,9 +68,9 @@ export function deriveItemStatus(item: {
   return workflowToItemStatus(item.workflowStatus);
 }
 
-// Covering-risk BLOCKED overlay on a base progress status — same rule as the
-// lead card. Only in-progress is eligible; at-risk amber remains at risk.
-export function applyBlockedRiskOverlay(
+// Covering-risk alarm overlay on a base progress status — same rule as the
+// lead card. Only in-progress is eligible; blocked outranks at-risk.
+export function applyRiskAlarmOverlay(
   base: ItemStatus,
   parent: {
     projectId: string;
@@ -84,10 +86,10 @@ export function applyBlockedRiskOverlay(
     },
     alarmRisks,
   );
-  return covered === "blocked" ? "blocked" : base;
+  return covered ?? base;
 }
 
-// Head-report badge: progress status with the blocked overlay applied.
+// Head-report badge: progress status with the risk-alarm overlay applied.
 export function deriveHeadItemStatus(
   item: {
     workflowStatus: ItemWorkflowStatus;
@@ -97,5 +99,5 @@ export function deriveHeadItemStatus(
   },
   alarmRisks: readonly AlarmRisk[],
 ): ItemStatus {
-  return applyBlockedRiskOverlay(deriveItemStatus(item), item, alarmRisks);
+  return applyRiskAlarmOverlay(deriveItemStatus(item), item, alarmRisks);
 }

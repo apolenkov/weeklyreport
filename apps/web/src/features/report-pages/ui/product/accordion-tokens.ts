@@ -54,13 +54,18 @@ export const HEADER_STATUS_TONE = {
 } as const satisfies Record<WeeklyProductStatus, string>;
 
 // Each workflow status resolves its badge through named tokens, never hardcoded
-// hex: blocked=red alarm, in-progress=steel-blue, completed=success green,
-// planned=muted.
+// hex: blocked=red alarm, at-risk=amber alarm, in-progress=steel-blue,
+// completed=success green, planned/paused/postponed=muted.
 export const STATUS_BADGE = {
   blocked: {
     label: "Blocked",
     bg: CSS.statusBlockedBg,
     fg: CSS.destructive,
+  },
+  "at-risk": {
+    label: "At Risk",
+    bg: "var(--color-status-at-risk-bg)",
+    fg: CSS.statusAtRiskFg,
   },
   "in-progress": {
     label: "In Progress",

@@ -251,6 +251,68 @@ describe("mapWeeklyReport — grouping, severity & escalation", () => {
     expect(expectDefined(crmReport?.risks[0]).severity).toBe("at-risk");
   });
 
+  it("floors a covered in-progress item to at-risk on the head report", () => {
+    const report = baseReport({
+      portfolioOverview: [
+        {
+          productId: PROJECT_A,
+          productName: "CRM",
+          worstStatus: "yellow",
+          stageCount: 7,
+          leadNames: ["Тимлид 1"],
+          leadIds: ["695cfa6a-0dd8-50a5-84e5-06c474e139fd"],
+        },
+      ],
+      leadSections: [
+        {
+          activities: [],
+          reportSectionId: SECTION_A,
+          reportId: REPORT_ID,
+          authorId: AUTHOR_A,
+          authorName: "Тимлид 1",
+          version: 1,
+          status: "submitted",
+          submittedAt: new Date("2026-04-19T18:00:00Z"),
+          projects: [
+            {
+              projectId: PROJECT_A,
+              projectName: "CRM",
+              trafficLight: "yellow",
+            },
+          ],
+          items: [
+            {
+              id: "i1",
+              projectId: PROJECT_A,
+              type: "current",
+              text: "OAuth integration",
+              tag: "auth",
+              workflowStatus: "in_progress",
+              carriedOver: false,
+              stageNames: ["Dev"],
+            },
+          ],
+          risks: [
+            {
+              id: "r1",
+              projectId: PROJECT_A,
+              risk: "OAuth slow",
+              impact: "SSO slips",
+              mitigation: "Vendor escalation",
+              severity: "at-risk",
+              stageNames: ["Dev"],
+            },
+          ],
+          decisions: [],
+        },
+      ],
+    });
+
+    const result = mapWeeklyReport(report);
+    const crmReport = result.products.find((p) => p.id === PROJECT_A);
+    expect(expectDefined(crmReport?.currentWeek[0]).status).toBe("at-risk");
+  });
+
   it("honors persisted risk severity when no blocked item exists", () => {
     const report = baseReport({
       portfolioOverview: [

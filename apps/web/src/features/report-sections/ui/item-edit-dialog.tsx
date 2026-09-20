@@ -6,7 +6,7 @@ import { RecordDialogFooter } from "../../../shared/ui/forms/record-dialog-foote
 import type { ParentActivityOption } from "../model/record-parent";
 import type { KanbanItem, Product, RiskEntry } from "../model/types";
 import { ItemEditDialogFields } from "./item-edit-dialog-fields";
-import { CURRENT_WEEK_CHOICES, NEXT_WEEK_CHOICES } from "./item-status-choices";
+import { ITEM_STATUS_CHOICES } from "./item-status-choices";
 import { useItemEditDialog } from "./use-item-edit-dialog";
 
 const EMPTY_ACTIVITIES: readonly ParentActivityOption[] = [];
@@ -19,7 +19,6 @@ export interface ItemEditDialogProps {
   readonly products: readonly Product[];
   // When set, parent picker offers activities; activity parent hides stage step.
   readonly activities?: readonly ParentActivityOption[] | undefined;
-  // Next week omits Completed/Blocked — those are in-flight, not yet-to-start.
   readonly week: "current" | "next";
   readonly currentUserName?: string | undefined;
   // Requested product seed; a missing or stale ID leaves the parent unresolved.
@@ -75,7 +74,14 @@ function ItemEditDialogContent(props: ItemEditDialogContentProps) {
   const { dialogSurfaceRef, handleKeyDown, handleSave, headerVerb, ...fields } =
     useItemEditDialog({ ...props, activities });
 
-  const choices = week === "current" ? CURRENT_WEEK_CHOICES : NEXT_WEEK_CHOICES;
+  const choices =
+    week === "current"
+      ? ITEM_STATUS_CHOICES.map((choice) =>
+          choice.value === "planned"
+            ? { ...choice, label: "Not started" }
+            : choice,
+        )
+      : ITEM_STATUS_CHOICES;
 
   return (
     <DocumentBodyPortal>
