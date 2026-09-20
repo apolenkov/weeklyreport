@@ -1,15 +1,10 @@
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@customreport/ui/components/ui/dropdown-menu";
-import { ChevronDown, MoreHorizontal } from "lucide-react";
+import { useRef, useState } from "react";
 
 import type {
   StatusOverviewEditTarget,
   StatusOverviewItem,
 } from "../model/status-overview";
+import { statusOverviewItemActions } from "../model/status-overview-items";
 import { OVERVIEW_ITEM_ACTION_CLASS } from "./status-overview-quick-edit-form";
 
 interface ActionProps {
@@ -31,107 +26,206 @@ interface ActionProps {
     ((item: StatusOverviewItem, focusKey?: string) => void) | undefined;
 }
 
-function restoreFocusAfterConfirmation(item: StatusOverviewItem): void {
-  queueMicrotask(() => {
-    const identity = item.stableId ?? item.key;
-    const target = Array.from(
-      document.querySelectorAll<HTMLElement>("[data-overview-focus]"),
-    ).find(
-      (element) =>
-        element.dataset.overviewFocus === `edit:${item.source}:${identity}`,
-    );
-    (
-      target ??
-      document.querySelector<HTMLElement>("[data-overview-focus-heading]")
-    )?.focus();
-  });
-}
+const PRIMARY_ACTION_CLASS =
+  "inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-sm)] bg-[var(--color-primary)] px-3 text-xs font-semibold text-[var(--color-primary-foreground)] hover:bg-[var(--color-starbucks-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]";
 
-function ConfirmAction({ item, onConfirmItem }: ActionProps) {
-  if (!onConfirmItem || item.source !== "current" || !item.needsConfirmation)
-    return null;
-  const focusKey = `confirm:${item.source}:${item.stableId ?? item.key}`;
+function ProgressAction({ item, onEditItem }: ActionProps) {
+  if (statusOverviewItemActions(item).primary !== "progress") return null;
+  const target = item.editTarget;
+  if (target === null || onEditItem === undefined) return null;
+  const carried = item.needsConfirmation === true;
+  const identity = item.stableId ?? item.key;
+  // Carried items keep the confirm anchor: the submit-readiness summary
+  // deep-links to `confirm:current:<stableId>`, and saving the editor clears
+  // carriedOver through the existing confirmation patch. Other items reuse the
+  // `edit:` focus key so readiness links land on a top-level control.
+  const focusKey = `${carried ? "confirm" : "edit"}:${item.source}:${identity}`;
   return (
     <button
-      id={focusKey}
+      id={carried ? focusKey : undefined}
       type="button"
-      aria-label={`Confirm ${item.text} for this week`}
+      aria-label={`Update progress for ${item.text}`}
       data-overview-focus={focusKey}
-      onClick={() => {
-        onConfirmItem(item);
-        restoreFocusAfterConfirmation(item);
-      }}
-      className="inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-sm)] bg-[var(--color-primary)] px-3 text-xs font-semibold text-[var(--color-primary-foreground)] hover:bg-[var(--color-starbucks-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+      onClick={() => onEditItem(target)}
+      className={PRIMARY_ACTION_CLASS}
     >
-      Confirm for this week
+      Update progress
     </button>
   );
 }
 
-function EditAction({ item, onEditItem }: ActionProps) {
-  const target = item.editTarget;
-  if (!onEditItem || !target || target.focusNextStep) return null;
-  const targetIdentity = item.stableId ?? `${target.source}:${target.recordId}`;
+function MenuItem({
+  label,
+  ariaLabel,
+  focusKey,
+  fallbackKey,
+  onActivate,
+}: {
+  readonly label: string;
+  readonly ariaLabel: string;
+  readonly focusKey: string;
+  readonly fallbackKey?: string;
+  readonly onActivate: () => void;
+}) {
   return (
     <button
       type="button"
-      aria-label={`Edit update: ${item.text}`}
-      data-overview-focus={`edit:${item.source}:${item.stableId ?? item.key}`}
-      data-overview-focus-fallback={`edit:${target.source}:${targetIdentity}`}
-      onClick={() => onEditItem(target)}
+      aria-label={ariaLabel}
+      data-overview-focus={focusKey}
+      data-overview-focus-fallback={fallbackKey}
+      onClick={onActivate}
       className={OVERVIEW_ITEM_ACTION_CLASS}
     >
-      Edit
+      {label}
     </button>
   );
 }
 
-function MoveAction({ item, onMoveItem }: ActionProps) {
-  const target = item.editTarget;
-  if (
-    !onMoveItem ||
-    !target ||
-    item.resolution != null ||
-    item.workflowStatus === "done"
-  )
-    return null;
+function EditMenuItem({
+  item,
+  target,
+  onEdit,
+  onDone,
+}: {
+  readonly item: StatusOverviewItem;
+  readonly target: StatusOverviewEditTarget;
+  readonly onEdit: (target: StatusOverviewEditTarget) => void;
+  readonly onDone: () => void;
+}) {
+  const identity = item.stableId ?? item.key;
+  return (
+    <MenuItem
+      label="Edit details"
+      ariaLabel={`Edit details: ${item.text}`}
+      focusKey={`edit:${item.source}:${identity}`}
+      fallbackKey={`edit:${target.source}:${
+        item.stableId ?? `${target.source}:${target.recordId}`
+      }`}
+      onActivate={() => {
+        onDone();
+        onEdit(target);
+      }}
+    />
+  );
+}
+
+function StatusMenuItem({
+  item,
+  onResolve,
+  onDone,
+}: {
+  readonly item: StatusOverviewItem;
+  readonly onResolve: NonNullable<ActionProps["onResolvePlan"]>;
+  readonly onDone: () => void;
+}) {
+  const focusKey = `resolve:${item.source}:${item.stableId ?? item.key}`;
+  return (
+    <MenuItem
+      label="Update status"
+      ariaLabel={`Update status: ${item.text}`}
+      focusKey={focusKey}
+      onActivate={() => {
+        onDone();
+        onResolve(item, focusKey);
+      }}
+    />
+  );
+}
+
+function MoveMenuItem({
+  item,
+  onMove,
+  onDone,
+}: {
+  readonly item: StatusOverviewItem;
+  readonly onMove: NonNullable<ActionProps["onMoveItem"]>;
+  readonly onDone: () => void;
+}) {
   const nextWeek = item.source === "current";
   const focusKey = `move:${item.source}:${item.stableId ?? item.key}`;
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label={`Move ${item.text}`}
-          data-overview-focus={focusKey}
-          className={OVERVIEW_ITEM_ACTION_CLASS}
-        >
-          Move
-          <ChevronDown aria-hidden="true" className="ml-1 h-3.5 w-3.5" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" aria-label={`Move ${item.text}`}>
-        <DropdownMenuItem
-          data-overview-focus={focusKey}
-          className="min-h-[var(--touch-target-min)]"
-          onSelect={() =>
-            onMoveItem(item, nextWeek ? "next" : "current", focusKey)
-          }
-        >
-          Move to {nextWeek ? "next week" : "this week"}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <MenuItem
+      label={nextWeek ? "Move to next week" : "Move to this week"}
+      ariaLabel={`Move ${item.text} to ${nextWeek ? "next week" : "this week"}`}
+      focusKey={focusKey}
+      onActivate={() => {
+        onDone();
+        onMove(item, nextWeek ? "next" : "current", focusKey);
+      }}
+    />
+  );
+}
+
+function MoreActions({
+  item,
+  onEditItem,
+  onMoveItem,
+  onResolvePlan,
+}: ActionProps) {
+  const [open, setOpen] = useState(false);
+  const summaryRef = useRef<HTMLElement>(null);
+  const secondary = statusOverviewItemActions(item).secondary;
+  const edit = secondary.includes("edit") ? onEditItem : undefined;
+  const move = secondary.includes("move") ? onMoveItem : undefined;
+  // The terminal outcome path stays available for active editable items, but
+  // never on Previous rows or an unconfirmed carry — the canonical progress
+  // editor clears that first.
+  const status =
+    item.source !== "previous" &&
+    item.needsConfirmation !== true &&
+    item.canResolve
+      ? onResolvePlan
+      : undefined;
+  const target = item.editTarget;
+  if ((!edit && !move && !status) || target === null) return null;
+  const close = () => setOpen(false);
+  return (
+    <details
+      open={open}
+      className="min-w-0"
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && open) {
+          event.stopPropagation();
+          close();
+          summaryRef.current?.focus();
+        }
+      }}
+    >
+      <summary
+        ref={summaryRef}
+        aria-label={`More actions for ${item.text}`}
+        onClick={(event) => {
+          event.preventDefault();
+          setOpen(!open);
+        }}
+        className={`${OVERVIEW_ITEM_ACTION_CLASS} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
+      >
+        More actions
+      </summary>
+      <div className="flex flex-wrap items-center gap-1 pt-1">
+        {edit ? (
+          <EditMenuItem
+            item={item}
+            target={target}
+            onEdit={edit}
+            onDone={close}
+          />
+        ) : null}
+        {status ? (
+          <StatusMenuItem item={item} onResolve={status} onDone={close} />
+        ) : null}
+        {move ? (
+          <MoveMenuItem item={item} onMove={move} onDone={close} />
+        ) : null}
+      </div>
+    </details>
   );
 }
 
 function PlanAction({ item, onPlanItem }: ActionProps) {
   if (
     !onPlanItem ||
-    item.source !== "previous" ||
-    !item.canResolve ||
-    item.resolution != null ||
-    item.workflowStatus === "done"
+    !statusOverviewItemActions(item).recovery.includes("replan")
   )
     return null;
   return (
@@ -146,73 +240,42 @@ function PlanAction({ item, onPlanItem }: ActionProps) {
   );
 }
 
-function SecondaryActions({ item, onResolvePlan, onRestorePlan }: ActionProps) {
-  const resolve =
-    !item.needsConfirmation && item.canResolve && onResolvePlan !== undefined;
-  const restore = item.canRestore && onRestorePlan !== undefined;
-  if (!resolve && !restore) return null;
-  const kind = restore ? "restore" : "resolve";
-  const focusKey = `${kind}:${item.source}:${item.stableId ?? item.key}`;
+function RestoreAction({ item, onRestorePlan }: ActionProps) {
+  if (
+    !onRestorePlan ||
+    !statusOverviewItemActions(item).recovery.includes("restore")
+  )
+    return null;
+  const focusKey = `restore:${item.source}:${item.stableId ?? item.key}`;
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label={`More actions for ${item.text}`}
-          data-overview-focus={focusKey}
-          className={OVERVIEW_ITEM_ACTION_CLASS}
-        >
-          <MoreHorizontal aria-hidden="true" className="h-4 w-4" />
-          <span className="sr-only">More actions</span>
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="start"
-        aria-label={`Actions for ${item.text}`}
-      >
-        {resolve ? (
-          <DropdownMenuItem
-            data-overview-focus={focusKey}
-            className="min-h-[var(--touch-target-min)]"
-            onSelect={() => onResolvePlan(item, focusKey)}
-          >
-            Update status
-          </DropdownMenuItem>
-        ) : null}
-        {restore ? (
-          <DropdownMenuItem
-            data-overview-focus={focusKey}
-            className="min-h-[var(--touch-target-min)]"
-            onSelect={() => onRestorePlan(item, focusKey)}
-          >
-            Restore
-          </DropdownMenuItem>
-        ) : null}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <button
+      type="button"
+      aria-label={`Restore ${item.text}`}
+      data-overview-focus={focusKey}
+      onClick={() => onRestorePlan(item, focusKey)}
+      className={OVERVIEW_ITEM_ACTION_CLASS}
+    >
+      Restore
+    </button>
   );
 }
 
 function hasActions(props: ActionProps): boolean {
   const { item } = props;
+  const actions = statusOverviewItemActions(item);
+  const primary = item.editTarget !== null ? props.onEditItem : undefined;
+  const resolvable =
+    item.source !== "previous" &&
+    item.needsConfirmation !== true &&
+    item.canResolve &&
+    props.onResolvePlan !== undefined;
   return (
-    (props.onEditItem !== undefined &&
-      item.editTarget !== null &&
-      !item.editTarget.focusNextStep) ||
-    (props.onPlanItem !== undefined &&
-      item.source === "previous" &&
-      item.canResolve &&
-      item.resolution == null &&
-      item.workflowStatus !== "done") ||
-    (props.onMoveItem !== undefined &&
-      item.editTarget !== null &&
-      item.resolution == null &&
-      item.workflowStatus !== "done") ||
-    (props.onConfirmItem !== undefined &&
-      item.source === "current" &&
-      (item.needsConfirmation ?? false)) ||
-    item.canResolve ||
-    item.canRestore
+    (actions.primary === "progress" && primary !== undefined) ||
+    (actions.secondary.includes("edit") && props.onEditItem !== undefined) ||
+    (actions.secondary.includes("move") && props.onMoveItem !== undefined) ||
+    resolvable ||
+    (actions.recovery.includes("replan") && props.onPlanItem !== undefined) ||
+    (actions.recovery.includes("restore") && props.onRestorePlan !== undefined)
   );
 }
 
@@ -223,11 +286,10 @@ export function PreviewActions(props: ActionProps) {
       data-overview-item-actions
       className="mt-2 flex min-h-[var(--touch-target-min)] flex-wrap items-center gap-1 border-t border-[var(--color-border-subtle)] pt-2 md:mt-auto"
     >
-      <ConfirmAction {...props} />
-      <EditAction {...props} />
+      <ProgressAction {...props} />
+      <MoreActions {...props} />
       <PlanAction {...props} />
-      <MoveAction {...props} />
-      <SecondaryActions {...props} />
+      <RestoreAction {...props} />
     </div>
   );
 }

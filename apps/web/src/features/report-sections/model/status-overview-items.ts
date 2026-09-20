@@ -255,3 +255,69 @@ export function buildStatusOverviewColumns(
     },
   };
 }
+
+type SecondaryAction = "edit" | "move";
+type RecoveryAction = "replan" | "restore";
+
+export interface StatusOverviewActionModel {
+  /** The single primary control; absent on read-only and terminal items. */
+  readonly primary: "progress" | null;
+  /** Entries of the quiet overflow disclosure, in display order. */
+  readonly secondary: readonly SecondaryAction[];
+  /** Conditional standalone actions: historical replan, restore. */
+  readonly recovery: readonly RecoveryAction[];
+}
+
+function primaryActionFor(
+  item: StatusOverviewItem,
+  editable: boolean,
+): StatusOverviewActionModel["primary"] {
+  // A carried item keeps the primary even without an edit target: the
+  // confirmation patch is the only path that clears carriedOver there.
+  if (item.needsConfirmation === true && item.source === "current")
+    return "progress";
+  if (!editable) return null;
+  if (item.canResolve && item.workflowStatus !== "done") return "progress";
+  return null;
+}
+
+function secondaryActionsFor(
+  item: StatusOverviewItem,
+  editable: boolean,
+): SecondaryAction[] {
+  const target = item.editTarget;
+  if (!editable || target === null || item.resolution != null) return [];
+  const actions: SecondaryAction[] = [];
+  if (target.focusNextStep !== true) actions.push("edit");
+  if (item.workflowStatus !== "done") actions.push("move");
+  return actions;
+}
+
+function recoveryActionsFor(item: StatusOverviewItem): RecoveryAction[] {
+  const actions: RecoveryAction[] = [];
+  if (
+    item.source === "previous" &&
+    item.canResolve &&
+    item.workflowStatus !== "done"
+  )
+    actions.push("replan");
+  if (item.canRestore) actions.push("restore");
+  return actions;
+}
+
+/**
+ * One primary progress interaction for editable active items, Edit and week
+ * movement inside one secondary overflow, and conditional recovery actions.
+ * Previous stays informational; an unconfirmed carried item keeps the same
+ * primary so confirming goes through the canonical progress path.
+ */
+export function statusOverviewItemActions(
+  item: StatusOverviewItem,
+): StatusOverviewActionModel {
+  const editable = item.source !== "previous" && item.editTarget !== null;
+  return {
+    primary: primaryActionFor(item, editable),
+    secondary: secondaryActionsFor(item, editable),
+    recovery: recoveryActionsFor(item),
+  };
+}

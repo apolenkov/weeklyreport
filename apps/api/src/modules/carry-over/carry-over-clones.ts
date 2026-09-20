@@ -22,14 +22,18 @@ export function cloneCarriedItem(
       id: targetItemId,
       type: "current",
       carriedOver: true,
-      // Carrying preserves the author's last workflow status. The marker, not
-      // a status rewrite, records that the new Current occurrence is unconfirmed.
       // Legacy next-period plans continue unchanged. Only a current-period
       // result consumes its explicit next-period commitment as the new text.
       text:
         item.type === "current" && item.nextStepText?.trim()
           ? item.nextStepText
           : item.text,
+      // Commitments restart as planned; only a bare unfinished Current item
+      // continues in progress. The marker records that it is unconfirmed.
+      workflowStatus:
+        item.type === "current" && !item.nextStepText?.trim()
+          ? "in_progress"
+          : "planned",
       nextStepText: null,
       pausedReason: null,
     },

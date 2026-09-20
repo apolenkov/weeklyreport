@@ -1,5 +1,8 @@
-import type { KanbanItem } from "../../../../report-sections";
-import { buildMoveItemPatch } from "../../../../report-sections";
+import type { DraftPatch, KanbanItem } from "../../../../report-sections";
+import {
+  buildConfirmCarriedItemPatch,
+  buildMoveItemPatch,
+} from "../../../../report-sections";
 import {
   buildStatusOverviewCreatePatch,
   buildStatusOverviewItemPatch,
@@ -142,6 +145,20 @@ function submitPromotion(
     });
 }
 
+// Saving a carried Current item through the canonical editor confirms it for
+// the week: the existing confirmation patch clears carriedOver on the same
+// draft write, even when the lead changed no other field.
+function carriedConfirmPatch(
+  editor: ReadyEditor,
+  dialog: OverviewItemDialogState,
+): DraftPatch | null {
+  if (dialog.mode !== "edit") return null;
+  const itemId = findOverviewDraftItem(editor, dialog)?.id;
+  return itemId
+    ? buildConfirmCarriedItemPatch(editor.draft.section, itemId)
+    : null;
+}
+
 function applyDraftChange(
   editor: ReadyEditor,
   dialog: OverviewItemDialogState,
@@ -150,6 +167,7 @@ function applyDraftChange(
   const currentItem =
     dialog.mode === "edit" ? findOverviewDraftItem(editor, dialog) : null;
   const itemId = currentItem?.id ?? null;
+  const confirmPatch = carriedConfirmPatch(editor, dialog);
   const moving = dialog.mode === "edit" && currentItem?.type !== dialog.week;
   const movePatch =
     moving && itemId
@@ -161,6 +179,7 @@ function applyDraftChange(
   if (!patch)
     return "This update is no longer available. Your text has not been discarded.";
   editor.draft.apply(patch);
+  if (confirmPatch) editor.draft.apply(confirmPatch);
   if (movePatch) editor.draft.apply(movePatch);
   return null;
 }
@@ -230,7 +249,9 @@ export function saveOverviewItem(
     dialog.submission === null &&
     dialog.week === dialog.target.source &&
     overviewItemFieldsUnchanged(dialog.item, updatedItem);
-  if (unchanged) {
+  // A carried item still writes on Save: the confirmation patch that clears
+  // carriedOver must ride along even when no field changed.
+  if (unchanged && carriedConfirmPatch(editor, dialog) === null) {
     context.startedAttempt.current = null;
     context.setDialog(null);
     context.setError(null);

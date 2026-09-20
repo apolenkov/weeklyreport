@@ -12,6 +12,7 @@ function item(status: "paused" | "postponed"): OpenWorkRegisterItem {
   return {
     key: stableId,
     periodLabel: "Jul 6–12, 2026",
+    automaticPauseReason: null,
     action:
       status === "paused"
         ? { kind: "resume", label: "Resume paused work" }
@@ -128,5 +129,53 @@ describe("OpenWorkRegister", () => {
     expect(
       screen.getByText("Cancellation reason: Contract ended"),
     ).toBeVisible();
+  });
+
+  it("presents automatically paused work with its system reason and a resume action", () => {
+    const paused = item("paused");
+    const automatic: OpenWorkRegisterItem = {
+      ...paused,
+      key: "50000000-0000-4000-8000-000000000020",
+      automaticPauseReason: "Not scheduled for the new week",
+      action: { kind: "resume", label: "Resume paused work" },
+      occurrence: {
+        ...paused.occurrence,
+        item: {
+          ...paused.occurrence.item,
+          stableId: "50000000-0000-4000-8000-000000000020",
+          type: "current",
+          workflowStatus: "planned",
+          pausedReason: null,
+        },
+      },
+    };
+    const onOpen = vi.fn<(item: OpenWorkRegisterItem) => void>();
+    render(
+      <OpenWorkRegister
+        query={{
+          openItems: [automatic],
+          terminalItems: [],
+          isLoading: false,
+          isComplete: true,
+          error: null,
+          retry: vi.fn(),
+        }}
+        actionsDisabled={false}
+        disabledReason={null}
+        onOpen={onOpen}
+      />,
+    );
+
+    expect(screen.getByText(/Paused · Published/)).toBeInTheDocument();
+    expect(
+      screen.getByText("Pause reason: Not scheduled for the new week"),
+    ).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Resume paused work" }));
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    expect(onOpen.mock.calls[0]?.[0].action.kind).toBe("resume");
+    // The projected row does not relabel the stored status.
+    expect(onOpen.mock.calls[0]?.[0].occurrence.item.workflowStatus).toBe(
+      "planned",
+    );
   });
 });
