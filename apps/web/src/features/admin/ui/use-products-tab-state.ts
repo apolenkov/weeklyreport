@@ -2,9 +2,13 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
-import { toAdminProjectInput } from "../model/admin";
+import {
+  toAdminProjectInput,
+  UnresolvedProjectLeadError,
+} from "../model/admin";
 import type { AdminProductView, AdminUserView } from "../model/admin-types";
 import {
   EMPTY_PRODUCT_FORM,
@@ -157,16 +161,34 @@ function productSaveActions({
   readonly getUserById: (id: string) => AdminUserView | undefined;
   readonly saveProject: (input: ReturnType<typeof toAdminProjectInput>) => void;
 }) {
+  // Only an unresolved lead is recoverable here — the draft may hold a stale
+  // owner id after a users refresh. Anything else escapes to the caller.
+  const prepare = (
+    fields: { name: string; leadOwnerId: string; archived: boolean },
+    existingId: string | undefined,
+  ) => {
+    try {
+      return toAdminProjectInput(
+        { ...fields, leadName: getUserById(fields.leadOwnerId)?.name },
+        existingId,
+      );
+    } catch (error) {
+      if (!(error instanceof UnresolvedProjectLeadError)) throw error;
+      toast.error(
+        "Lead owner is no longer available — reselect the lead and try again.",
+      );
+      return undefined;
+    }
+  };
+
   const write = (
     fields: { name: string; leadOwnerId: string; archived: boolean },
     existingId: string | undefined,
-  ) =>
-    saveProject(
-      toAdminProjectInput(
-        { ...fields, leadName: getUserById(fields.leadOwnerId)?.name },
-        existingId,
-      ),
-    );
+  ) => {
+    const input = prepare(fields, existingId);
+    if (input === undefined) return;
+    saveProject(input);
+  };
 
   return {
     handleSave: () =>
@@ -218,6 +240,16 @@ export function useProductsTabState({
     [products, dialog.form.leadId],
   );
 
+  // `leads` stays active-only for replacement choices. A product still owned
+  // by a deactivated lead gets that owner back as a retained disabled option —
+  // resolved from the full user list so the select keeps its stored value.
+  const editingOwnerId = dialog.editingProduct?.leadOwnerId;
+  const retainedOwner =
+    editingOwnerId !== undefined &&
+    !leads.some((lead) => lead.id === editingOwnerId)
+      ? getUserById(editingOwnerId)
+      : undefined;
+
   return {
     ...dialog,
     ...filters,
@@ -234,6 +266,7 @@ export function useProductsTabState({
     stageCountByProject,
     countsError,
     leadProductCount,
+    retainedOwner,
     // leadOwnerId is a required uuid on the wire — an unselected owner must
     // not submit.
     canSave: dialog.form.name.trim().length > 0 && dialog.form.leadId !== "",
