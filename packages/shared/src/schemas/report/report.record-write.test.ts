@@ -201,6 +201,7 @@ describe("record write stage requirements", () => {
       reportId: uuid(),
       authorId: uuid(),
       authorName: "Test Lead",
+      authorRole: "lead",
       version: 1,
       status: "draft",
       submittedAt: null,
@@ -212,12 +213,31 @@ describe("record write stage requirements", () => {
     expect(parsed.success).toBe(false);
   });
 
+  it("requires authorRole on a section read model", () => {
+    const parsed = reportSectionReadModelSchema.safeParse({
+      reportSectionId: uuid(),
+      reportId: uuid(),
+      authorId: uuid(),
+      authorName: "Test Lead",
+      version: 1,
+      status: "draft",
+      submittedAt: null,
+      projects: [],
+      items: [],
+      risks: [],
+      decisions: [],
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+
   it("carries an optional human-readable live reporting-group label", () => {
     const parsed = reportSectionReadModelSchema.parse({
       reportSectionId: uuid(),
       reportId: uuid(),
       authorId: uuid(),
       authorName: "Test Lead",
+      authorRole: "lead",
       version: 1,
       status: "draft",
       submittedAt: null,

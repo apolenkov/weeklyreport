@@ -44,6 +44,7 @@ describe("semanticDocuments", () => {
         reportId: uuid(reportId),
         authorId: uuid("2"),
         authorName: "Lead",
+        authorRole: "lead",
         version: 1,
         status: "draft",
         submittedAt: null,
