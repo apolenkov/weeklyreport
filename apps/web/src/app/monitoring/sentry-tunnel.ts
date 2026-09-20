@@ -10,6 +10,7 @@ export const SENTRY_TUNNEL_MAX_REQUESTS_PER_WINDOW = 30;
 export const SENTRY_TUNNEL_MAX_CLIENT_BUCKETS = 1024;
 const MAX_CLIENT_KEY_LENGTH = 128;
 
+import { webEnv } from "../../shared/lib/runtime/web-env";
 import { SentryTunnelQuota } from "./sentry-tunnel-quota";
 
 const clientQuota = new SentryTunnelQuota(
@@ -48,8 +49,7 @@ function configuredDsn(): string | undefined {
   const serverDsn = process.env.SENTRY_DSN?.trim();
   if (serverDsn) return serverDsn;
 
-  const publicDsn = process.env.NEXT_PUBLIC_SENTRY_DSN?.trim();
-  return publicDsn || undefined;
+  return webEnv.sentryDsn();
 }
 
 /**
