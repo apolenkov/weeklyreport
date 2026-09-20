@@ -3,18 +3,21 @@ import {
   act,
   fireEvent,
   render,
+  renderHook,
   screen,
   waitFor,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
+import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import type { AdminGroupView, AdminUserView } from "../model/admin-types";
+import { useUsersTabState } from "./use-users-tab-state";
 import { UsersTab } from "./users-tab";
 
 // Mutation behavior is asserted through callbacks and UI state; toast output is
@@ -85,6 +88,31 @@ function renderTab(
 
   render(<UsersTab users={users} groups={groups} />, { wrapper: Wrapper });
   return { qc, captured, proxy };
+}
+
+function renderState(
+  users: AdminUserView[] = [USER],
+  groups: AdminGroupView[] = [GROUP],
+) {
+  const { proxy, captured } = buildProxy();
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+
+  function Wrapper({ children }: { readonly children: ReactNode }) {
+    return (
+      <QueryClientProvider client={qc}>
+        <TRPCProxyContext.Provider value={proxy}>
+          {children}
+        </TRPCProxyContext.Provider>
+      </QueryClientProvider>
+    );
+  }
+
+  const rendered = renderHook(() => useUsersTabState(users, groups), {
+    wrapper: Wrapper,
+  });
+  return { ...rendered, captured };
 }
 
 function openDialog() {
@@ -236,6 +264,72 @@ describe("UsersTab — dialog keyboard and click behavior", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Enter a valid email address.",
     );
+  });
+});
+
+describe("UsersTab — owning group validation", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it.each(["", " \t "])(
+    "disables save for a non-viewer with an empty group (%s)",
+    (groupId) => {
+      const { result } = renderState([], []);
+
+      act(() => {
+        result.current.openAdd();
+        result.current.setForm({
+          ...result.current.form,
+          lastName: "Petrov",
+          firstName: "Ivan",
+          email: "ivan@example.com",
+          groupId,
+        });
+      });
+
+      expect(result.current.canSave).toBe(false);
+    },
+  );
+
+  it("shows the missing-group error when the save path receives whitespace", () => {
+    const { result, captured } = renderState([], []);
+
+    act(() => {
+      result.current.openAdd();
+      result.current.setForm({
+        ...result.current.form,
+        lastName: "Petrov",
+        firstName: "Ivan",
+        email: "ivan@example.com",
+        groupId: " \t ",
+      });
+    });
+
+    expect(() => act(() => result.current.handleSave())).not.toThrow();
+    expect(toast.error).toHaveBeenCalledWith(
+      "A non-viewer user requires an owning group",
+    );
+    const saveUser = expectDefined(captured["admin.saveUser"]);
+    expect(saveUser.mutationFn).not.toHaveBeenCalled();
+  });
+
+  it("keeps a groupless viewer saveable", () => {
+    const { result } = renderState([], []);
+
+    act(() => {
+      result.current.openAdd();
+      result.current.setForm({
+        ...result.current.form,
+        lastName: "Viewer",
+        firstName: "Vera",
+        email: "vera@example.com",
+        role: "viewer",
+        groupId: null,
+      });
+    });
+
+    expect(result.current.canSave).toBe(true);
   });
 });
 
