@@ -27,6 +27,7 @@ export {
   toAdminUserInput,
   toReminderPolicyInput,
   toReportingGroupInput,
+  UnresolvedProjectLeadError,
 } from "./admin-form-inputs";
 export type { MappedAdminSnapshot } from "./admin-types";
 

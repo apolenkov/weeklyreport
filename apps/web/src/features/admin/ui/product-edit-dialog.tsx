@@ -19,6 +19,7 @@ interface ProductEditDialogProps {
   readonly form: ProductFormData;
   readonly onFormChange: (form: ProductFormData) => void;
   readonly leads: readonly AdminUserView[];
+  readonly retainedOwner: AdminUserView | undefined;
   readonly leadProductCount: number;
   readonly canSave: boolean;
   readonly isSaving: boolean;
@@ -56,13 +57,23 @@ function LeadOwnerField({
   value,
   onChange,
   leads,
+  retainedOwner,
   leadProductCount,
 }: {
   readonly value: string;
   readonly onChange: (value: string) => void;
   readonly leads: readonly AdminUserView[];
+  readonly retainedOwner: AdminUserView | undefined;
   readonly leadProductCount: number;
 }) {
+  // A stored owner id that neither active leads nor a retained deactivated
+  // owner still claims (e.g. a users refetch mid-draft) keeps the select's
+  // value via a disabled option — otherwise the DOM would silently display
+  // the first enabled lead while the draft holds the dead id.
+  const missingOwner =
+    value !== "" &&
+    !leads.some((lead) => lead.id === value) &&
+    retainedOwner?.id !== value;
   return (
     <div>
       <label htmlFor="product-lead" className={FIELD_LABEL_CLASS}>
@@ -80,6 +91,19 @@ function LeadOwnerField({
         {value === "" && (
           <option value="" disabled>
             Select lead…
+          </option>
+        )}
+        {/* A deactivated current owner is absent from `leads` (active-only):
+            surface it as a disabled retained option so the select keeps the
+            stored value instead of presenting another lead as owner. */}
+        {retainedOwner !== undefined && (
+          <option value={retainedOwner.id} disabled>
+            {retainedOwner.name}
+          </option>
+        )}
+        {missingOwner && (
+          <option value={value} disabled>
+            Unavailable lead — reselect
           </option>
         )}
         {leads.map((lead) => (
@@ -112,12 +136,14 @@ function ProductFormFields({
   form,
   onFormChange,
   leads,
+  retainedOwner,
   leadProductCount,
   isSaving,
 }: {
   readonly form: ProductFormData;
   readonly onFormChange: (form: ProductFormData) => void;
   readonly leads: readonly AdminUserView[];
+  readonly retainedOwner: AdminUserView | undefined;
   readonly leadProductCount: number;
   readonly isSaving: boolean;
 }) {
@@ -135,6 +161,7 @@ function ProductFormFields({
         value={form.leadId}
         onChange={(leadId) => onFormChange({ ...form, leadId })}
         leads={leads}
+        retainedOwner={retainedOwner}
         leadProductCount={leadProductCount}
       />
     </fieldset>
@@ -146,6 +173,7 @@ export function ProductEditDialog({
   form,
   onFormChange,
   leads,
+  retainedOwner,
   leadProductCount,
   canSave,
   isSaving,
@@ -187,6 +215,7 @@ export function ProductEditDialog({
           form={form}
           onFormChange={onFormChange}
           leads={leads}
+          retainedOwner={retainedOwner}
           leadProductCount={leadProductCount}
           isSaving={isSaving}
         />

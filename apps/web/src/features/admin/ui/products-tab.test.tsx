@@ -5,9 +5,11 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
+import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
@@ -58,6 +60,7 @@ vi.mock("../../../shared/ui/dialogs/confirm-delete-dialog", () => ({
 }));
 
 const LEAD_ID = "u-lead-1";
+const INACTIVE_LEAD_ID = "u-lead-inactive";
 const PRODUCT_ID = "p-product-1";
 const SECOND_PRODUCT_ID = "p-product-2";
 
@@ -73,6 +76,13 @@ const mockLead: AdminUserView = {
   groupId: "g1",
   department: "Engineering",
   isActive: true,
+};
+
+const inactiveLead: AdminUserView = {
+  ...mockLead,
+  id: INACTIVE_LEAD_ID,
+  name: "Bob",
+  isActive: false,
 };
 
 const mockProduct: AdminProductView = {
@@ -461,5 +471,119 @@ describe("ProductsTab — slide-capacity advisory", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(/\/7 stages/i)).not.toBeInTheDocument();
     expect(screen.getAllByText("Stages unavailable").length).toBeGreaterThan(0);
+  });
+});
+
+describe("ProductsTab — retained owner in edit dialog", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("keeps a deactivated current owner visible as a disabled option without widening replacements", async () => {
+    const user = userEvent.setup();
+    const productWithInactiveOwner: AdminProductView = {
+      ...mockProduct,
+      leadOwnerId: INACTIVE_LEAD_ID,
+    };
+    renderTab({
+      products: [productWithInactiveOwner],
+      users: [mockLead, inactiveLead],
+    });
+
+    await user.click(
+      screen.getByRole("button", { name: `Edit ${mockProduct.name}` }),
+    );
+
+    // The deactivated owner still holds the slot: the select keeps the value
+    // via one disabled retained option; active leads stay the only selectable
+    // replacements.
+    const select = screen.getByLabelText(/lead owner/i);
+    expect(select).toHaveValue(INACTIVE_LEAD_ID);
+    expect(within(select).getAllByRole("option")).toHaveLength(2);
+    const retained = within(select).getByRole("option", { name: "Bob" });
+    expect(retained).toHaveValue(INACTIVE_LEAD_ID);
+    expect(retained).toBeDisabled();
+    expect(within(select).getByRole("option", { name: "Alice" })).toBeEnabled();
+  });
+});
+
+describe("ProductsTab — unresolved lead owner", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("keeps a vanished lead as a disabled unavailable option until the admin reselects", async () => {
+    const replacementLead: AdminUserView = {
+      ...mockLead,
+      id: "u-lead-2",
+      name: "Carol",
+    };
+    const user = userEvent.setup();
+    const { rerender, captured } = renderTab({
+      products: [],
+      users: [mockLead],
+    });
+
+    openAddAndPickLead();
+
+    // A users refresh drops the picked lead while the draft keeps its id.
+    rerender(
+      <ProductsTab
+        products={[]}
+        users={[replacementLead]}
+        productFilter={null}
+      />,
+    );
+
+    // The stale id stays the select's value via a disabled unavailable
+    // option; Carol is a genuinely different, enabled choice.
+    const select = screen.getByLabelText(/lead owner/i);
+    expect(select).toHaveValue(LEAD_ID);
+    const staleOption = within(select).getByRole("option", {
+      name: /unavailable/i,
+    });
+    expect(staleOption).toHaveValue(LEAD_ID);
+    expect(staleOption).toBeDisabled();
+    expect(within(select).getByRole("option", { name: "Carol" })).toBeEnabled();
+
+    // Save is still blocked instead of silently submitting Carol.
+    await user.click(screen.getByRole("button", { name: "Add Product" }));
+    expect(captured["admin.saveProject"]?.calls).toHaveLength(0);
+    expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/lead/i));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByLabelText(/product name/i)).toHaveValue("New Product");
+
+    // A real user change picks Carol — the DOM value actually differs now.
+    await user.selectOptions(select, replacementLead.id);
+    await user.click(screen.getByRole("button", { name: "Add Product" }));
+
+    await waitFor(() =>
+      expect(captured["admin.saveProject"]?.calls).toHaveLength(1),
+    );
+    expect(captured["admin.saveProject"]?.calls[0]).toMatchObject({
+      name: "New Product",
+      leadId: replacementLead.id,
+      leadName: "Carol",
+    });
+  });
+
+  it("blocks Restore with a toast when the product owner is missing from the users list", async () => {
+    const orphanedArchived: AdminProductView = {
+      ...mockProduct,
+      status: "archived",
+      leadOwnerId: "u-missing-owner",
+    };
+    const user = userEvent.setup();
+    const { captured } = renderTab({
+      products: [orphanedArchived],
+      users: [mockLead],
+    });
+
+    await user.click(
+      screen.getByRole("button", { name: `Restore ${orphanedArchived.name}` }),
+    );
+
+    expect(captured["admin.saveProject"]?.calls).toHaveLength(0);
+    expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/lead/i));
   });
 });
