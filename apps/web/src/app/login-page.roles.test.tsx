@@ -24,14 +24,16 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => useSearchParamsMock() as URLSearchParams,
 }));
 
-vi.mock("../shared/lib/trpc/trpc-context", () => ({
-  useTRPC: () => ({
-    auth: { me: { queryOptions: () => ({ queryKey: ["auth.me"] }) } },
-    org: {
-      getPublic: { queryOptions: () => ({ queryKey: ["org.getPublic"] }) },
-    },
-  }),
-}));
+vi.mock("../shared/lib/trpc/trpc-context", async () => {
+  const { createMockTRPC } = await vi.importActual<
+    typeof import("../test-utils/mock-trpc")
+  >("../test-utils/mock-trpc");
+  const { proxy } = createMockTRPC([
+    { path: ["auth", "me"], query: null },
+    { path: ["org", "getPublic"], query: null },
+  ]);
+  return { useTRPC: () => proxy };
+});
 
 // Lightweight stubs for landing-only visuals — keep tests focused on
 // the last-role hint, not the hero rendering.
@@ -95,9 +97,13 @@ beforeEach(() => {
 
   // Default: unauthenticated landing.
   useQueryMock.mockImplementation((opts: { queryKey?: readonly unknown[] }) => {
-    const key = opts.queryKey?.at(0);
-    if (key === "auth.me") return { data: null, isLoading: false };
-    if (key === "org.getPublic") return { data: STUB_ORG, isLoading: false };
+    const path = opts.queryKey?.[0];
+    if (Array.isArray(path) && path[0] === "auth" && path[1] === "me") {
+      return { data: null, isLoading: false };
+    }
+    if (Array.isArray(path) && path[0] === "org" && path[1] === "getPublic") {
+      return { data: STUB_ORG, isLoading: false };
+    }
     return { data: null, isLoading: false };
   });
 

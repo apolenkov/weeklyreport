@@ -24,14 +24,16 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => useSearchParamsMock() as URLSearchParams,
 }));
 
-vi.mock("../shared/lib/trpc/trpc-context", () => ({
-  useTRPC: () => ({
-    auth: { me: { queryOptions: () => ({ queryKey: ["auth.me"] }) } },
-    org: {
-      getPublic: { queryOptions: () => ({ queryKey: ["org.getPublic"] }) },
-    },
-  }),
-}));
+vi.mock("../shared/lib/trpc/trpc-context", async () => {
+  const { createMockTRPC } = await vi.importActual<
+    typeof import("../test-utils/mock-trpc")
+  >("../test-utils/mock-trpc");
+  const { proxy } = createMockTRPC([
+    { path: ["auth", "me"], query: null },
+    { path: ["org", "getPublic"], query: null },
+  ]);
+  return { useTRPC: () => proxy };
+});
 
 vi.mock("../features/landing/ui/pulse-background", () => ({
   PulseBackground: () => null,
@@ -53,9 +55,13 @@ beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_AUTH_STUB", "false");
 
   useQueryMock.mockImplementation((opts: { queryKey?: readonly unknown[] }) => {
-    const key = opts.queryKey?.at(0);
-    if (key === "auth.me") return makeQueryState({ data: null });
-    if (key === "org.getPublic") return makeQueryState({ data: STUB_ORG });
+    const path = opts.queryKey?.[0];
+    if (Array.isArray(path) && path[0] === "auth" && path[1] === "me") {
+      return makeQueryState({ data: null });
+    }
+    if (Array.isArray(path) && path[0] === "org" && path[1] === "getPublic") {
+      return makeQueryState({ data: STUB_ORG });
+    }
     return makeQueryState({ data: null });
   });
 
@@ -142,10 +148,17 @@ describe("Login page — session query failure", () => {
   it("surfaces the failure instead of rendering the ordinary signed-out state", async () => {
     useQueryMock.mockImplementation(
       (opts: { queryKey?: readonly unknown[] }) => {
-        const key = opts.queryKey?.[0];
-        if (key === "auth.me")
+        const path = opts.queryKey?.[0];
+        if (Array.isArray(path) && path[0] === "auth" && path[1] === "me") {
           return makeQueryState({ data: null, error: new Error("boom") });
-        if (key === "org.getPublic") return makeQueryState({ data: STUB_ORG });
+        }
+        if (
+          Array.isArray(path) &&
+          path[0] === "org" &&
+          path[1] === "getPublic"
+        ) {
+          return makeQueryState({ data: STUB_ORG });
+        }
         return makeQueryState({ data: null });
       },
     );
