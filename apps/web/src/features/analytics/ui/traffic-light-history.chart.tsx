@@ -100,7 +100,7 @@ export function TrafficLightHistoryChart({
               key={s.dataKey}
               dataKey={s.dataKey}
               name={s.name}
-              stroke={COLORS[idx % COLORS.length] ?? "currentColor"}
+              stroke={COLORS[idx % COLORS.length] as string}
               strokeWidth={2}
               connectNulls={false}
               dot={{ r: 3 }}
