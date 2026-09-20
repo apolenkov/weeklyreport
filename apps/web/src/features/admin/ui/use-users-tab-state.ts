@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { toAdminUserInput } from "../model/admin";
+import { MissingUserGroupError } from "../model/admin-form-inputs";
 import type { AdminGroupView, AdminUserView } from "../model/admin-types";
 import { emptyForm, formFromUser, type UserFormData } from "../model/user-form";
 import {
@@ -24,7 +26,7 @@ function canSaveUser(form: UserFormData, isSaving: boolean): boolean {
   return (
     form.lastName.trim().length > 0 &&
     form.firstName.trim().length > 0 &&
-    (form.role === "viewer" || form.groupId !== null) &&
+    (form.role === "viewer" || Boolean(form.groupId?.trim())) &&
     !isSaving
   );
 }
@@ -174,16 +176,21 @@ export function useUsersTabState(
     deactivatePending: deactivateUserMut.isPending,
     activatePending: activateUserMut.isPending,
     handleSave: () => {
-      const input = toAdminUserInput(
-        dialog.form,
-        dialog.editingUser?.id,
-        dialog.editingUser?.isActive ?? true,
-      );
-      if (changesUserGroup(dialog.editingUser, dialog.form)) {
-        setPendingGroupChange(input);
-        return;
+      try {
+        const input = toAdminUserInput(
+          dialog.form,
+          dialog.editingUser?.id,
+          dialog.editingUser?.isActive ?? true,
+        );
+        if (changesUserGroup(dialog.editingUser, dialog.form)) {
+          setPendingGroupChange(input);
+          return;
+        }
+        saveUserMut.mutate(input);
+      } catch (error) {
+        if (!(error instanceof MissingUserGroupError)) throw error;
+        toast.error(error.message);
       }
-      saveUserMut.mutate(input);
     },
     confirmGroupChange: () => {
       if (pendingGroupChange === null) return;
