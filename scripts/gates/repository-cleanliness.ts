@@ -3,6 +3,8 @@ import { readdir, readFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { promisify } from "node:util";
 
+import { parse } from "yaml";
+
 const execFileAsync = promisify(execFile);
 const BYTES_PER_KIB = 1024;
 const MAX_BUFFER_KIB = 128;
@@ -45,6 +47,15 @@ const FORBIDDEN_PATHS = [
   /(?:^|\/)(?:browser-harness|browser-harnesses|playwright-report|test-results|session-artifacts)(?:\/|$)/i,
   /(?:^|\/)[^/]*\.session(?:\/|$)/i,
   /(?:^|\/)(?:report|session)-(?:dump|export|artifact)(?:\.|\/|$)/i,
+  /(?:^|\/)patches(?:\/|$)/,
+  /(?:^|\/)[^/]*\.patch$/i,
+  /(?:^|\/)[^/]*\.diff$/i,
+];
+const DEPENDENCY_MANIFEST_PATH =
+  /(?:^|\/)package\.json$|(?:^|\/)pnpm-workspace\.yaml$/;
+const PATCHED_DEPENDENCIES_PATTERNS = [
+  /^patchedDependencies\s*:/mu,
+  /["']patchedDependencies["']\s*:/u,
 ];
 
 export interface RepositoryInventory {
@@ -165,11 +176,51 @@ export async function validateOpenSpecIndex(
     .sort((left, right) => left.localeCompare(right));
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function manifestDeclaresPatchedDependencies(
+  path: string,
+  manifest: string,
+): boolean {
+  try {
+    const parsed: unknown = path.endsWith(".json")
+      ? JSON.parse(manifest)
+      : parse(manifest);
+    return (
+      isRecord(parsed) &&
+      ("patchedDependencies" in parsed ||
+        (isRecord(parsed.pnpm) && "patchedDependencies" in parsed.pnpm))
+    );
+  } catch {
+    return PATCHED_DEPENDENCIES_PATTERNS.some((pattern) =>
+      pattern.test(manifest),
+    );
+  }
+}
+
+export async function validateDependencyIntegrity(
+  rootInput: string,
+  tracked: readonly string[],
+): Promise<string[]> {
+  const root = resolve(rootInput);
+  const findings: string[] = [];
+  for (const path of tracked) {
+    if (!DEPENDENCY_MANIFEST_PATH.test(path)) continue;
+    const manifest = await readFile(resolve(root, path), "utf8");
+    if (manifestDeclaresPatchedDependencies(path, manifest))
+      findings.push(`dependency-patches: ${path}`);
+  }
+  return findings.sort((left, right) => left.localeCompare(right));
+}
+
 export async function assertRepositoryClean(root: string): Promise<void> {
   const inventory = await inventoryRepository(root);
   const findings = [
     ...validateInventory(inventory),
     ...(await validateOpenSpecIndex(root, inventory.tracked)),
+    ...(await validateDependencyIntegrity(root, inventory.tracked)),
   ].sort((left, right) => left.localeCompare(right));
   if (findings.length > 0)
     throw new Error(

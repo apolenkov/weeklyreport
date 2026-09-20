@@ -40,7 +40,7 @@ interface UseAgentationDeliveryStatusOptions {
 }
 
 function annotationMatchesClientId(annotation: Annotation, clientId: string) {
-  return annotation.id === clientId || annotation.clientId === clientId;
+  return annotation.id === clientId;
 }
 
 function abortableDelay(milliseconds: number, signal: AbortSignal) {
@@ -184,7 +184,7 @@ export function useAgentationDeliveryStatus({
           : (scope.initialSessionId ?? undefined));
       setCandidate({
         annotation,
-        clientId: annotation.clientId ?? annotation.id,
+        clientId: annotation.id,
         scope,
         ...(sessionId ? { sessionId } : {}),
         state: "checking",
