@@ -63,10 +63,13 @@ export function RemindersPolicyList({
           />
         )}
 
-      {filteredPolicies.map((policy) =>
-        editor.mode === "edit" && editor.id === policy.id ? (
-          <PolicyForm key={policy.id} editing {...editorProps} />
-        ) : (
+      {editor.mode === "edit" && (
+        <PolicyForm key={editor.id} editing {...editorProps} />
+      )}
+
+      {filteredPolicies
+        .filter((policy) => editor.mode !== "edit" || editor.id !== policy.id)
+        .map((policy) => (
           <PolicyRow
             key={policy.id}
             policy={policy}
@@ -77,8 +80,7 @@ export function RemindersPolicyList({
             onEdit={() => onEdit(policy)}
             onRemove={() => onRemove(policy)}
           />
-        ),
-      )}
+        ))}
     </div>
   );
 }
