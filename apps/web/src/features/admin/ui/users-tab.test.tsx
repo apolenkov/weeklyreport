@@ -411,6 +411,25 @@ describe("UsersTab — group change confirmation", () => {
     );
   });
 
+  it("does not choose an archived group when a new user switches roles", async () => {
+    const archivedGroup: AdminGroupView = {
+      ...GROUP,
+      id: "g-archived",
+      name: "Legacy",
+      archived: true,
+    };
+    renderTab([], [archivedGroup]);
+    const user = userEvent.setup();
+
+    openDialog();
+    const groupSelect = screen.getByLabelText(/owning group/i);
+    expect(groupSelect).toHaveValue("");
+
+    await user.selectOptions(screen.getByLabelText(/^role$/i), "head");
+
+    expect(groupSelect).toHaveValue("");
+  });
+
   it("keeps an archived selected group visible while allowing a switch to an active group", async () => {
     const archivedGroup: AdminGroupView = {
       ...GROUP,
@@ -438,6 +457,10 @@ describe("UsersTab — group change confirmation", () => {
         name: `${archivedGroup.name} (archived)`,
       }),
     ).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText(/^role$/i), "head");
+
+    expect(groupSelect).toHaveValue(archivedGroup.id);
 
     await user.selectOptions(groupSelect, GROUP.id);
 

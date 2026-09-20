@@ -141,21 +141,19 @@ function IdentityFields({ form, onFormChange }: FormBinding) {
   );
 }
 
-// A viewer owns no group; any other role keeps its group or falls back to the
-// first configured one, so the form never submits an unowned non-viewer.
+// A viewer owns no group; any other role keeps its assignment or selects the
+// first active group, so a new user never receives an archived fallback.
 function withRole(
   form: UserFormData,
   role: DbRole,
   activeGroups: readonly AdminGroupView[],
-  groups: readonly AdminGroupView[],
+  _groups: readonly AdminGroupView[],
 ): UserFormData {
   return {
     ...form,
     role,
     groupId:
-      role === "viewer"
-        ? null
-        : (form.groupId ?? activeGroups[0]?.id ?? groups[0]?.id ?? null),
+      role === "viewer" ? null : (form.groupId ?? activeGroups[0]?.id ?? null),
   };
 }
 

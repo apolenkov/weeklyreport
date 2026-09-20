@@ -11,8 +11,7 @@ export function emptyForm(groups: readonly AdminGroupView[]): UserFormData {
     position: "",
     email: "",
     role: "lead",
-    groupId:
-      groups.find((group) => !group.archived)?.id ?? groups.at(0)?.id ?? null,
+    groupId: groups.find((group) => !group.archived)?.id ?? null,
   };
 }
 
