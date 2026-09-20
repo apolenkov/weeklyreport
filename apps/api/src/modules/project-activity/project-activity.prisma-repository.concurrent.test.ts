@@ -235,4 +235,138 @@ describe("ProjectActivityPrismaRepository conflict retries", () => {
       data: { version: { increment: 1 } },
     });
   });
+
+  it("does not provision submitted sections when attaching a lead", async () => {
+    const reportSectionFindMany = vi
+      .fn()
+      .mockImplementation(({ where }: { where?: { status?: string } }) =>
+        Promise.resolve(
+          where?.status === "draft"
+            ? []
+            : [{ id: "submitted-section", reportId: "report-1" }],
+        ),
+      );
+    const createMany = vi.fn().mockResolvedValue({ count: 0 });
+    const updateMany = vi.fn().mockResolvedValue({ count: 0 });
+    const tx = {
+      report: {
+        findMany: vi.fn().mockResolvedValue([{ id: "report-1" }]),
+      },
+      $executeRaw: vi.fn().mockResolvedValue(0),
+      $queryRaw: vi.fn().mockResolvedValue([
+        {
+          id: "report-1",
+          status: "draft",
+          periodState: "open",
+          periodStatus: "open",
+          archived: false,
+          autoPublished: false,
+          autoArchived: false,
+          publishedAt: null,
+          publishedById: null,
+          reopenedAt: null,
+        },
+      ]),
+      projectActivity: {
+        findUnique: vi.fn().mockResolvedValue({
+          groupId: GROUP_A,
+          archived: false,
+        }),
+      },
+      user: {
+        findUnique: vi.fn().mockResolvedValue({
+          role: "lead",
+          reportingGroupId: GROUP_A,
+        }),
+      },
+      projectActivityLead: { upsert: vi.fn().mockResolvedValue({}) },
+      reportSection: { findMany: reportSectionFindMany, updateMany },
+      activityStatus: { createMany },
+    } as unknown as Prisma.TransactionClient;
+    const prisma = {
+      $transaction: vi.fn((operation: TransactionOperation) => operation(tx)),
+    } as unknown as PrismaService;
+    const repository = new ProjectActivityPrismaRepository(prisma);
+
+    await repository.attachLead({ activityId: ACTIVITY, leadId: LEAD });
+
+    expect(reportSectionFindMany).toHaveBeenCalledWith({
+      where: {
+        authorId: LEAD,
+        reportId: { in: ["report-1"] },
+        status: "draft",
+      },
+      select: { id: true, reportId: true },
+    });
+    expect(createMany).toHaveBeenCalledWith({
+      data: [],
+      skipDuplicates: true,
+    });
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: { in: [] } },
+      data: { version: { increment: 1 } },
+    });
+  });
+
+  it("does not remove or version submitted sections when detaching a lead", async () => {
+    const reportSectionFindMany = vi
+      .fn()
+      .mockImplementation(({ where }: { where?: { status?: string } }) =>
+        Promise.resolve(
+          where?.status === "draft" ? [] : [{ id: "submitted-section" }],
+        ),
+      );
+    const deleteMany = vi.fn().mockResolvedValue({ count: 0 });
+    const updateMany = vi.fn().mockResolvedValue({ count: 0 });
+    const tx = {
+      report: {
+        findMany: vi.fn().mockResolvedValue([{ id: "report-1" }]),
+      },
+      $executeRaw: vi.fn().mockResolvedValue(0),
+      $queryRaw: vi.fn().mockResolvedValue([
+        {
+          id: "report-1",
+          status: "draft",
+          periodState: "open",
+          periodStatus: "open",
+          archived: false,
+          autoPublished: false,
+          autoArchived: false,
+          publishedAt: null,
+          publishedById: null,
+          reopenedAt: null,
+        },
+      ]),
+      projectActivityLead: {
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+      reportSection: { findMany: reportSectionFindMany, updateMany },
+      activityStatus: { deleteMany },
+    } as unknown as Prisma.TransactionClient;
+    const prisma = {
+      $transaction: vi.fn((operation: TransactionOperation) => operation(tx)),
+    } as unknown as PrismaService;
+    const repository = new ProjectActivityPrismaRepository(prisma);
+
+    await repository.detachLead({ activityId: ACTIVITY, leadId: LEAD });
+
+    expect(reportSectionFindMany).toHaveBeenCalledWith({
+      where: {
+        authorId: LEAD,
+        reportId: { in: ["report-1"] },
+        status: "draft",
+      },
+      select: { id: true },
+    });
+    expect(deleteMany).toHaveBeenCalledWith({
+      where: {
+        activityId: ACTIVITY,
+        reportSectionId: { in: [] },
+      },
+    });
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: { in: [] } },
+      data: { version: { increment: 1 } },
+    });
+  });
 });

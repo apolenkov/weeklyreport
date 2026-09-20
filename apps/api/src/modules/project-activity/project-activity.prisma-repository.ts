@@ -156,7 +156,11 @@ export class ProjectActivityPrismaRepository implements ProjectActivityRepositor
         update: {},
       });
       const sections = await tx.reportSection.findMany({
-        where: { authorId: edge.leadId, reportId: { in: lockedReports } },
+        where: {
+          authorId: edge.leadId,
+          reportId: { in: lockedReports },
+          status: "draft",
+        },
         select: { id: true, reportId: true },
       });
       await tx.activityStatus.createMany({
@@ -185,7 +189,11 @@ export class ProjectActivityPrismaRepository implements ProjectActivityRepositor
       await tx.projectActivityLead.deleteMany({ where: edge });
       if (editableReports.length === 0) return;
       const sections = await tx.reportSection.findMany({
-        where: { authorId: edge.leadId, reportId: { in: editableReports } },
+        where: {
+          authorId: edge.leadId,
+          reportId: { in: editableReports },
+          status: "draft",
+        },
         select: { id: true },
       });
       await tx.activityStatus.deleteMany({
