@@ -1,6 +1,6 @@
 "use client";
 
-import { MAX_PRODUCTS_PER_LEAD } from "@customreport/shared";
+import { MAX_PRODUCTS_PER_LEAD, shortName } from "@customreport/shared";
 import { useRef } from "react";
 
 import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";
@@ -98,7 +98,7 @@ function LeadOwnerField({
             stored value instead of presenting another lead as owner. */}
         {retainedOwner !== undefined && (
           <option value={retainedOwner.id} disabled>
-            {retainedOwner.name}
+            {shortName(retainedOwner)}
           </option>
         )}
         {missingOwner && (
@@ -108,7 +108,7 @@ function LeadOwnerField({
         )}
         {leads.map((lead) => (
           <option key={lead.id} value={lead.id}>
-            {lead.name}
+            {shortName(lead)}
           </option>
         ))}
       </select>

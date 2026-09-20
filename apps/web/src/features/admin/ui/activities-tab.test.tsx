@@ -87,6 +87,7 @@ const otherGroupLead: AdminUserView = {
   ...lead,
   id: OTHER_LEAD_ID,
   name: "Bob",
+  lastName: "Bob",
   email: "bob@example.com",
   groupId: OTHER_GROUP_ID,
   department: "Data",
@@ -480,8 +481,10 @@ describe("ActivitiesTab — lead attachment", () => {
     const { captured } = renderTab();
 
     await expandLeadEditor(user);
+    expect(screen.getByText("Alice L.")).toBeInTheDocument();
+    expect(screen.getByText("Bob L.")).toBeInTheDocument();
     await user.click(
-      screen.getByLabelText("Toggle Alice on Onboarding Revamp"),
+      screen.getByLabelText("Toggle Alice L. on Onboarding Revamp"),
     );
 
     await waitFor(() => {
@@ -498,7 +501,9 @@ describe("ActivitiesTab — lead attachment", () => {
     });
 
     await expandLeadEditor(user);
-    const checkbox = screen.getByLabelText("Toggle Alice on Onboarding Revamp");
+    const checkbox = screen.getByLabelText(
+      "Toggle Alice L. on Onboarding Revamp",
+    );
     expect(checkbox).toBeChecked();
 
     await user.click(checkbox);
@@ -516,7 +521,7 @@ describe("ActivitiesTab — lead attachment", () => {
 
     await expandLeadEditor(user);
 
-    const locked = screen.getByLabelText("Toggle Bob on Onboarding Revamp");
+    const locked = screen.getByLabelText("Toggle Bob L. on Onboarding Revamp");
     expect(locked).toBeDisabled();
     expect(screen.getByText("Belongs to Data")).toBeInTheDocument();
     expect(captured["projectActivity.attachLead"]?.calls).toEqual([]);

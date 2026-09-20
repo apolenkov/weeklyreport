@@ -318,3 +318,17 @@ describe("GroupsTab — focus management", () => {
     expect(document.activeElement).toBe(addBtn);
   });
 });
+
+describe("GroupsTab — picker names", () => {
+  it("uses the canonical short name in the leader picker", () => {
+    renderTab();
+    openAddDialog();
+
+    const leaderPicker = screen.getByRole("combobox", { name: "Leader" });
+    expect(
+      within(leaderPicker).getByRole("option", {
+        name: "Alice H. (alice@example.com)",
+      }),
+    ).toBeInTheDocument();
+  });
+});

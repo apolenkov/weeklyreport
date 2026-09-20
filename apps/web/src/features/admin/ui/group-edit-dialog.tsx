@@ -1,5 +1,6 @@
 "use client";
 
+import { shortName } from "@customreport/shared";
 import { useRef } from "react";
 
 import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";
@@ -93,7 +94,7 @@ function GroupLeaderField({
         <option value="">— No leader —</option>
         {headCandidates.map((u) => (
           <option key={u.id} value={u.id}>
-            {u.name} ({u.email})
+            {shortName(u)} ({u.email})
           </option>
         ))}
       </select>

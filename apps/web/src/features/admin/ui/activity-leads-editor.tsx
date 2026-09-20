@@ -1,6 +1,6 @@
 "use client";
 
-import type { ProjectActivity } from "@customreport/shared";
+import { type ProjectActivity, shortName } from "@customreport/shared";
 
 import type { AdminUserView } from "../model/admin-types";
 import { useActivityLeads } from "./use-activity-leads";
@@ -41,12 +41,12 @@ function LeadToggleRow({
           checked={checked}
           disabled={disabled}
           onChange={(e) => onToggle(lead.id, e.target.checked)}
-          aria-label={`Toggle ${lead.name} on ${activityName}`}
+          aria-label={`Toggle ${shortName(lead)} on ${activityName}`}
           aria-describedby={lockedHint ? hintId : undefined}
           className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-starbucks-accent)] focus:ring-2 focus:ring-[var(--color-ring)]"
         />
         <span className="min-w-0">
-          <span>{lead.name}</span>
+          <span>{shortName(lead)}</span>
           {lockedHint && (
             <span id={hintId} className={HINT_CLASS}>
               {lockedHint}
