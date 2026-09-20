@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { StatusOverviewItem } from "../../../../report-sections";
 import { StatusOverviewItemPreview } from "../../../../report-sections/ui/status-overview-item-preview";
+import type { OverviewItemDialogState } from "./lead-status-overview-item-editor";
 import {
   OverviewInputProvider,
   useRetainedOverviewQuickEdits,
@@ -34,6 +35,37 @@ function Composer({ reportId }: { readonly reportId: string }) {
   );
 }
 
+function ItemComposer({ reportId }: { readonly reportId: string }) {
+  const [value, setValue] = useRetainedOverviewState("item", reportId);
+  return (
+    <>
+      {value ? (
+        <textarea aria-label="Item composer" defaultValue="Pending item" />
+      ) : null}
+      <button
+        onClick={() =>
+          setValue({
+            mode: "create",
+            generation: `generation:${reportId}`,
+            stableId: null,
+            week: "current",
+            target: {
+              source: "current",
+              unitKind: "product",
+              unitId: "marketing",
+            },
+            draftStore: null,
+            editorAtOpen: null,
+            submission: null,
+          } as unknown as OverviewItemDialogState)
+        }
+      >
+        Open item
+      </button>
+    </>
+  );
+}
+
 function Page({ reportId }: { readonly reportId: string | null }) {
   return (
     <OverviewInputProvider>
@@ -42,6 +74,14 @@ function Page({ reportId }: { readonly reportId: string | null }) {
       ) : (
         <span>Other page</span>
       )}
+    </OverviewInputProvider>
+  );
+}
+
+function ItemPage({ reportId }: { readonly reportId: string }) {
+  return (
+    <OverviewInputProvider>
+      <ItemComposer key={reportId} reportId={reportId} />
     </OverviewInputProvider>
   );
 }
@@ -198,5 +238,24 @@ describe("overview session input retention", () => {
     const cleared = new Event("beforeunload", { cancelable: true });
     window.dispatchEvent(cleared);
     expect(cleared.defaultPrevented).toBe(false);
+  });
+
+  it("retains a pending item composer across report navigation", () => {
+    const page = render(<ItemPage reportId="report-a" />);
+    fireEvent.click(screen.getByRole("button", { name: "Open item" }));
+    expect(
+      screen.getByRole("textbox", { name: "Item composer" }),
+    ).toBeInTheDocument();
+
+    page.rerender(<ItemPage reportId="report-b" />);
+    expect(screen.queryByRole("textbox", { name: "Item composer" })).toBeNull();
+
+    page.rerender(<ItemPage reportId="report-a" />);
+    expect(
+      screen.getByRole("textbox", { name: "Item composer" }),
+    ).toBeInTheDocument();
+    const unload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(unload);
+    expect(unload.defaultPrevented).toBe(true);
   });
 });

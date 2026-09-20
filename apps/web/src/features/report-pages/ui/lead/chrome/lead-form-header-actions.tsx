@@ -29,6 +29,7 @@ interface LeadFormHeaderActionsProps {
   readonly completionSentinelRef: Ref<HTMLDivElement>;
   readonly showCompletionActions: boolean;
   readonly isSlidesMode: boolean;
+  readonly isForeignSlidesDeck: boolean;
   readonly isSubmitted: boolean;
   readonly periodLabel?: string | undefined;
 }
@@ -176,6 +177,7 @@ function HeaderActionToolbar({
   completionActions,
   completionSentinelRef,
   showCompletionActions,
+  isForeignSlidesDeck,
   isSubmitted,
 }: Omit<LeadFormHeaderActionsProps, "isSlidesMode">) {
   const {
@@ -185,10 +187,12 @@ function HeaderActionToolbar({
     isReadOnly,
     visiblePeriods,
   } = viewModel;
+  const canEditDraft = !isReadOnly && !isForeignSlidesDeck;
+  const canMutateSubmittedSection = isSubmitted && !isForeignSlidesDeck;
 
   return (
     <DocumentActionGroup>
-      {!isReadOnly && (
+      {canEditDraft && (
         <FillFromButton
           periods={visiblePeriods}
           disabled={writeActions.fillFromPending}
@@ -196,7 +200,7 @@ function HeaderActionToolbar({
           onFillFrom={writeActions.handleFillFrom}
         />
       )}
-      {isSubmitted && (
+      {canMutateSubmittedSection && (
         <SubmittedSectionAction
           authorRole={currentUser.authorRole}
           canRequestReopen={canRequestReopen}
@@ -204,7 +208,7 @@ function HeaderActionToolbar({
         />
       )}
       <div ref={completionSentinelRef} className="min-h-px min-w-px">
-        {!isReadOnly && showCompletionActions && (
+        {canEditDraft && showCompletionActions && (
           <LeadCompletionActions
             {...completionActions}
             label="Header completion actions"

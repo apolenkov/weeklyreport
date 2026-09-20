@@ -120,6 +120,7 @@ function LoadedChrome({
           props.isSlidesMode || completion.headerActionsVisible
         }
         isSlidesMode={props.isSlidesMode}
+        isForeignSlidesDeck={data.isForeignSlidesDeck}
         isSubmitted={props.isSubmitted}
       />
       <LeadFormToolbarControls

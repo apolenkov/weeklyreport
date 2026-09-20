@@ -136,6 +136,56 @@ describe("ItemEditDialog — create parent seeding", () => {
     expect(screen.getByLabelText("Product")).toHaveValue("unresolved:");
   });
 
+  it("leaves the parent explicitly unresolved over a stale product id when activities exist", () => {
+    render(
+      <ItemEditDialog
+        open={true}
+        item={null}
+        products={products}
+        activities={[{ id: "a1", name: "Jira triage duty" }]}
+        week="current"
+        defaultProductId="stale-id"
+        stagesForProduct={() => ["Dev"] as const}
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+    // The stale product seed must not fall through to the first activity.
+    expect(screen.getByLabelText("Parent")).toHaveValue("unresolved:");
+  });
+
+  it("saves the product explicitly chosen after a stale seed", () => {
+    const onSave = vi.fn();
+    render(
+      <ItemEditDialog
+        open={true}
+        item={null}
+        products={products}
+        activities={[{ id: "a1", name: "Jira triage duty" }]}
+        week="current"
+        defaultProductId="stale-id"
+        stagesForProduct={() => ["Dev"] as const}
+        onSave={onSave}
+        onCancel={() => undefined}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Parent"), {
+      target: { value: "product:p1" },
+    });
+    fireEvent.change(screen.getByLabelText(/Description \*/i), {
+      target: { value: "Choose the current product" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
+
+    expect(onSave).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        parent: { kind: "product", id: "p1" },
+        productId: "p1",
+      }),
+    );
+  });
+
   it("leaves the parent explicitly unresolved when no product exists", () => {
     render(
       <ItemEditDialog
@@ -150,6 +200,43 @@ describe("ItemEditDialog — create parent seeding", () => {
     );
     expect(screen.getByLabelText("Product")).toHaveValue("unresolved:");
     expect(screen.getByLabelText("Product")).toBeDisabled();
+  });
+
+  it("attaches a missing-product save error to the parent picker and focuses it", () => {
+    render(
+      <ItemEditDialog
+        open={true}
+        item={{
+          id: "item-missing-parent",
+          parent: { kind: "unresolved" },
+          productId: null,
+          productName: "",
+          activityId: null,
+          stageNames: ["Dev"],
+          text: "Existing item text",
+          status: "in-progress",
+          author: "Test Lead",
+        }}
+        products={products}
+        week="current"
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
+
+    const parentPicker = screen.getByLabelText("Product");
+    expect(screen.getByText("No product available")).toBeInTheDocument();
+    expect(parentPicker).toHaveAttribute("aria-invalid", "true");
+    expect(parentPicker).toHaveAttribute(
+      "aria-describedby",
+      "item-product-error",
+    );
+    expect(
+      screen.queryByText("Description is required"),
+    ).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(parentPicker);
   });
 
   it("preselects the exact requested product when it exists", () => {
