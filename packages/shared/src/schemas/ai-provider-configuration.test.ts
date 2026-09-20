@@ -265,7 +265,13 @@ describe("ai provider contracts", () => {
       generationCompatibilityIdentity: "generation:v1:test",
       semanticInputVersion: "1",
       testResult: null,
-      progress: { completed: 0, total: 0, failed: 0, elapsedMs: 0 },
+      progress: {
+        completed: 0,
+        total: 0,
+        failed: 0,
+        elapsedMs: 0,
+        finishedAt: null,
+      },
       createdAt: "2026-08-10T00:00:00.000Z",
       updatedAt: "2026-08-10T00:00:00.000Z",
       activatedAt: null,
@@ -275,38 +281,48 @@ describe("ai provider contracts", () => {
   });
 
   it("accepts a separately masked embedding read", () => {
-    expect(
-      aiProviderConfigurationReadSchema.safeParse({
-        id: "659b2767-0f86-41e2-b025-49730ca010e4",
-        lifecycle: "draft",
-        generation: {
-          profile: "groq",
-          baseUrl: "https://api.groq.com/openai/v1",
-          plannerModel: "planner-1",
-          answerModel: "answer-1",
-          reasoningMode: "off",
-          reasoningCustomValue: null,
-          credentialConfigured: true,
-          credentialMaskedSuffix: "••••gkey",
-        },
-        embeddings: {
-          mode: "separate",
-          profile: "jina",
-          baseUrl: "https://api.jina.ai/v1",
-          model: "jina-embeddings-v3",
-          dimensions: null,
-          credentialConfigured: true,
-          credentialMaskedSuffix: "••••jkey",
-        },
-        generationCompatibilityIdentity: "generation:v1:test",
-        semanticInputVersion: "1",
-        testResult: null,
-        progress: { completed: 0, total: 0, failed: 0, elapsedMs: 0 },
-        createdAt: "2026-08-10T00:00:00.000Z",
-        updatedAt: "2026-08-10T00:00:00.000Z",
-        activatedAt: null,
-      }).success,
-    ).toBe(true);
+    const finishedAt = new Date("2026-08-10T01:00:00.000Z");
+    const result = aiProviderConfigurationReadSchema.safeParse({
+      id: "659b2767-0f86-41e2-b025-49730ca010e4",
+      lifecycle: "draft",
+      generation: {
+        profile: "groq",
+        baseUrl: "https://api.groq.com/openai/v1",
+        plannerModel: "planner-1",
+        answerModel: "answer-1",
+        reasoningMode: "off",
+        reasoningCustomValue: null,
+        credentialConfigured: true,
+        credentialMaskedSuffix: "••••gkey",
+      },
+      embeddings: {
+        mode: "separate",
+        profile: "jina",
+        baseUrl: "https://api.jina.ai/v1",
+        model: "jina-embeddings-v3",
+        dimensions: null,
+        credentialConfigured: true,
+        credentialMaskedSuffix: "••••jkey",
+      },
+      generationCompatibilityIdentity: "generation:v1:test",
+      semanticInputVersion: "1",
+      testResult: null,
+      progress: {
+        completed: 0,
+        total: 0,
+        failed: 0,
+        elapsedMs: 0,
+        finishedAt,
+      },
+      createdAt: "2026-08-10T00:00:00.000Z",
+      updatedAt: "2026-08-10T00:00:00.000Z",
+      activatedAt: null,
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.progress.finishedAt).toEqual(finishedAt);
+    }
   });
 
   it("accepts the fixed short-secret mask and rejects unsafe mask metadata", () => {
@@ -331,7 +347,13 @@ describe("ai provider contracts", () => {
       generationCompatibilityIdentity: "generation:v1:test",
       semanticInputVersion: "1",
       testResult: null,
-      progress: { completed: 0, total: 0, failed: 0, elapsedMs: 0 },
+      progress: {
+        completed: 0,
+        total: 0,
+        failed: 0,
+        elapsedMs: 0,
+        finishedAt: null,
+      },
       createdAt: "2026-08-10T00:00:00.000Z",
       updatedAt: "2026-08-10T00:00:00.000Z",
       activatedAt: "2026-08-10T00:00:00.000Z",

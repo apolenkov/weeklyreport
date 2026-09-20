@@ -104,6 +104,10 @@ export const providerTestExecutionMessage = (
 type AiProviderMutationsInput = Readonly<{
   trpc: ReturnType<typeof useTRPC>;
   refresh: () => void;
+  onActivationPendingChange: (
+    operation: "activate" | "restore",
+    pending: boolean,
+  ) => void;
   setSavedRevision: Dispatch<
     SetStateAction<AiProviderConfigurationRead | null>
   >;
@@ -114,6 +118,7 @@ type AiProviderMutationsInput = Readonly<{
 export const useAiProviderMutations = ({
   trpc,
   refresh,
+  onActivationPendingChange,
   setSavedRevision,
   setMessage,
   setOperationFailed,
@@ -162,18 +167,23 @@ export const useAiProviderMutations = ({
   const activate = useMutation(
     trpc.admin.aiProvider.activate.mutationOptions({
       onMutate: () => {
+        onActivationPendingChange("activate", true);
         setMessage(null);
         setOperationFailed(false);
+        refresh();
       },
       onSuccess: () => {
+        onActivationPendingChange("activate", false);
         setSavedRevision(null);
         setMessage("Activation completed atomically.");
         setOperationFailed(false);
         refresh();
       },
       onError: (error) => {
+        onActivationPendingChange("activate", false);
         setMessage(error.message);
         setOperationFailed(true);
+        refresh();
       },
     }),
   );
@@ -199,17 +209,22 @@ export const useAiProviderMutations = ({
   const restore = useMutation(
     trpc.admin.aiProvider.restore.mutationOptions({
       onMutate: () => {
+        onActivationPendingChange("restore", true);
         setMessage(null);
         setOperationFailed(false);
+        refresh();
       },
       onSuccess: () => {
+        onActivationPendingChange("restore", false);
         setMessage("The retained AI provider is being restored atomically.");
         setOperationFailed(false);
         refresh();
       },
       onError: (error) => {
+        onActivationPendingChange("restore", false);
         setMessage(error.message);
         setOperationFailed(true);
+        refresh();
       },
     }),
   );
