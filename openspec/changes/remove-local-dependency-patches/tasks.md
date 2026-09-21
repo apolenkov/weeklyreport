@@ -13,4 +13,4 @@
 ## 3. Planning and acceptance
 
 - [x] 3.1 Reconcile the durable `authenticated-product-feedback` spec with the approved stock-package behavior and verify `pnpm spec:check` passes.
-- [ ] 3.2 Run `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm build`; record exact results and commit only task-owned files for TASK-050.
+- [x] 3.2 Run `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm build`; record exact results and commit only task-owned files for TASK-050.

@@ -170,16 +170,17 @@ async function renderLoaded(
     | Promise<ReturnType<typeof makeSection>> = makeSection,
 ) {
   const harness = buildHarness(section);
+  // The load cascade never settles under fake timers, so the form comes up on
+  // the real clock; fake timers arm only once Autosaved is observable, keeping
+  // the debounce cadence deterministic for the tests below.
+  vi.useRealTimers();
   render(
     <harness.Wrapper>
       <LeadForm />
     </harness.Wrapper>,
   );
-  // Let the query cascade resolve through the mock proxy.
-  await flush();
-  await flush();
-  await flush();
-  expect(screen.queryByText("Autosaved")).not.toBeNull();
+  expect(await screen.findByText("Autosaved")).toBeInTheDocument();
+  vi.useFakeTimers();
   return harness;
 }
 
