@@ -12,6 +12,7 @@ export interface ItemEditErrors {
   nextStepText?: string | undefined;
   stageNames?: string | undefined;
   pausedReason?: string | undefined;
+  parent?: string | undefined;
 }
 
 interface UseItemEditFormStateArgs extends ItemEditDraftSeed {

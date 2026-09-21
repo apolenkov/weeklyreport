@@ -7,7 +7,6 @@ import {
 } from "@prisma/client";
 
 import { SEED_REPORTS } from "../support/seed-constants.js";
-import { stageNameFor } from "./seed-advanced.cycles.js";
 import {
   itemId,
   projectStatusId,
@@ -26,6 +25,10 @@ import {
   upsertProjectStatus,
   upsertSection,
 } from "./seed-advanced.rows.js";
+import {
+  ownedStageNameAt,
+  type StageOwnership,
+} from "./seed-advanced.stage-names.js";
 import type { SectionCounts } from "./seed-advanced.summary.js";
 import {
   addSectionCounts,
@@ -41,6 +44,7 @@ const CLOSING_ITEM_TAG = "feature";
 async function seedProductRows(
   prisma: PrismaClient,
   cfg: LeadConfig,
+  ownership?: StageOwnership,
 ): Promise<void> {
   const reportSectionId = sectionId(PUBLISHED_SUFFIX, cfg.leadIndex);
 
@@ -60,7 +64,14 @@ async function seedProductRows(
       text: `Закрыли недельные цели по продукту «${product.name}»`,
       tag: CLOSING_ITEM_TAG,
       workflowStatus: ItemWorkflowStatus.done,
-      stageNames: [stageNameFor(cfg.leadIndex + productIdx)],
+      stageNames: [
+        ownedStageNameAt(
+          cfg.leadId,
+          product.id,
+          cfg.leadIndex + productIdx,
+          ownership,
+        ),
+      ],
     });
   }
 }
@@ -69,6 +80,7 @@ async function seedPublishedSection(
   prisma: PrismaClient,
   cfg: LeadConfig,
   leadIdx: number,
+  ownership?: StageOwnership,
 ): Promise<SectionCounts> {
   await upsertSection(prisma, {
     id: sectionId(PUBLISHED_SUFFIX, cfg.leadIndex),
@@ -80,7 +92,7 @@ async function seedPublishedSection(
       FIRST_SUBMIT_HOUR_UTC + leadIdx,
     ),
   });
-  await seedProductRows(prisma, cfg);
+  await seedProductRows(prisma, cfg, ownership);
   await prisma.item.update({
     where: { id: itemId(PUBLISHED_SUFFIX, cfg.leadIndex, 1) },
     data: { priorityRank: 1 },
@@ -97,12 +109,13 @@ async function seedPublishedSection(
 /** Seeds the previous, published week: every section submitted, all green. */
 export async function seedPublishedSections(
   prisma: PrismaClient,
+  ownership?: StageOwnership,
 ): Promise<SectionCounts> {
   return ACTIVE_LEAD_CONFIGS.reduce<Promise<SectionCounts>>(
     async (total, cfg, leadIdx) =>
       addSectionCounts(
         await total,
-        await seedPublishedSection(prisma, cfg, leadIdx),
+        await seedPublishedSection(prisma, cfg, leadIdx, ownership),
       ),
     Promise.resolve(NO_SECTION_COUNTS),
   );

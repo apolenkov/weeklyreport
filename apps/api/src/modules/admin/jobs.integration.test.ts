@@ -150,10 +150,6 @@ describe("JobsService — integration (BullMQ failed jobs)", () => {
           });
           return execution !== null;
         },
-        retryFailedPdfExport: () =>
-          Promise.reject(
-            new Error("pdf-export retry is not exercised by this suite"),
-          ),
       },
     );
 
@@ -285,10 +281,6 @@ describe("JobsService — integration (BullMQ failed jobs)", () => {
             data: { status: "pending", error: null },
           });
         },
-        retryFailedPdfExport: () =>
-          Promise.reject(
-            new Error("pdf-export retry is not exercised by this suite"),
-          ),
       },
     );
 

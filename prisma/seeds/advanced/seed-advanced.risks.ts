@@ -1,6 +1,12 @@
 import type { PrismaClient } from "@prisma/client";
 
 import {
+  LEAD_1_ID,
+  LEAD_DMITRY_ID,
+  LEAD_IGOR_ID,
+  LEAD_OLGA_ID,
+} from "../support/seed-constants.js";
+import {
   LEAD_SLOT_DMITRY,
   LEAD_SLOT_IGOR,
   LEAD_SLOT_OLGA,
@@ -16,6 +22,10 @@ import {
   STAGE_NAME_TESTING,
 } from "./seed-advanced.anchors.js";
 import { ACTIVE_SUFFIX, riskId, sectionId } from "./seed-advanced.ids.js";
+import {
+  ownedStageName,
+  type StageOwnership,
+} from "./seed-advanced.stage-names.js";
 
 const SEVERITY_AT_RISK = "at-risk";
 const SEVERITY_BLOCKED = "blocked";
@@ -24,11 +34,12 @@ interface RiskRow {
   readonly id: string;
   readonly stableId: string;
   readonly reportSectionId: string;
+  readonly authorId: string;
   readonly projectId: string;
   readonly risk: string;
   readonly impact: string;
   readonly mitigation: string;
-  readonly stageNames: string[];
+  readonly stageName: string;
   readonly severity: string;
 }
 
@@ -49,47 +60,51 @@ const RISK_ROWS: readonly RiskRow[] = [
     id: riskId(RISK_SEQ.partnerRateLimit),
     stableId: riskId(RISK_SEQ.partnerRateLimit),
     reportSectionId: sectionId(ACTIVE_SUFFIX, LEAD_SLOT_PRIMARY),
+    authorId: LEAD_1_ID,
     projectId: PRODUCT_MARKETING_PORTAL,
     risk: "Партнёрский OAuth2 API режет нас по rate-limit на пиковом трафике",
     impact: "Сдвигает milestone SSO на 1 неделю, блокирует смежную команду",
     mitigation:
       "Эскалирована заявка на расширение квоты, параллельно готовим batch-fallback",
-    stageNames: [STAGE_NAME_DEVELOPMENT],
+    stageName: STAGE_NAME_DEVELOPMENT,
     severity: SEVERITY_AT_RISK,
   },
   {
     id: riskId(RISK_SEQ.etlMemoryLeak),
     stableId: riskId(RISK_SEQ.etlMemoryLeak),
     reportSectionId: sectionId(ACTIVE_SUFFIX, LEAD_SLOT_PRIMARY),
+    authorId: LEAD_1_ID,
     projectId: PRODUCT_ANALYTICS_HUB,
     risk: "Memory leak в ETL — OOM на больших экстрактах (>2M строк)",
     impact: "Блокирует релиз до получения патча от вендора",
     mitigation:
       "Патч ETA 8 мая, временно перешли на chunked extraction по 500K",
-    stageNames: [STAGE_NAME_TESTING],
+    stageName: STAGE_NAME_TESTING,
     severity: SEVERITY_AT_RISK,
   },
   {
     id: riskId(RISK_SEQ.pgBouncerDowntime),
     stableId: riskId(RISK_SEQ.pgBouncerDowntime),
     reportSectionId: sectionId(ACTIVE_SUFFIX, LEAD_SLOT_IGOR),
+    authorId: LEAD_IGOR_ID,
     projectId: PRODUCT_INTERNAL_BI,
     risk: "Миграция PgBouncer требует ~30 мин downtime в проде",
     impact: "Окно обслуживания затрагивает зависимые сервисы (auth, payments)",
     mitigation:
       "Окно запланировано в субботу 02:00 МСК, rollback-план провалидирован",
-    stageNames: [STAGE_NAME_DEVOPS],
+    stageName: STAGE_NAME_DEVOPS,
     severity: SEVERITY_AT_RISK,
   },
   {
     id: riskId(RISK_SEQ.wafFalsePositives),
     stableId: riskId(RISK_SEQ.wafFalsePositives),
     reportSectionId: sectionId(ACTIVE_SUFFIX, LEAD_SLOT_DMITRY),
+    authorId: LEAD_DMITRY_ID,
     projectId: PRODUCT_SECURITY_GATEWAY,
     risk: "Тюнинг WAF может выдавать false positives на пиковой нагрузке",
     impact: "Часть клиентских запросов может блокироваться без причины",
     mitigation: "Раскатка через shadow-mode + кнопка мгновенного rollback",
-    stageNames: [STAGE_NAME_SUPPORT],
+    stageName: STAGE_NAME_SUPPORT,
     severity: SEVERITY_AT_RISK,
   },
   // Olga's Testing stage carries no explicit stageStatus, so
@@ -98,12 +113,13 @@ const RISK_ROWS: readonly RiskRow[] = [
     id: riskId(RISK_SEQ.testingEnvironment),
     stableId: riskId(RISK_SEQ.testingEnvironment),
     reportSectionId: sectionId(ACTIVE_SUFFIX, LEAD_SLOT_OLGA),
+    authorId: LEAD_OLGA_ID,
     projectId: PRODUCT_PAYMENT_GATEWAY,
     risk: "Нестабильность Testing-окружения при нагрузочных прогонах",
     impact: "Задержка валидации релиза",
     mitigation:
       "Изолированный стенд для нагрузки запланирован на следующий спринт",
-    stageNames: [STAGE_NAME_TESTING],
+    stageName: STAGE_NAME_TESTING,
     severity: SEVERITY_AT_RISK,
   },
   // The covering blocker for Olga's DevOps item: that item is stored
@@ -112,23 +128,30 @@ const RISK_ROWS: readonly RiskRow[] = [
     id: riskId(RISK_SEQ.devOpsBlocked),
     stableId: riskId(RISK_SEQ.devOpsBlocked),
     reportSectionId: sectionId(ACTIVE_SUFFIX, LEAD_SLOT_OLGA),
+    authorId: LEAD_OLGA_ID,
     projectId: PRODUCT_PAYMENT_GATEWAY,
     risk: "Настройка DevOps-конвейера заблокирована ожиданием Dev-фикса",
     impact: "Блокирует выкатку Платёжного шлюза до устранения",
     mitigation:
       "Эскалировано команде Dev; ETA фикса — начало следующего спринта",
-    stageNames: [STAGE_NAME_DEVOPS],
+    stageName: STAGE_NAME_DEVOPS,
     severity: SEVERITY_BLOCKED,
   },
 ];
 
 /** Seeds the active period's risks; returns the row count for the summary. */
-export async function seedRisks(prisma: PrismaClient): Promise<number> {
-  for (const { id, ...fields } of RISK_ROWS) {
+export async function seedRisks(
+  prisma: PrismaClient,
+  ownership?: StageOwnership,
+): Promise<number> {
+  for (const { id, authorId, stageName, ...fields } of RISK_ROWS) {
+    const stageNames = [
+      ownedStageName(authorId, fields.projectId, stageName, ownership),
+    ];
     await prisma.risk.upsert({
       where: { id },
-      update: fields,
-      create: { id, ...fields },
+      update: { ...fields, stageNames },
+      create: { id, ...fields, stageNames },
     });
   }
   return RISK_ROWS.length;
