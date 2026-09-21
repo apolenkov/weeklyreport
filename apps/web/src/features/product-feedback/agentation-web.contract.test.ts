@@ -46,7 +46,6 @@ describe("Agentation web contract", () => {
   });
 
   it("matches the public annotation field types and accounts for server-owned fields", () => {
-    expectTypeOf<Annotation["clientId"]>().toEqualTypeOf<string | undefined>();
     expectTypeOf<JsonFields<AgentationAnnotationCreate>>().toEqualTypeOf<
       JsonFields<Pick<Annotation, keyof AgentationAnnotationCreate>>
     >();
@@ -57,7 +56,6 @@ describe("Agentation web contract", () => {
     expectTypeOf<
       Exclude<keyof Annotation, keyof AgentationAnnotationCreate>
     >().toEqualTypeOf<
-      | "clientId"
       | "sessionId"
       | "url"
       | "status"
