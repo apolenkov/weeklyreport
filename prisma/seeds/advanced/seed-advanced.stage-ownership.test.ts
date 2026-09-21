@@ -12,7 +12,7 @@ import {
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { SEED_STAGES } from "../support/seed-constants.js";
+import { LEAD_1_ID, SEED_STAGES } from "../support/seed-constants.js";
 import { seedActiveSections } from "./seed-advanced.active-sections.js";
 import { PRODUCT_MARKETING_PORTAL } from "./seed-advanced.anchors.js";
 import { seedCrossAuthorOverlay } from "./seed-advanced.cross-author.js";
@@ -21,6 +21,13 @@ import { seedHistoryPeriods } from "./seed-advanced.history.js";
 import { seedPublishedSections } from "./seed-advanced.published-sections.js";
 import { seedRisks } from "./seed-advanced.risks.js";
 import { seedStageAssignments } from "./seed-advanced.stage-assignments.js";
+import {
+  ownedStageName,
+  ownedStageNameAt,
+  ownedStageNames,
+  ownershipKey,
+  type StageOwnership,
+} from "./seed-advanced.stage-names.js";
 
 interface UpsertArgs<T> {
   readonly create: T;
@@ -192,6 +199,62 @@ describe("advanced seed composition", () => {
     for (const row of marketingRows) {
       expect(stageNamesOf(row.stageNames)).not.toContain("Planning");
     }
+  });
+
+  it("fails closed when the effective map loses every stage for a pair", async () => {
+    const foreignLead = "a0000000-0000-4000-8000-0000000000fe";
+    // Static rows grant the primary lead Planning/Analysis/Design on
+    // Marketing, but the effective map hands every stage there to a foreign
+    // owner, so the pair's key is absent. The map must win: no fallback.
+    const ownership: StageOwnership = new Map([
+      [
+        ownershipKey(foreignLead, PRODUCT_MARKETING_PORTAL),
+        SEED_STAGES.map((stage) => stage.name),
+      ],
+    ]);
+    const failClosed = /owns no stage/;
+    expect(() =>
+      ownedStageNames(LEAD_1_ID, PRODUCT_MARKETING_PORTAL, ownership),
+    ).toThrow(failClosed);
+    expect(() =>
+      ownedStageNameAt(LEAD_1_ID, PRODUCT_MARKETING_PORTAL, 0, ownership),
+    ).toThrow(failClosed);
+    expect(() =>
+      ownedStageName(
+        LEAD_1_ID,
+        PRODUCT_MARKETING_PORTAL,
+        "Planning",
+        ownership,
+      ),
+    ).toThrow(failClosed);
+
+    // The writer must refuse instead of selecting an unowned stage: the first
+    // section's first item targets (primary, Marketing).
+    const items: Prisma.ItemUncheckedCreateInput[] = [];
+    const noop = () => Promise.resolve(null);
+    const noopMany = () => Promise.resolve({ count: 0 });
+    const prisma = {
+      reportSection: captureUpserts<Prisma.ReportSectionUncheckedCreateInput>(
+        [],
+      ),
+      projectStatus: captureUpserts<Prisma.ProjectStatusUncheckedCreateInput>(
+        [],
+      ),
+      stageStatus: captureUpserts<Prisma.StageStatusUncheckedCreateInput>([]),
+      item: { ...captureUpserts(items), update: noop, updateMany: noopMany },
+    } as unknown as PrismaClient;
+    await expect(seedActiveSections(prisma, ownership)).rejects.toThrow(
+      failClosed,
+    );
+    expect(items).toHaveLength(0);
+  });
+
+  it("keeps the static rows only for callers without a map", () => {
+    expect(ownedStageNames(LEAD_1_ID, PRODUCT_MARKETING_PORTAL)).toEqual([
+      "Planning",
+      "Analysis",
+      "Design",
+    ]);
   });
 });
 

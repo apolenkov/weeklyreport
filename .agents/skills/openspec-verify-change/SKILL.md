@@ -43,9 +43,11 @@ In both branches, never create the root as a side effect: do not run `openspec i
    Always announce: "Using change: <name>" and how to override (e.g., `$openspec-verify-change (Codex) or /openspec-verify-change (other agents) <other>`).
 
 2. **Check status to understand the schema**
+
    ```bash
    openspec status --change "<name>" --json
    ```
+
    Parse the JSON to understand:
    - `schemaName`: The workflow being used (e.g., "spec-driven")
    - `planningHome`, `changeRoot`, `artifactPaths`, and `actionContext`: path and scope context
@@ -130,15 +132,17 @@ In both branches, never create the root as a side effect: do not run `openspec i
 8. **Generate Verification Report**
 
    **Summary Scorecard**:
+
    ```markdown
    ## Verification Report: <change-name>
 
    ### Summary
-   | Dimension    | Status           |
-   |--------------|------------------|
-   | Completeness | X/Y tasks, N reqs|
-   | Correctness  | M/N reqs covered |
-   | Coherence    | Followed/Issues  |
+
+   | Dimension    | Status            |
+   | ------------ | ----------------- |
+   | Completeness | X/Y tasks, N reqs |
+   | Correctness  | M/N reqs covered  |
+   | Coherence    | Followed/Issues   |
    ```
 
    **Issues by Priority**:
@@ -181,6 +185,7 @@ In both branches, never create the root as a side effect: do not run `openspec i
 **Output Format**
 
 Use clear markdown with:
+
 - Table for summary scorecard
 - Grouped lists for issues (CRITICAL/WARNING/SUGGESTION)
 - Code references in format: `file.ts:123`
