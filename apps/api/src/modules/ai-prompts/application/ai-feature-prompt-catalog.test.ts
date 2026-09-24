@@ -1,4 +1,10 @@
 import type { AiPromptContents } from "@customreport/shared";
+import {
+  AI_PROMPT_CORE_LIMIT,
+  AI_PROMPT_EDITABLE_TAIL_SEPARATOR,
+  AI_PROMPT_SLOT_CONTENT_LIMIT,
+  aiPromptSlotReadSchema,
+} from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -38,6 +44,61 @@ describe("AI feature prompt catalog", () => {
     expect(slot.effectivePrompt).toContain(
       "Operator guidance (editable tail):",
     );
+    expect(slot.effectivePrompt).toBe(
+      `${slot.lockedCore}${AI_PROMPT_EDITABLE_TAIL_SEPARATOR}${slot.promptContents}`,
+    );
+  });
+
+  it("keeps a catalog-legal boundary composition readable by the shared schema", () => {
+    const entry = aiFeaturePromptCatalog.require(REPORT_ASSISTANT_FEATURE_KEY);
+    const boundaryCores = {
+      ...entry.lockedCore,
+      planner: "c".repeat(AI_PROMPT_CORE_LIMIT),
+    };
+    const editable = {
+      ...entry.defaultEditableInstructions,
+      planner: "e".repeat(AI_PROMPT_SLOT_CONTENT_LIMIT),
+    };
+    const composed = composePromptSet(
+      { ...entry, lockedCore: boundaryCores },
+      editable,
+      boundaryCores,
+    );
+    const planner = composed.slots.find(({ slot }) => slot === "planner");
+    expect(planner?.effectivePrompt).toHaveLength(
+      AI_PROMPT_CORE_LIMIT +
+        AI_PROMPT_EDITABLE_TAIL_SEPARATOR.length +
+        AI_PROMPT_SLOT_CONTENT_LIMIT,
+    );
+    expect(
+      composed.slots.every(
+        (slot) => aiPromptSlotReadSchema.safeParse(slot).success,
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects an editable slot that fails the shared contents schema", () => {
+    const entry = aiFeaturePromptCatalog.require(REPORT_ASSISTANT_FEATURE_KEY);
+    const editable = {
+      ...entry.defaultEditableInstructions,
+      planner: "",
+    };
+    expect(() =>
+      composePromptSet(entry, editable, { ...entry.lockedCore }),
+    ).toThrow("Invalid report-assistant prompt edit");
+  });
+
+  it("still rejects a serialized bundle over the shared cap", () => {
+    const entry = aiFeaturePromptCatalog.require(REPORT_ASSISTANT_FEATURE_KEY);
+    const editable = Object.fromEntries(
+      entry.slots.map((slot) => [
+        slot,
+        "e".repeat(AI_PROMPT_SLOT_CONTENT_LIMIT),
+      ]),
+    ) as AiPromptContents;
+    expect(() =>
+      composePromptSet(entry, editable, { ...entry.lockedCore }),
+    ).toThrow("exceed the size limit");
   });
 
   it("rejects a tampered locked core snapshot", () => {

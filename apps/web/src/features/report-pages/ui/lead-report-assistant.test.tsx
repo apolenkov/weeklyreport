@@ -11,7 +11,10 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { SessionContext } from "../../../shared/lib/auth/session-provider";
+import {
+  SessionContext,
+  type SessionUser,
+} from "../../../shared/lib/auth/session-provider";
 import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import { LeadReportAssistant } from "./lead-report-assistant";
@@ -300,6 +303,157 @@ describe("LeadReportAssistant", () => {
       question: "What is blocked in ERP?",
       resolutionTokens: [],
     });
+  });
+
+  it("clears the exchange when the authenticated user changes", async () => {
+    let currentUser: SessionUser = {
+      id: "lead-1",
+      name: "Lead",
+      email: "lead@example.com",
+      role: "lead",
+    };
+    const descriptors = [
+      { path: ["leadForm", "assistant"], mutation: true },
+      { path: ["ai", "availability"], query: { availability: "available" } },
+    ];
+    const { proxy, captured } = createMockTRPC(descriptors);
+    const mutation = captured["leadForm.assistant"];
+    if (!mutation) throw new Error("Assistant mutation was not registered");
+    mutation.mutationFn.mockResolvedValue(successOutcome);
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    function Wrapper({ children }: { readonly children: ReactNode }) {
+      return (
+        <QueryClientProvider client={queryClient}>
+          <SessionContext.Provider
+            value={{
+              user: currentUser,
+              organization: null,
+              isLoading: false,
+              isAuthenticated: true,
+            }}
+          >
+            <TRPCProxyContext.Provider value={proxy}>
+              <LeadReportAssistantStore>{children}</LeadReportAssistantStore>
+            </TRPCProxyContext.Provider>
+          </SessionContext.Provider>
+        </QueryClientProvider>
+      );
+    }
+    const { rerender } = render(
+      <Wrapper>
+        <LeadReportAssistant />
+      </Wrapper>,
+    );
+
+    await openAssistant();
+    submitQuestion("Lead one's private question");
+    await screen.findByText("The release is on track.");
+
+    currentUser = { ...currentUser, id: "lead-2" };
+    rerender(
+      <Wrapper>
+        <LeadReportAssistant />
+      </Wrapper>,
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.queryByText("The release is on track."),
+      ).not.toBeInTheDocument(),
+    );
+    expect(screen.queryByText("Lead one's private question")).toBeNull();
+    expect(screen.getByRole("textbox", { name: "Your question" })).toHaveValue(
+      "",
+    );
+  });
+
+  it("keeps the new user's exchange empty when a pending answer resolves after switching accounts", async () => {
+    let currentUser: SessionUser = {
+      id: "lead-1",
+      name: "Lead",
+      email: "lead@example.com",
+      role: "lead",
+    };
+    const descriptors = [
+      { path: ["leadForm", "assistant"], mutation: true },
+      { path: ["ai", "availability"], query: { availability: "available" } },
+    ];
+    const { proxy, captured } = createMockTRPC(descriptors);
+    const mutation = captured["leadForm.assistant"];
+    if (!mutation) throw new Error("Assistant mutation was not registered");
+    let resolveRequest: ((value: unknown) => void) | undefined;
+    const pending = new Promise<unknown>((resolve) => {
+      resolveRequest = resolve;
+    });
+    mutation.mutationFn.mockReturnValueOnce(pending);
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    function Wrapper({ children }: { readonly children: ReactNode }) {
+      return (
+        <QueryClientProvider client={queryClient}>
+          <SessionContext.Provider
+            value={{
+              user: currentUser,
+              organization: null,
+              isLoading: false,
+              isAuthenticated: true,
+            }}
+          >
+            <TRPCProxyContext.Provider value={proxy}>
+              <LeadReportAssistantStore>{children}</LeadReportAssistantStore>
+            </TRPCProxyContext.Provider>
+          </SessionContext.Provider>
+        </QueryClientProvider>
+      );
+    }
+    const { rerender } = render(
+      <Wrapper>
+        <LeadReportAssistant />
+      </Wrapper>,
+    );
+
+    await openAssistant();
+    submitQuestion("Lead one's pending question");
+    expect(screen.getByRole("status")).toHaveTextContent("Reviewing");
+
+    currentUser = { ...currentUser, id: "lead-2" };
+    rerender(
+      <Wrapper>
+        <LeadReportAssistant />
+      </Wrapper>,
+    );
+
+    await waitFor(() => expect(screen.queryByRole("status")).toBeNull());
+    expect(screen.getByRole("textbox", { name: "Your question" })).toHaveValue(
+      "",
+    );
+    expect(
+      screen.getByRole("button", { name: "Ask report chat" }),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      resolveRequest?.(successOutcome);
+      await pending;
+    });
+
+    expect(screen.queryByText("The release is on track.")).toBeNull();
+    expect(screen.queryByText("Lead one's pending question")).toBeNull();
+    expect(
+      screen.queryByRole("link", { name: /S1.*Week 31.*Portal/u }),
+    ).toBeNull();
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.getByRole("textbox", { name: "Your question" })).toHaveValue(
+      "",
+    );
   });
 
   it("completes a pending exchange while the assistant surface is unmounted", async () => {

@@ -5,6 +5,7 @@ import { ActiveProductRow } from "./active-product-row";
 
 interface ProductsTableProps {
   readonly activeProducts: readonly AdminProductView[];
+  readonly hasData: boolean;
   readonly archivedProducts: readonly AdminProductView[];
   readonly getUserById: (id: string) => AdminUserView | undefined;
   readonly stageCountByProject: ReadonlyMap<string, number>;
@@ -21,6 +22,7 @@ interface ProductsTableProps {
 
 export function ProductsTable({
   activeProducts,
+  hasData,
   archivedProducts,
   getUserById,
   stageCountByProject,
@@ -57,6 +59,13 @@ export function ProductsTable({
             isArchiving={isArchiving}
           />
         ))}
+        {activeProducts.length === 0 && (
+          <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
+            {hasData
+              ? "No products match the search."
+              : "No active products yet."}
+          </div>
+        )}
       </div>
 
       <ArchivedProductList

@@ -105,7 +105,7 @@ export function createAppRouter(deps: AppRouterDeps) {
   return router({
     auth: createAuthRouter(),
     org: createOrganizationRouter(deps),
-    // Only mounted when AUTH_DEV_MODE=true.
+    // Always mounted; each procedure refuses unless AUTH_DEV_MODE=true.
     dev: createDevRouter(deps),
     reports: createReportsRouter(deps),
     review: createReviewRouter(deps),

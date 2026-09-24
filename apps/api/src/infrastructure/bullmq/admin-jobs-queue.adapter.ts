@@ -1,6 +1,7 @@
 import {
   EMAIL_REMINDER_QUEUE_NAME,
   failedJobSchema,
+  PDF_EXPORT_QUEUE_NAME,
   type QueueName,
 } from "@customreport/shared";
 import type { Job, Queue } from "bullmq";
@@ -8,6 +9,7 @@ import type { Job, Queue } from "bullmq";
 import type {
   AdminJobHandle,
   AdminJobsQueue,
+  AdminPdfExportIdentity,
 } from "../../modules/admin/index.js";
 
 type AdminQueueJob = Pick<
@@ -21,6 +23,7 @@ type AdminQueueJob = Pick<
   | "data"
   | "retry"
   | "remove"
+  | "getState"
 >;
 
 // Reads the reminder-execution id out of the raw job payload; the port needs
@@ -37,6 +40,35 @@ function getReminderExecutionId(data: unknown): string | null {
   }
 
   return null;
+}
+
+// Reads the non-credential identity a pdf-export job payload claims. A
+// missing or malformed triple fails closed: the coordinated retry cannot
+// bind the queue job to a durable export row without all three fields.
+function getPdfExportIdentity(data: unknown): AdminPdfExportIdentity | null {
+  if (data === null || typeof data !== "object") return null;
+  const payload = data as {
+    jobId?: unknown;
+    reportId?: unknown;
+    requestedBy?: unknown;
+  };
+  if (typeof payload.jobId !== "string" || payload.jobId.length === 0) {
+    return null;
+  }
+  if (typeof payload.reportId !== "string" || payload.reportId.length === 0) {
+    return null;
+  }
+  if (
+    typeof payload.requestedBy !== "string" ||
+    payload.requestedBy.length === 0
+  ) {
+    return null;
+  }
+  return {
+    jobId: payload.jobId,
+    reportId: payload.reportId,
+    requestedBy: payload.requestedBy,
+  };
 }
 
 export function createAdminJobHandle(
@@ -58,7 +90,13 @@ export function createAdminJobHandle(
             queue,
             reminderExecutionId: getReminderExecutionId(job.data),
           }
-        : { queue },
+        : queue === PDF_EXPORT_QUEUE_NAME
+          ? {
+              queue,
+              pdfExportIdentity: getPdfExportIdentity(job.data),
+            }
+          : { queue },
+    getState: () => job.getState(),
     retry: () => job.retry(),
     remove: () => job.remove(),
   };

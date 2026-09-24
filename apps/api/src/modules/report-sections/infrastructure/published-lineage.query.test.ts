@@ -1,8 +1,13 @@
 import { PublishedSnapshotIntegrityError } from "@customreport/report-persistence";
-import type { ReportSectionReadModel } from "@customreport/shared";
+import {
+  type PublishedReportSnapshot,
+  publishedReportSnapshotSchema,
+  type ReportSectionReadModel,
+} from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
+import { publishedSnapshotFixture } from "../../../test-utils/prisma-test-helper.js";
 import { LeadFormPrismaRepository } from "./lead-form.prisma-repository.js";
 import { queryPublishedLineage } from "./published-lineage.query.js";
 import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository.js";
@@ -17,6 +22,11 @@ const candidates = {
     "draft-decision",
   ],
 };
+
+type PublishedItem =
+  PublishedReportSnapshot["sections"][number]["items"][number];
+type PublishedDecision =
+  PublishedReportSnapshot["sections"][number]["decisions"][number];
 
 function emptyPublishedSnapshot(reportId: string) {
   return {
@@ -33,6 +43,39 @@ function emptyPublishedSnapshot(reportId: string) {
       totals: { green: 0, yellow: 0, red: 0 },
     },
     sections: [],
+  };
+}
+
+function publishedItem(stableId: string, id: string): PublishedItem {
+  return {
+    id,
+    stableId,
+    projectId: "30000000-0000-4000-8000-000000000001",
+    activityId: null,
+    type: "current",
+    text: "Published item",
+    tag: "feature",
+    workflowStatus: "done",
+    carriedOver: false,
+    priorityRank: null,
+    pausedReason: null,
+    nextStepText: null,
+    stageNames: ["Development"],
+  };
+}
+
+function publishedDecision(stableId: string, id: string): PublishedDecision {
+  return {
+    id,
+    stableId,
+    text: "Published decision",
+    owner: "Test Owner",
+    deadline: null,
+    impact: "Published impact",
+    resolvedAt: null,
+    stageNames: ["Development"],
+    productId: "30000000-0000-4000-8000-000000000001",
+    activityId: null,
   };
 }
 
@@ -283,6 +326,73 @@ describe("queryPublishedLineage", () => {
     ).resolves.toEqual({
       itemStableIds: ["10000000-0000-4000-8000-000000000005"],
       decisionStableIds: [],
+    });
+  });
+
+  it("recovers sibling item and decision lineage when projection rows are missing", async () => {
+    const fixture = createPrisma();
+    const currentItemStableId = "10000000-0000-4000-8000-000000000010";
+    const siblingItemStableId = "10000000-0000-4000-8000-000000000011";
+    const currentDecisionStableId = "10000000-0000-4000-8000-000000000020";
+    const siblingDecisionStableId = "10000000-0000-4000-8000-000000000021";
+    const snapshot = publishedReportSnapshotSchema.parse(
+      publishedSnapshotFixture({
+        reportId: candidates.reportId,
+        periodStart: "2026-04-07",
+        periodEnd: "2026-04-13",
+        publishedAt: "2026-04-14T10:00:00.000Z",
+        sectionOwners: [
+          {
+            reportSectionId: candidates.reportSectionId,
+            authorId: "40000000-0000-4000-8000-000000000001",
+            authorName: "Test Lead",
+            groupId: "50000000-0000-4000-8000-000000000001",
+            groupName: "Engineering",
+          },
+          {
+            reportSectionId: "10000000-0000-4000-8000-000000000003",
+            authorId: "40000000-0000-4000-8000-000000000002",
+            authorName: "Other Lead",
+            groupId: "50000000-0000-4000-8000-000000000002",
+            groupName: "Product",
+          },
+        ],
+      }),
+    );
+    fixture.documentFindMany.mockResolvedValue([]);
+    fixture.reportFindMany.mockResolvedValue([
+      {
+        id: candidates.reportId,
+        publishedSnapshot: {
+          ...snapshot,
+          sections: snapshot.sections.map((section, index) => ({
+            ...section,
+            items: [
+              publishedItem(
+                index === 0 ? currentItemStableId : siblingItemStableId,
+                `60000000-0000-4000-8000-00000000001${index}`,
+              ),
+            ],
+            decisions: [
+              publishedDecision(
+                index === 0 ? currentDecisionStableId : siblingDecisionStableId,
+                `60000000-0000-4000-8000-00000000002${index}`,
+              ),
+            ],
+          })),
+        },
+      },
+    ]);
+
+    await expect(
+      queryPublishedLineage(fixture.prisma, {
+        ...candidates,
+        itemStableIds: [currentItemStableId, siblingItemStableId],
+        decisionStableIds: [currentDecisionStableId, siblingDecisionStableId],
+      }),
+    ).resolves.toEqual({
+      itemStableIds: [currentItemStableId, siblingItemStableId],
+      decisionStableIds: [currentDecisionStableId, siblingDecisionStableId],
     });
   });
 

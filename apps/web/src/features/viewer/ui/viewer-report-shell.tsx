@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useMemo } from "react";
 
+import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";
 import { isLead } from "../../../shared/lib/auth/role-predicates";
 import { useSession } from "../../../shared/lib/auth/session-provider";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
@@ -204,6 +205,20 @@ export function ViewerReportShell({
     }),
   );
   const displayedQ = useQuery(trpc.weeklyReport.get.queryOptions({ reportId }));
+
+  // Log-only: history errors already render an inline alert; a displayedQ
+  // failure degrades to missing chrome (authority label / export) and must
+  // still reach the error seam.
+  useQueryErrorHandler(historyQ, {
+    event: "viewerReport.compiledHistory.load_failed",
+    component: "ViewerReportShell",
+    procedure: "reports.compiledHistory",
+  });
+  useQueryErrorHandler(displayedQ, {
+    event: "viewerReport.get.load_failed",
+    component: "ViewerReportShell",
+    procedure: "weeklyReport.get",
+  });
 
   const shouldRecover = useStatusEntryRecovery(displayedQ);
 

@@ -274,7 +274,7 @@ describe("createAuditLogger — period.auto-*", () => {
     });
   });
 
-  it("createNullAuditLogger noop branches for the three new events", () => {
+  it("createNullAuditLogger noop branches for the period and scope events", () => {
     const audit = createNullAuditLogger();
     expect(() =>
       audit.periodAutoCreate({

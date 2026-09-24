@@ -234,6 +234,7 @@ describe("ProjectActivity (integration)", () => {
         activityName: "Jira triage duty",
         jiraAccounts: ["OPS", "SUP-billing"],
         status: null,
+        titleOverride: null,
         note: null,
         linkedProducts: [{ productId, productName: "CRM Portal" }],
         derivedStatus: null,

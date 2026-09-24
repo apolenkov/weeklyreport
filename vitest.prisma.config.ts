@@ -9,8 +9,8 @@ import baseConfig from "./vitest.base.config.ts";
 export default mergeConfig(
   baseConfig,
   defineConfig({
-    // Nothing links workspace packages into the repo root, so shared imports need
-    // an explicit source alias here.
+    // Resolve @customreport/shared to the same source entry that
+    // tsconfig.prisma.json maps for this suite.
     resolve: {
       alias: {
         "@customreport/shared": path.resolve(

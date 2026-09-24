@@ -74,7 +74,7 @@ function buildItemChunk(context: SearchSqlContext): Prisma.Sql {
     INNER JOIN "ReportSection" rs ON rs."id" = i."reportSectionId"
     WHERE i."searchTsv" @@ plainto_tsquery('russian', ${q})
     ${context.sectionMineFilter} ${context.sectionGroupFilter}
-    ORDER BY "rank" DESC, i."createdAt" DESC
+    ORDER BY "rank" DESC, i."createdAt" DESC, "id" ASC
     LIMIT ${perType}
   )`;
 }
@@ -97,7 +97,7 @@ function buildRiskChunk(context: SearchSqlContext): Prisma.Sql {
     INNER JOIN "ReportSection" rs ON rs."id" = r."reportSectionId"
     WHERE r."searchTsv" @@ plainto_tsquery('russian', ${q})
     ${context.sectionMineFilter} ${context.sectionGroupFilter}
-    ORDER BY "rank" DESC, r."createdAt" DESC
+    ORDER BY "rank" DESC, r."createdAt" DESC, "id" ASC
     LIMIT ${perType}
   )`;
 }
@@ -116,7 +116,7 @@ function buildDecisionChunk(context: SearchSqlContext): Prisma.Sql {
     INNER JOIN "ReportSection" rs ON rs."id" = d."reportSectionId"
     WHERE d."searchTsv" @@ plainto_tsquery('russian', ${q})
     ${context.sectionMineFilter} ${context.sectionGroupFilter}
-    ORDER BY "rank" DESC, d."createdAt" DESC
+    ORDER BY "rank" DESC, d."createdAt" DESC, "id" ASC
     LIMIT ${perType}
   )`;
 }
@@ -133,7 +133,7 @@ function buildProjectChunk(context: SearchSqlContext): Prisma.Sql {
     FROM "Project" p
     WHERE p."searchTsv" @@ plainto_tsquery('russian', ${q})
     ${context.projectMineFilter} ${context.projectGroupFilter}
-    ORDER BY "rank" DESC, p."createdAt" DESC
+    ORDER BY "rank" DESC, p."createdAt" DESC, "id" ASC
     LIMIT ${perType}
   )`;
 }
@@ -156,7 +156,7 @@ function buildIncludedChunks(
 function buildSearchQuery(chunks: readonly Prisma.Sql[], limit: number) {
   return Prisma.sql`
     SELECT * FROM (${Prisma.join(chunks, " UNION ALL ")}) hits
-    ORDER BY "rank" DESC, "createdAt" DESC
+    ORDER BY "rank" DESC, "createdAt" DESC, "id" ASC
     LIMIT ${limit}
   `;
 }

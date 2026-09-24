@@ -64,6 +64,19 @@ overrides).
 - **THEN** `safeParse` fails and the process exits non-zero with the invalid-config report
 - **AND** the failure occurs at startup, not at a later request or worker job
 
+#### Scenario: Blank required numeric settings, Redis host, or PDF directory fail boot loud
+
+- **GIVEN** all other configuration is valid
+- **WHEN** `REDIS_HOST`, `REDIS_DB`, `DB_POOL_IDLE_TIMEOUT_MS`, `DB_POOL_CONNECTION_TIMEOUT_MS`,
+  `REPORT_ASSISTANT_SIMILARITY_THRESHOLD`, or `PDF_OUTPUT_DIR` is an empty string
+  or contains only whitespace, including tabs and newlines
+- **THEN** validation fails at startup instead of coercing a blank value to zero
+  or accepting a blank Redis host or output directory
+- **AND** explicit numeric `"0"` remains valid for each of the four numeric settings,
+  with their existing range and integer constraints preserved
+- **AND** nonblank relative and absolute `PDF_OUTPUT_DIR` paths remain accepted unchanged
+- **AND** nonblank `REDIS_HOST` values remain accepted unchanged
+
 ### Requirement: Routed vars read through the validated config except at named boundaries
 
 The system MUST read the routed variables through the validated

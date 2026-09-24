@@ -6,11 +6,12 @@ import {
 import { describe, expect, it, vi } from "vitest";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
-  PdfExportPrismaRepository,
   PdfExportStateConflictError,
   UnsupportedPdfExportStatusError,
-} from "./pdf-export.prisma-repository";
+} from "./pdf-export.job-state.js";
+import { PdfExportPrismaRepository } from "./pdf-export.prisma-repository";
 import { PdfExportDomainError } from "./pdf-export.service";
 
 const REPORT_ID = "659b2767-0f86-41e2-b025-49730ca010e4";
@@ -501,6 +502,217 @@ describe("PdfExportPrismaRepository terminal-state CAS", () => {
       filePath: EXPORT_ARTIFACT_URL,
       checksum: "checksum-a",
       error: "stale failure",
+    });
+  });
+});
+
+// The fake transaction models the two properties the row lock relies on:
+// every write runs on the tx client, and a rejected callback restores the
+// pre-transaction row (the mock stands in for PostgreSQL's rollback; the real
+// FOR UPDATE wait is covered by the integration suite).
+describe("PdfExportPrismaRepository runLockedExportJob", () => {
+  function createLockedPrisma(initial: PdfExportRow | null) {
+    let current = initial ? structuredClone(initial) : null;
+    const updateMany = vi.fn(
+      (input: {
+        where: { id: string; status: string };
+        data: Partial<PdfExportRow>;
+      }) => {
+        if (
+          current?.id !== input.where.id ||
+          current.status !== input.where.status
+        ) {
+          return Promise.resolve({ count: 0 });
+        }
+        current = {
+          ...current,
+          ...input.data,
+          updatedAt: new Date("2026-06-09T00:00:01Z"),
+        };
+        return Promise.resolve({ count: 1 });
+      },
+    );
+    const findUnique = vi.fn(() =>
+      Promise.resolve(current ? structuredClone(current) : null),
+    );
+    const queryRaw = vi.fn(() =>
+      Promise.resolve(current ? [structuredClone(current)] : []),
+    );
+    const tx = {
+      $queryRaw: queryRaw,
+      pdfExportJob: { updateMany, findUnique },
+    };
+    const transaction = vi.fn(async (run: (tx: unknown) => unknown) => {
+      const before = current ? structuredClone(current) : null;
+      try {
+        return await run(tx);
+      } catch (error) {
+        current = before;
+        throw error;
+      }
+    });
+    return {
+      prisma: { $transaction: transaction },
+      tx,
+      readCurrent: () => current,
+    };
+  }
+
+  it("locks the export row FOR UPDATE inside one transaction before the callback", async () => {
+    const { prisma, tx } = createLockedPrisma(
+      exportRow({ status: "failed", error: "browser crashed" }),
+    );
+    const repo = new PdfExportPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    const seen: string[] = [];
+    await repo.runLockedExportJob(EXPORT_JOB_ID, (job) => {
+      expect(job).toMatchObject({
+        jobId: EXPORT_JOB_ID,
+        reportId: REPORT_ID,
+        status: "failed",
+        requestedBy: AUTHOR_ID,
+      });
+      seen.push("callback");
+      return Promise.resolve();
+    });
+
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(1);
+    const [strings] = expectDefined(tx.$queryRaw.mock.calls[0]) as unknown as [
+      readonly string[],
+    ];
+    expect(strings.join("")).toContain('FROM "PdfExportJob"');
+    expect(strings.join("")).toContain("FOR UPDATE");
+    expect(seen).toEqual(["callback"]);
+  });
+
+  it("hands a null job to the callback when no export row exists", async () => {
+    const { prisma } = createLockedPrisma(null);
+    const repo = new PdfExportPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await repo.runLockedExportJob(EXPORT_JOB_ID, (job) => {
+      expect(job).toBeNull();
+      return Promise.resolve();
+    });
+  });
+
+  it("revives a failed row to pending, clearing artifact and error fields, on the tx client", async () => {
+    const { prisma, tx, readCurrent } = createLockedPrisma(
+      exportRow({ status: "failed", error: "browser crashed" }),
+    );
+    const repo = new PdfExportPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await repo.runLockedExportJob(EXPORT_JOB_ID, async (_job, writes) => {
+      await writes.reviveFailed();
+    });
+
+    expect(tx.pdfExportJob.updateMany).toHaveBeenCalledWith({
+      where: { id: EXPORT_JOB_ID, status: "failed" },
+      data: {
+        status: "pending",
+        filePath: null,
+        checksum: null,
+        error: null,
+      },
+    });
+    expect(readCurrent()).toMatchObject({
+      status: "pending",
+      filePath: null,
+      checksum: null,
+      error: null,
+      // Immutable identity columns are untouched by the revival.
+      reportId: REPORT_ID,
+      requestedBy: AUTHOR_ID,
+      templateVersion: "phase-2-pdf-v1",
+    });
+  });
+
+  it("fails loud when the locked row is no longer failed", async () => {
+    const { prisma, readCurrent } = createLockedPrisma(exportRow());
+    const repo = new PdfExportPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await expect(
+      repo.runLockedExportJob(EXPORT_JOB_ID, async (_job, writes) => {
+        await writes.reviveFailed();
+      }),
+    ).rejects.toBeInstanceOf(PdfExportDomainError);
+    expect(readCurrent()).toMatchObject({ status: "pending" });
+  });
+
+  it("rolls the revival back when the locked callback rejects", async () => {
+    const { prisma, readCurrent } = createLockedPrisma(
+      exportRow({ status: "failed", error: "browser crashed" }),
+    );
+    const repo = new PdfExportPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await expect(
+      repo.runLockedExportJob(EXPORT_JOB_ID, async (_job, writes) => {
+        await writes.reviveFailed();
+        throw new Error("queue.retry acknowledgement lost");
+      }),
+    ).rejects.toThrow("queue.retry acknowledgement lost");
+
+    expect(readCurrent()).toMatchObject({
+      status: "failed",
+      error: "browser crashed",
+    });
+  });
+
+  it("keeps failure-after-completion a no-op inside the lock", async () => {
+    const { prisma, readCurrent } = createLockedPrisma(
+      exportRow({
+        status: "completed",
+        filePath: EXPORT_ARTIFACT_URL,
+        checksum: "checksum-a",
+      }),
+    );
+    const repo = new PdfExportPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await repo.runLockedExportJob(EXPORT_JOB_ID, async (_job, writes) => {
+      await writes.markFailed("late failure");
+    });
+
+    expect(readCurrent()).toMatchObject({
+      status: "completed",
+      filePath: EXPORT_ARTIFACT_URL,
+      checksum: "checksum-a",
+      error: null,
+    });
+  });
+
+  it("adopts only the canonical artifact through the locked completion CAS", async () => {
+    const { prisma, readCurrent } = createLockedPrisma(exportRow());
+    const repo = new PdfExportPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await repo.runLockedExportJob(EXPORT_JOB_ID, async (_job, writes) => {
+      await expect(
+        writes.markCompleted("/exports/other.pdf", "sha-foreign"),
+      ).rejects.toBeInstanceOf(PdfExportDomainError);
+      const completed = await writes.markCompleted(
+        EXPORT_ARTIFACT_URL,
+        "checksum-a",
+      );
+      expect(completed).toMatchObject({ status: "completed" });
+    });
+
+    expect(readCurrent()).toMatchObject({
+      status: "completed",
+      filePath: EXPORT_ARTIFACT_URL,
+      checksum: "checksum-a",
     });
   });
 });

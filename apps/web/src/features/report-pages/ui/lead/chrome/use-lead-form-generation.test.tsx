@@ -165,4 +165,29 @@ describe("lead-form generation ownership", () => {
       items: [ITEM],
     });
   });
+
+  it("returning to the active generation must not restore a dialog that navigation closed", () => {
+    const generationA: LeadFormGeneration = "report-a:section-a";
+    const rendered = renderHook(
+      ({ generation }) =>
+        useLeadFormQuickAdd({
+          generation,
+          loaded: loaded(),
+          apply: () => undefined,
+        }),
+      { initialProps: { generation: generationA } },
+    );
+
+    act(() => rendered.result.current.quickAdd("next"));
+    expect(rendered.result.current.pendingQuickAdd).toMatchObject({
+      week: "next",
+      seq: 1,
+    });
+
+    rendered.rerender({ generation: "report-b:section-b" });
+    expect(rendered.result.current.pendingQuickAdd).toBeNull();
+
+    rendered.rerender({ generation: generationA });
+    expect(rendered.result.current.pendingQuickAdd).toBeNull();
+  });
 });

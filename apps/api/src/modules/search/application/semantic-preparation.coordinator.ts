@@ -144,10 +144,19 @@ export class SemanticPreparationCoordinator implements AiProviderPreparationCoor
       };
     }
     if (attempt >= 2) {
+      const currentCached = new Set(
+        await this.semanticRepository.findCachedHashes(
+          scope,
+          current.map(({ input }) => input.contentHash),
+        ),
+      );
+      const completed = current.filter(({ input }) =>
+        currentCached.has(input.contentHash),
+      ).length;
       return {
-        ...result,
+        completed,
         total: current.length,
-        failed: Math.max(1, result.failed),
+        failed: Math.max(1, current.length - completed),
         elapsedMs: Math.max(0, Date.now() - startedAt),
         sourceFingerprint: sourceFingerprint(current),
         sourceGeneration: currentSourceGeneration,
@@ -205,7 +214,7 @@ export class SemanticPreparationCoordinator implements AiProviderPreparationCoor
       this.batchConcurrency,
       (batch) =>
         this.embedBatch(batch, scope, embeddings).catch(() =>
-          Promise.all(
+          Promise.allSettled(
             batch.map(({ locator }) =>
               this.enqueuer.enqueue(locator, {
                 configurationRevisionId: revisionId,

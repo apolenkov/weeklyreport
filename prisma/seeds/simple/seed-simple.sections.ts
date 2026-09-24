@@ -68,7 +68,11 @@ function assignmentsFor(
   );
 }
 
-function requireAssignment(
+/**
+ * The lead's assignment on the preferred product (falling back to any product),
+ * so every authored row carries a stage its author owns there.
+ */
+export function requireAssignment(
   leadId: string,
   preferredProjectId: string,
   index: number,

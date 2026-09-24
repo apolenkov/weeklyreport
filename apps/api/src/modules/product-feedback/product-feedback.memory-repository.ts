@@ -159,17 +159,6 @@ export class ProductFeedbackMemoryRepository implements ProductFeedbackRepositor
     });
   }
 
-  findByClientId(
-    access: FeedbackAccess,
-    clientId: string,
-  ): Promise<FeedbackRecord | null> {
-    const match = [...this.rows.values()].find(
-      (feedback) =>
-        feedback.record.clientId === clientId && canRead(access, feedback),
-    );
-    return Promise.resolve(match?.record ?? null);
-  }
-
   update(
     access: FeedbackAccess,
     id: string,
@@ -202,11 +191,6 @@ export class ProductFeedbackMemoryRepository implements ProductFeedbackRepositor
     }
     this.rows.delete(id);
     return Promise.resolve();
-  }
-
-  owns(access: FeedbackAccess, id: string): Promise<boolean> {
-    const feedback = this.rows.get(id);
-    return Promise.resolve(feedback !== undefined && canRead(access, feedback));
   }
 
   ownsAuthor(access: FeedbackAccess, id: string): Promise<boolean> {

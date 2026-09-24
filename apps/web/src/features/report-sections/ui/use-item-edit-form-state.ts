@@ -10,9 +10,9 @@ import {
 export interface ItemEditErrors {
   text?: string | undefined;
   nextStepText?: string | undefined;
+  parent?: string | undefined;
   stageNames?: string | undefined;
   pausedReason?: string | undefined;
-  parent?: string | undefined;
 }
 
 interface UseItemEditFormStateArgs extends ItemEditDraftSeed {

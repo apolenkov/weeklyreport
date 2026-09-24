@@ -140,6 +140,13 @@ export class AiProviderConfigurationError extends Error {
   }
 }
 
+export class AiProviderConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AiProviderConflictError";
+  }
+}
+
 export const NOOP_AUDIT: AiProviderAuditSink = { record: () => undefined };
 
 export const NOOP_METRICS: AiProviderMetricsSink = {

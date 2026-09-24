@@ -1,0 +1,5 @@
+schema: spec-driven
+created: 2026-09-22
+goal: Replace the API's in-process Playwright PDF renderer with an internal
+  Gotenberg container, keeping the durable BullMQ job/artifact protocol and
+  adding a separate non-gating renderer health signal.

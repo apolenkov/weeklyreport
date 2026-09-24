@@ -12,6 +12,7 @@ import {
   AdminSnapshotConflictError,
   AdminUserActivityAssignmentConflictError,
   AdminUserConflictError,
+  AdminUserNotFoundError,
   AdminUserPublishedHistoryError,
   AdminUserReportingGroupRequiredError,
 } from "../../modules/admin/index.js";
@@ -22,11 +23,15 @@ import {
 } from "../../modules/ai-prompts/index.js";
 import {
   AiProviderConfigurationError,
+  AiProviderConflictError,
   AiProviderNotFoundError,
   CredentialCodecError,
   ProviderUrlPolicyError,
 } from "../../modules/ai-provider/index.js";
-import { ArchiveDomainError } from "../../modules/archive/index.js";
+import {
+  ArchiveCursorError,
+  ArchiveDomainError,
+} from "../../modules/archive/index.js";
 import {
   CarryOverConflictError,
   CarryOverDomainError,
@@ -80,6 +85,10 @@ export const DOMAIN_ERROR_CODES: readonly (readonly [
   TRPCError["code"],
 ])[] = [
   [AiProviderConfigurationError, "BAD_REQUEST"],
+  // A lost active-pointer compare-and-set is a concurrency conflict — the
+  // losing activation rolls back and the client retries, distinct from the
+  // configuration rejections above.
+  [AiProviderConflictError, "CONFLICT"],
   [AiProviderNotFoundError, "NOT_FOUND"],
   [CredentialCodecError, "BAD_REQUEST"],
   [ProviderUrlPolicyError, "BAD_REQUEST"],
@@ -107,6 +116,9 @@ export const DOMAIN_ERROR_CODES: readonly (readonly [
   [LeadFormAccessError, "FORBIDDEN"],
   [PdfExportDomainError, "NOT_FOUND"],
   [ArchiveDomainError, "NOT_FOUND"],
+  // A present-but-undecodable keyset cursor is malformed client input:
+  // BAD_REQUEST (400), never a silent page-1 restart or an internal error.
+  [ArchiveCursorError, "BAD_REQUEST"],
   [WeeklyReportDomainError, "NOT_FOUND"],
   [LeadFormDomainError, "NOT_FOUND"],
   // A lifecycle/one-pending block is a state conflict on an existing resource
@@ -159,8 +171,10 @@ export const DOMAIN_ERROR_CODES: readonly (readonly [
   // Product owned by another group, terminal until the admin detaches it →
   // CONFLICT.
   [AdminGroupProductConflictError, "CONFLICT"],
-  // An email or SAML identity collision is an existing-resource conflict.
+  // An identity collision or a delete blocked by existing references.
   [AdminUserConflictError, "CONFLICT"],
+  // Targeted activate/deactivate on an absent user id (P2025) → NOT_FOUND.
+  [AdminUserNotFoundError, "NOT_FOUND"],
   [AdminUserActivityAssignmentConflictError, "CONFLICT"],
   // Published reports retain their publisher identity; deactivation is the
   // supported offboarding path, so a hard delete is a state conflict.

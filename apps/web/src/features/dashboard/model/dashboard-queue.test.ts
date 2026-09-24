@@ -55,15 +55,27 @@ describe("dashboard lead queue", () => {
 
     expect(
       mapWeeklyDashboardData({ weeklyReport }).blockedAtRisk.map(
-        ({ productId, description }) => ({ productId, description }),
+        ({ productId, stage, severity, productFlaggedRed, description }) => ({
+          productId,
+          stage,
+          severity,
+          productFlaggedRed,
+          description,
+        }),
       ),
     ).toEqual([
       {
         productId: firstProductId,
+        stage: "Development",
+        severity: "blocked",
+        productFlaggedRed: true,
         description: "Concrete first-product blocker",
       },
       {
         productId: secondProductId,
+        stage: "Flagged",
+        severity: "at-risk",
+        productFlaggedRed: true,
         description: "Red roll-up for second product",
       },
     ]);
@@ -151,6 +163,7 @@ describe("dashboard lead queue", () => {
         status: "draft",
         lastEditAt: new Date("2026-07-16T11:30:00.000Z"),
         reviewLabel: "Not reviewed",
+        reminderRuleId: "a0000000-0000-4000-a000-000000000600",
         actions: { canOpen: true, canRemind: true },
       },
     );
@@ -161,6 +174,27 @@ describe("dashboard lead queue", () => {
       actions: { canReview: true, canRequestChanges: true, canRevoke: true },
     });
     expect(mapped.pendingLeads).toEqual(["Nora N.S."]);
+  });
+
+  it("offers no reminder action without an active deadline rule", () => {
+    const row = queueReviewRow(queueLeadId(1), "Dana Draft");
+    const weeklyReport = {
+      ...queueReport([queueSection(row.leadId, row.leadName, "draft")]),
+      activeDeadlineReminderRuleId: null,
+    };
+    const mapped = mapReviewDashboardData({
+      review: [row],
+      weeklyReport,
+      activity: queueActivity([
+        queueActivityRow(row.leadId, row.leadName, { content: 1 }),
+      ]),
+      now: QUEUE_NOW,
+    });
+
+    expect(mapped.leads[0]).toMatchObject({
+      reminderRuleId: null,
+      actions: { canRemind: false },
+    });
   });
 
   it("orders action-needed, stale, active, and completed rows with name ties", () => {

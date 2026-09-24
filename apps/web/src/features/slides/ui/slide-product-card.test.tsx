@@ -143,4 +143,30 @@ describe("SlideProductCard status presentation", () => {
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
     expect(screen.queryByTestId("slide-product-card")).not.toBeInTheDocument();
   });
+
+  it("renders the effective Activity title and description together", () => {
+    const grid = buildSlideGridModel({
+      section: makeReportSectionFixture({
+        projects: [
+          { projectId: "p1", projectName: "Alpha", trafficLight: "green" },
+        ],
+        activities: [
+          {
+            activityId: "activity-1",
+            activityName: "Operations",
+            titleOverride: "Weekly operations",
+            note: "Coverage remains staffed",
+            status: "green",
+            linkedProducts: [{ productId: "p1", productName: "Alpha" }],
+          },
+        ],
+      }),
+    });
+    const card = expectDefined(
+      grid.products.find((product) => product.id === "p1"),
+    );
+    render(<SlideProductCard card={card} authorsById={authorsById} />);
+    expect(screen.getByText("Weekly operations")).toBeInTheDocument();
+    expect(screen.getByText("Coverage remains staffed")).toBeInTheDocument();
+  });
 });

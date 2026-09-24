@@ -1,9 +1,7 @@
 import {
-  type AssembledReport,
   AUTH_COOKIE_NAME,
   type PdfExportJob,
   pdfExportJobSchema,
-  type PublishedReportSnapshot,
   type UserSession,
 } from "@customreport/shared";
 
@@ -13,7 +11,12 @@ import { type AppLogger } from "../../lib/logger";
 import { buildPublishedReadModelFromSnapshot } from "../weekly-report/index.js";
 import {
   type PdfExportEnqueuer,
+  type PdfExportJobIdentity,
+  type PdfExportRepository,
+  type PdfExportRetryOutcome,
+  type PdfExportRetryQueue,
   type PdfExportTelemetry,
+  type PdfExportTerminalState,
 } from "./pdf-export.ports.js";
 import { signPdfExportToken as signPdfExportTokenPure } from "./pdf-export.token.js";
 
@@ -30,38 +33,6 @@ const PDF_EXPORT_TEMPLATE_VERSION = "phase-2-pdf-v1";
 
 // Telemetry role label for non-tRPC callers (workers/cron) with no session role.
 const SYSTEM_ROLE_LABEL = "system";
-
-export type PdfExportJobRecord = PdfExportJob & { requestedBy: string };
-
-export interface PdfExportTerminalState {
-  readonly jobId: string;
-  readonly reportId: string;
-  readonly requestedBy: string;
-  readonly status: "completed" | "failed";
-  readonly artifactUrl?: string;
-  readonly checksum?: string;
-  readonly error?: string;
-}
-
-export interface PdfExportRepository {
-  getPublishedReportForExport(
-    reportId: string,
-    session: UserSession,
-  ): Promise<AssembledReport | null>;
-  // Requester identity is mandatory: a job without a requester is a caller
-  // bug and must fail loud rather than be relabelled as a system actor.
-  createExportJob(
-    job: PdfExportJob,
-    requestedBy: string,
-    publicationSnapshot: AssembledReport,
-  ): Promise<PdfExportJob>;
-  getPublishedReportForJob(
-    jobId: string,
-  ): Promise<PublishedReportSnapshot | null>;
-  getExportJob(jobId: string): Promise<PdfExportJobRecord | null>;
-  saveExportJob(job: PdfExportJob): Promise<PdfExportJob>;
-  markExportFailed(jobId: string, error: string): Promise<void>;
-}
 
 export class PdfExportService {
   private readonly logger: AppLogger;
@@ -242,55 +213,110 @@ export class PdfExportService {
     await this.repository.markExportFailed(jobId, error);
   }
 
-  /** Reconciles one durable BullMQ terminal state; DB terminal states win ties. */
+  /**
+   * Reconciles a terminal queue state to the durable export row under the
+   * per-export row lock. `loadCurrentTerminalState` re-reads the queue AFTER
+   * the lock is held, so a state captured before it (for example a failure
+   * whose job has since been retried) can never overwrite a newer attempt.
+   */
   async reconcileTerminalState(
-    state: PdfExportTerminalState,
+    identity: PdfExportJobIdentity,
+    loadCurrentTerminalState: () => Promise<PdfExportTerminalState | null>,
   ): Promise<boolean> {
-    const job = await this.repository.getExportJob(state.jobId);
-    if (
-      job?.status !== "queued" ||
-      job.reportId !== state.reportId ||
-      job.requestedBy !== state.requestedBy
-    ) {
-      if (job?.status === "queued") {
-        this.logger.error("pdf-export terminal identity mismatch", {
-          jobId: state.jobId,
-          reportId: state.reportId,
-          requestedBy: state.requestedBy,
-        });
-      }
-      return false;
-    }
-    if (state.status === "failed") {
-      await this.markExportFailed(
-        state.jobId,
-        state.error ?? "PDF export failed in BullMQ",
-      );
-      return true;
-    }
-    if (!state.artifactUrl || !state.checksum) {
-      this.logger.error(
-        "pdf-export completed job has no durable artifact result",
-        {
-          jobId: state.jobId,
-        },
-      );
-      return false;
-    }
-    await this.markExportCompleted(
-      state.jobId,
-      state.artifactUrl,
-      state.checksum,
+    return this.repository.runLockedExportJob(
+      identity.jobId,
+      async (job, writes) => {
+        if (job?.status !== "queued") {
+          return false;
+        }
+        const state = await loadCurrentTerminalState();
+        if (state === null) {
+          return false;
+        }
+        if (
+          state.jobId !== identity.jobId ||
+          state.reportId !== identity.reportId ||
+          state.requestedBy !== identity.requestedBy ||
+          job.reportId !== identity.reportId ||
+          job.requestedBy !== identity.requestedBy
+        ) {
+          this.logger.error("pdf-export terminal identity mismatch", {
+            jobId: state.jobId,
+            reportId: state.reportId,
+            requestedBy: state.requestedBy,
+          });
+          return false;
+        }
+        if (state.status === "failed") {
+          await writes.markFailed(state.error ?? "PDF export failed in BullMQ");
+          return true;
+        }
+        if (!state.artifactUrl || !state.checksum) {
+          this.logger.error(
+            "pdf-export completed job has no durable artifact result",
+            {
+              jobId: state.jobId,
+            },
+          );
+          return false;
+        }
+        await writes.markCompleted(state.artifactUrl, state.checksum);
+        return true;
+      },
     );
-    return true;
   }
 
-  // Prefer Playwright `url` over domain/secure inference from PDF_BASE_URL —
-  // IP, localhost, and proxy hostnames reject or mis-scope domain cookies.
+  /**
+   * Coordinated manual retry of a terminally failed export. The durable
+   * failed→pending revival commits only if queue.retry resolves first, so a
+   * rejected retry rolls the Postgres transaction back with the row left
+   * failed. Only Postgres rolls back — a lost Redis ack or a failed Postgres
+   * commit leaves the queue-side outcome uncertain and is never compensated.
+   */
+  async retryFailedExport(input: {
+    identity: PdfExportJobIdentity;
+    queue: PdfExportRetryQueue;
+  }): Promise<PdfExportRetryOutcome> {
+    const { identity, queue } = input;
+    return this.repository.runLockedExportJob(
+      identity.jobId,
+      async (job, writes) => {
+        if (
+          job?.status !== "failed" ||
+          job.reportId !== identity.reportId ||
+          job.requestedBy !== identity.requestedBy
+        ) {
+          this.logger.info(
+            "pdf-export manual retry declined: no matching failed export",
+            {
+              jobId: identity.jobId,
+              reportId: identity.reportId,
+            },
+          );
+          return "ineligible";
+        }
+        if (!(await queue.isFailed())) {
+          return "queue-not-failed";
+        }
+        await writes.reviveFailed();
+        await queue.retry();
+        this.logger.info("pdf-export manual retry revived the export", {
+          jobId: identity.jobId,
+          reportId: identity.reportId,
+        });
+        return "retried";
+      },
+    );
+  }
+
+  // Gotenberg `cookies` field shape: the jar is keyed by `domain`, not `url`.
+  // A single-label host (compose `web`, or localhost in host-source dev) is
+  // probe-verified to reach the main document and same-origin subrequests.
   buildAuthCookies(authToken: string): {
     name: string;
     value: string;
-    url: string;
+    domain: string;
+    path: string;
     httpOnly: boolean;
     sameSite: "Lax" | "Strict" | "None";
   }[] {
@@ -300,7 +326,8 @@ export class PdfExportService {
       {
         name: AUTH_COOKIE_NAME,
         value: authToken,
-        url: baseUrl,
+        domain: new URL(baseUrl).hostname,
+        path: "/",
         httpOnly: true,
         sameSite: "Lax",
       },

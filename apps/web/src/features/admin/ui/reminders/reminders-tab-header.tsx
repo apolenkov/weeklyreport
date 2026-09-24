@@ -22,7 +22,7 @@ export function RemindersTabHeader({
   return (
     <TabHeader
       title="Reminders"
-      description="Each reminder fires automatically before every report deadline inside its validity window."
+      description="Each reminder fires automatically relative to every report deadline inside its validity window."
       count={`${policyCount} ${pluralize(policyCount, "reminder", "reminders")}`}
       search={
         <TabSearch

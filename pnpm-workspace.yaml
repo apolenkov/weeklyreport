@@ -31,7 +31,6 @@ allowBuilds:
   esbuild: true
   msgpackr-extract: true
   msw: true
-  playwright: true
   prisma: true
   sharp: true
   unrs-resolver: true

@@ -254,6 +254,10 @@ export async function executeAgentationRequest(
   actorOrOptions: AgentationRequestOptions | AgentationRole = "human",
 ): Promise<boolean> {
   const options = resolveOptions(actorOrOptions);
+  // The handler is mounted at /api/v1 for both /feedback and /agentation —
+  // without this guard, un-prefixed paths like /api/v1/sessions would shadow
+  // onto agentation handlers below.
+  if (!/^\/agentation(?=\/|$)/.test(req.path)) return false;
   const path = req.path.replace(/^\/agentation(?=\/|$)/, "") || "/";
   res.setHeader("cache-control", "no-store");
   const repo = new AgentationPrismaRepository(prisma);

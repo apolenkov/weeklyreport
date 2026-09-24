@@ -25,11 +25,7 @@ dist
 .codex
 .agents
 .idea
-test-results
-**/test-results
 **/.results
-**/playwright-report
-playwright-report
 coverage
 **/coverage
 apps/api/.logs

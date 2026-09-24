@@ -251,11 +251,12 @@ export const auditPersistFailuresTotal = new Counter({
 });
 
 // Counts shared Redis read-through-cache operations that degraded
-// (read / parse / write / scan failures). Cache reads stay fail-safe,
-// so this counter is the only signal the cache is actually serving hits.
+// (validation / parse / read / write / scan failures). Cache reads stay
+// fail-safe, so this counter reports cache degradation and errors only — it
+// does not track successful cache hits.
 export const redisCacheErrorsTotal = new Counter({
   name: "customreport_redis_cache_errors_total",
-  help: "Redis read-through-cache operations that degraded (read / parse / write / scan)",
+  help: "Redis read-through-cache operations that degraded (validation / parse / read / write / scan / delete / connection); not successful cache hits",
   labelNames: ["operation"] as const,
   registers: [metricsRegistry],
 });

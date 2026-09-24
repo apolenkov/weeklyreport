@@ -55,6 +55,7 @@ export function ScopeToggle<T extends ScopeValue>({
     buttonRefs.current[nextIndex]?.focus();
   }
 
+  const activeIndex = allowedScopes.indexOf(value);
   return (
     <SegmentedToggle role="radiogroup" ariaLabel={ariaLabel} size={size}>
       {allowedScopes.map((s, index) => (
@@ -66,7 +67,9 @@ export function ScopeToggle<T extends ScopeValue>({
           type="button"
           role="radio"
           aria-checked={value === s}
-          tabIndex={value === s ? 0 : -1}
+          tabIndex={
+            (activeIndex === -1 ? index === 0 : index === activeIndex) ? 0 : -1
+          }
           onClick={() => onChange(s)}
           onKeyDown={(event) => handleKeyDown(event, index)}
           className={segmentClassName(value === s)}

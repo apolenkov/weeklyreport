@@ -31,7 +31,10 @@ export function OutcomeAudit({ item }: { readonly item: StatusOverviewItem }) {
   return (
     <details className="text-xs text-[var(--color-muted-foreground)]">
       <summary className="flex min-h-[var(--touch-target-min)] cursor-pointer items-center rounded-[var(--radius-sm)] px-1 font-medium text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]">
-        History
+        <span>History</span>
+        {events.length > 0 ? (
+          <span>{` · ${String(events.length)}`}</span>
+        ) : null}
       </summary>
       <ul className="space-y-1 px-1 pb-1">
         {events.length > 0 ? (

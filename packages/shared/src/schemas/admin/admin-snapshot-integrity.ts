@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import type { DbRole } from "../auth/auth";
 import {
   type ReminderRecoverySnapshot,
   validateReminderRecoveryReferences,
@@ -18,7 +19,7 @@ interface AdminSnapshotIntegrityInput extends ReminderRecoverySnapshot {
   readonly users: readonly {
     readonly id: string;
     readonly email: string;
-    readonly role: "lead" | "head" | "admin" | "viewer";
+    readonly role: DbRole;
     readonly reportingGroupId?: string | null | undefined;
   }[];
   readonly groups: readonly {

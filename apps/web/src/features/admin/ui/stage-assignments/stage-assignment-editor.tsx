@@ -1,6 +1,6 @@
 "use client";
 
-import { shortName } from "@customreport/shared";
+import { shortName, shortNameFromName } from "@customreport/shared";
 import type { ReactNode } from "react";
 
 import type { AdminUserView, StageName } from "../../model/admin-types";
@@ -40,7 +40,12 @@ const STAGE_SELECT_CLASS = {
 interface StageCellProps {
   readonly stage: { readonly id: string; readonly name: string };
   readonly assignment:
-    { readonly id: string; readonly userId: string } | undefined;
+    | {
+        readonly id: string;
+        readonly userId: string;
+        readonly userName?: string | undefined;
+      }
+    | undefined;
   readonly projectId: string;
   readonly projectName: string;
   readonly leads: readonly AdminUserView[];
@@ -64,6 +69,12 @@ function StageCell({
 }: StageCellProps) {
   const stageName = stage.name as StageName;
   const currentAssignee = assignment?.userId ?? "";
+  // A stored assignee outside the eligible lead list (regrouped,
+  // deactivated) still holds the slot: surface it as a disabled option so
+  // the select keeps the value instead of rendering as unassigned.
+  const isRetainedAssignee =
+    assignment !== undefined &&
+    !leads.some((lead) => lead.id === currentAssignee);
   const selectId = `${projectId}-${stage.id}`;
 
   function handleChange(nextUserId: string) {
@@ -102,6 +113,11 @@ function StageCell({
         aria-label={`Assign ${stageName} stage for ${projectName}`}
       >
         <option value="">-- unassigned --</option>
+        {isRetainedAssignee ? (
+          <option value={currentAssignee} disabled>
+            {shortNameFromName(assignment.userName ?? "") || currentAssignee}
+          </option>
+        ) : null}
         {leads.map((lead) => (
           <option key={lead.id} value={lead.id}>
             {shortName(lead)}

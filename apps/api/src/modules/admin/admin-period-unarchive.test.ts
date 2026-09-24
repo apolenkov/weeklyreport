@@ -116,7 +116,6 @@ describe("unarchivePeriod lifecycle compare-and-set", () => {
 
     await expect(unarchivePeriod(prisma, "report-1", NOW)).resolves.toEqual({
       nextPeriodState: "scheduled",
-      nextPeriodStatus: "open",
     });
     expect(updateMany.mock.calls[0]?.[0]).toEqual({
       where: { id: "report-1", ...ARCHIVED_ROW },
@@ -191,7 +190,6 @@ describe("unarchivePeriod lifecycle compare-and-set", () => {
 
     await expect(unarchivePeriod(prisma, "report-1", now)).resolves.toEqual({
       nextPeriodState: "open",
-      nextPeriodStatus: "open",
     });
     expect(updateMany.mock.calls[0]?.[0]).toEqual({
       where: { id: "report-1", ...ARCHIVED_ROW },
@@ -211,7 +209,6 @@ describe("unarchivePeriod lifecycle compare-and-set", () => {
 
     await expect(unarchivePeriod(prisma, "report-1", NOW)).resolves.toEqual({
       nextPeriodState: "published",
-      nextPeriodStatus: "published",
     });
     expect(updateMany.mock.calls[0]?.[0]).toEqual({
       where: { id: "report-1", ...published },

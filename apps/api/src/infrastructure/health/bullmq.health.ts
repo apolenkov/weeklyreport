@@ -63,11 +63,7 @@ export class BullMQHealthIndicator {
       this.logger.error("bullmq readiness probe failed", {
         error: error instanceof Error ? error.message : String(error),
       });
-      return this.healthIndicator.check(key).down({
-        ...(error instanceof Error && error.message.includes("timed out")
-          ? { message: error.message }
-          : {}),
-      });
+      return this.healthIndicator.check(key).down();
     }
   }
 }

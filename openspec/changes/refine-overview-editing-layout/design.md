@@ -12,20 +12,20 @@ resolve/restore content.
 - Treat editor expansion as unit-local presentation derived from the existing
   slot. Do not add another editor state or infer matches from visible text.
 - In a linked row, match the slot through the existing stable-ID-first,
-  record-ID fallback plus source rule. When matched, let that cell span the
-  three timeline columns and hide the two sibling cells at multi-lane widths.
-- In independent lists, expand only the matching Current or Next list container
-  across the timeline and hide the placeholder and sibling list. Lists remain
-  independent arrays; no position-based pairing is introduced.
+  record-ID fallback plus source rule. Keep all three cells visible and mount
+  the matched editor once below them across the timeline width.
+- In independent lists, keep source context visible and mount the matching
+  editor below the source row. Lists remain independent arrays; no
+  position-based pairing is introduced.
 - In the footer, a create slot spans the timeline and hides the other footer
   lanes. Unit identity remains visible at the 80rem topology.
 - Keep resolve/restore content inside the same editor-slot contract, so it
   receives identical layout without a separate modal or path.
-- Render preview copy as text. Place a compact visible `Edit` button after the
-  text while preserving the exact accessible name, focus-return attributes,
-  disclosure, metadata, and action order.
-- Label non-empty independent lists `Current updates without a prior plan` and
-  `Next updates without a prior plan` using the incumbent muted metadata style.
+- Keep preview copy readable and use the complete item editor for changes,
+  preserving its accessible name, focus-return attributes, disclosure and
+  metadata. Read-only rows never expose a write action.
+- Keep primary move and status actions visible and direct. Do not use a dropdown
+  for a single available command.
 
 ## Invariants
 
@@ -40,11 +40,12 @@ resolve/restore content.
 
 ## Responsive behavior
 
-Below `md`, Status Overview continues to show one selected source lane and the
-editor uses that sequential lane. At `md+`, a matched editor receives the full
-three-column timeline width. At 80rem, the unit summary remains the first
-column and the expanded editor uses the other three columns.
+At `md+`, a matched editor receives the full three-column timeline width below
+the still-visible Previous, Current, and Next cells. At 80rem, the unit summary
+remains the first column and the expanded editor uses the other three columns.
+Mobile behavior is outside this change's acceptance scope.
 
-Native browser acceptance at 1024, 1279, 1280 and 1728 CSS pixels, plus the
-requested 200% zoom cases, remains a separate acceptance task owned by the
-primary lane.
+Native browser acceptance at 1024, 1279, 1280 and 1728 CSS pixels remains a
+separate acceptance task owned by the primary lane. Native 200% zoom is excluded
+by the preserved September 9 user acceptance-scope update; ordinary desktop
+layout and keyboard/focus requirements remain.

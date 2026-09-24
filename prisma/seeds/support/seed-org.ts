@@ -1,6 +1,11 @@
 import type { PrismaClient } from "@prisma/client";
 import { Role } from "@prisma/client";
 
+import {
+  idTailToFactoryIndex,
+  makeGroupProductId,
+  makeViewerAccessId,
+} from "../demo/seed-demo.ids.js";
 import type { SeedUser } from "./seed-constants.js";
 import {
   ADMIN_USER_ID,
@@ -104,16 +109,20 @@ async function seedGroupMembership(prisma: PrismaClient): Promise<void> {
     data: { headUserId: ADMIN_USER_ID },
   });
 
-  for (const groupId of [
+  for (const [groupIndex, groupId] of [
     DEFAULT_REPORTING_GROUP_ID,
     ADVANCED_FINANCE_GROUP_ID,
-  ]) {
+  ].entries()) {
     await prisma.viewerGroupAccess.upsert({
       where: {
         viewerUserId_groupId: { viewerUserId: VIEWER_USER_ID, groupId },
       },
       update: {},
-      create: { viewerUserId: VIEWER_USER_ID, groupId },
+      create: {
+        id: makeViewerAccessId(groupIndex),
+        viewerUserId: VIEWER_USER_ID,
+        groupId,
+      },
     });
   }
 }
@@ -156,7 +165,11 @@ async function seedProducts(prisma: PrismaClient): Promise<void> {
     await prisma.groupProduct.upsert({
       where: { productId: product.id },
       update: { groupId },
-      create: { groupId, productId: product.id },
+      create: {
+        id: makeGroupProductId(idTailToFactoryIndex(product.id)),
+        groupId,
+        productId: product.id,
+      },
     });
   }
 }

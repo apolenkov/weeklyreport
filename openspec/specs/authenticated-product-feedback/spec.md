@@ -230,6 +230,7 @@ by stable client ID. Agentation DELETE compatibility MUST be non-destructive.
 
 - **WHEN** the user starts a right-click comment
 - **THEN** the composer opens on the targeted element without showing the drawing-instruction toolbar
+- **AND** the composer remains fully inside the viewport
 
 #### Scenario: The Agentation toolbar deletes an annotation
 
@@ -430,7 +431,9 @@ Canonical report redirects MUST preserve the supported legacy `feedback` and
 `agentationAnnotation` parameters without expanding authorization scope.
 This URL continuity MUST NOT introduce navigation controls in the feedback
 workbench. Exact annotation autofocus is not part of the contract while the
-stock widget has no supported focus API.
+stock widget has no supported focus API. The retired SitePing auto-scroll and
+highlight behavior MUST NOT be restored, and no replacement focus mechanism is
+introduced.
 
 #### Scenario: A report route redirects to its canonical URL
 
@@ -439,11 +442,34 @@ stock widget has no supported focus API.
 - **THEN** the canonical destination retains the supplied supported parameters
 - **AND** ordinary feedback authorization still applies
 
+#### Scenario: A link targets a record outside the default newest page
+
+- **WHEN** an authorized caller follows a supported inbound feedback link
+  targeting a record that is not within the default newest page
+- **THEN** the initial URL-scoped list includes that record within the
+  caller's existing server-derived authorization scope
+- **AND** an inaccessible or missing target is not included, and its
+  existence is not disclosed by a different response
+
 ### Requirement: Agentation integration MUST prefer supported upstream mechanisms
 
-WeeklyReport MUST use the public, unmodified Agentation widget and MCP client. The React feedback surface MUST treat popup placement, local annotation identifiers, and other package-owned presentation details as upstream behavior rather than rewriting the distributed package.
+WeeklyReport MUST use the public Agentation widget and MCP client. Until public
+upstream identity and popup-placement fixes exist, pinned Agentation 3.0.2 MUST
+carry only the reviewed patch that:
 
-Custom protocol behavior MUST be limited to requirements not met by supported upstream mechanisms and MUST have a documented reason and an executable check. The integration MUST NOT import package internals, apply dependency patches, or replace PostgreSQL or server-authoritative identity merely to alter package-owned presentation behavior.
+- adds optional `clientId` to `Annotation` and preserves the original local ID
+  there when live synchronization replaces it with a different server ID; and
+- measures and clamps the package-owned contextual popup to 8 px viewport
+  gutters using its final unscaled box, remeasures it after size or viewport
+  changes, and keeps its actions outside the scrollable content region.
+
+That patch MUST NOT change Agentation's transport, endpoint, payload, callback
+order, identity authority, or storage ownership. Custom protocol behavior MUST
+be limited to requirements not met by supported upstream mechanisms and MUST
+have a documented reason and an executable check. The integration MUST NOT
+import package internals, apply dependency patches beyond these two repairs, or
+replace PostgreSQL or server-authoritative identity merely to remove adapter
+code.
 
 #### Scenario: A dependency upgrade changes its wire behavior
 
@@ -462,7 +488,6 @@ Custom protocol behavior MUST be limited to requirements not met by supported up
 - **WHEN** stock behavior cannot preserve required storage, attribution, access, or deletion semantics
 - **THEN** the adapter retains that boundary with its requirement, source evidence, and test
 - **AND** a change to those requirements requires explicit user approval
-- **AND** package-owned presentation behavior without a supported extension point remains stock and unpatched
 
 #### Scenario: A cached browser page returns after administrative deletion
 
@@ -499,6 +524,22 @@ managed through the preserved domain model.
 - **THEN** only feedback lifecycle/thread evidence changes
 - **AND** no report or review record is written
 
+### Requirement: External feedback ingress MUST stay closed pending a separate SSO/token specification
+
+Only the `weekly-report` product is enabled by this contract. The reserved
+`core-dev` discriminator MUST NOT expose a CoreDev ingress, and the product
+MUST NOT add an external feedback-ingress route, until a separate SSO or
+short-lived signed-token specification defines one.
+
+#### Scenario: No external ingress route is exposed before its own specification
+
+- **WHEN** the product's feedback surfaces and adapter routes are enumerated
+  for any caller or product scope
+- **THEN** no `core-dev`-scoped or other external feedback-ingress route is
+  present
+- **AND** none is added by this contract before a separate SSO or short-lived
+  signed-token specification defines one
+
 ### Requirement: Feedback MUST remain separate from report review lifecycle
 
 Creating, triaging, resolving, or deleting product feedback MUST NOT mutate report comments, review verdicts, acknowledgements, period state, or any companion lifecycle field.
@@ -525,26 +566,33 @@ MUST NOT reset, seed, or mutate production, shared, or unknown data.
   existing feedback rows
 - **AND** the canonical init baseline remains unchanged
 
-### Requirement: Contextual feedback composition MUST use stock package placement
+### Requirement: Contextual feedback composition MUST remain operable inside the viewport
 
 The pinned Agentation widget MUST retain drawn annotations, right-click comments,
-screenshot capture, console/network diagnostics, and marker visibility.
-Contextual popup placement is package-owned stock behavior; WeeklyReport
-application code MUST NOT query, move, resize, or style Agentation's private
-injected DOM and MUST NOT carry a local patch or wrapper to alter it.
+screenshot capture, console/network diagnostics, and marker visibility. Its
+contextual popup MUST calculate placement from its rendered dimensions rather
+than a smaller fixed estimate, and MUST remain bounded by the current viewport
+so its explicit Add and Cancel actions are reachable. WeeklyReport application
+code MUST NOT query, move, resize, or style Agentation's private injected DOM.
+
+#### Scenario: A tall region leaves insufficient space above and below
+
+- **WHEN** an authenticated user draws a region that occupies most of a 1728x962 viewport
+- **THEN** the popup is clamped inside the viewport using its rendered height and width
+- **AND** an enabled explicit Add button is visible and clickable
+- **AND** keyboard submission remains a secondary accelerator rather than the only visible path
+
+#### Scenario: The popup renders in a narrow or short viewport
+
+- **WHEN** popup content approaches the available viewport dimensions
+- **THEN** the popup box remains within 8 px viewport gutters and its actions remain reachable
+- **AND** the underlying document does not gain horizontal overflow
 
 #### Scenario: WeeklyReport initializes contextual feedback
 
 - **WHEN** the application mounts the Agentation widget
 - **THEN** it configures only the package's supported public API
-- **AND** popup placement is whatever the unmodified package provides
-
-#### Scenario: Stock placement renders poorly at a viewport edge
-
-- **WHEN** the unmodified package positions the composer outside its intended
-  bounds
-- **THEN** the defect is owned and fixed upstream
-- **AND** WeeklyReport does not compensate with a patch or first-party rewrite
+- **AND** the package-owned popup performs its own measured placement
 
 ### Requirement: Agentation submission confirmation MUST remain visible and retryable
 
@@ -565,18 +613,13 @@ server-session author ID in the authorized session response. An authenticated
 actor, page, session, or annotation change MUST cancel the former confirmation
 observer, and an older observer MUST NOT clear a newer error. Retry MUST keep
 the alert visible until confirmation. If the user deletes or clears the retained
-native annotation while the public callback still identifies it by its captured
-client-local ID, its delivery alert MUST be removed.
+native annotation, its delivery alert MUST be removed.
 
-Stock Agentation replaces a synchronized annotation's client-local ID with its
-server ID and does not expose the original ID again through public callbacks.
-Delete and clear callbacks MUST remove delivery state only when the callback
-annotation's `id` equals the current candidate's captured client-local ID. Once
-the widget has adopted a server ID, its delete and clear callbacks can no longer
-identify the retained annotation, so the delivery state and alert persist; they
-clear only when a `Retry`-driven confirmation succeeds or the observation scope
-changes. This cleanup MUST remain local and MUST NOT depend on a later
-confirmation GET.
+The retained native annotation MUST preserve its original client ID exactly
+when live synchronization adopts a different server ID. Delete and clear
+callbacks MUST remove delivery state only when the callback annotation's `id`
+or preserved `clientId` equals the current candidate's original client ID. This
+cleanup MUST remain local and MUST NOT depend on a later confirmation GET.
 
 #### Scenario: Persistence cannot be confirmed
 
@@ -613,20 +656,10 @@ confirmation GET.
 #### Scenario: The retained annotation is removed
 
 - **WHEN** Agentation reports that the user deleted the unconfirmed annotation
-  or cleared a collection containing it while it still carries its original
-  client ID
+  or cleared a collection containing it by its original ID, or by a server ID
+  paired with its preserved original `clientId`
 - **THEN** WeeklyReport cancels its observer and removes the associated alert
 - **AND** cleanup succeeds when confirmation readback remains unavailable
-
-#### Scenario: An adopted annotation is removed before confirmation
-
-- **WHEN** the stock widget has replaced the retained annotation's client-local
-  ID with its server ID and the user deletes or clears it before delivery is
-  confirmed
-- **THEN** the public callback carries only the adopted server ID
-- **AND** the pending delivery state cannot be matched to it, so the honest
-  alert remains until a `Retry`-driven confirmation succeeds or the
-  observation scope changes
 
 #### Scenario: An older synchronized annotation is removed
 

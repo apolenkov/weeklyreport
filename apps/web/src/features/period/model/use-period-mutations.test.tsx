@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { toast } from "sonner";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { makeTRPCProxy } from "../../../shared/lib/trpc/trpc";
@@ -135,6 +136,8 @@ it.each(cases)(
       expect(h.client.getQueryState(h.settings)?.isInvalidated).toBe(false);
       for (const [name, fn] of Object.entries(h.callbacks))
         expect(fn).toHaveBeenCalledTimes(name === callback ? 1 : 0);
+      if (_name === "reopen")
+        expect(toast.success).toHaveBeenCalledWith("Period reopened");
     } finally {
       h.unmount();
       h.client.clear();

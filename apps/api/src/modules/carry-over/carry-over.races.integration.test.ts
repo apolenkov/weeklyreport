@@ -52,8 +52,11 @@ describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races
   });
 
   afterAll(async () => {
-    await cleanDatabase();
-    await disconnectTestPrisma();
+    try {
+      await cleanDatabase();
+    } finally {
+      await disconnectTestPrisma();
+    }
   });
 
   it("persists carried rows for every target section in a multi-lead report", async () => {
@@ -80,6 +83,50 @@ describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races
         status: "draft",
       },
     });
+
+    // Membership derives from author.stageAssignments: each author owns the
+    // same product through a DISTINCT stage — @@unique(stageId, projectId)
+    // forbids two users sharing one stage/project row.
+    const developmentStage = await prisma.stage.create({
+      data: { name: "Development", sortOrder: 1 },
+    });
+    const testingStage = await prisma.stage.create({
+      data: { name: "Testing", sortOrder: 2 },
+    });
+    await prisma.stageAssignment.createMany({
+      data: [
+        {
+          userId: testData.lead.id,
+          stageId: developmentStage.id,
+          projectId: testData.project.id,
+        },
+        {
+          userId: testData.head.id,
+          stageId: testingStage.id,
+          projectId: testData.project.id,
+        },
+      ],
+    });
+
+    // The real read models must show each author owning the product through
+    // their own stage — otherwise the membership checks below exercise nothing.
+    const preWriteSections = await repo.getTargetSections(targetReport.id);
+    const leadRead = expectDefined(
+      preWriteSections.find((section) => section.authorId === testData.lead.id),
+    );
+    const headRead = expectDefined(
+      preWriteSections.find((section) => section.authorId === testData.head.id),
+    );
+    const leadProject = expectDefined(leadRead.projects[0]);
+    const headProject = expectDefined(headRead.projects[0]);
+    expect(leadProject.projectId).toBe(testData.project.id);
+    expect(leadProject.ownedStages.map((stage) => stage.stageId)).toEqual([
+      developmentStage.id,
+    ]);
+    expect(headProject.projectId).toBe(testData.project.id);
+    expect(headProject.ownedStages.map((stage) => stage.stageId)).toEqual([
+      testingStage.id,
+    ]);
 
     const itemLeadId = crypto.randomUUID();
     const itemHeadId = crypto.randomUUID();
@@ -151,7 +198,7 @@ describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races
           tag: "feature",
           workflowStatus: "in_progress" as const,
           carriedOver: true,
-          stageNames: ["Development"],
+          stageNames: ["Testing"],
         },
       ],
     };

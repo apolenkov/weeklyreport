@@ -120,6 +120,8 @@ type Harness = Readonly<{
   upsert: Mock<SemanticEmbeddingRepository["upsert"]>;
   enqueue: Mock<SemanticIndexEnqueuer["enqueue"]>;
   listSources: Mock<ReportSearchRepository["listSources"]>;
+  loadOccurrences: Mock<ReportSearchRepository["loadOccurrences"]>;
+  getSourceGeneration: Mock<ReportSearchRepository["getSourceGeneration"]>;
   progress: Readonly<{ completed: number; total: number; failed: number }>[];
 }>;
 
@@ -159,14 +161,9 @@ const createHarness = (providerFailure = false, documentCount = 1): Harness => {
   const listSources = vi
     .fn<ReportSearchRepository["listSources"]>()
     .mockResolvedValue([source]);
-  const reports: ReportSearchRepository = {
-    getSourceGeneration: vi.fn().mockResolvedValue(0n),
-    getAuthorizationSnapshot: vi.fn().mockResolvedValue({
-      ownSectionReportIds: [],
-      sharedProductIdsByAuthor: new Map(),
-    }),
-    listSources,
-    loadOccurrences: vi.fn().mockResolvedValue([
+  const loadOccurrences = vi
+    .fn<ReportSearchRepository["loadOccurrences"]>()
+    .mockResolvedValue([
       {
         reportId: REPORT_ID,
         periodId: source.periodId,
@@ -175,7 +172,18 @@ const createHarness = (providerFailure = false, documentCount = 1): Harness => {
         source: source.source,
         sections: [section(documentCount)],
       },
-    ]),
+    ]);
+  const getSourceGeneration = vi
+    .fn<ReportSearchRepository["getSourceGeneration"]>()
+    .mockResolvedValue(0n);
+  const reports: ReportSearchRepository = {
+    getSourceGeneration,
+    getAuthorizationSnapshot: vi.fn().mockResolvedValue({
+      ownSectionReportIds: [],
+      sharedProductIdsByAuthor: new Map(),
+    }),
+    listSources,
+    loadOccurrences,
   };
   const embeddings = {
     resolveExact: vi.fn().mockResolvedValue({
@@ -206,6 +214,8 @@ const createHarness = (providerFailure = false, documentCount = 1): Harness => {
     upsert,
     enqueue,
     listSources,
+    loadOccurrences,
+    getSourceGeneration,
     progress,
   };
 };
@@ -305,5 +315,171 @@ describe("SemanticPreparationCoordinator", () => {
     });
     expect(harness.embedDocuments).toHaveBeenCalledTimes(3);
     expect(maxInFlight).toBeLessThanOrEqual(2);
+  });
+
+  it("retries after an independent content change and stabilizes on the new corpus", async () => {
+    const harness = createHarness();
+    const cached = new Set<string>();
+    harness.findCachedHashes.mockImplementation((_scope, hashes) =>
+      Promise.resolve(hashes.filter((hash) => cached.has(hash))),
+    );
+    harness.upsert.mockImplementation(({ contentHash }) => {
+      cached.add(contentHash);
+      return Promise.resolve(undefined);
+    });
+    let occurrenceRead = 0;
+    harness.loadOccurrences.mockImplementation(() => {
+      occurrenceRead += 1;
+      return Promise.resolve([
+        {
+          reportId: REPORT_ID,
+          periodId: source.periodId,
+          periodLabel: source.periodLabel,
+          periodStart: source.periodStart,
+          source: source.source,
+          sections: [section(occurrenceRead >= 2 ? 2 : 1)],
+        },
+      ]);
+    });
+    harness.getSourceGeneration.mockResolvedValue(1n);
+
+    const result = await harness.coordinator.prepare(revision(), null);
+
+    expect(result).toMatchObject({ completed: 2, total: 2, failed: 0 });
+    expect(harness.loadOccurrences).toHaveBeenCalledTimes(4);
+    expect(
+      harness.embedDocuments.mock.calls.map(([documents]) =>
+        documents.map(({ text }) => text),
+      ),
+    ).toEqual([["Ship the release"], ["Ship release 2"]]);
+    expect(cached).toHaveLength(2);
+  });
+
+  it("retries after a generation-only change and stabilizes unchanged content", async () => {
+    const harness = createHarness();
+    const generations = [1n, 1n, 1n, 2n, 2n, 2n, 2n];
+    let generationRead = 0;
+    harness.getSourceGeneration.mockImplementation(() => {
+      const generation = generations[generationRead] ?? 2n;
+      generationRead += 1;
+      return Promise.resolve(generation);
+    });
+
+    const result = await harness.coordinator.prepare(revision(), null);
+
+    expect(result).toMatchObject({ completed: 1, total: 1, failed: 0 });
+    expect(generationRead).toBe(7);
+    expect(harness.loadOccurrences).toHaveBeenCalledTimes(4);
+    expect(
+      harness.embedDocuments.mock.calls.map(([documents]) =>
+        documents.map(({ text }) => text),
+      ),
+    ).toEqual([["Ship the release"], ["Ship the release"]]);
+  });
+
+  it("reports observed counters when an enqueue fallback rejects after sibling progress", async () => {
+    const harness = createHarness(false, 4);
+    const cached = new Set<string>();
+    harness.findCachedHashes.mockImplementation((_scope, hashes) =>
+      Promise.resolve(hashes.filter((hash) => cached.has(hash))),
+    );
+    harness.upsert.mockImplementation(({ contentHash }) => {
+      cached.add(contentHash);
+      return Promise.resolve(undefined);
+    });
+    let releaseSibling!: () => void;
+    const siblingFinished = new Promise<void>((resolve) => {
+      releaseSibling = resolve;
+    });
+    let observeEnqueue!: () => void;
+    const enqueueObserved = new Promise<void>((resolve) => {
+      observeEnqueue = resolve;
+    });
+    harness.embedDocuments.mockImplementation((documents) =>
+      documents.some(({ text }) => text === "Ship release 3")
+        ? Promise.reject(new Error("provider unavailable"))
+        : siblingFinished.then(() =>
+            documents.map(({ contentHash }) => ({
+              contentHash,
+              vector: [0.1, 0.2, 0.3],
+            })),
+          ),
+    );
+    harness.enqueue.mockImplementation(() => {
+      observeEnqueue();
+      return Promise.reject(new Error("queue unavailable"));
+    });
+
+    const preparation = harness.coordinator.prepare(
+      revision(),
+      null,
+      (value: PreparationProgress) => {
+        harness.progress.push({
+          completed: value.completed,
+          total: value.total,
+          failed: value.failed,
+        });
+        return Promise.resolve();
+      },
+    );
+    await enqueueObserved;
+    let settled = false;
+    const resultPromise = preparation.then((value) => {
+      settled = true;
+      return value;
+    });
+
+    expect(harness.enqueue).toHaveBeenCalled();
+    expect(settled).toBe(false);
+    expect(harness.progress.at(-1)).toEqual({
+      completed: 0,
+      total: 4,
+      failed: 0,
+    });
+    releaseSibling();
+    const result = await resultPromise;
+    expect(result).toMatchObject({ completed: 2, total: 4, failed: 2 });
+    expect(harness.upsert).toHaveBeenCalledTimes(2);
+    expect(cached).toHaveLength(2);
+    expect(harness.progress.at(-1)).toEqual({
+      completed: 2,
+      total: 4,
+      failed: 2,
+    });
+  });
+
+  it("bounds reported counters by the shrunk corpus on the final retry", async () => {
+    const harness = createHarness(false, 2);
+    const cached = new Set<string>();
+    harness.upsert.mockImplementation(({ contentHash }) => {
+      cached.add(contentHash);
+      return Promise.resolve(undefined);
+    });
+    harness.findCachedHashes.mockImplementation((_scope, hashes) =>
+      Promise.resolve(hashes.filter((hash) => cached.has(hash))),
+    );
+    let occurrencesCall = 0;
+    harness.loadOccurrences.mockImplementation(() => {
+      occurrencesCall += 1;
+      return Promise.resolve([
+        {
+          reportId: REPORT_ID,
+          periodId: source.periodId,
+          periodLabel: source.periodLabel,
+          periodStart: source.periodStart,
+          source: source.source,
+          sections: [section(occurrencesCall >= 6 ? 1 : 2)],
+        },
+      ]);
+    });
+    let generation = 0;
+    harness.getSourceGeneration.mockImplementation(() => {
+      generation += 1;
+      return Promise.resolve(BigInt(generation));
+    });
+
+    const result = await harness.coordinator.prepare(revision(), null);
+
+    expect(result).toMatchObject({ completed: 1, total: 1, failed: 1 });
   });
 });

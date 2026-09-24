@@ -18,6 +18,13 @@ export class ArchiveDomainError extends Error {
   }
 }
 
+export class ArchiveCursorError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ArchiveCursorError";
+  }
+}
+
 // Role-aware filter as a plain object the repository merges into its Prisma
 // `where`, so domain code stays free of `@prisma/client`. `status` optional.
 export interface ArchiveReadFilter {
@@ -73,7 +80,7 @@ function sortSectionsByAuthorName(
     report: {
       ...detail.report,
       sections: [...detail.report.sections].sort((a, b) =>
-        a.authorName.localeCompare(b.authorName),
+        a.authorName.localeCompare(b.authorName, "ru"),
       ),
     },
   };
