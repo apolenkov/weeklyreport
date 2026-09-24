@@ -8,6 +8,7 @@ import {
   publishedSnapshotFixture,
 } from "../../../test-utils/prisma-test-helper";
 import { WeeklyReportPrismaRepository } from "../../weekly-report/weekly-report.prisma-repository.js";
+import { PeriodAccessError } from "../application/period.service.js";
 import { buildTransition } from "../domain/period-transition.js";
 import { PeriodPrismaRepository } from "./period.prisma-repository";
 
@@ -33,6 +34,9 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
   }
 
   async function createOpenReport(): Promise<void> {
+    await prisma.reportingGroup.create({
+      data: { id: GROUP, name: "Projection Group" },
+    });
     // The publish transition stamps publishedById, which references User.
     await prisma.user.create({
       data: {
@@ -43,6 +47,7 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
         firstName: "Atomicity",
         role: "head",
         samlId: "head-atomicity",
+        reportingGroupId: GROUP,
       },
     });
     await prisma.report.create({
@@ -55,6 +60,9 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
         periodStatus: "open",
         periodState: "open",
       },
+    });
+    await prisma.reportSection.create({
+      data: { reportId: REPORT, authorId: USER, status: "submitted" },
     });
   }
 
@@ -94,22 +102,26 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
     });
   });
 
+  it("rejects publication when no section is submitted", async () => {
+    await prisma.reportSection.deleteMany({ where: { reportId: REPORT } });
+
+    await expect(
+      repository.publishPeriod(REPORT, USER, await expected(REPORT)),
+    ).rejects.toBeInstanceOf(PeriodAccessError);
+
+    const reloaded = await prisma.report.findUnique({ where: { id: REPORT } });
+    expect(reloaded?.periodStatus).toBe("open");
+  });
+
   it("atomically replaces frozen scope and search rows on republish", async () => {
-    await prisma.reportingGroup.create({
-      data: { id: GROUP, name: "Projection Group" },
-    });
-    await prisma.user.update({
-      where: { id: USER },
-      data: { reportingGroupId: GROUP },
-    });
     await prisma.project.create({
       data: { id: PROJECT, name: "Projection Project", leadId: USER },
     });
     await prisma.groupProduct.create({
       data: { groupId: GROUP, productId: PROJECT },
     });
-    const section = await prisma.reportSection.create({
-      data: { reportId: REPORT, authorId: USER, status: "submitted" },
+    const section = await prisma.reportSection.findFirstOrThrow({
+      where: { reportId: REPORT, authorId: USER },
     });
     const item = await prisma.item.create({
       data: {
@@ -151,6 +163,10 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
     await prisma.item.update({
       where: { id: item.id },
       data: { text: "projection second publication" },
+    });
+    await prisma.reportSection.update({
+      where: { id: section.id },
+      data: { status: "submitted", submittedAt: new Date() },
     });
     await expect(
       repository.publishPeriod(REPORT, USER, await expected(REPORT)),

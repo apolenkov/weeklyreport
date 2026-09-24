@@ -14,8 +14,6 @@ const DEFAULT_OFFSET_MINUTES = -(DEFAULT_OFFSET_DAYS_BEFORE * MINUTES_PER_DAY);
 
 export type PolicyFormState = AdminReminderPolicyFormInput & {
   preset: ReminderPreset;
-  // ISO `YYYY-MM-DD` anchors validity checks for this form instance.
-  todayIso: string;
   // The forever control represents a null validity end date.
   foreverChecked: boolean;
 };
@@ -36,7 +34,6 @@ export function emptyPolicyForm(timezone: string): PolicyFormState {
     active: true,
     validFromIso: today,
     validUntilIso: null,
-    todayIso: today,
     foreverChecked: true,
   };
 }
@@ -52,7 +49,6 @@ export function policyToForm(policy: AdminReminderPolicyView): PolicyFormState {
     validFromIso: toIsoDateString(policy.validFrom),
     validUntilIso:
       policy.validUntil === null ? null : toIsoDateString(policy.validUntil),
-    todayIso: toIsoDateString(new Date()),
     foreverChecked: policy.validUntil === null,
   };
 }

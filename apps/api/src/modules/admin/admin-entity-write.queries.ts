@@ -14,6 +14,7 @@ import { lockUserAndAssertActivityAssignments } from "../../lib/user-activity-as
 import { buildTransition } from "../period/index.js";
 import {
   AdminUserConflictError,
+  AdminUserNotFoundError,
   AdminUserPublishedHistoryError,
   AdminUserReportingGroupRequiredError,
 } from "./admin-shared.js";
@@ -102,13 +103,17 @@ export async function removeUser(
       `User is retained by published report ${publishedReport.id}; deactivate the user instead.`,
     );
   }
-  // Only delete a user no section/project still references — otherwise the row
-  // stays (the FK would block it anyway). A late-arriving reference that races
-  // the count check surfaces as P2003 and is skipped, not surfaced as a 500.
+  // A user still referenced by a section or project is an existing-resource
+  // conflict, not a silent keep. A reference that commits after this count
+  // races the delete and surfaces as P2003 below.
   const hasReferences =
     (await prisma.reportSection.count({ where: { authorId: userId } })) > 0 ||
     (await prisma.project.count({ where: { leadId: userId } })) > 0;
-  if (hasReferences) return;
+  if (hasReferences) {
+    throw new AdminUserConflictError(
+      "User is referenced by report sections or projects; deactivate the user instead.",
+    );
+  }
   try {
     // deleteMany makes removal idempotent: an already-absent id is a no-op
     // rather than a P2025 failure.
@@ -127,7 +132,11 @@ export async function removeUser(
           `User is retained by published report ${racedPublication.id}; deactivate the user instead.`,
         );
       }
-      return;
+      // A reference committed between the count check and the delete — the
+      // same conflict the precheck reports, surfaced by the restrictive FK.
+      throw new AdminUserConflictError(
+        "User is referenced by existing records; deactivate the user instead.",
+      );
     }
     throw error;
   }
@@ -138,10 +147,20 @@ export async function deactivateUser(
   prisma: PrismaService,
   userId: string,
 ): Promise<void> {
-  await prisma.user.update({
-    where: { id: userId },
-    data: { isActive: false },
-  });
+  try {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { isActive: false },
+    });
+  } catch (error: unknown) {
+    // Only a missing row (P2025) becomes a typed NOT_FOUND; any other failure
+    // propagates unchanged.
+    const prismaError = error as { code?: string } | null;
+    if (prismaError?.code === "P2025") {
+      throw new AdminUserNotFoundError(`User ${userId} was not found.`);
+    }
+    throw error;
+  }
 }
 
 // Session restoration is the caller's job.
@@ -149,10 +168,18 @@ export async function activateUser(
   prisma: PrismaService,
   userId: string,
 ): Promise<void> {
-  await prisma.user.update({
-    where: { id: userId },
-    data: { isActive: true },
-  });
+  try {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { isActive: true },
+    });
+  } catch (error: unknown) {
+    const prismaError = error as { code?: string } | null;
+    if (prismaError?.code === "P2025") {
+      throw new AdminUserNotFoundError(`User ${userId} was not found.`);
+    }
+    throw error;
+  }
 }
 
 export async function upsertProject(

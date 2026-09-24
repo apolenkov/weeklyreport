@@ -216,7 +216,8 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
   });
 
   it("excludes unshared-product items/risks/decisions and keeps shared ones", async () => {
-    const service = new LeadFormService(crossAuthorRepo());
+    const repo = crossAuthorRepo();
+    const service = new LeadFormService(repo);
 
     const { section } = await service.getByPeriod(
       REPORT_ID,
@@ -225,6 +226,12 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
       OTHER_USER_ID,
     );
 
+    // no report-scoped override → the report-independent fallback is used with
+    // (viewerId, authorId) only — no reportId.
+    expect(repo.getSharedNonArchivedProductIds).toHaveBeenCalledExactlyOnceWith(
+      AUTHOR_ID,
+      OTHER_USER_ID,
+    );
     expect(section.authorId).toBe(OTHER_USER_ID);
     // items — current AND next week
     expect(section.items.map((i) => i.text).sort()).toEqual([
@@ -237,6 +244,34 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
     // and the non-product-scoped (null productId) one are both dropped, mirroring
     // getCrossAuthorContent's sharedIds.has(productId) filter.
     expect(section.decisions.map((d) => d.text)).toEqual(["Shared decision"]);
+  });
+
+  it("dispatches the report-scoped co-ownership read with (reportId, viewerId, authorId) and never calls the fallback", async () => {
+    const getSharedNonArchivedProductIdsForReport = vi
+      .fn()
+      .mockResolvedValue([PROJECT_ID]);
+    const repo = crossAuthorRepo({ getSharedNonArchivedProductIdsForReport });
+    const service = new LeadFormService(repo);
+
+    const { section } = await service.getByPeriod(
+      REPORT_ID,
+      AUTHOR_ID,
+      "lead",
+      OTHER_USER_ID,
+    );
+
+    // exact dispatch: (reportId, viewerId, requestedAuthorId)
+    expect(
+      getSharedNonArchivedProductIdsForReport,
+    ).toHaveBeenCalledExactlyOnceWith(REPORT_ID, AUTHOR_ID, OTHER_USER_ID);
+    // the report-independent fallback is not consulted when the scoped read exists
+    expect(repo.getSharedNonArchivedProductIds).not.toHaveBeenCalled();
+    // the scoped product set still gates AND filters the foreign section
+    expect(section.projects.map((p) => p.projectId)).toEqual([PROJECT_ID]);
+    expect(section.items.map((i) => i.text).sort()).toEqual([
+      "Shared current",
+      "Shared next",
+    ]);
   });
 
   it("drops both a non-product-scoped (null productId) decision and the unshared-product one, mirroring getCrossAuthorContent", async () => {

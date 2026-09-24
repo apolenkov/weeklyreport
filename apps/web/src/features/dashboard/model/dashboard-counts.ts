@@ -23,16 +23,6 @@ export function countSectionContent(section: ReportSectionReadModel): number {
   );
 }
 
-export function countProductContent(section: ReportSectionReadModel): number {
-  return (
-    section.items.filter((i) => i.projectId != null).length +
-    section.risks.filter((r) => r.projectId != null).length +
-    section.decisions.filter((d) => d.productId != null).length +
-    section.items.filter((i) => i.priorityRank != null && i.projectId != null)
-      .length
-  );
-}
-
 export function countProductRecords(section: ReportSectionReadModel): number {
   return (
     section.items.filter((i) => i.projectId != null).length +

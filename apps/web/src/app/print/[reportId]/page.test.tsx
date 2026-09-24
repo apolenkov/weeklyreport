@@ -16,24 +16,20 @@ const redirectMock = vi.hoisted(() =>
 const getPrintRouteContextMock = vi.hoisted(() =>
   vi.fn<() => Promise<PrintRouteContext>>(),
 );
+const getPdfExportRenderMock = vi.hoisted(() =>
+  vi.fn<(jobId: string, reportId: string) => Promise<unknown>>(),
+);
 
 vi.mock("next/navigation", () => ({
   redirect: redirectMock,
 }));
 vi.mock("../../../features/pdf-export/server", () => ({
   getPrintRouteContext: getPrintRouteContextMock,
+  getPdfExportRender: getPdfExportRenderMock,
 }));
 vi.mock("./print-report-template", () => ({
-  PrintReportTemplate: ({
-    reportId,
-    jobId,
-  }: {
-    readonly reportId: string;
-    readonly jobId: string;
-  }) => (
-    <div data-testid="print-report-template">
-      {reportId}:{jobId}
-    </div>
+  PrintReportTemplate: ({ data }: { readonly data: unknown }) => (
+    <div data-testid="print-report-template">{JSON.stringify(data)}</div>
   ),
 }));
 
@@ -67,12 +63,31 @@ describe("PrintReportPage server gate", () => {
       pdfReportId: REPORT_ID,
       pdfJobId: "job-123",
     });
+    getPdfExportRenderMock.mockResolvedValue({ reportId: REPORT_ID });
 
     render(await renderPage());
 
+    expect(getPdfExportRenderMock).toHaveBeenCalledWith("job-123", REPORT_ID);
     expect(screen.getByTestId("print-report-template")).toHaveTextContent(
-      `${REPORT_ID}:job-123`,
+      REPORT_ID,
     );
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+
+  it("renders the error shell when the render read fails closed", async () => {
+    getPrintRouteContextMock.mockResolvedValue({
+      session: session("head"),
+      isPdfExport: true,
+      pdfReportId: REPORT_ID,
+      pdfJobId: "job-123",
+    });
+    getPdfExportRenderMock.mockResolvedValue(null);
+
+    const { container } = render(await renderPage());
+
+    expect(
+      container.querySelector('[data-print-state="error"]'),
+    ).not.toBeNull();
     expect(redirectMock).not.toHaveBeenCalled();
   });
 

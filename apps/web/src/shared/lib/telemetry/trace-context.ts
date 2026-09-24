@@ -1,9 +1,16 @@
 const TRACEPARENT_VERSION = "00";
 const SAMPLED_TRACE_FLAGS = "01";
-const PARENT_ID_HEX_LENGTH = 16;
+const TRACE_ID_BYTES = 16;
+const PARENT_ID_BYTES = 8;
+const HEX_RADIX = 16;
 
-function randomUuidHex(): string {
-  return crypto.randomUUID().replaceAll("-", "");
+// crypto.randomUUID exists only in secure contexts, but the print page renders
+// inside the internal renderer over plain http — getRandomValues is available
+// everywhere and gives the same trace-id entropy the W3C format needs.
+function randomHex(byteLength: number): string {
+  return [...crypto.getRandomValues(new Uint8Array(byteLength))]
+    .map((byte) => byte.toString(HEX_RADIX).padStart(2, "0"))
+    .join("");
 }
 
 function formatTraceparent(traceId: string, parentId: string): string {
@@ -11,7 +18,7 @@ function formatTraceparent(traceId: string, parentId: string): string {
 }
 
 export function createTraceparent(): string {
-  const traceId = randomUuidHex();
-  const parentId = randomUuidHex().slice(0, PARENT_ID_HEX_LENGTH);
+  const traceId = randomHex(TRACE_ID_BYTES);
+  const parentId = randomHex(PARENT_ID_BYTES);
   return formatTraceparent(traceId, parentId);
 }

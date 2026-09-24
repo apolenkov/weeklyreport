@@ -69,11 +69,6 @@ export async function attachProductToGroup(
       expectedGroupId: input.groupId,
       requireDesiredLeadCurrent: true,
     });
-    if (!graph.project) {
-      throw new AdminGroupProductConflictError(
-        `Project ${input.productId} was not found. Refresh and retry.`,
-      );
-    }
     const existing = graph.ownership;
     if (existing?.groupId === input.groupId) {
       return groupProductSchema.parse(existing);

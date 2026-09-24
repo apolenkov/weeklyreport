@@ -11,6 +11,7 @@ import type {
 import express from "express";
 import passport from "passport";
 
+import { SAML_CALLBACK_URLENCODED_LIMIT } from "../../infrastructure/http/ingress-limits.js";
 import { loginAttemptsTotal } from "../../infrastructure/metrics/metrics.registry.js";
 import {
   ANONYMOUS_USER_ID,
@@ -227,7 +228,10 @@ function mountSamlRoutes(
 
   expressApp.post(
     "/auth/saml/callback",
-    express.urlencoded({ extended: false }),
+    express.urlencoded({
+      extended: false,
+      limit: SAML_CALLBACK_URLENCODED_LIMIT,
+    }),
     passport.initialize(),
     createSamlAuthenticationHandler(deps),
     createSamlCallbackHandler(deps),

@@ -418,6 +418,8 @@ jobs:
       AUTH_JWT_SECRET: ci-build-only-secret-32-characters-min!!
       PDF_EXPORT_JWT_SECRET: ci-build-only-secret-32-characters-min!!
       PDF_BASE_URL: http://localhost
+      GOTENBERG_URL: http://gotenberg:3000
+      CHROMIUM_ALLOW_LIST: "^http://localhost/"
       AI_PROVIDER_CONFIG_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
       AI_PROVIDER_CONFIG_KEY_VERSION: "1"
       AI_PROVIDER_ALLOWED_ORIGINS: https://api.example.com

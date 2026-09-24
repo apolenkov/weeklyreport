@@ -100,6 +100,7 @@ function SessionLoadError({
   return (
     <main
       id="main-content"
+      tabIndex={-1}
       className="flex min-h-svh items-center justify-center p-6"
     >
       <Alert variant="destructive" className="max-w-md" role="alert">

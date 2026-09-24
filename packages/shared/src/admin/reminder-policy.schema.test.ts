@@ -14,7 +14,7 @@ const validPolicy = {
 } as const;
 
 describe("reminderPolicySchema time zones", () => {
-  it.each(["Europe/Moscow", "UTC", "Etc/UTC"])(
+  it.each(["Europe/Moscow", "UTC", "Etc/UTC", "Etc/GMT+3"])(
     "accepts the resolvable time zone %s",
     (timezone) => {
       const result = reminderPolicySchema.safeParse({
@@ -26,7 +26,7 @@ describe("reminderPolicySchema time zones", () => {
     },
   );
 
-  it.each(["Not/AZone", "UTC+3", "MSK"])(
+  it.each(["Not/AZone", "UTC+3", "MSK", "+03:00", "+0300", "+03", "-05:30"])(
     "rejects invalid time zone %s at the timezone path",
     (timezone) => {
       const result = reminderPolicySchema.safeParse({

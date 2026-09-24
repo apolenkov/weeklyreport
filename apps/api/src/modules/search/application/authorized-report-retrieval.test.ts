@@ -168,7 +168,7 @@ describe("authorizeReportOccurrences", () => {
     expect(result.occurrences[0]?.sections[0]?.activities).toHaveLength(1);
   });
 
-  it("does not query or expose foreign sections without an own section proof", async () => {
+  it("exposes no foreign sections without an own section proof", async () => {
     const access = accessRepository(false, [SHARED_PRODUCT_ID]);
     const result = await authorizeReportOccurrences(
       access.repository,

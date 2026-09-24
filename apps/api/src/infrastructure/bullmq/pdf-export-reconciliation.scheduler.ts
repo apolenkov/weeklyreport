@@ -4,6 +4,7 @@ import { Cron, CronExpression } from "@nestjs/schedule";
 import type { Job } from "bullmq";
 
 import {
+  type PdfExportJobIdentity,
   PdfExportService,
   type PdfExportTerminalState,
 } from "../../modules/pdf-export/index.js";
@@ -55,9 +56,11 @@ export class PdfExportReconciliationScheduler {
 
   private async reconcileOne(job: Job<unknown>): Promise<boolean> {
     try {
-      const state = toTerminalState(job, await job.getState());
-      if (!state) return false;
-      return await this.service.reconcileTerminalState(state);
+      const identity = terminalIdentity(job, asRecord(job.data));
+      if (!identity) return false;
+      return await this.service.reconcileTerminalState(identity, () =>
+        this.loadCurrentTerminalState(identity.jobId),
+      );
     } catch (error: unknown) {
       const jobData = asRecord(job.data);
       const payloadJobId =
@@ -68,6 +71,27 @@ export class PdfExportReconciliationScheduler {
       });
       return false;
     }
+  }
+
+  // Runs inside the export row lock: the listing's captured state is already
+  // stale there, so the job is re-read — a retried job reports its live
+  // state, not the old terminal one. The state is observed first, then the
+  // job is re-read again: BullMQ transitions are not serialized by the row
+  // lock, so the first snapshot's payload, failedReason, or returnvalue can
+  // already belong to an older attempt.
+  private async loadCurrentTerminalState(
+    jobId: string,
+  ): Promise<PdfExportTerminalState | null> {
+    const queue = this.queues.get(PDF_EXPORT_QUEUE_NAME);
+    const observed = await queue.getJob(jobId);
+    if (!observed) return null;
+    const observedState = await observed.getState();
+    if (observedState !== "completed" && observedState !== "failed") {
+      return null;
+    }
+    const current = await queue.getJob(jobId);
+    if (!current) return null;
+    return toTerminalState(current, await current.getState());
   }
 }
 
@@ -92,7 +116,7 @@ function toTerminalState(
 function terminalIdentity(
   job: Job<unknown>,
   data: ReturnType<typeof asRecord>,
-): { jobId: string; reportId: string; requestedBy: string } | null {
+): PdfExportJobIdentity | null {
   const jobId = typeof data?.jobId === "string" ? data.jobId : "";
   const reportId = typeof data?.reportId === "string" ? data.reportId : "";
   const requestedBy =
@@ -105,7 +129,7 @@ function terminalIdentity(
 
 function completedState(
   job: Job<unknown>,
-  identity: { jobId: string; reportId: string; requestedBy: string },
+  identity: PdfExportJobIdentity,
 ): PdfExportTerminalState {
   const result: unknown = job.returnvalue as unknown;
   if (typeof result !== "object" || result === null) {

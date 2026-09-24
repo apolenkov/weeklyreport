@@ -11,6 +11,7 @@ import pg from "pg";
 import { assertE2eRuntimeDestructive } from "../../guards/_destructive-guard.js";
 import { requireEnv } from "../../guards/_require-env.js";
 import { finalizePublishedSnapshots } from "../support/published-snapshot.js";
+import { assertAssistantReadiness } from "../support/seed-assistant-readiness.js";
 import { assertSeedCoverage } from "../support/seed-coverage-check.js";
 import {
   seedActionLog,
@@ -69,8 +70,9 @@ async function main(): Promise<void> {
     await seedActionLog(prisma);
     await seedReminderPolicies(prisma);
 
-    await logSeedSummary(prisma);
     await assertSeedCoverage(prisma, "seed-simple", REPORT_ACTIVE);
+    assertAssistantReadiness("demo");
+    await logSeedSummary(prisma);
   } finally {
     await prisma.$disconnect();
     await pool.end();

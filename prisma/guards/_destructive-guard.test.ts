@@ -93,6 +93,8 @@ describe("exact E2E/runtime destructive target", () => {
     "postgresql://127.0.0.1/cu\tstomreport_e2e",
     "postgresql://127.0.0.1/customreport_e2e/extra",
     "postgresql://127.0.0.1/customreport_e2e%2Fextra",
+    "postgresql://127.0.0.1/other/../customreport_e2e",
+    "postgresql://127.0.0.1/%2e/customreport_e2e",
     "postgresql://127.0.0.1:0/customreport_e2e",
     "postgresql://127.0.0.1:/customreport_e2e",
     "postgresql://127.0.0.1:05432/customreport_e2e",

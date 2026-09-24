@@ -72,6 +72,29 @@ describe("publishCompareAndSet", () => {
       ),
     ).resolves.toBe("archived");
     expect(db.report.updateMany).not.toHaveBeenCalled();
+    expect(db.report.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("classifies an already-published expected row as raced without a write or re-read", async () => {
+    const db = client(1);
+
+    await expect(
+      publishCompareAndSet(
+        db,
+        "report-1",
+        {
+          ...expected,
+          status: "published",
+          periodState: "published",
+          periodStatus: "published",
+          publishedAt: new Date("2026-08-31T12:00:00.000Z"),
+          publishedById: "user-1",
+        },
+        data,
+      ),
+    ).resolves.toBe("raced");
+    expect(db.report.updateMany).not.toHaveBeenCalled();
+    expect(db.report.findUnique).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -81,6 +104,11 @@ describe("publishCompareAndSet", () => {
       "concurrent publish",
       { archived: false, periodStatus: "published" },
       "raced",
+    ],
+    [
+      "concurrent archive",
+      { archived: true, periodStatus: "published" },
+      "archived",
     ],
   ] as const)(
     "classifies a zero-row %s result",

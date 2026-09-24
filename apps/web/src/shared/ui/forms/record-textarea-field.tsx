@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, type Ref, useEffect, useRef } from "react";
+import { type ReactNode, type RefObject, useEffect, useRef } from "react";
 
 const TEXTAREA_BORDER_ERROR =
   "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[var(--shadow-focus-destructive)]";
@@ -17,7 +17,7 @@ interface RecordTextareaFieldProps {
   readonly placeholder?: string | undefined;
   readonly minHeightPx?: number | undefined;
   readonly focusOnMount?: boolean | undefined;
-  readonly textareaRef?: Ref<HTMLTextAreaElement> | undefined;
+  readonly textareaRef?: RefObject<HTMLTextAreaElement | null> | undefined;
   readonly hint?: ReactNode | undefined;
   readonly characterLimit?: number | undefined;
   // When true, wrapper and textarea take flex-1 to fill a multi-field column;
@@ -45,12 +45,11 @@ function FieldErrorMessage({
 
 function useInitialTextareaFocus(
   focusOnMount: boolean,
-  elementRef: Exclude<Ref<HTMLTextAreaElement>, null>,
+  elementRef: RefObject<HTMLTextAreaElement | null>,
 ): void {
   useEffect(() => {
     if (!focusOnMount) return;
-    const node = "current" in elementRef ? elementRef.current : null;
-    node?.focus();
+    elementRef.current?.focus();
   }, [focusOnMount, elementRef]);
 }
 

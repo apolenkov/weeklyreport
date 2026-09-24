@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { type RefObject, useMemo, useRef } from "react";
 
 import { useFullscreen } from "../../../../shared/hooks/browser/use-fullscreen";
+import { useQueryErrorHandler } from "../../../../shared/hooks/query/use-query-error-handler";
 import { useTRPC } from "../../../../shared/lib/trpc/trpc-context";
 import { ReportToolbar } from "../../../../shared/ui/report-shell/report-toolbar";
 import {
@@ -43,6 +44,13 @@ function useHeadPeriodData(reportId: string, includeArchive: boolean) {
   );
   const displayedQ = useQuery(trpc.weeklyReport.get.queryOptions({ reportId }));
   const activeQ = useQuery(trpc.weeklyReport.get.queryOptions({}));
+
+  // Log-only: the toolbar already renders the inline "unavailable" state.
+  useQueryErrorHandler(historyQ, {
+    event: "headReport.compiledHistory.load_failed",
+    component: "HeadReportShell",
+    procedure: "reports.compiledHistory",
+  });
 
   const periods: readonly ReportPeriod[] = useMemo(
     () =>

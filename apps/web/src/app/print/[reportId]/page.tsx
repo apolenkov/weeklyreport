@@ -1,7 +1,11 @@
 import type { Role } from "@customreport/shared";
 import { redirect } from "next/navigation";
 
-import { getPrintRouteContext } from "../../../features/pdf-export/server";
+import {
+  getPdfExportRender,
+  getPrintRouteContext,
+} from "../../../features/pdf-export/server";
+import { ErrorShell } from "./print-report-shell";
 import { PrintReportTemplate } from "./print-report-template";
 
 interface Props {
@@ -37,7 +41,16 @@ export default async function PrintReportPage({ params, searchParams }: Props) {
     typeof jobId === "string" &&
     ctx.pdfJobId === jobId
   ) {
-    return <PrintReportTemplate reportId={reportId} jobId={jobId} />;
+    // The render read happens on the server so the ready marker lands in SSR
+    // markup — the renderer's wait must not rely on client hydration. A null
+    // read renders the error shell, which keeps the wait falsy until the
+    // renderer's own bounded timeout fails the attempt.
+    const data = await getPdfExportRender(jobId, reportId);
+    return data === null ? (
+      <ErrorShell reportId={reportId} />
+    ) : (
+      <PrintReportTemplate data={data} />
+    );
   }
 
   // Destination varies by session role, so this must stay a temporary (307)

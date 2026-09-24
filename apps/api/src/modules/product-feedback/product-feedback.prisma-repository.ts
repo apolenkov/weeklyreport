@@ -1,15 +1,11 @@
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
-import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
 import {
   accessWhere,
-  createFeedbackData,
   mapFeedback,
   queryWhere,
 } from "./product-feedback.prisma-support.js";
 import {
   type FeedbackAccess,
-  type FeedbackCreateInput,
-  FeedbackDuplicateError,
   FeedbackNotFoundError,
   type FeedbackPage,
   type FeedbackQuery,
@@ -21,47 +17,8 @@ import {
 const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 50;
 
-const CLIENT_ID_UNIQUE_CONSTRAINT = {
-  columns: ["clientId"],
-} as const;
-
 export class ProductFeedbackPrismaRepository implements ProductFeedbackRepository {
   constructor(private readonly prisma: PrismaService) {}
-
-  async create(
-    access: FeedbackAccess,
-    input: FeedbackCreateInput,
-  ): Promise<FeedbackRecord> {
-    const existing = await this.prisma.productFeedback.findUnique({
-      where: { clientId: input.clientId },
-      include: { annotations: true },
-    });
-    if (existing) {
-      if (existing.authorUserId !== access.userId) {
-        throw new FeedbackDuplicateError();
-      }
-      return mapFeedback(existing);
-    }
-
-    try {
-      const row = await this.prisma.productFeedback.create({
-        data: createFeedbackData(access, input),
-        include: { annotations: true },
-      });
-      return mapFeedback(row);
-    } catch (error: unknown) {
-      if (!isUniqueViolation(error, CLIENT_ID_UNIQUE_CONSTRAINT)) throw error;
-      const winner = await this.prisma.productFeedback.findUnique({
-        where: { clientId: input.clientId },
-        include: { annotations: true },
-      });
-      if (!winner) throw error;
-      if (winner.authorUserId !== access.userId) {
-        throw new FeedbackDuplicateError();
-      }
-      return mapFeedback(winner);
-    }
-  }
 
   async list(
     access: FeedbackAccess,
@@ -98,21 +55,6 @@ export class ProductFeedbackPrismaRepository implements ProductFeedbackRepositor
         ? [focused, ...rows.slice(0, Math.max(0, limit - 1))]
         : rows;
     return { feedbacks: visibleRows.map(mapFeedback), total };
-  }
-
-  async findByClientId(
-    access: FeedbackAccess,
-    clientId: string,
-  ): Promise<FeedbackRecord | null> {
-    const row = await this.prisma.productFeedback.findFirst({
-      where: {
-        clientId,
-        projectName: WEEKLY_REPORT_FEEDBACK_PRODUCT,
-        ...accessWhere(access),
-      },
-      include: { annotations: true },
-    });
-    return row ? mapFeedback(row) : null;
   }
 
   async update(
@@ -156,17 +98,6 @@ export class ProductFeedbackPrismaRepository implements ProductFeedbackRepositor
       },
     });
     if (deleted.count !== 1) throw new FeedbackNotFoundError();
-  }
-
-  async owns(access: FeedbackAccess, id: string): Promise<boolean> {
-    const count = await this.prisma.productFeedback.count({
-      where: {
-        id,
-        projectName: WEEKLY_REPORT_FEEDBACK_PRODUCT,
-        ...accessWhere(access),
-      },
-    });
-    return count === 1;
   }
 
   async ownsAuthor(access: FeedbackAccess, id: string): Promise<boolean> {

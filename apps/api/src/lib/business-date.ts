@@ -66,6 +66,11 @@ export function addBusinessDays(
   wd: WorkingDays,
   tz: string,
 ): Date {
+  if (Number.isNaN(date.getTime())) {
+    throw new TypeError(
+      `business-date: input date must be valid (got ${String(date)})`,
+    );
+  }
   const dt = DateTime.fromJSDate(date).setZone(tz);
   if (!dt.isValid) {
     throw new Error(`business-date: invalid timezone "${tz}"`);
@@ -103,9 +108,6 @@ export function computeDeadline(
 ): Date {
   const shifted = addBusinessDays(periodStart, deadlineDays, wd, tz);
   const dt = DateTime.fromJSDate(shifted).setZone(tz);
-  if (!dt.isValid) {
-    throw new Error(`business-date: invalid timezone "${tz}"`);
-  }
   return dt.set({ ...deadlineTime, second: 0, millisecond: 0 }).toJSDate();
 }
 

@@ -1,7 +1,10 @@
 import "server-only";
 
 import type { OrganizationPublic } from "@customreport/shared";
-import { DEFAULT_ORGANIZATION_IDENTITY } from "@customreport/shared";
+import {
+  DEFAULT_ORGANIZATION_IDENTITY,
+  organizationPublicSchema,
+} from "@customreport/shared";
 import * as Sentry from "@sentry/nextjs";
 import { PHASE_PRODUCTION_BUILD } from "next/constants";
 
@@ -42,11 +45,8 @@ function reportUnresolvedIdentity(
 
 function decodeOrgPublicResponse(body: unknown): OrganizationPublic | null {
   const payload = decodeTrpcBatchPayload(body);
-  if (!payload || typeof payload !== "object") return null;
-  const p = payload as Record<string, unknown>;
-  if (typeof p.shortName !== "string" || typeof p.fullName !== "string")
-    return null;
-  return { shortName: p.shortName, fullName: p.fullName };
+  const result = organizationPublicSchema.safeParse(payload);
+  return result.success ? result.data : null;
 }
 
 export async function getOrgPublic(): Promise<OrganizationPublic> {

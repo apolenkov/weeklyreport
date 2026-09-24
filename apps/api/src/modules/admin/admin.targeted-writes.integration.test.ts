@@ -20,6 +20,85 @@ import {
   AdminUserPublishedHistoryError,
 } from "./admin-shared";
 
+const LOCK_WAIT_POLL_MS = 25;
+const LOCK_WAIT_TIMEOUT_MS = 10_000;
+
+// Stage-assignment writers queue on the same editable-Report row locks that
+// section saves and carry-over hold. A blocked `FROM "Report" ... FOR UPDATE`
+// on another session is the observable condition — bounded poll, never a
+// fixed sleep as evidence.
+async function waitForReportLockWaiter(
+  prisma: ReturnType<typeof createTestPrisma>,
+): Promise<void> {
+  const deadline = Date.now() + LOCK_WAIT_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    const waiting = await prisma.$queryRaw<{ pid: number }[]>`
+      SELECT activity.pid
+      FROM pg_stat_activity AS activity
+      JOIN pg_locks AS lock
+        ON lock.pid = activity.pid AND NOT lock.granted
+      WHERE activity.datname = current_database()
+        AND activity.pid <> pg_backend_pid()
+        AND activity.query LIKE '%FROM "Report"%'
+        AND activity.query LIKE '%FOR UPDATE%'`;
+    if (waiting.length > 0) return;
+    await new Promise((resolve) => setTimeout(resolve, LOCK_WAIT_POLL_MS));
+  }
+  throw new Error(
+    `Timed out after ${String(LOCK_WAIT_TIMEOUT_MS)}ms waiting for the stage-assignment write to block on a Report lock`,
+  );
+}
+
+// Holds the Report row lock an editable-section write/carry-over would hold,
+// so a stage-assignment writer must queue behind it.
+async function holdEditableReportLock(
+  prisma: ReturnType<typeof createTestPrisma>,
+  reportId: string,
+): Promise<{ holder: Promise<unknown>; release: () => void }> {
+  const locked = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const holder = prisma.$transaction(
+    async (tx) => {
+      // Bound the FOR UPDATE at the PG level too — Prisma's callback deadline
+      // cannot interrupt an in-flight lock wait, and the acquisition-failure
+      // path below awaits this transaction before rethrowing.
+      await tx.$executeRaw`SET LOCAL lock_timeout = '5s'`;
+      await tx.$queryRaw`
+        SELECT "id" FROM "Report" WHERE "id" = ${reportId} FOR UPDATE
+      `;
+      locked.resolve();
+      await release.promise;
+    },
+    // The waiter poll may run the full LOCK_WAIT_TIMEOUT_MS while held.
+    { timeout: 15_000 },
+  );
+  // Observe the holder immediately: a transaction that fails before acquiring
+  // the lock must not leave its rejection unhandled while acquisition waits.
+  void holder.catch(() => undefined);
+  const acquisitionTimeout = Promise.withResolvers<never>();
+  const timer = setTimeout(
+    () =>
+      acquisitionTimeout.reject(
+        new Error(
+          `Timed out after ${String(LOCK_WAIT_TIMEOUT_MS)}ms acquiring the Report row lock`,
+        ),
+      ),
+    LOCK_WAIT_TIMEOUT_MS,
+  );
+  try {
+    // A failed acquisition rejects `holder` before `locked` resolves — racing
+    // both keeps the caller from hanging on a lock that will never arrive.
+    await Promise.race([locked.promise, holder, acquisitionTimeout.promise]);
+  } catch (error) {
+    release.resolve();
+    await Promise.allSettled([holder]);
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+  return { holder, release: release.resolve };
+}
+
 describe("AdminPrismaRepository (integration) — targeted writes & concurrency", () => {
   const prisma = createTestPrisma();
   const repo = new AdminPrismaRepository(prisma as never);
@@ -32,8 +111,11 @@ describe("AdminPrismaRepository (integration) — targeted writes & concurrency"
   });
 
   afterAll(async () => {
-    await cleanDatabase();
-    await disconnectTestPrisma();
+    try {
+      await cleanDatabase();
+    } finally {
+      await disconnectTestPrisma();
+    }
   });
 
   // Multi-entity restore is atomic; targeted mutations never reconcile concurrent rows away.
@@ -524,8 +606,11 @@ describe("AdminPrismaRepository (integration) — targeted writes & concurrency"
   });
 
   it("removeUser honors the FK-reference guard", async () => {
-    // The seeded lead leads a project and authored a section → not deletable.
-    await repo.removeUser(testData.lead.id);
+    // The seeded lead leads a project and authored a section → conflict,
+    // and the row is retained.
+    await expect(repo.removeUser(testData.lead.id)).rejects.toBeInstanceOf(
+      AdminUserConflictError,
+    );
     expect(
       await prisma.user.findUnique({ where: { id: testData.lead.id } }),
     ).not.toBeNull();
@@ -633,5 +718,118 @@ describe("AdminPrismaRepository (integration) — targeted writes & concurrency"
     expect([testData.head.id, testData.lead.id]).toContain(
       expectDefined(rows[0]).userId,
     );
+  });
+
+  it("deleteStageAssignment queues behind a held editable-report lock", async () => {
+    const stage = await prisma.stage.create({
+      data: {
+        id: "a0000000-0000-4000-a000-000000000701",
+        name: "Serialization Stage",
+      },
+    });
+    const assignment = await prisma.stageAssignment.create({
+      data: {
+        userId: testData.lead.id,
+        stageId: stage.id,
+        projectId: testData.project.id,
+      },
+    });
+    const held = await holdEditableReportLock(prisma, testData.report.id);
+
+    const deletion = repo.deleteStageAssignment(assignment.id);
+    // Observe immediately so an early rejection cannot surface as unhandled
+    // while the bounded waiter poll is still running.
+    void deletion.catch(() => undefined);
+    let waitFailure: Error | undefined;
+    try {
+      await waitForReportLockWaiter(prisma);
+      // Still queued behind the held lock — the row must not be gone yet.
+      expect(
+        await prisma.stageAssignment.findUnique({
+          where: { id: assignment.id },
+        }),
+      ).not.toBeNull();
+    } catch (error) {
+      waitFailure =
+        error instanceof Error
+          ? error
+          : new Error(
+              "Stage-assignment lock wait failed without an Error object",
+            );
+    } finally {
+      held.release();
+    }
+
+    const [holderResult, deleteResult] = await Promise.allSettled([
+      held.holder,
+      deletion,
+    ]);
+    if (waitFailure !== undefined) throw waitFailure;
+    expect(holderResult.status).toBe("fulfilled");
+    expect(deleteResult.status).toBe("fulfilled");
+    await expect(
+      prisma.stageAssignment.findUnique({ where: { id: assignment.id } }),
+    ).resolves.toBeNull();
+  });
+
+  it("saveStageAssignment reassign queues behind a held editable-report lock", async () => {
+    const stage = await prisma.stage.create({
+      data: {
+        id: "a0000000-0000-4000-a000-000000000702",
+        name: "Reassign Order Stage",
+      },
+    });
+    const assignment = await prisma.stageAssignment.create({
+      data: {
+        userId: testData.lead.id,
+        stageId: stage.id,
+        projectId: testData.project.id,
+      },
+    });
+    const held = await holdEditableReportLock(prisma, testData.report.id);
+
+    const reassignment = repo.saveStageAssignment({
+      userId: testData.head.id,
+      stageId: stage.id,
+      projectId: testData.project.id,
+    });
+    void reassignment.catch(() => undefined);
+    let waitFailure: Error | undefined;
+    try {
+      await waitForReportLockWaiter(prisma);
+      // Still queued — the existing row keeps its assignee.
+      const row = expectDefined(
+        await prisma.stageAssignment.findUnique({
+          where: { id: assignment.id },
+        }),
+      );
+      expect(row.userId).toBe(testData.lead.id);
+    } catch (error) {
+      waitFailure =
+        error instanceof Error
+          ? error
+          : new Error(
+              "Stage-assignment lock wait failed without an Error object",
+            );
+    } finally {
+      held.release();
+    }
+
+    const [holderResult, saveResult] = await Promise.allSettled([
+      held.holder,
+      reassignment,
+    ]);
+    if (waitFailure !== undefined) throw waitFailure;
+    expect(holderResult.status).toBe("fulfilled");
+    expect(saveResult.status).toBe("fulfilled");
+    if (saveResult.status === "fulfilled") {
+      expect(saveResult.value.userId).toBe(testData.head.id);
+    }
+    const row = expectDefined(
+      await prisma.stageAssignment.findUnique({
+        where: { id: assignment.id },
+      }),
+    );
+    expect(row.userId).toBe(testData.head.id);
   });
 });

@@ -3,7 +3,11 @@ import { Inject, Injectable } from "@nestjs/common";
 import type { Prisma as PrismaTypes } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
-import { groupScopeFilter, guardGroupScope } from "../../lib/group-scope.js";
+import {
+  computeAllowedGroupIds,
+  groupScopeFilter,
+  guardGroupScope,
+} from "../../lib/group-scope.js";
 import { currentEditableReportWhere } from "../../lib/report-lifecycle.js";
 import { publishedReportScopeWhere } from "../report-sections/index.js";
 import type { TelemetryRepository } from "./telemetry.ports.js";
@@ -98,12 +102,7 @@ export class TelemetryPrismaRepository implements TelemetryRepository {
     if (session.role === "admin") {
       return this.prisma.pdfExportJob.count({ where });
     }
-    const groupIds =
-      session.role === "viewer"
-        ? (session.viewerGroupAccess ?? [])
-        : session.reportingGroupId
-          ? [session.reportingGroupId]
-          : [];
+    const groupIds = computeAllowedGroupIds(session);
     if (groupIds.length === 0) return 0;
     return this.prisma.pdfExportJob.count({
       where: { ...where, publicationGroupIds: { hasSome: [...groupIds] } },

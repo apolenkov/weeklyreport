@@ -55,6 +55,15 @@ function makeActivityReport(): PrintActivityReport {
         initials: "LC",
       },
     ],
+    presentations: [
+      {
+        reportSectionId: "section-boundary",
+        authorId: "author-boundary",
+        authorName: LONG_CONTRIBUTOR_NAME,
+        title: LONG_ACTIVITY_NAME,
+        note: "Frozen weekly description",
+      },
+    ],
     currentWeek: [
       {
         id: "item-boundary",
@@ -127,6 +136,7 @@ describe("print layout boundaries", () => {
       overflowWrap: "anywhere",
     });
     expect(screen.getByText(LONG_RECORD_TEXT)).toBeInTheDocument();
+    expect(screen.getByText("Frozen weekly description")).toBeInTheDocument();
     expect(firstReport?.getAttribute("style") ?? "").not.toContain(
       "page-break-inside",
     );

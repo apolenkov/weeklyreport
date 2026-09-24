@@ -172,9 +172,6 @@ export class ReportSearchPrismaRepository implements ReportSearchRepository {
             ),
           )
         : publishedRows;
-    if (mode === "named" && namedRows.length > MAX_PUBLISHED_PERIODS) {
-      throw new ReportSearchResultSetTooLargeError();
-    }
     const metadataRows = [...currentRows, ...namedRows];
     const publishedIds = namedRows.map((row) => row.id);
     const snapshots =

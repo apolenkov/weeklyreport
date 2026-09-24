@@ -1,5 +1,6 @@
 import { adminSnapshotReminderExecutionSchema } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
+import { ZodError } from "zod";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { writePeriodRow } from "./admin-entity-write.queries.js";
@@ -63,7 +64,7 @@ describe("saveSnapshot — reporting-group integrity", () => {
     expect(transaction).not.toHaveBeenCalled();
   });
 
-  it("rejects a published record without id before opening a restore transaction", async () => {
+  it("rejects a published record with mismatched snapshot identity before opening a restore transaction", async () => {
     const transaction = vi.fn();
     const prisma = { $transaction: transaction } as unknown as PrismaService;
     const publishedAt = new Date("2026-04-19T15:00:00.000Z");
@@ -83,13 +84,14 @@ describe("saveSnapshot — reporting-group integrity", () => {
           periodState: "published",
           periodStatus: "published",
           archived: false,
+          weekLabel: null,
           autoPublished: false,
           autoArchived: false,
           publishedAt,
           publishedById: null,
           reopenedAt: null,
           publishedSnapshot: {
-            reportId: REPORT_ID,
+            reportId: USER_ID,
             periodStart,
             periodEnd,
             deadline: null,
@@ -116,6 +118,7 @@ describe("saveSnapshot — reporting-group integrity", () => {
                 referencedProjects: [],
                 items: [
                   {
+                    id: ACTIVITY_ID,
                     stableId: STABLE_ID,
                     projectId: null,
                     activityId: ACTIVITY_ID,
@@ -143,53 +146,63 @@ describe("saveSnapshot — reporting-group integrity", () => {
       policies: [],
     };
 
-    await expect(
-      saveSnapshot(prisma, undefined, malformedSnapshot as never),
-    ).rejects.toThrow();
+    let error: unknown;
+    try {
+      await saveSnapshot(prisma, undefined, malformedSnapshot as never);
+    } catch (error_) {
+      error = error_;
+    }
+    expect(error).toBeInstanceOf(ZodError);
+    if (!(error instanceof ZodError)) {
+      throw new Error("Expected snapshot validation to throw ZodError");
+    }
+    expect(error.issues).toEqual([
+      expect.objectContaining({
+        path: ["periods", 0, "publishedSnapshot", "reportId"],
+        message: "Published snapshot must belong to the restored report.",
+      }),
+    ]);
     expect(transaction).not.toHaveBeenCalled();
   });
 });
 
 describe("saveSnapshot — deterministic pre-transaction validation", () => {
-  it.each(["fresh", "populated"])(
-    "rejects duplicate business identity against a %s database without reading it",
-    async (_databaseState) => {
-      const transaction = vi.fn();
-      const prisma = { $transaction: transaction } as unknown as PrismaService;
-      const viewer = {
-        id: USER_ID,
-        email: "viewer@example.test",
-        name: "Viewer Example",
-        lastName: "Viewer",
-        firstName: "Example",
-        middleName: null,
-        position: null,
-        role: "viewer",
-        isActive: true,
-      };
-      const duplicateEmailSnapshot = {
-        users: [
-          viewer,
-          {
-            ...viewer,
-            id: "10000000-0000-4000-8000-000000000010",
-            email: viewer.email.toUpperCase(),
-          },
-        ],
-        groups: [],
-        projects: [],
-        periods: [],
-        reminderRules: [],
-        reminderExecutions: [],
-        policies: [],
-      };
+  it("rejects duplicate business identity before opening a restore transaction", async () => {
+    const transaction = vi.fn();
+    const prisma = { $transaction: transaction } as unknown as PrismaService;
+    const viewer = {
+      id: USER_ID,
+      email: "viewer@example.test",
+      name: "Viewer Example",
+      lastName: "Viewer",
+      firstName: "Example",
+      middleName: null,
+      position: null,
+      role: "viewer",
+      isActive: true,
+    };
+    const duplicateEmailSnapshot = {
+      users: [
+        viewer,
+        {
+          ...viewer,
+          id: "10000000-0000-4000-8000-000000000010",
+          email: viewer.email.toUpperCase(),
+        },
+      ],
+      groups: [],
+      projects: [],
+      periods: [],
+      reminderRules: [],
+      reminderExecutions: [],
+      policies: [],
+    };
 
-      await expect(
-        saveSnapshot(prisma, undefined, duplicateEmailSnapshot as never),
-      ).rejects.toThrow(/User email duplicates users\[0\]/);
-      expect(transaction).not.toHaveBeenCalled();
-    },
-  );
+    await expect(
+      saveSnapshot(prisma, undefined, duplicateEmailSnapshot as never),
+    ).rejects.toThrow(/User email duplicates users\[0\]/);
+    expect(transaction).not.toHaveBeenCalled();
+  });
 });
 
 describe("lockReminderRestoreGraph — canonical policy ownership locks", () => {

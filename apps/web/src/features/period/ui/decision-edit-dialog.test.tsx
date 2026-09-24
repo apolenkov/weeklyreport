@@ -695,3 +695,45 @@ describe("DecisionEditDialog — activity parenting", () => {
     expect(saved.text).toBe("Escalate triage backlog");
   });
 });
+
+// A stale requested product must stay unresolved — never rebind to another
+// catalog entry — and the dialog must refuse to save against a ghost parent.
+describe("DecisionEditDialog — create parent seeding", () => {
+  it("leaves the parent unresolved and blocks save when the requested product id is stale", () => {
+    const onSave = vi.fn();
+    render(
+      <DecisionEditDialog
+        open
+        decision={null}
+        defaultOwner="Test Lead"
+        stagesForProduct={() => ["Development"]}
+        products={products}
+        activities={[{ id: "act1", name: "Jira triage duty" }]}
+        defaultProductId="stale-id"
+        onSave={onSave}
+        onCancel={() => undefined}
+      />,
+    );
+
+    const parentSelect = screen.getByLabelText("Parent");
+    expect(parentSelect).toHaveValue("unresolved:");
+
+    // Valid prose plus an auto-applied stage still cannot save a ghost parent.
+    fireEvent.change(screen.getByLabelText(/^Decision \*/i), {
+      target: { value: "Approve the plan" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
+      target: { value: "Unblocks rollout" },
+    });
+    const saveButton = screen.getByRole("button", { name: /Save Decision/i });
+    expect(saveButton).toBeDisabled();
+    const backdrop = document.querySelector<HTMLElement>(
+      '[role="presentation"]',
+    );
+    if (!backdrop) throw new Error("backdrop not found");
+    fireEvent.keyDown(backdrop, { key: "Enter", ctrlKey: true });
+    fireEvent.click(saveButton);
+
+    expect(onSave).not.toHaveBeenCalled();
+  });
+});

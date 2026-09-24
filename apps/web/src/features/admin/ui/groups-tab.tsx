@@ -181,8 +181,10 @@ export function GroupsTab({ groups, users, products }: GroupsTabProps) {
     <>
       <div className="space-y-4" data-testid="groups-tab">
         <GroupsTabHeader
-          activeCount={tab.activeGroupCount}
-          totalCount={groups.length}
+          activeCount={
+            filters.filteredGroups.filter((group) => !group.archived).length
+          }
+          totalCount={filters.filteredGroups.length}
           archiveFilter={filters.archiveFilter}
           onArchiveFilterChange={filters.setArchiveFilter}
           search={filters.search}
@@ -200,7 +202,9 @@ export function GroupsTab({ groups, users, products }: GroupsTabProps) {
 
         {filters.filteredGroups.length === 0 && (
           <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
-            No groups match the search.
+            {groups.length > 0
+              ? "No groups match the search."
+              : "No groups yet."}
           </div>
         )}
       </div>

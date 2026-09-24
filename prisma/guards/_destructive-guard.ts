@@ -166,15 +166,26 @@ const assertRawUrlSyntax = (scriptName: string, databaseUrl: string): void => {
 };
 
 const parseUrl = (scriptName: string, databaseUrl: string): URL => {
-  try {
-    return new URL(databaseUrl);
-  } catch {
+  const parsed = URL.parse(databaseUrl);
+  if (parsed === null) {
     return refuse(
       scriptName,
       databaseUrl,
       "DATABASE_URL is not a parseable PostgreSQL URL.",
     );
   }
+  const pathStart = databaseUrl.indexOf(
+    "/",
+    databaseUrl.indexOf("://") + "://".length,
+  );
+  if (pathStart === -1 || databaseUrl.slice(pathStart) !== parsed.pathname) {
+    return refuse(
+      scriptName,
+      databaseUrl,
+      "DATABASE_URL path must be an exact literal segment without normalization.",
+    );
+  }
+  return parsed;
 };
 
 const parseDatabaseTarget = (

@@ -17,6 +17,14 @@ export const AI_PROMPT_SLOT_CONTENT_LIMIT = 12_000;
 export const AI_PROMPT_BUNDLE_EFFECTIVE_LIMIT = 48_000;
 /** Maximum locked-core characters retained for one prompt slot. */
 export const AI_PROMPT_CORE_LIMIT = 24_000;
+/** Separator joining the locked core and editable tail in a composed prompt. */
+export const AI_PROMPT_EDITABLE_TAIL_SEPARATOR =
+  "\n\nOperator guidance (editable tail):\n";
+/** Maximum composed effective-prompt characters in one prompt slot. */
+export const AI_PROMPT_EFFECTIVE_PROMPT_LIMIT =
+  AI_PROMPT_CORE_LIMIT +
+  AI_PROMPT_EDITABLE_TAIL_SEPARATOR.length +
+  AI_PROMPT_SLOT_CONTENT_LIMIT;
 /** Character length of a lowercase SHA-256 content hash. */
 export const AI_PROMPT_HASH_LENGTH = 64;
 /** Maximum length of a prompt contract or composer version. */
@@ -93,7 +101,7 @@ export const aiPromptSlotReadSchema = z
     slot: aiPromptSlotSchema,
     lockedCore: safePromptText(AI_PROMPT_CORE_LIMIT),
     promptContents: safePromptText(AI_PROMPT_SLOT_CONTENT_LIMIT),
-    effectivePrompt: safePromptText(AI_PROMPT_SLOT_CONTENT_LIMIT * 2),
+    effectivePrompt: safePromptText(AI_PROMPT_EFFECTIVE_PROMPT_LIMIT),
   })
   .strict();
 

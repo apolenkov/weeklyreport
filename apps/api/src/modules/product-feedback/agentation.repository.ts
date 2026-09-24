@@ -25,7 +25,7 @@ import {
 } from "./agentation.repository.helpers.js";
 import { AgentationReadRepository } from "./agentation.repository.reads.js";
 import { mapAnnotation, mapEvent, mapSession } from "./agentation-mappers.js";
-import { annotationScope, sessionScope } from "./agentation-scope.js";
+import { annotationPatchScope, sessionScope } from "./agentation-scope.js";
 import {
   type FeedbackAccess,
   WEEKLY_REPORT_FEEDBACK_PRODUCT,
@@ -197,7 +197,7 @@ export class AgentationPrismaRepository extends AgentationReadRepository {
   ): Promise<ReturnType<typeof mapAnnotation> | null> {
     return this.prisma.$transaction(async (db) => {
       const current = await db.agentationAnnotation.findFirst({
-        where: { id, ...annotationScope(access) },
+        where: { id, ...annotationPatchScope(access, patch) },
         include: { threadMessages: { orderBy: { timestamp: "asc" } } },
       });
       if (!current) return null;

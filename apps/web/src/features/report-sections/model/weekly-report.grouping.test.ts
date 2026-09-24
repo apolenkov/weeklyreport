@@ -490,6 +490,46 @@ describe("mapWeeklyReport — grouping, severity & escalation", () => {
     expect(crmReport?.needsAttentionSeverity).toBe("at-risk");
   });
 
+  it("prefers the highest-severity escalation across sections", () => {
+    const report = baseReport({
+      portfolioOverview: [
+        {
+          productId: PROJECT_A,
+          productName: "CRM",
+          worstStatus: "red",
+          stageCount: 7,
+          leadNames: ["Тимлид 1", "Тимлид 2"],
+          leadIds: ["695cfa6a-0dd8-50a5-84e5-06c474e139fd", AUTHOR_B],
+        },
+      ],
+      escalations: [
+        {
+          type: "at_risk",
+          productId: PROJECT_A,
+          productName: "CRM",
+          stageName: "Dev",
+          authorId: AUTHOR_A,
+          leadName: "Тимлид 1",
+          description: "Lower severity first.",
+        },
+        {
+          type: "blocked",
+          productId: PROJECT_A,
+          productName: "CRM",
+          stageName: "Dev",
+          authorId: AUTHOR_B,
+          leadName: "Тимлид 2",
+          description: "Blocked wins.",
+        },
+      ],
+    });
+
+    const result = mapWeeklyReport(report);
+    const crmReport = result.products.find((p) => p.id === PROJECT_A);
+    expect(crmReport?.needsAttention).toBe("Blocked wins.");
+    expect(crmReport?.needsAttentionSeverity).toBe("blocked");
+  });
+
   it("joins aggregate attention by product id when product names collide", () => {
     const report = baseReport({
       portfolioOverview: [

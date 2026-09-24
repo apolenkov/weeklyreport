@@ -254,9 +254,6 @@ export async function runResetHard(): Promise<void> {
 
   try {
     console.log("[reset-hard] Starting hard reset…");
-    console.log(
-      `[reset-hard] DATABASE_URL: ${databaseUrl.replace(/:[^:@]*@/, ":***@")}`,
-    );
 
     // Apply any pending migrations first so schema matches Prisma client.
     // This prevents "not-null constraint" errors from schema drift.

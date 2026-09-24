@@ -174,7 +174,7 @@ describe("focused admin services", () => {
     expect(restored.headUserId).toBe(leaderId);
   });
 
-  it("routes project and reminder writes to their owning services", async () => {
+  it("persists a project through its owning service", async () => {
     const repository = createRepository(initialSnapshot);
     const projectService = new ProjectAdminService(
       repository,

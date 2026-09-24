@@ -73,6 +73,26 @@ describe("LeadFormSkeleton", () => {
     );
   });
 
+  it("carries the loaded overview report-page landmark while loading", () => {
+    render(<LeadFormSkeleton mode="overview" />);
+
+    const status = screen.getByRole("status", {
+      name: "Loading status overview",
+    });
+    expect(status).toHaveAttribute("aria-busy", "true");
+    expect(status).toHaveAttribute("data-layout-key", "report-page");
+    expect(status).toHaveAttribute("data-layout-stability", "position-width");
+
+    const root = screen.getByTestId("lead-form-skeleton");
+    expect(root).toContainElement(
+      screen.getByTestId("lead-skeleton-context-toolbar"),
+    );
+    const placeholders = Array.from(root.children).filter(
+      (child) => (child as HTMLElement).dataset.slot === "skeleton",
+    );
+    expect(placeholders).toHaveLength(3);
+  });
+
   it("mirrors compact loaded toolbar clusters", () => {
     render(<LeadFormSkeleton />);
 

@@ -6,9 +6,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { QueueRegistry } from "../bullmq/queue-registry.js";
 import { WorkerLivenessRegistry } from "../bullmq/worker-liveness.registry.js";
+import { ENV_CONFIG } from "../config/config.module.js";
 import type { EnvConfig } from "../config/env.schema.js";
 import { BullMQHealthIndicator } from "./bullmq.health.js";
 import { HealthController } from "./health.controller.js";
+import { PdfRendererHealthIndicator } from "./pdf-renderer.health.js";
 import { PrismaHealthIndicator } from "./prisma.health.js";
 import { READINESS_PROBE_TIMEOUT_MS } from "./readiness-timeout.js";
 import { RedisHealthIndicator } from "./redis.health.js";
@@ -19,6 +21,10 @@ const STUB_ENV = {
   REDIS_DB: 15,
   REDIS_HOST: "localhost",
   REDIS_PORT: 6379,
+} as EnvConfig;
+
+const RENDERER_ENV = {
+  GOTENBERG_URL: "http://gotenberg:3000",
 } as EnvConfig;
 
 const explicitInjectionToken = (
@@ -44,6 +50,7 @@ describe("health provider composition", () => {
     [RedisHealthIndicator, 0],
     [PrismaHealthIndicator, 1],
     [BullMQHealthIndicator, 2],
+    [PdfRendererHealthIndicator, 0],
   ] as const)(
     "%s declares its HealthIndicatorService injection token for the tsx runtime",
     (provider, index) => {
@@ -52,6 +59,12 @@ describe("health provider composition", () => {
       );
     },
   );
+
+  it("injects EnvConfig into the renderer indicator for GOTENBERG_URL", () => {
+    expect(explicitInjectionToken(PdfRendererHealthIndicator, 1)).toBe(
+      ENV_CONFIG,
+    );
+  });
 });
 
 describe("HealthController", () => {
@@ -83,6 +96,9 @@ describe("HealthController", () => {
     const bullmqHealth = {
       isHealthy: vi.fn((key: string) => Promise.resolve(up(key))),
     };
+    const pdfRendererHealth = {
+      isHealthy: vi.fn((key: string) => Promise.resolve(up(key))),
+    };
     const env = {
       HEAP_HEALTH_THRESHOLD_BYTES: threshold,
     } as EnvConfig;
@@ -92,9 +108,17 @@ describe("HealthController", () => {
       prismaHealth,
       redisHealth,
       bullmqHealth,
+      pdfRendererHealth,
       env,
     );
-    return { controller, memory, prismaHealth, redisHealth, bullmqHealth };
+    return {
+      controller,
+      memory,
+      prismaHealth,
+      redisHealth,
+      bullmqHealth,
+      pdfRendererHealth,
+    };
   }
 
   it("liveness response carries no memory_heap result", async () => {
@@ -117,6 +141,35 @@ describe("HealthController", () => {
     expect(bullmqHealth.isHealthy).toHaveBeenCalledExactlyOnceWith("bullmq");
     expect(memory.checkHeap).toHaveBeenCalledWith("memory_heap", threshold);
     expect(result).toMatchObject({ memory_heap: { status: "up" } });
+  });
+
+  it("readiness aggregates only its own dependency set, never the renderer", async () => {
+    const { controller, pdfRendererHealth } = makeController();
+
+    const result = await controller.readiness();
+
+    expect(pdfRendererHealth.isHealthy).not.toHaveBeenCalled();
+    expect(Object.keys(result).sort()).toEqual([
+      "bullmq",
+      "database",
+      "memory_heap",
+      "redis",
+    ]);
+  });
+
+  it("the dedicated renderer route probes pdf_renderer without joining readiness", async () => {
+    const { controller, pdfRendererHealth, redisHealth } = makeController();
+    pdfRendererHealth.isHealthy.mockResolvedValueOnce({
+      pdf_renderer: { status: "down" },
+    });
+
+    const result = await controller.pdfRenderer();
+
+    expect(pdfRendererHealth.isHealthy).toHaveBeenCalledExactlyOnceWith(
+      "pdf_renderer",
+    );
+    expect(result).toMatchObject({ pdf_renderer: { status: "down" } });
+    expect(redisHealth.isHealthy).not.toHaveBeenCalled();
   });
 });
 
@@ -345,37 +398,39 @@ describe("BullMQHealthIndicator", () => {
     });
   });
 
-  it("returns down result keyed `bullmq` without echoing the raw queue error, and logs it internally", async () => {
-    const pdfQueue = {
-      getJobCounts: vi.fn().mockRejectedValue(new Error("Queue unavailable")),
-    } as unknown as Queue;
-    const emailQueue = {
-      getJobCounts: vi.fn().mockResolvedValue({ waiting: 0, active: 0 }),
-    } as unknown as Queue;
-    const errorSpy = vi
-      .spyOn(Logger.prototype, "error")
-      .mockImplementation(() => undefined);
-    const indicator = new BullMQHealthIndicator(
-      new QueueRegistry([
-        emailQueue,
-        pdfQueue,
-        makeQueue({ waiting: 0, active: 0 }),
-        makeQueue({ waiting: 0, active: 0 }),
-      ]),
-      readyWorkers(),
-      new HealthIndicatorService(),
-    );
+  it.each(["Queue unavailable", "timed out: sensitive-timeout-marker"])(
+    "returns down without exposing %s and logs it internally",
+    async (message) => {
+      const pdfQueue = {
+        getJobCounts: vi.fn().mockRejectedValue(new Error(message)),
+      } as unknown as Queue;
+      const emailQueue = {
+        getJobCounts: vi.fn().mockResolvedValue({ waiting: 0, active: 0 }),
+      } as unknown as Queue;
+      const errorSpy = vi
+        .spyOn(Logger.prototype, "error")
+        .mockImplementation(() => undefined);
+      const indicator = new BullMQHealthIndicator(
+        new QueueRegistry([
+          emailQueue,
+          pdfQueue,
+          makeQueue({ waiting: 0, active: 0 }),
+          makeQueue({ waiting: 0, active: 0 }),
+        ]),
+        readyWorkers(),
+        new HealthIndicatorService(),
+      );
 
-    const result = await indicator.isHealthy("bullmq");
+      const result = await indicator.isHealthy("bullmq");
 
-    expect(result.bullmq).toMatchObject({ status: "down" });
-    expect(result.bullmq?.message).toBeUndefined();
-    expect(JSON.stringify(result)).not.toContain("Queue unavailable");
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining("bullmq readiness probe failed"),
-      expect.objectContaining({ error: "Queue unavailable" }),
-    );
-  });
+      expect(result).toEqual({ bullmq: { status: "down" } });
+      expect(JSON.stringify(result)).not.toContain(message);
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("bullmq readiness probe failed"),
+        expect.objectContaining({ error: message }),
+      );
+    },
+  );
 
   it("checks every canonical queue and fails readiness when one is unavailable", async () => {
     const queues = [
@@ -415,11 +470,15 @@ describe("BullMQHealthIndicator", () => {
     );
 
     const resultPromise = indicator.isHealthy("bullmq");
-    await vi.runAllTimersAsync();
+    const settled = vi.fn();
+    void resultPromise.then(settled);
+    await vi.advanceTimersByTimeAsync(1999);
+    expect(settled).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
 
     const result = await resultPromise;
-    expect(result.bullmq).toMatchObject({ status: "down" });
-    expect(result.bullmq?.message).toContain("timed out");
+    expect(result).toEqual({ bullmq: { status: "down" } });
+    expect(settled).toHaveBeenCalledOnce();
 
     pending.reject(new Error("late queue failure"));
     await Promise.resolve();
@@ -472,5 +531,102 @@ describe("BullMQHealthIndicator", () => {
     await expect(indicator.isHealthy("bullmq")).resolves.toMatchObject({
       bullmq: { status: "up" },
     });
+  });
+});
+
+describe("PdfRendererHealthIndicator", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  function makeIndicator() {
+    return new PdfRendererHealthIndicator(
+      new HealthIndicatorService(),
+      RENDERER_ENV,
+    );
+  }
+
+  function okResponse() {
+    return {
+      ok: true,
+      status: 200,
+      body: { cancel: vi.fn().mockResolvedValue(undefined) },
+    } as unknown as Response;
+  }
+
+  it("probes {GOTENBERG_URL}/health and reports up on a 2xx", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okResponse());
+    vi.stubGlobal("fetch", fetchMock);
+    const indicator = makeIndicator();
+
+    const result = await indicator.isHealthy("pdf_renderer");
+
+    expect(fetchMock).toHaveBeenCalledExactlyOnceWith(
+      "http://gotenberg:3000/health",
+      expect.objectContaining({
+        signal: expect.any(AbortSignal) as AbortSignal,
+      }),
+    );
+    expect(result).toEqual({ pdf_renderer: { status: "up" } });
+  });
+
+  it("reports down on a transport failure without leaking the error", async () => {
+    const warnSpy = vi
+      .spyOn(Logger.prototype, "warn")
+      .mockImplementation(() => undefined);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new Error("ENOTFOUND gotenberg")),
+    );
+    const indicator = makeIndicator();
+
+    const result = await indicator.isHealthy("pdf_renderer");
+
+    expect(result).toEqual({ pdf_renderer: { status: "down" } });
+    expect(JSON.stringify(result)).not.toContain("ENOTFOUND");
+    expect(warnSpy).toHaveBeenCalledWith(
+      "pdf renderer health probe failed",
+      expect.objectContaining({ error: "ENOTFOUND gotenberg" }),
+    );
+  });
+
+  it("reports down on a non-ok response and releases the body", async () => {
+    const body = { cancel: vi.fn().mockResolvedValue(undefined) };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 503,
+        body,
+      }),
+    );
+    const indicator = makeIndicator();
+
+    const result = await indicator.isHealthy("pdf_renderer");
+
+    expect(result).toEqual({ pdf_renderer: { status: "down" } });
+    expect(body.cancel).toHaveBeenCalledOnce();
+  });
+
+  it("reports down when the probe does not settle before the deadline and aborts the fetch", async () => {
+    vi.useFakeTimers();
+    let capturedSignal: AbortSignal | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_: string, init?: RequestInit) => {
+        capturedSignal = init?.signal ?? undefined;
+        return new Promise<never>(() => undefined);
+      }),
+    );
+    const indicator = makeIndicator();
+
+    const resultPromise = indicator.isHealthy("pdf_renderer");
+    await vi.advanceTimersByTimeAsync(READINESS_PROBE_TIMEOUT_MS);
+
+    await expect(resultPromise).resolves.toEqual({
+      pdf_renderer: { status: "down" },
+    });
+    expect(capturedSignal?.aborted).toBe(true);
   });
 });

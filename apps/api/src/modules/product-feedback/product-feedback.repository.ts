@@ -118,25 +118,16 @@ export function feedbackAccessFromSession(
 }
 
 export interface ProductFeedbackRepository {
-  create(
-    access: FeedbackAccess,
-    input: FeedbackCreateInput,
-  ): Promise<FeedbackRecord>;
   list(
     access: FeedbackAccess,
     query: FeedbackQuery,
     focusId?: string,
   ): Promise<FeedbackPage>;
-  findByClientId(
-    access: FeedbackAccess,
-    clientId: string,
-  ): Promise<FeedbackRecord | null>;
   update(
     access: FeedbackAccess,
     id: string,
     input: FeedbackUpdateInput,
   ): Promise<FeedbackRecord>;
   delete(access: FeedbackAccess, id: string): Promise<void>;
-  owns(access: FeedbackAccess, id: string): Promise<boolean>;
   ownsAuthor(access: FeedbackAccess, id: string): Promise<boolean>;
 }

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import * as React from "react";
 import { describe, expect, it } from "vitest";
 
@@ -76,8 +76,25 @@ describe("BlockedAtRiskTable — grouping by product", () => {
       name: "Marketing Portal",
     });
     expect(headings).toHaveLength(1);
-    expect(screen.getByText("Vendor patch pending")).toBeVisible();
-    expect(screen.getByText("QA capacity short")).toBeVisible();
+    expect(screen.getAllByText("Marketing Portal")).toHaveLength(1);
+    const card = headings[0]?.closest("div.overflow-hidden");
+    if (!(card instanceof HTMLElement))
+      throw new Error("expected product card");
+    expect(within(card).getByText("MP")).toBeVisible();
+    expect(within(card).getByText("Anna · Boris")).toBeVisible();
+    expect(within(card).getAllByText("Blocked")).toHaveLength(2);
+    expect(within(card).getByText("At Risk")).toBeVisible();
+
+    const blockedRow = card.querySelector('[data-blocked-row="blocked"]');
+    const atRiskRow = card.querySelector('[data-blocked-row="at-risk"]');
+    if (
+      !(blockedRow instanceof HTMLElement) ||
+      !(atRiskRow instanceof HTMLElement)
+    ) {
+      throw new TypeError("expected issue rows");
+    }
+    expect(blockedRow).toHaveTextContent("DevAnnaVendor patch pendingBlocked");
+    expect(atRiskRow).toHaveTextContent("TestingBorisQA capacity shortAt Risk");
   });
 
   it("renders a separate product card per product, preserving first-appearance order", () => {
@@ -107,6 +124,27 @@ describe("BlockedAtRiskTable — grouping by product", () => {
     ]);
     // Total count badge sums across groups, not per-group.
     expect(screen.getByText("3 issues")).toBeVisible();
+  });
+
+  it("keeps a red product header when its remaining concrete row is at risk", () => {
+    const item = oneItem[0];
+    if (!item) throw new Error("expected blocked fixture");
+    render(
+      <BlockedAtRiskTable
+        items={[
+          {
+            ...item,
+            severity: "at-risk",
+            productFlaggedRed: true,
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /blocked & at risk/i }));
+
+    expect(screen.getByText("At Risk")).toBeVisible();
+    expect(screen.getByText("Blocked")).toBeVisible();
   });
 
   it("renders separate cards for distinct products with the same display name", () => {

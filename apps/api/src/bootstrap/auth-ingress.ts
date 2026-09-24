@@ -14,21 +14,6 @@ import {
 import type { AutoCarryOverOutcome } from "../modules/carry-over/index.js";
 import { createProvisionLeadWorkspace } from "./lead-workspace-provisioner";
 
-// Auth limiter before mountAuthRoutes so every /auth/* route is covered.
-// Skip /auth/dev-login: AUTH_DEV_MODE-gated, not brute-force; 5/min blocks E2E.
-function mountAuthRateLimit(
-  expressApp: Express,
-  authLimiter: RequestHandler,
-): void {
-  expressApp.use("/auth", ((req, res, next) => {
-    if (req.path === "/dev-login") {
-      next();
-      return;
-    }
-    return authLimiter(req, res, next);
-  }) as RequestHandler);
-}
-
 // No SAML env → dev-login only (prod fence + mountAuthRoutes refuse boot if
 // both off). Any SAML var present → real strategy; partial set fails via requireEnv.
 function resolveSamlStrategy(logger: AppLogger) {
@@ -55,7 +40,7 @@ export function mountAuthIngress(deps: {
   const authCtrl = createAuthController(process.env);
   const auditLogger = createAuditLogger(logger);
 
-  mountAuthRateLimit(expressApp, authLimiter);
+  expressApp.use("/auth", authLimiter);
 
   const provisionLeadWorkspace = createProvisionLeadWorkspace({
     app,

@@ -1,3 +1,8 @@
+> **OWNER-CANCELED / SUPERSEDED — 2026-09-20.** Reticle is removed and replaced
+> by agent-browser (Vercel) as the primary route (backlog TASK-047). The
+> `spec:reticle` machinery described below no longer exists in the repository;
+> this body is preserved as history, not as a live contract.
+
 ## Context
 
 The OpenSpec corpus evolves over time. The gate derives the exact scenario and normative-outcome denominators from the accepted source snapshot; prose counts are descriptive evidence for that snapshot, never fixed contract values. Scenario identity uses the specification path, requirement title, and scenario title together, so titles reused in different structured parents remain distinct. Existing saved Reticle flows for project `customreport-web-60381801` are present in the workspace, but no source-controlled contract maps them to OpenSpec.
@@ -60,7 +65,7 @@ Native Reticle tools provide live `verified: yes` and replay results. Mixed outc
 
 The gate now separates identity integrity from proof obligation. `.reticle/spec-coverage-exclusions.json` is an owner-signed declaration naming excluded specifications and, when needed, individual outcomes by `spec`/`requirement`/`scenario`/`ordinal`; each entry carries a reason, and the declaration points at an existing decision file. Everything the declaration does not name stays mandatory, so new specifications and new outcomes fail closed instead of being skipped silently. The validator requires registry identity, scenario and outcome fingerprints, and exact outcome text for every outcome, and requires valid proofs only for mandatory outcomes. Excluded outcomes are counted separately and never contribute to proof counts.
 
-`spec:reticle` is no longer part of `spec:check`; CI runs it as a separate non-blocking step so the remaining gap stays visible without blocking unrelated merges. The current mandatory core is six outcomes in `ci-merge-gate` and `role-coverage-gate`, with 3,114 outcomes excluded and zero Reticle proofs; the gate therefore proves registry-to-spec integrity, not browser coverage. Growing the core means adding real references or accepted flows and deleting the matching exclusion entry, and removing the step's `continue-on-error` once the declared core is wide enough to represent the product's critical surface.
+`spec:reticle` is no longer part of `spec:check`; CI runs it as a separate non-blocking step so the remaining gap stays visible without blocking unrelated merges. The current mandatory core is 20 outcomes (floor raised 6→20 on 2026-09-17, refs verified against passing tests; see tasks 6.4), with 3,104 outcomes excluded and zero Reticle proofs; the gate therefore proves registry-to-spec integrity, not browser coverage. Growing the core means adding real references or accepted flows and deleting the matching exclusion entry, and removing the step's `continue-on-error` once the declared core is wide enough to represent the product's critical surface.
 
 The first-party implementation consists of the registry, one TypeScript validator, one focused validator test, the root script wiring, saved flows required by mappings, and this OpenSpec change. It uses Node standard-library parsing and hashing; no dependency or third-party Reticle customization is added.
 

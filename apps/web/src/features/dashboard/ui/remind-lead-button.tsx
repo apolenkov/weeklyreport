@@ -16,6 +16,7 @@ interface RemindLeadButtonProps {
 }
 
 const NO_SECTION_CONFIRM_STATE = "no-section";
+const NO_RULE_CONFIRM_STATE = "no-rule";
 
 type ConfirmState =
   | "idle"
@@ -23,6 +24,7 @@ type ConfirmState =
   | "already"
   | "skipped"
   | typeof NO_SECTION_CONFIRM_STATE
+  | typeof NO_RULE_CONFIRM_STATE
   | "error";
 
 const CONFIRM_HOLD_MS = 2400;
@@ -35,6 +37,7 @@ const CONFIRM_LABELS: Record<ConfirmState, string | null> = {
   already: "Already requested",
   skipped: "Skipped",
   [NO_SECTION_CONFIRM_STATE]: "No sections matched",
+  [NO_RULE_CONFIRM_STATE]: "No active rule",
   error: "Retry",
 };
 
@@ -51,12 +54,20 @@ const CONFIRM_LIVE_MESSAGES: Record<
   skipped: (leadName) => `Reminder for ${leadName} was skipped`,
   [NO_SECTION_CONFIRM_STATE]: (leadName) =>
     `No sections matched this lead for ${leadName}`,
+  [NO_RULE_CONFIRM_STATE]: (leadName) =>
+    `Reminder to ${leadName} not sent; no active reminder rule`,
   error: (leadName) => `Reminder to ${leadName} failed; retry available`,
 };
 
 // States where re-sending is pointless or would duplicate: the button locks.
 const SETTLED_CONFIRM_STATES: ReadonlySet<ConfirmState> = new Set<ConfirmState>(
-  ["queued", "already", "skipped", NO_SECTION_CONFIRM_STATE],
+  [
+    "queued",
+    "already",
+    "skipped",
+    NO_SECTION_CONFIRM_STATE,
+    NO_RULE_CONFIRM_STATE,
+  ],
 );
 
 // Only accepted or deduplicated requests earn the check glyph.
@@ -68,6 +79,9 @@ const confirmStateFromDispatch = (
   result: ReminderDispatchResult,
 ): ConfirmState => {
   if (result.reason === "no-matching-section") return NO_SECTION_CONFIRM_STATE;
+  // The ruleId this button holds no longer resolves: retrying cannot succeed,
+  // so this is a terminal state like no-section, not a transient error.
+  if (result.reason === "no-active-rule") return NO_RULE_CONFIRM_STATE;
   if (result.failed > 0) return "error";
   if (result.queued > 0) return "queued";
   if (result.alreadyRequested > 0) return "already";

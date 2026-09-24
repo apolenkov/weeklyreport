@@ -95,6 +95,25 @@ describe("createAppLogger", () => {
     expect(parsed.service).toBe("test-svc");
   });
 
+  it("degrades to the envelope when context serialization fails", () => {
+    const spy = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    const logger = createAppLogger({ minLevel: "info" });
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+
+    expect(() => logger.info("circular", { ref: circular })).not.toThrow();
+
+    expect(spy).toHaveBeenCalledOnce();
+    const parsed = JSON.parse(
+      expectDefined(spy.mock.calls[0])[0] as string,
+    ) as Record<string, unknown>;
+    expect(parsed).toMatchObject({
+      level: "info",
+      message: "circular",
+      contextSerializationFailed: true,
+    });
+  });
+
   it("merges context into log entry", () => {
     const spy = vi.spyOn(process.stdout, "write").mockReturnValue(true);
     const logger = createAppLogger();
@@ -320,6 +339,39 @@ describe("createAppLogger", () => {
 
   // retry: the async rotation races its assertions under a loaded machine
   // (turbo runs 4 package suites in parallel); a real regression fails all 3.
+  it(
+    "keeps both archives when two rotations land in the same millisecond",
+    { retry: 2 },
+    async () => {
+      const logDir = createLogDir();
+      vi.spyOn(process.stdout, "write").mockReturnValue(true);
+      // Freeze only the clock: both rotations compute the same archive stamp.
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-09-19T10:00:00.000Z"));
+      try {
+        const logger = createAppLogger({
+          logDir,
+          maxBytes: 200,
+          maxAgeDays: 30,
+        });
+
+        Array.from({ length: 8 }, (_, index) => index).forEach((index) =>
+          logger.info(`line-${index}`, { padding: "x".repeat(40) }),
+        );
+        // Timers stay real (only Date is faked), so the queue can drain while
+        // every rotation still computes the frozen stamp.
+        await flush(8);
+      } finally {
+        vi.useRealTimers();
+      }
+
+      const archives = readdirSync(logDir).filter(
+        (f) => f.startsWith("app.log.") && f.endsWith(".gz"),
+      );
+      expect(archives.length).toBeGreaterThanOrEqual(2);
+    },
+  );
+
   it(
     "rotates when active log exceeds maxBytes (creates gzip archive)",
     { retry: 2 },

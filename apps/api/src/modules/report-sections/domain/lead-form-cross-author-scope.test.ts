@@ -14,6 +14,7 @@ const SHARED_ITEM_STABLE_ID = "88888888-8888-4888-8888-888888888882";
 const OUTCOME_EVENT_ID = "88888888-8888-4888-8888-888888888883";
 const OUTCOME_ACTOR_ID = "88888888-8888-4888-8888-888888888884";
 const PRIVATE_AUDIT_SENTINEL = "PRIVATE_NESTED_PAUSE_REASON";
+const PRIVATE_NEXT_STEP = "PRIVATE_NEXT_STEP";
 const PRIVATE_PAUSED_STATE = {
   type: "current" as const,
   workflowStatus: "paused" as const,
@@ -93,6 +94,7 @@ function sectionWithComments(): ReportSectionReadModel {
         tag: "feature",
         workflowStatus: "paused",
         pausedReason: "Blocked on a confidential legal review",
+        nextStepText: PRIVATE_NEXT_STEP,
         carriedOver: false,
         comments: [{ ...COMMENT }],
         stageNames: ["Development"],
@@ -201,6 +203,16 @@ describe("filterSectionToSharedProducts", () => {
     expect(parsed.items).toHaveLength(1);
     expect(parsed.items[0]).toMatchObject({ workflowStatus: "paused" });
     expect(parsed.items.every((row) => !("pausedReason" in row))).toBe(true);
+  });
+
+  it("strips the author's next-step commitment from every retained item", () => {
+    const result = filterSectionToSharedProducts(
+      sectionWithComments(),
+      new Set([SHARED_PRODUCT_ID]),
+    );
+
+    expect(result.items.every((row) => !("nextStepText" in row))).toBe(true);
+    expect(JSON.stringify(result)).not.toContain(PRIVATE_NEXT_STEP);
   });
 
   it("strips nested outcome audit from the current co-lead projection", () => {

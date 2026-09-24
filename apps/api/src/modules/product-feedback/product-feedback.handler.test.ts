@@ -227,6 +227,17 @@ describe("authenticated product-feedback ingress", () => {
     }
   });
 
+  it("does not expose agentation routes without the /agentation prefix", async () => {
+    const server = await createServer({ agentationEnabled: true });
+    try {
+      const response = await call(server, "/sessions");
+
+      expect(response.status).toBe(404);
+    } finally {
+      server.close();
+    }
+  });
+
   it("rejects a cross-origin Agentation read before repository access", async () => {
     const server = await createServer({ agentationEnabled: true });
     try {
