@@ -229,6 +229,42 @@ services:
         max-size: "5m"
         max-file: "1"
 
+  # Internal Gotenberg PDF renderer — reached only by the api over the compose
+  # network: no published port and no ingress route. There is deliberately no
+  # api depends_on edge: the renderer is a runtime-optional capability whose
+  # outage surfaces on /health/pdf-renderer and in retryable export failures,
+  # never in boot ordering. Serialized conversions plus the clear-* flags keep
+  # the one shared browser from leaking credentials or page state between
+  # jobs. CHROMIUM_ALLOW_LIST is operator-set and must match the production
+  # PDF_BASE_URL origin — the only outbound destination conversions may reach.
+  gotenberg:
+    image: gotenberg/gotenberg:8.37.0-chromium@sha256:0d28ae9a96441588ef739623726bd500ad0720b77266c6f1351a13e333fbd61c
+    environment:
+      API_TIMEOUT: 150s
+      CHROMIUM_MAX_CONCURRENCY: 1
+      CHROMIUM_CLEAR_COOKIES: "true"
+      CHROMIUM_CLEAR_STORAGE: "true"
+      CHROMIUM_CLEAR_CACHE: "true"
+      CHROMIUM_ALLOW_LIST: ${CHROMIUM_ALLOW_LIST:?CHROMIUM_ALLOW_LIST must be set (anchored regex matching the PDF_BASE_URL origin)}
+      CHROMIUM_DENY_PRIVATE_IPS: "true"
+      CHROMIUM_DENY_PUBLIC_IPS: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   api:
     build:
       context: .
@@ -277,6 +313,7 @@ services:
       # MUST be set explicitly here — never the throwaway dev value.
       PDF_EXPORT_JWT_SECRET: ${PDF_EXPORT_JWT_SECRET:?PDF_EXPORT_JWT_SECRET must be set (min 32 chars, NOT the dev value)}
       PDF_BASE_URL: ${PDF_BASE_URL:?PDF_BASE_URL must be set}
+      GOTENBERG_URL: ${GOTENBERG_URL:?GOTENBERG_URL must be set}
       PDF_OUTPUT_DIR: /app/data/pdfs
       LOG_LEVEL: ${LOG_LEVEL:?set the API log level (e.g. info)}
       LOG_DIR: /app/logs

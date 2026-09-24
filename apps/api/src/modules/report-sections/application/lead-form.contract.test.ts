@@ -567,4 +567,24 @@ describe("LeadFormService — fillFrom", () => {
     ).rejects.toThrow(`Source section ${SOURCE_SECTION_ID} not found.`);
     expect(repo.fillFromSection).not.toHaveBeenCalled();
   });
+
+  // Self-fill is not a copy: the transaction delete-recreates the target's own
+  // rows under new identities and drops non-carryable ones. The argument-level
+  // guard must reject before any repository read, so fillFromSection — the
+  // only mutation — can never run.
+  it("rejects source === target before any repository read or copy", async () => {
+    const repo = createMockRepository({
+      getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
+    });
+    const service = new LeadFormService(repo);
+
+    await expect(
+      service.fillFrom(SECTION_ID, SECTION_ID, AUTHOR_ID, 1),
+    ).rejects.toBeInstanceOf(LeadFormConstraintError);
+    await expect(
+      service.fillFrom(SECTION_ID, SECTION_ID, AUTHOR_ID, 1),
+    ).rejects.toThrow("Cannot fill a section from itself.");
+    expect(repo.getSectionById).not.toHaveBeenCalled();
+    expect(repo.fillFromSection).not.toHaveBeenCalled();
+  });
 });

@@ -270,6 +270,21 @@ describe("SearchService", () => {
     expect(result.map((r) => r.title)).toEqual(["newer", "older"]);
   });
 
+  it("orders equal-rank equal-createdAt hits deterministically by id", async () => {
+    const repo = createRepository(() => [
+      makeHit({ id: "ffffffff-ffff-4fff-8fff-ffffffffffff", title: "z-id" }),
+      makeHit({ id: "11111111-1111-4111-8111-111111111111", title: "a-id" }),
+    ]);
+    const service = new SearchService(repo);
+
+    const result = await service.query(
+      { q: "rel", scope: "mine", limit: 20 },
+      makeSession({ role: "lead" }),
+    );
+
+    expect(result.map((r) => r.title)).toEqual(["a-id", "z-id"]);
+  });
+
   it("applies the requested limit even when the repo returns more rows", async () => {
     const repo = createRepository(() =>
       Array.from({ length: 30 }, (_, idx) =>

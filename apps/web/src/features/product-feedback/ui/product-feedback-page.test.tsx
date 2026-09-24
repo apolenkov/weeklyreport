@@ -48,9 +48,6 @@ const pageFeedback = {
 } as const;
 
 const inboxState = {
-  project: "weekly-report",
-  projects: ["weekly-report"],
-  setProject: vi.fn(),
   status: "all",
   setStatus: vi.fn(),
   type: "all",
@@ -58,30 +55,13 @@ const inboxState = {
   search: "",
   setSearch: vi.fn(),
   items: [pageFeedback],
-  total: 1,
-  counts: {},
-  loading: false,
-  loadingMore: false,
-  error: null,
-  hasMore: false,
   view: "ready",
-  loadMore: vi.fn(() => Promise.resolve()),
   refresh: vi.fn(() => Promise.resolve()),
-  focusedId: null,
-  focus: vi.fn(),
-  focusNext: vi.fn(),
-  focusPrev: vi.fn(),
-  openedId: null,
-  opened: null,
-  openFeedback: vi.fn(),
-  closeFeedback: vi.fn(),
   changeStatus,
   editOriginal: vi.fn(() => Promise.resolve()),
   reply: vi.fn(() => Promise.resolve()),
   dismiss: vi.fn(() => Promise.resolve()),
   deleteFeedback: vi.fn(() => Promise.resolve()),
-  pendingUndo: null,
-  undo: vi.fn(() => Promise.resolve()),
 };
 
 useProductFeedbackInbox.mockReturnValue(inboxState);
@@ -282,5 +262,60 @@ describe("ProductFeedbackPage role controls", () => {
     fireEvent.click(screen.getByRole("button", { name: "Details" }));
     expect(screen.getByText("session-1")).toBeInTheDocument();
     expect(screen.getByText("annotation-1")).toBeInTheDocument();
+  });
+});
+
+describe("ProductFeedbackPage inbox states", () => {
+  it("shows the loading placeholder while the inbox loads", () => {
+    setRole("lead");
+    useProductFeedbackInbox.mockReturnValue({
+      ...inboxState,
+      view: "loading",
+      items: [],
+    });
+
+    render(<ProductFeedbackPage />);
+
+    expect(screen.getByText(/Loading feedback/)).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByText("No feedback matches these filters.")).toBeNull();
+    expect(screen.queryByText("The row is difficult to read")).toBeNull();
+  });
+
+  it("surfaces an alert and retries via inbox.refresh on error", () => {
+    setRole("lead");
+    useProductFeedbackInbox.mockReturnValue({
+      ...inboxState,
+      view: "error",
+      items: [],
+    });
+
+    render(<ProductFeedbackPage />);
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Feedback is unavailable. Please try again.",
+    );
+    expect(screen.queryByText("The row is difficult to read")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(inboxState.refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the empty state when no feedback matches", () => {
+    setRole("lead");
+    useProductFeedbackInbox.mockReturnValue({
+      ...inboxState,
+      view: "empty",
+      items: [],
+    });
+
+    render(<ProductFeedbackPage />);
+
+    expect(
+      screen.getByText("No feedback matches these filters."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByText("The row is difficult to read")).toBeNull();
   });
 });

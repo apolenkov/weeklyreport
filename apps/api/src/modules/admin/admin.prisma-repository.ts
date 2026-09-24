@@ -6,7 +6,6 @@ import type {
   GroupProduct,
   GroupProductEdgeInput,
   PeriodState,
-  PeriodStatus,
   ReminderPolicy,
   ReportingGroup,
   StageAssignment,
@@ -191,10 +190,7 @@ export class AdminPrismaRepository implements AdminRepository {
   unarchivePeriod(
     periodId: string,
     now: Date,
-  ): Promise<{
-    nextPeriodState: PeriodState;
-    nextPeriodStatus: PeriodStatus;
-  }> {
+  ): Promise<{ nextPeriodState: PeriodState }> {
     return periodLifecycle.unarchivePeriod(this.prisma, periodId, now);
   }
 
@@ -229,7 +225,7 @@ export class AdminPrismaRepository implements AdminRepository {
     );
   }
 
-  // ---- Deactivate/activate user, integrations status, stage catalogue ----
+  // ---- Deactivate/activate user, stage catalogue ----
 
   deactivateUser(userId: string): Promise<void> {
     return entityWriteQueries.deactivateUser(this.prisma, userId);

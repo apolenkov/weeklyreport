@@ -6,8 +6,9 @@ interface UseProductDeepLinkExpandArgs {
   readonly setExpandedId: (id: string) => void;
 }
 
-// Auto-expand `?product` once per filter; first manual toggle wins until
-// the deep link changes so a just-collapsed row is not re-expanded.
+// Auto-expand `?product` once per filter; first manual toggle on any row
+// wins until the deep link changes so a refetch does not re-collapse the
+// row the user opened.
 export function useProductDeepLinkExpand({
   productFilter,
   products,
@@ -31,8 +32,8 @@ export function useProductDeepLinkExpand({
   }, [productFilter, products, setExpandedId]);
 
   return {
-    markUserToggle: (id: string) => {
-      if (id === productFilter) hasUserToggledRef.current = true;
+    markUserToggle: () => {
+      hasUserToggledRef.current = true;
     },
   };
 }

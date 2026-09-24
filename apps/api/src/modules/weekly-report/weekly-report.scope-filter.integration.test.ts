@@ -293,6 +293,7 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
                 reportId: REPORT_ID,
                 authorId: LEAD_A_ID,
                 authorName: "Lead A",
+                authorRole: "lead",
                 groupId: GROUP_A_ID,
                 groupName: "Group A",
                 version: 1,

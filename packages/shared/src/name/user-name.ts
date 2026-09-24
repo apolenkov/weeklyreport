@@ -12,7 +12,7 @@ export interface UserNameParts {
 
 function firstLetter(part?: string | null): string {
   const trimmed = (part ?? "").trim();
-  return trimmed[0] ?? "";
+  return Array.from(trimmed)[0] ?? "";
 }
 
 /**
@@ -47,7 +47,8 @@ export function shortName(parts: UserNameParts): string {
 export function initialsFromName(name: string): string {
   const [first, second] = name.trim().split(/\s+/).filter(Boolean);
   if (first === undefined) return "";
-  if (second === undefined) return first.slice(0, 2).toUpperCase();
+  if (second === undefined)
+    return Array.from(first).slice(0, 2).join("").toUpperCase();
   return `${firstLetter(first)}${firstLetter(second)}`.toUpperCase();
 }
 

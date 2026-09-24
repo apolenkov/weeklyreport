@@ -3,10 +3,6 @@ import type {
   StatusOverviewItem,
   StatusOverviewQuickEditMemory,
 } from "../model/status-overview";
-import {
-  editorSlotMatchesItem,
-  type StatusOverviewEditorSlot,
-} from "./status-overview-editor-slot";
 import { StatusOverviewItemPreview } from "./status-overview-item-preview";
 
 export const REPORT_PREVIEW_COUNT = 2;
@@ -17,7 +13,6 @@ export function reportHiddenRowCount(rows: readonly unknown[]): number {
 
 export function ReportItemSlot({
   item,
-  editorSlot,
   onEditItem,
   onQuickEditText,
   onPlanItem,
@@ -28,7 +23,6 @@ export function ReportItemSlot({
   onRestorePlan,
 }: {
   readonly item: StatusOverviewItem;
-  readonly editorSlot?: StatusOverviewEditorSlot | undefined;
   readonly onEditItem?:
     ((target: StatusOverviewEditTarget) => void) | undefined;
   readonly onQuickEditText?:
@@ -48,27 +42,22 @@ export function ReportItemSlot({
   readonly onRestorePlan?:
     ((item: StatusOverviewItem, focusKey?: string) => void) | undefined;
 }) {
-  const matches = editorSlotMatchesItem(editorSlot, item);
   return (
     <div
       data-overview-item-slot
       className="min-w-0 md:flex md:h-full md:flex-1 md:flex-col"
     >
-      {matches && editorSlot ? (
-        editorSlot.content
-      ) : (
-        <StatusOverviewItemPreview
-          item={item}
-          onEditItem={onEditItem}
-          onQuickEditText={onQuickEditText}
-          quickEditMemory={quickEditMemory}
-          onPlanItem={onPlanItem}
-          onMoveItem={onMoveItem}
-          onConfirmItem={onConfirmItem}
-          onResolvePlan={onResolvePlan}
-          onRestorePlan={onRestorePlan}
-        />
-      )}
+      <StatusOverviewItemPreview
+        item={item}
+        onEditItem={onEditItem}
+        onQuickEditText={onQuickEditText}
+        quickEditMemory={quickEditMemory}
+        onPlanItem={onPlanItem}
+        onMoveItem={onMoveItem}
+        onConfirmItem={onConfirmItem}
+        onResolvePlan={onResolvePlan}
+        onRestorePlan={onRestorePlan}
+      />
     </div>
   );
 }

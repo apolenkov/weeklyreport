@@ -81,21 +81,40 @@ describe("lead queue contextual actions", () => {
     );
     expect(screen.getByRole("button", { name: "Remind" })).toBeVisible();
     expect(
+      screen.queryByRole("link", { name: "Review Alice Lead report section" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Request Changes" }),
+    ).not.toBeInTheDocument();
+    expect(
       screen.queryByRole("button", { name: "Revoke" }),
     ).not.toBeInTheDocument();
   });
 
   it("makes Review primary and keeps Open, Request Changes, and Revoke distinct", () => {
-    renderActions(
-      lead({
+    renderActions({
+      ...lead({
         canOpen: true,
         canRemind: false,
         canReview: true,
         canRequestChanges: true,
         canRevoke: true,
       }),
-    );
+      status: "submitted",
+      submittedAt: new Date("2026-09-15T08:00:00Z"),
+    });
 
+    const reviewLink = screen.getByRole("link", {
+      name: "Review Alice Lead report section",
+    });
+    expect(reviewLink).toHaveAttribute(
+      "href",
+      `/head/report/${REPORT_ID}?authorId=20000000-0000-4000-8000-000000000001`,
+    );
+    expect(reviewLink).toHaveClass(
+      "min-h-[var(--touch-target-min)]",
+      "focus-visible:ring-2",
+    );
     expect(
       screen.getByRole("link", { name: "Review Alice Lead report section" }),
     ).toBeVisible();

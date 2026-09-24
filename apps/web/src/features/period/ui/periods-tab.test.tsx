@@ -188,6 +188,9 @@ describe("PeriodsTab", () => {
       screen.getByTestId(`action-publish-${openRow.id}`),
     ).toBeInTheDocument();
     expect(
+      screen.queryByTestId(`action-reopen-${openRow.id}`),
+    ).not.toBeInTheDocument();
+    expect(
       screen.queryByTestId(`action-archive-${openRow.id}`),
     ).not.toBeInTheDocument();
   });
@@ -226,6 +229,24 @@ describe("PeriodsTab", () => {
 
     expect(
       await screen.findByTestId(`action-delete-${reopenedRow.id}`),
+    ).toBeDisabled();
+  });
+
+  it("archived open-draft rows keep delete disabled", async () => {
+    const user = userEvent.setup();
+    // deleteReport rejects every archived row; the affordance must not
+    // offer a delete the server will refuse.
+    const archivedDraft = makeRow({
+      id: "11111111-1111-4111-8111-111111111166",
+      periodState: "archived",
+      periodStatus: "open",
+      archived: true,
+    });
+    renderTab({ archive: [archivedDraft] });
+
+    await user.click(screen.getByTestId("periods-archive-toggle"));
+    expect(
+      await screen.findByTestId(`action-delete-${archivedDraft.id}`),
     ).toBeDisabled();
   });
 

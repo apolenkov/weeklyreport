@@ -4,7 +4,7 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import type { Role } from "@customreport/shared";
+import type { Role, WeeklyReportReadModel } from "@customreport/shared";
 import { render, screen, within } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -40,8 +40,14 @@ vi.mock("../../lib/auth/session-provider", () => ({
 // The /print server gate reads the cookie once via this helper; mock it
 // per-test to drive the worker / human / no-session branches.
 const getPrintRouteContext = vi.fn<() => Promise<PrintRouteContext>>();
+const getPdfExportRender =
+  vi.fn<
+    (jobId: string, reportId: string) => Promise<WeeklyReportReadModel | null>
+  >();
 vi.mock("../../../features/pdf-export/server", () => ({
   getPrintRouteContext: () => getPrintRouteContext(),
+  getPdfExportRender: (jobId: string, reportId: string) =>
+    getPdfExportRender(jobId, reportId),
 }));
 
 vi.mock(
@@ -293,6 +299,15 @@ describe("PrintReportPage — PDF-worker-vs-human server gate", () => {
       pdfReportId: TEST_REPORT_ID,
       pdfJobId: "job-123",
     });
+    getPdfExportRender.mockResolvedValue(
+      makeWeeklyReportFixture({
+        reportId: "test-report-001",
+        periodStart: new Date("2026-06-08T00:00:00.000Z"),
+        periodEnd: new Date("2026-06-14T00:00:00.000Z"),
+        periodState: "published",
+        periodStatus: "published",
+      }),
+    );
     const ui = (await PrintReportPage({
       params: paramsOf(TEST_REPORT_ID),
       searchParams: Promise.resolve({ jobId: "job-123" }),

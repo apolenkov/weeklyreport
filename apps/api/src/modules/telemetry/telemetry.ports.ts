@@ -20,6 +20,6 @@ export interface TelemetryCachePort {
   readonly getOrCompute: <T>(
     key: string,
     fn: () => Promise<T>,
-    validate?: (value: unknown) => boolean,
+    validate?: (value: unknown) => value is T,
   ) => Promise<T>;
 }

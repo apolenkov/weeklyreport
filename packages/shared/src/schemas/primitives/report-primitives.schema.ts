@@ -82,6 +82,54 @@ export function addItemTypeStatusIssue(
     });
   }
 }
+
+/** Adds a Zod issue when a pause reason is missing on a paused item or kept on any other status. */
+export function addPausedReasonIssues(
+  value: {
+    readonly workflowStatus: string;
+    readonly pausedReason?: string | null | undefined;
+  },
+  ctx: z.RefinementCtx,
+): void {
+  const reason = value.pausedReason ?? null;
+  if (value.workflowStatus === "paused") {
+    if (reason == null || reason.trim().length === 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["pausedReason"],
+        message: "A paused item requires a non-blank reason.",
+      });
+    }
+  } else if (reason != null) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["pausedReason"],
+      message: "Only paused items may carry a pause reason.",
+    });
+  }
+}
+
+/** Adds a Zod issue when a next-period commitment sits on finished or next-period work. */
+export function addNextStepTextIssue(
+  value: {
+    readonly type: "current" | "next";
+    readonly workflowStatus: string;
+    readonly nextStepText?: string | null | undefined;
+  },
+  ctx: z.RefinementCtx,
+): void {
+  if (
+    value.nextStepText != null &&
+    (value.type !== "current" || value.workflowStatus === "done")
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["nextStepText"],
+      message:
+        "Only unfinished current work may have a next-period commitment.",
+    });
+  }
+}
 /** Defines the alarm severities that a risk can impose on covered work. */
 export const riskSeveritySchema = z.enum(["at-risk", "blocked"]);
 /** Alarm severity imposed by a report risk. */
@@ -132,11 +180,62 @@ export const currentStageNamesField = z
   .readonly();
 
 // The conditional rule (at least one stage for a product parent and none for
-// an activity parent) is enforced by the record superRefine in
-// section-record.schema.ts because it depends on the parent kind.
+// an activity parent) is enforced by addParentStageIssues below because it
+// depends on the parent kind.
 /** Accepts a validated stage array whose cardinality is checked with its parent. */
 export const writeStageNamesField = z
   .array(stageNameElement)
   .max(MAX_SELECTED_STAGES)
   .readonly()
   .optional();
+
+/**
+ * Adds a Zod issue unless the record has exactly one parent — a product
+ * (projectId/productId per productPath) or an activity — and reports whether
+ * the XOR held.
+ */
+export function addParentXorIssue(
+  productId: string | null | undefined,
+  activityId: string | null | undefined,
+  productPath: "projectId" | "productId",
+  ctx: z.RefinementCtx,
+): boolean {
+  const hasProduct = productId != null;
+  const hasActivity = activityId != null;
+  if (hasProduct !== hasActivity) {
+    return true;
+  }
+  ctx.addIssue({
+    code: "custom",
+    path: [hasActivity ? "activityId" : productPath],
+    message:
+      "A record must have exactly one parent — a product or an activity.",
+  });
+  return false;
+}
+
+/**
+ * Adds Zod issues for the stage cardinality implied by the record's parent
+ * kind: a product parent requires at least one stage, an activity parent none.
+ */
+export function addParentStageIssues(
+  productId: string | null | undefined,
+  activityId: string | null | undefined,
+  stageCount: number,
+  ctx: z.RefinementCtx,
+): void {
+  if (productId != null && stageCount === 0) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["stageNames"],
+      message: "A product-parented record requires at least one stage.",
+    });
+  }
+  if (activityId != null && stageCount > 0) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["stageNames"],
+      message: "An activity-parented record must not carry a stage.",
+    });
+  }
+}

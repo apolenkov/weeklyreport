@@ -19,8 +19,8 @@ export interface SeedProfileSnapshot {
   readonly userIds: readonly string[];
   readonly projectIds: readonly string[];
   readonly reportIds: readonly string[];
-  readonly itemRecords: readonly SeedRecordIdentity[];
-  readonly riskRecords: readonly SeedRecordIdentity[];
+  readonly itemRecords: readonly SeedItemIdentity[];
+  readonly riskRecords: readonly SeedRiskIdentity[];
   readonly decisionRecords: readonly SeedDecisionIdentity[];
   readonly stableText: readonly string[];
 }
@@ -29,6 +29,16 @@ interface SeedRecordIdentity {
   readonly reportSectionId: string;
   readonly id: string;
   readonly stableId: string;
+}
+
+interface SeedItemIdentity extends SeedRecordIdentity {
+  readonly text: string;
+}
+
+interface SeedRiskIdentity extends SeedRecordIdentity {
+  readonly risk: string;
+  readonly impact: string;
+  readonly mitigation: string;
 }
 
 interface SeedDecisionIdentity extends SeedRecordIdentity {
@@ -194,12 +204,24 @@ export async function validateSeedProfile(
     prisma.item.findMany({
       where: { reportSection: { reportId: { in: [...scope.reportIds] } } },
       orderBy: [{ reportSectionId: "asc" }, { stableId: "asc" }],
-      select: { reportSectionId: true, id: true, stableId: true },
+      select: {
+        reportSectionId: true,
+        id: true,
+        stableId: true,
+        text: true,
+      },
     }),
     prisma.risk.findMany({
       where: { reportSection: { reportId: { in: [...scope.reportIds] } } },
       orderBy: [{ reportSectionId: "asc" }, { stableId: "asc" }],
-      select: { reportSectionId: true, id: true, stableId: true },
+      select: {
+        reportSectionId: true,
+        id: true,
+        stableId: true,
+        risk: true,
+        impact: true,
+        mitigation: true,
+      },
     }),
     prisma.decision.findMany({
       where: { reportSection: { reportId: { in: [...scope.reportIds] } } },

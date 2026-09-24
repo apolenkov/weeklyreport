@@ -7,6 +7,7 @@ import { ActiveActivityRow } from "./active-activity-row";
 
 interface ActivitiesTableProps {
   readonly activeActivities: readonly ProjectActivity[];
+  readonly hasData: boolean;
   readonly archivedActivities: readonly ProjectActivity[];
   readonly groupNameById: ReadonlyMap<string, string>;
   readonly users: readonly AdminUserView[];
@@ -20,6 +21,7 @@ interface ActivitiesTableProps {
 
 export function ActivitiesTable({
   activeActivities,
+  hasData,
   archivedActivities,
   groupNameById,
   users,
@@ -35,7 +37,9 @@ export function ActivitiesTable({
       <div className="space-y-3" data-testid="activities-table">
         {activeActivities.length === 0 ? (
           <p className="text-sm text-[var(--color-muted-foreground)]">
-            No active activities yet.
+            {hasData
+              ? "No activities match the search."
+              : "No active activities yet."}
           </p>
         ) : (
           activeActivities.map((activity) => (

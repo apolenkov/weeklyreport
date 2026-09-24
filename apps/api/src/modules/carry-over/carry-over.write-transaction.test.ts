@@ -5,11 +5,17 @@ import type {
 } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
+import { ReportSectionNotFoundError } from "../report-sections/index.js";
 import { writeCarryOver } from "./carry-over.write-transaction";
 
 const sourceReportId = "22222222-2222-4222-8222-222222222222";
 const targetReportId = "55555555-5555-4555-8555-555555555555";
 const projectId = "44444444-4444-4444-8444-444444444444";
+const activityId = "66666666-6666-4666-8666-666666666666";
+const detachedProjectId = "77777777-7777-4777-8777-777777777777";
+const detachedActivityId = "88888888-8888-4888-8888-888888888888";
+const ownerGroupId = "99999999-9999-4999-8999-999999999999";
+const stageId = "12341234-1234-4234-8234-123412341234";
 const sectionAId = "11111111-1111-4111-8111-111111111111";
 const sectionBId = "11111111-1111-4111-8111-222222222222";
 
@@ -100,18 +106,49 @@ function carriedDecision({
   };
 }
 
+function attachedProject(
+  id: string = projectId,
+): ReportSectionReadModel["projects"][number] {
+  return {
+    projectId: id,
+    projectName: "Product",
+    trafficLight: null,
+    ownedStages: [],
+    stageSet: [],
+    ownerGroupId,
+  };
+}
+
+function attachedActivity(
+  id: string = activityId,
+): ReportSectionReadModel["activities"][number] {
+  return {
+    activityId: id,
+    activityName: "Activity",
+    status: null,
+    jiraAccounts: [],
+    linkedProducts: [],
+    derivedStatus: null,
+    alarmFloor: null,
+  };
+}
+
 function targetSection({
   id = sectionAId,
   version = 1,
   status = "draft",
   items = [],
   decisions = [],
+  projects = [],
+  activities = [],
 }: {
   readonly id?: string;
   readonly version?: number;
   readonly status?: "draft" | "submitted";
   readonly items?: readonly Item[];
   readonly decisions?: readonly Decision[];
+  readonly projects?: readonly ReportSectionReadModel["projects"][number][];
+  readonly activities?: readonly ReportSectionReadModel["activities"][number][];
 } = {}): ReportSectionReadModel {
   return {
     reportSectionId: id,
@@ -124,12 +161,12 @@ function targetSection({
     submittedAt:
       status === "submitted" ? new Date("2026-05-05T09:30:00.000Z") : null,
     late: false,
-    projects: [],
+    projects,
     referencedProjects: [],
     items,
     risks: [],
     decisions,
-    activities: [],
+    activities,
     reviews: [],
   };
 }
@@ -187,11 +224,38 @@ function prismaSectionRow(section: ReportSectionReadModel) {
       name: section.authorName,
       role: section.authorRole,
       reportingGroupId: null,
-      stageAssignments: [],
+      // Section projects derive from the author's stage assignments; one
+      // assignment per attached product reproduces that relation.
+      stageAssignments: section.projects.map((project) => ({
+        projectId: project.projectId,
+        stageId,
+        stage: { name: "Development", sortOrder: 0 },
+        project: {
+          id: project.projectId,
+          name: project.projectName,
+          archived: false,
+          stageAssignments: [
+            { stageId, stage: { name: "Development", sortOrder: 0 } },
+          ],
+          groupProducts: [{ groupId: project.ownerGroupId ?? ownerGroupId }],
+        },
+      })),
     },
     projectStatuses: [],
     stageStatuses: [],
-    activityStatuses: [],
+    activityStatuses: section.activities.map((activity) => ({
+      activityId: activity.activityId,
+      status: activity.status,
+      note: activity.note ?? null,
+      titleOverride: activity.titleOverride ?? null,
+      activity: {
+        name: activity.activityName,
+        jiraAccounts: [...activity.jiraAccounts],
+        activityProducts: activity.linkedProducts.map((link) => ({
+          product: { id: link.productId, name: link.productName },
+        })),
+      },
+    })),
     items: section.items.map((item) => ({
       id: requireRowId(item.id),
       stableId: requireRowId(item.stableId),
@@ -372,7 +436,7 @@ describe("writeCarryOver — fresh writes and section versions", () => {
   it("increments once for item and decision inserts and returns the readback", async () => {
     const item = carriedItem();
     const decision = carriedDecision();
-    const current = targetSection();
+    const current = targetSection({ projects: [attachedProject()] });
     const planned = targetSection({ items: [item], decisions: [decision] });
     const persisted = targetSection({
       version: 2,
@@ -443,6 +507,7 @@ describe("writeCarryOver — fresh writes and section versions", () => {
     const freshLockedTarget = targetSection({
       version: 5,
       items: [freshCurrentEdit],
+      projects: [attachedProject()],
     });
     const persisted = targetSection({
       version: 6,
@@ -525,6 +590,7 @@ describe("writeCarryOver — fresh writes and section versions", () => {
     const current = targetSection({
       version: 5,
       items: [resolvedOccurrence],
+      projects: [attachedProject()],
     });
     const planned = targetSection({ version: 4, items: [plannedClone] });
     const plannedExecution = { ...execution, carriedDecisionCount: 0 };
@@ -586,14 +652,205 @@ describe("writeCarryOver — fresh writes and section versions", () => {
     expect(replayTx.reportSection.update).not.toHaveBeenCalled();
   });
 
+  it("skips clones whose parents detached after planning but keeps attached siblings", async () => {
+    const keptCurrentItem: Item = {
+      ...carriedItem({
+        id: "41414141-4141-4141-8141-414141414141",
+        stableId: "42424242-4242-4242-8242-424242424242",
+        text: "Pre-existing row on the detached product",
+      }),
+      projectId: detachedProjectId,
+      carriedOver: false,
+    };
+    const attachedItem = carriedItem({
+      id: "43434343-4343-4343-8343-434343434343",
+      stableId: "45454545-4545-4545-8545-454545454545",
+      text: "Clone on the still-attached product",
+    });
+    const detachedItemOnProduct: Item = {
+      ...carriedItem({
+        id: "46464646-4646-4646-8646-464646464646",
+        stableId: "47474747-4747-4747-8747-474747474747",
+        text: "Clone on the detached product",
+      }),
+      projectId: detachedProjectId,
+    };
+    const detachedItemOnActivity: Item = {
+      ...carriedItem({
+        id: "48484848-4848-4848-8848-484848484848",
+        stableId: "49494949-4949-4949-8949-494949494949",
+        text: "Clone on the detached activity",
+      }),
+      projectId: null,
+      activityId: detachedActivityId,
+      // Activities have no SDLC stage set; only product parents carry names.
+      stageNames: [],
+    };
+    const detachedDecisionOnProduct: Decision = {
+      ...carriedDecision({
+        id: "51515151-5151-4151-8151-515151515151",
+        stableId: "52525252-5252-4252-8252-525252525252",
+        text: "Decision clone on the detached product",
+      }),
+      productId: detachedProjectId,
+    };
+    const detachedDecisionOnActivity: Decision = {
+      ...carriedDecision({
+        id: "53535353-5353-4353-8353-535353535353",
+        stableId: "54545454-5454-4454-8454-545454545454",
+        text: "Decision clone on the detached activity",
+      }),
+      productId: null,
+      activityId: detachedActivityId,
+      // Activities have no SDLC stage set; only product parents carry names.
+      stageNames: [],
+    };
+    // The plan snapshot still shows every parent attached; the locked re-read
+    // no longer holds detachedProjectId or detachedActivityId.
+    const stalePlanned = targetSection({
+      projects: [attachedProject(), attachedProject(detachedProjectId)],
+      activities: [attachedActivity(detachedActivityId)],
+      items: [attachedItem, detachedItemOnProduct, detachedItemOnActivity],
+      decisions: [detachedDecisionOnProduct, detachedDecisionOnActivity],
+    });
+    const current = targetSection({
+      projects: [attachedProject()],
+      items: [keptCurrentItem],
+    });
+    const persisted = targetSection({
+      version: 2,
+      projects: [attachedProject()],
+      items: [keptCurrentItem, attachedItem],
+    });
+    const attachedRecord = itemCarryRecord(
+      attachedItem,
+      "56565656-5656-4656-8656-565656565656",
+    );
+    const records = [
+      attachedRecord,
+      itemCarryRecord(
+        detachedItemOnProduct,
+        "57575757-5757-4757-8757-575757575757",
+      ),
+      itemCarryRecord(
+        detachedItemOnActivity,
+        "58585858-5858-4858-8858-585858585858",
+      ),
+      decisionCarryRecord(
+        detachedDecisionOnProduct,
+        "59595959-5959-4959-8959-595959595959",
+      ),
+      decisionCarryRecord(
+        detachedDecisionOnActivity,
+        "60606060-6060-4060-8060-606060606060",
+      ),
+    ];
+    const tx = createTransaction({
+      currentSections: [current],
+      readbackSections: [persisted],
+      itemInsertCounts: [1],
+    });
+
+    const result = await writeCarryOver(tx as never, execution, records, [
+      stalePlanned,
+    ]);
+
+    expect(tx.item.createMany).toHaveBeenCalledExactlyOnceWith({
+      data: [expect.objectContaining({ id: attachedItem.id })],
+      skipDuplicates: true,
+    });
+    expect(tx.decision.createMany).not.toHaveBeenCalled();
+    expect(tx.carryOverRecord.createMany).toHaveBeenCalledExactlyOnceWith({
+      data: [
+        expect.objectContaining({
+          targetItemId: attachedItem.id,
+          targetDecisionId: null,
+          recordType: "item",
+        }),
+      ],
+    });
+    expect(result.execution).toMatchObject({
+      carriedItemCount: 1,
+      carriedDecisionCount: 0,
+    });
+    expect(result.records.map((record) => record.id)).toEqual([
+      attachedRecord.id,
+    ]);
+    expect(result.targetSection.items.map((item) => item.id)).toEqual([
+      keptCurrentItem.id,
+      attachedItem.id,
+    ]);
+    expect(tx.reportSection.update).toHaveBeenCalledExactlyOnceWith({
+      where: { id: sectionAId },
+      data: { version: { increment: 1 } },
+    });
+  });
+
+  it("writes no rows, records, or revision when every planned parent detached", async () => {
+    const detachedItem = carriedItem({
+      id: "61616161-6161-4161-8161-616161616161",
+      stableId: "62626262-6262-4262-8262-626262626262",
+      text: "Clone on the detached product",
+    });
+    const detachedDecision = carriedDecision({
+      id: "63636363-6363-4363-8363-636363636363",
+      stableId: "64646464-6464-4464-8464-646464646464",
+      text: "Decision clone on the detached product",
+    });
+    const stalePlanned = targetSection({
+      projects: [attachedProject()],
+      items: [detachedItem],
+      decisions: [detachedDecision],
+    });
+    const current = targetSection();
+    const tx = createTransaction({
+      currentSections: [current],
+      // Queued counts keep a removed membership guard failing on the no-write
+      // assertions, not on an unstubbed createMany returning undefined.
+      itemInsertCounts: [1],
+      decisionInsertCounts: [1],
+    });
+
+    const result = await writeCarryOver(
+      tx as never,
+      execution,
+      [
+        itemCarryRecord(detachedItem, "65656565-6565-4656-8565-656565656565"),
+        decisionCarryRecord(
+          detachedDecision,
+          "67676767-6767-4767-8767-676767676767",
+        ),
+      ],
+      [stalePlanned],
+    );
+
+    expect(tx.item.createMany).not.toHaveBeenCalled();
+    expect(tx.decision.createMany).not.toHaveBeenCalled();
+    expect(tx.carryOverRecord.createMany).not.toHaveBeenCalled();
+    expect(tx.reportSection.update).not.toHaveBeenCalled();
+    expect(result.execution).toMatchObject({
+      carriedItemCount: 0,
+      carriedDecisionCount: 0,
+    });
+    expect(result.records).toEqual([]);
+    expect(result.targetSection.items).toEqual([]);
+    expect(result.targetSection.decisions).toEqual([]);
+  });
+
   it("increments only matched sections with actual inserts", async () => {
     const sectionAItem = carriedItem();
     const sectionBItem = carriedItem({
       id: "70707070-7070-4070-8070-707070707070",
       stableId: "80808080-8080-4080-8080-808080808080",
     });
-    const currentA = targetSection({ id: sectionAId });
-    const currentB = targetSection({ id: sectionBId });
+    const currentA = targetSection({
+      id: sectionAId,
+      projects: [attachedProject()],
+    });
+    const currentB = targetSection({
+      id: sectionBId,
+      projects: [attachedProject()],
+    });
     const plannedA = targetSection({ id: sectionAId, items: [sectionAItem] });
     const plannedB = targetSection({ id: sectionBId, items: [sectionBItem] });
     const tx = createTransaction({
@@ -631,7 +888,10 @@ describe("writeCarryOver — fresh writes and section versions", () => {
     },
     {
       name: "fully deduplicated plan",
-      current: targetSection({ items: [carriedItem()] }),
+      current: targetSection({
+        items: [carriedItem()],
+        projects: [attachedProject()],
+      }),
       planned: targetSection({
         items: [carriedItem({ id: "90909090-9090-4090-8090-909090909090" })],
       }),
@@ -689,6 +949,23 @@ describe("writeCarryOver — scheduled dual-state interleaving", () => {
       writeCarryOver(tx as never, execution, [], [targetSection()]),
     ).rejects.toThrow("Carry-over target period is no longer editable.");
     expect(tx.reportSection.findMany).not.toHaveBeenCalled();
+    expect(tx.carryOverExecution.create).not.toHaveBeenCalled();
+    expect(tx.carryOverRecord.createMany).not.toHaveBeenCalled();
+    expect(tx.item.createMany).not.toHaveBeenCalled();
+    expect(tx.decision.createMany).not.toHaveBeenCalled();
+    expect(tx.reportSection.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("writeCarryOver — empty locked target re-read", () => {
+  it("throws ReportSectionNotFoundError and writes nothing when the planned targets vanished", async () => {
+    const tx = createTransaction({ currentSections: [] });
+
+    await expect(
+      writeCarryOver(tx as never, execution, [], [targetSection()]),
+    ).rejects.toBeInstanceOf(ReportSectionNotFoundError);
+
+    expect(tx.carryOverExecution.findFirst).not.toHaveBeenCalled();
     expect(tx.carryOverExecution.create).not.toHaveBeenCalled();
     expect(tx.carryOverRecord.createMany).not.toHaveBeenCalled();
     expect(tx.item.createMany).not.toHaveBeenCalled();

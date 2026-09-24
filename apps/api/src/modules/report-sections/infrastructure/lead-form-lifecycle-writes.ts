@@ -29,6 +29,11 @@ export async function revokeSectionSubmissionTx(
       // constraint while retaining the rejection and transaction rollback.
       throw new LeadFormConstraintError(NON_EDITABLE_PERIOD_MESSAGE);
     }
+    if (gate.kind === "not-found") {
+      // The section-joined row vanished between the scoped service load and
+      // this lock — that is a NOT_FOUND, not a period-state constraint.
+      throw new LeadFormDomainError("The target section no longer exists.");
+    }
     if (gate.kind !== "editable") {
       throw new LeadFormConstraintError(NON_EDITABLE_PERIOD_MESSAGE);
     }

@@ -343,7 +343,7 @@ describe("ProjectAdminService — Group <-> Product M:M", () => {
   });
 });
 
-describe("focused services — users, integrations, and stages", () => {
+describe("focused services — users and stages", () => {
   it("deactivateUser delegates to the repository and reports success", async () => {
     const repo = createRepository(initialSnapshot);
     const service = new SnapshotAdminService(repo);

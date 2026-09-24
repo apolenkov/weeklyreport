@@ -16,26 +16,35 @@ export function cloneCarriedItem(
   const targetItemId = crypto.randomUUID();
 
   return {
-    // Keep priorityRank; resetting would force re-prioritize every boundary.
+    // Explicit write fields only: the read model's comments, resolution and
+    // outcomeHistory extras are dead data past this boundary.
     item: {
-      ...item,
       id: targetItemId,
+      stableId: item.stableId,
+      projectId: item.projectId,
+      activityId: item.activityId,
       type: "current",
-      carriedOver: true,
-      // Legacy next-period plans continue unchanged. Only a current-period
-      // result consumes its explicit next-period commitment as the new text.
+      // Legacy next-period plans keep their text. A current-period result
+      // consumes its explicit next-period commitment as the new text.
       text:
         item.type === "current" && item.nextStepText?.trim()
           ? item.nextStepText
           : item.text,
-      // Commitments restart as planned; only a bare unfinished Current item
-      // continues in progress. The marker records that it is unconfirmed.
+      tag: item.tag,
+      // An explicit commitment restarts as planned — entering a new period
+      // must not claim that work has already started. A bare Current
+      // in-progress continues in progress; the carriedOver marker, not a
+      // status rewrite, records that the occurrence is unconfirmed.
       workflowStatus:
         item.type === "current" && !item.nextStepText?.trim()
           ? "in_progress"
           : "planned",
-      nextStepText: null,
+      carriedOver: true,
+      // Keep priorityRank; resetting would force re-prioritize every boundary.
+      priorityRank: item.priorityRank,
       pausedReason: null,
+      nextStepText: null,
+      stageNames: item.stageNames,
     },
     record: carryOverRecordSchema.parse({
       id: crypto.randomUUID(),
@@ -63,10 +72,18 @@ export function cloneUnresolvedDecision(
   const targetDecisionId = crypto.randomUUID();
 
   return {
+    // Same projection boundary: read-model comments never reach the write side.
     decision: {
-      ...decision,
       id: targetDecisionId,
+      stableId: decision.stableId,
+      text: decision.text,
+      owner: decision.owner,
+      deadline: decision.deadline,
+      impact: decision.impact,
       resolvedAt: null,
+      stageNames: decision.stageNames,
+      productId: decision.productId,
+      activityId: decision.activityId,
     },
     record: carryOverRecordSchema.parse({
       id: crypto.randomUUID(),

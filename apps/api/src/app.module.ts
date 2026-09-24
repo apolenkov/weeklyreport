@@ -7,6 +7,7 @@ import { BullMQModule } from "./infrastructure/bullmq/bullmq.module";
 import { EmailReminderProcessor } from "./infrastructure/bullmq/email-reminder.processor";
 import { PdfExportProcessor } from "./infrastructure/bullmq/pdf-export.processor";
 import { PdfExportReconciliationScheduler } from "./infrastructure/bullmq/pdf-export-reconciliation.scheduler.js";
+import { QueueRegistry } from "./infrastructure/bullmq/queue-registry.js";
 import { WorkerLivenessRegistry } from "./infrastructure/bullmq/worker-liveness.registry.js";
 import { createWorkerLogger } from "./infrastructure/bullmq/worker-observability.js";
 import {
@@ -29,8 +30,10 @@ import { ArchiveModule } from "./modules/archive/index.js";
 import { CarryOverModule } from "./modules/carry-over/index.js";
 import { ObservabilityModule } from "./modules/observability/index.js";
 import { OrganizationModule } from "./modules/organization/index.js";
+import type { PdfRenderer } from "./modules/pdf-export/index.js";
 import { PdfExportModule } from "./modules/pdf-export/index.js";
 import { PdfExportService } from "./modules/pdf-export/index.js";
+import { PDF_RENDERER } from "./modules/pdf-export/index.js";
 import { PeriodModule } from "./modules/period/module.js";
 import { ProjectActivityModule } from "./modules/project-activity/index.js";
 import { PublicationModule } from "./modules/publication/index.js";
@@ -83,21 +86,27 @@ import { WeeklyReportModule } from "./modules/weekly-report/index.js";
       provide: PdfExportProcessor,
       useFactory: (
         pdfExportService: PdfExportService,
+        pdfRenderer: PdfRenderer,
         env: EnvConfig,
         cls: ClsService,
+        queues: QueueRegistry,
         workerLiveness: WorkerLivenessRegistry,
       ) =>
         new PdfExportProcessor(
           pdfExportService,
+          pdfRenderer,
           env,
           createWorkerLogger("pdf-export-worker", cls),
           cls,
+          queues,
           workerLiveness,
         ),
       inject: [
         PdfExportService,
+        PDF_RENDERER,
         ENV_CONFIG,
         ClsService,
+        QueueRegistry,
         WorkerLivenessRegistry,
       ],
     },

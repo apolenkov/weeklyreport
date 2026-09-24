@@ -45,7 +45,9 @@ const ROW_GRID =
 // A product's worst severity drives its avatar + header dot: blocked if any of
 // its issues is blocked, otherwise at-risk.
 function groupSeverity(group: ProductGroup): Severity {
-  return group.items.some((item) => item.severity === "blocked")
+  return group.items.some(
+    (item) => item.severity === "blocked" || item.productFlaggedRed,
+  )
     ? "blocked"
     : "at-risk";
 }

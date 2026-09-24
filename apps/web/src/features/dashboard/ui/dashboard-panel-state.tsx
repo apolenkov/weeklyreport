@@ -1,14 +1,46 @@
 import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 
+import { QUEUE_ROW_GRID_CLASS } from "./lead-row-format";
+
 const PANEL_HEIGHT_CLASS = {
   kpi: "h-24",
-  leads: "h-56",
   alert: "h-12",
   blocked: "h-40",
 } as const;
 
-export type DashboardPanelKind = keyof typeof PANEL_HEIGHT_CLASS;
+// "leads" renders structured skeleton rows instead of a fixed-height block.
+export type DashboardPanelKind = keyof typeof PANEL_HEIGHT_CLASS | "leads";
+
+const QUEUE_SKELETON_ROW_KEYS = ["r1", "r2", "r3", "r4"] as const;
+
+// Reserves the loaded queue's row and action-track geometry instead of a
+// monolithic block (dashboard-interaction-stability).
+function LeadsQueueSkeleton() {
+  return (
+    <ul className="grid min-w-0 gap-2" aria-hidden="true">
+      {QUEUE_SKELETON_ROW_KEYS.map((key) => (
+        <li
+          key={key}
+          className="min-w-0 overflow-hidden rounded-[var(--radius)] border border-[var(--color-border)]"
+        >
+          <div className={QUEUE_ROW_GRID_CLASS}>
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-4 w-16 max-lg:hidden" />
+            <Skeleton className="h-4 w-24 max-lg:hidden" />
+            <Skeleton className="h-4 w-24 max-lg:hidden" />
+            <div className="w-[var(--dashboard-summary-action-w)]">
+              <Skeleton className="h-[var(--dashboard-action-h)] w-full" />
+            </div>
+            <div className="w-[var(--dashboard-summary-action-w)]">
+              <Skeleton className="h-[var(--dashboard-action-h)] w-full" />
+            </div>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export function DashboardPanelLoading({
   kind,
@@ -22,7 +54,11 @@ export function DashboardPanelLoading({
       aria-label={`Loading ${kind} data`}
       className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-4"
     >
-      <Skeleton className={`w-full ${PANEL_HEIGHT_CLASS[kind]}`} />
+      {kind === "leads" ? (
+        <LeadsQueueSkeleton />
+      ) : (
+        <Skeleton className={`w-full ${PANEL_HEIGHT_CLASS[kind]}`} />
+      )}
     </div>
   );
 }

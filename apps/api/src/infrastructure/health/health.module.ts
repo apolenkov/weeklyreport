@@ -5,6 +5,7 @@ import { BullMQModule } from "../bullmq/bullmq.module";
 import { ConfigModule } from "../config/config.module";
 import { BullMQHealthIndicator } from "./bullmq.health.js";
 import { HealthController } from "./health.controller.js";
+import { PdfRendererHealthIndicator } from "./pdf-renderer.health.js";
 import { PrismaHealthIndicator } from "./prisma.health.js";
 import { RedisHealthIndicator } from "./redis.health.js";
 
@@ -15,6 +16,7 @@ import { RedisHealthIndicator } from "./redis.health.js";
     PrismaHealthIndicator,
     RedisHealthIndicator,
     BullMQHealthIndicator,
+    PdfRendererHealthIndicator,
   ],
 })
 export class HealthModule {}

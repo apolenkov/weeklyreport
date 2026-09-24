@@ -29,14 +29,48 @@ export class AiProviderTestProcessor extends RawBullMqProcessor<AiProviderTestJo
 
   protected override readonly extraWorkerOptions = () => ({ concurrency: 1 });
 
-  protected readonly onJobFailed = (
+  protected readonly onJobFailed = async (
     job: Job<AiProviderTestJobData> | undefined,
     _error: Error,
-  ): void => {
+  ): Promise<void> => {
     this.logger.error("AI provider test job failed", {
       executionId: job?.data.executionId,
-      failureCode: "ai_provider_test_job_failed",
+      failureCode: AI_PROVIDER_TEST_JOB_FAILED,
     });
+    if (!job) return;
+    const { executionId } = job.data;
+    // The enqueuer sets the BullMQ job id to the execution id, so a mismatched
+    // or empty identity marks a stale/foreign delivery that must not write.
+    if (!executionId || job.id !== executionId) return;
+    // The durable claim identity is attemptsStarted; attemptsMade only decides
+    // whether the retry budget is exhausted and this failure is terminal. A
+    // counter BullMQ never produced cannot prove exhaustion.
+    const executionAttempt = job.attemptsStarted;
+    if (!Number.isSafeInteger(executionAttempt) || executionAttempt < 1) return;
+    if (
+      !Number.isSafeInteger(job.attemptsMade) ||
+      job.attemptsMade < (job.opts.attempts ?? 1)
+    ) {
+      return;
+    }
+    try {
+      await this.completeClaimedExecution(
+        executionId,
+        "inconclusive",
+        AI_PROVIDER_TEST_JOB_FAILED,
+        [],
+        executionAttempt,
+      );
+    } catch {
+      // A rejected terminal write leaves the row running for the manual queue
+      // retry; log fixed identity fields only — error payloads can carry
+      // provider credentials.
+      this.logger.error("AI provider test execution terminal write failed", {
+        executionId,
+        executionAttempt,
+        failureCode: AI_PROVIDER_TEST_JOB_FAILED,
+      });
+    }
   };
 
   protected readonly processJob = async (
@@ -146,3 +180,4 @@ const isProviderFailure = (
 
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_FORBIDDEN = 403;
+const AI_PROVIDER_TEST_JOB_FAILED = "ai_provider_test_job_failed";

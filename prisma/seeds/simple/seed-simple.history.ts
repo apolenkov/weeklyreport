@@ -17,6 +17,7 @@ import {
   plusDaysUTC,
   PREV_SUBMIT_AT,
 } from "./seed-simple.period.js";
+import { requireAssignment } from "./seed-simple.sections.js";
 
 // Deterministic history IDs make re-runs idempotent; published and archive
 // blocks stay disjoint so residue from another seed cannot satisfy the journey.
@@ -101,7 +102,7 @@ async function seedPublishedSection(
         workflowStatus: ItemWorkflowStatus.done,
         carriedOver: false,
         priorityRank: 1,
-        stageNames: ["Development"],
+        stageNames: [requireAssignment(lead.id, lead.productId, 0).stageName],
       },
       {
         id: nextItemId,
@@ -113,7 +114,7 @@ async function seedPublishedSection(
         tag: "feature",
         workflowStatus: ItemWorkflowStatus.planned,
         carriedOver: false,
-        stageNames: ["Development"],
+        stageNames: [requireAssignment(lead.id, lead.productId, 0).stageName],
       },
     ],
   });
@@ -159,7 +160,7 @@ function buildArchiveItemRows(lead: LeadCfg, ctx: ArchiveSectionContext) {
       tag: "feature",
       workflowStatus: ItemWorkflowStatus.done,
       carriedOver: false,
-      stageNames: ["Development"],
+      stageNames: [requireAssignment(lead.id, lead.productId, 0).stageName],
       priorityRank: 1,
       createdAt,
       updatedAt: submittedAt,
@@ -174,7 +175,7 @@ function buildArchiveItemRows(lead: LeadCfg, ctx: ArchiveSectionContext) {
       tag: "ops",
       workflowStatus: ItemWorkflowStatus.planned,
       carriedOver: false,
-      stageNames: ["Development"],
+      stageNames: [requireAssignment(lead.id, lead.productId, 0).stageName],
       createdAt,
       updatedAt: submittedAt,
     },

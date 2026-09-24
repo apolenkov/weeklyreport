@@ -19,8 +19,10 @@ import type { AiProviderCapabilityTester } from "./ai-provider.service.js";
 import {
   AiProviderConfigurationError,
   AiProviderConfigurationService,
+  AiProviderConflictError,
   AiProviderNotFoundError,
 } from "./ai-provider.service.js";
+import type { AiProviderPreparationCoordinator } from "./ai-provider.service-types.js";
 
 const KEY = "a".repeat(64);
 const codec = new AesGcmCredentialCodec(KEY, 1);
@@ -810,6 +812,259 @@ describe("AiProviderConfigurationService", () => {
         revisionId,
         expect.objectContaining({ lifecycle: AiProviderLifecycle.failed }),
       );
+    },
+  );
+
+  it.each(["activate", "restore"] as const)(
+    "%s persists observed preparation counters when preparation rejects after progress",
+    async (operation) => {
+      const events: Record<string, unknown>[] = [];
+      const active = revision(activeId, {
+        lifecycle: AiProviderLifecycle.active,
+      });
+      const candidate = revision(revisionId, {
+        lifecycle: AiProviderLifecycle.validated,
+        embeddingModel: "new-embed",
+      });
+      const repository = repositoryFor({
+        control: control(active),
+        draft: candidate,
+      });
+      repository.getRevision.mockResolvedValue(candidate);
+      const preparation = {
+        prepare: vi
+          .fn<AiProviderPreparationCoordinator["prepare"]>()
+          .mockImplementation(async (_prepared, _previous, onProgress) => {
+            await onProgress?.({
+              completed: 4,
+              total: 10,
+              failed: 6,
+              elapsedMs: 20,
+            });
+            throw new Error("queue unavailable");
+          }),
+      };
+      const service = new AiProviderConfigurationService(
+        repository as never,
+        codec,
+        env,
+        tester,
+        preparation,
+        { record: (event) => events.push({ ...event }) },
+      );
+
+      const result = await service[operation](revisionId, "admin-1");
+
+      expect(events.map((event) => event.event)).toEqual([
+        "ai_provider.activation_requested",
+        "ai_provider.activation_failed",
+      ]);
+      expect(result.activeRevisionId).toBe(activeId);
+      expect(repository.activateRevision).not.toHaveBeenCalled();
+      expect(repository.updateProgress).toHaveBeenLastCalledWith(
+        revisionId,
+        expect.objectContaining({
+          completed: 4,
+          total: 10,
+          failed: 6,
+          lifecycle: AiProviderLifecycle.failed,
+        }),
+      );
+    },
+  );
+
+  const auditFailureScenarios = [
+    {
+      name: "embedding preparation is not configured",
+      expectedError: "Embedding preparation is not configured",
+      expectedErrorClass: AiProviderConfigurationError,
+      configure: (
+        repository: RepositoryHarness,
+        candidate: StoredAiProviderRevision,
+      ) => {
+        repository.getRevision.mockResolvedValue(candidate);
+        return undefined;
+      },
+      activation: "not-called" as const,
+    },
+    {
+      name: "preparation evidence is incomplete",
+      expectedError: "Semantic preparation evidence is incomplete",
+      expectedErrorClass: AiProviderConfigurationError,
+      configure: (
+        repository: RepositoryHarness,
+        candidate: StoredAiProviderRevision,
+      ) => {
+        repository.getRevision.mockResolvedValue(candidate);
+        return {
+          prepare: vi.fn().mockResolvedValue({
+            completed: 10,
+            total: 10,
+            failed: 0,
+            elapsedMs: 20,
+          }),
+        };
+      },
+      activation: "not-called" as const,
+    },
+    {
+      name: "the revision disappears mid-activation",
+      expectedError: "AI provider revision disappeared during activation",
+      expectedErrorClass: AiProviderConfigurationError,
+      configure: (
+        repository: RepositoryHarness,
+        candidate: StoredAiProviderRevision,
+        operation: "activate" | "restore",
+      ) => {
+        const readsBeforeRevalidation = operation === "restore" ? 2 : 1;
+        let reads = 0;
+        repository.getRevision.mockImplementation(() => {
+          reads += 1;
+          return Promise.resolve(
+            reads <= readsBeforeRevalidation ? candidate : null,
+          );
+        });
+        return {
+          prepare: vi.fn().mockResolvedValue({
+            completed: 10,
+            total: 10,
+            failed: 0,
+            elapsedMs: 20,
+          }),
+        };
+      },
+      activation: "not-called" as const,
+    },
+    {
+      name: "sources change after preparation",
+      expectedError: "Report sources changed after embedding preparation",
+      expectedErrorClass: AiProviderConfigurationError,
+      configure: (
+        repository: RepositoryHarness,
+        candidate: StoredAiProviderRevision,
+      ) => {
+        const prepared = revision(revisionId, {
+          ...candidate,
+          preparationCompleted: 10,
+          preparationTotal: 10,
+          preparationFailed: 0,
+          preparationFinishedAt: now,
+          preparationSourceFingerprint: "prepared-source",
+          preparationSourceGeneration: 3n,
+        });
+        repository.getRevision
+          .mockResolvedValueOnce(candidate)
+          .mockResolvedValue(prepared);
+        return {
+          prepare: vi.fn().mockResolvedValue({
+            completed: 10,
+            total: 10,
+            failed: 0,
+            elapsedMs: 20,
+          }),
+          currentSourceFingerprint: vi.fn().mockResolvedValue("changed-source"),
+        };
+      },
+      activation: "not-called" as const,
+    },
+    {
+      name: "activation loses a lifecycle race",
+      expectedError: "AI provider activation lost a lifecycle race",
+      expectedErrorClass: AiProviderConflictError,
+      configure: (
+        repository: RepositoryHarness,
+        candidate: StoredAiProviderRevision,
+      ) => {
+        const prepared = revision(revisionId, {
+          ...candidate,
+          preparationCompleted: 10,
+          preparationTotal: 10,
+          preparationFailed: 0,
+          preparationFinishedAt: now,
+          preparationSourceFingerprint: "prepared-source",
+          preparationSourceGeneration: 3n,
+        });
+        repository.getRevision
+          .mockResolvedValueOnce(candidate)
+          .mockResolvedValue(prepared);
+        repository.activateRevision.mockResolvedValue(false);
+        return {
+          prepare: vi.fn().mockResolvedValue({
+            completed: 10,
+            total: 10,
+            failed: 0,
+            elapsedMs: 20,
+          }),
+          currentSourceFingerprint: vi
+            .fn()
+            .mockResolvedValue("prepared-source"),
+        };
+      },
+      activation: "called" as const,
+    },
+  ] as const;
+
+  const auditFailureCases = auditFailureScenarios.flatMap((scenario) =>
+    (["activate", "restore"] as const).map((operation) => ({
+      ...scenario,
+      operation,
+    })),
+  );
+
+  it.each(auditFailureCases)(
+    "$operation audits $name with a terminal failure event",
+    async ({
+      operation,
+      configure,
+      expectedError,
+      expectedErrorClass,
+      activation,
+    }) => {
+      const events: Record<string, unknown>[] = [];
+      const active = revision(activeId, {
+        lifecycle: AiProviderLifecycle.active,
+      });
+      const candidate = revision(revisionId, {
+        lifecycle: AiProviderLifecycle.validated,
+        embeddingModel: "new-embed",
+      });
+      const repository = repositoryFor({
+        control: control(active),
+        draft: candidate,
+      });
+      const preparation = configure(repository, candidate, operation);
+      const service = new AiProviderConfigurationService(
+        repository as never,
+        codec,
+        env,
+        tester,
+        preparation,
+        { record: (event) => events.push({ ...event }) },
+      );
+
+      const attempt = service[operation](revisionId, "admin-1");
+      await expect(attempt).rejects.toThrow(expectedError);
+      await expect(attempt).rejects.toThrow(expectedErrorClass);
+
+      expect(events).toEqual([
+        {
+          event: "ai_provider.activation_requested",
+          actorId: "admin-1",
+          revisionId,
+          profile: "mistral",
+        },
+        {
+          event: "ai_provider.activation_failed",
+          actorId: "admin-1",
+          revisionId,
+          profile: "mistral",
+        },
+      ]);
+      if (activation === "called") {
+        expect(repository.activateRevision).toHaveBeenCalledOnce();
+      } else {
+        expect(repository.activateRevision).not.toHaveBeenCalled();
+      }
     },
   );
 

@@ -10,10 +10,11 @@ as the complete edit target, which mixes reading with operation.
 ## What Changes
 
 - Keep the existing idle unit and three-lane timeline layout.
-- Let only the matching unit and record editor occupy the full timeline width;
-  temporarily hide that unit's sibling lanes until the editor closes.
+- Keep the matching unit's Previous, Current, and Next lanes visible while its
+  record editor opens below them across the full timeline width.
 - Give create and existing resolve/restore editors the same timeline width.
-- Render update copy as readable text with a separate visible `Edit` action.
+- Keep update copy readable and use the existing complete item editor for
+  changes.
 - Label independent Current and Next update lists without pairing them by index
   or aligning their actions as shared lineage.
 
@@ -22,8 +23,7 @@ as the complete edit target, which mixes reading with operation.
 - No new write, autosave, identity, recovery, persistence, or lifecycle path.
 - No drag-and-drop, new modal, icon action set, design system, or report-wide
   visual redesign.
-- No change to linked lineage, idle row topology, unit ordering, or retained
-  draft behavior.
+- No change to linked lineage, idle row topology or unit ordering.
 
 ## Capabilities
 

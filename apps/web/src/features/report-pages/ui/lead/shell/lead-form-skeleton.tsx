@@ -119,6 +119,8 @@ export function LeadFormSkeleton({
         aria-busy="true"
         aria-label="Loading status overview"
         data-testid="lead-form-skeleton"
+        data-layout-key="report-page"
+        data-layout-stability="position-width"
         className="space-y-4"
       >
         <ContextToolbarSkeleton />

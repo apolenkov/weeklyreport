@@ -94,6 +94,28 @@ describe("getOrgPublic", () => {
     expect(branchTagOfLastCapture()).toBe("decode");
   });
 
+  it("degrades and reports the decode branch on a schema-invalid brand", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve([
+          {
+            result: {
+              data: {
+                json: { shortName: "X".repeat(17), fullName: "Valid Name" },
+              },
+            },
+          },
+        ]),
+    });
+
+    await expect(getOrgPublic()).resolves.toEqual(
+      DEFAULT_ORGANIZATION_IDENTITY,
+    );
+    expect(consoleError).toHaveBeenCalledOnce();
+    expect(branchTagOfLastCapture()).toBe("decode");
+  });
+
   it("degrades and reports the transport branch when fetch throws", async () => {
     fetchMock.mockRejectedValue(new Error("ECONNREFUSED"));
 

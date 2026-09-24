@@ -7,7 +7,6 @@ import type {
   GroupProduct,
   GroupProductEdgeInput,
   PeriodState,
-  PeriodStatus,
   ReminderPolicy,
   ReportingGroup,
   StageAssignment,
@@ -54,14 +53,14 @@ export interface AdminRepository {
   deleteReminderPolicy(policyId: string): Promise<void>;
   listPeriodsByState(filter: {
     states: readonly PeriodState[];
-    // Cap is enforced server-side; defaults to 50 when the caller omits it.
+    // Explicit: the service resolves the default and cap upstream.
     limit: number;
   }): Promise<PeriodRowFromRepo[]>;
   archivePeriod(periodId: string): Promise<void>;
   unarchivePeriod(
     periodId: string,
     now: Date,
-  ): Promise<{ nextPeriodState: PeriodState; nextPeriodStatus: PeriodStatus }>;
+  ): Promise<{ nextPeriodState: PeriodState }>;
   // Delete a Report only when its lifecycle is still draft/open/non-archived;
   // throws a typed error when the guarded operation matches zero rows.
   deleteReport(reportId: string): Promise<void>;
@@ -133,8 +132,8 @@ export interface AdminRepository {
   listProductGroupOwnership(
     productIds: readonly string[],
   ): Promise<ProductGroupOwnership[]>;
-  // Deactivate/activate user, integrations status, stage catalogue, reopen-
-  // request lifecycle. Every AdminRepository double gets an explicit stub (see
+  // Deactivate/activate user, stage catalogue, reopen-request lifecycle.
+  // Every AdminRepository double gets an explicit stub (see
   // unusedAdminRepositoryStubs). Flip isActive; revocation stays the caller's job.
   deactivateUser(userId: string): Promise<void>;
   // Flip `User.isActive=true`. Session restoration stays the caller's job.

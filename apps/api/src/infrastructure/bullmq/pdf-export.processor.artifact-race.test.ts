@@ -10,6 +10,7 @@ vi.mock("@nestjs/common", async (importOriginal) => ({
 }));
 
 vi.mock("../../modules/pdf-export/index.js", () => ({
+  PDF_RENDERER: Symbol("PdfRenderer"),
   PdfExportService: class {
     markExportCompleted = vi.fn();
     markExportFailed = vi.fn();
@@ -24,8 +25,17 @@ import {
   type PdfArtifactStore,
   PdfExportProcessor as ProductionPdfExportProcessor,
 } from "./pdf-export.processor.js";
+import type { QueueRegistry } from "./queue-registry.js";
 
 const TEST_OUTPUT_DIR = "artifact-test-output";
+
+// This suite never reaches the failed-job loader; a registry whose get()
+// throws makes any accidental queue access loud instead of silent.
+const UNUSED_QUEUES: Pick<QueueRegistry, "get"> = {
+  get: () => {
+    throw new Error("unexpected queue access in artifact-race suite");
+  },
+};
 
 function createMockPdfExportService() {
   return {
@@ -102,6 +112,10 @@ class InterleavingArtifactStore extends ImmediateArtifactStore {
   );
 }
 
+// This suite exercises persistCompletedArtifact directly, so the renderer
+// port is an inert stub — processJob never runs here.
+const UNUSED_RENDERER = { render: vi.fn() };
+
 class PdfExportProcessor extends ProductionPdfExportProcessor {
   constructor(
     service: ConstructorParameters<typeof ProductionPdfExportProcessor>[0],
@@ -109,7 +123,7 @@ class PdfExportProcessor extends ProductionPdfExportProcessor {
     logger: AppLogger,
     private readonly artifactStore: PdfArtifactStore,
   ) {
-    super(service, env, logger, null);
+    super(service, UNUSED_RENDERER, env, logger, null, UNUSED_QUEUES);
   }
 
   protected override createArtifactStore(): PdfArtifactStore {

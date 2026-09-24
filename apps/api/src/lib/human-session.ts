@@ -1,8 +1,8 @@
 import type { UserSession } from "@customreport/shared";
 
-import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
+import type { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { hydrateSession } from "../infrastructure/trpc/trpc.session-hydration.js";
-import { SessionRevocationService } from "../modules/admin/index.js";
+import type { SessionRevocationService } from "../modules/admin/index.js";
 import { isUserAccessBarred } from "../modules/auth/index.js";
 
 export interface HumanSessionDeps {

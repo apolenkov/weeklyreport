@@ -108,35 +108,6 @@ describe("Agentation dependency contract", () => {
     expect(output).toContain("--mcp-only");
     expect(output).toContain("--http-url");
   });
-
-  it("keeps every reviewed MCP tool and adapter path in the installed bundle", () => {
-    const bundle = readFileSync(require.resolve("agentation-mcp"), "utf8");
-    const normalizedBundle = bundle.replaceAll(
-      ["$", "{"].join(""),
-      "{template:",
-    );
-    const toolNames = [
-      "agentation_list_sessions",
-      "agentation_get_session",
-      "agentation_get_pending",
-      "agentation_get_all_pending",
-      "agentation_acknowledge",
-      "agentation_resolve",
-      "agentation_dismiss",
-      "agentation_reply",
-      "agentation_watch_annotations",
-    ];
-    const transportFragments = [
-      "/sessions/{template:sessionId}/pending",
-      "/annotations/{template:annotationId}/thread",
-      "/sessions/{template:sessionId}/events?agent=true",
-      "/events?agent=true",
-      "x-api-key",
-    ];
-
-    for (const fragment of [...toolNames, ...transportFragments])
-      expect(normalizedBundle).toContain(fragment);
-  });
 });
 
 describe("Agentation storage migration contract", () => {

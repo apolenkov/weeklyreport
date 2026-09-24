@@ -171,6 +171,23 @@ describe("PeriodsSubTab — disabled reopen-window validity", () => {
     expect(save).toBeDisabled();
   });
 
+  it("preserves invalid raw input in number fields across a refetch", () => {
+    const rendered = render(<PeriodsSubTab serverSettings={SETTINGS} />);
+    const lengthInput = screen.getByLabelText("Period length (days)");
+    const save = screen.getByRole("button", { name: "Save period policy" });
+
+    fireEvent.change(lengthInput, { target: { value: "999" } });
+    rendered.rerender(
+      <PeriodsSubTab serverSettings={{ ...SETTINGS, periodLengthDays: 14 }} />,
+    );
+
+    expect(lengthInput).toHaveValue(999);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Whole number between 1 and 31 required",
+    );
+    expect(save).toBeDisabled();
+  });
+
   it("includes the unified activity view toggle in the period-policy patch", async () => {
     const user = userEvent.setup();
     render(<PeriodsSubTab serverSettings={SETTINGS} />);

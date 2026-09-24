@@ -36,7 +36,7 @@ export interface AnalyticsCachePort {
   readonly getOrCompute: <T>(
     key: string,
     fn: () => Promise<T>,
-    validate?: (value: unknown) => boolean,
+    validate?: (value: unknown) => value is T,
   ) => Promise<T>;
 }
 
@@ -78,7 +78,8 @@ export class AnalyticsService {
     const result = await this.cache.getOrCompute(
       key,
       () => this.repository.trafficLightHistory(parsed, session),
-      (value) => trafficLightHistoryOutputSchema.safeParse(value).success,
+      (value): value is TrafficLightHistoryOutput =>
+        trafficLightHistoryOutputSchema.safeParse(value).success,
     );
     return trafficLightHistoryOutputSchema.parse(result);
   }
@@ -92,7 +93,8 @@ export class AnalyticsService {
     const result = await this.cache.getOrCompute(
       key,
       () => this.repository.leadVelocity(parsed, session),
-      (value) => leadVelocityOutputSchema.safeParse(value).success,
+      (value): value is LeadVelocityOutput =>
+        leadVelocityOutputSchema.safeParse(value).success,
     );
     return leadVelocityOutputSchema.parse(result);
   }
@@ -106,7 +108,8 @@ export class AnalyticsService {
     const result = await this.cache.getOrCompute(
       key,
       () => this.repository.periodComparison(parsed, session),
-      (value) => periodComparisonOutputSchema.safeParse(value).success,
+      (value): value is PeriodComparisonOutput =>
+        periodComparisonOutputSchema.safeParse(value).success,
     );
     return periodComparisonOutputSchema.parse(result);
   }

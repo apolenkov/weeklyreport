@@ -21,6 +21,10 @@ const txWith = (row: object | null) => ({
   $queryRaw: vi.fn().mockResolvedValue(row ? [row] : []),
 });
 
+function sqlText(query: unknown): string {
+  return Array.isArray(query) ? query.join("?") : "";
+}
+
 describe("lockCurrentEditableReport", () => {
   it("admits the exact open-draft tuple after locking by report id", async () => {
     const tx = txWith(openReport);
@@ -86,5 +90,32 @@ describe("lockCurrentEditableReport", () => {
         sectionId: "missing-section",
       }),
     ).resolves.toEqual({ kind: "not-found" });
+  });
+
+  it("locks the parent report row FOR UPDATE when addressed by report id", async () => {
+    const tx = txWith(openReport);
+
+    await lockCurrentEditableReport(tx as never, { reportId: REPORT_ID });
+
+    const sql = sqlText(tx.$queryRaw.mock.calls[0]?.[0]);
+    expect(sql).toContain('FROM "Report"');
+    expect(sql).toContain('WHERE "id" = ?');
+    expect(sql).toMatch(/FOR UPDATE$/);
+    expect(sql).not.toContain("FOR UPDATE OF");
+    expect(tx.$queryRaw.mock.calls[0]?.[1]).toBe(REPORT_ID);
+  });
+
+  it("locks the parent report FOR UPDATE OF report through the section join", async () => {
+    const tx = txWith(openReport);
+
+    await lockCurrentEditableReport(tx as never, { sectionId: "section-1" });
+
+    const sql = sqlText(tx.$queryRaw.mock.calls[0]?.[0]);
+    expect(sql).toContain('FROM "Report" AS report');
+    expect(sql).toContain('INNER JOIN "ReportSection" AS section');
+    expect(sql).toContain('ON section."reportId" = report."id"');
+    expect(sql).toContain('WHERE section."id" = ?');
+    expect(sql).toMatch(/FOR UPDATE OF report$/);
+    expect(tx.$queryRaw.mock.calls[0]?.[1]).toBe("section-1");
   });
 });

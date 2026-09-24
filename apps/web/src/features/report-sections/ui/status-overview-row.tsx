@@ -104,7 +104,7 @@ function LineageRow({
         );
       })}
       {editorBelongsToRow ? (
-        <div className="min-w-0 border-t border-[var(--color-border-subtle)] px-4 py-3 md:col-span-3">
+        <div className="min-w-0 border-t border-[var(--color-border-subtle)] bg-[var(--color-card)] px-4 py-3 md:col-span-3">
           {editorSlot?.content}
         </div>
       ) : null}

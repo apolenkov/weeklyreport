@@ -134,6 +134,157 @@ describe("PdfExportPrismaRepository (integration)", () => {
     const reread = await repo.getExportJob(TEST_IDS.pdfJob2);
     expect(expectDefined(reread).checksum).toBe(completedChecksum);
   });
+
+  // These are the cases the unit fakes can only approximate: the real
+  // SELECT … FOR UPDATE wait, the real rollback, and the real row contents.
+  describe("runLockedExportJob (real row lock)", () => {
+    async function createFailedExportJob(jobId: string): Promise<void> {
+      await repo.createExportJob(
+        {
+          jobId,
+          reportId: testData.report.id,
+          status: "queued" as const,
+          requestedAt: new Date(),
+          completedAt: null,
+          checksum: null,
+          templateVersion: "phase-2-pdf-v1",
+          artifactUrl: null,
+        },
+        testData.head.id,
+        publishedReportSnapshotSchema.parse(
+          publishedSnapshotFixture({
+            reportId: testData.report.id,
+            periodStart: testData.report.periodStart,
+            periodEnd: testData.report.periodEnd,
+            deadline: testData.report.deadline,
+            publishedAt: testData.report.publishedAt ?? new Date(),
+          }),
+        ),
+      );
+      await repo.markExportFailed(jobId, "terminal failure");
+    }
+
+    it("serializes a revival against another lock holder on the same row", async () => {
+      await createFailedExportJob(TEST_IDS.pdfJob1);
+
+      const events: string[] = [];
+      await Promise.all([
+        repo.runLockedExportJob(TEST_IDS.pdfJob1, async (job, writes) => {
+          events.push(`first:saw:${job?.status ?? "missing"}`);
+          await writes.reviveFailed();
+          // Hold the lock long enough for the second holder to queue behind it.
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          events.push("first:released");
+        }),
+        (async () => {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          await repo.runLockedExportJob(TEST_IDS.pdfJob1, (job) => {
+            events.push(`second:saw:${job?.status ?? "missing"}`);
+            return Promise.resolve();
+          });
+        })(),
+      ]);
+
+      // The second holder's FOR UPDATE blocked until the first transaction
+      // committed, so it reads the revived pending row — never the old failed one.
+      expect(events).toEqual([
+        "first:saw:failed",
+        "first:released",
+        "second:saw:queued",
+      ]);
+    });
+
+    it("rolls back the locked revival when the callback rejects", async () => {
+      await createFailedExportJob(TEST_IDS.pdfJob1);
+
+      await expect(
+        repo.runLockedExportJob(TEST_IDS.pdfJob1, async (_job, writes) => {
+          await writes.reviveFailed();
+          throw new Error("queue.retry acknowledgement lost");
+        }),
+      ).rejects.toThrow("queue.retry acknowledgement lost");
+
+      // The uncertain enqueue left no trace: the durable row is still failed
+      // with its original error, not half-revived and not compensated.
+      const dbRow = await prisma.pdfExportJob.findUnique({
+        where: { id: TEST_IDS.pdfJob1 },
+      });
+      expect(dbRow).toMatchObject({
+        status: "failed",
+        error: "terminal failure",
+      });
+    });
+
+    it("revives only lifecycle fields and lets the retried export complete", async () => {
+      await createFailedExportJob(TEST_IDS.pdfJob2);
+      const before = expectDefined(
+        await prisma.pdfExportJob.findUnique({
+          where: { id: TEST_IDS.pdfJob2 },
+        }),
+      );
+
+      const service = new PdfExportService(
+        repo,
+        createNullLogger(),
+        { enqueue: () => Promise.resolve() },
+        NOOP_PDF_EXPORT_TELEMETRY,
+        {
+          PDF_BASE_URL: "http://localhost:3000",
+          PDF_EXPORT_JWT_SECRET: "test-pdf-export-secret-at-least-32-chars",
+        },
+      );
+      const queue = {
+        isFailed: () => Promise.resolve(true),
+        retry: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+      };
+
+      const outcome = await service.retryFailedExport({
+        identity: {
+          jobId: TEST_IDS.pdfJob2,
+          reportId: testData.report.id,
+          requestedBy: testData.head.id,
+        },
+        queue,
+      });
+
+      expect(outcome).toBe("retried");
+      expect(queue.retry).toHaveBeenCalledTimes(1);
+
+      const revived = expectDefined(
+        await prisma.pdfExportJob.findUnique({
+          where: { id: TEST_IDS.pdfJob2 },
+        }),
+      );
+      expect(revived).toMatchObject({
+        status: "pending",
+        filePath: null,
+        checksum: null,
+        error: null,
+      });
+      // Publication, requester, and template provenance are immutable.
+      expect(revived.reportId).toBe(testData.report.id);
+      expect(revived.requestedBy).toBe(testData.head.id);
+      expect(revived.templateVersion).toBe("phase-2-pdf-v1");
+      expect(revived.publicationAt.getTime()).toBe(
+        before.publicationAt.getTime(),
+      );
+      expect(revived.publicationSnapshot).toEqual(before.publicationSnapshot);
+
+      // The revived pending row is what lets the new attempt's completion CAS
+      // and terminal handling run unchanged.
+      const completed = await repo.saveExportJob({
+        jobId: TEST_IDS.pdfJob2,
+        reportId: testData.report.id,
+        status: "completed",
+        requestedAt: new Date(),
+        completedAt: new Date(),
+        checksum: "sha-256-retry",
+        templateVersion: "phase-2-pdf-v1",
+        artifactUrl: `/pdfs/${TEST_IDS.pdfJob2}.pdf`,
+      });
+      expect(completed.status).toBe("completed");
+    });
+  });
 });
 
 // Verify queued export identity through the service and real Prisma repository.
@@ -204,8 +355,11 @@ describe("PDF enqueue — service against real Prisma repo", () => {
   });
 
   afterAll(async () => {
-    await cleanDatabase();
-    await disconnectTestPrisma();
+    try {
+      await cleanDatabase();
+    } finally {
+      await disconnectTestPrisma();
+    }
   });
 
   it("enqueues non-credential identifiers bound to the requester for a published report", async () => {

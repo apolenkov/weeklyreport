@@ -124,19 +124,26 @@ function SubsectionHeader({
     );
   }
   return (
-    <span className="flex min-w-0 flex-wrap items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
-      <CornerDownRight aria-hidden="true" className="h-3 w-3" />
-      <StatusDot status={subsection.status} />
-      {subsection.name}
-      {subsection.linkedProducts.length > 0 && (
-        <span className="min-w-0 break-words font-normal normal-case tracking-normal">
-          Linked products:{" "}
-          {subsection.linkedProducts
-            .map((product) => product.productName)
-            .join(", ")}
-        </span>
-      )}
-    </span>
+    <div className="min-w-0 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+        <CornerDownRight aria-hidden="true" className="h-3 w-3" />
+        <StatusDot status={subsection.status} />
+        {subsection.name}
+        {subsection.linkedProducts.length > 0 && (
+          <span className="min-w-0 break-words font-normal normal-case tracking-normal">
+            Linked products:{" "}
+            {subsection.linkedProducts
+              .map((product) => product.productName)
+              .join(", ")}
+          </span>
+        )}
+      </div>
+      {subsection.note ? (
+        <div className="mt-0.5 break-words font-normal normal-case tracking-normal text-[var(--color-foreground)]">
+          {subsection.note}
+        </div>
+      ) : null}
+    </div>
   );
 }
 

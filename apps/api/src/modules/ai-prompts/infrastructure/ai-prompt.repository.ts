@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 
+import { AI_PROMPT_HISTORY_LIMIT } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
 import type { AiPromptBundleLifecycle } from "@prisma/client";
 
@@ -28,8 +29,6 @@ export type {
   StoredAiPromptBundleRevision,
 } from "./ai-prompt.repository.types.js";
 
-const PROMPT_HISTORY_LIMIT = 100;
-
 @Injectable()
 export class AiPromptRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
@@ -54,7 +53,7 @@ export class AiPromptRepository {
       where: { featureKey },
       select: revisionSelect,
       orderBy: { revision: "desc" },
-      take: PROMPT_HISTORY_LIMIT,
+      take: AI_PROMPT_HISTORY_LIMIT,
     });
     return {
       ...toControl(control),
@@ -76,7 +75,7 @@ export class AiPromptRepository {
 
   async listRevisions(
     featureKey: string,
-    take = PROMPT_HISTORY_LIMIT,
+    take = AI_PROMPT_HISTORY_LIMIT,
   ): Promise<readonly StoredAiPromptBundleRevision[]> {
     const revisions = await this.prisma.aiPromptBundleRevision.findMany({
       where: { featureKey },

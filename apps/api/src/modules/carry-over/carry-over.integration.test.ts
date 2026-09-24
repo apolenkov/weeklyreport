@@ -27,10 +27,16 @@ describe("CarryOverPrismaRepository (integration)", () => {
   });
 
   afterAll(async () => {
-    await cleanDatabase();
-    await disconnectTestPrisma();
+    try {
+      await cleanDatabase();
+    } finally {
+      await disconnectTestPrisma();
+    }
   });
 
+  // Membership in the locked re-read comes from the real assignment graph:
+  // the StageAssignment attaches the product to the author and the section
+  // projectStatus row mirrors what assignment reconciliation writes alongside.
   async function attachProductToAuthor(
     authorId: string,
     reportSectionId: string,
@@ -77,6 +83,8 @@ describe("CarryOverPrismaRepository (integration)", () => {
         status: "draft",
       },
     });
+
+    await attachProductToAuthor(testData.lead.id, targetSection.id);
 
     // Create a source item to carry over
     const sourceItem = await prisma.item.create({
@@ -192,6 +200,8 @@ describe("CarryOverPrismaRepository (integration)", () => {
         status: "draft",
       },
     });
+    await attachProductToAuthor(testData.lead.id, targetSection.id);
+
     const dedupeKey = `${testData.report.id}:${targetReport.id}`;
     const execution = {
       id: TEST_IDS.carryExec,
@@ -285,6 +295,8 @@ describe("CarryOverPrismaRepository (integration)", () => {
         status: "draft",
       },
     });
+
+    await attachProductToAuthor(testData.lead.id, targetSection.id);
 
     // The lineage key the clone inherits from its source (cloneCarriedItem
     // copies it via the `...item` spread; here we assert the repo persists it).
@@ -381,6 +393,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
         status: "draft",
       },
     });
+    await attachProductToAuthor(testData.lead.id, targetSection.id);
 
     const decisionId = crypto.randomUUID();
     const execution = {
@@ -476,6 +489,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
         status: "draft",
       },
     });
+    await attachProductToAuthor(testData.lead.id, targetSection.id);
 
     const itemId = crypto.randomUUID();
     const execution = {
@@ -542,6 +556,155 @@ describe("CarryOverPrismaRepository (integration)", () => {
     expect(created).toHaveLength(1);
     expect(expectDefined(created[0]).priorityRank).toBe(2);
     expect(expectDefined(created[0]).stageNames).toEqual(["Design", "Build"]);
+  });
+
+  // The shared seed fixture creates no StageAssignment; these tests add a
+  // local stage+assignment so the membership checks below exercise the real
+  // author.stageAssignments → projects projection.
+  it("derives the section projects projection from the author's stage assignments", async () => {
+    const targetReport = await prisma.report.create({
+      data: {
+        id: TEST_IDS.targetReport,
+        periodStart: new Date("2026-04-14"),
+        periodEnd: new Date("2026-04-20"),
+        deadline: new Date("2026-04-18"),
+        status: "draft",
+      },
+    });
+    const leadSectionRow = await prisma.reportSection.create({
+      data: {
+        reportId: targetReport.id,
+        authorId: testData.lead.id,
+        status: "draft",
+      },
+    });
+    await prisma.reportSection.create({
+      data: {
+        reportId: targetReport.id,
+        authorId: testData.head.id,
+        status: "draft",
+      },
+    });
+    const stage = await attachProductToAuthor(
+      testData.lead.id,
+      leadSectionRow.id,
+    );
+
+    const sections = await repo.getTargetSections(targetReport.id);
+    const leadSection = expectDefined(
+      sections.find((section) => section.authorId === testData.lead.id),
+    );
+    const headSection = expectDefined(
+      sections.find((section) => section.authorId === testData.head.id),
+    );
+
+    expect(leadSection.projects.map((project) => project.projectId)).toEqual([
+      testData.project.id,
+    ]);
+    const project = expectDefined(leadSection.projects[0]);
+    expect(project.ownedStages.map((owned) => owned.stageId)).toEqual([
+      stage.id,
+    ]);
+    expect(project.ownerGroupId).toBe(TEST_IDS.group);
+    expect(headSection.projects).toEqual([]);
+  });
+
+  it("writes zero carried rows when the plan's last stage assignment was removed before the write", async () => {
+    const targetReport = await prisma.report.create({
+      data: {
+        id: TEST_IDS.targetReport,
+        periodStart: new Date("2026-04-14"),
+        periodEnd: new Date("2026-04-20"),
+        deadline: new Date("2026-04-18"),
+        status: "draft",
+      },
+    });
+    const targetSection = await prisma.reportSection.create({
+      data: {
+        reportId: targetReport.id,
+        authorId: testData.lead.id,
+        status: "draft",
+      },
+    });
+    const stage = await prisma.stage.create({
+      data: { name: "Development" },
+    });
+    const assignment = await prisma.stageAssignment.create({
+      data: {
+        userId: testData.lead.id,
+        stageId: stage.id,
+        projectId: testData.project.id,
+      },
+    });
+
+    // The plan is captured while the author still owns the product — the same
+    // stale snapshot a pre-transaction plan carries into the write.
+    const staleTarget = expectDefined(
+      (await repo.getTargetSections(targetReport.id))[0],
+    );
+    expect(staleTarget.projects.map((project) => project.projectId)).toContain(
+      testData.project.id,
+    );
+
+    await prisma.stageAssignment.delete({ where: { id: assignment.id } });
+
+    const carriedItemId = crypto.randomUUID();
+    const result = await repo.saveCarryOver(
+      {
+        id: crypto.randomUUID(),
+        sourceReportId: testData.report.id,
+        targetReportId: targetReport.id,
+        dedupeKey: `${testData.report.id}:${targetReport.id}`,
+        status: "completed" as const,
+        startedAt: new Date(),
+        completedAt: new Date(),
+        carriedItemCount: 1,
+        carriedDecisionCount: 0,
+      },
+      [
+        {
+          id: crypto.randomUUID(),
+          sourceReportId: testData.report.id,
+          targetReportId: targetReport.id,
+          sourceItemId: crypto.randomUUID(),
+          targetItemId: carriedItemId,
+          sourceDecisionId: null,
+          targetDecisionId: null,
+          status: "completed" as const,
+          carriedAt: new Date(),
+        },
+      ],
+      [
+        {
+          ...staleTarget,
+          items: [
+            {
+              id: carriedItemId,
+              stableId: crypto.randomUUID(),
+              projectId: testData.project.id,
+              type: "current" as const,
+              text: "Stale-membership clone",
+              tag: "feature",
+              workflowStatus: "in_progress" as const,
+              carriedOver: true,
+              stageNames: ["Development"],
+            },
+          ],
+        },
+      ],
+    );
+
+    // The locked re-read sees empty membership: no clone row, no lineage
+    // record, and no positive inserted count on the execution.
+    expect(result.records).toHaveLength(0);
+    expect(result.execution.carriedItemCount).toBe(0);
+    expect(result.targetSection.version).toBe(staleTarget.version);
+    expect(
+      await prisma.item.count({
+        where: { reportSectionId: targetSection.id },
+      }),
+    ).toBe(0);
+    expect(await prisma.carryOverRecord.count()).toBe(0);
   });
 
   // End-to-end planner + write path: one lineage per rollover rule, records

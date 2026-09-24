@@ -168,7 +168,12 @@ describe("ReopenRequestsCard", () => {
     expect(screen.getByText("Alice L.")).toBeInTheDocument();
     expect(within(alice).getByRole("textbox")).toHaveValue("Keep this draft");
 
-    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+    const retry = screen.getByRole("button", { name: "Retry" });
+    expect(retry).toHaveFocus();
+    const retainedDraft = within(alice).getByRole("textbox");
+    await userEvent.type(retainedDraft, " corrected");
+    expect(retainedDraft).toHaveFocus();
+    await userEvent.click(retry);
     expect(await screen.findByText("Bob L.")).toBeInTheDocument();
     expect(screen.getByText("Alice L.")).toBeInTheDocument();
     expect(inputs.at(-1)).toMatchObject({
@@ -190,6 +195,42 @@ describe("ReopenRequestsCard", () => {
     expect(
       await screen.findByText("Count unavailable · 1 loaded"),
     ).toBeInTheDocument();
+  });
+
+  it("returns keyboard focus to the same Respond action after Cancel", async () => {
+    const { captured } = renderCard({
+      list: {
+        items: [
+          makeRequest("request-1", "Alice Lead"),
+          makeRequest("request-2", "Bob Lead"),
+        ],
+        nextCursor: null,
+      },
+    });
+    const alice = expectDefined(
+      (await screen.findByText("Alice L.")).closest("li"),
+    );
+    const bob = expectDefined(screen.getByText("Bob L.").closest("li"));
+    const aliceRespond = within(alice).getByRole("button", {
+      name: "Respond",
+    });
+
+    aliceRespond.focus();
+    await userEvent.keyboard("{Enter}");
+    expect(within(alice).getByRole("textbox")).toHaveFocus();
+    expect(
+      within(bob).getByRole("button", { name: "Respond" }),
+    ).toBeInTheDocument();
+
+    await userEvent.click(
+      within(alice).getByRole("button", { name: "Cancel" }),
+    );
+    expect(
+      within(alice).getByRole("button", { name: "Respond" }),
+    ).toHaveFocus();
+    expect(
+      expectDefined(captured["admin.respondReopenRequest"]).calls,
+    ).toHaveLength(0);
   });
 
   it("submits a trimmed decision, resets the draft, and invalidates every list page", async () => {

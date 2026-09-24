@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  AI_PROMPT_CORE_LIMIT,
+  AI_PROMPT_EDITABLE_TAIL_SEPARATOR,
+  AI_PROMPT_EFFECTIVE_PROMPT_LIMIT,
+  AI_PROMPT_SLOT_CONTENT_LIMIT,
   AI_PROMPT_SLOT_KEYS,
   aiFeatureKeySchema,
   aiPromptBundleReadSchema,
   aiPromptContentsSchema,
   aiPromptDraftInputSchema,
   aiPromptRevisionInputSchema,
+  aiPromptSlotReadSchema,
 } from "./ai-prompt-management";
 
 const id = "659b2767-0f86-41e2-b025-49730ca010e4";
@@ -117,6 +122,44 @@ describe("AI prompt management contracts", () => {
     expect(
       aiPromptRevisionInputSchema.safeParse({
         featureKey: "lead-report-assistant",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("pins the shared composition separator bytes", () => {
+    expect(AI_PROMPT_EDITABLE_TAIL_SEPARATOR).toBe(
+      "\n\nOperator guidance (editable tail):\n",
+    );
+  });
+
+  it("accepts a composed slot at the derived effective-prompt boundary", () => {
+    const lockedCore = "c".repeat(AI_PROMPT_CORE_LIMIT);
+    const promptText = "e".repeat(AI_PROMPT_SLOT_CONTENT_LIMIT);
+    const effectivePrompt = `${lockedCore}${AI_PROMPT_EDITABLE_TAIL_SEPARATOR}${promptText}`;
+    expect(effectivePrompt).toHaveLength(AI_PROMPT_EFFECTIVE_PROMPT_LIMIT);
+    const boundarySlot = {
+      slot: "planner",
+      lockedCore,
+      promptContents: promptText,
+      effectivePrompt,
+    };
+    expect(aiPromptSlotReadSchema.safeParse(boundarySlot).success).toBe(true);
+    const baseline = validBundleRead();
+    expect(
+      aiPromptBundleReadSchema.safeParse({
+        ...baseline,
+        slots: [boundarySlot, ...baseline.slots.slice(1)],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects an effective prompt beyond the derived boundary", () => {
+    expect(
+      aiPromptSlotReadSchema.safeParse({
+        slot: "planner",
+        lockedCore: "c".repeat(AI_PROMPT_CORE_LIMIT),
+        promptContents: "e".repeat(AI_PROMPT_SLOT_CONTENT_LIMIT),
+        effectivePrompt: "x".repeat(AI_PROMPT_EFFECTIVE_PROMPT_LIMIT + 1),
       }).success,
     ).toBe(false);
   });

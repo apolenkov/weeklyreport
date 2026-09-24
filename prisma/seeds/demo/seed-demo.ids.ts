@@ -4,6 +4,14 @@ const ID_TAIL_RADIX = 16;
 const ID_TAIL_LENGTH = 12;
 const TAIL_BLOCK_BITS = 0x1_00_00_00_00;
 
+export function idTailToFactoryIndex(id: string): number {
+  const tail = id.slice(-ID_TAIL_LENGTH);
+  if (!/^[0-9a-f]{12}$/i.test(tail)) {
+    throw new Error(`Seed id must end with a hexadecimal UUID tail: ${id}`);
+  }
+  return Number.parseInt(tail, ID_TAIL_RADIX);
+}
+
 function makeIdFactory(block: number): (index: number) => string {
   return (index: number): string => {
     const tail = (block + index)

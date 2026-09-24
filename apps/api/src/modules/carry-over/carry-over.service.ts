@@ -118,9 +118,8 @@ export class CarryOverService {
     this.logger = logger ?? createNullLogger();
   }
 
-  // Fetch order is load-bearing: the dedupe lookup and both section reads run
-  // before the period gate, so a replay of a completed carry-over still sees
-  // its stored execution.
+  // The dedupe lookup and both section reads run before the period gate; the
+  // gate still rejects a replay whose target period is no longer editable.
   private async loadCarryOverInputs(
     sourceReportId: string,
     targetReportId: string,

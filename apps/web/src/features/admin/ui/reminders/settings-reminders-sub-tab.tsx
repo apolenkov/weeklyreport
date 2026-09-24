@@ -8,7 +8,7 @@ import {
   CheckIcon,
   useUpdateSettingsMut,
 } from "../../../../shared/ui/settings/settings-tab";
-import { TIMEZONE_OPTIONS } from "../../model/timezone-options";
+import { timezoneOptionsWith } from "../../model/timezone-options";
 
 function DefaultTimezoneField({
   value,
@@ -32,7 +32,7 @@ function DefaultTimezoneField({
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
       >
-        {TIMEZONE_OPTIONS.map((group) => (
+        {timezoneOptionsWith(value).map((group) => (
           <optgroup key={group.group} label={group.group}>
             {group.zones.map((z) => (
               <option key={z.value} value={z.value}>

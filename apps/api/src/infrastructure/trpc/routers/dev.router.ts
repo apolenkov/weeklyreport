@@ -12,6 +12,7 @@ import type { PrismaClient } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
+import { assertE2eRuntimeDestructiveTarget } from "../../../../../../prisma/guards/_destructive-guard.js";
 import { errorMessage } from "../../../lib/error-message.js";
 import type { EnvConfig } from "../../config/env.schema";
 import {
@@ -30,8 +31,6 @@ const DEFAULT_RESEED_TIMEOUT_MS =
   DEFAULT_RESEED_TIMEOUT_MINUTES * MS_PER_MINUTE;
 const RESEED_OUTPUT_TAIL_LINES = 15;
 const RESEED_STDERR_TAIL_LENGTH = 500;
-// Prisma AI consent gate expects this Russian yes; any other value aborts reset.
-const PRISMA_AI_DANGEROUS_ACTION_CONSENT = "давай";
 
 export interface DevRouterDeps {
   prisma: PrismaClient;
@@ -139,15 +138,20 @@ export function createDevRouter(deps: DevRouterDeps) {
         // Run Prisma reset as a child process so "wipe & reseed" is a
         // real clean-slate operation in Docker too.
         const repoRoot = resolveRepoRoot(deps.env.CUSTOMREPORT_REPO_ROOT);
+        // The canonical destructive guard runs immediately before the first
+        // child process: it refuses a non-disposable target or a run without the
+        // operator's per-run consent. Consent is read from the operator's
+        // environment and never injected here.
+        assertE2eRuntimeDestructiveTarget(
+          "dev-reseed",
+          deps.env.DATABASE_URL,
+          process.env,
+        );
         try {
           const options = {
             cwd: repoRoot,
             encoding: "utf8",
-            env: {
-              ...process.env,
-              PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION:
-                PRISMA_AI_DANGEROUS_ACTION_CONSENT,
-            },
+            env: process.env,
             timeout: reseedTimeoutMs(input.variant),
           } as const;
           const resetOutput = execFileSync(

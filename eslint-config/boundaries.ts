@@ -42,7 +42,7 @@ const apiCrossModuleZones = apiModules.map((moduleName) => ({
       .filter((sibling) => sibling !== moduleName)
       .map((sibling) => `${sibling}/index.ts`),
   ],
-  message: `api module boundary: '${moduleName}' may reach a sibling module only through its index.ts facade barrel, never an internal path (restructure-directory-architecture).`,
+  message: `api module boundary: '${moduleName}' may reach a sibling module only through its index.ts facade barrel, never an internal path (module-import-boundaries).`,
 }));
 
 const apiInfrastructureModuleZones = [
@@ -92,7 +92,7 @@ const webCrossSliceZones = webSlices.map((sliceName) => ({
       .filter((sibling) => sibling !== sliceName)
       .flatMap((sibling) => [`${sibling}/index.ts`, `${sibling}/client.ts`]),
   ],
-  message: `web slice boundary: '${sliceName}' may reach a sibling slice only through its public index.ts or client.ts entrypoint (restructure-directory-architecture).`,
+  message: `web slice boundary: '${sliceName}' may reach a sibling slice only through its public index.ts or client.ts entrypoint (module-import-boundaries).`,
 }));
 
 export const boundaryConfig: Linter.Config[] = [
@@ -118,7 +118,7 @@ export const boundaryConfig: Linter.Config[] = [
       ],
     },
   },
-  // ── restructure-directory-architecture slice 1: import-boundary zones. ──
+  // ── module-import-boundaries slice 1: import-boundary zones. ──
   // Resolver so import-x/no-restricted-paths can map relative NodeNext specifiers
   // (`../period/period-transition.js` → the real .ts) to real paths; without it the
   // rule silently matches nothing and every zone becomes an inert no-op.
@@ -183,10 +183,7 @@ export const boundaryConfig: Linter.Config[] = [
   // through a port.
   {
     files: [
-      "apps/api/src/modules/period/domain/**/*.ts",
-      "apps/api/src/modules/report-sections/domain/**/*.ts",
-      "apps/api/src/modules/review/domain/**/*.ts",
-      "apps/api/src/modules/publication/domain/**/*.ts",
+      "apps/api/src/modules/**/domain/**/*.ts",
       // Admin is a flat module; its port and shared-type files stay in this
       // boundary so domain code cannot depend on admin infrastructure types.
       "apps/api/src/modules/admin/admin-shared.ts",
@@ -207,7 +204,7 @@ export const boundaryConfig: Linter.Config[] = [
                 "nodemailer",
               ],
               message:
-                "domain/ is pure: no @prisma/client, @nestjs/*, ioredis, bullmq or nodemailer (value OR type) — a Prisma-typed transaction applicator belongs in application/, receiving its client through a port (restructure-directory-architecture).",
+                "domain/ is pure: no @prisma/client, @nestjs/*, ioredis, bullmq or nodemailer (value OR type) — a Prisma-typed transaction applicator belongs in application/, receiving its client through a port (module-import-boundaries).",
             },
           ],
         },

@@ -16,6 +16,15 @@ function stageKey(projectId: string, stageId: string): string {
   return `${projectId}::${stageId}`;
 }
 
+// The write schema tolerates a missing stageNames key on activity-parented
+// records while read models always expose the array ("activity rows use []").
+// Normalize here so a schema-valid write never crashes the read-model parse.
+function withStageNames<
+  T extends { stageNames?: readonly string[] | undefined },
+>(record: T): T & { stageNames: readonly string[] } {
+  return { ...record, stageNames: record.stageNames ?? [] };
+}
+
 // Fold the client's stage-status slice onto the author's owned stages. A stage
 // the payload omits keeps whatever status the section row already carries, and
 // an entry whose status field is absent does too — only an explicit null (or a
@@ -96,10 +105,11 @@ export function mergeSection(
       .map((project) =>
         withAggregatedTrafficLight(project, input.projectStatuses),
       ),
-    items: input.items,
-    risks: input.risks,
+    items: input.items.map(withStageNames),
+    risks: input.risks.map(withStageNames),
     decisions: input.decisions.map((decision) => ({
       ...decision,
+      stageNames: decision.stageNames ?? [],
       // The lead form owner input is read-only and represents the section owner.
       // Persisting a stale display name here makes the lead's own rows look
       // foreign and disables edit/delete in the UI.
