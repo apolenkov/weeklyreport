@@ -7,6 +7,31 @@ import {
 
 type ReportStoreError = (error: unknown) => void;
 
+export const RATE_LIMIT_REDIS_COMMAND_TIMEOUT_MS = 12_000;
+
+async function withRateLimitTimeout<T>(
+  operation: string,
+  value: T | PromiseLike<T>,
+): Promise<T> {
+  const timeout = Promise.withResolvers<never>();
+  const timer = setTimeout(
+    () =>
+      timeout.reject(
+        new Error(
+          `rate-limit Redis ${operation} timed out after ${RATE_LIMIT_REDIS_COMMAND_TIMEOUT_MS}ms`,
+        ),
+      ),
+    RATE_LIMIT_REDIS_COMMAND_TIMEOUT_MS,
+  );
+  timer.unref();
+
+  try {
+    return await Promise.race([Promise.resolve(value), timeout.promise]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function stricterResult(
   local: ClientRateLimitInfo,
   shared: ClientRateLimitInfo,
@@ -45,7 +70,7 @@ export class RateLimitDegradedStore implements Store {
 
   async get(key: string): Promise<ClientRateLimitInfo | undefined> {
     try {
-      const shared = await this.primary.get?.(key);
+      const shared = await withRateLimitTimeout("get", this.primary.get?.(key));
       return shared ?? (await this.fallback.get(key));
     } catch (error) {
       this.reportError(error);
@@ -56,7 +81,10 @@ export class RateLimitDegradedStore implements Store {
   async increment(key: string): Promise<ClientRateLimitInfo> {
     const local = await this.fallback.increment(key);
     try {
-      const shared = await this.primary.increment(key);
+      const shared = await withRateLimitTimeout(
+        "increment",
+        this.primary.increment(key),
+      );
       return stricterResult(local, shared);
     } catch (error) {
       this.reportError(error);
@@ -67,7 +95,7 @@ export class RateLimitDegradedStore implements Store {
   async decrement(key: string): Promise<void> {
     await this.fallback.decrement(key);
     try {
-      await this.primary.decrement(key);
+      await withRateLimitTimeout("decrement", this.primary.decrement(key));
     } catch (error) {
       this.reportError(error);
     }
@@ -76,7 +104,7 @@ export class RateLimitDegradedStore implements Store {
   async resetKey(key: string): Promise<void> {
     await this.fallback.resetKey(key);
     try {
-      await this.primary.resetKey(key);
+      await withRateLimitTimeout("resetKey", this.primary.resetKey(key));
     } catch (error) {
       this.reportError(error);
     }
@@ -85,7 +113,7 @@ export class RateLimitDegradedStore implements Store {
   async resetAll(): Promise<void> {
     await this.fallback.resetAll();
     try {
-      await this.primary.resetAll?.();
+      await withRateLimitTimeout("resetAll", this.primary.resetAll?.());
     } catch (error) {
       this.reportError(error);
     }

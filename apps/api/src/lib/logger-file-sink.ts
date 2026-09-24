@@ -66,15 +66,31 @@ async function maybePruneArchives(
   return now;
 }
 
+// Two rotations in one millisecond share the stamp — suffix the second so
+// the newer archive cannot truncate the one written moments earlier.
+async function uniqueArchivePath(
+  logDir: string,
+  stamp: string,
+  n: number,
+): Promise<string> {
+  const suffix = n === 1 ? "" : `-${n}`;
+  const candidate = join(
+    logDir,
+    `${ARCHIVE_PREFIX}${stamp}${suffix}${ARCHIVE_SUFFIX}`,
+  );
+  const taken = await fs.stat(candidate).then(
+    () => true,
+    () => false,
+  );
+  return taken ? uniqueArchivePath(logDir, stamp, n + 1) : candidate;
+}
+
 async function archiveActiveLog(
   logDir: string,
   activePath: string,
 ): Promise<void> {
   const stamp = new Date().toISOString().replaceAll(/[:.]/g, "-");
-  const archivePath = join(
-    logDir,
-    `${ARCHIVE_PREFIX}${stamp}${ARCHIVE_SUFFIX}`,
-  );
+  const archivePath = await uniqueArchivePath(logDir, stamp, 1);
   await pipeline(
     createReadStream(activePath),
     createGzip(),

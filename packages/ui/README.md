@@ -27,12 +27,13 @@ The source tree currently contains **13 component `.tsx` files**:
 - **13 files under `src/components/ui/`**. Current consumers import twelve live
   UI modules by subpath: Alert, Button, Card, Chart, Dialog, DropdownMenu,
   Separator, Sheet, Skeleton, Toaster, Tabs, and Tooltip.
-- `dropdown-menu-items.tsx` is the only internal source module. The package
+- `dropdown-menu-items.tsx` and `dialog-focus.ts` (imported by `dialog.tsx`)
+  are the internal source modules, absent from the exports map. The package
   utility is imported from `@customreport/ui/lib/utils`. Only currently
   consumed subparts are public: card content/header;
   dialog content/description/title; dropdown
-  content/item/label/separator/trigger; sheet content/header/title/
-  trigger; and tabs content/list/trigger.
+  content/item/label/separator/trigger; sheet
+  content/description/header/title/trigger; and tabs content/list/trigger.
 
 ## Design tokens
 

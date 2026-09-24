@@ -44,7 +44,7 @@ function periodFixture(
   };
 }
 
-import type { PeriodState, PeriodStatus } from "@customreport/shared";
+import type { PeriodState } from "@customreport/shared";
 
 function makePeriodAwareRepository(
   rows: PeriodRowFromRepo[],
@@ -72,10 +72,7 @@ function makePeriodAwareRepository(
     unarchivePeriod(
       periodId,
       now = new Date(),
-    ): Promise<{
-      nextPeriodState: PeriodState;
-      nextPeriodStatus: PeriodStatus;
-    }> {
+    ): Promise<{ nextPeriodState: PeriodState }> {
       const row = store.find((r) => r.id === periodId);
       if (!row) return Promise.reject(new Error("not found"));
       const next: PeriodState =
@@ -86,10 +83,7 @@ function makePeriodAwareRepository(
             : "open";
       row.archived = false;
       row.periodState = next;
-      return Promise.resolve({
-        nextPeriodState: next,
-        nextPeriodStatus: row.periodStatus,
-      });
+      return Promise.resolve({ nextPeriodState: next });
     },
   };
 }

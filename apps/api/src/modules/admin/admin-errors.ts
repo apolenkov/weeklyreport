@@ -56,11 +56,19 @@ export class AdminGroupProductConflictError extends Error {
   }
 }
 
-// Existing email/SAML identity → CONFLICT (exists, not invalid).
+// Existing identity or references prevent the requested user change → CONFLICT.
 export class AdminUserConflictError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "AdminUserConflictError";
+  }
+}
+
+// Targeted activate/deactivate on an absent user id (P2025) → NOT_FOUND.
+export class AdminUserNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminUserNotFoundError";
   }
 }
 

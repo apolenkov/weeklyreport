@@ -23,14 +23,14 @@ import { expectDefined } from "../../test-utils/expect-defined.js";
 import { NOOP_PDF_EXPORT_TELEMETRY } from "../../test-utils/pdf-export.js";
 import {
   type PdfExportEnqueuer,
-  type PdfExportTelemetry,
-} from "./pdf-export.ports.js";
-import {
-  PdfExportDomainError,
+  type PdfExportJobIdentity,
   type PdfExportJobRecord,
+  type PdfExportLockedJobWrites,
   type PdfExportRepository,
-  PdfExportService,
-} from "./pdf-export.service";
+  type PdfExportTelemetry,
+  type PdfExportTerminalState,
+} from "./pdf-export.ports.js";
+import { PdfExportDomainError, PdfExportService } from "./pdf-export.service";
 import { verifyPdfExportToken as verifyPdfExportTokenImpl } from "./pdf-export.token";
 import { PdfExportInfrastructureTelemetry } from "./pdf-export-telemetry.adapter.js";
 
@@ -109,6 +109,84 @@ function createRepository(
   canRead = true,
 ): PdfExportRepository {
   const jobs = new Map<string, PdfExportJobRecord>();
+  // Serializes lock holders in arrival order like FOR UPDATE does; a rejected
+  // callback restores the pre-transaction row like a rollback.
+  let lockChain: Promise<unknown> = Promise.resolve();
+
+  function runLockedExportJob<T>(
+    jobId: string,
+    run: (
+      job: PdfExportJobRecord | null,
+      writes: PdfExportLockedJobWrites,
+    ) => Promise<T>,
+  ): Promise<T> {
+    const execute = async (): Promise<T> => {
+      const snapshot = jobs.get(jobId);
+      const backup = snapshot ? structuredClone(snapshot) : undefined;
+      const writes: PdfExportLockedJobWrites = {
+        markFailed: (_error: string) => {
+          const current = jobs.get(jobId);
+          if (current?.status === "queued") {
+            jobs.set(jobId, {
+              ...current,
+              status: "failed",
+              artifactUrl: null,
+              checksum: null,
+            });
+          }
+          return Promise.resolve();
+        },
+        markCompleted: (artifactUrl: string, checksum: string) => {
+          const current = jobs.get(jobId);
+          if (current?.status !== "queued") {
+            return Promise.reject(
+              new Error(`PDF export job ${jobId} is not pending.`),
+            );
+          }
+          const completed: PdfExportJobRecord = {
+            ...current,
+            status: "completed",
+            artifactUrl,
+            checksum,
+            completedAt: new Date(),
+          };
+          jobs.set(jobId, completed);
+          return Promise.resolve(structuredClone(completed));
+        },
+        reviveFailed: () => {
+          const current = jobs.get(jobId);
+          if (current?.status !== "failed") {
+            return Promise.reject(
+              new Error(`PDF export job ${jobId} is not failed.`),
+            );
+          }
+          jobs.set(jobId, {
+            ...current,
+            status: "queued",
+            artifactUrl: null,
+            checksum: null,
+          });
+          return Promise.resolve();
+        },
+      };
+      try {
+        return await run(snapshot ? structuredClone(snapshot) : null, writes);
+      } catch (error) {
+        if (backup === undefined) {
+          jobs.delete(jobId);
+        } else {
+          jobs.set(jobId, backup);
+        }
+        throw error;
+      }
+    };
+    const result = lockChain.then(execute);
+    lockChain = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
+  }
 
   return {
     getPublishedReportForExport() {
@@ -146,6 +224,7 @@ function createRepository(
       }
       return Promise.resolve();
     },
+    runLockedExportJob,
   };
 }
 
@@ -535,23 +614,17 @@ describe("markExportFailed", () => {
 
   it("calls repository.markExportFailed with correct parameters", async () => {
     const repo = createRepository(publishedReport);
-    const markExportFailedCalls: { jobId: string; error: string }[] = [];
-    const originalMarkExportFailed = repo.markExportFailed.bind(repo);
-    repo.markExportFailed = async (jobId: string, error: string) => {
-      markExportFailedCalls.push({ jobId, error });
-      return originalMarkExportFailed(jobId, error);
-    };
+    const markExportFailedSpy = vi.spyOn(repo, "markExportFailed");
 
     const service = createPdfExportService(repo);
     const queued = await service.requestPdfExport(reportId, requesterSession);
 
     await service.markExportFailed(queued.jobId, "browser crashed");
 
-    expect(markExportFailedCalls).toHaveLength(1);
-    expect(markExportFailedCalls[0]).toEqual({
-      jobId: queued.jobId,
-      error: "browser crashed",
-    });
+    expect(markExportFailedSpy).toHaveBeenCalledExactlyOnceWith(
+      queued.jobId,
+      "browser crashed",
+    );
   });
 });
 
@@ -572,10 +645,11 @@ describe("buildAuthCookies", () => {
     expect(cookies[0]?.httpOnly).toBe(true);
   });
 
-  // The cookie is scoped via Playwright's `url` field instead of
-  // `domain`+`secure` inference. The url-based form works regardless of
-  // hostname shape (localhost, IP, behind-proxy).
-  it("uses PDF_BASE_URL as the cookie url verbatim (https hostname)", () => {
+  // The cookie is scoped to the print-origin host through Gotenberg's
+  // `domain`-keyed `cookies` field — the jar key that keeps the credential
+  // from crossing origin boundaries. Single-label and IP hosts are
+  // probe-verified to reach the document and same-origin subrequests.
+  it("scopes the cookie domain to the PDF_BASE_URL hostname (https)", () => {
     const originalEnv = process.env.PDF_BASE_URL;
     process.env.PDF_BASE_URL = "https://reports.example.com";
 
@@ -583,7 +657,7 @@ describe("buildAuthCookies", () => {
       const service = createPdfExportService(createRepository(publishedReport));
       const cookies = service.buildAuthCookies("test-jwt-token");
 
-      expect(cookies[0]?.url).toBe("https://reports.example.com");
+      expect(cookies[0]?.domain).toBe("reports.example.com");
     } finally {
       if (originalEnv === undefined) {
         delete process.env.PDF_BASE_URL;
@@ -593,7 +667,7 @@ describe("buildAuthCookies", () => {
     }
   });
 
-  it("produces a url-based cookie for localhost (no domain leak, no secure inference)", () => {
+  it("produces a domain-scoped cookie for localhost (no url or secure inference)", () => {
     const originalEnv = process.env.PDF_BASE_URL;
     process.env.PDF_BASE_URL = "http://localhost:3000";
 
@@ -601,12 +675,12 @@ describe("buildAuthCookies", () => {
       const service = createPdfExportService(createRepository(publishedReport));
       const cookies = service.buildAuthCookies("test-jwt-token");
 
-      expect(cookies[0]?.url).toBe("http://localhost:3000");
-      // The `domain` and `secure` fields must not appear — Playwright
-      // chooses between url-based and domain-based scoping by which
-      // fields are present in the entry.
-      expect(cookies[0]).not.toHaveProperty("domain");
+      expect(cookies[0]?.domain).toBe("localhost");
+      // Gotenberg's `cookies` field is keyed by `domain`+`path` — no `url`
+      // field exists, and `secure` is not part of the accepted shape.
+      expect(cookies[0]).not.toHaveProperty("url");
       expect(cookies[0]).not.toHaveProperty("secure");
+      expect(cookies[0]?.path).toBe("/");
       expect(cookies[0]?.httpOnly).toBe(true);
       expect(cookies[0]?.sameSite).toBe("Lax");
     } finally {
@@ -618,9 +692,7 @@ describe("buildAuthCookies", () => {
     }
   });
 
-  it("produces a url-based cookie for an IP-based PDF_BASE_URL (no domain rejection)", () => {
-    // Playwright's addCookies() rejects entries whose `domain` field would
-    // resolve to an IP — using `url` sidesteps that branch entirely.
+  it("produces a domain-scoped cookie for an IP-based PDF_BASE_URL", () => {
     const originalEnv = process.env.PDF_BASE_URL;
     process.env.PDF_BASE_URL = "http://10.0.0.5:3000";
 
@@ -628,8 +700,8 @@ describe("buildAuthCookies", () => {
       const service = createPdfExportService(createRepository(publishedReport));
       const cookies = service.buildAuthCookies("test-jwt-token");
 
-      expect(cookies[0]?.url).toBe("http://10.0.0.5:3000");
-      expect(cookies[0]).not.toHaveProperty("domain");
+      expect(cookies[0]?.domain).toBe("10.0.0.5");
+      expect(cookies[0]).not.toHaveProperty("url");
     } finally {
       if (originalEnv === undefined) {
         delete process.env.PDF_BASE_URL;
@@ -639,7 +711,7 @@ describe("buildAuthCookies", () => {
     }
   });
 
-  it("produces a url-based cookie for a behind-proxy internal hostname", () => {
+  it("produces a domain-scoped cookie for a behind-proxy internal hostname", () => {
     const originalEnv = process.env.PDF_BASE_URL;
     process.env.PDF_BASE_URL = "http://web-internal.cluster.local:3000";
 
@@ -647,8 +719,8 @@ describe("buildAuthCookies", () => {
       const service = createPdfExportService(createRepository(publishedReport));
       const cookies = service.buildAuthCookies("test-jwt-token");
 
-      expect(cookies[0]?.url).toBe("http://web-internal.cluster.local:3000");
-      expect(cookies[0]).not.toHaveProperty("domain");
+      expect(cookies[0]?.domain).toBe("web-internal.cluster.local");
+      expect(cookies[0]).not.toHaveProperty("url");
     } finally {
       if (originalEnv === undefined) {
         delete process.env.PDF_BASE_URL;
@@ -672,5 +744,366 @@ describe("requestPdfExport + getPdfExportStatus round trip", () => {
     await expect(
       service.getPdfExportStatus(queued.jobId, requesterSession.userId),
     ).resolves.toMatchObject(completed);
+  });
+});
+
+const exportIdentity = (job: PdfExportJob): PdfExportJobIdentity => ({
+  jobId: job.jobId,
+  reportId: job.reportId,
+  requestedBy: requesterSession.userId,
+});
+
+const terminalState = (
+  job: PdfExportJob,
+  state: Pick<PdfExportTerminalState, "status"> &
+    Partial<PdfExportTerminalState>,
+): PdfExportTerminalState => ({ ...exportIdentity(job), ...state });
+
+describe("reconcileTerminalState", () => {
+  it("marks a queued export failed from the queue state loaded inside the lock", async () => {
+    const service = createPdfExportService(createRepository(publishedReport));
+    const job = await service.requestPdfExport(reportId, requesterSession);
+
+    const applied = await service.reconcileTerminalState(
+      exportIdentity(job),
+      () =>
+        Promise.resolve(
+          terminalState(job, { status: "failed", error: "browser crashed" }),
+        ),
+    );
+
+    expect(applied).toBe(true);
+    await expect(
+      service.getPdfExportStatus(job.jobId, requesterSession.userId),
+    ).resolves.toMatchObject({ status: "failed" });
+  });
+
+  it("marks a queued export completed through the canonical artifact result", async () => {
+    const service = createPdfExportService(createRepository(publishedReport));
+    const job = await service.requestPdfExport(reportId, requesterSession);
+
+    const applied = await service.reconcileTerminalState(
+      exportIdentity(job),
+      () =>
+        Promise.resolve(
+          terminalState(job, {
+            status: "completed",
+            artifactUrl: `/pdfs/${job.jobId}.pdf`,
+            checksum: "sha-256",
+          }),
+        ),
+    );
+
+    expect(applied).toBe(true);
+    await expect(
+      service.getPdfExportStatus(job.jobId, requesterSession.userId),
+    ).resolves.toMatchObject({
+      status: "completed",
+      artifactUrl: `/pdfs/${job.jobId}.pdf`,
+      checksum: "sha-256",
+    });
+  });
+
+  it("skips the write when the job is no longer terminal inside the lock", async () => {
+    // The captured "failed" is stale the moment an admin retry requeues the
+    // job; the loader returning null is how a revived attempt stays alive.
+    const service = createPdfExportService(createRepository(publishedReport));
+    const job = await service.requestPdfExport(reportId, requesterSession);
+
+    const applied = await service.reconcileTerminalState(
+      exportIdentity(job),
+      () => Promise.resolve(null),
+    );
+
+    expect(applied).toBe(false);
+    await expect(
+      service.getPdfExportStatus(job.jobId, requesterSession.userId),
+    ).resolves.toMatchObject({ status: "queued" });
+  });
+
+  it("never regresses a completed export and never consults the queue for it", async () => {
+    const service = createPdfExportService(createRepository(publishedReport));
+    const job = await service.requestPdfExport(reportId, requesterSession);
+    await service.markExportCompleted(
+      job.jobId,
+      `/pdfs/${job.jobId}.pdf`,
+      "sha-256",
+    );
+    const loadCurrent = vi
+      .fn()
+      .mockResolvedValue(
+        terminalState(job, { status: "failed", error: "late failure" }),
+      );
+
+    const applied = await service.reconcileTerminalState(
+      exportIdentity(job),
+      loadCurrent,
+    );
+
+    expect(applied).toBe(false);
+    expect(loadCurrent).not.toHaveBeenCalled();
+    await expect(
+      service.getPdfExportStatus(job.jobId, requesterSession.userId),
+    ).resolves.toMatchObject({ status: "completed", checksum: "sha-256" });
+  });
+
+  it("returns false for a missing export row without consulting the queue", async () => {
+    const service = createPdfExportService(createRepository(publishedReport));
+    const loadCurrent = vi.fn();
+    const missingId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+
+    const applied = await service.reconcileTerminalState(
+      { jobId: missingId, reportId, requestedBy: requesterSession.userId },
+      loadCurrent,
+    );
+
+    expect(applied).toBe(false);
+    expect(loadCurrent).not.toHaveBeenCalled();
+  });
+
+  it("rejects a terminal state whose identity mismatches the durable row", async () => {
+    const service = createPdfExportService(createRepository(publishedReport));
+    const job = await service.requestPdfExport(reportId, requesterSession);
+
+    const applied = await service.reconcileTerminalState(
+      exportIdentity(job),
+      () =>
+        Promise.resolve(
+          terminalState(job, {
+            status: "failed",
+            error: "browser crashed",
+            reportId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          }),
+        ),
+    );
+
+    expect(applied).toBe(false);
+    await expect(
+      service.getPdfExportStatus(job.jobId, requesterSession.userId),
+    ).resolves.toMatchObject({ status: "queued" });
+  });
+
+  it("performs no terminal write when a fresh payload mismatches the durable binding", async () => {
+    // Composed delayed-callback regression: the failure event claims identity
+    // A, but the queue job re-read under the row lock now carries payload B.
+    // The state's own identity is checked against the claimed one, so the
+    // write is declined before any lifecycle field changes.
+    const service = createPdfExportService(createRepository(publishedReport));
+    const job = await service.requestPdfExport(reportId, requesterSession);
+
+    const applied = await service.reconcileTerminalState(
+      exportIdentity(job),
+      () =>
+        Promise.resolve(
+          terminalState(job, {
+            status: "failed",
+            error: "failure from the rebound payload",
+            reportId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            requestedBy: "00000000-0000-4000-8000-00000000bbbb",
+          }),
+        ),
+    );
+
+    expect(applied).toBe(false);
+    await expect(
+      service.getPdfExportStatus(job.jobId, requesterSession.userId),
+    ).resolves.toMatchObject({
+      status: "queued",
+      artifactUrl: null,
+      checksum: null,
+    });
+  });
+});
+
+describe("retryFailedExport", () => {
+  function createRetryQueue() {
+    return {
+      isFailed: vi.fn<() => Promise<boolean>>().mockResolvedValue(true),
+      retry: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+    };
+  }
+
+  it("revives a durable failed export and drives queue.retry inside the lock", async () => {
+    const service = createPdfExportService(createRepository(publishedReport));
+    const job = await service.requestPdfExport(reportId, requesterSession);
+    await service.markExportFailed(job.jobId, "browser crashed");
+    const queue = createRetryQueue();
+
+    const outcome = await service.retryFailedExport({
+      identity: exportIdentity(job),
+      queue,
+    });
+
+    expect(outcome).toBe("retried");
+    expect(queue.isFailed).toHaveBeenCalledTimes(1);
+    expect(queue.retry).toHaveBeenCalledTimes(1);
+    await expect(
+      service.getPdfExportStatus(job.jobId, requesterSession.userId),
+    ).resolves.toMatchObject({
+      status: "queued",
+      artifactUrl: null,
+      checksum: null,
+    });
+  });
+
+  it("lets the revived attempt complete through the pending-only CAS", async () => {
+    const service = createPdfExportService(createRepository(publishedReport));
+    const job = await service.requestPdfExport(reportId, requesterSession);
+    await service.markExportFailed(job.jobId, "browser crashed");
+    const queue = createRetryQueue();
+
+    await service.retryFailedExport({ identity: exportIdentity(job), queue });
+    const completed = await service.markExportCompleted(
+      job.jobId,
+      `/pdfs/${job.jobId}.pdf`,
+      "sha-256-retry",
+    );
+
+    expect(completed).toMatchObject({
+      status: "completed",
+      artifactUrl: `/pdfs/${job.jobId}.pdf`,
+      checksum: "sha-256-retry",
+    });
+  });
+
+  it("returns queue-not-failed without writing when the live queue state moved on", async () => {
+    const service = createPdfExportService(createRepository(publishedReport));
+    const job = await service.requestPdfExport(reportId, requesterSession);
+    await service.markExportFailed(job.jobId, "browser crashed");
+    const queue = createRetryQueue();
+    queue.isFailed.mockResolvedValue(false);
+
+    const outcome = await service.retryFailedExport({
+      identity: exportIdentity(job),
+      queue,
+    });
+
+    expect(outcome).toBe("queue-not-failed");
+    expect(queue.retry).not.toHaveBeenCalled();
+    await expect(
+      service.getPdfExportStatus(job.jobId, requesterSession.userId),
+    ).resolves.toMatchObject({ status: "failed" });
+  });
+
+  it.each([
+    [
+      "queued",
+      (_service: PdfExportService, _job: PdfExportJob) => Promise.resolve(),
+    ],
+    [
+      "completed",
+      async (service: PdfExportService, job: PdfExportJob) => {
+        await service.markExportCompleted(
+          job.jobId,
+          `/pdfs/${job.jobId}.pdf`,
+          "sha-256",
+        );
+      },
+    ],
+  ] as const)(
+    "returns ineligible for a %s export without touching the queue",
+    async (expectedStatus, arrange) => {
+      const service = createPdfExportService(createRepository(publishedReport));
+      const job = await service.requestPdfExport(reportId, requesterSession);
+      await arrange(service, job);
+      const queue = createRetryQueue();
+
+      const outcome = await service.retryFailedExport({
+        identity: exportIdentity(job),
+        queue,
+      });
+
+      expect(outcome).toBe("ineligible");
+      expect(queue.isFailed).not.toHaveBeenCalled();
+      expect(queue.retry).not.toHaveBeenCalled();
+      await expect(
+        service.getPdfExportStatus(job.jobId, requesterSession.userId),
+      ).resolves.toMatchObject({ status: expectedStatus });
+    },
+  );
+
+  it("returns ineligible for a missing export row without touching the queue", async () => {
+    const service = createPdfExportService(createRepository(publishedReport));
+    const queue = createRetryQueue();
+    const missingId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+
+    const outcome = await service.retryFailedExport({
+      identity: {
+        jobId: missingId,
+        reportId,
+        requestedBy: requesterSession.userId,
+      },
+      queue,
+    });
+
+    expect(outcome).toBe("ineligible");
+    expect(queue.isFailed).not.toHaveBeenCalled();
+    expect(queue.retry).not.toHaveBeenCalled();
+  });
+
+  it.each(["reportId", "requestedBy"] as const)(
+    "returns ineligible when the payload %s mismatches the durable row",
+    async (field) => {
+      const service = createPdfExportService(createRepository(publishedReport));
+      const job = await service.requestPdfExport(reportId, requesterSession);
+      await service.markExportFailed(job.jobId, "browser crashed");
+      const queue = createRetryQueue();
+
+      const outcome = await service.retryFailedExport({
+        identity: {
+          ...exportIdentity(job),
+          [field]:
+            field === "reportId"
+              ? "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+              : "00000000-0000-4000-8000-00000000bbbb",
+        },
+        queue,
+      });
+
+      expect(outcome).toBe("ineligible");
+      expect(queue.isFailed).not.toHaveBeenCalled();
+      expect(queue.retry).not.toHaveBeenCalled();
+      await expect(
+        service.getPdfExportStatus(job.jobId, requesterSession.userId),
+      ).resolves.toMatchObject({ status: "failed" });
+    },
+  );
+
+  it("rolls the revival back when queue.retry rejects", async () => {
+    const service = createPdfExportService(createRepository(publishedReport));
+    const job = await service.requestPdfExport(reportId, requesterSession);
+    await service.markExportFailed(job.jobId, "browser crashed");
+    const queue = createRetryQueue();
+    // A lost Redis ack is an uncertain operation error: the enqueue may or
+    // may not have happened, so the row must stay failed, not half-revived.
+    queue.retry.mockRejectedValue(
+      new Error("queue.retry acknowledgement lost"),
+    );
+
+    await expect(
+      service.retryFailedExport({ identity: exportIdentity(job), queue }),
+    ).rejects.toThrow("queue.retry acknowledgement lost");
+
+    await expect(
+      service.getPdfExportStatus(job.jobId, requesterSession.userId),
+    ).resolves.toMatchObject({ status: "failed" });
+  });
+
+  it("serializes concurrent retries into a single revival", async () => {
+    const service = createPdfExportService(createRepository(publishedReport));
+    const job = await service.requestPdfExport(reportId, requesterSession);
+    await service.markExportFailed(job.jobId, "browser crashed");
+    const queue = createRetryQueue();
+
+    const [first, second] = await Promise.all([
+      service.retryFailedExport({ identity: exportIdentity(job), queue }),
+      service.retryFailedExport({ identity: exportIdentity(job), queue }),
+    ]);
+
+    expect([first, second].sort()).toEqual(["ineligible", "retried"]);
+    expect(queue.retry).toHaveBeenCalledTimes(1);
+    await expect(
+      service.getPdfExportStatus(job.jobId, requesterSession.userId),
+    ).resolves.toMatchObject({ status: "queued" });
   });
 });

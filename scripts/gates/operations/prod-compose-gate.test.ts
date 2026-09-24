@@ -80,6 +80,8 @@ const REQUIRED_POLICY_INPUTS = [
   "AUTH_JWT_SECRET",
   "PDF_EXPORT_JWT_SECRET",
   "PDF_BASE_URL",
+  "GOTENBERG_URL",
+  "CHROMIUM_ALLOW_LIST",
   "AI_PROVIDER_CONFIG_ENCRYPTION_KEY",
   "AI_PROVIDER_CONFIG_KEY_VERSION",
   "AI_PROVIDER_ALLOWED_ORIGINS",
@@ -140,6 +142,10 @@ const backupDockerfile = readFileSync(
 );
 const apiDockerfile = readFileSync(resolve("Dockerfile.api"), "utf8");
 const webDockerfile = readFileSync(resolve("Dockerfile.web"), "utf8");
+const caddyfileContent = readFileSync(
+  resolve("deploy/caddy/Caddyfile"),
+  "utf8",
+);
 const REVIEWED_EXTERNAL_IMAGES = new Set([
   "postgres:15.19-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b",
   "pgvector/pgvector:0.8.6-pg15-bookworm@sha256:a947c45cdc5906a1bc951f20a8709e321256343ee0f251e4ae00b5e7def4e6da",
@@ -151,6 +157,7 @@ const REVIEWED_EXTERNAL_IMAGES = new Set([
   "prometheuscommunity/postgres-exporter:v0.20.1@sha256:ac5ec343104fae0e2d84a27bb8d69b38430a11910c5382cad85d478d2bab713e",
   "oliver006/redis_exporter:v1.90.0@sha256:a129504e65b87c54f79bc92f1afc403475e8ff646a3d7512de469904ceddf986",
   "bugsink/bugsink:2.5.1@sha256:ecdd845877464d70d61244b8adba20d623e1860e88d8338f2808d9cc2925745c",
+  "gotenberg/gotenberg:8.37.0-chromium@sha256:0d28ae9a96441588ef739623726bd500ad0720b77266c6f1351a13e333fbd61c",
 ]);
 const releaseImageTag =
   "$" +
@@ -600,10 +607,6 @@ void test("post-install production tools bypass pnpm dependency preflight", () =
     /RUN \.\/node_modules\/\.bin\/turbo build --filter=@customreport\/api/u,
   );
   assert.match(
-    apiDockerfile,
-    /RUN \/app\/node_modules\/\.bin\/playwright install --with-deps chromium/u,
-  );
-  assert.match(
     webDockerfile,
     /RUN \.\/node_modules\/\.bin\/turbo build --filter=@customreport\/web/u,
   );
@@ -732,8 +735,14 @@ void test("release labels do not invalidate heavyweight runner layers", () => {
   assert.ok(
     apiRunner.indexOf("LABEL org.opencontainers.image.revision=") >
       apiRunner.indexOf(
-        "./node_modules/.bin/playwright install --with-deps chromium",
+        "COPY --from=prod-deps --chown=node:node /app/node_modules ./node_modules",
       ),
+    "the release label must follow the heavyweight production dependency layer",
+  );
+  assert.ok(
+    apiRunner.indexOf("LABEL org.opencontainers.image.revision=") >
+      apiRunner.lastIndexOf("COPY --from="),
+    "the release label must follow the last runner build-output copy",
   );
   const webRunner = webDockerfile.slice(webDockerfile.indexOf(" AS runner"));
   assert.ok(
@@ -1025,6 +1034,11 @@ void test("backup entrypoints are baked into the pinned image", () => {
 
 // A real render check: with the policy matrix supplied the model renders;
 // with every required var blank it must fail to render.
+// A developer's ambient .env must not leak required inputs into the rendered
+// policy — the fail-closed proofs below assert the template's own behaviour,
+// so compose resolves variables from an empty file plus the spawn env only.
+const COMPOSE_ENV_ISOLATION_FILE = "/dev/null";
+
 const renderComposeFiles = (
   composeFiles: readonly string[],
   env: NodeJS.ProcessEnv,
@@ -1034,6 +1048,8 @@ const renderComposeFiles = (
     composeCommand.executable,
     [
       ...composeCommand.leadingArguments,
+      "--env-file",
+      COMPOSE_ENV_ISOLATION_FILE,
       ...composeFiles.flatMap((composeFile) => ["-f", composeFile]),
       "config",
       "--format",
@@ -1067,7 +1083,9 @@ const FULL_POLICY_ENV: NodeJS.ProcessEnv = {
   PRODUCT_FEEDBACK_ENABLED: "false",
   AUTH_JWT_SECRET: "x".repeat(32),
   PDF_EXPORT_JWT_SECRET: "x".repeat(32),
-  PDF_BASE_URL: "http://x",
+  PDF_BASE_URL: "http://x.invalid",
+  GOTENBERG_URL: "http://gotenberg:3000",
+  CHROMIUM_ALLOW_LIST: String.raw`^http://x\.invalid/`,
   AI_PROVIDER_CONFIG_ENCRYPTION_KEY: "x".repeat(32),
   AI_PROVIDER_CONFIG_KEY_VERSION: "1",
   AI_PROVIDER_ALLOWED_ORIGINS: "https://api.example.com",
@@ -1131,8 +1149,16 @@ const LOCAL_ASSISTANT_POLICY_ENV: NodeJS.ProcessEnv = {
 
 interface RenderedService {
   readonly command?: readonly string[];
+  readonly deploy?: {
+    readonly resources?: {
+      readonly limits?: { readonly memory?: unknown };
+    };
+  };
   readonly environment?: Readonly<Record<string, string>>;
   readonly image?: string;
+  readonly ports?: readonly unknown[];
+  readonly healthcheck?: { readonly test?: unknown };
+  readonly depends_on?: unknown;
 }
 
 interface RenderedCompose {
@@ -1253,6 +1279,325 @@ void test("production Web uses one Compose-owned API origin in both phases", () 
     /^API_URL=/mu,
     "API_URL must not be a production operator input",
   );
+});
+
+const GOTENBERG_IMAGE =
+  "gotenberg/gotenberg:8.37.0-chromium" +
+  "@sha256:0d28ae9a96441588ef739623726bd500ad0720b77266c6f1351a13e333fbd61c";
+// Serialized conversions plus the between-conversion clearing flags keep the
+// shared browser's cookie jar, localStorage, and HTTP cache from leaking one
+// job's credential or page state into the next — the compose gate pins the
+// effective values, not mere env presence (D4 isolation invariant).
+const GOTENBERG_PINNED_ENV: Readonly<Record<string, string>> = {
+  API_TIMEOUT: "150s",
+  CHROMIUM_MAX_CONCURRENCY: "1",
+  CHROMIUM_CLEAR_COOKIES: "true",
+  CHROMIUM_CLEAR_STORAGE: "true",
+  CHROMIUM_CLEAR_CACHE: "true",
+  CHROMIUM_DENY_PRIVATE_IPS: "true",
+  CHROMIUM_DENY_PUBLIC_IPS: "true",
+};
+// `docker compose config` renders `memory: 1G` as its byte value. The cap is
+// a provisional 1 GiB containment bound, identical in every lane, pending
+// runtime-acceptance measurement — not capacity evidence (D9).
+const GOTENBERG_MEMORY_LIMIT_BYTES = "1073741824";
+const DEV_CHROMIUM_ALLOW_LIST = "^http://web:3000/";
+// The production fixture pairs a dotted placeholder host with its anchored,
+// dot-escaped allow-list regex — a sample, never a real domain or secret.
+const SAMPLE_PRODUCTION_ALLOW_LIST = String.raw`^http://x\.invalid/`;
+
+interface ComposeServiceDefinition {
+  readonly image?: unknown;
+  readonly ports?: unknown;
+  readonly environment?: Readonly<Record<string, unknown>>;
+  readonly healthcheck?: { readonly test?: unknown };
+  readonly depends_on?: unknown;
+}
+
+const parseComposeServices = (
+  source: string,
+): Readonly<Record<string, ComposeServiceDefinition>> =>
+  (
+    parse(source, { maxAliasCount: 50 }) as {
+      readonly services?: Readonly<Record<string, ComposeServiceDefinition>>;
+    }
+  ).services ?? {};
+
+const serviceDependencies = (
+  definition: { readonly depends_on?: unknown } | undefined,
+): readonly string[] => {
+  const dependsOn = definition?.depends_on;
+  if (Array.isArray(dependsOn)) return dependsOn.map(String);
+  if (dependsOn !== null && typeof dependsOn === "object") {
+    return Object.keys(dependsOn);
+  }
+  return [];
+};
+
+// docker-compose.dev.yml is an override fragment that only ever renders on
+// top of docker-compose.yml (see the dev:watch script); it is intentionally
+// not a standalone graph and is asserted as a fragment below.
+const COMPOSE_GRAPHS = [
+  ["docker-compose.yml", devContent],
+  ["docker-compose.prod.yml", content],
+] as const;
+
+void test("the internal renderer joins every compose graph pinned and unexposed", () => {
+  for (const [path, source] of COMPOSE_GRAPHS) {
+    const services = parseComposeServices(source);
+    const renderer = services.gotenberg;
+    assert.ok(renderer, `${path}: the gotenberg service must exist`);
+    assert.equal(
+      renderer.image,
+      GOTENBERG_IMAGE,
+      `${path}: gotenberg must use the tag-plus-digest pinned image`,
+    );
+    assert.equal(
+      renderer.ports,
+      undefined,
+      `${path}: gotenberg must not publish a host port`,
+    );
+    assert.match(
+      JSON.stringify(renderer.healthcheck ?? {}),
+      /curl .*http:\/\/127\.0\.0\.1:3000\/health/u,
+      `${path}: the gotenberg healthcheck must exercise the real GET /health`,
+    );
+    const environment = renderer.environment ?? {};
+    for (const [key, value] of Object.entries(GOTENBERG_PINNED_ENV)) {
+      assert.equal(
+        String(environment[key]),
+        value,
+        `${path}: gotenberg ${key} must stay pinned to ${value}`,
+      );
+    }
+    assert.ok(
+      !serviceDependencies(services.api).includes("gotenberg"),
+      `${path}: api must not declare a depends_on edge on the renderer`,
+    );
+  }
+  assert.doesNotMatch(
+    caddyfileContent,
+    /gotenberg/iu,
+    "the Caddy edge must not expose an ingress route to the renderer",
+  );
+});
+
+void test("the renderer wiring is literal in dev and required operator input in production", () => {
+  {
+    const base = parseComposeServices(devContent);
+    const baseApiEnvironment = base.api?.environment;
+    assert.ok(
+      baseApiEnvironment,
+      "docker-compose.yml: api must carry an environment map",
+    );
+    assert.equal(
+      base.gotenberg?.environment?.CHROMIUM_ALLOW_LIST,
+      DEV_CHROMIUM_ALLOW_LIST,
+      "docker-compose.yml: the dev allow-list must stay the anchored literal",
+    );
+    assert.equal(
+      baseApiEnvironment.GOTENBERG_URL,
+      "http://gotenberg:3000",
+      "docker-compose.yml: api must reach the renderer over the internal network",
+    );
+    assert.equal(
+      baseApiEnvironment.PDF_BASE_URL,
+      "http://web:3000",
+      "docker-compose.yml: api must keep the internal print origin",
+    );
+  }
+
+  // The dev overlay is a fragment: it pins only the dev allow-list and api
+  // URL, leaving the single complete renderer definition in the base graph.
+  {
+    const overlay = parseComposeServices(devOverrideContent);
+    const overlayRenderer = overlay.gotenberg;
+    assert.ok(
+      overlayRenderer,
+      "docker-compose.dev.yml: the gotenberg fragment must exist",
+    );
+    assert.deepEqual(
+      overlayRenderer.environment ?? {},
+      { CHROMIUM_ALLOW_LIST: DEV_CHROMIUM_ALLOW_LIST },
+      "the overlay must pin only the dev allow-list, not duplicate the renderer definition",
+    );
+    assert.equal(
+      overlayRenderer.image,
+      undefined,
+      "the overlay must not repeat the pinned image",
+    );
+    assert.equal(
+      overlayRenderer.healthcheck,
+      undefined,
+      "the overlay must not repeat the healthcheck",
+    );
+    assert.equal(
+      overlayRenderer.ports,
+      undefined,
+      "the overlay must not publish a host port",
+    );
+    const overlayApiEnvironment = overlay.api?.environment;
+    assert.ok(
+      overlayApiEnvironment,
+      "docker-compose.dev.yml: api must carry an environment map",
+    );
+    assert.equal(
+      overlayApiEnvironment.GOTENBERG_URL,
+      "http://gotenberg:3000",
+      "docker-compose.dev.yml: api must keep the internal renderer URL",
+    );
+    assert.equal(
+      overlayApiEnvironment.PDF_BASE_URL,
+      "http://web:3000",
+      "docker-compose.dev.yml: api must keep the internal print origin",
+    );
+  }
+
+  const production = parseComposeServices(content);
+  const allowList = String(
+    production.gotenberg?.environment?.CHROMIUM_ALLOW_LIST,
+  );
+  assert.match(
+    allowList,
+    /\$\{CHROMIUM_ALLOW_LIST:\?CHROMIUM_ALLOW_LIST must be set/u,
+    "production must require an operator-set CHROMIUM_ALLOW_LIST",
+  );
+  assert.ok(
+    !allowList.includes("web:3000"),
+    "production must not hardcode the development print origin",
+  );
+  assert.match(
+    String(production.api?.environment?.GOTENBERG_URL),
+    /\$\{GOTENBERG_URL:\?GOTENBERG_URL must be set/u,
+    "production api must require an operator-set GOTENBERG_URL",
+  );
+  assert.match(
+    String(production.api?.environment?.PDF_BASE_URL),
+    /\$\{PDF_BASE_URL:\?PDF_BASE_URL must be set/u,
+    "production api must keep the operator-set print origin",
+  );
+});
+
+void test("the rendered renderer policy is effective in every compose lane", () => {
+  for (const [lane, composeFiles, environment] of [
+    ["local", [devCompose], { PATH: process.env.PATH }],
+    [
+      "source-watch",
+      [devCompose, devOverrideCompose],
+      LOCAL_ASSISTANT_POLICY_ENV,
+    ],
+  ] as const) {
+    const rendered = renderComposeFiles(composeFiles, environment, "json");
+    assert.equal(rendered.status, 0, `${lane}: ${rendered.stderr}`);
+    const model = JSON.parse(rendered.stdout) as RenderedCompose;
+    const laneRenderer = model.services.gotenberg;
+    assert.ok(laneRenderer, `${lane}: the renderer must render`);
+    assert.equal(
+      laneRenderer.image,
+      GOTENBERG_IMAGE,
+      `${lane}: the effective image must stay pinned`,
+    );
+    assert.equal(
+      laneRenderer.ports,
+      undefined,
+      `${lane}: the renderer must not publish a host port`,
+    );
+    assert.match(
+      JSON.stringify(laneRenderer.healthcheck ?? {}),
+      /curl .*http:\/\/127\.0\.0\.1:3000\/health/u,
+      `${lane}: the effective healthcheck must exercise the real GET /health`,
+    );
+    assert.equal(
+      laneRenderer.deploy?.resources?.limits?.memory,
+      GOTENBERG_MEMORY_LIMIT_BYTES,
+      `${lane}: the effective renderer memory limit must be the provisional 1 GiB`,
+    );
+    assert.ok(
+      !serviceDependencies(model.services.api).includes("gotenberg"),
+      `${lane}: api must not declare a depends_on edge on the renderer`,
+    );
+    const rendererEnvironment = laneRenderer.environment ?? {};
+    assert.equal(
+      rendererEnvironment.CHROMIUM_ALLOW_LIST,
+      DEV_CHROMIUM_ALLOW_LIST,
+      `${lane}: the effective dev allow-list must stay the anchored literal`,
+    );
+    for (const [key, value] of Object.entries(GOTENBERG_PINNED_ENV)) {
+      assert.equal(
+        rendererEnvironment[key],
+        value,
+        `${lane}: effective gotenberg ${key} must stay pinned to ${value}`,
+      );
+    }
+    assert.equal(
+      model.services.api?.environment?.GOTENBERG_URL,
+      "http://gotenberg:3000",
+      `${lane}: api must render the internal renderer URL`,
+    );
+  }
+
+  const model = renderComposeModel(FULL_POLICY_ENV);
+  const renderer = model.services.gotenberg;
+  assert.ok(renderer, "the production renderer must render");
+  assert.equal(renderer.image, GOTENBERG_IMAGE);
+  assert.equal(
+    renderer.ports,
+    undefined,
+    "the rendered production renderer must not publish a host port",
+  );
+  assert.equal(
+    renderer.deploy?.resources?.limits?.memory,
+    GOTENBERG_MEMORY_LIMIT_BYTES,
+    "production: the effective renderer memory limit must be the provisional 1 GiB",
+  );
+  const productionEnvironment = renderer.environment ?? {};
+  for (const [key, value] of Object.entries(GOTENBERG_PINNED_ENV)) {
+    assert.equal(
+      productionEnvironment[key],
+      value,
+      `production: effective gotenberg ${key} must stay pinned to ${value}`,
+    );
+  }
+  const allowList = productionEnvironment.CHROMIUM_ALLOW_LIST;
+  assert.equal(
+    allowList,
+    SAMPLE_PRODUCTION_ALLOW_LIST,
+    "the rendered allow-list must equal the fixture's anchored regex",
+  );
+  assert.equal(
+    model.services.api?.environment?.PDF_BASE_URL,
+    "http://x.invalid",
+    "the fixture print origin must render so the regex proof is anchored",
+  );
+  const allowed = new RegExp(allowList);
+  assert.ok(
+    allowed.test("http://x.invalid/print/1?jobId=2"),
+    "the allow-list must admit the fixture print origin",
+  );
+  assert.ok(
+    !allowed.test("http://xXinvalid/print/1?jobId=2"),
+    "an escaped hostname dot must reject the lookalike host",
+  );
+  assert.ok(
+    !allowed.test("http://elsewhere.invalid/http://x.invalid/"),
+    "the allow-list must stay start-anchored",
+  );
+
+  for (const variable of ["GOTENBERG_URL", "CHROMIUM_ALLOW_LIST"] as const) {
+    const missing: NodeJS.ProcessEnv = { ...FULL_POLICY_ENV };
+    delete missing[variable];
+    const rendered = renderCompose(missing);
+    assert.notEqual(
+      rendered.status,
+      0,
+      `production must refuse to render without ${variable}`,
+    );
+    assert.match(
+      `${rendered.stdout}${rendered.stderr}`,
+      new RegExp(variable),
+      `the render failure must name ${variable}`,
+    );
+  }
 });
 
 void test("production compose refuses to render with a blank required input", () => {

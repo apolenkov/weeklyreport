@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { createRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { RecordTextareaField } from "./record-textarea-field";
@@ -165,5 +166,35 @@ describe("RecordTextareaField", () => {
     expect(textarea).toHaveAccessibleDescription(
       "501 / 500 characters Prose must be 500 characters or fewer.",
     );
+  });
+
+  it("focuses the textarea on mount through a passed object ref", () => {
+    const textareaRef = createRef<HTMLTextAreaElement>();
+    render(
+      <RecordTextareaField
+        id="risk-text"
+        label="Risk"
+        value=""
+        onChange={vi.fn()}
+        focusOnMount
+        textareaRef={textareaRef}
+      />,
+    );
+    const textarea = screen.getByLabelText("Risk");
+    expect(textareaRef.current).toBe(textarea);
+    expect(textarea).toHaveFocus();
+  });
+
+  it("focuses the textarea on mount through the internal ref when no ref is passed", () => {
+    render(
+      <RecordTextareaField
+        id="dec-text"
+        label="Decision"
+        value=""
+        onChange={vi.fn()}
+        focusOnMount
+      />,
+    );
+    expect(screen.getByLabelText("Decision")).toHaveFocus();
   });
 });

@@ -11,8 +11,9 @@ Derive item alarm state from covering risks while keeping progress status, block
 An item card's at-risk/blocked pill MUST be derived at render from the risk rows
 that cover the item, never set as a free workflow choice. The DISPLAYED alarm is
 the highest severity among the covering risks (precedence: blocked > at-risk).
-**Only an in-progress item is eligible for the derived alarm**: a completed
-(`done`) item and a planned (next-week) item are NEVER floored — a covering risk
+**Only an in-progress item is eligible for the derived alarm**, regardless of
+its Current or Next placement: a completed (`done`) item and an item whose
+progress is `planned` are NEVER floored — a covering risk
 pertains to in-flight work on the stage, not to finished or not-yet-started work,
 so a completed/planned item keeps its progress status even when a risk covers its
 product and stage. An eligible item is COVERED by a risk when both live in the
@@ -137,7 +138,7 @@ No alarm MUST ever be stored on an item: the `ItemWorkflowStatus` enum carries p
 The escalation roll-up MUST NOT emit a blocked item and its covering blocker as
 two separate escalations for the same underlying problem. The builder is
 `buildEscalationsFromReadSections` in
-`packages/report-persistence/src/published-report-snapshot.ts`. Because a displayed
+`packages/shared/src/schemas/report/report-escalations.ts`. Because a displayed
 item-blocked is now backed by a covering
 blocked-severity risk, the `blocked` and `unresolved_risk` escalations that a
 single blocker would otherwise produce MUST be reconciled to one signal per
@@ -158,7 +159,7 @@ blocker, so the roll-up count does not inflate.
 
 ### Requirement: The item dialog and quick-add surface the derived-alarm UX in full
 
-The item edit dialog MUST offer exactly the item type's status vocabulary (current → Not started | In Progress | Paused | Completed; next → Planned | Postponed) and MUST NOT offer an in-dialog "mark as blocked" affordance — the only path to a blocked item is creating a blocker in Risks & Blockers (the quick-add "Blocker" entry keeps creating a blocked-severity risk). The covered-status lock stays: when a covering risk floors the item, an inline message replaces the status chips, stating the status is set by the covering risk/blocker and to resolve it to change.
+The item edit dialog and Overview editor MUST offer the same five progress states in Current and Next: Planned (labelled Not started in the Current dialog), In Progress, Paused, Postponed, and Completed. An existing item's progress MUST remain visibly selected after changing week placement, and editing unrelated fields MUST preserve it and any required pause reason. Neither editor may offer an in-dialog "mark as blocked" affordance — the only path to a blocked item is creating a blocker in Risks & Blockers (the quick-add "Blocker" entry keeps creating a blocked-severity risk). The covered-status lock stays: when a covering risk floors the item, an inline message replaces the status chips, stating the status is set by the covering risk/blocker and to resolve it to change.
 
 #### Scenario: a covered item's dialog shows the locked message
 
@@ -166,11 +167,12 @@ The item edit dialog MUST offer exactly the item type's status vocabulary (curre
 - **WHEN** the dialog renders its status controls
 - **THEN** an inline message replaces the status chips, stating the status is set by the covering risk/blocker and to resolve it to change
 
-#### Scenario: the dialog never offers foreign-type or alarm statuses
+#### Scenario: the dialog offers every supported progress status
 
 - **GIVEN** the lead opens the edit dialog of a next item
 - **WHEN** the status chips render
-- **THEN** the choices are exactly Planned and Postponed — no In Progress, no blocked gesture
+- **THEN** the choices are exactly Planned, In Progress, Paused, Postponed, and Completed, with the existing progress selected
+- **AND** editing the description preserves that progress and its pause reason; no alarm choice or blocked gesture is offered
 
 #### Scenario: the quick-add "Blocker" defaults to blocked severity
 
@@ -185,25 +187,52 @@ The item edit dialog MUST offer exactly the item type's status vocabulary (curre
 - **WHEN** the item card renders the locked alarm
 - **THEN** the lock names the covering risk's author so the lead knows whom to talk to
 
-### Requirement: One stored progress status per item, with per-type vocabularies
+### Requirement: One stored progress vocabulary independent of week placement
 
-`ItemWorkflowStatus` (Prisma enum + shared Zod item schemas) MUST be the single stored source of an item's progress: `planned | in_progress | paused | postponed | done`. The system MUST NOT store `blocked` on an item (alarms derive from covering risks) and MUST NOT define or persist a separate `Item.completed` flag. Shared Zod MUST reject a status outside the item type's vocabulary: current → `planned | in_progress | paused | done`; next → `planned | postponed`. Current `planned` means Not started. `paused` and `postponed` roll up as not-done and MUST NOT feed the blocked/at-risk escalation paths.
+`ItemWorkflowStatus` (Prisma enum, shared Zod item schemas and database constraints) MUST remain the single stored source of an item's progress: `planned | in_progress | paused | postponed | done`. Current and Next MUST accept the same progress vocabulary so explicitly moving the one editable occurrence between those active-week buckets preserves its status. Current `planned` means Not started. The system MUST NOT store `blocked` on an item or persist a separate completion flag. `paused` MUST retain a nonblank `pausedReason`; every non-paused status MUST clear it. `paused` and `postponed` remain not-done and MUST NOT feed blocked/at-risk escalation paths. Week placement, progress status and risk-derived alarm are independent dimensions.
+
+#### Scenario: In-progress work moves to Next without changing progress
+
+- **WHEN** an authorized lead moves a Current `in_progress` item to Next
+- **THEN** shared validation, persistence and projection accept the Next occurrence with `workflowStatus: in_progress`
+- **AND** the move does not rewrite progress or create a duplicate
 
 #### Scenario: next item accepts only its vocabulary
 
-- **WHEN** a save payload carries a next item with status `in_progress`
-- **THEN** shared validation rejects it; `planned` and `postponed` pass
+- **WHEN** a save payload carries a Next item with any stored progress value
+- **THEN** shared validation accepts `planned`, `in_progress`, `paused`, `postponed`, or `done`
+- **AND** it still rejects alarms and unknown values outside the single progress vocabulary
 
 #### Scenario: paused work does not escalate
 
-- **WHEN** a section contains only `paused`/`postponed` items and no risks
+- **WHEN** a section contains only `paused` or `postponed` items and no risks
 - **THEN** the dashboard blocked/at-risk tables and product health show no escalation caused by those items
 
 #### Scenario: carry-over stays planned until progress is confirmed; postponed stays behind
 
-- **WHEN** the carry-over run copies a `planned` next item into the new period
-- **THEN** the created current item is `planned`, not automatically `in_progress`
-- **AND** `postponed` items are not carried — re-planning them is an explicit lead action
+- **WHEN** the carry-over run copies a `planned` Next item into the new period
+- **THEN** the created Current item is `planned`, marked unconfirmed, and not automatically `in_progress`
+- **AND** `postponed` items are not carried because replanning them remains an explicit lead action
+
+#### Scenario: Paused work keeps its reason across placement
+
+- **WHEN** a paused item with a valid pause reason moves between Current and Next
+- **THEN** its status and pause reason are preserved
+
+#### Scenario: Postponed work can be moved to Current explicitly
+
+- **WHEN** an authorized lead moves a Next `postponed` item to Current
+- **THEN** its postponed status is preserved until the lead explicitly changes it
+
+#### Scenario: Risk-derived alarms do not become stored status
+
+- **WHEN** an item with a covering risk moves between Current and Next
+- **THEN** the stored progress status remains unchanged and the displayed alarm is derived again from the covering risk
+
+#### Scenario: Carry-over preserves planned work without asserting progress
+
+- **WHEN** automatic carry-over copies a Next `planned` item into the new Current period
+- **THEN** the created Current item remains `planned`, is marked unconfirmed, and is not automatically changed to `in_progress`
 
 ### Requirement: Pausing an item requires and records a reason
 

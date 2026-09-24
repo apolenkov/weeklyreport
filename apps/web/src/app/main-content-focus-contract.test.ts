@@ -28,6 +28,8 @@ const MAIN_CONTENT_ROUTES = [
   "src/app/(app)/reports/trends/page.tsx",
   "src/app/print/[reportId]/print-report-shell.tsx",
   "src/app/print/[reportId]/print-report-template.tsx",
+  "src/features/product-feedback/ui/product-feedback-page.tsx",
+  "src/shared/lib/auth/session-provider.tsx",
 ] as const;
 
 function sourceFileFromText(path: string, text: string): ts.SourceFile {

@@ -189,15 +189,36 @@ describe("PrismaService query logging", () => {
 describe("PrismaService shutdown logging", () => {
   it("logs shutdown before closing the database connection", async () => {
     const service = makeService();
-    vi.spyOn(service, "$disconnect").mockResolvedValue(undefined);
-    vi.spyOn(poolOf(service), "end").mockResolvedValue(undefined);
+    const disconnectGate = Promise.withResolvers<void>();
+    const poolEndGate = Promise.withResolvers<void>();
+    const disconnectSpy = vi
+      .spyOn(service, "$disconnect")
+      .mockReturnValue(disconnectGate.promise);
+    const poolEndSpy = vi
+      .spyOn(poolOf(service), "end")
+      .mockReturnValue(poolEndGate.promise as unknown as void);
     const logSpy = vi
       .spyOn(loggerOf(service), "log")
       .mockImplementation(() => undefined);
 
-    await service.onModuleDestroy();
+    const shutdown = service.onModuleDestroy();
+    await Promise.resolve();
 
     expect(logSpy).toHaveBeenNthCalledWith(1, "Shutting down Prisma...");
+    expect(logSpy).toHaveBeenCalledTimes(1);
+    expect(disconnectSpy).toHaveBeenCalledOnce();
+    expect(poolEndSpy).not.toHaveBeenCalled();
+
+    disconnectGate.resolve();
+    await Promise.resolve();
+    expect(poolEndSpy).toHaveBeenCalledOnce();
+    expect(logSpy).toHaveBeenCalledTimes(1);
+
+    poolEndGate.resolve();
+    await shutdown;
+
+    expect(disconnectSpy).toHaveBeenCalledOnce();
+    expect(poolEndSpy).toHaveBeenCalledOnce();
     expect(logSpy).toHaveBeenNthCalledWith(2, "Database connection closed");
     expect(logSpy).toHaveBeenCalledTimes(2);
   });

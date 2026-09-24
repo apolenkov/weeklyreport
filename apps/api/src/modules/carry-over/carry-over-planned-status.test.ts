@@ -7,7 +7,7 @@ import {
 import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined";
-import { cloneCarriedItem } from "./carry-over-clones";
+import { cloneCarriedItem, cloneUnresolvedDecision } from "./carry-over-clones";
 import { planCarriedEntries } from "./carry-over-plan";
 
 function section(input: {
@@ -246,6 +246,147 @@ describe("carry-over preserves planning intent", () => {
     expect(expectDefined(firstSource.items[0]).text).toBe("Validate the API");
     expect(expectDefined(firstSource.items[0]).carriedOver).toBe(false);
     expect(expectDefined(middleSource.items[0]).carriedOver).toBe(false);
+  });
+});
+
+// Read models carry review and audit metadata the write boundary never
+// accepts; clones must project only the fields the row writes persist.
+describe("carry-over clone write-field projection", () => {
+  it("drops comments, resolution and outcome history from an item clone", () => {
+    const outcomeState = {
+      type: "current" as const,
+      workflowStatus: "in_progress" as const,
+      pausedReason: null,
+      nextStepText: null,
+      text: "API implemented",
+    };
+    const source = {
+      id: randomUUID(),
+      stableId: randomUUID(),
+      projectId: randomUUID(),
+      activityId: null,
+      type: "current" as const,
+      workflowStatus: "in_progress" as const,
+      text: "API implemented",
+      nextStepText: "Run integration tests",
+      tag: "feature",
+      carriedOver: false,
+      priorityRank: 3,
+      pausedReason: null,
+      stageNames: ["Development"],
+      comments: [
+        {
+          id: randomUUID(),
+          reviewerId: randomUUID(),
+          reviewerName: "Head",
+          text: "Check the edge cases",
+          createdAt: new Date("2026-09-05T10:00:00.000Z"),
+        },
+      ],
+      resolution: {
+        kind: "wont_do" as const,
+        eventId: randomUUID(),
+        reason: "Descoped",
+        actorId: randomUUID(),
+        actorName: "Head",
+        occurredAt: "2026-09-06T09:00:00.000Z",
+        previousState: outcomeState,
+      },
+      outcomeHistory: [
+        {
+          id: randomUUID(),
+          stableId: randomUUID(),
+          outcome: "continue" as const,
+          reason: null,
+          actorId: randomUUID(),
+          actorName: "Head",
+          occurredAt: "2026-09-06T09:00:00.000Z",
+          beforeState: outcomeState,
+          afterState: outcomeState,
+          reversesEventId: null,
+        },
+      ],
+    };
+    const original = structuredClone(source);
+
+    const { item, record } = cloneCarriedItem(
+      randomUUID(),
+      randomUUID(),
+      source,
+      new Date("2026-09-07T00:00:00.000Z"),
+    );
+
+    expect(item).not.toHaveProperty("comments");
+    expect(item).not.toHaveProperty("resolution");
+    expect(item).not.toHaveProperty("outcomeHistory");
+    expect(item).toMatchObject({
+      stableId: source.stableId,
+      projectId: source.projectId,
+      activityId: null,
+      type: "current",
+      text: "Run integration tests",
+      tag: "feature",
+      workflowStatus: "planned",
+      carriedOver: true,
+      priorityRank: 3,
+      pausedReason: null,
+      nextStepText: null,
+      stageNames: ["Development"],
+    });
+    expect(item.id).not.toBe(source.id);
+    expect(record.sourceItemId).toBe(source.id);
+    expect(record.targetItemId).toBe(item.id);
+    expect(source).toEqual(original);
+  });
+
+  it("drops comments and keeps write fields on a decision clone", () => {
+    const deadline = new Date("2026-09-30T00:00:00.000Z");
+    const source = {
+      id: randomUUID(),
+      stableId: randomUUID(),
+      text: "Escalate vendor risk",
+      owner: "Department Head",
+      deadline,
+      impact: "Blocks the release",
+      resolvedAt: null,
+      stageNames: ["Development"],
+      productId: randomUUID(),
+      activityId: null,
+      comments: [
+        {
+          id: randomUUID(),
+          reviewerId: randomUUID(),
+          reviewerName: "Head",
+          text: "Confirm the date",
+          createdAt: new Date("2026-09-05T10:00:00.000Z"),
+        },
+      ],
+    };
+    const original = structuredClone(source);
+
+    const { decision, record } = cloneUnresolvedDecision(
+      randomUUID(),
+      randomUUID(),
+      source,
+      new Date("2026-09-07T00:00:00.000Z"),
+    );
+
+    expect(decision).not.toHaveProperty("comments");
+    expect(decision).toMatchObject({
+      stableId: source.stableId,
+      text: "Escalate vendor risk",
+      owner: "Department Head",
+      deadline,
+      impact: "Blocks the release",
+      resolvedAt: null,
+      stageNames: ["Development"],
+      productId: source.productId,
+      activityId: null,
+    });
+    expect(decision.id).not.toBe(source.id);
+    expect(record.sourceDecisionId).toBe(source.id);
+    expect(record.targetDecisionId).toBe(decision.id);
+    expect(source).toEqual(original);
   });
 });
 

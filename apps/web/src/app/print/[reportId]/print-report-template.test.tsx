@@ -1,122 +1,12 @@
 // @vitest-environment jsdom
 
-import { useQuery } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { MapWeeklyReportResult } from "../../../features/report-sections";
+import type { MapWeeklyReportResult } from "../../../features/report-sections/model/weekly-report";
 
 // Module mocks must be hoisted above the import-under-test.
-vi.mock("@tanstack/react-query", async () => {
-  const actual = await vi.importActual<typeof import("@tanstack/react-query")>(
-    "@tanstack/react-query",
-  );
-  return {
-    ...actual,
-    useQuery: vi.fn((options: { queryKey?: unknown[] }) => {
-      const reportId = options.queryKey?.[2];
-      if (reportId === "report-b") {
-        return {
-          data: undefined,
-          isLoading: true,
-          isError: false,
-          error: null,
-        };
-      }
-      if (reportId === "report-error") {
-        return {
-          data: undefined,
-          isLoading: false,
-          isError: true,
-          error: new Error("network unavailable"),
-        };
-      }
-      return {
-        data: {
-          status: "open",
-          leadSections: [
-            {
-              reportSectionId: "section-activity",
-              authorId: "author-activity",
-              authorName: "Taylor Reed",
-              activities: [
-                {
-                  activityId: "activity-1",
-                  activityName: "Support rotation",
-                  status: "yellow",
-                  derivedStatus: "yellow",
-                },
-              ],
-              items: [
-                {
-                  id: "activity-item-1",
-                  activityId: "activity-1",
-                  type: "next",
-                  text: "Cover launch support",
-                  workflowStatus: "postponed",
-                  priorityRank: 2,
-                },
-              ],
-              risks: [
-                {
-                  id: "activity-risk-1",
-                  activityId: "activity-1",
-                  risk: "Coverage gap",
-                  impact: "Slow response",
-                  mitigation: "Add backup",
-                  severity: "at-risk",
-                },
-              ],
-              decisions: [
-                {
-                  id: "activity-decision-1",
-                  activityId: "activity-1",
-                  text: "Approve backup rotation",
-                },
-              ],
-            },
-          ],
-        },
-        isLoading: false,
-        isError: false,
-        error: null,
-      };
-    }),
-  };
-});
-
-vi.mock("sonner", () => ({
-  toast: { error: vi.fn() },
-}));
-
-vi.mock("../../../shared/lib/trpc/trpc-context", () => ({
-  useTRPC: () => ({
-    pdfExport: {
-      render: {
-        queryOptions: ({
-          jobId,
-          reportId,
-        }: {
-          jobId: string;
-          reportId: string;
-        }) => ({
-          queryKey: ["pdfExport.render", jobId, reportId],
-        }),
-      },
-    },
-  }),
-}));
-
-vi.mock("../../../features/report-sections", () => ({
-  STATUS_BADGE: {
-    "in-progress": { label: "In Progress" },
-    completed: { label: "Completed" },
-    blocked: { label: "Blocked" },
-    "at-risk": { label: "At Risk" },
-    planned: { label: "Planned" },
-    paused: { label: "Paused" },
-    postponed: { label: "Postponed" },
-  },
+vi.mock("../../../features/report-sections/model/weekly-report", () => ({
   mapWeeklyReport: () =>
     ({
       portfolio: [
@@ -185,15 +75,58 @@ vi.mock("../../../features/report-sections", () => ({
 
 import { PrintReportTemplate } from "./print-report-template";
 
-function renderPage(reportId: string) {
-  return render(
-    <PrintReportTemplate reportId={reportId} jobId={`job-for-${reportId}`} />,
-  );
+const DATA = {
+  leadSections: [
+    {
+      reportSectionId: "section-activity",
+      authorId: "author-activity",
+      authorName: "Taylor Reed",
+      activities: [
+        {
+          activityId: "activity-1",
+          activityName: "Support rotation",
+          status: "yellow",
+          derivedStatus: "yellow",
+        },
+      ],
+      items: [
+        {
+          id: "activity-item-1",
+          activityId: "activity-1",
+          type: "next",
+          text: "Cover launch support",
+          workflowStatus: "postponed",
+          priorityRank: 2,
+        },
+      ],
+      risks: [
+        {
+          id: "activity-risk-1",
+          activityId: "activity-1",
+          risk: "Coverage gap",
+          impact: "Slow response",
+          mitigation: "Add backup",
+          severity: "at-risk",
+        },
+      ],
+      decisions: [
+        {
+          id: "activity-decision-1",
+          activityId: "activity-1",
+          text: "Approve backup rotation",
+        },
+      ],
+    },
+  ],
+} as never;
+
+function renderPage() {
+  return render(<PrintReportTemplate data={DATA} />);
 }
 
 describe("PrintReportTemplate — static CSS safety", () => {
   it("style textContent contains only static CSS keywords — no user-supplied interpolations", () => {
-    const { container } = renderPage("report-123");
+    const { container } = renderPage();
     const styleEl = container.querySelector("style");
     expect(styleEl).not.toBeNull();
     const css = styleEl?.textContent ?? "";
@@ -206,9 +139,8 @@ describe("PrintReportTemplate — static CSS safety", () => {
   });
 
   it("style innerHTML does not contain script-injectable patterns — no XSS vector", () => {
-    const { container } = renderPage("report-456");
+    const { container } = renderPage();
     const styleEl = container.querySelector("style");
-    expect(styleEl).not.toBeNull();
     const css = styleEl?.innerHTML ?? "";
 
     expect(css).not.toContain("<");
@@ -217,21 +149,8 @@ describe("PrintReportTemplate — static CSS safety", () => {
     expect(css).not.toMatch(/expression\(/i);
   });
 
-  it("__html value is identical regardless of reportId — confirms no prop-derived interpolation", () => {
-    const { container: c1 } = renderPage("id-aaa");
-    const { container: c2 } = renderPage("id-bbb");
-
-    const css1 = c1.querySelector("style")?.innerHTML ?? "";
-    const css2 = c2.querySelector("style")?.innerHTML ?? "";
-
-    expect(css1).toBe(css2);
-    // Sanity: the style must be non-empty (the invariant is only meaningful
-    // if the block actually rendered).
-    expect(css1.length).toBeGreaterThan(0);
-  });
-
   it("style element innerHTML snapshot — any future user-data interpolation breaks this", () => {
-    const { container } = renderPage("snapshot-test");
+    const { container } = renderPage();
     const styleEl = container.querySelector("style");
     expect(styleEl).not.toBeNull();
     expect(styleEl?.innerHTML).toMatchInlineSnapshot(`
@@ -260,48 +179,9 @@ describe("PrintReportTemplate — static CSS safety", () => {
   });
 });
 
-describe("PrintReportTemplate report-key transitions", () => {
-  it("replaces report A output with the pending shell for report B", async () => {
-    const rendered = renderPage("report-a");
-    expect(screen.getByText(/W1, Jun 1 – Jun 7/)).toBeInTheDocument();
-
-    rendered.rerender(
-      <PrintReportTemplate reportId="report-b" jobId="job-for-report-b" />,
-    );
-
-    await waitFor(() => {
-      expect(screen.queryByText(/W1, Jun 1 – Jun 7/)).not.toBeInTheDocument();
-    });
-    expect(screen.getByText("Loading report report-b …")).toBeInTheDocument();
-    expect(vi.mocked(useQuery).mock.lastCall?.[0]).toMatchObject({
-      queryKey: ["pdfExport.render", "job-for-report-b", "report-b"],
-    });
-  });
-});
-
-describe("PrintReportTemplate render outcomes", () => {
-  it("renders the loading marker without ready content", () => {
-    const { container } = renderPage("report-b");
-
-    expect(
-      container.querySelector('[data-print-state="loading"]'),
-    ).not.toBeNull();
-    expect(container.querySelector('[data-print-state="ready"]')).toBeNull();
-  });
-
-  it("renders the terminal error marker", () => {
-    const { container } = renderPage("report-error");
-
-    expect(
-      container.querySelector('[data-print-state="error"]'),
-    ).not.toBeNull();
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Report could not be rendered",
-    );
-  });
-
-  it("renders ready summary, portfolio, and product records", () => {
-    const { container } = renderPage("report-ready");
+describe("PrintReportTemplate render outcome", () => {
+  it("renders the ready marker plus summary, portfolio, and product records from SSR data", () => {
+    const { container } = renderPage();
 
     expect(
       container.querySelector('[data-print-state="ready"]'),

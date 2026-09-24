@@ -13,6 +13,21 @@ Keep this file limited to WeeklyReport-specific context.
   records without asking for each step. This includes creating/editing records
   and exercising submit, review, and reopen flows in a verified local test
   environment. `localhost` alone does not prove that its backend is disposable.
+- **Standing local synthetic-database authority (owner decision 2026-09-23).**
+  The local MVP databases named under Database safety contain disposable
+  synthetic data. For work within this repository, the owner grants standing
+  permission for any database operation the task needs against those exact,
+  guard-approved targets: read/write queries; create, update, and delete any
+  synthetic records; schema and migration changes, including migration-history
+  repair; and full reset, truncate, wipe, drop/recreate, and reseed. Do not ask
+  for confirmation per run, command, table, or record. Before destructive
+  operations, still verify the exact target, use the repository guard and its
+  required consent token, and coordinate concurrent sessions. This authority
+  does not authorize creating unprovisioned lane databases or touching any
+  production, shared, or unknown target. It also grants authority to clean up
+  Redis DB 15, restart local repository processes, recreate repository-scoped
+  local Docker resources, and remove generated runtime/build/cache state when
+  needed for the task.
 - Preserve the task boundary: an audit does not authorize product fixes, and
   explicit read-only instructions override the test-record permission above.
   Do not expand local permission to production, shared/unknown data, credentials,
@@ -97,28 +112,46 @@ pnpm spec:check         # strict validation of all durable OpenSpec specs
 - Verify that the running app includes the changed sources before browser
   acceptance. An existing Docker image may predate the change; use the source
   workflow in `docs/onboarding.md` or `pnpm dev` when appropriate.
+- For browser/E2E work that requires Redis DB 15, launch source with
+  `REDIS_DB=15 pnpm exec turbo run dev --env-mode=loose`. The shorter `pnpm dev`
+  uses Turbo's strict environment filtering and can drop `REDIS_DB` because the
+  `dev` task does not allowlist it. Before browser checks, verify application
+  Redis clients use `db=15`; `/health/ready` only proves connectivity.
 
 ## Database safety
 
-- This file records safety boundaries, not standing permission for destructive
-  work or credential lifecycle. Obtain task-specific authority before reset,
-  reseed, migration-history rewrite, deletion, or credential operations.
+- All database operations listed under `Autonomy in the local MVP` hold
+  standing owner permission (decision 2026-09-23) and need no new confirmation
+  per run, command, table, or record. Credential lifecycle and any target or
+  state beyond this repository's local MVP/disposable scope still require
+  separate authority — including production, shared or unknown databases,
+  external publication or messages, unrelated containers/volumes/processes,
+  and deletion of source code or user-authored evidence.
 - **The only disposable database candidates are `customreport_e2e` and the
   runtime-lane targets `customreport_e2e_lane_[a-o]_test`.** Destructive database
   work may target only those exact non-production databases.
+- **MVP single-database policy (owner decision 2026-09-18).** Local dev
+  (`DATABASE_URL`), tests, and E2E runs all share the one `customreport_e2e`
+  database on loopback; lane targets stay guard-permitted but are not
+  provisioned and must not be created without a new owner order. Every phase
+  reset wipes this database — keep no long-lived data in it. Before each
+  test/E2E phase, run a guarded reset plus the explicit required seed, so
+  phases never inherit each other's state.
   Resolve the target from `E2E_DATABASE_URL` (or the command's explicit
-  database URL), prove that it is not production, shared, or unknown, and
-  require `prisma/guards/_destructive-guard.ts` to accept it before every
-  destructive command.
-- Set the explicit per-run consent for each authorized operation:
-  `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай'`. Do not rely on global
-  or blanket disposable-database authorization, and never bypass the guard.
+  database URL), print it with credentials masked, prove that it is
+  loopback-only and not production, shared, or unknown, and require
+  `prisma/guards/_destructive-guard.ts` to accept it before every destructive
+  command.
+- Set the mechanical guard token on every destructive operation:
+  `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай'`. It is required per
+  command under the standing permission too — setting it does not need a new
+  chat prompt. Never bypass the guard.
 - Prisma 7 quirk: `migrate reset` does NOT auto-seed; run the required seed
-  explicitly under the same consent after a successful reset.
+  explicitly with the same consent token after a successful reset.
 - Redis connections require explicit `REDIS_DB`. Product/dev environments use
   logical DB 0; E2E uses reserved logical DB 15. Destructive E2E Redis cleanup
-  must select DB 15, pass the exact disposable PostgreSQL guard and per-run
-  consent, and must never flush DB 0.
+  must select DB 15, pass the exact disposable PostgreSQL guard and the
+  per-command consent token, and must never flush DB 0.
 
 ## Load-Bearing Invariants
 

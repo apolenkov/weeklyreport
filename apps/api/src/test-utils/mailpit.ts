@@ -40,13 +40,6 @@ async function listMessages(signal: AbortSignal): Promise<MailpitMessage[]> {
   return body.messages ?? [];
 }
 
-export async function clearMessages(): Promise<void> {
-  const res = await fetch(`${MAILPIT_BASE}/api/v1/messages`, {
-    method: "DELETE",
-  });
-  if (!res.ok) throw new Error(`Mailpit DELETE failed: ${res.status}`);
-}
-
 export async function pollForMessage(
   recipientEmail: string,
   timeoutMs = 3000,

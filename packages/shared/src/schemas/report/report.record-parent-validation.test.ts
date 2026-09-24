@@ -3,11 +3,15 @@ import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 
 import {
+  decisionReadModelSchema,
   decisionWriteSchema,
   type DraftSaveInput,
+  itemReadModelSchema,
   itemWriteSchema,
   reportSectionReadModelSchema,
+  riskReadModelSchema,
   riskWriteSchema,
+  sharedItemReadModelSchema,
   validateRecordActivityIds,
 } from "../report";
 
@@ -165,5 +169,119 @@ describe("validateRecordActivityIds", () => {
 
   it("ignores product-parented records", () => {
     expect(validateRecordActivityIds(section, validDraft())).toHaveLength(0);
+  });
+});
+
+const issueList = (result: {
+  success: boolean;
+  error?: {
+    issues: { path?: readonly PropertyKey[]; message: string }[];
+  };
+}) => {
+  if (result.success || result.error === undefined) {
+    throw new Error("expected the record to fail validation");
+  }
+  return result.error.issues.map(({ path, message }) => ({ path, message }));
+};
+
+// Historical read rows may predate today's write invariants, so read contracts
+// stop after the parent XOR issue while write contracts continue into the
+// stage-cardinality check. These cases pin the differing issue lists.
+describe("read/write parent-stage issue lists", () => {
+  const xorMessage =
+    "A record must have exactly one parent — a product or an activity.";
+  const productStageMessage =
+    "A product-parented record requires at least one stage.";
+  const activityStageMessage =
+    "An activity-parented record must not carry a stage.";
+
+  const decisionBase = () => ({
+    productId: uuid(),
+    text: "Adopt weekly rotation",
+    owner: "Alice",
+    impact: "Fairer load",
+    stageNames: ["Development"],
+  });
+
+  const riskBase = () => ({
+    projectId: uuid(),
+    risk: "On-call fatigue",
+    impact: "Slower response",
+    mitigation: "Rotate weekly",
+    severity: "at-risk" as const,
+    stageNames: ["Development"],
+  });
+
+  it.each([
+    {
+      label: "both parents with a stage",
+      record: () => ({ ...validItem(), activityId: uuid() }),
+      readIssues: [{ path: ["activityId"], message: xorMessage }],
+      writeIssues: [
+        { path: ["activityId"], message: xorMessage },
+        { path: ["stageNames"], message: activityStageMessage },
+      ],
+    },
+    {
+      label: "both parents without a stage",
+      record: () => ({ ...validItem(), activityId: uuid(), stageNames: [] }),
+      readIssues: [{ path: ["activityId"], message: xorMessage }],
+      writeIssues: [
+        { path: ["activityId"], message: xorMessage },
+        { path: ["stageNames"], message: productStageMessage },
+      ],
+    },
+    {
+      label: "no parent with a stage",
+      record: () => ({ ...validItem(), projectId: undefined }),
+      readIssues: [{ path: ["projectId"], message: xorMessage }],
+      writeIssues: [{ path: ["projectId"], message: xorMessage }],
+    },
+  ])("pins the item $label lists", ({ record, readIssues, writeIssues }) => {
+    const input = record();
+    expect(issueList(itemReadModelSchema.safeParse(input))).toEqual(readIssues);
+    expect(issueList(itemWriteSchema.safeParse(input))).toEqual(writeIssues);
+  });
+
+  it("pins the decision productId path when no parent is set", () => {
+    const expected = [{ path: ["productId"], message: xorMessage }];
+    const record = { ...decisionBase(), productId: undefined };
+    expect(issueList(decisionReadModelSchema.safeParse(record))).toEqual(
+      expected,
+    );
+    expect(issueList(decisionWriteSchema.safeParse(record))).toEqual(expected);
+  });
+
+  it("pins the divergent decision lists when both parents are set", () => {
+    const record = { ...decisionBase(), activityId: uuid() };
+    expect(issueList(decisionReadModelSchema.safeParse(record))).toEqual([
+      { path: ["activityId"], message: xorMessage },
+    ]);
+    expect(issueList(decisionWriteSchema.safeParse(record))).toEqual([
+      { path: ["activityId"], message: xorMessage },
+      { path: ["stageNames"], message: activityStageMessage },
+    ]);
+  });
+
+  it("pins the divergent risk lists when both parents are set", () => {
+    const record = { ...riskBase(), activityId: uuid() };
+    expect(issueList(riskReadModelSchema.safeParse(record))).toEqual([
+      { path: ["activityId"], message: xorMessage },
+    ]);
+    expect(issueList(riskWriteSchema.safeParse(record))).toEqual([
+      { path: ["activityId"], message: xorMessage },
+      { path: ["stageNames"], message: activityStageMessage },
+    ]);
+  });
+
+  it("keeps the shared lens on the read-only issue list", () => {
+    expect(
+      issueList(
+        sharedItemReadModelSchema.safeParse({
+          ...validItem(),
+          activityId: uuid(),
+        }),
+      ),
+    ).toEqual([{ path: ["activityId"], message: xorMessage }]);
   });
 });

@@ -55,6 +55,7 @@ type DialogContentProps = React.ComponentProps<
   readonly initialFocusRef?: React.RefObject<HTMLElement | null> | undefined;
   readonly restoreFocusRef?: React.RefObject<HTMLElement | null> | undefined;
   readonly restoreFocusToPrevious?: boolean | undefined;
+  readonly portalContainer?: HTMLElement | null | undefined;
 };
 
 /**
@@ -69,6 +70,7 @@ function DialogContent({
   initialFocusRef,
   restoreFocusRef,
   restoreFocusToPrevious = false,
+  portalContainer,
   onOpenAutoFocus,
   onCloseAutoFocus,
   ...props
@@ -82,7 +84,7 @@ function DialogContent({
   });
 
   return (
-    <DialogPortal data-slot="dialog-portal">
+    <DialogPortal data-slot="dialog-portal" container={portalContainer}>
       <DialogOverlay className={overlayClassName} testId={overlayTestId} />
       <DialogPrimitive.Content
         data-slot="dialog-content"

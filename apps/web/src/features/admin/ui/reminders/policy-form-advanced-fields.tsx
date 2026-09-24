@@ -1,5 +1,5 @@
 import type { PolicyFormState } from "../../model/reminders-form-state";
-import { TIMEZONE_OPTIONS } from "../../model/timezone-options";
+import { timezoneOptionsWith } from "../../model/timezone-options";
 import {
   POLICY_FORM_INPUT_CLASS,
   POLICY_FORM_LABEL_CLASS,
@@ -28,7 +28,7 @@ function TimezoneField({ form, onChange }: PolicyFieldProps) {
         }
         className={POLICY_FORM_INPUT_CLASS}
       >
-        {TIMEZONE_OPTIONS.map((group) => (
+        {timezoneOptionsWith(form.timezone).map((group) => (
           <optgroup key={group.group} label={group.group}>
             {group.zones.map((zone) => (
               <option key={zone.value} value={zone.value}>

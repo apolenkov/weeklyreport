@@ -10,6 +10,10 @@ export const TRPC_MAX_BODY_BYTES = BYTES_PER_KIB * BYTES_PER_KIB;
 // 128 KiB bounds a public beacon while covering a burst flush; shared with
 // the ingress integration test so a drifted limit fails there, not in prod.
 export const CLIENT_LOGS_JSON_LIMIT = "128kb";
+// Keep the other small, unauthenticated browser and ACS payloads on the same
+// explicit budget instead of relying on body-parser's 100 KiB default.
+export const WEB_VITALS_JSON_LIMIT = CLIENT_LOGS_JSON_LIMIT;
+export const SAML_CALLBACK_URLENCODED_LIMIT = CLIENT_LOGS_JSON_LIMIT;
 // Agentation context can include bounded DOM/source metadata. 512 KiB leaves
 // headroom for that contract without accepting screenshot-sized JSON bodies.
 export const PRODUCT_FEEDBACK_JSON_LIMIT = "512kb";

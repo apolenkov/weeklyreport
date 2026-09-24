@@ -1,7 +1,7 @@
 "use client";
 
 import { SAFE_TEXT_MAX_LENGTH } from "@customreport/shared";
-import { type Ref, useId } from "react";
+import { type RefObject, useId } from "react";
 
 import { ChoiceChipRow } from "../../../shared/ui/forms/choice-chip-row";
 import { RecordTextareaField } from "../../../shared/ui/forms/record-textarea-field";
@@ -18,15 +18,15 @@ interface RiskEditDialogFieldsProps {
   readonly text: string;
   readonly onTextChange: (value: string) => void;
   readonly textError: string | undefined;
-  readonly textRef: Ref<HTMLTextAreaElement>;
+  readonly textRef: RefObject<HTMLTextAreaElement | null>;
   readonly impact: string;
   readonly onImpactChange: (value: string) => void;
   readonly impactError: string | undefined;
-  readonly impactRef: Ref<HTMLTextAreaElement>;
+  readonly impactRef: RefObject<HTMLTextAreaElement | null>;
   readonly mitigation: string;
   readonly onMitigationChange: (value: string) => void;
   readonly mitigationError: string | undefined;
-  readonly mitigationRef: Ref<HTMLTextAreaElement>;
+  readonly mitigationRef: RefObject<HTMLTextAreaElement | null>;
   readonly parent: RecordParent;
   readonly products: readonly Product[];
   readonly activities: readonly ParentActivityOption[];

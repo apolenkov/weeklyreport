@@ -47,6 +47,8 @@ export function useLeadFormRedirects({
     if (shouldRouteHeadLikeAwayFromLeadForm) return;
     if (!activeReportId) return;
     const next = feedbackQuery();
+    const authorId = getScalarSearchParam(searchParams, "authorId");
+    if (authorId) next.set("authorId", authorId);
     if (canonicalMode) next.set("mode", canonicalMode);
     else if (isSlidesMode) next.set("mode", "slides");
     const query = next.toString();
@@ -58,6 +60,7 @@ export function useLeadFormRedirects({
     activeReportId,
     isSlidesMode,
     canonicalMode,
+    searchParams,
     shouldRouteHeadLikeAwayFromLeadForm,
     router,
     feedbackQuery,

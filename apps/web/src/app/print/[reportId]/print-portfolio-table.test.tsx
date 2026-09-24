@@ -37,4 +37,16 @@ describe("PrintPortfolioTable — status label/color pins", () => {
       expect(badge).toHaveStyle({ backgroundColor: color });
     },
   );
+
+  it("keeps a 200-character product name inside the fixed-width print table", () => {
+    const product = { ...makeProduct("on-track"), name: "P".repeat(200) };
+    const { container } = render(<PrintPortfolioTable products={[product]} />);
+
+    expect(container.querySelector("table")).toHaveStyle({
+      tableLayout: "fixed",
+    });
+    expect(screen.getByText(product.name)).toHaveStyle({
+      overflowWrap: "anywhere",
+    });
+  });
 });

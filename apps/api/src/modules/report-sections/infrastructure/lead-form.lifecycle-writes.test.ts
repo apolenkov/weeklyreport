@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import {
   LeadFormConstraintError,
+  LeadFormDomainError,
   ReopenRequestError,
 } from "../domain/lead-form-shared.js";
 import { LeadFormPrismaRepository } from "./lead-form.prisma-repository.js";
@@ -67,6 +68,24 @@ describe("LeadFormPrismaRepository — canonical editable lifecycle lock", () =>
       repo.revokeSectionSubmission(SECTION_ID, USER_ID),
     ).rejects.toBeInstanceOf(LeadFormConstraintError);
     expect(sectionUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects revoke as not-found when the section row vanished in the window", async () => {
+    const prisma = {
+      $transaction: vi.fn((callback: (client: unknown) => unknown) =>
+        Promise.resolve(
+          callback({
+            $queryRaw: vi.fn().mockResolvedValue([]),
+            reportSection: { updateMany: vi.fn() },
+          }),
+        ),
+      ),
+    } as unknown as PrismaService;
+    const repo = new LeadFormPrismaRepository(prisma);
+
+    await expect(
+      repo.revokeSectionSubmission(SECTION_ID, USER_ID),
+    ).rejects.toBeInstanceOf(LeadFormDomainError);
   });
 
   it("returns zero for bulk revoke after publish without changing sections", async () => {

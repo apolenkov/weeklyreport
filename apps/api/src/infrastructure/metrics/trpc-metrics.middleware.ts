@@ -28,9 +28,11 @@ export interface SpanStarter {
 
 const DEFAULT_TRACER = trace.getTracer("customreport-api");
 
-// Wired before logging/audit so timings exclude logger overhead. Labels stay
-// low-cardinality (path/type/outcome only) — correlationId/userId/IP would
-// explode Prometheus series. try/catch is defense-in-depth for rare raw throws.
+// The timer starts before next() and ends after it, so nested canonical
+// logging/audit work executed inside next() is included in the measurement.
+// Labels stay low-cardinality (path/type/outcome only) — correlationId/userId/
+// IP would explode Prometheus series. try/catch is defense-in-depth for rare
+// raw throws.
 export async function trpcMetricsMiddleware<R extends TrpcMiddlewareResult>(
   opts: TrpcMiddlewareArgs<R>,
   tracer: SpanStarter = DEFAULT_TRACER,

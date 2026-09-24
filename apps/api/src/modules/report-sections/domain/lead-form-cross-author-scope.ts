@@ -150,13 +150,23 @@ function stripItemAuthorPrivateFields<
   T extends {
     comments?: unknown;
     pausedReason?: unknown;
+    nextStepText?: unknown;
     resolution?: unknown;
     outcomeHistory?: unknown;
   },
 >(
   row: T,
-): Omit<T, "comments" | "pausedReason" | "resolution" | "outcomeHistory"> {
-  const { comments, pausedReason, resolution, outcomeHistory, ...restOfRow } =
-    row;
+): Omit<
+  T,
+  "comments" | "pausedReason" | "nextStepText" | "resolution" | "outcomeHistory"
+> {
+  const {
+    comments,
+    pausedReason,
+    nextStepText,
+    resolution,
+    outcomeHistory,
+    ...restOfRow
+  } = row;
   return restOfRow;
 }

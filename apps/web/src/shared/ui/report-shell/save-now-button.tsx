@@ -156,7 +156,7 @@ function SpinnerIcon() {
       fill="none"
       style={{ animation: "saveBtnSpin 1s linear infinite" }}
     >
-      <style>{`@keyframes saveBtnSpin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`@keyframes saveBtnSpin { to { transform: rotate(360deg); } } @media (prefers-reduced-motion: reduce) { [data-testid="save-now-spinner"] { animation: none; } }`}</style>
       <circle
         cx="6"
         cy="6"

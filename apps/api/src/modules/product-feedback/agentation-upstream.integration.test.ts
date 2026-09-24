@@ -27,6 +27,44 @@ import {
 } from "../../test-utils/prisma-test-helper";
 import { getAgentationSseConnectionCounts } from "./agentation-sse";
 
+async function expectHttpStatus(
+  response: Response,
+  expected: number,
+): Promise<void> {
+  if (response.status === expected) return;
+  const body: unknown = await response
+    .clone()
+    .json()
+    .catch(() => null);
+  const error =
+    typeof body === "object" && body !== null && "error" in body
+      ? body.error
+      : undefined;
+  const message =
+    typeof body === "object" && body !== null && "message" in body
+      ? body.message
+      : undefined;
+  const errorContext = typeof error === "string" ? `; error=${error}` : "";
+  const messageContext =
+    typeof message === "string" ? `; message=${message}` : "";
+  throw new Error(
+    `Expected HTTP ${expected}, received ${response.status}${errorContext}${messageContext}`,
+  );
+}
+
+async function callTool(
+  client: Client,
+  name: string,
+  args: Record<string, unknown> = {},
+) {
+  const result = await client.callTool({ name, arguments: args });
+  expect(result.isError).not.toBe(true);
+  const content = z
+    .array(z.object({ type: z.literal("text"), text: z.string() }))
+    .parse(result.content);
+  return JSON.parse(content.map((item) => item.text).join("")) as unknown;
+}
+
 describe("installed Agentation MCP against the authenticated adapter", () => {
   let server: Awaited<ReturnType<typeof startAgentationContractServer>>;
   let closeServer: (() => Promise<void>) | undefined;
@@ -38,39 +76,8 @@ describe("installed Agentation MCP against the authenticated adapter", () => {
     await closeServer?.();
   });
 
-  async function expectHttpStatus(
-    response: Response,
-    expected: number,
-  ): Promise<void> {
-    if (response.status === expected) return;
-    const body: unknown = await response
-      .clone()
-      .json()
-      .catch(() => null);
-    const error =
-      typeof body === "object" && body !== null && "error" in body
-        ? body.error
-        : undefined;
-    const message =
-      typeof body === "object" && body !== null && "message" in body
-        ? body.message
-        : undefined;
-    const errorContext = typeof error === "string" ? `; error=${error}` : "";
-    const messageContext =
-      typeof message === "string" ? `; message=${message}` : "";
-    throw new Error(
-      `Expected HTTP ${expected}, received ${response.status}${errorContext}${messageContext}`,
-    );
-  }
-
-  async function tool(name: string, args: Record<string, unknown> = {}) {
-    const result = await server.client.callTool({ name, arguments: args });
-    expect(result.isError).not.toBe(true);
-    const content = z
-      .array(z.object({ type: z.literal("text"), text: z.string() }))
-      .parse(result.content);
-    return JSON.parse(content.map((item) => item.text).join("")) as unknown;
-  }
+  const tool = (name: string, args: Record<string, unknown> = {}) =>
+    callTool(server.client, name, args);
   async function fixture() {
     const author = server.actors[0];
     const sessionResponse = await server.request(
@@ -496,4 +503,74 @@ describe("Agentation contract fixture failure cleanup", () => {
       }),
     ).toBe(fixtureUsersBefore);
   });
+});
+
+// Separate fixture: the earlier describe's close() deletes its own actors'
+// sessions (cascading annotations), so this suite starts with no leftover
+// pending rows and the stock watch cannot drain them instead of opening SSE.
+describe("installed Agentation MCP all-session watch", () => {
+  let server: Awaited<ReturnType<typeof startAgentationContractServer>>;
+  let closeServer: (() => Promise<void>) | undefined;
+  beforeAll(async () => {
+    server = await startAgentationContractServer();
+    closeServer = server.close;
+  });
+  afterAll(async () => {
+    await closeServer?.();
+  });
+
+  const tool = (name: string, args: Record<string, unknown> = {}) =>
+    callTool(server.client, name, args);
+
+  it("delivers a new annotation to the all-session stock watch tool over SSE", async () => {
+    // The stock watch tool drains GET /pending before opening SSE; the API key
+    // is admin-scoped and sees every project pending row, so a leftover row
+    // would answer the watch without ever reaching /events?agent=true.
+    expect(await tool("agentation_get_all_pending")).toMatchObject({
+      count: 0,
+      annotations: [],
+    });
+    const author = server.actors[0];
+    const sessionResponse = await server.request(
+      "/agentation/sessions",
+      author,
+      "POST",
+      { url: `http://localhost:3000/contract/${randomUUID()}` },
+    );
+    await expectHttpStatus(sessionResponse, 201);
+    const session = agentationSessionResponseSchema.parse(
+      await sessionResponse.json(),
+    );
+    const agentBaseline = getAgentationSseConnectionCounts().agentListeners;
+    const watching = tool("agentation_watch_annotations", {
+      timeoutSeconds: 5,
+      batchWindowSeconds: 0.1,
+    });
+    await vi.waitFor(() =>
+      expect(getAgentationSseConnectionCounts().agentListeners).toBeGreaterThan(
+        agentBaseline,
+      ),
+    );
+    const create = await server.request(
+      `/agentation/sessions/${session.id}/annotations`,
+      author,
+      "POST",
+      {
+        id: randomUUID(),
+        x: 10,
+        y: 20,
+        comment: "Created while watching all sessions",
+        element: "button",
+        elementPath: "main > button",
+        timestamp: Date.now(),
+      },
+    );
+    await expectHttpStatus(create, 201);
+    const created = agentationAnnotationResponseSchema.parse(
+      await create.json(),
+    );
+    const result = await watching;
+    expect(JSON.stringify(result)).toContain(created.id);
+    expect(JSON.stringify(result)).toContain(session.id);
+  }, 15_000);
 });

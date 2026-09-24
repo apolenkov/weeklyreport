@@ -11,6 +11,7 @@ import type { EnvConfig } from "../infrastructure/config/env.schema";
 import {
   PRODUCT_FEEDBACK_JSON_LIMIT,
   TRPC_MAX_BODY_BYTES,
+  WEB_VITALS_JSON_LIMIT,
 } from "../infrastructure/http/ingress-limits";
 import type { PrismaService } from "../infrastructure/prisma/prisma.service";
 import { createContextFactory } from "../infrastructure/trpc/trpc.context";
@@ -112,5 +113,9 @@ export function mountApiIngress(deps: {
 
   // Bound the public, unauthenticated web-vitals beacon. Registered before
   // app.listen so it runs ahead of the Nest controller handling the beacon.
-  expressApp.use("/api/web-vitals", vitalsLimiter);
+  expressApp.use(
+    "/api/web-vitals",
+    vitalsLimiter,
+    express.json({ limit: WEB_VITALS_JSON_LIMIT }),
+  );
 }

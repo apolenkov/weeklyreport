@@ -89,7 +89,6 @@ function buildRepo(overrides: RepoOverrides = {}) {
     getVerdictContext: vi.fn(() =>
       Promise.resolve<VerdictContext>(
         overrides.verdictContext ?? {
-          status: "submitted",
           groupId: GROUP_A,
           periodStatus: "open",
           archived: false,
@@ -216,7 +215,6 @@ describe("ReviewActionsService — verdict", () => {
   it("rejects a verdict on a non-editable (published) period", async () => {
     const { repo } = buildRepo({
       verdictContext: {
-        status: "submitted",
         groupId: GROUP_A,
         periodStatus: "published",
         archived: false,

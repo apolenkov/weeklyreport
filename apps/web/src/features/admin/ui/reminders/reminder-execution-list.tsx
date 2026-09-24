@@ -23,7 +23,6 @@ function statusClass(status: AdminReminderExecutionView["status"]): string {
     case "queued":
       return "bg-[var(--color-muted)] text-[var(--color-muted-foreground)]";
   }
-  return "bg-[var(--color-muted)] text-[var(--color-muted-foreground)]";
 }
 
 export function ReminderExecutionList({

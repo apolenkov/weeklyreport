@@ -13,6 +13,7 @@ const IDS = {
   actor: "10000000-0000-4000-8000-000000000005",
 };
 const PRIVATE_SENTINEL = "PRIVATE_NESTED_PAUSE_REASON";
+const PRIVATE_NEXT_STEP = "PRIVATE_NEXT_STEP";
 const pausedState = {
   type: "current" as const,
   workflowStatus: "paused" as const,
@@ -52,7 +53,6 @@ const sharedPausedItem = {
   workflowStatus: "paused" as const,
   carriedOver: false,
   priorityRank: null,
-  nextStepText: null,
   stageNames: ["Development"],
 };
 
@@ -67,6 +67,8 @@ describe("sharedItemReadModelSchema", () => {
 
   it.each([
     ["top-level pause reason", { pausedReason: PRIVATE_SENTINEL }],
+    ["next-step commitment", { nextStepText: PRIVATE_NEXT_STEP }],
+    ["next-step null", { nextStepText: null }],
     ["resolution audit", { resolution }],
     ["outcome history", { outcomeHistory: [outcomeEvent] }],
   ])("rejects injected author-private %s", (_label, injected) => {
@@ -76,6 +78,17 @@ describe("sharedItemReadModelSchema", () => {
         ...injected,
       }).success,
     ).toBe(false);
+  });
+
+  it("keeps the next-step commitment in the author-visible contract", () => {
+    const nextStepText = "Continue with the integration";
+    const parsed = itemReadModelSchema.parse({
+      ...sharedPausedItem,
+      nextStepText,
+      pausedReason: PRIVATE_SENTINEL,
+    });
+
+    expect(parsed.nextStepText).toBe(nextStepText);
   });
 
   it("keeps the complete outcome audit in the author-visible contract", () => {

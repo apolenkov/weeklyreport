@@ -1,5 +1,6 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
+import { activityDisplayTitle } from "../../../shared/lib/activity/activity-display";
 import type {
   DecisionEntry,
   KanbanItem,
@@ -55,7 +56,7 @@ export function toDialogActivities(
 ): readonly { id: string; name: string }[] {
   return section.activities.map((activity) => ({
     id: activity.activityId,
-    name: activity.activityName,
+    name: activityDisplayTitle(activity),
   }));
 }
 

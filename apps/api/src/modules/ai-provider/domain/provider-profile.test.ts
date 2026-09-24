@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  builtInProviderEndpoints,
   embeddingScopeChanged,
-  endpointSupportsRole,
   normalizeProviderBaseUrl,
   providerEndpointIdentity,
   ProviderUrlPolicyError,
@@ -26,13 +24,6 @@ const draft = {
 };
 
 describe("provider profile policy", () => {
-  it("enforces role-specific profile eligibility", () => {
-    expect(endpointSupportsRole("groq", "generation")).toBe(true);
-    expect(endpointSupportsRole("groq", "embeddings")).toBe(false);
-    expect(endpointSupportsRole("jina", "generation")).toBe(false);
-    expect(endpointSupportsRole("jina", "embeddings")).toBe(true);
-  });
-
   it("requires both fixed origins for Groq generation with Jina embeddings", () => {
     const splitDraft = {
       generation: {
@@ -51,9 +42,9 @@ describe("provider profile policy", () => {
     const bothOrigins = "https://api.groq.com,https://api.jina.ai";
     const resolved = resolveProviderProfile(splitDraft, bothOrigins, "1");
 
-    expect(resolved.generation.baseUrl).toBe(builtInProviderEndpoints.groq);
+    expect(resolved.generation.baseUrl).toBe("https://api.groq.com/openai/v1");
     expect(resolved.embeddings.effective.baseUrl).toBe(
-      builtInProviderEndpoints.jina,
+      "https://api.jina.ai/v1",
     );
     expect(() =>
       resolveProviderProfile(splitDraft, "https://api.groq.com", "1"),
@@ -76,14 +67,14 @@ describe("provider profile policy", () => {
         resolved.generation.baseUrl,
       ),
     );
-    expect(normalizeProviderBaseUrl(builtInProviderEndpoints.mistral)).toBe(
-      builtInProviderEndpoints.mistral,
+    expect(normalizeProviderBaseUrl("https://api.mistral.ai/v1")).toBe(
+      "https://api.mistral.ai/v1",
     );
   });
 
   it.each([
-    ["mistral" as const, builtInProviderEndpoints.mistral],
-    ["openrouter" as const, builtInProviderEndpoints.openrouter],
+    ["mistral" as const, "https://api.mistral.ai/v1"],
+    ["openrouter" as const, "https://openrouter.ai/api/v1"],
   ])("resolves the fixed endpoint for %s", (profile, baseUrl) => {
     const resolved = resolveProviderProfile(
       {
@@ -99,7 +90,9 @@ describe("provider profile policy", () => {
   it.each([
     "https://user:pass@ai.example.com/v1",
     "https://ai.example.com/v1?target=internal",
+    "https://ai.example.com/v1?",
     "https://ai.example.com/v1#fragment",
+    "https://ai.example.com/v1#",
     "https://not-allowed.example.com/v1",
   ])("rejects unsafe or disallowed endpoint %s", (baseUrl) => {
     expect(() =>

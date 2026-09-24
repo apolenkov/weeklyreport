@@ -4,17 +4,35 @@ import type {
 } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
-// Empty list is a broken caller invariant — fail loud (service pre-validates).
+import { ReportSectionNotFoundError } from "../report-sections/index.js";
+
+// Planned targets can vanish between the service precheck and this locked
+// re-read; surface the typed missing-resource error, not a generic 500.
 export function requirePrimaryTargetSection(
   targetSections: readonly ReportSectionReadModel[],
 ): ReportSectionReadModel {
   const [primary] = targetSections;
   if (primary === undefined) {
-    throw new Error(
-      "Carry-over requires at least one target section — the service validates this before writing.",
+    throw new ReportSectionNotFoundError(
+      "Carry-over target section no longer exists.",
     );
   }
   return primary;
+}
+
+// The plan-time parent check ran on a pre-transaction snapshot; the locked
+// re-read is authoritative. A product or activity detached in between leaves
+// the clone ineligible — current rows are never membership-filtered.
+function isParentAttached(
+  productId: string | null | undefined,
+  activityId: string | null | undefined,
+  currentProjectIds: ReadonlySet<string>,
+  currentActivityIds: ReadonlySet<string>,
+): boolean {
+  if (productId != null) {
+    return currentProjectIds.has(productId);
+  }
+  return activityId != null && currentActivityIds.has(activityId);
 }
 
 export function mergePlannedCarriedRows(
@@ -37,6 +55,13 @@ export function mergePlannedCarriedRows(
     ),
   );
 
+  const currentProjectIds = new Set(
+    current.projects.map((project) => project.projectId),
+  );
+  const currentActivityIds = new Set(
+    current.activities.map((activity) => activity.activityId),
+  );
+
   const existingItemKeys = new Set(
     current.items.flatMap((item) => {
       const key = item.stableId ?? item.id;
@@ -47,7 +72,13 @@ export function mergePlannedCarriedRows(
     if (
       !item.carriedOver ||
       item.id === undefined ||
-      !plannedTargetItemIds.has(item.id)
+      !plannedTargetItemIds.has(item.id) ||
+      !isParentAttached(
+        item.projectId,
+        item.activityId,
+        currentProjectIds,
+        currentActivityIds,
+      )
     ) {
       return false;
     }
@@ -67,7 +98,13 @@ export function mergePlannedCarriedRows(
     if (
       decision.id === undefined ||
       !plannedTargetDecisionIds.has(decision.id) ||
-      (decision.resolvedAt !== null && decision.resolvedAt !== undefined)
+      (decision.resolvedAt !== null && decision.resolvedAt !== undefined) ||
+      !isParentAttached(
+        decision.productId,
+        decision.activityId,
+        currentProjectIds,
+        currentActivityIds,
+      )
     ) {
       return false;
     }
@@ -165,9 +202,8 @@ async function insertCarriedDecisions(
   const result = await tx.decision.createMany({
     data: newDecisions.map((d) => ({
       ...(d.id === undefined ? {} : { id: d.id }),
-      // Carry the source decision's durable lineage key onto the
-      // clone (rides the `...decision` spread in
-      // cloneUnresolvedDecision).
+      // Carry the source decision's durable lineage key onto the clone
+      // (cloneUnresolvedDecision assigns stableId explicitly).
       ...(d.stableId === undefined ? {} : { stableId: d.stableId }),
       reportSectionId: targetSection.reportSectionId,
       text: d.text,

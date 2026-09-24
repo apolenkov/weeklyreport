@@ -30,7 +30,7 @@ export class TelemetryCache implements TelemetryCachePort, OnModuleDestroy {
   readonly getOrCompute = <T>(
     key: string,
     fn: () => Promise<T>,
-    validate?: (value: unknown) => boolean,
+    validate?: (value: unknown) => value is T,
   ): Promise<T> => {
     return this.cache.getOrCompute(key, fn, validate);
   };
