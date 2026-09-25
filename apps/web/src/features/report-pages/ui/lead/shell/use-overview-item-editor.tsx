@@ -195,16 +195,6 @@ export function useOverviewItemEditor(
     focusKey?: string,
   ): void => {
     if (!editor || isReadOnly || dialog || !item.editTarget) return;
-    if (item.source === "current" && target === "next") {
-      openEditItem(
-        { ...item.editTarget, focusNextStep: true },
-        "current",
-        undefined,
-        undefined,
-        focusKey,
-      );
-      return;
-    }
     const move = overviewMoveEditorItem(
       editor,
       { text: item.text, editTarget: item.editTarget },

@@ -153,19 +153,8 @@ export function OverviewItemDialog({
       products={viewModel.products}
       activities={viewModel.activityOptions}
       week={dialog.week}
-      onWeekChange={
-        dialog.mode === "edit" && dialog.target.focusNextStep
-          ? undefined
-          : onWeekChange
-      }
-      focusNextStep={
-        dialog.mode === "edit" && dialog.target.focusNextStep === true
-      }
-      showNextStep={
-        dialog.mode === "edit" &&
-        dialog.week === "current" &&
-        dialog.target.focusNextStep === true
-      }
+      onWeekChange={onWeekChange}
+      showNextStep={false}
       showPriority={false}
       confirmationOnly={dialog.mode === "edit" && dialog.promotion != null}
       currentUserName={viewModel.currentUser.name}
