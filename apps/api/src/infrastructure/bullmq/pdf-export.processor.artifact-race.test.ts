@@ -10,6 +10,7 @@ vi.mock("@nestjs/common", async (importOriginal) => ({
 }));
 
 vi.mock("../../modules/pdf-export/index.js", () => ({
+  PDF_RENDERER: Symbol("PdfRenderer"),
   PdfExportService: class {
     markExportCompleted = vi.fn();
     markExportFailed = vi.fn();
@@ -111,6 +112,10 @@ class InterleavingArtifactStore extends ImmediateArtifactStore {
   );
 }
 
+// This suite exercises persistCompletedArtifact directly, so the renderer
+// port is an inert stub — processJob never runs here.
+const UNUSED_RENDERER = { render: vi.fn() };
+
 class PdfExportProcessor extends ProductionPdfExportProcessor {
   constructor(
     service: ConstructorParameters<typeof ProductionPdfExportProcessor>[0],
@@ -118,7 +123,7 @@ class PdfExportProcessor extends ProductionPdfExportProcessor {
     logger: AppLogger,
     private readonly artifactStore: PdfArtifactStore,
   ) {
-    super(service, env, logger, null, UNUSED_QUEUES);
+    super(service, UNUSED_RENDERER, env, logger, null, UNUSED_QUEUES);
   }
 
   protected override createArtifactStore(): PdfArtifactStore {

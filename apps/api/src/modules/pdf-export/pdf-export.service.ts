@@ -309,12 +309,14 @@ export class PdfExportService {
     );
   }
 
-  // Prefer Playwright `url` over domain/secure inference from PDF_BASE_URL —
-  // IP, localhost, and proxy hostnames reject or mis-scope domain cookies.
+  // Gotenberg `cookies` field shape: the jar is keyed by `domain`, not `url`.
+  // A single-label host (compose `web`, or localhost in host-source dev) is
+  // probe-verified to reach the main document and same-origin subrequests.
   buildAuthCookies(authToken: string): {
     name: string;
     value: string;
-    url: string;
+    domain: string;
+    path: string;
     httpOnly: boolean;
     sameSite: "Lax" | "Strict" | "None";
   }[] {
@@ -324,7 +326,8 @@ export class PdfExportService {
       {
         name: AUTH_COOKIE_NAME,
         value: authToken,
-        url: baseUrl,
+        domain: new URL(baseUrl).hostname,
+        path: "/",
         httpOnly: true,
         sameSite: "Lax",
       },

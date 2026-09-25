@@ -1,3 +1,4 @@
+export { GotenbergPdfRenderer } from "./gotenberg-pdf-renderer.adapter.js";
 export { createPdfDownloadHandler } from "./pdf-export.download-handler.js";
 export { PdfExportModule } from "./pdf-export.module.js";
 export type {
@@ -8,7 +9,11 @@ export type {
   PdfExportRetryOutcome,
   PdfExportRetryQueue,
   PdfExportTerminalState,
+  PdfRenderCookie,
+  PdfRenderer,
+  PdfRenderRequest,
 } from "./pdf-export.ports.js";
+export { PDF_RENDERER } from "./pdf-export.ports.js";
 export {
   PdfExportDomainError,
   PdfExportService,

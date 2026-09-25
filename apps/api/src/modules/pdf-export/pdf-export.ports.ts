@@ -31,6 +31,36 @@ export interface PdfExportTelemetry {
 
 export const PDF_EXPORT_ENQUEUER = Symbol("PdfExportEnqueuer");
 export const PDF_EXPORT_TELEMETRY = Symbol("PdfExportTelemetry");
+export const PDF_RENDERER = Symbol("PdfRenderer");
+
+// Gotenberg `cookies` form-field shape: `domain` (not `url`) keys the jar —
+// probe-verified to reach the main document and same-origin subrequests even
+// for a single-label compose hostname like `web`.
+export interface PdfRenderCookie {
+  readonly name: string;
+  readonly value: string;
+  readonly domain: string;
+  readonly path: string;
+  readonly httpOnly: boolean;
+  readonly sameSite: "Lax" | "Strict" | "None";
+}
+
+export interface PdfRenderRequest {
+  // Absolute print URL: `{PDF_BASE_URL}/print/{reportId}?jobId={jobId}`.
+  readonly url: string;
+  // Job-bound credential cookies, scoped to the print origin host.
+  readonly cookies: readonly PdfRenderCookie[];
+  // Job identity for the `Gotenberg-Trace` correlation header.
+  readonly traceId: string;
+}
+
+// HTTP seam for page capture: the worker owns the job protocol, the renderer
+// owns the browser. A `200` yields validated PDF bytes; only a renderer `403`
+// or a locally proven request-construction failure throws
+// `UnrecoverableError` — every other outcome stays retryable.
+export interface PdfRenderer {
+  readonly render: (input: PdfRenderRequest) => Promise<Buffer>;
+}
 
 export type PdfExportJobRecord = PdfExportJob & { requestedBy: string };
 
