@@ -86,6 +86,19 @@ describe("resolveRecordParent", () => {
     });
   });
 
+  it("honors an explicitly unresolved row parent over the activity fallback", () => {
+    // A stale requested product bakes an explicit unresolved marker into the
+    // create row; it must not silently rebind to the first activity.
+    expect(
+      resolveRecordParent(
+        { parent: { kind: "unresolved" }, productId: null, activityId: null },
+        {},
+        ACTIVITIES,
+        [],
+      ),
+    ).toEqual({ kind: "unresolved" });
+  });
+
   it("returns an explicit unresolved parent when no row, seed, or activity provides an owner", () => {
     // Absence must never be fabricated as a valid-looking product with an
     // empty id — the picker renders an explicit "Select parent…" state instead.

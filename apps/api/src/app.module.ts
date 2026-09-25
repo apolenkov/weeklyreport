@@ -30,8 +30,10 @@ import { ArchiveModule } from "./modules/archive/index.js";
 import { CarryOverModule } from "./modules/carry-over/index.js";
 import { ObservabilityModule } from "./modules/observability/index.js";
 import { OrganizationModule } from "./modules/organization/index.js";
+import type { PdfRenderer } from "./modules/pdf-export/index.js";
 import { PdfExportModule } from "./modules/pdf-export/index.js";
 import { PdfExportService } from "./modules/pdf-export/index.js";
+import { PDF_RENDERER } from "./modules/pdf-export/index.js";
 import { PeriodModule } from "./modules/period/module.js";
 import { ProjectActivityModule } from "./modules/project-activity/index.js";
 import { PublicationModule } from "./modules/publication/index.js";
@@ -84,6 +86,7 @@ import { WeeklyReportModule } from "./modules/weekly-report/index.js";
       provide: PdfExportProcessor,
       useFactory: (
         pdfExportService: PdfExportService,
+        pdfRenderer: PdfRenderer,
         env: EnvConfig,
         cls: ClsService,
         queues: QueueRegistry,
@@ -91,6 +94,7 @@ import { WeeklyReportModule } from "./modules/weekly-report/index.js";
       ) =>
         new PdfExportProcessor(
           pdfExportService,
+          pdfRenderer,
           env,
           createWorkerLogger("pdf-export-worker", cls),
           cls,
@@ -99,6 +103,7 @@ import { WeeklyReportModule } from "./modules/weekly-report/index.js";
         ),
       inject: [
         PdfExportService,
+        PDF_RENDERER,
         ENV_CONFIG,
         ClsService,
         QueueRegistry,

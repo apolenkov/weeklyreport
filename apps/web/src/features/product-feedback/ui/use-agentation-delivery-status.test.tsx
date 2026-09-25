@@ -16,11 +16,7 @@ const CONFIRMATION_WINDOW_MS =
   AGENTATION_CONFIRMATION_DELAYS_MS.reduce((total, delay) => total + delay, 0) +
   AGENTATION_CONFIRMATION_TIMEOUT_MS * AGENTATION_CONFIRMATION_DELAYS_MS.length;
 
-function annotation(
-  id: string,
-  sessionId?: string,
-  clientId?: string,
-): Annotation {
+function annotation(id: string, sessionId?: string): Annotation {
   return {
     id,
     x: 10,
@@ -30,7 +26,6 @@ function annotation(
     elementPath: "main > button",
     timestamp: 1_788_720_000_000,
     ...(sessionId ? { sessionId } : {}),
-    ...(clientId ? { clientId } : {}),
   };
 }
 
@@ -232,7 +227,10 @@ describe("useAgentationDeliveryStatus", () => {
     expect(result.current.status).toBe("idle");
   });
 
-  it("clears delivery state by the preserved client ID after native live sync", async () => {
+  it("cannot correlate callbacks that carry only an adopted server id", async () => {
+    // Stock Agentation replaces the local id with the server id and does not
+    // expose the original client id again, so a post-adoption delete or clear
+    // callback cannot be matched back to the pending delivery candidate.
     const fetcher = vi
       .fn()
       .mockResolvedValue(Response.json(sessionResponse([])));
@@ -253,25 +251,19 @@ describe("useAgentationDeliveryStatus", () => {
     const fetchCountBeforeDelete = fetcher.mock.calls.length;
     act(() =>
       result.current.onAnnotationDelete(
-        annotation("server-delete", SESSION_ID, "client-delete"),
+        annotation("server-delete", SESSION_ID),
       ),
     );
-    expect(result.current.status).toBe("idle");
+    expect(result.current.unconfirmed).toBe(true);
     expect(fetcher).toHaveBeenCalledTimes(fetchCountBeforeDelete);
 
     act(() =>
-      result.current.onAnnotationAdd(annotation("client-clear", SESSION_ID)),
-    );
-    await advanceConfirmationWindow();
-    expect(result.current.unconfirmed).toBe(true);
-    const fetchCountBeforeClear = fetcher.mock.calls.length;
-    act(() =>
       result.current.onAnnotationsClear([
-        annotation("server-clear", SESSION_ID, "client-clear"),
+        annotation("server-clear", SESSION_ID),
       ]),
     );
-    expect(result.current.status).toBe("idle");
-    expect(fetcher).toHaveBeenCalledTimes(fetchCountBeforeClear);
+    expect(result.current.unconfirmed).toBe(true);
+    expect(fetcher).toHaveBeenCalledTimes(fetchCountBeforeDelete);
   });
 
   it("keeps a newer delivery alert when an older server annotation is removed", async () => {
@@ -296,14 +288,12 @@ describe("useAgentationDeliveryStatus", () => {
     );
 
     act(() =>
-      result.current.onAnnotationDelete(
-        annotation("older-server", SESSION_ID, "older-client"),
-      ),
+      result.current.onAnnotationDelete(annotation("older-server", SESSION_ID)),
     );
     expect(result.current.status).toBe("checking");
     act(() =>
       result.current.onAnnotationsClear([
-        annotation("older-server", SESSION_ID, "older-client"),
+        annotation("older-server", SESSION_ID),
       ]),
     );
     expect(result.current.status).toBe("checking");

@@ -6,70 +6,45 @@
 // Ownership comes from the effective assignment table for this seed run, not
 // from the static row list: the `full` and `stress` profiles compose this
 // dataset with the simple one over the same product ids, and a pair another
-// dataset already owns must keep its owner. The static list stays the fallback
-// for callers that run without a database (unit tests).
+// dataset already owns must keep its owner. An explicit map fails closed — a
+// missing key means the pair owns nothing. The static list stays the fallback
+// only for callers that pass no map at all (unit tests without a database).
 
 import { SEED_STAGES } from "../support/seed-constants.js";
 import {
   CROSS_AUTHOR_ROWS,
   DETERMINISTIC_ROWS,
+  ownershipKey,
+  type StageOwnership,
+  toStageOwnership,
 } from "./seed-advanced.stage-assignments.js";
+
+export { ownershipKey, toStageOwnership };
+export type { StageOwnership };
 
 const ASSIGNMENT_ROWS = [...DETERMINISTIC_ROWS, ...CROSS_AUTHOR_ROWS];
 
 const EMPTY_OWNERSHIP = "Seed stage selection: owned stage cycle is empty";
-const KEY_SEPARATOR = "|";
-
-/** Effective stage ownership for one seed run, keyed by lead and product. */
-export type StageOwnership = ReadonlyMap<string, readonly string[]>;
-
-export const ownershipKey = (leadId: string, productId: string): string =>
-  `${leadId}${KEY_SEPARATOR}${productId}`;
 
 const catalogueIndex = (stageName: string): number =>
   SEED_STAGES.findIndex((stage) => stage.name === stageName);
-
-/** Catalogue-ordered names from a set of `(lead, product) -> stageIds`. */
-export const toStageOwnership = (
-  rows: readonly {
-    readonly userId: string;
-    readonly projectId: string;
-    readonly stageId: string;
-  }[],
-): StageOwnership => {
-  const byKey = new Map<string, Set<string>>();
-  for (const row of rows) {
-    const key = ownershipKey(row.userId, row.projectId);
-    const assigned = byKey.get(key) ?? new Set<string>();
-    assigned.add(row.stageId);
-    byKey.set(key, assigned);
-  }
-  return new Map(
-    [...byKey].map(([key, assigned]) => [
-      key,
-      SEED_STAGES.filter((stage) => assigned.has(stage.id)).map(
-        (stage) => stage.name,
-      ),
-    ]),
-  );
-};
 
 const requireOwned = (
   leadId: string,
   productId: string,
   ownership: StageOwnership | undefined,
 ): readonly string[] => {
-  const fromRun = ownership?.get(ownershipKey(leadId, productId));
   const names =
-    fromRun ??
-    SEED_STAGES.filter((stage) =>
-      ASSIGNMENT_ROWS.some(
-        (row) =>
-          row.userId === leadId &&
-          row.projectId === productId &&
-          row.stageId === stage.id,
-      ),
-    ).map((stage) => stage.name);
+    ownership === undefined
+      ? SEED_STAGES.filter((stage) =>
+          ASSIGNMENT_ROWS.some(
+            (row) =>
+              row.userId === leadId &&
+              row.projectId === productId &&
+              row.stageId === stage.id,
+          ),
+        ).map((stage) => stage.name)
+      : (ownership.get(ownershipKey(leadId, productId)) ?? []);
   if (names.length === 0) {
     throw new Error(
       `Seed stage selection: lead ${leadId} owns no stage on ${productId}`,

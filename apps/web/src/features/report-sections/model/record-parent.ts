@@ -16,7 +16,10 @@ export interface RecordParentSeed {
 
 // Branch order is not permutable: the seed activity is checked BEFORE the row's
 // product because the item dialog bakes its seed product into the bound row, and
-// an activity-lane create must still win over that baked default.
+// an activity-lane create must still win over that baked default. An explicit
+// unresolved row parent is authoritative too — a stale product seed must not
+// fall through to the first activity; only a row with no parent at all reaches
+// the activity fallback.
 export function resolveRecordParent(
   row: {
     readonly parent?: RecordParent | undefined;
@@ -28,8 +31,7 @@ export function resolveRecordParent(
   products: readonly { readonly id: string }[],
 ): RecordParent {
   if (seed.activityId) return { kind: "activity", id: seed.activityId };
-  if (row.parent?.kind === "activity") return row.parent;
-  if (row.parent?.kind === "product") return row.parent;
+  if (row.parent !== undefined) return row.parent;
   if (row.activityId) return { kind: "activity", id: row.activityId };
   if (row.productId) return { kind: "product", id: row.productId };
   if (seed.productId) {

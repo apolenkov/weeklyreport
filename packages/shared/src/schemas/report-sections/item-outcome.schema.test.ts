@@ -326,6 +326,7 @@ describe("item outcome contracts", () => {
           reportId: IDs.report,
           authorId: IDs.actor,
           authorName: "Lead",
+          authorRole: "lead",
           version: 1,
           status: "draft",
           submittedAt: null,

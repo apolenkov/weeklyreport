@@ -1,19 +1,10 @@
-"use client";
+import type { WeeklyReportReadModel } from "@customreport/shared";
 
-import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
-import { toast } from "sonner";
-
-import {
-  mapWeeklyReport,
-  type MapWeeklyReportResult,
-} from "../../../features/report-sections";
-import { formatClientErrorMessage } from "../../../shared/lib/errors/client-error-reporting";
+import { mapWeeklyReport } from "../../../features/report-sections/model/weekly-report";
 import {
   formatDateTime,
   joinPeriodLabel,
 } from "../../../shared/lib/format/format-date";
-import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { buildPrintActivityReports } from "./print-activity-projection";
 import { PrintExecutiveSummary } from "./print-executive-summary";
 import {
@@ -23,26 +14,19 @@ import {
   PrintReportFooter,
   PrintReportHeader,
 } from "./print-report-sections";
-import {
-  ErrorShell,
-  LoadingShell,
-  PRINT_STATE,
-  SHELL_STYLE,
-} from "./print-report-shell";
+import { PRINT_STATE, SHELL_STYLE } from "./print-report-shell";
 import { PrintReportStyles } from "./print-report-styles";
 
 interface PrintReportTemplateProps {
-  readonly reportId: string;
-  readonly jobId: string;
+  readonly data: WeeklyReportReadModel;
 }
 
-function ReadyReport({
-  view,
-  activityReports,
-}: {
-  readonly view: MapWeeklyReportResult;
-  readonly activityReports: ReturnType<typeof buildPrintActivityReports>;
-}) {
+// Server-rendered by design: the renderer's ready contract
+// (data-print-state="ready" + loaded fonts) is satisfied from SSR markup, so
+// PDF conversion never depends on client hydration in the embedded browser.
+export function PrintReportTemplate({ data }: PrintReportTemplateProps) {
+  const view = mapWeeklyReport(data);
+  const activityReports = buildPrintActivityReports(data.leadSections);
   const summaryReports = [...view.products, ...activityReports];
   const blockedCount = summaryReports.filter(
     (report) => report.status === "blocked",
@@ -87,36 +71,5 @@ function ReadyReport({
         />
       </main>
     </>
-  );
-}
-
-export function PrintReportTemplate({
-  reportId,
-  jobId,
-}: PrintReportTemplateProps) {
-  const trpc = useTRPC();
-  const weeklyQuery = useQuery(
-    trpc.pdfExport.render.queryOptions({ jobId, reportId }),
-  );
-
-  useEffect(() => {
-    if (weeklyQuery.isError) {
-      toast.error(
-        formatClientErrorMessage("Failed to load report", weeklyQuery.error),
-      );
-    }
-  }, [weeklyQuery.isError, weeklyQuery.error]);
-
-  if (weeklyQuery.isError) {
-    return <ErrorShell reportId={reportId} />;
-  }
-  if (weeklyQuery.isLoading || !weeklyQuery.data) {
-    return <LoadingShell reportId={reportId} />;
-  }
-  return (
-    <ReadyReport
-      view={mapWeeklyReport(weeklyQuery.data)}
-      activityReports={buildPrintActivityReports(weeklyQuery.data.leadSections)}
-    />
   );
 }

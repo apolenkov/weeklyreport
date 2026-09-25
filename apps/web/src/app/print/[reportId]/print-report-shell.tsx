@@ -8,7 +8,6 @@ import {
 const ERROR_HEADING_COLOR = printStatusColor("blocked");
 
 export const PRINT_STATE = {
-  loading: "loading",
   error: "error",
   ready: "ready",
 } as const;
@@ -28,20 +27,6 @@ export const SHELL_STYLE = {
 
 interface PrintReportShellProps {
   readonly reportId: string;
-}
-
-export function LoadingShell({ reportId }: PrintReportShellProps) {
-  return (
-    <main
-      id="main-content"
-      tabIndex={-1}
-      data-print-state={PRINT_STATE.loading}
-      style={SHELL_STYLE}
-      aria-busy="true"
-    >
-      <p style={{ color: TEXT_SECONDARY }}>Loading report {reportId} …</p>
-    </main>
-  );
 }
 
 export function ErrorShell({ reportId }: PrintReportShellProps) {

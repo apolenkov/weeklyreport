@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   assertRepositoryClean,
   inventoryRepository,
+  validateDependencyIntegrity,
   validateInventory,
   validateOpenSpecIndex,
 } from "./repository-cleanliness.ts";
@@ -136,6 +137,98 @@ describe("repository cleanliness", () => {
     await execFileAsync("git", ["add", ".gitignore"], { cwd: root });
 
     expect(validateInventory(await inventoryRepository(root))).toEqual([]);
+  });
+
+  it("rejects patchedDependencies declarations and tracked patch files", async () => {
+    const root = await repository();
+    await mkdir(join(root, "patches"), { recursive: true });
+    await mkdir(join(root, "apps/api"), { recursive: true });
+    await writeFile(
+      join(root, "pnpm-workspace.yaml"),
+      "packages:\n  - apps/*\npatchedDependencies:\n  pkg@1.0.0: patches/pkg@1.0.0.patch\n",
+    );
+    await writeFile(join(root, "patches/pkg@1.0.0.patch"), "patch-body");
+    await writeFile(
+      join(root, "apps/api/package.json"),
+      JSON.stringify({
+        name: "api",
+        pnpm: { patchedDependencies: { "dep@1.0.0": "patches/d.patch" } },
+      }),
+    );
+    await execFileAsync("git", ["add", "."], { cwd: root });
+    const inventory = await inventoryRepository(root);
+
+    expect(validateInventory(inventory)).toEqual([
+      "tracked: patches/pkg@1.0.0.patch",
+    ]);
+    await expect(
+      validateDependencyIntegrity(root, inventory.tracked),
+    ).resolves.toEqual([
+      "dependency-patches: apps/api/package.json",
+      "dependency-patches: pnpm-workspace.yaml",
+    ]);
+    await expect(assertRepositoryClean(root)).rejects.toThrow(
+      "dependency-patches: pnpm-workspace.yaml",
+    );
+  });
+
+  it("rejects quoted and indented patchedDependencies plus .diff files", async () => {
+    const quoted = await repository();
+    await mkdir(join(quoted, "vendor"), { recursive: true });
+    await writeFile(
+      join(quoted, "pnpm-workspace.yaml"),
+      "packages:\n  - apps/*\n'patchedDependencies':\n  pkg@1.0.0: patches/pkg.patch\n",
+    );
+    await writeFile(
+      join(quoted, "package.json"),
+      JSON.stringify({
+        name: "root",
+        patchedDependencies: { "dep@1.0.0": "patches/d.patch" },
+      }),
+    );
+    await writeFile(join(quoted, "vendor/x.diff"), "diff-body");
+    await execFileAsync("git", ["add", "."], { cwd: quoted });
+    const quotedInventory = await inventoryRepository(quoted);
+
+    expect(validateInventory(quotedInventory)).toEqual([
+      "tracked: vendor/x.diff",
+    ]);
+    await expect(
+      validateDependencyIntegrity(quoted, quotedInventory.tracked),
+    ).resolves.toEqual([
+      "dependency-patches: package.json",
+      "dependency-patches: pnpm-workspace.yaml",
+    ]);
+
+    const indented = await repository();
+    await writeFile(
+      join(indented, "pnpm-workspace.yaml"),
+      "  packages:\n    - apps/*\n  patchedDependencies:\n    pkg@1.0.0: patches/pkg.patch\n",
+    );
+    await execFileAsync("git", ["add", "."], { cwd: indented });
+    await expect(
+      validateDependencyIntegrity(
+        indented,
+        (await inventoryRepository(indented)).tracked,
+      ),
+    ).resolves.toEqual(["dependency-patches: pnpm-workspace.yaml"]);
+  });
+
+  it("accepts dependency manifests without patch declarations", async () => {
+    const root = await repository();
+    await writeFile(
+      join(root, "pnpm-workspace.yaml"),
+      "packages:\n  - apps/*\noverrides:\n  dep: '>=1 <2'\n",
+    );
+    await writeFile(join(root, "package.json"), '{"name":"root"}');
+    await execFileAsync("git", ["add", "."], { cwd: root });
+
+    await expect(
+      validateDependencyIntegrity(
+        root,
+        (await inventoryRepository(root)).tracked,
+      ),
+    ).resolves.toEqual([]);
   });
 
   it("accepts a minimal current repository", async () => {
