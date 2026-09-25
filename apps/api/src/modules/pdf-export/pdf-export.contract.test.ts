@@ -453,12 +453,12 @@ describe("PdfExportService — contract tests", () => {
       const service = createPdfExportService(repo);
       const queued = await service.requestPdfExport(reportId, requesterSession);
 
-      await service.markExportFailed(queued.jobId, "Playwright timeout");
+      await service.markExportFailed(queued.jobId, "renderer timeout");
 
       expect(markExportFailed).toHaveBeenCalledTimes(1);
       expect(markExportFailed).toHaveBeenCalledWith(
         queued.jobId,
-        "Playwright timeout",
+        "renderer timeout",
       );
     });
   });
@@ -484,10 +484,9 @@ describe("PdfExportService — contract tests", () => {
       }
     });
 
-    // Cookie is scoped via Playwright's `url` field rather than
-    // `domain`+`secure` inference. Playwright auto-derives the secure flag
-    // from the URL's protocol.
-    it("passes the full PDF_BASE_URL through as the cookie url for https", () => {
+    // The credential is scoped to the print-origin host through Gotenberg's
+    // `domain`-keyed `cookies` field, so the token cannot cross origins.
+    it("scopes the cookie domain to the PDF_BASE_URL hostname for https", () => {
       const originalBaseUrl = process.env.PDF_BASE_URL;
       process.env.PDF_BASE_URL = "https://reports.example.com";
 
@@ -497,9 +496,8 @@ describe("PdfExportService — contract tests", () => {
         );
         const cookies = service.buildAuthCookies("secure-token");
 
-        expect(expectDefined(cookies[0]).url).toBe(
-          "https://reports.example.com",
-        );
+        expect(expectDefined(cookies[0]).domain).toBe("reports.example.com");
+        expect(cookies[0]).not.toHaveProperty("url");
       } finally {
         if (originalBaseUrl === undefined) {
           delete process.env.PDF_BASE_URL;

@@ -153,6 +153,12 @@ const envObjectSchema = z.object({
   AGENTATION_API_KEY: z.string().trim().min(MIN_JWT_SECRET_LENGTH).optional(),
   // PDF generation
   PDF_BASE_URL: z.url(),
+  // Internal Gotenberg render service endpoint. Required fail-closed like
+  // PDF_BASE_URL, but the check is syntactic only: no DNS or reachability
+  // probe runs here, so host-source `pnpm dev` keeps booting while the
+  // compose-internal hostname is unresolvable (renderer health stays a
+  // separate lazy signal, never a boot dependency).
+  GOTENBERG_URL: z.url(),
   // Directory where the BullMQ worker writes generated PDFs and
   // where /pdfs static mount serves them. Resolved relative to the API's cwd
   // (apps/api/) at runtime — `./storage/pdfs` lands at `apps/api/storage/pdfs`.

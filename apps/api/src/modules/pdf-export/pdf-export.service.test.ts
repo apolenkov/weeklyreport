@@ -645,10 +645,11 @@ describe("buildAuthCookies", () => {
     expect(cookies[0]?.httpOnly).toBe(true);
   });
 
-  // The cookie is scoped via Playwright's `url` field instead of
-  // `domain`+`secure` inference. The url-based form works regardless of
-  // hostname shape (localhost, IP, behind-proxy).
-  it("uses PDF_BASE_URL as the cookie url verbatim (https hostname)", () => {
+  // The cookie is scoped to the print-origin host through Gotenberg's
+  // `domain`-keyed `cookies` field — the jar key that keeps the credential
+  // from crossing origin boundaries. Single-label and IP hosts are
+  // probe-verified to reach the document and same-origin subrequests.
+  it("scopes the cookie domain to the PDF_BASE_URL hostname (https)", () => {
     const originalEnv = process.env.PDF_BASE_URL;
     process.env.PDF_BASE_URL = "https://reports.example.com";
 
@@ -656,7 +657,7 @@ describe("buildAuthCookies", () => {
       const service = createPdfExportService(createRepository(publishedReport));
       const cookies = service.buildAuthCookies("test-jwt-token");
 
-      expect(cookies[0]?.url).toBe("https://reports.example.com");
+      expect(cookies[0]?.domain).toBe("reports.example.com");
     } finally {
       if (originalEnv === undefined) {
         delete process.env.PDF_BASE_URL;
@@ -666,7 +667,7 @@ describe("buildAuthCookies", () => {
     }
   });
 
-  it("produces a url-based cookie for localhost (no domain leak, no secure inference)", () => {
+  it("produces a domain-scoped cookie for localhost (no url or secure inference)", () => {
     const originalEnv = process.env.PDF_BASE_URL;
     process.env.PDF_BASE_URL = "http://localhost:3000";
 
@@ -674,12 +675,12 @@ describe("buildAuthCookies", () => {
       const service = createPdfExportService(createRepository(publishedReport));
       const cookies = service.buildAuthCookies("test-jwt-token");
 
-      expect(cookies[0]?.url).toBe("http://localhost:3000");
-      // The `domain` and `secure` fields must not appear — Playwright
-      // chooses between url-based and domain-based scoping by which
-      // fields are present in the entry.
-      expect(cookies[0]).not.toHaveProperty("domain");
+      expect(cookies[0]?.domain).toBe("localhost");
+      // Gotenberg's `cookies` field is keyed by `domain`+`path` — no `url`
+      // field exists, and `secure` is not part of the accepted shape.
+      expect(cookies[0]).not.toHaveProperty("url");
       expect(cookies[0]).not.toHaveProperty("secure");
+      expect(cookies[0]?.path).toBe("/");
       expect(cookies[0]?.httpOnly).toBe(true);
       expect(cookies[0]?.sameSite).toBe("Lax");
     } finally {
@@ -691,9 +692,7 @@ describe("buildAuthCookies", () => {
     }
   });
 
-  it("produces a url-based cookie for an IP-based PDF_BASE_URL (no domain rejection)", () => {
-    // Playwright's addCookies() rejects entries whose `domain` field would
-    // resolve to an IP — using `url` sidesteps that branch entirely.
+  it("produces a domain-scoped cookie for an IP-based PDF_BASE_URL", () => {
     const originalEnv = process.env.PDF_BASE_URL;
     process.env.PDF_BASE_URL = "http://10.0.0.5:3000";
 
@@ -701,8 +700,8 @@ describe("buildAuthCookies", () => {
       const service = createPdfExportService(createRepository(publishedReport));
       const cookies = service.buildAuthCookies("test-jwt-token");
 
-      expect(cookies[0]?.url).toBe("http://10.0.0.5:3000");
-      expect(cookies[0]).not.toHaveProperty("domain");
+      expect(cookies[0]?.domain).toBe("10.0.0.5");
+      expect(cookies[0]).not.toHaveProperty("url");
     } finally {
       if (originalEnv === undefined) {
         delete process.env.PDF_BASE_URL;
@@ -712,7 +711,7 @@ describe("buildAuthCookies", () => {
     }
   });
 
-  it("produces a url-based cookie for a behind-proxy internal hostname", () => {
+  it("produces a domain-scoped cookie for a behind-proxy internal hostname", () => {
     const originalEnv = process.env.PDF_BASE_URL;
     process.env.PDF_BASE_URL = "http://web-internal.cluster.local:3000";
 
@@ -720,8 +719,8 @@ describe("buildAuthCookies", () => {
       const service = createPdfExportService(createRepository(publishedReport));
       const cookies = service.buildAuthCookies("test-jwt-token");
 
-      expect(cookies[0]?.url).toBe("http://web-internal.cluster.local:3000");
-      expect(cookies[0]).not.toHaveProperty("domain");
+      expect(cookies[0]?.domain).toBe("web-internal.cluster.local");
+      expect(cookies[0]).not.toHaveProperty("url");
     } finally {
       if (originalEnv === undefined) {
         delete process.env.PDF_BASE_URL;

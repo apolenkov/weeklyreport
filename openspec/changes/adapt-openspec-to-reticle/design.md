@@ -1,3 +1,8 @@
+> **OWNER-CANCELED / SUPERSEDED — 2026-09-20.** Reticle is removed and replaced
+> by agent-browser (Vercel) as the primary route (backlog TASK-047). The
+> `spec:reticle` machinery described below no longer exists in the repository;
+> this body is preserved as history, not as a live contract.
+
 ## Context
 
 The OpenSpec corpus evolves over time. The gate derives the exact scenario and normative-outcome denominators from the accepted source snapshot; prose counts are descriptive evidence for that snapshot, never fixed contract values. Scenario identity uses the specification path, requirement title, and scenario title together, so titles reused in different structured parents remain distinct. Existing saved Reticle flows for project `customreport-web-60381801` are present in the workspace, but no source-controlled contract maps them to OpenSpec.

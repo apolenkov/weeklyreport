@@ -388,11 +388,11 @@ void test("integration environment documents its guarded target boundary", () =>
   assert.match(integrationEnvironment, /Guarded disposable E2E target/u);
   assert.match(
     integrationEnvironment,
-    /If DATABASE_URL is present[\s\S]*must not identify this same database/u,
+    /DATABASE_URL in the process environment[\s\S]*must identify the same loopback database and port as E2E_DATABASE_URL/u,
   );
   assert.match(
     integrationEnvironment,
-    /Local bootstrap is a different path[\s\S]*DATABASE_URL=E2E_DATABASE_URL/u,
+    /MVP single-database policy[\s\S]*customreport_e2e database on loopback/u,
   );
   assert.doesNotMatch(integrationEnvironment, /^DATABASE_URL=/mu);
 });

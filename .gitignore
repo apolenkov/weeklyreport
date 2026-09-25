@@ -7,8 +7,6 @@ dist/
 *.tsbuildinfo
 
 coverage/
-playwright-report/
-test-results/
 
 .env
 .env.*

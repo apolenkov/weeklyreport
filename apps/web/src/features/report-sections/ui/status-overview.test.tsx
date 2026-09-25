@@ -646,25 +646,33 @@ describe("StatusOverview", () => {
 
     const editor = screen.getByRole("form", { name: "Resolve plan editor" });
     expect(editor.parentElement).toHaveClass("md:col-span-3");
+    const previousLane = screen
+      .getByText("Previous shared")
+      .closest("[data-overview-lineage-lane]");
+    const currentSharedLane = screen
+      .getByText("Current shared")
+      .closest("[data-overview-lineage-lane]");
+    const nextLane = screen
+      .getByText("Next shared")
+      .closest("[data-overview-lineage-lane]");
+    for (const lane of [previousLane, currentSharedLane, nextLane]) {
+      expect(lane).not.toHaveClass("hidden");
+      expect(lane).toHaveClass("md:flex");
+    }
+    // The matched cell keeps its preview; the editor is a separate full-width
+    // cell appended after the three lineage cells of the same row.
     expect(
-      screen
-        .getByText("Previous shared")
-        .closest("[data-overview-lineage-lane]"),
-    ).not.toHaveClass("hidden");
-    expect(
-      screen.getByText("Next shared").closest("[data-overview-lineage-lane]"),
-    ).not.toHaveClass("hidden");
-    expect(
-      screen
-        .getByText("Previous shared")
-        .closest("[data-overview-lineage-lane]"),
-    ).toHaveClass("md:flex");
-    expect(
-      screen.getByText("Next shared").closest("[data-overview-lineage-lane]"),
-    ).toHaveClass("md:flex");
+      currentSharedLane?.querySelector("[data-overview-item-preview]"),
+    ).not.toBeNull();
+    const matchedRow = currentSharedLane?.parentElement ?? null;
+    expect(matchedRow?.lastElementChild).toContainElement(editor);
     expect(
       screen.getByText("Current other").closest("[data-overview-lineage-lane]"),
     ).not.toHaveClass("md:col-span-3");
+    const otherRow =
+      screen.getByText("Current other").closest("[data-overview-lineage-lane]")
+        ?.parentElement ?? null;
+    expect(otherRow).not.toContainElement(editor);
     expect(screen.getAllByRole("form")).toHaveLength(1);
 
     rendered.rerender(<StatusOverview model={linkedModel} />);

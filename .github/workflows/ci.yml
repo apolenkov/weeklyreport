@@ -128,9 +128,11 @@ jobs:
           --health-retries=10
 
     env:
-      # Keep the product URL distinct from the exact disposable E2E target;
-      # the integration helper rejects accidental same-target configuration.
-      DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_generate_only
+      # MVP single-database policy: local dev, tests, and E2E share the one
+      # disposable customreport_e2e target. The integration helper requires
+      # DATABASE_URL and E2E_DATABASE_URL to resolve to the same target
+      # before cleanup runs.
+      DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_e2e
       E2E_DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_e2e
       API_HOST: 127.0.0.1
       NODE_ENV: test
@@ -418,6 +420,8 @@ jobs:
       AUTH_JWT_SECRET: ci-build-only-secret-32-characters-min!!
       PDF_EXPORT_JWT_SECRET: ci-build-only-secret-32-characters-min!!
       PDF_BASE_URL: http://localhost
+      GOTENBERG_URL: http://gotenberg:3000
+      CHROMIUM_ALLOW_LIST: "^http://localhost/"
       AI_PROVIDER_CONFIG_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
       AI_PROVIDER_CONFIG_KEY_VERSION: "1"
       AI_PROVIDER_ALLOWED_ORIGINS: https://api.example.com
