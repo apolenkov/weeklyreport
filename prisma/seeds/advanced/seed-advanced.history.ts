@@ -34,8 +34,10 @@ import {
   upsertProjectStatus,
   upsertSection,
 } from "./seed-advanced.rows.js";
-import type { StageOwnership } from "./seed-advanced.stage-names.js";
-import { ownedStageNameAt } from "./seed-advanced.stage-names.js";
+import {
+  ownedStageNameAt,
+  type StageOwnership,
+} from "./seed-advanced.stage-names.js";
 import type { SectionCounts } from "./seed-advanced.summary.js";
 import {
   addSectionCounts,
@@ -99,7 +101,7 @@ async function seedHistorySection(
   suffix: ReportSuffix,
   cfg: LeadConfig,
   leadIdx: number,
-  ownership: StageOwnership,
+  ownership?: StageOwnership,
 ): Promise<SectionCounts> {
   const reportSectionId = sectionId(suffix, cfg.leadIndex);
   await upsertSection(prisma, {
@@ -131,7 +133,12 @@ async function seedHistorySection(
       tag: CLOSING_ITEM_TAG,
       workflowStatus: ItemWorkflowStatus.done,
       stageNames: [
-        ownedStageNameAt(cfg.leadId, product.id, productIdx, ownership),
+        ownedStageNameAt(
+          cfg.leadId,
+          product.id,
+          cfg.leadIndex + productIdx,
+          ownership,
+        ),
       ],
     });
   }
@@ -148,7 +155,7 @@ async function seedHistoryPeriod(
   prisma: PrismaClient,
   report: SeedHistoryReport,
   suffix: ReportSuffix,
-  ownership: StageOwnership,
+  ownership?: StageOwnership,
 ): Promise<SectionCounts> {
   await upsertHistoryReport(prisma, report);
   return ACTIVE_LEAD_CONFIGS.reduce<Promise<SectionCounts>>(
@@ -171,7 +178,7 @@ async function seedHistoryPeriod(
 /** Seeds the N-2, N-3 and N-4 published periods behind the Fill From flow. */
 export async function seedHistoryPeriods(
   prisma: PrismaClient,
-  ownership: StageOwnership,
+  ownership?: StageOwnership,
 ): Promise<HistorySeedResult> {
   const sections = await HISTORY_PERIODS.reduce<Promise<SectionCounts>>(
     async (total, { report, suffix }) =>

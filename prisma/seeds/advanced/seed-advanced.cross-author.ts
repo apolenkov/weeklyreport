@@ -16,8 +16,10 @@ import {
 } from "./seed-advanced.anchors.js";
 import { ACTIVE_SUFFIX, itemId, sectionId } from "./seed-advanced.ids.js";
 import { upsertItem } from "./seed-advanced.rows.js";
-import type { StageOwnership } from "./seed-advanced.stage-names.js";
-import { ownedStageName } from "./seed-advanced.stage-names.js";
+import {
+  ownedStageName,
+  type StageOwnership,
+} from "./seed-advanced.stage-names.js";
 
 const OLGA_DEVOPS_ITEM_SEQ = 6;
 
@@ -47,7 +49,7 @@ const LOCKED_CHIP_STATUSES = [
  */
 export async function seedCrossAuthorOverlay(
   prisma: PrismaClient,
-  ownership: StageOwnership,
+  ownership?: StageOwnership,
 ): Promise<void> {
   for (const row of LOCKED_CHIP_STATUSES) {
     await prisma.stageStatus.upsert({

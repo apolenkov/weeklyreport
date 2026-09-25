@@ -80,7 +80,7 @@ function LineageRow({
             data-overview-lineage-lane={column.source}
             role="group"
             aria-labelledby={STATUS_OVERVIEW_COLUMN_HEADER_IDS[column.key]}
-            className={`${TIMELINE_CELL} block border-t border-[var(--color-border-subtle)] first:border-t-0 md:flex md:flex-col md:border-t-0 ${item ? "" : "bg-[var(--color-surface-muted)]"}`}
+            className={`${TIMELINE_CELL} block border-t border-[var(--color-border-subtle)] first:border-t-0 md:min-h-36 md:flex-col md:border-t-0 md:flex ${item ? "" : "bg-[var(--color-surface-muted)]"}`}
           >
             <MobileWeekLabel
               label={column.label}
@@ -104,7 +104,7 @@ function LineageRow({
         );
       })}
       {editorBelongsToRow ? (
-        <div className="border-t border-[var(--color-border-subtle)] bg-[var(--color-card)] px-4 py-3 md:col-span-3">
+        <div className="min-w-0 border-t border-[var(--color-border-subtle)] bg-[var(--color-card)] px-4 py-3 md:col-span-3">
           {editorSlot?.content}
         </div>
       ) : null}

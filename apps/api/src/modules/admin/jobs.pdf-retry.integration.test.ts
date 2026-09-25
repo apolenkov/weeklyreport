@@ -199,6 +199,9 @@ describe("JobsService — pdf-export retry (Postgres + BullMQ integration)", () 
     scheduler = new PdfExportReconciliationScheduler(pdfService, queueRegistry);
     processor = new PdfExportProcessor(
       pdfService,
+      // This suite exercises retry/identity paths; processJob's render call
+      // never runs, so the port is an inert stub.
+      { render: vi.fn() },
       REDIS_ENV,
       createNullLogger(),
       null,

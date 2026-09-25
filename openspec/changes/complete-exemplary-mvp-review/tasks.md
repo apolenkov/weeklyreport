@@ -905,7 +905,7 @@ external `execution/r02-g2-quick-add-generation-fix-20260916.json`, SHA-256
 - [ ] P4 — Resolve all 231 accepted findings as bounded product patches + regression evidence (owner D2). Accept: every finding dispositioned, regressions green; new scope → child change.
 - [ ] P5 — Independent review of the final diff (44.13) or recorded explicit unavailability. Accept: review returned + reconciled, or unavailability on record.
 - [ ] P6 — Full gates on the frozen SHA (44.14) + strict 39.6 (full denominator, criteria≥2, unreviewed=blocked=0, 100% critical). Accept: commands+results+source identity logged, all green.
-- [ ] P7 — Counts/delivery/cleanup (44.15) + adapt 6.4 core growth incl. `design.md:63` refresh; production items stay a separate track. Accept: reconciled counts, CI verified, temps cleaned.
+- [ ] P7 — Counts/delivery/cleanup (44.15); production items stay a separate track. Accept: reconciled counts, CI verified, temps cleaned. Note: the `adapt-openspec-to-reticle` 6.4 mandatory-core growth was owner-canceled 2026-09-20 (Reticle removed, agent-browser selected); the stale `design.md` machinery description is reconciled with a superseded banner instead of core growth.
 
 ## Tier A closeout (Sisyphus phase 1 — measured 2026-09-18, gate-logic exact)
 
@@ -1219,3 +1219,14 @@ Execution checklist — all items stay unchecked until root accepts:
 - [ ] Connect agent-browser (Vercel) and drive one real flow end to end on this
       app; until a verified observable consequence exists, the replacement is
       unproven here.
+
+## TASK-047 44.11 contract and source rebind (2026-09-24, static-only)
+
+- [x] 44.16 Apply the owner-accepted feedback decisions to this change and the
+      canonical spec, then derive `matrix-ratified-20260924-v5` bound to the
+      isolated freeze candidate: D-06a inbound-link inclusion scenario, D-06b
+      retired SitePing facet kept without a replacement autofocus or workbench
+      navigation control, and the CoreDev external-ingress prohibition
+      pending a separate SSO/token specification. Static contract sync and
+      source rebinding only; every execution status stays `not-run` and no
+      runtime acceptance is claimed.
