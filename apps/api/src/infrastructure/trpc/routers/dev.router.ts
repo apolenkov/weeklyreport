@@ -12,7 +12,7 @@ import type { PrismaClient } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { assertE2eRuntimeDestructiveTarget } from "../../../../../../prisma/guards/_destructive-guard.js";
+import { assertE2eRuntimeDestructiveTarget } from "../../prisma/e2e-destructive-target.js";
 import { errorMessage } from "../../../lib/error-message.js";
 import type { EnvConfig } from "../../config/env.schema";
 import {
