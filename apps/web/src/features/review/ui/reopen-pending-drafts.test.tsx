@@ -429,7 +429,12 @@ describe("Admin reopen pagination", () => {
     expect(screen.getByText("Alice")).toBeInTheDocument();
     expect(within(alice).getByRole("textbox")).toHaveValue("Keep admin draft");
 
-    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+    const retry = screen.getByRole("button", { name: "Retry" });
+    expect(retry).toHaveFocus();
+    const retainedDraft = within(alice).getByRole("textbox");
+    await userEvent.type(retainedDraft, " corrected");
+    expect(retainedDraft).toHaveFocus();
+    await userEvent.click(retry);
     expect(await screen.findByText("Bob")).toBeInTheDocument();
     expect(screen.getByText("Alice")).toBeInTheDocument();
     expect(screen.getByText("2 requests")).toBeInTheDocument();

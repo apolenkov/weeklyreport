@@ -345,37 +345,39 @@ describe("BullMQHealthIndicator", () => {
     });
   });
 
-  it("returns down result keyed `bullmq` without echoing the raw queue error, and logs it internally", async () => {
-    const pdfQueue = {
-      getJobCounts: vi.fn().mockRejectedValue(new Error("Queue unavailable")),
-    } as unknown as Queue;
-    const emailQueue = {
-      getJobCounts: vi.fn().mockResolvedValue({ waiting: 0, active: 0 }),
-    } as unknown as Queue;
-    const errorSpy = vi
-      .spyOn(Logger.prototype, "error")
-      .mockImplementation(() => undefined);
-    const indicator = new BullMQHealthIndicator(
-      new QueueRegistry([
-        emailQueue,
-        pdfQueue,
-        makeQueue({ waiting: 0, active: 0 }),
-        makeQueue({ waiting: 0, active: 0 }),
-      ]),
-      readyWorkers(),
-      new HealthIndicatorService(),
-    );
+  it.each(["Queue unavailable", "timed out: sensitive-timeout-marker"])(
+    "returns down without exposing %s and logs it internally",
+    async (message) => {
+      const pdfQueue = {
+        getJobCounts: vi.fn().mockRejectedValue(new Error(message)),
+      } as unknown as Queue;
+      const emailQueue = {
+        getJobCounts: vi.fn().mockResolvedValue({ waiting: 0, active: 0 }),
+      } as unknown as Queue;
+      const errorSpy = vi
+        .spyOn(Logger.prototype, "error")
+        .mockImplementation(() => undefined);
+      const indicator = new BullMQHealthIndicator(
+        new QueueRegistry([
+          emailQueue,
+          pdfQueue,
+          makeQueue({ waiting: 0, active: 0 }),
+          makeQueue({ waiting: 0, active: 0 }),
+        ]),
+        readyWorkers(),
+        new HealthIndicatorService(),
+      );
 
-    const result = await indicator.isHealthy("bullmq");
+      const result = await indicator.isHealthy("bullmq");
 
-    expect(result.bullmq).toMatchObject({ status: "down" });
-    expect(result.bullmq?.message).toBeUndefined();
-    expect(JSON.stringify(result)).not.toContain("Queue unavailable");
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining("bullmq readiness probe failed"),
-      expect.objectContaining({ error: "Queue unavailable" }),
-    );
-  });
+      expect(result).toEqual({ bullmq: { status: "down" } });
+      expect(JSON.stringify(result)).not.toContain(message);
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("bullmq readiness probe failed"),
+        expect.objectContaining({ error: message }),
+      );
+    },
+  );
 
   it("checks every canonical queue and fails readiness when one is unavailable", async () => {
     const queues = [
@@ -415,11 +417,15 @@ describe("BullMQHealthIndicator", () => {
     );
 
     const resultPromise = indicator.isHealthy("bullmq");
-    await vi.runAllTimersAsync();
+    const settled = vi.fn();
+    void resultPromise.then(settled);
+    await vi.advanceTimersByTimeAsync(1999);
+    expect(settled).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
 
     const result = await resultPromise;
-    expect(result.bullmq).toMatchObject({ status: "down" });
-    expect(result.bullmq?.message).toContain("timed out");
+    expect(result).toEqual({ bullmq: { status: "down" } });
+    expect(settled).toHaveBeenCalledOnce();
 
     pending.reject(new Error("late queue failure"));
     await Promise.resolve();

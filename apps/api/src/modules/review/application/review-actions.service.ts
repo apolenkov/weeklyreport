@@ -2,7 +2,6 @@ import {
   type PeriodStatus,
   type RecordCommentView,
   recordCommentViewSchema,
-  type ReportSectionStatus,
   type ReviewAcknowledgementView,
   reviewAcknowledgementViewSchema,
   type ReviewCommentInput,
@@ -36,9 +35,8 @@ export type ReviewWriteActor = Pick<
   "userId" | "role" | "reportingGroupId"
 >;
 
-// Section facts a verdict reads — editable status, owning group, period lifecycle.
+// Section facts a verdict reads — owning group and period lifecycle.
 export interface VerdictContext {
-  readonly status: ReportSectionStatus;
   readonly groupId: string | null;
   readonly periodStatus: PeriodStatus;
   readonly archived: boolean;

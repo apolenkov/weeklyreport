@@ -293,14 +293,12 @@ export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
     const section = await this.prisma.reportSection.findUnique({
       where: { id: sectionId },
       select: {
-        status: true,
         author: { select: { reportingGroupId: true } },
         report: { select: { periodStatus: true, archived: true } },
       },
     });
     if (!section) return null;
     return {
-      status: section.status,
       groupId: section.author.reportingGroupId,
       periodStatus: section.report.periodStatus,
       archived: section.report.archived,

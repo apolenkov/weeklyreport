@@ -62,6 +62,7 @@ export function initialDecisionParent(
     args.decision ?? {},
     { productId: args.defaultProductId || args.products?.[0]?.id },
     args.activities,
+    args.products ?? [],
   );
 }
 

@@ -88,6 +88,7 @@ model ProductFeedback {
   @@index([projectName, authorUserId, createdAt(sort: Desc)])
   @@index([projectName, authorReportingGroupId, status, createdAt(sort: Desc)])
   @@index([projectName, url])
+  @@index([authorUserId])
   @@map("SitepingFeedback")
 }
 
@@ -209,6 +210,7 @@ model AgentationEvent {
 
   @@index([sessionId, sequence])
   @@index([sequence])
+  @@index([authorUserId])
 }
 
 model AgentationThreadMessage {
@@ -1168,6 +1170,7 @@ model AiPromptBundleRevision {
   @@unique([featureKey, revision])
   @@index([featureKey, lifecycle, updatedAt(sort: Desc)])
   @@index([effectiveContentHash])
+  @@index([baseRevisionId])
 }
 
 // One control row per code-registered feature. The nullable pointer is the

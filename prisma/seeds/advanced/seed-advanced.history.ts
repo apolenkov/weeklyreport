@@ -15,7 +15,6 @@ import {
   HEAD_USER_ID,
   SEED_HISTORY_REPORTS,
 } from "../support/seed-constants.js";
-import { stageNameFor } from "./seed-advanced.cycles.js";
 import type { ReportSuffix } from "./seed-advanced.ids.js";
 import {
   HISTORY_SUFFIXES,
@@ -35,6 +34,8 @@ import {
   upsertProjectStatus,
   upsertSection,
 } from "./seed-advanced.rows.js";
+import type { StageOwnership } from "./seed-advanced.stage-names.js";
+import { ownedStageNameAt } from "./seed-advanced.stage-names.js";
 import type { SectionCounts } from "./seed-advanced.summary.js";
 import {
   addSectionCounts,
@@ -98,6 +99,7 @@ async function seedHistorySection(
   suffix: ReportSuffix,
   cfg: LeadConfig,
   leadIdx: number,
+  ownership: StageOwnership,
 ): Promise<SectionCounts> {
   const reportSectionId = sectionId(suffix, cfg.leadIndex);
   await upsertSection(prisma, {
@@ -128,7 +130,9 @@ async function seedHistorySection(
       text: `Завершили этап по продукту «${product.name}»`,
       tag: CLOSING_ITEM_TAG,
       workflowStatus: ItemWorkflowStatus.done,
-      stageNames: [stageNameFor(cfg.leadIndex + productIdx)],
+      stageNames: [
+        ownedStageNameAt(cfg.leadId, product.id, productIdx, ownership),
+      ],
     });
   }
 
@@ -144,13 +148,21 @@ async function seedHistoryPeriod(
   prisma: PrismaClient,
   report: SeedHistoryReport,
   suffix: ReportSuffix,
+  ownership: StageOwnership,
 ): Promise<SectionCounts> {
   await upsertHistoryReport(prisma, report);
   return ACTIVE_LEAD_CONFIGS.reduce<Promise<SectionCounts>>(
     async (total, cfg, leadIdx) =>
       addSectionCounts(
         await total,
-        await seedHistorySection(prisma, report, suffix, cfg, leadIdx),
+        await seedHistorySection(
+          prisma,
+          report,
+          suffix,
+          cfg,
+          leadIdx,
+          ownership,
+        ),
       ),
     Promise.resolve(NO_SECTION_COUNTS),
   );
@@ -159,12 +171,13 @@ async function seedHistoryPeriod(
 /** Seeds the N-2, N-3 and N-4 published periods behind the Fill From flow. */
 export async function seedHistoryPeriods(
   prisma: PrismaClient,
+  ownership: StageOwnership,
 ): Promise<HistorySeedResult> {
   const sections = await HISTORY_PERIODS.reduce<Promise<SectionCounts>>(
     async (total, { report, suffix }) =>
       addSectionCounts(
         await total,
-        await seedHistoryPeriod(prisma, report, suffix),
+        await seedHistoryPeriod(prisma, report, suffix, ownership),
       ),
     Promise.resolve(NO_SECTION_COUNTS),
   );

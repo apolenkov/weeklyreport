@@ -6,7 +6,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { type ComponentProps, useMemo, useState } from "react";
+import { type ComponentProps, useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -282,6 +282,11 @@ function DashboardNextPageIssue({
   readonly isRetrying: boolean;
   readonly onRetry: () => void;
 }) {
+  const focusRetry = useCallback(
+    (element: HTMLButtonElement | null) => element?.focus(),
+    [],
+  );
+
   return (
     <div
       role="alert"
@@ -292,6 +297,7 @@ function DashboardNextPageIssue({
         {error instanceof Error ? error.message : "Unknown error"}
       </span>
       <button
+        ref={focusRetry}
         type="button"
         disabled={isRetrying}
         onClick={onRetry}

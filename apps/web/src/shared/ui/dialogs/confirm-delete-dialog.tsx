@@ -8,6 +8,8 @@ import {
 } from "@customreport/ui/components/ui/dialog";
 import { type RefObject, useId, useRef } from "react";
 
+import { usePortalTarget } from "./document-body-portal";
+
 interface ConfirmDeleteDialogProps {
   readonly open: boolean;
   readonly title: string;
@@ -34,6 +36,7 @@ export function ConfirmDeleteDialog({
 }: ConfirmDeleteDialogProps) {
   const guardedCancel = isPending ? () => undefined : onCancel;
   const guardedConfirm = isPending ? () => undefined : onConfirm;
+  const portalTarget = usePortalTarget();
 
   return (
     <Dialog
@@ -44,6 +47,7 @@ export function ConfirmDeleteDialog({
     >
       <ConfirmDeleteContent
         {...contentProps}
+        portalContainer={portalTarget}
         isPending={isPending}
         onConfirm={guardedConfirm}
         onCancel={guardedCancel}
@@ -59,9 +63,11 @@ interface ConfirmDeleteContentProps extends Omit<
   readonly isPending: boolean;
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
+  readonly portalContainer?: HTMLElement | null | undefined;
 }
 
 function ConfirmDeleteContent({
+  portalContainer,
   title,
   preview,
   subtitle,
@@ -83,6 +89,7 @@ function ConfirmDeleteContent({
 
   return (
     <DialogContent
+      portalContainer={portalContainer}
       showCloseButton={false}
       className="animate-scale-in z-[var(--layer-dialog)] block w-full max-w-[calc(100%-2rem)] rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl sm:max-w-md"
       overlayClassName="z-[var(--layer-dialog)] bg-[var(--color-overlay)]"

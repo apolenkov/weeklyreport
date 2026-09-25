@@ -52,6 +52,32 @@ describe("admin-settings.queries.getSettings", () => {
 });
 
 describe("admin-settings.queries.updateSettings", () => {
+  it("preserves nulls, omits undefined, strips runtime keys, and translates wire enums", async () => {
+    const update = vi.fn().mockRejectedValue(new Error("captured update"));
+    const prisma = {
+      appSettings: { update },
+    } as unknown as PrismaService;
+
+    await expect(
+      updateSettings(prisma, {
+        defaultDeadlineDays: undefined,
+        notificationFromEmail: null,
+        workingDays: "mon-fri",
+        defaultReminderAudience: "lead-with-draft",
+        unknownRuntimeKey: "must not reach Prisma",
+      } as never),
+    ).rejects.toThrow("captured update");
+
+    expect(update).toHaveBeenCalledWith({
+      where: { id: "singleton" },
+      data: {
+        notificationFromEmail: null,
+        workingDays: "MON_FRI",
+        defaultReminderAudience: "LEAD_WITH_DRAFT",
+      },
+    });
+  });
+
   it("uses a fixed-id update and never creates a missing singleton", async () => {
     const missing = new Error("Record to update not found");
     const update = vi.fn().mockRejectedValue(missing);

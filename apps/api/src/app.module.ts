@@ -7,6 +7,7 @@ import { BullMQModule } from "./infrastructure/bullmq/bullmq.module";
 import { EmailReminderProcessor } from "./infrastructure/bullmq/email-reminder.processor";
 import { PdfExportProcessor } from "./infrastructure/bullmq/pdf-export.processor";
 import { PdfExportReconciliationScheduler } from "./infrastructure/bullmq/pdf-export-reconciliation.scheduler.js";
+import { QueueRegistry } from "./infrastructure/bullmq/queue-registry.js";
 import { WorkerLivenessRegistry } from "./infrastructure/bullmq/worker-liveness.registry.js";
 import { createWorkerLogger } from "./infrastructure/bullmq/worker-observability.js";
 import {
@@ -85,6 +86,7 @@ import { WeeklyReportModule } from "./modules/weekly-report/index.js";
         pdfExportService: PdfExportService,
         env: EnvConfig,
         cls: ClsService,
+        queues: QueueRegistry,
         workerLiveness: WorkerLivenessRegistry,
       ) =>
         new PdfExportProcessor(
@@ -92,12 +94,14 @@ import { WeeklyReportModule } from "./modules/weekly-report/index.js";
           env,
           createWorkerLogger("pdf-export-worker", cls),
           cls,
+          queues,
           workerLiveness,
         ),
       inject: [
         PdfExportService,
         ENV_CONFIG,
         ClsService,
+        QueueRegistry,
         WorkerLivenessRegistry,
       ],
     },

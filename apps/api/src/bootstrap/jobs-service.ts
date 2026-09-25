@@ -5,6 +5,7 @@ import { QUEUE_NAMES } from "../infrastructure/bullmq/queue-registry.js";
 import type { PrismaService } from "../infrastructure/prisma/prisma.service";
 import type { AppLogger } from "../lib/logger";
 import { JobsService } from "../modules/admin/index.js";
+import type { PdfExportService } from "../modules/pdf-export/index.js";
 
 // Builds the admin DLQ registry from the BullMQ handles owned by Nest.
 // Stays out of the NestJS DI graph (see the raw-Worker note in
@@ -13,8 +14,9 @@ export function createBootstrapJobsService(deps: {
   queueRegistry: { get: (name: (typeof QUEUE_NAMES)[number]) => Queue };
   prisma: PrismaService;
   logger: AppLogger;
+  pdfExportService: Pick<PdfExportService, "retryFailedExport">;
 }): JobsService {
-  const { queueRegistry, prisma, logger } = deps;
+  const { queueRegistry, prisma, logger, pdfExportService } = deps;
   const queues = new Map(
     QUEUE_NAMES.map(
       (name) =>
@@ -49,6 +51,8 @@ export function createBootstrapJobsService(deps: {
           data: { status: "pending", error: null },
         });
       },
+      retryFailedPdfExport: (input) =>
+        pdfExportService.retryFailedExport(input),
     },
     logger,
   );

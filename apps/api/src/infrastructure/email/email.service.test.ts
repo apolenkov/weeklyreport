@@ -123,6 +123,56 @@ describe("EmailService delivery behavior", () => {
     });
   });
 
+  it.each([
+    { from: undefined, expectedFrom: "sender@example.com" },
+    { from: null, expectedFrom: "sender@example.com" },
+    { from: "override@example.com", expectedFrom: "override@example.com" },
+  ])(
+    "maps multipart delivery with sender override $from",
+    async ({ from, expectedFrom }) => {
+      const service = createEmailService({
+        SMTP_HOST,
+        SMTP_FROM: "sender@example.com",
+      });
+
+      await service.sendMailMultipart(
+        "recipient@example.com",
+        "Multipart subject",
+        "<p>HTML body</p>",
+        "Plain text body",
+        from,
+      );
+
+      expect(sendMailMock).toHaveBeenCalledTimes(1);
+      expect(sendMailMock).toHaveBeenCalledWith({
+        from: expectedFrom,
+        to: "recipient@example.com",
+        subject: "Multipart subject",
+        html: "<p>HTML body</p>",
+        text: "Plain text body",
+      });
+    },
+  );
+
+  it("propagates the multipart SMTP transport rejection", async () => {
+    const service = createEmailService({
+      SMTP_HOST,
+      SMTP_FROM: "sender@example.com",
+    });
+    const transportError = new Error("Multipart SMTP transport unavailable");
+    sendMailMock.mockRejectedValueOnce(transportError);
+
+    await expect(
+      service.sendMailMultipart(
+        "recipient@example.com",
+        "Multipart subject",
+        "<p>HTML body</p>",
+        "Plain text body",
+      ),
+    ).rejects.toBe(transportError);
+    expect(sendMailMock).toHaveBeenCalledTimes(1);
+  });
+
   it("observes one SMTP transport rejection and recovers on the subsequent send", async () => {
     const service = createEmailService({
       SMTP_HOST,

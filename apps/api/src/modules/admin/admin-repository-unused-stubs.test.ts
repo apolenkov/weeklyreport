@@ -37,7 +37,6 @@ describe("unusedAdminRepositoryStubs", () => {
     await expect(stubs.archivePeriod(ID)).resolves.toBeUndefined();
     await expect(stubs.unarchivePeriod(ID, new Date(0))).resolves.toEqual({
       nextPeriodState: "open",
-      nextPeriodStatus: "open",
     });
     await expect(stubs.deleteReport(ID)).resolves.toBeUndefined();
     await expect(

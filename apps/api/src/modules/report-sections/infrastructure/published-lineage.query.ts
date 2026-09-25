@@ -91,13 +91,7 @@ export async function queryPublishedLineage(
       report.publishedSnapshot,
       report.id,
     );
-    const sections =
-      report.id === candidates.reportId
-        ? snapshot.sections.filter(
-            (section) => section.reportSectionId === candidates.reportSectionId,
-          )
-        : snapshot.sections;
-    return sections.map((section) => ({
+    return snapshot.sections.map((section) => ({
       itemStableIds: section.items.map((item) => item.stableId),
       decisionStableIds: section.decisions.map((decision) => decision.stableId),
     }));

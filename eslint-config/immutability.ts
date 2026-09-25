@@ -127,7 +127,7 @@ export const immutabilityConfig: Linter.Config[] = [
             {
               group: ["@customreport/shared", "@customreport/shared/*"],
               message:
-                "packages/ui must stay domain-free: no @customreport/shared schemas; shape data in the web slice or api and pass finished series as props (restructure-directory-architecture).",
+                "packages/ui must stay domain-free: no @customreport/shared schemas; shape data in the web slice or api and pass finished series as props (module-import-boundaries).",
             },
           ],
         },

@@ -242,6 +242,40 @@ describe("AiPromptService", () => {
     expect(result.control.availability).toBe("not_configured");
   });
 
+  it.each([null, "report-assistant/editor-serving/v0"])(
+    "keeps a valid historical core inspectable when serving is %s",
+    async (servingContractVersion) => {
+      const historicalCore = Object.fromEntries(
+        baseline.slots.map(({ slot }) => [slot, `Legacy ${slot} core`]),
+      );
+      const legacy = {
+        ...bundle(AiPromptBundleLifecycle.active),
+        coreContractVersion: "report-assistant/core/v0",
+        composerVersion: "report-assistant/composer/v1",
+        servingContractVersion,
+        lockedCoreSnapshot: historicalCore,
+        effectiveContentHash: "f".repeat(64),
+      };
+      const harness = serviceFor({
+        revision: legacy,
+        control: control(legacy),
+        provider: provider(),
+      });
+
+      const result = await harness.service.read("lead-report-assistant");
+
+      expect(result.control.activeBundle?.servingStatus).toBe("incompatible");
+      expect(result.control.activeBundle?.lockedCoreSnapshot).toEqual(
+        historicalCore,
+      );
+      expect(
+        result.control.activeBundle?.slots.map((slot) => slot.lockedCore),
+      ).toEqual(baseline.slots.map(({ slot }) => `Legacy ${slot} core`));
+      expect(result.control.history[0]?.servingStatus).toBe("incompatible");
+      expect(result.control.availability).toBe("not_configured");
+    },
+  );
+
   it.each([
     {
       operation: "activate" as const,

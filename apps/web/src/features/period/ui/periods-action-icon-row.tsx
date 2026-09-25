@@ -78,19 +78,18 @@ function DeleteAction({
 }: {
   readonly row: PeriodListItem;
 } & Pick<PeriodActionHandlers, "onDelete">) {
-  // Mirrors the delete service: only a published report (live or archived)
-  // and a reopened one are protected — an archived DRAFT stays deletable
-  // without a detour through unarchive.
+  // Mirrors the delete service: only an open, unarchived draft period can
+  // be deleted — published, reopened, and every archived row stay disabled.
   const deleteDisabled =
     row.periodState === "published" ||
-    (row.periodState === "archived" && row.periodStatus === "published") ||
+    row.periodState === "archived" ||
     row.periodStatus === "reopened";
 
   if (deleteDisabled) {
     return (
       <IconButton
         testId={`action-delete-${row.id}`}
-        label="Cannot delete a published or reopened period"
+        label="Cannot delete a published, archived, or reopened period"
         onClick={() => {
           /* disabled buttons suppress clicks */
         }}

@@ -44,9 +44,11 @@ function mapSectionForPeriodRow(
   const { report, reopenRequests } = row;
 
   // A 'reopened' period is editable again (the whole point of the state), so
-  // it is read-write alongside 'open'. 'published'/'archived' stay read-only.
+  // it is read-write alongside 'open'. 'published'/'archived' stay read-only —
+  // archiving does not move periodStatus, so `archived` must gate explicitly.
   const readOnly =
-    report.periodStatus !== "open" && report.periodStatus !== "reopened";
+    report.archived ||
+    (report.periodStatus !== "open" && report.periodStatus !== "reopened");
 
   const reopenFacts: ReopenEligibilityFacts = {
     sectionStatus: section.status,

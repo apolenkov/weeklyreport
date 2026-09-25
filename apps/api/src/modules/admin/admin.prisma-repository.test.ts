@@ -11,6 +11,7 @@ import {
   AdminPeriodOverlapError,
   AdminReopenRequestNotFoundError,
   AdminUserConflictError,
+  AdminUserNotFoundError,
   AdminUserPublishedHistoryError,
   AdminUserReportingGroupRequiredError,
 } from "./admin-shared";
@@ -214,7 +215,7 @@ describe("AdminPrismaRepository period writers — overlap translation", () => {
     ).rejects.toBeInstanceOf(AdminPeriodOverlapError);
   });
 
-  it("re-throws a non-P2002 error unchanged (an unrelated failure is not masked)", async () => {
+  it("re-throws a non-P2039 error unchanged (an unrelated failure is not masked)", async () => {
     const prisma = {
       report: {
         create: vi.fn(() => Promise.reject(new Error("connection reset"))),
@@ -438,7 +439,7 @@ describe("AdminPrismaRepository entity writers — P2002 race handling", () => {
 });
 
 // Group-scope where-clause pinning lives at this repository boundary.
-describe("AdminPrismaRepository — deactivate/activate, integrations, stages", () => {
+describe("AdminPrismaRepository — deactivate/activate, stages", () => {
   it("removeUser reports a published-report reference before deleting", async () => {
     const deleteMany = vi.fn();
     const sectionCount = vi.fn();
@@ -482,6 +483,58 @@ describe("AdminPrismaRepository — deactivate/activate, integrations, stages", 
     expect(findFirst).toHaveBeenCalledTimes(2);
   });
 
+  it.each([
+    { references: "sections", sectionCount: 1, projectCount: 0 },
+    { references: "projects", sectionCount: 0, projectCount: 1 },
+  ])(
+    "removeUser reports a conflict when $references still reference the user",
+    async ({ sectionCount, projectCount }) => {
+      const deleteMany = vi.fn();
+      const repo = new AdminPrismaRepository({
+        report: { findFirst: vi.fn(() => Promise.resolve(null)) },
+        reportSection: { count: vi.fn(() => Promise.resolve(sectionCount)) },
+        project: { count: vi.fn(() => Promise.resolve(projectCount)) },
+        user: { deleteMany },
+      } as unknown as PrismaService);
+
+      await expect(repo.removeUser("lead-1")).rejects.toBeInstanceOf(
+        AdminUserConflictError,
+      );
+      expect(deleteMany).not.toHaveBeenCalled();
+    },
+  );
+
+  it("removeUser reports a conflict when a racing reference rejects the delete", async () => {
+    // A reference committed between the count check and the delete surfaces as
+    // P2003; with no raced publication it is still an honest conflict.
+    const findFirst = vi.fn(() => Promise.resolve(null));
+    const repo = new AdminPrismaRepository({
+      report: { findFirst },
+      reportSection: { count: vi.fn(() => Promise.resolve(0)) },
+      project: { count: vi.fn(() => Promise.resolve(0)) },
+      user: {
+        deleteMany: vi.fn(() => Promise.reject({ code: "P2003" })),
+      },
+    } as unknown as PrismaService);
+
+    await expect(repo.removeUser("lead-1")).rejects.toBeInstanceOf(
+      AdminUserConflictError,
+    );
+    expect(findFirst).toHaveBeenCalledTimes(2);
+  });
+
+  it("removeUser re-throws a non-P2003 delete failure unchanged", async () => {
+    const original = new Error("connection reset");
+    const repo = new AdminPrismaRepository({
+      report: { findFirst: vi.fn(() => Promise.resolve(null)) },
+      reportSection: { count: vi.fn(() => Promise.resolve(0)) },
+      project: { count: vi.fn(() => Promise.resolve(0)) },
+      user: { deleteMany: vi.fn(() => Promise.reject(original)) },
+    } as unknown as PrismaService);
+
+    await expect(repo.removeUser("lead-1")).rejects.toBe(original);
+  });
+
   it("deactivateUser sets isActive=false", async () => {
     const update = vi.fn(() => Promise.resolve({}));
     const repo = new AdminPrismaRepository({
@@ -509,6 +562,67 @@ describe("AdminPrismaRepository — deactivate/activate, integrations, stages", 
       data: { isActive: true },
     });
   });
+
+  it.each(["deactivateUser", "activateUser"] as const)(
+    "%s translates a missing-row P2025 into AdminUserNotFoundError",
+    async (method) => {
+      const repo = new AdminPrismaRepository({
+        user: {
+          update: vi.fn(() => Promise.reject({ code: "P2025" })),
+        },
+      } as unknown as PrismaService);
+
+      await expect(repo[method]("missing-user")).rejects.toBeInstanceOf(
+        AdminUserNotFoundError,
+      );
+    },
+  );
+
+  it.each([
+    {
+      method: "deactivateUser",
+      kind: "Error",
+      rejection: new Error("connection reset"),
+    },
+    { method: "deactivateUser", kind: "null", rejection: null },
+    { method: "deactivateUser", kind: "undefined", rejection: undefined },
+    {
+      method: "deactivateUser",
+      kind: "primitive",
+      rejection: "plain failure",
+    },
+    {
+      method: "deactivateUser",
+      kind: "non-P2025 object",
+      rejection: { code: "P2003" },
+    },
+    {
+      method: "activateUser",
+      kind: "Error",
+      rejection: new Error("connection reset"),
+    },
+    { method: "activateUser", kind: "null", rejection: null },
+    { method: "activateUser", kind: "undefined", rejection: undefined },
+    {
+      method: "activateUser",
+      kind: "primitive",
+      rejection: "plain failure",
+    },
+    {
+      method: "activateUser",
+      kind: "non-P2025 object",
+      rejection: { code: "P2003" },
+    },
+  ] as const)(
+    "$method re-throws a $kind rejection unchanged",
+    async ({ method, rejection }) => {
+      const repo = new AdminPrismaRepository({
+        user: { update: vi.fn(() => Promise.reject(rejection)) },
+      } as unknown as PrismaService);
+
+      await expect(repo[method]("user-1")).rejects.toBe(rejection);
+    },
+  );
 
   it("listStages orders by sortOrder asc", async () => {
     const findMany = vi.fn((..._args: unknown[]) => Promise.resolve([]));
@@ -1052,5 +1166,340 @@ describe("AdminPrismaRepository — reopen-request lifecycle", () => {
       }),
     ).resolves.toEqual({ kind: "decided", decision: "rejected" });
     expect(tx.reportSection.updateMany).not.toHaveBeenCalled();
+  });
+});
+
+// StageAssignment DML joins the save/carry-over serialization lane: the
+// status-graph advisory lock, then every editable Report row in stable id
+// order, then the mutation. A compound-key P2002 recovery must reopen that
+// whole sequence in a fresh transaction — never write inside the aborted one.
+describe("AdminPrismaRepository — stage-assignment write serialization", () => {
+  const ASSIGNMENT_ID = "a0000000-0000-4000-a000-000000000401";
+  const INPUT = {
+    userId: "a0000000-0000-4000-a000-000000000101",
+    stageId: "a0000000-0000-4000-a000-000000000701",
+    projectId: "a0000000-0000-4000-a000-000000000201",
+  };
+  const ROW = {
+    id: ASSIGNMENT_ID,
+    userId: INPUT.userId,
+    stageId: INPUT.stageId,
+    projectId: INPUT.projectId,
+    stage: { name: "Development" },
+    user: { name: "Test Lead 1" },
+  };
+  const PARSED = {
+    id: ASSIGNMENT_ID,
+    userId: INPUT.userId,
+    stageId: INPUT.stageId,
+    projectId: INPUT.projectId,
+    stageName: "Development",
+    userName: "Test Lead 1",
+  };
+  const COMPOUND_WHERE = {
+    stageId_projectId: { stageId: INPUT.stageId, projectId: INPUT.projectId },
+  };
+  const RELATIONS = {
+    stage: { select: { name: true } },
+    user: { select: { name: true } },
+  };
+  // The exact candidate scan from lib/project-assignment.ts
+  // `lockAllEditableReports` — the lock set these writers must share.
+  const EDITABLE_SCAN = {
+    where: {
+      archived: false,
+      periodState: "open",
+      OR: [
+        { status: "draft", periodStatus: "open" },
+        { status: "published", periodStatus: "reopened" },
+      ],
+    },
+    select: { id: true },
+    orderBy: { id: "asc" },
+  };
+
+  const editableRow = (id: string) => ({
+    id,
+    status: "draft",
+    periodState: "open",
+    periodStatus: "open",
+    archived: false,
+    autoPublished: false,
+    autoArchived: false,
+    publishedAt: null,
+    publishedById: null,
+    reopenedAt: null,
+  });
+
+  function lockedTx(
+    events: string[],
+    candidateIds: readonly string[],
+    stageAssignment: Record<string, ReturnType<typeof vi.fn>>,
+    reportGate?: Promise<unknown[]>,
+  ) {
+    return {
+      // lockStatusGraph's advisory xact lock runs through $executeRaw.
+      $executeRaw: vi.fn(() => {
+        events.push("status-graph-lock");
+        return Promise.resolve(0);
+      }),
+      report: {
+        findMany: vi.fn(() => {
+          events.push("editable-scan");
+          return Promise.resolve(candidateIds.map((id) => ({ id })));
+        }),
+      },
+      // lockCurrentEditableReport reads the row FOR UPDATE via $queryRaw; the
+      // reportId parameter is the first bound value after the template.
+      $queryRaw: vi.fn((...args: unknown[]) => {
+        const reportId = String(args[1]);
+        events.push(`report-lock:${reportId}`);
+        return reportGate ?? Promise.resolve([editableRow(reportId)]);
+      }),
+      stageAssignment,
+    };
+  }
+
+  function prismaForTransactions(txs: readonly ReturnType<typeof lockedTx>[]) {
+    const queue = [...txs];
+    const $transaction = vi.fn((run: (client: unknown) => Promise<unknown>) => {
+      const tx = queue.shift();
+      if (tx === undefined) {
+        return Promise.reject(new Error("unexpected extra transaction"));
+      }
+      return run(tx);
+    });
+    return {
+      prisma: {
+        $transaction,
+        // The pre-serialization code path writes through the bare client;
+        // sharing the primary spies keeps the RED signal on the ordering
+        // assertions instead of an early TypeError.
+        stageAssignment: txs[0]?.stageAssignment,
+      } as unknown as PrismaService,
+      $transaction,
+    };
+  }
+
+  const flushResolvedLocks = () =>
+    new Promise<void>((resolve) => setImmediate(resolve));
+
+  it("saveStageAssignment holds the upsert until the editable-report locks resolve", async () => {
+    const events: string[] = [];
+    const upsert = vi.fn(() => {
+      events.push("upsert");
+      return Promise.resolve(ROW);
+    });
+    const gate = Promise.withResolvers<unknown[]>();
+    const tx = lockedTx(events, ["report-1"], { upsert }, gate.promise);
+    const { prisma, $transaction } = prismaForTransactions([tx]);
+    const repo = new AdminPrismaRepository(prisma);
+
+    const pending = repo.saveStageAssignment(INPUT);
+    // Observe settlement up front so a failing ordering assertion cannot
+    // leave the call's rejection unhandled.
+    void pending.catch(() => undefined);
+    try {
+      await flushResolvedLocks();
+
+      expect(events).toEqual([
+        "status-graph-lock",
+        "editable-scan",
+        "report-lock:report-1",
+      ]);
+      expect(upsert).not.toHaveBeenCalled();
+      expect(tx.report.findMany).toHaveBeenCalledWith(EDITABLE_SCAN);
+    } finally {
+      gate.resolve([editableRow("report-1")]);
+    }
+
+    await expect(pending).resolves.toEqual(PARSED);
+    expect(events).toEqual([
+      "status-graph-lock",
+      "editable-scan",
+      "report-lock:report-1",
+      "upsert",
+    ]);
+    expect(upsert).toHaveBeenCalledWith({
+      where: COMPOUND_WHERE,
+      create: INPUT,
+      update: { userId: INPUT.userId },
+      include: RELATIONS,
+    });
+    expect($transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it("saveStageAssignment locks every editable report in the stable scan order", async () => {
+    const events: string[] = [];
+    const upsert = vi.fn(() => {
+      events.push("upsert");
+      return Promise.resolve(ROW);
+    });
+    const tx = lockedTx(events, ["report-a", "report-b"], { upsert });
+    const repo = new AdminPrismaRepository(prismaForTransactions([tx]).prisma);
+
+    await expect(repo.saveStageAssignment(INPUT)).resolves.toEqual(PARSED);
+
+    expect(events).toEqual([
+      "status-graph-lock",
+      "editable-scan",
+      "report-lock:report-a",
+      "report-lock:report-b",
+      "upsert",
+    ]);
+  });
+
+  it("deleteStageAssignment holds the delete until the editable-report locks resolve", async () => {
+    const events: string[] = [];
+    const deleteRow = vi.fn(() => {
+      events.push("delete");
+      return Promise.resolve(ROW);
+    });
+    const gate = Promise.withResolvers<unknown[]>();
+    const tx = lockedTx(
+      events,
+      ["report-1"],
+      { delete: deleteRow },
+      gate.promise,
+    );
+    const repo = new AdminPrismaRepository(prismaForTransactions([tx]).prisma);
+
+    const pending = repo.deleteStageAssignment(ASSIGNMENT_ID);
+    void pending.catch(() => undefined);
+    try {
+      await flushResolvedLocks();
+
+      expect(deleteRow).not.toHaveBeenCalled();
+    } finally {
+      gate.resolve([editableRow("report-1")]);
+    }
+
+    await expect(pending).resolves.toBeUndefined();
+    expect(deleteRow).toHaveBeenCalledWith({ where: { id: ASSIGNMENT_ID } });
+    expect(events).toEqual([
+      "status-graph-lock",
+      "editable-scan",
+      "report-lock:report-1",
+      "delete",
+    ]);
+  });
+
+  it("deleteStageAssignment propagates a missing-row failure unchanged", async () => {
+    const missing = { code: "P2025" };
+    const tx = lockedTx([], ["report-1"], {
+      delete: vi.fn(() => Promise.reject(missing)),
+    });
+    const { prisma, $transaction } = prismaForTransactions([tx]);
+    const repo = new AdminPrismaRepository(prisma);
+
+    await expect(repo.deleteStageAssignment(ASSIGNMENT_ID)).rejects.toBe(
+      missing,
+    );
+    // The failure still flows through the locked transaction, not around it.
+    expect($transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it("saveStageAssignment retries a compound-key P2002 in a second fully-locked transaction", async () => {
+    const conflict = new Prisma.PrismaClientKnownRequestError(
+      "Unique constraint failed",
+      {
+        code: "P2002",
+        clientVersion: "test",
+        meta: { target: "StageAssignment_stageId_projectId_key" },
+      },
+    );
+    const events1: string[] = [];
+    const events2: string[] = [];
+    const tx1 = lockedTx(events1, ["report-1"], {
+      upsert: vi.fn(() => {
+        events1.push("upsert");
+        return Promise.reject(conflict);
+      }),
+      // Resolves a real row so a baseline run reaches the forbidden
+      // aborted-client reuse assertion instead of an incidental TypeError.
+      update: vi.fn(() => Promise.resolve(ROW)),
+    });
+    const update = vi.fn(() => {
+      events2.push("update");
+      return Promise.resolve(ROW);
+    });
+    const tx2 = lockedTx(events2, ["report-1"], { update });
+    const { prisma, $transaction } = prismaForTransactions([tx1, tx2]);
+    const repo = new AdminPrismaRepository(prisma);
+
+    await expect(repo.saveStageAssignment(INPUT)).resolves.toEqual(PARSED);
+
+    // The aborted transaction's client is never reused for the recovery write.
+    expect(tx1.stageAssignment.update).not.toHaveBeenCalled();
+    expect($transaction).toHaveBeenCalledTimes(2);
+    expect(events1).toEqual([
+      "status-graph-lock",
+      "editable-scan",
+      "report-lock:report-1",
+      "upsert",
+    ]);
+    expect(events2).toEqual([
+      "status-graph-lock",
+      "editable-scan",
+      "report-lock:report-1",
+      "update",
+    ]);
+    expect(update).toHaveBeenCalledWith({
+      where: COMPOUND_WHERE,
+      data: { userId: INPUT.userId },
+      include: RELATIONS,
+    });
+  });
+
+  it("saveStageAssignment re-throws a non-P2002 failure without a recovery transaction", async () => {
+    const original = new Error("connection reset");
+    const tx = lockedTx([], ["report-1"], {
+      upsert: vi.fn(() => Promise.reject(original)),
+      update: vi.fn(),
+    });
+    const { prisma, $transaction } = prismaForTransactions([tx]);
+    const repo = new AdminPrismaRepository(prisma);
+
+    await expect(repo.saveStageAssignment(INPUT)).rejects.toBe(original);
+    expect($transaction).toHaveBeenCalledTimes(1);
+    expect(tx.stageAssignment.update).not.toHaveBeenCalled();
+  });
+
+  it("saveStageAssignment re-throws a P2002 outside the stage+project scope", async () => {
+    const unrelated = new Prisma.PrismaClientKnownRequestError(
+      "Unique constraint failed",
+      {
+        code: "P2002",
+        clientVersion: "test",
+        meta: { target: "StageAssignment_userId_key" },
+      },
+    );
+    const tx = lockedTx([], ["report-1"], {
+      upsert: vi.fn(() => Promise.reject(unrelated)),
+      update: vi.fn(),
+    });
+    const { prisma, $transaction } = prismaForTransactions([tx]);
+    const repo = new AdminPrismaRepository(prisma);
+
+    await expect(repo.saveStageAssignment(INPUT)).rejects.toBe(unrelated);
+    expect($transaction).toHaveBeenCalledTimes(1);
+    expect(tx.stageAssignment.update).not.toHaveBeenCalled();
+  });
+
+  it("listStageAssignments stays a plain ordered read outside any transaction", async () => {
+    const findMany = vi.fn(() => Promise.resolve([ROW]));
+    const prisma = {
+      stageAssignment: { findMany },
+    } as unknown as PrismaService;
+    const repo = new AdminPrismaRepository(prisma);
+
+    await expect(repo.listStageAssignments(INPUT.projectId)).resolves.toEqual([
+      PARSED,
+    ]);
+    expect(findMany).toHaveBeenCalledWith({
+      where: { projectId: INPUT.projectId },
+      include: RELATIONS,
+      orderBy: { createdAt: "asc" },
+    });
   });
 });

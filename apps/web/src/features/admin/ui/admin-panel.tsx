@@ -1,9 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
-import { toast } from "sonner";
 
+import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { mapAdminSnapshot } from "../model/admin";
 import {
@@ -15,22 +14,6 @@ import { AdminPanelContent } from "./admin-panel-content";
 interface AdminPanelProps {
   readonly activeTab: AdminTab;
   readonly productFilter?: string | null;
-}
-
-interface QueryErrorState {
-  readonly enabled: boolean;
-  readonly error: unknown;
-  readonly isError: boolean;
-  readonly label: string;
-}
-
-function useAdminQueryErrorToast(state: QueryErrorState): void {
-  useEffect(() => {
-    if (!state.enabled || !state.isError) return;
-    const detail =
-      state.error instanceof Error ? `: ${state.error.message}` : "";
-    toast.error(`Failed to load ${state.label}${detail}`);
-  }, [state.enabled, state.error, state.isError, state.label]);
 }
 
 export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
@@ -45,18 +28,30 @@ export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
     enabled: dependencies.settings,
   });
 
-  useAdminQueryErrorToast({
-    enabled: dependencies.snapshot,
-    error: snapshotQuery.error,
-    isError: snapshotQuery.isError,
-    label: "admin data",
-  });
-  useAdminQueryErrorToast({
-    enabled: dependencies.settings,
-    error: settingsQuery.error,
-    isError: settingsQuery.isError,
-    label: "settings",
-  });
+  useQueryErrorHandler(
+    {
+      isError: dependencies.snapshot && snapshotQuery.isError,
+      error: snapshotQuery.error,
+    },
+    {
+      component: "AdminPanel",
+      event: "admin.snapshot.load_failed",
+      procedure: "admin.snapshot",
+      toastPrefix: "Failed to load admin data",
+    },
+  );
+  useQueryErrorHandler(
+    {
+      isError: dependencies.settings && settingsQuery.isError,
+      error: settingsQuery.error,
+    },
+    {
+      component: "AdminPanel",
+      event: "admin.get_settings.load_failed",
+      procedure: "admin.getSettings",
+      toastPrefix: "Failed to load settings",
+    },
+  );
 
   const data = snapshotQuery.data
     ? mapAdminSnapshot(snapshotQuery.data)

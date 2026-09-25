@@ -24,8 +24,17 @@ import {
   type PdfArtifactStore,
   PdfExportProcessor as ProductionPdfExportProcessor,
 } from "./pdf-export.processor.js";
+import type { QueueRegistry } from "./queue-registry.js";
 
 const TEST_OUTPUT_DIR = "artifact-test-output";
+
+// This suite never reaches the failed-job loader; a registry whose get()
+// throws makes any accidental queue access loud instead of silent.
+const UNUSED_QUEUES: Pick<QueueRegistry, "get"> = {
+  get: () => {
+    throw new Error("unexpected queue access in artifact-race suite");
+  },
+};
 
 function createMockPdfExportService() {
   return {
@@ -109,7 +118,7 @@ class PdfExportProcessor extends ProductionPdfExportProcessor {
     logger: AppLogger,
     private readonly artifactStore: PdfArtifactStore,
   ) {
-    super(service, env, logger, null);
+    super(service, env, logger, null, UNUSED_QUEUES);
   }
 
   protected override createArtifactStore(): PdfArtifactStore {

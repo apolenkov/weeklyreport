@@ -10,7 +10,10 @@ import { chromium, type Page } from "playwright";
 import { APP_LOGGER } from "../../lib/audit-logger.js";
 import { errorMessage } from "../../lib/error-message.js";
 import type { AppLogger } from "../../lib/logger.js";
-import { PdfExportService } from "../../modules/pdf-export/index.js";
+import {
+  PdfExportService,
+  type PdfExportTerminalState,
+} from "../../modules/pdf-export/index.js";
 import { ENV_CONFIG } from "../config/config.module.js";
 import type { EnvConfig } from "../config/env.schema";
 import {
@@ -18,6 +21,7 @@ import {
   type PdfArtifactAttempt,
   type PdfArtifactStore,
 } from "./pdf-export.artifact-store.js";
+import { QueueRegistry } from "./queue-registry.js";
 import { RawBullMqProcessor } from "./raw-bullmq-processor.js";
 import { WorkerLivenessRegistry } from "./worker-liveness.registry.js";
 import {
@@ -71,6 +75,8 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
     @Inject(ENV_CONFIG) env: EnvConfig,
     @Inject(APP_LOGGER) logger: AppLogger,
     @Inject(ClsService) cls: ClsService | null,
+    @Inject(QueueRegistry)
+    private readonly queues: Pick<QueueRegistry, "get">,
     @Inject(WorkerLivenessRegistry)
     workerLiveness?: WorkerLivenessRegistry,
   ) {
@@ -82,7 +88,7 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
     error: Error,
   ): void => {
     const { logFields: correlation } = describeJobFailureTrace(job?.data);
-    void this.markTerminalFailure(job, error, correlation);
+    void this.markTerminalFailure(job, correlation);
 
     this.logger.error("pdf-export job failed", {
       jobId: job?.data.jobId,
@@ -95,7 +101,6 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
 
   private async markTerminalFailure(
     job: Job<PdfExportJobData> | undefined,
-    error: Error,
     correlation: Readonly<Record<string, string>>,
   ): Promise<void> {
     if (
@@ -112,14 +117,35 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
     }
     const maxAttempts = job.opts.attempts ?? 1;
     if (job.attemptsMade < maxAttempts) return;
+    const identity = {
+      jobId: job.data.jobId,
+      reportId: job.data.reportId,
+      requestedBy: job.data.requestedBy,
+    };
     try {
-      await this.pdfExportService.reconcileTerminalState({
-        jobId: job.data.jobId,
-        reportId: job.data.reportId,
-        requestedBy: job.data.requestedBy,
-        status: "failed",
-        error: error.message,
-      });
+      await this.pdfExportService.reconcileTerminalState(
+        identity,
+        // This event's failure was captured before the export row lock, so
+        // the job object, its payload, and `error` are all stale. Inside the
+        // lock, observe the live state first — then re-read the job itself:
+        // BullMQ transitions are not serialized by the row lock, so that
+        // snapshot's failedReason can already belong to an older attempt.
+        async () => {
+          const observed = await this.queues
+            .get(this.queueName)
+            .getJob(identity.jobId);
+          if (!observed || (await observed.getState()) !== "failed") {
+            return null;
+          }
+          const current = await this.queues
+            .get(this.queueName)
+            .getJob(identity.jobId);
+          if (!current || (await current.getState()) !== "failed") {
+            return null;
+          }
+          return currentFailedTerminalState(current);
+        },
+      );
     } catch (markError: unknown) {
       this.logger.error("pdf-export failed-state update failed", {
         jobId: job.data.jobId,
@@ -296,4 +322,36 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
     });
     return result;
   }
+}
+
+// Terminal state built from the job as it is NOW, inside the export row
+// lock: payload identity and failedReason are re-read from the current queue
+// job, so a delayed failure event from an older attempt can neither stamp a
+// stale reason nor write for a payload that no longer matches.
+function currentFailedTerminalState(
+  job: Job<unknown>,
+): PdfExportTerminalState | null {
+  const data =
+    typeof job.data === "object" && job.data !== null
+      ? (job.data as {
+          jobId?: unknown;
+          reportId?: unknown;
+          requestedBy?: unknown;
+        })
+      : null;
+  const jobId = typeof data?.jobId === "string" ? data.jobId : "";
+  const reportId = typeof data?.reportId === "string" ? data.reportId : "";
+  const requestedBy =
+    typeof data?.requestedBy === "string" ? data.requestedBy : "";
+  if (!jobId || !reportId || !requestedBy) return null;
+  if (job.id !== undefined && job.id !== jobId) return null;
+  return {
+    jobId,
+    reportId,
+    requestedBy,
+    status: "failed",
+    ...(typeof job.failedReason === "string" && job.failedReason
+      ? { error: job.failedReason }
+      : {}),
+  };
 }

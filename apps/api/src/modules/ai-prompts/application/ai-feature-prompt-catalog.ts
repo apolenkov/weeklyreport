@@ -8,6 +8,7 @@ import type {
 } from "@customreport/shared";
 import {
   AI_PROMPT_BUNDLE_EFFECTIVE_LIMIT,
+  AI_PROMPT_EDITABLE_TAIL_SEPARATOR,
   AI_PROMPT_SLOT_KEYS,
   aiPromptContentsSchema,
 } from "@customreport/shared";
@@ -138,7 +139,7 @@ export const composePromptSet = (
       }
       return [
         slot,
-        `${core}\n\nOperator guidance (editable tail):\n${promptContents[slot]}`,
+        `${core}${AI_PROMPT_EDITABLE_TAIL_SEPARATOR}${promptContents[slot]}`,
       ];
     }),
   ) as Readonly<Record<AiPromptSlot, string>>;

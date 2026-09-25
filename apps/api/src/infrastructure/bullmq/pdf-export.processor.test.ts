@@ -1,9 +1,19 @@
-import { AUTH_COOKIE_NAME } from "@customreport/shared";
-import type { Job } from "bullmq";
+import {
+  AUTH_COOKIE_NAME,
+  type PdfExportJob,
+  pdfExportJobSchema,
+} from "@customreport/shared";
+import type { Job, Queue } from "bullmq";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { type AppLogger, createNullLogger } from "../../lib/logger.js";
+import type {
+  PdfExportJobRecord,
+  PdfExportLockedJobWrites,
+  PdfExportRepository,
+} from "../../modules/pdf-export/index.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
+import { NOOP_PDF_EXPORT_TELEMETRY } from "../../test-utils/pdf-export.js";
 import { silenceStderr } from "../../test-utils/silence-logs";
 
 // Mock factories use vi.fn() inline (no outer variable references) because
@@ -79,6 +89,7 @@ import {
   type PdfArtifactStore,
   PdfExportProcessor as ProductionPdfExportProcessor,
 } from "./pdf-export.processor.js";
+import type { QueueRegistry } from "./queue-registry.js";
 
 function createMockArtifactStore(checksum = "abc123hash") {
   const attempt: PdfArtifactAttempt = {
@@ -100,8 +111,9 @@ class PdfExportProcessor extends ProductionPdfExportProcessor {
     env: EnvConfig,
     logger: AppLogger = createNullLogger(),
     artifactStore: PdfArtifactStore = createMockArtifactStore(),
+    queues: Pick<QueueRegistry, "get"> = queuesWith(undefined).registry,
   ) {
-    super(service, env, logger, null);
+    super(service, env, logger, null, queues);
     this.artifactStore = artifactStore;
   }
 
@@ -152,13 +164,33 @@ function createMockJob(
   data: PdfExportJobData,
   attemptsMade = 0,
   attempts = 1,
+  options: {
+    state?: Awaited<ReturnType<Job["getState"]>>;
+    failedReason?: string;
+    queueJobId?: string;
+  } = {},
 ): Job<PdfExportJobData> {
   return {
-    id: data.jobId,
+    id: options.queueJobId ?? data.jobId,
     data,
     attemptsMade,
     opts: { attempts },
-  } as Job<PdfExportJobData>;
+    failedReason: options.failedReason,
+    getState: vi.fn().mockResolvedValue(options.state ?? "failed"),
+  } as unknown as Job<PdfExportJobData>;
+}
+
+// The queue handle the delayed-failure loader re-reads inside the export row
+// lock: `current` is the job a fresh getJob returns — which may be a newer
+// attempt than the one the failed event was captured from.
+function queuesWith(current: Job<unknown> | undefined) {
+  const queue = {
+    getJob: vi.fn().mockResolvedValue(current),
+  } as unknown as Queue;
+  const registry = {
+    get: () => queue,
+  } satisfies Pick<QueueRegistry, "get">;
+  return { registry, queue };
 }
 
 // Test seam — `processJob` is `protected`; cast through this interface so
@@ -531,9 +563,28 @@ describe("PdfExportProcessor.onModuleInit", () => {
     ).instances = [];
   });
 
-  it("marks the DB export job failed only on the terminal attempt", () => {
+  it("marks the DB export job failed only on the terminal attempt", async () => {
+    const jobData = {
+      reportId: "report-1",
+      jobId: "job-1",
+      requestedBy: "user-1",
+    };
+    // What a fresh getJob returns when the loader runs inside the row lock:
+    // the job still failed, carrying the current attempt's own failedReason.
+    const { registry, queue } = queuesWith(
+      createMockJob(jobData, 3, 3, {
+        state: "failed",
+        failedReason: "browser missing",
+      }),
+    );
     const mockService = createMockPdfExportService();
-    const processor = new PdfExportProcessor(mockService as never, STUB_ENV);
+    const processor = new PdfExportProcessor(
+      mockService as never,
+      STUB_ENV,
+      createNullLogger(),
+      createMockArtifactStore(),
+      registry,
+    );
 
     processor.onModuleInit();
 
@@ -546,12 +597,6 @@ describe("PdfExportProcessor.onModuleInit", () => {
     ).instances;
     const failedHandler = instances.at(-1)?.handlers.failed;
     expect(failedHandler).toBeTypeOf("function");
-
-    const jobData = {
-      reportId: "report-1",
-      jobId: "job-1",
-      requestedBy: "user-1",
-    };
 
     // BullMQ increments attemptsMade before emitting `failed`, so for
     // attempts=3 the penultimate failure reports attemptsMade=2 — a third
@@ -570,14 +615,183 @@ describe("PdfExportProcessor.onModuleInit", () => {
     );
 
     expect(mockService.reconcileTerminalState).toHaveBeenCalledWith(
-      expect.objectContaining({
-        jobId: "job-1",
-        reportId: "report-1",
-        requestedBy: "user-1",
-        status: "failed",
+      { jobId: "job-1", reportId: "report-1", requestedBy: "user-1" },
+      expect.any(Function),
+    );
+    // The loader re-reads the current queue job inside the row lock: still
+    // failed, so its payload identity and failedReason become the terminal
+    // state the service would write.
+    const loadCurrent = expectDefined(
+      mockService.reconcileTerminalState.mock.calls[0]?.[1],
+    ) as () => Promise<unknown>;
+    await expect(loadCurrent()).resolves.toEqual({
+      jobId: "job-1",
+      reportId: "report-1",
+      requestedBy: "user-1",
+      status: "failed",
+      error: "browser missing",
+    });
+    expect(queue.getJob).toHaveBeenCalledWith("job-1");
+    expect(mockService.markExportCompleted).not.toHaveBeenCalled();
+  });
+
+  it("cannot terminalize a revived attempt with a failure captured before the row lock", async () => {
+    const jobData = {
+      reportId: "report-1",
+      jobId: "job-1",
+      requestedBy: "user-1",
+    };
+    // The failed event fired on the terminal attempt, but an admin retry
+    // requeued the job before the durable row lock was acquired — the loader
+    // must observe the current "waiting", not the captured "failed".
+    const { registry, queue } = queuesWith(
+      createMockJob(jobData, 4, 4, { state: "waiting" }),
+    );
+    const mockService = createMockPdfExportService();
+    const processor = new PdfExportProcessor(
+      mockService as never,
+      STUB_ENV,
+      createNullLogger(),
+      createMockArtifactStore(),
+      registry,
+    );
+    processor.onModuleInit();
+    const instances = (
+      Worker as unknown as {
+        instances: { handlers: Record<string, (...args: never[]) => void> }[];
+      }
+    ).instances;
+    const failedHandler = instances.at(-1)?.handlers.failed;
+
+    failedHandler?.(
+      createMockJob(jobData, 3, 3, {
+        state: "failed",
+        failedReason: "attempt-A crashed",
+      }) as never,
+      new Error("attempt-A crashed") as never,
+    );
+
+    expect(mockService.reconcileTerminalState).toHaveBeenCalledWith(
+      { jobId: "job-1", reportId: "report-1", requestedBy: "user-1" },
+      expect.any(Function),
+    );
+    const loadCurrent = expectDefined(
+      mockService.reconcileTerminalState.mock.calls[0]?.[1],
+    ) as () => Promise<unknown>;
+    await expect(loadCurrent()).resolves.toBeNull();
+    expect(queue.getJob).toHaveBeenCalledWith("job-1");
+  });
+
+  it("records the current attempt's failedReason, not a stale event's, when a retried job failed again", async () => {
+    const jobData = {
+      reportId: "report-1",
+      jobId: "job-1",
+      requestedBy: "user-1",
+    };
+    // Attempt A's failed event is still in flight; an admin retry requeued
+    // the job and attempt B already failed. Inside the row lock the durable
+    // row must adopt B's payload identity and failedReason — never A's
+    // captured error, which the pending-only CAS would otherwise freeze.
+    const { registry, queue } = queuesWith(
+      createMockJob(jobData, 4, 4, {
+        state: "failed",
+        failedReason: "attempt-B exploded",
       }),
     );
-    expect(mockService.markExportCompleted).not.toHaveBeenCalled();
+    const mockService = createMockPdfExportService();
+    const processor = new PdfExportProcessor(
+      mockService as never,
+      STUB_ENV,
+      createNullLogger(),
+      createMockArtifactStore(),
+      registry,
+    );
+    processor.onModuleInit();
+    const instances = (
+      Worker as unknown as {
+        instances: { handlers: Record<string, (...args: never[]) => void> }[];
+      }
+    ).instances;
+    const failedHandler = instances.at(-1)?.handlers.failed;
+
+    failedHandler?.(
+      createMockJob(jobData, 3, 3, {
+        state: "failed",
+        failedReason: "attempt-A crashed",
+      }) as never,
+      new Error("attempt-A crashed") as never,
+    );
+
+    expect(mockService.reconcileTerminalState).toHaveBeenCalledWith(
+      { jobId: "job-1", reportId: "report-1", requestedBy: "user-1" },
+      expect.any(Function),
+    );
+    const loadCurrent = expectDefined(
+      mockService.reconcileTerminalState.mock.calls[0]?.[1],
+    ) as () => Promise<unknown>;
+    await expect(loadCurrent()).resolves.toEqual({
+      jobId: "job-1",
+      reportId: "report-1",
+      requestedBy: "user-1",
+      status: "failed",
+      error: "attempt-B exploded",
+    });
+    expect(queue.getJob).toHaveBeenCalledWith("job-1");
+  });
+
+  it("hands the service the current job's payload, so a rebound payload is declined", async () => {
+    const staleJobData = {
+      reportId: "report-1",
+      jobId: "job-1",
+      requestedBy: "user-1",
+    };
+    // The job now bound to this id carries a different payload — rebound or
+    // tampered. The loader surfaces the CURRENT payload instead of the stale
+    // event's, so the service's state-vs-identity check declines the write.
+    const { registry, queue } = queuesWith(
+      createMockJob(
+        { reportId: "other-report", jobId: "job-1", requestedBy: "user-1" },
+        4,
+        4,
+        { state: "failed", failedReason: "attempt-B exploded" },
+      ),
+    );
+    const mockService = createMockPdfExportService();
+    const processor = new PdfExportProcessor(
+      mockService as never,
+      STUB_ENV,
+      createNullLogger(),
+      createMockArtifactStore(),
+      registry,
+    );
+    processor.onModuleInit();
+    const instances = (
+      Worker as unknown as {
+        instances: { handlers: Record<string, (...args: never[]) => void> }[];
+      }
+    ).instances;
+    const failedHandler = instances.at(-1)?.handlers.failed;
+
+    failedHandler?.(
+      createMockJob(staleJobData, 3, 3) as never,
+      new Error("attempt-A crashed") as never,
+    );
+
+    expect(mockService.reconcileTerminalState).toHaveBeenCalledWith(
+      { jobId: "job-1", reportId: "report-1", requestedBy: "user-1" },
+      expect.any(Function),
+    );
+    const loadCurrent = expectDefined(
+      mockService.reconcileTerminalState.mock.calls[0]?.[1],
+    ) as () => Promise<unknown>;
+    await expect(loadCurrent()).resolves.toEqual({
+      jobId: "job-1",
+      reportId: "other-report",
+      requestedBy: "user-1",
+      status: "failed",
+      error: "attempt-B exploded",
+    });
+    expect(queue.getJob).toHaveBeenCalledWith("job-1");
   });
 
   it("rejects a failed event whose BullMQ id does not match its payload", () => {
@@ -597,15 +811,189 @@ describe("PdfExportProcessor.onModuleInit", () => {
     };
 
     failedHandler?.(
-      {
-        id: "other-job",
-        data: jobData,
-        attemptsMade: 3,
-        opts: { attempts: 3 },
-      } as never,
+      createMockJob(jobData, 3, 3, { queueJobId: "other-job" }) as never,
       new Error("bad") as never,
     );
 
     expect(mockService.reconcileTerminalState).not.toHaveBeenCalled();
+  });
+
+  it("uses the failedReason re-read after the terminal observation, not the earlier snapshot", async () => {
+    const jobData = {
+      reportId: "report-1",
+      jobId: "job-1",
+      requestedBy: "user-1",
+    };
+    // The Postgres row lock does not serialize BullMQ transitions: the
+    // snapshot the first in-lock getJob returns can still carry attempt A's
+    // failedReason while attempt B has already failed underneath it. After
+    // observing the terminal state the loader must reread the job and use
+    // the fresh metadata — otherwise the durable row freezes A's stale
+    // reason and the pending-only CAS keeps the wrong error forever.
+    const staleRead = createMockJob(jobData, 4, 4, {
+      state: "failed",
+      failedReason: "attempt-A stale reason",
+    });
+    const freshRead = createMockJob(jobData, 4, 4, {
+      state: "failed",
+      failedReason: "attempt-B latest reason",
+    });
+    const queue = {
+      getJob: vi
+        .fn()
+        .mockResolvedValueOnce(staleRead)
+        .mockResolvedValue(freshRead),
+    } as unknown as Queue;
+    const registry = {
+      get: () => queue,
+    } satisfies Pick<QueueRegistry, "get">;
+    const mockService = createMockPdfExportService();
+    const processor = new PdfExportProcessor(
+      mockService as never,
+      STUB_ENV,
+      createNullLogger(),
+      createMockArtifactStore(),
+      registry,
+    );
+    processor.onModuleInit();
+    const instances = (
+      Worker as unknown as {
+        instances: { handlers: Record<string, (...args: never[]) => void> }[];
+      }
+    ).instances;
+    const failedHandler = instances.at(-1)?.handlers.failed;
+
+    failedHandler?.(
+      createMockJob(jobData, 3, 3, {
+        state: "failed",
+        failedReason: "attempt-A stale reason",
+      }) as never,
+      new Error("attempt-A stale reason") as never,
+    );
+
+    expect(mockService.reconcileTerminalState).toHaveBeenCalledWith(
+      { jobId: "job-1", reportId: "report-1", requestedBy: "user-1" },
+      expect.any(Function),
+    );
+    const loadCurrent = expectDefined(
+      mockService.reconcileTerminalState.mock.calls[0]?.[1],
+    ) as () => Promise<unknown>;
+    await expect(loadCurrent()).resolves.toEqual({
+      jobId: "job-1",
+      reportId: "report-1",
+      requestedBy: "user-1",
+      status: "failed",
+      error: "attempt-B latest reason",
+    });
+    expect(queue.getJob).toHaveBeenCalledTimes(2);
+  });
+
+  it("performs no scoped write when the freshly re-read payload mismatches the durable identity", async () => {
+    // Composed regression: the real PdfExportService.reconcileTerminalState
+    // runs inside the fake repository's locked-writes scope. The failed event
+    // claims identity A; the first queue snapshot still carries A, but the
+    // reread after the terminal observation returns rebound payload B — so
+    // the durable row must see no write at all.
+    const { PdfExportService: RealPdfExportService } = await vi.importActual<
+      typeof import("../../modules/pdf-export/pdf-export.service.js")
+    >("../../modules/pdf-export/pdf-export.service.js");
+
+    const identityA = {
+      jobId: "759b2767-0f86-41e2-b025-49730ca010e4",
+      reportId: "659b2767-0f86-41e2-b025-49730ca010e4",
+      requestedBy: "00000000-0000-4000-8000-00000000aaaa",
+    };
+    const durableJob: PdfExportJobRecord = {
+      ...pdfExportJobSchema.parse({
+        jobId: identityA.jobId,
+        reportId: identityA.reportId,
+        status: "queued",
+        requestedAt: new Date("2026-06-09T00:00:00Z"),
+        completedAt: null,
+        checksum: null,
+        templateVersion: "phase-2-pdf-v1",
+        artifactUrl: null,
+      }),
+      requestedBy: identityA.requestedBy,
+    };
+    const writes = {
+      markFailed: vi
+        .fn<(error: string) => Promise<void>>()
+        .mockResolvedValue(undefined),
+      markCompleted: vi
+        .fn<(artifactUrl: string, checksum: string) => Promise<PdfExportJob>>()
+        .mockRejectedValue(new Error("not used in this test")),
+      reviveFailed: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+    } satisfies PdfExportLockedJobWrites;
+    let settled = false;
+    const repository: PdfExportRepository = {
+      getPublishedReportForExport: () => Promise.resolve(null),
+      createExportJob: () => Promise.reject(new Error("not used in this test")),
+      getPublishedReportForJob: () => Promise.resolve(null),
+      getExportJob: () => Promise.resolve(durableJob),
+      saveExportJob: () => Promise.reject(new Error("not used in this test")),
+      markExportFailed: () => Promise.resolve(),
+      runLockedExportJob: (_jobId, run) =>
+        run(durableJob, writes).finally(() => {
+          settled = true;
+        }),
+    };
+    const realService = new RealPdfExportService(
+      repository,
+      createNullLogger(),
+      { enqueue: () => Promise.resolve() },
+      NOOP_PDF_EXPORT_TELEMETRY,
+      {
+        PDF_BASE_URL: "http://localhost:3000",
+        PDF_EXPORT_JWT_SECRET: "test-pdf-export-secret-at-least-32-chars",
+      },
+    );
+
+    const staleRead = createMockJob(identityA, 4, 4, {
+      state: "failed",
+      failedReason: "attempt-A stale reason",
+    });
+    const freshRead = createMockJob(
+      {
+        jobId: identityA.jobId,
+        reportId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        requestedBy: "00000000-0000-4000-8000-00000000bbbb",
+      },
+      4,
+      4,
+      { state: "failed", failedReason: "rebound payload failure" },
+    );
+    const queue = {
+      getJob: vi
+        .fn()
+        .mockResolvedValueOnce(staleRead)
+        .mockResolvedValue(freshRead),
+    } as unknown as Queue;
+    const processor = new PdfExportProcessor(
+      realService,
+      STUB_ENV,
+      createNullLogger(),
+      createMockArtifactStore(),
+      { get: () => queue },
+    );
+    processor.onModuleInit();
+    const instances = (
+      Worker as unknown as {
+        instances: { handlers: Record<string, (...args: never[]) => void> }[];
+      }
+    ).instances;
+    const failedHandler = instances.at(-1)?.handlers.failed;
+
+    failedHandler?.(
+      createMockJob(identityA, 3, 3) as never,
+      new Error("attempt-A crashed") as never,
+    );
+
+    await vi.waitFor(() => {
+      expect(settled).toBe(true);
+    });
+    expect(writes.markFailed).not.toHaveBeenCalled();
+    expect(writes.markCompleted).not.toHaveBeenCalled();
+    expect(writes.reviveFailed).not.toHaveBeenCalled();
   });
 });

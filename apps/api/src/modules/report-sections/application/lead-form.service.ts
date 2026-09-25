@@ -22,6 +22,7 @@ import {
   ReopenRequestError,
 } from "../domain/lead-form-shared";
 import {
+  assertDistinctFillSections,
   assertFillableSource,
   assertFillableTarget,
   assertNoPublishedLineage,
@@ -130,6 +131,8 @@ export class LeadFormService {
     copiedItems: number;
     section?: ReportSectionReadModel;
   }> {
+    // Argument-level guard first: self-fill rejects before any repository read.
+    assertDistinctFillSections(targetSectionId, sourceSectionId);
     const target = await assertFillableTarget(
       this.repository,
       targetSectionId,

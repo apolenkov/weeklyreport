@@ -52,7 +52,6 @@ export async function seedMinimal(prisma: PrismaClient): Promise<void> {
   const dataset: SeedDataset = {
     leads: [lead, nonOwnerLead],
     products: [{ ...product, leadId: lead.id }],
-    sections: [],
   };
   const active = SEED_REPORTS.active;
 

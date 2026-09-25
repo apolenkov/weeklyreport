@@ -7,7 +7,6 @@ import type { Prisma } from "@prisma/client";
 
 import {
   type FeedbackAccess,
-  type FeedbackCreateInput,
   type FeedbackQuery,
   type FeedbackRecord,
   WEEKLY_REPORT_FEEDBACK_PRODUCT,
@@ -120,47 +119,5 @@ export function queryWhere(
           ]
         : []),
     ],
-  };
-}
-
-export function createFeedbackData(
-  access: FeedbackAccess,
-  input: FeedbackCreateInput,
-) {
-  return {
-    projectName: WEEKLY_REPORT_FEEDBACK_PRODUCT,
-    type: input.type,
-    message: input.message,
-    status: "open",
-    url: normalizeFeedbackPath(input.url),
-    urlPattern: input.urlPattern
-      ? normalizeFeedbackPath(input.urlPattern)
-      : null,
-    screenshotUrl: input.screenshotDataUrl ?? null,
-    ...(input.screenshotRegion
-      ? { screenshotRegion: { ...input.screenshotRegion } }
-      : {}),
-    ...(input.diagnostics
-      ? {
-          diagnostics: {
-            console: input.diagnostics.console.map((entry) => ({ ...entry })),
-            network: input.diagnostics.network.map((entry) => ({ ...entry })),
-          },
-        }
-      : {}),
-    viewport: input.viewport,
-    userAgent: input.userAgent,
-    authorUserId: access.userId,
-    authorName: access.name,
-    authorEmail: access.email,
-    authorReportingGroupId: access.reportingGroupId ?? null,
-    clientId: input.clientId,
-    annotations: {
-      create: input.annotations.map((annotation) => ({
-        ...annotation,
-        elementId: annotation.elementId ?? null,
-        anchorKey: annotation.anchorKey ?? null,
-      })),
-    },
   };
 }

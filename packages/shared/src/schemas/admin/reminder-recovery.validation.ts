@@ -4,6 +4,8 @@ import {
   computeReminderFireAt,
   reminderPolicyAppliesTo,
 } from "../../admin/reminder-policy-time";
+import type { ReportStatus } from "../primitives/report-primitives.schema";
+import type { PeriodState, PeriodStatus } from "../report/report.schema";
 import type {
   AdminSnapshotReminderExecution,
   AdminSnapshotReminderRule,
@@ -22,9 +24,9 @@ export interface ReminderRecoverySnapshot {
 interface RecoveryReport {
   readonly id: string;
   readonly deadline: Date | null;
-  readonly status: "draft" | "published";
-  readonly periodState: "scheduled" | "open" | "published" | "archived";
-  readonly periodStatus: "open" | "published" | "reopened";
+  readonly status: ReportStatus;
+  readonly periodState: PeriodState;
+  readonly periodStatus: PeriodStatus;
   readonly archived: boolean;
 }
 

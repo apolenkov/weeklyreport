@@ -14,6 +14,7 @@ import {
   initialsFromName,
   trafficToProductStatus,
 } from "../../../features/report-sections/model/weekly-report-groupers";
+import { activityDisplayTitle } from "../../../shared/lib/activity/activity-display";
 import { worstTrafficStatus } from "../../../shared/lib/status/status-presentation";
 
 type Section = WeeklyReportReadModel["leadSections"][number];
@@ -35,11 +36,19 @@ export type PrintActivityRisk = WeeklyReportRisk & PrintActivityAuthorIdentity;
 export type PrintActivityDecision = WeeklyReportDecision &
   PrintActivityAuthorIdentity;
 
+/** Frozen title/description pair contributed by one report section author. */
+export interface PrintActivityPresentation extends PrintActivityAuthorIdentity {
+  readonly reportSectionId: string;
+  readonly title: string;
+  readonly note: string | null;
+}
+
 export interface PrintActivityReport {
   readonly id: string;
   readonly name: string;
   readonly status: WeeklyProductStatus;
   readonly contributors: readonly PrintActivityContributor[];
+  readonly presentations: readonly PrintActivityPresentation[];
   readonly currentWeek: readonly PrintActivityItem[];
   readonly nextWeek: readonly PrintActivityItem[];
   readonly risks: readonly PrintActivityRisk[];
@@ -48,10 +57,10 @@ export interface PrintActivityReport {
 
 interface ActivityAccumulator {
   readonly id: string;
-  readonly name: string;
   readonly status: ActivityStatus;
   readonly contributors: readonly PrintActivityContributor[];
   readonly contributorIds: ReadonlySet<string>;
+  readonly presentations: readonly PrintActivityPresentation[];
   readonly currentWeek: readonly PrintActivityItem[];
   readonly nextWeek: readonly PrintActivityItem[];
   readonly risks: readonly PrintActivityRisk[];
@@ -89,20 +98,48 @@ function addContributor(
   };
 }
 
-function createAccumulator(
-  id: string,
-  name = "Unknown activity",
-): ActivityAccumulator {
+function createAccumulator(id: string): ActivityAccumulator {
   return {
     id,
-    name,
     status: null,
     contributors: [],
     contributorIds: new Set(),
+    presentations: [],
     currentWeek: [],
     nextWeek: [],
     risks: [],
     decisions: [],
+  };
+}
+
+function addPresentation(
+  accumulator: ActivityAccumulator,
+  section: Section,
+  activityId: string,
+): ActivityAccumulator {
+  if (
+    accumulator.presentations.some(
+      (presentation) =>
+        presentation.reportSectionId === section.reportSectionId,
+    )
+  ) {
+    return accumulator;
+  }
+  const activity = section.activities.find(
+    (candidate) => candidate.activityId === activityId,
+  );
+  return {
+    ...accumulator,
+    presentations: [
+      ...accumulator.presentations,
+      {
+        reportSectionId: section.reportSectionId,
+        authorId: section.authorId,
+        authorName: section.authorName,
+        title: activity ? activityDisplayTitle(activity) : "Activity",
+        note: activity?.note ?? null,
+      },
+    ],
   };
 }
 
@@ -174,23 +211,32 @@ function mapDecision(
 function accumulateSection(
   activities: ReadonlyMap<string, ActivityAccumulator>,
   section: Section,
-  activityNames: ReadonlyMap<string, string>,
 ): ReadonlyMap<string, ActivityAccumulator> {
   const result = new Map(activities);
+  const activityById = new Map(
+    section.activities.map((activity) => [activity.activityId, activity]),
+  );
+  const activityTitle = (activityId: string): string => {
+    const activity = activityById.get(activityId);
+    return activity ? activityDisplayTitle(activity) : "Activity";
+  };
   const update = (
     activityId: string,
     apply: (current: ActivityAccumulator) => ActivityAccumulator,
   ) => {
-    const current =
-      result.get(activityId) ??
-      createAccumulator(activityId, activityNames.get(activityId));
-    result.set(activityId, addContributor(apply(current), section));
+    const current = result.get(activityId) ?? createAccumulator(activityId);
+    result.set(
+      activityId,
+      addContributor(
+        apply(addPresentation(current, section, activityId)),
+        section,
+      ),
+    );
   };
 
   section.activities.forEach((activity) => {
     update(activity.activityId, (current) => ({
       ...current,
-      name: activity.activityName,
       status: worstTrafficStatus([
         current.status,
         activity.derivedStatus ?? activity.status,
@@ -198,29 +244,38 @@ function accumulateSection(
     }));
   });
   section.items.forEach((item) => {
-    if (item.activityId == null) return;
-    update(item.activityId, (current) => {
+    const activityId = item.activityId;
+    if (activityId == null) return;
+    update(activityId, (current) => {
       const field = item.type === "current" ? "currentWeek" : "nextWeek";
       return {
         ...current,
-        [field]: [...current[field], mapItem(section, current.name, item)],
+        [field]: [
+          ...current[field],
+          mapItem(section, activityTitle(activityId), item),
+        ],
       };
     });
   });
   section.risks.forEach((risk) => {
-    if (risk.activityId == null) return;
-    update(risk.activityId, (current) => ({
+    const activityId = risk.activityId;
+    if (activityId == null) return;
+    update(activityId, (current) => ({
       ...current,
-      risks: [...current.risks, mapRisk(section, current.name, risk)],
+      risks: [
+        ...current.risks,
+        mapRisk(section, activityTitle(activityId), risk),
+      ],
     }));
   });
   section.decisions.forEach((decision, index) => {
-    if (decision.activityId == null) return;
-    update(decision.activityId, (current) => ({
+    const activityId = decision.activityId;
+    if (activityId == null) return;
+    update(activityId, (current) => ({
       ...current,
       decisions: [
         ...current.decisions,
-        mapDecision(section, current.name, decision, index),
+        mapDecision(section, activityTitle(activityId), decision, index),
       ],
     }));
   });
@@ -230,26 +285,26 @@ function accumulateSection(
 export function buildPrintActivityReports(
   sections: WeeklyReportReadModel["leadSections"],
 ): readonly PrintActivityReport[] {
-  const activityNames = new Map(
-    sections.flatMap((section) =>
-      section.activities.map(
-        (activity) => [activity.activityId, activity.activityName] as const,
-      ),
-    ),
-  );
   const accumulated = sections.reduce<ReadonlyMap<string, ActivityAccumulator>>(
-    (activities, section) =>
-      accumulateSection(activities, section, activityNames),
+    (activities, section) => accumulateSection(activities, section),
     new Map(),
   );
-  return [...accumulated.values()].map((activity) => ({
-    id: activity.id,
-    name: activity.name,
-    status: trafficToProductStatus(activity.status),
-    contributors: activity.contributors,
-    currentWeek: activity.currentWeek,
-    nextWeek: activity.nextWeek,
-    risks: activity.risks,
-    decisions: activity.decisions,
-  }));
+  return [...accumulated.values()].map((activity) => {
+    const titles = [
+      ...new Set(
+        activity.presentations.map((presentation) => presentation.title),
+      ),
+    ];
+    return {
+      id: activity.id,
+      name: titles.length === 1 ? (titles[0] ?? "Activity") : "Activity",
+      status: trafficToProductStatus(activity.status),
+      contributors: activity.contributors,
+      presentations: activity.presentations,
+      currentWeek: activity.currentWeek,
+      nextWeek: activity.nextWeek,
+      risks: activity.risks,
+      decisions: activity.decisions,
+    };
+  });
 }

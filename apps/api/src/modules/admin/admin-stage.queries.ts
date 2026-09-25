@@ -6,6 +6,8 @@ import type { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { isUniqueViolation } from "../../lib/prisma-unique-violation";
+import { lockAllEditableReports } from "../../lib/project-assignment.js";
+import { lockStatusGraph } from "../../lib/status-graph-lock.js";
 
 interface StageAssignmentInput {
   readonly userId: string;
@@ -20,7 +22,9 @@ const STAGE_ASSIGNMENT_RELATIONS = {
 
 // Reassign updates userId only. Prisma upsert on this compound key is not
 // native ON CONFLICT, so concurrent first-assigns race P2002 and the loser
-// applies the same update explicitly.
+// applies the same update explicitly. StageAssignment writes change the live
+// `current.projects` section projection, so the DML serializes on the status
+// graph and every editable Report row — the locks carry-over shares.
 async function upsertStageAssignmentRow(
   prisma: PrismaService,
   data: StageAssignmentInput,
@@ -29,11 +33,15 @@ async function upsertStageAssignmentRow(
     stageId_projectId: { stageId: data.stageId, projectId: data.projectId },
   };
   try {
-    return await prisma.stageAssignment.upsert({
-      where,
-      create: data,
-      update: { userId: data.userId },
-      include: STAGE_ASSIGNMENT_RELATIONS,
+    return await prisma.$transaction(async (tx) => {
+      await lockStatusGraph(tx);
+      await lockAllEditableReports(tx);
+      return tx.stageAssignment.upsert({
+        where,
+        create: data,
+        update: { userId: data.userId },
+        include: STAGE_ASSIGNMENT_RELATIONS,
+      });
     });
   } catch (error) {
     if (
@@ -44,10 +52,17 @@ async function upsertStageAssignmentRow(
     ) {
       throw error;
     }
-    return prisma.stageAssignment.update({
-      where,
-      data: { userId: data.userId },
-      include: STAGE_ASSIGNMENT_RELATIONS,
+    // The conflict aborted the first transaction — never write through its
+    // client again. Recovery relocks the graph and reports on a fresh client
+    // before the same compound-identity update.
+    return prisma.$transaction(async (tx) => {
+      await lockStatusGraph(tx);
+      await lockAllEditableReports(tx);
+      return tx.stageAssignment.update({
+        where,
+        data: { userId: data.userId },
+        include: STAGE_ASSIGNMENT_RELATIONS,
+      });
     });
   }
 }
@@ -72,7 +87,11 @@ export async function deleteStageAssignment(
   prisma: PrismaService,
   id: string,
 ): Promise<void> {
-  await prisma.stageAssignment.delete({ where: { id } });
+  await prisma.$transaction(async (tx) => {
+    await lockStatusGraph(tx);
+    await lockAllEditableReports(tx);
+    await tx.stageAssignment.delete({ where: { id } });
+  });
 }
 
 export async function listStageAssignments(

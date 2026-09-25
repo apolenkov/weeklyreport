@@ -55,7 +55,9 @@ export function scopeDiscriminator(session: UserSession): string {
     .join("|");
 }
 
-// Shared source for groupScopeFilter and scopeDiscriminator.
+// Shared source for groupScopeFilter and scopeDiscriminator. Returns [] for
+// admin — callers must keep the role==='admin' early return, since an empty
+// list here means zero access, not full access.
 export function computeAllowedGroupIds(
   session: Pick<UserSession, "role" | "reportingGroupId" | "viewerGroupAccess">,
 ): readonly string[] {

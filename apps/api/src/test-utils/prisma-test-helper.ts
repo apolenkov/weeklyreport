@@ -20,12 +20,17 @@ export function assertTestDatabaseUrl(
   environment: DestructiveTargetEnv = process.env,
 ): void {
   assertE2eRuntimeDestructiveTarget(SCRIPT_NAME, url, environment);
+  // Both explicit URLs must identify the shared database before cleanup.
+  if (!environment.DATABASE_URL) {
+    throw new Error(
+      "[api-integration-test] DATABASE_URL is required to verify the shared database target before cleanup.",
+    );
+  }
   if (
-    environment.DATABASE_URL !== undefined &&
-    sameLocalPostgresDatabaseTarget(SCRIPT_NAME, url, environment.DATABASE_URL)
+    !sameLocalPostgresDatabaseTarget(SCRIPT_NAME, url, environment.DATABASE_URL)
   ) {
     throw new Error(
-      "[api-integration-test] E2E_DATABASE_URL must differ from DATABASE_URL.",
+      "[api-integration-test] E2E_DATABASE_URL must resolve to the same database target as DATABASE_URL.",
     );
   }
 }

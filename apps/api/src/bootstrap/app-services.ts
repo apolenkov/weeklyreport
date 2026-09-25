@@ -6,6 +6,7 @@ import { PrismaService } from "../infrastructure/prisma/prisma.service";
 import type { AppRouter } from "../infrastructure/trpc/trpc.router";
 import type { AppLogger } from "../lib/logger";
 import type { AutoCarryOverOutcome } from "../modules/carry-over/index.js";
+import { PdfExportService } from "../modules/pdf-export/index.js";
 import { buildAppRouter } from "./app-router";
 import { createAutoCarryOver } from "./auto-carry-over";
 import { createBootstrapJobsService } from "./jobs-service";
@@ -31,6 +32,7 @@ export function createAppServices(deps: {
     queueRegistry,
     prisma,
     logger,
+    pdfExportService: app.get(PdfExportService),
   });
 
   const autoCarryOver = createAutoCarryOver({ app, prisma, logger });

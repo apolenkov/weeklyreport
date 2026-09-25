@@ -17,8 +17,10 @@ import {
 } from "./seed-advanced.anchors.js";
 import { CONSECUTIVE_STAGE_OFFSETS, stageAt } from "./seed-advanced.cycles.js";
 import { stageAssignmentId } from "./seed-advanced.ids.js";
+import type { StageOwnership } from "./seed-advanced.stage-names.js";
+import { toStageOwnership } from "./seed-advanced.stage-names.js";
 
-interface AssignmentRow {
+export interface AssignmentRow {
   readonly id: string;
   readonly userId: string;
   readonly stageId: string;
@@ -27,21 +29,21 @@ interface AssignmentRow {
 
 // Every product gets its lead assigned to three consecutive catalogue stages;
 // the cyclic lookup reuses stages when products outnumber the catalogue.
-const DETERMINISTIC_ROWS: readonly AssignmentRow[] = SEED_PRODUCTS.flatMap(
-  (product, productIdx) =>
+export const DETERMINISTIC_ROWS: readonly AssignmentRow[] =
+  SEED_PRODUCTS.flatMap((product, productIdx) =>
     CONSECUTIVE_STAGE_OFFSETS.map((offset) => ({
       id: stageAssignmentId(productIdx, offset),
       userId: product.leadId,
       stageId: stageAt(productIdx + offset).id,
       projectId: product.id,
     })),
-);
+  );
 
 // Igor and Maria contribute to the primary lead's Marketing portal (he owns
 // Planning/Analysis/Design, so Testing and DevOps are free), and the primary
 // lead contributes to Olga's Payment gateway — that pair drives the "Other
 // contributors" strip and the locked cross-author chips in her view.
-const CROSS_AUTHOR_ROWS: readonly AssignmentRow[] = [
+export const CROSS_AUTHOR_ROWS: readonly AssignmentRow[] = [
   {
     id: "a0000000-0000-4000-8000-00000000ca01",
     userId: LEAD_IGOR_ID,
@@ -86,28 +88,54 @@ async function upsertAssignment(
   prisma: PrismaClient,
   row: AssignmentRow,
 ): Promise<void> {
+  const existing = await prisma.stageAssignment.findUnique({
+    where: {
+      stageId_projectId: { stageId: row.stageId, projectId: row.projectId },
+    },
+    select: { userId: true },
+  });
+  // A pair another dataset already owns keeps its owner: the composed `full`
+  // and `stress` profiles run the simple dataset first over the same product
+  // ids, and re-pointing its stages would leave that dataset's authored rows
+  // referencing stages their author no longer owns.
+  if (existing !== null && existing.userId !== row.userId) {
+    return;
+  }
   await prisma.stageAssignment.upsert({
     where: {
       stageId_projectId: { stageId: row.stageId, projectId: row.projectId },
     },
-    update: { userId: row.userId },
+    update: {},
     create: row,
   });
 }
 
+/** Effective ownership for this run, read back after the writes. */
+async function readOwnership(prisma: PrismaClient): Promise<StageOwnership> {
+  const rows = await prisma.stageAssignment.findMany({
+    where: { projectId: { in: SEED_PRODUCTS.map((product) => product.id) } },
+    select: { userId: true, projectId: true, stageId: true },
+  });
+  return toStageOwnership(rows);
+}
+
 /**
  * Seeds the per-product stage ownership plus the hand-written cross-author
- * rows. Returns the generated assignment count; cross-author demo rows are
- * seeded in addition and are excluded from that count.
+ * rows, then returns the generated assignment count together with the effective
+ * ownership every row writer must select stages from. Cross-author demo rows
+ * are seeded in addition and are excluded from the count.
  */
 export async function seedStageAssignments(
   prisma: PrismaClient,
-): Promise<number> {
+): Promise<{ count: number; ownership: StageOwnership }> {
   for (const row of DETERMINISTIC_ROWS) {
     await upsertAssignment(prisma, row);
   }
   for (const row of CROSS_AUTHOR_ROWS) {
     await upsertAssignment(prisma, row);
   }
-  return DETERMINISTIC_ROWS.length;
+  return {
+    count: DETERMINISTIC_ROWS.length,
+    ownership: await readOwnership(prisma),
+  };
 }

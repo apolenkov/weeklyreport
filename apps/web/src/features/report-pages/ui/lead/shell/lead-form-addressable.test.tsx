@@ -223,6 +223,21 @@ describe("LeadForm — addressable URLs", () => {
     );
   });
 
+  it("preserves authorId while resolving the bare route", async () => {
+    mockSearchParams = new URLSearchParams({ authorId: "author_9" });
+    const proxy = buildHarness({});
+    render(
+      <Wrapper proxy={proxy}>
+        <LeadForm redirectToCanonical />
+      </Wrapper>,
+    );
+    await waitFor(() =>
+      expect(replace).toHaveBeenCalledWith(
+        `/lead/report/${ACTIVE_REPORT_ID}?authorId=author_9&mode=edit`,
+      ),
+    );
+  });
+
   it("preserves a feedback deep link while resolving the bare route", async () => {
     mockSearchParams = new URLSearchParams({
       feedback: "feedback_123",

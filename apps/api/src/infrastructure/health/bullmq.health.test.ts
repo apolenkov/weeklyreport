@@ -47,6 +47,6 @@ describe("BullMQHealthIndicator timeout", () => {
     expect(result).toMatchObject({
       bullmq: { status: "down" },
     });
-    expect(JSON.stringify(result)).toContain("timed out");
+    expect(result).toEqual({ bullmq: { status: "down" } });
   });
 });

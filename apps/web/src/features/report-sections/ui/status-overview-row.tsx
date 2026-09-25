@@ -13,7 +13,6 @@ import {
   reportHiddenRowCount,
   ReportItemSlot,
 } from "./status-overview-additional-updates";
-import { editorLaneClass } from "./status-overview-editor-slot";
 import type { ItemHandlers } from "./status-overview-item-handlers";
 import {
   STATUS_OVERVIEW_COLUMN_HEADER_IDS,
@@ -69,44 +68,32 @@ function LineageRow({
           (column) => row[column.source]?.recordId === editorSlot.recordId,
         )),
   );
-  const matchedColumn = editorBelongsToRow
-    ? STATUS_OVERVIEW_COLUMNS.find(
-        (column) => column.source === editorSlot?.source,
-      )
-    : undefined;
   return (
     <div
       className={`${TIMELINE_GRID} mx-3 my-3 overflow-hidden rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)] bg-[var(--color-card)] md:m-0 md:rounded-none md:border-0 md:border-b md:items-stretch`}
     >
       {STATUS_OVERVIEW_COLUMNS.map((column) => {
         const item = row[column.source];
-        const matchesEditor = matchedColumn?.key === column.key;
         return (
           <div
             key={column.key}
             data-overview-lineage-lane={column.source}
             role="group"
             aria-labelledby={STATUS_OVERVIEW_COLUMN_HEADER_IDS[column.key]}
-            className={`${TIMELINE_CELL} ${editorLaneClass(matchesEditor, matchedColumn !== undefined, "block")} border-t border-[var(--color-border-subtle)] first:border-t-0 md:min-h-36 md:flex-col md:border-t-0 ${matchedColumn !== undefined && !matchesEditor ? "" : "md:flex"} ${item ? "" : "bg-[var(--color-surface-muted)]"}`}
+            className={`${TIMELINE_CELL} block border-t border-[var(--color-border-subtle)] first:border-t-0 md:flex md:flex-col md:border-t-0 ${item ? "" : "bg-[var(--color-surface-muted)]"}`}
           >
             <MobileWeekLabel
               label={column.label}
               period={periods[column.key]}
             />
-            {matchesEditor ? (
-              editorSlot?.content
-            ) : item ? (
+            {item ? (
               <>
                 {column.source === "previous" && row.previousParent ? (
                   <p className="mb-1 break-words text-xs text-[var(--color-muted-foreground)]">
                     Previously in {row.previousParent}
                   </p>
                 ) : null}
-                <ReportItemSlot
-                  item={item}
-                  editorSlot={editorSlot}
-                  {...handlers}
-                />
+                <ReportItemSlot item={item} {...handlers} />
               </>
             ) : (
               <p className="text-xs text-[var(--color-muted-foreground)]">
@@ -116,6 +103,11 @@ function LineageRow({
           </div>
         );
       })}
+      {editorBelongsToRow ? (
+        <div className="border-t border-[var(--color-border-subtle)] bg-[var(--color-card)] px-4 py-3 md:col-span-3">
+          {editorSlot?.content}
+        </div>
+      ) : null}
     </div>
   );
 }

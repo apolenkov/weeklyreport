@@ -1,7 +1,7 @@
 "use client";
 
 import { SAFE_TEXT_MAX_LENGTH } from "@customreport/shared";
-import type { Ref } from "react";
+import type { RefObject } from "react";
 
 import { RecordTextareaField } from "../../../shared/ui/forms/record-textarea-field";
 import type {
@@ -15,13 +15,13 @@ interface DecisionEditDialogFieldsProps {
   readonly text: string;
   readonly onTextChange: (value: string) => void;
   readonly textError: string | undefined;
-  readonly textRef: Ref<HTMLTextAreaElement>;
+  readonly textRef: RefObject<HTMLTextAreaElement | null>;
   readonly deadline: string;
   readonly onDeadlineChange: (value: string) => void;
   readonly impact: string;
   readonly onImpactChange: (value: string) => void;
   readonly impactError: string | undefined;
-  readonly impactRef: Ref<HTMLTextAreaElement>;
+  readonly impactRef: RefObject<HTMLTextAreaElement | null>;
   readonly parent: RecordParent;
   readonly products: readonly Product[];
   readonly activities: readonly ParentActivityOption[];

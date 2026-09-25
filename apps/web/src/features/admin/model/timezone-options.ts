@@ -58,3 +58,17 @@ export const TIMEZONE_OPTIONS: readonly {
     zones: [{ value: "UTC", label: "UTC" }],
   },
 ];
+
+// The wire schema accepts any IANA-resolvable zone, wider than this curated
+// list — keep a stored out-of-list value selectable so the select shows the
+// real value instead of silently falling back to the first option.
+export function timezoneOptionsWith(current: string): typeof TIMEZONE_OPTIONS {
+  const known = TIMEZONE_OPTIONS.some((group) =>
+    group.zones.some((zone) => zone.value === current),
+  );
+  if (known || current === "") return TIMEZONE_OPTIONS;
+  return [
+    { group: "Current", zones: [{ value: current, label: current }] },
+    ...TIMEZONE_OPTIONS,
+  ];
+}

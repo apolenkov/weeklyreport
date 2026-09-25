@@ -36,8 +36,10 @@ export function outcomeCommandHash(
           stageNames:
             resolve.stageNames === undefined
               ? undefined
-              : [...new Set(resolve.stageNames)].sort((a, b) =>
-                  a.localeCompare(b),
+              : // Code-unit order: the hash must be identical across ICU
+                // versions and process locales (localeCompare is not).
+                [...new Set(resolve.stageNames)].sort((a, b) =>
+                  a < b ? -1 : a > b ? 1 : 0,
                 ),
           priorityRank: resolve.priorityRank,
           parent:

@@ -1,8 +1,16 @@
 export { createPdfDownloadHandler } from "./pdf-export.download-handler.js";
 export { PdfExportModule } from "./pdf-export.module.js";
+export type {
+  PdfExportJobIdentity,
+  PdfExportJobRecord,
+  PdfExportLockedJobWrites,
+  PdfExportRepository,
+  PdfExportRetryOutcome,
+  PdfExportRetryQueue,
+  PdfExportTerminalState,
+} from "./pdf-export.ports.js";
 export {
   PdfExportDomainError,
   PdfExportService,
-  type PdfExportTerminalState,
 } from "./pdf-export.service.js";
 export { verifyPdfExportToken } from "./pdf-export.token.js";

@@ -128,6 +128,94 @@ describe("envSchema — no defaults, every product var required", () => {
     },
   );
 
+  it("preserves the trimmed provider origin allowlist as a string", () => {
+    const value = " https://api.mistral.ai, https://openrouter.ai ";
+    expect(
+      envSchema.parse({
+        ...COMPLETE,
+        [REPORT_ASSISTANT_ENV_KEYS.providerAllowedOrigins]: value,
+      })[REPORT_ASSISTANT_ENV_KEYS.providerAllowedOrigins],
+    ).toBe("https://api.mistral.ai, https://openrouter.ai");
+  });
+
+  it.each([
+    "",
+    " ".repeat(3),
+    "not-a-url",
+    "https://api.example.com/v1",
+    "https://api.example.com,not-a-url",
+  ])("rejects an invalid provider origin allowlist %j", (value) => {
+    const result = envSchema.safeParse({
+      ...COMPLETE,
+      [REPORT_ASSISTANT_ENV_KEYS.providerAllowedOrigins]: value,
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.map((issue) => issue.path)).toContainEqual([
+        REPORT_ASSISTANT_ENV_KEYS.providerAllowedOrigins,
+      ]);
+    }
+  });
+
+  describe.each([
+    ["REDIS_DB", "15"],
+    ["DB_POOL_IDLE_TIMEOUT_MS", "10000"],
+    ["DB_POOL_CONNECTION_TIMEOUT_MS", "10000"],
+    [REPORT_ASSISTANT_ENV_KEYS.similarityThreshold, "1"],
+  ] as const)("explicit numeric configuration for %s", (key, validValue) => {
+    it.each(["", " ".repeat(3), "\t\n"])("rejects blank value %j", (value) => {
+      const result = envSchema.safeParse({ ...COMPLETE, [key]: value });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.map((issue) => issue.path)).toContainEqual([
+          key,
+        ]);
+      }
+    });
+
+    it.each(["0", validValue])("accepts explicit value %s", (value) => {
+      expect(envSchema.parse({ ...COMPLETE, [key]: value })[key]).toBe(
+        Number(value),
+      );
+    });
+  });
+
+  it.each(["", " ".repeat(3), "\t\n"])(
+    "rejects blank REDIS_HOST %j",
+    (REDIS_HOST) => {
+      expect(envSchema.safeParse({ ...COMPLETE, REDIS_HOST }).success).toBe(
+        false,
+      );
+    },
+  );
+
+  it.each(["localhost", "redis", "127.0.0.1", "::1"])(
+    "preserves nonblank REDIS_HOST %j",
+    (REDIS_HOST) => {
+      expect(envSchema.parse({ ...COMPLETE, REDIS_HOST }).REDIS_HOST).toBe(
+        REDIS_HOST,
+      );
+    },
+  );
+
+  it.each(["", " ".repeat(3), "\t\n"])(
+    "rejects blank PDF_OUTPUT_DIR %j",
+    (PDF_OUTPUT_DIR) => {
+      expect(envSchema.safeParse({ ...COMPLETE, PDF_OUTPUT_DIR }).success).toBe(
+        false,
+      );
+    },
+  );
+
+  it.each(["./storage/pdfs", "/var/lib/customreport/pdfs", " ./pdfs "])(
+    "preserves nonblank PDF_OUTPUT_DIR %j",
+    (PDF_OUTPUT_DIR) => {
+      expect(
+        envSchema.parse({ ...COMPLETE, PDF_OUTPUT_DIR }).PDF_OUTPUT_DIR,
+      ).toBe(PDF_OUTPUT_DIR);
+    },
+  );
+
   it.each(["localhost", "::", "", "api.internal"] as const)(
     "rejects an unsupported API_HOST (%j)",
     (API_HOST) => {
@@ -245,15 +333,16 @@ describe("envSchema — no defaults, every product var required", () => {
     },
   );
 
-  it.each(["1.5", "-1", "notnum"] as const)(
-    "rejects a malformed DB_POOL_IDLE_TIMEOUT_MS (%s)",
-    (value) => {
-      expect(
-        envSchema.safeParse({ ...COMPLETE, DB_POOL_IDLE_TIMEOUT_MS: value })
-          .success,
-      ).toBe(false);
-    },
-  );
+  describe.each([
+    "DB_POOL_IDLE_TIMEOUT_MS",
+    "DB_POOL_CONNECTION_TIMEOUT_MS",
+  ] as const)("integer constraint for %s", (key) => {
+    it.each(["1.5", "-1", "notnum"])("rejects malformed value %s", (value) => {
+      expect(envSchema.safeParse({ ...COMPLETE, [key]: value }).success).toBe(
+        false,
+      );
+    });
+  });
 
   it("accepts a zero timeout but rejects a zero DB_POOL_MAX", () => {
     expect(

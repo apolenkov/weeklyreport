@@ -121,7 +121,7 @@ default.
 The shared Blocked-&-At-Risk builder MUST emit the project-level "flagged red"
 escalation exactly once per red product, regardless of how many leads co-own
 that product. The builder is `buildEscalationsFromReadSections` in
-`packages/report-persistence/src/published-report-snapshot.ts`. The product-level red
+`packages/shared/src/schemas/report/report-escalations.ts`. The product-level red
 signal is product-scoped (it is derived from the product's effective status, not
 from any single lead's contribution), so it MUST NOT be emitted once per
 contributing lead's section.

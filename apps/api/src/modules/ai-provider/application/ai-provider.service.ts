@@ -40,6 +40,7 @@ export type {
 } from "./ai-provider.service-support.js";
 export {
   AiProviderConfigurationError,
+  AiProviderConflictError,
   AiProviderNotFoundError,
 } from "./ai-provider.service-support.js";
 

@@ -4,7 +4,6 @@ import type {
   AiProviderConfigurationRead,
   AiProviderControlRead,
   AiProviderDraft,
-  AiProviderProfile,
   AiProviderProfileCapability,
 } from "@customreport/shared";
 import { useId, useRef, useState } from "react";
@@ -12,9 +11,14 @@ import { useId, useRef, useState } from "react";
 import {
   AiProviderConfigurationFields,
   type AiProviderFormState,
-  CUSTOM_PROVIDER_PROFILE,
 } from "./ai-provider-configuration-fields";
+import {
+  CUSTOM_PROVIDER_PROFILE,
+  profileLabel,
+} from "./ai-provider-configuration-fields.types";
 import { AiProviderActions } from "./ai-provider-form-actions";
+
+export { profileLabel };
 
 type RevisionRead = AiProviderConfigurationRead;
 
@@ -35,13 +39,6 @@ const INITIAL_AI_PROVIDER_FORM: AiProviderFormState = {
     model: "mistral-embed",
     credential: "",
   },
-};
-
-export const profileLabel = (profile: AiProviderProfile): string => {
-  if (profile === CUSTOM_PROVIDER_PROFILE) return "Custom OpenAI-compatible";
-  return profile === "openrouter"
-    ? "OpenRouter"
-    : profile.charAt(0).toUpperCase() + profile.slice(1);
 };
 
 export const toAiProviderForm = (
@@ -207,6 +204,8 @@ export function AiProviderForm({
   const [reasoningError, setReasoningError] = useState<string | null>(null);
   const reasoningErrorId = useId();
   const reasoningRef = useRef<HTMLInputElement>(null);
+  const visibleReasoningError =
+    form.generation.reasoningMode === "custom" ? reasoningError : null;
 
   return (
     <form
@@ -243,17 +242,17 @@ export function AiProviderForm({
             updateFormState(current, key, value, props.profileCapabilities),
           )
         }
-        reasoningInvalid={reasoningError !== null}
+        reasoningInvalid={visibleReasoningError !== null}
         reasoningErrorId={reasoningErrorId}
         reasoningRef={reasoningRef}
       />
-      {reasoningError && (
+      {visibleReasoningError && (
         <p
           id={reasoningErrorId}
           className="text-sm text-[var(--color-destructive)]"
           role="alert"
         >
-          {reasoningError}
+          {visibleReasoningError}
         </p>
       )}
       <AiProviderActions {...props} onCancel={onCancelEdit} />

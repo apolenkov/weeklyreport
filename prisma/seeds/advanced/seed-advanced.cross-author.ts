@@ -5,6 +5,7 @@ import {
   TrafficLightStatus,
 } from "@prisma/client";
 
+import { LEAD_OLGA_ID } from "../support/seed-constants.js";
 import {
   LEAD_SLOT_OLGA,
   LEAD_SLOT_PRIMARY,
@@ -15,6 +16,8 @@ import {
 } from "./seed-advanced.anchors.js";
 import { ACTIVE_SUFFIX, itemId, sectionId } from "./seed-advanced.ids.js";
 import { upsertItem } from "./seed-advanced.rows.js";
+import type { StageOwnership } from "./seed-advanced.stage-names.js";
+import { ownedStageName } from "./seed-advanced.stage-names.js";
 
 const OLGA_DEVOPS_ITEM_SEQ = 6;
 
@@ -44,6 +47,7 @@ const LOCKED_CHIP_STATUSES = [
  */
 export async function seedCrossAuthorOverlay(
   prisma: PrismaClient,
+  ownership: StageOwnership,
 ): Promise<void> {
   for (const row of LOCKED_CHIP_STATUSES) {
     await prisma.stageStatus.upsert({
@@ -68,6 +72,13 @@ export async function seedCrossAuthorOverlay(
     text: "Настройка DevOps-конвейера для Платёжного шлюза",
     tag: "infra",
     workflowStatus: ItemWorkflowStatus.in_progress,
-    stageNames: [STAGE_NAME_DEVOPS],
+    stageNames: [
+      ownedStageName(
+        LEAD_OLGA_ID,
+        PRODUCT_PAYMENT_GATEWAY,
+        STAGE_NAME_DEVOPS,
+        ownership,
+      ),
+    ],
   });
 }
