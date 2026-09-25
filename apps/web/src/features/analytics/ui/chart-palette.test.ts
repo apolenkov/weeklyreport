@@ -49,14 +49,14 @@ function contrastRatio(foreground: string, background: string): number {
 }
 
 describe("analytics chart legend palette", () => {
-  it("keeps green and cyan legend labels readable on the desktop surface", () => {
-    const surface = themeColor("color-background");
+  const surface = themeColor("color-background");
 
-    expect(
-      contrastRatio(themeColor("color-chart-1"), surface),
-    ).toBeGreaterThanOrEqual(4.5);
-    expect(
-      contrastRatio(themeColor("color-chart-4"), surface),
-    ).toBeGreaterThanOrEqual(4.5);
-  });
+  it.each([1, 2, 3, 4, 5, 6, 7])(
+    "keeps every categorical series color readable on the desktop surface (chart-%i)",
+    (index) => {
+      expect(
+        contrastRatio(themeColor(`color-chart-${String(index)}`), surface),
+      ).toBeGreaterThanOrEqual(4.5);
+    },
+  );
 });

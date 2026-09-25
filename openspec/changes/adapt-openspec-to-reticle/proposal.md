@@ -1,3 +1,11 @@
+> **OWNER-CANCELED / SUPERSEDED — 2026-09-20.** The owner removed the Reticle
+> integration and selected agent-browser (Vercel) as the browser-verification
+> primary route (backlog TASK-047); Jev is a separate optional global tool
+> tracked in TASK-036. This
+> change is superseded: it is not accepted, must not be archive-completed, and
+> its outstanding Reticle-specific tasks are canceled, not passed. The body
+> below is preserved as history.
+
 ## Why
 
 WeeklyReport has a normative OpenSpec corpus but no durable way to tell which user-facing scenarios Reticle proves, which flow proves them, or which scenarios cannot be exercised through the browser. The exact scenario and outcome denominators must come from the accepted source snapshot, because the corpus can change. The existing saved flows are useful runtime evidence, yet they are not traceable to the complete specification denominator.

@@ -17,15 +17,11 @@ export async function reconcileProjectAssignment(
   project: ProjectAssignmentInput,
 ): Promise<void> {
   await lockStatusGraph(tx);
-  await lockAndValidateProjectOwnership(tx, {
+  const { project: lockedProject } = await lockAndValidateProjectOwnership(tx, {
     projectId: project.id,
     desiredLeadId: project.leadId,
   });
-  const existing = await tx.project.findUnique({
-    where: { id: project.id },
-    select: { leadId: true },
-  });
-  await reconcileProjectAssignmentRows(tx, project, existing?.leadId);
+  await reconcileProjectAssignmentRows(tx, project, lockedProject?.leadId);
 }
 
 /**
@@ -102,7 +98,8 @@ async function reconcileProjectAssignmentRows(
   }
 }
 
-async function lockAllEditableReports(
+/** Locks every editable Report row in stable id order; callers hold the graph lock first. */
+export async function lockAllEditableReports(
   tx: Prisma.TransactionClient,
 ): Promise<string[]> {
   const candidates = await tx.report.findMany({

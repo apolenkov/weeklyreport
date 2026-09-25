@@ -251,6 +251,19 @@ workspace, Prisma-тесты и проверки repository cleanliness и opera
 запускает интеграционные тесты API с базой данных: их запускают отдельно через
 `pnpm --filter @customreport/api test:integration`.
 
+Конфиги API `vitest.integration.config.ts` и `vitest.coverage.config.ts` загружают
+`.env.test`; `apps/web/vitest.config.ts` этот файл не загружает. По MVP-политике
+одной базы (решение владельца 2026-09-18, см. [`AGENTS.md`](../AGENTS.md#database-safety))
+локальная разработка, тесты и E2E делят одну loopback-базу `customreport_e2e` —
+образец [`.env.test.example`](../.env.test.example) несёт только E2E-цель.
+Lane-базы не подготовлены и не должны создаваться без нового распоряжения
+владельца. Каждой test/E2E-фазе предшествуют guarded reset и явный seed под
+per-run согласием, чтобы фазы не наследовали чужое состояние: helper очистки
+откажет, если `DATABASE_URL` отсутствует в окружении или указывает на ту же
+базу, — интеграционные suites работают от reset-baseline, а не от cleanup. Для запуска очистки нужно отдельное согласие на эту операцию
+через `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION`; правила — в
+[`AGENTS.md`](../AGENTS.md#database-safety).
+
 Пользовательские сценарии проверяют в работающем приложении через реальный
 браузер по разделу [Browser verification](../AGENTS.md#browser-verification):
 перед действием называют ожидаемое наблюдаемое следствие и подтверждают его

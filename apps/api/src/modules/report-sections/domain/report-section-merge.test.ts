@@ -231,3 +231,32 @@ describe("mergeSection activity title override", () => {
     expect(activitySection.activities[0]?.titleOverride).toBeUndefined();
   });
 });
+
+describe("mergeSection stageNames normalization", () => {
+  it("normalizes an omitted stageNames key on activity-parented records to []", () => {
+    // The write schema tolerates a missing stageNames key for
+    // activity-parented rows, while read models always expose the array
+    // ("activity rows use []"). mergeSection must normalize instead of
+    // throwing a ZodError that escapes as INTERNAL_SERVER_ERROR.
+    const merged = mergeSection(
+      section,
+      {
+        ...baseInput,
+        items: [
+          {
+            activityId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            type: "current",
+            text: "Weekly duty",
+            tag: "ops",
+            workflowStatus: "in_progress",
+            carriedOver: false,
+          },
+        ],
+      },
+      "draft",
+      NOW,
+    );
+
+    expect(merged.items[0]?.stageNames).toEqual([]);
+  });
+});

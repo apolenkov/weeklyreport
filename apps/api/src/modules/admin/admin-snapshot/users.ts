@@ -1,14 +1,10 @@
 import { type AdminSnapshot, composeName } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
-import { lockUserAndAssertActivityAssignments } from "../../../lib/user-activity-assignment.js";
-
 export async function upsertUsers(
   tx: Prisma.TransactionClient,
   users: AdminSnapshot["users"],
-  options: { readonly validateAssignments?: boolean } = {},
 ): Promise<void> {
-  const validateAssignments = options.validateAssignments ?? true;
   const currentUserIds = new Set((await tx.user.findMany()).map((u) => u.id));
 
   for (const user of users) {
@@ -19,13 +15,6 @@ export async function upsertUsers(
       middleName: user.middleName,
     });
     if (currentUserIds.has(user.id)) {
-      if (validateAssignments) {
-        await lockUserAndAssertActivityAssignments(tx, {
-          userId: user.id,
-          role: user.role,
-          reportingGroupId,
-        });
-      }
       await tx.user.update({
         where: { id: user.id },
         data: {

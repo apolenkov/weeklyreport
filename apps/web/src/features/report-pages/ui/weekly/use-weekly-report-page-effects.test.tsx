@@ -85,6 +85,24 @@ describe("useCanonicalReportRedirect", () => {
     );
   });
 
+  it("preserves scope and archive view-state parameters in the canonical redirect", () => {
+    searchParams = new URLSearchParams({ scope: "lead", archive: "1" });
+    renderHook(() => useCanonicalReportRedirect(args));
+    expect(replace).toHaveBeenCalledWith(
+      "/head/report/report-1?authorId=user+name%2F%D0%BA%D1%82%D0%BE&scope=lead&archive=1",
+      { scroll: false },
+    );
+  });
+
+  it("preserves a mode deep-link parameter in the canonical redirect", () => {
+    searchParams = new URLSearchParams({ mode: "slides" });
+    renderHook(() => useCanonicalReportRedirect(args));
+    expect(replace).toHaveBeenCalledWith(
+      "/head/report/report-1?authorId=user+name%2F%D0%BA%D1%82%D0%BE&mode=slides",
+      { scroll: false },
+    );
+  });
+
   it("preserves scalar feedback and omits a repeated focus parameter", () => {
     searchParams = new URLSearchParams(
       "feedback=feedback_123&agentationAnnotation=first&agentationAnnotation=second",

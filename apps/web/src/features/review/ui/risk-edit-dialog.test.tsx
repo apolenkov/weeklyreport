@@ -112,6 +112,69 @@ describe("RiskEditDialog prose limits", () => {
   });
 });
 
+describe("RiskEditDialog — stale create parent", () => {
+  it("blocks button and shortcut saves, then saves the explicitly selected product", () => {
+    const onSave = vi.fn();
+    const mixedProducts: Product[] = [
+      ...products,
+      {
+        id: "p2",
+        name: "Billing",
+        overallStatus: "on-track",
+        stages: [],
+      },
+    ];
+    render(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={mixedProducts}
+        activities={[{ id: "a1", name: "Triage" }]}
+        defaultProductId="stale-id"
+        initialStageNames={["Dev"]}
+        stagesForProduct={() => ["Dev"]}
+        onSave={onSave}
+        onCancel={() => undefined}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/^Risk \*/i), {
+      target: { value: "Vendor delay" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
+      target: { value: "Slips Q3" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Mitigation \*/i), {
+      target: { value: "Escalate" },
+    });
+
+    const saveButton = screen.getByRole("button", { name: /Save Risk/i });
+    expect(saveButton).not.toBeDisabled();
+    fireEvent.click(saveButton);
+    expect(onSave).not.toHaveBeenCalled();
+
+    const backdrop = document.querySelector<HTMLElement>(
+      '[role="presentation"]',
+    );
+    if (!backdrop) throw new Error("backdrop not found");
+    fireEvent.keyDown(backdrop, { key: "Enter", ctrlKey: true });
+    fireEvent.keyDown(backdrop, { key: "Enter", metaKey: true });
+    expect(onSave).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText("Parent"), {
+      target: { value: "product:p2" },
+    });
+    fireEvent.click(saveButton);
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+      productId: "p2",
+      productName: "Billing",
+      stageNames: ["Dev"],
+    });
+  });
+});
+
 describe("RiskEditDialog — compact touch floor", () => {
   it("keeps severity chips at the touch target across breakpoints", () => {
     // jsdom cannot evaluate media queries; the class assertions are the teeth.

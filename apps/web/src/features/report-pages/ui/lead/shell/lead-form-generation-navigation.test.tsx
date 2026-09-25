@@ -246,4 +246,23 @@ describe("LeadForm generation navigation", () => {
       expect(screen.getByText("report-a:0")).toBeInTheDocument(),
     );
   });
+
+  it("does not restore a quick-add dialog after the persistent editor returns from report B", async () => {
+    const { Providers } = makeProviders();
+    const rendered = render(<LeadForm reportId="report-a" />, {
+      wrapper: Providers,
+    });
+    expect(await screen.findByText("report-a:0")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open quick add" }));
+    expect(screen.getByText("Quick add open")).toBeInTheDocument();
+
+    rendered.rerender(<LeadForm reportId="report-b" />);
+    expect(await screen.findByText("report-b:0")).toBeInTheDocument();
+    expect(screen.queryByText("Quick add open")).not.toBeInTheDocument();
+
+    rendered.rerender(<LeadForm reportId="report-a" />);
+    expect(await screen.findByText("report-a:0")).toBeInTheDocument();
+    expect(screen.queryByText("Quick add open")).not.toBeInTheDocument();
+  });
 });

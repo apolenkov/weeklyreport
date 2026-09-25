@@ -25,6 +25,7 @@ import {
 const COMMAND_ID = "44444444-4444-4444-8444-444444444444";
 const RECORD_ID = "55555555-5555-4555-8555-555555555555";
 const OTHER_USER_ID = "66666666-6666-4666-8666-666666666666";
+const OTHER_COMMAND_ID = "99999999-9999-4999-8999-999999999999";
 
 const command: ResolvePlanInput = {
   reportSectionId: SECTION_ID,
@@ -213,6 +214,52 @@ describe("loadOutcomeTarget", () => {
     expect(target.replay).toMatchObject({
       stableId: RECORD_ID,
       replayed: true,
+    });
+    expect(transaction.reportSection.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("scopes receipt replay to the matching command id, not the shared intent", async () => {
+    const stableId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const sameIntent: ResolvePlanInput = {
+      ...command,
+      commandId: OTHER_COMMAND_ID,
+    };
+    const requestHash = outcomeCommandHash(command, "resolve");
+    expect(outcomeCommandHash(sameIntent, "resolve")).toBe(requestHash);
+
+    const receipt = {
+      reportSectionId: SECTION_ID,
+      stableId,
+      actorId: AUTHOR_ID,
+      requestHash,
+    };
+    const { transaction } = createTransaction();
+    transaction.itemOutcomeEvent.findUnique.mockImplementation(
+      (args?: { where: { id: string } }) =>
+        Promise.resolve(args?.where.id === COMMAND_ID ? receipt : null),
+    );
+
+    const replayed = await loadOutcomeTarget(
+      transaction as never,
+      command,
+      AUTHOR_ID,
+      "resolve",
+    );
+    const fresh = await loadOutcomeTarget(
+      transaction as never,
+      sameIntent,
+      AUTHOR_ID,
+      "resolve",
+    );
+
+    expect(replayed.replay).toMatchObject({ stableId, replayed: true });
+    expect(transaction.itemOutcomeEvent.findUnique).toHaveBeenNthCalledWith(1, {
+      where: { id: COMMAND_ID },
+    });
+    expect(fresh.replay).toBeNull();
+    expect(fresh.requestHash).toBe(requestHash);
+    expect(transaction.itemOutcomeEvent.findUnique).toHaveBeenNthCalledWith(2, {
+      where: { id: OTHER_COMMAND_ID },
     });
     expect(transaction.reportSection.updateMany).not.toHaveBeenCalled();
   });

@@ -12,7 +12,6 @@ import {
   CONSECUTIVE_STAGE_OFFSETS,
   cyclic,
   stageAt,
-  stageNameFor,
   tagFor,
   trafficLightFor,
   workflowFor,
@@ -31,6 +30,11 @@ import {
   upsertProjectStatus,
   upsertSection,
 } from "./seed-advanced.rows.js";
+import type { StageOwnership } from "./seed-advanced.stage-names.js";
+import {
+  ownedStageNameAt,
+  ownedStageNames,
+} from "./seed-advanced.stage-names.js";
 import type { SectionCounts } from "./seed-advanced.summary.js";
 import {
   addSectionCounts,
@@ -47,9 +51,9 @@ const activeReportId = SEED_REPORTS.active.id;
 const PAUSED_CURRENT_INDEX = 3;
 const POSTPONED_NEXT_INDEX = 0;
 
-// Next-week rows sit further along the stage rotation than current-week rows so
-// a lead's two lists do not land on the same stage label.
-const NEXT_ITEM_STAGE_SHIFT = 3;
+// Next-week rows sit one owned stage further along than the current-week row on
+// the same product, so a lead's two lists do not land on the same stage label.
+const NEXT_ITEM_STAGE_SHIFT = 1;
 
 // Stage statuses cover the same three-stage span the product's assignments do,
 // so every chip in the form has a status behind it.
@@ -58,6 +62,7 @@ async function seedStageStatuses(
   cfg: LeadConfig,
   projectId: string,
   productIdx: number,
+  ownership: StageOwnership,
 ): Promise<void> {
   const reportSectionId = sectionId(ACTIVE_SUFFIX, cfg.leadIndex);
   const globalIdx = SEED_PRODUCTS.findIndex((p) => p.id === projectId);
@@ -66,8 +71,13 @@ async function seedStageStatuses(
   }
   const startStageIdx = globalIdx;
 
+  const owned = new Set(ownedStageNames(cfg.leadId, projectId, ownership));
   for (const offset of CONSECUTIVE_STAGE_OFFSETS) {
     const stage = stageAt(startStageIdx + offset);
+    // A stage another dataset owns is not this lead's, so it carries no status.
+    if (!owned.has(stage.name)) {
+      continue;
+    }
     const status = trafficLightFor(cfg.leadIndex + productIdx + offset);
     await prisma.stageStatus.upsert({
       where: {
@@ -93,6 +103,7 @@ async function seedStageStatuses(
 async function seedProductStatuses(
   prisma: PrismaClient,
   cfg: LeadConfig,
+  ownership: StageOwnership,
 ): Promise<Pick<SectionCounts, "projectStatuses" | "stageStatuses">> {
   if (cfg.leadId === LEAD_SERGEY_ID) {
     return { projectStatuses: 0, stageStatuses: 0 };
@@ -106,7 +117,7 @@ async function seedProductStatuses(
       projectId: product.id,
       status: trafficLightFor(cfg.leadIndex + productIdx),
     });
-    await seedStageStatuses(prisma, cfg, product.id, productIdx);
+    await seedStageStatuses(prisma, cfg, product.id, productIdx, ownership);
   }
 
   return {
@@ -134,15 +145,17 @@ const nextStatusFor = (cfg: LeadConfig, index: number): ItemWorkflowStatus =>
 async function seedItems(
   prisma: PrismaClient,
   cfg: LeadConfig,
+  ownership: StageOwnership,
 ): Promise<number> {
   const reportSectionId = sectionId(ACTIVE_SUFFIX, cfg.leadIndex);
   const { current, next } = contentFor(cfg.leadId);
+  const productAt = (index: number) => cyclic(cfg.products, index);
   const rows = [
     ...current.map((text, i) => ({
       id: itemId(ACTIVE_SUFFIX, cfg.leadIndex, i + 1),
       stableId: itemId(ACTIVE_SUFFIX, cfg.leadIndex, i + 1),
       reportSectionId,
-      projectId: cyclic(cfg.products, i).id,
+      projectId: productAt(i).id,
       type: ItemType.current,
       text,
       tag: tagFor(i),
@@ -150,18 +163,25 @@ async function seedItems(
       ...(cfg.leadIndex === LEAD_SLOT_PRIMARY && i === PAUSED_CURRENT_INDEX
         ? { pausedReason: "Ожидаем подтверждение владельца этапа" }
         : {}),
-      stageNames: [stageNameFor(cfg.leadIndex + i)],
+      stageNames: [ownedStageNameAt(cfg.leadId, productAt(i).id, i, ownership)],
     })),
     ...next.map((text, i) => ({
       id: itemId(ACTIVE_SUFFIX, cfg.leadIndex, current.length + i + 1),
       stableId: itemId(ACTIVE_SUFFIX, cfg.leadIndex, current.length + i + 1),
       reportSectionId,
-      projectId: cyclic(cfg.products, i).id,
+      projectId: productAt(i).id,
       type: ItemType.next,
       text,
       tag: tagFor(i),
       workflowStatus: nextStatusFor(cfg, i),
-      stageNames: [stageNameFor(cfg.leadIndex + i + NEXT_ITEM_STAGE_SHIFT)],
+      stageNames: [
+        ownedStageNameAt(
+          cfg.leadId,
+          productAt(i).id,
+          i + NEXT_ITEM_STAGE_SHIFT,
+          ownership,
+        ),
+      ],
     })),
   ];
 
@@ -194,6 +214,7 @@ export async function applyPriorityRanks(
 async function seedLeadSection(
   prisma: PrismaClient,
   cfg: LeadConfig,
+  ownership: StageOwnership,
 ): Promise<SectionCounts> {
   await upsertSection(prisma, {
     id: sectionId(ACTIVE_SUFFIX, cfg.leadIndex),
@@ -202,8 +223,8 @@ async function seedLeadSection(
     status: cfg.status,
     submittedAt: cfg.submittedAt,
   });
-  const statuses = await seedProductStatuses(prisma, cfg);
-  const items = await seedItems(prisma, cfg);
+  const statuses = await seedProductStatuses(prisma, cfg, ownership);
+  const items = await seedItems(prisma, cfg, ownership);
   await applyPriorityRanks(prisma, cfg);
   return { sections: 1, items, ...statuses };
 }
@@ -211,10 +232,14 @@ async function seedLeadSection(
 /** Seeds every lead's section of the open weekly report. */
 export async function seedActiveSections(
   prisma: PrismaClient,
+  ownership: StageOwnership,
 ): Promise<SectionCounts> {
   return ACTIVE_LEAD_CONFIGS.reduce<Promise<SectionCounts>>(
     async (total, cfg) =>
-      addSectionCounts(await total, await seedLeadSection(prisma, cfg)),
+      addSectionCounts(
+        await total,
+        await seedLeadSection(prisma, cfg, ownership),
+      ),
     Promise.resolve(NO_SECTION_COUNTS),
   );
 }

@@ -23,7 +23,7 @@ export class NullTelemetryCache implements TelemetryCachePort {
   readonly getOrCompute = async <T>(
     _key: string,
     fn: () => Promise<T>,
-    _validate?: (value: unknown) => boolean,
+    _validate?: (value: unknown) => value is T,
   ): Promise<T> => {
     return fn();
   };
@@ -75,7 +75,8 @@ export class TelemetryService {
           sparkline,
         });
       },
-      (value) => telemetrySummarySchema.safeParse(value).success,
+      (value): value is TelemetrySummary =>
+        telemetrySummarySchema.safeParse(value).success,
     );
   }
 }

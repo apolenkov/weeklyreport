@@ -94,8 +94,8 @@ importers:
         specifier: ^4.7.2
         version: 4.7.2(eslint@10.9.1(jiti@2.7.0)(supports-color@10.2.2))
       '@fission-ai/openspec':
-        specifier: 1.11.0
-        version: 1.11.0(@types/node@26.4.0)
+        specifier: 1.13.0
+        version: 1.13.0(@types/node@26.4.0)
       '@next/eslint-plugin-next':
         specifier: ^16.3.3
         version: 16.3.3(eslint@10.9.1(jiti@2.7.0)(supports-color@10.2.2))
@@ -1036,8 +1036,8 @@ packages:
       '@noble/hashes':
         optional: true
 
-  '@fission-ai/openspec@1.11.0':
-    resolution: {integrity: sha512-P9h8H4Snit8I7tHmCopjg3QDwBllIlObxb+/DebvBwhWTj6YEPPYRYkC4n5GqG4PdQnKMA6E1AlEOI9FT4G7FA==}
+  '@fission-ai/openspec@1.13.0':
+    resolution: {integrity: sha512-1b1VbjELIUHPz8BLnkVxqPu4pAYS6BhfrLcmUIM7Bd0iJXQDvE+e/LBofE1kydegfxmG7R1xCMRXsl5VtZD+0w==}
     engines: {node: '>=20.19.0'}
     hasBin: true
 
@@ -8095,7 +8095,7 @@ snapshots:
 
   '@exodus/bytes@1.15.1': {}
 
-  '@fission-ai/openspec@1.11.0(@types/node@26.4.0)':
+  '@fission-ai/openspec@1.13.0(@types/node@26.4.0)':
     dependencies:
       '@inquirer/core': 11.2.1(@types/node@26.4.0)
       '@inquirer/prompts': 8.7.0(@types/node@26.4.0)

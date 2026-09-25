@@ -219,8 +219,15 @@ describe("PublicationService", () => {
       ).rejects.toThrow("was not found");
     });
 
-    it("builds portfolio overview: all green -> status green", async () => {
+    it("passes through the canonical portfolio overview — shared products are not recounted", async () => {
+      // The snapshot builder already folds each distinct product once (worst
+      // status across sections). A per-occurrence recount here would count a
+      // product owned by two leads twice and inflate the preview totals.
       const report = makeReport({
+        portfolioOverview: {
+          status: "yellow",
+          totals: { green: 0, yellow: 1, red: 0 },
+        },
         sections: [
           makeSection({
             reportSectionId: "11111111-1111-4111-8111-111111111111",
@@ -229,68 +236,20 @@ describe("PublicationService", () => {
             projects: [
               {
                 projectId: "44444444-4444-4444-8444-444444444441",
-                projectName: "P1",
-                trafficLight: "green",
-              },
-              {
-                projectId: "44444444-4444-4444-8444-444444444442",
-                projectName: "P2",
-                trafficLight: "green",
-              },
-            ],
-          }),
-          makeSection({
-            reportSectionId: "11111111-1111-4111-8111-111111111112",
-            authorId: "33333333-3333-4333-8333-333333333332",
-            authorName: "Lead B",
-            projects: [
-              {
-                projectId: "44444444-4444-4444-8444-444444444443",
-                projectName: "P3",
-                trafficLight: "green",
-              },
-            ],
-          }),
-        ],
-      });
-
-      const service = new PublicationService(
-        createRepository(report),
-        createNullLogger(),
-        noopInvalidateAnalyticsCache,
-      );
-      const result = await service.getAssembledReport(reportId);
-
-      expect(result.portfolioOverview).toEqual({
-        status: "green",
-        totals: { green: 3, yellow: 0, red: 0 },
-      });
-    });
-
-    it("builds portfolio overview: any yellow -> status yellow", async () => {
-      const report = makeReport({
-        sections: [
-          makeSection({
-            reportSectionId: "11111111-1111-4111-8111-111111111111",
-            authorId: "33333333-3333-4333-8333-333333333331",
-            authorName: "Lead A",
-            projects: [
-              {
-                projectId: "44444444-4444-4444-8444-444444444441",
-                projectName: "P1",
-                trafficLight: "green",
-              },
-            ],
-          }),
-          makeSection({
-            reportSectionId: "11111111-1111-4111-8111-111111111112",
-            authorId: "33333333-3333-4333-8333-333333333332",
-            authorName: "Lead B",
-            projects: [
-              {
-                projectId: "44444444-4444-4444-8444-444444444442",
-                projectName: "P2",
+                projectName: "Shared P",
                 trafficLight: "yellow",
+              },
+            ],
+          }),
+          makeSection({
+            reportSectionId: "11111111-1111-4111-8111-111111111112",
+            authorId: "33333333-3333-4333-8333-333333333332",
+            authorName: "Lead B",
+            projects: [
+              {
+                projectId: "44444444-4444-4444-8444-444444444441",
+                projectName: "Shared P",
+                trafficLight: "green",
               },
             ],
           }),
@@ -306,85 +265,8 @@ describe("PublicationService", () => {
 
       expect(result.portfolioOverview).toEqual({
         status: "yellow",
-        totals: { green: 1, yellow: 1, red: 0 },
+        totals: { green: 0, yellow: 1, red: 0 },
       });
-    });
-
-    it("builds portfolio overview: any red -> status red (overrides yellow)", async () => {
-      const report = makeReport({
-        sections: [sectionAlpha, sectionBravo, sectionCharlie],
-      });
-
-      const service = new PublicationService(
-        createRepository(report),
-        createNullLogger(),
-        noopInvalidateAnalyticsCache,
-      );
-      const result = await service.getAssembledReport(reportId);
-
-      expect(result.portfolioOverview.status).toBe("red");
-      expect(result.portfolioOverview.totals.red).toBeGreaterThan(0);
-    });
-
-    it("counts traffic lights correctly in totals — null lights are not counted", async () => {
-      const report = makeReport({
-        sections: [
-          makeSection({
-            reportSectionId: "11111111-1111-4111-8111-111111111111",
-            authorId: "33333333-3333-4333-8333-333333333331",
-            authorName: "Lead A",
-            projects: [
-              {
-                projectId: "44444444-4444-4444-8444-444444444441",
-                projectName: "P1",
-                trafficLight: "green",
-              },
-              {
-                projectId: "44444444-4444-4444-8444-444444444442",
-                projectName: "P2",
-                trafficLight: "green",
-              },
-              {
-                projectId: "44444444-4444-4444-8444-444444444443",
-                projectName: "P3 (no light)",
-                trafficLight: null,
-              },
-            ],
-          }),
-          makeSection({
-            reportSectionId: "11111111-1111-4111-8111-111111111112",
-            authorId: "33333333-3333-4333-8333-333333333332",
-            authorName: "Lead B",
-            projects: [
-              {
-                projectId: "44444444-4444-4444-8444-444444444444",
-                projectName: "P4",
-                trafficLight: "yellow",
-              },
-              {
-                projectId: "44444444-4444-4444-8444-444444444445",
-                projectName: "P5",
-                trafficLight: "red",
-              },
-            ],
-          }),
-        ],
-      });
-
-      const service = new PublicationService(
-        createRepository(report),
-        createNullLogger(),
-        noopInvalidateAnalyticsCache,
-      );
-      const result = await service.getAssembledReport(reportId);
-
-      // 2 green, 1 yellow, 1 red; null is skipped
-      expect(result.portfolioOverview.totals).toEqual({
-        green: 2,
-        yellow: 1,
-        red: 1,
-      });
-      expect(result.portfolioOverview.status).toBe("red");
     });
 
     it("sections sorted by authorName (Russian locale)", async () => {

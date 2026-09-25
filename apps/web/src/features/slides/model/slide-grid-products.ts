@@ -1,5 +1,6 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
+import { activityDisplayTitle } from "../../../shared/lib/activity/activity-display";
 import {
   type CellBuckets,
   columnsRowCount,
@@ -13,6 +14,8 @@ export interface GridSubsection {
   readonly kind: "product-level" | "project";
   readonly id: string;
   readonly name: string;
+  // Weekly Activity description; empty descriptions do not render a row.
+  readonly note: string | null;
   readonly linkedProducts: ReportSectionReadModel["activities"][number]["linkedProducts"];
   // Activity status; product-level subsections carry none.
   readonly status: SlideTrafficStatus;
@@ -71,7 +74,8 @@ function buildActivityEntries(
         subsection: {
           kind: "project" as const,
           id: activityId,
-          name: meta?.activityName ?? "Activity",
+          name: meta ? activityDisplayTitle(meta) : "Activity",
+          note: meta?.note ?? null,
           linkedProducts: meta?.linkedProducts ?? [],
           status: meta ? (meta.derivedStatus ?? meta.status) : null,
           showStages: false,
@@ -103,6 +107,7 @@ export function buildProductSubsections(
         kind: "product-level" as const,
         id: `${productId}-product-level`,
         name: "Product-level",
+        note: null,
         linkedProducts: [],
         status: null,
         showStages: true,

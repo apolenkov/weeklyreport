@@ -1,3 +1,10 @@
+> **OWNER-CANCELED / SUPERSEDED — 2026-09-20.** Reticle is removed and replaced
+> by agent-browser (Vercel) as the primary route (backlog TASK-047).
+> Jev is a separate optional global tool tracked in TASK-036.
+> Every unchecked task below — 3.2, 3.3, 4.1–4.4, 5.1–5.3 and
+> the open remainder of 6.4 — is canceled, not passed. Do not archive this
+> change as complete; the historical body is preserved.
+
 ## 1. Deterministic scenario and outcome inventory
 
 - [x] 1.1 Extend the focused tests to extract every normative `THEN` and following `AND` outcome with a stable within-scenario identity and fingerprint; verify mixed browser/internal scenarios produce separate outcomes.

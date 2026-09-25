@@ -50,6 +50,16 @@ describe("KpiCards — a11y regression", () => {
     ).toBeInTheDocument();
   });
 
+  it("renders the last-week comparison as explicitly unavailable, never a fabricated number", () => {
+    render(<KpiCards data={baseData} />);
+
+    const section = screen.getByRole("region", {
+      name: /^Submissions: 5 of 8, 3 pending$/,
+    });
+    expect(section).toHaveTextContent(/last week\s*unavailable/i);
+    expect(section.textContent).not.toMatch(/last week\s*\d/i);
+  });
+
   it("exposes the Submissions region and conic ring without NaN when totals are zero", () => {
     const zeroData: KpiData = {
       ...baseData,

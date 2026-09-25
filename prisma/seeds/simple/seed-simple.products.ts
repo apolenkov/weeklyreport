@@ -1,6 +1,10 @@
 import type { PrismaClient } from "@prisma/client";
 
 import {
+  idTailToFactoryIndex,
+  makeGroupProductId,
+} from "../demo/seed-demo.ids.js";
+import {
   DEFAULT_REPORTING_GROUP_ID,
   FINANCE_GROUP_ID,
   LEAD_1,
@@ -47,7 +51,10 @@ const GROUP_PRODUCT_ROWS = [
   { groupId: DEFAULT_REPORTING_GROUP_ID, productId: PROD_CRM_SALES },
   { groupId: DEFAULT_REPORTING_GROUP_ID, productId: PROD_CRM_DATA },
   { groupId: DEFAULT_REPORTING_GROUP_ID, productId: PROD_CRM_360 },
-];
+].map((row) => ({
+  ...row,
+  id: makeGroupProductId(idTailToFactoryIndex(row.productId)),
+}));
 
 export async function seedProducts(prisma: PrismaClient): Promise<void> {
   console.log("[seed-simple] Creating products (RU names)...");

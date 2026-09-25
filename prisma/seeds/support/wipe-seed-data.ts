@@ -48,6 +48,7 @@ export async function wipeSeedData(prisma: PrismaClient): Promise<void> {
   await prisma.agentationEvent.deleteMany({});
   await prisma.agentationAnnotation.deleteMany({});
   await prisma.agentationSession.deleteMany({});
+  await prisma.productFeedback.deleteMany({});
   await prisma.user.deleteMany({});
   await prisma.reportingGroup.deleteMany({});
   // Singleton configuration is seed-owned too; deleting it makes every

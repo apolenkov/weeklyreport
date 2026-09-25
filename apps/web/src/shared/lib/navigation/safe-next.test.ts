@@ -23,6 +23,17 @@ describe("sanitizeNext — same-origin redirect validation", () => {
     expect(sanitizeNext("//evil.com", FALLBACK)).toBe(FALLBACK);
   });
 
+  it.each([
+    "/.//evil.com",
+    "/%2e//evil.com",
+    "/%2E%2E//evil.com",
+    String.raw`/./\evil.com`,
+    String.raw`/.\/evil.com`,
+    "/a/../..//evil.com",
+  ])("rejects the dot-segment normalization bypass %s", (candidate) => {
+    expect(sanitizeNext(candidate, FALLBACK)).toBe(FALLBACK);
+  });
+
   it("rejects an absolute off-origin URL", () => {
     expect(sanitizeNext("https://evil.com", FALLBACK)).toBe(FALLBACK);
   });

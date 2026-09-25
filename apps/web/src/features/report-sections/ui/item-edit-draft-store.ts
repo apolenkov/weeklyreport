@@ -48,8 +48,12 @@ export function createItemEditDraftStore(args: ItemEditDraftSeed) {
       pausedReason: args.item?.pausedReason ?? "",
       parent: resolveRecordParent(
         initial,
-        { activityId: isCreate ? args.defaultActivityId : undefined },
+        {
+          activityId: isCreate ? args.defaultActivityId : undefined,
+          productId: isCreate ? args.defaultProductId : undefined,
+        },
         args.activities,
+        args.products,
       ),
       priorityRank: args.item?.priorityRank ?? null,
       stageNames: [...(args.item?.stageNames ?? [])],

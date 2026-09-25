@@ -50,6 +50,25 @@ function source(
 }
 
 describe("Agentation SSE transport", () => {
+  it("keeps an idle stream alive before the web proxy's 30-second timeout", async () => {
+    vi.useFakeTimers();
+    const { req, res, response } = harness();
+    try {
+      await startAgentationSse({
+        req,
+        res,
+        source: source(),
+        agent: false,
+        allowGlobal: true,
+      });
+      await vi.advanceTimersByTimeAsync(29_000);
+      expect(response.write).toHaveBeenCalledWith(": ping\n\n");
+    } finally {
+      (req as unknown as EventEmitter).emit("close");
+      vi.useRealTimers();
+    }
+  });
+
   it("does not start timers after disconnecting during the initial read", async () => {
     const { req, res, response } = harness();
     const s = source();

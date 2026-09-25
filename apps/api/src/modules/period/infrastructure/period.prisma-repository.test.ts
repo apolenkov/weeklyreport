@@ -69,6 +69,9 @@ describe("PeriodPrismaRepository.publishPeriod", () => {
       reminderRule: {
         updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
+      reportSection: {
+        count: vi.fn().mockResolvedValue(1),
+      },
       publishedSearchDocument: {
         deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
       },

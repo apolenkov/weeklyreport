@@ -29,6 +29,7 @@ import {
   sumSectionCounts,
 } from "./seeds/advanced/seed-advanced.summary.js";
 import { finalizePublishedSnapshots } from "./seeds/support/published-snapshot.js";
+import { assertAssistantReadiness } from "./seeds/support/seed-assistant-readiness.js";
 import { SEED_REPORTS } from "./seeds/support/seed-constants.js";
 import { assertSeedCoverage } from "./seeds/support/seed-coverage-check.js";
 import { seedOrganizationBaseline } from "./seeds/support/seed-org.js";
@@ -44,18 +45,19 @@ async function main(): Promise<void> {
   const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
   try {
     const organization = await seedOrganizationBaseline(prisma);
-    const stageAssignments = await seedStageAssignments(prisma);
+    const { count: stageAssignments, ownership } =
+      await seedStageAssignments(prisma);
 
     const activeReports = await seedActiveReport(prisma);
     const publishedReports = await seedPublishedReport(prisma);
 
-    const active = await seedActiveSections(prisma);
-    const risks = await seedRisks(prisma);
-    await seedCrossAuthorOverlay(prisma);
-    const decisions = await seedDecisions(prisma);
+    const active = await seedActiveSections(prisma, ownership);
+    const risks = await seedRisks(prisma, ownership);
+    await seedCrossAuthorOverlay(prisma, ownership);
+    const decisions = await seedDecisions(prisma, ownership);
 
-    const published = await seedPublishedSections(prisma);
-    const history = await seedHistoryPeriods(prisma);
+    const published = await seedPublishedSections(prisma, ownership);
+    const history = await seedHistoryPeriods(prisma, ownership);
     await finalizePublishedSnapshots(prisma);
 
     const adminExamples = await seedAdminExamples(prisma);
@@ -63,6 +65,9 @@ async function main(): Promise<void> {
     await seedSingletons(prisma);
     await seedAiProviderControl(prisma);
     await seedAiPromptBaseline(prisma);
+
+    await assertSeedCoverage(prisma, "seed", SEED_REPORTS.active.id);
+    assertAssistantReadiness("full");
 
     logSeedSummary({
       ...organization,
@@ -75,8 +80,6 @@ async function main(): Promise<void> {
       reminderRules: reminders.rules,
       ...adminExamples,
     });
-
-    await assertSeedCoverage(prisma, "seed", SEED_REPORTS.active.id);
   } finally {
     await prisma.$disconnect();
     await pool.end();

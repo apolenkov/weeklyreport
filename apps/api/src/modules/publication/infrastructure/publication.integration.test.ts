@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
+import { createNullLogger } from "../../../lib/logger.js";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
@@ -9,15 +10,20 @@ import {
   seedTestData,
   TEST_IDS,
 } from "../../../test-utils/prisma-test-helper";
+import { PublicationService } from "../application/publication.service.js";
 import { PublicationPrismaRepository } from "./publication.prisma-repository";
 
 describe("PublicationPrismaRepository (integration)", () => {
   const prisma = createTestPrisma();
   let repo: PublicationPrismaRepository;
+  let service: PublicationService;
   let testData: Awaited<ReturnType<typeof seedTestData>>;
 
   beforeAll(() => {
     repo = new PublicationPrismaRepository(prisma as unknown as PrismaService);
+    service = new PublicationService(repo, createNullLogger(), () =>
+      Promise.resolve(),
+    );
   });
 
   beforeEach(async () => {
@@ -110,10 +116,10 @@ describe("PublicationPrismaRepository (integration)", () => {
     );
 
     const firstRead = expectDefined(
-      await repo.getAssembledReport(testData.report.id),
+      await service.getAssembledReport(testData.report.id),
     );
     const secondRead = expectDefined(
-      await repo.getAssembledReport(testData.report.id),
+      await service.getAssembledReport(testData.report.id),
     );
     const firstAuthorNames = firstRead.sections.map(
       (section) => section.authorName,
@@ -129,6 +135,30 @@ describe("PublicationPrismaRepository (integration)", () => {
       "Zeta Lead",
     ]);
     expect(secondAuthorNames).toEqual(firstAuthorNames);
+
+    const published = await repo.saveAutoPublishedReport({
+      ...firstRead,
+      status: "published",
+      publishedAt: new Date("2026-04-12T10:00:00.000Z"),
+      publishedById: null,
+    });
+
+    expect(published.published).toBe(true);
+    if (published.published) {
+      expect(
+        published.report.sections.map(({ authorName }) => authorName),
+      ).toEqual(firstAuthorNames);
+    }
+    await expect(
+      prisma.report.findUnique({
+        where: { id: testData.report.id },
+        select: { publishedSnapshot: true },
+      }),
+    ).resolves.toMatchObject({
+      publishedSnapshot: {
+        sections: firstAuthorNames.map((authorName) => ({ authorName })),
+      },
+    });
   });
 
   it("saveAutoPublishedReport writes the full autoPublish set for a non-archived draft", async () => {

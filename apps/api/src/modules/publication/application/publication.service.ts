@@ -1,7 +1,6 @@
 import {
   type AssembledReport,
   assembledReportSchema,
-  type PortfolioOverview,
   type ReportSectionReadModel,
 } from "@customreport/shared";
 
@@ -56,38 +55,6 @@ function compareSections(
   return left.authorName.localeCompare(right.authorName, "ru");
 }
 
-function buildPortfolioOverview(
-  sections: ReportSectionReadModel[],
-): PortfolioOverview {
-  const totals = sections.reduce(
-    (summary, section) => {
-      return section.projects.reduce((projectSummary, project) => {
-        if (!project.trafficLight) {
-          return projectSummary;
-        }
-
-        return {
-          ...projectSummary,
-          [project.trafficLight]: projectSummary[project.trafficLight] + 1,
-        };
-      }, summary);
-    },
-    {
-      green: 0,
-      yellow: 0,
-      red: 0,
-    },
-  );
-
-  const status =
-    totals.red > 0 ? "red" : totals.yellow > 0 ? "yellow" : "green";
-
-  return {
-    status,
-    totals,
-  };
-}
-
 // Display name shown in the UI for a report the auto-publish cron closed
 // with no human head to attribute it to.
 const SYSTEM_PUBLISHER_NAME = "system";
@@ -124,9 +91,11 @@ export class PublicationService {
 
     const sortedSections = [...report.sections].sort(compareSections);
 
+    // portfolioOverview passes through unchanged: the snapshot builder already
+    // folds each distinct product once — recounting per (section, project)
+    // occurrence would double-count products shared between leads.
     return assembledReportSchema.parse({
       ...report,
-      portfolioOverview: buildPortfolioOverview(sortedSections),
       sections: sortedSections,
     });
   }

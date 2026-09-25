@@ -11,6 +11,7 @@ import { LeadQueueDetail } from "./lead-queue-detail";
 import {
   contentSummary,
   freshnessLabel,
+  QUEUE_ROW_GRID_CLASS,
   STATUS_CLASSES,
   STATUS_LABELS,
 } from "./lead-row-format";
@@ -101,7 +102,7 @@ function LeadQueueRowSummary({
   readonly onToggle: () => void;
 }) {
   return (
-    <div className="grid min-w-0 gap-3 p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-4 lg:grid-cols-[minmax(11rem,1.3fr)_minmax(9rem,0.8fr)_minmax(10rem,1fr)_minmax(9rem,0.8fr)_var(--dashboard-summary-action-w)_var(--dashboard-summary-action-w)]">
+    <div className={QUEUE_ROW_GRID_CLASS}>
       <LeadIdentity lead={lead} />
       <LeadStateBadges lead={lead} />
       <span className="min-w-0 text-xs text-[var(--color-muted-foreground)]">

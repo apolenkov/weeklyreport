@@ -12,6 +12,7 @@ import {
   BRAND_DARK_SURFACE,
   ON_BRAND_TEXT,
   printStatusColor,
+  TEXT_PRIMARY,
   TEXT_SECONDARY,
 } from "./print-report-theme";
 
@@ -78,6 +79,27 @@ export function PrintActivitySection({
           {contributorNames}
         </span>
       </div>
+      {report.presentations.map((presentation) => (
+        <div
+          key={presentation.reportSectionId}
+          style={{
+            marginBottom: "8px",
+            fontSize: "11px",
+            overflowWrap: "anywhere",
+          }}
+        >
+          <div style={{ color: TEXT_PRIMARY }}>
+            <strong>{presentation.title}</strong>
+            <span style={{ color: TEXT_SECONDARY }}>
+              {" · "}
+              {presentation.authorName}
+            </span>
+          </div>
+          {presentation.note ? (
+            <div style={{ color: TEXT_SECONDARY }}>{presentation.note}</div>
+          ) : null}
+        </div>
+      ))}
       <CurrentWeekRecords report={report} />
       <NextWeekRecords report={report} />
       <RiskRecords report={report} />

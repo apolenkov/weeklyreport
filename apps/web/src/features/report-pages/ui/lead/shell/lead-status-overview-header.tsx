@@ -38,6 +38,7 @@ export function ReadyOverviewHeader({
         completionSentinelRef={completionSentinelRef}
         showCompletionActions
         isSlidesMode={false}
+        isForeignSlidesDeck={false}
         isSubmitted={editor.view.isSubmitted}
       />
       <LeadOverviewToolbarControls

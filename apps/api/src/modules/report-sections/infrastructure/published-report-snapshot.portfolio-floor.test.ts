@@ -4,6 +4,7 @@ import {
   computePortfolioOverviewFromReadSections,
   PublishedSnapshotIntegrityError,
   requirePublishedSnapshot,
+  toPublishedSnapshotJson,
 } from "@customreport/report-persistence";
 import { buildEscalationsFromReadSections } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
@@ -413,6 +414,96 @@ describe("buildAssembledReportFromPrismaRow — portfolio totals floor (Shape B)
       yellow: 1,
       green: 0,
     });
+  });
+
+  it("freezes the effective Activity title and note independently of live rows", () => {
+    const row = reportRow("at-risk");
+    const sourceSection = row.sections[0];
+    if (!sourceSection) throw new Error("missing section fixture");
+    const sourceActivity = {
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa-status",
+      reportSectionId: SECTION_ID,
+      createdAt: FIXED_TIMESTAMP,
+      updatedAt: FIXED_TIMESTAMP,
+      activityId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      status: "green" as const,
+      titleOverride: "Weekly customer duty",
+      note: "Frozen weekly context",
+      activity: {
+        name: "Catalogue customer duty",
+        jiraAccounts: [],
+        activityProducts: [],
+      },
+    };
+    const report = buildAssembledReportFromPrismaRow({
+      ...row,
+      sections: [
+        {
+          ...sourceSection,
+          activityStatuses: [sourceActivity],
+        },
+      ],
+    });
+    const snapshot = toPublishedSnapshotJson(report);
+
+    sourceActivity.titleOverride = "Changed draft title";
+    sourceActivity.note = "Changed draft note";
+    sourceActivity.activity.name = "Renamed catalogue title";
+
+    expect(
+      requirePublishedSnapshot(snapshot, row.id).sections[0]?.activities,
+    ).toMatchObject([
+      {
+        activityName: "Weekly customer duty",
+        titleOverride: "Weekly customer duty",
+        note: "Frozen weekly context",
+      },
+    ]);
+  });
+
+  it("keeps a legacy snapshot's stored Activity label without override metadata", () => {
+    const snapshot = publishedSnapshotFixture({
+      reportId: REPORT_ID,
+      periodStart: new Date("2026-06-01T00:00:00Z"),
+      periodEnd: new Date("2026-06-07T00:00:00Z"),
+      publishedAt: new Date("2026-06-09T00:00:00Z"),
+      sectionOwners: [
+        {
+          reportSectionId: SECTION_ID,
+          authorId: AUTHOR_ID,
+          authorName: "Alice Lead",
+          groupId: AUTHOR_GROUP_ID,
+          groupName: "Finance Platforms",
+        },
+      ],
+    });
+    const { sections } = snapshot as unknown as {
+      sections: Record<string, unknown>[];
+    };
+    sections[0] = {
+      ...sections[0],
+      activities: [
+        {
+          activityId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          activityName: "Legacy frozen title",
+          status: "green",
+          note: "Legacy frozen note",
+          jiraAccounts: [],
+          linkedProducts: [],
+          derivedStatus: "green",
+          alarmFloor: null,
+        },
+      ],
+    };
+
+    expect(
+      requirePublishedSnapshot(snapshot, REPORT_ID).sections[0]?.activities,
+    ).toMatchObject([
+      {
+        activityName: "Legacy frozen title",
+        note: "Legacy frozen note",
+      },
+    ]);
   });
 
   it("refuses to build a snapshot section without an author group anchor", () => {

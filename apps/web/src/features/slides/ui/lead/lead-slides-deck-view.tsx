@@ -1,7 +1,8 @@
 "use client";
 
-import type { ReactNode, RefObject } from "react";
+import { type ReactNode, type RefObject, useState } from "react";
 
+import { PortalTargetProvider } from "../../../../shared/ui/dialogs/document-body-portal";
 import type { SectionSlideModel } from "../../model/section-slide-contracts";
 import type { SlideDensity } from "../../model/slide-density-pagination";
 import {
@@ -82,6 +83,7 @@ export function LeadSlidesDeckView({
   readonly selectedIndex: number;
   readonly onSelect: (next: number) => void;
 }) {
+  const [portalTarget, setPortalTarget] = useState<HTMLDivElement | null>(null);
   const deckToolbar =
     showDensityControl || deck.showFullscreenControls ? (
       <DeckToolbar
@@ -108,7 +110,11 @@ export function LeadSlidesDeckView({
         isFullscreen={fullscreen.isFullscreen}
         onToggle={fullscreen.onToggle}
       />
-      {deck.dialogs}
+      {/* Dialogs must portal inside the fullscreened element to stay visible. */}
+      <PortalTargetProvider target={portalTarget}>
+        {deck.dialogs}
+      </PortalTargetProvider>
+      <div ref={setPortalTarget} className="contents" />
     </div>
   );
 }

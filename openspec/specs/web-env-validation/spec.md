@@ -12,16 +12,24 @@ The web app MUST declare every `NEXT_PUBLIC_*` variable it consumes (outside the
 API URL seam) in a single Zod schema, and that schema MUST NOT
 attach a `.default()` to any field — a genuinely-optional toggle is declared
 `.optional()` with the consumer handling absence, mirroring the api
-`env-schema-coverage` no-default posture. The in-scope set is exactly six:
+`env-schema-coverage` no-default posture. The in-scope set is exactly eight:
 `NEXT_PUBLIC_APP_VERSION`, `NEXT_PUBLIC_AUTH_STUB`,
 `NEXT_PUBLIC_CLIENT_LOG_FORWARDING`, `NEXT_PUBLIC_DEV_ROLE_SWITCHER`,
-`NEXT_PUBLIC_SENTRY_DSN`, and `NEXT_PUBLIC_WEB_VITALS`. Each field MUST carry
+`NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED`,
+`NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES`, `NEXT_PUBLIC_SENTRY_DSN`, and
+`NEXT_PUBLIC_WEB_VITALS`. Each field MUST carry
 meaningful validation, not a
 blanket permissive string: `NEXT_PUBLIC_SENTRY_DSN` is a URL-or-unset; the
-boolean toggles (`AUTH_STUB`, `CLIENT_LOG_FORWARDING`, `DEV_ROLE_SWITCHER`,
-`WEB_VITALS`) accept only `"true"`, `"false"`, or unset so a
+five boolean toggles (`AUTH_STUB`, `CLIENT_LOG_FORWARDING`,
+`DEV_ROLE_SWITCHER`, `PRODUCT_FEEDBACK_ENABLED`, `WEB_VITALS`) accept only
+`"true"`, `"false"`, or unset so a
 typo is rejected rather than read as "off"; `NEXT_PUBLIC_APP_VERSION` is an
-optional string. Empty string MUST count as unset WITHIN the schema itself (a
+optional string; `NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES` is an optional
+comma-separated role list whose trimmed elements MUST each be one of `lead`,
+`head`, `admin`, or `viewer`, rejecting unknown roles, empty elements, and
+duplicates; and `NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED="true"` REQUIRES `admin`
+among the inbox roles, so the schema rejects an enabled flag whose roles list
+lacks `admin` — including a missing roles var. Empty string MUST count as unset WITHIN the schema itself (a
 per-field `""`→`undefined` preprocess), so that BOTH the build assert and the
 accessor — the two parse sites sharing this schema — treat an empty value as
 absent rather than one of them feeding `""` into `z.url()`.
@@ -33,6 +41,14 @@ absent rather than one of them feeding `""` into `z.url()`.
 - **WHEN** the client-env schema object shape is inspected
 - **THEN** the key is present with a non-permissive Zod type
 - **AND** no field in the schema carries a `.default()`
+
+#### Scenario: Feedback enabled without an admin inbox role is rejected
+
+- **GIVEN** `NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED=true` with a roles list that
+  lacks `admin`, or with `NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES` absent
+- **WHEN** the env is parsed against the schema
+- **THEN** the parse fails with an issue on
+  `NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES`
 
 #### Scenario: A malformed toggle value is a type error, not a silent off
 
@@ -46,10 +62,10 @@ absent rather than one of them feeding `""` into `z.url()`.
 The web app MUST parse the client-env schema at `apps/web/next.config.ts`
 load time — which executes during `next build`, where the real `NEXT_PUBLIC_*`
 values are present in `process.env` before inlining — and MUST throw a
-descriptive error that fails the build when any value is malformed. This is a
-completeness-and-typing gate, not a required-presence gate: all six vars are
-optional, so absence is allowed and only a PRESENT-but-malformed value (e.g. a
-non-URL DSN) rejects the build.
+descriptive error that fails the build when any value is malformed. All eight
+fields are individually optional, so an entirely absent configuration passes.
+The build MUST reject malformed values and invalid combinations, including
+enabled product feedback without an inbox-role list containing admin.
 
 #### Scenario: Malformed DSN rejects the build
 
@@ -60,7 +76,7 @@ non-URL DSN) rejects the build.
 
 #### Scenario: All-absent env builds clean
 
-- **GIVEN** none of the six in-scope vars are set at build time
+- **GIVEN** none of the eight in-scope vars are set at build time
 - **WHEN** `next.config.ts` runs the client-env assert
 - **THEN** the assert passes because every field is optional and the build
   proceeds
@@ -76,7 +92,7 @@ non-URL DSN) rejects the build.
 
 ### Requirement: A typed accessor is the single client-env read seam and preserves inlining
 
-The web app MUST read the six in-scope client vars through one typed accessor
+The web app MUST read the eight in-scope client vars through one typed accessor
 module (a `web-env` seam sibling to `requireApiUrl` in
 `apps/web/src/shared/server/transport/api-url.ts`) rather than reaching for raw
 `process.env`. Because Next replaces each `process.env.NEXT_PUBLIC_X` occurrence
@@ -93,14 +109,20 @@ eagerly at module scope, so a value read is not frozen at first import — the
 existing suite mutates `process.env.NEXT_PUBLIC_*` after import
 (`role-switcher.test.tsx`, `login-page.client.test.tsx`, `page.test.tsx`), and an
 eager module-scope parse would break it. The accessor MUST expose typed derived
-getters — the four boolean toggles resolved to `boolean` (so the scattered
-`=== "true"` comparisons live in one place), plus `appVersion` and `sentryDsn`.
-Two toggle getters MUST fold the existing `NODE_ENV !== "production"` guard to
-match current code: `NEXT_PUBLIC_AUTH_STUB` (as `login-page.client.tsx` does) AND
+getters — the five boolean toggles resolved to `boolean` (so the scattered
+`=== "true"` comparisons live in one place), plus `appVersion`, `sentryDsn`,
+and `productFeedbackInboxRoles`, which projects an absent roles list to `[]`
+for consumers (a getter projection, not a schema default). Three toggle
+getters MUST fold the `NODE_ENV !== "production"` guard to
+match current code: `NEXT_PUBLIC_AUTH_STUB` (as `login-page.client.tsx` does),
 `NEXT_PUBLIC_DEV_ROLE_SWITCHER` (as BOTH `nav-right-rail.tsx` and
 `role-switcher.tsx`
-do) — dropping the latter's guard would render the dev role switcher in a
-production build where `NEXT_PUBLIC_DEV_ROLE_SWITCHER=true`.
+do), AND `NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED` (suppressing the feedback
+surface in a production build even when the var stays `"true"`) — dropping the
+role-switcher guard would render the dev role switcher in a
+production build where `NEXT_PUBLIC_DEV_ROLE_SWITCHER=true`. Production
+suppression lives in the getter and MUST NOT bypass schema validation: every
+getter still parses the shared schema on each read.
 
 #### Scenario: Accessor references full literals so values survive inlining
 
@@ -142,7 +164,13 @@ an in-scope var with a call to the typed accessor, at each named consumer site:
 and `apps/web/src/shared/ui/auth-runtime/role-switcher.tsx` (`NEXT_PUBLIC_DEV_ROLE_SWITCHER`),
 `apps/web/src/shared/lib/telemetry/client-logger.ts` (`NEXT_PUBLIC_CLIENT_LOG_FORWARDING`),
 `apps/web/src/features/telemetry/model/vitals/web-vitals.ts` (`NEXT_PUBLIC_WEB_VITALS`),
-`apps/web/instrumentation-client.ts` (`NEXT_PUBLIC_SENTRY_DSN`). A grep of
+`apps/web/instrumentation-client.ts` (`NEXT_PUBLIC_SENTRY_DSN`),
+`apps/web/src/app/(app)/feedback/page.tsx` and
+`apps/web/src/features/product-feedback/ui/product-feedback-widget.tsx`
+(`NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED`),
+`apps/web/src/app/(app)/feedback/layout.tsx`
+(`NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES`), and
+`apps/web/src/shared/ui/navigation/nav-bar.tsx` (both feedback vars). A grep of
 `apps/web/src` and the web root for a literal
 `process.env.NEXT_PUBLIC_` read outside the accessor module and the
 API URL seam MUST return no product-code hits (test files

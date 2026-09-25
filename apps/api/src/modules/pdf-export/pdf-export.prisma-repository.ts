@@ -1,7 +1,6 @@
 import {
   type AssembledReport,
   type PdfExportJob,
-  pdfExportJobSchema,
   type PublishedReportSnapshot,
   publishedReportSnapshotSchema,
   type UserSession,
@@ -15,70 +14,22 @@ import {
   requireScopedPublishedSnapshot,
 } from "../report-sections/index.js";
 import {
-  PdfExportDomainError,
-  type PdfExportJobRecord,
-  type PdfExportRepository,
-} from "./pdf-export.service.js";
-
-const pdfStatusToDb: Record<
-  PdfExportJob["status"],
-  "pending" | "completed" | "failed"
-> = {
-  queued: "pending",
-  completed: "completed",
-  failed: "failed",
-};
-
-const dbStatusToDomain: Record<string, PdfExportJob["status"]> = {
-  pending: "queued",
-  completed: "completed",
-  failed: "failed",
-};
-
-export class UnsupportedPdfExportStatusError extends Error {
-  constructor(status: string) {
-    super(`Unsupported PDF export database status: ${status}`);
-    this.name = "UnsupportedPdfExportStatusError";
-  }
-}
-
-export class PdfExportStateConflictError extends Error {
-  constructor(jobId: string, status: string) {
-    super(
-      `PDF export job ${jobId} is already in terminal state ${status}; completion was not applied.`,
-    );
-    this.name = "PdfExportStateConflictError";
-  }
-}
-
-interface PdfExportJobRow {
-  id: string;
-  reportId: string;
-  status: string;
-  templateVersion: string;
-  filePath: string | null;
-  checksum: string | null;
-  error: string | null;
-  requestedBy: string;
-  publicationAt: Date;
-  publicationSnapshot: unknown;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-type CompletedPdfExportJob = PdfExportJob & {
-  status: "completed";
-  artifactUrl: string;
-  checksum: string;
-};
-
-function toDomainStatus(status: string): PdfExportJob["status"] {
-  const domainStatus = dbStatusToDomain[status];
-  if (domainStatus === undefined) {
-    throw new UnsupportedPdfExportStatusError(status);
-  }
-  return domainStatus;
-}
+  assertCanonicalArtifact,
+  assertValidCompletionJob,
+  isIdenticalCompletedArtifact,
+  type LockedPdfExportJobRow,
+  type PdfExportDb,
+  type PdfExportJobRow,
+  PdfExportStateConflictError,
+  pdfStatusToDb,
+  toExportJob,
+} from "./pdf-export.job-state.js";
+import type {
+  PdfExportJobRecord,
+  PdfExportLockedJobWrites,
+  PdfExportRepository,
+} from "./pdf-export.ports.js";
+import { PdfExportDomainError } from "./pdf-export.service.js";
 
 @Injectable()
 export class PdfExportPrismaRepository implements PdfExportRepository {
@@ -190,30 +141,85 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
 
   async saveExportJob(job: PdfExportJob): Promise<PdfExportJob> {
     assertValidCompletionJob(job);
+    return this.completeExportJob(
+      this.prisma,
+      job.jobId,
+      job.artifactUrl,
+      job.checksum,
+    );
+  }
 
-    const { count } = await this.prisma.pdfExportJob.updateMany({
-      where: { id: job.jobId, status: "pending" },
+  async markExportFailed(jobId: string, error: string): Promise<void> {
+    await this.failExportJob(this.prisma, jobId, error);
+  }
+
+  // One per-export serialization lane: a manual retry and the terminal
+  // reconciliation/failure callbacks all run their read-decide-write sequence
+  // while holding the row's FOR UPDATE lock, so a stale captured state can
+  // never overwrite a revive that committed first (or vice versa).
+  async runLockedExportJob<T>(
+    jobId: string,
+    run: (
+      job: PdfExportJobRecord | null,
+      writes: PdfExportLockedJobWrites,
+    ) => Promise<T>,
+  ): Promise<T> {
+    return this.prisma.$transaction(async (tx) => {
+      const rows = await tx.$queryRaw<LockedPdfExportJobRow[]>`
+        SELECT "id", "reportId", "status", "templateVersion", "filePath",
+          "checksum", "error", "requestedBy", "createdAt", "updatedAt"
+        FROM "PdfExportJob"
+        WHERE "id" = ${jobId}
+        FOR UPDATE`;
+      const row = rows[0];
+      const writes: PdfExportLockedJobWrites = {
+        markFailed: (error) => this.failExportJob(tx, jobId, error),
+        markCompleted: (artifactUrl, checksum) =>
+          this.completeExportJob(tx, jobId, artifactUrl, checksum),
+        reviveFailed: () => this.reviveFailedExport(tx, jobId),
+      };
+      return run(row === undefined ? null : toExportJob(row), writes);
+    });
+  }
+
+  // Pending-only CAS is preserved inside the lock: a completion that lost the
+  // race still fails closed, and an identical completed artifact still reads
+  // back as an idempotent success.
+  private async completeExportJob(
+    db: PdfExportDb,
+    jobId: string,
+    artifactUrl: string,
+    checksum: string,
+  ): Promise<PdfExportJob> {
+    assertCanonicalArtifact(jobId, artifactUrl, checksum);
+
+    const { count } = await db.pdfExportJob.updateMany({
+      where: { id: jobId, status: "pending" },
       data: {
         status: "completed",
-        filePath: job.artifactUrl,
-        checksum: job.checksum,
+        filePath: artifactUrl,
+        checksum,
         error: null,
       },
     });
 
-    const current = await this.readExportJobRow(job.jobId);
+    const current = await this.readExportJobRow(db, jobId);
     if (count === 0) {
-      if (isIdenticalCompletedArtifact(current, job)) {
+      if (isIdenticalCompletedArtifact(current, artifactUrl, checksum)) {
         return toExportJob(current);
       }
-      throw new PdfExportStateConflictError(job.jobId, current.status);
+      throw new PdfExportStateConflictError(jobId, current.status);
     }
 
     return toExportJob(current);
   }
 
-  async markExportFailed(jobId: string, error: string): Promise<void> {
-    const { count } = await this.prisma.pdfExportJob.updateMany({
+  private async failExportJob(
+    db: PdfExportDb,
+    jobId: string,
+    error: string,
+  ): Promise<void> {
+    const { count } = await db.pdfExportJob.updateMany({
       where: { id: jobId, status: "pending" },
       data: {
         status: "failed",
@@ -227,7 +233,7 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
       return;
     }
 
-    const current = await this.readExportJobRow(jobId);
+    const current = await this.readExportJobRow(db, jobId);
     if (current.status === "completed" || current.status === "failed") {
       return;
     }
@@ -235,8 +241,37 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
     throw new PdfExportStateConflictError(jobId, current.status);
   }
 
-  private async readExportJobRow(jobId: string): Promise<PdfExportJobRow> {
-    const row = await this.prisma.pdfExportJob.findUnique({
+  // A manual retry revives only the lifecycle fields; the immutable
+  // publication identity, requester, and template provenance are untouched.
+  private async reviveFailedExport(
+    db: PdfExportDb,
+    jobId: string,
+  ): Promise<void> {
+    const { count } = await db.pdfExportJob.updateMany({
+      where: { id: jobId, status: "failed" },
+      data: {
+        status: "pending",
+        filePath: null,
+        checksum: null,
+        error: null,
+      },
+    });
+
+    if (count === 0) {
+      // Unreachable under the row lock after a failed-status check; failing
+      // loud rolls the transaction back instead of stranding a pending row.
+      const current = await this.readExportJobRow(db, jobId);
+      throw new PdfExportDomainError(
+        `PDF export job ${jobId} is ${current.status}, not failed; the retry revival was not applied.`,
+      );
+    }
+  }
+
+  private async readExportJobRow(
+    db: PdfExportDb,
+    jobId: string,
+  ): Promise<PdfExportJobRow> {
+    const row = await db.pdfExportJob.findUnique({
       where: { id: jobId },
     });
 
@@ -246,52 +281,4 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
 
     return row;
   }
-}
-
-function assertValidCompletionJob(
-  job: PdfExportJob,
-): asserts job is CompletedPdfExportJob {
-  const expectedArtifactUrl = `/pdfs/${job.jobId}.pdf`;
-  if (
-    job.status !== "completed" ||
-    job.artifactUrl === null ||
-    job.artifactUrl.trim() === "" ||
-    job.artifactUrl !== expectedArtifactUrl ||
-    job.checksum === null ||
-    job.checksum.trim() === ""
-  ) {
-    throw new PdfExportDomainError(
-      `PDF export completion requires completed status, artifact URL ${expectedArtifactUrl}, and a checksum.`,
-    );
-  }
-}
-
-function isIdenticalCompletedArtifact(
-  row: PdfExportJobRow,
-  job: PdfExportJob,
-): boolean {
-  return (
-    row.status === "completed" &&
-    row.error === null &&
-    row.filePath === job.artifactUrl &&
-    row.checksum === job.checksum
-  );
-}
-
-function toExportJob(row: PdfExportJobRow): PdfExportJobRecord {
-  return {
-    ...pdfExportJobSchema.parse({
-      jobId: row.id,
-      reportId: row.reportId,
-      status: toDomainStatus(row.status),
-      requestedAt: row.createdAt,
-      completedAt: row.status === "completed" ? row.updatedAt : null,
-      checksum: row.checksum,
-      // The template stamped at creation round-trips; a later code release
-      // must never relabel a persisted export with its own running version.
-      templateVersion: row.templateVersion,
-      artifactUrl: row.filePath,
-    }),
-    requestedBy: row.requestedBy,
-  };
 }

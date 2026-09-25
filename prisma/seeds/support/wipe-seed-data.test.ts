@@ -37,6 +37,7 @@ const TABLES = [
   "agentationEvent",
   "agentationAnnotation",
   "agentationSession",
+  "productFeedback",
   "user",
   "reportingGroup",
   "appSettings",
@@ -65,5 +66,37 @@ describe("wipeSeedData", () => {
     for (const table of TABLES) {
       expect(prisma[table].deleteMany).toHaveBeenCalledWith({});
     }
+  });
+
+  it("clears product feedback before users so the Restrict FK cannot fire", async () => {
+    let feedbackRows = 1;
+    let userRows = 1;
+    const prisma = Object.fromEntries(
+      TABLES.map((table) => [
+        table,
+        {
+          deleteMany: vi.fn(() => {
+            if (table === "productFeedback") {
+              feedbackRows = 0;
+            }
+            if (table === "user") {
+              if (feedbackRows > 0) {
+                throw new Error(
+                  "Restrict violation: ProductFeedback.authorUserId still referenced",
+                );
+              }
+              userRows = 0;
+            }
+          }),
+        },
+      ]),
+    ) as unknown as PrismaClient;
+
+    await wipeSeedData(prisma);
+
+    expect(feedbackRows).toBe(0);
+    expect(userRows).toBe(0);
+    expect(prisma.productFeedback.deleteMany).toHaveBeenCalledWith({});
+    expect(prisma.user.deleteMany).toHaveBeenCalledWith({});
   });
 });

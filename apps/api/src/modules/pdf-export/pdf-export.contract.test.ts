@@ -11,14 +11,12 @@ import { expectDefined } from "../../test-utils/expect-defined.js";
 import { NOOP_PDF_EXPORT_TELEMETRY } from "../../test-utils/pdf-export.js";
 import {
   type PdfExportEnqueuer,
+  type PdfExportJobRecord,
+  type PdfExportLockedJobWrites,
+  type PdfExportRepository,
   type PdfExportTelemetry,
 } from "./pdf-export.ports.js";
-import {
-  PdfExportDomainError,
-  type PdfExportJobRecord,
-  type PdfExportRepository,
-  PdfExportService,
-} from "./pdf-export.service";
+import { PdfExportDomainError, PdfExportService } from "./pdf-export.service";
 
 const reportId = "22222222-2222-4222-8222-222222222222";
 const unknownReportId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -90,6 +88,82 @@ function createRepository(
   canRead = true,
 ): PdfExportRepository {
   const jobs = new Map<string, PdfExportJobRecord>();
+  let lockChain: Promise<unknown> = Promise.resolve();
+
+  function runLockedExportJob<T>(
+    jobId: string,
+    run: (
+      job: PdfExportJobRecord | null,
+      writes: PdfExportLockedJobWrites,
+    ) => Promise<T>,
+  ): Promise<T> {
+    const execute = async (): Promise<T> => {
+      const snapshot = jobs.get(jobId);
+      const backup = snapshot ? structuredClone(snapshot) : undefined;
+      const writes: PdfExportLockedJobWrites = {
+        markFailed: (_error: string) => {
+          const current = jobs.get(jobId);
+          if (current?.status === "queued") {
+            jobs.set(jobId, {
+              ...current,
+              status: "failed",
+              artifactUrl: null,
+              checksum: null,
+            });
+          }
+          return Promise.resolve();
+        },
+        markCompleted: (artifactUrl: string, checksum: string) => {
+          const current = jobs.get(jobId);
+          if (current?.status !== "queued") {
+            return Promise.reject(
+              new Error(`PDF export job ${jobId} is not pending.`),
+            );
+          }
+          const completed: PdfExportJobRecord = {
+            ...current,
+            status: "completed",
+            artifactUrl,
+            checksum,
+            completedAt: new Date(),
+          };
+          jobs.set(jobId, completed);
+          return Promise.resolve(structuredClone(completed));
+        },
+        reviveFailed: () => {
+          const current = jobs.get(jobId);
+          if (current?.status !== "failed") {
+            return Promise.reject(
+              new Error(`PDF export job ${jobId} is not failed.`),
+            );
+          }
+          jobs.set(jobId, {
+            ...current,
+            status: "queued",
+            artifactUrl: null,
+            checksum: null,
+          });
+          return Promise.resolve();
+        },
+      };
+      try {
+        return await run(snapshot ? structuredClone(snapshot) : null, writes);
+      } catch (error) {
+        if (backup === undefined) {
+          jobs.delete(jobId);
+        } else {
+          jobs.set(jobId, backup);
+        }
+        throw error;
+      }
+    };
+    const result = lockChain.then(execute);
+    lockChain = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
+  }
 
   return {
     getPublishedReportForExport(id: string) {
@@ -125,6 +199,7 @@ function createRepository(
       }
       return Promise.resolve();
     },
+    runLockedExportJob,
   };
 }
 

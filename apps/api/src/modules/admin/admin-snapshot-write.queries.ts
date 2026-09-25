@@ -135,7 +135,7 @@ export async function saveSnapshot(
 
     // Groups precede users because User.reportingGroupId is a foreign key.
     await upsertGroups(tx, parsedSnapshot.groups);
-    await upsertUsers(tx, parsedSnapshot.users, { validateAssignments: false });
+    await upsertUsers(tx, parsedSnapshot.users);
     // Apply group head assignments now that every head's User row exists;
     // upsertGroups only wrote name/description/archived.
     await applyGroupHeads(tx, parsedSnapshot.groups);
