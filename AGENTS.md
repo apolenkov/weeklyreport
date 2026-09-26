@@ -223,6 +223,13 @@ for local acceptance; the workflow is authoritative for CI jobs and conditions.
   Report what changed, what passed, and the actual commit/push/publication state.
   Completion requires every agreed delivery step; locally saved progress alone
   does not complete a task whose requested delivery is still pending.
+- Worktrees, dev servers, disposable containers, and background processes
+  created for a task are temporary by default. At session end, remove every
+  task-owned worktree (`git worktree remove`) whose content is committed,
+  pushed, or explicitly archived — never leave a worktree alive solely to
+  hold an uncommitted diff (commit it, archive the diff as an artifact, or
+  discard it explicitly). Stop task-owned runtimes and containers. Foreign
+  worktrees and processes owned by other tasks/sessions stay untouched.
 
 ## Browser verification
 
