@@ -1,7 +1,11 @@
 import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { ExpressAdapter } from "@bull-board/express";
-import { AUTH_COOKIE_NAME, type UserSession } from "@customreport/shared";
+import {
+  AUTH_COOKIE_NAME,
+  PDF_EXPORT_QUEUE_NAME,
+  type UserSession,
+} from "@customreport/shared";
 import type { INestApplication } from "@nestjs/common";
 import type {
   Express,
@@ -93,8 +97,17 @@ export function mountBullBoard(app: INestApplication, env: EnvConfig): void {
   const serverAdapter = new ExpressAdapter();
   serverAdapter.setBasePath("/admin/queues");
 
+  // recover-orphaned-pdf-exports: a manual PDF retry must run the generation
+  // transition, so the board's direct job.retry() endpoint is refused for
+  // pdf-export. readOnlyMode makes the installed write handlers answer 405
+  // before touching the queue; the other queues keep their writable board.
   createBullBoard({
-    queues: registry.names.map((name) => new BullMQAdapter(registry.get(name))),
+    queues: registry.names.map(
+      (name) =>
+        new BullMQAdapter(registry.get(name), {
+          readOnlyMode: name === PDF_EXPORT_QUEUE_NAME,
+        }),
+    ),
     serverAdapter,
   });
 
