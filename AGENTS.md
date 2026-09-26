@@ -130,13 +130,15 @@ pnpm spec:check         # strict validation of all durable OpenSpec specs
 - **The only disposable database candidates are `customreport_e2e` and the
   runtime-lane targets `customreport_e2e_lane_[a-o]_test`.** Destructive database
   work may target only those exact non-production databases.
-- **MVP single-database policy (owner decision 2026-09-18).** Local dev
-  (`DATABASE_URL`), tests, and E2E runs all share the one `customreport_e2e`
-  database on loopback; lane targets stay guard-permitted but are not
-  provisioned and must not be created without a new owner order. Every phase
-  reset wipes this database — keep no long-lived data in it. Before each
-  test/E2E phase, run a guarded reset plus the explicit required seed, so
-  phases never inherit each other's state.
+- **MVP database policy.** By default, local dev (`DATABASE_URL`), tests, and
+  E2E runs share the loopback `customreport_e2e` database (owner decision
+  2026-09-18). TASK-133 separately authorizes the existing
+  `customreport_e2e_lane_a_test` and `customreport_e2e_lane_b_test` databases
+  for its two isolated acceptance lanes. Other lane targets remain
+  unprovisioned and must not be created without a new owner order. Every phase
+  reset wipes its selected database — keep no long-lived data in these targets.
+  Before each test/E2E phase, run a guarded reset plus the explicit required
+  seed, so phases never inherit each other's state.
   Resolve the target from `E2E_DATABASE_URL` (or the command's explicit
   database URL), print it with credentials masked, prove that it is
   loopback-only and not production, shared, or unknown, and require
