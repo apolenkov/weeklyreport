@@ -565,13 +565,13 @@ void test("the API runner CMD resolves its emitted entrypoint from WORKDIR", () 
   const workdir = /^WORKDIR (\S+)$/mu.exec(runner)?.[1];
   assert.equal(workdir, "/app", "the API runner must declare its WORKDIR");
   const distCopy =
-    /^COPY --from=builder --chown=node:node \S+ (\.\/\S+)$/mu.exec(runner);
+    /^COPY --from=builder --chown=node:node \S+ (\.\/\S+)$/mu.exec(runner)?.[1];
   assert.ok(distCopy, "the runner must copy the built API dist tree");
   const cmd = /^CMD \["node", "([^"]+)"\]$/mu.exec(runner)?.[1];
   assert.ok(cmd, "the API runner must start node in exec form");
   assert.equal(
     resolve(workdir, cmd),
-    resolve(workdir, distCopy[1], "apps/api/src/main.js"),
+    resolve(workdir, distCopy, "apps/api/src/main.js"),
     "the runner CMD must point at the emitted entrypoint under its dist destination",
   );
 });
