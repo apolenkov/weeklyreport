@@ -25,8 +25,15 @@ vi.mock("@nestjs/common", async (importOriginal) => ({
   Injectable: () => (target: unknown) => target,
 }));
 
-// Mock bullmq Worker so no Redis connection is attempted
+// Mock bullmq Worker so no Redis connection is attempted. The error class is
+// still the processor's public terminal-rejection signal.
 vi.mock("bullmq", () => ({
+  UnrecoverableError: class UnrecoverableError extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = "UnrecoverableError";
+    }
+  },
   Worker: class {
     static readonly instances: {
       handlers: Record<string, (...args: never[]) => void>;
@@ -76,7 +83,7 @@ vi.mock("../../modules/pdf-export/index.js", () => ({
   },
 }));
 
-import { Worker } from "bullmq";
+import { UnrecoverableError, Worker } from "bullmq";
 
 import type { EnvConfig } from "../config/env.schema";
 import {
@@ -88,8 +95,8 @@ import type { QueueRegistry } from "./queue-registry.js";
 
 function createMockArtifactStore(checksum = "abc123hash") {
   const attempt: PdfArtifactAttempt = {
-    tempPath: "artifact-test-temp/.job-1.attempt.pdf.tmp",
-    canonicalPath: "artifact-test-temp/job-1.pdf",
+    tempPath: "artifact-test-temp/.job-1-g1.attempt.pdf.tmp",
+    canonicalPath: "artifact-test-temp/job-1-g1.pdf",
   };
   return {
     createAttempt: vi.fn().mockResolvedValue(attempt),
@@ -165,20 +172,30 @@ interface PdfExportJobData {
   reportId: string;
   jobId: string;
   requestedBy: string;
+  generation: number;
 }
 
 function createMockJob(
-  data: PdfExportJobData,
+  input: Omit<PdfExportJobData, "generation"> & { generation?: unknown },
   attemptsMade = 0,
   attempts = 1,
   options: {
     state?: Awaited<ReturnType<Job["getState"]>>;
     failedReason?: string;
-    queueJobId?: string;
+    queueJobId?: string | undefined;
   } = {},
 ): Job<PdfExportJobData> {
+  // No generation argument models the valid legacy test fixture default;
+  // an explicit `generation: undefined` stays malformed instead of being
+  // silently repaired by the helper.
+  const data = (
+    "generation" in input ? input : { ...input, generation: 1 }
+  ) as PdfExportJobData;
   return {
-    id: options.queueJobId ?? data.jobId,
+    id:
+      "queueJobId" in options
+        ? options.queueJobId
+        : `${data.jobId}-g${data.generation}`,
     data,
     attemptsMade,
     opts: { attempts },
@@ -227,6 +244,10 @@ describe("PdfExportProcessor.processJob", () => {
 
     await (processor as unknown as ProcessorTestSeam).processJob(job);
 
+    expect(
+      mockService.assertPdfExportJobIdentity,
+    ).toHaveBeenCalledExactlyOnceWith("job-1", "report-1", "user-1", 1);
+
     // Print route lives at /print/[id] (top-level, outside the (app) route
     // group) so the print viewport doesn't inherit NavBar/DEV switcher chrome.
     expect(renderer.render).toHaveBeenCalledExactlyOnceWith({
@@ -265,7 +286,158 @@ describe("PdfExportProcessor.processJob", () => {
     await expect(
       (processor as unknown as ProcessorTestSeam).processJob(job),
     ).rejects.toThrow("PDF export job job-1 was not found.");
+    expect(mockService.assertPdfExportJobIdentity).toHaveBeenCalledWith(
+      "job-1",
+      "wrong-report",
+      "user-1",
+      1,
+    );
     expect(renderer.render).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["missing", undefined],
+    ["zero", 0],
+    ["negative", -1],
+    ["fractional", 1.5],
+    ["a string", "2"],
+    ["NaN", Number.NaN],
+  ] as const)(
+    "rejects a %s generation before the worker reads durable state or renders",
+    async (_label, generation) => {
+      const renderer = createMockRenderer();
+      const mockService = createMockPdfExportService();
+      const artifactStore = createMockArtifactStore();
+      const processor = new PdfExportProcessor(
+        mockService as never,
+        renderer,
+        STUB_ENV,
+        createNullLogger(),
+        artifactStore,
+      );
+      const job = createMockJob({
+        reportId: "report-1",
+        jobId: "job-1",
+        requestedBy: "user-1",
+        generation,
+      });
+
+      await expect(
+        (processor as unknown as ProcessorTestSeam).processJob(job),
+      ).rejects.toThrow(UnrecoverableError);
+
+      expect(mockService.assertPdfExportJobIdentity).not.toHaveBeenCalled();
+      expect(mockService.signPdfExportToken).not.toHaveBeenCalled();
+      expect(renderer.render).not.toHaveBeenCalled();
+      expect(artifactStore.createAttempt).not.toHaveBeenCalled();
+      expect(mockService.markExportCompleted).not.toHaveBeenCalled();
+      expect(mockService.markExportFailed).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ["job-1", "a legacy bare id"],
+    ["job-1-g9", "another generation's id"],
+    ["other-job", "a foreign job's id"],
+    [undefined, "a missing id"],
+  ] as const)(
+    "rejects queue id %s (%s) before the worker reads durable state or renders",
+    async (queueJobId, _label) => {
+      const renderer = createMockRenderer();
+      const mockService = createMockPdfExportService();
+      const artifactStore = createMockArtifactStore();
+      const processor = new PdfExportProcessor(
+        mockService as never,
+        renderer,
+        STUB_ENV,
+        createNullLogger(),
+        artifactStore,
+      );
+      const job = createMockJob(
+        {
+          reportId: "report-1",
+          jobId: "job-1",
+          requestedBy: "user-1",
+          generation: 1,
+        },
+        0,
+        1,
+        { queueJobId },
+      );
+
+      await expect(
+        (processor as unknown as ProcessorTestSeam).processJob(job),
+      ).rejects.toThrow(UnrecoverableError);
+
+      expect(mockService.assertPdfExportJobIdentity).not.toHaveBeenCalled();
+      expect(mockService.signPdfExportToken).not.toHaveBeenCalled();
+      expect(renderer.render).not.toHaveBeenCalled();
+      expect(artifactStore.createAttempt).not.toHaveBeenCalled();
+      expect(mockService.markExportCompleted).not.toHaveBeenCalled();
+      expect(mockService.markExportFailed).not.toHaveBeenCalled();
+      expect(mockService.reconcileTerminalState).not.toHaveBeenCalled();
+    },
+  );
+
+  it("rejects a stale payload generation against the real durable-identity gate before rendering", async () => {
+    const { PdfExportService: RealPdfExportService } = await vi.importActual<
+      typeof import("../../modules/pdf-export/pdf-export.service.js")
+    >("../../modules/pdf-export/pdf-export.service.js");
+    const jobId = "759b2767-0f86-41e2-b025-49730ca010e4";
+    const reportId = "659b2767-0f86-41e2-b025-49730ca010e4";
+    const requestedBy = "00000000-0000-4000-8000-00000000aaaa";
+    const durableJob: PdfExportJobRecord = {
+      ...pdfExportJobSchema.parse({
+        jobId,
+        reportId,
+        status: "queued",
+        generation: 2,
+        requestedAt: new Date("2026-06-09T00:00:00Z"),
+        completedAt: null,
+        checksum: null,
+        templateVersion: "phase-2-pdf-v1",
+        artifactUrl: null,
+      }),
+      requestedBy,
+    };
+    const repository = {
+      getExportJob: vi.fn().mockResolvedValue(durableJob),
+    } as unknown as PdfExportRepository;
+    const service = new RealPdfExportService(
+      repository,
+      createNullLogger(),
+      { enqueue: () => Promise.resolve() },
+      NOOP_PDF_EXPORT_TELEMETRY,
+      {
+        PDF_BASE_URL: "http://localhost:3000",
+        PDF_EXPORT_JWT_SECRET: "test-pdf-export-secret-at-least-32-chars",
+      },
+    );
+    const signToken = vi.spyOn(service, "signPdfExportToken");
+    const renderer = createMockRenderer();
+    const artifactStore = createMockArtifactStore();
+    const processor = new PdfExportProcessor(
+      service,
+      renderer,
+      STUB_ENV,
+      createNullLogger(),
+      artifactStore,
+    );
+    const staleJob = createMockJob({
+      reportId,
+      jobId,
+      requestedBy,
+      generation: 1,
+    });
+
+    await expect(
+      (processor as unknown as ProcessorTestSeam).processJob(staleJob),
+    ).rejects.toThrow(`PDF export job ${jobId} was not found.`);
+
+    expect(repository.getExportJob).toHaveBeenCalledExactlyOnceWith(jobId);
+    expect(signToken).not.toHaveBeenCalled();
+    expect(renderer.render).not.toHaveBeenCalled();
+    expect(artifactStore.createAttempt).not.toHaveBeenCalled();
   });
 
   it("mints a fresh render token at execution time and never reads one from job data", async () => {
@@ -316,22 +488,24 @@ describe("PdfExportProcessor.processJob", () => {
 
     expect(mockService.markExportCompleted).toHaveBeenCalledWith(
       "job-1",
+      1,
       "/pdfs/job-1.pdf",
       "abc123hash",
     );
     expect(artifactStore.createAttempt).toHaveBeenCalledWith(
       expect.stringMatching(/storage\/pdfs-test$/),
       "job-1",
+      1,
       Buffer.from("pdf-bytes"),
     );
     expect(artifactStore.publishAndHash).toHaveBeenCalledWith(
       expect.objectContaining({
-        canonicalPath: "artifact-test-temp/job-1.pdf",
+        canonicalPath: "artifact-test-temp/job-1-g1.pdf",
       }),
     );
     expect(artifactStore.cleanupAttempt).toHaveBeenCalledWith(
       expect.objectContaining({
-        tempPath: "artifact-test-temp/.job-1.attempt.pdf.tmp",
+        tempPath: "artifact-test-temp/.job-1-g1.attempt.pdf.tmp",
       }),
     );
   });
@@ -463,7 +637,7 @@ describe("PdfExportProcessor.processJob", () => {
     expect(artifactStore.createAttempt).toHaveBeenCalledOnce();
     expect(artifactStore.cleanupAttempt).toHaveBeenCalledWith(
       expect.objectContaining({
-        tempPath: "artifact-test-temp/.job-1.attempt.pdf.tmp",
+        tempPath: "artifact-test-temp/.job-1-g1.attempt.pdf.tmp",
       }),
     );
   });
@@ -524,7 +698,12 @@ describe("PdfExportProcessor.onModuleInit", () => {
 
     await vi.waitFor(() => {
       expect(mockService.reconcileTerminalState).toHaveBeenCalledWith(
-        { jobId: "job-1", reportId: "report-1", requestedBy: "user-1" },
+        {
+          jobId: "job-1",
+          reportId: "report-1",
+          requestedBy: "user-1",
+          generation: 1,
+        },
         expect.any(Function),
       );
     });
@@ -553,10 +732,11 @@ describe("PdfExportProcessor.onModuleInit", () => {
       jobId: "job-1",
       reportId: "report-1",
       requestedBy: "user-1",
+      generation: 1,
       status: "failed",
       error: "renderer missing",
     });
-    expect(queue.getJob).toHaveBeenCalledWith("job-1");
+    expect(queue.getJob).toHaveBeenCalledWith("job-1-g1");
   });
 
   it("terminalizes an unrecoverable failure with attempts remaining", async () => {
@@ -597,7 +777,12 @@ describe("PdfExportProcessor.onModuleInit", () => {
 
     await vi.waitFor(() => {
       expect(mockService.reconcileTerminalState).toHaveBeenCalledWith(
-        { jobId: "job-1", reportId: "report-1", requestedBy: "user-1" },
+        {
+          jobId: "job-1",
+          reportId: "report-1",
+          requestedBy: "user-1",
+          generation: 1,
+        },
         expect.any(Function),
       );
     });
@@ -608,10 +793,11 @@ describe("PdfExportProcessor.onModuleInit", () => {
       jobId: "job-1",
       reportId: "report-1",
       requestedBy: "user-1",
+      generation: 1,
       status: "failed",
       error: "renderer answered 403",
     });
-    expect(queue.getJob).toHaveBeenCalledWith("job-1");
+    expect(queue.getJob).toHaveBeenCalledWith("job-1-g1");
   });
 
   it("cannot terminalize a revived attempt with a failure captured before the row lock", async () => {
@@ -653,7 +839,12 @@ describe("PdfExportProcessor.onModuleInit", () => {
 
     await vi.waitFor(() => {
       expect(mockService.reconcileTerminalState).toHaveBeenCalledWith(
-        { jobId: "job-1", reportId: "report-1", requestedBy: "user-1" },
+        {
+          jobId: "job-1",
+          reportId: "report-1",
+          requestedBy: "user-1",
+          generation: 1,
+        },
         expect.any(Function),
       );
     });
@@ -661,7 +852,7 @@ describe("PdfExportProcessor.onModuleInit", () => {
       mockService.reconcileTerminalState.mock.calls[0]?.[1],
     ) as () => Promise<unknown>;
     await expect(loadCurrent()).resolves.toBeNull();
-    expect(queue.getJob).toHaveBeenCalledWith("job-1");
+    expect(queue.getJob).toHaveBeenCalledWith("job-1-g1");
   });
 
   it("records the current attempt's failedReason, not a stale event's, when a retried job failed again", async () => {
@@ -707,7 +898,12 @@ describe("PdfExportProcessor.onModuleInit", () => {
 
     await vi.waitFor(() => {
       expect(mockService.reconcileTerminalState).toHaveBeenCalledWith(
-        { jobId: "job-1", reportId: "report-1", requestedBy: "user-1" },
+        {
+          jobId: "job-1",
+          reportId: "report-1",
+          requestedBy: "user-1",
+          generation: 1,
+        },
         expect.any(Function),
       );
     });
@@ -718,10 +914,11 @@ describe("PdfExportProcessor.onModuleInit", () => {
       jobId: "job-1",
       reportId: "report-1",
       requestedBy: "user-1",
+      generation: 1,
       status: "failed",
       error: "attempt-B exploded",
     });
-    expect(queue.getJob).toHaveBeenCalledWith("job-1");
+    expect(queue.getJob).toHaveBeenCalledWith("job-1-g1");
   });
 
   it("hands the service the current job's payload, so a rebound payload is declined", async () => {
@@ -765,7 +962,12 @@ describe("PdfExportProcessor.onModuleInit", () => {
 
     await vi.waitFor(() => {
       expect(mockService.reconcileTerminalState).toHaveBeenCalledWith(
-        { jobId: "job-1", reportId: "report-1", requestedBy: "user-1" },
+        {
+          jobId: "job-1",
+          reportId: "report-1",
+          requestedBy: "user-1",
+          generation: 1,
+        },
         expect.any(Function),
       );
     });
@@ -776,39 +978,149 @@ describe("PdfExportProcessor.onModuleInit", () => {
       jobId: "job-1",
       reportId: "other-report",
       requestedBy: "user-1",
+      generation: 1,
       status: "failed",
       error: "attempt-B exploded",
     });
-    expect(queue.getJob).toHaveBeenCalledWith("job-1");
+    expect(queue.getJob).toHaveBeenCalledWith("job-1-g1");
   });
 
-  it("rejects a failed event whose BullMQ id does not match its payload", () => {
-    const mockService = createMockPdfExportService();
-    const processor = new PdfExportProcessor(
-      mockService as never,
-      createMockRenderer(),
-      STUB_ENV,
-    );
-    processor.onModuleInit();
-    const instances = (
-      Worker as unknown as {
-        instances: { handlers: Record<string, (...args: never[]) => void> }[];
-      }
-    ).instances;
-    const failedHandler = instances.at(-1)?.handlers.failed;
-    const jobData = {
-      reportId: "report-1",
-      jobId: "job-1",
-      requestedBy: "user-1",
-    };
+  it.each([
+    ["other-job", "a foreign queue id"],
+    [undefined, "a missing queue id"],
+  ] as const)(
+    "rejects a failed event with BullMQ id %s (%s)",
+    (queueJobId, _label) => {
+      const mockService = createMockPdfExportService();
+      const processor = new PdfExportProcessor(
+        mockService as never,
+        createMockRenderer(),
+        STUB_ENV,
+      );
+      processor.onModuleInit();
+      const instances = (
+        Worker as unknown as {
+          instances: { handlers: Record<string, (...args: never[]) => void> }[];
+        }
+      ).instances;
+      const failedHandler = instances.at(-1)?.handlers.failed;
+      const jobData = {
+        reportId: "report-1",
+        jobId: "job-1",
+        requestedBy: "user-1",
+        generation: 1,
+      };
 
-    failedHandler?.(
-      createMockJob(jobData, 3, 3, { queueJobId: "other-job" }) as never,
-      new Error("bad") as never,
-    );
+      failedHandler?.(
+        createMockJob(jobData, 3, 3, { queueJobId }) as never,
+        new Error("bad") as never,
+      );
 
-    expect(mockService.reconcileTerminalState).not.toHaveBeenCalled();
-  });
+      expect(mockService.reconcileTerminalState).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ["missing", undefined],
+    ["zero", 0],
+    ["negative", -1],
+    ["fractional", 1.5],
+    ["a string", "2"],
+    ["NaN", Number.NaN],
+  ] as const)(
+    "rejects a failed event with a %s payload generation",
+    (_label, generation) => {
+      const mockService = createMockPdfExportService();
+      const processor = new PdfExportProcessor(
+        mockService as never,
+        createMockRenderer(),
+        STUB_ENV,
+      );
+      processor.onModuleInit();
+      const instances = (
+        Worker as unknown as {
+          instances: { handlers: Record<string, (...args: never[]) => void> }[];
+        }
+      ).instances;
+      const failedHandler = instances.at(-1)?.handlers.failed;
+
+      failedHandler?.(
+        createMockJob(
+          {
+            reportId: "report-1",
+            jobId: "job-1",
+            requestedBy: "user-1",
+            generation,
+          },
+          3,
+          3,
+        ) as never,
+        new Error("bad") as never,
+      );
+
+      expect(mockService.reconcileTerminalState).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ["a foreign queue id", "other-job"],
+    ["a missing queue id", undefined],
+  ] as const)(
+    "declines the in-lock queue re-read with %s",
+    async (_label, currentQueueJobId) => {
+      const jobData = {
+        reportId: "report-1",
+        jobId: "job-1",
+        requestedBy: "user-1",
+        generation: 1,
+      };
+      const { registry, queue } = queuesWith(
+        createMockJob(jobData, 4, 4, {
+          state: "failed",
+          failedReason: "attempt-B exploded",
+          queueJobId: currentQueueJobId,
+        }),
+      );
+      const mockService = createMockPdfExportService();
+      const processor = new PdfExportProcessor(
+        mockService as never,
+        createMockRenderer(),
+        STUB_ENV,
+        createNullLogger(),
+        createMockArtifactStore(),
+        registry,
+      );
+      processor.onModuleInit();
+      const instances = (
+        Worker as unknown as {
+          instances: { handlers: Record<string, (...args: never[]) => void> }[];
+        }
+      ).instances;
+      const failedHandler = instances.at(-1)?.handlers.failed;
+
+      failedHandler?.(
+        createMockJob(jobData, 3, 3) as never,
+        new Error("attempt-A crashed") as never,
+      );
+
+      await vi.waitFor(() => {
+        expect(mockService.reconcileTerminalState).toHaveBeenCalledWith(
+          {
+            jobId: "job-1",
+            reportId: "report-1",
+            requestedBy: "user-1",
+            generation: 1,
+          },
+          expect.any(Function),
+        );
+      });
+      const loadCurrent = expectDefined(
+        mockService.reconcileTerminalState.mock.calls[0]?.[1],
+      ) as () => Promise<unknown>;
+      await expect(loadCurrent()).resolves.toBeNull();
+      expect(queue.getJob).toHaveBeenCalledWith("job-1-g1");
+    },
+  );
 
   it("uses the failedReason re-read after the terminal observation, not the earlier snapshot", async () => {
     const jobData = {
@@ -866,7 +1178,12 @@ describe("PdfExportProcessor.onModuleInit", () => {
 
     await vi.waitFor(() => {
       expect(mockService.reconcileTerminalState).toHaveBeenCalledWith(
-        { jobId: "job-1", reportId: "report-1", requestedBy: "user-1" },
+        {
+          jobId: "job-1",
+          reportId: "report-1",
+          requestedBy: "user-1",
+          generation: 1,
+        },
         expect.any(Function),
       );
     });
@@ -877,6 +1194,7 @@ describe("PdfExportProcessor.onModuleInit", () => {
       jobId: "job-1",
       reportId: "report-1",
       requestedBy: "user-1",
+      generation: 1,
       status: "failed",
       error: "attempt-B latest reason",
     });
@@ -897,12 +1215,14 @@ describe("PdfExportProcessor.onModuleInit", () => {
       jobId: "759b2767-0f86-41e2-b025-49730ca010e4",
       reportId: "659b2767-0f86-41e2-b025-49730ca010e4",
       requestedBy: "00000000-0000-4000-8000-00000000aaaa",
+      generation: 1,
     };
     const durableJob: PdfExportJobRecord = {
       ...pdfExportJobSchema.parse({
         jobId: identityA.jobId,
         reportId: identityA.reportId,
         status: "queued",
+        generation: 1,
         requestedAt: new Date("2026-06-09T00:00:00Z"),
         completedAt: null,
         checksum: null,
@@ -913,12 +1233,23 @@ describe("PdfExportProcessor.onModuleInit", () => {
     };
     const writes = {
       markFailed: vi
-        .fn<(error: string) => Promise<void>>()
+        .fn<(generation: number, error: string) => Promise<void>>()
         .mockResolvedValue(undefined),
       markCompleted: vi
-        .fn<(artifactUrl: string, checksum: string) => Promise<PdfExportJob>>()
+        .fn<
+          (
+            generation: number,
+            artifactUrl: string,
+            checksum: string,
+          ) => Promise<PdfExportJob>
+        >()
         .mockRejectedValue(new Error("not used in this test")),
-      reviveFailed: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+      markRecoveryRequired: vi
+        .fn<(generation: number) => Promise<void>>()
+        .mockResolvedValue(undefined),
+      advanceGeneration: vi
+        .fn<(expectedGeneration: number) => Promise<void>>()
+        .mockResolvedValue(undefined),
     } satisfies PdfExportLockedJobWrites;
     let settled = false;
     const repository: PdfExportRepository = {
@@ -928,6 +1259,7 @@ describe("PdfExportProcessor.onModuleInit", () => {
       getExportJob: () => Promise.resolve(durableJob),
       saveExportJob: () => Promise.reject(new Error("not used in this test")),
       markExportFailed: () => Promise.resolve(),
+      listPendingExportCandidates: () => Promise.resolve([]),
       runLockedExportJob: (_jobId, run) =>
         run(durableJob, writes).finally(() => {
           settled = true;
@@ -990,6 +1322,7 @@ describe("PdfExportProcessor.onModuleInit", () => {
     });
     expect(writes.markFailed).not.toHaveBeenCalled();
     expect(writes.markCompleted).not.toHaveBeenCalled();
-    expect(writes.reviveFailed).not.toHaveBeenCalled();
+    expect(writes.markRecoveryRequired).not.toHaveBeenCalled();
+    expect(writes.advanceGeneration).not.toHaveBeenCalled();
   });
 });

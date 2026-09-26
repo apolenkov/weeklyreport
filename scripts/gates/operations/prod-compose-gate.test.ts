@@ -142,6 +142,10 @@ const backupDockerfile = readFileSync(
 );
 const apiDockerfile = readFileSync(resolve("Dockerfile.api"), "utf8");
 const webDockerfile = readFileSync(resolve("Dockerfile.web"), "utf8");
+const pdfArtifactMigratorDockerfile = readFileSync(
+  resolve("apps/api/Dockerfile.pdf-artifact-migrator"),
+  "utf8",
+);
 const caddyfileContent = readFileSync(
   resolve("deploy/caddy/Caddyfile"),
   "utf8",
@@ -167,6 +171,10 @@ const REVIEWED_LOCAL_BUILD_IMAGES = new Map([
   [
     "docker-compose.prod.yml:migrate",
     `customreport-migrate:${releaseImageTag}`,
+  ],
+  [
+    "docker-compose.prod.yml:pdf-artifact-migrator",
+    `customreport-pdf-artifact-migrator:${releaseImageTag}`,
   ],
   ["docker-compose.prod.yml:api", `customreport-api:${releaseImageTag}`],
   ["docker-compose.prod.yml:web", `customreport-web:${releaseImageTag}`],
@@ -298,7 +306,7 @@ void test("the production template lists every required input as fail-closed", (
 
 const DEV_APP_DATABASE_URL =
   "postgresql://customreport:localdev@postgres:5432/customreport_e2e";
-const DEV_APP_DATABASE_ASSIGNMENT_COUNT = 2;
+const DEV_APP_DATABASE_ASSIGNMENT_COUNT = 3;
 
 void test("development Compose owns one exact guarded database target", () => {
   assert.doesNotMatch(
@@ -412,7 +420,12 @@ void test("the production image receives one release identity", () => {
     workflowContent,
     /OTEL_SERVICE_VERSION: \$\{\{ github\.sha \}\}/u,
   );
-  for (const dockerfile of [apiDockerfile, webDockerfile, backupDockerfile]) {
+  for (const dockerfile of [
+    apiDockerfile,
+    webDockerfile,
+    backupDockerfile,
+    pdfArtifactMigratorDockerfile,
+  ]) {
     assert.match(
       dockerfile,
       /LABEL org\.opencontainers\.image\.revision=\$\{/u,
@@ -786,7 +799,11 @@ void test("production services pool API connections and preserve direct paths", 
   );
   const migrationDatabaseUrl =
     /DATABASE_URL: postgresql:\/\/customreport:\$\{DB_PASSWORD:\?[^\n]+@postgres:5432\/\$\{POSTGRES_DB:\?[^\n]+/g;
-  assert.equal([...content.matchAll(migrationDatabaseUrl)].length, 1);
+  assert.equal(
+    [...content.matchAll(migrationDatabaseUrl)].length,
+    2,
+    "migrate and pdf-artifact-migrator share the direct postgres:5432 URL",
+  );
   assert.match(
     content,
     /api:[\s\S]*DATABASE_URL: postgresql:\/\/customreport:[\s\S]*@pgbouncer:5432[\s\S]*depends_on:[\s\S]*pgbouncer:[\s\S]*condition: service_healthy[\s\S]*healthcheck:[\s\S]*health\/ready/u,
@@ -961,7 +978,17 @@ void test("manual runtime smoke reclaims only reviewed application build space",
   assert.equal(reclaimStep.if, "github.event_name == 'workflow_dispatch'");
   assert.equal(typeof reclaimStep.run, "string");
   const reclaimRun = reclaimStep.run as string;
-  assert.match(reclaimRun, /for service in backup migrate api web/u);
+  const cleanupServices = /^for service in ([^;]+); do$/mu.exec(
+    reclaimRun,
+  )?.[1];
+  assert.ok(cleanupServices, "cleanup must enumerate repository-built images");
+  assert.deepEqual(cleanupServices.split(/\s+/u).toSorted(), [
+    "api",
+    "backup",
+    "migrate",
+    "pdf-artifact-migrator",
+    "web",
+  ]);
   assert.match(
     reclaimRun,
     /docker image rm "customreport-\$\{service\}:\$\{OTEL_SERVICE_VERSION\}"/u,
@@ -1043,6 +1070,7 @@ const renderComposeFiles = (
   composeFiles: readonly string[],
   env: NodeJS.ProcessEnv,
   format: "yaml" | "json" = "yaml",
+  profiles: readonly string[] = [],
 ) =>
   spawnSync(
     composeCommand.executable,
@@ -1050,6 +1078,7 @@ const renderComposeFiles = (
       ...composeCommand.leadingArguments,
       "--env-file",
       COMPOSE_ENV_ISOLATION_FILE,
+      ...profiles.flatMap((profile) => ["--profile", profile]),
       ...composeFiles.flatMap((composeFile) => ["-f", composeFile]),
       "config",
       "--format",
@@ -1064,7 +1093,8 @@ const renderComposeFiles = (
 const renderCompose = (
   env: NodeJS.ProcessEnv,
   format: "yaml" | "json" = "yaml",
-) => renderComposeFiles([prodCompose], env, format);
+  profiles: readonly string[] = [],
+) => renderComposeFiles([prodCompose], env, format, profiles);
 
 const FULL_POLICY_ENV: NodeJS.ProcessEnv = {
   PATH: process.env.PATH,
@@ -1165,11 +1195,35 @@ interface RenderedCompose {
   readonly services: Readonly<Record<string, RenderedService>>;
 }
 
-const renderComposeModel = (env: NodeJS.ProcessEnv): RenderedCompose => {
-  const rendered = renderCompose(env, "json");
+const renderComposeModel = (
+  env: NodeJS.ProcessEnv,
+  profiles: readonly string[] = [],
+): RenderedCompose => {
+  const rendered = renderCompose(env, "json", profiles);
   assert.equal(rendered.status, 0, rendered.stderr);
   return JSON.parse(rendered.stdout) as RenderedCompose;
 };
+
+const planComposeCreate = (
+  composeFiles: readonly string[],
+  env: NodeJS.ProcessEnv,
+  profile?: string,
+) =>
+  spawnSync(
+    composeCommand.executable,
+    [
+      ...composeCommand.leadingArguments,
+      "--dry-run",
+      "--project-name",
+      "p4-pdf-migrator-profile-gate",
+      "--env-file",
+      COMPOSE_ENV_ISOLATION_FILE,
+      ...(profile === undefined ? [] : ["--profile", profile]),
+      ...composeFiles.flatMap((composeFile) => ["-f", composeFile]),
+      "create",
+    ],
+    { env, encoding: "utf8" },
+  );
 
 void test("every documented Compose lane supplies the required report-assistant environment", () => {
   const lanes = [
@@ -1214,11 +1268,53 @@ void test("every documented Compose lane supplies the required report-assistant 
 });
 
 void test("every repository-built image carries the rendered release tag", () => {
-  const model = renderComposeModel(FULL_POLICY_ENV);
-  for (const service of ["backup", "migrate", "api", "web"] as const) {
+  const model = renderComposeModel(FULL_POLICY_ENV, ["pdf-artifact-migration"]);
+  for (const service of [
+    "backup",
+    "migrate",
+    "pdf-artifact-migrator",
+    "api",
+    "web",
+  ] as const) {
     assert.equal(
       model.services[service]?.image,
       `customreport-${service}:test-release`,
+    );
+  }
+});
+
+void test("PDF artifact migration is excluded from normal starts and opt-in by profile", () => {
+  const lanes = [
+    ["local", [devCompose], { PATH: process.env.PATH }],
+    [
+      "source-watch",
+      [devCompose, devOverrideCompose],
+      LOCAL_ASSISTANT_POLICY_ENV,
+    ],
+    ["production", [prodCompose], FULL_POLICY_ENV],
+  ] as const;
+
+  for (const [lane, composeFiles, environment] of lanes) {
+    const normal = planComposeCreate(composeFiles, environment);
+    assert.equal(normal.status, 0, `${lane}: ${normal.stderr}`);
+    const normalOutput = `${normal.stdout}${normal.stderr}`;
+    assert.doesNotMatch(
+      normalOutput,
+      /Container [^\n]*pdf-artifact-migrator[^\n]* Creating/u,
+      `${lane}: ordinary Compose start must not run the one-shot migrator`,
+    );
+
+    const explicit = planComposeCreate(
+      composeFiles,
+      environment,
+      "pdf-artifact-migration",
+    );
+    assert.equal(explicit.status, 0, `${lane}: ${explicit.stderr}`);
+    const explicitOutput = `${explicit.stdout}${explicit.stderr}`;
+    assert.match(
+      explicitOutput,
+      /Container [^\n]*pdf-artifact-migrator[^\n]* Creating/u,
+      `${lane}: the explicit migration profile must include the migrator`,
     );
   }
 });

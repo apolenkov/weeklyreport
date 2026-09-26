@@ -22,6 +22,7 @@ const MAIN_CONTENT_ROUTES = [
   "src/app/(app)/lead/report/page.tsx",
   "src/app/(app)/lead/report/[reportId]/page.tsx",
   "src/app/(app)/lead/report/[reportId]/preview/page.tsx",
+  "src/app/(app)/pdf-exports/page.tsx",
   "src/app/(app)/reports/page.tsx",
   "src/app/(app)/reports/[reportId]/page.tsx",
   "src/app/(app)/reports/latest/page.tsx",

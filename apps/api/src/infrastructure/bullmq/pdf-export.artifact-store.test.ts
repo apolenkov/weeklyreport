@@ -11,6 +11,11 @@ import {
 } from "./pdf-export.processor.js";
 
 const JOB_ID = "11111111-1111-4111-8111-111111111111";
+const GENERATION = 1;
+
+function canonicalName(generation: number): string {
+  return `${JOB_ID}-g${generation}.pdf`;
+}
 
 function expectedChecksum(bytes: Buffer): string {
   return createHash("sha256").update(bytes).digest("hex");
@@ -31,8 +36,18 @@ describe("default PDF artifact store", () => {
     const store = createDefaultPdfArtifactStore();
     const winner = Buffer.from("winner-bytes");
     const loser = Buffer.from("loser-bytes");
-    const winnerAttempt = await store.createAttempt(outputDir, JOB_ID, winner);
-    const loserAttempt = await store.createAttempt(outputDir, JOB_ID, loser);
+    const winnerAttempt = await store.createAttempt(
+      outputDir,
+      JOB_ID,
+      GENERATION,
+      winner,
+    );
+    const loserAttempt = await store.createAttempt(
+      outputDir,
+      JOB_ID,
+      GENERATION,
+      loser,
+    );
 
     const winnerChecksum = await store.publishAndHash(winnerAttempt);
     const loserChecksum = await store.publishAndHash(loserAttempt);
@@ -41,9 +56,9 @@ describe("default PDF artifact store", () => {
 
     expect(winnerChecksum).toBe(expectedChecksum(winner));
     expect(loserChecksum).toBe(expectedChecksum(winner));
-    await expect(readFile(join(outputDir, `${JOB_ID}.pdf`))).resolves.toEqual(
-      winner,
-    );
+    await expect(
+      readFile(join(outputDir, canonicalName(GENERATION))),
+    ).resolves.toEqual(winner);
   });
 
   it("adopts a canonical file left by a crash before completion CAS", async () => {
@@ -52,6 +67,7 @@ describe("default PDF artifact store", () => {
     const firstAttempt = await store.createAttempt(
       outputDir,
       JOB_ID,
+      GENERATION,
       published,
     );
     await store.publishAndHash(firstAttempt);
@@ -60,14 +76,50 @@ describe("default PDF artifact store", () => {
     const retryAttempt = await store.createAttempt(
       outputDir,
       JOB_ID,
+      GENERATION,
       Buffer.from("retry-bytes"),
     );
     const checksum = await store.publishAndHash(retryAttempt);
     await store.cleanupAttempt(retryAttempt);
 
     expect(checksum).toBe(expectedChecksum(published));
-    await expect(readFile(join(outputDir, `${JOB_ID}.pdf`))).resolves.toEqual(
-      published,
+    await expect(
+      readFile(join(outputDir, canonicalName(GENERATION))),
+    ).resolves.toEqual(published);
+  });
+
+  it("keeps generations isolated: a stale generation cannot observe, overwrite, or adopt the newer file", async () => {
+    const store = createDefaultPdfArtifactStore();
+    const newerBytes = Buffer.from("generation-2-bytes");
+    const staleBytes = Buffer.from("generation-1-stale-bytes");
+
+    const newerAttempt = await store.createAttempt(
+      outputDir,
+      JOB_ID,
+      2,
+      newerBytes,
+    );
+    expect(newerAttempt.canonicalPath).toBe(join(outputDir, canonicalName(2)));
+    const newerChecksum = await store.publishAndHash(newerAttempt);
+    await store.cleanupAttempt(newerAttempt);
+
+    const staleAttempt = await store.createAttempt(
+      outputDir,
+      JOB_ID,
+      1,
+      staleBytes,
+    );
+    expect(staleAttempt.canonicalPath).toBe(join(outputDir, canonicalName(1)));
+    const staleChecksum = await store.publishAndHash(staleAttempt);
+    await store.cleanupAttempt(staleAttempt);
+
+    expect(newerChecksum).toBe(expectedChecksum(newerBytes));
+    expect(staleChecksum).toBe(expectedChecksum(staleBytes));
+    await expect(readFile(join(outputDir, canonicalName(2)))).resolves.toEqual(
+      newerBytes,
+    );
+    await expect(readFile(join(outputDir, canonicalName(1)))).resolves.toEqual(
+      staleBytes,
     );
   });
 
@@ -77,6 +129,7 @@ describe("default PDF artifact store", () => {
     const attempt = await store.createAttempt(
       outputDir,
       JOB_ID,
+      GENERATION,
       Buffer.from("attempt-bytes"),
     );
     await writeFile(outsidePath, "outside-bytes");
@@ -98,6 +151,7 @@ describe("default PDF artifact store", () => {
     const attempt = await store.createAttempt(
       outputDir,
       JOB_ID,
+      GENERATION,
       Buffer.from("attempt-bytes"),
     );
     await rm(attempt.canonicalPath, { force: true });
@@ -116,6 +170,7 @@ describe("default PDF artifact store", () => {
     const attempt = await store.createAttempt(
       outputDir,
       JOB_ID,
+      GENERATION,
       Buffer.from("winner-bytes"),
     );
     const canonical: PdfArtifactAttempt = {

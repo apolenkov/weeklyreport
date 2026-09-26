@@ -1,13 +1,13 @@
-export { GotenbergPdfRenderer } from "./gotenberg-pdf-renderer.adapter.js";
 export { createPdfDownloadHandler } from "./pdf-export.download-handler.js";
 export { PdfExportModule } from "./pdf-export.module.js";
 export type {
   PdfExportJobIdentity,
   PdfExportJobRecord,
   PdfExportLockedJobWrites,
+  PdfExportPendingCandidate,
+  PdfExportPendingCursor,
   PdfExportRepository,
   PdfExportRetryOutcome,
-  PdfExportRetryQueue,
   PdfExportTerminalState,
   PdfRenderCookie,
   PdfRenderer,

@@ -12,6 +12,7 @@ import { ToolbarIconButton } from "../../../shared/ui/report-shell/toolbar-icon-
 import { usePdfExportJob } from "./use-pdf-export-job";
 
 const DISABLED_REASON = "Publish or re-publish the report to export PDF.";
+const RECOVERY_MESSAGE = "Recovery required — export outcome unknown";
 const DISABLED_TRIGGER_CLASS =
   "inline-flex shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1";
 const FALLBACK_LINK_CLASS =
@@ -61,8 +62,14 @@ export function ExportPdfButton({
   reportId,
   periodStatus,
 }: ExportPdfButtonProps) {
-  const { isExportable, isGenerating, disabled, fallbackUrl, handleExport } =
-    usePdfExportJob({ reportId, periodStatus });
+  const {
+    isExportable,
+    isGenerating,
+    disabled,
+    fallbackUrl,
+    recoveryRequired,
+    handleExport,
+  } = usePdfExportJob({ reportId, periodStatus });
   const disabledReasonId = `${reportId}-export-pdf-disabled-reason`;
 
   const buttonClassName = exportButtonClassName(isGenerating);
@@ -112,6 +119,11 @@ export function ExportPdfButton({
         <a href={fallbackUrl} download className={FALLBACK_LINK_CLASS}>
           Download PDF
         </a>
+      ) : null}
+      {recoveryRequired ? (
+        <p role="alert" className="text-sm text-[var(--color-destructive)]">
+          {RECOVERY_MESSAGE}
+        </p>
       ) : null}
     </>
   );

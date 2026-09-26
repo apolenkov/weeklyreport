@@ -3,6 +3,11 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useReducer, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";
+import {
+  formatClientErrorMessage,
+  getClientErrorDetails,
+} from "../../../shared/lib/errors/client-error-reporting";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 
 const STATUS_POLL_INTERVAL_MS = 2 * MS_PER_SECOND;
@@ -47,7 +52,9 @@ function removeStoredActiveJob(reportId: string): void {
 export function pdfExportRefetchInterval(
   status: string | undefined,
 ): number | false {
-  return status === "completed" || status === "failed"
+  return status === "completed" ||
+    status === "failed" ||
+    status === "recovery_required"
     ? false
     : STATUS_POLL_INTERVAL_MS;
 }
@@ -62,6 +69,7 @@ interface UsePdfExportJobResult {
   readonly isGenerating: boolean;
   readonly disabled: boolean;
   readonly fallbackUrl: string | null;
+  readonly recoveryRequired: boolean;
   readonly handleExport: () => void;
 }
 
@@ -83,12 +91,30 @@ export function usePdfExportJob({
     readonly url: string;
   } | null>(null);
   const fallbackUrl = fallback?.reportId === reportId ? fallback.url : null;
+  // Same reportId keying as the fallback link: a report switch hides the
+  // quarantine notice instead of leaking it onto another report.
+  const [recoveryNotice, setRecoveryNotice] = useReducer(
+    (
+      _current: { readonly reportId: string } | null,
+      next: { readonly reportId: string } | null,
+    ) => next,
+    null,
+  );
+  const recoveryRequired = recoveryNotice?.reportId === reportId;
   // One-shot guard: delivery fires exactly once per completed jobId regardless
   // of how many times tanstack-query re-runs the effect.
   const lastDownloadedJobIdRef = useRef<string | null>(null);
   const requestMut = useMutation(trpc.pdfExport.request.mutationOptions());
 
   const statusQ = useJobStatusPoll(jobId);
+  // Poll failures still flow through the error-policy seam: logged once per
+  // error transition, no toast — the busy control is the user signal while a
+  // transient failure keeps polling.
+  useQueryErrorHandler(statusQ, {
+    component: "ExportPdfButton",
+    event: "pdfExport.status.load_failed",
+    procedure: "pdfExport.status",
+  });
 
   useEffect(() => {
     // A report switch owns a fresh artifact surface: reset the one-shot
@@ -103,11 +129,18 @@ export function usePdfExportJob({
 
   useEffect(() => {
     if (jobId === null) return;
-    const outcome = readJobOutcome(statusQ.isError, statusQ.data);
+    const outcome = readJobOutcome(statusQ.error, statusQ.data);
     if (outcome === null) return;
 
     if (outcome.kind === "failed") {
       toast.error(outcome.message);
+      removeStoredActiveJob(reportId);
+      setActiveJob(null);
+      return;
+    }
+
+    if (outcome.kind === "recovery_required") {
+      setRecoveryNotice({ reportId });
       removeStoredActiveJob(reportId);
       setActiveJob(null);
       return;
@@ -120,7 +153,7 @@ export function usePdfExportJob({
     );
     removeStoredActiveJob(reportId);
     setActiveJob(null);
-  }, [statusQ.data, statusQ.isError, jobId, reportId]);
+  }, [statusQ.data, statusQ.error, jobId, reportId]);
 
   const isExportable = periodStatus === "published";
   const isGenerating = requestMut.isPending || jobId !== null;
@@ -129,6 +162,7 @@ export function usePdfExportJob({
   function handleExport() {
     if (disabled) return;
     setFallback(null);
+    setRecoveryNotice(null);
     requestMut.mutate(
       { reportId },
       exportRequestHandlers((nextJobId) => {
@@ -138,7 +172,14 @@ export function usePdfExportJob({
     );
   }
 
-  return { isExportable, isGenerating, disabled, fallbackUrl, handleExport };
+  return {
+    isExportable,
+    isGenerating,
+    disabled,
+    fallbackUrl,
+    recoveryRequired,
+    handleExport,
+  };
 }
 
 function exportRequestHandlers(onStarted: (jobId: string) => void) {
@@ -176,21 +217,31 @@ interface JobStatusData {
 
 type JobOutcome =
   | { readonly kind: "failed"; readonly message: string }
+  | { readonly kind: "recovery_required" }
   | {
       readonly kind: "completed";
       readonly jobId: string;
       readonly artifactUrl: string;
     };
 
-// null means "keep polling": no status yet, or the job is still queued.
+// null means "keep polling": no status yet, the job is still queued, or the
+// last check hit a transient transport failure — none of those is a terminal
+// observation of the durable job. Only an observed terminal status or a
+// deterministic client error (a stale stored job reads NOT_FOUND) ends it.
 function readJobOutcome(
-  isError: boolean,
+  error: unknown,
   data: JobStatusData | undefined,
 ): JobOutcome | null {
-  if (isError) {
+  if (error !== null) {
+    const errorDetails = getClientErrorDetails(error);
+    if (!errorDetails.isDeterministicClientError) {
+      return null;
+    }
     return {
       kind: "failed",
-      message: "PDF export status check failed. Please try again.",
+      message: errorDetails.isInvalidLink
+        ? "PDF export status is no longer available. Please try again."
+        : formatClientErrorMessage("PDF export status check failed", error),
     };
   }
   if (!data) return null;
@@ -203,6 +254,9 @@ function readJobOutcome(
   }
   if (data.status === "failed") {
     return { kind: "failed", message: "PDF export failed. Please try again." };
+  }
+  if (data.status === "recovery_required") {
+    return { kind: "recovery_required" };
   }
   return null;
 }

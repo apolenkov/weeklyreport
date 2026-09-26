@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
@@ -239,5 +239,39 @@ describe("canonical init migration", () => {
       `VALUES ('singleton', 'PEO', 'Product Engineering & Operations', CURRENT_TIMESTAMP)`,
     );
     expect(migration.match(/ON CONFLICT \("id"\) DO NOTHING/g)).toHaveLength(2);
+  });
+});
+
+describe("pdf export recovery additive migration", () => {
+  const upgradeUrl = new URL(
+    "./20260921120000_pdf_export_recovery/migration.sql",
+    import.meta.url,
+  );
+
+  it("keeps the canonical init schema free of recovery state", () => {
+    const pdfExportJob = /CREATE TABLE "PdfExportJob" \([\s\S]*?\n\);/u.exec(
+      migration,
+    )?.[0];
+    expect(pdfExportJob).toBeDefined();
+    expect(pdfExportJob).not.toContain('"generation"');
+    expect(migration).not.toContain("recovery_required");
+  });
+
+  it("adds the quarantine status and generation column without rewriting history", () => {
+    expect(existsSync(upgradeUrl)).toBe(true);
+    if (!existsSync(upgradeUrl)) return;
+    const upgrade = readFileSync(upgradeUrl, "utf8");
+
+    expect(upgrade).toMatch(/^BEGIN;[\s\S]*COMMIT;\s*$/u);
+    expect(upgrade).toContain(
+      `ALTER TYPE "PdfExportStatus" ADD VALUE IF NOT EXISTS 'recovery_required'`,
+    );
+    expect(upgrade).toContain(
+      'ALTER TABLE "PdfExportJob" ADD COLUMN IF NOT EXISTS "generation" INTEGER NOT NULL DEFAULT 1',
+    );
+    // PostgreSQL cannot reference a freshly added enum value inside the same
+    // transaction — 'recovery_required' may appear only in its ADD VALUE clause.
+    expect(upgrade.match(/recovery_required/g)).toHaveLength(1);
+    expect(upgrade).not.toMatch(/\b(?:UPDATE|DELETE|TRUNCATE|DROP)\b/u);
   });
 });

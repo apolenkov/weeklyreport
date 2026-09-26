@@ -37,6 +37,8 @@ const UNUSED_QUEUES: Pick<QueueRegistry, "get"> = {
   },
 };
 
+const UNUSED_RENDERER = { render: vi.fn() };
+
 function createMockPdfExportService() {
   return {
     markExportCompleted: vi.fn().mockResolvedValue(undefined),
@@ -46,13 +48,20 @@ function createMockPdfExportService() {
   };
 }
 
+// Models the generation-scoped store contract: canonical publication targets
+// `${jobId}-g${generation}.pdf` and never replaces surviving bytes per path.
 class ImmediateArtifactStore implements PdfArtifactStore {
   readonly createAttempt = vi.fn(
-    (_outputDir: string, jobId: string, pdfBuffer: Buffer) => {
-      const tempPath = `${TEST_OUTPUT_DIR}/.${jobId}.attempt-${this.attempts.size}.pdf.tmp`;
+    (
+      _outputDir: string,
+      jobId: string,
+      generation: number,
+      pdfBuffer: Buffer,
+    ) => {
+      const tempPath = `${TEST_OUTPUT_DIR}/.${jobId}-g${generation}.attempt-${this.attempts.size}.pdf.tmp`;
       const attempt = {
         tempPath,
-        canonicalPath: `${TEST_OUTPUT_DIR}/${jobId}.pdf`,
+        canonicalPath: `${TEST_OUTPUT_DIR}/${jobId}-g${generation}.pdf`,
       };
       this.attempts.set(tempPath, Buffer.from(pdfBuffer));
       return Promise.resolve(attempt);
@@ -66,9 +75,17 @@ class ImmediateArtifactStore implements PdfArtifactStore {
         new Error(`missing temp attempt ${attempt.tempPath}`),
       );
     }
-    this.canonicalBytes ??= Buffer.from(bytes);
+    if (!this.canonicalByPath.has(attempt.canonicalPath)) {
+      this.canonicalByPath.set(attempt.canonicalPath, Buffer.from(bytes));
+    }
+    const surviving = this.canonicalByPath.get(attempt.canonicalPath);
+    if (!surviving) {
+      return Promise.reject(
+        new Error(`missing canonical ${attempt.canonicalPath}`),
+      );
+    }
     return Promise.resolve(
-      createHash("sha256").update(this.canonicalBytes).digest("hex"),
+      createHash("sha256").update(surviving).digest("hex"),
     );
   });
 
@@ -77,7 +94,7 @@ class ImmediateArtifactStore implements PdfArtifactStore {
     return Promise.resolve();
   });
 
-  canonicalBytes: Buffer | undefined;
+  readonly canonicalByPath = new Map<string, Buffer>();
   protected readonly attempts = new Map<string, Buffer>();
 }
 
@@ -93,11 +110,17 @@ class InterleavingArtifactStore extends ImmediateArtifactStore {
           new Error(`missing temp attempt ${attempt.tempPath}`),
         );
       }
-      this.canonicalBytes ??= Buffer.from(bytes);
+      if (!this.canonicalByPath.has(attempt.canonicalPath)) {
+        this.canonicalByPath.set(attempt.canonicalPath, Buffer.from(bytes));
+      }
+      const surviving = this.canonicalByPath.get(attempt.canonicalPath);
+      if (!surviving) {
+        return Promise.reject(
+          new Error(`missing canonical ${attempt.canonicalPath}`),
+        );
+      }
       this.publishCount += 1;
-      const checksum = createHash("sha256")
-        .update(this.canonicalBytes)
-        .digest("hex");
+      const checksum = createHash("sha256").update(surviving).digest("hex");
 
       if (this.publishCount === 1) {
         return new Promise<string>((resolve) => {
@@ -111,10 +134,6 @@ class InterleavingArtifactStore extends ImmediateArtifactStore {
     },
   );
 }
-
-// This suite exercises persistCompletedArtifact directly, so the renderer
-// port is an inert stub — processJob never runs here.
-const UNUSED_RENDERER = { render: vi.fn() };
 
 class PdfExportProcessor extends ProductionPdfExportProcessor {
   constructor(
@@ -142,6 +161,7 @@ interface ProcessorArtifactSeam {
   persistCompletedArtifact(input: {
     artifactUrl: string;
     jobId: string;
+    generation: number;
     outputDir: string;
     pdfBuffer: Buffer;
   }): Promise<{ artifactUrl: string; checksum: string }>;
@@ -151,12 +171,14 @@ function persist(
   processor: PdfExportProcessor,
   jobId: string,
   pdfBuffer: Buffer,
+  generation = 1,
 ): Promise<{ artifactUrl: string; checksum: string }> {
   return (
     processor as unknown as ProcessorArtifactSeam
   ).persistCompletedArtifact({
     artifactUrl: `/pdfs/${jobId}.pdf`,
     jobId,
+    generation,
     outputDir: TEST_OUTPUT_DIR,
     pdfBuffer,
   });
@@ -169,7 +191,12 @@ describe("PdfExportProcessor artifact publication races", () => {
     let completionCount = 0;
     let dbChecksum: string | undefined;
     mockService.markExportCompleted.mockImplementation(
-      (_jobId: string, _artifactUrl: string, checksum: string) => {
+      (
+        _jobId: string,
+        _generation: number,
+        _artifactUrl: string,
+        checksum: string,
+      ) => {
         completionCount += 1;
         if (completionCount === 1) {
           dbChecksum = checksum;
@@ -202,7 +229,9 @@ describe("PdfExportProcessor artifact publication races", () => {
     expect(results.filter(({ status }) => status === "rejected")).toHaveLength(
       1,
     );
-    expect(store.canonicalBytes).toEqual(winnerBytes);
+    expect(
+      store.canonicalByPath.get(`${TEST_OUTPUT_DIR}/job-1-g1.pdf`),
+    ).toEqual(winnerBytes);
     expect(dbChecksum).toBe(
       createHash("sha256").update(winnerBytes).digest("hex"),
     );
@@ -250,7 +279,9 @@ describe("PdfExportProcessor artifact publication races", () => {
       checksum: null,
       error: "terminal failure won",
     });
-    expect(store.canonicalBytes).toEqual(bytes);
+    expect(
+      store.canonicalByPath.get(`${TEST_OUTPUT_DIR}/job-1-g1.pdf`),
+    ).toEqual(bytes);
     expect(store.cleanupAttempt).toHaveBeenCalledOnce();
   });
 
@@ -276,7 +307,12 @@ describe("PdfExportProcessor artifact publication races", () => {
       .digest("hex");
     let observedChecksum: string | undefined;
     mockService.markExportCompleted.mockImplementationOnce(
-      (_jobId: string, _artifactUrl: string, checksum: string) => {
+      (
+        _jobId: string,
+        _generation: number,
+        _artifactUrl: string,
+        checksum: string,
+      ) => {
         observedChecksum = checksum;
         return Promise.resolve();
       },
@@ -285,7 +321,9 @@ describe("PdfExportProcessor artifact publication races", () => {
     await persist(processor, "job-1", Buffer.from("retry-bytes"));
 
     expect(observedChecksum).toBe(retryChecksum);
-    expect(store.canonicalBytes).toEqual(publishedBytes);
+    expect(
+      store.canonicalByPath.get(`${TEST_OUTPUT_DIR}/job-1-g1.pdf`),
+    ).toEqual(publishedBytes);
     expect(store.cleanupAttempt).toHaveBeenCalledTimes(2);
   });
 
@@ -294,7 +332,12 @@ describe("PdfExportProcessor artifact publication races", () => {
     const mockService = createMockPdfExportService();
     let completedChecksum: string | undefined;
     mockService.markExportCompleted.mockImplementation(
-      (_jobId: string, _artifactUrl: string, checksum: string) => {
+      (
+        _jobId: string,
+        _generation: number,
+        _artifactUrl: string,
+        checksum: string,
+      ) => {
         if (completedChecksum === undefined) {
           completedChecksum = checksum;
           return Promise.resolve();
@@ -315,8 +358,64 @@ describe("PdfExportProcessor artifact publication races", () => {
     await persist(processor, "job-1", Buffer.from("different-retry-bytes"));
 
     expect(mockService.markExportCompleted).toHaveBeenCalledTimes(2);
-    expect(store.canonicalBytes).toEqual(bytes);
+    expect(
+      store.canonicalByPath.get(`${TEST_OUTPUT_DIR}/job-1-g1.pdf`),
+    ).toEqual(bytes);
     expect(store.cleanupAttempt).toHaveBeenCalledTimes(2);
+  });
+
+  it("never lets an older generation overwrite or adopt a newer generation's file", async () => {
+    const store = new ImmediateArtifactStore();
+    const mockService = createMockPdfExportService();
+    const processor = new PdfExportProcessor(
+      mockService as never,
+      STUB_ENV,
+      createNullLogger(),
+      store,
+    );
+    const g2Bytes = Buffer.from("generation-2-bytes");
+    const staleG1Bytes = Buffer.from("stale-generation-1-bytes");
+
+    // The row completed at g2; a stale g1 worker publishing afterwards must
+    // write only `${jobId}-g1.pdf` — the newer generation's path is
+    // unreachable from its generation-scoped attempt.
+    await persist(processor, "job-1", g2Bytes, 2);
+    await persist(processor, "job-1", staleG1Bytes, 1);
+
+    expect(store.createAttempt).toHaveBeenNthCalledWith(
+      1,
+      TEST_OUTPUT_DIR,
+      "job-1",
+      2,
+      g2Bytes,
+    );
+    expect(store.createAttempt).toHaveBeenNthCalledWith(
+      2,
+      TEST_OUTPUT_DIR,
+      "job-1",
+      1,
+      staleG1Bytes,
+    );
+    expect(
+      store.canonicalByPath.get(`${TEST_OUTPUT_DIR}/job-1-g2.pdf`),
+    ).toEqual(g2Bytes);
+    expect(
+      store.canonicalByPath.get(`${TEST_OUTPUT_DIR}/job-1-g1.pdf`),
+    ).toEqual(staleG1Bytes);
+    expect(mockService.markExportCompleted).toHaveBeenNthCalledWith(
+      1,
+      "job-1",
+      2,
+      "/pdfs/job-1.pdf",
+      createHash("sha256").update(g2Bytes).digest("hex"),
+    );
+    expect(mockService.markExportCompleted).toHaveBeenNthCalledWith(
+      2,
+      "job-1",
+      1,
+      "/pdfs/job-1.pdf",
+      createHash("sha256").update(staleG1Bytes).digest("hex"),
+    );
   });
 
   it("does not turn a completed DB write into a retry when temp cleanup fails", async () => {
@@ -345,7 +444,7 @@ describe("PdfExportProcessor artifact publication races", () => {
       "pdf-export attempt cleanup failed after completion",
       expect.objectContaining({
         jobId: "job-1",
-        tempPath: `${TEST_OUTPUT_DIR}/.job-1.attempt-0.pdf.tmp`,
+        tempPath: `${TEST_OUTPUT_DIR}/.job-1-g1.attempt-0.pdf.tmp`,
         error: "temp cleanup failed",
       }),
     );

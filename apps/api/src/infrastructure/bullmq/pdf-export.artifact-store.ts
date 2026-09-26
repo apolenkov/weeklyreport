@@ -14,6 +14,7 @@ export interface PdfArtifactStore {
   createAttempt(
     outputDir: string,
     jobId: string,
+    generation: number,
     pdfBuffer: Buffer,
   ): Promise<PdfArtifactAttempt>;
   publishAndHash(attempt: PdfArtifactAttempt): Promise<string>;
@@ -22,10 +23,13 @@ export interface PdfArtifactStore {
 
 export function createDefaultPdfArtifactStore(): PdfArtifactStore {
   return {
-    async createAttempt(outputDir, jobId, pdfBuffer) {
+    async createAttempt(outputDir, jobId, generation, pdfBuffer) {
       await mkdir(outputDir, { recursive: true });
-      const tempPath = join(outputDir, `.${jobId}.${randomUUID()}.pdf.tmp`);
-      const canonicalPath = join(outputDir, `${jobId}.pdf`);
+      const tempPath = join(
+        outputDir,
+        `.${jobId}-g${generation}.${randomUUID()}.pdf.tmp`,
+      );
+      const canonicalPath = join(outputDir, `${jobId}-g${generation}.pdf`);
       const handle = await open(tempPath, "wx", PDF_TEMP_FILE_MODE);
       try {
         await handle.writeFile(pdfBuffer);

@@ -43,14 +43,20 @@ function getReminderExecutionId(data: unknown): string | null {
 }
 
 // Reads the non-credential identity a pdf-export job payload claims. A
-// missing or malformed triple fails closed: the coordinated retry cannot
-// bind the queue job to a durable export row without all three fields.
-function getPdfExportIdentity(data: unknown): AdminPdfExportIdentity | null {
+// missing or malformed identity fails closed: the generation-bound retry
+// cannot bind the queue job to a durable export row without all four fields,
+// and the retained queue id must be exactly `${jobId}-g${generation}` — a
+// legacy bare id or a generation skew is rejected the same way.
+function getPdfExportIdentity(
+  queueJobId: string,
+  data: unknown,
+): AdminPdfExportIdentity | null {
   if (data === null || typeof data !== "object") return null;
   const payload = data as {
     jobId?: unknown;
     reportId?: unknown;
     requestedBy?: unknown;
+    generation?: unknown;
   };
   if (typeof payload.jobId !== "string" || payload.jobId.length === 0) {
     return null;
@@ -64,10 +70,21 @@ function getPdfExportIdentity(data: unknown): AdminPdfExportIdentity | null {
   ) {
     return null;
   }
+  if (
+    typeof payload.generation !== "number" ||
+    !Number.isInteger(payload.generation) ||
+    payload.generation < 1
+  ) {
+    return null;
+  }
+  if (queueJobId !== `${payload.jobId}-g${payload.generation}`) {
+    return null;
+  }
   return {
     jobId: payload.jobId,
     reportId: payload.reportId,
     requestedBy: payload.requestedBy,
+    generation: payload.generation,
   };
 }
 
@@ -93,7 +110,7 @@ export function createAdminJobHandle(
         : queue === PDF_EXPORT_QUEUE_NAME
           ? {
               queue,
-              pdfExportIdentity: getPdfExportIdentity(job.data),
+              pdfExportIdentity: getPdfExportIdentity(job.id ?? "", job.data),
             }
           : { queue },
     getState: () => job.getState(),

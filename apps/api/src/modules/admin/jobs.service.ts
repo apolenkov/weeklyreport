@@ -2,6 +2,10 @@ import {
   EMAIL_REMINDER_QUEUE_NAME,
   type FailedJobList,
   PDF_EXPORT_QUEUE_NAME,
+  type PdfRecoveryJob,
+  type PdfRecoveryJobList,
+  type PdfRecoveryRetryInput,
+  type PdfRecoveryRetryResult,
   type QueueName,
 } from "@customreport/shared";
 
@@ -11,9 +15,7 @@ import type {
   AdminJobHandle,
   AdminJobsQueue,
   AdminJobsQueueRegistry,
-  AdminPdfExportIdentity,
   AdminPdfExportRetryOutcome,
-  AdminPdfExportRetryQueue,
 } from "./admin-jobs.port.js";
 
 const DEFAULT_FAILED_JOBS_LIMIT = 50;
@@ -40,14 +42,17 @@ interface JobsServiceOptions {
   // Revives a terminal-failed execution so the worker's pending-only claim CAS
   // can pick it up again; absent means the caller opted out of revival.
   reviveFailedReminderExecution?: (executionId: string) => Promise<void>;
-  // Coordinated pdf-export retry: revives the durable failed row and requeues
-  // the queue job while the export row lock is held — only the Postgres side
-  // can roll back. Required — a bare queue retry would strand the
-  // terminal-failed export row.
-  retryFailedPdfExport: (input: {
-    identity: AdminPdfExportIdentity;
-    queue: AdminPdfExportRetryQueue;
+  // Generation-bound pdf-export retry: the durable row decides whether the
+  // caller-selected generation may advance; the queue job is never retried
+  // in place — a fresh `${jobId}-g${generation + 1}` entry is enqueued.
+  // Required — a bare queue retry would strand the terminal-failed export row.
+  retryPdfExportGeneration: (input: {
+    jobId: string;
+    expectedGeneration: number;
   }) => Promise<AdminPdfExportRetryOutcome>;
+  // Durable list of export rows quarantined as recovery_required. Their
+  // generation's queue job may already be gone, so Redis is never consulted.
+  listPdfRecoveryJobs: () => Promise<readonly PdfRecoveryJob[]>;
 }
 
 function assertQueueMatch(expected: QueueName, actual: QueueName): void {
@@ -123,12 +128,12 @@ export class JobsService {
       input.queue === PDF_EXPORT_QUEUE_NAME &&
       reference.queue === PDF_EXPORT_QUEUE_NAME
     ) {
-      return this.retryFailedPdfExport(input.jobId, job, reference);
+      return this.retryPdfExportEntry(input.jobId, job, reference);
     }
 
     // A stale UI request can point at live work — only failed jobs may be
     // retried. Runs before every reminder-domain side effect; pdf-export
-    // arbitrates job state inside its coordinated seam above.
+    // arbitrates eligibility on the durable row inside its generation seam.
     const state = await job.getState();
     if (state !== "failed") {
       this.logger.info("admin.jobs.retry — job is not failed", {
@@ -183,12 +188,12 @@ export class JobsService {
     return { retried: true, jobId: input.jobId };
   }
 
-  // The pdf-export module owns the ordering: the durable failed→pending
-  // revival commits only after queue.retry resolves, so a rejected retry rolls
-  // the Postgres transaction back. Only Postgres rolls back — a lost Redis ack
-  // leaves the queue-side outcome uncertain and is never compensated here.
-  // This side only supplies the live queue primitives and maps the outcome.
-  private async retryFailedPdfExport(
+  // The pdf-export module owns the transition: `retryExportGeneration`
+  // advances the durable row exactly one generation under its row lock and
+  // enqueues a fresh generation-scoped queue job. This side only binds the
+  // retained queue entry to the generation the caller selected and maps the
+  // outcome — no queue-state read or in-place retry happens here.
+  private async retryPdfExportEntry(
     jobId: string,
     job: AdminJobHandle,
     reference: Extract<
@@ -197,7 +202,10 @@ export class JobsService {
     >,
   ): Promise<RetryFailedResult> {
     const identity = reference.pdfExportIdentity;
-    if (identity?.jobId !== job.failedJob.id) {
+    if (
+      !identity ||
+      job.failedJob.id !== `${identity.jobId}-g${identity.generation}`
+    ) {
       this.logger.error(
         "admin.jobs.retry — pdf-export payload identity rejected",
         {
@@ -213,18 +221,18 @@ export class JobsService {
       };
     }
 
-    const outcome = await this.options.retryFailedPdfExport({
-      identity,
-      queue: {
-        isFailed: async () => (await job.getState()) === "failed",
-        retry: () => job.retry(),
-      },
+    const outcome = await this.options.retryPdfExportGeneration({
+      jobId: identity.jobId,
+      expectedGeneration: identity.generation,
     });
-    if (outcome === "retried") {
+    // already-advanced is an idempotent repeat of the same caller-selected
+    // generation — the requested end state already holds, so report success.
+    if (outcome === "retried" || outcome === "already-advanced") {
       this.logger.info("admin.jobs.retry — job requeued", {
         phase: ADMIN_JOBS_RETRY_PHASE,
         queue: PDF_EXPORT_QUEUE_NAME,
         jobId,
+        outcome,
       });
       return { retried: true, jobId };
     }
@@ -238,10 +246,19 @@ export class JobsService {
       retried: false,
       jobId,
       reason:
-        outcome === "queue-not-failed"
-          ? "PDF export queue job is no longer failed."
-          : "PDF export row is missing, not failed, or bound to another payload.",
+        "PDF export row is missing, not failed, or bound to another payload.",
     };
+  }
+
+  async listPdfRecovery(): Promise<PdfRecoveryJobList> {
+    return { jobs: await this.options.listPdfRecoveryJobs() };
+  }
+
+  async retryPdfRecovery(
+    input: PdfRecoveryRetryInput,
+  ): Promise<PdfRecoveryRetryResult> {
+    const outcome = await this.options.retryPdfExportGeneration(input);
+    return { jobId: input.jobId, outcome };
   }
 
   async removeFailed(input: {

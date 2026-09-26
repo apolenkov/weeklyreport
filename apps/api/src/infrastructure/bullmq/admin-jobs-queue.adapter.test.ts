@@ -23,10 +23,13 @@ function pdfJobRecord(
     jobId: "job-1",
     reportId: "report-1",
     requestedBy: "user-1",
+    generation: 1,
   },
+  id = "job-1-g1",
 ) {
   return {
     ...failedJobRecord(),
+    id,
     name: "pdf-export",
     data,
   };
@@ -59,7 +62,15 @@ describe("createAdminJobHandle", () => {
   });
 
   it("exposes the pdf-export payload identity and live state on the handle", async () => {
-    const record = pdfJobRecord();
+    const record = pdfJobRecord(
+      {
+        jobId: "job-1",
+        reportId: "report-1",
+        requestedBy: "user-1",
+        generation: 2,
+      },
+      "job-1-g2",
+    );
     const handle = createAdminJobHandle("pdf-export", record);
 
     expect(handle.domainReference).toEqual({
@@ -68,6 +79,7 @@ describe("createAdminJobHandle", () => {
         jobId: "job-1",
         reportId: "report-1",
         requestedBy: "user-1",
+        generation: 2,
       },
     });
     await expect(handle.getState()).resolves.toBe("failed");
@@ -75,13 +87,50 @@ describe("createAdminJobHandle", () => {
   });
 
   it.each([
-    ["missing", { reportId: "report-1", requestedBy: "user-1" }],
+    ["missing", { reportId: "report-1", requestedBy: "user-1", generation: 1 }],
     [
       "non-string jobId",
-      { jobId: 42, reportId: "report-1", requestedBy: "user-1" },
+      { jobId: 42, reportId: "report-1", requestedBy: "user-1", generation: 1 },
     ],
-    ["empty reportId", { jobId: "job-1", reportId: "", requestedBy: "user-1" }],
-    ["missing requestedBy", { jobId: "job-1", reportId: "report-1" }],
+    [
+      "empty reportId",
+      { jobId: "job-1", reportId: "", requestedBy: "user-1", generation: 1 },
+    ],
+    [
+      "missing requestedBy",
+      { jobId: "job-1", reportId: "report-1", generation: 1 },
+    ],
+    [
+      "missing generation",
+      { jobId: "job-1", reportId: "report-1", requestedBy: "user-1" },
+    ],
+    [
+      "non-integer generation",
+      {
+        jobId: "job-1",
+        reportId: "report-1",
+        requestedBy: "user-1",
+        generation: 1.5,
+      },
+    ],
+    [
+      "zero generation",
+      {
+        jobId: "job-1",
+        reportId: "report-1",
+        requestedBy: "user-1",
+        generation: 0,
+      },
+    ],
+    [
+      "string generation",
+      {
+        jobId: "job-1",
+        reportId: "report-1",
+        requestedBy: "user-1",
+        generation: "1",
+      },
+    ],
     ["non-object payload", "not-an-object"],
     ["null payload", null],
   ] as const)("fails closed on %s pdf-export identity", (_label, data) => {
@@ -92,6 +141,37 @@ describe("createAdminJobHandle", () => {
       pdfExportIdentity: null,
     });
   });
+
+  it.each([
+    // Legacy bare durable id — predates generation-scoped queue ids.
+    ["job-1", 1],
+    // Generation inside the queue id disagrees with the payload's.
+    ["job-1-g2", 1],
+    ["job-1-g1", 2],
+    // Suffix shape is right but bound to a different durable jobId.
+    ["other-job-g1", 1],
+  ] as const)(
+    "fails closed when the retained queue id %s does not match the payload generation %s",
+    (id, generation) => {
+      const handle = createAdminJobHandle(
+        "pdf-export",
+        pdfJobRecord(
+          {
+            jobId: "job-1",
+            reportId: "report-1",
+            requestedBy: "user-1",
+            generation,
+          },
+          id,
+        ),
+      );
+
+      expect(handle.domainReference).toEqual({
+        queue: "pdf-export",
+        pdfExportIdentity: null,
+      });
+    },
+  );
 
   it.each(["id", "failedReason", "stacktrace", "attemptsMade"] as const)(
     "rejects a failed job without its required %s field",
