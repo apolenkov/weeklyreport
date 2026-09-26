@@ -46,6 +46,16 @@ const RECOVERY_JOB: PdfRecoveryJob = {
   createdAt: new Date("2026-05-01T09:00:00.000Z"),
 };
 
+// A terminally failed durable row whose queue job may already be pruned.
+const FAILED_JOB: PdfRecoveryJob = {
+  jobId: "de305d54-75b4-431b-adb2-eb6b9e546015",
+  reportId: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  generation: 3,
+  requestedBy: "1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed",
+  status: "failed",
+  createdAt: new Date("2026-05-02T09:00:00.000Z"),
+};
+
 function makeRecoveryMockTRPC(recoveryQuery: ProcedureDescriptor["query"]) {
   return createMockTRPC([
     { path: ["admin", "jobs", "listPdfRecovery"], query: recoveryQuery },
@@ -90,6 +100,42 @@ describe("PdfRecoverySection — DB-backed recovery list", () => {
       within(row).getByText(String(RECOVERY_JOB.generation)),
     ).toBeInTheDocument();
     expect(recoveryQuery).toHaveBeenCalledTimes(1);
+  });
+
+  it("lists a terminally failed export with its status and retries its listed generation", async () => {
+    const { captured } = renderSection(() =>
+      Promise.resolve({ jobs: [RECOVERY_JOB, FAILED_JOB] }),
+    );
+    const retryFn = expectDefined(
+      captured["admin.jobs.retryPdfRecovery"],
+    ).mutationFn;
+    retryFn.mockResolvedValue({
+      jobId: FAILED_JOB.jobId,
+      outcome: "retried",
+    });
+
+    const quarantinedRow = await screen.findByTestId(
+      `pdf-recovery-row-${RECOVERY_JOB.jobId}`,
+    );
+    const failedRow = await screen.findByTestId(
+      `pdf-recovery-row-${FAILED_JOB.jobId}`,
+    );
+    expect(within(failedRow).getByText("Failed")).toBeInTheDocument();
+    expect(
+      within(quarantinedRow).getByText("Recovery required"),
+    ).toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: `Retry PDF export ${FAILED_JOB.jobId}`,
+      }),
+    );
+
+    await waitFor(() => expect(retryFn).toHaveBeenCalledTimes(1));
+    expect(retryFn.mock.calls[0]?.[0]).toEqual({
+      jobId: FAILED_JOB.jobId,
+      expectedGeneration: FAILED_JOB.generation,
+    });
   });
 
   it("renders the empty state when nothing awaits recovery", async () => {

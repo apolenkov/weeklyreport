@@ -6,7 +6,10 @@ import {
   MAX_WEEK_LABEL_LENGTH,
   reportPeriodSchema,
 } from "../period/period.schema";
-import { publishedReportSnapshotSchema } from "../report/report.schema";
+import {
+  pdfExportStatusSchema,
+  publishedReportSnapshotSchema,
+} from "../report/report.schema";
 import { validateAdminSnapshotIntegrity } from "./admin-snapshot-integrity";
 import {
   adminSnapshotReminderExecutionSchema,
@@ -246,9 +249,10 @@ export const failedJobListSchema = z
   .readonly();
 
 /**
- * One durable PDF export row quarantined for head-driven recovery. The
- * DB-backed surface only lists `recovery_required` rows — the generation's
- * queue job may already be gone, so Redis is never consulted.
+ * One durable PDF export row listed for head-driven recovery: rows quarantined
+ * as `recovery_required` and terminally `failed` rows alike. The generation's
+ * queue job may already be gone, so the DB-backed surface never consults
+ * Redis.
  */
 export const pdfRecoveryJobSchema = z
   .object({
@@ -256,7 +260,7 @@ export const pdfRecoveryJobSchema = z
     reportId: z.uuid(),
     generation: z.number().int().min(1),
     requestedBy: z.uuid(),
-    status: z.literal("recovery_required"),
+    status: pdfExportStatusSchema.extract(["failed", "recovery_required"]),
     createdAt: z.coerce.date(),
   })
   .readonly();
@@ -335,7 +339,7 @@ export type AdminSnapshot = z.infer<typeof adminSnapshotSchema>;
 export type FailedJob = z.infer<typeof failedJobSchema>;
 /** Offset page of failed jobs with a nullable continuation cursor. */
 export type FailedJobList = z.infer<typeof failedJobListSchema>;
-/** Durable export row quarantined for head-driven recovery. */
+/** Durable export row listed for head-driven recovery. */
 export type PdfRecoveryJob = z.infer<typeof pdfRecoveryJobSchema>;
 /** DB-backed list of exports awaiting recovery. */
 export type PdfRecoveryJobList = z.infer<typeof pdfRecoveryJobListSchema>;
