@@ -59,18 +59,22 @@ describe("assertTestDatabaseUrl", () => {
     [sharedUrl, sharedUrl],
     [
       "postgresql://integration:secret@localhost:5432/customreport_e2e",
-      "postgres://developer:other@127.0.0.1:5432/customreport_e2e",
+      "postgres://developer:other@localhost:5432/customreport_e2e",
+    ],
+    [
+      "postgres://u:p@127.0.0.1:5432/customreport_e2e",
+      "postgresql://u:p@127.0.0.1:5432/customreport_e2e",
     ],
     [
       "postgres://u:p@[::1]:5432/customreport_e2e",
-      "postgresql://u:p@localhost:5432/customreport_e2e",
+      "postgresql://u:p@[::1]:5432/customreport_e2e",
     ],
     [
       "postgresql://u:p@localhost:5432/customreport_e2e_lane_a_test",
       "postgresql://u:p@localhost:5432/customreport_e2e_lane_a_test",
     ],
   ] as const)(
-    "accepts both URLs resolving to one logical target: %s vs %s",
+    "accepts matching host, database, and port despite other URL differences: %s vs %s",
     (e2eUrl, developerUrl) => {
       expect(() =>
         assertTestDatabaseUrl(e2eUrl, {
@@ -217,6 +221,33 @@ describe("assertTestDatabaseUrl", () => {
     expect(executeRawUnsafe).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["127.0.0.2", "localhost"],
+    ["127.0.0.1", "localhost"],
+    ["[::1]", "localhost"],
+    ["127.0.0.1", "[::1]"],
+  ] as const)(
+    "rejects different loopback hosts before allocating a pg pool or running SQL: %s vs %s",
+    async (e2eHost, developerHost) => {
+      vi.stubEnv(
+        "E2E_DATABASE_URL",
+        `postgresql://u:p@${e2eHost}:5432/customreport_e2e`,
+      );
+      vi.stubEnv(
+        "DATABASE_URL",
+        `postgresql://u:p@${developerHost}:5432/customreport_e2e`,
+      );
+      vi.stubEnv("NODE_ENV", "test");
+      vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
+
+      expect(() => createTestPrisma()).toThrow(/same database target/iu);
+      await expect(cleanDatabase()).rejects.toThrow(/same database target/iu);
+      expect(poolConstructor).not.toHaveBeenCalled();
+      expect(queryRaw).not.toHaveBeenCalled();
+      expect(executeRawUnsafe).not.toHaveBeenCalled();
+    },
+  );
+
   it("rejects missing consent before discovering or truncating tables", async () => {
     vi.stubEnv("E2E_DATABASE_URL", sharedUrl);
     vi.stubEnv("DATABASE_URL", sharedUrl);
@@ -226,7 +257,7 @@ describe("assertTestDatabaseUrl", () => {
     expect(poolConstructor).not.toHaveBeenCalled();
   });
 
-  it("reuses the memoized client for an alias-spelled equal target", () => {
+  it("reuses the memoized client when only credentials and protocol change", () => {
     vi.stubEnv("E2E_DATABASE_URL", sharedUrl);
     vi.stubEnv("DATABASE_URL", sharedUrl);
     vi.stubEnv("NODE_ENV", "test");
@@ -235,9 +266,8 @@ describe("assertTestDatabaseUrl", () => {
     const client = createTestPrisma();
     vi.stubEnv(
       "E2E_DATABASE_URL",
-      "postgres://other:creds@127.0.0.1:5432/customreport_e2e",
+      "postgres://other:creds@localhost:5432/customreport_e2e",
     );
-    vi.stubEnv("DATABASE_URL", "postgresql://u:p@[::1]:5432/customreport_e2e");
 
     expect(createTestPrisma()).toBe(client);
     expect(poolConstructor).toHaveBeenCalledTimes(1);
@@ -250,7 +280,7 @@ describe("assertTestDatabaseUrl", () => {
     );
     vi.stubEnv(
       "DATABASE_URL",
-      "postgres://developer:other@127.0.0.1:5432/customreport_e2e",
+      "postgres://developer:other@localhost:5432/customreport_e2e",
     );
     vi.stubEnv("NODE_ENV", "test");
     vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
