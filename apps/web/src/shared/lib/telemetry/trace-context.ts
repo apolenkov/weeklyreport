@@ -8,7 +8,12 @@ const HEX_RADIX = 16;
 // inside the internal renderer over plain http — getRandomValues is available
 // everywhere and gives the same trace-id entropy the W3C format needs.
 function randomHex(byteLength: number): string {
-  return [...crypto.getRandomValues(new Uint8Array(byteLength))]
+  const bytes = new Uint8Array(byteLength);
+  do {
+    crypto.getRandomValues(bytes);
+  } while (bytes.every((byte) => byte === 0));
+
+  return [...bytes]
     .map((byte) => byte.toString(HEX_RADIX).padStart(2, "0"))
     .join("");
 }

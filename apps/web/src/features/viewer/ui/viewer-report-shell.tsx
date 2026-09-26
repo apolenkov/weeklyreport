@@ -205,22 +205,23 @@ export function ViewerReportShell({
     }),
   );
   const displayedQ = useQuery(trpc.weeklyReport.get.queryOptions({ reportId }));
+  const shouldRecover = useStatusEntryRecovery(displayedQ);
 
-  // Log-only: history errors already render an inline alert; a displayedQ
-  // failure degrades to missing chrome (authority label / export) and must
-  // still reach the error seam.
+  // The mounted form/slides child reports ordinary displayedQ failures. The
+  // shell owns only the recovery failure, where it replaces that child.
   useQueryErrorHandler(historyQ, {
     event: "viewerReport.compiledHistory.load_failed",
     component: "ViewerReportShell",
     procedure: "reports.compiledHistory",
   });
-  useQueryErrorHandler(displayedQ, {
-    event: "viewerReport.get.load_failed",
-    component: "ViewerReportShell",
-    procedure: "weeklyReport.get",
-  });
-
-  const shouldRecover = useStatusEntryRecovery(displayedQ);
+  useQueryErrorHandler(
+    { isError: shouldRecover && displayedQ.isError, error: displayedQ.error },
+    {
+      event: "viewerReport.get.load_failed",
+      component: "ViewerReportShell",
+      procedure: "weeklyReport.get",
+    },
+  );
 
   const periods = useMemo(
     () =>
