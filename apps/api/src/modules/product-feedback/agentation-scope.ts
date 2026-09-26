@@ -41,16 +41,35 @@ export function annotationScope(
   };
 }
 
-// Moderation fields (status/kind/severity) follow visibility scope; content
-// fields (comment/intent) stay editable by the annotation author only.
+export function mayUpdateAnnotationStatus(
+  access: FeedbackAccess,
+  actor: "human" | "agent",
+  source: "patch" | "native-delete",
+  status: AgentationAnnotationPatch["status"],
+): boolean {
+  if (status === undefined) return true;
+  if (source === "native-delete") return status === "dismissed";
+  if (actor === "agent" || access.role === "admin" || access.role === "head")
+    return true;
+  return false;
+}
+
+// Original content stays author-only; lifecycle status is role-gated above.
 export function annotationPatchScope(
   access: FeedbackAccess,
   patch: AgentationAnnotationPatch,
+  actor: "human" | "agent",
+  source: "patch" | "native-delete",
 ): Prisma.AgentationAnnotationWhereInput {
+  const authorOnly =
+    source === "native-delete" ||
+    patch.comment !== undefined ||
+    patch.intent !== undefined;
   return {
     ...annotationScope(access),
-    ...(patch.comment !== undefined || patch.intent !== undefined
-      ? { authorUserId: access.userId }
+    ...(!mayUpdateAnnotationStatus(access, actor, source, patch.status)
+      ? { id: { in: [] } }
       : {}),
+    ...(authorOnly ? { authorUserId: access.userId } : {}),
   };
 }
