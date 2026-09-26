@@ -31,4 +31,4 @@ None.
 
 - WeeklyReport: `AGENTS.md`, OpenSpec artifacts, local acceptance only.
 - User environment: existing `onui-local` registration and explicit scope of the dormant `/Users/wrk/.agentation` data in local-tooling cleanup actions.
-- CoreDev: read-only conformance reference at `AGENTS.md` and `docs/research/onui-unification-agentation-replacement-2026-09-03.md`.
+- CoreDev: read-only conformance reference at `AGENTS.md`; the former `docs/research/onui-unification-agentation-replacement-2026-09-03.md` lived in the CoreDev repository and was removed there in `15d834d9`.
