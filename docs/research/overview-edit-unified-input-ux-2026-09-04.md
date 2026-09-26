@@ -477,15 +477,17 @@ region для autosave в Overview. Это сохраняется. До приё
 
 ## OpenSpec и domain impact
 
-Текущая реализация следует двум действующим решениям, которые новый UX частично
-пересматривает:
+Текущая реализация следует двум решениям, действовавшим на момент исследования
+(оба change-каталога позже сняты, их дельты влиты в durable `openspec/specs/`
+коммитом `6272693e7`, поэтому ссылки ниже — исторические), которые новый UX
+частично пересматривает:
 
-- `process-current-feedback-batch/proposal.md:14-26` требует сохранять
-  отдельный Edit и запрещает новый status;
+- `process-current-feedback-batch/proposal.md:14-26` (архивный change) требует
+  сохранять отдельный Edit и запрещает новый status;
 - `process-current-feedback-batch/specs/lead-status-overview/spec.md:3-24`
-  разрешает подробным stages, activity status, risks, decisions и guidance
-  оставаться в Edit;
-- `add-compact-lead-status-overview` закрепляет три режима
+  (архивный change) разрешает подробным stages, activity status, risks,
+  decisions и guidance оставаться в Edit;
+- `add-compact-lead-status-overview` (архивный change) закрепляет три режима
   `Overview | Edit | Slides` и immutable Previous.
 
 Immutable Previous и один editor/draft/write coordinator сохраняются.
@@ -780,7 +782,8 @@ orphan Previous в состояние `needs decision`.
 `apps/web/src/features/report-sections/ui/status-overview-row.tsx:30-43`).
 OpenSpec-тесты текущей проекции также закрепляют vocabulary
 `unplanned/continued` (`apps/web/src/features/report-sections/model/status-overview.test.ts:150-176`,
-`openspec/changes/add-compact-lead-status-overview/tasks.md:3`). Поэтому
+`openspec/changes/add-compact-lead-status-overview/tasks.md:3`, архивный
+change, снят в `6272693e7`). Поэтому
 Отсутствие связи не доказывает, что запись создана на текущей неделе. После
 синтеза ревью выбрано `Not in prior plan` с явным display mapping и обновлением
 тестового контракта; при unavailable previous source label скрывается.
@@ -821,7 +824,8 @@ append-preserving и атомарной относительно текущег�
 Previous строится из prior `type=next`; `postponed` намеренно не попадает в
 автоматический carry-over и требует явного re-plan
 (`openspec/specs/record-status-derivation/spec.md:202-206`,
-`openspec/changes/add-compact-lead-status-overview/research.md:18-23`).
+`openspec/changes/add-compact-lead-status-overview/research.md:18-23`, архивный
+change, снят в `6272693e7`).
 Если для ленивого пользователя оставить один вход `Resolve prior plan`, каждый
 исход должен иметь собственную серверную транзакцию: `Continue` создаёт Current
 `in_progress`, `Done` создаёт Current `done`, `Plan next` создаёт Next

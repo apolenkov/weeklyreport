@@ -1206,8 +1206,10 @@ are not re-marked.
 - Tool status: root-verified live proof — navigation and screenshot succeeded
   on agent-browser 0.38.1; WeeklyReport app UI acceptance via this route is
   still pending and is not claimed.
-- Verified durable archive: `reticle-removal/reticle-project-before.tar.gz`
-  (root-verified). The earlier `/tmp` evidence is lost; recovery stays active.
+- Verified durable archive:
+  `~/.codex/work-artifacts/weeklyreport-continuation-20260920/reticle-removal/reticle-project-before.tar.gz`
+  (root-verified; external work-artifact, never tracked in the repository).
+  The earlier `/tmp` evidence is lost; recovery stays active.
   Reference this durable path, not the lost `/tmp` records.
 
 Execution checklist — all items stay unchecked until root accepts:
