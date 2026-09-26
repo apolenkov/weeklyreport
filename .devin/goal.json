@@ -1,8 +1,8 @@
 {
   "goal": "Возобновить и завершить кампанию TASK-047 (complete-exemplary-mvp-review) в /home/user/work/weeklyreport: собрать единый source freeze с проверенным provenance на актуальном базисе; реализовать принятые решения владельца в scope задачи (D-06 legacy feedback URL, ручной карантин orphan-pending PDF без queue job, Gotenberg-рендерер вместо Playwright); выполнить полную матрицу 44.11 и strict gates (39.6, P6, P7/44.15, CI) на одном подтверждённом SHA; провести CLOSEOUT с явными исключениями и одним финальным независимым ревью. Сохранять TASK-048/TASK-050 и все чужие worktrees. Стоп-условия для вопроса владельцу: интеграция, push или публикация; операции вне guard-approved loopback customreport_e2e и Redis DB 15; конфликт ownership чужих изменений; нерешаемый BLOCKED после диагностики.",
   "done_when": "На одном зафиксированном SHA кандидата: `backlog task view TASK-047` показывает AC #3 и #4 отмеченными; `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm spec:check` проходят; каждая строка матрицы 44.11 имеет статус с привязкой к evidence, а остаточные BLOCKED/NOT RUN явно перечислены в CLOSEOUT; verdict единственного финального независимого ревью = PASS и записан в TASK-047.",
-  "status": "active",
-  "phase": "resume-verify",
+  "status": "done",
+  "phase": "complete",
   "created_at": "2026-09-24T07:54:25.705Z",
   "frozen_hash": "cb99556f4ae0ee6e5d256e965dce85f5e2edd696c17207478bce9b1387b2c874"
 }
