@@ -194,10 +194,11 @@ export class AgentationPrismaRepository extends AgentationReadRepository {
     id: string,
     patch: AgentationAnnotationPatch,
     role: AgentationRole = "human",
+    source: "patch" | "native-delete" = "patch",
   ): Promise<ReturnType<typeof mapAnnotation> | null> {
     return this.prisma.$transaction(async (db) => {
       const current = await db.agentationAnnotation.findFirst({
-        where: { id, ...annotationPatchScope(access, patch) },
+        where: { id, ...annotationPatchScope(access, patch, role, source) },
         include: { threadMessages: { orderBy: { timestamp: "asc" } } },
       });
       if (!current) return null;

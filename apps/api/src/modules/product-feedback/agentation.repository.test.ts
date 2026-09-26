@@ -316,6 +316,77 @@ describe("AgentationPrismaRepository", () => {
     expect(result).not.toBeNull();
   });
 
+  it("scopes a lead lifecycle patch out before writing the annotation", async () => {
+    const { tx, update } = updateTx(annotationRow());
+    tx.agentationAnnotation.findFirst.mockResolvedValue(null);
+
+    const result = await new AgentationPrismaRepository(
+      transactionPrisma(tx),
+    ).updateAnnotation(leadA, "annotation-1", { status: "resolved" });
+
+    expect(result).toBeNull();
+    const query: unknown = tx.agentationAnnotation.findFirst.mock.calls[0]?.[0];
+    expect(query).toMatchObject({ where: { id: { in: [] } } });
+    expect(update).not.toHaveBeenCalled();
+    expect(tx.agentationEvent.create).not.toHaveBeenCalled();
+  });
+
+  it("allows the upstream agent principal to update lifecycle status", async () => {
+    const { tx, update } = updateTx(annotationRow());
+
+    const result = await new AgentationPrismaRepository(
+      transactionPrisma(tx),
+    ).updateAnnotation(
+      leadA,
+      "annotation-1",
+      { status: "acknowledged" },
+      "agent",
+    );
+
+    expect(result).not.toBeNull();
+    expect(update.mock.calls[0]?.[0]).toMatchObject({
+      data: { status: "acknowledged" },
+    });
+  });
+
+  it("keeps native author delete as a non-destructive dismissal", async () => {
+    const { tx, update } = updateTx(annotationRow());
+
+    const result = await new AgentationPrismaRepository(
+      transactionPrisma(tx),
+    ).updateAnnotation(
+      leadA,
+      "annotation-1",
+      { status: "dismissed" },
+      "human",
+      "native-delete",
+    );
+
+    expect(result).not.toBeNull();
+    expect(update.mock.calls[0]?.[0]).toMatchObject({
+      data: { status: "dismissed" },
+    });
+  });
+
+  it("does not let a reviewer use native delete to dismiss another author's row", async () => {
+    const { tx, update } = updateTx(null);
+
+    const result = await new AgentationPrismaRepository(
+      transactionPrisma(tx),
+    ).updateAnnotation(
+      headOfGroupA,
+      "annotation-1",
+      { status: "dismissed" },
+      "human",
+      "native-delete",
+    );
+
+    expect(result).toBeNull();
+    const query: unknown = tx.agentationAnnotation.findFirst.mock.calls[0]?.[0];
+    expect(query).toMatchObject({ where: { authorUserId: "head-1" } });
+    expect(update).not.toHaveBeenCalled();
+  });
+
   it("rejects an in-scope head patching comment on a foreign annotation", async () => {
     const { tx, update } = updateTx(null);
 
