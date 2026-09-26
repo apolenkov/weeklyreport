@@ -37,6 +37,16 @@ describe("local disposable database bootstrap", () => {
       E2E_DATABASE_URL:
         "postgresql://customreport:localdev@127.0.0.1:5432/customreport_e2e_lane_a_test",
     },
+    {
+      ...environment,
+      E2E_DATABASE_URL:
+        "postgresql://customreport:localdev@localhost:5432/customreport_e2e",
+    },
+    {
+      ...environment,
+      E2E_DATABASE_URL:
+        "postgresql://customreport:localdev@127.0.0.2:5432/customreport_e2e",
+    },
   ])("rejects unsafe input before spawning a child", (unsafeEnvironment) => {
     const spawn = vi.fn<LocalBootstrapSpawn>(passingSpawn);
     expect(() =>

@@ -29,6 +29,7 @@ import {
   sumSectionCounts,
 } from "./seeds/advanced/seed-advanced.summary.js";
 import { finalizePublishedSnapshots } from "./seeds/support/published-snapshot.js";
+import { assertAssistantReadiness } from "./seeds/support/seed-assistant-readiness.js";
 import { SEED_REPORTS } from "./seeds/support/seed-constants.js";
 import { assertSeedCoverage } from "./seeds/support/seed-coverage-check.js";
 import { seedOrganizationBaseline } from "./seeds/support/seed-org.js";
@@ -65,6 +66,9 @@ async function main(): Promise<void> {
     await seedAiProviderControl(prisma);
     await seedAiPromptBaseline(prisma);
 
+    await assertSeedCoverage(prisma, "seed", SEED_REPORTS.active.id);
+    assertAssistantReadiness("full");
+
     logSeedSummary({
       ...organization,
       stageAssignments,
@@ -76,8 +80,6 @@ async function main(): Promise<void> {
       reminderRules: reminders.rules,
       ...adminExamples,
     });
-
-    await assertSeedCoverage(prisma, "seed", SEED_REPORTS.active.id);
   } finally {
     await prisma.$disconnect();
     await pool.end();

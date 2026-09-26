@@ -10,6 +10,8 @@
 //
 // E2E destructive work has one deliberately narrow target contract. Production
 // restore is a separate shell entrypoint and does not use this module.
+import { isIP } from "node:net";
+
 export const E2E_DESTRUCTIVE_CONSENT = "давай" as const;
 export const E2E_DATABASE_NAME = "customreport_e2e" as const;
 const E2E_RUNTIME_DATABASE_PATTERN = /^customreport_e2e(?:_lane_[a-o]_test)?$/u;
@@ -29,9 +31,7 @@ export interface E2eRuntimeDatabaseIdentity {
 
 const DEFAULT_POSTGRES_PORT = "5432";
 const MAX_TCP_PORT = 65_535;
-const IPV4_LOOPBACK_PREFIX = 127;
 const IPV4_MAX_OCTET = 255;
-const IPV4_PART_COUNT = 4;
 const IPV4_MAPPED_HIGH_WORD = 0x7f_00;
 const RAW_ASCII_SPACE_OR_CONTROL = /[\u0000-\u0020\u007F]/u;
 
@@ -56,17 +56,8 @@ const refuse = (scriptName: string, url: string, reason: string): never => {
   );
 };
 
-const isLoopbackIpv4 = (host: string): boolean => {
-  const parts = host.split(".");
-  return (
-    parts.length === IPV4_PART_COUNT &&
-    parts.every((part) => /^(?:0|[1-9]\d*)$/u.test(part)) &&
-    Number(parts[0]) === IPV4_LOOPBACK_PREFIX &&
-    parts
-      .slice(1)
-      .every((part) => Number(part) >= 0 && Number(part) <= IPV4_MAX_OCTET)
-  );
-};
+const isLoopbackIpv4 = (host: string): boolean =>
+  host.startsWith("127.") && Boolean(isIP(host));
 
 const isLoopbackHost = (hostname: string): boolean => {
   const host = hostname.toLowerCase().replaceAll(/^\[|\]$/gu, "");
@@ -283,7 +274,11 @@ export const sameLocalPostgresDatabaseTarget = (
 ): boolean => {
   const left = parseDatabaseTarget(scriptName, leftUrl, true);
   const right = parseDatabaseTarget(scriptName, rightUrl, true);
-  return left.database === right.database && left.port === right.port;
+  return (
+    left.database === right.database &&
+    left.port === right.port &&
+    left.host === right.host
+  );
 };
 
 /**
