@@ -524,16 +524,22 @@ source inputs match. A checkbox means its full stated acceptance passed.
 - [ ] 44.7 Trace architecture across draft/save/refetch, lifecycle atomicity,
       publication snapshots, jobs and configuration; preserve original scoped
       exclusions and reconcile evidence with the final source.
-- [x] 44.8 Complete the quick-edit child change, including DS-F01/DS-F02,
+- [ ] 44.8 Complete the quick-edit child change, including DS-F01/DS-F02,
       read-only actions, retention, browser verification and independent review.
       Follow its tasks rather than duplicating implementation checkboxes here.
-      Evidence: child `refine-overview-editing-layout` is complete (5/5 tasks);
-      `refine-overview-editing-layout-qe-acceptance.json` covers the QE-01…QE-09
-      table with browser evidence — text-only quick edit versus the full Edit
-      action, focus restoration from both editors including the retained-memory
-      path, the read-only surface of a submitted period with no unload guard, and
-      the IME fix (Escape during an active composition used to close the editor
-      and discard composed text).
+      Child `refine-overview-editing-layout` is 4/5 tasks; child task 2.3
+      (desktop viewport matrix in the primary browser lane) remains open —
+      the 2026-09-16 QE-CLOSE native check was interrupted and unaccepted,
+      and QE-04, QE-05, QE-07 and QE-08 still require verification on the
+      current source. Historical evidence retained as provenance, not
+      acceptance: `refine-overview-editing-layout-qe-acceptance.json`
+      (captured 2026-09-14, baseHead c7766a20) recorded the QE-01…QE-09
+      table with browser evidence — text-only quick edit versus the full
+      Edit action, focus restoration from both editors including the
+      retained-memory path, the read-only surface of a submitted period
+      with no unload guard, and the IME fix (Escape during an active
+      composition used to close the editor and discard composed text).
+      That record predates the open checks above and does not close them.
 - [x] 44.9 Define and implement the requested Current/Next drag-and-drop in a
       focused child change, preserving lineage and canonical writes; verify
       keyboard alternative, invalid targets and desktop drag feedback.
