@@ -53,17 +53,21 @@ export function createBootstrapJobsService(deps: {
       },
       retryPdfExportGeneration: (input) =>
         pdfExportService.retryExportGeneration(input),
-      // Quarantined rows are durable state: their generation's queue job may
-      // already be pruned, so the list is read from Postgres, never Redis.
+      // Terminal rows are durable state: their generation's queue job may
+      // already be pruned or removed, so the list is read from Postgres,
+      // never Redis. Terminally `failed` rows are listed too — otherwise a
+      // removed failed queue job would leave the row with no Head retry
+      // surface even though retryExportGeneration accepts it.
       listPdfRecoveryJobs: async () => {
         const rows = await prisma.pdfExportJob.findMany({
-          where: { status: "recovery_required" },
+          where: { status: { in: ["failed", "recovery_required"] } },
           orderBy: { createdAt: "asc" },
           select: {
             id: true,
             reportId: true,
             generation: true,
             requestedBy: true,
+            status: true,
             createdAt: true,
           },
         });
@@ -72,7 +76,9 @@ export function createBootstrapJobsService(deps: {
           reportId: row.reportId,
           generation: row.generation,
           requestedBy: row.requestedBy,
-          status: "recovery_required" as const,
+          // Narrowed by the `in` filter above, not coerced — the procedure's
+          // output schema re-validates the vocabulary on the wire.
+          status: row.status as "failed" | "recovery_required",
           createdAt: row.createdAt,
         }));
       },

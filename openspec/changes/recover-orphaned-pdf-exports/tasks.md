@@ -233,6 +233,21 @@ NOT NULL DEFAULT 1` — never using the new enum value inside the same
       `pdf-export.integration.test`, `jobs.pdf-retry.integration.test`,
       `test-utils/pdf-export.ts`, `jobs-service.ts` bootstrap wiring; verify
       `pnpm --filter @customreport/api typecheck` is clean.
+- [x] 5.5 WR-022 (review finding F-DSR-01): list durable `failed` export rows on
+      the DB-backed Head recovery surface so a row whose failed queue job was
+      removed or pruned stays retryable — `bootstrap/jobs-service.ts` selects
+      `failed` + `recovery_required` and forwards the row's own `status`,
+      `pdfRecoveryJobSchema` accepts both terminal states via
+      `pdfExportStatusSchema.extract`, and `pdf-recovery-section.tsx` renders a
+      Status column so the two row kinds stay distinguishable. The retry seam
+      is unchanged (`retryExportGeneration` already accepts `failed` at
+      `expectedGeneration`, never reading Redis). RED→GREEN evidence:
+      `report-admin.schema.test.ts` rejected `failed` pre-change, new
+      `bootstrap/jobs-service.test.ts` asserts the two-status Prisma filter and
+      verbatim status mapping, `pdf-recovery-section.test.tsx` asserts the
+      `Failed`/`Recovery required` cells and the generation-bound retry post;
+      all pass after the change, and `spec:check` validates the widened
+      requirement.
 
 ## 6. Web (`apps/web`)
 

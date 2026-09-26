@@ -116,6 +116,13 @@ function PdfRecoveryEmptyState() {
 const HEAD_CELL_CLASSNAME =
   "px-4 py-3 font-semibold text-[var(--color-foreground)]";
 
+// Both durable terminal states are listed: failed (whose queue job may still
+// be retained or already pruned) and quarantined recovery_required rows.
+const STATUS_LABELS: Record<PdfRecoveryJob["status"], string> = {
+  failed: "Failed",
+  recovery_required: "Recovery required",
+};
+
 function PdfRecoveryTable({
   jobs,
   retryingId,
@@ -137,6 +144,7 @@ function PdfRecoveryTable({
           <tr className="border-b border-[var(--color-border)] bg-[var(--color-background)]">
             <th className={HEAD_CELL_CLASSNAME}>Job</th>
             <th className={HEAD_CELL_CLASSNAME}>Report</th>
+            <th className={HEAD_CELL_CLASSNAME}>Status</th>
             <th className={HEAD_CELL_CLASSNAME}>Generation</th>
             <th className={HEAD_CELL_CLASSNAME}>Requested by</th>
             <th className={HEAD_CELL_CLASSNAME}>Created</th>
@@ -155,6 +163,9 @@ function PdfRecoveryTable({
               </td>
               <td className="px-4 py-3 font-mono text-xs text-[var(--color-foreground)]">
                 {job.reportId}
+              </td>
+              <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
+                {STATUS_LABELS[job.status]}
               </td>
               <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
                 {job.generation}
@@ -199,7 +210,7 @@ export function PdfRecoverySection() {
     >
       <TabHeader
         title="PDF export recovery"
-        description="Exports quarantined after their queue job was lost. Retry dispatches a fresh generation."
+        description="Exports that failed terminally or were quarantined after losing their queue job. Retry dispatches a fresh generation."
         count={list.data ? jobs.length : undefined}
       />
       {list.isLoading ? (

@@ -534,18 +534,21 @@ fence their durable writes to that generation.
   generation-aware workers start
 - **AND** a queue job from the old protocol is rejected instead of rendered
 
-### Requirement: Recovery-required exports are listed and retried from a DB-backed Head-only surface
+### Requirement: Failed and recovery-required exports are listed and retried from a DB-backed Head-only surface
 
-The admin jobs surface MUST list durable export rows in `recovery_required`
-from the database — not from Redis — so a row whose queue job is gone is still
-visible and actionable. The list and the retry MUST be exposed through
-`headProcedure` tRPC procedures, `admin.jobs.listPdfRecovery` and
-`admin.jobs.retryPdfRecovery`; the retry input MUST be exactly
-`{jobId, expectedGeneration}`. The list item MUST expose at least `jobId`,
-`reportId`, `generation`, `requestedBy`, `status`, and `createdAt`. The retry
-MUST report whether a generation was advanced, and MUST distinguish a
-successful transition from an idempotent no-op and from an ineligible target.
-Non-head callers MUST be denied by the canonical middleware chain.
+The admin jobs surface MUST list durable export rows in `failed` or
+`recovery_required` from the database — not from Redis — so a row whose queue
+job is gone is still visible and actionable. Listing a `failed` row MUST NOT
+depend on whether its terminal BullMQ job is still retained: a job removed or
+pruned from Redis leaves the durable row listed. The list and the retry MUST
+be exposed through `headProcedure` tRPC procedures,
+`admin.jobs.listPdfRecovery` and `admin.jobs.retryPdfRecovery`; the retry
+input MUST be exactly `{jobId, expectedGeneration}`. The list item MUST expose
+at least `jobId`, `reportId`, `generation`, `requestedBy`, `status`, and
+`createdAt`. The retry MUST report whether a generation was advanced, and MUST
+distinguish a successful transition from an idempotent no-op and from an
+ineligible target. Non-head callers MUST be denied by the canonical middleware
+chain.
 
 #### Scenario: A recovery-required row is listed without a Redis job
 
@@ -553,9 +556,18 @@ Non-head callers MUST be denied by the canonical middleware chain.
 - **WHEN** a Head opens the recovery list
 - **THEN** the row is listed from the database with its current generation
 
+#### Scenario: A failed row is listed whether or not its queue job survived
+
+- **GIVEN** a `failed` export row whose BullMQ job was removed or pruned
+- **WHEN** a Head opens the recovery list
+- **THEN** the row is listed from the database with its `failed` status and
+  current generation
+- **AND** retrying it with that `expectedGeneration` dispatches a fresh
+  generation queue job
+
 #### Scenario: Recovery retry works with no queue job
 
-- **GIVEN** a listed `recovery_required` row
+- **GIVEN** a listed `failed` or `recovery_required` row
 - **WHEN** the Head retries it with the listed `expectedGeneration`
 - **THEN** the generation transition runs and a new queue job is dispatched
 

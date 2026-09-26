@@ -806,7 +806,13 @@ describe("PDF export recovery contracts", () => {
     expect(parsed).toEqual(recoveryJob);
   });
 
-  it.each(["queued", "completed", "failed"] as const)(
+  it("round-trips a terminally failed export row awaiting head retry", () => {
+    const failedJob = { ...recoveryJob, status: "failed" } as const;
+
+    expect(pdfRecoveryJobSchema.parse(failedJob)).toEqual(failedJob);
+  });
+
+  it.each(["queued", "completed"] as const)(
     "rejects a recovery list row in the %s state",
     (status) => {
       expect(
