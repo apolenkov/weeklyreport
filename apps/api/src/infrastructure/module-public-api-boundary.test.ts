@@ -81,6 +81,16 @@ const UI_BOUNDARY_CASE = {
   localImport: "../../lib/utils.js",
 } as const;
 
+// Zone 4b lists port files by exact path, so the @prisma/client ban silently
+// stops applying the moment a service moves. Resolve the file the search
+// facade actually re-exports instead of restating the path here.
+const SEARCH_FACADE_PATH = resolve(
+  REPOSITORY_ROOT,
+  "apps/api/src/modules/search/index.ts",
+);
+const SEARCH_SERVICE_SPECIFIER_PATTERN =
+  /export\s*\{[^}]*\bSearchService\b[^}]*\}\s*from\s*"(?<specifier>\.[^"]+)"/;
+
 interface LintMessage {
   readonly message: string;
   readonly ruleId: string | null;
@@ -151,6 +161,63 @@ function runEslint(paths: readonly string[]): Promise<
       },
     );
   });
+}
+
+// ESLint resolves --stdin-filename against the real flat config, so a virtual
+// probe exercises the exact rule coverage of an on-disk path without
+// rewriting the file it stands in for.
+function runEslintStdin(
+  filename: string,
+  source: string,
+): Promise<readonly LintMessage[]> {
+  return new Promise((resolveOutput, rejectOutput) => {
+    const child = execFile(
+      process.execPath,
+      [
+        resolve(REPOSITORY_ROOT, "node_modules/eslint/bin/eslint.js"),
+        "--stdin",
+        "--stdin-filename",
+        filename,
+        "--format",
+        "json",
+      ],
+      { cwd: REPOSITORY_ROOT, encoding: "utf8" },
+      (error, stdout) => {
+        if (stdout.length === 0) {
+          rejectOutput(error ?? new Error("ESLint produced no output"));
+          return;
+        }
+        const [result] = JSON.parse(stdout) as readonly {
+          readonly messages: readonly LintMessage[];
+        }[];
+        if (!result) {
+          rejectOutput(new Error("ESLint returned no result for stdin"));
+          return;
+        }
+        resolveOutput(result.messages);
+      },
+    );
+    child.stdin?.end(source);
+  });
+}
+
+async function resolveSearchServicePath(): Promise<string> {
+  const facadeSource = await readFile(SEARCH_FACADE_PATH, "utf8");
+  const specifier =
+    SEARCH_SERVICE_SPECIFIER_PATTERN.exec(facadeSource)?.groups?.specifier;
+  if (!specifier) {
+    throw new Error(
+      "modules/search/index.ts no longer re-exports SearchService — reconcile the zone 4b port inventory",
+    );
+  }
+  const servicePath = resolve(
+    dirname(SEARCH_FACADE_PATH),
+    specifier.replace(/\.js$/, ".ts"),
+  );
+  if (!existsSync(servicePath)) {
+    throw new Error(`search service file missing on disk: ${servicePath}`);
+  }
+  return servicePath;
 }
 
 let probes: readonly BoundaryProbe[] = [];
@@ -355,6 +422,25 @@ describe("API module public boundary", () => {
         }),
       ]);
       expect(messagesFor(`${UI_BOUNDARY_CASE.name}:local`)).toEqual([]);
+    },
+    ESLINT_RUN_BUDGET_MS,
+  );
+
+  it(
+    "keeps the @prisma/client ban on the physical search service file",
+    async () => {
+      const messages = await runEslintStdin(
+        await resolveSearchServicePath(),
+        'import "@prisma/client";\n',
+      );
+      expect(messages).toEqual([
+        expect.objectContaining({
+          ruleId: "@typescript-eslint/no-restricted-imports",
+          message: expect.stringContaining(
+            "repository-port-type-boundary",
+          ) as unknown as string,
+        }),
+      ]);
     },
     ESLINT_RUN_BUDGET_MS,
   );
