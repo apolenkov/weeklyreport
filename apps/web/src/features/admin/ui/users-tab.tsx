@@ -62,6 +62,7 @@ export function UsersTab({ users, groups }: UsersTabProps) {
         preview={state.deleteTarget ? state.deleteTarget.name : ""}
         reversible={false}
         confirmLabel="Delete"
+        isPending={state.deletePending}
         onConfirm={state.handleDelete}
         onCancel={state.cancelDelete}
         triggerRef={state.deleteTriggerRef}

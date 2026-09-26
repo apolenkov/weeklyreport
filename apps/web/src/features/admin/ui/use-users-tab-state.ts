@@ -130,7 +130,11 @@ function useUserEditDialog(groups: AdminGroupView[]) {
 
 // The trigger element is stashed so the confirm dialog can restore focus to the
 // row button it replaced; it is written on click only, never read while rendering.
-function useUserDeletion(deleteUser: (userId: string) => void) {
+// The dialog stays mounted while the request is pending and closes only on
+// settle, so the admin sees one in-flight delete instead of a re-armed form.
+function useUserDeletion(
+  deleteUser: (userId: string, onSettled: () => void) => void,
+) {
   const [deleteTarget, setDeleteTarget] = useState<AdminUserView | null>(null);
   const deleteTriggerRef = useRef<HTMLElement | null>(null);
 
@@ -144,8 +148,7 @@ function useUserDeletion(deleteUser: (userId: string) => void) {
     },
     handleDelete: () => {
       if (!deleteTarget) return;
-      deleteUser(deleteTarget.id);
-      setDeleteTarget(null);
+      deleteUser(deleteTarget.id, () => setDeleteTarget(null));
     },
   };
 }
@@ -161,8 +164,8 @@ export function useUsersTabState(
   const [pendingGroupChange, setPendingGroupChange] = useState<ReturnType<
     typeof toAdminUserInput
   > | null>(null);
-  const deletion = useUserDeletion((userId) =>
-    deleteUserMut.mutate({ userId }),
+  const deletion = useUserDeletion((userId, onSettled) =>
+    deleteUserMut.mutate({ userId }, { onSettled }),
   );
   const isSaving = saveUserMut.isPending;
 
@@ -175,6 +178,7 @@ export function useUsersTabState(
     canSave: canSaveUser(dialog.form, isSaving),
     deactivatePending: deactivateUserMut.isPending,
     activatePending: activateUserMut.isPending,
+    deletePending: deleteUserMut.isPending,
     handleSave: () => {
       try {
         const input = toAdminUserInput(
