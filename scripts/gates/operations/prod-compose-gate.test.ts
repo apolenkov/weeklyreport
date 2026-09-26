@@ -560,6 +560,22 @@ void test("the API runner excludes migration-only tooling", () => {
   );
 });
 
+void test("the API runner CMD resolves its emitted entrypoint from WORKDIR", () => {
+  const runner = apiDockerfile.slice(apiDockerfile.indexOf(" AS runner"));
+  const workdir = /^WORKDIR (\S+)$/mu.exec(runner)?.[1];
+  assert.equal(workdir, "/app", "the API runner must declare its WORKDIR");
+  const distCopy =
+    /^COPY --from=builder --chown=node:node \S+ (\.\/\S+)$/mu.exec(runner);
+  assert.ok(distCopy, "the runner must copy the built API dist tree");
+  const cmd = /^CMD \["node", "([^"]+)"\]$/mu.exec(runner)?.[1];
+  assert.ok(cmd, "the API runner must start node in exec form");
+  assert.equal(
+    resolve(workdir, cmd),
+    resolve(workdir, distCopy[1], "apps/api/src/main.js"),
+    "the runner CMD must point at the emitted entrypoint under its dist destination",
+  );
+});
+
 void test("post-install production tools bypass pnpm dependency preflight", () => {
   assert.ok(
     turboConfig.globalEnv?.includes("PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN"),
