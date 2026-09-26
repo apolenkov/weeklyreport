@@ -1,0 +1,74 @@
+# One-shot generation-1 PDF artifact migrator (OpenSpec
+# recover-orphaned-pdf-exports): links each completed row's legacy
+# ${jobId}.pdf to ${jobId}-g1.pdf under PDF_OUTPUT_DIR under a global
+# .migration/lock with per-job durable records in .migration/records/.
+#
+# The migrator is a compiled CLI inside apps/api (src/pdf-artifact-migrator +
+# tsconfig.pdf-artifact-migrator.json). apps/api already owns the pg
+# dependency, so this image needs no workspace package and no lockfile change.
+# It is NOT a prisma/operations tsx script: the final image carries only the
+# compiled entrypoint and the pg dependency closure copied out of the
+# lockfile-installed store — no tsx, no prisma CLI, no pnpm/turbo.
+#
+# Build from the repository root:
+#   docker build -f apps/api/Dockerfile.pdf-artifact-migrator .
+
+FROM node:26.8.1-bookworm@sha256:9f94d34c787165dca03b74e5bf9c3bf90e8de79b19aa3d87fe1fa1694bf75c89 AS build
+ENV CI=true
+# Node 26 does not ship Corepack; same npm pin as Dockerfile.api.
+RUN npm install -g pnpm@11.24.0
+WORKDIR /app
+# A --frozen-lockfile install requires every workspace manifest present.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/api/package.json ./apps/api/package.json
+COPY apps/web/package.json ./apps/web/package.json
+COPY packages/migrator-runtime/package.json ./packages/migrator-runtime/package.json
+COPY packages/report-persistence/package.json ./packages/report-persistence/package.json
+COPY packages/shared/package.json ./packages/shared/package.json
+COPY packages/ui/package.json ./packages/ui/package.json
+# Scripts are irrelevant to compiling a dependency-free CLI; skipping them keeps
+# playwright/prisma postinstalls out of this stage entirely.
+RUN --mount=type=cache,id=customreport-pnpm-store-v11,target=/pnpm/store,sharing=locked \
+    pnpm install --frozen-lockfile --ignore-scripts --store-dir=/pnpm/store
+COPY tsconfig.base.json ./tsconfig.base.json
+COPY apps/api/tsconfig.pdf-artifact-migrator.json ./apps/api/tsconfig.pdf-artifact-migrator.json
+COPY apps/api/scripts/pdf-artifact-migrator-runtime-deps.ts ./apps/api/scripts/pdf-artifact-migrator-runtime-deps.ts
+COPY apps/api/src/pdf-artifact-migrator ./apps/api/src/pdf-artifact-migrator
+RUN ./node_modules/.bin/tsc6 -p apps/api/tsconfig.pdf-artifact-migrator.json && \
+    ./node_modules/.bin/tsx apps/api/scripts/pdf-artifact-migrator-runtime-deps.ts /app/node_modules /runtime
+
+# Runtime stage: fresh pinned base, only the compiled CLI + the pg closure.
+FROM node:26.8.1-bookworm@sha256:9f94d34c787165dca03b74e5bf9c3bf90e8de79b19aa3d87fe1fa1694bf75c89
+WORKDIR /app
+COPY --from=build /runtime/node_modules ./node_modules
+COPY --from=build /app/apps/api/dist/pdf-artifact-migrator ./
+# The CLI compiles to ESM (apps/api is "type": "module"); /app has no
+# package.json of its own, so write the marker the loader needs.
+RUN printf '{"type":"module"}\n' > /app/package.json
+ARG BUILD_VERSION
+LABEL org.opencontainers.image.revision=${BUILD_VERSION}
+RUN test -f /app/main.js && \
+    node --check /app/main.js && \
+    test -d /app/node_modules/.pnpm && \
+    test -L /app/node_modules/pg && \
+    test ! -e /app/node_modules/.bin && \
+    ! find /app/node_modules/.pnpm -maxdepth 1 -type d \
+      \( -name 'prisma@*' -o -name '@prisma+*' -o -name 'tsx@*' -o -name 'esbuild@*' -o -name '@typescript+*' -o -name 'typescript@*' \) \
+      -print -quit | grep -q . && \
+    test ! -e /usr/local/bin/pnpm && \
+    test ! -e /usr/local/bin/turbo && \
+    node -e "const { Client } = require('pg'); if (typeof Client !== 'function') process.exit(1)"
+# The pdfdata named volume seeds its ownership from this directory on first
+# mount; without it the root-owned fresh volume refuses the node user's
+# .migration/lock creation (same pattern as Dockerfile.api's runner).
+RUN mkdir -p /app/data/pdfs && chown node:node /app/data/pdfs
+USER node
+ENV NODE_ENV=production
+# Env contract: DATABASE_URL (postgres URL; target identity must live in the
+# authority/path with an explicit port — a portless URL inherits PGPORT and is
+# refused), PDF_OUTPUT_DIR (absolute artifact root),
+# PDF_ARTIFACT_MIGRATOR_MODE=check|apply|rollback (default check) and, for
+# apply/rollback, PDF_ARTIFACT_MIGRATOR_CONFIRM=<host>|<port>|<database> equal
+# to the resolved DATABASE_URL target. JSONL verdicts on stdout; the process
+# exits non-zero while links are pending or anomalies are reported.
+CMD ["node", "main.js"]

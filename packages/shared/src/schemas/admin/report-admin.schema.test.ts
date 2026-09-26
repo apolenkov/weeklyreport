@@ -3,6 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   adminReportPeriodSchema,
   adminSnapshotSchema,
+  pdfRecoveryJobListSchema,
+  pdfRecoveryJobSchema,
+  pdfRecoveryRetryInputSchema,
+  pdfRecoveryRetryResultSchema,
 } from "./report-admin.schema";
 
 const USER_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -783,5 +787,89 @@ describe("adminReportPeriodSchema — week label recovery", () => {
     expect(adminReportPeriodSchema.safeParse(withoutWeekLabel).success).toBe(
       false,
     );
+  });
+});
+
+describe("PDF export recovery contracts", () => {
+  const recoveryJob = {
+    jobId: EXECUTION_ID,
+    reportId: REPORT_ID,
+    generation: 2,
+    requestedBy: USER_ID,
+    status: "recovery_required",
+    createdAt: new Date("2026-09-20T10:00:00.000Z"),
+  } as const;
+
+  it("round-trips a quarantined export row with its generation", () => {
+    const parsed = pdfRecoveryJobSchema.parse(recoveryJob);
+
+    expect(parsed).toEqual(recoveryJob);
+  });
+
+  it.each(["queued", "completed", "failed"] as const)(
+    "rejects a recovery list row in the %s state",
+    (status) => {
+      expect(
+        pdfRecoveryJobSchema.safeParse({ ...recoveryJob, status }).success,
+      ).toBe(false);
+    },
+  );
+
+  it("wraps the DB-backed recovery list, empty or populated", () => {
+    expect(
+      pdfRecoveryJobListSchema.parse({ jobs: [recoveryJob] }).jobs,
+    ).toHaveLength(1);
+    expect(pdfRecoveryJobListSchema.safeParse({ jobs: [] }).success).toBe(true);
+  });
+
+  it("round-trips the generation-bound retry input", () => {
+    const parsed = pdfRecoveryRetryInputSchema.parse({
+      jobId: recoveryJob.jobId,
+      expectedGeneration: recoveryJob.generation,
+    });
+
+    expect(parsed).toEqual({ jobId: recoveryJob.jobId, expectedGeneration: 2 });
+  });
+
+  it.each([0, -1, 1.5, "2", undefined])(
+    "rejects retry input with expectedGeneration %s",
+    (expectedGeneration) => {
+      expect(
+        pdfRecoveryRetryInputSchema.safeParse({
+          jobId: recoveryJob.jobId,
+          expectedGeneration,
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it("rejects a non-uuid retry jobId", () => {
+    expect(
+      pdfRecoveryRetryInputSchema.safeParse({
+        jobId: "not-a-uuid",
+        expectedGeneration: 1,
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each(["retried", "already-advanced", "ineligible"] as const)(
+    "distinguishes the %s retry outcome",
+    (outcome) => {
+      const parsed = pdfRecoveryRetryResultSchema.parse({
+        jobId: recoveryJob.jobId,
+        outcome,
+      });
+
+      expect(parsed).toEqual({ jobId: recoveryJob.jobId, outcome });
+    },
+  );
+
+  it("rejects the removed queue-retry outcome vocabulary", () => {
+    expect(
+      pdfRecoveryRetryResultSchema.safeParse({
+        jobId: recoveryJob.jobId,
+        outcome: "queue-not-failed",
+      }).success,
+    ).toBe(false);
   });
 });

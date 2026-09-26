@@ -16,6 +16,7 @@ const PROTECTED_PATH_PREFIXES = [
   "/head",
   "/reports",
   "/admin",
+  "/pdf-exports",
   "/feedback",
 ];
 
@@ -78,6 +79,7 @@ export const config = {
     "/head/:path*",
     "/reports/:path*",
     "/admin/:path*",
+    "/pdf-exports/:path*",
     "/feedback/:path*",
   ],
 };

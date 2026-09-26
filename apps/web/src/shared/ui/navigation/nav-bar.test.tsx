@@ -214,6 +214,24 @@ describe("NavBar — role-aware visibility", () => {
     expectLinkMissing(container, "/reports");
   });
 
+  it.each(["head", "admin"] as const)(
+    "%s sees the /pdf-exports recovery link",
+    (role) => {
+      setRole(role);
+      const { container } = render(<NavBar />);
+      expectLinkExists(container, "/pdf-exports");
+    },
+  );
+
+  it.each(["lead", "viewer"] as const)(
+    "%s does NOT see the /pdf-exports link",
+    (role) => {
+      setRole(role);
+      const { container } = render(<NavBar />);
+      expectLinkMissing(container, "/pdf-exports");
+    },
+  );
+
   it("renders the user initials in the compact home mark", () => {
     setRole("lead");
     const { container } = render(<NavBar />);

@@ -14,7 +14,7 @@ export function createBootstrapJobsService(deps: {
   queueRegistry: { get: (name: (typeof QUEUE_NAMES)[number]) => Queue };
   prisma: PrismaService;
   logger: AppLogger;
-  pdfExportService: Pick<PdfExportService, "retryFailedExport">;
+  pdfExportService: Pick<PdfExportService, "retryExportGeneration">;
 }): JobsService {
   const { queueRegistry, prisma, logger, pdfExportService } = deps;
   const queues = new Map(
@@ -51,8 +51,31 @@ export function createBootstrapJobsService(deps: {
           data: { status: "pending", error: null },
         });
       },
-      retryFailedPdfExport: (input) =>
-        pdfExportService.retryFailedExport(input),
+      retryPdfExportGeneration: (input) =>
+        pdfExportService.retryExportGeneration(input),
+      // Quarantined rows are durable state: their generation's queue job may
+      // already be pruned, so the list is read from Postgres, never Redis.
+      listPdfRecoveryJobs: async () => {
+        const rows = await prisma.pdfExportJob.findMany({
+          where: { status: "recovery_required" },
+          orderBy: { createdAt: "asc" },
+          select: {
+            id: true,
+            reportId: true,
+            generation: true,
+            requestedBy: true,
+            createdAt: true,
+          },
+        });
+        return rows.map((row) => ({
+          jobId: row.id,
+          reportId: row.reportId,
+          generation: row.generation,
+          requestedBy: row.requestedBy,
+          status: "recovery_required" as const,
+          createdAt: row.createdAt,
+        }));
+      },
     },
     logger,
   );

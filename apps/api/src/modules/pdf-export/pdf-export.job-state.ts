@@ -7,17 +7,19 @@ import { PdfExportDomainError } from "./pdf-export.service.js";
 
 export const pdfStatusToDb: Record<
   PdfExportJob["status"],
-  "pending" | "completed" | "failed"
+  "pending" | "completed" | "failed" | "recovery_required"
 > = {
   queued: "pending",
   completed: "completed",
   failed: "failed",
+  recovery_required: "recovery_required",
 };
 
 export const dbStatusToDomain: Record<string, PdfExportJob["status"]> = {
   pending: "queued",
   completed: "completed",
   failed: "failed",
+  recovery_required: "recovery_required",
 };
 
 export class UnsupportedPdfExportStatusError extends Error {
@@ -40,6 +42,7 @@ export interface PdfExportJobRow {
   id: string;
   reportId: string;
   status: string;
+  generation: number;
   templateVersion: string;
   filePath: string | null;
   checksum: string | null;
@@ -58,6 +61,7 @@ export interface LockedPdfExportJobRow {
   id: string;
   reportId: string;
   status: string;
+  generation: number;
   templateVersion: string;
   filePath: string | null;
   checksum: string | null;
@@ -89,6 +93,7 @@ export function toExportJob(row: LockedPdfExportJobRow): PdfExportJobRecord {
       jobId: row.id,
       reportId: row.reportId,
       status: toDomainStatus(row.status),
+      generation: row.generation,
       requestedAt: row.createdAt,
       completedAt: row.status === "completed" ? row.updatedAt : null,
       checksum: row.checksum,

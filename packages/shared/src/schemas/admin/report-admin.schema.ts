@@ -245,6 +245,58 @@ export const failedJobListSchema = z
   })
   .readonly();
 
+/**
+ * One durable PDF export row quarantined for head-driven recovery. The
+ * DB-backed surface only lists `recovery_required` rows — the generation's
+ * queue job may already be gone, so Redis is never consulted.
+ */
+export const pdfRecoveryJobSchema = z
+  .object({
+    jobId: z.uuid(),
+    reportId: z.uuid(),
+    generation: z.number().int().min(1),
+    requestedBy: z.uuid(),
+    status: z.literal("recovery_required"),
+    createdAt: z.coerce.date(),
+  })
+  .readonly();
+
+/** Validates the full DB-backed list of exports awaiting recovery. */
+export const pdfRecoveryJobListSchema = z
+  .object({
+    jobs: z.array(pdfRecoveryJobSchema).readonly(),
+  })
+  .readonly();
+
+/**
+ * Input for `admin.jobs.retryPdfRecovery`. `expectedGeneration` binds the retry
+ * to the generation the caller selected; the durable row decides eligibility.
+ */
+export const pdfRecoveryRetryInputSchema = z
+  .object({
+    jobId: z.uuid(),
+    expectedGeneration: z.number().int().min(1),
+  })
+  .readonly();
+
+/**
+ * Outcome of a head-driven recovery retry: the generation advanced, the same
+ * request already advanced it (idempotent no-op), or the row was ineligible.
+ */
+export const pdfRecoveryRetryOutcomeSchema = z.enum([
+  "retried",
+  "already-advanced",
+  "ineligible",
+]);
+
+/** Result of `admin.jobs.retryPdfRecovery`. */
+export const pdfRecoveryRetryResultSchema = z
+  .object({
+    jobId: z.uuid(),
+    outcome: pdfRecoveryRetryOutcomeSchema,
+  })
+  .readonly();
+
 /** Canonical BullMQ queue name for reminder delivery jobs. */
 export const EMAIL_REMINDER_QUEUE_NAME = "email-reminder" as const;
 /** Canonical BullMQ queue name for PDF export jobs. */
@@ -283,3 +335,17 @@ export type AdminSnapshot = z.infer<typeof adminSnapshotSchema>;
 export type FailedJob = z.infer<typeof failedJobSchema>;
 /** Offset page of failed jobs with a nullable continuation cursor. */
 export type FailedJobList = z.infer<typeof failedJobListSchema>;
+/** Durable export row quarantined for head-driven recovery. */
+export type PdfRecoveryJob = z.infer<typeof pdfRecoveryJobSchema>;
+/** DB-backed list of exports awaiting recovery. */
+export type PdfRecoveryJobList = z.infer<typeof pdfRecoveryJobListSchema>;
+/** Generation-bound retry input for the recovery surface. */
+export type PdfRecoveryRetryInput = z.infer<typeof pdfRecoveryRetryInputSchema>;
+/** Recovery retry outcome: advanced, idempotent no-op, or ineligible. */
+export type PdfRecoveryRetryOutcome = z.infer<
+  typeof pdfRecoveryRetryOutcomeSchema
+>;
+/** Recovery retry result carrying the outcome classification. */
+export type PdfRecoveryRetryResult = z.infer<
+  typeof pdfRecoveryRetryResultSchema
+>;

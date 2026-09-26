@@ -80,6 +80,28 @@ services:
         condition: service_healthy
     restart: "no"
 
+  # One-shot generation-1 PDF artifact migrator (OpenSpec
+  # recover-orphaned-pdf-exports). Runs once like `migrate`; the baked-in
+  # `check` mode is read-only on Postgres. PDF_ARTIFACT_MIGRATOR_CONFIRM stays
+  # unset so apply/rollback can only run through an explicit `run -e`.
+  pdf-artifact-migrator:
+    profiles: ["pdf-artifact-migration"]
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile.pdf-artifact-migrator
+    environment:
+      DATABASE_URL: postgresql://customreport:localdev@postgres:5432/customreport_e2e
+      PDF_OUTPUT_DIR: /app/data/pdfs
+      PDF_ARTIFACT_MIGRATOR_MODE: check
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
+    volumes:
+      - pdfdata:/app/data/pdfs
+
   # Internal Gotenberg PDF renderer: no published port and no api depends_on
   # edge — the api reaches it only over the compose network at runtime, so a
   # renderer outage degrades exports without blocking api boot. Conversions
@@ -95,8 +117,6 @@ services:
       CHROMIUM_CLEAR_COOKIES: "true"
       CHROMIUM_CLEAR_STORAGE: "true"
       CHROMIUM_CLEAR_CACHE: "true"
-      # Anchored to the print origin only: the print page is server-rendered,
-      # so Chromium needs plain http access and nothing else.
       CHROMIUM_ALLOW_LIST: "^http://web:3000/"
       CHROMIUM_DENY_PRIVATE_IPS: "true"
       CHROMIUM_DENY_PUBLIC_IPS: "true"

@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist/pdf-artifact-migrator",
+    "rootDir": "src/pdf-artifact-migrator",
+    "types": ["node"]
+  },
+  "include": ["src/pdf-artifact-migrator/**/*.ts"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.integration.test.ts",
+    "**/*.integration.test.tsx",
+    "**/__tests__/**"
+  ]
+}

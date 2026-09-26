@@ -40,6 +40,7 @@ interface PdfExportRow {
   id: string;
   reportId: string;
   status: string;
+  generation: number;
   templateVersion: string;
   filePath: string | null;
   checksum: string | null;
@@ -54,6 +55,7 @@ function exportRow(overrides: Partial<PdfExportRow> = {}): PdfExportRow {
     id: EXPORT_JOB_ID,
     reportId: REPORT_ID,
     status: "pending",
+    generation: 1,
     templateVersion: "phase-2-pdf-v1",
     filePath: null,
     checksum: null,
@@ -72,6 +74,7 @@ function completedExportJob(
     jobId: EXPORT_JOB_ID,
     reportId: REPORT_ID,
     status: "completed",
+    generation: 1,
     requestedAt: EXPORT_CREATED_AT,
     completedAt: EXPORT_CREATED_AT,
     checksum: "checksum-a",
@@ -81,17 +84,40 @@ function completedExportJob(
   };
 }
 
+// Mirrors the repository's CAS where-clauses: `status` is either a single
+// value or an `{ in: [...] }` set, and `generation` is an optional conjunct.
+function matchesCasWhere(
+  current: PdfExportRow,
+  where: {
+    id: string;
+    status: string | { in: string[] };
+    generation?: number;
+  },
+): boolean {
+  if (current.id !== where.id) return false;
+  if (
+    where.generation !== undefined &&
+    current.generation !== where.generation
+  ) {
+    return false;
+  }
+  return typeof where.status === "string"
+    ? current.status === where.status
+    : where.status.in.includes(current.status);
+}
+
 function createAtomicPdfExportPrisma(initial: PdfExportRow) {
   let current = structuredClone(initial);
   const updateMany = vi.fn(
     (input: {
-      where: { id: string; status: string };
+      where: {
+        id: string;
+        status: string | { in: string[] };
+        generation?: number;
+      };
       data: Partial<PdfExportRow>;
     }) => {
-      if (
-        current.id !== input.where.id ||
-        current.status !== input.where.status
-      ) {
+      if (!matchesCasWhere(current, input.where)) {
         return { count: 0 };
       }
       current = {
@@ -173,6 +199,7 @@ describe("PdfExportPrismaRepository", () => {
       id: "759b2767-0f86-41e2-b025-49730ca010e4",
       reportId: REPORT_ID,
       status: "paused",
+      generation: 1,
       templateVersion: "phase-2-pdf-v1",
       filePath: null,
       checksum: null,
@@ -193,6 +220,25 @@ describe("PdfExportPrismaRepository", () => {
       }),
     );
   });
+
+  it("maps a recovery_required row and carries its generation", async () => {
+    const findUnique = vi
+      .fn()
+      .mockResolvedValue(
+        exportRow({ status: "recovery_required", generation: 3 }),
+      );
+    const prisma = {
+      pdfExportJob: { findUnique },
+    } as unknown as PrismaService;
+    const repo = new PdfExportPrismaRepository(prisma);
+
+    await expect(repo.getExportJob(EXPORT_JOB_ID)).resolves.toMatchObject({
+      jobId: EXPORT_JOB_ID,
+      status: "recovery_required",
+      generation: 3,
+      requestedBy: AUTHOR_ID,
+    });
+  });
 });
 
 describe("PdfExportPrismaRepository template provenance", () => {
@@ -201,6 +247,7 @@ describe("PdfExportPrismaRepository template provenance", () => {
       id: "759b2767-0f86-41e2-b025-49730ca010e4",
       reportId: REPORT_ID,
       status: "pending",
+      generation: 1,
       templateVersion: "phase-2-pdf-v1",
       filePath: null,
       checksum: null,
@@ -221,6 +268,7 @@ describe("PdfExportPrismaRepository template provenance", () => {
         jobId: "759b2767-0f86-41e2-b025-49730ca010e4",
         reportId: REPORT_ID,
         status: "queued",
+        generation: 1,
         requestedAt: new Date("2026-06-09T00:00:00Z"),
         completedAt: null,
         checksum: null,
@@ -237,6 +285,7 @@ describe("PdfExportPrismaRepository template provenance", () => {
           id: "759b2767-0f86-41e2-b025-49730ca010e4",
           reportId: REPORT_ID,
           status: "pending",
+          generation: 1,
           requestedBy: AUTHOR_ID,
           templateVersion: "phase-2-pdf-v1",
           filePath: null,
@@ -263,6 +312,7 @@ describe("PdfExportPrismaRepository template provenance", () => {
           jobId: "759b2767-0f86-41e2-b025-49730ca010e4",
           reportId: REPORT_ID,
           status: "queued",
+          generation: 1,
           requestedAt: new Date("2026-06-09T00:00:00Z"),
           completedAt: null,
           checksum: null,
@@ -325,7 +375,7 @@ describe("PdfExportPrismaRepository terminal-state CAS", () => {
       checksum: "checksum-a",
     });
     expect(updateMany).toHaveBeenCalledWith({
-      where: { id: EXPORT_JOB_ID, status: "pending" },
+      where: { id: EXPORT_JOB_ID, status: "pending", generation: 1 },
       data: {
         status: "completed",
         filePath: EXPORT_ARTIFACT_URL,
@@ -342,10 +392,10 @@ describe("PdfExportPrismaRepository terminal-state CAS", () => {
     } as unknown as PrismaService;
     const repo = new PdfExportPrismaRepository(prisma);
 
-    await repo.markExportFailed(EXPORT_JOB_ID, "browser crashed");
+    await repo.markExportFailed(EXPORT_JOB_ID, 1, "browser crashed");
 
     expect(updateMany).toHaveBeenCalledWith({
-      where: { id: EXPORT_JOB_ID, status: "pending" },
+      where: { id: EXPORT_JOB_ID, status: "pending", generation: 1 },
       data: {
         status: "failed",
         filePath: null,
@@ -355,7 +405,7 @@ describe("PdfExportPrismaRepository terminal-state CAS", () => {
     });
   });
 
-  it.each(["completed", "failed"] as const)(
+  it.each(["completed", "failed", "recovery_required"] as const)(
     "treats a failure after %s as an idempotent no-op",
     async (status) => {
       const updateMany = vi.fn().mockResolvedValue({ count: 0 });
@@ -376,13 +426,46 @@ describe("PdfExportPrismaRepository terminal-state CAS", () => {
       const repo = new PdfExportPrismaRepository(prisma);
 
       await expect(
-        repo.markExportFailed(EXPORT_JOB_ID, "late failure"),
+        repo.markExportFailed(EXPORT_JOB_ID, 1, "late failure"),
       ).resolves.toBeUndefined();
       expect(findUnique).toHaveBeenCalledWith({
         where: { id: EXPORT_JOB_ID },
       });
     },
   );
+
+  it("treats a stale-generation failure on a pending row as an idempotent no-op", async () => {
+    const prisma = createAtomicPdfExportPrisma(exportRow({ generation: 2 }));
+    const repo = new PdfExportPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await expect(
+      repo.markExportFailed(EXPORT_JOB_ID, 1, "stale failure"),
+    ).resolves.toBeUndefined();
+    expect(prisma.readCurrent()).toMatchObject({
+      status: "pending",
+      generation: 2,
+      error: null,
+    });
+  });
+
+  it("rejects a completion for another generation without touching the row", async () => {
+    const prisma = createAtomicPdfExportPrisma(exportRow({ generation: 2 }));
+    const repo = new PdfExportPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await expect(
+      repo.saveExportJob(completedExportJob({ generation: 1 })),
+    ).rejects.toBeInstanceOf(PdfExportStateConflictError);
+    expect(prisma.readCurrent()).toMatchObject({
+      status: "pending",
+      generation: 2,
+      filePath: null,
+      checksum: null,
+    });
+  });
 
   it("rejects a failure for a missing job after the guarded update misses", async () => {
     const updateMany = vi.fn().mockResolvedValue({ count: 0 });
@@ -393,7 +476,7 @@ describe("PdfExportPrismaRepository terminal-state CAS", () => {
     const repo = new PdfExportPrismaRepository(prisma);
 
     await expect(
-      repo.markExportFailed(EXPORT_JOB_ID, "browser crashed"),
+      repo.markExportFailed(EXPORT_JOB_ID, 1, "browser crashed"),
     ).rejects.toBeInstanceOf(PdfExportDomainError);
   });
 
@@ -404,7 +487,7 @@ describe("PdfExportPrismaRepository terminal-state CAS", () => {
     );
 
     await repo.saveExportJob(completedExportJob());
-    await repo.markExportFailed(EXPORT_JOB_ID, "late failure");
+    await repo.markExportFailed(EXPORT_JOB_ID, 1, "late failure");
 
     expect(prisma.readCurrent()).toMatchObject({
       status: "completed",
@@ -515,13 +598,14 @@ describe("PdfExportPrismaRepository runLockedExportJob", () => {
     let current = initial ? structuredClone(initial) : null;
     const updateMany = vi.fn(
       (input: {
-        where: { id: string; status: string };
+        where: {
+          id: string;
+          status: string | { in: string[] };
+          generation?: number;
+        };
         data: Partial<PdfExportRow>;
       }) => {
-        if (
-          current?.id !== input.where.id ||
-          current.status !== input.where.status
-        ) {
+        if (current === null || !matchesCasWhere(current, input.where)) {
           return Promise.resolve({ count: 0 });
         }
         current = {
@@ -572,6 +656,7 @@ describe("PdfExportPrismaRepository runLockedExportJob", () => {
         jobId: EXPORT_JOB_ID,
         reportId: REPORT_ID,
         status: "failed",
+        generation: 1,
         requestedBy: AUTHOR_ID,
       });
       seen.push("callback");
@@ -584,6 +669,7 @@ describe("PdfExportPrismaRepository runLockedExportJob", () => {
       readonly string[],
     ];
     expect(strings.join("")).toContain('FROM "PdfExportJob"');
+    expect(strings.join("")).toContain('"generation"');
     expect(strings.join("")).toContain("FOR UPDATE");
     expect(seen).toEqual(["callback"]);
   });
@@ -600,40 +686,70 @@ describe("PdfExportPrismaRepository runLockedExportJob", () => {
     });
   });
 
-  it("revives a failed row to pending, clearing artifact and error fields, on the tx client", async () => {
-    const { prisma, tx, readCurrent } = createLockedPrisma(
-      exportRow({ status: "failed", error: "browser crashed" }),
+  it.each(["failed", "recovery_required"] as const)(
+    "advances a %s row to pending at generation+1, clearing terminal fields, on the tx client",
+    async (status) => {
+      const { prisma, tx, readCurrent } = createLockedPrisma(
+        exportRow({
+          status,
+          filePath: EXPORT_ARTIFACT_URL,
+          checksum: "checksum-a",
+          error: "browser crashed",
+        }),
+      );
+      const repo = new PdfExportPrismaRepository(
+        prisma as unknown as PrismaService,
+      );
+
+      await repo.runLockedExportJob(EXPORT_JOB_ID, async (_job, writes) => {
+        await writes.advanceGeneration(1);
+      });
+
+      expect(tx.pdfExportJob.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: EXPORT_JOB_ID,
+          status: { in: ["failed", "recovery_required"] },
+          generation: 1,
+        },
+        data: {
+          status: "pending",
+          generation: 2,
+          filePath: null,
+          checksum: null,
+          error: null,
+        },
+      });
+      expect(readCurrent()).toMatchObject({
+        status: "pending",
+        generation: 2,
+        filePath: null,
+        checksum: null,
+        error: null,
+        // Immutable identity columns are untouched by the advance.
+        reportId: REPORT_ID,
+        requestedBy: AUTHOR_ID,
+        templateVersion: "phase-2-pdf-v1",
+      });
+    },
+  );
+
+  it("fails loud when the locked row is not at the expected generation", async () => {
+    const { prisma, readCurrent } = createLockedPrisma(
+      exportRow({ status: "failed", generation: 2, error: "crashed" }),
     );
     const repo = new PdfExportPrismaRepository(
       prisma as unknown as PrismaService,
     );
 
-    await repo.runLockedExportJob(EXPORT_JOB_ID, async (_job, writes) => {
-      await writes.reviveFailed();
-    });
-
-    expect(tx.pdfExportJob.updateMany).toHaveBeenCalledWith({
-      where: { id: EXPORT_JOB_ID, status: "failed" },
-      data: {
-        status: "pending",
-        filePath: null,
-        checksum: null,
-        error: null,
-      },
-    });
-    expect(readCurrent()).toMatchObject({
-      status: "pending",
-      filePath: null,
-      checksum: null,
-      error: null,
-      // Immutable identity columns are untouched by the revival.
-      reportId: REPORT_ID,
-      requestedBy: AUTHOR_ID,
-      templateVersion: "phase-2-pdf-v1",
-    });
+    await expect(
+      repo.runLockedExportJob(EXPORT_JOB_ID, async (_job, writes) => {
+        await writes.advanceGeneration(1);
+      }),
+    ).rejects.toBeInstanceOf(PdfExportDomainError);
+    expect(readCurrent()).toMatchObject({ status: "failed", generation: 2 });
   });
 
-  it("fails loud when the locked row is no longer failed", async () => {
+  it("fails loud when the locked row is not retryable", async () => {
     const { prisma, readCurrent } = createLockedPrisma(exportRow());
     const repo = new PdfExportPrismaRepository(
       prisma as unknown as PrismaService,
@@ -641,13 +757,13 @@ describe("PdfExportPrismaRepository runLockedExportJob", () => {
 
     await expect(
       repo.runLockedExportJob(EXPORT_JOB_ID, async (_job, writes) => {
-        await writes.reviveFailed();
+        await writes.advanceGeneration(1);
       }),
     ).rejects.toBeInstanceOf(PdfExportDomainError);
-    expect(readCurrent()).toMatchObject({ status: "pending" });
+    expect(readCurrent()).toMatchObject({ status: "pending", generation: 1 });
   });
 
-  it("rolls the revival back when the locked callback rejects", async () => {
+  it("rolls the generation advance back when the locked callback rejects", async () => {
     const { prisma, readCurrent } = createLockedPrisma(
       exportRow({ status: "failed", error: "browser crashed" }),
     );
@@ -657,16 +773,70 @@ describe("PdfExportPrismaRepository runLockedExportJob", () => {
 
     await expect(
       repo.runLockedExportJob(EXPORT_JOB_ID, async (_job, writes) => {
-        await writes.reviveFailed();
-        throw new Error("queue.retry acknowledgement lost");
+        await writes.advanceGeneration(1);
+        throw new Error("queue.add acknowledgement lost");
       }),
-    ).rejects.toThrow("queue.retry acknowledgement lost");
+    ).rejects.toThrow("queue.add acknowledgement lost");
 
     expect(readCurrent()).toMatchObject({
       status: "failed",
+      generation: 1,
       error: "browser crashed",
     });
   });
+
+  it("quarantines a pending row as recovery_required at its generation", async () => {
+    const { prisma, tx, readCurrent } = createLockedPrisma(
+      exportRow({ generation: 2 }),
+    );
+    const repo = new PdfExportPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await repo.runLockedExportJob(EXPORT_JOB_ID, async (_job, writes) => {
+      await writes.markRecoveryRequired(2);
+    });
+
+    expect(tx.pdfExportJob.updateMany).toHaveBeenCalledWith({
+      where: { id: EXPORT_JOB_ID, status: "pending", generation: 2 },
+      data: { status: "recovery_required" },
+    });
+    expect(readCurrent()).toMatchObject({
+      status: "recovery_required",
+      generation: 2,
+    });
+  });
+
+  it("refuses to quarantine a row at another generation", async () => {
+    const { prisma, readCurrent } = createLockedPrisma(exportRow());
+    const repo = new PdfExportPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await expect(
+      repo.runLockedExportJob(EXPORT_JOB_ID, async (_job, writes) => {
+        await writes.markRecoveryRequired(2);
+      }),
+    ).rejects.toBeInstanceOf(PdfExportDomainError);
+    expect(readCurrent()).toMatchObject({ status: "pending", generation: 1 });
+  });
+
+  it.each(["completed", "failed", "recovery_required"] as const)(
+    "refuses to quarantine a %s row",
+    async (status) => {
+      const { prisma, readCurrent } = createLockedPrisma(exportRow({ status }));
+      const repo = new PdfExportPrismaRepository(
+        prisma as unknown as PrismaService,
+      );
+
+      await expect(
+        repo.runLockedExportJob(EXPORT_JOB_ID, async (_job, writes) => {
+          await writes.markRecoveryRequired(1);
+        }),
+      ).rejects.toBeInstanceOf(PdfExportDomainError);
+      expect(readCurrent()).toMatchObject({ status });
+    },
+  );
 
   it("keeps failure-after-completion a no-op inside the lock", async () => {
     const { prisma, readCurrent } = createLockedPrisma(
@@ -681,13 +851,32 @@ describe("PdfExportPrismaRepository runLockedExportJob", () => {
     );
 
     await repo.runLockedExportJob(EXPORT_JOB_ID, async (_job, writes) => {
-      await writes.markFailed("late failure");
+      await writes.markFailed(1, "late failure");
     });
 
     expect(readCurrent()).toMatchObject({
       status: "completed",
       filePath: EXPORT_ARTIFACT_URL,
       checksum: "checksum-a",
+      error: null,
+    });
+  });
+
+  it("leaves a pending row unchanged when the locked failure names another generation", async () => {
+    const { prisma, readCurrent } = createLockedPrisma(
+      exportRow({ generation: 2 }),
+    );
+    const repo = new PdfExportPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await repo.runLockedExportJob(EXPORT_JOB_ID, async (_job, writes) => {
+      await writes.markFailed(1, "stale failure");
+    });
+
+    expect(readCurrent()).toMatchObject({
+      status: "pending",
+      generation: 2,
       error: null,
     });
   });
@@ -700,9 +889,10 @@ describe("PdfExportPrismaRepository runLockedExportJob", () => {
 
     await repo.runLockedExportJob(EXPORT_JOB_ID, async (_job, writes) => {
       await expect(
-        writes.markCompleted("/exports/other.pdf", "sha-foreign"),
+        writes.markCompleted(1, "/exports/other.pdf", "sha-foreign"),
       ).rejects.toBeInstanceOf(PdfExportDomainError);
       const completed = await writes.markCompleted(
+        1,
         EXPORT_ARTIFACT_URL,
         "checksum-a",
       );
@@ -714,5 +904,176 @@ describe("PdfExportPrismaRepository runLockedExportJob", () => {
       filePath: EXPORT_ARTIFACT_URL,
       checksum: "checksum-a",
     });
+  });
+
+  it("rejects a locked completion that names another generation", async () => {
+    const { prisma, readCurrent } = createLockedPrisma(
+      exportRow({ generation: 2 }),
+    );
+    const repo = new PdfExportPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await expect(
+      repo.runLockedExportJob(EXPORT_JOB_ID, async (_job, writes) => {
+        await writes.markCompleted(1, EXPORT_ARTIFACT_URL, "checksum-a");
+      }),
+    ).rejects.toBeInstanceOf(PdfExportStateConflictError);
+
+    expect(readCurrent()).toMatchObject({
+      status: "pending",
+      generation: 2,
+      filePath: null,
+      checksum: null,
+    });
+  });
+});
+
+describe("PdfExportPrismaRepository listPendingExportCandidates", () => {
+  // Applies the real where/orderBy/take semantics to an in-memory row set so
+  // the tests exercise keyset behavior, not just emitted argument shapes.
+  function createListingPrisma(rows: PdfExportRow[]) {
+    const findMany = vi.fn(
+      (args: {
+        where: {
+          status: string;
+          createdAt: { lte: Date };
+          OR?: [
+            { createdAt: { gt: Date } },
+            { createdAt: Date; id: { gt: string } },
+          ];
+        };
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }];
+        take: number;
+        select: Record<string, true>;
+      }) => {
+        const matched = rows
+          .filter((row) => {
+            if (row.status !== args.where.status) return false;
+            if (row.createdAt > args.where.createdAt.lte) return false;
+            if (args.where.OR !== undefined) {
+              const [afterCreatedAt, tieBreak] = args.where.OR;
+              const past = row.createdAt > afterCreatedAt.createdAt.gt;
+              const tied =
+                row.createdAt.getTime() ===
+                  new Date(tieBreak.createdAt).getTime() &&
+                row.id > tieBreak.id.gt;
+              if (!past && !tied) return false;
+            }
+            return true;
+          })
+          .sort(
+            (a, b) =>
+              a.createdAt.getTime() - b.createdAt.getTime() ||
+              a.id.localeCompare(b.id),
+          )
+          .slice(0, args.take);
+        return Promise.resolve(
+          matched.map((row) => ({
+            id: row.id,
+            generation: row.generation,
+            createdAt: row.createdAt,
+          })),
+        );
+      },
+    );
+    return {
+      prisma: { pdfExportJob: { findMany } },
+      findMany,
+    };
+  }
+
+  const BOUND = new Date("2026-06-09T01:00:00Z");
+
+  function listingRows(): PdfExportRow[] {
+    return [
+      exportRow({
+        id: "aaaaaaaa-0000-4000-8000-000000000002",
+        createdAt: new Date("2026-06-09T00:10:00Z"),
+        generation: 2,
+      }),
+      exportRow({
+        id: "aaaaaaaa-0000-4000-8000-000000000001",
+        createdAt: new Date("2026-06-09T00:10:00Z"),
+      }),
+      exportRow({
+        id: "bbbbbbbb-0000-4000-8000-000000000001",
+        status: "failed",
+        createdAt: new Date("2026-06-09T00:05:00Z"),
+      }),
+      exportRow({
+        id: "bbbbbbbb-0000-4000-8000-000000000002",
+        status: "recovery_required",
+        createdAt: new Date("2026-06-09T00:05:00Z"),
+      }),
+      exportRow({
+        id: "cccccccc-0000-4000-8000-000000000001",
+        createdAt: new Date("2026-06-09T00:20:00Z"),
+      }),
+      // Created after the bound: a pass must never chase it.
+      exportRow({
+        id: "dddddddd-0000-4000-8000-000000000001",
+        createdAt: new Date("2026-06-09T01:05:00Z"),
+      }),
+    ];
+  }
+
+  it("returns pending rows at or below the bound in (createdAt, id) order", async () => {
+    const { prisma, findMany } = createListingPrisma(listingRows());
+    const repo = new PdfExportPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    const page = await repo.listPendingExportCandidates(BOUND, null, 10);
+
+    expect(page.map((row) => row.jobId)).toEqual([
+      "aaaaaaaa-0000-4000-8000-000000000001",
+      "aaaaaaaa-0000-4000-8000-000000000002",
+      "cccccccc-0000-4000-8000-000000000001",
+    ]);
+    expect(page[0]).toMatchObject({ generation: 1 });
+    expect(page[1]).toMatchObject({ generation: 2 });
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { status: "pending", createdAt: { lte: BOUND } },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        take: 10,
+      }),
+    );
+  });
+
+  it("advances the (createdAt, id) keyset past every inspected row", async () => {
+    const { prisma } = createListingPrisma(listingRows());
+    const repo = new PdfExportPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    const first = await repo.listPendingExportCandidates(BOUND, null, 2);
+    expect(first.map((row) => row.jobId)).toEqual([
+      "aaaaaaaa-0000-4000-8000-000000000001",
+      "aaaaaaaa-0000-4000-8000-000000000002",
+    ]);
+
+    const second = await repo.listPendingExportCandidates(
+      BOUND,
+      {
+        createdAt: expectDefined(first[1]).createdAt,
+        jobId: expectDefined(first[1]).jobId,
+      },
+      2,
+    );
+    expect(second.map((row) => row.jobId)).toEqual([
+      "cccccccc-0000-4000-8000-000000000001",
+    ]);
+
+    const third = await repo.listPendingExportCandidates(
+      BOUND,
+      {
+        createdAt: expectDefined(second[0]).createdAt,
+        jobId: expectDefined(second[0]).jobId,
+      },
+      2,
+    );
+    expect(third).toEqual([]);
   });
 });

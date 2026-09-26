@@ -1,5 +1,6 @@
 import {
   type FailedJob,
+  type PdfRecoveryJob,
   QUEUE_NAMES,
   type QueueName,
 } from "@customreport/shared";
@@ -11,7 +12,6 @@ import type {
   AdminJobsQueueRegistry,
   AdminPdfExportIdentity,
   AdminPdfExportRetryOutcome,
-  AdminPdfExportRetryQueue,
 } from "./admin-jobs.port.js";
 import { JobsService } from "./jobs.service";
 
@@ -21,9 +21,9 @@ interface FakeJob extends AdminJobHandle {
   readonly remove: ReturnType<typeof vi.fn<() => Promise<void>>>;
 }
 
-type RetryFailedPdfExport = (input: {
-  identity: AdminPdfExportIdentity;
-  queue: AdminPdfExportRetryQueue;
+type RetryPdfExportGeneration = (input: {
+  jobId: string;
+  expectedGeneration: number;
 }) => Promise<AdminPdfExportRetryOutcome>;
 
 function makeJob(
@@ -63,6 +63,7 @@ function makeJob(
                       jobId: overrides.id,
                       reportId: "report-1",
                       requestedBy: "user-1",
+                      generation: 1,
                     }
                   : pdfExportIdentity,
             }
@@ -109,9 +110,10 @@ function makeRegistry(
 
 const defaultOptions = {
   reminderExecutionExists: vi.fn().mockResolvedValue(true),
-  retryFailedPdfExport: vi
-    .fn<RetryFailedPdfExport>()
+  retryPdfExportGeneration: vi
+    .fn<RetryPdfExportGeneration>()
     .mockResolvedValue("retried"),
+  listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
 };
 
 describe("JobsService — DLQ admin surface", () => {
@@ -240,12 +242,13 @@ describe("JobsService — DLQ admin surface", () => {
       id: "job-stale",
       reminderExecutionId: "missing-execution",
     });
-    const retryFailedPdfExport = vi.fn<RetryFailedPdfExport>();
+    const retryPdfExportGeneration = vi.fn<RetryPdfExportGeneration>();
     const service = new JobsService(
       makeRegistry(makeQueue({ failed: [job] })),
       {
         reminderExecutionExists: vi.fn().mockResolvedValue(false),
-        retryFailedPdfExport,
+        retryPdfExportGeneration,
+        listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
       },
     );
 
@@ -256,7 +259,7 @@ describe("JobsService — DLQ admin surface", () => {
 
     expect(job.retry).not.toHaveBeenCalled();
     expect(job.remove).toHaveBeenCalledTimes(1);
-    expect(retryFailedPdfExport).not.toHaveBeenCalled();
+    expect(retryPdfExportGeneration).not.toHaveBeenCalled();
     expect(result).toEqual({
       retried: false,
       removed: true,
@@ -271,13 +274,14 @@ describe("JobsService — DLQ admin surface", () => {
       reminderExecutionId: "existing-execution",
     });
     const reviveFailedReminderExecution = vi.fn().mockResolvedValue(undefined);
-    const retryFailedPdfExport = vi.fn<RetryFailedPdfExport>();
+    const retryPdfExportGeneration = vi.fn<RetryPdfExportGeneration>();
     const service = new JobsService(
       makeRegistry(makeQueue({ failed: [job] })),
       {
         reminderExecutionExists: vi.fn().mockResolvedValue(true),
         reviveFailedReminderExecution,
-        retryFailedPdfExport,
+        retryPdfExportGeneration,
+        listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
       },
     );
 
@@ -291,7 +295,7 @@ describe("JobsService — DLQ admin surface", () => {
       "existing-execution",
     );
     expect(job.retry).toHaveBeenCalledTimes(1);
-    expect(retryFailedPdfExport).not.toHaveBeenCalled();
+    expect(retryPdfExportGeneration).not.toHaveBeenCalled();
     expect(result).toEqual({ retried: true, jobId: "job-live" });
   });
 
@@ -309,7 +313,7 @@ describe("JobsService — DLQ admin surface", () => {
         reminderExecutionId: "foreign-execution-id",
       });
       const reminderExecutionExists = vi.fn().mockResolvedValue(false);
-      const retryFailedPdfExport = vi.fn<RetryFailedPdfExport>();
+      const retryPdfExportGeneration = vi.fn<RetryPdfExportGeneration>();
       const registry = {
         names: QUEUE_NAMES,
         get: (name: QueueName) =>
@@ -317,7 +321,8 @@ describe("JobsService — DLQ admin surface", () => {
       };
       const service = new JobsService(registry, {
         reminderExecutionExists,
-        retryFailedPdfExport,
+        retryPdfExportGeneration,
+        listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
       });
 
       const result = await service.retryFailed({
@@ -326,7 +331,7 @@ describe("JobsService — DLQ admin surface", () => {
       });
 
       expect(reminderExecutionExists).not.toHaveBeenCalled();
-      expect(retryFailedPdfExport).not.toHaveBeenCalled();
+      expect(retryPdfExportGeneration).not.toHaveBeenCalled();
       expect(job.remove).not.toHaveBeenCalled();
       expect(job.retry).toHaveBeenCalledTimes(1);
       expect(result).toEqual({ retried: true, jobId: job.failedJob.id });
@@ -347,7 +352,8 @@ describe("JobsService — DLQ admin surface", () => {
       },
       {
         reminderExecutionExists,
-        retryFailedPdfExport: vi.fn<RetryFailedPdfExport>(),
+        retryPdfExportGeneration: vi.fn<RetryPdfExportGeneration>(),
+        listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
       },
     );
 
@@ -391,13 +397,14 @@ describe("JobsService — DLQ admin surface", () => {
       const reviveFailedReminderExecution = vi
         .fn()
         .mockResolvedValue(undefined);
-      const retryFailedPdfExport = vi.fn<RetryFailedPdfExport>();
+      const retryPdfExportGeneration = vi.fn<RetryPdfExportGeneration>();
       const service = new JobsService(
         makeRegistry(makeQueue({ failed: [job] })),
         {
           reminderExecutionExists,
           reviveFailedReminderExecution,
-          retryFailedPdfExport,
+          retryPdfExportGeneration,
+          listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
         },
       );
 
@@ -416,7 +423,7 @@ describe("JobsService — DLQ admin surface", () => {
       expect(reviveFailedReminderExecution).not.toHaveBeenCalled();
       expect(job.retry).not.toHaveBeenCalled();
       expect(job.remove).not.toHaveBeenCalled();
-      expect(retryFailedPdfExport).not.toHaveBeenCalled();
+      expect(retryPdfExportGeneration).not.toHaveBeenCalled();
     },
   );
 
@@ -432,7 +439,8 @@ describe("JobsService — DLQ admin surface", () => {
       {
         reminderExecutionExists,
         reviveFailedReminderExecution: vi.fn(),
-        retryFailedPdfExport: vi.fn<RetryFailedPdfExport>(),
+        retryPdfExportGeneration: vi.fn<RetryPdfExportGeneration>(),
+        listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
       },
     );
 
@@ -460,10 +468,14 @@ describe("JobsService — DLQ admin surface", () => {
         state,
       });
       const reminderExecutionExists = vi.fn();
-      const retryFailedPdfExport = vi.fn<RetryFailedPdfExport>();
+      const retryPdfExportGeneration = vi.fn<RetryPdfExportGeneration>();
       const service = new JobsService(
         makeRegistry(makeQueue({ failed: [job] }), "semantic-index"),
-        { reminderExecutionExists, retryFailedPdfExport },
+        {
+          reminderExecutionExists,
+          retryPdfExportGeneration,
+          listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
+        },
       );
 
       const result = await service.retryFailed({
@@ -477,7 +489,7 @@ describe("JobsService — DLQ admin surface", () => {
       });
       expect(job.getState).toHaveBeenCalled();
       expect(reminderExecutionExists).not.toHaveBeenCalled();
-      expect(retryFailedPdfExport).not.toHaveBeenCalled();
+      expect(retryPdfExportGeneration).not.toHaveBeenCalled();
       expect(job.retry).not.toHaveBeenCalled();
       expect(job.remove).not.toHaveBeenCalled();
     },
@@ -497,7 +509,8 @@ describe("JobsService — DLQ admin surface", () => {
       },
       {
         reminderExecutionExists,
-        retryFailedPdfExport: vi.fn<RetryFailedPdfExport>(),
+        retryPdfExportGeneration: vi.fn<RetryPdfExportGeneration>(),
+        listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
       },
     );
 
@@ -622,7 +635,7 @@ describe("JobsService — DLQ admin surface", () => {
   });
 });
 
-describe("JobsService — pdf-export coordinated retry", () => {
+describe("JobsService — pdf-export generation retry", () => {
   function pdfQueue(job: FakeJob) {
     return {
       names: QUEUE_NAMES,
@@ -633,51 +646,140 @@ describe("JobsService — pdf-export coordinated retry", () => {
     } satisfies AdminJobsQueueRegistry;
   }
 
-  it("delegates to the coordinated seam instead of a bare queue retry", async () => {
-    const job = makeJob({ id: "pdf-job-1", queue: "pdf-export" });
-    const reminderExecutionExists = vi.fn();
-    const retryFailedPdfExport = vi
-      .fn<RetryFailedPdfExport>()
+  // A retained failed-list entry: queue id `${jobId}-g${generation}` bound to
+  // a payload identity carrying the same durable jobId and generation.
+  function pdfJob(durableJobId: string, generation: number, state = "failed") {
+    return makeJob({
+      id: `${durableJobId}-g${generation}`,
+      queue: "pdf-export",
+      state,
+      pdfExportIdentity: {
+        jobId: durableJobId,
+        reportId: "report-1",
+        requestedBy: "user-1",
+        generation,
+      },
+    });
+  }
+
+  it("binds the caller-selected queue generation to the durable retry seam", async () => {
+    const job = pdfJob("pdf-job-1", 2);
+    const retryPdfExportGeneration = vi
+      .fn<RetryPdfExportGeneration>()
       .mockResolvedValue("retried");
     const service = new JobsService(pdfQueue(job), {
-      reminderExecutionExists,
-      retryFailedPdfExport,
+      reminderExecutionExists: vi.fn(),
+      retryPdfExportGeneration,
+      listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
     });
 
     const result = await service.retryFailed({
       queue: "pdf-export",
-      jobId: "pdf-job-1",
+      jobId: "pdf-job-1-g2",
     });
 
-    expect(result).toEqual({ retried: true, jobId: "pdf-job-1" });
-    // The seam received the payload identity plus the live queue primitives;
-    // the service never touches job.retry() itself on this path.
-    expect(reminderExecutionExists).not.toHaveBeenCalled();
-    expect(job.retry).not.toHaveBeenCalled();
-    expect(retryFailedPdfExport).toHaveBeenCalledTimes(1);
-    const input = retryFailedPdfExport.mock.calls[0]?.[0];
-    expect(input?.identity).toEqual({
+    expect(result).toEqual({ retried: true, jobId: "pdf-job-1-g2" });
+    // The seam receives the durable jobId plus the generation the caller
+    // selected on the queue entry — never the row's current generation,
+    // which this layer never reads.
+    expect(retryPdfExportGeneration).toHaveBeenCalledTimes(1);
+    expect(retryPdfExportGeneration).toHaveBeenCalledWith({
       jobId: "pdf-job-1",
-      reportId: "report-1",
-      requestedBy: "user-1",
+      expectedGeneration: 2,
     });
-    await expect(input?.queue.isFailed()).resolves.toBe(true);
-    await input?.queue.retry();
-    expect(job.retry).toHaveBeenCalledTimes(1);
+    // No BullMQ job.retry() or live-state read survives on the pdf path.
+    expect(job.getState).not.toHaveBeenCalled();
+    expect(job.retry).not.toHaveBeenCalled();
+    expect(job.remove).not.toHaveBeenCalled();
+  });
+
+  it("reports the idempotent already-advanced outcome as retried", async () => {
+    // A repeat of the same caller-selected generation after a successful
+    // transition already holds the requested end state — pending(g+1) with
+    // its queue job — so the caller hears success, not a false decline.
+    const job = pdfJob("pdf-job-1", 1);
+    const retryPdfExportGeneration = vi
+      .fn<RetryPdfExportGeneration>()
+      .mockResolvedValue("already-advanced");
+    const service = new JobsService(pdfQueue(job), {
+      reminderExecutionExists: vi.fn(),
+      retryPdfExportGeneration,
+      listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
+    });
+
+    const result = await service.retryFailed({
+      queue: "pdf-export",
+      jobId: "pdf-job-1-g1",
+    });
+
+    expect(result).toEqual({ retried: true, jobId: "pdf-job-1-g1" });
+    expect(retryPdfExportGeneration).toHaveBeenCalledWith({
+      jobId: "pdf-job-1",
+      expectedGeneration: 1,
+    });
+    expect(job.retry).not.toHaveBeenCalled();
+  });
+
+  it("a retained g1 queue entry cannot advance a row already failed at g2", async () => {
+    // The retained entry still parses a valid generation-1 identity; the
+    // durable transition's locked generation check rejects it because the
+    // row is already at g2 — no write, no new queue job, no job.retry().
+    const job = pdfJob("pdf-job-1", 1);
+    const retryPdfExportGeneration = vi
+      .fn<RetryPdfExportGeneration>()
+      .mockResolvedValue("ineligible");
+    const service = new JobsService(pdfQueue(job), {
+      reminderExecutionExists: vi.fn(),
+      retryPdfExportGeneration,
+      listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
+    });
+
+    const result = await service.retryFailed({
+      queue: "pdf-export",
+      jobId: "pdf-job-1-g1",
+    });
+
+    expect(retryPdfExportGeneration).toHaveBeenCalledWith({
+      jobId: "pdf-job-1",
+      expectedGeneration: 1,
+    });
+    expect(result).toEqual({
+      retried: false,
+      jobId: "pdf-job-1-g1",
+      reason:
+        "PDF export row is missing, not failed, or bound to another payload.",
+    });
+    expect(job.getState).not.toHaveBeenCalled();
+    expect(job.retry).not.toHaveBeenCalled();
+    expect(job.remove).not.toHaveBeenCalled();
   });
 
   it.each([
-    [{ jobId: "pdf-job-null", identity: null }, "pdf-job-null"],
+    [{ jobId: "pdf-job-null-g1", identity: null }, "pdf-job-null-g1"],
     [
       {
-        jobId: "pdf-job-mismatch",
+        jobId: "pdf-job-mismatch-g1",
         identity: {
           jobId: "other-job",
           reportId: "report-1",
           requestedBy: "user-1",
+          generation: 1,
         },
       },
-      "pdf-job-mismatch",
+      "pdf-job-mismatch-g1",
+    ],
+    [
+      {
+        // The generation inside the queue id disagrees with the payload's.
+        jobId: "pdf-job-skew-g2",
+        identity: {
+          jobId: "pdf-job-skew",
+          reportId: "report-1",
+          requestedBy: "user-1",
+          generation: 1,
+        },
+      },
+      "pdf-job-skew-g2",
     ],
   ] as const)(
     "rejects malformed or mismatched payload identity with zero writes and zero retry",
@@ -687,10 +789,11 @@ describe("JobsService — pdf-export coordinated retry", () => {
         queue: "pdf-export",
         pdfExportIdentity: identity,
       });
-      const retryFailedPdfExport = vi.fn<RetryFailedPdfExport>();
+      const retryPdfExportGeneration = vi.fn<RetryPdfExportGeneration>();
       const service = new JobsService(pdfQueue(job), {
         reminderExecutionExists: vi.fn(),
-        retryFailedPdfExport,
+        retryPdfExportGeneration,
+        listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
       });
 
       const result = await service.retryFailed({
@@ -703,91 +806,113 @@ describe("JobsService — pdf-export coordinated retry", () => {
         jobId: requestedId,
         reason: "PDF export payload identity is missing or mismatched.",
       });
-      expect(retryFailedPdfExport).not.toHaveBeenCalled();
+      expect(retryPdfExportGeneration).not.toHaveBeenCalled();
       expect(job.getState).not.toHaveBeenCalled();
       expect(job.retry).not.toHaveBeenCalled();
       expect(job.remove).not.toHaveBeenCalled();
     },
   );
 
-  it.each([
-    {
-      outcome: "queue-not-failed" as const,
-      reason: "PDF export queue job is no longer failed.",
-    },
-    {
-      outcome: "ineligible" as const,
-      reason:
-        "PDF export row is missing, not failed, or bound to another payload.",
-    },
-  ])(
-    "maps a declined pdf-export outcome ($outcome) to retried=false",
-    async ({ outcome, reason }) => {
-      const job = makeJob({ id: "pdf-job-2", queue: "pdf-export" });
-      const retryFailedPdfExport = vi
-        .fn<RetryFailedPdfExport>()
-        .mockResolvedValue(outcome);
-      const service = new JobsService(pdfQueue(job), {
-        reminderExecutionExists: vi.fn(),
-        retryFailedPdfExport,
-      });
-
-      const result = await service.retryFailed({
-        queue: "pdf-export",
-        jobId: "pdf-job-2",
-      });
-
-      expect(result).toEqual({ retried: false, jobId: "pdf-job-2", reason });
-      expect(job.retry).not.toHaveBeenCalled();
-    },
-  );
-
-  it("propagates a rejected coordinated retry as an uncertain error, not a success", async () => {
-    const job = makeJob({ id: "pdf-job-3", queue: "pdf-export" });
-    const retryFailedPdfExport = vi
-      .fn<RetryFailedPdfExport>()
-      .mockRejectedValue(new Error("queue.retry acknowledgement lost"));
+  it("propagates a rejected generation retry as an uncertain error, not a success", async () => {
+    const job = pdfJob("pdf-job-3", 1);
+    const retryPdfExportGeneration = vi
+      .fn<RetryPdfExportGeneration>()
+      .mockRejectedValue(new Error("queue add acknowledgement lost"));
     const service = new JobsService(pdfQueue(job), {
       reminderExecutionExists: vi.fn(),
-      retryFailedPdfExport,
+      retryPdfExportGeneration,
+      listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
     });
 
     await expect(
-      service.retryFailed({ queue: "pdf-export", jobId: "pdf-job-3" }),
-    ).rejects.toThrow("queue.retry acknowledgement lost");
+      service.retryFailed({ queue: "pdf-export", jobId: "pdf-job-3-g1" }),
+    ).rejects.toThrow("queue add acknowledgement lost");
     expect(job.retry).not.toHaveBeenCalled();
   });
 
-  it("delegates a non-failed queue job to the coordinated seam without an eager precheck", async () => {
-    const job = makeJob({
-      id: "pdf-job-active",
-      queue: "pdf-export",
-      state: "active",
-    });
-    const retryFailedPdfExport = vi
-      .fn<RetryFailedPdfExport>()
-      .mockImplementation(async ({ queue }) =>
-        (await queue.isFailed()) ? "retried" : "queue-not-failed",
-      );
+  it("never inspects live queue state on the pdf path — the durable row arbitrates", async () => {
+    // A stale UI request can name a queue job that is no longer failed; the
+    // durable transition still decides eligibility — no queue-state precheck.
+    const job = pdfJob("pdf-job-active", 1, "active");
+    const retryPdfExportGeneration = vi
+      .fn<RetryPdfExportGeneration>()
+      .mockResolvedValue("ineligible");
     const service = new JobsService(pdfQueue(job), {
       reminderExecutionExists: vi.fn(),
-      retryFailedPdfExport,
+      retryPdfExportGeneration,
+      listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
     });
 
     const result = await service.retryFailed({
       queue: "pdf-export",
-      jobId: "pdf-job-active",
+      jobId: "pdf-job-active-g1",
     });
 
-    // The seam arbitrates state under the export row lock; the only getState
-    // call is the one it makes through isFailed — no service-level precheck.
-    expect(retryFailedPdfExport).toHaveBeenCalledTimes(1);
-    expect(job.getState).toHaveBeenCalledTimes(1);
+    expect(retryPdfExportGeneration).toHaveBeenCalledTimes(1);
+    expect(job.getState).not.toHaveBeenCalled();
     expect(job.retry).not.toHaveBeenCalled();
     expect(result).toEqual({
       retried: false,
-      jobId: "pdf-job-active",
-      reason: "PDF export queue job is no longer failed.",
+      jobId: "pdf-job-active-g1",
+      reason:
+        "PDF export row is missing, not failed, or bound to another payload.",
     });
   });
+});
+
+describe("JobsService — pdf recovery surface", () => {
+  const RECOVERY_ROW: PdfRecoveryJob = {
+    jobId: "55555555-5555-4555-8555-555555555555",
+    reportId: "66666666-6666-4666-8666-666666666666",
+    generation: 2,
+    requestedBy: "77777777-7777-4777-8777-777777777777",
+    status: "recovery_required",
+    createdAt: new Date("2026-09-01T10:00:00.000Z"),
+  };
+
+  function recoveryService(
+    overrides: Partial<{
+      retryPdfExportGeneration: RetryPdfExportGeneration;
+      listPdfRecoveryJobs: () => Promise<readonly PdfRecoveryJob[]>;
+    }> = {},
+  ) {
+    return new JobsService(makeRegistry(makeQueue({ failed: [] })), {
+      reminderExecutionExists: vi.fn(),
+      retryPdfExportGeneration: vi
+        .fn<RetryPdfExportGeneration>()
+        .mockResolvedValue("retried"),
+      listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
+      ...overrides,
+    });
+  }
+
+  it("lists quarantined export rows from the durable side, never Redis", async () => {
+    const listPdfRecoveryJobs = vi.fn().mockResolvedValue([RECOVERY_ROW]);
+    const service = recoveryService({ listPdfRecoveryJobs });
+
+    await expect(service.listPdfRecovery()).resolves.toEqual({
+      jobs: [RECOVERY_ROW],
+    });
+    expect(listPdfRecoveryJobs).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["retried", "already-advanced", "ineligible"] as const)(
+    "retryPdfRecovery passes {jobId, expectedGeneration} and reports the verbatim %s outcome",
+    async (outcome) => {
+      const retryPdfExportGeneration = vi
+        .fn<RetryPdfExportGeneration>()
+        .mockResolvedValue(outcome);
+      const service = recoveryService({ retryPdfExportGeneration });
+
+      const input = {
+        jobId: RECOVERY_ROW.jobId,
+        expectedGeneration: RECOVERY_ROW.generation,
+      };
+      await expect(service.retryPdfRecovery(input)).resolves.toEqual({
+        jobId: RECOVERY_ROW.jobId,
+        outcome,
+      });
+      expect(retryPdfExportGeneration).toHaveBeenCalledWith(input);
+    },
+  );
 });

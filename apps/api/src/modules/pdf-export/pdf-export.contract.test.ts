@@ -4,16 +4,37 @@ import type {
   PublishedReportSnapshot,
   UserSession,
 } from "@customreport/shared";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { AUTH_COOKIE_NAME } from "@customreport/shared";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  expectTypeOf,
+  it,
+  vi,
+} from "vitest";
 
 import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import { NOOP_PDF_EXPORT_TELEMETRY } from "../../test-utils/pdf-export.js";
 import {
+  dbStatusToDomain,
+  type LockedPdfExportJobRow,
+  PdfExportStateConflictError,
+  pdfStatusToDb,
+  toDomainStatus,
+  toExportJob,
+  UnsupportedPdfExportStatusError,
+} from "./pdf-export.job-state.js";
+import {
   type PdfExportEnqueuer,
   type PdfExportJobRecord,
   type PdfExportLockedJobWrites,
+  type PdfExportPendingCandidate,
+  type PdfExportPendingCursor,
   type PdfExportRepository,
+  type PdfExportRetryOutcome,
   type PdfExportTelemetry,
 } from "./pdf-export.ports.js";
 import { PdfExportDomainError, PdfExportService } from "./pdf-export.service";
@@ -101,9 +122,12 @@ function createRepository(
       const snapshot = jobs.get(jobId);
       const backup = snapshot ? structuredClone(snapshot) : undefined;
       const writes: PdfExportLockedJobWrites = {
-        markFailed: (_error: string) => {
+        markFailed: (generation: number, _error: string) => {
           const current = jobs.get(jobId);
-          if (current?.status === "queued") {
+          if (
+            current?.status === "queued" &&
+            current.generation === generation
+          ) {
             jobs.set(jobId, {
               ...current,
               status: "failed",
@@ -113,9 +137,16 @@ function createRepository(
           }
           return Promise.resolve();
         },
-        markCompleted: (artifactUrl: string, checksum: string) => {
+        markCompleted: (
+          generation: number,
+          artifactUrl: string,
+          checksum: string,
+        ) => {
           const current = jobs.get(jobId);
-          if (current?.status !== "queued") {
+          if (
+            current?.status !== "queued" ||
+            current.generation !== generation
+          ) {
             return Promise.reject(
               new Error(`PDF export job ${jobId} is not pending.`),
             );
@@ -130,16 +161,36 @@ function createRepository(
           jobs.set(jobId, completed);
           return Promise.resolve(structuredClone(completed));
         },
-        reviveFailed: () => {
+        markRecoveryRequired: (generation: number) => {
           const current = jobs.get(jobId);
-          if (current?.status !== "failed") {
+          if (
+            current?.status !== "queued" ||
+            current.generation !== generation
+          ) {
             return Promise.reject(
-              new Error(`PDF export job ${jobId} is not failed.`),
+              new Error(`PDF export job ${jobId} is not pending.`),
+            );
+          }
+          jobs.set(jobId, { ...current, status: "recovery_required" });
+          return Promise.resolve();
+        },
+        advanceGeneration: (expectedGeneration: number) => {
+          const current = jobs.get(jobId);
+          if (
+            (current?.status !== "failed" &&
+              current?.status !== "recovery_required") ||
+            current.generation !== expectedGeneration
+          ) {
+            return Promise.reject(
+              new Error(
+                `PDF export job ${jobId} is not retryable at generation ${expectedGeneration}.`,
+              ),
             );
           }
           jobs.set(jobId, {
             ...current,
             status: "queued",
+            generation: expectedGeneration + 1,
             artifactUrl: null,
             checksum: null,
           });
@@ -186,18 +237,69 @@ function createRepository(
       return Promise.resolve(job ? structuredClone(job) : null);
     },
     saveExportJob(job: PdfExportJob) {
-      jobs.set(job.jobId, {
-        ...structuredClone(job),
-        requestedBy: expectDefined(jobs.get(job.jobId)).requestedBy,
-      });
-      return Promise.resolve(structuredClone(job));
+      // Mirrors the repository's pending+generation CAS: a completion wins
+      // only while the row is queued at the claimed generation; an identical
+      // completed artifact reads back as an idempotent success.
+      const current = jobs.get(job.jobId);
+      if (
+        current?.status === "queued" &&
+        current.generation === job.generation
+      ) {
+        const completed: PdfExportJobRecord = {
+          ...structuredClone(job),
+          requestedBy: current.requestedBy,
+        };
+        jobs.set(job.jobId, completed);
+        return Promise.resolve(structuredClone(completed));
+      }
+      if (
+        current?.status === "completed" &&
+        current.artifactUrl === job.artifactUrl &&
+        current.checksum === job.checksum
+      ) {
+        return Promise.resolve(structuredClone(current));
+      }
+      return Promise.reject(
+        new PdfExportStateConflictError(
+          job.jobId,
+          current?.status ?? "missing",
+        ),
+      );
     },
-    markExportFailed(jobId: string, _error: string) {
+    markExportFailed(jobId: string, generation: number, _error: string) {
       const job = jobs.get(jobId);
-      if (job) {
+      if (job?.status === "queued" && job.generation === generation) {
         jobs.set(jobId, { ...job, status: "failed" as const });
       }
       return Promise.resolve();
+    },
+    listPendingExportCandidates(
+      bound: Date,
+      cursor: PdfExportPendingCursor | null,
+      limit: number,
+    ): Promise<PdfExportPendingCandidate[]> {
+      const matched = [...jobs.values()]
+        .filter(
+          (job) =>
+            job.status === "queued" &&
+            job.requestedAt <= bound &&
+            (cursor === null ||
+              job.requestedAt > cursor.createdAt ||
+              (job.requestedAt.getTime() === cursor.createdAt.getTime() &&
+                job.jobId > cursor.jobId)),
+        )
+        .sort(
+          (a, b) =>
+            a.requestedAt.getTime() - b.requestedAt.getTime() ||
+            a.jobId.localeCompare(b.jobId),
+        )
+        .slice(0, limit)
+        .map((job) => ({
+          jobId: job.jobId,
+          generation: job.generation,
+          createdAt: job.requestedAt,
+        }));
+      return Promise.resolve(matched);
     },
     runLockedExportJob,
   };
@@ -272,6 +374,7 @@ describe("PdfExportService — contract tests", () => {
           {
             reportId,
             jobId: job.jobId,
+            generation: 1,
             requestedBy: requesterSession.userId,
           },
           {},
@@ -326,6 +429,7 @@ describe("PdfExportService — contract tests", () => {
 
       const completed = await service.markExportCompleted(
         job.jobId,
+        job.generation,
         "/exports/test.pdf",
         "sha256-test",
       );
@@ -338,7 +442,11 @@ describe("PdfExportService — contract tests", () => {
       const service = createPdfExportService(repo);
       const job = await service.requestPdfExport(reportId, requesterSession);
 
-      await service.markExportFailed(job.jobId, "Browser crashed");
+      await service.markExportFailed(
+        job.jobId,
+        job.generation,
+        "Browser crashed",
+      );
 
       const fetched = await service.getPdfExportStatus(
         job.jobId,
@@ -413,6 +521,7 @@ describe("PdfExportService — contract tests", () => {
 
       const completed = await service.markExportCompleted(
         queued.jobId,
+        queued.generation,
         "/exports/report-2026-04.pdf",
         "sha256-abc123",
       );
@@ -429,6 +538,7 @@ describe("PdfExportService — contract tests", () => {
       const before = new Date();
       const completed = await service.markExportCompleted(
         queued.jobId,
+        queued.generation,
         "/exports/report.pdf",
         "checksum-value",
       );
@@ -453,12 +563,17 @@ describe("PdfExportService — contract tests", () => {
       const service = createPdfExportService(repo);
       const queued = await service.requestPdfExport(reportId, requesterSession);
 
-      await service.markExportFailed(queued.jobId, "renderer timeout");
+      await service.markExportFailed(
+        queued.jobId,
+        queued.generation,
+        "Playwright timeout",
+      );
 
       expect(markExportFailed).toHaveBeenCalledTimes(1);
       expect(markExportFailed).toHaveBeenCalledWith(
         queued.jobId,
-        "renderer timeout",
+        queued.generation,
+        "Playwright timeout",
       );
     });
   });
@@ -484,9 +599,8 @@ describe("PdfExportService — contract tests", () => {
       }
     });
 
-    // The credential is scoped to the print-origin host through Gotenberg's
-    // `domain`-keyed `cookies` field, so the token cannot cross origins.
-    it("scopes the cookie domain to the PDF_BASE_URL hostname for https", () => {
+    // The accepted Gotenberg contract scopes the renderer cookie by host.
+    it("scopes the Gotenberg cookie to the PDF_BASE_URL hostname for https", () => {
       const originalBaseUrl = process.env.PDF_BASE_URL;
       process.env.PDF_BASE_URL = "https://reports.example.com";
 
@@ -496,8 +610,16 @@ describe("PdfExportService — contract tests", () => {
         );
         const cookies = service.buildAuthCookies("secure-token");
 
-        expect(expectDefined(cookies[0]).domain).toBe("reports.example.com");
-        expect(cookies[0]).not.toHaveProperty("url");
+        expect(cookies).toEqual([
+          {
+            name: AUTH_COOKIE_NAME,
+            value: "secure-token",
+            domain: "reports.example.com",
+            path: "/",
+            httpOnly: true,
+            sameSite: "Lax",
+          },
+        ]);
       } finally {
         if (originalBaseUrl === undefined) {
           delete process.env.PDF_BASE_URL;
@@ -505,6 +627,118 @@ describe("PdfExportService — contract tests", () => {
           process.env.PDF_BASE_URL = originalBaseUrl;
         }
       }
+    });
+  });
+});
+
+describe("generation recovery surface contracts", () => {
+  // The orphan-scan probe and the retry outcome are the seam the scheduler
+  // and admin surfaces bind to — pin the shapes they compiled against.
+  it("scanOrphanedPendingExports takes a generation-scoped job probe", () => {
+    expectTypeOf<PdfExportService["scanOrphanedPendingExports"]>()
+      .parameter(0)
+      .toEqualTypeOf<
+        (
+          candidate: Pick<PdfExportPendingCandidate, "jobId" | "generation">,
+        ) => Promise<boolean>
+      >();
+  });
+
+  it("retryExportGeneration resolves the documented outcome vocabulary", () => {
+    expectTypeOf<PdfExportService["retryExportGeneration"]>()
+      .parameter(0)
+      .toEqualTypeOf<{
+        readonly jobId: string;
+        readonly expectedGeneration: number;
+      }>();
+    expectTypeOf<
+      PdfExportService["retryExportGeneration"]
+    >().returns.resolves.toEqualTypeOf<PdfExportRetryOutcome>();
+    expectTypeOf<PdfExportRetryOutcome>().toEqualTypeOf<
+      "retried" | "already-advanced" | "ineligible"
+    >();
+  });
+
+  it("assertPdfExportJobIdentity is the pending+generation pre-render gate", () => {
+    expectTypeOf<
+      PdfExportService["assertPdfExportJobIdentity"]
+    >().toEqualTypeOf<
+      (
+        jobId: string,
+        reportId: string,
+        requestedBy: string,
+        generation: number,
+      ) => Promise<void>
+    >();
+  });
+
+  it("markExportCompleted claims a generation before artifact metadata", () => {
+    expectTypeOf<PdfExportService["markExportCompleted"]>().toEqualTypeOf<
+      (
+        jobId: string,
+        generation: number,
+        artifactUrl: string,
+        checksum: string,
+      ) => Promise<PdfExportJob>
+    >();
+  });
+});
+
+describe("pdf-export job-state mapping", () => {
+  function lockedRow(
+    overrides: Partial<LockedPdfExportJobRow> = {},
+  ): LockedPdfExportJobRow {
+    return {
+      id: "759b2767-0f86-41e2-b025-49730ca010e4",
+      reportId,
+      status: "pending",
+      generation: 1,
+      templateVersion: "phase-2-pdf-v1",
+      filePath: null,
+      checksum: null,
+      error: null,
+      requestedBy: requesterSession.userId,
+      createdAt: new Date("2026-06-09T00:00:00Z"),
+      updatedAt: new Date("2026-06-09T00:00:00Z"),
+      ...overrides,
+    };
+  }
+
+  it("maps every durable status to its domain status", () => {
+    expect(dbStatusToDomain.pending).toBe("queued");
+    expect(dbStatusToDomain.completed).toBe("completed");
+    expect(dbStatusToDomain.failed).toBe("failed");
+    expect(dbStatusToDomain.recovery_required).toBe("recovery_required");
+    expect(toDomainStatus("recovery_required")).toBe("recovery_required");
+  });
+
+  it("maps every domain status back to its durable status", () => {
+    expect(pdfStatusToDb.queued).toBe("pending");
+    expect(pdfStatusToDb.completed).toBe("completed");
+    expect(pdfStatusToDb.failed).toBe("failed");
+    expect(pdfStatusToDb.recovery_required).toBe("recovery_required");
+  });
+
+  it("still throws UnsupportedPdfExportStatusError on unknown statuses", () => {
+    expect(() => toDomainStatus("paused")).toThrow(
+      UnsupportedPdfExportStatusError,
+    );
+    expect(() => toExportJob(lockedRow({ status: "paused" }))).toThrow(
+      UnsupportedPdfExportStatusError,
+    );
+  });
+
+  it("carries generation and recovery_required through toExportJob", () => {
+    const record = toExportJob(
+      lockedRow({ status: "recovery_required", generation: 3 }),
+    );
+
+    expect(record).toMatchObject({
+      jobId: "759b2767-0f86-41e2-b025-49730ca010e4",
+      reportId,
+      status: "recovery_required",
+      generation: 3,
+      requestedBy: requesterSession.userId,
     });
   });
 });

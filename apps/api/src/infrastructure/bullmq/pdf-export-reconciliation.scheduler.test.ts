@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type {
   PdfExportJobIdentity,
+  PdfExportPendingCandidate,
   PdfExportTerminalState,
 } from "../../modules/pdf-export/index.js";
 import { PdfExportReconciliationScheduler } from "./pdf-export-reconciliation.scheduler.js";
@@ -13,8 +14,20 @@ type ReconcileTerminalState = (
   loadCurrentTerminalState: () => Promise<PdfExportTerminalState | null>,
 ) => Promise<boolean>;
 
+// The service owns candidate paging and the quarantine write; runOnce hands
+// it a live probe answering whether `${jobId}-g${generation}` is in the queue.
+type OrphanQueueProbe = (
+  candidate: Pick<PdfExportPendingCandidate, "jobId" | "generation">,
+) => Promise<boolean>;
+type ScanOrphanedPendingExports = (
+  hasQueueJob: OrphanQueueProbe,
+) => Promise<unknown>;
+
 function job(input: {
   jobId: string;
+  generation?: number;
+  omitGeneration?: boolean;
+  queueId?: string | undefined;
   reportId?: string;
   requestedBy?: string;
   failedReason?: string;
@@ -22,12 +35,21 @@ function job(input: {
   state?: Awaited<ReturnType<Job["getState"]>>;
   stateError?: Error;
 }): Job<unknown> {
+  const generation = input.omitGeneration ? undefined : (input.generation ?? 1);
   return {
-    id: input.jobId,
+    // `in` keeps an explicit `undefined` — an id-less delivery — distinct
+    // from an omitted option that defaults to the dispatch-correct id.
+    id:
+      "queueId" in input
+        ? input.queueId
+        : generation === undefined
+          ? input.jobId
+          : `${input.jobId}-g${generation}`,
     data: {
       jobId: input.jobId,
       reportId: input.reportId ?? "report-1",
       requestedBy: input.requestedBy ?? "user-1",
+      ...(generation === undefined ? {} : { generation }),
     },
     failedReason: input.failedReason,
     finishedOn: Date.now(),
@@ -69,6 +91,21 @@ function recordingReconcile(loaderResults: unknown[]) {
     });
 }
 
+// runOnce exercises both passes; each test overrides only the collaborator
+// under scrutiny. The default scan resolves without probing the queue.
+function service(overrides: {
+  reconcileTerminalState?: ReconcileTerminalState;
+  scanOrphanedPendingExports?: ScanOrphanedPendingExports;
+}) {
+  return {
+    reconcileTerminalState:
+      overrides.reconcileTerminalState ?? vi.fn<ReconcileTerminalState>(),
+    scanOrphanedPendingExports:
+      overrides.scanOrphanedPendingExports ??
+      vi.fn<ScanOrphanedPendingExports>().mockResolvedValue(undefined),
+  };
+}
+
 describe("PdfExportReconciliationScheduler", () => {
   afterEach(() => vi.restoreAllMocks());
 
@@ -76,14 +113,14 @@ describe("PdfExportReconciliationScheduler", () => {
     const logError = vi
       .spyOn(Logger.prototype, "error")
       .mockImplementation(() => undefined);
-    const reconcileTerminalState = vi.fn();
+    const reconcileTerminalState = vi.fn<ReconcileTerminalState>();
     const getJobs = vi
       .fn<Queue["getJobs"]>()
       .mockRejectedValueOnce(new Error("Queue unavailable"))
       .mockResolvedValueOnce([]);
     const queue = { getJobs } as unknown as Queue;
     const scheduler = new PdfExportReconciliationScheduler(
-      { reconcileTerminalState },
+      service({ reconcileTerminalState }),
       { get: () => queue },
     );
 
@@ -114,7 +151,7 @@ describe("PdfExportReconciliationScheduler", () => {
       }),
     ]);
     const scheduler = new PdfExportReconciliationScheduler(
-      { reconcileTerminalState },
+      service({ reconcileTerminalState }),
       { get: () => queue },
     );
 
@@ -123,12 +160,22 @@ describe("PdfExportReconciliationScheduler", () => {
     expect(queue.getJobs).toHaveBeenCalledWith(["completed", "failed"], 0, 999);
     expect(reconcileTerminalState).toHaveBeenNthCalledWith(
       1,
-      { jobId: "failed", reportId: "report-1", requestedBy: "user-1" },
+      {
+        jobId: "failed",
+        reportId: "report-1",
+        requestedBy: "user-1",
+        generation: 1,
+      },
       expect.any(Function),
     );
     expect(reconcileTerminalState).toHaveBeenNthCalledWith(
       2,
-      { jobId: "completed", reportId: "report-1", requestedBy: "user-1" },
+      {
+        jobId: "completed",
+        reportId: "report-1",
+        requestedBy: "user-1",
+        generation: 1,
+      },
       expect.any(Function),
     );
     // The loader re-read the CURRENT state inside the lock and produced the
@@ -138,6 +185,7 @@ describe("PdfExportReconciliationScheduler", () => {
         jobId: "failed",
         reportId: "report-1",
         requestedBy: "user-1",
+        generation: 1,
         status: "failed",
         error: "browser crashed",
       },
@@ -145,13 +193,54 @@ describe("PdfExportReconciliationScheduler", () => {
         jobId: "completed",
         reportId: "report-1",
         requestedBy: "user-1",
+        generation: 1,
         status: "completed",
         artifactUrl: "/pdfs/completed.pdf",
         checksum: "sha",
       },
     ]);
-    expect(queue.getJob).toHaveBeenCalledWith("failed");
-    expect(queue.getJob).toHaveBeenCalledWith("completed");
+    expect(queue.getJob).toHaveBeenCalledWith("failed-g1");
+    expect(queue.getJob).toHaveBeenCalledWith("completed-g1");
+  });
+
+  it("scopes the terminal identity and the queue lookup to the payload generation", async () => {
+    const loaderResults: unknown[] = [];
+    const reconcileTerminalState = recordingReconcile(loaderResults);
+    const queue = queueWith([
+      job({
+        jobId: "job-9",
+        generation: 4,
+        state: "failed",
+        failedReason: "browser crashed",
+      }),
+    ]);
+    const scheduler = new PdfExportReconciliationScheduler(
+      service({ reconcileTerminalState }),
+      { get: () => queue },
+    );
+
+    await scheduler.runOnce();
+
+    expect(reconcileTerminalState).toHaveBeenCalledWith(
+      {
+        jobId: "job-9",
+        reportId: "report-1",
+        requestedBy: "user-1",
+        generation: 4,
+      },
+      expect.any(Function),
+    );
+    expect(queue.getJob).toHaveBeenCalledWith("job-9-g4");
+    expect(loaderResults).toEqual([
+      {
+        jobId: "job-9",
+        reportId: "report-1",
+        requestedBy: "user-1",
+        generation: 4,
+        status: "failed",
+        error: "browser crashed",
+      },
+    ]);
   });
 
   it("reconciles a completed retry even when BullMQ retains its earlier failure reason", async () => {
@@ -169,14 +258,19 @@ describe("PdfExportReconciliationScheduler", () => {
       }),
     ]);
     const scheduler = new PdfExportReconciliationScheduler(
-      { reconcileTerminalState },
+      service({ reconcileTerminalState }),
       { get: () => queue },
     );
 
     await scheduler.runOnce();
 
     expect(reconcileTerminalState).toHaveBeenCalledWith(
-      { jobId: "retry-completed", reportId: "report-1", requestedBy: "user-1" },
+      {
+        jobId: "retry-completed",
+        reportId: "report-1",
+        requestedBy: "user-1",
+        generation: 1,
+      },
       expect.any(Function),
     );
     expect(loaderResults).toEqual([
@@ -184,6 +278,7 @@ describe("PdfExportReconciliationScheduler", () => {
         jobId: "retry-completed",
         reportId: "report-1",
         requestedBy: "user-1",
+        generation: 1,
         status: "completed",
         artifactUrl: "/pdfs/retry-completed.pdf",
         checksum: "sha-retry",
@@ -196,14 +291,19 @@ describe("PdfExportReconciliationScheduler", () => {
     const reconcileTerminalState = recordingReconcile(loaderResults);
     const queue = queueWith([job({ jobId: "no-result" })]);
     const scheduler = new PdfExportReconciliationScheduler(
-      { reconcileTerminalState },
+      service({ reconcileTerminalState }),
       { get: () => queue },
     );
 
     await scheduler.runOnce();
 
     expect(reconcileTerminalState).toHaveBeenCalledWith(
-      { jobId: "no-result", reportId: "report-1", requestedBy: "user-1" },
+      {
+        jobId: "no-result",
+        reportId: "report-1",
+        requestedBy: "user-1",
+        generation: 1,
+      },
       expect.any(Function),
     );
     // The loaded state stays a bare completed marker — adopting the canonical
@@ -213,13 +313,14 @@ describe("PdfExportReconciliationScheduler", () => {
         jobId: "no-result",
         reportId: "report-1",
         requestedBy: "user-1",
+        generation: 1,
         status: "completed",
       },
     ]);
   });
 
   it("skips a stale queue payload whose id or identity is mismatched", async () => {
-    const reconcileTerminalState = vi.fn();
+    const reconcileTerminalState = vi.fn<ReconcileTerminalState>();
     const queue = {
       getJobs: vi
         .fn()
@@ -228,7 +329,7 @@ describe("PdfExportReconciliationScheduler", () => {
         ]),
     } as unknown as Queue;
     const scheduler = new PdfExportReconciliationScheduler(
-      { reconcileTerminalState },
+      service({ reconcileTerminalState }),
       { get: () => queue },
     );
 
@@ -236,6 +337,83 @@ describe("PdfExportReconciliationScheduler", () => {
 
     expect(reconcileTerminalState).not.toHaveBeenCalled();
   });
+
+  it("skips a terminal job whose queue id names another generation", async () => {
+    // A retained entry from an older generation can never reconcile the row:
+    // the payload's generation must rebuild the exact queue id.
+    const reconcileTerminalState = vi.fn<ReconcileTerminalState>();
+    const queue = queueWith([
+      job({
+        jobId: "job-1",
+        generation: 2,
+        queueId: "job-1-g1",
+        state: "failed",
+        failedReason: "old generation failure",
+      }),
+    ]);
+    const scheduler = new PdfExportReconciliationScheduler(
+      service({ reconcileTerminalState }),
+      { get: () => queue },
+    );
+
+    await scheduler.runOnce();
+
+    expect(reconcileTerminalState).not.toHaveBeenCalled();
+  });
+
+  it("skips a legacy terminal job whose payload carries no generation", async () => {
+    // Pre-migration jobs used the bare jobId; they are invisible to the
+    // generation protocol and the orphan scan reaps the stranded row instead.
+    const reconcileTerminalState = vi.fn<ReconcileTerminalState>();
+    const queue = queueWith([
+      job({ jobId: "legacy-job", omitGeneration: true }),
+    ]);
+    const scheduler = new PdfExportReconciliationScheduler(
+      service({ reconcileTerminalState }),
+      { get: () => queue },
+    );
+
+    await scheduler.runOnce();
+
+    expect(reconcileTerminalState).not.toHaveBeenCalled();
+  });
+
+  // The listing applies the same exact-match guard the processor enforces:
+  // only a delivery whose own BullMQ id equals `${jobId}-g${generation}` can
+  // supply the terminal identity — an id-less, bare, wrong-generation, or
+  // foreign queue id is skipped, never reconciled.
+  it.each([
+    { queueId: "job-1-g1", reconciles: true, label: "exact generation id" },
+    { queueId: undefined, reconciles: false, label: "no BullMQ id" },
+    { queueId: "job-1", reconciles: false, label: "bare legacy id" },
+    {
+      queueId: "job-1-g9",
+      reconciles: false,
+      label: "another generation's id",
+    },
+    { queueId: "other-job", reconciles: false, label: "a foreign job's id" },
+  ])(
+    "reconciles a listed terminal job only when its queue id is the exact generation id: $label",
+    async ({ queueId, reconciles }) => {
+      const reconcileTerminalState = vi.fn<ReconcileTerminalState>();
+      const queue = queueWith([
+        job({
+          jobId: "job-1",
+          state: "failed",
+          failedReason: "boom",
+          queueId,
+        }),
+      ]);
+      const scheduler = new PdfExportReconciliationScheduler(
+        service({ reconcileTerminalState }),
+        { get: () => queue },
+      );
+
+      await scheduler.runOnce();
+
+      expect(reconcileTerminalState).toHaveBeenCalledTimes(reconciles ? 1 : 0);
+    },
+  );
 
   it("declines a retry that is no longer terminal when the lock is held", async () => {
     // The listing saw a terminal failure; by the time the row lock is held an
@@ -247,13 +425,13 @@ describe("PdfExportReconciliationScheduler", () => {
       failedReason: "browser crashed on the first attempt",
     });
     const current = new Map([
-      ["retry-active", job({ jobId: "retry-active", state: "active" })],
+      ["retry-active-g1", job({ jobId: "retry-active", state: "active" })],
     ]);
     const loaderResults: unknown[] = [];
     const reconcileTerminalState = recordingReconcile(loaderResults);
     const queue = queueWith([listed], current);
     const scheduler = new PdfExportReconciliationScheduler(
-      { reconcileTerminalState },
+      service({ reconcileTerminalState }),
       { get: () => queue },
     );
 
@@ -261,10 +439,15 @@ describe("PdfExportReconciliationScheduler", () => {
 
     expect(reconcileTerminalState).toHaveBeenCalledTimes(1);
     expect(reconcileTerminalState).toHaveBeenCalledWith(
-      { jobId: "retry-active", reportId: "report-1", requestedBy: "user-1" },
+      {
+        jobId: "retry-active",
+        reportId: "report-1",
+        requestedBy: "user-1",
+        generation: 1,
+      },
       expect.any(Function),
     );
-    expect(queue.getJob).toHaveBeenCalledWith("retry-active");
+    expect(queue.getJob).toHaveBeenCalledWith("retry-active-g1");
     expect(loaderResults).toEqual([null]);
   });
 
@@ -276,7 +459,7 @@ describe("PdfExportReconciliationScheduler", () => {
       new Map(),
     );
     const scheduler = new PdfExportReconciliationScheduler(
-      { reconcileTerminalState },
+      service({ reconcileTerminalState }),
       { get: () => queue },
     );
 
@@ -285,6 +468,64 @@ describe("PdfExportReconciliationScheduler", () => {
     expect(reconcileTerminalState).toHaveBeenCalledTimes(1);
     expect(loaderResults).toEqual([null]);
   });
+
+  // The in-lock re-read applies the same exact-match guard to the job it
+  // fetches under `${jobId}-g${generation}`: an id-less, bare,
+  // wrong-generation, or foreign BullMQ id can never become the terminal
+  // state — the loader must resolve null and the write is declined.
+  it.each([
+    { queueId: "job-1-g1", terminal: true, label: "exact generation id" },
+    { queueId: undefined, terminal: false, label: "no BullMQ id" },
+    { queueId: "job-1", terminal: false, label: "bare legacy id" },
+    {
+      queueId: "job-1-g9",
+      terminal: false,
+      label: "another generation's id",
+    },
+    { queueId: "other-job", terminal: false, label: "a foreign job's id" },
+  ])(
+    "declines the in-lock re-read unless its queue id is the exact generation id: $label",
+    async ({ queueId, terminal }) => {
+      const listed = job({
+        jobId: "job-1",
+        state: "failed",
+        failedReason: "listed reason",
+      });
+      const reread = job({
+        jobId: "job-1",
+        state: "failed",
+        failedReason: "reread reason",
+        queueId,
+      });
+      const loaderResults: unknown[] = [];
+      const reconcileTerminalState = recordingReconcile(loaderResults);
+      const queue = {
+        getJobs: vi.fn().mockResolvedValue([listed]),
+        getJob: vi.fn().mockResolvedValue(reread),
+      } as unknown as Queue;
+      const scheduler = new PdfExportReconciliationScheduler(
+        service({ reconcileTerminalState }),
+        { get: () => queue },
+      );
+
+      await scheduler.runOnce();
+
+      expect(reconcileTerminalState).toHaveBeenCalledTimes(1);
+      expect(queue.getJob).toHaveBeenCalledWith("job-1-g1");
+      expect(loaderResults).toEqual([
+        terminal
+          ? {
+              jobId: "job-1",
+              reportId: "report-1",
+              requestedBy: "user-1",
+              generation: 1,
+              status: "failed",
+              error: "reread reason",
+            }
+          : null,
+      ]);
+    },
+  );
 
   it("isolates a state lookup failure and reconciles the valid sibling", async () => {
     const logError = vi
@@ -307,7 +548,7 @@ describe("PdfExportReconciliationScheduler", () => {
       }),
     ]);
     const scheduler = new PdfExportReconciliationScheduler(
-      { reconcileTerminalState },
+      service({ reconcileTerminalState }),
       { get: () => queue },
     );
 
@@ -323,6 +564,7 @@ describe("PdfExportReconciliationScheduler", () => {
         jobId: "completed-sibling",
         reportId: "report-1",
         requestedBy: "user-1",
+        generation: 1,
         status: "completed",
         artifactUrl: "/pdfs/completed-sibling.pdf",
         checksum: "sha-sibling",
@@ -358,7 +600,7 @@ describe("PdfExportReconciliationScheduler", () => {
         .mockResolvedValue(freshRead),
     } as unknown as Queue;
     const scheduler = new PdfExportReconciliationScheduler(
-      { reconcileTerminalState },
+      service({ reconcileTerminalState }),
       { get: () => queue },
     );
 
@@ -370,6 +612,7 @@ describe("PdfExportReconciliationScheduler", () => {
         jobId: "job-1",
         reportId: "report-1",
         requestedBy: "user-1",
+        generation: 1,
         status: "failed",
         error: "attempt-B latest reason",
       },
@@ -402,7 +645,7 @@ describe("PdfExportReconciliationScheduler", () => {
         .mockResolvedValue(freshRead),
     } as unknown as Queue;
     const scheduler = new PdfExportReconciliationScheduler(
-      { reconcileTerminalState },
+      service({ reconcileTerminalState }),
       { get: () => queue },
     );
 
@@ -414,10 +657,88 @@ describe("PdfExportReconciliationScheduler", () => {
         jobId: "job-1",
         reportId: "report-1",
         requestedBy: "user-1",
+        generation: 1,
         status: "completed",
         artifactUrl: "/pdfs/job-1.pdf",
         checksum: "sha-B",
       },
     ]);
+  });
+
+  it("hands the orphan scan a probe for the generation-scoped queue job", async () => {
+    let probe: OrphanQueueProbe | undefined;
+    const scanOrphanedPendingExports = vi
+      .fn<ScanOrphanedPendingExports>()
+      .mockImplementation((hasQueueJob) => {
+        probe = hasQueueJob;
+        return Promise.resolve();
+      });
+    const queue = queueWith(
+      [],
+      new Map([["job-9-g4", job({ jobId: "job-9", generation: 4 })]]),
+    );
+    const scheduler = new PdfExportReconciliationScheduler(
+      service({ scanOrphanedPendingExports }),
+      { get: () => queue },
+    );
+
+    await scheduler.runOnce();
+
+    // One delegation per pass — the service owns the keyset paging; the
+    // scheduler never buffers or iterates candidate rows itself.
+    expect(scanOrphanedPendingExports).toHaveBeenCalledTimes(1);
+    if (!probe) {
+      throw new Error("the orphan scan did not receive the queue probe");
+    }
+    await expect(probe({ jobId: "job-9", generation: 4 })).resolves.toBe(true);
+    expect(queue.getJob).toHaveBeenCalledWith("job-9-g4");
+    // Confirmed absence answers false — quarantining the row is the service's
+    // locked write, not the probe's.
+    await expect(probe({ jobId: "absent", generation: 1 })).resolves.toBe(
+      false,
+    );
+    expect(queue.getJob).toHaveBeenCalledWith("absent-g1");
+  });
+
+  it("propagates a probe Redis error to the service instead of answering absence", async () => {
+    let probe: OrphanQueueProbe | undefined;
+    const scanOrphanedPendingExports = vi
+      .fn<ScanOrphanedPendingExports>()
+      .mockImplementation((hasQueueJob) => {
+        probe = hasQueueJob;
+        return Promise.resolve();
+      });
+    const queue = {
+      getJobs: vi.fn().mockResolvedValue([]),
+      getJob: vi.fn().mockRejectedValue(new Error("Redis timeout")),
+    } as unknown as Queue;
+    const scheduler = new PdfExportReconciliationScheduler(
+      service({ scanOrphanedPendingExports }),
+      { get: () => queue },
+    );
+
+    await scheduler.runOnce();
+
+    if (!probe) {
+      throw new Error("the orphan scan did not receive the queue probe");
+    }
+    // An unknown queue outcome must reach the service's skip-and-log path —
+    // the probe can never convert it into absence.
+    await expect(probe({ jobId: "job-1", generation: 1 })).rejects.toThrow(
+      "Redis timeout",
+    );
+  });
+
+  it("surfaces an orphan scan failure through runOnce like the terminal pass", async () => {
+    const scanOrphanedPendingExports = vi
+      .fn<ScanOrphanedPendingExports>()
+      .mockRejectedValue(new Error("scan store unavailable"));
+    const queue = queueWith([]);
+    const scheduler = new PdfExportReconciliationScheduler(
+      service({ scanOrphanedPendingExports }),
+      { get: () => queue },
+    );
+
+    await expect(scheduler.runOnce()).rejects.toThrow("scan store unavailable");
   });
 });

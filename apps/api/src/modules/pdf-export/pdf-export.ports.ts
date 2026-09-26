@@ -12,6 +12,9 @@ export type PdfExportJobContext = JobTraceContext;
 export interface PdfExportEnqueueInput {
   readonly reportId: string;
   readonly jobId: string;
+  // The durable row's generation being dispatched; the queue job id and the
+  // worker's pre-render gate are both bound to it.
+  readonly generation: number;
   // Non-credential requester identity; the worker mints a short-lived render
   // token from it at execution time, never from a persisted credential.
   readonly requestedBy: string;
@@ -33,9 +36,7 @@ export const PDF_EXPORT_ENQUEUER = Symbol("PdfExportEnqueuer");
 export const PDF_EXPORT_TELEMETRY = Symbol("PdfExportTelemetry");
 export const PDF_RENDERER = Symbol("PdfRenderer");
 
-// Gotenberg `cookies` form-field shape: `domain` (not `url`) keys the jar —
-// probe-verified to reach the main document and same-origin subrequests even
-// for a single-label compose hostname like `web`.
+// Gotenberg's cookies form field keys the cookie jar by domain.
 export interface PdfRenderCookie {
   readonly name: string;
   readonly value: string;
@@ -46,18 +47,11 @@ export interface PdfRenderCookie {
 }
 
 export interface PdfRenderRequest {
-  // Absolute print URL: `{PDF_BASE_URL}/print/{reportId}?jobId={jobId}`.
   readonly url: string;
-  // Job-bound credential cookies, scoped to the print origin host.
   readonly cookies: readonly PdfRenderCookie[];
-  // Job identity for the `Gotenberg-Trace` correlation header.
   readonly traceId: string;
 }
 
-// HTTP seam for page capture: the worker owns the job protocol, the renderer
-// owns the browser. A `200` yields validated PDF bytes; only a renderer `403`
-// or a locally proven request-construction failure throws
-// `UnrecoverableError` — every other outcome stays retryable.
 export interface PdfRenderer {
   readonly render: (input: PdfRenderRequest) => Promise<Buffer>;
 }
@@ -69,6 +63,7 @@ export interface PdfExportJobIdentity {
   readonly jobId: string;
   readonly reportId: string;
   readonly requestedBy: string;
+  readonly generation: number;
 }
 
 export interface PdfExportTerminalState extends PdfExportJobIdentity {
@@ -78,24 +73,42 @@ export interface PdfExportTerminalState extends PdfExportJobIdentity {
   readonly error?: string;
 }
 
-// Queue-side operations the coordinated retry drives while the export row
-// lock is held. `isFailed` must re-read live state — never a captured one.
-export interface PdfExportRetryQueue {
-  readonly isFailed: () => Promise<boolean>;
-  readonly retry: () => Promise<void>;
-}
-
+// Every manual retry binds to one durable generation transition: `retried`
+// committed `pending(g+1)` (phase-B dispatch may be preempted by concurrent
+// quarantine), `already-advanced` is the idempotent repeat of a stale
+// expectedGeneration, and `ineligible` wrote nothing.
 export type PdfExportRetryOutcome =
-  "retried" | "queue-not-failed" | "ineligible";
+  "retried" | "already-advanced" | "ineligible";
 
 /** Writes valid only while the export row lock is held by the open transaction. */
 export interface PdfExportLockedJobWrites {
-  readonly markFailed: (error: string) => Promise<void>;
+  // Terminal writes name the generation they claim: the CAS is
+  // `status='pending' AND generation=g`, so a stale generation can never
+  // touch the current row.
+  readonly markFailed: (generation: number, error: string) => Promise<void>;
   readonly markCompleted: (
+    generation: number,
     artifactUrl: string,
     checksum: string,
   ) => Promise<PdfExportJob>;
-  readonly reviveFailed: () => Promise<void>;
+  // Orphan-scan quarantine: pending(g) → recovery_required(g).
+  readonly markRecoveryRequired: (generation: number) => Promise<void>;
+  // Head retry transition: failed|recovery_required(g) → pending(g+1),
+  // clearing the terminal artifact fields.
+  readonly advanceGeneration: (expectedGeneration: number) => Promise<void>;
+}
+
+/** Keyset cursor over the immutable `(createdAt, id)` pending-row ordering. */
+export interface PdfExportPendingCursor {
+  readonly createdAt: Date;
+  readonly jobId: string;
+}
+
+/** The orphan scan's per-candidate projection — identity, generation, age. */
+export interface PdfExportPendingCandidate {
+  readonly jobId: string;
+  readonly generation: number;
+  readonly createdAt: Date;
 }
 
 export interface PdfExportRepository {
@@ -115,7 +128,19 @@ export interface PdfExportRepository {
   ) => Promise<PublishedReportSnapshot | null>;
   readonly getExportJob: (jobId: string) => Promise<PdfExportJobRecord | null>;
   readonly saveExportJob: (job: PdfExportJob) => Promise<PdfExportJob>;
-  readonly markExportFailed: (jobId: string, error: string) => Promise<void>;
+  readonly markExportFailed: (
+    jobId: string,
+    generation: number,
+    error: string,
+  ) => Promise<void>;
+  // Aged `pending` rows for the orphan scan: `createdAt <= bound`, keyset
+  // `(createdAt, id)` past `cursor`, at most `limit` rows. `bound` is captured
+  // once per pass so rows created during the pass are never chased.
+  readonly listPendingExportCandidates: (
+    bound: Date,
+    cursor: PdfExportPendingCursor | null,
+    limit: number,
+  ) => Promise<PdfExportPendingCandidate[]>;
   // The one per-export serialization lane. `run` executes with the row under
   // FOR UPDATE and receives only transaction-scoped writes, so every locked
   // Postgres write commits or rolls back together. Queue side effects inside

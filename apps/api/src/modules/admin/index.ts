@@ -8,7 +8,6 @@ export type {
   AdminJobsQueueRegistry,
   AdminPdfExportIdentity,
   AdminPdfExportRetryOutcome,
-  AdminPdfExportRetryQueue,
 } from "./admin-jobs.port.js";
 export {
   AdminAccessError,

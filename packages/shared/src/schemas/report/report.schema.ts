@@ -211,7 +211,12 @@ export const publishedReportSnapshotSchema = assembledReportObjectSchema
   .readonly();
 
 /** Defines the lifecycle states exposed for an asynchronous PDF export. */
-export const pdfExportStatusSchema = z.enum(["queued", "completed", "failed"]);
+export const pdfExportStatusSchema = z.enum([
+  "queued",
+  "completed",
+  "failed",
+  "recovery_required",
+]);
 
 /** Describes the observable state and artifact metadata of a PDF export job. */
 export const pdfExportJobSchema = z
@@ -219,6 +224,8 @@ export const pdfExportJobSchema = z
     jobId: z.uuid(),
     reportId: z.uuid(),
     status: pdfExportStatusSchema,
+    // Monotonic dispatch generation; the first dispatch is generation 1.
+    generation: z.number().int().min(1),
     requestedAt: z.coerce.date(),
     completedAt: z.coerce.date().nullable(),
     checksum: z.string().nullable(),

@@ -10,16 +10,11 @@ export interface AdminPdfExportIdentity {
   readonly jobId: string;
   readonly reportId: string;
   readonly requestedBy: string;
-}
-
-/** Queue-side operations the coordinated pdf-export retry drives while it holds the export row lock. */
-export interface AdminPdfExportRetryQueue {
-  readonly isFailed: () => Promise<boolean>;
-  readonly retry: () => Promise<void>;
+  readonly generation: number;
 }
 
 export type AdminPdfExportRetryOutcome =
-  "retried" | "queue-not-failed" | "ineligible";
+  "retried" | "already-advanced" | "ineligible";
 
 export type AdminJobDomainReference =
   | {

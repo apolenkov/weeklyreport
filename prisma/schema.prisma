@@ -761,6 +761,8 @@ model PdfExportJob {
   publicationSnapshot Json
   publicationGroupIds String[]
   status              PdfExportStatus @default(pending)
+  // Monotonic dispatch generation; every retry increments it by exactly one.
+  generation          Int             @default(1)
   templateVersion     String
   filePath            String?
   checksum            String?
@@ -1325,6 +1327,7 @@ enum PdfExportStatus {
   pending
   completed
   failed
+  recovery_required
 }
 
 enum ReminderExecutionStatus {
