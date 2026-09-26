@@ -697,6 +697,69 @@ describe("UsersTab — delete modal focus management", () => {
       );
     });
   });
+
+  it("keeps the delete confirmation open and inert while deletion is pending, then closes on success", async () => {
+    const deferred = Promise.withResolvers<unknown>();
+    const { captured } = renderTab();
+    const deleteUser = expectDefined(captured["admin.deleteUser"]);
+    deleteUser.mutationFn.mockReturnValue(deferred.promise);
+    const trigger = await openDeleteModal();
+
+    fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+
+    const dialog = screen.getByRole("alertdialog");
+    const confirm = within(dialog).getByRole("button", { name: /^delete$/i });
+    const cancel = within(dialog).getByRole("button", { name: /^cancel$/i });
+    await waitFor(() => expect(confirm).toBeDisabled());
+    expect(cancel).toBeDisabled();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+
+    const backdrop = document.querySelector('[data-slot="dialog-overlay"]');
+    expect(backdrop).not.toBeNull();
+    if (!backdrop) return;
+    await userEvent.click(backdrop);
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+
+    fireEvent.click(cancel);
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+
+    fireEvent.click(confirm);
+    expect(deleteUser.mutationFn).toHaveBeenCalledOnce();
+    expect(deleteUser.mutationFn).toHaveBeenCalledWith(
+      { userId: USER.id },
+      expect.anything(),
+    );
+
+    act(() => deferred.resolve(undefined));
+
+    await waitFor(() =>
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
+    );
+    expect(toast.success).toHaveBeenCalledWith("User deleted");
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+
+  it("closes the delete confirmation and keeps the error toast after a failed deletion", async () => {
+    const deferred = Promise.withResolvers<unknown>();
+    const { captured } = renderTab();
+    const deleteUser = expectDefined(captured["admin.deleteUser"]);
+    deleteUser.mutationFn.mockReturnValue(deferred.promise);
+    await openDeleteModal();
+
+    fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+
+    await waitFor(() => expect(deleteUser.mutationFn).toHaveBeenCalledOnce());
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+
+    act(() => deferred.reject(new Error("delete failed")));
+
+    await waitFor(() =>
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
+    );
+    expect(toast.error).toHaveBeenCalledWith("delete failed");
+  });
 });
 
 describe("UsersTab — role label rendering", () => {
