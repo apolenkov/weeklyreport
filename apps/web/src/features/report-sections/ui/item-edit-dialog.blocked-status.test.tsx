@@ -1,3 +1,4 @@
+import { SAFE_TEXT_MAX_LENGTH } from "@customreport/shared";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -60,5 +61,48 @@ describe("ItemEditDialog blocked-status boundary", () => {
 
     expect(onSave).not.toHaveBeenCalled();
     expect(screen.getByText("Select at least one stage.")).toBeInTheDocument();
+  });
+});
+
+describe("ItemEditDialog — pause reason length", () => {
+  it("rejects a reason over the shared server limit before saving", () => {
+    const onSave = vi.fn();
+    render(
+      <ItemEditDialog
+        open
+        item={null}
+        products={products}
+        week="current"
+        defaultProductId="p1"
+        // A single owned stage auto-applies, isolating the pause-reason check.
+        stagesForProduct={() => ["Development"]}
+        onSave={onSave}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Description *"), {
+      target: { value: "Paused migration work" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Paused/ }));
+
+    const reason = screen.getByLabelText("Pause reason *");
+    const overLimit = "x".repeat(SAFE_TEXT_MAX_LENGTH + 1);
+    fireEvent.change(reason, { target: { value: overLimit } });
+    fireEvent.click(screen.getByRole("button", { name: "Save Item" }));
+
+    expect(onSave).not.toHaveBeenCalled();
+    expect(reason).toHaveValue(overLimit);
+    expect(reason).toHaveAttribute("aria-invalid", "true");
+    expect(reason).toHaveAttribute(
+      "aria-describedby",
+      "item-paused-reason-error",
+    );
+    expect(
+      screen.getByText(
+        `Pause reason must be ${SAFE_TEXT_MAX_LENGTH} characters or fewer.`,
+      ),
+    ).toBeInTheDocument();
+    expect(document.activeElement).toBe(reason);
   });
 });
