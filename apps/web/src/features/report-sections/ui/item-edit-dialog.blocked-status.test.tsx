@@ -64,6 +64,40 @@ describe("ItemEditDialog blocked-status boundary", () => {
   });
 });
 
+describe("ItemEditDialog — pause reason accessibility", () => {
+  it("exposes the pause reason as required and advertises the shared character limit before save", () => {
+    render(
+      <ItemEditDialog
+        open
+        item={null}
+        products={products}
+        week="current"
+        defaultProductId="p1"
+        stagesForProduct={() => ["Development"]}
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    // The field is required only when rendered — it mounts with Paused.
+    expect(screen.queryByLabelText(/Pause reason/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Paused/ }));
+
+    const reason = screen.getByLabelText("Pause reason *");
+    expect(reason).toBeRequired();
+    // Limit is associated, not enforced — over-limit input must not truncate.
+    expect(reason).toHaveAttribute(
+      "aria-describedby",
+      "item-paused-reason-limit",
+    );
+    expect(reason).not.toHaveAttribute("maxlength");
+    expect(
+      screen.getByText(`0 / ${SAFE_TEXT_MAX_LENGTH} characters`),
+    ).toBeInTheDocument();
+  });
+});
+
 describe("ItemEditDialog — pause reason length", () => {
   it("rejects a reason over the shared server limit before saving", () => {
     const onSave = vi.fn();
@@ -96,7 +130,7 @@ describe("ItemEditDialog — pause reason length", () => {
     expect(reason).toHaveAttribute("aria-invalid", "true");
     expect(reason).toHaveAttribute(
       "aria-describedby",
-      "item-paused-reason-error",
+      "item-paused-reason-limit item-paused-reason-error",
     );
     expect(
       screen.getByText(
