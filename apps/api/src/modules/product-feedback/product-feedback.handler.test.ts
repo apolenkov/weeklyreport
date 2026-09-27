@@ -83,7 +83,7 @@ async function createServer(
     express.json({ limit: PRODUCT_FEEDBACK_JSON_LIMIT }),
     handler.handle,
   );
-  const server = app.listen(0);
+  const server = app.listen(0, "127.0.0.1");
   await new Promise<void>((resolve) => server.once("listening", resolve));
   return server;
 }

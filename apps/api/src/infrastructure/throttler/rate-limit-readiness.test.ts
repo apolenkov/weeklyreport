@@ -74,7 +74,7 @@ describe("rate-limit Redis readiness", () => {
     app.use(authLimiter);
     app.post("/", (_request, response) => response.sendStatus(204));
 
-    const server = app.listen(0);
+    const server = app.listen(0, "127.0.0.1");
     await new Promise<void>((resolve) => server.once("listening", resolve));
     const { port } = server.address() as AddressInfo;
     try {

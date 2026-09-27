@@ -44,7 +44,7 @@ interface HttpResponse {
 }
 
 async function listen(app: express.Express): Promise<Server> {
-  const server = app.listen(0);
+  const server = app.listen(0, "127.0.0.1");
   await new Promise<void>((resolve) => {
     server.once("listening", () => {
       resolve();
