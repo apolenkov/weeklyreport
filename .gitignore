@@ -3,6 +3,7 @@ node_modules/
 .turbo/
 .next/
 .next-docker-dev/
+.next-lane_*/
 dist/
 *.tsbuildinfo
 
