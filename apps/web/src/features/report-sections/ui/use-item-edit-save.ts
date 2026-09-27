@@ -1,3 +1,4 @@
+import { SAFE_TEXT_MAX_LENGTH } from "@customreport/shared";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 
 import type {
@@ -43,8 +44,6 @@ interface TrimmedSaveText {
   readonly trimmedPausedReason: string;
 }
 
-const NEXT_STEP_MAX_LENGTH = 500;
-
 function collectSaveErrors(
   args: UseItemEditSaveArgs,
   text: TrimmedSaveText,
@@ -57,8 +56,10 @@ function collectSaveErrors(
   });
   return {
     ...errors,
-    ...(text.trimmedNextStepText.length > NEXT_STEP_MAX_LENGTH
-      ? { nextStepText: "Next step must be 500 characters or fewer." }
+    ...(text.trimmedNextStepText.length > SAFE_TEXT_MAX_LENGTH
+      ? {
+          nextStepText: `Next step must be ${SAFE_TEXT_MAX_LENGTH} characters or fewer.`,
+        }
       : {}),
     ...(args.status === "completed" && text.trimmedNextStepText.length > 0
       ? {
@@ -68,6 +69,12 @@ function collectSaveErrors(
       : {}),
     ...(args.status === "paused" && text.trimmedPausedReason.length === 0
       ? { pausedReason: "A reason is required to pause an item." }
+      : {}),
+    ...(args.status === "paused" &&
+    text.trimmedPausedReason.length > SAFE_TEXT_MAX_LENGTH
+      ? {
+          pausedReason: `Pause reason must be ${SAFE_TEXT_MAX_LENGTH} characters or fewer.`,
+        }
       : {}),
   };
 }
