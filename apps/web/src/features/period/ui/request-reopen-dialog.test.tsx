@@ -85,6 +85,43 @@ describe("RequestReopenDialog — a11y regression", () => {
     });
   });
 
+  it("disables the reason textarea while the request is pending so it cannot diverge from the submitted value", () => {
+    renderDialog({ pending: true });
+
+    expect(screen.getByRole("textbox")).toBeDisabled();
+  });
+
+  it("keeps the reason textarea editable when not pending", () => {
+    renderDialog();
+
+    expect(screen.getByRole("textbox")).not.toBeDisabled();
+  });
+
+  it("announces the pending send through a live status and marks the dialog busy", () => {
+    renderDialog({ pending: true });
+
+    expect(screen.getByRole("dialog")).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByRole("button", { name: "Sending…" })).toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("Sending…");
+  });
+
+  it("does not mark the dialog busy when the request is not pending", () => {
+    renderDialog();
+
+    expect(screen.getByRole("dialog")).not.toHaveAttribute("aria-busy");
+  });
+
+  it("surfaces a failed send through an alert", () => {
+    renderDialog({ error: "Could not reach Head. Try again." });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Could not reach Head. Try again.",
+    );
+  });
+
   it("blocks keyboard submit and dismissal while the request is pending", () => {
     const onConfirm = vi.fn();
     const onCancel = vi.fn();
