@@ -36,7 +36,7 @@ async function resolveReqIp(headers: Record<string, string>): Promise<string> {
     res.json({ ip: req.ip });
   });
 
-  const server = app.listen(0);
+  const server = app.listen(0, "127.0.0.1");
   await new Promise<void>((resolve) => {
     server.once("listening", () => {
       resolve();
@@ -81,9 +81,9 @@ describe("rate-limit middleware — trust-proxy IP resolution", () => {
   });
 
   it("falls back to the loopback socket address when no X-Forwarded-For is present", async () => {
-    // Loopback may surface as IPv4 (127.0.0.1) or IPv4-mapped IPv6
-    // (::ffff:127.0.0.1) depending on the dual-stack bind; either proves req.ip
-    // fell back to the real socket peer rather than a fabricated value.
+    // The server binds 127.0.0.1 explicitly, so the socket peer is always IPv4
+    // loopback; it proves req.ip fell back to the real socket peer rather than
+    // a fabricated value.
     expect(await resolveReqIp({})).toContain("127.0.0.1");
   });
 });
@@ -129,7 +129,7 @@ describe("rate-limit middleware — vitals limiter budget", () => {
       res.sendStatus(204);
     });
 
-    const server = app.listen(0);
+    const server = app.listen(0, "127.0.0.1");
     await new Promise<void>((resolve) => {
       server.once("listening", () => {
         resolve();
@@ -175,7 +175,7 @@ describe("rate-limit middleware — client-logs limiter budget", () => {
       res.sendStatus(204);
     });
 
-    const server = app.listen(0);
+    const server = app.listen(0, "127.0.0.1");
     await new Promise<void>((resolve) => {
       server.once("listening", () => {
         resolve();
@@ -216,7 +216,7 @@ describe("rate-limit middleware — product-feedback limiter budget", () => {
     app.use("/api/v1/feedback", feedbackLimiter);
     app.post("/api/v1/feedback", (_req, res) => res.sendStatus(204));
 
-    const server = app.listen(0);
+    const server = app.listen(0, "127.0.0.1");
     await new Promise<void>((resolve) => server.once("listening", resolve));
     const { port } = server.address() as AddressInfo;
     try {
@@ -372,7 +372,7 @@ describe("rate-limit middleware — fail-loud store policy", () => {
       res.sendStatus(204);
     });
 
-    const server = app.listen(0);
+    const server = app.listen(0, "127.0.0.1");
     await new Promise<void>((resolve) => {
       server.once("listening", resolve);
     });

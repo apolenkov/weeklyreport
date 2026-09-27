@@ -50,8 +50,7 @@ describe("createBootstrapJobsService — listPdfRecoveryJobs", () => {
     const list = await service.listPdfRecovery();
 
     const findManyArgs = findMany.mock.calls[0]?.[0] as
-      | { where?: { status?: { in?: readonly string[] } } }
-      | undefined;
+      { where?: { status?: { in?: readonly string[] } } } | undefined;
     expect(new Set(findManyArgs?.where?.status?.in)).toEqual(
       new Set(["failed", "recovery_required"]),
     );
