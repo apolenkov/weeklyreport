@@ -245,6 +245,9 @@ coverage:
 api-integration:
   extends: .postgres-job
   stage: api-integration
+  # The serial API coverage contour is the heaviest lane; 30m killed it at
+  # SIGTERM on the first real run.
+  timeout: 90m
   needs:
     - job: quality
       artifacts: false
@@ -275,6 +278,30 @@ api-integration:
     SMTP_FROM: integration@customreport.local
     MAILPIT_API_URL: http://mailpit:8025
   script:
+    # Fail fast on unreachable service aliases instead of hanging a test.
+    - |
+      node --input-type=module <<'NODE'
+      import { connect } from "node:net";
+
+      const probe = (host, port, label) =>
+        new Promise((resolve, reject) => {
+          const socket = connect({ host, port, timeout: 5000 });
+          socket.once("connect", () => {
+            socket.destroy();
+            console.log(label + " reachable at " + host + ":" + port);
+            resolve();
+          });
+          socket.once("timeout", () => {
+            socket.destroy();
+            reject(new Error(label + " connect timeout at " + host + ":" + port));
+          });
+          socket.once("error", reject);
+        });
+
+      await probe("redis", 6379, "redis");
+      await probe("mailpit", 1025, "mailpit-smtp");
+      await probe("mailpit", 8025, "mailpit-api");
+      NODE
     - pnpm exec prisma migrate deploy --schema=prisma/schema.prisma
     - VITEST_JSON_OUTPUT_FILE="$CI_PROJECT_DIR/ci-reports/api-verification-vitest.json" pnpm --filter @customreport/api test:coverage
     - |
