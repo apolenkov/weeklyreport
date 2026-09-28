@@ -45,6 +45,15 @@ const WORKSPACE_MANIFEST = "pnpm-workspace.yaml";
 const DOCKERFILES = ["Dockerfile.api", "Dockerfile.web"];
 const ACTIONS_WORKFLOW = ".github/workflows/ci.yml";
 const DEPENDENCY_SCAN_WORKFLOW = ".github/workflows/dependency-scan.yml";
+const GITLAB_CI = ".gitlab-ci.yml";
+// Exact declaration counts written into .gitlab-ci.yml: a changed count is a
+// drift signal that must fail, not a smaller comparison set.
+const GITLAB_NODE_IMAGE_COUNT = 1;
+const GITLAB_NODE_ASSERT_COUNT = 1;
+const GITLAB_NODE_TOOLCHAIN_TARBALL_COUNT = 1;
+const GITLAB_NODE_TOOLCHAIN_DIST_COUNT = 1;
+const GITLAB_PNPM_INSTALL_COUNT = 3;
+const GITLAB_PNPM_ASSERT_COUNT = 3;
 const EXPECTED_ACTION_SETUP_COUNT = 4;
 const ACTION_SHA_LENGTH = 40;
 const TYPESCRIPT_SCRIPT_MANIFESTS = [
@@ -85,9 +94,89 @@ const catalogTypesNodeMajor = (): Declaration => ({
   ),
 });
 
+// The GitLab migration candidate writes the same versions into its job image,
+// global pnpm installs, and the checksum-verified Node toolchain tarball that
+// database jobs unpack. Each pattern is paired with the count the file must
+// contain, so a removed or restyled declaration fails as unreadable rather
+// than being skipped.
+const gitlabCiPins = (
+  pattern: RegExp,
+  expectedCount: number,
+  label: string,
+): readonly Declaration[] => {
+  const matches = [...read(GITLAB_CI).matchAll(pattern)];
+  return Array.from({ length: expectedCount }, (_, index) => ({
+    source: `${GITLAB_CI} ${label} ${index + 1}`,
+    value: matches.length === expectedCount ? matches[index]?.[1] : undefined,
+  }));
+};
+
+const gitlabNodeDeclarations = (): readonly Declaration[] => [
+  ...gitlabCiPins(
+    /^ +image: node:(\d+\.\d+\.\d+)-bookworm@sha256:[\da-f]{64}$/gmu,
+    GITLAB_NODE_IMAGE_COUNT,
+    "Node image",
+  ),
+  ...gitlabCiPins(
+    /node --version\)" = "v(\d+\.\d+\.\d+)"/gu,
+    GITLAB_NODE_ASSERT_COUNT,
+    "node preflight",
+  ),
+  ...gitlabCiPins(
+    /NODE_TOOLCHAIN_TARBALL: node-v(\d+\.\d+\.\d+)-linux-x64\.tar\.gz/gu,
+    GITLAB_NODE_TOOLCHAIN_TARBALL_COUNT,
+    "Node toolchain tarball",
+  ),
+  ...gitlabCiPins(
+    /nodejs\.org\/dist\/v(\d+\.\d+\.\d+)\//gu,
+    GITLAB_NODE_TOOLCHAIN_DIST_COUNT,
+    "Node toolchain dist dir",
+  ),
+];
+
+const gitlabPnpmDeclarations = (): readonly Declaration[] => [
+  ...gitlabCiPins(
+    /npm install --global pnpm@(\d+\.\d+\.\d+)/gu,
+    GITLAB_PNPM_INSTALL_COUNT,
+    "pnpm install",
+  ),
+  ...gitlabCiPins(
+    /pnpm --version\)" = "(\d+\.\d+\.\d+)"/gu,
+    GITLAB_PNPM_ASSERT_COUNT,
+    "pnpm preflight",
+  ),
+];
+
+// The .gitlab-ci.yml job image is the same bookworm base as Dockerfile.api's
+// FROM lines, so the pinned digest — not just the tag — must agree with them.
+const bookwormImageDigests = (): readonly Declaration[] => {
+  const dockerfileDigests = DOCKERFILES.flatMap((file) =>
+    [
+      ...read(file).matchAll(
+        /^FROM node:\d+\.\d+\.\d+-bookworm@sha256:([\da-f]{64})/gmu,
+      ),
+    ].map((match) => ({
+      source: `${file} bookworm base`,
+      value: match[1],
+    })),
+  );
+
+  return [
+    ...(dockerfileDigests.length === 0
+      ? [{ source: "Dockerfiles bookworm base", value: undefined }]
+      : dockerfileDigests),
+    ...gitlabCiPins(
+      /^ +image: node:\d+\.\d+\.\d+-bookworm@sha256:([\da-f]{64})$/gmu,
+      GITLAB_NODE_IMAGE_COUNT,
+      "bookworm digest",
+    ),
+  ];
+};
+
 const runtimeVersions = (): readonly Declaration[] => [
   { source: ".nvmrc", value: read(".nvmrc").trim() },
   ...imageNodeVersions(),
+  ...gitlabNodeDeclarations(),
 ];
 
 const nodeMajorDeclarations = (): readonly Declaration[] => [
@@ -161,6 +250,7 @@ const pnpmPins = (): readonly Declaration[] => [
   })),
   ...workflowPnpmPins(ACTIONS_WORKFLOW, EXPECTED_ACTION_SETUP_COUNT),
   ...workflowPnpmPins(DEPENDENCY_SCAN_WORKFLOW, 1),
+  ...gitlabPnpmDeclarations(),
 ];
 
 const turboPins = (): readonly Declaration[] => [
@@ -231,6 +321,10 @@ const report = (label: string, entries: readonly Declaration[]): boolean => {
 };
 
 const nodeVersionOk = report("Node runtime version", runtimeVersions());
+const nodeImageDigestOk = report(
+  "Node bookworm image digest",
+  bookwormImageDigests(),
+);
 const nodeMajorOk = report("Node dependency major", nodeMajorDeclarations());
 const nodeEngineRangeOk = nodeEngineOk();
 const pnpmOk = report("pnpm version", pnpmPins());
@@ -239,6 +333,7 @@ const typescriptCliOk = pinnedTypescriptCliOk();
 
 process.exit(
   nodeVersionOk &&
+    nodeImageDigestOk &&
     nodeMajorOk &&
     nodeEngineRangeOk &&
     pnpmOk &&

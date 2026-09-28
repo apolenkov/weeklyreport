@@ -203,9 +203,15 @@ path must respect them and link the relevant `openspec/specs/` spec.
 
 ## Gates
 
-CI (`.github/workflows/ci.yml`) runs on every push to `main`, on pull requests,
-and on manual dispatch. Use `docs/exemplary-code-standard.md#verification`
-for local acceptance; the workflow is authoritative for CI jobs and conditions.
+The GitHub workflows remain authoritative: `.github/workflows/ci.yml` runs on
+pull requests, pushes to `main`, and manual dispatch. `.gitlab-ci.yml` is a
+migration candidate carrying only lint/test lanes (owner decision 2026-09-28):
+quality, coverage, API integration, and migrate-reset on the shared Docker
+runner, with in-job loopback PostgreSQL and Redis/Mailpit service aliases —
+no DinD, image builds, or operational checks. Production build, PDF, and
+browser acceptance stay outside CI. Do not treat a runnable GitLab pipeline as
+full acceptance. Use `docs/exemplary-code-standard.md#verification` for local
+acceptance.
 
 ## Task completion
 
