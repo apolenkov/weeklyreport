@@ -39,6 +39,10 @@ variables:
 
 .node-image:
   image: node:26.8.1-bookworm@sha256:9f94d34c787165dca03b74e5bf9c3bf90e8de79b19aa3d87fe1fa1694bf75c89
+  # Without this, jobs fetch artifacts from every earlier stage — the
+  # node-toolchain tarball would land in the workspace as untracked residue
+  # and trip the cleanliness gate. Database jobs use explicit `needs`.
+  dependencies: []
   timeout: 30m
   resource_group: weeklyreport-ci-heavy
   allow_failure: false
