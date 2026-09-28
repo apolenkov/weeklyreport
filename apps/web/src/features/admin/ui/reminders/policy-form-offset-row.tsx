@@ -20,7 +20,8 @@ function parseOffsetMagnitude(raw: string): number | null {
   const text = raw.trim();
   if (text === "") return null;
   const parsed = Number(text);
-  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  // The wire schema requires whole minutes; decimals fail int() on save.
+  if (!Number.isInteger(parsed) || parsed < 0) return null;
   return parsed;
 }
 

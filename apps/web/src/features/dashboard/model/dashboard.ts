@@ -59,6 +59,11 @@ export type MappedReviewDashboard = Pick<
 function mapBlockedAtRisk(
   weeklyReport: WeeklyReportReadModel,
 ): readonly BlockedAtRiskItem[] {
+  const flaggedRedProducts = new Set(
+    weeklyReport.escalations
+      .filter((e) => e.type === "at_risk")
+      .map((e) => e.productId),
+  );
   const stageKeyedProducts = new Set(
     weeklyReport.escalations
       .filter((e) => e.type === "blocked" || e.type === "unresolved_risk")
@@ -66,7 +71,12 @@ function mapBlockedAtRisk(
   );
   return weeklyReport.escalations
     .filter((e) => e.type !== "at_risk" || !stageKeyedProducts.has(e.productId))
-    .map((e) => escalationToBlockedItem(e));
+    .map((e) => ({
+      ...escalationToBlockedItem(e),
+      ...(flaggedRedProducts.has(e.productId)
+        ? { productFlaggedRed: true }
+        : {}),
+    }));
 }
 
 export function mapWeeklyDashboardData({

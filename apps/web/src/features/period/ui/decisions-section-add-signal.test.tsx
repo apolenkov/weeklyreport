@@ -1,5 +1,6 @@
-// Snapshot transitions must not reopen Add Decision: readOnly is outside the
-// addSignal effect deps, so false→true→false must not re-fire.
+// Snapshot transitions must not reopen Add Decision: the addSignal effect
+// skips signals already consumed via lastHandledSignal, so
+// false→true→false must not re-fire.
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";

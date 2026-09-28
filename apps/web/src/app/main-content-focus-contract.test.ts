@@ -22,12 +22,15 @@ const MAIN_CONTENT_ROUTES = [
   "src/app/(app)/lead/report/page.tsx",
   "src/app/(app)/lead/report/[reportId]/page.tsx",
   "src/app/(app)/lead/report/[reportId]/preview/page.tsx",
+  "src/app/(app)/pdf-exports/page.tsx",
   "src/app/(app)/reports/page.tsx",
   "src/app/(app)/reports/[reportId]/page.tsx",
   "src/app/(app)/reports/latest/page.tsx",
   "src/app/(app)/reports/trends/page.tsx",
   "src/app/print/[reportId]/print-report-shell.tsx",
   "src/app/print/[reportId]/print-report-template.tsx",
+  "src/features/product-feedback/ui/product-feedback-page.tsx",
+  "src/shared/lib/auth/session-provider.tsx",
 ] as const;
 
 function sourceFileFromText(path: string, text: string): ts.SourceFile {

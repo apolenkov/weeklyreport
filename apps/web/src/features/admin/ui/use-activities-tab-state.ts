@@ -126,6 +126,7 @@ export function useActivitiesTabState() {
     ...archive,
     handleSave,
     canSave,
+    hasData: activities.length > 0,
     isLoading: activitiesQuery.isLoading,
     isError: activitiesQuery.isError,
     retry: () => {

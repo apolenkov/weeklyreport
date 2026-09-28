@@ -57,7 +57,15 @@ function PrintPortfolioRow({
 }) {
   return (
     <tr style={{ borderBottom: BORDER_LIGHT }}>
-      <td style={{ padding: "5px 8px", fontWeight: 600 }}>{product.name}</td>
+      <td
+        style={{
+          padding: "5px 8px",
+          fontWeight: 600,
+          overflowWrap: "anywhere",
+        }}
+      >
+        {product.name}
+      </td>
       <td style={PORTFOLIO_ROW_CENTERED_STYLE}>
         <span
           style={{
@@ -73,7 +81,13 @@ function PrintPortfolioRow({
           {statusLabel(product.status, "print")}
         </span>
       </td>
-      <td style={{ padding: "5px 8px", color: TEXT_SECONDARY }}>
+      <td
+        style={{
+          padding: "5px 8px",
+          color: TEXT_SECONDARY,
+          overflowWrap: "anywhere",
+        }}
+      >
         {product.leads}
       </td>
       <td style={PORTFOLIO_ROW_CENTERED_STYLE}>{product.currentWeekCount}</td>
@@ -98,6 +112,7 @@ export function PrintPortfolioTable({ products }: PrintPortfolioTableProps) {
     <table
       style={{
         width: "100%",
+        tableLayout: "fixed",
         borderCollapse: "collapse",
         fontSize: "11px",
         lineHeight: "1.4",

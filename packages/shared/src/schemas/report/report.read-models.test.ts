@@ -6,6 +6,8 @@ import {
   archiveReportSummarySchema,
   assembledReportSchema,
   carryOverStatusSchema,
+  pdfExportJobSchema,
+  pdfExportStatusSchema,
   portfolioOverviewSchema,
   projectStatusInputSchema,
   reportPeriodSchema,
@@ -194,6 +196,61 @@ describe("portfolioOverviewSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+});
+
+// pdfExportJobSchema — export lifecycle read model
+
+describe("pdfExportStatusSchema", () => {
+  it('accepts the "recovery_required" quarantine status', () => {
+    expect(pdfExportStatusSchema.safeParse("recovery_required").success).toBe(
+      true,
+    );
+  });
+
+  it.each(["queued", "completed", "failed"] as const)(
+    'still accepts "%s"',
+    (status) => {
+      expect(pdfExportStatusSchema.safeParse(status).success).toBe(true);
+    },
+  );
+});
+
+describe("pdfExportJobSchema", () => {
+  const validJob = () => ({
+    jobId: uuid(),
+    reportId: uuid(),
+    status: "queued" as const,
+    generation: 1,
+    requestedAt: "2026-09-01T10:00:00.000Z",
+    completedAt: null,
+    checksum: null,
+    templateVersion: "weekly-pdf-v1",
+    artifactUrl: null,
+  });
+
+  it("round-trips a recovery_required export at its generation", () => {
+    const result = pdfExportJobSchema.safeParse({
+      ...validJob(),
+      status: "recovery_required",
+      generation: 3,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.generation).toBe(3);
+  });
+
+  it("rejects a job without a generation", () => {
+    const { generation: _omitted, ...withoutGeneration } = validJob();
+    expect(pdfExportJobSchema.safeParse(withoutGeneration).success).toBe(false);
+  });
+
+  it.each([0, -1, 1.5, "1"])(
+    "rejects generation %s below one or non-integer",
+    (generation) => {
+      expect(
+        pdfExportJobSchema.safeParse({ ...validJob(), generation }).success,
+      ).toBe(false);
+    },
+  );
 });
 
 // archiveReportSummarySchema — reportDate usage

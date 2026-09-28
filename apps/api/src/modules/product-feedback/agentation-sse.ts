@@ -46,7 +46,8 @@ export interface AgentationSseConnectionCounts {
 }
 
 const DEFAULT_POLL_INTERVAL_MS = 500;
-const DEFAULT_HEARTBEAT_INTERVAL_MS = 30_000;
+// Send before the web rewrite proxy's 30-second idle timeout.
+const DEFAULT_HEARTBEAT_INTERVAL_MS = 15_000;
 const DEFAULT_MAX_BATCH_SIZE = 100;
 const HTTP_OK = 200;
 const HTTP_FORBIDDEN = 403;

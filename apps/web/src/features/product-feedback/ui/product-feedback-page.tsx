@@ -53,7 +53,11 @@ export function ProductFeedbackPage() {
   };
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8"
+    >
       <div className="mb-6 flex items-start gap-3">
         <div className="rounded-xl bg-[var(--color-starbucks-accent)]/10 p-3 text-[var(--color-starbucks-accent)]">
           <MessageSquareText aria-hidden="true" className="size-5" />

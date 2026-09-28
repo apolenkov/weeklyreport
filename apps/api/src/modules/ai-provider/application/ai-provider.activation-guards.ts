@@ -16,10 +16,18 @@ type PreparedProviderRevision = ProviderRevision &
     preparationSourceGeneration: bigint;
   }>;
 
+// Correlation for the terminal activation_failed audit; present only after the
+// matching activation_requested event has been recorded.
+export type RequestedActivation = Readonly<{
+  actorId: string;
+  revisionId: string;
+}>;
+
 export const requirePreparationEvidence = (
   dependencies: AiProviderServiceDependencies,
   profile: ReturnType<typeof toSharedProfile>,
   revision: ProviderRevision,
+  requested?: RequestedActivation,
 ): PreparedProviderRevision => {
   if (
     typeof revision.preparationSourceFingerprint !== "string" ||
@@ -33,6 +41,7 @@ export const requirePreparationEvidence = (
       dependencies,
       profile,
       "Semantic preparation evidence is incomplete; activation must be retried",
+      requested,
     );
   }
   return revision as PreparedProviderRevision;
@@ -71,15 +80,26 @@ export const failActivation = (
   dependencies: AiProviderServiceDependencies,
   profile: ReturnType<typeof toSharedProfile>,
   message: string,
+  requested?: RequestedActivation,
+  errorClass: new (message: string) => Error = AiProviderConfigurationError,
 ): never => {
+  if (requested) {
+    dependencies.audit.record({
+      event: "ai_provider.activation_failed",
+      actorId: requested.actorId,
+      revisionId: requested.revisionId,
+      profile,
+    });
+  }
   dependencies.metrics.recordActivation({ profile, result: "failed" });
-  throw new AiProviderConfigurationError(message);
+  throw new errorClass(message);
 };
 
 export const requirePreparedRevision = async (
   dependencies: AiProviderServiceDependencies,
   revisionId: string,
   profile: ReturnType<typeof toSharedProfile>,
+  requested?: RequestedActivation,
 ): Promise<PreparedProviderRevision> => {
   const revision = await dependencies.repository.getRevision(revisionId);
   if (!revision) {
@@ -87,15 +107,17 @@ export const requirePreparedRevision = async (
       dependencies,
       profile,
       "AI provider revision disappeared during activation",
+      requested,
     );
   }
-  return requirePreparationEvidence(dependencies, profile, revision);
+  return requirePreparationEvidence(dependencies, profile, revision, requested);
 };
 
 export const verifyCurrentSourceFingerprint = async (
   dependencies: AiProviderServiceDependencies,
   profile: ReturnType<typeof toSharedProfile>,
   revision: PreparedProviderRevision,
+  requested?: RequestedActivation,
 ): Promise<void> => {
   const preparation = dependencies.preparation;
   if (!preparation?.currentSourceFingerprint) return;
@@ -105,6 +127,7 @@ export const verifyCurrentSourceFingerprint = async (
       dependencies,
       profile,
       "Report sources changed after embedding preparation; activation must be retried",
+      requested,
     );
   }
 };

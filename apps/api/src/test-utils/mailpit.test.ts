@@ -17,6 +17,7 @@ const message: MailpitMessage = {
 describe("Mailpit polling deadline", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => {
+    vi.unstubAllEnvs();
     vi.unstubAllGlobals();
     vi.useRealTimers();
   });
@@ -103,4 +104,34 @@ describe("Mailpit polling deadline", () => {
     );
     expect(vi.getTimerCount()).toBe(0);
   });
+});
+
+describe("Mailpit API base URL", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it.each([
+    {
+      override: "http://localhost:8027",
+      expectedUrl: "http://localhost:8027/api/v1/messages",
+    },
+    {
+      override: undefined,
+      expectedUrl: "http://localhost:8025/api/v1/messages",
+    },
+  ])(
+    "polls $expectedUrl when MAILPIT_API_URL is $override",
+    async ({ override, expectedUrl }) => {
+      vi.stubEnv("MAILPIT_API_URL", override);
+      const fetch = vi
+        .fn<typeof globalThis.fetch>()
+        .mockResolvedValue(Response.json({ messages: [message] }));
+      vi.stubGlobal("fetch", fetch);
+
+      await expect(pollForMessage(recipient)).resolves.toEqual(message);
+      expect(fetch.mock.calls[0]?.[0]).toBe(expectedUrl);
+    },
+  );
 });

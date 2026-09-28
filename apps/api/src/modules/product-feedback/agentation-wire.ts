@@ -23,6 +23,7 @@ import { feedbackAccessFromSession } from "./product-feedback.repository.js";
 
 const HTTP_OK = 200;
 const HTTP_CREATED = 201;
+const HTTP_BAD_REQUEST = 400;
 const HTTP_NOT_FOUND = 404;
 const HTTP_FORBIDDEN = 403;
 
@@ -35,6 +36,7 @@ type ResolvedOptions = Required<
   Pick<AgentationRequestOptions, "actor" | "isAgent">
 > &
   Pick<AgentationRequestOptions, "frontendOrigin">;
+type FeedbackAccess = ReturnType<typeof feedbackAccessFromSession>;
 
 function send(res: Response, status: number, body: unknown): void {
   res.status(status).json(body);
@@ -212,21 +214,15 @@ async function annotationRoute(
       const row = await repo.getAnnotation(access, id);
       return row ? (send(res, HTTP_OK, row), true) : missing(res);
     }
-    case `PATCH /annotations/${id}`: {
-      const row = await repo.updateAnnotation(
-        access,
-        id,
-        agentationAnnotationPatchSchema.parse(req.body),
-        options.actor,
-      );
-      return row ? (send(res, HTTP_OK, row), true) : missing(res);
-    }
+    case `PATCH /annotations/${id}`:
+      return patchAnnotation(req, res, repo, access, id, options);
     case `DELETE /annotations/${id}`: {
       const row = await repo.updateAnnotation(
         access,
         id,
         { status: "dismissed" },
         options.actor,
+        "native-delete",
       );
       if (!row) return missing(res);
       send(res, HTTP_OK, { deleted: true, annotationId: id });
@@ -245,6 +241,24 @@ async function annotationRoute(
       return false;
   }
 }
+
+async function patchAnnotation(
+  req: Request,
+  res: Response,
+  repo: AgentationPrismaRepository,
+  access: FeedbackAccess,
+  id: string,
+  options: ResolvedOptions,
+): Promise<boolean> {
+  const patch = agentationAnnotationPatchSchema.parse(req.body);
+  if (options.actor === "human" && patch.status === "dismissed") {
+    send(res, HTTP_BAD_REQUEST, { error: "dismiss_reason_required" });
+    return true;
+  }
+  const row = await repo.updateAnnotation(access, id, patch, options.actor);
+  return row ? (send(res, HTTP_OK, row), true) : missing(res);
+}
+
 export async function executeAgentationRequest(
   req: Request,
   res: Response,
@@ -254,6 +268,10 @@ export async function executeAgentationRequest(
   actorOrOptions: AgentationRequestOptions | AgentationRole = "human",
 ): Promise<boolean> {
   const options = resolveOptions(actorOrOptions);
+  // The handler is mounted at /api/v1 for both /feedback and /agentation —
+  // without this guard, un-prefixed paths like /api/v1/sessions would shadow
+  // onto agentation handlers below.
+  if (!/^\/agentation(?=\/|$)/.test(req.path)) return false;
   const path = req.path.replace(/^\/agentation(?=\/|$)/, "") || "/";
   res.setHeader("cache-control", "no-store");
   const repo = new AgentationPrismaRepository(prisma);

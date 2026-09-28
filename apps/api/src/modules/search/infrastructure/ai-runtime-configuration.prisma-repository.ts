@@ -14,6 +14,7 @@ import {
   composePromptSet,
   REPORT_ASSISTANT_FEATURE_KEY,
   REPORT_ASSISTANT_SERVING_CONTRACT_VERSION,
+  revisionSelect,
 } from "../../ai-prompts/index.js";
 import {
   aiProviderRevisionSelect,
@@ -22,30 +23,11 @@ import {
 
 const providerSelect = aiProviderRevisionSelect;
 
-const promptSelect = {
-  id: true,
-  featureKey: true,
-  revision: true,
-  baseRevisionId: true,
-  coreContractVersion: true,
-  composerVersion: true,
-  servingContractVersion: true,
-  lockedCoreSnapshot: true,
-  promptContents: true,
-  effectiveContentHash: true,
-  lifecycle: true,
-  createdBy: true,
-  createdAt: true,
-  updatedAt: true,
-  activatedAt: true,
-  supersededAt: true,
-} as const;
-
 type ProviderRecord = Prisma.AiProviderConfigurationGetPayload<{
   select: typeof providerSelect;
 }>;
 type PromptRecord = Prisma.AiPromptBundleRevisionGetPayload<{
-  select: typeof promptSelect;
+  select: typeof revisionSelect;
 }>;
 
 export type AiRuntimeConfigurationSnapshot = Readonly<{
@@ -121,7 +103,7 @@ export class AiRuntimeConfigurationRepository {
           }),
           transaction.aiFeaturePromptControl.findUnique({
             where: { featureKey: REPORT_ASSISTANT_FEATURE_KEY },
-            include: { activeRevision: { select: promptSelect } },
+            include: { activeRevision: { select: revisionSelect } },
           }),
         ]);
         const provider = providerControl?.activeConfiguration;

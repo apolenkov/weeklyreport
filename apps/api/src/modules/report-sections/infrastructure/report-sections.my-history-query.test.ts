@@ -1,3 +1,4 @@
+import { PublishedSnapshotIntegrityError } from "@customreport/report-persistence";
 import { describe, expect, it, vi } from "vitest";
 
 import { publishedSnapshotFixture } from "../../../test-utils/prisma-test-helper.js";
@@ -67,6 +68,11 @@ describe("queryMyHistoryPage", () => {
         periodStatus: "published",
         publishedSectionScopes: { some: { authorId } },
       },
+      orderBy: [
+        { periodStart: "desc" },
+        { publishedAt: "desc" },
+        { id: "desc" },
+      ],
     });
   });
 
@@ -122,6 +128,61 @@ describe("queryMyHistoryPage", () => {
       expect(transactionOptions).toEqual({ isolationLevel: "RepeatableRead" });
     },
   );
+
+  it.each([
+    ["a schema-invalid payload", { reportId }],
+    [
+      "a snapshot bound to a different report",
+      publishedSnapshotFixture({
+        reportId: "a0000000-0000-4000-8000-000000000099",
+        periodStart: "2026-04-14",
+        periodEnd: "2026-04-18",
+        publishedAt: "2026-04-20T12:00:00.000Z",
+        sectionOwners: [
+          {
+            reportSectionId: sectionId,
+            authorId,
+            authorName: "Test Lead",
+            groupId: "a0000000-0000-4000-8000-000000000009",
+            groupName: "Test Group",
+          },
+        ],
+      }),
+    ],
+  ])(
+    "fails the merged page on %s without a mutable fallback",
+    async (_label, publishedSnapshot) => {
+      const findManyLive = vi
+        .fn()
+        .mockResolvedValue([
+          liveRow(
+            sectionId,
+            new Date("2026-04-14T00:00:00Z"),
+            new Date("2026-04-14T12:00:00Z"),
+          ),
+        ]);
+      const findManyPublished = vi
+        .fn()
+        .mockResolvedValue([
+          { id: reportId, archived: false, publishedSnapshot },
+        ]);
+      const prisma = {
+        reportSection: { findMany: findManyLive },
+        report: { findMany: findManyPublished },
+        $transaction: (operation: (tx: unknown) => unknown) =>
+          Promise.resolve(
+            operation({
+              reportSection: { findMany: findManyLive },
+              report: { findMany: findManyPublished },
+            }),
+          ),
+      } as never;
+
+      await expect(
+        queryMyHistoryPage(prisma, authorId, { limit: 20 }),
+      ).rejects.toBeInstanceOf(PublishedSnapshotIntegrityError);
+    },
+  );
 });
 
 function liveRow(id: string, periodStart: Date, createdAt: Date) {
@@ -169,7 +230,11 @@ function publishedRow(id: string, periodStart: string, publishedAt: string) {
   };
 }
 
-function pagedPrisma(live: unknown[], published: unknown[]) {
+function pagedPrisma(
+  live: unknown[],
+  published: unknown[],
+  laterPublished: unknown[] = [],
+) {
   let publishedCalls = 0;
   const client = {
     reportSection: {
@@ -186,7 +251,13 @@ function pagedPrisma(live: unknown[], published: unknown[]) {
       findMany: vi.fn((args: { where?: { OR?: unknown[] } }) => {
         publishedCalls += 1;
         const or = args.where?.OR;
-        return Promise.resolve(!or && publishedCalls === 1 ? published : []);
+        if (!or) return Promise.resolve(publishedCalls === 1 ? published : []);
+        const last = or.at(-1);
+        return Promise.resolve(
+          last && typeof last === "object" && "id" in last
+            ? laterPublished
+            : [],
+        );
       }),
     },
   };
@@ -212,9 +283,75 @@ it("keeps equal-coordinate live and published rows distinct across pages", async
   });
   expect(first.items).toHaveLength(1);
   expect(second.items).toHaveLength(1);
+  expect(first.items[0]?.archived).toBe(true);
+  expect(second.items[0]?.archived).toBe(false);
   expect(first.items[0]?.sectionId).toBe(second.items[0]?.sectionId);
-  expect(first.items[0]?.archived).not.toBe(second.items[0]?.archived);
   expect(second.nextCursor).toBeNull();
+});
+
+it("orders merged history by period before either source event time", async () => {
+  const newerReportId = "a0000000-0000-4000-8000-000000000013";
+  const prisma = pagedPrisma(
+    [
+      liveRow(
+        sectionId,
+        new Date("2026-04-27T00:00:00.000Z"),
+        new Date("2026-05-20T12:00:00.000Z"),
+      ),
+    ],
+    [
+      publishedRow(
+        newerReportId,
+        "2026-05-04T00:00:00.000Z",
+        "2026-05-10T12:00:00.000Z",
+      ),
+    ],
+  );
+
+  const result = await queryMyHistoryPage(prisma, authorId, { limit: 2 });
+
+  expect(result.items.map((item) => item.reportId)).toEqual([
+    newerReportId,
+    "a0000000-0000-4000-8000-000000000012",
+  ]);
+});
+
+it("keeps published rows sharing period and publication time distinct across pages", async () => {
+  const periodStart = "2026-05-04T00:00:00.000Z";
+  const publishedAt = "2026-05-10T12:00:00.000Z";
+  const higherReportId = "a0000000-0000-4000-8000-000000000015";
+  const lowerReportId = "a0000000-0000-4000-8000-000000000014";
+  const prisma = pagedPrisma(
+    [],
+    [
+      publishedRow(lowerReportId, periodStart, publishedAt),
+      publishedRow(higherReportId, periodStart, publishedAt),
+    ],
+    [publishedRow(lowerReportId, periodStart, publishedAt)],
+  );
+
+  const first = await queryMyHistoryPage(prisma, authorId, { limit: 1 });
+  expect(first.nextCursor).not.toBeNull();
+  expect(first.items.map((item) => item.reportId)).toEqual([higherReportId]);
+
+  const second = await queryMyHistoryPage(prisma, authorId, {
+    limit: 1,
+    cursor: first.nextCursor ?? undefined,
+  });
+
+  expect(second.items.map((item) => item.reportId)).toEqual([lowerReportId]);
+  expect(second.nextCursor).toBeNull();
+  const publishedQuery = (
+    prisma as { report: { findMany: ReturnType<typeof vi.fn> } }
+  ).report.findMany;
+  const lastArgs = publishedQuery.mock.lastCall?.[0] as {
+    where: { OR: unknown[] };
+  };
+  expect(lastArgs.where.OR).toContainEqual({
+    periodStart: new Date(periodStart),
+    publishedAt: new Date(publishedAt),
+    id: { lt: higherReportId },
+  });
 });
 
 it("rejects malformed opaque cursors as a typed client error", () => {
@@ -222,3 +359,30 @@ it("rejects malformed opaque cursors as a typed client error", () => {
     ReportSectionDomainError,
   );
 });
+
+const validCursorPayload = {
+  periodStart: "2026-05-04T00:00:00.000Z",
+  eventAt: "2026-05-10T12:00:00.000Z",
+  source: "published",
+  id: reportId,
+};
+
+it.each([
+  ["an empty object", {}],
+  ["an unknown source", { ...validCursorPayload, source: "archived" }],
+  ["a non-uuid row id", { ...validCursorPayload, id: "not-a-uuid" }],
+  [
+    "an unparseable periodStart",
+    { ...validCursorPayload, periodStart: "not-a-date" },
+  ],
+])(
+  "rejects a base64-json cursor with %s at the schema boundary",
+  (_label, payload) => {
+    const cursor = Buffer.from(JSON.stringify(payload), "utf8").toString(
+      "base64url",
+    );
+    expect(() => decodeMyHistoryCursor(cursor)).toThrow(
+      ReportSectionDomainError,
+    );
+  },
+);

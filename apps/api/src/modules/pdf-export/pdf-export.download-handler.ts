@@ -23,7 +23,7 @@ const HTTP = {
 
 export interface PdfDownloadDeps {
   prisma: PrismaService;
-  // Absolute directory the BullMQ worker writes `{jobId}.pdf` into.
+  // Absolute directory the BullMQ worker publishes `{jobId}-g{generation}.pdf` into.
   pdfDir: string;
   // Session-cookie name resolved once at boot from the validated env.
   sessionCookieName: string;
@@ -79,14 +79,17 @@ function parseJobId(req: Request): string | null {
 }
 
 // Containment check against the resolved pdfDir; `null` means "do not serve".
-// The open with O_NOFOLLOW is the atomic enforcement: a symlink planted at the
-// artifact path is rejected (ELOOP) instead of followed outside pdfDir.
+// The physical artifact is generation-scoped — `${jobId}-g${generation}.pdf`
+// from the durable row, never the legacy un-suffixed name. The open with
+// O_NOFOLLOW is the atomic enforcement: a symlink planted at the artifact
+// path is rejected (ELOOP) instead of followed outside pdfDir.
 async function resolveArtifactPath(
   pdfDir: string,
   jobId: string,
+  generation: number,
 ): Promise<{ filePath: string; fd: number } | null> {
   const baseDir = resolve(pdfDir);
-  const filePath = resolve(baseDir, `${jobId}.pdf`);
+  const filePath = resolve(baseDir, `${jobId}-g${generation}.pdf`);
   if (!filePath.startsWith(baseDir + sep)) {
     return null;
   }
@@ -164,11 +167,17 @@ export async function handlePdfDownload(
 
   const job = await deps.prisma.pdfExportJob.findUnique({
     where: { id: jobId },
-    select: { status: true, filePath: true, reportId: true, requestedBy: true },
+    select: {
+      status: true,
+      filePath: true,
+      reportId: true,
+      requestedBy: true,
+      generation: true,
+    },
   });
   // The job row — not the filesystem — decides whether bytes may be served:
-  // 404 when missing, not completed, or the persisted artifact path does not
-  // match the requested path (a path-mismatched row or orphan same-named file).
+  // 404 when missing, not completed, or the persisted artifact URL is not the
+  // canonical public one (a path-mismatched row or orphan same-named file).
   if (job?.status !== "completed" || job.filePath !== `/pdfs/${jobId}.pdf`) {
     res.status(HTTP.notFound).end();
     return;
@@ -181,7 +190,11 @@ export async function handlePdfDownload(
     return;
   }
 
-  const artifact = await resolveArtifactPath(deps.pdfDir, jobId);
+  const artifact = await resolveArtifactPath(
+    deps.pdfDir,
+    jobId,
+    job.generation,
+  );
   if (artifact === null) {
     res.status(HTTP.notFound).end();
     return;

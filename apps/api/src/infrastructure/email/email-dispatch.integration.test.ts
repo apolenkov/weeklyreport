@@ -25,7 +25,11 @@ vi.mock("bullmq", () => ({
 
 import { createNullLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
-import { isMailpitUp, pollForMessage } from "../../test-utils/mailpit.js";
+import {
+  isMailpitUp,
+  mailpitBase,
+  pollForMessage,
+} from "../../test-utils/mailpit.js";
 import { EmailReminderProcessor as ProductionEmailReminderProcessor } from "../bullmq/email-reminder.processor.js";
 import type { EnvConfig } from "../config/env.schema.js";
 import { EmailService } from "./email.service.js";
@@ -46,8 +50,8 @@ class EmailReminderProcessor extends ProductionEmailReminderProcessor {
 // Real SMTP coords so EmailService picks Mailpit; Redis coords satisfy the
 // processor constructor (onModuleInit is skipped — processJob is called directly).
 const SMTP_ENV = {
-  SMTP_HOST: "localhost",
-  SMTP_PORT: 1025,
+  SMTP_HOST: process.env.SMTP_HOST ?? "localhost",
+  SMTP_PORT: Number(process.env.SMTP_PORT ?? 1025),
   SMTP_FROM: "test-integration@customreport.local",
   REDIS_HOST: "localhost",
   REDIS_PORT: 6379,
@@ -63,11 +67,11 @@ beforeAll(async () => {
   if (!mailpitUp) {
     if (REQUIRED_INTEGRATION_DEPS) {
       throw new Error(
-        "Required integration dependency unavailable: Mailpit at http://localhost:8025",
+        `Required integration dependency unavailable: Mailpit at ${mailpitBase()}`,
       );
     }
     console.warn(
-      "[email-dispatch] Mailpit unreachable at http://localhost:8025 — start local stack to run live assertions.",
+      `[email-dispatch] Mailpit unreachable at ${mailpitBase()} — start local stack to run live assertions.`,
     );
   }
 });

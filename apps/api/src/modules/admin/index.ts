@@ -2,9 +2,12 @@ export { ActionLogService } from "./action-log.service.js";
 export { AdminModule } from "./admin.module.js";
 export { AdminPrismaRepository } from "./admin.prisma-repository.js";
 export type {
+  AdminJobDomainReference,
   AdminJobHandle,
   AdminJobsQueue,
   AdminJobsQueueRegistry,
+  AdminPdfExportIdentity,
+  AdminPdfExportRetryOutcome,
 } from "./admin-jobs.port.js";
 export {
   AdminAccessError,
@@ -18,6 +21,7 @@ export {
   AdminSnapshotConflictError,
   AdminUserActivityAssignmentConflictError,
   AdminUserConflictError,
+  AdminUserNotFoundError,
   AdminUserPublishedHistoryError,
   AdminUserReportingGroupRequiredError,
 } from "./admin-shared.js";

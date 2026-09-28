@@ -269,6 +269,56 @@ describe("SemanticIndexPrismaSourceLoader", () => {
     await expect(harness.loader.load(locator("snapshot"))).resolves.toBeNull();
   });
 
+  it.each([
+    [
+      "changed publishedSnapshot bytes",
+      {
+        status: "published",
+        periodStatus: "published",
+        periodState: "published",
+        archived: false,
+        publishedSnapshot: { frozen: "v2" },
+      },
+    ],
+    [
+      "an invalid published lifecycle",
+      {
+        status: "published",
+        periodStatus: "reopened",
+        periodState: "open",
+        archived: false,
+        publishedSnapshot: { frozen: true },
+      },
+    ],
+  ])("rejects a snapshot reread returning %s", async (_name, secondRead) => {
+    const harness = prismaHarness();
+    harness.findReport
+      .mockResolvedValueOnce({
+        id: "report-1",
+        periodStart: new Date("2026-08-03T00:00:00.000Z"),
+        status: "published",
+        periodStatus: "published",
+        periodState: "published",
+        weekLabel: "Week 31",
+        archived: false,
+        publishedSnapshot: { frozen: true },
+      })
+      .mockResolvedValueOnce({
+        id: "report-1",
+        periodStart: new Date("2026-08-03T00:00:00.000Z"),
+        weekLabel: "Week 31",
+        ...secondRead,
+      });
+    parsePublishedSnapshot.mockReturnValue({
+      reportId: "report-1",
+      sections: [section()],
+    });
+
+    await expect(harness.loader.load(locator("snapshot"))).resolves.toBeNull();
+    expect(harness.findReport).toHaveBeenCalledTimes(2);
+    expect(harness.findSection).not.toHaveBeenCalled();
+  });
+
   it("rejects a lifecycle race while loading a live section", async () => {
     const harness = prismaHarness();
     harness.findReport

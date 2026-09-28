@@ -72,6 +72,7 @@ function RequestReopenDialogContent({
     <DocumentBodyPortal>
       <ReopenDialogShell
         surfaceRef={dialogSurfaceRef}
+        pending={pending}
         onDismiss={guardedCancel}
         onKeyDown={handleKeyDown}
       >
@@ -80,9 +81,13 @@ function RequestReopenDialogContent({
           reason={reason}
           onReasonChange={setReason}
           textareaRef={textareaRef}
+          disabled={pending}
         />
         {error && (
-          <p className="mt-2 text-xs text-[var(--color-destructive)]">
+          <p
+            role="alert"
+            className="mt-2 text-xs text-[var(--color-destructive)]"
+          >
             {error}
           </p>
         )}
@@ -101,17 +106,20 @@ function RequestReopenDialogContent({
 // the surface are stopped so they never reach it.
 function ReopenDialogShell({
   surfaceRef,
+  pending,
   onDismiss,
   onKeyDown,
   children,
 }: {
   readonly surfaceRef: RefObject<HTMLDivElement | null>;
+  readonly pending: boolean;
   readonly onDismiss: () => void;
   readonly onKeyDown: (e: React.KeyboardEvent) => void;
   readonly children: ReactNode;
 }) {
   return (
     <DialogSurface
+      isPending={pending}
       surfaceRef={surfaceRef}
       onDismiss={onDismiss}
       onBackdropKeyDown={onKeyDown}
@@ -162,12 +170,14 @@ interface ReopenReasonFieldProps {
   readonly reason: string;
   readonly onReasonChange: (next: string) => void;
   readonly textareaRef: RefObject<HTMLTextAreaElement | null>;
+  readonly disabled: boolean;
 }
 
 function ReopenReasonField({
   reason,
   onReasonChange,
   textareaRef,
+  disabled,
 }: ReopenReasonFieldProps) {
   return (
     <div className="mt-4">
@@ -185,6 +195,7 @@ function ReopenReasonField({
         name="reopenReason"
         autoComplete="off"
         ref={textareaRef}
+        disabled={disabled}
         className="w-full resize-y rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-card)] px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_var(--color-ring)] focus:outline-none"
         style={{ minHeight: "80px" }}
         maxLength={MAX_REOPEN_REASON_LENGTH}
@@ -224,10 +235,16 @@ function ReopenDialogActions({
         type="button"
         onClick={onConfirm}
         disabled={pending}
+        aria-busy={pending || undefined}
         className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[40px] items-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-starbucks-accent)] disabled:opacity-50"
       >
         {pending ? "Sending…" : "Send Request"}
       </button>
+      {pending ? (
+        <span className="sr-only" role="status" aria-live="polite">
+          Sending…
+        </span>
+      ) : null}
     </div>
   );
 }

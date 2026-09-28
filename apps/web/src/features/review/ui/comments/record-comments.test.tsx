@@ -225,6 +225,36 @@ describe("RecordComments — mutation success", () => {
     expect(mutationCalls.comment).toHaveLength(0);
   });
 
+  it("submits once after an over-limit draft is corrected to 2,000 characters", async () => {
+    const user = userEvent.setup();
+    renderComments();
+    const overLimit = "A".repeat(REVIEW_COMMENT_MAX_LENGTH + 1);
+    const atLimit = overLimit.slice(0, REVIEW_COMMENT_MAX_LENGTH);
+    const draft = screen.getByRole("textbox", {
+      name: "Add a review comment",
+    });
+    const submit = screen.getByRole("button", { name: "Comment" });
+
+    fireEvent.change(draft, { target: { value: overLimit } });
+    expect(submit).toBeDisabled();
+    expect(mutationCalls.comment).toHaveLength(0);
+
+    await user.click(draft);
+    await user.keyboard("{End}{Backspace}{Tab}");
+    expect(submit).toBeEnabled();
+    expect(submit).toHaveFocus();
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => {
+      expect(mutationCalls.comment).toEqual([
+        {
+          itemId: "11111111-1111-4111-8111-111111111111",
+          text: atLimit,
+        },
+      ]);
+    });
+  });
+
   it("does not render serialized validation details from the server", async () => {
     mutationCalls.commentError = new Error(
       '[{"code":"too_big","maximum":2000,"path":["text"]}]',

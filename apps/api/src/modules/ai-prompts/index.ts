@@ -9,3 +9,4 @@ export {
   AiPromptNotFoundError,
 } from "./application/ai-prompt.service-support.js";
 export * from "./infrastructure/ai-prompt.repository.js";
+export { revisionSelect } from "./infrastructure/ai-prompt.repository.types.js";

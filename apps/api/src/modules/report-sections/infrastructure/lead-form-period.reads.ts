@@ -35,9 +35,15 @@ async function getSectionForPeriodInSnapshot(
       select: { reportSectionId: true },
     });
     if (!admitted) return null;
-    const section = requirePublishedSnapshot(
-      report.publishedSnapshot,
-      reportId,
+    const section = requireScopedPublishedSnapshot(
+      requirePublishedSnapshot(report.publishedSnapshot, reportId),
+      {
+        role: "lead",
+        userId,
+        viewerGroupAccess: [],
+      },
+      "lead-own",
+      admitted.reportSectionId,
     ).sections.find(
       (candidate) =>
         candidate.reportSectionId === admitted.reportSectionId &&

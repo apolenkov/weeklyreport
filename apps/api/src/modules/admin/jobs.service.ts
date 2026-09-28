@@ -1,17 +1,26 @@
 import {
   EMAIL_REMINDER_QUEUE_NAME,
   type FailedJobList,
+  PDF_EXPORT_QUEUE_NAME,
+  type PdfRecoveryJob,
+  type PdfRecoveryJobList,
+  type PdfRecoveryRetryInput,
+  type PdfRecoveryRetryResult,
   type QueueName,
 } from "@customreport/shared";
 
 import { type AppLogger, createNullLogger } from "../../lib/logger";
 import type {
+  AdminJobDomainReference,
+  AdminJobHandle,
   AdminJobsQueue,
   AdminJobsQueueRegistry,
+  AdminPdfExportRetryOutcome,
 } from "./admin-jobs.port.js";
 
 const DEFAULT_FAILED_JOBS_LIMIT = 50;
 const MAX_FAILED_JOBS_LIMIT = 200;
+const ADMIN_JOBS_RETRY_PHASE = "admin.jobs.retry";
 // No mutation audit here: mutationAuditMiddleware captures tRPC mutations.
 
 export type ListFailedResult = FailedJobList;
@@ -33,6 +42,17 @@ interface JobsServiceOptions {
   // Revives a terminal-failed execution so the worker's pending-only claim CAS
   // can pick it up again; absent means the caller opted out of revival.
   reviveFailedReminderExecution?: (executionId: string) => Promise<void>;
+  // Generation-bound pdf-export retry: the durable row decides whether the
+  // caller-selected generation may advance; the queue job is never retried
+  // in place — a fresh `${jobId}-g${generation + 1}` entry is enqueued.
+  // Required — a bare queue retry would strand the terminal-failed export row.
+  retryPdfExportGeneration: (input: {
+    jobId: string;
+    expectedGeneration: number;
+  }) => Promise<AdminPdfExportRetryOutcome>;
+  // Durable list of export rows quarantined as recovery_required. Their
+  // generation's queue job may already be gone, so Redis is never consulted.
+  listPdfRecoveryJobs: () => Promise<readonly PdfRecoveryJob[]>;
 }
 
 function assertQueueMatch(expected: QueueName, actual: QueueName): void {
@@ -105,6 +125,31 @@ export class JobsService {
     const reference = job.domainReference;
     assertQueueMatch(input.queue, reference.queue);
     if (
+      input.queue === PDF_EXPORT_QUEUE_NAME &&
+      reference.queue === PDF_EXPORT_QUEUE_NAME
+    ) {
+      return this.retryPdfExportEntry(input.jobId, job, reference);
+    }
+
+    // A stale UI request can point at live work — only failed jobs may be
+    // retried. Runs before every reminder-domain side effect; pdf-export
+    // arbitrates eligibility on the durable row inside its generation seam.
+    const state = await job.getState();
+    if (state !== "failed") {
+      this.logger.info("admin.jobs.retry — job is not failed", {
+        phase: ADMIN_JOBS_RETRY_PHASE,
+        queue: input.queue,
+        jobId: input.jobId,
+        state,
+      });
+      return {
+        retried: false,
+        jobId: input.jobId,
+        reason: `Job is not failed (current state: ${state}).`,
+      };
+    }
+
+    if (
       input.queue === EMAIL_REMINDER_QUEUE_NAME &&
       reference.queue === EMAIL_REMINDER_QUEUE_NAME &&
       reference.reminderExecutionId
@@ -115,7 +160,7 @@ export class JobsService {
         await job.remove();
         const reason = `Reminder execution ${executionId} no longer exists.`;
         this.logger.info("admin.jobs.retry — stale job removed", {
-          phase: "admin.jobs.retry",
+          phase: ADMIN_JOBS_RETRY_PHASE,
           queue: input.queue,
           jobId: input.jobId,
           executionId,
@@ -136,11 +181,84 @@ export class JobsService {
     // the durable row and renders its current payload, never this job's body.
     await job.retry();
     this.logger.info("admin.jobs.retry — job requeued", {
-      phase: "admin.jobs.retry",
+      phase: ADMIN_JOBS_RETRY_PHASE,
       queue: input.queue,
       jobId: input.jobId,
     });
     return { retried: true, jobId: input.jobId };
+  }
+
+  // The pdf-export module owns the transition: `retryExportGeneration`
+  // advances the durable row exactly one generation under its row lock and
+  // enqueues a fresh generation-scoped queue job. This side only binds the
+  // retained queue entry to the generation the caller selected and maps the
+  // outcome — no queue-state read or in-place retry happens here.
+  private async retryPdfExportEntry(
+    jobId: string,
+    job: AdminJobHandle,
+    reference: Extract<
+      AdminJobDomainReference,
+      { queue: typeof PDF_EXPORT_QUEUE_NAME }
+    >,
+  ): Promise<RetryFailedResult> {
+    const identity = reference.pdfExportIdentity;
+    if (
+      !identity ||
+      job.failedJob.id !== `${identity.jobId}-g${identity.generation}`
+    ) {
+      this.logger.error(
+        "admin.jobs.retry — pdf-export payload identity rejected",
+        {
+          phase: ADMIN_JOBS_RETRY_PHASE,
+          queue: PDF_EXPORT_QUEUE_NAME,
+          jobId,
+        },
+      );
+      return {
+        retried: false,
+        jobId,
+        reason: "PDF export payload identity is missing or mismatched.",
+      };
+    }
+
+    const outcome = await this.options.retryPdfExportGeneration({
+      jobId: identity.jobId,
+      expectedGeneration: identity.generation,
+    });
+    // already-advanced is an idempotent repeat of the same caller-selected
+    // generation — the requested end state already holds, so report success.
+    if (outcome === "retried" || outcome === "already-advanced") {
+      this.logger.info("admin.jobs.retry — job requeued", {
+        phase: ADMIN_JOBS_RETRY_PHASE,
+        queue: PDF_EXPORT_QUEUE_NAME,
+        jobId,
+        outcome,
+      });
+      return { retried: true, jobId };
+    }
+    this.logger.info("admin.jobs.retry — pdf-export retry declined", {
+      phase: ADMIN_JOBS_RETRY_PHASE,
+      queue: PDF_EXPORT_QUEUE_NAME,
+      jobId,
+      outcome,
+    });
+    return {
+      retried: false,
+      jobId,
+      reason:
+        "PDF export row is missing, not failed, or bound to another payload.",
+    };
+  }
+
+  async listPdfRecovery(): Promise<PdfRecoveryJobList> {
+    return { jobs: await this.options.listPdfRecoveryJobs() };
+  }
+
+  async retryPdfRecovery(
+    input: PdfRecoveryRetryInput,
+  ): Promise<PdfRecoveryRetryResult> {
+    const outcome = await this.options.retryPdfExportGeneration(input);
+    return { jobId: input.jobId, outcome };
   }
 
   async removeFailed(input: {
@@ -151,6 +269,16 @@ export class JobsService {
     const job = await queue.getJob(input.jobId);
     if (!job) return { removed: false, jobId: input.jobId };
     assertQueueMatch(input.queue, job.domainReference.queue);
+    const state = await job.getState();
+    if (state !== "failed") {
+      this.logger.info("admin.jobs.remove — job is not failed", {
+        phase: "admin.jobs.remove",
+        queue: input.queue,
+        jobId: input.jobId,
+        state,
+      });
+      return { removed: false, jobId: input.jobId };
+    }
     await job.remove();
     this.logger.info("admin.jobs.remove — job removed", {
       phase: "admin.jobs.remove",

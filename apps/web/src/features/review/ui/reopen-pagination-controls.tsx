@@ -1,3 +1,5 @@
+import { useCallback } from "react";
+
 interface LoadMoreRequestsButtonProps {
   readonly isLoading: boolean;
   readonly onLoadMore: () => void;
@@ -32,6 +34,11 @@ export function ReopenNextPageIssue({
   isRetrying,
   onRetry,
 }: ReopenNextPageIssueProps) {
+  const focusRetry = useCallback(
+    (element: HTMLButtonElement | null) => element?.focus(),
+    [],
+  );
+
   return (
     <div
       role="alert"
@@ -39,6 +46,7 @@ export function ReopenNextPageIssue({
     >
       <span>{errorMessage}</span>
       <button
+        ref={focusRetry}
         type="button"
         disabled={isRetrying}
         onClick={onRetry}

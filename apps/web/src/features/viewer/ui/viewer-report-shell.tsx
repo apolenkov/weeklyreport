@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useMemo } from "react";
 
+import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";
 import { isLead } from "../../../shared/lib/auth/role-predicates";
 import { useSession } from "../../../shared/lib/auth/session-provider";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
@@ -204,8 +205,23 @@ export function ViewerReportShell({
     }),
   );
   const displayedQ = useQuery(trpc.weeklyReport.get.queryOptions({ reportId }));
-
   const shouldRecover = useStatusEntryRecovery(displayedQ);
+
+  // The mounted form/slides child reports ordinary displayedQ failures. The
+  // shell owns only the recovery failure, where it replaces that child.
+  useQueryErrorHandler(historyQ, {
+    event: "viewerReport.compiledHistory.load_failed",
+    component: "ViewerReportShell",
+    procedure: "reports.compiledHistory",
+  });
+  useQueryErrorHandler(
+    { isError: shouldRecover && displayedQ.isError, error: displayedQ.error },
+    {
+      event: "viewerReport.get.load_failed",
+      component: "ViewerReportShell",
+      procedure: "weeklyReport.get",
+    },
+  );
 
   const periods = useMemo(
     () =>

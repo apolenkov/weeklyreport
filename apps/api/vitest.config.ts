@@ -26,6 +26,7 @@ export default mergeConfig(
           "src/**/__tests__/**",
           "src/**/test-utils/**",
           "src/main.ts",
+          "src/pdf-artifact-migrator/main.ts",
           "src/**/*.module.ts",
         ],
         thresholds: {

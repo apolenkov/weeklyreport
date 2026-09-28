@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createNullLogger } from "../../lib/logger.js";
 import type { OrganizationService } from "../../modules/organization/index.js";
@@ -77,12 +77,20 @@ function makeSession(role: Role, activeReportId: string | null) {
 
 const prisma = createTestPrisma();
 
-function buildCaller(role: Role, activeReportId: string | null) {
+type ReminderQueue = NonNullable<
+  ConstructorParameters<typeof RemindersService>[2]
+>;
+
+function buildCaller(
+  role: Role,
+  activeReportId: string | null,
+  queue?: ReminderQueue,
+) {
   const repo = new RemindersPrismaRepository(prisma as never);
   const remindersService = new RemindersService(
     repo,
     undefined,
-    undefined,
+    queue,
     undefined,
     ORGANIZATION_SERVICE,
     TEST_ENV,
@@ -304,6 +312,29 @@ describe("reminders namespace — per-group scope (integration)", () => {
         ),
       ).toBe(false);
     });
+  });
+
+  it("dispatches one reminder for the head's in-scope draft lead and active rule", async () => {
+    const enqueue = vi
+      .fn<ReminderQueue["enqueue"]>()
+      .mockResolvedValue(undefined);
+    const queue: ReminderQueue = { enqueue };
+    const caller = buildCaller("head", TEST_IDS.report, queue);
+
+    const result = await caller.reminders.dispatchPending({
+      reportId: TEST_IDS.report,
+      ruleId: RULE_A,
+      leadId: TEST_IDS.lead,
+    });
+
+    expect(result.queued).toBe(1);
+    expect(result.reason).not.toBe("no-active-rule");
+    expect(enqueue).toHaveBeenCalledOnce();
+    const [jobId, payload, context, options] = enqueue.mock.calls[0] ?? [];
+    expect(jobId).toBe(payload?.executionId);
+    expect(payload?.recipientEmail).toBe(LEAD_A_EMAIL);
+    expect(context).toEqual({});
+    expect(options).toBeUndefined();
   });
 
   describe("dispatchPending — in-scope lead with no draft section", () => {

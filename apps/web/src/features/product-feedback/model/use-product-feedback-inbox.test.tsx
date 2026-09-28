@@ -131,6 +131,33 @@ describe("useProductFeedbackInbox mutations", () => {
     expect(onError).not.toHaveBeenCalled();
   });
 
+  it("applies the server-returned record on status change, not a local patch", async () => {
+    fetchMock.mockResolvedValueOnce(response({ feedback: [feedback] }));
+    const { result } = renderHook(() => useProductFeedbackInbox(vi.fn()));
+    await waitFor(() => expect(result.current.view).toBe("ready"));
+
+    const changed = {
+      ...feedback,
+      status: "resolved" as const,
+      resolvedAt: "2026-09-19T12:00:00.000Z",
+      updatedAt: "2026-09-19T12:00:00.000Z",
+    };
+    fetchMock.mockResolvedValueOnce(response(changed));
+    await act(() => result.current.changeStatus(feedback.id, "resolved"));
+
+    expect(result.current.items[0]?.status).toBe("resolved");
+    expect(result.current.items[0]?.updatedAt).toEqual(
+      new Date(changed.updatedAt),
+    );
+    expect(fetchMock.mock.calls[1]).toEqual([
+      `/api/v1/feedback/${feedback.id}/status`,
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({ status: "resolved" }),
+      }),
+    ]);
+  });
+
   it("keeps current records visible when a mutation fails", async () => {
     fetchMock
       .mockResolvedValueOnce(response({ feedback: [feedback] }))

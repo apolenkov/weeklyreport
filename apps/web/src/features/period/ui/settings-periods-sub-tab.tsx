@@ -108,6 +108,12 @@ function usePeriodPolicyForm(serverSettings: AppSettings) {
   } | null>(null);
 
   function handleValidityChange(id: string, valid: boolean) {
+    if (!valid) {
+      // Invalid raw text never reaches onChange, so it never dirties the
+      // draft — a background reseed would clobber it. Dirty-mark here, same
+      // as useReopenWindowState's setDraft((c) => c).
+      setDraft((current) => current);
+    }
     setInvalidFields((previous) => {
       const next = new Set(previous);
       valid ? next.delete(id) : next.add(id);

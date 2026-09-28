@@ -1,11 +1,14 @@
 import { createHash } from "node:crypto";
 
-import type {
-  AiProviderConnectionRole,
-  AiProviderDraft,
-  AiProviderProfile,
-} from "@customreport/shared";
-import { AI_PROVIDER_PROFILE_CAPABILITIES } from "@customreport/shared";
+import type { AiProviderDraft, AiProviderProfile } from "@customreport/shared";
+
+import {
+  allowedOrigins,
+  parseUrl,
+  ProviderUrlPolicyError,
+} from "../../../lib/ai-provider-url-policy.js";
+
+export { ProviderUrlPolicyError } from "../../../lib/ai-provider-url-policy.js";
 
 const BUILT_IN_ENDPOINTS = {
   mistral: "https://api.mistral.ai/v1",
@@ -61,56 +64,11 @@ export type ResolvedCompositeProviderProfile = Readonly<{
       }>;
 }>;
 
-export class ProviderUrlPolicyError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "ProviderUrlPolicyError";
-  }
-}
-
-const parseUrl = (value: string): URL => {
-  try {
-    const parsed = new URL(value);
-    if (!/^https?:$/iu.test(parsed.protocol)) {
-      throw new ProviderUrlPolicyError(
-        "Provider endpoint must use HTTP or HTTPS",
-      );
-    }
-    if (parsed.username || parsed.password || parsed.search || parsed.hash) {
-      throw new ProviderUrlPolicyError(
-        "Provider endpoint must not contain credentials, a query, or a fragment",
-      );
-    }
-    return parsed;
-  } catch (error) {
-    if (error instanceof ProviderUrlPolicyError) throw error;
-    throw new ProviderUrlPolicyError("Provider endpoint must be a valid URL");
-  }
-};
-
 export const normalizeProviderBaseUrl = (value: string): string => {
   const parsed = parseUrl(value.trim());
   const parts = parsed.pathname.split("/").filter(Boolean);
   const path = parts.length > 0 ? `/${parts.join("/")}` : "";
   return `${parsed.origin}${path}`;
-};
-
-const allowedOrigins = (values: string): ReadonlySet<string> => {
-  const origins = values
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean)
-    .map((value) => {
-      const parsed = parseUrl(value);
-      if (parsed.pathname !== "/")
-        throw new ProviderUrlPolicyError(
-          "Allowed provider entries must be exact origins",
-        );
-      return parsed.origin;
-    });
-  if (origins.length === 0)
-    throw new ProviderUrlPolicyError("Provider origin allowlist is empty");
-  return new Set(origins);
 };
 
 const endpointFor = (
@@ -209,16 +167,6 @@ export const resolveProviderProfile = (
   };
 };
 
-export const endpointSupportsRole = (
-  profile: AiProviderProfile,
-  role: AiProviderConnectionRole,
-): boolean =>
-  AI_PROVIDER_PROFILE_CAPABILITIES.some(
-    (capability) =>
-      capability.profile === profile &&
-      (capability.roles as readonly AiProviderConnectionRole[]).includes(role),
-  );
-
 export const embeddingScopeChanged = (
   left: Pick<
     ResolvedEmbeddingProfile,
@@ -233,5 +181,3 @@ export const embeddingScopeChanged = (
   left.model !== right.model ||
   left.dimensions !== right.dimensions ||
   left.semanticInputVersion !== right.semanticInputVersion;
-
-export const builtInProviderEndpoints = BUILT_IN_ENDPOINTS;

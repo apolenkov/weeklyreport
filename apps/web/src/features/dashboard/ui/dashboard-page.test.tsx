@@ -174,6 +174,22 @@ describe("DashboardPage progressive readiness", () => {
     ).toBeInTheDocument();
   });
 
+  it("reserves queue row and action-track geometry in the leads skeleton", () => {
+    setQueryState("review.dashboard", { data: [] });
+    setQueryState("weeklyReport.get", {
+      status: "pending",
+      fetchStatus: "fetching",
+    });
+    render(<DashboardPage />);
+
+    const skeleton = screen.getByTestId("dashboard-leads-loading");
+    // Same grid template as loaded rows + full-height action tracks.
+    expect(skeleton.querySelectorAll("li").length).toBeGreaterThan(0);
+    expect(
+      skeleton.querySelectorAll('[class*="--dashboard-action-h"]').length,
+    ).toBeGreaterThan(0);
+  });
+
   it("renders the weekly queue while optional activity freshness is pending", () => {
     setQueryState("activity.live", {
       status: "pending",

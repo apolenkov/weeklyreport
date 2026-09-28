@@ -51,10 +51,10 @@ function useFailedJobsPagination(queue: QueueName): FailedJobsPagination {
     procedure: "admin.jobs.listFailed",
     context: { queue },
   });
-  const jobs = useMemo(() => {
-    if (query.status !== "success") return [];
-    return query.data.pages.flatMap((page) => page.jobs);
-  }, [query.data, query.status]);
+  const jobs = useMemo(
+    () => query.data?.pages.flatMap((page) => page.jobs) ?? [],
+    [query.data?.pages],
+  );
   return {
     jobs,
     isLoading: query.isLoading,
@@ -167,6 +167,7 @@ function useExpandedRows() {
           : new Set([...prev, jobId]),
       );
     },
+    clear: () => setExpanded(new Set()),
   };
 }
 
@@ -206,7 +207,10 @@ export function JobsTab() {
           name="queue"
           autoComplete="off"
           value={queue}
-          onChange={(event) => setQueue(event.target.value as QueueName)}
+          onChange={(event) => {
+            setQueue(event.target.value as QueueName);
+            rows.clear();
+          }}
           aria-label="Failed job queue"
           className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 font-normal"
         >

@@ -80,6 +80,60 @@ services:
         condition: service_healthy
     restart: "no"
 
+  # One-shot generation-1 PDF artifact migrator (OpenSpec
+  # recover-orphaned-pdf-exports). Runs once like `migrate`; the baked-in
+  # `check` mode is read-only on Postgres. PDF_ARTIFACT_MIGRATOR_CONFIRM stays
+  # unset so apply/rollback can only run through an explicit `run -e`.
+  pdf-artifact-migrator:
+    profiles: ["pdf-artifact-migration"]
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile.pdf-artifact-migrator
+    environment:
+      DATABASE_URL: postgresql://customreport:localdev@postgres:5432/customreport_e2e
+      PDF_OUTPUT_DIR: /app/data/pdfs
+      PDF_ARTIFACT_MIGRATOR_MODE: check
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
+    volumes:
+      - pdfdata:/app/data/pdfs
+
+  # Internal Gotenberg PDF renderer: no published port and no api depends_on
+  # edge — the api reaches it only over the compose network at runtime, so a
+  # renderer outage degrades exports without blocking api boot. Conversions
+  # are serialized and the clear-* flags empty the shared browser's cookie
+  # jar, localStorage, and HTTP cache between jobs; outbound fetches stay
+  # confined to the print origin by the anchored allow-list plus both
+  # IP-class denies.
+  gotenberg:
+    image: gotenberg/gotenberg:8.37.0-chromium@sha256:0d28ae9a96441588ef739623726bd500ad0720b77266c6f1351a13e333fbd61c
+    environment:
+      API_TIMEOUT: 150s
+      CHROMIUM_MAX_CONCURRENCY: 1
+      CHROMIUM_CLEAR_COOKIES: "true"
+      CHROMIUM_CLEAR_STORAGE: "true"
+      CHROMIUM_CLEAR_CACHE: "true"
+      CHROMIUM_ALLOW_LIST: "^http://web:3000/"
+      CHROMIUM_DENY_PRIVATE_IPS: "true"
+      CHROMIUM_DENY_PUBLIC_IPS: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          # Initial provisional cap matching docker-compose.prod.yml — not
+          # measured capacity; runtime acceptance revises it from observed
+          # peaks (openspec replace-playwright-pdf-renderer, D9).
+          memory: 1G
+
   api:
     build:
       context: .
@@ -127,6 +181,7 @@ services:
       PRODUCT_FEEDBACK_ENABLED: "true"
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-change-me-in-development-min-32-chars!!}
       PDF_BASE_URL: http://web:3000
+      GOTENBERG_URL: http://gotenberg:3000
       PDF_OUTPUT_DIR: /app/data/pdfs
       PDF_EXPORT_JWT_SECRET: ${PDF_EXPORT_JWT_SECRET:-dev-only-replace-in-production-min-32-chars}
       OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-true}

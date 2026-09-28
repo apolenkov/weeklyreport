@@ -41,6 +41,7 @@ interface PdfJob {
   status: string;
   filePath: string;
   reportId: string;
+  generation: number;
   requestedBy: string;
 }
 
@@ -176,6 +177,7 @@ function completedJob(): PdfJob {
     status: "completed",
     filePath: `/pdfs/${JOB_ID}.pdf`,
     reportId: "33333333-3333-4333-8333-333333333333",
+    generation: 1,
     requestedBy: USER_ID,
   };
 }
@@ -213,6 +215,7 @@ describe("mounted PDF download ingress", () => {
           status: true,
           filePath: true,
           reportId: true,
+          generation: true,
           requestedBy: true,
         },
       });
@@ -222,9 +225,13 @@ describe("mounted PDF download ingress", () => {
   });
 
   it("streams a completed PDF with 200 for the authenticated requester", async () => {
-    const fixture = ownFixture(completedJob());
+    const job = completedJob();
+    const fixture = ownFixture(job);
     const bytes = Buffer.from("%PDF-1.7\nmounted-route-bytes");
-    writeFileSync(join(fixture.root, "pdfs", `${JOB_ID}.pdf`), bytes);
+    writeFileSync(
+      join(fixture.root, "pdfs", `${JOB_ID}-g${job.generation}.pdf`),
+      bytes,
+    );
     const server = await listen(fixture.app);
     const { port } = server.address() as AddressInfo;
 

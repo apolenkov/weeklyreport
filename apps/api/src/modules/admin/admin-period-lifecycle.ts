@@ -3,7 +3,6 @@ import {
   type DraftPeriodState,
   draftPeriodStateSchema,
   type PeriodState,
-  type PeriodStatus,
 } from "@customreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
@@ -121,7 +120,7 @@ export async function unarchivePeriod(
   prisma: PrismaService,
   periodId: string,
   now: Date,
-): Promise<{ nextPeriodState: PeriodState; nextPeriodStatus: PeriodStatus }> {
+): Promise<{ nextPeriodState: PeriodState }> {
   return periodOverlapGuarded(() =>
     prisma.$transaction(async (tx) => {
       // Reminder writers share policy -> report -> rule ordering. Lock policies
@@ -195,10 +194,7 @@ export async function unarchivePeriod(
           );
         }
       }
-      return {
-        nextPeriodState,
-        nextPeriodStatus: lifecycle.data.periodStatus,
-      };
+      return { nextPeriodState };
     }),
   );
 }

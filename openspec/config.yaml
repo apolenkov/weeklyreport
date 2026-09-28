@@ -20,9 +20,9 @@ context: |
   - Auth: SAML via `@node-saml/passport-saml` + Keycloak (prod); dev-only
     `/auth/dev-login` gated behind `AUTH_DEV_MODE`
   - Validation: Zod 4 shared schemas in `@customreport/shared`
-  - Testing: Vitest 4, Testing Library, MSW 2; Playwright is a production-only
-    dependency of the API PDF worker
-  - Node: 26.8.1 Current (Docker pins Node 26.8.1 images; API installs Chromium explicitly)
+  - Testing: Vitest 4, Testing Library, MSW 2; PDF export renders through an
+    internal Gotenberg service, not an in-process browser
+  - Node: 26.8.1 Current (Docker pins Node 26.8.1 images)
 
   # Workspace layout
   apps/web         — Next.js frontend (`@customreport/web`)

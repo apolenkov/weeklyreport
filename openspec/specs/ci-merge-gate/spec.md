@@ -9,12 +9,13 @@ Define the CI-authoritative acceptance gate for `main`.
 ### Requirement: CI runs the complete repository acceptance gate
 
 `.github/workflows/ci.yml` MUST run for pull requests, pushes to `main`, and
-manual dispatch. Its jobs MUST cover the repository's current acceptance
-surfaces: format, lint, OpenSpec validation, typecheck, unit tests, the complete
-workspace build, disposable database integration, coverage, reset safety, and
-production Compose builds. Docker target builds do not replace the complete
-workspace build because their filters may omit an independently buildable
-package.
+manual dispatch while it remains the authoritative gate — this requirement is
+transitional and retires when the GitLab main cutover completes. Its jobs MUST
+cover the repository's current acceptance surfaces: format, lint, OpenSpec
+validation, typecheck, unit tests, the complete workspace build, disposable
+database integration, coverage, reset safety, and production Compose builds.
+Docker target builds do not replace the complete workspace build because their
+filters may omit an independently buildable package.
 
 #### Scenario: A pull request runs the gate
 
@@ -29,12 +30,48 @@ package.
 - **THEN** the same acceptance workflow runs
 - **AND** its result is the authoritative repository-level acceptance signal
 
+### Requirement: GitLab CI carries only lint and test lanes
+
+Per the owner decision of 2026-09-28, `.gitlab-ci.yml` MUST run only lint and
+test lanes: `node-toolchain`, `quality`, `coverage`, `api-integration`, and
+`migrate-reset` on push pipelines, plus `dependency-scan` on schedule and
+manual pipelines. It MUST NOT run Docker-in-Docker, image builds, or
+operational smoke checks. Disposable-database lanes MUST satisfy the exact
+loopback destructive guard with a real PostgreSQL process inside the job
+container bound to `127.0.0.1`; a GitLab service alias MUST NOT be presented
+as a loopback database target. Redis and Mailpit MAY run as ordinary service
+aliases.
+
+#### Scenario: A push pipeline runs lint and tests
+
+- **WHEN** a branch or merge-request pipeline runs on GitLab
+- **THEN** it contains the lint/test jobs above and no Docker build or
+  Compose smoke job
+- **AND** database lanes use an in-job loopback PostgreSQL with Redis and
+  Mailpit as service aliases
+
+### Requirement: Product-build evidence stays required outside CI
+
+The complete workspace build (`pnpm build`), production Compose builds, PDF
+export, and browser acceptance MUST remain required acceptance evidence,
+collected outside GitLab CI and bound to the exact source SHA. Their absence
+from `.gitlab-ci.yml` is not a waiver, and the GitHub workflow jobs that
+provide them stay until the contract gates are retargeted.
+
+#### Scenario: Acceptance without outside-CI build evidence
+
+- **WHEN** a candidate is proposed for `main` acceptance
+- **THEN** the required build, PDF, and browser evidence exists for the exact
+  source SHA, or acceptance fails
+
 ### Requirement: CI actions are pinned and read-only by default
 
-Every `uses:` step in the current CI workflow MUST reference a full commit SHA
-with its readable release tag preserved in a comment. The workflow default
-permission MUST be `contents: read`; a job that needs more authority MUST
-declare only that permission at job scope.
+Every `uses:` step in the current action-based CI workflow MUST reference a
+full commit SHA with its readable release tag preserved in a comment. The
+workflow default permission MUST be `contents: read`; a job that needs more
+authority MUST declare only that permission at job scope. `.gitlab-ci.yml`
+carries no `uses:` steps; its image references are versioned
+`tag@sha256:` digests held in sync by the runtime declaration gate.
 
 #### Scenario: A CI action is inspected
 

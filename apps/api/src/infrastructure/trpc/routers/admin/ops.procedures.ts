@@ -2,6 +2,9 @@ import {
   adminActionLogPageSchema,
   omitUndefinedProperties,
   paginationInputSchema,
+  pdfRecoveryJobListSchema,
+  pdfRecoveryRetryInputSchema,
+  pdfRecoveryRetryResultSchema,
   queueNameSchema,
 } from "@customreport/shared";
 import { TRPCError } from "@trpc/server";
@@ -101,6 +104,26 @@ function createJobsRouter(deps: AdminOpsDeps) {
       .mutation(({ input }) =>
         withDomainErrorMapping(() =>
           requireJobsService(deps.jobsService).removeFailed(input),
+        ),
+      ),
+
+    // DB-backed quarantine list — the generation's queue job may already be
+    // gone, so Redis is never consulted.
+    listPdfRecovery: headProcedure
+      .output(pdfRecoveryJobListSchema)
+      .query(() =>
+        withDomainErrorMapping(() =>
+          requireJobsService(deps.jobsService).listPdfRecovery(),
+        ),
+      ),
+
+    retryPdfRecovery: headProcedure
+      .input(pdfRecoveryRetryInputSchema)
+      .use(captureMutationAuditInputMiddleware)
+      .output(pdfRecoveryRetryResultSchema)
+      .mutation(({ input }) =>
+        withDomainErrorMapping(() =>
+          requireJobsService(deps.jobsService).retryPdfRecovery(input),
         ),
       ),
   });

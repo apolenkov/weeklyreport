@@ -10,6 +10,18 @@ type Section = NonNullable<
   Awaited<ReturnType<LeadFormRepository["getSectionById"]>>
 >;
 
+// Self-fill is not a copy: fillFromSection delete-recreates the target's own
+// rows under new identities and drops non-carryable ones. Pure argument check —
+// it must run before any repository read or write.
+export function assertDistinctFillSections(
+  targetSectionId: string,
+  sourceSectionId: string,
+): void {
+  if (sourceSectionId === targetSectionId) {
+    throw new LeadFormConstraintError("Cannot fill a section from itself.");
+  }
+}
+
 export async function assertFillableTarget(
   repository: LeadFormRepository,
   targetSectionId: string,

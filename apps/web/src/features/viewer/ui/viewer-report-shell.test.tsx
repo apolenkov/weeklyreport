@@ -120,6 +120,7 @@ vi.mock("../../../shared/lib/errors/client-error-reporting", () => ({
       (error as { data?: { code?: string } } | null)?.data?.code ===
       "NOT_FOUND",
   }),
+  logClientError: () => undefined,
 }));
 
 vi.mock("../../../shared/lib/trpc/trpc-context", () => ({

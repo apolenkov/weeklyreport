@@ -76,6 +76,9 @@
   line-height: 1.5;
   margin-top: 1.6rem;
   max-width: 32ch;
+  /* Reserve two lines (2 × 1.5em) so a rotation to a tagline wrapping to
+     the second line does not shift the hero layout. */
+  min-height: 3em;
   /* Duration comes from TaglineCycler's inline transition-duration
      (FADE_MS) — the single source for the swap timing. */
   transition-property: opacity;

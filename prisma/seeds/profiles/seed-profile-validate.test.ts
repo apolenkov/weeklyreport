@@ -17,10 +17,22 @@ describe("seed profile validation summary", () => {
       projectIds: ["project-id"],
       reportIds: ["report-id"],
       itemRecords: [
-        { id: "item-id", reportSectionId: "section-id", stableId: "stable-id" },
+        {
+          id: "item-id",
+          reportSectionId: "section-id",
+          stableId: "stable-id",
+          text: "must not be printed",
+        },
       ],
       riskRecords: [
-        { id: "risk-id", reportSectionId: "section-id", stableId: "stable-id" },
+        {
+          id: "risk-id",
+          reportSectionId: "section-id",
+          stableId: "stable-id",
+          risk: "must not be printed",
+          impact: "must not be printed",
+          mitigation: "must not be printed",
+        },
       ],
       decisionRecords: [
         {

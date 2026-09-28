@@ -4,6 +4,7 @@ import type { AdminActionLogEvent } from "@customreport/shared";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
+import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { TabHeader, TabSearch } from "../../../shared/ui/tabs/tab-header";
 import { matchesActionLogSearch } from "../model/action-log-model";
@@ -109,6 +110,11 @@ function useActionLogPagination() {
       },
     ),
   );
+  useQueryErrorHandler(query, {
+    component: "ActionLogTab",
+    event: "admin.action_log.list_failed",
+    procedure: "admin.actionLog.list",
+  });
   const items = useMemo(
     () => query.data?.pages.flatMap((page) => page.items) ?? [],
     [query.data?.pages],

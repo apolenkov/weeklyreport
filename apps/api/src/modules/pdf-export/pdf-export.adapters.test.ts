@@ -17,7 +17,12 @@ describe("PDF export infrastructure adapters", () => {
     const { enqueue } = enqueuer;
 
     await enqueue(
-      { reportId: "report-1", jobId: "job-1", requestedBy: "user-1" },
+      {
+        reportId: "report-1",
+        jobId: "job-1",
+        generation: 1,
+        requestedBy: "user-1",
+      },
       { traceparent: "trace", correlationId: "correlation" },
     );
 
@@ -26,6 +31,7 @@ describe("PDF export infrastructure adapters", () => {
       {
         reportId: "report-1",
         jobId: "job-1",
+        generation: 1,
         requestedBy: "user-1",
         traceparent: "trace",
         correlationId: "correlation",
@@ -33,7 +39,7 @@ describe("PDF export infrastructure adapters", () => {
       {
         attempts: 3,
         backoff: { type: "exponential", delay: 5000 },
-        jobId: "job-1",
+        jobId: "job-1-g1",
       },
     );
   });
@@ -46,7 +52,12 @@ describe("PDF export infrastructure adapters", () => {
     const { enqueue } = enqueuer;
 
     await enqueue(
-      { reportId: "report-1", jobId: "job-1", requestedBy: "user-1" },
+      {
+        reportId: "report-1",
+        jobId: "job-1",
+        generation: 1,
+        requestedBy: "user-1",
+      },
       {},
     );
 

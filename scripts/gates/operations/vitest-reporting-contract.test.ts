@@ -57,6 +57,18 @@ void test("CI executes the combined API coverage contour exactly once", () => {
   );
   assert.match(apiJob, /@customreport\/api test:coverage/u);
   assert.doesNotMatch(apiJob, /@customreport\/api test:integration/u);
+
+  const gitlab = readFileSync(resolve(".gitlab-ci.yml"), "utf8");
+  assert.equal(
+    [...gitlab.matchAll(/@customreport\/api test:coverage/gu)].length,
+    1,
+  );
+  const gitlabApiJob = gitlab.slice(
+    gitlab.indexOf("\napi-integration:"),
+    gitlab.indexOf("\nmigrate-reset:"),
+  );
+  assert.match(gitlabApiJob, /@customreport\/api test:coverage/u);
+  assert.doesNotMatch(gitlabApiJob, /@customreport\/api test:integration/u);
 });
 
 void test("API verification summary fails closed when evidence is unusable", () => {
@@ -79,6 +91,19 @@ void test("API verification summary fails closed when evidence is unusable", () 
   assert.doesNotMatch(summaryStep, /(?:total|passed|failed)=0/u);
   assert.doesNotMatch(summaryStep, /\|\| 0/u);
   assert.match(summaryStep, /\$GITHUB_SHA/u);
+
+  const gitlab = readFileSync(resolve(".gitlab-ci.yml"), "utf8");
+  const gitlabApiJob = gitlab.slice(
+    gitlab.indexOf("\napi-integration:"),
+    gitlab.indexOf("\nmigrate-reset:"),
+  );
+  assert.match(gitlabApiJob, /api-verification-vitest\.json/u);
+  assert.match(gitlabApiJob, /coverage-summary\.json/u);
+  assert.match(gitlabApiJob, /numTotalTests/u);
+  assert.match(gitlabApiJob, /statements\?\.pct/u);
+  assert.match(gitlabApiJob, /throw new Error/u);
+  assert.match(gitlabApiJob, /CI_COMMIT_SHA/u);
+  assert.doesNotMatch(gitlabApiJob, /\|\| 0/u);
 });
 
 void test("coverage summary fails closed and reports the exact commit", () => {
@@ -97,4 +122,16 @@ void test("coverage summary fails closed and reports the exact commit", () => {
   assert.match(summaryStep, /exit 1/u);
   assert.match(summaryStep, /\$GITHUB_SHA/u);
   assert.doesNotMatch(summaryStep, /unavailable/u);
+
+  const gitlab = readFileSync(resolve(".gitlab-ci.yml"), "utf8");
+  const gitlabCoverageJob = gitlab.slice(
+    gitlab.indexOf("\ncoverage:"),
+    gitlab.indexOf("\napi-integration:"),
+  );
+  assert.match(gitlabCoverageJob, /web-coverage-vitest\.json/u);
+  assert.match(gitlabCoverageJob, /coverage-summary\.json/u);
+  assert.match(gitlabCoverageJob, /statements\?\.pct/u);
+  assert.match(gitlabCoverageJob, /throw new Error/u);
+  assert.match(gitlabCoverageJob, /CI_COMMIT_SHA/u);
+  assert.doesNotMatch(gitlabCoverageJob, /\|\| 0/u);
 });

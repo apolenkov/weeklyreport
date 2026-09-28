@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+import {
+  allowedOrigins,
+  ProviderUrlPolicyError,
+} from "../../lib/ai-provider-url-policy.js";
 import { logLevelSchema } from "../../lib/logger.js";
 import { SAML_ENV_KEYS } from "../../lib/saml-env-keys.js";
 import { REPORT_ASSISTANT_ENV_KEYS } from "./report-assistant-env-keys.js";
@@ -9,6 +13,7 @@ const MAX_REDIS_LOGICAL_DATABASE = 15;
 const MIN_SIMILARITY_THRESHOLD = 0;
 const MAX_SIMILARITY_THRESHOLD = 1;
 const positiveIntegerEnv = z.coerce.number().int().positive();
+const explicitNumberEnv = z.string().trim().min(1).transform(Number);
 
 const optionalUrl = z.preprocess(
   (value) =>
@@ -60,9 +65,13 @@ const envObjectSchema = z.object({
   KEYCLOAK_SAML_CERT: z.string().optional(),
 
   // Redis (BullMQ)
-  REDIS_HOST: z.string(),
+  REDIS_HOST: z.string().refine((value) => value.trim().length > 0, {
+    message: "REDIS_HOST must not be blank",
+  }),
   REDIS_PORT: z.coerce.number().int().positive(),
-  REDIS_DB: z.coerce.number().int().min(0).max(MAX_REDIS_LOGICAL_DATABASE),
+  REDIS_DB: explicitNumberEnv.pipe(
+    z.number().int().min(0).max(MAX_REDIS_LOGICAL_DATABASE),
+  ),
   // Redis memory cap in bytes. Required, no default: the DLQ monitor derives
   // its memory-usage alert threshold from it, so it MUST track the redis
   // container's `--maxmemory`, or usage creeps toward OOM-kill unnoticed.
@@ -88,10 +97,9 @@ const envObjectSchema = z.object({
     .enum(["true", "false"])
     .transform((value) => value === "true"),
   [REPORT_ASSISTANT_ENV_KEYS.inputVersion]: z.string().trim().min(1),
-  [REPORT_ASSISTANT_ENV_KEYS.similarityThreshold]: z.coerce
-    .number()
-    .min(MIN_SIMILARITY_THRESHOLD)
-    .max(MAX_SIMILARITY_THRESHOLD),
+  [REPORT_ASSISTANT_ENV_KEYS.similarityThreshold]: explicitNumberEnv.pipe(
+    z.number().min(MIN_SIMILARITY_THRESHOLD).max(MAX_SIMILARITY_THRESHOLD),
+  ),
   [REPORT_ASSISTANT_ENV_KEYS.candidateLimit]: positiveIntegerEnv,
   [REPORT_ASSISTANT_ENV_KEYS.readThroughLimit]: positiveIntegerEnv,
   [REPORT_ASSISTANT_ENV_KEYS.exhaustiveLimit]: positiveIntegerEnv,
@@ -145,10 +153,18 @@ const envObjectSchema = z.object({
   AGENTATION_API_KEY: z.string().trim().min(MIN_JWT_SECRET_LENGTH).optional(),
   // PDF generation
   PDF_BASE_URL: z.url(),
+  // Internal Gotenberg render service endpoint. Required fail-closed like
+  // PDF_BASE_URL, but the check is syntactic only: no DNS or reachability
+  // probe runs here, so host-source `pnpm dev` keeps booting while the
+  // compose-internal hostname is unresolvable (renderer health stays a
+  // separate lazy signal, never a boot dependency).
+  GOTENBERG_URL: z.url(),
   // Directory where the BullMQ worker writes generated PDFs and
   // where /pdfs static mount serves them. Resolved relative to the API's cwd
   // (apps/api/) at runtime — `./storage/pdfs` lands at `apps/api/storage/pdfs`.
-  PDF_OUTPUT_DIR: z.string(),
+  PDF_OUTPUT_DIR: z.string().refine((value) => value.trim().length > 0, {
+    message: "PDF_OUTPUT_DIR must not be blank",
+  }),
   // Short-lived JWT signed at /trpc entry and injected as cookie into the
   // headless browser so PDF rendering can authenticate against
   // /weekly-report/* routes. Min 32 chars also enforced in the service.
@@ -162,8 +178,12 @@ const envObjectSchema = z.object({
   // pg.Pool tunables are required so production capacity and timeout policy
   // cannot silently drift from the deployment contract.
   DB_POOL_MAX: z.coerce.number().int().positive(),
-  DB_POOL_IDLE_TIMEOUT_MS: z.coerce.number().int().nonnegative(),
-  DB_POOL_CONNECTION_TIMEOUT_MS: z.coerce.number().int().nonnegative(),
+  DB_POOL_IDLE_TIMEOUT_MS: explicitNumberEnv.pipe(
+    z.number().int().nonnegative(),
+  ),
+  DB_POOL_CONNECTION_TIMEOUT_MS: explicitNumberEnv.pipe(
+    z.number().int().nonnegative(),
+  ),
 });
 
 type ValidatedEnv = z.infer<typeof envObjectSchema>;
@@ -259,7 +279,24 @@ const addMissingSamlIssues = (
   });
 };
 
+const addProviderAllowedOriginsIssue = (
+  data: ValidatedEnv,
+  ctx: z.RefinementCtx,
+): void => {
+  try {
+    allowedOrigins(data[REPORT_ASSISTANT_ENV_KEYS.providerAllowedOrigins]);
+  } catch (error) {
+    if (!(error instanceof ProviderUrlPolicyError)) throw error;
+    ctx.addIssue({
+      code: "custom",
+      message: error.message,
+      path: [REPORT_ASSISTANT_ENV_KEYS.providerAllowedOrigins],
+    });
+  }
+};
+
 export const envSchema = envObjectSchema.superRefine((data, ctx) => {
+  addProviderAllowedOriginsIssue(data, ctx);
   // Production fences. Boot must fail if any of these aren't met.
   if (data.NODE_ENV !== "production") return;
   addForbiddenDevModeIssue(data, ctx);

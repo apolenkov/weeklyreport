@@ -4,7 +4,7 @@ import type {
 } from "@customreport/shared";
 import type { ReactNode } from "react";
 
-import { CUSTOM_PROVIDER_PROFILE } from "./ai-provider-configuration-fields.types";
+import { profileLabel } from "./ai-provider-configuration-fields.types";
 
 export const FIELD_CLASS =
   "mt-1.5 h-10 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 text-sm text-[var(--color-foreground)] shadow-xs outline-none transition focus:border-[var(--color-starbucks-accent)] focus:ring-2 focus:ring-[var(--color-ring)] disabled:cursor-not-allowed disabled:bg-[var(--color-surface-hover)] disabled:text-[var(--color-muted-foreground)]";
@@ -46,13 +46,6 @@ export function SectionHeading({
     </div>
   );
 }
-
-const profileLabel = (profile: AiProviderProfile): string => {
-  if (profile === CUSTOM_PROVIDER_PROFILE) return "Custom OpenAI-compatible";
-  return profile === "openrouter"
-    ? "OpenRouter"
-    : profile.charAt(0).toUpperCase() + profile.slice(1);
-};
 
 export function ProfileField({
   connectionRole,

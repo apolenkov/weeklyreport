@@ -37,7 +37,9 @@ interface UseRiskEditParentStageArgs {
 function useRiskEditSeeds(args: UseRiskEditParentStageArgs) {
   const { risk, isCreate, products, activities, stagesForProduct } = args;
   const seedProduct = isCreate
-    ? (products.find((p) => p.id === args.defaultProductId) ?? products[0])
+    ? args.defaultProductId
+      ? products.find((p) => p.id === args.defaultProductId)
+      : products[0]
     : products.find((p) => p.id === risk?.productId);
 
   // Chip-raise initialSeverity wins over the severity derived from the
@@ -54,10 +56,13 @@ function useRiskEditSeeds(args: UseRiskEditParentStageArgs) {
     resolveRecordParent(
       risk ?? {},
       {
-        productId: seedProduct?.id,
+        productId: isCreate
+          ? args.defaultProductId || seedProduct?.id
+          : seedProduct?.id,
         activityId: isCreate ? args.defaultActivityId : undefined,
       },
       activities,
+      products,
     ),
   );
 

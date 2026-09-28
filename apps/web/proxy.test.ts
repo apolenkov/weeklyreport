@@ -133,13 +133,77 @@ describe("apps/web/src/proxy.ts — auth guard", () => {
       /next=%2Flead%2Freport/,
     );
   });
+
+  describe("/pdf-exports route protection", () => {
+    it("redirects to /?next=/pdf-exports when no session cookie", () => {
+      const req = makeRequest("/pdf-exports");
+      const response = proxy(req);
+
+      expect(response.status).toBe(307);
+      const location = response.headers.get("location") ?? "";
+      expect(location).toContain("/?next=");
+      expect(location).toMatch(/next=%2Fpdf-exports/);
+    });
+
+    it("preserves query string in next= param", () => {
+      const req = makeRequest("/pdf-exports", "?jobId=job-42");
+      const response = proxy(req);
+
+      expect(response.status).toBe(307);
+      const location = response.headers.get("location") ?? "";
+      expect(location).toMatch(/next=%2Fpdf-exports%3FjobId%3Djob-42/);
+    });
+
+    it.each([
+      {
+        label: "non-JWT-shaped (no dots)",
+        cookie: "invalid",
+      },
+      {
+        label: "wrong segment count (one dot / two parts)",
+        cookie: "header.payloadbutnosignature",
+      },
+      {
+        label: "JWT-shaped but too short (≤20 chars)",
+        cookie: "jwt.token.here",
+      },
+      {
+        label: "empty string",
+        cookie: "",
+      },
+    ] as const)(
+      "redirects to /?next=/pdf-exports when session cookie is $label",
+      ({ cookie }) => {
+        const req = makeRequest("/pdf-exports", "", {
+          [AUTH_COOKIE_NAME]: cookie,
+        });
+        const response = proxy(req);
+
+        expect(response.status).toBe(307);
+        expect(response.headers.get("location") ?? "").toMatch(
+          /next=%2Fpdf-exports/,
+        );
+      },
+    );
+
+    it("passes through when a JWT-shaped session cookie is present", () => {
+      const validShapeJwt = "aaaaaaaaaa.bbbbbbbbbb.cccccccccc";
+      const req = makeRequest("/pdf-exports", "", {
+        [AUTH_COOKIE_NAME]: validShapeJwt,
+      });
+      const response = proxy(req);
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("location")).toBeNull();
+    });
+  });
 });
 
 describe("apps/web/src/proxy.ts — config matcher", () => {
   it("exports a config object with every protected route matcher", () => {
     expect(config).toBeDefined();
     expect(Array.isArray(config.matcher)).toBe(true);
-    expect(config.matcher).toHaveLength(5);
+    expect(config.matcher).toHaveLength(6);
   });
 
   it("matcher is a positive allowlist of protected prefixes", () => {
@@ -152,12 +216,15 @@ describe("apps/web/src/proxy.ts — config matcher", () => {
         "/head/:path*",
         "/reports/:path*",
         "/admin/:path*",
+        "/pdf-exports/:path*",
         "/feedback/:path*",
       ]),
     );
     // Every entry begins with one of the protected prefixes.
     for (const entry of matcher) {
-      expect(entry).toMatch(/^\/(lead|head|reports|admin|feedback)\//);
+      expect(entry).toMatch(
+        /^\/(lead|head|reports|admin|pdf-exports|feedback)\//,
+      );
     }
   });
 

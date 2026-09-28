@@ -13,6 +13,7 @@ import {
   AdminSnapshotConflictError,
   AdminUserActivityAssignmentConflictError,
   AdminUserConflictError,
+  AdminUserNotFoundError,
   AdminUserPublishedHistoryError,
   AdminUserReportingGroupRequiredError,
 } from "../../modules/admin/index.js";
@@ -23,11 +24,15 @@ import {
 } from "../../modules/ai-prompts/index.js";
 import {
   AiProviderConfigurationError,
+  AiProviderConflictError,
   AiProviderNotFoundError,
   CredentialCodecError,
   ProviderUrlPolicyError,
 } from "../../modules/ai-provider/index.js";
-import { ArchiveDomainError } from "../../modules/archive/index.js";
+import {
+  ArchiveCursorError,
+  ArchiveDomainError,
+} from "../../modules/archive/index.js";
 import {
   CarryOverConflictError,
   CarryOverDomainError,
@@ -260,6 +265,19 @@ describe("mapDomainError", () => {
     });
   });
 
+  // A targeted activate/deactivate on a missing user id → NOT_FOUND so the
+  // admin UI shows a row-removed state, not a generic failure.
+  describe("AdminUserNotFoundError -> NOT_FOUND", () => {
+    it("maps a missing user write target to NOT_FOUND with the original message", () => {
+      const error = new AdminUserNotFoundError("User user-1 was not found.");
+      const mapped = mapDomainError(error);
+
+      expect(mapped.code).toBe("NOT_FOUND");
+      expect(mapped.message).toBe("User user-1 was not found.");
+      expect(mapped.cause).toBe(error);
+    });
+  });
+
   describe("ReminderDomainError -> BAD_REQUEST", () => {
     it('maps "rule not found" to BAD_REQUEST', () => {
       const error = new ReminderDomainError("Reminder rule abc was not found.");
@@ -355,6 +373,11 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
       code: "BAD_REQUEST",
     },
     {
+      name: "AiProviderConflictError",
+      make: () => new AiProviderConflictError("m"),
+      code: "CONFLICT",
+    },
+    {
       name: "AiProviderNotFoundError",
       make: () => new AiProviderNotFoundError(),
       code: "NOT_FOUND",
@@ -435,6 +458,11 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
       name: "ArchiveDomainError",
       make: () => new ArchiveDomainError("m"),
       code: "NOT_FOUND",
+    },
+    {
+      name: "ArchiveCursorError",
+      make: () => new ArchiveCursorError("m"),
+      code: "BAD_REQUEST",
     },
     {
       name: "WeeklyReportDomainError",
@@ -561,6 +589,11 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
       name: "AdminUserConflictError",
       make: () => new AdminUserConflictError("m"),
       code: "CONFLICT",
+    },
+    {
+      name: "AdminUserNotFoundError",
+      make: () => new AdminUserNotFoundError("m"),
+      code: "NOT_FOUND",
     },
     {
       name: "AdminUserActivityAssignmentConflictError",
