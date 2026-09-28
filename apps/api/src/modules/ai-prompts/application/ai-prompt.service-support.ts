@@ -4,6 +4,7 @@ import type {
   AiPromptFeatureRead,
 } from "@customreport/shared";
 import {
+  AI_PROMPT_EDITABLE_TAIL_SEPARATOR,
   AI_PROMPT_SLOT_KEYS,
   aiPromptBundleReadSchema,
   aiPromptContentsSchema,
@@ -114,18 +115,25 @@ export const bundleRead = (
 ): AiPromptBundleRead => {
   const promptContents = editableFrom(revision.promptContents);
   const lockedCoreSnapshot = lockedCoreFrom(revision.lockedCoreSnapshot);
-  const composed = composePromptSet(entry, promptContents, lockedCoreSnapshot);
+  const composed =
+    revision.servingContractVersion === entry.servingContractVersion
+      ? composePromptSet(entry, promptContents, lockedCoreSnapshot)
+      : null;
   const metadataMatches =
+    composed !== null &&
     composed.contentHash === revision.effectiveContentHash &&
     composed.coreContractVersion === revision.coreContractVersion &&
     composed.composerVersion === revision.composerVersion;
-  const servingStatus =
-    revision.servingContractVersion === null ||
-    revision.servingContractVersion !== entry.servingContractVersion
-      ? "incompatible"
-      : metadataMatches
-        ? "current"
-        : "incompatible";
+  const servingStatus = metadataMatches ? "current" : "incompatible";
+  const slots =
+    composed?.slots ??
+    entry.slots.map((slot) => {
+      const lockedCore = lockedCoreSnapshot[slot];
+      const contents = promptContents[slot];
+      const effectivePrompt =
+        lockedCore + AI_PROMPT_EDITABLE_TAIL_SEPARATOR + contents;
+      return { slot, lockedCore, promptContents: contents, effectivePrompt };
+    });
   return aiPromptBundleReadSchema.parse({
     id: revision.id,
     featureKey: revision.featureKey,
@@ -137,7 +145,7 @@ export const bundleRead = (
     servingStatus,
     lockedCoreSnapshot,
     promptContents,
-    slots: composed.slots,
+    slots,
     effectiveContentHash: revision.effectiveContentHash,
     lifecycle: revision.lifecycle,
     createdAt: revision.createdAt,

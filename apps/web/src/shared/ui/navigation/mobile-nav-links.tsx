@@ -1,4 +1,5 @@
 import type { Role } from "@customreport/shared";
+import Link from "next/link";
 
 import { isActiveLink } from "./nav-active";
 import { NavIcon } from "./nav-icon";
@@ -20,9 +21,10 @@ export function MobileNavLinks({
       {links.map((link) => {
         const active = isActiveLink(pathname, link.href, role);
         return (
-          <a
+          <Link
             key={link.href}
             href={link.href}
+            scroll={false}
             onClick={onNavigate}
             className={`flex h-11 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors ${
               active
@@ -33,7 +35,7 @@ export function MobileNavLinks({
           >
             <NavIcon href={link.href} />
             {link.label}
-          </a>
+          </Link>
         );
       })}
     </nav>

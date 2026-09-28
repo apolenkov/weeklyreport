@@ -88,6 +88,7 @@ model ProductFeedback {
   @@index([projectName, authorUserId, createdAt(sort: Desc)])
   @@index([projectName, authorReportingGroupId, status, createdAt(sort: Desc)])
   @@index([projectName, url])
+  @@index([authorUserId])
   @@map("SitepingFeedback")
 }
 
@@ -209,6 +210,7 @@ model AgentationEvent {
 
   @@index([sessionId, sequence])
   @@index([sequence])
+  @@index([authorUserId])
 }
 
 model AgentationThreadMessage {
@@ -759,6 +761,8 @@ model PdfExportJob {
   publicationSnapshot Json
   publicationGroupIds String[]
   status              PdfExportStatus @default(pending)
+  // Monotonic dispatch generation; every retry increments it by exactly one.
+  generation          Int             @default(1)
   templateVersion     String
   filePath            String?
   checksum            String?
@@ -1168,6 +1172,7 @@ model AiPromptBundleRevision {
   @@unique([featureKey, revision])
   @@index([featureKey, lifecycle, updatedAt(sort: Desc)])
   @@index([effectiveContentHash])
+  @@index([baseRevisionId])
 }
 
 // One control row per code-registered feature. The nullable pointer is the
@@ -1322,6 +1327,7 @@ enum PdfExportStatus {
   pending
   completed
   failed
+  recovery_required
 }
 
 enum ReminderExecutionStatus {

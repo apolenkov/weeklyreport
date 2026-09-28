@@ -10,22 +10,24 @@ marked **untested in production**.
 ## The stack
 
 `docker compose --env-file .env.production -f docker-compose.prod.yml` brings up
-nine services:
+eleven services:
 
-| Service        | Role                                                                                                                                                                                                                           |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `config-guard` | Fails before database services start if `DB_PASSWORD` contains a reserved URL character.                                                                                                                                       |
-| `caddy`        | The only public entrypoint. TLS, security headers, routes `/api/web-vitals`, `/api/client-logs`, `/trpc`, `/auth`, `/health`, `/admin/queues`, and `/pdfs` to the api and everything else to web. `/metrics` is internal-only. |
-| `web`          | Next.js standalone server. Not published to the host — reachable only through caddy.                                                                                                                                           |
-| `api`          | NestJS + tRPC. Not published to the host either.                                                                                                                                                                               |
-| `migrate`      | Init container: `prisma migrate deploy`, then exits. `api` waits for it to succeed.                                                                                                                                            |
-| `pgbouncer`    | Transaction-mode pool in front of Postgres. All api query traffic goes through it.                                                                                                                                             |
-| `postgres`     | The database. No host port; reachable only on the compose network.                                                                                                                                                             |
-| `redis`        | BullMQ queues. `--maxmemory 200mb`, `noeviction`.                                                                                                                                                                              |
-| `backup`       | Periodic `pg_dump` into the `pgbackups` volume. See [Backups](#backups).                                                                                                                                                       |
+| Service                 | Role                                                                                                                                                                                                                           |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `config-guard`          | Fails before database services start if `DB_PASSWORD` contains a reserved URL character.                                                                                                                                       |
+| `caddy`                 | The only public entrypoint. TLS, security headers, routes `/api/web-vitals`, `/api/client-logs`, `/trpc`, `/auth`, `/health`, `/admin/queues`, and `/pdfs` to the api and everything else to web. `/metrics` is internal-only. |
+| `web`                   | Next.js standalone server. Not published to the host — reachable only through caddy.                                                                                                                                           |
+| `api`                   | NestJS + tRPC. Not published to the host either.                                                                                                                                                                               |
+| `migrate`               | Init container: `prisma migrate deploy`, then exits. `api` waits for it to succeed.                                                                                                                                            |
+| `pdf-artifact-migrator` | Opt-in one-shot generation-1 artifact link migration. Its default `check` mode is read-only on PostgreSQL. See [PDF artifact generation protocol](#pdf-artifact-generation-protocol).                                          |
+| `pgbouncer`             | Transaction-mode pool in front of Postgres. All api query traffic goes through it.                                                                                                                                             |
+| `postgres`              | The database. No host port; reachable only on the compose network.                                                                                                                                                             |
+| `redis`                 | BullMQ queues. `--maxmemory 200mb`, `noeviction`.                                                                                                                                                                              |
+| `gotenberg`             | Internal PDF renderer reached only by the api over the compose network — no host port, no Caddy route. Serializes conversions and clears browser state between jobs; egress is confined to the `PDF_BASE_URL` print origin.    |
+| `backup`                | Periodic `pg_dump` into the `pgbackups` volume. See [Backups](#backups).                                                                                                                                                       |
 
-`migrate` and `backup` talk to `postgres` **directly**, bypassing pgbouncer:
-DDL and `pg_dump` both need a session that outlives a single transaction.
+`migrate`, `pdf-artifact-migrator`, and `backup` talk to `postgres` **directly**, bypassing pgbouncer:
+DDL and `pg_dump` need a session that outlives a single transaction; the artifact migrator keeps the direct path for its read-only scan.
 
 ## First deploy
 
@@ -34,30 +36,31 @@ DDL and `pg_dump` both need a session that outlives a single transaction.
    every empty assignment. Compose or the api rejects an untouched template;
    the few populated values are explicit repository policy, not hidden defaults.
 
-   | Variable                                                                                                                                                                                  | What it is                                                                       |
-   | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-   | `DB_PASSWORD`                                                                                                                                                                             | Postgres password; URL-safe unreserved characters only (`A-Z a-z 0-9 . - _ ~`).  |
-   | `POSTGRES_DB`                                                                                                                                                                             | Database name shared by all consumers; letters, digits, and underscores only.    |
-   | `FRONTEND_URL`, `APP_BASE_URL`, `PDF_BASE_URL`                                                                                                                                            | Public origins.                                                                  |
-   | `CLIENT_LOG_FORWARDING`, `NEXT_PUBLIC_CLIENT_LOG_FORWARDING`, `NEXT_PUBLIC_WEB_VITALS`                                                                                                    | Explicit server/browser telemetry toggles.                                       |
-   | `PRODUCT_FEEDBACK_ENABLED`, `NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED`, `NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES`                                                                            | Matching API/Web feedback gates and the comma-separated inbox role allowlist.    |
-   | `AUTH_JWT_SECRET`, `PDF_EXPORT_JWT_SECRET`                                                                                                                                                | Min 32 chars each, distinct, never the dev values.                               |
-   | `AI_PROVIDER_CONFIG_ENCRYPTION_KEY`                                                                                                                                                       | Base64 or hexadecimal key for encrypted provider credentials; required at boot.  |
-   | `AI_PROVIDER_CONFIG_KEY_VERSION`, `AI_PROVIDER_ALLOWED_ORIGINS`                                                                                                                           | Current key version and exact upstream origin allowlist.                         |
-   | `REPORT_ASSISTANT_OUTBOUND_DATA_APPROVED`                                                                                                                                                 | Explicit owner decision for sending report-derived content; `false` blocks it.   |
-   | `REPORT_ASSISTANT_INPUT_VERSION`, `REPORT_ASSISTANT_SIMILARITY_THRESHOLD`, `REPORT_ASSISTANT_CANDIDATE_LIMIT`, `REPORT_ASSISTANT_READ_THROUGH_LIMIT`, `REPORT_ASSISTANT_EXHAUSTIVE_LIMIT` | Bounded retrieval policy for the report assistant.                               |
-   | `REPORT_ASSISTANT_CONTEXT_TOKEN_BUDGET`, `REPORT_ASSISTANT_PROVIDER_TIMEOUT_MS`, `REPORT_ASSISTANT_PLANNER_MAX_TOKENS`, `REPORT_ASSISTANT_ANSWER_MAX_TOKENS`                              | Bounded assistant execution limits.                                              |
-   | `REPORT_ASSISTANT_EMBEDDING_BATCH_SIZE`, `REPORT_ASSISTANT_EMBEDDING_TOKEN_BUDGET`                                                                                                        | Bounded embedding workload limits.                                               |
-   | `KEYCLOAK_SAML_CALLBACK_URL`, `KEYCLOAK_SAML_ENTRY_POINT`, `KEYCLOAK_SAML_ISSUER`, `KEYCLOAK_SAML_CERT`                                                                                   | The IdP; all four are required when `AUTH_DEV_MODE=false`.                       |
-   | `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`                                                                                                                                                     | Reminder delivery. Missing values fail production boot instead of dropping mail. |
-   | `HEAP_HEALTH_THRESHOLD_BYTES`                                                                                                                                                             | ~75% of the api container memory limit (2 GB → `1610612736`).                    |
-   | `CADDY_SITE_ADDRESS`, `CADDY_ACME_EMAIL`, `CADDY_CSP_REPORT_URI`                                                                                                                          | Public hostname, ACME account email, and external CSP violation collector.       |
-   | `HTTP_PORT`, `HTTPS_PORT`, `HTTPS_PORT_QUIC`                                                                                                                                              | Host ports for the public Caddy listener.                                        |
-   | `PGBOUNCER_MAX_CLIENT_CONN`, `PGBOUNCER_POOL_SIZE`, `PGBOUNCER_RESERVE_POOL_SIZE`                                                                                                         | PgBouncer capacity limits.                                                       |
-   | `DB_POOL_MAX`, `DB_POOL_IDLE_TIMEOUT_MS`, `DB_POOL_CONNECTION_TIMEOUT_MS`                                                                                                                 | API pg.Pool capacity and timeout policy; all three are required.                 |
-   | `REDIS_DB`, `LOG_LEVEL`, `OTEL_SDK_DISABLED`, `OTEL_TRACES_SAMPLER_ARG`, `OTEL_SERVICE_VERSION`                                                                                           | Runtime policy, telemetry mode, and the exact release identity.                  |
-   | `BACKUP_INTERVAL_SECONDS`, `BACKUP_RETENTION_DAYS`                                                                                                                                        | Local backup cadence and history window. See [Backups](#backups).                |
-   | `GRAFANA_ADMIN_PASSWORD`                                                                                                                                                                  | Operator secret required when the optional observability overlay is composed.    |
+   | Variable                                                                                                                                                                                  | What it is                                                                              |
+   | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+   | `DB_PASSWORD`                                                                                                                                                                             | Postgres password; URL-safe unreserved characters only (`A-Z a-z 0-9 . - _ ~`).         |
+   | `POSTGRES_DB`                                                                                                                                                                             | Database name shared by all consumers; letters, digits, and underscores only.           |
+   | `FRONTEND_URL`, `APP_BASE_URL`, `PDF_BASE_URL`                                                                                                                                            | Public origins.                                                                         |
+   | `GOTENBERG_URL`, `CHROMIUM_ALLOW_LIST`                                                                                                                                                    | Renderer compose-network URL and the anchored regex matching the `PDF_BASE_URL` origin. |
+   | `CLIENT_LOG_FORWARDING`, `NEXT_PUBLIC_CLIENT_LOG_FORWARDING`, `NEXT_PUBLIC_WEB_VITALS`                                                                                                    | Explicit server/browser telemetry toggles.                                              |
+   | `PRODUCT_FEEDBACK_ENABLED`, `NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED`, `NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES`                                                                            | Matching API/Web feedback gates and the comma-separated inbox role allowlist.           |
+   | `AUTH_JWT_SECRET`, `PDF_EXPORT_JWT_SECRET`                                                                                                                                                | Min 32 chars each, distinct, never the dev values.                                      |
+   | `AI_PROVIDER_CONFIG_ENCRYPTION_KEY`                                                                                                                                                       | Base64 or hexadecimal key for encrypted provider credentials; required at boot.         |
+   | `AI_PROVIDER_CONFIG_KEY_VERSION`, `AI_PROVIDER_ALLOWED_ORIGINS`                                                                                                                           | Current key version and exact upstream origin allowlist.                                |
+   | `REPORT_ASSISTANT_OUTBOUND_DATA_APPROVED`                                                                                                                                                 | Explicit owner decision for sending report-derived content; `false` blocks it.          |
+   | `REPORT_ASSISTANT_INPUT_VERSION`, `REPORT_ASSISTANT_SIMILARITY_THRESHOLD`, `REPORT_ASSISTANT_CANDIDATE_LIMIT`, `REPORT_ASSISTANT_READ_THROUGH_LIMIT`, `REPORT_ASSISTANT_EXHAUSTIVE_LIMIT` | Bounded retrieval policy for the report assistant.                                      |
+   | `REPORT_ASSISTANT_CONTEXT_TOKEN_BUDGET`, `REPORT_ASSISTANT_PROVIDER_TIMEOUT_MS`, `REPORT_ASSISTANT_PLANNER_MAX_TOKENS`, `REPORT_ASSISTANT_ANSWER_MAX_TOKENS`                              | Bounded assistant execution limits.                                                     |
+   | `REPORT_ASSISTANT_EMBEDDING_BATCH_SIZE`, `REPORT_ASSISTANT_EMBEDDING_TOKEN_BUDGET`                                                                                                        | Bounded embedding workload limits.                                                      |
+   | `KEYCLOAK_SAML_CALLBACK_URL`, `KEYCLOAK_SAML_ENTRY_POINT`, `KEYCLOAK_SAML_ISSUER`, `KEYCLOAK_SAML_CERT`                                                                                   | The IdP; all four are required when `AUTH_DEV_MODE=false`.                              |
+   | `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`                                                                                                                                                     | Reminder delivery. Missing values fail production boot instead of dropping mail.        |
+   | `HEAP_HEALTH_THRESHOLD_BYTES`                                                                                                                                                             | ~75% of the api container memory limit (2 GB → `1610612736`).                           |
+   | `CADDY_SITE_ADDRESS`, `CADDY_ACME_EMAIL`, `CADDY_CSP_REPORT_URI`                                                                                                                          | Public hostname, ACME account email, and external CSP violation collector.              |
+   | `HTTP_PORT`, `HTTPS_PORT`, `HTTPS_PORT_QUIC`                                                                                                                                              | Host ports for the public Caddy listener.                                               |
+   | `PGBOUNCER_MAX_CLIENT_CONN`, `PGBOUNCER_POOL_SIZE`, `PGBOUNCER_RESERVE_POOL_SIZE`                                                                                                         | PgBouncer capacity limits.                                                              |
+   | `DB_POOL_MAX`, `DB_POOL_IDLE_TIMEOUT_MS`, `DB_POOL_CONNECTION_TIMEOUT_MS`                                                                                                                 | API pg.Pool capacity and timeout policy; all three are required.                        |
+   | `REDIS_DB`, `LOG_LEVEL`, `OTEL_SDK_DISABLED`, `OTEL_TRACES_SAMPLER_ARG`, `OTEL_SERVICE_VERSION`                                                                                           | Runtime policy, telemetry mode, and the exact release identity.                         |
+   | `BACKUP_INTERVAL_SECONDS`, `BACKUP_RETENTION_DAYS`                                                                                                                                        | Local backup cadence and history window. See [Backups](#backups).                       |
+   | `GRAFANA_ADMIN_PASSWORD`                                                                                                                                                                  | Operator secret required when the optional observability overlay is composed.           |
 
 Optional: `FRONTEND_URLS` (extra CORS origins, no wildcards in production),
 `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`, `SMTP_USER`, `SMTP_PASS`.
@@ -80,18 +83,33 @@ Production Compose owns the internal web-to-api origin as one YAML anchor
 Web server. Do not add `API_URL` to `.env.production`; an operator override
 would let rewrites and server-side fetches target different origins.
 
-2. **Build and start.** `NEXT_PUBLIC_*` values are compiled into the client
-   bundle, so a changed public origin needs a rebuild, not a restart.
+2. **Build the release images.** `NEXT_PUBLIC_*` values are compiled into the
+   client bundle, so a changed public origin needs a rebuild, not a restart.
 
    ```sh
-   docker compose --env-file .env.production -f docker-compose.prod.yml up --build -d
+   docker compose --env-file .env.production -f docker-compose.prod.yml build
    ```
 
-3. **Watch the boot order.** `migrate` must exit 0 before `api` starts; `api`
+3. **Activate the release.** For the first install and every release that
+   introduces the generation-aware PDF protocol, complete the pre-activation
+   sequence in [PDF artifact generation protocol](#pdf-artifact-generation-protocol)
+   before starting the stack. It runs the schema migration and artifact
+   `check → apply → check` while the API is stopped, then starts the app only
+   after the final check exits 0. For later routine starts, `pdf-artifact-migrator`
+   is excluded from the default Compose set; the protocol's one-shot `check`
+   must not run against artifacts already created by the generation-aware API.
+   For a later routine start, run the default Compose set without the
+   migration profile:
+
+   ```sh
+   docker compose --env-file .env.production -f docker-compose.prod.yml up -d
+   ```
+
+4. **Watch the boot order.** `migrate` must exit 0 before `api` starts; `api`
    must report healthy before `web` and `caddy` start. A stuck start is almost
    always `migrate` failing — read its log first.
 
-4. **Verify before announcing.**
+5. **Verify before announcing.**
 
    ```sh
    docker compose --env-file .env.production -f docker-compose.prod.yml ps        # long-running services healthy; guards/migrate exited 0
@@ -109,6 +127,10 @@ hand-edit the container mount.
   container healthcheck and any load balancer should use. During startup it
   stays unavailable until both workers connect; Compose grants a 60-second
   startup grace.
+- `GET /health/pdf-renderer` — dedicated, non-gating probe of the Gotenberg
+  service's own `GET /health`. It reports `up`/`down` (200/503) and never joins
+  `/health/ready`: a renderer outage degrades PDF exports (jobs fail retryably)
+  without marking the api unready.
 - `GET /metrics` — internal API metrics. Deliberately **not** routed through
   Caddy from the public internet; Caddy returns 404 for it at the edge.
 - `/admin/queues` — Bull Board. Session-authenticated, `head` role only; exposes
@@ -252,6 +274,159 @@ listed in `AGENTS.md`, section **Database safety**.
 `prisma/guards/_destructive-guard.ts` must accept the resolved target before any
 destructive command. Product or shared databases are never reset; leave
 `ALLOW_PROD_DESTRUCTIVE` unset.
+
+### PDF artifact generation protocol
+
+PDF artifact files are generation-scoped: workers publish
+`${jobId}-g${generation}.pdf`, the public URL stays `/pdfs/{jobId}.pdf`, and
+the download resolves the completed row's recorded generation — never the
+legacy un-suffixed name. Rows completed before the protocol carry
+`generation = 1` but only a legacy `${jobId}.pdf` file, so the deploy that
+introduces the protocol runs a one-shot artifact migration that hard-links
+every verified legacy file to its generation-1 name.
+
+The `pdf-artifact-migrator` image (`apps/api/Dockerfile.pdf-artifact-migrator`)
+is a separate compiled one-shot runtime: its CLI source lives under
+`apps/api`, but it ships and runs as its own container with a dedicated
+entrypoint — never inside the api runner — and carries no tsx or prisma
+tooling. The Compose service uses the opt-in `pdf-artifact-migration` profile,
+is `restart: "no"`, and mounts the `pdfdata` artifact volume at
+`PDF_OUTPUT_DIR`; it exists in `docker-compose.prod.yml` and `docker-compose.yml`
+from task 2.5 of this change onward. PostgreSQL access is read-only: a
+single `pg` session pinned `default_transaction_read_only=on`, connected
+directly to postgres like `migrate`, issuing only SELECTs of `completed`
+rows. It writes nothing to the database and leaves every durable field
+unchanged. On the artifact filesystem, `check` and `apply` never delete or
+overwrite a destination PDF, and `rollback` deletes only the verified
+record-owned destination link; the migrator's only other filesystem effects
+are its own state under `.migration/` — a transient `lock` directory every
+mode (including `check`) creates for the run and removes on clean completion,
+and per-job `records/<jobId>.json` entries that are atomically replaced
+(fsynced temp renamed over the record path), never edited in place. The
+migrator does not run under `prisma/guards/_destructive-guard.ts` — its
+guards are the read-only session plus a target-bound confirmation token.
+
+Deploy order — old-protocol and generation-aware producers/workers must never
+run concurrently:
+
+1. Build the release images without starting the new API:
+
+   ```sh
+   docker compose --env-file .env.production -f docker-compose.prod.yml build
+   ```
+
+2. Start PostgreSQL and run `prisma migrate deploy` through the existing
+   `migrate` service. The migration is additive and backward-compatible, so
+   on an upgrade it runs while the old API is still live. Do not start the new
+   API yet.
+
+   ```sh
+   docker compose --env-file .env.production -f docker-compose.prod.yml up -d postgres
+   docker compose --env-file .env.production -f docker-compose.prod.yml run --rm --no-deps migrate
+   ```
+
+3. Stop the old API containers on an upgrade. The pdf-export worker is
+   in-process, so stopping the API quiesces both dispatch and rendering;
+   retained old-protocol queue entries are later rejected by the workers'
+   generation check and funnel to `recovery_required`. A fresh install has no
+   old API to stop.
+4. Run the migrator in `check` (the default mode). It reports each row as
+   `already-linked`, `would-link`, or `skipped-anomaly`, writes no artifact
+   or record — only the transient `.migration/lock` while it runs — and
+   exits non-zero while an applicable link is missing or any anomaly is
+   reported. Do not start the new API on a non-zero result.
+5. Run `apply` with
+   `PDF_ARTIFACT_MIGRATOR_CONFIRM=<host>|<port>|<database>` matching the
+   resolved `DATABASE_URL` target — the `CONFIRM_RESTORE_TARGET` precedent.
+   `apply` and `rollback` both refuse without it.
+6. Run `check` again until it exits 0 and its summary reports `pending=0`
+   and `anomalies=0` — zero pending links alone is not sufficient.
+7. Activate the generation-aware API only after that successful check:
+
+   ```sh
+   docker compose --env-file .env.production -f docker-compose.prod.yml up -d
+   ```
+
+   The migrator's profile is not enabled by this ordinary stack start, so it
+   will not reclassify native generation-1 artifacts as migration anomalies.
+
+The whole window runs quiesced: the artifact root and its `.migration/`
+subtree must not be touched by anything else — Node has no `openat`-style
+protection against a process swapping parent directories mid-run, so
+quiescence is part of the safety contract.
+
+```sh
+# check (default): reports verdicts, writes no artifact or record
+docker compose --profile pdf-artifact-migration --env-file .env.production \
+  -f docker-compose.prod.yml run --rm --no-deps pdf-artifact-migrator
+
+# apply: the token echoes the resolved target host|port|database
+docker compose --profile pdf-artifact-migration --env-file .env.production \
+  -f docker-compose.prod.yml run --rm --no-deps \
+  -e PDF_ARTIFACT_MIGRATOR_MODE=apply \
+  -e 'PDF_ARTIFACT_MIGRATOR_CONFIRM=postgres|5432|<POSTGRES_DB>' \
+  pdf-artifact-migrator
+
+# check again before starting the generation-aware API
+docker compose --profile pdf-artifact-migration --env-file .env.production \
+  -f docker-compose.prod.yml run --rm --no-deps pdf-artifact-migrator
+```
+
+Environment contract: `DATABASE_URL` must pin an explicit port (a portless
+URL inherits `PGPORT` and is refused) and must not carry `host`, `port`,
+`database`, `user`, or `password` query parameters; `PDF_OUTPUT_DIR` is the
+absolute artifact root; `PDF_ARTIFACT_MIGRATOR_MODE` is `check` (default),
+`apply`, or `rollback`; `apply`/`rollback` additionally require
+`PDF_ARTIFACT_MIGRATOR_CONFIRM=<host>|<port>|<database>` exactly matching
+the resolved `DATABASE_URL` target.
+
+`apply` verifies each `${jobId}.pdf` as a regular non-symlink file whose
+sha256 equals the row's checksum; a missing, symlinked, or
+checksum-mismatched legacy file is skipped and reported with the row
+untouched. Run locking and per-job records:
+
+- Every mode — `check` included — takes a global exclusive lock by creating
+  `PDF_OUTPUT_DIR/.migration/lock` (`mkdir`); it is transient run state, not
+  an artifact or record. `EEXIST` refuses safely; normal completion removes
+  the empty directory.
+- A crashed or killed run leaves the lock in place. It is **never**
+  reclaimed automatically — not by PID, age, or heartbeat. To recover:
+  confirm the old api and all migrators are quiesced and no run is active,
+  remove **only** the empty `lock` directory (`rmdir
+PDF_OUTPUT_DIR/.migration/lock`), then rerun — the records drive
+  idempotent recovery.
+- Each job's ownership lives in
+  `PDF_OUTPUT_DIR/.migration/records/<jobId>.json` — schema version, the
+  writing operation's UUID, jobId, source/destination names and paths,
+  source device+inode, sha256, and a state of `intent`, `committed`,
+  `rollback-intent`, or `rolled-back`. Each transition is persisted by
+  atomically replacing the record: unique temp file, fsync, rename over the
+  record path, directory fsync; a corrupt, symlinked, or non-regular record
+  blocks mutation for that row and fails `check`.
+- `apply` verifies the destination absent, then persists `intent` before
+  linking, then `committed` after; a pre-existing destination without a
+  matching record is foreign — even a hard link to the same inode — and is
+  reported, never adopted. A rerun after a crash retries a missing link
+  (only while the recorded source inode still matches the live file) or
+  finalizes a matching one.
+- `rollback` is valid only inside this pre-activation window — it requires a
+  `committed` record, re-verifies path+inode+checksum, persists
+  `rollback-intent`, unlinks only that verified destination, and persists
+  `rolled-back`. A crashed `rollback-intent` resumes the same way: delete
+  only a destination that still matches the owned record, or finish
+  `rolled-back` when the destination is already absent — a mismatch is
+  reported with nothing deleted. An `intent` record blocks rollback as
+  unresolved — `apply` owns its recovery — so resolve it with `apply` first.
+  Legacy files and entries no valid record owns are never removed.
+
+Once the generation-aware api is activated, ordinary rollback is unsafe — a
+completed artifact may exist only as `${jobId}-g${generation}.pdf`, which the
+old reader cannot resolve — and recovery is forward-only: fix forward and
+preserve every durable row, artifact, and queue entry. No reverse migration
+or legacy-filename fallback is provided.
+
+This procedure is the deploy contract for the protocol change; it remains
+**untested in production** and has not yet been exercised end to end.
 
 ### Agentation feedback operations
 

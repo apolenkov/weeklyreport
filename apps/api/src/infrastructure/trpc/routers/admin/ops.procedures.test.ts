@@ -1,4 +1,4 @@
-import type { Role } from "@customreport/shared";
+import type { PdfRecoveryJob, Role } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { createNullLogger } from "../../../../lib/logger.js";
@@ -100,6 +100,24 @@ describe("admin ops dependency wiring", () => {
   it("jobs.listFailed fails loud when the jobs service is unwired", async () => {
     await expect(
       buildAdminCaller().admin.jobs.listFailed({ queue: "email-reminder" }),
+    ).rejects.toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Jobs service is not configured.",
+    });
+  });
+
+  it("jobs.listPdfRecovery fails loud when the jobs service is unwired", async () => {
+    await expect(
+      buildAdminCaller().admin.jobs.listPdfRecovery(),
+    ).rejects.toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Jobs service is not configured.",
+    });
+  });
+
+  it("jobs.retryPdfRecovery fails loud when the jobs service is unwired", async () => {
+    await expect(
+      buildAdminCaller().admin.jobs.retryPdfRecovery(RECOVERY_RETRY_INPUT),
     ).rejects.toMatchObject({
       code: "INTERNAL_SERVER_ERROR",
       message: "Jobs service is not configured.",
@@ -236,6 +254,112 @@ describe("jobs contract uses the canonical Head authority", () => {
       expect(listFailed).not.toHaveBeenCalled();
       expect(retryFailed).not.toHaveBeenCalled();
       expect(removeFailed).not.toHaveBeenCalled();
+    },
+  );
+});
+
+const RECOVERY_ROW: PdfRecoveryJob = {
+  jobId: "55555555-5555-4555-8555-555555555555",
+  reportId: "66666666-6666-4666-8666-666666666666",
+  generation: 2,
+  requestedBy: "77777777-7777-4777-8777-777777777777",
+  status: "recovery_required",
+  createdAt: new Date("2026-09-01T10:00:00.000Z"),
+};
+
+const RECOVERY_RETRY_INPUT = {
+  jobId: RECOVERY_ROW.jobId,
+  expectedGeneration: RECOVERY_ROW.generation,
+};
+
+describe("jobs pdf recovery contract", () => {
+  function makeRecoveryService() {
+    const listPdfRecovery = vi.fn().mockResolvedValue({
+      jobs: [RECOVERY_ROW],
+    });
+    const retryPdfRecovery = vi.fn().mockResolvedValue({
+      jobId: RECOVERY_ROW.jobId,
+      outcome: "retried" as const,
+    });
+    const service = {
+      listPdfRecovery,
+      retryPdfRecovery,
+    } as unknown as JobsService;
+    return { service, listPdfRecovery, retryPdfRecovery };
+  }
+
+  it.each(["head", "admin"] as const)(
+    "lets a %s list quarantined exports from the durable side",
+    async (role) => {
+      const { service, listPdfRecovery } = makeRecoveryService();
+
+      await expect(
+        buildJobsCaller(service, role).admin.jobs.listPdfRecovery(),
+      ).resolves.toEqual({ jobs: [RECOVERY_ROW] });
+      expect(listPdfRecovery).toHaveBeenCalledOnce();
+    },
+  );
+
+  it.each(["lead", "viewer"] as const)(
+    "rejects the %s role before listing quarantined exports",
+    async (role) => {
+      const { service, listPdfRecovery } = makeRecoveryService();
+
+      await expect(
+        buildJobsCaller(service, role).admin.jobs.listPdfRecovery(),
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+      expect(listPdfRecovery).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["retried", "already-advanced", "ineligible"] as const)(
+    "passes the caller-selected generation through and reports the verbatim %s outcome",
+    async (outcome) => {
+      const { service, retryPdfRecovery } = makeRecoveryService();
+      retryPdfRecovery.mockResolvedValue({
+        jobId: RECOVERY_ROW.jobId,
+        outcome,
+      });
+
+      await expect(
+        buildJobsCaller(service, "head").admin.jobs.retryPdfRecovery(
+          RECOVERY_RETRY_INPUT,
+        ),
+      ).resolves.toEqual({ jobId: RECOVERY_ROW.jobId, outcome });
+      expect(retryPdfRecovery).toHaveBeenCalledWith(RECOVERY_RETRY_INPUT);
+    },
+  );
+
+  it.each(["lead", "viewer"] as const)(
+    "rejects the %s role before a recovery retry can reach the service",
+    async (role) => {
+      const { service, retryPdfRecovery } = makeRecoveryService();
+
+      await expect(
+        buildJobsCaller(service, role).admin.jobs.retryPdfRecovery(
+          RECOVERY_RETRY_INPUT,
+        ),
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+      expect(retryPdfRecovery).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    [{ jobId: "not-a-uuid", expectedGeneration: 1 }],
+    [{ jobId: RECOVERY_ROW.jobId, expectedGeneration: 0 }],
+    [{ jobId: RECOVERY_ROW.jobId, expectedGeneration: 1.5 }],
+    [{ jobId: RECOVERY_ROW.jobId }],
+  ])(
+    "rejects malformed retry input %o before the service runs",
+    async (input) => {
+      const { service, retryPdfRecovery } = makeRecoveryService();
+
+      await expect(
+        buildJobsCaller(service, "head").admin.jobs.retryPdfRecovery(
+          input as typeof RECOVERY_RETRY_INPUT,
+        ),
+      ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+      expect(retryPdfRecovery).not.toHaveBeenCalled();
     },
   );
 });

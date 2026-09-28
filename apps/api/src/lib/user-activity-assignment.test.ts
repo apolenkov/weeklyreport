@@ -41,9 +41,11 @@ function hasMockCalls(
 function fakeTx(
   edges: unknown[] = [],
   projects: unknown[] = [],
+  headed: unknown[] = [],
+  users: unknown[] = [{ id: USER_ID }],
 ): Prisma.TransactionClient {
   return {
-    $queryRaw: vi.fn().mockResolvedValue([{ id: USER_ID }]),
+    $queryRaw: vi.fn().mockResolvedValue(users),
     projectActivityLead: {
       findMany: vi.fn().mockResolvedValue(edges),
     },
@@ -51,7 +53,7 @@ function fakeTx(
       findMany: vi.fn().mockResolvedValue(projects),
     },
     reportingGroup: {
-      findMany: vi.fn().mockResolvedValue([]),
+      findMany: vi.fn().mockResolvedValue(headed),
     },
   } as unknown as Prisma.TransactionClient;
 }
@@ -112,6 +114,33 @@ describe("user assignment integrity", () => {
         reportingGroupId: GROUP_A,
       }),
     ).rejects.toBeInstanceOf(AdminUserActivityAssignmentConflictError);
+  });
+
+  it("rejects demoting a reporting-group head to a non-head role", async () => {
+    const tx = fakeTx([], [], [{ id: GROUP_A }]);
+
+    await expect(
+      lockUserAndAssertActivityAssignments(tx, {
+        userId: USER_ID,
+        role: "lead",
+        reportingGroupId: GROUP_A,
+      }),
+    ).rejects.toBeInstanceOf(AdminUserActivityAssignmentConflictError);
+  });
+
+  it("returns false without reading the graph when the user is missing", async () => {
+    const tx = fakeTx([], [], [], []);
+
+    await expect(
+      lockUserAndAssertActivityAssignments(tx, {
+        userId: USER_ID,
+        role: "lead",
+        reportingGroupId: GROUP_A,
+      }),
+    ).resolves.toBe(false);
+    expect(tx.projectActivityLead.findMany).not.toHaveBeenCalled();
+    expect(tx.project.findMany).not.toHaveBeenCalled();
+    expect(tx.reportingGroup.findMany).not.toHaveBeenCalled();
   });
 
   it("allows a compatible lead assignment", async () => {

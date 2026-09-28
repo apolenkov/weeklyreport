@@ -54,6 +54,40 @@ Consumer surface: `prisma/guards/_destructive-guard.ts` —
 - **WHEN** the URL contains a query, fragment, encoded path alias, remote host, or missing exact consent
 - **THEN** the common guard refuses before destructive work without logging credentials
 
+### Requirement: Integration cleanup requires the shared database target
+
+Under the MVP single-database policy the API integration helper MUST require
+both the disposable `E2E_DATABASE_URL` and the developer's actual
+`DATABASE_URL`, and both URLs MUST identify the same loopback PostgreSQL
+database, parsed host, and port. The host comparison MUST be exact after URL
+parsing; loopback aliases are different targets. Credentials and the
+`postgres`/`postgresql` scheme do not distinguish otherwise matching targets.
+It MUST refuse a missing developer target or URLs that resolve to different
+database names, hosts, or ports before allocating a connection pool, discovering
+tables, or truncating data. The existing exact target allowlist and per-run
+consent remain required. Unit, integration, and coverage entrypoints using the
+helper MUST follow the same check.
+
+#### Scenario: Integration runner omits the developer target
+
+- **WHEN** the runner supplies a valid disposable target and consent but omits `DATABASE_URL` or leaves it empty
+- **THEN** cleanup refuses before connecting to the database or discovering tables
+
+#### Scenario: Both URLs identify the same database
+
+- **WHEN** both URLs have the same parsed loopback host, database, and port, even with different credentials or PostgreSQL URL schemes
+- **THEN** the helper may connect to the shared target for guarded cleanup
+
+#### Scenario: Loopback aliases differ
+
+- **WHEN** the URLs use different parsed loopback hosts such as `localhost` and `127.0.0.1`, or `localhost` and `[::1]`, even with the same database and port
+- **THEN** cleanup refuses before allocating a connection pool, discovering tables, or truncating data
+
+#### Scenario: Developer and integration URLs diverge
+
+- **WHEN** the URLs resolve to different database names, hosts, or ports, including distinct loopback literals such as `localhost` and `127.0.0.2`
+- **THEN** cleanup refuses before allocating a connection pool
+
 ### Requirement: DATABASE_URL and POSTGRES_DB must be consistent
 
 Every Compose file and environment example used by a destructive disposable-database workflow MUST use the same accepted database name in both `POSTGRES_DB` and the raw final path segment of `DATABASE_URL`. The guard MUST validate the resolved URL itself; a safe-looking `POSTGRES_DB` value cannot override a different URL target.

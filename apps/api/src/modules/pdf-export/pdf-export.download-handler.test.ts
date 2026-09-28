@@ -117,6 +117,7 @@ interface PrismaStubOptions {
     status: string;
     filePath: string;
     reportId: string;
+    generation?: number;
     requestedBy?: string;
   } | null;
   reportAuthorized?: boolean;
@@ -160,13 +161,24 @@ function makePrisma(opts: PrismaStubOptions = {}): PrismaService {
   return stub as unknown as PrismaService;
 }
 
-function completedJob(requestedBy = headSession.userId) {
+function completedJob(requestedBy = headSession.userId, generation = 1) {
   return {
     status: "completed",
     filePath: `/pdfs/${JOB_ID}.pdf`,
     reportId: REPORT_ID,
+    generation,
     requestedBy,
   };
+}
+
+// The durable row keeps the canonical public URL; the physical artifact is
+// generation-scoped — `${jobId}-g${generation}.pdf`.
+function artifactName(generation: number): string {
+  return `${JOB_ID}-g${generation}.pdf`;
+}
+
+function writeArtifact(generation: number, bytes: string | Buffer): void {
+  writeFileSync(join(pdfDir, artifactName(generation)), bytes);
 }
 
 let pdfDir: string;
@@ -229,7 +241,7 @@ describe("handlePdfDownload", () => {
     "closes the real file descriptor when the response closes %s",
     async (timing) => {
       const bytes = Buffer.alloc(1024 * 1024, "p");
-      writeFileSync(join(pdfDir, `${JOB_ID}.pdf`), bytes);
+      writeArtifact(1, bytes);
       const res = new MockResponse();
       if (timing === "before stream connection") res.destroy();
       else {
@@ -264,7 +276,7 @@ describe("handlePdfDownload", () => {
   );
 
   it("streams the PDF for an authenticated, in-scope caller (200)", async () => {
-    writeFileSync(join(pdfDir, `${JOB_ID}.pdf`), "PDF-BYTES");
+    writeArtifact(1, "PDF-BYTES");
     const res = new MockResponse();
     const finished = new Promise<void>((r) => res.on("finish", () => r()));
 
@@ -289,7 +301,7 @@ describe("handlePdfDownload", () => {
   });
 
   it("reads the session cookie under the deps cookie name (200)", async () => {
-    writeFileSync(join(pdfDir, `${JOB_ID}.pdf`), "PDF-BYTES");
+    writeArtifact(1, "PDF-BYTES");
     const res = new MockResponse();
     const finished = new Promise<void>((r) => res.on("finish", () => r()));
 
@@ -343,7 +355,7 @@ describe("handlePdfDownload", () => {
   });
 
   it("rejects an out-of-scope caller, requester identity notwithstanding (403)", async () => {
-    writeFileSync(join(pdfDir, `${JOB_ID}.pdf`), "PDF-BYTES");
+    writeArtifact(1, "PDF-BYTES");
     const res = new MockResponse();
 
     await handlePdfDownload(
@@ -423,11 +435,11 @@ describe("handlePdfDownload", () => {
   });
 
   it("refuses to serve an artifact that is a symlink planted in the artifacts dir (404)", async () => {
-    // A symlink at `{jobId}.pdf` must be rejected at open (O_NOFOLLOW), never
-    // followed outside the pdfDir root.
+    // A symlink at the generation-scoped artifact path must be rejected at
+    // open (O_NOFOLLOW), never followed outside the pdfDir root.
     const outside = join(fixtureRoot, "outside.txt");
     writeFileSync(outside, "SECRET-OUTSIDE-BYTES");
-    symlinkSync(outside, join(pdfDir, `${JOB_ID}.pdf`));
+    symlinkSync(outside, join(pdfDir, artifactName(1)));
     const res = new MockResponse();
 
     await handlePdfDownload(
@@ -443,7 +455,7 @@ describe("handlePdfDownload", () => {
   });
 
   it("returns 404 for a non-completed job even with a same-named file on disk", async () => {
-    writeFileSync(join(pdfDir, `${JOB_ID}.pdf`), "PDF-BYTES");
+    writeArtifact(1, "PDF-BYTES");
     const res = new MockResponse();
 
     await handlePdfDownload(
@@ -466,7 +478,7 @@ describe("handlePdfDownload", () => {
   });
 
   it("returns 404 when the persisted artifact path mismatches the requested path", async () => {
-    writeFileSync(join(pdfDir, `${JOB_ID}.pdf`), "PDF-BYTES");
+    writeArtifact(1, "PDF-BYTES");
     const res = new MockResponse();
 
     await handlePdfDownload(
@@ -479,6 +491,70 @@ describe("handlePdfDownload", () => {
             filePath: "/pdfs/other.pdf",
             reportId: REPORT_ID,
           },
+          reportAuthorized: true,
+        }),
+      }),
+    );
+
+    expect(res.statusCode).toBe(404);
+    expect(res.body).toBe("");
+  });
+
+  it("serves only the completed row's generation file when older generations remain on disk", async () => {
+    // Generations 1 and 2 both exist; the row completed at generation 2, so
+    // only the g2 bytes may be selected — never the g1 file.
+    writeArtifact(1, "STALE-G1-BYTES");
+    writeArtifact(2, "CURRENT-G2-BYTES");
+    const res = new MockResponse();
+    const finished = new Promise<void>((r) => res.on("finish", () => r()));
+
+    await handlePdfDownload(
+      makeReq({ cookie: "valid" }),
+      asResponse(res),
+      makeDeps({
+        prisma: makePrisma({
+          job: completedJob(headSession.userId, 2),
+          reportAuthorized: true,
+        }),
+      }),
+    );
+    await finished;
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toBe("CURRENT-G2-BYTES");
+  });
+
+  it("returns 404 when only an older generation's file exists on disk", async () => {
+    writeArtifact(1, "STALE-G1-BYTES");
+    const res = new MockResponse();
+
+    await handlePdfDownload(
+      makeReq({ cookie: "valid" }),
+      asResponse(res),
+      makeDeps({
+        prisma: makePrisma({
+          job: completedJob(headSession.userId, 2),
+          reportAuthorized: true,
+        }),
+      }),
+    );
+
+    expect(res.statusCode).toBe(404);
+    expect(res.body).toBe("");
+  });
+
+  it("never falls back to the legacy un-suffixed artifact name", async () => {
+    // A pre-protocol `${jobId}.pdf` file must not be served even for a
+    // generation-1 row — generation resolution is mandatory.
+    writeFileSync(join(pdfDir, `${JOB_ID}.pdf`), "LEGACY-BYTES");
+    const res = new MockResponse();
+
+    await handlePdfDownload(
+      makeReq({ cookie: "valid" }),
+      asResponse(res),
+      makeDeps({
+        prisma: makePrisma({
+          job: completedJob(headSession.userId, 1),
           reportAuthorized: true,
         }),
       }),
@@ -540,7 +616,7 @@ describe("handlePdfDownload", () => {
   });
 
   it("returns 500 when the PDF read fails before headers are sent", async () => {
-    writeFileSync(join(pdfDir, `${JOB_ID}.pdf`), "PDF-BYTES");
+    writeArtifact(1, "PDF-BYTES");
     failNextRead();
     const res = new MockResponse();
     const finished = new Promise<void>((resolve) => {
@@ -561,7 +637,7 @@ describe("handlePdfDownload", () => {
   });
 
   it("destroys the response when the PDF read fails after headers were sent", async () => {
-    writeFileSync(join(pdfDir, `${JOB_ID}.pdf`), "PDF-BYTES");
+    writeArtifact(1, "PDF-BYTES");
     failNextRead();
     const res = new MockResponse();
     res.headersSent = true;
@@ -583,7 +659,7 @@ describe("handlePdfDownload", () => {
   });
 
   it("logs a PDF stream failure with the job id (observable, not silent)", async () => {
-    writeFileSync(join(pdfDir, `${JOB_ID}.pdf`), "PDF-BYTES");
+    writeArtifact(1, "PDF-BYTES");
     failNextRead();
     const error = vi.fn();
     const logger = { error, child: () => logger } as unknown as AppLogger;

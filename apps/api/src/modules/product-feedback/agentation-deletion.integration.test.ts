@@ -102,7 +102,7 @@ describe("Agentation deletion protocol", () => {
     expect(snapshot?.annotations?.map((annotation) => annotation.id)).toContain(
       row.id,
     );
-    await repository.updateAnnotation(author, row.id, { status: "resolved" });
+    await repository.updateAnnotation(admin, row.id, { status: "resolved" });
     expect(
       await repository.deletionEvents(
         author,

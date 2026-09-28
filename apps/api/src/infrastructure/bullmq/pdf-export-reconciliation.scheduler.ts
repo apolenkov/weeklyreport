@@ -4,12 +4,25 @@ import { Cron, CronExpression } from "@nestjs/schedule";
 import type { Job } from "bullmq";
 
 import {
+  type PdfExportJobIdentity,
+  type PdfExportPendingCandidate,
   PdfExportService,
   type PdfExportTerminalState,
 } from "../../modules/pdf-export/index.js";
 import { QueueRegistry } from "./queue-registry.js";
 
 const RECONCILIATION_LIMIT = 1000;
+
+// The service owns the orphan scan's keyset paging, locked recheck, and
+// quarantine write; the scheduler contributes only the live queue probe.
+// A probe rejection is an unknown queue outcome, never proof of absence.
+interface PdfExportOrphanScan {
+  readonly scanOrphanedPendingExports: (
+    hasQueueJob: (
+      candidate: Pick<PdfExportPendingCandidate, "jobId" | "generation">,
+    ) => Promise<boolean>,
+  ) => Promise<unknown>;
+}
 
 /** Repairs DB rows stranded by a worker/process failure after BullMQ committed a terminal state. */
 @Injectable()
@@ -18,7 +31,8 @@ export class PdfExportReconciliationScheduler {
 
   constructor(
     @Inject(PdfExportService)
-    private readonly service: Pick<PdfExportService, "reconcileTerminalState">,
+    private readonly service: Pick<PdfExportService, "reconcileTerminalState"> &
+      PdfExportOrphanScan,
     @Inject(QueueRegistry) private readonly queues: Pick<QueueRegistry, "get">,
   ) {}
 
@@ -51,23 +65,60 @@ export class PdfExportReconciliationScheduler {
         repaired,
       });
     }
+    await this.service.scanOrphanedPendingExports((candidate) =>
+      this.hasQueueJob(candidate),
+    );
+  }
+
+  private async hasQueueJob(
+    candidate: Pick<PdfExportPendingCandidate, "jobId" | "generation">,
+  ): Promise<boolean> {
+    const queue = this.queues.get(PDF_EXPORT_QUEUE_NAME);
+    return (
+      (await queue.getJob(`${candidate.jobId}-g${candidate.generation}`)) !==
+      undefined
+    );
   }
 
   private async reconcileOne(job: Job<unknown>): Promise<boolean> {
     try {
-      const state = toTerminalState(job, await job.getState());
-      if (!state) return false;
-      return await this.service.reconcileTerminalState(state);
+      const identity = terminalIdentity(job, asRecord(job.data));
+      if (!identity) return false;
+      return await this.service.reconcileTerminalState(identity, () =>
+        this.loadCurrentTerminalState(identity),
+      );
     } catch (error: unknown) {
       const jobData = asRecord(job.data);
       const payloadJobId =
         typeof jobData?.jobId === "string" ? jobData.jobId : undefined;
       this.logger.error("pdf-export terminal reconciliation failed", {
-        jobId: job.id ?? payloadJobId,
+        jobId: payloadJobId ?? job.id,
         error: error instanceof Error ? error.message : String(error),
       });
       return false;
     }
+  }
+
+  // Runs inside the export row lock: the listing's captured state is already
+  // stale there, so the job is re-read — a retried job reports its live
+  // state, not the old terminal one. The state is observed first, then the
+  // job is re-read again: BullMQ transitions are not serialized by the row
+  // lock, so the first snapshot's payload, failedReason, or returnvalue can
+  // already belong to an older attempt.
+  private async loadCurrentTerminalState(
+    identity: PdfExportJobIdentity,
+  ): Promise<PdfExportTerminalState | null> {
+    const queue = this.queues.get(PDF_EXPORT_QUEUE_NAME);
+    const queueJobId = `${identity.jobId}-g${identity.generation}`;
+    const observed = await queue.getJob(queueJobId);
+    if (!observed) return null;
+    const observedState = await observed.getState();
+    if (observedState !== "completed" && observedState !== "failed") {
+      return null;
+    }
+    const current = await queue.getJob(queueJobId);
+    if (!current) return null;
+    return toTerminalState(current, await current.getState());
   }
 }
 
@@ -92,20 +143,30 @@ function toTerminalState(
 function terminalIdentity(
   job: Job<unknown>,
   data: ReturnType<typeof asRecord>,
-): { jobId: string; reportId: string; requestedBy: string } | null {
+): PdfExportJobIdentity | null {
   const jobId = typeof data?.jobId === "string" ? data.jobId : "";
   const reportId = typeof data?.reportId === "string" ? data.reportId : "";
   const requestedBy =
     typeof data?.requestedBy === "string" ? data.requestedBy : "";
-  if (!jobId || !reportId || !requestedBy) return null;
-  return job.id === undefined || job.id === jobId
-    ? { jobId, reportId, requestedBy }
+  const generation = data?.generation;
+  if (
+    !jobId ||
+    !reportId ||
+    !requestedBy ||
+    typeof generation !== "number" ||
+    !Number.isInteger(generation) ||
+    generation < 1
+  ) {
+    return null;
+  }
+  return job.id === `${jobId}-g${generation}`
+    ? { jobId, reportId, requestedBy, generation }
     : null;
 }
 
 function completedState(
   job: Job<unknown>,
-  identity: { jobId: string; reportId: string; requestedBy: string },
+  identity: PdfExportJobIdentity,
 ): PdfExportTerminalState {
   const result: unknown = job.returnvalue as unknown;
   if (typeof result !== "object" || result === null) {
@@ -126,6 +187,7 @@ function asRecord(value: unknown): {
   jobId?: unknown;
   reportId?: unknown;
   requestedBy?: unknown;
+  generation?: unknown;
 } | null {
   return typeof value === "object" && value !== null ? value : null;
 }

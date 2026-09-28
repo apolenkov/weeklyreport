@@ -128,12 +128,10 @@ function buildFallbackPeriodNav(
     {
       id: period.id,
       periodStart: period.periodStart,
-      sourceSectionId: "",
       weekLabel: period.weekLabel,
       dateRange: period.dateRange,
       isCurrent: period.isCurrent,
       periodState: period.periodState,
-      isSubmitted: true,
     },
   ];
 }

@@ -47,6 +47,3 @@ export const workflowFor = (seed: number): ItemWorkflowStatus =>
 export const tagFor = (seed: number): string => cyclic(TAG_CYCLE, seed);
 
 export const stageAt = (seed: number): SeedStage => cyclic(SEED_STAGES, seed);
-
-export const stageNameFor = (seed: number): string =>
-  cyclic(SEED_STAGES, seed).name;

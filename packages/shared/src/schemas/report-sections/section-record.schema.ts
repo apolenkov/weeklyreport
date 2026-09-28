@@ -2,6 +2,10 @@ import { z } from "zod";
 
 import {
   addItemTypeStatusIssue,
+  addNextStepTextIssue,
+  addParentStageIssues,
+  addParentXorIssue,
+  addPausedReasonIssues,
   currentStageNamesField,
   itemTypeSchema,
   itemWorkflowStatusSchema,
@@ -124,31 +128,6 @@ const itemInputObjectSchema = z.object({
   stageNames: writeStageNamesField,
 });
 
-const addPausedReasonIssues = (
-  value: {
-    readonly workflowStatus: string;
-    readonly pausedReason?: string | null | undefined;
-  },
-  ctx: z.RefinementCtx,
-): void => {
-  const reason = value.pausedReason ?? null;
-  if (value.workflowStatus === "paused") {
-    if (reason == null || reason.trim().length === 0) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["pausedReason"],
-        message: "A paused item requires a non-blank reason.",
-      });
-    }
-  } else if (reason != null) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["pausedReason"],
-      message: "Only paused items may carry a pause reason.",
-    });
-  }
-};
-
 const addReadParentXorIssues = (
   value: {
     readonly projectId?: string | null | undefined;
@@ -159,32 +138,17 @@ const addReadParentXorIssues = (
   productPath: "projectId" | "productId",
   ctx: z.RefinementCtx,
 ): void => {
-  const hasProduct =
-    (productPath === "productId" ? value.productId : value.projectId) != null;
-  const hasActivity = value.activityId != null;
-  if (hasProduct === hasActivity) {
-    ctx.addIssue({
-      code: "custom",
-      path: [hasActivity ? "activityId" : productPath],
-      message:
-        "A record must have exactly one parent — a product or an activity.",
-    });
+  const productId =
+    productPath === "productId" ? value.productId : value.projectId;
+  if (!addParentXorIssue(productId, value.activityId, productPath, ctx)) {
     return;
   }
-  if (hasProduct && value.stageNames.length === 0) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["stageNames"],
-      message: "A product-parented record requires at least one stage.",
-    });
-  }
-  if (hasActivity && value.stageNames.length > 0) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["stageNames"],
-      message: "An activity-parented record must not carry a stage.",
-    });
-  }
+  addParentStageIssues(
+    productId,
+    value.activityId,
+    value.stageNames.length,
+    ctx,
+  );
 };
 
 /** Accepts the shared fields of an item draft or read model. */
@@ -210,6 +174,7 @@ export const sharedItemReadModelSchema = itemReadModelObjectSchema
   .extend({
     comments: z.never().optional(),
     pausedReason: z.never().optional(),
+    nextStepText: z.never().optional(),
     resolution: z.never().optional(),
     outcomeHistory: z.never().optional(),
   })
@@ -288,32 +253,13 @@ const addParentXorIssues = (
   productPath: "projectId" | "productId",
   ctx: z.RefinementCtx,
 ): void => {
-  const { activityId, stageNames } = value;
-  const hasProduct = productId != null;
-  const hasActivity = activityId != null;
-  if (hasProduct === hasActivity) {
-    ctx.addIssue({
-      code: "custom",
-      path: [hasActivity ? "activityId" : productPath],
-      message:
-        "A record must have exactly one parent — a product or an activity.",
-    });
-  }
-  const stageCount = stageNames?.length ?? 0;
-  if (hasProduct && stageCount === 0) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["stageNames"],
-      message: "A product-parented record requires at least one stage.",
-    });
-  }
-  if (hasActivity && stageCount > 0) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["stageNames"],
-      message: "An activity-parented record must not carry a stage.",
-    });
-  }
+  addParentXorIssue(productId, value.activityId, productPath, ctx);
+  addParentStageIssues(
+    productId,
+    value.activityId,
+    value.stageNames?.length ?? 0,
+    ctx,
+  );
 };
 
 /** Validates an item write against parent and workflow-status invariants. */
@@ -322,17 +268,7 @@ export const itemWriteSchema = itemInputObjectSchema
     addParentXorIssues(value, value.projectId, "projectId", ctx);
     addItemTypeStatusIssue(value.type, value.workflowStatus, ctx);
     addPausedReasonIssues(value, ctx);
-    if (
-      value.nextStepText != null &&
-      (value.type !== "current" || value.workflowStatus === "done")
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["nextStepText"],
-        message:
-          "Only unfinished current work may have a next-period commitment.",
-      });
-    }
+    addNextStepTextIssue(value, ctx);
   })
   .readonly();
 

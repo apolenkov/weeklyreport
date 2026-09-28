@@ -25,34 +25,36 @@ module destruction.
 
 #### Scenario: BullMQ result includes queue counts
 
-- **WHEN** both required in-process workers report ready and both BullMQ queue
-  count probes succeed
+- **WHEN** all four required in-process workers report ready and all four
+  canonical BullMQ queue count probes succeed
 - **THEN** the `up` result carries `pdf_export` and `email_reminder` objects
   with their `waiting` and `active` counts
 - **AND** a queue failure or timeout produces a `down` result without exposing
-  raw dependency error details
+  raw dependency error details, including errors whose text contains `timed out`
+- **AND** a queue probe that does not settle produces `down` after 2 seconds
 
 ### Requirement: BullMQ readiness includes required worker lifecycle
 
-`BullMQHealthIndicator` MUST read the current lifecycle of the required
-`pdf-export` and `email-reminder` workers from the application-scoped BullMQ
-registry. Queue connectivity alone MUST NOT report readiness. A missing,
-starting, paused, stopped, or connection-unready worker produces `down`; the
-indicator returns to `up` only after both current worker instances report ready
-and the queue probes succeed. A stale event from a replaced worker MUST NOT
-change the current worker state.
+`BullMQHealthIndicator` MUST read the current lifecycle of all four required
+workers—`email-reminder`, `pdf-export`, `ai-provider-test`, and
+`semantic-index`—from the application-scoped BullMQ registry. Queue
+connectivity alone MUST NOT report readiness. A missing, starting, paused,
+stopped, or connection-unready worker produces `down`; the indicator returns
+to `up` only after all four current worker instances report ready and all four
+queue probes succeed. A stale event from a replaced worker MUST NOT change the
+current worker state.
 
 #### Scenario: Redis remains up after a worker stops
 
-- **WHEN** queue count reads would succeed but either required worker is stopped
-  or connection-unready
+- **WHEN** queue count reads would succeed but any required worker is stopped or
+  connection-unready
 - **THEN** BullMQ readiness reports `down` and `/health/ready` returns HTTP 503
 
 #### Scenario: A required worker reconnects or is replaced
 
 - **WHEN** the current stopped or unready worker reports ready again, or a
   replacement worker registers and reports ready
-- **THEN** BullMQ readiness recovers to `up` after both queue probes succeed
+- **THEN** BullMQ readiness recovers to `up` after all four queue probes succeed
 
 ### Requirement: BullMQ readiness checks the exhaustive queue registry
 
@@ -73,7 +75,7 @@ canonical queue names, with only `waiting` and `active` counts.
 
 #### Scenario: Workers are still connecting during startup grace
 
-- **WHEN** the API process exists but one or both required workers have not yet
+- **WHEN** the API process exists but one or more required workers have not yet
   reported ready
 - **THEN** `/health/ready` remains unavailable while `/health/live` stays up
 - **AND** the deployment healthcheck startup grace absorbs normal worker

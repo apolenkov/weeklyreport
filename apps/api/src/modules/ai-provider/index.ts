@@ -5,6 +5,7 @@ export {
   type AiProviderCapabilityTestMetrics,
   AiProviderConfigurationError,
   AiProviderConfigurationService,
+  AiProviderConflictError,
   type AiProviderMetricsSink,
   AiProviderNotFoundError,
   type AiProviderPreparationCoordinator,

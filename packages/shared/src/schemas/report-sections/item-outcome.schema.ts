@@ -2,6 +2,8 @@ import { z } from "zod";
 
 import {
   addItemTypeStatusIssue,
+  addNextStepTextIssue,
+  addPausedReasonIssues,
   itemTypeSchema,
   itemWorkflowStatusSchema,
   safeText,
@@ -32,34 +34,8 @@ const addOutcomeStateIssues = (
   ctx: z.RefinementCtx,
 ): void => {
   addItemTypeStatusIssue(value.type, value.workflowStatus, ctx);
-
-  if (value.workflowStatus === "paused") {
-    if (value.pausedReason == null || value.pausedReason.trim().length === 0) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["pausedReason"],
-        message: "A paused item requires a non-blank reason.",
-      });
-    }
-  } else if (value.pausedReason != null) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["pausedReason"],
-      message: "Only paused items may carry a pause reason.",
-    });
-  }
-
-  if (
-    value.nextStepText != null &&
-    (value.type !== "current" || value.workflowStatus === "done")
-  ) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["nextStepText"],
-      message:
-        "Only unfinished current work may have a next-period commitment.",
-    });
-  }
+  addPausedReasonIssues(value, ctx);
+  addNextStepTextIssue(value, ctx);
 };
 
 /** Defines the canonical item tuple retained before and after an outcome. */

@@ -5,6 +5,7 @@ import { QUEUE_NAMES } from "../infrastructure/bullmq/queue-registry.js";
 import type { PrismaService } from "../infrastructure/prisma/prisma.service";
 import type { AppLogger } from "../lib/logger";
 import { JobsService } from "../modules/admin/index.js";
+import type { PdfExportService } from "../modules/pdf-export/index.js";
 
 // Builds the admin DLQ registry from the BullMQ handles owned by Nest.
 // Stays out of the NestJS DI graph (see the raw-Worker note in
@@ -13,8 +14,9 @@ export function createBootstrapJobsService(deps: {
   queueRegistry: { get: (name: (typeof QUEUE_NAMES)[number]) => Queue };
   prisma: PrismaService;
   logger: AppLogger;
+  pdfExportService: Pick<PdfExportService, "retryExportGeneration">;
 }): JobsService {
-  const { queueRegistry, prisma, logger } = deps;
+  const { queueRegistry, prisma, logger, pdfExportService } = deps;
   const queues = new Map(
     QUEUE_NAMES.map(
       (name) =>
@@ -48,6 +50,37 @@ export function createBootstrapJobsService(deps: {
           where: { id: executionId, status: "failed" },
           data: { status: "pending", error: null },
         });
+      },
+      retryPdfExportGeneration: (input) =>
+        pdfExportService.retryExportGeneration(input),
+      // Terminal rows are durable state: their generation's queue job may
+      // already be pruned or removed, so the list is read from Postgres,
+      // never Redis. Terminally `failed` rows are listed too — otherwise a
+      // removed failed queue job would leave the row with no Head retry
+      // surface even though retryExportGeneration accepts it.
+      listPdfRecoveryJobs: async () => {
+        const rows = await prisma.pdfExportJob.findMany({
+          where: { status: { in: ["failed", "recovery_required"] } },
+          orderBy: { createdAt: "asc" },
+          select: {
+            id: true,
+            reportId: true,
+            generation: true,
+            requestedBy: true,
+            status: true,
+            createdAt: true,
+          },
+        });
+        return rows.map((row) => ({
+          jobId: row.id,
+          reportId: row.reportId,
+          generation: row.generation,
+          requestedBy: row.requestedBy,
+          // Narrowed by the `in` filter above, not coerced — the procedure's
+          // output schema re-validates the vocabulary on the wire.
+          status: row.status as "failed" | "recovery_required",
+          createdAt: row.createdAt,
+        }));
       },
     },
     logger,

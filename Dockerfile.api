@@ -1,10 +1,9 @@
 # Stage 1: Base with pnpm and turbo.
-# glibc (Debian) rather than alpine: Chromium needs it for PDF export, and the
-# native node modules must be built for the same libc the runner uses.
+# glibc (Debian) rather than alpine: the native node modules must be built for
+# the same libc the runner uses.
 # Node 26 does not ship Corepack, so pnpm is installed with npm — the pin is
 # held against package.json's packageManager by scripts/gates/environment/check-runtime-node-sync.ts.
 FROM node:26.8.1-bookworm@sha256:9f94d34c787165dca03b74e5bf9c3bf90e8de79b19aa3d87fe1fa1694bf75c89 AS base
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 RUN npm install -g pnpm@11.24.0 turbo@2.10.12
 
 # Stage 2: Prune monorepo for api workspace
@@ -81,8 +80,8 @@ RUN ./node_modules/.bin/turbo build --filter=@customreport/api
 # Stage 7: Production dependencies, installed fresh from the same lockfile.
 # Deploy the API closure into an isolated production tree. A workspace-root
 # install would also retain unrelated root tooling and the migration package.
-# --ignore-scripts keeps playwright from pulling a browser here; the runner
-# installs Chromium explicitly.
+# --ignore-scripts keeps install hooks from running here; the runner needs no
+# postinstall side effects.
 FROM base AS prod-deps
 WORKDIR /app
 COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
@@ -108,7 +107,6 @@ RUN mkdir -p /app/node_modules && cp -a /tmp/api-deps/node_modules/. /app/node_m
 
 # Stage 8: Production runner
 FROM node:26.8.1-bookworm@sha256:9f94d34c787165dca03b74e5bf9c3bf90e8de79b19aa3d87fe1fa1694bf75c89 AS runner
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 WORKDIR /app
 
 # Manifests and the built app come from the build; every node_modules tree comes
@@ -125,14 +123,9 @@ RUN test ! -e /app/prisma && test ! -e /app/prisma.config.ts && \
     test ! -e /app/node_modules/prisma && \
     ! find /app/node_modules/.pnpm -maxdepth 1 -type d \( -name 'prisma@*' -o -name '@customreport+migrator-runtime@*' -o -name '@prisma+dev@*' -o -name '@prisma+studio*' -o -name '@typescript+typescript6@*' -o -name 'typescript@*' \) -print -quit | grep -q . && \
     ! find /app/apps -type d \( -name test-utils -o -name __tests__ -o -name seeds -o -name guards -o -name operations \) -print | grep -q .
-# Verify the two runtime dependency surfaces before installing Chromium.
+# Verify the two runtime dependency surfaces.
 RUN test ! -e /app/node_modules/.bin/pnpm && test ! -e /app/node_modules/.bin/turbo && \
     node -e "Promise.all([import('/app/apps/api/dist/packages/shared/src/index.js'), import('/app/apps/api/dist/packages/report-persistence/src/index.js'), import('@prisma/client'), import('@prisma/adapter-pg')]).then(([, , { PrismaClient }, { PrismaPg }]) => { new PrismaClient({ adapter: new PrismaPg({ connectionString: 'postgresql://ci-build-only@localhost:5432/customreport' }) }); console.log('runtime imports passed') })"
-
-# Install the Chromium revision pinned by the production Playwright dependency.
-# The production install hoists the API binary into the root dependency tree.
-WORKDIR /app/apps/api
-RUN /app/node_modules/.bin/playwright install --with-deps chromium
 
 # Create PDF storage directory
 RUN mkdir -p /app/data/pdfs && chown node:node /app/data/pdfs
@@ -152,4 +145,4 @@ ENV NODE_ENV=production
 EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD wget -qO- http://localhost:3001/health/ready || exit 1
-CMD ["node", "dist/apps/api/src/main.js"]
+CMD ["node", "apps/api/dist/apps/api/src/main.js"]

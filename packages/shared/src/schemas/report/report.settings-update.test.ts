@@ -22,7 +22,7 @@ describe("appSettingsUpdateSchema", () => {
     ).toBe(false);
   });
 
-  it.each(["Europe/Moscow", "UTC", "Etc/UTC", "Asia/Tokyo"])(
+  it.each(["Europe/Moscow", "UTC", "Etc/UTC", "Asia/Tokyo", "Etc/GMT+3"])(
     "accepts the resolvable default time zone %s in a partial update",
     (defaultTimezone) => {
       expect(
@@ -31,7 +31,15 @@ describe("appSettingsUpdateSchema", () => {
     },
   );
 
-  it.each(["Not/A_Timezone", "UTC+3", "MSK"])(
+  it.each([
+    "Not/A_Timezone",
+    "UTC+3",
+    "MSK",
+    "+03:00",
+    "+0300",
+    "+03",
+    "-05:30",
+  ])(
     "rejects invalid default time zone %s in a partial update",
     (defaultTimezone) => {
       const result = appSettingsUpdateSchema.safeParse({ defaultTimezone });

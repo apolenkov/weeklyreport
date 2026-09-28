@@ -6,7 +6,7 @@ import {
   type PaginatedResult,
   type PaginationInput,
 } from "@customreport/shared";
-import { BadRequestException, Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
@@ -15,11 +15,12 @@ import {
   requirePublishedSnapshot,
   requireScopedPublishedSnapshot,
 } from "../report-sections/index.js";
-import type {
-  ArchiveDetailRead,
-  ArchiveReadFilter,
-  ArchiveRepository,
-  ArchiveScopeSession,
+import {
+  ArchiveCursorError,
+  type ArchiveDetailRead,
+  type ArchiveReadFilter,
+  type ArchiveRepository,
+  type ArchiveScopeSession,
 } from "./archive.service.js";
 import { decodeArchiveCursor, encodeArchiveCursor } from "./archive-cursor.js";
 
@@ -147,7 +148,7 @@ function withArchiveKeyset(
     // A present cursor that fails to decode is a malformed / tampered token.
     // Fail loud (400) instead of silently restarting at page 1, which would
     // mask the bug and could loop a client that keeps resending it.
-    throw new BadRequestException("Malformed archive pagination cursor.");
+    throw new ArchiveCursorError("Malformed archive pagination cursor.");
   }
   return {
     ...where,

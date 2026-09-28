@@ -57,6 +57,7 @@ services:
       AUTH_DEV_MODE: "true"
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-change-me-in-development-min-32-chars!!}
       PDF_BASE_URL: http://web:3000
+      GOTENBERG_URL: http://gotenberg:3000
       PDF_OUTPUT_DIR: /app/data/pdfs
       PDF_EXPORT_JWT_SECRET: ${PDF_EXPORT_JWT_SECRET:-dev-only-replace-in-production-min-32-chars}
       SMTP_HOST: mailpit
@@ -134,6 +135,13 @@ services:
           path: ./apps/web/src
         - action: restart
           path: ./packages/shared/src
+
+  # Internal Gotenberg renderer — the complete definition lives in
+  # docker-compose.yml; this override only re-pins the dev allow-list so the
+  # print origin stays explicit in the source-watch lane.
+  gotenberg:
+    environment:
+      CHROMIUM_ALLOW_LIST: "^http://web:3000/"
 
 volumes:
   apilogs:

@@ -73,10 +73,18 @@ const editedReport = {
 };
 
 function repositoryFor(periodStatus: "published" | "reopened") {
-  const findMany = vi.fn((query: { where: { periodStatus?: string } }) =>
-    Promise.resolve(
-      query.where.periodStatus === periodStatus ? [editedReport] : [],
-    ),
+  // A reopened report keeps status "published" (publication lineage) while
+  // periodStatus carries the reopen state, so the where clause must pin both
+  // lifecycle fields to admit the stored row.
+  const storedReport = { status: "published", periodStatus };
+  const findMany = vi.fn(
+    (query: { where: { status?: string; periodStatus?: string } }) =>
+      Promise.resolve(
+        query.where.status === storedReport.status &&
+          query.where.periodStatus === storedReport.periodStatus
+          ? [editedReport]
+          : [],
+      ),
   );
   const prisma = { report: { findMany } } as unknown as PrismaService;
   return new AnalyticsPrismaRepository(prisma);

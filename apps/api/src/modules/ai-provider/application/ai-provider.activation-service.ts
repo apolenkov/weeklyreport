@@ -13,10 +13,12 @@ import {
 import {
   AiProviderActivationPreparation,
   preparationAlreadyCompleted,
+  type PreparationResult,
 } from "./ai-provider.activation-preparation.js";
 import { AiProviderReadService } from "./ai-provider.read-service.js";
 import {
   AiProviderConfigurationError,
+  AiProviderConflictError,
   type AiProviderServiceDependencies,
   now,
   requireRevision,
@@ -88,11 +90,13 @@ export class AiProviderActivationService {
       profile: generationProfile,
       result: "requested",
     });
+    const requested = { actorId, revisionId };
     if (changed && !this.dependencies.preparation)
       return failActivation(
         this.dependencies,
         generationProfile,
         "Embedding preparation is not configured",
+        requested,
       );
     const preparationFailure = await this.prepareIfChanged(
       changed && !(await this.preparationIsFresh(revision)),
@@ -107,6 +111,7 @@ export class AiProviderActivationService {
           this.dependencies,
           revisionId,
           generationProfile,
+          requested,
         )
       : requirePreparationEvidence(
           this.dependencies,
@@ -116,13 +121,16 @@ export class AiProviderActivationService {
               this.dependencies,
               generationProfile,
               "Current embedding-scope readiness evidence is unavailable",
+              requested,
             ),
+          requested,
         );
     if (changed) {
       await verifyCurrentSourceFingerprint(
         this.dependencies,
         generationProfile,
         readyRevision,
+        requested,
       );
     }
     const activated = await this.dependencies.repository.activateRevision(
@@ -146,6 +154,8 @@ export class AiProviderActivationService {
         this.dependencies,
         generationProfile,
         "AI provider activation lost a lifecycle race",
+        requested,
+        AiProviderConflictError,
       );
     }
     this.dependencies.audit.record({
@@ -194,17 +204,20 @@ export class AiProviderActivationService {
       revisionId,
       embeddingScope,
     );
+    const state: { progress: PreparationResult | null } = { progress: null };
     try {
       const result = await this.dependencies.preparation.prepare(
         preparing,
         previous,
-        (progress) =>
-          this.preparationState.update(
+        (progress) => {
+          state.progress = progress;
+          return this.preparationState.update(
             revisionId,
             embeddingScope,
             progress,
             preparing.preparationStartedAt ?? now(),
-          ),
+          );
+        },
       );
       if (result.failed > 0 || result.completed < result.total) {
         return await this.preparationState.fail(
@@ -223,14 +236,15 @@ export class AiProviderActivationService {
       );
       return null;
     } catch {
+      const observed = state.progress;
       return this.preparationState.fail(
         revisionId,
         actorId,
         embeddingScope,
         {
-          completed: preparing.preparationCompleted,
-          total: Math.max(1, preparing.preparationTotal),
-          failed: Math.max(1, preparing.preparationFailed),
+          completed: observed?.completed ?? preparing.preparationCompleted,
+          total: Math.max(1, observed?.total ?? preparing.preparationTotal),
+          failed: Math.max(1, observed?.failed ?? preparing.preparationFailed),
           elapsedMs: Math.max(
             0,
             Date.now() - (preparing.preparationStartedAt ?? now()).getTime(),

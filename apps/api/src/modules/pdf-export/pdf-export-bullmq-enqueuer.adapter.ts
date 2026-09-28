@@ -21,7 +21,7 @@ export class PdfExportBullmqEnqueuer implements PdfExportEnqueuer {
       "generate",
       { ...input, ...context },
       {
-        jobId: input.jobId,
+        jobId: `${input.jobId}-g${input.generation}`,
         attempts: PDF_EXPORT_JOB_ATTEMPTS,
         backoff: {
           type: "exponential",

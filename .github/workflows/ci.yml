@@ -18,7 +18,8 @@ concurrency:
 jobs:
   quality:
     name: Lint, Typecheck, Unit Tests & Build
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, weeklyreport-ci]
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     # Keep cleanup headroom around the complete lint, contract, type, and unit
     # gate on a cold hosted runner.
     timeout-minutes: 30
@@ -89,7 +90,8 @@ jobs:
 
   api-integration:
     name: API serial integration (disposable services)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, weeklyreport-ci]
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     timeout-minutes: 30
     needs: quality
 
@@ -128,9 +130,11 @@ jobs:
           --health-retries=10
 
     env:
-      # Keep the product URL distinct from the exact disposable E2E target;
-      # the integration helper rejects accidental same-target configuration.
-      DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_generate_only
+      # MVP single-database policy: local dev, tests, and E2E share the one
+      # disposable customreport_e2e target. The integration helper requires
+      # DATABASE_URL and E2E_DATABASE_URL to resolve to the same target
+      # before cleanup runs.
+      DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_e2e
       E2E_DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_e2e
       API_HOST: 127.0.0.1
       NODE_ENV: test
@@ -233,7 +237,8 @@ jobs:
 
   coverage:
     name: Web coverage
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, weeklyreport-ci]
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     timeout-minutes: 30
     needs: quality
 
@@ -335,7 +340,8 @@ jobs:
 
   migrate-reset:
     name: Prisma migrate-reset gate
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, weeklyreport-ci]
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     timeout-minutes: 10
     needs: quality
 
@@ -394,7 +400,8 @@ jobs:
   # target that development images do not cover.
   docker-build:
     name: Docker Build
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, weeklyreport-ci]
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     timeout-minutes: 30
     needs: quality
 
@@ -418,6 +425,8 @@ jobs:
       AUTH_JWT_SECRET: ci-build-only-secret-32-characters-min!!
       PDF_EXPORT_JWT_SECRET: ci-build-only-secret-32-characters-min!!
       PDF_BASE_URL: http://localhost
+      GOTENBERG_URL: http://gotenberg:3000
+      CHROMIUM_ALLOW_LIST: "^http://localhost/"
       AI_PROVIDER_CONFIG_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
       AI_PROVIDER_CONFIG_KEY_VERSION: "1"
       AI_PROVIDER_ALLOWED_ORIGINS: https://api.example.com
@@ -472,19 +481,18 @@ jobs:
 
       - name: Verify production image release identity
         run: |
-          for service in backup migrate api web; do
+          for service in backup migrate pdf-artifact-migrator api web; do
             image_ref="customreport-${service}:${OTEL_SERVICE_VERSION}"
             revision="$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$image_ref")"
             test "$revision" = "$OTEL_SERVICE_VERSION"
           done
 
-      # The hosted runner is disposable, while the optional OTEL/Bugsink
-      # images are large. Release identity is already proven, and the runtime
-      # smoke below does not use these four application images or build cache.
+      # Release identity is already proven, and the runtime smoke below does
+      # not use these application images or the build cache.
       - name: Reclaim Docker build space before runtime smoke
         if: github.event_name == 'workflow_dispatch'
         run: |
-          for service in backup migrate api web; do
+          for service in backup migrate pdf-artifact-migrator api web; do
             docker image rm "customreport-${service}:${OTEL_SERVICE_VERSION}"
           done
           docker builder prune --all --force
@@ -544,7 +552,7 @@ jobs:
         run: |
           docker compose --project-name runtime-production \
             -f docker-compose.prod.yml \
-            down --remove-orphans
+            down --volumes --remove-orphans
 
       - name: Verify mail, telemetry, metrics, and error overlays
         if: github.event_name == 'workflow_dispatch'
@@ -649,4 +657,13 @@ jobs:
             -f docker-compose.yml \
             -f docker-compose.observability.yml \
             -f docker-compose.errors.yml \
-            down --remove-orphans
+            down --volumes --remove-orphans
+
+      - name: Clean Docker build artifacts on the persistent runner
+        if: always()
+        run: |
+          for service in backup migrate pdf-artifact-migrator api web; do
+            docker image rm --force "customreport-${service}:${OTEL_SERVICE_VERSION}" >/dev/null 2>&1 || true
+          done
+          docker builder prune --all --force
+          docker system df

@@ -173,6 +173,17 @@ describe("dashboard queue mutation transitions", () => {
       },
       label: "Already requested",
     },
+    {
+      name: "shows a terminal state when the rule no longer resolves",
+      result: {
+        reason: "no-active-rule",
+        queued: 0,
+        alreadyRequested: 0,
+        failed: 0,
+        skipped: 0,
+      },
+      label: "No active rule",
+    },
   ] satisfies readonly {
     readonly name: string;
     readonly result: ReminderDispatchResult;

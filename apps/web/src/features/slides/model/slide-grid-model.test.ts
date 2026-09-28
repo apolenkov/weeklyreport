@@ -426,6 +426,7 @@ describe("buildSlideGridModel — activity subsections", () => {
     const sub = card.subsections.find((s) => s.kind === "project");
     expect(sub).toMatchObject({
       name: "Портал",
+      note: null,
       status: "red",
       showStages: false,
     });
@@ -441,6 +442,37 @@ describe("buildSlideGridModel — activity subsections", () => {
     const shared = cardOf(model, SHARED_CARD_ID);
     expect(shared.name).toBe(SHARED_CARD_NAME);
     expect(shared.subsections.some((s) => s.kind === "project")).toBe(true);
+  });
+
+  it("renders the weekly title override instead of the catalogue name", () => {
+    const model = buildSlideGridModel({
+      section: section({
+        activities: [activity({ titleOverride: "Weekly duty" })],
+      }),
+    });
+    const card = cardOf(model, "p1");
+    const sub = card.subsections.find((s) => s.kind === "project");
+    expect(sub).toMatchObject({ name: "Weekly duty" });
+  });
+
+  it("carries an Activity description into its subsection, including no records", () => {
+    const model = buildSlideGridModel({
+      section: section({
+        activities: [
+          activity({
+            titleOverride: "Weekly duty",
+            note: "Coverage remains staffed",
+          }),
+        ],
+      }),
+    });
+    const sub = cardOf(model, "p1").subsections.find(
+      (candidate) => candidate.kind === "project",
+    );
+    expect(sub).toMatchObject({
+      name: "Weekly duty",
+      note: "Coverage remains staffed",
+    });
   });
 
   it("renders a status-only activity (no records) as a project subsection", () => {

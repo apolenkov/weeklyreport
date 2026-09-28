@@ -21,6 +21,7 @@ import {
   type WeeklyReportLifecyclePort,
 } from "../../weekly-report/index.js";
 import {
+  PeriodAccessError,
   type PeriodRepository,
   PeriodScopeError,
   PeriodStaleStateError,
@@ -136,6 +137,15 @@ export class PeriodPrismaRepository implements PeriodRepository {
 
       if (outcome !== "transitioned") {
         return { transitioned: false, reason: outcome };
+      }
+
+      const submittedSections = await tx.reportSection.count({
+        where: { reportId, status: "submitted" },
+      });
+      if (submittedSections === 0) {
+        throw new PeriodAccessError(
+          "At least one section must be submitted before publishing.",
+        );
       }
 
       await pauseReminderRulesForReport(tx, reportId);

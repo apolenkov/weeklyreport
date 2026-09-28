@@ -140,4 +140,106 @@ describe("buildPrintActivityReports", () => {
       }),
     ]);
   });
+
+  it("renders the weekly title override instead of the catalogue name", () => {
+    const section = makeReportSectionFixture({
+      reportSectionId: "11111111-1111-4111-8111-111111111111",
+      authorId: "22222222-2222-4222-8222-222222222222",
+      authorName: "Alex Morgan",
+      activities: [
+        {
+          activityId: ACTIVITY_ID,
+          activityName: "Support rotation",
+          titleOverride: "Holiday duty",
+          status: "yellow",
+          derivedStatus: "yellow",
+          linkedProducts: [],
+        },
+      ],
+    });
+
+    const reports = buildPrintActivityReports([section]);
+    expect(reports).toEqual([
+      expect.objectContaining({ id: ACTIVITY_ID, name: "Holiday duty" }),
+    ]);
+  });
+
+  it("keeps each author's frozen title and description beside their records", () => {
+    const first = makeReportSectionFixture({
+      reportSectionId: "11111111-1111-4111-8111-111111111111",
+      authorId: "22222222-2222-4222-8222-222222222222",
+      authorName: "Alex Morgan",
+      activities: [
+        {
+          activityId: ACTIVITY_ID,
+          activityName: "Catalogue activity",
+          titleOverride: "Alex weekly title",
+          note: "Alex description",
+          status: "green",
+          derivedStatus: "green",
+        },
+      ],
+      items: [
+        {
+          id: "33333333-3333-4333-8333-333333333333",
+          activityId: ACTIVITY_ID,
+          projectId: null,
+          type: "current",
+          text: "Alex update",
+          tag: "ops",
+          workflowStatus: "in_progress",
+          carriedOver: false,
+        },
+      ],
+    });
+    const second = makeReportSectionFixture({
+      reportSectionId: "55555555-5555-4555-8555-555555555555",
+      authorId: "66666666-6666-4666-8666-666666666666",
+      authorName: "Blair Chen",
+      activities: [
+        {
+          activityId: ACTIVITY_ID,
+          activityName: "Catalogue activity",
+          titleOverride: "Blair weekly title",
+          note: "Blair description",
+          status: "green",
+          derivedStatus: "green",
+        },
+      ],
+      items: [
+        {
+          id: "77777777-7777-4777-8777-777777777777",
+          activityId: ACTIVITY_ID,
+          projectId: null,
+          type: "current",
+          text: "Blair update",
+          tag: "ops",
+          workflowStatus: "in_progress",
+          carriedOver: false,
+        },
+      ],
+    });
+
+    const [report] = buildPrintActivityReports([first, second]);
+
+    expect(report).toMatchObject({
+      name: "Activity",
+      presentations: [
+        expect.objectContaining({
+          authorName: "Alex Morgan",
+          title: "Alex weekly title",
+          note: "Alex description",
+        }),
+        expect.objectContaining({
+          authorName: "Blair Chen",
+          title: "Blair weekly title",
+          note: "Blair description",
+        }),
+      ],
+    });
+    expect(report?.currentWeek.map((item) => [item.text, item.stage])).toEqual([
+      ["Alex update", "Alex weekly title"],
+      ["Blair update", "Blair weekly title"],
+    ]);
+  });
 });

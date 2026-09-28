@@ -1,9 +1,7 @@
 import {
-  type AssembledReport,
   AUTH_COOKIE_NAME,
   type PdfExportJob,
   pdfExportJobSchema,
-  type PublishedReportSnapshot,
   type UserSession,
 } from "@customreport/shared";
 
@@ -13,8 +11,23 @@ import { type AppLogger } from "../../lib/logger";
 import { buildPublishedReadModelFromSnapshot } from "../weekly-report/index.js";
 import {
   type PdfExportEnqueuer,
+  type PdfExportJobIdentity,
+  type PdfExportRepository,
+  type PdfExportRetryOutcome,
   type PdfExportTelemetry,
+  type PdfExportTerminalState,
+  type PdfRenderCookie,
 } from "./pdf-export.ports.js";
+import {
+  dispatchExportGeneration as dispatchExportGenerationPure,
+  type PdfExportOrphanScanSummary,
+  type PdfExportQueueJobProbe,
+  type PdfExportRecoveryDeps,
+  type PdfExportRetryInput,
+  reconcileTerminalState as reconcileTerminalStatePure,
+  retryExportGeneration as retryExportGenerationPure,
+  scanOrphanedPendingExports as scanOrphanedPendingExportsPure,
+} from "./pdf-export.recovery.js";
 import { signPdfExportToken as signPdfExportTokenPure } from "./pdf-export.token.js";
 
 export class PdfExportDomainError extends Error {
@@ -28,48 +41,23 @@ export class PdfExportDomainError extends Error {
 // persisted value rather than relabel with the running constant.
 const PDF_EXPORT_TEMPLATE_VERSION = "phase-2-pdf-v1";
 
+// A fresh export is always dispatched as generation 1; only the Head retry
+// transition advances it.
+const PDF_EXPORT_INITIAL_GENERATION = 1;
+
 // Telemetry role label for non-tRPC callers (workers/cron) with no session role.
 const SYSTEM_ROLE_LABEL = "system";
 
-export type PdfExportJobRecord = PdfExportJob & { requestedBy: string };
-
-export interface PdfExportTerminalState {
-  readonly jobId: string;
-  readonly reportId: string;
-  readonly requestedBy: string;
-  readonly status: "completed" | "failed";
-  readonly artifactUrl?: string;
-  readonly checksum?: string;
-  readonly error?: string;
-}
-
-export interface PdfExportRepository {
-  getPublishedReportForExport(
-    reportId: string,
-    session: UserSession,
-  ): Promise<AssembledReport | null>;
-  // Requester identity is mandatory: a job without a requester is a caller
-  // bug and must fail loud rather than be relabelled as a system actor.
-  createExportJob(
-    job: PdfExportJob,
-    requestedBy: string,
-    publicationSnapshot: AssembledReport,
-  ): Promise<PdfExportJob>;
-  getPublishedReportForJob(
-    jobId: string,
-  ): Promise<PublishedReportSnapshot | null>;
-  getExportJob(jobId: string): Promise<PdfExportJobRecord | null>;
-  saveExportJob(job: PdfExportJob): Promise<PdfExportJob>;
-  markExportFailed(jobId: string, error: string): Promise<void>;
-}
+export type { PdfExportOrphanScanSummary, PdfExportRetryInput };
 
 export class PdfExportService {
   private readonly logger: AppLogger;
+  private readonly recoveryDeps: PdfExportRecoveryDeps;
 
   constructor(
     private readonly repository: PdfExportRepository,
     logger: AppLogger,
-    private readonly pdfQueue: PdfExportEnqueuer,
+    pdfQueue: PdfExportEnqueuer,
     private readonly telemetry: PdfExportTelemetry,
     private readonly env: Pick<
       EnvConfig,
@@ -77,6 +65,7 @@ export class PdfExportService {
     >,
   ) {
     this.logger = logger;
+    this.recoveryDeps = { repository, pdfQueue, telemetry, logger };
   }
 
   // Throws PdfExportDomainError (tRPC → 500) if the secret is missing/too short —
@@ -131,6 +120,7 @@ export class PdfExportService {
         jobId: crypto.randomUUID(),
         reportId,
         status: "queued",
+        generation: PDF_EXPORT_INITIAL_GENERATION,
         requestedAt: new Date(),
         completedAt: null,
         checksum: null,
@@ -145,16 +135,32 @@ export class PdfExportService {
     // mints a fresh short-lived token from them at execution time, so a
     // persisted payload never holds a bearer credential.
     try {
-      await this.pdfQueue.enqueue(
-        { reportId, jobId: job.jobId, requestedBy: session.userId },
-        this.telemetry.captureJobContext(),
-      );
+      const dispatched = await dispatchExportGenerationPure(this.recoveryDeps, {
+        reportId,
+        jobId: job.jobId,
+        generation: job.generation,
+        requestedBy: session.userId,
+      });
+      if (!dispatched) {
+        // The locked re-verification observed a row that is no longer pending
+        // at this generation (a concurrent quarantine committed first). Abort
+        // the dispatch: no add, and no compensating write — the committed row
+        // belongs to the recovery surface now.
+        this.logger.error(
+          "pdf-export initial dispatch aborted: row is not pending at its generation",
+          { jobId: job.jobId, reportId },
+        );
+        return job;
+      }
     } catch (error) {
       // A row must never stay "queued" with no job behind it: mark it failed
       // so status/reaper surfaces the breakage, then propagate the enqueue
-      // error to the caller.
+      // error to the caller. A Redis command already issued with unknown
+      // outcome cannot be cancelled on lock release; the worker's
+      // pending+generation fence contains a job that executes late.
       await this.markExportFailed(
         job.jobId,
+        job.generation,
         error instanceof Error ? error.message : String(error),
       );
       throw error;
@@ -203,20 +209,61 @@ export class PdfExportService {
     return pdfExportJobSchema.parse(job);
   }
 
-  /** Validates the queue payload against the immutable persisted job identity. */
+  /**
+   * Pre-render gate: validates the queue payload against the immutable
+   * persisted job identity and requires the row to still be pending at
+   * exactly the payload's generation. A stale-generation or terminal row
+   * rejects — the worker performs no render and no write.
+   */
   async assertPdfExportJobIdentity(
     jobId: string,
     reportId: string,
     requestedBy: string,
+    generation: number,
   ): Promise<void> {
     const job = await this.repository.getExportJob(jobId);
-    if (job?.reportId !== reportId || job.requestedBy !== requestedBy) {
+    if (
+      job?.reportId !== reportId ||
+      job.requestedBy !== requestedBy ||
+      job.status !== "queued" ||
+      job.generation !== generation
+    ) {
       throw new PdfExportDomainError(`PDF export job ${jobId} was not found.`);
     }
   }
 
+  /**
+   * The Head retry transition. Phase A commits `pending(g+1)` under the row
+   * lock — only from `failed`/`recovery_required` at exactly the caller-bound
+   * `expectedGeneration`, which is never re-derived from the row — then phase
+   * B re-verifies `pending(g+1)` under a fresh lock and issues the
+   * generation-scoped queue add inside it. An enqueue throw or lost ack
+   * leaves the committed `pending(g+1)` for the orphan scan or a later retry;
+   * it is never compensated or marked failed.
+   */
+  async retryExportGeneration(
+    input: PdfExportRetryInput,
+  ): Promise<PdfExportRetryOutcome> {
+    return retryExportGenerationPure(this.recoveryDeps, input);
+  }
+
+  /**
+   * One finite pass over aged `pending` rows: pages the immutable
+   * `(createdAt, id)` keyset bounded at pass start, and per candidate holds
+   * the row lock to re-verify pending+generation+age before probing the
+   * generation-scoped queue job. Only a confirmed-absent job quarantines the
+   * row to `recovery_required`; a probe error or unknown outcome skips the
+   * row untouched — it is never treated as absence.
+   */
+  async scanOrphanedPendingExports(
+    hasQueueJob: PdfExportQueueJobProbe,
+  ): Promise<PdfExportOrphanScanSummary> {
+    return scanOrphanedPendingExportsPure(this.recoveryDeps, hasQueueJob);
+  }
+
   async markExportCompleted(
     jobId: string,
+    generation: number,
     artifactUrl: string,
     checksum: string,
   ): Promise<PdfExportJob> {
@@ -225,10 +272,13 @@ export class PdfExportService {
       throw new PdfExportDomainError(`PDF export job ${jobId} was not found.`);
     }
 
-    this.logger.info("marking PDF export completed", { jobId });
+    this.logger.info("marking PDF export completed", { jobId, generation });
     return this.repository.saveExportJob(
       pdfExportJobSchema.parse({
         ...job,
+        // The claimed generation — never the row's current one — is what the
+        // pending+generation CAS fences on.
+        generation,
         status: "completed",
         completedAt: new Date(),
         artifactUrl,
@@ -237,70 +287,42 @@ export class PdfExportService {
     );
   }
 
-  async markExportFailed(jobId: string, error: string): Promise<void> {
-    this.logger.error("PDF export job failed", { jobId, error });
-    await this.repository.markExportFailed(jobId, error);
+  async markExportFailed(
+    jobId: string,
+    generation: number,
+    error: string,
+  ): Promise<void> {
+    this.logger.error("PDF export job failed", { jobId, generation, error });
+    await this.repository.markExportFailed(jobId, generation, error);
   }
 
-  /** Reconciles one durable BullMQ terminal state; DB terminal states win ties. */
+  /**
+   * Reconciles a terminal queue state to the durable export row under the
+   * per-export row lock. `loadCurrentTerminalState` re-reads the queue AFTER
+   * the lock is held, so a state captured before it (for example a failure
+   * whose job has since been retried) can never overwrite a newer attempt.
+   */
   async reconcileTerminalState(
-    state: PdfExportTerminalState,
+    identity: PdfExportJobIdentity,
+    loadCurrentTerminalState: () => Promise<PdfExportTerminalState | null>,
   ): Promise<boolean> {
-    const job = await this.repository.getExportJob(state.jobId);
-    if (
-      job?.status !== "queued" ||
-      job.reportId !== state.reportId ||
-      job.requestedBy !== state.requestedBy
-    ) {
-      if (job?.status === "queued") {
-        this.logger.error("pdf-export terminal identity mismatch", {
-          jobId: state.jobId,
-          reportId: state.reportId,
-          requestedBy: state.requestedBy,
-        });
-      }
-      return false;
-    }
-    if (state.status === "failed") {
-      await this.markExportFailed(
-        state.jobId,
-        state.error ?? "PDF export failed in BullMQ",
-      );
-      return true;
-    }
-    if (!state.artifactUrl || !state.checksum) {
-      this.logger.error(
-        "pdf-export completed job has no durable artifact result",
-        {
-          jobId: state.jobId,
-        },
-      );
-      return false;
-    }
-    await this.markExportCompleted(
-      state.jobId,
-      state.artifactUrl,
-      state.checksum,
+    return reconcileTerminalStatePure(
+      this.recoveryDeps,
+      identity,
+      loadCurrentTerminalState,
     );
-    return true;
   }
 
-  // Prefer Playwright `url` over domain/secure inference from PDF_BASE_URL —
-  // IP, localhost, and proxy hostnames reject or mis-scope domain cookies.
-  buildAuthCookies(authToken: string): {
-    name: string;
-    value: string;
-    url: string;
-    httpOnly: boolean;
-    sameSite: "Lax" | "Strict" | "None";
-  }[] {
+  // Scope the render credential to the print origin used by Gotenberg.
+  buildAuthCookies(authToken: string): PdfRenderCookie[] {
     const baseUrl = requireEnv(this.env, "PDF_BASE_URL");
 
     return [
       {
         name: AUTH_COOKIE_NAME,
         value: authToken,
-        url: baseUrl,
+        domain: new URL(baseUrl).hostname,
+        path: "/",
         httpOnly: true,
         sameSite: "Lax",
       },

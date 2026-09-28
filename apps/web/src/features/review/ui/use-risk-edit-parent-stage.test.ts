@@ -44,14 +44,14 @@ const STAGES: Record<string, readonly string[]> = {
   [CLEAN_PRODUCT.id]: ["Design"],
 };
 
-function setup() {
+function setup(defaultProductId: string | undefined = FLAGGED_PRODUCT.id) {
   return renderHook(() =>
     useRiskEditParentStage({
       risk: null,
       isCreate: true,
       products: [FLAGGED_PRODUCT, CLEAN_PRODUCT],
       activities: [{ id: "a1", name: "Jira triage duty" }],
-      defaultProductId: FLAGGED_PRODUCT.id,
+      defaultProductId,
       stagesForProduct: (productId) => STAGES[productId] ?? [],
     }),
   );
@@ -109,5 +109,17 @@ describe("useRiskEditParentStage — context strip follows the parent", () => {
     expect(result.current.preCheckedStages).toEqual([
       { name: "Design", severity: "at-risk" },
     ]);
+  });
+});
+
+// An explicit stale seed must not rebind to products[0] or fall through to
+// the first activity — the lead resolves the parent explicitly.
+describe("useRiskEditParentStage — stale create seed", () => {
+  it("leaves the parent unresolved when the requested product id is absent from the catalog", () => {
+    const { result } = setup("p-stale");
+
+    expect(result.current.parent).toEqual({ kind: "unresolved" });
+    expect(result.current.parentName).toBe("");
+    expect(result.current.preCheckedStages).toEqual([]);
   });
 });

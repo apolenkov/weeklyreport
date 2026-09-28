@@ -135,14 +135,28 @@ export function buildProductToAuthorMap(
   );
 }
 
-// First escalation targeting the product, surfaced as the needsAttention banner.
+// Highest-severity escalation targeting the product, surfaced as the
+// needsAttention banner. Builder order is severity-first only within one
+// section, so rank explicitly across sections.
+const ESCALATION_SEVERITY_RANK: Record<
+  WeeklyReportReadModel["escalations"][number]["type"],
+  number
+> = {
+  blocked: 0,
+  at_risk: 1,
+  unresolved_risk: 2,
+};
+
 export function findNeedsAttention(
   api: WeeklyReportReadModel,
   productId: string,
 ): { needsAttention?: string; needsAttentionSeverity?: "blocked" | "at-risk" } {
-  const escalation = api.escalations.find(
-    (candidate) => candidate.productId === productId,
-  );
+  const escalation = api.escalations
+    .filter((candidate) => candidate.productId === productId)
+    .sort(
+      (a, b) =>
+        ESCALATION_SEVERITY_RANK[a.type] - ESCALATION_SEVERITY_RANK[b.type],
+    )[0];
   if (!escalation) return {};
   return {
     needsAttention: escalation.description,

@@ -3,10 +3,9 @@ import {
   reminderPolicyAppliesTo,
 } from "@customreport/shared";
 import {
-  type PeriodState,
-  type PeriodStatus,
   type PrismaClient,
   type ReminderRuleKind,
+  type Report,
   type ReportSectionStatus,
 } from "@prisma/client";
 
@@ -53,11 +52,10 @@ interface PendingReopenRequestJourneyRow {
   readonly id: string;
   readonly reportSection: {
     readonly status: ReportSectionStatus;
-    readonly report: {
-      readonly archived: boolean;
-      readonly periodState: PeriodState;
-      readonly periodStatus: PeriodStatus;
-    };
+    readonly report: Pick<
+      Report,
+      "id" | "archived" | "periodState" | "periodStatus"
+    >;
   };
 }
 
@@ -100,6 +98,7 @@ export function assertPendingReopenRequestIntegrity(
     .filter(
       ({ reportSection }) =>
         reportSection.status !== "submitted" ||
+        reportSection.report.id !== ACTIVE_REPORT_ID ||
         reportSection.report.periodState !== "open" ||
         reportSection.report.periodStatus !== "open" ||
         reportSection.report.archived,
@@ -205,6 +204,7 @@ async function runDemoJourney(
               status: true,
               report: {
                 select: {
+                  id: true,
                   archived: true,
                   periodState: true,
                   periodStatus: true,

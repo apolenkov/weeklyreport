@@ -4,9 +4,11 @@
 
 import "@testing-library/jest-dom/vitest";
 
+import { type PdfExportJob, pdfExportJobSchema } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { TRPCClientError } from "@trpc/client";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -35,16 +37,58 @@ const ACTIVE_JOB_STORAGE_KEY = `weeklyreport:pdf-export:active:${REPORT_ID}`;
 const DISABLED_REASON = "Publish or re-publish the report to export PDF.";
 const STATUS_POLL_INTERVAL_MS = 2000;
 
-const COMPLETED_STATUS = {
+const COMPLETED_STATUS_INPUT: PdfExportJob = {
   jobId: JOB_ID,
   reportId: REPORT_ID,
   status: "completed" as const,
+  generation: 1,
   artifactUrl: ARTIFACT_URL,
   requestedAt: new Date("2026-04-14T00:00:00Z"),
   completedAt: new Date("2026-04-14T00:00:02Z"),
   checksum: null,
   templateVersion: "1",
 };
+const COMPLETED_STATUS = pdfExportJobSchema.parse(COMPLETED_STATUS_INPUT);
+
+const RECOVERY_STATUS_INPUT: PdfExportJob = {
+  jobId: JOB_ID,
+  reportId: REPORT_ID,
+  status: "recovery_required" as const,
+  generation: 1,
+  artifactUrl: null,
+  requestedAt: new Date("2026-04-14T00:00:00Z"),
+  completedAt: null,
+  checksum: null,
+  templateVersion: "1",
+};
+const RECOVERY_STATUS = pdfExportJobSchema.parse(RECOVERY_STATUS_INPUT);
+
+const FAILED_STATUS_INPUT: PdfExportJob = {
+  jobId: JOB_ID,
+  reportId: REPORT_ID,
+  status: "failed",
+  generation: 1,
+  artifactUrl: null,
+  requestedAt: new Date("2026-04-14T00:00:00Z"),
+  completedAt: new Date("2026-04-14T00:00:02Z"),
+  checksum: null,
+  templateVersion: "1",
+};
+const FAILED_STATUS = pdfExportJobSchema.parse(FAILED_STATUS_INPUT);
+
+const RECOVERY_MESSAGE = "Recovery required — export outcome unknown";
+
+// A stored job whose status query is rejected with a deterministic client
+// error (e.g. the durable row is gone or belongs to another user) can never
+// resolve — unlike a transient transport failure.
+function makeNotFoundStatusError(): TRPCClientError<never> {
+  const error = new TRPCClientError<never>("PDF export job was not found.");
+  Object.defineProperty(error, "data", {
+    value: { httpStatus: 404, code: "NOT_FOUND" },
+    configurable: true,
+  });
+  return error;
+}
 
 function makeQueryClient() {
   return new QueryClient({
@@ -107,6 +151,7 @@ describe("pdfExportRefetchInterval", () => {
     ["processing", STATUS_POLL_INTERVAL_MS],
     ["completed", false],
     ["failed", false],
+    ["recovery_required", false],
   ] as const)("maps %s to %s", (status, expected) => {
     expect(pdfExportRefetchInterval(status)).toBe(expected);
   });
@@ -328,29 +373,23 @@ describe("ExportPdfButton", () => {
 
   it.each([
     {
-      name: "a status query error",
-      expectedMessage: "PDF export status check failed. Please try again.",
+      name: "a deterministic status query error",
+      expectedMessage:
+        "PDF export status is no longer available. Please try again.",
       statusQuery: () => {
-        throw new Error("poll failed");
+        throw makeNotFoundStatusError();
       },
     },
     {
       name: "a failed status",
       expectedMessage: "PDF export failed. Please try again.",
-      statusQuery: () => ({
-        jobId: JOB_ID,
-        reportId: REPORT_ID,
-        status: "failed" as const,
-        artifactUrl: null,
-        requestedAt: new Date("2026-04-14T00:00:00Z"),
-        completedAt: new Date("2026-04-14T00:00:02Z"),
-        checksum: null,
-        templateVersion: "1",
-      }),
+      statusQuery: () => FAILED_STATUS,
     },
   ])(
     "cleans up a restored job after $name without a fresh enqueue",
     async ({ expectedMessage, statusQuery }) => {
+      // The query error-policy seam logs each terminal failure.
+      vi.spyOn(console, "error").mockImplementation(() => undefined);
       window.sessionStorage.setItem(ACTIVE_JOB_STORAGE_KEY, JOB_ID);
 
       const statusQueryFactory = vi.fn(statusQuery);
@@ -389,6 +428,54 @@ describe("ExportPdfButton", () => {
     },
   );
 
+  it("surfaces the persistent recovery message, stops polling, and stays retryable", async () => {
+    window.sessionStorage.setItem(ACTIVE_JOB_STORAGE_KEY, JOB_ID);
+
+    const statusQueryFactory = vi.fn(() => RECOVERY_STATUS);
+    const { captured, queryClient } = renderButton({
+      statusQuery: statusQueryFactory,
+    });
+    const requestMutation = expectDefined(
+      captured["pdfExport.request"],
+    ).mutationFn;
+    requestMutation.mockResolvedValue({ jobId: JOB_ID });
+
+    const button = screen.getByRole("button", { name: "Export PDF" });
+    const message = await screen.findByText(RECOVERY_MESSAGE);
+    expect(message).toBeVisible();
+    expect(message).toHaveAttribute("role", "alert");
+
+    await waitFor(() => {
+      expect(button).toHaveAttribute("aria-busy", "false");
+      expect(button).toBeEnabled();
+    });
+    expect(window.sessionStorage.getItem(ACTIVE_JOB_STORAGE_KEY)).toBeNull();
+    expect(anchorClick).not.toHaveBeenCalled();
+    expect(toastSuccess).not.toHaveBeenCalled();
+
+    const statusQueryCache = queryClient.getQueryCache().find({
+      queryKey: [["pdfExport", "status"]],
+    });
+    const statusObserver = statusQueryCache?.observers[0];
+    expect(statusObserver?.getCurrentResult().isEnabled).toBe(false);
+    expect(statusObserver?.getCurrentResult().isFetching).toBe(false);
+
+    const callsAfterCleanup = statusQueryFactory.mock.calls.length;
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, STATUS_POLL_INTERVAL_MS + 50);
+    });
+    expect(statusQueryFactory.mock.calls).toHaveLength(callsAfterCleanup);
+    expect(message).toBeInTheDocument();
+
+    await userEvent.click(button);
+    await waitFor(() => {
+      expect(requestMutation).toHaveBeenCalledTimes(1);
+    });
+    expect(expectDefined(captured["pdfExport.request"]).calls).toEqual([
+      { reportId: REPORT_ID },
+    ]);
+  });
+
   it("uses a reduced-motion-safe spinner while the export request is pending", async () => {
     const { captured } = renderButton({ statusQuery: COMPLETED_STATUS });
     expectDefined(captured["pdfExport.request"]).mutationFn.mockImplementation(
@@ -403,14 +490,78 @@ describe("ExportPdfButton", () => {
     expect(spinner.querySelector("style")).not.toBeInTheDocument();
   });
 
-  it("on status poll error: error toast fires and the button returns to idle", async () => {
+  it("keeps polling through a transient status error and delivers the same job's artifact once", async () => {
+    // The query error-policy seam logs each transient failure.
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    let statusCalls = 0;
+    const statusQueryFactory = vi.fn(() => {
+      statusCalls += 1;
+      if (statusCalls === 1) {
+        throw new Error("API restarting");
+      }
+      return COMPLETED_STATUS;
+    });
+    const { captured, queryClient } = renderButton({
+      statusQuery: statusQueryFactory,
+    });
+    const requestMutation = expectDefined(
+      captured["pdfExport.request"],
+    ).mutationFn;
+    requestMutation.mockResolvedValue({ jobId: JOB_ID });
+
+    const button = screen.getByRole("button", { name: "Export PDF" });
+    await userEvent.click(button);
+
+    await waitFor(() => {
+      expect(requestMutation).toHaveBeenCalledTimes(1);
+    });
+    expect(window.sessionStorage.getItem(ACTIVE_JOB_STORAGE_KEY)).toBe(JOB_ID);
+
+    // The first status check fails transiently: the stored job survives, the
+    // control stays busy, and no failure toast fires — this is not an outcome.
+    await waitFor(() => {
+      const statusObserver = queryClient
+        .getQueryCache()
+        .find({ queryKey: [["pdfExport", "status"]] })?.observers[0];
+      expect(statusObserver?.getCurrentResult().isError).toBe(true);
+    });
+    expect(window.sessionStorage.getItem(ACTIVE_JOB_STORAGE_KEY)).toBe(JOB_ID);
+    expect(button).toHaveAttribute("aria-busy", "true");
+    expect(button).toBeDisabled();
+    expect(toastError).not.toHaveBeenCalled();
+
+    // The next check observes the SAME job completed: the artifact is
+    // delivered exactly once with no fresh enqueue.
+    const link = await screen.findByRole(
+      "link",
+      { name: "Download PDF" },
+      { timeout: STATUS_POLL_INTERVAL_MS * 3 },
+    );
+    expect(link).toHaveAttribute("href", ARTIFACT_URL);
+    expect(anchorClick).toHaveBeenCalledTimes(1);
+    expect(toastSuccess).toHaveBeenCalledTimes(1);
+    expect(requestMutation).toHaveBeenCalledTimes(1);
+    expect(window.sessionStorage.getItem(ACTIVE_JOB_STORAGE_KEY)).toBeNull();
+
+    const callsAfterDelivery = statusQueryFactory.mock.calls.length;
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, STATUS_POLL_INTERVAL_MS + 50);
+    });
+    expect(statusQueryFactory.mock.calls).toHaveLength(callsAfterDelivery);
+    expect(anchorClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("on a sustained status poll outage: keeps polling and stays busy without an error toast", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
     const openMock = vi.fn();
     vi.stubGlobal("open", openMock);
 
-    const { captured } = renderButton({
-      statusQuery: () => {
-        throw new Error("poll failed");
-      },
+    const statusQueryFactory = vi.fn(() => {
+      throw new Error("poll failed");
+    });
+    const { captured, queryClient } = renderButton({
+      statusQuery: statusQueryFactory,
     });
     expectDefined(captured["pdfExport.request"]).mutationFn.mockResolvedValue({
       jobId: JOB_ID,
@@ -420,15 +571,22 @@ describe("ExportPdfButton", () => {
     await userEvent.click(button);
 
     await waitFor(() => {
-      expect(toastError).toHaveBeenCalled();
+      const statusObserver = queryClient
+        .getQueryCache()
+        .find({ queryKey: [["pdfExport", "status"]] })?.observers[0];
+      expect(statusObserver?.getCurrentResult().isError).toBe(true);
     });
-    expect(toastError.mock.calls[0]?.[0]).toMatch(/status check failed/i);
+    expect(toastError).not.toHaveBeenCalled();
     expect(openMock).not.toHaveBeenCalled();
+    expect(button).toHaveAttribute("aria-busy", "true");
+    expect(button).toBeDisabled();
+    expect(window.sessionStorage.getItem(ACTIVE_JOB_STORAGE_KEY)).toBe(JOB_ID);
 
-    await waitFor(() => {
-      expect(button).toHaveAttribute("aria-busy", "false");
-      expect(button).not.toBeDisabled();
+    const callsAtError = statusQueryFactory.mock.calls.length;
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, STATUS_POLL_INTERVAL_MS + 50);
     });
+    expect(statusQueryFactory.mock.calls.length).toBeGreaterThan(callsAtError);
   });
 
   it("on failed job status: error toast fires and the button returns to idle without a tab", async () => {
@@ -436,16 +594,7 @@ describe("ExportPdfButton", () => {
     vi.stubGlobal("open", openMock);
 
     const { captured } = renderButton({
-      statusQuery: {
-        jobId: JOB_ID,
-        reportId: REPORT_ID,
-        status: "failed" as const,
-        artifactUrl: null,
-        requestedAt: new Date("2026-04-14T00:00:00Z"),
-        completedAt: new Date("2026-04-14T00:00:02Z"),
-        checksum: null,
-        templateVersion: "1",
-      },
+      statusQuery: FAILED_STATUS,
     });
     expectDefined(captured["pdfExport.request"]).mutationFn.mockResolvedValue({
       jobId: JOB_ID,

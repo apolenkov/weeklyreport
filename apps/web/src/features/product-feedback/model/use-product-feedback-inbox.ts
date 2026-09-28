@@ -108,23 +108,10 @@ export function useProductFeedbackInbox(onError: () => void) {
     );
   }, [items, search, status, type]);
 
-  const changeStatus = async (id: string, nextStatus: FeedbackStatus) => {
-    const response = await fetch(
-      `/api/v1/feedback/${encodeURIComponent(id)}/status`,
-      {
-        method: "PATCH",
-        credentials: SAME_ORIGIN,
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ status: nextStatus }),
-      },
-    );
-    if (!response.ok) throw new Error("Feedback status update failed");
-    setItems((current) =>
-      current.map((item) =>
-        item.id === id ? { ...item, status: nextStatus } : item,
-      ),
-    );
-  };
+  // Routes through `mutate` so the server-returned record (incl. updatedAt)
+  // replaces the row instead of a local status-only patch.
+  const changeStatus = (id: string, nextStatus: FeedbackStatus) =>
+    mutate(id, "/status", { status: nextStatus });
 
   const mutate = async (id: string, path: string, body: unknown) => {
     const response = await fetch(

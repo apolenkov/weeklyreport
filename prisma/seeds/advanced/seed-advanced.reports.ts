@@ -1,5 +1,10 @@
-import type { PrismaClient } from "@prisma/client";
-import { PeriodState, PeriodStatus, ReportStatus } from "@prisma/client";
+import {
+  PeriodState,
+  PeriodStatus,
+  Prisma,
+  type PrismaClient,
+  ReportStatus,
+} from "@prisma/client";
 
 import { provisionalPublishedSnapshot } from "../support/published-snapshot.js";
 import { HEAD_USER_ID, SEED_REPORTS } from "../support/seed-constants.js";
@@ -7,6 +12,9 @@ import { HEAD_USER_ID, SEED_REPORTS } from "../support/seed-constants.js";
 const activeReport = SEED_REPORTS.active;
 const publishedReport = SEED_REPORTS.published;
 
+// An upsert rerun restores the whole lifecycle tuple: no publication, reopen,
+// or automation residue may survive on the open report. DbNull writes SQL
+// NULL for the absent snapshot (JsonNull would read as present).
 const ACTIVE_FIELDS = {
   periodStart: new Date(activeReport.periodStart),
   periodEnd: new Date(activeReport.periodEnd),
@@ -15,6 +23,12 @@ const ACTIVE_FIELDS = {
   periodStatus: PeriodStatus[activeReport.periodStatus],
   periodState: PeriodState.open,
   archived: false,
+  autoPublished: false,
+  autoArchived: false,
+  publishedAt: null,
+  publishedById: null,
+  reopenedAt: null,
+  publishedSnapshot: Prisma.DbNull,
   weekLabel: activeReport.weekLabel,
 };
 
@@ -26,6 +40,9 @@ const PUBLISHED_FIELDS = {
   periodStatus: PeriodStatus[publishedReport.periodStatus],
   periodState: PeriodState.published,
   archived: false,
+  autoPublished: false,
+  autoArchived: false,
+  reopenedAt: null,
   weekLabel: publishedReport.weekLabel,
   publishedAt: new Date(publishedReport.publishedAt),
   publishedById: HEAD_USER_ID,

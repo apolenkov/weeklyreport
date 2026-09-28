@@ -96,11 +96,13 @@ export class SearchService {
       limit: parsed.limit,
     });
 
-    // Server-side ordering: rank desc, then createdAt desc as a stable tie-
-    // breaker so two equal-rank rows don't shuffle between calls.
+    // Server-side ordering: rank desc, then createdAt desc, then id asc as a
+    // stable tie-breaker so equal-rank rows don't shuffle between calls.
     const sorted = [...hits].sort((a, b) => {
       if (b.rank !== a.rank) return b.rank - a.rank;
-      return b.createdAt.localeCompare(a.createdAt);
+      if (b.createdAt !== a.createdAt)
+        return b.createdAt.localeCompare(a.createdAt);
+      return a.id.localeCompare(b.id);
     });
 
     const limited = sorted.slice(0, parsed.limit);

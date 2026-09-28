@@ -37,6 +37,9 @@ export function useCanonicalReportRedirect({
     const next = new URLSearchParams();
     if (focusedAuthorId) next.set("authorId", focusedAuthorId);
     for (const key of [
+      "mode",
+      "scope",
+      "archive",
       "feedback",
       "feedbackUrl",
       "agentationSession",

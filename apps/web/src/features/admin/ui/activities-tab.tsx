@@ -93,6 +93,7 @@ export function ActivitiesTab({ groups, users, products }: ActivitiesTabProps) {
         ) : (
           <ActivitiesTable
             activeActivities={state.activeActivities}
+            hasData={state.hasData}
             archivedActivities={state.archivedActivities}
             groupNameById={groupNameById}
             users={users}

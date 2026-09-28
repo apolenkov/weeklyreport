@@ -81,6 +81,22 @@ function stripReservedContext(
   );
 }
 
+// A caller-supplied context holding BigInt or circular values must not
+// turn logging itself into a crash path — degrade to the envelope.
+function serializeEntry(entry: LogEntry): string {
+  try {
+    return JSON.stringify(entry);
+  } catch {
+    return JSON.stringify({
+      timestamp: entry.timestamp,
+      level: entry.level,
+      message: entry.message,
+      correlationId: entry.correlationId,
+      contextSerializationFailed: true,
+    });
+  }
+}
+
 const LEVEL_PRIORITY: Record<LogLevel, number> = {
   debug: 0,
   info: 1,
@@ -229,7 +245,7 @@ class AppLoggerImpl implements AppLogger {
       ...spanFields,
     };
 
-    const formatted = JSON.stringify(entry);
+    const formatted = serializeEntry(entry);
 
     if (level === "error") {
       process.stderr.write(`${formatted}\n`);

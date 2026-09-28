@@ -21,7 +21,7 @@ export function UsersTab({ users, groups }: UsersTabProps) {
     <>
       <div className="space-y-4">
         <UsersTabHeader
-          userCount={users.length}
+          userCount={state.filters.filteredUsers.length}
           filters={state.filters}
           groupFilterOptions={userGroupFilterOptions(groups)}
           onAdd={state.openAdd}
@@ -36,7 +36,9 @@ export function UsersTab({ users, groups }: UsersTabProps) {
           onActivate={state.activateUser}
           onDelete={state.openDelete}
         />
-        {state.filters.filteredUsers.length === 0 && <UsersEmptyState />}
+        {state.filters.filteredUsers.length === 0 && (
+          <UsersEmptyState hasData={users.length > 0} />
+        )}
       </div>
 
       {state.showDialog && (
@@ -60,6 +62,7 @@ export function UsersTab({ users, groups }: UsersTabProps) {
         preview={state.deleteTarget ? state.deleteTarget.name : ""}
         reversible={false}
         confirmLabel="Delete"
+        isPending={state.deletePending}
         onConfirm={state.handleDelete}
         onCancel={state.cancelDelete}
         triggerRef={state.deleteTriggerRef}
@@ -88,10 +91,10 @@ function GroupChangeDialog({
   );
 }
 
-function UsersEmptyState() {
+function UsersEmptyState({ hasData }: { readonly hasData: boolean }) {
   return (
     <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
-      No users match the search.
+      {hasData ? "No users match the search." : "No users yet."}
     </div>
   );
 }

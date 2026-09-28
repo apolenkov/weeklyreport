@@ -9,6 +9,7 @@ import {
 import { ENV_CONFIG } from "../config/config.module.js";
 import type { EnvConfig } from "../config/env.schema.js";
 import { BullMQHealthIndicator } from "./bullmq.health.js";
+import { PdfRendererHealthIndicator } from "./pdf-renderer.health.js";
 import { PrismaHealthIndicator } from "./prisma.health.js";
 import { RedisHealthIndicator } from "./redis.health.js";
 
@@ -40,6 +41,8 @@ export class HealthController {
     @Inject(PrismaHealthIndicator) private readonly prismaHealth: HealthProbe,
     @Inject(RedisHealthIndicator) private readonly redisHealth: HealthProbe,
     @Inject(BullMQHealthIndicator) private readonly bullmqHealth: HealthProbe,
+    @Inject(PdfRendererHealthIndicator)
+    private readonly pdfRendererHealth: HealthProbe,
     @Inject(ENV_CONFIG) private readonly env: EnvConfig,
   ) {}
 
@@ -64,6 +67,17 @@ export class HealthController {
           "memory_heap",
           this.env.HEAP_HEALTH_THRESHOLD_BYTES,
         ),
+    ]);
+  }
+
+  // Dedicated non-gating renderer signal: `up`/`down` as 200/503 with no
+  // internal error details. It must NOT join the readiness aggregate above —
+  // a renderer outage degrades exports, it never marks the API unready.
+  @Get("pdf-renderer")
+  @HealthCheck()
+  pdfRenderer() {
+    return this.health.check([
+      () => this.pdfRendererHealth.isHealthy("pdf_renderer"),
     ]);
   }
 }

@@ -2,6 +2,23 @@
 
 Completed repair checkboxes record verified local corrections. The final verification section remains the release acceptance gate; a local correction does not establish overall readiness. Review observations and baseline test runs are not completion evidence. Close an item only after current-source reconciliation, implementation or evidence-backed disposition, and applicable verification. Detailed accepted evidence is indexed by the retained finding ID outside the repository.
 
+Current execution entry point: section 44. Earlier checked tasks retain their
+baseline meaning; they do not establish acceptance of the September 12 branch
+snapshot. OpenCode and Codex use this file as the shared execution checklist.
+Product-specific quick-edit tasks live only in
+[refine-overview-editing-layout](../refine-overview-editing-layout/tasks.md).
+
+Current priority (user correction, 2026-09-12): finish the detailed review and
+execution plan before resuming implementation acceptance. Section 46 tracks
+planning deliverables; it does not replace section 44 or count as product PASS.
+Run diagnostics only to establish a finding, dependency or acceptance method.
+
+Evidence root on this workstation:
+`/home/user/.codex/work-artifacts/weeklyreport-quality-plan-2026-09-04/execution/deepseek-session-review-20260912/`.
+It contains `branch-review-catalog.json`, `session-requirements.json`,
+`quick-edit-findings.json`, `remote-refs.json`, screenshots and CI logs. Raw
+evidence stays outside the repository; task status and acceptance live here.
+
 ## 1. Shared contracts and acceptance scope
 
 - [x] 1.1 Complete substantive review of all 2,466 snapshot files and retain source identities and per-file criteria outside the repository.
@@ -480,3 +497,744 @@ Source-bound 34-row reconciliation and exact native criteria are recorded in the
 
 - [x] 43.1 `ROOT-UI-PROVIDER-DISABLED-001`: derive the retained active revision summary from global availability; verify disabled read and edit states without changing the provider lifecycle.
 - [x] 43.2 `ROOT-UI-PROVIDER-READINESS-002`: refresh feature readiness after provider mutations without requiring a page reload.
+
+## 44. September 12 branch and session reconciliation
+
+Execute in dependency order. One owner per bounded task; do not start a second
+implementation while the first owner is active. Reuse checks only when their
+source inputs match. A checkbox means its full stated acceptance passed.
+
+- [x] 44.1 Pin local SHA for main and the three named feature branches plus the
+      supplied session digest; inventory their 1,220 unique changed paths.
+      Evidence: branch-review-catalog.json; this supplements the full MVP scope.
+- [x] 44.2 Inspect live remote refs, worktrees and current PR/CI. Evidence:
+      remote-refs.json and ci-34630878032-failed.log; agentation PR #84 is open,
+      its current head failed lint, local editable is one commit ahead, and
+      faster-fixes has no remote branch. These observations are not code PASS.
+- [ ] 44.3 Reconcile the complete supplied session against actual commits;
+      attribute changes or mark unknown, and distinguish user requirements
+      from assistant claims. Every requirement has an ID and disposition.
+- [ ] 44.4 Reconcile the original full-file snapshot with current tracked and
+      relevant untracked files. Preserve history and evidence; assign every
+      required path exactly once and record SHA and ownership.
+- [ ] 44.5 Review all source paths in that scope; record path/line, scenario,
+      severity and applicable spec for each finding. No unreviewed paths remain.
+- [ ] 44.6 Review tests, specs, configuration, dependencies and deletions;
+      record missing coverage and unsupported acceptance claims explicitly.
+- [ ] 44.7 Trace architecture across draft/save/refetch, lifecycle atomicity,
+      publication snapshots, jobs and configuration; preserve original scoped
+      exclusions and reconcile evidence with the final source.
+- [ ] 44.8 Complete the quick-edit child change, including DS-F01/DS-F02,
+      read-only actions, retention, browser verification and independent review.
+      Follow its tasks rather than duplicating implementation checkboxes here.
+      Child `refine-overview-editing-layout` is 4/5 tasks; child task 2.3
+      (desktop viewport matrix in the primary browser lane) remains open —
+      the 2026-09-16 QE-CLOSE native check was interrupted and unaccepted,
+      and QE-04, QE-05, QE-07 and QE-08 still require verification on the
+      current source. Historical evidence retained as provenance, not
+      acceptance: `refine-overview-editing-layout-qe-acceptance.json`
+      (captured 2026-09-14, baseHead c7766a20) recorded the QE-01…QE-09
+      table with browser evidence — text-only quick edit versus the full
+      Edit action, focus restoration from both editors including the
+      retained-memory path, the read-only surface of a submitted period
+      with no unload guard, and the IME fix (Escape during an active
+      composition used to close the editor and discard composed text).
+      That record predates the open checks above and does not close them.
+- [x] 44.9 Define and implement the requested Current/Next drag-and-drop in a
+      focused child change, preserving lineage and canonical writes; verify
+      keyboard alternative, invalid targets and desktop drag feedback.
+      Evidence: child `preserve-linked-continuation-dnd` is complete (15/15);
+      receipts in file-reviews/preserve-linked-continuation-dnd-*.json. The
+      Current result is retained and the linked Next is created/promoted
+      through canonical draft writes with the superseded text kept in readable
+      history; keyboard parity, Escape/focus restoration, invalid-target and
+      locked/foreign rejection are covered by the change's component, shell
+      and API suites. Browser drag feedback was exercised through the
+      keyboard/menu-equivalent entry points; a synthetic pointer-drag gesture
+      is covered by the component tests rather than the browser lane (recorded
+      as a gap in preserve-linked-continuation-dnd-browser-lane-4-1.json).
+- [x] 44.10 Resolve report-specific Activity name/details semantics in a focused
+      child change; verify that later edits cannot alter published snapshots.
+      Evidence: child `add-weekly-activity-title` is complete (12/12) with
+      file-reviews/ACTIVITY-TITLE-FINAL-GATES.json and
+      ACTIVITY-TITLE-FINAL-INVENTORY.json; the weekly title/description are
+      stored per lead/week without touching the catalogue, and the published
+      snapshot suites prove later edits cannot alter published periods.
+- [ ] 44.11 Accept the finite desktop UI/UX scenario matrix with actual browser
+      evidence and relevant annotations. Preserve the current style; no mobile.
+- [ ] 44.12 Resolve all confirmed findings in bounded patches with regression
+      evidence. Verify the forbidden archive placeholder correction at the
+      delivery snapshot; preserve the supplied session history outside product
+      artifacts without deleting its only copy.
+- [ ] 44.13 Independently review substantial final changes with independent reviewer High;
+      reconcile every finding, including explicit unavailability if applicable.
+- [ ] 44.14 Run applicable format/lint/typecheck/test/build/spec/integration
+      acceptance against the final source. All required criteria score at least
+      2, all critical scenarios pass, and unreviewed=blocked=0 in local scope.
+- [ ] 44.15 Reconcile the original roadmap, catalog and evidence counts; deliver
+      within authorized branch scope and verify destination/CI. Resolve owned
+      temporary files/processes. Report external/production readiness separately.
+
+## 45. Confirmed feedback transport repair
+
+- [x] 45.1 `DS-SSE-01` — Keep idle Agentation SSE alive through the web rewrite
+      proxy. The 30-second heartbeat races the installed proxy's 30-second
+      timeout; send heartbeat earlier. Accept with a failing-then-passing
+      transport regression and a live same-origin stream that survives beyond
+      the former timeout. Preserve replay, scope checks and disconnect cleanup.
+      Evidence: agentation-stream-probe.json and agentation-stream-after.json in
+      the section 44 evidence root. Before: proxy terminated at 30,050 ms while
+      direct API survived 35 seconds. After: proxy survived 35,002 ms with three
+      chunks. Regression red→green; 12 transport tests, scoped lint and format
+      pass. This is local idle-transport acceptance, not all feedback acceptance.
+
+## 46. Detailed plan for bounded execution
+
+Planning counter: 12 of 12 deliverables accepted (P01–P12).
+Final execution awaits repaired source and evidence bindings. Compute subsequent
+counts from these checkboxes. Report planning, file-review coverage and product
+acceptance separately; never combine them into one completion percentage.
+
+Every resulting execution packet must name its requirement/finding IDs, base
+revision and dirty inputs, exact allowed files, prerequisites, one owner,
+implementation steps, acceptance commands/scenarios, evidence destination and
+stop conditions. A packet is ready only when its input contract is unambiguous.
+Product contradictions remain explicit decisions; do not silently choose them.
+
+- [x] P01 Reconcile session requirements. Read the supplied session's complete
+      user blocks and the original handoff; map each requirement to its source
+      line and an existing or planned change. Distinguish assistant claims and
+      unknown commit authorship. Output: complete requirements-to-task map,
+      including DS-01 through DS-08 and original MVP requirements. Feeds 44.3.
+      Planning acceptance: `requirements-plan-acceptance.json` binds the source
+      registers and maps all 167 original User blocks, DS-01–DS-08 and seven
+      recovered nested Page Feedback annotations. Original handoff/roadmap
+      obligations remain linked. Ambiguous history, product decisions and cleanup
+      requests retain explicit open dispositions; mapping is not product approval.
+- [x] P02 Fix the review denominator. Reconcile the original snapshot, current
+      tracked/relevant untracked files and branch-only changes. Assign one
+      review owner per path; include deleted paths with their source revision.
+      Output: hashed manifest and disjoint file lists, with no silent exclusions.
+      Feeds 44.4; depends on P01 for scope, not on product fixes.
+      Planning acceptance: `review-ownership-and-sources.json` covers 2,701
+      unique paths in 335 assignments, all 2,622 current-snapshot paths, all
+      2,466 original-snapshot paths and 27 branch-version bindings. Every source
+      hash was checked. The coordinator is the accountable review owner until
+      explicit executor assignment; this grants no ownership of concurrent edits.
+      Later source deltas and full review acceptance remain separate.
+- [x] P03 Partition the complete file review into bounded packets using P02.
+      Each packet lists actual paths, applicable criteria and shared dependencies;
+      no arbitrary file-count target substitutes for coherent ownership. Include
+      tests, specs, tooling, configuration and deletions. Feeds 44.5 and 44.6.
+      Planning acceptance: `file-review-execution-packets.json` assigns 2,701
+      paths to 335 bounded review tasks with criteria, mandatory dependencies,
+      contracts and hashed source definitions. Independent independent reviewer high accepted
+      correction SHA `86acfcd933ba8cbea6050f888ca4185cb51392f9f3ec61b3acadb75d9e8ac9ec`.
+      Assign an executor before dispatch; actual file reviews remain open.
+- [x] P04 Define architecture review packets for draft/save/refetch identity,
+      period dual-state writers, role middleware, publication/PDF snapshots,
+      jobs and required configuration. Name concrete entry points and trace
+      callers before assigning packets. Feeds 44.7; reuse current evidence only
+      after its source dependency check.
+      Planning acceptance: seven `architecture-*-review-packet.json` artifacts
+      bind concrete entry/dependency files, traced callers, questions, steps,
+      output contracts and stop conditions. All 76 source/spec references match
+      the immutable snapshot. Actual architecture review and 44.7 remain open.
+- [x] P05 Finish the quick-edit execution contract in the existing child change.
+      Separate accepted evidence from remaining read-only recovery, user
+      isolation, composition input, focus and viewport acceptance. Link DS-01,
+      DS-02 and DS-06 without duplicating their implementation tasks. Feeds 44.8.
+      Planning acceptance: child tasks.md QE-01–QE-09 plus
+      `quick-edit-execution-packet.json` in the evidence root bind 11 owned files
+      and 7 dependencies to the verified immutable snapshot. Compare current
+      inputs before execution and invalidate affected evidence on drift.
+      Child 1.2/2.3/2.4 remain open; this closes only preparation of their contract.
+- [x] P06 Specify Current/Next movement semantics from DS-03: move versus copy,
+      lineage, linked commitment versus independent Next item, allowed source
+      and target combinations, ordering, read-only restrictions and cancellation.
+      Identify unresolved product decisions before implementation. Feeds 44.9.
+- [x] P07 Turn the accepted P06 decisions into a focused DnD child change with
+      pointer feedback, keyboard alternative, invalid-target behavior and one
+      canonical write path. Enumerate acceptance per allowed/forbidden transfer;
+      use existing dependencies before adding any. Depends on P06; feeds 44.9.
+- [x] P08 Define report-specific Activity name/details semantics for DS-04.
+      Trace catalogue, per-period fields, carry-forward and snapshot consumers;
+      distinguish an intentional catalogue rename from a period override.
+      Produce a child change with migration implications and immutable published
+      read scenarios. Unresolved semantics must remain explicit. Feeds 44.10.
+      Planning acceptance for P06–P08: the user confirmed linked continuation,
+      preserved Current/history, and weekly Activity title/details. Child changes
+      `preserve-linked-continuation-dnd` and `add-weekly-activity-title` contain
+      proposal/design/spec/tasks (15 and 12 unchecked execution tasks). Fresh
+      independent reviewer high reviewed both and verified the completed/paused transition
+      corrections. This accepts preparation only, not implementation or P09.
+- [x] P09 Reconcile the desktop UI/UX matrix and screenshot catalogue. Map each
+      required role, page, state, viewport, zoom and keyboard scenario to a task
+      and existing evidence or named gap. Include row actions and DnD feedback;
+      preserve style and exclude mobile. Feeds 44.11; depends on P05/P07/P08.
+- [x] P10 Convert confirmed review findings into small repair packets. Each
+      finding has reproduction, severity, source location, contract, minimal
+      correction and regression method. Do not attribute a defect to DeepSeek
+      without provenance or implement unconfirmed suspicions. Feeds 44.12.
+      Planning acceptance: design.md P10 defines the five currently confirmed
+      packets with priorities, concrete triggers/source anchors, owning specs,
+      smallest correction and regression/remaining acceptance. Their existing
+      implementation is not assigned again. New findings extend the queue;
+      44.12 and all incomplete product acceptance remain open.
+- [x] P11 Specify final independent review and verification packets: current
+      format/lint/typecheck/test/build/spec commands, applicable integrations,
+      critical-scenario denominator, criterion scoring and evidence source
+      identities. Preserve unreviewed=blocked=0 and all criteria >=2; record
+      unavailable evidence as unavailable. Feeds 44.13 and 44.14.
+      Planning evidence: design.md FINAL-01–FINAL-08, repository package scripts,
+      CI workflow and exemplary-code-standard.md verification section. All 22
+      explicit repository paths in design.md exist; `pnpm spec:check` passes
+      167/167 items (`plan-spec-check.log`). No product execution is accepted by
+      this planning checkbox.
+      Independent independent reviewer high accepted the final input binding contract and
+      separate reviewer assignment as planning preparation. Populate and hash
+      the specified inventories after repairs, before execution; this checkbox
+      accepts neither future source identities nor product results.
+- [x] P12 Publish the executable order and handoff instructions within OpenSpec:
+      ready/decision-needed/dependent packets, disjoint parallel lanes, counters,
+      journal/catalog links and the exact next packet. Include delivery, CI and
+      owned-resource cleanup; external readiness remains separate. Feeds 44.15.
+
+Planning acceptance for P09/P12: `ux-dispatch-catalog.json` binds retained
+baseline IDs, imported groups, QE and child scenarios; OPENCODE-START-HERE.md
+provides the bounded entry point and complete execution order. Fresh independent reviewer high
+verified exact coverage and readiness; both wording corrections are incorporated.
+Runtime fixture/source checks and all implementation acceptance remain open.
+
+Execution routing follows the current task-orchestration skill and DSH.md:
+simple work locally, one DeepSeek 4.1 Flash Max worker for a suitable bounded
+packet, Sol integration and acceptance, and one independent reviewer High gate for material
+risk. Inspect saved session activity without duplicating workers or treating
+waits as progress. Record limits and actual model/session usage; unknown cost
+is not zero. Keep secrets, personal data and unrelated source out of packets.
+DeepSeek output alone never checks a task off.
+
+## Confirmed integration cleanup incident — 2026-09-15
+
+- [x] `ROOT-INTEGRATION-DEV-DB-ISOLATION` — Refuse integration cleanup when the
+      developer database is unknown or matches the disposable target, before
+      pool allocation. Bind the regression tests and independent safety review.
+      Contract: `destructive-db-guard`; evidence:
+      `execution/r12-integration-cleanup-isolation-20260915.json` in the external
+      quality-plan catalog. Local checks pass; independent High review
+      found no P0/P1/P2 and independently passed all 12 mock-only unit cases.
+- [x] `ROOT-INTEGRATION-FIXTURE-RECOVERY` — Restore the approved synthetic fixture after integration cleanup. Seed validation and Lead/Head/Viewer login with dashboard/report routes are verified. Evidence: external `execution/r12-fixture-recovery-20260915.json` and `execution/r04-status-parity-exact-20260916/head-viewer-recovery.json`. This closes seeded-fixture recovery only; lifecycle acceptance and recovery of old unseeded edits are excluded.
+
+## Item status parity — 2026-09-15
+
+- [x] `R04-ITEM-STATUS-PARITY` — Both Item editors offer five progress states independently of Current/Next placement. The prior 54 focused tests, typecheck, lint, format and strict OpenSpec results retain matching source inputs. Native acceptance passed 4/4: Next in progress, paused with reason, completed, and Current postponed; text-only saves, guarded DB read-back and reload preserve the values. Tested Item business values were restored. Evidence: external `execution/r04-status-parity-exact-20260916/receipt.json`. Full R04/R02 packages and counters remain open.
+
+## Explicit user resume — 2026-09-16
+
+Resume is explicitly authorized. The original full exemplary MVP goal, its criteria, OpenSpec
+scope and fixed denominator remain unchanged; the 2026-09-15 stop receipt remains historical.
+The current status is 14 total, 1 done, 13 remaining; R02 has 3 groups, R03 has 23 assertions,
+R04 has 109, and R05 has 20. The five status-parity receipt source hashes match current files;
+the native editor and persisted read-back acceptance remains open. No package checkbox or counter
+is promoted by this note. Root code review inspected the diff and all callers/shared save-and-derive
+paths against `record-status-derivation`; no new P0/P1/P2 was found in this bounded fix, and
+At resume before later acceptance: acceptance waits for native results.
+
+After status parity, the next bounded native batch is **R02-G3**. It covers exact contracts
+`contract:lead-form-write-actions:4` and `contract:lead-form-write-actions:5`, plus the exact
+atoms `unifiedActivityView persistence`, `own-versus-display payload isolation`, and `Decision
+owner persistence`. Reuse the current-source 166/166 baseline and prior native save/read-back,
+visibility and unified-view receipts. The matrix must capture pre-state; save/read back a Product
+draft with the literal parent/stage payload (which may also bind the R02-G2 parent-stage atom),
+reload the classic projection after changing `unifiedActivityView`, exclude Everyone rows from
+save/submit payload and durable read-back, and verify Decision owner policy/read-back. Require
+Reticle `verified: yes` for each declared consequence, deterministic restore/read-back, then root
+independent reviewer Ultra review and acceptance with no additional reviewer before accepting all four G3 atoms or
+changing the R02 counter. Route: root
+independent reviewer planning/review/acceptance; execution Luna Max or optional bounded DSH 4.1 Flash max; no
+fixed worker count. Metadata reconciliation used estimate 5 minutes/10 model turns and hard limit
+10/20; this completed metadata-only budget is not a budget for the future G3 native matrix. DSH 0;
+reviewers 0.
+
+Current native status (2026-09-16): Decision owner persistence is accepted for existing-edit and
+create/default-owner paths; G3 is 1/4 atoms accepted. `unifiedActivityView` remains on contract
+HOLD: the setting write and restore are Reticle-verified, but the current Lead route canonicalizes
+`mode=edit` to Status Overview, making the specified classic/unified visible consequence
+unreachable. Evidence: external
+`execution/r02-g3-decision-owner-create-exact-20260916.json` and
+`execution/r02-g3-unified-view-route-contradiction-20260916.json`. No package counter changes.
+The own-versus-display native atom is also on contract HOLD: Everyone now navigates to the
+compiled read-only report, so the retained literal Save/Submit-with-Everyone-loaded scenario has no
+current product route. Evidence: external
+`execution/r02-g3-own-display-route-contradiction-20260916.json`.
+Write-actions 4–5 are reconciled separately: Request Reopen remains reachable but lacks the exact
+error-to-success native verdict; Revoke is now owned by Head Dashboard and is unreachable from the
+retained Lead-form route. Evidence: external
+`execution/r02-g3-write-actions-route-reconciliation-20260916.json`. G3 remains 1/4 accepted.
+
+R02-G2 Product parent/stage persistence now has an exact current-source candidate. One temporary
+Product item was saved with `Analysis` and `Design`; Reticle proved the single save request and
+post-reload persisted UI, guarded database read-back matched both stages, and exact guarded cleanup
+restored the fixture. Focused tests pass 40/40. The current inline editor has no delete action, so
+that UI gap is retained as a finding. Evidence: external
+`execution/r02-g2-product-parent-stage-exact-20260916.json` (SHA-256
+`633c6450eb25882b2ab215a14eddf2846c995155c15048b384dcaa679ee32a5b`). This does not accept G2
+or change the 14/1/13 package counter before the remaining atoms and accumulated review.
+
+R02-G2 server-id reconciliation now has an exact current-source candidate. Reticle proved one
+create save with a temporary client ID and no stable ID, then one edit save using the exact
+server-returned ID and minted stable ID. Guarded DB read-back proved one edited row, unchanged
+stable lineage, a regenerated volatile ID, and version progression 18 -> 19 -> 20. Focused tests
+pass 58/58; exact guarded cleanup left zero temporary rows and Reticle verified their absence.
+Evidence: external `execution/r02-g2-server-id-reconciliation-exact-20260916.json` (SHA-256
+`4fc89b80dc44c97bdd05b495ddfd428358683abbfe8ff863ac859df35179285a`). No product code changed;
+G2 and the 14/1/13 package counter remain open pending the retained atoms and accumulated review.
+
+R02-G2 same-content version advance now has an exact current-source candidate. A separate
+authenticated client performed a content-equal save from version 21 to 22. Reticle then proved the
+Lead view refetched that version without a save and that the next user edit sent exactly version 22,
+advancing durable state to 23. Exact UI restoration used version 23, returned `verified: yes`, and
+left the original text at version 24 with no sentinel rows. Focused tests remain 58/58 and no product
+code changed. Evidence: external `execution/r02-g2-same-content-version-exact-20260916.json` (SHA-256
+`7b1993c9a94fd910d52d79e0b18e77528a5773f01b1d25c0e5f1c6a29cfca1cb`).
+This accepts only the atom as an accumulated-review candidate; G2 and counters remain open.
+
+The accumulated independent reviewer High review of R02-G2 (source SHA
+`784411c13d532c1ed860a7a2aad9ad8ad49b73c6`) accepts only 2/8 atoms: server-id
+reconciliation and same-content version advance. Six remain HOLD because the literal Reticle
+path is missing, incomplete, or reports `unknown`/`no-fault`: autosave echo, dirty external
+conflict, quick-add period switch, snapshot return, parent/stage matrix, and paused-reason
+lifecycle. No P0/P1/P2 was found; the known P2 is the missing delete affordance in Status
+Overview Item editing. Receipt: external `execution/r02-g2-accumulated-independent-review-20260916.json`.
+The G2 group and roadmap counters remain open.
+
+The current strict OpenSpec check validates 173/173 items, then the Reticle coverage gate stops
+on missing flow `activity-reporting-unit-lead-form`. Registry inspection finds 97 mapped flow names
+covering 1,482 outcomes but only 5 saved flow files. Luna diagnosis confirms these mappings are
+source-valid; placeholders or `N/A` would be invalid. Receipt: external
+`execution/reticle-gate-missing-flow-inventory-20260916.json` (SHA-256
+`af7f6550687f4b97b87bf894512fafa35872d7f1c25c88c6b961ef12133e2f73`). This is a P1 final acceptance
+catalogue blocker; it does not change R02 counters.
+An attempted bounded Luna recording of the first required flow reached its 20-turn/10-minute
+limit without producing a flow or Reticle verdict; no placeholder was created and no source or
+fixture state changed. The catalogue remains on HOLD.
+
+## Initial native attempt — superseded by exact acceptance below
+
+The primary rollout call/output pairs were extracted into the mode-0600
+`execution/r04-status-parity-native-20260916/primary-reticle-transcript.json` and bound with
+`execution/r04-status-parity-native-20260916/receipt.json`. They prove editor opening and five
+Next-chip verdicts only; status save/persistence, paused-reason read-back and the whole matrix
+remain unverified. No writes or baseline changes occurred. The owned lease release was attempted
+only for `lease-a24fab0c-7ade-46b6-a275-f3ac31883db3`; the expired first lease, released second
+lease and all other leases/sessions were untouched. Execution exceeded the first 5-minute/10-turn
+estimate at 65 calls and stopped at the second 10-minute/20-turn cap; DSH 0, reviewers 0, no fake
+savings.
+Final exact acceptance is recorded in external execution/r04-status-parity-exact-20260916/receipt.json.
+
+## Reticle activity flow reachability — 2026-09-16
+
+Root's bounded Reticle exploration reached the seeded `activity-lead@customreport.local` fixture:
+section `...00040a` is activity-only with one activity and one item, but its status is already
+`submitted`. Lead exposes only `Request Reopen`; the Head route exposes the activity status strip
+and document controls, with no generic Add Item/Add Risk/quick-add controls. The required editable
+`activity-reporting-unit-lead-form` therefore remains unreachable without a separate lifecycle
+package. No reopen/approval mutation, source or registry change, flow file, or placeholder was
+made. One role-switch `observation_lost` was excluded after the session reconnected. Receipt:
+external `execution/reticle-activity-flow-reachability-20260916.json`, SHA-256
+`f5c3618643aa7f739aae836fc691a2feab632d365a36fbfa006f1052b454f5d2` (mode 0600). Lease and
+owned runtime were released; ports 3000/3002 are free. Counters remain 14 total, 1 accepted,
+13 remaining; R02 remains open.
+
+## DSH budget wording audit — 2026-09-16
+
+Terra's bounded read-only audit made no DSH call and read no secrets. The local
+runner records route, usage and elapsed/session evidence, but not provider
+balance or billing. `maxDshInvocations` and `maxElapsedMs` are per-package
+safety guards, not account-fund limits. Monetary claims require a separate
+complete billing/provider-reported artifact; unknown is not zero. Receipt:
+external `execution/terra-dsh-budget-audit-20260916.json`, SHA-256
+`148d8e7534ff5d46245a6ded9a27ad5acc6e8af0fcd891ecfa59066a2e9f8ae2` (mode 0600).
+The earlier account-budget wording is withdrawn; only the current package
+invocation guard was known.
+
+## R02-G2 dirty external conflict exact acceptance — 2026-09-16
+
+The Boris Current-item conflict now has current-source native evidence. Lead
+kept unsaved local B while a separate client saved C at version 14 -> 15. The
+stale B save returned 409; Reticle returned `verified: yes` for C visibility,
+retained B recovery, and the exact conflict message. Reapplying B sent version
+15 and persisted version 16; UI restoration returned the seed text at version 17. Guarded local cleanup restored version 14 and left zero sentinel rows.
+All four Reticle verdicts are `yes` with zero `unknown`, `no-fault`, and console
+errors. Evidence: external
+`execution/r02-g2-dirty-external-conflict-exact-20260916.json`, SHA-256
+`1537e868eb400cf3296cc77626f3c56b5e39ec52dace518f82d56f5fbcbceb41`.
+This promotes the atom to accumulated-review candidate only; G2 and R02 remain
+open pending the retained atoms and a refreshed accumulated review.
+
+## R02-G2 accumulated acceptance refresh — 2026-09-16
+
+Primary acceptance rechecked the exact source SHA, four Reticle `yes` verdicts,
+durable reapply at version 16, and cleanup invariants. G2 now accepts 3/8 atoms:
+server-ID reconciliation, same-content version advance, and dirty external
+conflict. Autosave echo, quick-add period switch, snapshot return, parent/stage
+matrix, and paused-reason lifecycle remain HOLD. G2 and R02 stay active; the
+roadmap counter remains 14 total, 1 accepted, 13 remaining. Receipt: external
+`execution/r02-g2-accumulated-acceptance-v2-20260916.json`, SHA-256
+`f15dc7aabc9dedfa16e81735bd0afaab1214883855dc61599307dd1421cf2417`.
+
+## R02-G2 quick-add generation fix — 2026-09-16
+
+A TDD regression confirmed a P2 defect: returning A -> B -> A restored a
+quick-add dialog that period navigation had closed. The red result returned
+`{ week: "next", seq: 1 }` instead of null. The minimal guarded render-phase
+generation reset is covered by the same test; focused Vitest (3/3), Prettier,
+ESLint, and web typecheck pass. Native Reticle is not claimed because ports
+3000/3002 belong to a preexisting external session. The quick-add/snapshot
+atoms remain HOLD until that lifecycle reports `verified: yes`. Evidence:
+external `execution/r02-g2-quick-add-generation-fix-20260916.json`, SHA-256
+`f2972b850b87d8299445cc0909e2e0f18653091879a93bc6a1f05157d42b265e`.
+
+## DRAFT plan decisions (owner-ordered 2026-09-17 — bullets only, not tasks; counts unchanged)
+
+- D1 strict: 39.6 keeps full coverage, criteria≥2, unreviewed=blocked=0, 100% critical; R13 external (18/19/6) not counted in PASS.
+- Lane permit: owner allows provisioning the 15 `customreport_e2e_lane_[a-o]_test` DBs at execution; each run still gated by destructive-guard + per-run consent; bootstrap does not create lanes (manual).
+- Freeze procedure: no SHA frozen yet — P1 attributes the dirty tree first, then `git rev-parse HEAD` = frozen SHA; all later steps bind to it.
+- Plan items P1–P7, pilot P1, two DoDs, Tier A/B detail and ASCII map: `proposal.md` DRAFT sections above (single source until transcription after P1 ownership resolution).
+- Owner figures to re-measure at inventory: ~3124 outcomes, ~3081 excluded/153 specs, ~43 mandatory in 7 specs, ~1663 missing refs, 5 flows vs 97 names, batches LEAD ~565 / ADMIN ~254 / HEAD ~119 / VIEWER ~51 / SHARED ~2092 / OTHER ~1396.
+
+## Audit plan tasks (owner order B, transcribed 2026-09-17 — one campaign; these checkboxes are the plan's own)
+
+- [x] P1 — Attribute the dirty tree and freeze the SHA (read-only): list every uncommitted path with owner/cause, revert-or-keep each with an owner, then `git rev-parse HEAD` = frozen SHA; bind all later steps to it + hashes of task-owned uncommitted files. Accept: attributed inventory + frozen SHA recorded; stop after two failed attribution attempts. Executed 2026-09-18 (goal 3c96657e): all 141 status paths attributed to pre-existing commits (table `/tmp/wr-p1-attrib-20260918.txt` per run), frozen SHA `a41779cf5`, owner KEEP ALL; rebound to `870da1d8` after the owner's skills-only commit (P7 section, design.md).
+- [ ] P2 — Execute 44.5+44.6+44.7 reviews (paths/config/architecture) within `apps/*`, `packages/*`, `prisma/*`, specs; read-only. Accept: per-path findings with severity/spec + explicit gap list.
+- [ ] P3 — Execute 44.11 desktop matrix with `verified: yes`-only browser evidence on `apps/web` (needs dev servers + synthetic records permit at execution). Accept: finite matrix + evidence, no `unknown`/`no-fault` passes.
+- [ ] P4 — Resolve all 231 accepted findings as bounded product patches + regression evidence (owner D2). Accept: every finding dispositioned, regressions green; new scope → child change.
+- [ ] P5 — Independent review of the final diff (44.13) or recorded explicit unavailability. Accept: review returned + reconciled, or unavailability on record.
+- [ ] P6 — Full gates on the frozen SHA (44.14) + strict 39.6 (full denominator, criteria≥2, unreviewed=blocked=0, 100% critical). Accept: commands+results+source identity logged, all green.
+- [ ] P7 — Counts/delivery/cleanup (44.15); production items stay a separate track. Accept: reconciled counts, CI verified, temps cleaned. Note: the `adapt-openspec-to-reticle` 6.4 mandatory-core growth was owner-canceled 2026-09-20 (Reticle removed, agent-browser selected); the stale `design.md` machinery description is reconciled with a superseded banner instead of core growth.
+
+## Tier A closeout (Sisyphus phase 1 — measured 2026-09-18, gate-logic exact)
+
+- Mandatory entries: 20 in 7 specs (audit-target-coverage 3, ci-merge-gate 3, manual-publish-telemetry 3, published-section-order-determinism 2, role-coverage-gate 3, search-contract-precision 3, section-save-payload-bounds 3).
+- Mandatory unclassified = 0, empty-proofs = 0, unresolvable/missing refs = 0 (checked with the gate's own exclusion logic: excludedSpecs dict + 4-key declared outcomes + in-repo file resolution).
+- 74 references added by this phase went to 10 EXCLUDED specs (registry hygiene, zero gate effect); mandatory refs were already 20/20 at HEAD — reported honestly, no gate progress claimed for them.
+- Floor 20 >= 20; `pnpm spec:reticle` green; `pnpm spec:check` green (173 passed, 0 failed; INFO-only long-requirement hints).
+- Tier A CLOSED. Next: lane provisioning (15 DBs, guard + per-run consent each op).
+
+## Owner decision 2026-09-18: single database, no lanes (supersedes lane permit)
+
+- MVP работает на одной `customreport_e2e` (dev `DATABASE_URL`, тесты и E2E уже указывают на неё; проверено read-only 2026-09-18: единственная пользовательская БД в контейнере, лейнов не существует).
+- `customreport_e2e_lane_[a-o]_test` остаются разрешены гардом, но не создаются без нового распоряжения; критерий «15 lane-БД» из цели заменён на single-DB readiness (reset + migrate + seed перед каждой фазой).
+- Зафиксировано в `AGENTS.md` (MVP single-database policy) и `proposal.md` (3 пометки SUPERSEDED).
+
+## Tier B closeout (Sisyphus phase 3 — browser, single-DB demo seed, 2026-09-18)
+
+- LEAD PASS: login -> /lead/report -> edit item description -> Save update -> new text re-rendered in item actions.
+- HEAD PASS: role switch -> /head/dashboard -> review section -> Acknowledge -> button flips to disabled "Acknowledged".
+- ADMIN PASS: role switch -> /admin -> reopen tab (1 pending) -> Respond -> Approve -> "0 requests / No pending reopen requests", badge cleared. Negative: head on /admin sees "Page unavailable for your role".
+- VIEWER PASS: role switch -> /reports/latest renders (products, activities, period selector) -> Previous period navigates Week 38 -> Week 37 with content.
+- Evidence: DOM-consequence asserts + screenshots per flow (agent-browser artifacts in session dir). No native reticle verdicts: daemon absent (client ws://localhost:4400/reticle unreachable, see api dev log) — flows asserted via rendered consequences instead.
+- Cost note: Reticle dev overlay repeatedly covers click points (chat-head/pill/strip); workarounds: overlay Exit/minimize + scrollintoview + semantic text clicks (~10 extra steps).
+- Open observation (not Tier B blocking): admin Jobs tab shows "1 Failed Job In DLQ" since demo seed; cause unread (no PdfExportJob rows; BullMQ DB15 lookup empty). Needs one admin Jobs-tab read before 44.x close.
+
+## 39.6 missing flow closed (2026-09-18): activity-reporting-unit-lead-form
+
+- Authored `.reticle/flows/customreport-web-60381801/activity-reporting-unit-lead-form.json` (6th flow file): lead login -> "Add item to <activity>" -> fill Description -> Save update -> item renders under the activity. Anchors are role-kind with observed accessible names; per-step element expect + text success assert; shapes mirror the repo flow validator (role/testid anchors, native tools/actions, expect keys).
+- Executed substance in browser as lead1 on single-DB demo seed: item "Проверил интеграцию с новым API (39.6 flow check)" created under activity "Исследование новых интеграций" (was "No items yet"), screenshot assert. VERIFIED via rendered consequence.
+- Native reticle replay NOT done: no daemon (ws://localhost:4400/reticle unreachable); flow file awaits replay when a daemon exists. Not counted as native PASS.
+
+## P6 battery (frozen SHA a41779cf5 + 4 task-owned files, 2026-09-18)
+
+- GREEN: typecheck 6/6, build 5/5, units shared 868 + persistence 85 + api 3040 + web 3267 + root 198 + 61, spec:check 173/173, spec:reticle (20 mandatory, floor met).
+- RED (all foreign, untouched per task-boundary rule): format:check — 12 `.agents/skills/openspec-*/SKILL.md` (my 4 files clean); lint stops at repository-cleanliness (138M+1?? structural); root safety — 1 operations-config-docs assert (`.env.test.example` 2026-09-15 vs test 2026-09-01 mismatch, predates session).
+- Freeze note: 137 -> 139 dirty paths vs P1 count; my writes proven by mtime to be exactly 4 task-owned files (registry, AGENTS.md, proposal.md, tasks.md); residual unattributed pre-existing drift, no new paths from me, no commits.
+
+## 44.13 disposition: recorded unavailability (2026-09-18)
+
+- No independent reviewer available in-session. Advisor (oracle) is explicitly NOT a substitute for final independent review per execution constraints; worker-delegation model quota is exhausted (429, ~20d). External/independent review needs owner scheduling. NOT counted as pass.
+
+## 44.15 strict counts (criteria>=2, unreviewed=blocked=0, R13 external excluded from PASS)
+
+- Tier A mandatory core: 20/20 refs resolve, 0 unclassified/empty/refless; floor 20>=20.
+- Browser evidence: 6/6 DOM-asserted (LEAD edit, HEAD acknowledge, ADMIN approve, VIEWER period nav, head-vs-admin negative gate, activity lead-form). Native reticle replay: 0 (daemon absent) — recorded as blocked, not pass.
+- P4 231 findings: NOT executed (outside Sisyphus ordered steps) — open, not pass.
+- Strict 39.6 verdict: NOT PASS (red foreign-dirt gates + 0 native replays + open P4 + unresolved R13 external). Everything green is listed above with exact numerators; nothing unreviewed is counted.
+
+## First native replay (2026-09-18, daemon 3.1.0, CLI verify): PARTIAL 2/6
+
+- PASS: reticle-install-smoke-2026-09-15, weeklyreport-reticle-viewer-period-dropdown-explicit-20260916.
+- FAIL activity-reporting-unit-lead-form: "Add item to ..." button anchor not found (rendered for agent-browser, absent at replay speed — timing/lazy-section suspect).
+- FAIL reticle-head-review-flow: "Respond" absent — premise consumed by my own verified Tier B approve (0 pending now). Needs reseed, not a product fault.
+- FAIL reticle-lead-read-flow: role==head at assert — cross-flow session leakage (shared browser profile, earlier flow left head session; Lead link missing when authenticated).
+- FAIL reticle-reviewer-read-flow: radio "Leads" anchor gone — UI drift or state suspect, inspect before touching.
+- Next: guarded reseed (restores premises) -> re-verify -> triage anchors/order with 2-attempt rule. No free passes.
+
+## Native replay verdict (2026-09-18): PARTIAL 2/6, high confidence
+
+- PASS native: reticle-install-smoke-2026-09-15, weeklyreport-reticle-viewer-period-dropdown-explicit-20260916.
+- FAIL premises (not product): head-review (Respond consumed by verified Tier B approve — reseed restores), lead-read (cross-flow head session leakage), reviewer-read (radio "Leads" anchor drift), activity-form (Add-item anchor absent at replay speed).
+- Reruns blocked by infra, not product: `query timed out after 8000ms` x3 on lead/report (app healthy: 17ms/307, no errors); daemon/MCP ownership churn (CLI- vs proxy-spawned daemons orphan each other's sessions) + wire skew (MCP 2.14.0 vs daemon 3.1.0). Retried with reseed + single-flow isolation + drive+MCP query — same wall. Path paused with evidence; DOM-asserted 6/6 stands as Tier B evidence.
+
+## Reticle infra wall (2026-09-18, recorded with evidence)
+
+- One native verdict obtained: PARTIAL 2/6 (high confidence). Reruns blocked, not by product.
+- `drive` holds the session and does not exit on its own: two orphans killed (29:59, 23:01 hangs). Rule: never run bare `drive`; always outer `timeout`, then kill the stray listener.
+- Daemon churn is structural: CLI-spawned vs MCP-proxy-spawned daemons orphan each other's sessions; `verify` refuses while any daemon holds 4400; query path times out (5x `query timed out after 8000ms`, app healthy) + wire skew (MCP 2.14.0 vs daemon 3.1.0).
+- To unblock: restart the agent (fresh MCP server per skew message) or update its reticle package; then single-driver replays. Needs owner action.
+
+## P4 packet acceptance (2026-09-18, autonomous slice)
+
+- ARCHIVE-PLACEHOLDER: `openspec/changes/archive/` absent entirely — placeholder deletion verified present; full cleanliness still structurally red on foreign dirt (recorded, not forced).
+- FEEDBACK-IDLE: `agentation-sse.test.ts` 11/11 pass (heartbeat + cancellation) — fresh narrow regression evidence.
+- Sizing truth: the "231" have no patch-ready packets on disk (5 defined packets are already implemented in the dirty diff; their remains are acceptance, not code). 231-minus-5 needs P2 review execution first — solo forecast is weeks, not turns; needs owner call on volume/delegation.
+
+## QE-CLOSE acceptance (2026-09-18, browser + unit)
+
+- Browser as lead1: Edit item -> typed "(QE-CLOSE typed)" via trusted keystrokes -> Escape closes, triggers restored; reopen shows SAVED text (typed gone).
+- Ruled INTENDED, not a finding: colocated tests specify "cancels with Escape without saving" and "retains typed text across a same-item refresh and cancels to refreshed text" — observed behavior matches both. Initial retained-after-Escape expectation was my conflation of QE-RETAIN (navigation) with explicit-cancel (discard); corrected, no packet filed.
+- Regression: `status-overview-item-preview.test.tsx` 11/11 green. Focus-restore-to-trigger unassertable with agent-browser (no focus readout) — recorded limitation, not claimed.
+
+## QE-RETAIN A→B→A: INTERRUPTED (tool channel, 2026-09-18)
+
+- Typed marker present in open editor; navigated to History (B); return leg (A) hit agent-browser IPC timeouts x2 (35s + 60s) while the app itself answers in ~23ms (curl 307) with no errors — automation channel wedged, not product. Slice paused per stop rule; no verdict claimed either way. Unit side (provider lineage) untouched this pass.
+
+## Проект плана 2026-09-18 (goal mu6s113y-6vif62 — предъявлен на согласование, не исполнение)
+
+- Статус-блок, single-DB refresh шагов 4–5/рисков/P6 и находки F8–F10 — в `proposal.md` и `design.md` этого change; чекбоксы выше не менялись.
+- Открытые обязательства без изменений: `complete-exemplary-mvp-review` 39.6, 44.3–44.7, 44.11–44.15 + P1–P7; связанный `adapt-openspec-to-reticle` 3.2, 3.3, 4.1–4.4, 5.1–5.3, 6.4 — ссылки по ID, копий нет.
+- Пилот P1 (read-only) обоснован в `proposal.md`; два DoD разделены там же; собственная дельта фазы — только `proposal.md`/`design.md`/`tasks.md` (mtime 12:56–12:57 + `git diff --stat`); полное дерево содержит предсуществующую кампанейскую дельту (не этой фазы, не откатывать).
+
+## Native replay full tally (2026-09-19, daemon 3.1.0, MCP lease): 7/7 flow files PASS
+
+- Lease-context replay (`__reticle_session` survives doc-nav; focused, unthrottled) after SDK 2.14.0->3.1.0 alignment removed the wire skew.
+- PASS: reticle-install-smoke-2026-09-15; weeklyreport-reticle-viewer-period-dropdown-explicit-20260916 (viewer-role lease); activity-reporting-unit-lead-form (repaired: startPath lands on authed surface, fill uses `{value}`, success=net reports.saveDraft + text); reticle-lead-read-flow; reticle-reviewer-read-flow; reticle-head-review-flow (re-authored: Respond->Approve->net admin.respondReopenRequest + "Request approved"); head-dashboard-clarity-head-dashboard (43/43 steps + success, new dense journey).
+- Premise restoration: head-review pending reopen request recreated through the product path (lead dmitry@ Request Reopen dialog -> leadForm.requestReopen 200 {success:true}) — no reseed needed; then head lease replayed Respond->Approve natively.
+- Repairs recorded: "0 records" substring-collided with "10 records" -> "No edits yet"; "Reminder queued" split text nodes -> net review.dashboard 200; SPA goto preserves React useState (expanded rows persist) -> hard reload before replay.
+- Reminder evidence: POST reminders.dispatchPending body carries exact active ruleId a0000000-...-0801; response alreadyRequested:1 (dedup within cycle) — mechanism proven, no "no-active-rule".
+- Revoke All (2) confirmation: dialog opened (49 events), Cancel closed it — destructive action guarded, no mutation fired.
+- Supplementary live asserts (beyond flow-file grammar): aria-expanded toggles, leadId .013 = Ветров body match, post-mutation refetches. Evidence: /tmp/wr-cont/TB-head-dashboard-native-replay.json + prior session records.
+- Prior PARTIAL 2/6 notes remain the pre-lease record; session leakage/anchor drift resolved by lease + repairs above.
+
+## PDF failed-job retry implementation plan — 44.12 / FR-032 (2026-09-20)
+
+**Goal:** A manual retry of a failed PDF export can complete against the same
+immutable publication without a stale failure event undoing the retry.
+
+**Architecture:** Serialize retry and terminal reconciliation on the existing
+`PdfExportJob` row. Read current queue state after acquiring that lock; await
+queue retry inside the revival transaction so rejection rolls back the revival.
+Keep pending-only completion CAS and canonical artifact adoption.
+
+**Stack:** Existing TypeScript, Prisma/PostgreSQL, BullMQ and Vitest only.
+**Contracts:** `openspec/specs/queue-reliability-monitoring/spec.md:69-88`;
+`openspec/specs/pdf-export-integrity/spec.md:267-300,431-457`.
+**Decision evidence:** `/tmp/wr-cont/advisor-pdf-retry-plan-20260920.json`.
+The two-step revival hook was rejected because reconciliation can observe the
+old failed queue state and because retry rejection can strand a pending row.
+This repairs existing behavior; it adds no owner requirement or new retry policy.
+
+One delegated worker owns all interfaces below; use subagent-driven-development.
+Preserve concurrent changes. No schema/migration, UI, dependency or public DTO
+changes. Local unit work is authorized; actual DB/Redis execution is a separate,
+still-unapproved verification phase. No commit or publication is implied.
+
+- [x] Add failing regressions in the existing PDF repository/service, admin jobs,
+      queue adapter, processor and reconciliation scheduler tests. Cover failed
+      retry through completion; missing/pending/completed rows; wrong payload
+      job/report/requester identity; queue retry rejection; delayed old failure;
+      and two concurrent retry requests. Preserve existing terminal-race cases.
+- [x] Implement a per-export row-lock operation in
+      `apps/api/src/modules/pdf-export/pdf-export.prisma-repository.ts` and its
+      `PdfExportRepository` boundary in `pdf-export.ports.ts`.
+      All work under a lock uses the same transaction, without nested transactions.
+
+  ```ts
+  await tx.$queryRaw`
+    SELECT "id" FROM "PdfExportJob"
+    WHERE "id" = ${jobId} FOR UPDATE
+  `;
+  ```
+
+  Require stored `failed` and matching `jobId`, `reportId`, `requestedBy`.
+  Revival changes only `status`, `error`, `filePath`, `checksum`.
+  Preserve publication timestamp, snapshot, groups, requester and template.
+  Await the queue retry before transaction completion; propagate rejection,
+  with no unconditional compensating write or claim that a lost Redis
+  acknowledgement proves no enqueue occurred.
+
+- [x] Change terminal reconciliation to consume a job identity and a lazy loader
+      `() => Promise<PdfExportTerminalState | null>`. Invoke the loader only
+      after the row lock. Update `pdf-export.processor.ts` failure callbacks and
+      `pdf-export-reconciliation.scheduler.ts`; a now-waiting/active job must not
+      apply a previously captured failed state.
+- [x] Wire PDF-specific retry through `modules/admin/jobs.service.ts`,
+      `admin-jobs.port.ts`, `infrastructure/bullmq/admin-jobs-queue.adapter.ts`,
+      `bootstrap/jobs-service.ts` and `bootstrap/app-services.ts`.
+      Keep identity internal and reminder retry unchanged. An ineligible row
+      performs no queue retry and is not reported as newly retried.
+- [x] Run the affected existing non-DB Vitest suites, API typecheck, targeted
+      ESLint/Prettier; review the actual diff independently. Record source hashes
+      and exclusions in `/tmp/wr-cont/44-12-patch-record-*.json` and TASK-047.
+- [ ] Prepare and obtain specific authority for real row-lock/queue verification
+      on the permitted disposable target; run applicable live admin/Reticle
+      acceptance. Unit results alone do not close this feature or 44.12.
+
+Source/unit receipt: `/tmp/wr-cont/44-12-patch-record-pdf-retry-20260920.json`.
+166 tests passed; the import-only final correction passed its 20 affected tests.
+Targeted lint/format and API types passed. Independent source review passed;
+the seven reviewed production hashes remain unchanged. Live verification stays open.
+
+## Single-database integration alignment and PDF runtime preparation (2026-09-20)
+
+The owner decision of 2026-09-18, recorded in `AGENTS.md` and this change's design,
+requires local dev and integration phases to share `customreport_e2e`. The old
+integration helper and durable guard specification still require different targets.
+Reconcile that contradiction; do not change the common parser, target allowlist,
+per-operation consent, or the rule against provisioning additional lanes.
+Independent advisor approved this bounded extension; decision evidence is
+`/tmp/wr-cont/advisor-single-db-helper-plan-20260920.json` and TASK-047.
+
+- [x] Add mocked regression checks for a common logical PostgreSQL target,
+      including equivalent credentials/loopback aliases; reject mismatched
+      database/port, unknown target, production, unsafe URL and absent consent
+      before pool allocation or SQL. Preserve memoized-client target-drift checks.
+- [x] Require matching explicit `E2E_DATABASE_URL` and `DATABASE_URL` in the
+      integration helper after the unchanged destructive guard. Reconcile
+      `destructive-db-guard` specification with the existing owner decision.
+      Verify focused unit tests, lint/format, types and strict spec validation;
+      no real database operation is included in this implementation step.
+- [x] Prepare one existing-helper-based PDF integration suite in
+      `apps/api/src/modules/admin/jobs.pdf-retry.integration.test.ts`: two
+      concurrent retries; stale failure after retry; second-attempt failure;
+      real queue retry rejection with PostgreSQL rollback; and three separate
+      job/report/requester identity mismatches. Use real PostgreSQL and BullMQ
+      only during the later authorized phase, with Redis DB 15 and owned prefixes.
+      Assert immutable publication provenance and final terminal idempotency.
+      Synchronize on events/promises with bounded timeouts; do not depend on sleeps.
+- [ ] Present the concrete runtime phase for separate owner authorization after
+      source checks and independent review. Run the seven new scenarios plus the
+      existing PDF integration suite only with exclusive ownership of the single
+      database, guarded row cleanup, explicit fixture seeding and complete owned
+      queue/process cleanup. This is not authorization to reset, seed or run now.
+
+The runtime phase proves queue/database state transitions, not PDF rendering or
+distributed atomicity. Lost Redis acknowledgements and uncertain PostgreSQL commits
+remain explicit limitations; UI/Reticle acceptance stays separate.
+
+## Shared validation and carry-over bounded queue batch (2026-09-20)
+
+Independent plan review: `/tmp/wr-cont/advisor-shared-carry-plan-20260920.md`.
+Preserve existing contracts and lifecycle locks; no new database constraint.
+
+- [x] Deduplicate section-record parent/stage validation through a leaf helper,
+      preserving read early return, write issue accumulation, exact issue paths,
+      messages, historical leniency and outcome-only rules. Pin parity with tests.
+- [x] Build carry-over clones from explicit write fields; omit read-model extras
+      while preserving lineage, identities, dates and source immutability.
+- [x] After the existing Report lock, filter new planned carry-over clones against
+      current parent membership before deduplication. Preserve current rows and
+      readback-derived lineage/counts. Cover item/decision and product/activity
+      detach-after-plan cases; real concurrent detach remains separate evidence.
+- [x] Reconcile lineage-shape finding with prior accepted optional hardening;
+      nullable history endpoints are not a required XOR contract or a fixed bug.
+- [x] Complete remaining product-parent race: serialize admin StageAssignment
+      save/reassign/delete with graph then stable all-editable Report locks, reusing
+      the existing helper. Recover compound-key P2002 only in a new transaction.
+      Preserve current policy and add bounded ordering checks and locally attached
+      carry-over integration fixtures. Plan: `/tmp/wr-cont/advisor-stage-assignment-lock-plan-20260920.md`;
+      real database execution remains separately authorized, not a source-check PASS.
+- [x] Independently inspect the resulting changes and run focused tests, lint,
+      format and relevant typechecks before accepting these queue claims.
+
+Source/unit evidence: `/tmp/wr-cont/44-12-patch-record-carry-parent-20260920.json`;
+164 tests, targeted lint/format/API types and independent source review passed.
+
+- [ ] Run the separately authorized 18-case PostgreSQL phase and verify cleanup;
+      source/unit acceptance above does not prove actual concurrent DB ordering.
+      Plan: `/tmp/wr-cont/stage-assignment-live-phase-plan-20260920.md`.
+
+## Existing test contracts and internal textarea ref (2026-09-20)
+
+Independent bounded plan: `/tmp/wr-cont/advisor-next-small-plan-20260920.md`.
+
+- [x] Make analytics published-floor mock require both lifecycle fields; preserve
+      three consumer scenarios and prove either missing predicate breaks coverage.
+- [x] Cover reporting-group and reminder-policy input normalization in the existing
+      mapper test, including null/default and UTC validity dates.
+- [x] Narrow internal textarea ref types through risk/decision field callers to
+      the object refs they already produce. Pin external/internal object focus,
+      verify web types and open/close one existing dialog without saving.
+- [x] Record reminder timing wording as optional editorial consistency: the
+      specification uses an illustrative phrase, not an exact unit-copy constraint.
+
+## Remaining bounded evidence corrections (2026-09-20)
+
+- [x] Add the Activities parent-query matrix case and prove a late assistant
+      response cannot restore the previous user's exchange after identity change.
+      Evidence: 42 focused tests, web types/lint/format, independent source review.
+- [x] Pin settings null/undefined/enum mapping and isolate the snapshot identity
+      negative to exactly one schema issue; remove a decorative database-state
+      parameter that never changed the unit fixture. Evidence: 36 focused tests,
+      API types/lint/format and independent source review.
+- [x] Reuse the canonical group-id helper in PDF telemetry while retaining the
+      admin early return and immutable publication-group filter. Evidence: 27
+      focused tests, API types/lint/format and independent source review.
+- [x] Prove the real auth route composition through bounded local HTTP stubs;
+      include fail-closed boot, dev/SAML exclusion, callback posture and cleanup.
+- [x] Correct the four documented reference/inventory/env-semantics gaps without
+      changing product contracts; validate durable specs and existing env tests.
+- [x] Add the existing report-page position-width landmark to the overview
+      skeleton, with one failing-then-passing regression for that branch.
+      Preserve markup, styles and loaded behavior; live desktop acceptance remains
+      in the frozen candidate matrix.
+
+## Owner decision 2026-09-20: Reticle removed, agent-browser (Vercel) selected
+
+Owner explicitly removes the Reticle integration and selects agent-browser
+(Vercel) as the primary browser-verification route. Backlog TASK-047 records
+the removal; TASK-036 covers Jev as a separate optional global tool. This supersedes every
+Reticle-specific mechanism referenced above; prior sections stay as history and
+are not re-marked.
+
+- All source-coverage and critical-scenario denominators are unchanged: the
+  normative-outcome corpus, the declared mandatory core of 20 in 7 specs, and
+  the finite browser matrices keep their identities. Only the proof surface for
+  not-yet-passed browser evidence changes.
+- Open items that name Reticle (live admin/Reticle acceptance, pending replays,
+  flow mappings) are not passed; their acceptance now routes through the
+  replacement mechanism under the same predeclared-consequence rules.
+- Tool status: root-verified live proof — navigation and screenshot succeeded
+  on agent-browser 0.38.1; WeeklyReport app UI acceptance via this route is
+  still pending and is not claimed.
+- Verified durable archive:
+  `~/.codex/work-artifacts/weeklyreport-continuation-20260920/reticle-removal/reticle-project-before.tar.gz`
+  (root-verified; external work-artifact, never tracked in the repository).
+  The earlier `/tmp` evidence is lost; recovery stays active.
+  Reference this durable path, not the lost `/tmp` records.
+
+Execution checklist — all items stay unchecked until root accepts:
+
+- [ ] Archive the remaining old Reticle evidence under the durable
+      `reticle-removal/` path and record what could not be recovered.
+- [x] Remove the integration remnants (`.reticle/` assets, `spec:reticle` /
+      `test:reticle` scripts and validator, MCP wiring) with owner-scoped edits
+      only.
+- [x] Reconcile instructions and docs (`AGENTS.md`, `RETICLE.md`,
+      `docs/onboarding.md`, `docs/sdlc.md`, related OpenSpec texts) to the
+      replacement route.
+- [ ] Re-run applicable checks after removal (`spec:check`, lint/format, gates)
+      and bind results to the tested source identity.
+- [ ] Connect agent-browser (Vercel) and drive one real flow end to end on this
+      app; until a verified observable consequence exists, the replacement is
+      unproven here.
+
+## TASK-047 44.11 contract and source rebind (2026-09-24, static-only)
+
+- [x] 44.16 Apply the owner-accepted feedback decisions to this change and the
+      canonical spec, then derive `matrix-ratified-20260924-v5` bound to the
+      isolated freeze candidate: D-06a inbound-link inclusion scenario, D-06b
+      retired SitePing facet kept without a replacement autofocus or workbench
+      navigation control, and the Development external-ingress prohibition
+      pending a separate SSO/token specification. Static contract sync and
+      source rebinding only; every execution status stays `not-run` and no
+      runtime acceptance is claimed.

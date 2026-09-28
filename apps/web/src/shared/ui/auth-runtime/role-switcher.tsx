@@ -15,6 +15,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Users } from "lucide-react";
 import type { RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { logoutThenRedirect } from "../../lib/navigation/logout-then-redirect";
 import { webEnv } from "../../lib/runtime/web-env";
@@ -156,7 +157,7 @@ function useDevRoleSwitcher() {
   };
   const stayLoggedIn = () => {
     recoverFromFailure();
-    alert(LOGOUT_FAILED_MESSAGE);
+    toast.error(LOGOUT_FAILED_MESSAGE);
   };
   const logoutThen = (href: string) => {
     const started = logoutThenRedirect(queryClient, href, stayLoggedIn);
@@ -169,7 +170,7 @@ function useDevRoleSwitcher() {
       onSuccess: () => logoutThen("/"),
       onError: (error) => {
         recoverFromFailure();
-        alert(`Reseed failed:\n${error.message}`);
+        toast.error(`Reseed failed: ${error.message}`);
       },
     }),
   );

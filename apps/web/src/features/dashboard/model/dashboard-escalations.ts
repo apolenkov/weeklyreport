@@ -7,6 +7,7 @@ export interface BlockedAtRiskItem {
   readonly productId: string;
   readonly authorId: string;
   readonly severity: "blocked" | "at-risk";
+  readonly productFlaggedRed?: boolean;
   readonly product: string;
   readonly stage: string;
   readonly assignee: string;

@@ -60,6 +60,16 @@ describe("shortName", () => {
       }),
     ).toBe("Берёзов А.");
   });
+
+  it("keeps an astral first code point whole in the initial", () => {
+    expect(
+      shortName({
+        lastName: "田中",
+        firstName: "𠮷子",
+        middleName: null,
+      }),
+    ).toBe("田中 𠮷.");
+  });
 });
 
 describe("shortNameFromName", () => {
@@ -84,6 +94,10 @@ describe("shortNameFromName", () => {
   it("empty string yields empty", () => {
     expect(shortNameFromName(" ".repeat(3))).toBe("");
   });
+
+  it("keeps an astral first code point whole in initials", () => {
+    expect(shortNameFromName("山田 𠮷子")).toBe("山田 𠮷.");
+  });
 });
 
 describe("initials", () => {
@@ -104,6 +118,10 @@ describe("initials", () => {
   it("returns empty when nothing is available", () => {
     expect(initials({})).toBe("");
   });
+
+  it("keeps astral first code points whole from structured parts", () => {
+    expect(initials({ lastName: "𠮷田", firstName: "花子" })).toBe("𠮷花");
+  });
 });
 
 describe("initialsFromName", () => {
@@ -113,6 +131,18 @@ describe("initialsFromName", () => {
 
   it("single token yields its first two letters", () => {
     expect(initialsFromName("Берёзов")).toBe("БА");
+  });
+
+  it("keeps astral first letters whole across tokens", () => {
+    expect(initialsFromName("𠮷田 花子")).toBe("𠮷花");
+  });
+
+  it("takes two code points for a single astral-led token", () => {
+    expect(initialsFromName("𠮷田")).toBe("𠮷田");
+  });
+
+  it("does not split an astral pair in the second position", () => {
+    expect(initialsFromName("花𠮷")).toBe("花𠮷");
   });
 
   it("empty string yields empty", () => {

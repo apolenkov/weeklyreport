@@ -38,16 +38,6 @@ function status(value: string): FeedbackStatus {
         : "open";
 }
 
-export function inverseStatus(value: FeedbackStatus): string {
-  return value === "in_progress"
-    ? "acknowledged"
-    : value === "resolved"
-      ? "resolved"
-      : value === "wont_fix"
-        ? "dismissed"
-        : "pending";
-}
-
 function type(row: AgentationInboxRow): FeedbackRecord["type"] {
   if (row.intent === "question") return "question";
   if (

@@ -7,6 +7,11 @@ export function useGenerationState<T>(
   initialValue: T,
 ): readonly [T, (next: T) => void] {
   const [values, setValues] = useState<Readonly<Record<string, T>>>({});
+  const [stateGeneration, setStateGeneration] = useState(generation);
+  if (stateGeneration !== generation) {
+    setStateGeneration(generation);
+    setValues({});
+  }
   const value =
     generation !== null && Object.hasOwn(values, generation)
       ? (values[generation] as T)

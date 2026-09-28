@@ -281,4 +281,154 @@ describe("AgentationPrismaRepository", () => {
       where: { authorReportingGroupId: "group-b" },
     });
   });
+
+  function updateTx(current: Record<string, unknown> | null) {
+    const update = vi.fn().mockResolvedValue(current ?? {});
+    const tx = {
+      agentationAnnotation: {
+        findFirst: vi.fn().mockResolvedValue(current),
+        update,
+      },
+      agentationEvent: { create: vi.fn().mockResolvedValue({}) },
+    };
+    return { tx, update };
+  }
+
+  const headOfGroupA: FeedbackAccess = {
+    ...leadA,
+    userId: "head-1",
+    role: "head",
+  };
+
+  it("lets an in-scope head patch moderation fields on a foreign annotation", async () => {
+    const { tx, update } = updateTx(annotationRow());
+
+    const result = await new AgentationPrismaRepository(
+      transactionPrisma(tx),
+    ).updateAnnotation(headOfGroupA, "annotation-1", {
+      status: "acknowledged",
+    });
+
+    expect(
+      tx.agentationAnnotation.findFirst.mock.calls[0]?.[0],
+    ).not.toMatchObject({ where: { authorUserId: "head-1" } });
+    expect(update).toHaveBeenCalled();
+    expect(result).not.toBeNull();
+  });
+
+  it("scopes a lead lifecycle patch out before writing the annotation", async () => {
+    const { tx, update } = updateTx(annotationRow());
+    tx.agentationAnnotation.findFirst.mockResolvedValue(null);
+
+    const result = await new AgentationPrismaRepository(
+      transactionPrisma(tx),
+    ).updateAnnotation(leadA, "annotation-1", { status: "resolved" });
+
+    expect(result).toBeNull();
+    const query: unknown = tx.agentationAnnotation.findFirst.mock.calls[0]?.[0];
+    expect(query).toMatchObject({ where: { id: { in: [] } } });
+    expect(update).not.toHaveBeenCalled();
+    expect(tx.agentationEvent.create).not.toHaveBeenCalled();
+  });
+
+  it("allows the upstream agent principal to update lifecycle status", async () => {
+    const { tx, update } = updateTx(annotationRow());
+
+    const result = await new AgentationPrismaRepository(
+      transactionPrisma(tx),
+    ).updateAnnotation(
+      leadA,
+      "annotation-1",
+      { status: "acknowledged" },
+      "agent",
+    );
+
+    expect(result).not.toBeNull();
+    expect(update.mock.calls[0]?.[0]).toMatchObject({
+      data: { status: "acknowledged" },
+    });
+  });
+
+  it("keeps native author delete as a non-destructive dismissal", async () => {
+    const { tx, update } = updateTx(annotationRow());
+
+    const result = await new AgentationPrismaRepository(
+      transactionPrisma(tx),
+    ).updateAnnotation(
+      leadA,
+      "annotation-1",
+      { status: "dismissed" },
+      "human",
+      "native-delete",
+    );
+
+    expect(result).not.toBeNull();
+    expect(update.mock.calls[0]?.[0]).toMatchObject({
+      data: { status: "dismissed" },
+    });
+  });
+
+  it("does not let a reviewer use native delete to dismiss another author's row", async () => {
+    const { tx, update } = updateTx(null);
+
+    const result = await new AgentationPrismaRepository(
+      transactionPrisma(tx),
+    ).updateAnnotation(
+      headOfGroupA,
+      "annotation-1",
+      { status: "dismissed" },
+      "human",
+      "native-delete",
+    );
+
+    expect(result).toBeNull();
+    const query: unknown = tx.agentationAnnotation.findFirst.mock.calls[0]?.[0];
+    expect(query).toMatchObject({ where: { authorUserId: "head-1" } });
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("rejects an in-scope head patching comment on a foreign annotation", async () => {
+    const { tx, update } = updateTx(null);
+
+    const result = await new AgentationPrismaRepository(
+      transactionPrisma(tx),
+    ).updateAnnotation(headOfGroupA, "annotation-1", { comment: "edited" });
+
+    expect(tx.agentationAnnotation.findFirst.mock.calls[0]?.[0]).toMatchObject({
+      where: { authorUserId: "head-1" },
+    });
+    expect(update).not.toHaveBeenCalled();
+    expect(result).toBeNull();
+  });
+
+  it("lets the author patch comment on their own annotation", async () => {
+    const { tx, update } = updateTx(annotationRow());
+
+    const result = await new AgentationPrismaRepository(
+      transactionPrisma(tx),
+    ).updateAnnotation(leadA, "annotation-1", { comment: "reworded" });
+
+    expect(update).toHaveBeenCalled();
+    expect(result).not.toBeNull();
+  });
+
+  it("rejects an admin patching intent on a foreign annotation", async () => {
+    const admin: FeedbackAccess = {
+      ...leadB,
+      userId: "admin-1",
+      role: "admin",
+      reportingGroupId: undefined,
+    };
+    const { tx, update } = updateTx(null);
+
+    const result = await new AgentationPrismaRepository(
+      transactionPrisma(tx),
+    ).updateAnnotation(admin, "annotation-1", { intent: "fix" });
+
+    expect(tx.agentationAnnotation.findFirst.mock.calls[0]?.[0]).toMatchObject({
+      where: { authorUserId: "admin-1" },
+    });
+    expect(update).not.toHaveBeenCalled();
+    expect(result).toBeNull();
+  });
 });
