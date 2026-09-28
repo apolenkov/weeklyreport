@@ -40,9 +40,11 @@ the owner decision. The honest topology is:
   the pinned SHA-256, adds the `libatomic.so.1` that Node 26 links and the slim
   image lacks (copied from the same bookworm toolchain image), and passes one
   composite artifact to database jobs. `pnpm install --frozen-lockfile` needs
-  no git inside the database image. No new egress endpoint is required beyond
-  the existing npm registry, Docker Hub, and nodejs.org fetch in
-  `node-toolchain`.
+  no git inside the database image. Egress endpoints: the npm registry,
+  Docker Hub, nodejs.org (`node-toolchain` tarball), and one
+  github.com/docker/compose release fetch in `quality` — the latter is a
+  digest-pinned `docker-compose` CLI used only to render the production
+  Compose config in the compose gate, not a Compose smoke lane.
 - `api-integration` also declares `services:` for Redis (`redis` alias) and
   Mailpit (`mailpit` alias). Neither is guard-constrained; the suite reads the
   real hostnames (`REDIS_HOST=redis`, `SMTP_HOST=mailpit`,
@@ -61,8 +63,8 @@ The weekly dependency scan uses a GitLab schedule for the default branch at
 Monday 06:00 UTC; create that schedule after the main cutover. A manually
 started pipeline (`CI_PIPELINE_SOURCE=web`) runs the full lane set plus the
 dependency audit. The dependency update bot has a separate hosting migration
-(`renovate.json`, see `gitlab-hosting.md`) and is not replaced by the audit
-job.
+(Renovate config lives in the GitLab hosting work package, not in this CI
+file) and is not replaced by the audit job.
 
 ## Contract-test coverage gap (updated for the tests+linters form)
 
@@ -76,7 +78,10 @@ services (adding the pinned Node image to `REVIEWED_EXTERNAL_IMAGES`), a
 negative lock forbids Docker build/Compose smoke lanes, the single combined
 API coverage contour and fail-closed `ci-reports` summary contract are
 asserted, and the `quality` job is pinned as build-free with the product
-build documented as outside-CI evidence. The residual gap is deliberate:
+build documented as outside-CI evidence. `DOCKER_COMPOSE_VERSION`/`SHA256`
+have a single declaration site in `.gitlab-ci.yml` (the compose CLI exists
+only for the render check), so the runtime-sync gate has nothing to pin them
+against — the digest itself is the lock. The residual gap is deliberate:
 GitHub assertions stay authoritative until main cutover and retire with it.
 This is a recorded open item, not a waiver: the GitHub workflow remains
 authoritative until the merge completes.
