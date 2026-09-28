@@ -1694,7 +1694,10 @@ describe("AdminPrismaRepository (integration)", () => {
       // The fixture uses an April 2026 schedule; freeze the policy writer's
       // clock before that schedule so this test exercises activation rather
       // than the production rule that elapsed reminders stay paused.
-      vi.useFakeTimers({ now: new Date("2026-04-01T00:00:00.000Z") });
+      vi.useFakeTimers({
+        toFake: ["Date"],
+        now: new Date("2026-04-01T00:00:00.000Z"),
+      });
       try {
         await seedActiveRule();
         expect(await ruleStatus()).toBe("active");
