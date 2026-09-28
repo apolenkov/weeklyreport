@@ -930,9 +930,9 @@ void test("external Compose and CI images use versioned immutable references", (
     }
   }
 
-  const gitlabModel = parse(gitlabContent, { maxAliasCount: 50 }) as {
-    readonly [key: string]: unknown;
-  };
+  const gitlabModel = parse(gitlabContent, { maxAliasCount: 50 }) as Readonly<
+    Record<string, unknown>
+  >;
   for (const [job, definition] of Object.entries(gitlabModel)) {
     const jobDefinition = definition as {
       readonly image?: unknown;
