@@ -1052,6 +1052,7 @@ void test("GitLab CI carries no Docker build or Compose smoke lane", () => {
   }
   assert.doesNotMatch(gitlabContent, /docker build/u);
   assert.doesNotMatch(gitlabContent, /docker compose/u);
+  assert.doesNotMatch(gitlabContent, /docker-compose (up|run|exec|build)/u);
   assert.doesNotMatch(gitlabContent, /docker:dind|\bdind\b/iu);
 });
 
