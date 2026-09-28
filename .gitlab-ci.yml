@@ -150,7 +150,7 @@ quality:
   before_script:
     - !reference [.workspace-node, before_script]
     # The root test suite's production Compose contract gate requires a
-    # resolvable compose binary (config rendering only — no daemon, no DinD).
+    # resolvable compose binary (config rendering only — no daemon needed).
     # The node image has none, so install the pinned standalone CLI.
     - curl -fsSL "https://github.com/docker/compose/releases/download/v${DOCKER_COMPOSE_VERSION}/docker-compose-linux-x86_64" -o /usr/local/bin/docker-compose
     - echo "$DOCKER_COMPOSE_SHA256  /usr/local/bin/docker-compose" | sha256sum -c -
@@ -303,7 +303,9 @@ api-integration:
       await probe("mailpit", 8025, "mailpit-api");
       NODE
     - pnpm exec prisma migrate deploy --schema=prisma/schema.prisma
-    - VITEST_JSON_OUTPUT_FILE="$CI_PROJECT_DIR/ci-reports/api-verification-vitest.json" pnpm --filter @customreport/api test:coverage
+    # Verbose reporter keeps per-test lines in the trace so a serial-suite
+    # stall names its test; the JSON reporter still feeds the summary gate.
+    - pnpm --filter @customreport/api test:coverage --reporter=verbose --reporter=json "--outputFile.json=$CI_PROJECT_DIR/ci-reports/api-verification-vitest.json"
     - |
       node --input-type=module <<'NODE'
       import { readFileSync, writeFileSync } from "node:fs";

@@ -39,6 +39,8 @@ const webPackageJson = JSON.parse(read("apps/web/package.json")) as {
   readonly scripts: Readonly<Record<string, string | undefined>>;
 };
 const workflow = read(".github/workflows/ci.yml");
+const gitlabContent = read(".gitlab-ci.yml");
+const gitlabCiDoc = read("docs/gitlab-ci.md");
 const vitestBase = read("vitest.base.config.ts");
 
 const requiredProductionVariables = (): readonly string[] =>
@@ -471,11 +473,26 @@ void test("operations documentation inventories integration and coverage lanes",
     [...workflow.matchAll(/@customreport\/api test:coverage/gu)].length,
     1,
   );
+  assert.match(gitlabContent, /\napi-integration:/u);
+  assert.match(gitlabContent, /\nmigrate-reset:/u);
+  assert.match(gitlabContent, /\nnode-toolchain:/u);
+  assert.equal(
+    [...gitlabContent.matchAll(/@customreport\/api test:coverage/gu)].length,
+    1,
+  );
 });
 
 void test("the CI quality lane builds every workspace", () => {
   assert.match(workflow, /- name: Build all workspaces\s+run: pnpm build/u);
   assert.match(operations, /quality lane[\s\S]*complete workspace build/u);
+  // The GitLab candidate carries no build lane per the owner decision; the
+  // product build is documented as required evidence outside CI instead.
+  const gitlabQuality = gitlabContent.slice(
+    gitlabContent.indexOf("\nquality:"),
+    gitlabContent.indexOf("\ndependency-scan:"),
+  );
+  assert.doesNotMatch(gitlabQuality, /pnpm build/u);
+  assert.match(gitlabCiDoc, /product build[\s\S]*outside CI/u);
 });
 
 void test("Vitest CI output has one labelled summary contract", () => {
@@ -486,6 +503,12 @@ void test("Vitest CI output has one labelled summary contract", () => {
   assert.match(workflow, /Publish API verification summary/u);
   assert.match(workflow, /Publish coverage summary/u);
   assert.match(workflow, /coverage-summary\.json/u);
+  assert.match(gitlabContent, /VITEST_JSON_OUTPUT_FILE/u);
+  assert.match(gitlabContent, /ci-reports\/api-verification-summary\.md/u);
+  assert.match(gitlabContent, /ci-reports\/web-coverage-summary\.md/u);
+  assert.match(gitlabContent, /CI_COMMIT_SHA/u);
+  assert.match(gitlabContent, /coverage-summary\.json/u);
+  assert.match(gitlabContent, /throw new Error/u);
 });
 
 const assertRecoveryEvidenceIsTruthful = (document: string): void => {

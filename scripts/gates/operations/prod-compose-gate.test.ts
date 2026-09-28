@@ -15,6 +15,7 @@ const productionEnvironmentTemplate = resolve(
   "deploy/environment/production.env.example",
 );
 const workflow = resolve(".github/workflows/ci.yml");
+const gitlabCi = resolve(".gitlab-ci.yml");
 const observabilityCompose = resolve("docker-compose.observability.yml");
 const errorsCompose = resolve("docker-compose.errors.yml");
 const gitIgnore = resolve(".gitignore");
@@ -132,6 +133,7 @@ const productionEnvironment = readFileSync(
   "utf8",
 );
 const workflowContent = readFileSync(workflow, "utf8");
+const gitlabContent = readFileSync(gitlabCi, "utf8");
 const observabilityContent = readFileSync(observabilityCompose, "utf8");
 const errorsContent = readFileSync(errorsCompose, "utf8");
 const gitIgnoreContent = readFileSync(gitIgnore, "utf8");
@@ -162,6 +164,7 @@ const REVIEWED_EXTERNAL_IMAGES = new Set([
   "oliver006/redis_exporter:v1.90.0@sha256:a129504e65b87c54f79bc92f1afc403475e8ff646a3d7512de469904ceddf986",
   "bugsink/bugsink:2.5.1@sha256:ecdd845877464d70d61244b8adba20d623e1860e88d8338f2808d9cc2925745c",
   "gotenberg/gotenberg:8.37.0-chromium@sha256:0d28ae9a96441588ef739623726bd500ad0720b77266c6f1351a13e333fbd61c",
+  "node:26.8.1-bookworm@sha256:9f94d34c787165dca03b74e5bf9c3bf90e8de79b19aa3d87fe1fa1694bf75c89",
 ]);
 const releaseImageTag =
   "$" +
@@ -927,6 +930,30 @@ void test("external Compose and CI images use versioned immutable references", (
     }
   }
 
+  const gitlabModel = parse(gitlabContent, { maxAliasCount: 50 }) as {
+    readonly [key: string]: unknown;
+  };
+  for (const [job, definition] of Object.entries(gitlabModel)) {
+    const jobDefinition = definition as {
+      readonly image?: unknown;
+      readonly services?: readonly { readonly name?: unknown }[];
+    };
+    if (typeof jobDefinition.image === "string") {
+      externalImages.push({
+        path: `.gitlab-ci.yml:${job}`,
+        image: jobDefinition.image,
+      });
+    }
+    for (const service of jobDefinition.services ?? []) {
+      if (typeof service.name === "string") {
+        externalImages.push({
+          path: `.gitlab-ci.yml:${job}:services`,
+          image: service.name,
+        });
+      }
+    }
+  }
+
   assert.ok(externalImages.length > 0);
   const observedImages = new Set<string>();
   for (const { path, image } of externalImages) {
@@ -1011,6 +1038,21 @@ void test("manual runtime smoke reclaims only reviewed application build space",
   );
   assert.match(reclaimRun, /docker builder prune --all --force/u);
   assert.doesNotMatch(reclaimRun, /--volumes|docker system prune/u);
+});
+
+void test("GitLab CI carries no Docker build or Compose smoke lane", () => {
+  for (const name of Object.keys(
+    parse(gitlabContent, { maxAliasCount: 50 }) as Record<string, unknown>,
+  )) {
+    assert.doesNotMatch(
+      name,
+      /docker/iu,
+      `.gitlab-ci.yml:${name} must not be a Docker lane`,
+    );
+  }
+  assert.doesNotMatch(gitlabContent, /docker build/u);
+  assert.doesNotMatch(gitlabContent, /docker compose/u);
+  assert.doesNotMatch(gitlabContent, /docker:dind|\bdind\b/iu);
 });
 
 void test("Bugsink persists its SQLite database in the named data volume", () => {

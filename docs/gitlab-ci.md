@@ -67,13 +67,16 @@ job.
 ## Contract-test coverage gap (updated for the tests+linters form)
 
 Node and pnpm declarations in `.gitlab-ci.yml` are pinned in sync by
-`lint:runtime-node`, including the toolchain tarball version. The remaining
-mechanical contract gates — `prod-compose-gate.test.ts`,
+`lint:runtime-node`, including the toolchain tarball version. The mechanical
+contract gates — `prod-compose-gate.test.ts`,
 `operations-config-docs.test.ts`, and `vitest-reporting-contract.test.ts` —
-still parse only `.github/workflows/ci.yml`. The candidate no longer
-duplicates the Compose/release-identity content those gates assert (the
-coverage-evidence artifact names and the combined API coverage contour are
-preserved), so the residual gap is that the GitLab file is not parsed by those
-contract tests at all. Retiring or retargeting them is required before the
-final GitLab cutover. This is a recorded open gap, not a waiver: the GitHub
-workflow stays authoritative until it is closed.
+now carry narrow GitLab assertions alongside the untouched GitHub ones:
+reviewed external images are collected from `.gitlab-ci.yml` jobs and
+services (adding the pinned Node image to `REVIEWED_EXTERNAL_IMAGES`), a
+negative lock forbids Docker build/Compose smoke lanes, the single combined
+API coverage contour and fail-closed `ci-reports` summary contract are
+asserted, and the `quality` job is pinned as build-free with the product
+build documented as outside-CI evidence. The residual gap is deliberate:
+GitHub assertions stay authoritative until main cutover and retire with it.
+This is a recorded open item, not a waiver: the GitHub workflow remains
+authoritative until the merge completes.
