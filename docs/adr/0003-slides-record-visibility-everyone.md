@@ -1,5 +1,7 @@
 # Lead slides support Mine and Everyone visibility
 
+**Date:** 2026-06-19
+
 **Status:** accepted and implemented.
 
 In **Mine** mode, a lead's slides contain the lead's own records. In

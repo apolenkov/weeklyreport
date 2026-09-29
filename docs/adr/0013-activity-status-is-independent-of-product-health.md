@@ -1,5 +1,7 @@
 # Activity status is independent of product health
 
+**Date:** 2026-06-30
+
 **Status:** accepted and implemented. Current contract:
 `openspec/specs/activity-reporting-unit/spec.md`.
 

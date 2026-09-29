@@ -1,5 +1,7 @@
 # Product feedback dismissal preserves evidence
 
+**Date:** 2026-09-04
+
 **Status:** accepted for the authenticated product-feedback workbench.
 
 `Dismiss` is never physical deletion through WeeklyReport's product UI. It is a

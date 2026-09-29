@@ -1,5 +1,7 @@
 # The unified by-state view is a derived presentation projection
 
+**Date:** 2026-06-30
+
 **Status:** accepted and implemented. Current contract:
 [lead-form-loaded-view-model](../../openspec/specs/lead-form-loaded-view-model/spec.md).
 

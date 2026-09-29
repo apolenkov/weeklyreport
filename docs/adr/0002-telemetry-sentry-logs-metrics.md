@@ -1,5 +1,6 @@
 ---
 status: accepted
+date: 2026-08-30
 ---
 
 # Errors use external Sentry; logs and metrics stay application-owned

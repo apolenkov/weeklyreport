@@ -1,5 +1,7 @@
 # Head and viewer default to submitted-only on the live current period
 
+**Date:** 2026-06-30
+
 **Status:** accepted and implemented.
 
 ## Decision

@@ -1,5 +1,7 @@
 # Project Activities attach to many leads
 
+**Date:** 2026-06-30
+
 **Status:** accepted and implemented.
 
 Activity-to-lead attachment is many-to-many through
