@@ -55,6 +55,13 @@ export function PreviewMetadata({
             <span className="break-words">{item.stageNames.join(", ")}</span>
           </MetaFact>
         ) : null}
+        {item.continuity === "unplanned" ? (
+          <MetaFact>
+            <span className="rounded-[var(--radius-sm)] bg-[var(--color-muted)] px-1.5 py-0.5 font-medium">
+              Unplanned
+            </span>
+          </MetaFact>
+        ) : null}
         {item.tag ? (
           <MetaFact>
             <TagIcon tag={item.tag} />

@@ -254,8 +254,8 @@ remain keyboard-focusable.
 #### Scenario: An editable unplanned item wraps
 
 - **WHEN** an unplanned Current item has a multi-line description
-- **THEN** `Unplanned` and `Edit` remain together in the trailing action rail
-- **AND** the description and tag remain readable in the flexible region
+- **THEN** the `Unplanned` marker stays with the item's metadata row beneath the description
+- **AND** the description, marker, and actions remain readable without overlap
 
 ### Requirement: Overview read path MUST preserve access and lifecycle invariants
 
