@@ -10,6 +10,7 @@ export { ReviewCommentList } from "./ui/comments/review-comment-list";
 export { ReviewedRow } from "./ui/comments/reviewed-row";
 export { ReopenTab } from "./ui/reopen-tab";
 export { ReopenTabLabel } from "./ui/reopen-tab-label";
+export { RequestChangesDialog } from "./ui/request-changes-dialog";
 export { ReviewAcknowledgeBar } from "./ui/review-acknowledge-bar";
 export type { ReviewMode } from "./ui/review-mode-toggle";
 export { ReviewModeToggle } from "./ui/review-mode-toggle";

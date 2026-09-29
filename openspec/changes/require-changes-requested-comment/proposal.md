@@ -7,7 +7,7 @@ Owner decision 2026-09-29 (TASK-145.06): when the Head requests changes, a reaso
 - `review.verdict` accepts an optional `comment` (`safeText`, max `REVIEW_COMMENT_MAX_LENGTH`). It is required and non-empty when `verdict` is `changes_requested` and must be absent for `approved`.
 - The comment is stored on the verdict row, so it is written in the same transaction as the verdict and the un-submit.
 - The section read model exposes it as `reviews[].comment`; the Lead sees it in "Reviewer feedback" on the returned section.
-- Request changes in the review panel and the dashboard queue opens an inline comment form (focus, validation error, pending state) instead of mutating on the first click.
+- Request changes in the review panel and the dashboard queue opens a modal comment dialog (focus, validation error, pending state) instead of mutating on the first click.
 - Lifecycle is unchanged: the existing revoke transition and period dual-state writers are reused as is.
 
 ## Impact

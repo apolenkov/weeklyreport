@@ -2,10 +2,12 @@
 
 import type { ReviewVerdict, SectionReviewView } from "@customreport/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { invalidateReview } from "../../../shared/lib/query/cache-keys";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
+import { RequestChangesDialog } from "./request-changes-dialog";
 
 type VerdictBadge =
   | { kind: "changes"; label: string }
@@ -74,10 +76,12 @@ const REQUEST_CHANGES_BUTTON_CLASSNAME =
 
 function VerdictActions({
   disabled,
-  onSubmit,
+  onApprove,
+  onRequestChanges,
 }: {
   readonly disabled: boolean;
-  readonly onSubmit: (verdict: ReviewVerdict) => void;
+  readonly onApprove: () => void;
+  readonly onRequestChanges: () => void;
 }) {
   return (
     <span className="flex items-center gap-1.5">
@@ -85,7 +89,7 @@ function VerdictActions({
         type="button"
         data-interaction-effect="mutation-required"
         className={APPROVE_BUTTON_CLASSNAME}
-        onClick={() => onSubmit("approved")}
+        onClick={onApprove}
         disabled={disabled}
         aria-busy={disabled}
       >
@@ -95,11 +99,11 @@ function VerdictActions({
         type="button"
         data-interaction-effect="mutation-required"
         className={REQUEST_CHANGES_BUTTON_CLASSNAME}
-        onClick={() => onSubmit("changes_requested")}
+        onClick={onRequestChanges}
         disabled={disabled}
         aria-busy={disabled}
       >
-        {disabled ? "Saving…" : "Request changes"}
+        Request changes
       </button>
     </span>
   );
@@ -126,22 +130,25 @@ export function SectionVerdictControl({
   const qc = useQueryClient();
   const badge = resolveBadge(reviews);
 
+  const [requestingChanges, setRequestingChanges] = useState(false);
+
+  const onVerdictRecorded = (result: {
+    unsubmitted: boolean;
+    verdict: ReviewVerdict;
+  }) => {
+    toast.success(verdictToastMessage(result));
+    invalidateReview(qc, trpc);
+    onMutated();
+  };
+
   const verdictMut = useMutation(
     trpc.review.verdict.mutationOptions({
-      onSuccess: (result: { unsubmitted: boolean; verdict: ReviewVerdict }) => {
-        toast.success(verdictToastMessage(result));
-        invalidateReview(qc, trpc);
-        onMutated();
-      },
+      onSuccess: onVerdictRecorded,
       onError: (err: unknown) => {
         toast.error(errorToastMessage(err));
       },
     }),
   );
-
-  const submit = (verdict: ReviewVerdict) => {
-    verdictMut.mutate({ reportSectionId, verdict, version });
-  };
 
   return (
     <div className="flex items-center gap-2">
@@ -155,7 +162,25 @@ export function SectionVerdictControl({
         {badge.label}
       </span>
       {canReview ? (
-        <VerdictActions disabled={verdictMut.isPending} onSubmit={submit} />
+        <VerdictActions
+          disabled={verdictMut.isPending}
+          onApprove={() =>
+            verdictMut.mutate({
+              reportSectionId,
+              verdict: "approved",
+              version,
+            })
+          }
+          onRequestChanges={() => setRequestingChanges(true)}
+        />
+      ) : null}
+      {requestingChanges ? (
+        <RequestChangesDialog
+          reportSectionId={reportSectionId}
+          version={version}
+          onClose={() => setRequestingChanges(false)}
+          onRequested={onVerdictRecorded}
+        />
       ) : null}
     </div>
   );
