@@ -1,5 +1,7 @@
 import {
+  computeReportProgress,
   type PublishedReportSnapshot,
+  type ReportProgress,
   type ReportSectionReadModel,
   type UserSession,
   type WeeklyReportReadModel,
@@ -38,6 +40,14 @@ export type WeeklyReportProjectRow = Prisma.ProjectGetPayload<{
     stageAssignments: true;
   };
 }>;
+
+// Head and admin run the period lifecycle across every group, so their
+// progress denominator is org-wide; other roles stay inside their groups.
+export function isOrgWideProgressRole(
+  session: Pick<UserSession, "role">,
+): boolean {
+  return session.role === "head" || session.role === "admin";
+}
 
 export interface WeeklyReportScopeFilters {
   readonly sectionScope: Record<string, unknown> | undefined;
@@ -84,12 +94,18 @@ export function buildSnapshotResult(
   session: UserSession,
 ): WeeklyReportRepositoryResult {
   const scopedSnapshot = requireScopedPublishedSnapshot(snapshot, session);
-  const readModel = buildPublishedReadModelFromSnapshot(scopedSnapshot, {
-    periodState: report.periodState,
-    periodStatus: report.periodStatus,
-    archived: report.archived,
-    weekLabel: report.weekLabel,
-  });
+  const readModel = buildPublishedReadModelFromSnapshot(
+    scopedSnapshot,
+    {
+      periodState: report.periodState,
+      periodStatus: report.periodStatus,
+      archived: report.archived,
+      weekLabel: report.weekLabel,
+    },
+    computeSnapshotProgress(
+      isOrgWideProgressRole(session) ? snapshot : scopedSnapshot,
+    ),
+  );
   const leadSections = readModel.leadSections;
 
   // The signal comes from owner groups frozen INTO the snapshot, never a live
@@ -106,6 +122,15 @@ export function buildSnapshotResult(
   };
 }
 
+function computeSnapshotProgress(
+  snapshot: PublishedReportSnapshot,
+): ReportProgress {
+  return computeReportProgress(
+    snapshot.sections.map((section) => section.authorId),
+    snapshot.sections,
+  );
+}
+
 /** Builds the weekly read model solely from an already-scoped frozen snapshot. */
 export function buildPublishedReadModelFromSnapshot(
   snapshot: PublishedReportSnapshot,
@@ -113,6 +138,7 @@ export function buildPublishedReadModelFromSnapshot(
     WeeklyReportMetadata,
     "periodState" | "periodStatus" | "archived" | "weekLabel"
   >,
+  progress: ReportProgress = computeSnapshotProgress(snapshot),
 ): WeeklyReportReadModel {
   const leadSections = snapshot.sections;
   return weeklyReportReadModelSchema.parse({
@@ -124,10 +150,8 @@ export function buildPublishedReadModelFromSnapshot(
     periodStatus: metadata.periodStatus,
     archived: metadata.archived,
     weekLabel: metadata.weekLabel,
-    submissionCount: leadSections.filter(
-      (section) => section.status === "submitted",
-    ).length,
-    totalLeads: new Set(leadSections.map((section) => section.authorId)).size,
+    submissionCount: progress.submitted,
+    totalLeads: progress.total,
     activeDeadlineReminderRuleId: null,
     portfolioOverview: buildPortfolioProductsFromSnapshotSections(leadSections),
     leadSections,
@@ -140,8 +164,7 @@ export function buildLiveResult(
   leadSections: WeeklyReportLiveSection[],
   projects: WeeklyReportProjectRow[],
   crossGroup: WeeklyReportRepositoryResult["crossGroup"],
-  submissionCount: number,
-  totalLeads: number,
+  progress: ReportProgress,
   activeDeadlineRuleId: string | null,
 ): WeeklyReportRepositoryResult {
   // Statuses come from the floored `leadSections` so a card cannot disagree
@@ -162,8 +185,8 @@ export function buildLiveResult(
       periodStatus: report.periodStatus,
       archived: report.archived,
       weekLabel: report.weekLabel,
-      submissionCount,
-      totalLeads,
+      submissionCount: progress.submitted,
+      totalLeads: progress.total,
       activeDeadlineReminderRuleId: activeDeadlineRuleId,
       portfolioOverview,
       leadSections,

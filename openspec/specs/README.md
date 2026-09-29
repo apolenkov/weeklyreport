@@ -30,6 +30,7 @@ This index maps every durable capability to one canonical home. Product capabili
 - [list-empty-state-fidelity](./list-empty-state-fidelity/spec.md) — Filtered-list counts and empty states derive from the same rows the user can see. `[roles: Lead, Head, Viewer, Admin]`
 - [report-badge-resolution](./report-badge-resolution/spec.md) — Risk and decision badges resolve product names report-wide instead of falling back to Unknown. `[roles: Lead, Head, Viewer, Admin]`
 - [dashboard-record-count](./dashboard-record-count/spec.md) — Review-dashboard totals count each persisted product item, risk, and decision exactly once. `[roles: Head, Admin]`
+- [weekly-progress-denominator](./weekly-progress-denominator/spec.md) — Head and Admin see one weekly submission-progress figure computed over the period's expected active leads. `[roles: Head, Admin]`
 - [report-toolbar-layout](./report-toolbar-layout/spec.md) — Header actions and context controls remain stable, grouped, reachable, and accessible across roles and viewport widths. `[roles: Lead, Head, Viewer, Admin]`
 - [compact-overflow-containment](./compact-overflow-containment/spec.md) — Dense report content stays usable without horizontal overflow. `[roles: Lead, Head, Viewer, Admin]`
 - [desktop-surface-composition](./desktop-surface-composition/spec.md) — Desktop report surfaces preserve their intended composition and hierarchy. `[roles: Lead, Head, Viewer, Admin]`

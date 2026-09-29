@@ -393,6 +393,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
         findUnique: vi.fn().mockResolvedValue(reportRow),
       },
       user: { findMany: vi.fn().mockResolvedValue([{ id: AUTHOR_ID }]) },
+      reportSection: { findMany: vi.fn().mockResolvedValue([]) },
       project: {
         findMany: vi.fn().mockResolvedValue([
           {
@@ -627,6 +628,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     const prisma = interactivePrisma({
       report: { findUnique: vi.fn().mockResolvedValue(report) },
       user: { findMany: vi.fn().mockResolvedValue([{ id: AUTHOR_ID }]) },
+      reportSection: { findMany: vi.fn().mockResolvedValue([]) },
       project: { findMany: vi.fn().mockResolvedValue([]) },
       reminderRule: { findFirst: vi.fn().mockResolvedValue(null) },
       reportingGroup: { findMany: groupFindMany },
@@ -645,6 +647,79 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     });
   });
 
+  it("counts active leads org-wide for a group-scoped head but keeps a lead in its group", async () => {
+    const GROUP = "00000000-0000-4000-8000-000000000099";
+    const leadIds = Array.from(
+      { length: 10 },
+      (_, index) => `00000000-0000-4000-8000-0000000001${index}0`,
+    );
+    const progressOf = async (session: UserSession) => {
+      const userFindMany = vi
+        .fn()
+        .mockResolvedValue(leadIds.map((id) => ({ id })));
+      const sectionFindMany = vi.fn().mockResolvedValue(
+        leadIds.slice(0, 3).map((authorId) => ({
+          authorId,
+          status: "submitted",
+        })),
+      );
+      const prisma = interactivePrisma({
+        report: { findUnique: vi.fn().mockResolvedValue(makeReportRow()) },
+        user: { findMany: userFindMany },
+        reportSection: { findMany: sectionFindMany },
+        project: { findMany: vi.fn().mockResolvedValue([]) },
+        reminderRule: { findFirst: vi.fn().mockResolvedValue(null) },
+        reportingGroup: { findMany: vi.fn().mockResolvedValue([]) },
+        viewerGroupAccess: { findMany: vi.fn().mockResolvedValue([]) },
+      });
+      const result = await new WeeklyReportPrismaRepository(
+        prisma,
+      ).getWeeklyReport(REPORT_ID, session);
+      return {
+        userFindMany,
+        sectionFindMany,
+        progress: [
+          result?.readModel.submissionCount,
+          result?.readModel.totalLeads,
+        ],
+      };
+    };
+    const base = { userId: adminSession.userId, email: "x@example.test" };
+
+    const head = await progressOf({
+      ...base,
+      name: "Head",
+      role: "head",
+      reportingGroupId: GROUP,
+    });
+    expect(head.progress).toEqual([3, 10]);
+    const admin = await progressOf({ ...adminSession });
+    expect(admin.progress).toEqual([3, 10]);
+    expect(head.userFindMany).toHaveBeenCalledWith({
+      where: { role: "lead", isActive: true },
+      select: { id: true },
+    });
+    expect(head.sectionFindMany).toHaveBeenCalledWith({
+      where: { reportId: REPORT_ID },
+      select: { authorId: true, status: true },
+    });
+
+    const lead = await progressOf({
+      ...base,
+      name: "Lead",
+      role: "lead",
+      reportingGroupId: GROUP,
+    });
+    expect(lead.userFindMany).toHaveBeenCalledWith({
+      where: {
+        role: "lead",
+        isActive: true,
+        reportingGroupId: { in: [GROUP] },
+      },
+      select: { id: true },
+    });
+  });
+
   it("dispatches leadUsers, projects, and the deadline-rule lookup concurrently", async () => {
     const { promise: usersPending, resolve: releaseUsers } =
       Promise.withResolvers<{ id: string }[]>();
@@ -654,6 +729,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     const prisma = interactivePrisma({
       report: { findUnique: vi.fn().mockResolvedValue(makeReportRow()) },
       user: { findMany: userFindMany },
+      reportSection: { findMany: vi.fn().mockResolvedValue([]) },
       project: { findMany: projectFindMany },
       reminderRule: { findFirst: reminderRuleFindFirst },
     });
@@ -691,6 +767,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     const tx = {
       report: { findUnique, findFirst: vi.fn() },
       user: { findMany: userFindMany },
+      reportSection: { findMany: vi.fn().mockResolvedValue([]) },
       project: { findMany: projectFindMany },
       reminderRule: { findFirst: reminderRuleFindFirst },
       reportingGroup: { findMany: vi.fn().mockResolvedValue([]) },
@@ -715,6 +792,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     const livePrisma = interactivePrisma({
       report: { findUnique: vi.fn().mockResolvedValue(makeReportRow()) },
       user: { findMany: vi.fn().mockResolvedValue([]) },
+      reportSection: { findMany: vi.fn().mockResolvedValue([]) },
       project: { findMany: projectFindManyLive },
       reminderRule: { findFirst: vi.fn().mockResolvedValue(null) },
     });
@@ -736,6 +814,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
         findUnique: vi.fn().mockResolvedValue(makePublishedReportRow()),
       },
       user: { findMany: vi.fn().mockResolvedValue([]) },
+      reportSection: { findMany: vi.fn().mockResolvedValue([]) },
       project: { findMany: projectFindManyPublished },
       reminderRule: { findFirst: vi.fn().mockResolvedValue(null) },
     });

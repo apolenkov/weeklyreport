@@ -15,6 +15,24 @@ import {
   queueVerdict,
 } from "./dashboard-queue.fixtures";
 
+describe("dashboard submissions KPI", () => {
+  it("adds up when org-wide totals exceed the visible group sections", () => {
+    const groupSections = Array.from({ length: 8 }, (_, index) =>
+      queueSection(
+        queueLeadId(index + 1),
+        `Lead ${index + 1}`,
+        index < 3 ? "submitted" : "draft",
+      ),
+    );
+    // Head sees 8 group sections but the report counts 3 of 10 org-wide.
+    const { kpi } = mapWeeklyDashboardData({
+      weeklyReport: queueReport(groupSections, "open", 10),
+    });
+
+    expect([kpi.submitted, kpi.total, kpi.pendingCount]).toEqual([3, 10, 7]);
+  });
+});
+
 describe("dashboard lead queue", () => {
   it("suppresses a red roll-up only for its exact product id", () => {
     const firstProductId = "50000000-0000-4000-8000-000000000001";

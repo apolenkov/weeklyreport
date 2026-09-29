@@ -18,7 +18,11 @@ afterEach(() => vi.unstubAllGlobals());
 const reportId = "11111111-1111-4111-8111-111111111111";
 type Mutations = ReturnType<typeof usePeriodMutations>;
 const cases = [
-  ["publish", (m: Mutations) => m.publishMut.mutateAsync({ reportId }), null],
+  [
+    "publish",
+    (m: Mutations) => m.publishMut.mutateAsync({ reportId }),
+    "onPublishSuccess",
+  ],
   [
     "reopen",
     (m: Mutations) => m.reopenMut.mutateAsync({ reportId }),
@@ -104,6 +108,7 @@ function setup(fails: boolean) {
   const callbacks = {
     onCreateSuccess: vi.fn(),
     onEditSuccess: vi.fn(),
+    onPublishSuccess: vi.fn(),
     onReopenSuccess: vi.fn(),
     onDeleteSuccess: vi.fn(),
   };

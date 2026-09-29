@@ -79,6 +79,26 @@ able to cancel without side effects.
 - **AND** the period remains with `periodStatus: "published"` and
   `periodState: "published"`
 
+### Requirement: Publish Now Requires Confirmation
+
+Clicking "Publish now" on an open period in the Admin Periods list MUST open a
+confirmation dialog that states the period is published immediately and Leads
+lose edit access. The publish mutation MUST fire only after explicit
+confirmation, exactly once per confirmation; the user MUST be able to cancel
+without side effects. While the request is pending the dialog MUST NOT be
+dismissible and MUST NOT accept a second confirmation.
+
+#### Scenario: User confirms the publish
+
+- **WHEN** the user clicks "Publish now" and confirms in the dialog
+- **THEN** the publish mutation fires once for that period
+- **AND** on success a toast displays "Period published" and the dialog closes
+
+#### Scenario: User cancels the confirmation
+
+- **WHEN** the user clicks "Publish now" and dismisses the dialog
+- **THEN** no mutation fires and the period stays open
+
 ### Requirement: Period Navigation Separates Selection From Current Identity
 
 Period navigation MUST label Current only for the report id returned by the

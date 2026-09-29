@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup } from "@testing-library/react";
+import { cleanup, configure } from "@testing-library/react";
 import { afterEach } from "vitest";
 
 // Radix UI primitives open a Popper layer that calls ResizeObserver and
@@ -26,6 +26,10 @@ if (globalForStubs.Element) {
   elementProto.releasePointerCapture = noop;
   elementProto.scrollIntoView = noop;
 }
+
+// The 1 s default for findBy*/waitFor is too tight for heavy trees while the
+// whole suite runs in parallel workers.
+configure({ asyncUtilTimeout: 5000 });
 
 afterEach(() => {
   cleanup();

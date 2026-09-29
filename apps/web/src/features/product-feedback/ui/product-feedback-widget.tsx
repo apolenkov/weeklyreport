@@ -6,7 +6,7 @@ import {
   AlertTitle,
 } from "@customreport/ui/components/ui/alert";
 import { Button } from "@customreport/ui/components/ui/button";
-import { Agentation } from "agentation";
+import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -16,6 +16,16 @@ import { webEnv } from "../../../shared/lib/runtime/web-env";
 import { useAgentationDeliveryStatus } from "./use-agentation-delivery-status";
 
 const AGENTATION_ENDPOINT = "/api/v1/agentation";
+
+// The inlined NODE_ENV check makes the bundler drop the import, so the
+// development toolbar never ships in a production build.
+const Agentation = dynamic(
+  () =>
+    process.env.NODE_ENV === "production"
+      ? Promise.resolve(() => null)
+      : import("agentation").then((module) => module.Agentation),
+  { ssr: false },
+);
 
 export function ProductFeedbackWidget() {
   const { user } = useSession();
