@@ -1,5 +1,6 @@
 "use client";
 
+import { SAFE_TEXT_MAX_LENGTH } from "@customreport/shared";
 import type { Ref } from "react";
 
 import type { ChipChoice } from "../../../shared/ui/forms/choice-chip-row";
@@ -91,6 +92,7 @@ export function ItemDescriptionField({
           : "What is planned for next week…"
       }
       minHeightPx={70}
+      characterLimit={SAFE_TEXT_MAX_LENGTH}
       focusOnMount
     />
   );

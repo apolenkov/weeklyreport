@@ -93,8 +93,8 @@ describe("ItemEditDialog — pause reason accessibility", () => {
     );
     expect(reason).not.toHaveAttribute("maxlength");
     expect(
-      screen.getByText(`0 / ${SAFE_TEXT_MAX_LENGTH} characters`),
-    ).toBeInTheDocument();
+      document.getElementById("item-paused-reason-limit"),
+    ).toHaveTextContent(`0 / ${SAFE_TEXT_MAX_LENGTH} characters`);
   });
 });
 
