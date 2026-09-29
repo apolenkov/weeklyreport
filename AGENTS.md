@@ -2,8 +2,8 @@
 
 This file provides guidance to coding agents working in this repository.
 
-Global language and response-style preferences live in `~/.codex/AGENTS.md`.
-Keep this file limited to WeeklyReport-specific context.
+This file is self-contained for repository work. Keep it limited to
+WeeklyReport-specific context.
 
 ## Autonomy in the local MVP
 
@@ -52,8 +52,8 @@ publishes, and exports a unified report. pnpm + Turbo monorepo:
   build the minimal production migration image
 - `packages/shared` — Zod schemas, tRPC contracts (update here before duplicating types)
 - `packages/ui` — shadcn/ui + Tailwind 4 tokens
-- `prisma` — schema, canonical init plus forward-only additive migrations
-  (`prisma/migrations`), seeds, destructive guard
+- `prisma` — schema, canonical init plus additive migrations
+  (`prisma/migrations`; see Migration policy below), seeds, destructive guard
 - `openspec` — durable product and engineering specifications (`specs/`)
 
 ## Commands
@@ -110,9 +110,9 @@ pnpm spec:check         # strict validation of all durable OpenSpec specs
   work may target only those exact non-production databases.
 - **MVP database policy.** By default, local dev (`DATABASE_URL`), tests, and
   E2E runs share the loopback `customreport_e2e` database (owner decision
-  2026-09-18). TASK-133 separately authorizes the existing
+  2026-09-18). Two acceptance lanes are separately authorized: the existing
   `customreport_e2e_lane_a_test` and `customreport_e2e_lane_b_test` databases
-  for its two isolated acceptance lanes. Other lane targets remain
+  for isolated runs. Other lane targets remain
   unprovisioned and must not be created without a new owner order. Every phase
   reset wipes its selected database — keep no long-lived data in these targets.
   Before each test/E2E phase, run a guarded reset plus the explicit required
@@ -132,6 +132,14 @@ pnpm spec:check         # strict validation of all durable OpenSpec specs
   logical DB 0; E2E uses reserved logical DB 15. Destructive E2E Redis cleanup
   must select DB 15, pass the exact disposable PostgreSQL guard and the
   per-command consent token, and must never flush DB 0.
+
+## Migration policy
+
+While no production database exists (MVP), the canonical init migration may be
+re-baselined; git history shows it edited after the additive migrations, and
+`prisma/migrations/canonical-init-contract.test.ts` guards its shape. From the
+first production deployment, migrations are forward-only: never edit an applied
+migration, add a new one.
 
 ## Load-Bearing Invariants
 
@@ -185,7 +193,7 @@ path must respect them and link the relevant `openspec/specs/` spec.
 ## Gates
 
 The repository lives on the private corporate GitLab (`gitlab` is the only
-remote; owner decision-067). `.gitlab-ci.yml` is the CI that targets this
+remote; owner decision). `.gitlab-ci.yml` is the CI that targets this
 remote and carries only lint/test lanes (owner decision 2026-09-28): quality,
 coverage, API integration, migrate-reset, and the dependency audit on the
 shared Docker runner, with in-job loopback PostgreSQL and Redis/Mailpit service
@@ -195,21 +203,21 @@ acceptance.
 
 ## Task completion
 
-General completion, verification and cleanup rules live in `~/.codex/AGENTS.md`.
-Project specifics: stage only task-owned changes (concurrent sessions edit
+Before reporting a change done, run the checks in
+`docs/exemplary-code-standard.md#verification` and report their results; a check
+that was not run or was blocked does not count as passed. Stage only task-owned changes (concurrent sessions edit
 this repo); remove task-owned worktrees, dev servers and containers at session
 end once their content is committed or archived.
 
 ## Browser verification
 
-Owner decision 2026-09-20 (backlog TASK-047): agent-browser (Vercel) is the
+Owner decision 2026-09-20 : agent-browser (Vercel) is the
 selected route for exercising the running app; the Reticle integration is
-removed. Verified on a source run (`next dev`, `customreport_e2e`, 2026-09-29,
-TASK-145): Lead sign-in, save, submit and reopen; Head approve; Viewer
+removed. Verified on a source run (`next dev`, `customreport_e2e`, 2026-09-29): Lead sign-in, save, submit and reopen; Head approve; Viewer
 read-only; Admin DLQ; period reopen, resubmit and republish; the limit dialog.
 Not verified: PDF export (needs the Gotenberg/Docker stack), the production
 build output, and Head reject with a comment (the Request changes dialog has a
 comment field, but it has not been exercised in a browser). Do not claim a
-flow beyond this list without fresh evidence. Generic browser-evidence rules
-live in `~/.codex/AGENTS.md`; the database-safety and permission boundaries
-above apply unchanged.
+flow beyond this list without fresh evidence. Judge a browser flow by its observable result (snapshot, DOM, network or
+screenshot); an unknown or failed result is not a pass. The database-safety
+and permission boundaries above apply unchanged.
