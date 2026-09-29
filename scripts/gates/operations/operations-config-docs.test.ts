@@ -487,8 +487,17 @@ void test("the GitLab quality lane carries no product build", () => {
 });
 
 void test("dependency-scan also runs on merge requests that change dependency manifests", () => {
-  const scan = gitlabContent.slice(gitlabContent.indexOf("\ndependency-scan:"));
-  assert.match(scan, /merge_request_event"'\s+changes:/u);
+  const start = gitlabContent.indexOf("\ndependency-scan:");
+  const next = gitlabContent.slice(start + 1).search(/\n[a-z.][\w.-]*:\n/u);
+  const job = gitlabContent.slice(
+    start,
+    next === -1 ? undefined : start + 1 + next,
+  );
+  const mrRule = /merge_request_event"'\s+changes:\n((?:\s+- .+\n)+)/u.exec(
+    job,
+  )?.[1];
+  assert.ok(mrRule, "dependency-scan must run on merge requests with changes");
+  const scan = mrRule;
   for (const manifest of [
     "pnpm-lock.yaml",
     "package.json",

@@ -62,7 +62,8 @@ of the integration suite's data.
 The weekly dependency scan uses a GitLab schedule for the default branch at
 Monday 06:00 UTC; create that schedule after the main cutover. A manually
 started pipeline (`CI_PIPELINE_SOURCE=web`) runs the full lane set plus the
-dependency audit. No dependency-update bot is configured (see
+dependency audit. A merge request that changes `pnpm-lock.yaml`, a
+`package.json`, or `pnpm-workspace.yaml` also runs the audit. No dependency-update bot is configured (see
 `docs/sdlc.md`); the audit job does not replace one. Runner assignment is a
 GitLab setting, not declared in `.gitlab-ci.yml`.
 

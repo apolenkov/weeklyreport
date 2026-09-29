@@ -42,7 +42,7 @@ obtain its `db`, `host`, and `port` by spreading `buildRedisConnectionOptions(en
 and MUST NOT inline `requireEnv(process.env, "REDIS_HOST")` or
 `Number(requireEnv(process.env, "REDIS_PORT"))`. The consumers are
 `bullmq-options.ts` (`getBullMQConnectionOptions`), `redis.health.ts`,
-`session-revocation.service.ts`, `analytics.cache.ts`, `telemetry.cache.ts`,
+`admin.module.ts` (the session-revocation Redis provider), `analytics.cache.ts`, `telemetry.cache.ts`,
 and `rate-limit.middleware.ts` (the `rate-limit-redis` store's ioredis
 client). A consumer MAY add its own resilience flags (`lazyConnect`,
 `maxRetriesPerRequest`, `enableOfflineQueue`) alongside the spread, because
@@ -107,7 +107,7 @@ and a bounded `commandTimeout` (2s), and MUST install a no-op `error` listener,
 (the offline queue stays ENABLED: with `lazyConnect`, disabling it rejects the
 first ping while the client is still connecting — a deterministic false "down"
 at process start against a healthy Redis),
-matching the `read-through-cache.ts` and `session-revocation.service.ts`
+matching the `read-through-cache.ts` and session-revocation (`admin.module.ts`)
 clients. This bounds how long a `ping()` issued during a Redis outage can
 stay queued before rejecting, and prevents ioredis's unhandled `error`
 events from being dumped to raw stderr.
