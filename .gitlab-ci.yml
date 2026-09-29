@@ -170,6 +170,12 @@ dependency-scan:
     - if: '$CI_PIPELINE_SOURCE == "schedule" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
     - if: '$CI_PIPELINE_SOURCE == "web"'
       when: always
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - pnpm-lock.yaml
+        - package.json
+        - "**/package.json"
+        - pnpm-workspace.yaml
     - when: never
   before_script:
     - npm install --global pnpm@11.24.0

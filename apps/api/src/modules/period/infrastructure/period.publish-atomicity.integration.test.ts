@@ -102,15 +102,54 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
     });
   });
 
-  it("rejects publication when no section is submitted", async () => {
+  it("rejects publication when no section is submitted without side effects", async () => {
+    const POLICY = "f0000000-0000-4000-a000-0000000000d4";
+    const RULE = "f0000000-0000-4000-a000-0000000000d5";
+    await prisma.reminderPolicy.create({
+      data: {
+        id: POLICY,
+        kind: "deadline",
+        offsetMinutes: 0,
+        timezone: "Europe/Moscow",
+        audience: "LEAD_WITH_DRAFT",
+        active: true,
+        validFrom: new Date("2026-01-01T00:00:00.000Z"),
+      },
+    });
+    await prisma.reminderRule.create({
+      data: {
+        id: RULE,
+        policyId: POLICY,
+        reportId: REPORT,
+        kind: "deadline",
+        fireAt: new Date("2026-05-15T00:00:00.000Z"),
+        deadline: new Date("2026-05-15T00:00:00.000Z"),
+        timezone: "Europe/Moscow",
+        status: "active",
+        version: 1,
+      },
+    });
     await prisma.reportSection.deleteMany({ where: { reportId: REPORT } });
 
     await expect(
       repository.publishPeriod(REPORT, USER, await expected(REPORT)),
     ).rejects.toBeInstanceOf(PeriodAccessError);
 
-    const reloaded = await prisma.report.findUnique({ where: { id: REPORT } });
-    expect(reloaded?.periodStatus).toBe("open");
+    const reloaded = await prisma.report.findUniqueOrThrow({
+      where: { id: REPORT },
+    });
+    expect(reloaded.status).toBe("draft");
+    expect(reloaded.periodStatus).toBe("open");
+    expect(reloaded.periodState).toBe("open");
+    expect(reloaded.publishedSnapshot).toBeNull();
+    expect(reloaded.publishedAt).toBeNull();
+    // A rejected publish must leave the reminder rules untouched (not paused).
+    await expect(
+      prisma.reminderRule.findUniqueOrThrow({ where: { id: RULE } }),
+    ).resolves.toMatchObject({ status: "active", version: 1 });
+    await expect(
+      prisma.reminderRule.count({ where: { reportId: REPORT } }),
+    ).resolves.toBe(1);
   });
 
   it("atomically replaces frozen scope and search rows on republish", async () => {

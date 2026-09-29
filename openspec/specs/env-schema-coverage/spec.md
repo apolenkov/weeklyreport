@@ -101,10 +101,8 @@ which run before or outside the Nest DI container: the single
 `sentry-bootstrap` import inside `start()`; the second `validateEnv()` at the
 BullMQ `worker-observability.ts` process boundary; the API auth-ingress
 bootstrap that passes `process.env` into the validated auth/SAML factories;
-`otel.bootstrap`; and `createServiceLogger` in
-`logger-service.ts`, a pre-DI logger factory that parses
-`process.env.LOG_LEVEL` through `logLevelSchema.parse` (throws on an invalid
-value — validated, no silent fallback) before the container exists. `AUTH_DEV_MODE_ALLOW_TEST` is declared for
+and `otel.bootstrap`. Services receive their logger from the shared
+`APP_LOGGER` provider, never from a raw `process.env` factory. `AUTH_DEV_MODE_ALLOW_TEST` is declared for
 coverage but read raw beside its `NODE_ENV` and `AUTH_DEV_MODE`
 dev-mode-gate siblings (both already declared, both read raw); routing one
 of the three buys no safety once it is declared, so all three stay raw.

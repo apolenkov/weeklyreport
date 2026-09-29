@@ -1,15 +1,14 @@
 import type { OnModuleDestroy } from "@nestjs/common";
 import { Inject, Injectable } from "@nestjs/common";
-import { Redis } from "ioredis";
+import type { Redis } from "ioredis";
 
-import type { EnvConfig } from "../../infrastructure/config/env.schema";
-import { buildFailOpenRedisConnectionOptions } from "../../infrastructure/config/redis-connection";
 import { sessionRevocationFailuresTotal } from "../../infrastructure/metrics/metrics.registry.js";
 import type { AppLogger } from "../../lib/logger.js";
 
-export type SessionRevocationDependencies =
-  | { readonly redis: Redis; readonly logger: AppLogger }
-  | { readonly env: EnvConfig; readonly logger: AppLogger };
+export interface SessionRevocationDependencies {
+  readonly redis: Redis;
+  readonly logger: AppLogger;
+}
 
 export const SESSION_REVOCATION_DEPS = Symbol("SessionRevocationDeps");
 
@@ -25,15 +24,7 @@ export class SessionRevocationService implements OnModuleDestroy {
   constructor(
     @Inject(SESSION_REVOCATION_DEPS) deps: SessionRevocationDependencies,
   ) {
-    if ("redis" in deps) {
-      this.redis = deps.redis;
-    } else {
-      this.redis = new Redis({
-        ...buildFailOpenRedisConnectionOptions(deps.env),
-      });
-      // Suppress unhandled error events on transient Redis blips.
-      this.redis.on("error", () => undefined);
-    }
+    this.redis = deps.redis;
     this.logger = deps.logger;
   }
 
