@@ -119,8 +119,9 @@ type HeaderSummary = Pick<
   "counters" | "onTrack" | "worstStatus"
 >;
 
-// Product status and on-track totals use real products; counters and urgency
-// include visible rows from the Shared card too.
+// On-track totals use real products; counters and urgency include visible
+// rows from the Shared card, and urgency reads activity statuses like Report
+// health does.
 function buildHeaderSummary(
   realCards: readonly GridProductCard[],
   products: readonly GridProductCard[],
@@ -135,6 +136,9 @@ function buildHeaderSummary(
   return {
     worstStatus: worstTrafficStatus([
       ...realCards.map((card) => card.status),
+      ...products.flatMap((card) =>
+        card.subsections.map((subsection) => subsection.status),
+      ),
       ...allColumns.flatMap((columns) =>
         columns.risks.map((risk) =>
           risk.tone === "blocked" ? ("red" as const) : ("yellow" as const),

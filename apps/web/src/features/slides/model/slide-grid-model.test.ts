@@ -493,6 +493,16 @@ describe("buildSlideGridModel — activity subsections", () => {
     expect(card.noData).toBe(false);
   });
 
+  it("lets an at-risk activity raise the worst status above a green product", () => {
+    const model = buildSlideGridModel({
+      section: section({
+        activities: [activity({ derivedStatus: "red" })],
+      }),
+      productStatuses: new Map([["p1", "green"]]),
+    });
+    expect(model.worstStatus).toBe("red");
+  });
+
   it("keeps a product without updates or status collapsed", () => {
     const model = buildSlideGridModel({
       section: section({

@@ -761,7 +761,11 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
         <LeadForm />
       </Wrapper>,
     );
-    await screen.findByText("Autosaved");
+    await screen.findByText("Read-only");
+    expect(screen.queryByText("Autosaved")).toBeNull();
+    expect(
+      screen.getByText("Read-only report and status context."),
+    ).toBeInTheDocument();
 
     const documentActions = screen.getByRole("group", {
       name: "Document actions",

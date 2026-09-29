@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import type { SlideGridModel } from "../model/slide-grid-model";
-import { SlideGridHeader } from "./slide-article-header";
+import { SlideGridHeader, SlidePriorityStrip } from "./slide-article-header";
 
 const offTrackGrid: SlideGridModel = {
   authors: [],
@@ -48,4 +48,26 @@ describe("SlideGridHeader", () => {
       );
     },
   );
+});
+
+describe("SlidePriorityStrip", () => {
+  it("keeps the full priority text reachable when the card clamps it", () => {
+    const text = "Long priority ".repeat(30).trim();
+    const grid: SlideGridModel = {
+      ...offTrackGrid,
+      priorityStrip: [
+        {
+          id: "i1",
+          rank: 1,
+          text,
+          productId: "p1",
+          productName: "Product",
+          authorId: "a1",
+        },
+      ],
+    };
+    render(<SlidePriorityStrip grid={grid} authorsById={new Map()} />);
+
+    expect(screen.getByTitle(text)).toBeInTheDocument();
+  });
 });
