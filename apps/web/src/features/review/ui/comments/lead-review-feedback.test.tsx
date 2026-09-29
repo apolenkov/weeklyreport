@@ -1,5 +1,6 @@
 // Lead read-only feedback surface — no composer (lead has no review capability).
 
+import type { SectionReviewView } from "@customreport/shared";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
@@ -165,6 +166,41 @@ describe("LeadReviewFeedback", () => {
     expect(
       screen.queryByRole("textbox", { name: /review comment/i }),
     ).not.toBeInTheDocument();
+  });
+
+  const returned = (
+    overrides: Partial<SectionReviewView> = {},
+  ): SectionReviewView => ({
+    reviewerId: REVIEWER_ID,
+    reviewerName: "Head",
+    verdict: "changes_requested",
+    judgedVersion: 2,
+    isCurrent: true,
+    comment: "Add the missing risk owner.",
+    createdAt: new Date("2026-07-01T00:00:00Z"),
+    ...overrides,
+  });
+
+  it("shows the current changes-requested reason even without record notes", () => {
+    render(<LeadReviewFeedback records={[]} reviews={[returned()]} />);
+
+    expect(screen.getByTestId("lead-review-feedback")).toBeInTheDocument();
+    expect(screen.getByText("Add the missing risk owner.")).toBeInTheDocument();
+    expect(screen.getByText(/Changes requested by Head/u)).toBeInTheDocument();
+  });
+
+  it("ignores stale, approved, and legacy reviews without a comment", () => {
+    const { container } = render(
+      <LeadReviewFeedback
+        records={[]}
+        reviews={[
+          returned({ isCurrent: false }),
+          returned({ verdict: "approved" }),
+          returned({ comment: undefined }),
+        ]}
+      />,
+    );
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("renders nothing when there is no feedback", () => {

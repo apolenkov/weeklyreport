@@ -3,7 +3,7 @@ import "@testing-library/jest-dom/vitest";
 
 import type { SectionReviewView } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -114,6 +114,20 @@ describe("resolveBadge", () => {
   });
 });
 
+async function requestChanges() {
+  await userEvent.click(
+    screen.getByRole("button", { name: "Request changes" }),
+  );
+  const dialog = within(screen.getByRole("dialog"));
+  await userEvent.type(
+    dialog.getByLabelText("Reason for the lead"),
+    "Add the missing risk owner.",
+  );
+  await userEvent.click(
+    dialog.getByRole("button", { name: "Request changes" }),
+  );
+}
+
 describe("SectionVerdictControl — verdict buttons", () => {
   beforeEach(() => {
     toastSuccess.mockClear();
@@ -174,6 +188,17 @@ describe("SectionVerdictControl — verdict buttons", () => {
     expect(onMutated).toHaveBeenCalledTimes(1);
   });
 
+  it("Request changes only opens the reason dialog and sends nothing", async () => {
+    const { captured } = renderControl({ canReview: true });
+    await userEvent.click(
+      screen.getByRole("button", { name: "Request changes" }),
+    );
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(
+      expectDefined(captured["review.verdict"]).mutationFn,
+    ).not.toHaveBeenCalled();
+  });
+
   it("Request changes with unsubmit toasts the lead-return message and invalidates", async () => {
     const { captured, onMutated } = renderControl({ canReview: true });
     const mutationFn = expectDefined(captured["review.verdict"]).mutationFn;
@@ -183,15 +208,14 @@ describe("SectionVerdictControl — verdict buttons", () => {
       judgedVersion: VERSION,
     });
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "Request changes" }),
-    );
+    await requestChanges();
 
     await waitFor(() => {
       expect(mutationFn.mock.calls[0]?.[0]).toEqual({
         reportSectionId: REPORT_SECTION_ID,
         verdict: "changes_requested",
         version: VERSION,
+        comment: "Add the missing risk owner.",
       });
     });
     await waitFor(() => {
@@ -212,9 +236,7 @@ describe("SectionVerdictControl — verdict buttons", () => {
       judgedVersion: VERSION,
     });
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "Request changes" }),
-    );
+    await requestChanges();
 
     await waitFor(() => {
       expect(toastSuccess).toHaveBeenCalledWith("Changes requested");
