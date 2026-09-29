@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 
-import type { PeriodLifecycleExpectation } from "../modules/period/domain/period-lifecycle-expectation.js";
+import type { PeriodLifecycleExpectation } from "../domain/period-lifecycle-expectation.js";
 
 // Bind a lifecycle write to the exact state and reporting envelope authorized
 // by the caller. Any intervening lifecycle or boundary change drops the CAS.
