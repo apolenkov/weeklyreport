@@ -19,6 +19,10 @@ interface PeriodsTabDialogsProps {
   readonly onCancelEdit: () => void;
   readonly onSubmitEdit: (values: CreatePeriodValues) => void;
   readonly editIsPending: boolean;
+  readonly publishConfirm: PeriodListItem | null;
+  readonly publishIsPending: boolean;
+  readonly onClosePublish: () => void;
+  readonly onConfirmPublish: () => void;
   readonly reopenConfirm: PeriodListItem | null;
   readonly reopenIsPending: boolean;
   readonly onCloseReopen: () => void;
@@ -38,6 +42,10 @@ export function PeriodsTabDialogs({
   onCancelEdit,
   onSubmitEdit,
   editIsPending,
+  publishConfirm,
+  publishIsPending,
+  onClosePublish,
+  onConfirmPublish,
   reopenConfirm,
   reopenIsPending,
   onCloseReopen,
@@ -65,6 +73,19 @@ export function PeriodsTabDialogs({
           onCancel={onCancelEdit}
           onSubmit={onSubmitEdit}
           isPending={editIsPending}
+        />
+      )}
+
+      {publishConfirm && (
+        <ConfirmationDialog
+          open={true}
+          title="Publish this period?"
+          description={`${publishConfirm.weekLabel ?? formatWeekLabel(publishConfirm.periodStart)} (${formatPeriodRangeWithYear(publishConfirm.periodStart, publishConfirm.periodEnd)}) will be published immediately, without waiting for the deadline. Leads will no longer be able to edit their sections until the period is reopened.`}
+          confirmLabel={publishIsPending ? "Publishing…" : "Publish"}
+          testId="periods-publish-dialog"
+          isPending={publishIsPending}
+          onClose={onClosePublish}
+          onConfirm={onConfirmPublish}
         />
       )}
 
