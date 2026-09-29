@@ -33,7 +33,7 @@ Subject ≤ 100 chars. Body is free-form (multi-line line length unrestricted).
 Before committing, run `pnpm format:check`, `pnpm lint`, `pnpm typecheck`,
 `pnpm test`, and `pnpm build`. The lint floor is zero warnings.
 
-## Pushing to `origin/main`
+## Pushing to `gitlab/main`
 
 The canonical remote is `https://gitlab.example.org/acme/weeklyreport.git` (remote `gitlab`).
 Before relying on a push, verify the configured remote, authenticated private
