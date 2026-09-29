@@ -303,3 +303,17 @@ The `/lead/report/:reportId` Report Overview MUST keep the three temporal column
 - **WHEN** the lead operates the progress interaction or cancels the canonical editor with a keyboard
 - **THEN** focus returns to the triggering item control or the Overview heading
 - **AND** the three-column lineage remains visible without document-level horizontal overflow
+
+### Requirement: Empty temporal cells MUST state their emptiness in plain language
+
+The Lead Report route's Status Overview MUST render an empty temporal cell with
+the visible text `No item` and no write action in that cell. A decorative mark
+MUST NOT be the only explanation. New work MUST be created through the
+reporting unit's single `Add item` action, which is hidden for historical units
+and read-only views.
+
+#### Scenario: A temporal cell has no content
+
+- **WHEN** a Previously planned, Current week, or Next week cell has no item
+- **THEN** it shows `No item`
+- **AND** the cell exposes no add, edit, or next-step control
