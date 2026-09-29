@@ -25,8 +25,6 @@ export interface MapWeeklyDashboardArgs {
   readonly weeklyReport: WeeklyReportReadModel;
   // Override `now` for deterministic deadline tests.
   readonly now?: Date;
-  // Review-backed count fills the weekly view when available.
-  readonly pendingCount?: number;
 }
 
 export interface MapReviewDashboardArgs {
@@ -81,13 +79,9 @@ function mapBlockedAtRisk(
 export function mapWeeklyDashboardData({
   weeklyReport,
   now = new Date(),
-  pendingCount: reviewPendingCount,
 }: MapWeeklyDashboardArgs): MappedWeeklyDashboard {
-  const pendingCount =
-    reviewPendingCount ??
-    Math.max(0, weeklyReport.totalLeads - weeklyReport.leadSections.length);
   return {
-    kpi: buildKpiData(weeklyReport, pendingCount, now),
+    kpi: buildKpiData(weeklyReport, now),
     blockedAtRisk: mapBlockedAtRisk(weeklyReport),
   };
 }

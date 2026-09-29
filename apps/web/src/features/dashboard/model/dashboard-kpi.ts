@@ -26,11 +26,12 @@ function formatRelativeDeadline(deadline: Date, now: Date): string {
 
 export function buildKpiData(
   weeklyReport: WeeklyReportReadModel,
-  pendingCount: number,
   now: Date,
 ): KpiData {
   const submitted = weeklyReport.submissionCount;
   const total = weeklyReport.totalLeads;
+  // Same scope as submitted/total, so the card always adds up.
+  const pendingCount = Math.max(0, total - submitted);
 
   const blockedCount = weeklyReport.escalations.filter(
     (e) => e.type === "blocked",
