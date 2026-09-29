@@ -5,3 +5,6 @@ coverage
 .turbo
 pnpm-lock.yaml
 .devin-artifacts
+.claude/commands/opsx
+.claude/skills/openspec-*
+.agents/skills/openspec-*

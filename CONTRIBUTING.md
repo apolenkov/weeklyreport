@@ -33,12 +33,12 @@ Subject ≤ 100 chars. Body is free-form (multi-line line length unrestricted).
 Before committing, run `pnpm format:check`, `pnpm lint`, `pnpm typecheck`,
 `pnpm test`, and `pnpm build`. The lint floor is zero warnings.
 
-## Pushing to `origin/main`
+## Pushing to `gitlab/main`
 
-The canonical remote is `https://github.com/apolenkov/weeklyreport.git`.
+The canonical remote is `https://gitlab.example.org/acme/weeklyreport.git` (remote `gitlab`).
 Before relying on a push, verify the configured remote, authenticated private
 read access, the pushed commit, and the remote SHA. A successful local hook does
-not prove that GitHub accepted the update or ran CI.
+not prove that GitLab accepted the update or ran CI.
 
 ## Common gotchas
 

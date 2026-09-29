@@ -64,7 +64,7 @@
 
 ## 5. Planning, review, and delivery
 
-- [x] 5.1 Reconcile the conflicting `clarify-status-overview-workflow` and `preserve-linked-continuation-dnd` deltas without rewriting their historical evidence. `simplify-status-overview-authoring` is the active superseding UX contract; prior task records, receipts, screenshots, and compatible persistence guarantees remain unchanged. Validate the active change strictly and run `pnpm spec:check`.
+- [x] 5.1 Reconcile the conflicting `clarify-status-overview-workflow` and `preserve-linked-continuation-dnd` deltas (both retired; files only in git history before 7e6c20f2d) without rewriting their historical evidence. `simplify-status-overview-authoring` is the active superseding UX contract; prior task records, receipts, screenshots, and compatible persistence guarantees remain unchanged. Validate the active change strictly and run `pnpm spec:check`.
 - [x] 5.2 Run Impeccable detection and the current Web Interface Guidelines review on the final changed UI; run focused Vitest, web typecheck, `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm build`, recording only proven unrelated failures.
   - [x] Impeccable mechanical detection over the Lead route and report-section UI returns no findings.
   - [x] Current Web Interface Guidelines review found one collapsed-target navigation P2; strict TDD fixed expansion/focus/hash/modified-click behavior and Astra's final re-review found no remaining P0/P1/P2 in that patch.

@@ -479,7 +479,9 @@ Images are the unit of rollback; the database is not.
 
 ## CI
 
-`.github/workflows/ci.yml` runs the `quality`, `api-integration`, `coverage`,
+`.gitlab-ci.yml` runs the lint/test subset (`node-toolchain`, `quality`,
+`dependency-scan`, `coverage`, `api-integration`, `migrate-reset`; see `docs/gitlab-ci.md`). The declared
+`.github/workflows/ci.yml` (no GitHub remote is configured) runs the `quality`, `api-integration`, `coverage`,
 `migrate-reset`, and `docker-build` jobs. The `api-integration` lane runs the
 API unit and integration suites once, serially, against disposable
 Postgres/Redis/Mailpit services and enforces the API coverage thresholds. The

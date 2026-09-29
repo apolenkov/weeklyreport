@@ -1,6 +1,0 @@
-schema: spec-driven
-created: 2026-09-21
-goal: Quarantine aged pending PDF exports whose generation queue job is
-  confirmed absent into recovery_required, and let a Head retry recreate
-  dispatch through a generation-fenced transition instead of BullMQ
-  queue.retry().
