@@ -190,10 +190,7 @@ function dashboardPanelModel(
       })
     : undefined;
   const weekly = weeklyReport
-    ? mapWeeklyDashboardData({
-        weeklyReport,
-        pendingCount: queue?.pendingLeads.length ?? 0,
-      })
+    ? mapWeeklyDashboardData({ weeklyReport })
     : undefined;
   return {
     queue,

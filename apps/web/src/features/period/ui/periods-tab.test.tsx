@@ -271,6 +271,45 @@ describe("PeriodsTab", () => {
     });
   });
 
+  it("requires confirmation and cancels publish without side effects", async () => {
+    const user = userEvent.setup();
+    const { captured } = renderTab();
+    const publishEntry = expectDefined(captured["period.publish"]);
+
+    await user.click(await screen.findByTestId(`action-publish-${openRow.id}`));
+
+    expect(
+      screen.getByRole("alertdialog", { name: "Publish this period?" }),
+    ).toBeInTheDocument();
+    expect(publishEntry.mutationFn).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(publishEntry.mutationFn).not.toHaveBeenCalled();
+  });
+
+  it("confirms publish exactly once and blocks duplicate confirmation while pending", async () => {
+    const user = userEvent.setup();
+    const { captured } = renderTab();
+    const publishEntry = expectDefined(captured["period.publish"]);
+    const pending = Promise.withResolvers<{ success: true }>();
+    publishEntry.mutationFn.mockReturnValueOnce(pending.promise);
+
+    await user.click(await screen.findByTestId(`action-publish-${openRow.id}`));
+    await user.click(screen.getByRole("button", { name: "Publish" }));
+
+    await user.click(screen.getByRole("button", { name: "Publishing…" }));
+    expect(publishEntry.mutationFn).toHaveBeenCalledTimes(1);
+    expect(publishEntry.mutationFn.mock.calls[0]?.[0]).toEqual({
+      reportId: openRow.id,
+    });
+    pending.resolve({ success: true });
+    await waitFor(() =>
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
+    );
+  });
+
   it("requires confirmation and cancels reopen without side effects", async () => {
     const user = userEvent.setup();
     const { captured } = renderTab();

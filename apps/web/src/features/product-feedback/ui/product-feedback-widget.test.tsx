@@ -72,9 +72,11 @@ beforeEach(() => {
 });
 
 describe("ProductFeedbackWidget", () => {
-  it("remounts the native client only when a cached page is restored", () => {
+  it("remounts the native client only when a cached page is restored", async () => {
     const view = render(<ProductFeedbackWidget />);
-    const original = screen.getByText("Agentation endpoint /api/v1/agentation");
+    const original = await screen.findByText(
+      "Agentation endpoint /api/v1/agentation",
+    );
 
     fireEvent(
       window,
@@ -104,7 +106,6 @@ describe("ProductFeedbackWidget", () => {
   });
 
   it("shows an honest persistent status and remounts native retry", async () => {
-    vi.useFakeTimers();
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -122,9 +123,11 @@ describe("ProductFeedbackWidget", () => {
 
     try {
       render(<ProductFeedbackWidget />);
-      const originalWidget = screen.getByText(
+      // The lazy toolbar must load on real timers before the clock is faked.
+      const originalWidget = await screen.findByText(
         "Agentation endpoint /api/v1/agentation",
       );
+      vi.useFakeTimers();
       const props = agentation.mock.calls.at(-1)?.[0];
       if (!props?.onAnnotationAdd || !props.onSessionCreated)
         throw new Error("Agentation delivery callbacks were not supplied");
@@ -171,9 +174,11 @@ describe("ProductFeedbackWidget", () => {
     }
   });
 
-  it("remounts the native client when the authenticated actor changes", () => {
+  it("remounts the native client when the authenticated actor changes", async () => {
     const view = render(<ProductFeedbackWidget />);
-    const original = screen.getByText("Agentation endpoint /api/v1/agentation");
+    const original = await screen.findByText(
+      "Agentation endpoint /api/v1/agentation",
+    );
     mockedSession.mockReturnValue({
       user: {
         id: "user-2",

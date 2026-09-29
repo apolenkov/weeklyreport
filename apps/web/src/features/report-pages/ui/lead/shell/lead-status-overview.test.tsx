@@ -325,10 +325,14 @@ function Wrapper({
   );
 }
 
+// vi.waitFor defaults to 1 s, which heavy renders exceed under suite load.
+const pollUntil = <T,>(check: () => T | Promise<T>) =>
+  vi.waitFor(check, { timeout: 5000 });
+
 async function itemPreview(text: string): Promise<HTMLElement> {
   // The item text also renders in the details section; poll until the
   // overview preview that owns the row actions exists.
-  return vi.waitFor(() => {
+  return pollUntil(() => {
     const preview =
       screen
         .queryAllByText(text)
@@ -432,7 +436,7 @@ describe("LeadForm Overview", () => {
     await user.click(screen.getByRole("radio", { name: "Next week" }));
     await user.click(screen.getByRole("button", { name: "Save update" }));
 
-    await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledOnce());
+    await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
     const occurrences = (
       saveDraft.mock.calls[0]?.[0] as {
         readonly items: ReportSectionReadModel["items"];
@@ -587,7 +591,7 @@ describe("LeadForm Overview", () => {
       within(composer).getByRole("button", { name: "Save outcome" }),
     );
 
-    await vi.waitFor(() => expect(resolvePlan).toHaveBeenCalledTimes(1));
+    await pollUntil(() => expect(resolvePlan).toHaveBeenCalledTimes(1));
     expect(resolvePlan.mock.calls[0]?.[0]).toMatchObject({
       source: {
         kind: "prior",
@@ -597,7 +601,7 @@ describe("LeadForm Overview", () => {
       outcome: "plan_next",
       text: "Deferred provider rollout",
     });
-    await vi.waitFor(() =>
+    await pollUntil(() =>
       expect(
         screen.queryByRole("button", { name: "Replan deferred work" }),
       ).not.toBeInTheDocument(),
@@ -638,12 +642,12 @@ describe("LeadForm Overview", () => {
     await user.click(
       within(editor).getByRole("button", { name: "Save update" }),
     );
-    await vi.waitFor(() =>
+    await pollUntil(() =>
       expect(
         screen.queryByRole("form", { name: "Next week update for Payments" }),
       ).not.toBeInTheDocument(),
     );
-    await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledOnce());
+    await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
     expect(resolvePlan).not.toHaveBeenCalled();
     const done = (
       saveDraft.mock.calls[0]?.[0] as {
@@ -711,7 +715,7 @@ describe("LeadForm Overview", () => {
     await user.click(
       within(composer).getByRole("button", { name: "Save outcome" }),
     );
-    await vi.waitFor(() => expect(resolvePlan).toHaveBeenCalledOnce());
+    await pollUntil(() => expect(resolvePlan).toHaveBeenCalledOnce());
     expect(resolvePlan.mock.calls[0]?.[0]).toMatchObject({
       outcome: "wont_do",
       reason: "The dependency was retired",
@@ -770,7 +774,7 @@ describe("LeadForm Overview", () => {
     await user.click(
       within(form).getByRole("button", { name: "Save outcome" }),
     );
-    await vi.waitFor(() => expect(resolvePlan).toHaveBeenCalledTimes(2));
+    await pollUntil(() => expect(resolvePlan).toHaveBeenCalledTimes(2));
     expect(resolvePlan.mock.calls[1]?.[0]).toEqual(
       resolvePlan.mock.calls[0]?.[0],
     );
@@ -996,7 +1000,7 @@ describe("LeadForm Overview", () => {
       }
       await user.click(screen.getByRole("button", { name: "Save update" }));
 
-      await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledTimes(2));
+      await pollUntil(() => expect(saveDraft).toHaveBeenCalledTimes(2));
 
       const expected = editAfterFailure
         ? "Retained retry value plus correction"
@@ -1189,8 +1193,8 @@ describe("LeadForm Overview", () => {
     await user.type(description, "Current work");
     await user.click(screen.getByRole("button", { name: "Save update" }));
 
-    await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledOnce());
-    await vi.waitFor(() =>
+    await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
+    await pollUntil(() =>
       expect(
         screen.queryByRole("form", {
           name: "Current week update for Payments",
@@ -1278,7 +1282,7 @@ describe("LeadForm Overview", () => {
     );
     await user.click(screen.getByRole("button", { name: "Save update" }));
 
-    await vi.waitFor(() =>
+    await pollUntil(() =>
       expect(
         screen.queryByRole("form", {
           name: "Current week update for Analytics",
@@ -1344,8 +1348,8 @@ describe("LeadForm Overview", () => {
     ).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Save update" }));
 
-    await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledTimes(2));
-    await vi.waitFor(() =>
+    await pollUntil(() => expect(saveDraft).toHaveBeenCalledTimes(2));
+    await pollUntil(() =>
       expect(
         screen.queryByRole("form", {
           name: "Current week update for Analytics",
@@ -1384,7 +1388,7 @@ describe("LeadForm Overview", () => {
     expect(saveDraft).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Save update" }));
-    await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledOnce());
+    await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
     const moved = (
       saveDraft.mock.calls[0]?.[0] as {
         readonly items: ReportSectionReadModel["items"];
@@ -1497,14 +1501,14 @@ describe("LeadForm Overview", () => {
     await user.click(
       within(editor).getByRole("button", { name: "Save update" }),
     );
-    await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledOnce());
+    await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
     const saved = (
       saveDraft.mock.calls[0]?.[0] as {
         readonly items: ReportSectionReadModel["items"];
       }
     ).items.find((item) => item.text === "Current work");
     expect(saved).toMatchObject({ carriedOver: false });
-    await vi.waitFor(() =>
+    await pollUntil(() =>
       expect(
         screen.queryByText("Continued · not updated this week"),
       ).toBeNull(),
@@ -1552,7 +1556,7 @@ describe("LeadForm Overview", () => {
     await user.click(screen.getByRole("button", { name: "! In Progress" }));
     await user.click(screen.getByRole("button", { name: "Save update" }));
 
-    await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledOnce());
+    await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
     const saved = (
       saveDraft.mock.calls[0]?.[0] as {
         readonly items: ReportSectionReadModel["items"];
@@ -1695,10 +1699,10 @@ describe("LeadForm Overview", () => {
 
     await user.click(screen.getByRole("button", { name: "Save update" }));
 
-    await vi.waitFor(() => expect(promotePlan).toHaveBeenCalledOnce());
+    await pollUntil(() => expect(promotePlan).toHaveBeenCalledOnce());
     expect(promotePlan.mock.calls[0]?.[0]).toMatchObject({ target: "next" });
     expect(saveDraft).not.toHaveBeenCalled();
-    await vi.waitFor(() =>
+    await pollUntil(() =>
       expect(
         screen.queryByRole("form", { name: "Next week update for Payments" }),
       ).not.toBeInTheDocument(),
@@ -1774,7 +1778,7 @@ describe("LeadForm Overview", () => {
       await user.type(editedField, " after retry");
       await user.click(screen.getByRole("button", { name: "Save update" }));
 
-      await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledTimes(2));
+      await pollUntil(() => expect(saveDraft).toHaveBeenCalledTimes(2));
       const retryItems = (
         saveDraft.mock.calls[1]?.[0] as {
           readonly items: ReportSectionReadModel["items"];
