@@ -3,7 +3,7 @@ import type { UserSession } from "@customreport/shared";
 import type { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { hydrateSession } from "../infrastructure/trpc/trpc.session-hydration.js";
 import type { SessionRevocationService } from "../modules/admin/index.js";
-import { isUserAccessBarred } from "../modules/auth/index.js";
+import { readLiveAccess } from "../modules/auth/index.js";
 
 export interface HumanSessionDeps {
   readonly verifySessionToken: (token: string) => UserSession;
@@ -26,14 +26,23 @@ export async function resolveHumanSession(
     }
   })();
   if (!session) return null;
-  if (
-    await isUserAccessBarred(
-      session.userId,
-      deps.prisma,
-      deps.sessionRevocation,
-    )
-  ) {
-    return null;
-  }
-  return hydrateSession(session, deps.prisma);
+  const live = await readLiveAccess(
+    session.userId,
+    deps.prisma,
+    deps.sessionRevocation,
+  );
+  if (!live) return null;
+  // Role and group come from the database, not the JWT, so an admin change
+  // takes effect on the next request (jwt-session-integrity).
+  const { reportingGroupId: _stale, ...rest } = session;
+  return hydrateSession(
+    {
+      ...rest,
+      role: live.role,
+      ...(live.reportingGroupId
+        ? { reportingGroupId: live.reportingGroupId }
+        : {}),
+    },
+    deps.prisma,
+  );
 }

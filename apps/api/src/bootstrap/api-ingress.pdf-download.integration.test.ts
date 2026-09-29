@@ -106,7 +106,13 @@ function makeFixture(job: PdfJob | null): Fixture {
   const findJob = vi.fn(() => Promise.resolve(job));
   const prisma = {
     user: {
-      findUnique: vi.fn(() => Promise.resolve({ isActive: true })),
+      findUnique: vi.fn(() =>
+        Promise.resolve({
+          isActive: true,
+          role: "head",
+          reportingGroupId: null,
+        }),
+      ),
     },
     organization: {
       findUnique: vi.fn(() =>
