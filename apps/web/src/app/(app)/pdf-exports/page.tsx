@@ -8,7 +8,12 @@ export default function PdfExportsPage() {
       className="min-h-screen bg-[var(--color-background)]"
     >
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <PdfRecoverySection />
+        <div className="space-y-6">
+          <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
+            PDF exports
+          </h1>
+          <PdfRecoverySection />
+        </div>
       </div>
     </main>
   );
