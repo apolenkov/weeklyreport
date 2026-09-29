@@ -1,6 +1,7 @@
 # dependency-integrity Specification
 
 ## Purpose
+
 Ensures WeeklyReport installs and executes published dependency artifacts without carrying repository-local rewrites of third-party package contents.
 
 ## Requirements

@@ -1,6 +1,7 @@
 # weekly-activity-presentation Specification
 
 ## Purpose
+
 Allow a lead to describe an Activity for a particular report week without changing the shared catalogue or another report's published presentation.
 
 ## Requirements
