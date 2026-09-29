@@ -12,8 +12,8 @@ production point.
 
 The durable SDLC record MUST distinguish repository-declared controls, locally
 executed evidence, live externally verified settings, and unverified or
-unavailable controls. It MUST NOT present a checked-in workflow as proof that a
-GitHub rule, deployment environment, release, backup target, or alert receiver
+unavailable controls. It MUST NOT present a checked-in pipeline as proof that a
+platform rule, deployment environment, release, backup target, or alert receiver
 is active.
 
 #### Scenario: An administrative API returns forbidden

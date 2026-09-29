@@ -7,8 +7,7 @@ exists.
 
 ## Report a vulnerability privately
 
-Use GitHub private vulnerability reporting or a private repository security
-advisory when that feature is available. Otherwise contact the repository owner
+Use a confidential GitLab issue when that feature is available. Otherwise contact the repository owner
 through an already approved private work channel.
 
 Do not put a suspected secret, exploit, user record, access token, private log,
@@ -60,7 +59,7 @@ detect -> pause publish/deploy
 
 Do not reuse an artifact whose source, builder identity, dependency graph, or
 provenance is uncertain. Database recovery is a separate destructive decision;
-follow [the operations runbook](../docs/operations.md) and do not represent an
+follow [the operations runbook](docs/operations.md) and do not represent an
 image rollback as a schema rollback.
 
 ## Disclosure

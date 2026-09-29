@@ -1,10 +1,9 @@
 # Current accountable owner for repository changes.
 * @apolenkov
 
-# Repository policy and automation
-/.github/CODEOWNERS @apolenkov
-/.github/workflows/ @apolenkov
-/.github/SECURITY.md @apolenkov
+# Repository policy
+/.gitlab/CODEOWNERS @apolenkov
+/SECURITY.md @apolenkov
 
 # Data model, release topology, and operational controls
 /prisma/schema.prisma @apolenkov

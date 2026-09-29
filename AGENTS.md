@@ -185,10 +185,7 @@ remote; owner decision-067). `.gitlab-ci.yml` is the CI that targets this
 remote and carries only lint/test lanes (owner decision 2026-09-28): quality,
 coverage, API integration, migrate-reset, and the dependency audit on the
 shared Docker runner, with in-job loopback PostgreSQL and Redis/Mailpit service
-aliases — no DinD, image builds, or operational checks. `.github/workflows/`
-still declares the fuller pipeline (production build, Docker build) but no
-GitHub remote is configured, so those files are not evidence of execution.
-Production build, PDF, and browser acceptance stay outside CI. Do not treat a
+aliases — no DinD, image builds, or operational checks. Production build, PDF, and browser acceptance stay outside CI. Do not treat a
 runnable GitLab pipeline as full acceptance. Use `docs/exemplary-code-standard.md#verification` for local
 acceptance.
 
