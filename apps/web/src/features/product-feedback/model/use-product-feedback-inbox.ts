@@ -7,10 +7,14 @@ import {
   type FeedbackType,
 } from "@customreport/shared";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { z } from "zod";
 
 type FilterValue<T extends string> = T | "all";
 const FEEDBACK_UPDATE_ERROR = "Feedback update failed";
 const SAME_ORIGIN = "same-origin";
+const feedbackInboxSchema = z.object({
+  feedback: z.array(feedbackResponseSchema),
+});
 interface FeedbackInboxItem {
   readonly id: string;
   readonly type: FeedbackType;
@@ -76,13 +80,8 @@ export function useProductFeedbackInbox(onError: () => void) {
         },
       );
       if (!response.ok) throw new Error("Feedback request failed");
-      const payload = (await response.json()) as { feedback: unknown[] };
-      setItems(
-        payload.feedback.map((value) => {
-          const parsed = feedbackResponseSchema.parse(value);
-          return fromResponse(parsed);
-        }),
-      );
+      const payload = feedbackInboxSchema.parse(await response.json());
+      setItems(payload.feedback.map(fromResponse));
     } catch {
       setError(true);
       onErrorRef.current();

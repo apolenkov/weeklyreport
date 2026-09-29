@@ -1,4 +1,5 @@
 import { AI_PROVIDER_TEST_QUEUE_NAME } from "@customreport/shared";
+import { z } from "zod";
 
 import type { JobEnqueuer } from "../../../infrastructure/bullmq/job-enqueuer.js";
 
@@ -13,6 +14,11 @@ export type AiProviderTestJobData = Readonly<{
   tracestate?: string;
   executionId: string;
 }>;
+
+// Redis payloads are untrusted delivery data: the processor parses before use.
+export const aiProviderTestJobDataSchema = z.object({
+  executionId: z.string().min(1),
+});
 
 export type AiProviderTestEnqueuer = Readonly<{
   enqueue(job: AiProviderTestJobData): Promise<void>;

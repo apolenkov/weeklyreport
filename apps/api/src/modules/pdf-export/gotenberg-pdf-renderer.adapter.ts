@@ -158,6 +158,7 @@ export class GotenbergPdfRenderer implements PdfRenderer {
     } catch (error) {
       throw new Error(
         `pdf render request failed: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error },
       );
     }
   }
@@ -185,6 +186,7 @@ export class GotenbergPdfRenderer implements PdfRenderer {
       if (error instanceof RenderResponseTooLargeError) throw error;
       throw new Error(
         `pdf render body read failed: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error },
       );
     }
   }
