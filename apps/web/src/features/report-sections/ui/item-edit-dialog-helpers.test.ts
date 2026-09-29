@@ -23,7 +23,9 @@ describe("item description contract", () => {
 
   it("keeps invalid descriptions in the editor before mutating the draft", () => {
     expect(validate("").text).toBe("Description is required");
-    expect(validate("X".repeat(501)).text).toBeDefined();
+    expect(validate("X".repeat(501)).text).toBe(
+      "Description must be 500 characters or fewer.",
+    );
     expect(validate("\u200B").text).toBeDefined();
     expect(validate("text\u0000").text).toBeDefined();
   });
