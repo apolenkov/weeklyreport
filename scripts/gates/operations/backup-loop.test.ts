@@ -10,7 +10,8 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import test, { afterEach } from "node:test";
+
+import { afterEach, test } from "vitest";
 
 const backupScript = resolve("deploy/postgres/backup-loop.sh");
 const backupHealthScript = resolve("deploy/postgres/backup-health.sh");
@@ -115,7 +116,7 @@ const runBackupHealth = (interval: string) => {
   return { calls, result };
 };
 
-void test("rejects empty, zero, negative, and non-numeric backup settings", () => {
+test("rejects empty, zero, negative, and non-numeric backup settings", () => {
   for (const variable of ["BACKUP_INTERVAL_SECONDS", "BACKUP_RETENTION_DAYS"]) {
     for (const value of ["", "0", "-1", "1.5", "not-a-number", "9999999999"]) {
       const { calls, result } = runBackup({ [variable]: value });
@@ -130,7 +131,7 @@ void test("rejects empty, zero, negative, and non-numeric backup settings", () =
   }
 });
 
-void test("backup health rejects invalid cadence before filesystem inspection", () => {
+test("backup health rejects invalid cadence before filesystem inspection", () => {
   for (const value of ["", "0", "-1", "1.5", "not-a-number", "9999999999"]) {
     const { calls, result } = runBackupHealth(value);
     assert.equal(result.signal, null, `cadence=${value} was terminated`);
@@ -143,7 +144,7 @@ void test("backup health rejects invalid cadence before filesystem inspection", 
   }
 });
 
-void test("backup health normalizes leading-zero decimal cadence before arithmetic", () => {
+test("backup health normalizes leading-zero decimal cadence before arithmetic", () => {
   const { calls, result } = runBackupHealth("08");
   assert.equal(result.signal, null);
   assert.equal(calls, "find\n");
@@ -153,7 +154,7 @@ void test("backup health normalizes leading-zero decimal cadence before arithmet
   );
 });
 
-void test("a failed atomic publish cannot log success or prune retention", () => {
+test("a failed atomic publish cannot log success or prune retention", () => {
   const { calls, result } = runBackup(
     {},
     {
