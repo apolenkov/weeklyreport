@@ -1,7 +1,7 @@
 # Exemplary Code Standard
 
 This is the current maintainability standard for WeeklyReport. Product code is
-clear, typed, small, and tested. Repository checks and hooks enforce the
+clear, typed, small, and tested. Repository checks enforce the
 applicable rules.
 
 ## Principles
