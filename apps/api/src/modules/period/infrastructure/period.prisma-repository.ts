@@ -2,8 +2,6 @@ import { currentPeriodLifecycleSchema } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
-import { publishCompareAndSet } from "../../../lib/publish-compare-and-set.js";
-import { reopenCompareAndSet } from "../../../lib/reopen-compare-and-set.js";
 import { AdminPeriodOverlapError } from "../../admin/index.js";
 import {
   lockAllReminderPolicies,
@@ -15,7 +13,7 @@ import {
   reportFullIncludeForSnapshot,
   toPublishedSnapshotJson,
 } from "../../report-sections/index.js";
-import { replacePublishedProjections } from "../../search/index.js";
+import { freezePublishedSnapshot } from "../../search/index.js";
 import {
   WEEKLY_REPORT_LIFECYCLE,
   type WeeklyReportLifecyclePort,
@@ -33,6 +31,8 @@ import {
 } from "../application/period-factory.js";
 import type { PeriodLifecycleExpectation } from "../domain/period-lifecycle-expectation.js";
 import { buildTransition } from "../domain/period-transition.js";
+import { publishCompareAndSet } from "./publish-compare-and-set.js";
+import { reopenCompareAndSet } from "./reopen-compare-and-set.js";
 
 @Injectable()
 export class PeriodPrismaRepository implements PeriodRepository {
@@ -150,21 +150,9 @@ export class PeriodPrismaRepository implements PeriodRepository {
 
       await pauseReminderRulesForReport(tx, reportId);
 
-      // updateMany cannot carry an `include`, so read the row back to replace
-      // the provisional snapshot — still inside this transaction, so it stays
-      // atomic with the transition.
-      const published = await tx.report.findUniqueOrThrow({
-        where: { id: reportId },
-        include: reportFullIncludeForSnapshot,
-      });
-      const snapshot = buildAssembledReportFromPrismaRow(published);
-      await tx.report.update({
-        where: { id: reportId },
-        data: {
-          publishedSnapshot: toPublishedSnapshotJson(snapshot),
-        },
-      });
-      await replacePublishedProjections(tx, { reportId, snapshot });
+      // updateMany cannot carry an `include`, so re-read and replace the
+      // provisional snapshot inside this transaction to stay atomic.
+      await freezePublishedSnapshot(tx, reportId);
 
       return { transitioned: true };
     });

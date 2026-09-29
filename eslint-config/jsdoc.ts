@@ -1,6 +1,6 @@
 // JSDoc rule family — one cohesive policy module for published-package
 // exports. Kept out of eslint.config.ts so the lint policy hub stays a
-// composition root instead of one 1,200-line file owning every family's rules.
+// composition root instead of owning every family's rules.
 
 import type { Linter } from "eslint";
 import jsdoc from "eslint-plugin-jsdoc";

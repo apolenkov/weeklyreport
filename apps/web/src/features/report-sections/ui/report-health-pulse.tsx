@@ -1,6 +1,6 @@
 import type { MouseEvent } from "react";
 
-import { SlideStatusBadge } from "../../slides";
+import { SlideStatusBadge } from "../../../shared/ui/feedback/slide-status-badge";
 import type {
   ReportHealthPulse,
   ReportHealthUnit,

@@ -9,6 +9,7 @@ export {
   SearchService,
 } from "./application/search.service.js";
 export {
+  freezePublishedSnapshot,
   replacePublishedProjections,
   replaceRestoredPublishedProjections,
 } from "./published-search-projection.js";
