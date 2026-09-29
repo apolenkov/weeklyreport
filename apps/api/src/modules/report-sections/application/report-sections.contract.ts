@@ -70,18 +70,3 @@ export interface ReportSectionsRepository {
 }
 
 export const REPORT_SECTIONS_REPOSITORY = Symbol("ReportSectionsRepository");
-
-/** Runtime settings needed by section submission, deliberately independent of AdminModule. */
-export interface ReportSectionsGraceSettings {
-  gracePeriodHours: number;
-  allowLateSubmissions: boolean;
-}
-
-export const REPORT_SECTIONS_GRACE_SETTINGS = Symbol(
-  "ReportSectionsGraceSettings",
-);
-
-export type GetGraceSettings = () => Promise<{
-  gracePeriodHours: number;
-  allowLateSubmissions: boolean;
-}>;

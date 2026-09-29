@@ -9,11 +9,13 @@ import { lockCurrentEditableReport } from "../../../lib/report-lifecycle.js";
 import { lockStatusGraph } from "../../../lib/status-graph-lock.js";
 import { PeriodLifecycleIntegrityError } from "../../period/index.js";
 import {
+  ReportSectionAccessError,
   ReportSectionDomainError,
   ReportSectionNotFoundError,
   SectionVersionConflictError,
 } from "../application/report-sections.service";
 import { findPublishedRecordViolation } from "../domain/published-record-guard.js";
+import { evaluateSubmissionDeadline } from "../domain/submission-deadline.js";
 import { querySectionPublishedLineageTx } from "./published-lineage.transaction.js";
 import {
   captureRecordComments,
@@ -33,6 +35,42 @@ import {
   itemResolutionGuardSelect,
   preserveResolvedItemJson,
 } from "./save-section.item-resolutions";
+
+async function checkSubmissionDeadline(
+  tx: Prisma.TransactionClient,
+  section: ReportSectionReadModel,
+): Promise<ReportSectionReadModel> {
+  if (section.status !== "submitted") return section;
+  const report = await tx.report.findUnique({
+    where: { id: section.reportId },
+    select: { deadline: true },
+  });
+  if (!report) {
+    throw new ReportSectionNotFoundError("The report no longer exists.");
+  }
+  if (report.deadline === null) {
+    return { ...section, late: false, submittedAt: new Date() };
+  }
+  const settings = await tx.appSettings.findUnique({
+    where: { id: "singleton" },
+    select: { gracePeriodHours: true, allowLateSubmissions: true },
+  });
+  if (!settings) {
+    throw new Error(
+      "AppSettings singleton row 'singleton' is missing — apply the canonical init migration or restore the row.",
+    );
+  }
+  const submittedAt = new Date();
+  const gate = evaluateSubmissionDeadline(
+    report.deadline,
+    settings,
+    submittedAt.getTime(),
+  );
+  if (gate === "closed") {
+    throw new ReportSectionAccessError("Past deadline; submissions closed.");
+  }
+  return { ...section, late: gate === "late", submittedAt };
+}
 
 // Publish/save mutual exclusion: lock the parent report row FIRST (same lock
 // order as the publish tx — consistent ordering, no deadlock). A concurrent
@@ -71,8 +109,8 @@ async function bumpSectionVersion(
     data: {
       status: section.status,
       submittedAt: section.submittedAt,
-      // Persist the late flag computed by submitSection; saveDraft / reopen
-      // paths carry the prior value through mergeSection.
+      // Submission stamps late under the owning Report lock. Draft saves
+      // preserve the existing flag.
       late: section.late,
       version: { increment: 1 },
     },
@@ -187,8 +225,9 @@ export async function applySaveSection(
   const sectionId = section.reportSectionId;
 
   await lockReportForSave(tx, section.reportId);
-  await assertPublishedLineagePreserved(tx, section);
-  await bumpSectionVersion(tx, section, sectionId, expectedVersion);
+  const checkedSection = await checkSubmissionDeadline(tx, section);
+  await assertPublishedLineagePreserved(tx, checkedSection);
+  await bumpSectionVersion(tx, checkedSection, sectionId, expectedVersion);
 
   // The version CAS holds the section row before we inspect the rows that a
   // delete-recreate would otherwise erase. Client read metadata is ignored;
@@ -198,7 +237,7 @@ export async function applySaveSection(
     select: itemResolutionGuardSelect,
   });
   const resolutionByStableId = preserveResolvedItemJson(
-    section.items,
+    checkedSection.items,
     persistedItems,
   );
 
@@ -208,7 +247,7 @@ export async function applySaveSection(
   const capturedComments = await captureRecordComments(tx, sectionId);
 
   await clearSectionChildRows(tx, sectionId);
-  await recreateChildRows(tx, section, sectionId, resolutionByStableId);
+  await recreateChildRows(tx, checkedSection, sectionId, resolutionByStableId);
   // Atomic with the version bump above.
   await reinsertRecordComments(tx, sectionId, capturedComments);
 

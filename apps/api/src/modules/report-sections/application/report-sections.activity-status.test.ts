@@ -15,9 +15,6 @@ import {
   ReportSectionsService,
 } from "./report-sections.service";
 
-const testGraceSettings = () =>
-  Promise.resolve({ gracePeriodHours: 0, allowLateSubmissions: true });
-
 const SECTION_ID = "11111111-1111-4111-8111-111111111111";
 const REPORT_ID = "22222222-2222-4222-8222-222222222222";
 const AUTHOR_ID = "33333333-3333-4333-8333-333333333333";
@@ -118,10 +115,7 @@ function draftPayload(
 
 describe("ReportSectionsService — activity statuses on saveDraft", () => {
   it("folds written statuses onto the seeded set, keeping omitted entries", async () => {
-    const service = new ReportSectionsService(
-      createRepository([baseSection]),
-      testGraceSettings,
-    );
+    const service = new ReportSectionsService(createRepository([baseSection]));
 
     const saved = await service.saveDraft(
       draftPayload([
@@ -158,10 +152,7 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
   });
 
   it("keeps every seeded status when the payload supplies an empty slice", async () => {
-    const service = new ReportSectionsService(
-      createRepository([baseSection]),
-      testGraceSettings,
-    );
+    const service = new ReportSectionsService(createRepository([baseSection]));
 
     const saved = await service.saveDraft(draftPayload(), AUTHOR_ID);
 
@@ -169,10 +160,7 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
   });
 
   it("hard-rejects a status for an unattached activity", async () => {
-    const service = new ReportSectionsService(
-      createRepository([baseSection]),
-      testGraceSettings,
-    );
+    const service = new ReportSectionsService(createRepository([baseSection]));
 
     await expect(
       service.saveDraft(
@@ -186,10 +174,7 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
   });
 
   it("the reject is a ReportSectionDomainError (maps to BAD_REQUEST)", async () => {
-    const service = new ReportSectionsService(
-      createRepository([baseSection]),
-      testGraceSettings,
-    );
+    const service = new ReportSectionsService(createRepository([baseSection]));
 
     await expect(
       service.saveDraft(
@@ -209,10 +194,7 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
         (activity) => activity.activityId !== ACTIVITY_B,
       ),
     };
-    const service = new ReportSectionsService(
-      createRepository([afterDetach]),
-      testGraceSettings,
-    );
+    const service = new ReportSectionsService(createRepository([afterDetach]));
 
     const saved = await service.saveDraft(
       draftPayload([{ activityId: ACTIVITY_A, status: "yellow" }]),
@@ -232,10 +214,7 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
         (activity) => activity.activityId !== ACTIVITY_B,
       ),
     };
-    const service = new ReportSectionsService(
-      createRepository([afterDetach]),
-      testGraceSettings,
-    );
+    const service = new ReportSectionsService(createRepository([afterDetach]));
 
     await expect(
       service.saveDraft(
@@ -258,7 +237,7 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
       authorName: "Lead 2",
     };
     const repository = createRepository([baseSection, sectionB]);
-    const service = new ReportSectionsService(repository, testGraceSettings);
+    const service = new ReportSectionsService(repository);
 
     await service.saveDraft(
       draftPayload([{ activityId: ACTIVITY_A, status: "red" }]),

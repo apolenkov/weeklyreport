@@ -96,3 +96,29 @@ The Lead report chat MUST render `provider_unavailable` using the existing assis
 - **WHEN** the assistant procedure returns `provider_unavailable`
 - **THEN** the Sheet explains that the AI service is temporarily unavailable
 - **AND** the Lead can retry the same active exchange
+
+### Requirement: Provider retry waits honor request cancellation
+
+The OpenAI-compatible transport MUST stop a pending retry wait when its request
+signal is cancelled and MUST NOT begin another provider attempt. The assistant
+MUST then release its lease through the existing terminal cleanup. Without
+cancellation, existing transient classification, at most three attempts and
+at most five seconds of cumulative retry waiting MUST remain unchanged.
+
+#### Scenario: Lease is lost during provider backoff
+
+- **WHEN** lease loss cancels the request while a transient provider failure
+  is waiting for its retry
+- **THEN** the assistant promptly returns `resource_limited`, releases its lease
+  and sends no second provider request
+
+#### Scenario: Request is already cancelled
+
+- **WHEN** the transport receives an already cancelled request signal
+- **THEN** no provider attempt starts
+
+#### Scenario: Provider succeeds after a permitted retry
+
+- **WHEN** a transient failure is retried without cancellation
+- **THEN** the successful result is returned within the existing attempt/wait
+  limits and error classification remains unchanged

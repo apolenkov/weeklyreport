@@ -172,3 +172,39 @@ telemetry to an external service.
 
 - **WHEN** the final integrated Next.js production build completes
 - **THEN** its emitted server output contains the instrumentation artifact
+
+### Requirement: Forwarded browser log events omit private free text
+
+The opt-in browser log forwarding surface and its API ingress MUST project
+events before they reach AppLogger. Stored and forwarded events MUST NOT carry
+raw console arguments, error messages, stacks, user agents, URL credentials,
+query strings or fragments. Only recognized event-source labels, fixed
+diagnostic messages, level, timestamp, safe HTTP(S) URL origin/path and trusted
+request attribution/correlation MAY reach the existing log sinks. Unknown URL
+forms MUST be omitted. Existing opt-in and volume bounds MUST remain in force.
+
+#### Scenario: Browser forwards an error containing private data
+
+- **WHEN** console, window-error or unhandled-rejection data contains a private
+  marker in text, stack, URL credentials, query or fragment
+- **THEN** the forwarding batch and all configured API log sinks omit the marker
+- **AND** source, severity and request correlation remain available
+
+#### Scenario: Caller sends a raw batch directly to the API
+
+- **WHEN** a client bypasses browser projection and submits raw private fields
+  or an unrecognized source to the client-log ingress
+- **THEN** API projection omits those fields or rejects the malformed batch
+- **AND** raw free text does not reach stdout, stderr, file or OTel log sinks
+
+### Requirement: Denied search audit records category without query text
+
+The `search.query` denial audit MUST retain actor, role, request IP, correlation
+and attempted scope, but MUST use a fixed search category as resource identity.
+The rejected `q` value MUST NOT reach any configured application log sink.
+
+#### Scenario: Search scope is denied
+
+- **WHEN** a Lead or Viewer requests a forbidden search scope with private text
+- **THEN** the existing scope-denied event identifies `search.query`
+- **AND** it retains actor attribution without the query text

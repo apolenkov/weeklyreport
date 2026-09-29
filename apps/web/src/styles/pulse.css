@@ -69,6 +69,7 @@
 /* ───── Tagline under PulseMark (cycling with fade) ───── */
 
 .pulse-tagline {
+  opacity: 1;
   font-family: var(--font-sans);
   font-size: clamp(0.9rem, 0.6vw + 0.7rem, 1.05rem);
   letter-spacing: 0.01em;
@@ -83,6 +84,17 @@
      (FADE_MS) — the single source for the swap timing. */
   transition-property: opacity;
   transition-timing-function: ease-in-out;
+}
+
+.pulse-tagline[data-visible="false"] {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-tagline[data-visible] {
+    opacity: 1;
+    transition-property: none;
+  }
 }
 
 /* ───── Background — gradient + dot grid ───── */

@@ -151,7 +151,7 @@ describe("mergeSection traffic-light aggregation", () => {
   });
 
   it("stamps the injected now as submittedAt on submit (deterministic seam)", () => {
-    const merged = mergeSection(section, baseInput, "submitted", NOW, false);
+    const merged = mergeSection(section, baseInput, "submitted", NOW);
 
     expect(merged.submittedAt?.toISOString()).toBe(NOW.toISOString());
   });

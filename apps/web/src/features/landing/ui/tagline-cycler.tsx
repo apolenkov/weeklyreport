@@ -44,8 +44,8 @@ function CyclingTagline() {
   return (
     <p
       className="pulse-tagline"
+      data-visible={visible}
       style={{
-        opacity: visible ? 1 : 0,
         transitionDuration: `${TAGLINE_FADE_MS}ms`,
       }}
       suppressHydrationWarning

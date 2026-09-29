@@ -25,6 +25,39 @@ describe("requireApiUrl", () => {
     vi.stubEnv("API_URL", "http://api.internal:3001");
     expect(requireApiUrl()).toBe("http://api.internal:3001");
   });
+
+  it.each([
+    " ".repeat(3),
+    "not-a-url",
+    "/api",
+    "//api.internal:3002",
+    "http:api.internal:3002",
+    "ftp://api.internal",
+    "file:///tmp/api",
+    "https://user:secret-marker@api.internal",
+    "https://user@api.internal",
+    "https://api.internal?token=secret-marker",
+    "https://api.internal#secret-marker",
+  ])("rejects invalid API_URL %s without echoing its contents", (value) => {
+    vi.stubEnv("API_URL", value);
+    expect(() => requireApiUrl()).toThrow(/API_URL/);
+    expect(() => requireApiUrl()).not.toThrow(/secret-marker/);
+  });
+
+  it.each([
+    ["http://localhost:3002/", "http://localhost:3002"],
+    ["http://api:3002", "http://api:3002"],
+    ["https://api.internal/base/", "https://api.internal/base"],
+    ["HTTPS://api.internal/base/", "https://api.internal/base"],
+    ["http://api:3001///", "http://api:3001"],
+    [
+      "https://api.internal/base//nested///",
+      "https://api.internal/base//nested",
+    ],
+  ])("normalizes %s for appending API routes", (input, expected) => {
+    vi.stubEnv("API_URL", input);
+    expect(requireApiUrl()).toBe(expected);
+  });
 });
 
 describe("decodeTrpcBatchPayload", () => {

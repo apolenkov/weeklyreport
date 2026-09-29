@@ -36,7 +36,9 @@ choice, but the displayed text MUST come from the curated array.
 ### Requirement: Tagline Rotation Animates Without Layout Shift
 
 Transitions between taglines MUST use a fade-in/fade-out animation (CSS
-opacity ≤ 300ms) when a timed-rotation strategy is chosen. The hero
+opacity ≤ 300ms) when a timed-rotation strategy is chosen and the visitor has
+not requested reduced motion. With prefers-reduced-motion: reduce, the tagline
+MUST remain readable throughout rotation without the opacity fade. The hero
 container MUST reserve enough height for the longest tagline so a
 rotation does NOT cause cumulative layout shift on the hero region.
 
@@ -45,6 +47,12 @@ rotation does NOT cause cumulative layout shift on the hero region.
 - **WHEN** the rotation transitions from a short tagline to a longer one
 - **THEN** the hero container height does NOT change
 - **AND** the fade-in/fade-out transition runs smoothly (no flash of unstyled content)
+
+#### Scenario: Visitor requests reduced motion
+
+- **WHEN** the browser reports prefers-reduced-motion: reduce during rotation
+- **THEN** the tagline remains opaque and has no opacity transition
+- **AND** its text and reserved layout remain readable and stable
 
 ### Requirement: Hero Brand Wordmark Reads "Weekly Report"
 

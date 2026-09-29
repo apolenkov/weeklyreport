@@ -11,9 +11,6 @@ import {
   ReportSectionsService,
 } from "./report-sections.service";
 
-const testGraceSettings = () =>
-  Promise.resolve({ gracePeriodHours: 0, allowLateSubmissions: true });
-
 const SECTION_ID = "11111111-1111-4111-8111-111111111111";
 const PROJECT_ID = "44444444-4444-4444-8444-444444444444";
 const PUBLISHED_ITEM_LINEAGE = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -124,7 +121,6 @@ describe("resolve-not-delete save guard", () => {
   it("rejects a saveDraft whose payload drops a published-lineage item", async () => {
     const service = new ReportSectionsService(
       createRepository([PUBLISHED_ITEM_LINEAGE]),
-      testGraceSettings,
     );
     const payload = basePayload();
     await expect(
@@ -143,7 +139,6 @@ describe("resolve-not-delete save guard", () => {
   it("rejects a payload that rewrites the published stableId (identity evasion)", async () => {
     const service = new ReportSectionsService(
       createRepository([PUBLISHED_ITEM_LINEAGE]),
-      testGraceSettings,
     );
     const payload = basePayload();
     await expect(
@@ -164,7 +159,6 @@ describe("resolve-not-delete save guard", () => {
   it("allows deleting a never-published draft record", async () => {
     const service = new ReportSectionsService(
       createRepository([PUBLISHED_ITEM_LINEAGE]),
-      testGraceSettings,
     );
     const payload = basePayload();
     const saved = await service.saveDraft(
@@ -183,7 +177,6 @@ describe("resolve-not-delete save guard", () => {
   it("allows resolving a published record in place (mark done, same lineage)", async () => {
     const service = new ReportSectionsService(
       createRepository([PUBLISHED_ITEM_LINEAGE]),
-      testGraceSettings,
     );
     const payload = basePayload();
     const saved = await service.saveDraft(
