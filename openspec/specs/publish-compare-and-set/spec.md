@@ -292,3 +292,18 @@ ahead of the scheduler is never recorded as an auto-publish audit event.
   write, so `publishAuto` returns `{ published: false }`
 - **WHEN** the scheduler processes that outcome
 - **THEN** it skips the audit, log, and missing-sections count.
+
+### Requirement: Manual publish requires a submitted section
+
+`PeriodPrismaRepository.publishPeriod` MUST, inside the publish transaction and
+after the guarded publish compare-and-set, count the report's sections with
+`status: "submitted"`. When the count is zero it MUST throw `PeriodAccessError`
+so the whole transaction rolls back, leaving the period open. The check runs
+before reminder-rule pausing and published-snapshot freezing. Automatic publish
+keeps its own predicate and is not governed by this requirement.
+
+#### Scenario: Publication with no submitted section is rejected
+
+- **WHEN** a manual publish is attempted on a report with zero submitted sections
+- **THEN** the call rejects with `PeriodAccessError`
+- **AND** the report remains `open` with no published snapshot
