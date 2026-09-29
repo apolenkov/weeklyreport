@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This file provides guidance to Codex when working with code in this repository.
+This file provides guidance to coding agents working in this repository.
 
 Global language and response-style preferences live in `~/.codex/AGENTS.md`.
 Keep this file limited to WeeklyReport-specific context.
@@ -33,33 +33,10 @@ Keep this file limited to WeeklyReport-specific context.
   Do not expand local permission to production, shared/unknown data, credentials,
   paid actions, external messages, or publication. Database safety below still applies.
 - Inspect the actual handler before activating a UI control whose side effects
-  are unclear. Distinguish opening a form from submitting it and local input from
-  autosave. Use known fixtures and record the relevant pre-state before lifecycle
-  tests; never infer reversibility from a button label.
-- If a test unexpectedly changes state, disclose the effect once, inspect it,
-  and recover autonomously when the recovery is known, scoped, and authorized.
-  Otherwise isolate that record/scenario and continue independent checks. An
-  optional rollback or one unavailable fixture must not block the entire task.
-- Resolve routine choices from code, specs, existing data, and tools. Ask only
-  when a material decision or new authority is genuinely necessary; name the
-  exact affected step and continue all work that does not depend on the answer.
-  Do not repeatedly request confirmation for an already authorized action.
-- After at least two explicit requests for the same owner decision receive no
-  answer and all independent work is exhausted, invoke one bounded read-only
-  `independent_advisor` on that unresolved choice. For reversible local-MVP product,
-  architecture, risk, scope, or trade-off decisions, the coordinator may adopt
-  a clear advisor recommendation and continue autonomously, recording the
-  reason, verdict, assumptions, and resulting decision in Backlog/OpenSpec as
-  applicable. An inconclusive or conflicting verdict still returns to the
-  owner. This delegation does not authorize production/shared/unknown data,
-  credentials, paid actions, external messages or publication, destructive
-  operations without separate applicable owner authorization, or changes to
-  agreed acceptance criteria.
-- Keep acceptance evidence proportional and explicit: define the finite test
-  matrix, reuse equivalent evidence without hiding exclusions, and report gaps.
-  Finish the requested outcome; do not replace it with repeated plans, status
-  messages, or an arbitrary screenshot count. Do not mark a goal blocked while
-  meaningful independent work remains, or complete while required checks remain.
+  are unclear; use known fixtures and record the pre-state before lifecycle
+  tests; never infer reversibility from a button label. If a test unexpectedly
+  changes state, disclose it once, recover when the recovery is known and
+  authorized, otherwise isolate that record and continue.
 
 ## Project
 
@@ -120,13 +97,9 @@ pnpm spec:check         # strict validation of all durable OpenSpec specs
 
 ## Database safety
 
-- All database operations listed under `Autonomy in the local MVP` hold
-  standing owner permission (decision 2026-09-23) and need no new confirmation
-  per run, command, table, or record. Credential lifecycle and any target or
-  state beyond this repository's local MVP/disposable scope still require
-  separate authority — including production, shared or unknown databases,
-  external publication or messages, unrelated containers/volumes/processes,
-  and deletion of source code or user-authored evidence.
+- Standing permission: see `Autonomy in the local MVP`. Credentials and any
+  target beyond this repository's local disposable scope still need separate
+  authority.
 - **The only disposable database candidates are `customreport_e2e` and the
   runtime-lane targets `customreport_e2e_lane_[a-o]_test`.** Destructive database
   work may target only those exact non-production databases.
@@ -215,29 +188,10 @@ acceptance.
 
 ## Task completion
 
-- Before editing, inspect the working tree and identify the files owned by this
-  task. Preserve pre-existing and concurrent edits, including edits in the same
-  file. Stage only task-owned changes; never clean up another task's work to
-  obtain a clean status.
-- Derive acceptance from the user's requested outcome and the relevant OpenSpec
-  contract. Include required checks and any requested commit, push, publication,
-  or live verification. Existing authorization remains valid within its scope;
-  do not add external delivery to a local task.
-- Tie results to the tested commit and relevant uncommitted changes. Reuse prior
-  passing checks only when their inputs remain applicable. Record unavailable
-  checks and exclusions explicitly; do not present them as passes.
-- Before finishing, inspect the task diff, remove temporary artifacts created
-  by this task, and reconcile affected instructions and specs with the result.
-  Report what changed, what passed, and the actual commit/push/publication state.
-  Completion requires every agreed delivery step; locally saved progress alone
-  does not complete a task whose requested delivery is still pending.
-- Worktrees, dev servers, disposable containers, and background processes
-  created for a task are temporary by default. At session end, remove every
-  task-owned worktree (`git worktree remove`) whose content is committed,
-  pushed, or explicitly archived — never leave a worktree alive solely to
-  hold an uncommitted diff (commit it, archive the diff as an artifact, or
-  discard it explicitly). Stop task-owned runtimes and containers. Foreign
-  worktrees and processes owned by other tasks/sessions stay untouched.
+General completion, verification and cleanup rules live in `~/.codex/AGENTS.md`.
+Project specifics: stage only task-owned changes (concurrent sessions edit
+this repo); remove task-owned worktrees, dev servers and containers at session
+end once their content is committed or archived.
 
 ## Browser verification
 
@@ -246,16 +200,5 @@ selected route for exercising the running app; the Reticle integration is
 removed. Tool-level runtime proof exists (navigation + screenshot on
 agent-browser 0.38.1); WeeklyReport UI acceptance through it is still pending —
 do not claim the route verifies this app until one real flow has produced
-verified evidence.
-
-- Name the explicit observable consequence before acting: a rendered change, a
-  network request, or a route/state transition. An action with no declared
-  consequence proves nothing.
-- Capture the evidence the claim needs — screenshots, DOM, and/or network
-  observations of the real app, not retold summaries.
-- Bind results to source identity (commit plus task-owned uncommitted files)
-  and a finite scenario set; report exclusions and gaps explicitly.
-- A failed or unknown outcome is not a PASS; report it as such.
-- Never weaken product acceptance to make a check green, and never present the
-  replacement route as working before its first verified flow. The
-  database-safety and permission boundaries above apply unchanged.
+verified evidence. Generic browser-evidence rules live in `~/.codex/AGENTS.md`;
+the database-safety and permission boundaries above apply unchanged.
