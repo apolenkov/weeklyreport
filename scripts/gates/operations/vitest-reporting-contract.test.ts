@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import test from "node:test";
+
+import { test } from "vitest";
 
 import { getVitestReporters } from "../../../vitest.base.config.ts";
 
-void test("Vitest keeps human output and opts into JSON only when requested", () => {
+test("Vitest keeps human output and opts into JSON only when requested", () => {
   const outputFile = "ci-report.json";
 
   assert.deepEqual(getVitestReporters({}), ["default"]);
@@ -31,7 +32,7 @@ void test("Vitest keeps human output and opts into JSON only when requested", ()
   );
 });
 
-void test("every repository Vitest runner inherits the shared reporter contract", () => {
+test("every repository Vitest runner inherits the shared reporter contract", () => {
   for (const path of [
     "apps/api/vitest.config.ts",
     "apps/api/vitest.coverage.config.ts",
@@ -45,7 +46,7 @@ void test("every repository Vitest runner inherits the shared reporter contract"
   }
 });
 
-void test("CI executes the combined API coverage contour exactly once", () => {
+test("CI executes the combined API coverage contour exactly once", () => {
   const gitlab = readFileSync(resolve(".gitlab-ci.yml"), "utf8");
   assert.equal(
     [...gitlab.matchAll(/@customreport\/api test:coverage/gu)].length,
@@ -59,7 +60,7 @@ void test("CI executes the combined API coverage contour exactly once", () => {
   assert.doesNotMatch(gitlabApiJob, /@customreport\/api test:integration/u);
 });
 
-void test("API verification summary fails closed when evidence is unusable", () => {
+test("API verification summary fails closed when evidence is unusable", () => {
   const gitlab = readFileSync(resolve(".gitlab-ci.yml"), "utf8");
   const gitlabApiJob = gitlab.slice(
     gitlab.indexOf("\napi-integration:"),
@@ -74,7 +75,7 @@ void test("API verification summary fails closed when evidence is unusable", () 
   assert.doesNotMatch(gitlabApiJob, /\|\| 0/u);
 });
 
-void test("coverage summary fails closed and reports the exact commit", () => {
+test("coverage summary fails closed and reports the exact commit", () => {
   const gitlab = readFileSync(resolve(".gitlab-ci.yml"), "utf8");
   const gitlabCoverageJob = gitlab.slice(
     gitlab.indexOf("\ncoverage:"),
