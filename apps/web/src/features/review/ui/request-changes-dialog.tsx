@@ -34,6 +34,8 @@ export function RequestChangesDialog({
   const trpc = useTRPC();
   const id = useId();
   const errorId = `${id}-error`;
+  const hintId = `${id}-hint`;
+  const counterId = `${id}-counter`;
   const surfaceRef = useRef<HTMLDivElement>(null);
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +66,7 @@ export function RequestChangesDialog({
   });
 
   const submit = () => {
+    if (isPending) return;
     const comment = reason.trim();
     if (comment === "") {
       setError(EMPTY_REASON_ERROR);
@@ -120,13 +123,13 @@ export function RequestChangesDialog({
             setError(null);
           }}
           aria-invalid={error ? "true" : "false"}
-          aria-describedby={error ? errorId : undefined}
+          aria-describedby={`${error ? errorId : hintId} ${counterId}`}
           placeholder="What should the lead change?…"
           className="w-full resize-y rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
         />
         <div className="flex items-start justify-between gap-2 text-[11px]">
           <p
-            id={error ? errorId : undefined}
+            id={error ? errorId : hintId}
             role={error ? "alert" : undefined}
             className={
               error
@@ -136,8 +139,8 @@ export function RequestChangesDialog({
           >
             {error ?? "The lead sees this note on the returned section."}
           </p>
-          <p className="text-[var(--color-muted-foreground)]">
-            {reason.length} / {REVIEW_COMMENT_MAX_LENGTH}
+          <p id={counterId} className="text-[var(--color-muted-foreground)]">
+            {reason.trim().length} / {REVIEW_COMMENT_MAX_LENGTH}
           </p>
         </div>
         <div className="mt-2 flex justify-end gap-3">
@@ -150,6 +153,7 @@ export function RequestChangesDialog({
           </button>
           <button
             type="submit"
+            disabled={isPending}
             data-interaction-effect="mutation-required"
             className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-destructive)] px-4 py-2 text-sm font-semibold text-[var(--color-destructive-foreground)] transition-opacity max-md:min-h-[var(--touch-target-min)] disabled:cursor-not-allowed disabled:opacity-50"
           >

@@ -88,7 +88,12 @@ export const reviewVerdictInputSchema = z
     // race with the head's revoke) transition exactly once.
     version: z.number().int().min(1),
     // Mandatory reason for changes_requested; forbidden for approved.
-    comment: safeText({ max: REVIEW_COMMENT_MAX_LENGTH }).optional(),
+    // Trimmed before the non-empty check so padding alone never counts.
+    comment: z
+      .string()
+      .trim()
+      .pipe(safeText({ max: REVIEW_COMMENT_MAX_LENGTH }))
+      .optional(),
   })
   .superRefine((value, ctx) => {
     const requested = value.verdict === "changes_requested";

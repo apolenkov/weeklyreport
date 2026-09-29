@@ -12,6 +12,6 @@ Owner decision 2026-09-29 (TASK-145.06): when the Head requests changes, a reaso
 
 ## Impact
 
-- Schema: one additive, forward-only migration adding a nullable `comment TEXT` column to `SectionReview`. This is why the change stops after design: the migration is not applied to any database in this task.
+- Schema: one additive, forward-only migration adding a nullable `comment TEXT` column to `SectionReview`. It is applied to the guarded local database `customreport_e2e`; other environments apply it through the normal deploy step.
 - Shared: `reviewVerdictInputSchema`, `sectionReviewViewSchema`. API: review-actions service, verdict write, review mapper. Web: `SectionVerdictControl`, `RequestChangesButton`, `LeadReviewFeedback`.
 - Existing rows: verdicts created before the migration keep `comment = NULL`. The view shows no comment for them and the UI shows no placeholder; nothing is backfilled. Approved verdicts always store `NULL`.

@@ -35,6 +35,15 @@ describe("reviewVerdictInputSchema comment rule", () => {
     expect(ok("x".repeat(REVIEW_COMMENT_MAX_LENGTH + 1))).toBe(false);
   });
 
+  it("trims the comment before validating and returning it", () => {
+    const parsed = reviewVerdictInputSchema.parse({
+      ...base,
+      verdict: "changes_requested",
+      comment: "  Add a risk owner.  ",
+    });
+    expect(parsed.comment).toBe("Add a risk owner.");
+  });
+
   it("accepts approved only without a comment", () => {
     expect(
       reviewVerdictInputSchema.safeParse({ ...base, verdict: "approved" })
