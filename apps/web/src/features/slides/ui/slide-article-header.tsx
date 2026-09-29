@@ -94,7 +94,7 @@ function PriorityAuthorBadge({
       <span
         data-testid="slide-priority-author-badge"
         title="Unknown author"
-        className="inline-flex h-[15px] w-[22px] shrink-0 items-center justify-center rounded text-[8px] font-semibold text-[var(--color-foreground)]"
+        className="inline-flex h-[18px] w-[26px] shrink-0 items-center justify-center rounded text-xs font-semibold text-[var(--color-foreground)]"
         style={{ background: "var(--color-muted)" }}
       >
         <span aria-hidden="true">?</span>
@@ -106,7 +106,7 @@ function PriorityAuthorBadge({
     <span
       data-testid="slide-priority-author-badge"
       title={author.name}
-      className="inline-flex h-[15px] w-[22px] shrink-0 items-center justify-center rounded text-[8px] font-semibold text-[var(--color-foreground)]"
+      className="inline-flex h-[18px] w-[26px] shrink-0 items-center justify-center rounded text-xs font-semibold text-[var(--color-foreground)]"
       style={{ background: authorSlotBackground(author) }}
     >
       <span aria-hidden="true">{author.initials}</span>
@@ -131,7 +131,7 @@ function PriorityCard({
             Mine hides the selected owner, so its tint stays neutral. */}
         <span
           data-testid="slide-priority-rank-badge"
-          className="inline-flex h-[15px] shrink-0 items-center rounded px-1 text-[8px] font-semibold text-[var(--color-foreground)]"
+          className="inline-flex h-[18px] shrink-0 items-center rounded px-1 text-xs font-semibold text-[var(--color-foreground)]"
           style={
             author === undefined || !showAuthorBadge
               ? { background: "var(--color-priority-row-bg)" }
@@ -140,7 +140,10 @@ function PriorityCard({
         >
           P{card.rank}
         </span>
-        <span className="min-w-0 whitespace-normal break-words text-xs text-[var(--color-foreground)]">
+        <span
+          title={card.text}
+          className="line-clamp-3 min-w-0 whitespace-normal break-words text-xs text-[var(--color-foreground)]"
+        >
           {card.text}
         </span>
       </div>
@@ -199,7 +202,7 @@ export function SlideLegend({
       {authors.map((author) => (
         <span key={author.id} className="inline-flex items-center gap-1.5">
           <span
-            className="inline-flex h-[15px] w-[22px] items-center justify-center rounded text-[8px] font-semibold text-[var(--color-foreground)]"
+            className="inline-flex h-[18px] w-[26px] items-center justify-center rounded text-xs font-semibold text-[var(--color-foreground)]"
             style={{ background: authorSlotBackground(author) }}
           >
             {author.initials}
