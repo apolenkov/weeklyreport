@@ -1,10 +1,12 @@
 import { Module } from "@nestjs/common";
+import { Redis } from "ioredis";
 
 import {
   ConfigModule,
   ENV_CONFIG,
 } from "../../infrastructure/config/config.module.js";
 import type { EnvConfig } from "../../infrastructure/config/env.schema";
+import { buildFailOpenRedisConnectionOptions } from "../../infrastructure/config/redis-connection";
 import { APP_LOGGER } from "../../lib/audit-logger.js";
 import type { AppLogger } from "../../lib/logger.js";
 import { PolicyApplicatorService } from "../reminders/index.js";
@@ -35,6 +37,8 @@ const focusedAdminProvider = <T>(
   inject: [AdminPrismaRepository, APP_LOGGER],
 });
 
+const SESSION_REVOCATION_REDIS = Symbol("SessionRevocationRedis");
+
 @Module({
   imports: [ConfigModule],
   providers: [
@@ -57,13 +61,20 @@ const focusedAdminProvider = <T>(
       ) => new ReopenRequestAdminService(repo, logger, telemetry),
       inject: [AdminPrismaRepository, APP_LOGGER, ADMIN_TELEMETRY],
     },
-    // The service builds its own ioredis client from the validated env when
-    // no test client is injected; the factory passes only env so the redis
-    // param stays undefined on the production path.
+    {
+      provide: SESSION_REVOCATION_REDIS,
+      useFactory: (env: EnvConfig) => {
+        const redis = new Redis(buildFailOpenRedisConnectionOptions(env));
+        // Suppress unhandled error events on transient Redis blips.
+        redis.on("error", () => undefined);
+        return redis;
+      },
+      inject: [ENV_CONFIG],
+    },
     {
       provide: SESSION_REVOCATION_DEPS,
-      useFactory: (env: EnvConfig, logger: AppLogger) => ({ env, logger }),
-      inject: [ENV_CONFIG, APP_LOGGER],
+      useFactory: (redis: Redis, logger: AppLogger) => ({ redis, logger }),
+      inject: [SESSION_REVOCATION_REDIS, APP_LOGGER],
     },
     SessionRevocationService,
     ActionLogPrismaRepository,

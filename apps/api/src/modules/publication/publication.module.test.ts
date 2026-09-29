@@ -2,6 +2,8 @@ import type { AssembledReport } from "@customreport/shared";
 import { MODULE_METADATA } from "@nestjs/common/constants.js";
 import { describe, expect, it, vi } from "vitest";
 
+import { APP_LOGGER } from "../../lib/audit-logger.js";
+import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import { AnalyticsCache } from "../analytics/index.js";
 import {
   PUBLICATION_REPOSITORY,
@@ -23,6 +25,7 @@ interface FactoryProvider {
     repo: PublicationRepository,
     analyticsCache: Pick<AnalyticsCache, "invalidateAll">,
     telemetry: PublicationTelemetry,
+    logger: AppLogger,
   ) => PublicationService;
   inject: unknown[];
 }
@@ -83,6 +86,7 @@ describe("PublicationModule wiring", () => {
       PUBLICATION_REPOSITORY,
       AnalyticsCache,
       PUBLICATION_TELEMETRY,
+      APP_LOGGER,
     ]);
 
     const invalidateAll = vi.fn(() => Promise.resolve());
@@ -101,6 +105,7 @@ describe("PublicationModule wiring", () => {
       repository,
       mockCache,
       NOOP_PUBLICATION_TELEMETRY,
+      createNullLogger(),
     );
 
     await service.publishAuto(reportId, new Date("2026-04-10T18:00:00.000Z"));

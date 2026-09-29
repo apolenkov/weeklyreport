@@ -55,6 +55,18 @@ describe("getOrgPublic", () => {
     expect(captureException).not.toHaveBeenCalled();
   });
 
+  it("bounds the upstream call with an AbortSignal", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve([{ result: { data: { json: ORG } } }]),
+    });
+
+    await getOrgPublic();
+
+    const init = expectDefined(fetchMock.mock.calls[0])[1] as RequestInit;
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
   it("uses the generic identity without network or error reporting during production build", async () => {
     vi.stubEnv("NEXT_PHASE", PHASE_PRODUCTION_BUILD);
 

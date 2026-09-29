@@ -63,6 +63,21 @@ describe("same-origin Sentry tunnel route", () => {
     );
   });
 
+  it("bounds the upstream forward with an AbortSignal", async () => {
+    vi.stubEnv("SENTRY_DSN", "https://public-key@bugsink.test/42");
+    const fetchMock = vi.fn<typeof fetch>(() =>
+      Promise.resolve(new Response(null, { status: 200 })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await POST(
+      makeRequest({ "content-type": "application/x-sentry-envelope" }),
+    );
+
+    const init = fetchMock.mock.calls[0]?.[1];
+    expect(init?.signal).toBeInstanceOf(AbortSignal);
+  });
+
   it("forwards the raw envelope to the configured endpoint", async () => {
     vi.stubEnv("SENTRY_DSN", "https://public-key@bugsink.test/42");
     vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://other-key@other.test/99");

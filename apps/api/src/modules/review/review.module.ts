@@ -1,5 +1,8 @@
 import { Module } from "@nestjs/common";
 
+import { ConfigModule } from "../../infrastructure/config/config.module.js";
+import { APP_LOGGER } from "../../lib/audit-logger.js";
+import type { AppLogger } from "../../lib/logger.js";
 import {
   REVIEW_REPOSITORY,
   type ReviewRepository,
@@ -14,6 +17,7 @@ import { ReviewPrismaRepository } from "./infrastructure/review.prisma-repositor
 import { ReviewActionsPrismaRepository } from "./infrastructure/review-actions.prisma-repository.js";
 
 @Module({
+  imports: [ConfigModule],
   providers: [
     { provide: REVIEW_REPOSITORY, useClass: ReviewPrismaRepository },
     {
@@ -22,8 +26,9 @@ import { ReviewActionsPrismaRepository } from "./infrastructure/review-actions.p
     },
     {
       provide: ReviewService,
-      useFactory: (repo: ReviewRepository) => new ReviewService(repo),
-      inject: [REVIEW_REPOSITORY],
+      useFactory: (repo: ReviewRepository, logger: AppLogger) =>
+        new ReviewService(repo, logger.child({ service: "ReviewService" })),
+      inject: [REVIEW_REPOSITORY, APP_LOGGER],
     },
     {
       provide: ReviewActionsService,

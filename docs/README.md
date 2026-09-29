@@ -5,7 +5,7 @@ not belong in this directory.
 
 | Path                         | What it is                                                                                        |
 | ---------------------------- | ------------------------------------------------------------------------------------------------- |
-| `adr/`                       | Current accepted architectural and product decisions.                                             |
+| `adr/`                       | Current accepted architectural and product decisions; `adr/README.md` holds the ADR template.     |
 | `exemplary-code-standard.md` | Current code-quality and maintainability standard.                                                |
 | `onboarding.md`              | New-contributor guide: setup, development, testing, workflows.                                    |
 | `environment.md`             | Environment precedence, ownership, and safe contracts for dev, tests, Docker, production, and CI. |

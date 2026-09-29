@@ -16,7 +16,7 @@ acceptance gate.
 | coverage        | Node 26.8.1 container on the shared Docker runner             |
 | api-integration | pgvector 0.8.6/pg15 job container on the shared Docker runner |
 | migrate-reset   | pgvector 0.8.6/pg15 job container on the shared Docker runner |
-| dependency-scan | Schedule or manual pipeline                                   |
+| dependency-scan | Schedule, manual, or MR changing lockfile/manifests           |
 
 ## Database-lane topology
 

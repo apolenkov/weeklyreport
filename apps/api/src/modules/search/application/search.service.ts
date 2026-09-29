@@ -8,7 +8,7 @@ import {
 } from "@customreport/shared";
 
 import { computeAllowedGroupIds } from "../../../lib/group-scope.js";
-import { createServiceLogger } from "../../../lib/logger-service.js";
+import { type AppLogger, createNullLogger } from "../../../lib/logger.js";
 
 // Prisma-free port so unit tests supply an in-memory fake; Prisma impl uses
 // $queryRaw + plainto_tsquery against GIN-indexed searchTsv columns.
@@ -54,9 +54,10 @@ function resolveSearchExcludeTypes(
 }
 
 export class SearchService {
-  private readonly logger = createServiceLogger("SearchService");
-
-  constructor(private readonly repository: SearchRepository) {}
+  constructor(
+    private readonly repository: SearchRepository,
+    private readonly logger: AppLogger = createNullLogger(),
+  ) {}
 
   // Viewers are confined to immutable published search. `scope='all'` remains
   // head/admin-only; lead/head/admin retain their existing mine/all behavior.
