@@ -390,6 +390,28 @@ describe("envSchema — no defaults, every product var required", () => {
 });
 
 describe("envSchema — production fences", () => {
+  it.each(["AUTH_JWT_SECRET", "PDF_EXPORT_JWT_SECRET"])(
+    "rejects a placeholder %s in production",
+    (key) => {
+      expect(
+        envSchema.safeParse({
+          ...COMPLETE,
+          [key]: "change-me-in-production-min-32-chars!!",
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each([
+    ["OTEL_SDK_DISABLED", "1"],
+    ["CLIENT_LOG_FORWARDING", "TRUE"],
+    ["AUTH_DEV_MODE_ALLOW_TEST", "yes"],
+  ])("rejects malformed boolean flag %s=%s", (key, value) => {
+    expect(envSchema.safeParse({ ...COMPLETE, [key]: value }).success).toBe(
+      false,
+    );
+  });
+
   it("forbids AUTH_DEV_MODE=true in production", () => {
     const result = envSchema.safeParse({ ...COMPLETE, AUTH_DEV_MODE: "true" });
     expect(result.success).toBe(false);
