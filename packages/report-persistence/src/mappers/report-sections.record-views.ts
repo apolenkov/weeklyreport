@@ -28,6 +28,7 @@ export const toReviewViews = (
     reviewerName: review.reviewer.name,
     verdict: review.verdict === "approved" ? "approved" : "changes_requested",
     judgedVersion: review.judgedVersion,
+    ...(review.comment ? { comment: review.comment } : {}),
     isCurrent: review.judgedVersion === version,
     createdAt: review.createdAt,
   }));

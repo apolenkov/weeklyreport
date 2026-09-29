@@ -46,6 +46,8 @@ export interface PostVerdictParams {
   readonly sectionId: string;
   readonly reviewerId: string;
   readonly verdict: ReviewVerdict;
+  // Reviewer reason; present exactly for changes_requested (input schema).
+  readonly comment?: string | undefined;
   // The client-loaded version drives both the optimistic lock and the version
   // stamped on the verdict, so a stale judgement can never be persisted.
   readonly expectedVersion: number;
@@ -165,7 +167,12 @@ export class ReviewActionsService {
 
   async verdict(
     session: ReviewSession,
-    input: { reportSectionId: string; verdict: ReviewVerdict; version: number },
+    input: {
+      reportSectionId: string;
+      verdict: ReviewVerdict;
+      version: number;
+      comment?: string | undefined;
+    },
   ): Promise<ReviewVerdictResult> {
     const context = await this.repository.getVerdictContext(
       input.reportSectionId,
@@ -183,6 +190,7 @@ export class ReviewActionsService {
       sectionId: input.reportSectionId,
       reviewerId: session.userId,
       verdict: input.verdict,
+      ...(input.comment === undefined ? {} : { comment: input.comment }),
       expectedVersion: input.version,
     });
     return reviewVerdictResultSchema.parse({

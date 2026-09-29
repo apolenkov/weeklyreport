@@ -66,7 +66,10 @@ export function LeadFormEditSections({
       {/* Reviewer feedback on a returned section surfaces read-only above
           the editable content, so the lead sees what to fix before
           resubmitting. Self-suppresses when there is none. */}
-      <LeadReviewFeedback records={reviewFeedback} />
+      <LeadReviewFeedback
+        records={reviewFeedback}
+        reviews={serverSection.reviews}
+      />
       <LeadFormEditBridgeSections
         viewModel={viewModel}
         actions={actions}

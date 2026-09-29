@@ -1,5 +1,7 @@
 "use client";
 
+import type { SectionReviewView } from "@customreport/shared";
+
 import type { LeadReviewFeedbackRecord } from "../../../report-sections";
 import { ReviewCommentList } from "./review-comment-list";
 
@@ -13,15 +15,25 @@ const KIND_LABEL: Record<LeadReviewFeedbackRecord["kind"], string> = {
 // an empty record list self-suppresses so no blank panel appears.
 export function LeadReviewFeedback({
   records,
+  reviews = [],
 }: {
   readonly records: readonly LeadReviewFeedbackRecord[];
+  readonly reviews?: readonly SectionReviewView[];
 }) {
-  if (records.length === 0) return null;
+  // Reasons recorded with a current changes request; legacy verdicts have none.
+  const reasons = reviews.filter(
+    (review) =>
+      review.isCurrent &&
+      review.verdict === "changes_requested" &&
+      review.comment,
+  );
+  if (records.length === 0 && reasons.length === 0) return null;
   const total = records.reduce(
     (sum, record) => sum + record.comments.length,
     0,
   );
   const noun = total === 1 ? "note" : "notes";
+  const hasRecords = records.length > 0;
 
   return (
     <section
@@ -36,10 +48,26 @@ export function LeadReviewFeedback({
         {/* Copy stays verdict-neutral: comments can exist pre-verdict on a
             still-submitted section, so the marker must not assert a
             resubmission that was never requested. */}
-        <span className="text-sm font-semibold text-[var(--color-foreground)]">
-          {total} reviewer {noun} on your records
-        </span>
+        {hasRecords ? (
+          <span className="text-sm font-semibold text-[var(--color-foreground)]">
+            {total} reviewer {noun} on your records
+          </span>
+        ) : null}
       </header>
+      {reasons.map((review) => (
+        <div
+          key={review.reviewerId}
+          data-testid="section-review-reason"
+          className="flex flex-col gap-1.5"
+        >
+          <span className="text-[11px] font-bold uppercase tracking-[0.09em] text-[var(--color-muted-foreground)]">
+            Changes requested by {review.reviewerName ?? "the reviewer"}
+          </span>
+          <p className="min-w-0 whitespace-pre-wrap break-words text-[13px] font-medium text-[var(--color-foreground)] [overflow-wrap:anywhere]">
+            {review.comment}
+          </p>
+        </div>
+      ))}
       <ul className="flex flex-col gap-3">
         {records.map((record) => (
           <li

@@ -2,7 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import type { ReminderDispatchResult } from "@customreport/shared";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
@@ -284,7 +284,7 @@ describe("dashboard queue mutation transitions", () => {
     expect(onMutated).toHaveBeenCalledOnce();
   });
 
-  it("posts the existing changes-requested verdict and refreshes the queue", () => {
+  it("asks for a reason, then posts the changes-requested verdict and refreshes the queue", () => {
     const onMutated = vi.fn();
     render(
       <RequestChangesButton
@@ -296,13 +296,25 @@ describe("dashboard queue mutation transitions", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Request Changes" }));
+    expect(mutate).not.toHaveBeenCalled();
+    const dialog = within(screen.getByRole("dialog"));
+    fireEvent.click(dialog.getByRole("button", { name: "Request changes" }));
+    expect(mutate).not.toHaveBeenCalled();
+    expect(dialog.getByRole("alert")).toHaveTextContent("Enter a reason");
+
+    fireEvent.change(dialog.getByLabelText("Reason for the lead"), {
+      target: { value: "Add the missing risk owner." },
+    });
+    fireEvent.click(dialog.getByRole("button", { name: "Request changes" }));
     expect(mutate).toHaveBeenCalledWith({
       reportSectionId: "30000000-0000-4000-8000-000000000001",
       verdict: "changes_requested",
       version: 4,
+      comment: "Add the missing risk owner.",
     });
     expect(invalidateReview).toHaveBeenCalledTimes(1);
     expect(onMutated).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("refreshes lead, dashboard and history projections after per-lead revoke", () => {
