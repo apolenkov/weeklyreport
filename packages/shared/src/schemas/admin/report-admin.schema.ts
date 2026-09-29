@@ -235,7 +235,10 @@ export const failedJobSchema = z
   })
   .readonly();
 
-/** Validates one cursor page of failed queue jobs. */
+/**
+ * Validates one cursor page of failed queue jobs.
+ * @public
+ */
 export const failedJobListSchema = z
   .object({
     jobs: z.array(failedJobSchema).readonly(),

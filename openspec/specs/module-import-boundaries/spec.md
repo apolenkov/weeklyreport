@@ -72,3 +72,23 @@ sources MUST NOT leave residue in the worktree.
 - **WHEN** the boundary test executes
 - **THEN** each zone reports its violating probe and stays silent for its compliant probe
 - **AND** no probe file remains in the worktree afterwards, including when the run is interrupted
+
+### Requirement: Runtime imports stay acyclic
+
+Source under `apps/web/src` and `apps/api/src` MUST NOT contain runtime import cycles. The `import-x/no-cycle` rule in `eslint-config/boundaries.ts` MUST report a value import that closes a cycle; type-only edges are erased at build time and are not cycles.
+
+#### Scenario: A back-import closes a cycle
+
+- **WHEN** a file imports a module whose import chain already reaches that file
+- **THEN** `import-x/no-cycle` reports the import
+- **AND** a regression test in `module-public-api-boundary.test.ts` fails if the rule stops reporting
+
+### Requirement: Shared API lib reaches modules only through their barrels
+
+Code under `apps/api/src/lib` MUST import an API module only through that module's `index.ts` barrel. A deep import into a module's internal path MUST be reported by the API module boundary zone.
+
+#### Scenario: A lib file deep-imports a module
+
+- **WHEN** a file in `apps/api/src/lib` imports `../modules/<module>/<internal path>`
+- **THEN** the boundary zone reports the import
+- **AND** importing the same symbol through `../modules/<module>/index.js` reports nothing

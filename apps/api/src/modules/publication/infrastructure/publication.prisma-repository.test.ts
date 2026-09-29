@@ -15,23 +15,11 @@ vi.mock("../../report-sections/index.js", () => ({
     status: "published",
   })),
 }));
-// The freeze step lives in search; the stand-in keeps its two tx statements.
+// The freeze sequence is unit-tested in search; here it only returns the frozen graph.
 vi.mock("../../search/index.js", () => ({
-  freezePublishedSnapshot: vi.fn(
-    async (
-      tx: {
-        report: {
-          findUniqueOrThrow: (args: unknown) => Promise<unknown>;
-          update: (args: unknown) => Promise<unknown>;
-        };
-      },
-      reportId: string,
-    ) => {
-      await tx.report.findUniqueOrThrow({ where: { id: reportId } });
-      await tx.report.update({ where: { id: reportId }, data: {} });
-      return { reportId: "rep-1", status: "published" };
-    },
-  ),
+  freezePublishedSnapshot: vi
+    .fn()
+    .mockResolvedValue({ reportId: "rep-1", status: "published" }),
 }));
 
 const asAny = (value: unknown): never => value as never;
@@ -114,8 +102,6 @@ describe("PublicationPrismaRepository.saveAutoPublishedReport", () => {
     expect(updateMany.mock.calls[0]?.[0]).toMatchObject({
       data: { publishedSnapshot: { snapshot: true } },
     });
-    // A separate write replaces the provisional snapshot after the transition.
-    expect(update).toHaveBeenCalledOnce();
     expect(vi.mocked(freezePublishedSnapshot)).toHaveBeenCalledOnce();
     expect(vi.mocked(freezePublishedSnapshot).mock.calls[0]?.[1]).toBe("rep-1");
   });
@@ -183,9 +169,7 @@ describe("PublicationPrismaRepository.saveAutoPublishedReport", () => {
       wasAlreadyPublished: false,
       report: { reportId: "rep-1", status: "published" },
     });
-    expect(findUniqueOrThrow).toHaveBeenCalledOnce();
-    // The snapshot is frozen as a second in-transaction statement.
-    expect(update).toHaveBeenCalledOnce();
+    expect(freezePublishedSnapshot).toHaveBeenCalledOnce();
     expect(pauseRules).toHaveBeenCalledWith({
       where: { reportId: "rep-1", status: "active" },
       data: { status: "paused" },

@@ -34,7 +34,7 @@ interface RequireHeadDeps {
 }
 
 // Only token-verification failure means "invalid session" (401). A rejected
-// isUserAccessBarred read is a server fault and must propagate to the 500
+// readLiveAccess read is a server fault and must propagate to the 500
 // path, never masquerade as a bad session.
 function readGuardSession(
   deps: RequireHeadDeps,

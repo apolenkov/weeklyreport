@@ -10,7 +10,7 @@
   "scripts": {
     "build": "rm -rf dist && tsc6 -p tsconfig.production.json && tsx ../../scripts/gates/production-dist.ts --shared",
     "typecheck": "tsc6 --noEmit -p tsconfig.json",
-    "test": "vitest run --exclude '**/dist/**'"
+    "test": "TZ=UTC vitest run --exclude '**/dist/**'"
   },
   "dependencies": {
     "@trpc/server": "catalog:",
