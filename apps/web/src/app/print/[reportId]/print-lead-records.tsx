@@ -12,7 +12,7 @@ import {
   TEXT_SECONDARY,
 } from "./print-report-theme";
 
-export interface PrintRecordCollections {
+interface PrintRecordCollections {
   readonly currentWeek: readonly WeeklyProductReport["currentWeek"][number][];
   readonly nextWeek: readonly WeeklyProductReport["nextWeek"][number][];
   readonly risks: readonly WeeklyProductReport["risks"][number][];

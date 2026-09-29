@@ -62,7 +62,7 @@ export type LeadFormEditorHandle =
       readonly view: LeadFormLoadedProps;
     };
 
-export interface LeadFormEditorDraftHandle extends LeadFormDraftHandle {
+interface LeadFormEditorDraftHandle extends LeadFormDraftHandle {
   readonly section: ReportSectionReadModel;
   readonly dirty: boolean;
   readonly version: number;

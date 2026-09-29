@@ -11,8 +11,6 @@ import {
 import { type AiProviderFormState } from "./ai-provider-configuration-fields.types";
 
 export type { AiProviderFormState } from "./ai-provider-configuration-fields.types";
-export { CUSTOM_PROVIDER_PROFILE } from "./ai-provider-configuration-fields.types";
-
 type ConfigurationFieldsProps = Readonly<{
   form: AiProviderFormState;
   busy: boolean;

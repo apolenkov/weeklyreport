@@ -5,8 +5,6 @@ export { persistableItemStatusToWorkflow } from "./model/item-status";
 export {
   buildConfirmCarriedItemPatch,
   buildMoveItemPatch,
-  canContinueOrPromote,
-  continuationConflict,
   continueToNextPatch,
   markCompletePatch,
   moveToCurrentWeekPatch,
@@ -53,11 +51,7 @@ export { sectionToDraftPayload } from "./model/lead-section-draft-payload";
 export type { LeadStatus } from "./model/lead-status";
 export { deriveLeadStatus } from "./model/lead-status";
 export type { LeadSubmitReadiness } from "./model/lead-submit-readiness";
-export {
-  isBoardEmpty,
-  type ItemColumn,
-  splitItemBoard,
-} from "./model/next-week-columns";
+export { isBoardEmpty, splitItemBoard } from "./model/next-week-columns";
 export { sortByPriorityRank } from "./model/priority/priority-sort";
 export type { ParentActivityOption, RecordParent } from "./model/record-parent";
 export { resolveRecordParent } from "./model/record-parent";
@@ -75,19 +69,13 @@ export {
 } from "./model/stage-ownership";
 export { canonicalStageNames, riskCoversStage } from "./model/stage-tags";
 export type {
-  StatusOverviewColumn,
   StatusOverviewCreateTarget,
   StatusOverviewEditTarget,
   StatusOverviewItem,
   StatusOverviewLinkedDraft,
   StatusOverviewLinkedMemory,
   StatusOverviewModel,
-  StatusOverviewPeriodLabels,
-  StatusOverviewProjectionOptions,
   StatusOverviewQuickEditMemory,
-  StatusOverviewStage,
-  StatusOverviewUnit,
-  StatusOverviewUnitKind,
 } from "./model/status-overview";
 export { projectStatusOverview } from "./model/status-overview";
 export {

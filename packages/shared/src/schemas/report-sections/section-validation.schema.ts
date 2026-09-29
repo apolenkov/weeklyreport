@@ -9,10 +9,7 @@ import type {
   DraftSaveValidationErrorCode,
 } from "./section-validation.types";
 
-export type {
-  DraftSaveValidationError,
-  DraftSaveValidationErrorCode,
-} from "./section-validation.types";
+export type { DraftSaveValidationError } from "./section-validation.types";
 
 const validationError = (
   code: DraftSaveValidationErrorCode,

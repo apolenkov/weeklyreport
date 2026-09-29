@@ -5,10 +5,10 @@ import { organizationPublicSchema } from "../organization/organization";
 // 'escalation' fires the T+2h heads-only digest and bypasses
 // User.notificationOptOut because heads must always be notified.
 /** Reminder rule categories stored by the admin scheduler. */
-export const adminReminderRuleKindSchema = z.enum(["deadline", "escalation"]);
+const adminReminderRuleKindSchema = z.enum(["deadline", "escalation"]);
 
 /** Administrative lifecycle of a generated reminder rule. */
-export const adminReminderRuleStatusSchema = z.enum(["active", "paused"]);
+const adminReminderRuleStatusSchema = z.enum(["active", "paused"]);
 
 /** Validates one generated reminder rule and its owning report and policy. */
 export const adminReminderRuleSchema = z
@@ -30,7 +30,7 @@ export const adminSnapshotReminderRuleSchema = adminReminderRuleSchema
   .readonly();
 
 /** Delivery lifecycle recorded for one reminder execution. */
-export const adminReminderExecutionStatusSchema = z.enum([
+const adminReminderExecutionStatusSchema = z.enum([
   "queued",
   "sending",
   "sent",

@@ -1,7 +1,6 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "verbatimModuleSyntax": false,
     "noEmit": true,
     "allowImportingTsExtensions": true,
     // Prisma seeds consume the server-only persistence package and the pure

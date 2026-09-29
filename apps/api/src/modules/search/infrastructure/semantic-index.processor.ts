@@ -30,7 +30,7 @@ export type SemanticIndexProcessorConfig = Readonly<{
   >;
 }>;
 
-export const SEMANTIC_INDEX_PROCESSOR_CONFIG = Symbol(
+const SEMANTIC_INDEX_PROCESSOR_CONFIG = Symbol(
   "SEMANTIC_INDEX_PROCESSOR_CONFIG",
 );
 

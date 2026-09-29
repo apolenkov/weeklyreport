@@ -14,7 +14,7 @@ export interface KpiData {
   readonly decisionCount: number;
 }
 
-export function formatRelativeDeadline(deadline: Date, now: Date): string {
+function formatRelativeDeadline(deadline: Date, now: Date): string {
   const diffMs = deadline.getTime() - now.getTime();
   if (diffMs <= 0) return "Past";
   const totalHours = Math.floor(diffMs / MS_PER_HOUR);

@@ -1,5 +1,9 @@
 import { defineConfig } from "vitest/config";
 
+// Date formatting in tests must not depend on the host time zone; workers
+// inherit this from the config process.
+process.env.TZ = "UTC";
+
 type VitestReportingEnvironment = Readonly<Record<string, string | undefined>>;
 
 type VitestReporter =

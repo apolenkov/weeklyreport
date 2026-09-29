@@ -17,7 +17,6 @@
     "@prisma/client": "^7.10.0"
   },
   "devDependencies": {
-    "@types/react": "catalog:",
     "typescript": "npm:@typescript/typescript6@^6.0.2"
   }
 }

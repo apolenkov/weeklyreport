@@ -11,7 +11,7 @@ import {
   type FeedbackRecordAnnotation,
 } from "./product-feedback.repository.js";
 
-export const AGENTATION_INBOX_ID_PREFIX = "agentation_";
+const AGENTATION_INBOX_ID_PREFIX = "agentation_";
 const PERCENT_SCALE = 100;
 
 export type AgentationInboxRow = AnnotationWithThread & {
