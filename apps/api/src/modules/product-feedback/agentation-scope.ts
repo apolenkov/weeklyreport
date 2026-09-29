@@ -41,7 +41,7 @@ export function annotationScope(
   };
 }
 
-export function mayUpdateAnnotationStatus(
+function mayUpdateAnnotationStatus(
   access: FeedbackAccess,
   actor: "human" | "agent",
   source: "patch" | "native-delete",

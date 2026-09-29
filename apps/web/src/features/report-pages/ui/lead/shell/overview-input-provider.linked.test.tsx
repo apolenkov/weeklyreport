@@ -90,22 +90,6 @@ function renderLinked(
 }
 
 describe("linked memory receipt adoption", () => {
-  it.each([true, false, undefined])(
-    "passes through the canonical baseline signal %s without a receipt",
-    (currentPayloadMatchesSavedBaseline) => {
-      const { result } = renderLinked({
-        ...context,
-        receipt: null,
-        currentPayloadMatchesSavedBaseline,
-      });
-      expect(result.current.currentPayloadMatchesSavedBaseline).toBe(
-        currentPayloadMatchesSavedBaseline === true,
-      );
-      expect(result.current.receiptSequence).toBe(0);
-      expect(result.current.receiptConfirms?.(server, "N")).toBe(false);
-    },
-  );
-
   it("adopts the saved identity, keeps pending, and clears both keys on cancel", () => {
     const { result, rerender } = renderLinked(null, server);
 
@@ -242,44 +226,8 @@ describe("linked memory receipt adoption", () => {
     expect(result.current.read(client)).toBeNull();
   });
 
-  it.each([undefined, null, "Older intent", "Queued intent"])(
-    "acknowledges only the exact persisted text (%s)",
-    (persistedNextStepText) => {
-      const { result } = renderLinked({
-        ...context,
-        scope: "activation-1",
-        receipt: {
-          generation: "g1",
-          reportSectionId: "section-1",
-          scope: "activation-1",
-          sequence: 2,
-          itemIdentities: [
-            {
-              clientId: "client-1",
-              serverId: "server-1",
-              stableId: "stable-1",
-              persistedNextStepText,
-            },
-          ],
-        },
-      });
-      expect(result.current.receiptConfirms?.(client, "Queued intent")).toBe(
-        persistedNextStepText === "Queued intent",
-      );
-      expect(result.current.receiptConfirms?.(server, "Queued intent")).toBe(
-        persistedNextStepText === "Queued intent",
-      );
-      expect(
-        result.current.receiptConfirms?.(
-          item({ recordId: "foreign" }),
-          "Queued intent",
-        ),
-      ).toBe(false);
-    },
-  );
-
   it.each([undefined, "old-activation"])(
-    "rejects acknowledgement and alias adoption from receipt scope %s",
+    "rejects alias adoption from receipt scope %s",
     (scope) => {
       const { result } = renderLinked({
         ...context,
@@ -288,13 +236,11 @@ describe("linked memory receipt adoption", () => {
           generation: "g1",
           reportSectionId: "section-1",
           scope,
-          sequence: 2,
           itemIdentities: [
             {
               clientId: "client-1",
               serverId: "server-1",
               stableId: "stable-1",
-              persistedNextStepText: "Queued intent",
             },
           ],
         },
@@ -304,12 +250,7 @@ describe("linked memory receipt adoption", () => {
           open: false,
           draft: "Queued intent",
           baseline: "",
-          submittedReceiptSequence: 1,
-          submittedReceiptScope: "new-activation",
         }),
-      );
-      expect(result.current.receiptConfirms?.(server, "Queued intent")).toBe(
-        false,
       );
       expect(result.current.read(server)).toBeNull();
       expect(result.current.read(client)?.draft).toBe("Queued intent");

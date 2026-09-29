@@ -4,7 +4,7 @@ import type { FileHandle } from "node:fs/promises";
 import { link, lstat, open, unlink } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
-export type FileAnomaly =
+type FileAnomaly =
   "missing" | "symlink" | "not-regular" | "checksum-mismatch" | "unreadable";
 
 export interface VerifiedArtifact {
@@ -17,7 +17,7 @@ export type ArtifactVerification =
   | { readonly ok: true; readonly file: VerifiedArtifact }
   | { readonly ok: false; readonly reason: FileAnomaly };
 
-export class ArtifactPathError extends Error {
+class ArtifactPathError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "ArtifactPathError";

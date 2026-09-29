@@ -26,13 +26,7 @@ import {
   recordsDirFor,
 } from "./state.js";
 
-export type {
-  MigratorEvent,
-  MigratorMode,
-  RowVerdict,
-  RunOutcome,
-  RunSummary,
-} from "./report.js";
+export type { MigratorEvent, MigratorMode, RunOutcome } from "./report.js";
 export { EXIT_OK, EXIT_REFUSED, EXIT_UNRESOLVED } from "./report.js";
 
 export interface MigratorDeps {

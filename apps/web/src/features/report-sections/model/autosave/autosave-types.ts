@@ -81,7 +81,7 @@ export interface UseLeadFormAutosaveArgs {
   readonly localOnlyRows?: number;
 }
 
-export interface SavedDraftReconciliation {
+interface SavedDraftReconciliation {
   readonly savedKey: string;
   readonly queuedPayload: DraftSaveContent | null;
 }

@@ -18,18 +18,6 @@ const LOG_FLUSH_TIMEOUT_MS = 1500;
 const OTEL_SHUTDOWN_TIMEOUT_MS = 2000;
 const SENTRY_FLUSH_TIMEOUT_MS = 1500;
 
-// These sequential phase limits are the complete worst-case API shutdown
-// budget. docker-compose.prod.yml gives the container 20s, leaving margin for
-// signal delivery and runtime teardown after this 12.5s application budget.
-export const API_SHUTDOWN_BUDGET_MS =
-  CLOSE_TIMEOUT_MS +
-  CLOSE_TIMEOUT_MS +
-  LOG_FLUSH_TIMEOUT_MS +
-  LOG_FLUSH_TIMEOUT_MS +
-  OTEL_SHUTDOWN_TIMEOUT_MS +
-  SENTRY_FLUSH_TIMEOUT_MS;
-export const API_SHUTDOWN_GRACE_PERIOD_MS = 20_000;
-
 const withDeadline = async (
   label: string,
   timeoutMs: number,

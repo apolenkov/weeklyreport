@@ -1,9 +1,6 @@
-import type { StatusOverviewUnit } from "../model/status-overview";
-
 export const STATUS_OVERVIEW_DESKTOP_GRID =
   "min-[80rem]:grid min-[80rem]:grid-cols-[repeat(4,minmax(0,1fr))]";
 
-export type StatusOverviewColumnKey = keyof StatusOverviewUnit["columns"];
 export const STATUS_OVERVIEW_COLUMN_HEADER_IDS = {
   previouslyPlanned: "status-overview-previously-planned-heading",
   currentWeek: "status-overview-current-week-heading",

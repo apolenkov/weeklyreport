@@ -6,11 +6,9 @@ import type {
 /** Current editor identity context used to adopt a saved draft's new key. */
 export interface LinkedReceiptContext {
   readonly scope?: string | null | undefined;
-  readonly currentPayloadMatchesSavedBaseline?: boolean | undefined;
   readonly generation: string | null;
   readonly sectionId: string;
   readonly receipt: {
-    readonly sequence?: number | undefined;
     readonly scope?: string | undefined;
     readonly generation: string | null;
     readonly reportSectionId: string;
@@ -18,7 +16,6 @@ export interface LinkedReceiptContext {
       readonly clientId: string;
       readonly serverId: string;
       readonly stableId: string | null;
-      readonly persistedNextStepText?: string | null | undefined;
     }[];
   } | null;
 }
@@ -51,30 +48,6 @@ export function linkedAliasKey(
       (candidate.stableId !== null && candidate.stableId === item.stableId),
   );
   return identity?.clientId ?? null;
-}
-
-export function linkedReceiptConfirmsIntent(
-  item: StatusOverviewItem,
-  text: string,
-  context: LinkedReceiptContext | null,
-): boolean {
-  if (context?.generation == null) return false;
-  const receipt = context.receipt;
-  if (
-    receipt?.generation == null ||
-    receipt.generation !== context.generation ||
-    receipt.reportSectionId !== context.sectionId ||
-    (context.scope != null && context.scope !== receipt.scope)
-  ) {
-    return false;
-  }
-  const identity = receipt.itemIdentities.find(
-    (candidate) =>
-      candidate.clientId === item.recordId ||
-      candidate.serverId === item.recordId ||
-      (candidate.stableId !== null && candidate.stableId === item.stableId),
-  );
-  return identity?.persistedNextStepText === text;
 }
 
 export function resolveLinkedDraftKey(
