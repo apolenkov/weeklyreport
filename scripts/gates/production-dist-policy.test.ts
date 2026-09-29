@@ -10,8 +10,9 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import test from "node:test";
 import { fileURLToPath } from "node:url";
+
+import { test } from "vitest";
 
 import {
   checksApiRuntime,
@@ -19,7 +20,7 @@ import {
   isProductionDistMode,
 } from "./production-dist-policy.js";
 
-void test("production dist policy recognizes only current build modes", () => {
+test("production dist policy recognizes only current build modes", () => {
   assert.equal(isProductionDistMode("--all"), true);
   assert.equal(isProductionDistMode("--api"), true);
   assert.equal(isProductionDistMode("--shared"), true);
@@ -36,41 +37,40 @@ const typescriptPackageRoot = dirname(
   dirname(fileURLToPath(import.meta.resolve("typescript"))),
 );
 
-void test("production dist CLI requires runnable build entrypoints", async (t) => {
-  const scenarios = [
-    { name: "empty API", mode: "--api", files: [], status: 1 },
-    { name: "empty shared", mode: "--shared", files: [], status: 1 },
-    { name: "empty combined", mode: "--all", files: [], status: 1 },
-    ...apiEntrypoints.map((missing) => ({
-      name: `API missing ${missing}`,
-      mode: "--api",
-      files: apiEntrypoints.filter((path) => path !== missing),
-      status: 1,
-    })),
-    {
-      name: "combined missing shared build",
-      mode: "--all",
-      files: apiEntrypoints,
-      status: 1,
-    },
-    { name: "complete API", mode: "--api", files: apiEntrypoints, status: 0 },
-    {
-      name: "complete shared",
-      mode: "--shared",
-      files: [sharedEntrypoint],
-      status: 0,
-    },
-    {
-      name: "complete combined",
-      mode: "--all",
-      files: [...apiEntrypoints, sharedEntrypoint],
-      status: 0,
-    },
-  ];
-  for (const scenario of scenarios) {
-    await t.test(scenario.name, async (context) => {
-      const root = await mkdtemp(join(tmpdir(), "weeklyreport-dist-fixture-"));
-      context.after(() => rm(root, { recursive: true, force: true }));
+const scenarios = [
+  { name: "empty API", mode: "--api", files: [], status: 1 },
+  { name: "empty shared", mode: "--shared", files: [], status: 1 },
+  { name: "empty combined", mode: "--all", files: [], status: 1 },
+  ...apiEntrypoints.map((missing) => ({
+    name: `API missing ${missing}`,
+    mode: "--api",
+    files: apiEntrypoints.filter((path) => path !== missing),
+    status: 1,
+  })),
+  {
+    name: "combined missing shared build",
+    mode: "--all",
+    files: apiEntrypoints,
+    status: 1,
+  },
+  { name: "complete API", mode: "--api", files: apiEntrypoints, status: 0 },
+  {
+    name: "complete shared",
+    mode: "--shared",
+    files: [sharedEntrypoint],
+    status: 0,
+  },
+  {
+    name: "complete combined",
+    mode: "--all",
+    files: [...apiEntrypoints, sharedEntrypoint],
+    status: 0,
+  },
+];
+for (const scenario of scenarios) {
+  test(`production dist CLI requires runnable build entrypoints: ${scenario.name}`, async () => {
+    const root = await mkdtemp(join(tmpdir(), "weeklyreport-dist-fixture-"));
+    try {
       await mkdir(join(root, "scripts/gates"), { recursive: true });
       for (const name of ["production-dist.ts", "production-dist-policy.ts"]) {
         await copyFile(
@@ -109,17 +109,19 @@ void test("production dist CLI requires runnable build entrypoints", async (t) =
       } else {
         assert.match(result.stdout, /Production dist gate passed/u);
       }
-    });
-  }
-});
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+}
 
-void test("all and API modes inspect the embedded API runtime", () => {
+test("all and API modes inspect the embedded API runtime", () => {
   assert.equal(checksApiRuntime("--all"), true);
   assert.equal(checksApiRuntime("--api"), true);
   assert.equal(checksApiRuntime("--shared"), false);
 });
 
-void test("bare workspace imports cannot remain in the API runtime", () => {
+test("bare workspace imports cannot remain in the API runtime", () => {
   for (const source of [
     "import '@customreport/shared';",
     "import value from '@customreport/shared/schema';",

@@ -11,7 +11,8 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import test, { afterEach } from "node:test";
+
+import { afterEach, test } from "vitest";
 
 const restoreScript = resolve("deploy/postgres/restore.sh");
 const fixtureRoots = new Set<string>();
@@ -23,7 +24,7 @@ afterEach(() => {
   fixtureRoots.clear();
 });
 
-void test("compose-mounted restore entrypoint is executable", () => {
+test("compose-mounted restore entrypoint is executable", () => {
   assert.notEqual(statSync(restoreScript).mode & 0o111, 0);
 });
 
@@ -69,7 +70,7 @@ function runRestore(overrides: NodeJS.ProcessEnv = {}) {
   return { calls, fixtureSecret, result };
 }
 
-void test("wrong host, port, or database confirmation executes nothing", () => {
+test("wrong host, port, or database confirmation executes nothing", () => {
   for (const confirmation of [
     "test|other.internal|5432|customreport_test",
     "test|db.example.com|6432|customreport_test",
@@ -83,7 +84,7 @@ void test("wrong host, port, or database confirmation executes nothing", () => {
   }
 });
 
-void test("invalid host, port, or database executes nothing", () => {
+test("invalid host, port, or database executes nothing", () => {
   for (const overrides of [
     { PGHOST: "db.example.com user" },
     { PGPORT: "70000" },
@@ -95,7 +96,7 @@ void test("invalid host, port, or database executes nothing", () => {
   }
 });
 
-void test("missing environment and malformed confirmation execute nothing", () => {
+test("missing environment and malformed confirmation execute nothing", () => {
   const missing = runRestore({ RESTORE_ENVIRONMENT: "" });
   assert.equal(missing.result.status, 2);
   assert.deepEqual(missing.calls, []);
@@ -105,7 +106,7 @@ void test("missing environment and malformed confirmation execute nothing", () =
   assert.deepEqual(malformed.calls, []);
 });
 
-void test("undeployed environment labels execute nothing", () => {
+test("undeployed environment labels execute nothing", () => {
   for (const environment of ["development", "uat", "staging"]) {
     const { calls, result } = runRestore({
       RESTORE_ENVIRONMENT: environment,
@@ -117,7 +118,7 @@ void test("undeployed environment labels execute nothing", () => {
   }
 });
 
-void test("missing or incorrect per-run consent executes nothing", () => {
+test("missing or incorrect per-run consent executes nothing", () => {
   for (const consent of ["", "yes"]) {
     const { calls, result } = runRestore({
       PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: consent,
@@ -128,7 +129,7 @@ void test("missing or incorrect per-run consent executes nothing", () => {
   }
 });
 
-void test("production requires the existing destructive consent", () => {
+test("production requires the existing destructive consent", () => {
   const { calls, result } = runRestore({
     RESTORE_ENVIRONMENT: "production",
     CONFIRM_RESTORE_TARGET: "production|db.example.com|5432|customreport_test",
@@ -138,7 +139,7 @@ void test("production requires the existing destructive consent", () => {
   assert.deepEqual(calls, []);
 });
 
-void test("archive validation precedes one non-production restore", () => {
+test("archive validation precedes one non-production restore", () => {
   const { calls, fixtureSecret, result } = runRestore();
   assert.equal(result.status, 0);
   assert.equal(calls.length, 2);
@@ -150,7 +151,7 @@ void test("archive validation precedes one non-production restore", () => {
   assert.ok(!(result.stdout + result.stderr).includes(fixtureSecret));
 });
 
-void test("fully consented production restore runs once after validation", () => {
+test("fully consented production restore runs once after validation", () => {
   const { calls, result } = runRestore({
     RESTORE_ENVIRONMENT: "Production",
     PGHOST: "db.example.com.",
@@ -164,7 +165,7 @@ void test("fully consented production restore runs once after validation", () =>
   assert.match(calls[1] ?? "", /--clean/);
 });
 
-void test("an unreadable archive never reaches the destructive command", () => {
+test("an unreadable archive never reaches the destructive command", () => {
   const { calls, result } = runRestore({ FAIL_ARCHIVE_LIST: "yes" });
   assert.equal(result.status, 4);
   assert.equal(calls.length, 1);

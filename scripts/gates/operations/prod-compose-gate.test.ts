@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { delimiter, join, resolve } from "node:path";
-import test from "node:test";
 
+import { test } from "vitest";
 import { parse } from "yaml";
 
 import { REQUIRED_REPORT_ASSISTANT_ENV_KEYS } from "../../../apps/api/src/infrastructure/config/report-assistant-env-keys.ts";
@@ -187,7 +187,7 @@ const turboConfig = JSON.parse(readFileSync(resolve("turbo.json"), "utf8")) as {
   >;
 };
 
-void test("Docker build context excludes TypeScript test harnesses", () => {
+test("Docker build context excludes TypeScript test harnesses", () => {
   for (const pattern of [
     "**/*.test.ts",
     "**/*.test.tsx",
@@ -218,7 +218,7 @@ void test("Docker build context excludes TypeScript test harnesses", () => {
   }
 });
 
-void test("Docker build context retains the production-prune self-test", () => {
+test("Docker build context retains the production-prune self-test", () => {
   const fixture = "scripts/gates/production-deps-prune.fixture.test.ts";
   assert.ok(
     dockerIgnoreContent.split("\n").includes(`!${fixture}`),
@@ -230,7 +230,7 @@ void test("Docker build context retains the production-prune self-test", () => {
   );
 });
 
-void test("production compose requires every operational policy input", () => {
+test("production compose requires every operational policy input", () => {
   for (const variable of REQUIRED_POLICY_INPUTS) {
     // The `:?` guard must name the variable explicitly (a compose render with
     // the variable blank fails instead of inventing a default).
@@ -241,7 +241,7 @@ void test("production compose requires every operational policy input", () => {
   }
 });
 
-void test("production compose has no silent `:-` defaults on policy inputs", () => {
+test("production compose has no silent `:-` defaults on policy inputs", () => {
   for (const variable of REQUIRED_POLICY_INPUTS) {
     assert.ok(
       !content.includes(`\${${variable}:-`),
@@ -250,7 +250,7 @@ void test("production compose has no silent `:-` defaults on policy inputs", () 
   }
 });
 
-void test("the production template lists every required input as fail-closed", () => {
+test("the production template lists every required input as fail-closed", () => {
   const assignments = new Map(
     productionEnvironment
       .split("\n")
@@ -309,7 +309,7 @@ const DEV_APP_DATABASE_URL =
   "postgresql://customreport:localdev@postgres:5432/customreport_e2e";
 const DEV_APP_DATABASE_ASSIGNMENT_COUNT = 3;
 
-void test("development Compose owns one exact guarded database target", () => {
+test("development Compose owns one exact guarded database target", () => {
   assert.doesNotMatch(
     devContent,
     /\$\{DB_PASSWORD/u,
@@ -338,7 +338,7 @@ void test("development Compose owns one exact guarded database target", () => {
   );
 });
 
-void test("development API watches the current persistence source", () => {
+test("development API watches the current persistence source", () => {
   assert.match(
     devOverrideContent,
     /- \.\/packages\/report-persistence\/src:\/app\/packages\/report-persistence\/src/u,
@@ -390,7 +390,7 @@ const assertLoopbackPublishedPorts = (
   return ports;
 };
 
-void test("every development host port binds to loopback", () => {
+test("every development host port binds to loopback", () => {
   const basePorts = assertLoopbackPublishedPorts(devContent, devCompose);
   assert.deepEqual(basePorts, [
     "127.0.0.1:5432:5432",
@@ -402,7 +402,7 @@ void test("every development host port binds to loopback", () => {
   ]);
 });
 
-void test("development port guard rejects a planted wildcard binding", () => {
+test("development port guard rejects a planted wildcard binding", () => {
   const planted = devContent.replace('"127.0.0.1:6379:6379"', '"6379:6379"');
   assert.notEqual(planted, devContent);
   assert.throws(
@@ -411,7 +411,7 @@ void test("development port guard rejects a planted wildcard binding", () => {
   );
 });
 
-void test("the production image receives one release identity", () => {
+test("the production image receives one release identity", () => {
   assert.match(
     content,
     /NEXT_PUBLIC_APP_VERSION: \$\{OTEL_SERVICE_VERSION:\?/u,
@@ -429,7 +429,7 @@ void test("the production image receives one release identity", () => {
   }
 });
 
-void test("production dependency layers retain a shared pnpm BuildKit cache", () => {
+test("production dependency layers retain a shared pnpm BuildKit cache", () => {
   const cacheMount =
     "--mount=type=cache,id=customreport-pnpm-store-v11,target=/pnpm/store,sharing=locked";
   // API installs the full build graph once, the isolated migrator runtime once,
@@ -444,7 +444,7 @@ void test("production dependency layers retain a shared pnpm BuildKit cache", ()
   }
 });
 
-void test("production builders carry the complete dist gate policy", () => {
+test("production builders carry the complete dist gate policy", () => {
   for (const [path, dockerfile] of [
     ["Dockerfile.api", apiDockerfile],
     ["Dockerfile.web", webDockerfile],
@@ -462,7 +462,7 @@ void test("production builders carry the complete dist gate policy", () => {
   }
 });
 
-void test("the migrator target contains only the canonical migration runtime", () => {
+test("the migrator target contains only the canonical migration runtime", () => {
   const baseImage = /^FROM (node:\S+) AS base$/mu.exec(apiDockerfile)?.[1];
   assert.ok(baseImage, "Dockerfile.api must define a pinned Node base image");
   const start = apiDockerfile.indexOf(`FROM ${baseImage} AS migrator`);
@@ -527,7 +527,7 @@ void test("the migrator target contains only the canonical migration runtime", (
   );
 });
 
-void test("the API runner excludes migration-only tooling", () => {
+test("the API runner excludes migration-only tooling", () => {
   assert.match(
     apiDockerfile,
     /pnpm --filter=@customreport\/api deploy --prod --legacy --frozen-lockfile --ignore-scripts \/tmp\/api-deps/u,
@@ -556,7 +556,7 @@ void test("the API runner excludes migration-only tooling", () => {
   );
 });
 
-void test("the API runner CMD resolves its emitted entrypoint from WORKDIR", () => {
+test("the API runner CMD resolves its emitted entrypoint from WORKDIR", () => {
   const runner = apiDockerfile.slice(apiDockerfile.indexOf(" AS runner"));
   const workdir = /^WORKDIR (\S+)$/mu.exec(runner)?.[1];
   assert.equal(workdir, "/app", "the API runner must declare its WORKDIR");
@@ -572,7 +572,7 @@ void test("the API runner CMD resolves its emitted entrypoint from WORKDIR", () 
   );
 });
 
-void test("post-install production tools bypass pnpm dependency preflight", () => {
+test("post-install production tools bypass pnpm dependency preflight", () => {
   assert.ok(
     turboConfig.globalEnv?.includes("PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN"),
   );
@@ -675,7 +675,7 @@ void test("post-install production tools bypass pnpm dependency preflight", () =
   }
 });
 
-void test("Turbo forwards dev auth and product feedback switches", () => {
+test("Turbo forwards dev auth and product feedback switches", () => {
   const devEnv = turboConfig.tasks?.dev?.env ?? [];
   assert.ok(devEnv.includes("AUTH_DEV_MODE"));
   assert.ok(devEnv.includes("NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED"));
@@ -683,7 +683,7 @@ void test("Turbo forwards dev auth and product feedback switches", () => {
   assert.ok(devEnv.includes("PRODUCT_FEEDBACK_ENABLED"));
 });
 
-void test("feedback dev contour enables role switching and admin inbox", () => {
+test("feedback dev contour enables role switching and admin inbox", () => {
   const command = rootPackage.scripts?.["dev:feedback"];
   assert.ok(command, "package.json must expose dev:feedback");
   assert.match(command, /AUTH_DEV_MODE=true/u);
@@ -694,7 +694,7 @@ void test("feedback dev contour enables role switching and admin inbox", () => {
   assert.match(command, /turbo run dev/u);
 });
 
-void test("production build stages make pnpm explicitly non-interactive", () => {
+test("production build stages make pnpm explicitly non-interactive", () => {
   for (const [path, dockerfile] of [
     ["Dockerfile.api", apiDockerfile],
     ["Dockerfile.web", webDockerfile],
@@ -739,7 +739,7 @@ void test("production build stages make pnpm explicitly non-interactive", () => 
   }
 });
 
-void test("release labels do not invalidate heavyweight runner layers", () => {
+test("release labels do not invalidate heavyweight runner layers", () => {
   const apiRunner = apiDockerfile.slice(
     apiDockerfile.lastIndexOf("FROM ", apiDockerfile.indexOf(" AS runner")),
   );
@@ -776,7 +776,7 @@ void test("release labels do not invalidate heavyweight runner layers", () => {
   );
 });
 
-void test("untracked environment variants stay ignored while examples remain tracked", () => {
+test("untracked environment variants stay ignored while examples remain tracked", () => {
   assert.match(gitIgnoreContent, /^\.env\.\*$/mu);
   assert.match(gitIgnoreContent, /^!\.env\.example$/mu);
   assert.match(gitIgnoreContent, /^!\.env\.test\.example$/mu);
@@ -796,7 +796,7 @@ void test("untracked environment variants stay ignored while examples remain tra
   assert.equal(example.status, 1, ".env.example must remain trackable");
 });
 
-void test("production services pool API connections and preserve direct paths", () => {
+test("production services pool API connections and preserve direct paths", () => {
   assert.match(content, /POSTGRES_DB: \$\{POSTGRES_DB:\?/);
   assert.match(content, /DB_NAME: \$\{POSTGRES_DB:\?/);
   assert.match(content, /PGDATABASE: \$\{POSTGRES_DB:\?/);
@@ -870,7 +870,7 @@ function classifyComposeImage(
   return undefined;
 }
 
-void test("external Compose and CI images use versioned immutable references", () => {
+test("external Compose and CI images use versioned immutable references", () => {
   const composeSources = [
     ["docker-compose.yml", devContent],
     ["docker-compose.prod.yml", content],
@@ -928,7 +928,7 @@ void test("external Compose and CI images use versioned immutable references", (
   assert.deepEqual(observedImages, REVIEWED_EXTERNAL_IMAGES);
 });
 
-void test("external image policy rejects moving and mismatched references", () => {
+test("external image policy rejects moving and mismatched references", () => {
   const digest = "a".repeat(64);
   const variableTag = "$" + "{TAG}";
   for (const image of [
@@ -948,7 +948,7 @@ void test("external image policy rejects moving and mismatched references", () =
   );
 });
 
-void test("GitLab CI carries no Docker build or Compose smoke lane", () => {
+test("GitLab CI carries no Docker build or Compose smoke lane", () => {
   for (const name of Object.keys(
     parse(gitlabContent, { maxAliasCount: 50 }) as Record<string, unknown>,
   )) {
@@ -964,7 +964,7 @@ void test("GitLab CI carries no Docker build or Compose smoke lane", () => {
   assert.doesNotMatch(gitlabContent, /docker:dind|\bdind\b/iu);
 });
 
-void test("Bugsink persists its SQLite database in the named data volume", () => {
+test("Bugsink persists its SQLite database in the named data volume", () => {
   const model = parse(errorsContent, { maxAliasCount: 50 }) as {
     readonly services?: Readonly<
       Record<
@@ -987,7 +987,7 @@ void test("Bugsink persists its SQLite database in the named data volume", () =>
   );
 });
 
-void test("web health probes use the IPv4 address the standalone server binds", () => {
+test("web health probes use the IPv4 address the standalone server binds", () => {
   assert.match(
     content,
     /web:[\s\S]*healthcheck:[\s\S]*http:\/\/127\.0\.0\.1:3000\//u,
@@ -999,7 +999,7 @@ void test("web health probes use the IPv4 address the standalone server binds", 
   assert.doesNotMatch(webDockerfile, /http:\/\/localhost:3000\//u);
 });
 
-void test("Caddy health probes the IPv4 admin listener", () => {
+test("Caddy health probes the IPv4 admin listener", () => {
   assert.match(
     content,
     /caddy:[\s\S]*healthcheck:[\s\S]*http:\/\/127\.0\.0\.1:2019\/config\//u,
@@ -1007,7 +1007,7 @@ void test("Caddy health probes the IPv4 admin listener", () => {
   assert.doesNotMatch(content, /http:\/\/localhost:2019\/config\//u);
 });
 
-void test("backup entrypoints are baked into the pinned image", () => {
+test("backup entrypoints are baked into the pinned image", () => {
   assert.match(
     content,
     /backup:[\s\S]*build:[\s\S]*context: \.\/deploy\/postgres/,
@@ -1192,7 +1192,7 @@ const planComposeCreate = (
     { env, encoding: "utf8" },
   );
 
-void test("every documented Compose lane supplies the required report-assistant environment", () => {
+test("every documented Compose lane supplies the required report-assistant environment", () => {
   const lanes = [
     ["local", [devCompose], { PATH: process.env.PATH }],
     [
@@ -1234,7 +1234,7 @@ void test("every documented Compose lane supplies the required report-assistant 
   }
 });
 
-void test("every repository-built image carries the rendered release tag", () => {
+test("every repository-built image carries the rendered release tag", () => {
   const model = renderComposeModel(FULL_POLICY_ENV, ["pdf-artifact-migration"]);
   for (const service of [
     "backup",
@@ -1250,7 +1250,7 @@ void test("every repository-built image carries the rendered release tag", () =>
   }
 });
 
-void test("PDF artifact migration is excluded from normal starts and opt-in by profile", () => {
+test("PDF artifact migration is excluded from normal starts and opt-in by profile", () => {
   const lanes = [
     ["local", [devCompose], { PATH: process.env.PATH }],
     [
@@ -1286,7 +1286,7 @@ void test("PDF artifact migration is excluded from normal starts and opt-in by p
   }
 });
 
-void test("the rendered config guard rejects unsafe URL components without leaking them", () => {
+test("the rendered config guard rejects unsafe URL components without leaking them", () => {
   const model = renderComposeModel(FULL_POLICY_ENV);
   const command = model.services["config-guard"]?.command;
   assert.ok(command !== undefined);
@@ -1314,12 +1314,12 @@ void test("the rendered config guard rejects unsafe URL components without leaki
   }
 });
 
-void test("production compose renders with the full policy matrix", () => {
+test("production compose renders with the full policy matrix", () => {
   const rendered = renderCompose(FULL_POLICY_ENV);
   assert.equal(rendered.status, 0, rendered.stderr);
 });
 
-void test("production Web uses one Compose-owned API origin in both phases", () => {
+test("production Web uses one Compose-owned API origin in both phases", () => {
   assert.equal(
     [...content.matchAll(/^[ \t]+API_URL: \*production-api-url$/gmu)].length,
     2,
@@ -1398,7 +1398,7 @@ const COMPOSE_GRAPHS = [
   ["docker-compose.prod.yml", content],
 ] as const;
 
-void test("the internal renderer joins every compose graph pinned and unexposed", () => {
+test("the internal renderer joins every compose graph pinned and unexposed", () => {
   for (const [path, source] of COMPOSE_GRAPHS) {
     const services = parseComposeServices(source);
     const renderer = services.gotenberg;
@@ -1438,7 +1438,7 @@ void test("the internal renderer joins every compose graph pinned and unexposed"
   );
 });
 
-void test("the renderer wiring is literal in dev and required operator input in production", () => {
+test("the renderer wiring is literal in dev and required operator input in production", () => {
   {
     const base = parseComposeServices(devContent);
     const baseApiEnvironment = base.api?.environment;
@@ -1534,7 +1534,7 @@ void test("the renderer wiring is literal in dev and required operator input in 
   );
 });
 
-void test("the rendered renderer policy is effective in every compose lane", () => {
+test("the rendered renderer policy is effective in every compose lane", () => {
   for (const [lane, composeFiles, environment] of [
     ["local", [devCompose], { PATH: process.env.PATH }],
     [
@@ -1656,7 +1656,7 @@ void test("the rendered renderer policy is effective in every compose lane", () 
   }
 });
 
-void test("production compose refuses to render with a blank required input", () => {
+test("production compose refuses to render with a blank required input", () => {
   // Blank every required var: compose must exit nonzero instead of inventing
   // operational policy. A handful are exempted as documented optional
   // integrations (OTEL_EXPORTER_OTLP_ENDPOINT, SMTP_USER/PASS, SENTRY_DSN,

@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import test from "node:test";
+
+import { test } from "vitest";
 
 import { mergeNextEnvironment } from "../../../apps/web/scripts/run-next.ts";
 
@@ -73,11 +74,11 @@ const assertFirstDeployVariableTable = (document: string): void => {
   }
 };
 
-void test("first-deploy documentation lists every required production variable", () => {
+test("first-deploy documentation lists every required production variable", () => {
   assertFirstDeployVariableTable(operations);
 });
 
-void test("first-deploy variable-table assertion rejects a broken Markdown row", () => {
+test("first-deploy variable-table assertion rejects a broken Markdown row", () => {
   const malformed = operations.replace(
     "\n   | `POSTGRES_DB`",
     "\n\n| `POSTGRES_DB`",
@@ -125,11 +126,11 @@ const assertLocalBootstrapContract = (
   assert.ok(localEnvironment.includes("POSTGRES_DB=customreport_e2e"));
 };
 
-void test("local quick start bootstraps one exact guarded database", () => {
+test("local quick start bootstraps one exact guarded database", () => {
   assertLocalBootstrapContract(localEnvironment, readme);
 });
 
-void test("local bootstrap contract rejects target and consent drift", () => {
+test("local bootstrap contract rejects target and consent drift", () => {
   const wrongTarget = localEnvironment.replaceAll(
     "/customreport_e2e",
     "/customreport_dev",
@@ -159,14 +160,14 @@ const assertNativeApiEnvironment = (
   assert.match(environmentExample, /^API_HOST=127\.0\.0\.1$/mu);
 };
 
-void test("API source development uses the supported TypeScript loader", () => {
+test("API source development uses the supported TypeScript loader", () => {
   const apiDevCommand = apiPackageJson.scripts.dev;
   assertNativeApiEnvironment(apiDevCommand, read(".env.example"), apiBootstrap);
   assert.match(compose, /API_HOST: 0\.0\.0\.0/);
   assert.match(prodCompose, /API_HOST: 0\.0\.0\.0/);
 });
 
-void test("native API environment guard rejects a planted public listener", () => {
+test("native API environment guard rejects a planted public listener", () => {
   const planted = read(".env.example").replace(
     "API_HOST=127.0.0.1",
     "API_HOST=0.0.0.0",
@@ -194,7 +195,7 @@ const assertNativeWebRootEnvironment = (
   assert.match(environmentExample, /^API_URL=http:\/\/localhost:3002$/mu);
 };
 
-void test("native Web dev and build load the root environment contract", () => {
+test("native Web dev and build load the root environment contract", () => {
   assertNativeWebRootEnvironment(webPackageJson.scripts, read(".env.example"));
   assert.equal(
     existsSync(resolve("apps/web/.env.example")),
@@ -210,7 +211,7 @@ void test("native Web dev and build load the root environment contract", () => {
   );
 });
 
-void test("native Web environment guard rejects a planted split-brain script", () => {
+test("native Web environment guard rejects a planted split-brain script", () => {
   assert.throws(() =>
     assertNativeWebRootEnvironment(
       { ...webPackageJson.scripts, dev: "next dev --webpack" },
@@ -219,7 +220,7 @@ void test("native Web environment guard rejects a planted split-brain script", (
   );
 });
 
-void test("native Web root environment preserves explicit shell precedence", () => {
+test("native Web root environment preserves explicit shell precedence", () => {
   assert.deepEqual(
     mergeNextEnvironment("API_URL=http://file\nFILE_ONLY=yes\n", {
       API_URL: "http://shell",
@@ -233,7 +234,7 @@ void test("native Web root environment preserves explicit shell precedence", () 
   );
 });
 
-void test("native Web uses the standard NODE_ENV for each Next command", () => {
+test("native Web uses the standard NODE_ENV for each Next command", () => {
   assert.equal(
     mergeNextEnvironment("NODE_ENV=development\n", {}, "build").NODE_ENV,
     "production",
@@ -244,14 +245,14 @@ void test("native Web uses the standard NODE_ENV for each Next command", () => {
   );
 });
 
-void test("Mailpit is the one local SMTP service name", () => {
+test("Mailpit is the one local SMTP service name", () => {
   assert.match(compose, /\n {2}mailpit:\n/);
   assert.match(compose, /SMTP_HOST: mailpit/);
   assert.match(read(".env.example"), /^SMTP_HOST=localhost$/m);
   assert.match(read(".env.example"), /^SMTP_PORT=1025$/m);
 });
 
-void test("metrics documentation and edge config keep the endpoint internal", () => {
+test("metrics documentation and edge config keep the endpoint internal", () => {
   const caddy = read("deploy/caddy/Caddyfile");
   const apiPathMatcher =
     caddy.split("\n").find((line) => line.trimStart().startsWith("path ")) ??
@@ -272,7 +273,7 @@ void test("metrics documentation and edge config keep the endpoint internal", ()
   assert.match(read("deploy/caddy/README.md"), /`\/metrics` stays internal/);
 });
 
-void test("the enforcing CSP policy reports violations to the required collector", () => {
+test("the enforcing CSP policy reports violations to the required collector", () => {
   const caddy = read("deploy/caddy/Caddyfile");
   assert.match(
     caddy,
@@ -285,14 +286,14 @@ void test("the enforcing CSP policy reports violations to the required collector
   );
 });
 
-void test("production Compose mounts the sole Caddy policy", () => {
+test("production Compose mounts the sole Caddy policy", () => {
   assert.match(
     prodCompose,
     /- \.\/deploy\/caddy\/Caddyfile:\/etc\/caddy\/Caddyfile:ro/,
   );
 });
 
-void test("production Compose examples always load the production environment", () => {
+test("production Compose examples always load the production environment", () => {
   const examples = [operations, caddyReadme]
     .flatMap((document) => document.split("\n"))
     .filter(
@@ -310,7 +311,7 @@ void test("production Compose examples always load the production environment", 
   );
 });
 
-void test("production Caddy variables have one production-only source", () => {
+test("production Caddy variables have one production-only source", () => {
   for (const variable of [
     "CADDY_SITE_ADDRESS",
     "CADDY_ACME_EMAIL",
@@ -322,7 +323,7 @@ void test("production Caddy variables have one production-only source", () => {
   }
 });
 
-void test("observability has explicit local and production Grafana contracts", () => {
+test("observability has explicit local and production Grafana contracts", () => {
   assert.match(localEnvironment, /^GRAFANA_PORT=3003$/m);
   assert.match(localEnvironment, /^GRAFANA_ADMIN_USER=admin$/m);
   assert.match(
@@ -347,7 +348,7 @@ void test("observability has explicit local and production Grafana contracts", (
   assert.match(environmentDocs, /host ports are loopback-only/u);
 });
 
-void test("local observability extends one Compose project without duplicate ports", () => {
+test("local observability extends one Compose project without duplicate ports", () => {
   const composeCommand = packageJson.scripts["observability:compose"] ?? "";
   const downCommand = packageJson.scripts["observability:down"] ?? "";
 
@@ -364,7 +365,7 @@ void test("local observability extends one Compose project without duplicate por
   assert.match(environmentDocs, /reuses its PostgreSQL, Redis, and Mailpit/u);
 });
 
-void test("local Bugsink overlay has an explicit secret contract", () => {
+test("local Bugsink overlay has an explicit secret contract", () => {
   assert.match(localEnvironment, /^BUGSINK_PORT=8000$/m);
   assert.match(
     localEnvironment,
@@ -385,7 +386,7 @@ void test("local Bugsink overlay has an explicit secret contract", () => {
   );
 });
 
-void test("integration environment documents its guarded target boundary", () => {
+test("integration environment documents its guarded target boundary", () => {
   assert.match(integrationEnvironment, /Guarded disposable E2E target/u);
   assert.match(
     integrationEnvironment,
@@ -398,7 +399,7 @@ void test("integration environment documents its guarded target boundary", () =>
   assert.doesNotMatch(integrationEnvironment, /^DATABASE_URL=/mu);
 });
 
-void test("Grafana providers own non-overlapping current dashboard roots", () => {
+test("Grafana providers own non-overlapping current dashboard roots", () => {
   assert.match(
     observabilityCompose,
     /dashboards\/customreport\/operations\/customreport-dashboard\.json/,
@@ -431,7 +432,7 @@ void test("Grafana providers own non-overlapping current dashboard roots", () =>
   );
 });
 
-void test("development Compose uses the canonical Sentry variable names", () => {
+test("development Compose uses the canonical Sentry variable names", () => {
   assert.match(devCompose, /SENTRY_DSN: \$\{SENTRY_DSN:-\}/);
   assert.match(
     devCompose,
@@ -440,7 +441,7 @@ void test("development Compose uses the canonical Sentry variable names", () => 
   assert.doesNotMatch(devCompose, /SENTRY_DSN_[A-Z]/);
 });
 
-void test("production documents the browser DSN as a build-time input", () => {
+test("production documents the browser DSN as a build-time input", () => {
   assert.match(
     prodCompose,
     /NEXT_PUBLIC_SENTRY_DSN: \$\{NEXT_PUBLIC_SENTRY_DSN:-\}/,
@@ -456,7 +457,7 @@ void test("production documents the browser DSN as a build-time input", () => {
   );
 });
 
-void test("operations documentation inventories integration and coverage lanes", () => {
+test("operations documentation inventories integration and coverage lanes", () => {
   assert.match(
     operations,
     /`api-integration` lane[\s\S]*Postgres\/Redis\/Mailpit/,
@@ -475,7 +476,7 @@ void test("operations documentation inventories integration and coverage lanes",
   );
 });
 
-void test("the GitLab quality lane carries no product build", () => {
+test("the GitLab quality lane carries no product build", () => {
   // Per the owner decision the product build is documented as required
   // evidence outside CI instead.
   const gitlabQuality = gitlabContent.slice(
@@ -486,7 +487,7 @@ void test("the GitLab quality lane carries no product build", () => {
   assert.match(gitlabCiDoc, /product build[\s\S]*outside CI/u);
 });
 
-void test("dependency-scan also runs on merge requests that change dependency manifests", () => {
+test("dependency-scan also runs on merge requests that change dependency manifests", () => {
   const start = gitlabContent.indexOf("\ndependency-scan:");
   const next = gitlabContent.slice(start + 1).search(/\n[a-z.][\w.-]*:\n/u);
   const end = next === -1 ? gitlabContent.length : start + 1 + next;
@@ -508,7 +509,7 @@ void test("dependency-scan also runs on merge requests that change dependency ma
   }
 });
 
-void test("Vitest CI output has one labelled summary contract", () => {
+test("Vitest CI output has one labelled summary contract", () => {
   assert.match(vitestBase, /jobSummary:\s*\{\s*enabled:\s*false\s*\}/u);
   assert.match(vitestBase, /displayAnnotations:\s*true/u);
   assert.match(vitestBase, /VITEST_JSON_OUTPUT_FILE/u);
@@ -540,11 +541,11 @@ const assertRecoveryEvidenceIsTruthful = (document: string): void => {
   );
 };
 
-void test("recovery guidance distinguishes configuration from measured evidence", () => {
+test("recovery guidance distinguishes configuration from measured evidence", () => {
   assertRecoveryEvidenceIsTruthful(operations);
 });
 
-void test("recovery guidance rejects a planted RPO overclaim", () => {
+test("recovery guidance rejects a planted RPO overclaim", () => {
   const overclaim = operations.replace(
     "Neither value alone\nproves achieved RPO or RTO",
     "Together they are the recovery-point objective and\nprove achieved RPO or RTO",
@@ -583,11 +584,11 @@ const assertAiCredentialKeyRotationBoundary = (
   );
 };
 
-void test("AI credential-key documentation states the single-key MVP boundary", () => {
+test("AI credential-key documentation states the single-key MVP boundary", () => {
   assertAiCredentialKeyRotationBoundary(operations, productionEnvironment);
 });
 
-void test("AI credential-key documentation rejects a planted rotation claim", () => {
+test("AI credential-key documentation rejects a planted rotation claim", () => {
   const overclaim = operations.replace(
     "Do **not** treat a\nversion increment as a safe rotation",
     "Treat a version increment as a safe rotation",
@@ -598,7 +599,7 @@ void test("AI credential-key documentation rejects a planted rotation claim", ()
   );
 });
 
-void test("external production controls remain blocked until external read-back", () => {
+test("external production controls remain blocked until external read-back", () => {
   const operationsText = read("docs/operations.md");
   assert.match(operationsText, /External first-production prerequisites/);
   assert.match(operationsText, /BLOCKED/);
