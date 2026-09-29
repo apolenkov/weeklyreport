@@ -111,8 +111,8 @@ write or update the colocated test first, then the code.
       `GOTENBERG_URL: ${GOTENBERG_URL:?GOTENBERG_URL must be set}` to
       `docker-compose.prod.yml`, `GOTENBERG_URL=` to
       `deploy/environment/production.env.example`, and `GOTENBERG_URL` plus
-      `CHROMIUM_ALLOW_LIST` job-env values to the `docker-build` job in
-      `.github/workflows/ci.yml` so the production compose render keeps
+      `CHROMIUM_ALLOW_LIST` job-env values to the removed
+      `docker-build` CI job so the production compose render keeps
       passing — verify the compose gate test suite passes with assertions on
       all effective renderer values.
 - [x] 4.2 Update `prod-compose-gate.test.ts`: replace the positive

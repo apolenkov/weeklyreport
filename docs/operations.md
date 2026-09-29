@@ -479,16 +479,16 @@ Images are the unit of rollback; the database is not.
 
 ## CI
 
-`.gitlab-ci.yml` runs the lint/test subset (`node-toolchain`, `quality`,
-`dependency-scan`, `coverage`, `api-integration`, `migrate-reset`; see `docs/gitlab-ci.md`). The declared
-`.github/workflows/ci.yml` (no GitHub remote is configured) runs the `quality`, `api-integration`, `coverage`,
-`migrate-reset`, and `docker-build` jobs. The `api-integration` lane runs the
-API unit and integration suites once, serially, against disposable
-Postgres/Redis/Mailpit services and enforces the API coverage thresholds. The
-`coverage` lane enforces Web coverage without starting a second dependency
-stack; the quality lane
-runs lint, typecheck, unit tests, and the complete workspace build, while the
-remaining jobs cover migration drift and the production image build. Local
+`.gitlab-ci.yml` runs the lint/test lanes only (`node-toolchain`, `quality`,
+`dependency-scan`, `coverage`, `api-integration`, `migrate-reset`; see
+`docs/gitlab-ci.md`). The `api-integration` lane runs the API unit and
+integration suites once, serially, against disposable Postgres/Redis/Mailpit
+(in-job loopback Postgres; Redis and Mailpit as service aliases) and enforces the API coverage thresholds.
+The `coverage` lane enforces Web coverage without starting a second dependency
+stack; the `quality` lane runs lint, typecheck, and unit tests, and
+`migrate-reset` covers migration drift. The complete workspace build, the
+production image build, PDF export, and browser acceptance are not CI lanes and
+stay required evidence collected outside CI. Local
 commands remain the fast gate; run the same checks before pushing.
 
 ## External first-production prerequisites
