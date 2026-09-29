@@ -167,7 +167,7 @@ Authority model:
 - [prod-security-hardening](./prod-security-hardening/spec.md) — Enforces production CSP, immutable base-image digests, and safe dev-auth build defaults.
 - [public-endpoint-resource-limits](./public-endpoint-resource-limits/spec.md) — Bounds unauthenticated API request rate and body size per public ingress surface.
 - [repository-scope-guard](./repository-scope-guard/spec.md) — Repositories fail closed when a read attempts to cross the caller's authorized product-group scope.
-- [repository-security-controls](./repository-security-controls/spec.md) — Requires explicit ownership of sensitive repository paths and a tested private vulnerability-response path.
+- [repository-security-controls](./repository-security-controls/spec.md) — Keeps automated checks least-privileged, requires explicit ownership of sensitive repository paths, and preserves a tested private vulnerability-response path.
 - [role-coverage-gate](./role-coverage-gate/spec.md) — Requires every tRPC procedure to use one of the canonical middleware builders by reference identity.
 - [role-model-consistency](./role-model-consistency/spec.md) — Keeps route role declarations aligned with the API authorization gate.
 - [section-save-payload-bounds](./section-save-payload-bounds/spec.md) — Applies the shared array-size bound to every client-supplied section-save collection.

@@ -114,6 +114,7 @@ describe("getServerSession", () => {
     expect(url).toContain("/trpc/auth.me");
     expect(init.headers).toBeUndefined();
     expect(init.cache).toBe("no-store");
+    expect(init.signal).toBeInstanceOf(AbortSignal);
   });
 
   it("returns the decoded session when auth.me resolves", async () => {

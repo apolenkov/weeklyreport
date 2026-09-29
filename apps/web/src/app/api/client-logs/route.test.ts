@@ -51,6 +51,7 @@ describe("client-logs proxy route", () => {
     expect(new Headers(init.headers).get("x-forwarded-for")).toBe(
       "203.0.113.7",
     );
+    expect(init.signal).toBeInstanceOf(AbortSignal);
   });
 
   it("omits X-Forwarded-For when the incoming request carries none", async () => {

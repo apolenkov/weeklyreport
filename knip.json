@@ -45,6 +45,5 @@
     "packages/migrator-runtime": {
       "ignoreDependencies": ["dotenv", "prisma"]
     }
-  },
-  "ignoreExportsUsedInFile": true
+  }
 }

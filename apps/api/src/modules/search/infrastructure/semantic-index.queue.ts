@@ -41,7 +41,8 @@ export const semanticIndexJobDataSchema = z.object({
   configurationRevisionId: nonEmpty,
   scope: z.object({
     provider: nonEmpty,
-    embeddingScopeIdentity: z.string().trim().min(1),
+    // refine, not trim(): the value must stay byte-identical to the enqueued one.
+    embeddingScopeIdentity: z.string().refine((v) => v.trim().length > 0),
     model: nonEmpty,
     inputVersion: nonEmpty,
     dimensions: z.number().int().positive(),

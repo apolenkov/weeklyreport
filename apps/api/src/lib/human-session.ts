@@ -34,7 +34,8 @@ export async function resolveHumanSession(
   if (!live) return null;
   // Role and group come from the database, not the JWT, so an admin change
   // takes effect on the next request (jwt-session-integrity).
-  const { reportingGroupId: _stale, ...rest } = session;
+  // The cached name goes with the id so hydration re-reads it for the live group.
+  const { reportingGroupId: _id, reportingGroupName: _name, ...rest } = session;
   return hydrateSession(
     {
       ...rest,
