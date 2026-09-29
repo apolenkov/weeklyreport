@@ -50,10 +50,13 @@ async function upsertVerdict(
       reviewerId: params.reviewerId,
       verdict: params.verdict,
       judgedVersion: params.expectedVersion,
+      comment: params.comment ?? null,
     },
     update: {
       verdict: params.verdict,
       judgedVersion: params.expectedVersion,
+      // null on approval so a stale reason never outlives a later verdict.
+      comment: params.comment ?? null,
     },
   });
 }

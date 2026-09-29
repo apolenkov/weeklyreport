@@ -190,12 +190,14 @@ describe("ReviewActionsService — verdict", () => {
       reportSectionId: SECTION,
       verdict: "changes_requested",
       version: 3,
+      comment: "Add the missing risk owner.",
     });
     expect(result).toMatchObject({ judgedVersion: 3, unsubmitted: true });
     expect(postVerdict).toHaveBeenCalledWith({
       sectionId: SECTION,
       reviewerId: headA.userId,
       verdict: "changes_requested",
+      comment: "Add the missing risk owner.",
       expectedVersion: 3,
     });
   });
