@@ -316,6 +316,7 @@ describe("LeadForm mode-adaptive trailing control", () => {
             risks: [],
             decisions: [],
             activities: [],
+            reviews: [],
           },
           readOnly: false,
           publishedLineage: { itemStableIds: [], decisionStableIds: [] },
