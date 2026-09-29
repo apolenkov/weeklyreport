@@ -28,15 +28,6 @@ import {
 } from "./section-record.schema";
 
 export {
-  type PublishedDecisionReadModel,
-  publishedDecisionReadModelSchema,
-  type PublishedItemReadModel,
-  publishedItemReadModelSchema,
-  type PublishedRiskReadModel,
-  publishedRiskReadModelSchema,
-} from "./published-section-record.schema";
-export {
-  activityStatusInputSchema,
   decisionInputSchema,
   decisionReadModelSchema,
   decisionWriteSchema,
@@ -49,11 +40,7 @@ export {
   riskInputSchema,
   riskReadModelSchema,
   riskWriteSchema,
-  sectionActivitySchema,
-  sharedDecisionReadModelSchema,
   sharedItemReadModelSchema,
-  sharedRiskReadModelSchema,
-  stageStatusInputSchema,
 } from "./section-record.schema";
 
 /** Maximum number of records accepted for any one section-save collection. */
@@ -124,11 +111,11 @@ const stageSetEntryObjectSchema = z.object({
 });
 
 /** Describes one stage displayed in a product's read-only stage grid. */
-export const stageSetEntrySchema = stageSetEntryObjectSchema.readonly();
+const stageSetEntrySchema = stageSetEntryObjectSchema.readonly();
 
 // Author's StageAssignment rows for this product; empty means no stake.
 /** Describes a stage assigned to the section author for one product. */
-export const ownedStageSchema = stageSetEntryObjectSchema
+const ownedStageSchema = stageSetEntryObjectSchema
   .extend({
     status: trafficLightStatusSchema.nullable().optional(),
   })
@@ -147,7 +134,7 @@ const projectReadModelObjectSchema = z.object({
 });
 
 /** Describes an author-visible product and its reporting-stage context. */
-export const projectReadModelSchema = projectReadModelObjectSchema.readonly();
+const projectReadModelSchema = projectReadModelObjectSchema.readonly();
 
 const publishedProjectReadModelSchema = projectReadModelObjectSchema
   .extend({
@@ -157,7 +144,7 @@ const publishedProjectReadModelSchema = projectReadModelObjectSchema
 
 // Name-only for products outside author-owned projects — not in `projects` (avoids write leakage).
 /** Identifies a product referenced by records outside the author's products. */
-export const referencedProjectSchema = z
+const referencedProjectSchema = z
   .object({
     projectId: z.uuid(),
     projectName: z.string().min(1),

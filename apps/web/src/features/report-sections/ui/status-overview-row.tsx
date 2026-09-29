@@ -18,16 +18,13 @@ import {
   STATUS_OVERVIEW_COLUMN_HEADER_IDS,
   STATUS_OVERVIEW_COLUMNS,
   STATUS_OVERVIEW_DESKTOP_GRID,
-  type StatusOverviewColumnKey,
   TIMELINE_CELL,
   TIMELINE_GRID,
 } from "./status-overview-layout";
 import { StatusOverviewUnitSummary } from "./status-overview-summary";
 import { TimelineFooter } from "./status-overview-timeline-footer";
 
-export { STATUS_OVERVIEW_COLUMNS, STATUS_OVERVIEW_DESKTOP_GRID };
-export type { StatusOverviewColumnKey };
-
+export { STATUS_OVERVIEW_DESKTOP_GRID };
 function MobileWeekLabel({
   label,
   period,

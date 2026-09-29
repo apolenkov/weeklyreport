@@ -17,7 +17,6 @@ import { buildLeadInfos } from "./dashboard-leads";
 
 export type { BlockedAtRiskItem } from "./dashboard-escalations";
 export type { KpiData } from "./dashboard-kpi";
-export { formatRelativeDeadline } from "./dashboard-kpi";
 export type { LeadInfo } from "./dashboard-lead-presentation";
 
 // ---- Composer ----
@@ -39,7 +38,7 @@ export interface MapReviewDashboardArgs {
   readonly currentUserId?: string;
 }
 
-export interface MappedDashboard {
+interface MappedDashboard {
   readonly kpi: KpiData;
   readonly leads: readonly LeadInfo[];
   readonly blockedAtRisk: readonly BlockedAtRiskItem[];

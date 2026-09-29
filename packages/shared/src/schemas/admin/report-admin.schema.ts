@@ -19,16 +19,11 @@ import {
 export type {
   AdminReminderExecution,
   AdminReminderRule,
-  AdminSnapshotReminderExecution,
-  AdminSnapshotReminderRule,
   ReminderQueuePayload,
 } from "./reminder-recovery.schema";
 export {
   adminReminderExecutionSchema,
-  adminReminderExecutionStatusSchema,
-  adminReminderRuleKindSchema,
   adminReminderRuleSchema,
-  adminReminderRuleStatusSchema,
   adminSnapshotReminderExecutionSchema,
   adminSnapshotReminderRuleSchema,
   reminderDeadlinePayloadSchema,

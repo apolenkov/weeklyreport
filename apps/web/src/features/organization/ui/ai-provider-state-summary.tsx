@@ -6,7 +6,7 @@ import { Pencil } from "lucide-react";
 
 import { profileLabel } from "./ai-provider-form";
 
-export const lifecycleCopy: Record<
+const lifecycleCopy: Record<
   AiProviderConfigurationRead["lifecycle"] | "none",
   { label: string; detail: string; next: string }
 > = {

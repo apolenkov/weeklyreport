@@ -7,7 +7,7 @@ import { formatPeriodRangeWithYear } from "../../../../../shared/lib/format/form
 
 type SectionItem = ReportSectionReadModel["items"][number];
 
-export type OpenWorkAction =
+type OpenWorkAction =
   | { readonly kind: "resume"; readonly label: "Resume paused work" }
   | { readonly kind: "continue"; readonly label: "Continue work" }
   | { readonly kind: "replan"; readonly label: "Replan deferred work" }

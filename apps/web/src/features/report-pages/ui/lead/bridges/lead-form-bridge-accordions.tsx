@@ -46,7 +46,7 @@ export interface LeadFormBridgeAccordionsActions extends LeadFormItemSectionsAct
   readonly addRisk: () => void;
 }
 
-export function ProductStatusAccordion({
+function ProductStatusAccordion({
   groupExpanded,
   productCount,
 }: {
@@ -69,7 +69,7 @@ export function ProductStatusAccordion({
 
 // Stage-less units beside products. Attachment is admin-provisioned, so the
 // section offers no add control.
-export function ProjectActivitiesAccordion({
+function ProjectActivitiesAccordion({
   groupExpanded,
   activities,
   attachedCount,

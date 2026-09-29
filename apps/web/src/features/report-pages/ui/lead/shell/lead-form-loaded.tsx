@@ -41,11 +41,11 @@ import {
   useCompletionPresentation,
 } from "./presentation/use-completion-presentation";
 
-export type LeadFormLoadedActions = LeadFormEditSectionsActions &
+type LeadFormLoadedActions = LeadFormEditSectionsActions &
   LeadFormDialogsQuickAdd & {
     readonly onQuickAdd: (kind: QuickAddKind) => void;
   };
-export type LeadFormLoadedWriteActions = LeadFormHeaderWriteActions &
+type LeadFormLoadedWriteActions = LeadFormHeaderWriteActions &
   LeadFormDialogsWriteActions & { readonly handleSubmit: () => void };
 
 // The fixed completion rail owns the only conditional content clearance.

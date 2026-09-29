@@ -25,7 +25,7 @@ export interface GridRowEditableRef {
   readonly stableId: string;
 }
 
-export interface GridRowDetail {
+interface GridRowDetail {
   readonly label: "Impact" | "Mitigation";
   readonly text: string;
 }

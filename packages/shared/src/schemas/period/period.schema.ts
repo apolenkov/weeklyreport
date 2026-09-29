@@ -145,7 +145,7 @@ export type AdminUpdatePeriodManualResult = z.infer<
 >;
 
 /** Supported work-week policies used by deadline calculations. */
-export const workingDaysSchema = z.enum(["mon-fri", "mon-sat", "mon-sun"]);
+const workingDaysSchema = z.enum(["mon-fri", "mon-sat", "mon-sun"]);
 
 /**
  * Regex guard for the `deadlineTime` HH:MM-in-24h

@@ -29,7 +29,7 @@ function commandSource(source: Item, command: ResolvePlanInput): Item {
   };
 }
 
-export function outcomeState(item: Item): ItemOutcomeState {
+function outcomeState(item: Item): ItemOutcomeState {
   return itemOutcomeStateSchema.parse({
     type: item.type,
     workflowStatus: item.workflowStatus,
