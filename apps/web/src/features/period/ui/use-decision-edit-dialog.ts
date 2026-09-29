@@ -1,6 +1,7 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";
+import { useDiscardGuard } from "../../../shared/ui/dialogs/use-discard-guard";
 import { resolveDecisionFormSeed } from "./decision-edit-dialog-helpers";
 import {
   deriveDecisionDialogModel,
@@ -16,14 +17,7 @@ import {
 export function useDecisionEditDialog(args: UseDecisionEditDialogArgs) {
   const { decision, onCancel } = args;
 
-  // Escape + focus trap via the shared primitive; the surface autofocuses its
-  // first field, and the primitive restores focus to the opener on close.
   const dialogSurfaceRef = useRef<HTMLDivElement>(null);
-  useDialogFocus({
-    open: true,
-    onClose: onCancel,
-    containerRef: dialogSurfaceRef,
-  });
   // Validation-focus targets: on a failed save, focus moves to the first
   // invalid control instead of sitting on the Save button.
   const textRef = useRef<HTMLTextAreaElement>(null);
@@ -31,6 +25,26 @@ export function useDecisionEditDialog(args: UseDecisionEditDialogArgs) {
 
   const seed = resolveDecisionFormSeed(decision, args.defaultOwner);
   const fields = useDecisionFormState(seed, () => initialDecisionParent(args));
+  const snapshot = JSON.stringify([
+    fields.text,
+    fields.impact,
+    fields.deadline,
+    fields.parent,
+    fields.stageNames,
+  ]);
+  const [baseline] = useState(snapshot);
+  const { requestClose, discardDialog } = useDiscardGuard(
+    snapshot !== baseline,
+    onCancel,
+    args.isPending,
+  );
+  // Escape + focus trap via the shared primitive; the surface autofocuses its
+  // first field, and the primitive restores focus to the opener on close.
+  useDialogFocus({
+    open: true,
+    onClose: requestClose,
+    containerRef: dialogSurfaceRef,
+  });
   const model = deriveDecisionDialogModel(
     args,
     fields.parent,
@@ -66,5 +80,7 @@ export function useDecisionEditDialog(args: UseDecisionEditDialogArgs) {
     headerProductName: model.headerProductName,
     handleSave,
     handleKeyDown,
+    requestClose,
+    discardDialog,
   };
 }

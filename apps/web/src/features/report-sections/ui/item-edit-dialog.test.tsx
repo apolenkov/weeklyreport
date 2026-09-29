@@ -100,7 +100,7 @@ describe("ItemEditDialog — compact touch floor", () => {
       />,
     );
 
-    for (const name of [/^Cancel$/, /Save Item/]) {
+    for (const name of [/^Cancel$/, /Save item/]) {
       const button = screen.getByRole("button", { name });
       expect(button.className).toContain("min-h-[var(--touch-target-min)]");
       expect(button.className).toContain("md:min-h-[40px]");
@@ -176,7 +176,7 @@ describe("ItemEditDialog — create parent seeding", () => {
     fireEvent.change(screen.getByLabelText(/Description \*/i), {
       target: { value: "Choose the current product" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save item/i }));
 
     expect(onSave).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({
@@ -224,7 +224,7 @@ describe("ItemEditDialog — create parent seeding", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save item/i }));
 
     const parentPicker = screen.getByLabelText("Product");
     expect(screen.getByText("No product available")).toBeInTheDocument();
@@ -289,7 +289,7 @@ describe("ItemEditDialog — reopen reset", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /In Progress/i }));
     fireEvent.click(screen.getByRole("checkbox", { name: "Testing" }));
-    fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save item/i }));
 
     expect(screen.getByText("Description is required")).toBeInTheDocument();
     expect(
@@ -323,7 +323,7 @@ describe("ItemEditDialog — reopen reset", () => {
     expect(screen.getByLabelText(/Description \*/i)).toHaveValue(
       "Persisted item text",
     );
-    expect(screen.getByRole("button", { name: /Completed/i })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: /Done/i })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
@@ -363,7 +363,7 @@ describe("ItemEditDialog — save and reopen status reset", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: /Completed/i })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: /Done/i })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
@@ -375,7 +375,7 @@ describe("ItemEditDialog — save and reopen status reset", () => {
     fireEvent.change(screen.getByRole("textbox", { name: /Next step/i }), {
       target: { value: "Watch the deployment" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save item/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
@@ -415,7 +415,7 @@ describe("ItemEditDialog — save and reopen status reset", () => {
     expect(
       screen.getByRole("button", { name: /In Progress/i }),
     ).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: /Completed/i })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: /Done/i })).toHaveAttribute(
       "aria-pressed",
       "false",
     );
@@ -515,7 +515,7 @@ describe("ItemEditDialog — unique rank picker", () => {
     fireEvent.change(screen.getByLabelText(/Priority rank/i), {
       target: { value: "3" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save item/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({ priorityRank: 3 });
@@ -543,7 +543,7 @@ describe("ItemEditDialog — stageNames", () => {
     });
     // Nothing is pre-selected on create, so clicking "Testing" selects it.
     fireEvent.click(screen.getByRole("checkbox", { name: "Testing" }));
-    fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save item/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({

@@ -337,9 +337,9 @@ describe("lead-form draft: local section add", () => {
       screen.getAllByRole("button", { name: "+ Add Item" })[0]?.click(),
     );
     // The section action opens the shared item editor, whose accessible name
-    // ends in "dialog" (distinct from the "Confirm submission" dialog).
+    // starts with "Add Item" (distinct from the "Confirm submission" dialog).
     expect(
-      await screen.findByRole("dialog", { name: /dialog$/i }),
+      await screen.findByRole("dialog", { name: /^Add Item/ }),
     ).toBeInTheDocument();
   });
 
@@ -490,7 +490,7 @@ describe("lead-form draft: submit gating + dialogs", () => {
     expect(await screen.findByText("✓ Submitted")).toBeInTheDocument();
   });
 
-  it("a submitted lead can open the Request Reopen dialog", async () => {
+  it("a submitted lead can open the Request reopen dialog", async () => {
     const { Wrapper } = buildHarness({ sectionStatus: "submitted" });
     render(
       <Wrapper>
@@ -498,7 +498,7 @@ describe("lead-form draft: submit gating + dialogs", () => {
       </Wrapper>,
     );
     const reopen = await screen.findByRole("button", {
-      name: /Request Reopen/i,
+      name: /Request reopen/i,
     });
     act(() => reopen.click());
     expect(

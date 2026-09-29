@@ -67,7 +67,7 @@ describe("RiskEditDialog prose limits", () => {
     fireEvent.change(screen.getByLabelText(/^Mitigation \*/i), {
       target: { value: "Mitigation" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Save Risk" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save risk" }));
 
     expect(screen.getByLabelText(/^Risk \*/i)).toHaveValue(overLimit);
     expect(screen.getByLabelText(/^Risk \*/i)).toHaveFocus();
@@ -100,7 +100,7 @@ describe("RiskEditDialog prose limits", () => {
     fireEvent.change(screen.getByLabelText(/^Mitigation \*/i), {
       target: { value: "Mitigation" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Save Risk" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save risk" }));
 
     expect(riskText).toHaveValue(invisibleOnly);
     expect(riskText).toHaveAttribute("aria-invalid", "true");
@@ -148,7 +148,7 @@ describe("RiskEditDialog — stale create parent", () => {
       target: { value: "Escalate" },
     });
 
-    const saveButton = screen.getByRole("button", { name: /Save Risk/i });
+    const saveButton = screen.getByRole("button", { name: /Save risk/i });
     expect(saveButton).not.toBeDisabled();
     fireEvent.click(saveButton);
     expect(onSave).not.toHaveBeenCalled();
@@ -191,7 +191,7 @@ describe("RiskEditDialog — compact touch floor", () => {
       />,
     );
 
-    for (const name of [/^Cancel$/, /Save Risk/]) {
+    for (const name of [/^Cancel$/, /Save risk/]) {
       const button = screen.getByRole("button", { name });
       expect(button.className).toContain("min-h-[var(--touch-target-min)]");
       expect(button.className).toContain("md:min-h-[40px]");
@@ -406,7 +406,7 @@ describe("RiskEditDialog — cross-stage product preservation", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save risk/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
@@ -501,7 +501,7 @@ describe("RiskEditDialog — zero-owned-stage guard", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: /Save Risk/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Save risk/i })).toBeDisabled();
     expect(
       screen.getByText(/no stages assigned — contact admin/i),
     ).toBeInTheDocument();
@@ -564,7 +564,7 @@ describe("RiskEditDialog — zero-owned-stage guard", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: /Save Risk/i }),
+      screen.getByRole("button", { name: /Save risk/i }),
     ).not.toBeDisabled();
 
     fireEvent.change(screen.getByLabelText(/^Risk \*/i), {
@@ -576,7 +576,7 @@ describe("RiskEditDialog — zero-owned-stage guard", () => {
     fireEvent.change(screen.getByLabelText(/^Mitigation \*/i), {
       target: { value: "Escalate" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save risk/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
   });
@@ -606,13 +606,13 @@ describe("RiskEditDialog — zero-owned-stage guard", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: /Save Risk/i }),
+      screen.getByRole("button", { name: /Save risk/i }),
     ).not.toBeDisabled();
     expect(
       screen.queryByText(/no stages assigned — contact admin/i),
     ).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save risk/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
@@ -649,7 +649,7 @@ describe("RiskEditDialog — zero-owned-stage guard", () => {
     fireEvent.change(screen.getByLabelText(/^Mitigation \*/i), {
       target: { value: "Escalate" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save risk/i }));
     expect(screen.getByText(/Select at least one stage/i)).toBeInTheDocument();
 
     // Switch to the zero-owned-stage product: the stale required-stage error
@@ -664,7 +664,7 @@ describe("RiskEditDialog — zero-owned-stage guard", () => {
     expect(
       screen.queryByText(/Select at least one stage/i),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Save Risk/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Save risk/i })).toBeDisabled();
   });
 });
 
@@ -750,7 +750,7 @@ describe("RiskEditDialog — activity parenting", () => {
     fireEvent.change(screen.getByLabelText(/^Mitigation \*/i), {
       target: { value: "Escalate" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save risk/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
     const saved = onSave.mock.calls[0]?.[0] as {
@@ -765,5 +765,33 @@ describe("RiskEditDialog — activity parenting", () => {
       text: "Vendor delay",
     });
     expect(saved.stageNames).toEqual([]);
+  });
+});
+
+describe("RiskEditDialog discard guard", () => {
+  it("asks before discarding typed text on Escape and keeps it on Keep editing", () => {
+    const onCancel = vi.fn();
+    render(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={products}
+        onSave={vi.fn()}
+        onCancel={onCancel}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev"]}
+      />,
+    );
+    const text = screen.getByLabelText(/^Risk \*/i);
+    fireEvent.change(text, { target: { value: "Vendor delay" } });
+    fireEvent.keyDown(text, { key: "Escape" });
+
+    expect(screen.getByRole("alertdialog")).toHaveTextContent(
+      "Discard changes?",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Keep editing" }));
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(screen.getByLabelText(/^Risk \*/i)).toHaveValue("Vendor delay");
+    expect(onCancel).not.toHaveBeenCalled();
   });
 });

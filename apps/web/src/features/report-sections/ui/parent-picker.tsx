@@ -96,7 +96,7 @@ export function ParentPicker({
       </label>
       <select
         id={id}
-        className={`select-chevron w-full max-md:min-h-[var(--touch-target-min)] rounded-xl border bg-[var(--color-card)] py-2.5 pl-3 text-sm text-[var(--color-foreground)] focus:outline-none ${error ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[var(--shadow-focus-destructive)]" : "border-[var(--color-border-strong)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_var(--color-ring)]"}`}
+        className={`select-chevron w-full max-md:min-h-[var(--touch-target-min)] rounded-xl border bg-[var(--color-card)] py-2.5 pl-3 text-base md:text-sm text-[var(--color-foreground)] focus:outline-none ${error ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[var(--shadow-focus-destructive)]" : "border-[var(--color-border-strong)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_var(--color-ring)]"}`}
         value={encodeParent(value)}
         aria-invalid={error ? "true" : "false"}
         aria-describedby={error ? `${id}-error` : undefined}

@@ -64,7 +64,7 @@ active-selection fill, not the brand accent.
    for head) it MUST be the only control with the resting solid brand-accent
    fill; in states with no forward commit (submitted lead, published head) the
    header action group has no resting solid primary.
-2. Reversal lifecycle actions (Request Reopen, Revoke, Reopen) MUST NOT use the
+2. Reversal lifecycle actions (Request reopen, Revoke, Reopen) MUST NOT use the
    resting solid brand-accent fill; they MUST take a neutral/outline treatment
    so the accent colour signals only a forward, safe-to-commit action.
 3. The bordered context-control bar MUST NOT give any control a brand-accent
@@ -85,7 +85,7 @@ active-selection fill, not the brand accent.
 
 - **WHEN** a lead has submitted their section and the commit becomes Request
   Reopen
-- **THEN** the Request Reopen control is rendered with a neutral/outline
+- **THEN** the Request reopen control is rendered with a neutral/outline
   treatment, not the resting solid brand-accent fill
 
 #### Scenario: the context bar uses no brand-accent fill

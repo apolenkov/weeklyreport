@@ -68,7 +68,7 @@ export const STATUS_BADGE = {
     fg: CSS.statusAtRiskFg,
   },
   "in-progress": {
-    label: "In Progress",
+    label: "In progress",
     bg: "var(--color-status-in-progress-bg)",
     fg: "var(--color-status-in-progress-fg)",
   },

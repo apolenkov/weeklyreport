@@ -1,5 +1,6 @@
 "use client";
 
+import { Lock } from "lucide-react";
 import type { ReactNode } from "react";
 
 import type { ChipChoice } from "../../../shared/ui/forms/choice-chip-row";
@@ -46,7 +47,8 @@ function ItemStatusChips({
 function CoveredStatusLock() {
   return (
     <StatusField>
-      <p className="rounded-xl border border-[color-mix(in_srgb,var(--color-destructive)_15%,transparent)] bg-[var(--color-status-blocked-bg)] px-3 py-2 text-xs text-[var(--color-foreground)]">
+      <p className="flex items-start gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)] px-3 py-2 text-xs text-[var(--color-foreground)]">
+        <Lock aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
         Status is set by the covering risk/blocker — resolve it in Risks &amp;
         Blockers to change.
       </p>

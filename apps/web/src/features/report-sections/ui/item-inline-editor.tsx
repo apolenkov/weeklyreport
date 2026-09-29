@@ -11,7 +11,7 @@ import {
   ItemStatusFields,
 } from "./item-edit-dialog-fields";
 import type { ItemEditDraftStore } from "./item-edit-draft-store";
-import { ITEM_STATUS_CHOICES } from "./item-status-choices";
+import { choicesForWeek } from "./item-status-choices";
 import { ParentPicker } from "./parent-picker";
 import { StageStep } from "./stage-step";
 import { useInlineEditUnloadGuard } from "./use-inline-edit-unload-guard";
@@ -48,15 +48,21 @@ export function ItemInlineEditor({
       nextStepTextareaRef.current?.focus();
     }
   }, [focusNextStep, props.week]);
-  const { dialogSurfaceRef, handleKeyDown, handleSave, ...form } =
-    useItemEditDialog({
-      ...props,
-      activities,
-      presentation: "inline",
-      onSave: (item) => {
-        if (!saveDisabled) props.onSave(item);
-      },
-    });
+  const {
+    dialogSurfaceRef,
+    handleKeyDown,
+    handleSave,
+    requestClose,
+    discardDialog,
+    ...form
+  } = useItemEditDialog({
+    ...props,
+    activities,
+    presentation: "inline",
+    onSave: (item) => {
+      if (!saveDisabled) props.onSave(item);
+    },
+  });
   const activeWeekLabel = overviewWeekLabel(props.week);
   return (
     <div ref={dialogSurfaceRef} className="min-w-0">
@@ -71,7 +77,7 @@ export function ItemInlineEditor({
           if (event.key === "Escape") {
             event.preventDefault();
             event.stopPropagation();
-            props.onCancel();
+            requestClose();
           } else handleKeyDown(event);
         }}
         className="min-w-0 space-y-3"
@@ -143,25 +149,9 @@ export function ItemInlineEditor({
             />
           ) : null}
           <div>
-            <ItemStatusFields {...form} choices={ITEM_STATUS_CHOICES} />
+            <ItemStatusFields {...form} choices={choicesForWeek(props.week)} />
           </div>
         </fieldset>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="submit"
-            disabled={form.isDeadEnd || saveDisabled}
-            className="min-h-[var(--touch-target-min)] rounded-[var(--radius-sm)] bg-[var(--color-primary)] px-3 text-sm font-semibold text-[var(--color-primary-foreground)] hover:bg-[var(--color-starbucks-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] disabled:opacity-50"
-          >
-            Save update
-          </button>
-          <button
-            type="button"
-            onClick={props.onCancel}
-            className="min-h-[var(--touch-target-min)] rounded-[var(--radius-sm)] px-3 text-sm text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
-          >
-            Cancel
-          </button>
-        </div>
         <fieldset disabled={confirmationOnly} className="min-w-0 border-0 p-0">
           <details>
             <summary className="min-h-[var(--touch-target-min)] cursor-pointer py-3 text-xs font-semibold text-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]">
@@ -179,12 +169,29 @@ export function ItemInlineEditor({
             </div>
           </details>
         </fieldset>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="submit"
+            disabled={form.isDeadEnd || saveDisabled}
+            className="min-h-[var(--touch-target-min)] rounded-[var(--radius-sm)] bg-[var(--color-primary)] px-3 text-sm font-semibold text-[var(--color-primary-foreground)] hover:bg-[var(--color-starbucks-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] disabled:opacity-50"
+          >
+            Save update
+          </button>
+          <button
+            type="button"
+            onClick={requestClose}
+            className="min-h-[var(--touch-target-min)] rounded-[var(--radius-sm)] px-3 text-sm text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+          >
+            Cancel
+          </button>
+        </div>
         <p className="text-xs text-[var(--color-muted-foreground)]">
           {confirmationOnly
             ? "No changes are made until you save."
             : "Unsaved edit · Ctrl/⌘ + Enter to save"}
         </p>
       </form>
+      {discardDialog}
     </div>
   );
 }

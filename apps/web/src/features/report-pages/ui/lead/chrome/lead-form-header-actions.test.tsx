@@ -57,7 +57,7 @@ describe("LeadFormHeaderActions", () => {
     expect(
       screen.queryByRole("button", { name: "Fill from previous" }),
     ).toBeNull();
-    expect(screen.queryByRole("button", { name: "Request Reopen" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Request reopen" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Submit" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Save draft now" })).toBeNull();
 
@@ -86,7 +86,7 @@ describe("LeadFormHeaderActions", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: "Request Reopen" }),
+      screen.getByRole("button", { name: "Request reopen" }),
     ).toBeInTheDocument();
   });
 });

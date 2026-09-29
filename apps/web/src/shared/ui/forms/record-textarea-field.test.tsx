@@ -164,7 +164,7 @@ describe("RecordTextareaField", () => {
     expect(textarea).toHaveValue(overLimit);
     expect(textarea).not.toHaveAttribute("maxlength");
     expect(textarea).toHaveAccessibleDescription(
-      "501 / 500 characters Prose must be 500 characters or fewer.",
+      "501 / 500 characters — 1 over the limit Prose must be 500 characters or fewer.",
     );
   });
 
@@ -196,5 +196,24 @@ describe("RecordTextareaField", () => {
       />,
     );
     expect(screen.getByLabelText("Decision")).toHaveFocus();
+  });
+});
+
+describe("RecordTextareaField over the limit", () => {
+  it("marks the textarea invalid at 501 of 500 characters", () => {
+    render(
+      <RecordTextareaField
+        id="over"
+        label="Note"
+        value={"x".repeat(501)}
+        onChange={vi.fn()}
+        characterLimit={500}
+      />,
+    );
+    expect(screen.getByLabelText("Note")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(screen.getByText(/1 over the limit/)).toBeInTheDocument();
   });
 });
