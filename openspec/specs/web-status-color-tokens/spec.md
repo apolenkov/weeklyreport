@@ -64,7 +64,7 @@ severity options (`risk-edit-dialog`), the portfolio-overview status cells
 (`portfolio-overview-table`), the lead-form blocked accent (`lead-form`), the
 lead-history severity chip and dot (`lead-history-list`, `lead-history-sidebar`),
 the stage-hint amber (`meta-row`, `item-card-stage-tags`), the product-accordion
-"At Risk" pill (`product-accordion`), and the dashboard blocked/at-risk severity
+"At risk" pill (`product-accordion`), and the dashboard blocked/at-risk severity
 badge (`blocked-at-risk-product-card`). Every at-risk foreground on these
 surfaces MUST resolve through the single canonical
 `--color-status-at-risk-fg`. Blocked report surfaces resolve through

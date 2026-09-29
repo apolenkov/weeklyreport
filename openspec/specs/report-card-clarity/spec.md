@@ -30,7 +30,7 @@ banner, and SHALL be suppressed when its text matches the text of a row already
 rendered in the same product card — whether a current/next-week item or a risk.
 When it renders, it SHALL add information beyond what the item and risk rows
 already show, and it SHALL carry a Flagged identity gutter and a Blocked /
-At Risk severity badge. The Risks & Blockers section renders when the product has
+At risk severity badge. The Risks & Blockers section renders when the product has
 either structured risks or a distinct escalation.
 
 #### Scenario: escalation text equals a shown item
@@ -47,7 +47,7 @@ either structured risks or a distinct escalation.
 
 - **WHEN** a product's escalation is a distinct head-facing summary
 - **THEN** it renders as a leading row inside Risks & Blockers with a Flagged
-  gutter and a Blocked / At Risk badge
+  gutter and a Blocked / At risk badge
 - **AND** no standalone "Needs Attention" banner appears
 
 ### Requirement: By-lead scope slices each product to one lead

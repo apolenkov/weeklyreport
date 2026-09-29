@@ -1,5 +1,6 @@
 import { type ReactNode, type RefObject, useId, useRef, useState } from "react";
 
+import { shortItemLabel } from "../../../shared/lib/format/short-label";
 import type {
   GridAuthor,
   GridRow,
@@ -136,7 +137,7 @@ function ItemRow({
               {activatable && (
                 <button
                   type="button"
-                  aria-label={`Edit ${row.hoverLabel}: ${row.text}`}
+                  aria-label={`Edit ${row.hoverLabel}: ${shortItemLabel(row.text)}`}
                   onClick={activate}
                   className="rounded-sm px-1 py-0.5 font-medium text-[var(--color-muted-foreground)] underline-offset-2 hover:text-[var(--color-foreground)] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--color-primary)]"
                 >

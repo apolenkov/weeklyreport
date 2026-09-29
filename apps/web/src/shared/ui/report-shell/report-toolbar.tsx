@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 
 // Shared period-toolbar frame tokens (border / hover surface / radius / padding).
 const REPORT_TOOLBAR_FRAME_CLASS =
@@ -23,17 +23,46 @@ interface ReportToolbarProps {
   readonly layoutKey?: string;
 }
 
+const SCROLL_OFFSET_VAR = "--sticky-toolbar-offset";
+const SCROLL_OFFSET_GAP_PX = 16;
+
+// Keeps anchored/focused targets below the real sticky toolbar height (app.css
+// falls back to 5rem until this measures).
+function useStickyScrollOffset(active: boolean) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!active || !el) return;
+    const root = document.documentElement;
+    const update = () =>
+      root.style.setProperty(
+        SCROLL_OFFSET_VAR,
+        `${el.offsetHeight + SCROLL_OFFSET_GAP_PX}px`,
+      );
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty(SCROLL_OFFSET_VAR);
+    };
+  }, [active]);
+  return ref;
+}
+
 export function ReportToolbar({
   contextControls,
   sticky = false,
   layoutKey,
 }: ReportToolbarProps) {
+  const ref = useStickyScrollOffset(sticky && contextControls !== undefined);
   if (contextControls === undefined) return null;
   const frameClass = sticky
     ? REPORT_TOOLBAR_FRAME_STICKY_CLASS
     : REPORT_TOOLBAR_FRAME_CLASS;
   return (
     <div
+      ref={ref}
       data-testid="report-toolbar"
       data-layout-key={layoutKey}
       data-layout-stability={layoutKey ? "position-size" : undefined}

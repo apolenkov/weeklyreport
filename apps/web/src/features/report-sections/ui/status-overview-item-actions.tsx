@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 
+import { shortItemLabel } from "../../../shared/lib/format/short-label";
 import type {
   StatusOverviewEditTarget,
   StatusOverviewItem,
@@ -44,7 +45,7 @@ function ProgressAction({ item, onEditItem }: ActionProps) {
     <button
       id={carried ? focusKey : undefined}
       type="button"
-      aria-label={`Update progress for ${item.text}`}
+      aria-label={`Update progress for ${shortItemLabel(item.text)}`}
       data-overview-focus={focusKey}
       onClick={() => onEditItem(target)}
       className={PRIMARY_ACTION_CLASS}
@@ -96,7 +97,7 @@ function EditMenuItem({
   return (
     <MenuItem
       label="Edit details"
-      ariaLabel={`Edit details: ${item.text}`}
+      ariaLabel={`Edit details: ${shortItemLabel(item.text)}`}
       focusKey={`edit:${item.source}:${identity}`}
       fallbackKey={`edit:${target.source}:${
         item.stableId ?? `${target.source}:${target.recordId}`
@@ -122,7 +123,7 @@ function StatusMenuItem({
   return (
     <MenuItem
       label="Update status"
-      ariaLabel={`Update status: ${item.text}`}
+      ariaLabel={`Update status: ${shortItemLabel(item.text)}`}
       focusKey={focusKey}
       onActivate={() => {
         onDone();
@@ -146,7 +147,7 @@ function MoveMenuItem({
   return (
     <MenuItem
       label={nextWeek ? "Move to next week" : "Move to this week"}
-      ariaLabel={`Move ${item.text} to ${nextWeek ? "next week" : "this week"}`}
+      ariaLabel={`Move ${shortItemLabel(item.text)} to ${nextWeek ? "next week" : "this week"}`}
       focusKey={focusKey}
       onActivate={() => {
         onDone();
@@ -193,7 +194,7 @@ function MoreActions({
     >
       <summary
         ref={summaryRef}
-        aria-label={`More actions for ${item.text}`}
+        aria-label={`More actions for ${shortItemLabel(item.text)}`}
         onClick={(event) => {
           event.preventDefault();
           setOpen(!open);
@@ -231,6 +232,7 @@ function PlanAction({ item, onPlanItem }: ActionProps) {
   return (
     <button
       type="button"
+      aria-label={`Plan this work: ${shortItemLabel(item.text)}`}
       data-overview-focus={`plan:${item.source}:${item.stableId ?? item.key}`}
       onClick={() => onPlanItem(item)}
       className={OVERVIEW_ITEM_ACTION_CLASS}
@@ -250,7 +252,7 @@ function RestoreAction({ item, onRestorePlan }: ActionProps) {
   return (
     <button
       type="button"
-      aria-label={`Restore ${item.text}`}
+      aria-label={`Restore ${shortItemLabel(item.text)}`}
       data-overview-focus={focusKey}
       onClick={() => onRestorePlan(item, focusKey)}
       className={OVERVIEW_ITEM_ACTION_CLASS}

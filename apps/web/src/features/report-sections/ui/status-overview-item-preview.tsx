@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import { shortItemLabel } from "../../../shared/lib/format/short-label";
 import type {
   StatusOverviewEditTarget,
   StatusOverviewItem,
@@ -45,7 +46,7 @@ function writeQuickEdit(
 }
 
 function previewTextClassName(expanded: boolean, canCollapse: boolean): string {
-  return `${expanded || !canCollapse ? "" : "line-clamp-2"} min-h-10 break-words text-sm leading-5 [overflow-wrap:anywhere]`;
+  return `${expanded || !canCollapse ? "block" : "line-clamp-2"} min-h-10 break-words text-sm leading-5 [overflow-wrap:anywhere]`;
 }
 
 function PreviewText({
@@ -128,24 +129,22 @@ function PreviewText({
         <button
           ref={triggerRef}
           type="button"
-          aria-label={`Quick edit ${item.text}`}
           onClick={() => {
             setDraft(item.text);
             setLocalEditing(true);
           }}
-          className={`${textClassName} -mx-1 block w-[calc(100%+0.5rem)] rounded-[var(--radius-sm)] px-1 text-left hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]`}
+          className={`${textClassName} -mx-1 w-[calc(100%+0.5rem)] rounded-[var(--radius-sm)] px-1 text-left hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]`}
         >
-          {item.text}
+          <span className="sr-only">Quick edit</span> {item.text}
         </button>
       ) : canonicalTitle ? (
         <button
           type="button"
-          aria-label={`Edit item: ${item.text}`}
           data-overview-focus={`title:${item.source}:${item.stableId ?? item.key}`}
           onClick={() => onEditItem(editTarget)}
-          className={`${textClassName} min-h-[var(--touch-target-min)] -mx-1 block w-[calc(100%+0.5rem)] rounded-[var(--radius-sm)] px-1 text-left hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]`}
+          className={`${textClassName} min-h-[var(--touch-target-min)] -mx-1 w-[calc(100%+0.5rem)] rounded-[var(--radius-sm)] px-1 text-left hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]`}
         >
-          {item.text}
+          <span className="sr-only">Edit item:</span> {item.text}
         </button>
       ) : (
         <p className={textClassName}>{item.text}</p>
@@ -172,7 +171,7 @@ function TextDisclosure({
     <button
       type="button"
       aria-expanded={expanded}
-      aria-label={`${label}: ${item.text}`}
+      aria-label={`${label}: ${shortItemLabel(item.text)}`}
       onClick={onToggle}
       className="min-h-[var(--touch-target-min)] rounded-[var(--radius-sm)] px-1 text-xs text-[var(--color-primary)] underline underline-offset-4 hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
     >

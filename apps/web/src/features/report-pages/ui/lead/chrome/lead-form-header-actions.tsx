@@ -1,5 +1,12 @@
 "use client";
 
+import {
+  Circle,
+  CircleCheck,
+  type LucideIcon,
+  RefreshCw,
+  TriangleAlert,
+} from "lucide-react";
 import type { Ref } from "react";
 
 import { isLead } from "../../../../../shared/lib/auth/role-predicates";
@@ -32,6 +39,8 @@ interface LeadFormHeaderActionsProps {
   readonly isForeignSlidesDeck: boolean;
   readonly isSubmitted: boolean;
   readonly periodLabel?: string | undefined;
+  // False where the page already announces autosave in its own live region.
+  readonly announceAutosave?: boolean | undefined;
 }
 
 type HeaderAutosave = LeadCompletionActionContract["autosave"];
@@ -39,31 +48,49 @@ type HeaderAutosave = LeadCompletionActionContract["autosave"];
 const FILL_FROM_LOCKED_REASON =
   "Fill from previous cannot replace records that are part of the published report.";
 
+// Decorative state icons are aria-hidden so screen readers get the words only.
+const AUTOSAVE_ICON: Partial<Record<HeaderAutosave["state"], LucideIcon>> = {
+  saving: RefreshCw,
+  pending: Circle,
+  error: TriangleAlert,
+};
+
 function formatAutosaveLabel(autosave: HeaderAutosave): string {
-  if (autosave.state === "saving") return "↻ Saving…";
-  if (autosave.state === "pending") return "● Pending…";
-  if (autosave.state === "error") return "⚠ Save failed";
+  if (autosave.state === "saving") return "Saving…";
+  if (autosave.state === "pending") return "Pending…";
+  if (autosave.state === "error") return "Save failed";
   if (autosave.state === "saved" && autosave.lastSavedAt) {
-    return autosave.lastSavedAt.toLocaleTimeString([], {
+    return `Saved ${autosave.lastSavedAt.toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
-    });
+    })}`;
   }
   return "Autosaved";
 }
 
 // The badge shares the green success treatment for every non-error state; an
 // error must not read as a success, so it takes a destructive variant.
-function AutosaveBadge({ autosave }: { readonly autosave: HeaderAutosave }) {
+function AutosaveBadge({
+  autosave,
+  announce,
+}: {
+  readonly autosave: HeaderAutosave;
+  readonly announce: boolean;
+}) {
   const toneClassName =
     autosave.state === "error"
       ? "bg-[var(--color-status-blocked-bg)] text-[var(--color-destructive)]"
       : "bg-[var(--color-success)] text-[var(--color-primary)]";
 
+  const Icon = AUTOSAVE_ICON[autosave.state];
+
+  // A stable role keeps error announcements from re-announcing on a role switch.
   return (
     <span
+      role={announce ? "status" : undefined}
       className={`inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-2.5 py-1 text-xs font-semibold ${toneClassName}`}
     >
+      {Icon ? <Icon aria-hidden="true" className="size-3" /> : null}
       {formatAutosaveLabel(autosave)}
     </span>
   );
@@ -152,8 +179,10 @@ function HeaderStatusBadge({
   isReadOnly,
   autosave,
   pendingInput,
+  announceAutosave,
 }: {
   readonly pendingInput?: boolean | undefined;
+  readonly announceAutosave: boolean;
   readonly isSubmitted: boolean;
   readonly isReadOnly: boolean;
   readonly autosave: HeaderAutosave;
@@ -169,7 +198,8 @@ function HeaderStatusBadge({
   if (isSubmitted) {
     return (
       <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-1 text-xs font-semibold text-[var(--color-starbucks-accent)]">
-        ✓ Submitted
+        <CircleCheck aria-hidden="true" className="size-3" />
+        Submitted
       </span>
     );
   }
@@ -180,7 +210,7 @@ function HeaderStatusBadge({
       </span>
     );
   }
-  return <AutosaveBadge autosave={autosave} />;
+  return <AutosaveBadge autosave={autosave} announce={announceAutosave} />;
 }
 
 // Mutating actions hide on read-only; green stays the sole forward primary.
@@ -256,6 +286,7 @@ export function LeadFormHeaderActions({
             isReadOnly={header.viewModel.isReadOnly}
             autosave={header.completionActions.autosave}
             pendingInput={header.pendingInput}
+            announceAutosave={header.announceAutosave ?? true}
           />
         )}
       </div>

@@ -40,7 +40,7 @@ item via a shared helper.
 - **GIVEN** an item with no covering blocked risk
 - **AND** an own risk of severity `at-risk` covering the item's product and stage
 - **WHEN** the item card renders
-- **THEN** the item's status pill shows At Risk with the amber token set
+- **THEN** the item's status pill shows At risk with the amber token set
 
 #### Scenario: mixed-severity covering risks resolve to the highest
 
@@ -126,7 +126,7 @@ No alarm MUST ever be stored on an item: the `ItemWorkflowStatus` enum carries p
 - **GIVEN** an item covered by an at-risk risk
 - **WHEN** the item is persisted by saveSection
 - **THEN** its stored `workflowStatus` is a progress value, not an alarm
-- **AND** the amber At Risk pill is reproduced from the covering risk at the next render
+- **AND** the amber At risk pill is reproduced from the covering risk at the next render
 
 #### Scenario: blocked cannot be persisted at all
 

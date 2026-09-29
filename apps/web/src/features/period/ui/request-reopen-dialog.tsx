@@ -1,7 +1,14 @@
 "use client";
 
 import { MAX_REOPEN_REASON_LENGTH } from "@customreport/shared";
-import { type ReactNode, type RefObject, useId, useRef, useState } from "react";
+import {
+  type ReactNode,
+  type RefObject,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 
 import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";
 import { DialogSurface } from "../../../shared/ui/dialogs/dialog-surface";
@@ -36,6 +43,7 @@ function RequestReopenDialogContent({
 }: Omit<RequestReopenDialogProps, "open">) {
   const [reason, setReason] = useState("");
   const dialogSurfaceRef = useRef<HTMLDivElement>(null);
+  const reasonRef = useRef<HTMLTextAreaElement>(null);
   const headingId = useId();
   const isTooLong = reason.length > MAX_REOPEN_REASON_LENGTH;
   const { requestClose, discardDialog } = useDiscardGuard(
@@ -54,6 +62,14 @@ function RequestReopenDialogContent({
     onClose: guardedCancel,
     containerRef: dialogSurfaceRef,
   });
+
+  // The field is disabled while sending, which drops focus; a failed submit
+  // hands it back so the lead can retry without re-finding the field.
+  const wasPending = useRef(false);
+  useEffect(() => {
+    if (wasPending.current && !pending) reasonRef.current?.focus();
+    wasPending.current = pending;
+  }, [pending]);
 
   function handleConfirm() {
     if (pending || isTooLong) return;
@@ -89,6 +105,7 @@ function RequestReopenDialogContent({
             characterLimit={MAX_REOPEN_REASON_LENGTH}
             fill={false}
             focusOnMount
+            textareaRef={reasonRef}
             disabled={pending}
           />
         </div>

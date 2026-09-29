@@ -128,6 +128,22 @@ describe("StatusOverviewItemPreview quick edit", () => {
     ).toBeInTheDocument();
   });
 
+  it("keeps the full visible text inside the accessible name of the title buttons", () => {
+    const text = "Long update ".repeat(12).trim();
+    const longItem = { ...item, text };
+    const { unmount } = render(
+      <StatusOverviewItemPreview item={longItem} onQuickEditText={vi.fn()} />,
+    );
+    expect(
+      screen.getByRole("button", { name: /Quick edit/ }),
+    ).toHaveAccessibleName(`Quick edit ${text}`);
+    unmount();
+    render(<StatusOverviewItemPreview item={longItem} onEditItem={vi.fn()} />);
+    expect(
+      screen.getByRole("button", { name: /Edit item/ }),
+    ).toHaveAccessibleName(`Edit item: ${text}`);
+  });
+
   it("opens the same canonical target from the active title and the Edit details action", async () => {
     const user = userEvent.setup();
     const onEditItem = vi.fn();
@@ -170,7 +186,9 @@ describe("StatusOverviewItemPreview quick edit", () => {
     expect(
       screen.queryByRole("button", { name: /Confirm for this week/ }),
     ).toBeNull();
-    expect(screen.queryByRole("button", { name: "Plan this work" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^Plan this work/ }),
+    ).toBeNull();
     expect(screen.queryByText(/[→←]/)).toBeNull();
 
     await user.click(primary);
@@ -390,7 +408,7 @@ describe("StatusOverviewItemPreview quick edit", () => {
     );
 
     expect(screen.getByText("Original text").tagName).toBe("P");
-    await user.click(screen.getByRole("button", { name: "Plan this work" }));
+    await user.click(screen.getByRole("button", { name: /^Plan this work/ }));
     expect(onPlanItem).toHaveBeenCalledWith(previous);
     expect(
       screen.queryByRole("button", {

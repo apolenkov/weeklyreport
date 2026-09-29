@@ -40,6 +40,7 @@ export function ReadyOverviewHeader({
         isSlidesMode={false}
         isForeignSlidesDeck={editor.view.data.isForeignSlidesDeck}
         isSubmitted={editor.view.isSubmitted}
+        announceAutosave={false}
       />
       <LeadOverviewToolbarControls
         viewModel={editor.view.viewModel}

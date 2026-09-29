@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";
 import { useDiscardGuard } from "../../../shared/ui/dialogs/use-discard-guard";
@@ -75,10 +75,17 @@ export function useRiskEditDialog(args: UseRiskEditDialogArgs) {
   const parentStage = useRiskEditParentStage({ ...args, isCreate });
 
   const dialogSurfaceRef = useRef<HTMLDivElement>(null);
+  const snapshot = JSON.stringify([
+    fields.text,
+    fields.impact,
+    fields.mitigation,
+    parentStage.parent,
+    parentStage.stageNames,
+    parentStage.severity,
+  ]);
+  const [baseline] = useState(snapshot);
   const { requestClose, discardDialog } = useDiscardGuard(
-    fields.text !== (risk?.text ?? "") ||
-      fields.impact !== (risk?.impact ?? "") ||
-      fields.mitigation !== (risk?.mitigation ?? ""),
+    snapshot !== baseline,
     onCancel,
     args.isPending,
   );

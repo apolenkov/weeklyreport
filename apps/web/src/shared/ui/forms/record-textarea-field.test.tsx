@@ -197,6 +197,21 @@ describe("RecordTextareaField", () => {
     );
     expect(screen.getByLabelText("Decision")).toHaveFocus();
   });
+
+  it("describes the textarea by its hint", () => {
+    render(
+      <RecordTextareaField
+        id="risk-note"
+        label="Note"
+        value=""
+        onChange={vi.fn()}
+        hint={<p>Keep it short.</p>}
+      />,
+    );
+    expect(screen.getByLabelText("Note")).toHaveAccessibleDescription(
+      "Keep it short.",
+    );
+  });
 });
 
 describe("RecordTextareaField over the limit", () => {

@@ -14,10 +14,10 @@ const STATUS_OPTIONS: readonly {
   readonly label: string;
   readonly dotClass: string;
 }[] = [
-  { value: "green", label: "On Track", dotClass: "bg-[var(--color-primary)]" },
+  { value: "green", label: "On track", dotClass: "bg-[var(--color-primary)]" },
   {
     value: "yellow",
-    label: "At Risk",
+    label: "At risk",
     dotClass: "bg-[var(--color-status-dot-at-risk)]",
   },
   { value: "red", label: "Blocked", dotClass: "bg-[var(--color-destructive)]" },
@@ -36,7 +36,7 @@ interface ActivityStatusHandlers {
     activityId: string,
     status: TrafficLightStatus,
   ) => void;
-  // Unbacked raise (At Risk/Blocked with no covering risk) routes here so the
+  // Unbacked raise (At risk/Blocked with no covering risk) routes here so the
   // host can open risk creation instead of writing status alone.
   readonly onRaiseRequiresRisk: (
     activityId: string,
