@@ -482,6 +482,15 @@ Custom protocol behavior MUST be limited to requirements not met by supported up
 - **THEN** the public widget starts a fresh server synchronization
 - **AND** a deleted annotation does not remain as a stale marker or recreate server content
 
+### Requirement: The Agentation toolbar MUST be development-only
+
+The Agentation browser toolbar code MUST be excluded from production builds and MUST NOT render or load when the runtime is production, regardless of feedback enablement variables.
+
+#### Scenario: Production runtime
+
+- **WHEN** `NODE_ENV` is `production` and feedback enablement is `true`
+- **THEN** the widget renders nothing and the `agentation` module is not imported
+
 ### Requirement: Product rollout MUST fail closed
 
 The Agentation widget, inbox, mutations, and SSE MUST be disabled without
