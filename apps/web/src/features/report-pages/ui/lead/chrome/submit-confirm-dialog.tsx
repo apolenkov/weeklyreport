@@ -65,8 +65,9 @@ export function SubmitConfirmDialog({
       onClose={onCancel}
       onConfirm={onConfirm}
       title="Confirm submission"
-      description="Your report will be locked and visible to the group head. You will not be able to make changes after submission."
+      description="Your report will be locked and visible to the group head. To change it later, request a reopen."
       confirmLabel="Submit"
+      pendingLabel="Submitting…"
       isPending={submitPending}
     >
       <SubmitCountList counts={counts} />

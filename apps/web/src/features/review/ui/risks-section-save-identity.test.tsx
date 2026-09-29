@@ -64,7 +64,7 @@ describe("RisksSection save identity", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Edit risk for CRM/i }));
     fillProse("Vendor delay, now confirmed");
-    fireEvent.click(screen.getByRole("button", { name: /^Save Risk$/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Save risk$/ }));
 
     expect(onChange).toHaveBeenCalledTimes(1);
     const next = onChange.mock.calls[0]?.[0];
@@ -92,7 +92,7 @@ describe("RisksSection save identity", () => {
 
     // A lone owned stage is applied automatically.
     fillProse("Second vendor at risk");
-    fireEvent.click(screen.getByRole("button", { name: /^Save Risk$/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Save risk$/ }));
 
     expect(onChange).toHaveBeenCalledTimes(1);
     const next = onChange.mock.calls[0]?.[0];

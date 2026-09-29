@@ -107,12 +107,10 @@ describe("UnifiedActivitySection", () => {
       <UnifiedActivitySection {...props} addSignal={0} />,
     );
 
-    expect(
-      screen.queryByRole("dialog", { name: "Add Item dialog" }),
-    ).toBeNull();
+    expect(screen.queryByRole("dialog", { name: /^Add Item/ })).toBeNull();
     rerender(<UnifiedActivitySection {...props} addSignal={1} />);
     expect(
-      screen.getByRole("dialog", { name: "Add Item dialog" }),
+      screen.getByRole("dialog", { name: /^Add Item/ }),
     ).toBeInTheDocument();
   });
 

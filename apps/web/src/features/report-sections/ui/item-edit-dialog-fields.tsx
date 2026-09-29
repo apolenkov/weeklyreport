@@ -1,7 +1,7 @@
 "use client";
 
 import { SAFE_TEXT_MAX_LENGTH } from "@customreport/shared";
-import type { Ref } from "react";
+import type { RefObject } from "react";
 
 import type { ChipChoice } from "../../../shared/ui/forms/choice-chip-row";
 import { RecordTextareaField } from "../../../shared/ui/forms/record-textarea-field";
@@ -24,7 +24,8 @@ export interface ItemEditDialogFieldsProps {
   readonly nextStepText: string;
   readonly nextStepTextError: string | undefined;
   readonly onNextStepTextChange: (value: string) => void;
-  readonly nextStepTextareaRef?: Ref<HTMLTextAreaElement> | undefined;
+  readonly nextStepTextareaRef?:
+    RefObject<HTMLTextAreaElement | null> | undefined;
   readonly priorityRank: number | null;
   readonly onPriorityRankChange: (next: number | null) => void;
   readonly rankOptions: readonly number[];
@@ -135,7 +136,7 @@ export function ItemPriorityRankField({
       </label>
       <select
         id="item-priority-rank"
-        className="select-chevron w-full max-md:min-h-[var(--touch-target-min)] rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-card)] py-2.5 pl-3 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_var(--color-ring)] focus:outline-none"
+        className="select-chevron w-full max-md:min-h-[var(--touch-target-min)] rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-card)] py-2.5 pl-3 text-base md:text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_var(--color-ring)] focus:outline-none"
         value={priorityRank ?? ""}
         onChange={(e) => {
           const v = e.target.value;

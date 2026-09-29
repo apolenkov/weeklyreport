@@ -6,6 +6,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@customreport/ui/components/ui/dialog";
+import { LoaderCircle } from "lucide-react";
 import { useRef } from "react";
 
 type ConfirmationDialogVariant = "default" | "destructive";
@@ -18,6 +19,8 @@ interface ConfirmationDialogProps {
   readonly description: React.ReactNode;
   readonly confirmLabel?: string;
   readonly cancelLabel?: string;
+  // Shown with a spinner in place of confirmLabel while isPending.
+  readonly pendingLabel?: string | undefined;
   readonly variant?: ConfirmationDialogVariant;
   readonly isPending?: boolean;
   readonly testId?: string;
@@ -28,6 +31,7 @@ function DialogActions({
   onClose,
   onConfirm,
   confirmLabel,
+  pendingLabel,
   cancelLabel,
   isDestructive,
   isPending,
@@ -36,6 +40,7 @@ function DialogActions({
   readonly onClose: () => void;
   readonly onConfirm: () => void;
   readonly confirmLabel: string;
+  readonly pendingLabel?: string | undefined;
   readonly cancelLabel: string;
   readonly isDestructive: boolean;
   readonly isPending: boolean;
@@ -57,14 +62,30 @@ function DialogActions({
         data-interaction-effect="mutation-required"
         onClick={onConfirm}
         disabled={isPending}
-        className={`btn-press inline-flex items-center justify-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+        aria-busy={isPending || undefined}
+        className={`btn-press inline-flex items-center justify-center gap-2 max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
           isDestructive
             ? "bg-[var(--color-destructive)] text-[var(--color-destructive-foreground)] hover:bg-destructive/90"
             : "bg-[var(--color-starbucks-accent)] text-[var(--color-primary-foreground)] hover:bg-[var(--color-primary)]"
         }`}
       >
-        {confirmLabel}
+        {isPending && pendingLabel ? (
+          <>
+            <LoaderCircle
+              aria-hidden="true"
+              className="size-4 animate-spin motion-reduce:animate-none"
+            />
+            {pendingLabel}
+          </>
+        ) : (
+          confirmLabel
+        )}
       </button>
+      {isPending && pendingLabel ? (
+        <span className="sr-only" role="status" aria-live="polite">
+          {pendingLabel}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -113,6 +134,7 @@ export function ConfirmationDialog({
   title,
   description,
   confirmLabel = "Confirm",
+  pendingLabel,
   cancelLabel = "Cancel",
   variant = "default",
   isPending = false,
@@ -156,6 +178,7 @@ export function ConfirmationDialog({
           onClose={guardedClose}
           onConfirm={guardedConfirm}
           confirmLabel={confirmLabel}
+          pendingLabel={pendingLabel}
           cancelLabel={cancelLabel}
           isDestructive={variant === "destructive"}
           isPending={isPending}

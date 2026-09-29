@@ -21,6 +21,7 @@ interface UseItemEditDialogArgs {
   readonly risks?: readonly RiskEntry[] | undefined;
   readonly onSave: (next: KanbanItem) => void;
   readonly onCancel: () => void;
+  readonly isPending?: boolean | undefined;
 }
 
 type ItemEditFormState = ReturnType<typeof useItemEditFormState>;
@@ -36,6 +37,8 @@ function buildItemEditHandle(
 ) {
   return {
     dialogSurfaceRef: formState.dialogSurfaceRef,
+    requestClose: formState.requestClose,
+    discardDialog: formState.discardDialog,
     headerVerb: derived.headerVerb,
     parentName: derived.parentName,
     text: formState.text,
@@ -90,6 +93,7 @@ export function useItemEditDialog(args: UseItemEditDialogArgs) {
     defaultProductId: args.defaultProductId,
     defaultActivityId: args.defaultActivityId,
     onCancel: args.onCancel,
+    isPending: args.isPending,
     presentation: args.presentation,
     draftStore: args.draftStore,
   });

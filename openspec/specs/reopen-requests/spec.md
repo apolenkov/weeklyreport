@@ -139,7 +139,7 @@ approval, judged by the period lifecycle: `open` and `reopened` periods are
 allowed; `published` and `archived` periods are forbidden. The server
 (`requestReopen`) MUST enforce the rule and MUST be the single source of truth:
 it MUST expose a server-computed `canRequestReopen` flag (with a reason when
-false) on the lead-form read so the lead's Request Reopen control is hidden
+false) on the lead-form read so the lead's Request reopen control is hidden
 exactly when the server would reject the call — the web client MUST NOT
 reconstruct the policy itself. `canRequestReopen` MUST be true only when the
 section is `submitted`, the period is `open` or `reopened`, AND no pending reopen
@@ -160,7 +160,7 @@ after publish or archive commits.
 #### Scenario: Open period allows the request
 
 - **WHEN** a lead with a submitted section on an `open` period opens their report
-- **THEN** `canRequestReopen` is true, the Request Reopen control is shown, and
+- **THEN** `canRequestReopen` is true, the Request reopen control is shown, and
   `requestReopen` succeeds
 
 #### Scenario: Reopened period allows the request and the section is editable
@@ -173,13 +173,13 @@ after publish or archive commits.
 #### Scenario: Published period forbids the request
 
 - **WHEN** a lead views a submitted section whose period is `published`
-- **THEN** `canRequestReopen` is false, the Request Reopen control is hidden, and
+- **THEN** `canRequestReopen` is false, the Request reopen control is hidden, and
   a direct `requestReopen` call is rejected
 
 #### Scenario: Archived period forbids the request
 
 - **WHEN** a lead views a submitted section whose period is `archived`
-- **THEN** `canRequestReopen` is false, the Request Reopen control is hidden, and
+- **THEN** `canRequestReopen` is false, the Request reopen control is hidden, and
   a direct `requestReopen` call is rejected
 
 #### Scenario: Publish wins request creation
@@ -192,7 +192,7 @@ after publish or archive commits.
 
 - **WHEN** a lead's section on an `open` period already has a pending reopen
   request
-- **THEN** `canRequestReopen` is false and the Request Reopen control is hidden
+- **THEN** `canRequestReopen` is false and the Request reopen control is hidden
   until that request is decided
 
 ### Requirement: At most one pending reopen request per section

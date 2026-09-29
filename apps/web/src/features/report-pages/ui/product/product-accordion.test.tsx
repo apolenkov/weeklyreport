@@ -278,7 +278,7 @@ describe("ProductAccordion — item status badge", () => {
     expect(
       screen.getByText("Won't do: The dependency was retired"),
     ).toBeInTheDocument();
-    expect(screen.getAllByText("In Progress")).toHaveLength(1);
+    expect(screen.getAllByText("In progress")).toHaveLength(1);
 
     fireEvent.click(screen.getByText("Outcome history"));
     expect(
@@ -303,7 +303,7 @@ describe("ProductAccordion — item status badge", () => {
       />,
     );
     expect(screen.getByText("Blocked")).toBeInTheDocument();
-    expect(screen.getByText("In Progress")).toBeInTheDocument();
+    expect(screen.getByText("In progress")).toBeInTheDocument();
     expect(screen.getByText("Done")).toBeInTheDocument();
     expect(screen.getByText("Planned")).toBeInTheDocument();
   });

@@ -45,7 +45,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
       />,
     );
 
-    const save = screen.getByRole("button", { name: "Save Risk" });
+    const save = screen.getByRole("button", { name: "Save risk" });
     fireEvent.click(save);
     expect(screen.getByText("Select at least one stage.")).toBeInTheDocument();
     const text = screen.getByLabelText(/^Risk \*/i);
@@ -119,7 +119,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
     fireEvent.change(screen.getByLabelText(/^Mitigation \*/i), {
       target: { value: "Escalate" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save risk/i }));
 
     // Required stage validation: onSave not called, error message shown.
     expect(onSave).not.toHaveBeenCalled();
@@ -150,7 +150,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
       target: { value: "Escalate immediately" },
     });
     fireEvent.click(screen.getByRole("button", { name: /Blocked/i }));
-    fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save risk/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
@@ -185,7 +185,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
     // No stages are pre-selected (none are at-risk/blocked). Select Development explicitly.
     fireEvent.click(screen.getByRole("checkbox", { name: "Development" }));
 
-    fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save risk/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
     // The selected canonical stage is persisted in the payload.
@@ -432,7 +432,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
     );
   });
 
-  it("renders Save Risk and Cancel buttons in the sticky footer", () => {
+  it("renders Save risk and Cancel buttons in the sticky footer", () => {
     render(
       <RiskEditDialog
         open
@@ -445,7 +445,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
       />,
     );
 
-    const save = screen.getByRole("button", { name: /Save Risk/i });
+    const save = screen.getByRole("button", { name: /Save risk/i });
     const cancel = screen.getByRole("button", { name: /Cancel/i });
     expect(save.parentElement).toHaveClass("sticky");
     expect(cancel.parentElement).toBe(save.parentElement);

@@ -1,5 +1,7 @@
 "use client";
 
+import { useId } from "react";
+
 import { DialogSurface } from "../../../shared/ui/dialogs/dialog-surface";
 import { DocumentBodyPortal } from "../../../shared/ui/dialogs/document-body-portal";
 import { RecordDialogFooter } from "../../../shared/ui/forms/record-dialog-footer";
@@ -153,16 +155,20 @@ function RiskDialogSurface({
   onDelete,
   children,
 }: RiskDialogSurfaceProps) {
+  const headingId = useId();
   return (
     <DialogSurface
       isPending={isPending}
       surfaceRef={surfaceRef}
       onDismiss={onCancel}
       onBackdropKeyDown={dialog.handleKeyDown}
-      surfaceClassName="mx-4 max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[var(--radius)] bg-[var(--color-popover)] p-4 md:p-5 shadow-2xl"
-      ariaLabel={`${dialog.headerVerb} dialog`}
+      surfaceClassName="mx-4 max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[var(--radius)] bg-[var(--color-popover)] p-4 md:p-6 shadow-2xl"
+      ariaLabelledBy={headingId}
     >
-      <h2 className="mb-4 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
+      <h2
+        id={headingId}
+        className="mb-4 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]"
+      >
         {dialog.headerVerb}{" "}
         {dialog.parentName ? (
           <span className="text-[var(--color-muted-foreground)]">
@@ -175,7 +181,7 @@ function RiskDialogSurface({
 
       <RecordDialogFooter
         sticky
-        saveLabel="Save Risk"
+        saveLabel="Save risk"
         onCancel={onCancel}
         onSave={dialog.handleSave}
         onDelete={onDelete}
@@ -194,6 +200,7 @@ function RiskEditDialogContent(props: RiskEditDialogProps) {
       activities,
       onSave: props.onSave,
       onCancel: props.onCancel,
+      isPending: props.isPending,
       defaultProductId: props.defaultProductId,
       defaultActivityId: props.defaultActivityId,
       initialStageNames: props.initialStageNames,
@@ -207,7 +214,7 @@ function RiskEditDialogContent(props: RiskEditDialogProps) {
         isPending={props.isPending}
         dialog={dialog}
         surfaceRef={dialogSurfaceRef}
-        onCancel={props.onCancel}
+        onCancel={dialog.requestClose}
         onDelete={props.onDelete}
       >
         <RiskDialogBody
@@ -219,6 +226,7 @@ function RiskEditDialogContent(props: RiskEditDialogProps) {
           mitigationRef={mitigationRef}
         />
       </RiskDialogSurface>
+      {dialog.discardDialog}
     </DocumentBodyPortal>
   );
 }
