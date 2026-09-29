@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 
+import { z } from "zod";
+
 import type { JobEnqueuer } from "../../../infrastructure/bullmq/job-enqueuer.js";
 import {
   SEMANTIC_INDEX_JOB_NAME,
@@ -25,6 +27,29 @@ export type SemanticIndexJobData = SemanticIndexLocator &
     configurationRevisionId: string;
     scope: SemanticIndexRuntimeContext["scope"];
   }>;
+
+// Redis payloads are untrusted delivery data: the processor parses before use.
+const nonEmpty = z.string().min(1);
+export const semanticIndexJobDataSchema = z.object({
+  source: z.enum(["live", "snapshot"]),
+  reportId: nonEmpty,
+  sectionId: nonEmpty,
+  occurrenceId: nonEmpty,
+  recordKind: z.enum(["item", "risk", "decision", "activity_status"]),
+  recordId: nonEmpty,
+  expectedContentHash: nonEmpty,
+  configurationRevisionId: nonEmpty,
+  scope: z.object({
+    provider: nonEmpty,
+    embeddingScopeIdentity: z.string().trim().min(1),
+    model: nonEmpty,
+    inputVersion: nonEmpty,
+    dimensions: z.number().int().positive(),
+  }),
+  traceparent: z.string().optional(),
+  tracestate: z.string().optional(),
+  correlationId: z.string().optional(),
+});
 
 const SEMANTIC_INDEX_JOB_ID_VERSION = "v1";
 

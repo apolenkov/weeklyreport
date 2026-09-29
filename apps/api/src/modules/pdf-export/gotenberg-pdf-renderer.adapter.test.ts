@@ -94,6 +94,16 @@ describe("GotenbergPdfRenderer", () => {
     );
   });
 
+  it("keeps the transport error as the cause", async () => {
+    const failure = new TypeError("connect ECONNREFUSED");
+    fetchMock.mockRejectedValue(failure);
+    const renderer = new GotenbergPdfRenderer(STUB_ENV);
+
+    await expect(renderer.render(renderInput)).rejects.toMatchObject({
+      cause: failure,
+    });
+  });
+
   it("keeps a client-side abort/timeout retryable", async () => {
     fetchMock.mockRejectedValue(
       new DOMException("The operation timed out", "TimeoutError"),

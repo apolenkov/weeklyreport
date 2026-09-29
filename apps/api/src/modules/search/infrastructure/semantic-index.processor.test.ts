@@ -211,7 +211,7 @@ describe("SemanticIndexProcessor", () => {
         ...jobData(hash),
         scope: { ...scope, embeddingScopeIdentity: undefined },
       } as unknown as SemanticIndexJobData),
-    ).rejects.toThrow("scope identity is required");
+    ).rejects.toThrow("job data is invalid");
     expect(harness.resolveRuntime).not.toHaveBeenCalled();
     expect(harness.load).not.toHaveBeenCalled();
   });

@@ -11,6 +11,7 @@ import { PHASE_PRODUCTION_BUILD } from "next/constants";
 import {
   decodeTrpcBatchPayload,
   requireApiUrl,
+  SERVER_FETCH_TIMEOUT_MS,
   TRPC_BATCH_EMPTY_INPUT,
 } from "../transport/api-url";
 
@@ -63,6 +64,7 @@ export async function getOrgPublic(): Promise<OrganizationPublic> {
     const response = await fetch(url, {
       method: "GET",
       cache: "force-cache",
+      signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
       next: { tags: ["org-public"], revalidate: ORG_PUBLIC_REVALIDATE_SECONDS },
     });
     if (!response.ok)
