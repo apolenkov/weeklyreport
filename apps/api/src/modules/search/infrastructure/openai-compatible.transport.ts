@@ -71,7 +71,10 @@ export type OpenAiCompatibleTransportConfig = Readonly<{
 }>;
 
 export class OpenAiCompatibleProtocolError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    readonly reason?: "usage",
+  ) {
     super(message);
     this.name = "OpenAiCompatibleProtocolError";
   }
@@ -266,7 +269,8 @@ export class OpenAiCompatibleTransport {
   static usage(value: unknown): ReportAssistantTokenUsage {
     return normalizedUsage(
       value,
-      () => new OpenAiCompatibleProtocolError("Provider usage is invalid"),
+      () =>
+        new OpenAiCompatibleProtocolError("Provider usage is invalid", "usage"),
     );
   }
 }

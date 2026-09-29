@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../../shared/server/transport/api-url", () => ({
   requireApiUrl: () => "http://api.test:3002",
+  SERVER_FETCH_TIMEOUT_MS: 1000,
 }));
 
 import { CLIENT_LOGS_MAX_BODY_BYTES } from "../../../features/telemetry/server";

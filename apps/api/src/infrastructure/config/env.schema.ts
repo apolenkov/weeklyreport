@@ -44,7 +44,7 @@ const envObjectSchema = z.object({
   // Non-prod test-context toggle, read raw beside NODE_ENV/AUTH_DEV_MODE in
   // the trpc.context dev-mode gate. Optional: only honoured when
   // NODE_ENV !== 'production'; absent → the test-context path stays off.
-  AUTH_DEV_MODE_ALLOW_TEST: z.string().optional(),
+  AUTH_DEV_MODE_ALLOW_TEST: z.enum(["true", "false"]).optional(),
   // Dev/test reseed repo-root override (`dev.wipeAndReseed`); first candidate
   // in a fallback list, so absent → the process walks cwd/workspace guesses.
   CUSTOMREPORT_REPO_ROOT: z.string().optional(),
@@ -122,7 +122,7 @@ const envObjectSchema = z.object({
   // OTEL_EXPORTER_OTLP_ENDPOINT is set AND OTEL_SDK_DISABLED is not 'true'.
   // The toggle + sampler are required so the telemetry posture is explicit.
   OTEL_EXPORTER_OTLP_ENDPOINT: optionalUrl,
-  OTEL_SDK_DISABLED: z.string(),
+  OTEL_SDK_DISABLED: z.enum(["true", "false"]),
   OTEL_TRACES_SAMPLER_ARG: z
     .string()
     .trim()
@@ -141,7 +141,7 @@ const envObjectSchema = z.object({
   // Browser → server log forwarder toggle (`main.ts`). This schema owns its
   // validation; optional prod opt-in;
   // dev enables the forwarder via NODE_ENV, prod opts in with "true".
-  CLIENT_LOG_FORWARDING: z.string().optional(),
+  CLIENT_LOG_FORWARDING: z.enum(["true", "false"]).optional(),
   // Authenticated product feedback is fail-closed: absent and false both keep
   // the raw ingress unmounted; malformed values fail startup validation.
   PRODUCT_FEEDBACK_ENABLED: z
@@ -198,6 +198,23 @@ const addForbiddenDevModeIssue = (
     message: "AUTH_DEV_MODE=true is forbidden when NODE_ENV=production",
     path: ["AUTH_DEV_MODE"],
   });
+};
+
+// .env.example ships public placeholder signing secrets; production must not
+// boot on them.
+const PLACEHOLDER_SECRET_PREFIX = /^(change-me|dev-only)/i;
+const addPlaceholderSecretIssues = (
+  data: ValidatedEnv,
+  ctx: z.RefinementCtx,
+): void => {
+  for (const key of ["AUTH_JWT_SECRET", "PDF_EXPORT_JWT_SECRET"] as const) {
+    if (!PLACEHOLDER_SECRET_PREFIX.test(data[key])) continue;
+    ctx.addIssue({
+      code: "custom",
+      message: `${key} must not be a placeholder value when NODE_ENV=production`,
+      path: [key],
+    });
+  }
 };
 
 // Production CORS accepts only the explicitly configured origins; reject a
@@ -300,6 +317,7 @@ export const envSchema = envObjectSchema.superRefine((data, ctx) => {
   // Production fences. Boot must fail if any of these aren't met.
   if (data.NODE_ENV !== "production") return;
   addForbiddenDevModeIssue(data, ctx);
+  addPlaceholderSecretIssues(data, ctx);
   addWildcardOriginIssue(data, ctx);
   addMissingSmtpIssues(data, ctx);
   addMissingSmtpPortIssue(data, ctx);

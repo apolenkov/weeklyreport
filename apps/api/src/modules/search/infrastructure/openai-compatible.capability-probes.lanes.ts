@@ -145,7 +145,7 @@ export const embeddingLane = async (
     const capability = connectionFailure
       ? ("authentication" as const)
       : error instanceof OpenAiCompatibleProtocolError &&
-          error.message.includes("usage")
+          error.reason === "usage"
         ? ("token_usage" as const)
         : ("batch_embeddings" as const);
     return {

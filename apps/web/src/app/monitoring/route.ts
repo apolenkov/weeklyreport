@@ -1,3 +1,4 @@
+import { SERVER_FETCH_TIMEOUT_MS } from "../../shared/server/transport/api-url";
 import {
   consumeSentryTunnelQuota,
   resolveSentryEnvelopeEndpoint,
@@ -49,6 +50,7 @@ export async function POST(req: Request): Promise<Response> {
           req.headers.get("content-type") ?? "application/x-sentry-envelope",
       },
       body,
+      signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
     });
     return new Response(null, { status: upstream.status });
   } catch {
