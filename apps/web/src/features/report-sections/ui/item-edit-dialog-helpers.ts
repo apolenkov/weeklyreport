@@ -1,4 +1,4 @@
-import { safeText } from "@customreport/shared";
+import { SAFE_TEXT_MAX_LENGTH, safeText } from "@customreport/shared";
 
 import { deriveItemAlarmFromRisks } from "../model/alarms/item-alarm";
 import type { ParentActivityOption } from "../model/record-parent";
@@ -30,7 +30,9 @@ export function collectItemErrors(args: {
       ? "Description is required"
       : description.success
         ? undefined
-        : description.error.issues[0]?.message;
+        : args.trimmed.length > SAFE_TEXT_MAX_LENGTH
+          ? `Description must be ${SAFE_TEXT_MAX_LENGTH} characters or fewer.`
+          : description.error.issues[0]?.message;
   return {
     ...(textError ? { text: textError } : {}),
     ...(stageRequired ? { stageNames: "Select at least one stage." } : {}),
