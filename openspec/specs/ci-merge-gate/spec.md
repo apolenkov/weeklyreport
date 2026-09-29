@@ -12,7 +12,8 @@ must be collected outside CI.
 Per the owner decision of 2026-09-28, `.gitlab-ci.yml` MUST run only lint and
 test lanes: `node-toolchain`, `quality`, `coverage`, `api-integration`, and
 `migrate-reset` on push pipelines, plus `dependency-scan` on schedule and
-manual pipelines. It MUST NOT run Docker-in-Docker, image builds, or
+manual pipelines and on merge requests that change `pnpm-lock.yaml`,
+`pnpm-workspace.yaml`, or any `package.json`. It MUST NOT run Docker-in-Docker, image builds, or
 operational smoke checks. Disposable-database lanes MUST satisfy the exact
 loopback destructive guard with a real PostgreSQL process inside the job
 container bound to `127.0.0.1`; a GitLab service alias MUST NOT be presented

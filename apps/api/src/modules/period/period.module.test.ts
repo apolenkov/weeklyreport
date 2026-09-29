@@ -39,6 +39,7 @@ const appLogger = {
   info: vi.fn(),
   warn: vi.fn(),
   error: vi.fn(),
+  child: () => appLogger,
 };
 
 describe("PeriodModule wiring", () => {

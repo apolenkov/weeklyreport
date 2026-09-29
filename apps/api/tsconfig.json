@@ -1,6 +1,8 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "lib": ["ES2024"],
+    "types": ["node"],
     "outDir": "dist",
     "rootDir": "../..",
     "experimentalDecorators": true,

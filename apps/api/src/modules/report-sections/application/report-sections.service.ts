@@ -15,7 +15,7 @@ import {
   validateSubmitInput,
 } from "@customreport/shared";
 
-import { createServiceLogger } from "../../../lib/logger-service.js";
+import { type AppLogger, createNullLogger } from "../../../lib/logger.js";
 import { findPublishedRecordViolation } from "../domain/published-record-guard.js";
 import { mergeSection } from "../domain/report-section-merge.js";
 import {
@@ -43,8 +43,6 @@ export {
 } from "./report-sections.contract.js";
 
 export class ReportSectionsService {
-  private readonly logger = createServiceLogger("ReportSectionsService");
-
   constructor(
     private readonly repository: ReportSectionsRepository,
     // Grace-period settings provider — required, or late stamping would
@@ -52,6 +50,7 @@ export class ReportSectionsService {
     // !allowLateSubmissions → AccessError; now > deadline → section.late = true.
     private readonly getGraceSettings: GetGraceSettings,
     private readonly telemetry: ReportSectionsTelemetry = NOOP_REPORT_SECTIONS_TELEMETRY,
+    private readonly logger: AppLogger = createNullLogger(),
   ) {}
 
   private assertCanEditSection(

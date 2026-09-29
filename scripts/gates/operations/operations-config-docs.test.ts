@@ -486,6 +486,28 @@ void test("the GitLab quality lane carries no product build", () => {
   assert.match(gitlabCiDoc, /product build[\s\S]*outside CI/u);
 });
 
+void test("dependency-scan also runs on merge requests that change dependency manifests", () => {
+  const start = gitlabContent.indexOf("\ndependency-scan:");
+  const next = gitlabContent.slice(start + 1).search(/\n[a-z.][\w.-]*:\n/u);
+  const end = next === -1 ? gitlabContent.length : start + 1 + next;
+  const job = gitlabContent.slice(start, end);
+  const mrRule = /merge_request_event"'\s+changes:\n((?:\s+- .+\n)+)/u.exec(
+    job,
+  )?.[1];
+  assert.ok(mrRule, "dependency-scan must run on merge requests with changes");
+  const scan = mrRule;
+  for (const manifest of [
+    "pnpm-lock.yaml",
+    "package.json",
+    "pnpm-workspace.yaml",
+  ]) {
+    assert.ok(
+      scan.includes(`- ${manifest}`),
+      `${manifest} must trigger the scan`,
+    );
+  }
+});
+
 void test("Vitest CI output has one labelled summary contract", () => {
   assert.match(vitestBase, /jobSummary:\s*\{\s*enabled:\s*false\s*\}/u);
   assert.match(vitestBase, /displayAnnotations:\s*true/u);
