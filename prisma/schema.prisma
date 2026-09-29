@@ -1025,6 +1025,8 @@ model SectionReview {
   reviewerId      String
   verdict         ReviewVerdict
   judgedVersion   Int
+  // Reviewer reason for changes_requested; NULL for approvals and legacy rows.
+  comment         String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
