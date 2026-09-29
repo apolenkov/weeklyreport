@@ -27,20 +27,23 @@ function usePeriodDoneNotifier(): NotifyDone {
 // Reopen dismisses its confirmation only after the transition succeeds.
 function usePeriodStateMutations(
   notifyDone: NotifyDone,
-  onReopenSuccess: () => void,
+  callbacks: {
+    readonly onPublishSuccess: () => void;
+    readonly onReopenSuccess: () => void;
+  },
 ) {
   const trpc = useTRPC();
 
   return {
     publishMut: useMutation(
       trpc.period.publish.mutationOptions({
-        onSuccess: notifyDone("Period published"),
+        onSuccess: notifyDone("Period published", callbacks.onPublishSuccess),
         onError: notifyError,
       }),
     ),
     reopenMut: useMutation(
       trpc.period.reopen.mutationOptions({
-        onSuccess: notifyDone("Period reopened", onReopenSuccess),
+        onSuccess: notifyDone("Period reopened", callbacks.onReopenSuccess),
         onError: notifyError,
       }),
     ),
@@ -94,16 +97,21 @@ function usePeriodRecordMutations(
 export function usePeriodMutations({
   onCreateSuccess,
   onEditSuccess,
+  onPublishSuccess,
   onReopenSuccess,
   onDeleteSuccess,
 }: {
   readonly onCreateSuccess: () => void;
   readonly onEditSuccess: () => void;
+  readonly onPublishSuccess: () => void;
   readonly onReopenSuccess: () => void;
   readonly onDeleteSuccess: () => void;
 }) {
   const notifyDone = usePeriodDoneNotifier();
-  const stateMutations = usePeriodStateMutations(notifyDone, onReopenSuccess);
+  const stateMutations = usePeriodStateMutations(notifyDone, {
+    onPublishSuccess,
+    onReopenSuccess,
+  });
   const recordMutations = usePeriodRecordMutations(
     notifyDone,
     onCreateSuccess,
