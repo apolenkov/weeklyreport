@@ -237,7 +237,8 @@ export const createSearchProviders = (): Provider[] => [
   },
   {
     provide: SearchService,
-    useFactory: (repo: SearchPrismaRepository) => new SearchService(repo),
-    inject: [SearchPrismaRepository],
+    useFactory: (repo: SearchPrismaRepository, logger: AppLogger) =>
+      new SearchService(repo, logger.child({ service: "SearchService" })),
+    inject: [SearchPrismaRepository, APP_LOGGER],
   },
 ];

@@ -119,6 +119,19 @@ would let rewrites and server-side fetches target different origins.
 The production Caddy mount defaults to `deploy/caddy/Caddyfile`; do not
 hand-edit the container mount.
 
+## Owner flags and when to remove them
+
+Every on/off flag exists for one reason and is deleted once that reason is
+gone. Env flags accept only `true` or `false`; any other value fails startup.
+
+| Flag                                                                              | Kept for                                                       | Remove when                                                                                                     |
+| --------------------------------------------------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `PRODUCT_FEEDBACK_ENABLED`, `NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED`                | Owner switch for the in-app feedback ingress and inbox.        | The feedback channel is either permanent in every environment or dropped; then delete the gate and both values. |
+| `CLIENT_LOG_FORWARDING`, `NEXT_PUBLIC_CLIENT_LOG_FORWARDING`                      | Owner switch for browser-to-API log forwarding.                | A central log pipeline replaces forwarding, or forwarding is always on.                                         |
+| `OTEL_SDK_DISABLED`                                                               | Kill switch for the OpenTelemetry SDK when an endpoint is set. | The collector is a fixed part of every deployment and the SDK can no longer be disabled safely.                 |
+| `AUTH_DEV_MODE_ALLOW_TEST`                                                        | Lets automated tests use dev login under `NODE_ENV=test`.      | Tests authenticate through a real IdP fixture and never need dev login.                                         |
+| `AppSettings.autoCreatePeriods`, `AppSettings.autoPublishAfterDeadline` (DB flag) | Owner control over scheduled period creation and auto-publish. | The owner confirms the schedule is fixed; then make the behaviour unconditional and drop the column.            |
+
 ## Health and where to look
 
 - `GET /health/live` — the process is up. Says nothing about dependencies.
