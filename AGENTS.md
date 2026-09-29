@@ -53,7 +53,7 @@ publishes, and exports a unified report. pnpm + Turbo monorepo:
 - `packages/shared` — Zod schemas, tRPC contracts (update here before duplicating types)
 - `packages/ui` — shadcn/ui + Tailwind 4 tokens
 - `prisma` — schema, canonical init plus forward-only additive migrations
-  (`prisma/migrations`, 9 today), seeds, destructive guard
+  (`prisma/migrations`), seeds, destructive guard
 - `openspec` — durable product and engineering specifications (`specs/`)
 
 ## Commands
@@ -162,6 +162,9 @@ path must respect them and link the relevant `openspec/specs/` spec.
 
 - **OpenSpec is the source of truth.** Read `openspec list` + `openspec/specs/`
   before changing query semantics or behavior; non-trivial work starts as a change.
+  `openspec archive` and `openspec init` write into `openspec/changes/archive/`,
+  which the cleanliness gate forbids: after either, delete its contents;
+  durable knowledge lives in `openspec/specs/`, history in git.
 - **UI strings stay English** in `apps/web/src/**/*.tsx` (JSX/toast/aria/placeholder).
   Russian allowed only as DB/seed data, comments, and test fixtures.
   Check changed files: `grep -nE '[а-яА-Я]' <file>` — every hit must be data/comment/test.
