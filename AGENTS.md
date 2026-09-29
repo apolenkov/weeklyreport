@@ -52,7 +52,8 @@ publishes, and exports a unified report. pnpm + Turbo monorepo:
   build the minimal production migration image
 - `packages/shared` — Zod schemas, tRPC contracts (update here before duplicating types)
 - `packages/ui` — shadcn/ui + Tailwind 4 tokens
-- `prisma` — schema, single init migration, seeds, destructive guard
+- `prisma` — schema, canonical init plus forward-only additive migrations
+  (`prisma/migrations`, 9 today), seeds, destructive guard
 - `openspec` — durable product and engineering specifications (`specs/`)
 
 ## Commands
@@ -176,14 +177,16 @@ path must respect them and link the relevant `openspec/specs/` spec.
 
 ## Gates
 
-The GitHub workflows remain authoritative: `.github/workflows/ci.yml` runs on
-pull requests, pushes to `main`, and manual dispatch. `.gitlab-ci.yml` is a
-migration candidate carrying only lint/test lanes (owner decision 2026-09-28):
-quality, coverage, API integration, and migrate-reset on the shared Docker
-runner, with in-job loopback PostgreSQL and Redis/Mailpit service aliases —
-no DinD, image builds, or operational checks. Production build, PDF, and
-browser acceptance stay outside CI. Do not treat a runnable GitLab pipeline as
-full acceptance. Use `docs/exemplary-code-standard.md#verification` for local
+The repository lives on the private corporate GitLab (`gitlab` is the only
+remote; owner decision-067). `.gitlab-ci.yml` is the CI that targets this
+remote and carries only lint/test lanes (owner decision 2026-09-28): quality,
+coverage, API integration, migrate-reset, and the dependency audit on the
+shared Docker runner, with in-job loopback PostgreSQL and Redis/Mailpit service
+aliases — no DinD, image builds, or operational checks. `.github/workflows/`
+still declares the fuller pipeline (production build, Docker build) but no
+GitHub remote is configured, so those files are not evidence of execution.
+Production build, PDF, and browser acceptance stay outside CI. Do not treat a
+runnable GitLab pipeline as full acceptance. Use `docs/exemplary-code-standard.md#verification` for local
 acceptance.
 
 ## Task completion
@@ -197,8 +200,10 @@ end once their content is committed or archived.
 
 Owner decision 2026-09-20 (backlog TASK-047): agent-browser (Vercel) is the
 selected route for exercising the running app; the Reticle integration is
-removed. Tool-level runtime proof exists (navigation + screenshot on
-agent-browser 0.38.1); WeeklyReport UI acceptance through it is still pending —
-do not claim the route verifies this app until one real flow has produced
-verified evidence. Generic browser-evidence rules live in `~/.codex/AGENTS.md`;
+removed. Verified on a source run (`next dev`, `customreport_e2e`, 2026-09-29,
+TASK-145): Lead sign-in, save, submit and reopen; Head approve; Viewer
+read-only; Admin DLQ; period reopen, resubmit and republish; the limit dialog.
+Not verified: PDF export (needs the Gotenberg/Docker stack), the production
+build output, and Head reject with a comment (Request changes has no comment
+field). Do not claim a flow beyond this list without fresh evidence. Generic browser-evidence rules live in `~/.codex/AGENTS.md`;
 the database-safety and permission boundaries above apply unchanged.
