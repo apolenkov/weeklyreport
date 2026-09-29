@@ -82,7 +82,10 @@ export function LeadOverviewSupportSections({
       data-testid="lead-overview-support-sections"
       data-feedback-anchor="lead-overview-support-sections"
     >
-      <LeadReviewFeedback records={reviewFeedback} />
+      <LeadReviewFeedback
+        records={reviewFeedback}
+        reviews={serverSection.reviews}
+      />
       <LeadFormSyncBridge.Provider
         products={products}
         activities={activityOptions}

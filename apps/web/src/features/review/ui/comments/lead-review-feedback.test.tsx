@@ -147,7 +147,7 @@ describe("LeadReviewFeedback", () => {
   ];
 
   it("renders the section-level marker and each comment inline on its record", () => {
-    render(<LeadReviewFeedback records={records} />);
+    render(<LeadReviewFeedback records={records} reviews={[]} />);
 
     expect(screen.getByTestId("lead-review-feedback")).toBeInTheDocument();
     // Section-level count marker so the return is not silent. Verdict-neutral
@@ -204,7 +204,9 @@ describe("LeadReviewFeedback", () => {
   });
 
   it("renders nothing when there is no feedback", () => {
-    const { container } = render(<LeadReviewFeedback records={[]} />);
+    const { container } = render(
+      <LeadReviewFeedback records={[]} reviews={[]} />,
+    );
     expect(container).toBeEmptyDOMElement();
   });
 });
