@@ -66,7 +66,7 @@ technology reads columns in the visual sequence.
 
 ### Requirement: Header summarizes the owner's period
 
-The header MUST show: a worst-status pill derived from all product and risk
+The header MUST show: a worst-status pill derived from all product, activity, and risk
 signals on the slide, the owner's name, counters for current items, risks, and
 priorities, and an "N of M products on track" chip. A slide with blocked or
 at-risk signals MUST retain that severity in the summary even when it has no
@@ -78,6 +78,11 @@ existing design tokens.
 
 - **WHEN** the slide has products on track and one blocked product
 - **THEN** the header pill shows the blocked treatment
+
+#### Scenario: an at-risk activity raises the pill
+
+- **WHEN** every product is on track and one activity is at risk
+- **THEN** the header pill shows the at-risk treatment
 
 #### Scenario: all products on track
 

@@ -158,6 +158,7 @@ function pageGrid(
     ...source,
     worstStatus: worstTrafficStatus([
       product.status,
+      ...product.subsections.map((subsection) => subsection.status),
       ...page.risks.map((risk) =>
         risk.tone === "blocked" ? ("red" as const) : ("yellow" as const),
       ),

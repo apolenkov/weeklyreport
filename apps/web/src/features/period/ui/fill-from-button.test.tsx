@@ -1,6 +1,12 @@
 import "@testing-library/jest-dom/vitest";
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import * as React from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -62,19 +68,19 @@ describe("FillFromButton", () => {
     expect(screen.queryByText(/Week 17/)).not.toBeInTheDocument();
   });
 
-  it("shows empty-state when no submitted past periods", () => {
-    const periods: ReportPeriod[] = [
-      makePeriod({
-        id: "2026-W17",
-        dateRange: "Apr 21–27, 2026",
-        sourceSectionId: "sec-W17",
-        weekLabel: "Week 17",
-        isCurrent: true,
-        isSubmitted: false,
-      }),
-    ];
+  const currentOnly = [
+    makePeriod({
+      id: "2026-W17",
+      dateRange: "Apr 21–27, 2026",
+      sourceSectionId: "sec-W17",
+      weekLabel: "Week 17",
+      isCurrent: true,
+      isSubmitted: false,
+    }),
+  ];
 
-    render(<FillFromButton periods={periods} />);
+  it("shows the archive hint when archived periods are hidden", () => {
+    render(<FillFromButton periods={currentOnly} archivedHidden />);
     const chevron = screen.getByRole("button", {
       name: "Choose past report to fill from",
     });
@@ -83,16 +89,42 @@ describe("FillFromButton", () => {
     const panel = screen.getByRole("region", { name: "Past reports" });
     expect(chevron).toHaveAttribute("aria-expanded", "true");
     expect(chevron).toHaveAttribute("aria-controls", panel.id);
+    expect(
+      screen.getByText(
+        "No submitted reports in open periods. Show closed (archived) report periods to see more.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the plain empty state when no archive is hidden", () => {
+    render(<FillFromButton periods={currentOnly} />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Choose past report to fill from" }),
+    );
 
     expect(
       screen.getByText("No submitted past reports found."),
     ).toBeInTheDocument();
+    expect(screen.queryByText(/closed \(archived\)/)).not.toBeInTheDocument();
+  });
 
-    // Primary fill trigger is disabled because !previousPeriod
-    const fillButton = screen.getByRole("button", {
+  it("explains the blocked main segment on focus and click, without confirming", async () => {
+    render(<FillFromButton periods={currentOnly} />);
+    const main = screen.getByRole("button", {
       name: "Fill from most recent submitted period",
     });
-    expect(fillButton).toBeDisabled();
+    const reason = "No submitted past report to fill from.";
+
+    expect(main).toHaveAttribute("aria-disabled", "true");
+    const describedBy = main.getAttribute("aria-describedby");
+    expect(document.getElementById(describedBy ?? "")).toHaveTextContent(
+      reason,
+    );
+    act(() => main.focus());
+    expect((await screen.findAllByText(reason)).length).toBeGreaterThan(0);
+    fireEvent.click(main);
+    expect(screen.getByRole("tooltip")).toHaveTextContent(reason);
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
 
   it("exposes the closed picker state without rendering an orphan region", () => {
@@ -308,12 +340,12 @@ describe("FillFromButton — responsive touch-target geometry", () => {
 
 describe("FillFromButton — locked on a reopened period", () => {
   // On a reopened period the section carries published-lineage records, so the
-  // server's fillFrom guard rejects every source. Disable both segments and
-  // surface the reason as the tooltip instead of offering a doomed action.
+  // server's fillFrom guard rejects every source. Block both segments and
+  // surface the reason instead of offering a doomed action.
   const lockedReason =
     "Fill from previous cannot replace records that are part of the published report.";
 
-  it("disables both segments and surfaces the reason as the tooltip", () => {
+  it("keeps both segments focusable and shows the reason on focus", async () => {
     render(
       <FillFromButton periods={[pastPeriod]} lockedReason={lockedReason} />,
     );
@@ -325,10 +357,19 @@ describe("FillFromButton — locked on a reopened period", () => {
       name: "Choose past report to fill from",
     });
 
-    expect(main).toBeDisabled();
-    expect(chevron).toBeDisabled();
-    expect(main).toHaveAttribute("title", lockedReason);
-    expect(chevron).toHaveAttribute("title", lockedReason);
+    expect(main).toHaveAttribute("aria-disabled", "true");
+    expect(chevron).toHaveAttribute("aria-disabled", "true");
+    expect(main).toBeEnabled();
+    act(() => chevron.focus());
+    expect((await screen.findAllByText(lockedReason)).length).toBeGreaterThan(
+      0,
+    );
+    fireEvent.click(chevron);
+    expect(chevron).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("tooltip")).toHaveTextContent(lockedReason);
+    expect(
+      document.getElementById(chevron.getAttribute("aria-describedby") ?? ""),
+    ).toHaveTextContent(lockedReason);
   });
 
   it("does not open the confirm dialog when the locked main segment is clicked", () => {
@@ -501,7 +542,7 @@ describe("FillFromButton — confirmation focus restoration", () => {
   });
 });
 
-describe("FillFromButton — 'Previous' badge keyed by identity, not filtered index", () => {
+describe("FillFromButton — 'Latest submitted' badge keyed by identity, not filtered index", () => {
   const week16: ReportPeriod = makePeriod({
     id: "2026-W16",
     dateRange: "Apr 14–20, 2026",
@@ -527,11 +568,11 @@ describe("FillFromButton — 'Previous' badge keyed by identity, not filtered in
     render(<FillFromButton periods={[week16, week15]} />);
     openDropdown();
 
-    const badge = screen.getByText("Previous");
+    const badge = screen.getByText("Latest submitted");
     expect(badge.closest("div")).toContainElement(screen.getByText(/Week 16/));
   });
 
-  it("does not mislabel Week 15 as Previous when a search excludes Week 16", () => {
+  it("does not mislabel Week 15 as Latest submitted when a search excludes Week 16", () => {
     render(<FillFromButton periods={[week16, week15]} />);
     openDropdown();
 
@@ -541,12 +582,12 @@ describe("FillFromButton — 'Previous' badge keyed by identity, not filtered in
 
     // The true previous period (Week 16) is filtered out entirely, so no
     // period in the remaining list — including filtered-index-0 Week 15 —
-    // may carry the "Previous" badge.
+    // may carry the "Latest submitted" badge.
     expect(screen.getByText(/Week 15/)).toBeInTheDocument();
-    expect(screen.queryByText("Previous")).not.toBeInTheDocument();
+    expect(screen.queryByText("Latest submitted")).not.toBeInTheDocument();
   });
 
-  it("keeps badging Week 16 as Previous while a search still matches it", () => {
+  it("keeps badging Week 16 as Latest submitted while a search still matches it", () => {
     render(<FillFromButton periods={[week16, week15]} />);
     openDropdown();
 
@@ -556,7 +597,7 @@ describe("FillFromButton — 'Previous' badge keyed by identity, not filtered in
     });
 
     expect(screen.getByText(/Week 15/)).toBeInTheDocument();
-    const badge = screen.getByText("Previous");
+    const badge = screen.getByText("Latest submitted");
     expect(badge.closest("div")).toContainElement(screen.getByText(/Week 16/));
   });
 });

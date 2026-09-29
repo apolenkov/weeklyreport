@@ -304,3 +304,36 @@ the trailing controls in their existing order.
 - **WHEN** the toolbar is rendered at 1024, 1440, 1728 or native 200% zoom
 - **THEN** Next, Archive, Visibility, View, Density and Fullscreen targets do not overlap
 - **AND** every target remains reachable in the same logical Tab order
+
+### Requirement: Lead read-only state is stated in the header
+
+When the lead report cannot be edited and the section is not submitted, the
+header MUST show a "Read-only" badge in place of the autosave badge and the
+subtitle "Read-only report and status context.". An editable report MUST keep
+the autosave badge and the subtitle "Your report draft and status context.".
+Mutating document actions MUST stay hidden while the report is read-only.
+
+#### Scenario: a past period is opened
+
+- **WHEN** a lead opens a report that is read-only and not submitted
+- **THEN** the header shows the "Read-only" badge and the read-only subtitle
+- **AND** no autosave badge or Fill from control is rendered
+
+### Requirement: Reasons for unavailable toolbar controls are reachable by mouse, keyboard and touch
+
+A toolbar control that is unavailable for a stated reason (Fill from segments
+and Report chat) MUST use `aria-disabled` instead of `disabled`, so it stays
+focusable. Its reason MUST be shown on hover, on focus, and on click or tap of
+the control; activating the control MUST NOT run its action. The control MUST
+reference the same reason text through `aria-describedby`.
+
+#### Scenario: a blocked control is tapped
+
+- **WHEN** a touch user taps an unavailable Fill from segment or Report chat
+- **THEN** the reason is visible
+- **AND** no confirmation dialog or chat sheet opens
+
+#### Scenario: no past report can be filled from
+
+- **WHEN** the lead has no submitted past report
+- **THEN** the Fill from main segment is unavailable and focusing or clicking it shows "No submitted past report to fill from."

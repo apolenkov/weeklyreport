@@ -8,15 +8,21 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@customreport/ui/components/ui/sheet";
+import { TooltipProvider } from "@customreport/ui/components/ui/tooltip";
 import { useQuery } from "@tanstack/react-query";
 import { LoaderCircle, MessageCircle, RefreshCw, Sparkles } from "lucide-react";
 import { useRef, useState } from "react";
 
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
+import { ReasonTooltip } from "../../../shared/ui/report-shell/reason-tooltip";
 import { ToolbarIconButton } from "../../../shared/ui/report-shell/toolbar-icon-button";
 import { LeadReportAssistantBody } from "./lead-report-assistant-body";
 import { LeadReportAssistantForm } from "./lead-report-assistant-form";
 import { useLeadReportAssistantController } from "./use-lead-report-assistant-controller";
+
+// Hover highlight is for actionable state only; aria-disabled stays neutral.
+const ASSISTANT_TRIGGER_CLASS =
+  "border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] not-aria-disabled:hover:border-[var(--color-primary)] not-aria-disabled:hover:text-[var(--color-primary)]";
 
 interface AssistantAvailabilityPresentation {
   readonly ariaLabel: string;
@@ -87,32 +93,45 @@ export function LeadReportAssistant() {
     handleRetry,
   } = useLeadReportAssistantController();
 
+  // aria-disabled keeps the trigger focusable so its reason stays reachable;
+  // the sheet therefore must not open while unavailable.
   const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen && availabilityPresentation.disabled) return;
     setOpen(nextOpen);
   };
 
   return (
     <div className="inline-flex items-center gap-1">
       <Sheet open={open} onOpenChange={handleOpenChange}>
-        <SheetTrigger asChild>
-          <ToolbarIconButton
-            aria-label={availabilityPresentation.ariaLabel}
-            aria-busy={isCheckingAvailability}
-            data-testid="lead-report-assistant-trigger"
-            disabled={availabilityPresentation.disabled}
-            title={availabilityPresentation.title}
-            className="border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+        <TooltipProvider>
+          <ReasonTooltip
+            reason={
+              availabilityPresentation.disabled
+                ? availabilityPresentation.title
+                : undefined
+            }
           >
-            {isCheckingAvailability ? (
-              <LoaderCircle
-                className="size-4 animate-spin motion-reduce:animate-none"
-                aria-hidden="true"
-              />
-            ) : (
-              <MessageCircle className="size-4" aria-hidden="true" />
-            )}
-          </ToolbarIconButton>
-        </SheetTrigger>
+            <SheetTrigger asChild>
+              <ToolbarIconButton
+                aria-label={availabilityPresentation.ariaLabel}
+                aria-busy={isCheckingAvailability}
+                aria-disabled={availabilityPresentation.disabled || undefined}
+                data-testid="lead-report-assistant-trigger"
+                title={availabilityPresentation.disabled ? "" : undefined}
+                className={ASSISTANT_TRIGGER_CLASS}
+              >
+                {isCheckingAvailability ? (
+                  <LoaderCircle
+                    className="size-4 animate-spin motion-reduce:animate-none"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <MessageCircle className="size-4" aria-hidden="true" />
+                )}
+              </ToolbarIconButton>
+            </SheetTrigger>
+          </ReasonTooltip>
+        </TooltipProvider>
         <SheetContent
           side="right"
           showCloseButton

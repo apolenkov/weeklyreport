@@ -45,7 +45,7 @@ export function AuthorBadge({
     <span
       {...tooltip}
       data-testid="slide-author-badge"
-      className="inline-flex h-[15px] w-[22px] shrink-0 items-center justify-center rounded text-[8px] font-semibold text-[var(--color-foreground)]"
+      className="inline-flex h-[18px] w-[26px] shrink-0 items-center justify-center rounded text-xs font-semibold text-[var(--color-foreground)]"
       style={
         unknown
           ? { background: "var(--color-muted)" }

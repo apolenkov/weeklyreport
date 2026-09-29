@@ -143,7 +143,6 @@ function LoadedChrome({
       <LeadFormPastPeriodBanner
         pinnedReportId={props.pinnedReportId}
         activeReportId={data.activeReportId}
-        isSubmitted={props.isSubmitted}
       />
     </>
   );

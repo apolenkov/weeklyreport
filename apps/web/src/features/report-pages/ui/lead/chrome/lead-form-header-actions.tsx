@@ -71,8 +71,10 @@ function AutosaveBadge({ autosave }: { readonly autosave: HeaderAutosave }) {
 
 function ReportTitleBlock({
   periodLabel,
+  isReadOnly,
 }: {
   readonly periodLabel?: string | undefined;
+  readonly isReadOnly: boolean;
 }) {
   return (
     <div className="flex min-w-0 flex-col gap-1">
@@ -81,7 +83,9 @@ function ReportTitleBlock({
         My Report
       </h1>
       <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-        Your report draft and status context.
+        {isReadOnly
+          ? "Read-only report and status context."
+          : "Your report draft and status context."}
       </p>
     </div>
   );
@@ -145,11 +149,13 @@ function SubmittedSectionAction({
 
 function HeaderStatusBadge({
   isSubmitted,
+  isReadOnly,
   autosave,
   pendingInput,
 }: {
   readonly pendingInput?: boolean | undefined;
   readonly isSubmitted: boolean;
+  readonly isReadOnly: boolean;
   readonly autosave: HeaderAutosave;
 }) {
   if (pendingInput) {
@@ -164,6 +170,13 @@ function HeaderStatusBadge({
     return (
       <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-1 text-xs font-semibold text-[var(--color-starbucks-accent)]">
         ✓ Submitted
+      </span>
+    );
+  }
+  if (isReadOnly) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-1 text-xs font-semibold text-[var(--color-muted-foreground)]">
+        Read-only
       </span>
     );
   }
@@ -183,6 +196,7 @@ function HeaderActionToolbar({
   const {
     canRequestReopen,
     currentUser,
+    archivedHidden,
     fillFromLocked,
     isReadOnly,
     visiblePeriods,
@@ -195,6 +209,7 @@ function HeaderActionToolbar({
       {canEditDraft && (
         <FillFromButton
           periods={visiblePeriods}
+          archivedHidden={archivedHidden}
           disabled={writeActions.fillFromPending}
           lockedReason={fillFromLocked ? FILL_FROM_LOCKED_REASON : undefined}
           onFillFrom={writeActions.handleFillFrom}
@@ -231,10 +246,14 @@ export function LeadFormHeaderActions({
       className="flex flex-wrap items-center justify-between gap-4"
     >
       <div className="flex min-w-0 flex-wrap items-center gap-3">
-        <ReportTitleBlock periodLabel={header.periodLabel} />
+        <ReportTitleBlock
+          periodLabel={header.periodLabel}
+          isReadOnly={header.viewModel.isReadOnly}
+        />
         {!isSlidesMode && (
           <HeaderStatusBadge
             isSubmitted={header.isSubmitted}
+            isReadOnly={header.viewModel.isReadOnly}
             autosave={header.completionActions.autosave}
             pendingInput={header.pendingInput}
           />
