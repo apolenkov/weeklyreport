@@ -1,6 +1,6 @@
 import type { GroundingBundle } from "../domain/context-builder.js";
 
-export type ReportAssistantResourceLease = Readonly<{
+type ReportAssistantResourceLease = Readonly<{
   signal: AbortSignal;
   release: () => Promise<void>;
 }>;
@@ -108,13 +108,6 @@ export interface ReportAssistantCitationRepairPort {
     signal?: AbortSignal,
   ): Promise<GroundedAnswer>;
 }
-
-export interface ReportLanguageModelPort
-  extends
-    ReportAssistantPlannerPort,
-    ReportAssistantPlannerRepairPort,
-    ReportAssistantAnswerPort,
-    ReportAssistantCitationRepairPort {}
 
 export type EmbeddingVector = readonly number[];
 

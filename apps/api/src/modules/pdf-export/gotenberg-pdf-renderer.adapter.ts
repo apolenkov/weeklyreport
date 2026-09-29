@@ -41,14 +41,14 @@ const PDF_TRAILING_WHITESPACE = new Set([
   SPACE_BYTE,
 ]);
 
-export class RenderResponseTooLargeError extends Error {
+class RenderResponseTooLargeError extends Error {
   constructor() {
     super("renderer response exceeds the 64 MiB bound");
     this.name = "RenderResponseTooLargeError";
   }
 }
 
-export class InvalidRenderResponseError extends Error {
+class InvalidRenderResponseError extends Error {
   constructor() {
     super("renderer returned a body that is not a minimal PDF");
     this.name = "InvalidRenderResponseError";
@@ -158,6 +158,7 @@ export class GotenbergPdfRenderer implements PdfRenderer {
     } catch (error) {
       throw new Error(
         `pdf render request failed: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error },
       );
     }
   }
@@ -185,6 +186,7 @@ export class GotenbergPdfRenderer implements PdfRenderer {
       if (error instanceof RenderResponseTooLargeError) throw error;
       throw new Error(
         `pdf render body read failed: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error },
       );
     }
   }

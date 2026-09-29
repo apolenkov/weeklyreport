@@ -25,6 +25,9 @@ const viewerSession: UserSession = {
 
 interface PrismaStubOptions {
   isActive?: boolean;
+  liveRole?: UserSession["role"];
+  liveGroupId?: string;
+  liveGroupName?: string;
   viewerGroups?: string[];
   // When true the user row is gone (hard-deleted) — findUnique returns null.
   missingUser?: boolean;
@@ -35,7 +38,13 @@ function makePrisma(opts: PrismaStubOptions = {}): PrismaService {
     user: {
       findUnique: () =>
         Promise.resolve(
-          opts.missingUser ? null : { isActive: opts.isActive ?? true },
+          opts.missingUser
+            ? null
+            : {
+                isActive: opts.isActive ?? true,
+                role: opts.liveRole ?? "viewer",
+                reportingGroupId: opts.liveGroupId ?? null,
+              },
         ),
     },
     viewerGroupAccess: {
@@ -48,7 +57,10 @@ function makePrisma(opts: PrismaStubOptions = {}): PrismaService {
       findFirst: () => Promise.resolve(null),
     },
     reportingGroup: {
-      findUnique: () => Promise.resolve(null),
+      findUnique: () =>
+        Promise.resolve(
+          opts.liveGroupName ? { name: opts.liveGroupName } : null,
+        ),
     },
     organization: {
       findUnique: () =>
@@ -120,6 +132,42 @@ describe("resolveHumanSession", () => {
     });
 
     expect(result).toBeNull();
+  });
+
+  it("overrides stale JWT role and group with the database values", async () => {
+    const result = await resolveHumanSession("valid-token", {
+      verifySessionToken: () => ({
+        ...viewerSession,
+        role: "head",
+        reportingGroupId: "stale-group",
+        reportingGroupName: "Stale Group",
+      }),
+      sessionRevocation: { isRevoked: () => Promise.resolve(false) },
+      prisma: makePrisma({
+        liveRole: "lead",
+        liveGroupId: "live-group",
+        liveGroupName: "Live Group",
+      }),
+    });
+
+    expect(result?.role).toBe("lead");
+    expect(result?.reportingGroupId).toBe("live-group");
+    expect(result?.reportingGroupName).toBe("Live Group");
+  });
+
+  it("drops a stale JWT group when the database has none", async () => {
+    const result = await resolveHumanSession("valid-token", {
+      verifySessionToken: () => ({
+        ...viewerSession,
+        reportingGroupId: "stale-group",
+        reportingGroupName: "Stale Group",
+      }),
+      sessionRevocation: { isRevoked: () => Promise.resolve(false) },
+      prisma: makePrisma(),
+    });
+
+    expect(result?.reportingGroupId).toBeUndefined();
+    expect(result?.reportingGroupName).toBeUndefined();
   });
 
   it("rejects a hard-deleted user absent from the revoked set (null row fails closed)", async () => {

@@ -1,4 +1,4 @@
-import type { Job } from "bullmq";
+import { type Job, UnrecoverableError } from "bullmq";
 import type { ClsService } from "nestjs-cls";
 
 import { RawBullMqProcessor } from "../../../infrastructure/bullmq/raw-bullmq-processor.js";
@@ -10,6 +10,7 @@ import { AiProviderConfigurationRepository } from "./ai-provider.repository.js";
 import {
   AI_PROVIDER_TEST_QUEUE_NAME,
   type AiProviderTestJobData,
+  aiProviderTestJobDataSchema,
 } from "./ai-provider-test.queue.js";
 
 export class AiProviderTestProcessor extends RawBullMqProcessor<AiProviderTestJobData> {
@@ -76,30 +77,32 @@ export class AiProviderTestProcessor extends RawBullMqProcessor<AiProviderTestJo
   protected readonly processJob = async (
     job: Job<AiProviderTestJobData>,
   ): Promise<void> => {
+    const parsed = aiProviderTestJobDataSchema.safeParse(job.data);
+    if (!parsed.success) {
+      throw new UnrecoverableError("AI provider test job data is invalid");
+    }
+    const { executionId } = parsed.data;
     const executionAttempt = job.attemptsStarted;
     if (!Number.isSafeInteger(executionAttempt) || executionAttempt < 1) {
       throw new Error("AI provider test job has no processing attempt");
     }
     if (
-      !(await this.repository.startExecution(
-        job.data.executionId,
-        executionAttempt,
-      ))
+      !(await this.repository.startExecution(executionId, executionAttempt))
     ) {
       return;
     }
-    const execution = await this.repository.getExecution(job.data.executionId);
+    const execution = await this.repository.getExecution(executionId);
     if (!execution) return;
     try {
       await this.providerService.executeTest(
         execution.providerRevisionId,
         "worker",
-        { id: job.data.executionId, attempt: executionAttempt },
+        { id: executionId, attempt: executionAttempt },
       );
     } catch (error) {
       const classification = classifyFailure(error);
       await this.completeClaimedExecution(
-        job.data.executionId,
+        executionId,
         classification.outcome,
         classification.failureCode,
         [],

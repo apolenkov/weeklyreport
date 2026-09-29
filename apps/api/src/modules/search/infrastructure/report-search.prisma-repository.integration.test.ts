@@ -1,3 +1,4 @@
+import { toPublishedSnapshotJson } from "@customreport/report-persistence";
 import {
   reportSectionReadModelSchema,
   type SearchPlan,
@@ -11,7 +12,6 @@ import {
   disconnectTestPrisma,
 } from "../../../test-utils/prisma-test-helper.js";
 import { buildTransition } from "../../period/domain/period-transition.js";
-import { toPublishedSnapshotJson } from "../../publication/index.js";
 import { authorizeReportOccurrences } from "../application/authorized-report-retrieval.js";
 import { projectSectionCandidates } from "../domain/candidate-projector.js";
 import { selectPeriodSources } from "../domain/period-source-selection.js";

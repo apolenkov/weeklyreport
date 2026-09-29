@@ -19,12 +19,12 @@ export type TrafficLightHistoryInput = z.infer<
 >;
 
 /** Nullable traffic-light status cell. */
-export const trafficLightCellSchema = trafficLightStatusSchema.nullable();
+const trafficLightCellSchema = trafficLightStatusSchema.nullable();
 /** One period status cell (null = no data). */
 export type TrafficLightCell = z.infer<typeof trafficLightCellSchema>;
 
 /** One project row of period statuses. */
-export const trafficLightRowSchema = z
+const trafficLightRowSchema = z
   .object({
     projectId: z.uuid(),
     projectName: z.string(),
@@ -99,7 +99,7 @@ export const periodComparisonInputSchema = z
 export type PeriodComparisonInput = z.infer<typeof periodComparisonInputSchema>;
 
 /** Per-project status and risk counts across two periods. */
-export const periodComparisonRowSchema = z
+const periodComparisonRowSchema = z
   .object({
     projectId: z.uuid(),
     projectName: z.string(),

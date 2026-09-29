@@ -1,6 +1,6 @@
 import { isAbsolute, resolve } from "node:path";
 
-export type MigratorMode = "check" | "apply" | "rollback";
+type MigratorMode = "check" | "apply" | "rollback";
 
 export interface DatabaseTarget {
   readonly host: string;

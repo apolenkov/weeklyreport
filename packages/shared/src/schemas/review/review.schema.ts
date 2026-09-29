@@ -6,7 +6,7 @@ import { safeText } from "../primitives/report-primitives.schema";
 export const REVIEW_COMMENT_MAX_LENGTH = 2000;
 
 /** Section verdict; requesting changes returns a submitted section to draft. */
-export const reviewVerdictSchema = z.enum(["approved", "changes_requested"]);
+const reviewVerdictSchema = z.enum(["approved", "changes_requested"]);
 
 /** Validates a flat review comment rendered at its record anchor. */
 export const recordCommentViewSchema = z

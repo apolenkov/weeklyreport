@@ -28,16 +28,3 @@ export const publishedDecisionReadModelSchema = decisionReadModelSchema
   .unwrap()
   .safeExtend(publishedRecordIdentitySchema)
   .readonly();
-
-/** Item record frozen into a publication snapshot. */
-export type PublishedItemReadModel = z.infer<
-  typeof publishedItemReadModelSchema
->;
-/** Risk record frozen into a publication snapshot. */
-export type PublishedRiskReadModel = z.infer<
-  typeof publishedRiskReadModelSchema
->;
-/** Decision record frozen into a publication snapshot. */
-export type PublishedDecisionReadModel = z.infer<
-  typeof publishedDecisionReadModelSchema
->;

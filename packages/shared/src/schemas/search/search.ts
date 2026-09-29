@@ -3,14 +3,9 @@ import { z } from "zod";
 import { safeText } from "../primitives/report-primitives.schema";
 
 /** Search result kinds supported by the unified full-text endpoint. */
-export const searchHitTypeSchema = z.enum([
-  "item",
-  "risk",
-  "decision",
-  "project",
-]);
+const searchHitTypeSchema = z.enum(["item", "risk", "decision", "project"]);
 /** Describes a ranked search result and its navigation anchors. */
-export const searchHitSchema = z
+const searchHitSchema = z
   .object({
     type: searchHitTypeSchema,
     id: z.uuid(),

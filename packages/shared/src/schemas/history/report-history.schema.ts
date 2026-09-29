@@ -165,7 +165,10 @@ export type CompiledHistoryEntry = z.infer<typeof compiledHistoryEntrySchema>;
 export type CompiledHistoryResult = z.infer<typeof compiledHistoryResultSchema>;
 /** Lead-specific period result with optional aggregate details. */
 export type MyHistoryEntry = z.infer<typeof myHistoryEntrySchema>;
-/** A bounded page of lead-specific history entries. */
+/**
+ * A bounded page of lead-specific history entries.
+ * @public
+ */
 export const myHistoryResultSchema = z
   .object({
     items: myHistoryEntrySchema.array().readonly(),

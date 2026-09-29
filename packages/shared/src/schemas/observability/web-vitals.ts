@@ -23,7 +23,7 @@ const WEB_VITAL_NAVIGATION_TYPES = new Set<string>([
 ]);
 
 /** Bounded fallback label for unknown browser navigation types. */
-export const WEB_VITAL_NAVIGATION_OTHER = "other";
+const WEB_VITAL_NAVIGATION_OTHER = "other";
 
 /**
  * Map a client-supplied `navigationType` to a bounded label value: a recognised

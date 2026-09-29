@@ -16,7 +16,8 @@ const testContextEnv = () => ({
   NODE_ENV: (process.env.NODE_ENV ?? "test") as
     "development" | "production" | "test",
   AUTH_DEV_MODE: process.env.AUTH_DEV_MODE === "true",
-  AUTH_DEV_MODE_ALLOW_TEST: process.env.AUTH_DEV_MODE_ALLOW_TEST,
+  AUTH_DEV_MODE_ALLOW_TEST: process.env.AUTH_DEV_MODE_ALLOW_TEST as
+    "true" | "false" | undefined,
   AUTH_JWT_SECRET:
     process.env.AUTH_JWT_SECRET ?? "integration-test-secret-32-chars-or-more",
   PDF_EXPORT_JWT_SECRET:
@@ -137,7 +138,13 @@ describe("resolveHumanSession", () => {
     const hydrationError = new Error("section lookup failed");
     const prisma = {
       user: {
-        findUnique: vi.fn(() => Promise.resolve({ isActive: true })),
+        findUnique: vi.fn(() =>
+          Promise.resolve({
+            isActive: true,
+            role: "head",
+            reportingGroupId: null,
+          }),
+        ),
       },
       reportSection: {
         findFirst: vi.fn(() => Promise.reject(hydrationError)),

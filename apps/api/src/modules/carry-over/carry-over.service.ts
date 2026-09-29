@@ -221,7 +221,7 @@ export class CarryOverService {
   }
 }
 
-export function isTargetEditable(state: TargetReportState): boolean {
+function isTargetEditable(state: TargetReportState): boolean {
   return (
     !state.archived &&
     state.periodState === "open" &&

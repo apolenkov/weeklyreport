@@ -39,7 +39,7 @@ function resolvePublishedScope(
     : { kind: "groups", groupIds };
 }
 
-export function filterSnapshotSections(
+function filterSnapshotSections(
   snapshot: PublishedReportSnapshot,
   allowedSectionIds: ReadonlySet<string> | undefined,
 ): PublishedReportSnapshot {

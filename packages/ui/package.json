@@ -23,7 +23,6 @@
     "./components/ui/tooltip": "./src/components/ui/tooltip.tsx"
   },
   "scripts": {
-    "build": "tsc6 -p tsconfig.json",
     "typecheck": "tsc6 --noEmit -p tsconfig.json"
   },
   "dependencies": {

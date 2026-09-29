@@ -14,7 +14,7 @@ vi.mock("../../report-sections/index.js", () => ({
   mapPrismaToReportSection: mocks.mapPrismaToReportSection,
   reportSectionFullInclude: {},
 }));
-vi.mock("../../publication/index.js", () => ({
+vi.mock("@customreport/report-persistence", () => ({
   parsePublishedSnapshot: mocks.parsePublishedSnapshot,
 }));
 

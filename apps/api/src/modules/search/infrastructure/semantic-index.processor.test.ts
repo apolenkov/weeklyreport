@@ -1,4 +1,4 @@
-import type { Job } from "bullmq";
+import { type Job, UnrecoverableError } from "bullmq";
 import { describe, expect, it, type Mock, vi } from "vitest";
 
 import type { EmbeddingPort } from "../application/report-assistant.ports.js";
@@ -211,8 +211,18 @@ describe("SemanticIndexProcessor", () => {
         ...jobData(hash),
         scope: { ...scope, embeddingScopeIdentity: undefined },
       } as unknown as SemanticIndexJobData),
-    ).rejects.toThrow("scope identity is required");
+    ).rejects.toThrow("job data is invalid");
     expect(harness.resolveRuntime).not.toHaveBeenCalled();
+    expect(harness.load).not.toHaveBeenCalled();
+  });
+
+  it("fails invalid job data as UnrecoverableError so BullMQ does not retry", async () => {
+    const harness = createHarness(candidate("Empty payload"));
+
+    const run = harness.processor.run({} as unknown as SemanticIndexJobData);
+
+    await expect(run).rejects.toBeInstanceOf(UnrecoverableError);
+    await expect(run).rejects.toThrow("job data is invalid");
     expect(harness.load).not.toHaveBeenCalled();
   });
 });

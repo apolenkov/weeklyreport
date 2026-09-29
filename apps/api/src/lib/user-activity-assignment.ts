@@ -1,9 +1,22 @@
 import type { Prisma } from "@prisma/client";
 
-import {
-  AdminGroupProductConflictError,
-  AdminUserActivityAssignmentConflictError,
-} from "../modules/admin/admin-shared.js";
+// Product already belongs to a different reporting group → CONFLICT; the
+// message names the current owner so the admin can detach first.
+export class AdminGroupProductConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminGroupProductConflictError";
+  }
+}
+
+// A lead's activity attachments are live ownership edges. Changing the user's
+// role or reporting group underneath them would create an invalid assignment.
+export class AdminUserActivityAssignmentConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminUserActivityAssignmentConflictError";
+  }
+}
 
 /**
  * Locks a user before inspecting activity edges and rejects an incompatible

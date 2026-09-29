@@ -5,4 +5,3 @@ export { LeadSlidesClient } from "./ui/lead-slides-client";
 export { SlideDensityControl } from "./ui/slide-density-control";
 export { SlideFullscreenButton } from "./ui/slide-fullscreen-button";
 export { SlideSkeleton } from "./ui/slide-skeleton";
-export { SlideStatusBadge } from "./ui/slide-status-badge";

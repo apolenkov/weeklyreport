@@ -1,0 +1,49 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": [
+        "eslint-config/*.ts",
+        "prisma/**/*.ts",
+        "scripts/**/*.test.ts",
+        "scripts/gates/*.ts",
+        "vitest.*.config.ts"
+      ],
+      "project": [
+        "eslint-config/**/*.ts",
+        "prisma/**/*.ts",
+        "scripts/**/*.ts",
+        "vitest.*.config.ts"
+      ],
+      "prisma": false
+    },
+    "apps/api": {
+      "entry": [
+        "src/**/*.test.ts",
+        "src/**/*.fixture.ts",
+        "src/pdf-artifact-migrator/main.ts",
+        "vitest*.config.ts"
+      ],
+      "project": ["src/**/*.ts"],
+      "ignoreDependencies": ["@customreport/migrator-runtime"]
+    },
+    "apps/web": {
+      "entry": ["src/**/*.test.{ts,tsx}", "src/test-utils/**"],
+      "project": ["src/**/*.{ts,tsx,css}"]
+    },
+    "packages/shared": {
+      "entry": ["src/**/*.test.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/report-persistence": {
+      "entry": ["src/**/*.test.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/ui": {
+      "project": ["src/**/*.{ts,tsx}"]
+    },
+    "packages/migrator-runtime": {
+      "ignoreDependencies": ["dotenv", "prisma"]
+    }
+  }
+}

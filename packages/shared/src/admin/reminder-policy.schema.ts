@@ -9,7 +9,7 @@ export const reminderAudienceSchema = z.enum([
 ]);
 
 /** Reminder policy kind. */
-export const reminderPolicyKindSchema = z.enum(["deadline", "escalation"]);
+const reminderPolicyKindSchema = z.enum(["deadline", "escalation"]);
 
 /**
  * Wire reminder policy; `validUntil` must be on or after `validFrom` when set.

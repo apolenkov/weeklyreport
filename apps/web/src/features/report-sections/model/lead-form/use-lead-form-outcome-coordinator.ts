@@ -21,12 +21,6 @@ import {
   WAIT_FOR_OUTCOME,
 } from "./lead-form-outcome-coordinator-helpers";
 
-export type {
-  PromotePlanCommandInput,
-  ResolvePlanCommandInput,
-  RestorePlanCommandInput,
-} from "./lead-form-outcome-coordinator-helpers";
-
 export interface LeadFormOutcomeActions {
   readonly pending: boolean;
   readonly canExecute: boolean;

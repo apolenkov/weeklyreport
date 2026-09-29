@@ -31,7 +31,7 @@ export function sectionRevision(section: ReportSectionReadModel): string {
   return `${section.reportSectionId}:${section.version}`;
 }
 
-export function findExactSaveEcho(
+function findExactSaveEcho(
   ledger: SaveEchoLedger,
   serverDraftKey: string,
   revision: string,

@@ -21,7 +21,7 @@ export const SELECT_PERIOD = {
 } as const;
 
 /** The only report rows that can occupy the scheduler's live future horizon. */
-export const LIVE_SCHEDULER_PERIOD_WHERE = {
+const LIVE_SCHEDULER_PERIOD_WHERE = {
   status: "draft",
   periodStatus: "open",
   periodState: { in: ["scheduled", "open"] },

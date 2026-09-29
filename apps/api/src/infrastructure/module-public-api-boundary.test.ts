@@ -23,6 +23,7 @@ const MODULE_FIXTURE_PATH = resolve(
 );
 const PUBLIC_ENTRYPOINT = "../modules/admin/index.js";
 const INTERNAL_MODULE_PATH = "../modules/admin/snapshot-admin.service.js";
+const LIB_INTERNAL_MODULE_PATH = "../modules/admin/snapshot-admin.service.js";
 const REPORT_SECTIONS_PUBLIC_ENTRYPOINT = "../report-sections/index.js";
 const MODULE_BOUNDARY_SOURCE = `import type { buildAssembledReportFromPrismaRow } from "${REPORT_SECTIONS_PUBLIC_ENTRYPOINT}";
 
@@ -441,6 +442,51 @@ describe("API module public boundary", () => {
           ) as unknown as string,
         }),
       ]);
+    },
+    ESLINT_RUN_BUDGET_MS,
+  );
+
+  it(
+    "keeps apps/api/src/lib on module barrels only",
+    async () => {
+      const filename = resolve(
+        REPOSITORY_ROOT,
+        "apps/api/src/lib/human-session.ts",
+      );
+      const internal = await runEslintStdin(
+        filename,
+        `import "${LIB_INTERNAL_MODULE_PATH}";\n`,
+      );
+      expect(internal).toEqual([
+        expect.objectContaining({ ruleId: "import-x/no-restricted-paths" }),
+      ]);
+      const barrel = await runEslintStdin(
+        filename,
+        'import "../modules/admin/index.js";\n',
+      );
+      expect(barrel).toEqual([]);
+    },
+    ESLINT_RUN_BUDGET_MS,
+  );
+
+  it(
+    "rejects runtime import cycles in the API and the web app",
+    async () => {
+      for (const [file, backImport] of [
+        ["apps/api/src/modules/search/index.ts", "../publication/index.js"],
+        [
+          "apps/web/src/features/report-sections/index.ts",
+          "../slides/index.js",
+        ],
+      ] as const) {
+        const messages = await runEslintStdin(
+          resolve(REPOSITORY_ROOT, file),
+          `import * as probe from "${backImport}";\nexport { probe };\n`,
+        );
+        expect(messages).toEqual([
+          expect.objectContaining({ ruleId: "import-x/no-cycle" }),
+        ]);
+      }
     },
     ESLINT_RUN_BUDGET_MS,
   );

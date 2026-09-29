@@ -16,11 +16,11 @@ const HISTORY_LINK_TITLE = "Past weeks and closed reports";
 export const LEAD_REPORT_ROUTE = "/lead/report";
 export const REPORTS_ROUTE = "/reports";
 export const ADMIN_ROUTE = "/admin";
-export const PDF_EXPORTS_ROUTE = "/pdf-exports";
+const PDF_EXPORTS_ROUTE = "/pdf-exports";
 export const REPORTS_LATEST_ROUTE = "/reports/latest";
 export const HEAD_DASHBOARD_ROUTE = "/head/dashboard";
 export const HEAD_REPORT_ROUTE = "/head/report";
-export const FEEDBACK_ROUTE = "/feedback";
+const FEEDBACK_ROUTE = "/feedback";
 
 export const NAV_LINKS: readonly NavLink[] = [
   { href: LEAD_REPORT_ROUTE, label: "Report", roles: ["lead"] },
