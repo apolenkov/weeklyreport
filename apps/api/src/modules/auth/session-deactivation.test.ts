@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import type { SessionRevocationService } from "../admin/index.js";
-import { isUserAccessBarred } from "./session-deactivation";
+import { isUserAccessBarred, readLiveAccess } from "./session-deactivation";
 
 const USER_ID = "a0000000-0000-4000-8000-0000000000b1";
 
@@ -68,5 +68,38 @@ describe("isUserAccessBarred", () => {
     );
 
     expect(barred).toBe(true);
+  });
+});
+
+describe("readLiveAccess", () => {
+  it("returns the database role and group, not token claims", async () => {
+    const prisma = {
+      user: {
+        findUnique: () =>
+          Promise.resolve({
+            isActive: true,
+            role: "lead",
+            reportingGroupId: "g1",
+          }),
+      },
+    } as unknown as PrismaService;
+
+    await expect(
+      readLiveAccess(
+        USER_ID,
+        prisma,
+        revocation(() => Promise.resolve(false)),
+      ),
+    ).resolves.toEqual({ role: "lead", reportingGroupId: "g1" });
+  });
+
+  it("returns null for a deactivated user", async () => {
+    await expect(
+      readLiveAccess(
+        USER_ID,
+        makePrisma({ isActive: false }),
+        revocation(() => Promise.resolve(false)),
+      ),
+    ).resolves.toBeNull();
   });
 });
