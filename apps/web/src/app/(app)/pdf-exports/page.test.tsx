@@ -19,5 +19,9 @@ describe("PdfExportsPage", () => {
     const main = screen.getByRole("main");
     expect(main).toHaveAttribute("id", "main-content");
     expect(main).toHaveAttribute("tabindex", "-1");
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(
+      screen.getByRole("heading", { level: 1, name: "PDF exports" }),
+    ).toBeInTheDocument();
   });
 });
