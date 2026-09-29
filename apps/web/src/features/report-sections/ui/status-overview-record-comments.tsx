@@ -2,7 +2,7 @@
 
 import type { RecordCommentView } from "@customreport/shared";
 
-import { ReviewCommentList } from "../../review";
+import { ReviewCommentList } from "../../../shared/ui/feedback/review-comment-list";
 import type { StatusOverviewItem } from "../model/status-overview";
 
 /**

@@ -9,10 +9,7 @@ import {
   type FeedbackPage,
   type FeedbackQuery,
 } from "./product-feedback.repository.js";
-export {
-  agentationInboxId,
-  annotationIdFromInboxId,
-} from "./agentation-inbox-projection.js";
+export { annotationIdFromInboxId } from "./agentation-inbox-projection.js";
 const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 50;
 

@@ -5,13 +5,9 @@ export type {
   PdfExportJobRecord,
   PdfExportLockedJobWrites,
   PdfExportPendingCandidate,
-  PdfExportPendingCursor,
   PdfExportRepository,
-  PdfExportRetryOutcome,
   PdfExportTerminalState,
-  PdfRenderCookie,
   PdfRenderer,
-  PdfRenderRequest,
 } from "./pdf-export.ports.js";
 export { PDF_RENDERER } from "./pdf-export.ports.js";
 export {

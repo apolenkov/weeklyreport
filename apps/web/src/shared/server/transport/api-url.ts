@@ -33,6 +33,10 @@ function isSuperJsonEnvelope(value: unknown): value is SuperJsonEnvelope {
   );
 }
 
+// Explicit deadline for server-side calls to the API and proxy routes; the
+// runtime default is 300 s, long enough to pile up blocked SSR requests.
+export const SERVER_FETCH_TIMEOUT_MS = 10_000;
+
 // tRPC v11 batched GET empty-input map for procedures with no args.
 export const TRPC_BATCH_EMPTY_INPUT = encodeURIComponent('{"0":{}}');
 

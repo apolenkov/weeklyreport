@@ -21,7 +21,7 @@ interface OverviewComposerState {
   readonly submission: OverviewItemSubmission | null;
 }
 
-export interface OverviewItemSubmission {
+interface OverviewItemSubmission {
   readonly attempt: number;
   readonly item: KanbanItem;
   readonly inputSnapshot: ReturnType<ItemEditDraftStore["getSnapshot"]>;
@@ -123,7 +123,7 @@ export function findEditableItem(
   return items.find((item) => item.id === target.recordId) ?? null;
 }
 
-export function OverviewItemDialog({
+function OverviewItemDialog({
   editor,
   dialog,
   onSave,

@@ -6,7 +6,23 @@ import {
 import { describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined.js";
-import { replacePublishedProjections } from "./published-search-projection.js";
+import {
+  buildAssembledReportFromPrismaRow,
+  reportFullIncludeForSnapshot,
+  toPublishedSnapshotJson,
+} from "../report-sections/index.js";
+import {
+  freezePublishedSnapshot,
+  replacePublishedProjections,
+} from "./published-search-projection.js";
+
+// Only the row mapper and JSON serializer are stubbed; snapshot validation
+// stays real so the projection writes exercise the actual contract.
+vi.mock("../report-sections/index.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../report-sections/index.js")>()),
+  buildAssembledReportFromPrismaRow: vi.fn(),
+  toPublishedSnapshotJson: vi.fn(),
+}));
 
 const REPORT_ID = "20000000-0000-4000-8000-000000000001";
 const SECTION_ID = "20000000-0000-4000-8000-000000000002";
@@ -330,5 +346,48 @@ describe("published projections", () => {
     ).rejects.toThrow(/Published snapshot integrity failure/);
     expect(tx.publishedSearchDocument.deleteMany).not.toHaveBeenCalled();
     expect(tx.publishedSectionScope.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it("freezes the snapshot in order: re-read, snapshot write, projection rebuild", async () => {
+    const order: string[] = [];
+    const row = { id: REPORT_ID };
+    const frozen = snapshot();
+    const json = { frozen: true };
+    vi.mocked(buildAssembledReportFromPrismaRow).mockReturnValue(frozen);
+    vi.mocked(toPublishedSnapshotJson).mockReturnValue(json);
+    const tx = {
+      ...transaction(),
+      report: {
+        findUniqueOrThrow: vi.fn().mockImplementation(() => {
+          order.push("read");
+          return Promise.resolve(row);
+        }),
+        update: vi.fn().mockImplementation(() => {
+          order.push("update");
+          return Promise.resolve({});
+        }),
+      },
+    };
+    tx.publishedSearchDocument.deleteMany.mockImplementation(() => {
+      order.push("projection");
+      return Promise.resolve({ count: 0 });
+    });
+
+    const result = await freezePublishedSnapshot(tx as never, REPORT_ID);
+
+    expect(result).toBe(frozen);
+    expect(order).toEqual(["read", "update", "projection"]);
+    expect(tx.report.findUniqueOrThrow).toHaveBeenCalledWith({
+      where: { id: REPORT_ID },
+      include: reportFullIncludeForSnapshot,
+    });
+    expect(buildAssembledReportFromPrismaRow).toHaveBeenCalledWith(row);
+    expect(toPublishedSnapshotJson).toHaveBeenCalledWith(frozen);
+    expect(tx.report.update).toHaveBeenCalledWith({
+      where: { id: REPORT_ID },
+      data: { publishedSnapshot: json },
+    });
+    expect(tx.publishedSectionScope.createMany).toHaveBeenCalledOnce();
+    expect(tx.publishedSearchDocument.createMany).toHaveBeenCalledOnce();
   });
 });

@@ -47,6 +47,7 @@ const apiCrossModuleZones = apiModules.map((moduleName) => ({
 
 const apiInfrastructureModuleZones = [
   "apps/api/src/infrastructure",
+  "apps/api/src/lib",
   "apps/api/src/bootstrap",
   "apps/api/src/main.ts",
   "apps/api/src/app.module.ts",
@@ -124,6 +125,7 @@ export const boundaryConfig: Linter.Config[] = [
   // rule silently matches nothing and every zone becomes an inert no-op.
   {
     settings: {
+      "import-x/extensions": [".ts", ".tsx"],
       "import-x/resolver-next": [
         createTypeScriptImportResolver({
           noWarnOnMultipleProjects: true,
@@ -150,6 +152,7 @@ export const boundaryConfig: Linter.Config[] = [
   {
     files: [
       "apps/api/src/infrastructure/**/*.ts",
+      "apps/api/src/lib/**/*.ts",
       "apps/api/src/bootstrap/**/*.ts",
       "apps/api/src/main.ts",
       "apps/api/src/app.module.ts",
@@ -172,6 +175,18 @@ export const boundaryConfig: Linter.Config[] = [
     plugins: { "import-x": importX },
     rules: {
       "import-x/no-restricted-paths": ["error", { zones: webCrossSliceZones }],
+    },
+  },
+  // Slice barrels must stay acyclic; type-only edges erase at build time.
+  {
+    files: ["apps/web/src/**/*.{ts,tsx}", "apps/api/src/**/*.ts"],
+    ignores: ["**/*.test.{ts,tsx}", "**/*.spec.ts", "**/__tests__/**"],
+    plugins: { "import-x": importX },
+    rules: {
+      "import-x/no-cycle": [
+        "error",
+        { allowUnsafeDynamicCyclicDependency: false },
+      ],
     },
   },
   // Zone 4 — api domain purity (package-name zone). Files under an invariant

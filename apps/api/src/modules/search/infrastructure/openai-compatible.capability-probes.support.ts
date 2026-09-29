@@ -114,7 +114,7 @@ export const embeddingContract = async (
     !Number.isInteger(totalTokens) ||
     totalTokens < 0
   ) {
-    throw new OpenAiCompatibleProtocolError("embedding_usage_invalid");
+    throw new OpenAiCompatibleProtocolError("embedding_usage_invalid", "usage");
   }
   return { dimensions };
 };

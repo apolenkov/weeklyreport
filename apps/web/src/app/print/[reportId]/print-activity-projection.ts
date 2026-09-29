@@ -20,7 +20,7 @@ import { worstTrafficStatus } from "../../../shared/lib/status/status-presentati
 type Section = WeeklyReportReadModel["leadSections"][number];
 type ActivityStatus = ReportSectionReadModel["activities"][number]["status"];
 
-export interface PrintActivityContributor {
+interface PrintActivityContributor {
   readonly id: string;
   readonly name: string;
   readonly initials: string;
@@ -31,13 +31,12 @@ interface PrintActivityAuthorIdentity {
   readonly authorName: string;
 }
 
-export type PrintActivityItem = WeeklyReportItem & PrintActivityAuthorIdentity;
-export type PrintActivityRisk = WeeklyReportRisk & PrintActivityAuthorIdentity;
-export type PrintActivityDecision = WeeklyReportDecision &
-  PrintActivityAuthorIdentity;
+type PrintActivityItem = WeeklyReportItem & PrintActivityAuthorIdentity;
+type PrintActivityRisk = WeeklyReportRisk & PrintActivityAuthorIdentity;
+type PrintActivityDecision = WeeklyReportDecision & PrintActivityAuthorIdentity;
 
 /** Frozen title/description pair contributed by one report section author. */
-export interface PrintActivityPresentation extends PrintActivityAuthorIdentity {
+interface PrintActivityPresentation extends PrintActivityAuthorIdentity {
   readonly reportSectionId: string;
   readonly title: string;
   readonly note: string | null;

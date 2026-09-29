@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { Job } from "bullmq";
+import { type Job, UnrecoverableError } from "bullmq";
 import { ClsService } from "nestjs-cls";
 
 import { RawBullMqProcessor } from "../../../infrastructure/bullmq/raw-bullmq-processor.js";
@@ -20,6 +20,7 @@ import { buildSemanticInput } from "../domain/semantic-input.js";
 import {
   SEMANTIC_INDEX_QUEUE_NAME,
   type SemanticIndexJobData,
+  semanticIndexJobDataSchema,
 } from "./semantic-index.queue.js";
 
 export type SemanticIndexProcessorConfig = Readonly<{
@@ -30,7 +31,7 @@ export type SemanticIndexProcessorConfig = Readonly<{
   >;
 }>;
 
-export const SEMANTIC_INDEX_PROCESSOR_CONFIG = Symbol(
+const SEMANTIC_INDEX_PROCESSOR_CONFIG = Symbol(
   "SEMANTIC_INDEX_PROCESSOR_CONFIG",
 );
 
@@ -79,14 +80,13 @@ export class SemanticIndexProcessor extends RawBullMqProcessor<SemanticIndexJobD
   };
 
   protected readonly processJob = async (
-    job: Job<SemanticIndexJobData>,
+    rawJob: Job<SemanticIndexJobData>,
   ): Promise<void> => {
-    if (
-      typeof job.data.scope.embeddingScopeIdentity !== "string" ||
-      job.data.scope.embeddingScopeIdentity.trim().length === 0
-    ) {
-      throw new Error("Semantic index job scope identity is required");
+    const parsed = semanticIndexJobDataSchema.safeParse(rawJob.data);
+    if (!parsed.success) {
+      throw new UnrecoverableError("Semantic index job data is invalid");
     }
+    const job = { data: parsed.data };
     const runtime = await this.config.resolveRuntime(
       job.data.configurationRevisionId,
     );

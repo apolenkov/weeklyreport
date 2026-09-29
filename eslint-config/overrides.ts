@@ -41,9 +41,8 @@ export const overrideConfig: Linter.Config[] = [
     rules: {
       // `expect(mock.method)` is the whole point of a spy assertion, but the
       // base rule cannot tell it from a genuine `this`-losing method capture,
-      // so it demanded a disable at 133 sites — 123 of them that one shape.
-      // The vitest rule understands `expect` calls and flags everything else,
-      // so this is a stricter check than the 133 blanket suppressions were.
+      // so it demands a disable at every such site. The vitest rule
+      // understands `expect` calls and flags everything else.
       "@typescript-eslint/unbound-method": "off",
       "vitest/unbound-method": "error",
       // Keep only failure-prevention rules; preference/style rules belong to

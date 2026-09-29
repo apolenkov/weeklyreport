@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 
 import {
   requireApiUrl,
+  SERVER_FETCH_TIMEOUT_MS,
   shouldUseDevAuthFallback,
   TRPC_BATCH_EMPTY_INPUT,
 } from "../transport/api-url";
@@ -22,6 +23,7 @@ export async function getServerSession() {
       method: "GET",
       ...(token ? { headers: { cookie: `${AUTH_COOKIE_NAME}=${token}` } } : {}),
       cache: "no-store",
+      signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
     });
     if (!response.ok) return null;
     const body = (await response.json()) as unknown;

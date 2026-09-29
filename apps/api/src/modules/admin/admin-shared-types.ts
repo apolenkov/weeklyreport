@@ -6,12 +6,6 @@ import type {
   UserSession,
 } from "@customreport/shared";
 
-export type {
-  ReopenRequestCursor,
-  ReopenRequestListInput,
-  ReopenRequestStatusFilter,
-} from "@customreport/shared";
-
 export type ListReopenRequestsInput = ReopenRequestListInput & {
   readonly session: UserSession;
 };

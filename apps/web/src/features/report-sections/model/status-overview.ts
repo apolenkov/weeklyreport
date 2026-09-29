@@ -23,7 +23,7 @@ export type StatusOverviewSection = Pick<
   "projects" | "referencedProjects" | "activities" | "items" | "risks"
 >;
 
-export interface StatusOverviewPeriodLabels {
+interface StatusOverviewPeriodLabels {
   readonly previouslyPlanned: string | null;
   readonly currentWeek: string;
   readonly nextWeek: string;
@@ -90,23 +90,11 @@ export interface StatusOverviewQuickEditMemory {
   readonly write: (item: StatusOverviewItem, draft: string | null) => void;
 }
 
-export function isLinkedContinuationLocked(item: StatusOverviewItem): boolean {
-  return (
-    item.editTarget === null ||
-    item.resolution != null ||
-    item.workflowStatus === "done"
-  );
-}
-
 /** Retained linked-continuation editor state for one stable lineage. */
 export interface StatusOverviewLinkedDraft {
   readonly open: boolean;
   readonly draft: string;
   readonly baseline: string;
-  /** Receipt sequence observed before this submitted intent. */
-  readonly submittedReceiptSequence?: number | undefined;
-  /** Receipt scope observed before this submitted intent. */
-  readonly submittedReceiptScope?: string | null | undefined;
 }
 
 /** Session-scoped retention for linked-continuation editors, keyed by lineage. */
@@ -118,36 +106,9 @@ export interface StatusOverviewLinkedMemory {
   ) => void;
   /** Store-derived gate: true while any retained linked draft exists. */
   readonly pending: boolean;
-  /** Latest successful autosave receipt sequence for this report/section. */
-  readonly receiptSequence?: number | undefined;
-  /** Scope of the current report-section editor activation. */
-  readonly receiptScope?: string | null | undefined;
-  /** Current canonical payload equals the autosave coordinator's saved baseline. */
-  readonly currentPayloadMatchesSavedBaseline?: boolean | undefined;
-  /** Whether the latest scoped receipt persisted this exact linked value. */
-  readonly receiptConfirms?:
-    ((item: StatusOverviewItem, text: string) => boolean) | undefined;
 }
 
-export function linkedDraftSubmissionResolved(
-  item: StatusOverviewItem,
-  draft: StatusOverviewLinkedDraft | null,
-  existingNextText: string,
-  memory: StatusOverviewLinkedMemory | undefined,
-): boolean {
-  if (existingNextText !== draft?.draft) return false;
-  if (memory?.currentPayloadMatchesSavedBaseline === true) return true;
-  const submittedSequence = draft.submittedReceiptSequence;
-  return (
-    submittedSequence !== undefined &&
-    (memory?.receiptSequence ?? 0) > submittedSequence &&
-    (draft.submittedReceiptScope === undefined ||
-      draft.submittedReceiptScope === (memory?.receiptScope ?? null)) &&
-    memory?.receiptConfirms?.(item, draft.draft) === true
-  );
-}
-
-export type StatusOverviewColumn =
+type StatusOverviewColumn =
   | {
       readonly availability: "available";
       readonly items: readonly StatusOverviewItem[];

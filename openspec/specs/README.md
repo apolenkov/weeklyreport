@@ -167,7 +167,7 @@ Authority model:
 - [prod-security-hardening](./prod-security-hardening/spec.md) — Enforces production CSP, immutable base-image digests, and safe dev-auth build defaults.
 - [public-endpoint-resource-limits](./public-endpoint-resource-limits/spec.md) — Bounds unauthenticated API request rate and body size per public ingress surface.
 - [repository-scope-guard](./repository-scope-guard/spec.md) — Repositories fail closed when a read attempts to cross the caller's authorized product-group scope.
-- [repository-security-controls](./repository-security-controls/spec.md) — Enforces least-privilege workflows, non-persistent checkout credentials, sensitive-path ownership, and private vulnerability reporting.
+- [repository-security-controls](./repository-security-controls/spec.md) — Keeps automated checks least-privileged, requires explicit ownership of sensitive repository paths, and preserves a tested private vulnerability-response path.
 - [role-coverage-gate](./role-coverage-gate/spec.md) — Requires every tRPC procedure to use one of the canonical middleware builders by reference identity.
 - [role-model-consistency](./role-model-consistency/spec.md) — Keeps route role declarations aligned with the API authorization gate.
 - [section-save-payload-bounds](./section-save-payload-bounds/spec.md) — Applies the shared array-size bound to every client-supplied section-save collection.
@@ -230,12 +230,12 @@ Authority model:
 - [test-evidence-integrity](./test-evidence-integrity/spec.md) — Requires fail-hard disposable integration and explicit stock Vitest coverage thresholds in CI.
 - [web-test-timer-discipline](./web-test-timer-discipline/spec.md) — Keeps web tests deterministic by using framework timers and query primitives instead of hand-rolled tick loops.
 - [web-trpc-test-harness](./web-trpc-test-harness/spec.md) — Gives component and hook tests one shared tRPC proxy factory and cache-filter contract.
-- [dependency-vulnerability-scanning](./dependency-vulnerability-scanning/spec.md) — Scheduled dependency scanning reports current advisories and automates updates.
+- [dependency-vulnerability-scanning](./dependency-vulnerability-scanning/spec.md) — Requires a recurring server-side dependency-vulnerability scan independent of push and branch-protection state.
 - [dependency-integrity](./dependency-integrity/spec.md) — Installs and runs published dependency artifacts without repository-local rewrites of third-party package contents.
 
 ### Lint, tooling, and repository process
 
-- [ci-merge-gate](./ci-merge-gate/spec.md) — Defines the server-side merge gate and the local pre-push substitute required before production.
+- [ci-merge-gate](./ci-merge-gate/spec.md) — Defines the GitLab CI lint/test gate for `main` and the acceptance evidence collected outside CI.
 - [repository-file-accountability](./repository-file-accountability/spec.md) — Requires a complete one-off file disposition and a residue-free worktree without tracking campaign tooling.
 - [surface-token-integrity](./surface-token-integrity/spec.md) — Prevents report UI from referencing undefined surface tokens.
 - [web-status-color-tokens](./web-status-color-tokens/spec.md) — Keeps the web status-token set complete, named, and free of hex fallbacks or unrelated color domains.

@@ -1,5 +1,5 @@
 import type { AiProviderConfigurationRead } from "@customreport/shared";
-import type { Job } from "bullmq";
+import { type Job, UnrecoverableError } from "bullmq";
 import { describe, expect, it, vi } from "vitest";
 
 import type { EnvConfig } from "../../../infrastructure/config/env.schema.js";
@@ -224,6 +224,19 @@ describe("AiProviderTestProcessor.processJob", () => {
       attempt: 1,
     });
     expect(harness.repository.completeExecution).not.toHaveBeenCalled();
+  });
+
+  it("rejects malformed job data as unrecoverable before touching the repository", async () => {
+    const harness = createExecutionHarness();
+    const processor = createProcessor(harness.repository, vi.fn());
+
+    await expect(
+      (processor as unknown as ProcessorTestSeam).processJob({
+        ...createJob(),
+        data: {},
+      } as Job<AiProviderTestJobData>),
+    ).rejects.toBeInstanceOf(UnrecoverableError);
+    expect(harness.repository.startExecution).not.toHaveBeenCalled();
   });
 
   it("does not call the capability provider when another worker already owns the execution", async () => {

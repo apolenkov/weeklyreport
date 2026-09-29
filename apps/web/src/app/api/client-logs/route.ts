@@ -1,7 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 import { CLIENT_LOGS_MAX_BODY_BYTES } from "../../../features/telemetry/server";
-import { requireApiUrl } from "../../../shared/server/transport/api-url";
+import {
+  requireApiUrl,
+  SERVER_FETCH_TIMEOUT_MS,
+} from "../../../shared/server/transport/api-url";
 
 function declaredBodyIsOversized(req: NextRequest): boolean {
   const contentLength = req.headers.get("content-length");
@@ -38,6 +41,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         ...(forwardedFor === null ? {} : { "X-Forwarded-For": forwardedFor }),
       },
       body,
+      signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
     });
     return new NextResponse(null, { status: res.status });
   } catch {

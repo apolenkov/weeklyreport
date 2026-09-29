@@ -16,11 +16,6 @@ import { reportSectionFullInclude } from "./report-sections.include.js";
 import { mapPrismaToReportSection } from "./report-sections.mappers.js";
 import { deriveEffectiveProductStatus } from "./report-sections.status-derivation.js";
 
-export {
-  parsePublishedSnapshot,
-  requirePublishedSnapshot,
-} from "./published-snapshot.js";
-
 const reportSectionFullIncludeForSnapshot = {
   ...reportSectionFullInclude,
   author: {

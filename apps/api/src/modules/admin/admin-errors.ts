@@ -1,3 +1,8 @@
+export {
+  AdminGroupProductConflictError,
+  AdminUserActivityAssignmentConflictError,
+} from "../../lib/user-activity-assignment.js";
+
 export class AdminAccessError extends Error {
   constructor(message: string) {
     super(message);
@@ -47,15 +52,6 @@ export class AdminPeriodStaleStateError extends Error {
   }
 }
 
-// Product already belongs to a different reporting group → CONFLICT; the
-// message names the current owner so the admin can detach first.
-export class AdminGroupProductConflictError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "AdminGroupProductConflictError";
-  }
-}
-
 // Existing identity or references prevent the requested user change → CONFLICT.
 export class AdminUserConflictError extends Error {
   constructor(message: string) {
@@ -88,15 +84,6 @@ export class AdminUserReportingGroupRequiredError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "AdminUserReportingGroupRequiredError";
-  }
-}
-
-// A lead's activity attachments are live ownership edges. Changing the user's
-// role or reporting group underneath them would create an invalid assignment.
-export class AdminUserActivityAssignmentConflictError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "AdminUserActivityAssignmentConflictError";
   }
 }
 

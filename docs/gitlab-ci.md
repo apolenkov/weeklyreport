@@ -9,14 +9,14 @@ browser acceptance remain required evidence, collected outside CI as separate
 checks — the `quality` job is therefore a lint/test lane, not a full
 acceptance gate.
 
-| GitLab job      | Execution                                       |
-| --------------- | ----------------------------------------------- |
-| node-toolchain  | Node 26.8.1 container on runner 342             |
-| quality         | Node 26.8.1 container on runner 342             |
-| coverage        | Node 26.8.1 container on runner 342             |
-| api-integration | pgvector 0.8.6/pg15 job container on runner 342 |
-| migrate-reset   | pgvector 0.8.6/pg15 job container on runner 342 |
-| dependency-scan | Schedule or manual pipeline                     |
+| GitLab job      | Execution                                                     |
+| --------------- | ------------------------------------------------------------- |
+| node-toolchain  | Node 26.8.1 container on the shared Docker runner             |
+| quality         | Node 26.8.1 container on the shared Docker runner             |
+| coverage        | Node 26.8.1 container on the shared Docker runner             |
+| api-integration | pgvector 0.8.6/pg15 job container on the shared Docker runner |
+| migrate-reset   | pgvector 0.8.6/pg15 job container on the shared Docker runner |
+| dependency-scan | Schedule or manual pipeline                                   |
 
 ## Database-lane topology
 
@@ -62,9 +62,9 @@ of the integration suite's data.
 The weekly dependency scan uses a GitLab schedule for the default branch at
 Monday 06:00 UTC; create that schedule after the main cutover. A manually
 started pipeline (`CI_PIPELINE_SOURCE=web`) runs the full lane set plus the
-dependency audit. The dependency update bot has a separate hosting migration
-(Renovate config lives in the GitLab hosting work package, not in this CI
-file) and is not replaced by the audit job.
+dependency audit. No dependency-update bot is configured (see
+`docs/sdlc.md`); the audit job does not replace one. Runner assignment is a
+GitLab setting, not declared in `.gitlab-ci.yml`.
 
 ## Contract-test coverage
 

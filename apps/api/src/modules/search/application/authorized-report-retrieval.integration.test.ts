@@ -1,3 +1,4 @@
+import { toPublishedSnapshotJson } from "@customreport/report-persistence";
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
@@ -6,7 +7,6 @@ import {
   createTestPrisma,
   disconnectTestPrisma,
 } from "../../../test-utils/prisma-test-helper.js";
-import { toPublishedSnapshotJson } from "../../publication/index.js";
 import { ReportSearchPrismaRepository } from "../infrastructure/report-search.prisma-repository.js";
 import { authorizeReportOccurrences } from "./authorized-report-retrieval.js";
 
