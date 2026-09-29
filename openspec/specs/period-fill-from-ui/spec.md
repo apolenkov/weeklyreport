@@ -2,28 +2,47 @@
 
 ## Purpose
 
-Keeps the period fill-from dropdown truthful under search: its "Previous" badge is keyed to the real previous-period identity rather than filtered array position, and its search state resets on every close path so reopening always starts unfiltered.
+Keeps the period fill-from dropdown truthful under search: its "Latest submitted" badge is keyed to the real source-period identity rather than filtered array position, and its search state resets on every close path so reopening always starts unfiltered.
 
 ## Requirements
 
-### Requirement: The dropdown's "Previous" badge identifies the real previous period, not filtered position
+### Requirement: The dropdown's "Latest submitted" badge identifies the real most recent submitted period, not filtered position
 
-`FillFromDropdownPanel`'s "Previous" badge and highlight MUST be keyed to
-the actual previous period's identity (`previousPeriodId`, passed down from
-`FillFromButton`, which already resolves the real previous period for its
+`FillFromDropdownPanel`'s "Latest submitted" badge and highlight MUST be keyed to
+the actual most recent submitted period's identity (`previousPeriodId`, passed down from
+`FillFromButton`, which already resolves the real most recent submitted period for its
 main fill action), never to array position (`idx === 0`) within the
 search-filtered period list. A search query that filters out the true
-previous period MUST NOT cause a different period to be labeled "Previous".
+source MUST NOT cause a different period to be labeled "Latest submitted".
 
-#### Scenario: A search query filters out the true previous period
+#### Scenario: A search query filters out the most recent submitted period
 
 - **GIVEN** the fill-from dropdown is open and the user types a search
-  query that excludes the actual previous period from the filtered results
+  query that excludes the actual most recent submitted period from the filtered results
 - **WHEN** the filtered list renders
-- **THEN** no period in the filtered list is labeled "Previous" unless it
-  is the actual previous period
+- **THEN** no period in the filtered list is labeled "Latest submitted" unless it
+  is the actual most recent submitted period
 - **AND** the main split-button's fill action still targets the real
-  previous period, unaffected by the search filter
+  most recent submitted period, unaffected by the search filter
+
+### Requirement: The dropdown's empty state matches why no report is listed
+
+When the dropdown has no submitted past period, its text MUST depend on
+whether archived periods are hidden by the archive toggle. If archived periods
+exist and are hidden, it MUST read "No submitted reports in open periods. Show
+closed (archived) report periods to see more.". Otherwise it MUST read "No
+submitted past reports found.". A search with no match MUST read "No reports
+match your search.".
+
+#### Scenario: archived periods are hidden
+
+- **WHEN** the lead has archived periods, the archive toggle is off, and no open period is submitted
+- **THEN** the dropdown shows the archive hint
+
+#### Scenario: nothing to hide
+
+- **WHEN** the lead has no archived periods, or the toggle is already on, and no period is submitted
+- **THEN** the dropdown shows "No submitted past reports found." without the archive hint
 
 ### Requirement: The dropdown's search state resets on every close path
 

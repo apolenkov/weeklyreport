@@ -89,6 +89,7 @@ function unifiedViewModel(readOnly: boolean): LeadFormLoadedViewModel {
     unifiedEntries: [],
     canRequestReopen: false,
     hasArchivedPeriods: false,
+    archivedHidden: false,
     visiblePeriods: [],
   };
 }

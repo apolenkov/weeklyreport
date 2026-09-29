@@ -1,8 +1,10 @@
 "use client";
 
+import { TooltipProvider } from "@customreport/ui/components/ui/tooltip";
 import { ChevronDown } from "lucide-react";
 import { type RefObject, useId, useRef } from "react";
 
+import { ReasonTooltip } from "../../../shared/ui/report-shell/reason-tooltip";
 import type { ReportPeriod } from "../../report-sections";
 import { sortMostRecentFirst } from "./fill-from-button-helpers";
 import {
@@ -19,7 +21,7 @@ import { useFillFromDropdown } from "./use-fill-from-dropdown";
 const SPLIT_BUTTON_CONTAINER_CLASS =
   "inline-flex h-[var(--toolbar-control-h)] shrink-0 items-center overflow-hidden rounded-full border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-card)_70%,transparent)] text-[var(--color-foreground)]";
 const SPLIT_BUTTON_SEGMENT_CLASS =
-  "btn-press inline-flex h-full max-md:min-h-[var(--touch-target-min)] items-center justify-center transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50";
+  "btn-press inline-flex h-full max-md:min-h-[var(--touch-target-min)] items-center justify-center transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50";
 // The container border consumes 2px from `h-full`; below `md`, each
 // actionable segment therefore floors its own box at the touch target.
 const SPLIT_BUTTON_MAIN_CLASS = `${SPLIT_BUTTON_SEGMENT_CLASS} px-2.5 max-md:min-w-[var(--touch-target-min)]`;
@@ -30,9 +32,12 @@ interface FillFromButtonProps {
   // Uses section ids so the parent can wire fillFrom's target/source contract.
   readonly onFillFrom?: FillFromHandler | undefined;
   readonly disabled?: boolean | undefined;
-  // Published-lineage records disable both segments; the server guard remains
-  // the enforcement point and this string is surfaced as the tooltip.
+  // Published-lineage records block both segments; the server guard remains
+  // the enforcement point and this string is surfaced as the visible reason.
   readonly lockedReason?: string | undefined;
+  // Archived periods exist but are filtered out of `periods`; the empty-state
+  // hint then points at the archive toggle.
+  readonly archivedHidden?: boolean | undefined;
 }
 
 function CopyIcon() {
@@ -53,9 +58,9 @@ function CopyIcon() {
 
 function SplitButton({
   wrapRef,
-  lockedReason,
-  copyDisabled,
-  chevronDisabled,
+  copyReason,
+  chevronReason,
+  pending,
   copyRef,
   chevronRef,
   dropdownId,
@@ -64,9 +69,9 @@ function SplitButton({
   onToggleDropdown,
 }: {
   readonly wrapRef: RefObject<HTMLDivElement | null>;
-  readonly lockedReason: string | undefined;
-  readonly copyDisabled: boolean;
-  readonly chevronDisabled: boolean;
+  readonly copyReason: string | undefined;
+  readonly chevronReason: string | undefined;
+  readonly pending: boolean;
   readonly copyRef: RefObject<HTMLButtonElement | null>;
   readonly chevronRef: RefObject<HTMLButtonElement | null>;
   readonly dropdownId: string;
@@ -76,33 +81,41 @@ function SplitButton({
 }) {
   return (
     <div className="relative inline-flex items-center" ref={wrapRef}>
-      <div className={SPLIT_BUTTON_CONTAINER_CLASS}>
-        <button
-          ref={copyRef}
-          type="button"
-          aria-label="Fill from most recent submitted period"
-          title={lockedReason ?? "Fill from most recent submitted period"}
-          onClick={onCopy}
-          disabled={copyDisabled}
-          className={SPLIT_BUTTON_MAIN_CLASS}
-        >
-          <CopyIcon />
-        </button>
+      <TooltipProvider>
+        <div className={SPLIT_BUTTON_CONTAINER_CLASS}>
+          <ReasonTooltip reason={copyReason}>
+            <button
+              ref={copyRef}
+              type="button"
+              aria-label="Fill from most recent submitted period"
+              title={copyReason ? "" : "Fill from most recent submitted period"}
+              onClick={copyReason ? undefined : onCopy}
+              disabled={pending}
+              aria-disabled={copyReason ? true : undefined}
+              className={SPLIT_BUTTON_MAIN_CLASS}
+            >
+              <CopyIcon />
+            </button>
+          </ReasonTooltip>
 
-        <button
-          ref={chevronRef}
-          type="button"
-          aria-label="Choose past report to fill from"
-          aria-controls={dropdownOpen ? dropdownId : undefined}
-          aria-expanded={dropdownOpen}
-          title={lockedReason ?? "Choose past report to fill from"}
-          onClick={onToggleDropdown}
-          disabled={chevronDisabled}
-          className={SPLIT_BUTTON_CHEVRON_CLASS}
-        >
-          <ChevronDown className="h-3 w-3" aria-hidden="true" />
-        </button>
-      </div>
+          <ReasonTooltip reason={chevronReason}>
+            <button
+              ref={chevronRef}
+              type="button"
+              aria-label="Choose past report to fill from"
+              aria-controls={dropdownOpen ? dropdownId : undefined}
+              aria-expanded={dropdownOpen}
+              title={chevronReason ? "" : "Choose past report to fill from"}
+              onClick={chevronReason ? undefined : onToggleDropdown}
+              disabled={pending}
+              aria-disabled={chevronReason ? true : undefined}
+              className={SPLIT_BUTTON_CHEVRON_CLASS}
+            >
+              <ChevronDown className="h-3 w-3" aria-hidden="true" />
+            </button>
+          </ReasonTooltip>
+        </div>
+      </TooltipProvider>
     </div>
   );
 }
@@ -127,8 +140,8 @@ export function FillFromButton({
   onFillFrom,
   disabled = false,
   lockedReason,
+  archivedHidden = false,
 }: FillFromButtonProps) {
-  const locked = lockedReason !== undefined;
   const dropdown = useFillFromDropdown();
   const dropdownId = useId();
   const fill = useFillFromConfirmation(onFillFrom);
@@ -154,9 +167,14 @@ export function FillFromButton({
     <>
       <SplitButton
         wrapRef={dropdown.wrapRef}
-        lockedReason={lockedReason}
-        copyDisabled={disabled || locked || !previousPeriod}
-        chevronDisabled={disabled || locked}
+        copyReason={
+          lockedReason ??
+          (previousPeriod
+            ? undefined
+            : "No submitted past report to fill from.")
+        }
+        chevronReason={lockedReason}
+        pending={disabled}
         copyRef={copyRef}
         chevronRef={dropdown.triggerRef}
         dropdownId={dropdownId}
@@ -171,6 +189,7 @@ export function FillFromButton({
         pos={dropdown.pos}
         panelRef={dropdown.panelRef}
         pastPeriods={pastPeriods}
+        archivedHidden={archivedHidden}
         filteredPeriods={filterBySearch(pastPeriods, dropdown.search)}
         previousPeriodId={previousPeriod?.id}
         search={dropdown.search}

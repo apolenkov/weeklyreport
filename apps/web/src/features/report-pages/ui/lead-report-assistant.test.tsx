@@ -143,11 +143,25 @@ describe("LeadReportAssistant", () => {
     const trigger = await screen.findByRole("button", {
       name: "Report chat unavailable",
     });
-    expect(trigger).toBeDisabled();
-    expect(trigger).toHaveAttribute(
-      "title",
+    expect(trigger).toHaveAttribute("aria-disabled", "true");
+    act(() => trigger.focus());
+    expect(
+      (
+        await screen.findAllByText(
+          "Report chat is unavailable until an administrator configures AI",
+        )
+      ).length,
+    ).toBeGreaterThan(0);
+    fireEvent.click(trigger);
+    expect(screen.getByRole("tooltip")).toHaveTextContent(
       "Report chat is unavailable until an administrator configures AI",
     );
+    expect(
+      document.getElementById(trigger.getAttribute("aria-describedby") ?? ""),
+    ).toHaveTextContent(
+      "Report chat is unavailable until an administrator configures AI",
+    );
+    expect(screen.queryByText("Lead workspace")).not.toBeInTheDocument();
   });
 
   it("keeps Chat disabled while availability is pending", async () => {
@@ -156,7 +170,7 @@ describe("LeadReportAssistant", () => {
     const trigger = await screen.findByRole("button", {
       name: "Checking report chat availability",
     });
-    expect(trigger).toBeDisabled();
+    expect(trigger).toHaveAttribute("aria-disabled", "true");
     expect(trigger).toHaveAttribute("aria-busy", "true");
     expect(trigger.querySelector("svg")).toHaveClass(
       "animate-spin",
@@ -169,7 +183,7 @@ describe("LeadReportAssistant", () => {
 
     expect(
       await screen.findByRole("button", { name: "Report chat unavailable" }),
-    ).toBeDisabled();
+    ).toHaveAttribute("aria-disabled", "true");
     expect(
       screen.getByRole("button", {
         name: "Retry report chat availability check",

@@ -80,7 +80,7 @@ function PeriodRowButton({
           )}
           {isPrevious && (
             <span className="inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-2 py-0.5 text-[9px] font-semibold text-[var(--color-primary-foreground)]">
-              Previous
+              Latest submitted
             </span>
           )}
         </div>
@@ -103,6 +103,7 @@ interface FillFromDropdownPanelProps {
   // Keep the real previous-period identity independent of search filtering;
   // badges/highlights must not key off filtered-array position.
   readonly previousPeriodId: string | undefined;
+  readonly archivedHidden: boolean;
   readonly search: string;
   readonly onSearchChange: (value: string) => void;
   readonly onSelect: (period: ReportPeriod) => void;
@@ -116,6 +117,7 @@ export function FillFromDropdownPanel({
   pastPeriods,
   filteredPeriods,
   previousPeriodId,
+  archivedHidden,
   search,
   onSearchChange,
   onSelect,
@@ -137,7 +139,9 @@ export function FillFromDropdownPanel({
         <div className="max-h-[200px] space-y-1 overflow-y-auto">
           {pastPeriods.length === 0 ? (
             <p className="px-2 py-3 text-center text-[13px] text-[var(--color-muted-foreground)]">
-              No submitted past reports found.
+              {archivedHidden
+                ? "No submitted reports in open periods. Show closed (archived) report periods to see more."
+                : "No submitted past reports found."}
             </p>
           ) : filteredPeriods.length === 0 ? (
             <p className="px-2 py-3 text-center text-[13px] text-[var(--color-muted-foreground)]">
