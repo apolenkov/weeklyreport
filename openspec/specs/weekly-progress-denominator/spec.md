@@ -9,7 +9,7 @@ over the period's expected leads.
 
 ### Requirement: Weekly progress uses one denominator for Head and Admin
 
-The weekly read model's `submissionCount` and `totalLeads` SHALL be computed by one shared function over the period's expected leads. For an editable period the expected leads are the users with `role = lead` and `isActive = true`; for a published period they are the authors frozen in the publication snapshot. Head and Admin SHALL use every reporting group, so both see the same figure for the same period. Lead and Viewer roles SHALL keep their group scope so counts never include groups outside their access. Each expected lead SHALL count once, and only expected leads SHALL count as submitted.
+The weekly read model's `submissionCount` and `totalLeads` SHALL be computed by one shared function over the period's expected leads. For an editable period the expected leads are the users with `role = lead` and `isActive = true`; for a published period they are the authors frozen in the publication snapshot. Head and Admin SHALL use every reporting group, so both see the same figure for the same period. Head progress is a deliberate cross-group read tied to the Head's cross-group lifecycle (publish) authority (see `group-scope-isolation-gaps`), and it exposes counts only, never sections of other groups. Lead and Viewer roles SHALL keep their group scope, as `group-scope-isolation-gaps` requires, so counts never include groups outside their access. Each expected lead SHALL count once, and only expected leads SHALL count as submitted.
 
 #### Scenario: Head and Admin see the same progress
 
@@ -21,7 +21,7 @@ The weekly read model's `submissionCount` and `totalLeads` SHALL be computed by 
 
 - **GIVEN** a deactivated lead with no submission
 - **WHEN** the live weekly read model is built
-- **THEN** that lead is not part of `totalLeads`
+- **THEN** that lead is not part of `totalLeads`, and their submitted section, if any, is not counted in `submissionCount`
 
 #### Scenario: A restricted viewer stays inside its groups
 
