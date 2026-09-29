@@ -7,5 +7,5 @@ export {
   type SamlStrategyOptions,
   verifySamlProfile,
 } from "./saml.strategy.js";
-export { isUserAccessBarred } from "./session-deactivation.js";
+export { isUserAccessBarred, readLiveAccess } from "./session-deactivation.js";
 export type { ProvisionLeadWorkspace } from "./user-session.js";

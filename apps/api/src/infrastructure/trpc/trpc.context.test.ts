@@ -137,7 +137,13 @@ describe("resolveHumanSession", () => {
     const hydrationError = new Error("section lookup failed");
     const prisma = {
       user: {
-        findUnique: vi.fn(() => Promise.resolve({ isActive: true })),
+        findUnique: vi.fn(() =>
+          Promise.resolve({
+            isActive: true,
+            role: "head",
+            reportingGroupId: null,
+          }),
+        ),
       },
       reportSection: {
         findFirst: vi.fn(() => Promise.reject(hydrationError)),

@@ -48,7 +48,13 @@ function makePrismaStub() {
     },
     // isActive check on createContextFactory.
     user: {
-      findUnique: vi.fn(() => Promise.resolve({ isActive: true })),
+      findUnique: vi.fn(() =>
+        Promise.resolve({
+          isActive: true,
+          role: "head",
+          reportingGroupId: null,
+        }),
+      ),
     },
     // PDF-token paths short-circuit before this stub; the regular-JWT test
     // below does hydrate `session.organization` from it.
@@ -264,7 +270,9 @@ function makeRequesterPrisma(user: RequesterUser | null) {
       findFirst: vi.fn(() => Promise.resolve(null)),
     },
     user: {
-      findUnique: vi.fn(() => Promise.resolve(user)),
+      findUnique: vi.fn(() =>
+        Promise.resolve(user && { ...user, isActive: true }),
+      ),
     },
     viewerGroupAccess: {
       findMany: vi.fn(() => Promise.resolve([{ groupId: GRANTED_GROUP_ID }])),
