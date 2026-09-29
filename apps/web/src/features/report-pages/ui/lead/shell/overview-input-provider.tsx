@@ -22,7 +22,6 @@ import {
   type AliasIndex,
   linkedAliasKey,
   linkedLineageKey,
-  linkedReceiptConfirmsIntent,
   type LinkedReceiptContext,
   resolveLinkedDraftKey,
 } from "./overview-linked-retention";
@@ -267,11 +266,5 @@ export function useRetainedOverviewLinkedEdits(
       );
     },
     pending,
-    receiptSequence: context?.receipt?.sequence ?? 0,
-    receiptScope: context?.scope ?? null,
-    currentPayloadMatchesSavedBaseline:
-      context?.currentPayloadMatchesSavedBaseline === true,
-    receiptConfirms: (item, text) =>
-      linkedReceiptConfirmsIntent(item, text, context),
   };
 }

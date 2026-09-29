@@ -41,14 +41,14 @@ const PDF_TRAILING_WHITESPACE = new Set([
   SPACE_BYTE,
 ]);
 
-export class RenderResponseTooLargeError extends Error {
+class RenderResponseTooLargeError extends Error {
   constructor() {
     super("renderer response exceeds the 64 MiB bound");
     this.name = "RenderResponseTooLargeError";
   }
 }
 
-export class InvalidRenderResponseError extends Error {
+class InvalidRenderResponseError extends Error {
   constructor() {
     super("renderer returned a body that is not a minimal PDF");
     this.name = "InvalidRenderResponseError";

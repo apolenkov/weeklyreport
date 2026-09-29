@@ -32,10 +32,10 @@ import {
   semanticDocuments,
 } from "./semantic-preparation.documents.js";
 
-export const SEMANTIC_PREPARATION_BATCH_SIZE = Symbol(
+const SEMANTIC_PREPARATION_BATCH_SIZE = Symbol(
   "SEMANTIC_PREPARATION_BATCH_SIZE",
 );
-export const SEMANTIC_PREPARATION_BATCH_CONCURRENCY = Symbol(
+const SEMANTIC_PREPARATION_BATCH_CONCURRENCY = Symbol(
   "SEMANTIC_PREPARATION_BATCH_CONCURRENCY",
 );
 

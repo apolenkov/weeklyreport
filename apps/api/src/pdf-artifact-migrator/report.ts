@@ -6,7 +6,7 @@ export const EXIT_REFUSED = 2;
 
 export type MigratorMode = MigratorConfig["mode"];
 
-export type RowVerdict =
+type RowVerdict =
   | "already-linked"
   | "would-link"
   | "linked"

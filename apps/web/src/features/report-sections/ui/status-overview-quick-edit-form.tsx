@@ -4,7 +4,7 @@ import type { StatusOverviewItem } from "../model/status-overview";
 
 export const OVERVIEW_ITEM_ACTION_CLASS =
   "inline-flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-sm)] px-2 text-xs font-semibold text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]";
-export const OVERVIEW_ITEM_QUIET_ACTION_CLASS =
+const OVERVIEW_ITEM_QUIET_ACTION_CLASS =
   "inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-sm)] px-2 text-xs text-[var(--color-muted-foreground)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]";
 
 export function StatusOverviewQuickEditForm({

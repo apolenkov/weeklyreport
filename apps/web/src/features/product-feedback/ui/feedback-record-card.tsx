@@ -54,9 +54,7 @@ export interface FeedbackCardItem {
   readonly thread: readonly FeedbackThreadItem[];
   readonly agentationContext: AgentationContext | null;
 }
-export type FeedbackCapability = FeedbackCapabilities;
-export type FeedbackThreadMessage = FeedbackThreadItem;
-export type FeedbackContext = AgentationContext;
+type FeedbackCapability = FeedbackCapabilities;
 function formatSubmitted(value: Date): string {
   return new Intl.DateTimeFormat("en", {
     dateStyle: "medium",

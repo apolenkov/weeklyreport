@@ -16,7 +16,7 @@ import {
 /**
  * Live lead-section activity row; `lastEditAt` is derived from child records.
  */
-export const activityLiveRowSchema = z
+const activityLiveRowSchema = z
   .object({
     reportId: z.uuid(),
     reportSectionId: z.uuid().nullable(),
