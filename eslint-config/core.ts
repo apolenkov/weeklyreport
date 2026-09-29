@@ -286,8 +286,12 @@ export const coreConfig: Linter.Config[] = [
 
       // file size + cyclomatic complexity. `max-lines` counts real code lines
       // only (skipBlankLines + skipComments); `complexity` uses the ESLint
-      // default of 20; cognitive complexity is owned by sonarjs. Named override
-      // blocks below document the files that use a different limit.
+      // default of 20; cognitive complexity is owned by sonarjs. Tests and
+      // config files relax these in overrides.ts.
+      // Measured 2026-09-30 on production code, not enabled while over 5
+      // violations: max-params 5 (59), max-lines-per-function 80 (70) / 120
+      // (21), complexity 15 (22). max-depth 4 has none, so it is enforced.
+      "max-depth": ["error", 4],
       "max-lines": [
         "error",
         { max: 300, skipBlankLines: true, skipComments: true },
