@@ -72,9 +72,11 @@ beforeEach(() => {
 });
 
 describe("ProductFeedbackWidget", () => {
-  it("remounts the native client only when a cached page is restored", () => {
+  it("remounts the native client only when a cached page is restored", async () => {
     const view = render(<ProductFeedbackWidget />);
-    const original = screen.getByText("Agentation endpoint /api/v1/agentation");
+    const original = await screen.findByText(
+      "Agentation endpoint /api/v1/agentation",
+    );
 
     fireEvent(
       window,
