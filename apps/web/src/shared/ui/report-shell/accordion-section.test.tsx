@@ -134,6 +134,25 @@ describe("AccordionSection — open signal", () => {
   });
 });
 
+describe("AccordionSection — heading name", () => {
+  it("keeps the subtitle out of the heading and links it as a description", () => {
+    render(
+      <AccordionSection
+        icon={HIDDEN_ICON}
+        title="Risks"
+        badge="2"
+        subtitle="Needs attention"
+      >
+        <p>Panel body</p>
+      </AccordionSection>,
+    );
+
+    const toggle = screen.getByRole("button", { name: /^Risks\s?\(2\)$/ });
+    expect(toggle).toHaveAccessibleDescription("Needs attention");
+    expect(toggle.closest("h2")).not.toHaveTextContent("Needs attention");
+  });
+});
+
 describe("AccordionSection — responsive disclosure geometry", () => {
   it("moves action controls to a second mobile header row", () => {
     render(
@@ -147,9 +166,9 @@ describe("AccordionSection — responsive disclosure geometry", () => {
     );
 
     const headerToggle = screen.getByRole("button", { name: "Risks" });
-    const heading = headerToggle.closest("h2");
-    expect(heading).toHaveClass("max-sm:basis-full");
-    expect(heading?.parentElement).toHaveClass("max-sm:flex-wrap");
+    const headingWrap = headerToggle.closest("h2")?.parentElement;
+    expect(headingWrap).toHaveClass("max-sm:basis-full");
+    expect(headingWrap?.parentElement).toHaveClass("max-sm:flex-wrap");
     expect(
       screen.getByRole("button", { name: "Add risk" }).parentElement?.className,
     ).toContain("max-sm:ml-auto");

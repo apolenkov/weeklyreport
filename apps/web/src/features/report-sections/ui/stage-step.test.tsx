@@ -64,7 +64,7 @@ describe("StageStep", () => {
     render(<StageStep {...BASE_PROPS} previewSeverity="at-risk" />);
 
     expect(screen.getByTestId("stage-scope-banner")).toHaveTextContent(
-      "Stage Testing will show as At Risk.",
+      "Stage Testing will show as At risk.",
     );
   });
 });

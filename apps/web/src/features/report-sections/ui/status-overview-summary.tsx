@@ -138,16 +138,12 @@ export function StatusOverviewUnitSummary({
           </span>
         ) : null}
       </div>
-      {unit.kind === "activity" ? (
-        <p className="text-xs text-[var(--color-muted-foreground)]">
-          Activity status:{" "}
-          {statusLabel(health?.status ?? unit.status, "screen")}
-        </p>
-      ) : null}
       {health ? (
-        <p className="break-words text-xs text-[var(--color-muted-foreground)]">
-          {healthLocations(health)}
-        </p>
+        healthLocations(health) ? (
+          <p className="break-words text-xs text-[var(--color-muted-foreground)]">
+            {healthLocations(health)}
+          </p>
+        ) : null
       ) : (
         <StageSummary unit={unit} />
       )}

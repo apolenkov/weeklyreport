@@ -40,9 +40,8 @@ function AccordionHeading({
   titleColor,
   badge,
   badgeStyle,
-  subtitle,
   headingId,
-}: AccordionHeadingProps & { readonly headingId: string }) {
+}: Omit<AccordionHeadingProps, "subtitle"> & { readonly headingId: string }) {
   return (
     <span className="block min-w-0">
       <span className="flex items-center gap-3">
@@ -59,15 +58,12 @@ function AccordionHeading({
             className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-0.5 font-[family-name:var(--font-sans)] text-[13px] font-semibold tabular-nums text-[var(--color-muted-foreground)]"
             style={badgeStyle}
           >
+            <span className="sr-only">{" ("}</span>
             {badge}
+            <span className="sr-only">)</span>
           </span>
         )}
       </span>
-      {subtitle && (
-        <span className="mt-1 block text-xs text-[var(--color-muted-foreground)]">
-          {subtitle}
-        </span>
-      )}
     </span>
   );
 }
@@ -145,22 +141,36 @@ function AccordionHeader({
   readonly onToggle: () => void;
 }) {
   const hasActions = actions !== null && actions !== undefined;
+  const subtitleId = `${headingId}-subtitle`;
   return (
     <div
       className={`flex w-full items-center justify-between gap-3 p-5 transition-colors hover:bg-[var(--color-surface-hover)] ${hasActions ? "max-sm:flex-wrap" : ""}`}
     >
-      <h2 className={`min-w-0 flex-1 ${hasActions ? "max-sm:basis-full" : ""}`}>
-        <button
-          type="button"
-          className="flex w-full min-w-0 items-center justify-between gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-1"
-          onClick={onToggle}
-          aria-expanded={expanded}
-          aria-controls={panelId}
-        >
-          <AccordionHeading {...heading} headingId={headingId} />
-          {!actions && <RotatingChevron expanded={expanded} />}
-        </button>
-      </h2>
+      <div
+        className={`min-w-0 flex-1 ${hasActions ? "max-sm:basis-full" : ""}`}
+      >
+        <h2>
+          <button
+            type="button"
+            className="flex w-full min-w-0 items-center justify-between gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-1"
+            onClick={onToggle}
+            aria-expanded={expanded}
+            aria-controls={panelId}
+            aria-describedby={heading.subtitle ? subtitleId : undefined}
+          >
+            <AccordionHeading {...heading} headingId={headingId} />
+            {!actions && <RotatingChevron expanded={expanded} />}
+          </button>
+        </h2>
+        {heading.subtitle && (
+          <p
+            id={subtitleId}
+            className="mt-1 text-xs text-[var(--color-muted-foreground)]"
+          >
+            {heading.subtitle}
+          </p>
+        )}
+      </div>
       {actions ? (
         <div className="flex shrink-0 items-center gap-2 max-sm:ml-auto">
           {actions}

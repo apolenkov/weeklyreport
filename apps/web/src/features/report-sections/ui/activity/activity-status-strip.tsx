@@ -33,8 +33,8 @@ interface ActivityCardModel {
 }
 
 const TONE_LABEL: Record<ActivityTone, string> = {
-  "on-track": "On Track",
-  "at-risk": "At Risk",
+  "on-track": "On track",
+  "at-risk": "At risk",
   blocked: "Blocked",
   empty: "No status",
 };

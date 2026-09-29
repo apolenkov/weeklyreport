@@ -141,3 +141,22 @@ describe("RequestReopenDialog — a11y regression", () => {
     expect(screen.getByRole("button", { name: "Sending…" })).toBeDisabled();
   });
 });
+
+describe("RequestReopenDialog — failed submit", () => {
+  it("returns focus to the reason field once sending ends with an error", () => {
+    const props = { onConfirm: vi.fn(), onCancel: vi.fn() };
+    const { rerender } = render(
+      <RequestReopenDialog open pending {...props} />,
+    );
+    // The field is disabled while pending, so it cannot hold focus.
+    expect(screen.getByLabelText(/Reason/)).toBeDisabled();
+    rerender(
+      <RequestReopenDialog
+        open
+        error="Could not send the request."
+        {...props}
+      />,
+    );
+    expect(screen.getByLabelText(/Reason/)).toHaveFocus();
+  });
+});

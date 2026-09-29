@@ -160,7 +160,7 @@ describe("PrintProductSection — item status badge", () => {
       />,
     );
 
-    const badge = screen.getByText("At Risk");
+    const badge = screen.getByText("At risk");
     expect(badge).toHaveStyle({
       backgroundColor: "#fef9e7",
       color: "#daa520",

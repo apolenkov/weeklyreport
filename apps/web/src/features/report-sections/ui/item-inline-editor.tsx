@@ -185,10 +185,12 @@ export function ItemInlineEditor({
             Cancel
           </button>
         </div>
-        <p className="text-xs text-[var(--color-muted-foreground)]">
+        <p
+          className={`text-xs text-[var(--color-muted-foreground)] ${confirmationOnly ? "" : "hidden [@media(hover:hover)_and_(pointer:fine)]:block"}`}
+        >
           {confirmationOnly
             ? "No changes are made until you save."
-            : "Unsaved edit · Ctrl/⌘ + Enter to save"}
+            : "Ctrl/⌘ + Enter to save"}
         </p>
       </form>
       {discardDialog}

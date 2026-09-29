@@ -170,7 +170,7 @@ issues shows its name once instead of repeating it on every row. Each product
 card header MUST carry an avatar, the product name, a worst-severity status dot
 (blocked / at-risk), and the line of contributing assignees. Each issue row MUST
 show a left status rail (red for blocked, amber for at-risk), a
-stage-over-assignee gutter, the issue description, and a Blocked / At Risk badge
+stage-over-assignee gutter, the issue description, and a Blocked / At risk badge
 — the same row vocabulary the report accordion uses. Product cards MUST preserve
 the first-appearance order of the source data, and the trigger's issue count
 MUST remain the total across all cards.
@@ -190,7 +190,7 @@ MUST remain the total across all cards.
 - **THEN** its header shows an avatar, the product name, a status dot, and the
   contributing assignees
 - **AND** each issue row shows a status rail, a stage-over-assignee gutter, the
-  description, and a Blocked / At Risk badge
+  description, and a Blocked / At risk badge
 
 ### Requirement: The product-level red roll-up does not duplicate stage rows
 

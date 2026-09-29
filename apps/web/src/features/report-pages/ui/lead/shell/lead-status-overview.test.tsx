@@ -406,7 +406,7 @@ describe("LeadForm Overview", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", { name: "Plan this work" }),
+      await screen.findByRole("button", { name: /^Plan this work/ }),
     );
     expect(
       screen.getByRole("form", {
@@ -480,13 +480,13 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
 
-    const plan = await screen.findByRole("button", { name: "Plan this work" });
+    const plan = await screen.findByRole("button", { name: /^Plan this work/ });
     await user.click(plan);
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(saveDraft).not.toHaveBeenCalled();
     expect(
-      await screen.findByRole("button", { name: "Plan this work" }),
+      await screen.findByRole("button", { name: /^Plan this work/ }),
     ).toHaveFocus();
     expect(screen.getByText("Cancel this prior plan")).toBeInTheDocument();
   });
@@ -515,7 +515,7 @@ describe("LeadForm Overview", () => {
     // Previously planned stays read-only: no progress, edit, move, or
     // outcome controls on the row — only explicit replanning.
     expect(
-      within(preview).getByRole("button", { name: "Plan this work" }),
+      within(preview).getByRole("button", { name: /^Plan this work/ }),
     ).toBeVisible();
     expect(
       within(preview).queryByRole("button", { name: /Update progress/ }),

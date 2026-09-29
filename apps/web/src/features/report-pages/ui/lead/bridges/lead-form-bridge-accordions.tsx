@@ -147,10 +147,14 @@ export function RisksAccordion({
       title="Risks & Blockers"
       titleColor="var(--color-destructive)"
       badge={`${riskCount}`}
-      badgeStyle={{
-        background: "var(--color-status-blocked-bg)",
-        color: "var(--color-destructive)",
-      }}
+      badgeStyle={
+        riskCount > 0
+          ? {
+              background: "var(--color-status-blocked-bg)",
+              color: "var(--color-destructive)",
+            }
+          : undefined
+      }
       subtitle="Risks and blockers that need attention, with impact, mitigation, and affected stages."
       actions={
         !readOnly ? (

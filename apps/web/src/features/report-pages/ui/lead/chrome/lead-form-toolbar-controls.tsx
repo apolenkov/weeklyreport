@@ -189,7 +189,7 @@ function ToolbarPeriodCluster({
         leadSubmittedAt={leadSubmittedAt}
       />
       {viewModel.hasArchivedPeriods && (
-        <>
+        <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
           <Separator
             orientation="vertical"
             className="h-5 bg-[var(--color-border)]"
@@ -198,7 +198,7 @@ function ToolbarPeriodCluster({
             checked={showArchivePeriods}
             onChange={onShowArchivePeriodsChange}
           />
-        </>
+        </span>
       )}
     </>
   );

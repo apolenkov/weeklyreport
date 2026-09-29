@@ -159,7 +159,7 @@ export function EscalationRow({
                 }
           }
         >
-          {isBlocked ? "Blocked" : "At Risk"}
+          {isBlocked ? "Blocked" : "At risk"}
         </span>
       </span>
     </div>

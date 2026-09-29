@@ -248,9 +248,9 @@ describe("ItemCard — risk-derived alarm status", () => {
     expect(screen.queryByText("In progress")).not.toBeInTheDocument();
   });
 
-  it("floors an in-progress item to At Risk when a covering at-risk risk exists", () => {
+  it("floors an in-progress item to At risk when a covering at-risk risk exists", () => {
     render(<ItemCard item={inProgress} risks={[risk("at-risk")]} />);
-    expect(screen.getByText("At Risk")).toBeInTheDocument();
+    expect(screen.getByText("At risk")).toBeInTheDocument();
   });
 
   it("shows the covered-lock message on a derived alarm pill", () => {
@@ -352,7 +352,7 @@ describe("ItemCard — risk-derived alarm status", () => {
 
     render(<ItemCard item={foreignItem} />);
 
-    const badge = screen.getByText("At Risk");
+    const badge = screen.getByText("At risk");
     expect(badge).toHaveStyle({
       background: "var(--color-status-at-risk-bg)",
       color: "var(--color-status-at-risk-fg)",

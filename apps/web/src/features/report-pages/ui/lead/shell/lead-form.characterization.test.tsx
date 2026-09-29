@@ -487,7 +487,7 @@ describe("lead-form draft: submit gating + dialogs", () => {
     expect(invalidateLeadForm).toHaveBeenCalled();
     expect(invalidateDashboard).toHaveBeenCalled();
     expect(invalidateLeadHistory).toHaveBeenCalled();
-    expect(await screen.findByText("✓ Submitted")).toBeInTheDocument();
+    expect(await screen.findByText("Submitted")).toBeInTheDocument();
   });
 
   it("a submitted lead can open the Request reopen dialog", async () => {

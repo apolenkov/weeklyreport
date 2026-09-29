@@ -35,7 +35,7 @@ export const STATUS_BADGE = {
   "at-risk": {
     bg: "var(--color-status-at-risk-bg)",
     text: "var(--color-status-at-risk-fg)",
-    label: "At Risk",
+    label: "At risk",
   },
   planned: {
     bg: MUTED_BADGE_BG,

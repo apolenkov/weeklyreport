@@ -759,3 +759,54 @@ describe("DecisionEditDialog deadline warning", () => {
     expect(screen.getByText("Deadline is in the past.")).toBeInTheDocument();
   });
 });
+
+describe("DecisionEditDialog — discard guard on non-text fields", () => {
+  const twoProducts: Product[] = [
+    ...products,
+    { id: "p2", name: "ERP", overallStatus: "on-track", stages: [] },
+  ];
+  const stagesByProduct = (productId: string) =>
+    productId === "p1" ? ["Planning", "Development"] : ["Analysis"];
+
+  function renderDialog(onCancel = vi.fn()) {
+    render(
+      <DecisionEditDialog
+        open
+        decision={null}
+        defaultOwner="Test Lead"
+        stagesForProduct={stagesByProduct}
+        products={twoProducts}
+        defaultProductId="p1"
+        onSave={vi.fn()}
+        onCancel={onCancel}
+      />,
+    );
+    return onCancel;
+  }
+
+  it("asks before discarding when only a stage changed", () => {
+    const onCancel = renderDialog();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Planning" }));
+    fireEvent.keyDown(screen.getByLabelText(/^Decision \*/i), {
+      key: "Escape",
+    });
+    expect(screen.getByRole("alertdialog")).toHaveTextContent(
+      "Discard changes?",
+    );
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it("asks before discarding when only the product changed", () => {
+    const onCancel = renderDialog();
+    fireEvent.change(screen.getByLabelText(/^Product/i), {
+      target: { value: "product:p2" },
+    });
+    fireEvent.keyDown(screen.getByLabelText(/^Decision \*/i), {
+      key: "Escape",
+    });
+    expect(screen.getByRole("alertdialog")).toHaveTextContent(
+      "Discard changes?",
+    );
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+});
