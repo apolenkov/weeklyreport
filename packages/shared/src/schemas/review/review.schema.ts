@@ -26,6 +26,8 @@ export const sectionReviewViewSchema = z
     reviewerName: z.string().min(1).optional(),
     verdict: reviewVerdictSchema,
     judgedVersion: z.number().int().min(1),
+    /** Reviewer reason recorded with `changes_requested`; absent otherwise. */
+    comment: z.string().min(1).optional(),
     isCurrent: z.boolean(),
     createdAt: z.coerce.date(),
   })
@@ -85,6 +87,25 @@ export const reviewVerdictInputSchema = z
     // reviewer judged. Guards the auto-un-submit so concurrent verdicts (or a
     // race with the head's revoke) transition exactly once.
     version: z.number().int().min(1),
+    // Mandatory reason for changes_requested; forbidden for approved.
+    comment: safeText({ max: REVIEW_COMMENT_MAX_LENGTH }).optional(),
+  })
+  .superRefine((value, ctx) => {
+    const requested = value.verdict === "changes_requested";
+    if (requested && value.comment === undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["comment"],
+        message: "Requesting changes requires a comment.",
+      });
+    }
+    if (!requested && value.comment !== undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["comment"],
+        message: "Only a changes request may carry a comment.",
+      });
+    }
   })
   .readonly();
 

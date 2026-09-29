@@ -273,6 +273,36 @@ describe("review-actions (integration)", () => {
     });
   });
 
+  describe("verdict comment", () => {
+    it("stores the reason with the verdict, exposes it to the Lead, and clears it on approval", async () => {
+      await setSubmitted();
+      await repo.postVerdict({
+        sectionId: testData.section.id,
+        reviewerId: testData.head.id,
+        verdict: "changes_requested",
+        comment: "Add the missing risk owner.",
+        expectedVersion: 1,
+      });
+      const returned = expectDefined(
+        await sectionsRepo.getSectionById(testData.section.id),
+      );
+      expect(expectDefined(returned.reviews[0]).comment).toBe(
+        "Add the missing risk owner.",
+      );
+
+      await repo.postVerdict({
+        sectionId: testData.section.id,
+        reviewerId: testData.head.id,
+        verdict: "approved",
+        expectedVersion: 1,
+      });
+      const approved = expectDefined(
+        await sectionsRepo.getSectionById(testData.section.id),
+      );
+      expect(expectDefined(approved.reviews[0]).comment).toBeUndefined();
+    });
+  });
+
   describe("review write lifecycle gate", () => {
     it.each([
       [
