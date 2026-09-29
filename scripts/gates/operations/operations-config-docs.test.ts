@@ -489,10 +489,8 @@ void test("the GitLab quality lane carries no product build", () => {
 void test("dependency-scan also runs on merge requests that change dependency manifests", () => {
   const start = gitlabContent.indexOf("\ndependency-scan:");
   const next = gitlabContent.slice(start + 1).search(/\n[a-z.][\w.-]*:\n/u);
-  const job = gitlabContent.slice(
-    start,
-    next === -1 ? undefined : start + 1 + next,
-  );
+  const end = next === -1 ? gitlabContent.length : start + 1 + next;
+  const job = gitlabContent.slice(start, end);
   const mrRule = /merge_request_event"'\s+changes:\n((?:\s+- .+\n)+)/u.exec(
     job,
   )?.[1];
