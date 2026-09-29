@@ -95,7 +95,7 @@ export function HeadContextControls({
 
   return (
     <>
-      <div className="flex min-w-max shrink-0 items-center gap-1.5">
+      <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1.5">
         {historyError ? (
           <span
             className="text-xs font-medium text-[var(--color-destructive)]"
