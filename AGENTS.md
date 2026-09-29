@@ -204,6 +204,6 @@ removed. Verified on a source run (`next dev`, `customreport_e2e`, 2026-09-29,
 TASK-145): Lead sign-in, save, submit and reopen; Head approve; Viewer
 read-only; Admin DLQ; period reopen, resubmit and republish; the limit dialog.
 Not verified: PDF export (needs the Gotenberg/Docker stack), the production
-build output, and Head reject with a comment (Request changes has no comment
-field). Do not claim a flow beyond this list without fresh evidence. Generic browser-evidence rules live in `~/.codex/AGENTS.md`;
+build output, and Head reject with a comment (the Request changes dialog has a
+comment field, but it has not been exercised in a browser). Do not claim a flow beyond this list without fresh evidence. Generic browser-evidence rules live in `~/.codex/AGENTS.md`;
 the database-safety and permission boundaries above apply unchanged.
