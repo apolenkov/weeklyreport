@@ -20,9 +20,12 @@ const headSession: UserSession = {
   activeReportSectionId: null,
 };
 
-function makePrisma(isActive: boolean): PrismaService {
+function makePrisma(isActive: boolean, role = "head"): PrismaService {
   return {
-    user: { findUnique: () => Promise.resolve({ isActive }) },
+    user: {
+      findUnique: () =>
+        Promise.resolve({ isActive, role, reportingGroupId: null }),
+    },
   } as unknown as PrismaService;
 }
 
@@ -85,13 +88,13 @@ describe("createRequireHeadGuard", () => {
     expect(status).not.toHaveBeenCalled();
   });
 
-  it("rejects a non-head role with 403 before any deactivation check", async () => {
+  it("rejects a head token whose database role was demoted with 403", async () => {
     const next = vi.fn();
     const { res, status } = makeRes();
 
     await createRequireHeadGuard({
-      verifySessionToken: () => ({ ...headSession, role: "lead" }),
-      prisma: makePrisma(true),
+      verifySessionToken: () => headSession,
+      prisma: makePrisma(true, "lead"),
       sessionRevocation: { isRevoked: () => Promise.resolve(false) },
       sessionCookieName: AUTH_COOKIE_NAME,
     })(makeReq("token"), res, next);

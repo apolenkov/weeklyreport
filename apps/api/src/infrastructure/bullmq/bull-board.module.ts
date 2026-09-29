@@ -18,7 +18,7 @@ import type {
 import { readRequestCookie } from "../../lib/request-boundary.js";
 import { SessionRevocationService } from "../../modules/admin/index.js";
 import { createAuthController } from "../../modules/auth/index.js";
-import { isUserAccessBarred } from "../../modules/auth/index.js";
+import { readLiveAccess } from "../../modules/auth/index.js";
 import type { EnvConfig } from "../config/env.schema.js";
 import { PrismaService } from "../prisma/prisma.service";
 import { QueueRegistry } from "./queue-registry.js";
@@ -47,8 +47,8 @@ function readGuardSession(
   }
 }
 
-// Re-check revoked/deactivated via isUserAccessBarred so a deactivated head
-// loses queue admin immediately (not for the JWT TTL). Express 5 awaits async
+// Re-check revoked/deactivated and the live role via readLiveAccess so a
+// deactivated or demoted head loses queue admin immediately (not for the JWT TTL). Express 5 awaits async
 // handlers; a rejected Prisma read propagates to the error handler as a 500.
 export function createRequireHeadGuard(deps: RequireHeadDeps): RequestHandler {
   return async (
@@ -71,19 +71,18 @@ export function createRequireHeadGuard(deps: RequireHeadDeps): RequestHandler {
       return;
     }
 
-    if (verified.session.role !== "head") {
-      res.status(HTTP_FORBIDDEN).json({ error: "Head role required" });
+    const live = await readLiveAccess(
+      verified.session.userId,
+      deps.prisma,
+      deps.sessionRevocation,
+    );
+    if (!live) {
+      res.status(HTTP_UNAUTHORIZED).json({ error: "Session no longer valid" });
       return;
     }
 
-    if (
-      await isUserAccessBarred(
-        verified.session.userId,
-        deps.prisma,
-        deps.sessionRevocation,
-      )
-    ) {
-      res.status(HTTP_UNAUTHORIZED).json({ error: "Session no longer valid" });
+    if (live.role !== "head") {
+      res.status(HTTP_FORBIDDEN).json({ error: "Head role required" });
       return;
     }
 

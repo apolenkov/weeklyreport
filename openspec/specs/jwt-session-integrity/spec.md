@@ -119,3 +119,23 @@ deactivation. The gate has two tiers, in order:
   `isActive=false`
 - **WHEN** the revocation gate reaches the Prisma read
 - **THEN** access is barred
+
+### Requirement: Role and reporting group come from the database on every request
+
+Human-session resolution and the Bull Board head guard MUST take the requester's
+`role` and `reportingGroupId` from the same Prisma read as the `isActive` gate,
+overriding the JWT claims, so an administrator's role or group change applies on
+the user's next request without revoking the session.
+
+#### Scenario: A demoted user loses the old role immediately
+
+- **GIVEN** a valid JWT issued while the user was `head`
+- **WHEN** the database role is `lead` and the user makes a request
+- **THEN** the resolved session role is `lead`
+- **AND** the Bull Board guard responds 403
+
+#### Scenario: A moved user takes the new group
+
+- **GIVEN** a valid JWT carrying reporting group `A`
+- **WHEN** the database group is `B` (or none)
+- **THEN** the resolved session carries `B` (or no group)
