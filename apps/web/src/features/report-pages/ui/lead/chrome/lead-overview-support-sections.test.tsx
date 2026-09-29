@@ -139,6 +139,28 @@ describe("LeadOverviewSupportSections", () => {
     expect(screen.queryByTestId("lead-section-unified-items")).toBeNull();
   });
 
+  it("shows the head's changes-requested reason to the lead", () => {
+    const section: ReportSectionReadModel = {
+      ...makeDraftMergeSection(),
+      reviews: [
+        {
+          reviewerId: "20202020-2020-4020-8020-202020202020",
+          reviewerName: "Department Head",
+          verdict: "changes_requested",
+          judgedVersion: 1,
+          isCurrent: true,
+          comment: "Add the missing outcome details.",
+          createdAt: new Date("2026-09-05T08:00:00Z"),
+        },
+      ],
+    };
+    render(<Harness initialSection={section} />);
+
+    expect(screen.getByTestId("lead-review-feedback")).toHaveTextContent(
+      "Add the missing outcome details.",
+    );
+  });
+
   it("disables support writes while another Overview input is pending", () => {
     render(<Harness pendingInput />);
     expect(

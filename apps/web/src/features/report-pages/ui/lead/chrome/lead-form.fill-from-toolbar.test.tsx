@@ -107,6 +107,7 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
       },
     ],
     activities: [],
+    reviews: [],
   };
 }
 

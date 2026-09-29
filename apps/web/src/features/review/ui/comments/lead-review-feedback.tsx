@@ -15,10 +15,10 @@ const KIND_LABEL: Record<LeadReviewFeedbackRecord["kind"], string> = {
 // an empty record list self-suppresses so no blank panel appears.
 export function LeadReviewFeedback({
   records,
-  reviews = [],
+  reviews,
 }: {
   readonly records: readonly LeadReviewFeedbackRecord[];
-  readonly reviews?: readonly SectionReviewView[];
+  readonly reviews: readonly SectionReviewView[];
 }) {
   // Reasons recorded with a current changes request; legacy verdicts have none.
   const reasons = reviews.filter(
