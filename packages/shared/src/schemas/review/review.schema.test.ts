@@ -13,7 +13,7 @@ const base = {
 
 describe("reviewVerdictInputSchema comment rule", () => {
   it("requires a visible comment for changes_requested", () => {
-    for (const comment of [undefined, "", "   ", "​"]) {
+    for (const comment of [undefined, "", " ".repeat(3), "​"]) {
       expect(
         reviewVerdictInputSchema.safeParse({
           ...base,
@@ -59,9 +59,9 @@ describe("sectionReviewViewSchema", () => {
       isCurrent: true,
       createdAt: new Date(),
     };
-    expect(sectionReviewViewSchema.parse({ ...view, comment: "Fix X" }).comment).toBe(
-      "Fix X",
-    );
+    expect(
+      sectionReviewViewSchema.parse({ ...view, comment: "Fix X" }).comment,
+    ).toBe("Fix X");
     expect(sectionReviewViewSchema.parse(view).comment).toBeUndefined();
   });
 });

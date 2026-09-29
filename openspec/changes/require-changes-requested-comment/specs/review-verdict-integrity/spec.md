@@ -32,9 +32,9 @@ The Lead's "Reviewer feedback" panel SHALL show the current `changes_requested` 
 
 ### Requirement: Request changes asks for the reason before mutating
 
-Both Request changes entry points (review panel and dashboard queue) SHALL open a comment form and SHALL send the mutation only on submit with valid text. The form SHALL move focus into the field, show an inline error for empty input, disable submit while pending and keep the text if the server rejects the request.
+Both Request changes entry points (review panel and dashboard queue) SHALL open a comment dialog and SHALL send the mutation only on submit with valid text. The dialog SHALL move focus into the field, show an inline error for empty input, disable submit while pending and keep the text if the server rejects the request.
 
 #### Scenario: Empty submit
 
-- **WHEN** the Head submits the form with no text
+- **WHEN** the Head submits the dialog with no text
 - **THEN** an inline error is shown and no mutation is sent
