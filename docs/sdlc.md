@@ -54,8 +54,8 @@ enabled. Those external settings are **unverified** until an authorized
 read-back confirms them.
 
 Any direct push requires explicit authorization for the task. The pre-production
-MVP MUST NOT call current CI an enforced merge gate. The local pre-push hook is
-defense in depth, not server-side enforcement.
+MVP MUST NOT call current CI an enforced merge gate. No local commit or push
+hooks are configured; run the local gates manually.
 
 ## First-production stop condition
 

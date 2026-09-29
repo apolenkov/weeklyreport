@@ -31,13 +31,13 @@ Subject ≤ 100 chars. Body is free-form (multi-line line length unrestricted).
 ## Local quality gate
 
 Before committing, run `pnpm format:check`, `pnpm lint`, `pnpm typecheck`,
-`pnpm test`, and `pnpm build`. The lint floor is zero warnings.
+`pnpm test`, `pnpm build`, and `pnpm spec:check`. The lint floor is zero warnings.
 
 ## Pushing to `gitlab/main`
 
 The canonical remote is `https://forge.example.com/example/weeklyreport.git` (remote `gitlab`).
 Before relying on a push, verify the configured remote, authenticated private
-read access, the pushed commit, and the remote SHA. A successful local hook does
+read access, the pushed commit, and the remote SHA. A successful local push command does
 not prove that GitLab accepted the update or ran CI.
 
 ## Common gotchas
@@ -50,5 +50,5 @@ not prove that GitLab accepted the update or ran CI.
   from its owning terminal with `Ctrl-C`. If a port is occupied, inspect the
   exact listener with `lsof -nP -iTCP:3000 -sTCP:LISTEN` or port `3002`, then
   stop only the process you own.
-- **Reset the dev DB:** select `demo` or `stress` in the in-app development
+- **Reset the dev DB:** select `minimal`, `demo`, `full`, or `stress` in the in-app development
   controls. Each action calls `dev.wipeAndReseed` and reloads.
