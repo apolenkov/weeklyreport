@@ -60,6 +60,16 @@ const model: StatusOverviewModel = {
 };
 
 describe("StatusOverview", () => {
+  it("marks only unplanned Current items", () => {
+    render(<StatusOverview model={model} />);
+    expect(screen.getAllByText("Unplanned")).toHaveLength(1);
+    const preview = screen
+      .getByText("Work item 1")
+      .closest<HTMLElement>("[data-overview-item-preview]");
+    if (!preview) throw new Error("Expected the item preview");
+    expect(within(preview).getByText("Unplanned")).toBeTruthy();
+  });
+
   it("uses one clear item grammar without linked-step or drag controls", async () => {
     const user = userEvent.setup();
     const onEditItem = vi.fn();
