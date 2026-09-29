@@ -240,6 +240,10 @@ export {
 export * from "./schemas/report/published-projections";
 export { buildEscalationsFromReadSections } from "./schemas/report/report-escalations";
 export { buildPortfolioProductsFromSnapshotSections } from "./schemas/report/report-portfolio-products";
+export {
+  computeReportProgress,
+  type ReportProgress,
+} from "./schemas/report/report-progress";
 export * from "./schemas/report-assistant";
 export * from "./schemas/report-assistant-search-plan";
 export type {

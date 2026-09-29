@@ -1,5 +1,6 @@
 import {
   computeReminderFireAt,
+  computeReportProgress,
   reminderPolicyAppliesTo,
   type ReportSectionReadModel,
   type UserSession,
@@ -18,6 +19,7 @@ import type {
 import {
   buildLiveResult,
   deriveScopeFilters,
+  isOrgWideProgressRole,
   requireLiveGroupName,
   type WeeklyReportLiveSection,
   type WeeklyReportProjectRow,
@@ -32,21 +34,26 @@ export async function buildLiveReportResult(
   session: UserSession,
 ): Promise<WeeklyReportRepositoryResult> {
   const { userScope, projectScope } = deriveScopeFilters(session);
-  const { leadUsers, projects, activeDeadlineRuleId } =
-    await fetchReportDependencies(db, report, userScope, projectScope);
+  const { progressLeads, progressSections, projects, activeDeadlineRuleId } =
+    await fetchReportDependencies(
+      db,
+      report,
+      isOrgWideProgressRole(session) ? undefined : userScope,
+      projectScope,
+    );
   const crossGroup = computeCrossGroupSignal(session, projects);
   const leadSections = await buildLiveSections(db, report, session);
-  const submissionCount = report.sections.filter(
-    (section) => section.status === "submitted",
-  ).length;
+  const progress = computeReportProgress(
+    progressLeads.map((lead) => lead.id),
+    progressSections,
+  );
 
   return buildLiveResult(
     report,
     leadSections,
     projects,
     crossGroup,
-    submissionCount,
-    leadUsers.length,
+    progress,
     activeDeadlineRuleId,
   );
 }
@@ -54,43 +61,53 @@ export async function buildLiveReportResult(
 async function fetchReportDependencies(
   db: WeeklyReportDb,
   report: WeeklyReportRow,
-  userScope: Record<string, unknown> | undefined,
+  progressScope: Record<string, unknown> | undefined,
   projectScope: Record<string, unknown> | undefined,
 ): Promise<{
-  readonly leadUsers: { id: string }[];
+  readonly progressLeads: { id: string }[];
+  readonly progressSections: { authorId: string; status: string }[];
   readonly projects: WeeklyReportProjectRow[];
   readonly activeDeadlineRuleId: string | null;
 }> {
-  const [leadUsers, projects, activeDeadlineRule] = await Promise.all([
-    db.user.findMany({
-      where: { role: "lead", ...userScope },
-      select: { id: true },
-    }),
-    db.project.findMany({
-      where: { archived: false, ...projectScope },
-      include: {
-        lead: { select: { reportingGroupId: true } },
-        stageAssignments: true,
-      },
-    }),
-    report.deadline === null
-      ? Promise.resolve(null)
-      : db.reminderRule.findFirst({
-          where: {
-            reportId: report.id,
-            kind: "deadline",
-            status: "active",
-            deadline: report.deadline,
-            policy: { active: true },
-            report: editableReminderReportWhere,
-          },
-          orderBy: { version: "desc" },
-          select: { id: true, fireAt: true, timezone: true, policy: true },
-        }),
-  ]);
+  const [progressLeads, progressSections, projects, activeDeadlineRule] =
+    await Promise.all([
+      db.user.findMany({
+        where: { role: "lead", isActive: true, ...progressScope },
+        select: { id: true },
+      }),
+      db.reportSection.findMany({
+        where: {
+          reportId: report.id,
+          ...(progressScope ? { author: progressScope } : {}),
+        },
+        select: { authorId: true, status: true },
+      }),
+      db.project.findMany({
+        where: { archived: false, ...projectScope },
+        include: {
+          lead: { select: { reportingGroupId: true } },
+          stageAssignments: true,
+        },
+      }),
+      report.deadline === null
+        ? Promise.resolve(null)
+        : db.reminderRule.findFirst({
+            where: {
+              reportId: report.id,
+              kind: "deadline",
+              status: "active",
+              deadline: report.deadline,
+              policy: { active: true },
+              report: editableReminderReportWhere,
+            },
+            orderBy: { version: "desc" },
+            select: { id: true, fireAt: true, timezone: true, policy: true },
+          }),
+    ]);
 
   return {
-    leadUsers,
+    progressLeads,
+    progressSections,
     projects,
     activeDeadlineRuleId:
       activeDeadlineRule &&
