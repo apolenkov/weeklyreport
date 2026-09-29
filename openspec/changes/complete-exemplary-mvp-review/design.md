@@ -343,7 +343,7 @@ ID before dispatch; a private repository is not automatically eligible for the
 external OpenCode route. This initial review does not require Activity semantics.
 
 The implementation handoff now includes `preserve-linked-continuation-dnd`
-and `add-weekly-activity-title`, each with proposal, design, delta spec and tasks.
+and `add-weekly-activity-title` (retired; its files exist only in git history before 7e6c20f2d), each with proposal, design, delta spec and tasks.
 Their independent preparation review passed; product execution is not accepted. The
 accepted MOVE-01 and new comments/history request must accompany that child;
 an old prompt saying that the Current→Next choice is unanswered is stale.
@@ -946,8 +946,8 @@ Next; inverse promotion retains the old result in history. Activity has a weekly
 title and description per lead/week, leaving the catalogue unchanged. Earlier
 whole-record-move and note-only suggestions are superseded, not open questions.
 
-Implementation contracts are in preserve-linked-continuation-dnd and
-add-weekly-activity-title. Both passed independent Astra high planning review;
+Implementation contracts were in preserve-linked-continuation-dnd and
+add-weekly-activity-title (retired; its files exist only in git history before 7e6c20f2d). Both passed independent Astra high planning review;
 the completed/paused eligibility and promotion tuple corrections were verified.
 Use their specifications and tasks rather than earlier synthetic recommendations.
 

@@ -103,6 +103,38 @@ For a published source, eligible content MUST come from the immutable published 
 - **WHEN** carry-over targets a submitted section or a published or archived period
 - **THEN** the write-integrity guard rejects the write without partial changes
 
+### Requirement: Carried work stays unconfirmed until the lead acts on it
+
+A Current occurrence with `carriedOver: true` awaits lead confirmation. It MUST remain visible and MUST block submit completion (`UNCONFIRMED_CARRIED_ITEM`); submit MUST NOT silently clear the marker. Explicit confirmation, editing, or an explicit terminal outcome MUST clear the marker through the authorized write path (an outcome clears it in the same transaction as the outcome and its audit event). Moving an occurrence to Next MUST clear the marker because that move is an explicit author plan, so the occurrence stays eligible for a later carry-over. Resolved decisions (`resolvedAt` set) MUST NOT carry.
+
+#### Scenario: Unconfirmed carried work reaches submit
+
+- **WHEN** an editable section contains a Current occurrence with `carriedOver: true`
+- **THEN** submit is rejected with `UNCONFIRMED_CARRIED_ITEM` and guidance names the item to update
+- **AND** submit does not clear the marker
+
+#### Scenario: A lead confirms carried work
+
+- **WHEN** the lead confirms a carried Current occurrence without editing it
+- **THEN** only `carriedOver` is cleared and reload observes the confirmed state
+
+#### Scenario: Carried work is cancelled before confirmation
+
+- **WHEN** the lead records an explicit terminal outcome for a carried Current occurrence
+- **THEN** the outcome transaction clears `carriedOver` together with the outcome and audit event
+- **AND** submit is not blocked by a stale confirmation marker
+
+#### Scenario: Work is moved through consecutive periods
+
+- **WHEN** work carried into Current B is explicitly moved to Next B and period C opens
+- **THEN** the move clears `carriedOver` in Next B and carry-over creates one unconfirmed Current occurrence in C
+- **AND** text, status, priority, stable identity and history are preserved without duplicates
+
+#### Scenario: resolved decisions do not carry
+
+- **WHEN** the authoritative predecessor contains both resolved and unresolved decisions
+- **THEN** only unresolved decisions are created in the editable target with `resolvedAt: null`
+
 ### Requirement: Automatic carry-over has no manual banner
 
 The head report surface MUST NOT render a manual "Copy forward unfinished"
