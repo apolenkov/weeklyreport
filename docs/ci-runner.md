@@ -1,5 +1,10 @@
 # Локальный runner GitHub Actions
 
+> **Статус: наследие.** Единственный remote репозитория — GitLab (`gitlab`,
+> decision-067), CI для него описан в [gitlab-ci.md](./gitlab-ci.md). Документ
+> описывает прежний runner GitHub Actions; состояние самого runner здесь не
+> проверялось.
+
 `weeklyreport-ci` выполняет CI репозитория `apolenkov/weeklyreport` на постоянной машине OrbStack `01M3FFXA98T6VCN6JEB6WFK4H4`. Runner `2.337.0` зарегистрирован только на уровне репозитория; GitHub API подтвердил ровно одну запись `weeklyreport-ci` со статусом `online` и метками `self-hosted`, `Linux`, `X64`, `weeklyreport-ci`. Автообновление runner оставлено включённым. Один экземпляр принимает не более одного задания одновременно.
 
 ## Машина и границы доступа

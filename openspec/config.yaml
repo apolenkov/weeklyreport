@@ -79,9 +79,11 @@ context: |
     `ALLOW_PROD_DESTRUCTIVE` bypass exists for these flows
   - Development operations use the same exact target contract; production
     restore remains a separate entrypoint and contract
-  - The MVP has one canonical Prisma init migration. Keep it synchronized with
-    `schema.prisma`; prove every rewrite only by recreating an exact disposable
-    DB target from `AGENTS.md` behind the destructive guard and per-run consent
+  - Prisma history is the canonical init migration plus forward-only additive
+    migrations. Never rewrite applied migrations; add a new one, keep it
+    synchronized with `schema.prisma`, and prove it only by recreating an exact
+    disposable DB target from `AGENTS.md` behind the destructive guard and
+    per-run consent
 
   # Quality gates (must stay green)
   pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm spec:check

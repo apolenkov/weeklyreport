@@ -53,6 +53,8 @@ This index maps every durable capability to one canonical home. Product capabili
 #### Draft
 
 - [activity-reporting-unit](./activity-reporting-unit/spec.md) — Activity-parented records, links, and derived status behave consistently across lead, slide, head-report, and admin surfaces without changing product health. `[roles: Lead, Head, Admin]`
+- [tracked-work-continuation](./tracked-work-continuation/spec.md) — Leads continue and develop the same tracked work across weekly report projections while results, comments and published history are preserved. `[roles: Lead]`
+- [weekly-activity-presentation](./weekly-activity-presentation/spec.md) — A lead describes an Activity for a report week without changing the shared catalogue or another report's published presentation. `[roles: Lead]`
 - [lead-dialog-lifecycle](./lead-dialog-lifecycle/spec.md) — Editable lead sections share one dialog lifecycle so view transitions cannot reopen or strand editors. `[roles: Lead]`
 - [lead-form-cross-author-scope](./lead-form-cross-author-scope/spec.md) — The cross-author lens never reveals more than the curated Everyone scope. `[roles: Lead]`
 - [lead-form-draft-merges](./lead-form-draft-merges/spec.md) — Draft merges preserve record identity, quick-add behavior, and blocker routing behind one tested boundary. `[roles: Lead]`
@@ -229,6 +231,7 @@ Authority model:
 - [web-test-timer-discipline](./web-test-timer-discipline/spec.md) — Keeps web tests deterministic by using framework timers and query primitives instead of hand-rolled tick loops.
 - [web-trpc-test-harness](./web-trpc-test-harness/spec.md) — Gives component and hook tests one shared tRPC proxy factory and cache-filter contract.
 - [dependency-vulnerability-scanning](./dependency-vulnerability-scanning/spec.md) — Scheduled dependency scanning reports current advisories and automates updates.
+- [dependency-integrity](./dependency-integrity/spec.md) — Installs and runs published dependency artifacts without repository-local rewrites of third-party package contents.
 
 ### Lint, tooling, and repository process
 

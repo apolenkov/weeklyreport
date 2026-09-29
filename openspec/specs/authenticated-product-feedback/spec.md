@@ -452,16 +452,9 @@ introduced.
 
 ### Requirement: Agentation integration MUST prefer supported upstream mechanisms
 
-WeeklyReport MUST use the public, unmodified Agentation widget and MCP client.
-The React feedback surface MUST treat popup placement, local annotation
-identifiers, and other package-owned presentation details as upstream behavior
-rather than rewriting the distributed package.
+WeeklyReport MUST use the public, unmodified Agentation widget and MCP client. The React feedback surface MUST treat popup placement, local annotation identifiers, and other package-owned presentation details as upstream behavior rather than rewriting the distributed package.
 
-Custom protocol behavior MUST be limited to requirements not met by supported
-upstream mechanisms and MUST have a documented reason and an executable check.
-The integration MUST NOT import package internals, apply dependency patches, or
-replace PostgreSQL or server-authoritative identity merely to alter
-package-owned presentation behavior.
+Custom protocol behavior MUST be limited to requirements not met by supported upstream mechanisms and MUST have a documented reason and an executable check. The integration MUST NOT import package internals, apply dependency patches, or replace PostgreSQL or server-authoritative identity merely to alter package-owned presentation behavior.
 
 #### Scenario: A dependency upgrade changes its wire behavior
 
