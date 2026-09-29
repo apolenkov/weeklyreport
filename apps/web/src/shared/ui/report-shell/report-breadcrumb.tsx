@@ -15,7 +15,10 @@ export function ReportBreadcrumb({
     <nav aria-label="Breadcrumb" className="min-w-0">
       <ol className="flex min-w-0 items-center gap-1.5 text-xs text-[var(--color-muted-foreground)]">
         <li className="shrink-0">
-          <Link href={reportsHref} className="hover:underline">
+          <Link
+            href={reportsHref}
+            className="inline-flex min-h-6 items-center py-1 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+          >
             Reports
           </Link>
         </li>

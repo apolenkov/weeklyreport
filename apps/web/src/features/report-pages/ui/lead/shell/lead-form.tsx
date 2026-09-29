@@ -1,5 +1,6 @@
 "use client";
 
+import { LeadFormEmptyState } from "./lead-form-empty-state";
 import { LeadFormLoadError } from "./lead-form-load-error";
 import { LeadFormLoaded } from "./lead-form-loaded";
 import { LeadFormSkeleton } from "./lead-form-skeleton";
@@ -15,24 +16,19 @@ interface LeadFormProps {
 
 function LeadFormUnavailable() {
   return (
-    <section
-      aria-labelledby="lead-form-unavailable-title"
-      className="card-surface space-y-3 p-6"
+    <LeadFormEmptyState
+      titleId="lead-form-unavailable-title"
+      title="Report form unavailable"
     >
-      <h1
-        id="lead-form-unavailable-title"
-        className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]"
-      >
-        Report form unavailable
-      </h1>
       <p role="status" className="text-sm text-[var(--color-foreground)]">
         This reporting period does not have an editable section for your
         account.
       </p>
       <p className="text-sm text-[var(--color-muted-foreground)]">
-        Choose a report assigned to you or contact your reporting lead.
+        Choose a report assigned to you, or ask an administrator to assign you a
+        section.
       </p>
-    </section>
+    </LeadFormEmptyState>
   );
 }
 
@@ -44,9 +40,14 @@ function LeadFormEditor(
   const editor = useLeadFormEditor(props);
   if (editor.status === "no-active") {
     return (
-      <section className="card-surface p-6" role="status">
-        No active reporting period is available.
-      </section>
+      <LeadFormEmptyState
+        titleId="lead-form-no-active-title"
+        title="No active reporting period"
+      >
+        <p role="status" className="text-sm text-[var(--color-foreground)]">
+          No active reporting period is available.
+        </p>
+      </LeadFormEmptyState>
     );
   }
   if (editor.status === "unavailable") return <LeadFormUnavailable />;

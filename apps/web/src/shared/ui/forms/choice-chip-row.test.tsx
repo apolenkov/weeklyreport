@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { Flag } from "lucide-react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ChoiceChipRow } from "./choice-chip-row";
@@ -81,5 +82,26 @@ describe("ChoiceChipRow", () => {
     const idleBtn = screen.getByRole("button", { name: "✕ Blocked" });
     expect(idleBtn.style.background).toBe("transparent");
     expect(idleBtn.style.border).toBe("1.5px solid var(--color-border-strong)");
+  });
+
+  it("renders a decorative icon outside the accessible name", () => {
+    render(
+      <ChoiceChipRow
+        choices={[
+          {
+            value: "at-risk",
+            label: "At risk",
+            icon: Flag,
+            bg: "var(--color-status-at-risk-bg)",
+            color: "var(--color-status-at-risk-fg)",
+            border: "var(--color-status-dot-at-risk)",
+          },
+        ]}
+        value="at-risk"
+        onSelect={vi.fn()}
+      />,
+    );
+    const button = screen.getByRole("button", { name: "At risk" });
+    expect(button.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
   });
 });

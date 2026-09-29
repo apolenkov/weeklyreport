@@ -197,7 +197,7 @@ describe("RiskEditDialog — compact touch floor", () => {
       expect(button.className).toContain("md:min-h-[40px]");
     }
 
-    for (const name of [/At Risk$/, /Blocked$/]) {
+    for (const name of [/At risk$/, /Blocked$/]) {
       const chip = screen.getByRole("button", { name });
       expect(chip.className).toContain("min-h-[var(--touch-target-min)]");
       expect(chip.className).not.toContain("md:min-h-[34px]");
@@ -792,6 +792,29 @@ describe("RiskEditDialog discard guard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Keep editing" }));
     expect(screen.queryByRole("alertdialog")).toBeNull();
     expect(screen.getByLabelText(/^Risk \*/i)).toHaveValue("Vendor delay");
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it("asks before discarding when only the severity changed", () => {
+    const onCancel = vi.fn();
+    render(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={products}
+        onSave={vi.fn()}
+        onCancel={onCancel}
+        defaultProductId="p1"
+        initialSeverity="at-risk"
+        stagesForProduct={() => ["Dev"]}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Blocked" }));
+    fireEvent.keyDown(screen.getByLabelText(/^Risk \*/i), { key: "Escape" });
+
+    expect(screen.getByRole("alertdialog")).toHaveTextContent(
+      "Discard changes?",
+    );
     expect(onCancel).not.toHaveBeenCalled();
   });
 });

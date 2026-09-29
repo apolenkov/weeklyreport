@@ -1,5 +1,6 @@
 import type { RefObject } from "react";
 
+import { countLabel } from "../../../shared/lib/format/pluralize";
 import { DocumentBodyPortal } from "../../../shared/ui/dialogs/document-body-portal";
 import type { ReportPeriod } from "../../report-sections";
 
@@ -85,8 +86,9 @@ function PeriodRowButton({
           )}
         </div>
         <div className="text-[11px] text-[var(--color-muted-foreground)]">
-          {period.productCount ?? 0} products &middot; {period.itemCount ?? 0}{" "}
-          items &middot; {period.riskCount ?? 0} risks
+          {countLabel(period.productCount ?? 0, "product", "products")} &middot;{" "}
+          {countLabel(period.itemCount ?? 0, "item", "items")} &middot;{" "}
+          {countLabel(period.riskCount ?? 0, "risk", "risks")}
         </div>
       </div>
     </button>

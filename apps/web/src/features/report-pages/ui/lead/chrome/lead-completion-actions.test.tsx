@@ -74,7 +74,8 @@ describe("LeadCompletionActions", () => {
 
     const bar = screen.getByTestId("lead-sticky-completion-actions");
     expect(bar.className).toContain("safe-area-inset-bottom");
-    expect(screen.getByRole("status")).toHaveTextContent("Draft save failed");
+    // The header badge is the single autosave live region.
+    expect(screen.queryByRole("status")).toBeNull();
     expect(
       screen.getByRole("group", { name: "Sticky completion actions" })
         .className,

@@ -1,5 +1,6 @@
 "use client";
 
+import { pluralize } from "../../../../../shared/lib/format/pluralize";
 import { ConfirmationDialog } from "../../../../../shared/ui/dialogs/confirmation-dialog";
 
 // The submit summary counts the lead's OWN records only — it reflects what will
@@ -14,21 +15,32 @@ interface SubmitConfirmCounts {
 
 const SUBMIT_COUNT_LABELS: readonly {
   readonly key: keyof SubmitConfirmCounts;
-  readonly label: string;
+  readonly singular: string;
+  readonly plural: string;
 }[] = [
-  { key: "currentWeekItems", label: "current week items" },
-  { key: "nextWeekItems", label: "next week items" },
-  { key: "risks", label: "risks" },
-  { key: "decisions", label: "decisions" },
+  {
+    key: "currentWeekItems",
+    singular: "current week item",
+    plural: "current week items",
+  },
+  {
+    key: "nextWeekItems",
+    singular: "next week item",
+    plural: "next week items",
+  },
+  { key: "risks", singular: "risk", plural: "risks" },
+  { key: "decisions", singular: "decision", plural: "decisions" },
 ];
 
 function SubmitCountList({ counts }: { readonly counts: SubmitConfirmCounts }) {
   return (
     <div className="mt-3 space-y-1 text-sm">
-      {SUBMIT_COUNT_LABELS.map(({ key, label }) => (
+      {SUBMIT_COUNT_LABELS.map(({ key, singular, plural }) => (
         <div key={key} className="flex items-center gap-2">
           <span className="font-medium">{counts[key]}</span>
-          <span className="text-[var(--color-muted-foreground)]">{label}</span>
+          <span className="text-[var(--color-muted-foreground)]">
+            {pluralize(counts[key], singular, plural)}
+          </span>
         </div>
       ))}
     </div>

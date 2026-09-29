@@ -1,8 +1,11 @@
 "use client";
 
+import type { LucideIcon } from "lucide-react";
+
 export interface ChipChoice<T extends string> {
   readonly value: T;
   readonly label: string;
+  readonly icon?: LucideIcon;
   readonly bg: string;
   readonly color: string;
   readonly border: string;
@@ -31,14 +34,14 @@ export function ChoiceChipRow<T extends string>({
         ? { "aria-labelledby": ariaLabelledBy }
         : { "aria-label": "Options" })}
     >
-      {choices.map((c) => {
+      {choices.map(({ icon: Icon, ...c }) => {
         const selected = value === c.value;
         return (
           <button
             key={c.value}
             type="button"
             onClick={() => onSelect(c.value)}
-            className="inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-[background-color,border-color,color,opacity]"
+            className="inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-[background-color,border-color,color,opacity] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] motion-reduce:transition-none"
             style={{
               background: selected ? c.bg : "transparent",
               color: selected ? c.color : "var(--color-foreground)",
@@ -46,6 +49,7 @@ export function ChoiceChipRow<T extends string>({
             }}
             aria-pressed={selected}
           >
+            {Icon ? <Icon aria-hidden="true" className="size-3.5" /> : null}
             {c.label}
           </button>
         );

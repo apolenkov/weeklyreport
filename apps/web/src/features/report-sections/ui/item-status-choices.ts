@@ -1,3 +1,11 @@
+import {
+  Check,
+  ChevronsRight,
+  Circle,
+  CircleDot,
+  CirclePause,
+} from "lucide-react";
+
 import type { ChipChoice } from "../../../shared/ui/forms/choice-chip-row";
 import { NOT_STARTED_LABEL, STATUS_BADGE } from "../model/item-card-style";
 import type { ItemProgressStatus } from "../model/types";
@@ -14,6 +22,7 @@ export const ITEM_STATUS_CHOICES: readonly ChipChoice<ItemProgressStatus>[] = [
   {
     value: "planned",
     label: STATUS_BADGE.planned.label,
+    icon: Circle,
     bg: CSS_MUTED,
     color: CSS_MUTED_FG,
     border: CHIP_IDLE_BORDER,
@@ -21,6 +30,7 @@ export const ITEM_STATUS_CHOICES: readonly ChipChoice<ItemProgressStatus>[] = [
   {
     value: IN_PROGRESS_STATUS,
     label: STATUS_BADGE["in-progress"].label,
+    icon: CircleDot,
     bg: "var(--color-success)",
     color: CSS_PRIMARY,
     border: "var(--color-starbucks-accent)",
@@ -28,6 +38,7 @@ export const ITEM_STATUS_CHOICES: readonly ChipChoice<ItemProgressStatus>[] = [
   {
     value: "paused",
     label: STATUS_BADGE.paused.label,
+    icon: CirclePause,
     bg: CSS_MUTED,
     color: CSS_MUTED_FG,
     border: CHIP_IDLE_BORDER,
@@ -35,6 +46,7 @@ export const ITEM_STATUS_CHOICES: readonly ChipChoice<ItemProgressStatus>[] = [
   {
     value: "postponed",
     label: STATUS_BADGE.postponed.label,
+    icon: ChevronsRight,
     bg: CSS_MUTED,
     color: CSS_MUTED_FG,
     border: CHIP_IDLE_BORDER,
@@ -42,6 +54,7 @@ export const ITEM_STATUS_CHOICES: readonly ChipChoice<ItemProgressStatus>[] = [
   {
     value: "completed",
     label: STATUS_BADGE.completed.label,
+    icon: Check,
     bg: CSS_PRIMARY,
     color: "var(--color-primary-foreground)",
     border: CSS_PRIMARY,

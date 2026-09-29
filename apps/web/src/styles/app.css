@@ -10,6 +10,13 @@
     outline: none;
   }
 
+  /* Keeps focused controls clear of the sticky period toolbar (md and up). */
+  @media (width >= 48rem) {
+    html {
+      scroll-padding-top: var(--sticky-toolbar-offset, 5rem);
+    }
+  }
+
   body {
     background-color: var(--color-background);
     background-image:

@@ -91,6 +91,7 @@ export function RecordTextareaField({
 }: RecordTextareaFieldProps) {
   const errorId = `${id}-error`;
   const limitId = `${id}-limit`;
+  const hintId = `${id}-hint`;
   const ownRef = useRef<HTMLTextAreaElement | null>(null);
   // React writes the element into this ref (the caller's when given, else the
   // field's own), so the focus effect only ever READS .current.
@@ -111,7 +112,7 @@ export function RecordTextareaField({
         {label}
         {required ? " *" : ""}
       </label>
-      {hint}
+      {hint ? <div id={hintId}>{hint}</div> : null}
       <textarea
         id={id}
         name={id}
@@ -122,6 +123,7 @@ export function RecordTextareaField({
         aria-invalid={isInvalid ? "true" : "false"}
         aria-describedby={
           [
+            hint ? hintId : undefined,
             characterLimit === undefined ? undefined : limitId,
             error ? errorId : undefined,
             describedBy,

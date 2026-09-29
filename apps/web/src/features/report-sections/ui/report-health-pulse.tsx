@@ -1,5 +1,6 @@
 import type { MouseEvent } from "react";
 
+import { countLabel } from "../../../shared/lib/format/pluralize";
 import { SlideStatusBadge } from "../../../shared/ui/feedback/slide-status-badge";
 import type {
   ReportHealthPulse,
@@ -22,7 +23,7 @@ export function healthLocations(unit: ReportHealthUnit): string {
   ].filter(Boolean);
   if (labels.length > 0) return labels.join(" · ");
   if (unit.status === "empty") return "Status not reported";
-  return unit.kind === "activity" ? "Activity health" : "Product health";
+  return "";
 }
 
 export function ReportHealthPulseView({
@@ -50,7 +51,12 @@ export function ReportHealthPulseView({
           Report health
         </h3>
         <p className="text-xs text-[var(--color-muted-foreground)]">
-          {health.total} current reporting units · Products and activities
+          {countLabel(
+            health.total,
+            "current reporting unit",
+            "current reporting units",
+          )}{" "}
+          · Products and activities
         </p>
       </div>
       <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
@@ -73,9 +79,11 @@ export function ReportHealthPulseView({
                   <span className="block text-sm font-semibold text-[var(--color-primary)]">
                     {unit.name}
                   </span>
-                  <span className="block text-xs text-[var(--color-muted-foreground)]">
-                    {healthLocations(unit)}
-                  </span>
+                  {healthLocations(unit) ? (
+                    <span className="block text-xs text-[var(--color-muted-foreground)]">
+                      {healthLocations(unit)}
+                    </span>
+                  ) : null}
                 </span>
                 <SlideStatusBadge status={unit.status} labelVariant="screen" />
               </button>

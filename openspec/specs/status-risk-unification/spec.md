@@ -15,7 +15,7 @@ At-risk and blocked states MUST be authored only as risk rows in the Risks
 section of the lead report. Stage chips (`SdlcPipeline` in
 `apps/web/src/features/period/ui/sdlc-pipeline.tsx`) MUST NOT author an
 at-risk/blocked state at all: a chip has no status menu and offers no
-At Risk/Blocked option. An editable chip is a plain toggle between unset (empty)
+At risk/Blocked option. An editable chip is a plain toggle between unset (empty)
 and On Track. A covering risk floors the chip's DISPLAYED severity at render;
 while a covering risk exists the chip MUST NOT be settable to On Track — clicking
 it leaves the status unchanged and directs the lead to resolve the risk in the

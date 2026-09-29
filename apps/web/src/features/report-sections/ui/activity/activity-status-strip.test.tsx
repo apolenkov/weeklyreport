@@ -55,7 +55,7 @@ describe("ActivityStatusStrip", () => {
     // The same activity appears once per reporting author — independent rows.
     expect(screen.getAllByText("Jira triage duty")).toHaveLength(2);
     expect(screen.getByText("Blocked")).toBeInTheDocument();
-    expect(screen.getByText("On Track")).toBeInTheDocument();
+    expect(screen.getByText("On track")).toBeInTheDocument();
     expect(screen.getByText("Иванов В.П.")).toBeInTheDocument();
     expect(screen.getByText("Каштанова М.А.")).toBeInTheDocument();
     expect(screen.queryByText("Иванов Василий Петрович")).toBeNull();
@@ -168,9 +168,9 @@ describe("ActivityStatusStrip", () => {
       strip.querySelector(":scope > ul")?.children ?? [],
     );
     expect(cards.map((card) => card.textContent)).toEqual([
-      expect.stringContaining("Alpha dutyAt RiskLead A.· Products: Payments"),
-      expect.stringContaining("Alpha dutyOn TrackLead B."),
-      expect.stringContaining("Zulu dutyOn TrackLead B."),
+      expect.stringContaining("Alpha dutyAt riskLead A.· Products: Payments"),
+      expect.stringContaining("Alpha dutyOn trackLead B."),
+      expect.stringContaining("Zulu dutyOn trackLead B."),
     ]);
     expect(cards[0]).toHaveTextContent("CurrentLead A current item");
     expect(cards[0]).toHaveTextContent("Risks & BlockersLead A blocker");

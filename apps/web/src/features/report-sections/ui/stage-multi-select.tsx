@@ -13,7 +13,7 @@ function computeBannerText(
   selected: readonly string[],
   previewSeverity: "at-risk" | "blocked",
 ): string {
-  const severityLabel = previewSeverity === "blocked" ? "Blocked" : "At Risk";
+  const severityLabel = previewSeverity === "blocked" ? "Blocked" : "At risk";
   const [onlySelected] = selected;
   if (onlySelected === undefined) {
     return "";
