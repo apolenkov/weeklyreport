@@ -38,3 +38,13 @@ Both Request changes entry points (review panel and dashboard queue) SHALL open 
 
 - **WHEN** the Head submits the dialog with no text
 - **THEN** an inline error is shown and no mutation is sent
+
+### Requirement: Published snapshots exclude review comments
+
+The published report snapshot SHALL NOT contain any section review comment.
+
+#### Scenario: Publishing a report with a stored reason
+
+- **GIVEN** a section with a `changes_requested` review carrying a comment
+- **WHEN** the report snapshot is assembled for publication
+- **THEN** the frozen section reviews carry no `comment`

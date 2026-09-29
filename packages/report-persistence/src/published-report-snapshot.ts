@@ -63,6 +63,8 @@ function freezeSectionOwnership(
 
   return publishedReportSectionReadModelSchema.parse({
     ...section,
+    // Reviewer reasons are for the owning lead only; never freeze them.
+    reviews: section.reviews.map(({ comment: _comment, ...review }) => review),
     activities: section.activities.map((activity) => ({
       ...activity,
       activityName: activity.titleOverride?.trim() || activity.activityName,

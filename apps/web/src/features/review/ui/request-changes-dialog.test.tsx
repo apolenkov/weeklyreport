@@ -2,7 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -109,5 +109,26 @@ describe("RequestChangesDialog", () => {
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(mutationFn).not.toHaveBeenCalled();
+  });
+
+  it("disables submit while pending and ignores a second submit", async () => {
+    const { mutationFn } = setup();
+    mutationFn.mockReturnValue(new Promise(() => undefined));
+    await userEvent.type(screen.getByLabelText("Reason for the lead"), "Fix X");
+    await userEvent.click(submitButton());
+    await waitFor(() => {
+      expect(submitButton()).toBeDisabled();
+    });
+    fireEvent.submit(screen.getByLabelText("Reason for the lead"));
+    expect(mutationFn).toHaveBeenCalledTimes(1);
+  });
+
+  it("links the hint and counter to the field and counts trimmed text", async () => {
+    setup();
+    const field = screen.getByLabelText("Reason for the lead");
+    await userEvent.type(field, "  ab  ");
+    expect(field).toHaveAccessibleDescription(
+      "The lead sees this note on the returned section. 2 / 2000",
+    );
   });
 });
