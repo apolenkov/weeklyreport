@@ -6,12 +6,15 @@ import { useEffect, useRef, useState } from "react";
 export interface PeriodDialogState {
   readonly showCreate: boolean;
   readonly editingRow: PeriodListItem | null;
+  readonly publishConfirm: PeriodListItem | null;
   readonly reopenConfirm: PeriodListItem | null;
   readonly deleteConfirm: PeriodListItem | null;
   readonly openCreate: () => void;
   readonly closeCreate: () => void;
   readonly openEdit: (row: PeriodListItem) => void;
   readonly closeEdit: () => void;
+  readonly requestPublish: (row: PeriodListItem) => void;
+  readonly closePublish: () => void;
   readonly requestReopen: (row: PeriodListItem) => void;
   readonly closeReopen: () => void;
   readonly requestDelete: (row: PeriodListItem) => void;
@@ -37,6 +40,9 @@ function useRestoreFocusOnClose(openState: unknown) {
 export function usePeriodDialogState(): PeriodDialogState {
   const [showCreate, setShowCreate] = useState(false);
   const [editingRow, setEditingRow] = useState<PeriodListItem | null>(null);
+  const [publishConfirm, setPublishConfirm] = useState<PeriodListItem | null>(
+    null,
+  );
   const [reopenConfirm, setReopenConfirm] = useState<PeriodListItem | null>(
     null,
   );
@@ -49,6 +55,7 @@ export function usePeriodDialogState(): PeriodDialogState {
   return {
     showCreate,
     editingRow,
+    publishConfirm,
     reopenConfirm,
     deleteConfirm,
     openCreate: () => {
@@ -61,6 +68,8 @@ export function usePeriodDialogState(): PeriodDialogState {
       setEditingRow(row);
     },
     closeEdit: () => setEditingRow(null),
+    requestPublish: setPublishConfirm,
+    closePublish: () => setPublishConfirm(null),
     requestReopen: setReopenConfirm,
     closeReopen: () => setReopenConfirm(null),
     requestDelete: setDeleteConfirm,

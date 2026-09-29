@@ -84,8 +84,7 @@ function buildRowActions(
   dialogs: PeriodDialogState,
 ) {
   return {
-    onPublish: (row: PeriodListItem) =>
-      mutations.publishMut.mutate({ reportId: row.id }),
+    onPublish: dialogs.requestPublish,
     onReopen: dialogs.requestReopen,
     onArchive: (row: PeriodListItem) =>
       mutations.archiveMut.mutate({ periodId: row.id }),
@@ -145,7 +144,7 @@ function PeriodsTabDialogsSlot({
   readonly mutations: PeriodMutations;
 }) {
   const { createMut, updateMut, deleteMut } = mutations;
-  const { editingRow, reopenConfirm, deleteConfirm } = dialogs;
+  const { editingRow, publishConfirm, reopenConfirm, deleteConfirm } = dialogs;
 
   return (
     <PeriodsTabDialogs
@@ -168,6 +167,13 @@ function PeriodsTabDialogsSlot({
         editingRow && updateMut.mutate({ reportId: editingRow.id, ...values })
       }
       editIsPending={updateMut.isPending}
+      publishConfirm={publishConfirm}
+      publishIsPending={mutations.publishMut.isPending}
+      onClosePublish={dialogs.closePublish}
+      onConfirmPublish={() =>
+        publishConfirm &&
+        mutations.publishMut.mutate({ reportId: publishConfirm.id })
+      }
       reopenConfirm={reopenConfirm}
       reopenIsPending={mutations.reopenMut.isPending}
       onCloseReopen={dialogs.closeReopen}
@@ -201,6 +207,7 @@ export function PeriodsTab() {
   const mutations = usePeriodMutations({
     onCreateSuccess: dialogs.closeCreate,
     onEditSuccess: dialogs.closeEdit,
+    onPublishSuccess: dialogs.closePublish,
     onReopenSuccess: dialogs.closeReopen,
     onDeleteSuccess: dialogs.closeDelete,
   });
