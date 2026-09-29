@@ -27,7 +27,7 @@ COPY packages/report-persistence/package.json ./packages/report-persistence/pack
 COPY packages/shared/package.json ./packages/shared/package.json
 COPY packages/ui/package.json ./packages/ui/package.json
 # Scripts are irrelevant to compiling a dependency-free CLI; skipping them keeps
-# playwright/prisma postinstalls out of this stage entirely.
+# prisma postinstalls out of this stage entirely.
 RUN --mount=type=cache,id=customreport-pnpm-store-v11,target=/pnpm/store,sharing=locked \
     pnpm install --frozen-lockfile --ignore-scripts --store-dir=/pnpm/store
 COPY tsconfig.base.json ./tsconfig.base.json

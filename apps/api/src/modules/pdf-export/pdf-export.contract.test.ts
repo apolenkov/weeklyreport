@@ -566,14 +566,14 @@ describe("PdfExportService — contract tests", () => {
       await service.markExportFailed(
         queued.jobId,
         queued.generation,
-        "Playwright timeout",
+        "Renderer timeout",
       );
 
       expect(markExportFailed).toHaveBeenCalledTimes(1);
       expect(markExportFailed).toHaveBeenCalledWith(
         queued.jobId,
         queued.generation,
-        "Playwright timeout",
+        "Renderer timeout",
       );
     });
   });

@@ -35,10 +35,10 @@ Before committing, run `pnpm format:check`, `pnpm lint`, `pnpm typecheck`,
 
 ## Pushing to `origin/main`
 
-The canonical remote is `https://github.com/apolenkov/weeklyreport.git`.
+The canonical remote is `https://forge.example.com/example/weeklyreport.git` (remote `gitlab`).
 Before relying on a push, verify the configured remote, authenticated private
 read access, the pushed commit, and the remote SHA. A successful local hook does
-not prove that GitHub accepted the update or ran CI.
+not prove that GitLab accepted the update or ran CI.
 
 ## Common gotchas
 

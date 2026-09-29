@@ -1,7 +1,7 @@
 # SDLC and first-production readiness
 
 This document is the durable control map for WeeklyReport. It distinguishes
-what the repository declares, what has been executed locally, what GitHub or a
+what the repository declares, what has been executed locally, what the hosting platform or a
 deployment system has verified live, and what remains unavailable or
 unverified. A checked-in file is never proof that an external control is active.
 
@@ -37,18 +37,21 @@ the acceptance authority; no custom replacement gate substitutes for them.
 | Build   | Node and pnpm are pinned; frozen lockfile and explicit build-script allowlists are used; runtime images and Actions are pinned.         | Reproducible install and production image build on an exact commit.         | Build once on a trusted hosted runner; retain immutable image digest.                                                                  |
 | Verify  | Lint, format, typecheck, colocated unit/integration tests, migration reset, and Docker build exist.                                     | Exact commands, exit codes, source identity, failures, and artifacts.       | Stable required checks protect `main`; mandatory product suites pass on the release candidate.                                         |
 | Secure  | Dependabot covers npm, Docker, and Actions; a scheduled production-dependency audit runs; workflow tokens are read-only by declaration. | Workflow source inspection and audit results.                               | Verify secret scanning, push protection, Dependabot security updates, CodeQL, dependency review, alert ownership, and incident access. |
-| Release | Tags exist, but there is no verified registry publication or GitHub release process.                                                    | No release claim is allowed yet.                                            | Publish one image digest, SBOM, signed provenance, migration list, and immutable release manifest.                                     |
+| Release | Tags exist, but there is no verified registry publication or release process.                                                           | No release claim is allowed yet.                                            | Publish one image digest, SBOM, signed provenance, migration list, and immutable release manifest.                                     |
 | Deploy  | Production Compose topology and a runbook exist; no production target exists.                                                           | Local rehearsal only, explicitly labelled.                                  | Protected pre-production and production environments promote the same verified digest with approvals and concurrency.                  |
 | Operate | Readiness, liveness, metrics, logs, traces, error collection, dashboards, and alert-rule material exist.                                | Source-bound runtime evidence and controlled local observability rehearsal. | Owned user SLIs/SLOs, loaded rules, real receiver, runbook links, retention, and a tested end-to-end alert.                            |
 | Recover | Periodic local dumps, freshness checks, restore guard, transactional restore, and migration guidance exist.                             | Isolated local restore evidence.                                            | Encrypted off-site copy, access audit, retention, scheduled restore drill, and measured RPO/RTO.                                       |
 | Learn   | Findings feed OpenSpec, tests, architecture decisions, and current runbooks.                                                            | Each accepted finding has an owner, disposition, and regression proof.      | Release and incident reviews update controls, SLOs, and runbooks without hiding residual risk.                                         |
 
-## Current GitHub boundary
+## Current hosting and CI boundary
 
-The workflow is configured for pull requests, pushes to `main`, and manual
-dispatch. Repository files do not prove that `main` is protected or that
-GitHub security settings are enabled. Those external settings are
-**unverified** until an authorized read-back confirms them.
+The only configured remote is the private GitLab project (decision-067).
+`.gitlab-ci.yml` runs the lint/test lanes described in `docs/gitlab-ci.md`;
+`.github/workflows/` still declares the fuller GitHub pipeline (build, Docker
+build) but no GitHub remote exists, so it is declaration only. Repository files
+do not prove that `main` is protected or that any platform security setting is
+enabled. Those external settings are **unverified** until an authorized
+read-back confirms them.
 
 Any direct push requires explicit authorization for the task. The pre-production
 MVP MUST NOT call current CI an enforced merge gate. The local pre-push hook is
