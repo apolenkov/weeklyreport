@@ -12,11 +12,13 @@ const ALLOWED_DATABASES: readonly string[] = [
     .map((lane) => `customreport_e2e_lane_${lane}_test`),
 ];
 const isAllowed = (name: string): boolean => ALLOWED_DATABASES.includes(name);
+const REFUSAL =
+  /^\[guard-property\] Refusing E2E\/runtime destructive operation/u;
 
 const octet = fc.integer({ min: 0, max: 255 });
 const publicIpv4 = fc
   .tuple(
-    fc.integer({ min: 1, max: 255 }).filter((first) => first !== 127),
+    fc.integer({ min: 0, max: 255 }).filter((first) => first !== 127),
     octet,
     octet,
     octet,
@@ -28,6 +30,9 @@ const nonLoopbackHost = fc.oneof(
   publicIpv4,
   hextet.map((h) => `[2001:db8::${h}]`),
   publicIpv4.map((ip) => `[::ffff:${ip}]`),
+  fc.constant("[::]"),
+  fc.domain().map((domain) => `localhost.${domain}`),
+  fc.domain().map((domain) => `${domain}.localhost`),
 );
 
 const loopbackHost = fc.oneof(
@@ -84,7 +89,7 @@ describe("destructive target parser properties", () => {
         urlParts,
         fc.string({ unit: "grapheme-ascii" }).filter((n) => !isAllowed(n)),
         (parts, database) => {
-          expect(run(buildUrl(parts, database))).toThrow();
+          expect(run(buildUrl(parts, database))).toThrow(REFUSAL);
         },
       ),
       { numRuns: NUM_RUNS },
@@ -109,7 +114,7 @@ describe("destructive target parser properties", () => {
       .filter((encoded) => !isAllowed(encoded));
     fc.assert(
       fc.property(urlParts, encodedVariant, (parts, database) => {
-        expect(run(buildUrl(parts, database))).toThrow();
+        expect(run(buildUrl(parts, database))).toThrow(REFUSAL);
       }),
       { numRuns: NUM_RUNS },
     );
@@ -122,11 +127,25 @@ describe("destructive target parser properties", () => {
         fc.oneof(
           fc.constantFrom(...ALLOWED_DATABASES),
           fc.stringMatching(/^customreport_e2e[a-z_]{0,12}$/u),
+          fc
+            .string({ unit: "grapheme-ascii", minLength: 1, maxLength: 2 })
+            .map((lane) => `customreport_e2e_lane_${lane}_test`),
+          fc
+            .constantFrom(...ALLOWED_DATABASES)
+            .chain((name) =>
+              fc.constantFrom(
+                name.toUpperCase(),
+                name.replace(/_test$/u, ""),
+                `${name}/`,
+                `${name}?host=db.example.com`,
+                `${name}#x`,
+              ),
+            ),
         ),
         (parts, database) => {
           const url = buildUrl(parts, database);
           if (!isAllowed(database)) {
-            expect(run(url)).toThrow();
+            expect(run(url)).toThrow(REFUSAL);
             return;
           }
           const identity = parseE2eRuntimeDatabaseTarget(SCRIPT, url);
