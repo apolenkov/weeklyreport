@@ -10,7 +10,10 @@ Resolve the web API base URL and tRPC batch decoding through fail-loud shared se
 
 The web app MUST resolve the API base URL through a single seam
 (`requireApiUrl` in `apps/web/src/shared/server/transport/api-url.ts`) that reads `API_URL`
-and throws a descriptive error when it is unset.
+and throws a descriptive error naming API_URL without echoing its value when
+it is unset or malformed. The value MUST be an absolute HTTP(S) URL without
+embedded credentials, query or fragment. An explicit base path MUST be preserved
+with trailing slashes removed so consumers can append their API routes.
 It MUST NOT fall back to a hardcoded `http://localhost:3002` (or any other
 default). Every consumer — `apps/web/next.config.ts`,
 `apps/web/src/app/api/client-logs/route.ts`,
@@ -40,6 +43,19 @@ own explicit `API_URL` values.
 - **GIVEN** `API_URL=https://api.example.com` is set
 - **WHEN** a consumer calls `requireApiUrl`
 - **THEN** it returns `https://api.example.com`
+
+#### Scenario: Invalid API_URL fails before authenticated transport
+
+- **WHEN** API_URL is relative, malformed, uses an unsupported scheme or embeds
+  credentials, query or fragment
+- **THEN** config load or URL resolution rejects it before any authenticated
+  fetch or rewrite, without echoing the supplied value
+
+#### Scenario: Explicit internal or HTTPS base path is configured
+
+- **WHEN** a valid internal HTTP or HTTPS API_URL contains a base path
+- **THEN** the seam preserves that path and removes trailing slashes
+- **AND** consumers append their API routes beneath the normalized base
 
 ### Requirement: Org-identity transport failure degrades to the generic identity and is reported
 

@@ -24,9 +24,6 @@ import {
 import { LeadFormPrismaRepository } from "./lead-form.prisma-repository";
 import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
 
-const testGraceSettings = () =>
-  Promise.resolve({ gracePeriodHours: 0, allowLateSubmissions: true });
-
 // Real-DB coverage for the unified-activity-entry lifecycle rules:
 // resolve-not-delete on reopened-period saves, deletable-until-republished
 // additions, carried-clone lineage locks, and move-to-next-week identity survival.
@@ -128,7 +125,7 @@ describe("unified-activity lifecycle (integration)", () => {
     repo = new ReportSectionsPrismaRepository(
       prisma as unknown as PrismaService,
     );
-    service = new ReportSectionsService(repo, testGraceSettings);
+    service = new ReportSectionsService(repo);
   });
 
   beforeEach(async () => {

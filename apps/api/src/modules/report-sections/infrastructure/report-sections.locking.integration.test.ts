@@ -15,8 +15,6 @@ import {
 } from "../application/report-sections.service";
 import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
 
-const testGraceSettings = () =>
-  Promise.resolve({ gracePeriodHours: 0, allowLateSubmissions: true });
 const PUBLISHED_AT = new Date("2026-08-02T10:00:00.000Z");
 
 describe("ReportSectionsPrismaRepository (integration) — locking, identity & write gates", () => {
@@ -71,7 +69,7 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
     });
 
     it("bumps the row version and returns it in the saved read model", async () => {
-      const service = new ReportSectionsService(repo, testGraceSettings);
+      const service = new ReportSectionsService(repo);
 
       // Seed rows are minted at version 1.
       const saved = await service.saveDraft(
@@ -83,7 +81,7 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
     });
 
     it("rejects a second writer that carries a stale loaded version", async () => {
-      const service = new ReportSectionsService(repo, testGraceSettings);
+      const service = new ReportSectionsService(repo);
 
       // First writer loaded version 1, saves, and bumps the row to 2.
       await service.saveDraft(draftAtVersion(1), testData.lead.id);
@@ -96,7 +94,7 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
     });
 
     it("lets the second writer succeed after reloading the fresh version", async () => {
-      const service = new ReportSectionsService(repo, testGraceSettings);
+      const service = new ReportSectionsService(repo);
 
       await service.saveDraft(draftAtVersion(1), testData.lead.id);
       // Reload surfaces version 2; round-tripping it clears the conflict.
@@ -254,7 +252,7 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
       // This is the make-or-break for the OPTIONAL read model: the FIRST save
       // carries a new item with NO stableId, so mergeSection (which parses the
       // raw input items against the read-model schema) must not reject it.
-      const service = new ReportSectionsService(repo, testGraceSettings);
+      const service = new ReportSectionsService(repo);
       const itemInput = (text: string, stableId?: string) => ({
         ...(stableId ? { stableId } : {}),
         projectId: testData.project.id,
@@ -326,7 +324,7 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
         },
       });
 
-      const service = new ReportSectionsService(repo, testGraceSettings);
+      const service = new ReportSectionsService(repo);
       const saved = await service.saveDraft(
         {
           reportSectionId: testData.section.id,
@@ -404,7 +402,7 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
         },
       });
 
-      const service = new ReportSectionsService(repo, testGraceSettings);
+      const service = new ReportSectionsService(repo);
       await expect(
         service.submitSection(
           {

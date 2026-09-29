@@ -1,3 +1,4 @@
+import { sanitizeClientLogUrl } from "@customreport/shared";
 import type { Request, RequestHandler, Response } from "express";
 import { z } from "zod";
 
@@ -11,7 +12,6 @@ const MAX_CLIENT_LOG_BATCH_SIZE = 100;
 const MAX_CLIENT_LOG_MESSAGE_LENGTH = 2000;
 const MAX_CLIENT_LOG_URL_LENGTH = 500;
 const MAX_CLIENT_LOG_STACK_LENGTH = 4000;
-const MAX_CLIENT_LOG_USER_AGENT_LENGTH = 200;
 const MAX_JAVASCRIPT_TIMESTAMP_MS = 8_640_000_000_000_000;
 
 const clientLogEntrySchema = z
@@ -58,14 +58,14 @@ export function createClientLogsHandler(deps: {
       .map(parseClientLogEntry)
       .filter((entry) => entry !== null);
 
+    // Browser text and stacks may contain credentials or report content.
+    // Only the validated source category and scrubbed URL reach the sinks.
     entries.forEach((entry) => {
-      logger[entry.level](`client: ${entry.message}`, {
+      logger[entry.level](`client: ${entry.source}`, {
         phase: "web.client",
         source: entry.source,
-        url: entry.url,
-        stack: entry.stack,
+        url: sanitizeClientLogUrl(entry.url),
         ts: entry.ts,
-        ua: req.get("user-agent")?.slice(0, MAX_CLIENT_LOG_USER_AGENT_LENGTH),
         ip: req.ip,
       });
     });

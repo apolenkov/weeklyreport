@@ -5,7 +5,6 @@ import {
   AUTHOR_ID,
   baseSection,
   createRepository,
-  testGraceSettings,
   validDraft,
 } from "./report-sections.contract.fixtures.js";
 import { ReportSectionsService } from "./report-sections.service.js";
@@ -16,7 +15,7 @@ describe("missing initial report section error mapping", () => {
     async (operation) => {
       const repository = createRepository(baseSection);
       const save = vi.spyOn(repository, "saveSection");
-      const service = new ReportSectionsService(repository, testGraceSettings);
+      const service = new ReportSectionsService(repository);
       const missingId = "99999999-9999-4999-8999-999999999999";
       const draft = validDraft({ reportSectionId: missingId });
 

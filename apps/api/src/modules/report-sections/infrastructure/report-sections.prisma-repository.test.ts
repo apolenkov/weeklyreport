@@ -122,7 +122,10 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
         deleteMany: noop,
         createMany: noop,
       },
-      report: { findMany: vi.fn(() => Promise.resolve([])) },
+      report: {
+        findMany: vi.fn(() => Promise.resolve([])),
+        findUnique: vi.fn(() => Promise.resolve({ deadline: null })),
+      },
       publishedSearchDocument: {
         findMany: vi.fn((): Promise<PublishedLineageDocumentRow[]> =>
           Promise.resolve([]),

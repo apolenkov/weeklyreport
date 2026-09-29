@@ -25,6 +25,39 @@ describe("requireApiUrl", () => {
     vi.stubEnv("API_URL", "http://api.example.com:3001");
     expect(requireApiUrl()).toBe("http://api.example.com:3001");
   });
+
+  it.each([
+    " ".repeat(3),
+    "not-a-url",
+    "/api",
+    "//api.example.com:3002",
+    "http:api.example.com:3002",
+    "ftp://api.example.com",
+    "file:///tmp/api",
+    "https://user:secret-marker@api.example.com",
+    "https://user@api.example.com",
+    "https://api.example.com?token=secret-marker",
+    "https://api.example.com#secret-marker",
+  ])("rejects invalid API_URL %s without echoing its contents", (value) => {
+    vi.stubEnv("API_URL", value);
+    expect(() => requireApiUrl()).toThrow(/API_URL/);
+    expect(() => requireApiUrl()).not.toThrow(/secret-marker/);
+  });
+
+  it.each([
+    ["http://localhost:3002/", "http://localhost:3002"],
+    ["http://api:3002", "http://api:3002"],
+    ["https://api.example.com/base/", "https://api.example.com/base"],
+    ["HTTPS://api.example.com/base/", "https://api.example.com/base"],
+    ["http://api:3001///", "http://api:3001"],
+    [
+      "https://api.example.com/base//nested///",
+      "https://api.example.com/base//nested",
+    ],
+  ])("normalizes %s for appending API routes", (input, expected) => {
+    vi.stubEnv("API_URL", input);
+    expect(requireApiUrl()).toBe(expected);
+  });
 });
 
 describe("decodeTrpcBatchPayload", () => {
