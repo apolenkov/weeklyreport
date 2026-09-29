@@ -1,4 +1,5 @@
 import type { ChipChoice } from "../../../shared/ui/forms/choice-chip-row";
+import { NOT_STARTED_LABEL, STATUS_BADGE } from "../model/item-card-style";
 import type { ItemProgressStatus } from "../model/types";
 
 const CSS_PRIMARY = "var(--color-primary)";
@@ -12,37 +13,50 @@ const CHIP_IDLE_BORDER = "var(--color-border-strong)";
 export const ITEM_STATUS_CHOICES: readonly ChipChoice<ItemProgressStatus>[] = [
   {
     value: "planned",
-    label: "○ Planned",
+    label: STATUS_BADGE.planned.label,
     bg: CSS_MUTED,
     color: CSS_MUTED_FG,
     border: CHIP_IDLE_BORDER,
   },
   {
     value: IN_PROGRESS_STATUS,
-    label: "! In Progress",
+    label: STATUS_BADGE["in-progress"].label,
     bg: "var(--color-success)",
     color: CSS_PRIMARY,
     border: "var(--color-starbucks-accent)",
   },
   {
     value: "paused",
-    label: "‖ Paused",
+    label: STATUS_BADGE.paused.label,
     bg: CSS_MUTED,
     color: CSS_MUTED_FG,
     border: CHIP_IDLE_BORDER,
   },
   {
     value: "postponed",
-    label: "» Postponed",
+    label: STATUS_BADGE.postponed.label,
     bg: CSS_MUTED,
     color: CSS_MUTED_FG,
     border: CHIP_IDLE_BORDER,
   },
   {
     value: "completed",
-    label: "✓ Completed",
+    label: STATUS_BADGE.completed.label,
     bg: CSS_PRIMARY,
     color: "var(--color-primary-foreground)",
     border: CSS_PRIMARY,
   },
 ];
+
+// The current week reads "Not started" for an item that was never begun.
+export function choicesForWeek(
+  week: "current" | "next",
+): readonly ChipChoice<ItemProgressStatus>[] {
+  return week === "current"
+    ? ITEM_STATUS_CHOICES.map((choice) =>
+        choice.value === "planned"
+          ? { ...choice, label: NOT_STARTED_LABEL }
+          : choice,
+      )
+    : ITEM_STATUS_CHOICES;
+}

@@ -208,7 +208,7 @@ describe("ItemCard — uniform height", () => {
     const rows = Array.from(card.children);
     expect(rows[0]).toHaveClass("shrink-0");
     expect(rows[2]).toHaveClass("shrink-0");
-    expect(screen.getByText("In Progress")).toBeInTheDocument();
+    expect(screen.getByText("In progress")).toBeInTheDocument();
     expect(screen.getByText("Alice Lead")).toBeInTheDocument();
   });
 });
@@ -245,7 +245,7 @@ describe("ItemCard — risk-derived alarm status", () => {
   it("floors an in-progress item to Blocked when a covering blocked risk exists", () => {
     render(<ItemCard item={inProgress} risks={[risk("blocked")]} />);
     expect(screen.getByText("Blocked")).toBeInTheDocument();
-    expect(screen.queryByText("In Progress")).not.toBeInTheDocument();
+    expect(screen.queryByText("In progress")).not.toBeInTheDocument();
   });
 
   it("floors an in-progress item to At Risk when a covering at-risk risk exists", () => {
@@ -263,7 +263,7 @@ describe("ItemCard — risk-derived alarm status", () => {
 
   it("shows the progress status when no risk covers the item", () => {
     render(<ItemCard item={inProgress} risks={[]} />);
-    expect(screen.getByText("In Progress")).toBeInTheDocument();
+    expect(screen.getByText("In progress")).toBeInTheDocument();
     expect(screen.queryByText("Blocked")).not.toBeInTheDocument();
   });
 
@@ -274,7 +274,7 @@ describe("ItemCard — risk-derived alarm status", () => {
         risks={[risk("blocked")]}
       />,
     );
-    expect(screen.getByText("Completed")).toBeInTheDocument();
+    expect(screen.getByText("Done")).toBeInTheDocument();
     expect(screen.queryByText("Blocked")).not.toBeInTheDocument();
   });
 
@@ -291,7 +291,7 @@ describe("ItemCard — risk-derived alarm status", () => {
         risks={[risk("blocked")]}
       />,
     );
-    expect(screen.getByText("In Progress")).toBeInTheDocument();
+    expect(screen.getByText("In progress")).toBeInTheDocument();
     expect(screen.queryByText("Blocked")).not.toBeInTheDocument();
   });
 

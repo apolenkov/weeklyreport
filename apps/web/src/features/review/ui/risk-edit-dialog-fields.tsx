@@ -73,7 +73,7 @@ function RiskProseColumn(props: RiskProseColumnProps) {
         value={props.text}
         onChange={props.onTextChange}
         error={props.textError}
-        placeholder="e.g. Vendor API regression delays OAuth2 integration"
+        placeholder="e.g. Vendor API regression delays OAuth2 integration…"
         minHeightPx={RISK_TEXT_MIN_HEIGHT_PX}
         focusOnMount
         textareaRef={props.textRef}
@@ -86,7 +86,7 @@ function RiskProseColumn(props: RiskProseColumnProps) {
         value={props.impact}
         onChange={props.onImpactChange}
         error={props.impactError}
-        placeholder="e.g. Delays Q3 launch by 2 weeks; 4 downstream teams idle"
+        placeholder="e.g. Delays Q3 launch by 2 weeks; 4 downstream teams idle…"
         minHeightPx={RISK_FOLLOW_UP_MIN_HEIGHT_PX}
         textareaRef={props.impactRef}
         characterLimit={SAFE_TEXT_MAX_LENGTH}
@@ -98,7 +98,7 @@ function RiskProseColumn(props: RiskProseColumnProps) {
         value={props.mitigation}
         onChange={props.onMitigationChange}
         error={props.mitigationError}
-        placeholder="e.g. Vendor escalation in progress; ETA 48h"
+        placeholder="e.g. Vendor escalation in progress; ETA 48h…"
         minHeightPx={RISK_FOLLOW_UP_MIN_HEIGHT_PX}
         textareaRef={props.mitigationRef}
         characterLimit={SAFE_TEXT_MAX_LENGTH}

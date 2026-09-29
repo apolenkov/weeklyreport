@@ -159,7 +159,7 @@ blocker, so the roll-up count does not inflate.
 
 ### Requirement: The item dialog and quick-add surface the derived-alarm UX in full
 
-The item edit dialog and Overview editor MUST offer the same five progress states in Current and Next: Planned (labelled Not started in the Current dialog), In Progress, Paused, Postponed, and Completed. An existing item's progress MUST remain visibly selected after changing week placement, and editing unrelated fields MUST preserve it and any required pause reason. Neither editor may offer an in-dialog "mark as blocked" affordance — the only path to a blocked item is creating a blocker in Risks & Blockers (the quick-add "Blocker" entry keeps creating a blocked-severity risk). The covered-status lock stays: when a covering risk floors the item, an inline message replaces the status chips, stating the status is set by the covering risk/blocker and to resolve it to change.
+The item edit dialog and Overview editor MUST offer the same five progress states in Current and Next: Planned (labelled Not started in Current), In progress, Paused, Postponed, and Done. Editors and item cards MUST share one sentence-case label vocabulary (no icon prefixes, no "Completed" or "In Progress" spellings). Dismissing the dialog or the Overview inline editor (Escape, Cancel, backdrop) after changing ANY field, including status, stages or product, MUST ask "Discard changes?" first; an unchanged draft closes at once. An existing item's progress MUST remain visibly selected after changing week placement, and editing unrelated fields MUST preserve it and any required pause reason. Neither editor may offer an in-dialog "mark as blocked" affordance — the only path to a blocked item is creating a blocker in Risks & Blockers (the quick-add "Blocker" entry keeps creating a blocked-severity risk). The covered-status lock stays: when a covering risk floors the item, an inline message replaces the status chips, stating the status is set by the covering risk/blocker and to resolve it to change.
 
 #### Scenario: a covered item's dialog shows the locked message
 
@@ -171,7 +171,7 @@ The item edit dialog and Overview editor MUST offer the same five progress state
 
 - **GIVEN** the lead opens the edit dialog of a next item
 - **WHEN** the status chips render
-- **THEN** the choices are exactly Planned, In Progress, Paused, Postponed, and Completed, with the existing progress selected
+- **THEN** the choices are exactly Planned, In progress, Paused, Postponed, and Done, with the existing progress selected
 - **AND** editing the description preserves that progress and its pause reason; no alarm choice or blocked gesture is offered
 
 #### Scenario: the quick-add "Blocker" defaults to blocked severity

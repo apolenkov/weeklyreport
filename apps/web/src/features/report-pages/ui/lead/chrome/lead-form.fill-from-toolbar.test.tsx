@@ -539,9 +539,9 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
     );
   });
 
-  it("submitted-section action: Lead sees Request Reopen, not Revoke", async () => {
+  it("submitted-section action: Lead sees Request reopen, not Revoke", async () => {
     // Harness role is hard-coded 'Dev Lead', so only the Lead-visible path
-    // (Request Reopen) renders; Revoke is Head/Admin.
+    // (Request reopen) renders; Revoke is Head/Admin.
     const { Wrapper } = buildHarness({ sectionStatus: "submitted" });
     render(
       <Wrapper>
@@ -550,12 +550,12 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
     );
 
     expect(
-      await screen.findByRole("button", { name: /Request Reopen/i }),
+      await screen.findByRole("button", { name: /Request reopen/i }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Revoke$/i })).toBeNull();
   });
 
-  it("Request Reopen is hidden when canRequestReopen is false", async () => {
+  it("Request reopen is hidden when canRequestReopen is false", async () => {
     // A submitted section on a closed (published/archived) period, or with a
     // request already pending, comes back with canRequestReopen=false. The
     // control must not render — the client never reconstructs the policy.
@@ -569,10 +569,10 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
       </Wrapper>,
     );
 
-    // The toolbar settles, but the Request Reopen control stays hidden.
+    // The toolbar settles, but the Request reopen control stays hidden.
     expect(await screen.findByTestId("report-toolbar")).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: /Request Reopen/i }),
+      screen.queryByRole("button", { name: /Request reopen/i }),
     ).toBeNull();
   });
 
@@ -594,19 +594,19 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
     );
 
     const requestReopenButton = await screen.findByRole("button", {
-      name: /Request Reopen/i,
+      name: /Request reopen/i,
     });
     act(() => {
       requestReopenButton.click();
     });
     const dialog = await screen.findByRole("dialog", {
-      name: "Request Reopen dialog",
+      name: "Request reopen",
     });
     fireEvent.change(within(dialog).getByLabelText(/Reason/i), {
       target: { value: "  Need to add a carry-over  " },
     });
     act(() => {
-      within(dialog).getByRole("button", { name: "Send Request" }).click();
+      within(dialog).getByRole("button", { name: "Send request" }).click();
     });
 
     await waitFor(() =>
@@ -623,7 +623,7 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
 
     requestReopenEntry.mutationFn.mockResolvedValueOnce({ success: true });
     act(() => {
-      within(dialog).getByRole("button", { name: "Send Request" }).click();
+      within(dialog).getByRole("button", { name: "Send request" }).click();
     });
     await waitFor(() =>
       expect(toast.success).toHaveBeenCalledWith("Reopen request sent to Head"),
@@ -631,7 +631,7 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
     expect(invalidateSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
     await waitFor(() =>
       expect(
-        screen.queryByRole("dialog", { name: "Request Reopen dialog" }),
+        screen.queryByRole("dialog", { name: "Request reopen" }),
       ).toBeNull(),
     );
     expect(screen.queryByText("Request already pending")).toBeNull();

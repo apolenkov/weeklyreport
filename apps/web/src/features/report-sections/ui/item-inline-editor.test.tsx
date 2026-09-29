@@ -95,7 +95,7 @@ describe("ItemInlineEditor", () => {
     );
 
     expect(screen.queryByLabelText(/Next step/)).toBeNull();
-    await user.click(screen.getByText("✓ Completed"));
+    await user.click(screen.getByText("Done"));
     await user.click(screen.getByText("Save update"));
     expect(onSave).not.toHaveBeenCalled();
     const guidance = document.querySelector<HTMLElement>('[role="alert"]');
@@ -174,7 +174,7 @@ describe("ItemInlineEditor", () => {
       screen.getByRole("textbox", { name: /Description/ }),
       "Start API implementation",
     );
-    await user.click(screen.getByRole("button", { name: "○ Planned" }));
+    await user.click(screen.getByRole("button", { name: "Not started" }));
     await user.click(screen.getByRole("button", { name: "Save update" }));
     expect(onSave).toHaveBeenCalledWith(
       expect.objectContaining({ status: "planned", pausedReason: null }),
@@ -248,6 +248,9 @@ describe("ItemInlineEditor", () => {
     await user.click(details);
     screen.getByLabelText(/Priority rank/).focus();
     await user.tab();
+    expect(screen.getByRole("button", { name: "Save update" })).toHaveFocus();
+    await user.tab();
+    await user.tab();
     expect(screen.getByRole("button", { name: "After editor" })).toHaveFocus();
     const input = screen.getByRole("textbox", { name: /Description/ });
     input.focus();
@@ -270,7 +273,7 @@ describe("ItemInlineEditor", () => {
     expect(
       screen.getByText("A reason is required to pause an item."),
     ).toBeVisible();
-    await user.click(screen.getByRole("button", { name: /Completed/ }));
+    await user.click(screen.getByRole("button", { name: /Done/i }));
     await user.click(screen.getByRole("button", { name: "Save update" }));
     expect(onSave).toHaveBeenCalledWith(
       expect.objectContaining({ status: "completed", pausedReason: null }),
@@ -341,7 +344,7 @@ describe("ItemInlineEditor", () => {
     );
     const nextStep = screen.getByRole("textbox", { name: /Next step/ });
     await user.type(nextStep, "Monitor the recovery");
-    await user.click(screen.getByRole("button", { name: /Completed/ }));
+    await user.click(screen.getByRole("button", { name: /Done/i }));
     await user.click(screen.getByRole("button", { name: "Save update" }));
     expect(onSave).not.toHaveBeenCalled();
     expect(nextStep).toHaveFocus();
@@ -373,5 +376,36 @@ describe("ItemInlineEditor", () => {
       <ItemInlineEditor {...base} focusNextStep={true} onSave={vi.fn()} />,
     );
     expect(screen.getByRole("textbox", { name: /Next step/ })).toHaveFocus();
+  });
+});
+
+describe("ItemInlineEditor discard guard", () => {
+  it("confirms before discarding typed text and keeps it on Keep editing", async () => {
+    const user = userEvent.setup();
+    const onCancel = vi.fn();
+    render(<ItemInlineEditor {...base} onCancel={onCancel} onSave={vi.fn()} />);
+    const text = screen.getByRole("textbox", { name: /Description/ });
+    await user.type(text, "Draft update");
+    await user.keyboard("{Escape}");
+
+    expect(screen.getByRole("alertdialog")).toHaveTextContent(
+      "Discard changes?",
+    );
+    await user.click(screen.getByRole("button", { name: "Keep editing" }));
+    expect(text).toHaveValue("Draft update");
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it("treats a status-only change as dirty and closes a clean draft at once", async () => {
+    const user = userEvent.setup();
+    const onCancel = vi.fn();
+    render(<ItemInlineEditor {...base} onCancel={onCancel} onSave={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(onCancel).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole("button", { name: "Done" }));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+    expect(onCancel).toHaveBeenCalledTimes(1);
   });
 });

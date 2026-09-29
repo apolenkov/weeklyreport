@@ -1,6 +1,7 @@
 import { useRef } from "react";
 
 import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";
+import { useDiscardGuard } from "../../../shared/ui/dialogs/use-discard-guard";
 import type {
   ParentActivityOption,
   Product,
@@ -23,6 +24,7 @@ interface UseRiskEditDialogArgs {
     next: RiskEntry & { impact: string; mitigation: string },
   ) => void;
   readonly onCancel: () => void;
+  readonly isPending?: boolean | undefined;
   readonly defaultProductId?: string | undefined;
   readonly defaultActivityId?: string | undefined;
   readonly initialStageNames?: readonly string[] | undefined;
@@ -73,6 +75,13 @@ export function useRiskEditDialog(args: UseRiskEditDialogArgs) {
   const parentStage = useRiskEditParentStage({ ...args, isCreate });
 
   const dialogSurfaceRef = useRef<HTMLDivElement>(null);
+  const { requestClose, discardDialog } = useDiscardGuard(
+    fields.text !== (risk?.text ?? "") ||
+      fields.impact !== (risk?.impact ?? "") ||
+      fields.mitigation !== (risk?.mitigation ?? ""),
+    onCancel,
+    args.isPending,
+  );
 
   function handleSave() {
     saveRisk({ fields, parentStage, products, risk, onSave, dialogSurfaceRef });
@@ -82,7 +91,7 @@ export function useRiskEditDialog(args: UseRiskEditDialogArgs) {
   // first field, and the primitive restores focus to the opener on close.
   useDialogFocus({
     open: true,
-    onClose: onCancel,
+    onClose: requestClose,
     containerRef: dialogSurfaceRef,
   });
 
@@ -100,5 +109,7 @@ export function useRiskEditDialog(args: UseRiskEditDialogArgs) {
     ...toParentStageView(parentStage),
     handleSave,
     handleKeyDown,
+    requestClose,
+    discardDialog,
   };
 }

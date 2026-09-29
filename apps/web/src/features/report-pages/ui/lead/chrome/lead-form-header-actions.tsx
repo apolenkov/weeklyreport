@@ -135,7 +135,7 @@ function SubmittedSectionAction({
   if (!canRequestReopen) return null;
   return (
     <ToolbarSecondaryButton
-      label="Request Reopen"
+      label="Request reopen"
       title="Ask Head to unlock this section"
       onClick={writeActions.openReopenDialog}
       disabled={writeActions.reopenPending}

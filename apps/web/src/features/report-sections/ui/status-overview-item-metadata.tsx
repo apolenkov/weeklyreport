@@ -1,14 +1,15 @@
+import { NOT_STARTED_LABEL, STATUS_BADGE } from "../model/item-card-style";
 import type { StatusOverviewItem } from "../model/status-overview";
 import { ProgressIcon, StageIcon, TagIcon } from "./status-overview-item-icons";
 
 const PROGRESS_LABELS: Readonly<
   Record<StatusOverviewItem["workflowStatus"], string>
 > = {
-  planned: "Planned",
-  in_progress: "In progress",
-  paused: "Paused",
-  postponed: "Postponed",
-  done: "Done",
+  planned: STATUS_BADGE.planned.label,
+  in_progress: STATUS_BADGE["in-progress"].label,
+  paused: STATUS_BADGE.paused.label,
+  postponed: STATUS_BADGE.postponed.label,
+  done: STATUS_BADGE.completed.label,
 };
 
 /** Visible progress text, including the not-yet-confirmed carried states. */
@@ -20,7 +21,7 @@ export function statusOverviewProgressLabel(item: StatusOverviewItem): string {
       return "Continued · not updated this week";
   }
   if (item.source === "current" && item.workflowStatus === "planned")
-    return "Not started";
+    return NOT_STARTED_LABEL;
   return PROGRESS_LABELS[item.workflowStatus];
 }
 

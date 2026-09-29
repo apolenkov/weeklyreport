@@ -11,16 +11,19 @@ export interface StatusBadge {
 const MUTED_BADGE_BG = "var(--color-muted)";
 const MUTED_BADGE_TEXT = "var(--color-muted-foreground)";
 
+// Current-week wording for a planned item that was never begun.
+export const NOT_STARTED_LABEL = "Not started";
+
 export const STATUS_BADGE = {
   "in-progress": {
     bg: "var(--color-success)",
     text: "var(--color-primary)",
-    label: "In Progress",
+    label: "In progress",
   },
   completed: {
     bg: "var(--color-primary)",
     text: "var(--color-primary-foreground)",
-    label: "Completed",
+    label: "Done",
   },
   blocked: {
     bg: "var(--color-status-blocked-bg)",

@@ -20,9 +20,12 @@ interface RecordTextareaFieldProps {
   readonly textareaRef?: RefObject<HTMLTextAreaElement | null> | undefined;
   readonly hint?: ReactNode | undefined;
   readonly characterLimit?: number | undefined;
+  // Extra ids (space-separated) that describe the textarea besides limit/error.
+  readonly describedBy?: string | undefined;
   // When true, wrapper and textarea take flex-1 to fill a multi-field column;
   // false for a lone field with no height to share.
   readonly fill?: boolean | undefined;
+  readonly disabled?: boolean | undefined;
 }
 
 function FieldErrorMessage({
@@ -58,7 +61,7 @@ function textareaClassName(fill: boolean, hasError: boolean): string {
   const borderClass = hasError
     ? TEXTAREA_BORDER_ERROR
     : TEXTAREA_BORDER_DEFAULT;
-  return `w-full ${fillClass}resize-y rounded-xl border bg-[var(--color-card)] px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${borderClass}`;
+  return `w-full ${fillClass}resize-y rounded-xl border bg-[var(--color-card)] px-3 py-2.5 text-base md:text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${borderClass}`;
 }
 
 function minHeightStyle(
@@ -82,7 +85,9 @@ export function RecordTextareaField({
   textareaRef,
   hint,
   characterLimit,
+  describedBy,
   fill = true,
+  disabled = false,
 }: RecordTextareaFieldProps) {
   const errorId = `${id}-error`;
   const limitId = `${id}-limit`;
@@ -91,6 +96,11 @@ export function RecordTextareaField({
   // field's own), so the focus effect only ever READS .current.
   const elementRef = textareaRef ?? ownRef;
   useInitialTextareaFocus(focusOnMount, elementRef);
+  const overBy =
+    characterLimit === undefined
+      ? 0
+      : Math.max(0, value.length - characterLimit);
+  const isInvalid = Boolean(error) || overBy > 0;
 
   return (
     <div className={fill ? "flex flex-1 flex-col" : undefined}>
@@ -108,16 +118,18 @@ export function RecordTextareaField({
         autoComplete="off"
         ref={elementRef}
         required={required}
-        aria-invalid={error ? "true" : "false"}
+        disabled={disabled}
+        aria-invalid={isInvalid ? "true" : "false"}
         aria-describedby={
           [
             characterLimit === undefined ? undefined : limitId,
             error ? errorId : undefined,
+            describedBy,
           ]
             .filter(Boolean)
             .join(" ") || undefined
         }
-        className={textareaClassName(fill, Boolean(error))}
+        className={textareaClassName(fill, isInvalid)}
         style={minHeightStyle(minHeightPx)}
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -126,9 +138,14 @@ export function RecordTextareaField({
       {characterLimit !== undefined && (
         <p
           id={limitId}
-          className="mt-1 text-xs text-[var(--color-muted-foreground)]"
+          className={`mt-1 text-xs ${
+            overBy > 0
+              ? "text-[var(--color-destructive)]"
+              : "text-[var(--color-muted-foreground)]"
+          }`}
         >
           {value.length} / {characterLimit} characters
+          {overBy > 0 ? ` — ${overBy} over the limit` : ""}
         </p>
       )}
       {error && <FieldErrorMessage id={errorId} error={error} />}

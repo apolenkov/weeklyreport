@@ -71,7 +71,7 @@ describe("DecisionEditDialog prose limits", () => {
     fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
       target: { value: overLimit },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Save Decision" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save decision" }));
 
     expect(screen.getByLabelText(/^Impact \*/i)).toHaveValue(overLimit);
     expect(screen.getByLabelText(/^Impact \*/i)).toHaveFocus();
@@ -102,7 +102,7 @@ describe("DecisionEditDialog prose limits", () => {
     });
     const impact = screen.getByLabelText(/^Impact \*/i);
     fireEvent.change(impact, { target: { value: invisibleOnly } });
-    fireEvent.click(screen.getByRole("button", { name: "Save Decision" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save decision" }));
 
     expect(impact).toHaveValue(invisibleOnly);
     expect(impact).toHaveAttribute("aria-invalid", "true");
@@ -183,7 +183,7 @@ describe("DecisionEditDialog — form-race regression", () => {
     });
     // Multi-stage product requires an explicit stage pick.
     fireEvent.click(screen.getByRole("checkbox", { name: "Planning" }));
-    fireEvent.click(screen.getByRole("button", { name: /Save Decision/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save decision/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
@@ -217,7 +217,7 @@ describe("DecisionEditDialog — form-race regression", () => {
     });
     // Nothing pre-selected; clicking "Planning" selects exactly that stage.
     fireEvent.click(screen.getByRole("checkbox", { name: "Planning" }));
-    fireEvent.click(screen.getByRole("button", { name: /Save Decision/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save decision/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
@@ -279,7 +279,7 @@ describe("DecisionEditDialog — form-race regression", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Save Decision/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save decision/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
     // owner comes from the decision, not the (different) defaultOwner prop.
@@ -464,7 +464,7 @@ describe("DecisionEditDialog — require a stage", () => {
     fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
       target: { value: "Some impact" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Save Decision/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save decision/i }));
 
     expect(onSave).not.toHaveBeenCalled();
     expect(screen.getByText(/Select at least one stage/i)).toBeInTheDocument();
@@ -490,7 +490,7 @@ describe("DecisionEditDialog — require a stage", () => {
     fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
       target: { value: "Some impact" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Save Decision/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save decision/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
     // A single canonical owned stage is applied automatically.
@@ -582,7 +582,7 @@ describe("DecisionEditDialog — stage-ownership scoping", () => {
     expect(lockedPill).toHaveTextContent("Development");
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /Save Decision/i }),
+      screen.getByRole("button", { name: /Save decision/i }),
     ).not.toBeDisabled();
   });
 
@@ -611,7 +611,7 @@ describe("DecisionEditDialog — stage-ownership scoping", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: /Save Decision/i }),
+      screen.getByRole("button", { name: /Save decision/i }),
     ).toBeDisabled();
     expect(
       screen.getByText(
@@ -684,7 +684,7 @@ describe("DecisionEditDialog — activity parenting", () => {
     fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
       target: { value: "Backlog cleared next sprint" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Save Decision/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save decision/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
     const saved = onSave.mock.calls[0]?.[0] as DecisionEntry;
@@ -725,7 +725,7 @@ describe("DecisionEditDialog — create parent seeding", () => {
     fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
       target: { value: "Unblocks rollout" },
     });
-    const saveButton = screen.getByRole("button", { name: /Save Decision/i });
+    const saveButton = screen.getByRole("button", { name: /Save decision/i });
     expect(saveButton).toBeDisabled();
     const backdrop = document.querySelector<HTMLElement>(
       '[role="presentation"]',
@@ -735,5 +735,27 @@ describe("DecisionEditDialog — create parent seeding", () => {
     fireEvent.click(saveButton);
 
     expect(onSave).not.toHaveBeenCalled();
+  });
+});
+
+describe("DecisionEditDialog deadline warning", () => {
+  it("warns when the deadline is in the past", () => {
+    render(
+      <DecisionEditDialog
+        open
+        decision={null}
+        defaultOwner="Test Lead"
+        products={products}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Development"]}
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+      />,
+    );
+    expect(screen.queryByText("Deadline is in the past.")).toBeNull();
+    fireEvent.change(screen.getByLabelText(/^Deadline/), {
+      target: { value: "2000-01-01" },
+    });
+    expect(screen.getByText("Deadline is in the past.")).toBeInTheDocument();
   });
 });

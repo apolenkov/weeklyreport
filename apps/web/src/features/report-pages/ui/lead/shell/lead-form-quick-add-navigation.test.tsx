@@ -72,7 +72,7 @@ describe("LeadForm local add navigation", () => {
       expectDefined(screen.getAllByRole("button", { name: "+ Add Item" })[0]),
     );
     expect(
-      await screen.findByRole("dialog", { name: "Add Item dialog" }),
+      await screen.findByRole("dialog", { name: /^Add Item/ }),
     ).toBeInTheDocument();
 
     rendered.rerender(<LeadForm reportId={reportB.reportId} />);
@@ -80,7 +80,7 @@ describe("LeadForm local add navigation", () => {
     expect(await screen.findAllByText("Report B product")).not.toHaveLength(0);
     await waitFor(() =>
       expect(
-        screen.queryByRole("dialog", { name: "Add Item dialog" }),
+        screen.queryByRole("dialog", { name: /^Add Item/ }),
       ).not.toBeInTheDocument(),
     );
     expect(queryClient.getMutationCache().getAll()).toEqual([]);
