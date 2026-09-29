@@ -1,8 +1,8 @@
 import type { Prisma } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
-import { AdminUserActivityAssignmentConflictError } from "../modules/admin/admin-shared.js";
 import {
+  AdminUserActivityAssignmentConflictError,
   lockUser,
   lockUserAndAssertActivityAssignments,
 } from "./user-activity-assignment.js";

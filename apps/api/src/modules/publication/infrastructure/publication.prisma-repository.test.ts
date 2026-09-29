@@ -1,7 +1,7 @@
 import type { AssembledReport } from "@customreport/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { replacePublishedProjections } from "../../search/index.js";
+import { freezePublishedSnapshot } from "../../search/index.js";
 import { PublicationPrismaRepository } from "./publication.prisma-repository";
 
 // The snapshot helpers need a full Prisma row to build/serialize; stub them so
@@ -15,8 +15,23 @@ vi.mock("../../report-sections/index.js", () => ({
     status: "published",
   })),
 }));
+// The freeze step lives in search; the stand-in keeps its two tx statements.
 vi.mock("../../search/index.js", () => ({
-  replacePublishedProjections: vi.fn().mockResolvedValue(undefined),
+  freezePublishedSnapshot: vi.fn(
+    async (
+      tx: {
+        report: {
+          findUniqueOrThrow: (args: unknown) => Promise<unknown>;
+          update: (args: unknown) => Promise<unknown>;
+        };
+      },
+      reportId: string,
+    ) => {
+      await tx.report.findUniqueOrThrow({ where: { id: reportId } });
+      await tx.report.update({ where: { id: reportId }, data: {} });
+      return { reportId: "rep-1", status: "published" };
+    },
+  ),
 }));
 
 const asAny = (value: unknown): never => value as never;
@@ -101,12 +116,8 @@ describe("PublicationPrismaRepository.saveAutoPublishedReport", () => {
     });
     // A separate write replaces the provisional snapshot after the transition.
     expect(update).toHaveBeenCalledOnce();
-    const projectionMock = vi.mocked(replacePublishedProjections);
-    expect(projectionMock).toHaveBeenCalledOnce();
-    expect(projectionMock.mock.calls[0]?.[1]).toEqual({
-      reportId: "rep-1",
-      snapshot: { reportId: "rep-1", status: "published" },
-    });
+    expect(vi.mocked(freezePublishedSnapshot)).toHaveBeenCalledOnce();
+    expect(vi.mocked(freezePublishedSnapshot).mock.calls[0]?.[1]).toBe("rep-1");
   });
 
   it("uses one repeatable-read transaction for the fresh graph and publish CAS", async () => {
@@ -151,7 +162,7 @@ describe("PublicationPrismaRepository.saveAutoPublishedReport", () => {
     expect(updateMany).toHaveBeenCalledOnce();
     expect(findUniqueOrThrow).not.toHaveBeenCalled();
     expect(update).not.toHaveBeenCalled();
-    expect(replacePublishedProjections).not.toHaveBeenCalled();
+    expect(freezePublishedSnapshot).not.toHaveBeenCalled();
   });
 
   it("matched row → { published: true } carrying the fresh in-transaction re-read", async () => {

@@ -4,13 +4,13 @@ import {
 } from "@customreport/shared";
 import type { ReactNode } from "react";
 
+import { SlideStatusBadge } from "../../../shared/ui/feedback/slide-status-badge";
 import type {
   GridAuthor,
   GridPriorityCard,
   SlideGridModel,
 } from "../model/slide-grid-model";
 import { authorSlotBackground } from "./slide-article-rows";
-import { SlideStatusBadge } from "./slide-status-badge";
 
 function metric(count: number, singular: string, plural = singular) {
   const label = count === 1 ? singular : plural;

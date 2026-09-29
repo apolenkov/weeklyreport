@@ -1,6 +1,6 @@
 // Next-specific correctness rules — one cohesive policy module. Kept out of
 // eslint.config.ts so the lint policy hub stays a composition root instead of
-// one 1,200-line file owning every family's rule selection.
+// owning every family's rule selection.
 
 import nextPlugin from "@next/eslint-plugin-next";
 import type { Linter } from "eslint";

@@ -1,9 +1,9 @@
+import { parsePublishedSnapshot } from "@customreport/report-persistence";
 import { MAX_PUBLISHED_PERIODS } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
-import { parsePublishedSnapshot } from "../../publication/index.js";
 import {
   mapPrismaToReportSection,
   reportSectionFullInclude,

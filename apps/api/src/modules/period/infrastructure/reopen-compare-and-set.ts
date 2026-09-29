@@ -1,7 +1,7 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 
-import type { PeriodLifecycleExpectation } from "../modules/period/domain/period-lifecycle-expectation.js";
-import type { LifecycleWrite } from "../modules/period/domain/period-transition.js";
+import type { PeriodLifecycleExpectation } from "../domain/period-lifecycle-expectation.js";
+import type { LifecycleWrite } from "../domain/period-transition.js";
 import { reportLifecycleCasWhere } from "./report-lifecycle-cas.js";
 
 // Guarded full-lifecycle-and-boundary predicate + zero-row classification for

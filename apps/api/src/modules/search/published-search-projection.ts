@@ -1,7 +1,15 @@
-import { buildPublishedProjections } from "@customreport/shared";
+import {
+  type AssembledReport,
+  buildPublishedProjections,
+} from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
-import { requirePublishedSnapshot } from "../report-sections/index.js";
+import {
+  buildAssembledReportFromPrismaRow,
+  reportFullIncludeForSnapshot,
+  requirePublishedSnapshot,
+  toPublishedSnapshotJson,
+} from "../report-sections/index.js";
 
 interface ReplacePublishedProjectionInput {
   readonly reportId: string;
@@ -47,4 +55,25 @@ export async function replaceRestoredPublishedProjections(
   for (const period of periods) {
     await replacePublishedProjections(tx, period);
   }
+}
+
+/**
+ * Re-reads the report inside the caller's transaction, replaces its provisional
+ * published snapshot with the full graph, and rebuilds both projections.
+ */
+export async function freezePublishedSnapshot(
+  tx: Prisma.TransactionClient,
+  reportId: string,
+): Promise<AssembledReport> {
+  const row = await tx.report.findUniqueOrThrow({
+    where: { id: reportId },
+    include: reportFullIncludeForSnapshot,
+  });
+  const snapshot = buildAssembledReportFromPrismaRow(row);
+  await tx.report.update({
+    where: { id: reportId },
+    data: { publishedSnapshot: toPublishedSnapshotJson(snapshot) },
+  });
+  await replacePublishedProjections(tx, { reportId, snapshot });
+  return snapshot;
 }

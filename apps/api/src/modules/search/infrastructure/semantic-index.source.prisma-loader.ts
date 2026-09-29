@@ -1,8 +1,8 @@
+import { parsePublishedSnapshot } from "@customreport/report-persistence";
 import { Inject, Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
-import { parsePublishedSnapshot } from "../../publication/index.js";
 import {
   mapPrismaToReportSection,
   reportSectionFullInclude,
