@@ -14,7 +14,6 @@ const devOverrideCompose = resolve("docker-compose.dev.yml");
 const productionEnvironmentTemplate = resolve(
   "deploy/environment/production.env.example",
 );
-const workflow = resolve(".github/workflows/ci.yml");
 const gitlabCi = resolve(".gitlab-ci.yml");
 const observabilityCompose = resolve("docker-compose.observability.yml");
 const errorsCompose = resolve("docker-compose.errors.yml");
@@ -132,7 +131,6 @@ const productionEnvironment = readFileSync(
   productionEnvironmentTemplate,
   "utf8",
 );
-const workflowContent = readFileSync(workflow, "utf8");
 const gitlabContent = readFileSync(gitlabCi, "utf8");
 const observabilityContent = readFileSync(observabilityCompose, "utf8");
 const errorsContent = readFileSync(errorsCompose, "utf8");
@@ -417,11 +415,6 @@ void test("the production image receives one release identity", () => {
   assert.match(
     content,
     /NEXT_PUBLIC_APP_VERSION: \$\{OTEL_SERVICE_VERSION:\?/u,
-  );
-  assert.match(workflowContent, /POSTGRES_DB: customreport/u);
-  assert.match(
-    workflowContent,
-    /OTEL_SERVICE_VERSION: \$\{\{ github\.sha \}\}/u,
   );
   for (const dockerfile of [
     apiDockerfile,
@@ -902,34 +895,6 @@ void test("external Compose and CI images use versioned immutable references", (
     }
   }
 
-  const workflowModel = parse(workflowContent, { maxAliasCount: 50 }) as {
-    readonly jobs?: Readonly<
-      Record<
-        string,
-        {
-          readonly services?: Readonly<
-            Record<string, { readonly image?: unknown }>
-          >;
-        }
-      >
-    >;
-  };
-  for (const [job, definition] of Object.entries(workflowModel.jobs ?? {})) {
-    for (const [service, serviceDefinition] of Object.entries(
-      definition.services ?? {},
-    )) {
-      if (typeof serviceDefinition.image !== "string") {
-        assert.fail(
-          `.github/workflows/ci.yml:${job}:${service} image must be a scalar`,
-        );
-      }
-      externalImages.push({
-        path: `.github/workflows/ci.yml:${job}:${service}`,
-        image: serviceDefinition.image,
-      });
-    }
-  }
-
   const gitlabModel = parse(gitlabContent, { maxAliasCount: 50 }) as Readonly<
     Record<string, unknown>
   >;
@@ -981,63 +946,6 @@ void test("external image policy rejects moving and mismatched references", () =
       image: `redis:latest@sha256:${digest}`,
     }),
   );
-});
-
-void test("manual runtime smoke reclaims only reviewed application build space", () => {
-  const workflowModel = parse(workflowContent, { maxAliasCount: 50 }) as {
-    readonly jobs?: Readonly<
-      Record<
-        string,
-        {
-          readonly steps?: readonly {
-            readonly name?: unknown;
-            readonly if?: unknown;
-            readonly run?: unknown;
-          }[];
-        }
-      >
-    >;
-  };
-  const steps = workflowModel.jobs?.["docker-build"]?.steps ?? [];
-  const stepNames = steps.map(({ name }) => name);
-  const releaseIdentityIndex = stepNames.indexOf(
-    "Verify production image release identity",
-  );
-  const reclaimIndex = stepNames.indexOf(
-    "Reclaim Docker build space before runtime smoke",
-  );
-  const runtimeIndex = stepNames.indexOf(
-    "Verify PostgreSQL, pgvector, PgBouncer, Redis, and Caddy",
-  );
-  assert.ok(
-    releaseIdentityIndex !== -1 &&
-      releaseIdentityIndex < reclaimIndex &&
-      reclaimIndex < runtimeIndex,
-    "build outputs must be verified before their space is reclaimed for runtime smoke",
-  );
-
-  const reclaimStep = steps.at(reclaimIndex);
-  assert.ok(reclaimStep);
-  assert.equal(reclaimStep.if, "github.event_name == 'workflow_dispatch'");
-  assert.equal(typeof reclaimStep.run, "string");
-  const reclaimRun = reclaimStep.run as string;
-  const cleanupServices = /^for service in ([^;]+); do$/mu.exec(
-    reclaimRun,
-  )?.[1];
-  assert.ok(cleanupServices, "cleanup must enumerate repository-built images");
-  assert.deepEqual(cleanupServices.split(/\s+/u).toSorted(), [
-    "api",
-    "backup",
-    "migrate",
-    "pdf-artifact-migrator",
-    "web",
-  ]);
-  assert.match(
-    reclaimRun,
-    /docker image rm "customreport-\$\{service\}:\$\{OTEL_SERVICE_VERSION\}"/u,
-  );
-  assert.match(reclaimRun, /docker builder prune --all --force/u);
-  assert.doesNotMatch(reclaimRun, /--volumes|docker system prune/u);
 });
 
 void test("GitLab CI carries no Docker build or Compose smoke lane", () => {
@@ -1409,13 +1317,6 @@ void test("the rendered config guard rejects unsafe URL components without leaki
 void test("production compose renders with the full policy matrix", () => {
   const rendered = renderCompose(FULL_POLICY_ENV);
   assert.equal(rendered.status, 0, rendered.stderr);
-  for (const variable of REQUIRED_POLICY_INPUTS) {
-    assert.match(
-      workflowContent,
-      new RegExp(`^      ${variable}:`, "mu"),
-      `CI Docker build must provide ${variable}`,
-    );
-  }
 });
 
 void test("production Web uses one Compose-owned API origin in both phases", () => {

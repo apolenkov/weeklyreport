@@ -71,8 +71,7 @@ variables:
     - pnpm install --frozen-lockfile
     - pnpm exec prisma generate
 
-# Database jobs run on the same pinned PostgreSQL+pgvector image the GitHub
-# services use. PostgreSQL starts inside the job container bound to 127.0.0.1,
+# Database jobs run on a pinned PostgreSQL+pgvector image. PostgreSQL starts inside the job container bound to 127.0.0.1,
 # so the exact-loopback destructive guard sees a truthful target. The Node
 # toolchain arrives as the verified node-toolchain artifact.
 .postgres-job:
@@ -103,8 +102,8 @@ variables:
     - install -d -o postgres -g postgres /tmp/pgdata
     - su postgres -s /bin/sh -c '/usr/lib/postgresql/15/bin/initdb -D /tmp/pgdata -A trust -E UTF8'
     - su postgres -s /bin/sh -c '/usr/lib/postgresql/15/bin/pg_ctl -D /tmp/pgdata -l /tmp/postgres.log -o "-h 127.0.0.1" -w -t 60 start'
-    # POSTGRES_USER in the GitHub service is a superuser; prisma migrate reset
-    # drops and recreates the database, which needs the same privilege here.
+    # prisma migrate reset drops and recreates the database, which needs a
+    # superuser role.
     - createuser -h 127.0.0.1 -U postgres -s customreport
     - createdb -h 127.0.0.1 -U postgres -O customreport customreport_e2e
   after_script:

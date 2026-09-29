@@ -12,8 +12,8 @@ The 7 canonical builders are: `publicProcedure`, `protectedProcedure`,
 `apps/api/src/infrastructure/trpc/trpc.middleware.ts`.
 
 Consumer surfaces: `apps/api/src/infrastructure/trpc/` (canonical builders),
-all `*.router.ts` files under `apps/api/src/` (targets), and the CI workflow
-file under `.github/workflows/` (enforcement point).
+all `*.router.ts` files under `apps/api/src/` (targets), and the GitLab
+`quality` job in `.gitlab-ci.yml` (enforcement point).
 
 ## Requirements
 
@@ -104,21 +104,17 @@ reference-identity gate keeps passing.
 
 ### Requirement: Gate Runs in CI for Every PR Touching Router Files
 
-The role-coverage gate MUST execute as a required CI job in the GitHub Actions
-workflow defined under `.github/workflows/` for every pull request that adds or
-modifies at least one `*.router.ts` file. A PR that introduces a non-canonical
-procedure MUST be blocked from merging — the violation is surfaced at CI review
-time, not at runtime.
+The role-coverage gate MUST execute in the GitLab `quality` job (`pnpm test`) on every pipeline, including merge requests that add or modify at least one `*.router.ts` file. A merge request that introduces a non-canonical procedure MUST be blocked from merging — the violation is surfaced at CI review time, not at runtime.
 
 #### Scenario: PR adds a new router file with a canonical procedure
 
-- **WHEN** a pull request creates a new `*.router.ts` file whose procedures all use canonical builders
-- **THEN** the role-coverage gate CI job passes and does not block the PR
+- **WHEN** a merge request creates a new `*.router.ts` file whose procedures all use canonical builders
+- **THEN** the role-coverage gate passes and does not block the merge request
 
 #### Scenario: PR adds a router file with a non-canonical procedure
 
-- **WHEN** a pull request creates or modifies a `*.router.ts` file that contains at least one procedure not using a canonical builder
-- **THEN** the role-coverage gate CI job fails, the PR is marked as failing required checks, and merge is blocked until the violation is corrected
+- **WHEN** a merge request creates or modifies a `*.router.ts` file that contains at least one procedure not using a canonical builder
+- **THEN** the role-coverage gate fails, the pipeline is marked as failing, and merge is blocked until the violation is corrected
 
 ### Requirement: Middleware-chain matching MUST be exact, not prefix
 
