@@ -543,7 +543,7 @@ source inputs match. A checkbox means its full stated acceptance passed.
 - [x] 44.9 Define and implement the requested Current/Next drag-and-drop in a
       focused child change, preserving lineage and canonical writes; verify
       keyboard alternative, invalid targets and desktop drag feedback.
-      Evidence: child `preserve-linked-continuation-dnd` is complete (15/15);
+      Evidence: child `preserve-linked-continuation-dnd` (retired; its files exist only in git history before 7e6c20f2d) was complete (15/15);
       receipts in file-reviews/preserve-linked-continuation-dnd-*.json. The
       Current result is retained and the linked Next is created/promoted
       through canonical draft writes with the superseded text kept in readable
@@ -555,7 +555,7 @@ source inputs match. A checkbox means its full stated acceptance passed.
       as a gap in preserve-linked-continuation-dnd-browser-lane-4-1.json).
 - [x] 44.10 Resolve report-specific Activity name/details semantics in a focused
       child change; verify that later edits cannot alter published snapshots.
-      Evidence: child `add-weekly-activity-title` is complete (12/12) with
+      Evidence: child `add-weekly-activity-title` (retired; its files exist only in git history before 7e6c20f2d) was complete (12/12) with
       file-reviews/ACTIVITY-TITLE-FINAL-GATES.json and
       ACTIVITY-TITLE-FINAL-INVENTORY.json; the weekly title/description are
       stored per lead/week without touching the catalogue, and the published

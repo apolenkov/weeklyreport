@@ -210,16 +210,11 @@ At rollover, an explicit next-period commitment MUST become Current `planned`; a
 - **WHEN** a section contains only paused or postponed items and no risks
 - **THEN** dashboard and product health show no escalation caused by those items
 
-#### Scenario: carry-over stays planned until progress is confirmed; postponed stays behind
+#### Scenario: carry-over stays planned until progress is confirmed
 
 - **WHEN** automatic carry-over consumes an eligible Next item or Current next commitment
 - **THEN** the created Current item is `planned`, carried, and unconfirmed
 - **AND** it is not automatically changed to `in_progress`
-
-#### Scenario: Carry-over preserves planned work without asserting progress
-
-- **WHEN** automatic carry-over copies an explicit commitment into the new Current period
-- **THEN** the created Current item remains `planned`, is marked unconfirmed, and is not automatically changed to `in_progress`
 
 #### Scenario: fallback continuation retains in-progress without confirming a result
 
