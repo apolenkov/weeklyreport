@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { pluralize } from "./pluralize";
+import { countLabel, pluralize } from "./pluralize";
 
 describe("pluralize", () => {
   it("returns the singular form for exactly 1", () => {
@@ -13,5 +13,10 @@ describe("pluralize", () => {
 
   it("returns the plural form for N > 1", () => {
     expect(pluralize(5, "item", "items")).toBe("items");
+  });
+
+  it("countLabel prefixes the count and keeps 0 plural", () => {
+    expect(countLabel(1, "risk", "risks")).toBe("1 risk");
+    expect(countLabel(0, "risk", "risks")).toBe("0 risks");
   });
 });

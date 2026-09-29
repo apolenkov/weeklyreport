@@ -308,7 +308,7 @@ describe("ProductAccordion — item status badge", () => {
     expect(screen.getByText("Planned")).toBeInTheDocument();
   });
 
-  it("renders an at-risk item with the amber At Risk badge and neutral rail", () => {
+  it("renders an at-risk item with the amber At risk badge and neutral rail", () => {
     const { container } = render(
       <ProductAccordion
         defaultOpen
@@ -319,7 +319,7 @@ describe("ProductAccordion — item status badge", () => {
         })}
       />,
     );
-    const badge = screen.getByText("At Risk");
+    const badge = screen.getByText("At risk");
     expect(badge).toHaveStyle({
       background: "var(--color-status-at-risk-bg)",
       color: "var(--color-status-at-risk-fg)",

@@ -62,7 +62,7 @@ function PreCheckedStagesBanner({
         {preCheckedStages
           .map(
             (s) =>
-              `${s.name} (${s.severity === "blocked" ? "Blocked" : "At Risk"})`,
+              `${s.name} (${s.severity === "blocked" ? "Blocked" : "At risk"})`,
           )
           .join(" · ")}
       </div>

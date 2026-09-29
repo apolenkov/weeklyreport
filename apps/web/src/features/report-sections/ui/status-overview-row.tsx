@@ -154,7 +154,7 @@ export function StatusOverviewUnitRow({
         </div>
         <div className="min-w-0 min-[80rem]:col-span-3">
           <div
-            className={`${TIMELINE_GRID} min-[80rem]:sr-only bg-[var(--color-surface-muted)]`}
+            className={`${TIMELINE_GRID} max-md:hidden min-[80rem]:sr-only bg-[var(--color-surface-muted)]`}
           >
             {STATUS_OVERVIEW_COLUMNS.map((column) => (
               <div key={column.key} className={TIMELINE_CELL}>

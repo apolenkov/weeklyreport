@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { DocumentActionGroup, ReportToolbar } from "./report-toolbar";
 
@@ -77,5 +77,36 @@ describe("DocumentActionGroup", () => {
     );
     // Header line wraps so no document action is clipped (no overflow clip).
     expect(group.className).toContain("flex-wrap");
+  });
+
+  it("publishes the measured sticky height as the scroll offset and clears it on unmount", () => {
+    let notify: () => void = () => undefined;
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(cb: () => void) {
+          notify = cb;
+        }
+        observe = () => undefined;
+        disconnect = () => undefined;
+      },
+    );
+    const height = vi
+      .spyOn(HTMLElement.prototype, "offsetHeight", "get")
+      .mockReturnValue(50);
+    const root = document.documentElement;
+    const { unmount } = render(
+      <ReportToolbar sticky contextControls={<span>Ctx</span>} />,
+    );
+    expect(root.style.getPropertyValue("--sticky-toolbar-offset")).toBe("66px");
+    height.mockReturnValue(90);
+    notify();
+    expect(root.style.getPropertyValue("--sticky-toolbar-offset")).toBe(
+      "106px",
+    );
+    unmount();
+    expect(root.style.getPropertyValue("--sticky-toolbar-offset")).toBe("");
+    height.mockRestore();
+    vi.unstubAllGlobals();
   });
 });

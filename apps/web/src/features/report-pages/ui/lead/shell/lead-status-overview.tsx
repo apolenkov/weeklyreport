@@ -6,6 +6,7 @@ import { useContext } from "react";
 import { useQueryErrorHandler } from "../../../../../shared/hooks/query/use-query-error-handler";
 import { SessionContext } from "../../../../../shared/lib/auth/session-provider";
 import { useTRPC } from "../../../../../shared/lib/trpc/trpc-context";
+import { LeadFormEmptyState } from "./lead-form-empty-state";
 import { LeadFormLoadError } from "./lead-form-load-error";
 import { LeadStatusOverviewContent } from "./lead-status-overview-content";
 import {
@@ -33,11 +34,11 @@ function OverviewSkeleton() {
       data-layout-key="report-page"
       data-layout-stability="position-width"
     >
-      <div className="h-12 animate-pulse rounded-[var(--radius)] bg-[var(--color-muted)]" />
+      <div className="h-12 animate-pulse motion-reduce:animate-none rounded-[var(--radius)] bg-[var(--color-muted)]" />
       {Array.from({ length: 3 }, (_, index) => (
         <div
           key={index}
-          className="h-28 animate-pulse rounded-[var(--radius)] bg-[var(--color-muted)]"
+          className="h-28 animate-pulse motion-reduce:animate-none rounded-[var(--radius)] bg-[var(--color-muted)]"
         />
       ))}
     </div>
@@ -61,9 +62,14 @@ function OverviewWithoutTarget({
   }
   if (activeAbsent) {
     return (
-      <section className="card-surface p-6" role="status">
-        No active reporting period is available.
-      </section>
+      <LeadFormEmptyState
+        titleId="lead-overview-no-active-title"
+        title="No active reporting period"
+      >
+        <p role="status" className="text-sm text-[var(--color-foreground)]">
+          No active reporting period is available.
+        </p>
+      </LeadFormEmptyState>
     );
   }
   return <OverviewSkeleton />;

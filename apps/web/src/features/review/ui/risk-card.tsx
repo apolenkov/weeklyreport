@@ -83,7 +83,7 @@ function RiskSeverityChip({ isBlocked }: { readonly isBlocked: boolean }) {
           : "var(--color-status-at-risk-fg)",
       }}
     >
-      {isBlocked ? "Blocked" : "At Risk"}
+      {isBlocked ? "Blocked" : "At risk"}
     </span>
   );
 }

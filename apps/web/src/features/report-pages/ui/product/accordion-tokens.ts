@@ -1,6 +1,7 @@
-import type {
-  WeeklyProductStatus,
-  WeeklyReportItem,
+import {
+  STATUS_BADGE as ITEM_STATUS_BADGE,
+  type WeeklyProductStatus,
+  type WeeklyReportItem,
 } from "../../../report-sections";
 
 export interface StatusConfig {
@@ -58,37 +59,37 @@ export const HEADER_STATUS_TONE = {
 // completed=success green, planned/paused/postponed=muted.
 export const STATUS_BADGE = {
   blocked: {
-    label: "Blocked",
+    label: ITEM_STATUS_BADGE.blocked.label,
     bg: CSS.statusBlockedBg,
     fg: CSS.destructive,
   },
   "at-risk": {
-    label: "At Risk",
+    label: ITEM_STATUS_BADGE["at-risk"].label,
     bg: "var(--color-status-at-risk-bg)",
     fg: CSS.statusAtRiskFg,
   },
   "in-progress": {
-    label: "In progress",
+    label: ITEM_STATUS_BADGE["in-progress"].label,
     bg: "var(--color-status-in-progress-bg)",
     fg: "var(--color-status-in-progress-fg)",
   },
   completed: {
-    label: "Done",
+    label: ITEM_STATUS_BADGE.completed.label,
     bg: CSS.success,
     fg: "var(--color-success-foreground)",
   },
   planned: {
-    label: "Planned",
+    label: ITEM_STATUS_BADGE.planned.label,
     bg: CSS.muted,
     fg: CSS.mutedForeground,
   },
   paused: {
-    label: "Paused",
+    label: ITEM_STATUS_BADGE.paused.label,
     bg: CSS.muted,
     fg: CSS.mutedForeground,
   },
   postponed: {
-    label: "Postponed",
+    label: ITEM_STATUS_BADGE.postponed.label,
     bg: CSS.muted,
     fg: CSS.mutedForeground,
   },

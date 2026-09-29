@@ -124,7 +124,7 @@ at least that severity (precedence: blocked > at-risk). The lead MUST NOT be abl
 to lower the pill below the floor manually; the surface MUST explain the floor
 with a message telling the lead to remove the risk/blocker first.
 
-A manual raise MUST NOT be the only record of an alarm: clicking At Risk or
+A manual raise MUST NOT be the only record of an alarm: clicking At risk or
 Blocked without a sufficient covering risk (blocked requires a covering blocked
 risk; at-risk accepts any covering risk) MUST NOT persist the status and MUST
 instead open the risk entry in create mode with the activity preselected as the
@@ -157,7 +157,7 @@ save/refetch round-trip.
 #### Scenario: an unbacked raise routes through activity-scoped risk creation
 
 - **GIVEN** an activity with no covering risk or blocker
-- **WHEN** the lead clicks the pill's At Risk (or Blocked) option
+- **WHEN** the lead clicks the pill's At risk (or Blocked) option
 - **THEN** the status is not applied
 - **AND** the risk entry opens in create mode with the activity preselected as
   the parent and the clicked severity prefilled

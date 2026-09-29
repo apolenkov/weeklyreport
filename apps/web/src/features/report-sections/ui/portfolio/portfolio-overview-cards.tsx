@@ -33,8 +33,8 @@ const STATUS_ICON: Record<WeeklyProductStatus, string> = {
 };
 
 const STATUS_LABEL: Record<WeeklyProductStatus, string> = {
-  "on-track": "On Track",
-  "at-risk": "At Risk",
+  "on-track": "On track",
+  "at-risk": "At risk",
   blocked: "Blocked",
   empty: "No status",
 };

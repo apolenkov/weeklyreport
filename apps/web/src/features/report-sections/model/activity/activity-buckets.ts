@@ -32,7 +32,7 @@ export const ACTIVITY_BUCKET_LABELS: Readonly<Record<ActivityBucket, string>> =
     "in-progress": "In progress",
     paused: "Paused",
     "planned-current": "Not started",
-    "planned-next": "Planned Next",
+    "planned-next": "Planned next",
     deferred: "Deferred",
   };
 
