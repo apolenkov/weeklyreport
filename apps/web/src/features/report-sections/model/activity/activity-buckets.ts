@@ -29,7 +29,7 @@ export const ACTIVITY_BUCKET_ORDER: readonly ActivityBucket[] = [
 export const ACTIVITY_BUCKET_LABELS: Readonly<Record<ActivityBucket, string>> =
   {
     done: "Done",
-    "in-progress": "In Progress",
+    "in-progress": "In progress",
     paused: "Paused",
     "planned-current": "Not started",
     "planned-next": "Planned Next",

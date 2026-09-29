@@ -81,7 +81,7 @@ function DecisionTextField({
       value={text}
       onChange={onTextChange}
       error={textError}
-      placeholder="e.g. Approve hiring of 2 SDETs in Q3"
+      placeholder="e.g. Approve hiring of 2 SDETs in Q3…"
       minHeightPx={60}
       focusOnMount
       textareaRef={textRef}
@@ -101,6 +101,9 @@ function DecisionDeadlineField({
   deadline,
   onDeadlineChange,
 }: Pick<DecisionProseColumnProps, "deadline" | "onDeadlineChange">) {
+  // ISO dates compare lexicographically; en-CA formats the local day as such.
+  const isPast =
+    deadline !== "" && deadline < new Date().toLocaleDateString("en-CA");
   return (
     <div>
       <label
@@ -114,10 +117,20 @@ function DecisionDeadlineField({
         name="deadline"
         autoComplete="off"
         type="date"
-        className="w-full max-md:min-h-[var(--touch-target-min)] rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-card)] px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_var(--color-ring)] focus:outline-none"
+        className="w-full max-md:min-h-[var(--touch-target-min)] rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-card)] px-3 py-2.5 text-base md:text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_var(--color-ring)] focus:outline-none"
         value={deadline}
+        aria-describedby={isPast ? "dec-deadline-warning" : undefined}
         onChange={(e) => onDeadlineChange(e.target.value)}
       />
+      {isPast ? (
+        <p
+          id="dec-deadline-warning"
+          role="status"
+          className="mt-1 text-xs text-[var(--color-muted-foreground)]"
+        >
+          Deadline is in the past.
+        </p>
+      ) : null}
     </div>
   );
 }

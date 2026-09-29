@@ -284,7 +284,7 @@ describe("lead-form draft: autosave cadence", () => {
     });
     await user.clear(firstDescription);
     await user.type(firstDescription, "Saved A");
-    await user.click(screen.getByRole("button", { name: "Save Item" }));
+    await user.click(screen.getByRole("button", { name: "Save item" }));
     await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledTimes(1), {
       timeout: 7000,
     });
@@ -299,7 +299,7 @@ describe("lead-form draft: autosave cadence", () => {
     });
     await user.clear(secondDescription);
     await user.type(secondDescription, "Local B");
-    await user.click(screen.getByRole("button", { name: "Save Item" }));
+    await user.click(screen.getByRole("button", { name: "Save item" }));
     expect(screen.getByText("Local B")).toBeInTheDocument();
 
     const savedA = {
@@ -368,7 +368,7 @@ describe("lead-form draft: autosave cadence", () => {
     });
     await user.clear(firstDescription);
     await user.type(firstDescription, "Saved A");
-    await user.click(screen.getByRole("button", { name: "Save Item" }));
+    await user.click(screen.getByRole("button", { name: "Save item" }));
     await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledTimes(1), {
       timeout: 7000,
     });
@@ -379,7 +379,7 @@ describe("lead-form draft: autosave cadence", () => {
     });
     await user.clear(secondDescription);
     await user.type(secondDescription, "Local B");
-    await user.click(screen.getByRole("button", { name: "Save Item" }));
+    await user.click(screen.getByRole("button", { name: "Save item" }));
     expect(screen.getByText("Local B")).toBeInTheDocument();
 
     const savedA = {

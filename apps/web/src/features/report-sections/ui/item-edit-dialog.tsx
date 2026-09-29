@@ -1,12 +1,14 @@
 "use client";
 
+import { useId } from "react";
+
 import { DialogSurface } from "../../../shared/ui/dialogs/dialog-surface";
 import { DocumentBodyPortal } from "../../../shared/ui/dialogs/document-body-portal";
 import { RecordDialogFooter } from "../../../shared/ui/forms/record-dialog-footer";
 import type { ParentActivityOption } from "../model/record-parent";
 import type { KanbanItem, Product, RiskEntry } from "../model/types";
 import { ItemEditDialogFields } from "./item-edit-dialog-fields";
-import { ITEM_STATUS_CHOICES } from "./item-status-choices";
+import { choicesForWeek } from "./item-status-choices";
 import { useItemEditDialog } from "./use-item-edit-dialog";
 
 const EMPTY_ACTIVITIES: readonly ParentActivityOption[] = [];
@@ -45,14 +47,19 @@ export function ItemEditDialog({ open, ...rest }: ItemEditDialogProps) {
 type ItemEditDialogContentProps = Omit<ItemEditDialogProps, "open">;
 
 function ItemEditDialogHeading({
+  id,
   headerVerb,
   parentName,
 }: {
+  readonly id: string;
   readonly headerVerb: string;
   readonly parentName: string;
 }) {
   return (
-    <h2 className="mb-4 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
+    <h2
+      id={id}
+      className="mb-4 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]"
+    >
       {headerVerb}{" "}
       {parentName ? (
         <span className="text-[var(--color-muted-foreground)]">
@@ -64,36 +71,30 @@ function ItemEditDialogHeading({
 }
 
 function ItemEditDialogContent(props: ItemEditDialogContentProps) {
+  const { activities = EMPTY_ACTIVITIES, products, week, onDelete } = props;
+  const headingId = useId();
   const {
-    activities = EMPTY_ACTIVITIES,
-    products,
-    week,
-    onCancel,
-    onDelete,
-  } = props;
-  const { dialogSurfaceRef, handleKeyDown, handleSave, headerVerb, ...fields } =
-    useItemEditDialog({ ...props, activities });
-
-  const choices =
-    week === "current"
-      ? ITEM_STATUS_CHOICES.map((choice) =>
-          choice.value === "planned"
-            ? { ...choice, label: "Not started" }
-            : choice,
-        )
-      : ITEM_STATUS_CHOICES;
+    dialogSurfaceRef,
+    handleKeyDown,
+    handleSave,
+    headerVerb,
+    requestClose,
+    discardDialog,
+    ...fields
+  } = useItemEditDialog({ ...props, activities });
 
   return (
     <DocumentBodyPortal>
       <DialogSurface
         isPending={props.isPending}
         surfaceRef={dialogSurfaceRef}
-        onDismiss={onCancel}
+        onDismiss={requestClose}
         onBackdropKeyDown={handleKeyDown}
         surfaceClassName="mx-4 w-full max-w-3xl rounded-[var(--radius)] bg-[var(--color-popover)] p-4 md:p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
-        ariaLabel={`${headerVerb} dialog`}
+        ariaLabelledBy={headingId}
       >
         <ItemEditDialogHeading
+          id={headingId}
           headerVerb={headerVerb}
           parentName={fields.parentName}
         />
@@ -103,17 +104,19 @@ function ItemEditDialogContent(props: ItemEditDialogContentProps) {
           week={week}
           products={products}
           activities={activities}
-          choices={choices}
+          choices={choicesForWeek(week)}
         />
 
         <RecordDialogFooter
-          saveLabel="Save Item"
-          onCancel={onCancel}
+          sticky
+          saveLabel="Save item"
+          onCancel={requestClose}
           onSave={handleSave}
           onDelete={onDelete}
           saveDisabled={fields.isDeadEnd}
         />
       </DialogSurface>
+      {discardDialog}
     </DocumentBodyPortal>
   );
 }

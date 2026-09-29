@@ -51,7 +51,7 @@ export function LeadFormDecisionsSection({
         background: "var(--color-success)",
         color: "var(--color-starbucks-accent)",
       }}
-      subtitle="Decisions that need leadership attention, with owner, impact, and affected stages."
+      subtitle="Decisions that need leadership attention, with impact and affected stages."
       actions={
         !isReadOnly ? (
           <LeadFormAddButton onClick={actions.addDecision}>

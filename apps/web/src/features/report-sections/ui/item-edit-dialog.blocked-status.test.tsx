@@ -27,11 +27,9 @@ describe("ItemEditDialog blocked-status boundary", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: "! In Progress" }),
+      screen.getByRole("button", { name: "In progress" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "✓ Completed" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Done" })).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "✕ Blocked" }),
     ).not.toBeInTheDocument();
@@ -57,7 +55,7 @@ describe("ItemEditDialog blocked-status boundary", () => {
     fireEvent.change(screen.getByLabelText("Product"), {
       target: { value: "product:p1" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Save Item" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save item" }));
 
     expect(onSave).not.toHaveBeenCalled();
     expect(screen.getByText("Select at least one stage.")).toBeInTheDocument();
@@ -123,7 +121,7 @@ describe("ItemEditDialog — pause reason length", () => {
     const reason = screen.getByLabelText("Pause reason *");
     const overLimit = "x".repeat(SAFE_TEXT_MAX_LENGTH + 1);
     fireEvent.change(reason, { target: { value: overLimit } });
-    fireEvent.click(screen.getByRole("button", { name: "Save Item" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save item" }));
 
     expect(onSave).not.toHaveBeenCalled();
     expect(reason).toHaveValue(overLimit);

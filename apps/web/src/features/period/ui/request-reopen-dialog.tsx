@@ -1,17 +1,13 @@
 "use client";
 
 import { MAX_REOPEN_REASON_LENGTH } from "@customreport/shared";
-import {
-  type ReactNode,
-  type RefObject,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { type ReactNode, type RefObject, useId, useRef, useState } from "react";
 
 import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";
 import { DialogSurface } from "../../../shared/ui/dialogs/dialog-surface";
 import { DocumentBodyPortal } from "../../../shared/ui/dialogs/document-body-portal";
+import { useDiscardGuard } from "../../../shared/ui/dialogs/use-discard-guard";
+import { RecordTextareaField } from "../../../shared/ui/forms/record-textarea-field";
 
 interface RequestReopenDialogProps {
   readonly open: boolean;
@@ -39,12 +35,17 @@ function RequestReopenDialogContent({
   onCancel,
 }: Omit<RequestReopenDialogProps, "open">) {
   const [reason, setReason] = useState("");
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const dialogSurfaceRef = useRef<HTMLDivElement>(null);
+  const headingId = useId();
+  const isTooLong = reason.length > MAX_REOPEN_REASON_LENGTH;
+  const { requestClose, discardDialog } = useDiscardGuard(
+    reason.trim().length > 0,
+    onCancel,
+  );
 
   // While the request is in flight the dialog stays put: no keyboard submit,
   // no Escape/backdrop dismissal — the submit cannot be abandoned mid-flight.
-  const guardedCancel = pending ? () => undefined : onCancel;
+  const guardedCancel = pending ? () => undefined : requestClose;
 
   // Escape + focus trap + restore-to-trigger via the shared primitive. The
   // content component exists only while open.
@@ -53,10 +54,9 @@ function RequestReopenDialogContent({
     onClose: guardedCancel,
     containerRef: dialogSurfaceRef,
   });
-  useFocusOnMount(textareaRef);
 
   function handleConfirm() {
-    if (pending) return;
+    if (pending || isTooLong) return;
     const trimmed = reason.trim();
     onConfirm(trimmed.length > 0 ? trimmed : undefined);
   }
@@ -72,17 +72,26 @@ function RequestReopenDialogContent({
     <DocumentBodyPortal>
       <ReopenDialogShell
         surfaceRef={dialogSurfaceRef}
+        headingId={headingId}
         pending={pending}
         onDismiss={guardedCancel}
         onKeyDown={handleKeyDown}
       >
-        <ReopenDialogHeader />
-        <ReopenReasonField
-          reason={reason}
-          onReasonChange={setReason}
-          textareaRef={textareaRef}
-          disabled={pending}
-        />
+        <ReopenDialogHeader headingId={headingId} />
+        <div className="mt-4">
+          <RecordTextareaField
+            id="reopen-reason"
+            label="Reason (optional)"
+            value={reason}
+            onChange={setReason}
+            placeholder="e.g. Forgot to add the carry-over from last week…"
+            minHeightPx={80}
+            characterLimit={MAX_REOPEN_REASON_LENGTH}
+            fill={false}
+            focusOnMount
+            disabled={pending}
+          />
+        </div>
         {error && (
           <p
             role="alert"
@@ -94,10 +103,12 @@ function RequestReopenDialogContent({
         <ReopenDialogFootnote />
         <ReopenDialogActions
           pending={pending}
-          onCancel={onCancel}
+          sendDisabled={isTooLong}
+          onCancel={requestClose}
           onConfirm={handleConfirm}
         />
       </ReopenDialogShell>
+      {discardDialog}
     </DocumentBodyPortal>
   );
 }
@@ -106,12 +117,14 @@ function RequestReopenDialogContent({
 // the surface are stopped so they never reach it.
 function ReopenDialogShell({
   surfaceRef,
+  headingId,
   pending,
   onDismiss,
   onKeyDown,
   children,
 }: {
   readonly surfaceRef: RefObject<HTMLDivElement | null>;
+  readonly headingId: string;
   readonly pending: boolean;
   readonly onDismiss: () => void;
   readonly onKeyDown: (e: React.KeyboardEvent) => void;
@@ -124,30 +137,21 @@ function ReopenDialogShell({
       onDismiss={onDismiss}
       onBackdropKeyDown={onKeyDown}
       surfaceClassName="mx-4 w-full max-w-lg rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-2xl"
-      ariaLabel="Request Reopen dialog"
+      ariaLabelledBy={headingId}
     >
       {children}
     </DialogSurface>
   );
 }
 
-// Pins initial focus to the note field: the shared focus primitive lands on the
-// first focusable, which is not what this dialog is for. Deferred a frame so
-// the portal is mounted first.
-function useFocusOnMount(ref: RefObject<HTMLTextAreaElement | null>) {
-  useEffect(() => {
-    const id = requestAnimationFrame(() => {
-      ref.current?.focus();
-    });
-    return () => cancelAnimationFrame(id);
-  }, [ref]);
-}
-
-function ReopenDialogHeader() {
+function ReopenDialogHeader({ headingId }: { readonly headingId: string }) {
   return (
     <>
-      <h2 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-        Request Reopen
+      <h2
+        id={headingId}
+        className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]"
+      >
+        Request reopen
       </h2>
       <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
         Ask Head to unlock this section. A short note about what you need to
@@ -166,58 +170,16 @@ function ReopenDialogFootnote() {
   );
 }
 
-interface ReopenReasonFieldProps {
-  readonly reason: string;
-  readonly onReasonChange: (next: string) => void;
-  readonly textareaRef: RefObject<HTMLTextAreaElement | null>;
-  readonly disabled: boolean;
-}
-
-function ReopenReasonField({
-  reason,
-  onReasonChange,
-  textareaRef,
-  disabled,
-}: ReopenReasonFieldProps) {
-  return (
-    <div className="mt-4">
-      <label
-        htmlFor="reopen-reason"
-        className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
-      >
-        Reason{" "}
-        <span className="font-normal text-[var(--color-muted-foreground)]">
-          (optional, max {MAX_REOPEN_REASON_LENGTH} chars)
-        </span>
-      </label>
-      <textarea
-        id="reopen-reason"
-        name="reopenReason"
-        autoComplete="off"
-        ref={textareaRef}
-        disabled={disabled}
-        className="w-full resize-y rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-card)] px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_var(--color-ring)] focus:outline-none"
-        style={{ minHeight: "80px" }}
-        maxLength={MAX_REOPEN_REASON_LENGTH}
-        value={reason}
-        onChange={(e) => onReasonChange(e.target.value)}
-        placeholder="e.g. Forgot to add the carry-over from last week."
-      />
-      <div className="mt-1 text-right text-[11px] text-[var(--color-muted-foreground)]">
-        {reason.length}/{MAX_REOPEN_REASON_LENGTH}
-      </div>
-    </div>
-  );
-}
-
 interface ReopenDialogActionsProps {
   readonly pending: boolean;
+  readonly sendDisabled: boolean;
   readonly onCancel: () => void;
   readonly onConfirm: () => void;
 }
 
 function ReopenDialogActions({
   pending,
+  sendDisabled,
   onCancel,
   onConfirm,
 }: ReopenDialogActionsProps) {
@@ -234,11 +196,11 @@ function ReopenDialogActions({
       <button
         type="button"
         onClick={onConfirm}
-        disabled={pending}
+        disabled={pending || sendDisabled}
         aria-busy={pending || undefined}
         className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[40px] items-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-starbucks-accent)] disabled:opacity-50"
       >
-        {pending ? "Sending…" : "Send Request"}
+        {pending ? "Sending…" : "Send request"}
       </button>
       {pending ? (
         <span className="sr-only" role="status" aria-live="polite">

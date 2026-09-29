@@ -1,6 +1,11 @@
 "use client";
 
-import type { KeyboardEventHandler, ReactNode, RefObject } from "react";
+import {
+  type KeyboardEventHandler,
+  type ReactNode,
+  type RefObject,
+  useId,
+} from "react";
 
 import { DialogSurface } from "../../../shared/ui/dialogs/dialog-surface";
 import { DocumentBodyPortal } from "../../../shared/ui/dialogs/document-body-portal";
@@ -51,6 +56,7 @@ function DecisionDialogShell({
   readonly onKeyDown: KeyboardEventHandler<HTMLDivElement>;
   readonly children: ReactNode;
 }) {
+  const headingId = useId();
   return (
     <DialogSurface
       isPending={isPending}
@@ -58,9 +64,12 @@ function DecisionDialogShell({
       onDismiss={onCancel}
       onBackdropKeyDown={onKeyDown}
       surfaceClassName="mx-4 w-full max-w-3xl rounded-[var(--radius)] bg-[var(--color-popover)] p-4 md:p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
-      ariaLabel={`${headerVerb} dialog`}
+      ariaLabelledBy={headingId}
     >
-      <h2 className="mb-4 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
+      <h2
+        id={headingId}
+        className="mb-4 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]"
+      >
         {headerVerb}
       </h2>
       {children}
@@ -89,6 +98,7 @@ function DecisionEditDialogContent({
     defaultProductId,
     onSave,
     onCancel,
+    isPending,
   });
 
   return (
@@ -97,7 +107,7 @@ function DecisionEditDialogContent({
         isPending={isPending}
         surfaceRef={dialog.dialogSurfaceRef}
         headerVerb={dialog.headerVerb}
-        onCancel={onCancel}
+        onCancel={dialog.requestClose}
         onKeyDown={dialog.handleKeyDown}
       >
         {/* The risk-dialog layout keeps prose on the left and product/stage
@@ -109,13 +119,15 @@ function DecisionEditDialogContent({
         />
 
         <RecordDialogFooter
-          saveLabel="Save Decision"
-          onCancel={onCancel}
+          sticky
+          saveLabel="Save decision"
+          onCancel={dialog.requestClose}
           onSave={dialog.handleSave}
           onDelete={onDelete}
           saveDisabled={dialog.isDeadEnd}
         />
       </DecisionDialogShell>
+      {dialog.discardDialog}
     </DocumentBodyPortal>
   );
 }

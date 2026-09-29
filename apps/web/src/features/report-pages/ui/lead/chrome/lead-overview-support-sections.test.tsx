@@ -114,7 +114,7 @@ describe("LeadOverviewSupportSections", () => {
     );
     await user.click(screen.getByRole("button", { name: "+ Add Risk" }));
     const dialog = await screen.findByRole("dialog", {
-      name: "Add Risk dialog",
+      name: /^Add Risk/,
     });
     expect(
       within(dialog).getByRole("option", { name: "Ops rotation" }),
@@ -157,7 +157,7 @@ describe("LeadOverviewSupportSections", () => {
     ).toHaveAttribute("aria-expanded", "false");
     await user.click(screen.getByRole("button", { name: "+ Add Risk" }));
 
-    await screen.findByRole("dialog", { name: "Add Risk dialog" });
+    await screen.findByRole("dialog", { name: /^Add Risk/ });
     await waitFor(() =>
       expect(
         screen.getByRole("button", { name: "Collapse Risks & Blockers" }),

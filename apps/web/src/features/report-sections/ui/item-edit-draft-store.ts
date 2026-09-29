@@ -59,6 +59,7 @@ export function createItemEditDraftStore(args: ItemEditDraftSeed) {
       stageNames: [...(args.item?.stageNames ?? [])],
     },
   };
+  const baseline = state.snapshot;
   const listeners = new Set<() => void>();
   const update = <Key extends keyof ItemEditDraftFields>(
     key: Key,
@@ -72,6 +73,7 @@ export function createItemEditDraftStore(args: ItemEditDraftSeed) {
   };
   return {
     initial,
+    baseline,
     isCreate,
     getSnapshot: () => state.snapshot,
     subscribe: (listener: () => void) => {

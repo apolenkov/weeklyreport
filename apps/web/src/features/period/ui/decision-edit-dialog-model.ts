@@ -26,6 +26,7 @@ export interface UseDecisionEditDialogArgs {
   readonly defaultProductId?: string | undefined;
   readonly onSave: (next: DecisionEntry) => void;
   readonly onCancel: () => void;
+  readonly isPending?: boolean | undefined;
 }
 
 export interface DecisionDialogModel {

@@ -636,9 +636,7 @@ describe("LeadForm Overview", () => {
     expect(
       within(editor).getByRole("textbox", { name: /Description/ }),
     ).toHaveValue("Next work");
-    await user.click(
-      within(editor).getByRole("button", { name: "✓ Completed" }),
-    );
+    await user.click(within(editor).getByRole("button", { name: "Done" }));
     await user.click(
       within(editor).getByRole("button", { name: "Save update" }),
     );
@@ -686,9 +684,7 @@ describe("LeadForm Overview", () => {
     });
     // A hidden legacy next-step commitment blocks Completed in the editor and
     // points at More actions → Update status.
-    await user.click(
-      within(editor).getByRole("button", { name: "✓ Completed" }),
-    );
+    await user.click(within(editor).getByRole("button", { name: "Done" }));
     await user.click(
       within(editor).getByRole("button", { name: "Save update" }),
     );
@@ -696,6 +692,7 @@ describe("LeadForm Overview", () => {
       "More actions → Update status",
     );
     await user.click(within(editor).getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByRole("button", { name: "Discard" }));
 
     const settled = await itemPreview("Current work");
     await user.click(within(settled).getByText("More actions"));
@@ -1251,6 +1248,7 @@ describe("LeadForm Overview", () => {
     );
     await user.type(screen.getByLabelText(/Description \*/i), " unsaved");
     await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Discard" }));
     expect(
       screen.getByRole("button", { name: "Update progress for Current work" }),
     ).toHaveFocus();
@@ -1553,7 +1551,7 @@ describe("LeadForm Overview", () => {
         name: "Update progress for Current work",
       }),
     );
-    await user.click(screen.getByRole("button", { name: "! In Progress" }));
+    await user.click(screen.getByRole("button", { name: "In progress" }));
     await user.click(screen.getByRole("button", { name: "Save update" }));
 
     await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
@@ -1796,12 +1794,12 @@ describe("LeadForm Overview", () => {
   );
 
   it.each([
-    ["current", "next", "in_progress", "! In Progress"],
-    ["next", "current", "in_progress", "! In Progress"],
-    ["current", "next", "paused", "‖ Paused"],
-    ["next", "current", "paused", "‖ Paused"],
-    ["current", "next", "postponed", "» Postponed"],
-    ["next", "current", "postponed", "» Postponed"],
+    ["current", "next", "in_progress", "In progress"],
+    ["next", "current", "in_progress", "In progress"],
+    ["current", "next", "paused", "Paused"],
+    ["next", "current", "paused", "Paused"],
+    ["current", "next", "postponed", "Postponed"],
+    ["next", "current", "postponed", "Postponed"],
   ] as const)(
     "keeps %s status %s selected while moving to %s",
     async (source, target, status, statusLabel) => {

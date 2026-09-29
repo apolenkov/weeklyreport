@@ -154,21 +154,21 @@ const cases = [
   {
     kind: "item",
     label: /Description/,
-    saveLabel: "Save Item",
+    saveLabel: "Save item",
     field: "items",
     textKey: "text",
   },
   {
     kind: "risk",
     label: /^Risk/,
-    saveLabel: "Save Risk",
+    saveLabel: "Save risk",
     field: "risks",
     textKey: "risk",
   },
   {
     kind: "decision",
     label: /^Decision/,
-    saveLabel: "Save Decision",
+    saveLabel: "Save decision",
     field: "decisions",
     textKey: "text",
   },
@@ -326,7 +326,7 @@ describe("slide conflict through its real section query producer", () => {
         expect(screen.getByTestId("read-state")).toHaveTextContent("loaded"),
       );
       fireEvent.click(screen.getByRole("button", { name: "Open loaded item" }));
-      fireEvent.click(screen.getByRole("button", { name: "Save Item" }));
+      fireEvent.click(screen.getByRole("button", { name: "Save item" }));
       await waitFor(() => expect(reads).toBe(2));
       expect(toastError).not.toHaveBeenCalled();
       await act(async () => {

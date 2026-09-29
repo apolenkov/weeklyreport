@@ -297,4 +297,22 @@ describe("ConfirmationDialog", () => {
     expect(onClose).not.toHaveBeenCalled();
     expect(onConfirm).not.toHaveBeenCalled();
   });
+
+  it("shows the pending label instead of the confirm label while pending", () => {
+    render(
+      <ConfirmationDialog
+        open={true}
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+        title="Submit?"
+        description="Sure?"
+        confirmLabel="Submit"
+        pendingLabel="Submitting…"
+        isPending
+      />,
+    );
+    const button = screen.getByRole("button", { name: /Submitting…/ });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("aria-busy", "true");
+  });
 });

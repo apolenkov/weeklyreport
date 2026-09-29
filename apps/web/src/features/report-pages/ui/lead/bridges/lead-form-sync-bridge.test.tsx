@@ -180,7 +180,7 @@ describe("LeadFormSyncBridge", () => {
       screen.getByRole("button", { name: /Quick-add Blocker/i }),
     );
 
-    await screen.findByRole("dialog", { name: /Add Risk dialog/i });
+    await screen.findByRole("dialog", { name: /^Add Risk/ });
     expect(screen.getByRole("button", { name: /Blocked/i })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -204,17 +204,17 @@ describe("LeadFormSyncBridge", () => {
     await user.click(
       screen.getByRole("button", { name: /Quick-add Blocker/i }),
     );
-    await screen.findByRole("dialog", { name: /Add Risk dialog/i });
+    await screen.findByRole("dialog", { name: /^Add Risk/ });
     // The prefill (signal 1) stays set in the persistent parent.
     await user.click(screen.getByRole("button", { name: /^Cancel$/i }));
     expect(
-      screen.queryByRole("dialog", { name: /Add Risk dialog/i }),
+      screen.queryByRole("dialog", { name: /^Add Risk/ }),
     ).not.toBeInTheDocument();
 
     // Remount the bridge; the still-set prefill must NOT reopen the dialog.
     await user.click(screen.getByRole("button", { name: /Remount bridge/i }));
     expect(
-      screen.queryByRole("dialog", { name: /Add Risk dialog/i }),
+      screen.queryByRole("dialog", { name: /^Add Risk/ }),
     ).not.toBeInTheDocument();
 
     // A genuine later quick-add still opens (guard advances on strict increase).
@@ -222,7 +222,7 @@ describe("LeadFormSyncBridge", () => {
       screen.getByRole("button", { name: /Quick-add Blocker/i }),
     );
     expect(
-      await screen.findByRole("dialog", { name: /Add Risk dialog/i }),
+      await screen.findByRole("dialog", { name: /^Add Risk/ }),
     ).toBeInTheDocument();
   });
 
@@ -348,7 +348,7 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
     const devCheckbox = screen.getByRole("checkbox", { name: "Dev" });
     await user.click(devCheckbox);
 
-    await user.click(screen.getByRole("button", { name: /Save Risk/i }));
+    await user.click(screen.getByRole("button", { name: /Save risk/i }));
 
     // The Dev chip renders blocked via the render-time floor; Planning (locked)
     // and the uncovered Testing chip stay at their explicit on-track.
@@ -403,7 +403,7 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
     // StageMultiSelect renders "Applied automatically" (non-interactive) for
     // a single stage, so there is no checkbox to click.
 
-    await user.click(screen.getByRole("button", { name: /Save Risk/i }));
+    await user.click(screen.getByRole("button", { name: /Save risk/i }));
 
     // Planning is locked-ownership — the floor never touches it, and nothing is
     // persisted onto the products.
@@ -463,7 +463,7 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
     await user.type(screen.getByLabelText(/^Risk \*/i), "Product-wide risk");
     await user.type(screen.getByLabelText(/^Impact \*/i), "Broad impact");
     await user.type(screen.getByLabelText(/^Mitigation \*/i), "Escalate");
-    await user.click(screen.getByRole("button", { name: /Save Risk/i }));
+    await user.click(screen.getByRole("button", { name: /Save risk/i }));
 
     // The risk floors the empty chips for DISPLAY, but completeness reads raw —
     // so the pill is unchanged: still 1/3, still incomplete.
@@ -643,7 +643,7 @@ describe("LeadFormSyncBridge — severity floor and chip toggle", () => {
 
     // The toggle applies straight through — no menu, no risk dialog.
     expect(
-      screen.queryByRole("dialog", { name: /Add Risk dialog/i }),
+      screen.queryByRole("dialog", { name: /^Add Risk/ }),
     ).not.toBeInTheDocument();
     expect(onProductsChangeSpy).toHaveBeenCalled();
     expect(

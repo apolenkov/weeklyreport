@@ -53,7 +53,7 @@ export function DialogSurface({
       <div
         ref={surfaceRef}
         tabIndex={-1}
-        className={surfaceClassName}
+        className={`${surfaceClassName} overscroll-contain`}
         role={role}
         aria-modal="true"
         aria-busy={isPending ? true : undefined}

@@ -149,7 +149,7 @@ describe("ItemEditDialog — cross-stage product preservation", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save item/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
@@ -182,7 +182,7 @@ describe("ItemEditDialog — stage-ownership scoping", () => {
     // Locked: no checkbox exists, so the single stage cannot be deselected.
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /Save Item/i }),
+      screen.getByRole("button", { name: /Save item/i }),
     ).not.toBeDisabled();
   });
 
@@ -239,7 +239,7 @@ describe("ItemEditDialog — stage-ownership scoping", () => {
       />,
     );
 
-    const save = screen.getByRole("button", { name: "Save Item" });
+    const save = screen.getByRole("button", { name: "Save item" });
     fireEvent.click(save);
     expect(screen.getByText("Select at least one stage.")).toBeInTheDocument();
     expect(screen.getByText("Description is required")).toBeInTheDocument();
@@ -303,7 +303,7 @@ describe("ItemEditDialog — stage-ownership scoping", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: /Save Item/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Save item/i })).toBeDisabled();
     expect(
       screen.getByText(
         /no stages assigned on Payments Gateway — contact admin/i,
@@ -358,7 +358,7 @@ describe("ItemEditDialog — require a stage", () => {
     fireEvent.change(screen.getByLabelText(/Description \*/i), {
       target: { value: "An item without a stage" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save item/i }));
 
     expect(onSave).not.toHaveBeenCalled();
     expect(screen.getByText(/Select at least one stage/i)).toBeInTheDocument();
@@ -381,7 +381,7 @@ describe("ItemEditDialog — require a stage", () => {
     fireEvent.change(screen.getByLabelText(/Description \*/i), {
       target: { value: "Single-stage item" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save item/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
     // The auto-applied "Dev" stage is persisted as canonical "Development".
@@ -408,7 +408,7 @@ describe("ItemEditDialog — require a stage", () => {
     fireEvent.change(screen.getByLabelText(/Description \*/i), {
       target: { value: "Item on Testing only" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save item/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
@@ -451,7 +451,7 @@ describe("ItemEditDialog — activity parenting", () => {
     fireEvent.change(screen.getByLabelText(/Description \*/i), {
       target: { value: "Triaged 12 tickets" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save item/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
     const saved = onSave.mock.calls[0]?.[0] as KanbanItem;
@@ -526,13 +526,7 @@ describe("ItemEditDialog — status lock and blocker routing", () => {
       within(status)
         .getAllByRole("button")
         .map((button) => button.textContent),
-    ).toEqual([
-      "Not started",
-      "! In Progress",
-      "‖ Paused",
-      "» Postponed",
-      "✓ Completed",
-    ]);
+    ).toEqual(["Not started", "In progress", "Paused", "Postponed", "Done"]);
   });
 
   it("offers all progress states for next-week work", () => {
@@ -554,19 +548,13 @@ describe("ItemEditDialog — status lock and blocker routing", () => {
       within(status)
         .getAllByRole("button")
         .map((button) => button.textContent),
-    ).toEqual([
-      "○ Planned",
-      "! In Progress",
-      "‖ Paused",
-      "» Postponed",
-      "✓ Completed",
-    ]);
+    ).toEqual(["Planned", "In progress", "Paused", "Postponed", "Done"]);
   });
 
   it.each([
     { week: "next", status: "in-progress", label: /In Progress/i },
     { week: "next", status: "paused", label: /Paused/i },
-    { week: "next", status: "completed", label: /Completed/i },
+    { week: "next", status: "completed", label: /Done/i },
     { week: "current", status: "postponed", label: /Postponed/i },
   ] as const)(
     "shows and preserves $status after placement in $week",
@@ -593,7 +581,7 @@ describe("ItemEditDialog — status lock and blocker routing", () => {
       fireEvent.change(screen.getByLabelText(/Description \*/i), {
         target: { value: "Updated work description" },
       });
-      fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
+      fireEvent.click(screen.getByRole("button", { name: /Save item/i }));
 
       expect(onSave).toHaveBeenCalledExactlyOnceWith(
         expect.objectContaining({
