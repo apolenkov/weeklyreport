@@ -2,33 +2,10 @@
 
 ## Purpose
 
-Define the CI-authoritative acceptance gate for `main`.
+Define the GitLab CI lint/test gate for `main` and the acceptance evidence that
+must be collected outside CI.
 
 ## Requirements
-
-### Requirement: CI runs the complete repository acceptance gate
-
-`.github/workflows/ci.yml` MUST run for pull requests, pushes to `main`, and
-manual dispatch while it remains the authoritative gate — this requirement is
-transitional and retires when the GitLab main cutover completes. Its jobs MUST
-cover the repository's current acceptance surfaces: format, lint, OpenSpec
-validation, typecheck, unit tests, the complete workspace build, disposable
-database integration, coverage, reset safety, and production Compose builds.
-Docker target builds do not replace the complete workspace build because their
-filters may omit an independently buildable package.
-
-#### Scenario: A pull request runs the gate
-
-- **WHEN** a pull request is opened or updated
-- **THEN** CI runs the quality job including the complete workspace build, plus
-  the integration, coverage, reset, and production Compose build jobs
-- **AND** a failed job makes the workflow fail
-
-#### Scenario: A push to main runs the gate
-
-- **WHEN** a commit is pushed to `main`
-- **THEN** the same acceptance workflow runs
-- **AND** its result is the authoritative repository-level acceptance signal
 
 ### Requirement: GitLab CI carries only lint and test lanes
 
@@ -52,44 +29,21 @@ aliases.
 
 ### Requirement: Product-build evidence stays required outside CI
 
-The complete workspace build (`pnpm build`), production Compose builds, PDF
-export, and browser acceptance MUST remain required acceptance evidence,
-collected outside GitLab CI and bound to the exact source SHA. Their absence
-from `.gitlab-ci.yml` is not a waiver, and the GitHub workflow jobs that
-provide them stay until the contract gates are retargeted.
+The complete workspace build (`pnpm build`), production Compose builds, PDF export, and browser acceptance MUST remain required acceptance evidence, collected outside GitLab CI and bound to the exact source SHA. Their absence from `.gitlab-ci.yml` is not a waiver.
 
 #### Scenario: Acceptance without outside-CI build evidence
 
 - **WHEN** a candidate is proposed for `main` acceptance
-- **THEN** the required build, PDF, and browser evidence exists for the exact
-  source SHA, or acceptance fails
-
-### Requirement: CI actions are pinned and read-only by default
-
-Every `uses:` step in the current action-based CI workflow MUST reference a
-full commit SHA with its readable release tag preserved in a comment. The
-workflow default permission MUST be `contents: read`; a job that needs more
-authority MUST declare only that permission at job scope. `.gitlab-ci.yml`
-carries no `uses:` steps; its image references are versioned
-`tag@sha256:` digests held in sync by the runtime declaration gate.
-
-#### Scenario: A CI action is inspected
-
-- **WHEN** the current CI workflow is parsed
-- **THEN** every action reference is immutable and its default token is
-  read-only
+- **THEN** the required build, PDF, and browser evidence exists for the exact source SHA, or acceptance fails
 
 ### Requirement: CI does not depend on local hooks
 
-The acceptance gate MUST be complete when evaluated in a clean checkout by the
-workflow itself. No local Git hook, opt-out variable, or developer-machine state
-may be required for CI acceptance.
+The lint/test lanes MUST be complete when evaluated in a clean checkout by `.gitlab-ci.yml` itself. No local hook, opt-out variable, or developer-machine state may be required for CI acceptance.
 
 #### Scenario: A clean runner evaluates the repository
 
-- **WHEN** the CI workflow runs in a fresh runner checkout
-- **THEN** all required checks execute from the workflow and do not invoke a
-  local Git hook
+- **WHEN** the GitLab pipeline runs in a fresh job checkout
+- **THEN** all required lint and test checks execute from `.gitlab-ci.yml` and do not invoke a local hook
 
 ### Requirement: Web typecheck covers maintained TypeScript entrypoints
 
@@ -129,3 +83,12 @@ The production output gate MUST reject a missing or non-file runtime entrypoint.
 
 - **WHEN** the selected mode has every required regular entrypoint file and satisfies existing output policy checks
 - **THEN** the production output gate succeeds
+
+### Requirement: CI images are pinned by digest
+
+Every image referenced by `.gitlab-ci.yml` MUST be a versioned `tag@sha256:` digest reference, held in sync with the runtime declarations by the runtime declaration gate.
+
+#### Scenario: A CI image is inspected
+
+- **WHEN** `.gitlab-ci.yml` job and service images are listed
+- **THEN** every reference is immutable and reviewed by the external-image policy

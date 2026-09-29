@@ -38,7 +38,6 @@ const apiPackageJson = JSON.parse(read("apps/api/package.json")) as {
 const webPackageJson = JSON.parse(read("apps/web/package.json")) as {
   readonly scripts: Readonly<Record<string, string | undefined>>;
 };
-const workflow = read(".github/workflows/ci.yml");
 const gitlabContent = read(".gitlab-ci.yml");
 const gitlabCiDoc = read("docs/gitlab-ci.md");
 const vitestBase = read("vitest.base.config.ts");
@@ -467,12 +466,6 @@ void test("operations documentation inventories integration and coverage lanes",
     /`api-integration` lane[\s\S]*API coverage thresholds/u,
   );
   assert.match(operations, /`coverage` lane[\s\S]*Web coverage/u);
-  assert.match(workflow, /api-integration:/);
-  assert.match(workflow, /coverage:/);
-  assert.equal(
-    [...workflow.matchAll(/@customreport\/api test:coverage/gu)].length,
-    1,
-  );
   assert.match(gitlabContent, /\napi-integration:/u);
   assert.match(gitlabContent, /\nmigrate-reset:/u);
   assert.match(gitlabContent, /\nnode-toolchain:/u);
@@ -482,11 +475,9 @@ void test("operations documentation inventories integration and coverage lanes",
   );
 });
 
-void test("the CI quality lane builds every workspace", () => {
-  assert.match(workflow, /- name: Build all workspaces\s+run: pnpm build/u);
-  assert.match(operations, /quality lane[\s\S]*complete workspace build/u);
-  // The GitLab candidate carries no build lane per the owner decision; the
-  // product build is documented as required evidence outside CI instead.
+void test("the GitLab quality lane carries no product build", () => {
+  // Per the owner decision the product build is documented as required
+  // evidence outside CI instead.
   const gitlabQuality = gitlabContent.slice(
     gitlabContent.indexOf("\nquality:"),
     gitlabContent.indexOf("\ndependency-scan:"),
@@ -499,10 +490,6 @@ void test("Vitest CI output has one labelled summary contract", () => {
   assert.match(vitestBase, /jobSummary:\s*\{\s*enabled:\s*false\s*\}/u);
   assert.match(vitestBase, /displayAnnotations:\s*true/u);
   assert.match(vitestBase, /VITEST_JSON_OUTPUT_FILE/u);
-  assert.match(workflow, /Publish unit test summary/u);
-  assert.match(workflow, /Publish API verification summary/u);
-  assert.match(workflow, /Publish coverage summary/u);
-  assert.match(workflow, /coverage-summary\.json/u);
   assert.match(gitlabContent, /VITEST_JSON_OUTPUT_FILE/u);
   assert.match(gitlabContent, /ci-reports\/api-verification-summary\.md/u);
   assert.match(gitlabContent, /ci-reports\/web-coverage-summary\.md/u);

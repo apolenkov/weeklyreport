@@ -31,24 +31,24 @@ the acceptance authority; no custom replacement gate substitutes for them.
 
 ## Lifecycle control map
 
-| Stage   | Present control                                                                                                                         | Acceptance evidence now                                                     | First-production prerequisite                                                                                                          |
-| ------- | --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Plan    | OpenSpec changes and durable specifications define non-trivial behavior.                                                                | Strict validation and traceable tasks.                                      | Production ownership, risk acceptance, and release boundary are named.                                                                 |
-| Build   | Node and pnpm are pinned; frozen lockfile and explicit build-script allowlists are used; runtime images and Actions are pinned.         | Reproducible install and production image build on an exact commit.         | Build once on a trusted hosted runner; retain immutable image digest.                                                                  |
-| Verify  | Lint, format, typecheck, colocated unit/integration tests, migration reset, and Docker build exist.                                     | Exact commands, exit codes, source identity, failures, and artifacts.       | Stable required checks protect `main`; mandatory product suites pass on the release candidate.                                         |
-| Secure  | Dependabot covers npm, Docker, and Actions; a scheduled production-dependency audit runs; workflow tokens are read-only by declaration. | Workflow source inspection and audit results.                               | Verify secret scanning, push protection, Dependabot security updates, CodeQL, dependency review, alert ownership, and incident access. |
-| Release | Tags exist, but there is no verified registry publication or release process.                                                           | No release claim is allowed yet.                                            | Publish one image digest, SBOM, signed provenance, migration list, and immutable release manifest.                                     |
-| Deploy  | Production Compose topology and a runbook exist; no production target exists.                                                           | Local rehearsal only, explicitly labelled.                                  | Protected pre-production and production environments promote the same verified digest with approvals and concurrency.                  |
-| Operate | Readiness, liveness, metrics, logs, traces, error collection, dashboards, and alert-rule material exist.                                | Source-bound runtime evidence and controlled local observability rehearsal. | Owned user SLIs/SLOs, loaded rules, real receiver, runbook links, retention, and a tested end-to-end alert.                            |
-| Recover | Periodic local dumps, freshness checks, restore guard, transactional restore, and migration guidance exist.                             | Isolated local restore evidence.                                            | Encrypted off-site copy, access audit, retention, scheduled restore drill, and measured RPO/RTO.                                       |
-| Learn   | Findings feed OpenSpec, tests, architecture decisions, and current runbooks.                                                            | Each accepted finding has an owner, disposition, and regression proof.      | Release and incident reviews update controls, SLOs, and runbooks without hiding residual risk.                                         |
+| Stage   | Present control                                                                                                            | Acceptance evidence now                                                     | First-production prerequisite                                                                                                                  |
+| ------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Plan    | OpenSpec changes and durable specifications define non-trivial behavior.                                                   | Strict validation and traceable tasks.                                      | Production ownership, risk acceptance, and release boundary are named.                                                                         |
+| Build   | Node and pnpm are pinned; frozen lockfile and explicit build-script allowlists are used; runtime and CI images are pinned. | Reproducible install and production image build on an exact commit.         | Build once on a trusted hosted runner; retain immutable image digest.                                                                          |
+| Verify  | Lint, format, typecheck, colocated unit/integration tests, migration reset, and Docker build exist.                        | Exact commands, exit codes, source identity, failures, and artifacts.       | Stable required checks protect `main`; mandatory product suites pass on the release candidate.                                                 |
+| Secure  | A scheduled production-dependency audit runs in GitLab CI; automated dependency updates are not yet configured.            | Pipeline source inspection and audit results.                               | Verify secret scanning, push protection, dependency-update automation, code scanning, dependency review, alert ownership, and incident access. |
+| Release | Tags exist, but there is no verified registry publication or release process.                                              | No release claim is allowed yet.                                            | Publish one image digest, SBOM, signed provenance, migration list, and immutable release manifest.                                             |
+| Deploy  | Production Compose topology and a runbook exist; no production target exists.                                              | Local rehearsal only, explicitly labelled.                                  | Protected pre-production and production environments promote the same verified digest with approvals and concurrency.                          |
+| Operate | Readiness, liveness, metrics, logs, traces, error collection, dashboards, and alert-rule material exist.                   | Source-bound runtime evidence and controlled local observability rehearsal. | Owned user SLIs/SLOs, loaded rules, real receiver, runbook links, retention, and a tested end-to-end alert.                                    |
+| Recover | Periodic local dumps, freshness checks, restore guard, transactional restore, and migration guidance exist.                | Isolated local restore evidence.                                            | Encrypted off-site copy, access audit, retention, scheduled restore drill, and measured RPO/RTO.                                               |
+| Learn   | Findings feed OpenSpec, tests, architecture decisions, and current runbooks.                                               | Each accepted finding has an owner, disposition, and regression proof.      | Release and incident reviews update controls, SLOs, and runbooks without hiding residual risk.                                                 |
 
 ## Current hosting and CI boundary
 
 The only configured remote is the private GitLab project (decision-067).
 `.gitlab-ci.yml` runs the lint/test lanes described in `docs/gitlab-ci.md`;
-`.github/workflows/` still declares the fuller GitHub pipeline (build, Docker
-build) but no GitHub remote exists, so it is declaration only. Repository files
+the production build, Docker build, PDF export, and browser acceptance are not
+CI lanes. Repository files
 do not prove that `main` is protected or that any platform security setting is
 enabled. Those external settings are **unverified** until an authorized
 read-back confirms them.
@@ -65,8 +65,8 @@ source-bound evidence:
 - [ ] `main` is protected by a rule or ruleset with stable required CI and
       security checks, review/conversation rules, no force push or deletion,
       and recorded bypass actors.
-- [ ] Secret scanning, push protection, Dependabot alerts/security updates,
-      CodeQL, and pull-request dependency review are verified and their initial
+- [ ] Secret scanning, push protection, dependency-update automation,
+      code scanning, and merge-request dependency review are verified and their initial
       findings are triaged.
 - [ ] A trusted build publishes one immutable image digest with an SPDX or
       CycloneDX SBOM and signed provenance; deployment verifies the digest and

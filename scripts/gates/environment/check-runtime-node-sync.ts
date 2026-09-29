@@ -43,8 +43,6 @@ const ROOT_MANIFEST = "package.json";
 const WORKSPACE_MANIFEST = "pnpm-workspace.yaml";
 
 const DOCKERFILES = ["Dockerfile.api", "Dockerfile.web"];
-const ACTIONS_WORKFLOW = ".github/workflows/ci.yml";
-const DEPENDENCY_SCAN_WORKFLOW = ".github/workflows/dependency-scan.yml";
 const GITLAB_CI = ".gitlab-ci.yml";
 // Exact declaration counts written into .gitlab-ci.yml: a changed count is a
 // drift signal that must fail, not a smaller comparison set.
@@ -54,8 +52,6 @@ const GITLAB_NODE_TOOLCHAIN_TARBALL_COUNT = 1;
 const GITLAB_NODE_TOOLCHAIN_DIST_COUNT = 1;
 const GITLAB_PNPM_INSTALL_COUNT = 3;
 const GITLAB_PNPM_ASSERT_COUNT = 3;
-const EXPECTED_ACTION_SETUP_COUNT = 4;
-const ACTION_SHA_LENGTH = 40;
 const TYPESCRIPT_SCRIPT_MANIFESTS = [
   ROOT_MANIFEST,
   "apps/api/package.json",
@@ -94,7 +90,7 @@ const catalogTypesNodeMajor = (): Declaration => ({
   ),
 });
 
-// The GitLab migration candidate writes the same versions into its job image,
+// .gitlab-ci.yml writes the same versions into its job image,
 // global pnpm installs, and the checksum-verified Node toolchain tarball that
 // database jobs unpack. Each pattern is paired with the count the file must
 // contain, so a removed or restyled declaration fails as unreadable rather
@@ -209,36 +205,7 @@ const nodeEngineOk = (): boolean => {
 const majorless = (packageManager: string): string | undefined =>
   /^pnpm@(\d+\.\d+\.\d+)$/.exec(packageManager)?.[1];
 
-const workflowPnpmPins = (
-  file: string,
-  expectedSetupCount: number,
-): readonly Declaration[] => {
-  const content = read(file);
-  const setupCount = [...content.matchAll(/- name: Setup pnpm/g)].length;
-  const steps = [
-    ...content.matchAll(
-      /- name: Setup pnpm\n\s+uses: pnpm\/action-setup@([0-9a-f]{40}) # v(\d+\.\d+\.\d+)\n\s+with:\n\s+version: (\d+\.\d+\.\d+)/g,
-    ),
-  ];
-  const pins = steps.map((step) => {
-    const actionSha = step[1];
-    const actionVersion = step[2];
-    return actionSha?.length === ACTION_SHA_LENGTH &&
-      actionVersion !== undefined
-      ? step[3]
-      : undefined;
-  });
-
-  return Array.from({ length: expectedSetupCount }, (_, index) => {
-    return {
-      source: `${file} Setup pnpm ${index + 1}`,
-      value: setupCount === expectedSetupCount ? pins[index] : undefined,
-    };
-  });
-};
-
-// The action setup stays SHA-pinned and its requested pnpm version must agree
-// with the repository packageManager pin.
+// Every pnpm declaration must agree with the repository packageManager pin.
 const pnpmPins = (): readonly Declaration[] => [
   {
     source: "package.json packageManager",
@@ -248,8 +215,6 @@ const pnpmPins = (): readonly Declaration[] => [
     source: `${file} npm install -g`,
     value: /npm install -g pnpm@(\d+\.\d+\.\d+)/.exec(read(file))?.[1],
   })),
-  ...workflowPnpmPins(ACTIONS_WORKFLOW, EXPECTED_ACTION_SETUP_COUNT),
-  ...workflowPnpmPins(DEPENDENCY_SCAN_WORKFLOW, 1),
   ...gitlabPnpmDeclarations(),
 ];
 
