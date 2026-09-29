@@ -35,3 +35,13 @@ None.
 ## Impact
 
 Primarily affects the complete Lead authoring route and its Status Overview editor bindings. Shared/API persistence and validation changes are permitted only where source tracing proves the current canonical path rejects the required idempotent week transition; no dependency or destructive database operation is planned.
+
+## Status note
+
+Implementation is complete, but the lead-status-overview and
+unified-report-authoring deltas were never merged into `openspec/specs` and
+partly conflict with the later `simplify-lead-weekly-cycle` (primary `Edit`
+action versus one progress interaction). The carry-over-automation,
+record-status-derivation, and "Tracked work" deltas were dropped: the first two
+were superseded or already present, the last by `simplify-lead-weekly-cycle`.
+Reconcile the remaining deltas with the current specs before archiving.
