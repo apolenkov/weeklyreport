@@ -1,5 +1,7 @@
 # Viewer is a status observer of the current period
 
+**Date:** 2026-06-25
+
 **Status:** accepted
 
 ## Context

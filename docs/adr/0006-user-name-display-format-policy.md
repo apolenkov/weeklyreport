@@ -1,5 +1,7 @@
 # User-name display format policy
 
+**Date:** 2026-06-25
+
 **Status:** accepted and implemented.
 
 Names use one form per affordance:
