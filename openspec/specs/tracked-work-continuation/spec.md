@@ -1,8 +1,9 @@
-## Purpose
+# tracked-work-continuation Specification
 
+## Purpose
 Let leads continue and develop the same tracked work across weekly report projections while preserving results, comments and immutable published history.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Current to Next preserves the Current result
 
