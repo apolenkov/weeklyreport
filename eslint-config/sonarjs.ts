@@ -1,6 +1,6 @@
 // SonarJS rule family — one cohesive policy module. Kept out of
 // eslint.config.ts so the lint policy hub stays a composition root instead of
-// one 1,200-line file owning every family's rule selection.
+// owning every family's rule selection.
 
 import type { Linter } from "eslint";
 import sonarjs from "eslint-plugin-sonarjs";
@@ -35,8 +35,7 @@ export const sonarjsConfig: Linter.Config = {
     "sonarjs/deprecation": "off", // covered by the TypeScript deprecation rule
     "sonarjs/prefer-read-only-props": "off", // suggestion-only React prop immutability is not part of the project contract
     "sonarjs/no-nested-conditional": "off", // nested ternaries are idiomatic in JSX rendering; cognitive complexity bounds nesting
-    // Complexity remains bounded; cohesive exceptions are documented in the
-    // relevant override while new code remains gated.
+    // Complexity stays bounded for all production code.
     "sonarjs/cognitive-complexity": ["error", COGNITIVE_COMPLEXITY_MAX],
     "sonarjs/no-nested-functions": "error",
     // Test fixtures contain synthetic IPs and secrets; the test-file override

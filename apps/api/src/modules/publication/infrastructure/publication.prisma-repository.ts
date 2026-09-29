@@ -1,6 +1,6 @@
 import type { AssembledReport } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
-import { Prisma, type Prisma as PrismaTypes } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { buildTransition } from "../../period/index.js";
@@ -13,30 +13,11 @@ import {
   reportFullIncludeForSnapshot,
   toPublishedSnapshotJson,
 } from "../../report-sections/index.js";
-import { replacePublishedProjections } from "../../search/index.js";
+import { freezePublishedSnapshot } from "../../search/index.js";
 import type {
   AutoPublishResult,
   PublicationRepository,
 } from "../application/publication.service";
-
-// Replace the guarded write's required provisional snapshot with the full
-// post-transition graph, read and frozen through the same transaction client.
-async function freezeSnapshotInTx(
-  tx: PrismaTypes.TransactionClient,
-  reportId: string,
-): Promise<AssembledReport> {
-  const row = await tx.report.findUniqueOrThrow({
-    where: { id: reportId },
-    include: reportFullIncludeForSnapshot,
-  });
-  const snapshot = buildAssembledReportFromPrismaRow(row);
-  await tx.report.update({
-    where: { id: reportId },
-    data: { publishedSnapshot: toPublishedSnapshotJson(snapshot) },
-  });
-  await replacePublishedProjections(tx, { reportId, snapshot });
-  return snapshot;
-}
 
 @Injectable()
 export class PublicationPrismaRepository implements PublicationRepository {
@@ -118,7 +99,7 @@ export class PublicationPrismaRepository implements PublicationRepository {
           // This layer only ever performs the write — the idempotent
           // no-write short-circuit lives in `publishAuto`, above it.
           wasAlreadyPublished: false,
-          report: await freezeSnapshotInTx(tx, candidate.reportId),
+          report: await freezePublishedSnapshot(tx, candidate.reportId),
         };
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },

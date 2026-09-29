@@ -11,13 +11,13 @@ import { toast } from "sonner";
 
 import { invalidateReview } from "../../../../shared/lib/query/cache-keys";
 import { useTRPC } from "../../../../shared/lib/trpc/trpc-context";
+import { ReviewCommentList } from "../../../../shared/ui/feedback/review-comment-list";
 import { RecordCommentComposer } from "./record-comment-composer";
 import {
   CommentDeleteDialog,
   type CommentFeedback,
   CommentFeedbackMessage,
 } from "./record-comment-feedback";
-import { ReviewCommentList } from "./review-comment-list";
 
 // Exactly one concrete record anchors each comment.
 export type RecordCommentAnchor =

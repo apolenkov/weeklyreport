@@ -2,8 +2,8 @@
 
 import type { SectionReviewView } from "@customreport/shared";
 
+import { ReviewCommentList } from "../../../../shared/ui/feedback/review-comment-list";
 import type { LeadReviewFeedbackRecord } from "../../../report-sections";
-import { ReviewCommentList } from "./review-comment-list";
 
 const KIND_LABEL: Record<LeadReviewFeedbackRecord["kind"], string> = {
   item: "Item",

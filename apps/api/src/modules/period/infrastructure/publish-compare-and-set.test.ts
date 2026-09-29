@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { PeriodLifecycleExpectation } from "../modules/period/domain/period-lifecycle-expectation.js";
-import { buildTransition } from "../modules/period/domain/period-transition.js";
+import type { PeriodLifecycleExpectation } from "../domain/period-lifecycle-expectation.js";
+import { buildTransition } from "../domain/period-transition.js";
 import { publishCompareAndSet } from "./publish-compare-and-set.js";
 
 const expected: PeriodLifecycleExpectation = {
