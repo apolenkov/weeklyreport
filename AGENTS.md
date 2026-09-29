@@ -87,6 +87,10 @@ pnpm spec:check         # strict validation of all durable OpenSpec specs
 - Web `http://localhost:3000`, API `http://localhost:3002`, Mailpit UI `http://localhost:8025`.
 - Dev auth: `AUTH_DEV_MODE=true` + `/auth/dev-login`; refused at boot when `NODE_ENV=production`.
 - `NEXT_PUBLIC_DEV_ROLE_SWITCHER=true` shows the dev-only role switcher.
+- When the owner asks to try the product, start it from source (`pnpm dev`),
+  offer a reset to the minimal seed through the guarded flow, report the URLs
+  and dev roles, diagnose restarts or hangs from logs, and stop the processes
+  at session end.
 - Verify that the running app includes the changed sources before browser
   acceptance. An existing Docker image may predate the change; use the source
   workflow in `docs/onboarding.md` or `pnpm dev` when appropriate.
