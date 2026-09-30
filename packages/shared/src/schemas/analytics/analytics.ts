@@ -4,6 +4,13 @@ import { trafficLightStatusSchema } from "../primitives/report-primitives.schema
 
 const isoDateOnly = z.iso.date();
 
+/** Frozen publication period dates in UTC. */
+export const analyticsPeriodSchema = z
+  .object({ periodStart: isoDateOnly, periodEnd: isoDateOnly })
+  .readonly();
+/** Readonly frozen publication period range. */
+export type AnalyticsPeriod = z.infer<typeof analyticsPeriodSchema>;
+
 /** Input window for traffic-light history (optional project/lead filter). */
 export const trafficLightHistoryInputSchema = z
   .object({
@@ -34,7 +41,7 @@ const trafficLightRowSchema = z
 /** Periods × rows history matrix for the traffic-light chart. */
 export const trafficLightHistoryOutputSchema = z
   .object({
-    periods: z.array(isoDateOnly).readonly(),
+    periods: z.array(analyticsPeriodSchema).readonly(),
     rows: z.array(trafficLightRowSchema).readonly(),
   })
   .superRefine(({ periods, rows }, context) => {
@@ -65,9 +72,9 @@ export const leadVelocityInputSchema = z
 export type LeadVelocityInput = z.infer<typeof leadVelocityInputSchema>;
 
 /** One period’s lead submission counts. */
-export const leadVelocityRowSchema = z
-  .object({
-    periodLabel: isoDateOnly,
+export const leadVelocityRowSchema = analyticsPeriodSchema
+  .unwrap()
+  .extend({
     leads: z
       .array(
         z
@@ -113,6 +120,8 @@ const periodComparisonRowSchema = z
 /** Period comparison matrix response. */
 export const periodComparisonOutputSchema = z
   .object({
+    periodA: analyticsPeriodSchema.nullable(),
+    periodB: analyticsPeriodSchema.nullable(),
     rows: z.array(periodComparisonRowSchema).readonly(),
   })
   .readonly();

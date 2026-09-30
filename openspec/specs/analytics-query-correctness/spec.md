@@ -194,3 +194,45 @@ Every successful report-publish path, including `PeriodService.publishPeriod` an
 - **WHEN** `PeriodService.publishPeriod` successfully publishes that report
 - **THEN** the matching analytics cache entries are invalidated
 - **AND** the next analytics read recomputes and does not return the cached pre-publish result
+
+### Requirement: Analytics returns the winning frozen period range
+
+The tRPC analytics procedures `trafficLightHistory`, `leadVelocity`, and
+`periodComparison` MUST return readonly ISO UTC date pairs `periodStart` and
+`periodEnd` from the same winning publication snapshot that supplies their
+cells. History periods MUST be these pairs; submission rows MUST carry both
+dates alongside leads. Comparison MUST return a pair for each populated side
+and null for a missing side. Query inputs MUST retain date-only end labels.
+Live report dates and current duration settings MUST NOT replace frozen dates.
+Existing SQL admission, frozen ownership, published lifecycle floor, and winner
+ordering by publication time, creation time, then report id MUST remain intact.
+Old nonempty response shapes MUST fail cache validation and be recomputed.
+
+#### Scenario: A manual range replaces an earlier publication
+
+- **WHEN** two admitted snapshots share a frozen UTC end day and the winning snapshot has a different start
+- **THEN** every analytics response uses the winner's two dates and values regardless of row order or non-midnight timestamps
+- **AND** mutable report dates and current duration settings do not change the returned dates
+
+#### Scenario: A cached response predates period metadata
+
+- **WHEN** an analytics cache entry contains string history periods, submission labels alone, or comparison rows without period metadata
+- **THEN** the entry is rejected and the repository recomputes a valid response
+
+### Requirement: One comparison side represents one frozen period
+
+The `periodComparison` repository MUST group validated SQL-admitted snapshots
+for each comparison side by their frozen UTC end day. More than one group MUST
+raise the existing publication snapshot integrity error. An empty side MUST
+return null metadata and empty cells. Within one group, only the existing
+winning snapshot MUST provide both the returned period pair and cells.
+
+#### Scenario: Admitted rows disagree on the frozen end day
+
+- **WHEN** either comparison side contains more than one frozen UTC end-day group
+- **THEN** comparison fails with a snapshot integrity error in either row order
+
+#### Scenario: A comparison side has no admitted publication
+
+- **WHEN** one side has no snapshots
+- **THEN** its metadata is null and its cells contain no status or risk facts

@@ -3,12 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   leadVelocityRowSchema,
   periodComparisonInputSchema,
+  periodComparisonOutputSchema,
   trafficLightHistoryInputSchema,
   trafficLightHistoryOutputSchema,
 } from "./analytics";
 
 // The ISO date rule is unexported; exercise it through every public alias that
-// uses it — the two scalar inputs, the periods[] array element, periodLabel.
+// uses it, including both dates in response periods.
 const parseByAlias = {
   periodFrom: (v: unknown) =>
     trafficLightHistoryInputSchema.safeParse({
@@ -26,9 +27,16 @@ const parseByAlias = {
       periodB: "2026-06-30",
     }),
   "periods[]": (v: unknown) =>
-    trafficLightHistoryOutputSchema.safeParse({ periods: [v], rows: [] }),
-  periodLabel: (v: unknown) =>
-    leadVelocityRowSchema.safeParse({ periodLabel: v, leads: [] }),
+    trafficLightHistoryOutputSchema.safeParse({
+      periods: [{ periodStart: v, periodEnd: v }],
+      rows: [],
+    }),
+  periodStart: (v: unknown) =>
+    leadVelocityRowSchema.safeParse({
+      periodStart: v,
+      periodEnd: v,
+      leads: [],
+    }),
 } as const;
 
 const aliases = Object.keys(parseByAlias) as (keyof typeof parseByAlias)[];
@@ -133,7 +141,10 @@ describe("trafficLightHistoryOutputSchema", () => {
   it("accepts a rectangular period-by-project matrix", () => {
     expect(
       trafficLightHistoryOutputSchema.safeParse({
-        periods: ["2026-06-19", "2026-06-26"],
+        periods: [
+          { periodStart: "2026-06-13", periodEnd: "2026-06-19" },
+          { periodStart: "2026-06-20", periodEnd: "2026-06-26" },
+        ],
         rows: [{ ...row, statuses: ["green", null] }],
       }).success,
     ).toBe(true);
@@ -144,7 +155,10 @@ describe("trafficLightHistoryOutputSchema", () => {
     { label: "excess", statuses: ["green", null, "red"] },
   ])("rejects a row with $label status cells", ({ statuses }) => {
     const result = trafficLightHistoryOutputSchema.safeParse({
-      periods: ["2026-06-19", "2026-06-26"],
+      periods: [
+        { periodStart: "2026-06-13", periodEnd: "2026-06-19" },
+        { periodStart: "2026-06-20", periodEnd: "2026-06-26" },
+      ],
       rows: [{ ...row, statuses }],
     });
 
@@ -155,4 +169,59 @@ describe("trafficLightHistoryOutputSchema", () => {
       }),
     ]);
   });
+});
+
+describe("frozen analytics period contracts", () => {
+  it("rejects old nonempty history and submission response shapes", () => {
+    expect(
+      trafficLightHistoryOutputSchema.safeParse({
+        periods: ["2026-06-19"],
+        rows: [],
+      }).success,
+    ).toBe(false);
+    expect(
+      leadVelocityRowSchema.safeParse({ periodLabel: "2026-06-19", leads: [] })
+        .success,
+    ).toBe(false);
+  });
+  it("requires comparison metadata even when no projects exist", () => {
+    expect(periodComparisonOutputSchema.safeParse({ rows: [] }).success).toBe(
+      false,
+    );
+    expect(
+      periodComparisonOutputSchema.safeParse({
+        periodA: null,
+        periodB: null,
+        rows: [],
+      }).success,
+    ).toBe(true);
+  });
+  it.each([
+    { periodStart: "2026-06-17", periodEnd: "2026-06-17" },
+    { periodStart: "2026-06-17", periodEnd: "2026-06-23" },
+    { periodStart: "2026-06-17", periodEnd: "2026-07-16" },
+    { periodStart: "2026-06-17", periodEnd: "2026-07-17" },
+    { periodStart: "2026-12-20", periodEnd: "2027-01-19" },
+    { periodStart: "2026-06-17", periodEnd: "2027-06-17" },
+  ])(
+    "accepts a manual frozen range $periodStart through $periodEnd",
+    (period) => {
+      expect(
+        trafficLightHistoryOutputSchema.safeParse({
+          periods: [period],
+          rows: [],
+        }).success,
+      ).toBe(true);
+      expect(
+        leadVelocityRowSchema.safeParse({ ...period, leads: [] }).success,
+      ).toBe(true);
+      expect(
+        periodComparisonOutputSchema.safeParse({
+          periodA: period,
+          periodB: null,
+          rows: [],
+        }).success,
+      ).toBe(true);
+    },
+  );
 });
