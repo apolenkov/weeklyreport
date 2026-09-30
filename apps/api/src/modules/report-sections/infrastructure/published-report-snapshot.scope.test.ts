@@ -5,11 +5,9 @@ import {
 } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
+import { canReadPublishedSnapshot } from "../../../test-utils/report-read-access.js";
 import { makeReportSectionReadModel } from "../../../test-utils/report-section-fixtures.js";
-import {
-  canReadPublishedSnapshot,
-  filterPublishedSnapshotForSession,
-} from "./published-report-scope.js";
+import { filterPublishedSnapshotForSession } from "./published-report-scope.js";
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
 const GROUP_A = "22222222-2222-4222-8222-222222222222";

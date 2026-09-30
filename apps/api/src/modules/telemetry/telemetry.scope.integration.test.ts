@@ -94,7 +94,9 @@ describe("Telemetry group scoping (integration)", () => {
   const repository = new TelemetryPrismaRepository(
     prisma as unknown as PrismaService,
   );
-  const service = new TelemetryService(repository);
+  const service = new TelemetryService(repository, {
+    getOrCompute: (_key, compute) => compute(),
+  });
 
   async function seedGroupB(): Promise<void> {
     await prisma.reportingGroup.create({

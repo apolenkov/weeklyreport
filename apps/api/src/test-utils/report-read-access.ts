@@ -1,11 +1,26 @@
-import type { UserSession } from "@customreport/shared";
+import type {
+  PublishedReportSnapshot,
+  UserSession,
+} from "@customreport/shared";
 
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { groupScopeFilter } from "../lib/group-scope.js";
 import {
-  canReadPublishedSnapshot,
+  filterPublishedSnapshotForSession,
   requirePublishedSnapshot,
 } from "../modules/report-sections/index.js";
+
+export function canReadPublishedSnapshot(
+  snapshot: PublishedReportSnapshot,
+  session: Parameters<typeof filterPublishedSnapshotForSession>[1],
+  mode: Parameters<typeof filterPublishedSnapshotForSession>[2] = "group",
+): boolean {
+  return (
+    session.role === "admin" ||
+    filterPublishedSnapshotForSession(snapshot, session, mode).sections.length >
+      0
+  );
+}
 
 // Per-request group-scope re-check — not a stored grant (e.g. export job
 // requestedBy), so revoked ViewerGroupAccess cannot keep reading bytes.

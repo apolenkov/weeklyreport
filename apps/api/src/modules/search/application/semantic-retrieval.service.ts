@@ -11,7 +11,7 @@ import type {
 } from "./semantic-embedding.repository.js";
 import type { SemanticIndexEnqueuer } from "./semantic-index.enqueuer.js";
 import type { SemanticIndexRuntimeContext } from "./semantic-index.enqueuer.js";
-import type { SemanticIndexLocator } from "./semantic-index.source-loader.js";
+import { locatorFor } from "./semantic-preparation.documents.js";
 
 export type SemanticRetrievalConfig = Readonly<{
   configurationRevisionId: string;
@@ -100,19 +100,6 @@ const groupByHash = (
 const hashSet = (groups: readonly SemanticGroup[]): readonly string[] =>
   groups.map(({ input }) => input.contentHash);
 
-const indexLocator = (
-  candidate: SearchCandidate,
-  input: SemanticInput,
-): SemanticIndexLocator => ({
-  source: candidate.context.source,
-  reportId: candidate.context.reportId,
-  sectionId: candidate.context.sectionId,
-  occurrenceId: candidate.identity.occurrenceId,
-  recordKind: input.kind,
-  recordId: candidate.identity.recordId,
-  expectedContentHash: input.contentHash,
-});
-
 const enqueueMissing = async (
   groups: readonly SemanticGroup[],
   config: SemanticRetrievalConfig,
@@ -124,7 +111,7 @@ const enqueueMissing = async (
   await Promise.all(
     groups.flatMap(({ input, candidates }) =>
       candidates.map((candidate) =>
-        config.enqueuer.enqueue(indexLocator(candidate, input), context),
+        config.enqueuer.enqueue(locatorFor(candidate, input), context),
       ),
     ),
   );

@@ -1,4 +1,5 @@
 import { filterSectionToSharedProducts } from "../../report-sections/index.js";
+import { uniqueStrings } from "../domain/entity-resolver.catalog.js";
 import type {
   ReportOccurrence,
   SectionScope,
@@ -9,21 +10,6 @@ export type AuthorizedReportRetrieval = Readonly<{
   occurrences: readonly ReportOccurrence[];
   sectionScopes: readonly SectionScope[];
 }>;
-
-type ReportAccess = Readonly<{
-  reportId: string;
-  hasOwnSection: boolean;
-}>;
-
-const unique = (values: readonly string[]): readonly string[] =>
-  values.filter((value, index) => values.indexOf(value) === index);
-
-const accessByReport = (
-  accesses: readonly ReportAccess[],
-): ReadonlyMap<string, boolean> =>
-  new Map(
-    accesses.map(({ reportId, hasOwnSection }) => [reportId, hasOwnSection]),
-  );
 
 const sharedProductsByAuthor = (
   entries: readonly (readonly [string, readonly string[]])[],
@@ -63,13 +49,13 @@ const authorizedSection = (
 const authorizedOccurrence = (
   actorId: string,
   occurrence: ReportOccurrence,
-  reportAccess: ReadonlyMap<string, boolean>,
+  reportAccess: ReadonlySet<string>,
   sharedProducts: ReadonlyMap<string, ReadonlySet<string>>,
 ): Readonly<{
   occurrence: ReportOccurrence;
   scopes: readonly SectionScope[];
 }> | null => {
-  if (!reportAccess.get(occurrence.reportId)) return null;
+  if (!reportAccess.has(occurrence.reportId)) return null;
 
   const scopes = occurrence.sections.flatMap((section) => {
     const scope = authorizedSection(
@@ -101,10 +87,10 @@ export async function authorizeReportOccurrences(
   actorId: string,
   occurrences: readonly ReportOccurrence[],
 ): Promise<AuthorizedReportRetrieval> {
-  const reportIds = unique(
+  const reportIds = uniqueStrings(
     occurrences.map((occurrence) => occurrence.reportId),
   );
-  const candidateForeignAuthorIds = unique(
+  const candidateForeignAuthorIds = uniqueStrings(
     occurrences.flatMap((occurrence) =>
       occurrence.sections
         .filter((section) => section.authorId !== actorId)
@@ -116,19 +102,10 @@ export async function authorizeReportOccurrences(
     reportIds,
     candidateForeignAuthorIds,
   );
-  const accesses = reportIds.map(
-    (reportId) =>
-      [
-        reportId,
-        atomicSnapshot.ownSectionReportIds.includes(reportId),
-      ] as const,
-  );
-  const reportAccess = accessByReport(
-    accesses.map(([reportId, hasOwnSection]) => ({ reportId, hasOwnSection })),
-  );
-  const foreignAuthorIds = unique(
+  const reportAccess = new Set(atomicSnapshot.ownSectionReportIds);
+  const foreignAuthorIds = uniqueStrings(
     occurrences
-      .filter((occurrence) => reportAccess.get(occurrence.reportId))
+      .filter((occurrence) => reportAccess.has(occurrence.reportId))
       .flatMap((occurrence) =>
         occurrence.sections
           .filter((section) => section.authorId !== actorId)

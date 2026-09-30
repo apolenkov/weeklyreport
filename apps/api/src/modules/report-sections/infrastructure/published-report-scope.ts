@@ -149,15 +149,3 @@ export function requireScopedPublishedSnapshot(
   }
   return scoped;
 }
-
-export function canReadPublishedSnapshot(
-  snapshot: PublishedReportSnapshot,
-  session: PublishedSnapshotScopeSession,
-  mode: PublishedSnapshotScopeMode = "group",
-): boolean {
-  return (
-    session.role === "admin" ||
-    filterPublishedSnapshotForSession(snapshot, session, mode).sections.length >
-      0
-  );
-}

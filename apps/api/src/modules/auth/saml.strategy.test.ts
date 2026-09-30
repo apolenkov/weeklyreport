@@ -3,26 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   createSamlStrategyOptions,
   hasSamlEnv,
-  type SamlStrategyOptions,
   verifySamlProfile,
 } from "./saml.strategy.js";
 
-const baseOptions = {
-  callbackUrl: "http://localhost/callback",
-  entryPoint: "http://localhost/entry",
-  issuer: "test-issuer",
-  idpCert: "CERT",
-  validateInResponseTo: "never",
-  disableRequestedAuthnContext: true,
-  signatureAlgorithm: "sha256",
-  digestAlgorithm: "sha256",
-  wantAssertionsSigned: true,
-  wantAuthnResponseSigned: true,
-  acceptedClockSkewMs: 0,
-} as unknown as SamlStrategyOptions;
-
-const devOptions: SamlStrategyOptions = { ...baseOptions, devMode: true };
-const prodOptions: SamlStrategyOptions = { ...baseOptions, devMode: false };
 const devEnv = {
   NODE_ENV: "development",
   AUTH_DEV_MODE: "true",
@@ -33,108 +16,76 @@ const devEnv = {
 } as unknown as NodeJS.ProcessEnv;
 
 describe("verifySamlProfile", () => {
-  describe("devMode=true", () => {
-    it("missing role defaults to viewer", () => {
-      const result = verifySamlProfile(devOptions, {
-        nameID: "u-1",
-        email: "u@example.com",
-        displayName: "U",
-      });
-      expect(result.ok).toBe(true);
-      if (result.ok) expect(result.profile.role).toBe("viewer");
+  it("accepts a profile without a role attribute and defaults to viewer", () => {
+    const result = verifySamlProfile({
+      nameID: "u-1",
+      email: "u@example.com",
+      displayName: "U",
     });
-
-    it("ignores an asserted role and defaults to viewer (role is admin-assigned)", () => {
-      const result = verifySamlProfile(devOptions, {
-        nameID: "u-2",
-        email: "h@example.com",
-        displayName: "Head",
-        role: "head",
-      });
-      expect(result.ok).toBe(true);
-      if (result.ok) expect(result.profile.role).toBe("viewer");
-    });
-
-    it("rejects a profile without a stable identity", () => {
-      const result = verifySamlProfile(devOptions, {
-        displayName: "No Identity",
-      });
-      expect(result.ok).toBe(false);
-    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.profile.role).toBe("viewer");
+      expect(result.profile.email).toBe("u@example.com");
+      expect(result.profile.samlId).toBe("u-1");
+    }
   });
 
-  describe("devMode=false (production strict path)", () => {
-    it("accepts a profile without a role attribute and defaults to viewer", () => {
-      const result = verifySamlProfile(prodOptions, {
-        nameID: "u-1",
-        email: "u@example.com",
-        displayName: "U",
-      });
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.profile.role).toBe("viewer");
-        expect(result.profile.email).toBe("u@example.com");
-        expect(result.profile.samlId).toBe("u-1");
-      }
+  it("ignores an asserted role attribute and still defaults to viewer", () => {
+    const result = verifySamlProfile({
+      nameID: "u-2",
+      email: "head@example.com",
+      displayName: "Head",
+      role: "head",
     });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.profile.role).toBe("viewer");
+      expect(result.profile.email).toBe("head@example.com");
+      expect(result.profile.samlId).toBe("u-2");
+    }
+  });
 
-    it("ignores an asserted role attribute and still defaults to viewer", () => {
-      const result = verifySamlProfile(prodOptions, {
-        nameID: "u-2",
-        email: "head@example.com",
-        displayName: "Head",
-        role: "head",
-      });
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.profile.role).toBe("viewer");
-        expect(result.profile.email).toBe("head@example.com");
-        expect(result.profile.samlId).toBe("u-2");
-      }
+  it("rejects a profile missing nameID/email", () => {
+    const result = verifySamlProfile({
+      displayName: "No Identity",
     });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.message).toContain(
+        "missing required nameID/email attribute",
+      );
+    }
+  });
 
-    it("rejects a profile missing nameID/email", () => {
-      const result = verifySamlProfile(prodOptions, {
-        displayName: "No Identity",
-      });
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.message).toContain(
-          "missing required nameID/email attribute",
-        );
-      }
-    });
+  it("rejects a missing profile", () => {
+    const result = verifySamlProfile(null);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.message).toContain("SAML profile is missing");
+    }
+  });
 
-    it("rejects a missing profile", () => {
-      const result = verifySamlProfile(prodOptions, null);
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.message).toContain("SAML profile is missing");
-      }
+  it("rejects a profile without a displayName instead of provisioning a placeholder", () => {
+    const result = verifySamlProfile({
+      nameID: "u-3",
+      email: "nameless@example.com",
     });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.message).toContain("missing displayName attribute");
+    }
+  });
 
-    it("rejects a profile without a displayName instead of provisioning a placeholder", () => {
-      const result = verifySamlProfile(prodOptions, {
-        nameID: "u-3",
-        email: "nameless@example.com",
-      });
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.message).toContain("missing displayName attribute");
-      }
+  it("rejects a blank/whitespace displayName the same way", () => {
+    const result = verifySamlProfile({
+      nameID: "u-4",
+      email: "blank@example.com",
+      displayName: " ".repeat(3),
     });
-
-    it("rejects a blank/whitespace displayName the same way", () => {
-      const result = verifySamlProfile(prodOptions, {
-        nameID: "u-4",
-        email: "blank@example.com",
-        displayName: " ".repeat(3),
-      });
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.message).toContain("missing displayName attribute");
-      }
-    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.message).toContain("missing displayName attribute");
+    }
   });
 });
 

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject } from "@nestjs/common";
 
 import type {
   AiProviderPreparationCoordinator,
@@ -32,13 +32,6 @@ import {
   semanticDocuments,
 } from "./semantic-preparation.documents.js";
 
-const SEMANTIC_PREPARATION_BATCH_SIZE = Symbol(
-  "SEMANTIC_PREPARATION_BATCH_SIZE",
-);
-const SEMANTIC_PREPARATION_BATCH_CONCURRENCY = Symbol(
-  "SEMANTIC_PREPARATION_BATCH_CONCURRENCY",
-);
-
 type PreparationResult = Readonly<{
   completed: number;
   total: number;
@@ -67,7 +60,6 @@ type ProgressSink = (
   }>,
 ) => Promise<void>;
 
-@Injectable()
 export class SemanticPreparationCoordinator implements AiProviderPreparationCoordinator {
   constructor(
     @Inject(REPORT_SEARCH_REPOSITORY)
@@ -78,9 +70,7 @@ export class SemanticPreparationCoordinator implements AiProviderPreparationCoor
     private readonly semanticRepository: SemanticEmbeddingRepository,
     @Inject(SEMANTIC_INDEX_ENQUEUER)
     private readonly enqueuer: SemanticIndexEnqueuer,
-    @Inject(SEMANTIC_PREPARATION_BATCH_SIZE)
     private readonly batchSize: number,
-    @Inject(SEMANTIC_PREPARATION_BATCH_CONCURRENCY)
     private readonly batchConcurrency = 2,
   ) {}
 

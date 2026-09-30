@@ -4,7 +4,6 @@ export {
   createSamlStrategy,
   createSamlStrategyOptions,
   hasSamlEnv,
-  type SamlStrategyOptions,
   verifySamlProfile,
 } from "./saml.strategy.js";
 export { isUserAccessBarred, readLiveAccess } from "./session-deactivation.js";
