@@ -3,7 +3,7 @@
 import { RefreshCw } from "lucide-react";
 import type { ReactNode } from "react";
 
-export function ChartSkeleton() {
+function ChartSkeleton() {
   return (
     <div
       aria-label="Loading chart"
