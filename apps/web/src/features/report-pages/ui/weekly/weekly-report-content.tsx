@@ -119,7 +119,7 @@ function SectionsToolbar({
 }: SectionsToolbarProps) {
   return (
     <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
+      <span className="text-xs font-bold text-[var(--color-muted-foreground)]">
         Sections
       </span>
       <div className="flex max-w-full flex-wrap items-center gap-2">

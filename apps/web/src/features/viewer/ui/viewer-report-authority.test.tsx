@@ -5,8 +5,14 @@ import type { PeriodStatus } from "@customreport/shared";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const queryState = vi.hoisted<{ periodStatus: PeriodStatus }>(() => ({
+import { makeWeeklyReportFixture } from "../../../test-utils/report-section-fixtures";
+
+const queryState = vi.hoisted<{
+  periodStatus: PeriodStatus;
+  archived: boolean;
+}>(() => ({
   periodStatus: "open",
+  archived: false,
 }));
 
 vi.mock("@tanstack/react-query", () => ({
@@ -16,10 +22,20 @@ vi.mock("@tanstack/react-query", () => ({
       return {
         data: {
           status: "active",
-          reportId: "report-001",
-          periodStart: "2026-06-08T00:00:00.000Z",
-          periodEnd: "2026-06-14T00:00:00.000Z",
-          periodStatus: queryState.periodStatus,
+          ...makeWeeklyReportFixture({
+            reportId: "report-001",
+            periodStart: new Date("2026-06-08T00:00:00.000Z"),
+            periodEnd: new Date("2026-06-14T00:00:00.000Z"),
+            periodState: queryState.archived
+              ? "archived"
+              : queryState.periodStatus === "published"
+                ? "published"
+                : "open",
+            periodStatus: queryState.periodStatus,
+            archived: queryState.archived,
+            submissionCount: 6,
+            totalLeads: 8,
+          }),
         },
         isError: false,
         error: null,
@@ -122,25 +138,36 @@ vi.mock("../../slides", () => ({
   SlideSkeleton: () => <div>Loading slides</div>,
 }));
 
-vi.mock("../../report-pages", () => ({
-  WeeklyReportPage: ({
-    documentActionsLeading,
-    contextControls,
-    headerContextLabel,
-  }: {
-    readonly documentActionsLeading?: React.ReactNode;
-    readonly contextControls?: React.ReactNode;
-    readonly headerContextLabel?: React.ReactNode;
-  }) => (
-    <div>
-      <header>
-        <h1>Status Report</h1>
-        {headerContextLabel}
-        {documentActionsLeading}
-      </header>
-      {contextControls}
-    </div>
-  ),
+vi.mock("../../report-pages", async () => ({
+  WeeklyReportPage: (
+    await import("../../report-pages/ui/weekly/weekly-report-page")
+  ).WeeklyReportPage,
+}));
+
+vi.mock("../../report-pages/ui/weekly/use-weekly-report-page", () => ({
+  useWeeklyReportPage: () => ({
+    kind: "ready",
+    reportId: "report-001",
+    periodStatus: queryState.periodStatus,
+    archived: queryState.archived,
+    periodLabel: "Week 24, Jun 8–14, 2026",
+    submitted: 6,
+    total: 8,
+    canMutatePeriod: false,
+    periods: [],
+    handlers: { setSubmissionFilter: vi.fn() },
+    accordion: { products: [] },
+  }),
+}));
+
+vi.mock("../../report-pages/ui/weekly/weekly-report-content", () => ({
+  ReportContent: () => null,
+}));
+
+vi.mock("../../report-pages/ui/weekly/weekly-report-page-content", () => ({
+  AcknowledgeSurface: () => null,
+  CenteredNotice: () => null,
+  ToolbarExportControl: () => null,
 }));
 
 import { ViewerReportShell } from "./viewer-report-shell";
@@ -155,6 +182,7 @@ const MODES = ["form", "slides"] as const;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  queryState.archived = false;
 });
 
 describe.each(AUTHORITY_CASES)(
@@ -167,7 +195,12 @@ describe.each(AUTHORITY_CASES)(
       expect(
         screen.getByRole("heading", { name: "Status Report" }),
       ).toBeVisible();
-      expect(screen.getByText(stateLabel)).toBeVisible();
+      if (mode === "form" && periodStatus === "published") {
+        expect(screen.getByText("Published · 6/8 Submitted")).toBeVisible();
+        expect(screen.queryByText("Published")).not.toBeInTheDocument();
+      } else {
+        expect(screen.getByText(stateLabel)).toBeVisible();
+      }
       const banner = screen.queryByText("Working report — includes drafts");
       expect(banner ? banner.textContent : null).toBe(
         working ? "Working report — includes drafts" : null,
@@ -186,3 +219,12 @@ describe.each(AUTHORITY_CASES)(
     });
   },
 );
+
+it("keeps the archived document lifecycle and submission ratio without another status badge", () => {
+  queryState.periodStatus = "published";
+  queryState.archived = true;
+  render(<ViewerReportShell reportId="report-001" mode="form" />);
+
+  expect(screen.getByText("Archived · 6/8 Submitted")).toBeVisible();
+  expect(screen.queryByText("Published")).not.toBeInTheDocument();
+});

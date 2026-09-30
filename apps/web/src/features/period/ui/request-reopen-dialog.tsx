@@ -180,7 +180,7 @@ function ReopenDialogHeader({ headingId }: { readonly headingId: string }) {
 
 function ReopenDialogFootnote() {
   return (
-    <p className="mt-3 text-[11px] text-[var(--color-muted-foreground)]">
+    <p className="mt-3 text-xs text-[var(--color-muted-foreground)]">
       Once submitted, Head will see the request and either reopen the section or
       leave a note. You'll be notified by email.
     </p>

@@ -38,21 +38,25 @@ export function PeriodComparisonTable({
         Periods ending {periodA} (previous) and {periodB} (latest). Risk change
         is latest minus previous.
       </p>
-      <AnalyticsTable headingId={headingId} caption="Period comparison data">
+      <AnalyticsTable
+        headingId={headingId}
+        caption="Period comparison data"
+        showScrollHint
+      >
         <thead>
           <tr className="border-b text-left">
             <StickyColumnHeader>Project</StickyColumnHeader>
             <th scope="col" className="px-3 py-2">
-              Previous status
-            </th>
-            <th scope="col" className="px-3 py-2">
               Latest status
             </th>
             <th scope="col" className="px-3 py-2">
-              Previous risks
+              Previous status
             </th>
             <th scope="col" className="px-3 py-2">
               Latest risks
+            </th>
+            <th scope="col" className="px-3 py-2">
+              Previous risks
             </th>
             <th scope="col" className="px-3 py-2">
               Risk change
@@ -65,18 +69,18 @@ export function PeriodComparisonTable({
               <StickyRowHeader>{r.projectName}</StickyRowHeader>
               <td className="whitespace-nowrap px-3 py-2">
                 <SlideStatusBadge
-                  status={trafficLightToCanonical(r.statusA)}
+                  status={trafficLightToCanonical(r.statusB)}
                   labelVariant="screen"
                 />
               </td>
               <td className="whitespace-nowrap px-3 py-2">
                 <SlideStatusBadge
-                  status={trafficLightToCanonical(r.statusB)}
+                  status={trafficLightToCanonical(r.statusA)}
                   labelVariant="screen"
                 />
               </td>
-              <td className="px-3 py-2">{r.riskCountA}</td>
               <td className="px-3 py-2">{r.riskCountB}</td>
+              <td className="px-3 py-2">{r.riskCountA}</td>
               <td className={`px-3 py-2 ${deltaClass(r.riskDelta)}`}>
                 {r.riskDelta > 0 ? `+${r.riskDelta}` : r.riskDelta}
               </td>

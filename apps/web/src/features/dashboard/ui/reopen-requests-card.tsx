@@ -135,7 +135,7 @@ function ReopenRequestsHeader({ countLabel }: { readonly countLabel: string }) {
       <h2 className="font-[family-name:var(--font-sans)] text-base font-semibold text-[var(--color-foreground)]">
         Reopen Requests
       </h2>
-      <span className="rounded-[var(--radius-pill)] bg-[var(--color-status-at-risk-bg)] px-2 py-0.5 text-[11px] font-bold text-[var(--color-status-at-risk-fg)]">
+      <span className="rounded-[var(--radius-pill)] bg-[var(--color-status-at-risk-bg)] px-2 py-0.5 text-xs font-bold text-[var(--color-status-at-risk-fg)]">
         {countLabel}
       </span>
     </header>

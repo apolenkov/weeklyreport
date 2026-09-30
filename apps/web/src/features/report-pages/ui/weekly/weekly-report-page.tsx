@@ -82,7 +82,7 @@ function WeeklyReportHeader({
     <header
       data-layout-key="weekly-report-header"
       data-layout-stability="position-size"
-      className="flex flex-wrap items-center justify-between gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_auto]"
+      className="flex flex-col items-stretch gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between lg:grid lg:grid-cols-[minmax(0,1fr)_auto]"
     >
       <div className="flex min-w-0 flex-col gap-1">
         <ReportBreadcrumb label={page.periodLabel} />

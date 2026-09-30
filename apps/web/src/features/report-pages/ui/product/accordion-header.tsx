@@ -26,18 +26,18 @@ function HeaderIdentity({
   return (
     <div className="flex min-w-0 flex-1 items-center gap-3 pr-3">
       <div
-        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold"
         style={{ background: config.avatarBg, color: config.avatarText }}
       >
         {report.initials}
       </div>
       <div className="flex min-w-0 flex-col gap-0.5">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="truncate font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.015em]">
+        <div className="flex min-w-0 flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2.5">
+          <span className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.015em] [overflow-wrap:anywhere]">
             {report.name}
           </span>
           <span
-            className="inline-flex flex-shrink-0 items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.04em]"
+            className="inline-flex flex-shrink-0 items-center gap-1.5 whitespace-nowrap text-xs font-semibold"
             style={{ color: statusTone }}
           >
             <span
@@ -48,7 +48,7 @@ function HeaderIdentity({
             {statusLabel}
           </span>
         </div>
-        <span className="truncate text-[12.5px] text-[var(--color-muted-foreground)]">
+        <span className="text-[12.5px] text-[var(--color-muted-foreground)] [overflow-wrap:anywhere]">
           {report.leads}
         </span>
       </div>
@@ -80,10 +80,10 @@ export function AccordionHeader({
     <button
       type="button"
       id={hasContent ? toggleId : undefined}
-      className={`flex w-full items-center justify-between gap-3 p-4 transition-[background-color,border-color,box-shadow] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2 ${
+      className={`flex w-full items-center justify-between gap-3 p-4 text-left transition-[background-color,border-color,box-shadow] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2 ${
         hasContent
           ? "cursor-pointer hover:bg-[var(--color-surface-muted)]"
-          : "cursor-default bg-[var(--color-background)] opacity-65"
+          : "cursor-default bg-[var(--color-background)]"
       }`}
       onClick={onToggle}
       disabled={!hasContent}

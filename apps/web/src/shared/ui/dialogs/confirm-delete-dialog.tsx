@@ -174,7 +174,7 @@ function ConfirmDeleteBody({
         </p>
       )}
 
-      <p className="mt-4 text-[11px] text-[var(--color-muted-foreground)]">
+      <p className="mt-4 text-xs text-[var(--color-muted-foreground)]">
         {reversible
           ? "This can be reversed later."
           : "This action cannot be undone."}

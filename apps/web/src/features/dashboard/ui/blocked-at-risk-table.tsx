@@ -83,7 +83,7 @@ function ToggleHeader({
       className={`flex w-full items-center justify-between p-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2 ${
         hasItems
           ? "cursor-pointer hover:bg-[var(--color-surface-hover)]"
-          : "cursor-default opacity-65"
+          : "cursor-default"
       }`}
       onClick={() => {
         if (hasItems) onToggle();

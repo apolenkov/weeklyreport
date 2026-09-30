@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 
 import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
-import { TabCountPill } from "../../../shared/ui/tabs/tab-count-pill";
 import {
   ADMIN_TAB_LABELS,
   ADMIN_TABS,
@@ -21,41 +20,30 @@ interface Props {
 
 interface MobileAlertLinkProps {
   readonly accessibleCount: string;
-  readonly count: number;
   readonly href: string;
-  readonly label: string;
   readonly testId: string;
-  readonly unavailable?: boolean;
 }
 
 function MobileAlertLink({
   accessibleCount,
-  count,
   href,
-  label,
   testId,
-  unavailable = false,
 }: MobileAlertLinkProps) {
   return (
     <Link
       href={href}
       className="relative inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-1.5 text-sm font-semibold text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2"
     >
-      {label}
-      <TabCountPill
-        ariaLabel={accessibleCount}
-        count={count}
-        testId={testId}
-        unavailable={unavailable}
-      />
+      <span data-testid={testId}>{accessibleCount}</span>
     </Link>
   );
 }
 
 interface MobileAlertProps extends Omit<
   MobileAlertLinkProps,
-  "accessibleCount" | "unavailable"
+  "accessibleCount"
 > {
+  readonly count: number;
   readonly singularCount: string;
   readonly pluralCount: string;
   readonly unavailable: boolean;
@@ -74,7 +62,6 @@ function MobileAlert({
   return (
     <MobileAlertLink
       {...linkProps}
-      count={count}
       accessibleCount={
         unavailable
           ? unavailableCount
@@ -82,7 +69,6 @@ function MobileAlert({
             ? singularCount
             : `${count} ${pluralCount}`
       }
-      unavailable={unavailable}
     />
   );
 }
@@ -131,7 +117,6 @@ function AdminTabsMobileAlerts() {
         pluralCount="pending reopen requests"
         count={reopenCount}
         href="/admin?tab=reopen"
-        label="Reopen"
         testId="mobile-reopen-tab-count"
         unavailable={reopenUnavailable}
         unavailableCount="Pending reopen count unavailable"
@@ -141,7 +126,6 @@ function AdminTabsMobileAlerts() {
         pluralCount="failed jobs in DLQ"
         count={dlqCount}
         href="/admin?tab=jobs"
-        label="Jobs"
         testId="mobile-jobs-tab-count"
         unavailable={dlqUnavailable}
         unavailableCount="Failed job count unavailable"

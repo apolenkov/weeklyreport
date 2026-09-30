@@ -39,7 +39,6 @@ export function ItemCard(props: ItemCardProps) {
       style={cardContainerStyle({
         isPlanned,
         isBlocked,
-        foreign: item.foreign === true,
       })}
     >
       <ItemCardHeaderRow
@@ -112,7 +111,7 @@ function PausedReasonNote({
   if (reason == null || reason.trim().length === 0) return null;
   return (
     <p
-      className="mt-1 line-clamp-2 shrink-0 text-[11px] italic text-[var(--color-muted-foreground)]"
+      className="mt-1 line-clamp-2 shrink-0 text-xs italic text-[var(--color-muted-foreground)]"
       title={reason}
     >
       Paused: {reason}
@@ -130,7 +129,7 @@ function ItemCardFooter({
 }) {
   return (
     <div className="mt-auto flex shrink-0 items-end justify-between gap-2 pt-2">
-      <div className="min-w-0 flex-1 truncate text-[11px] text-[var(--color-muted-foreground)]">
+      <div className="min-w-0 flex-1 truncate text-xs text-[var(--color-muted-foreground)]">
         {author}
       </div>
       <div className="flex min-w-0 max-w-[72%] flex-wrap items-center justify-end gap-1">

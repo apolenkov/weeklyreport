@@ -26,14 +26,12 @@ interface ProductAccordionProps {
   readonly review?: AccordionReviewContext | undefined;
 }
 
-// Empty cards render dimmed; an active highlight gets the accent ring.
+// Empty cards use a quiet tint; an active highlight gets the accent ring.
 // This helper keeps the render body focused on state wiring.
 function surfaceProps(hasContent: boolean, isHighlightActive: boolean) {
   return {
     className: `card-surface-elevated scroll-mt-28 overflow-hidden rounded-[var(--radius)] border transition-[border-color,box-shadow] motion-reduce:transition-none ${
-      hasContent
-        ? "card-surface-fill"
-        : "bg-[var(--color-surface-empty-tint)] opacity-90"
+      hasContent ? "card-surface-fill" : "bg-[var(--color-surface-empty-tint)]"
     }`,
     style: {
       borderColor: isHighlightActive

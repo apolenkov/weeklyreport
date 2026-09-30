@@ -90,10 +90,7 @@ export function StageMultiSelect({
 
 function StageHelperText({ id }: { readonly id: string }) {
   return (
-    <p
-      id={id}
-      className="mb-2 text-[11px] text-[var(--color-muted-foreground)]"
-    >
+    <p id={id} className="mb-2 text-xs text-[var(--color-muted-foreground)]">
       Select at least one assigned stage. A single owned stage is applied
       automatically.
     </p>
@@ -137,9 +134,7 @@ function StageChoices({
     return (
       <div className="inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-3 py-1 text-xs font-semibold text-[var(--color-muted-foreground)]">
         {singleStage}
-        <span className="ml-2 text-[10px] font-medium">
-          Applied automatically
-        </span>
+        <span className="ml-2 text-xs font-medium">Applied automatically</span>
       </div>
     );
   }

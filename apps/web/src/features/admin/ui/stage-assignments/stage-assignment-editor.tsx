@@ -90,7 +90,7 @@ function StageCell({
     <div className="space-y-1">
       <label
         htmlFor={selectId}
-        className="flex items-center justify-center gap-1 text-center text-[11px] font-semibold uppercase tracking-wider text-[var(--color-foreground)]"
+        className="flex items-center justify-center gap-1 text-center text-xs font-semibold uppercase tracking-wider text-[var(--color-foreground)]"
       >
         <span
           aria-hidden="true"

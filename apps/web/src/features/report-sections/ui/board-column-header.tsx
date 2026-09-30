@@ -31,7 +31,7 @@ export function BoardColumnHeader({
         <button
           type="button"
           // Mobile keeps the 44px tap-target for a11y; md+ compacts to 28px.
-          className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[28px] flex-shrink-0 items-center gap-1 rounded-[var(--radius-pill)] border border-[color-mix(in_srgb,var(--color-starbucks-accent)_18%,transparent)] bg-[color-mix(in_srgb,var(--color-starbucks-accent)_8%,transparent)] px-3 py-1.5 md:px-2.5 md:py-0.5 text-[11px] font-semibold text-[var(--color-primary)] transition-colors hover:border-[color-mix(in_srgb,var(--color-starbucks-accent)_28%,transparent)] hover:bg-[var(--color-success)]"
+          className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[28px] flex-shrink-0 items-center gap-1 rounded-[var(--radius-pill)] border border-[color-mix(in_srgb,var(--color-starbucks-accent)_18%,transparent)] bg-[color-mix(in_srgb,var(--color-starbucks-accent)_8%,transparent)] px-3 py-1.5 md:px-2.5 md:py-0.5 text-xs font-semibold text-[var(--color-primary)] transition-colors hover:border-[color-mix(in_srgb,var(--color-starbucks-accent)_28%,transparent)] hover:bg-[var(--color-success)]"
           onClick={() =>
             onAdd(
               col.parent.kind === "activity"

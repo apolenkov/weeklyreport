@@ -37,7 +37,7 @@ function ColumnHeading({
       id={id}
       className="min-w-0 border-l border-[var(--color-border-subtle)] px-4 pb-3"
     >
-      <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+      <p className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
         {label}
       </p>
       <p className="mt-0.5 truncate text-xs text-[var(--color-foreground)]">

@@ -21,10 +21,9 @@ import type {
 import { SlideCell, type SlideRowActivateHandler } from "./slide-article-rows";
 import { SLIDE_PRODUCT_STATUS_PRESENTATION } from "./slide-product-status";
 
-// Shared by the header row and every subsection (openspec/specs/
-// lead-slide-by-product-grid, "Subsections share one four-column grid"). Keep
-// 4 lanes: the fixed Risks position is the head's severity scan-line.
-const GRID_TEMPLATE = "grid grid-cols-[1.35fr_1.25fr_0.85fr_0.85fr] gap-x-4";
+// Desktop columns align across every subsection; mobile reads the same cells in order.
+const GRID_TEMPLATE =
+  "grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-[1.35fr_1.25fr_0.85fr_0.85fr]";
 
 const COLUMNS = [
   {
@@ -57,7 +56,10 @@ const COLUMNS = [
 
 export function SlideColumnHeaderRow() {
   return (
-    <div className={GRID_TEMPLATE} data-testid="slide-column-headers">
+    <div
+      className={`hidden sm:grid ${GRID_TEMPLATE}`}
+      data-testid="slide-column-headers"
+    >
       {COLUMNS.map(({ key, label, icon: Icon, accent }) => (
         <span
           key={key}
@@ -117,14 +119,14 @@ function SubsectionHeader({
 }) {
   if (subsection.kind === "product-level") {
     return (
-      <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+      <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
         <Box aria-hidden="true" className="h-3 w-3" />
         {subsection.name}
       </span>
     );
   }
   return (
-    <div className="min-w-0 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+    <div className="min-w-0 text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
       <div className="flex min-w-0 flex-wrap items-center gap-1.5">
         <CornerDownRight aria-hidden="true" className="h-3 w-3" />
         <StatusDot status={subsection.status} />
@@ -163,16 +165,23 @@ function SubsectionRow({
     <div className="border-t border-dashed border-[var(--card-surface-border)] pt-2 first:border-t-0 first:pt-0">
       <SubsectionHeader subsection={subsection} />
       {!empty && (
-        <div className={`${GRID_TEMPLATE} mt-1.5`}>
-          {COLUMNS.map(({ key, label }) => (
-            <SlideCell
-              key={key}
-              rows={subsection.columns[key]}
-              authorsById={authorsById}
-              showStages={subsection.showStages}
-              label={label}
-              onRowActivate={onRowActivate}
-            />
+        <div className={`grid ${GRID_TEMPLATE} mt-1.5`}>
+          {COLUMNS.map(({ key, label, icon: Icon, accent }) => (
+            <div key={key} className="min-w-0">
+              <h4
+                className={`mb-1.5 flex items-center gap-1.5 border-b-2 pb-1 text-xs font-semibold sm:hidden ${accent}`}
+              >
+                <Icon aria-hidden="true" className="h-3.5 w-3.5" />
+                {label}
+              </h4>
+              <SlideCell
+                rows={subsection.columns[key]}
+                authorsById={authorsById}
+                showStages={subsection.showStages}
+                label={label}
+                onRowActivate={onRowActivate}
+              />
+            </div>
           ))}
         </div>
       )}
@@ -196,9 +205,11 @@ export function SlideProductCard({
     return (
       <div
         data-testid="slide-product-empty"
-        className="flex items-center gap-2 rounded-[var(--radius)] border border-dashed border-[var(--color-border)] px-4 py-2.5 text-sm text-[var(--color-muted-foreground)]"
+        className="flex flex-col items-start gap-1 rounded-[var(--radius)] border border-dashed border-[var(--color-border)] px-4 py-2.5 text-sm text-[var(--color-muted-foreground)] sm:flex-row sm:items-center sm:gap-2"
       >
-        <span className="truncate font-medium">{card.name}</span>
+        <span className="min-w-0 break-words font-medium sm:truncate">
+          {card.name}
+        </span>
         <span className="text-xs">no status for this period</span>
       </div>
     );

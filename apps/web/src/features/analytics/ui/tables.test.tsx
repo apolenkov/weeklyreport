@@ -135,6 +135,34 @@ describe("TrafficLightHistoryTable", () => {
     ]);
     expect(rows).toEqual(original);
   });
+
+  it("shows the latest week first while keeping statuses and changes tied to their original periods", () => {
+    const history: TrafficLightHistoryOutput = {
+      periods: ["2026-08-23", "2026-08-30", "2026-09-06"],
+      rows: [
+        {
+          projectId: "alpha",
+          projectName: "Alpha",
+          statuses: ["yellow", "red", "green"],
+        },
+      ],
+    };
+    const original = structuredClone(history);
+    render(
+      <TrafficLightHistoryTable {...history} headingId="history-heading" />,
+    );
+
+    expect(
+      screen.getAllByRole("columnheader").map((header) => header.textContent),
+    ).toEqual(["Project", "2026-09-06", "2026-08-30", "2026-08-23"]);
+    expect(
+      screen.getAllByRole("cell").map((cell) => cell.textContent.trim()),
+    ).toEqual(["On track ↑ Recovered", "Blocked", "At risk"]);
+    expect(screen.getByText(/Week ending/)).toHaveTextContent(
+      "Week ending 2026-09-06:1 On track",
+    );
+    expect(history).toEqual(original);
+  });
 });
 
 describe("LeadSubmissionsTable", () => {
@@ -191,6 +219,65 @@ describe("LeadSubmissionsTable", () => {
     expect(region).toHaveAttribute("aria-labelledby", "velocity-heading");
     await userEvent.tab();
     expect(region).toHaveFocus();
+  });
+
+  it("shows newest submissions first without changing lead membership or period values", () => {
+    const rows = [
+      {
+        periodLabel: "2026-08-23",
+        leads: [
+          { leadId: "alex", leadName: "Alex", submittedSections: 1 },
+          { leadId: "blair", leadName: "Blair", submittedSections: 0 },
+        ],
+      },
+      {
+        periodLabel: "2026-08-30",
+        leads: [{ leadId: "alex", leadName: "Alex", submittedSections: 0 }],
+      },
+      {
+        periodLabel: "2026-09-06",
+        leads: [{ leadId: "blair", leadName: "Blair", submittedSections: 1 }],
+      },
+    ];
+    const original = structuredClone(rows);
+    render(
+      <LeadSubmissionsTable rows={rows} headingId="submissions-heading" />,
+    );
+
+    expect(
+      screen.getAllByRole("columnheader").map((header) => header.textContent),
+    ).toEqual(["Lead", "2026-09-06", "2026-08-30", "2026-08-23"]);
+    const renderedRows = screen.getAllByRole("row").slice(1);
+    expect(
+      within(expectDefined(renderedRows[0]))
+        .getAllByRole("cell")
+        .map((cell) => cell.textContent.trim()),
+    ).toEqual(["Missing", "Missing", "✓ Submitted"]);
+    expect(
+      within(expectDefined(renderedRows[1]))
+        .getAllByRole("cell")
+        .map((cell) => cell.textContent.trim()),
+    ).toEqual(["✓ Submitted", "Missing", "Missing"]);
+    expect(rows).toEqual(original);
+  });
+
+  it("retains the only submitted period without suggesting earlier columns", () => {
+    render(
+      <LeadSubmissionsTable
+        headingId="submissions-heading"
+        rows={[
+          {
+            periodLabel: "2026-08-23",
+            leads: [{ leadId: "alex", leadName: "Alex", submittedSections: 1 }],
+          },
+        ]}
+      />,
+    );
+    expect(
+      screen.getAllByRole("columnheader").map((header) => header.textContent),
+    ).toEqual(["Lead", "2026-08-23"]);
+    expect(screen.getByRole("cell", { name: "Submitted" })).toBeVisible();
+    expect(screen.queryByText(/Scroll horizontally/)).toBeNull();
   });
 });
 
@@ -327,6 +414,19 @@ describe("PeriodComparisonTable", () => {
       expect(
         screen.getByRole("columnheader", { name: "Risk change" }),
       ).toBeVisible();
+      expect(
+        screen.getAllByRole("columnheader").map((header) => header.textContent),
+      ).toEqual([
+        "Project",
+        "Latest status",
+        "Previous status",
+        "Latest risks",
+        "Previous risks",
+        "Risk change",
+      ]);
+      expect(
+        screen.getAllByRole("cell").map((cell) => cell.textContent),
+      ).toEqual(["Blocked", "On track", "4", "1", "+3"]);
     },
   );
 });
@@ -369,8 +469,8 @@ describe("History latest period", () => {
       const cells = within(expectDefined(row.closest("tr"))).getAllByRole(
         "cell",
       );
-      expect(cells[0]).not.toHaveClass("bg-[var(--color-surface-muted)]");
-      expect(cells[1]).toHaveClass("bg-[var(--color-surface-muted)]");
+      expect(cells[0]).toHaveClass("bg-[var(--color-surface-muted)]");
+      expect(cells[1]).not.toHaveClass("bg-[var(--color-surface-muted)]");
     }
   });
 
@@ -433,11 +533,11 @@ describe("History latest period", () => {
         />,
       );
       const cells = screen.getAllByRole("cell");
-      expect(cells[0]).not.toHaveTextContent(/Recovered|Slipped/);
+      expect(cells[1]).not.toHaveTextContent(/Recovered|Slipped/);
       if (word === null) {
-        expect(cells[1]).not.toHaveTextContent(/Recovered|Slipped/);
+        expect(cells[0]).not.toHaveTextContent(/Recovered|Slipped/);
       } else {
-        const marker = within(expectDefined(cells[1])).getByText(word);
+        const marker = within(expectDefined(cells[0])).getByText(word);
         expect(marker).toHaveClass("text-muted-foreground");
         expect(marker.querySelector('[aria-hidden="true"]')).toHaveTextContent(
           word === "Recovered" ? "↑" : "↓",
@@ -456,6 +556,10 @@ describe("History latest period", () => {
       />,
     );
     expect(screen.getByRole("cell")).not.toHaveTextContent(/Recovered|Slipped/);
+    expect(
+      screen.getByRole("columnheader", { name: periods[0] }),
+    ).toBeVisible();
+    expect(screen.queryByText(/Scroll horizontally/)).toBeNull();
   });
 });
 
@@ -517,6 +621,10 @@ describe("Native table affordances", () => {
           "sticky",
           "left-0",
           "bg-[var(--color-background)]",
+          "w-36",
+          "max-w-36",
+          "whitespace-normal",
+          "break-words",
         );
         expect(name?.className).toMatch(/z-10|z-20/);
       }
@@ -542,6 +650,15 @@ describe("Native table affordances", () => {
     expect(comparison).toHaveAttribute("tabindex", "0");
     expect(comparison).toHaveAttribute("aria-labelledby", "comparison-heading");
     expect(comparison).toHaveClass("focus-visible:ring-[var(--color-primary)]");
+    expect(comparison).toHaveAttribute(
+      "aria-describedby",
+      "comparison-heading-scroll-hint",
+    );
+    expect(
+      screen.getByText(/Scroll horizontally/, {
+        selector: "#comparison-heading-scroll-hint",
+      }),
+    ).toHaveClass("text-xs", "sm:hidden");
     await userEvent.tab();
     await userEvent.tab();
     await userEvent.tab();

@@ -120,7 +120,7 @@ describe("WeeklyReportPage — shared period toolbar", () => {
       "lg:grid",
       "lg:grid-cols-[minmax(0,1fr)_auto]",
     );
-    expect(docGroup).toHaveClass("justify-end");
+    expect(docGroup).toHaveClass("justify-start", "sm:justify-end");
     expect(
       within(toolbar).queryByRole("group", { name: "Document actions" }),
     ).toBeNull();

@@ -122,7 +122,7 @@ export function StageLegend({
   return (
     <div
       data-testid="slide-stage-legend"
-      className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-[var(--color-muted-foreground)]"
+      className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--color-muted-foreground)]"
     >
       {stageNames.map((stageName) => {
         const Icon = STAGE_ICONS[stageName];

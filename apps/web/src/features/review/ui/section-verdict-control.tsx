@@ -69,10 +69,10 @@ const errorToastMessage = (err: unknown): string =>
     : "Failed to record verdict";
 
 const APPROVE_BUTTON_CLASSNAME =
-  "btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-success-foreground)] transition-colors hover:border-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50";
+  "btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-2.5 py-0.5 text-xs font-semibold text-[var(--color-success-foreground)] transition-colors hover:border-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50";
 
 const REQUEST_CHANGES_BUTTON_CLASSNAME =
-  "btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-destructive)] transition-colors hover:border-[var(--color-destructive)] disabled:cursor-not-allowed disabled:opacity-50";
+  "btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-2.5 py-0.5 text-xs font-semibold text-[var(--color-destructive)] transition-colors hover:border-[var(--color-destructive)] disabled:cursor-not-allowed disabled:opacity-50";
 
 function VerdictActions({
   disabled,
@@ -153,7 +153,7 @@ export function SectionVerdictControl({
   return (
     <div className="flex items-center gap-2">
       <span
-        className="whitespace-nowrap rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[11px] font-semibold"
+        className="whitespace-nowrap rounded-[var(--radius-pill)] px-2.5 py-0.5 text-xs font-semibold"
         style={{
           background: BADGE_STYLE[badge.kind].bg,
           color: BADGE_STYLE[badge.kind].fg,
