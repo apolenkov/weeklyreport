@@ -10,6 +10,11 @@ import {
 
 import { worstTrafficStatus } from "../../../shared/lib/status/status-presentation";
 import { SlideStatusBadge } from "../../../shared/ui/feedback/slide-status-badge";
+import {
+  AnalyticsTable,
+  StickyColumnHeader,
+  StickyRowHeader,
+} from "./analytics-table";
 
 function StatusChange({
   previous,
@@ -28,6 +33,65 @@ function StatusChange({
       <span aria-hidden="true">{recovered ? "↑" : "↓"}</span>{" "}
       {recovered ? "Recovered" : "Slipped"}
     </span>
+  );
+}
+
+function LatestWeekSummary({
+  period,
+  rows,
+  index,
+}: {
+  readonly period: string | undefined;
+  readonly rows: TrafficLightHistoryOutput["rows"];
+  readonly index: number;
+}) {
+  const counts = canonicalStatusSchema.options
+    .map((status) => ({
+      status,
+      count: rows.filter(
+        (row) => trafficLightToCanonical(row.statuses[index]) === status,
+      ).length,
+    }))
+    .filter(({ count }) => count > 0);
+  return (
+    <p className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+      Week ending {period}:
+      {counts.map(({ status, count }) => (
+        <span
+          key={status}
+          className="inline-flex items-center gap-1 whitespace-nowrap"
+        >
+          {count} <SlideStatusBadge status={status} labelVariant="screen" />
+        </span>
+      ))}
+    </p>
+  );
+}
+
+function HistoryCell({
+  statuses,
+  index,
+  latest,
+}: {
+  readonly statuses: TrafficLightHistoryOutput["rows"][number]["statuses"];
+  readonly index: number;
+  readonly latest: boolean;
+}) {
+  return (
+    <td
+      className={`whitespace-nowrap px-3 py-2 ${latest ? "bg-[var(--color-surface-muted)]" : ""}`}
+    >
+      <SlideStatusBadge
+        status={trafficLightToCanonical(statuses[index] ?? null)}
+        labelVariant="screen"
+      />{" "}
+      {latest && index > 0 ? (
+        <StatusChange
+          previous={trafficLightToCanonical(statuses[index - 1])}
+          current={trafficLightToCanonical(statuses[index])}
+        />
+      ) : null}
+    </td>
   );
 }
 
@@ -57,90 +121,48 @@ export function TrafficLightHistoryTable({
     })
     .toSorted((a, b) => b.rank - a.rank);
   const latestIndex = periods.length - 1;
-  const latestCounts = canonicalStatusSchema.options
-    .map((status) => ({
-      status,
-      count: rows.filter(
-        (row) => trafficLightToCanonical(row.statuses[latestIndex]) === status,
-      ).length,
-    }))
-    .filter(({ count }) => count > 0);
 
   return (
     <>
-      <p className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
-        Week ending {periods[latestIndex]}:
-        {latestCounts.map(({ status, count }) => (
-          <span
-            key={status}
-            className="inline-flex items-center gap-1 whitespace-nowrap"
-          >
-            {count} <SlideStatusBadge status={status} labelVariant="screen" />
-          </span>
-        ))}
-      </p>
-      <div
-        className="max-w-full overflow-x-auto rounded-md bg-[var(--color-background)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1"
-        tabIndex={0}
-        role="region"
-        aria-labelledby={headingId}
+      <LatestWeekSummary
+        period={periods[latestIndex]}
+        rows={rows}
+        index={latestIndex}
+      />
+      <AnalyticsTable
+        headingId={headingId}
+        caption="Traffic-light history data"
       >
-        <table className="min-w-full border-collapse text-sm">
-          <caption className="sr-only">Traffic-light history data</caption>
-          <thead>
-            <tr className="border-b text-left">
+        <thead>
+          <tr className="border-b text-left">
+            <StickyColumnHeader>Project</StickyColumnHeader>
+            {periods.map((period, index) => (
               <th
+                key={period}
                 scope="col"
-                className="sticky left-0 z-20 bg-[var(--color-background)] shadow-[1px_0_0_var(--color-border)] px-3 py-2"
+                className={`whitespace-nowrap px-3 py-2 ${index === latestIndex ? "bg-[var(--color-surface-muted)]" : ""}`}
               >
-                Project
+                {period}
               </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rankedRows.map(({ row }) => (
+            <tr key={row.projectId} className="border-b last:border-0">
+              <StickyRowHeader>{row.projectName}</StickyRowHeader>
               {periods.map((period, index) => (
-                <th
+                <HistoryCell
                   key={period}
-                  scope="col"
-                  className={`whitespace-nowrap px-3 py-2 ${index === latestIndex ? "bg-[var(--color-surface-muted)]" : ""}`}
-                >
-                  {period}
-                </th>
+                  statuses={row.statuses}
+                  index={index}
+                  latest={index === latestIndex}
+                />
               ))}
             </tr>
-          </thead>
-          <tbody>
-            {rankedRows.map(({ row }) => (
-              <tr key={row.projectId} className="border-b last:border-0">
-                <th
-                  scope="row"
-                  className="sticky left-0 z-10 bg-[var(--color-background)] shadow-[1px_0_0_var(--color-border)] px-3 py-2 text-left font-medium"
-                >
-                  {row.projectName}
-                </th>
-                {periods.map((period, index) => (
-                  <td
-                    key={period}
-                    className={`whitespace-nowrap px-3 py-2 ${index === latestIndex ? "bg-[var(--color-surface-muted)]" : ""}`}
-                  >
-                    <SlideStatusBadge
-                      status={trafficLightToCanonical(
-                        row.statuses[index] ?? null,
-                      )}
-                      labelVariant="screen"
-                    />{" "}
-                    {index === latestIndex && index > 0 ? (
-                      <StatusChange
-                        previous={trafficLightToCanonical(
-                          row.statuses[index - 1],
-                        )}
-                        current={trafficLightToCanonical(row.statuses[index])}
-                      />
-                    ) : null}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </AnalyticsTable>
     </>
   );
 }
