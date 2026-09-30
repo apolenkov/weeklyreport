@@ -43,7 +43,9 @@ export function RequestChangesButton({
           subjectName={leadName}
           onClose={() => setOpen(false)}
           onRequested={() => {
-            toast.success(`Changes requested from ${leadName}.`);
+            toast.success(
+              `Changes requested from ${leadName.replace(/\.$/u, "")}.`,
+            );
             invalidateReview(queryClient, trpc);
             onMutated();
           }}
