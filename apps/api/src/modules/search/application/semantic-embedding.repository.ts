@@ -1,9 +1,5 @@
 import type { EmbeddingVector } from "./report-assistant.ports.js";
 
-export const SEMANTIC_EMBEDDING_REPOSITORY = Symbol(
-  "SEMANTIC_EMBEDDING_REPOSITORY",
-);
-
 export type SemanticEmbeddingScope = Readonly<{
   provider: string;
   embeddingScopeIdentity: string;

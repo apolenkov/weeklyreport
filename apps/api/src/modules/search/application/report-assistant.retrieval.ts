@@ -3,10 +3,7 @@ import type { ClarificationOption, SearchPlan } from "@customreport/shared";
 import { filterCandidates } from "../domain/candidate-filter.js";
 import { projectSectionCandidates } from "../domain/candidate-projector.js";
 import { resolveSearchPlanEntities } from "../domain/entity-resolver.plan.js";
-import type {
-  ClarificationTokenCodec,
-  ResolveSearchPlanInput,
-} from "../domain/entity-resolver.types.js";
+import type { ResolveSearchPlanInput } from "../domain/entity-resolver.types.js";
 import type { SelectableReportSource } from "../domain/period-source-selection.js";
 import { selectPeriodSources } from "../domain/period-source-selection.js";
 import type {
@@ -22,6 +19,12 @@ import {
 } from "./report-search.repository.js";
 
 type RetrievalClock = Readonly<{ now: Date }>;
+
+type CandidateResolutionContext = Pick<
+  ResolveSearchPlanInput,
+  "actorId" | "resolutionTokens" | "tokenCodec"
+> &
+  Readonly<{ clock: RetrievalClock; timeZone: string }>;
 
 export type CandidateResolution =
   | Readonly<{
@@ -54,10 +57,8 @@ const projectCandidates = (
 
 const resolutionInput = (
   plan: SearchPlan,
-  actorId: string,
   retrieval: Awaited<ReturnType<typeof authorizeReportOccurrences>>,
-  resolutionTokens: readonly string[],
-  tokenCodec: ClarificationTokenCodec,
+  { actorId, resolutionTokens, tokenCodec }: CandidateResolutionContext,
 ): ResolveSearchPlanInput => ({
   plan,
   actorId,
@@ -71,12 +72,9 @@ const resolutionInput = (
 export const resolveReportAssistantCandidates = async (
   repository: ReportSearchRepository,
   plan: SearchPlan,
-  actorId: string,
-  resolutionTokens: readonly string[],
-  tokenCodec: ClarificationTokenCodec,
-  clock: RetrievalClock,
-  timeZone: string,
+  context: CandidateResolutionContext,
 ): Promise<CandidateResolution> => {
+  const { actorId, clock, timeZone } = context;
   const publishedOptions = {
     publishedMode: plan.periods.published.mode,
     ...(plan.periods.published.count !== null
@@ -109,7 +107,7 @@ export const resolveReportAssistantCandidates = async (
   if (authorized.occurrences.length === 0) return { kind: "no_results" };
 
   const resolved = resolveSearchPlanEntities(
-    resolutionInput(plan, actorId, authorized, resolutionTokens, tokenCodec),
+    resolutionInput(plan, authorized, context),
   );
   if (resolved.kind !== "resolved") return resolved;
 

@@ -101,24 +101,20 @@ describe("AI prompt control-plane database states", () => {
   it("activates current prompt text and preserves history on discard", async () => {
     const active = await createActiveBaseline();
     const candidate = await createDraft(active.id, "candidate");
-    await repository.transition(
-      featureKey,
-      candidate.id,
-      [AiPromptBundleLifecycle.draft],
-      AiPromptBundleLifecycle.validated,
-    );
+    await repository.transition(featureKey, candidate.id, {
+      from: [AiPromptBundleLifecycle.draft],
+      to: AiPromptBundleLifecycle.validated,
+    });
 
     await expect(
-      repository.activate(
-        featureKey,
-        candidate.id,
-        [AiPromptBundleLifecycle.validated],
+      repository.activate(featureKey, candidate.id, {
+        allowedLifecycle: [AiPromptBundleLifecycle.validated],
         now,
-        {
+        contract: {
           servingContractVersion:
             candidate.servingContractVersion ?? baseline.servingContractVersion,
         },
-      ),
+      }),
     ).resolves.toBe(true);
     await expect(
       prisma.aiFeaturePromptControl.findUnique({ where: { featureKey } }),

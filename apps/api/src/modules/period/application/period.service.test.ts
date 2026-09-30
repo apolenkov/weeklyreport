@@ -1,6 +1,7 @@
 import { MS_PER_HOUR } from "@customreport/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { createNullLogger } from "../../../lib/logger.js";
 import {
   archivedReportId,
   createSpyRepository,
@@ -18,6 +19,7 @@ import {
   PeriodService,
   PeriodStaleStateError,
 } from "./period.service";
+import { NOOP_PERIOD_TELEMETRY } from "./period-telemetry.port.js";
 
 describe("PeriodService — publishPeriod (unit)", () => {
   it("calls repository.publishPeriod with correct args", async () => {
@@ -35,8 +37,10 @@ describe("PeriodService — publishPeriod (unit)", () => {
     const repo = createSpyRepository(reports);
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await service.publishPeriod(reportId, headSession);
@@ -65,8 +69,10 @@ describe("PeriodService — publishPeriod (unit)", () => {
     ]);
     const service = new PeriodService(
       createSpyRepository(reports),
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     const result = await service.publishPeriod(reportId, headSession);
@@ -78,8 +84,10 @@ describe("PeriodService — publishPeriod (unit)", () => {
   it("throws PeriodNotFoundError when report is missing", async () => {
     const service = new PeriodService(
       createSpyRepository(new Map()),
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(service.publishPeriod(reportId, headSession)).rejects.toThrow(
@@ -105,8 +113,10 @@ describe("PeriodService — publishPeriod (unit)", () => {
     const repo = createSpyRepository(reports);
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
@@ -143,8 +153,10 @@ describe("PeriodService — publishPeriod (unit)", () => {
     const getCurrentEditableId = vi.fn(() => base.getCurrentEditableId());
     const service = new PeriodService(
       { ...base, getCurrentEditableId },
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(
@@ -173,8 +185,10 @@ describe("PeriodService — publishPeriod (unit)", () => {
     const repo = createSpyRepository(reports);
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(
@@ -198,8 +212,10 @@ describe("PeriodService — publishPeriod (unit)", () => {
     const repo = createSpyRepository(reports);
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await service.publishPeriod(reportId, headSession);
@@ -228,8 +244,10 @@ describe("PeriodService — publishPeriod (unit)", () => {
     const invalidate = vi.fn(() => Promise.resolve(undefined));
     const service = new PeriodService(
       createSpyRepository(reports),
-      invalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: invalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await service.publishPeriod(reportId, headSession);
@@ -252,8 +270,10 @@ describe("PeriodService — publishPeriod (unit)", () => {
     const invalidate = vi.fn(() => Promise.resolve(undefined));
     const service = new PeriodService(
       createSpyRepository(reports),
-      invalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: invalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
@@ -279,8 +299,10 @@ describe("PeriodService — publishPeriod (unit)", () => {
     const invalidate = vi.fn(() => Promise.resolve(undefined));
     const service = new PeriodService(
       createSpyRepository(reports),
-      invalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: invalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(
@@ -312,8 +334,10 @@ describe("PeriodService — publishPeriod (unit)", () => {
     const invalidate = vi.fn(() => Promise.resolve(undefined));
     const service = new PeriodService(
       { ...base, publishPeriod },
-      invalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: invalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(
@@ -347,8 +371,10 @@ describe("PeriodService — publishPeriod (unit)", () => {
     ]);
     const service = new PeriodService(
       createSpyRepository(reports),
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
@@ -381,8 +407,10 @@ describe("PeriodService — reopenPeriod (unit)", () => {
     const repo = createSpyRepository(reports);
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await service.reopenPeriod(reportId, headSession);
@@ -411,8 +439,10 @@ describe("PeriodService — reopenPeriod (unit)", () => {
     const repo = createSpyRepository(reports);
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(service.reopenPeriod(reportId, headSession)).rejects.toThrow();
@@ -434,8 +464,10 @@ describe("PeriodService — reopenPeriod (unit)", () => {
     const invalidate = vi.fn(() => Promise.resolve(undefined));
     const service = new PeriodService(
       createSpyRepository(reports),
-      invalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: invalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await service.reopenPeriod(reportId, headSession);
@@ -457,8 +489,10 @@ describe("PeriodService — reopenPeriod (unit)", () => {
     ]);
     const service = new PeriodService(
       createSpyRepository(reports),
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await service.reopenPeriod(reportId, headSession);
@@ -487,12 +521,16 @@ describe("PeriodService — reopen policy gate", () => {
     const repo = createSpyRepository(reports);
     const service = new PeriodService(
       repo,
-      () => Promise.resolve(undefined),
-      () =>
-        Promise.resolve({
-          allowReopenAfterPublish: false,
-          reopenWindowHours: 72,
-        }),
+      { invalidateAll: () => Promise.resolve(undefined) },
+      {
+        getSettings: () =>
+          Promise.resolve({
+            allowReopenAfterPublish: false,
+            reopenWindowHours: 72,
+          }),
+      },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(
@@ -517,12 +555,16 @@ describe("PeriodService — reopen policy gate", () => {
     const repo = createSpyRepository(reports);
     const service = new PeriodService(
       repo,
-      () => Promise.resolve(undefined),
-      () =>
-        Promise.resolve({
-          allowReopenAfterPublish: true,
-          reopenWindowHours: 72,
-        }),
+      { invalidateAll: () => Promise.resolve(undefined) },
+      {
+        getSettings: () =>
+          Promise.resolve({
+            allowReopenAfterPublish: true,
+            reopenWindowHours: 72,
+          }),
+      },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(
@@ -544,11 +586,18 @@ describe("PeriodService — reopen policy gate", () => {
       ],
     ]);
     const repo = createSpyRepository(reports);
-    const service = new PeriodService(repo, noopInvalidate, () =>
-      Promise.resolve({
-        allowReopenAfterPublish: true,
-        reopenWindowHours: 72,
-      }),
+    const service = new PeriodService(
+      repo,
+      { invalidateAll: noopInvalidate },
+      {
+        getSettings: () =>
+          Promise.resolve({
+            allowReopenAfterPublish: true,
+            reopenWindowHours: 72,
+          }),
+      },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(
@@ -577,12 +626,16 @@ describe("PeriodService — reopen policy gate", () => {
     const repo = createSpyRepository(reports);
     const service = new PeriodService(
       repo,
-      () => Promise.resolve(undefined),
-      () =>
-        Promise.resolve({
-          allowReopenAfterPublish: true,
-          reopenWindowHours: 72,
-        }),
+      { invalidateAll: () => Promise.resolve(undefined) },
+      {
+        getSettings: () =>
+          Promise.resolve({
+            allowReopenAfterPublish: true,
+            reopenWindowHours: 72,
+          }),
+      },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await service.reopenPeriod(reportId, headSession);
@@ -604,8 +657,10 @@ describe("PeriodService — reopen policy gate", () => {
     const repo = createSpyRepository(reports);
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await service.reopenPeriod(reportId, headSession);
@@ -637,11 +692,18 @@ describe("PeriodService — reopen window boundary", () => {
       ],
     ]);
     const repo = createSpyRepository(reports);
-    const service = new PeriodService(repo, noopInvalidate, () =>
-      Promise.resolve({
-        allowReopenAfterPublish: true,
-        reopenWindowHours: 72,
-      }),
+    const service = new PeriodService(
+      repo,
+      { invalidateAll: noopInvalidate },
+      {
+        getSettings: () =>
+          Promise.resolve({
+            allowReopenAfterPublish: true,
+            reopenWindowHours: 72,
+          }),
+      },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     return service.reopenPeriod(reportId, headSession).then(

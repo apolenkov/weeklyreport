@@ -18,7 +18,7 @@ import { RemindersPrismaRepository } from "./reminders.prisma-repository.js";
 import { RemindersService } from "./reminders.service.js";
 
 function createModule(withTelemetry = true) {
-  // Exercise the production factories without starting their database/queue imports.
+  // Resolve the production providers with fake database/queue dependencies.
   const providers = (
     Reflect.getMetadata(
       MODULE_METADATA.PROVIDERS,
@@ -26,9 +26,10 @@ function createModule(withTelemetry = true) {
     ) as Provider[]
   ).filter(
     (provider) =>
-      typeof provider === "object" &&
-      (provider.provide === RemindersService ||
-        (withTelemetry && provider.provide === REMINDERS_TELEMETRY)),
+      provider === RemindersService ||
+      (typeof provider === "object" &&
+        withTelemetry &&
+        provider.provide === REMINDERS_TELEMETRY),
   );
   return Test.createTestingModule({
     imports: [ClsModule.forRoot({ global: true })],

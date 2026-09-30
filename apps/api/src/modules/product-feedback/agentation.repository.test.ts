@@ -340,7 +340,7 @@ describe("AgentationPrismaRepository", () => {
       leadA,
       "annotation-1",
       { status: "acknowledged" },
-      "agent",
+      { role: "agent" },
     );
 
     expect(result).not.toBeNull();
@@ -358,8 +358,7 @@ describe("AgentationPrismaRepository", () => {
       leadA,
       "annotation-1",
       { status: "dismissed" },
-      "human",
-      "native-delete",
+      { role: "human", source: "native-delete" },
     );
 
     expect(result).not.toBeNull();
@@ -377,8 +376,7 @@ describe("AgentationPrismaRepository", () => {
       headOfGroupA,
       "annotation-1",
       { status: "dismissed" },
-      "human",
-      "native-delete",
+      { role: "human", source: "native-delete" },
     );
 
     expect(result).toBeNull();

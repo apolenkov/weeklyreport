@@ -17,7 +17,10 @@ import {
   type ProductFeedbackRepository,
 } from "./product-feedback.repository.js";
 import type { FeedbackRouteDeps } from "./product-feedback.routes.js";
-import { executeFeedbackRequest } from "./product-feedback-request.js";
+import {
+  executeFeedbackRequest,
+  type FeedbackRequestPrincipal,
+} from "./product-feedback-request.js";
 
 const HTTP_BAD_REQUEST = 400;
 const HTTP_UNAUTHORIZED = 401;
@@ -130,10 +133,7 @@ function invalidRequest(error: unknown): boolean {
 export function createAuthenticatedFeedbackHandler(
   deps: AuthenticatedFeedbackHandlerDeps,
 ): AuthenticatedFeedbackHandler {
-  const principals = new WeakMap<
-    Request,
-    { readonly session: UserSession; readonly agentationAgent: boolean }
-  >();
+  const principals = new WeakMap<Request, FeedbackRequestPrincipal>();
   const authenticate: RequestHandler = async (req, res, next) => {
     const keyedAgentRequest =
       deps.agentationEnabled &&
@@ -204,9 +204,9 @@ export function createAuthenticatedFeedbackHandler(
       );
       return;
     }
-    const { agentationAgent, session } = principal;
+    const { session } = principal;
     try {
-      await executeFeedbackRequest(req, res, session, deps, agentationAgent);
+      await executeFeedbackRequest(req, res, principal, deps);
     } catch (error: unknown) {
       if (error instanceof FeedbackNotFoundError) {
         sendError(res, HTTP_NOT_FOUND, "not_found", "Feedback not found.");

@@ -143,13 +143,7 @@ export class AgentationPrismaRepository extends AgentationReadRepository {
           input.id,
         );
         if (tombstone)
-          return deletedAnnotationResponse(
-            access,
-            session,
-            sessionId,
-            input,
-            tombstone,
-          );
+          return deletedAnnotationResponse(access, session, input, tombstone);
         const proposedId = randomUUID();
         const existing = await findAnnotationForSync(
           db,
@@ -170,7 +164,7 @@ export class AgentationPrismaRepository extends AgentationReadRepository {
             },
           },
           update: {},
-          create: annotationData(proposedId, access, session, sessionId, input),
+          create: annotationData(proposedId, access, session, input),
           include: { threadMessages: { orderBy: { timestamp: "asc" } } },
         });
         const annotation = agentationAnnotationResponseSchema.parse(
@@ -193,9 +187,12 @@ export class AgentationPrismaRepository extends AgentationReadRepository {
     access: FeedbackAccess,
     id: string,
     patch: AgentationAnnotationPatch,
-    role: AgentationRole = "human",
-    source: "patch" | "native-delete" = "patch",
+    options: {
+      readonly role?: AgentationRole;
+      readonly source?: "patch" | "native-delete";
+    } = {},
   ): Promise<ReturnType<typeof mapAnnotation> | null> {
+    const { role = "human", source = "patch" } = options;
     return this.prisma.$transaction(async (db) => {
       const current = await db.agentationAnnotation.findFirst({
         where: { id, ...annotationPatchScope(access, patch, role, source) },

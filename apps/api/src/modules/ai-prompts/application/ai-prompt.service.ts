@@ -48,9 +48,13 @@ export class AiPromptService {
     private readonly repository: AiPromptRepository,
     private readonly providerRepository: AiProviderConfigurationRepository,
     private readonly catalog: AiFeaturePromptCatalog = aiFeaturePromptCatalog,
-    audit: AiPromptAuditSink = NOOP_AI_PROMPT_AUDIT,
-    metrics: AiPromptMetricsSink = NOOP_AI_PROMPT_METRICS,
+    telemetry: Readonly<{
+      audit?: AiPromptAuditSink;
+      metrics?: AiPromptMetricsSink;
+    }> = {},
   ) {
+    const { audit = NOOP_AI_PROMPT_AUDIT, metrics = NOOP_AI_PROMPT_METRICS } =
+      telemetry;
     this.lifecycle = new AiPromptLifecycleService(
       repository,
       catalog,

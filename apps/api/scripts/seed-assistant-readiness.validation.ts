@@ -299,11 +299,14 @@ function projectOwnScopes(
 export function digestSource(
   source: SelectableReportSource,
   occurrence: ReportOccurrence,
-  authorizedOccurrences: readonly ReportOccurrence[],
-  scopes: readonly SectionScope[],
-  options: AssistantReadinessOptions,
-  seen: Set<string>,
+  context: {
+    readonly authorizedOccurrences: readonly ReportOccurrence[];
+    readonly scopes: readonly SectionScope[];
+    readonly options: AssistantReadinessOptions;
+    readonly seen: Set<string>;
+  },
 ): readonly AssistantReadinessDigestEntry[] {
+  const { authorizedOccurrences, scopes, options, seen } = context;
   const authorizedOccurrence = authorizedOccurrenceFor(
     source,
     authorizedOccurrences,

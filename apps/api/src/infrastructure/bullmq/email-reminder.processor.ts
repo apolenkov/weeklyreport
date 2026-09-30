@@ -48,7 +48,12 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
     @Inject(WorkerLivenessRegistry)
     workerLiveness?: WorkerLivenessRegistry,
   ) {
-    super(env, logger, cls, workerLiveness);
+    super(
+      env,
+      logger.child({ service: "email-reminder-worker" }),
+      cls,
+      workerLiveness,
+    );
   }
 
   // Cap SMTP throughput at 5 emails per rolling 60s window so a burst of
@@ -159,9 +164,7 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
     });
     await this.emailService.sendMailMultipart(
       data.recipientEmail,
-      rendered.subject,
-      rendered.html,
-      rendered.text,
+      rendered,
       fromOverride,
     );
   }
@@ -182,9 +185,7 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
     });
     await this.emailService.sendMailMultipart(
       data.recipientEmail,
-      rendered.subject,
-      rendered.html,
-      rendered.text,
+      rendered,
       fromOverride,
     );
   }

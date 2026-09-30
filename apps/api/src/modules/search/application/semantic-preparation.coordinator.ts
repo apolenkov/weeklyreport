@@ -1,23 +1,25 @@
 import { createHash } from "node:crypto";
 
-import { Inject } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 
+import { ENV_CONFIG } from "../../../infrastructure/config/config.module.js";
+import type { EnvConfig } from "../../../infrastructure/config/env.schema.js";
 import type {
   AiProviderPreparationCoordinator,
   StoredAiProviderRevision,
 } from "../../ai-provider/index.js";
+import { ReportSearchPrismaRepository } from "../infrastructure/report-search.prisma-repository.js";
+import { SemanticEmbeddingPrismaRepository } from "../infrastructure/semantic-embedding.prisma-repository.js";
 import {
   AiRuntimeResolver,
   type AiRuntimeResolverPort,
 } from "./ai-runtime.resolver.js";
 import type { EmbeddingPort } from "./report-assistant.ports.js";
 import type { ReportSearchRepository } from "./report-search.repository.js";
-import { REPORT_SEARCH_REPOSITORY } from "./report-search.repository.js";
 import type {
   SemanticEmbeddingRepository,
   SemanticEmbeddingScope,
 } from "./semantic-embedding.repository.js";
-import { SEMANTIC_EMBEDDING_REPOSITORY } from "./semantic-embedding.repository.js";
 import {
   SEMANTIC_INDEX_ENQUEUER,
   type SemanticIndexEnqueuer,
@@ -60,19 +62,32 @@ type ProgressSink = (
   }>,
 ) => Promise<void>;
 
+type PreparationContext = Readonly<{
+  embeddings: EmbeddingPort;
+  scope: SemanticEmbeddingScope;
+  startedAt: number;
+  onProgress: ProgressSink;
+}>;
+
+@Injectable()
 export class SemanticPreparationCoordinator implements AiProviderPreparationCoordinator {
+  private readonly batchSize: number;
+  private readonly batchConcurrency = 2;
+
   constructor(
-    @Inject(REPORT_SEARCH_REPOSITORY)
+    @Inject(ReportSearchPrismaRepository)
     private readonly reports: ReportSearchRepository,
     @Inject(AiRuntimeResolver)
     private readonly embeddings: AiRuntimeResolverPort,
-    @Inject(SEMANTIC_EMBEDDING_REPOSITORY)
+    @Inject(SemanticEmbeddingPrismaRepository)
     private readonly semanticRepository: SemanticEmbeddingRepository,
     @Inject(SEMANTIC_INDEX_ENQUEUER)
     private readonly enqueuer: SemanticIndexEnqueuer,
-    private readonly batchSize: number,
-    private readonly batchConcurrency = 2,
-  ) {}
+    @Inject(ENV_CONFIG)
+    env: Pick<EnvConfig, "REPORT_ASSISTANT_EMBEDDING_BATCH_SIZE">,
+  ) {
+    this.batchSize = env.REPORT_ASSISTANT_EMBEDDING_BATCH_SIZE;
+  }
 
   async prepare(
     revision: StoredAiProviderRevision,
@@ -87,10 +102,12 @@ export class SemanticPreparationCoordinator implements AiProviderPreparationCoor
     }
     return this.prepareAttempt(
       revision,
-      runtime.embeddings,
-      runtime.scope,
-      startedAt,
-      onProgress,
+      {
+        embeddings: runtime.embeddings,
+        scope: runtime.scope,
+        startedAt,
+        onProgress,
+      },
       0,
       sourceGeneration,
     );
@@ -104,22 +121,13 @@ export class SemanticPreparationCoordinator implements AiProviderPreparationCoor
 
   private async prepareAttempt(
     revision: StoredAiProviderRevision,
-    embeddings: EmbeddingPort,
-    scope: SemanticEmbeddingScope,
-    startedAt: number,
-    onProgress: ProgressSink,
+    context: PreparationContext,
     attempt: number,
     sourceGeneration: bigint,
   ): Promise<PreparationResult> {
+    const { scope, startedAt } = context;
     const documents = await this.collect(revision.semanticInputVersion);
-    const result = await this.embedMissing(
-      documents,
-      revision.id,
-      scope,
-      embeddings,
-      startedAt,
-      onProgress,
-    );
+    const result = await this.embedMissing(documents, revision.id, context);
     const current = await this.collect(revision.semanticInputVersion);
     const currentSourceGeneration = await this.reports.getSourceGeneration();
     if (
@@ -154,10 +162,7 @@ export class SemanticPreparationCoordinator implements AiProviderPreparationCoor
     }
     return this.prepareAttempt(
       revision,
-      embeddings,
-      scope,
-      startedAt,
-      onProgress,
+      context,
       attempt + 1,
       currentSourceGeneration,
     );
@@ -177,10 +182,7 @@ export class SemanticPreparationCoordinator implements AiProviderPreparationCoor
   private async embedMissing(
     documents: readonly PreparationDocument[],
     revisionId: string,
-    scope: SemanticEmbeddingScope,
-    embeddings: EmbeddingPort,
-    startedAt: number,
-    onProgress: ProgressSink,
+    { scope, embeddings, startedAt, onProgress }: PreparationContext,
   ): Promise<PreparationResult> {
     const hashes = documents.map(({ input }) => input.contentHash);
     const cached = new Set(

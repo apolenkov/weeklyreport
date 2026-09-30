@@ -2,7 +2,8 @@ import { AiPromptBundleLifecycle } from "@prisma/client";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import {
-  type AiPromptActivationContract,
+  type AiPromptActivationOptions,
+  type AiPromptTransition,
   revisionWhere,
 } from "./ai-prompt.repository.types.js";
 
@@ -10,13 +11,9 @@ export const transition = async (
   prisma: PrismaService,
   featureKey: string,
   revisionId: string,
-  from: readonly AiPromptBundleLifecycle[],
-  to: AiPromptBundleLifecycle,
-  timestamps: Readonly<{
-    activatedAt?: Date | null;
-    supersededAt?: Date | null;
-  }> = {},
+  input: AiPromptTransition,
 ): Promise<boolean> => {
+  const { from, to, timestamps = {} } = input;
   const result = await prisma.aiPromptBundleRevision.updateMany({
     where: {
       ...revisionWhere(featureKey, revisionId),
@@ -47,10 +44,9 @@ export const activate = async (
   prisma: PrismaService,
   featureKey: string,
   revisionId: string,
-  allowedLifecycle: readonly AiPromptBundleLifecycle[],
-  now: Date,
-  contract: AiPromptActivationContract,
+  options: AiPromptActivationOptions,
 ): Promise<boolean> => {
+  const { allowedLifecycle, now, contract } = options;
   try {
     return await prisma.$transaction(async (transaction) => {
       const control = await transaction.aiFeaturePromptControl.findUnique({

@@ -47,13 +47,11 @@ export function mountAuthIngress(deps: {
     prisma,
     autoCarryOver,
   });
-  mountAuthRoutes(
-    expressApp,
-    samlStrategy,
-    authCtrl,
+  mountAuthRoutes(expressApp, samlStrategy, {
+    authController: authCtrl,
     prisma,
-    process.env,
+    env: process.env,
     provisionLeadWorkspace,
     auditLogger,
-  );
+  });
 }

@@ -61,8 +61,23 @@ export type NewAiPromptBundleRevision = Readonly<{
   createdBy: string;
 }>;
 
-export type AiPromptActivationContract = Readonly<{
+type AiPromptActivationContract = Readonly<{
   servingContractVersion: string;
+}>;
+
+export type AiPromptActivationOptions = Readonly<{
+  allowedLifecycle: readonly AiPromptBundleLifecycle[];
+  now: Date;
+  contract: AiPromptActivationContract;
+}>;
+
+export type AiPromptTransition = Readonly<{
+  from: readonly AiPromptBundleLifecycle[];
+  to: AiPromptBundleLifecycle;
+  timestamps?: Readonly<{
+    activatedAt?: Date | null;
+    supersededAt?: Date | null;
+  }>;
 }>;
 
 export type RevisionRecord = Prisma.AiPromptBundleRevisionGetPayload<{

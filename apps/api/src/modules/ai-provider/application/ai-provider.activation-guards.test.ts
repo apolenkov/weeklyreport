@@ -15,7 +15,7 @@ describe("verifyCurrentSourceFingerprint", () => {
       {} as never,
       {} as never,
       {} as never,
-      1,
+      { REPORT_ASSISTANT_EMBEDDING_BATCH_SIZE: 1 },
     );
 
     await expect(

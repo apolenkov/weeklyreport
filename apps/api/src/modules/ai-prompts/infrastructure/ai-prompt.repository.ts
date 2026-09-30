@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 
 import { AI_PROMPT_HISTORY_LIMIT } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
-import type { AiPromptBundleLifecycle } from "@prisma/client";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import { createDraft } from "./ai-prompt.repository.commands.js";
@@ -12,7 +11,8 @@ import {
   transition,
 } from "./ai-prompt.repository.lifecycle.js";
 import {
-  type AiPromptActivationContract,
+  type AiPromptActivationOptions,
+  type AiPromptTransition,
   type NewAiPromptBundleRevision,
   revisionSelect,
   revisionWhere,
@@ -23,7 +23,6 @@ import {
 } from "./ai-prompt.repository.types.js";
 
 export type {
-  AiPromptActivationContract,
   NewAiPromptBundleRevision,
   StoredAiFeaturePromptControl,
   StoredAiPromptBundleRevision,
@@ -95,21 +94,9 @@ export class AiPromptRepository {
   transition(
     featureKey: string,
     revisionId: string,
-    from: readonly AiPromptBundleLifecycle[],
-    to: AiPromptBundleLifecycle,
-    timestamps: Readonly<{
-      activatedAt?: Date | null;
-      supersededAt?: Date | null;
-    }> = {},
+    input: AiPromptTransition,
   ): Promise<boolean> {
-    return transition(
-      this.prisma,
-      featureKey,
-      revisionId,
-      from,
-      to,
-      timestamps,
-    );
+    return transition(this.prisma, featureKey, revisionId, input);
   }
 
   discardDisposable(featureKey: string, revisionId: string): Promise<boolean> {
@@ -119,17 +106,8 @@ export class AiPromptRepository {
   activate(
     featureKey: string,
     revisionId: string,
-    allowedLifecycle: readonly AiPromptBundleLifecycle[],
-    now: Date,
-    contract: AiPromptActivationContract,
+    options: AiPromptActivationOptions,
   ): Promise<boolean> {
-    return activate(
-      this.prisma,
-      featureKey,
-      revisionId,
-      allowedLifecycle,
-      now,
-      contract,
-    );
+    return activate(this.prisma, featureKey, revisionId, options);
   }
 }

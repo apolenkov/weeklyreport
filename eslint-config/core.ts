@@ -11,6 +11,8 @@ import unicorn from "eslint-plugin-unicorn";
 import unusedImports from "eslint-plugin-unused-imports";
 import tseslint from "typescript-eslint";
 
+import { maxParamsRule } from "./max-params.ts";
+
 const reactHooksPlugin = reactHooks as unknown as ESLint.Plugin;
 
 export const coreConfig: Linter.Config[] = [
@@ -47,6 +49,7 @@ export const coreConfig: Linter.Config[] = [
       "simple-import-sort": simpleImportSort,
       unicorn,
       "unused-imports": unusedImports,
+      weeklyreport: { rules: { "max-params": maxParamsRule } },
     },
     languageOptions: {
       parser: tseslint.parser,
@@ -285,14 +288,15 @@ export const coreConfig: Linter.Config[] = [
       "react-compiler/react-compiler": "error",
 
       // Production structure budgets. Native eslint-suppressions.json counts
-      // preserve existing function/parameter violations; overrides.ts exempts
+      // preserve existing function-length violations; overrides.ts exempts
       // the test/config contour. Cognitive complexity is owned by sonarjs.
       "max-lines-per-function": [
         "error",
         { max: 80, skipBlankLines: true, skipComments: true },
       ],
-      "max-params": ["error", 5],
-      "max-depth": ["error", 4],
+      "max-params": "off",
+      "weeklyreport/max-params": ["error", 4],
+      "max-depth": ["error", 3],
       "max-lines": [
         "error",
         { max: 300, skipBlankLines: true, skipComments: true },

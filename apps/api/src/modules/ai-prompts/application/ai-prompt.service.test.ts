@@ -132,7 +132,7 @@ const serviceFor = (values: {
     createDraft: vi.fn().mockResolvedValue(storedRevision),
     transition: vi.fn().mockResolvedValue(true),
     discardDisposable: vi.fn().mockResolvedValue(true),
-    activate: vi.fn().mockResolvedValue(true),
+    activate: vi.fn<AiPromptRepository["activate"]>().mockResolvedValue(true),
   };
   const providerRepository = {
     getControl: vi.fn().mockResolvedValue(
@@ -155,8 +155,7 @@ const serviceFor = (values: {
       promptRepository as unknown as AiPromptRepository,
       providerRepository as never,
       aiFeaturePromptCatalog,
-      audit,
-      metrics,
+      { audit, metrics },
     ),
   };
 };
@@ -387,13 +386,20 @@ describe("AiPromptService", () => {
       lifecycle: "active",
     });
     expect(harness.providerRepository.getControl).not.toHaveBeenCalled();
+    const activation = harness.repository.activate.mock.lastCall?.[2];
     expect(harness.repository.activate).toHaveBeenCalledWith(
       "lead-report-assistant",
       candidate.id,
-      expect.arrayContaining([AiPromptBundleLifecycle.draft]),
-      expect.any(Date),
-      { servingContractVersion: baseline.servingContractVersion },
+      {
+        allowedLifecycle: activation?.allowedLifecycle,
+        now: activation?.now,
+        contract: { servingContractVersion: baseline.servingContractVersion },
+      },
     );
+    expect(activation?.allowedLifecycle).toContain(
+      AiPromptBundleLifecycle.draft,
+    );
+    expect(activation?.now).toBeInstanceOf(Date);
   });
 
   it("refuses protected prompt discard", async () => {

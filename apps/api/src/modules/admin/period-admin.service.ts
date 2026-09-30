@@ -63,13 +63,11 @@ function resolveManualPeriodEnvelope(
 
   const deadline =
     input.deadline ??
-    computeDeadline(
-      input.periodStart,
-      settings.defaultDeadlineDays,
-      settings.workingDays,
-      settings.defaultTimezone,
-      deadlineTimeFromSetting(settings.deadlineTime),
-    );
+    computeDeadline(input.periodStart, settings.defaultDeadlineDays, {
+      workingDays: settings.workingDays,
+      timezone: settings.defaultTimezone,
+      deadlineTime: deadlineTimeFromSetting(settings.deadlineTime),
+    });
 
   return { periodEnd, deadline };
 }

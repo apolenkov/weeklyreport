@@ -6,13 +6,21 @@ import type {
   AiProviderDraft,
   AiProviderPreparationProgress,
 } from "@customreport/shared";
+import { Inject, Injectable } from "@nestjs/common";
 
+import { ENV_CONFIG } from "../../../infrastructure/config/config.module.js";
+import { AiProviderPrometheusMetrics } from "../../../infrastructure/metrics/ai-provider.metrics.js";
+import { APP_LOGGER } from "../../../lib/audit-logger.js";
+import { type AppLogger, createNullLogger } from "../../../lib/logger.js";
 import { AiProviderConfigurationRepository } from "../infrastructure/ai-provider.repository.js";
+import { AI_PROVIDER_TEST_ENQUEUER } from "../infrastructure/ai-provider-test.queue.js";
 import { AesGcmCredentialCodec } from "../infrastructure/credential-codec.js";
 import { AiProviderActivationService } from "./ai-provider.activation-service.js";
 import { AiProviderDraftService } from "./ai-provider.draft-service.js";
 import { AiProviderReadService } from "./ai-provider.read-service.js";
 import {
+  AI_PROVIDER_CAPABILITY_TESTER,
+  AI_PROVIDER_PREPARATION_COORDINATOR,
   type AiProviderAuditSink,
   type AiProviderCapabilityTester,
   AiProviderConfigurationError,
@@ -20,7 +28,6 @@ import {
   AiProviderNotFoundError,
   type AiProviderPreparationCoordinator,
   type AiProviderServiceDependencies,
-  NOOP_AUDIT,
   NOOP_METRICS,
 } from "./ai-provider.service-support.js";
 import type {
@@ -44,6 +51,7 @@ export {
   AiProviderNotFoundError,
 } from "./ai-provider.service-support.js";
 
+@Injectable()
 export class AiProviderConfigurationService {
   private readonly dependencies: Readonly<{
     repository: AiProviderConfigurationRepository;
@@ -54,15 +62,26 @@ export class AiProviderConfigurationService {
   private readonly activations: AiProviderActivationService;
 
   constructor(
+    @Inject(AiProviderConfigurationRepository)
     repository: AiProviderConfigurationRepository,
+    @Inject(AesGcmCredentialCodec)
     codec: AesGcmCredentialCodec,
+    @Inject(ENV_CONFIG)
     env: AiProviderEnvironment,
+    @Inject(AI_PROVIDER_CAPABILITY_TESTER)
     tester?: AiProviderCapabilityTester,
+    @Inject(AI_PROVIDER_PREPARATION_COORDINATOR)
     preparation?: AiProviderPreparationCoordinator,
-    audit: AiProviderAuditSink = NOOP_AUDIT,
+    @Inject(APP_LOGGER)
+    logger: AppLogger = createNullLogger(),
+    @Inject(AiProviderPrometheusMetrics)
     metrics: AiProviderMetricsSink = NOOP_METRICS,
+    @Inject(AI_PROVIDER_TEST_ENQUEUER)
     testEnqueuer?: AiProviderTestEnqueuer,
   ) {
+    const audit: AiProviderAuditSink = {
+      record: (event) => logger.info("ai_provider.audit", { ...event }),
+    };
     this.dependencies = { repository, audit };
     const dependencies = {
       repository,

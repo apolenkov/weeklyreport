@@ -682,9 +682,11 @@ describe("carry-over plan — boundary-provided lifecycle timestamps", () => {
           decisions: [],
         },
       ],
-      sourceReportId,
-      targetReportId,
-      NOW,
+      {
+        sourceReportId,
+        targetReportId,
+        carriedAt: NOW,
+      },
     );
 
     const timestamps = entries.flatMap((entry) =>

@@ -5,6 +5,7 @@ import type {
 } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
+import { createNullLogger } from "../../../lib/logger.js";
 import {
   type AnalyticsCacheInvalidator,
   PeriodAccessError,
@@ -12,6 +13,7 @@ import {
   PeriodService,
   type ReopenPolicyReader,
 } from "../application/period.service";
+import { NOOP_PERIOD_TELEMETRY } from "../application/period-telemetry.port.js";
 import type { PeriodLifecycleExpectation } from "../domain/period-lifecycle-expectation.js";
 
 const noopInvalidate: AnalyticsCacheInvalidator = () => Promise.resolve();
@@ -160,8 +162,10 @@ describe("PeriodService — integration (publish lifecycle)", () => {
     const repo = createSpyRepository(reports);
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     const result = await service.publishPeriod(reportId, headSession);
@@ -188,8 +192,10 @@ describe("PeriodService — integration (publish lifecycle)", () => {
     ]);
     const service = new PeriodService(
       createSpyRepository(reports),
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
@@ -212,8 +218,10 @@ describe("PeriodService — integration (publish lifecycle)", () => {
     const repo = createSpyRepository(reports);
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     const result = await service.reopenPeriod(reportId, headSession);
@@ -236,8 +244,10 @@ describe("PeriodService — integration (publish lifecycle)", () => {
     ]);
     const service = new PeriodService(
       createSpyRepository(reports),
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(
@@ -259,8 +269,10 @@ describe("PeriodService — integration (publish lifecycle)", () => {
     ]);
     const service = new PeriodService(
       createSpyRepository(reports),
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     // Publish -> Reopen -> Re-publish
@@ -274,8 +286,10 @@ describe("PeriodService — integration (publish lifecycle)", () => {
   it("publish with missing report throws generic Error (not PeriodAccessError)", async () => {
     const service = new PeriodService(
       createSpyRepository(new Map()),
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     const error = await service
@@ -289,8 +303,10 @@ describe("PeriodService — integration (publish lifecycle)", () => {
   it("reopen with missing report throws generic Error", async () => {
     const service = new PeriodService(
       createSpyRepository(new Map()),
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     const error = await service
@@ -316,8 +332,10 @@ describe("PeriodService — integration (publish lifecycle)", () => {
     const repo = createSpyRepository(reports);
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await service.publishPeriod(reportId, headSession);

@@ -27,7 +27,7 @@ const HTTP_BAD_REQUEST = 400;
 const HTTP_NOT_FOUND = 404;
 const HTTP_FORBIDDEN = 403;
 
-export interface AgentationRequestOptions {
+interface AgentationRequestOptions {
   readonly actor?: AgentationRole;
   readonly isAgent?: boolean;
   readonly frontendOrigin?: string;
@@ -37,6 +37,19 @@ type ResolvedOptions = Required<
 > &
   Pick<AgentationRequestOptions, "frontendOrigin">;
 type FeedbackAccess = ReturnType<typeof feedbackAccessFromSession>;
+
+interface AgentationRequestDeps {
+  readonly prisma: PrismaService;
+  readonly logger: AppLogger;
+  readonly options?: AgentationRequestOptions | AgentationRole;
+}
+
+interface AgentationRouteContext {
+  readonly repo: AgentationPrismaRepository;
+  readonly access: FeedbackAccess;
+  readonly path: string;
+  readonly options: ResolvedOptions;
+}
 
 function send(res: Response, status: number, body: unknown): void {
   res.status(status).json(body);
@@ -65,18 +78,16 @@ function requestsAgentSync(req: Request, options: ResolvedOptions): boolean {
 async function events(
   req: Request,
   res: Response,
-  repo: AgentationPrismaRepository,
-  session: UserSession,
+  context: AgentationRouteContext,
   sessionId: string | undefined,
-  options: ResolvedOptions,
 ): Promise<true> {
+  const { repo, access, options } = context;
   if (!sessionId && !options.isAgent) {
     send(res, HTTP_FORBIDDEN, {
       error: "Global Agentation stream is disabled.",
     });
     return true;
   }
-  const access = feedbackAccessFromSession(session);
   if (sessionId && !(await repo.getSession(access, sessionId)))
     return missing(res);
   const sseOptions = {
@@ -94,7 +105,7 @@ async function events(
         after: bigint,
         through: bigint,
         limit: number,
-      ) => repo.deletionEvents(access, id, after, through, limit),
+      ) => repo.deletionEvents(access, id, { after, through, limit }),
     },
     ...(sessionId ? { scopedSessionId: sessionId } : {}),
     ...(options.frontendOrigin
@@ -107,12 +118,9 @@ async function events(
 async function collection(
   req: Request,
   res: Response,
-  repo: AgentationPrismaRepository,
-  session: UserSession,
-  path: string,
-  options: ResolvedOptions,
+  context: AgentationRouteContext,
 ): Promise<boolean> {
-  const access = feedbackAccessFromSession(session);
+  const { repo, access, path } = context;
   switch (`${req.method} ${path}`) {
     case "GET /health":
       send(res, HTTP_OK, { status: "ok", mode: "postgres" });
@@ -139,7 +147,7 @@ async function collection(
       return true;
     }
     case "GET /events":
-      return events(req, res, repo, session, undefined, options);
+      return events(req, res, context, undefined);
     default:
       return false;
   }
@@ -147,13 +155,10 @@ async function collection(
 async function sessionRoute(
   req: Request,
   res: Response,
-  repo: AgentationPrismaRepository,
-  session: UserSession,
+  context: AgentationRouteContext,
   id: string,
-  path: string,
-  options: ResolvedOptions,
 ): Promise<boolean> {
-  const access = feedbackAccessFromSession(session);
+  const { repo, access, path, options } = context;
   switch (`${req.method} ${path}`) {
     case `GET /sessions/${id}`: {
       const row = await repo.getSession(access, id);
@@ -194,7 +199,7 @@ async function sessionRoute(
       return true;
     }
     case `GET /sessions/${id}/events`:
-      return events(req, res, repo, session, id, options);
+      return events(req, res, context, id);
     default:
       return false;
   }
@@ -202,27 +207,23 @@ async function sessionRoute(
 async function annotationRoute(
   req: Request,
   res: Response,
-  repo: AgentationPrismaRepository,
-  session: UserSession,
+  context: AgentationRouteContext,
   id: string,
-  path: string,
-  options: ResolvedOptions,
 ): Promise<boolean> {
-  const access = feedbackAccessFromSession(session);
+  const { repo, access, path, options } = context;
   switch (`${req.method} ${path}`) {
     case `GET /annotations/${id}`: {
       const row = await repo.getAnnotation(access, id);
       return row ? (send(res, HTTP_OK, row), true) : missing(res);
     }
     case `PATCH /annotations/${id}`:
-      return patchAnnotation(req, res, repo, access, id, options);
+      return patchAnnotation(req, res, context, id);
     case `DELETE /annotations/${id}`: {
       const row = await repo.updateAnnotation(
         access,
         id,
         { status: "dismissed" },
-        options.actor,
-        "native-delete",
+        { role: options.actor, source: "native-delete" },
       );
       if (!row) return missing(res);
       send(res, HTTP_OK, { deleted: true, annotationId: id });
@@ -245,17 +246,18 @@ async function annotationRoute(
 async function patchAnnotation(
   req: Request,
   res: Response,
-  repo: AgentationPrismaRepository,
-  access: FeedbackAccess,
+  context: AgentationRouteContext,
   id: string,
-  options: ResolvedOptions,
 ): Promise<boolean> {
+  const { repo, access, options } = context;
   const patch = agentationAnnotationPatchSchema.parse(req.body);
   if (options.actor === "human" && patch.status === "dismissed") {
     send(res, HTTP_BAD_REQUEST, { error: "dismiss_reason_required" });
     return true;
   }
-  const row = await repo.updateAnnotation(access, id, patch, options.actor);
+  const row = await repo.updateAnnotation(access, id, patch, {
+    role: options.actor,
+  });
   return row ? (send(res, HTTP_OK, row), true) : missing(res);
 }
 
@@ -263,9 +265,7 @@ export async function executeAgentationRequest(
   req: Request,
   res: Response,
   session: UserSession,
-  prisma: PrismaService,
-  logger: AppLogger,
-  actorOrOptions: AgentationRequestOptions | AgentationRole = "human",
+  { prisma, logger, options: actorOrOptions = "human" }: AgentationRequestDeps,
 ): Promise<boolean> {
   const options = resolveOptions(actorOrOptions);
   // The handler is mounted at /api/v1 for both /feedback and /agentation —
@@ -275,26 +275,18 @@ export async function executeAgentationRequest(
   const path = req.path.replace(/^\/agentation(?=\/|$)/, "") || "/";
   res.setHeader("cache-control", "no-store");
   const repo = new AgentationPrismaRepository(prisma);
-  if (await collection(req, res, repo, session, path, options)) return true;
+  const context: AgentationRouteContext = {
+    repo,
+    access: feedbackAccessFromSession(session),
+    path,
+    options,
+  };
+  if (await collection(req, res, context)) return true;
   const sessionId = /^\/sessions\/([^/]+)(?:\/|$)/.exec(path)?.[1];
-  if (
-    sessionId &&
-    (await sessionRoute(req, res, repo, session, sessionId, path, options))
-  )
+  if (sessionId && (await sessionRoute(req, res, context, sessionId)))
     return true;
   const annotationId = /^\/annotations\/([^/]+)(?:\/|$)/.exec(path)?.[1];
-  if (
-    annotationId &&
-    (await annotationRoute(
-      req,
-      res,
-      repo,
-      session,
-      annotationId,
-      path,
-      options,
-    ))
-  )
+  if (annotationId && (await annotationRoute(req, res, context, annotationId)))
     return true;
   logger.debug("unhandled Agentation route", {
     path,

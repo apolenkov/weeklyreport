@@ -13,10 +13,12 @@ const rateLimit = (retryAfterMs: number): ReportAssistantProviderError =>
   new ReportAssistantProviderError(
     "planner",
     new Error("rate_limit_exceeded"),
-    429,
-    true,
-    "rate_limit_exceeded",
-    retryAfterMs,
+    {
+      statusCode: 429,
+      retryable: true,
+      providerCode: "rate_limit_exceeded",
+      retryAfterMs,
+    },
   );
 
 afterEach(() => vi.useRealTimers());

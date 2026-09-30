@@ -90,15 +90,7 @@ const resolveSlots = (
   slots: readonly ReferenceSlot[],
   tokenIndex: ReadonlyMap<string, readonly ClarificationTokenDescriptor[]>,
 ): readonly SingleReferenceOutcome[] =>
-  slots.map((slot) =>
-    resolveReference(
-      input.catalog,
-      slot,
-      tokenIndex,
-      input.actorId,
-      input.tokenCodec,
-    ),
-  );
+  slots.map((slot) => resolveReference(input.catalog, slot, tokenIndex, input));
 
 const firstFailure = (
   outcomes: readonly SingleReferenceOutcome[],

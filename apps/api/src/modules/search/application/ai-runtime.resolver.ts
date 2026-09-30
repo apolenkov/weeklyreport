@@ -1,13 +1,16 @@
 import type { AiProviderReasoningMode } from "@customreport/shared";
+import { Inject, Injectable } from "@nestjs/common";
 
+import { ENV_CONFIG } from "../../../infrastructure/config/config.module.js";
 import type { EnvConfig } from "../../../infrastructure/config/env.schema.js";
 import type { AiComposedPromptSet } from "../../ai-prompts/index.js";
-import type {
+import {
   AesGcmCredentialCodec,
   AiProviderConfigurationRepository,
-  StoredAiProviderRevision,
+  type StoredAiProviderRevision,
 } from "../../ai-provider/index.js";
-import type { AiRuntimeConfigurationRepository } from "../infrastructure/ai-runtime-configuration.prisma-repository.js";
+import { AiRuntimeConfigurationRepository } from "../infrastructure/ai-runtime-configuration.prisma-repository.js";
+import { SemanticEmbeddingPrismaRepository } from "../infrastructure/semantic-embedding.prisma-repository.js";
 import {
   createRuntimeClients,
   type RuntimeClients,
@@ -23,7 +26,10 @@ import type {
   SemanticEmbeddingRepository,
   SemanticEmbeddingScope,
 } from "./semantic-embedding.repository.js";
-import type { SemanticIndexEnqueuer } from "./semantic-index.enqueuer.js";
+import {
+  SEMANTIC_INDEX_ENQUEUER,
+  type SemanticIndexEnqueuer,
+} from "./semantic-index.enqueuer.js";
 import { SemanticRetrievalService } from "./semantic-retrieval.service.js";
 
 export type AiRuntimeSnapshot = Readonly<{
@@ -57,15 +63,21 @@ export class AiRuntimeNotConfiguredError extends Error {
   }
 }
 
+@Injectable()
 export class AiRuntimeResolver implements AiRuntimeResolverPort {
   private static readonly CLIENT_CACHE_LIMIT = 4;
   private readonly clients = new Map<string, RuntimeClients>();
 
   constructor(
+    @Inject(AiProviderConfigurationRepository)
     private readonly repository: AiProviderConfigurationRepository,
+    @Inject(AesGcmCredentialCodec)
     private readonly codec: AesGcmCredentialCodec,
+    @Inject(SemanticEmbeddingPrismaRepository)
     private readonly semanticRepository: SemanticEmbeddingRepository,
+    @Inject(SEMANTIC_INDEX_ENQUEUER)
     private readonly semanticEnqueuer: SemanticIndexEnqueuer,
+    @Inject(ENV_CONFIG)
     private readonly env: Pick<
       EnvConfig,
       | "REPORT_ASSISTANT_PROVIDER_TIMEOUT_MS"
@@ -77,6 +89,7 @@ export class AiRuntimeResolver implements AiRuntimeResolverPort {
       | "REPORT_ASSISTANT_READ_THROUGH_LIMIT"
       | "REPORT_ASSISTANT_OUTBOUND_DATA_APPROVED"
     >,
+    @Inject(AiRuntimeConfigurationRepository)
     private readonly configurationRepository: Pick<
       AiRuntimeConfigurationRepository,
       "resolveReportAssistant"
@@ -90,14 +103,7 @@ export class AiRuntimeResolver implements AiRuntimeResolverPort {
     const configuration =
       await this.configurationRepository.resolveReportAssistant();
     return configuration
-      ? this.resolveRevision(
-          configuration.provider,
-          configuration.prompts,
-          configuration.featureKey,
-          configuration.promptRevisionId,
-          configuration.servingContractVersion,
-          configuration.coreContractVersion,
-        )
+      ? this.resolveRevision(configuration.provider, configuration)
       : null;
   }
 
@@ -107,17 +113,33 @@ export class AiRuntimeResolver implements AiRuntimeResolverPort {
     }
     const revision = await this.repository.getRevision(revisionId);
     if (!revision) throw new AiRuntimeNotConfiguredError();
-    return this.resolveRevision(revision, null, null, null, null, null);
+    return this.resolveRevision(revision, {
+      prompts: null,
+      featureKey: null,
+      promptRevisionId: null,
+      servingContractVersion: null,
+      coreContractVersion: null,
+    });
   }
 
   private resolveRevision(
     revision: StoredAiProviderRevision,
-    prompts: AiComposedPromptSet | null,
-    featureKey: string | null,
-    promptRevisionId: string | null,
-    servingContractVersion: string | null,
-    coreContractVersion: string | null,
+    prompt: Pick<
+      AiRuntimeSnapshot,
+      | "prompts"
+      | "featureKey"
+      | "promptRevisionId"
+      | "servingContractVersion"
+      | "coreContractVersion"
+    >,
   ): AiRuntimeSnapshot {
+    const {
+      prompts,
+      featureKey,
+      promptRevisionId,
+      servingContractVersion,
+      coreContractVersion,
+    } = prompt;
     // Exact embedding workers intentionally have no generation prompts. The
     // active assistant has a persisted prompt identity, so its client set is
     // kept separate even when both snapshots use the same provider revision.
@@ -131,13 +153,11 @@ export class AiRuntimeResolver implements AiRuntimeResolverPort {
       revision.embeddingScopeIdentity,
     ].join(":");
     const clients = this.getOrCreateClients(cacheKey, () =>
-      createRuntimeClients(
-        revision,
-        prompts,
-        this.codec,
-        this.env,
-        () => new AiRuntimeNotConfiguredError(),
-      ),
+      createRuntimeClients(revision, prompts, {
+        codec: this.codec,
+        env: this.env,
+        createError: () => new AiRuntimeNotConfiguredError(),
+      }),
     );
     return {
       revisionId: revision.id,

@@ -58,12 +58,12 @@ type SaveDraftSection = (
 ) => void;
 
 function saveActiveRecord<T>(
-  section: ReportSectionReadModel | null,
+  context: Pick<InlineSaveHandlersArgs, "section" | "saveDraftSection">,
   active: ActiveRecord,
   applyEdit: ApplyEdit<T>,
   next: T,
-  saveDraftSection: SaveDraftSection,
 ) {
+  const { section, saveDraftSection } = context;
   if (section === null || active === null) return;
   saveDraftSection(
     section,
@@ -81,12 +81,9 @@ interface InlineSaveHandlersArgs {
   readonly saveDraftSection: SaveDraftSection;
 }
 
-function createInlineSaveHandlers({
-  section,
-  inlineEditRecord,
-  pendingDeleteRef,
-  saveDraftSection,
-}: InlineSaveHandlersArgs) {
+function createInlineSaveHandlers(args: InlineSaveHandlersArgs) {
+  const { section, inlineEditRecord, pendingDeleteRef, saveDraftSection } =
+    args;
   const activeItem = getActiveItemRecord(inlineEditRecord);
   const activeRisk = getActiveRiskRecord(inlineEditRecord);
   const activeDecision = getActiveDecisionRecord(inlineEditRecord);
@@ -100,31 +97,13 @@ function createInlineSaveHandlers({
     );
   }
   function onItemSave(next: KanbanItem) {
-    saveActiveRecord(
-      section,
-      activeItem,
-      applySlideInlineItemEdit,
-      next,
-      saveDraftSection,
-    );
+    saveActiveRecord(args, activeItem, applySlideInlineItemEdit, next);
   }
   function onRiskSave(next: RiskEntry) {
-    saveActiveRecord(
-      section,
-      activeRisk,
-      applySlideInlineRiskEdit,
-      next,
-      saveDraftSection,
-    );
+    saveActiveRecord(args, activeRisk, applySlideInlineRiskEdit, next);
   }
   function onDecisionSave(next: DecisionEntry) {
-    saveActiveRecord(
-      section,
-      activeDecision,
-      applySlideInlineDecisionEdit,
-      next,
-      saveDraftSection,
-    );
+    saveActiveRecord(args, activeDecision, applySlideInlineDecisionEdit, next);
   }
 
   return { onConfirmDelete, onItemSave, onRiskSave, onDecisionSave };

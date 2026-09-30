@@ -29,11 +29,14 @@ const UNPAGINATED_HARD_CAP = 1000;
 async function collectScoped(
   fetchPage: FetchExecutionsPage,
   matches: (execution: AdminReminderExecution) => boolean,
-  batchSize: number,
-  cursor: string | null,
-  needed: number,
-  acc: readonly AdminReminderExecution[],
+  scan: {
+    readonly batchSize: number;
+    readonly cursor: string | null;
+    readonly needed: number;
+    readonly acc: readonly AdminReminderExecution[];
+  },
 ): Promise<readonly AdminReminderExecution[]> {
+  const { batchSize, cursor, needed, acc } = scan;
   const batch = adminReminderExecutionSchema
     .array()
     .parse(await fetchPage({ cursor, take: batchSize }));
@@ -42,14 +45,11 @@ async function collectScoped(
   if (batch.length < batchSize || scoped.length >= needed || !lastRow) {
     return scoped;
   }
-  return collectScoped(
-    fetchPage,
-    matches,
-    batchSize,
-    lastRow.id,
-    needed,
-    scoped,
-  );
+  return collectScoped(fetchPage, matches, {
+    ...scan,
+    cursor: lastRow.id,
+    acc: scoped,
+  });
 }
 
 // Recipient allowlist is derived outside persistence: filter explicit
@@ -64,14 +64,12 @@ export async function paginateReminderExecutions(
     !recipientAllowlist || recipientAllowlist.has(execution.recipientEmail);
 
   if (!pagination) {
-    const all = await collectScoped(
-      fetchPage,
-      matches,
-      FULL_SCAN_BATCH_SIZE,
-      null,
-      UNPAGINATED_HARD_CAP + 1,
-      [],
-    );
+    const all = await collectScoped(fetchPage, matches, {
+      batchSize: FULL_SCAN_BATCH_SIZE,
+      cursor: null,
+      needed: UNPAGINATED_HARD_CAP + 1,
+      acc: [],
+    });
     if (all.length > UNPAGINATED_HARD_CAP) {
       throw new Error(
         `Reminder execution history exceeds the unpaginated cap of ${UNPAGINATED_HARD_CAP} rows; pass pagination.`,
@@ -81,14 +79,12 @@ export async function paginateReminderExecutions(
   }
 
   const batchSize = Math.max(pagination.limit + 1, MIN_BATCH_SIZE);
-  const scoped = await collectScoped(
-    fetchPage,
-    matches,
+  const scoped = await collectScoped(fetchPage, matches, {
     batchSize,
-    pagination.cursor ?? null,
-    pagination.limit + 1,
-    [],
-  );
+    cursor: pagination.cursor ?? null,
+    needed: pagination.limit + 1,
+    acc: [],
+  });
   const items = scoped.slice(0, pagination.limit);
   const nextCursor =
     scoped.length > pagination.limit ? (items.at(-1)?.id ?? null) : null;

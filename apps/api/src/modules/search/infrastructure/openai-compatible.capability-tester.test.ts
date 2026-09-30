@@ -126,11 +126,13 @@ describe("OpenAiCompatibleCapabilityTester", () => {
     const bodies: unknown[] = [];
     const headers: Headers[] = [];
     const tester = new OpenAiCompatibleCapabilityTester(
-      1000,
-      100,
-      100,
-      2,
-      100,
+      {
+        timeoutMs: 1000,
+        plannerMaxTokens: 100,
+        answerMaxTokens: 100,
+        embeddingBatchSize: 2,
+        embeddingTokenBudget: 100,
+      },
       fetcherFor(passingResponses, bodies, headers),
     );
     const result = await tester.test(profile, {
@@ -173,11 +175,13 @@ describe("OpenAiCompatibleCapabilityTester", () => {
   it("rejects embeddings that omit required token usage", async () => {
     const bodies: unknown[] = [];
     const tester = new OpenAiCompatibleCapabilityTester(
-      1000,
-      100,
-      100,
-      2,
-      100,
+      {
+        timeoutMs: 1000,
+        plannerMaxTokens: 100,
+        answerMaxTokens: 100,
+        embeddingBatchSize: 2,
+        embeddingTokenBudget: 100,
+      },
       fetcherFor(
         [
           passingResponses[0],
@@ -222,11 +226,13 @@ describe("OpenAiCompatibleCapabilityTester", () => {
     const makeResult = async (plannerArguments: unknown) => {
       const bodies: unknown[] = [];
       const tester = new OpenAiCompatibleCapabilityTester(
-        1000,
-        100,
-        100,
-        2,
-        100,
+        {
+          timeoutMs: 1000,
+          plannerMaxTokens: 100,
+          answerMaxTokens: 100,
+          embeddingBatchSize: 2,
+          embeddingTokenBudget: 100,
+        },
         fetcherFor(
           [
             {
@@ -292,11 +298,13 @@ describe("OpenAiCompatibleCapabilityTester", () => {
     const bodies: unknown[] = [];
     const headers: Headers[] = [];
     const tester = new OpenAiCompatibleCapabilityTester(
-      1000,
-      100,
-      100,
-      2,
-      100,
+      {
+        timeoutMs: 1000,
+        plannerMaxTokens: 100,
+        answerMaxTokens: 100,
+        embeddingBatchSize: 2,
+        embeddingTokenBudget: 100,
+      },
       fetcherFor(passingResponses, bodies, headers),
     );
 
@@ -349,11 +357,13 @@ describe("OpenAiCompatibleCapabilityTester", () => {
       },
     };
     const tester = new OpenAiCompatibleCapabilityTester(
-      1000,
-      100,
-      100,
-      2,
-      100,
+      {
+        timeoutMs: 1000,
+        plannerMaxTokens: 100,
+        answerMaxTokens: 100,
+        embeddingBatchSize: 2,
+        embeddingTokenBudget: 100,
+      },
       (input, init) => {
         requests.push({
           url: input,
@@ -390,11 +400,13 @@ describe("OpenAiCompatibleCapabilityTester", () => {
   it("fails the answer capability when fixed JSON mode is rejected", async () => {
     const bodies: unknown[] = [];
     const tester = new OpenAiCompatibleCapabilityTester(
-      1000,
-      100,
-      100,
-      2,
-      100,
+      {
+        timeoutMs: 1000,
+        plannerMaxTokens: 100,
+        answerMaxTokens: 100,
+        embeddingBatchSize: 2,
+        embeddingTokenBudget: 100,
+      },
       responseFetcherFor(
         [
           { status: 200, body: passingResponses[0] },
@@ -424,11 +436,13 @@ describe("OpenAiCompatibleCapabilityTester", () => {
   it("does not negotiate after an authentication failure", async () => {
     const bodies: unknown[] = [];
     const tester = new OpenAiCompatibleCapabilityTester(
-      1000,
-      100,
-      100,
-      2,
-      100,
+      {
+        timeoutMs: 1000,
+        plannerMaxTokens: 100,
+        answerMaxTokens: 100,
+        embeddingBatchSize: 2,
+        embeddingTokenBudget: 100,
+      },
       responseFetcherFor(
         [
           { status: 200, body: passingResponses[0] },
@@ -464,11 +478,13 @@ describe("OpenAiCompatibleCapabilityTester", () => {
   it("stops after a planner rate limit so the worker can classify it as inconclusive", async () => {
     const bodies: unknown[] = [];
     const tester = new OpenAiCompatibleCapabilityTester(
-      1000,
-      100,
-      100,
-      2,
-      100,
+      {
+        timeoutMs: 1000,
+        plannerMaxTokens: 100,
+        answerMaxTokens: 100,
+        embeddingBatchSize: 2,
+        embeddingTokenBudget: 100,
+      },
       responseFetcherFor(
         [
           {
@@ -512,11 +528,13 @@ describe("OpenAiCompatibleCapabilityTester", () => {
   it("retries invalid generated tool calls with deterministic sampling", async () => {
     const bodies: unknown[] = [];
     const tester = new OpenAiCompatibleCapabilityTester(
-      1000,
-      100,
-      100,
-      2,
-      100,
+      {
+        timeoutMs: 1000,
+        plannerMaxTokens: 100,
+        answerMaxTokens: 100,
+        embeddingBatchSize: 2,
+        embeddingTokenBudget: 100,
+      },
       responseFetcherFor(
         [
           {
@@ -552,11 +570,13 @@ describe("OpenAiCompatibleCapabilityTester", () => {
       body: { error: { code: "tool_use_failed" } },
     };
     const tester = new OpenAiCompatibleCapabilityTester(
-      1000,
-      100,
-      100,
-      2,
-      100,
+      {
+        timeoutMs: 1000,
+        plannerMaxTokens: 100,
+        answerMaxTokens: 100,
+        embeddingBatchSize: 2,
+        embeddingTokenBudget: 100,
+      },
       responseFetcherFor([toolFailure, toolFailure, toolFailure], bodies),
     );
 

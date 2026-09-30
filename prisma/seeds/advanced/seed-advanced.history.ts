@@ -97,10 +97,14 @@ async function upsertHistoryReport(
 
 async function seedHistorySection(
   prisma: PrismaClient,
-  report: SeedHistoryReport,
-  suffix: ReportSuffix,
-  cfg: LeadConfig,
-  leadIdx: number,
+  { report, suffix }: (typeof HISTORY_PERIODS)[number],
+  {
+    cfg,
+    leadIdx,
+  }: {
+    readonly cfg: LeadConfig;
+    readonly leadIdx: number;
+  },
   ownership?: StageOwnership,
 ): Promise<SectionCounts> {
   const reportSectionId = sectionId(suffix, cfg.leadIndex);
@@ -164,10 +168,8 @@ async function seedHistoryPeriod(
         await total,
         await seedHistorySection(
           prisma,
-          report,
-          suffix,
-          cfg,
-          leadIdx,
+          { report, suffix },
+          { cfg, leadIdx },
           ownership,
         ),
       ),

@@ -199,40 +199,60 @@ describe("business-date: addBusinessDays — boundaries", () => {
 describe("business-date: computeDeadline", () => {
   it("applies the explicit 18:00 wall-clock in tz", () => {
     const start = inZone("2026-05-04T09:00:00", TZ_MSK); // Mon 09:00
-    const got = computeDeadline(start, 4, "mon-fri", TZ_MSK, {
-      hour: 18,
-      minute: 0,
+    const got = computeDeadline(start, 4, {
+      workingDays: "mon-fri",
+      timezone: TZ_MSK,
+      deadlineTime: {
+        hour: 18,
+        minute: 0,
+      },
     });
     expectWallClock(got, "2026-05-08T18:00:00", TZ_MSK); // Fri 18:00 MSK
   });
 
   it("discards the hour of periodStart (lands cleanly on HH:00:00.000)", () => {
     const start = inZone("2026-05-04T23:59:59", TZ_MSK);
-    const got = computeDeadline(start, 1, "mon-fri", TZ_MSK, {
-      hour: 9,
-      minute: 0,
+    const got = computeDeadline(start, 1, {
+      workingDays: "mon-fri",
+      timezone: TZ_MSK,
+      deadlineTime: {
+        hour: 9,
+        minute: 0,
+      },
     });
     expectWallClock(got, "2026-05-05T09:00:00", TZ_MSK);
   });
 
   it("mon-sun with deadlineDays=4 from Monday lands on Friday (calendar +4)", () => {
     const start = inZone("2026-05-04T09:00:00", TZ_MSK);
-    const got = computeDeadline(start, 4, "mon-sun", TZ_MSK, {
-      hour: 18,
-      minute: 0,
+    const got = computeDeadline(start, 4, {
+      workingDays: "mon-sun",
+      timezone: TZ_MSK,
+      deadlineTime: {
+        hour: 18,
+        minute: 0,
+      },
     });
     expectWallClock(got, "2026-05-08T18:00:00", TZ_MSK);
   });
 
   it("mon-fri vs mon-sun diverge when deadlineDays crosses a weekend", () => {
     const start = inZone("2026-05-04T09:00:00", TZ_MSK); // Mon
-    const friMonFri = computeDeadline(start, 5, "mon-fri", TZ_MSK, {
-      hour: 18,
-      minute: 0,
+    const friMonFri = computeDeadline(start, 5, {
+      workingDays: "mon-fri",
+      timezone: TZ_MSK,
+      deadlineTime: {
+        hour: 18,
+        minute: 0,
+      },
     });
-    const satMonSun = computeDeadline(start, 5, "mon-sun", TZ_MSK, {
-      hour: 18,
-      minute: 0,
+    const satMonSun = computeDeadline(start, 5, {
+      workingDays: "mon-sun",
+      timezone: TZ_MSK,
+      deadlineTime: {
+        hour: 18,
+        minute: 0,
+      },
     });
     expectWallClock(friMonFri, "2026-05-11T18:00:00", TZ_MSK); // next Mon
     expectWallClock(satMonSun, "2026-05-09T18:00:00", TZ_MSK); // Sat
@@ -240,9 +260,13 @@ describe("business-date: computeDeadline", () => {
 
   it("produces UTC-stable Date (instant equality across zone observers)", () => {
     const start = inZone("2026-05-04T09:00:00", TZ_MSK);
-    const got = computeDeadline(start, 4, "mon-fri", TZ_MSK, {
-      hour: 18,
-      minute: 0,
+    const got = computeDeadline(start, 4, {
+      workingDays: "mon-fri",
+      timezone: TZ_MSK,
+      deadlineTime: {
+        hour: 18,
+        minute: 0,
+      },
     });
     // Fri 2026-05-08 18:00 MSK = 15:00 UTC.
     expect(got.toISOString()).toBe("2026-05-08T15:00:00.000Z");

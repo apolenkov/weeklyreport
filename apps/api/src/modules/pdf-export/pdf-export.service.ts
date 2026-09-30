@@ -4,12 +4,18 @@ import {
   pdfExportJobSchema,
   type UserSession,
 } from "@customreport/shared";
+import { Inject, Injectable } from "@nestjs/common";
 
+import { ENV_CONFIG } from "../../infrastructure/config/config.module.js";
 import type { EnvConfig } from "../../infrastructure/config/env.schema.js";
+import { APP_LOGGER } from "../../lib/audit-logger.js";
 import { requireEnv } from "../../lib/env.js";
 import { type AppLogger } from "../../lib/logger";
 import { buildPublishedReadModelFromSnapshot } from "../weekly-report/index.js";
+import { PdfExportDomainError } from "./pdf-export.job-state.js";
 import {
+  PDF_EXPORT_ENQUEUER,
+  PDF_EXPORT_TELEMETRY,
   type PdfExportEnqueuer,
   type PdfExportJobIdentity,
   type PdfExportRepository,
@@ -18,6 +24,7 @@ import {
   type PdfExportTerminalState,
   type PdfRenderCookie,
 } from "./pdf-export.ports.js";
+import { PdfExportPrismaRepository } from "./pdf-export.prisma-repository.js";
 import {
   dispatchExportGeneration as dispatchExportGenerationPure,
   type PdfExportOrphanScanSummary,
@@ -29,13 +36,6 @@ import {
   scanOrphanedPendingExports as scanOrphanedPendingExportsPure,
 } from "./pdf-export.recovery.js";
 import { signPdfExportToken as signPdfExportTokenPure } from "./pdf-export.token.js";
-
-export class PdfExportDomainError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "PdfExportDomainError";
-  }
-}
 
 // Template id stamped on every created export job; read paths round-trip the
 // persisted value rather than relabel with the running constant.
@@ -50,15 +50,19 @@ const SYSTEM_ROLE_LABEL = "system";
 
 export type { PdfExportOrphanScanSummary, PdfExportRetryInput };
 
+@Injectable()
 export class PdfExportService {
   private readonly logger: AppLogger;
   private readonly recoveryDeps: PdfExportRecoveryDeps;
 
   constructor(
+    @Inject(PdfExportPrismaRepository)
     private readonly repository: PdfExportRepository,
-    logger: AppLogger,
-    pdfQueue: PdfExportEnqueuer,
+    @Inject(APP_LOGGER) logger: AppLogger,
+    @Inject(PDF_EXPORT_ENQUEUER) pdfQueue: PdfExportEnqueuer,
+    @Inject(PDF_EXPORT_TELEMETRY)
     private readonly telemetry: PdfExportTelemetry,
+    @Inject(ENV_CONFIG)
     private readonly env: Pick<
       EnvConfig,
       "PDF_BASE_URL" | "PDF_EXPORT_JWT_SECRET"

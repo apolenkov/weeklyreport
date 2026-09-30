@@ -39,9 +39,7 @@ export const runCompositeCapabilityProbes = async (input: {
   const generation = await generationLane(
     input.transports.generation,
     input.profile.generation,
-    input.plannerMaxTokens,
-    input.answerMaxTokens,
-    input.runtime,
+    input,
   );
   const reused = input.profile.embeddings.mode === "reuse_generation";
   const embeddings =

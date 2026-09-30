@@ -6,6 +6,13 @@ export type ProviderExecutionRequest = Readonly<{
   testSuiteVersion: string;
 }>;
 
+export type ProviderExecutionCompletion = Readonly<{
+  outcome: AiProviderTestOutcome;
+  failureCode: string | null;
+  checks: Prisma.InputJsonValue;
+  executionAttempt?: number;
+}>;
+
 const revisionExecutionIdentity = (
   compositeIdentity: string,
   revisionId: string,
@@ -105,11 +112,14 @@ export const startProviderTestExecution = async (
 export const completeProviderTestExecution = async (
   prisma: PrismaService,
   id: string,
-  outcome: AiProviderTestOutcome,
-  failureCode: string | null,
-  checks: Prisma.InputJsonValue,
-  executionAttempt = FIRST_EXECUTION_ATTEMPT,
+  completion: ProviderExecutionCompletion,
 ): Promise<boolean> => {
+  const {
+    outcome,
+    failureCode,
+    checks,
+    executionAttempt = FIRST_EXECUTION_ATTEMPT,
+  } = completion;
   const completed = await prisma.aiProviderTestExecution.updateMany({
     where: { id, state: "running", executionAttempt },
     data: {

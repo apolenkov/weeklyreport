@@ -148,11 +148,13 @@ export const prepareReportAssistantCandidates = async ({
   const resolved = await resolveReportAssistantCandidates(
     dependencies.repository,
     plan,
-    actorId,
-    resolutionTokens,
-    dependencies.tokenCodec,
-    dependencies.clock,
-    dependencies.timeZone,
+    {
+      actorId,
+      resolutionTokens,
+      tokenCodec: dependencies.tokenCodec,
+      clock: dependencies.clock,
+      timeZone: dependencies.timeZone,
+    },
   );
   signal.throwIfAborted();
   if (resolved.kind !== "resolved") {

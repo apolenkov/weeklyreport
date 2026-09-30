@@ -29,9 +29,14 @@ const ITEMS_PER_STRESS_PROJECT = 3;
 async function seedStressItems(
   prisma: PrismaClient,
   sectionId: string,
-  projectId: string,
+  {
+    projectId,
+    projectIndex,
+  }: {
+    readonly projectId: string;
+    readonly projectIndex: number;
+  },
   stageName: string,
-  projectIndex: number,
 ): Promise<void> {
   for (const itemOffset of Array.from(
     { length: ITEMS_PER_STRESS_PROJECT },
@@ -130,7 +135,12 @@ async function seedStressProject(
       status: TrafficLightStatus.green,
     },
   });
-  await seedStressItems(prisma, sectionId, projectId, stage.name, index);
+  await seedStressItems(
+    prisma,
+    sectionId,
+    { projectId, projectIndex: index },
+    stage.name,
+  );
 }
 
 export async function seedStressOverlay(prisma: PrismaClient): Promise<void> {

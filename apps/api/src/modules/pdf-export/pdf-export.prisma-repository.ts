@@ -16,9 +16,11 @@ import {
 import {
   assertCanonicalArtifact,
   assertValidCompletionJob,
+  type CompletedPdfExportJob,
   isIdenticalCompletedArtifact,
   type LockedPdfExportJobRow,
   type PdfExportDb,
+  PdfExportDomainError,
   type PdfExportJobRow,
   PdfExportStateConflictError,
   pdfStatusToDb,
@@ -31,7 +33,6 @@ import type {
   PdfExportPendingCursor,
   PdfExportRepository,
 } from "./pdf-export.ports.js";
-import { PdfExportDomainError } from "./pdf-export.service.js";
 
 @Injectable()
 export class PdfExportPrismaRepository implements PdfExportRepository {
@@ -65,14 +66,13 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
   async createExportJob(
     job: PdfExportJob,
     requestedBy: string,
-    publicationSnapshot: AssembledReport,
+    snapshot: AssembledReport,
   ): Promise<PdfExportJob> {
     if (requestedBy === "") {
       throw new PdfExportDomainError(
         "PDF export job creation requires a requester.",
       );
     }
-    const snapshot = publicationSnapshot;
     if (!snapshot.publishedAt) {
       throw new PdfExportDomainError(
         `PDF export requires a publication timestamp for report ${job.reportId}.`,
@@ -142,13 +142,7 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
 
   async saveExportJob(job: PdfExportJob): Promise<PdfExportJob> {
     assertValidCompletionJob(job);
-    return this.completeExportJob(
-      this.prisma,
-      job.jobId,
-      job.generation,
-      job.artifactUrl,
-      job.checksum,
-    );
+    return this.completeExportJob(this.prisma, job);
   }
 
   async markExportFailed(
@@ -210,7 +204,12 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
         markFailed: (generation, error) =>
           this.failExportJob(tx, jobId, generation, error),
         markCompleted: (generation, artifactUrl, checksum) =>
-          this.completeExportJob(tx, jobId, generation, artifactUrl, checksum),
+          this.completeExportJob(tx, {
+            jobId,
+            generation,
+            artifactUrl,
+            checksum,
+          }),
         markRecoveryRequired: (generation) =>
           this.markRecoveryRequiredExport(tx, jobId, generation),
         advanceGeneration: (expectedGeneration) =>
@@ -225,11 +224,12 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
   // idempotent success.
   private async completeExportJob(
     db: PdfExportDb,
-    jobId: string,
-    generation: number,
-    artifactUrl: string,
-    checksum: string,
+    completion: Pick<
+      CompletedPdfExportJob,
+      "jobId" | "generation" | "artifactUrl" | "checksum"
+    >,
   ): Promise<PdfExportJob> {
+    const { jobId, generation, artifactUrl, checksum } = completion;
     assertCanonicalArtifact(jobId, artifactUrl, checksum);
 
     const { count } = await db.pdfExportJob.updateMany({

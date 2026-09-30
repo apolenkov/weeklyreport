@@ -13,11 +13,13 @@ import {
 
 export class OpenAiCompatibleCapabilityTester implements AiProviderCapabilityTester {
   constructor(
-    private readonly timeoutMs: number,
-    private readonly plannerMaxTokens: number,
-    private readonly answerMaxTokens: number,
-    private readonly embeddingBatchSize: number,
-    private readonly embeddingTokenBudget: number,
+    private readonly config: Readonly<{
+      timeoutMs: number;
+      plannerMaxTokens: number;
+      answerMaxTokens: number;
+      embeddingBatchSize: number;
+      embeddingTokenBudget: number;
+    }>,
     private readonly fetcher?: OpenAiCompatibleFetch,
   ) {}
 
@@ -31,13 +33,16 @@ export class OpenAiCompatibleCapabilityTester implements AiProviderCapabilityTes
       embeddingDimensions: number | null;
     }>
   > {
-    if (this.embeddingBatchSize < 2 || this.embeddingTokenBudget < 1) {
+    if (
+      this.config.embeddingBatchSize < 2 ||
+      this.config.embeddingTokenBudget < 1
+    ) {
       throw new Error("Embedding capability probe requires a batch budget");
     }
     const generationTransport = new OpenAiCompatibleTransport({
       baseUrl: profile.generation.baseUrl,
       credential: credentials.generation,
-      timeoutMs: this.timeoutMs,
+      timeoutMs: this.config.timeoutMs,
       ...(this.fetcher ? { fetcher: this.fetcher } : {}),
     });
     const embeddingsTransport =
@@ -46,7 +51,7 @@ export class OpenAiCompatibleCapabilityTester implements AiProviderCapabilityTes
         : new OpenAiCompatibleTransport({
             baseUrl: profile.embeddings.connection.baseUrl,
             credential: credentials.embeddings,
-            timeoutMs: this.timeoutMs,
+            timeoutMs: this.config.timeoutMs,
             ...(this.fetcher ? { fetcher: this.fetcher } : {}),
           });
     const probe = await runCompositeCapabilityProbes({
@@ -55,8 +60,8 @@ export class OpenAiCompatibleCapabilityTester implements AiProviderCapabilityTes
         embeddings: embeddingsTransport,
       },
       profile,
-      plannerMaxTokens: this.plannerMaxTokens,
-      answerMaxTokens: this.answerMaxTokens,
+      plannerMaxTokens: this.config.plannerMaxTokens,
+      answerMaxTokens: this.config.answerMaxTokens,
       ...(runtime ? { runtime } : {}),
     });
     return {

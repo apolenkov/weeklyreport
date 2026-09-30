@@ -3,10 +3,13 @@ import {
   type PeriodStatus,
   type UserSession,
 } from "@customreport/shared";
+import { Inject, Injectable } from "@nestjs/common";
 
+import { APP_LOGGER } from "../../../lib/audit-logger.js";
+import type { AppLogger } from "../../../lib/logger.js";
 import type { PeriodLifecycleExpectation } from "../domain/period-lifecycle-expectation.js";
 import {
-  NOOP_PERIOD_TELEMETRY,
+  PERIOD_TELEMETRY,
   type PeriodTelemetry,
 } from "./period-telemetry.port.js";
 import { emitPublishSideEffects } from "./publish-side-effects.js";
@@ -84,14 +87,13 @@ export interface PeriodRepository {
 // DI token binding the PeriodRepository port to its adapter at the module
 // boundary — the service depends on the port, not the concrete prisma class.
 export const PERIOD_REPOSITORY = Symbol("PeriodRepository");
+export const PERIOD_SETTINGS = Symbol("PeriodSettings");
+export const PERIOD_ANALYTICS_CACHE = Symbol("PeriodAnalyticsCache");
 
-// Cache invalidation port — PeriodService stays Redis-free; the AnalyticsCache
-// is wired through this lambda by period.module.ts.
+// The service only consumes invalidation from the injected cache.
 export type AnalyticsCacheInvalidator = () => Promise<void>;
 
-// Lazy reader for the two reopen-policy knobs in AppSettings, keeping the
-// service decoupled from the settings service. Always wired (non-null) — no
-// path can construct the service without a reopen-policy gate.
+// Settings are read on each reopen so policy edits take effect immediately.
 export type ReopenPolicyReader = () => Promise<{
   allowReopenAfterPublish: boolean;
   reopenWindowHours: number;
@@ -113,17 +115,36 @@ function assertPublishRaceIsIdempotent(
   }
 }
 
+@Injectable()
 export class PeriodService {
+  private readonly invalidateAnalyticsCache: AnalyticsCacheInvalidator;
+  private readonly readReopenPolicy: ReopenPolicyReader;
+  private readonly onSideEffectError: (error: unknown) => void;
+
   constructor(
+    @Inject(PERIOD_REPOSITORY)
     private readonly repository: PeriodRepository,
-    private readonly invalidateAnalyticsCache: AnalyticsCacheInvalidator,
-    // Reopen-policy gate reader. Required — production wiring is done in
-    // period.module.ts; the gate is always enforced.
-    private readonly readReopenPolicy: ReopenPolicyReader,
-    private readonly telemetry: PeriodTelemetry = NOOP_PERIOD_TELEMETRY,
-    private readonly onSideEffectError: (error: unknown) => void = () =>
-      undefined,
-  ) {}
+    @Inject(PERIOD_ANALYTICS_CACHE)
+    cache: { readonly invalidateAll: AnalyticsCacheInvalidator },
+    @Inject(PERIOD_SETTINGS)
+    settings: { readonly getSettings: ReopenPolicyReader },
+    @Inject(PERIOD_TELEMETRY) private readonly telemetry: PeriodTelemetry,
+    @Inject(APP_LOGGER) logger: Pick<AppLogger, "warn">,
+  ) {
+    this.invalidateAnalyticsCache = () => cache.invalidateAll();
+    this.readReopenPolicy = async () => {
+      const policy = await settings.getSettings();
+      return {
+        allowReopenAfterPublish: policy.allowReopenAfterPublish,
+        reopenWindowHours: policy.reopenWindowHours,
+      };
+    };
+    this.onSideEffectError = (error) => {
+      logger.warn("publish side-effect failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    };
+  }
 
   async publishPeriod(
     reportId: string,

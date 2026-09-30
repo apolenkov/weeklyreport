@@ -214,10 +214,13 @@ const quarantineIfOrphaned = async (
 const inspectOrphanCandidate = async (
   deps: PdfExportRecoveryDeps,
   candidate: PdfExportPendingCandidate,
-  bound: Date,
-  hasQueueJob: PdfExportQueueJobProbe,
-  summary: { quarantined: number; failed: number },
+  pass: {
+    readonly bound: Date;
+    readonly hasQueueJob: PdfExportQueueJobProbe;
+    readonly summary: { quarantined: number; failed: number };
+  },
 ): Promise<void> => {
+  const { bound, hasQueueJob, summary } = pass;
   try {
     if (await quarantineIfOrphaned(deps, candidate, bound, hasQueueJob)) {
       summary.quarantined += 1;
@@ -267,13 +270,11 @@ export const scanOrphanedPendingExports = async (
       // included — so a dense run of live rows can never starve the pass.
       cursor = { createdAt: candidate.createdAt, jobId: candidate.jobId };
       summary.inspected += 1;
-      await inspectOrphanCandidate(
-        deps,
-        candidate,
+      await inspectOrphanCandidate(deps, candidate, {
         bound,
         hasQueueJob,
         summary,
-      );
+      });
     }
     if (page.length < ORPHAN_SCAN_PAGE_SIZE) {
       break;
