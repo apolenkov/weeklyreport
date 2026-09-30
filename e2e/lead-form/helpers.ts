@@ -70,7 +70,7 @@ export async function scopedRef(
   session?: string,
 ): Promise<string> {
   return oneRef(
-    scopeSnapshot(await snapshot(session), scope.role, scope.name),
+    scopeSnapshot(await waitScope(scope, session), scope.role, scope.name),
     role,
     name,
   );

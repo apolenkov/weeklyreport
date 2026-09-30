@@ -800,7 +800,7 @@ void test("submit, reopen and resubmit restore editability", async () => {
   await clickIn({ role: "group", name: "Header completion actions" }, "Submit");
   const confirmation = { role: "alertdialog", name: "Confirm submission" };
   assert.match(
-    namedScope(await snapshot(), confirmation).snapshot,
+    namedScope(await waitScope(confirmation), confirmation).snapshot,
     /not set.*marked On Track/s,
   );
   await clickIn(confirmation, "Cancel");
@@ -1244,6 +1244,10 @@ for (const kind of ["risk", "decision"] as const) {
       "click",
     );
     await findRole("button", `+ Add ${title}`, "click");
+    await waitScope({
+      role: "dialog",
+      name: kind === "risk" ? /^Add Risk — /u : "Add Decision",
+    });
     const initial = oneRef(await snapshot(), "combobox", "Parent");
     await command(["select", initial, LEAD_FORM_FIXTURE.activityName]);
     const dialog = {

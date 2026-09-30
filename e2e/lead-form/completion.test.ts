@@ -20,6 +20,7 @@ import {
   waitText,
 } from "./browser.js";
 import { registerE2eHooks } from "./fixtures.js";
+import { assertFocused } from "./focus.js";
 import {
   ARCHIVED_FILL_FIXTURE,
   LEAD_FORM_FIXTURE,
@@ -47,6 +48,7 @@ const WRITE_ROUTE =
 const QUESTION = "What is the current product status?";
 // The canonical label is styled uppercase; match its AX name with case folding.
 const QUESTION_FIELD = /^Your question$/iu;
+const SOURCE_NAME = `S1E2E previous period · ${LEAD_FORM_FIXTURE.productName}`;
 // Frozen published history includes the demo assignments and the overlay product.
 const SOURCE_PRODUCT_COUNT =
   new Set(
@@ -100,14 +102,6 @@ async function clickScoped(
   name: string,
 ): Promise<void> {
   await command(["click", await scopedRef(scope, role, name)]);
-}
-
-async function assertFocused(name: string): Promise<void> {
-  const data = await command([
-    "eval",
-    "document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.textContent?.trim() ?? ''",
-  ]);
-  assert.equal(data.result, name);
 }
 
 async function valueOf(role: string, name: string | RegExp): Promise<string> {
@@ -306,6 +300,7 @@ async function expandFilledProduct(): Promise<void> {
 async function createUnsavedRisk(): Promise<void> {
   await command(["network", "route", DRAFT_ROUTE, "--abort"]);
   await findRole("button", "+ Add Risk", "click");
+  await waitScope({ role: "dialog", name: /^Add Risk — /u });
   await command([
     "select",
     await refFor("combobox", "Parent"),
@@ -477,6 +472,7 @@ void test("Fill from previous handles cancel and persists canonical replacement"
   const edit = editRefs.at(0);
   assert(edit);
   await command(["click", edit]);
+  await waitScope({ role: "dialog", name: /^Edit Item — /u });
   assert.equal(
     await valueOf(
       "combobox",
@@ -986,10 +982,7 @@ void test("report chat questions, clarification, retry and sources stay read-onl
       2,
     true,
   );
-  const source = await refFor(
-    "link",
-    `S1 E2E previous period · ${LEAD_FORM_FIXTURE.productName}`,
-  );
+  const source = await refFor("link", SOURCE_NAME);
   assert.equal(
     await getAttr(source, "href"),
     `/lead/report/${LEAD_FORM_FIXTURE.previousReportId}`,
@@ -1009,19 +1002,13 @@ void test("report chat questions, clarification, retry and sources stay read-onl
   await waitText("E2E grounded answer");
   await findRole("heading", "E2E grounded answer", "text");
   assert.equal(await valueOf("textbox", QUESTION_FIELD), QUESTION);
-  await command([
-    "click",
-    await refFor(
-      "link",
-      `S1 E2E previous period · ${LEAD_FORM_FIXTURE.productName}`,
-    ),
-  ]);
+  await command(["click", await refFor("link", SOURCE_NAME)]);
   await command([
     "wait",
     "--url",
     `**/lead/report/${LEAD_FORM_FIXTURE.previousReportId}`,
   ]);
-  await findRole("button", "Close", "click");
+  await waitClosed({ role: "dialog", name: "Report chat" });
   await waitText("Read-only report and status context.");
   await assertNoReportWrites();
   await findRole("button", "Open report chat", "click");
@@ -1121,10 +1108,7 @@ for (const warning of [
     await waitText(warning.title);
     await waitText("E2E grounded answer");
     await findRole("heading", "E2E grounded answer", "text");
-    const source = await refFor(
-      "link",
-      `S1 E2E previous period · ${LEAD_FORM_FIXTURE.productName}`,
-    );
+    const source = await refFor("link", SOURCE_NAME);
     assert.equal(
       await getAttr(source, "href"),
       `/lead/report/${LEAD_FORM_FIXTURE.previousReportId}`,
