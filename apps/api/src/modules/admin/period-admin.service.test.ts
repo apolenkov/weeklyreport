@@ -106,7 +106,7 @@ function createRepository(row: SeedRow): AdminRepository & {
 describe("PeriodAdminService — updatePeriodManual published guard", () => {
   it("rejects a deadline edit on a published period (no write)", async () => {
     const repo = createRepository(seedRow("published"));
-    const service = new PeriodAdminService(repo);
+    const service = new PeriodAdminService(repo, createNullLogger());
 
     await expect(
       service.updatePeriodManual({
@@ -119,7 +119,7 @@ describe("PeriodAdminService — updatePeriodManual published guard", () => {
 
   it("rejects a periodStart edit on a published period (no write)", async () => {
     const repo = createRepository(seedRow("published"));
-    const service = new PeriodAdminService(repo);
+    const service = new PeriodAdminService(repo, createNullLogger());
 
     await expect(
       service.updatePeriodManual({
@@ -132,7 +132,7 @@ describe("PeriodAdminService — updatePeriodManual published guard", () => {
 
   it("rejects a date-envelope edit on an archived period (no write)", async () => {
     const repo = createRepository(seedRow("archived"));
-    const service = new PeriodAdminService(repo);
+    const service = new PeriodAdminService(repo, createNullLogger());
 
     await expect(
       service.updatePeriodManual({
@@ -145,7 +145,7 @@ describe("PeriodAdminService — updatePeriodManual published guard", () => {
 
   it("allows a weekLabel-only edit on a published period", async () => {
     const repo = createRepository(seedRow("published"));
-    const service = new PeriodAdminService(repo);
+    const service = new PeriodAdminService(repo, createNullLogger());
 
     const { result } = await service.updatePeriodManual({
       reportId: REPORT_ID,
@@ -158,7 +158,7 @@ describe("PeriodAdminService — updatePeriodManual published guard", () => {
 
   it("allows an envelope edit on an open period (boundary)", async () => {
     const repo = createRepository(seedRow("open"));
-    const service = new PeriodAdminService(repo);
+    const service = new PeriodAdminService(repo, createNullLogger());
 
     const { result } = await service.updatePeriodManual({
       reportId: REPORT_ID,
@@ -173,7 +173,7 @@ describe("PeriodAdminService — updatePeriodManual published guard", () => {
 
   it("preserves an explicit deadline clear through the repository seam", async () => {
     const repo = createRepository(seedRow("open"));
-    const service = new PeriodAdminService(repo);
+    const service = new PeriodAdminService(repo, createNullLogger());
 
     const { result } = await service.updatePeriodManual({
       reportId: REPORT_ID,
@@ -192,7 +192,7 @@ describe("PeriodAdminService — updatePeriodManual published guard", () => {
     // Reopen reverts periodState to "open"; the guard keys on the live state,
     // so a once-published-now-reopened period is editable again.
     const repo = createRepository(seedRow("open"));
-    const service = new PeriodAdminService(repo);
+    const service = new PeriodAdminService(repo, createNullLogger());
 
     await service.updatePeriodManual({
       reportId: REPORT_ID,
@@ -204,7 +204,7 @@ describe("PeriodAdminService — updatePeriodManual published guard", () => {
 
   it("maps the published-edit rejection to FORBIDDEN (matching deleteReport)", async () => {
     const repo = createRepository(seedRow("published"));
-    const service = new PeriodAdminService(repo);
+    const service = new PeriodAdminService(repo, createNullLogger());
 
     const error = await service
       .updatePeriodManual({

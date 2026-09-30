@@ -4,6 +4,7 @@ import type {
 } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
+import { createNullLogger } from "../../lib/logger";
 import { unusedRemindersRepositoryStubs } from "./__tests__/reminders-scope.repository-stub.js";
 import { ReminderExecutionIneligibleError } from "./reminders.errors.js";
 import { ReminderDomainError, RemindersService } from "./reminders.service";
@@ -113,7 +114,10 @@ function createRepository(initialRule: AdminReminderRule): RemindersRepository {
 
 describe("RemindersService", () => {
   it("creates a queued reminder execution for an active rule", async () => {
-    const service = new RemindersService(createRepository(activeRule));
+    const service = new RemindersService(
+      createRepository(activeRule),
+      createNullLogger(),
+    );
     const execution = await service.requestReminderExecution(
       activeRule.id,
       "lead1@customreport.local",
@@ -125,7 +129,10 @@ describe("RemindersService", () => {
   });
 
   it("returns the existing execution when the dedupe key matches", async () => {
-    const service = new RemindersService(createRepository(activeRule));
+    const service = new RemindersService(
+      createRepository(activeRule),
+      createNullLogger(),
+    );
     const first = await service.requestReminderExecution(
       activeRule.id,
       "lead1@customreport.local",
@@ -141,7 +148,10 @@ describe("RemindersService", () => {
   });
 
   it("rejects reminder execution for paused rules", async () => {
-    const service = new RemindersService(createRepository(pausedRule));
+    const service = new RemindersService(
+      createRepository(pausedRule),
+      createNullLogger(),
+    );
 
     await expect(
       service.requestReminderExecution(
@@ -153,7 +163,10 @@ describe("RemindersService", () => {
   });
 
   it("marks queued reminders as sent", async () => {
-    const service = new RemindersService(createRepository(activeRule));
+    const service = new RemindersService(
+      createRepository(activeRule),
+      createNullLogger(),
+    );
     const queued = await service.requestReminderExecution(
       activeRule.id,
       "lead1@customreport.local",
@@ -173,7 +186,10 @@ describe("RemindersService", () => {
 
 describe("reminder rule domain mapping and deduplication", () => {
   it("uses the deadline dispatch kind for a deadline rule", async () => {
-    const service = new RemindersService(createRepository(activeRule));
+    const service = new RemindersService(
+      createRepository(activeRule),
+      createNullLogger(),
+    );
     const execution = await service.requestReminderExecution(
       activeRule.id,
       "lead1@customreport.local",
@@ -186,7 +202,10 @@ describe("reminder rule domain mapping and deduplication", () => {
   });
 
   it("generates different dedupeKeys for different recipient emails", async () => {
-    const service = new RemindersService(createRepository(activeRule));
+    const service = new RemindersService(
+      createRepository(activeRule),
+      createNullLogger(),
+    );
     const exec1 = await service.requestReminderExecution(
       activeRule.id,
       "lead1@customreport.local",
@@ -205,7 +224,10 @@ describe("reminder rule domain mapping and deduplication", () => {
   });
 
   it("generates the same dedupeKey for the same email + rule + fireAt (deterministic)", async () => {
-    const service = new RemindersService(createRepository(activeRule));
+    const service = new RemindersService(
+      createRepository(activeRule),
+      createNullLogger(),
+    );
     const exec1 = await service.requestReminderExecution(
       activeRule.id,
       "lead1@customreport.local",
@@ -223,7 +245,10 @@ describe("reminder rule domain mapping and deduplication", () => {
   });
 
   it("dedupeKey contains recipientEmail as a component", async () => {
-    const service = new RemindersService(createRepository(activeRule));
+    const service = new RemindersService(
+      createRepository(activeRule),
+      createNullLogger(),
+    );
     const execution = await service.requestReminderExecution(
       activeRule.id,
       "lead1@customreport.local",
@@ -250,7 +275,10 @@ describe("deadline payload — extended dedupe-key shape", () => {
   };
 
   it("builds dedupeKey of shape <ruleId>:deadline:<cycleDate>:<email> when payload is provided", async () => {
-    const service = new RemindersService(createRepository(activeRule));
+    const service = new RemindersService(
+      createRepository(activeRule),
+      createNullLogger(),
+    );
     const exec = await service.requestReminderExecution(
       activeRule.id,
       "lead@test.local",
@@ -263,7 +291,10 @@ describe("deadline payload — extended dedupe-key shape", () => {
   });
 
   it("two calls with same (ruleId, kind, cycleDate, email) collapse to one execution", async () => {
-    const service = new RemindersService(createRepository(activeRule));
+    const service = new RemindersService(
+      createRepository(activeRule),
+      createNullLogger(),
+    );
     const first = await service.requestReminderExecution(
       activeRule.id,
       "lead@test.local",
@@ -280,7 +311,10 @@ describe("deadline payload — extended dedupe-key shape", () => {
   });
 
   it("different cycleDate ⇒ different dedupeKey ⇒ different execution", async () => {
-    const service = new RemindersService(createRepository(activeRule));
+    const service = new RemindersService(
+      createRepository(activeRule),
+      createNullLogger(),
+    );
     const cycleN = await service.requestReminderExecution(
       activeRule.id,
       "lead@test.local",
@@ -297,7 +331,10 @@ describe("deadline payload — extended dedupe-key shape", () => {
   });
 
   it("explicit payload uses its deadline cycle in the dedupe key", async () => {
-    const service = new RemindersService(createRepository(activeRule));
+    const service = new RemindersService(
+      createRepository(activeRule),
+      createNullLogger(),
+    );
     const manual = await service.requestReminderExecution(
       activeRule.id,
       "lead@test.local",
@@ -312,7 +349,10 @@ describe("deadline payload — extended dedupe-key shape", () => {
   });
 
   it("manual and automated payloads collide for the same cycle", async () => {
-    const service = new RemindersService(createRepository(activeRule));
+    const service = new RemindersService(
+      createRepository(activeRule),
+      createNullLogger(),
+    );
     const automated = await service.requestReminderExecution(
       activeRule.id,
       "lead@test.local",
@@ -329,7 +369,10 @@ describe("deadline payload — extended dedupe-key shape", () => {
   });
 
   it("payload dispatches for different cycles stay independent", async () => {
-    const service = new RemindersService(createRepository(activeRule));
+    const service = new RemindersService(
+      createRepository(activeRule),
+      createNullLogger(),
+    );
     const manual = await service.requestReminderExecution(
       activeRule.id,
       "lead@test.local",
@@ -399,7 +442,7 @@ describe("requestReminderExecution — enqueue gated on record outcome", () => {
         return Promise.resolve();
       },
     };
-    const service = new RemindersService(repository, undefined, queue);
+    const service = new RemindersService(repository, createNullLogger(), queue);
 
     await service.requestReminderExecution(
       activeRule.id,
@@ -419,7 +462,7 @@ describe("requestReminderExecution — enqueue gated on record outcome", () => {
         return Promise.resolve();
       },
     };
-    const service = new RemindersService(repository, undefined, queue);
+    const service = new RemindersService(repository, createNullLogger(), queue);
 
     await service.requestReminderExecution(
       activeRule.id,
@@ -437,7 +480,7 @@ describe("requestReminderExecution — enqueue gated on record outcome", () => {
         Promise.reject(new ReminderExecutionIneligibleError()),
     } satisfies RemindersRepository;
     const queue = { enqueue: vi.fn() };
-    const service = new RemindersService(repository, undefined, queue);
+    const service = new RemindersService(repository, createNullLogger(), queue);
 
     await expect(
       service.requestReminderExecutionWithOutcome(
@@ -461,7 +504,7 @@ describe("requestReminderExecution — enqueue gated on record outcome", () => {
           outcome: "created" as const,
         }),
     } satisfies RemindersRepository;
-    const service = new RemindersService(repository);
+    const service = new RemindersService(repository, createNullLogger());
 
     await expect(
       service.requestReminderExecution(
@@ -567,7 +610,7 @@ describe("requestReminderExecution — failed execution revival", () => {
     const addCalls: unknown[] = [];
     const service = new RemindersService(
       buildFailedRepo({ status: "failed", requeueCalls }),
-      undefined,
+      createNullLogger(),
       buildQueue(addCalls),
     );
 
@@ -588,7 +631,7 @@ describe("requestReminderExecution — failed execution revival", () => {
     const addCalls: unknown[] = [];
     const service = new RemindersService(
       buildFailedRepo({ status: "failed", requeueCalls }),
-      undefined,
+      createNullLogger(),
       buildQueue(addCalls),
     );
 
@@ -614,7 +657,7 @@ describe("requestReminderExecution — failed execution revival", () => {
         status: "failed",
         requeuePayloads,
       }),
-      undefined,
+      createNullLogger(),
       buildQueue(addCalls),
     );
 
@@ -629,7 +672,7 @@ describe("requestReminderExecution — failed execution revival", () => {
     const addCalls: unknown[] = [];
     const service = new RemindersService(
       buildFailedRepo({ status: "failed", requeueWins: false }),
-      undefined,
+      createNullLogger(),
       buildQueue(addCalls),
     );
 
@@ -644,7 +687,7 @@ describe("requestReminderExecution — failed execution revival", () => {
     const addCalls: unknown[] = [];
     const service = new RemindersService(
       buildFailedRepo({ status: "sent", requeueCalls }),
-      undefined,
+      createNullLogger(),
       buildQueue(addCalls),
     );
 
@@ -661,6 +704,7 @@ describe("requestReminderExecution — failed execution revival", () => {
     // enqueue a real job for a revived execution.
     const service = new RemindersService(
       buildFailedRepo({ status: "failed", requeueCalls }),
+      createNullLogger(),
     );
 
     await expect(manualRedispatch(service)).rejects.toMatchObject({
@@ -713,7 +757,7 @@ describe("requestReminderExecution — enqueue failure is recorded, not swallowe
         return Promise.reject(new Error("Redis unavailable"));
       },
     };
-    const service = new RemindersService(repository, undefined, queue);
+    const service = new RemindersService(repository, createNullLogger(), queue);
 
     const result = await service.requestReminderExecution(
       activeRule.id,
@@ -737,7 +781,11 @@ describe("requestReminderExecution — enqueue failure is recorded, not swallowe
       const queue = {
         enqueue: () => Promise.reject(enqueueError),
       };
-      const service = new RemindersService(repository, undefined, queue);
+      const service = new RemindersService(
+        repository,
+        createNullLogger(),
+        queue,
+      );
 
       const result = await service.requestReminderExecution(
         activeRule.id,
@@ -761,10 +809,15 @@ describe("stale sending reconciliation", () => {
       ...unusedRemindersRepositoryStubs(),
       markStuckSendingUncertain: () => Promise.resolve(2),
     } satisfies RemindersRepository;
-    const service = new RemindersService(repository, undefined, undefined, {
-      captureJobContext: () => ({}),
-      recordUncertainDelivery,
-    });
+    const service = new RemindersService(
+      repository,
+      createNullLogger(),
+      undefined,
+      {
+        captureJobContext: () => ({}),
+        recordUncertainDelivery,
+      },
+    );
 
     await expect(
       service.reconcileStuckSendingExecutions(

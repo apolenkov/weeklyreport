@@ -89,7 +89,7 @@ function buildCaller(
   const repo = new RemindersPrismaRepository(prisma as never);
   const remindersService = new RemindersService(
     repo,
-    undefined,
+    createNullLogger(),
     queue,
     undefined,
     ORGANIZATION_SERVICE,
@@ -97,6 +97,7 @@ function buildCaller(
   );
   const weeklyReportService = new WeeklyReportService(
     new WeeklyReportPrismaRepository(prisma as never),
+    createNullLogger(),
   );
   const deps = createStubAppRouterDeps({
     prisma,

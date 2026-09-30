@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import { createNullLogger } from "../../lib/logger";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
@@ -281,10 +282,10 @@ describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races
       },
     });
 
-    const result = await new CarryOverService(repo).executeCarryOver(
-      testData.report.id,
-      targetReport.id,
-    );
+    const result = await new CarryOverService(
+      repo,
+      createNullLogger(),
+    ).executeCarryOver(testData.report.id, targetReport.id);
 
     expect(result.records).toHaveLength(1);
     expect(

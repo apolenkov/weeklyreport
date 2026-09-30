@@ -67,7 +67,7 @@ function buildCaller(
     ),
   };
   const repo = new LeadFormPrismaRepository(prisma as never);
-  const leadFormService = new LeadFormService(repo);
+  const leadFormService = new LeadFormService(repo, {} as never);
   const deps = createStubAppRouterDeps({ leadFormService });
   const caller = createAppRouter(deps).createCaller({
     session: makeSession(role),

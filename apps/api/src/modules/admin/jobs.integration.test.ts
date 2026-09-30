@@ -156,6 +156,7 @@ describe("JobsService — integration (BullMQ failed jobs)", () => {
           ),
         listPdfRecoveryJobs: () => Promise.resolve([]),
       },
+      createNullLogger(),
     );
 
     const result = await service.retryFailed({
@@ -220,6 +221,7 @@ describe("JobsService — integration (BullMQ failed jobs)", () => {
     const processor = new TestEmailReminderProcessor(
       new RemindersService(
         new RemindersPrismaRepository(prisma as unknown as PrismaService),
+        createNullLogger(),
       ),
       {
         sendMail: () => Promise.resolve(),
@@ -292,6 +294,7 @@ describe("JobsService — integration (BullMQ failed jobs)", () => {
           ),
         listPdfRecoveryJobs: () => Promise.resolve([]),
       },
+      createNullLogger(),
     );
 
     await expect(

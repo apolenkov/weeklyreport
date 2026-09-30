@@ -26,7 +26,10 @@ describe("reports.latestForViewer (integration)", () => {
   const repository = new WeeklyReportPrismaRepository(
     prisma as unknown as PrismaService,
   );
-  const weeklyReportService = new WeeklyReportService(repository);
+  const weeklyReportService = new WeeklyReportService(
+    repository,
+    createNullLogger(),
+  );
 
   const GROUP_A_ID = "c0000000-0000-4000-a000-0000000000a1";
   const GROUP_B_ID = "c0000000-0000-4000-a000-0000000000a2";
@@ -63,6 +66,7 @@ describe("reports.latestForViewer (integration)", () => {
         periodStatus,
         archived,
         ...(periodStatus !== "open" ? { publishedAt } : {}),
+        ...(periodStatus === "reopened" ? { reopenedAt: publishedAt } : {}),
         periodState: archived
           ? "archived"
           : periodStatus === "published"

@@ -1,5 +1,7 @@
 # Reopen-decisioning is a head capability, not admin-only
 
+**Date:** 2026-06-27
+
 **Status:** accepted
 
 ## Context

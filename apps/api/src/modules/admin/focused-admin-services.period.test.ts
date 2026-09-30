@@ -46,6 +46,8 @@ function periodFixture(
 
 import type { PeriodState } from "@customreport/shared";
 
+import { createNullLogger } from "../../lib/logger";
+
 function makePeriodAwareRepository(
   rows: PeriodRowFromRepo[],
   settings: AppSettings = defaultSettings,
@@ -90,7 +92,10 @@ function makePeriodAwareRepository(
 
 describe("PeriodAdminService — listPeriodsByState", () => {
   it("returns empty when the repository has no matching rows", async () => {
-    const service = new PeriodAdminService(createRepository(initialSnapshot));
+    const service = new PeriodAdminService(
+      createRepository(initialSnapshot),
+      createNullLogger(),
+    );
     const result = await service.listPeriodsByState({ bucket: "active" });
     expect(result).toEqual([]);
   });
@@ -106,6 +111,7 @@ describe("PeriodAdminService — listPeriodsByState", () => {
     const archived = periodFixture(PERIOD_ID_ARCHIVED, "archived");
     const service = new PeriodAdminService(
       makePeriodAwareRepository([fresh, open, archived]),
+      createNullLogger(),
     );
 
     const rows = await service.listPeriodsByState({ bucket: "active" });
@@ -120,6 +126,7 @@ describe("PeriodAdminService — listPeriodsByState", () => {
     const archived = periodFixture(PERIOD_ID_ARCHIVED, "archived");
     const service = new PeriodAdminService(
       makePeriodAwareRepository([fresh, archived]),
+      createNullLogger(),
     );
 
     const rows = await service.listPeriodsByState({ bucket: "archive" });
@@ -136,6 +143,7 @@ describe("PeriodAdminService — listPeriodsByState", () => {
         allowReopenAfterPublish: true,
         reopenWindowHours: 72,
       }),
+      createNullLogger(),
     );
 
     const rows = await service.listPeriodsByState({ bucket: "active" });
@@ -153,6 +161,7 @@ describe("PeriodAdminService — listPeriodsByState", () => {
         allowReopenAfterPublish: true,
         reopenWindowHours: 72,
       }),
+      createNullLogger(),
     );
 
     const rows = await service.listPeriodsByState({ bucket: "active" });
@@ -169,6 +178,7 @@ describe("PeriodAdminService — listPeriodsByState", () => {
         allowReopenAfterPublish: false,
         reopenWindowHours: 72,
       }),
+      createNullLogger(),
     );
 
     const rows = await service.listPeriodsByState({ bucket: "active" });
@@ -180,6 +190,7 @@ describe("PeriodAdminService — listPeriodsByState", () => {
     const archived = periodFixture(PERIOD_ID_ARCHIVED, "archived");
     const service = new PeriodAdminService(
       makePeriodAwareRepository([fresh, archived]),
+      createNullLogger(),
     );
     const active = await service.listPeriodsByState({ bucket: "active" });
     expect(active[0]?.canArchive).toBe(true);
@@ -193,7 +204,10 @@ describe("PeriodAdminService — listPeriodsByState", () => {
         periodStart: new Date(Date.UTC(2026, 0, index + 1)),
       }),
     );
-    const service = new PeriodAdminService(makePeriodAwareRepository(rows));
+    const service = new PeriodAdminService(
+      makePeriodAwareRepository(rows),
+      createNullLogger(),
+    );
     // Negative gets clamped to 1, then filtered (and the one row matches).
     const a = await service.listPeriodsByState({ bucket: "active", limit: 0 });
     expect(a).toHaveLength(1);
@@ -209,7 +223,7 @@ describe("PeriodAdminService — archivePeriod / unarchivePeriod", () => {
   it("archivePeriod flips state + archived on the in-memory row", async () => {
     const open = periodFixture(PERIOD_ID_OPEN, "open");
     const repo = makePeriodAwareRepository([open]);
-    const service = new PeriodAdminService(repo);
+    const service = new PeriodAdminService(repo, createNullLogger());
 
     const result = await service.archivePeriod(PERIOD_ID_OPEN);
     expect(result).toEqual({ success: true });
@@ -224,6 +238,7 @@ describe("PeriodAdminService — archivePeriod / unarchivePeriod", () => {
     });
     const service = new PeriodAdminService(
       makePeriodAwareRepository([archived]),
+      createNullLogger(),
     );
 
     const result = await service.unarchivePeriod(PERIOD_ID_ARCHIVED);
@@ -238,7 +253,7 @@ describe("PeriodAdminService — archivePeriod / unarchivePeriod", () => {
     });
     const service = new PeriodAdminService(
       makePeriodAwareRepository([future]),
-      undefined,
+      createNullLogger(),
       () => new Date("2026-08-31T12:00:00Z"),
     );
 
@@ -327,7 +342,7 @@ function makeCreatePeriodRepository(opts: {
 describe("PeriodAdminService — createPeriodManual", () => {
   it("happy path: mints a period with the supplied non-Monday periodStart", async () => {
     const repo = makeCreatePeriodRepository({});
-    const service = new PeriodAdminService(repo);
+    const service = new PeriodAdminService(repo, createNullLogger());
 
     const result = await service.createPeriodManual(
       {
@@ -350,7 +365,7 @@ describe("PeriodAdminService — createPeriodManual", () => {
 
   it("derives 'open' when periodStart is at or before now", async () => {
     const repo = makeCreatePeriodRepository({});
-    const service = new PeriodAdminService(repo);
+    const service = new PeriodAdminService(repo, createNullLogger());
 
     const result = await service.createPeriodManual(
       {
@@ -363,7 +378,7 @@ describe("PeriodAdminService — createPeriodManual", () => {
 
   it("D-8: accepts a custom period that starts on a non-Monday", async () => {
     const repo = makeCreatePeriodRepository({});
-    const service = new PeriodAdminService(repo);
+    const service = new PeriodAdminService(repo, createNullLogger());
 
     const result = await service.createPeriodManual(
       {
@@ -381,7 +396,7 @@ describe("PeriodAdminService — createPeriodManual", () => {
 
   it("computes default deadline from AppSettings (defaultDeadlineDays + workingDays + deadlineTime)", async () => {
     const repo = makeCreatePeriodRepository({});
-    const service = new PeriodAdminService(repo);
+    const service = new PeriodAdminService(repo, createNullLogger());
 
     // defaultSettings: 5 business days mon-fri from Monday 2026-05-04 lands on
     // Monday 2026-05-11; 18:00 Europe/Moscow == 15:00 UTC. Same date math as
@@ -397,7 +412,7 @@ describe("PeriodAdminService — createPeriodManual", () => {
 
   it("respects explicit periodEnd / deadline / weekLabel overrides", async () => {
     const repo = makeCreatePeriodRepository({});
-    const service = new PeriodAdminService(repo);
+    const service = new PeriodAdminService(repo, createNullLogger());
 
     const explicitEnd = new Date("2026-05-31T23:59:59.999Z");
     const explicitDeadline = new Date("2026-05-29T15:00:00.000Z");
@@ -424,7 +439,7 @@ describe("PeriodAdminService — createPeriodManual", () => {
         },
       ],
     });
-    const service = new PeriodAdminService(repo);
+    const service = new PeriodAdminService(repo, createNullLogger());
 
     await expect(
       service.createPeriodManual({
@@ -436,7 +451,7 @@ describe("PeriodAdminService — createPeriodManual", () => {
 
   it("rejects when periodEnd < periodStart", async () => {
     const repo = makeCreatePeriodRepository({});
-    const service = new PeriodAdminService(repo);
+    const service = new PeriodAdminService(repo, createNullLogger());
 
     await expect(
       service.createPeriodManual({
@@ -557,7 +572,7 @@ function defaultEditSeed(): EditableRow[] {
 describe("PeriodAdminService — updatePeriodManual", () => {
   it("happy path: applies the diff and returns the updated row", async () => {
     const repo = makeUpdatePeriodRepository({ seedPeriods: defaultEditSeed() });
-    const service = new PeriodAdminService(repo);
+    const service = new PeriodAdminService(repo, createNullLogger());
 
     const { result, diff } = await service.updatePeriodManual({
       reportId: SEED_ROW_ID,
@@ -587,7 +602,7 @@ describe("PeriodAdminService — updatePeriodManual", () => {
 
   it("allows clearing weekLabel via explicit null", async () => {
     const repo = makeUpdatePeriodRepository({ seedPeriods: defaultEditSeed() });
-    const service = new PeriodAdminService(repo);
+    const service = new PeriodAdminService(repo, createNullLogger());
 
     const { result, diff } = await service.updatePeriodManual({
       reportId: SEED_ROW_ID,
@@ -600,7 +615,7 @@ describe("PeriodAdminService — updatePeriodManual", () => {
 
   it("rejects when reportId does not resolve", async () => {
     const repo = makeUpdatePeriodRepository({ seedPeriods: defaultEditSeed() });
-    const service = new PeriodAdminService(repo);
+    const service = new PeriodAdminService(repo, createNullLogger());
 
     await expect(
       service.updatePeriodManual({
@@ -624,7 +639,7 @@ describe("PeriodAdminService — updatePeriodManual", () => {
         },
       ],
     });
-    const service = new PeriodAdminService(repo);
+    const service = new PeriodAdminService(repo, createNullLogger());
 
     // Try to push SEED_ROW_ID's end into the SEED_OTHER_ID window.
     await expect(
@@ -637,7 +652,7 @@ describe("PeriodAdminService — updatePeriodManual", () => {
 
   it("self-edit on the same envelope does NOT trigger overlap (excludeId works)", async () => {
     const repo = makeUpdatePeriodRepository({ seedPeriods: defaultEditSeed() });
-    const service = new PeriodAdminService(repo);
+    const service = new PeriodAdminService(repo, createNullLogger());
 
     // Shifting deadline only — envelope keys unchanged — should not even
     // touch the overlap gate. Then shift periodEnd to the same value
@@ -654,7 +669,7 @@ describe("PeriodAdminService — updatePeriodManual", () => {
 
   it("no-op (zero changed fields) short-circuits without audit / write", async () => {
     const repo = makeUpdatePeriodRepository({ seedPeriods: defaultEditSeed() });
-    const service = new PeriodAdminService(repo);
+    const service = new PeriodAdminService(repo, createNullLogger());
 
     const { result, diff } = await service.updatePeriodManual({
       reportId: SEED_ROW_ID,
@@ -673,7 +688,7 @@ describe("PeriodAdminService — updatePeriodManual", () => {
 
   it("rejects when supplied periodEnd < periodStart", async () => {
     const repo = makeUpdatePeriodRepository({ seedPeriods: defaultEditSeed() });
-    const service = new PeriodAdminService(repo);
+    const service = new PeriodAdminService(repo, createNullLogger());
 
     await expect(
       service.updatePeriodManual({

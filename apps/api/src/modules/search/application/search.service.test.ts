@@ -1,6 +1,7 @@
 import type { SearchHit, UserSession } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
+import { createNullLogger } from "../../../lib/logger.js";
 import {
   SearchAuthorizationError,
   type SearchRepository,
@@ -68,7 +69,7 @@ describe("SearchService", () => {
       expect(q).toBe("PR");
       return [makeHit({ title: "PR review" })];
     });
-    const service = new SearchService(repo);
+    const service = new SearchService(repo, createNullLogger());
 
     const result = await service.query(
       { q: "PR", scope: "mine", limit: 20 },
@@ -81,7 +82,10 @@ describe("SearchService", () => {
 
   it('rejects scope="all" for lead role with SearchAuthorizationError', async () => {
     const spy = vi.fn(() => [] as SearchHit[]);
-    const service = new SearchService(createRepository(spy));
+    const service = new SearchService(
+      createRepository(spy),
+      createNullLogger(),
+    );
 
     await expect(
       service.query(
@@ -95,7 +99,10 @@ describe("SearchService", () => {
   });
 
   it('rejects scope="all" for viewer role', async () => {
-    const service = new SearchService(createRepository(() => []));
+    const service = new SearchService(
+      createRepository(() => []),
+      createNullLogger(),
+    );
 
     await expect(
       service.query(
@@ -110,7 +117,7 @@ describe("SearchService", () => {
       expect(scope).toBe("all");
       return [makeHit()];
     });
-    const service = new SearchService(repo);
+    const service = new SearchService(repo, createNullLogger());
 
     const result = await service.query(
       { q: "release", scope: "all", limit: 20 },
@@ -125,7 +132,7 @@ describe("SearchService", () => {
       expect(scope).toBe("all");
       return [makeHit()];
     });
-    const service = new SearchService(repo);
+    const service = new SearchService(repo, createNullLogger());
 
     const result = await service.query(
       { q: "release", scope: "all", limit: 20 },
@@ -141,7 +148,7 @@ describe("SearchService", () => {
       expect(params.scope).toBe("mine");
       return [];
     });
-    const service = new SearchService(repo);
+    const service = new SearchService(repo, createNullLogger());
 
     await service.query(
       { q: "release", scope: "mine", limit: 20 },
@@ -165,7 +172,7 @@ describe("SearchService", () => {
         }),
       ];
     });
-    const service = new SearchService(repo);
+    const service = new SearchService(repo, createNullLogger());
 
     const result = await service.query(
       { q: "CRM", scope: "mine", limit: 20 },
@@ -194,7 +201,7 @@ describe("SearchService", () => {
         }),
       ];
     });
-    const service = new SearchService(repo);
+    const service = new SearchService(repo, createNullLogger());
 
     const result = await service.query(
       { q: "CRM", scope: "all", limit: 20 },
@@ -206,7 +213,10 @@ describe("SearchService", () => {
   });
 
   it("returns empty array when repository finds nothing", async () => {
-    const service = new SearchService(createRepository(() => []));
+    const service = new SearchService(
+      createRepository(() => []),
+      createNullLogger(),
+    );
 
     const result = await service.query(
       { q: "unmatched", scope: "mine", limit: 20 },
@@ -234,7 +244,7 @@ describe("SearchService", () => {
         createdAt: "2026-05-06T06:00:00.000Z",
       }),
     ]);
-    const service = new SearchService(repo);
+    const service = new SearchService(repo, createNullLogger());
 
     const result = await service.query(
       { q: "rel", scope: "mine", limit: 20 },
@@ -260,7 +270,7 @@ describe("SearchService", () => {
         createdAt: "2026-05-06T00:00:00.000Z",
       }),
     ]);
-    const service = new SearchService(repo);
+    const service = new SearchService(repo, createNullLogger());
 
     const result = await service.query(
       { q: "rel", scope: "mine", limit: 20 },
@@ -275,7 +285,7 @@ describe("SearchService", () => {
       makeHit({ id: "ffffffff-ffff-4fff-8fff-ffffffffffff", title: "z-id" }),
       makeHit({ id: "11111111-1111-4111-8111-111111111111", title: "a-id" }),
     ]);
-    const service = new SearchService(repo);
+    const service = new SearchService(repo, createNullLogger());
 
     const result = await service.query(
       { q: "rel", scope: "mine", limit: 20 },
@@ -296,7 +306,7 @@ describe("SearchService", () => {
         }),
       ),
     );
-    const service = new SearchService(repo);
+    const service = new SearchService(repo, createNullLogger());
 
     const result = await service.query(
       { q: "foo", scope: "mine", limit: 5 },
@@ -309,7 +319,10 @@ describe("SearchService", () => {
   });
 
   it("rejects q shorter than 2 characters via Zod", async () => {
-    const service = new SearchService(createRepository(() => []));
+    const service = new SearchService(
+      createRepository(() => []),
+      createNullLogger(),
+    );
 
     await expect(
       service.query(
@@ -320,7 +333,10 @@ describe("SearchService", () => {
   });
 
   it("rejects q longer than 200 characters via Zod", async () => {
-    const service = new SearchService(createRepository(() => []));
+    const service = new SearchService(
+      createRepository(() => []),
+      createNullLogger(),
+    );
 
     await expect(
       service.query(
@@ -335,7 +351,7 @@ describe("SearchService", () => {
       expect(params.groupIds).toEqual([groupA]);
       return [];
     });
-    const service = new SearchService(repo);
+    const service = new SearchService(repo, createNullLogger());
 
     await service.query(
       { q: "release", scope: "mine", limit: 20 },
@@ -348,7 +364,7 @@ describe("SearchService", () => {
       expect(params.groupIds).toBeNull();
       return [];
     });
-    const service = new SearchService(repo);
+    const service = new SearchService(repo, createNullLogger());
 
     await service.query(
       { q: "release", scope: "all", limit: 20 },
@@ -358,7 +374,10 @@ describe("SearchService", () => {
 
   it('rejects scope="mine" for a viewer before calling the repository', async () => {
     const spy = vi.fn(() => [] as SearchHit[]);
-    const service = new SearchService(createRepository(spy));
+    const service = new SearchService(
+      createRepository(spy),
+      createNullLogger(),
+    );
 
     await expect(
       service.query(
@@ -387,7 +406,7 @@ describe("SearchService", () => {
         expect(params.excludeTypes).toEqual(expectedExcludedTypes);
         return [];
       });
-      const service = new SearchService(repo);
+      const service = new SearchService(repo, createNullLogger());
 
       await service.query(
         { q: "release", scope: "published", limit: 20 },
@@ -402,7 +421,7 @@ describe("SearchService", () => {
       expect(params.groupIds).toEqual([groupA]);
       return [makeHit({ title: "published item" })];
     });
-    const service = new SearchService(repo);
+    const service = new SearchService(repo, createNullLogger());
 
     const result = await service.query(
       { q: "release", scope: "published", limit: 20 },
@@ -429,7 +448,7 @@ describe("SearchService", () => {
         }),
       ];
     });
-    const service = new SearchService(repo);
+    const service = new SearchService(repo, createNullLogger());
 
     const result = await service.query(
       { q: "CRM", scope: "published", limit: 20 },
@@ -442,7 +461,10 @@ describe("SearchService", () => {
 
   it('viewer with no granted groups returns empty for scope="published" without calling repository', async () => {
     const spy = vi.fn(() => [] as SearchHit[]);
-    const service = new SearchService(createRepository(spy));
+    const service = new SearchService(
+      createRepository(spy),
+      createNullLogger(),
+    );
 
     const result = await service.query(
       { q: "release", scope: "published", limit: 20 },
@@ -455,7 +477,10 @@ describe("SearchService", () => {
 
   it("head with no reportingGroupId returns empty without calling repository", async () => {
     const spy = vi.fn(() => [] as SearchHit[]);
-    const service = new SearchService(createRepository(spy));
+    const service = new SearchService(
+      createRepository(spy),
+      createNullLogger(),
+    );
 
     const result = await service.query(
       { q: "release", scope: "mine", limit: 20 },

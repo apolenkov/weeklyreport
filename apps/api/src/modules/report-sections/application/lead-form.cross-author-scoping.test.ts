@@ -18,6 +18,7 @@ import {
   type LeadFormRepository,
   LeadFormService,
 } from "./lead-form.service";
+import { NOOP_REPORT_SECTIONS_TELEMETRY } from "./report-sections-telemetry.port.js";
 
 // ---------------------------------------------------------------------------
 // getByPeriod — lead cross-author product scoping
@@ -199,6 +200,7 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
     const getPublishedLineage = vi.fn().mockResolvedValue(publishedLineage);
     const service = new LeadFormService(
       crossAuthorRepo({ getPublishedLineage }),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
     );
 
     const result = await service.getByPeriod(
@@ -217,7 +219,7 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
 
   it("excludes unshared-product items/risks/decisions and keeps shared ones", async () => {
     const repo = crossAuthorRepo();
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     const { section } = await service.getByPeriod(
       REPORT_ID,
@@ -251,7 +253,7 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
       .fn()
       .mockResolvedValue([PROJECT_ID]);
     const repo = crossAuthorRepo({ getSharedNonArchivedProductIdsForReport });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     const { section } = await service.getByPeriod(
       REPORT_ID,
@@ -275,7 +277,10 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
   });
 
   it("drops both a non-product-scoped (null productId) decision and the unshared-product one, mirroring getCrossAuthorContent", async () => {
-    const service = new LeadFormService(crossAuthorRepo());
+    const service = new LeadFormService(
+      crossAuthorRepo(),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+    );
 
     const { section } = await service.getByPeriod(
       REPORT_ID,
@@ -296,7 +301,10 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
   });
 
   it("drops the unshared product card, its stage data, and its referenced name", async () => {
-    const service = new LeadFormService(crossAuthorRepo());
+    const service = new LeadFormService(
+      crossAuthorRepo(),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+    );
 
     const { section } = await service.getByPeriod(
       REPORT_ID,
@@ -358,7 +366,7 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
           ),
         ),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     const { section } = await service.getByPeriod(
       REPORT_ID,
@@ -417,7 +425,7 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
           ),
         ),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     const { section } = await service.getByPeriod(
       REPORT_ID,
@@ -439,7 +447,10 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
   });
 
   it("returns the full section for the author's own read (no filter)", async () => {
-    const service = new LeadFormService(crossAuthorRepo());
+    const service = new LeadFormService(
+      crossAuthorRepo(),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+    );
 
     const { section, readOnly } = await service.getByPeriod(
       REPORT_ID,
@@ -453,7 +464,7 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
 
   it("returns the full section for an in-group head cross-author read (no filter)", async () => {
     const repo = crossAuthorRepo();
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     const { section, readOnly } = await service.getByPeriod(
       REPORT_ID,
@@ -488,7 +499,7 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
           ),
         ),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
       service.getByPeriod(REPORT_ID, AUTHOR_ID, "head", OTHER_USER_ID),
@@ -506,7 +517,7 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
       getUserReportingGroupId: vi.fn().mockResolvedValue(HEAD_GROUP_ID),
       getSectionForPeriodAsGroupPeer: vi.fn().mockResolvedValue(null),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
       service.getByPeriod(REPORT_ID, AUTHOR_ID, "head", OTHER_USER_ID),
@@ -535,7 +546,7 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
           ),
         ),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     const { section } = await service.getByPeriod(
       REPORT_ID,
@@ -555,7 +566,7 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
       // archived-only co-ownership → empty non-archived set
       getSharedNonArchivedProductIds: vi.fn().mockResolvedValue([]),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
       service.getByPeriod(REPORT_ID, AUTHOR_ID, "lead", OTHER_USER_ID),
@@ -580,7 +591,7 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
         ),
       getSharedNonArchivedProductIds: vi.fn().mockResolvedValue([PROJECT_ID]),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
       service.getByPeriod(REPORT_ID, AUTHOR_ID, "lead", OTHER_USER_ID),

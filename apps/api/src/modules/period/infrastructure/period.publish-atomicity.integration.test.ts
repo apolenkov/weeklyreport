@@ -102,7 +102,7 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
     });
   });
 
-  it("rejects publication when no section is submitted without side effects", async () => {
+  async function createActiveReminderRule(): Promise<string> {
     const POLICY = "f0000000-0000-4000-a000-0000000000d4";
     const RULE = "f0000000-0000-4000-a000-0000000000d5";
     await prisma.reminderPolicy.create({
@@ -129,6 +129,27 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
         version: 1,
       },
     });
+    return RULE;
+  }
+
+  // Control for the refused-publish test below: the same fixture must show
+  // the rule being paused when publish succeeds, so "still active" there can
+  // only mean the write did not happen.
+  it("pauses the active reminder rule when publication succeeds", async () => {
+    const RULE = await createActiveReminderRule();
+
+    await repository.publishPeriod(REPORT, USER, await expected(REPORT));
+
+    await expect(
+      prisma.reminderRule.findUniqueOrThrow({ where: { id: RULE } }),
+    ).resolves.toMatchObject({ status: "paused" });
+  });
+
+  it("rejects publication when no section is submitted without side effects", async () => {
+    const RULE = await createActiveReminderRule();
+    const ruleBefore = await prisma.reminderRule.findUniqueOrThrow({
+      where: { id: RULE },
+    });
     await prisma.reportSection.deleteMany({ where: { reportId: REPORT } });
 
     await expect(
@@ -143,13 +164,22 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
     expect(reloaded.periodState).toBe("open");
     expect(reloaded.publishedSnapshot).toBeNull();
     expect(reloaded.publishedAt).toBeNull();
-    // A rejected publish must leave the reminder rules untouched (not paused).
+    expect(reloaded.publishedById).toBeNull();
+    // No frozen snapshot rows: the published scope and search projections.
     await expect(
-      prisma.reminderRule.findUniqueOrThrow({ where: { id: RULE } }),
-    ).resolves.toMatchObject({ status: "active", version: 1 });
+      prisma.publishedSectionScope.count({ where: { reportId: REPORT } }),
+    ).resolves.toBe(0);
     await expect(
-      prisma.reminderRule.count({ where: { reportId: REPORT } }),
-    ).resolves.toBe(1);
+      prisma.publishedSearchDocument.count({ where: { reportId: REPORT } }),
+    ).resolves.toBe(0);
+    // Reminder rules are byte-identical (not paused, not re-versioned) and no
+    // reminder was executed.
+    await expect(
+      prisma.reminderRule.findMany({ where: { reportId: REPORT } }),
+    ).resolves.toEqual([ruleBefore]);
+    await expect(
+      prisma.reminderExecution.count({ where: { rule: { reportId: REPORT } } }),
+    ).resolves.toBe(0);
   });
 
   it("atomically replaces frozen scope and search rows on republish", async () => {

@@ -14,7 +14,7 @@ import {
   validateSubmitInput,
 } from "@customreport/shared";
 
-import { type AppLogger, createNullLogger } from "../../../lib/logger.js";
+import { type AppLogger } from "../../../lib/logger.js";
 import { findPublishedRecordViolation } from "../domain/published-record-guard.js";
 import { mergeSection } from "../domain/report-section-merge.js";
 import {
@@ -24,10 +24,7 @@ import {
   ReportSectionNotFoundError,
   type ReportSectionsRepository,
 } from "./report-sections.contract.js";
-import {
-  NOOP_REPORT_SECTIONS_TELEMETRY,
-  type ReportSectionsTelemetry,
-} from "./report-sections-telemetry.port.js";
+import { type ReportSectionsTelemetry } from "./report-sections-telemetry.port.js";
 
 export {
   REPORT_SECTIONS_REPOSITORY,
@@ -42,8 +39,8 @@ export {
 export class ReportSectionsService {
   constructor(
     private readonly repository: ReportSectionsRepository,
-    private readonly telemetry: ReportSectionsTelemetry = NOOP_REPORT_SECTIONS_TELEMETRY,
-    private readonly logger: AppLogger = createNullLogger(),
+    private readonly telemetry: ReportSectionsTelemetry,
+    private readonly logger: AppLogger,
   ) {}
 
   private assertCanEditSection(

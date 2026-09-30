@@ -1,3 +1,4 @@
+import type { AiProviderTestOutcome } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
@@ -104,7 +105,7 @@ export const startProviderTestExecution = async (
 export const completeProviderTestExecution = async (
   prisma: PrismaService,
   id: string,
-  outcome: "passed" | "incompatible" | "configuration_error" | "inconclusive",
+  outcome: AiProviderTestOutcome,
   failureCode: string | null,
   checks: Prisma.InputJsonValue,
   executionAttempt = FIRST_EXECUTION_ATTEMPT,

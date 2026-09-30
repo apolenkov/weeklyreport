@@ -54,6 +54,9 @@ describe("WeeklyReportPrismaRepository.getCurrentEditableId (integration)", () =
         ...(periodStatus !== "open"
           ? {
               publishedAt,
+              ...(periodStatus === "reopened"
+                ? { reopenedAt: publishedAt }
+                : {}),
               publishedSnapshot: publishedSnapshotFixture({
                 reportId: id,
                 periodStart,

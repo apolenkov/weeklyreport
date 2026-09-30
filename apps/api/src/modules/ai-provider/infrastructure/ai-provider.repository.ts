@@ -1,4 +1,7 @@
-import type { AiProviderCapabilityTestResult } from "@customreport/shared";
+import type {
+  AiProviderCapabilityTestResult,
+  AiProviderTestOutcome,
+} from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
 import {
   AiProviderLifecycle,
@@ -16,6 +19,7 @@ import {
   type AiProviderPreparationUpdate,
   createDraftRecord,
   type NewAiProviderRevision,
+  type SetClaimedTestResultInput,
   setClaimedTestResultRecord,
   setTestResultRecord,
   updateProgressRecord,
@@ -72,8 +76,7 @@ export type StoredAiProviderRevision = Readonly<{
     id: string;
     testSuiteVersion: string;
     state: "queued" | "running" | "completed";
-    outcome:
-      "passed" | "incompatible" | "configuration_error" | "inconclusive" | null;
+    outcome: AiProviderTestOutcome | null;
     failureCode: string | null;
     checks: Prisma.JsonValue | null;
     requestedAt: Date;
@@ -183,37 +186,9 @@ export class AiProviderConfigurationRepository {
   }
 
   async setClaimedTestResult(
-    executionId: string,
-    executionAttempt: number,
-    id: string,
-    result: Prisma.InputJsonValue,
-    status: AiProviderCapabilityTestResult["status"],
-    embeddingDimensions: number | null,
-    testedAt: Date,
-    currentLifecycle: AiProviderLifecycle,
-    outcome: "passed" | "incompatible" | "configuration_error" | "inconclusive",
-    failureCode: string | null,
-    checks: Prisma.InputJsonValue,
-    identities: Readonly<{
-      generationCompatibilityIdentity: string;
-      embeddingScopeIdentity: string;
-      compositeTestIdentity: string;
-    }>,
+    input: SetClaimedTestResultInput,
   ): Promise<StoredAiProviderRevision | null> {
-    const tested = await setClaimedTestResultRecord(this.prisma, {
-      executionId,
-      executionAttempt,
-      id,
-      result,
-      status,
-      embeddingDimensions,
-      testedAt,
-      currentLifecycle,
-      outcome,
-      failureCode,
-      checks,
-      ...identities,
-    });
+    const tested = await setClaimedTestResultRecord(this.prisma, input);
     return tested ? toRevision(tested) : null;
   }
 
@@ -230,7 +205,7 @@ export class AiProviderConfigurationRepository {
 
   async completeExecution(
     id: string,
-    outcome: "passed" | "incompatible" | "configuration_error" | "inconclusive",
+    outcome: AiProviderTestOutcome,
     failureCode: string | null = null,
     checks: Prisma.InputJsonValue = [],
     executionAttempt = 1,

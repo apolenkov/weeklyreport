@@ -4,6 +4,7 @@ import type {
 } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
+import { createNullLogger } from "../../lib/logger";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import { unusedRemindersRepositoryStubs } from "./__tests__/reminders-scope.repository-stub.js";
 import { RemindersService } from "./reminders.service.js";
@@ -59,7 +60,7 @@ function buildService(
       },
     ),
   } satisfies RemindersRepository;
-  return new RemindersService(repository);
+  return new RemindersService(repository, createNullLogger());
 }
 
 describe("RemindersService.listExecutions — recipient scope before pagination", () => {

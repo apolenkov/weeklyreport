@@ -1,5 +1,7 @@
 # Slice boundaries use curated index barrels
 
+**Date:** 2026-07-14
+
 **Status:** accepted and implemented.
 
 API modules and web feature slices may cross sibling boundaries only through the

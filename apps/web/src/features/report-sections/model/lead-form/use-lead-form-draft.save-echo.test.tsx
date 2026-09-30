@@ -379,3 +379,42 @@ describe("reviewer feedback arriving without a payload change", () => {
     expect(result.current.draft?.items[0]?.comments).toHaveLength(1);
   });
 });
+
+describe("draft save echo for decisions the server re-owns", () => {
+  it("settles after one save when a decision owner differs from the section author", async () => {
+    vi.useFakeTimers();
+    const decision = {
+      id: "88888888-8888-4888-8888-888888888888",
+      stableId: "99999999-9999-4999-8999-999999999999",
+      text: "Adopt the new runbook",
+      owner: "Lead S.",
+      deadline: null,
+      impact: "Fewer incidents",
+      resolvedAt: null,
+      productId: null,
+      activityId: null,
+      stageNames: [],
+    };
+    const initial = { ...makeSection(), decisions: [decision] };
+    // The server stores every decision under the section author.
+    const saved = savedSection(
+      {
+        ...initial,
+        decisions: [{ ...decision, owner: initial.authorName }],
+      },
+      SAVED_ITEM,
+      "Next commitment",
+      2,
+    );
+    const saveDraft = vi.fn().mockResolvedValue(saved);
+    const { result } = renderDraft(initial, saveDraft);
+
+    act(() => editCommitment(result.current, "Next commitment"));
+    await act(() => result.current.autosave.forceSave());
+    await act(() => vi.advanceTimersByTimeAsync(20_000));
+
+    expect(saveDraft).toHaveBeenCalledOnce();
+    expect(result.current.autosave.dirty).toBe(false);
+    expect(result.current.autosave.state).toBe("saved");
+  });
+});

@@ -6,6 +6,7 @@ import {
 } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
+import { createNullLogger } from "../../lib/logger";
 import type {
   AdminJobHandle,
   AdminJobsQueue,
@@ -126,7 +127,11 @@ describe("JobsService — DLQ admin surface", () => {
         get: (name: (typeof QUEUE_NAMES)[number]) =>
           makeQueue({ failed: name === queue ? [job] : [] }),
       };
-      const service = new JobsService(registry, defaultOptions);
+      const service = new JobsService(
+        registry,
+        defaultOptions,
+        createNullLogger(),
+      );
 
       await expect(service.listFailed({ queue })).resolves.toEqual({
         jobs: [job.failedJob],
@@ -142,6 +147,7 @@ describe("JobsService — DLQ admin surface", () => {
     const service = new JobsService(
       makeRegistry(makeQueue({ failed })),
       defaultOptions,
+      createNullLogger(),
     );
 
     const result = await service.listFailed({ queue: "email-reminder" });
@@ -166,7 +172,11 @@ describe("JobsService — DLQ admin surface", () => {
       makeJob({ id: `job-${i}` }),
     );
     const queue = makeQueue({ failed });
-    const service = new JobsService(makeRegistry(queue), defaultOptions);
+    const service = new JobsService(
+      makeRegistry(queue),
+      defaultOptions,
+      createNullLogger(),
+    );
 
     await service.listFailed({ queue: "email-reminder", cursor: 0, limit: 50 });
     expect(queue.getFailed).toHaveBeenCalledWith(0, 49);
@@ -186,6 +196,7 @@ describe("JobsService — DLQ admin surface", () => {
     const service = new JobsService(
       makeRegistry(makeQueue({ failed })),
       defaultOptions,
+      createNullLogger(),
     );
 
     const page1 = await service.listFailed({
@@ -212,6 +223,7 @@ describe("JobsService — DLQ admin surface", () => {
         get: () => makeQueue({ failed: [job] }),
       },
       defaultOptions,
+      createNullLogger(),
     );
 
     await expect(
@@ -226,6 +238,7 @@ describe("JobsService — DLQ admin surface", () => {
     const service = new JobsService(
       makeRegistry(makeQueue({ failed: [job] })),
       defaultOptions,
+      createNullLogger(),
     );
 
     const result = await service.retryFailed({
@@ -250,6 +263,7 @@ describe("JobsService — DLQ admin surface", () => {
         retryPdfExportGeneration,
         listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
       },
+      createNullLogger(),
     );
 
     const result = await service.retryFailed({
@@ -283,6 +297,7 @@ describe("JobsService — DLQ admin surface", () => {
         retryPdfExportGeneration,
         listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
       },
+      createNullLogger(),
     );
 
     const result = await service.retryFailed({
@@ -319,11 +334,15 @@ describe("JobsService — DLQ admin surface", () => {
         get: (name: QueueName) =>
           makeQueue({ failed: name === queue ? [job] : [] }),
       };
-      const service = new JobsService(registry, {
-        reminderExecutionExists,
-        retryPdfExportGeneration,
-        listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
-      });
+      const service = new JobsService(
+        registry,
+        {
+          reminderExecutionExists,
+          retryPdfExportGeneration,
+          listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
+        },
+        createNullLogger(),
+      );
 
       const result = await service.retryFailed({
         queue,
@@ -355,6 +374,7 @@ describe("JobsService — DLQ admin surface", () => {
         retryPdfExportGeneration: vi.fn<RetryPdfExportGeneration>(),
         listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
       },
+      createNullLogger(),
     );
 
     await expect(
@@ -375,6 +395,7 @@ describe("JobsService — DLQ admin surface", () => {
     const service = new JobsService(
       makeRegistry(makeQueue({ failed: [], getJob: () => undefined })),
       defaultOptions,
+      createNullLogger(),
     );
 
     const result = await service.retryFailed({
@@ -406,6 +427,7 @@ describe("JobsService — DLQ admin surface", () => {
           retryPdfExportGeneration,
           listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
         },
+        createNullLogger(),
       );
 
       const result = await service.retryFailed({
@@ -442,6 +464,7 @@ describe("JobsService — DLQ admin surface", () => {
         retryPdfExportGeneration: vi.fn<RetryPdfExportGeneration>(),
         listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
       },
+      createNullLogger(),
     );
 
     const result = await service.retryFailed({
@@ -476,6 +499,7 @@ describe("JobsService — DLQ admin surface", () => {
           retryPdfExportGeneration,
           listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
         },
+        createNullLogger(),
       );
 
       const result = await service.retryFailed({
@@ -512,6 +536,7 @@ describe("JobsService — DLQ admin surface", () => {
         retryPdfExportGeneration: vi.fn<RetryPdfExportGeneration>(),
         listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
       },
+      createNullLogger(),
     );
 
     await expect(
@@ -540,6 +565,7 @@ describe("JobsService — DLQ admin surface", () => {
       const service = new JobsService(
         makeRegistry(makeQueue({ failed: [job] }), "semantic-index"),
         defaultOptions,
+        createNullLogger(),
       );
 
       const result = await service.removeFailed({
@@ -558,6 +584,7 @@ describe("JobsService — DLQ admin surface", () => {
     const service = new JobsService(
       makeRegistry(makeQueue({ failed: [job] })),
       defaultOptions,
+      createNullLogger(),
     );
 
     const result = await service.removeFailed({
@@ -574,6 +601,7 @@ describe("JobsService — DLQ admin surface", () => {
     const service = new JobsService(
       makeRegistry(makeQueue({ failed: [], getJob: () => undefined })),
       defaultOptions,
+      createNullLogger(),
     );
 
     await expect(
@@ -593,6 +621,7 @@ describe("JobsService — DLQ admin surface", () => {
         get: () => makeQueue({ failed: [job] }),
       },
       defaultOptions,
+      createNullLogger(),
     );
 
     await expect(
@@ -624,7 +653,11 @@ describe("JobsService — DLQ admin surface", () => {
         };
       },
     };
-    const service = new JobsService(registry, defaultOptions);
+    const service = new JobsService(
+      registry,
+      defaultOptions,
+      createNullLogger(),
+    );
 
     await expect(service.countFailed()).resolves.toBe(
       QUEUE_NAMES.reduce((sum, name) => sum + (counts.get(name) ?? 0), 0),
@@ -667,11 +700,15 @@ describe("JobsService — pdf-export generation retry", () => {
     const retryPdfExportGeneration = vi
       .fn<RetryPdfExportGeneration>()
       .mockResolvedValue("retried");
-    const service = new JobsService(pdfQueue(job), {
-      reminderExecutionExists: vi.fn(),
-      retryPdfExportGeneration,
-      listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
-    });
+    const service = new JobsService(
+      pdfQueue(job),
+      {
+        reminderExecutionExists: vi.fn(),
+        retryPdfExportGeneration,
+        listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
+      },
+      createNullLogger(),
+    );
 
     const result = await service.retryFailed({
       queue: "pdf-export",
@@ -701,11 +738,15 @@ describe("JobsService — pdf-export generation retry", () => {
     const retryPdfExportGeneration = vi
       .fn<RetryPdfExportGeneration>()
       .mockResolvedValue("already-advanced");
-    const service = new JobsService(pdfQueue(job), {
-      reminderExecutionExists: vi.fn(),
-      retryPdfExportGeneration,
-      listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
-    });
+    const service = new JobsService(
+      pdfQueue(job),
+      {
+        reminderExecutionExists: vi.fn(),
+        retryPdfExportGeneration,
+        listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
+      },
+      createNullLogger(),
+    );
 
     const result = await service.retryFailed({
       queue: "pdf-export",
@@ -728,11 +769,15 @@ describe("JobsService — pdf-export generation retry", () => {
     const retryPdfExportGeneration = vi
       .fn<RetryPdfExportGeneration>()
       .mockResolvedValue("ineligible");
-    const service = new JobsService(pdfQueue(job), {
-      reminderExecutionExists: vi.fn(),
-      retryPdfExportGeneration,
-      listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
-    });
+    const service = new JobsService(
+      pdfQueue(job),
+      {
+        reminderExecutionExists: vi.fn(),
+        retryPdfExportGeneration,
+        listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
+      },
+      createNullLogger(),
+    );
 
     const result = await service.retryFailed({
       queue: "pdf-export",
@@ -790,11 +835,15 @@ describe("JobsService — pdf-export generation retry", () => {
         pdfExportIdentity: identity,
       });
       const retryPdfExportGeneration = vi.fn<RetryPdfExportGeneration>();
-      const service = new JobsService(pdfQueue(job), {
-        reminderExecutionExists: vi.fn(),
-        retryPdfExportGeneration,
-        listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
-      });
+      const service = new JobsService(
+        pdfQueue(job),
+        {
+          reminderExecutionExists: vi.fn(),
+          retryPdfExportGeneration,
+          listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
+        },
+        createNullLogger(),
+      );
 
       const result = await service.retryFailed({
         queue: "pdf-export",
@@ -818,11 +867,15 @@ describe("JobsService — pdf-export generation retry", () => {
     const retryPdfExportGeneration = vi
       .fn<RetryPdfExportGeneration>()
       .mockRejectedValue(new Error("queue add acknowledgement lost"));
-    const service = new JobsService(pdfQueue(job), {
-      reminderExecutionExists: vi.fn(),
-      retryPdfExportGeneration,
-      listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
-    });
+    const service = new JobsService(
+      pdfQueue(job),
+      {
+        reminderExecutionExists: vi.fn(),
+        retryPdfExportGeneration,
+        listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
+      },
+      createNullLogger(),
+    );
 
     await expect(
       service.retryFailed({ queue: "pdf-export", jobId: "pdf-job-3-g1" }),
@@ -837,11 +890,15 @@ describe("JobsService — pdf-export generation retry", () => {
     const retryPdfExportGeneration = vi
       .fn<RetryPdfExportGeneration>()
       .mockResolvedValue("ineligible");
-    const service = new JobsService(pdfQueue(job), {
-      reminderExecutionExists: vi.fn(),
-      retryPdfExportGeneration,
-      listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
-    });
+    const service = new JobsService(
+      pdfQueue(job),
+      {
+        reminderExecutionExists: vi.fn(),
+        retryPdfExportGeneration,
+        listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
+      },
+      createNullLogger(),
+    );
 
     const result = await service.retryFailed({
       queue: "pdf-export",
@@ -876,14 +933,18 @@ describe("JobsService — pdf recovery surface", () => {
       listPdfRecoveryJobs: () => Promise<readonly PdfRecoveryJob[]>;
     }> = {},
   ) {
-    return new JobsService(makeRegistry(makeQueue({ failed: [] })), {
-      reminderExecutionExists: vi.fn(),
-      retryPdfExportGeneration: vi
-        .fn<RetryPdfExportGeneration>()
-        .mockResolvedValue("retried"),
-      listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
-      ...overrides,
-    });
+    return new JobsService(
+      makeRegistry(makeQueue({ failed: [] })),
+      {
+        reminderExecutionExists: vi.fn(),
+        retryPdfExportGeneration: vi
+          .fn<RetryPdfExportGeneration>()
+          .mockResolvedValue("retried"),
+        listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
+        ...overrides,
+      },
+      createNullLogger(),
+    );
   }
 
   it("lists quarantined export rows from the durable side, never Redis", async () => {

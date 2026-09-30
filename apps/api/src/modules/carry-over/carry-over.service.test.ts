@@ -5,6 +5,7 @@ import type {
 } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
+import { createNullLogger } from "../../lib/logger";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   CarryOverDomainError,
@@ -184,10 +185,10 @@ describe("CarryOverService", () => {
       unrelatedSubmitted,
     ]);
     const saved = vi.spyOn(repo, "saveCarryOver");
-    const result = await new CarryOverService(repo).executeCarryOver(
-      sourceReportId,
-      targetReportId,
-    );
+    const result = await new CarryOverService(
+      repo,
+      createNullLogger(),
+    ).executeCarryOver(sourceReportId, targetReportId);
 
     expect(result.records).toHaveLength(2);
     expect(saved).toHaveBeenCalledOnce();
@@ -196,7 +197,10 @@ describe("CarryOverService", () => {
   });
 
   it("carries only next-period items and unresolved decisions into the target section", async () => {
-    const service = new CarryOverService(createRepository(sourceSection));
+    const service = new CarryOverService(
+      createRepository(sourceSection),
+      createNullLogger(),
+    );
     const result = await service.executeCarryOver(
       sourceReportId,
       targetReportId,
@@ -212,7 +216,10 @@ describe("CarryOverService", () => {
   });
 
   it("marks carry-over lineage and becomes a no-op on replay", async () => {
-    const service = new CarryOverService(createRepository(sourceSection));
+    const service = new CarryOverService(
+      createRepository(sourceSection),
+      createNullLogger(),
+    );
     const first = await service.executeCarryOver(
       sourceReportId,
       targetReportId,
@@ -249,6 +256,7 @@ describe("CarryOverService", () => {
     };
     const service = new CarryOverService(
       createRepository(sourceWithCommitment),
+      createNullLogger(),
     );
 
     const first = await service.executeCarryOver(
@@ -274,7 +282,10 @@ describe("CarryOverService", () => {
   });
 
   it("rejects carry-over when source and target report are identical", async () => {
-    const service = new CarryOverService(createRepository(sourceSection));
+    const service = new CarryOverService(
+      createRepository(sourceSection),
+      createNullLogger(),
+    );
 
     await expect(
       service.executeCarryOver(sourceReportId, sourceReportId),
@@ -349,7 +360,7 @@ describe("CarryOverService", () => {
           targetSection: expectDefined(sections[0]),
         }),
     };
-    const service = new CarryOverService(repo);
+    const service = new CarryOverService(repo, createNullLogger());
     const result = await service.executeCarryOver(
       sourceReportId,
       targetReportId,
@@ -473,7 +484,7 @@ describe("CarryOverService", () => {
         secondSourceSection,
         thirdSourceSection,
       ]);
-      const service = new CarryOverService(repo);
+      const service = new CarryOverService(repo, createNullLogger());
       const result = await service.executeCarryOver(
         sourceReportId,
         targetReportId,
@@ -489,7 +500,7 @@ describe("CarryOverService", () => {
 
     it("returns existing execution without creating new records (idempotency)", async () => {
       const repo = createRepository(sourceSection);
-      const service = new CarryOverService(repo);
+      const service = new CarryOverService(repo, createNullLogger());
 
       const first = await service.executeCarryOver(
         sourceReportId,
@@ -507,7 +518,7 @@ describe("CarryOverService", () => {
 
     it("creates a new execution when none exists", async () => {
       const repo = createRepository(sourceSection);
-      const service = new CarryOverService(repo);
+      const service = new CarryOverService(repo, createNullLogger());
       const result = await service.executeCarryOver(
         sourceReportId,
         targetReportId,
@@ -522,7 +533,7 @@ describe("CarryOverService", () => {
 
     it("throws when source sections are empty", async () => {
       const repo = createRepository(sourceSection, undefined, "source");
-      const service = new CarryOverService(repo);
+      const service = new CarryOverService(repo, createNullLogger());
 
       await expect(
         service.executeCarryOver(sourceReportId, targetReportId),
@@ -531,7 +542,7 @@ describe("CarryOverService", () => {
 
     it("throws when target sections are empty", async () => {
       const repo = createRepository(sourceSection, undefined, "target");
-      const service = new CarryOverService(repo);
+      const service = new CarryOverService(repo, createNullLogger());
 
       await expect(
         service.executeCarryOver(sourceReportId, targetReportId),
@@ -585,7 +596,10 @@ describe("CarryOverService — activity-parented carry-over", () => {
   };
 
   it("carries the records when the activity is re-attached in the target period", async () => {
-    const service = new CarryOverService(createRepository(activitySource));
+    const service = new CarryOverService(
+      createRepository(activitySource),
+      createNullLogger(),
+    );
     const result = await service.executeCarryOver(
       sourceReportId,
       targetReportId,
@@ -602,6 +616,7 @@ describe("CarryOverService — activity-parented carry-over", () => {
     const service = new CarryOverService(
       // Empty target activities model an archived/detached activity.
       createRepository(activitySource, []),
+      createNullLogger(),
     );
     const result = await service.executeCarryOver(
       sourceReportId,

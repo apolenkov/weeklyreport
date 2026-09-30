@@ -455,6 +455,7 @@ describe("Telemetry group scoping (integration)", () => {
         periodStatus: "reopened",
         periodState: "open",
         publishedAt: REOPENED_PUBLISHED_AT,
+        reopenedAt: REOPENED_PUBLISHED_AT,
         publishedSnapshot: telemetrySnapshot({
           reportId: REOPENED_REPORT,
           periodStart: reopenedPeriodStart,

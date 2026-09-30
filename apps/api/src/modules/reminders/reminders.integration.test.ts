@@ -10,6 +10,7 @@ import {
 } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { createNullLogger } from "../../lib/logger";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
@@ -242,7 +243,7 @@ describe("RemindersPrismaRepository (integration)", () => {
     });
 
     const queue = { enqueue: vi.fn().mockResolvedValue(undefined) };
-    const service = new RemindersService(repo, undefined, queue);
+    const service = new RemindersService(repo, createNullLogger(), queue);
     await expect(
       service.requestReminderExecutionWithOutcome(
         TEST_IDS.reminderRule,
@@ -291,7 +292,7 @@ describe("RemindersPrismaRepository (integration)", () => {
     });
 
     const queue = { enqueue: vi.fn().mockResolvedValue(undefined) };
-    const service = new RemindersService(repo, undefined, queue);
+    const service = new RemindersService(repo, createNullLogger(), queue);
     await expect(
       service.requestReminderExecutionWithOutcome(
         TEST_IDS.reminderRule,
@@ -315,7 +316,7 @@ describe("RemindersPrismaRepository (integration)", () => {
     });
 
     const queue = { enqueue: vi.fn().mockResolvedValue(undefined) };
-    const service = new RemindersService(repo, undefined, queue);
+    const service = new RemindersService(repo, createNullLogger(), queue);
     await expect(
       service.requestReminderExecutionWithOutcome(
         TEST_IDS.reminderRule,
@@ -366,7 +367,7 @@ describe("RemindersPrismaRepository (integration)", () => {
         return rule;
       });
     const queue = { enqueue: vi.fn().mockResolvedValue(undefined) };
-    const service = new RemindersService(repo, undefined, queue);
+    const service = new RemindersService(repo, createNullLogger(), queue);
 
     try {
       await expect(

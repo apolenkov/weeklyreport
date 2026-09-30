@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
+import { createNullLogger } from "../../../lib/logger.js";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
@@ -16,6 +17,7 @@ import {
 } from "../../carry-over/index.js";
 import { LeadFormService } from "../application/lead-form.service";
 import { ReportSectionsService } from "../application/report-sections.service";
+import { NOOP_REPORT_SECTIONS_TELEMETRY } from "../application/report-sections-telemetry.port.js";
 import {
   buildAssembledReportFromPrismaRow,
   reportFullIncludeForSnapshot,
@@ -125,7 +127,11 @@ describe("unified-activity lifecycle (integration)", () => {
     repo = new ReportSectionsPrismaRepository(
       prisma as unknown as PrismaService,
     );
-    service = new ReportSectionsService(repo);
+    service = new ReportSectionsService(
+      repo,
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
   });
 
   beforeEach(async () => {
@@ -376,6 +382,7 @@ describe("unified-activity lifecycle (integration)", () => {
 
     const leadService = new LeadFormService(
       new LeadFormPrismaRepository(prisma as unknown as PrismaService),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
     );
 
     await expect(
@@ -408,6 +415,7 @@ describe("unified-activity lifecycle (integration)", () => {
 
     const carryService = new CarryOverService(
       new CarryOverPrismaRepository(prisma as unknown as PrismaService),
+      createNullLogger(),
     );
 
     // Period N+1: carry forward → arrives carriedOver=true, type=current.
@@ -525,7 +533,7 @@ describe("unified-activity lifecycle (integration)", () => {
     const deps = buildAutoCarryOverDeps({
       prisma,
       repository,
-      carryOverService: new CarryOverService(repository),
+      carryOverService: new CarryOverService(repository, createNullLogger()),
       logger: { info: () => undefined, warn: () => undefined },
     });
     await carryOverIntoOpenedPeriod(deps, nextReport.id);

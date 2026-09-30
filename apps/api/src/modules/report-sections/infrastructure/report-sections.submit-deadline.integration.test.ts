@@ -5,6 +5,7 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
+import { createNullLogger } from "../../../lib/logger.js";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   createPauseGate,
@@ -21,6 +22,7 @@ import {
   ReportSectionAccessError,
   ReportSectionsService,
 } from "../application/report-sections.service";
+import { NOOP_REPORT_SECTIONS_TELEMETRY } from "../application/report-sections-telemetry.port.js";
 import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
@@ -202,7 +204,11 @@ describe("submit versus manual deadline update (PostgreSQL interleaving)", () =>
     const sections = new ReportSectionsPrismaRepository(
       submitPrisma as unknown as PrismaService,
     );
-    const service = new ReportSectionsService(sections);
+    const service = new ReportSectionsService(
+      sections,
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
     const update = () =>
       admin.updatePeriodManual({
         reportId: testData.report.id,
