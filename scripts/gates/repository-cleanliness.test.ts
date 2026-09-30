@@ -118,6 +118,24 @@ describe("repository cleanliness", () => {
     ]);
   });
 
+  it("allows per-machine code-index and agent worktree state", async () => {
+    const root = await repository();
+    await writeFile(
+      join(root, ".gitignore"),
+      ".claude/worktrees/\n.codegraph/\n.kilo/\n.superpowers/\n",
+    );
+    for (const dir of [".codegraph", ".kilo", ".superpowers/sdd"]) {
+      await mkdir(join(root, dir), { recursive: true });
+      await writeFile(join(root, dir, "state"), "x");
+    }
+    await mkdir(join(root, ".claude/worktrees/agent-1/empty"), {
+      recursive: true,
+    });
+    await execFileAsync("git", ["add", ".gitignore"], { cwd: root });
+
+    expect(validateInventory(await inventoryRepository(root))).toEqual([]);
+  });
+
   it("allows per-machine Pi runtime state and session exports", async () => {
     const root = await repository();
     await writeFile(
