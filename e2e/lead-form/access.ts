@@ -33,7 +33,7 @@ async function login(role: "lead" | "head", session?: string): Promise<void> {
   assert.equal(url.pathname, "/auth/dev-login");
   assert.equal(url.searchParams.get("role"), role);
   assert.equal(url.searchParams.get("email"), DEV_LOGIN_EMAIL_BY_ROLE[role]);
-  await findRole("link", name, "click", undefined, session);
+  await findRole("link", name, "click", { session });
   const homePath = ROLE_HOME_PATH[role];
   await waitSnapshot(
     async () => {
@@ -77,5 +77,5 @@ export async function openLeadReport(
         : "Status slide deck (use arrow keys to navigate slides)",
   };
   await waitScope(scope, session);
-  await findRole(scope.role, scope.name, "text", undefined, session);
+  await findRole(scope.role, scope.name, "text", { session });
 }
