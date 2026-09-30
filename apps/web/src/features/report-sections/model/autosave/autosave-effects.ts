@@ -2,7 +2,19 @@
 
 import { useEffect } from "react";
 
+import { mutationErrorMessage } from "../../../../shared/lib/errors/mutation-error-message";
 import type { AutosaveState } from "./autosave-types";
+
+const AUTOSAVE_FAILURE_MESSAGE =
+  "Autosave failed. Check your connection and use Save to retry.";
+
+// A bare browser transport message ("Failed to fetch") is not actionable.
+export function autosaveFailureMessage(error: unknown): string {
+  return (
+    mutationErrorMessage(error, AUTOSAVE_FAILURE_MESSAGE) ||
+    AUTOSAVE_FAILURE_MESSAGE
+  );
+}
 
 // A pending announcement whose edit is no longer dirty is stale (first render
 // races the baseline-priming effect; undo restores saved content). Undoing a

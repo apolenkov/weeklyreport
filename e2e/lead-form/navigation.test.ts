@@ -527,7 +527,7 @@ async function openSupportingSections(): Promise<void> {
 
 function supportEditingNames(data: Snapshot): string[] {
   return namedRefs(data, "button", (name) =>
-    /^(?:Edit risk for |Delete risk for |Escalate risk for |Downgrade risk for |Edit decision$|Delete decision for )/.test(
+    /^(?:Edit risk for |Delete risk for |Escalate risk for |Downgrade risk for |Edit decision: |Delete decision for )/.test(
       name,
     ),
   )

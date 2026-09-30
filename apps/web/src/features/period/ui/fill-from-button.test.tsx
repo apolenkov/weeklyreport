@@ -572,6 +572,18 @@ describe("FillFromButton — 'Latest submitted' badge keyed by identity, not fil
     expect(badge.closest("div")).toContainElement(screen.getByText(/Week 16/));
   });
 
+  it("keeps the full date range visible: the title never truncates and badges wrap", () => {
+    render(<FillFromButton periods={[week16, week15]} />);
+    openDropdown();
+
+    const title = screen.getByText(/Week 16/);
+    expect(title).not.toHaveClass("truncate");
+    expect(title).toHaveClass("min-w-fit");
+    expect(screen.getByText("Latest submitted").closest("div")).toHaveClass(
+      "flex-wrap",
+    );
+  });
+
   it("does not mislabel Week 15 as Latest submitted when a search excludes Week 16", () => {
     render(<FillFromButton periods={[week16, week15]} />);
     openDropdown();

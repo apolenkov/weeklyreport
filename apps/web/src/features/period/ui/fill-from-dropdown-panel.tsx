@@ -68,10 +68,10 @@ function PeriodRowButton({
       onClick={onSelect}
     >
       <div className="flex-1">
-        {/* Badges share the title line, right-aligned — one
-            horizontal level for Archived and Previous. */}
-        <div className="flex items-center gap-1.5 text-sm font-semibold">
-          <span className="flex-1 truncate">
+        {/* The title never truncates: its intrinsic width is the floor, so
+            when badges do not fit beside it they wrap to the next line. */}
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm font-semibold">
+          <span className="min-w-fit flex-1">
             {period.weekLabel} &middot; {period.dateRange}
           </span>
           {period.archived && (

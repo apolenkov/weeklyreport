@@ -683,6 +683,11 @@ describe("RiskEditDialog — classification field order", () => {
     );
 
     expect(screen.getByRole("group", { name: "Severity" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "Severity" }),
+    ).toHaveAccessibleDescription(
+      "At risk = needs attention; Blocked = work stopped.",
+    );
   });
 
   it("orders the classification panel Product → Stages → Severity", () => {

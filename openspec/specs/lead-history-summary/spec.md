@@ -62,6 +62,20 @@ set.
   completed set), not "across 3 periods"
 - **AND** the separate draft note still discloses the excluded draft
 
+### Requirement: History traffic-light totals match the report's effective status
+
+Each personal history entry's traffic-light totals MUST count every owned
+product by the same effective status the report shows for it, including the
+floor from covering risks (a Blocked risk covering a product's stage makes
+that product red even when its stored status is green). Totals MUST NOT be
+counted from the raw stored product status rows.
+
+#### Scenario: A blocked risk turns the card red
+
+- **WHEN** a live section's product has a stored green status and a Blocked
+  risk covering one of its owned stages
+- **THEN** the history card counts that product as red, not green
+
 ### Requirement: The reports history page carries no tab state
 
 The `/reports` history page MUST render a single role-defaulted history

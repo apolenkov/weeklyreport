@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 
+import { useIsOnline } from "../../../../../shared/lib/query/use-is-online";
 import { SdlcTooltipProvider } from "../../../../../shared/ui/feedback/sdlc-tooltip";
 import {
   projectReportHealthPulse,
@@ -88,15 +89,16 @@ function useOverviewCompletion(
   });
 }
 
-function overviewSaveStatus(
+function useSaveStatus(
   editor: ReadyEditor | null,
   pendingInput: boolean,
   outcomePending: boolean,
 ): string | undefined {
+  const online = useIsOnline();
   if (outcomePending) return "Saving plan outcome…";
   if (pendingInput) return "Unsaved update — save or cancel the open edit";
   if (!editor || editor.view.viewModel.isReadOnly) return undefined;
-  return autosaveStatusCopy(editor.draft.autosave.state);
+  return autosaveStatusCopy(editor.draft.autosave.state, online);
 }
 
 function OverviewRefreshWarning({
@@ -233,6 +235,7 @@ export function LeadStatusOverviewContent({
     dialog.dialog !== null ||
     plan.dialog !== null ||
     pendingActivityIds.size > 0;
+  const saveStatus = useSaveStatus(readyEditor, pendingInput, plan.pending);
   const canStartAction = canEdit && !pendingInput;
   const openWork = useOpenWorkRegister(
     targetReportId,
@@ -281,11 +284,7 @@ export function LeadStatusOverviewContent({
         activityFieldsEditable={canEdit}
         onActivityFieldsChange={onActivityFieldsChange}
         onActivityFieldsPendingChange={onActivityFieldsPendingChange}
-        autosaveStatus={overviewSaveStatus(
-          readyEditor,
-          pendingInput,
-          plan.pending,
-        )}
+        autosaveStatus={saveStatus}
       />
       <OpenWorkRegister
         query={{

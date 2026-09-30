@@ -2,7 +2,7 @@
 
 import type { Role } from "@customreport/shared";
 import { Separator } from "@customreport/ui/components/ui/separator";
-import type { ComponentProps, RefObject } from "react";
+import type { ComponentProps, ReactNode, RefObject } from "react";
 
 import type { FullscreenHandle } from "../../../../../shared/hooks/browser/use-fullscreen";
 import { useSession } from "../../../../../shared/lib/auth/session-provider";
@@ -59,6 +59,17 @@ export const canShowLeadReportAssistant = (
   role: Role | null | undefined,
 ): boolean => role === "lead";
 
+// The shared toolbar row stops wrapping at md, where the slides controls no
+// longer fit beside the period cluster; this row keeps both clusters wrapping
+// (and inside the card) until lg.
+function ToolbarClusterRow({ children }: { readonly children: ReactNode }) {
+  return (
+    <div className="flex min-w-0 basis-full flex-wrap items-center gap-1.5 lg:flex-nowrap">
+      {children}
+    </div>
+  );
+}
+
 export function LeadFormToolbarControls({
   viewModel,
   leadSubmittedAt,
@@ -83,8 +94,8 @@ export function LeadFormToolbarControls({
       sticky
       layoutKey="report-context-toolbar"
       contextControls={
-        <>
-          <div className="flex min-w-0 basis-full flex-wrap items-center gap-1.5 md:basis-auto md:shrink-0 md:flex-nowrap">
+        <ToolbarClusterRow>
+          <div className="flex min-w-0 basis-full flex-wrap items-center gap-1.5 lg:basis-auto lg:shrink-0 lg:flex-nowrap">
             <ToolbarPeriodCluster
               viewModel={viewModel}
               leadSubmittedAt={leadSubmittedAt}
@@ -92,7 +103,7 @@ export function LeadFormToolbarControls({
               onShowArchivePeriodsChange={onShowArchivePeriodsChange}
             />
           </div>
-          <div className="flex min-w-0 basis-full flex-wrap items-center gap-1.5 md:ml-auto md:basis-0 md:grow md:justify-end">
+          <div className="flex min-w-0 basis-full flex-wrap items-center gap-1.5 lg:ml-auto lg:basis-0 lg:grow lg:justify-end">
             {canShowLeadReportAssistant(user?.role) && <LeadReportAssistant />}
             <ToolbarViewCluster
               toolbarVisibility={toolbarVisibility}
@@ -112,7 +123,7 @@ export function LeadFormToolbarControls({
               setGroupExpanded={setGroupExpanded}
             />
           </div>
-        </>
+        </ToolbarClusterRow>
       }
     />
   );
@@ -137,8 +148,8 @@ export function LeadOverviewToolbarControls({
       sticky
       layoutKey="report-context-toolbar"
       contextControls={
-        <>
-          <div className="flex min-w-0 basis-full flex-wrap items-center gap-1.5 md:basis-auto md:shrink-0 md:flex-nowrap">
+        <ToolbarClusterRow>
+          <div className="flex min-w-0 basis-full flex-wrap items-center gap-1.5 lg:basis-auto lg:shrink-0 lg:flex-nowrap">
             <ToolbarPeriodCluster
               viewModel={viewModel}
               leadSubmittedAt={leadSubmittedAt}
@@ -146,7 +157,7 @@ export function LeadOverviewToolbarControls({
               onShowArchivePeriodsChange={onShowArchivePeriodsChange}
             />
           </div>
-          <div className="flex min-w-0 basis-full flex-wrap items-center gap-1.5 md:ml-auto md:basis-0 md:grow md:justify-end">
+          <div className="flex min-w-0 basis-full flex-wrap items-center gap-1.5 lg:ml-auto lg:basis-0 lg:grow lg:justify-end">
             {canShowLeadReportAssistant(user?.role) && <LeadReportAssistant />}
             <RecordVisibilityToggle
               value={toolbarVisibility}
@@ -159,7 +170,7 @@ export function LeadOverviewToolbarControls({
               desktopLabels
             />
           </div>
-        </>
+        </ToolbarClusterRow>
       }
     />
   );
