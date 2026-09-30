@@ -146,7 +146,7 @@ function RecordCommentThread({
 }: RecordCommentThreadProps) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-[10px] font-bold uppercase tracking-[0.09em] text-[var(--color-muted-foreground)]">
+      <span className="text-xs font-bold uppercase tracking-[0.09em] text-[var(--color-muted-foreground)]">
         {comments.length} review {comments.length === 1 ? "note" : "notes"}
       </span>
       <ReviewCommentList
@@ -155,7 +155,7 @@ function RecordCommentThread({
           canDelete(comment) ? (
             <button
               type="button"
-              className="inline-flex items-center justify-center max-md:min-h-[var(--touch-target-min)] max-md:min-w-[var(--touch-target-min)] text-[10px] font-semibold text-[var(--color-destructive)] underline-offset-2 hover:underline disabled:opacity-50"
+              className="inline-flex items-center justify-center max-md:min-h-[var(--touch-target-min)] max-md:min-w-[var(--touch-target-min)] text-xs font-semibold text-[var(--color-destructive)] underline-offset-2 hover:underline disabled:opacity-50"
               onClick={() => onDelete(comment.id)}
               disabled={isDeletePending}
               aria-busy={isDeletePending || undefined}

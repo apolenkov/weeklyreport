@@ -143,7 +143,7 @@ export function StatusOverviewActivityEditor({
         save();
       }}
     >
-      <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+      <p className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
         Weekly fields
       </p>
       <div className="mt-2 grid gap-2 md:grid-cols-2">

@@ -45,7 +45,7 @@ interface PeriodListboxPanelProps {
 
 export function ArchivedBadge() {
   return (
-    <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--color-muted-foreground)]">
+    <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-1.5 py-0.5 text-xs font-semibold text-[var(--color-muted-foreground)]">
       Archived
     </span>
   );
@@ -55,7 +55,7 @@ export function ArchivedBadge() {
 // head/viewer navigators omit it.
 export function SubmittedBadge() {
   return (
-    <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--color-primary)]">
+    <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-1.5 py-0.5 text-xs font-semibold text-[var(--color-primary)]">
       Submitted
     </span>
   );

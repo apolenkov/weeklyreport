@@ -490,7 +490,7 @@ describe("SearchInput", () => {
     if (!badgeSpan) throw new Error("badge span not found");
     // Snapshot the badge span in isolation — avoids the locale-dependent date sibling.
     expect(badgeSpan.outerHTML).toMatchInlineSnapshot(
-      `"<span class="inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">Task</span>"`,
+      `"<span class="inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">Task</span>"`,
     );
     // Confirm no aria-label is present on the span.
     expect(badgeSpan).not.toHaveAttribute("aria-label");

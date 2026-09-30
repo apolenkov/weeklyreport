@@ -60,7 +60,7 @@ export function LeadReviewFeedback({
           data-testid="section-review-reason"
           className="flex flex-col gap-1.5"
         >
-          <span className="text-[11px] font-bold uppercase tracking-[0.09em] text-[var(--color-muted-foreground)]">
+          <span className="text-xs font-bold uppercase tracking-[0.09em] text-[var(--color-muted-foreground)]">
             Changes requested by {review.reviewerName ?? "the reviewer"}
           </span>
           <p className="min-w-0 whitespace-pre-wrap break-words text-[13px] font-medium text-[var(--color-foreground)] [overflow-wrap:anywhere]">
@@ -74,7 +74,7 @@ export function LeadReviewFeedback({
             key={`${record.kind}-${record.id}`}
             className="flex flex-col gap-1.5"
           >
-            <span className="text-[11px] font-bold uppercase tracking-[0.09em] text-[var(--color-muted-foreground)]">
+            <span className="text-xs font-bold uppercase tracking-[0.09em] text-[var(--color-muted-foreground)]">
               {KIND_LABEL[record.kind]} &middot; {record.productName}
             </span>
             <span className="min-w-0 break-words text-[13px] font-medium text-[var(--color-foreground)] [overflow-wrap:anywhere]">

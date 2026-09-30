@@ -122,6 +122,13 @@ describe("BlockedAtRiskTable — grouping by product", () => {
       "Marketing Portal",
       "Billing",
     ]);
+    const billingHeader = screen.getByRole("heading", {
+      name: "Billing",
+    }).parentElement;
+    if (!billingHeader) throw new Error("expected billing header");
+    expect(within(billingHeader).getByText("At Risk")).toHaveStyle({
+      color: "var(--color-status-at-risk-fg)",
+    });
     // Total count badge sums across groups, not per-group.
     expect(screen.getByText("3 issues")).toBeVisible();
   });
@@ -176,7 +183,7 @@ describe("BlockedAtRiskTable — grouping by product", () => {
 });
 
 describe("BlockedAtRiskTable", () => {
-  it("mutes and disables the accordion when there are no issues", () => {
+  it("keeps the empty heading and count readable while disabling the toggle", () => {
     render(<BlockedAtRiskTable items={[]} />);
 
     const trigger = screen.getByRole("button", {
@@ -184,8 +191,21 @@ describe("BlockedAtRiskTable", () => {
     });
 
     expect(trigger).toBeDisabled();
+    expect(trigger).toHaveAttribute("aria-disabled", "true");
+    expect(trigger).toHaveClass("cursor-default");
+    expect(trigger.className).not.toMatch(/(?:^|\s)opacity-/);
     expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByText("Blocked & At Risk")).toBeVisible();
+    expect(screen.getByText("Blocked & At Risk")).toHaveClass(
+      "text-[var(--color-muted-foreground)]",
+    );
     expect(screen.getByText("0 issues")).toBeVisible();
+    expect(screen.getByText("0 issues")).toHaveClass(
+      "text-[var(--color-muted-foreground)]",
+    );
+
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
 
   it("is collapsed by default and expands on click when issues exist", () => {

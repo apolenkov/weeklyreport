@@ -1,6 +1,5 @@
 import { MetaRow } from "../../../shared/ui/report-shell/meta-row";
 import type { RiskEntry, StageStatus } from "../../report-sections";
-import { FOREIGN_ENTRY_OPACITY } from "../../report-sections";
 import { RiskCardActions, RiskCardSummary } from "./risk-card-parts";
 
 // Keep the card wash softer than its chip while deriving every hue from the
@@ -73,7 +72,7 @@ function deriveRiskCardState(
 function RiskSeverityChip({ isBlocked }: { readonly isBlocked: boolean }) {
   return (
     <span
-      className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[11px] font-semibold"
+      className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-2.5 py-0.5 text-xs font-semibold"
       style={{
         background: isBlocked
           ? "var(--color-status-blocked-bg)"
@@ -144,7 +143,6 @@ export function RiskCard({
       style={{
         background: state.isBlocked ? BLOCKED_CARD_BG : AT_RISK_CARD_BG,
         border: `1px solid ${state.isBlocked ? BLOCKED_CARD_BORDER : AT_RISK_CARD_BORDER}`,
-        opacity: risk.foreign ? FOREIGN_ENTRY_OPACITY : 1,
       }}
     >
       <RiskCardHeader
@@ -158,7 +156,7 @@ export function RiskCard({
       />
       <RiskCardSummary risk={risk} />
       {state.needsStage && (
-        <p className="mt-2 text-[11px] font-semibold text-[var(--color-status-at-risk-fg)]">
+        <p className="mt-2 text-xs font-semibold text-[var(--color-status-at-risk-fg)]">
           ⚠ Select at least one stage — required for at-risk/blocked products.
         </p>
       )}

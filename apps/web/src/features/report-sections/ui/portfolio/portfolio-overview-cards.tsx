@@ -109,7 +109,7 @@ export function LeadOverviewCard({
         <div className="text-xs text-[var(--color-muted-foreground)]">
           {STATUS_LABEL[lead.worstStatus]}
         </div>
-        <span className="text-[11px] text-[var(--color-muted-foreground)]">
+        <span className="text-xs text-[var(--color-muted-foreground)]">
           {countLabel(lead.currentCount, lead.nextCount, lead.riskCount)}
         </span>
       </div>
@@ -136,7 +136,7 @@ function ProductCardBody({
       <div className="text-xs text-[var(--color-muted-foreground)]">
         {isEmpty ? "No updates" : product.statusLabel}
       </div>
-      <span className="text-[11px] text-[var(--color-muted-foreground)]">
+      <span className="text-xs text-[var(--color-muted-foreground)]">
         {countLabel(
           product.currentWeekCount,
           product.nextWeekCount,

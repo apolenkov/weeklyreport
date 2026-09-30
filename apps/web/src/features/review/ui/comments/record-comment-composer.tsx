@@ -50,7 +50,7 @@ export function RecordCommentComposer({
           .filter(Boolean)
           .join(" ")}
       />
-      <div className="flex items-start justify-between gap-2 text-[11px]">
+      <div className="flex items-start justify-between gap-2 text-xs">
         <p
           id={validationError ? validationErrorId : undefined}
           role={validationError ? "alert" : undefined}

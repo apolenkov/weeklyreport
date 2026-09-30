@@ -37,7 +37,32 @@ function layerValue(name: string): number {
   return Number(match[1]);
 }
 
+function themeLuminance(name: string): number {
+  const hex = new RegExp(
+    String.raw`--color-${name}:\s*#([a-f0-9]{6});`,
+    "i",
+  ).exec(theme)?.[1];
+  if (!hex) throw new Error(`Missing hex theme token --color-${name}`);
+  return [0.2126, 0.7152, 0.0722].reduce((luminance, weight, index) => {
+    const channel =
+      Number.parseInt(hex.slice(index * 2, index * 2 + 2), 16) / 255;
+    const linear =
+      channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+    return luminance + weight * linear;
+  }, 0);
+}
+
 describe("package semantic tokens", () => {
+  it("keeps archived period labels readable on their surface", () => {
+    const foreground = themeLuminance("period-archived-fg");
+    const background = themeLuminance("period-archived-bg");
+    const contrast =
+      (Math.max(foreground, background) + 0.05) /
+      (Math.min(foreground, background) + 0.05);
+
+    expect(contrast).toBeGreaterThanOrEqual(4.5);
+  });
+
   it("uses the destructive foreground and focus contracts", () => {
     render(<Button data-testid="button" variant="destructive" />);
 

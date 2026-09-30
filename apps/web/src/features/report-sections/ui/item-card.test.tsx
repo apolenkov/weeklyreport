@@ -22,6 +22,26 @@ const BASE_ITEM: KanbanItem = {
   stageNames: ["Planning"],
 };
 
+it("keeps foreign item metadata opaque while retaining read-only actions", () => {
+  render(
+    <ItemCard
+      item={{ ...BASE_ITEM, foreign: true }}
+      onEdit={vi.fn()}
+      onDelete={vi.fn()}
+    />,
+  );
+
+  const card = screen.getByTestId("item-card");
+  expect(Number(getComputedStyle(card).opacity || "1")).toBe(1);
+  expect(screen.getByText(BASE_ITEM.author)).toBeVisible();
+  expect(
+    screen.queryByRole("button", { name: "Edit" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Delete" }),
+  ).not.toBeInTheDocument();
+});
+
 describe("ItemCard — priority rank badge accessibility", () => {
   it("priority rank badge has role='img'", () => {
     render(<ItemCard item={{ ...BASE_ITEM, priorityRank: 2 }} />);

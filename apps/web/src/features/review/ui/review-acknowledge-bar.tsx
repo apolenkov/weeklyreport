@@ -124,14 +124,11 @@ function AcknowledgeGroupControl({
             : "Acknowledge") + suffix}
       </button>
       {rosterUnavailable ? (
-        <span
-          className="text-[11px] text-[var(--color-destructive)]"
-          role="alert"
-        >
+        <span className="text-xs text-[var(--color-destructive)]" role="alert">
           Could not load acknowledgements
         </span>
       ) : isHeadOrAdmin && acks.length > 0 ? (
-        <span className="text-[11px] text-[var(--color-muted-foreground)]">
+        <span className="text-xs text-[var(--color-muted-foreground)]">
           Seen by {acks.map((ack) => ack.userName ?? "—").join(", ")}
         </span>
       ) : null}
