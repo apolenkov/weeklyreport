@@ -42,11 +42,21 @@ function priorContinuity(
     : "unplanned";
 }
 
+interface PlanFacts {
+  readonly source: StatusOverviewItem["source"];
+  readonly stableId: string | null;
+  readonly recordId: string | null;
+  readonly resolution: SectionItem["resolution"];
+}
+
+interface ItemProjectionContext {
+  readonly input: StatusOverviewProjectionSource;
+  readonly priorIds: ReadonlySet<string>;
+  readonly currentStableIds: ReadonlySet<string>;
+}
+
 function canResolvePlan(
-  source: StatusOverviewItem["source"],
-  stableId: string | null,
-  recordId: string | null,
-  resolution: SectionItem["resolution"],
+  { source, stableId, recordId, resolution }: PlanFacts,
   input: StatusOverviewProjectionSource,
   currentStableIds: ReadonlySet<string>,
 ): boolean {
@@ -76,10 +86,8 @@ function canEditItem(
 
 function editTargetFor(
   item: SectionItem,
-  source: StatusOverviewItem["source"],
-  recordId: string | null,
+  { source, recordId, resolution }: PlanFacts,
   nextStep: string | null,
-  resolution: SectionItem["resolution"],
   input: StatusOverviewProjectionSource,
 ): StatusOverviewItem["editTarget"] {
   if (recordId === null || !canEditItem(source, recordId, resolution, input))
@@ -101,10 +109,7 @@ function overviewWorkflowStatus(
 }
 
 function canRestorePlan(
-  source: StatusOverviewItem["source"],
-  stableId: string | null,
-  recordId: string | null,
-  resolution: SectionItem["resolution"],
+  { source, stableId, recordId, resolution }: PlanFacts,
   input: StatusOverviewProjectionSource,
 ): boolean {
   return (
@@ -120,13 +125,12 @@ function toOverviewItem(
   item: SectionItem,
   source: StatusOverviewItem["source"],
   index: number,
-  input: StatusOverviewProjectionSource,
-  priorIds: ReadonlySet<string>,
-  currentStableIds: ReadonlySet<string>,
+  { input, priorIds, currentStableIds }: ItemProjectionContext,
 ): StatusOverviewItem {
   const stableId = stableIdentity(item);
   const recordId = item.id ?? null;
   const resolution = item.resolution ?? null;
+  const facts = { source, stableId, recordId, resolution };
   const nextStep =
     source !== "current" && item.type === "current"
       ? (item.nextStepText ?? null)
@@ -136,14 +140,7 @@ function toOverviewItem(
     recordId,
     source,
     stableId,
-    editTarget: editTargetFor(
-      item,
-      source,
-      recordId,
-      nextStep,
-      resolution,
-      input,
-    ),
+    editTarget: editTargetFor(item, facts, nextStep, input),
     text: nextStep ?? item.text,
     tag: item.tag,
     stageNames: item.stageNames,
@@ -155,15 +152,8 @@ function toOverviewItem(
     // so its comments stay.
     comments:
       source === "next" && nextStep !== null ? [] : (item.comments ?? []),
-    canResolve: canResolvePlan(
-      source,
-      stableId,
-      recordId,
-      resolution,
-      input,
-      currentStableIds,
-    ),
-    canRestore: canRestorePlan(source, stableId, recordId, resolution, input),
+    canResolve: canResolvePlan(facts, input, currentStableIds),
+    canRestore: canRestorePlan(facts, input),
     workflowStatus: overviewWorkflowStatus(item, nextStep),
     needsConfirmation:
       source === "current" && item.type === "current" && item.carriedOver,
@@ -210,13 +200,11 @@ export function buildStatusOverviewColumns(
       return stableId === null ? [] : [stableId];
     }),
   );
+  const context = { input, priorIds, currentStableIds };
   const project = (
     items: readonly SectionItem[],
     source: StatusOverviewItem["source"],
-  ) =>
-    items.map((item, index) =>
-      toOverviewItem(item, source, index, input, priorIds, currentStableIds),
-    );
+  ) => items.map((item, index) => toOverviewItem(item, source, index, context));
   return {
     previouslyPlanned:
       input.previousPlan.availability === "available"

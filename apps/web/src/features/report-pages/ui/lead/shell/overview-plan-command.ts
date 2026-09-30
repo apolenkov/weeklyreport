@@ -67,9 +67,15 @@ export function createOverviewPlanState(
   editor: ReadyEditor,
   model: StatusOverviewModel,
   item: StatusOverviewItem,
-  raw: SectionItem,
-  source: ResolvePlanInput["source"],
-  mode: "resolve" | "restore",
+  {
+    raw,
+    source,
+    mode,
+  }: {
+    readonly raw: SectionItem;
+    readonly source: ResolvePlanInput["source"];
+    readonly mode: "resolve" | "restore";
+  },
 ): OverviewPlanState {
   const column =
     item.source === "previous"

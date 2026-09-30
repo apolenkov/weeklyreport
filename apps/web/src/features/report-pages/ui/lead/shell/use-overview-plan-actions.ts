@@ -99,8 +99,7 @@ function capturePlan(
   editor: ReadyEditor,
   output: LeadStatusOverviewOutput,
   model: StatusOverviewModel,
-  item: StatusOverviewItem,
-  mode: "resolve" | "restore",
+  { item, mode }: { item: StatusOverviewItem; mode: "resolve" | "restore" },
 ) {
   if (!item.recordId || !item.stableId) return null;
   const recordId = item.recordId;
@@ -120,7 +119,7 @@ function capturePlan(
         recordId: item.recordId,
       }
     : { kind: "current" as const, recordId: item.recordId };
-  return createOverviewPlanState(editor, model, item, raw, source, mode);
+  return createOverviewPlanState(editor, model, item, { raw, source, mode });
 }
 
 export function useOverviewPlanActions(
@@ -245,7 +244,7 @@ export function useOverviewPlanActions(
       running.current
     )
       return;
-    const next = capturePlan(editor, output, model, item, mode);
+    const next = capturePlan(editor, output, model, { item, mode });
     if (!next) return;
     rememberFocus(focusKey);
     setError(null);

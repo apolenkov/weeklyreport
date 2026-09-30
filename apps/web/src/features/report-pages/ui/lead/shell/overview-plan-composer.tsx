@@ -164,10 +164,8 @@ function OutcomeFields({
 
 function handleComposerKey(
   event: KeyboardEvent<HTMLFormElement>,
-  pending: boolean,
+  { pending, onSubmit, onCancel }: ComposerProps,
   canSubmit: boolean,
-  onSubmit: () => void,
-  onCancel: () => void,
 ) {
   if (event.key === "Escape" && !pending) {
     event.preventDefault();
@@ -226,9 +224,7 @@ export function OverviewPlanComposer(props: ComposerProps) {
         event.preventDefault();
         if (canSubmit) onSubmit();
       }}
-      onKeyDown={(event) =>
-        handleComposerKey(event, pending, canSubmit, onSubmit, onCancel)
-      }
+      onKeyDown={(event) => handleComposerKey(event, props, canSubmit)}
     >
       <p className="break-words text-sm font-semibold">{title}</p>
       <p className="break-words text-sm [overflow-wrap:anywhere]">

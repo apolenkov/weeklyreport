@@ -156,9 +156,7 @@ export function useLeadFormOutcomeCoordinator(
           prepareRegistry(scope),
           input,
           sourceStableId,
-          scope,
-          args.draftSection,
-          args.version,
+          { scope, draftSection: args.draftSection, version: args.version },
         );
         const result = await args.writePort.resolvePlan(prepared);
         adoptIfCurrent(result, scope, token);
@@ -181,9 +179,7 @@ export function useLeadFormOutcomeCoordinator(
           prepareRegistry(scope),
           input,
           stableId,
-          scope,
-          args.draftSection,
-          args.version,
+          { scope, draftSection: args.draftSection, version: args.version },
         );
         const result = await args.writePort.restorePlan(prepared);
         adoptIfCurrent(result, scope, token);
@@ -208,9 +204,7 @@ export function useLeadFormOutcomeCoordinator(
           prepareRegistry(scope),
           input,
           stableId,
-          scope,
-          args.draftSection,
-          args.version,
+          { scope, draftSection: args.draftSection, version: args.version },
         );
         const result = await args.writePort.promotePlan(prepared);
         adoptIfCurrent(result, scope, token);

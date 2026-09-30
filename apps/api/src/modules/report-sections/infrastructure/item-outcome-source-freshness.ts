@@ -40,13 +40,11 @@ export async function resolveEligibleOutcomeSourceSection(
     return null;
   }
 
-  const resolved = await resolveStatusOverviewPredecessor(
-    tx,
-    report,
+  const resolved = await resolveStatusOverviewPredecessor(tx, report, {
     authorId,
-    authorId,
-    "lead",
-  );
+    viewerId: authorId,
+    role: "lead",
+  });
   if (
     resolved.availability === "unavailable" &&
     resolved.reason === "invalid_published_snapshot"

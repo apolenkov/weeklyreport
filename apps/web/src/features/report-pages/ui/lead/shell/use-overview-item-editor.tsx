@@ -30,11 +30,11 @@ type ReadyEditor = Extract<LeadFormEditorHandle, { status: "ready" }>;
 
 export function useOverviewItemEditor(
   editor: ReadyEditor | null,
-  isReadOnly: boolean,
   model: StatusOverviewModel,
   reportId: string,
   output?: LeadStatusOverviewOutput,
 ) {
+  const isReadOnly = editor?.view.viewModel.isReadOnly ?? true;
   const [dialog, setDialog] = useRetainedOverviewState("item", reportId);
   const [error, setError] = useState<string | null>(null);
   const recoveryReason = overviewEditorRecoveryReason(editor, dialog, model);
@@ -95,10 +95,13 @@ export function useOverviewItemEditor(
   const openEditItem = (
     target: StatusOverviewEditTarget,
     week: "current" | "next",
-    visibleItem?: KanbanItem,
-    promotionTarget?: "current" | "next",
-    focusKey?: string,
+    options: {
+      visibleItem?: KanbanItem | undefined;
+      promotionTarget?: "current" | "next" | undefined;
+      focusKey?: string | undefined;
+    } = {},
   ): void => {
+    const { visibleItem, promotionTarget, focusKey } = options;
     if (!editor || isReadOnly || dialog) return;
     const item = findEditableItem(editor, target);
     if (!item) return;
@@ -200,7 +203,11 @@ export function useOverviewItemEditor(
       { text: item.text, editTarget: item.editTarget },
       target,
     );
-    openEditItem(item.editTarget, target, move.item, move.promotion, focusKey);
+    openEditItem(item.editTarget, target, {
+      visibleItem: move.item,
+      promotionTarget: move.promotion,
+      focusKey,
+    });
   };
   const confirmItem = (item: StatusOverviewItem): void => {
     if (!editor || isReadOnly || dialog || !item.recordId) return;
@@ -240,9 +247,15 @@ export function useOverviewItemEditor(
 export function buildOverviewEditorSlot(
   editor: ReadyEditor | null,
   editing: OverviewItemDialogState | null,
-  onSave: (item: KanbanItem) => void,
-  onCancel: () => void,
-  onWeekChange: (week: "current" | "next") => void,
+  {
+    onSave,
+    onCancel,
+    onWeekChange,
+  }: {
+    onSave: (item: KanbanItem) => void;
+    onCancel: () => void;
+    onWeekChange: (week: "current" | "next") => void;
+  },
 ): StatusOverviewEditorSlot | undefined {
   if (!editor || !editing || editor.view.viewModel.isReadOnly) return undefined;
   if (editing.generation !== editor.generation) return undefined;
