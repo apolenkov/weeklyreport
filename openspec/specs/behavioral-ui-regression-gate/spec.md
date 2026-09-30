@@ -249,7 +249,12 @@ use logical DB 15; cleanup MUST pass the same PostgreSQL guard and consent.
 Target mismatch, missing consent or another Redis DB MUST fail before a
 destructive operation. Browser execution MUST require the coordinator's
 explicit handoff of the shared target and MUST NOT start, stop or restart its
-web/API processes. After the authorized live task, the canonical full dataset
+web/API processes. Before the first scenario, global setup MUST observe the
+running app through the web origin, a dev-mode API query that reports the
+database of its live connection and its configured Redis DB, and MUST fail
+unless they are exactly `customreport_e2e` and `15`; `/health/ready` alone
+is not sufficient evidence. The loopback and Redis DB 15 checks MUST live in
+one shared guard module reused by setup and the guarded Redis cleanup. After the authorized live task, the canonical full dataset
 MUST be restored through the guarded reset/seed workflow from the application
 checkout, with exit code 0 recorded before target handoff.
 
@@ -263,6 +268,11 @@ checkout, with exit code 0 recorded before target handoff.
 
 - **WHEN** `REDIS_DB` is not exactly `15` or the exact consent is missing
 - **THEN** setup fails before reset, seed or Redis cleanup
+
+#### Scenario: The running app uses another database or Redis DB
+
+- **WHEN** the app behind the web origin reports a database other than `customreport_e2e`, a Redis DB other than `15`, or no runtime-target answer
+- **THEN** global setup fails with an explicit error before any scenario or reset runs
 
 #### Scenario: The authorized live task returns the shared target
 
