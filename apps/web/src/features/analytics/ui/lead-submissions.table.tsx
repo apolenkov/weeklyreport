@@ -2,9 +2,9 @@
 
 import type { LeadVelocityOutput } from "@customreport/shared";
 
-import { buildLeadVelocityChartData } from "./analytics-chart-data";
+import { buildLeadSubmissionsTableData } from "./analytics-table-data";
 
-export function LeadVelocityChart({
+export function LeadSubmissionsTable({
   rows,
   headingId,
 }: {
@@ -14,12 +14,12 @@ export function LeadVelocityChart({
   if (rows.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        No velocity data in range.
+        No submissions data in range.
       </p>
     );
   }
 
-  const { data, series } = buildLeadVelocityChartData(rows);
+  const { data, series } = buildLeadSubmissionsTableData(rows);
 
   return (
     <div
@@ -29,12 +29,13 @@ export function LeadVelocityChart({
       aria-labelledby={headingId}
     >
       <table className="min-w-full border-collapse text-sm">
-        <caption className="pb-3 text-left text-muted-foreground">
-          Lead velocity data in submitted sections
-        </caption>
+        <caption className="sr-only">Lead submissions</caption>
         <thead>
           <tr className="border-b text-left">
-            <th scope="col" className="px-3 py-2">
+            <th
+              scope="col"
+              className="sticky left-0 z-20 bg-[var(--color-background)] px-3 py-2"
+            >
               Lead
             </th>
             {data.map((point) => (
@@ -51,17 +52,26 @@ export function LeadVelocityChart({
         <tbody>
           {series.map((lead) => (
             <tr key={lead.dataKey} className="border-b last:border-0">
-              <th scope="row" className="px-3 py-2 text-left font-medium">
+              <th
+                scope="row"
+                className="sticky left-0 z-10 bg-[var(--color-background)] px-3 py-2 text-left font-medium"
+              >
                 {lead.name}
               </th>
               {data.map((point) => {
-                const count = point[lead.dataKey] ?? 0;
+                const submitted = Number(point[lead.dataKey] ?? 0) > 0;
                 return (
                   <td
                     key={String(point.period)}
-                    className={`px-3 py-2 ${count === 0 ? "text-muted-foreground" : ""}`}
+                    className={`whitespace-nowrap px-3 py-2 ${submitted ? "" : "text-muted-foreground"}`}
                   >
-                    {count}
+                    {submitted ? (
+                      <>
+                        <span aria-hidden="true">✓</span> Submitted
+                      </>
+                    ) : (
+                      "Missing"
+                    )}
                   </td>
                 );
               })}

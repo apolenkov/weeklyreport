@@ -6,9 +6,9 @@ import {
   deriveTrendsWindow,
   latestPeriodPair,
 } from "../../../../features/analytics";
-import { LeadVelocityChart } from "../../../../features/analytics/ui/lead-velocity.chart";
-import { PeriodComparisonChart } from "../../../../features/analytics/ui/period-comparison.chart";
-import { TrafficLightHistoryChart } from "../../../../features/analytics/ui/traffic-light-history.chart";
+import { LeadSubmissionsTable } from "../../../../features/analytics/ui/lead-submissions.table";
+import { PeriodComparisonTable } from "../../../../features/analytics/ui/period-comparison.table";
+import { TrafficLightHistoryTable } from "../../../../features/analytics/ui/traffic-light-history.table";
 import { TrendsSection } from "../../../../features/analytics/ui/trends-section";
 import { useQueryErrorHandler } from "../../../../shared/hooks/query/use-query-error-handler";
 import { useTRPC } from "../../../../shared/lib/trpc/trpc-context";
@@ -76,7 +76,7 @@ function TrafficLightTrendsSection({
       }}
     >
       {historyData !== undefined ? (
-        <TrafficLightHistoryChart
+        <TrafficLightHistoryTable
           {...historyData}
           headingId="trends-history-heading"
         />
@@ -85,13 +85,13 @@ function TrafficLightTrendsSection({
   );
 }
 
-function LeadVelocityTrendsSection({
+function LeadSubmissionsTrendsSection({
   velocity,
 }: Pick<TrendsQueries, "velocity">) {
   return (
     <TrendsSection
-      headingId="trends-velocity-heading"
-      title="Lead velocity"
+      headingId="trends-submissions-heading"
+      title="Lead submissions"
       isError={velocity.isError}
       isLoading={velocity.isLoading}
       isRetrying={velocity.isFetching}
@@ -100,9 +100,9 @@ function LeadVelocityTrendsSection({
       }}
     >
       {velocity.data !== undefined ? (
-        <LeadVelocityChart
+        <LeadSubmissionsTable
           rows={velocity.data}
-          headingId="trends-velocity-heading"
+          headingId="trends-submissions-heading"
         />
       ) : null}
     </TrendsSection>
@@ -134,7 +134,11 @@ function PeriodComparisonTrendsSection({
       onRetry={retry}
     >
       {comparison.data !== undefined && periodPair !== null ? (
-        <PeriodComparisonChart {...comparison.data} {...periodPair} />
+        <PeriodComparisonTable
+          {...comparison.data}
+          {...periodPair}
+          headingId="trends-comparison-heading"
+        />
       ) : null}
     </TrendsSection>
   );
@@ -151,7 +155,7 @@ export default function TrendsPage() {
     >
       <h1 className="text-2xl font-semibold">Trends</h1>
       <TrafficLightTrendsSection {...queries} />
-      <LeadVelocityTrendsSection velocity={queries.velocity} />
+      <LeadSubmissionsTrendsSection velocity={queries.velocity} />
       <PeriodComparisonTrendsSection {...queries} />
     </main>
   );
