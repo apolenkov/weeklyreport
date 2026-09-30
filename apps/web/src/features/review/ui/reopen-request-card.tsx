@@ -1,3 +1,5 @@
+import { type Ref, useEffect, useRef } from "react";
+
 import {
   formatDateTime,
   formatPeriodRangeWithYear,
@@ -120,13 +122,16 @@ function ReopenRequestNotes({
 function RespondButton({
   onStartRespond,
   isSaving,
+  buttonRef,
 }: {
   readonly onStartRespond: () => void;
   readonly isSaving: boolean;
+  readonly buttonRef: Ref<HTMLButtonElement>;
 }) {
   return (
     <div className="flex gap-2">
       <button
+        ref={buttonRef}
         type="button"
         disabled={isSaving}
         onClick={onStartRespond}
@@ -161,12 +166,31 @@ export function ReopenRequestCard({
   readonly onReject: () => void;
   readonly onApprove: () => void;
 }) {
+  const respondButtonRef = useRef<HTMLButtonElement>(null);
+  const noteFieldRef = useRef<HTMLTextAreaElement>(null);
+  const restoreFocusAfterCancelRef = useRef(false);
+
+  // Opening the form focuses its field; Cancel returns to the Respond button
+  // that the form replaced. A decision is handled by the list (ReopenTab).
+  useEffect(() => {
+    if (isResponding) {
+      noteFieldRef.current?.focus();
+    } else if (restoreFocusAfterCancelRef.current) {
+      restoreFocusAfterCancelRef.current = false;
+      respondButtonRef.current?.focus();
+    }
+  }, [isResponding]);
+
   return (
     <li className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-[var(--shadow-card-resting)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <ReopenRequestMeta request={r} />
         {r.status === "pending" && !isResponding && (
-          <RespondButton onStartRespond={onStartRespond} isSaving={isSaving} />
+          <RespondButton
+            onStartRespond={onStartRespond}
+            isSaving={isSaving}
+            buttonRef={respondButtonRef}
+          />
         )}
       </div>
 
@@ -178,8 +202,12 @@ export function ReopenRequestCard({
           note={note}
           isPending={isSaving}
           pendingDecision={pendingDecision}
+          textareaRef={noteFieldRef}
           onNoteChange={onNoteChange}
-          onCancel={onCancelRespond}
+          onCancel={() => {
+            restoreFocusAfterCancelRef.current = true;
+            onCancelRespond();
+          }}
           onReject={onReject}
           onApprove={onApprove}
         />

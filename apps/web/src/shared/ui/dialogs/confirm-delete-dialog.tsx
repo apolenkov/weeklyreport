@@ -18,6 +18,8 @@ interface ConfirmDeleteDialogProps {
   readonly consequence?: string | undefined;
   readonly confirmLabel?: string | undefined;
   readonly reversible?: boolean | undefined;
+  // false drops the reversibility footnote when the client cannot know it.
+  readonly showReversibility?: boolean | undefined;
   readonly tone?: "destructive" | "primary" | undefined;
   readonly isPending?: boolean | undefined;
   readonly onConfirm: () => void;
@@ -74,6 +76,7 @@ function ConfirmDeleteContent({
   consequence,
   confirmLabel = "Delete",
   reversible = false,
+  showReversibility = true,
   tone = "destructive",
   isPending,
   onConfirm,
@@ -109,6 +112,7 @@ function ConfirmDeleteContent({
         subtitle={subtitle}
         consequence={consequence}
         reversible={reversible}
+        showReversibility={showReversibility}
         titleId={titleId}
         previewId={previewId}
       />
@@ -127,7 +131,7 @@ function ConfirmDeleteContent({
 type ConfirmDeleteBodyProps = Pick<
   ConfirmDeleteDialogProps,
   "title" | "preview" | "subtitle" | "consequence"
-> & { readonly reversible: boolean };
+> & { readonly reversible: boolean; readonly showReversibility: boolean };
 
 function ConfirmDeleteBody({
   title,
@@ -135,6 +139,7 @@ function ConfirmDeleteBody({
   subtitle,
   consequence,
   reversible,
+  showReversibility,
   titleId,
   previewId,
 }: ConfirmDeleteBodyProps & {
@@ -174,11 +179,13 @@ function ConfirmDeleteBody({
         </p>
       )}
 
-      <p className="mt-4 text-xs text-[var(--color-muted-foreground)]">
-        {reversible
-          ? "This can be reversed later."
-          : "This action cannot be undone."}
-      </p>
+      {showReversibility ? (
+        <p className="mt-4 text-xs text-[var(--color-muted-foreground)]">
+          {reversible
+            ? "This can be reversed later."
+            : "This action cannot be undone."}
+        </p>
+      ) : null}
     </>
   );
 }

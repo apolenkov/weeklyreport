@@ -1,5 +1,7 @@
 "use client";
 
+import { type RefObject, useRef } from "react";
+
 import { formatClientErrorMessage } from "../../../shared/lib/errors/client-error-reporting";
 import type { ReopenDecision } from "../../../shared/ui/forms/reopen-respond-form";
 import { TabHeader, TabSearch } from "../../../shared/ui/tabs/tab-header";
@@ -51,6 +53,7 @@ function ReopenFilterBar({
 // The respond form is single-open: one `respondingId` and one shared note draft
 // serve the whole list, so the draft lives here rather than inside each card.
 interface ReopenRequestListProps {
+  readonly listRef: RefObject<HTMLUListElement | null>;
   readonly requests: readonly ReopenRequest[];
   readonly respondingId: string | null;
   readonly note: string;
@@ -63,6 +66,7 @@ interface ReopenRequestListProps {
 }
 
 function ReopenRequestList({
+  listRef,
   requests,
   respondingId,
   note,
@@ -74,7 +78,12 @@ function ReopenRequestList({
   respond,
 }: ReopenRequestListProps) {
   return (
-    <ul className="space-y-3">
+    <ul
+      ref={listRef}
+      tabIndex={-1}
+      aria-label="Reopen requests"
+      className="space-y-3 focus-visible:outline-none"
+    >
       {requests.map((r) => (
         <ReopenRequestCard
           key={r.id}
@@ -136,6 +145,9 @@ function reopenCountLabel(
 }
 
 export function ReopenTab() {
+  // A decision removes the form (and, under the Pending filter, the row) that
+  // held focus; the list outlives both, so it is the stable place to land.
+  const listRef = useRef<HTMLUListElement>(null);
   const {
     filter,
     setFilter,
@@ -151,7 +163,7 @@ export function ReopenTab() {
     startRespond,
     cancelRespond,
     respond,
-  } = useReopenTabState();
+  } = useReopenTabState({ onResponded: () => listRef.current?.focus() });
 
   return (
     <div className="space-y-4">
@@ -186,6 +198,7 @@ export function ReopenTab() {
       />
 
       <ReopenRequestList
+        listRef={listRef}
         requests={requests}
         respondingId={respondingId}
         note={note}

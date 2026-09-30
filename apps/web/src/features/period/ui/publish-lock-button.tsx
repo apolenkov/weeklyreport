@@ -82,6 +82,8 @@ function ReopenPeriodControl({
   );
 }
 
+// Reopening can be refused (disabled in settings, window expired) and the
+// weekly-report read model does not expose that, so no reversibility claim.
 function PublishConfirmDialog({
   open,
   pendingCount,
@@ -109,10 +111,10 @@ function PublishConfirmDialog({
           ? "Their sections will appear empty in the published report."
           : undefined
       }
-      consequence="Leads can no longer edit this period until you reopen it."
+      consequence="Leads can no longer edit this period."
       confirmLabel={pendingCount > 0 ? "Publish Anyway" : "Publish & Lock"}
       tone="primary"
-      reversible
+      showReversibility={false}
       onConfirm={onConfirm}
       onCancel={onCancel}
     />
@@ -130,12 +132,30 @@ export function PublishLockButton({
   publishDisabledReason = "Publish requires at least one submitted section.",
 }: PublishLockButtonProps) {
   const [showDialog, setShowDialog] = useState(false);
+  const publishButtonRef = useRef<HTMLButtonElement>(null);
+  const focusPublishRef = useRef(false);
   const focusReopenRef = useRef(false);
   const takeFocusRequest = useCallback(() => {
     const requested = focusReopenRef.current;
     focusReopenRef.current = false;
     return requested;
   }, []);
+
+  // Reopening swaps Reopen Period for Publish & Lock, which held focus. The
+  // button is disabled while nothing is submitted (reopen resets sections to
+  // draft), so fall back to the page rather than dropping focus to <body>.
+  useEffect(() => {
+    if (periodStatus === "published" || !focusPublishRef.current) return;
+    focusPublishRef.current = false;
+    const button = publishButtonRef.current;
+    if (button && !button.disabled) button.focus();
+    else document.getElementById("main-content")?.focus();
+  }, [periodStatus]);
+
+  function handleReopen() {
+    focusPublishRef.current = true;
+    onReopen();
+  }
 
   function handleConfirm() {
     if (!canPublish) return;
@@ -147,7 +167,7 @@ export function PublishLockButton({
   if (periodStatus === "published") {
     return (
       <ReopenPeriodControl
-        onReopen={onReopen}
+        onReopen={handleReopen}
         isPending={isPending}
         takeFocusRequest={takeFocusRequest}
       />
@@ -159,6 +179,7 @@ export function PublishLockButton({
   return (
     <>
       <button
+        ref={publishButtonRef}
         type="button"
         className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
         onClick={() => {
