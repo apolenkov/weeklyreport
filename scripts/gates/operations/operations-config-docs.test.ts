@@ -507,6 +507,9 @@ test("dependency-scan also runs on merge requests that change dependency manifes
       `${manifest} must trigger the scan`,
     );
   }
+  // Production advisories block; development-tool advisories only report.
+  assert.match(job, /^ {4}- pnpm audit --prod$/mu);
+  assert.match(job, /pnpm audit --dev --audit-level high \|\| echo /u);
 });
 
 test("Vitest CI output has one labelled summary contract", () => {
