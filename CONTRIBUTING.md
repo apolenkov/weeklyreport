@@ -11,6 +11,14 @@ PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' \
 pnpm dev # web on :3000, api on :3002
 ```
 
+OpenSpec agent skills and `/opsx` commands are generated, not tracked. After
+cloning, recreate them (init also drops a `.gitkeep` the cleanliness gate
+forbids):
+
+```bash
+pnpm exec openspec init --tools claude,codex && rm openspec/changes/archive/.gitkeep
+```
+
 `db:bootstrap:local` is the single setup entrypoint: it verifies the exact
 disposable database, applies migrations, and seeds the selected profile. See
 [`docs/onboarding.md`](./docs/onboarding.md) for the guard contract and the

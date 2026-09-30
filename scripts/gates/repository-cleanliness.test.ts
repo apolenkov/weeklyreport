@@ -103,19 +103,17 @@ describe("repository cleanliness", () => {
   it("rejects ignored agent and hook installations", async () => {
     const root = await repository();
     await writeFile(join(root, ".gitignore"), ".agents/**\n.husky/_/**\n");
-    await mkdir(join(root, ".agents/skills/openspec-apply-change"), {
-      recursive: true,
-    });
+    for (const skill of ["openspec-apply-change", "hand-made"]) {
+      await mkdir(join(root, `.agents/skills/${skill}`), { recursive: true });
+      await writeFile(join(root, `.agents/skills/${skill}/SKILL.md`), "x");
+    }
     await mkdir(join(root, ".husky/_"), { recursive: true });
-    await writeFile(
-      join(root, ".agents/skills/openspec-apply-change/SKILL.md"),
-      "generated",
-    );
     await writeFile(join(root, ".husky/_/husky.sh"), "generated");
     await execFileAsync("git", ["add", ".gitignore"], { cwd: root });
 
+    // Generated OpenSpec skills are recreated after cloning; nothing else is.
     expect(validateInventory(await inventoryRepository(root))).toEqual([
-      "ignored: .agents/skills/openspec-apply-change/SKILL.md",
+      "ignored: .agents/skills/hand-made/SKILL.md",
       "ignored: .husky/_/husky.sh",
     ]);
   });
