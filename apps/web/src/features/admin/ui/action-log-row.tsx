@@ -18,11 +18,20 @@ const MAX_USER_ID_LENGTH = 18;
 const MAX_TARGET_ID_LENGTH = 26;
 const COLUMN_COUNT = 6;
 
-function UserCell({ row }: { readonly row: AdminActionLogEvent }) {
+function UserCell({
+  row,
+  userName,
+}: {
+  readonly row: AdminActionLogEvent;
+  readonly userName?: string | undefined;
+}) {
   return (
     <td className="px-4 py-3">
-      <div className="font-mono text-xs text-[var(--color-foreground)]">
-        {truncate(row.userId, MAX_USER_ID_LENGTH)}
+      <div
+        className={`break-words text-xs text-[var(--color-foreground)]${userName ? " font-medium" : " font-mono"}`}
+        title={row.userId}
+      >
+        {userName ?? truncate(row.userId, MAX_USER_ID_LENGTH)}
       </div>
       <div className="text-xs text-[var(--color-muted-foreground)]">
         {row.role ?? "-"}
@@ -41,7 +50,7 @@ function ProcedureCell({ row }: { readonly row: AdminActionLogEvent }) {
         {humanizeProcedure(row.procedure)}
       </div>
       {row.targetId ? (
-        <div className="font-mono text-[11px] text-[var(--color-muted-foreground)]">
+        <div className="font-mono text-xs text-[var(--color-muted-foreground)]">
           {truncate(row.targetId, MAX_TARGET_ID_LENGTH)}
         </div>
       ) : null}
@@ -152,20 +161,26 @@ function ActionLogDetails({ row }: { readonly row: AdminActionLogEvent }) {
   );
 }
 
-export function ActionLogRow({ row }: { readonly row: AdminActionLogEvent }) {
+export function ActionLogRow({
+  row,
+  userName,
+}: {
+  readonly row: AdminActionLogEvent;
+  readonly userName?: string | undefined;
+}) {
   const [expanded, setExpanded] = useState(false);
   const detailId = useId();
 
   return (
     <Fragment>
       <tr className="border-b border-[var(--color-border)] hover:bg-[var(--color-surface-hover)]">
-        <td className="whitespace-nowrap px-4 py-3 text-[var(--color-muted-foreground)]">
+        <td className="hidden whitespace-nowrap px-4 py-3 text-[var(--color-muted-foreground)] sm:table-cell">
           {formatTimestamp(row.createdAt)}
         </td>
-        <UserCell row={row} />
+        <UserCell row={row} userName={userName} />
         <ProcedureCell row={row} />
         <StatusCell row={row} />
-        <td className="px-4 py-3">
+        <td className="hidden px-4 py-3 sm:table-cell">
           <CorrelationCell value={row.correlationId} />
         </td>
         <td className="px-4 py-3 text-right">

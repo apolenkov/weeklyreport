@@ -50,7 +50,7 @@ export function CorrelationCell({ value }: { readonly value: string }) {
       >
         <span>{truncate(value, MAX_REFERENCE_ID_LENGTH)}</span>
         <span
-          className={`inline-flex items-center gap-1 text-[10px] ${
+          className={`inline-flex items-center gap-1 text-xs ${
             copied
               ? "text-[var(--color-primary)]"
               : "text-[var(--color-muted-foreground)]"
