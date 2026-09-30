@@ -207,9 +207,9 @@ describe("renderEmail — HTML escaping of interpolated values", () => {
       },
     });
 
-    // <title> and heading cycleDate, headName, reportPeriod, leadName,
+    // <title>, preview and heading cycleDate, headName, reportPeriod, leadName,
     // sectionTitle, deadlineIso, shortName, fullName
-    expectEscaped(out.html, 9);
+    expectEscaped(out.html, 10);
   });
 
   it("leaves the plaintext part unescaped", async () => {
@@ -228,5 +228,19 @@ describe("renderEmail — HTML escaping of interpolated values", () => {
 
     expect(out.text).toContain("Hello A & B,");
     expect(out.text).toContain("Product Engineering & Operations");
+  });
+});
+
+describe("renderEmail — section link scheme", () => {
+  const deadline = (sectionUrl: string) =>
+    renderEmail({ kind: "deadline", props: { ...baseProps, sectionUrl } });
+
+  it("rejects a non-http(s) section URL", async () => {
+    await expect(deadline("javascript:alert(1)//x")).rejects.toThrow(/http/);
+  });
+
+  it("accepts an https section URL", async () => {
+    const out = await deadline("https://example.com/lead/report");
+    expect(out.html).toContain('href="https://example.com/lead/report"');
   });
 });
