@@ -1,61 +1,139 @@
-// @vitest-environment node
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, within } from "@testing-library/react";
+import { createElement } from "react";
+import { describe, expect, it, vi } from "vitest";
 
-import type { ReactNode } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { expectDefined } from "../../../../test-utils/expect-defined";
+import TrendsPage from "./page";
 
-type DynamicCall = Readonly<{
-  loader: () => Promise<unknown>;
-  options: Readonly<{ loading?: () => ReactNode; ssr?: boolean }>;
-}>;
-
-const dynamicCalls = vi.hoisted(() => [] as DynamicCall[]);
-const chartComponents = vi.hoisted(() => ({
-  history: () => null,
-  velocity: () => null,
-  comparison: () => null,
-}));
-
-vi.mock("next/dynamic", () => ({
-  default: (loader: DynamicCall["loader"], options: DynamicCall["options"]) => {
-    dynamicCalls.push({ loader, options });
-    return () => null;
-  },
-}));
-vi.mock(
-  "../../../../features/analytics/ui/traffic-light-history.chart",
-  () => ({ TrafficLightHistoryChart: chartComponents.history }),
-);
-vi.mock("../../../../features/analytics/ui/lead-velocity.chart", () => ({
-  LeadVelocityChart: chartComponents.velocity,
-}));
-vi.mock("../../../../features/analytics/ui/period-comparison.chart", () => ({
-  PeriodComparisonChart: chartComponents.comparison,
-}));
-
-beforeAll(async () => {
-  await import("./page");
-});
-
-describe("Trends chunk loading", () => {
-  it.each([
-    ["traffic-light history", 0, chartComponents.history],
-    ["lead velocity", 1, chartComponents.velocity],
-    ["period comparison", 2, chartComponents.comparison],
-  ] as const)(
-    "loads the %s chart from its concrete module",
-    async (_name, index, chart) => {
-      await expect(dynamicCalls[index]?.loader()).resolves.toBe(chart);
+vi.mock("../../../../shared/lib/trpc/trpc-context", () => ({
+  useTRPC: () => ({
+    analytics: {
+      trafficLightHistory: {
+        queryOptions: () => ({
+          queryKey: ["history"],
+          queryFn: () => new Promise(() => undefined),
+        }),
+      },
+      leadVelocity: {
+        queryOptions: () => ({
+          queryKey: ["velocity"],
+          queryFn: () => new Promise(() => undefined),
+        }),
+      },
+      periodComparison: {
+        queryOptions: () => ({
+          queryKey: ["comparison"],
+          queryFn: () => new Promise(() => undefined),
+        }),
+      },
     },
-  );
+  }),
+}));
 
-  it("configures every chart as client-only with a local skeleton", () => {
-    expect(dynamicCalls).toHaveLength(3);
-    dynamicCalls.forEach(({ options }) => {
-      expect(options.ssr).toBe(false);
-      expect(options.loading).toBeTypeOf("function");
-      const loading = options.loading as () => ReactNode;
-      expect(renderToStaticMarkup(loading())).toContain("animate-pulse");
+function renderPage(client: QueryClient) {
+  render(
+    createElement(QueryClientProvider, { client }, createElement(TrendsPage)),
+  );
+}
+
+describe("Trends query loading", () => {
+  it("renders local skeletons for pending queries", () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
     });
+    renderPage(client);
+    expect(
+      screen.getAllByRole("status", { name: "Loading data" }),
+    ).toHaveLength(3);
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Lead submissions" }),
+    ).toBeVisible();
+    client.clear();
+  });
+
+  it("renders ready tables directly while a sibling query stays pending", () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    client.setQueryData(["history"], {
+      periods: ["2026-08-23", "2026-08-30"],
+      rows: [
+        {
+          projectId: "alpha",
+          projectName: "Alpha",
+          statuses: ["green", "red"],
+        },
+      ],
+    });
+    client.setQueryData(["comparison"], {
+      rows: [
+        {
+          projectId: "alpha",
+          projectName: "Alpha",
+          statusA: "green",
+          statusB: "red",
+          riskCountA: 0,
+          riskCountB: 1,
+          riskDelta: 1,
+        },
+      ],
+    });
+    renderPage(client);
+    expect(
+      screen.getByRole("table", { name: "Traffic-light history data" }),
+    ).toBeVisible();
+    const historySection = screen
+      .getByRole("heading", { name: "Traffic-light history" })
+      .closest("section");
+    expect(
+      within(expectDefined(historySection)).getByRole("region", {
+        name: "Traffic-light history",
+      }),
+    ).toHaveAttribute("tabindex", "0");
+    expect(
+      screen.getByRole("table", {
+        name: "Period comparison data",
+      }),
+    ).toBeVisible();
+    expect(
+      screen.getAllByRole("status", { name: "Loading data" }),
+    ).toHaveLength(1);
+    client.clear();
+  });
+
+  it("shows ready Lead submissions from the leadVelocity query while history stays pending", () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    client.setQueryData(
+      ["velocity"],
+      [
+        {
+          periodLabel: "2026-08-30",
+          leads: [
+            { leadId: "lead-a", leadName: "Alex", submittedSections: 3 },
+            { leadId: "lead-b", leadName: "Blair", submittedSections: 0 },
+          ],
+        },
+      ],
+    );
+    renderPage(client);
+    const table = screen.getByRole("table", { name: "Lead submissions" });
+    expect(
+      within(table).getByRole("cell", { name: "Submitted" }),
+    ).toBeVisible();
+    expect(within(table).getByRole("cell", { name: "Missing" })).toBeVisible();
+    const submissionsSection = expectDefined(table.closest("section"));
+    expect(
+      within(submissionsSection).getByRole("region", {
+        name: "Lead submissions",
+      }),
+    ).toHaveAttribute("aria-labelledby", "trends-submissions-heading");
+    expect(
+      screen.getAllByRole("status", { name: "Loading data" }),
+    ).toHaveLength(2);
+    client.clear();
   });
 });

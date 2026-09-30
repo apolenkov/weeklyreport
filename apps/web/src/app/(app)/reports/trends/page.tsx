@@ -1,41 +1,17 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import dynamic from "next/dynamic";
 
 import {
   deriveTrendsWindow,
   latestPeriodPair,
 } from "../../../../features/analytics";
-import {
-  ChartSkeleton,
-  TrendsSection,
-} from "../../../../features/analytics/ui/trends-section";
+import { LeadSubmissionsTable } from "../../../../features/analytics/ui/lead-submissions.table";
+import { PeriodComparisonTable } from "../../../../features/analytics/ui/period-comparison.table";
+import { TrafficLightHistoryTable } from "../../../../features/analytics/ui/traffic-light-history.table";
+import { TrendsSection } from "../../../../features/analytics/ui/trends-section";
 import { useQueryErrorHandler } from "../../../../shared/hooks/query/use-query-error-handler";
 import { useTRPC } from "../../../../shared/lib/trpc/trpc-context";
-
-// Charts load with ssr:false — Recharts needs ResizeObserver (browser-only).
-const TrafficLightHistoryChart = dynamic(
-  () =>
-    import("../../../../features/analytics/ui/traffic-light-history.chart").then(
-      (m) => m.TrafficLightHistoryChart,
-    ),
-  { ssr: false, loading: () => <ChartSkeleton /> },
-);
-const LeadVelocityChart = dynamic(
-  () =>
-    import("../../../../features/analytics/ui/lead-velocity.chart").then(
-      (m) => m.LeadVelocityChart,
-    ),
-  { ssr: false, loading: () => <ChartSkeleton /> },
-);
-const PeriodComparisonChart = dynamic(
-  () =>
-    import("../../../../features/analytics/ui/period-comparison.chart").then(
-      (m) => m.PeriodComparisonChart,
-    ),
-  { ssr: false, loading: () => <ChartSkeleton /> },
-);
 
 function useTrendsQueries() {
   const trpc = useTRPC();
@@ -100,19 +76,22 @@ function TrafficLightTrendsSection({
       }}
     >
       {historyData !== undefined ? (
-        <TrafficLightHistoryChart {...historyData} />
+        <TrafficLightHistoryTable
+          {...historyData}
+          headingId="trends-history-heading"
+        />
       ) : null}
     </TrendsSection>
   );
 }
 
-function LeadVelocityTrendsSection({
+function LeadSubmissionsTrendsSection({
   velocity,
 }: Pick<TrendsQueries, "velocity">) {
   return (
     <TrendsSection
-      headingId="trends-velocity-heading"
-      title="Lead velocity"
+      headingId="trends-submissions-heading"
+      title="Lead submissions"
       isError={velocity.isError}
       isLoading={velocity.isLoading}
       isRetrying={velocity.isFetching}
@@ -121,7 +100,10 @@ function LeadVelocityTrendsSection({
       }}
     >
       {velocity.data !== undefined ? (
-        <LeadVelocityChart rows={velocity.data} />
+        <LeadSubmissionsTable
+          rows={velocity.data}
+          headingId="trends-submissions-heading"
+        />
       ) : null}
     </TrendsSection>
   );
@@ -152,7 +134,11 @@ function PeriodComparisonTrendsSection({
       onRetry={retry}
     >
       {comparison.data !== undefined && periodPair !== null ? (
-        <PeriodComparisonChart {...comparison.data} {...periodPair} />
+        <PeriodComparisonTable
+          {...comparison.data}
+          {...periodPair}
+          headingId="trends-comparison-heading"
+        />
       ) : null}
     </TrendsSection>
   );
@@ -165,11 +151,11 @@ export default function TrendsPage() {
     <main
       id="main-content"
       tabIndex={-1}
-      className="mx-auto max-w-7xl space-y-8 px-4 py-6 sm:px-6 lg:px-8"
+      className="mx-auto w-full min-w-0 max-w-7xl space-y-8 px-4 py-6 sm:px-6 lg:px-8"
     >
       <h1 className="text-2xl font-semibold">Trends</h1>
       <TrafficLightTrendsSection {...queries} />
-      <LeadVelocityTrendsSection velocity={queries.velocity} />
+      <LeadSubmissionsTrendsSection velocity={queries.velocity} />
       <PeriodComparisonTrendsSection {...queries} />
     </main>
   );

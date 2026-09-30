@@ -12,7 +12,6 @@
     "./components/ui/alert": "./src/components/ui/alert.tsx",
     "./components/ui/button": "./src/components/ui/button.tsx",
     "./components/ui/card": "./src/components/ui/card.tsx",
-    "./components/ui/chart": "./src/components/ui/chart.tsx",
     "./components/ui/dialog": "./src/components/ui/dialog.tsx",
     "./components/ui/dropdown-menu": "./src/components/ui/dropdown-menu.tsx",
     "./components/ui/separator": "./src/components/ui/separator.tsx",
@@ -31,7 +30,6 @@
     "lucide-react": "catalog:",
     "radix-ui": "^1.6.7",
     "react": "catalog:",
-    "recharts": "catalog:",
     "sonner": "catalog:",
     "tailwind-merge": "^3.6.0"
   },

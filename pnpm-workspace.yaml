@@ -14,7 +14,6 @@ catalog:
   "zod": "^4.5.4"
   "lucide-react": "^1.38.0"
   "react-dom": "^19.2.8"
-  "recharts": "^3.10.1"
   "sonner": "^2.0.8"
 
 # pnpm 11+ build script allowlist (native / postinstall tooling).
