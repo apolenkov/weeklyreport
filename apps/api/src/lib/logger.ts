@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync } from "node:fs";
+import { createWriteStream, mkdirSync, type WriteStream } from "node:fs";
+import { join, resolve } from "node:path";
 
 import { trace } from "@opentelemetry/api";
 import { logs, SeverityNumber } from "@opentelemetry/api-logs";
@@ -6,7 +7,6 @@ import { ClsService } from "nestjs-cls";
 import { z } from "zod";
 
 import { NO_CORRELATION_ID } from "./actor-sentinels.js";
-import { type FileSink, processFileSink } from "./logger-file-sink.js";
 
 // Single source of truth for the log-level domain: the env schema validates
 // `LOG_LEVEL` with this exact enum, so logger-accepted and env-accepted values
@@ -20,8 +20,8 @@ export interface AppLogger {
   warn(message: string, context?: Record<string, unknown>): void;
   error(message: string, context?: Record<string, unknown>): void;
   child(context: Record<string, unknown>): AppLogger;
-  // Drains the file sink; rejects if any pending write failed. Omit for
-  // loggers without a file sink.
+  // Drains the log file; rejects if a write failed. Omit for loggers
+  // without a log file.
   flush?: () => Promise<void>;
 }
 
@@ -115,11 +115,23 @@ const LEVEL_SEVERITY: Record<LogLevel, SeverityNumber> = {
 // construction passes the validated LOG_LEVEL explicitly, so this covers only
 // ad-hoc loggers built without a config in reach.
 const DEFAULT_MIN_LEVEL: LogLevel = "info";
-const DEFAULT_MAX_BYTES_MB = 50;
-const BYTES_PER_KB = 1024;
-const KB_PER_MB = 1024;
-const DEFAULT_MAX_BYTES = DEFAULT_MAX_BYTES_MB * KB_PER_MB * BYTES_PER_KB;
-const DEFAULT_MAX_AGE_DAYS = 30;
+
+// Local-dev app.log: one append stream per directory, shared by every logger
+// in the process. No rotation; production relies on Docker's stdout rotation.
+const logStreams = new Map<string, WriteStream>();
+
+function logStreamFor(logDir: string): WriteStream {
+  const dir = resolve(logDir);
+  const existing = logStreams.get(dir);
+  if (existing !== undefined) return existing;
+  mkdirSync(dir, { recursive: true });
+  const stream = createWriteStream(join(dir, "app.log"), { flags: "a" });
+  stream.on("error", (error) => {
+    process.stderr.write(`[logger] file write failed: ${String(error)}\n`);
+  });
+  logStreams.set(dir, stream);
+  return stream;
+}
 
 export interface LoggerOptions {
   readonly minLevel?: LogLevel | undefined;
@@ -128,8 +140,6 @@ export interface LoggerOptions {
   readonly service?: string | undefined;
   // Reads correlationId from CLS; NO_CORRELATION_ID outside an active scope.
   readonly clsService?: ClsService | undefined;
-  readonly maxBytes?: number | undefined;
-  readonly maxAgeDays?: number | undefined;
 }
 
 class AppLoggerImpl implements AppLogger {
@@ -138,39 +148,25 @@ class AppLoggerImpl implements AppLogger {
   private readonly baseContext: Record<string, unknown>;
   private readonly logDir: string | undefined;
   private readonly clsService: ClsService | undefined;
-  private readonly maxBytes: number;
-  private readonly maxAgeDays: number;
-  private readonly fileSink: FileSink | undefined;
+  private readonly logStream: WriteStream | undefined;
 
   constructor(
     options: LoggerOptions,
     baseContext: Record<string, unknown> = {},
-    inheritedSink?: FileSink,
+    inheritedStream?: WriteStream,
   ) {
     this.minLevel = options.minLevel ?? DEFAULT_MIN_LEVEL;
     this.minPriority = LEVEL_PRIORITY[this.minLevel];
     this.logDir = options.logDir;
     this.clsService = options.clsService;
-    this.maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
-    this.maxAgeDays = options.maxAgeDays ?? DEFAULT_MAX_AGE_DAYS;
     this.baseContext = {
       ...(options.service ? { service: options.service } : {}),
       ...baseContext,
     };
 
-    if (this.logDir && !existsSync(this.logDir)) {
-      // Acceptable sync call: runs once at construction, not on the hot path.
-      mkdirSync(this.logDir, { recursive: true });
-    }
-
-    if (inheritedSink) {
-      this.fileSink = inheritedSink;
-    } else if (this.logDir) {
-      this.fileSink = processFileSink(this.logDir, {
-        maxBytes: this.maxBytes,
-        maxAgeDays: this.maxAgeDays,
-      });
-    }
+    this.logStream =
+      inheritedStream ??
+      (this.logDir === undefined ? undefined : logStreamFor(this.logDir));
   }
 
   debug(message: string, context?: Record<string, unknown>): void {
@@ -195,16 +191,23 @@ class AppLoggerImpl implements AppLogger {
         minLevel: this.minLevel,
         logDir: this.logDir,
         clsService: this.clsService,
-        maxBytes: this.maxBytes,
-        maxAgeDays: this.maxAgeDays,
       },
       { ...this.baseContext, ...context },
-      this.fileSink,
+      this.logStream,
     );
   }
 
-  flush = async (): Promise<void> => {
-    await this.fileSink?.flush();
+  // An empty write completes only after every earlier write; its callback
+  // carries the stream's error, if any.
+  flush = (): Promise<void> => {
+    const stream = this.logStream;
+    if (stream === undefined) return Promise.resolve();
+    return new Promise((done, fail) => {
+      stream.write("", (error) => {
+        if (error) fail(error);
+        else done();
+      });
+    });
   };
 
   private resolveCorrelationId(): string {
@@ -253,10 +256,8 @@ class AppLoggerImpl implements AppLogger {
       process.stdout.write(`${formatted}\n`);
     }
 
-    if (this.fileSink) {
-      // Fire-and-forget; the sink serializes writes and records failures for flush.
-      this.fileSink.enqueue(entry);
-    }
+    // Fire-and-forget; a failed write surfaces through flush().
+    this.logStream?.write(`${formatted}\n`);
 
     // Forward to OTel log provider (no-op when provider not registered).
     logs.getLogger("customreport-api").emit({

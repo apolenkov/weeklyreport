@@ -118,23 +118,18 @@ landing path — is always read-only.
 - **WHEN** `getOrganization` is called
 - **THEN** it fails with a missing-singleton error and performs no write
 
-### Requirement: Log pruning does not run per log line
+### Requirement: The log file is a plain append
 
-The logger MUST NOT run `readdir`+`stat` directory pruning on every emitted log
-line; pruning MUST run only after an actual rotation or on a timer, so log
-volume does not drive proportional filesystem churn.
+The logger MUST append each emitted line to a single `app.log` and MUST NOT
+scan the log directory, rotate, or prune on emit. There is no rotation or
+retention: production logs go to stdout only, and the file exists for local
+development.
 
 #### Scenario: Emitting a log line does not scan the log directory
 
 - **GIVEN** the application is emitting log lines at volume
 - **WHEN** a single log line is written
-- **THEN** no `readdir`+`stat` prune scan is triggered by that write
-
-#### Scenario: Pruning runs on rotation or timer
-
-- **GIVEN** the logger is configured with retention
-- **WHEN** a rotation occurs or the prune timer fires
-- **THEN** the prune scan runs at that point, not on each emit
+- **THEN** the line is appended to `app.log` and no directory scan runs
 
 ### Requirement: Product-group ownership loads in one batched query
 

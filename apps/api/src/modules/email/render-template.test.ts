@@ -140,4 +140,107 @@ describe('renderEmail — kind="escalation"', () => {
     expect(out.subject).toContain("1 late report section ");
     expect(out.subject).not.toContain("1 late report sections");
   });
+
+  it("keeps late leads in input order and uses the singular phrasing for one", async () => {
+    const [alpha, beta] = escalationProps.lateLeads;
+    const out = await renderEmail({
+      kind: "escalation",
+      props: {
+        ...escalationProps,
+        lateLeads: [expectDefined(beta), expectDefined(alpha)],
+      },
+    });
+    expect(out.html.indexOf("Lead Beta")).toBeLessThan(
+      out.html.indexOf("Lead Alpha"),
+    );
+
+    const single = await renderEmail({
+      kind: "escalation",
+      props: { ...escalationProps, lateLeads: [expectDefined(alpha)] },
+    });
+    expect(single.html).toContain("the following lead has not submitted");
+    expect(single.text).toContain("The following lead has not submitted");
+  });
+});
+
+// Trust boundary: the HTML is rendered by the recipient's mail client, so
+// every interpolated value must arrive escaped.
+describe("renderEmail — HTML escaping of interpolated values", () => {
+  const hostile = `<script>alert("x")</script>&'`;
+  const escaped = "&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;&amp;&#39;";
+  const evilOrg = { shortName: hostile, fullName: hostile };
+
+  const expectEscaped = (html: string, occurrences: number): void => {
+    expect(html).not.toContain("<script>");
+    expect(html).not.toContain(hostile);
+    expect(html.split(escaped)).toHaveLength(occurrences + 1);
+  };
+
+  it("escapes every deadline field", async () => {
+    const out = await renderEmail({
+      kind: "deadline",
+      props: {
+        leadName: hostile,
+        reportPeriod: hostile,
+        deadlineIso: "2026-04-20T15:00:00.000Z",
+        sectionUrl: `http://localhost/?q=${hostile}`,
+        organization: evilOrg,
+      },
+    });
+
+    // leadName, reportPeriod, sectionUrl, shortName, fullName
+    expectEscaped(out.html, 5);
+    expect(out.html).toContain('href="http://localhost/?q=&lt;script');
+  });
+
+  it("escapes every escalation field", async () => {
+    const out = await renderEmail({
+      kind: "escalation",
+      props: {
+        headName: hostile,
+        cycleDate: hostile,
+        reportPeriod: hostile,
+        lateLeads: [
+          { leadName: hostile, sectionTitle: hostile, deadlineIso: hostile },
+        ],
+        organization: evilOrg,
+      },
+    });
+
+    // <title>, preview and heading cycleDate, headName, reportPeriod, leadName,
+    // sectionTitle, deadlineIso, shortName, fullName
+    expectEscaped(out.html, 10);
+  });
+
+  it("leaves the plaintext part unescaped", async () => {
+    const out = await renderEmail({
+      kind: "escalation",
+      props: {
+        headName: "A & B",
+        cycleDate: "2026-04-19",
+        reportPeriod: "P",
+        lateLeads: [
+          { leadName: "L", sectionTitle: "S", deadlineIso: "2026-04-19" },
+        ],
+        organization,
+      },
+    });
+
+    expect(out.text).toContain("Hello A & B,");
+    expect(out.text).toContain("Example Software Department");
+  });
+});
+
+describe("renderEmail — section link scheme", () => {
+  const deadline = (sectionUrl: string) =>
+    renderEmail({ kind: "deadline", props: { ...baseProps, sectionUrl } });
+
+  it("rejects a non-http(s) section URL", async () => {
+    await expect(deadline("javascript:alert(1)//x")).rejects.toThrow(/http/);
+  });
+
+  it("accepts an https section URL", async () => {
+    const out = await deadline("https://example.com/lead/report");
+    expect(out.html).toContain('href="https://example.com/lead/report"');
+  });
 });
