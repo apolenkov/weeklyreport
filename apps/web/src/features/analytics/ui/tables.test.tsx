@@ -191,13 +191,15 @@ describe("LeadSubmissionsTable", () => {
           headingId="velocity-heading"
           rows={[
             {
-              ...{ periodStart: "2026-08-17", periodEnd: "2026-08-23" },
+              periodStart: "2026-08-17",
+              periodEnd: "2026-08-23",
               leads: [
                 { leadId: "lead-a", leadName: "Alex", submittedSections: 3 },
               ],
             },
             {
-              ...{ periodStart: "2026-08-24", periodEnd: "2026-08-30" },
+              periodStart: "2026-08-24",
+              periodEnd: "2026-08-30",
               leads: [
                 { leadId: "lead-b", leadName: "Alex", submittedSections: 5 },
               ],
@@ -236,18 +238,21 @@ describe("LeadSubmissionsTable", () => {
   it("shows newest submissions first without changing lead membership or period values", () => {
     const rows = [
       {
-        ...{ periodStart: "2026-08-17", periodEnd: "2026-08-23" },
+        periodStart: "2026-08-17",
+        periodEnd: "2026-08-23",
         leads: [
           { leadId: "alex", leadName: "Alex", submittedSections: 1 },
           { leadId: "blair", leadName: "Blair", submittedSections: 0 },
         ],
       },
       {
-        ...{ periodStart: "2026-08-24", periodEnd: "2026-08-30" },
+        periodStart: "2026-08-24",
+        periodEnd: "2026-08-30",
         leads: [{ leadId: "alex", leadName: "Alex", submittedSections: 0 }],
       },
       {
-        ...{ periodStart: "2026-08-31", periodEnd: "2026-09-06" },
+        periodStart: "2026-08-31",
+        periodEnd: "2026-09-06",
         leads: [{ leadId: "blair", leadName: "Blair", submittedSections: 1 }],
       },
     ];
@@ -284,7 +289,8 @@ describe("LeadSubmissionsTable", () => {
         headingId="submissions-heading"
         rows={[
           {
-            ...{ periodStart: "2026-08-17", periodEnd: "2026-08-23" },
+            periodStart: "2026-08-17",
+            periodEnd: "2026-08-23",
             leads: [{ leadId: "alex", leadName: "Alex", submittedSections: 1 }],
           },
         ]}
@@ -305,7 +311,8 @@ describe("buildLeadSubmissionsTableData", () => {
 
     const { data, series } = buildLeadSubmissionsTableData([
       {
-        ...{ periodStart: "2026-04-15", periodEnd: "2026-04-21" },
+        periodStart: "2026-04-15",
+        periodEnd: "2026-04-21",
         leads: [
           { leadId: idA, leadName: "Alex", submittedSections: 3 },
           { leadId: idB, leadName: "Alex", submittedSections: 5 },
@@ -328,11 +335,13 @@ describe("buildLeadSubmissionsTableData", () => {
   it("fills absent leads with zero across multiple periods", () => {
     const { data } = buildLeadSubmissionsTableData([
       {
-        ...{ periodStart: "2026-07-14", periodEnd: "2026-07-20" },
+        periodStart: "2026-07-14",
+        periodEnd: "2026-07-20",
         leads: [{ leadId: "lead-a", leadName: "Lead A", submittedSections: 2 }],
       },
       {
-        ...{ periodStart: "2026-07-21", periodEnd: "2026-07-27" },
+        periodStart: "2026-07-21",
+        periodEnd: "2026-07-27",
         leads: [{ leadId: "lead-b", leadName: "Lead B", submittedSections: 3 }],
       },
     ]);
@@ -701,7 +710,7 @@ describe("Trends real frozen ranges", () => {
     {
       periodStart: "2026-06-17",
       periodEnd: "2026-06-17",
-      label: "Jun 17–17, 2026",
+      label: "Jun 17, 2026",
     },
     {
       periodStart: "2026-06-17",

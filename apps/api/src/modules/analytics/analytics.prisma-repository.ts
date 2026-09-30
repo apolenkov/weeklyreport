@@ -117,7 +117,7 @@ function mapComparisonSide(
   const winner = reportInEffectForPeriod(reports);
   return {
     period: winner === undefined ? null : analyticsPeriod(winner),
-    cells: collectComparisonCells(winner === undefined ? [] : [winner]),
+    cells: collectComparisonCells(reports),
   };
 }
 
@@ -239,8 +239,8 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
 
     const sideA = mapComparisonSide(a, session);
     const sideB = mapComparisonSide(b, session);
-    const cellsA = sideA.cells;
-    const cellsB = sideB.cells;
+    const { cells: cellsA } = sideA;
+    const { cells: cellsB } = sideB;
 
     const allProjectIds = new Set<string>([...cellsA.keys(), ...cellsB.keys()]);
 

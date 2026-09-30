@@ -50,6 +50,13 @@ const structuredUrl = fc
       fc
         .constantFrom(..."abcdefghijklmno")
         .map((lane) => `customreport_e2e_lane_${lane}_test`),
+      fc.constantFrom(
+        "customreport",
+        "production",
+        "customreport_e2e_lane_p_test",
+        "customreport_e2e_lane_a",
+        "CUSTOMREPORT_E2E",
+      ),
     ),
     password,
   })
@@ -84,7 +91,7 @@ describe("API destructive target parser properties", () => {
     );
   });
 
-  it("only accepts loopback URLs with a positive witness in every run", () => {
+  it("only accepts loopback e2e databases with a positive witness in every run", () => {
     const loopbackIps = new BlockList();
     loopbackIps.addSubnet("127.0.0.0", 8, "ipv4");
     loopbackIps.addAddress("::1", "ipv6");
@@ -123,6 +130,9 @@ describe("API destructive target parser properties", () => {
           for (const { url: acceptedUrl, target } of accepted) {
             const hostname = new URL(acceptedUrl).hostname;
             expect(target.host).toBe(hostname);
+            expect(target.database).toMatch(
+              /^customreport_e2e(?:_lane_[a-o]_test)?$/u,
+            );
             const host = hostname.startsWith("[")
               ? hostname.slice(1, -1)
               : hostname;

@@ -1,3 +1,4 @@
+import { shortNameFromName } from "@customreport/shared";
 import { useRef } from "react";
 
 import { useSdlcTooltip } from "../../../shared/ui/feedback/sdlc-tooltip";
@@ -37,8 +38,8 @@ export function AuthorBadge({
   const label = unknown
     ? "Unknown author"
     : author.role === undefined
-      ? author.name
-      : `${author.name} · ${author.role}`;
+      ? shortNameFromName(author.name)
+      : `${shortNameFromName(author.name)} · ${author.role}`;
   const tooltip = useHoverTooltip(label);
   // A missing author still surfaces the foreign-record marker as unknown.
   return (
