@@ -1,4 +1,4 @@
-import { ROLE_HOME_PATH, type UserSession } from "@customreport/shared";
+import type { UserSession } from "@customreport/shared";
 import { render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -41,7 +41,7 @@ async function renderGate(
 function expectForbiddenWall(homeHref: string) {
   expect(screen.getByText(/page unavailable/i)).toBeInTheDocument();
   expect(screen.queryByTestId("gated-child")).not.toBeInTheDocument();
-  const homeLink = screen.getByRole("link", { name: /go to dashboard/i });
+  const homeLink = screen.getByRole("link", { name: "Go to my home page" });
   expect(homeLink).toHaveAttribute("href", homeHref);
 }
 
@@ -63,9 +63,9 @@ describe("RoleGate (ui-role-route-access)", () => {
     mockedGetServerSession.mockResolvedValue(sessionWithRole("viewer"));
     await renderGate(["head", "admin"]);
     expect(
-      screen.getByText(/reserved for the head or admin role/i),
+      screen.getByText(/requires the head or admin role/i),
     ).toBeInTheDocument();
-    expectForbiddenWall(ROLE_HOME_PATH.viewer);
+    expectForbiddenWall("/reports/latest");
   });
 
   it("denies an anonymous visitor with the / home fallback", async () => {
@@ -74,18 +74,24 @@ describe("RoleGate (ui-role-route-access)", () => {
     expectForbiddenWall("/");
   });
 
+  it("denies a lead with the lead's own report home", async () => {
+    mockedGetServerSession.mockResolvedValue(sessionWithRole("lead"));
+    await renderGate(["head", "admin"]);
+    expectForbiddenWall("/lead/report");
+  });
+
   // Pins the lead-preview exactly-lead semantics BEFORE the page migrates:
   // head and admin pass the /lead layout but must NOT pass a ["lead"] gate.
   it('allowedRoles=["lead"] denies head, with head home', async () => {
     mockedGetServerSession.mockResolvedValue(sessionWithRole("head"));
     await renderGate(["lead"]);
-    expectForbiddenWall(ROLE_HOME_PATH.head);
+    expectForbiddenWall("/head/dashboard");
   });
 
   it('allowedRoles=["lead"] denies admin, with admin home', async () => {
     mockedGetServerSession.mockResolvedValue(sessionWithRole("admin"));
     await renderGate(["lead"]);
-    expectForbiddenWall(ROLE_HOME_PATH.admin);
+    expectForbiddenWall("/admin");
   });
 
   it('allowedRoles=["lead"] allows lead', async () => {

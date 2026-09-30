@@ -92,7 +92,7 @@ function HeroPanel({
       <div className="relative z-10 max-w-[480px]">
         <PulseMark />
         <TaglineCycler />
-        <p className="mt-10 text-xs uppercase tracking-[0.22em] text-[var(--color-on-dark)]/40">
+        <p className="mt-10 text-xs uppercase tracking-[0.22em] text-[var(--color-primary-foreground)]">
           {orgShortName} · {orgFullName}
         </p>
       </div>
@@ -131,6 +131,9 @@ function SignInPanel({
   return (
     <div className="relative flex w-full flex-col items-center justify-center bg-[var(--color-card)] px-6 sm:px-10 lg:w-[480px] lg:flex-none">
       <div className="w-full max-w-[320px] text-center">
+        <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold leading-tight tracking-[-0.02em] lg:sr-only">
+          Weekly Report
+        </h1>
         <p className="mb-10 mt-2 text-[15px] text-[var(--color-muted-foreground)]">
           Status Reporting System
         </p>
@@ -213,8 +216,6 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
 
   return (
     <main id="main-content" tabIndex={-1} className="flex min-h-svh">
-      {/* PulseMark is graphical only — sr-only h1 for page-has-heading-one. */}
-      <h1 className="sr-only">Weekly Report</h1>
       <HeroPanel orgShortName={org.shortName} orgFullName={org.fullName} />
       <SignInPanel
         orgFullName={org.fullName}
