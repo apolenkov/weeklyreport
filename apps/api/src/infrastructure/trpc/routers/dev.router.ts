@@ -1,7 +1,8 @@
-import { execFileSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import url from "node:url";
+import { promisify } from "node:util";
 
 import {
   MS_PER_MINUTE,
@@ -29,6 +30,8 @@ const DEFAULT_RESEED_TIMEOUT_MINUTES = 2;
 const STRESS_RESEED_TIMEOUT_MS = STRESS_RESEED_TIMEOUT_MINUTES * MS_PER_MINUTE;
 const DEFAULT_RESEED_TIMEOUT_MS =
   DEFAULT_RESEED_TIMEOUT_MINUTES * MS_PER_MINUTE;
+// Async so a multi-minute reset never blocks the API event loop.
+const execFileAsync = promisify(execFile);
 const RESEED_OUTPUT_TAIL_LINES = 15;
 const RESEED_STDERR_TAIL_LENGTH = 500;
 
@@ -133,7 +136,7 @@ export function createDevRouter(deps: DevRouterDeps) {
         }),
       )
       .use(captureMutationAuditInputMiddleware)
-      .mutation(({ input }) => {
+      .mutation(async ({ input }) => {
         assertDevMode(deps.env);
         // Run Prisma reset as a child process so "wipe & reseed" is a
         // real clean-slate operation in Docker too.
@@ -154,12 +157,12 @@ export function createDevRouter(deps: DevRouterDeps) {
             env: process.env,
             timeout: reseedTimeoutMs(input.variant),
           } as const;
-          const resetOutput = execFileSync(
+          const reset = await execFileAsync(
             resolveExecutable("pnpm"),
             ["exec", "prisma", "migrate", "reset", "--force"],
             options,
           );
-          const seedOutput = execFileSync(
+          const seed = await execFileAsync(
             resolveExecutable("pnpm"),
             ["db:seed:profile", input.variant],
             options,
@@ -167,7 +170,7 @@ export function createDevRouter(deps: DevRouterDeps) {
           return {
             ok: true,
             variant: input.variant,
-            output: `${resetOutput}\n${seedOutput}`
+            output: `${reset.stdout}\n${seed.stdout}`
               .split("\n")
               .slice(-RESEED_OUTPUT_TAIL_LINES)
               .join("\n"),
