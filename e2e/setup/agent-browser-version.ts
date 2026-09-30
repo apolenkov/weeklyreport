@@ -5,16 +5,12 @@ const execute = promisify(execFile);
 
 export const AGENT_BROWSER_VERSION = "0.38.1";
 
-/** Extracts the first semantic version from `agent-browser --version` output. */
-export function parseAgentBrowserVersion(output: string): string | undefined {
-  return /\b\d+\.\d+\.\d+\b/.exec(output)?.[0];
-}
-
+/** Accepts only the exact pinned release; prereleases such as 0.38.1-rc.1 fail. */
 export function assertAgentBrowserVersion(output: string): void {
-  const actual = parseAgentBrowserVersion(output);
+  const actual = output.trim().split(/\s+/u).at(-1) ?? "";
   if (actual !== AGENT_BROWSER_VERSION) {
     throw new Error(
-      `E2E requires agent-browser ${AGENT_BROWSER_VERSION}, found ${actual ?? JSON.stringify(output.trim())}`,
+      `E2E requires agent-browser ${AGENT_BROWSER_VERSION}, found ${JSON.stringify(actual)}`,
     );
   }
 }
