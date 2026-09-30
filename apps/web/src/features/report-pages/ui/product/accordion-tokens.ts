@@ -41,15 +41,15 @@ export const STATUS_CONFIG = {
   },
 } as const satisfies Record<WeeklyProductStatus, StatusConfig>;
 
-// One shared grid so stage labels and content keep a common left edge.
+// Stage, content and status stack on mobile; rank and rail span those rows.
 export const ROW_GRID =
-  "grid grid-cols-[20px_3px_minmax(0,84px)_minmax(0,1fr)_auto] items-start gap-x-2 md:grid-cols-[20px_3px_minmax(0,124px)_minmax(0,1fr)_104px] md:gap-x-3.5";
+  "grid grid-cols-[20px_3px_minmax(0,1fr)] items-start gap-x-2 gap-y-1 [&>:nth-child(-n+2)]:row-span-3 [&>:nth-child(n+3)]:col-start-3 sm:grid-cols-[20px_3px_minmax(0,84px)_minmax(0,1fr)_auto] sm:gap-y-0 sm:[&>:nth-child(-n+2)]:row-span-1 sm:[&>:nth-child(n+3)]:col-start-auto md:grid-cols-[20px_3px_minmax(0,124px)_minmax(0,1fr)_104px] md:gap-x-3.5";
 
 // The product-status dot in the header reads its hue from a named token
 // (red=blocked alarm, amber=at-risk, green=on-track, muted=empty).
 export const HEADER_STATUS_TONE = {
   "on-track": "var(--color-chip-on-track-text)",
-  "at-risk": CSS.statusAtRiskBorder,
+  "at-risk": CSS.statusAtRiskFg,
   blocked: CSS.destructive,
   empty: CSS.mutedForeground,
 } as const satisfies Record<WeeklyProductStatus, string>;

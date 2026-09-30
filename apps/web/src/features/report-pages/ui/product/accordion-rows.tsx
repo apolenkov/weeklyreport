@@ -99,10 +99,10 @@ export function RiskRow({ risk }: { readonly risk: WeeklyReportRisk }) {
           {risk.problem}
         </div>
         {risk.impact || risk.mitigation ? (
-          <div className="mt-1.5 grid grid-cols-[84px_minmax(0,1fr)] items-baseline gap-x-2.5 gap-y-1">
+          <div className="mt-1.5 grid grid-cols-1 items-baseline gap-x-2.5 gap-y-1 sm:grid-cols-[84px_minmax(0,1fr)]">
             {risk.impact ? (
               <>
-                <span className="text-[10px] font-bold uppercase tracking-[0.09em] text-[var(--color-destructive)]">
+                <span className="text-xs font-bold text-[var(--color-destructive)]">
                   Impact
                 </span>
                 <span className="text-[13px] leading-snug">{risk.impact}</span>
@@ -110,7 +110,7 @@ export function RiskRow({ risk }: { readonly risk: WeeklyReportRisk }) {
             ) : null}
             {risk.mitigation ? (
               <>
-                <span className="text-[10px] font-bold uppercase tracking-[0.09em] text-[var(--color-muted-foreground)]">
+                <span className="text-xs font-bold text-[var(--color-muted-foreground)]">
                   Mitigation
                 </span>
                 <span className="text-[13px] leading-snug text-[var(--color-starbucks-accent)]">
@@ -144,9 +144,9 @@ export function EscalationRow({
       <span className="pt-px text-[14.5px] leading-snug text-[var(--color-foreground)]">
         {description}
       </span>
-      <span className="flex justify-end pt-px">
+      <span className="flex justify-start pt-px sm:justify-end">
         <span
-          className="whitespace-nowrap rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[11px] font-semibold"
+          className="whitespace-nowrap rounded-[var(--radius-pill)] px-2.5 py-0.5 text-xs font-semibold"
           style={
             isBlocked
               ? {
