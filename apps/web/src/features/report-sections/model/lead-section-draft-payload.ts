@@ -52,14 +52,20 @@ function toRiskDrafts(risks: ReportSectionReadModel["risks"]) {
     }));
 }
 
-function toDecisionDrafts(decisions: ReportSectionReadModel["decisions"]) {
+// The server stores every decision under the section author (see
+// report-section-merge.ts); mirroring that keeps the draft key equal to the
+// saved key, otherwise autosave re-saves forever.
+function toDecisionDrafts(
+  decisions: ReportSectionReadModel["decisions"],
+  authorName: string,
+) {
   return decisions
     .filter((d) => hasText(d.text) && hasText(d.owner) && hasText(d.impact))
     .map((d) => ({
       id: d.id,
       stableId: d.stableId,
       text: d.text,
-      owner: d.owner,
+      owner: authorName,
       deadline: d.deadline ?? null,
       impact: d.impact,
       resolvedAt: d.resolvedAt ?? null,
@@ -90,7 +96,7 @@ export function sectionToDraftPayload(
     activityStatuses: section.activities.map(toActivityStatusPayload),
     items: toItemDrafts(section.items),
     risks: toRiskDrafts(section.risks),
-    decisions: toDecisionDrafts(section.decisions),
+    decisions: toDecisionDrafts(section.decisions, section.authorName),
   };
 }
 
