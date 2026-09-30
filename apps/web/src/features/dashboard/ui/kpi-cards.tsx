@@ -32,13 +32,13 @@ function SubmissionsCard({
       aria-label={`Submissions: ${submitted} of ${total}, ${pendingCount} pending`}
     >
       <div
-        className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full"
+        className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full"
         style={{
           background: `conic-gradient(var(--color-starbucks-accent) 0% ${submissionPercent}%, var(--color-border) ${submissionPercent}% 100%)`,
         }}
         title={`${submitted} of ${total} leads submitted this week (${submissionPercent}%)`}
       >
-        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-card)]">
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-card)]">
           <span className="font-[family-name:var(--font-sans)] text-xs font-bold leading-none text-[var(--color-primary)]">
             {submitted}/{total}
           </span>

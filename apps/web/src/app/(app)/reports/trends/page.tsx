@@ -153,7 +153,14 @@ export default function TrendsPage() {
       tabIndex={-1}
       className="mx-auto w-full min-w-0 max-w-7xl space-y-8 px-4 py-6 sm:px-6 lg:px-8"
     >
-      <h1 className="text-2xl font-semibold">Trends</h1>
+      <header>
+        <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
+          Trends
+        </h1>
+        <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+          How project statuses and risks changed over recent weeks.
+        </p>
+      </header>
       <TrafficLightTrendsSection {...queries} />
       <LeadSubmissionsTrendsSection velocity={queries.velocity} />
       <PeriodComparisonTrendsSection {...queries} />

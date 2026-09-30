@@ -7,7 +7,10 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
-import { buildLeadSubmissionsTableData } from "./analytics-table-data";
+import {
+  buildLeadSubmissionsTableData,
+  weekEndingRange,
+} from "./analytics-table-data";
 import { LeadSubmissionsTable } from "./lead-submissions.table";
 import { PeriodComparisonTable } from "./period-comparison.table";
 import { TrafficLightHistoryTable } from "./traffic-light-history.table";
@@ -54,9 +57,9 @@ describe("TrafficLightHistoryTable", () => {
     });
     expect(table).toBeVisible();
     expect(table.closest(".sr-only")).toBeNull();
-    for (const period of periods)
+    for (const range of ["Aug 17\u201323", "Aug 24\u201330"])
       expect(
-        within(table).getByRole("columnheader", { name: period }),
+        within(table).getByRole("columnheader", { name: range }),
       ).toHaveAttribute("scope", "col");
     expect(
       within(table).getByRole("rowheader", { name: "Alpha" }),
@@ -154,12 +157,17 @@ describe("TrafficLightHistoryTable", () => {
 
     expect(
       screen.getAllByRole("columnheader").map((header) => header.textContent),
-    ).toEqual(["Project", "2026-09-06", "2026-08-30", "2026-08-23"]);
+    ).toEqual([
+      "Project",
+      "Aug 31\u2013Sep 6",
+      "Aug 24\u201330",
+      "Aug 17\u201323",
+    ]);
     expect(
       screen.getAllByRole("cell").map((cell) => cell.textContent.trim()),
     ).toEqual(["On track ↑ Recovered", "Blocked", "At risk"]);
-    expect(screen.getByText(/Week ending/)).toHaveTextContent(
-      "Week ending 2026-09-06:1 On track",
+    expect(screen.getByText(/Week of/)).toHaveTextContent(
+      "Week of Aug 31\u2013Sep 6: 1 project on track",
     );
     expect(history).toEqual(original);
   });
@@ -199,9 +207,9 @@ describe("LeadSubmissionsTable", () => {
     });
     expect(table).toBeVisible();
     expect(table.closest(".sr-only")).toBeNull();
-    for (const period of periods)
+    for (const range of ["Aug 17–23", "Aug 24–30"])
       expect(
-        within(table).getByRole("columnheader", { name: period }),
+        within(table).getByRole("columnheader", { name: range }),
       ).toHaveAttribute("scope", "col");
     expect(
       within(table).getAllByRole("rowheader", { name: "Alex" }),
@@ -246,7 +254,7 @@ describe("LeadSubmissionsTable", () => {
 
     expect(
       screen.getAllByRole("columnheader").map((header) => header.textContent),
-    ).toEqual(["Lead", "2026-09-06", "2026-08-30", "2026-08-23"]);
+    ).toEqual(["Lead", "Aug 31–Sep 6", "Aug 24–30", "Aug 17–23"]);
     const renderedRows = screen.getAllByRole("row").slice(1);
     expect(
       within(expectDefined(renderedRows[0]))
@@ -275,7 +283,7 @@ describe("LeadSubmissionsTable", () => {
     );
     expect(
       screen.getAllByRole("columnheader").map((header) => header.textContent),
-    ).toEqual(["Lead", "2026-08-23"]);
+    ).toEqual(["Lead", "Aug 17–23"]);
     expect(screen.getByRole("cell", { name: "Submitted" })).toBeVisible();
     expect(screen.queryByText(/Scroll horizontally/)).toBeNull();
   });
@@ -365,6 +373,9 @@ describe("PeriodComparisonTable", () => {
     // zero risk count renders as the literal '0'
     const zeros = screen.getAllByText("0");
     expect(zeros.length).toBeGreaterThanOrEqual(2);
+    // zero risk change is a dash in the normal foreground color, not grey 0
+    const dash = screen.getByText("\u2014");
+    expect(dash.className).not.toContain("text-muted-foreground");
   });
 
   it.each([
@@ -401,7 +412,7 @@ describe("PeriodComparisonTable", () => {
         "Period comparison data",
       );
       const explanation = screen.getByText(
-        `Periods ending ${periodA} (previous) and ${periodB} (latest). Risk change is latest minus previous.`,
+        `Weeks of ${weekEndingRange(periodA)} (previous) and ${weekEndingRange(periodB)} (latest). Risk change is latest minus previous.`,
       );
       expect(explanation.tagName).toBe("P");
       expect(explanation.closest('[role="region"]')).toBeNull();
@@ -446,24 +457,15 @@ describe("History latest period", () => {
         ]}
       />,
     );
-    const summary = screen.getByText(/Week ending/);
-    expect(summary).toHaveTextContent("Week ending 2026-08-30:");
+    const summary = screen.getByText(/Week of/);
     expect(summary.closest('[role="region"]')).toBeNull();
-    for (const [label, count] of [
-      ["On track", 1],
-      ["At risk", 1],
-      ["Blocked", 1],
-      ["No status", 2],
-    ] as const) {
-      const badge = within(summary).getByText(label);
-      expect(badge).toHaveClass("rounded-[var(--radius-pill)]");
-      expect(badge.parentElement).toHaveTextContent(`${count} ${label}`);
-      expect(badge.parentElement).toHaveClass("whitespace-nowrap");
-    }
-    const latest = screen.getByRole("columnheader", { name: periods[1] });
+    expect(summary.textContent).toBe(
+      "Week of Aug 24\u201330: 1 project blocked, 1 at risk, 1 on track, 2 no status",
+    );
+    const latest = screen.getByRole("columnheader", { name: "Aug 24\u201330" });
     expect(latest).toHaveClass("bg-[var(--color-surface-muted)]");
     expect(
-      screen.getByRole("columnheader", { name: periods[0] }),
+      screen.getByRole("columnheader", { name: "Aug 17\u201323" }),
     ).not.toHaveClass("bg-[var(--color-surface-muted)]");
     for (const row of screen.getAllByRole("rowheader")) {
       const cells = within(expectDefined(row.closest("tr"))).getAllByRole(
@@ -485,10 +487,9 @@ describe("History latest period", () => {
         ]}
       />,
     );
-    const summary = screen.getByText(/Week ending/);
-    expect(summary).toHaveTextContent("2 On track");
-    for (const label of ["Blocked", "At risk", "No status"])
-      expect(within(summary).queryByText(label)).toBeNull();
+    expect(screen.getByText(/Week of/).textContent).toBe(
+      "Week of Aug 24\u201330: 2 projects on track",
+    );
   });
 
   const transitions: readonly [
@@ -557,7 +558,7 @@ describe("History latest period", () => {
     );
     expect(screen.getByRole("cell")).not.toHaveTextContent(/Recovered|Slipped/);
     expect(
-      screen.getByRole("columnheader", { name: periods[0] }),
+      screen.getByRole("columnheader", { name: "Aug 17\u201323" }),
     ).toBeVisible();
     expect(screen.queryByText(/Scroll horizontally/)).toBeNull();
   });

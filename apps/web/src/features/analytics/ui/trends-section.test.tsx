@@ -31,6 +31,17 @@ describe("TrendsSection", () => {
     expect(onRetry).toHaveBeenCalledOnce();
   });
 
+  it("renders the section as a card surface", () => {
+    render(
+      <TrendsSection {...baseProps}>
+        <p>Table data</p>
+      </TrendsSection>,
+    );
+    expect(
+      screen.getByRole("region", { name: "Traffic-light history" }),
+    ).toHaveClass("card-surface");
+  });
+
   it("announces loading and renders an explicit empty state", () => {
     const { rerender } = render(
       <TrendsSection {...baseProps} isLoading>
