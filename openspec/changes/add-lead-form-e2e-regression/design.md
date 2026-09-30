@@ -10,22 +10,11 @@ and reviewer feedback. Imported toolbar and Slides controls are part of the
 capability inventory.
 
 The owner selected installed `agent-browser` CLI 0.38.1 with TypeScript
-`node:test`. The preparation stage prohibited browser execution, database/Redis
-access and reset/seed while the owner's site occupied the target; its static
-checks did not establish browser acceptance.
-
-On 2026-09-30 the coordinator handed over exclusive `customreport_e2e` and
-Redis DB 15 use for live correction and acceptance. The initial runner baseline
-was `94efe4f6e` against application main `33d853b6a`. Before run11, the owner's
-clean application checkout advanced to
-`c9ffc8c8df0fce0b9ca3800ee04fe3256236612b`; the task commits were rebased onto
-that main, with runner HEAD `8567f64` before the latest wait corrections. The
-existing web/API processes still run from `/home/user/work/weeklyreport` on
-ports 3000/3002. Do not stop or restart
-those processes. Complete browser acceptance remains NOT VERIFIED pending the
-final full-run evidence; selected results are recorded separately below.
-The final handoff must restore the canonical full dataset through the
-guarded `pnpm db:reset:hard full` command from that application checkout.
+`node:test`; the suite fails fast unless `agent-browser --version` reports that
+version. It runs against the already running web/API (ports 3000/3002) and the
+exclusive `customreport_e2e` database with Redis DB 15, and never starts or
+stops the application. Browser acceptance is a full `pnpm test:e2e` run; its
+evidence stays outside the repository.
 
 ## Goals / Non-Goals
 
@@ -38,11 +27,8 @@ remote provider execution or external publication. A Head browser session joins
 the same test's Request changes, approval/rejection of Lead Request reopen, or
 period publication/reopen needed to establish the Lead's published-lineage
 controls in S13. This does not add a general Head regression suite.
-Use native subagents for delegated work; do not use Devin for this task.
-The current owner instructions also require independent review of the final
-SHA by a different model, including ponytail review, and successful remote CI
-for that same SHA before claiming complete acceptance. Push remains forbidden;
-unavailable CI must be recorded as NOT VERIFIED for coordinator handoff.
+Final-SHA review by a different model and green same-SHA CI are required
+before claiming complete acceptance; local gates do not replace either.
 
 ## Decisions
 
@@ -75,7 +61,7 @@ installed before global preparation. There is no separate runner wrapper.
 Before each destructive preparation, `beginTestSessions` verifies that the
 previous test left no owned browsers open; failed strict close blocks the next
 reset in that worker.
-Keep `pnpm test` and `.gitlab-ci.yml` unchanged. Serial Node execution prevents overlapping resets
+Keep `.gitlab-ci.yml` unchanged; `pnpm test` adds only the browser-free `test:e2e-setup` contract suite. Serial Node execution prevents overlapping resets
 of the shared target; per-test preparation provides isolation. Use native Node
 test reporting and put optional snapshots/screenshots/logs under
 `node:os.tmpdir()`; repository runtime artifacts remain forbidden.
@@ -97,9 +83,6 @@ has no `--wait-until` option: its native load/cold-start behavior includes a
 attempts (about 152 seconds for those attempts). The outer open bound accommodates
 that native policy; the wrapper adds no sleeps or retries. Observable AX/URL
 readiness still uses the unchanged 25-second waits and strict assertions.
-The selected reopen repeat in `run13/reopen-open-bound.log` exits 0, 1 pass /
-0 fail in 23150.740875 ms. That result does not establish the cause of the earlier
-failure or complete full-suite acceptance.
 
 Only at authorized runtime setup, create the named session with the CLI command:
 
@@ -124,25 +107,16 @@ Lead folder: every Overview action, section editor, priority/status,
 completion, limits, feedback, navigation and viewing control. An implemented
 scenario is not a runtime PASS.
 
-The revised inventory contains 123 authored browser cases. Item, Risk and Decision
+The inventory contains 123 authored browser cases. Item, Risk and Decision
 required-field/discard contracts use three independent cases: the existing
 `canonical record dialogs validate required fields and discard unsaved changes`
-retains Item, and the new `risk dialog validates required fields and discards unsaved changes`
+covers Item, and `risk dialog validates required fields and discards unsaved changes`
 and `decision dialog validates required fields and discards unsaved changes`
-were inventoried before implementation and are now authored. The independent
-run8 result is exit 1, 2 pass / 1 fail: Risk and Decision pass, while Item leaves
-focus on `MAIN` after dirty Discard. Each receives its own guarded baseline,
-so that failure does not prevent exercising the other editors. The defect
-reproduces with a verified focused Edit opener activated by native pointer
-in `run8/selected.log` and by native Enter in `run8/keyboard-focus.log`.
-After modal closure and the 25-second observable wait, exactly one expected
-opener remains connected and visible; the keyboard-only case exits 1, 0 pass /
-1 fail. Earlier evidence remains in the two run7 focus logs. Current explicit
-record opening uses native focus plus Enter. Upstream fixes `d9af14d4b` /
-`68ff73bf0` restored the product contract before run11, where the unchanged
-strict Item focus case 107 passed. The regression retains its assertion and
-does not change product code or restore focus through test scripting. The
-corrected runner's complete 123-case acceptance remains pending.
+cover the other two. Each receives its own guarded baseline,
+so one failure does not prevent exercising the other editors. The Item case
+asserts that focus returns to a connected, visible Edit opener after dirty
+Discard; current explicit record opening uses native focus plus Enter. The
+regression never changes product code or restores focus through test scripting.
 
 The public form has Report/Overview and Slides; `mode=edit` normalizes rather
 than opening a third route. Week-item Delete exists in the Slides canonical
@@ -155,10 +129,7 @@ section already containing 100 items is rejected by `resolvePlanTx` with
 retains the input and `overview-plan-composer.tsx` renders that exact alert.
 The authored case, `historical plan item limit retains input without changing saved work`,
 asserts two genuine rejections, retained composer input and unchanged saved
-Current/Next/history after cancellation and reload. Its inventory entry preceded
-implementation. It passed in the selected `run5/selected.log`; that run's
-10 pass / 5 fail result does not establish full-suite acceptance.
-The historical WR-041/F08 "limit dialog" refers to 500-character validation in
+Current/Next/history after cancellation and reload. The historical WR-041/F08 "limit dialog" refers to 500-character validation in
 the canonical ItemEditDialog, covered separately by the real field-boundary
 cases. A Product with no author stage assignment is filtered out by the
 backend; the zero-owned-stage defensive panel is N/A for valid public data.
@@ -296,7 +267,7 @@ exact StaticText inside the `Notifications alt+T` region through the existing
 saves observe the success toast before retaining their modal-close checks.
 After connectivity returns, navigation waits for `+ Add Risk`, and conflict
 recovery waits for the exact recovery-region text plus its exact error toast.
-All ten offline-return cases now use bounded AX waits without sleeps or retries;
+All ten offline-return cases use bounded AX waits without sleeps or retries;
 native text waits remain elsewhere. These changes retain every persistence,
 request-count, dialog and deadline assertion
 and avoid assuming the native text/URL wait recognizes those transitions.
@@ -341,10 +312,8 @@ Touch navigation opens the Reporting period listbox and checks its observed
 bounds contain the CLI's entire native swipe path from (200, 400) before a
 100-pixel swipe. In CLI 0.38.1 the native handler has an Appium branch followed
 by a Chrome CDP `Input.dispatchTouchEvent` branch; the iOS wording in help does
-not establish that Chrome is unsupported. The selected N13 run in
-`run2/navigation-last-three.log` passed both directions with URL/selected-option,
-historical read-only and no-report-POST assertions. This selected result does
-not prove full-suite acceptance; the final complete run remains separate.
+not establish that Chrome is unsupported. The N13 case passes both directions with URL/selected-option,
+historical read-only and no-report-POST assertions.
 
 A save failure may be reproduced only through a verified native CLI network
 control, with retained input and a successful real-backend retry. Identify
@@ -359,10 +328,7 @@ The citation finder uses the observed label
 context and closes the local chat Sheet as the loaded generation remounts.
 Await that closed state and the read-only source context, then reopen chat and
 assert the retained question/answer instead of expecting a Close control on an
-already closed sheet. The corrected single-case run in
-`run10/chat-source-navigation.log` exits 0, 1 pass / 0 fail; warning cases also
-passed separately. These are scenario corrections, not product changes.
-
+already closed sheet.
 Production data flow is unchanged:
 
 ```text
@@ -406,8 +372,9 @@ reset/seed/overlay have no URL or consent bypass.
 
 ## Risks / Trade-offs
 
-- The shared target is exclusive only for the coordinator-authorized live task;
-  use no lane database or Redis DB 0 and restore the full seed before returning it.
+- The shared target is exclusive to this suite; use no lane database or
+  Redis DB 0, and restore the canonical full seed with the guarded
+  `pnpm db:reset:hard full` before returning the target.
 - CLI semantics differ from SDK locators -> inspect actual help/core skill and
   implement only real commands; unsupported coverage remains explicit.
 - Conditional controls require fixture states -> use the narrow guarded overlay
@@ -415,9 +382,9 @@ reset/seed/overlay have no URL or consent bypass.
 - Preparation can still write after a hook abort -> contain reset and overlay
   in one owned process group and finish its cleanup before the next test;
   browser cleanup uses an independent cancellation context.
-- Static gates cannot prove visible flows -> record four exit codes separately,
-  then the complete browser run's exit code and pass/fail counts. Keep unrun
-  cases pending and report reproduced product defects without weakening tests.
+- Static gates cannot prove visible flows -> record the static gates' exit codes separately
+  from the complete browser run's exit code and pass/fail counts. Report
+  reproduced product defects without weakening tests.
 - Provider/failure interception may be unavailable -> never compensate with
   remote paid calls or a second browser adapter.
 - Default browser runtime limits platform coverage -> no claim for other browser
@@ -425,30 +392,10 @@ reset/seed/overlay have no URL or consent bypass.
 
 ## Migration Plan
 
-Run9 was deliberately interrupted: exit 1 after 39 emitted results, 34 pass /
-5 fail, without a final TAP summary. It cannot establish full acceptance.
-Following the independent review, selected run10 evidence exercises the scoped
-waits, modal readiness, citation and focus corrections. Its twelve-case result
-is exit 1, 8 pass / 4 fail: three overbroad shared `aria-modal` assumptions were
-corrected afterwards; Item's focus failure was reproduced on that earlier
-application revision. Run11 then completed 123 cases with exit 1, 121 pass /
-2 fail, while the strict Item case passed after the upstream fix. Its remaining
-failures were the assistant-answer and reopen-toast native waits; source
-corrections reuse existing bounded AX waits without relaxing assertions. The
-corrected runner's full result and current final gates/restoration are pending.
-
-Replace the task's earlier test runner/dependency/configuration with the native
-Node suite and CLI wrapper; keep product/database source unchanged. Validate
-the revised OpenSpec before implementation. The preparation stage completed
-static checks and a local commit with runtime deferred. After rebase, correct
-imports removed by main cleanup, verify current CLI/selectors and remove
-duplicated helpers and the redundant global reset. Run selected files as
-needed, then the full `pnpm test:e2e` suite; retain failure evidence outside the
-repository and distinguish scenario errors from reproduced product defects.
-Re-run the four required static gates, restore the canonical full seed with
-exit 0, and record final source SHA, browser counts and restoration in the
-external report. Commit task-owned changes with the required Conventional
-Commit subject and Codex coauthor; obtain the required different-model review
-including ponytail against the final SHA. Record same-SHA remote CI as NOT
-VERIFIED until the coordinator provides its successful result; do not push or
-archive prematurely.
+The native Node suite and CLI wrapper replace the task's earlier test
+runner/dependency/configuration; product and database source are unchanged.
+Run selected files as needed, then the full `pnpm test:e2e` suite, retaining
+failure evidence outside the repository and distinguishing scenario errors from
+reproduced product defects. Re-run the static gates, restore the canonical full
+seed with exit 0, and record the final source SHA and browser counts in the
+external report. Do not push or archive without the owner.

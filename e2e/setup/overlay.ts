@@ -10,6 +10,7 @@ import {
 import { finalizePublishedSnapshots } from "../../prisma/seeds/support/published-snapshot.js";
 import { LEAD_FORM_FIXTURE, OPEN_WORK_FIXTURE } from "./fixture-data.js";
 import {
+  ACTIVITY_ID,
   buildOpenWorkItemData,
   createCancelledEvent,
   createCompletedEvent,
@@ -28,7 +29,6 @@ async function upsertActivityStatus(
   prisma: PrismaClient,
   sectionId: string,
 ): Promise<void> {
-  const { ACTIVITY_ID } = await import("./overlay-items.js");
   await prisma.activityStatus.upsert({
     where: {
       reportSectionId_activityId: {
@@ -83,7 +83,6 @@ export async function applyE2eFixtureOverlay(
     const occurredAt = archiveSection.submittedAt.toISOString();
     const actorName = LEAD_FORM_FIXTURE.leadName;
 
-    validateE2eRuntimeTarget(OVERLAY_SCRIPT_NAME);
     await addExplicitNextCommitment(prisma, ownSection);
     await addPrivacySentinels(prisma, ownSection, foreignSection);
     await addSingleStageProduct(prisma, ownSection);
@@ -94,7 +93,6 @@ export async function applyE2eFixtureOverlay(
     await createCancelledEvent(prisma, archiveSection, occurredAt, actorName);
     await createCompletedEvent(prisma, archiveSection, occurredAt, actorName);
 
-    validateE2eRuntimeTarget(OVERLAY_SCRIPT_NAME);
     await finalizePublishedSnapshots(prisma);
     if (scenario === "section-item-limit") {
       await fillSectionItemLimit(prisma, ownSection);
