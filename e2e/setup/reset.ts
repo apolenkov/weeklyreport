@@ -13,7 +13,27 @@ const PREPARATION_SCRIPT = path.resolve(REPO_ROOT, "e2e/setup/prepare.ts");
 const CHILD_TIMEOUT_MS = 90_000;
 
 export type E2eSeedProfile = "demo" | "minimal";
-export type E2eScenario = "archived-fill-only";
+export type E2eScenario = "archived-fill-only" | "section-item-limit";
+
+export function parseE2eScenario(
+  profile: E2eSeedProfile,
+  scenario: unknown,
+): E2eScenario | undefined {
+  if (scenario === undefined) return undefined;
+  if (scenario === "archived-fill-only") {
+    if (profile !== "minimal") {
+      throw new Error("The archived Fill scenario requires the minimal seed");
+    }
+    return scenario;
+  }
+  if (scenario === "section-item-limit") {
+    if (profile !== "demo") {
+      throw new Error("The section item-limit scenario requires the demo seed");
+    }
+    return scenario;
+  }
+  throw new Error("Unknown E2E scenario");
+}
 
 function maskDatabaseUrl(value: string): string {
   try {
@@ -105,9 +125,7 @@ export async function prepareE2eData(
   scenario?: E2eScenario,
 ): Promise<void> {
   const cancellation = runtimeSignal(signal);
-  if (scenario !== undefined && profile !== "minimal") {
-    throw new Error("The archived Fill scenario requires the minimal seed");
-  }
+  const selectedScenario = parseE2eScenario(profile, scenario);
   const scriptName = `e2e-prepare-${profile}`;
   const target = validateE2eRuntimeTarget(scriptName);
   console.log(
@@ -120,7 +138,7 @@ export async function prepareE2eData(
       "tsx",
       PREPARATION_SCRIPT,
       profile,
-      ...(scenario === undefined ? [] : [scenario]),
+      ...(selectedScenario === undefined ? [] : [selectedScenario]),
     ],
     {
       cwd: REPO_ROOT,

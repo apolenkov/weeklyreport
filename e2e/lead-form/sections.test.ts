@@ -18,19 +18,23 @@ import {
 } from "./browser.js";
 import { registerE2eHooks } from "./fixtures.js";
 import {
+  clickBackdrop,
   LEAD_FORM_FIXTURE,
   loginAsHead,
   openLeadReport,
   roleText,
   saveDraft,
+  type Scope,
   scopeCount,
+  scopedRef,
   scopeSnapshot,
   setOffline,
+  waitClosed,
+  waitScope,
 } from "./helpers.js";
 
 registerE2eHooks();
 
-type RoleName = readonly [role: string, name: string | RegExp];
 type Week = "Current" | "Next";
 interface ParentCase {
   readonly kind: "product" | "activity";
@@ -53,11 +57,16 @@ const ACTIVITY: ParentCase = {
 const PARENTS: readonly ParentCase[] = [PRODUCT, ACTIVITY];
 const PRIORITY_LABEL =
   "Priority rank (optional — leave blank if not a priority)";
-const WEEKLY_FORM: RoleName = [
-  "form",
-  `Weekly fields for ${LEAD_FORM_FIXTURE.activityName}`,
-];
-const DECISION_DIALOG: RoleName = ["dialog", /^(Add|Edit) Decision$/];
+const WEEKLY_FORM: Scope = {
+  role: "form",
+  name: `Weekly fields for ${LEAD_FORM_FIXTURE.activityName}`,
+};
+const DECISION_DIALOG: Scope = {
+  role: "dialog",
+  name: /^(Add|Edit) Decision$/,
+};
+const ITEM_DIALOG: Scope = { role: "dialog", name: /^Edit Item — / };
+const RISK_DIALOG: Scope = { role: "dialog", name: /^(Add|Edit) Risk — / };
 const DEADLINE_SEGMENTS = [
   { maximum: "12", digits: "01" },
   { maximum: "31", digits: "01" },
@@ -81,30 +90,17 @@ async function ref(role: string, name: string): Promise<string> {
   return match;
 }
 
-async function scopedRef(
-  scope: RoleName,
-  target: RoleName,
-  session?: string,
-): Promise<string> {
-  const data = scopeSnapshot(await snapshot(session), ...scope);
-  const targetRefs = refsByRole(data, ...target);
-  assert.equal(targetRefs.length, 1, `Expected one ${target.join(": ")}`);
-  const targetRef = targetRefs.at(0);
-  assert.ok(targetRef);
-  return targetRef;
-}
-
 async function click(name: string, session?: string): Promise<void> {
   await findRole("button", name, "click", undefined, session);
 }
 
 async function scopedClick(
-  scope: RoleName,
+  scope: Scope,
   name: string,
   session?: string,
 ): Promise<void> {
   await command(
-    ["click", await scopedRef(scope, ["button", name], session)],
+    ["click", await scopedRef(scope, "button", name, session)],
     session,
   );
 }
@@ -126,11 +122,27 @@ async function fill(label: string, text: string): Promise<void> {
 }
 
 async function clearTextbox(target: string): Promise<void> {
+  const original = (await command(["get", "value", target])).value;
+  assert.ok(typeof original === "string");
+  assert.doesNotMatch(
+    original,
+    /[\r\n]/,
+    "Keyboard clear expects a single line",
+  );
   await command(["click", target]);
-  await command([
-    "press",
-    process.platform === "darwin" ? "Meta+A" : "Control+A",
-  ]);
+  await command(["press", "End"]);
+  await command(["press", "Shift+Home"]);
+  const selection = (
+    await command([
+      "eval",
+      "({start: document.activeElement?.selectionStart, end: document.activeElement?.selectionEnd, value: document.activeElement?.value})",
+    ])
+  ).result;
+  assert.deepEqual(selection, {
+    start: 0,
+    end: original.length,
+    value: original,
+  });
   await command(["press", "Backspace"]);
   assert.equal((await command(["get", "value", target])).value, "");
 }
@@ -163,7 +175,14 @@ async function assertModal(name: string): Promise<void> {
 }
 
 async function waitNoModals(session?: string): Promise<void> {
-  await command(["wait", "--fn", NO_MODALS], session);
+  await command(["wait", "--fn", NO_MODALS], session).catch(
+    async (error: unknown) => {
+      if (error instanceof Error && error.name !== "AbortError") {
+        error.message += `\n${(await snapshot(session)).snapshot}`;
+      }
+      throw error;
+    },
+  );
   const data = await snapshot(session);
   assert.equal(scopeCount(data, "dialog"), 0);
   assert.equal(scopeCount(data, "alertdialog"), 0);
@@ -178,9 +197,34 @@ async function openSlides(): Promise<void> {
   );
 }
 
-async function persistedReload(text: string): Promise<void> {
+async function expandOverviewParent(parent: ParentCase): Promise<void> {
+  const scope: Scope = {
+    role: "article",
+    name: `${parent.kind === "product" ? "Product" : "Activity"} ${parent.name}`,
+  };
+  const data = scopeSnapshot(await waitScope(scope), scope.role, scope.name);
+  const more = refsByRole(data, "button", /^\+\d+ more$/);
+  assert.ok(more.length <= 1);
+  const target = more.at(0);
+  if (target) {
+    await command(["click", target]);
+    assert.equal(
+      await getAttr(
+        await scopedRef(scope, "button", "Show less"),
+        "aria-expanded",
+      ),
+      "true",
+    );
+  }
+}
+
+async function persistedReload(
+  text: string,
+  parent?: ParentCase,
+): Promise<void> {
   await reload();
   await waitText("My Report");
+  if (parent) await expandOverviewParent(parent);
   await waitText(text);
   assert.ok((await snapshot()).snapshot.includes(text));
 }
@@ -199,18 +243,33 @@ async function createItem(
 ): Promise<void> {
   await waitText(parent.name);
   await click(`Add item to ${parent.name}`);
-  await waitText("Description *");
+  await waitScope({
+    role: "form",
+    name: `Current week update for ${parent.name}`,
+  });
   if (week === "Next") {
     await findRole("radio", "Next week", "click");
+    await waitScope({
+      role: "form",
+      name: `Next week update for ${parent.name}`,
+    });
     // Switching weeks preserves the open draft's progress choice.
     await click("Planned");
+    assert.equal(
+      await getAttr(await ref("button", "Planned"), "aria-pressed"),
+      "true",
+    );
   }
   await fill("Description *", text);
   if (parent.kind === "product") await selectProductStages();
   else assert.equal(scopeCount(await snapshot(), "group", "SDLC Stages"), 0);
   await click("Save update");
+  await waitClosed({
+    role: "form",
+    name: `${week} week update for ${parent.name}`,
+  });
+  await expandOverviewParent(parent);
   await waitText(text);
-  await command(["wait", "--fn", NO_INLINE_EDITORS]);
   await saveDraft();
 }
 
@@ -232,7 +291,11 @@ async function openSlideRecord(record: SlideRecord): Promise<void> {
     .replace(/^(Expand|Collapse) full details for /, "")
     .slice(0, -`: ${record.text}`.length);
   if (rowName.startsWith("Expand")) await command(["click", `@${id}`]);
-  await click(`Edit ${hoverLabel}: ${record.text}`);
+  const editName = `Edit ${hoverLabel}: ${record.text}`;
+  const edit = await ref("button", editName);
+  await command(["focus", edit]);
+  assert.equal(await activeName(), editName);
+  await command(["press", "Enter"]);
   await assertModal(
     record.kind === "Decision"
       ? "Edit Decision"
@@ -241,7 +304,11 @@ async function openSlideRecord(record: SlideRecord): Promise<void> {
 }
 
 async function saveSlide(label: string): Promise<void> {
-  const target = await scopedRef(["dialog", /^Edit /], ["button", label]);
+  const target = await scopedRef(
+    { role: "dialog", name: /^Edit / },
+    "button",
+    label,
+  );
   assert.equal((await command(["is", "enabled", target])).enabled, true);
   await command(["focus", target]);
   assert.equal(await activeName(), label);
@@ -261,13 +328,13 @@ async function deleteSlideRecord(
   await waitModal(title, "alertdialog");
   assert.equal(scopeCount(await snapshot(), "alertdialog", title), 1);
   assert.equal(scopeCount(await snapshot(), "dialog"), 0);
-  await scopedClick(["alertdialog", title], "Cancel");
+  await scopedClick({ role: "alertdialog", name: title }, "Cancel");
   await waitNoModals();
   await waitText(record.text);
   await openSlideRecord(record);
   await click("Delete");
   await waitModal(title, "alertdialog");
-  await scopedClick(["alertdialog", title], "Delete");
+  await scopedClick({ role: "alertdialog", name: title }, "Delete");
   await waitNoModals();
   await waitText("Slide record deleted");
   await reload();
@@ -282,7 +349,7 @@ for (const parent of PARENTS) {
       const text = `E2E ${parent.kind} ${week.toLowerCase()} item`;
       await openLeadReport();
       await createItem(parent, week, text);
-      await persistedReload(text);
+      await persistedReload(text, parent);
       await openSlides();
       await openSlideRecord({ kind: "Item", parent, text });
       const edited = `${text} edited`;
@@ -306,9 +373,33 @@ async function assertItemExtras(nextStep: string, rank: string): Promise<void> {
 }
 
 async function assertNoForeignStages(): Promise<void> {
-  const data = await snapshot();
+  const data = scopeSnapshot(
+    await snapshot(),
+    ITEM_DIALOG.role,
+    ITEM_DIALOG.name,
+  );
   for (const name of ["Planning", "Analysis", "Design"])
     assert.equal(refsByRole(data, "checkbox", name).length, 0);
+}
+
+async function assertNoItemStages(): Promise<void> {
+  const data = scopeSnapshot(
+    await snapshot(),
+    ITEM_DIALOG.role,
+    ITEM_DIALOG.name,
+  );
+  assert.equal(scopeCount(data, "group", "SDLC Stages"), 0);
+}
+
+async function assertSingleStageProduct(): Promise<void> {
+  const data = scopeSnapshot(
+    await snapshot(),
+    ITEM_DIALOG.role,
+    ITEM_DIALOG.name,
+  );
+  const stage = scopeSnapshot(data, "group", "SDLC Stages");
+  assert.ok(stage.snapshot.includes(LEAD_FORM_FIXTURE.singleStageName));
+  assert.equal(refsByRole(data, "checkbox", /.*/).length, 0);
 }
 
 async function stageInvalid(): Promise<unknown> {
@@ -350,9 +441,7 @@ void test("canonical item parent and stage choices preserve valid ownership", as
   await switchToMultiStageProduct(text);
   await select("Parent", LEAD_FORM_FIXTURE.singleStageProductName);
   await waitText("Applied automatically");
-  const stageText = await roleText("group", "SDLC Stages");
-  assert.ok(stageText.includes(LEAD_FORM_FIXTURE.singleStageName));
-  assert.equal(refsByRole(await snapshot(), "checkbox", /.*/).length, 0);
+  await assertSingleStageProduct();
   await assertItemExtras("E2E retained next step", "10");
   await saveSlide("Save item");
   await persistedReload(text);
@@ -363,12 +452,12 @@ void test("canonical item parent and stage choices preserve valid ownership", as
   });
   await select("Parent", ACTIVITY.name);
   await assertModal(`Edit Item — ${ACTIVITY.name}`);
-  assert.equal(scopeCount(await snapshot(), "group", "SDLC Stages"), 0);
+  await assertNoItemStages();
   await assertItemExtras("E2E retained next step", "10");
   await saveSlide("Save item");
   await persistedReload(text);
   await openSlideRecord({ kind: "Item", parent: ACTIVITY, text });
-  assert.equal(scopeCount(await snapshot(), "group", "SDLC Stages"), 0);
+  await assertNoItemStages();
   await assertItemExtras("E2E retained next step", "10");
   await click("Cancel");
   await waitNoModals();
@@ -449,25 +538,22 @@ async function activeName(): Promise<unknown> {
   ).result;
 }
 
-async function clickBackdrop(name: string): Promise<void> {
-  const result = await command([
-    "eval",
-    String.raw`(() => { const matches = Array.from(document.getElementsByTagName('div')).filter(element => element.getAttribute('role') === 'dialog' && (element.getAttribute('aria-label') ?? (element.getAttribute('aria-labelledby') ?? '').split(/\s+/).map(id => document.getElementById(id)?.textContent?.trim() ?? '').join(' ')) === ${JSON.stringify(name)}); if (matches.length !== 1) throw new Error('Expected one named dialog'); const rect = matches[0].getBoundingClientRect(); return { x: rect.x, y: rect.y, height: rect.height }; })()`,
-  ]);
-  assert.ok(typeof result.result === "object" && result.result !== null);
-  const box = result.result as Record<string, unknown>;
-  assert.ok(typeof box.x === "number");
-  assert.ok(typeof box.y === "number");
-  assert.ok(typeof box.height === "number");
-  assert.ok(box.x > 0, "Dialog must leave visible backdrop space");
+async function assertFocused(name: string): Promise<void> {
   await command([
-    "mouse",
-    "move",
-    String(box.x - 1),
-    String(box.y + box.height / 2),
-  ]);
-  await command(["mouse", "down", "left"]);
-  await command(["mouse", "up", "left"]);
+    "wait",
+    "--fn",
+    `(document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.textContent?.trim()) === ${JSON.stringify(name)}`,
+  ]).catch(async (error: unknown) => {
+    if (error instanceof Error && error.name !== "AbortError") {
+      const data = await command([
+        "eval",
+        `(() => { const nameOf = element => element?.getAttribute('aria-label') ?? element?.textContent?.trim() ?? ''; const active = document.activeElement; const matches = Array.from(document.getElementsByTagName('button')).filter(button => nameOf(button) === ${JSON.stringify(name)}); return { activeTag: active?.tagName, activeName: nameOf(active).slice(0, 160), expectedControlCount: matches.length, expectedControls: matches.map(button => ({ connected: button.isConnected, visible: button.checkVisibility() })) }; })()`,
+      ]);
+      error.message += `\nFocus diagnostic: ${JSON.stringify(data.result)}`;
+    }
+    throw error;
+  });
+  assert.equal(await activeName(), name);
 }
 
 async function discardDirtyDialog(
@@ -482,7 +568,10 @@ async function discardDirtyDialog(
     scopeCount(await snapshot(), "alertdialog", "Discard changes?"),
     1,
   );
-  await scopedClick(["alertdialog", "Discard changes?"], "Keep editing");
+  await scopedClick(
+    { role: "alertdialog", name: "Discard changes?" },
+    "Keep editing",
+  );
   assert.equal(await value("textbox", field), unsaved);
   await clickBackdrop(modalName);
   await waitModal("Discard changes?", "alertdialog");
@@ -490,19 +579,24 @@ async function discardDirtyDialog(
     scopeCount(await snapshot(), "alertdialog", "Discard changes?"),
     1,
   );
-  await scopedClick(["alertdialog", "Discard changes?"], "Keep editing");
+  await scopedClick(
+    { role: "alertdialog", name: "Discard changes?" },
+    "Keep editing",
+  );
   assert.equal(await value("textbox", field), unsaved);
   await command(["press", "Escape"]);
   await waitModal("Discard changes?", "alertdialog");
-  await scopedClick(["alertdialog", "Discard changes?"], "Discard");
+  await scopedClick(
+    { role: "alertdialog", name: "Discard changes?" },
+    "Discard",
+  );
   await waitNoModals();
 }
 
 async function validateSupportingDialog(
   kind: "Risk" | "Decision",
 ): Promise<void> {
-  await click(`+ Add ${kind}`);
-  await waitModal();
+  await openSupportingDialog(kind);
   await select("Parent", ACTIVITY.name);
   await click(`Save ${kind.toLowerCase()}`);
   const field = `${kind} *`;
@@ -525,12 +619,19 @@ async function validateSupportingDialog(
     `E2E unsaved ${kind.toLowerCase()}`,
     kind === "Risk" ? `Add Risk — ${ACTIVITY.name}` : "Add Decision",
   );
-  assert.equal(await activeName(), `+ Add ${kind}`);
-  await click(`+ Add ${kind}`);
-  await waitModal();
+  await assertFocused(`+ Add ${kind}`);
+  await openSupportingDialog(kind);
   await click("Cancel");
   await waitNoModals();
-  assert.equal(await activeName(), `+ Add ${kind}`);
+  await assertFocused(`+ Add ${kind}`);
+}
+
+async function openSupportingDialog(kind: "Risk" | "Decision"): Promise<void> {
+  const name = `+ Add ${kind}`;
+  await command(["focus", await ref("button", name)]);
+  assert.equal(await activeName(), name);
+  await click(name);
+  await waitModal();
 }
 
 void test("canonical record dialogs validate required fields and discard unsaved changes", async () => {
@@ -556,23 +657,43 @@ void test("canonical record dialogs validate required fields and discard unsaved
     "E2E unsaved item",
     `Edit Item — ${ACTIVITY.name}`,
   );
-  assert.equal(await activeName(), `Edit In progress: ${record.text}`);
+  await assertFocused(`Edit In progress: ${record.text}`);
   await openSlideRecord(record);
   assert.equal(await value("textbox", "Description *"), record.text);
   await click("Cancel");
   await waitNoModals();
-  await openLeadReport();
-  await validateSupportingDialog("Risk");
-  await validateSupportingDialog("Decision");
   await persistedReload(record.text);
-  const data = await snapshot();
-  for (const text of [
-    "E2E unsaved item",
-    "E2E unsaved risk",
-    "E2E unsaved decision",
-  ])
-    assert.equal(data.snapshot.includes(text), false);
+  assert.equal((await snapshot()).snapshot.includes("E2E unsaved item"), false);
 });
+
+for (const kind of ["Risk", "Decision"] as const) {
+  void test(`${kind.toLowerCase()} dialog validates required fields and discards unsaved changes`, async () => {
+    const support = kind === "Risk" ? "Risks & Blockers" : "Decisions";
+    await openLeadReport();
+    await expandSupport(support);
+    const baseline = await roleText("region", support);
+    await validateSupportingDialog(kind);
+    await persistedReload(LEAD_FORM_FIXTURE.currentText);
+    await expandSupport(support);
+    assert.equal(await roleText("region", support), baseline);
+    assert.equal(
+      (await snapshot()).snapshot.includes(`E2E unsaved ${kind.toLowerCase()}`),
+      false,
+    );
+  });
+}
+
+async function selectRiskSeverity(name: "At risk" | "Blocked"): Promise<void> {
+  await command([
+    "scrollintoview",
+    await scopedRef(RISK_DIALOG, "button", name),
+  ]);
+  await scopedClick(RISK_DIALOG, name);
+  assert.equal(
+    await getAttr(await scopedRef(RISK_DIALOG, "button", name), "aria-pressed"),
+    "true",
+  );
+}
 
 async function createRisk(parent: ParentCase, text: string): Promise<void> {
   await click("+ Add Risk");
@@ -581,7 +702,7 @@ async function createRisk(parent: ParentCase, text: string): Promise<void> {
   await fill("Risk *", text);
   await fill("Impact *", `${text} impact`);
   await fill("Mitigation *", `${text} mitigation`);
-  await click("At risk");
+  await selectRiskSeverity("At risk");
   if (parent.kind === "product") await selectProductStages();
   else assert.equal(scopeCount(await snapshot(), "group", "SDLC Stages"), 0);
   await click("Save risk");
@@ -606,7 +727,7 @@ for (const parent of PARENTS) {
     }
     await fill("Impact *", `${text} changed impact`);
     await fill("Mitigation *", `${text} changed mitigation`);
-    await click("Blocked");
+    await selectRiskSeverity("Blocked");
     await saveSlide("Save risk");
     await persistedReload(text);
     await openSlideRecord(record);
@@ -679,7 +800,11 @@ async function deadlineValue(): Promise<unknown> {
 }
 
 async function deadlineSegmentNames(): Promise<ReadonlyMap<string, string>> {
-  const data = scopeSnapshot(await snapshot(), ...DECISION_DIALOG);
+  const data = scopeSnapshot(
+    await snapshot(),
+    DECISION_DIALOG.role,
+    DECISION_DIALOG.name,
+  );
   const segments = Object.values(data.refs).filter(
     (entry) => entry.role === "spinbutton",
   );
@@ -694,7 +819,7 @@ async function deadlineSegmentNames(): Promise<ReadonlyMap<string, string>> {
     );
     assert.ok(!names.has(name), "Date segment names must be unique");
     names.add(name);
-    const target = await scopedRef(DECISION_DIALOG, ["spinbutton", name]);
+    const target = await scopedRef(DECISION_DIALOG, "spinbutton", name);
     assert.equal(await getAttr(target, "aria-valuemin"), "1");
     const maximum = await getAttr(target, "aria-valuemax");
     assert.ok(maximum);
@@ -713,7 +838,7 @@ async function setDeadline(deadline: "2000-01-01" | ""): Promise<void> {
     assert.ok(name);
     await command([
       "click",
-      await scopedRef(DECISION_DIALOG, ["spinbutton", name]),
+      await scopedRef(DECISION_DIALOG, "spinbutton", name),
     ]);
     await command(["press", "Backspace"]);
     for (const digit of deadline === "" ? "" : segment.digits)
@@ -721,7 +846,7 @@ async function setDeadline(deadline: "2000-01-01" | ""): Promise<void> {
   }
   await command([
     "click",
-    await scopedRef(DECISION_DIALOG, ["textbox", "Impact *"]),
+    await scopedRef(DECISION_DIALOG, "textbox", "Impact *"),
   ]);
   assert.equal(await deadlineValue(), deadline);
 }
@@ -790,9 +915,12 @@ async function createPublishedLineageDraft(
   await click("Save decision");
   await waitNoModals();
   await saveDraft();
-  await click("Submit report");
+  await click("Submit");
   await waitModal("Confirm submission", "alertdialog");
-  await scopedClick(["alertdialog", "Confirm submission"], "Submit");
+  await scopedClick(
+    { role: "alertdialog", name: "Confirm submission" },
+    "Submit",
+  );
   await waitText("Report submitted");
   await waitNoModals();
 }
@@ -803,7 +931,10 @@ async function publishAndReopenPeriod(): Promise<void> {
   await open(`/head/report/${LEAD_FORM_FIXTURE.reportId}`, session);
   await waitText("Publish & Lock", session);
   await click("Publish & Lock", session);
-  const publishDialog: RoleName = ["alertdialog", "Publish & Lock Report?"];
+  const publishDialog: Scope = {
+    role: "alertdialog",
+    name: "Publish & Lock Report?",
+  };
   await waitModal("Publish & Lock Report?", "alertdialog", session);
   assert.ok(
     (await roleText("alertdialog", "Publish & Lock Report?", session)).includes(
@@ -816,7 +947,11 @@ async function publishAndReopenPeriod(): Promise<void> {
   await waitText("Reopen Period", session);
   await click("Reopen Period", session);
   await waitModal("Reopen this period?", "alertdialog", session);
-  await scopedClick(["alertdialog", "Reopen this period?"], "Reopen", session);
+  await scopedClick(
+    { role: "alertdialog", name: "Reopen this period?" },
+    "Reopen",
+    session,
+  );
   await waitText("Period reopened", session);
   await waitNoModals(session);
   await openLeadReport();
@@ -829,9 +964,9 @@ async function publishAndReopenPeriod(): Promise<void> {
 }
 
 async function editPublishedDecision(decisionText: string): Promise<void> {
-  const scope: RoleName = ["region", "Decisions"];
+  const scope: Scope = { role: "region", name: "Decisions" };
   await expandSupport("Decisions");
-  const data = scopeSnapshot(await snapshot(), ...scope);
+  const data = scopeSnapshot(await snapshot(), scope.role, scope.name);
   assert.ok(data.snapshot.includes(decisionText));
   assert.ok(data.snapshot.includes("In published report"));
   assert.equal(refsByRole(data, "button", "Edit decision").length, 1);
@@ -870,7 +1005,7 @@ async function rejectPublishedItemDeletion(): Promise<void> {
   const before = await saveRequestCount();
   await click("Delete");
   await waitModal("Delete item?", "alertdialog");
-  await scopedClick(["alertdialog", "Delete item?"], "Delete");
+  await scopedClick({ role: "alertdialog", name: "Delete item?" }, "Delete");
   await waitText(PUBLISHED_RECORD_LOCKED);
   await command([
     "wait",
@@ -878,7 +1013,7 @@ async function rejectPublishedItemDeletion(): Promise<void> {
     "Array.from(document.getElementsByTagName('div')).some(element => element.getAttribute('role') === 'alertdialog' && element.getAttribute('aria-busy') !== 'true')",
   ]);
   assert.equal(scopeCount(await snapshot(), "alertdialog", "Delete item?"), 1);
-  await scopedClick(["alertdialog", "Delete item?"], "Cancel");
+  await scopedClick({ role: "alertdialog", name: "Delete item?" }, "Cancel");
   await waitNoModals();
   await persistedReload(record.text);
   await openSlideRecord(record);
@@ -1011,8 +1146,8 @@ async function clickDisabledButton(name: string): Promise<void> {
   await command([
     "mouse",
     "move",
-    String((box.x as number) + (box.width as number) / 2),
-    String((box.y as number) + (box.height as number) / 2),
+    String(Math.round((box.x as number) + (box.width as number) / 2)),
+    String(Math.round((box.y as number) + (box.height as number) / 2)),
   ]);
   await command(["mouse", "down", "left"]);
   await command(["mouse", "up", "left"]);
@@ -1086,10 +1221,11 @@ for (const entry of SLIDE_SAVE_CASES) {
 }
 
 async function weeklyFill(name: string, text: string): Promise<void> {
-  const target = await scopedRef(WEEKLY_FORM, [
+  const target = await scopedRef(
+    WEEKLY_FORM,
     "textbox",
     new RegExp(`^${name}(?:$| )`),
-  ]);
+  );
   if (text === "") {
     await clearTextbox(target);
     return;
@@ -1102,7 +1238,7 @@ async function weeklyValue(name: string): Promise<unknown> {
     await command([
       "get",
       "value",
-      await scopedRef(WEEKLY_FORM, ["textbox", new RegExp(`^${name}(?:$| )`)]),
+      await scopedRef(WEEKLY_FORM, "textbox", new RegExp(`^${name}(?:$| )`)),
     ])
   ).value;
 }
@@ -1162,7 +1298,7 @@ void test("activity weekly fields enforce title and description limits", async (
   await waitText("Weekly title must be 200 characters or fewer.");
   assert.equal(
     await getAttr(
-      await scopedRef(WEEKLY_FORM, ["textbox", /^Weekly title/]),
+      await scopedRef(WEEKLY_FORM, "textbox", /^Weekly title/),
       "aria-invalid",
     ),
     "true",
@@ -1172,7 +1308,7 @@ void test("activity weekly fields enforce title and description limits", async (
       await command([
         "is",
         "enabled",
-        await scopedRef(WEEKLY_FORM, ["button", "Save weekly fields"]),
+        await scopedRef(WEEKLY_FORM, "button", "Save weekly fields"),
       ])
     ).enabled,
     false,
@@ -1182,7 +1318,7 @@ void test("activity weekly fields enforce title and description limits", async (
   await waitText("Description must be 500 characters or fewer.");
   assert.equal(
     await getAttr(
-      await scopedRef(WEEKLY_FORM, ["textbox", /^Description/]),
+      await scopedRef(WEEKLY_FORM, "textbox", /^Description/),
       "aria-invalid",
     ),
     "true",

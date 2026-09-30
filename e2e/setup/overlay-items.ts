@@ -1,9 +1,11 @@
-import { createHash } from "node:crypto";
+import assert from "node:assert/strict";
+import { createHash, randomUUID } from "node:crypto";
 
 import {
   itemOutcomeEventSchema,
   itemOutcomeStateSchema,
   itemResolutionSchema,
+  MAX_RECORDS_PER_SECTION_SAVE,
 } from "@customreport/shared";
 import {
   ItemType,
@@ -14,8 +16,12 @@ import {
 } from "@prisma/client";
 
 import { PROJECT_ACTIVITY_IDS } from "../../prisma/seeds/simple/seed-simple.activities.js";
-import { LEAD_1 } from "../../prisma/seeds/simple/seed-simple.ids.js";
+import {
+  LEAD_1,
+  REPORT_ACTIVE,
+} from "../../prisma/seeds/simple/seed-simple.ids.js";
 import { OPEN_WORK_FIXTURE } from "./fixture-data.js";
+import { validateE2eRuntimeTarget } from "./runtime-target.js";
 
 const activityId = PROJECT_ACTIVITY_IDS[0];
 if (!activityId) {
@@ -101,6 +107,81 @@ export function buildOpenWorkItemData(sectionId: string) {
     nextStepText: null,
     resolution: Prisma.DbNull,
   }));
+}
+
+export function buildSectionItemLimitData(
+  sectionId: string,
+  existingCount: number,
+): Prisma.ItemCreateManyInput[] {
+  assert(
+    Number.isSafeInteger(existingCount) &&
+      existingCount >= 0 &&
+      existingCount <= MAX_RECORDS_PER_SECTION_SAVE,
+    "E2E section item-limit baseline item count must be within the canonical cap",
+  );
+  return Array.from(
+    { length: MAX_RECORDS_PER_SECTION_SAVE - existingCount },
+    (_, index) => {
+      const stableId = randomUUID();
+      return {
+        id: stableId,
+        stableId,
+        reportSectionId: sectionId,
+        activityId: ACTIVITY_ID,
+        projectId: null,
+        type: ItemType.current,
+        text: `E2E section limit filler ${index + 1}`,
+        tag: "feature",
+        workflowStatus: ItemWorkflowStatus.in_progress,
+        carriedOver: false,
+        stageNames: [],
+        priorityRank: null,
+        pausedReason: null,
+        nextStepText: null,
+        resolution: Prisma.DbNull,
+      };
+    },
+  );
+}
+
+export async function fillSectionItemLimit(
+  prisma: PrismaClient,
+  section: ReportSection,
+): Promise<void> {
+  const scriptName = "e2e-section-item-limit";
+  validateE2eRuntimeTarget(scriptName);
+  assert(
+    section.reportId === REPORT_ACTIVE && section.authorId === LEAD_1,
+    "E2E section item-limit fixture requires the expected owning Lead section",
+  );
+  const where = { reportSectionId: section.id };
+  const existingCount = await prisma.item.count({ where });
+  const continuation = OPEN_WORK_ITEMS.find(
+    ({ text }) => text === OPEN_WORK_FIXTURE.continue,
+  );
+  assert(continuation, "E2E historical Continue fixture is required");
+  assert.equal(
+    await prisma.item.count({
+      where: { ...where, stableId: continuation.id },
+    }),
+    0,
+    "E2E historical Continue work must be absent from the active owning section",
+  );
+  const data = buildSectionItemLimitData(section.id, existingCount);
+  if (data.length > 0) {
+    validateE2eRuntimeTarget(scriptName);
+    const created = await prisma.item.createMany({ data });
+    assert.equal(
+      created.count,
+      data.length,
+      "E2E item-limit filler count changed",
+    );
+  }
+  assert.equal(
+    await prisma.item.count({ where }),
+    MAX_RECORDS_PER_SECTION_SAVE,
+    "E2E owning section must contain exactly the canonical item limit",
+  );
 }
 
 async function createItemOutcomeEvent(

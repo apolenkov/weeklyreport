@@ -12,6 +12,7 @@ import {
   type BrowserSnapshot,
   close,
   command,
+  fill,
   findRole,
   getAttr,
   getUrl,
@@ -23,15 +24,22 @@ import {
 } from "./browser.js";
 import { registerE2eHooks } from "./fixtures.js";
 import {
+  clickBackdrop,
   LEAD_FORM_FIXTURE,
   loginAsHead,
+  oneRef,
   openLeadReport,
   roleText,
   saveDraft,
   scopeCount,
+  scopedRef,
   scopeSnapshot,
   setOffline,
+  waitButton,
+  waitClosed,
+  waitScope,
 } from "./helpers.js";
+import { scopeSnapshots } from "./snapshot-scope.js";
 
 registerE2eHooks();
 
@@ -45,55 +53,15 @@ const WEEKLY_FORM = {
   role: "form",
   name: `Weekly fields for ${LEAD_FORM_FIXTURE.activityName}`,
 };
+const VIEW_MODE = { role: "group", name: "View mode" };
 
 interface Scope {
   readonly role: string;
   readonly name: string;
 }
 
-function roleBlocks(tree: string, role: string): string[] {
-  const lines = tree.split("\n");
-  return lines.flatMap((line, index) => {
-    const prefix = /^\s*/.exec(line)?.[0] ?? "";
-    if (!line.trimStart().startsWith(`- ${role}`)) return [];
-    const boundary = lines.findIndex(
-      (candidate, candidateIndex) =>
-        candidateIndex > index &&
-        candidate.trim().length > 0 &&
-        (/^\s*/.exec(candidate)?.[0].length ?? 0) <= prefix.length,
-    );
-    return [
-      lines.slice(index, boundary === -1 ? lines.length : boundary).join("\n"),
-    ];
-  });
-}
-
-function snapshotBlock(data: BrowserSnapshot, block: string): BrowserSnapshot {
-  const ids = new Set(
-    [...block.matchAll(/\bref=(e\d+)\b/g)].map((match) => match[1]),
-  );
-  return {
-    snapshot: block,
-    refs: Object.fromEntries(
-      Object.entries(data.refs).filter(([id]) => ids.has(id)),
-    ),
-  };
-}
-
 function namedScope(data: BrowserSnapshot, scope: Scope): BrowserSnapshot {
   return scopeSnapshot(data, scope.role, scope.name);
-}
-
-function oneRef(
-  data: BrowserSnapshot,
-  role: string,
-  name: string | RegExp,
-): string {
-  const refs = refsByRole(data, role, name);
-  assert.equal(refs.length, 1, `Expected one ${role}: ${String(name)}`);
-  const ref = refs.at(0);
-  assert(ref);
-  return ref;
 }
 
 function disabledRef(
@@ -111,13 +79,13 @@ function disabledRef(
   return ref;
 }
 
-async function scopedRef(
-  scope: Scope,
-  role: string,
-  name: string | RegExp,
-  session?: string,
-) {
-  return oneRef(namedScope(await snapshot(session), scope), role, name);
+function assertPendingSubmissionActions(data: BrowserSnapshot): void {
+  assert.equal(refsByRole(data, "button", "Submit report").length, 0);
+  disabledRef(
+    scopeSnapshot(data, "group", "Header completion actions"),
+    "button",
+    "Submit",
+  );
 }
 
 async function clickIn(
@@ -158,35 +126,13 @@ function scopePredicate(scope: Scope): string {
   return String.raw`(element.getAttribute('role') === ${role} || (${role} === 'form' && element.tagName === 'FORM')) && (element.getAttribute('aria-label') === ${name} || (element.getAttribute('aria-labelledby') || '').split(/\s+/).map(id => document.getElementById(id)?.textContent?.replace(/\s+/g, ' ').trim() || '').join(' ') === ${name})`;
 }
 
-async function waitClosed(scope: Scope, session?: string): Promise<void> {
-  await command(
-    [
-      "wait",
-      "--fn",
-      `!Array.from(document.getElementsByTagName('*')).some(element => ${scopePredicate(scope)})`,
-    ],
-    session,
-  );
-}
-
-async function waitScope(scope: Scope): Promise<void> {
-  await command([
-    "wait",
-    "--fn",
-    `Array.from(document.getElementsByTagName('*')).some(element => element.getClientRects().length > 0 && ${scopePredicate(scope)})`,
-  ]);
-}
-
-async function waitButton(name: string, present = true): Promise<void> {
-  await command([
-    "wait",
-    "--fn",
-    String.raw`Array.from(document.getElementsByTagName('button')).some(button => button.getClientRects().length > 0 && (button.getAttribute('aria-label') ?? button.innerText.replace(/\s+/g, ' ').trim()) === ${JSON.stringify(name)}) === ${present}`,
-  ]);
-}
-
 async function clickPoint(x: number, y: number): Promise<void> {
-  await command(["mouse", "move", String(x), String(y)]);
+  await command([
+    "mouse",
+    "move",
+    String(Math.round(x)),
+    String(Math.round(y)),
+  ]);
   await command(["mouse", "down", "left"]);
   await command(["mouse", "up", "left"]);
 }
@@ -199,19 +145,6 @@ async function clickDisabledButton(data: BrowserSnapshot, name: string) {
   assert(typeof box.width === "number" && box.width > 0);
   assert(typeof box.height === "number" && box.height > 0);
   await clickPoint(box.x + box.width / 2, box.y + box.height / 2);
-}
-
-async function clickBackdrop(scope: Scope): Promise<void> {
-  const data = await command([
-    "eval",
-    `(() => { const dialogs = Array.from(document.getElementsByTagName('div')).filter(element => ${scopePredicate(scope)}); if (dialogs.length !== 1) throw new Error('Expected one named dialog'); const rect = dialogs[0].getBoundingClientRect(); return { x: rect.x, y: rect.y, height: rect.height }; })()`,
-  ]);
-  const box = data.result;
-  assert(typeof box === "object" && box !== null);
-  assert("x" in box && typeof box.x === "number" && box.x > 1);
-  assert("y" in box && typeof box.y === "number");
-  assert("height" in box && typeof box.height === "number" && box.height > 0);
-  await clickPoint(box.x - 1, box.y + box.height / 2);
 }
 
 async function startActivityUpdate(text: string): Promise<void> {
@@ -310,15 +243,57 @@ async function postCount(procedure: string): Promise<number> {
   ).length;
 }
 
-function previousMarketingPlan(data: BrowserSnapshot): string {
+function previousMarketingPlan(data: BrowserSnapshot): BrowserSnapshot {
   const product = scopeSnapshot(
     data,
     "article",
     `Product ${LEAD_FORM_FIXTURE.productName}`,
   );
-  const previous = scopeSnapshot(product, "group", /^Previously planned/);
-  assert(previous.snapshot.includes(LEAD_FORM_FIXTURE.previousText));
-  return previous.snapshot.replaceAll(/\bref=e\d+\b/g, "ref");
+  const matches = scopeSnapshots(
+    product,
+    "group",
+    /^PREVIOUSLY PLANNED/,
+  ).filter((group) => group.snapshot.includes(LEAD_FORM_FIXTURE.previousText));
+  assert.equal(matches.length, 1, "Expected the owning prior-plan lineage");
+  const previous = matches.at(0);
+  assert(previous);
+  return previous;
+}
+
+function snapshotNodeName(data: BrowserSnapshot): string {
+  const match = /^\s*- \S+ ("(?:\\.|[^"\\])*")/u.exec(data.snapshot);
+  assert(match?.[1], "Expected a named accessibility node");
+  const name: unknown = JSON.parse(match[1]);
+  assert(typeof name === "string", "Expected an accessibility name");
+  return name;
+}
+
+function previousPlanData(previous: BrowserSnapshot) {
+  let content = previous.snapshot;
+  for (const button of scopeSnapshots(previous, "button")) {
+    content = content.replaceAll(button.snapshot, "");
+  }
+  return {
+    period: snapshotNodeName(previous),
+    values: scopeSnapshots({ snapshot: content, refs: {} }, "StaticText").map(
+      snapshotNodeName,
+    ),
+  };
+}
+
+function assertPreviousControls(previous: BrowserSnapshot, canPlan: boolean) {
+  assert.equal(
+    refsByRole(
+      previous,
+      "button",
+      `Plan this work: ${shortItemLabel(LEAD_FORM_FIXTURE.previousText)}`,
+    ).length,
+    canPlan ? 1 : 0,
+  );
+  assert.equal(
+    refsByRole(previous, "button", /^Update progress for /).length,
+    0,
+  );
 }
 
 async function saveConcurrentLeadUpdate(
@@ -416,7 +391,7 @@ async function prepareSubmission(): Promise<void> {
 }
 
 async function submitReport(currentCount = 6): Promise<void> {
-  await findRole("button", "Submit report", "click");
+  await clickIn({ role: "group", name: "Header completion actions" }, "Submit");
   const confirmation = { role: "alertdialog", name: "Confirm submission" };
   const contents = await roleText("alertdialog", confirmation.name);
   assert.match(
@@ -438,6 +413,8 @@ async function assertSubmitted(): Promise<void> {
   const data = await snapshot();
   assert.match(data.snapshot, /Submitted/);
   assert.equal(refsByRole(data, "button", "Save draft now").length, 0);
+  assert.equal(refsByRole(data, "button", "Submit").length, 0);
+  assert.equal(refsByRole(data, "button", "Submit report").length, 0);
   assert.equal(
     refsByRole(data, "button", `Add item to ${LEAD_FORM_FIXTURE.activityName}`)
       .length,
@@ -455,13 +432,13 @@ async function assertSubmitted(): Promise<void> {
 
 function headLeadRow(data: BrowserSnapshot): BrowserSnapshot {
   const summary = namedScope(data, { role: "region", name: "Period Summary" });
-  const rows = roleBlocks(summary.snapshot, "listitem").filter((block) =>
-    block.includes(LEAD_FORM_FIXTURE.leadDisplayName),
+  const rows = scopeSnapshots(summary, "listitem").filter((block) =>
+    block.snapshot.includes(LEAD_FORM_FIXTURE.leadDisplayName),
   );
   assert.equal(rows.length, 1, "Expected the owning Lead in the Head queue");
   const row = rows.at(0);
   assert(row);
-  return snapshotBlock(data, row);
+  return row;
 }
 
 async function reopenRow(
@@ -472,8 +449,8 @@ async function reopenRow(
     role: "region",
     name: "Pending reopen requests",
   });
-  const rows = roleBlocks(queue.snapshot, "listitem").filter((block) =>
-    block.includes(reason),
+  const rows = scopeSnapshots(queue, "listitem").filter((block) =>
+    block.snapshot.includes(reason),
   );
   assert.equal(
     rows.length,
@@ -482,7 +459,7 @@ async function reopenRow(
   );
   const row = rows.at(0);
   assert(row);
-  return snapshotBlock(queue, row);
+  return row;
 }
 
 async function respondToReopen(
@@ -497,10 +474,8 @@ async function respondToReopen(
       ["click", oneRef(await reopenRow(reason, session), "button", "Respond")],
       session,
     );
-    await findRole(
-      "textbox",
+    await fill(
       "Comment (optional, up to 500 characters)",
-      "fill",
       `E2E ${decision.toLowerCase()} response`,
       session,
     );
@@ -509,10 +484,8 @@ async function respondToReopen(
       ["click", oneRef(await reopenRow(reason, session), "button", "Respond")],
       session,
     );
-    await findRole(
-      "textbox",
+    await fill(
       "Comment (optional, up to 500 characters)",
-      "fill",
       `E2E ${decision.toLowerCase()} response`,
       session,
     );
@@ -526,8 +499,8 @@ async function respondToReopen(
       session,
     );
     assert.equal(
-      roleBlocks((await snapshot(session)).snapshot, "listitem").filter(
-        (block) => block.includes(reason),
+      scopeSnapshots(await snapshot(session), "listitem").filter((block) =>
+        block.snapshot.includes(reason),
       ).length,
       0,
     );
@@ -543,7 +516,7 @@ async function sendReopen(reason: string): Promise<void> {
   await clickIn(dialog, "Send request");
   await waitText("Reopen request sent to Head");
   await waitClosed(dialog);
-  await waitButton("Request reopen", false);
+  await waitButton("Request reopen", { present: false });
   assert.equal(
     refsByRole(await snapshot(), "button", "Request reopen").length,
     0,
@@ -570,10 +543,7 @@ void test("save failure preserves local changes and recovers", async () => {
     await clickIn(ACTIVITY_FORM, "Save update");
     await waitText("Save failed. Your update is still here; try saving again.");
     assert.equal(await inputValue(ACTIVITY_FORM, "Description *"), text);
-    assert.equal(
-      refsByRole(await snapshot(), "button", "Submit report").length,
-      0,
-    );
+    assertPendingSubmissionActions(await snapshot());
     assert.equal(await reportActionsDisabled(), true);
   } finally {
     await command(["network", "unroute", SAVE_ROUTE]);
@@ -615,11 +585,7 @@ void test("pending canonical save locks write actions until connectivity returns
   try {
     await setOffline(true);
     await clickIn(ACTIVITY_FORM, "Save update");
-    await command([
-      "wait",
-      "--fn",
-      `Array.from(document.getElementsByTagName('button')).some(button => button.getAttribute('aria-label') === 'Saving draft' && button.getAttribute('aria-busy') === 'true')`,
-    ]);
+    await waitButton("Saving draft", { busy: true });
     const saving = oneRef(await snapshot(), "button", "Saving draft");
     assert.equal(await getAttr(saving, "aria-busy"), "true");
     assert.equal((await command(["is", "enabled", saving])).enabled, false);
@@ -631,7 +597,7 @@ void test("pending canonical save locks write actions until connectivity returns
       refsByRole(pending, "button", /^Update progress for /).length,
       0,
     );
-    assert.equal(refsByRole(pending, "button", "Submit report").length, 0);
+    assertPendingSubmissionActions(pending);
     assert.equal(await reportActionsDisabled(), true);
     await command(["press", "Escape"]);
     assert.equal(await inputValue(ACTIVITY_FORM, "Description *"), text);
@@ -657,12 +623,9 @@ void test("pending edits guard navigation and competing write actions", async ()
   await waitText(
     "Save or cancel the open update before submitting the report.",
   );
-  assert.equal(
-    refsByRole(await snapshot(), "button", "Submit report").length,
-    0,
-  );
+  assertPendingSubmissionActions(await snapshot());
   assert.equal(await reportActionsDisabled(), true);
-  await findRole("link", "Slides", "click");
+  await command(["click", await scopedRef(VIEW_MODE, "link", "Slides")]);
   const dialog = await command(["dialog", "status"]);
   assert.equal(dialog.hasDialog, true);
   assert.equal(dialog.type, "confirm");
@@ -696,7 +659,10 @@ void test("accepted navigation retains pending input without changing the saved 
   await startActivityUpdate(text);
   await command(["network", "requests"]);
   await command(["network", "requests", "--clear"]);
-  const clicked = await findRole("link", "Slides", "click");
+  const clicked = await command([
+    "click",
+    await scopedRef(VIEW_MODE, "link", "Slides"),
+  ]);
   assert.equal(clicked.dialogOpened, true);
   const dialog = await command(["dialog", "status"]);
   assert.equal(dialog.hasDialog, true);
@@ -718,18 +684,12 @@ void test("accepted navigation retains pending input without changing the saved 
   assert(slides.snapshot.includes(LEAD_FORM_FIXTURE.currentText));
   assert(!slides.snapshot.includes(text));
   assert.equal(await postCount("reports.saveDraft"), 0);
-  await findRole("link", "Report", "click");
-  await command([
-    "wait",
-    "--fn",
-    `window.location.pathname === ${JSON.stringify(path)} && window.location.search === ''`,
-  ]);
+  await command(["click", await scopedRef(VIEW_MODE, "link", "Report")]);
+  await command(["wait", "--url", `**${path}`]);
   assert.equal(new URL(await getUrl()).pathname, path);
-  await command([
-    "wait",
-    "--fn",
-    `Array.from(document.getElementsByTagName('form')).some(element => ${scopePredicate(ACTIVITY_FORM)}) && !Array.from(document.getElementsByTagName('section')).some(element => element.getAttribute('aria-label') === 'Unsaved update recovery')`,
-  ]);
+  assert.equal(new URL(await getUrl()).search, "");
+  await waitScope(ACTIVITY_FORM);
+  await waitClosed({ role: "region", name: "Unsaved update recovery" });
   assert.equal(await inputValue(ACTIVITY_FORM, "Description *"), text);
   assert.equal(
     scopeCount(await snapshot(), "region", "Unsaved update recovery"),
@@ -765,7 +725,9 @@ void test("concurrent Lead edits recover unsaved input without overwriting the s
   const serverText = "E2E authoritative second-session update";
   const peerSession = headSession();
   await openLeadReport();
-  const previous = previousMarketingPlan(await snapshot());
+  const initialPrevious = previousMarketingPlan(await snapshot());
+  const previous = previousPlanData(initialPrevious);
+  assertPreviousControls(initialPrevious, true);
   await findRole(
     "button",
     `Update progress for ${shortItemLabel(LEAD_FORM_FIXTURE.currentText)}`,
@@ -782,11 +744,7 @@ void test("concurrent Lead edits recover unsaved input without overwriting the s
       await saveConcurrentLeadUpdate(form, serverText, peerSession);
       assert.equal(await inputValue(form, "Description *"), localText);
       await clickIn(form, "Save update");
-      await command([
-        "wait",
-        "--fn",
-        `Array.from(document.getElementsByTagName('button')).some(button => button.getAttribute('aria-label') === 'Saving draft' && button.getAttribute('aria-busy') === 'true')`,
-      ]);
+      await waitButton("Saving draft", { busy: true });
       assert.equal(await postCount("reports.saveDraft"), 0);
     } finally {
       await setOffline(false);
@@ -797,7 +755,7 @@ void test("concurrent Lead edits recover unsaved input without overwriting the s
     await waitText(
       "This section was changed elsewhere. Reloaded the latest version — re-apply your changes and save again.",
     );
-    await waitButton("Saving draft", false);
+    await waitButton("Saving draft", { present: false });
     await assertConflictingSave();
     const data = await snapshot();
     const retained = namedScope(data, recovery);
@@ -811,25 +769,25 @@ void test("concurrent Lead edits recover unsaved input without overwriting the s
     );
     assert(product.snapshot.includes(serverText));
     assert(!product.snapshot.includes(localText));
-    assert.equal(previousMarketingPlan(data), previous);
+    const retainedPrevious = previousMarketingPlan(data);
+    assert.deepEqual(previousPlanData(retainedPrevious), previous);
+    assertPreviousControls(retainedPrevious, false);
     assert.equal(refsByRole(data, "button", /^Add item to /).length, 0);
     assert.equal(refsByRole(data, "button", /^Update progress for /).length, 0);
-    assert.equal(refsByRole(data, "button", "Submit report").length, 0);
+    assertPendingSubmissionActions(data);
     assert.equal(await reportActionsDisabled(), true);
     await clickIn(recovery, "Cancel");
     await clickIn({ role: "alertdialog", name: "Discard changes?" }, "Discard");
     await waitClosed(form);
-    await command([
-      "wait",
-      "--fn",
-      `!Array.from(document.getElementsByTagName('section')).some(section => section.getAttribute('aria-label') === 'Unsaved update recovery')`,
-    ]);
+    await waitClosed(recovery);
     assert.equal(await reportActionsDisabled(), false);
     await assertPersistedItem(serverText);
     const persisted = await snapshot();
     assert(!persisted.snapshot.includes(localText));
     assert.equal(scopeCount(persisted, "region", recovery.name), 0);
-    assert.equal(previousMarketingPlan(persisted), previous);
+    const persistedPrevious = previousMarketingPlan(persisted);
+    assert.deepEqual(previousPlanData(persistedPrevious), previous);
+    assertPreviousControls(persistedPrevious, true);
     assert.equal(await postCount("reports.saveDraft"), 1);
   } finally {
     await close(peerSession);
@@ -839,7 +797,7 @@ void test("concurrent Lead edits recover unsaved input without overwriting the s
 void test("submit, reopen and resubmit restore editability", async () => {
   await openLeadReport();
   await prepareSubmission();
-  await findRole("button", "Submit report", "click");
+  await clickIn({ role: "group", name: "Header completion actions" }, "Submit");
   const confirmation = { role: "alertdialog", name: "Confirm submission" };
   assert.match(
     namedScope(await snapshot(), confirmation).snapshot,
@@ -935,11 +893,13 @@ void test("Head request changes returns reason to Lead", async () => {
       [
         "wait",
         "--fn",
-        `Array.from(document.getElementsByTagName('li')).some(element => element.textContent.includes(${JSON.stringify(LEAD_FORM_FIXTURE.leadDisplayName)}) && element.textContent.includes('Draft'))`,
+        `Array.from(document.getElementsByTagName('li')).some(element => element.textContent.includes(${JSON.stringify(LEAD_FORM_FIXTURE.leadDisplayName)}) && element.textContent.includes('In progress') && element.textContent.includes('Changes requested'))`,
       ],
       session,
     );
-    assert.match(headLeadRow(await snapshot(session)).snapshot, /Draft/);
+    const updatedLead = headLeadRow(await snapshot(session));
+    assert.match(updatedLead.snapshot, /StaticText "In progress"/);
+    assert.match(updatedLead.snapshot, /StaticText "Changes requested"/);
   } finally {
     await close(session);
   }
@@ -1058,7 +1018,7 @@ void test("reopen reason limits, dirty cancel and failed request retain input", 
   await clickIn(dialog, "Send request");
   await waitText("Reopen request sent to Head");
   await waitClosed(dialog);
-  await waitButton("Request reopen", false);
+  await waitButton("Request reopen", { present: false });
   assert.equal(
     refsByRole(await snapshot(), "button", "Request reopen").length,
     0,
@@ -1094,7 +1054,7 @@ void test("reopen supports an empty optional reason", async () => {
   ]);
   await waitText("Reopen request sent to Head");
   await waitClosed(dialog);
-  await waitButton("Request reopen", false);
+  await waitButton("Request reopen", { present: false });
   await reload();
   await waitText("Submitted");
   await assertSubmitted();
@@ -1141,11 +1101,11 @@ void test("pending reopen request preserves reason and blocks dismissal and dupl
   try {
     await setOffline(true);
     await clickIn(dialog, "Send request");
-    await waitButton("Sending…");
+    await waitButton("Sending…", { busy: true });
     await assertPendingReopen(reason);
     await command(["press", "Escape"]);
     await assertPendingReopen(reason);
-    await clickBackdrop(dialog);
+    await clickBackdrop(dialog.name);
     await assertPendingReopen(reason);
     await clickDisabledButton(namedScope(await snapshot(), dialog), "Sending…");
     await command(["press", "Control+Enter"]);
@@ -1155,7 +1115,7 @@ void test("pending reopen request preserves reason and blocks dismissal and dupl
   }
   await waitText("Reopen request sent to Head");
   await waitClosed(dialog);
-  await waitButton("Request reopen", false);
+  await waitButton("Request reopen", { present: false });
   assert.equal(await postCount("leadForm.requestReopen"), 1);
   await reload();
   await waitText("Submitted");

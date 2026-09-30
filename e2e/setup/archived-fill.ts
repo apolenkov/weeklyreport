@@ -13,7 +13,7 @@ import {
 } from "@prisma/client";
 import pg from "pg";
 
-import { PROD_PORTAL } from "../../prisma/seeds/demo/seed-demo.demo-cast.js";
+import { DEMO_PRODUCTS } from "../../prisma/seeds/demo/seed-demo.demo-cast.js";
 import {
   plusDaysUTC,
   SUBMIT_DAY_OFFSET,
@@ -37,6 +37,13 @@ const ITEM_ID = "e2e00000-0000-4000-8000-0000000000f2";
 
 async function createArchivedSource(prisma: PrismaClient): Promise<void> {
   const period = SEED_REPORTS.published;
+  const product = DEMO_PRODUCTS.find(
+    ({ name }) => name === ARCHIVED_FILL_FIXTURE.productName,
+  );
+  assert(
+    product,
+    "Minimal seed product is required for the archived Fill fixture",
+  );
   const stage = SEED_STAGES.find(
     ({ name }) => name === ARCHIVED_FILL_FIXTURE.stageName,
   );
@@ -78,13 +85,13 @@ async function createArchivedSource(prisma: PrismaClient): Promise<void> {
           late: false,
           projectStatuses: {
             create: {
-              projectId: PROD_PORTAL,
+              projectId: product.id,
               status: TrafficLightStatus.green,
             },
           },
           stageStatuses: {
             create: {
-              projectId: PROD_PORTAL,
+              projectId: product.id,
               stageId: stage.id,
               status: TrafficLightStatus.green,
             },
@@ -93,7 +100,7 @@ async function createArchivedSource(prisma: PrismaClient): Promise<void> {
             create: {
               id: ITEM_ID,
               stableId: ARCHIVED_FILL_FIXTURE.sourceStableId,
-              projectId: PROD_PORTAL,
+              projectId: product.id,
               type: ItemType.next,
               text: ARCHIVED_FILL_FIXTURE.sourceText,
               tag: "e2e",

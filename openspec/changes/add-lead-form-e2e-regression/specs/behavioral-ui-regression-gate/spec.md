@@ -12,6 +12,13 @@ verified. The inventory MUST distinguish an implemented test from a successful
 execution against the current source revision. Assistant scenarios using CLI
 tRPC-response stubs MUST identify that UI response boundary and MUST NOT claim
 backend provider integration from those stubs.
+Native CLI selectors MUST follow the observed AX names and supported commands;
+native summary roles without refs MUST NOT be replaced with invented ARIA
+aliases. Shared AX polling MAY provide bounded role/name waits when the CLI has
+no role-wait command, but MUST NOT use fixed sleeps or fabricate UI state.
+Dialog interaction MUST await its actual accessible role/name and a settled,
+unobstructed surface; readiness checks MUST NOT force or retry clicks or mutate
+the DOM.
 
 #### Scenario: A conditional Lead control is discovered
 
@@ -53,6 +60,17 @@ value before saving. It MUST NOT assume English accessibility names or mutate
 the DOM through a script. A published-lineage Lead scenario MAY use real
 same-test Head period publication and reopen to establish that conditional
 state without expanding into a general Head regression suite.
+Item, Risk and Decision required-field validation and dirty-discard contracts
+MUST be separate independently prepared cases. A failure in one editor MUST
+NOT prevent exercising the other editors. The regression MUST retain strict
+expected focus-restoration assertions and report an observed failure rather
+than restore focus through test scripting or weaken the assertion.
+The real section item-count constraint MUST be exercised through historical
+prior-plan resolution against exactly 100 own section items. The composer MUST
+show `This section has reached its item limit.`, retain the unsaved input and
+leave saved work and historical content unchanged. An absent standalone
+count-limit modal MUST NOT hide this existing UI rejection or the canonical
+ItemEditDialog's separately covered 500-character validation.
 
 #### Scenario: Head returns the Lead section with a reason
 
@@ -92,6 +110,19 @@ state without expanding into a general Head regression suite.
 - **THEN** the UI reports the failure without claiming the input is saved
 - **AND** retrying against the real backend persists the retained input
 
+#### Scenario: Historical resolution reaches the item-count limit
+
+- **GIVEN** the owning Lead's editable section contains exactly 100 valid items
+- **WHEN** the Lead saves a historical prior plan through its real outcome composer
+- **THEN** its alert shows `This section has reached its item limit.` and the typed input remains
+- **AND** cancellation and reload preserve the original saved section and immutable history
+
+#### Scenario: One editor fails its focus-restoration contract
+
+- **WHEN** the Item dialog's dirty-discard flow fails to return focus to its verified opener
+- **THEN** its strict assertion remains failing with observable evidence
+- **AND** the Risk and Decision validation/discard cases prepare independent baselines and still execute
+
 ### Requirement: Lead browser tests prepare independent disposable state
 
 Every Lead browser test MUST receive fresh named browser session state and prepare its
@@ -110,6 +141,14 @@ the empty Fill-source hint and archived-picker condition. Other profiles MUST
 reject that variant before spawning preparation or resetting. Each conditional
 scenario MUST prepare its own source, not inherit a prior test's history.
 Interactions under test MUST use existing authorized application writes.
+An explicit `section-item-limit` variant MAY fill the canonical demo baseline
+plus its normal overlay to exactly 100 valid items in the expected own Lead
+section, only for the item-count rejection case. Parent and child MUST reject
+that variant with another profile before spawning/resetting. The fixture MUST
+pass the exact destructive guard and verify owner/baseline count before any
+mutation, and MUST assert the exact final count. Its writes MUST remain in the
+owned cancellable preparation group; the browser/test process MUST NOT create
+another Prisma client or perform fixture writes.
 
 #### Scenario: One scenario is selected alone
 
@@ -129,6 +168,13 @@ Interactions under test MUST use existing authorized application writes.
 - **THEN** its own archived published source and frozen snapshot are created in the guarded preparation group
 - **AND** ordinary demo and minimal preparation remain unchanged
 - **AND** the empty quick-fill hint and archive-toggle behavior are checked through the real Lead controls
+
+#### Scenario: Item-count rejection prepares its own boundary state
+
+- **WHEN** the item-count scenario explicitly prepares demo with the section-item-limit variant
+- **THEN** the guarded canonical demo seed and normal overlay precede valid fixture rows bringing its own section to exactly 100 items
+- **AND** owner/count assertions run before mutation and the fixture remains inside the same owned preparation group
+- **AND** ordinary demo/minimal preparation and other tests' independence are unchanged
 
 ### Requirement: Cancelled preparation leaves no owned database writers
 
@@ -177,7 +223,10 @@ before browser execution. All regression Redis clients and any cleanup MUST
 use logical DB 15; cleanup MUST pass the same PostgreSQL guard and consent.
 Target mismatch, missing consent or another Redis DB MUST fail before a
 destructive operation. Browser execution MUST require the coordinator's
-explicit handoff of the shared target and MUST NOT start web or API servers.
+explicit handoff of the shared target and MUST NOT start, stop or restart its
+web/API processes. After the authorized live task, the canonical full dataset
+MUST be restored through the guarded reset/seed workflow from the application
+checkout, with exit code 0 recorded before target handoff.
 
 #### Scenario: Setup receives a runtime lane or another database
 
@@ -190,6 +239,12 @@ explicit handoff of the shared target and MUST NOT start web or API servers.
 - **WHEN** `REDIS_DB` is not exactly `15` or the exact consent is missing
 - **THEN** setup fails before reset, seed or Redis cleanup
 
+#### Scenario: The authorized live task returns the shared target
+
+- **WHEN** browser correction and acceptance finish against the handed-over target
+- **THEN** the canonical full reset and seed complete through the repository guard with exit 0
+- **AND** the report records restoration without stopping or restarting the existing web/API
+
 ### Requirement: Browser regression uses the selected CLI with native Node tests
 
 The `pnpm test:e2e` consumer MUST run TypeScript `node:test` scenarios through
@@ -199,9 +254,12 @@ a uniquely named session within its worktree and retain that session identity
 across its commands. Head operations in one scenario MUST use a separate owned
 session. Setup and module imports MUST NOT launch browsers or connect to
 services during static checks. Current implementation MUST NOT run browser
-tests, session creation, reset or seed while the shared target is occupied.
+tests, session creation, reset or seed without the coordinator's exclusive
+handoff of the shared target. Global setup MUST validate configuration and
+initialize the owned session base without a redundant data reset; each test's
+fixture remains responsible for its independent guarded preparation.
 
-#### Scenario: Future run acquires its browser identity
+#### Scenario: Authorized run acquires its browser identity
 
 - **WHEN** the coordinator starts an authorized regression run after target handoff
 - **THEN** setup creates a unique worktree-scoped session and passes its identity to CLI commands
@@ -222,7 +280,16 @@ exit codes for `pnpm typecheck`, `pnpm lint`, `pnpm format:check` and
 `pnpm spec:check`, with all four required to be zero. Other unit/build results
 MUST remain separate from browser acceptance. Browser execution MUST remain
 explicitly pending whenever it was not run. A discovery or help command
-MUST NOT be treated as runtime proof.
+MUST NOT be treated as runtime proof. After authorized live execution, delivery
+evidence MUST record the final complete `pnpm test:e2e` exit code, pass/fail
+counts and application/runner source revisions. Reproduced product defects
+MUST retain observable evidence and failing assertions rather than be hidden
+by weaker tests.
+Final acceptance MUST include independent review of the final SHA by a
+different model, including ponytail review, and successful remote CI for that
+same SHA. If publication is forbidden and that CI result is unavailable, the
+local delivery MUST record CI as NOT VERIFIED and keep coordinator verification
+open rather than claim complete acceptance.
 
 #### Scenario: A browser run emits output or snapshots
 
@@ -230,8 +297,20 @@ MUST NOT be treated as runtime proof.
 - **THEN** the artifact resides outside the repository
 - **AND** ordinary unit/CI entrypoints remain unchanged
 
-#### Scenario: Delivery happens under the current runtime prohibition
+#### Scenario: Delivery happens before exclusive runtime handoff
 
 - **WHEN** all four static gates pass but browser execution remains forbidden
 - **THEN** the report records those exact exit codes and the coordinator command
 - **AND** it records browser runtime acceptance as pending
+
+#### Scenario: A live run reproduces a product defect
+
+- **WHEN** the final browser run fails on a reproduced current-product defect
+- **THEN** the report records the failed assertion and observable evidence with the complete run's exit code and counts
+- **AND** the regression does not weaken or skip the failing assertion to manufacture acceptance
+
+#### Scenario: Local delivery has no same-SHA remote CI result
+
+- **WHEN** local gates and browser acceptance have evidence but pushing is forbidden and final-SHA remote CI is unavailable
+- **THEN** the handoff records CI as NOT VERIFIED for the coordinator
+- **AND** a prior SHA's green CI or an advisory review does not complete acceptance for the delivered SHA

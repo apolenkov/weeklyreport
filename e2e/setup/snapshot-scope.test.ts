@@ -5,6 +5,7 @@ import {
   type BrowserSnapshot,
   scopeCount,
   scopeSnapshot,
+  scopeSnapshots,
 } from "../lead-form/snapshot-scope.js";
 
 const example: BrowserSnapshot = {
@@ -37,6 +38,12 @@ void test("structural scopes retain combined-attribute descendant refs and exclu
   assert.deepEqual(Object.keys(current.refs), ["e1", "e2"]);
   assert(!current.snapshot.includes("Other product"));
   assert.equal(scopeCount(example, "article", /product/u), 2);
+  assert.deepEqual(
+    scopeSnapshots(example, "article", /product/u).map((scope) =>
+      Object.keys(scope.refs),
+    ),
+    [["e1", "e2"], ["e3"]],
+  );
 });
 
 void test("scope names support quoted accessible names and unnamed structural groups", () => {

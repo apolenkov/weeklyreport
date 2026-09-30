@@ -13,6 +13,7 @@ import {
   buildOpenWorkItemData,
   createCancelledEvent,
   createCompletedEvent,
+  fillSectionItemLimit,
 } from "./overlay-items.js";
 import {
   addExplicitNextCommitment,
@@ -44,7 +45,9 @@ async function upsertActivityStatus(
   });
 }
 
-export async function applyE2eFixtureOverlay(): Promise<void> {
+export async function applyE2eFixtureOverlay(
+  scenario?: "section-item-limit",
+): Promise<void> {
   const target = validateE2eRuntimeTarget(OVERLAY_SCRIPT_NAME);
   const pool = new pg.Pool({ connectionString: target.e2eDatabaseUrl });
   const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
@@ -93,6 +96,9 @@ export async function applyE2eFixtureOverlay(): Promise<void> {
 
     validateE2eRuntimeTarget(OVERLAY_SCRIPT_NAME);
     await finalizePublishedSnapshots(prisma);
+    if (scenario === "section-item-limit") {
+      await fillSectionItemLimit(prisma, ownSection);
+    }
   } finally {
     await prisma.$disconnect();
     await pool.end();

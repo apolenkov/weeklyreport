@@ -66,14 +66,31 @@ export function scopeSnapshot(
   role: string,
   name?: string | RegExp,
 ): BrowserSnapshot {
-  const matches = matchingSnapshotLines(data, role, name);
+  const scopes = scopeSnapshots(data, role, name);
   assert(
-    matches.length === 1,
-    `Expected one ${role} snapshot scope, got ${matches.length}`,
+    scopes.length === 1,
+    `Expected one ${role} snapshot scope, got ${scopes.length}`,
   );
-  const match = matches.at(0);
-  assert(match, "Missing snapshot scope");
+  const scope = scopes.at(0);
+  assert(scope, "Missing snapshot scope");
+  return scope;
+}
+
+export function scopeSnapshots(
+  data: BrowserSnapshot,
+  role: string,
+  name?: string | RegExp,
+): BrowserSnapshot[] {
+  const matches = matchingSnapshotLines(data, role, name);
   const lines = data.snapshot.split("\n");
+  return matches.map((match) => snapshotSubtree(data, lines, match));
+}
+
+function snapshotSubtree(
+  data: BrowserSnapshot,
+  lines: readonly string[],
+  match: SnapshotLine,
+): BrowserSnapshot {
   const start = match.index;
   let end = start + 1;
   while (end < lines.length) {
