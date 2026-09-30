@@ -1,3 +1,4 @@
+import type { Prisma, PrismaClient } from "@prisma/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 async function loadPeriodProfiles(referenceDate: string) {
@@ -16,6 +17,58 @@ afterEach(() => {
 });
 
 describe("seed reporting-period UTC boundaries", () => {
+  it("keeps one published report per week when full extends the simple seed", async () => {
+    await loadPeriodProfiles("2026-09-02T12:00:00Z");
+    const [{ seedReports }, { seedHistoryPeriods }] = await Promise.all([
+      import("../simple/seed-simple.reports.js"),
+      import("../advanced/seed-advanced.history.js"),
+    ]);
+    const reports = new Map<string, Prisma.ReportCreateManyInput>();
+    const storeReport = (data: Prisma.ReportCreateManyInput) => {
+      if (!data.id) throw new Error("Seed report requires a deterministic id");
+      reports.set(data.id, data);
+    };
+    const ignoredUpsert = () => Promise.resolve({});
+    const prisma = {
+      report: {
+        createMany: ({ data }: { data: Prisma.ReportCreateManyInput[] }) => {
+          for (const report of data) storeReport(report);
+          return Promise.resolve({ count: data.length });
+        },
+        upsert: (args: {
+          where: { id: string };
+          create: Prisma.ReportCreateManyInput;
+          update: Partial<Prisma.ReportCreateManyInput>;
+        }) => {
+          const stored = reports.get(args.where.id);
+          storeReport(stored ? { ...stored, ...args.update } : args.create);
+          return Promise.resolve(reports.get(args.where.id));
+        },
+      },
+      reportSection: { upsert: ignoredUpsert },
+      projectStatus: { upsert: ignoredUpsert },
+      item: { upsert: ignoredUpsert },
+    } as unknown as PrismaClient;
+    const publishedStarts = () =>
+      [...reports.values()]
+        .filter(({ status }) => status === "published")
+        .map(({ periodStart }) => new Date(periodStart).toISOString())
+        .sort();
+    const expected = [
+      "2026-07-27T00:00:00.000Z",
+      "2026-08-03T00:00:00.000Z",
+      "2026-08-10T00:00:00.000Z",
+      "2026-08-17T00:00:00.000Z",
+      "2026-08-24T00:00:00.000Z",
+    ];
+
+    await seedReports(prisma);
+    expect(publishedStarts()).toEqual(expected);
+    await seedHistoryPeriods(prisma);
+    expect(publishedStarts()).toEqual(expected);
+    expect(reports.size).toBe(8);
+  });
+
   it("keeps simple and full profiles on identical pinned boundaries", async () => {
     const { simple, support } = await loadPeriodProfiles(
       "2026-09-02T12:00:00Z",

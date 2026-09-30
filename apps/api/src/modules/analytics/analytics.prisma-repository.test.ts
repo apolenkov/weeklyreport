@@ -1,8 +1,4 @@
-import type {
-  TrafficLightCell,
-  TrafficLightStatus,
-  UserSession,
-} from "@customreport/shared";
+import type { TrafficLightCell, UserSession } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
@@ -45,7 +41,7 @@ interface SnapshotSectionInput {
   readonly groupId: string;
   readonly projectId?: string;
   readonly projectName?: string;
-  readonly status?: TrafficLightStatus;
+  readonly status?: TrafficLightCell;
   readonly submitted?: boolean;
   readonly late?: boolean;
 }
@@ -89,6 +85,7 @@ function publishedRow(args: {
   reportId: string;
   periodEnd?: string;
   createdAt?: string;
+  publishedAt?: string;
   sections: readonly SnapshotSectionInput[];
 }) {
   const periodEnd = args.periodEnd ?? "2026-04-21T12:00:00.000Z";
@@ -102,7 +99,7 @@ function publishedRow(args: {
       periodEnd,
       deadline: "2026-04-20T00:00:00.000Z",
       status: "published",
-      publishedAt: "2026-04-21T13:00:00.000Z",
+      publishedAt: args.publishedAt ?? "2026-04-21T13:00:00.000Z",
       publishedById: null,
       publishedByName: null,
       portfolioOverview: {
@@ -122,29 +119,29 @@ function repositoryForRows(rows: readonly ReturnType<typeof publishedRow>[]) {
   return { repo: new AnalyticsPrismaRepository(prisma), findMany };
 }
 
+const sectionA: SnapshotSectionInput = {
+  sectionId: SECTION_A,
+  authorId: LEAD_A,
+  authorName: "Lead A",
+  groupId: GROUP_A,
+  projectId: PROJECT_A,
+  projectName: "Project A",
+  status: "green",
+};
+const sectionB: SnapshotSectionInput = {
+  sectionId: SECTION_B,
+  authorId: LEAD_B,
+  authorName: "Lead B",
+  groupId: GROUP_B,
+  projectId: PROJECT_B,
+  projectName: "Project B",
+  status: "red",
+};
+
 const groupRows = [
   publishedRow({
     reportId: REPORT_A,
-    sections: [
-      {
-        sectionId: SECTION_A,
-        authorId: LEAD_A,
-        authorName: "Lead A",
-        groupId: GROUP_A,
-        projectId: PROJECT_A,
-        projectName: "Project A",
-        status: "green",
-      },
-      {
-        sectionId: SECTION_B,
-        authorId: LEAD_B,
-        authorName: "Lead B",
-        groupId: GROUP_B,
-        projectId: PROJECT_B,
-        projectName: "Project B",
-        status: "red",
-      },
-    ],
+    sections: [sectionA, sectionB],
   }),
 ];
 
@@ -172,7 +169,7 @@ describe("AnalyticsPrismaRepository frozen snapshot scoping", () => {
     expect(findMany.mock.calls[0]?.[0]).not.toHaveProperty("where.sections");
   });
 
-  it("applies leadId and group scope to the same frozen projection row", async () => {
+  it("filters a lead's frozen sections after group-scoped report admission", async () => {
     const { repo, findMany } = repositoryForRows(groupRows);
 
     const result = await repo.trafficLightHistory(
@@ -185,12 +182,14 @@ describe("AnalyticsPrismaRepository frozen snapshot scoping", () => {
       where: {
         publishedSectionScopes: {
           some: {
-            authorId: LEAD_A,
             groupId: { in: [GROUP_A] },
           },
         },
       },
     });
+    expect(findMany.mock.calls[0]?.[0]).not.toHaveProperty(
+      "where.publishedSectionScopes.some.authorId",
+    );
   });
 
   it("returns both frozen groups to an admin", async () => {
@@ -245,17 +244,27 @@ describe("AnalyticsPrismaRepository frozen snapshot scoping", () => {
   });
 });
 
-async function statusAFor(
-  rows: readonly ReturnType<typeof publishedRow>[],
-): Promise<TrafficLightCell> {
-  const findMany = vi.fn().mockResolvedValueOnce(rows).mockResolvedValue([]);
+async function comparisonFor(
+  rowsA: readonly ReturnType<typeof publishedRow>[],
+  rowsB: readonly ReturnType<typeof publishedRow>[] = [],
+) {
+  const findMany = vi
+    .fn()
+    .mockResolvedValueOnce(rowsA)
+    .mockResolvedValueOnce(rowsB);
   const repo = new AnalyticsPrismaRepository({
     report: { findMany },
   } as unknown as PrismaService);
-  const out = await repo.periodComparison(
+  return repo.periodComparison(
     { periodA: "2026-04-21", periodB: "2026-04-28" },
     adminSession,
   );
+}
+
+async function statusAFor(
+  rows: readonly ReturnType<typeof publishedRow>[],
+): Promise<TrafficLightCell> {
+  const out = await comparisonFor(rows);
   return out.rows.find((row) => row.projectId === PROJECT_A)?.statusA ?? null;
 }
 
@@ -300,7 +309,7 @@ describe("AnalyticsPrismaRepository deterministic tie-break", () => {
 });
 
 describe("AnalyticsPrismaRepository lead velocity", () => {
-  it("collapses two snapshot reports sharing a period label into one row", async () => {
+  it("uses only the latest publication's leads for a period label", async () => {
     const first = publishedRow({
       reportId: REPORT_A,
       periodEnd: "2026-04-21T08:00:00.000Z",
@@ -316,6 +325,7 @@ describe("AnalyticsPrismaRepository lead velocity", () => {
     const second = publishedRow({
       reportId: REPORT_B,
       periodEnd: "2026-04-21T20:00:00.000Z",
+      publishedAt: "2026-04-22T12:00:00.000Z",
       sections: [
         {
           sectionId: SECTION_B,
@@ -331,6 +341,202 @@ describe("AnalyticsPrismaRepository lead velocity", () => {
 
     expect(out).toHaveLength(1);
     expect(out[0]?.periodLabel).toBe("2026-04-21");
-    expect(out[0]?.leads.map((lead) => lead.leadId)).toEqual([LEAD_A, LEAD_B]);
+    expect(out[0]?.leads.map((lead) => lead.leadId)).toEqual([LEAD_B]);
+  });
+
+  it("keeps zero leads when a newer draft replaces an older submission", async () => {
+    const older = publishedRow({
+      reportId: REPORT_A,
+      sections: [sectionA],
+    });
+    const newer = publishedRow({
+      reportId: REPORT_B,
+      publishedAt: "2026-04-22T12:00:00.000Z",
+      sections: [
+        { ...sectionA, authorName: "Lead A at publication", submitted: false },
+        { ...sectionB, submitted: false },
+      ],
+    });
+    const { repo } = repositoryForRows([older, newer]);
+
+    await expect(
+      repo.leadVelocity(HISTORY_INPUT, adminSession),
+    ).resolves.toEqual([
+      {
+        periodLabel: "2026-04-21",
+        leads: [
+          {
+            leadId: LEAD_A,
+            leadName: "Lead A at publication",
+            submittedSections: 0,
+          },
+          { leadId: LEAD_B, leadName: "Lead B", submittedSections: 0 },
+        ],
+      },
+    ]);
+  });
+});
+
+describe("AnalyticsPrismaRepository authoritative publication", () => {
+  it.each([false, true])(
+    "uses publication order across all queries despite creation and periodEnd order (reverse=%s)",
+    async (reverse) => {
+      const earlierPublication = publishedRow({
+        reportId: REPORT_B,
+        periodEnd: "2026-04-21T20:00:00.000Z",
+        createdAt: "2026-04-22T12:00:00.000Z",
+        publishedAt: "2026-04-21T21:00:00.000Z",
+        sections: [sectionA],
+      });
+      const laterPublication = publishedRow({
+        reportId: REPORT_A,
+        periodEnd: "2026-04-21T08:00:00.000Z",
+        createdAt: "2026-04-20T12:00:00.000Z",
+        publishedAt: "2026-04-23T12:00:00.000Z",
+        sections: [
+          { ...sectionB, projectId: PROJECT_A, projectName: "Latest" },
+        ],
+      });
+      const rows = reverse
+        ? [laterPublication, earlierPublication]
+        : [earlierPublication, laterPublication];
+      const { repo } = repositoryForRows(rows);
+
+      const history = await repo.trafficLightHistory(
+        HISTORY_INPUT,
+        adminSession,
+      );
+      const comparison = await comparisonFor(rows);
+      const velocity = await repo.leadVelocity(HISTORY_INPUT, adminSession);
+
+      expect.soft(history).toEqual({
+        periods: ["2026-04-21"],
+        rows: [
+          { projectId: PROJECT_A, projectName: "Latest", statuses: ["red"] },
+        ],
+      });
+      expect.soft(comparison.rows[0]).toMatchObject({
+        projectId: PROJECT_A,
+        projectName: "Latest",
+        statusA: "red",
+      });
+      expect(velocity).toEqual([
+        {
+          periodLabel: "2026-04-21",
+          leads: [{ leadId: LEAD_B, leadName: "Lead B", submittedSections: 1 }],
+        },
+      ]);
+    },
+  );
+
+  it("preserves a winner's null project status and frozen name", async () => {
+    const older = publishedRow({ reportId: REPORT_A, sections: [sectionA] });
+    const newer = publishedRow({
+      reportId: REPORT_B,
+      publishedAt: "2026-04-22T12:00:00.000Z",
+      sections: [{ ...sectionA, projectName: "Latest null", status: null }],
+    });
+    const rows = [older, newer];
+    const { repo } = repositoryForRows(rows);
+
+    const history = await repo.trafficLightHistory(HISTORY_INPUT, adminSession);
+    const comparison = await comparisonFor(rows);
+
+    expect
+      .soft(history.rows)
+      .toEqual([
+        { projectId: PROJECT_A, projectName: "Latest null", statuses: [null] },
+      ]);
+    expect(comparison.rows[0]).toMatchObject({
+      projectId: PROJECT_A,
+      projectName: "Latest null",
+      statusA: null,
+    });
+  });
+
+  it("collects project membership only from the winning publication", async () => {
+    const older = publishedRow({ reportId: REPORT_A, sections: [sectionA] });
+    const newer = publishedRow({
+      reportId: REPORT_B,
+      publishedAt: "2026-04-22T12:00:00.000Z",
+      sections: [sectionB],
+    });
+    const { repo } = repositoryForRows([older, newer]);
+
+    await expect(
+      repo.trafficLightHistory(HISTORY_INPUT, adminSession),
+    ).resolves.toEqual({
+      periods: ["2026-04-21"],
+      rows: [
+        { projectId: PROJECT_B, projectName: "Project B", statuses: ["red"] },
+      ],
+    });
+  });
+
+  it("returns null when the winner lacks a project still present in another period", async () => {
+    const older = publishedRow({ reportId: REPORT_A, sections: [sectionA] });
+    const newer = publishedRow({
+      reportId: REPORT_B,
+      publishedAt: "2026-04-22T12:00:00.000Z",
+      sections: [sectionB],
+    });
+    const nextPeriod = publishedRow({
+      reportId: "10000000-0000-4000-8000-000000000003",
+      periodEnd: "2026-04-28T12:00:00.000Z",
+      publishedAt: "2026-04-28T13:00:00.000Z",
+      sections: [{ ...sectionA, projectName: "Next name", status: "yellow" }],
+    });
+    const { repo } = repositoryForRows([older, newer, nextPeriod]);
+
+    const history = await repo.trafficLightHistory(HISTORY_INPUT, adminSession);
+    const comparison = await comparisonFor([older, newer], [nextPeriod]);
+
+    expect
+      .soft(history.rows.find((row) => row.projectId === PROJECT_A))
+      .toEqual({
+        projectId: PROJECT_A,
+        projectName: "Next name",
+        statuses: [null, "yellow"],
+      });
+    expect(
+      comparison.rows.find((row) => row.projectId === PROJECT_A),
+    ).toMatchObject({
+      statusA: null,
+      statusB: "yellow",
+    });
+  });
+
+  it("does not fall back to an older report when the winner lacks the requested lead", async () => {
+    const rows = [
+      publishedRow({ reportId: REPORT_A, sections: [sectionA] }),
+      publishedRow({
+        reportId: REPORT_B,
+        publishedAt: "2026-04-22T12:00:00.000Z",
+        sections: [{ ...sectionB, groupId: GROUP_A }],
+      }),
+    ];
+    const findMany = vi.fn(
+      (query: {
+        where: { publishedSectionScopes?: { some?: { authorId?: string } } };
+      }) => {
+        const leadId = query.where.publishedSectionScopes?.some?.authorId;
+        return Promise.resolve(
+          rows.filter(
+            (row) =>
+              leadId === undefined ||
+              row.publishedSnapshot.sections.some(
+                (section) => section.authorId === leadId,
+              ),
+          ),
+        );
+      },
+    );
+    const repo = new AnalyticsPrismaRepository({
+      report: { findMany },
+    } as unknown as PrismaService);
+
+    await expect(
+      repo.trafficLightHistory({ ...HISTORY_INPUT, leadId: LEAD_A }, headA),
+    ).resolves.toEqual({ periods: ["2026-04-21"], rows: [] });
   });
 });
