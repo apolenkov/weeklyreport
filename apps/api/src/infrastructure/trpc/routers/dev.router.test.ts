@@ -3,18 +3,23 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 // The destructive child process is mocked: these cases prove WHEN the reset may
 // spawn, and no test in this file ever runs a real reset.
-type ExecFileSyncCall = (
+type ExecFileCall = (
   file: string,
   args: readonly string[],
   options: { readonly env?: NodeJS.ProcessEnv },
-) => string;
+) => Promise<{ stdout: string; stderr: string }>;
 
-const { execFileSyncMock } = vi.hoisted(() => ({
-  execFileSyncMock: vi.fn<ExecFileSyncCall>(() => "ok"),
+const { execFileMock } = vi.hoisted(() => ({
+  execFileMock: vi.fn<ExecFileCall>(() =>
+    Promise.resolve({ stdout: "ok", stderr: "" }),
+  ),
 }));
 
+// promisify(execFile) resolves through the util.promisify.custom hook.
 vi.mock("node:child_process", () => ({
-  execFileSync: execFileSyncMock,
+  execFile: Object.assign(vi.fn(), {
+    [Symbol.for("nodejs.util.promisify.custom")]: execFileMock,
+  }),
 }));
 
 import { createNullLogger } from "../../../lib/logger.js";
@@ -59,7 +64,7 @@ function buildCaller(
 }
 
 afterEach(() => {
-  execFileSyncMock.mockClear();
+  execFileMock.mockClear();
   vi.unstubAllEnvs();
 });
 
@@ -71,7 +76,7 @@ describe("dev.wipeAndReseed — destructive guard runs before the first spawn", 
     await expect(
       caller.wipeAndReseed({ variant: "minimal" }),
     ).rejects.toMatchObject({ code: "INTERNAL_SERVER_ERROR" });
-    expect(execFileSyncMock).not.toHaveBeenCalled();
+    expect(execFileMock).not.toHaveBeenCalled();
   });
 
   it("refuses a run without the operator's per-run consent", async () => {
@@ -81,7 +86,7 @@ describe("dev.wipeAndReseed — destructive guard runs before the first spawn", 
     await expect(
       caller.wipeAndReseed({ variant: "minimal" }),
     ).rejects.toMatchObject({ code: "INTERNAL_SERVER_ERROR" });
-    expect(execFileSyncMock).not.toHaveBeenCalled();
+    expect(execFileMock).not.toHaveBeenCalled();
   });
 
   it("reaches the reset spawn for a consented disposable E2E target", async () => {
@@ -92,8 +97,8 @@ describe("dev.wipeAndReseed — destructive guard runs before the first spawn", 
       caller.wipeAndReseed({ variant: "minimal" }),
     ).resolves.toMatchObject({ ok: true, variant: "minimal" });
 
-    expect(execFileSyncMock).toHaveBeenCalledTimes(2);
-    expect(execFileSyncMock.mock.calls[0]?.[1]).toEqual([
+    expect(execFileMock).toHaveBeenCalledTimes(2);
+    expect(execFileMock.mock.calls[0]?.[1]).toEqual([
       "exec",
       "prisma",
       "migrate",
@@ -101,7 +106,7 @@ describe("dev.wipeAndReseed — destructive guard runs before the first spawn", 
       "--force",
     ]);
     // Consent is inherited from the operator environment, never injected.
-    const options = execFileSyncMock.mock.calls[0]?.[2];
+    const options = execFileMock.mock.calls[0]?.[2];
     if (options === undefined) throw new TypeError("expected spawn options");
     expect(options.env).toBe(process.env);
   });
