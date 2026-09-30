@@ -34,13 +34,10 @@ export function createProvisionLeadWorkspace(deps: {
     const settings = await snapshotAdminService.getSettings();
     for (const attempt of [0, 1] as const) {
       const now = new Date();
-      const { reportId } = await ensureCurrentPeriod(
-        prisma,
+      const { reportId } = await ensureCurrentPeriod(prisma, now, settings, {
         now,
-        now,
-        settings,
         policyApplicator,
-      );
+      });
       try {
         const { sectionId } = await ensureLeadSection(prisma, reportId, userId);
         // Unconditional (not "just created"): dedupe short-circuits an
