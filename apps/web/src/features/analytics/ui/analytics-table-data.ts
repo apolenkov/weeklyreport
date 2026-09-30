@@ -1,4 +1,13 @@
 import type { LeadVelocityOutput } from "@customreport/shared";
+import { DAYS_PER_WEEK, MS_PER_DAY } from "@customreport/shared";
+
+import { formatPeriodRange } from "../../../shared/lib/format/format-date";
+
+/** Period ids are week-end dates; renders the Mon-Sun span, e.g. "Sep 21–27". */
+export function weekEndingRange(end: string): string {
+  const start = new Date(Date.parse(end) - (DAYS_PER_WEEK - 1) * MS_PER_DAY);
+  return formatPeriodRange(start, end);
+}
 
 interface TableSeries {
   readonly dataKey: string;

@@ -114,13 +114,16 @@ describe("lead queue contextual actions", () => {
     expect(reviewLink).toHaveClass(
       "min-h-[var(--touch-target-min)]",
       "focus-visible:ring-2",
+      "bg-[var(--color-starbucks-accent)]",
     );
     expect(
       screen.getByRole("link", { name: "Review Alice Lead report section" }),
     ).toBeVisible();
-    expect(
-      screen.getByRole("link", { name: "Open Alice Lead report section" }),
-    ).toBeVisible();
+    const openLink = screen.getByRole("link", {
+      name: "Open Alice Lead report section",
+    });
+    expect(openLink).toBeVisible();
+    expect(openLink).toHaveClass("bg-[var(--color-card)]");
     expect(
       screen.getByRole("button", { name: "Request Changes" }),
     ).toBeVisible();

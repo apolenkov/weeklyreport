@@ -317,3 +317,4 @@ and read-only views.
 - **WHEN** a Previously planned, Current week, or Next week cell has no item
 - **THEN** it shows `No item`
 - **AND** the cell exposes no add, edit, or next-step control
+- **AND** below the desktop breakpoint the cell collapses to one line pairing the column label with `No item`, without a period date
