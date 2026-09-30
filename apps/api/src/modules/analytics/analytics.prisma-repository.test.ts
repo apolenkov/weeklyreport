@@ -2,6 +2,7 @@ import type { TrafficLightCell, UserSession } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { PublishedSnapshotIntegrityError } from "../report-sections/index.js";
 import { AnalyticsPrismaRepository } from "./analytics.prisma-repository.js";
 
 const REPORT_A = "10000000-0000-4000-8000-000000000001";
@@ -83,6 +84,7 @@ function snapshotSection(reportId: string, input: SnapshotSectionInput) {
 
 function publishedRow(args: {
   reportId: string;
+  periodStart?: string;
   periodEnd?: string;
   createdAt?: string;
   publishedAt?: string;
@@ -95,7 +97,7 @@ function publishedRow(args: {
     createdAt: new Date(args.createdAt ?? "2026-04-22T12:00:00.000Z"),
     publishedSnapshot: {
       reportId: args.reportId,
-      periodStart: "2026-04-15T00:00:00.000Z",
+      periodStart: args.periodStart ?? "2026-04-15T00:00:00.000Z",
       periodEnd,
       deadline: "2026-04-20T00:00:00.000Z",
       status: "published",
@@ -247,6 +249,7 @@ describe("AnalyticsPrismaRepository frozen snapshot scoping", () => {
 async function comparisonFor(
   rowsA: readonly ReturnType<typeof publishedRow>[],
   rowsB: readonly ReturnType<typeof publishedRow>[] = [],
+  periodA = "2026-04-21",
 ) {
   const findMany = vi
     .fn()
@@ -256,7 +259,7 @@ async function comparisonFor(
     report: { findMany },
   } as unknown as PrismaService);
   return repo.periodComparison(
-    { periodA: "2026-04-21", periodB: "2026-04-28" },
+    { periodA, periodB: "2026-04-28" },
     adminSession,
   );
 }
@@ -340,7 +343,7 @@ describe("AnalyticsPrismaRepository lead velocity", () => {
     const out = await repo.leadVelocity(HISTORY_INPUT, adminSession);
 
     expect(out).toHaveLength(1);
-    expect(out[0]?.periodLabel).toBe("2026-04-21");
+    expect(out[0]?.periodEnd).toBe("2026-04-21");
     expect(out[0]?.leads.map((lead) => lead.leadId)).toEqual([LEAD_B]);
   });
 
@@ -363,7 +366,8 @@ describe("AnalyticsPrismaRepository lead velocity", () => {
       repo.leadVelocity(HISTORY_INPUT, adminSession),
     ).resolves.toEqual([
       {
-        periodLabel: "2026-04-21",
+        periodStart: "2026-04-15",
+        periodEnd: "2026-04-21",
         leads: [
           {
             leadId: LEAD_A,
@@ -410,7 +414,7 @@ describe("AnalyticsPrismaRepository authoritative publication", () => {
       const velocity = await repo.leadVelocity(HISTORY_INPUT, adminSession);
 
       expect.soft(history).toEqual({
-        periods: ["2026-04-21"],
+        periods: [{ periodStart: "2026-04-15", periodEnd: "2026-04-21" }],
         rows: [
           { projectId: PROJECT_A, projectName: "Latest", statuses: ["red"] },
         ],
@@ -422,7 +426,8 @@ describe("AnalyticsPrismaRepository authoritative publication", () => {
       });
       expect(velocity).toEqual([
         {
-          periodLabel: "2026-04-21",
+          periodStart: "2026-04-15",
+          periodEnd: "2026-04-21",
           leads: [{ leadId: LEAD_B, leadName: "Lead B", submittedSections: 1 }],
         },
       ]);
@@ -466,7 +471,7 @@ describe("AnalyticsPrismaRepository authoritative publication", () => {
     await expect(
       repo.trafficLightHistory(HISTORY_INPUT, adminSession),
     ).resolves.toEqual({
-      periods: ["2026-04-21"],
+      periods: [{ periodStart: "2026-04-15", periodEnd: "2026-04-21" }],
       rows: [
         { projectId: PROJECT_B, projectName: "Project B", statuses: ["red"] },
       ],
@@ -537,6 +542,84 @@ describe("AnalyticsPrismaRepository authoritative publication", () => {
 
     await expect(
       repo.trafficLightHistory({ ...HISTORY_INPUT, leadId: LEAD_A }, headA),
-    ).resolves.toEqual({ periods: ["2026-04-21"], rows: [] });
+    ).resolves.toEqual({
+      periods: [{ periodStart: "2026-04-15", periodEnd: "2026-04-21" }],
+      rows: [],
+    });
+  });
+});
+
+describe("AnalyticsPrismaRepository frozen period metadata", () => {
+  it.each([false, true])(
+    "takes dates and cells from the same publication despite live date drift (reverse=%s)",
+    async (reverse) => {
+      const older = publishedRow({
+        reportId: REPORT_A,
+        periodStart: "2026-04-15T00:00:00.000Z",
+        sections: [sectionA],
+      });
+      const winner = publishedRow({
+        reportId: REPORT_B,
+        periodStart: "2026-04-01T18:00:00.000Z",
+        periodEnd: "2026-04-21T20:00:00.000Z",
+        publishedAt: "2026-04-22T12:00:00.000Z",
+        sections: [{ ...sectionB, projectId: PROJECT_A }],
+      });
+      const liveDates = {
+        periodStart: new Date("2026-04-20T00:00:00.000Z"),
+        periodEnd: new Date("2026-04-23T12:00:00.000Z"),
+      };
+      const drifted = { ...winner, ...liveDates };
+      const admittedOlder = { ...older, ...liveDates };
+      const rows = reverse
+        ? [drifted, admittedOlder]
+        : [admittedOlder, drifted];
+      const { repo } = repositoryForRows(rows);
+      const history = await repo.trafficLightHistory(
+        HISTORY_INPUT,
+        adminSession,
+      );
+      const submissions = await repo.leadVelocity(HISTORY_INPUT, adminSession);
+      const comparison = await comparisonFor(rows, [], "2026-04-23");
+      expect(history.periods).toEqual([
+        { periodStart: "2026-04-01", periodEnd: "2026-04-21" },
+      ]);
+      expect(history.rows[0]?.statuses).toEqual(["red"]);
+      expect(submissions[0]).toMatchObject({
+        periodStart: "2026-04-01",
+        periodEnd: "2026-04-21",
+        leads: [{ leadId: LEAD_B }],
+      });
+      expect(comparison).toMatchObject({
+        periodA: { periodStart: "2026-04-01", periodEnd: "2026-04-21" },
+        periodB: null,
+        rows: [{ statusA: "red", statusB: null }],
+      });
+    },
+  );
+  it.each([false, true])(
+    "rejects multiple frozen end-day groups in one comparison side (reverse=%s)",
+    async (reverse) => {
+      const first = publishedRow({ reportId: REPORT_A, sections: [sectionA] });
+      const second = publishedRow({
+        reportId: REPORT_B,
+        periodEnd: "2026-04-22T00:00:00.000Z",
+        sections: [sectionB],
+      });
+      const rows = reverse ? [second, first] : [first, second];
+      await expect(comparisonFor(rows)).rejects.toThrow(
+        PublishedSnapshotIntegrityError,
+      );
+      await expect(comparisonFor([], rows)).rejects.toThrow(
+        PublishedSnapshotIntegrityError,
+      );
+    },
+  );
+  it("returns null metadata and empty cells for missing comparison sides", async () => {
+    await expect(comparisonFor([])).resolves.toEqual({
+      periodA: null,
+      periodB: null,
+      rows: [],
+    });
   });
 });

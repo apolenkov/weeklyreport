@@ -16,8 +16,14 @@ function makeCache(): {
   return {
     store,
     cache: {
-      async getOrCompute<T>(key: string, fn: () => Promise<T>): Promise<T> {
-        if (store.has(key)) return store.get(key) as T;
+      async getOrCompute<T>(
+        key: string,
+        fn: () => Promise<T>,
+        validate?: (value: unknown) => value is T,
+      ): Promise<T> {
+        const cached = store.get(key);
+        if (store.has(key) && (validate === undefined || validate(cached)))
+          return cached as T;
         const value = await fn();
         store.set(key, value);
         return value;
@@ -34,7 +40,9 @@ function makeRepo(
       Promise.resolve({ periods: [], rows: [] }),
     ),
     leadVelocity: vi.fn(() => Promise.resolve([])),
-    periodComparison: vi.fn(() => Promise.resolve({ rows: [] })),
+    periodComparison: vi.fn(() =>
+      Promise.resolve({ periodA: null, periodB: null, rows: [] }),
+    ),
     ...overrides,
   };
 }
@@ -73,7 +81,10 @@ describe("AnalyticsService.trafficLightHistory", () => {
     const repo = makeRepo({
       trafficLightHistory: vi.fn(() =>
         Promise.resolve({
-          periods: ["2026-04-21", "2026-04-28"],
+          periods: [
+            { periodStart: "2026-04-15", periodEnd: "2026-04-21" },
+            { periodStart: "2026-04-22", periodEnd: "2026-04-28" },
+          ],
           rows: [
             {
               projectId: "11111111-1111-4111-8111-111111111111",
@@ -106,7 +117,7 @@ describe("AnalyticsService.trafficLightHistory", () => {
   it("cache hit short-circuits the repository on second call (same scope)", async () => {
     const trafficLightHistory = vi.fn(() =>
       Promise.resolve({
-        periods: ["2026-04-28"],
+        periods: [{ periodStart: "2026-04-22", periodEnd: "2026-04-28" }],
         rows: [],
       }),
     );
@@ -182,7 +193,9 @@ describe("AnalyticsService cache scope partitioning", () => {
   });
 
   it("identical scope and input is a cache hit", async () => {
-    const periodComparison = vi.fn(() => Promise.resolve({ rows: [] }));
+    const periodComparison = vi.fn(() =>
+      Promise.resolve({ periodA: null, periodB: null, rows: [] }),
+    );
     const svc = new AnalyticsService(
       makeRepo({ periodComparison }),
       makeCache().cache,
@@ -246,11 +259,13 @@ describe("AnalyticsService.periodComparison", () => {
       { periodA: "2026-04-21", periodB: "2026-04-28" },
       headA,
     );
-    expect(out).toEqual({ rows: [] });
+    expect(out).toEqual({ periodA: null, periodB: null, rows: [] });
   });
 
   it("cache hit short-circuits the repository", async () => {
-    const periodComparison = vi.fn(() => Promise.resolve({ rows: [] }));
+    const periodComparison = vi.fn(() =>
+      Promise.resolve({ periodA: null, periodB: null, rows: [] }),
+    );
     const repo = makeRepo({ periodComparison });
     const { cache } = makeCache();
     const svc = new AnalyticsService(repo, cache);
@@ -283,5 +298,76 @@ describe("stableHash", () => {
     const b = { outer: { count: 2 } };
 
     expect(stableHash(a)).not.toBe(stableHash(b));
+  });
+});
+
+describe("AnalyticsService old nonempty cache shapes", () => {
+  const input = { periodFrom: "2026-04-01", periodTo: "2026-04-30" };
+  it("recomputes string history periods", async () => {
+    const trafficLightHistory = vi.fn(() =>
+      Promise.resolve({
+        periods: [{ periodStart: "2026-04-01", periodEnd: "2026-04-21" }],
+        rows: [],
+      }),
+    );
+    const { cache, store } = makeCache();
+    const svc = new AnalyticsService(makeRepo({ trafficLightHistory }), cache);
+    await svc.trafficLightHistory(input, headA);
+    for (const key of store.keys())
+      store.set(key, { periods: ["2026-04-21"], rows: [] });
+    expect(await svc.trafficLightHistory(input, headA)).toEqual({
+      periods: [{ periodStart: "2026-04-01", periodEnd: "2026-04-21" }],
+      rows: [],
+    });
+    expect(trafficLightHistory).toHaveBeenCalledTimes(2);
+  });
+  it("recomputes submission labels without a range", async () => {
+    const leadVelocity = vi.fn(() =>
+      Promise.resolve([
+        { periodStart: "2026-04-01", periodEnd: "2026-04-21", leads: [] },
+      ]),
+    );
+    const { cache, store } = makeCache();
+    const svc = new AnalyticsService(makeRepo({ leadVelocity }), cache);
+    await svc.leadVelocity(input, headA);
+    for (const key of store.keys())
+      store.set(key, [{ periodLabel: "2026-04-21", leads: [] }]);
+    expect(await svc.leadVelocity(input, headA)).toEqual([
+      { periodStart: "2026-04-01", periodEnd: "2026-04-21", leads: [] },
+    ]);
+    expect(leadVelocity).toHaveBeenCalledTimes(2);
+  });
+  it("recomputes comparison rows without metadata", async () => {
+    const periodComparison = vi.fn(() =>
+      Promise.resolve({
+        periodA: { periodStart: "2026-04-01", periodEnd: "2026-04-21" },
+        periodB: null,
+        rows: [],
+      }),
+    );
+    const { cache, store } = makeCache();
+    const svc = new AnalyticsService(makeRepo({ periodComparison }), cache);
+    const pair = { periodA: "2026-04-21", periodB: "2026-04-28" };
+    await svc.periodComparison(pair, headA);
+    for (const key of store.keys())
+      store.set(key, {
+        rows: [
+          {
+            projectId: "11111111-1111-4111-8111-111111111111",
+            projectName: "Old",
+            statusA: "red",
+            statusB: null,
+            riskCountA: 1,
+            riskCountB: 0,
+            riskDelta: -1,
+          },
+        ],
+      });
+    expect(await svc.periodComparison(pair, headA)).toEqual({
+      periodA: { periodStart: "2026-04-01", periodEnd: "2026-04-21" },
+      periodB: null,
+      rows: [],
+    });
+    expect(periodComparison).toHaveBeenCalledTimes(2);
   });
 });
