@@ -5,6 +5,7 @@ import type {
 } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
+import { createNullLogger } from "../../lib/logger";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   CarryOverDomainError,
@@ -13,7 +14,6 @@ import {
   CarryOverService,
   type TargetReportState,
 } from "./carry-over.service";
-import { createNullLogger } from "../../lib/logger";
 
 const sourceReportId = "aaaa0000-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const targetReportId = "bbbb0000-bbbb-4bbb-8bbb-bbbbbbbbbbbb";

@@ -45,6 +45,7 @@ function periodFixture(
 }
 
 import type { PeriodState } from "@customreport/shared";
+
 import { createNullLogger } from "../../lib/logger";
 
 function makePeriodAwareRepository(

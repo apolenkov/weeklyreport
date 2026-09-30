@@ -6,6 +6,7 @@ import {
 } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
+import { createNullLogger } from "../../lib/logger";
 import type {
   AdminJobHandle,
   AdminJobsQueue,
@@ -14,7 +15,6 @@ import type {
   AdminPdfExportRetryOutcome,
 } from "./admin-jobs.port.js";
 import { JobsService } from "./jobs.service";
-import { createNullLogger } from "../../lib/logger";
 
 interface FakeJob extends AdminJobHandle {
   readonly getState: ReturnType<typeof vi.fn<() => Promise<string>>>;

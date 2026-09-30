@@ -1,6 +1,7 @@
 import type { AdminReminderExecution, UserSession } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
+import { createNullLogger } from "../../lib/logger";
 import {
   activeRule,
   createServiceRepo,
@@ -15,7 +16,6 @@ import { RemindersScheduler } from "./reminders.scheduler.js";
 import { RemindersService } from "./reminders.service.js";
 import type { DueEscalationRule } from "./reminders.types.js";
 import type { ReminderQueueJobData } from "./reminders-queue-payload.js";
-import { createNullLogger } from "../../lib/logger";
 
 const recipients = [
   {

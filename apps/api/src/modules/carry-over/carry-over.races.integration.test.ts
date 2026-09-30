@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import { createNullLogger } from "../../lib/logger";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
@@ -11,7 +12,6 @@ import {
 import { applySaveSection } from "../report-sections/test-seams/index.js";
 import { CarryOverPrismaRepository } from "./carry-over.prisma-repository";
 import { CarryOverConflictError, CarryOverService } from "./carry-over.service";
-import { createNullLogger } from "../../lib/logger";
 
 const LOCK_WAIT_POLL_MS = 25;
 const LOCK_WAIT_TIMEOUT_MS = 10_000;

@@ -10,6 +10,7 @@ import {
 import { Prisma } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createNullLogger } from "../../lib/logger";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   createPauseGate,
@@ -42,7 +43,6 @@ import {
 import { lockRestoredReports } from "./admin-snapshot/period-locks.js";
 import { lockReminderRestoreGraph } from "./admin-snapshot/reminder-locks.js";
 import { PeriodAdminService } from "./period-admin.service.js";
-import { createNullLogger } from "../../lib/logger";
 
 describe("AdminPrismaRepository (integration)", () => {
   const prisma = createTestPrisma();

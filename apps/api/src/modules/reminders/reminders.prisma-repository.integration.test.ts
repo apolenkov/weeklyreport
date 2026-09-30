@@ -4,6 +4,7 @@ import type {
 } from "@customreport/shared";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
+import { createNullLogger } from "../../lib/logger";
 import {
   cleanDatabase,
   createTestPrisma,
@@ -12,7 +13,6 @@ import {
 } from "../../test-utils/prisma-test-helper.js";
 import { RemindersPrismaRepository } from "./reminders.prisma-repository.js";
 import { RemindersService } from "./reminders.service.js";
-import { createNullLogger } from "../../lib/logger";
 
 const EXECUTION_COUNT = 105;
 const PAGE_SIZE = 20;
