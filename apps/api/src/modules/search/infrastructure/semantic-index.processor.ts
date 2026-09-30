@@ -1,4 +1,4 @@
-import { Inject } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { type Job, UnrecoverableError } from "bullmq";
 import { ClsService } from "nestjs-cls";
 
@@ -8,27 +8,21 @@ import { ENV_CONFIG } from "../../../infrastructure/config/config.module.js";
 import type { EnvConfig } from "../../../infrastructure/config/env.schema";
 import { APP_LOGGER } from "../../../lib/audit-logger.js";
 import type { AppLogger } from "../../../lib/logger.js";
+import {
+  AiRuntimeResolver,
+  type AiRuntimeResolverPort,
+} from "../application/ai-runtime.resolver.js";
 import type { EmbeddingPort } from "../application/report-assistant.ports.js";
-import type {
-  SemanticEmbeddingRepository,
-  SemanticEmbeddingScope,
-} from "../application/semantic-embedding.repository.js";
-import { SEMANTIC_EMBEDDING_REPOSITORY } from "../application/semantic-embedding.repository.js";
+import type { SemanticEmbeddingRepository } from "../application/semantic-embedding.repository.js";
 import type { SemanticIndexSourceLoader } from "../application/semantic-index.source-loader.js";
 import { buildSemanticInput } from "../domain/semantic-input.js";
+import { SemanticEmbeddingPrismaRepository } from "./semantic-embedding.prisma-repository.js";
 import {
   SEMANTIC_INDEX_QUEUE_NAME,
   type SemanticIndexJobData,
   semanticIndexJobDataSchema,
 } from "./semantic-index.queue.js";
-
-export type SemanticIndexProcessorConfig = Readonly<{
-  resolveRuntime: (
-    revisionId: string,
-  ) => Promise<
-    Readonly<{ embeddings: EmbeddingPort; scope: SemanticEmbeddingScope }>
-  >;
-}>;
+import { SemanticIndexPrismaSourceLoader } from "./semantic-index.source.prisma-loader.js";
 
 const embeddingFor = async (
   embeddings: EmbeddingPort,
@@ -43,15 +37,21 @@ const embeddingFor = async (
   return document.vector;
 };
 
+@Injectable()
 export class SemanticIndexProcessor extends RawBullMqProcessor<SemanticIndexJobData> {
   protected readonly queueName = SEMANTIC_INDEX_QUEUE_NAME;
   protected readonly spanName = "semantic-index.process";
 
   constructor(
+    @Inject(SemanticIndexPrismaSourceLoader)
     private readonly sourceLoader: SemanticIndexSourceLoader,
-    @Inject(SEMANTIC_EMBEDDING_REPOSITORY)
+    @Inject(SemanticEmbeddingPrismaRepository)
     private readonly repository: SemanticEmbeddingRepository,
-    private readonly config: SemanticIndexProcessorConfig,
+    @Inject(AiRuntimeResolver)
+    private readonly runtimeResolver: Pick<
+      AiRuntimeResolverPort,
+      "resolveExact"
+    >,
     @Inject(ENV_CONFIG) env: EnvConfig,
     @Inject(APP_LOGGER) logger: AppLogger,
     @Inject(ClsService) cls: ClsService | null,
@@ -79,7 +79,7 @@ export class SemanticIndexProcessor extends RawBullMqProcessor<SemanticIndexJobD
       throw new UnrecoverableError("Semantic index job data is invalid");
     }
     const job = { data: parsed.data };
-    const runtime = await this.config.resolveRuntime(
+    const runtime = await this.runtimeResolver.resolveExact(
       job.data.configurationRevisionId,
     );
     const scope = runtime.scope;

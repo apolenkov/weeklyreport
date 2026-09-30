@@ -1,8 +1,15 @@
 import type { ReportSectionReadModel, SearchPlan } from "@customreport/shared";
 import { searchPlanSchema } from "@customreport/shared";
-import { afterEach, describe, expect, it, type Mock, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type Mock,
+  vi,
+} from "vitest";
 
-import type { ClarificationTokenCodec } from "../domain/entity-resolver.types.js";
 import type { ReportOccurrence } from "../domain/report-retrieval.types.js";
 import type { OpenAiCompatibleFetch } from "../infrastructure/openai-compatible.transport.js";
 import { OpenAiCompatibleTransport } from "../infrastructure/openai-compatible.transport.js";
@@ -22,6 +29,7 @@ import type {
   ReportAssistantTelemetry,
   ReportAssistantTelemetryEvent,
 } from "./report-assistant.telemetry.js";
+import { NOOP_REPORT_ASSISTANT_TELEMETRY } from "./report-assistant.telemetry.js";
 import type { ReportSearchRepository } from "./report-search.repository.js";
 import type { SemanticRetrievalService } from "./semantic-retrieval.service.js";
 
@@ -241,13 +249,10 @@ const createHarness = (
             inputVersion: "report-assistant/v1",
             dimensions: 1,
           },
-          model: options.runtimeModel ?? "runtime-provider:answer",
+          model: options.runtimeModel ?? "mistral-medium-3-5",
         },
   );
-  const runtimeResolver =
-    options.runtimeModel !== undefined || options.runtimeUnavailable
-      ? ({ resolveActive } as unknown as AiRuntimeResolverPort)
-      : undefined;
+  const runtimeResolver = { resolveActive } as unknown as AiRuntimeResolverPort;
   const repository: ReportSearchRepository = {
     getSourceGeneration: vi.fn().mockResolvedValue(0n),
     listSources: vi.fn().mockResolvedValue([source]),
@@ -278,28 +283,18 @@ const createHarness = (
         }),
       ),
   };
-  const tokenCodec: ClarificationTokenCodec = {
-    encode: () => "unused-token",
-    decode: () => null,
-  };
   return {
     service: new ReportAssistantService(
       repository,
-      plannerPort,
-      answererPort,
-      tokenCodec,
-      {
-        candidateLimit: 1,
-        exhaustiveLimit: options.exhaustiveLimit ?? 100,
-        contextTokenBudget: 10_000,
-        model: "mistral-medium-3-5",
-        timeZone: "UTC",
-      },
-      { now: new Date("2026-08-04T12:00:00.000Z") },
-      options.resourceGuard ?? permissiveResourceGuard,
-      options.semanticRetrieval,
-      options.telemetry,
+      options.telemetry ?? NOOP_REPORT_ASSISTANT_TELEMETRY,
       runtimeResolver,
+      {
+        AUTH_JWT_SECRET: "test-jwt-secret-with-at-least-thirty-two-characters",
+        REPORT_ASSISTANT_CANDIDATE_LIMIT: 1,
+        REPORT_ASSISTANT_EXHAUSTIVE_LIMIT: options.exhaustiveLimit ?? 100,
+        REPORT_ASSISTANT_CONTEXT_TOKEN_BUDGET: 10_000,
+      },
+      options.resourceGuard ?? permissiveResourceGuard,
     ),
     planner,
     plannerRepair,
@@ -317,6 +312,11 @@ const permissiveResourceGuard: ReportAssistantResourceGuardPort = {
     lease: { signal: activeLeaseSignal(), release: () => Promise.resolve() },
   }),
 };
+
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-08-04T12:00:00.000Z"));
+});
 
 afterEach(() => vi.useRealTimers());
 
@@ -794,12 +794,10 @@ describe("ReportAssistantService", () => {
   it("returns provider_unavailable for an exhausted transient failure", async () => {
     const harness = createHarness(basePlan);
     harness.answerer.mockRejectedValue(
-      new ReportAssistantProviderError(
-        "answer",
-        new Error("timeout"),
-        503,
-        true,
-      ),
+      new ReportAssistantProviderError("answer", new Error("timeout"), {
+        statusCode: 503,
+        retryable: true,
+      }),
     );
 
     await expect(harness.service.answer(request, ACTOR_ID)).resolves.toEqual({
@@ -813,10 +811,12 @@ describe("ReportAssistantService", () => {
       new ReportAssistantProviderError(
         "answer",
         new Error("rate_limit_exceeded"),
-        429,
-        true,
-        "rate_limit_exceeded",
-        42_100,
+        {
+          statusCode: 429,
+          retryable: true,
+          providerCode: "rate_limit_exceeded",
+          retryAfterMs: 42_100,
+        },
       ),
     );
 
@@ -831,8 +831,7 @@ describe("ReportAssistantService", () => {
     const failure = new ReportAssistantProviderError(
       "answer",
       new Error("unauthorized"),
-      401,
-      false,
+      { statusCode: 401, retryable: false },
     );
     harness.answerer.mockRejectedValue(failure);
 

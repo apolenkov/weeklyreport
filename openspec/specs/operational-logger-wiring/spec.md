@@ -1,46 +1,52 @@
 ## Purpose
 
-Ensure Nest service DI factories wire the shared operational logger for every
-service that emits operational events.
+Ensure Nest service providers supply the shared operational logger as a
+required dependency for every covered service that emits operational events.
 
 ## Requirements
 
-### Requirement: Service DI factories inject the shared APP_LOGGER
+### Requirement: Operational service providers require the shared APP_LOGGER
 
-Nest module factories MUST inject the `APP_LOGGER` token (exported by
-`ConfigModule`) and pass it through for every operational service that accepts
-an `AppLogger` constructor argument. This covers the focused admin services
-(`SnapshotAdminService`, `ProjectAdminService`, `ReminderAdminService`, and
-`PeriodAdminService`), `PdfExportService`, and `RemindersService`, mirroring
-the pattern used by `period.module.ts` for `PeriodService` and its schedulers.
+Production Nest providers MUST resolve the existing `APP_LOGGER` token
+exported by `ConfigModule` and supply it as a required constructor dependency
+for the focused admin services (`SnapshotAdminService`, `ProjectAdminService`,
+`ReminderAdminService`, and `PeriodAdminService`), `PdfExportService`, and
+`RemindersService`. Factory providers MUST resolve the token through their
+`inject` arrays; native class providers MUST resolve it through
+`@Inject(APP_LOGGER)`. These constructors MUST require an explicit logger
+both in production composition and in direct construction, with no silent
+null-logger fallback.
 
-#### Scenario: Admin service factories resolve the shared logger
+#### Scenario: Admin service providers resolve the shared logger
 
 - **GIVEN** `AdminModule` is bootstrapped in the Nest application
 - **WHEN** the DI container resolves a focused admin service provider
-- **THEN** its factory injects `APP_LOGGER` and constructs the service with
-  that logger, not `undefined`
+- **THEN** its provider supplies the token-resolved `APP_LOGGER` to the
+  service constructor, not `undefined`
 
-#### Scenario: PdfExportService factory resolves the shared logger
+#### Scenario: PdfExportService provider resolves the shared logger
 
 - **GIVEN** `PdfExportModule` is bootstrapped in the Nest application
 - **WHEN** the DI container resolves the `PdfExportService` provider
-- **THEN** the factory injects `APP_LOGGER` and constructs `PdfExportService`
-  with that logger as its second argument, not `undefined`
+- **THEN** its class provider supplies the shared `APP_LOGGER` through
+  `@Inject(APP_LOGGER)` as the required second constructor argument,
+  not `undefined`
 
-#### Scenario: RemindersService factory resolves the shared logger
+#### Scenario: RemindersService provider resolves the shared logger
 
 - **GIVEN** `RemindersModule` is bootstrapped in the Nest application
 - **WHEN** the DI container resolves the `RemindersService` provider
-- **THEN** the factory injects `APP_LOGGER` and constructs `RemindersService`
-  with that logger as its second argument, not `undefined`
+- **THEN** its class provider supplies the shared `APP_LOGGER` through
+  `@Inject(APP_LOGGER)` as the required second constructor argument,
+  not `undefined`
 
-#### Scenario: Direct construction outside DI still defaults safely
+#### Scenario: Direct construction requires the logger
 
 - **GIVEN** a unit test constructs `PeriodAdminService` or `RemindersService`
   directly without passing a logger
-- **WHEN** the constructor runs
-- **THEN** that service still falls back to its existing null logger default
+- **WHEN** TypeScript checks the constructor call
+- **THEN** it rejects the missing required logger argument
+- **AND** neither constructor supplies a null-logger default
 
 #### Scenario: Required logger constructors stay explicit
 

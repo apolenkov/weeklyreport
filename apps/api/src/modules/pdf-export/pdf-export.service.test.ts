@@ -22,7 +22,10 @@ import { customreportPdfExportRequestsTotal } from "../../infrastructure/metrics
 import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import { NOOP_PDF_EXPORT_TELEMETRY } from "../../test-utils/pdf-export.js";
-import { PdfExportStateConflictError } from "./pdf-export.job-state.js";
+import {
+  PdfExportDomainError,
+  PdfExportStateConflictError,
+} from "./pdf-export.job-state.js";
 import {
   type PdfExportEnqueueInput,
   type PdfExportEnqueuer,
@@ -35,7 +38,7 @@ import {
   type PdfExportTelemetry,
   type PdfExportTerminalState,
 } from "./pdf-export.ports.js";
-import { PdfExportDomainError, PdfExportService } from "./pdf-export.service";
+import { PdfExportService } from "./pdf-export.service";
 import { verifyPdfExportToken as verifyPdfExportTokenImpl } from "./pdf-export.token";
 import { PdfExportInfrastructureTelemetry } from "./pdf-export-telemetry.adapter.js";
 

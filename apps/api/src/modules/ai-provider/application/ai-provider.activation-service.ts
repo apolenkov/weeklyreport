@@ -5,6 +5,7 @@ import { embeddingScopeChanged } from "../domain/provider-profile.js";
 import {
   assertRevisionReady,
   failActivation,
+  type RequestedActivation,
   requireOutboundApproval,
   requirePreparationEvidence,
   requirePreparedRevision,
@@ -96,12 +97,11 @@ export class AiProviderActivationService {
         this.dependencies,
         generationProfile,
         "Embedding preparation is not configured",
-        requested,
+        { requested },
       );
     const preparationFailure = await this.prepareIfChanged(
       changed && !(await this.preparationIsFresh(revision)),
-      revisionId,
-      actorId,
+      requested,
       embeddingScope,
       previous,
     );
@@ -121,7 +121,7 @@ export class AiProviderActivationService {
               this.dependencies,
               generationProfile,
               "Current embedding-scope readiness evidence is unavailable",
-              requested,
+              { requested },
             ),
           requested,
         );
@@ -154,8 +154,7 @@ export class AiProviderActivationService {
         this.dependencies,
         generationProfile,
         "AI provider activation lost a lifecycle race",
-        requested,
-        AiProviderConflictError,
+        { requested, errorClass: AiProviderConflictError },
       );
     }
     this.dependencies.audit.record({
@@ -194,12 +193,12 @@ export class AiProviderActivationService {
 
   private async prepareIfChanged(
     changed: boolean,
-    revisionId: string,
-    actorId: string,
+    requested: RequestedActivation,
     embeddingScope: ReturnType<typeof resolveProfileFromRevision>,
     previous: Awaited<ReturnType<typeof requireRevision>> | null,
   ): Promise<AiProviderControlRead | null> {
     if (!changed || !this.dependencies.preparation) return null;
+    const { revisionId, actorId } = requested;
     const preparing = await this.preparationState.start(
       revisionId,
       embeddingScope,
@@ -224,8 +223,7 @@ export class AiProviderActivationService {
           revisionId,
           actorId,
           embeddingScope,
-          result,
-          preparing.preparationStartedAt ?? now(),
+          { result, startedAt: preparing.preparationStartedAt ?? now() },
         );
       }
       await this.preparationState.complete(
@@ -237,11 +235,8 @@ export class AiProviderActivationService {
       return null;
     } catch {
       const observed = state.progress;
-      return this.preparationState.fail(
-        revisionId,
-        actorId,
-        embeddingScope,
-        {
+      return this.preparationState.fail(revisionId, actorId, embeddingScope, {
+        result: {
           completed: observed?.completed ?? preparing.preparationCompleted,
           total: Math.max(1, observed?.total ?? preparing.preparationTotal),
           failed: Math.max(1, observed?.failed ?? preparing.preparationFailed),
@@ -250,8 +245,8 @@ export class AiProviderActivationService {
             Date.now() - (preparing.preparationStartedAt ?? now()).getTime(),
           ),
         },
-        preparing.preparationStartedAt ?? now(),
-      );
+        startedAt: preparing.preparationStartedAt ?? now(),
+      });
     }
   }
 

@@ -94,7 +94,12 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
     @Inject(WorkerLivenessRegistry)
     workerLiveness?: WorkerLivenessRegistry,
   ) {
-    super(env, logger, cls, workerLiveness);
+    super(
+      env,
+      logger.child({ service: "pdf-export-worker" }),
+      cls,
+      workerLiveness,
+    );
   }
 
   protected readonly onJobFailed = (

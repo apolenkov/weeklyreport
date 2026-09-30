@@ -2,15 +2,13 @@
 
 import type { LeadVelocityOutput } from "@customreport/shared";
 
+import { formatPeriodRangeWithYear } from "../../../shared/lib/format/format-date";
 import {
   AnalyticsTable,
   StickyColumnHeader,
   StickyRowHeader,
 } from "./analytics-table";
-import {
-  buildLeadSubmissionsTableData,
-  weekEndingRange,
-} from "./analytics-table-data";
+import { buildLeadSubmissionsTableData } from "./analytics-table-data";
 
 export function LeadSubmissionsTable({
   rows,
@@ -41,11 +39,11 @@ export function LeadSubmissionsTable({
           <StickyColumnHeader>Lead</StickyColumnHeader>
           {displayData.map((point) => (
             <th
-              key={String(point.period)}
+              key={point.periodEnd}
               scope="col"
               className="whitespace-nowrap px-3 py-2"
             >
-              {weekEndingRange(String(point.period))}
+              {formatPeriodRangeWithYear(point.periodStart, point.periodEnd)}
             </th>
           ))}
         </tr>
@@ -58,7 +56,7 @@ export function LeadSubmissionsTable({
               const submitted = Number(point[lead.dataKey] ?? 0) > 0;
               return (
                 <td
-                  key={String(point.period)}
+                  key={point.periodEnd}
                   className={`whitespace-nowrap px-3 py-2 ${submitted ? "" : "text-muted-foreground"}`}
                 >
                   {submitted ? (

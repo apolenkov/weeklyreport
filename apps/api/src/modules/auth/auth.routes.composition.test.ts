@@ -120,15 +120,13 @@ function mountAuthSurface(
 ) {
   const app = express();
   const deps = makeDeps();
-  mountAuthRoutes(
-    app,
-    samlStrategy,
-    deps.authController,
-    deps.prisma,
-    envValue,
-    deps.provisionLeadWorkspace,
-    createNullAuditLogger(),
-  );
+  mountAuthRoutes(app, samlStrategy, {
+    authController: deps.authController,
+    prisma: deps.prisma,
+    env: envValue,
+    provisionLeadWorkspace: deps.provisionLeadWorkspace,
+    auditLogger: createNullAuditLogger(),
+  });
   return { app, deps };
 }
 
@@ -144,15 +142,13 @@ describe("mountAuthRoutes composition", () => {
     const deps = makeDeps();
 
     expect(() =>
-      mountAuthRoutes(
-        app,
-        undefined,
-        deps.authController,
-        deps.prisma,
-        env({ AUTH_DEV_MODE: "false" }),
-        deps.provisionLeadWorkspace,
-        createNullAuditLogger(),
-      ),
+      mountAuthRoutes(app, undefined, {
+        authController: deps.authController,
+        prisma: deps.prisma,
+        env: env({ AUTH_DEV_MODE: "false" }),
+        provisionLeadWorkspace: deps.provisionLeadWorkspace,
+        auditLogger: createNullAuditLogger(),
+      }),
     ).toThrow(
       "mountAuthRoutes: a SAML strategy is required when AUTH_DEV_MODE is off",
     );
@@ -273,15 +269,13 @@ describe("mountAuthRoutes composition", () => {
     } as unknown as ReturnType<typeof createAuthController>;
     const provisionLeadWorkspace = vi.fn<ProvisionLeadWorkspace>();
     const app = express();
-    mountAuthRoutes(
-      app,
-      undefined,
+    mountAuthRoutes(app, undefined, {
       authController,
       prisma,
-      env({ AUTH_DEV_MODE: "true" }),
+      env: env({ AUTH_DEV_MODE: "true" }),
       provisionLeadWorkspace,
-      createNullAuditLogger(),
-    );
+      auditLogger: createNullAuditLogger(),
+    });
     const server = await listen(app);
     try {
       const { port } = server.address() as AddressInfo;

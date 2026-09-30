@@ -1,9 +1,6 @@
 import { context, propagation, ROOT_CONTEXT, trace } from "@opentelemetry/api";
-import type { ClsService } from "nestjs-cls";
 
 import type { JobTraceContext } from "../../lib/job-trace-context.js";
-import { type AppLogger, createAppLogger } from "../../lib/logger.js";
-import { validateEnv } from "../config/env.schema.js";
 
 const CORRELATION_ID_KEY = "correlationId";
 const WORKER_TRACER_NAME = "customreport-bullmq";
@@ -115,19 +112,4 @@ export function describeJobFailureTrace(ctx: JobTraceContext | undefined) {
       ...(traceId ? { traceId } : {}),
     },
   };
-}
-
-// Workers sit outside main.ts's request pipeline; seed with the same CLS so
-// job-scoped logs resolve correlationId like in-request logs.
-export function createWorkerLogger(
-  service: string,
-  cls: ClsService,
-): AppLogger {
-  const env = validateEnv();
-  return createAppLogger({
-    service,
-    minLevel: env.LOG_LEVEL,
-    ...(env.LOG_DIR ? { logDir: env.LOG_DIR } : {}),
-    clsService: cls,
-  });
 }

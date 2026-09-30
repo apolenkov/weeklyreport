@@ -88,9 +88,15 @@ const decryptCredential = (
 export const createRuntimeClients = (
   revision: StoredAiProviderRevision,
   prompts: AiComposedPromptSet | null,
-  codec: AesGcmCredentialCodec,
-  env: RuntimeClientEnvironment,
-  createError: RuntimeErrorFactory,
+  {
+    codec,
+    env,
+    createError,
+  }: Readonly<{
+    codec: AesGcmCredentialCodec;
+    env: RuntimeClientEnvironment;
+    createError: RuntimeErrorFactory;
+  }>,
 ): RuntimeClients => {
   const dimensions = required(revision.embeddingDimensions, createError);
   const generationTransport = new OpenAiCompatibleTransport({

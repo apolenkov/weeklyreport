@@ -182,9 +182,15 @@ function buildPage(
   model: SectionSlideModel,
   grid: SlideGridModel,
   product: GridProductCard,
-  records: readonly LocatedRecord[],
-  productPageIndex: number,
-  productPageTotal: number,
+  {
+    records,
+    productPageIndex,
+    productPageTotal,
+  }: {
+    readonly records: readonly LocatedRecord[];
+    readonly productPageIndex: number;
+    readonly productPageTotal: number;
+  },
 ): SectionSlideModel {
   const sourceProduct = model.productSlides.find(
     (candidate) => candidate.id === product.id,
@@ -229,7 +235,11 @@ export function paginateSectionSlides(
       recordsPerPage,
     );
     return productPages.map((records, index) =>
-      buildPage(model, grid, product, records, index, productPages.length),
+      buildPage(model, grid, product, {
+        records,
+        productPageIndex: index,
+        productPageTotal: productPages.length,
+      }),
     );
   });
   return pages.map((page, pageIndex) => ({

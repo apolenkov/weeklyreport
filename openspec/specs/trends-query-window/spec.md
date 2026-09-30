@@ -69,7 +69,8 @@ each displayed period to its original status index, and latest change markers
 MUST still compare that period with its preceding chronological period. Lead
 submissions headers and cells MUST use the same reversed render order without
 mutating query results. Query windows, summaries, risk-change direction,
-aggregation, API contracts, and original data order MUST remain unchanged.
+aggregation and original data order MUST remain unchanged. Returned period
+metadata MUST follow the frozen publication range contract.
 
 #### Scenario: A mobile reader opens populated Trends
 
@@ -95,3 +96,26 @@ aggregation, API contracts, and original data order MUST remain unchanged.
 - **WHEN** Traffic-light history or Lead submissions has one period or no rows
 - **THEN** a single period retains its corresponding values without a fabricated previous-period marker
 - **AND** the existing explicit empty state remains when there are no rows
+
+### Requirement: Trends displays actual publication ranges with years
+
+At `/reports/trends`, Traffic-light history headers, its latest-period summary,
+Lead submissions headers, and the Period comparison explanation MUST display
+both actual frozen dates with explicit years. Labels MUST describe Period or
+Periods without assuming seven-day weeks. Manual ranges, including ranges
+longer than the duration-setting limit of 31 days, MUST retain their dates.
+The comparison explanation MUST use metadata from its response; missing sides
+MUST show an empty date indication. Comparison queries MUST still select the
+latest two chronological history end labels. Accessible table regions,
+newest-first presentation, chronological cell alignment, and latest-minus-
+previous risk direction MUST remain intact.
+
+#### Scenario: Period duration and calendar boundaries vary
+
+- **WHEN** published periods last 1, 7, 30, or 31 days, begin midweek, cross a month or year, or use the same month in different years
+- **THEN** all Trends range labels show the actual start and end with unambiguous years
+
+#### Scenario: Response metadata differs from the query end label
+
+- **WHEN** comparison returns an admitted frozen snapshot's range
+- **THEN** its explanation displays that returned range alongside its cells

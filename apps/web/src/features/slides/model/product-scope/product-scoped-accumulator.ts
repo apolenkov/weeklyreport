@@ -149,8 +149,13 @@ function appendRecord(
   products: ProductMap,
   identity: { readonly id: string; readonly name: string },
   section: ReportSectionReadModel,
-  field: "items" | "risks" | "decisions",
-  row: SectionRecord,
+  {
+    field,
+    row,
+  }: {
+    readonly field: "items" | "risks" | "decisions";
+    readonly row: SectionRecord;
+  },
 ): ProductMap {
   return updateProduct(products, identity.id, identity.name, (accumulator) =>
     registerContribution(
@@ -204,8 +209,7 @@ function addSection(
         result,
         identityFor(item.projectId, item.activityId),
         section,
-        "items",
-        item,
+        { field: "items", row: item },
       ),
     withProjects,
   );
@@ -215,8 +219,7 @@ function addSection(
         result,
         identityFor(risk.projectId, risk.activityId),
         section,
-        "risks",
-        risk,
+        { field: "risks", row: risk },
       ),
     withItems,
   );
@@ -232,8 +235,7 @@ function addSection(
         result,
         identityFor(decision.productId, decision.activityId),
         section,
-        "decisions",
-        decision,
+        { field: "decisions", row: decision },
       ),
     withActivities,
   );

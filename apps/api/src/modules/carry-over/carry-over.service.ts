@@ -173,13 +173,11 @@ export class CarryOverService {
     // the plan clones and the execution builder consume it and never invent
     // their own timestamps.
     const now = new Date();
-    const carriedByAuthor = planCarriedEntries(
-      sourceSections,
-      targetSections,
+    const carriedByAuthor = planCarriedEntries(sourceSections, targetSections, {
       sourceReportId,
       targetReportId,
-      now,
-    );
+      carriedAt: now,
+    });
     assertUniqueCarriedAuthors(carriedByAuthor);
     const counts = carriedCounts(carriedByAuthor);
     const plannedTargetSections = selectPlannedTargetSections(

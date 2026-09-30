@@ -205,7 +205,7 @@ const createHarness = (providerFailure = false, documentCount = 1): Harness => {
     embeddings as never,
     semanticRepository,
     { enqueue },
-    2,
+    { REPORT_ASSISTANT_EMBEDDING_BATCH_SIZE: 2 },
   );
   return {
     coordinator,

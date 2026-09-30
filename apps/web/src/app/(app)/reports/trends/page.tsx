@@ -136,7 +136,6 @@ function PeriodComparisonTrendsSection({
       {comparison.data !== undefined && periodPair !== null ? (
         <PeriodComparisonTable
           {...comparison.data}
-          {...periodPair}
           headingId="trends-comparison-heading"
         />
       ) : null}
@@ -158,7 +157,7 @@ export default function TrendsPage() {
           Trends
         </h1>
         <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-          How project statuses and risks changed over recent weeks.
+          How project statuses and risks changed over recent periods.
         </p>
       </header>
       <TrafficLightTrendsSection {...queries} />

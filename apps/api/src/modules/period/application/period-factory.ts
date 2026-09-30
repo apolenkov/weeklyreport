@@ -153,10 +153,13 @@ async function repairExistingPeriod(
 export async function ensureCurrentPeriod(
   prisma: { report: ReportDelegate },
   anchorDate: Date,
-  now: Date,
   settings: PeriodFactorySettings,
-  policyApplicator?: ReminderApplicator,
+  options: {
+    readonly now: Date;
+    readonly policyApplicator?: ReminderApplicator;
+  },
 ): Promise<EnsuredPeriod> {
+  const { now, policyApplicator } = options;
   const { periodStart, periodEnd } = getCurrentWeekBounds(
     anchorDate,
     settings.periodLengthDays,
@@ -178,13 +181,11 @@ export async function ensureCurrentPeriod(
     return containing;
   }
 
-  const deadline = computeDeadline(
-    periodStart,
-    settings.defaultDeadlineDays,
-    settings.workingDays,
-    settings.defaultTimezone,
-    parseDeadlineTime(settings.deadlineTime),
-  );
+  const deadline = computeDeadline(periodStart, settings.defaultDeadlineDays, {
+    workingDays: settings.workingDays,
+    timezone: settings.defaultTimezone,
+    deadlineTime: parseDeadlineTime(settings.deadlineTime),
+  });
 
   try {
     return await createPeriod({

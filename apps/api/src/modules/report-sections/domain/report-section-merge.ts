@@ -3,6 +3,7 @@ import {
   type DraftSaveInput,
   type ReportSectionReadModel,
   reportSectionReadModelSchema,
+  type ReportSectionStatus,
   type SubmitSectionInput,
   type TrafficLightStatus,
 } from "@customreport/shared";
@@ -70,7 +71,7 @@ function withAggregatedTrafficLight(
 export function mergeSection(
   section: ReportSectionReadModel,
   input: SectionWritePayload,
-  nextStatus: "draft" | "submitted",
+  nextStatus: ReportSectionStatus,
   // Pending submit uses the request timestamp; persistence replaces it with
   // the authoritative time under the Report lock. Draft keeps its timestamp.
   now: Date,

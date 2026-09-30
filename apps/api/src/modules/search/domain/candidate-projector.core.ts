@@ -76,8 +76,13 @@ export const candidateIdentity = (
   occurrence: ReportOccurrence,
   section: ReportSectionReadModel,
   kind: SearchCandidate["kind"],
-  recordId: string,
-  lineageId: string | undefined,
+  {
+    recordId,
+    lineageId,
+  }: Readonly<{
+    recordId: string;
+    lineageId?: string | undefined;
+  }>,
 ): CandidateIdentity => ({
   occurrenceId: `${occurrence.reportId}:${section.reportSectionId}:${kind}:${recordId}`,
   recordId,

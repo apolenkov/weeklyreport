@@ -113,7 +113,7 @@ describe("AnalyticsPrismaRepository reopened-period floor", () => {
         { periodA: PERIOD, periodB: "2026-04-28" },
         adminSession,
       ),
-    ).resolves.toEqual({ rows: [] });
+    ).resolves.toEqual({ periodA: null, periodB: null, rows: [] });
   });
 
   it("excludes reopened traffic-light history until re-publication", async () => {
@@ -127,6 +127,9 @@ describe("AnalyticsPrismaRepository reopened-period floor", () => {
     );
 
     expect(reopened).toEqual({ periods: [], rows: [] });
+    expect(republished.periods).toEqual([
+      { periodStart: "2026-04-15", periodEnd: PERIOD },
+    ]);
     expect(republished.rows[0]).toMatchObject({
       projectId: PROJECT_ID,
       projectName: "Edited",
@@ -146,7 +149,8 @@ describe("AnalyticsPrismaRepository reopened-period floor", () => {
 
     expect(reopened).toEqual([]);
     expect(republished[0]).toMatchObject({
-      periodLabel: PERIOD,
+      periodStart: "2026-04-15",
+      periodEnd: PERIOD,
       leads: [{ leadId: LEAD_ID }],
     });
   });
@@ -162,7 +166,11 @@ describe("AnalyticsPrismaRepository reopened-period floor", () => {
       adminSession,
     );
 
-    expect(reopened.rows).toEqual([]);
+    expect(reopened).toEqual({ periodA: null, periodB: null, rows: [] });
+    expect(republished.periodA).toEqual({
+      periodStart: "2026-04-15",
+      periodEnd: PERIOD,
+    });
     expect(republished.rows[0]).toMatchObject({
       projectId: PROJECT_ID,
       statusA: "red",

@@ -70,6 +70,11 @@ export type OpenAiCompatibleTransportConfig = Readonly<{
   fetcher?: OpenAiCompatibleFetch;
 }>;
 
+type ProviderRequestContext = Readonly<{
+  operation: ReportAssistantProviderOperation;
+  signal?: AbortSignal | undefined;
+}>;
+
 export class OpenAiCompatibleProtocolError extends Error {
   constructor(
     message: string,
@@ -137,26 +142,22 @@ const assertResponse = async (
   const body = await readProviderResponseBody(response).catch(
     (error: unknown) => {
       if (!(error instanceof ProviderResponseTooLargeError)) throw error;
-      throw new ReportAssistantProviderError(
-        operation,
-        error,
-        response.status,
-        false,
-        "provider_response_too_large",
-        retryAfterMilliseconds(response),
-      );
+      throw new ReportAssistantProviderError(operation, error, {
+        statusCode: response.status,
+        retryable: false,
+        providerCode: "provider_response_too_large",
+        retryAfterMs: retryAfterMilliseconds(response),
+      });
     },
   );
   if (!response.ok) {
     const errorCode = safeErrorCode(body);
-    throw new ReportAssistantProviderError(
-      operation,
-      new Error(errorCode),
-      response.status,
-      retryableStatus(response.status),
-      errorCode,
-      retryAfterMilliseconds(response),
-    );
+    throw new ReportAssistantProviderError(operation, new Error(errorCode), {
+      statusCode: response.status,
+      retryable: retryableStatus(response.status),
+      providerCode: errorCode,
+      retryAfterMs: retryAfterMilliseconds(response),
+    });
   }
   return body;
 };
@@ -165,8 +166,7 @@ const requestJsonOnce = async (
   config: OpenAiCompatibleTransportConfig,
   path: string,
   body: unknown,
-  operation: ReportAssistantProviderOperation,
-  signal?: AbortSignal,
+  { operation, signal }: ProviderRequestContext,
 ): Promise<unknown> => {
   const fetcher = config.fetcher ?? fetch;
   try {
@@ -191,7 +191,10 @@ const requestJsonOnce = async (
   } catch (error) {
     signal?.throwIfAborted();
     if (error instanceof ReportAssistantProviderError) throw error;
-    throw new ReportAssistantProviderError(operation, error, undefined, true);
+    throw new ReportAssistantProviderError(operation, error, {
+      statusCode: undefined,
+      retryable: true,
+    });
   }
 };
 
@@ -199,12 +202,11 @@ const requestJson = (
   config: OpenAiCompatibleTransportConfig,
   path: string,
   body: unknown,
-  operation: ReportAssistantProviderOperation,
-  signal?: AbortSignal,
+  context: ProviderRequestContext,
 ): Promise<unknown> =>
   withTransientRetry(
-    () => requestJsonOnce(config, path, body, operation, signal),
-    signal,
+    () => requestJsonOnce(config, path, body, context),
+    context.signal,
   );
 
 const asObject = (value: unknown, label: string): Record<string, unknown> => {
@@ -246,8 +248,7 @@ export class OpenAiCompatibleTransport {
           ? {}
           : { temperature: request.temperature }),
       },
-      operation,
-      signal,
+      { operation, signal },
     );
     return asObject(value, "Provider chat response");
   }
@@ -261,8 +262,7 @@ export class OpenAiCompatibleTransport {
       this.config,
       "embeddings",
       { model, input },
-      "embedding",
-      signal,
+      { operation: "embedding", signal },
     );
     return asObject(value, "Provider embedding response");
   }

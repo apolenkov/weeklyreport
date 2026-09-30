@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { customreportReportsSubmittedTotal } from "../../../infrastructure/metrics/metrics.registry.js";
+import { createNullLogger } from "../../../lib/logger.js";
 import {
   adminSession,
   archivedReportId,
@@ -23,6 +24,7 @@ import {
   PeriodScopeError,
   PeriodService,
 } from "./period.service";
+import { NOOP_PERIOD_TELEMETRY } from "./period-telemetry.port.js";
 
 describe("PeriodService — publish target scope", () => {
   it("head publishes the active editable period", async () => {
@@ -31,8 +33,10 @@ describe("PeriodService — publish target scope", () => {
     );
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
@@ -61,8 +65,10 @@ describe("PeriodService — publish target scope", () => {
     );
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(
@@ -80,8 +86,10 @@ describe("PeriodService — publish target scope", () => {
     );
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     // reportId is the resolved active id; an admin still publishes the OTHER one.
@@ -105,8 +113,10 @@ describe("PeriodService — publish target scope", () => {
     );
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(
@@ -123,8 +133,10 @@ describe("PeriodService — publish target scope", () => {
     );
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(
@@ -136,8 +148,10 @@ describe("PeriodService — publish target scope", () => {
   it("maps a missing report to PeriodNotFoundError, not a bare Error", async () => {
     const service = new PeriodService(
       createSpyRepository(new Map()),
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(
@@ -170,8 +184,10 @@ describe("PeriodService — publish target scope", () => {
     });
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(
@@ -193,8 +209,10 @@ describe("PeriodService — reopen target scope", () => {
     );
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(service.reopenPeriod(reportId, headSession)).resolves.toEqual({
@@ -218,8 +236,10 @@ describe("PeriodService — reopen target scope", () => {
     );
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     // reportId is the resolved latest published id; otherReportId is stale.
@@ -238,8 +258,10 @@ describe("PeriodService — reopen target scope", () => {
     );
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(
@@ -261,8 +283,10 @@ describe("PeriodService — reopen target scope", () => {
     );
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(
@@ -279,8 +303,10 @@ describe("PeriodService — reopen target scope", () => {
     );
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(
@@ -301,8 +327,10 @@ describe("PeriodService — reopen target scope", () => {
     );
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(
@@ -324,8 +352,10 @@ describe("PeriodService — reopen target scope", () => {
   it("maps a missing report to PeriodNotFoundError", async () => {
     const service = new PeriodService(
       createSpyRepository(new Map()),
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(
@@ -353,7 +383,13 @@ describe("PeriodService — reopen target scope", () => {
       ),
       reopenPeriod,
     };
-    const service = new PeriodService(repo, invalidate, noGatingReopenPolicy);
+    const service = new PeriodService(
+      repo,
+      { invalidateAll: invalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
+    );
 
     await expect(
       service.reopenPeriod(reportId, headSession),
@@ -375,8 +411,10 @@ describe("PeriodService — reopen → republish & single-active-reopen guard", 
     const repo = createSpyRepository(reports);
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await service.reopenPeriod(reportId, headSession);
@@ -413,8 +451,10 @@ describe("PeriodService — reopen → republish & single-active-reopen guard", 
     const repo = createSpyRepository(reports);
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(
@@ -431,8 +471,10 @@ describe("PeriodService — reopen → republish & single-active-reopen guard", 
     const repo = createSpyRepository(reports);
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(service.reopenPeriod(reportId, adminSession)).resolves.toEqual(
@@ -454,8 +496,10 @@ describe("PeriodService — publish reopened-target scope", () => {
     );
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
@@ -482,8 +526,10 @@ describe("PeriodService — publish reopened-target scope", () => {
     );
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(
@@ -501,8 +547,10 @@ describe("PeriodService — publish reopened-target scope", () => {
     );
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(
@@ -546,8 +594,10 @@ describe("PeriodService — archive-in-window publish outcome", () => {
     );
     const service = new PeriodService(
       repoWithOutcome(publish),
-      invalidateAnalyticsCache,
-      noGatingReopenPolicy,
+      { invalidateAll: invalidateAnalyticsCache },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     const before = await getCounterValue(customreportReportsSubmittedTotal, {
@@ -573,8 +623,10 @@ describe("PeriodService — archive-in-window publish outcome", () => {
     );
     const service = new PeriodService(
       repoWithOutcome(publish),
-      invalidateAnalyticsCache,
-      noGatingReopenPolicy,
+      { invalidateAll: invalidateAnalyticsCache },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(

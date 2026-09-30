@@ -87,14 +87,12 @@ describe("provider test execution identity", () => {
     } as unknown as PrismaService;
 
     await expect(
-      completeProviderTestExecution(
-        prisma,
-        "execution-stalled",
-        "passed",
-        null,
-        [],
-        1,
-      ),
+      completeProviderTestExecution(prisma, "execution-stalled", {
+        outcome: "passed",
+        failureCode: null,
+        checks: [],
+        executionAttempt: 1,
+      }),
     ).resolves.toBe(false);
 
     const completionInput = updateMany.mock.calls.at(0)?.[0];

@@ -106,8 +106,9 @@ it.each(cases)(
           queryKey: keys[path],
           exact: true,
         });
-        for (const [sibling, siblingQuery] of cases) {
-          if (sibling === path) continue;
+        for (const [sibling, siblingQuery] of cases.filter(
+          ([key]) => key !== path,
+        )) {
           expect(calls.get(sibling)).toBe(1);
           expect(h.result.current[siblingQuery].data).toEqual(
             responses[sibling],

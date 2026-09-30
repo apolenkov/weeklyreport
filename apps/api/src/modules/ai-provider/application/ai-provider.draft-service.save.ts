@@ -49,9 +49,15 @@ const retainedOrNewCredential = (
   dependencies: AiProviderServiceDependencies,
   credential: string | undefined,
   active: StoredAiProviderRevision | null,
-  profileMatches: boolean,
-  role: typeof GENERATION_ROLE | typeof EMBEDDINGS_ROLE,
-  revisionId: string,
+  {
+    profileMatches,
+    role,
+    revisionId,
+  }: Readonly<{
+    profileMatches: boolean;
+    role: typeof GENERATION_ROLE | typeof EMBEDDINGS_ROLE;
+    revisionId: string;
+  }>,
 ) =>
   credential
     ? dependencies.codec.encrypt(credential, { revisionId, role })
@@ -111,12 +117,15 @@ export const saveAiProviderDraft = async (
     dependencies,
     draft.generation.credential,
     credentialSource,
-    credentialSource?.generationProfile ===
-      toPrismaProfile(profile.generation.profile) &&
-      credentialSource.generationEndpointIdentity ===
-        profile.generation.endpointIdentity,
-    GENERATION_ROLE,
-    revisionId,
+    {
+      profileMatches:
+        credentialSource?.generationProfile ===
+          toPrismaProfile(profile.generation.profile) &&
+        credentialSource.generationEndpointIdentity ===
+          profile.generation.endpointIdentity,
+      role: GENERATION_ROLE,
+      revisionId,
+    },
   );
   const persistedGenerationCredential = requireCredential(
     generationCredential,
@@ -127,13 +136,16 @@ export const saveAiProviderDraft = async (
         dependencies,
         embeddingCredentialInput,
         credentialSource,
-        credentialSource?.embeddingMode === "separate" &&
-          credentialSource.embeddingProfile ===
-            toPrismaProfile(separateEmbeddings.connection.profile) &&
-          credentialSource.embeddingEndpointIdentity ===
-            separateEmbeddings.connection.endpointIdentity,
-        EMBEDDINGS_ROLE,
-        revisionId,
+        {
+          profileMatches:
+            credentialSource?.embeddingMode === "separate" &&
+            credentialSource.embeddingProfile ===
+              toPrismaProfile(separateEmbeddings.connection.profile) &&
+            credentialSource.embeddingEndpointIdentity ===
+              separateEmbeddings.connection.endpointIdentity,
+          role: EMBEDDINGS_ROLE,
+          revisionId,
+        },
       )
     : null;
   const persistedEmbeddingCredential = separateEmbeddings

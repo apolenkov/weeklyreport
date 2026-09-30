@@ -81,16 +81,8 @@ function lockedProductHint(
     : undefined;
 }
 
-function describedByHint(
-  hintId: string,
-  locked: boolean,
-  attachedError: boolean,
-  ownershipLoading: boolean,
-  ownershipError: boolean,
-): string | undefined {
-  return locked || attachedError || ownershipLoading || ownershipError
-    ? hintId
-    : undefined;
+function describedByHint(hintId: string, hasHint: boolean): string | undefined {
+  return hasHint ? hintId : undefined;
 }
 
 // A product has exactly one owning group — other-group products show locked.
@@ -137,10 +129,10 @@ function ProductToggleRow({
           aria-label={`Toggle ${product.name}`}
           aria-describedby={describedByHint(
             hintId,
-            lockedByOtherGroup,
-            attachedError,
-            ownershipLoading,
-            ownershipError,
+            lockedByOtherGroup ||
+              attachedError ||
+              ownershipLoading ||
+              ownershipError,
           )}
           className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-starbucks-accent)] focus:ring-2 focus:ring-[var(--color-ring)]"
         />

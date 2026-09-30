@@ -102,12 +102,20 @@ export function addBusinessDays(
 export function computeDeadline(
   periodStart: Date,
   deadlineDays: number,
-  wd: WorkingDays,
-  tz: string,
-  deadlineTime: DeadlineTime,
+  schedule: {
+    readonly workingDays: WorkingDays;
+    readonly timezone: string;
+    readonly deadlineTime: DeadlineTime;
+  },
 ): Date {
-  const shifted = addBusinessDays(periodStart, deadlineDays, wd, tz);
-  const dt = DateTime.fromJSDate(shifted).setZone(tz);
+  const { workingDays, timezone, deadlineTime } = schedule;
+  const shifted = addBusinessDays(
+    periodStart,
+    deadlineDays,
+    workingDays,
+    timezone,
+  );
+  const dt = DateTime.fromJSDate(shifted).setZone(timezone);
   return dt.set({ ...deadlineTime, second: 0, millisecond: 0 }).toJSDate();
 }
 

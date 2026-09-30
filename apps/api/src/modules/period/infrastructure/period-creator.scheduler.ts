@@ -173,9 +173,8 @@ export class PeriodCreatorScheduler {
     const result: EnsuredPeriod | null = await ensureCurrentPeriod(
       this.prisma,
       mostRecent ? new Date(mostRecent.periodEnd.getTime() + MS_PER_DAY) : now,
-      now,
       settings,
-      this.policyApplicator,
+      { now, policyApplicator: this.policyApplicator },
     ).catch((error: unknown): null => {
       if (!(error instanceof PeriodOverlapError)) throw error;
       this.logger.warn(

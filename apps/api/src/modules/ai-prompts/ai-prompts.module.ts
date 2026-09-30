@@ -24,15 +24,12 @@ import { AiPromptRepository } from "./infrastructure/ai-prompt.repository.js";
         logger: AppLogger,
         metrics: AiPromptPrometheusMetrics,
       ) =>
-        new AiPromptService(
-          repository,
-          providerRepository,
-          undefined,
-          {
+        new AiPromptService(repository, providerRepository, undefined, {
+          audit: {
             record: (event) => logger.info("ai_prompt.audit", { ...event }),
           },
           metrics,
-        ),
+        }),
       inject: [
         AiPromptRepository,
         AiProviderConfigurationRepository,

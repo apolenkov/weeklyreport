@@ -6,6 +6,8 @@ import { describe, expect, it, vi } from "vitest";
 import { expectDefined } from "../../../../test-utils/expect-defined";
 import TrendsPage from "./page";
 
+const comparisonQueryOptions = vi.hoisted(() => vi.fn());
+
 vi.mock("../../../../shared/lib/trpc/trpc-context", () => ({
   useTRPC: () => ({
     analytics: {
@@ -22,10 +24,13 @@ vi.mock("../../../../shared/lib/trpc/trpc-context", () => ({
         }),
       },
       periodComparison: {
-        queryOptions: () => ({
-          queryKey: ["comparison"],
-          queryFn: () => new Promise(() => undefined),
-        }),
+        queryOptions: (input: unknown) => {
+          comparisonQueryOptions(input);
+          return {
+            queryKey: ["comparison"],
+            queryFn: () => new Promise(() => undefined),
+          };
+        },
       },
     },
   }),
@@ -58,7 +63,10 @@ describe("Trends query loading", () => {
       defaultOptions: { queries: { retry: false, staleTime: Infinity } },
     });
     client.setQueryData(["history"], {
-      periods: ["2026-08-23", "2026-08-30"],
+      periods: [
+        { periodStart: "2026-08-17", periodEnd: "2026-08-23" },
+        { periodStart: "2026-08-24", periodEnd: "2026-08-30" },
+      ],
       rows: [
         {
           projectId: "alpha",
@@ -68,6 +76,8 @@ describe("Trends query loading", () => {
       ],
     });
     client.setQueryData(["comparison"], {
+      periodA: { periodStart: "2026-08-01", periodEnd: "2026-08-23" },
+      periodB: { periodStart: "2026-08-20", periodEnd: "2026-08-30" },
       rows: [
         {
           projectId: "alpha",
@@ -81,6 +91,15 @@ describe("Trends query loading", () => {
       ],
     });
     renderPage(client);
+    expect(comparisonQueryOptions).toHaveBeenLastCalledWith({
+      periodA: "2026-08-23",
+      periodB: "2026-08-30",
+    });
+    expect(
+      screen.getByText(
+        "Periods Aug 1–23, 2026 (previous) and Aug 20–30, 2026 (latest). Risk change is latest minus previous.",
+      ),
+    ).toBeVisible();
     expect(
       screen.getByRole("table", { name: "Traffic-light history data" }),
     ).toBeVisible();
@@ -111,7 +130,8 @@ describe("Trends query loading", () => {
       ["velocity"],
       [
         {
-          periodLabel: "2026-08-30",
+          periodStart: "2026-08-24",
+          periodEnd: "2026-08-30",
           leads: [
             { leadId: "lead-a", leadName: "Alex", submittedSections: 3 },
             { leadId: "lead-b", leadName: "Blair", submittedSections: 0 },

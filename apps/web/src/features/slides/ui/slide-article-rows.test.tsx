@@ -10,6 +10,7 @@ import type {
 } from "../model/slide-grid-model";
 import { SlidePriorityStrip } from "./slide-article-header";
 import { SlideCell } from "./slide-article-rows";
+import { AuthorBadge } from "./slide-row-marks";
 
 const AUTHOR: GridAuthor = {
   id: "author-1",
@@ -29,6 +30,22 @@ const ROW: GridRow = {
   hoverLabel: "Paused",
   stageNames: [],
 };
+
+describe("AuthorBadge tooltip", () => {
+  it("uses the canonical short name and role", async () => {
+    render(
+      <SdlcTooltipProvider>
+        <AuthorBadge
+          author={{ ...AUTHOR, name: "Иванов Василий Петрович", role: "Lead" }}
+        />
+      </SdlcTooltipProvider>,
+    );
+    fireEvent.mouseEnter(screen.getByTestId("slide-author-badge"));
+    const tooltip = await screen.findByTestId("sdlc-tooltip");
+    expect(tooltip).toHaveTextContent("Иванов В.П. · Lead");
+    expect(tooltip).not.toHaveTextContent("Василий");
+  });
+});
 
 describe("SlideCell row hover", () => {
   it("shows the status AND the full row text in the tooltip", async () => {

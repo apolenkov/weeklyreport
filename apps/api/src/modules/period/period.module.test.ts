@@ -22,7 +22,9 @@ import {
 import { PublicationService } from "../publication/index.js";
 import { PolicyApplicatorService } from "../reminders/index.js";
 import {
+  PERIOD_ANALYTICS_CACHE,
   PERIOD_REPOSITORY,
+  PERIOD_SETTINGS,
   PeriodService,
 } from "./application/period.service.js";
 import { PERIOD_TELEMETRY } from "./application/period-telemetry.port.js";
@@ -91,6 +93,12 @@ describe("PeriodModule wiring", () => {
       .compile();
 
     expect(moduleRef.get(PeriodService)).toBeInstanceOf(PeriodService);
+    expect(moduleRef.get(PERIOD_SETTINGS)).toBe(
+      moduleRef.get(SnapshotAdminService),
+    );
+    expect(moduleRef.get(PERIOD_ANALYTICS_CACHE)).toBe(
+      moduleRef.get(AnalyticsCache),
+    );
     expect(moduleRef.get(PeriodCreatorScheduler)).toBeInstanceOf(
       PeriodCreatorScheduler,
     );

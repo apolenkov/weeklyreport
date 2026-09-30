@@ -12,8 +12,13 @@ export interface AccordionToggle {
 
 export function resolveExpanded(
   toggle: AccordionToggle | null,
-  navigationEpoch: number | undefined,
-  highlighted: boolean,
+  {
+    navigationEpoch,
+    highlighted,
+  }: {
+    readonly navigationEpoch: number | undefined;
+    readonly highlighted: boolean;
+  },
   hasContent: boolean,
   defaultOpen: boolean,
 ): boolean {

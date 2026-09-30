@@ -133,8 +133,13 @@ const completeEmbeddings = (
 const readThroughMissing = async (
   missing: readonly SemanticGroup[],
   config: SemanticRetrievalConfig,
-  embeddings: EmbeddingPort,
-  repository: SemanticEmbeddingRepository,
+  {
+    embeddings,
+    repository,
+  }: Readonly<{
+    embeddings: EmbeddingPort;
+    repository: SemanticEmbeddingRepository;
+  }>,
   signal?: AbortSignal,
 ): Promise<void> => {
   const inputs = missing.map(({ input }) => ({
@@ -225,8 +230,7 @@ export class SemanticRetrievalService {
       await readThroughMissing(
         missing,
         this.config,
-        this.embeddings,
-        this.repository,
+        { embeddings: this.embeddings, repository: this.repository },
         signal,
       );
     }

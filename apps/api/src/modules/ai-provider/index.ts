@@ -12,7 +12,11 @@ export {
   type AiProviderPreparationMetrics,
   type AiProviderStateMetrics,
 } from "./application/ai-provider.service.js";
-export { toSharedProfile } from "./application/ai-provider.service-types.js";
+export {
+  AI_PROVIDER_CAPABILITY_TESTER,
+  AI_PROVIDER_PREPARATION_COORDINATOR,
+  toSharedProfile,
+} from "./application/ai-provider.service-types.js";
 export {
   ProviderUrlPolicyError,
   type ResolvedCompositeProviderProfile,

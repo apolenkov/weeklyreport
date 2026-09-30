@@ -3,7 +3,13 @@ import type { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { PdfExportJobRecord } from "./pdf-export.ports.js";
-import { PdfExportDomainError } from "./pdf-export.service.js";
+
+export class PdfExportDomainError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PdfExportDomainError";
+  }
+}
 
 export const pdfStatusToDb: Record<
   PdfExportJob["status"],

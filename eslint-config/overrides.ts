@@ -8,6 +8,7 @@ const unrestrictedTestContourRules: Linter.RulesRecord = {
   "max-lines": "off",
   "max-lines-per-function": "off",
   "max-params": "off",
+  "weeklyreport/max-params": "off",
   complexity: "off",
   "sonarjs/cognitive-complexity": "off",
   "sonarjs/no-nested-functions": "off",
@@ -22,6 +23,7 @@ export const overrideConfig: Linter.Config[] = [
       "max-lines": "off",
       "max-lines-per-function": "off",
       "max-params": "off",
+      "weeklyreport/max-params": "off",
       complexity: "off",
       // Config knobs (ports, thresholds, rule options) ARE the named values —
       // lifting them to consts above adds indirection, not clarity. Same for

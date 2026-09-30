@@ -7,15 +7,15 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
-import {
-  buildLeadSubmissionsTableData,
-  weekEndingRange,
-} from "./analytics-table-data";
+import { buildLeadSubmissionsTableData } from "./analytics-table-data";
 import { LeadSubmissionsTable } from "./lead-submissions.table";
 import { PeriodComparisonTable } from "./period-comparison.table";
 import { TrafficLightHistoryTable } from "./traffic-light-history.table";
 
-const periods = ["2026-08-23", "2026-08-30"] as const;
+const periods = [
+  { periodStart: "2026-08-17", periodEnd: "2026-08-23" },
+  { periodStart: "2026-08-24", periodEnd: "2026-08-30" },
+] as const;
 
 describe("TrafficLightHistoryTable", () => {
   it("renders the empty-state message when no periods", () => {
@@ -57,7 +57,7 @@ describe("TrafficLightHistoryTable", () => {
     });
     expect(table).toBeVisible();
     expect(table.closest(".sr-only")).toBeNull();
-    for (const range of ["Aug 17\u201323", "Aug 24\u201330"])
+    for (const range of ["Aug 17\u201323, 2026", "Aug 24\u201330, 2026"])
       expect(
         within(table).getByRole("columnheader", { name: range }),
       ).toHaveAttribute("scope", "col");
@@ -139,9 +139,13 @@ describe("TrafficLightHistoryTable", () => {
     expect(rows).toEqual(original);
   });
 
-  it("shows the latest week first while keeping statuses and changes tied to their original periods", () => {
+  it("shows the latest period first while keeping statuses and changes tied to their original periods", () => {
     const history: TrafficLightHistoryOutput = {
-      periods: ["2026-08-23", "2026-08-30", "2026-09-06"],
+      periods: [
+        { periodStart: "2026-08-17", periodEnd: "2026-08-23" },
+        { periodStart: "2026-08-24", periodEnd: "2026-08-30" },
+        { periodStart: "2026-08-31", periodEnd: "2026-09-06" },
+      ],
       rows: [
         {
           projectId: "alpha",
@@ -159,15 +163,15 @@ describe("TrafficLightHistoryTable", () => {
       screen.getAllByRole("columnheader").map((header) => header.textContent),
     ).toEqual([
       "Project",
-      "Aug 31\u2013Sep 6",
-      "Aug 24\u201330",
-      "Aug 17\u201323",
+      "Aug 31\u2013Sep 6, 2026",
+      "Aug 24\u201330, 2026",
+      "Aug 17\u201323, 2026",
     ]);
     expect(
       screen.getAllByRole("cell").map((cell) => cell.textContent.trim()),
     ).toEqual(["On track ↑ Recovered", "Blocked", "At risk"]);
-    expect(screen.getByText(/Week of/)).toHaveTextContent(
-      "Week of Aug 31\u2013Sep 6: 1 project on track",
+    expect(screen.getByText(/Period/)).toHaveTextContent(
+      "Period Aug 31\u2013Sep 6, 2026: 1 project on track",
     );
     expect(history).toEqual(original);
   });
@@ -187,13 +191,15 @@ describe("LeadSubmissionsTable", () => {
           headingId="velocity-heading"
           rows={[
             {
-              periodLabel: "2026-08-23",
+              periodStart: "2026-08-17",
+              periodEnd: "2026-08-23",
               leads: [
                 { leadId: "lead-a", leadName: "Alex", submittedSections: 3 },
               ],
             },
             {
-              periodLabel: "2026-08-30",
+              periodStart: "2026-08-24",
+              periodEnd: "2026-08-30",
               leads: [
                 { leadId: "lead-b", leadName: "Alex", submittedSections: 5 },
               ],
@@ -207,7 +213,7 @@ describe("LeadSubmissionsTable", () => {
     });
     expect(table).toBeVisible();
     expect(table.closest(".sr-only")).toBeNull();
-    for (const range of ["Aug 17–23", "Aug 24–30"])
+    for (const range of ["Aug 17–23, 2026", "Aug 24–30, 2026"])
       expect(
         within(table).getByRole("columnheader", { name: range }),
       ).toHaveAttribute("scope", "col");
@@ -232,18 +238,21 @@ describe("LeadSubmissionsTable", () => {
   it("shows newest submissions first without changing lead membership or period values", () => {
     const rows = [
       {
-        periodLabel: "2026-08-23",
+        periodStart: "2026-08-17",
+        periodEnd: "2026-08-23",
         leads: [
           { leadId: "alex", leadName: "Alex", submittedSections: 1 },
           { leadId: "blair", leadName: "Blair", submittedSections: 0 },
         ],
       },
       {
-        periodLabel: "2026-08-30",
+        periodStart: "2026-08-24",
+        periodEnd: "2026-08-30",
         leads: [{ leadId: "alex", leadName: "Alex", submittedSections: 0 }],
       },
       {
-        periodLabel: "2026-09-06",
+        periodStart: "2026-08-31",
+        periodEnd: "2026-09-06",
         leads: [{ leadId: "blair", leadName: "Blair", submittedSections: 1 }],
       },
     ];
@@ -254,7 +263,12 @@ describe("LeadSubmissionsTable", () => {
 
     expect(
       screen.getAllByRole("columnheader").map((header) => header.textContent),
-    ).toEqual(["Lead", "Aug 31–Sep 6", "Aug 24–30", "Aug 17–23"]);
+    ).toEqual([
+      "Lead",
+      "Aug 31–Sep 6, 2026",
+      "Aug 24–30, 2026",
+      "Aug 17–23, 2026",
+    ]);
     const renderedRows = screen.getAllByRole("row").slice(1);
     expect(
       within(expectDefined(renderedRows[0]))
@@ -275,7 +289,8 @@ describe("LeadSubmissionsTable", () => {
         headingId="submissions-heading"
         rows={[
           {
-            periodLabel: "2026-08-23",
+            periodStart: "2026-08-17",
+            periodEnd: "2026-08-23",
             leads: [{ leadId: "alex", leadName: "Alex", submittedSections: 1 }],
           },
         ]}
@@ -283,7 +298,7 @@ describe("LeadSubmissionsTable", () => {
     );
     expect(
       screen.getAllByRole("columnheader").map((header) => header.textContent),
-    ).toEqual(["Lead", "Aug 17–23"]);
+    ).toEqual(["Lead", "Aug 17–23, 2026"]);
     expect(screen.getByRole("cell", { name: "Submitted" })).toBeVisible();
     expect(screen.queryByText(/Scroll horizontally/)).toBeNull();
   });
@@ -296,7 +311,8 @@ describe("buildLeadSubmissionsTableData", () => {
 
     const { data, series } = buildLeadSubmissionsTableData([
       {
-        periodLabel: "2026-04-21",
+        periodStart: "2026-04-15",
+        periodEnd: "2026-04-21",
         leads: [
           { leadId: idA, leadName: "Alex", submittedSections: 3 },
           { leadId: idB, leadName: "Alex", submittedSections: 5 },
@@ -306,7 +322,7 @@ describe("buildLeadSubmissionsTableData", () => {
 
     expect(data).toHaveLength(1);
     const point = expectDefined(data[0]);
-    expect(point.period).toBe("2026-04-21");
+    expect(point.periodEnd).toBe("2026-04-21");
     // Keyed by UUID, the colliding name does not overwrite the first value.
     expect(point[idA]).toBe(3);
     expect(point[idB]).toBe(5);
@@ -319,18 +335,30 @@ describe("buildLeadSubmissionsTableData", () => {
   it("fills absent leads with zero across multiple periods", () => {
     const { data } = buildLeadSubmissionsTableData([
       {
-        periodLabel: "2026-07-20",
+        periodStart: "2026-07-14",
+        periodEnd: "2026-07-20",
         leads: [{ leadId: "lead-a", leadName: "Lead A", submittedSections: 2 }],
       },
       {
-        periodLabel: "2026-07-27",
+        periodStart: "2026-07-21",
+        periodEnd: "2026-07-27",
         leads: [{ leadId: "lead-b", leadName: "Lead B", submittedSections: 3 }],
       },
     ]);
 
     expect(data).toEqual([
-      { period: "2026-07-20", "lead-a": 2, "lead-b": 0 },
-      { period: "2026-07-27", "lead-a": 0, "lead-b": 3 },
+      {
+        periodStart: "2026-07-14",
+        periodEnd: "2026-07-20",
+        "lead-a": 2,
+        "lead-b": 0,
+      },
+      {
+        periodStart: "2026-07-21",
+        periodEnd: "2026-07-27",
+        "lead-a": 0,
+        "lead-b": 3,
+      },
     ]);
   });
 });
@@ -341,8 +369,8 @@ describe("PeriodComparisonTable", () => {
       <PeriodComparisonTable
         headingId="comparison-heading"
         rows={[]}
-        periodA="2026-08-23"
-        periodB="2026-08-30"
+        periodA={{ periodStart: "2026-08-17", periodEnd: "2026-08-23" }}
+        periodB={{ periodStart: "2026-08-24", periodEnd: "2026-08-30" }}
       />,
     );
     expect(screen.getByText(/no comparison data/i)).toBeInTheDocument();
@@ -352,8 +380,8 @@ describe("PeriodComparisonTable", () => {
     render(
       <PeriodComparisonTable
         headingId="comparison-heading"
-        periodA="2026-08-23"
-        periodB="2026-08-30"
+        periodA={{ periodStart: "2026-08-17", periodEnd: "2026-08-23" }}
+        periodB={{ periodStart: "2026-08-24", periodEnd: "2026-08-30" }}
         rows={[
           {
             projectId: "11111111-1111-4111-8111-111111111111",
@@ -379,11 +407,21 @@ describe("PeriodComparisonTable", () => {
   });
 
   it.each([
-    { periodA: "2026-08-23", periodB: "2026-08-30" },
-    { periodA: "2026-08-30", periodB: "2026-09-06" },
+    {
+      periodA: { periodStart: "2026-08-17", periodEnd: "2026-08-23" },
+      periodB: { periodStart: "2026-08-24", periodEnd: "2026-08-30" },
+      explanation:
+        "Periods Aug 17–23, 2026 (previous) and Aug 24–30, 2026 (latest). Risk change is latest minus previous.",
+    },
+    {
+      periodA: { periodStart: "2026-08-24", periodEnd: "2026-08-30" },
+      periodB: { periodStart: "2026-08-31", periodEnd: "2026-09-06" },
+      explanation:
+        "Periods Aug 24–30, 2026 (previous) and Aug 31–Sep 6, 2026 (latest). Risk change is latest minus previous.",
+    },
   ])(
     "identifies $periodA → $periodB and labels the positive risk change",
-    ({ periodA, periodB }) => {
+    ({ periodA, periodB, explanation: expectedExplanation }) => {
       render(
         <PeriodComparisonTable
           headingId="comparison-heading"
@@ -411,9 +449,7 @@ describe("PeriodComparisonTable", () => {
       expect(screen.getByRole("table")).toHaveAccessibleName(
         "Period comparison data",
       );
-      const explanation = screen.getByText(
-        `Weeks of ${weekEndingRange(periodA)} (previous) and ${weekEndingRange(periodB)} (latest). Risk change is latest minus previous.`,
-      );
+      const explanation = screen.getByText(expectedExplanation);
       expect(explanation.tagName).toBe("P");
       expect(explanation.closest('[role="region"]')).toBeNull();
       expect(
@@ -457,15 +493,17 @@ describe("History latest period", () => {
         ]}
       />,
     );
-    const summary = screen.getByText(/Week of/);
+    const summary = screen.getByText(/Period/);
     expect(summary.closest('[role="region"]')).toBeNull();
     expect(summary.textContent).toBe(
-      "Week of Aug 24\u201330: 1 project blocked, 1 at risk, 1 on track, 2 no status",
+      "Period Aug 24\u201330, 2026: 1 project blocked, 1 at risk, 1 on track, 2 no status",
     );
-    const latest = screen.getByRole("columnheader", { name: "Aug 24\u201330" });
+    const latest = screen.getByRole("columnheader", {
+      name: "Aug 24\u201330, 2026",
+    });
     expect(latest).toHaveClass("bg-[var(--color-surface-muted)]");
     expect(
-      screen.getByRole("columnheader", { name: "Aug 17\u201323" }),
+      screen.getByRole("columnheader", { name: "Aug 17\u201323, 2026" }),
     ).not.toHaveClass("bg-[var(--color-surface-muted)]");
     for (const row of screen.getAllByRole("rowheader")) {
       const cells = within(expectDefined(row.closest("tr"))).getAllByRole(
@@ -487,8 +525,8 @@ describe("History latest period", () => {
         ]}
       />,
     );
-    expect(screen.getByText(/Week of/).textContent).toBe(
-      "Week of Aug 24\u201330: 2 projects on track",
+    expect(screen.getByText(/Period/).textContent).toBe(
+      "Period Aug 24\u201330, 2026: 2 projects on track",
     );
   });
 
@@ -558,7 +596,7 @@ describe("History latest period", () => {
     );
     expect(screen.getByRole("cell")).not.toHaveTextContent(/Recovered|Slipped/);
     expect(
-      screen.getByRole("columnheader", { name: "Aug 17\u201323" }),
+      screen.getByRole("columnheader", { name: "Aug 17\u201323, 2026" }),
     ).toBeVisible();
     expect(screen.queryByText(/Scroll horizontally/)).toBeNull();
   });
@@ -585,7 +623,7 @@ describe("Native table affordances", () => {
           headingId="lead-heading"
           rows={[
             {
-              periodLabel: periods[0],
+              ...periods[0],
               leads: [
                 { leadId: "a", leadName: "Alex", submittedSections: 1 },
                 { leadId: "b", leadName: "Blair", submittedSections: 0 },
@@ -665,4 +703,93 @@ describe("Native table affordances", () => {
     await userEvent.tab();
     expect(comparison).toHaveFocus();
   });
+});
+
+describe("Trends real frozen ranges", () => {
+  const ranges = [
+    {
+      periodStart: "2026-06-17",
+      periodEnd: "2026-06-17",
+      label: "Jun 17, 2026",
+    },
+    {
+      periodStart: "2026-06-17",
+      periodEnd: "2026-06-23",
+      label: "Jun 17–23, 2026",
+    },
+    {
+      periodStart: "2026-06-17",
+      periodEnd: "2026-07-16",
+      label: "Jun 17–Jul 16, 2026",
+    },
+    {
+      periodStart: "2026-06-17",
+      periodEnd: "2026-07-17",
+      label: "Jun 17–Jul 17, 2026",
+    },
+    {
+      periodStart: "2026-12-20",
+      periodEnd: "2027-01-19",
+      label: "Dec 20, 2026–Jan 19, 2027",
+    },
+    {
+      periodStart: "2026-06-17",
+      periodEnd: "2027-06-17",
+      label: "Jun 17, 2026–Jun 17, 2027",
+    },
+  ];
+  it.each(ranges)(
+    "renders $label in all three tables and the summary",
+    ({ label, ...period }) => {
+      render(
+        <>
+          <TrafficLightHistoryTable
+            headingId="history-heading"
+            periods={[period]}
+            rows={[
+              { projectId: "a", projectName: "Alpha", statuses: ["green"] },
+            ]}
+          />
+          <LeadSubmissionsTable
+            headingId="lead-heading"
+            rows={[
+              {
+                ...period,
+                leads: [
+                  { leadId: "a", leadName: "Alex", submittedSections: 1 },
+                ],
+              },
+            ]}
+          />
+          <PeriodComparisonTable
+            headingId="comparison-heading"
+            periodA={period}
+            periodB={null}
+            rows={[
+              {
+                projectId: "a",
+                projectName: "Alpha",
+                statusA: "green",
+                statusB: null,
+                riskCountA: 0,
+                riskCountB: 0,
+                riskDelta: 0,
+              },
+            ]}
+          />
+        </>,
+      );
+      expect(screen.getAllByRole("columnheader", { name: label })).toHaveLength(
+        2,
+      );
+      expect(
+        screen.getByText(`Period ${label}: 1 project on track`),
+      ).toBeVisible();
+      expect(
+        screen.getByText(
+          `Periods ${label} (previous) and — (latest). Risk change is latest minus previous.`,
+        ),
+      ).toBeVisible();
+    },
+  );
 });

@@ -1,7 +1,4 @@
-import type {
-  AiProviderCapabilityTestResult,
-  AiProviderTestOutcome,
-} from "@customreport/shared";
+import type { AiProviderTestOutcome } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
 import {
   AiProviderLifecycle,
@@ -21,6 +18,7 @@ import {
   type NewAiProviderRevision,
   type SetClaimedTestResultInput,
   setClaimedTestResultRecord,
+  type SetTestResultInput,
   setTestResultRecord,
   updateProgressRecord,
 } from "./ai-provider.repository.commands.js";
@@ -28,6 +26,7 @@ import {
   completeProviderTestExecution,
   createOrReuseProviderExecution,
   getProviderTestExecution,
+  type ProviderExecutionCompletion,
   type ProviderExecutionRequest,
   startProviderTestExecution,
 } from "./ai-provider.repository.executions.js";
@@ -160,29 +159,9 @@ export class AiProviderConfigurationRepository {
   }
 
   async setTestResult(
-    id: string,
-    result: Prisma.InputJsonValue,
-    status: AiProviderCapabilityTestResult["status"],
-    embeddingDimensions: number | null,
-    testedAt: Date,
-    currentLifecycle: AiProviderLifecycle,
-    identities?: Readonly<{
-      generationCompatibilityIdentity: string;
-      embeddingScopeIdentity: string;
-      compositeTestIdentity: string;
-    }>,
+    input: SetTestResultInput,
   ): Promise<StoredAiProviderRevision> {
-    return toRevision(
-      await setTestResultRecord(this.prisma, {
-        id,
-        result,
-        status,
-        embeddingDimensions,
-        testedAt,
-        currentLifecycle,
-        ...identities,
-      }),
-    );
+    return toRevision(await setTestResultRecord(this.prisma, input));
   }
 
   async setClaimedTestResult(
@@ -206,18 +185,23 @@ export class AiProviderConfigurationRepository {
   async completeExecution(
     id: string,
     outcome: AiProviderTestOutcome,
-    failureCode: string | null = null,
-    checks: Prisma.InputJsonValue = [],
-    executionAttempt = 1,
+    completion: Readonly<{
+      failureCode?: ProviderExecutionCompletion["failureCode"];
+      checks?: ProviderExecutionCompletion["checks"];
+      executionAttempt?: number;
+    }> = {},
   ): Promise<boolean> {
-    return completeProviderTestExecution(
-      this.prisma,
-      id,
+    const {
+      failureCode = null,
+      checks = [],
+      executionAttempt = 1,
+    } = completion;
+    return completeProviderTestExecution(this.prisma, id, {
       outcome,
       failureCode,
       checks,
       executionAttempt,
-    );
+    });
   }
 
   async getExecution(id: string): ReturnType<typeof getProviderTestExecution> {

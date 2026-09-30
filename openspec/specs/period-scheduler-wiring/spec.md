@@ -55,15 +55,15 @@ collaborator for publish ingestion; publishing has no ingestion dependency.
 #### Scenario: Reopen-policy reader is a required non-null PeriodService dependency
 
 - **WHEN** `PeriodService` is constructed
-- **THEN** `readReopenPolicy` is a required argument with a non-null policy
-  return type
+- **THEN** `settings` is a required constructor argument whose
+  `getSettings` method returns a non-null reopen policy
 - **AND** no production code path can silently skip the reopen-policy gate
 
 #### Scenario: Analytics-cache invalidation is a required PeriodService dependency
 
 - **WHEN** `PeriodService` is constructed
-- **THEN** `invalidateAnalyticsCache` is a required argument with no no-op
-  default
+- **THEN** `cache` is a required constructor argument whose
+  `invalidateAll` method has no no-op default
 - **AND** every successful publish invalidates the analytics cache
 
 #### Scenario: Publish has no ingestion section-id dependency
@@ -74,18 +74,24 @@ collaborator for publish ingestion; publishing has no ingestion dependency.
 
 ### Requirement: Audit Sink Is Wired At The Composition Root
 
-The real `AuditLogger` MUST be provided through the Nest DI graph via a
-dependency-injection token supplied by a `useFactory`/`inject` provider (the
-repository's known-safe shape, not `@Inject` parameter decorators), and the
-three schedulers MUST resolve that one token-provided AppLogger-backed
+The real `AuditLogger` MUST be provided through the existing `AUDIT_LOGGER`
+`useFactory`/`inject` provider exported by `ConfigModule`, backed by the
+shared `APP_LOGGER`. `PeriodModule` MUST register `PeriodCreatorScheduler`
+as a class provider whose required audit constructor argument uses
+`@Inject(AUDIT_LOGGER)`. `AutoPublisherScheduler` and `AutoArchiverScheduler`
+MUST receive that token through their `useFactory`/`inject` providers.
+The three schedulers MUST resolve that one token-provided AppLogger-backed
 instance rather than each reconstructing its own.
 
 #### Scenario: Token-provided audit logger is injected into the schedulers
 
 - **WHEN** `PeriodModule` builds the three scheduler providers
-- **THEN** each scheduler factory receives the token-resolved `AuditLogger`
-  through its `inject` array (no per-scheduler AppLogger reconstruction),
-  so all three schedulers' audit lines flow through the one shared instance
+- **THEN** `PeriodCreatorScheduler` receives the token-resolved `AuditLogger`
+  through `@Inject(AUDIT_LOGGER)` on its required constructor argument
+- **AND** the `AutoPublisherScheduler` and `AutoArchiverScheduler` factories
+  receive the same token through their `inject` arrays
+- **AND** all three schedulers' audit lines flow through the one shared
+  instance, with no per-scheduler AppLogger reconstruction
 
 #### Scenario: The audit sink reuses the post-CLS logger and adds no new sink
 

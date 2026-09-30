@@ -140,15 +140,13 @@ async function buildClientLogsApp(): Promise<express.Express> {
     isTest: false,
     redis: createFakeRedisCall() as unknown as Redis,
   });
-  mountClientLogsIngress(
-    app,
-    "/api/client-logs",
-    clientLogsLimiter,
-    express.json({ limit: CLIENT_LOGS_JSON_LIMIT }),
-    (_req, res) => {
+  mountClientLogsIngress(app, "/api/client-logs", {
+    limiter: clientLogsLimiter,
+    jsonParser: express.json({ limit: CLIENT_LOGS_JSON_LIMIT }),
+    handler: (_req, res) => {
       res.sendStatus(204);
     },
-  );
+  });
   return app;
 }
 
@@ -367,21 +365,20 @@ function buildSamlConfiguredApp(): {
     },
   } as unknown as SamlStrategy;
 
-  mountAuthRoutes(
-    app,
-    samlStrategy,
-    createAuthController({
+  mountAuthRoutes(app, samlStrategy, {
+    authController: createAuthController({
       AUTH_JWT_SECRET: "saml-body-limit-test-secret-32-characters",
       NODE_ENV: "test",
     }),
-    {} as PrismaClient,
-    {
+    prisma: {} as PrismaClient,
+    env: {
       AUTH_DEV_MODE: "true",
       FRONTEND_URL: "http://localhost:3000",
     },
-    () => Promise.resolve({ reportId: "report-id", sectionId: "section-id" }),
-    createAuditLogger(silentLogger),
-  );
+    provisionLeadWorkspace: () =>
+      Promise.resolve({ reportId: "report-id", sectionId: "section-id" }),
+    auditLogger: createAuditLogger(silentLogger),
+  });
   return { app, strategyCalls: () => calls };
 }
 
