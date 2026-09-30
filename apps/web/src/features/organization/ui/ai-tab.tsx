@@ -178,21 +178,29 @@ export function AiTab() {
         <div className="min-w-0 max-w-full overflow-x-auto">
           <TabsList
             variant="line"
-            className="min-w-max justify-start border-b border-[var(--color-border)]"
+            className="grid w-full grid-cols-2 justify-start border-b border-[var(--color-border)] group-data-[orientation=horizontal]/tabs:h-auto sm:inline-flex sm:w-fit sm:min-w-max"
           >
-            <TabsTrigger value="provider" aria-label="Provider">
+            <TabsTrigger
+              value="provider"
+              aria-label="Provider"
+              className="min-w-0 flex-col py-2 whitespace-normal sm:flex-row sm:py-1 sm:whitespace-nowrap"
+            >
               <span>Provider</span>
               <span
-                className="ml-2 text-xs font-medium text-[var(--color-muted-foreground)]"
+                className="text-xs font-medium text-[var(--color-muted-foreground)] sm:ml-2"
                 aria-live="polite"
               >
                 {readiness.provider}
               </span>
             </TabsTrigger>
-            <TabsTrigger value="features" aria-label="Features">
+            <TabsTrigger
+              value="features"
+              aria-label="Features"
+              className="min-w-0 flex-col py-2 whitespace-normal sm:flex-row sm:py-1 sm:whitespace-nowrap"
+            >
               <span>Features</span>
               <span
-                className="ml-2 text-xs font-medium text-[var(--color-muted-foreground)]"
+                className="text-xs font-medium text-[var(--color-muted-foreground)] sm:ml-2"
                 aria-live="polite"
               >
                 {readiness.features}

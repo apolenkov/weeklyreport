@@ -337,6 +337,13 @@ describe("AiTab", () => {
 
     const providerTab = await screen.findByRole("tab", { name: "Provider" });
     const featuresTab = screen.getByRole("tab", { name: "Features" });
+    expect(screen.getByRole("tablist")).toHaveClass(
+      "grid",
+      "grid-cols-2",
+      "w-full",
+    );
+    expect(providerTab).toHaveClass("flex-col", "sm:flex-row");
+    expect(featuresTab).toHaveClass("flex-col", "sm:flex-row");
     await waitFor(() => expect(providerTab).toHaveTextContent("ProviderReady"));
     expect(featuresTab).toHaveTextContent("Features1/1 ready");
     expect(screen.queryByText("Active and ready")).toBeNull();

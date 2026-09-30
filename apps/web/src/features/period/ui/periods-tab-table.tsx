@@ -6,7 +6,6 @@ import {
   formatDateWithYear,
   formatPeriodRangeWithYear,
   formatWeekLabel,
-  joinPeriodLabel,
 } from "../../../shared/lib/format/format-date";
 import {
   ActionIconRow,
@@ -53,11 +52,11 @@ export function PeriodTable({
       className="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-border)]"
       data-testid={`periods-${testIdPrefix}-table`}
     >
-      <table className="w-full text-left text-sm">
-        <thead>
+      <table className="w-full table-fixed text-left text-sm sm:table-auto">
+        <thead className="sr-only sm:not-sr-only">
           <PeriodTableHeaderRow />
         </thead>
-        <tbody>
+        <tbody className="block sm:table-row-group">
           {rows.map((row) => (
             <PeriodRow
               key={row.id}
@@ -75,11 +74,14 @@ export function PeriodTable({
 // State pill plus the "reopened" marker — the only cell with two signals.
 function PeriodStateCell({ row }: { readonly row: PeriodListItem }) {
   return (
-    <td className="px-4 py-3">
+    <td className="min-w-0 px-3 py-1 sm:px-4 sm:py-3">
+      <span className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)] sm:hidden">
+        State
+      </span>
       <StateBadge state={row.periodState} />
       {row.periodStatus === "reopened" && (
         <span
-          className="ml-2 inline-flex items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-semibold uppercase"
+          className="mt-1 inline-flex items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-xs font-semibold uppercase sm:ml-2 sm:mt-0"
           style={{
             backgroundColor: CHIP_TONE.amber.bg,
             color: CHIP_TONE.amber.text,
@@ -101,34 +103,40 @@ function PeriodRow({
   readonly row: PeriodListItem;
   readonly testIdPrefix: "active" | "archive";
 } & Omit<PeriodTableProps, "rows" | "testIdPrefix">) {
-  const periodLabel = joinPeriodLabel(
-    row.weekLabel ?? formatWeekLabel(row.periodStart),
-    formatPeriodRangeWithYear(row.periodStart, row.periodEnd),
-  );
-
   return (
     <tr
       data-testid={`periods-${testIdPrefix}-row-${row.id}`}
       data-period-state={row.periodState}
-      className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-hover)]"
+      className="grid grid-cols-2 gap-x-3 border-b border-[var(--color-border)] py-3 last:border-0 hover:bg-[var(--color-surface-hover)] sm:table-row sm:py-0"
     >
-      <td className="px-4 py-3 font-medium text-[var(--color-foreground)]">
-        {periodLabel}
+      <td className="col-span-2 min-w-0 px-3 py-1 font-medium text-[var(--color-foreground)] sm:min-w-48 sm:px-4 sm:py-3">
+        <span className="block break-words">
+          {row.weekLabel ?? formatWeekLabel(row.periodStart)}
+        </span>
+        <span className="mt-1 block text-xs text-[var(--color-muted-foreground)]">
+          {formatPeriodRangeWithYear(row.periodStart, row.periodEnd)}
+        </span>
       </td>
       <PeriodStateCell row={row} />
-      <td className="px-4 py-3">
+      <td className="min-w-0 px-3 py-1 sm:px-4 sm:py-3">
+        <span className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)] sm:hidden">
+          Progress
+        </span>
         <ProgressBadge
           submitted={row.submittedCount}
           total={row.totalCount}
           rowId={row.id}
         />
       </td>
-      <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
+      <td className="col-span-2 min-w-0 px-3 py-1 text-[var(--color-muted-foreground)] sm:px-4 sm:py-3">
+        <span className="mb-1 block text-xs font-semibold sm:hidden">
+          Deadline
+        </span>
         {row.deadline === null
           ? "No deadline"
           : formatDateWithYear(row.deadline)}
       </td>
-      <td className="px-4 py-3 text-right">
+      <td className="col-span-2 min-w-0 px-3 pb-1 pt-3 text-left sm:px-4 sm:py-3 sm:text-right">
         <ActionIconRow row={row} {...actions} />
       </td>
     </tr>

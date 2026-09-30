@@ -10,6 +10,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
+import type { AdminUserView } from "../model/admin-types";
 import { ActionLogTab } from "./action-log-tab";
 
 interface ActionLogPage {
@@ -39,7 +40,10 @@ function event(id: string, userId: string): AdminActionLogEvent {
   };
 }
 
-function renderTab(query: (input: ActionLogInput) => Promise<ActionLogPage>) {
+function renderTab(
+  query: (input: ActionLogInput) => Promise<ActionLogPage>,
+  users?: readonly Pick<AdminUserView, "id" | "name">[],
+) {
   const { proxy } = createMockTRPC([
     { path: ["admin", "actionLog", "list"], query },
   ]);
@@ -57,10 +61,45 @@ function renderTab(query: (input: ActionLogInput) => Promise<ActionLogPage>) {
     );
   }
 
-  return render(<ActionLogTab />, { wrapper: Wrapper });
+  return render(<ActionLogTab users={users} />, { wrapper: Wrapper });
 }
 
 describe("ActionLogTab pagination", () => {
+  it("uses already-loaded actor names and keeps unknown actors identifiable", async () => {
+    renderTab(
+      () =>
+        Promise.resolve({
+          items: [event("first", "known-id"), event("second", "unknown-id")],
+          nextCursor: null,
+        }),
+      [{ id: "known-id", name: "Alice Ivanova" }],
+    );
+    const user = userEvent.setup();
+
+    expect(await screen.findByText("2 loaded")).toBeInTheDocument();
+    expect(screen.getByText("Alice Ivanova")).toBeInTheDocument();
+    expect(screen.getByText("unknown-id")).toBeInTheDocument();
+    const scrollRegion = screen.getByRole("region", {
+      name: "Action log table",
+    });
+    expect(scrollRegion).toHaveAccessibleDescription(
+      "Swipe horizontally to see status and details.",
+    );
+
+    await user.type(
+      screen.getByRole("searchbox", { name: "Search loaded actions" }),
+      "alice",
+    );
+    expect(screen.getByText("1 matches · 2 loaded")).toBeInTheDocument();
+    expect(screen.getByText("Alice Ivanova")).toBeInTheDocument();
+    expect(screen.queryByText("unknown-id")).toBeNull();
+    await user.click(
+      screen.getByRole("button", { name: "Show action details" }),
+    );
+    expect(
+      screen.getByRole("region", { name: "Action details for first" }),
+    ).toHaveTextContent("known-id");
+  });
   it("distinguishes loaded rows from visible matches and updates the loaded count", async () => {
     const firstPage = Array.from({ length: 20 }, (_, index) =>
       event(
