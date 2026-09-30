@@ -34,7 +34,7 @@ export function PeriodComparisonTable({
         is latest minus previous.
       </p>
       <div
-        className="max-w-full overflow-x-auto rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1"
+        className="max-w-full overflow-x-auto rounded-md bg-[var(--color-background)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1"
         tabIndex={0}
         role="region"
         aria-labelledby={headingId}
@@ -45,7 +45,7 @@ export function PeriodComparisonTable({
             <tr className="border-b text-left">
               <th
                 scope="col"
-                className="sticky left-0 z-20 bg-[var(--color-background)] px-3 py-2"
+                className="sticky left-0 z-20 bg-[var(--color-background)] shadow-[1px_0_0_var(--color-border)] px-3 py-2"
               >
                 Project
               </th>
@@ -71,7 +71,7 @@ export function PeriodComparisonTable({
               <tr key={r.projectId} className="border-b last:border-0">
                 <th
                   scope="row"
-                  className="sticky left-0 z-10 bg-[var(--color-background)] px-3 py-2 text-left font-medium"
+                  className="sticky left-0 z-10 bg-[var(--color-background)] shadow-[1px_0_0_var(--color-border)] px-3 py-2 text-left font-medium"
                 >
                   {r.projectName}
                 </th>

@@ -23,7 +23,7 @@ export function LeadSubmissionsTable({
 
   return (
     <div
-      className="max-w-full overflow-x-auto rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1"
+      className="max-w-full overflow-x-auto rounded-md bg-[var(--color-background)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1"
       tabIndex={0}
       role="region"
       aria-labelledby={headingId}
@@ -34,7 +34,7 @@ export function LeadSubmissionsTable({
           <tr className="border-b text-left">
             <th
               scope="col"
-              className="sticky left-0 z-20 bg-[var(--color-background)] px-3 py-2"
+              className="sticky left-0 z-20 bg-[var(--color-background)] shadow-[1px_0_0_var(--color-border)] px-3 py-2"
             >
               Lead
             </th>
@@ -54,7 +54,7 @@ export function LeadSubmissionsTable({
             <tr key={lead.dataKey} className="border-b last:border-0">
               <th
                 scope="row"
-                className="sticky left-0 z-10 bg-[var(--color-background)] px-3 py-2 text-left font-medium"
+                className="sticky left-0 z-10 bg-[var(--color-background)] shadow-[1px_0_0_var(--color-border)] px-3 py-2 text-left font-medium"
               >
                 {lead.name}
               </th>
