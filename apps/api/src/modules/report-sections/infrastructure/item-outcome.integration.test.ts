@@ -2,6 +2,7 @@ import type { ItemOutcomeResult } from "@customreport/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
+import { createNullLogger } from "../../../lib/logger.js";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
@@ -17,6 +18,7 @@ import {
   ReportSectionsService,
   SectionVersionConflictError,
 } from "../application/report-sections.service";
+import { NOOP_REPORT_SECTIONS_TELEMETRY } from "../application/report-sections-telemetry.port.js";
 import {
   LeadFormConstraintError,
   LeadFormDomainError,
@@ -46,6 +48,8 @@ describe("item outcomes (real database)", () => {
   beforeAll(() => {
     ordinarySave = new ReportSectionsService(
       new ReportSectionsPrismaRepository(prismaService),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
     );
   });
 

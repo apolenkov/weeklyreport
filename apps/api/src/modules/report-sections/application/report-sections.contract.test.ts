@@ -1,6 +1,7 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
+import { createNullLogger } from "../../../lib/logger.js";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   AUTHOR_ID,
@@ -16,10 +17,15 @@ import {
   ReportSectionNotFoundError,
   ReportSectionsService,
 } from "./report-sections.service";
+import { NOOP_REPORT_SECTIONS_TELEMETRY } from "./report-sections-telemetry.port.js";
 
 describe("ReportSectionsService — getActiveSection", () => {
   it("returns section when found", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
     const section = await service.getActiveSection(SECTION_ID);
 
     expect(section.reportSectionId).toBe(SECTION_ID);
@@ -27,7 +33,11 @@ describe("ReportSectionsService — getActiveSection", () => {
   });
 
   it("throws when section ID does not exist", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
 
     await expect(
       service.getActiveSection("99999999-9999-4999-8999-999999999999"),
@@ -43,7 +53,11 @@ describe("ReportSectionsService — getActiveSection", () => {
         { ...expectDefined(baseSection.projects[0]), trafficLight: "green" },
       ],
     };
-    const service = new ReportSectionsService(createRepository(submitted));
+    const service = new ReportSectionsService(
+      createRepository(submitted),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
     const result = await service.getActiveSection(SECTION_ID);
 
     expect(result.status).toBe("submitted");
@@ -51,7 +65,11 @@ describe("ReportSectionsService — getActiveSection", () => {
   });
 
   it("validates section through Zod schema (reportSectionReadModelSchema)", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
     const result = await service.getActiveSection(SECTION_ID);
 
     expect(typeof result.reportSectionId).toBe("string");
@@ -63,7 +81,11 @@ describe("ReportSectionsService — getActiveSection", () => {
 
 describe("ReportSectionsService — saveDraft happy path", () => {
   it("updates traffic light status", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
     const saved = await service.saveDraft(
       validDraft({
         projectStatuses: [{ projectId: PROJECT_ID_1, status: "yellow" }],
@@ -75,7 +97,11 @@ describe("ReportSectionsService — saveDraft happy path", () => {
   });
 
   it("updates items list", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
     const newItems = [
       ...baseSection.items,
       {
@@ -97,7 +123,11 @@ describe("ReportSectionsService — saveDraft happy path", () => {
   });
 
   it("updates risks list", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
     const saved = await service.saveDraft(
       validDraft({
         risks: [
@@ -120,7 +150,11 @@ describe("ReportSectionsService — saveDraft happy path", () => {
   });
 
   it("updates decisions list", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
     const saved = await service.saveDraft(
       validDraft({
         decisions: [
@@ -143,7 +177,11 @@ describe("ReportSectionsService — saveDraft happy path", () => {
   });
 
   it("preserves draft status after save", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
     const saved = await service.saveDraft(validDraft(), AUTHOR_ID);
 
     expect(saved.status).toBe("draft");
@@ -157,7 +195,11 @@ describe("ReportSectionsService — saveDraft happy path", () => {
         { ...expectDefined(baseSection.projects[0]), trafficLight: "green" },
       ],
     };
-    const service = new ReportSectionsService(createRepository(withLight));
+    const service = new ReportSectionsService(
+      createRepository(withLight),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
     const saved = await service.saveDraft(
       validDraft({
         projectStatuses: [{ projectId: PROJECT_ID_1 }],
@@ -179,7 +221,11 @@ describe("ReportSectionsService — saveDraft error paths", () => {
         { ...expectDefined(baseSection.projects[0]), trafficLight: "green" },
       ],
     };
-    const service = new ReportSectionsService(createRepository(submitted));
+    const service = new ReportSectionsService(
+      createRepository(submitted),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
 
     await expect(
       service.saveDraft(validDraft(), AUTHOR_ID),
@@ -192,6 +238,8 @@ describe("ReportSectionsService — saveDraft error paths", () => {
   it("rejects when the period is published", async () => {
     const service = new ReportSectionsService(
       createRepository(baseSection, "published"),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(
@@ -204,7 +252,11 @@ describe("ReportSectionsService — saveDraft error paths", () => {
 
   it("rejects when the period lookup returns null", async () => {
     const repository = createRepository(baseSection, null);
-    const service = new ReportSectionsService(repository);
+    const service = new ReportSectionsService(
+      repository,
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
 
     await expect(
       service.saveDraft(validDraft(), AUTHOR_ID),
@@ -212,7 +264,11 @@ describe("ReportSectionsService — saveDraft error paths", () => {
   });
 
   it("rejects when section ID does not exist", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
 
     await expect(
       service.saveDraft(
@@ -233,7 +289,11 @@ describe("ReportSectionsService — saveDraft error paths", () => {
         { ...expectDefined(baseSection.projects[0]), trafficLight: "green" },
       ],
     };
-    const service = new ReportSectionsService(createRepository(submitted));
+    const service = new ReportSectionsService(
+      createRepository(submitted),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
 
     try {
       await service.saveDraft(validDraft(), AUTHOR_ID);
@@ -244,7 +304,11 @@ describe("ReportSectionsService — saveDraft error paths", () => {
   });
 
   it("rejects items exceeding max array length (Zod: max 100)", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
     const tooManyItems = Array.from({ length: 101 }, () => ({
       projectId: PROJECT_ID_1,
       type: "current" as const,
@@ -261,7 +325,11 @@ describe("ReportSectionsService — saveDraft error paths", () => {
   });
 
   it("rejects item with empty text (safeText min 1)", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
 
     await expect(
       service.saveDraft(
@@ -284,7 +352,11 @@ describe("ReportSectionsService — saveDraft error paths", () => {
   });
 
   it("rejects item with null byte in text", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
 
     await expect(
       service.saveDraft(
@@ -307,7 +379,11 @@ describe("ReportSectionsService — saveDraft error paths", () => {
   });
 
   it("rejects invalid UUID in reportSectionId", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
 
     await expect(
       service.saveDraft(
@@ -378,6 +454,8 @@ describe("ReportSectionsService — multi-project", () => {
   it("saveDraft updates traffic lights for multiple projects", async () => {
     const service = new ReportSectionsService(
       createRepository(multiProjectSection),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
     );
     const saved = await service.saveDraft(
       {
@@ -404,6 +482,8 @@ describe("ReportSectionsService — multi-project", () => {
   it("submit requires traffic light for EVERY project", async () => {
     const service = new ReportSectionsService(
       createRepository(multiProjectSection),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(
@@ -428,6 +508,8 @@ describe("ReportSectionsService — multi-project", () => {
   it("submit requires current item for EVERY project", async () => {
     const service = new ReportSectionsService(
       createRepository(multiProjectSection),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
     );
 
     await expect(
@@ -465,6 +547,8 @@ describe("ReportSectionsService — multi-project", () => {
   it("submit succeeds when all projects have traffic light and current item", async () => {
     const service = new ReportSectionsService(
       createRepository(multiProjectSection),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
     );
     const result = await service.submitSection(
       {
@@ -493,7 +577,11 @@ describe("ReportSectionsService — multi-project", () => {
 
 describe("ReportSectionsService — edge cases", () => {
   it("saveDraft with empty items/risks/decisions is allowed", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
     const saved = await service.saveDraft(
       validDraft({
         items: [],
@@ -509,7 +597,11 @@ describe("ReportSectionsService — edge cases", () => {
   });
 
   it("saveDraft is idempotent — same input twice produces same result", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
     const first = await service.saveDraft(validDraft(), AUTHOR_ID);
     const second = await service.saveDraft(validDraft(), AUTHOR_ID);
 
@@ -520,7 +612,11 @@ describe("ReportSectionsService — edge cases", () => {
   });
 
   it("section with max boundary items (100) can be saved", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
     const maxItems = Array.from({ length: 100 }, (_, i) => ({
       projectId: PROJECT_ID_1,
       type: "current" as const,
@@ -539,7 +635,11 @@ describe("ReportSectionsService — edge cases", () => {
   });
 
   it("draft save preserves project list from section (not from input)", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
+    const service = new ReportSectionsService(
+      createRepository(baseSection),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
     const saved = await service.saveDraft(
       validDraft({
         projectStatuses: [],

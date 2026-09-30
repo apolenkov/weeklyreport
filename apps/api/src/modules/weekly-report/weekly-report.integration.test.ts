@@ -2,6 +2,7 @@ import type { UserSession } from "@customreport/shared";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { createNullLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
@@ -33,6 +34,7 @@ describe("WeeklyReportService with Prisma (integration)", () => {
   const prisma = createTestPrisma();
   const service = new WeeklyReportService(
     new WeeklyReportPrismaRepository(prisma as unknown as PrismaService),
+    createNullLogger(),
   );
 
   beforeEach(async () => {

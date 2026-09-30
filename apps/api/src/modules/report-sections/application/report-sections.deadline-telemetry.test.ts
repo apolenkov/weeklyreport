@@ -5,6 +5,7 @@ import {
   customreportSectionsSubmittedTotal,
   customreportSectionSubmissionLatencySeconds,
 } from "../../../infrastructure/metrics/metrics.registry.js";
+import { createNullLogger } from "../../../lib/logger.js";
 import { ReportSectionsPrometheusTelemetry } from "../infrastructure/report-sections-prometheus-telemetry.adapter.js";
 import {
   type ReportSectionsRepository,
@@ -143,6 +144,7 @@ describe("ReportSectionsService — product telemetry", () => {
     const service = new ReportSectionsService(
       buildRepo(new Date(Date.now() + 6 * ONE_HOUR)),
       new ReportSectionsPrometheusTelemetry(),
+      createNullLogger(),
     );
     await service.submitSection(
       {
@@ -196,6 +198,7 @@ describe("ReportSectionsService — product telemetry", () => {
     const service = new ReportSectionsService(
       buildRepo(new Date(Date.now() - 2 * ONE_HOUR)),
       new ReportSectionsPrometheusTelemetry(),
+      createNullLogger(),
     );
     await service.submitSection(
       {

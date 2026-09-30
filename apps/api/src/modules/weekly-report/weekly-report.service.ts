@@ -9,7 +9,7 @@ import {
   latestForViewerReportSchema,
 } from "@customreport/shared";
 
-import { type AppLogger, createNullLogger } from "../../lib/logger.js";
+import { type AppLogger } from "../../lib/logger.js";
 import {
   buildCompiledHistoryEntries,
   type CompiledHistoryReportRow,
@@ -79,7 +79,7 @@ export interface WeeklyReportRepository {
 export class WeeklyReportService {
   constructor(
     private readonly repository: WeeklyReportRepository,
-    private readonly logger: AppLogger = createNullLogger(),
+    private readonly logger: AppLogger,
   ) {}
 
   // The router holds the service, not the repository, so routing

@@ -4,7 +4,7 @@ import {
   type UserSession,
 } from "@customreport/shared";
 
-import { type AppLogger, createNullLogger } from "../../../lib/logger.js";
+import { type AppLogger } from "../../../lib/logger.js";
 
 export class ReviewAccessError extends Error {
   constructor(message: string) {
@@ -79,7 +79,7 @@ function sortRows(
 export class ReviewService {
   constructor(
     private readonly repository: ReviewRepository,
-    private readonly logger: AppLogger = createNullLogger(),
+    private readonly logger: AppLogger,
   ) {}
 
   async getSubmissionDashboard(
