@@ -57,8 +57,6 @@
     "passport": "^0.7.0",
     "pg": "^8.23.0",
     "rate-limit-redis": "^6.0.1",
-    "react": "catalog:",
-    "react-email": "^6.9.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "superjson": "catalog:",
@@ -75,7 +73,6 @@
     "@types/nodemailer": "^8.0.1",
     "@types/passport": "^1.0.17",
     "@types/pg": "^8.23.1",
-    "@types/react": "catalog:",
     "samlify": "^2.13.1",
     "tsx": "catalog:"
   }

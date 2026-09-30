@@ -6,9 +6,8 @@
     "outDir": "dist",
     "rootDir": "../..",
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "jsx": "react-jsx"
+    "emitDecoratorMetadata": true
   },
-  "include": ["scripts/**/*.ts", "src/**/*.ts", "src/**/*.tsx"],
+  "include": ["scripts/**/*.ts", "src/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }
