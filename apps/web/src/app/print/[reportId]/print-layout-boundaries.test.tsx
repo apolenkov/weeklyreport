@@ -142,7 +142,11 @@ describe("print layout boundaries", () => {
     );
 
     const printCss = container.querySelector("style")?.textContent ?? "";
-    expect(printCss).toContain(".print-section-heading, .print-entity-header");
+    expect(printCss).toMatch(
+      /\.print-section-heading[^{]*\bh4\b[^{]*\{[^}]*break-after:\s*avoid/,
+    );
+    // The app body texture must not leak into the printed margins.
+    expect(printCss).toMatch(/html,\s*body\s*\{[^}]*background:\s*#fff/);
     expect(printCss).not.toMatch(/section\s*\{[^}]*page-break-inside:\s*avoid/);
   });
 });
