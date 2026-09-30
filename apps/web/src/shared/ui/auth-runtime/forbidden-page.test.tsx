@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { ForbiddenPage } from "./forbidden-page";
 
 describe("ForbiddenPage", () => {
-  it("renders the page-unavailable heading with the reserved-role copy", () => {
+  it("renders the page-unavailable heading with a plain required-role reason", () => {
     render(
       <ForbiddenPage requiredRoles={["head"]} homeHref="/head/dashboard" />,
     );
@@ -14,7 +14,11 @@ describe("ForbiddenPage", () => {
         name: /page unavailable for your role/i,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/reserved for the head role/i)).toBeInTheDocument();
+    expect(screen.getByText(/requires the head role/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/you do not have access to this page/i),
+    ).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(/head back|dashboard/i);
   });
 
   it("joins multiple required roles with ' or '", () => {
@@ -27,11 +31,17 @@ describe("ForbiddenPage", () => {
     expect(screen.getByText(/head or admin/)).toBeInTheDocument();
   });
 
-  it("links the dashboard button to the caller-resolved home and does not leak a role from the href", () => {
-    render(<ForbiddenPage requiredRoles={["head"]} homeHref="/lead/report" />);
-    const link = screen.getByRole("link", { name: /go to dashboard/i });
-    expect(link).toHaveAttribute("href", "/lead/report");
-    expect(document.body).not.toHaveTextContent(/\blead\b/i);
+  it.each([
+    "/lead/report",
+    "/reports/latest",
+    "/head/dashboard",
+    "/admin",
+    "/",
+  ])("links to the caller-resolved home %s", (homeHref) => {
+    render(<ForbiddenPage requiredRoles={["head"]} homeHref={homeHref} />);
+    const link = screen.getByRole("link", { name: "Go to my home page" });
+    expect(link).toHaveAttribute("href", homeHref);
+    expect(document.body).not.toHaveTextContent(/\blead\b|\bviewer\b/i);
   });
 
   it("uses a single native <main> landmark without an explicit role attribute", () => {

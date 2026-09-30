@@ -2,7 +2,11 @@
 
 import type { Role } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render as testingRender } from "@testing-library/react";
+import {
+  render as testingRender,
+  screen,
+  within,
+} from "@testing-library/react";
 import * as React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -34,7 +38,7 @@ function render(element: React.ReactElement) {
   );
 }
 
-function setRole(role: Role | null): void {
+function setRole(role: Role | null, name = "Test User"): void {
   if (role === null) {
     useSessionMock.mockReturnValue({
       user: null,
@@ -47,7 +51,7 @@ function setRole(role: Role | null): void {
     useSessionMock.mockReturnValue({
       user: {
         id: "u1",
-        name: "Test User",
+        name,
         email: "t@test.local",
         role,
         reportingGroupName: "Core Development",
@@ -289,6 +293,47 @@ describe("NavBar — role-aware visibility", () => {
     expect(
       container.querySelector('[data-testid="organization-atmosphere"]'),
     ).toBeNull();
+  });
+
+  it("keeps the actions in the mobile grid's right column", () => {
+    setRole("lead");
+    render(<NavBar />);
+
+    expect(screen.getByTestId("nav-bar").firstElementChild).toHaveClass(
+      "grid-cols-[minmax(0,1fr)_auto]",
+      "sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]",
+    );
+  });
+
+  it("shows a wrapping user name and a separate readable role on mobile", () => {
+    const fullName = "Alexandria Catherine Montgomery-Wetherington";
+    setRole("lead", fullName);
+    render(<NavBar />);
+
+    const identity = screen.getByTestId("nav-identity");
+    expect(identity).not.toHaveClass("hidden");
+    expect(identity).not.toHaveClass("h-8");
+    const name = within(identity).getByText(fullName);
+    expect(name).not.toHaveClass("truncate");
+    expect(name.parentElement).not.toHaveClass("truncate");
+    expect(name.parentElement).not.toHaveClass("whitespace-nowrap");
+    expect(within(identity).getByText("Lead", { exact: true })).toHaveClass(
+      "text-xs",
+    );
+  });
+
+  it("keeps a visible mobile menu label and the existing action names", () => {
+    setRole("lead");
+    render(<NavBar />);
+
+    const menu = screen.getByRole("button", {
+      name: "Open navigation menu",
+    });
+    expect(within(menu).getByText("Menu")).not.toHaveClass("sr-only");
+    expect(screen.getByRole("button", { name: "Sign out" })).toHaveAttribute(
+      "title",
+      "Sign out",
+    );
   });
 
   it("renders exactly one navigation accent", () => {
