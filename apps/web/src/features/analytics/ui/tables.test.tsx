@@ -451,7 +451,7 @@ describe("History latest period", () => {
     render(
       <TrafficLightHistoryTable
         headingId="history-heading"
-        periods={[periods[0] ?? ""]}
+        periods={[periods[0]]}
         rows={[{ projectId: "a", projectName: "A", statuses: ["red"] }]}
       />,
     );
@@ -480,7 +480,7 @@ describe("Native table affordances", () => {
           headingId="lead-heading"
           rows={[
             {
-              periodLabel: periods[0] ?? "",
+              periodLabel: periods[0],
               leads: [
                 { leadId: "a", leadName: "Alex", submittedSections: 1 },
                 { leadId: "b", leadName: "Blair", submittedSections: 0 },
@@ -491,8 +491,8 @@ describe("Native table affordances", () => {
         <h2 id="comparison-heading">Period comparison</h2>
         <PeriodComparisonTable
           headingId="comparison-heading"
-          periodA={periods[0] ?? ""}
-          periodB={periods[1] ?? ""}
+          periodA={periods[0]}
+          periodB={periods[1]}
           rows={[
             {
               projectId: "a",
