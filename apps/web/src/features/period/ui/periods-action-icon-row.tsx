@@ -1,5 +1,6 @@
 import type { PeriodListItem } from "@customreport/shared";
 
+import { formatPeriodRangeWithYear } from "../../../shared/lib/format/format-date";
 import {
   ArchiveIcon,
   DeleteIcon,
@@ -17,6 +18,15 @@ export interface PeriodActionHandlers {
   readonly onUnarchive: (row: PeriodListItem) => void;
   readonly onDelete: (row: PeriodListItem) => void;
   readonly onEdit: (row: PeriodListItem) => void;
+}
+
+function periodRange(row: PeriodListItem): string {
+  return formatPeriodRangeWithYear(row.periodStart, row.periodEnd);
+}
+
+// Names the period so identical icon buttons stay distinct across rows.
+function actionLabel(label: string, row: PeriodListItem): string {
+  return `${label}: ${periodRange(row)}`;
 }
 
 // Publish/reopen/archive/unarchive — the lifecycle transitions, each shown
@@ -38,7 +48,7 @@ function PeriodStateActions({
       {row.periodState === "open" && (
         <IconButton
           testId={`action-publish-${row.id}`}
-          label="Publish now"
+          label={actionLabel("Publish now", row)}
           onClick={() => onPublish(row)}
           icon={<PublishIcon />}
         />
@@ -46,7 +56,7 @@ function PeriodStateActions({
       {row.periodState === "published" && row.canReopen && (
         <IconButton
           testId={`action-reopen-${row.id}`}
-          label="Reopen period"
+          label={actionLabel("Reopen period", row)}
           onClick={() => onReopen(row)}
           icon={<ReopenIcon />}
         />
@@ -54,7 +64,7 @@ function PeriodStateActions({
       {row.canArchive && (
         <IconButton
           testId={`action-archive-${row.id}`}
-          label="Archive period"
+          label={actionLabel("Archive period", row)}
           onClick={() => onArchive(row)}
           tone="danger"
           icon={<ArchiveIcon />}
@@ -63,7 +73,7 @@ function PeriodStateActions({
       {row.periodState === "archived" && (
         <IconButton
           testId={`action-unarchive-${row.id}`}
-          label="Unarchive period"
+          label={actionLabel("Unarchive period", row)}
           onClick={() => onUnarchive(row)}
           icon={<UnarchiveIcon />}
         />
@@ -89,7 +99,10 @@ function DeleteAction({
     return (
       <IconButton
         testId={`action-delete-${row.id}`}
-        label="Cannot delete a published, archived, or reopened period"
+        label={actionLabel(
+          "Cannot delete a published, archived, or reopened period",
+          row,
+        )}
         onClick={() => {
           /* disabled buttons suppress clicks */
         }}
@@ -102,7 +115,7 @@ function DeleteAction({
   return (
     <IconButton
       testId={`action-delete-${row.id}`}
-      label="Delete period"
+      label={actionLabel("Delete period", row)}
       onClick={() => onDelete(row)}
       icon={<DeleteIcon />}
       tone="danger"
@@ -125,12 +138,12 @@ export function ActionIconRow({
     <div
       className="inline-flex items-center gap-1"
       role="group"
-      aria-label={`Actions for period ${row.id}`}
+      aria-label={`Actions for ${periodRange(row)}`}
       data-testid={`action-icons-${row.id}`}
     >
       <IconButton
         testId={`action-edit-${row.id}`}
-        label="Edit period"
+        label={actionLabel("Edit period", row)}
         onClick={() => onEdit(row)}
         icon={<EditIcon />}
       />

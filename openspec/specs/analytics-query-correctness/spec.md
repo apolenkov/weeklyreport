@@ -38,8 +38,9 @@ NOT fall back to an older report. An optional lead filter MUST be applied
 after choosing the report in effect, so an omitted lead cannot resurrect an
 older publication.
 If a project occurs in multiple admitted sections of that snapshot, history
-and comparison MUST use its last occurrence in the stored snapshot order,
-including a null status, consistently with comparison's section overwrite.
+and comparison MUST use the worst non-null status across its occurrences
+(`aggregateTrafficLight`, as the published report does), and null only when
+every occurrence is null. Comparison's project name is the last occurrence.
 
 #### Scenario: A later publication omits a project's status
 
@@ -73,7 +74,8 @@ including a null status, consistently with comparison's section overwrite.
 - **GIVEN** the report in effect contains the same project in two admitted sections
 - **AND** the sections contain different statuses, including a possible null
 - **WHEN** history and comparison read that period
-- **THEN** both use the last occurrence's status in the stored snapshot order
+- **THEN** both use the worst non-null status across the occurrences, regardless of section order
+- **AND** a null occurrence never masks a non-null status; the result is null only when all are null
 
 ### Requirement: leadVelocity reports truthful submission counts by period label
 

@@ -1,4 +1,8 @@
-import { MS_PER_DAY, type TrafficLightCell } from "@customreport/shared";
+import {
+  aggregateTrafficLight,
+  MS_PER_DAY,
+  type TrafficLightCell,
+} from "@customreport/shared";
 
 // ISO YYYY-MM-DD length after toISOString().slice(0, n).
 const ISO_DATE_LENGTH = 10;
@@ -63,13 +67,18 @@ interface SectionStatusRow {
 }
 export type LabelReport = PeriodStamped & { sections: SectionStatusRow[] };
 
+// A product reported by several sections takes the worst non-null status, as
+// the published report does; null only when every occurrence is null.
 function findProjectStatus(
   report: LabelReport,
   projectId: string,
-): ProjectStatusRow | undefined {
-  return report.sections
-    .flatMap((section) => section.projectStatuses)
-    .findLast((status) => status.projectId === projectId);
+): TrafficLightCell {
+  return aggregateTrafficLight(
+    report.sections
+      .flatMap((section) => section.projectStatuses)
+      .filter((status) => status.projectId === projectId)
+      .map((status) => status.status),
+  );
 }
 
 export function statusForProject(
@@ -77,7 +86,7 @@ export function statusForProject(
   projectId: string,
 ): TrafficLightCell {
   const winner = reportInEffectForPeriod(reportsForLabel);
-  return winner ? (findProjectStatus(winner, projectId)?.status ?? null) : null;
+  return winner ? findProjectStatus(winner, projectId) : null;
 }
 
 interface NamedProjectStatus {
@@ -132,19 +141,24 @@ export const UNKNOWN_CELL: ComparisonCell = Object.freeze({
   name: "Unknown",
 });
 
-// Status and name come from the section; the running risk tally survives.
+// Status is the worst non-null across the report's sections (as in
+// statusForProject); name is the last occurrence; the running risk tally survives.
 function applyProjectStatuses(
   cells: ReadonlyMap<string, ComparisonCell>,
-  section: ComparisonSection,
+  report: ComparisonReport,
 ): Map<string, ComparisonCell> {
+  const occurrences = Map.groupBy(
+    report.sections.flatMap((section) => section.projectStatuses),
+    (ps) => ps.projectId,
+  );
   return new Map<string, ComparisonCell>([
     ...cells,
-    ...section.projectStatuses.map((ps): [string, ComparisonCell] => [
-      ps.projectId,
+    ...[...occurrences].map(([projectId, group]): [string, ComparisonCell] => [
+      projectId,
       {
-        status: ps.status,
-        risks: cells.get(ps.projectId)?.risks ?? 0,
-        name: ps.project.name,
+        status: aggregateTrafficLight(group.map((ps) => ps.status)),
+        risks: cells.get(projectId)?.risks ?? 0,
+        name: group.at(-1)?.project.name ?? UNKNOWN_CELL.name,
       },
     ]),
   ]);
@@ -189,10 +203,12 @@ export function collectComparisonCells(
 
   return [...authoritativeReports]
     .sort((a, b) => a.periodEnd.getTime() - b.periodEnd.getTime())
-    .flatMap((report) => report.sections)
     .reduce(
-      (cells, section) =>
-        accumulateRisks(applyProjectStatuses(cells, section), section),
+      (cells, report) =>
+        report.sections.reduce(
+          accumulateRisks,
+          applyProjectStatuses(cells, report),
+        ),
       new Map<string, ComparisonCell>(),
     );
 }

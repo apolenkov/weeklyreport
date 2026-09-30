@@ -102,17 +102,18 @@ describe("collectComparisonCells — republished-period risk dedupe", () => {
   });
 
   it.each([
-    [null, "green"],
-    ["green", null],
-    ["green", "red"],
-    ["red", "green"],
-    [null, null],
+    [null, "green", "green"],
+    ["green", null, "green"],
+    ["green", "red", "red"],
+    ["red", "green", "red"],
+    ["yellow", "green", "yellow"],
+    [null, null, null],
   ] as const)(
-    "uses the last snapshot occurrence for a shared project's statuses %s then %s",
-    (first, last) => {
+    "folds a shared project's section statuses %s and %s to the worst non-null (%s)",
+    (first, second, expected) => {
       const report: ComparisonReport = {
         ...republished,
-        sections: [first, last].map((status) => ({
+        sections: [first, second].map((status) => ({
           projectStatuses: [
             { projectId: PROJECT_ID, status, project: { name: "CRM" } },
           ],
@@ -120,9 +121,9 @@ describe("collectComparisonCells — republished-period risk dedupe", () => {
         })),
       };
 
-      expect.soft(statusForProject([report], PROJECT_ID)).toBe(last);
+      expect.soft(statusForProject([report], PROJECT_ID)).toBe(expected);
       expect(collectComparisonCells([report]).get(PROJECT_ID)?.status).toBe(
-        last,
+        expected,
       );
     },
   );
