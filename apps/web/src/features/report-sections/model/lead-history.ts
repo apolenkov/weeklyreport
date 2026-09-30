@@ -22,7 +22,7 @@ export interface HistoryEntry {
   href?: string | undefined;
   weekLabel: string;
   dateRange: string;
-  status: "submitted" | "draft" | "published" | "archived";
+  status: "submitted" | "draft" | "published" | "reopened" | "archived";
   archived?: boolean | undefined;
   submissionState: HistorySubmissionState;
   submittedAt: string | null;
@@ -85,7 +85,7 @@ export function mapCompiledHistoryEntries(
     href: `/reports/${encodeURIComponent(e.reportId)}`,
     weekLabel: formatWeekLabel(e.periodStart),
     dateRange: formatPeriodRangeWithYear(e.periodStart, e.periodEnd),
-    status: e.archived ? "archived" : "published",
+    status: e.archived ? "archived" : e.reopened ? "reopened" : "published",
     archived: e.archived,
     submissionState: "unavailable",
     submittedAt: null,

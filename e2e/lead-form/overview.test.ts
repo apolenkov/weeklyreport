@@ -291,8 +291,12 @@ async function openWorkRow(text: string) {
   return row;
 }
 
-function openWorkActionName(action: string, text: string): string {
-  return `${action}: ${shortItemLabel(text)}`;
+// The register suffixes each action name with the occurrence's period range,
+// which differs per fixture row, so match the stable prefix only.
+function openWorkActionName(action: string, text: string): RegExp {
+  const prefix = `${action}: ${shortItemLabel(text)}, `;
+  const escaped = prefix.replaceAll(/[$()*+.?[\\\]^{|}]/g, String.raw`\$&`);
+  return new RegExp(`^${escaped}`);
 }
 
 async function openWorkOutcome(text: string, action: string): Promise<void> {

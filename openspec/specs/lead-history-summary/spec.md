@@ -146,6 +146,14 @@ next publish replaces the snapshot.
 - **THEN** the entry is derived from the last published scoped sections only
 - **AND** the new live section appears only after the report is published again
 
+#### Scenario: A reopened period is not presented as currently published
+
+- **GIVEN** a published report has been reopened and is live again
+- **WHEN** a head reads compiled history
+- **THEN** the entry carries `reopened: true` and the card shows a Reopened badge instead of Published
+- **AND** its publication time is labelled as the last publication
+- **AND** the entry does not count toward the published aggregates or streak
+
 ### Requirement: Personal history uses the immutable publication snapshot
 
 The lead-specific history read MUST derive entries for published periods from

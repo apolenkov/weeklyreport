@@ -23,6 +23,7 @@ import {
 } from "./overview-editor-recovery";
 import { useRetainedOverviewState } from "./overview-input-provider";
 import { overviewMoveEditorItem, saveOverviewItem } from "./overview-item-save";
+import { abandonedSaveRestorePatch } from "./overview-save-restore";
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
 import { useOverviewFocusReturn } from "./use-overview-focus-return";
 
@@ -236,6 +237,11 @@ export function useOverviewItemEditor(
       ),
     save,
     close: () => {
+      const restore =
+        editor && dialog && !recoveryReason
+          ? abandonedSaveRestorePatch(editor, dialog)
+          : null;
+      if (editor && restore) editor.draft.apply(restore);
       startedAttempt.current = null;
       promotionAttempt.current = null;
       setDialog(null);

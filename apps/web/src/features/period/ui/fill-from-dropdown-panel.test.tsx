@@ -18,7 +18,7 @@ describe("FillFromDropdownPanel counts", () => {
       <FillFromDropdownPanel
         open
         id="fill"
-        pos={{ top: 0, right: 0 }}
+        pos={{ top: 0, left: 0, width: 340 }}
         panelRef={createRef()}
         pastPeriods={[period]}
         filteredPeriods={[period]}

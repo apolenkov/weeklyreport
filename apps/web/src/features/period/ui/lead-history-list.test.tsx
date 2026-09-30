@@ -100,4 +100,17 @@ describe("LeadHistoryList", () => {
       expect(screen.getByRole("img", { name })).toBeInTheDocument();
     }
   });
+
+  it("labels a reopened period as reopened with its last publication time", () => {
+    render(
+      <LeadHistoryList
+        entries={[{ ...entry, status: "reopened", publishedAt: "8 min ago" }]}
+      />,
+    );
+
+    expect(screen.getByText("Reopened")).toBeInTheDocument();
+    expect(screen.queryByText("Published")).not.toBeInTheDocument();
+    expect(screen.getByText("Last published")).toBeInTheDocument();
+    expect(screen.getByText("8 min ago")).toBeInTheDocument();
+  });
 });
