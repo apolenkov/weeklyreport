@@ -59,13 +59,16 @@ function reviewErrorMessage(err: unknown, fallback: string): string {
   return err.message;
 }
 
+function shortExcerpt(text: string): string {
+  const excerpt = text.replaceAll(/\s+/g, " ").trim();
+  return excerpt.length > COMMENT_EXCERPT_MAX_LENGTH
+    ? `${excerpt.slice(0, COMMENT_EXCERPT_MAX_LENGTH - COMMENT_EXCERPT_SUFFIX_LENGTH)}…`
+    : excerpt;
+}
+
 function commentDeleteLabel(comment: RecordCommentView): string {
   const author = comment.reviewerName ?? "Reviewer";
-  const excerpt = comment.text.replaceAll(/\s+/g, " ").trim();
-  const shortened =
-    excerpt.length > COMMENT_EXCERPT_MAX_LENGTH
-      ? `${excerpt.slice(0, COMMENT_EXCERPT_MAX_LENGTH - COMMENT_EXCERPT_SUFFIX_LENGTH)}…`
-      : excerpt;
+  const shortened = shortExcerpt(comment.text);
   return shortened
     ? `Delete comment by ${author}: ${shortened}`
     : `Delete comment by ${author}`;
@@ -197,6 +200,7 @@ export function RecordComments({
   canReview,
   currentUserId,
   isAdmin,
+  subject,
   onMutated,
 }: {
   readonly anchor: RecordCommentAnchor;
@@ -204,6 +208,8 @@ export function RecordComments({
   readonly canReview: boolean;
   readonly currentUserId: string;
   readonly isAdmin: boolean;
+  /** Record text; makes each composer's accessible name unique in a list. */
+  readonly subject?: string | undefined;
   readonly onMutated: () => void;
 }) {
   const [draft, setDraft] = useState("");
@@ -298,6 +304,11 @@ export function RecordComments({
           onSubmit={submitDraft}
           submitDisabled={submitDisabled}
           isPending={isCommentPending}
+          label={
+            subject
+              ? `Add a review comment on ${shortExcerpt(subject)}`
+              : undefined
+          }
           validationError={validationError}
           {...(feedback ? { feedbackId } : {})}
         />

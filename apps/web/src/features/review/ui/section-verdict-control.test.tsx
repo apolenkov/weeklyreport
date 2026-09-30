@@ -42,6 +42,7 @@ function makeQueryClient() {
 
 function renderControl(options: {
   readonly canReview: boolean;
+  readonly subjectName?: string;
   readonly onMutated?: () => void;
 }) {
   const onMutated = options.onMutated ?? vi.fn<() => void>();
@@ -65,6 +66,7 @@ function renderControl(options: {
       version={VERSION}
       reviews={[]}
       canReview={options.canReview}
+      subjectName={options.subjectName}
       onMutated={onMutated}
     />,
     { wrapper: Wrapper },
@@ -160,6 +162,20 @@ describe("SectionVerdictControl — verdict buttons", () => {
     expect(
       screen.getByRole("button", { name: "Request changes" }),
     ).toHaveAttribute("data-interaction-effect", "mutation-required");
+  });
+
+  it("names the verdict buttons and the reason dialog after the section owner", async () => {
+    renderControl({ canReview: true, subjectName: "Ada Lovelace" });
+
+    expect(
+      screen.getByRole("button", { name: "Approve Ada Lovelace" }),
+    ).toHaveTextContent("Approve");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Request changes for Ada Lovelace" }),
+    );
+    expect(
+      screen.getByRole("dialog", { name: "Request changes from Ada Lovelace" }),
+    ).toBeInTheDocument();
   });
 
   it("Approve submits approved+version, toasts, invalidates review cache, and notifies parent", async () => {

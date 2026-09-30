@@ -16,20 +16,21 @@ import {
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { DashboardPanelIssue } from "./dashboard-panel-state";
 import { ReopenRequestRow } from "./reopen-request-row";
+import { useFocusQueueAfterDecision } from "./use-focus-queue-after-decision";
 
 type DashboardReopenRequest = ComponentProps<
   typeof ReopenRequestRow
 >["request"];
 type ReopenDecision = "approved" | "rejected";
 
-function useRespondReopenRequest(onResolved: () => void) {
+function useRespondReopenRequest(onResolved: (id: string) => void) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
   return useMutation(
     trpc.admin.respondReopenRequest.mutationOptions({
-      onSuccess: (result) => {
-        onResolved();
+      onSuccess: (result, variables) => {
+        onResolved(variables.id);
         if (result.staleAutoClosed) {
           toast.info(
             "This section was already reopened; the request was closed.",
@@ -162,11 +163,15 @@ export function ReopenRequestsCard() {
   const countQuery = useQuery(
     trpc.admin.pendingReopenCount.queryOptions(undefined),
   );
-  const respondMut = useRespondReopenRequest(closeResponder);
   const requests = useMemo(
     () => listQuery.data?.pages.flatMap((page) => page.items) ?? [],
     [listQuery.data?.pages],
   );
+  const { queueRef, markDecided } = useFocusQueueAfterDecision(requests);
+  const respondMut = useRespondReopenRequest((id) => {
+    markDecided(id);
+    closeResponder();
+  });
 
   if (listQuery.isPending) {
     return (
@@ -198,7 +203,9 @@ export function ReopenRequestsCard() {
 
   return (
     <section
-      className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-[var(--shadow-card-elevated)]"
+      ref={queueRef}
+      tabIndex={-1}
+      className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-[var(--shadow-card-elevated)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
       aria-label="Pending reopen requests"
     >
       <ReopenRequestsHeader

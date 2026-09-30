@@ -74,11 +74,15 @@ const APPROVE_BUTTON_CLASSNAME =
 const REQUEST_CHANGES_BUTTON_CLASSNAME =
   "btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-2.5 py-0.5 text-xs font-semibold text-[var(--color-destructive)] transition-colors hover:border-[var(--color-destructive)] disabled:cursor-not-allowed disabled:opacity-50";
 
+// Lists of leads repeat these buttons; the lead's name keeps each one unique
+// for assistive tech while the visible text stays short.
 function VerdictActions({
+  subjectName,
   disabled,
   onApprove,
   onRequestChanges,
 }: {
+  readonly subjectName: string | undefined;
   readonly disabled: boolean;
   readonly onApprove: () => void;
   readonly onRequestChanges: () => void;
@@ -91,6 +95,7 @@ function VerdictActions({
         className={APPROVE_BUTTON_CLASSNAME}
         onClick={onApprove}
         disabled={disabled}
+        aria-label={subjectName ? `Approve ${subjectName}` : undefined}
         aria-busy={disabled}
       >
         {disabled ? "Saving…" : "Approve"}
@@ -101,6 +106,9 @@ function VerdictActions({
         className={REQUEST_CHANGES_BUTTON_CLASSNAME}
         onClick={onRequestChanges}
         disabled={disabled}
+        aria-label={
+          subjectName ? `Request changes for ${subjectName}` : undefined
+        }
         aria-busy={disabled}
       >
         Request changes
@@ -114,6 +122,8 @@ interface SectionVerdictControlProps {
   readonly version: number;
   readonly reviews: readonly SectionReviewView[];
   readonly canReview: boolean;
+  /** Section owner; names the verdict buttons and the reason dialog. */
+  readonly subjectName?: string | undefined;
   readonly onMutated: () => void;
 }
 
@@ -124,6 +134,7 @@ export function SectionVerdictControl({
   version,
   reviews,
   canReview,
+  subjectName,
   onMutated,
 }: SectionVerdictControlProps) {
   const trpc = useTRPC();
@@ -163,6 +174,7 @@ export function SectionVerdictControl({
       </span>
       {canReview ? (
         <VerdictActions
+          subjectName={subjectName}
           disabled={verdictMut.isPending}
           onApprove={() =>
             verdictMut.mutate({
@@ -178,6 +190,7 @@ export function SectionVerdictControl({
         <RequestChangesDialog
           reportSectionId={reportSectionId}
           version={version}
+          subjectName={subjectName}
           onClose={() => setRequestingChanges(false)}
           onRequested={onVerdictRecorded}
         />

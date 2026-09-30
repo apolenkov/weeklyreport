@@ -324,7 +324,7 @@ describe("PeriodsTab", () => {
       name: "Reopen this period?",
     });
     expect(dialog).toHaveTextContent(
-      "Leads will be able to edit their sections again.",
+      "Sections they already submitted return to draft and must be submitted again.",
     );
     expect(reopenEntry.mutationFn).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();

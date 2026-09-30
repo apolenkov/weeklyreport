@@ -93,7 +93,7 @@ export function PeriodsTabDialogs({
         <ConfirmationDialog
           open={true}
           title="Reopen this period?"
-          description="The published report will be unlocked. Leads will be able to edit their sections again. The current published version will be replaced when you publish again."
+          description="The published report will be unlocked. Leads will be able to edit their sections again. Sections they already submitted return to draft and must be submitted again. The current published version will be replaced when you publish again."
           confirmLabel={reopenIsPending ? "Reopening…" : "Reopen"}
           testId="periods-reopen-dialog"
           isPending={reopenIsPending}

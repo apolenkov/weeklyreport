@@ -322,6 +322,20 @@ describe("NavBar — role-aware visibility", () => {
     );
   });
 
+  it("lets the identity shrink inside its grid column instead of overlapping the nav pills", () => {
+    setRole("head", "Alexandria Catherine Montgomery-Wetherington");
+    render(<NavBar />);
+
+    const identity = screen.getByTestId("nav-identity");
+    const brand = identity.parentElement;
+    expect(brand).toHaveClass("min-w-0");
+    expect(brand).not.toHaveClass("justify-self-start");
+    const name = within(identity).getByText(
+      "Alexandria Catherine Montgomery-Wetherington",
+    ).parentElement;
+    expect(name).toHaveClass("min-w-0", "sm:truncate");
+  });
+
   it("keeps a visible mobile menu label and the existing action names", () => {
     setRole("lead");
     render(<NavBar />);

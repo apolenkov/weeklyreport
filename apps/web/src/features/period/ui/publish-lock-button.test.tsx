@@ -198,6 +198,79 @@ describe("PublishLockButton", () => {
     expect(onPublish).not.toHaveBeenCalled();
   });
 
+  it("does not describe publishing as irreversible because a head can reopen", async () => {
+    render(
+      <PublishLockButton
+        pendingCount={0}
+        totalLeads={6}
+        periodStatus="open"
+        onPublish={vi.fn()}
+        onReopen={vi.fn()}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /publish & lock/i }),
+    );
+    const dialog = screen.getByRole("alertdialog");
+    expect(dialog).not.toHaveTextContent("cannot be undone");
+    expect(dialog).toHaveTextContent(
+      "Leads can no longer edit this period until you reopen it.",
+    );
+    expect(dialog).toHaveTextContent("This can be reversed later.");
+  });
+
+  it("tells the head that reopening returns submitted sections to draft", async () => {
+    render(
+      <PublishLockButton
+        pendingCount={0}
+        totalLeads={6}
+        periodStatus="published"
+        onPublish={vi.fn()}
+        onReopen={vi.fn()}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /reopen period/i }),
+    );
+    expect(screen.getByRole("alertdialog")).toHaveTextContent(
+      "Sections they already submitted return to draft and must be submitted again.",
+    );
+  });
+
+  describe("focus after publishing", () => {
+    const renderStatus = (periodStatus: "open" | "published") => (
+      <PublishLockButton
+        pendingCount={0}
+        totalLeads={6}
+        periodStatus={periodStatus}
+        onPublish={vi.fn()}
+        onReopen={vi.fn()}
+      />
+    );
+
+    it("moves focus to Reopen Period once the Publish button is replaced", async () => {
+      const { rerender } = render(renderStatus("open"));
+      await userEvent.click(
+        screen.getByRole("button", { name: /publish & lock/i }),
+      );
+      const dialog = screen.getByRole("alertdialog");
+      await userEvent.click(
+        expectDefined([...dialog.querySelectorAll("button")].at(-1)),
+      );
+
+      rerender(renderStatus("published"));
+
+      expect(
+        screen.getByRole("button", { name: /reopen period/i }),
+      ).toHaveFocus();
+    });
+
+    it("does not steal focus when a published period is simply displayed", () => {
+      render(renderStatus("published"));
+      expect(document.body).toHaveFocus();
+    });
+  });
+
   describe("a11y: Reopen Period button SVG", () => {
     it("SVG inside Reopen Period button has aria-hidden='true'", () => {
       render(
