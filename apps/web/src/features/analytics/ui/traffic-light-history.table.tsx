@@ -9,12 +9,14 @@ import {
   trafficLightToCanonical,
 } from "@customreport/shared";
 
+import { statusLabel } from "../../../shared/lib/status/status-presentation";
 import { SlideStatusBadge } from "../../../shared/ui/feedback/slide-status-badge";
 import {
   AnalyticsTable,
   StickyColumnHeader,
   StickyRowHeader,
 } from "./analytics-table";
+import { weekEndingRange } from "./analytics-table-data";
 
 function StatusChange({
   previous,
@@ -41,7 +43,7 @@ function LatestWeekSummary({
   rows,
   index,
 }: {
-  readonly period: string | undefined;
+  readonly period: string;
   readonly rows: TrafficLightHistoryOutput["rows"];
   readonly index: number;
 }) {
@@ -54,16 +56,14 @@ function LatestWeekSummary({
     }))
     .filter(({ count }) => count > 0);
   return (
-    <p className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
-      Week ending {period}:
-      {counts.map(({ status, count }) => (
-        <span
-          key={status}
-          className="inline-flex items-center gap-1 whitespace-nowrap"
-        >
-          {count} <SlideStatusBadge status={status} labelVariant="screen" />
-        </span>
-      ))}
+    <p className="mb-3 text-sm text-muted-foreground">
+      Week of {weekEndingRange(period)}:{" "}
+      {counts
+        .map(
+          ({ status, count }, i) =>
+            `${String(count)} ${i === 0 ? (count === 1 ? "project " : "projects ") : ""}${statusLabel(status, "screen").toLowerCase()}`,
+        )
+        .join(", ")}
     </p>
   );
 }
@@ -130,7 +130,7 @@ export function TrafficLightHistoryTable({
   return (
     <>
       <LatestWeekSummary
-        period={periods[latestIndex]}
+        period={periods[latestIndex] ?? ""}
         rows={rows}
         index={latestIndex}
       />
@@ -148,7 +148,7 @@ export function TrafficLightHistoryTable({
                 scope="col"
                 className={`whitespace-nowrap px-3 py-2 ${index === latestIndex ? "bg-[var(--color-surface-muted)]" : ""}`}
               >
-                {period}
+                {weekEndingRange(period)}
               </th>
             ))}
           </tr>

@@ -30,16 +30,21 @@ function MobileWeekLabel({
   period,
 }: {
   readonly label: string;
-  readonly period: string | null;
+  readonly period: string | null | undefined;
 }) {
+  // `undefined` marks an empty cell: the label shares one line with "No item".
   return (
-    <div className="mb-2 flex items-baseline justify-between gap-2 md:hidden">
+    <div
+      className={`flex items-baseline justify-between gap-2 md:hidden ${period === undefined ? "" : "mb-2"}`}
+    >
       <p className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--color-foreground)]">
         {label}
       </p>
-      <p className="text-xs text-[var(--color-muted-foreground)]">
-        {period ?? "Period unavailable"}
-      </p>
+      {period === undefined ? null : (
+        <p className="text-xs text-[var(--color-muted-foreground)]">
+          {period ?? "Period unavailable"}
+        </p>
+      )}
     </div>
   );
 }
@@ -77,11 +82,11 @@ function LineageRow({
             data-overview-lineage-lane={column.source}
             role="group"
             aria-labelledby={STATUS_OVERVIEW_COLUMN_HEADER_IDS[column.key]}
-            className={`${TIMELINE_CELL} block border-t border-[var(--color-border-subtle)] first:border-t-0 md:min-h-36 md:flex-col md:border-t-0 md:flex ${item ? "" : "bg-[var(--color-surface-muted)]"}`}
+            className={`${TIMELINE_CELL} block border-t border-[var(--color-border-subtle)] first:border-t-0 md:min-h-36 md:flex-col md:border-t-0 md:flex ${item ? "" : "bg-[var(--color-surface-muted)] max-md:flex max-md:items-baseline max-md:gap-2 max-md:py-1"}`}
           >
             <MobileWeekLabel
               label={column.label}
-              period={periods[column.key]}
+              period={item ? periods[column.key] : undefined}
             />
             {item ? (
               <>
@@ -94,6 +99,9 @@ function LineageRow({
               </>
             ) : (
               <p className="text-xs text-[var(--color-muted-foreground)]">
+                <span aria-hidden="true" className="md:hidden">
+                  ·{" "}
+                </span>
                 No item
               </p>
             )}

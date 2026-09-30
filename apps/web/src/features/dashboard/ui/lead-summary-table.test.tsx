@@ -72,6 +72,25 @@ function leadRow(name: string): HTMLElement {
 }
 
 describe("LeadSummaryTable action queue", () => {
+  it.each([
+    ["submitted", "none", "Not reviewed"],
+    ["draft", "changes-requested", "Changes requested"],
+  ] as const)(
+    "shows the review pill for a %s section in review state %s",
+    (status, reviewState, reviewLabel) => {
+      render(
+        <LeadSummaryTable
+          leads={[makeLead({ status, reviewState, reviewLabel })]}
+          reportId="10000000-0000-4000-8000-000000000001"
+          onMutated={vi.fn()}
+        />,
+      );
+      expect(within(leadRow("Alice Lead")).getByText(reviewLabel)).toHaveClass(
+        "text-[var(--color-foreground)]",
+      );
+    },
+  );
+
   it("renders one compact row with identity, state, freshness, attention, and primary action", () => {
     render(
       <LeadSummaryTable
@@ -92,7 +111,7 @@ describe("LeadSummaryTable action queue", () => {
     const row = leadRow("Alice Lead");
     expect(within(row).getByText("Lead")).toBeVisible();
     expect(within(row).getByText("In progress")).toBeVisible();
-    expect(within(row).getByText("Not reviewed")).toBeVisible();
+    expect(within(row).queryByText("Not reviewed")).toBeNull();
     expect(within(row).getByText(/5 records · At risk/)).toBeVisible();
     const primaryAction = within(row).getByRole("button", { name: "Open" });
     expect(primaryAction).toBeVisible();

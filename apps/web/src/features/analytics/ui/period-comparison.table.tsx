@@ -12,11 +12,16 @@ import {
   StickyColumnHeader,
   StickyRowHeader,
 } from "./analytics-table";
+import { weekEndingRange } from "./analytics-table-data";
 
 function deltaClass(delta: number): string {
   if (delta > 0) return "text-[var(--color-destructive)]";
   if (delta < 0) return "text-[var(--color-starbucks-accent)]";
-  return "text-muted-foreground";
+  return "";
+}
+
+function riskDeltaText(delta: number): string {
+  return delta === 0 ? "\u2014" : String(delta);
 }
 
 export function PeriodComparisonTable({
@@ -35,8 +40,9 @@ export function PeriodComparisonTable({
   return (
     <>
       <p className="mb-3 text-sm text-muted-foreground">
-        Periods ending {periodA} (previous) and {periodB} (latest). Risk change
-        is latest minus previous.
+        Weeks of {weekEndingRange(periodA)} (previous) and{" "}
+        {weekEndingRange(periodB)} (latest). Risk change is latest minus
+        previous.
       </p>
       <AnalyticsTable
         headingId={headingId}
@@ -82,7 +88,9 @@ export function PeriodComparisonTable({
               <td className="px-3 py-2">{r.riskCountB}</td>
               <td className="px-3 py-2">{r.riskCountA}</td>
               <td className={`px-3 py-2 ${deltaClass(r.riskDelta)}`}>
-                {r.riskDelta > 0 ? `+${r.riskDelta}` : r.riskDelta}
+                {r.riskDelta > 0
+                  ? `+${String(r.riskDelta)}`
+                  : riskDeltaText(r.riskDelta)}
               </td>
             </tr>
           ))}
