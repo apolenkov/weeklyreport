@@ -4,31 +4,20 @@
     "outDir": "dist",
     "rootDir": "../.."
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "include": ["src/**/*.ts"],
   "exclude": [
     "node_modules",
     "dist",
-    // The artifact migrator is a one-shot ops CLI with its own tsconfig/image;
-    // it must not ride into the API runtime dist.
-    "src/pdf-artifact-migrator/**",
     "**/*.test.ts",
-    "**/*.test.tsx",
     "**/*.integration.test.ts",
-    "**/*.integration.test.tsx",
     "**/*.spec.ts",
-    "**/*.spec.tsx",
     "**/__tests__/**",
     "**/test-utils/**",
     "**/*.fixture.ts",
-    "**/*.fixture.tsx",
     "**/*.fixtures.ts",
-    "**/*.fixtures.tsx",
     "**/*-fixtures.ts",
-    "**/*-fixtures.tsx",
     "**/*stub*.ts",
-    "**/*stub*.tsx",
     "**/*harness*.ts",
-    "**/*harness*.tsx",
     "**/test-seams/**"
   ]
 }

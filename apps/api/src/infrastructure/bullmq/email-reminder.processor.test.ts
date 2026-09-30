@@ -51,8 +51,8 @@ vi.mock("../../modules/admin/index.js", () => ({
   },
 }));
 
-// The deadline/escalation dispatch branches call renderEmail (react-email
-// rendering); mocking it keeps these tests focused on the processor's
+// The deadline/escalation dispatch branches call renderEmail (HTML
+// string templates); mocking it keeps these tests focused on the processor's
 // dispatch wiring rather than template output.
 vi.mock("../../modules/email/index.js", () => ({
   renderEmail: vi.fn(),

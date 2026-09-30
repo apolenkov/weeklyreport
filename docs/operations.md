@@ -12,22 +12,21 @@ marked **untested in production**.
 `docker compose --env-file .env.production -f docker-compose.prod.yml` brings up
 eleven services:
 
-| Service                 | Role                                                                                                                                                                                                                           |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `config-guard`          | Fails before database services start if `DB_PASSWORD` contains a reserved URL character.                                                                                                                                       |
-| `caddy`                 | The only public entrypoint. TLS, security headers, routes `/api/web-vitals`, `/api/client-logs`, `/trpc`, `/auth`, `/health`, `/admin/queues`, and `/pdfs` to the api and everything else to web. `/metrics` is internal-only. |
-| `web`                   | Next.js standalone server. Not published to the host — reachable only through caddy.                                                                                                                                           |
-| `api`                   | NestJS + tRPC. Not published to the host either.                                                                                                                                                                               |
-| `migrate`               | Init container: `prisma migrate deploy`, then exits. `api` waits for it to succeed.                                                                                                                                            |
-| `pdf-artifact-migrator` | Opt-in one-shot generation-1 artifact link migration. Its default `check` mode is read-only on PostgreSQL. See [PDF artifact generation protocol](#pdf-artifact-generation-protocol).                                          |
-| `pgbouncer`             | Transaction-mode pool in front of Postgres. All api query traffic goes through it.                                                                                                                                             |
-| `postgres`              | The database. No host port; reachable only on the compose network.                                                                                                                                                             |
-| `redis`                 | BullMQ queues. `--maxmemory 200mb`, `noeviction`.                                                                                                                                                                              |
-| `gotenberg`             | Internal PDF renderer reached only by the api over the compose network — no host port, no Caddy route. Serializes conversions and clears browser state between jobs; egress is confined to the `PDF_BASE_URL` print origin.    |
-| `backup`                | Periodic `pg_dump` into the `pgbackups` volume. See [Backups](#backups).                                                                                                                                                       |
+| Service        | Role                                                                                                                                                                                                                           |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `config-guard` | Fails before database services start if `DB_PASSWORD` contains a reserved URL character.                                                                                                                                       |
+| `caddy`        | The only public entrypoint. TLS, security headers, routes `/api/web-vitals`, `/api/client-logs`, `/trpc`, `/auth`, `/health`, `/admin/queues`, and `/pdfs` to the api and everything else to web. `/metrics` is internal-only. |
+| `web`          | Next.js standalone server. Not published to the host — reachable only through caddy.                                                                                                                                           |
+| `api`          | NestJS + tRPC. Not published to the host either.                                                                                                                                                                               |
+| `migrate`      | Init container: `prisma migrate deploy`, then exits. `api` waits for it to succeed.                                                                                                                                            |
+| `pgbouncer`    | Transaction-mode pool in front of Postgres. All api query traffic goes through it.                                                                                                                                             |
+| `postgres`     | The database. No host port; reachable only on the compose network.                                                                                                                                                             |
+| `redis`        | BullMQ queues. `--maxmemory 200mb`, `noeviction`.                                                                                                                                                                              |
+| `gotenberg`    | Internal PDF renderer reached only by the api over the compose network — no host port, no Caddy route. Serializes conversions and clears browser state between jobs; egress is confined to the `PDF_BASE_URL` print origin.    |
+| `backup`       | Periodic `pg_dump` into the `pgbackups` volume. See [Backups](#backups).                                                                                                                                                       |
 
-`migrate`, `pdf-artifact-migrator`, and `backup` talk to `postgres` **directly**, bypassing pgbouncer:
-DDL and `pg_dump` need a session that outlives a single transaction; the artifact migrator keeps the direct path for its read-only scan.
+`migrate` and `backup` talk to `postgres` **directly**, bypassing pgbouncer:
+DDL and `pg_dump` need a session that outlives a single transaction.
 
 ## First deploy
 
@@ -90,16 +89,7 @@ would let rewrites and server-side fetches target different origins.
    docker compose --env-file .env.production -f docker-compose.prod.yml build
    ```
 
-3. **Activate the release.** For the first install and every release that
-   introduces the generation-aware PDF protocol, complete the pre-activation
-   sequence in [PDF artifact generation protocol](#pdf-artifact-generation-protocol)
-   before starting the stack. It runs the schema migration and artifact
-   `check → apply → check` while the API is stopped, then starts the app only
-   after the final check exits 0. For later routine starts, `pdf-artifact-migrator`
-   is excluded from the default Compose set; the protocol's one-shot `check`
-   must not run against artifacts already created by the generation-aware API.
-   For a later routine start, run the default Compose set without the
-   migration profile:
+3. **Activate the release.** Start the stack:
 
    ```sh
    docker compose --env-file .env.production -f docker-compose.prod.yml up -d
@@ -292,154 +282,13 @@ destructive command. Product or shared databases are never reset; leave
 
 PDF artifact files are generation-scoped: workers publish
 `${jobId}-g${generation}.pdf`, the public URL stays `/pdfs/{jobId}.pdf`, and
-the download resolves the completed row's recorded generation — never the
-legacy un-suffixed name. Rows completed before the protocol carry
-`generation = 1` but only a legacy `${jobId}.pdf` file, so the deploy that
-introduces the protocol runs a one-shot artifact migration that hard-links
-every verified legacy file to its generation-1 name.
-
-The `pdf-artifact-migrator` image (`apps/api/Dockerfile.pdf-artifact-migrator`)
-is a separate compiled one-shot runtime: its CLI source lives under
-`apps/api`, but it ships and runs as its own container with a dedicated
-entrypoint — never inside the api runner — and carries no tsx or prisma
-tooling. The Compose service uses the opt-in `pdf-artifact-migration` profile,
-is `restart: "no"`, and mounts the `pdfdata` artifact volume at
-`PDF_OUTPUT_DIR`; it exists in `docker-compose.prod.yml` and `docker-compose.yml`
-from task 2.5 of this change onward. PostgreSQL access is read-only: a
-single `pg` session pinned `default_transaction_read_only=on`, connected
-directly to postgres like `migrate`, issuing only SELECTs of `completed`
-rows. It writes nothing to the database and leaves every durable field
-unchanged. On the artifact filesystem, `check` and `apply` never delete or
-overwrite a destination PDF, and `rollback` deletes only the verified
-record-owned destination link; the migrator's only other filesystem effects
-are its own state under `.migration/` — a transient `lock` directory every
-mode (including `check`) creates for the run and removes on clean completion,
-and per-job `records/<jobId>.json` entries that are atomically replaced
-(fsynced temp renamed over the record path), never edited in place. The
-migrator does not run under `prisma/guards/_destructive-guard.ts` — its
-guards are the read-only session plus a target-bound confirmation token.
-
-Deploy order — old-protocol and generation-aware producers/workers must never
-run concurrently:
-
-1. Build the release images without starting the new API:
-
-   ```sh
-   docker compose --env-file .env.production -f docker-compose.prod.yml build
-   ```
-
-2. Start PostgreSQL and run `prisma migrate deploy` through the existing
-   `migrate` service. The migration is additive and backward-compatible, so
-   on an upgrade it runs while the old API is still live. Do not start the new
-   API yet.
-
-   ```sh
-   docker compose --env-file .env.production -f docker-compose.prod.yml up -d postgres
-   docker compose --env-file .env.production -f docker-compose.prod.yml run --rm --no-deps migrate
-   ```
-
-3. Stop the old API containers on an upgrade. The pdf-export worker is
-   in-process, so stopping the API quiesces both dispatch and rendering;
-   retained old-protocol queue entries are later rejected by the workers'
-   generation check and funnel to `recovery_required`. A fresh install has no
-   old API to stop.
-4. Run the migrator in `check` (the default mode). It reports each row as
-   `already-linked`, `would-link`, or `skipped-anomaly`, writes no artifact
-   or record — only the transient `.migration/lock` while it runs — and
-   exits non-zero while an applicable link is missing or any anomaly is
-   reported. Do not start the new API on a non-zero result.
-5. Run `apply` with
-   `PDF_ARTIFACT_MIGRATOR_CONFIRM=<host>|<port>|<database>` matching the
-   resolved `DATABASE_URL` target — the `CONFIRM_RESTORE_TARGET` precedent.
-   `apply` and `rollback` both refuse without it.
-6. Run `check` again until it exits 0 and its summary reports `pending=0`
-   and `anomalies=0` — zero pending links alone is not sufficient.
-7. Activate the generation-aware API only after that successful check:
-
-   ```sh
-   docker compose --env-file .env.production -f docker-compose.prod.yml up -d
-   ```
-
-   The migrator's profile is not enabled by this ordinary stack start, so it
-   will not reclassify native generation-1 artifacts as migration anomalies.
-
-The whole window runs quiesced: the artifact root and its `.migration/`
-subtree must not be touched by anything else — Node has no `openat`-style
-protection against a process swapping parent directories mid-run, so
-quiescence is part of the safety contract.
-
-```sh
-# check (default): reports verdicts, writes no artifact or record
-docker compose --profile pdf-artifact-migration --env-file .env.production \
-  -f docker-compose.prod.yml run --rm --no-deps pdf-artifact-migrator
-
-# apply: the token echoes the resolved target host|port|database
-docker compose --profile pdf-artifact-migration --env-file .env.production \
-  -f docker-compose.prod.yml run --rm --no-deps \
-  -e PDF_ARTIFACT_MIGRATOR_MODE=apply \
-  -e 'PDF_ARTIFACT_MIGRATOR_CONFIRM=postgres|5432|<POSTGRES_DB>' \
-  pdf-artifact-migrator
-
-# check again before starting the generation-aware API
-docker compose --profile pdf-artifact-migration --env-file .env.production \
-  -f docker-compose.prod.yml run --rm --no-deps pdf-artifact-migrator
-```
-
-Environment contract: `DATABASE_URL` must pin an explicit port (a portless
-URL inherits `PGPORT` and is refused) and must not carry `host`, `port`,
-`database`, `user`, or `password` query parameters; `PDF_OUTPUT_DIR` is the
-absolute artifact root; `PDF_ARTIFACT_MIGRATOR_MODE` is `check` (default),
-`apply`, or `rollback`; `apply`/`rollback` additionally require
-`PDF_ARTIFACT_MIGRATOR_CONFIRM=<host>|<port>|<database>` exactly matching
-the resolved `DATABASE_URL` target.
-
-`apply` verifies each `${jobId}.pdf` as a regular non-symlink file whose
-sha256 equals the row's checksum; a missing, symlinked, or
-checksum-mismatched legacy file is skipped and reported with the row
-untouched. Run locking and per-job records:
-
-- Every mode — `check` included — takes a global exclusive lock by creating
-  `PDF_OUTPUT_DIR/.migration/lock` (`mkdir`); it is transient run state, not
-  an artifact or record. `EEXIST` refuses safely; normal completion removes
-  the empty directory.
-- A crashed or killed run leaves the lock in place. It is **never**
-  reclaimed automatically — not by PID, age, or heartbeat. To recover:
-  confirm the old api and all migrators are quiesced and no run is active,
-  remove **only** the empty `lock` directory (`rmdir
-PDF_OUTPUT_DIR/.migration/lock`), then rerun — the records drive
-  idempotent recovery.
-- Each job's ownership lives in
-  `PDF_OUTPUT_DIR/.migration/records/<jobId>.json` — schema version, the
-  writing operation's UUID, jobId, source/destination names and paths,
-  source device+inode, sha256, and a state of `intent`, `committed`,
-  `rollback-intent`, or `rolled-back`. Each transition is persisted by
-  atomically replacing the record: unique temp file, fsync, rename over the
-  record path, directory fsync; a corrupt, symlinked, or non-regular record
-  blocks mutation for that row and fails `check`.
-- `apply` verifies the destination absent, then persists `intent` before
-  linking, then `committed` after; a pre-existing destination without a
-  matching record is foreign — even a hard link to the same inode — and is
-  reported, never adopted. A rerun after a crash retries a missing link
-  (only while the recorded source inode still matches the live file) or
-  finalizes a matching one.
-- `rollback` is valid only inside this pre-activation window — it requires a
-  `committed` record, re-verifies path+inode+checksum, persists
-  `rollback-intent`, unlinks only that verified destination, and persists
-  `rolled-back`. A crashed `rollback-intent` resumes the same way: delete
-  only a destination that still matches the owned record, or finish
-  `rolled-back` when the destination is already absent — a mismatch is
-  reported with nothing deleted. An `intent` record blocks rollback as
-  unresolved — `apply` owns its recovery — so resolve it with `apply` first.
-  Legacy files and entries no valid record owns are never removed.
-
-Once the generation-aware api is activated, ordinary rollback is unsafe — a
-completed artifact may exist only as `${jobId}-g${generation}.pdf`, which the
-old reader cannot resolve — and recovery is forward-only: fix forward and
-preserve every durable row, artifact, and queue entry. No reverse migration
-or legacy-filename fallback is provided.
-
-This procedure is the deploy contract for the protocol change; it remains
-**untested in production** and has not yet been exercised end to end.
+the download resolves the completed row's recorded generation — never a
+legacy un-suffixed name. No production database exists yet, so there are no
+pre-protocol artifacts to migrate. Once the api is running, ordinary rollback
+is unsafe — a completed artifact may exist only as
+`${jobId}-g${generation}.pdf`, which an older reader cannot resolve — so
+recovery is forward-only: fix forward and preserve every durable row,
+artifact, and queue entry.
 
 ### Agentation feedback operations
 

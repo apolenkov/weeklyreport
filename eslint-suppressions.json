@@ -235,11 +235,6 @@
       "count": 1
     }
   },
-  "apps/api/src/pdf-artifact-migrator/rows.ts": {
-    "max-params": {
-      "count": 3
-    }
-  },
   "apps/web/src/app/print/[reportId]/print-activity-section.tsx": {
     "max-lines-per-function": {
       "count": 1
