@@ -32,7 +32,7 @@ export function parseClientLogEntry(value: unknown): ClientLogEntry | null {
 }
 
 // Browser → server log forwarder. Captures console.error/warn, window.onerror
-// and unhandledrejection from the web app into the same rotating app.log so all
+// and unhandledrejection from the web app into the same app.log so all
 // debug data lives in one file. `enabled` is dev-only by default.
 export function createClientLogsHandler(deps: {
   logger: AppLogger;

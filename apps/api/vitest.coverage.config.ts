@@ -15,15 +15,14 @@ export default mergeConfig(
   defineConfig({
     test: {
       setupFiles: ["./src/test-utils/test-env.setup.ts"],
-      include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+      include: ["src/**/*.test.ts"],
       exclude: ["**/dist/**", "**/node_modules/**"],
       fileParallelism: false,
       maxWorkers: 1,
       coverage: {
-        include: ["src/**/*.ts", "src/**/*.tsx"],
+        include: ["src/**/*.ts"],
         exclude: [
           "src/**/*.test.ts",
-          "src/**/*.test.tsx",
           "src/**/*.integration.test.ts",
           "src/**/__tests__/**",
           "src/**/test-utils/**",

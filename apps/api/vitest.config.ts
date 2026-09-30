@@ -18,10 +18,9 @@ export default mergeConfig(
       // unit-only.
       exclude: ["**/*.integration.test.ts", "**/dist/**", "**/node_modules/**"],
       coverage: {
-        include: ["src/**/*.ts", "src/**/*.tsx"],
+        include: ["src/**/*.ts"],
         exclude: [
           "src/**/*.test.ts",
-          "src/**/*.test.tsx",
           "src/**/*.integration.test.ts",
           "src/**/__tests__/**",
           "src/**/test-utils/**",
