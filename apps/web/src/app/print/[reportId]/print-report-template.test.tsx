@@ -156,11 +156,11 @@ describe("PrintReportTemplate — static CSS safety", () => {
     expect(styleEl?.innerHTML).toMatchInlineSnapshot(`
       "
                   @media print {
-                    body { margin: 0; padding: 0; }
+                    html, body { margin: 0; padding: 0; background: #fff; }
                     body nav, body .no-print { display: none; }
                     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                     .page-break-before { page-break-before: always; }
-                    .print-section-heading, .print-entity-header {
+                    .print-section-heading, .print-entity-header, h4 {
                       break-after: avoid-page;
                       page-break-after: avoid;
                     }
