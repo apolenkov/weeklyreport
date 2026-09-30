@@ -6,6 +6,7 @@ import {
   sharedReportSectionReadModelSchema,
 } from "@customreport/shared";
 
+import type { ByPeriodRequest } from "../domain/lead-form-cross-author-scope.js";
 import {
   LeadFormDomainError,
   type LeadFormRepository,
@@ -19,18 +20,10 @@ import { readByPeriod } from "./lead-form-by-period.js";
  */
 export async function readStatusOverview(
   repository: LeadFormRepository,
-  reportId: string,
-  viewerId: string,
-  role: Role,
-  requestedAuthorId?: string,
+  request: ByPeriodRequest & { readonly role: Role },
 ): Promise<LeadStatusOverviewOutput> {
-  const selected = await readByPeriod(
-    repository,
-    reportId,
-    viewerId,
-    role,
-    requestedAuthorId,
-  );
+  const { reportId, userId: viewerId, role, requestedAuthorId } = request;
+  const selected = await readByPeriod(repository, request);
   const periods = await repository.getStatusOverviewPeriods(
     reportId,
     selected.section.authorId,

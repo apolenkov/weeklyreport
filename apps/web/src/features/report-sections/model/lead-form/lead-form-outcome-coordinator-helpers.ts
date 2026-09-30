@@ -38,6 +38,12 @@ export interface OutcomeScope {
   readonly authorId: string;
 }
 
+export interface OutcomeCommandContext {
+  readonly scope: OutcomeScope;
+  readonly draftSection: ReportSectionReadModel;
+  readonly version: number;
+}
+
 export type PreparedOutcomeCommand =
   | {
       readonly kind: "resolve";
@@ -153,9 +159,7 @@ export function prepareResolveCommand(
   registry: Map<string, PreparedOutcomeCommand>,
   input: ResolvePlanCommandInput,
   sourceStableId: string | null,
-  scope: OutcomeScope,
-  draftSection: ReportSectionReadModel,
-  version: number,
+  { scope, draftSection, version }: OutcomeCommandContext,
 ): ResolvePlanInput {
   const existing = registry.get(input.commandId);
   if (existing) {
@@ -194,9 +198,7 @@ export function prepareRestoreCommand(
   registry: Map<string, PreparedOutcomeCommand>,
   input: RestorePlanCommandInput,
   stableId: string,
-  scope: OutcomeScope,
-  draftSection: ReportSectionReadModel,
-  version: number,
+  { scope, draftSection, version }: OutcomeCommandContext,
 ): RestorePlanInput {
   const existing = registry.get(input.commandId);
   if (existing) {
@@ -223,9 +225,7 @@ export function preparePromoteCommand(
   registry: Map<string, PreparedOutcomeCommand>,
   input: PromotePlanCommandInput,
   stableId: string,
-  scope: OutcomeScope,
-  draftSection: ReportSectionReadModel,
-  version: number,
+  { scope, draftSection, version }: OutcomeCommandContext,
 ): PromotePlanInput {
   const existing = registry.get(input.commandId);
   if (existing) {
