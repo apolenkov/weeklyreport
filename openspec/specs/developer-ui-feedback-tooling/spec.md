@@ -1,4 +1,10 @@
-## ADDED Requirements
+# developer-ui-feedback-tooling Specification
+
+## Purpose
+
+Defines how developers review UI in WeeklyReport and Development through the shared user-level onUI interface, canonical page origins, and evidence-bound annotation closure.
+
+## Requirements
 
 ### Requirement: Active repositories MUST share one external onUI review interface
 
