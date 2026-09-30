@@ -136,6 +136,21 @@ describe("activity weekly title override", () => {
     ]);
   });
 
+  it("accepts a title at the name limit and a description at the safe-text limit", () => {
+    const parsed = payload([
+      {
+        activityId: ACTIVITY_ID,
+        status: "green",
+        titleOverride: "x".repeat(MAX_ACTIVITY_NAME_LENGTH),
+        note: "y".repeat(SAFE_TEXT_MAX_LENGTH),
+      },
+    ]);
+    expect(parsed.activityStatuses[0]?.titleOverride).toHaveLength(
+      MAX_ACTIVITY_NAME_LENGTH,
+    );
+    expect(parsed.activityStatuses[0]?.note).toHaveLength(SAFE_TEXT_MAX_LENGTH);
+  });
+
   it("rejects an override longer than the catalogue name limit", () => {
     const tooLong = "x".repeat(MAX_ACTIVITY_NAME_LENGTH + 1);
     expect(() =>

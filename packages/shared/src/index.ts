@@ -182,6 +182,7 @@ export {
   itemResolutionSchema,
   itemWorkflowStatusSchema,
   latestForViewerReportSchema,
+  MAX_ACTIVITY_NAME_LENGTH,
   MAX_RECORDS_PER_SECTION_SAVE,
   MAX_WEEK_LABEL_LENGTH,
   myHistoryEntrySchema,

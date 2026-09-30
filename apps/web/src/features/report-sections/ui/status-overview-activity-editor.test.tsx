@@ -1,4 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import {
+  MAX_ACTIVITY_NAME_LENGTH,
+  SAFE_TEXT_MAX_LENGTH,
+} from "@customreport/shared";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -196,4 +200,64 @@ describe("StatusOverviewActivityEditor", () => {
       screen.getByTestId(`activity-description-${ACTIVITY_ID}`),
     ).toHaveValue("Pending description");
   });
+
+  it("accepts a 200-character title and a 500-character description", async () => {
+    const { onChange } = renderEditor();
+    const title = "t".repeat(MAX_ACTIVITY_NAME_LENGTH);
+    const description = "d".repeat(SAFE_TEXT_MAX_LENGTH);
+    fireEvent.change(screen.getByTestId(`activity-title-${ACTIVITY_ID}`), {
+      target: { value: title },
+    });
+    fireEvent.change(
+      screen.getByTestId(`activity-description-${ACTIVITY_ID}`),
+      { target: { value: description } },
+    );
+    await userEvent.click(
+      screen.getByTestId(`activity-fields-save-${ACTIVITY_ID}`),
+    );
+
+    expect(onChange).toHaveBeenCalledWith(ACTIVITY_ID, {
+      titleOverride: title,
+      description,
+    });
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it.each([
+    ["title", "activity-title", MAX_ACTIVITY_NAME_LENGTH, "Weekly title"],
+    [
+      "description",
+      "activity-description",
+      SAFE_TEXT_MAX_LENGTH,
+      "Description",
+    ],
+  ])(
+    "blocks an over-limit %s before saving, keeps the text and explains why",
+    async (_name, testIdPrefix, limit, label) => {
+      const { onChange } = renderEditor();
+      const tooLong = "x".repeat(limit + 1);
+      const field = screen.getByTestId(`${testIdPrefix}-${ACTIVITY_ID}`);
+      fireEvent.change(field, { target: { value: tooLong } });
+
+      const alert = screen.getByRole("alert");
+      expect(alert).toHaveTextContent(
+        `${label} must be ${String(limit)} characters or fewer.`,
+      );
+      expect(field).toHaveAttribute("aria-invalid", "true");
+      expect(field.getAttribute("aria-describedby")).toContain(alert.id);
+      expect(field).toHaveValue(tooLong);
+
+      await userEvent.click(
+        screen.getByTestId(`activity-fields-save-${ACTIVITY_ID}`),
+      );
+      expect(onChange).not.toHaveBeenCalled();
+
+      fireEvent.change(field, { target: { value: "x".repeat(limit) } });
+      expect(screen.queryByRole("alert")).toBeNull();
+      await userEvent.click(
+        screen.getByTestId(`activity-fields-save-${ACTIVITY_ID}`),
+      );
+      expect(onChange).toHaveBeenCalledTimes(1);
+    },
+  );
 });
