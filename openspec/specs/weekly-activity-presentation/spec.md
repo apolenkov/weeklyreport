@@ -61,3 +61,11 @@ Activity edits MUST use section version checking and preserve pending input on f
 - **WHEN** two editors save against the same prior section version
 - **THEN** the stale request receives the existing conflict outcome
 - **AND** its local input remains recoverable without overwriting the newer title or description
+
+#### Scenario: Weekly field editor limits and historical Activities
+
+- **WHEN** the Overview weekly-fields editor holds a title over 200 or a description over 500 characters
+- **THEN** it shows an English error beside the field, programmatically associated with it (`aria-invalid`, `aria-describedby`), and sends no write
+- **AND** the typed text is neither truncated nor lost, and values at exactly the limits are accepted
+- **WHEN** the Activity unit is historical
+- **THEN** the unit stays visible but has no weekly-fields editor or Save action

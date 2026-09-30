@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  MAX_ACTIVITY_NAME_LENGTH,
+  SAFE_TEXT_MAX_LENGTH,
+} from "@customreport/shared";
 import { useEffect, useRef, useState } from "react";
 
 import { useInlineEditUnloadGuard } from "./use-inline-edit-unload-guard";
@@ -13,6 +17,35 @@ export interface StatusOverviewActivityFieldsValue {
 export interface StatusOverviewActivityFieldsChange {
   readonly titleOverride: string | null;
   readonly description: string | null;
+}
+
+// Lengths are checked on the trimmed value, as the save schema trims it.
+function limitError(
+  label: string,
+  value: string,
+  limit: number,
+): string | undefined {
+  return value.trim().length > limit
+    ? `${label} must be ${String(limit)} characters or fewer.`
+    : undefined;
+}
+
+function FieldError({
+  id,
+  message,
+}: {
+  readonly id: string;
+  readonly message: string | undefined;
+}) {
+  return message === undefined ? null : (
+    <span
+      id={id}
+      role="alert"
+      className="mt-1 block text-xs font-normal text-[var(--color-destructive)]"
+    >
+      {message}
+    </span>
+  );
 }
 
 // Weekly title/description editor for one activity unit in the Overview row
@@ -69,7 +102,20 @@ export function StatusOverviewActivityEditor({
     return trimmed === "" ? null : trimmed;
   };
 
+  const titleError = limitError(
+    "Weekly title",
+    title,
+    MAX_ACTIVITY_NAME_LENGTH,
+  );
+  const descriptionError = limitError(
+    "Description",
+    description,
+    SAFE_TEXT_MAX_LENGTH,
+  );
+  const invalid = titleError !== undefined || descriptionError !== undefined;
+
   const save = (): void => {
+    if (invalid) return;
     onChange(activityId, {
       titleOverride: normalize(title),
       description: normalize(description),
@@ -113,8 +159,18 @@ export function StatusOverviewActivityEditor({
               setTitle(event.target.value);
               setDraftDirty(true);
             }}
+            aria-invalid={titleError !== undefined}
+            aria-describedby={
+              titleError === undefined
+                ? undefined
+                : `activity-title-error-${activityId}`
+            }
             data-testid={`activity-title-${activityId}`}
             className="mt-1 block min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] bg-[var(--color-card)] px-2 py-1 text-sm text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+          />
+          <FieldError
+            id={`activity-title-error-${activityId}`}
+            message={titleError}
           />
         </label>
         <label className="block text-xs font-medium text-[var(--color-muted-foreground)]">
@@ -128,15 +184,25 @@ export function StatusOverviewActivityEditor({
               setDescription(event.target.value);
               setDraftDirty(true);
             }}
+            aria-invalid={descriptionError !== undefined}
+            aria-describedby={
+              descriptionError === undefined
+                ? undefined
+                : `activity-description-error-${activityId}`
+            }
             data-testid={`activity-description-${activityId}`}
             className="mt-1 block min-h-[var(--touch-target-min)] w-full resize-none rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] bg-[var(--color-card)] px-2 py-1 text-sm text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+          />
+          <FieldError
+            id={`activity-description-error-${activityId}`}
+            message={descriptionError}
           />
         </label>
       </div>
       <div className="mt-1 flex flex-wrap items-center gap-1">
         <button
           type="submit"
-          disabled={!dirty}
+          disabled={!dirty || invalid}
           data-testid={`activity-fields-save-${activityId}`}
           className="inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-sm)] px-2 text-xs font-semibold text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] disabled:opacity-50"
         >
