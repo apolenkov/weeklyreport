@@ -7,6 +7,7 @@ import jsxA11y from "eslint-plugin-jsx-a11y";
 const unrestrictedTestContourRules: Linter.RulesRecord = {
   "max-lines": "off",
   "max-lines-per-function": "off",
+  "max-params": "off",
   complexity: "off",
   "sonarjs/cognitive-complexity": "off",
   "sonarjs/no-nested-functions": "off",
@@ -19,6 +20,8 @@ export const overrideConfig: Linter.Config[] = [
     files: ["**/*.config.ts", "eslint-config/*.ts"],
     rules: {
       "max-lines": "off",
+      "max-lines-per-function": "off",
+      "max-params": "off",
       complexity: "off",
       // Config knobs (ports, thresholds, rule options) ARE the named values —
       // lifting them to consts above adds indirection, not clarity. Same for

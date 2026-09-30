@@ -227,6 +227,38 @@ MUST NOT authorize or reject a later submission. A forbidden submission MUST
 return the existing access error without changing the section, version or child
 records. A null deadline MUST accept an otherwise valid submission as not late.
 
+`submitSection` MUST run service-level content validation (`validateSubmitInput`)
+before calling `saveSection`, so its first content-validation error takes
+precedence over an expired-deadline access error. Existing authorization,
+ownership, activity-attachment, application lifecycle, and published-record
+preservation checks MUST remain in force in their existing order. This
+precedence applies only to service-level content validation versus the deadline
+check; it MUST NOT replace or reorder the locked lifecycle, deadline, lineage,
+or section-version guards.
+
+#### Scenario: Invalid content takes precedence over an expired deadline
+
+- **GIVEN** a lead's draft section belongs to a non-archived open or reopened
+  period, and the request passes the existing schema and application
+  authorization, ownership, activity-attachment, and published-record
+  preservation checks
+- **WHEN** required content is invalid, such as a missing project traffic light,
+  and the deadline has expired beyond grace with late submissions disabled
+- **THEN** `submitSection` returns the first existing content-validation error
+  (`ReportSectionDomainError`, mapped to `BAD_REQUEST`; `MISSING_TRAFFIC_LIGHT`
+  in this example) before calling `saveSection` or checking the locked deadline
+- **AND** the section, version, and child records remain unchanged
+
+#### Scenario: Valid content reaches the locked expired-deadline rejection
+
+- **GIVEN** a request passes the existing schema, application guards, and
+  service-level content validation
+- **WHEN** the locked report still has a complete editable lifecycle tuple but
+  its authoritative deadline has expired beyond grace with late submissions
+  disabled
+- **THEN** the transaction raises `ReportSectionAccessError`, mapped to
+  `FORBIDDEN`, before changing the section, version, or child records
+
 #### Scenario: Deadline is shortened before the submit lock
 
 - **WHEN** an administrator commits an expired deadline before submission

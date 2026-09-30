@@ -221,6 +221,21 @@ pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && p
   Markdown); `pnpm format:check` проверяет результат.
 - **stylelint** (`.stylelintrc.json`) — линт CSS.
 
+Единственный унаследованный список исключений —
+[`eslint-suppressions.json`](../eslint-suppressions.json), только для правил
+`max-lines-per-function` и `max-params`. Его разрешено только сокращать:
+не добавляйте записи или правила и не увеличивайте счётчики. После исправления
+нарушений удалите ненужные исключения, отформатируйте список и повторите проверку:
+
+```bash
+pnpm lint:eslint --prune-suppressions
+pnpm exec prettier --write eslint-suppressions.json
+pnpm lint:eslint
+```
+
+Обычный `pnpm lint:eslint` завершается с ошибкой, если в списке остались ненужные
+исключения.
+
 Правила, о которые легко споткнуться:
 
 - **UI-строки — только английские.** Имеется в виду хардкод в продакшен-коде
