@@ -44,11 +44,12 @@ export interface ExtraReportSeed {
 
 // Deterministic ids, ordered oldest → newest; the offsets are derived from the
 // position in each list so the two blocks stay contiguous with PREV_MONDAY.
+// Shared history ids stay on the same weeks when the advanced seed overlays them.
 const PUBLISHED_HISTORY_IDS = [
-  "a0000000-0000-4000-8000-000000000003",
-  "a0000000-0000-4000-8000-000000000004",
-  "a0000000-0000-4000-8000-000000000005",
   "a0000000-0000-4000-8000-000000000006",
+  "a0000000-0000-4000-8000-000000000005",
+  "a0000000-0000-4000-8000-000000000004",
+  "a0000000-0000-4000-8000-000000000003",
 ];
 const FUTURE_PERIOD_IDS = [
   "a0000000-0000-4000-8000-000000000007",

@@ -12,10 +12,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
-import {
-  computeAllowedGroupIds,
-  guardGroupScope,
-} from "../../lib/group-scope.js";
+import { guardGroupScope } from "../../lib/group-scope.js";
 import {
   filterPublishedSnapshotForSession,
   publishedReportScopeWhere,
@@ -29,6 +26,7 @@ import {
   groupReportsByLabel,
   isoDateOnly,
   nextUtcDay,
+  reportInEffectForPeriod,
   startOfUtcDay,
   statusForProject,
   UNKNOWN_CELL,
@@ -40,6 +38,7 @@ import {
 const PUBLISHED_FLOOR = {
   status: "published" as const,
   periodStatus: "published" as const,
+  archived: false,
 };
 
 const publishedAnalyticsSelect = {
@@ -59,38 +58,26 @@ interface PublishedAnalyticsRow {
 function mapPublishedAnalyticsReport(
   row: PublishedAnalyticsRow,
   session: UserSession,
-  leadId?: string,
 ) {
   const snapshot = filterPublishedSnapshotForSession(
     requirePublishedSnapshot(row.publishedSnapshot, row.id),
     session,
   );
-  const sections = snapshot.sections
-    .filter((section) => leadId === undefined || section.authorId === leadId)
-    .map((section) => ({
-      authorId: section.authorId,
-      author: { name: section.authorName },
-      status: section.status,
-      late: section.late,
-      projectStatuses: section.projects.flatMap((project) =>
-        project.trafficLight === null
-          ? []
-          : [
-              {
-                projectId: project.projectId,
-                status: project.trafficLight,
-                project: { name: project.projectName },
-              },
-            ],
-      ),
-      risks: section.risks.map((risk) => ({
-        projectId: risk.projectId ?? null,
-      })),
-    }));
-  if (
-    sections.length === 0 &&
-    (session.role !== "admin" || leadId !== undefined)
-  ) {
+  const sections = snapshot.sections.map((section) => ({
+    authorId: section.authorId,
+    author: { name: section.authorName },
+    status: section.status,
+    late: section.late,
+    projectStatuses: section.projects.map((project) => ({
+      projectId: project.projectId,
+      status: project.trafficLight,
+      project: { name: project.projectName },
+    })),
+    risks: section.risks.map((risk) => ({
+      projectId: risk.projectId ?? null,
+    })),
+  }));
+  if (sections.length === 0 && session.role !== "admin") {
     throw new PublishedSnapshotIntegrityError(
       `Published snapshot scope projection mismatch for report ${row.id}.`,
     );
@@ -100,26 +87,8 @@ function mapPublishedAnalyticsReport(
     id: row.id,
     periodEnd: snapshot.periodEnd,
     createdAt: row.createdAt,
+    publishedAt: snapshot.publishedAt,
     sections,
-  };
-}
-
-function publishedSectionAdmission(
-  session: UserSession,
-  leadId?: string,
-): Prisma.ReportWhereInput {
-  if (leadId === undefined) return publishedReportScopeWhere(session);
-
-  const scope: Prisma.PublishedSectionScopeWhereInput = {};
-  if (session.role !== "admin") {
-    scope.groupId = { in: [...computeAllowedGroupIds(session)] };
-  }
-  scope.authorId = leadId;
-
-  return {
-    publishedSectionScopes: {
-      some: scope,
-    },
   };
 }
 
@@ -135,7 +104,7 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
     const reportRows = await this.prisma.report.findMany({
       where: {
         ...PUBLISHED_FLOOR,
-        ...publishedSectionAdmission(session, input.leadId),
+        ...publishedReportScopeWhere(session),
         periodStart: { gte: new Date(input.periodFrom) },
         // Half-open upper bound so a periodEnd later in the periodTo day is
         // still included (a bare `lte: midnight(periodTo)` drops it).
@@ -145,25 +114,32 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
       orderBy: { periodEnd: "asc" },
     });
 
-    const reports = reportRows.map((row) =>
-      mapPublishedAnalyticsReport(row, session, input.leadId),
+    const reportsByLabel = groupReportsByLabel(
+      reportRows.map((row) => mapPublishedAnalyticsReport(row, session)),
     );
-
-    const periods = Array.from(
-      new Set(reports.map((r) => isoDateOnly(r.periodEnd))),
-    );
-
-    // Multiple reports can map to one date-label (a republished period, or two
-    // periods differing only by periodStart), so aggregate per label instead of
-    // reading the first match and dropping the rest.
-    const reportsByLabel = groupReportsByLabel(reports);
+    const reports = [...reportsByLabel.values()].flatMap((group) => {
+      const report = reportInEffectForPeriod(group);
+      return report === undefined
+        ? []
+        : [
+            {
+              ...report,
+              sections: report.sections.filter(
+                (section) =>
+                  input.leadId === undefined ||
+                  section.authorId === input.leadId,
+              ),
+            },
+          ];
+    });
+    const periods = reports.map((report) => isoDateOnly(report.periodEnd));
 
     const projectMap = collectProjectNames(reports, input.projectId);
 
     const rows = Array.from(projectMap.entries()).map(
       ([projectId, projectName]) => {
-        const statuses: TrafficLightCell[] = periods.map((label) =>
-          statusForProject(reportsByLabel.get(label) ?? [], projectId),
+        const statuses: TrafficLightCell[] = reports.map((report) =>
+          statusForProject([report], projectId),
         );
         return { projectId, projectName, statuses };
       },
@@ -180,7 +156,7 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
     const reportRows = await this.prisma.report.findMany({
       where: {
         ...PUBLISHED_FLOOR,
-        ...publishedSectionAdmission(session),
+        ...publishedReportScopeWhere(session),
         periodStart: { gte: new Date(input.periodFrom) },
         // Half-open upper bound (parity with trafficLightHistory): include a
         // periodEnd later in the periodTo day.
@@ -189,39 +165,27 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
       select: publishedAnalyticsSelect,
       orderBy: { periodEnd: "asc" },
     });
-    const reports = reportRows
-      .map((row) => mapPublishedAnalyticsReport(row, session))
-      .map((report) => ({
-        ...report,
-        sections: report.sections.filter(
-          (section) => section.status === "submitted",
-        ),
-      }))
-      .filter((report) => report.sections.length > 0);
+    const reportsByLabel = groupReportsByLabel(
+      reportRows.map((row) => mapPublishedAnalyticsReport(row, session)),
+    );
 
-    // Group by period label so a republished period (two reports sharing a
-    // label) yields one row with both reports' leads, not a duplicate series
-    // point — parity with trafficLightHistory's per-label aggregation.
-    const reportsByLabel = groupReportsByLabel(reports);
-
-    return Array.from(reportsByLabel.entries()).map(([periodLabel, group]) => {
-      // One entry per lead within the label: a lead submitted in BOTH the
-      // original and the republished report of the same period must count
-      // once, or the row overstates that lead's velocity.
-      const byLead = new Map(
-        group
-          .flatMap((r) => r.sections)
-          .map((s) => [
-            s.authorId,
+    return Array.from(reportsByLabel.entries()).flatMap(
+      ([periodLabel, group]) => {
+        const report = reportInEffectForPeriod(group);
+        if (report === undefined) return [];
+        const byLead = new Map(
+          report.sections.map((section) => [
+            section.authorId,
             {
-              leadId: s.authorId,
-              leadName: s.author.name,
-              submittedSections: 1,
+              leadId: section.authorId,
+              leadName: section.author.name,
+              submittedSections: section.status === "submitted" ? 1 : 0,
             },
           ]),
-      );
-      return { periodLabel, leads: [...byLead.values()] };
-    });
+        );
+        return [{ periodLabel, leads: [...byLead.values()] }];
+      },
+    );
   };
 
   readonly periodComparison = async (
@@ -233,7 +197,7 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
       this.prisma.report.findMany({
         where: {
           ...PUBLISHED_FLOOR,
-          ...publishedSectionAdmission(session),
+          ...publishedReportScopeWhere(session),
           // Day-range match: a date-only label must match a full-timestamp
           // periodEnd regardless of its time component.
           periodEnd: { gte: startOfUtcDay(date), lt: nextUtcDay(date) },

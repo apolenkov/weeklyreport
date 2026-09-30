@@ -21,12 +21,12 @@ interface PeriodStamped {
   readonly id: string;
   readonly periodEnd: Date;
   readonly createdAt: Date;
+  readonly publishedAt: Date;
 }
 
-// periodEnd, then createdAt, then id — never fall back to non-deterministic DB order.
-function comparePeriodThenCreated(a: PeriodStamped, b: PeriodStamped): number {
-  const byPeriod = a.periodEnd.getTime() - b.periodEnd.getTime();
-  if (byPeriod !== 0) return byPeriod;
+function comparePublication(a: PeriodStamped, b: PeriodStamped): number {
+  const byPublished = a.publishedAt.getTime() - b.publishedAt.getTime();
+  if (byPublished !== 0) return byPublished;
   const byCreated = a.createdAt.getTime() - b.createdAt.getTime();
   if (byCreated !== 0) return byCreated;
   if (a.id < b.id) return -1;
@@ -34,9 +34,17 @@ function comparePeriodThenCreated(a: PeriodStamped, b: PeriodStamped): number {
   return 0;
 }
 
-// Latest periodEnd/createdAt/id wins; most recent republish is authoritative.
-function laterReport<T extends PeriodStamped>(a: T, b: T): T {
-  return comparePeriodThenCreated(a, b) >= 0 ? a : b;
+// Callers admit published, non-archived reports and group them by UTC period label.
+export function reportInEffectForPeriod<T extends PeriodStamped>(
+  reports: readonly T[],
+): T | undefined {
+  return reports.reduce<T | undefined>(
+    (best, report) =>
+      best === undefined || comparePublication(report, best) > 0
+        ? report
+        : best,
+    undefined,
+  );
 }
 
 // Multiple reports can share a label; insertion order follows the input query.
@@ -59,25 +67,16 @@ function findProjectStatus(
   report: LabelReport,
   projectId: string,
 ): ProjectStatusRow | undefined {
-  for (const section of report.sections) {
-    const hit = section.projectStatuses.find(
-      (ps) => ps.projectId === projectId,
-    );
-    if (hit) return hit;
-  }
-  return undefined;
+  return report.sections
+    .flatMap((section) => section.projectStatuses)
+    .findLast((status) => status.projectId === projectId);
 }
 
 export function statusForProject(
   reportsForLabel: LabelReport[],
   projectId: string,
 ): TrafficLightCell {
-  const winner = reportsForLabel
-    .filter((r) => findProjectStatus(r, projectId) !== undefined)
-    .reduce<LabelReport | null>(
-      (best, r) => (best === null ? r : laterReport(best, r)),
-      null,
-    );
+  const winner = reportInEffectForPeriod(reportsForLabel);
   return winner ? (findProjectStatus(winner, projectId)?.status ?? null) : null;
 }
 
@@ -177,23 +176,19 @@ function accumulateRisks(
   ]);
 }
 
-// Oldest-first so the latest status wins; risks accumulate across all reports.
-// A republished period is two reports sharing a label — only the LATEST per
-// label is authoritative, so its risks count once, not double.
+// Count risks once per period, using only its report in effect.
 export function collectComparisonCells(
   reports: ComparisonReport[],
 ): Map<string, ComparisonCell> {
   const authoritativeReports = [
     ...groupReportsByLabel(reports).values(),
   ].flatMap((group) => {
-    const [first] = group;
-    return first === undefined
-      ? []
-      : [group.slice(1).reduce(laterReport, first)];
+    const winner = reportInEffectForPeriod(group);
+    return winner === undefined ? [] : [winner];
   });
 
   return [...authoritativeReports]
-    .sort(comparePeriodThenCreated)
+    .sort((a, b) => a.periodEnd.getTime() - b.periodEnd.getTime())
     .flatMap((report) => report.sections)
     .reduce(
       (cells, section) =>
