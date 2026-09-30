@@ -215,11 +215,14 @@ end once their content is committed or archived.
 
 Owner decision 2026-09-20: agent-browser (Vercel) is the
 selected route for exercising the running app; the Reticle integration is
-removed. Verified on a source run (`next dev`, `customreport_e2e`, 2026-09-29): Lead sign-in, save, submit and reopen; Head approve; Viewer
-read-only; Admin DLQ; period reopen, resubmit and republish; the limit dialog.
-Not verified: PDF export (needs the Gotenberg/Docker stack), the production
-build output, and Head reject with a comment (the Request changes dialog has a
-comment field, but it has not been exercised in a browser). Do not claim a
+removed. Verified on source runs (`next dev`, `customreport_e2e`,
+2026-09-29/30): Lead sign-in, save, submit and reopen; Head approve; Head
+Request changes with a comment and the Lead seeing that reason; Viewer
+read-only; Admin DLQ; period reopen, resubmit and republish; the limit dialog;
+the Publish now confirmation; the lead-based progress denominator (Head and
+Admin Periods); PDF export through a local Gotenberg container; the Unplanned
+badge; the reduced-motion login tagline. `pnpm build` succeeds, but the built
+output has not been exercised in a browser. Do not claim a
 flow beyond this list without fresh evidence. Judge a browser flow by its observable result (snapshot, DOM, network or
 screenshot); an unknown or failed result is not a pass. The database-safety
 and permission boundaries above apply unchanged.
