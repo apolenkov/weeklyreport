@@ -44,13 +44,15 @@ const NON_DISPOSABLE_URL =
 function buildCaller(
   authDevMode: boolean,
   databaseUrl: string = DISPOSABLE_URL,
+  runtime: { prisma?: PrismaClient; redisDb?: number } = {},
 ) {
   const env = {
     AUTH_DEV_MODE: authDevMode,
     DATABASE_URL: databaseUrl,
+    REDIS_DB: runtime.redisDb,
   } as EnvConfig;
   const router = createDevRouter({
-    prisma: {} as unknown as PrismaClient,
+    prisma: runtime.prisma ?? ({} as unknown as PrismaClient),
     env,
   });
   return router.createCaller({
@@ -167,5 +169,43 @@ describe("dev.wipeAndReseed — one reseed at a time", () => {
     await expect(
       caller.wipeAndReseed({ variant: "minimal" }),
     ).resolves.toMatchObject({ ok: true });
+  });
+});
+
+describe("dev.runtimeTarget — observable database and Redis DB", () => {
+  const prismaReturning = (rows: unknown[]) =>
+    ({
+      $queryRaw: vi.fn(() => Promise.resolve(rows)),
+    }) as unknown as PrismaClient;
+
+  it("reports the connected database and the configured Redis DB", async () => {
+    const caller = buildCaller(true, DISPOSABLE_URL, {
+      prisma: prismaReturning([{ database: "customreport_e2e" }]),
+      redisDb: 15,
+    });
+
+    await expect(caller.runtimeTarget()).resolves.toEqual({
+      database: "customreport_e2e",
+      redisDb: 15,
+    });
+  });
+
+  it("is refused outside dev mode", async () => {
+    const caller = buildCaller(false);
+
+    await expect(caller.runtimeTarget()).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+  });
+
+  it("fails when the database cannot name itself", async () => {
+    const caller = buildCaller(true, DISPOSABLE_URL, {
+      prisma: prismaReturning([]),
+      redisDb: 15,
+    });
+
+    await expect(caller.runtimeTarget()).rejects.toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+    });
   });
 });
