@@ -290,8 +290,15 @@ Auth and report-entry helpers are owned by `e2e/lead-form/access.ts`. They
 verify the native dev-login role/email, then reuse the same 25-second
 `waitSnapshot`/`waitScope` bounds to observe the authorized `getUrl` pathname,
 My Report heading and selected report surface. The assistant answer waits for
-its actual named heading; the reopen success waits for its text inside the
-Notifications AX region. These changes retain every assertion and deadline
+its actual named heading. Shared `waitNotification(text, session)` observes
+exact StaticText inside the `Notifications alt+T` region through the existing
+25-second `waitSnapshot`. Pending Fill and reopen use it; three pending Slides
+saves observe the success toast before retaining their modal-close checks.
+After connectivity returns, navigation waits for `+ Add Risk`, and conflict
+recovery waits for the exact recovery-region text plus its exact error toast.
+All ten offline-return cases now use bounded AX waits without sleeps or retries;
+native text waits remain elsewhere. These changes retain every persistence,
+request-count, dialog and deadline assertion
 and avoid assuming the native text/URL wait recognizes those transitions.
 Expandable
 support sections await their actual `aria-controls` panel's platform

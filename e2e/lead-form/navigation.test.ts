@@ -818,7 +818,7 @@ void test("Overview editing read failure preserves data and recovers through Ret
   } finally {
     await setOffline(false);
   }
-  await waitText("+ Add Risk");
+  await waitButton("+ Add Risk");
   await assertScope("region", "Status overview");
   assert.ok(
     await isVisible(

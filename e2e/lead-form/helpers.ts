@@ -7,7 +7,7 @@ import {
 } from "../setup/fixture-data.js";
 import { command, findRole, getAttr, refsByRole, snapshot } from "./browser.js";
 import type { BrowserSnapshot } from "./snapshot-scope.js";
-import { scopeCount, scopeSnapshot } from "./snapshot-scope.js";
+import { scopeCount, scopeSnapshot, scopeSnapshots } from "./snapshot-scope.js";
 
 export { ARCHIVED_FILL_FIXTURE, LEAD_FORM_FIXTURE, OPEN_WORK_FIXTURE };
 export { scopeCount, scopeSnapshot, scopeSnapshots } from "./snapshot-scope.js";
@@ -34,6 +34,20 @@ export async function waitSnapshot(
     observed = await snapshot(session);
   }
   return observed;
+}
+
+export async function waitNotification(
+  text: string,
+  session?: string,
+): Promise<void> {
+  await waitSnapshot(
+    (data) =>
+      scopeSnapshots(data, "region", "Notifications alt+T").some(
+        (region) => scopeCount(region, "StaticText", text) > 0,
+      ),
+    `Expected notification: ${text}`,
+    session,
+  );
 }
 
 export function oneRef(
