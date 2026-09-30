@@ -37,15 +37,11 @@ describe("reminderPolicyAppliesTo", () => {
 });
 
 describe("computeReminderFireAt", () => {
-  it("applies elapsed minutes across timezones", () => {
+  it("applies elapsed minutes across daylight-saving transitions", () => {
     const deadline = new Date("2026-03-09T13:00:00.000Z");
-    expect(
-      computeReminderFireAt(
-        deadline,
-        -24 * 60,
-        "America/New_York",
-      ).toISOString(),
-    ).toBe("2026-03-08T13:00:00.000Z");
+    expect(computeReminderFireAt(deadline, -24 * 60).toISOString()).toBe(
+      "2026-03-08T13:00:00.000Z",
+    );
   });
 });
 
@@ -151,11 +147,7 @@ describe("PolicyApplicatorService", () => {
       reportId: "report-1",
       policyId: POLICY.id,
       deadline: DEADLINE,
-      fireAt: computeReminderFireAt(
-        DEADLINE,
-        POLICY.offsetMinutes,
-        POLICY.timezone,
-      ),
+      fireAt: computeReminderFireAt(DEADLINE, POLICY.offsetMinutes),
       version: 1,
     });
   });
@@ -198,11 +190,7 @@ describe("PolicyApplicatorService", () => {
       reportId: REPORT.id,
       policyId: POLICY.id,
       kind: "deadline" as const,
-      fireAt: computeReminderFireAt(
-        oldDeadline,
-        POLICY.offsetMinutes,
-        POLICY.timezone,
-      ),
+      fireAt: computeReminderFireAt(oldDeadline, POLICY.offsetMinutes),
       deadline: oldDeadline,
       timezone: POLICY.timezone,
       status: "active" as const,
@@ -239,11 +227,7 @@ describe("PolicyApplicatorService", () => {
         reportId: REPORT.id,
         policyId: POLICY.id,
         kind: POLICY.kind,
-        fireAt: computeReminderFireAt(
-          DEADLINE,
-          POLICY.offsetMinutes,
-          POLICY.timezone,
-        ),
+        fireAt: computeReminderFireAt(DEADLINE, POLICY.offsetMinutes),
         deadline: DEADLINE,
         timezone: POLICY.timezone,
         status: "paused",
@@ -265,11 +249,7 @@ describe("PolicyApplicatorService", () => {
       reportId: REPORT.id,
       policyId: POLICY.id,
       kind: POLICY.kind,
-      fireAt: computeReminderFireAt(
-        DEADLINE,
-        POLICY.offsetMinutes,
-        POLICY.timezone,
-      ),
+      fireAt: computeReminderFireAt(DEADLINE, POLICY.offsetMinutes),
       deadline: DEADLINE,
       timezone: POLICY.timezone,
       status: "active" as const,

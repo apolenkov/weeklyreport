@@ -161,7 +161,6 @@ const REMINDER_RULE_ROWS = [
     fireAt: computeReminderFireAt(
       ACTIVE_FRIDAY_DEADLINE,
       DEADLINE_OFFSET_MINUTES,
-      SEED_TIMEZONE,
     ),
     deadline: ACTIVE_FRIDAY_DEADLINE,
     timezone: SEED_TIMEZONE,
@@ -176,7 +175,6 @@ const REMINDER_RULE_ROWS = [
     fireAt: computeReminderFireAt(
       ACTIVE_FRIDAY_DEADLINE,
       ESCALATION_OFFSET_MINUTES,
-      SEED_TIMEZONE,
     ),
     deadline: ACTIVE_FRIDAY_DEADLINE,
     timezone: SEED_TIMEZONE,

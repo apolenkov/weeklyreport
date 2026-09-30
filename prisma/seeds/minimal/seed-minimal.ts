@@ -19,12 +19,12 @@ import { requireEnv } from "../../guards/_require-env.js";
 import { DEMO_LEADS, DEMO_PRODUCTS } from "../demo/seed-demo.demo-cast.js";
 import { seedScaffold } from "../demo/seed-demo.scaffold.js";
 import type { SeedDataset } from "../demo/seed-demo.types.js";
-import { wipe } from "../demo/seed-demo.wipe.js";
 import {
   LEAD_MARIA_ID,
   SEED_REPORTS,
   SEED_STAGES,
 } from "../support/seed-constants.js";
+import { wipeSeedData } from "../support/wipe-seed-data.js";
 
 const ID = {
   assignment: "f0000000-0000-4000-8000-000000000001",
@@ -55,7 +55,8 @@ export async function seedMinimal(prisma: PrismaClient): Promise<void> {
   };
   const active = SEED_REPORTS.active;
 
-  await wipe(prisma);
+  console.log("[seed-demo] Wiping existing data...");
+  await wipeSeedData(prisma);
   await seedScaffold(prisma, dataset);
   await prisma.report.create({
     data: {

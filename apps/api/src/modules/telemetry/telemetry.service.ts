@@ -18,24 +18,13 @@ export type {
 // Trailing periods on the KPI sparkline.
 const SPARKLINE_PERIOD_COUNT = 4;
 
-// Pass-through when Redis is unavailable (tests / degraded prod).
-export class NullTelemetryCache implements TelemetryCachePort {
-  readonly getOrCompute = async <T>(
-    _key: string,
-    fn: () => Promise<T>,
-    _validate?: (value: unknown) => value is T,
-  ): Promise<T> => {
-    return fn();
-  };
-}
-
 @Injectable()
 export class TelemetryService {
   constructor(
     @Inject(TelemetryPrismaRepository)
     private readonly repository: TelemetryRepository,
     @Inject(TelemetryCache)
-    private readonly cache: TelemetryCachePort = new NullTelemetryCache(),
+    private readonly cache: TelemetryCachePort,
   ) {}
 
   // Cached 60s per group-scope partition; key version suffix for clean invalidation.

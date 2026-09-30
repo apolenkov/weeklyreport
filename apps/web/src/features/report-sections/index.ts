@@ -72,10 +72,7 @@ export type {
   StatusOverviewCreateTarget,
   StatusOverviewEditTarget,
   StatusOverviewItem,
-  StatusOverviewLinkedDraft,
-  StatusOverviewLinkedMemory,
   StatusOverviewModel,
-  StatusOverviewQuickEditMemory,
 } from "./model/status-overview";
 export { projectStatusOverview } from "./model/status-overview";
 export {

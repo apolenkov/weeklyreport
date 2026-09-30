@@ -17,7 +17,6 @@ export {
   AI_PROVIDER_PROFILE_CAPABILITIES,
   aiProviderAvailabilitySchema,
   aiProviderConnectionRoleSchema,
-  aiProviderEmbeddingModeSchema,
   aiProviderLifecycleSchema,
   aiProviderProfileCapabilitySchema,
   aiProviderProfileSchema,
@@ -33,7 +32,6 @@ export {
   aiProviderRevisionInputSchema,
 } from "./ai-provider-configuration.read";
 export {
-  aiProviderCapabilitySchema,
   aiProviderCapabilityStatusSchema,
   aiProviderCapabilityTestResultSchema,
 } from "./ai-provider-configuration-results";

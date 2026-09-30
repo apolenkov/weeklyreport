@@ -2,11 +2,11 @@ import type { SearchPlan } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { createClarificationTokenCodec } from "../application/clarification-token.js";
+import { buildAccessibleEntityCatalog } from "./entity-resolver.catalog.js";
 import {
-  buildAccessibleEntityCatalog,
   resolveAccessibleEntities,
   resolveSearchPlanEntities,
-} from "./entity-resolver.js";
+} from "./entity-resolver.plan.js";
 
 const actorId = "actor-a";
 const env = {

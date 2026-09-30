@@ -1,7 +1,6 @@
 import type {
   StatusOverviewEditTarget,
   StatusOverviewItem,
-  StatusOverviewQuickEditMemory,
 } from "../model/status-overview";
 import { StatusOverviewItemPreview } from "./status-overview-item-preview";
 
@@ -14,9 +13,7 @@ export function reportHiddenRowCount(rows: readonly unknown[]): number {
 export function ReportItemSlot({
   item,
   onEditItem,
-  onQuickEditText,
   onPlanItem,
-  quickEditMemory,
   onMoveItem,
   onConfirmItem,
   onResolvePlan,
@@ -25,9 +22,6 @@ export function ReportItemSlot({
   readonly item: StatusOverviewItem;
   readonly onEditItem?:
     ((target: StatusOverviewEditTarget) => void) | undefined;
-  readonly onQuickEditText?:
-    ((item: StatusOverviewItem, text: string) => void) | undefined;
-  readonly quickEditMemory?: StatusOverviewQuickEditMemory | undefined;
   readonly onPlanItem?: ((item: StatusOverviewItem) => void) | undefined;
   readonly onMoveItem?:
     | ((
@@ -50,8 +44,6 @@ export function ReportItemSlot({
       <StatusOverviewItemPreview
         item={item}
         onEditItem={onEditItem}
-        onQuickEditText={onQuickEditText}
-        quickEditMemory={quickEditMemory}
         onPlanItem={onPlanItem}
         onMoveItem={onMoveItem}
         onConfirmItem={onConfirmItem}

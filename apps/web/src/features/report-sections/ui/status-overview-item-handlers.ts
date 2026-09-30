@@ -2,8 +2,6 @@ import type {
   StatusOverviewCreateTarget,
   StatusOverviewEditTarget,
   StatusOverviewItem,
-  StatusOverviewLinkedMemory,
-  StatusOverviewQuickEditMemory,
 } from "../model/status-overview";
 import type { StatusOverviewEditorSlot } from "./status-overview-editor-slot";
 
@@ -12,9 +10,6 @@ export interface ItemHandlers {
   readonly editorSlot?: StatusOverviewEditorSlot | undefined;
   readonly onEditItem?:
     ((target: StatusOverviewEditTarget) => void) | undefined;
-  readonly onQuickEditText?:
-    ((item: StatusOverviewItem, text: string) => void) | undefined;
-  readonly quickEditMemory?: StatusOverviewQuickEditMemory | undefined;
   readonly onAddItem?:
     ((target: StatusOverviewCreateTarget) => void) | undefined;
   readonly onPlanItem?: ((item: StatusOverviewItem) => void) | undefined;
@@ -42,6 +37,4 @@ export interface ItemHandlers {
   /** Reports an open linked-continuation editor by its stable id. */
   readonly onLinkedEditingChange?:
     ((editorId: string, editing: boolean) => void) | undefined;
-  /** Session retention so a projection change does not drop the linked draft. */
-  readonly linkedMemory?: StatusOverviewLinkedMemory | undefined;
 }

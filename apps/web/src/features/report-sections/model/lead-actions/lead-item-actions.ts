@@ -96,12 +96,6 @@ export function promoteContinuationPatch(nextText: string): Partial<LeadItem> {
   };
 }
 
-// MOVE-LOCKED: completed or resolved records cannot acquire a continuation or be
-// promoted. Read-only/foreign/historical rejection stays at the action layer.
-export function canContinueOrPromote(item: Partial<LeadItem>): boolean {
-  return item.workflowStatus !== "done" && item.resolution == null;
-}
-
 // MOVE-COMMITMENT: a different non-blank commitment already exists, so the
 // caller must ask for explicit selection instead of replacing it.
 export function continuationConflict(

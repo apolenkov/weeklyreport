@@ -1,9 +1,4 @@
-import type { CanonicalStatus, TrafficLightStatus } from "@customreport/shared";
-import {
-  canonicalToTrafficLight,
-  trafficLightToCanonical,
-  worstCanonicalStatus,
-} from "@customreport/shared";
+import type { CanonicalStatus } from "@customreport/shared";
 import {
   AlertTriangle,
   CircleCheck,
@@ -56,16 +51,6 @@ const STATUS_PRESENTATION: Record<CanonicalStatus, StatusPresentation> = {
     labels: { screen: "No status", print: "No status", worstPill: "No status" },
   },
 };
-
-// Delegate precedence to the shared canonical fold; all-null/empty maps back
-// to a nullable traffic-light status.
-export function worstTrafficStatus(
-  statuses: readonly (TrafficLightStatus | null | undefined)[],
-): TrafficLightStatus | null {
-  return canonicalToTrafficLight(
-    worstCanonicalStatus(statuses.map(trafficLightToCanonical)),
-  );
-}
 
 export function statusLabel(
   status: CanonicalStatus,

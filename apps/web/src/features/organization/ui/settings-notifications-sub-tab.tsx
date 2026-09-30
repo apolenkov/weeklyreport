@@ -1,8 +1,9 @@
 "use client";
 
 import type { AppSettings } from "@customreport/shared";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
+import { useServerSeededDraft } from "../../../shared/hooks/drafts/use-server-seeded-draft";
 import {
   CheckIcon,
   useUpdateSettingsMut,
@@ -23,24 +24,6 @@ function looksLikeEmail(trimmed: string): boolean {
   const domainPart = trimmed.slice(atIndex + 1);
   const dotIndex = domainPart.indexOf(".");
   return dotIndex > 0 && dotIndex < domainPart.length - 1;
-}
-
-// Seed only fresh server data: skip while dirty (refetch must not clobber
-// edits) and skip already-seeded refs — else post-save dirty flip re-fires
-// against pre-save props and the field flickers back.
-function useServerSeededDraft(serverSettings: AppSettings) {
-  const [draft, setDraft] = useState<AppSettings>(serverSettings);
-  const [isDirty, setIsDirty] = useState(false);
-
-  const lastSeeded = useRef<AppSettings>(serverSettings);
-  useEffect(() => {
-    if (!isDirty && serverSettings !== lastSeeded.current) {
-      lastSeeded.current = serverSettings;
-      setDraft(serverSettings);
-    }
-  }, [serverSettings, isDirty]);
-
-  return { draft, setDraft, setIsDirty };
 }
 
 function NotificationFromEmailField({
@@ -130,13 +113,14 @@ export function NotificationsSubTab({
 }: {
   readonly serverSettings: AppSettings;
 }) {
-  const { draft, setDraft, setIsDirty } = useServerSeededDraft(serverSettings);
+  const { draft, setDraft, markClean } =
+    useServerSeededDraft<AppSettings>(serverSettings);
   const [showSaved, setShowSaved] = useState(false);
 
   const updateSettingsMut = useUpdateSettingsMut(
     "Notification settings",
     () => {
-      setIsDirty(false);
+      markClean();
       setShowSaved(true);
     },
   );
@@ -162,7 +146,6 @@ export function NotificationsSubTab({
         value={draft.notificationFromEmail ?? ""}
         isValid={isValidEmail}
         onChange={(notificationFromEmail) => {
-          setIsDirty(true);
           setShowSaved(false);
           setDraft({ ...draft, notificationFromEmail });
         }}

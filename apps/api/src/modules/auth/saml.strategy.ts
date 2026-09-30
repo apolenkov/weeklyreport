@@ -66,7 +66,6 @@ export function createSamlStrategyOptions(
 // nameless assertion is a misconfigured IdP mapping and must fail provisioning,
 // not persist a placeholder identity the admin has to hunt down.
 export function verifySamlProfile(
-  _options: SamlStrategyOptions,
   rawProfile: Record<string, unknown> | null | undefined,
 ): { ok: true; profile: VerifiedSamlProfile } | { ok: false; error: Error } {
   if (!rawProfile) {
@@ -108,7 +107,7 @@ export function verifySamlProfile(
 
 export function createSamlStrategy(options: SamlStrategyOptions): SamlStrategy {
   const verify: VerifyWithoutRequest = (profile, done) => {
-    const result = verifySamlProfile(options, profile);
+    const result = verifySamlProfile(profile);
     if (!result.ok) {
       done(result.error);
       return;
