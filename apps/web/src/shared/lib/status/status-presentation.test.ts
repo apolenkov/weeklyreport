@@ -12,7 +12,6 @@ import {
   statusIcon,
   statusLabel,
   statusToneClassName,
-  worstTrafficStatus,
 } from "./status-presentation";
 
 // Canonical vocabulary parity — a value drift fails here.
@@ -76,18 +75,5 @@ describe("statusIcon", () => {
     expect(statusIcon("on-track", "product")).toBe(CircleCheck);
     expect(statusIcon("at-risk", "product")).toBe(TriangleAlert);
     expect(statusIcon("blocked", "product")).toBe(OctagonX);
-  });
-});
-
-describe("worstTrafficStatus", () => {
-  it.each([
-    { statuses: [], expected: null },
-    { statuses: [null, undefined], expected: null },
-    { statuses: ["green", null], expected: "green" },
-    { statuses: ["green", "yellow"], expected: "yellow" },
-    { statuses: ["red", "green", "yellow"], expected: "red" },
-    { statuses: ["yellow", "red", "green"], expected: "red" },
-  ] as const)("returns $expected for $statuses", ({ statuses, expected }) => {
-    expect(worstTrafficStatus(statuses)).toBe(expected);
   });
 });

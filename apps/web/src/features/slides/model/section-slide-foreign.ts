@@ -1,4 +1,5 @@
-import { worstTrafficStatus } from "../../../shared/lib/status/status-presentation";
+import { aggregateTrafficLight } from "@customreport/shared";
+
 import type { CrossAuthorContentRow } from "../../report-sections";
 import type {
   SectionSlideModel,
@@ -32,7 +33,7 @@ export function applyForeignProductHealth(
 ): SlideProduct[] {
   if (crossAuthors.length === 0) return [...productSlides];
   return productSlides.map((product) => {
-    const foreignWorst = worstTrafficStatus(
+    const foreignWorst = aggregateTrafficLight(
       crossAuthors
         .filter((crossAuthor) => crossAuthor.projectId === product.id)
         .flatMap((crossAuthor) => crossAuthor.stages)
@@ -40,7 +41,7 @@ export function applyForeignProductHealth(
     );
     return {
       ...product,
-      status: worstTrafficStatus([product.status, foreignWorst]),
+      status: aggregateTrafficLight([product.status, foreignWorst]),
     };
   });
 }

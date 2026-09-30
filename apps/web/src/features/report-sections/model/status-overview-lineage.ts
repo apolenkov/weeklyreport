@@ -8,10 +8,6 @@ export interface StatusOverviewLineageRow {
   readonly previousParent: string | null;
 }
 
-export function isLinkedOverviewRow(row: StatusOverviewLineageRow): boolean {
-  return row.previous !== null || (row.current !== null && row.next !== null);
-}
-
 function emptyRow(key: string): StatusOverviewLineageRow {
   return {
     key,

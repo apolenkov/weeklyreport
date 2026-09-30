@@ -5,7 +5,7 @@ import { CROSS_PRODUCT_ID, nonEmpty } from "./section-slide-model-helpers";
 
 type ProductPredicate = (productId: string | null | undefined) => boolean;
 
-function itemDisplayText(
+export function itemDisplayText(
   item: ReportSectionReadModel["items"][number],
 ): string {
   const text = item.text.trim();

@@ -67,8 +67,7 @@ function buildItemPatchActions(draft: LeadFormDraftHandle) {
     onPauseItem: (itemId: string, reason: string) =>
       patchItem(itemId, pauseItemPatch(reason)),
     // Accepted retain-Current continuation: keeps the row and records the Next
-    // intent. Callers resolve `continuationConflict`/`canContinueOrPromote`
-    // before invoking.
+    // intent. Callers resolve `continuationConflict` before invoking.
     onContinueToNext: (itemId: string, nextText: string) =>
       patchItem(itemId, continueToNextPatch(nextText)),
     onPromoteContinuation: (itemId: string, nextText: string) =>

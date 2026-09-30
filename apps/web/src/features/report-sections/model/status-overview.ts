@@ -85,29 +85,6 @@ export interface StatusOverviewItem {
   readonly continuity: "continued" | "unplanned" | null;
 }
 
-export interface StatusOverviewQuickEditMemory {
-  readonly read: (item: StatusOverviewItem) => string | null;
-  readonly write: (item: StatusOverviewItem, draft: string | null) => void;
-}
-
-/** Retained linked-continuation editor state for one stable lineage. */
-export interface StatusOverviewLinkedDraft {
-  readonly open: boolean;
-  readonly draft: string;
-  readonly baseline: string;
-}
-
-/** Session-scoped retention for linked-continuation editors, keyed by lineage. */
-export interface StatusOverviewLinkedMemory {
-  readonly read: (item: StatusOverviewItem) => StatusOverviewLinkedDraft | null;
-  readonly write: (
-    item: StatusOverviewItem,
-    next: StatusOverviewLinkedDraft | null,
-  ) => void;
-  /** Store-derived gate: true while any retained linked draft exists. */
-  readonly pending: boolean;
-}
-
 type StatusOverviewColumn =
   | {
       readonly availability: "available";
