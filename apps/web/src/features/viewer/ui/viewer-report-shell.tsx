@@ -165,6 +165,7 @@ function ViewerReportBody({
 function deriveViewerDisplay(
   displayed: WeeklyReportGetResponse | undefined,
   canExportPdf: boolean,
+  mode: ViewerReportShellProps["mode"],
 ): {
   readonly headerContextLabel: ReactNode;
   readonly exportPdf: ReactNode;
@@ -173,11 +174,12 @@ function deriveViewerDisplay(
     return { headerContextLabel: undefined, exportPdf: undefined };
   }
   return {
-    headerContextLabel: (
-      <ViewerAuthorityLabel
-        authority={deriveViewerAuthority(displayed.periodStatus)}
-      />
-    ),
+    headerContextLabel:
+      mode === "form" && displayed.periodStatus === "published" ? undefined : (
+        <ViewerAuthorityLabel
+          authority={deriveViewerAuthority(displayed.periodStatus)}
+        />
+      ),
     exportPdf: canExportPdf ? (
       <ExportPdfButton
         reportId={displayed.reportId}
@@ -237,6 +239,7 @@ export function ViewerReportShell({
     ...deriveViewerDisplay(
       displayedQ.data,
       user !== null && !isLead(user.role),
+      mode,
     ),
     isLoading: displayedQ.isLoading,
     contextControls: (

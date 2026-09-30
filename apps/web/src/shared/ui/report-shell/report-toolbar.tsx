@@ -82,7 +82,7 @@ export function DocumentActionGroup({ children }: { children: ReactNode }) {
     <div
       role="group"
       aria-label="Document actions"
-      className="flex min-w-0 flex-wrap items-center justify-end gap-1.5"
+      className="flex min-w-0 flex-wrap items-center justify-start gap-1.5 sm:justify-end"
     >
       {children}
     </div>
@@ -101,8 +101,8 @@ export function ReportToolbarCenterLabel({
   detail,
 }: ReportToolbarCenterLabelProps) {
   return (
-    <div className="flex min-w-0 items-center gap-2">
-      <span className="truncate text-sm text-[var(--color-muted-foreground)]">
+    <div className="flex min-w-0 max-w-full flex-wrap items-baseline gap-x-2 gap-y-1">
+      <span className="min-w-0 text-sm text-[var(--color-muted-foreground)] [overflow-wrap:anywhere]">
         {label}
       </span>
       <span className="text-[var(--color-muted-foreground)]">&middot;</span>
