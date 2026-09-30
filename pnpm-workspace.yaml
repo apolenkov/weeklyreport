@@ -55,7 +55,7 @@ overrides:
   # Keep both brace-expansion ranges: the graph contains incompatible 1.x and
   # 5.x consumers, so one cross-major override would be unsafe.
   "brace-expansion@<2": ">=1.1.18 <2"
-  "brace-expansion@>=4 <6": ">=5.0.9 <6"
+  "brace-expansion@>=4 <6": ">=5.0.12 <6"
   # prisma@7.10.0 pins mysql2 exactly at 3.15.3, which carries open advisories
   # (GHSA-rgwj-5xj2-c3m3 and a second <3.22.0 finding); floor at the patched
   # line, cap below the next major. mysql2 is prisma's internal MySQL driver

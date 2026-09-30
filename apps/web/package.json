@@ -19,7 +19,7 @@
     "@trpc/server": "catalog:",
     "@trpc/tanstack-react-query": "^11.18.0",
     "lucide-react": "catalog:",
-    "next": "^16.3.3",
+    "next": "^16.3.7",
     "react": "catalog:",
     "react-dom": "catalog:",
     "server-only": "^0.0.1",
