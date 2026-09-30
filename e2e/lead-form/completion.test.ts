@@ -6,6 +6,7 @@ import type { ReportAssistantOutcome } from "@customreport/shared";
 import { PROD_CRM_360 } from "../../prisma/seeds/simple/seed-simple.ids.js";
 import { DEMO_STAGE_ASSIGNMENTS } from "../../prisma/seeds/simple/seed-simple.stages.js";
 import { prepareE2eData } from "../setup/reset.js";
+import { openLeadReport } from "./access.js";
 import {
   command,
   fill,
@@ -24,7 +25,6 @@ import { assertFocused } from "./focus.js";
 import {
   ARCHIVED_FILL_FIXTURE,
   LEAD_FORM_FIXTURE,
-  openLeadReport,
   roleText,
   saveDraft,
   scopeCount,
@@ -922,7 +922,7 @@ void test("report chat searching disables input and prevents duplicate questions
   } finally {
     await setOffline(false);
   }
-  await waitText("E2E grounded answer");
+  await waitScope({ role: "heading", name: "E2E grounded answer" });
   await findRole("heading", "E2E grounded answer", "text");
   const question = await refFor("textbox", QUESTION_FIELD);
   assert.equal(await getAttr(question, "disabled"), null);

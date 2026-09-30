@@ -12,6 +12,8 @@ export type { BrowserSnapshot } from "./snapshot-scope.js";
 
 const execute = promisify(execFile);
 const COMMAND_TIMEOUT_MS = 40_000;
+// Cold navigation includes browser startup and the CLI's bounded socket attempts.
+const OPEN_TIMEOUT_MS = 180_000;
 const sessions: {
   base: string;
   lead: string;
@@ -69,7 +71,7 @@ function executeClient(
     ],
     {
       encoding: "utf8",
-      timeout: COMMAND_TIMEOUT_MS,
+      timeout: args.at(0) === "open" ? OPEN_TIMEOUT_MS : COMMAND_TIMEOUT_MS,
       maxBuffer: 8_388_608,
       signal,
       env: runnerEnvironment(session),

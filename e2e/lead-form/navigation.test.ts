@@ -6,6 +6,7 @@ import superjson from "superjson";
 
 import { formatPeriodRangeWithYear } from "../../apps/web/src/shared/lib/format/format-date.js";
 import { SEED_REPORTS } from "../../prisma/seeds/support/seed-periods.js";
+import { loginAsLead, openLeadReport } from "./access.js";
 import {
   command,
   fill,
@@ -23,9 +24,7 @@ import {
 import { registerE2eHooks } from "./fixtures.js";
 import {
   LEAD_FORM_FIXTURE,
-  loginAsLead,
   OPEN_WORK_FIXTURE,
-  openLeadReport,
   roleText,
   saveDraft,
   scopeCount,

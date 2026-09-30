@@ -128,7 +128,7 @@ ItemEditDialog's separately covered 500-character validation.
 #### Scenario: One editor fails its focus-restoration contract
 
 - **WHEN** the Item dialog's dirty-discard flow fails to return focus to its verified opener
-- **THEN** its strict assertion remains failing with observable evidence
+- **THEN** its strict assertion records failure with observable evidence
 - **AND** the Risk and Decision validation/discard cases prepare independent baselines and still execute
 
 ### Requirement: Lead browser tests prepare independent disposable state

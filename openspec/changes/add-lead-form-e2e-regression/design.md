@@ -15,9 +15,13 @@ access and reset/seed while the owner's site occupied the target; its static
 checks did not establish browser acceptance.
 
 On 2026-09-30 the coordinator handed over exclusive `customreport_e2e` and
-Redis DB 15 use for live correction and acceptance. The runner was rebased to
-`94efe4f6e`; the existing web/API processes on ports 3000/3002 run application
-main `33d853b6a` from `/home/user/work/weeklyreport`. Do not stop or restart
+Redis DB 15 use for live correction and acceptance. The initial runner baseline
+was `94efe4f6e` against application main `33d853b6a`. Before run11, the owner's
+clean application checkout advanced to
+`c9ffc8c8df0fce0b9ca3800ee04fe3256236612b`; the task commits were rebased onto
+that main, with runner HEAD `8567f64` before the latest wait corrections. The
+existing web/API processes still run from `/home/user/work/weeklyreport` on
+ports 3000/3002. Do not stop or restart
 those processes. Complete browser acceptance remains NOT VERIFIED pending the
 final full-run evidence; selected results are recorded separately below.
 The final handoff must restore the canonical full dataset through the
@@ -86,6 +90,17 @@ owned-session cleanup. Their implementation must follow the actual CLI help
 and core skill rather than a parallel locator API. Do not import a browser SDK
 or reproduce another driver's page/context/network objects.
 
+Only the CLI `open` child-process bound is 180 seconds; other commands and close
+retain 40 seconds, and the cleanup hook retains 45 seconds. CLI 0.38.1 `open`
+has no `--wait-until` option: its native load/cold-start behavior includes a
+25-second load wait, a 30-second cold startup and up to five 30-second socket
+attempts (about 152 seconds for those attempts). The outer open bound accommodates
+that native policy; the wrapper adds no sleeps or retries. Observable AX/URL
+readiness still uses the unchanged 25-second waits and strict assertions.
+The selected reopen repeat in `run13/reopen-open-bound.log` exits 0, 1 pass /
+0 fail in 23150.740875 ms. That result does not establish the cause of the earlier
+failure or complete full-suite acceptance.
+
 Only at authorized runtime setup, create the named session with the CLI command:
 
 ```text
@@ -123,9 +138,11 @@ in `run8/selected.log` and by native Enter in `run8/keyboard-focus.log`.
 After modal closure and the 25-second observable wait, exactly one expected
 opener remains connected and visible; the keyboard-only case exits 1, 0 pass /
 1 fail. Earlier evidence remains in the two run7 focus logs. Current explicit
-record opening uses native focus plus Enter. Keep the strict assertion failing
-and report the defect; this regression does not change product code or restore
-focus through test scripting. Complete 123-case acceptance remains pending.
+record opening uses native focus plus Enter. Upstream fixes `d9af14d4b` /
+`68ff73bf0` restored the product contract before run11, where the unchanged
+strict Item focus case 107 passed. The regression retains its assertion and
+does not change product code or restore focus through test scripting. The
+corrected runner's complete 123-case acceptance remains pending.
 
 The public form has Report/Overview and Slides; `mode=edit` normalizes rather
 than opening a third route. Week-item Delete exists in the Slides canonical
@@ -268,7 +285,15 @@ expose. Section-editor `waitModal` retains its existing modal precondition
 locally before using the general wait. The shared strict `assertFocused` lives
 in the leaf `e2e/lead-form/focus.ts` to keep `helpers.ts` within the 300-line
 limit without exemptions; it observes focus and the connected visible opener
-without changing focus during restoration checks. Expandable
+without changing focus during restoration checks.
+Auth and report-entry helpers are owned by `e2e/lead-form/access.ts`. They
+verify the native dev-login role/email, then reuse the same 25-second
+`waitSnapshot`/`waitScope` bounds to observe the authorized `getUrl` pathname,
+My Report heading and selected report surface. The assistant answer waits for
+its actual named heading; the reopen success waits for its text inside the
+Notifications AX region. These changes retain every assertion and deadline
+and avoid assuming the native text/URL wait recognizes those transitions.
+Expandable
 support sections await their actual `aria-controls` panel's platform
 `getAnimations()` completion before interacting with controls in its moving
 layout; no elapsed-time sleep substitutes for completion.
@@ -398,8 +423,12 @@ Run9 was deliberately interrupted: exit 1 after 39 emitted results, 34 pass /
 Following the independent review, selected run10 evidence exercises the scoped
 waits, modal readiness, citation and focus corrections. Its twelve-case result
 is exit 1, 8 pass / 4 fail: three overbroad shared `aria-modal` assumptions were
-corrected afterwards; the confirmed Item focus defect remains. The final
-complete 123-case result and current final gates/restoration are still pending.
+corrected afterwards; Item's focus failure was reproduced on that earlier
+application revision. Run11 then completed 123 cases with exit 1, 121 pass /
+2 fail, while the strict Item case passed after the upstream fix. Its remaining
+failures were the assistant-answer and reopen-toast native waits; source
+corrections reuse existing bounded AX waits without relaxing assertions. The
+corrected runner's full result and current final gates/restoration are pending.
 
 Replace the task's earlier test runner/dependency/configuration with the native
 Node suite and CLI wrapper; keep product/database source unchanged. Validate

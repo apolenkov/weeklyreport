@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import { shortItemLabel } from "../../apps/web/src/shared/lib/format/short-label.js";
 import { prepareE2eData } from "../setup/reset.js";
+import { openLeadReport } from "./access.js";
 import {
   command,
   fill,
@@ -18,7 +19,6 @@ import { registerE2eHooks } from "./fixtures.js";
 import {
   LEAD_FORM_FIXTURE,
   OPEN_WORK_FIXTURE,
-  openLeadReport,
   roleText,
   saveDraft,
   type Scope,
