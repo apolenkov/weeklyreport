@@ -123,6 +123,9 @@ export function TrafficLightHistoryTable({
     })
     .toSorted((a, b) => b.rank - a.rank);
   const latestIndex = periods.length - 1;
+  const displayPeriods = periods
+    .map((period, index) => ({ period, index }))
+    .toReversed();
 
   return (
     <>
@@ -134,11 +137,12 @@ export function TrafficLightHistoryTable({
       <AnalyticsTable
         headingId={headingId}
         caption="Traffic-light history data"
+        showScrollHint={periods.length > 1}
       >
         <thead>
           <tr className="border-b text-left">
             <StickyColumnHeader>Project</StickyColumnHeader>
-            {periods.map((period, index) => (
+            {displayPeriods.map(({ period, index }) => (
               <th
                 key={period}
                 scope="col"
@@ -153,7 +157,7 @@ export function TrafficLightHistoryTable({
           {rankedRows.map(({ row }) => (
             <tr key={row.projectId} className="border-b last:border-0">
               <StickyRowHeader>{row.projectName}</StickyRowHeader>
-              {periods.map((period, index) => (
+              {displayPeriods.map(({ period, index }) => (
                 <HistoryCell
                   key={period}
                   statuses={row.statuses}

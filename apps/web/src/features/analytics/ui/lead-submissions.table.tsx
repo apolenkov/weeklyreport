@@ -25,13 +25,18 @@ export function LeadSubmissionsTable({
   }
 
   const { data, series } = buildLeadSubmissionsTableData(rows);
+  const displayData = data.toReversed();
 
   return (
-    <AnalyticsTable headingId={headingId} caption="Lead submissions">
+    <AnalyticsTable
+      headingId={headingId}
+      caption="Lead submissions"
+      showScrollHint={rows.length > 1}
+    >
       <thead>
         <tr className="border-b text-left">
           <StickyColumnHeader>Lead</StickyColumnHeader>
-          {data.map((point) => (
+          {displayData.map((point) => (
             <th
               key={String(point.period)}
               scope="col"
@@ -46,7 +51,7 @@ export function LeadSubmissionsTable({
         {series.map((lead) => (
           <tr key={lead.dataKey} className="border-b last:border-0">
             <StickyRowHeader>{lead.name}</StickyRowHeader>
-            {data.map((point) => {
+            {displayData.map((point) => {
               const submitted = Number(point[lead.dataKey] ?? 0) > 0;
               return (
                 <td
