@@ -36,6 +36,7 @@ import {
   setOffline,
   waitButton,
   waitClosed,
+  waitNotification,
   waitScope,
   waitSnapshot,
 } from "./helpers.js";
@@ -749,10 +750,17 @@ void test("concurrent Lead edits recover unsaved input without overwriting the s
     } finally {
       await setOffline(false);
     }
-    await waitText(
-      "Your submitted update was not confirmed. It is kept below and has not overwritten the current draft.",
+    await waitSnapshot(
+      (data) =>
+        scopeCount(data, recovery.role, recovery.name) === 1 &&
+        scopeCount(
+          scopeSnapshot(data, recovery.role, recovery.name),
+          "StaticText",
+          "Your submitted update was not confirmed. It is kept below and has not overwritten the current draft.",
+        ) > 0,
+      "Expected unconfirmed update in Unsaved update recovery",
     );
-    await waitText(
+    await waitNotification(
       "This section was changed elsewhere. Reloaded the latest version — re-apply your changes and save again.",
     );
     await waitButton("Saving draft", { present: false });
@@ -1113,13 +1121,7 @@ void test("pending reopen request preserves reason and blocks dismissal and dupl
   } finally {
     await setOffline(false);
   }
-  await waitSnapshot(
-    (data) =>
-      scopeSnapshots(data, "region", "Notifications alt+T").some((region) =>
-        region.snapshot.includes('StaticText "Reopen request sent to Head"'),
-      ),
-    "Expected Request reopen success notification",
-  );
+  await waitNotification("Reopen request sent to Head");
   await waitClosed(dialog);
   await waitButton("Request reopen", { present: false });
   assert.equal(await postCount("leadForm.requestReopen"), 1);

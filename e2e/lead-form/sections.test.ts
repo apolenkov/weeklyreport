@@ -30,6 +30,7 @@ import {
   scopeSnapshot,
   setOffline,
   waitClosed,
+  waitNotification,
   waitScope,
 } from "./helpers.js";
 
@@ -1192,8 +1193,8 @@ for (const entry of SLIDE_SAVE_CASES) {
     } finally {
       await setOffline(false);
     }
+    await waitNotification("Slide record saved");
     await waitNoModals();
-    await waitText("Slide record saved");
     await persistedReload(revised);
     await openSlideRecord({ ...record, text: revised });
     assert.equal(await value("textbox", entry.field), revised);

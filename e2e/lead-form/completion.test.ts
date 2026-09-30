@@ -33,6 +33,7 @@ import {
   setOffline,
   waitButton,
   waitClosed,
+  waitNotification,
   waitScope,
 } from "./helpers.js";
 
@@ -509,7 +510,7 @@ void test("Fill from pending replacement blocks dismissal and duplicate writes",
   } finally {
     await setOffline(false);
   }
-  await waitText("Form filled from selected period");
+  await waitNotification("Form filled from selected period");
   const calls = (await requests()).filter(
     (request) =>
       request.method === "POST" &&

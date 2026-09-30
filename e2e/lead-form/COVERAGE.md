@@ -111,6 +111,11 @@ or retries. The selected reopen repeat in `run13/reopen-open-bound.log` records
 exit 0, **1 pass / 0 fail**, duration 23150.740875 ms; the preceding three-case
 selection was **2 pass / 1 fail**. The repeat does not prove the cause of the
 earlier failure or full-suite acceptance.
+Current execution checkpoint: run14 was deliberately stopped after seven
+emitted results (**6 pass / 1 fail**, exit 1), without complete TAP counts;
+its pending-Fill failure was a native text-wait timeout with empty CLI stdout.
+The current source observes all ten offline-return cases through the existing
+bounded AX waits. Their run15 selection and the next complete run remain pending.
 The final full run and restoration remain pending until their evidence is recorded.
 Same-final-SHA remote CI is also **NOT VERIFIED** under the no-push instruction;
 the coordinator must supply its green result before complete acceptance is claimed.
@@ -174,8 +179,14 @@ locally. Strict read-only opener-focus assertions live in
 restoration. Auth/report-entry helpers live in `e2e/lead-form/access.ts` and
 reuse the same 25-second `waitSnapshot`/`waitScope` policy: verify the native
 dev-login role/email, observe the `getUrl` pathname and wait for the named report
-surface. Answer and success-notification waits observe their actual heading or
-Notifications AX region. These waits do not force or retry clicks. Expandable support sections await their real `aria-controls`
+surface. `waitNotification(text, session)` reuses the same 25-second snapshot
+wait for exact StaticText inside `Notifications alt+T`. Pending Fill and reopen
+use it; three pending Slides saves observe their success notification before
+the retained modal-close checks. Navigation waits for `+ Add Risk`; concurrent
+conflict recovery waits for its exact recovery-region text and error notification.
+All persistence, request-count and dialog assertions remain. These ten
+offline-return cases use AX waits; native text waits remain elsewhere.
+These waits do not force or retry clicks. Expandable support sections await their real `aria-controls`
 panel's platform animation completion before clicking moving controls. Full
 tRPC `{ json, meta }` inputs are decoded with the existing `superjson` serializer
 before canonical save-schema checks; no browser adapter is added.
