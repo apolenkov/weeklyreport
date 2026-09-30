@@ -4,12 +4,15 @@
     ".": {
       "entry": [
         "eslint-config/*.ts",
+        "e2e/**/*.test.ts",
+        "e2e/setup/prepare.ts",
         "prisma/**/*.ts",
         "scripts/**/*.test.ts",
         "scripts/gates/*.ts",
         "vitest.*.config.ts"
       ],
       "project": [
+        "e2e/**/*.ts",
         "eslint-config/**/*.ts",
         "prisma/**/*.ts",
         "scripts/**/*.ts",
