@@ -1,8 +1,9 @@
 import type { PeriodState, ReportStatus } from "@customreport/shared";
 
-// The single, pure source of truth for the `Report` lifecycle field set: no DB
-// constraint ties the coupled lifecycle representations together. The governed
-// set and identity fields are specified in openspec/specs/period-dual-state.
+// The single, pure source of truth for the `Report` lifecycle field set; the
+// `Report_lifecycle_tuple_check` CHECK only rejects illegal tuples, not stale
+// writes. The governed set and identity fields are specified in
+// openspec/specs/period-dual-state.
 
 // The bare-scalar lifecycle subset every transition produces — never a Prisma
 // `{ set }` wrapper — so the object is assignable to both `ReportUpdateInput`

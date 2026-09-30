@@ -5,6 +5,7 @@ import type {
 } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
+import { createNullLogger } from "../../lib/logger";
 import type { OrganizationService } from "../organization/organization.service.js";
 import { unusedRemindersRepositoryStubs } from "./__tests__/reminders-scope.repository-stub.js";
 import { RemindersService } from "./reminders.service";
@@ -171,7 +172,7 @@ describe("RemindersScopeService.dispatchDraftSections — manual dispatch after 
     } as OrganizationService;
     const service = new RemindersService(
       buildDispatchRepository(),
-      undefined,
+      createNullLogger(),
       undefined,
       undefined,
       organizationService,
@@ -218,7 +219,7 @@ describe("RemindersScopeService.dispatchDraftSections — manual dispatch after 
     } as OrganizationService;
     const service = new RemindersService(
       buildDispatchRepository(insertedPayloads),
-      undefined,
+      createNullLogger(),
       undefined,
       undefined,
       organizationService,

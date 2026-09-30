@@ -507,6 +507,17 @@ test("dependency-scan also runs on merge requests that change dependency manifes
       `${manifest} must trigger the scan`,
     );
   }
+  // Production advisories block; development-tool advisories only report.
+  assert.match(job, /^ {4}- pnpm audit --prod$/mu);
+  assert.doesNotMatch(job, /pnpm audit --dev/u);
+  // The dev audit is its own job: a failure warns but is never hidden by `||`.
+  const devStart = gitlabContent.indexOf("\ndependency-scan-dev:");
+  assert.ok(devStart > start, "dependency-scan-dev job must exist");
+  const devJob = gitlabContent.slice(devStart + 1).split(/\n(?=\S)/u)[0] ?? "";
+  assert.match(devJob, /extends: dependency-scan\b/u);
+  assert.match(devJob, /allow_failure: true/u);
+  assert.match(devJob, /^ {4}- pnpm audit --dev --audit-level high$/mu);
+  assert.doesNotMatch(devJob, /\|\|/u);
 });
 
 test("Vitest CI output has one labelled summary contract", () => {

@@ -6,6 +6,7 @@ import {
 } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
+import { createNullLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   makeProjectReadModel,
@@ -133,7 +134,10 @@ describe("WeeklyReportService — contract tests", () => {
   it("returns compiled weekly report data for a given reportId", async () => {
     const report = makeWeeklyReport();
     const reports = new Map([[reportId, report]]);
-    const service = new WeeklyReportService(createRepository(reports));
+    const service = new WeeklyReportService(
+      createRepository(reports),
+      createNullLogger(),
+    );
 
     const result = await service.getWeeklyReport(reportId, caller);
 
@@ -163,7 +167,10 @@ describe("WeeklyReportService — contract tests", () => {
 
   it("throws WeeklyReportDomainError when report is not found", async () => {
     const reports = new Map<string, WeeklyReportReadModel>();
-    const service = new WeeklyReportService(createRepository(reports));
+    const service = new WeeklyReportService(
+      createRepository(reports),
+      createNullLogger(),
+    );
 
     await expect(
       service.getWeeklyReport("99999999-9999-4999-8999-999999999999", caller),
@@ -179,6 +186,7 @@ describe("WeeklyReportService — contract tests", () => {
     const reports = new Map([[activeReportId, report]]);
     const service = new WeeklyReportService(
       createRepository(reports, activeReportId),
+      createNullLogger(),
     );
 
     const result = await service.getWeeklyReport(undefined, caller);
@@ -190,7 +198,10 @@ describe("WeeklyReportService — contract tests", () => {
 
   it("returns no-period sentinel when no active report exists and no ID given", async () => {
     // no-period → HTTP 200; React Query does not retry 3× as it would on throw.
-    const service = new WeeklyReportService(createRepository(new Map(), null));
+    const service = new WeeklyReportService(
+      createRepository(new Map(), null),
+      createNullLogger(),
+    );
 
     const result = await service.getWeeklyReport(undefined, caller);
 
@@ -235,7 +246,10 @@ describe("WeeklyReportService — contract tests", () => {
       ],
     });
     const reports = new Map([[reportId, report]]);
-    const service = new WeeklyReportService(createRepository(reports));
+    const service = new WeeklyReportService(
+      createRepository(reports),
+      createNullLogger(),
+    );
 
     const result = await service.getWeeklyReport(reportId, caller);
 
@@ -272,7 +286,10 @@ describe("WeeklyReportService — contract tests", () => {
       ],
     });
     const reports = new Map([[reportId, report]]);
-    const service = new WeeklyReportService(createRepository(reports));
+    const service = new WeeklyReportService(
+      createRepository(reports),
+      createNullLogger(),
+    );
 
     const result = await service.getWeeklyReport(reportId, caller);
 
@@ -291,7 +308,10 @@ describe("WeeklyReportService — contract tests", () => {
       leadSections: [],
     });
     const reports = new Map([[reportId, report]]);
-    const service = new WeeklyReportService(createRepository(reports));
+    const service = new WeeklyReportService(
+      createRepository(reports),
+      createNullLogger(),
+    );
 
     const result = await service.getWeeklyReport(reportId, caller);
 
@@ -304,7 +324,10 @@ describe("WeeklyReportService — contract tests", () => {
   it("result conforms to Zod response schema", async () => {
     const report = makeWeeklyReport();
     const reports = new Map([[reportId, report]]);
-    const service = new WeeklyReportService(createRepository(reports));
+    const service = new WeeklyReportService(
+      createRepository(reports),
+      createNullLogger(),
+    );
 
     const result = await service.getWeeklyReport(reportId, caller);
 
@@ -322,6 +345,7 @@ describe("WeeklyReportService — contract tests", () => {
     });
     const service = new WeeklyReportService(
       createRepository(new Map([[reportId, report]])),
+      createNullLogger(),
     );
 
     const result = await service.getWeeklyReport(reportId, caller);

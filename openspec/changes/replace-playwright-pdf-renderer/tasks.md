@@ -228,7 +228,7 @@ write or update the colocated test first, then the code.
       inadequate headroom stops the run for a data-driven cap revision),
       and the expired/absent-token path — verify every item produces
       manifest-bound evidence tied to the exact candidate SHA, with
-      exclusions reported rather than claimed.
+      exclusions reported rather than claimed. Status (2026-09-30), per-item results in `/home/user/.local/state/session-review/weeklyreport-20260929/openspec-fix/pdf-matrix.json`: items 2, 3 (re-exported after the print CSS fix, `/home/user/.local/state/session-review/weeklyreport-20260929/openspec-fix/after-export.pdf`), 5, 6, 8, 10, 12, 13, 14, 15 verified; items 4, 7, 9, 11, 16 verified in part (residual variants in TASK-145.11.05); item 1 only for the compose gotenberg service, not the full `pnpm dev:watch` stack, and no compose-first ordering or SHA-bound manifest (TASK-145.11.04). Stays unchecked.
 
 ## 7. Candidate review
 
@@ -236,7 +236,7 @@ write or update the colocated test first, then the code.
       the delta specs, the removal inventory, and the pinned image/config —
       verify a written findings list covers every modified file and that every
       remaining `playwright` match is classified (historical, upstream
-      metadata, agent-tool, or deny-only rule).
+      metadata, agent-tool, or deny-only rule). Not run (reviewer work), TASK-145.11.06.
 - [ ] 7.2 Run the final `independent_reviewer` review of the candidate after all
       checks pass — verify the verdict is recorded and any blocking finding is
-      returned to the owning task before the change is called done.
+      returned to the owning task before the change is called done. Not run (reviewer work), TASK-145.11.06.

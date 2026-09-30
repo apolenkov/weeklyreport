@@ -11,6 +11,7 @@ import {
   REPORT_ID,
 } from "./__tests__/lead-form-contract-harness.js";
 import { LeadFormAccessError, LeadFormService } from "./lead-form.service.js";
+import { NOOP_REPORT_SECTIONS_TELEMETRY } from "./report-sections-telemetry.port.js";
 
 const PERIOD = {
   reportId: REPORT_ID,
@@ -52,11 +53,10 @@ describe("LeadFormService — getStatusOverview", () => {
       getStatusOverviewPeriods,
     });
 
-    const result = await new LeadFormService(repo).getStatusOverview(
-      REPORT_ID,
-      AUTHOR_ID,
-      "lead",
-    );
+    const result = await new LeadFormService(
+      repo,
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+    ).getStatusOverview(REPORT_ID, AUTHOR_ID, "lead");
 
     expect(result.current.section).toEqual(ownerSection);
     expect(result.current.section.items[0]).toHaveProperty(
@@ -86,12 +86,10 @@ describe("LeadFormService — getStatusOverview", () => {
     });
 
     await expect(
-      new LeadFormService(repo).getStatusOverview(
-        REPORT_ID,
-        AUTHOR_ID,
-        "lead",
-        OTHER_USER_ID,
-      ),
+      new LeadFormService(
+        repo,
+        NOOP_REPORT_SECTIONS_TELEMETRY,
+      ).getStatusOverview(REPORT_ID, AUTHOR_ID, "lead", OTHER_USER_ID),
     ).rejects.toBeInstanceOf(LeadFormAccessError);
     expect(getStatusOverviewPeriods).not.toHaveBeenCalled();
   });
@@ -136,12 +134,10 @@ describe("LeadFormService — getStatusOverview", () => {
       getStatusOverviewPeriods,
     });
 
-    const result = await new LeadFormService(repo).getStatusOverview(
-      REPORT_ID,
-      AUTHOR_ID,
-      "lead",
-      OTHER_USER_ID,
-    );
+    const result = await new LeadFormService(
+      repo,
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+    ).getStatusOverview(REPORT_ID, AUTHOR_ID, "lead", OTHER_USER_ID);
 
     expect(leadStatusOverviewOutputSchema.safeParse(result).success).toBe(true);
     expect(result.current.section.items[0]).toMatchObject({

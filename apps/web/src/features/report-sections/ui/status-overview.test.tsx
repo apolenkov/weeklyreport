@@ -60,6 +60,16 @@ const model: StatusOverviewModel = {
 };
 
 describe("StatusOverview", () => {
+  it("marks only unplanned Current items", () => {
+    render(<StatusOverview model={model} />);
+    expect(screen.getAllByText("Unplanned")).toHaveLength(1);
+    const preview = screen
+      .getByText("Work item 1")
+      .closest<HTMLElement>("[data-overview-item-preview]");
+    if (!preview) throw new Error("Expected the item preview");
+    expect(within(preview).getByText("Unplanned")).toBeTruthy();
+  });
+
   it("uses one clear item grammar without linked-step or drag controls", async () => {
     const user = userEvent.setup();
     const onEditItem = vi.fn();
@@ -1121,7 +1131,7 @@ describe("StatusOverview", () => {
     ).toBeNull();
   });
 
-  it("renders canonical status and all three real period ranges without repeated planning labels", () => {
+  it('renders canonical status and all three real period ranges without a "Not in prior plan" label', () => {
     render(<StatusOverview model={model} />);
 
     expect(screen.getByText("Blocked")).toBeInTheDocument();
@@ -1271,6 +1281,43 @@ describe("StatusOverview", () => {
         name: "Add next week update to Incident duty",
       }),
     ).not.toBeInTheDocument();
+  });
+
+  it("keeps a historical Activity visible without the weekly fields editor", () => {
+    const onActivityFieldsChange = vi.fn();
+    const activity = model.units[0];
+    if (!activity) throw new Error("Expected one overview unit");
+    const fields = {
+      titleOverride: null,
+      description: null,
+      catalogueName: "Incident duty",
+    };
+    const { rerender } = render(
+      <StatusOverview
+        model={{ ...model, units: [{ ...activity, activityFields: fields }] }}
+        activityFieldsEditable
+        onActivityFieldsChange={onActivityFieldsChange}
+      />,
+    );
+    expect(
+      screen.getByRole("form", { name: "Weekly fields for Incident duty" }),
+    ).toBeInTheDocument();
+
+    rerender(
+      <StatusOverview
+        model={{
+          ...model,
+          units: [{ ...activity, historical: true, activityFields: fields }],
+        }}
+        activityFieldsEditable
+        onActivityFieldsChange={onActivityFieldsChange}
+      />,
+    );
+    expect(screen.getByText("Work item 1")).toBeVisible();
+    expect(screen.getByText("Historical")).toBeVisible();
+    expect(screen.queryByRole("form", { name: /Weekly fields/ })).toBeNull();
+    expect(screen.queryByText("Save weekly fields")).toBeNull();
+    expect(onActivityFieldsChange).not.toHaveBeenCalled();
   });
 
   it("does not render quick-add controls when no create handler is provided", () => {

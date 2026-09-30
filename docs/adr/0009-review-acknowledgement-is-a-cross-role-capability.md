@@ -1,5 +1,7 @@
 # Review and acknowledgement are cross-role capabilities
 
+**Date:** 2026-06-30
+
 **Status:** accepted and implemented.
 
 ## Decision

@@ -49,7 +49,7 @@ function buildService(): RemindersService {
   } as OrganizationService;
   return new RemindersService(
     repository,
-    undefined,
+    createNullLogger(),
     undefined,
     undefined,
     organizationService,

@@ -4,6 +4,7 @@ import type {
 } from "@customreport/shared";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
+import { createNullLogger } from "../../lib/logger";
 import {
   cleanDatabase,
   createTestPrisma,
@@ -34,7 +35,7 @@ const QUEUE_PAYLOAD = {
 
 const prisma = createTestPrisma();
 const repository = new RemindersPrismaRepository(prisma as never);
-const service = new RemindersService(repository);
+const service = new RemindersService(repository, createNullLogger());
 
 async function seedExecutionHistory(): Promise<readonly string[]> {
   const { report } = await seedTestData(prisma);

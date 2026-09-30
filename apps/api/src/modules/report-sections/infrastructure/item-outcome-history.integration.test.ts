@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
+import { createNullLogger } from "../../../lib/logger.js";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
@@ -14,6 +15,7 @@ import {
 } from "../../carry-over/index.js";
 import { LeadFormService } from "../application/lead-form.service";
 import { ReportSectionsService } from "../application/report-sections.service";
+import { NOOP_REPORT_SECTIONS_TELEMETRY } from "../application/report-sections-telemetry.port.js";
 import {
   assignOutcomeStage,
   createOutcomePeriod,
@@ -31,12 +33,18 @@ describe("item outcome history across reporting gaps (real database)", () => {
   const prismaService = prisma as unknown as PrismaService;
   const carry = new CarryOverService(
     new CarryOverPrismaRepository(prismaService),
+    createNullLogger(),
   );
   const leadForm = new LeadFormService(
     new LeadFormPrismaRepository(prismaService),
+    NOOP_REPORT_SECTIONS_TELEMETRY,
   );
   const sectionRepository = new ReportSectionsPrismaRepository(prismaService);
-  const ordinarySave = new ReportSectionsService(sectionRepository);
+  const ordinarySave = new ReportSectionsService(
+    sectionRepository,
+    NOOP_REPORT_SECTIONS_TELEMETRY,
+    createNullLogger(),
+  );
   let testData: Awaited<ReturnType<typeof seedTestData>>;
 
   beforeEach(async () => {

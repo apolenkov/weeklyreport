@@ -39,7 +39,6 @@ describe("PeriodService single-active-reopen guard (integration)", () => {
   const PUBLISHED_A = "f0000000-0000-4000-a000-0000000000b1";
   const PUBLISHED_B = "f0000000-0000-4000-a000-0000000000b2";
   const REOPENED = "f0000000-0000-4000-a000-0000000000b3";
-  const REOPENED_ARCHIVED = "f0000000-0000-4000-a000-0000000000b4";
 
   const headSession: UserSession = {
     userId: "00000000-0000-4000-8000-0000000000c1",
@@ -77,6 +76,9 @@ describe("PeriodService single-active-reopen guard (integration)", () => {
             ? "open"
             : "published",
         publishedAt: new Date(periodStart),
+        ...(periodStatus === "reopened"
+          ? { reopenedAt: new Date(periodStart) }
+          : {}),
         archived,
         publishedSnapshot: publishedSnapshotFixture({
           reportId: id,
@@ -104,13 +106,7 @@ describe("PeriodService single-active-reopen guard (integration)", () => {
     await expect(repository.getReopenedNonArchivedId()).resolves.toBeNull();
   });
 
-  it("returns the reopened non-archived period and skips an archived reopened row", async () => {
-    await createReport(
-      REOPENED_ARCHIVED,
-      "reopened",
-      "2026-05-25T00:00:00.000Z",
-      true,
-    );
+  it("returns the reopened non-archived period", async () => {
     await createReport(REOPENED, "reopened", "2026-05-11T00:00:00.000Z");
 
     await expect(repository.getReopenedNonArchivedId()).resolves.toBe(REOPENED);

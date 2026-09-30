@@ -288,6 +288,8 @@ describe("ArchivePrismaRepository (integration)", () => {
           publishedAt: new Date("2026-04-12T10:00:00.000Z"),
           publishedById: testData.head.id,
           archived: true,
+          periodState: "archived",
+          periodStatus: "published",
         },
       }),
     ).rejects.toThrow(/Report_published_requires_snapshot/);
@@ -315,7 +317,9 @@ describe("ArchivePrismaRepository (integration)", () => {
           }),
         },
       }),
-    ).rejects.toThrow(/Report_published_requires_snapshot/);
+    ).rejects.toThrow(
+      /Report_(?:published_requires_snapshot|lifecycle_tuple_check)/,
+    );
     await expect(
       prisma.report.findUnique({ where: { id: testData.report.id } }),
     ).resolves.toMatchObject({ status: "draft", publishedAt: null });
@@ -701,6 +705,8 @@ describe("ArchivePrismaRepository (integration)", () => {
           publishedAt: new Date("2026-04-12T10:00:00.000Z"),
           publishedById: testData.head.id,
           archived: true,
+          periodState: "archived",
+          periodStatus: "published",
         },
       }),
     ).rejects.toThrow(/Report_published_requires_snapshot/);

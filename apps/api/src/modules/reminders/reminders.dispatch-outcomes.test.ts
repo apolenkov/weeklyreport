@@ -1,6 +1,7 @@
 import type { AdminReminderExecution, UserSession } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
+import { createNullLogger } from "../../lib/logger";
 import {
   activeRule,
   createServiceRepo,
@@ -93,7 +94,7 @@ function createDispatchHarness(kind: "deadline" | "escalation" = "deadline") {
   );
   const service = new RemindersService(
     repository,
-    undefined,
+    createNullLogger(),
     { enqueue },
     undefined,
     fakeOrganizationService,

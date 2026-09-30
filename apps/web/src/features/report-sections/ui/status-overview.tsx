@@ -252,6 +252,7 @@ export function StatusOverview({
                       />
                       {group.kind === "activity" &&
                       activityFieldsEditable === true &&
+                      !unit.historical &&
                       onActivityFieldsChange !== undefined &&
                       unit.activityFields !== undefined ? (
                         <StatusOverviewActivityEditor

@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import { createNullLogger } from "../../lib/logger";
 import {
   cleanDatabase,
   createTestPrisma,
@@ -37,6 +38,7 @@ describe("Archive → restore round-trip (integration)", () => {
     periodRepo = new PeriodPrismaRepository(prisma as never, historyRepo);
     periodAdmin = new PeriodAdminService(
       new AdminPrismaRepository(prisma as never),
+      createNullLogger(),
     );
   });
 

@@ -1,5 +1,8 @@
 # Results, commitments and resolution share one lineage
 
+**Status:** accepted
+**Date:** 2026-09-11
+
 A current result and a next-period commitment belong to one tracked task, not
 two editable task rows: moving the result into Next would erase what happened,
 while cloning it would make progress and ownership ambiguous. Keep the current

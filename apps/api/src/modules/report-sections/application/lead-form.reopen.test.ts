@@ -99,7 +99,7 @@ describe("LeadFormService — requestReopen", () => {
     const repo = createMockRepository({
       getSectionReopenContext: vi.fn().mockResolvedValue(reopenContext()),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     const result = await service.requestReopen(
       SECTION_ID,
@@ -121,7 +121,7 @@ describe("LeadFormService — requestReopen", () => {
         .fn()
         .mockResolvedValue(reopenContext({ periodStatus: "reopened" })),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(service.requestReopen(SECTION_ID, AUTHOR_ID)).resolves.toEqual(
       { success: true },
@@ -134,7 +134,7 @@ describe("LeadFormService — requestReopen", () => {
         .fn()
         .mockResolvedValue(reopenContext({ periodStatus: "published" })),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(service.requestReopen(SECTION_ID, AUTHOR_ID)).rejects.toThrow(
       ReopenRequestError,
@@ -150,7 +150,7 @@ describe("LeadFormService — requestReopen", () => {
           reopenContext({ periodStatus: "published", archived: true }),
         ),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(service.requestReopen(SECTION_ID, AUTHOR_ID)).rejects.toThrow(
       ReopenRequestError,
@@ -163,7 +163,7 @@ describe("LeadFormService — requestReopen", () => {
         .fn()
         .mockResolvedValue(reopenContext({ hasPendingReopen: true })),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(service.requestReopen(SECTION_ID, AUTHOR_ID)).rejects.toThrow(
       ReopenRequestError,
@@ -176,7 +176,7 @@ describe("LeadFormService — requestReopen", () => {
         .fn()
         .mockResolvedValue(reopenContext({ sectionStatus: "draft" })),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(service.requestReopen(SECTION_ID, AUTHOR_ID)).rejects.toThrow(
       ReopenRequestError,
@@ -187,7 +187,7 @@ describe("LeadFormService — requestReopen", () => {
     const repo = createMockRepository({
       getSectionReopenContext: vi.fn().mockResolvedValue(reopenContext()),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
       service.requestReopen(SECTION_ID, OTHER_USER_ID),
@@ -196,7 +196,7 @@ describe("LeadFormService — requestReopen", () => {
 
   it("rejects when the section does not exist (NOT_FOUND)", async () => {
     const repo = createMockRepository();
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(service.requestReopen(SECTION_ID, AUTHOR_ID)).rejects.toThrow(
       LeadFormDomainError,

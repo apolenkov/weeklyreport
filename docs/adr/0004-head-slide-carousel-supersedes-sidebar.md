@@ -1,5 +1,7 @@
 # Head slides use the shared carousel and fullscreen model
 
+**Date:** 2026-06-22
+
 **Status:** accepted and implemented.
 
 The head slide deck uses the same navigation model as the lead deck:

@@ -71,7 +71,7 @@ describe("lead-form published-period write locks (integration)", () => {
     const before = await targetRows(prisma, testData);
     await prisma.report.update({
       where: { id: testData.report.id },
-      data: { archived: true },
+      data: { archived: true, periodState: "archived" },
     });
 
     await expect(

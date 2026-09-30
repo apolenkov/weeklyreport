@@ -10,6 +10,7 @@ import {
 import { Prisma } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createNullLogger } from "../../lib/logger";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   createPauseGate,
@@ -238,6 +239,7 @@ describe("AdminPrismaRepository (integration)", () => {
       const pausedPrisma = pauseBeforeTransaction(prisma, gate.pause);
       const service = new PeriodAdminService(
         new AdminPrismaRepository(pausedPrisma as never),
+        createNullLogger(),
       );
       const originalEnd = testData.report.periodEnd;
       const update = service.updatePeriodManual({
@@ -973,7 +975,12 @@ describe("AdminPrismaRepository (integration)", () => {
     // Corrupt the persisted lifecycle (row still exists → update branch).
     await prisma.report.update({
       where: { id: testData.report.id },
-      data: { periodState: "open", periodStatus: "open" },
+      data: {
+        status: "published",
+        periodState: "open",
+        periodStatus: "reopened",
+        reopenedAt: new Date("2026-04-14T09:00:00.000Z"),
+      },
     });
 
     await repo.saveSnapshot(snapshot);
@@ -1256,7 +1263,7 @@ describe("AdminPrismaRepository (integration)", () => {
     const enqueued: unknown[] = [];
     const reminders = new RemindersService(
       new RemindersPrismaRepository(prisma as never),
-      undefined,
+      createNullLogger(),
       {
         enqueue: (...args: unknown[]) => {
           enqueued.push(args);

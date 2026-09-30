@@ -5,6 +5,7 @@ import type { TrafficLightStatus } from "@customreport/shared";
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
+import { createNullLogger } from "../../../lib/logger.js";
 import {
   OPEN_REPORT_META,
   reportMetaReader,
@@ -14,6 +15,7 @@ import {
   type ReportSectionsRepository,
   ReportSectionsService,
 } from "./report-sections.service";
+import { NOOP_REPORT_SECTIONS_TELEMETRY } from "./report-sections-telemetry.port.js";
 
 const SECTION_ID = "11111111-1111-4111-8111-111111111111";
 const REPORT_ID = "22222222-2222-4222-8222-222222222222";
@@ -115,7 +117,11 @@ function draftPayload(
 
 describe("ReportSectionsService — activity statuses on saveDraft", () => {
   it("folds written statuses onto the seeded set, keeping omitted entries", async () => {
-    const service = new ReportSectionsService(createRepository([baseSection]));
+    const service = new ReportSectionsService(
+      createRepository([baseSection]),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
 
     const saved = await service.saveDraft(
       draftPayload([
@@ -152,7 +158,11 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
   });
 
   it("keeps every seeded status when the payload supplies an empty slice", async () => {
-    const service = new ReportSectionsService(createRepository([baseSection]));
+    const service = new ReportSectionsService(
+      createRepository([baseSection]),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
 
     const saved = await service.saveDraft(draftPayload(), AUTHOR_ID);
 
@@ -160,7 +170,11 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
   });
 
   it("hard-rejects a status for an unattached activity", async () => {
-    const service = new ReportSectionsService(createRepository([baseSection]));
+    const service = new ReportSectionsService(
+      createRepository([baseSection]),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
 
     await expect(
       service.saveDraft(
@@ -174,7 +188,11 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
   });
 
   it("the reject is a ReportSectionDomainError (maps to BAD_REQUEST)", async () => {
-    const service = new ReportSectionsService(createRepository([baseSection]));
+    const service = new ReportSectionsService(
+      createRepository([baseSection]),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
 
     await expect(
       service.saveDraft(
@@ -194,7 +212,11 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
         (activity) => activity.activityId !== ACTIVITY_B,
       ),
     };
-    const service = new ReportSectionsService(createRepository([afterDetach]));
+    const service = new ReportSectionsService(
+      createRepository([afterDetach]),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
 
     const saved = await service.saveDraft(
       draftPayload([{ activityId: ACTIVITY_A, status: "yellow" }]),
@@ -214,7 +236,11 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
         (activity) => activity.activityId !== ACTIVITY_B,
       ),
     };
-    const service = new ReportSectionsService(createRepository([afterDetach]));
+    const service = new ReportSectionsService(
+      createRepository([afterDetach]),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
 
     await expect(
       service.saveDraft(
@@ -237,7 +263,11 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
       authorName: "Lead 2",
     };
     const repository = createRepository([baseSection, sectionB]);
-    const service = new ReportSectionsService(repository);
+    const service = new ReportSectionsService(
+      repository,
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
 
     await service.saveDraft(
       draftPayload([{ activityId: ACTIVITY_A, status: "red" }]),

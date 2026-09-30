@@ -2,6 +2,8 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
+    "lib": ["ES2024"],
+    "types": ["node"],
     "allowImportingTsExtensions": true,
     // Prisma seeds consume the server-only persistence package and the pure
     // shared contracts at runtime through the workspace install.

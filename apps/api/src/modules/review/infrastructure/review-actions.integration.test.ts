@@ -2,6 +2,7 @@ import type { UserSession } from "@customreport/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
+import { createNullLogger } from "../../../lib/logger";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   createPauseGate,
@@ -308,10 +309,6 @@ describe("review-actions (integration)", () => {
       [
         "scheduled",
         { status: "draft", periodState: "scheduled", periodStatus: "open" },
-      ],
-      [
-        "contradictory",
-        { status: "draft", periodState: "open", periodStatus: "reopened" },
       ],
       [
         "published tuple",
@@ -750,6 +747,7 @@ describe("review-actions (integration)", () => {
 
       const carryService = new CarryOverService(
         new CarryOverPrismaRepository(prisma as unknown as PrismaService),
+        createNullLogger(),
       );
       await carryService.executeCarryOver(testData.report.id, targetReport.id);
 

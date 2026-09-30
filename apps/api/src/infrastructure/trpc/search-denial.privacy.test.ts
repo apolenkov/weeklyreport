@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import { createAuditLogger } from "../../lib/audit-logger.js";
 import { createAppLogger } from "../../lib/logger.js";
+import { createNullLogger } from "../../lib/logger.js";
 import { SearchService } from "../../modules/search/index.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import { createSearchRouter } from "./routers/search.router.js";
@@ -39,9 +40,12 @@ describe("search denial privacy", () => {
         logDir,
         clsService: cls,
       });
-      const searchService = new SearchService({
-        search: () => Promise.resolve([]),
-      });
+      const searchService = new SearchService(
+        {
+          search: () => Promise.resolve([]),
+        },
+        createNullLogger(),
+      );
       const caller = createSearchRouter({ searchService }).createCaller({
         session: {
           userId: USER_ID,

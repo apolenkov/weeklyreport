@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import { createNullLogger } from "../../lib/logger";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
@@ -817,7 +818,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
       where: { reportSectionId: testData.section.id },
     });
 
-    const service = new CarryOverService(repo);
+    const service = new CarryOverService(repo, createNullLogger());
     const first = await service.executeCarryOver(
       testData.report.id,
       targetReport.id,

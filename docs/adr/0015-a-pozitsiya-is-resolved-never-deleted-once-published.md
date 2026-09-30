@@ -1,5 +1,7 @@
 # Published records are resolved, never deleted
 
+**Date:** 2026-07-01
+
 **Status:** accepted and implemented for items and decisions. Current contracts:
 `openspec/specs/lead-form-loaded-view-model/spec.md` and
 `openspec/specs/carry-over-automation/spec.md`.

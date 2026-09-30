@@ -9,7 +9,7 @@ import {
   type QueueName,
 } from "@customreport/shared";
 
-import { type AppLogger, createNullLogger } from "../../lib/logger";
+import type { AppLogger } from "../../lib/logger";
 import type {
   AdminJobDomainReference,
   AdminJobHandle,
@@ -69,9 +69,9 @@ export class JobsService {
   constructor(
     private readonly queues: AdminJobsQueueRegistry,
     private readonly options: JobsServiceOptions,
-    logger?: AppLogger,
+    logger: AppLogger,
   ) {
-    this.logger = logger ?? createNullLogger();
+    this.logger = logger;
   }
 
   private queue(name: QueueName): AdminJobsQueue {

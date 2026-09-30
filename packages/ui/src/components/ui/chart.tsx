@@ -37,11 +37,17 @@ export function ChartTooltip(
   return (
     <Tooltip
       {...props}
+      // Recharts renders the legend after the tooltip, so without a z-index its
+      // labels paint over a tall (many-series) tooltip.
+      wrapperStyle={{ zIndex: 10, ...props.wrapperStyle }}
+      // Compact rows keep an eight-series tooltip inside the plot area, above the legend.
+      itemStyle={{ paddingTop: 0, paddingBottom: 0, ...props.itemStyle }}
       contentStyle={{
         borderRadius: "var(--radius-chart-tooltip)",
         fontSize: "var(--font-size-chart-tooltip)",
         backgroundColor: "var(--color-card)",
         border: "1px solid var(--color-border)",
+        padding: "6px 8px",
       }}
     />
   );
