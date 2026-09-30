@@ -6,7 +6,7 @@
 ## 2. Local onUI Acceptance
 
 - [x] 2.1 Verify the pinned user-level `onui-local` registration, native host manifest, and writable local store without adding repository dependencies.
-- [ ] 2.2 On `http://localhost:3000`, create one disposable annotation, read it through MCP, trace it to its rendered target, update it only after verification, and remove it; require zero residual test annotations. Current status (2026-09-16): open. The retained historical roundtrip evidence below does not establish a current WeeklyReport MCP roundtrip.
+- [x] 2.2 On `http://localhost:3000`, create one disposable annotation, read it through MCP, trace it to its rendered target, update it only after verification, and remove it; require zero residual test annotations. Current status (2026-09-30): done on the source run of this branch; see Verification Evidence.
 - [x] 2.3 Read back the existing CoreDev onUI contract and canonical `http://127.0.0.1:4177` page without modifying its dirty worktree or annotation state.
 
 ## 3. Legacy Local Agentation Tooling Retirement
@@ -17,7 +17,7 @@
 
 ## 4. Verification
 
-- [ ] 4.1 Run `pnpm format:check`, `pnpm lint`, and `pnpm spec:check`; require every command to pass. Current status (2026-09-16): `pnpm spec:check` reaches strict OpenSpec validation (173/173 passed) but fails in `pnpm spec:reticle` with `Error: invalid deterministic proof` at `scripts/gates/reticle-spec-coverage.ts:177`; this is not a PASS.
+- [x] 4.1 Run `pnpm format:check`, `pnpm lint`, and `pnpm spec:check`; require every command to pass. Current status (2026-09-30): all three exit 0 on this branch (`~/.local/state/session-review/weeklyreport-20260929/openspec-fix/format-check.log`, `lint.log`, `spec-check.log`).
 - [x] 4.2 Audit the final diff: only WeeklyReport agent guidance and the linked OpenSpec changes may change; no product dependency, product bundle, CoreDev dirty file, archive, onUI source, or product lifecycle contract may change.
 
 ## Verification Evidence
@@ -26,7 +26,7 @@
   evidence from this change; this specification reconciliation did not refresh
   them, and they MUST NOT be treated as a current runtime snapshot.
 - Historical roundtrip evidence (2026-09-14): `standardize-onui-ui-review-roundtrip.json` records the registered server driven over stdio JSON-RPC (`initialize` + `tools/list` + `tools/call`, 8 tools); a disposable annotation was created through the native host's Chrome native-messaging `UPSERT_PAGE_SNAPSHOT` path, read through `onui_get_annotations`, traced to the single rendered `h2[data-overview-focus-heading="true"]` (identical bounding box; the React-generated DOM id is not stable), updated through `onui_update_annotation_metadata`, read back, and removed with `onui_delete_annotation`. MCP and the store ended empty (pages 0, annotations 0), and the CoreDev page and worktree were untouched.
-- Current status (2026-09-16): the WeeklyReport disposable annotation roundtrip remains open because the current MCP surface has no create operation and the database-backed app was not started without fresh disposable-database consent; this keeps 2.2 unchecked.
+- Current status (2026-09-30): WeeklyReport roundtrip done on `http://localhost:3000/lead/report/a0000000-0000-4000-8000-000000000001` (annotation created on that exact page URL through the native host; MCP has no create tool). Raw MCP outputs in `~/.local/state/session-review/weeklyreport-20260929/openspec-fix/onui22/mcp-roundtrip.txt`: `onui_get_annotations` read, live trace of `h2[data-overview-focus-heading="true"]` (1 match, identical box, `trace-from-mcp.json`, `target.png`), `onui_update_annotation_metadata` to resolved with `expectedUpdatedAt`, re-read, `onui_delete_annotation` (`remainingOnPage: 0`); afterwards MCP lists no localhost page and the CoreDev page is unchanged.
 - Both linked changes passed strict validation immediately after creation.
 - The exact legacy local Agentation deletion target contained only `store.db`, `store.db-shm`, and `store.db-wal`; after explicit deletion, the directory is absent and the user-level process, MCP/config, global-package, and SQLite-consumer inventories are empty.
 - Historical Agentation references under CoreDev `delivery/` remain untouched.
