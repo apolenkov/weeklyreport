@@ -1,6 +1,8 @@
 // Loaded after Sentry but before API composition so the SDK patches HTTP before
 // Nest/Express/Prisma. Collector absence or start failure never blocks boot.
 
+import { format } from "node:url";
+
 import { propagation } from "@opentelemetry/api";
 import { logs } from "@opentelemetry/api-logs";
 import {
@@ -24,6 +26,8 @@ import {
 import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
+  ATTR_URL_FULL,
+  ATTR_URL_QUERY,
 } from "@opentelemetry/semantic-conventions";
 import { PrismaInstrumentation } from "@prisma/instrumentation";
 import { SentryPropagator } from "@sentry/opentelemetry";
@@ -135,7 +139,22 @@ export function startOtel(
     // Browser→api shared trace id; W3C-wins precedence in createTraceContextPropagator.
     textMapPropagator: createTraceContextPropagator(),
     instrumentations: [
-      new HttpInstrumentation(),
+      // Start hooks also cover native request errors that precede requestHook.
+      new HttpInstrumentation({
+        startIncomingSpanHook: () => ({ [ATTR_URL_QUERY]: "" }),
+        startOutgoingSpanHook: (request) => ({
+          [ATTR_URL_FULL]: format({
+            protocol: request.protocol ?? "http:",
+            hostname: request.hostname || request.host || "localhost",
+            port: request.port,
+            pathname: request.path?.startsWith("/")
+              ? request.path.split("?")[0]
+              : (URL.parse(request.path ?? "/", "http://localhost")?.pathname ??
+                "/"),
+            slashes: true,
+          }),
+        }),
+      }),
       new ExpressInstrumentation(),
       new PrismaInstrumentation(),
     ],
