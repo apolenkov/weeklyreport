@@ -9,14 +9,15 @@ browser acceptance remain required evidence, collected outside CI as separate
 checks — the `quality` job is therefore a lint/test lane, not a full
 acceptance gate.
 
-| GitLab job      | Execution                                                     |
-| --------------- | ------------------------------------------------------------- |
-| node-toolchain  | Node 26.8.1 container on the shared Docker runner             |
-| quality         | Node 26.8.1 container on the shared Docker runner             |
-| coverage        | Node 26.8.1 container on the shared Docker runner             |
-| api-integration | pgvector 0.8.6/pg15 job container on the shared Docker runner |
-| migrate-reset   | pgvector 0.8.6/pg15 job container on the shared Docker runner |
-| dependency-scan | Schedule, manual, or MR changing lockfile/manifests           |
+| GitLab job          | Execution                                                     |
+| ------------------- | ------------------------------------------------------------- |
+| node-toolchain      | Node 26.8.1 container on the shared Docker runner             |
+| quality             | Node 26.8.1 container on the shared Docker runner             |
+| coverage            | Node 26.8.1 container on the shared Docker runner             |
+| api-integration     | pgvector 0.8.6/pg15 job container on the shared Docker runner |
+| migrate-reset       | pgvector 0.8.6/pg15 job container on the shared Docker runner |
+| dependency-scan     | Schedule, manual, or MR changing lockfile/manifests           |
+| dependency-scan-dev | Same rules as dependency-scan; `allow_failure: true`          |
 
 ## Database-lane topology
 
@@ -63,9 +64,10 @@ The weekly dependency scan uses a GitLab schedule for the default branch at
 Monday 06:00 UTC; create that schedule after the main cutover. A manually
 started pipeline (`CI_PIPELINE_SOURCE=web`) runs the full lane set plus the
 dependency audit. A merge request that changes `pnpm-lock.yaml`, a
-`package.json`, or `pnpm-workspace.yaml` also runs the audit. The job blocks on `pnpm audit --prod`; a second,
-non-blocking `pnpm audit --dev --audit-level high` line reports development
-tool advisories. No dependency-update bot is configured, because it would need
+`package.json`, or `pnpm-workspace.yaml` also runs the audit. `dependency-scan` blocks on `pnpm audit --prod`; the separate
+`dependency-scan-dev` job runs `pnpm audit --dev --audit-level high` with
+`allow_failure: true`, so development-tool advisories show as a pipeline
+warning instead of being hidden. No dependency-update bot is configured, because it would need
 an owner-provisioned token on the private GitLab (see `docs/sdlc.md`); the
 audit job does not replace one. Runner assignment is a
 GitLab setting, not declared in `.gitlab-ci.yml`.
