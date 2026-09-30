@@ -183,6 +183,9 @@ dependency-scan:
     - pnpm install --frozen-lockfile
   script:
     - pnpm audit --prod
+    # Dev tooling runs on developer machines and CI but ships nowhere, so its
+    # findings are reported without failing the lane.
+    - pnpm audit --dev --audit-level high || echo "WARNING - devDependencies have high or critical advisories (non-blocking)"
 
 coverage:
   extends: .workspace-node
