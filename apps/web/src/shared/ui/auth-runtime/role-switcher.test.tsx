@@ -36,7 +36,7 @@ import type { DbRole } from "@customreport/shared";
 import { expectTypeOf } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
-import { beginSessionTransition } from "../../lib/auth/session-transition";
+import * as sessionTransition from "../../lib/auth/session-transition";
 import { DevRoleSwitcher, ROLE_ORDER } from "./role-switcher";
 
 const SEED_USER = {
@@ -143,9 +143,20 @@ describe("DevRoleSwitcher — logout honesty", () => {
   // Spy instead of a mutable capture: the assignment history IS the assertion.
   const hrefAssign = vi.fn<(value: string) => void>();
   const realLocation = window.location;
+  // The transition is module state and a successful logout never releases it
+  // (the page unloads), so finish every handle a test opened.
+  const transitionHandles: sessionTransition.SessionTransitionHandle[] = [];
 
   beforeEach(() => {
     vi.stubEnv("NEXT_PUBLIC_DEV_ROLE_SWITCHER", "true");
+    const begin = sessionTransition.beginSessionTransition;
+    vi.spyOn(sessionTransition, "beginSessionTransition").mockImplementation(
+      () => {
+        const handle = begin();
+        if (handle) transitionHandles.push(handle);
+        return handle;
+      },
+    );
     useQueryMock.mockReset();
     useMutationMock.mockReset();
     cancelQueriesMock.mockReset();
@@ -166,6 +177,7 @@ describe("DevRoleSwitcher — logout honesty", () => {
   });
 
   afterEach(() => {
+    for (const handle of transitionHandles.splice(0)) handle.finish();
     vi.unstubAllEnvs();
     fetchMock.mockReset();
     vi.unstubAllGlobals();
@@ -205,7 +217,7 @@ describe("DevRoleSwitcher — logout honesty", () => {
 
   it("recovers when another session control already owns navigation", async () => {
     primeHooks("admin");
-    const transition = beginSessionTransition();
+    const transition = sessionTransition.beginSessionTransition();
     expect(transition).not.toBeNull();
     const user = userEvent.setup();
 

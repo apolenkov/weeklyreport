@@ -20,10 +20,10 @@ const webConfig = defineConfig({
     // disabled in workers instead of emitting a warning for every access.
     execArgv: ["--no-experimental-webstorage"],
     globals: false,
-    // Restore every spy and clear every mock's call history between tests so
-    // neither an installed spy nor hoisted vi.fn() history leaks across tests.
+    // Reset every mock between tests (Vitest 4 restores the original vi.fn
+    // implementation) so implementations and history never leak across tests.
+    mockReset: true,
     restoreMocks: true,
-    clearMocks: true,
     exclude: ["node_modules/**"],
     // Coverage floors. Web has more UI code than the focused DOM suite drives,
     // so the bar is lower than api.
