@@ -22,7 +22,7 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@customreport/ui"],
   experimental: {
     useTypeScriptCli: false,
-    optimizePackageImports: ["lucide-react", "recharts"],
+    optimizePackageImports: ["lucide-react"],
   },
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   // Docker development keeps its build output separate from native Next.js.

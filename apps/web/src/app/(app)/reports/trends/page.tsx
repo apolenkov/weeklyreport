@@ -1,41 +1,17 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import dynamic from "next/dynamic";
 
 import {
   deriveTrendsWindow,
   latestPeriodPair,
 } from "../../../../features/analytics";
-import {
-  ChartSkeleton,
-  TrendsSection,
-} from "../../../../features/analytics/ui/trends-section";
+import { LeadVelocityChart } from "../../../../features/analytics/ui/lead-velocity.chart";
+import { PeriodComparisonChart } from "../../../../features/analytics/ui/period-comparison.chart";
+import { TrafficLightHistoryChart } from "../../../../features/analytics/ui/traffic-light-history.chart";
+import { TrendsSection } from "../../../../features/analytics/ui/trends-section";
 import { useQueryErrorHandler } from "../../../../shared/hooks/query/use-query-error-handler";
 import { useTRPC } from "../../../../shared/lib/trpc/trpc-context";
-
-// Charts load with ssr:false — Recharts needs ResizeObserver (browser-only).
-const TrafficLightHistoryChart = dynamic(
-  () =>
-    import("../../../../features/analytics/ui/traffic-light-history.chart").then(
-      (m) => m.TrafficLightHistoryChart,
-    ),
-  { ssr: false, loading: () => <ChartSkeleton /> },
-);
-const LeadVelocityChart = dynamic(
-  () =>
-    import("../../../../features/analytics/ui/lead-velocity.chart").then(
-      (m) => m.LeadVelocityChart,
-    ),
-  { ssr: false, loading: () => <ChartSkeleton /> },
-);
-const PeriodComparisonChart = dynamic(
-  () =>
-    import("../../../../features/analytics/ui/period-comparison.chart").then(
-      (m) => m.PeriodComparisonChart,
-    ),
-  { ssr: false, loading: () => <ChartSkeleton /> },
-);
 
 function useTrendsQueries() {
   const trpc = useTRPC();
@@ -100,7 +76,10 @@ function TrafficLightTrendsSection({
       }}
     >
       {historyData !== undefined ? (
-        <TrafficLightHistoryChart {...historyData} />
+        <TrafficLightHistoryChart
+          {...historyData}
+          headingId="trends-history-heading"
+        />
       ) : null}
     </TrendsSection>
   );
@@ -121,7 +100,10 @@ function LeadVelocityTrendsSection({
       }}
     >
       {velocity.data !== undefined ? (
-        <LeadVelocityChart rows={velocity.data} />
+        <LeadVelocityChart
+          rows={velocity.data}
+          headingId="trends-velocity-heading"
+        />
       ) : null}
     </TrendsSection>
   );
@@ -165,7 +147,7 @@ export default function TrendsPage() {
     <main
       id="main-content"
       tabIndex={-1}
-      className="mx-auto max-w-7xl space-y-8 px-4 py-6 sm:px-6 lg:px-8"
+      className="mx-auto w-full min-w-0 max-w-7xl space-y-8 px-4 py-6 sm:px-6 lg:px-8"
     >
       <h1 className="text-2xl font-semibold">Trends</h1>
       <TrafficLightTrendsSection {...queries} />

@@ -1,68 +1,18 @@
 "use client";
 
-import type { TrafficLightHistoryOutput } from "@customreport/shared";
 import {
-  ChartContainer,
-  ChartTooltip,
-} from "@customreport/ui/components/ui/chart";
-import { CartesianGrid, Legend, Line, LineChart, XAxis, YAxis } from "recharts";
+  type TrafficLightHistoryOutput,
+  trafficLightToCanonical,
+} from "@customreport/shared";
 
-import {
-  buildTrafficLightHistoryChartData,
-  formatTrafficLightStatusLevel,
-} from "./analytics-chart-data";
-import { SERIES_PALETTE as COLORS } from "./chart-palette";
-
-// Domain max leaves headroom above green so the top line isn't clipped.
-const STATUS_LEVEL_GREEN = 3;
-const STATUS_LEVEL_TICKS = [1, 2, STATUS_LEVEL_GREEN];
-const Y_AXIS_DOMAIN_MAX = 4;
-function formatTrafficLightStatus(
-  status: TrafficLightHistoryOutput["rows"][number]["statuses"][number],
-): string {
-  if (status === null) return "No data";
-  return `${status.charAt(0).toUpperCase()}${status.slice(1)}`;
-}
-
-function TrafficLightHistoryDataTable({
-  periods,
-  rows,
-}: TrafficLightHistoryOutput) {
-  return (
-    <div className="sr-only">
-      <table>
-        <caption>Traffic-light history data</caption>
-        <thead>
-          <tr>
-            <th scope="col">Period</th>
-            {rows.map((row) => (
-              <th key={row.projectId} scope="col">
-                {row.projectName}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {periods.map((period, periodIndex) => (
-            <tr key={period}>
-              <th scope="row">{period}</th>
-              {rows.map((row) => (
-                <td key={row.projectId}>
-                  {formatTrafficLightStatus(row.statuses[periodIndex] ?? null)}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
+import { worstTrafficStatus } from "../../../shared/lib/status/status-presentation";
+import { SlideStatusBadge } from "../../../shared/ui/feedback/slide-status-badge";
 
 export function TrafficLightHistoryChart({
   periods,
   rows,
-}: TrafficLightHistoryOutput) {
+  headingId,
+}: TrafficLightHistoryOutput & { readonly headingId: string }) {
   if (periods.length === 0 || rows.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -71,45 +21,60 @@ export function TrafficLightHistoryChart({
     );
   }
 
-  const { data, series } = buildTrafficLightHistoryChartData(periods, rows);
+  const rankedRows = rows
+    .map((row) => {
+      const worst = worstTrafficStatus(row.statuses);
+      return { row, rank: worst === "red" ? 0 : worst === "yellow" ? 1 : 2 };
+    })
+    .toSorted((a, b) => a.rank - b.rank);
 
   return (
-    <>
-      <ChartContainer>
-        <LineChart data={data} aria-label="Traffic-light history">
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="period" />
-          <YAxis
-            ticks={STATUS_LEVEL_TICKS}
-            domain={[0, Y_AXIS_DOMAIN_MAX]}
-            tickFormatter={formatTrafficLightStatusLevel}
-            width={64}
-          />
-          <ChartTooltip
-            formatter={(value) =>
-              typeof value === "number"
-                ? formatTrafficLightStatusLevel(value)
-                : value
-            }
-          />
-          <Legend />
-          {/* connectNulls={false}: periods a project did NOT report stay visible
-              gaps instead of being bridged by a line through them. */}
-          {series.map((s, idx) => (
-            <Line
-              key={s.dataKey}
-              dataKey={s.dataKey}
-              name={s.name}
-              stroke={COLORS[idx % COLORS.length] as string}
-              strokeWidth={2}
-              connectNulls={false}
-              dot={{ r: 3 }}
-            />
+    <div
+      className="max-w-full overflow-x-auto rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1"
+      tabIndex={0}
+      role="region"
+      aria-labelledby={headingId}
+    >
+      <table className="min-w-full border-collapse text-sm">
+        <caption className="pb-3 text-left text-muted-foreground">
+          Traffic-light history data
+        </caption>
+        <thead>
+          <tr className="border-b text-left">
+            <th scope="col" className="px-3 py-2">
+              Project
+            </th>
+            {periods.map((period) => (
+              <th
+                key={period}
+                scope="col"
+                className="whitespace-nowrap px-3 py-2"
+              >
+                {period}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rankedRows.map(({ row }) => (
+            <tr key={row.projectId} className="border-b last:border-0">
+              <th scope="row" className="px-3 py-2 text-left font-medium">
+                {row.projectName}
+              </th>
+              {periods.map((period, index) => (
+                <td key={period} className="whitespace-nowrap px-3 py-2">
+                  <SlideStatusBadge
+                    status={trafficLightToCanonical(
+                      row.statuses[index] ?? null,
+                    )}
+                    labelVariant="screen"
+                  />
+                </td>
+              ))}
+            </tr>
           ))}
-        </LineChart>
-      </ChartContainer>
-
-      <TrafficLightHistoryDataTable periods={periods} rows={rows} />
-    </>
+        </tbody>
+      </table>
+    </div>
   );
 }

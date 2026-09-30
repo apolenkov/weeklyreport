@@ -3,22 +3,10 @@
 import type {
   PeriodComparisonInput,
   PeriodComparisonOutput,
-  TrafficLightCell,
 } from "@customreport/shared";
+import { trafficLightToCanonical } from "@customreport/shared";
 
-// A null cell renders as an en-dash, never '0': "no data" and "zero risks" are
-// deliberately distinguishable at a glance.
-function statusLabel(cell: TrafficLightCell): string {
-  if (cell === null) return "–";
-  return cell;
-}
-
-function statusColor(cell: TrafficLightCell): string {
-  if (cell === "green") return "text-[var(--color-starbucks-accent)]";
-  if (cell === "yellow") return "text-[var(--color-status-dot-at-risk)]";
-  if (cell === "red") return "text-[var(--color-destructive)]";
-  return "text-muted-foreground";
-}
+import { SlideStatusBadge } from "../../../shared/ui/feedback/slide-status-badge";
 
 function deltaClass(delta: number): string {
   if (delta > 0) return "text-[var(--color-destructive)]";
@@ -36,7 +24,7 @@ export function PeriodComparisonChart({
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="max-w-full overflow-x-auto">
       <table className="min-w-full border-collapse text-sm">
         <caption className="pb-3 text-left text-muted-foreground">
           Periods ending {periodA} (previous) and {periodB} (latest). Risk
@@ -44,27 +32,47 @@ export function PeriodComparisonChart({
         </caption>
         <thead>
           <tr className="border-b text-left">
-            <th className="px-3 py-2">Project</th>
-            <th className="px-3 py-2">Previous status</th>
-            <th className="px-3 py-2">Latest status</th>
-            <th className="px-3 py-2">Previous risks</th>
-            <th className="px-3 py-2">Latest risks</th>
-            <th className="px-3 py-2">Risk change</th>
+            <th scope="col" className="px-3 py-2">
+              Project
+            </th>
+            <th scope="col" className="px-3 py-2">
+              Previous status
+            </th>
+            <th scope="col" className="px-3 py-2">
+              Latest status
+            </th>
+            <th scope="col" className="px-3 py-2">
+              Previous risks
+            </th>
+            <th scope="col" className="px-3 py-2">
+              Latest risks
+            </th>
+            <th scope="col" className="px-3 py-2">
+              Risk change
+            </th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.projectId} className="border-b last:border-0">
-              <td className="px-3 py-2 font-medium">{r.projectName}</td>
-              <td className={`px-3 py-2 font-mono ${statusColor(r.statusA)}`}>
-                {statusLabel(r.statusA)}
+              <th scope="row" className="px-3 py-2 text-left font-medium">
+                {r.projectName}
+              </th>
+              <td className="px-3 py-2">
+                <SlideStatusBadge
+                  status={trafficLightToCanonical(r.statusA)}
+                  labelVariant="screen"
+                />
               </td>
-              <td className={`px-3 py-2 font-mono ${statusColor(r.statusB)}`}>
-                {statusLabel(r.statusB)}
+              <td className="px-3 py-2">
+                <SlideStatusBadge
+                  status={trafficLightToCanonical(r.statusB)}
+                  labelVariant="screen"
+                />
               </td>
-              <td className="px-3 py-2 font-mono">{r.riskCountA}</td>
-              <td className="px-3 py-2 font-mono">{r.riskCountB}</td>
-              <td className={`px-3 py-2 font-mono ${deltaClass(r.riskDelta)}`}>
+              <td className="px-3 py-2">{r.riskCountA}</td>
+              <td className="px-3 py-2">{r.riskCountB}</td>
+              <td className={`px-3 py-2 ${deltaClass(r.riskDelta)}`}>
                 {r.riskDelta > 0 ? `+${r.riskDelta}` : r.riskDelta}
               </td>
             </tr>

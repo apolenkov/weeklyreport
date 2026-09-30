@@ -1,25 +1,11 @@
-import type {
-  LeadVelocityOutput,
-  TrafficLightCell,
-  TrafficLightHistoryOutput,
-} from "@customreport/shared";
+import type { LeadVelocityOutput } from "@customreport/shared";
 
-import type { ChartData, ChartSeries } from "./chart-palette";
-
-const STATUS_TO_VALUE: Record<Exclude<TrafficLightCell, null>, number> = {
-  green: 3,
-  yellow: 2,
-  red: 1,
-};
-const STATUS_LEVEL_LABELS: Readonly<Record<number, string>> = {
-  1: "Red",
-  2: "Yellow",
-  3: "Green",
-};
-
-export function formatTrafficLightStatusLevel(value: number): string {
-  return STATUS_LEVEL_LABELS[value] ?? String(value);
+interface ChartSeries {
+  readonly dataKey: string;
+  readonly name: string;
 }
+
+type ChartData = Readonly<Record<string, number | string>>;
 
 export function buildLeadVelocityChartData(rows: LeadVelocityOutput): {
   readonly data: readonly ChartData[];
@@ -48,33 +34,6 @@ export function buildLeadVelocityChartData(rows: LeadVelocityOutput): {
       ),
     };
   });
-
-  return { data, series };
-}
-
-export function buildTrafficLightHistoryChartData(
-  periods: TrafficLightHistoryOutput["periods"],
-  rows: TrafficLightHistoryOutput["rows"],
-): {
-  readonly data: readonly ChartData[];
-  readonly series: readonly ChartSeries[];
-} {
-  const series = rows.map((row) => ({
-    dataKey: row.projectId,
-    name: row.projectName,
-  }));
-  const data = periods.map((period, index): ChartData => ({
-    period,
-    ...Object.fromEntries(
-      rows.map((row) => {
-        const status = row.statuses[index] ?? null;
-        return [
-          row.projectId,
-          status === null ? null : STATUS_TO_VALUE[status],
-        ];
-      }),
-    ),
-  }));
 
   return { data, series };
 }
