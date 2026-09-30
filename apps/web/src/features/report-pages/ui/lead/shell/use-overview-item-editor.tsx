@@ -210,18 +210,6 @@ export function useOverviewItemEditor(
     );
     if (patch) editor.draft.apply(patch);
   };
-  const quickEditText = (item: StatusOverviewItem, text: string): void => {
-    const target = item.editTarget;
-    if (!editor || isReadOnly || !target) return;
-    // MOVE-LOCKED: a completed record cannot acquire a next-period commitment;
-    // reject before touching the draft so no invalid save is attempted.
-    if (target.focusNextStep && item.workflowStatus === "done") return;
-    editor.draft.apply({
-      kind: "item-patch",
-      itemId: target.recordId,
-      patch: target.focusNextStep ? { nextStepText: text } : { text },
-    });
-  };
   return {
     dialog,
     error:
@@ -239,7 +227,6 @@ export function useOverviewItemEditor(
       setDialog((current) =>
         current?.submission === null ? { ...current, week } : current,
       ),
-    quickEditText,
     save,
     close: () => {
       startedAttempt.current = null;

@@ -8,9 +8,9 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@customreport/ui/components/ui/sheet";
+import { Menu } from "lucide-react";
 import { useState } from "react";
 
-import { MobileMenuIcon } from "./mobile-menu-icon";
 import { MobileNavLinks } from "./mobile-nav-links";
 import type { NavLink } from "./nav-links";
 
@@ -32,7 +32,7 @@ export function MobileNav({
           className="inline-flex h-11 min-w-11 items-center justify-center rounded-md text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
           aria-label="Open navigation menu"
         >
-          <MobileMenuIcon />
+          <Menu size={20} aria-hidden="true" />
           <span className="sr-only">Menu</span>
         </SheetTrigger>
         <SheetContent side="left" className="w-72 p-0">

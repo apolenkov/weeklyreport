@@ -1,6 +1,6 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
+import { aggregateTrafficLight } from "@customreport/shared";
 
-import { worstTrafficStatus } from "../../../shared/lib/status/status-presentation";
 import type { CrossAuthorContentRow } from "../../report-sections";
 import { buildAuthorRoster } from "./slide-grid-authors";
 import { activityHomeProduct, collectCells } from "./slide-grid-cells";
@@ -134,7 +134,7 @@ function buildHeaderSummary(
     card.subsections.map((subsection) => subsection.columns),
   );
   return {
-    worstStatus: worstTrafficStatus([
+    worstStatus: aggregateTrafficLight([
       ...realCards.map((card) => card.status),
       ...products.flatMap((card) =>
         card.subsections.map((subsection) => subsection.status),

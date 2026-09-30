@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -21,123 +21,24 @@ const item: StatusOverviewItem = {
   continuity: "continued",
 };
 
-describe("StatusOverviewItemPreview quick edit", () => {
+describe("StatusOverviewItemPreview", () => {
   it("keeps historical text read-only even when row handlers are available", () => {
     render(
       <StatusOverviewItemPreview
         item={{ ...item, source: "previous", editTarget: null }}
-        onQuickEditText={vi.fn()}
+        onEditItem={vi.fn()}
       />,
     );
 
     expect(screen.getByText("Original text")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Quick edit/ })).toBeNull();
-  });
-
-  it("edits the text inline and saves through onQuickEditText", async () => {
-    const user = userEvent.setup();
-    const onQuickEditText = vi.fn();
-    render(
-      <StatusOverviewItemPreview
-        item={item}
-        onEditItem={vi.fn()}
-        onQuickEditText={onQuickEditText}
-      />,
-    );
-
-    await user.click(
-      screen.getByRole("button", { name: /Quick edit Original text/ }),
-    );
-    const textarea = screen.getByRole("textbox", {
-      name: /Edit update text: Original text/,
-    });
-    await user.clear(textarea);
-    await user.type(textarea, "Updated text");
-    await user.click(screen.getByRole("button", { name: "Save" }));
-
-    expect(onQuickEditText).toHaveBeenCalledWith(item, "Updated text");
-  });
-
-  it("removes the quick edit form when the item becomes read-only", async () => {
-    const user = userEvent.setup();
-    const onQuickEditText = vi.fn();
-    const { rerender } = render(
-      <StatusOverviewItemPreview
-        item={item}
-        onQuickEditText={onQuickEditText}
-      />,
-    );
-    await user.click(screen.getByRole("button", { name: /Quick edit/ }));
-
-    rerender(
-      <StatusOverviewItemPreview
-        item={{ ...item, editTarget: null }}
-        onQuickEditText={onQuickEditText}
-      />,
-    );
-
-    expect(screen.queryByRole("textbox")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
-    expect(onQuickEditText).not.toHaveBeenCalled();
-  });
-
-  it("cancels with Escape without saving", async () => {
-    const user = userEvent.setup();
-    const onQuickEditText = vi.fn();
-    render(
-      <StatusOverviewItemPreview
-        item={item}
-        onEditItem={vi.fn()}
-        onQuickEditText={onQuickEditText}
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: /Quick edit/ }));
-    await user.keyboard("{Escape}");
-
-    expect(onQuickEditText).not.toHaveBeenCalled();
     expect(
-      screen.getByRole("button", { name: /Quick edit Original text/ }),
-    ).toHaveFocus();
-  });
-
-  it("retains typed text across a same-item refresh and cancels to refreshed text", async () => {
-    const user = userEvent.setup();
-    const onQuickEditText = vi.fn();
-    const { rerender } = render(
-      <StatusOverviewItemPreview
-        item={item}
-        onQuickEditText={onQuickEditText}
-      />,
-    );
-    await user.click(screen.getByRole("button", { name: /Quick edit/ }));
-    await user.clear(screen.getByRole("textbox"));
-    await user.type(screen.getByRole("textbox"), "Unsaved local text");
-
-    rerender(
-      <StatusOverviewItemPreview
-        item={{ ...item, text: "Refreshed text" }}
-        onQuickEditText={onQuickEditText}
-      />,
-    );
-    expect(screen.getByRole("textbox")).toHaveValue("Unsaved local text");
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(onQuickEditText).not.toHaveBeenCalled();
-    expect(
-      screen.getByRole("button", { name: "Quick edit Refreshed text" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: /Edit item|Update progress/ }),
+    ).toBeNull();
   });
 
   it("keeps the full visible text inside the accessible name of the title buttons", () => {
     const text = "Long update ".repeat(12).trim();
     const longItem = { ...item, text };
-    const { unmount } = render(
-      <StatusOverviewItemPreview item={longItem} onQuickEditText={vi.fn()} />,
-    );
-    expect(
-      screen.getByRole("button", { name: /Quick edit/ }),
-    ).toHaveAccessibleName(`Quick edit ${text}`);
-    unmount();
     render(<StatusOverviewItemPreview item={longItem} onEditItem={vi.fn()} />);
     expect(
       screen.getByRole("button", { name: /Edit item/ }),
@@ -423,13 +324,12 @@ describe("StatusOverviewItemPreview quick edit", () => {
       <StatusOverviewItemPreview
         item={{ ...item, canResolve: true }}
         onEditItem={vi.fn()}
-        onQuickEditText={vi.fn()}
         onResolvePlan={vi.fn()}
       />,
     );
 
     const text = screen.getByRole("button", {
-      name: "Quick edit Original text",
+      name: "Edit item: Original text",
     });
     const cluster = document.querySelector("[data-overview-item-actions]");
     expect(cluster).not.toBeNull();
@@ -448,21 +348,6 @@ describe("StatusOverviewItemPreview quick edit", () => {
     expect(text).toHaveClass("w-[calc(100%+0.5rem)]");
   });
 
-  it("leaves Escape to an active IME composition", async () => {
-    const user = userEvent.setup();
-    render(<StatusOverviewItemPreview item={item} onQuickEditText={vi.fn()} />);
-
-    await user.click(screen.getByRole("button", { name: /Quick edit/ }));
-    const textarea = screen.getByRole("textbox");
-    // IME composition in progress: Escape cancels the composition, not the edit.
-    fireEvent.keyDown(textarea, { key: "Escape", isComposing: true });
-    expect(screen.getByRole("textbox")).toBeInTheDocument();
-
-    // A finished composition leaves Escape closing the editor again.
-    fireEvent.keyDown(textarea, { key: "Escape", isComposing: false });
-    expect(screen.queryByRole("textbox")).toBeNull();
-  });
-
   it("keeps the actions keyboard reachable", async () => {
     const user = userEvent.setup();
     render(
@@ -470,14 +355,13 @@ describe("StatusOverviewItemPreview quick edit", () => {
         item={{ ...item, canResolve: true }}
         onEditItem={vi.fn()}
         onMoveItem={vi.fn()}
-        onQuickEditText={vi.fn()}
         onResolvePlan={vi.fn()}
       />,
     );
 
     await user.tab();
     expect(
-      screen.getByRole("button", { name: "Quick edit Original text" }),
+      screen.getByRole("button", { name: "Edit item: Original text" }),
     ).toHaveFocus();
     await user.tab();
     expect(

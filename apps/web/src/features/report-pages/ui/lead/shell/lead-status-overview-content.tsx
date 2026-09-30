@@ -271,7 +271,6 @@ export function LeadStatusOverviewContent({
         )}
         editorSlot={editorSlot}
         {...overviewItemActions(canStartAction, dialog, plan)}
-        onQuickEditText={undefined}
         {...overviewDirectActions(canStartAction, dialog)}
         detailsHref={
           readyEditor

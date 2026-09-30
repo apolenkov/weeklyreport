@@ -79,8 +79,6 @@ function buildAddItemHandler(
 export function StatusOverview({
   model,
   onEditItem,
-  onQuickEditText,
-  quickEditMemory,
   onAddItem,
   onPlanItem,
   onMoveItem,
@@ -240,8 +238,6 @@ export function StatusOverview({
                         onPlanItem={onPlanItem}
                         onMoveItem={onMoveItem}
                         onConfirmItem={onConfirmItem}
-                        onQuickEditText={onQuickEditText}
-                        quickEditMemory={quickEditMemory}
                         onResolvePlan={onResolvePlan}
                         onRestorePlan={onRestorePlan}
                         editorSlot={

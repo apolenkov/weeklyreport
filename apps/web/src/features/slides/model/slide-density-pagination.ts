@@ -1,4 +1,5 @@
-import { worstTrafficStatus } from "../../../shared/lib/status/status-presentation";
+import { aggregateTrafficLight } from "@customreport/shared";
+
 import type {
   SectionSlideModel,
   SlideProduct,
@@ -156,7 +157,7 @@ function pageGrid(
   const scored = !product.noData && product.status !== null;
   return {
     ...source,
-    worstStatus: worstTrafficStatus([
+    worstStatus: aggregateTrafficLight([
       product.status,
       ...product.subsections.map((subsection) => subsection.status),
       ...page.risks.map((risk) =>
