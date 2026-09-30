@@ -3,10 +3,7 @@ import { DeleteIcon, EditIcon } from "../../../shared/ui/icons/action-icons";
 import { LockBadge } from "../../../shared/ui/report-shell/lock-badge";
 import { MetaRow } from "../../../shared/ui/report-shell/meta-row";
 import type { DecisionEntry } from "../../report-sections";
-import {
-  FOREIGN_ENTRY_OPACITY,
-  PublishedRecordMarker,
-} from "../../report-sections";
+import { PublishedRecordMarker } from "../../report-sections";
 
 function formatDeadline(iso: string | null): string | null {
   if (!iso) return null;
@@ -35,9 +32,9 @@ function stagesAriaLabel(
 // The amber deadline chip and the icon-button hairline/destructive-hover ramp
 // have no design token yet; naming them keeps the raw values to one site each.
 const DUE_CHIP_CLASS =
-  "inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-status-at-risk-bg)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-status-at-risk-fg)]";
+  "inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-status-at-risk-bg)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-status-at-risk-fg)]";
 const INVALID_DUE_CHIP_CLASS =
-  "inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[color-mix(in_srgb,var(--color-destructive)_10%,transparent)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-destructive)]";
+  "inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[color-mix(in_srgb,var(--color-destructive)_10%,transparent)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-destructive)]";
 const ICON_BUTTON_CLASS =
   "flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] md:min-h-[34px] md:min-w-[34px] items-center justify-center rounded-full border border-[var(--card-surface-border)] bg-[var(--color-card)] p-1.5";
 const EDIT_BUTTON_CLASS = `${ICON_BUTTON_CLASS} text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]`;
@@ -65,7 +62,7 @@ function DecisionCardHeader({
   return (
     <div className="mb-2 flex flex-wrap items-center gap-2">
       <span
-        className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
+        className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2.5 py-0.5 text-xs font-semibold text-[var(--color-primary)]"
         title={decision.productName}
       >
         <span className="min-w-0 truncate">{decision.productName}</span>
@@ -93,7 +90,6 @@ export function DecisionCard(props: DecisionCardProps) {
       className="rounded-lg p-4"
       style={{
         background: "var(--color-background)",
-        opacity: decision.foreign ? FOREIGN_ENTRY_OPACITY : 1,
       }}
     >
       <DecisionCardHeader {...props} />
@@ -160,7 +156,7 @@ function DecisionCardBody({
   return (
     <div className="space-y-2 text-sm text-[var(--color-foreground)]">
       <div>
-        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
+        <span className="text-xs font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
           Decision
         </span>
         <div className="mt-0.5 break-words">
@@ -170,7 +166,7 @@ function DecisionCardBody({
         </div>
       </div>
       <div>
-        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
+        <span className="text-xs font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
           Impact
         </span>
         <div className="mt-0.5 break-words text-[var(--color-muted-foreground)]">

@@ -70,7 +70,7 @@ function SummaryCard({
         />
       </StatGrid>
       {draftCount > 0 && (
-        <p className="mt-2 text-[11px] text-[var(--color-muted-foreground)]">
+        <p className="mt-2 text-xs text-[var(--color-muted-foreground)]">
           {draftCount} {draftCount === 1 ? "draft" : "drafts"} not included in
           aggregates.
         </p>
@@ -85,7 +85,7 @@ function SummaryCard({
 function TrafficLightFooter({ stats }: { readonly stats: HistoryStats }) {
   const { totalGreen, totalYellow, totalRed, submitted } = stats;
   return (
-    <div className="mt-3 flex items-center gap-1.5 text-[11px] text-[var(--color-muted-foreground)]">
+    <div className="mt-3 flex items-center gap-1.5 text-xs text-[var(--color-muted-foreground)]">
       <span className="inline-flex items-center gap-1">
         <span className="h-2 w-2 rounded-full bg-[var(--color-starbucks-accent)]" />{" "}
         {totalGreen}
@@ -179,7 +179,7 @@ function SidebarCard({
   return (
     <div className="rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[var(--color-card)] p-4 shadow-[var(--shadow-sidebar-card)]">
       <div className="mb-3 flex items-center gap-2">
-        <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
+        <span className="text-xs font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
           {title}
         </span>
       </div>
@@ -217,7 +217,7 @@ function Stat({
       >
         {value}
       </div>
-      <div className="mt-1 text-[11px] text-[var(--color-muted-foreground)]">
+      <div className="mt-1 text-xs text-[var(--color-muted-foreground)]">
         {label}
       </div>
     </div>

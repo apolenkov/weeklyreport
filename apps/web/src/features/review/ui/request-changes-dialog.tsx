@@ -127,7 +127,7 @@ export function RequestChangesDialog({
           placeholder="What should the lead change?…"
           className="w-full resize-y rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
         />
-        <div className="flex items-start justify-between gap-2 text-[11px]">
+        <div className="flex items-start justify-between gap-2 text-xs">
           <p
             id={error ? errorId : hintId}
             role={error ? "alert" : undefined}

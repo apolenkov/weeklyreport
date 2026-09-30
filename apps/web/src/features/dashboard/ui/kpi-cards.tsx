@@ -39,7 +39,7 @@ function SubmissionsCard({
         title={`${submitted} of ${total} leads submitted this week (${submissionPercent}%)`}
       >
         <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-card)]">
-          <span className="font-[family-name:var(--font-sans)] text-[11px] font-bold leading-none text-[var(--color-primary)]">
+          <span className="font-[family-name:var(--font-sans)] text-xs font-bold leading-none text-[var(--color-primary)]">
             {submitted}/{total}
           </span>
         </div>
@@ -54,7 +54,7 @@ function SubmissionsCard({
             unavailable
           </span>
           {pendingCount > 0 && (
-            <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-status-at-risk-bg)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-status-at-risk-fg)]">
+            <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-status-at-risk-bg)] px-2 py-0.5 text-xs font-semibold text-[var(--color-status-at-risk-fg)]">
               {pendingCount} pending
             </span>
           )}
@@ -104,7 +104,7 @@ function RiskStat({
   return (
     <span className="whitespace-nowrap">
       <span className={countClassName}>{count}</span>
-      <span className="ml-1 text-[11px] text-[var(--color-muted-foreground)]">
+      <span className="ml-1 text-xs text-[var(--color-muted-foreground)]">
         {label}
       </span>
     </span>

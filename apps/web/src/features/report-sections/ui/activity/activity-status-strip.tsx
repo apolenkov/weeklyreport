@@ -94,7 +94,7 @@ function RecordList({
   if (rows.length === 0) return null;
   return (
     <div className="mt-2">
-      <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+      <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
         {label}
       </span>
       <ul className="mt-0.5 space-y-0.5">
@@ -165,7 +165,7 @@ export function ActivityStatusStrip({
       data-testid="activity-status-strip"
       className="rounded-[var(--radius)] border border-[var(--card-surface-border)] bg-[var(--card-surface-gradient)] p-4 shadow-[0_1px_2px_var(--color-border-subtle)]"
     >
-      <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
+      <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
         Project Activities
       </h2>
       <ul className="mt-3 space-y-2">

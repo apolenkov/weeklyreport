@@ -27,7 +27,7 @@ function LeadCountGrid({ lead }: { readonly lead: LeadInfo }) {
           key={field.label}
           className="rounded-[var(--radius-sm)] bg-[var(--color-surface-muted)] p-2"
         >
-          <dt className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
             {field.label}
           </dt>
           <dd className="mt-1 text-sm font-semibold tabular-nums text-[var(--color-foreground)]">

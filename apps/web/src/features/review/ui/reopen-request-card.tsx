@@ -66,7 +66,7 @@ function ReopenRequestMeta({
           {r.requestedBy.email}
         </span>
         <span
-          className={`rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${STATUS_PALETTE[r.status]}`}
+          className={`rounded-[var(--radius-pill)] px-2 py-0.5 text-xs font-bold uppercase tracking-wide ${STATUS_PALETTE[r.status]}`}
         >
           {STATUS_LABEL[r.status]}
         </span>
@@ -93,7 +93,7 @@ function ReopenRequestNotes({
     <>
       {r.reason && (
         <div className="mt-3 rounded-[var(--radius)] bg-[var(--color-surface-hover)] p-3 text-sm text-[var(--color-foreground)]">
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+          <div className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
             Reason
           </div>
           <div className="mt-1 whitespace-pre-wrap">{r.reason}</div>
@@ -102,12 +102,12 @@ function ReopenRequestNotes({
 
       {r.status !== "pending" && r.reviewNote && (
         <div className="mt-3 rounded-[var(--radius)] border border-[var(--color-border)] p-3 text-sm">
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+          <div className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
             Head Comment
           </div>
           <div className="mt-1 whitespace-pre-wrap">{r.reviewNote}</div>
           {r.reviewedBy && r.reviewedAt && (
-            <div className="mt-2 text-[11px] text-[var(--color-muted-foreground)]">
+            <div className="mt-2 text-xs text-[var(--color-muted-foreground)]">
               {r.reviewedBy.name} · {formatDateTime(r.reviewedAt)}
             </div>
           )}

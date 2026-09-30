@@ -58,15 +58,11 @@ export const STATUS_BADGE = {
 // body lines. Rules: openspec/specs/lead-item-card-uniformity/spec.md.
 const ITEM_CARD_REFERENCE_HEIGHT = 150;
 
-// Foreign rows use reduced opacity to distinguish ownership without hiding data.
-export const FOREIGN_ENTRY_OPACITY = 0.7;
-
 export function cardContainerStyle(opts: {
   isPlanned: boolean;
   isBlocked: boolean;
-  foreign: boolean;
 }): CSSProperties {
-  const { isPlanned, isBlocked, foreign } = opts;
+  const { isPlanned, isBlocked } = opts;
   const borderStyle = isPlanned ? "dashed" : "solid";
   // Faint blocked border uses the destructive token at 20%.
   const borderColor = isBlocked
@@ -83,6 +79,5 @@ export function cardContainerStyle(opts: {
     background: isBlocked
       ? "var(--color-status-blocked-bg)"
       : "var(--color-background)",
-    opacity: foreign ? FOREIGN_ENTRY_OPACITY : 1,
   };
 }

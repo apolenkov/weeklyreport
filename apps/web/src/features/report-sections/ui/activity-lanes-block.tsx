@@ -27,7 +27,7 @@ export function ActivityLanesBlock({
 
   return (
     <div className="mt-4 border-t border-dashed border-[var(--card-surface-border)] pt-3">
-      <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-muted-foreground)]">
+      <div className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-muted-foreground)]">
         Activities
       </div>
       <div

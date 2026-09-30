@@ -64,7 +64,7 @@ export function AssigneeLabel({ stage }: { readonly stage: StageAssignment }) {
   const isMine = stage.ownership === "mine";
   return (
     <span
-      className="block max-w-full truncate text-[11px]"
+      className="block max-w-full truncate text-xs"
       title={stage.assignee ?? "Unassigned"}
       style={{
         color: isMine

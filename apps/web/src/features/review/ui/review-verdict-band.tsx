@@ -21,7 +21,7 @@ export function ReviewVerdictBand({
       aria-label="Section reviews"
       className="flex flex-col gap-1.5 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3"
     >
-      <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
+      <span className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
         Review
       </span>
       {actionable.map((section) => (
@@ -33,7 +33,7 @@ export function ReviewVerdictBand({
             <span className="truncate text-[13px] font-semibold text-[var(--color-foreground)]">
               {section.authorName}
             </span>
-            <span className="text-[11px] text-[var(--color-muted-foreground)]">
+            <span className="text-xs text-[var(--color-muted-foreground)]">
               Submitted
             </span>
           </span>
