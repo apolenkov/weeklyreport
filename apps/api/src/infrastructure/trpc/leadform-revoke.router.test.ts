@@ -8,7 +8,6 @@ import { LeadFormPrismaRepository } from "../../modules/report-sections/index.js
 import { createNullAuditLogger } from "../../test-utils/audit-logger.js";
 import { createStubAppRouterDeps } from "../../test-utils/stub-app-router-deps.js";
 import { createAppRouter } from "./trpc.router.js";
-import { NOOP_REPORT_SECTIONS_TELEMETRY } from "../../modules/report-sections/application/report-sections-telemetry.port.js";
 
 // Revoke procedures are headProcedures whose object authz binds to the
 // caller's reporting group; exercise router scope threading end to end.
@@ -68,10 +67,7 @@ function buildCaller(
     ),
   };
   const repo = new LeadFormPrismaRepository(prisma as never);
-  const leadFormService = new LeadFormService(
-    repo,
-    NOOP_REPORT_SECTIONS_TELEMETRY,
-  );
+  const leadFormService = new LeadFormService(repo, {} as never);
   const deps = createStubAppRouterDeps({ leadFormService });
   const caller = createAppRouter(deps).createCaller({
     session: makeSession(role),

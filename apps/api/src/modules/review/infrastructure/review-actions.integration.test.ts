@@ -2,6 +2,7 @@ import type { UserSession } from "@customreport/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
+import { createNullLogger } from "../../../lib/logger";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   createPauseGate,
@@ -28,7 +29,6 @@ import {
 } from "../application/review.service.js";
 import { ReviewActionsService } from "../application/review-actions.service";
 import { ReviewActionsPrismaRepository } from "./review-actions.prisma-repository";
-import { createNullLogger } from "../../../lib/logger";
 
 const STABLE_A = "aaaa1111-0000-4000-8000-00000000aaaa";
 

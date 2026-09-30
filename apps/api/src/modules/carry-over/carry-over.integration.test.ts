@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import { createNullLogger } from "../../lib/logger";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
@@ -11,7 +12,6 @@ import {
 } from "../../test-utils/prisma-test-helper";
 import { CarryOverPrismaRepository } from "./carry-over.prisma-repository";
 import { CarryOverService } from "./carry-over.service";
-import { createNullLogger } from "../../lib/logger";
 
 describe("CarryOverPrismaRepository (integration)", () => {
   const prisma = createTestPrisma();

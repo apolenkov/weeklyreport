@@ -10,6 +10,7 @@ import {
 } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { createNullLogger } from "../../lib/logger";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
@@ -27,7 +28,6 @@ import {
   UNCERTAIN_DELIVERY_ERROR,
 } from "./reminders-execution.prisma-query.js";
 import type { ReminderQueuePayload } from "./reminders-queue-payload.js";
-import { createNullLogger } from "../../lib/logger";
 
 const DEADLINE_POLICY_ID = "a0000000-0000-4000-a000-000000000703";
 const ESCALATION_POLICY_ID = "a0000000-0000-4000-a000-000000000704";

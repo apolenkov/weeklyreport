@@ -5,6 +5,7 @@ import type {
 } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
+import { createNullLogger } from "../../lib/logger";
 import type { OrganizationService } from "../organization/organization.service.js";
 import { unusedRemindersRepositoryStubs } from "./__tests__/reminders-scope.repository-stub.js";
 import { RemindersService } from "./reminders.service";
@@ -15,7 +16,6 @@ import {
   toReminderCycleDate,
 } from "./reminders-dedupe-key.js";
 import type { ReminderQueuePayload } from "./reminders-queue-payload.js";
-import { createNullLogger } from "../../lib/logger";
 
 describe("resolveReminderDedupeKey", () => {
   const rule = {

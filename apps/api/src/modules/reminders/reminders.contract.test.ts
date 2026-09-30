@@ -5,11 +5,11 @@ import {
 } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
+import { createNullLogger } from "../../lib/logger";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import { unusedRemindersRepositoryStubs } from "./__tests__/reminders-scope.repository-stub.js";
 import { ReminderDomainError, RemindersService } from "./reminders.service";
 import type { RemindersRepository } from "./reminders.types";
-import { createNullLogger } from "../../lib/logger";
 
 const activeRule: AdminReminderRule = {
   id: "66666666-6666-4666-8666-666666666666",

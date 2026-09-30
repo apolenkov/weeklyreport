@@ -4,6 +4,7 @@ import type {
 } from "@customreport/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createNullLogger } from "../../lib/logger";
 import {
   activeRule,
   createServiceRepo,
@@ -22,7 +23,6 @@ import type {
   DueEscalationRule,
   RemindersRepository,
 } from "./reminders.types";
-import { createNullLogger } from "../../lib/logger";
 
 describe("RemindersScheduler — deadline reminder dispatch", () => {
   let queueAdds: { name: string; data: Record<string, unknown> }[];
