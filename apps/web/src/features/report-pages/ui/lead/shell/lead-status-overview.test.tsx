@@ -351,7 +351,7 @@ async function chooseMove(
   destination: "this week" | "next week",
 ) {
   const preview = await itemPreview(text);
-  await user.click(within(preview).getByText("More actions"));
+  await user.click(await within(preview).findByText("More actions"));
   await user.click(
     await within(preview).findByRole("button", {
       name: `Move ${text} to ${destination}`,
@@ -675,11 +675,11 @@ describe("LeadForm Overview", () => {
 
     const preview = await itemPreview("Current work");
     await user.click(
-      within(preview).getByRole("button", {
+      await within(preview).findByRole("button", {
         name: "Update progress for Current work",
       }),
     );
-    const editor = screen.getByRole("form", {
+    const editor = await screen.findByRole("form", {
       name: "Current week update for Payments",
     });
     // A hidden legacy next-step commitment blocks Completed in the editor and
@@ -695,9 +695,9 @@ describe("LeadForm Overview", () => {
     await user.click(screen.getByRole("button", { name: "Discard" }));
 
     const settled = await itemPreview("Current work");
-    await user.click(within(settled).getByText("More actions"));
+    await user.click(await within(settled).findByText("More actions"));
     await user.click(
-      within(settled).getByRole("button", {
+      await within(settled).findByRole("button", {
         name: "Update status: Current work",
       }),
     );
@@ -1410,8 +1410,8 @@ describe("LeadForm Overview", () => {
     );
 
     const preview = await itemPreview("Current work");
-    await user.click(within(preview).getByText("More actions"));
-    const opener = within(preview).getByRole("button", {
+    await user.click(await within(preview).findByText("More actions"));
+    const opener = await within(preview).findByRole("button", {
       name: "Move Current work to next week",
     });
     expect(opener).toHaveAttribute(
