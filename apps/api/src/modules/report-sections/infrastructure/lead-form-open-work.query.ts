@@ -1,4 +1,4 @@
-import { PublishedSnapshotIntegrityError } from "@customreport/report-persistence";
+import { publishedSnapshotFailure } from "@customreport/report-persistence";
 import {
   type LeadOpenWorkHistoryOccurrence,
   leadOpenWorkHistoryOccurrenceSchema,
@@ -97,12 +97,6 @@ function keysetWhere(
   };
 }
 
-function snapshotIntegrityFailure(reportId: string): never {
-  throw new PublishedSnapshotIntegrityError(
-    `Published snapshot integrity failure for report ${reportId}.`,
-  );
-}
-
 function historicalParent(
   section: ReportSectionReadModel,
   item: ReportSectionReadModel["items"][number],
@@ -124,7 +118,8 @@ function historicalParent(
       )?.activityName ?? null;
     return { kind: "activity", id: item.activityId, name };
   }
-  throw new PublishedSnapshotIntegrityError(
+  throw publishedSnapshotFailure(
+    section.reportId,
     "Historical section item has no validated parent.",
   );
 }
@@ -138,11 +133,12 @@ async function occurrencesForReport(
     report.publishedSnapshot === null &&
     (report.status === "published" || report.periodStatus === "published")
   ) {
-    return report.publishedSectionScopes.some(
-      (scope) => scope.authorId === authorId,
-    )
-      ? snapshotIntegrityFailure(report.id)
-      : [];
+    if (
+      report.publishedSectionScopes.some((scope) => scope.authorId === authorId)
+    ) {
+      throw publishedSnapshotFailure(report.id, "snapshot is absent.");
+    }
+    return [];
   }
 
   const source = await resolveStatusOverviewPredecessor(
@@ -156,7 +152,7 @@ async function occurrencesForReport(
     source.availability === "unavailable" &&
     source.reason === "invalid_published_snapshot"
   ) {
-    return snapshotIntegrityFailure(report.id);
+    throw publishedSnapshotFailure(report.id, "snapshot is invalid.");
   }
   if (
     source.availability === "available" &&
@@ -167,7 +163,10 @@ async function occurrencesForReport(
         scope.reportSectionId === source.section.reportSectionId,
     )
   ) {
-    return snapshotIntegrityFailure(report.id);
+    throw publishedSnapshotFailure(
+      report.id,
+      "indexed section scope does not match the snapshot.",
+    );
   }
   if (
     source.availability === "unavailable" ||

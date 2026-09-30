@@ -1,4 +1,4 @@
-import { DateTime } from "luxon";
+import { MS_PER_MINUTE } from "../time";
 
 /** Active interval in which a reminder policy applies to period deadlines. */
 export interface ReminderPolicyValidity {
@@ -14,13 +14,8 @@ export interface ReminderPolicyValidity {
 export function computeReminderFireAt(
   deadline: Date,
   offsetMinutes: number,
-  timezone: string,
 ): Date {
-  return DateTime.fromJSDate(deadline, { zone: "utc" })
-    .setZone(timezone)
-    .plus({ minutes: offsetMinutes })
-    .toUTC()
-    .toJSDate();
+  return new Date(deadline.getTime() + offsetMinutes * MS_PER_MINUTE);
 }
 
 /**

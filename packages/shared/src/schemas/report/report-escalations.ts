@@ -22,35 +22,19 @@ function productNamesFor(
   );
 }
 
-function blockedRiskEscalations(
+function riskEscalations(
   section: ReportSectionReadModel,
   productNames: ReadonlyMap<string, string>,
+  type: "blocked" | "unresolved_risk",
+  predicate: (
+    severity: ReportSectionReadModel["risks"][number]["severity"],
+  ) => boolean,
 ): Escalation[] {
   return section.risks.flatMap((risk) => {
-    if (risk.severity !== "blocked" || !risk.projectId) return [];
+    if (!predicate(risk.severity) || !risk.projectId) return [];
     return [
       {
-        type: "blocked" as const,
-        productId: risk.projectId,
-        productName: productNames.get(risk.projectId) ?? UNKNOWN_PRODUCT_NAME,
-        stageName: resolveStageName(risk.stageNames),
-        authorId: section.authorId,
-        leadName: section.authorName,
-        description: risk.risk,
-      },
-    ];
-  });
-}
-
-function unresolvedRiskEscalations(
-  section: ReportSectionReadModel,
-  productNames: ReadonlyMap<string, string>,
-): Escalation[] {
-  return section.risks.flatMap((risk) => {
-    if (risk.severity === "blocked" || !risk.projectId) return [];
-    return [
-      {
-        type: "unresolved_risk" as const,
+        type,
         productId: risk.projectId,
         productName: productNames.get(risk.projectId) ?? UNKNOWN_PRODUCT_NAME,
         stageName: resolveStageName(risk.stageNames),
@@ -118,9 +102,19 @@ export function buildEscalationsFromReadSections(
       return {
         escalations: [
           ...acc.escalations,
-          ...blockedRiskEscalations(section, productNames),
+          ...riskEscalations(
+            section,
+            productNames,
+            "blocked",
+            (severity) => severity === "blocked",
+          ),
           ...flaggedRed.escalations,
-          ...unresolvedRiskEscalations(section, productNames),
+          ...riskEscalations(
+            section,
+            productNames,
+            "unresolved_risk",
+            (severity) => severity !== "blocked",
+          ),
         ],
         seenProjectIds: flaggedRed.seenProjectIds,
       };

@@ -91,14 +91,3 @@ export const ACTIVE_LEAD_CONFIGS: readonly LeadConfig[] = [
     products: productsByLead(LEAD_SERGEY_ID),
   },
 ];
-
-/** Lead owning a seeded section slot; throws when the slot has no config. */
-export const leadIdForSlot = (slot: number): string => {
-  const leadId = ACTIVE_LEAD_CONFIGS.find(
-    (cfg) => cfg.leadIndex === slot,
-  )?.leadId;
-  if (leadId === undefined) {
-    throw new Error(`Seed section slot ${slot} has no lead config`);
-  }
-  return leadId;
-};

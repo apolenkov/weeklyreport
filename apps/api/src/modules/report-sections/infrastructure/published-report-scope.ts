@@ -1,5 +1,7 @@
-import { computePortfolioOverviewFromReadSections } from "@customreport/report-persistence";
-import { PublishedSnapshotIntegrityError } from "@customreport/report-persistence";
+import {
+  computePortfolioOverviewFromReadSections,
+  publishedSnapshotFailure,
+} from "@customreport/report-persistence";
 import {
   type PublishedReportSnapshot,
   publishedReportSnapshotSchema,
@@ -143,8 +145,9 @@ export function requireScopedPublishedSnapshot(
           (section) => section.reportSectionId === expectedSectionId,
         )))
   ) {
-    throw new PublishedSnapshotIntegrityError(
-      `Published snapshot integrity failure for report ${snapshot.reportId}: indexed section scope does not match the snapshot.`,
+    throw publishedSnapshotFailure(
+      snapshot.reportId,
+      "indexed section scope does not match the snapshot.",
     );
   }
   return scoped;

@@ -1,5 +1,5 @@
 // Curated IANA subset (not the ~600-zone full list) for Reminders + Settings.
-export const TIMEZONE_OPTIONS: readonly {
+const TIMEZONE_OPTIONS: readonly {
   group: string;
   zones: readonly { value: string; label: string }[];
 }[] = [

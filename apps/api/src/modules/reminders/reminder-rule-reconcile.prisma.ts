@@ -216,11 +216,7 @@ export async function repairMissingRuleForLockedReport(
     return "skipped";
   const now = new Date();
   if (!reminderPolicyAppliesTo(policy, report.deadline)) return "skipped";
-  const fireAt = computeReminderFireAt(
-    report.deadline,
-    policy.offsetMinutes,
-    policy.timezone,
-  );
+  const fireAt = computeReminderFireAt(report.deadline, policy.offsetMinutes);
   if (fireAt.getTime() <= now.getTime()) return "skipped";
   await createRuleVersion(
     tx,
@@ -258,7 +254,6 @@ export async function reconcileLockedPolicyForReport(
   const fireAt = computeReminderFireAt(
     schedulableReport.deadline,
     policy.offsetMinutes,
-    policy.timezone,
   );
   const active =
     reminderPolicyAppliesTo(policy, schedulableReport.deadline) &&

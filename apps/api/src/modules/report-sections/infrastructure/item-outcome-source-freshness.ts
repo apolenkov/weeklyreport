@@ -1,4 +1,4 @@
-import { PublishedSnapshotIntegrityError } from "@customreport/report-persistence";
+import { publishedSnapshotFailure } from "@customreport/report-persistence";
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { Prisma } from "@prisma/client";
 
@@ -22,12 +22,6 @@ interface ReportCoordinate {
   readonly createdAt: Date;
 }
 
-function snapshotIntegrityFailure(reportId: string): never {
-  throw new PublishedSnapshotIntegrityError(
-    `Published snapshot integrity failure for report ${reportId}.`,
-  );
-}
-
 /** Resolves one author-owned source without mutable fallback from frozen state. */
 export async function resolveEligibleOutcomeSourceSection(
   tx: Prisma.TransactionClient,
@@ -38,11 +32,12 @@ export async function resolveEligibleOutcomeSourceSection(
     report.publishedSnapshot === null &&
     (report.status === "published" || report.periodStatus === "published")
   ) {
-    return report.publishedSectionScopes.some(
-      (scope) => scope.authorId === authorId,
-    )
-      ? snapshotIntegrityFailure(report.id)
-      : null;
+    if (
+      report.publishedSectionScopes.some((scope) => scope.authorId === authorId)
+    ) {
+      throw publishedSnapshotFailure(report.id, "snapshot is absent.");
+    }
+    return null;
   }
 
   const resolved = await resolveStatusOverviewPredecessor(
@@ -56,7 +51,7 @@ export async function resolveEligibleOutcomeSourceSection(
     resolved.availability === "unavailable" &&
     resolved.reason === "invalid_published_snapshot"
   ) {
-    return snapshotIntegrityFailure(report.id);
+    throw publishedSnapshotFailure(report.id, "snapshot is invalid.");
   }
   if (resolved.availability === "unavailable") return null;
   if (
@@ -67,7 +62,10 @@ export async function resolveEligibleOutcomeSourceSection(
         scope.reportSectionId === resolved.section.reportSectionId,
     )
   ) {
-    return snapshotIntegrityFailure(report.id);
+    throw publishedSnapshotFailure(
+      report.id,
+      "indexed section scope does not match the snapshot.",
+    );
   }
   return resolved.section.status === "submitted" ? resolved.section : null;
 }
@@ -154,7 +152,8 @@ async function readLockedReports(
     },
   });
   if (rows.length !== coordinates.length) {
-    throw new PublishedSnapshotIntegrityError(
+    throw publishedSnapshotFailure(
+      undefined,
       "Locked historical report set changed inside the transaction.",
     );
   }

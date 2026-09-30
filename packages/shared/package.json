@@ -14,11 +14,9 @@
   },
   "dependencies": {
     "@trpc/server": "catalog:",
-    "luxon": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@types/luxon": "catalog:",
     "@types/node": "catalog:"
   }
 }

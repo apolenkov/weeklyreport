@@ -20,7 +20,7 @@ context: |
   - Auth: SAML via `@node-saml/passport-saml` + Keycloak (prod); dev-only
     `/auth/dev-login` gated behind `AUTH_DEV_MODE`
   - Validation: Zod 4 shared schemas in `@customreport/shared`
-  - Testing: Vitest 4, Testing Library, MSW 2; PDF export renders through an
+  - Testing: Vitest 4, Testing Library; PDF export renders through an
     internal Gotenberg service, not an in-process browser
   - Node: 26.8.1 Current (Docker pins Node 26.8.1 images)
 
@@ -48,7 +48,8 @@ context: |
   separate catalogue and parent for activity-linked records. Priorities are an Item
   projection selected and ordered by `priorityRank`, not a separate entity.
   Report carries both `periodState` and the companion lifecycle tuple; every
-  lifecycle writer must update both atomically (no DB constraint enforces this).
+  lifecycle writer must update both atomically; `Report_lifecycle_tuple_check`
+  enforces tuple consistency in PostgreSQL.
 
   # Conventions (load-bearing)
   - TypeScript strict everywhere; `no-explicit-any` is an error; no floating
@@ -79,8 +80,8 @@ context: |
     `ALLOW_PROD_DESTRUCTIVE` bypass exists for these flows
   - Development operations use the same exact target contract; production
     restore remains a separate entrypoint and contract
-  - Prisma history is the canonical init migration plus forward-only additive
-    migrations. Never rewrite applied migrations; add a new one, keep it
+  - Before the first production deployment, the canonical init may be re-baselined.
+    After production deployment, applied migrations are forward-only. Keep history
     synchronized with `schema.prisma`, and prove it only by recreating an exact
     disposable DB target from `AGENTS.md` behind the destructive guard and
     per-run consent
