@@ -1,4 +1,7 @@
-import type { AiProviderCapabilityTestResult } from "@customreport/shared";
+import type {
+  AiProviderCapabilityTestResult,
+  AiProviderTestOutcome,
+} from "@customreport/shared";
 import {
   AiProviderLifecycle,
   type AiProviderProfile,
@@ -68,11 +71,11 @@ type SetTestResultInput = Readonly<{
   compositeTestIdentity?: string;
 }>;
 
-type SetClaimedTestResultInput = SetTestResultInput &
+export type SetClaimedTestResultInput = SetTestResultInput &
   Readonly<{
     executionId: string;
     executionAttempt: number;
-    outcome: "passed" | "incompatible" | "configuration_error" | "inconclusive";
+    outcome: AiProviderTestOutcome;
     failureCode: string | null;
     checks: Prisma.InputJsonValue;
   }>;

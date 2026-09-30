@@ -1,3 +1,4 @@
+import type { AiProviderTestOutcome } from "@customreport/shared";
 import { type Job, UnrecoverableError } from "bullmq";
 import type { ClsService } from "nestjs-cls";
 
@@ -113,7 +114,7 @@ export class AiProviderTestProcessor extends RawBullMqProcessor<AiProviderTestJo
 
   private readonly completeClaimedExecution = async (
     executionId: string,
-    outcome: "passed" | "incompatible" | "configuration_error" | "inconclusive",
+    outcome: AiProviderTestOutcome,
     failureCode: string | null,
     checks: Parameters<
       AiProviderConfigurationRepository["completeExecution"]
@@ -138,7 +139,7 @@ export class AiProviderTestProcessor extends RawBullMqProcessor<AiProviderTestJo
 const classifyFailure = (
   error: unknown,
 ): Readonly<{
-  outcome: "incompatible" | "configuration_error" | "inconclusive";
+  outcome: Exclude<AiProviderTestOutcome, "passed">;
   failureCode: string;
 }> => {
   if (isProviderFailure(error)) {

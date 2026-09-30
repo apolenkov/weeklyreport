@@ -19,6 +19,8 @@ export const aiProviderTestOutcomeSchema = z.enum([
   "configuration_error",
   "inconclusive",
 ]);
+/** Terminal outcome of one provider test execution. */
+export type AiProviderTestOutcome = z.infer<typeof aiProviderTestOutcomeSchema>;
 
 /** Safe outcomes recorded for an individual capability check. */
 export const aiProviderTestCheckOutcomeSchema = z.enum([
