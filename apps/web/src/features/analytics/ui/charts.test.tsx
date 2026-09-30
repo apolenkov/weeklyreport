@@ -1,161 +1,187 @@
+import type { TrafficLightHistoryOutput } from "@customreport/shared";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
-import {
-  buildLeadVelocityChartData,
-  buildTrafficLightHistoryChartData,
-  formatTrafficLightStatusLevel,
-} from "./analytics-chart-data";
+import { buildLeadVelocityChartData } from "./analytics-chart-data";
 import { LeadVelocityChart } from "./lead-velocity.chart";
 import { PeriodComparisonChart } from "./period-comparison.chart";
 import { TrafficLightHistoryChart } from "./traffic-light-history.chart";
 
-function installChartBounds(): void {
-  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(
-    new DOMRect(0, 0, 800, 256),
-  );
-}
+const periods = ["2026-08-23", "2026-08-30"];
 
 describe("TrafficLightHistoryChart", () => {
   it("renders the empty-state message when no periods", () => {
-    render(<TrafficLightHistoryChart periods={[]} rows={[]} />);
+    render(
+      <TrafficLightHistoryChart
+        headingId="history-heading"
+        periods={[]}
+        rows={[]}
+      />,
+    );
     expect(screen.getByText(/no published periods/i)).toBeInTheDocument();
   });
 
-  it("renders populated data through an accessible table and a named chart", async () => {
-    installChartBounds();
-    const consoleWarn = vi
-      .spyOn(console, "warn")
-      .mockImplementation(() => undefined);
+  it("shows project rows with full dates, product status labels and a named keyboard region", async () => {
     render(
-      <TrafficLightHistoryChart
-        periods={["Apr 7", "Apr 14"]}
-        rows={[
-          {
-            projectId: "11111111-1111-4111-8111-111111111111",
-            projectName: "Alpha",
-            statuses: ["green", null],
-          },
-        ]}
-      />,
+      <>
+        <h2 id="history-heading">Traffic-light history</h2>
+        <TrafficLightHistoryChart
+          headingId="history-heading"
+          periods={periods}
+          rows={[
+            {
+              projectId: "alpha",
+              projectName: "Alpha",
+              statuses: ["green", null],
+            },
+            {
+              projectId: "beta",
+              projectName: "Beta",
+              statuses: ["yellow", "red"],
+            },
+            { projectId: "gamma", projectName: "Gamma", statuses: ["green"] },
+          ]}
+        />
+      </>,
     );
-    expect(screen.queryByText(/no published periods/i)).not.toBeInTheDocument();
+    const table = screen.getByRole("table", {
+      name: "Traffic-light history data",
+    });
+    expect(table).toBeVisible();
+    expect(table.closest(".sr-only")).toBeNull();
+    for (const period of periods)
+      expect(
+        within(table).getByRole("columnheader", { name: period }),
+      ).toHaveAttribute("scope", "col");
     expect(
-      screen.getByRole("table", { name: "Traffic-light history data" }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Alpha" })).toBeVisible();
-    expect(screen.getByRole("cell", { name: "Green" })).toBeVisible();
-    expect(screen.getByRole("cell", { name: "No data" })).toBeVisible();
-    expect(consoleWarn).not.toHaveBeenCalled();
-    const chart = screen.getByRole("application", {
+      within(table).getByRole("rowheader", { name: "Alpha" }),
+    ).toHaveAttribute("scope", "row");
+    const alpha = within(table)
+      .getByRole("rowheader", { name: "Alpha" })
+      .closest("tr");
+    expect(
+      within(expectDefined(alpha)).getByRole("cell", { name: "On track" }),
+    ).toBeVisible();
+    expect(
+      within(expectDefined(alpha)).getByRole("cell", { name: "No status" }),
+    ).toBeVisible();
+    expect(
+      within(table).getAllByRole("cell", { name: "No status" }),
+    ).toHaveLength(2);
+    expect(within(table).getByRole("cell", { name: "At risk" })).toBeVisible();
+    expect(within(table).getByRole("cell", { name: "Blocked" })).toBeVisible();
+    const region = screen.getByRole("region", {
       name: "Traffic-light history",
     });
-    expect(chart.closest('[aria-hidden="true"]')).toBeNull();
+    expect(region).toHaveAttribute("aria-labelledby", "history-heading");
     await userEvent.tab();
-    expect(chart).toHaveFocus();
+    expect(region).toHaveFocus();
   });
 
-  it("shows domain status labels when navigating points with the keyboard", async () => {
-    installChartBounds();
+  it("stably puts worst Red and Yellow projects first without changing input rows", () => {
+    const rows: TrafficLightHistoryOutput["rows"] = [
+      {
+        projectId: "green-a",
+        projectName: "Green A",
+        statuses: ["green", "green"],
+      },
+      {
+        projectId: "yellow-a",
+        projectName: "Yellow A",
+        statuses: ["green", "yellow"],
+      },
+      { projectId: "empty", projectName: "Empty", statuses: [null, null] },
+      { projectId: "red-a", projectName: "Red A", statuses: ["yellow", "red"] },
+      {
+        projectId: "yellow-b",
+        projectName: "Yellow B",
+        statuses: ["yellow", "green"],
+      },
+      { projectId: "red-b", projectName: "Red B", statuses: ["red", null] },
+      {
+        projectId: "green-b",
+        projectName: "Green B",
+        statuses: ["green", "green"],
+      },
+    ];
+    const original = structuredClone(rows);
     render(
-      <TrafficLightHistoryChart
-        periods={["2026-08-16", "2026-08-23", "2026-08-30"]}
-        rows={[
-          {
-            projectId: "product-1",
-            projectName: "Alpha",
-            statuses: ["red", "yellow", "green"],
-          },
-        ]}
-      />,
+      <>
+        <h2 id="history-heading">Traffic-light history</h2>
+        <TrafficLightHistoryChart
+          headingId="history-heading"
+          periods={periods}
+          rows={rows}
+        />
+      </>,
     );
-    const chart = screen.getByRole("application", {
-      name: "Traffic-light history",
-    });
-    await userEvent.tab();
-    expect(chart).toHaveFocus();
     expect(
-      within(await screen.findByRole("status")).getByText("Red"),
-    ).toBeVisible();
-    await userEvent.keyboard("{ArrowRight}");
-    expect(
-      within(await screen.findByRole("status")).getByText("Yellow"),
-    ).toBeVisible();
-    await userEvent.keyboard("{ArrowRight}");
-    expect(
-      within(await screen.findByRole("status")).getByText("Green"),
-    ).toBeVisible();
-  });
-
-  it("keeps a null status cell null in the series point", () => {
-    const { data } = buildTrafficLightHistoryChartData(
-      ["Apr 7", "Apr 14"],
-      [
-        {
-          projectId: "11111111-1111-4111-8111-111111111111",
-          projectName: "Alpha",
-          statuses: ["green", null],
-        },
-      ],
-    );
-    expect(data[1]?.["11111111-1111-4111-8111-111111111111"]).toBeNull();
-  });
-
-  it("labels numeric status levels with their traffic-light meaning", () => {
-    expect([1, 2, 3].map(formatTrafficLightStatusLevel)).toEqual([
-      "Red",
-      "Yellow",
-      "Green",
+      screen.getAllByRole("rowheader").map((header) => header.textContent),
+    ).toEqual([
+      "Red A",
+      "Red B",
+      "Yellow A",
+      "Yellow B",
+      "Green A",
+      "Empty",
+      "Green B",
     ]);
+    expect(rows).toEqual(original);
   });
 });
 
 describe("LeadVelocityChart", () => {
   it("renders the empty-state message when no rows", () => {
-    render(<LeadVelocityChart rows={[]} />);
+    render(<LeadVelocityChart headingId="velocity-heading" rows={[]} />);
     expect(screen.getByText(/no velocity data/i)).toBeInTheDocument();
   });
 
-  it("renders populated data through an accessible table and a named chart", async () => {
-    installChartBounds();
-    const consoleWarn = vi
-      .spyOn(console, "warn")
-      .mockImplementation(() => undefined);
+  it("shows lead rows and submitted counts including absent-lead zero in a named keyboard region", async () => {
     render(
-      <LeadVelocityChart
-        rows={[
-          {
-            periodLabel: "Apr 7",
-            leads: [
-              {
-                leadId: "22222222-2222-4222-8222-222222222222",
-                leadName: "Alex",
-                submittedSections: 3,
-              },
-            ],
-          },
-        ]}
-      />,
+      <>
+        <h2 id="velocity-heading">Lead velocity</h2>
+        <LeadVelocityChart
+          headingId="velocity-heading"
+          rows={[
+            {
+              periodLabel: "2026-08-23",
+              leads: [
+                { leadId: "lead-a", leadName: "Alex", submittedSections: 3 },
+              ],
+            },
+            {
+              periodLabel: "2026-08-30",
+              leads: [
+                { leadId: "lead-b", leadName: "Alex", submittedSections: 5 },
+              ],
+            },
+          ]}
+        />
+      </>,
     );
-    expect(screen.queryByText(/no velocity data/i)).not.toBeInTheDocument();
+    const table = screen.getByRole("table", {
+      name: "Lead velocity data in submitted sections",
+    });
+    expect(table).toBeVisible();
+    expect(table.closest(".sr-only")).toBeNull();
+    for (const period of periods)
+      expect(
+        within(table).getByRole("columnheader", { name: period }),
+      ).toHaveAttribute("scope", "col");
     expect(
-      screen.getByRole("table", {
-        name: "Lead velocity data in submitted sections",
-      }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Alex" })).toBeVisible();
-    expect(screen.getByRole("cell", { name: "3" })).toBeVisible();
-    expect(consoleWarn).not.toHaveBeenCalled();
-    const chart = screen.getByRole("application", { name: "Lead velocity" });
-    expect(chart.closest('[aria-hidden="true"]')).toBeNull();
+      within(table).getAllByRole("rowheader", { name: "Alex" }),
+    ).toHaveLength(2);
+    expect(within(table).getByRole("cell", { name: "3" })).toBeVisible();
+    expect(within(table).getByRole("cell", { name: "5" })).toBeVisible();
+    for (const cell of within(table).getAllByRole("cell", { name: "0" }))
+      expect(cell).toHaveClass("text-muted-foreground");
+    expect(table.querySelector(".font-mono")).toBeNull();
+    const region = screen.getByRole("region", { name: "Lead velocity" });
+    expect(region).toHaveAttribute("aria-labelledby", "velocity-heading");
     await userEvent.tab();
-    expect(chart).toHaveFocus();
-    await userEvent.keyboard("{ArrowRight}");
-    expect(
-      within(await screen.findByRole("status")).getByText("3"),
-    ).toBeVisible();
+    expect(region).toHaveFocus();
   });
 });
 
@@ -205,32 +231,6 @@ describe("buildLeadVelocityChartData", () => {
   });
 });
 
-describe("buildTrafficLightHistoryChartData", () => {
-  it("keeps both projects' statuses when they share a display name", () => {
-    const idA = "11111111-1111-4111-8111-11111111111a";
-    const idB = "11111111-1111-4111-8111-11111111111b";
-
-    const { data, series } = buildTrafficLightHistoryChartData(
-      ["2026-04-21"],
-      [
-        { projectId: idA, projectName: "Alpha", statuses: ["green"] },
-        { projectId: idB, projectName: "Alpha", statuses: ["red"] },
-      ],
-    );
-
-    expect(data).toHaveLength(1);
-    const point = expectDefined(data[0]);
-    expect(point.period).toBe("2026-04-21");
-    // Keyed by UUID, the colliding name keeps each project's status distinct.
-    expect(point[idA]).toBe(3);
-    expect(point[idB]).toBe(1);
-    expect(series).toEqual([
-      { dataKey: idA, name: "Alpha" },
-      { dataKey: idB, name: "Alpha" },
-    ]);
-  });
-});
-
 describe("PeriodComparisonChart", () => {
   it("renders the empty-state message when no rows", () => {
     render(
@@ -243,7 +243,7 @@ describe("PeriodComparisonChart", () => {
     expect(screen.getByText(/no comparison data/i)).toBeInTheDocument();
   });
 
-  it("renders null cells as en-dash and zero cells as 0", () => {
+  it("renders missing status as No status and zero risks as 0", () => {
     render(
       <PeriodComparisonChart
         periodA="2026-08-23"
@@ -261,8 +261,9 @@ describe("PeriodComparisonChart", () => {
         ]}
       />,
     );
-    // null status renders as en-dash
-    expect(screen.getByText("–")).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "No status" })).toBeVisible();
+    expect(screen.getByRole("cell", { name: "On track" })).toBeVisible();
+    expect(screen.getByRole("table").querySelector(".font-mono")).toBeNull();
     // zero risk count renders as the literal '0'
     const zeros = screen.getAllByText("0");
     expect(zeros.length).toBeGreaterThanOrEqual(2);

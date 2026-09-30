@@ -44,15 +44,15 @@ The head dashboard MUST render its page shell immediately and MUST let each pane
 - **THEN** the dashboard shows the canonical no-active-period state
 - **AND** it does not wait indefinitely for unrelated panel data
 
-### Requirement: Heavy packages and chart chunks are loaded through narrow entry points
+### Requirement: Heavy packages and Trends tables use narrow entry points
 
-The Next.js web build MUST optimize imports for `lucide-react` and `recharts`, and Trends chart `dynamic()` loaders MUST import the concrete chart modules rather than evaluating the `features/analytics` barrel.
+The Next.js web build MUST optimize imports for `lucide-react`. Trends MUST import its concrete table modules directly rather than evaluating a UI barrel or requesting client-only chart chunks. Pending Trends queries MUST retain local query-loading skeletons without hiding ready sibling sections.
 
-#### Scenario: Trends loads one chart chunk
+#### Scenario: Trends renders ready and pending sections
 
-- **WHEN** a Trends chart is dynamically requested in the browser
-- **THEN** its loader resolves the direct chart file with `ssr: false`
-- **AND** its existing chart skeleton remains the chunk-loading fallback
+- **WHEN** one Trends query is ready while another remains pending
+- **THEN** the ready section renders its directly imported table
+- **AND** only the pending section shows its local query-loading skeleton
 
 ### Requirement: Application fonts are self-hosted through next font
 
