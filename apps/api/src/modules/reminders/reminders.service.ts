@@ -62,6 +62,7 @@ export class RemindersService {
     private readonly repository: RemindersRepository,
     logger: AppLogger,
     emailQueue?: RemindersEnqueuer,
+    // Direct tests may omit telemetry; Nest requires and supplies its real adapter.
     private readonly telemetry: RemindersTelemetry = NOOP_REMINDERS_TELEMETRY,
     private readonly organizationService?: OrganizationService,
     private readonly env?: Pick<EnvConfig, "APP_BASE_URL">,
