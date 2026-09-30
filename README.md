@@ -134,9 +134,8 @@ repository cleanliness и operations. Интеграционные тесты AP
 `pnpm --filter @customreport/api test:integration`.
 
 Полезное при локальной отладке: читай структурированный лог API в
-`apps/api/.logs/app.log`; в production Compose он хранится в
-`/app/logs/app.log` контейнера `api` на volume `apilogs` (точные команды — в
-`docs/onboarding.md`). Готовность проверяй через `/health/ready`, а метрики —
+`apps/api/.logs/app.log`; в production Compose API пишет только в stdout
+(`docker compose logs api`, точные команды — в `docs/onboarding.md`). Готовность проверяй через `/health/ready`, а метрики —
 через `/metrics`.
 
 ## Куда смотреть дальше

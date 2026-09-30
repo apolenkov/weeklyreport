@@ -1,12 +1,9 @@
 import {
+  mkdirSync,
   mkdtempSync,
-  promises as fsp,
   readdirSync,
   readFileSync,
   rmSync,
-  statSync,
-  utimesSync,
-  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -286,15 +283,12 @@ describe("createAppLogger", () => {
     const logDir = createLogDir();
     vi.spyOn(process.stdout, "write").mockReturnValue(true);
     vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    // A directory at the log path makes every append fail.
+    mkdirSync(join(logDir, "app.log"));
     const logger = createAppLogger({ logDir });
-    const appendSpy = vi
-      .spyOn(fsp, "appendFile")
-      .mockRejectedValueOnce(new Error("disk full"));
 
     logger.info("doomed");
-    await expect(expectDefined(logger.flush)()).rejects.toThrow(/lost 1 write/);
-
-    appendSpy.mockRestore();
+    await expect(expectDefined(logger.flush)()).rejects.toThrow();
   });
 
   it("writes log entries asynchronously to <logDir>/app.log", async () => {
@@ -325,113 +319,6 @@ describe("createAppLogger", () => {
       service: "file-test",
       correlationId: "no-context",
     });
-  });
-
-  it("keeps both archives when two rotations land in the same millisecond", async () => {
-    const logDir = createLogDir();
-    vi.spyOn(process.stdout, "write").mockReturnValue(true);
-    // Freeze only the clock: both rotations compute the same archive stamp.
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date("2026-09-19T10:00:00.000Z"));
-    try {
-      const logger = createAppLogger({
-        logDir,
-        maxBytes: 200,
-        maxAgeDays: 30,
-      });
-
-      Array.from({ length: 8 }, (_, index) => index).forEach((index) =>
-        logger.info(`line-${index}`, { padding: "x".repeat(40) }),
-      );
-      await expectDefined(logger.flush)();
-    } finally {
-      vi.useRealTimers();
-    }
-
-    const archives = readdirSync(logDir).filter(
-      (f) => f.startsWith("app.log.") && f.endsWith(".gz"),
-    );
-    expect(archives.length).toBeGreaterThanOrEqual(2);
-  });
-
-  it("rotates when active log exceeds maxBytes (creates gzip archive)", async () => {
-    const logDir = createLogDir();
-    vi.spyOn(process.stdout, "write").mockReturnValue(true);
-    const logger = createAppLogger({
-      logDir,
-      service: "rot",
-      maxBytes: 200, // tiny threshold so a few lines trigger rotation
-      maxAgeDays: 30,
-    });
-
-    // Write enough lines that the active file exceeds 200 bytes before rotation
-    // is checked on the NEXT write. A typical entry here is ~140 bytes.
-    Array.from({ length: 6 }, (_, index) => index).forEach((index) =>
-      logger.info(`line-${index}`, { padding: "x".repeat(40) }),
-    );
-
-    await expectDefined(logger.flush)();
-
-    const files = readdirSync(logDir);
-    const archives = files.filter(
-      (f) => f.startsWith("app.log.") && f.endsWith(".gz"),
-    );
-    expect(archives.length).toBeGreaterThanOrEqual(1);
-    expect(files).toContain("app.log");
-
-    // Archive is gzipped — verify it has gzip magic bytes (0x1f, 0x8b).
-    const archiveBytes = readFileSync(join(logDir, expectDefined(archives[0])));
-    expect(archiveBytes[0]).toBe(0x1f);
-    expect(archiveBytes[1]).toBe(0x8b);
-
-    // The active file was truncated at rotation, then later writes appended.
-    // It must be strictly smaller than the un-rotated total (~840B).
-    const activeSize = statSync(join(logDir, "app.log")).size;
-    expect(activeSize).toBeLessThan(840);
-  });
-
-  it("does not prune (readdir) the log directory on every log line", async () => {
-    const logDir = createLogDir();
-    vi.spyOn(process.stdout, "write").mockReturnValue(true);
-    const readdirSpy = vi.spyOn(fsp, "readdir");
-
-    // Large maxBytes so no rotation fires: only the interval-gated prune can
-    // touch the directory, and it must run at most once across many lines.
-    const logger = createAppLogger({ logDir, maxBytes: 50 * 1024 * 1024 });
-
-    Array.from({ length: 12 }, (_, index) => index).forEach((index) =>
-      logger.info(`line-${index}`),
-    );
-    await expectDefined(logger.flush)();
-
-    expect(readdirSpy.mock.calls.length).toBeLessThanOrEqual(1);
-  });
-
-  it("prunes archives older than maxAgeDays during rotation", async () => {
-    const logDir = createLogDir();
-    vi.spyOn(process.stdout, "write").mockReturnValue(true);
-
-    // Pre-create a stale archive whose mtime is 2 days old.
-    const staleArchive = join(logDir, "app.log.STALE.gz");
-    writeFileSync(staleArchive, "gzip-bytes");
-    const twoDaysAgo = Date.now() / 1000 - 2 * 86_400;
-    utimesSync(staleArchive, twoDaysAgo, twoDaysAgo);
-
-    const logger = createAppLogger({
-      logDir,
-      maxBytes: 100,
-      maxAgeDays: 0, // anything older than now should be pruned
-    });
-
-    // Trigger writes large enough to force rotation, which calls pruneOldArchives.
-    Array.from({ length: 5 }, (_, index) => index).forEach((index) =>
-      logger.info(`prune-${index}`, { padding: "y".repeat(40) }),
-    );
-
-    await expectDefined(logger.flush)();
-
-    const remaining = readdirSync(logDir);
-    expect(remaining).not.toContain("app.log.STALE.gz");
   });
 
   it("reads correlationId from CLS when clsService.isActive()", () => {

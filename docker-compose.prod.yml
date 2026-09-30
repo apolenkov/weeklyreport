@@ -316,7 +316,6 @@ services:
       GOTENBERG_URL: ${GOTENBERG_URL:?GOTENBERG_URL must be set}
       PDF_OUTPUT_DIR: /app/data/pdfs
       LOG_LEVEL: ${LOG_LEVEL:?set the API log level (e.g. info)}
-      LOG_DIR: /app/logs
       OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:?set telemetry posture (true disables the SDK, false enables it when an endpoint is set)}
       # NO default endpoint on purpose (repo rule: no silent defaults for
       # product config): tracing is ON only when the operator supplies a
@@ -387,7 +386,6 @@ services:
       - "3001"
     volumes:
       - pdfdata:/app/data/pdfs
-      - apilogs:/app/logs
     deploy:
       resources:
         limits:
@@ -508,6 +506,5 @@ volumes:
   pgbackups:
   redisdata:
   pdfdata:
-  apilogs:
   caddy_data:
   caddy_config:
