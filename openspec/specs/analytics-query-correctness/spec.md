@@ -21,21 +21,88 @@ not only which reports qualify for inclusion.
 - **AND** projects belonging solely to other in-scope leads' sections are
   absent from the result
 
-### Requirement: leadVelocity aggregates by period label
+### Requirement: Analytics uses one report in effect per period label
 
-`leadVelocity` MUST group reports by their period label
-(`isoDateOnly(periodEnd)`) before producing output rows, so that multiple
-reports sharing a period label (a republished period) produce one combined
-row rather than one row per report.
+`trafficLightHistory`, `periodComparison`, and `leadVelocity` MUST use the
+same report in effect for each UTC period label (`isoDateOnly(periodEnd)`).
+Only reports satisfying `status: 'published'`, `periodStatus: 'published'`,
+and `archived: false` are eligible. Among eligible reports admitted by the
+caller's frozen group scope, the latest snapshot `publishedAt` wins; equal
+publication times are resolved by latest `createdAt`, then lexicographically
+greatest report `id`. The time component of `periodEnd` and database row
+order MUST NOT change the winner within a period label.
+
+The winning snapshot alone supplies project names, statuses, risks, and lead
+activity for that label. Missing projects and null traffic-light values MUST
+NOT fall back to an older report. An optional lead filter MUST be applied
+after choosing the report in effect, so an omitted lead cannot resurrect an
+older publication.
+If a project occurs in multiple admitted sections of that snapshot, history
+and comparison MUST use its last occurrence in the stored snapshot order,
+including a null status, consistently with comparison's section overwrite.
+
+#### Scenario: A later publication omits a project's status
+
+- **GIVEN** an earlier eligible report contains a green project status
+- **AND** the report in effect omits that project or has a null status
+- **WHEN** history and comparison read that period
+- **THEN** neither returns the older green status
+- **AND** an explicitly null project keeps its name and null status
+
+#### Scenario: An archived report has a later publication timestamp
+
+- **GIVEN** a published non-archived report and a later archived report share a label
+- **WHEN** any published-floor analytics query reads that label
+- **THEN** only the non-archived report is eligible
+
+#### Scenario: Publication and creation timestamps are equal
+
+- **GIVEN** two eligible reports share a period label and publication and creation times
+- **WHEN** analytics reads the reports in either database row order
+- **THEN** the lexicographically greatest report id wins in every query
+
+#### Scenario: A requested lead is absent from the report in effect
+
+- **GIVEN** an earlier report contains a lead's section
+- **AND** the report in effect omits that lead
+- **WHEN** history is filtered to that lead
+- **THEN** it returns no projects from the earlier report
+
+#### Scenario: Two snapshot sections contain the same project
+
+- **GIVEN** the report in effect contains the same project in two admitted sections
+- **AND** the sections contain different statuses, including a possible null
+- **WHEN** history and comparison read that period
+- **THEN** both use the last occurrence's status in the stored snapshot order
+
+### Requirement: leadVelocity reports truthful submission counts by period label
+
+`leadVelocity` MUST produce one row per eligible period label using its
+report in effect. Each lead represented in the winning frozen snapshot MUST
+appear once. `submittedSections` MUST be 1 when that lead's section status
+is `submitted`, otherwise 0. Leads with non-submitted sections MUST remain
+in the output; mutable live users MUST NOT supply historical membership.
 
 #### Scenario: a republished period collapses into one row
 
-- **WHEN** two published reports share the same `periodEnd` calendar day
+- **WHEN** two eligible published reports share the same `periodEnd` calendar day
   (a republished period)
 - **THEN** `leadVelocity`'s output contains exactly one row for that period
   label
-- **AND** that row's `leads` array contains the submitted sections from both
-  reports
+- **AND** that row's `leads` array comes only from the report in effect
+
+#### Scenario: A published snapshot contains an unsubmitted lead section
+
+- **GIVEN** the report in effect contains one submitted and one draft lead section
+- **WHEN** `leadVelocity` reads that period
+- **THEN** both leads appear with `submittedSections` values of 1 and 0 respectively
+
+#### Scenario: An older submission is replaced by a non-submitted section
+
+- **GIVEN** an older report contains a submitted section for a lead
+- **AND** the report in effect contains a draft section for that lead
+- **WHEN** `leadVelocity` reads that period
+- **THEN** that lead's `submittedSections` is 0
 
 ### Requirement: analytics cache keys hash nested objects correctly
 
@@ -60,7 +127,7 @@ different keys.
 ### Requirement: Published-floor analytics queries exclude reopened periods
 
 Published-floor analytics queries MUST require both companion `status:
-'published'` and `periodStatus: 'published'`. A publication-marked report whose
+'published'` and `periodStatus: 'published'`, plus `archived: false`. A publication-marked report whose
 period is currently reopened MUST be absent from `trafficLightHistory`,
 `leadVelocity`, and `periodComparison` until it is re-published.
 
@@ -80,7 +147,7 @@ period is currently reopened MUST be absent from `trafficLightHistory`,
 ### Requirement: Settled analytics facts come only from the publication snapshot
 
 `trafficLightHistory`, `leadVelocity`, and `periodComparison` MUST derive
-published and archived facts from the validated immutable
+published facts from the validated immutable
 `publishedSnapshot`. They MUST NOT reconstruct statuses, risks, lead activity,
 or group ownership from mutable `ReportSection`, `ProjectStatus`, `Risk`, or
 `User` rows. DB-side admission MAY use `PublishedSectionScope`, but the returned

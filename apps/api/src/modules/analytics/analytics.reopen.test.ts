@@ -72,16 +72,23 @@ const editedReport = {
   },
 };
 
-function repositoryFor(periodStatus: "published" | "reopened") {
+function repositoryFor(
+  periodStatus: "published" | "reopened",
+  archived = false,
+) {
   // A reopened report keeps status "published" (publication lineage) while
   // periodStatus carries the reopen state, so the where clause must pin both
   // lifecycle fields to admit the stored row.
-  const storedReport = { status: "published", periodStatus };
+  const storedReport = { status: "published", periodStatus, archived };
   const findMany = vi.fn(
-    (query: { where: { status?: string; periodStatus?: string } }) =>
+    (query: {
+      where: { status?: string; periodStatus?: string; archived?: boolean };
+    }) =>
       Promise.resolve(
         query.where.status === storedReport.status &&
-          query.where.periodStatus === storedReport.periodStatus
+          query.where.periodStatus === storedReport.periodStatus &&
+          (query.where.archived === undefined ||
+            query.where.archived === storedReport.archived)
           ? [editedReport]
           : [],
       ),
@@ -91,6 +98,24 @@ function repositoryFor(periodStatus: "published" | "reopened") {
 }
 
 describe("AnalyticsPrismaRepository reopened-period floor", () => {
+  it("excludes archived publications from every analytics query", async () => {
+    const repo = repositoryFor("published", true);
+
+    await expect(
+      repo.trafficLightHistory(RANGE, adminSession),
+    ).resolves.toEqual({
+      periods: [],
+      rows: [],
+    });
+    await expect(repo.leadVelocity(RANGE, adminSession)).resolves.toEqual([]);
+    await expect(
+      repo.periodComparison(
+        { periodA: PERIOD, periodB: "2026-04-28" },
+        adminSession,
+      ),
+    ).resolves.toEqual({ rows: [] });
+  });
+
   it("excludes reopened traffic-light history until re-publication", async () => {
     const reopened = await repositoryFor("reopened").trafficLightHistory(
       RANGE,
