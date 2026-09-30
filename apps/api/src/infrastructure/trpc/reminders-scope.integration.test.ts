@@ -97,6 +97,7 @@ function buildCaller(
   );
   const weeklyReportService = new WeeklyReportService(
     new WeeklyReportPrismaRepository(prisma as never),
+    createNullLogger(),
   );
   const deps = createStubAppRouterDeps({
     prisma,

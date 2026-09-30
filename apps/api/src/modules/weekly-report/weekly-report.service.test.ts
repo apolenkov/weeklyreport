@@ -7,6 +7,7 @@ import {
 import type { Prisma } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
+import { createNullLogger } from "../../lib/logger.js";
 import {
   makeProjectReadModel,
   makeReportSectionReadModel,
@@ -285,7 +286,7 @@ describe("WeeklyReportService", () => {
   it("forwards the authenticated session to an explicit read", async () => {
     const report = makeWeeklyReport();
     const repository = createRepository(new Map([[reportId, report]]));
-    const service = new WeeklyReportService(repository);
+    const service = new WeeklyReportService(repository, createNullLogger());
     const caller = session("head");
 
     await expect(
@@ -304,7 +305,7 @@ describe("WeeklyReportService", () => {
       new Map([[currentReportId, report]]),
       currentReportId,
     );
-    const service = new WeeklyReportService(repository);
+    const service = new WeeklyReportService(repository, createNullLogger());
     const caller = session("lead");
 
     await expect(
@@ -320,7 +321,7 @@ describe("WeeklyReportService", () => {
 
   it("returns no-period instead of defaulting to published history", async () => {
     const repository = createRepository(new Map(), null);
-    const service = new WeeklyReportService(repository);
+    const service = new WeeklyReportService(repository, createNullLogger());
 
     await expect(
       service.getWeeklyReport(undefined, session("admin")),
@@ -337,6 +338,7 @@ describe("WeeklyReportService", () => {
     const report = makeWeeklyReport({ periodStatus: "open" });
     const service = new WeeklyReportService(
       createRepository(new Map([[reportId, report]]), currentReportId),
+      createNullLogger(),
     );
 
     await expect(
@@ -349,6 +351,7 @@ describe("WeeklyReportService", () => {
     const current = makeWeeklyReport({ periodStatus: "reopened" });
     const currentService = new WeeklyReportService(
       createRepository(new Map([[reportId, current]]), reportId),
+      createNullLogger(),
     );
     await expect(
       currentService.getWeeklyReport(reportId, viewer),
@@ -363,6 +366,7 @@ describe("WeeklyReportService", () => {
     });
     const publishedService = new WeeklyReportService(
       createRepository(new Map([[reportId, published]])),
+      createNullLogger(),
     );
     await expect(
       publishedService.getWeeklyReport(reportId, viewer),
@@ -380,7 +384,7 @@ describe("WeeklyReportService", () => {
     repository.getWeeklyReport.mockResolvedValue(
       makeResult(makeWeeklyReport(), signal),
     );
-    const service = new WeeklyReportService(repository);
+    const service = new WeeklyReportService(repository, createNullLogger());
 
     const result = await service.getWeeklyReport(reportId, session("head"));
 
@@ -390,7 +394,7 @@ describe("WeeklyReportService", () => {
   it("resolves viewer navigation through the scoped current-then-published path", async () => {
     const viewer = session("viewer");
     const repository = createRepository(new Map(), currentReportId, reportId);
-    const service = new WeeklyReportService(repository);
+    const service = new WeeklyReportService(repository, createNullLogger());
 
     await expect(service.latestForViewer(viewer)).resolves.toEqual({
       reportId: currentReportId,

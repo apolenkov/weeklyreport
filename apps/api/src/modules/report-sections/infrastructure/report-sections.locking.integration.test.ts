@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
+import { createNullLogger } from "../../../lib/logger.js";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
@@ -13,6 +14,7 @@ import {
   ReportSectionsService,
   SectionVersionConflictError,
 } from "../application/report-sections.service";
+import { NOOP_REPORT_SECTIONS_TELEMETRY } from "../application/report-sections-telemetry.port.js";
 import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
 
 const PUBLISHED_AT = new Date("2026-08-02T10:00:00.000Z");
@@ -69,7 +71,11 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
     });
 
     it("bumps the row version and returns it in the saved read model", async () => {
-      const service = new ReportSectionsService(repo);
+      const service = new ReportSectionsService(
+        repo,
+        NOOP_REPORT_SECTIONS_TELEMETRY,
+        createNullLogger(),
+      );
 
       // Seed rows are minted at version 1.
       const saved = await service.saveDraft(
@@ -81,7 +87,11 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
     });
 
     it("rejects a second writer that carries a stale loaded version", async () => {
-      const service = new ReportSectionsService(repo);
+      const service = new ReportSectionsService(
+        repo,
+        NOOP_REPORT_SECTIONS_TELEMETRY,
+        createNullLogger(),
+      );
 
       // First writer loaded version 1, saves, and bumps the row to 2.
       await service.saveDraft(draftAtVersion(1), testData.lead.id);
@@ -94,7 +104,11 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
     });
 
     it("lets the second writer succeed after reloading the fresh version", async () => {
-      const service = new ReportSectionsService(repo);
+      const service = new ReportSectionsService(
+        repo,
+        NOOP_REPORT_SECTIONS_TELEMETRY,
+        createNullLogger(),
+      );
 
       await service.saveDraft(draftAtVersion(1), testData.lead.id);
       // Reload surfaces version 2; round-tripping it clears the conflict.
@@ -252,7 +266,11 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
       // This is the make-or-break for the OPTIONAL read model: the FIRST save
       // carries a new item with NO stableId, so mergeSection (which parses the
       // raw input items against the read-model schema) must not reject it.
-      const service = new ReportSectionsService(repo);
+      const service = new ReportSectionsService(
+        repo,
+        NOOP_REPORT_SECTIONS_TELEMETRY,
+        createNullLogger(),
+      );
       const itemInput = (text: string, stableId?: string) => ({
         ...(stableId ? { stableId } : {}),
         projectId: testData.project.id,
@@ -324,7 +342,11 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
         },
       });
 
-      const service = new ReportSectionsService(repo);
+      const service = new ReportSectionsService(
+        repo,
+        NOOP_REPORT_SECTIONS_TELEMETRY,
+        createNullLogger(),
+      );
       const saved = await service.saveDraft(
         {
           reportSectionId: testData.section.id,
@@ -402,7 +424,11 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
         },
       });
 
-      const service = new ReportSectionsService(repo);
+      const service = new ReportSectionsService(
+        repo,
+        NOOP_REPORT_SECTIONS_TELEMETRY,
+        createNullLogger(),
+      );
       await expect(
         service.submitSection(
           {

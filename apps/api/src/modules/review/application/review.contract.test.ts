@@ -4,6 +4,7 @@ import {
 } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
+import { createNullLogger } from "../../../lib/logger.js";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { type ReviewRepository, ReviewService } from "./review.service";
 
@@ -36,7 +37,7 @@ function createRepository(rows: SubmissionDashboardRow[]): ReviewRepository {
 
 describe("ReviewService output contract", () => {
   it("returns an empty dashboard when the repository has no rows", async () => {
-    const service = new ReviewService(createRepository([]));
+    const service = new ReviewService(createRepository([]), createNullLogger());
 
     await expect(
       service.getSubmissionDashboard(REPORT_ID, ADMIN_SESSION),
@@ -56,7 +57,7 @@ describe("ReviewService output contract", () => {
     const repository: ReviewRepository = {
       getSubmissionDashboard: () => Promise.resolve([rowWithExtra]),
     };
-    const service = new ReviewService(repository);
+    const service = new ReviewService(repository, createNullLogger());
 
     const result = await service.getSubmissionDashboard(
       REPORT_ID,
@@ -90,7 +91,7 @@ describe("ReviewService output contract", () => {
     const repository: ReviewRepository = {
       getSubmissionDashboard: () => Promise.resolve(rows),
     };
-    const service = new ReviewService(repository);
+    const service = new ReviewService(repository, createNullLogger());
 
     const result = await service.getSubmissionDashboard(
       REPORT_ID,
@@ -121,6 +122,7 @@ describe("ReviewService output contract", () => {
           leadName: "Альфа",
         }),
       ]),
+      createNullLogger(),
     );
 
     const result = await service.getSubmissionDashboard(
@@ -148,6 +150,7 @@ describe("ReviewService output contract", () => {
             leadName: "Альфа",
           }),
         ]),
+        createNullLogger(),
       );
       await service.getSubmissionDashboard(REPORT_ID, ADMIN_SESSION);
 

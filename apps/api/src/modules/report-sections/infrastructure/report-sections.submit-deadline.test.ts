@@ -5,6 +5,7 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
+import { createNullLogger } from "../../../lib/logger.js";
 import {
   ReportSectionAccessError,
   ReportSectionsService,
@@ -152,7 +153,11 @@ function createSubmission(
     recordSectionSubmitted: vi.fn(),
     observeSubmissionLatency: vi.fn(),
   };
-  const service = new ReportSectionsService(repository, telemetry);
+  const service = new ReportSectionsService(
+    repository,
+    telemetry,
+    createNullLogger(),
+  );
   const payload: SubmitSectionPayload = {
     reportSectionId: row.id,
     version: 1,

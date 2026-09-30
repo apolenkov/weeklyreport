@@ -83,7 +83,10 @@ const viewerSessionEmptyAccess: UserSession = {
 
 describe("ReviewService", () => {
   it("returns one typed row per lead for the active report", async () => {
-    const service = new ReviewService(createRepository(unsortedRows));
+    const service = new ReviewService(
+      createRepository(unsortedRows),
+      createNullLogger(),
+    );
 
     await expect(
       service.getSubmissionDashboard(reportId, headSession),
@@ -107,7 +110,10 @@ describe("ReviewService", () => {
   });
 
   it("sorts outstanding draft rows before submitted rows and then by lead name", async () => {
-    const service = new ReviewService(createRepository(unsortedRows));
+    const service = new ReviewService(
+      createRepository(unsortedRows),
+      createNullLogger(),
+    );
 
     const rows = await service.getSubmissionDashboard(reportId, headSession);
 
@@ -119,7 +125,10 @@ describe("ReviewService", () => {
   });
 
   it("rejects a lead session before returning dashboard data", async () => {
-    const service = new ReviewService(createRepository(unsortedRows));
+    const service = new ReviewService(
+      createRepository(unsortedRows),
+      createNullLogger(),
+    );
     const caller = buildReviewCaller(service, leadSession);
 
     await expect(caller.review.dashboard()).rejects.toMatchObject({
@@ -135,7 +144,7 @@ describe("ReviewService", () => {
         return Promise.resolve([]);
       },
     };
-    const service = new ReviewService(spyRepo);
+    const service = new ReviewService(spyRepo, createNullLogger());
     await service.getSubmissionDashboard(reportId, headSessionWithGroup);
     expect(capturedSession).toMatchObject({
       role: "head",
@@ -151,7 +160,7 @@ describe("ReviewService", () => {
         return Promise.resolve([]);
       },
     };
-    const service = new ReviewService(spyRepo);
+    const service = new ReviewService(spyRepo, createNullLogger());
     const result = await service.getSubmissionDashboard(
       reportId,
       viewerSessionEmptyAccess,
@@ -185,7 +194,10 @@ function buildReviewCaller(service: ReviewService, session: UserSession) {
 
 describe("review.dashboard leadership procedure", () => {
   it("allows a head session to read the active report dashboard", async () => {
-    const service = new ReviewService(createRepository(unsortedRows));
+    const service = new ReviewService(
+      createRepository(unsortedRows),
+      createNullLogger(),
+    );
     const caller = buildReviewCaller(service, headSession);
 
     await expect(caller.review.dashboard()).resolves.toHaveLength(3);

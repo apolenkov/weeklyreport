@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
+import { createNullLogger } from "../../../lib/logger.js";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
@@ -10,6 +11,7 @@ import {
   TEST_IDS,
 } from "../../../test-utils/prisma-test-helper";
 import { ReportSectionsService } from "../application/report-sections.service";
+import { NOOP_REPORT_SECTIONS_TELEMETRY } from "../application/report-sections-telemetry.port.js";
 import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
 
 describe("ReportSectionsPrismaRepository (integration)", () => {
@@ -167,7 +169,11 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
       ],
     });
 
-    const service = new ReportSectionsService(repo);
+    const service = new ReportSectionsService(
+      repo,
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
     const result = await service.submitSection(
       {
         reportSectionId: testData.section.id,

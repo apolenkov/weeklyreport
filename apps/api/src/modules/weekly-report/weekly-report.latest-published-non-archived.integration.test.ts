@@ -2,6 +2,7 @@ import type { UserSession } from "@customreport/shared";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { createNullLogger } from "../../lib/logger.js";
 import {
   cleanDatabase,
   createTestPrisma,
@@ -138,7 +139,7 @@ describe("WeeklyReportPrismaRepository.getLatestPublishedNonArchivedId (integrat
       true,
     );
 
-    const service = new WeeklyReportService(repository);
+    const service = new WeeklyReportService(repository, createNullLogger());
     await expect(
       service.getWeeklyReport(undefined, viewerSession),
     ).resolves.toEqual({
