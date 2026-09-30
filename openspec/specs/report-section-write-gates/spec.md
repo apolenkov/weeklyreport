@@ -215,3 +215,44 @@ When the initial `getActiveSection` lookup finds no section, the application MUS
 
 - **WHEN** an initially loaded section disappears before the save version compare-and-set
 - **THEN** the existing `SectionVersionConflictError` maps to `CONFLICT`
+
+### Requirement: Submission deadlines are authoritative under the report lock
+
+`submitSection` persistence MUST decide acceptance and the stored `late` flag
+and its stored submittedAt timestamp from one clock reading after
+acquiring the existing parent Report write lock. Acceptance MUST use
+the current Report deadline and grace/late-submission settings after
+acquiring the existing parent Report write lock. A pre-lock deadline decision
+MUST NOT authorize or reject a later submission. A forbidden submission MUST
+return the existing access error without changing the section, version or child
+records. A null deadline MUST accept an otherwise valid submission as not late.
+
+#### Scenario: Deadline is shortened before the submit lock
+
+- **WHEN** an administrator commits an expired deadline before submission
+  obtains its Report lock, and grace has expired with late submissions disabled
+- **THEN** submission returns the existing forbidden error and writes nothing
+
+#### Scenario: Deadline is extended before the submit lock
+
+- **WHEN** an administrator commits a future deadline before submission obtains
+  its Report lock
+- **THEN** an otherwise valid submission succeeds with `late=false`
+
+#### Scenario: Submission wins the lock
+
+- **WHEN** submission holds the Report write lock before a deadline update
+- **THEN** its decision and atomic write use the deadline protected by that lock
+
+#### Scenario: Grace settings change before the locked decision
+
+- **WHEN** the current grace or late-submission settings prohibit a submission
+  after its deadline
+- **THEN** the locked submission gate rejects before changing any section rows
+
+#### Scenario: Deadline passes while submission waits for the lock
+
+- **WHEN** a valid request starts before the deadline but obtains the Report
+  lock after it, within permitted grace
+- **THEN** both the stored submittedAt timestamp and late=true use the same
+  post-lock clock reading rather than the earlier request start

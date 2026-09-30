@@ -29,7 +29,7 @@ export function createSearchRouter(deps: SearchRouterDeps) {
               role: ctx.session.role,
               ip: ctx.ip,
               attemptedScope: "search",
-              resourceId: input.q,
+              resourceId: "search.query",
             });
             throw new TRPCError({
               code: "FORBIDDEN",

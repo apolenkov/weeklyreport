@@ -37,9 +37,6 @@ import {
 } from "./item-outcome.transaction";
 import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
 
-const graceSettings = () =>
-  Promise.resolve({ gracePeriodHours: 0, allowLateSubmissions: true });
-
 describe("item outcomes (real database)", () => {
   const prisma = createTestPrisma();
   const prismaService = prisma as unknown as PrismaService;
@@ -49,7 +46,6 @@ describe("item outcomes (real database)", () => {
   beforeAll(() => {
     ordinarySave = new ReportSectionsService(
       new ReportSectionsPrismaRepository(prismaService),
-      graceSettings,
     );
   });
 

@@ -1,17 +1,26 @@
 // No `server-only` import: next.config.ts loads this at Node config time.
 
+import { z } from "zod";
+
+const apiUrlSchema = z
+  .url({ protocol: /^https?$/ })
+  .refine((value) => /^https?:\/\//i.test(value))
+  .transform((value) => new URL(value))
+  .refine((url) => !url.username && !url.password && !url.search && !url.hash);
+
 export function requireApiUrl(): string {
-  const url = nonEmpty(process.env.API_URL);
-  if (url === undefined) {
+  const result = apiUrlSchema.safeParse(process.env.API_URL);
+  if (!result.success) {
     throw new Error(
-      "API base URL is not configured — set API_URL (server-side).",
+      "Invalid API_URL — set an absolute HTTP(S) base URL without credentials, query or fragment (server-side).",
     );
   }
-  return url;
-}
-
-function nonEmpty(value: string | undefined): string | undefined {
-  return value === "" ? undefined : value;
+  const url = result.data;
+  const segments = url.pathname.split("/");
+  const path = segments
+    .slice(0, segments.findLastIndex((segment) => segment !== "") + 1)
+    .join("/");
+  return `${url.origin}${path}`;
 }
 
 interface TrpcBatchEntry {

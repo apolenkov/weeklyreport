@@ -90,6 +90,58 @@ describe("window capture", () => {
     return { listeners, fetchMock };
   }
 
+  it.each([
+    ["console-error", "console", "error"],
+    ["console-warn", "console", "warn"],
+    ["window-error", "window-error", "error"],
+    ["unhandled-rejection", "unhandled-rejection", "error"],
+  ] as const)(
+    "keeps private %s data out of the forwarded batch",
+    async (kind, source, level) => {
+      const eventTime = 1_785_608_000_000;
+      vi.setSystemTime(eventTime);
+      const secret = "CLIENT_PRIVATE_MARKER";
+      const privateUrl = `https://person:${secret}@customreport.test/lead/report?token=${secret}#${secret}`;
+      vi.stubGlobal("window", {
+        location: { href: privateUrl },
+        addEventListener: vi.fn(),
+      });
+      const { listeners, fetchMock } = await captureListeners();
+      const error = new Error(`Request failed: ${secret}`);
+      error.stack = `Error: ${secret}\n at ${privateUrl}`;
+
+      if (kind === "console-error") console.error(error, { token: secret });
+      if (kind === "console-warn") console.warn(secret, { password: secret });
+      if (kind === "window-error") {
+        listeners.get("error")?.(
+          new ErrorEvent("error", {
+            message: secret,
+            filename: privateUrl,
+            error,
+          }),
+        );
+      }
+      if (kind === "unhandled-rejection") {
+        listeners.get("unhandledrejection")?.(
+          Object.assign(new Event("unhandledrejection"), { reason: error }),
+        );
+      }
+      await vi.advanceTimersByTimeAsync(2000);
+
+      const entries = postedEntries(fetchMock);
+      expect(JSON.stringify(entries)).not.toContain(secret);
+      expect(entries).toMatchObject([
+        {
+          source,
+          level,
+          url: "https://customreport.test/lead/report",
+          ts: eventTime,
+        },
+      ]);
+      expect(entries[0]).not.toHaveProperty("stack");
+    },
+  );
+
   it("captures window errors and unhandled rejections", async () => {
     const { listeners, fetchMock } = await captureListeners();
 
@@ -109,8 +161,8 @@ describe("window capture", () => {
     await vi.advanceTimersByTimeAsync(2000);
 
     expect(postedEntries(fetchMock)).toMatchObject([
-      { source: "window-error", message: "window failed" },
-      { source: "unhandled-rejection", message: "promise failed" },
+      { source: "window-error", message: "window-error" },
+      { source: "unhandled-rejection", message: "unhandled-rejection" },
     ]);
   });
 
@@ -133,14 +185,5 @@ describe("client logger helpers", () => {
 
     expect(canEnqueue(499)).toBe(true);
     expect(canEnqueue(500)).toBe(false);
-  });
-
-  it("stringifies circular and non-JSON-serializable values safely", async () => {
-    const { safeStringify } = await import("./client-logger");
-    const circular: Record<string, unknown> = {};
-    circular.self = circular;
-
-    expect(safeStringify(circular)).toBe("[object Object]");
-    expect(safeStringify(1n)).toBe("1");
   });
 });

@@ -2,7 +2,6 @@ import {
   type DraftSaveInput,
   type DraftSavePayload,
   draftSaveSchema,
-  MS_PER_HOUR,
   MS_PER_SECOND,
   type ReportSectionReadModel,
   reportSectionReadModelSchema,
@@ -19,7 +18,6 @@ import { type AppLogger, createNullLogger } from "../../../lib/logger.js";
 import { findPublishedRecordViolation } from "../domain/published-record-guard.js";
 import { mergeSection } from "../domain/report-section-merge.js";
 import {
-  type GetGraceSettings,
   type ReportPeriodWriteGate,
   ReportSectionAccessError,
   ReportSectionDomainError,
@@ -32,7 +30,6 @@ import {
 } from "./report-sections-telemetry.port.js";
 
 export {
-  type GetGraceSettings,
   REPORT_SECTIONS_REPOSITORY,
   type ReportPeriodWriteGate,
   ReportSectionAccessError,
@@ -45,10 +42,6 @@ export {
 export class ReportSectionsService {
   constructor(
     private readonly repository: ReportSectionsRepository,
-    // Grace-period settings provider — required, or late stamping would
-    // silently disable. submitSection: now > deadline + grace AND
-    // !allowLateSubmissions → AccessError; now > deadline → section.late = true.
-    private readonly getGraceSettings: GetGraceSettings,
     private readonly telemetry: ReportSectionsTelemetry = NOOP_REPORT_SECTIONS_TELEMETRY,
     private readonly logger: AppLogger = createNullLogger(),
   ) {}
@@ -122,37 +115,6 @@ export class ReportSectionsService {
       "SECTION_ALREADY_SUBMITTED",
       `Cannot ${action} sections of a published report.`,
     );
-  }
-
-  // Deadline gate for submitSection: returns the `late` flag to stamp, and
-  // throws AccessError (→403) when past deadline+grace AND late is forbidden.
-  // Always armed; null meta → NOT_FOUND, never a silent on-time pass.
-  private async evaluateDeadlineGate(reportId: string) {
-    const meta = await this.repository.getReportMeta(reportId);
-    if (!meta) {
-      // The section just loaded references this report (FK), so a null meta
-      // means the report row vanished mid-flight — fail closed, never an
-      // un-gated on-time submission.
-      throw new ReportSectionNotFoundError("The report no longer exists.");
-    }
-    if (meta.deadline === null) {
-      this.logger.info("deadline gate skipped: period has no deadline", {
-        reportId,
-      });
-      return { late: false, reportMeta: meta };
-    }
-    const settings = await this.getGraceSettings();
-    const now = Date.now();
-    const deadlineMs = meta.deadline.getTime();
-    if (now <= deadlineMs) {
-      return { late: false, reportMeta: meta };
-    }
-    const graceMs = settings.gracePeriodHours * MS_PER_HOUR;
-    if (now > deadlineMs + graceMs && !settings.allowLateSubmissions) {
-      throw new ReportSectionAccessError("Past deadline; submissions closed.");
-    }
-    // now > deadline (possibly within grace, or grace+late allowed) → stamp late.
-    return { late: true, reportMeta: meta };
   }
 
   async getActiveSection(
@@ -230,11 +192,6 @@ export class ReportSectionsService {
 
     this.assertPeriodEditable(writeGate, "submit");
 
-    // Deadline gate runs BEFORE the content validator: a past-deadline submit
-    // with late forbidden returns 403 even for a valid payload, while missing
-    // traffic-lights fail on content first when within grace (most-specific error).
-    const deadlineGate = await this.evaluateDeadlineGate(section.reportId);
-
     // Integrity before completeness: a stage the author does not own is a hard
     // authz reject, checked before the traffic-light / current-item nags.
     this.assertStageOwnership(section, parsedInput);
@@ -253,13 +210,7 @@ export class ReportSectionsService {
     }
 
     const saved = await this.repository.saveSection(
-      mergeSection(
-        section,
-        parsedInput,
-        "submitted",
-        new Date(),
-        deadlineGate.late,
-      ),
+      mergeSection(section, parsedInput, "submitted", new Date()),
       parsedInput.version,
     );
 
@@ -267,9 +218,11 @@ export class ReportSectionsService {
     // persisted on the row, so dashboard math matches the UI badge. Telemetry
     // must never break the write path, hence the defensive try/catch.
     try {
-      this.telemetry.recordSectionSubmitted(deadlineGate.late);
-      const meta = deadlineGate.reportMeta;
-      if (meta.deadline) {
+      this.telemetry.recordSectionSubmitted(saved.late);
+      // Diagnostic latency samples use the fresh post-save deadline. The late
+      // counter always uses the flag decided under the transaction lock.
+      const meta = await this.repository.getReportMeta(section.reportId);
+      if (meta?.deadline) {
         // Signed seconds: positive = late, negative = submitted early. A
         // cleared deadline has no reference point — no histogram sample.
         const deltaSeconds =
@@ -283,7 +236,7 @@ export class ReportSectionsService {
     this.logger.info("section submitted", {
       reportSectionId: parsedInput.reportSectionId,
       authorId: section.authorId,
-      late: deadlineGate.late,
+      late: saved.late,
     });
     return saved;
   }

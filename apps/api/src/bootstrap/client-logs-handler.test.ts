@@ -68,6 +68,7 @@ describe("parseClientLogEntry", () => {
     ["non-finite timestamp", { ...validEntry, ts: Number.POSITIVE_INFINITY }],
     ["oversized message", { ...validEntry, message: "x".repeat(2001) }],
     ["unknown field", { ...validEntry, credentials: "secret" }],
+    ["untrusted source", { ...validEntry, source: "PRIVATE_MARKER" }],
   ])("rejects %s", (_label, entry) => {
     expect(parseClientLogEntry(entry)).toBeNull();
   });
@@ -116,7 +117,7 @@ describe("client-logs handler boundary", () => {
       );
       expect(response.status).toBe(204);
       expect(error).toHaveBeenCalledWith(
-        "client: Request failed",
+        "client: console",
         expect.objectContaining({ phase: "web.client", source: "console" }),
       );
     } finally {

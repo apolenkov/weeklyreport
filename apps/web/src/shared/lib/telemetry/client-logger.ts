@@ -3,6 +3,8 @@
 // Batches browser console/window errors to /api/client-logs.
 // Dev-only by default — no-op unless NEXT_PUBLIC_CLIENT_LOG_FORWARDING is 'true'.
 
+import { sanitizeClientLogUrl } from "@customreport/shared";
+
 import { webEnv } from "../runtime/web-env";
 
 type Level = "debug" | "info" | "warn" | "error";
@@ -12,7 +14,6 @@ interface Entry {
   message: string;
   source: "console" | "window-error" | "unhandled-rejection";
   url?: string | undefined;
-  stack?: string | undefined;
   ts: number;
 }
 
@@ -29,16 +30,6 @@ const queue: Entry[] = [];
 const flushTimer: { current: ReturnType<typeof setTimeout> | null } = {
   current: null,
 };
-
-export function safeStringify(arg: unknown): string {
-  if (arg instanceof Error) return arg.message;
-  if (typeof arg === "string") return arg;
-  try {
-    return JSON.stringify(arg);
-  } catch {
-    return String(arg);
-  }
-}
 
 export function canEnqueue(queueLength: number): boolean {
   return queueLength < MAX_QUEUE;
@@ -81,10 +72,9 @@ function patchConsole(): void {
   console.error = (...args: unknown[]) => {
     enqueue({
       level: "error",
-      message: args.map(safeStringify).join(" "),
+      message: "console",
       source: "console",
-      url: window.location.href,
-      stack: args.find((a): a is Error => a instanceof Error)?.stack,
+      url: sanitizeClientLogUrl(window.location.href),
       ts: Date.now(),
     });
     origError(...args);
@@ -93,9 +83,9 @@ function patchConsole(): void {
   console.warn = (...args: unknown[]) => {
     enqueue({
       level: "warn",
-      message: args.map(safeStringify).join(" "),
+      message: "console",
       source: "console",
-      url: window.location.href,
+      url: sanitizeClientLogUrl(window.location.href),
       ts: Date.now(),
     });
     origWarn(...args);
@@ -106,22 +96,19 @@ function registerWindowListeners(): void {
   window.addEventListener("error", (event) => {
     enqueue({
       level: "error",
-      message: event.message,
+      message: "window-error",
       source: "window-error",
-      url: event.filename || window.location.href,
-      stack: event.error instanceof Error ? event.error.stack : undefined,
+      url: sanitizeClientLogUrl(event.filename || window.location.href),
       ts: Date.now(),
     });
   });
 
-  window.addEventListener("unhandledrejection", (event) => {
-    const reason: unknown = event.reason;
+  window.addEventListener("unhandledrejection", () => {
     enqueue({
       level: "error",
-      message: safeStringify(reason),
+      message: "unhandled-rejection",
       source: "unhandled-rejection",
-      url: window.location.href,
-      stack: reason instanceof Error ? reason.stack : undefined,
+      url: sanitizeClientLogUrl(window.location.href),
       ts: Date.now(),
     });
   });

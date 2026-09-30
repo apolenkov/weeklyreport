@@ -272,4 +272,5 @@ export * from "./schemas/status/canonical-status";
 export * from "./schemas/telemetry/telemetry";
 export { deriveEffectiveProductStatus } from "./status/effective-product-status";
 export * from "./status/traffic-light-aggregation";
+export { sanitizeClientLogUrl } from "./telemetry/sanitize-client-log-url";
 export * from "./time";

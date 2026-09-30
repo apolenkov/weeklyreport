@@ -71,14 +71,9 @@ export function mergeSection(
   section: ReportSectionReadModel,
   input: SectionWritePayload,
   nextStatus: "draft" | "submitted",
-  // Submission timestamp injected from the boundary so the pure seam never
-  // reads the wall clock; unused on the draft path.
+  // Pending submit uses the request timestamp; persistence replaces it with
+  // the authoritative time under the Report lock. Draft keeps its timestamp.
   now: Date,
-  // Explicit late flag set by submitSection when `now > Report.deadline` at
-  // submit-time. Defaults to whatever the existing section row already carries
-  // so saveDraft / reopen paths don't accidentally clear a previously-stamped
-  // late flag.
-  late?: boolean,
 ): ReportSectionReadModel {
   const stageStatusByKey = new Map(
     input.stageStatuses.map((status) => [
@@ -99,7 +94,6 @@ export function mergeSection(
     ...section,
     status: nextStatus,
     submittedAt: nextStatus === "submitted" ? now : section.submittedAt,
-    late: late ?? section.late,
     projects: section.projects
       .map((project) => applyStageStatuses(project, stageStatusByKey))
       .map((project) =>

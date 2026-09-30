@@ -12,9 +12,6 @@ import {
 import { ReportSectionsService } from "../application/report-sections.service";
 import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
 
-const testGraceSettings = () =>
-  Promise.resolve({ gracePeriodHours: 0, allowLateSubmissions: true });
-
 describe("ReportSectionsPrismaRepository (integration)", () => {
   const prisma = createTestPrisma();
   let repo: ReportSectionsPrismaRepository;
@@ -170,7 +167,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
       ],
     });
 
-    const service = new ReportSectionsService(repo, testGraceSettings);
+    const service = new ReportSectionsService(repo);
     const result = await service.submitSection(
       {
         reportSectionId: testData.section.id,
