@@ -183,7 +183,10 @@ them and link the relevant `openspec/specs/` spec.
   Russian allowed only as DB/seed data, comments, and test fixtures.
   Check changed files: `grep -nE '[а-яА-Я]' <file>` — every hit must be data/comment/test.
 - **Quality standard.** Follow `docs/exemplary-code-standard.md` and the
-  repository gates. Do not add per-file lint exemptions.
+  repository gates. Do not add per-file lint exemptions. The only legacy
+  suppression baseline is `eslint-suppressions.json`, limited to
+  `max-lines-per-function` and `max-params`. It may only shrink: never add
+  entries, increase counts, or add rules.
 - **Product configuration fails closed.** Required values have no silent default;
   validate with Zod, read through `requireEnv`, and supply them per environment.
 - **Comments record current rationale only.** Keep them short and remove
