@@ -210,7 +210,7 @@ export async function roleText(
   name: string,
   session?: string,
 ): Promise<string> {
-  const data = await findRole(role, name, "text", undefined, session);
+  const data = await findRole(role, name, "text", { session });
   assert(typeof data.text === "string", "Invalid browser role text result");
   return data.text;
 }

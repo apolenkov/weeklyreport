@@ -166,12 +166,13 @@ export function open(
   );
 }
 
+type FindRoleOptions = Partial<Record<"text" | "session", string | undefined>>;
+
 export function findRole(
   role: string,
   name: string,
   action: "click" | "fill" | "text",
-  text?: string,
-  session?: string,
+  { text, session }: FindRoleOptions = {},
 ): Promise<Record<string, unknown>> {
   assert(action !== "fill" || text !== undefined, "Fill requires text");
   const args = ["find", "role", role, action];

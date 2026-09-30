@@ -308,8 +308,7 @@ async function saveConcurrentLeadUpdate(
     "button",
     `Update progress for ${shortItemLabel(LEAD_FORM_FIXTURE.currentText)}`,
     "click",
-    undefined,
-    session,
+    { session },
   );
   await command(
     ["fill", await scopedRef(form, "textbox", "Description *", session), text],
@@ -480,7 +479,7 @@ async function respondToReopen(
       `E2E ${decision.toLowerCase()} response`,
       session,
     );
-    await findRole("button", "Cancel", "click", undefined, session);
+    await findRole("button", "Cancel", "click", { session });
     await command(
       ["click", oneRef(await reopenRow(reason, session), "button", "Respond")],
       session,
@@ -490,7 +489,7 @@ async function respondToReopen(
       `E2E ${decision.toLowerCase()} response`,
       session,
     );
-    await findRole("button", decision, "click", undefined, session);
+    await findRole("button", decision, "click", { session });
     await command(
       [
         "wait",

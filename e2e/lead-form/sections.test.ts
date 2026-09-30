@@ -93,7 +93,7 @@ async function ref(role: string, name: string): Promise<string> {
 }
 
 async function click(name: string, session?: string): Promise<void> {
-  await findRole("button", name, "click", undefined, session);
+  await findRole("button", name, "click", { session });
 }
 
 async function scopedClick(
