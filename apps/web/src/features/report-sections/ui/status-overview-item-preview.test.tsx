@@ -36,6 +36,19 @@ describe("StatusOverviewItemPreview", () => {
     ).toBeNull();
   });
 
+  it("clamps a long collapsed update to two lines until it is expanded", async () => {
+    const user = userEvent.setup();
+    const text = "Long update ".repeat(12).trim();
+    render(<StatusOverviewItemPreview item={{ ...item, text }} />);
+    const preview = screen.getByText(text);
+    expect(preview).toHaveClass("line-clamp-2");
+    expect(preview).not.toHaveClass("block");
+
+    await user.click(screen.getByRole("button", { name: /Show full update/ }));
+    expect(preview).toHaveClass("block");
+    expect(preview).not.toHaveClass("line-clamp-2");
+  });
+
   it("keeps the full visible text inside the accessible name of the title buttons", () => {
     const text = "Long update ".repeat(12).trim();
     const longItem = { ...item, text };
