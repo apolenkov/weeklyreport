@@ -261,7 +261,14 @@ bounded deadline without fixed sleeps. For ordinary scopes, `waitScope` returns
 the matching snapshot. For dialogs and alertdialogs, it additionally awaits the
 actual role/name, no running surface animations and a center hit target inside
 the dialog, then returns a fresh AX snapshot. This read-only readiness check
-does not force or retry clicks. Expandable
+does not force or retry clicks. `scopedRef` reuses `waitScope` before reading
+the scoped target; direct dialog snapshots require an explicit readiness wait.
+Shared waits do not demand `aria-modal`, which the Report chat Sheet does not
+expose. Section-editor `waitModal` retains its existing modal precondition
+locally before using the general wait. The shared strict `assertFocused` lives
+in the leaf `e2e/lead-form/focus.ts` to keep `helpers.ts` within the 300-line
+limit without exemptions; it observes focus and the connected visible opener
+without changing focus during restoration checks. Expandable
 support sections await their actual `aria-controls` panel's platform
 `getAnimations()` completion before interacting with controls in its moving
 layout; no elapsed-time sleep substitutes for completion.
@@ -315,6 +322,14 @@ use the browser CLI's network controls to stub the application's tRPC responses
 for availability and assistant outcomes. These are response stubs at the UI's
 tRPC boundary, not backend AI-provider stubs; they avoid remote or paid requests
 and prove local UI behavior without claiming provider integration.
+The citation finder uses the observed label
+`S1E2E previous period · <product>`. Source navigation changes the report
+context and closes the local chat Sheet as the loaded generation remounts.
+Await that closed state and the read-only source context, then reopen chat and
+assert the retained question/answer instead of expecting a Close control on an
+already closed sheet. The corrected single-case run in
+`run10/chat-source-navigation.log` exits 0, 1 pass / 0 fail; warning cases also
+passed separately. These are scenario corrections, not product changes.
 
 Production data flow is unchanged:
 
@@ -377,6 +392,14 @@ reset/seed/overlay have no URL or consent bypass.
   engines, production build behavior or SAML sign-in.
 
 ## Migration Plan
+
+Run9 was deliberately interrupted: exit 1 after 39 emitted results, 34 pass /
+5 fail, without a final TAP summary. It cannot establish full acceptance.
+Following the independent review, selected run10 evidence exercises the scoped
+waits, modal readiness, citation and focus corrections. Its twelve-case result
+is exit 1, 8 pass / 4 fail: three overbroad shared `aria-modal` assumptions were
+corrected afterwards; the confirmed Item focus defect remains. The final
+complete 123-case result and current final gates/restoration are still pending.
 
 Replace the task's earlier test runner/dependency/configuration with the native
 Node suite and CLI wrapper; keep product/database source unchanged. Validate

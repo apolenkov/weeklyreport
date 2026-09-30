@@ -19,6 +19,14 @@ no role-wait command, but MUST NOT use fixed sleeps or fabricate UI state.
 Dialog interaction MUST await its actual accessible role/name and a settled,
 unobstructed surface; readiness checks MUST NOT force or retry clicks or mutate
 the DOM.
+Scoped reference reads MUST reuse the matching scope-readiness wait, and direct
+dialog snapshots MUST await that dialog explicitly. Common dialog waits MUST
+follow actual semantics and MUST NOT impose `aria-modal` on a Sheet that does
+not expose it; existing section-editor modal preconditions MUST remain local.
+Strict focus-restoration assertions MUST observe the focused element and
+expected opener without changing focus during the assertion. Assistant source
+navigation MUST observe its actual closed Sheet and read-only report context,
+then verify the retained exchange after reopening.
 
 #### Scenario: A conditional Lead control is discovered
 

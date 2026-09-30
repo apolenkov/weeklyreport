@@ -13,6 +13,7 @@ Leads need a repeatable browser regression that checks their complete report for
 - Complete the coordinator-authorized live run against application main `33d853b6a`, reconcile real failures after the runner rebase, and restore the canonical full seed before handoff. Preserve the existing web/API processes.
 - Record final-SHA review by a different model including ponytail review, and hand remote CI acceptance to the coordinator without pushing. Local delivery cannot be described as complete acceptance while CI for that same SHA is unverified.
 - Cover 123 authored browser cases, including `historical plan item limit retains input without changing saved work`, whose inventory entry preceded implementation. Its explicit guarded demo `section-item-limit` fixture contains exactly 100 own section items. Split Item/Risk/Decision validation and discard into independently inventoried cases, retaining the Item opener-focus assertion and its confirmed failure.
+- Correct independently reviewed scenario assumptions through existing scoped waits, explicit dialog readiness, actual citation names and one strict read-only focus helper. Source navigation closes the chat sheet; reopening retains the same question/answer. Keep interrupted and selected runs separate from the pending complete 123-case result.
 
 ## Non-goals
 

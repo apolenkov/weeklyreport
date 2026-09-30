@@ -17,6 +17,7 @@ import {
   waitText,
 } from "./browser.js";
 import { registerE2eHooks } from "./fixtures.js";
+import { assertFocused } from "./focus.js";
 import {
   clickBackdrop,
   LEAD_FORM_FIXTURE,
@@ -165,6 +166,7 @@ async function waitModal(
     ],
     session,
   );
+  await waitScope({ role, name: name ?? /.*/u }, session);
 }
 
 async function assertModal(name: string): Promise<void> {
@@ -536,24 +538,6 @@ async function activeName(): Promise<unknown> {
       "document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.textContent?.trim()",
     ])
   ).result;
-}
-
-async function assertFocused(name: string): Promise<void> {
-  await command([
-    "wait",
-    "--fn",
-    `(document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.textContent?.trim()) === ${JSON.stringify(name)}`,
-  ]).catch(async (error: unknown) => {
-    if (error instanceof Error && error.name !== "AbortError") {
-      const data = await command([
-        "eval",
-        `(() => { const nameOf = element => element?.getAttribute('aria-label') ?? element?.textContent?.trim() ?? ''; const active = document.activeElement; const matches = Array.from(document.getElementsByTagName('button')).filter(button => nameOf(button) === ${JSON.stringify(name)}); return { activeTag: active?.tagName, activeName: nameOf(active).slice(0, 160), expectedControlCount: matches.length, expectedControls: matches.map(button => ({ connected: button.isConnected, visible: button.checkVisibility() })) }; })()`,
-      ]);
-      error.message += `\nFocus diagnostic: ${JSON.stringify(data.result)}`;
-    }
-    throw error;
-  });
-  assert.equal(await activeName(), name);
 }
 
 async function discardDirtyDialog(
