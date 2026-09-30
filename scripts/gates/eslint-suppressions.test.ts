@@ -7,7 +7,7 @@ import { dirname, join, resolve } from "node:path";
 import { ESLint, type Linter } from "eslint";
 import { expect, test } from "vitest";
 
-test("ESLint permits existing function budgets and rejects new excess", async () => {
+test("ESLint rejects new excess and requires pruning fixed budgets", async () => {
   const repository = resolve(import.meta.dirname, "../..");
   const eslint = new ESLint({ cwd: repository });
   const production = (await eslint.calculateConfigForFile(
@@ -63,6 +63,9 @@ test("ESLint permits existing function budgets and rejects new excess", async ()
     );
     expect(result.error).toBeUndefined();
     expect(result.status, result.stderr).toBe(expectedExit);
+    if (expectedExit === 2) {
+      expect(result.stderr).toContain("--prune-suppressions");
+    }
     const results = JSON.parse(result.stdout) as ESLint.LintResult[];
     return results.flatMap((result) =>
       result.messages.map(({ ruleId }) => ruleId),
@@ -114,10 +117,24 @@ test("ESLint permits existing function budgets and rejects new excess", async ()
       expect(lint(1)).toEqual(errors);
     }
     await writeFile(file, boundary + crowded);
-    expect(lint(0)).toEqual([]);
-    expect(await readFile(join(root, "eslint-suppressions.json"), "utf8")).toBe(
+    for (const baseline of [
       suppressions,
-    );
+      JSON.stringify({ "existing.js": { "max-params": { count: 2 } } }),
+    ]) {
+      await writeFile(join(root, "eslint-suppressions.json"), baseline);
+      expect(lint(2)).toEqual([]);
+      expect(
+        await readFile(join(root, "eslint-suppressions.json"), "utf8"),
+      ).toBe(baseline);
+      expect(lint(0, ["--prune-suppressions"])).toEqual([]);
+      expect(
+        JSON.parse(
+          await readFile(join(root, "eslint-suppressions.json"), "utf8"),
+        ),
+      ).toEqual({ "existing.js": { "max-params": { count: 1 } } });
+      expect(lint(0)).toEqual([]);
+    }
+    expect(normalFlags).toEqual([]);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

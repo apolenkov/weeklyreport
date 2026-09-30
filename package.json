@@ -24,7 +24,7 @@
     "lint": "pnpm lint:eslint && pnpm lint:stylelint && pnpm lint:runtime-node && pnpm lint:cleanliness && pnpm lint:knip",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint:eslint": "NODE_OPTIONS=--max-old-space-size=6144 eslint . --max-warnings 0 --pass-on-unpruned-suppressions",
+    "lint:eslint": "NODE_OPTIONS=--max-old-space-size=6144 eslint . --max-warnings 0",
     "lint:stylelint": "stylelint \"**/*.css\" --allow-empty-input --max-warnings 0",
     "lint:runtime-node": "node scripts/gates/environment/check-runtime-node-sync.ts",
     "lint:knip": "knip --include exports,types,files,dependencies",
