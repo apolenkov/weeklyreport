@@ -2,6 +2,7 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
+    "lib": ["ES2024"],
     // Ambient @types are not auto-discovered for this project, so the Node
     // globals these entrypoints run on are requested by name.
     "types": ["node"],

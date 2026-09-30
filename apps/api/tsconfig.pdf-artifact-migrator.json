@@ -3,6 +3,7 @@
   "compilerOptions": {
     "outDir": "dist/pdf-artifact-migrator",
     "rootDir": "src/pdf-artifact-migrator",
+    "lib": ["ES2024"],
     "types": ["node"]
   },
   "include": ["src/pdf-artifact-migrator/**/*.ts"],
