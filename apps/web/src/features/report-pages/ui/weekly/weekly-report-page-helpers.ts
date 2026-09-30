@@ -2,6 +2,7 @@ import {
   buildEscalationsFromReadSections,
   buildPortfolioProductsFromSnapshotSections,
   type ReportSectionReadModel,
+  type ReportSectionStatus,
   type WeeklyReportReadModel,
 } from "@customreport/shared";
 
@@ -87,7 +88,7 @@ function sectionHasActivityContent(
 
 // Shared submitted-only predicate for every surface that narrows with the filter.
 export const isSubmittedSection = (section: {
-  readonly status: "draft" | "submitted";
+  readonly status: ReportSectionStatus;
 }): boolean => section.status === "submitted";
 
 // Same per-lead grouping as mapWeeklyReportLeadGroups, scoped to one section.
