@@ -7,6 +7,11 @@ import type {
 import { trafficLightToCanonical } from "@customreport/shared";
 
 import { SlideStatusBadge } from "../../../shared/ui/feedback/slide-status-badge";
+import {
+  AnalyticsTable,
+  StickyColumnHeader,
+  StickyRowHeader,
+} from "./analytics-table";
 
 function deltaClass(delta: number): string {
   if (delta > 0) return "text-[var(--color-destructive)]";
@@ -33,70 +38,52 @@ export function PeriodComparisonTable({
         Periods ending {periodA} (previous) and {periodB} (latest). Risk change
         is latest minus previous.
       </p>
-      <div
-        className="max-w-full overflow-x-auto rounded-md bg-[var(--color-background)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1"
-        tabIndex={0}
-        role="region"
-        aria-labelledby={headingId}
-      >
-        <table className="min-w-full border-collapse text-sm">
-          <caption className="sr-only">Period comparison data</caption>
-          <thead>
-            <tr className="border-b text-left">
-              <th
-                scope="col"
-                className="sticky left-0 z-20 bg-[var(--color-background)] shadow-[1px_0_0_var(--color-border)] px-3 py-2"
-              >
-                Project
-              </th>
-              <th scope="col" className="px-3 py-2">
-                Previous status
-              </th>
-              <th scope="col" className="px-3 py-2">
-                Latest status
-              </th>
-              <th scope="col" className="px-3 py-2">
-                Previous risks
-              </th>
-              <th scope="col" className="px-3 py-2">
-                Latest risks
-              </th>
-              <th scope="col" className="px-3 py-2">
-                Risk change
-              </th>
+      <AnalyticsTable headingId={headingId} caption="Period comparison data">
+        <thead>
+          <tr className="border-b text-left">
+            <StickyColumnHeader>Project</StickyColumnHeader>
+            <th scope="col" className="px-3 py-2">
+              Previous status
+            </th>
+            <th scope="col" className="px-3 py-2">
+              Latest status
+            </th>
+            <th scope="col" className="px-3 py-2">
+              Previous risks
+            </th>
+            <th scope="col" className="px-3 py-2">
+              Latest risks
+            </th>
+            <th scope="col" className="px-3 py-2">
+              Risk change
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.projectId} className="border-b last:border-0">
+              <StickyRowHeader>{r.projectName}</StickyRowHeader>
+              <td className="whitespace-nowrap px-3 py-2">
+                <SlideStatusBadge
+                  status={trafficLightToCanonical(r.statusA)}
+                  labelVariant="screen"
+                />
+              </td>
+              <td className="whitespace-nowrap px-3 py-2">
+                <SlideStatusBadge
+                  status={trafficLightToCanonical(r.statusB)}
+                  labelVariant="screen"
+                />
+              </td>
+              <td className="px-3 py-2">{r.riskCountA}</td>
+              <td className="px-3 py-2">{r.riskCountB}</td>
+              <td className={`px-3 py-2 ${deltaClass(r.riskDelta)}`}>
+                {r.riskDelta > 0 ? `+${r.riskDelta}` : r.riskDelta}
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.projectId} className="border-b last:border-0">
-                <th
-                  scope="row"
-                  className="sticky left-0 z-10 bg-[var(--color-background)] shadow-[1px_0_0_var(--color-border)] px-3 py-2 text-left font-medium"
-                >
-                  {r.projectName}
-                </th>
-                <td className="whitespace-nowrap px-3 py-2">
-                  <SlideStatusBadge
-                    status={trafficLightToCanonical(r.statusA)}
-                    labelVariant="screen"
-                  />
-                </td>
-                <td className="whitespace-nowrap px-3 py-2">
-                  <SlideStatusBadge
-                    status={trafficLightToCanonical(r.statusB)}
-                    labelVariant="screen"
-                  />
-                </td>
-                <td className="px-3 py-2">{r.riskCountA}</td>
-                <td className="px-3 py-2">{r.riskCountB}</td>
-                <td className={`px-3 py-2 ${deltaClass(r.riskDelta)}`}>
-                  {r.riskDelta > 0 ? `+${r.riskDelta}` : r.riskDelta}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </AnalyticsTable>
     </>
   );
 }
