@@ -6,8 +6,8 @@ import { invalidatePeriodLifecycle } from "../../../shared/lib/query/cache-keys"
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 
 interface PeriodReportMutations {
-  readonly publish: (reportId: string) => void;
-  readonly reopen: (reportId: string) => void;
+  readonly publish: (reportId: string, onSuccess: () => void) => void;
+  readonly reopen: (reportId: string, onSuccess: () => void) => void;
   readonly isPublishOrReopenPending: boolean;
 }
 
@@ -37,8 +37,10 @@ export function usePeriodReportMutations(): PeriodReportMutations {
   );
 
   return {
-    publish: (reportId) => publishMut.mutate({ reportId }),
-    reopen: (reportId) => reopenMut.mutate({ reportId }),
+    publish: (reportId, onSuccess) =>
+      publishMut.mutate({ reportId }, { onSuccess }),
+    reopen: (reportId, onSuccess) =>
+      reopenMut.mutate({ reportId }, { onSuccess }),
     isPublishOrReopenPending: publishMut.isPending || reopenMut.isPending,
   };
 }

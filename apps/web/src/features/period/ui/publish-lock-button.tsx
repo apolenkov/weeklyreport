@@ -9,9 +9,11 @@ interface PublishLockButtonProps {
   readonly pendingCount: number;
   readonly totalLeads: number;
   readonly periodStatus: PeriodStatus;
-  readonly onPublish: () => void;
+  // The focus hand-off is armed only by `onSuccess`: a failed mutation must not
+  // leave a request that a later foreign status change would consume.
+  readonly onPublish: (onSuccess: () => void) => void;
   // Reopen unlocks a published period — confirm gate for a destructive action.
-  readonly onReopen: () => void;
+  readonly onReopen: (onSuccess: () => void) => void;
   readonly isPending?: boolean;
   readonly canPublish?: boolean;
   readonly publishDisabledReason?: string;
@@ -153,15 +155,17 @@ export function PublishLockButton({
   }, [periodStatus]);
 
   function handleReopen() {
-    focusPublishRef.current = true;
-    onReopen();
+    onReopen(() => {
+      focusPublishRef.current = true;
+    });
   }
 
   function handleConfirm() {
     if (!canPublish) return;
     setShowDialog(false);
-    focusReopenRef.current = true;
-    onPublish();
+    onPublish(() => {
+      focusReopenRef.current = true;
+    });
   }
 
   if (periodStatus === "published") {

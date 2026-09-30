@@ -1,7 +1,8 @@
 "use client";
 
-import { type RefObject, useRef } from "react";
+import type { RefObject } from "react";
 
+import { useFocusAfterRowRemoved } from "../../../shared/hooks/browser/use-focus-after-row-removed";
 import { formatClientErrorMessage } from "../../../shared/lib/errors/client-error-reporting";
 import type { ReopenDecision } from "../../../shared/ui/forms/reopen-respond-form";
 import { TabHeader, TabSearch } from "../../../shared/ui/tabs/tab-header";
@@ -145,9 +146,6 @@ function reopenCountLabel(
 }
 
 export function ReopenTab() {
-  // A decision removes the form (and, under the Pending filter, the row) that
-  // held focus; the list outlives both, so it is the stable place to land.
-  const listRef = useRef<HTMLUListElement>(null);
   const {
     filter,
     setFilter,
@@ -163,7 +161,13 @@ export function ReopenTab() {
     startRespond,
     cancelRespond,
     respond,
-  } = useReopenTabState({ onResponded: () => listRef.current?.focus() });
+  } = useReopenTabState();
+  // A decision removes the form (and, under the Pending filter, the row) that
+  // held focus; the list outlives both, so it is the stable place to land.
+  // The open form counts as one removable row.
+  const listRef = useFocusAfterRowRemoved<HTMLUListElement>(
+    requests.length + (respondingId === null ? 0 : 1),
+  );
 
   return (
     <div className="space-y-4">

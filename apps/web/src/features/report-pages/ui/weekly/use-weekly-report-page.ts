@@ -34,8 +34,8 @@ interface UseWeeklyReportPageParams {
 interface WeeklyReportPageHandlers {
   readonly setSubmissionFilter: (next: SubmissionFilter) => void;
   readonly setReviewMode: (next: ReviewMode) => void;
-  readonly publish: () => void;
-  readonly reopen: () => void;
+  readonly publish: (onSuccess: () => void) => void;
+  readonly reopen: (onSuccess: () => void) => void;
   readonly archive: () => void;
   readonly restore: () => void;
 }
@@ -162,8 +162,8 @@ function readyState({
     handlers: {
       setSubmissionFilter,
       setReviewMode,
-      publish: () => mutations.publish(view.reportId),
-      reopen: () => mutations.reopen(view.reportId),
+      publish: (onSuccess) => mutations.publish(view.reportId, onSuccess),
+      reopen: (onSuccess) => mutations.reopen(view.reportId, onSuccess),
       archive: () => mutations.archive(view.reportId),
       restore: () => mutations.restore(view.reportId),
     },

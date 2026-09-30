@@ -35,16 +35,16 @@ The lead history summary rail MUST compute its aggregate figures — the
 traffic-light totals, average items, and total risks — only from
 completed periods (a period submitted by the lead, or published, or
 archived). A draft period is provisional and MUST be excluded from these
-aggregates. The exclusion MUST be disclosed in plain text beside the
-figures (e.g. "N draft not included in aggregates") whenever at least one
-draft exists.
+aggregates, as is a reopened period. The exclusion MUST be disclosed in
+neutral plain text beside the figures (e.g. "N week not included in
+aggregates") whenever at least one period is excluded.
 
 #### Scenario: A draft period does not inflate the aggregates
 
 - **WHEN** a lead has completed periods plus one draft period
 - **THEN** the traffic-light totals, average items, and total risks count
   only the completed periods
-- **AND** a note discloses that the draft is not included
+- **AND** a note discloses that the excluded week is not included
 
 ### Requirement: Aggregate footer denominator matches what it counts
 

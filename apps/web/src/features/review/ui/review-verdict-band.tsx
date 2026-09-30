@@ -1,32 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
+import { useFocusAfterRowRemoved } from "../../../shared/hooks/browser/use-focus-after-row-removed";
 import type { SectionReviewRow } from "../model/section-review-rows";
 import { isSubmittedReviewableSection } from "../model/section-review-rows";
 import { SectionVerdictControl } from "./section-verdict-control";
-
-// A verdict that returns a section to its lead removes that row, taking the
-// focused button with it. The band (tabIndex -1) is the stable place to land,
-// but only when focus was lost: a refetch must not pull focus out of a
-// comment box the reviewer is typing in.
-function useFocusBandWhenRowRemoved(rowCount: number) {
-  const bandRef = useRef<HTMLElement>(null);
-  const previousCount = useRef(rowCount);
-  useEffect(() => {
-    const band = bandRef.current;
-    const active = document.activeElement;
-    const focusLost = !active || active === document.body;
-    if (
-      rowCount < previousCount.current &&
-      (focusLost || band?.contains(active))
-    ) {
-      band?.focus();
-    }
-    previousCount.current = rowCount;
-  }, [rowCount]);
-  return bandRef;
-}
 
 // In-report section verdicts for designated reviewers; no publish/lock control
 // (viewer-reviewers judge only). Self-suppresses when nothing is reviewable,
@@ -39,9 +18,10 @@ export function ReviewVerdictBand({
   readonly onMutated: () => void;
 }) {
   const actionable = sections.filter(isSubmittedReviewableSection);
+  // Stays mounted after the last row is actioned; the caller keys it by report.
   const [hadRows, setHadRows] = useState(actionable.length > 0);
   if (actionable.length > 0 && !hadRows) setHadRows(true);
-  const bandRef = useFocusBandWhenRowRemoved(actionable.length);
+  const bandRef = useFocusAfterRowRemoved<HTMLElement>(actionable.length);
   if (actionable.length === 0 && !hadRows) return null;
 
   return (

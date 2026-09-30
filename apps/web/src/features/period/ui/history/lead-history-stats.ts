@@ -11,7 +11,7 @@ export interface HistoryStats {
   readonly total: number;
   readonly submitted: number;
   readonly completionRate: number;
-  readonly draftCount: number;
+  readonly excludedCount: number;
   readonly totalGreen: number;
   readonly totalYellow: number;
   readonly totalRed: number;
@@ -24,7 +24,8 @@ function isCompletedWeek(entry: HistoryEntry): boolean {
   return COMPLETED_WEEK_STATUSES.has(entry.status);
 }
 
-// Aggregates cover completed weeks only, so drafts never dilute averages.
+// Aggregates cover completed weeks only, so drafts and reopened weeks never
+// dilute averages.
 export function deriveHistoryStats(
   entries: readonly HistoryEntry[],
 ): HistoryStats {
@@ -42,7 +43,7 @@ export function deriveHistoryStats(
     submitted,
     completionRate:
       total === 0 ? 0 : Math.round((submitted / total) * PERCENT_MAX),
-    draftCount: total - submitted,
+    excludedCount: total - submitted,
     totalGreen: sum((entry) => entry.trafficLights.green),
     totalYellow: sum((entry) => entry.trafficLights.yellow),
     totalRed: sum((entry) => entry.trafficLights.red),

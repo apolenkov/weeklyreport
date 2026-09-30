@@ -2,7 +2,7 @@
 
 import type { ReviewVerdict, SectionReviewView } from "@customreport/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { invalidateReview } from "../../../shared/lib/query/cache-keys";
@@ -99,7 +99,11 @@ function VerdictActions({
           if (!disabled) onApprove();
         }}
         aria-disabled={disabled}
-        aria-label={subjectName ? `Approve ${subjectName}` : undefined}
+        aria-label={
+          subjectName
+            ? `${disabled ? "Saving verdict for" : "Approve"} ${subjectName}`
+            : undefined
+        }
         aria-busy={disabled}
       >
         {disabled ? "Saving…" : "Approve"}
@@ -158,6 +162,9 @@ export function SectionVerdictControl({
     onMutated();
   };
 
+  // Two keypresses can land before React re-renders the pending state, so the
+  // guard must flip synchronously; each would otherwise write a verdict.
+  const approveInFlight = useRef(false);
   const verdictMut = useMutation(
     trpc.review.verdict.mutationOptions({
       onSuccess: onVerdictRecorded,
@@ -182,13 +189,18 @@ export function SectionVerdictControl({
         <VerdictActions
           subjectName={subjectName}
           disabled={verdictMut.isPending}
-          onApprove={() =>
-            verdictMut.mutate({
-              reportSectionId,
-              verdict: "approved",
-              version,
-            })
-          }
+          onApprove={() => {
+            if (approveInFlight.current) return;
+            approveInFlight.current = true;
+            verdictMut.mutate(
+              { reportSectionId, verdict: "approved", version },
+              {
+                onSettled: () => {
+                  approveInFlight.current = false;
+                },
+              },
+            );
+          }}
           onRequestChanges={() => setRequestingChanges(true)}
         />
       ) : null}

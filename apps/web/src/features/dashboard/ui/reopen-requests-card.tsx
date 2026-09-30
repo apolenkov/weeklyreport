@@ -9,6 +9,7 @@ import {
 import { type ComponentProps, useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { useFocusAfterRowRemoved } from "../../../shared/hooks/browser/use-focus-after-row-removed";
 import {
   invalidateLeadForm,
   invalidateSubmissionDashboard,
@@ -16,21 +17,20 @@ import {
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { DashboardPanelIssue } from "./dashboard-panel-state";
 import { ReopenRequestRow } from "./reopen-request-row";
-import { useFocusQueueAfterDecision } from "./use-focus-queue-after-decision";
 
 type DashboardReopenRequest = ComponentProps<
   typeof ReopenRequestRow
 >["request"];
 type ReopenDecision = "approved" | "rejected";
 
-function useRespondReopenRequest(onResolved: (id: string) => void) {
+function useRespondReopenRequest(onResolved: () => void) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
   return useMutation(
     trpc.admin.respondReopenRequest.mutationOptions({
-      onSuccess: (result, variables) => {
-        onResolved(variables.id);
+      onSuccess: (result) => {
+        onResolved();
         if (result.staleAutoClosed) {
           toast.info(
             "This section was already reopened; the request was closed.",
@@ -167,11 +167,10 @@ export function ReopenRequestsCard() {
     () => listQuery.data?.pages.flatMap((page) => page.items) ?? [],
     [listQuery.data?.pages],
   );
-  const { queueRef, markDecided } = useFocusQueueAfterDecision(requests);
-  const respondMut = useRespondReopenRequest((id) => {
-    markDecided(id);
-    closeResponder();
-  });
+  // A decided request leaves the queue with its focused button: land on the
+  // queue, or on the page when that was the last request.
+  const queueRef = useFocusAfterRowRemoved<HTMLElement>(requests.length);
+  const respondMut = useRespondReopenRequest(closeResponder);
 
   if (listQuery.isPending) {
     return (

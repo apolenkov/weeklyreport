@@ -39,6 +39,8 @@ const cases = [
       "reports.compiledHistory",
       "admin.listPeriodsByState",
       "admin.snapshot",
+      "admin.listReopenRequests",
+      "admin.pendingReopenCount",
     ],
   ],
   [
@@ -101,6 +103,8 @@ describe("cache-keys helpers with the real tRPC proxy", () => {
         trpc.admin.listPeriodsByState.queryKey({ bucket }),
       ),
       trpc.admin.snapshot.queryKey(),
+      trpc.admin.pendingReopenCount.queryKey(),
+      trpc.admin.listReopenRequests.infiniteQueryKey({ status: "pending" }),
       trpc.leadForm.statusOverview.queryKey({ reportId: "report-a" }),
       trpc.leadForm.openWork.infiniteQueryKey({
         reportId: "report-a",

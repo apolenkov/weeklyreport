@@ -70,14 +70,14 @@ Each metric block on the lead history surface MUST compute all its
 aggregates over one declared population. The "My History Summary" card
 computes risk totals, item averages, and traffic-light totals over
 SUBMITTED entries only — consistent with its Submissions ratio — and
-notes excluded drafts.
+notes the excluded weeks.
 
 #### Scenario: a draft period exists
 
 - **WHEN** the history list contains submitted periods and one draft
 - **THEN** Total risks, Avg items/week, and traffic-light totals reflect
   only the submitted periods
-- **AND** the card notes that the draft is not included
+- **AND** the card notes that the excluded week is not included
 
 ### Requirement: Popovers escape clipping containers
 

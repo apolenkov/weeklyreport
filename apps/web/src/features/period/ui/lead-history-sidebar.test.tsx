@@ -119,8 +119,8 @@ describe("LeadHistorySidebar completed-week stats", () => {
     // should NOT appear because red=0 for submitted entries only.
     expect(aside.textContent).not.toMatch(/blocked traffic-light/i);
 
-    // Draft note is visible
-    expect(screen.getByText(/1 draft not included/i)).toBeInTheDocument();
+    // The exclusion note is visible
+    expect(screen.getByText(/1 week not included/i)).toBeInTheDocument();
 
     // Traffic-light footer denominator counts only the aggregated (completed)
     // periods, matching the numerator — "across 2 periods", NOT "across 3".
@@ -128,7 +128,19 @@ describe("LeadHistorySidebar completed-week stats", () => {
     expect(aside.textContent).not.toMatch(/across 3 periods/);
   });
 
-  it("shows no draft note when all entries are submitted", () => {
+  it("words the exclusion note neutrally for a reopened week", () => {
+    render(
+      <LeadHistorySidebar
+        entries={[makeEntry("reopened", 0), makeEntry("published", 1)]}
+      />,
+    );
+
+    expect(screen.getByText(/not included/i)).toHaveTextContent(
+      "1 week not included in aggregates.",
+    );
+  });
+
+  it("shows no exclusion note when all entries are submitted", () => {
     const entries: HistoryEntry[] = [
       makeEntry("submitted", 0),
       makeEntry("submitted", 1),
@@ -136,6 +148,6 @@ describe("LeadHistorySidebar completed-week stats", () => {
 
     render(<LeadHistorySidebar entries={entries} />);
 
-    expect(screen.queryByText(/draft.*not included/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/not included/i)).not.toBeInTheDocument();
   });
 });

@@ -83,9 +83,7 @@ function useRespondReopenMutation(onResponded: () => void) {
   );
 }
 
-export function useReopenTabState({
-  onResponded,
-}: { readonly onResponded?: () => void } = {}) {
+export function useReopenTabState() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const [filter, setFilterState] = useState<ReopenFilterStatus>("pending");
@@ -109,7 +107,6 @@ export function useReopenTabState({
 
   const respondMut = useRespondReopenMutation(() => {
     draft.reset();
-    onResponded?.();
   });
 
   const requests = useMemo(

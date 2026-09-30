@@ -113,6 +113,51 @@ describe("PeriodPrismaRepository reopen atomicity (integration)", () => {
     expect(sections.every((s) => s.status === "draft")).toBe(true);
   });
 
+  it("closes a pending section-reopen request in the same transaction as the period reopen", async () => {
+    const section = await prisma.reportSection.findFirstOrThrow({
+      where: { reportId: REPORT },
+    });
+    const request = await prisma.reopenRequest.create({
+      data: {
+        reportSectionId: section.id,
+        requestedById: USER,
+        reason: "Raced with publish",
+      },
+    });
+
+    await repository.reopenPeriod(REPORT, await expected(REPORT));
+
+    const closed = await prisma.reopenRequest.findUniqueOrThrow({
+      where: { id: request.id },
+    });
+    expect(closed.status).toBe("rejected");
+    expect(closed.reviewedAt).not.toBeNull();
+    expect(closed.reviewNote).toBe("Auto-closed: the period was reopened.");
+    expect(
+      await prisma.reopenRequest.count({ where: { status: "pending" } }),
+    ).toBe(0);
+  });
+
+  it("leaves a pending request untouched when the reopen is refused", async () => {
+    const section = await prisma.reportSection.findFirstOrThrow({
+      where: { reportId: REPORT },
+    });
+    const stale = await expected(REPORT);
+    await archivePeriod(prisma as unknown as PrismaService, REPORT);
+    const request = await prisma.reopenRequest.create({
+      data: { reportSectionId: section.id, requestedById: USER },
+    });
+
+    await expect(repository.reopenPeriod(REPORT, stale)).rejects.toBeInstanceOf(
+      Error,
+    );
+
+    const untouched = await prisma.reopenRequest.findUniqueOrThrow({
+      where: { id: request.id },
+    });
+    expect(untouched.status).toBe("pending");
+  });
+
   it("archives a published period once, leaving its sections submitted", async () => {
     await archivePeriod(prisma as unknown as PrismaService, REPORT);
 

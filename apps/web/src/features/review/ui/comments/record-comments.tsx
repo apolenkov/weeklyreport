@@ -9,6 +9,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { shortItemLabel } from "../../../../shared/lib/format/short-label";
 import { invalidateReview } from "../../../../shared/lib/query/cache-keys";
 import { useTRPC } from "../../../../shared/lib/trpc/trpc-context";
 import { ReviewCommentList } from "../../../../shared/ui/feedback/review-comment-list";
@@ -39,8 +40,6 @@ export type RecordCommentAnchor =
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const COMMENT_EXCERPT_MAX_LENGTH = 60;
-const COMMENT_EXCERPT_SUFFIX_LENGTH = 3;
 
 function anchorId(anchor: RecordCommentAnchor): string | undefined {
   return anchor.itemId ?? anchor.riskId ?? anchor.decisionId;
@@ -59,16 +58,9 @@ function reviewErrorMessage(err: unknown, fallback: string): string {
   return err.message;
 }
 
-function shortExcerpt(text: string): string {
-  const excerpt = text.replaceAll(/\s+/g, " ").trim();
-  return excerpt.length > COMMENT_EXCERPT_MAX_LENGTH
-    ? `${excerpt.slice(0, COMMENT_EXCERPT_MAX_LENGTH - COMMENT_EXCERPT_SUFFIX_LENGTH)}…`
-    : excerpt;
-}
-
 function commentDeleteLabel(comment: RecordCommentView): string {
   const author = comment.reviewerName ?? "Reviewer";
-  const shortened = shortExcerpt(comment.text);
+  const shortened = shortItemLabel(comment.text);
   return shortened
     ? `Delete comment by ${author}: ${shortened}`
     : `Delete comment by ${author}`;
@@ -306,7 +298,7 @@ export function RecordComments({
           isPending={isCommentPending}
           label={
             subject
-              ? `Add a review comment on ${shortExcerpt(subject)}`
+              ? `Add a review comment on ${shortItemLabel(subject)}`
               : undefined
           }
           validationError={validationError}

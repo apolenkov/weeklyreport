@@ -6,6 +6,7 @@ import type {
   LeadStatusOverviewPredecessor,
   PromotePlanInput,
   PublishedLineage,
+  ReopenBlockedReason,
   ReportSectionReadModel,
   ResolvePlanInput,
   RestorePlanInput,
@@ -220,12 +221,6 @@ export interface ReopenEligibilityFacts {
   readonly archived: boolean;
   readonly hasPendingReopen: boolean;
 }
-
-export type ReopenBlockedReason =
-  | "not_submitted"
-  | "period_archived"
-  | "period_closed"
-  | "pending_request_exists";
 
 // Shared eligibility precedence: submission state, archive flag, period state,
 // then an existing pending request.
