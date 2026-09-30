@@ -6,10 +6,7 @@ import {
   type StatusOverviewProjectionSource,
 } from "./status-overview";
 import { buildStatusOverviewColumns } from "./status-overview-items";
-import {
-  buildStatusOverviewLineage,
-  isLinkedOverviewRow,
-} from "./status-overview-lineage";
+import { buildStatusOverviewLineage } from "./status-overview-lineage";
 
 const PROJECT = "10000000-0000-4000-8000-000000000001";
 const RECORD = "10000000-0000-4000-8000-000000000002";
@@ -78,7 +75,6 @@ describe("next-step overview projection", () => {
         editTarget: { recordId: RECORD, source: "current" },
       },
     });
-    expect(rows?.filter(isLinkedOverviewRow)).toHaveLength(1);
     expect(model.sourceCounts).toEqual({
       previouslyPlanned: 0,
       currentWeek: 1,

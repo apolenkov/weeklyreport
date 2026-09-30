@@ -2,6 +2,7 @@ import type {
   ReportSectionReadModel,
   WeeklyReportReadModel,
 } from "@customreport/shared";
+import { aggregateTrafficLight } from "@customreport/shared";
 
 import type {
   WeeklyProductStatus,
@@ -15,7 +16,6 @@ import {
   trafficToProductStatus,
 } from "../../../features/report-sections/model/weekly-report-groupers";
 import { activityDisplayTitle } from "../../../shared/lib/activity/activity-display";
-import { worstTrafficStatus } from "../../../shared/lib/status/status-presentation";
 
 type Section = WeeklyReportReadModel["leadSections"][number];
 type ActivityStatus = ReportSectionReadModel["activities"][number]["status"];
@@ -236,7 +236,7 @@ function accumulateSection(
   section.activities.forEach((activity) => {
     update(activity.activityId, (current) => ({
       ...current,
-      status: worstTrafficStatus([
+      status: aggregateTrafficLight([
         current.status,
         activity.derivedStatus ?? activity.status,
       ]),

@@ -502,16 +502,10 @@ importers:
       '@trpc/server':
         specifier: 'catalog:'
         version: 11.18.0(@typescript/typescript6@6.0.2)
-      luxon:
-        specifier: 'catalog:'
-        version: 3.7.2
       zod:
         specifier: 'catalog:'
         version: 4.5.4
     devDependencies:
-      '@types/luxon':
-        specifier: 'catalog:'
-        version: 3.7.5
       '@types/node':
         specifier: 'catalog:'
         version: 26.4.0

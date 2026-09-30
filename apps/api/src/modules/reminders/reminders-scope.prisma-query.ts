@@ -105,7 +105,6 @@ export function queryActiveRuleForDispatch(
           computeReminderFireAt(
             reportDeadline,
             rule.policy.offsetMinutes,
-            rule.policy.timezone,
           ).getTime()
       ) {
         return null;

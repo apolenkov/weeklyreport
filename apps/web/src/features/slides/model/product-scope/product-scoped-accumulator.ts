@@ -1,7 +1,6 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
-import { shortNameFromName } from "@customreport/shared";
+import { aggregateTrafficLight, shortNameFromName } from "@customreport/shared";
 
-import { worstTrafficStatus } from "../../../../shared/lib/status/status-presentation";
 import {
   buildActivityHomeById,
   CROSS_PRODUCT_LABEL,
@@ -110,7 +109,7 @@ function mergeOwnedStages(
     const value = previous
       ? {
           ...previous,
-          status: worstTrafficStatus([previous.status, stage.status]),
+          status: aggregateTrafficLight([previous.status, stage.status]),
         }
       : stage;
     return new Map([...merged, [stage.stageId, value]]);
@@ -130,7 +129,7 @@ function addProject(
       registerContribution(
         {
           ...accumulator,
-          trafficLight: worstTrafficStatus([
+          trafficLight: aggregateTrafficLight([
             accumulator.trafficLight,
             project.trafficLight,
           ]),

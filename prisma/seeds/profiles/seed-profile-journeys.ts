@@ -69,7 +69,6 @@ export function assertActiveReminderRuleIntegrity(
     const expectedFireAt = computeReminderFireAt(
       reportDeadline,
       rule.policy.offsetMinutes,
-      rule.policy.timezone,
     );
     const valid =
       rule.kind === rule.policy.kind &&

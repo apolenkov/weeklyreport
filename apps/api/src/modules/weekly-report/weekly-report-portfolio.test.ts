@@ -1,11 +1,13 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
+import {
+  buildPortfolioProductsFromSnapshotSections,
+  type ReportSectionReadModel,
+} from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import {
   makeProjectReadModel,
   makeReportSectionReadModel,
 } from "../../test-utils/report-section-fixtures.js";
-import { buildPortfolioProductsFromSnapshotSections } from "../report-sections/index.js";
 import { buildPortfolioOverview } from "./weekly-report-portfolio";
 
 const PROJECT_ID = "44444444-4444-4444-8444-444444444444";

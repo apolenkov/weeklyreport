@@ -6,7 +6,6 @@ import type {
   StatusOverviewItem,
 } from "../model/status-overview";
 import { statusOverviewItemActions } from "../model/status-overview-items";
-import { OVERVIEW_ITEM_ACTION_CLASS } from "./status-overview-quick-edit-form";
 
 interface ActionProps {
   readonly item: StatusOverviewItem;
@@ -27,6 +26,8 @@ interface ActionProps {
     ((item: StatusOverviewItem, focusKey?: string) => void) | undefined;
 }
 
+const OVERVIEW_ITEM_ACTION_CLASS =
+  "inline-flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-sm)] px-2 text-xs font-semibold text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]";
 const PRIMARY_ACTION_CLASS =
   "inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-sm)] bg-[var(--color-primary)] px-3 text-xs font-semibold text-[var(--color-primary-foreground)] hover:bg-[var(--color-starbucks-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]";
 

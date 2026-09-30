@@ -360,11 +360,6 @@
       "count": 1
     }
   },
-  "apps/web/src/features/report-pages/ui/lead/shell/overview-input-provider.tsx": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "apps/web/src/features/report-pages/ui/lead/shell/overview-plan-command.ts": {
     "max-params": {
       "count": 1
@@ -436,11 +431,6 @@
     }
   },
   "apps/web/src/features/report-sections/ui/status-overview-activity-editor.tsx": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "apps/web/src/features/report-sections/ui/status-overview-item-preview.tsx": {
     "max-lines-per-function": {
       "count": 1
     }

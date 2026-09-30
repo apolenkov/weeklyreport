@@ -8,7 +8,6 @@ import { applyDraftPatch } from "../lead-form/draft/lead-form-draft-patch";
 import {
   buildConfirmCarriedItemPatch,
   buildMoveItemPatch,
-  canContinueOrPromote,
   continuationConflict,
   continueToNextPatch,
   markCompletePatch,
@@ -363,35 +362,6 @@ describe("promoteContinuationPatch", () => {
     expect(itemWriteValid(promoteContinuationPatch("Follow-up work"))).toBe(
       true,
     );
-  });
-});
-
-describe("canContinueOrPromote", () => {
-  it("rejects completed and resolved records", () => {
-    expect(canContinueOrPromote(carriedItem())).toBe(true);
-    expect(
-      canContinueOrPromote({ ...carriedItem(), workflowStatus: "done" }),
-    ).toBe(false);
-    expect(
-      canContinueOrPromote({
-        ...carriedItem(),
-        resolution: {
-          kind: "wont_do",
-          eventId: "55555555-5555-4555-8555-555555555555",
-          reason: "no longer needed",
-          actorId: "66666666-6666-4666-8666-666666666666",
-          actorName: "Lead One",
-          occurredAt: "2026-09-13T00:00:00.000Z",
-          previousState: {
-            type: "current",
-            workflowStatus: "in_progress",
-            pausedReason: null,
-            nextStepText: null,
-            text: null,
-          },
-        },
-      }),
-    ).toBe(false);
   });
 });
 

@@ -119,7 +119,6 @@ async function fetchReportDependencies(
         computeReminderFireAt(
           report.deadline,
           activeDeadlineRule.policy.offsetMinutes,
-          activeDeadlineRule.policy.timezone,
         ).getTime()
         ? activeDeadlineRule.id
         : null,

@@ -17,8 +17,8 @@ import type { PrismaService } from "../infrastructure/prisma/prisma.service";
 import { clearOrgCache } from "../infrastructure/trpc/trpc.session-hydration";
 import { createNullLogger } from "../lib/logger";
 import { createAuthenticatedFeedbackHandler } from "../modules/product-feedback/product-feedback.handler";
-import { ProductFeedbackMemoryRepository } from "../modules/product-feedback/product-feedback.memory-repository";
 import { createTestPrisma, disconnectTestPrisma } from "./prisma-test-helper";
+import { ProductFeedbackMemoryRepository } from "./product-feedback.memory-repository";
 
 const ORIGIN = "http://localhost:3000";
 

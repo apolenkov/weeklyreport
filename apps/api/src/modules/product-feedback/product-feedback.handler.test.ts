@@ -10,11 +10,11 @@ import { PRODUCT_FEEDBACK_JSON_LIMIT } from "../../infrastructure/http/ingress-l
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { resolveHumanSession } from "../../lib/human-session";
 import { createNullLogger } from "../../lib/logger";
+import { ProductFeedbackMemoryRepository } from "../../test-utils/product-feedback.memory-repository";
 import {
   createAuthenticatedFeedbackHandler,
   isLoopbackAddress,
 } from "./product-feedback.handler";
-import { ProductFeedbackMemoryRepository } from "./product-feedback.memory-repository";
 import { feedbackAccessFromSession } from "./product-feedback.repository";
 
 vi.mock("../../lib/human-session", () => ({

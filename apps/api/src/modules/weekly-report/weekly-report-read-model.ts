@@ -1,4 +1,5 @@
 import {
+  buildPortfolioProductsFromSnapshotSections,
   computeReportProgress,
   type PublishedReportSnapshot,
   type ReportProgress,
@@ -12,7 +13,6 @@ import type { Prisma } from "@prisma/client";
 import { guardGroupScope } from "../../lib/group-scope.js";
 import {
   buildEscalationsFromReadSections,
-  buildPortfolioProductsFromSnapshotSections,
   type reportSectionFullInclude,
   requireScopedPublishedSnapshot,
 } from "../report-sections/index.js";

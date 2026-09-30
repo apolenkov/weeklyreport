@@ -5,7 +5,7 @@
 Provide authenticated, role-scoped product feedback through Agentation and a
 PostgreSQL-backed adapter, with deterministic inbox detail, preserved legacy
 records, and separation from the report review lifecycle. External onUI tooling
-is governed separately by [developer-ui-feedback-tooling](../../changes/standardize-onui-ui-review/specs/developer-ui-feedback-tooling/spec.md).
+is governed separately by [developer-ui-feedback-tooling](../developer-ui-feedback-tooling/spec.md).
 
 ## Requirements
 

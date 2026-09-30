@@ -166,11 +166,11 @@ async function mintResponse(idp: IdPInstance, requestId = ""): Promise<string> {
 }
 
 async function parseIdentity(response: string) {
-  const { options, parser } = buildParser("never");
+  const { parser } = buildParser("never");
   const { profile } = await parser.validatePostResponseAsync({
     SAMLResponse: response,
   });
-  return verifySamlProfile(options, profile);
+  return verifySamlProfile(profile);
 }
 
 describe("SAML hardening — samlify mock IdP integration", () => {

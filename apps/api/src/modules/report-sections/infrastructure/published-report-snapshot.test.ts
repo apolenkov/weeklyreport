@@ -1,9 +1,7 @@
-import {
-  buildPortfolioProductsFromSnapshotSections,
-  computePortfolioOverviewFromReadSections,
-} from "@customreport/report-persistence";
+import { computePortfolioOverviewFromReadSections } from "@customreport/report-persistence";
 import {
   buildEscalationsFromReadSections,
+  buildPortfolioProductsFromSnapshotSections,
   type ReportSectionReadModel,
 } from "@customreport/shared";
 import { describe, expect, it } from "vitest";

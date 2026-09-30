@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject } from "@nestjs/common";
 import { type Job, UnrecoverableError } from "bullmq";
 import { ClsService } from "nestjs-cls";
 
@@ -15,7 +15,6 @@ import type {
 } from "../application/semantic-embedding.repository.js";
 import { SEMANTIC_EMBEDDING_REPOSITORY } from "../application/semantic-embedding.repository.js";
 import type { SemanticIndexSourceLoader } from "../application/semantic-index.source-loader.js";
-import { SEMANTIC_INDEX_SOURCE_LOADER } from "../application/semantic-index.source-loader.js";
 import { buildSemanticInput } from "../domain/semantic-input.js";
 import {
   SEMANTIC_INDEX_QUEUE_NAME,
@@ -31,10 +30,6 @@ export type SemanticIndexProcessorConfig = Readonly<{
   >;
 }>;
 
-const SEMANTIC_INDEX_PROCESSOR_CONFIG = Symbol(
-  "SEMANTIC_INDEX_PROCESSOR_CONFIG",
-);
-
 const embeddingFor = async (
   embeddings: EmbeddingPort,
   contentHash: string,
@@ -48,17 +43,14 @@ const embeddingFor = async (
   return document.vector;
 };
 
-@Injectable()
 export class SemanticIndexProcessor extends RawBullMqProcessor<SemanticIndexJobData> {
   protected readonly queueName = SEMANTIC_INDEX_QUEUE_NAME;
   protected readonly spanName = "semantic-index.process";
 
   constructor(
-    @Inject(SEMANTIC_INDEX_SOURCE_LOADER)
     private readonly sourceLoader: SemanticIndexSourceLoader,
     @Inject(SEMANTIC_EMBEDDING_REPOSITORY)
     private readonly repository: SemanticEmbeddingRepository,
-    @Inject(SEMANTIC_INDEX_PROCESSOR_CONFIG)
     private readonly config: SemanticIndexProcessorConfig,
     @Inject(ENV_CONFIG) env: EnvConfig,
     @Inject(APP_LOGGER) logger: AppLogger,

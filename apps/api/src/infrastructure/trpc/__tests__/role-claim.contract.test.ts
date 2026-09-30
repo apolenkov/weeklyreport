@@ -1,33 +1,12 @@
 import type { Role } from "@customreport/shared";
 import type { UserSession } from "@customreport/shared";
-import type { PassportSamlConfig } from "@node-saml/passport-saml";
 import { describe, expect, it } from "vitest";
 
 import { createAuthController } from "../../../modules/auth/index.js";
-import {
-  type SamlStrategyOptions,
-  verifySamlProfile,
-} from "../../../modules/auth/index.js";
+import { verifySamlProfile } from "../../../modules/auth/index.js";
 
 // SAML carries no role; verifySamlProfile defaults every provisioned user to
 // viewer (least privilege). Pin that through SAML → JWT → ctx.session.role.
-
-const baseOptions = {
-  callbackUrl: "http://localhost/callback",
-  entryPoint: "http://localhost/entry",
-  issuer: "test-issuer",
-  idpCert: "CERT",
-  validateInResponseTo: "never" as NonNullable<
-    PassportSamlConfig["validateInResponseTo"]
-  >,
-  disableRequestedAuthnContext: true,
-  signatureAlgorithm: "sha256",
-  digestAlgorithm: "sha256",
-  wantAssertionsSigned: true,
-  wantAuthnResponseSigned: true,
-  acceptedClockSkewMs: 0,
-} satisfies Omit<SamlStrategyOptions, "devMode">;
-const prodOptions: SamlStrategyOptions = { ...baseOptions, devMode: false };
 
 const env: NodeJS.ProcessEnv = {
   ...process.env,
@@ -52,7 +31,7 @@ function buildSession(profile: {
 
 describe("SAML profile → JWT → session.role round-trip (role-free)", () => {
   it("an asserted head role is ignored — the session round-trips as viewer", () => {
-    const verified = verifySamlProfile(prodOptions, {
+    const verified = verifySamlProfile({
       nameID: "u-head",
       email: "head@customreport.local",
       displayName: "Department Head",
@@ -71,7 +50,7 @@ describe("SAML profile → JWT → session.role round-trip (role-free)", () => {
   });
 
   it("a role-less profile is accepted and round-trips as viewer (least privilege)", () => {
-    const verified = verifySamlProfile(prodOptions, {
+    const verified = verifySamlProfile({
       nameID: "u-no-role",
       email: "no-role@customreport.local",
       displayName: "Roleless",
@@ -88,7 +67,7 @@ describe("SAML profile → JWT → session.role round-trip (role-free)", () => {
   });
 
   it("an asserted admin role does not over-grant — session is still viewer", () => {
-    const verified = verifySamlProfile(prodOptions, {
+    const verified = verifySamlProfile({
       nameID: "u-admin",
       email: "admin@customreport.local",
       displayName: "Admin",

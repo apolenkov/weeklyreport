@@ -64,7 +64,7 @@ describe("due-rule editable lifecycle gate (integration)", () => {
         reportId: testData.report.id,
         policyId: policyIds[kind],
         kind,
-        fireAt: computeReminderFireAt(deadline, offsetMinutes, "Europe/Moscow"),
+        fireAt: computeReminderFireAt(deadline, offsetMinutes),
         deadline,
         status: "active",
       },

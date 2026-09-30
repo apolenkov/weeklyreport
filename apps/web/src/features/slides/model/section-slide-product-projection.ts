@@ -1,7 +1,7 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
+import { aggregateTrafficLight } from "@customreport/shared";
 
 import { deriveEffectiveStageStatus } from "../../../shared/lib/status/stage-status";
-import { worstTrafficStatus } from "../../../shared/lib/status/status-presentation";
 import {
   riskCoversStage,
   stageStatusToTraffic,
@@ -12,7 +12,10 @@ import type {
   SlideStage,
   SlideStageStatus,
 } from "./section-slide-contracts";
-import { buildCrossProductSlide } from "./section-slide-cross-product";
+import {
+  buildCrossProductSlide,
+  itemDisplayText,
+} from "./section-slide-cross-product";
 import { nonEmpty, unique } from "./section-slide-model-helpers";
 
 type SectionProject = ReportSectionReadModel["projects"][number];
@@ -31,15 +34,6 @@ interface SectionRecordSummary {
 export interface SectionProductProjection extends SectionRecordSummary {
   readonly products: string[];
   readonly productSlides: SlideProduct[];
-}
-
-function itemDisplayText(item: SectionItem): string {
-  const text = item.text.trim();
-  if (item.resolution != null)
-    return `${text} — Won't do: ${item.resolution.reason}`;
-  if (item.nextStepText?.trim())
-    return `${text} — Next: ${item.nextStepText.trim()}`;
-  return text;
 }
 
 function itemTexts(
@@ -143,7 +137,7 @@ function buildProductSlide(
   return {
     id: project.projectId,
     name: project.projectName,
-    status: worstTrafficStatus(stages.map((stage) => stage.status)),
+    status: aggregateTrafficLight(stages.map((stage) => stage.status)),
     stages,
     ...recordSlices(section, project.projectId),
   };
