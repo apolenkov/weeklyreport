@@ -192,10 +192,17 @@ const budgetEvidence = (
 export function buildGroundingBundle(
   candidates: readonly SearchCandidate[],
   plan: ResolvedSearchPlan,
-  contextTokenBudget: number,
-  classificationContext: GroundingClassificationContext,
-  evidenceCandidates: readonly SearchCandidate[] = candidates,
+  options: Readonly<{
+    contextTokenBudget: number;
+    classificationContext: GroundingClassificationContext;
+    evidenceCandidates?: readonly SearchCandidate[];
+  }>,
 ): GroundingBundle {
+  const {
+    contextTokenBudget,
+    classificationContext,
+    evidenceCandidates = candidates,
+  } = options;
   const aggregates = buildGroundingAggregates(
     candidates,
     plan,

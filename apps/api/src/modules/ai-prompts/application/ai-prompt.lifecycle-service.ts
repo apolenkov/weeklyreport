@@ -45,13 +45,15 @@ export class AiPromptLifecycleService {
       },
       input,
       actorId,
-      [
-        AiPromptBundleLifecycle.draft,
-        AiPromptBundleLifecycle.validated,
-        AiPromptBundleLifecycle.failed,
-        AiPromptBundleLifecycle.active,
-      ],
-      "activation",
+      {
+        allowedLifecycle: [
+          AiPromptBundleLifecycle.draft,
+          AiPromptBundleLifecycle.validated,
+          AiPromptBundleLifecycle.failed,
+          AiPromptBundleLifecycle.active,
+        ],
+        operation: "activation",
+      },
     );
   }
 
@@ -68,8 +70,10 @@ export class AiPromptLifecycleService {
       },
       input,
       actorId,
-      [AiPromptBundleLifecycle.superseded],
-      "restore",
+      {
+        allowedLifecycle: [AiPromptBundleLifecycle.superseded],
+        operation: "restore",
+      },
     );
   }
 

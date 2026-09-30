@@ -2,6 +2,7 @@ import { AiProviderLifecycle, AiProviderProfile } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
+import { createNullLogger } from "../../../lib/logger.js";
 import {
   cleanDatabase,
   createTestPrisma,
@@ -149,14 +150,17 @@ describe("AI provider control-plane database states", () => {
       AiProviderLifecycle.failed,
     );
     await createControl(active.id, true);
-    const events: Record<string, string | number | null>[] = [];
+    const events: Record<string, unknown>[] = [];
     const service = new AiProviderConfigurationService(
       repository,
       discardCodec,
       discardEnvironment,
       undefined,
       undefined,
-      { record: (event) => events.push({ ...event }) },
+      {
+        ...createNullLogger(),
+        info: (_message, event) => events.push({ ...event }),
+      },
     );
 
     await expect(service.discard(failed.id, "admin-1")).resolves.toEqual({
@@ -274,9 +278,9 @@ describe("AI provider control-plane database states", () => {
     );
     const testedAt = new Date("2026-08-11T01:00:00.000Z");
 
-    await repository.setTestResult(
-      candidate.id,
-      {
+    await repository.setTestResult({
+      id: candidate.id,
+      result: {
         status: "passed",
         generation: {
           status: "passed",
@@ -285,11 +289,11 @@ describe("AI provider control-plane database states", () => {
         embeddings: { status: "passed", capabilities: [] },
         testedAt: testedAt.toISOString(),
       },
-      "passed",
-      3,
+      status: "passed",
+      embeddingDimensions: 3,
       testedAt,
-      AiProviderLifecycle.draft,
-    );
+      currentLifecycle: AiProviderLifecycle.draft,
+    });
 
     await expect(
       prisma.aiProviderConfiguration.findUnique({
@@ -321,10 +325,18 @@ describe("AI provider control-plane database states", () => {
       true,
     );
     await expect(
-      repository.completeExecution(execution.id, "passed", null, [], 1),
+      repository.completeExecution(execution.id, "passed", {
+        failureCode: null,
+        checks: [],
+        executionAttempt: 1,
+      }),
     ).resolves.toBe(false);
     await expect(
-      repository.completeExecution(execution.id, "passed", null, [], 2),
+      repository.completeExecution(execution.id, "passed", {
+        failureCode: null,
+        checks: [],
+        executionAttempt: 2,
+      }),
     ).resolves.toBe(true);
 
     await expect(
@@ -356,13 +368,12 @@ describe("AI provider control-plane database states", () => {
       await repository.startExecution(first.id);
       const checkOutcome =
         terminalOutcome === "incompatible" ? "incompatible" : "inconclusive";
-      await repository.completeExecution(
-        first.id,
-        terminalOutcome,
-        terminalOutcome === "inconclusive"
-          ? "provider_transient_failure"
-          : null,
-        [
+      await repository.completeExecution(first.id, terminalOutcome, {
+        failureCode:
+          terminalOutcome === "inconclusive"
+            ? "provider_transient_failure"
+            : null,
+        checks: [
           {
             code: "generation.authentication",
             outcome: checkOutcome,
@@ -376,7 +387,7 @@ describe("AI provider control-plane database states", () => {
             failedCount: 0,
           },
         ],
-      );
+      });
 
       await expect(
         prisma.aiProviderTestExecution.findUnique({
@@ -428,7 +439,10 @@ describe("AI provider control-plane database states", () => {
       request,
     );
     await repository.startExecution(first.id);
-    await repository.completeExecution(first.id, "passed", null, []);
+    await repository.completeExecution(first.id, "passed", {
+      failureCode: null,
+      checks: [],
+    });
 
     const retest = await repository.createOrReuseProviderExecution(
       candidate.id,
@@ -455,7 +469,10 @@ describe("AI provider control-plane database states", () => {
       { testSuiteVersion: "provider-test-v1" },
     );
     await repository.startExecution(oldExecution.id);
-    await repository.completeExecution(oldExecution.id, "passed", null, []);
+    await repository.completeExecution(oldExecution.id, "passed", {
+      failureCode: null,
+      checks: [],
+    });
 
     await expect(
       repository.activateRevision(
@@ -495,8 +512,10 @@ describe("AI provider control-plane database states", () => {
     await repository.completeExecution(
       previousExecution.id,
       "configuration_error",
-      "provider_authentication_failed",
-      [],
+      {
+        failureCode: "provider_authentication_failed",
+        checks: [],
+      },
     );
 
     const current = await repository.createOrReuseProviderExecution(
@@ -530,7 +549,10 @@ describe("AI provider control-plane database states", () => {
       { testSuiteVersion: AI_PROVIDER_TEST_SUITE_VERSION },
     );
     await repository.startExecution(execution.id);
-    await repository.completeExecution(execution.id, "passed", null, []);
+    await repository.completeExecution(execution.id, "passed", {
+      failureCode: null,
+      checks: [],
+    });
 
     await expect(
       repository.activateRevision(
@@ -583,7 +605,10 @@ describe("AI provider control-plane database states", () => {
       { testSuiteVersion: AI_PROVIDER_TEST_SUITE_VERSION },
     );
     await repository.startExecution(execution.id);
-    await repository.completeExecution(execution.id, "passed", null, []);
+    await repository.completeExecution(execution.id, "passed", {
+      failureCode: null,
+      checks: [],
+    });
 
     await prisma.report.create({
       data: {
@@ -640,7 +665,10 @@ describe("AI provider control-plane database states", () => {
       { testSuiteVersion: AI_PROVIDER_TEST_SUITE_VERSION },
     );
     await repository.startExecution(execution.id);
-    await repository.completeExecution(execution.id, "passed", null, []);
+    await repository.completeExecution(execution.id, "passed", {
+      failureCode: null,
+      checks: [],
+    });
     const readiness = {
       mode: "reuse_active_scope" as const,
       activeRevisionId: active.id,
@@ -749,7 +777,10 @@ describe("AI provider control-plane database states", () => {
       { testSuiteVersion: AI_PROVIDER_TEST_SUITE_VERSION },
     );
     await repository.startExecution(execution.id);
-    await repository.completeExecution(execution.id, "passed", null, []);
+    await repository.completeExecution(execution.id, "passed", {
+      failureCode: null,
+      checks: [],
+    });
     await prisma.semanticSourceState.update({
       where: { id: "singleton" },
       data: { generation: { increment: 1 } },

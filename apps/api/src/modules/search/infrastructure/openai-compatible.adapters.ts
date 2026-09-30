@@ -70,8 +70,13 @@ const plannerRequest = (
   transport: OpenAiCompatibleTransport,
   prompt: ReturnType<typeof buildPlannerPrompt>,
   config: OpenAiCompatiblePlannerConfig,
-  operation: "planner" | "planner repair",
-  signal?: AbortSignal,
+  {
+    operation,
+    signal,
+  }: Readonly<{
+    operation: "planner" | "planner repair";
+    signal?: AbortSignal | undefined;
+  }>,
 ): Promise<unknown> => {
   const toolRequest = (temperature?: number) =>
     transport
@@ -118,8 +123,7 @@ export class OpenAiCompatiblePlannerAdapter
       this.transport,
       buildPlannerPrompt(input, this.config.prompts),
       this.config,
-      "planner",
-      signal,
+      { operation: "planner", signal },
     );
   }
 
@@ -131,8 +135,7 @@ export class OpenAiCompatiblePlannerAdapter
       this.transport,
       buildPlannerRepairPrompt(input, this.config.prompts),
       this.config,
-      "planner repair",
-      signal,
+      { operation: "planner repair", signal },
     );
   }
 }

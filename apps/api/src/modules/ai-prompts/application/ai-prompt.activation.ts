@@ -43,9 +43,12 @@ export const activateAiPromptRevision = async (
   dependencies: ActivationDependencies,
   input: AiPromptActivationInput,
   actorId: string,
-  allowedLifecycle: readonly AiPromptBundleLifecycle[],
-  operation: "activation" | "restore",
+  activation: Readonly<{
+    allowedLifecycle: readonly AiPromptBundleLifecycle[];
+    operation: "activation" | "restore";
+  }>,
 ): Promise<AiPromptOperationResult> => {
+  const { allowedLifecycle, operation } = activation;
   const entry = featureFromCatalog(dependencies.catalog, input.featureKey);
   const revision = await requireRevision(
     dependencies.repository,
@@ -61,10 +64,10 @@ export const activateAiPromptRevision = async (
   const activated = await dependencies.repository.activate(
     input.featureKey,
     revision.id,
-    allowedLifecycle,
-    new Date(),
     {
-      servingContractVersion: entry.servingContractVersion,
+      allowedLifecycle,
+      now: new Date(),
+      contract: { servingContractVersion: entry.servingContractVersion },
     },
   );
   if (!activated) {

@@ -137,9 +137,11 @@ describe("EmailService delivery behavior", () => {
 
       await service.sendMailMultipart(
         "recipient@example.com",
-        "Multipart subject",
-        "<p>HTML body</p>",
-        "Plain text body",
+        {
+          subject: "Multipart subject",
+          html: "<p>HTML body</p>",
+          text: "Plain text body",
+        },
         from,
       );
 
@@ -163,12 +165,11 @@ describe("EmailService delivery behavior", () => {
     sendMailMock.mockRejectedValueOnce(transportError);
 
     await expect(
-      service.sendMailMultipart(
-        "recipient@example.com",
-        "Multipart subject",
-        "<p>HTML body</p>",
-        "Plain text body",
-      ),
+      service.sendMailMultipart("recipient@example.com", {
+        subject: "Multipart subject",
+        html: "<p>HTML body</p>",
+        text: "Plain text body",
+      }),
     ).rejects.toBe(transportError);
     expect(sendMailMock).toHaveBeenCalledTimes(1);
   });

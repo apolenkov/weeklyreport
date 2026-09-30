@@ -31,9 +31,15 @@ const operationInput: PlannerInput = {
 export const generationLane = async (
   transport: OpenAiCompatibleTransport,
   profile: ResolvedCompositeProviderProfile["generation"],
-  plannerMaxTokens: number,
-  answerMaxTokens: number,
-  runtime: AiProviderCapabilityRuntimeConfig | undefined,
+  {
+    plannerMaxTokens,
+    answerMaxTokens,
+    runtime,
+  }: Readonly<{
+    plannerMaxTokens: number;
+    answerMaxTokens: number;
+    runtime?: AiProviderCapabilityRuntimeConfig;
+  }>,
 ): Promise<GenerationLaneResult> => {
   const prompts = baselineReportAssistantPrompts();
   const planner = new OpenAiCompatiblePlannerAdapter(transport, {
@@ -89,9 +95,7 @@ export const generationLane = async (
         embeddingDimensions: null,
         semanticInputVersion: "synthetic",
       },
-      answerMaxTokens,
-      runtime,
-      prompts,
+      { answerMaxTokens, runtime, prompts },
     );
     const capabilities: CapabilityProbeResult[] = [
       authentication,

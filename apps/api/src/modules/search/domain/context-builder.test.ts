@@ -112,8 +112,10 @@ describe("GroundingBundle", () => {
     };
 
     expect(
-      buildGroundingBundle([decision], plan, 1000, classificationContext)
-        .aggregates.groups,
+      buildGroundingBundle([decision], plan, {
+        contextTokenBudget: 1000,
+        classificationContext,
+      }).aggregates.groups,
     ).toEqual([
       { key: "decision_state:open", count: 1 },
       { key: "decision_timing:overdue", count: 1 },
@@ -124,8 +126,7 @@ describe("GroundingBundle", () => {
     const bundle = buildGroundingBundle(
       [item("one", "short"), item("two", "another long record"), status],
       basePlan,
-      250,
-      classificationContext,
+      { contextTokenBudget: 250, classificationContext },
     );
 
     expect(bundle.aggregates.totalCount).toBe(3);
@@ -142,12 +143,10 @@ describe("GroundingBundle", () => {
   });
 
   it("rejects unknown citations and preserves valid source metadata", () => {
-    const bundle = buildGroundingBundle(
-      [item("one", "short")],
-      basePlan,
-      1000,
+    const bundle = buildGroundingBundle([item("one", "short")], basePlan, {
+      contextTokenBudget: 1000,
       classificationContext,
-    );
+    });
     expect(validateCitationIds(["S1"], bundle)).toMatchObject({
       kind: "valid",
     });
@@ -171,12 +170,10 @@ describe("GroundingBundle", () => {
       },
     };
 
-    const bundle = buildGroundingBundle(
-      [candidate],
-      basePlan,
-      budget,
+    const bundle = buildGroundingBundle([candidate], basePlan, {
+      contextTokenBudget: budget,
       classificationContext,
-    );
+    });
     const serialized = JSON.stringify(groundingPromptData(bundle));
 
     expect(bundle.evidence).toHaveLength(1);

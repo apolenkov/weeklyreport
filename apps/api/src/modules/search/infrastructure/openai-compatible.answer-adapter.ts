@@ -63,8 +63,13 @@ const answerRequest = (
   transport: OpenAiCompatibleTransport,
   prompt: ReturnType<typeof buildGroundedAnswerPrompt>,
   config: OpenAiCompatibleAnswerConfig,
-  operation: "answer" | "citation repair",
-  signal?: AbortSignal,
+  {
+    operation,
+    signal,
+  }: Readonly<{
+    operation: "answer" | "citation repair";
+    signal?: AbortSignal | undefined;
+  }>,
 ): Promise<GroundedAnswer> => {
   return transport
     .chat(
@@ -106,8 +111,7 @@ export class OpenAiCompatibleAnswerAdapter
       this.transport,
       buildGroundedAnswerPrompt(input, this.config.prompts),
       this.config,
-      "answer",
-      signal,
+      { operation: "answer", signal },
     );
   }
 
@@ -119,8 +123,7 @@ export class OpenAiCompatibleAnswerAdapter
       this.transport,
       buildCitationRepairPrompt(input, this.config.prompts),
       this.config,
-      "citation repair",
-      signal,
+      { operation: "citation repair", signal },
     );
   }
 }

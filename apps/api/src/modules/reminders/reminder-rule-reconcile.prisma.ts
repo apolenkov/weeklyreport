@@ -117,6 +117,13 @@ type CurrentReminderRule = ReminderRule & {
   readonly _count: { readonly executions: number };
 };
 
+interface ReminderRuleSchedule {
+  readonly policy: ReminderPolicy;
+  readonly report: LockedReminderReport & { readonly deadline: Date };
+  readonly fireAt: Date;
+  readonly status: "active" | "paused";
+}
+
 function ruleScheduleChanged(
   current: CurrentReminderRule,
   policy: ReminderPolicy,
@@ -133,10 +140,7 @@ function ruleScheduleChanged(
 
 function createRuleVersion(
   tx: Prisma.TransactionClient,
-  policy: ReminderPolicy,
-  report: LockedReminderReport & { readonly deadline: Date },
-  fireAt: Date,
-  status: "active" | "paused",
+  { policy, report, fireAt, status }: ReminderRuleSchedule,
   version: number,
 ) {
   return tx.reminderRule.create({
@@ -156,11 +160,9 @@ function createRuleVersion(
 async function reconcileCurrentRule(
   tx: Prisma.TransactionClient,
   current: CurrentReminderRule,
-  policy: ReminderPolicy,
-  report: LockedReminderReport & { readonly deadline: Date },
-  fireAt: Date,
-  status: "active" | "paused",
+  schedule: ReminderRuleSchedule,
 ): Promise<ReminderRuleReconcileOutcome> {
+  const { policy, report, fireAt, status } = schedule;
   const identityChanged = ruleScheduleChanged(
     current,
     policy,
@@ -174,14 +176,7 @@ async function reconcileCurrentRule(
         data: { status: "paused" },
       });
     }
-    await createRuleVersion(
-      tx,
-      policy,
-      report,
-      fireAt,
-      status,
-      current.version + 1,
-    );
+    await createRuleVersion(tx, schedule, current.version + 1);
     return "created";
   }
 
@@ -220,10 +215,12 @@ export async function repairMissingRuleForLockedReport(
   if (fireAt.getTime() <= now.getTime()) return "skipped";
   await createRuleVersion(
     tx,
-    policy,
-    { ...report, deadline: report.deadline },
-    fireAt,
-    "active",
+    {
+      policy,
+      report: { ...report, deadline: report.deadline },
+      fireAt,
+      status: "active",
+    },
     1,
   );
   return "created";
@@ -261,7 +258,16 @@ export async function reconcileLockedPolicyForReport(
 
   if (!current && !active) return "skipped";
   if (!current) {
-    await createRuleVersion(tx, policy, schedulableReport, fireAt, "active", 1);
+    await createRuleVersion(
+      tx,
+      {
+        policy,
+        report: schedulableReport,
+        fireAt,
+        status: "active",
+      },
+      1,
+    );
     return "created";
   }
 
@@ -276,12 +282,10 @@ export async function reconcileLockedPolicyForReport(
   });
 
   const status = active ? ("active" as const) : ("paused" as const);
-  return reconcileCurrentRule(
-    tx,
-    current,
+  return reconcileCurrentRule(tx, current, {
     policy,
-    schedulableReport,
+    report: schedulableReport,
     fireAt,
     status,
-  );
+  });
 }

@@ -8,11 +8,11 @@ import { describe, expect, it, vi } from "vitest";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
+  PdfExportDomainError,
   PdfExportStateConflictError,
   UnsupportedPdfExportStatusError,
 } from "./pdf-export.job-state.js";
 import { PdfExportPrismaRepository } from "./pdf-export.prisma-repository";
-import { PdfExportDomainError } from "./pdf-export.service";
 
 const REPORT_ID = "659b2767-0f86-41e2-b025-49730ca010e4";
 const AUTHOR_ID = "6f99661a-cac6-4d06-bf08-2a14cced554d";

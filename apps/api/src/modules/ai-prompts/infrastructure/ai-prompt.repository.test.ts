@@ -153,13 +153,11 @@ describe("AiPromptRepository", () => {
     const harness = buildHarness();
 
     await expect(
-      harness.repository.activate(
-        featureKey,
-        revisionId,
-        [AiPromptBundleLifecycle.validated],
-        new Date("2026-08-10T01:00:00.000Z"),
-        activationCompatibility,
-      ),
+      harness.repository.activate(featureKey, revisionId, {
+        allowedLifecycle: [AiPromptBundleLifecycle.validated],
+        now: new Date("2026-08-10T01:00:00.000Z"),
+        contract: activationCompatibility,
+      }),
     ).resolves.toBe(true);
     expect(harness.updateMany).toHaveBeenCalledTimes(2);
     expect(harness.controlUpdateMany).toHaveBeenCalledWith({
@@ -172,15 +170,11 @@ describe("AiPromptRepository", () => {
     const harness = buildHarness();
 
     await expect(
-      harness.repository.activate(
-        featureKey,
-        revisionId,
-        [AiPromptBundleLifecycle.validated],
-        new Date("2026-08-10T01:00:00.000Z"),
-        {
-          servingContractVersion,
-        },
-      ),
+      harness.repository.activate(featureKey, revisionId, {
+        allowedLifecycle: [AiPromptBundleLifecycle.validated],
+        now: new Date("2026-08-10T01:00:00.000Z"),
+        contract: { servingContractVersion },
+      }),
     ).resolves.toBe(true);
     expect(harness.providerControlFindUnique).not.toHaveBeenCalled();
     const updateCalls = harness.updateMany.mock.calls as unknown as readonly [
@@ -199,13 +193,11 @@ describe("AiPromptRepository", () => {
     harness.controlUpdateMany.mockResolvedValue({ count: 0 });
 
     await expect(
-      harness.repository.activate(
-        featureKey,
-        revisionId,
-        [AiPromptBundleLifecycle.validated],
-        new Date("2026-08-10T01:00:00.000Z"),
-        activationCompatibility,
-      ),
+      harness.repository.activate(featureKey, revisionId, {
+        allowedLifecycle: [AiPromptBundleLifecycle.validated],
+        now: new Date("2026-08-10T01:00:00.000Z"),
+        contract: activationCompatibility,
+      }),
     ).resolves.toBe(false);
   });
 
@@ -216,13 +208,11 @@ describe("AiPromptRepository", () => {
       .mockResolvedValueOnce({ count: 0 });
 
     await expect(
-      harness.repository.activate(
-        featureKey,
-        revisionId,
-        [AiPromptBundleLifecycle.validated],
-        new Date("2026-08-10T01:00:00.000Z"),
-        activationCompatibility,
-      ),
+      harness.repository.activate(featureKey, revisionId, {
+        allowedLifecycle: [AiPromptBundleLifecycle.validated],
+        now: new Date("2026-08-10T01:00:00.000Z"),
+        contract: activationCompatibility,
+      }),
     ).resolves.toBe(false);
     expect(harness.updateMany).toHaveBeenCalledTimes(2);
     expect(harness.controlUpdateMany).not.toHaveBeenCalled();

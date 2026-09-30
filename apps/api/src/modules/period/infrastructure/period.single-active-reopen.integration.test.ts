@@ -2,6 +2,7 @@ import type { UserSession } from "@customreport/shared";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
+import { createNullLogger } from "../../../lib/logger.js";
 import {
   cleanDatabase,
   createTestPrisma,
@@ -15,6 +16,7 @@ import {
   PeriodService,
   type ReopenPolicyReader,
 } from "../application/period.service";
+import { NOOP_PERIOD_TELEMETRY } from "../application/period-telemetry.port.js";
 import { PeriodPrismaRepository } from "./period.prisma-repository";
 
 const noopInvalidate: AnalyticsCacheInvalidator = () => Promise.resolve();
@@ -32,8 +34,10 @@ describe("PeriodService single-active-reopen guard (integration)", () => {
   );
   const service = new PeriodService(
     repository,
-    noopInvalidate,
-    noGatingReopenPolicy,
+    { invalidateAll: noopInvalidate },
+    { getSettings: noGatingReopenPolicy },
+    NOOP_PERIOD_TELEMETRY,
+    createNullLogger(),
   );
 
   const PUBLISHED_A = "f0000000-0000-4000-a000-0000000000b1";

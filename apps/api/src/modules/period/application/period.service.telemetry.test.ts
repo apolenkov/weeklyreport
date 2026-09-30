@@ -4,6 +4,7 @@ import {
   customreportPeriodStateTransitionsTotal,
   customreportReportsSubmittedTotal,
 } from "../../../infrastructure/metrics/metrics.registry.js";
+import { createNullLogger } from "../../../lib/logger.js";
 import { PeriodPrometheusTelemetry } from "../infrastructure/period-prometheus-telemetry.adapter.js";
 import {
   createSpyRepository,
@@ -16,6 +17,7 @@ import {
   toPeriodLifecycleExpectation,
 } from "./__tests__/period-service-harness.js";
 import { type PeriodRepository, PeriodService } from "./period.service";
+import { NOOP_PERIOD_TELEMETRY } from "./period-telemetry.port.js";
 
 describe("PeriodService — manual-publish telemetry", () => {
   it("increments reportsSubmittedTotal once on successful publish of an open period", async () => {
@@ -32,9 +34,10 @@ describe("PeriodService — manual-publish telemetry", () => {
     ]);
     const service = new PeriodService(
       createSpyRepository(reports),
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
       new PeriodPrometheusTelemetry(),
+      createNullLogger(),
     );
     const before = await getCounterValue(customreportReportsSubmittedTotal, {
       state: "published",
@@ -63,9 +66,10 @@ describe("PeriodService — manual-publish telemetry", () => {
     ]);
     const service = new PeriodService(
       createSpyRepository(reports),
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
       new PeriodPrometheusTelemetry(),
+      createNullLogger(),
     );
     const before = await getCounterValue(
       customreportPeriodStateTransitionsTotal,
@@ -96,9 +100,10 @@ describe("PeriodService — manual-publish telemetry", () => {
     ]);
     const service = new PeriodService(
       createSpyRepository(reports),
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
       new PeriodPrometheusTelemetry(),
+      createNullLogger(),
     );
     const before = await getCounterValue(
       customreportPeriodStateTransitionsTotal,
@@ -144,8 +149,10 @@ describe("PeriodService — manual-publish telemetry", () => {
     };
     const service = new PeriodService(
       repo,
-      noopInvalidate,
-      noGatingReopenPolicy,
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     const submittedBefore = await getCounterValue(
@@ -200,8 +207,10 @@ describe("PeriodService — manual-publish telemetry", () => {
     };
     const service = new PeriodService(
       repo,
-      invalidateAnalyticsCache,
-      noGatingReopenPolicy,
+      { invalidateAll: invalidateAnalyticsCache },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
     );
 
     const submittedBefore = await getCounterValue(
@@ -233,7 +242,7 @@ describe("PeriodService — manual-publish telemetry", () => {
 
   // A committed lifecycle write must not fail the API response because the
   // post-commit cache invalidation rejected; the failure is observed via
-  // onSideEffectError, never propagated.
+  // the injected logger, never propagated.
   it("swallows a cache-invalidation failure without rejecting the publish", async () => {
     const reports = new Map<string, SpyReport>([
       [
@@ -254,17 +263,18 @@ describe("PeriodService — manual-publish telemetry", () => {
     };
     const service = new PeriodService(
       repo,
-      () => Promise.reject(new Error("cache down")),
-      noGatingReopenPolicy,
+      { invalidateAll: () => Promise.reject(new Error("cache down")) },
+      { getSettings: noGatingReopenPolicy },
       telemetry,
-      onSideEffectError,
+      { warn: onSideEffectError },
     );
 
     await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
       { success: true, reportId },
     );
     expect(onSideEffectError).toHaveBeenCalledExactlyOnceWith(
-      new Error("cache down"),
+      "publish side-effect failed",
+      { error: "cache down" },
     );
     expect(telemetry.recordPublishedReport).toHaveBeenCalledTimes(1);
     expect(telemetry.recordPeriodPublished).toHaveBeenCalledExactlyOnceWith(
@@ -273,7 +283,7 @@ describe("PeriodService — manual-publish telemetry", () => {
   });
 
   // The publish still resolves when the post-commit telemetry adapter throws;
-  // the failure is observed via onSideEffectError, never propagated.
+  // the failure is observed through the injected logger, never propagated.
   it("swallows a telemetry failure without rejecting the publish", async () => {
     const reports = new Map<string, SpyReport>([
       [
@@ -291,22 +301,23 @@ describe("PeriodService — manual-publish telemetry", () => {
     const invalidateAnalyticsCache = vi.fn(() => Promise.resolve());
     const service = new PeriodService(
       repo,
-      invalidateAnalyticsCache,
-      noGatingReopenPolicy,
+      { invalidateAll: invalidateAnalyticsCache },
+      { getSettings: noGatingReopenPolicy },
       {
         recordPublishedReport: () => {
           throw new Error("telemetry blip");
         },
         recordPeriodPublished: () => undefined,
       },
-      onSideEffectError,
+      { warn: onSideEffectError },
     );
 
     await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
       { success: true, reportId },
     );
     expect(onSideEffectError).toHaveBeenCalledExactlyOnceWith(
-      new Error("telemetry blip"),
+      "publish side-effect failed",
+      { error: "telemetry blip" },
     );
     expect(invalidateAnalyticsCache).toHaveBeenCalledTimes(1);
   });

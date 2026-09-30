@@ -5,6 +5,7 @@ import type {
 } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
+import { createNullLogger } from "../../../lib/logger.js";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import type { PeriodLifecycleExpectation } from "../domain/period-lifecycle-expectation.js";
 import {
@@ -14,6 +15,7 @@ import {
   PeriodService,
   type ReopenPolicyReader,
 } from "./period.service";
+import { NOOP_PERIOD_TELEMETRY } from "./period-telemetry.port.js";
 
 const noopInvalidate: AnalyticsCacheInvalidator = () => Promise.resolve();
 const noGatingReopenPolicy: ReopenPolicyReader = () =>
@@ -186,8 +188,10 @@ describe("PeriodService — contract tests", () => {
       const report = makeReport({ periodStatus: "open" });
       const service = new PeriodService(
         createRepository(report),
-        noopInvalidate,
-        noGatingReopenPolicy,
+        { invalidateAll: noopInvalidate },
+        { getSettings: noGatingReopenPolicy },
+        NOOP_PERIOD_TELEMETRY,
+        createNullLogger(),
       );
 
       const result = await service.publishPeriod(reportId, headSession);
@@ -199,8 +203,10 @@ describe("PeriodService — contract tests", () => {
       const report = makeReport({ periodStatus: "reopened" });
       const service = new PeriodService(
         createRepository(report),
-        noopInvalidate,
-        noGatingReopenPolicy,
+        { invalidateAll: noopInvalidate },
+        { getSettings: noGatingReopenPolicy },
+        NOOP_PERIOD_TELEMETRY,
+        createNullLogger(),
       );
 
       const result = await service.publishPeriod(reportId, headSession);
@@ -215,8 +221,10 @@ describe("PeriodService — contract tests", () => {
       });
       const service = new PeriodService(
         createRepository(report),
-        noopInvalidate,
-        noGatingReopenPolicy,
+        { invalidateAll: noopInvalidate },
+        { getSettings: noGatingReopenPolicy },
+        NOOP_PERIOD_TELEMETRY,
+        createNullLogger(),
       );
 
       await expect(
@@ -227,8 +235,10 @@ describe("PeriodService — contract tests", () => {
     it("throws when report not found", async () => {
       const service = new PeriodService(
         createRepository(null),
-        noopInvalidate,
-        noGatingReopenPolicy,
+        { invalidateAll: noopInvalidate },
+        { getSettings: noGatingReopenPolicy },
+        NOOP_PERIOD_TELEMETRY,
+        createNullLogger(),
       );
 
       await expect(
@@ -244,8 +254,10 @@ describe("PeriodService — contract tests", () => {
       const repo = createRepository(report);
       const service = new PeriodService(
         repo,
-        noopInvalidate,
-        noGatingReopenPolicy,
+        { invalidateAll: noopInvalidate },
+        { getSettings: noGatingReopenPolicy },
+        NOOP_PERIOD_TELEMETRY,
+        createNullLogger(),
       );
 
       await service.publishPeriod(reportId, headSession);
@@ -271,8 +283,10 @@ describe("PeriodService — contract tests", () => {
       });
       const service = new PeriodService(
         createRepository(report),
-        noopInvalidate,
-        noGatingReopenPolicy,
+        { invalidateAll: noopInvalidate },
+        { getSettings: noGatingReopenPolicy },
+        NOOP_PERIOD_TELEMETRY,
+        createNullLogger(),
       );
 
       const result = await service.reopenPeriod(reportId, headSession);
@@ -284,8 +298,10 @@ describe("PeriodService — contract tests", () => {
       const report = makeReport({ periodStatus: "open" });
       const service = new PeriodService(
         createRepository(report),
-        noopInvalidate,
-        noGatingReopenPolicy,
+        { invalidateAll: noopInvalidate },
+        { getSettings: noGatingReopenPolicy },
+        NOOP_PERIOD_TELEMETRY,
+        createNullLogger(),
       );
 
       await expect(
@@ -301,8 +317,10 @@ describe("PeriodService — contract tests", () => {
       const report = makeReport({ periodStatus: "reopened" });
       const service = new PeriodService(
         createRepository(report),
-        noopInvalidate,
-        noGatingReopenPolicy,
+        { invalidateAll: noopInvalidate },
+        { getSettings: noGatingReopenPolicy },
+        NOOP_PERIOD_TELEMETRY,
+        createNullLogger(),
       );
 
       await expect(
@@ -317,8 +335,10 @@ describe("PeriodService — contract tests", () => {
     it("throws when report not found", async () => {
       const service = new PeriodService(
         createRepository(null),
-        noopInvalidate,
-        noGatingReopenPolicy,
+        { invalidateAll: noopInvalidate },
+        { getSettings: noGatingReopenPolicy },
+        NOOP_PERIOD_TELEMETRY,
+        createNullLogger(),
       );
 
       await expect(
@@ -338,8 +358,10 @@ describe("PeriodService — contract tests", () => {
       const repo = createRepository(report);
       const service = new PeriodService(
         repo,
-        noopInvalidate,
-        noGatingReopenPolicy,
+        { invalidateAll: noopInvalidate },
+        { getSettings: noGatingReopenPolicy },
+        NOOP_PERIOD_TELEMETRY,
+        createNullLogger(),
       );
 
       await service.reopenPeriod(reportId, headSession);

@@ -84,13 +84,23 @@ function commentValidationError(
     : "Comment must contain visible characters.";
 }
 
+interface RecordCommentMutationCallbacks {
+  readonly onCommentAdded: () => void;
+  readonly onMutated: () => void;
+  readonly onCommentError: (err: unknown) => void;
+  readonly onDeleteSuccess: () => void;
+  readonly onDeleteError: (err: unknown) => void;
+}
+
 function useRecordCommentMutations(
   anchor: RecordCommentAnchor,
-  onCommentAdded: () => void,
-  onMutated: () => void,
-  onCommentError: (err: unknown) => void,
-  onDeleteSuccess: () => void,
-  onDeleteError: (err: unknown) => void,
+  {
+    onCommentAdded,
+    onMutated,
+    onCommentError,
+    onDeleteSuccess,
+    onDeleteError,
+  }: RecordCommentMutationCallbacks,
 ) {
   const trpc = useTRPC();
   const qc = useQueryClient();
@@ -204,29 +214,28 @@ export function RecordComments({
   const id = anchorId(anchor);
   const feedbackId = `record-comment-feedback-${id ?? "unknown"}`;
   const { submitComment, isCommentPending, deleteComment, isDeletePending } =
-    useRecordCommentMutations(
-      anchor,
-      () => {
+    useRecordCommentMutations(anchor, {
+      onCommentAdded: () => {
         setDraft("");
         setValidationAttempted(false);
         setFeedback({ message: "Comment added.", tone: "success" });
       },
       onMutated,
-      (err) => {
+      onCommentError: (err) => {
         const message = reviewErrorMessage(err, "Failed to add comment");
         setFeedback({ message, tone: "error" });
         toast.error(message);
       },
-      () => {
+      onDeleteSuccess: () => {
         setDeleteCandidate(null);
         setFeedback({ message: "Comment deleted.", tone: "success" });
       },
-      (err) => {
+      onDeleteError: (err) => {
         const message = reviewErrorMessage(err, "Failed to delete comment");
         setFeedback({ message, tone: "error" });
         toast.error(message);
       },
-    );
+    });
 
   // A synthetic (non-persisted) record has no real UUID — the composer stays
   // hidden so a synthetic id can never reach the uuid-validated mutation.

@@ -98,8 +98,7 @@ export function ProductAccordion({
   const hasContent = reportHasContent(report);
   const expanded = resolveExpanded(
     toggle,
-    navigationEpoch,
-    highlighted,
+    { navigationEpoch, highlighted },
     hasContent,
     defaultOpen,
   );

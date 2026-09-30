@@ -32,11 +32,15 @@ export interface EmailPort {
   ) => Promise<void>;
   readonly sendMailMultipart: (
     to: string,
-    subject: string,
-    html: string,
-    text: string,
+    content: MultipartMail,
     from?: string | null,
   ) => Promise<void>;
+}
+
+export interface MultipartMail {
+  readonly subject: string;
+  readonly html: string;
+  readonly text: string;
 }
 
 export const EMAIL_PORT = Symbol("EMAIL_PORT");
@@ -99,9 +103,7 @@ export class EmailService implements EmailPort {
   // text-only clients still get the body.
   readonly sendMailMultipart = async (
     to: string,
-    subject: string,
-    html: string,
-    text: string,
+    { subject, html, text }: MultipartMail,
     from?: string | null,
   ): Promise<void> => {
     const fromAddr = from ?? this.fromAddress;

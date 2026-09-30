@@ -69,8 +69,7 @@ export async function lockAgentationSession(
 
 export function deletedAnnotationResponse(
   access: FeedbackAccess,
-  session: { readonly url: string },
-  sessionId: string,
+  session: { readonly id: string; readonly url: string },
   input: AgentationAnnotationCreate,
   tombstone: { readonly annotationId: string | null; readonly createdAt: Date },
 ): AgentationAnnotationResponse {
@@ -79,7 +78,7 @@ export function deletedAnnotationResponse(
     ...input,
     id: tombstone.annotationId ?? input.id,
     clientId: input.id,
-    sessionId,
+    sessionId: session.id,
     url: session.url,
     kind: input.kind ?? "feedback",
     status: "dismissed",
@@ -211,14 +210,13 @@ export async function emit(
 export function annotationData(
   id: string,
   access: FeedbackAccess,
-  session: { url: string },
-  sessionId: string,
+  session: { readonly id: string; readonly url: string },
   input: AgentationAnnotationCreate,
 ): PrismaTypes.AgentationAnnotationUncheckedCreateInput {
   return {
     id,
     clientId: input.id,
-    sessionId,
+    sessionId: session.id,
     x: input.x,
     y: input.y,
     comment: input.comment,

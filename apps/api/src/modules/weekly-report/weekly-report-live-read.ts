@@ -48,14 +48,11 @@ export async function buildLiveReportResult(
     progressSections,
   );
 
-  return buildLiveResult(
-    report,
-    leadSections,
-    projects,
+  return buildLiveResult(report, leadSections, projects, {
     crossGroup,
     progress,
     activeDeadlineRuleId,
-  );
+  });
 }
 
 async function fetchReportDependencies(

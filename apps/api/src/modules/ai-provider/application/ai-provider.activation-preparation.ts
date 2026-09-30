@@ -92,9 +92,9 @@ export class AiProviderActivationPreparation {
     revisionId: string,
     actorId: string,
     profile: ResolvedEmbeddingProfile,
-    result: PreparationResult,
-    startedAt: Date,
+    preparation: Readonly<{ result: PreparationResult; startedAt: Date }>,
   ): Promise<AiProviderControlRead> {
+    const { result, startedAt } = preparation;
     const failed = await this.dependencies.repository.updateProgress(
       revisionId,
       {

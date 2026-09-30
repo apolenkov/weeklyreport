@@ -116,9 +116,15 @@ const createExecutionHarness = (
       (
         executionId: string,
         outcome: ExecutionOutcome,
-        failureCode: string | null,
-        checks: readonly PersistedCheck[] = [],
-        attempt: number,
+        {
+          failureCode,
+          checks = [],
+          executionAttempt: attempt,
+        }: Readonly<{
+          failureCode: string | null;
+          checks?: readonly PersistedCheck[];
+          executionAttempt: number;
+        }>,
       ) => {
         if (
           executionId !== jobData.executionId ||
@@ -384,9 +390,11 @@ describe("AiProviderTestProcessor.onJobFailed", () => {
       expect(harness.repository.completeExecution).toHaveBeenCalledWith(
         "execution-1",
         "inconclusive",
-        "ai_provider_test_job_failed",
-        [],
-        4,
+        {
+          failureCode: "ai_provider_test_job_failed",
+          checks: [],
+          executionAttempt: 4,
+        },
       ),
     );
     expect(harness.completion()).toStrictEqual({
@@ -416,9 +424,11 @@ describe("AiProviderTestProcessor.onJobFailed", () => {
       expect(harness.repository.completeExecution).toHaveBeenCalledWith(
         "execution-1",
         "inconclusive",
-        "ai_provider_test_job_failed",
-        [],
-        1,
+        {
+          failureCode: "ai_provider_test_job_failed",
+          checks: [],
+          executionAttempt: 1,
+        },
       ),
     );
     expect(harness.completion()?.failureCode).toBe(

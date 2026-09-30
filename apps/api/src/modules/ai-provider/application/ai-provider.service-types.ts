@@ -14,16 +14,17 @@ import type {
   ResolvedCompositeProviderProfile,
   ResolvedProviderProfile,
 } from "../domain/provider-profile.js";
-import type { AiProviderTestEnqueuer } from "../infrastructure/ai-provider-test.queue.js";
-export type { AiProviderTestEnqueuer } from "../infrastructure/ai-provider-test.queue.js";
 import type {
   AiProviderConfigurationRepository,
   StoredAiProviderRevision,
 } from "../infrastructure/ai-provider.repository.js";
+import type { AiProviderTestEnqueuer } from "../infrastructure/ai-provider-test.queue.js";
 import {
   AesGcmCredentialCodec,
   type StoredCredential,
 } from "../infrastructure/credential-codec.js";
+
+export type { AiProviderTestEnqueuer } from "../infrastructure/ai-provider-test.queue.js";
 
 export type AiProviderEnvironment = Pick<
   EnvConfig,
@@ -42,6 +43,10 @@ export type AiProviderCapabilityRuntimeConfig = Readonly<{
   reasoningCustomValue: string | null;
 }>;
 
+export const AI_PROVIDER_CAPABILITY_TESTER = Symbol(
+  "AiProviderCapabilityTester",
+);
+
 export type AiProviderCapabilityTester = Readonly<{
   test(
     profile: ResolvedCompositeProviderProfile,
@@ -54,6 +59,10 @@ export type AiProviderCapabilityTester = Readonly<{
     }>
   >;
 }>;
+
+export const AI_PROVIDER_PREPARATION_COORDINATOR = Symbol(
+  "AiProviderPreparationCoordinator",
+);
 
 export type AiProviderPreparationCoordinator = Readonly<{
   currentSourceFingerprint?(
@@ -146,8 +155,6 @@ export class AiProviderConflictError extends Error {
     this.name = "AiProviderConflictError";
   }
 }
-
-export const NOOP_AUDIT: AiProviderAuditSink = { record: () => undefined };
 
 export const NOOP_METRICS: AiProviderMetricsSink = {
   recordState: () => undefined,

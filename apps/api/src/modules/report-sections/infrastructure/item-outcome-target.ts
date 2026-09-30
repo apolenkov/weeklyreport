@@ -34,12 +34,21 @@ function receiptMatches(
     readonly outcome: string;
     readonly requestHash: string;
   },
-  reportSectionId: string,
-  userId: string,
-  operation: OutcomeCommandOperation,
-  requestHash: string,
-  legacyPromotionHash: string | null,
+  expected: {
+    readonly reportSectionId: string;
+    readonly userId: string;
+    readonly operation: OutcomeCommandOperation;
+    readonly requestHash: string;
+    readonly legacyPromotionHash: string | null;
+  },
 ): boolean {
+  const {
+    reportSectionId,
+    userId,
+    operation,
+    requestHash,
+    legacyPromotionHash,
+  } = expected;
   return (
     receipt.reportSectionId === reportSectionId &&
     receipt.actorId === userId &&
@@ -86,14 +95,13 @@ export async function loadOutcomeTarget(
         ? outcomeCommandHash(command, "restore")
         : null;
     if (
-      !receiptMatches(
-        receipt,
-        row.id,
+      !receiptMatches(receipt, {
+        reportSectionId: row.id,
         userId,
         operation,
         requestHash,
         legacyPromotionHash,
-      )
+      })
     ) {
       throw new LeadFormConstraintError(
         "This command identifier has already been used for another action.",

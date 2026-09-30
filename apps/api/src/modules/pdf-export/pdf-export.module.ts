@@ -10,15 +10,11 @@ import {
   ENV_CONFIG,
 } from "../../infrastructure/config/config.module.js";
 import type { EnvConfig } from "../../infrastructure/config/env.schema.js";
-import { APP_LOGGER } from "../../lib/audit-logger.js";
-import type { AppLogger } from "../../lib/logger.js";
 import { GotenbergPdfRenderer } from "./gotenberg-pdf-renderer.adapter.js";
 import {
   PDF_EXPORT_ENQUEUER,
   PDF_EXPORT_TELEMETRY,
   PDF_RENDERER,
-  type PdfExportEnqueuer,
-  type PdfExportTelemetry,
 } from "./pdf-export.ports.js";
 import { PdfExportPrismaRepository } from "./pdf-export.prisma-repository";
 import { PdfExportService } from "./pdf-export.service";
@@ -45,23 +41,7 @@ import { PdfExportInfrastructureTelemetry } from "./pdf-export-telemetry.adapter
       useFactory: (env: EnvConfig) => new GotenbergPdfRenderer(env),
       inject: [ENV_CONFIG],
     },
-    {
-      provide: PdfExportService,
-      useFactory: (
-        repo: PdfExportPrismaRepository,
-        logger: AppLogger,
-        queue: PdfExportEnqueuer,
-        telemetry: PdfExportTelemetry,
-        env: EnvConfig,
-      ) => new PdfExportService(repo, logger, queue, telemetry, env),
-      inject: [
-        PdfExportPrismaRepository,
-        APP_LOGGER,
-        PDF_EXPORT_ENQUEUER,
-        PDF_EXPORT_TELEMETRY,
-        ENV_CONFIG,
-      ],
-    },
+    PdfExportService,
   ],
   exports: [PdfExportService, PDF_RENDERER],
 })

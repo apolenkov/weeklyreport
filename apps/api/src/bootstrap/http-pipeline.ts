@@ -71,13 +71,11 @@ export async function configureHttpPipeline(deps: {
     env.NODE_ENV === "development" || env.CLIENT_LOG_FORWARDING === "true";
   // `trust proxy: 1` (set by the caller) makes req.ip the real client, so the
   // limiter keys per client, not per proxy hop; mount order lives in the helper.
-  mountClientLogsIngress(
-    app,
-    CLIENT_LOGS_ROUTE,
-    clientLogsLimiter,
-    express.json({ limit: CLIENT_LOGS_JSON_LIMIT }),
-    createClientLogsHandler({ logger, enabled: clientLogsEnabled }),
-  );
+  mountClientLogsIngress(app, CLIENT_LOGS_ROUTE, {
+    limiter: clientLogsLimiter,
+    jsonParser: express.json({ limit: CLIENT_LOGS_JSON_LIMIT }),
+    handler: createClientLogsHandler({ logger, enabled: clientLogsEnabled }),
+  });
 
   return {
     authLimiter,

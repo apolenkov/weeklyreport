@@ -4,8 +4,11 @@ import {
   type PaginatedResult,
   type PaginationInput,
 } from "@customreport/shared";
+import { Inject, Injectable } from "@nestjs/common";
 
+import { ENV_CONFIG } from "../../infrastructure/config/config.module.js";
 import type { EnvConfig } from "../../infrastructure/config/env.schema.js";
+import { APP_LOGGER } from "../../lib/audit-logger.js";
 import type { AppLogger } from "../../lib/logger";
 import { OrganizationService } from "../organization/index.js";
 import {
@@ -15,9 +18,12 @@ import {
 } from "./reminders.errors.js";
 import {
   NOOP_REMINDERS_TELEMETRY,
+  REMINDERS_ENQUEUER,
+  REMINDERS_TELEMETRY,
   type RemindersEnqueuer,
   type RemindersTelemetry,
 } from "./reminders.ports.js";
+import { RemindersPrismaRepository } from "./reminders.prisma-repository.js";
 import type {
   ReminderExecutionPayload,
   ReminderExecutionRecordResult,
@@ -52,6 +58,7 @@ function toDispatchResult(
     : record;
 }
 
+@Injectable()
 export class RemindersService {
   private readonly logger: AppLogger;
   private readonly emailQueue: RemindersEnqueuer | null;
@@ -59,13 +66,16 @@ export class RemindersService {
   readonly scope: RemindersScopeService;
 
   constructor(
+    @Inject(RemindersPrismaRepository)
     private readonly repository: RemindersRepository,
-    logger: AppLogger,
-    emailQueue?: RemindersEnqueuer,
+    @Inject(APP_LOGGER) logger: AppLogger,
+    @Inject(REMINDERS_ENQUEUER) emailQueue?: RemindersEnqueuer,
     // Direct tests may omit telemetry; Nest requires and supplies its real adapter.
+    @Inject(REMINDERS_TELEMETRY)
     private readonly telemetry: RemindersTelemetry = NOOP_REMINDERS_TELEMETRY,
+    @Inject(OrganizationService)
     private readonly organizationService?: OrganizationService,
-    private readonly env?: Pick<EnvConfig, "APP_BASE_URL">,
+    @Inject(ENV_CONFIG) private readonly env?: Pick<EnvConfig, "APP_BASE_URL">,
   ) {
     this.logger = logger;
     this.emailQueue = emailQueue ?? null;
@@ -178,8 +188,7 @@ export class RemindersService {
     const enqueued = await enqueueOrMarkFailed(
       this.enqueueContext(this.emailQueue),
       execution,
-      recipientEmail,
-      queuePayload,
+      { recipientEmail, payload: queuePayload },
       outcome === "revived"
         ? `${execution.id}:revive:${crypto.randomUUID()}`
         : undefined,

@@ -44,8 +44,7 @@ describe("Agentation wire contract", () => {
         json,
       } as unknown as Response,
       session,
-      prisma,
-      {} as AppLogger,
+      { prisma, logger: {} as AppLogger },
     );
 
     expect(handled).toBe(true);

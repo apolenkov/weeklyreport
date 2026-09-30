@@ -21,6 +21,7 @@ import { NOOP_PDF_EXPORT_TELEMETRY } from "../../test-utils/pdf-export.js";
 import {
   dbStatusToDomain,
   type LockedPdfExportJobRow,
+  PdfExportDomainError,
   PdfExportStateConflictError,
   pdfStatusToDb,
   toDomainStatus,
@@ -37,7 +38,7 @@ import {
   type PdfExportRetryOutcome,
   type PdfExportTelemetry,
 } from "./pdf-export.ports.js";
-import { PdfExportDomainError, PdfExportService } from "./pdf-export.service";
+import { PdfExportService } from "./pdf-export.service";
 
 const reportId = "22222222-2222-4222-8222-222222222222";
 const unknownReportId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
