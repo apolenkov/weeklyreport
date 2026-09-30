@@ -44,9 +44,12 @@ describe("Trends query loading", () => {
     });
     renderPage(client);
     expect(
-      screen.getAllByRole("status", { name: "Loading chart" }),
+      screen.getAllByRole("status", { name: "Loading data" }),
     ).toHaveLength(3);
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Lead submissions" }),
+    ).toBeVisible();
     client.clear();
   });
 
@@ -91,12 +94,46 @@ describe("Trends query loading", () => {
     ).toHaveAttribute("tabindex", "0");
     expect(
       screen.getByRole("table", {
-        name: /Periods ending 2026-08-23 .* 2026-08-30/,
+        name: "Period comparison data",
       }),
     ).toBeVisible();
     expect(
-      screen.getAllByRole("status", { name: "Loading chart" }),
+      screen.getAllByRole("status", { name: "Loading data" }),
     ).toHaveLength(1);
+    client.clear();
+  });
+
+  it("shows ready Lead submissions from the leadVelocity query while history stays pending", () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    client.setQueryData(
+      ["velocity"],
+      [
+        {
+          periodLabel: "2026-08-30",
+          leads: [
+            { leadId: "lead-a", leadName: "Alex", submittedSections: 3 },
+            { leadId: "lead-b", leadName: "Blair", submittedSections: 0 },
+          ],
+        },
+      ],
+    );
+    renderPage(client);
+    const table = screen.getByRole("table", { name: "Lead submissions" });
+    expect(
+      within(table).getByRole("cell", { name: "Submitted" }),
+    ).toBeVisible();
+    expect(within(table).getByRole("cell", { name: "Missing" })).toBeVisible();
+    const submissionsSection = expectDefined(table.closest("section"));
+    expect(
+      within(submissionsSection).getByRole("region", {
+        name: "Lead submissions",
+      }),
+    ).toHaveAttribute("aria-labelledby", "trends-submissions-heading");
+    expect(
+      screen.getAllByRole("status", { name: "Loading data" }),
+    ).toHaveLength(2);
     client.clear();
   });
 });

@@ -17,7 +17,7 @@ describe("TrendsSection", () => {
     const onRetry = vi.fn();
     render(
       <TrendsSection {...baseProps} isError onRetry={onRetry}>
-        <p>Chart data</p>
+        <p>Table data</p>
       </TrendsSection>,
     );
 
@@ -34,17 +34,17 @@ describe("TrendsSection", () => {
   it("announces loading and renders an explicit empty state", () => {
     const { rerender } = render(
       <TrendsSection {...baseProps} isLoading>
-        <p>Chart data</p>
+        <p>Table data</p>
       </TrendsSection>,
     );
-    expect(screen.getByRole("status", { name: "Loading chart" })).toBeVisible();
+    expect(screen.getByRole("status", { name: "Loading data" })).toBeVisible();
 
     rerender(
       <TrendsSection {...baseProps} emptyMessage="Two periods are required.">
-        <p>Chart data</p>
+        <p>Table data</p>
       </TrendsSection>,
     );
     expect(screen.getByText("Two periods are required.")).toBeVisible();
-    expect(screen.queryByText("Chart data")).not.toBeInTheDocument();
+    expect(screen.queryByText("Table data")).not.toBeInTheDocument();
   });
 });
