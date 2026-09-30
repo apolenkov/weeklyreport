@@ -87,24 +87,22 @@ export const executeAiProviderTest = async (
         ? ("inconclusive" as const)
         : ("incompatible" as const);
   const tested = executionClaim
-    ? await dependencies.repository.setClaimedTestResult(
-        executionClaim.id,
-        executionClaim.attempt,
-        revisionId,
+    ? await dependencies.repository.setClaimedTestResult({
+        executionId: executionClaim.id,
+        executionAttempt: executionClaim.attempt,
+        id: revisionId,
         result,
         status,
         embeddingDimensions,
-        now(),
-        revision.lifecycle,
+        testedAt: now(),
+        currentLifecycle: revision.lifecycle,
         outcome,
-        null,
+        failureCode: null,
         checks,
-        {
-          generationCompatibilityIdentity,
-          embeddingScopeIdentity,
-          compositeTestIdentity,
-        },
-      )
+        generationCompatibilityIdentity,
+        embeddingScopeIdentity,
+        compositeTestIdentity,
+      })
     : await dependencies.repository.setTestResult(
         revisionId,
         result,
