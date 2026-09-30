@@ -284,13 +284,14 @@ export const coreConfig: Linter.Config[] = [
       // React Compiler (React 19)
       "react-compiler/react-compiler": "error",
 
-      // file size + cyclomatic complexity. `max-lines` counts real code lines
-      // only (skipBlankLines + skipComments); `complexity` uses the ESLint
-      // default of 20; cognitive complexity is owned by sonarjs. Tests and
-      // config files relax these in overrides.ts.
-      // Measured 2026-09-30 on production code, not enabled while over 5
-      // violations: max-params 5 (59), max-lines-per-function 80 (70) / 120
-      // (21), complexity 15 (22). max-depth 4 has none, so it is enforced.
+      // Production structure budgets. Native eslint-suppressions.json counts
+      // preserve existing function/parameter violations; overrides.ts exempts
+      // the test/config contour. Cognitive complexity is owned by sonarjs.
+      "max-lines-per-function": [
+        "error",
+        { max: 80, skipBlankLines: true, skipComments: true },
+      ],
+      "max-params": ["error", 5],
       "max-depth": ["error", 4],
       "max-lines": [
         "error",
