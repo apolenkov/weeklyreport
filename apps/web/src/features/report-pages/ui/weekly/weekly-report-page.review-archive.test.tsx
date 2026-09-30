@@ -129,10 +129,10 @@ describe("WeeklyReportPage — review-mode split (report-review-mode)", () => {
     // Read mode renders read-only content — no verdict control, no composer, no
     // reviewer comments.
     expect(
-      screen.queryByRole("button", { name: "Approve" }),
+      screen.queryByRole("button", { name: /^Approve /u }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByLabelText("Add a review comment"),
+      screen.queryByLabelText(/^Add a review comment/u),
     ).not.toBeInTheDocument();
     expect(screen.queryByText(REVIEW_COMMENT_TEXT)).not.toBeInTheDocument();
     // The roll-up strip renders on the dashboard, not inside the report body.
@@ -149,9 +149,9 @@ describe("WeeklyReportPage — review-mode split (report-review-mode)", () => {
     );
 
     expect(
-      await screen.findByRole("button", { name: "Approve" }),
+      await screen.findByRole("button", { name: /^Approve /u }),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("Add a review comment")).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Add a review comment/u)).toBeInTheDocument();
     expect(screen.getByText(REVIEW_COMMENT_TEXT)).toBeInTheDocument();
     // The in-body verdict band is the designated viewer-reviewer's verdict home.
     expect(
@@ -167,7 +167,7 @@ describe("WeeklyReportPage — review-mode split (report-review-mode)", () => {
     );
 
     expect(
-      await screen.findByRole("button", { name: "Approve" }),
+      await screen.findByRole("button", { name: /^Approve /u }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("region", { name: "Section reviews" }),
@@ -209,7 +209,7 @@ describe("WeeklyReportPage — review-mode split (report-review-mode)", () => {
     expect(within(band).getByText("Alice")).toBeInTheDocument();
     expect(within(band).queryByText("Bob")).not.toBeInTheDocument();
     expect(
-      within(band).getAllByRole("button", { name: "Approve" }),
+      within(band).getAllByRole("button", { name: /^Approve /u }),
     ).toHaveLength(1);
   });
 });

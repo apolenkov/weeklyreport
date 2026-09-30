@@ -10,6 +10,8 @@ interface RecordCommentComposerProps {
   readonly submitDisabled: boolean;
   readonly isPending: boolean;
   readonly feedbackId?: string;
+  /** Accessible name; defaults to the generic label. */
+  readonly label?: string | undefined;
   readonly validationError?: string | undefined;
 }
 
@@ -20,6 +22,7 @@ export function RecordCommentComposer({
   submitDisabled,
   isPending,
   feedbackId,
+  label = "Add a review comment",
   validationError,
 }: RecordCommentComposerProps) {
   const id = useId();
@@ -41,7 +44,7 @@ export function RecordCommentComposer({
         value={draft}
         disabled={isPending}
         onChange={(event) => onDraftChange(event.target.value)}
-        aria-label="Add a review comment"
+        aria-label={label}
         aria-invalid={validationError ? "true" : "false"}
         aria-describedby={[
           limitId,
