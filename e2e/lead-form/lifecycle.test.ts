@@ -8,6 +8,7 @@ import {
 } from "@customreport/shared";
 
 import { shortItemLabel } from "../../apps/web/src/shared/lib/format/short-label.js";
+import { loginAsHead, openLeadReport } from "./access.js";
 import {
   type BrowserSnapshot,
   close,
@@ -26,9 +27,7 @@ import { registerE2eHooks } from "./fixtures.js";
 import {
   clickBackdrop,
   LEAD_FORM_FIXTURE,
-  loginAsHead,
   oneRef,
-  openLeadReport,
   roleText,
   saveDraft,
   scopeCount,
@@ -38,6 +37,7 @@ import {
   waitButton,
   waitClosed,
   waitScope,
+  waitSnapshot,
 } from "./helpers.js";
 import { scopeSnapshots } from "./snapshot-scope.js";
 
@@ -1113,7 +1113,13 @@ void test("pending reopen request preserves reason and blocks dismissal and dupl
   } finally {
     await setOffline(false);
   }
-  await waitText("Reopen request sent to Head");
+  await waitSnapshot(
+    (data) =>
+      scopeSnapshots(data, "region", "Notifications alt+T").some((region) =>
+        region.snapshot.includes('StaticText "Reopen request sent to Head"'),
+      ),
+    "Expected Request reopen success notification",
+  );
   await waitClosed(dialog);
   await waitButton("Request reopen", { present: false });
   assert.equal(await postCount("leadForm.requestReopen"), 1);

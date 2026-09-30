@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { prepareE2eData } from "../setup/reset.js";
+import { loginAsHead, openLeadReport } from "./access.js";
 import {
   type BrowserSnapshot,
   command,
@@ -21,8 +22,6 @@ import { assertFocused } from "./focus.js";
 import {
   clickBackdrop,
   LEAD_FORM_FIXTURE,
-  loginAsHead,
-  openLeadReport,
   roleText,
   saveDraft,
   type Scope,

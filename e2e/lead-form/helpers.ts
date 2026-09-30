@@ -1,26 +1,11 @@
 import assert from "node:assert/strict";
 
 import {
-  DEV_LOGIN_EMAIL_BY_ROLE,
-  ROLE_HOME_PATH,
-  ROLE_LABEL,
-} from "@customreport/shared";
-
-import {
   ARCHIVED_FILL_FIXTURE,
   LEAD_FORM_FIXTURE,
   OPEN_WORK_FIXTURE,
 } from "../setup/fixture-data.js";
-import {
-  command,
-  findRole,
-  getAttr,
-  headSession,
-  open,
-  refsByRole,
-  snapshot,
-  waitText,
-} from "./browser.js";
+import { command, findRole, getAttr, refsByRole, snapshot } from "./browser.js";
 import type { BrowserSnapshot } from "./snapshot-scope.js";
 import { scopeCount, scopeSnapshot } from "./snapshot-scope.js";
 
@@ -219,75 +204,11 @@ export async function setOffline(
   await command(["wait", "--fn", `navigator.onLine === ${!offline}`], session);
 }
 
-const authenticatedLeadSessions = new Set<string | undefined>();
 const SAVE_BUTTONS = `Array.from(document.getElementsByTagName('div'))
   .filter(group => group.getAttribute('role') === 'group' && ['Header completion actions', 'Sticky completion actions'].includes(group.getAttribute('aria-label')))
   .flatMap(group => Array.from(group.getElementsByTagName('button')))
   .filter(button => ['Save draft now', 'Retry saving draft', 'Saving draft', 'Draft saved'].includes(button.getAttribute('aria-label')))
   .filter(button => button.getClientRects().length > 0)`;
-
-async function login(role: "lead" | "head", session?: string): Promise<void> {
-  await open("/?stay=1", session);
-  const name = ROLE_LABEL[role];
-  await waitText(name, session);
-  const links = refsByRole(await snapshot(session), "link", name);
-  assert.equal(links.length, 1, `Expected one ${name} dev-login link`);
-  const ref = links.at(0);
-  assert(ref);
-  const href = await getAttr(ref, "href", session);
-  assert(href, "Missing dev-login link target");
-  const url = new URL(href, "http://localhost:3000");
-  assert.equal(url.pathname, "/auth/dev-login");
-  assert.equal(url.searchParams.get("role"), role);
-  assert.equal(url.searchParams.get("email"), DEV_LOGIN_EMAIL_BY_ROLE[role]);
-  await findRole("link", name, "click", undefined, session);
-  await command(["wait", "--url", `**${ROLE_HOME_PATH[role]}**`], session);
-}
-
-export async function loginAsLead(session?: string): Promise<void> {
-  await login("lead", session);
-  await waitText("My Report", session);
-  authenticatedLeadSessions.add(session ?? process.env.AGENT_BROWSER_SESSION);
-}
-
-export async function loginAsHead(session = headSession()): Promise<void> {
-  await login("head", session);
-}
-
-export async function openLeadReport(
-  mode: "overview" | "slides" = "overview",
-  session?: string,
-): Promise<void> {
-  if (
-    !authenticatedLeadSessions.has(session ?? process.env.AGENT_BROWSER_SESSION)
-  ) {
-    await loginAsLead(session);
-  }
-  await open(
-    `/lead/report/${LEAD_FORM_FIXTURE.reportId}?mode=${mode}`,
-    session,
-  );
-  await waitText("My Report", session);
-  const label =
-    mode === "overview"
-      ? "Status overview"
-      : "Status slide deck (use arrow keys to navigate slides)";
-  await command(
-    [
-      "wait",
-      "--fn",
-      String.raw`Array.from(document.getElementsByTagName('section')).some(section => section.getClientRects().length > 0 && (section.getAttribute('aria-label') ?? (section.getAttribute('aria-labelledby') ?? '').split(/\s+/).map(id => document.getElementById(id)?.textContent?.trim() ?? '').join(' ')) === ${JSON.stringify(label)})`,
-    ],
-    session,
-  );
-  await findRole(
-    mode === "overview" ? "region" : "group",
-    label,
-    "text",
-    undefined,
-    session,
-  );
-}
 
 export async function saveDraft(session?: string): Promise<void> {
   await command(
