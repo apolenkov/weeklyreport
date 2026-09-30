@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  aggregateTrafficLight,
   CANONICAL_STATUS_PRECEDENCE,
   type CanonicalStatus,
   canonicalStatusSchema,
@@ -8,7 +9,6 @@ import {
   trafficLightToCanonical,
 } from "@customreport/shared";
 
-import { worstTrafficStatus } from "../../../shared/lib/status/status-presentation";
 import { SlideStatusBadge } from "../../../shared/ui/feedback/slide-status-badge";
 import {
   AnalyticsTable,
@@ -110,7 +110,9 @@ export function TrafficLightHistoryTable({
 
   const rankedRows = rows
     .map((row) => {
-      const worst = trafficLightToCanonical(worstTrafficStatus(row.statuses));
+      const worst = trafficLightToCanonical(
+        aggregateTrafficLight(row.statuses),
+      );
       return {
         row,
         rank: Math.max(
