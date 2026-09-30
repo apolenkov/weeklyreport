@@ -14,12 +14,22 @@ if (!futureReport) {
   throw new Error("E2E fixture-data: missing draft future report in seed");
 }
 
+const oldestArchive = EXTRA_REPORTS.filter(
+  (report) => report.status === "published",
+)
+  .toSorted((left, right) => left.monday.getTime() - right.monday.getTime())
+  .at(0);
+if (!oldestArchive) {
+  throw new Error("E2E fixture-data: missing archived history in seed");
+}
+
 const LEAD_FULL_NAME = "Иванов Василий Петрович";
 
 export const LEAD_FORM_FIXTURE = {
   reportId: REPORT_ACTIVE,
   previousReportId: REPORT_PUBLISHED,
   futureReportId: futureReport.id,
+  oldestArchiveReportId: oldestArchive.id,
   leadId: LEAD_1,
   leadName: LEAD_FULL_NAME,
   leadDisplayName: shortNameFromName(LEAD_FULL_NAME),

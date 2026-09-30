@@ -4,9 +4,9 @@ import test from "node:test";
 import type { ReportAssistantOutcome } from "@customreport/shared";
 
 import { PROD_CRM_360 } from "../../prisma/seeds/simple/seed-simple.ids.js";
+import { DEMO_STAGE_ASSIGNMENTS } from "../../prisma/seeds/simple/seed-simple.stages.js";
 import { prepareE2eData } from "../setup/reset.js";
 import {
-  type BrowserSnapshot,
   command,
   fill,
   findRole,
@@ -27,8 +27,12 @@ import {
   roleText,
   saveDraft,
   scopeCount,
+  scopedRef,
   scopeSnapshot,
   setOffline,
+  waitButton,
+  waitClosed,
+  waitScope,
 } from "./helpers.js";
 
 registerE2eHooks();
@@ -41,6 +45,15 @@ const FILL_ROUTE = "**/trpc/*leadForm.fillFrom*";
 const WRITE_ROUTE =
   /reports\.(saveDraft|submit)|leadForm\.(resolvePlan|restorePlan|promotePlan|fillFrom|requestReopen)/u;
 const QUESTION = "What is the current product status?";
+// The canonical label is styled uppercase; match its AX name with case folding.
+const QUESTION_FIELD = /^Your question$/iu;
+// Frozen published history includes the demo assignments and the overlay product.
+const SOURCE_PRODUCT_COUNT =
+  new Set(
+    DEMO_STAGE_ASSIGNMENTS.filter(
+      (assignment) => assignment.userId === LEAD_FORM_FIXTURE.leadId,
+    ).map((assignment) => assignment.projectId),
+  ).size + 1;
 const ARCHIVED_FILL_HINT =
   "No submitted reports in open periods. Show closed (archived) report periods to see more.";
 const ANSWER: ReportAssistantOutcome = {
@@ -65,44 +78,17 @@ function record(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-async function waitButton(name: string, busy?: boolean): Promise<void> {
-  const busyCondition =
-    busy === undefined
-      ? "true"
-      : `button.getAttribute('aria-busy') === '${busy}'`;
-  await command([
-    "wait",
-    "--fn",
-    String.raw`Array.from(document.getElementsByTagName('button')).some(button => button.getClientRects().length > 0 && (button.getAttribute('aria-label') ?? button.innerText.replace(/\s+/g, ' ').trim()) === ${JSON.stringify(name)} && ${busyCondition})`,
-  ]);
-}
-
-async function refFor(role: string, name: string): Promise<string> {
-  const refs = refsByRole(await snapshot(), role, name);
-  assert.equal(refs.length, 1, `Expected one ${role} named ${name}`);
-  const ref = refs.at(0);
-  assert(ref);
-  return ref;
-}
-
-function namedRefs(
-  data: BrowserSnapshot,
-  role: string,
-  name: RegExp,
-): string[] {
-  return Object.entries(data.refs)
-    .filter(([, value]) => value.role === role && name.test(value.name ?? ""))
-    .map(([ref]) => `@${ref}`);
-}
-
-async function scopedRef(
-  scope: { role: string; name: string | RegExp },
-  role: string,
-  name: string,
-): Promise<string> {
-  const data = scopeSnapshot(await snapshot(), scope.role, scope.name);
+async function refFor(role: string, name: string | RegExp): Promise<string> {
+  const data = await snapshot();
   const refs = refsByRole(data, role, name);
-  assert.equal(refs.length, 1, `Expected one scoped ${role} named ${name}`);
+  const observedNames = Object.values(data.refs)
+    .filter((entry) => entry.role === role)
+    .map((entry) => entry.name);
+  assert.equal(
+    refs.length,
+    1,
+    `Expected one ${role} named ${String(name)}; observed ${JSON.stringify(observedNames)}`,
+  );
   const ref = refs.at(0);
   assert(ref);
   return ref;
@@ -124,7 +110,7 @@ async function assertFocused(name: string): Promise<void> {
   assert.equal(data.result, name);
 }
 
-async function valueOf(role: string, name: string): Promise<string> {
+async function valueOf(role: string, name: string | RegExp): Promise<string> {
   const data = await command(["get", "value", await refFor(role, name)]);
   assert.equal(typeof data.value, "string");
   return String(data.value);
@@ -266,6 +252,7 @@ async function openConfiguredChat(): Promise<void> {
   await stubAvailability("available");
   await clearRequests();
   await findRole("button", "Open report chat", "click");
+  await waitScope({ role: "dialog", name: "Report chat" });
   await findRole("dialog", "Report chat", "text");
 }
 
@@ -276,11 +263,10 @@ async function askQuestion(question = QUESTION): Promise<void> {
 
 async function signOutToLogin(): Promise<void> {
   await findRole("button", "Sign out", "click");
-  await command([
-    "wait",
-    "--fn",
-    "Array.from(document.links).some(link => link.getClientRects().length > 0 && link.textContent?.trim() === 'Lead')",
-  ]);
+  await command(["wait", "--url", "http://localhost:3000/"]);
+  await waitText("Lead");
+  await waitScope({ role: "list", name: "Sign in as" });
+  await findRole("link", "Lead", "text");
 }
 
 async function addMarker(text: string): Promise<void> {
@@ -298,14 +284,23 @@ async function addMarker(text: string): Promise<void> {
 
 async function openFillConfirmation(): Promise<{ role: string; name: RegExp }> {
   await findRole("button", "Fill from most recent submitted period", "click");
-  const data = await snapshot();
   const name = /^Fill from .+\?$/u;
+  const data = await waitScope({ role: "alertdialog", name });
   assert.equal(scopeCount(data, "alertdialog", name), 1);
   assert.match(
     scopeSnapshot(data, "alertdialog", name).snapshot,
     /Priorities will NOT be filled\./u,
   );
   return { role: "alertdialog", name };
+}
+
+async function expandFilledProduct(): Promise<void> {
+  const scope = {
+    role: "article",
+    name: `Product ${LEAD_FORM_FIXTURE.productName}`,
+  };
+  await waitScope(scope);
+  await command(["click", await scopedRef(scope, "button", "+1 more")]);
 }
 
 async function createUnsavedRisk(): Promise<void> {
@@ -328,6 +323,7 @@ async function createUnsavedRisk(): Promise<void> {
 async function requestOverwrite(): Promise<void> {
   const confirmation = await openFillConfirmation();
   await clickScoped(confirmation, "button", "Replace & Fill");
+  await waitScope({ role: "alertdialog", name: "Overwrite unsaved changes?" });
   await findRole("alertdialog", "Overwrite unsaved changes?", "text");
 }
 
@@ -437,6 +433,7 @@ void test("Fill from previous handles cancel and persists canonical replacement"
   await clearRequests();
   const confirmation = await openFillConfirmation();
   await clickScoped(confirmation, "button", "Cancel");
+  await waitClosed(confirmation);
   await assertFocused("Fill from most recent submitted period");
   await findRole(
     "button",
@@ -448,6 +445,7 @@ void test("Fill from previous handles cancel and persists canonical replacement"
   await clickScoped(replacement, "button", "Replace & Fill");
   await waitText("Form filled from selected period");
   await reload();
+  await expandFilledProduct();
   await waitButton(`Update progress for ${LEAD_FORM_FIXTURE.previousText}`);
   const data = await snapshot();
   assert.doesNotMatch(data.snapshot, /E2E fill replacement marker/u);
@@ -457,11 +455,11 @@ void test("Fill from previous handles cancel and persists canonical replacement"
     `Update progress for ${LEAD_FORM_FIXTURE.previousText}`,
     "text",
   );
-  await findRole("link", "Slides", "click");
-  await waitButton("Document");
+  await clickScoped({ role: "group", name: "View mode" }, "link", "Slides");
+  await waitText("Document");
   await findRole("button", "Document", "click");
   const slide = await snapshot();
-  const expanded = namedRefs(
+  const expanded = refsByRole(
     slide,
     "button",
     /^Expand full details for Completed: Закрыли спринтовые цели команды/u,
@@ -470,7 +468,7 @@ void test("Fill from previous handles cancel and persists canonical replacement"
   const expand = expanded.at(0);
   assert(expand);
   await command(["click", expand]);
-  const editRefs = namedRefs(
+  const editRefs = refsByRole(
     await snapshot(),
     "button",
     /^Edit Completed: Закрыли спринтовые цели команды/u,
@@ -498,7 +496,7 @@ void test("Fill from pending replacement blocks dismissal and duplicate writes",
   await setOffline(true);
   try {
     await clickScoped(confirmation, "button", "Replace & Fill");
-    await waitButton("Replace & Fill", true);
+    await waitButton("Replace & Fill", { busy: true });
     for (const name of ["Cancel", "Replace & Fill"]) {
       const ref = await scopedRef(confirmation, "button", name);
       assert.notEqual(await getAttr(ref, "disabled"), null);
@@ -524,6 +522,7 @@ void test("Fill from pending replacement blocks dismissal and duplicate writes",
   );
   assert.equal(calls.length, 1);
   await reload();
+  await expandFilledProduct();
   await waitButton(`Update progress for ${LEAD_FORM_FIXTURE.previousText}`);
   await findRole(
     "button",
@@ -596,6 +595,7 @@ void test("Fill from previous dirty overwrite retains input and recovers from fa
   await waitText("Form filled from selected period");
   await command(["network", "unroute", DRAFT_ROUTE]);
   await reload();
+  await expandFilledProduct();
   await waitButton(`Update progress for ${LEAD_FORM_FIXTURE.previousText}`);
   assert.doesNotMatch((await snapshot()).snapshot, /E2E unsaved fill risk/u);
   await findRole(
@@ -610,13 +610,17 @@ void test("past-report picker searches and restores focus without changing the d
   await clearRequests();
   await findRole("switch", "Show closed (archived) report periods", "click");
   await findRole("button", "Choose past report to fill from", "click");
+  await waitScope({ role: "region", name: "Past reports" });
   await findRole("region", "Past reports", "text");
   const initial = await snapshot();
-  const latest = namedRefs(initial, "button", /Latest submitted/u);
+  const latest = refsByRole(initial, "button", /Latest submitted/u);
   assert.equal(latest.length, 1);
   const latestRef = latest.at(0);
   assert(latestRef);
-  assert.match(await getText(latestRef), /1 product.*2 items.*0 risks/su);
+  assert.equal(
+    (await getText(latestRef)).split("\n").at(-1),
+    `${SOURCE_PRODUCT_COUNT} products · 2 items · 0 risks`,
+  );
   const pickerData = scopeSnapshot(initial, "region", "Past reports");
   const older = Object.entries(pickerData.refs)
     .filter(
@@ -629,7 +633,7 @@ void test("past-report picker searches and restores focus without changing the d
   assert(olderWeek);
   await fill("Search reports", olderWeek);
   const filtered = await snapshot();
-  assert.equal(namedRefs(filtered, "button", /Latest submitted/u).length, 0);
+  assert.equal(refsByRole(filtered, "button", /Latest submitted/u).length, 0);
   assert.match(
     scopeSnapshot(filtered, "region", "Past reports").snapshot,
     /Archived/u,
@@ -638,6 +642,7 @@ void test("past-report picker searches and restores focus without changing the d
   await waitText("No reports match your search.");
   await command(["press", "Escape"]);
   await findRole("button", "Choose past report to fill from", "click");
+  await waitScope({ role: "region", name: "Past reports" });
   assert.equal(await valueOf("textbox", "Search reports"), "");
   const picker = { role: "region", name: "Past reports" };
   const source = await scopedRef(
@@ -646,21 +651,29 @@ void test("past-report picker searches and restores focus without changing the d
     initial.refs[latestRef.slice(1)]?.name ?? "",
   );
   await command(["click", source]);
+  const confirmation = { role: "alertdialog", name: /^Fill from .+\?$/u };
+  await waitScope(confirmation);
   assert.equal(
     scopeCount(await snapshot(), "alertdialog", /^Fill from .+\?$/u),
     1,
   );
   await findRole("button", "Cancel", "click");
+  await waitClosed(confirmation);
   await assertFocused("Choose past report to fill from");
   await findRole("button", "Choose past report to fill from", "click");
+  await waitScope({ role: "region", name: "Past reports" });
   await fill("Search reports", "no matching E2E period");
   await findRole("heading", "My Report", "click");
+  await waitClosed({ role: "region", name: "Past reports" });
   assert.equal(scopeCount(await snapshot(), "region", "Past reports"), 0);
   await findRole("button", "Choose past report to fill from", "click");
+  await waitScope({ role: "region", name: "Past reports" });
   assert.equal(await valueOf("textbox", "Search reports"), "");
   await fill("Search reports", "no matching E2E period");
   await findRole("button", "Choose past report to fill from", "click");
+  await waitClosed({ role: "region", name: "Past reports" });
   await findRole("button", "Choose past report to fill from", "click");
+  await waitScope({ role: "region", name: "Past reports" });
   assert.equal(await valueOf("textbox", "Search reports"), "");
   await command(["press", "Escape"]);
   await findRole(
@@ -681,11 +694,7 @@ void test("published lineage disables Fill from without a write", async () => {
   );
   await findRole("form", formName, "text");
   await findRole("button", "Save update", "click");
-  await command([
-    "wait",
-    "--fn",
-    `!Array.from(document.forms).some(form => form.getAttribute('aria-label') === ${JSON.stringify(formName)})`,
-  ]);
+  await waitClosed({ role: "form", name: formName });
   await saveDraft();
   await reload();
   await waitButton("Fill from most recent submitted period");
@@ -723,6 +732,7 @@ void test("Fill from without submitted history explains the disabled action", as
     0,
   );
   await findRole("button", "Choose past report to fill from", "click");
+  await waitScope({ role: "region", name: "Past reports" });
   assert.match(
     await roleText("region", "Past reports"),
     /No submitted past reports found\./u,
@@ -756,6 +766,7 @@ void test("archived-only history explains Fill from and preserves the draft afte
   assert.equal(await getAttr(choose, "aria-disabled"), null);
   assert.equal(await getAttr(choose, "disabled"), null);
   await command(["click", choose]);
+  await waitScope({ role: "region", name: "Past reports" });
   await waitText(ARCHIVED_FILL_HINT);
   assert.equal(
     (await roleText("region", "Past reports")).trim(),
@@ -769,6 +780,7 @@ void test("archived-only history explains Fill from and preserves the draft afte
     0,
   );
   await command(["press", "Escape"]);
+  await waitClosed({ role: "region", name: "Past reports" });
   await findRole("switch", archiveSwitch, "click");
   assert.equal(
     await getAttr(await refFor("switch", archiveSwitch), "aria-checked"),
@@ -779,6 +791,7 @@ void test("archived-only history explains Fill from and preserves the draft afte
     null,
   );
   await findRole("button", picker, "click");
+  await waitScope({ role: "region", name: "Past reports" });
   await waitText("Latest submitted");
   const past = scopeSnapshot(await snapshot(), "region", "Past reports");
   const sources = refsByRole(past, "button");
@@ -795,11 +808,13 @@ void test("archived-only history explains Fill from and preserves the draft afte
     name: `Fill from ${ARCHIVED_FILL_FIXTURE.weekLabel}?`,
   };
   await waitText(confirmation.name);
+  await waitScope(confirmation);
   assert.equal(
     scopeCount(await snapshot(), confirmation.role, confirmation.name),
     1,
   );
   await clickScoped(confirmation, "button", "Cancel");
+  await waitClosed(confirmation);
   await assertFocused(picker);
   await findRole("button", current, "text");
   await assertNoReportWrites();
@@ -810,14 +825,17 @@ void test("archived-only history explains Fill from and preserves the draft afte
     "false",
   );
   await findRole("button", picker, "click");
+  await waitScope({ role: "region", name: "Past reports" });
   await waitText(ARCHIVED_FILL_HINT);
   await command(["press", "Escape"]);
+  await waitClosed({ role: "region", name: "Past reports" });
   await findRole("switch", archiveSwitch, "click");
   assert.equal(
     await getAttr(await refFor("switch", archiveSwitch), "aria-checked"),
     "true",
   );
   await findRole("button", picker, "click");
+  await waitScope({ role: "region", name: "Past reports" });
   await waitText("Latest submitted");
   const reloaded = refsByRole(
     scopeSnapshot(await snapshot(), "region", "Past reports"),
@@ -881,6 +899,7 @@ void test("report chat checking availability blocks opening until the check resu
   await waitButton("Open report chat");
   await findRole("button", "Open report chat", "text");
   await findRole("button", "Open report chat", "click");
+  await waitScope({ role: "dialog", name: "Report chat" });
   await findRole("dialog", "Report chat", "text");
   assert.equal((await assistantRequests()).length, 0);
   await assertNoReportWrites();
@@ -896,12 +915,12 @@ void test("report chat searching disables input and prevents duplicate questions
     await waitButton("Searching reports");
     const search = await refFor("button", "Searching reports");
     assert.notEqual(await getAttr(search, "disabled"), null);
-    const question = await refFor("textbox", "Your question");
+    const question = await refFor("textbox", QUESTION_FIELD);
     assert.notEqual(await getAttr(question, "disabled"), null);
     assert.equal(await getAttr(question, "aria-busy"), "true");
     await waitText("Reviewing your report context…");
     await command(["press", "Enter"]);
-    assert.equal(await valueOf("textbox", "Your question"), QUESTION);
+    assert.equal(await valueOf("textbox", QUESTION_FIELD), QUESTION);
     await assertSingletonAssistantCalls(0);
     await assertNoReportWrites();
   } finally {
@@ -909,7 +928,7 @@ void test("report chat searching disables input and prevents duplicate questions
   }
   await waitText("E2E grounded answer");
   await findRole("heading", "E2E grounded answer", "text");
-  const question = await refFor("textbox", "Your question");
+  const question = await refFor("textbox", QUESTION_FIELD);
   assert.equal(await getAttr(question, "disabled"), null);
   assert.equal(await getAttr(question, "aria-busy"), "false");
   await findRole("button", "Ask report chat", "text");
@@ -936,10 +955,10 @@ void test("report chat questions, clarification, retry and sources stay read-onl
     ).enabled,
     false,
   );
-  const question = await refFor("textbox", "Your question");
+  const question = await refFor("textbox", QUESTION_FIELD);
   assert.equal(await getAttr(question, "maxlength"), "2000");
   await fill("Your question", "x".repeat(2001));
-  assert.equal((await valueOf("textbox", "Your question")).length, 2000);
+  assert.equal((await valueOf("textbox", QUESTION_FIELD)).length, 2000);
   await stubAssistant({
     kind: "clarification_required",
     options: [
@@ -953,7 +972,7 @@ void test("report chat questions, clarification, retry and sources stay read-onl
   await stubAssistant({ kind: "provider_unavailable" });
   await findRole("button", LEAD_FORM_FIXTURE.productName, "click");
   await waitText("The AI service is temporarily unavailable.");
-  assert.equal(await valueOf("textbox", "Your question"), QUESTION);
+  assert.equal(await valueOf("textbox", QUESTION_FIELD), QUESTION);
   await stubAssistant(ANSWER);
   await findRole("button", "Try again", "click");
   await waitText("E2E grounded answer");
@@ -984,10 +1003,12 @@ void test("report chat questions, clarification, retry and sources stay read-onl
   assert.deepEqual(input.resolutionTokens, ["e2e-resolution-token"]);
   await assertNoReportWrites();
   await findRole("button", "Close", "click");
+  await waitClosed({ role: "dialog", name: "Report chat" });
   await findRole("button", "Open report chat", "click");
+  await waitScope({ role: "dialog", name: "Report chat" });
   await waitText("E2E grounded answer");
   await findRole("heading", "E2E grounded answer", "text");
-  assert.equal(await valueOf("textbox", "Your question"), QUESTION);
+  assert.equal(await valueOf("textbox", QUESTION_FIELD), QUESTION);
   await command([
     "click",
     await refFor(
@@ -1004,9 +1025,10 @@ void test("report chat questions, clarification, retry and sources stay read-onl
   await waitText("Read-only report and status context.");
   await assertNoReportWrites();
   await findRole("button", "Open report chat", "click");
+  await waitScope({ role: "dialog", name: "Report chat" });
   await waitText("E2E grounded answer");
   await findRole("heading", "E2E grounded answer", "text");
-  assert.equal(await valueOf("textbox", "Your question"), QUESTION);
+  assert.equal(await valueOf("textbox", QUESTION_FIELD), QUESTION);
 });
 
 void test("report chat reload clears its exchange while the saved draft persists", async () => {
@@ -1021,6 +1043,7 @@ void test("report chat reload clears its exchange while the saved draft persists
   await command(["network", "route", ASSISTANT_ROUTE, "--abort"]);
   await clearRequests();
   await findRole("button", "Open report chat", "click");
+  await waitScope({ role: "dialog", name: "Report chat" });
   await stubAssistant(ANSWER);
   await askQuestion();
   await waitText("E2E grounded answer");
@@ -1035,7 +1058,8 @@ void test("report chat reload clears its exchange while the saved draft persists
   await command(["network", "unroute", AVAILABILITY_ROUTE]);
   await stubAvailability("available");
   await findRole("button", "Open report chat", "click");
-  assert.equal(await valueOf("textbox", "Your question"), "");
+  await waitScope({ role: "dialog", name: "Report chat" });
+  assert.equal(await valueOf("textbox", QUESTION_FIELD), "");
   assert.equal(
     scopeCount(await snapshot(), "heading", "E2E grounded answer"),
     0,
@@ -1051,6 +1075,7 @@ for (const identity of ["Lead", "Head"]) {
     await waitText("E2E grounded answer");
     await findRole("heading", "E2E grounded answer", "text");
     await findRole("button", "Close", "click");
+    await waitClosed({ role: "dialog", name: "Report chat" });
     await command(["network", "unroute", SINGLE_AVAILABILITY_ROUTE]);
     await command(["network", "route", AVAILABILITY_ROUTE, "--abort"]);
     await signOutToLogin();
@@ -1067,7 +1092,8 @@ for (const identity of ["Lead", "Head"]) {
     await command(["network", "unroute", AVAILABILITY_ROUTE]);
     await stubAvailability("available");
     await findRole("button", "Open report chat", "click");
-    assert.equal(await valueOf("textbox", "Your question"), "");
+    await waitScope({ role: "dialog", name: "Report chat" });
+    assert.equal(await valueOf("textbox", QUESTION_FIELD), "");
     assert.equal(
       scopeCount(await snapshot(), "heading", "E2E grounded answer"),
       0,
@@ -1165,7 +1191,7 @@ for (const recovery of RECOVERIES) {
     await askQuestion();
     await waitText(recovery.message);
     await findRole("button", recovery.action, "text");
-    assert.equal(await valueOf("textbox", "Your question"), QUESTION);
+    assert.equal(await valueOf("textbox", QUESTION_FIELD), QUESTION);
     if (recovery.retry) await stubAssistant(ANSWER);
     await findRole("button", recovery.action, "click");
     if (recovery.retry) {
@@ -1180,7 +1206,7 @@ for (const recovery of RECOVERIES) {
       ]);
       await assertSingletonAssistantCalls(1);
     }
-    assert.equal(await valueOf("textbox", "Your question"), QUESTION);
+    assert.equal(await valueOf("textbox", QUESTION_FIELD), QUESTION);
     await assertNoReportWrites();
   });
 }
@@ -1190,7 +1216,7 @@ void test("report chat transport failure offers the correct read-only recovery",
   await command(["network", "route", ASSISTANT_ROUTE, "--abort"]);
   await askQuestion();
   await waitText("The assistant could not complete that search.");
-  assert.equal(await valueOf("textbox", "Your question"), QUESTION);
+  assert.equal(await valueOf("textbox", QUESTION_FIELD), QUESTION);
   await stubAssistant(ANSWER);
   await findRole("button", "Try again", "click");
   await waitText("E2E grounded answer");
@@ -1209,7 +1235,7 @@ void test("report chat provider rate limit offers the correct read-only recovery
   await waitText(
     "The AI provider reached its rate limit. Try again in about 1 second.",
   );
-  assert.equal(await valueOf("textbox", "Your question"), QUESTION);
+  assert.equal(await valueOf("textbox", QUESTION_FIELD), QUESTION);
   await stubAssistant(ANSWER);
   await findRole("button", "Try again", "click");
   await waitText("E2E grounded answer");

@@ -1,7 +1,7 @@
 import { initializeSessions } from "../lead-form/browser.js";
-import { prepareE2eData } from "./reset.js";
+import { validateE2eRuntimeTarget } from "./runtime-target.js";
 
 export async function globalSetup(signal: AbortSignal): Promise<void> {
-  await prepareE2eData("demo", signal);
+  validateE2eRuntimeTarget("e2e-global-setup");
   await initializeSessions(signal);
 }

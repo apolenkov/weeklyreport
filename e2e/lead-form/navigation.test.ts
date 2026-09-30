@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { draftSaveSchema, shortNameFromName } from "@customreport/shared";
+import superjson from "superjson";
 
+import { formatPeriodRangeWithYear } from "../../apps/web/src/shared/lib/format/format-date.js";
+import { SEED_REPORTS } from "../../prisma/seeds/support/seed-periods.js";
 import {
   command,
   fill,
@@ -26,14 +29,23 @@ import {
   roleText,
   saveDraft,
   scopeCount,
+  scopedRef,
   scopeSnapshot,
   setOffline,
+  waitButton,
+  waitScope,
+  waitSnapshot,
 } from "./helpers.js";
 
 registerE2eHooks();
 
 const DECK_NAME = "Status slide deck (use arrow keys to navigate slides)";
 const ARCHIVE_NAME = "Show closed (archived) report periods";
+const VIEW_MODE_SCOPE = { role: "group", name: "View mode" } as const;
+const PREVIOUS_PERIOD_DATE_RANGE = formatPeriodRangeWithYear(
+  SEED_REPORTS.published.periodStart,
+  SEED_REPORTS.published.periodEnd,
+);
 // Boris's CRM rows come from seed-simple.overlay-boris.ts.
 const FOREIGN_SUPPORT = {
   risk: "Требования к аналитическому модулю не финализированы до старта разработки",
@@ -59,8 +71,16 @@ function namedRefs(
 }
 
 async function roleRef(role: string, name: string): Promise<string> {
-  const refs = refsByRole(await snapshot(), role, name);
-  assert.equal(refs.length, 1, `${role}: ${name} must be unique`);
+  const data = await snapshot();
+  const refs = refsByRole(data, role, name);
+  const available = namedRefs(data, role, () => true).map(
+    (entry) => entry.name,
+  );
+  assert.equal(
+    refs.length,
+    1,
+    `${role}: ${name} must be unique; observed ${available.length > 0 ? JSON.stringify(available) : data.snapshot}`,
+  );
   const ref = refs.at(0);
   assert.ok(ref);
   return ref;
@@ -158,6 +178,21 @@ async function assertScope(role: string, name: string): Promise<void> {
   assert.ok((await roleText(role, name)).trim().length > 0);
 }
 
+async function clickViewMode(name: "Report" | "Slides"): Promise<void> {
+  await command(["click", await scopedRef(VIEW_MODE_SCOPE, "link", name)]);
+}
+
+async function openPeriodPicker(): Promise<void> {
+  await findRole("combobox", "Select reporting period", "click");
+  await waitScope({ role: "listbox", name: "Reporting period" });
+  await assertAttribute(
+    "combobox",
+    "Select reporting period",
+    "aria-expanded",
+    "true",
+  );
+}
+
 void test("dev login opens the current lead report", async () => {
   await loginAsLead();
   assert.equal(
@@ -180,7 +215,16 @@ void test("dev login opens the current lead report", async () => {
     `**/lead/report/${LEAD_FORM_FIXTURE.reportId}`,
   ]);
   assert.equal(new URL(await getUrl()).searchParams.has("mode"), false);
-  await assertAttribute("link", "Report", "aria-current", "page");
+  await waitScope({ role: "region", name: "Status overview" });
+  await waitScope({ role: "group", name: "Header completion actions" });
+  await waitButton("Save draft now");
+  assert.equal(
+    await getAttr(
+      await scopedRef(VIEW_MODE_SCOPE, "link", "Report"),
+      "aria-current",
+    ),
+    "page",
+  );
   assert.ok(await isVisible(await roleRef("button", "Save draft now")));
 });
 
@@ -190,7 +234,7 @@ void test("Report and Slides preserve the selected period and record visibility"
   await assertAttribute("button", "Everyone", "aria-pressed", "true");
   const overview = await roleText("region", "Status overview");
   assert.equal(overview.includes(LEAD_FORM_FIXTURE.foreignText), false);
-  await findRole("link", "Slides", "click");
+  await clickViewMode("Slides");
   await waitText(LEAD_FORM_FIXTURE.foreignText);
   await assertAttribute("link", "Slides", "aria-current", "page");
   assert.equal(
@@ -206,7 +250,7 @@ void test("Report and Slides preserve the selected period and record visibility"
     (await snapshot()).snapshot.includes(LEAD_FORM_FIXTURE.foreignText),
     false,
   );
-  await findRole("link", "Report", "click");
+  await clickViewMode("Report");
   await waitText("Status overview");
   await assertAttribute("button", "Mine only", "aria-pressed", "true");
   await findRole("button", "Previous period", "click");
@@ -219,7 +263,7 @@ void test("Report and Slides preserve the selected period and record visibility"
   const history = await snapshot();
   assert.equal(
     namedRefs(history, "button", (name) =>
-      /^(?:Save draft now|Retry saving draft|Submit report|Add item to |Update progress for |Edit item: )/.test(
+      /^(?:Save draft now|Retry saving draft|Submit(?: report)?$|Add item to |Update progress for |Edit item: )/.test(
         name,
       ),
     ).length,
@@ -229,7 +273,7 @@ void test("Report and Slides preserve the selected period and record visibility"
     scopeCount(history, "DisclosureTriangle", /^More actions for /),
     0,
   );
-  await findRole("link", "Slides", "click");
+  await clickViewMode("Slides");
   await waitText("Viewing past period. This form is read-only.");
   assert.equal(
     new URL(await getUrl()).pathname,
@@ -249,7 +293,7 @@ void test("period navigation and archive filters open read-only history", async 
     `/lead/report/${LEAD_FORM_FIXTURE.previousReportId}`,
   );
   await assertReadOnlySlide();
-  await findRole("combobox", "Select reporting period", "click");
+  await openPeriodPicker();
   await assertScope("listbox", "Reporting period");
   const hiddenArchive = namedRefs(await snapshot(), "option", (name) =>
     name.includes("Archived"),
@@ -264,7 +308,7 @@ void test("period navigation and archive filters open read-only history", async 
   );
   await findRole("switch", ARCHIVE_NAME, "click");
   await assertAttribute("switch", ARCHIVE_NAME, "aria-checked", "true");
-  await findRole("combobox", "Select reporting period", "click");
+  await openPeriodPicker();
   const archived = namedRefs(await snapshot(), "option", (name) =>
     name.includes("Archived"),
   );
@@ -275,13 +319,13 @@ void test("period navigation and archive filters open read-only history", async 
   await command([
     "wait",
     "--url",
-    `**/lead/report/${OPEN_WORK_FIXTURE.archiveReportId}?mode=slides`,
+    `**/lead/report/${LEAD_FORM_FIXTURE.oldestArchiveReportId}?mode=slides`,
   ]);
   await waitText("Viewing past period. This form is read-only.");
   await assertAttribute("button", "Previous period", "disabled", "");
   await findRole("switch", ARCHIVE_NAME, "click");
   await assertAttribute("switch", ARCHIVE_NAME, "aria-checked", "false");
-  await findRole("combobox", "Select reporting period", "click");
+  await openPeriodPicker();
   assert.equal(
     namedRefs(await snapshot(), "option", (name) => name.includes("Archived"))
       .length,
@@ -296,7 +340,7 @@ void test("period navigation and archive filters open read-only history", async 
   ]);
   await waitText(LEAD_FORM_FIXTURE.currentText);
   await assertAttribute("button", "Next period", "disabled", "");
-  await findRole("combobox", "Select reporting period", "click");
+  await openPeriodPicker();
   await command(["press", "ArrowDown"]);
   await command(["press", "Enter"]);
   await command([
@@ -334,7 +378,7 @@ void test("period listbox touch swipes move between Current and read-only histor
   await command(["set", "viewport", "400", "800"]);
   await findRole("switch", ARCHIVE_NAME, "click");
   await assertAttribute("switch", ARCHIVE_NAME, "aria-checked", "true");
-  await findRole("combobox", "Select reporting period", "click");
+  await openPeriodPicker();
   const options = namedRefs(
     scopeSnapshot(await snapshot(), "listbox", "Reporting period"),
     "option",
@@ -345,6 +389,7 @@ void test("period listbox touch swipes move between Current and read-only histor
   assert.ok(current);
   assert.ok(current.name.includes("(Current)"));
   assert.ok(previous);
+  assert.equal(previous.name, PREVIOUS_PERIOD_DATE_RANGE);
   await assertAttribute("option", current.name, "aria-selected", "true");
   await swipeOpenPeriodListbox("right");
   await command([
@@ -361,7 +406,7 @@ void test("period listbox touch swipes move between Current and read-only histor
   );
   assert.equal(
     namedRefs(history, "button", (name) =>
-      /^(?:Save draft now|Retry saving draft|Submit report|Add item to |\+ Add |Edit |Delete )/.test(
+      /^(?:Save draft now|Retry saving draft|Submit(?: report)?$|Add item to |\+ Add |Edit |Delete )/.test(
         name,
       ),
     ).length,
@@ -376,8 +421,16 @@ void test("period listbox touch swipes move between Current and read-only histor
     "aria-expanded",
     "false",
   );
-  await findRole("combobox", "Select reporting period", "click");
-  await assertAttribute("option", previous.name, "aria-selected", "true");
+  await openPeriodPicker();
+  const selectedPrevious = namedRefs(
+    scopeSnapshot(await snapshot(), "listbox", "Reporting period"),
+    "option",
+    (name) => name.replace(/ Submitted$/, "") === PREVIOUS_PERIOD_DATE_RANGE,
+  );
+  assert.equal(selectedPrevious.length, 1);
+  const previousOption = selectedPrevious.at(0);
+  assert.ok(previousOption);
+  assert.equal(await getAttr(previousOption.ref, "aria-selected"), "true");
   await swipeOpenPeriodListbox("left");
   await command([
     "wait",
@@ -387,7 +440,7 @@ void test("period listbox touch swipes move between Current and read-only histor
   await waitText(LEAD_FORM_FIXTURE.currentText);
   await assertAttribute("button", "Next period", "disabled", "");
   await command(["press", "Escape"]);
-  await findRole("combobox", "Select reporting period", "click");
+  await openPeriodPicker();
   await assertAttribute("option", current.name, "aria-selected", "true");
   await command(["press", "Escape"]);
   await reload();
@@ -400,7 +453,7 @@ async function assertReadOnlySlide(): Promise<void> {
   const data = await snapshot();
   assert.equal(
     namedRefs(data, "button", (name) =>
-      /^(?:Save draft now|Retry saving draft|Submit report|Add item to |\+ Add )/.test(
+      /^(?:Save draft now|Retry saving draft|Submit(?: report)?$|Add item to |\+ Add )/.test(
         name,
       ),
     ).length,
@@ -453,12 +506,23 @@ void test("Everyone preserves foreign record read-only boundaries", async () => 
 async function openSupportingSections(): Promise<void> {
   for (const title of ["Risks & Blockers", "Decisions"]) {
     await findRole("button", `Expand ${title}`, "click");
+    await waitButton(`Collapse ${title}`);
     await assertAttribute(
       "button",
       `Collapse ${title}`,
       "aria-expanded",
       "true",
     );
+    const panelId = await getAttr(
+      await roleRef("button", `Collapse ${title}`),
+      "aria-controls",
+    );
+    assert.ok(panelId, `${title} must identify its controlled panel`);
+    await command([
+      "wait",
+      "--fn",
+      `document.getElementById(${JSON.stringify(panelId)})?.getAnimations().every(animation => animation.playState !== "running") === true`,
+    ]);
   }
 }
 
@@ -543,7 +607,8 @@ function observedSaveInput(
   const index = procedures.indexOf("reports.saveDraft");
   assert.ok(index !== -1);
   const batch = record(JSON.parse(request.postData) as unknown);
-  return record(record(batch[String(index)]).json);
+  const envelope = record(batch[String(index)]);
+  return record(superjson.parse(JSON.stringify(envelope)));
 }
 
 async function assertOwnSavePayload(marker: string): Promise<void> {
@@ -554,7 +619,9 @@ async function assertOwnSavePayload(marker: string): Promise<void> {
   assert.ok(requests.length > 0, "A real draft-save POST must be acknowledged");
   for (const request of requests) {
     const input = observedSaveInput(request);
-    const payload = draftSaveSchema.parse(input);
+    const parsed = draftSaveSchema.safeParse(input);
+    assert.ok(parsed.success, parsed.success ? "" : parsed.error.message);
+    const payload = parsed.data;
     assert.equal(
       payload.reportSectionId,
       "a0000000-0000-4000-8000-000000000401",
@@ -595,16 +662,21 @@ async function assertOwnSavePayload(marker: string): Promise<void> {
 
 void test("Everyone saves only the Lead records and preserves foreign content", async () => {
   await openReadOnlyReport();
+  await waitScope({ role: "group", name: "Header completion actions" });
+  await waitButton(`Add item to ${LEAD_FORM_FIXTURE.activityName}`);
   await openSupportingSections();
   const ownEditing = supportEditingNames(await snapshot());
   assert.ok(ownEditing.length > 0);
   await findRole("button", "Everyone", "click");
   await assertAttribute("button", "Everyone", "aria-pressed", "true");
   await assertForeignSupport(ownEditing);
-  await findRole("link", "Slides", "click");
+  await clickViewMode("Slides");
   await assertForeignSlides();
-  await findRole("link", "Report", "click");
+  await clickViewMode("Report");
   await waitText(LEAD_FORM_FIXTURE.currentText);
+  await waitScope({ role: "region", name: "Status overview" });
+  await waitScope({ role: "group", name: "Header completion actions" });
+  await waitButton(`Add item to ${LEAD_FORM_FIXTURE.activityName}`);
   const marker = "E2E Everyone own activity progress";
   await command(["network", "requests", "--clear"]);
   await findRole(
@@ -622,7 +694,7 @@ void test("Everyone saves only the Lead records and preserves foreign content", 
   await assertAttribute("button", "Everyone", "aria-pressed", "true");
   await openSupportingSections();
   await assertForeignSupport(ownEditing);
-  await findRole("link", "Slides", "click");
+  await clickViewMode("Slides");
   await assertForeignSlides();
   assert.ok((await snapshot()).snapshot.includes(marker));
 });
@@ -632,7 +704,7 @@ void test("Status overview initial read failure recovers through Try again", asy
   const route = "**/trpc/*leadForm.statusOverview*";
   await command(["network", "route", route, "--abort"]);
   try {
-    await findRole("link", "Report", "click");
+    await clickViewMode("Report");
     await waitText("Status overview unavailable");
     assert.equal(
       await roleText("heading", "Status overview unavailable"),
@@ -671,12 +743,18 @@ void test("required Slides read failure recovers through Retry", async () => {
 });
 
 async function addRecoveryRisk(text: string): Promise<void> {
+  const dialog = { role: "dialog", name: /^Add Risk(?: — .+)?$/ };
   await findRole("button", "+ Add Risk", "click");
+  await waitScope(dialog);
   await command([
     "select",
-    await roleRef("combobox", "Parent"),
+    await scopedRef(dialog, "combobox", "Parent"),
     LEAD_FORM_FIXTURE.activityName,
   ]);
+  await waitScope({
+    role: "dialog",
+    name: `Add Risk — ${LEAD_FORM_FIXTURE.activityName}`,
+  });
   await fill("Risk *", text);
   await fill("Impact *", "E2E editing recovery impact");
   await fill("Mitigation *", "E2E editing recovery mitigation");
@@ -692,7 +770,7 @@ async function assertOverviewEditingUnavailable(): Promise<void> {
   );
   assert.equal(
     namedRefs(data, "button", (name) =>
-      /^(?:Save draft now|Retry saving draft|Submit report|Add item to |Update progress for |\+ Add )/.test(
+      /^(?:Save draft now|Retry saving draft|Submit(?: report)?$|Add item to |Update progress for |\+ Add )/.test(
         name,
       ),
     ).length,
@@ -754,7 +832,7 @@ void test("Overview editing read failure preserves data and recovers through Ret
   );
   await reload();
   await waitText(LEAD_FORM_FIXTURE.currentText);
-  await findRole("link", "Slides", "click");
+  await clickViewMode("Slides");
   await waitText(risk);
   await assertNoReportWrites();
 });
@@ -764,7 +842,7 @@ void test("open-work read failure recovers through Retry open work", async () =>
   const route = "**/trpc/*leadForm.openWork*";
   await command(["network", "route", route, "--abort"]);
   try {
-    await findRole("link", "Report", "click");
+    await clickViewMode("Report");
     await waitText("Retry open work");
     await assertScope("region", "Status overview");
     assert.ok(
@@ -803,7 +881,7 @@ void test("empty report states explain why authoring is unavailable", async () =
   );
   assert.equal(
     namedRefs(await snapshot(), "button", (name) =>
-      /^(?:Save draft now|Submit report|Add item to |\+ Add )/.test(name),
+      /^(?:Save draft now|Submit(?: report)?$|Add item to |\+ Add )/.test(name),
     ).length,
     0,
   );
@@ -865,45 +943,70 @@ async function focusDeckArrowControl(): Promise<void> {
   await command(["focus", enabled.ref]);
 }
 
+async function waitFullscreen(active: boolean): Promise<void> {
+  await command([
+    "wait",
+    "--fn",
+    `document.fullscreenElement ${active ? "!==" : "==="} null`,
+  ]);
+  await waitButton(active ? "Exit fullscreen" : "Enter fullscreen");
+}
+
+async function fullscreenExitRef(): Promise<string> {
+  await waitText("Press Esc to exit fullscreen");
+  const data = await waitSnapshot(async (observed) => {
+    const exits = refsByRole(observed, "button", "Exit fullscreen");
+    const floating = exits.at(0);
+    if (
+      exits.length !== 1 ||
+      refsByRole(observed, "button", "Enter fullscreen").length > 0 ||
+      floating === undefined
+    )
+      return false;
+    return (
+      (await getText(floating)).trim() === "Exit" && (await isVisible(floating))
+    );
+  }, "Expected one visible floating Exit fullscreen control");
+  const exits = refsByRole(data, "button", "Exit fullscreen");
+  assert.equal(
+    exits.length,
+    1,
+    "The fullscreen surface must expose one floating Exit control",
+  );
+  assert.equal(refsByRole(data, "button", "Enter fullscreen").length, 0);
+  const floating = exits.at(0);
+  assert.ok(floating);
+  assert.equal((await getText(floating)).trim(), "Exit");
+  assert.ok(await isVisible(floating));
+  assert.equal(await getAttr(floating, "aria-label"), "Exit fullscreen");
+  assert.equal(await getAttr(floating, "aria-pressed"), "true");
+  return floating;
+}
+
 async function assertFullscreenPreservesPage(page: number): Promise<void> {
   await findRole("button", "Enter fullscreen", "click");
-  await command(["wait", "--fn", "document.fullscreenElement !== null"]);
-  const exits = refsByRole(await snapshot(), "button", "Exit fullscreen");
-  const buttons = await Promise.all(
-    exits.map(async (ref) => ({ ref, text: await getText(ref) })),
-  );
-  const exit = buttons.filter((item) => item.text.trim() === "Exit");
-  assert.equal(
-    exit.length,
-    1,
-    "The floating Exit pill is distinct from the icon-only toolbar button",
-  );
-  const floating = exit.at(0);
-  assert.ok(floating);
-  assert.ok(await isVisible(floating.ref));
-  assert.equal(await getAttr(floating.ref, "aria-pressed"), "true");
-  await command(["click", floating.ref]);
-  await command(["wait", "--fn", "document.fullscreenElement === null"]);
+  await waitFullscreen(true);
+  await command(["click", await fullscreenExitRef()]);
+  await waitFullscreen(false);
   await assertAttribute("button", "Enter fullscreen", "aria-pressed", "false");
   assert.equal((await counter()).current, page);
   await findRole("button", "Enter fullscreen", "click");
-  await command(["wait", "--fn", "document.fullscreenElement !== null"]);
+  await waitFullscreen(true);
   await command(["press", "Escape"]);
-  await command(["wait", "--fn", "document.fullscreenElement === null"]);
+  await waitFullscreen(false);
   await assertAttribute("button", "Enter fullscreen", "aria-pressed", "false");
   assert.equal((await counter()).current, page);
-  await command(["focus", await roleRef("button", "Enter fullscreen")]);
-  await command(["press", "f"]);
-  await command(["wait", "--fn", "document.fullscreenElement !== null"]);
-  const deck = scopeSnapshot(await snapshot(), "group", DECK_NAME);
-  const toggles = refsByRole(deck, "button", "Exit fullscreen");
-  assert.equal(toggles.length, 1, "The deck toolbar must reflect fullscreen");
-  const toggle = toggles.at(0);
-  assert.ok(toggle);
-  assert.equal(await getAttr(toggle, "aria-pressed"), "true");
+  // Fullscreen input uses native key-only events without press synthesis.
+  const toolbarToggle = await roleRef("button", "Enter fullscreen");
+  await command(["focus", toolbarToggle]);
+  await command(["keydown", "f"]);
+  await command(["keyup", "f"]);
+  await waitFullscreen(true);
+  await fullscreenExitRef();
   assert.equal((await counter()).current, page);
-  await command(["press", "f"]);
-  await command(["wait", "--fn", "document.fullscreenElement === null"]);
+  await command(["keydown", "f"]);
+  await command(["keyup", "f"]);
+  await waitFullscreen(false);
   await assertAttribute("button", "Enter fullscreen", "aria-pressed", "false");
   assert.equal((await counter()).current, page);
 }

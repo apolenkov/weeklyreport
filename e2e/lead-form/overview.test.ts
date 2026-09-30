@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { shortItemLabel } from "../../apps/web/src/shared/lib/format/short-label.js";
+import { prepareE2eData } from "../setup/reset.js";
 import {
   command,
   fill,
@@ -20,14 +21,17 @@ import {
   openLeadReport,
   roleText,
   saveDraft,
+  type Scope,
   scopeCount,
   scopeSnapshot,
+  scopeSnapshots,
+  waitClosed,
+  waitScope,
 } from "./helpers.js";
 
 registerE2eHooks();
 
 type Week = "Current week" | "Next week";
-type Tree = Awaited<ReturnType<typeof snapshot>>;
 
 const ACTIVITY = LEAD_FORM_FIXTURE.activityName;
 const PRODUCT = LEAD_FORM_FIXTURE.productName;
@@ -39,47 +43,53 @@ const EXTRA_UPDATES = [
   "E2E additional activity update beta",
 ] as const;
 const STATUS_CHOICES = ["In progress", "Paused", "Postponed", "Done"] as const;
+const ITEM_LIMIT_MESSAGE = "This section has reached its item limit.";
 
-function subtree(tree: string, start: number): string {
-  const lines = tree.split("\n");
-  const line = lines[start];
-  assert.ok(line, "Missing accessibility-tree node");
-  const indent = line.length - line.trimStart().length;
-  const end = lines.findIndex(
-    (candidate, index) =>
-      index > start &&
-      candidate.trim().length > 0 &&
-      candidate.length - candidate.trimStart().length <= indent,
-  );
-  return (end === -1 ? lines.slice(start) : lines.slice(start, end)).join("\n");
+async function namedBlock(role: string, name: string): Promise<string> {
+  return scopeSnapshot(await snapshot(), role, name).snapshot;
 }
 
-function scopedRefs(
-  data: Tree,
-  scope: string,
-  role: string,
-  name: string | RegExp,
-): string[] {
-  return refsByRole(data, role, name).filter((ref) =>
-    new RegExp(String.raw`\bref=${ref.slice(1)}\b`, "u").test(scope),
+function roleNames(data: Awaited<ReturnType<typeof snapshot>>, role: string) {
+  return JSON.stringify(
+    scopeSnapshots(data, role).map((scope) => scope.snapshot.split("\n")[0]),
   );
 }
 
-async function namedBlock(
+async function namedRef(
   role: string,
   name: string,
-  observed?: Tree,
+  scope?: Scope,
 ): Promise<string> {
-  const data = observed ?? (await snapshot());
-  return scopeSnapshot(data, role, name).snapshot;
-}
-
-async function namedRef(role: string, name: string): Promise<string> {
-  const refs = refsByRole(await snapshot(), role, name);
-  assert.equal(refs.length, 1, `${role}: ${name}`);
+  const observed = await snapshot();
+  const data = scope
+    ? scopeSnapshot(observed, scope.role, scope.name)
+    : observed;
+  const refs = refsByRole(data, role, name);
+  assert.equal(
+    refs.length,
+    1,
+    `${role}: ${name}; names seen: ${roleNames(data, role)}`,
+  );
   const ref = refs[0];
   assert.ok(ref);
   return ref;
+}
+
+async function cancelUpdate(week: Week, parent: string = ACTIVITY) {
+  await command([
+    "click",
+    await namedRef("button", "Cancel", {
+      role: "form",
+      name: `${week} update for ${parent}`,
+    }),
+  ]);
+}
+
+async function discardChanges() {
+  const scope = { role: "alertdialog", name: "Discard changes?" };
+  await waitScope(scope);
+  await command(["click", await namedRef("button", "Discard", scope)]);
+  await waitClosed(scope);
 }
 
 async function expandUnit(
@@ -110,13 +120,11 @@ async function weekBlock(
 }
 
 function columnBlocks(article: string, week: Week | "Previously planned") {
-  return article
-    .split("\n")
-    .flatMap((line, index) =>
-      line.trimStart().startsWith(`- group "${week}`)
-        ? [subtree(article, index)]
-        : [],
-    );
+  return scopeSnapshots(
+    { snapshot: article, refs: {} },
+    "group",
+    new RegExp(`^${week.toUpperCase()}`, "u"),
+  ).map((group) => group.snapshot);
 }
 
 async function assertPlacement(week: Week, text: string): Promise<void> {
@@ -131,21 +139,12 @@ async function assertPlacement(week: Week, text: string): Promise<void> {
   }
 }
 
-async function waitClosed(name: string): Promise<void> {
-  await command([
-    "wait",
-    "--fn",
-    `Array.from(document.forms).every(form => form.getAttribute('aria-label') !== ${JSON.stringify(name)})`,
-  ]);
-  assert.equal(scopeCount(await snapshot(), "form", name), 0);
-}
-
 async function saveUpdate(
   week: Week,
   parent: string = ACTIVITY,
 ): Promise<void> {
   await findRole("button", "Save update", "click");
-  await waitClosed(`${week} update for ${parent}`);
+  await waitClosed({ role: "form", name: `${week} update for ${parent}` });
   await saveDraft();
 }
 
@@ -240,14 +239,18 @@ async function fillOutcomeBoundary(label: string, prefix: string) {
   return boundary;
 }
 
-async function writeCount(): Promise<number> {
+async function writeCount(procedure?: string): Promise<number> {
   const data = await command(["network", "requests"]);
   assert.ok(Array.isArray(data.requests));
   return data.requests.filter((entry: unknown) => {
     assert.ok(typeof entry === "object" && entry !== null);
     assert.ok("method" in entry && "url" in entry);
     assert.ok(typeof entry.url === "string");
-    return entry.method === "POST" && entry.url.includes("/trpc/");
+    return (
+      entry.method === "POST" &&
+      entry.url.includes("/trpc/") &&
+      (procedure === undefined || entry.url.includes(procedure))
+    );
   }).length;
 }
 
@@ -274,31 +277,29 @@ async function waitOpenWork(): Promise<void> {
 }
 
 async function openWorkRow(text: string) {
-  const data = await snapshot();
-  const register = await namedBlock(
+  const register = scopeSnapshot(
+    await snapshot(),
     "region",
     "Open work from earlier periods",
-    data,
   );
-  const rows = register
-    .split("\n")
-    .flatMap((line, index) =>
-      line.trimStart().startsWith("- listitem")
-        ? [subtree(register, index)]
-        : [],
-    );
-  const matches = rows.filter((row) => row.includes(text));
+  const matches = scopeSnapshots(register, "listitem").filter((row) =>
+    row.snapshot.includes(text),
+  );
   assert.equal(matches.length, 1, `Open work: ${text}`);
   const row = matches[0];
   assert.ok(row);
-  return { data, row };
+  return row;
 }
 
 async function openWorkOutcome(text: string, action: string): Promise<void> {
   await waitOpenWork();
-  const { data, row } = await openWorkRow(text);
-  const refs = scopedRefs(data, row, "button", action);
-  assert.equal(refs.length, 1);
+  const row = await openWorkRow(text);
+  const refs = refsByRole(row, "button", action);
+  assert.equal(
+    refs.length,
+    1,
+    `${action}; names seen: ${roleNames(row, "button")}`,
+  );
   const ref = refs[0];
   assert.ok(ref);
   await command(["click", ref]);
@@ -310,9 +311,13 @@ async function recoverWork(
   action: string,
   outcome: "Continue" | "Plan next",
 ) {
-  const { data, row } = await openWorkRow(text);
-  const refs = scopedRefs(data, row, "button", action);
-  assert.equal(refs.length, 1);
+  const row = await openWorkRow(text);
+  const refs = refsByRole(row, "button", action);
+  assert.equal(
+    refs.length,
+    1,
+    `${action}; names seen: ${roleNames(row, "button")}`,
+  );
   const ref = refs[0];
   assert.ok(ref);
   await command(["click", ref]);
@@ -323,7 +328,7 @@ async function recoverWork(
     recovered,
   );
   await findRole("button", "Save outcome", "click");
-  await waitClosed("Resolve plan");
+  await waitClosed({ role: "form", name: "Resolve plan" });
   await reloadOverview();
   await waitOpenWork();
   assert.ok(
@@ -343,12 +348,10 @@ async function recoverWork(
 
 void test("Overview shows product and activity lineage in all three weeks", async () => {
   await openLeadReport();
-  await waitText("Project activities");
-  assert.equal(await roleText("heading", "Products"), "Products");
-  assert.equal(
-    await roleText("heading", "Project activities"),
-    "Project activities",
-  );
+  await waitText("PROJECT ACTIVITIES");
+  const headings = await snapshot();
+  assert.equal(scopeCount(headings, "heading", "PRODUCTS"), 1);
+  assert.equal(scopeCount(headings, "heading", "PROJECT ACTIVITIES"), 1);
   assert.ok(
     (
       await weekBlock(
@@ -380,9 +383,13 @@ void test("overview disclosures reveal long updates and additional rows", async 
   await reloadOverview();
   const before = await writeCount();
   const data = await snapshot();
-  const article = await namedBlock("article", `Activity ${ACTIVITY}`, data);
-  const refs = scopedRefs(data, article, "button", /^\+\d+ more$/);
-  assert.equal(refs.length, 1);
+  const article = scopeSnapshot(data, "article", `Activity ${ACTIVITY}`);
+  const refs = refsByRole(article, "button", /^\+\d+ more$/);
+  assert.equal(
+    refs.length,
+    1,
+    `More updates; names seen: ${roleNames(article, "button")}`,
+  );
   const more = refs[0];
   assert.ok(more);
   await command(["click", more]);
@@ -413,9 +420,13 @@ void test("overview disclosures reveal long updates and additional rows", async 
   );
   await findRole("button", "Show less", "click");
   const collapsed = await snapshot();
-  const scope = await namedBlock("article", `Activity ${ACTIVITY}`, collapsed);
-  const moreAfter = scopedRefs(collapsed, scope, "button", /^\+\d+ more$/);
-  assert.equal(moreAfter.length, 1);
+  const scope = scopeSnapshot(collapsed, "article", `Activity ${ACTIVITY}`);
+  const moreAfter = refsByRole(scope, "button", /^\+\d+ more$/);
+  assert.equal(
+    moreAfter.length,
+    1,
+    `Collapsed updates; names seen: ${roleNames(scope, "button")}`,
+  );
   const afterRef = moreAfter[0];
   assert.ok(afterRef);
   assert.equal(await getAttr(afterRef, "aria-expanded"), "false");
@@ -475,8 +486,8 @@ void test("health inspection preserves pending input and restores focus", async 
   );
   assert.equal(await value("Description *"), pending);
   assert.equal(await writeCount(), before);
-  await findRole("button", "Cancel", "click");
-  await findRole("button", "Discard", "click");
+  await cancelUpdate("Current week", PRODUCT);
+  await discardChanges();
   await reloadOverview();
   assert.ok(
     (
@@ -492,22 +503,17 @@ void test("activity health stays stage-free and historical health stays read-onl
   const product = await roleText("article", `Product ${PRODUCT}`);
   await findRole("button", ACTIVITY, "click");
   const data = await snapshot();
-  const detail = await namedBlock(
+  const detail = scopeSnapshot(
+    data,
     "region",
     `Health details for ${ACTIVITY}`,
-    data,
   );
   assert.ok(
-    detail.includes("Activity health is independent of linked products."),
-  );
-  assert.equal(
-    scopeCount(
-      scopeSnapshot(data, "region", `Health details for ${ACTIVITY}`),
-      "list",
-      `All stages for ${ACTIVITY}`,
+    detail.snapshot.includes(
+      "Activity health is independent of linked products.",
     ),
-    0,
   );
+  assert.equal(scopeCount(detail, "list", `All stages for ${ACTIVITY}`), 0);
   await findRole("button", "Close health details", "click");
   assert.equal(await roleText("article", `Product ${PRODUCT}`), product);
   await historyText(LEAD_FORM_FIXTURE.previousReportId);
@@ -532,7 +538,7 @@ void test("Update progress saves current and next week through the canonical edi
     await fill("Description *", updated);
     await findRole("button", "In progress", "click");
     await pressSaveShortcut("Description *");
-    await waitClosed(`${week} update for ${ACTIVITY}`);
+    await waitClosed({ role: "form", name: `${week} update for ${ACTIVITY}` });
     await saveDraft();
     await reloadOverview();
     const stored = await weekBlock(week, updated);
@@ -540,7 +546,8 @@ void test("Update progress saves current and next week through the canonical edi
     assert.equal(stored.includes("Unplanned"), week === "Current week");
     await findRole("button", `Edit item: ${updated}`, "click");
     assert.equal(await value("Description *"), updated);
-    await findRole("button", "Cancel", "click");
+    await cancelUpdate(week);
+    await waitClosed({ role: "form", name: `${week} update for ${ACTIVITY}` });
   }
   await findRole(
     "button",
@@ -569,8 +576,7 @@ void test("More actions edits details and moves between current and next week", 
   await findRole("radio", "Next week", "click");
   await fill("Description *", `${text} discarded`);
   await command(["press", "Escape"]);
-  await namedBlock("alertdialog", "Discard changes?");
-  await findRole("button", "Discard", "click");
+  await discardChanges();
   await reloadOverview();
   assert.ok((await weekBlock("Current week", text)).includes(text));
   await moreAction(text, `Edit details: ${text}`);
@@ -651,7 +657,11 @@ for (const week of ["Current week", "Next week"] as const) {
           await value("Pause reason *"),
           "E2E waiting on a dependency",
         );
-      await findRole("button", "Cancel", "click");
+      await cancelUpdate(week);
+      await waitClosed({
+        role: "form",
+        name: `${week} update for ${ACTIVITY}`,
+      });
     });
   }
 }
@@ -673,33 +683,30 @@ void test("leaving Paused clears the saved reason", async () => {
   await openProgress(text, "Current week");
   await findRole("button", "Paused", "click");
   assert.equal(await value("Pause reason *"), "");
-  await findRole("button", "Cancel", "click");
-  await findRole("button", "Discard", "click");
+  await cancelUpdate("Current week");
+  await discardChanges();
 });
 
 void test("covering risk locks canonical item status", async () => {
   await openLeadReport();
   await openProgress(LEAD_FORM_FIXTURE.currentText, "Current week", PRODUCT);
   const data = await snapshot();
-  const form = await namedBlock(
+  const form = scopeSnapshot(
+    data,
     "form",
     `Current week update for ${PRODUCT}`,
-    data,
   );
   assert.ok(
-    form.includes(
+    form.snapshot.includes(
       "Status is set by the covering risk/blocker — resolve it in Risks & Blockers to change.",
     ),
   );
-  assert.equal(
-    scopeCount(
-      scopeSnapshot(data, "form", `Current week update for ${PRODUCT}`),
-      "group",
-      "Status",
-    ),
-    0,
-  );
-  await findRole("button", "Cancel", "click");
+  assert.equal(scopeCount(form, "group", "Status"), 0);
+  await cancelUpdate("Current week", PRODUCT);
+  await waitClosed({
+    role: "form",
+    name: `Current week update for ${PRODUCT}`,
+  });
 });
 
 void test("Resolve plan records Done immediately with retained audit", async () => {
@@ -710,7 +717,7 @@ void test("Resolve plan records Done immediately with retained audit", async () 
   await addActivity(text);
   await moreAction(text, `Update status: ${text}`);
   await findRole("button", "Done", "click");
-  await waitClosed("Resolve plan");
+  await waitClosed({ role: "form", name: "Resolve plan" });
   await reloadOverview();
   assert.ok((await weekBlock("Current week", text)).includes("Done"));
   await findRole("DisclosureTriangle", "History · 1", "click");
@@ -730,7 +737,7 @@ void test("Resolve plan completes a Next plan in Current with retained audit", a
   await addActivity(text, "Next week");
   await moreAction(text, `Update status: ${text}`);
   await findRole("button", "Done", "click");
-  await waitClosed("Resolve plan");
+  await waitClosed({ role: "form", name: "Resolve plan" });
   await reloadOverview();
   await assertPlacement("Current week", text);
   assert.ok((await weekBlock("Current week", text)).includes("Done"));
@@ -752,7 +759,14 @@ for (const week of ["Current week", "Next week"] as const) {
     await addActivity(text, week);
     await moreAction(text, `Update status: ${text}`);
     const before = await writeCount();
-    await findRole("button", "Cancel", "click");
+    await command([
+      "click",
+      await namedRef("button", "Cancel", {
+        role: "form",
+        name: "Resolve plan",
+      }),
+    ]);
+    await waitClosed({ role: "form", name: "Resolve plan" });
     assert.equal(await writeCount(), before);
     await moreAction(text, `Update status: ${text}`);
     await findRole("button", "Won't do", "click");
@@ -760,7 +774,7 @@ for (const week of ["Current week", "Next week"] as const) {
     await waitText("Explain why this plan will not be done.");
     await fill("Why won't this be done?", "E2E superseded requirement");
     await findRole("button", "Save outcome", "click");
-    await waitClosed("Resolve plan");
+    await waitClosed({ role: "form", name: "Resolve plan" });
     await reloadOverview();
     assert.ok(
       (await weekBlock(week, text)).includes(
@@ -769,7 +783,7 @@ for (const week of ["Current week", "Next week"] as const) {
     );
     await findRole("button", `Restore ${text}`, "click");
     await waitText("Plan restored");
-    await waitClosed("Restore plan");
+    await waitClosed({ role: "form", name: "Restore plan" });
     await reloadOverview();
     assert.equal(
       refsByRole(await snapshot(), "button", `Restore ${text}`).length,
@@ -800,15 +814,19 @@ void test("open work Done records the changed result and readable prior text", a
   const previous = await historyText(OPEN_WORK_FIXTURE.archiveReportId);
   await openLeadReport();
   await waitOpenWork();
-  const { data, row } = await openWorkRow(OPEN_WORK_FIXTURE.continue);
-  const controls = scopedRefs(data, row, "button", "Continue work");
-  assert.equal(controls.length, 1);
+  const row = await openWorkRow(OPEN_WORK_FIXTURE.continue);
+  const controls = refsByRole(row, "button", "Continue work");
+  assert.equal(
+    controls.length,
+    1,
+    `Continue work; names seen: ${roleNames(row, "button")}`,
+  );
   const control = controls[0];
   assert.ok(control);
   await command(["click", control]);
   await fill("This period's update", "E2E finished recovered historical work");
   await findRole("button", "Done", "click");
-  await waitClosed("Resolve plan");
+  await waitClosed({ role: "form", name: "Resolve plan" });
   await reloadOverview();
   assert.ok(
     (
@@ -831,7 +849,7 @@ for (const [text, action, outcome] of RECOVERY_CASES) {
     const previous = await historyText(OPEN_WORK_FIXTURE.archiveReportId);
     await openLeadReport();
     await waitText(text);
-    assert.ok((await openWorkRow(text)).row.includes(action));
+    assert.ok((await openWorkRow(text)).snapshot.includes(action));
     await recoverWork(text, action, outcome);
     assert.equal(
       await historyText(OPEN_WORK_FIXTURE.archiveReportId),
@@ -846,15 +864,25 @@ for (const text of [OPEN_WORK_FIXTURE.completed, OPEN_WORK_FIXTURE.cancelled]) {
     const previous = await historyText(OPEN_WORK_FIXTURE.archiveReportId);
     await openLeadReport();
     await waitOpenWork();
-    const history = refsByRole(
-      await snapshot(),
+    const observed = await snapshot();
+    const history = scopeCount(
+      observed,
       "DisclosureTriangle",
       /^Completed and cancelled work \(\d+\)$/,
     );
-    assert.equal(history.length, 1);
-    const ref = history[0];
-    assert.ok(ref);
-    await command(["click", ref]);
+    assert.equal(
+      history,
+      1,
+      `Terminal work; names seen: ${roleNames(observed, "DisclosureTriangle")}`,
+    );
+    await command([
+      "find",
+      "role",
+      "DisclosureTriangle",
+      "click",
+      "--name",
+      "Completed and cancelled work",
+    ]);
     await recoverWork(text, "Reopen in this report", "Plan next");
     assert.equal(
       await historyText(OPEN_WORK_FIXTURE.archiveReportId),
@@ -1035,10 +1063,20 @@ void test("own reviewer record feedback is readable without a Lead comment edito
   );
   assert.ok(row.includes("Reviewer comments"));
   assert.ok(row.includes(LEAD_FORM_FIXTURE.ownReviewComment));
-  const data = await snapshot();
-  assert.equal(scopedRefs(data, row, "textbox", /comment/i).length, 0);
+  const article = scopeSnapshot(
+    await snapshot(),
+    "article",
+    `Product ${PRODUCT}`,
+  );
+  const matches = scopeSnapshots(article, "group", /^CURRENT WEEK/u).filter(
+    (group) => group.snapshot.includes(LEAD_FORM_FIXTURE.currentText),
+  );
+  assert.equal(matches.length, 1);
+  const current = matches[0];
+  assert.ok(current);
+  assert.equal(refsByRole(current, "textbox", /comment/i).length, 0);
   assert.equal(
-    scopedRefs(data, row, "button", /(?:Add|Save|Edit|Delete) comment/i).length,
+    refsByRole(current, "button", /(?:Add|Save|Edit|Delete) comment/i).length,
     0,
   );
 });
@@ -1049,9 +1087,13 @@ void test("Parent and stages retains pending outcome details and saves the chose
   await openLeadReport();
   await waitOpenWork();
   const before = await writeCount();
-  const { data, row } = await openWorkRow(OPEN_WORK_FIXTURE.continue);
-  const controls = scopedRefs(data, row, "button", "Continue work");
-  assert.equal(controls.length, 1);
+  const row = await openWorkRow(OPEN_WORK_FIXTURE.continue);
+  const controls = refsByRole(row, "button", "Continue work");
+  assert.equal(
+    controls.length,
+    1,
+    `Continue work; names seen: ${roleNames(row, "button")}`,
+  );
   const control = controls[0];
   assert.ok(control);
   await command(["click", control]);
@@ -1086,7 +1128,7 @@ void test("Parent and stages retains pending outcome details and saves the chose
   assert.equal(await writeCount(), before);
   await findRole("button", "Save outcome", "click");
   await waitText("Plan outcome saved");
-  await waitClosed("Resolve plan");
+  await waitClosed({ role: "form", name: "Resolve plan" });
   await reloadOverview();
   const active = await weekBlock("Current week", result, PRODUCT);
   assert.ok(active.includes("Development"));
@@ -1104,7 +1146,11 @@ void test("Parent and stages retains pending outcome details and saves the chose
   await openProgress(result, "Current week", PRODUCT);
   assert.equal(await stageChecked("Development"), true);
   assert.equal(await value("Description *"), result);
-  await findRole("button", "Cancel", "click");
+  await cancelUpdate("Current week", PRODUCT);
+  await waitClosed({
+    role: "form",
+    name: `Current week update for ${PRODUCT}`,
+  });
   await waitOpenWork();
   assert.ok(
     !(await namedBlock("region", "Open work from earlier periods")).includes(
@@ -1139,7 +1185,7 @@ void test("outcome and restore failures retain inputs and retry with audit", asy
   }
   await findRole("button", "Save outcome", "click");
   await waitText("Plan outcome saved");
-  await waitClosed("Resolve plan");
+  await waitClosed({ role: "form", name: "Resolve plan" });
   await reloadOverview();
   assert.ok(
     (await weekBlock("Current week", text)).includes(`Won't do · ${reason}`),
@@ -1155,7 +1201,7 @@ void test("outcome and restore failures retain inputs and retry with audit", asy
       (await weekBlock("Current week", text)).includes(`Won't do · ${reason}`),
     );
     assert.equal(
-      refsByRole(await snapshot(), "DisclosureTriangle", "History · 1").length,
+      scopeCount(await snapshot(), "DisclosureTriangle", "History · 1"),
       1,
     );
   } finally {
@@ -1163,7 +1209,7 @@ void test("outcome and restore failures retain inputs and retry with audit", asy
   }
   await findRole("button", "Restore plan", "click");
   await waitText("Plan restored");
-  await waitClosed("Restore plan");
+  await waitClosed({ role: "form", name: "Restore plan" });
   await reloadOverview();
   assert.equal(
     refsByRole(await snapshot(), "button", `Update progress for ${text}`)
@@ -1199,7 +1245,7 @@ void test("Continue outcome limits preserve a result and optional next step of 5
   );
   await pressSaveShortcut("This period's update");
   await waitText("Plan outcome saved");
-  await waitClosed("Resolve plan");
+  await waitClosed({ role: "form", name: "Resolve plan" });
   await reloadOverview();
   await weekBlock("Next week", nextStep);
   await findRole(
@@ -1227,7 +1273,11 @@ void test("Continue outcome limits preserve a result and optional next step of 5
   );
   await openProgress(result, "Current week");
   assert.equal(await value("Description *"), result);
-  await findRole("button", "Cancel", "click");
+  await cancelUpdate("Current week");
+  await waitClosed({
+    role: "form",
+    name: `Current week update for ${ACTIVITY}`,
+  });
   assert.equal(await historyText(OPEN_WORK_FIXTURE.archiveReportId), previous);
 });
 
@@ -1243,12 +1293,13 @@ void test("Plan next outcome limit preserves a commitment of 500 characters", as
   );
   await findRole("button", "Save outcome", "click");
   await waitText("Plan outcome saved");
-  await waitClosed("Resolve plan");
+  await waitClosed({ role: "form", name: "Resolve plan" });
   await reloadOverview();
   assert.ok((await weekBlock("Next week", commitment)).includes("Planned"));
   await openProgress(commitment, "Next week");
   assert.equal(await value("Description *"), commitment);
-  await findRole("button", "Cancel", "click");
+  await cancelUpdate("Next week");
+  await waitClosed({ role: "form", name: `Next week update for ${ACTIVITY}` });
   assert.equal(await historyText(OPEN_WORK_FIXTURE.archiveReportId), previous);
 });
 
@@ -1266,7 +1317,7 @@ void test("Won't do outcome limit preserves a reason of 500 characters in histor
   );
   await findRole("button", "Save outcome", "click");
   await waitText("Plan outcome saved");
-  await waitClosed("Resolve plan");
+  await waitClosed({ role: "form", name: "Resolve plan" });
   await reloadOverview();
   assert.ok(
     (await weekBlock("Current week", text)).includes(`Won't do · ${reason}`),
@@ -1278,4 +1329,59 @@ void test("Won't do outcome limit preserves a reason of 500 characters in histor
     cancelled.includes(`Marked Won't do by ${LEAD_FORM_FIXTURE.leadName}`),
   );
   assert.equal(await historyText(LEAD_FORM_FIXTURE.previousReportId), previous);
+});
+
+void test("historical plan item limit retains input without changing saved work", async (context) => {
+  await prepareE2eData("demo", context.signal, "section-item-limit");
+  await openLeadReport();
+  const previous = await historyText(OPEN_WORK_FIXTURE.archiveReportId);
+  await openLeadReport();
+  await waitOpenWork();
+  const savedData = await roleText("region", "Status overview");
+  const savedWork = await roleText("region", "Open work from earlier periods");
+  await openWorkOutcome(OPEN_WORK_FIXTURE.continue, "Continue work");
+  await findRole("button", "Continue", "click");
+  const result = "E2E item limit keeps this historical result unsaved";
+  const nextStep = "E2E item limit keeps this next commitment unsaved";
+  await fill("This period's update", result);
+  await fill("Next step (optional)", nextStep);
+  const scope = { role: "form", name: "Resolve plan" };
+  const before = await writeCount("leadForm.resolvePlan");
+  for (const attempt of [1, 2]) {
+    await command(["click", await namedRef("button", "Save outcome", scope)]);
+    await waitText(ITEM_LIMIT_MESSAGE);
+    await waitText("Save outcome");
+    const form = scopeSnapshot(await snapshot(), scope.role, scope.name);
+    const alert = scopeSnapshot(form, "alert");
+    assert.equal(scopeCount(alert, "StaticText", ITEM_LIMIT_MESSAGE), 1);
+    assert.equal(await value("This period's update"), result);
+    assert.equal(await value("Next step (optional)"), nextStep);
+    assert.equal(await writeCount("leadForm.resolvePlan"), before + attempt);
+    assert.equal(
+      await getAttr(
+        await namedRef("button", "Save outcome", scope),
+        "disabled",
+      ),
+      null,
+    );
+  }
+  await command(["click", await namedRef("button", "Cancel", scope)]);
+  await waitClosed(scope);
+  await reloadOverview();
+  await waitOpenWork();
+  const reloaded = await roleText("region", "Status overview");
+  assert.equal(reloaded, savedData);
+  assert.ok(!reloaded.includes(result));
+  assert.ok(!reloaded.includes(nextStep));
+  assert.equal(
+    await roleText("region", "Open work from earlier periods"),
+    savedWork,
+  );
+  assert.ok(
+    (await openWorkRow(OPEN_WORK_FIXTURE.continue)).snapshot.includes(
+      "Continue work",
+    ),
+  );
+  assert.equal(await writeCount("leadForm.resolvePlan"), before + 2);
+  assert.equal(await historyText(OPEN_WORK_FIXTURE.archiveReportId), previous);
 });

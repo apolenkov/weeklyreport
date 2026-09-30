@@ -1,9 +1,8 @@
 import assert from "node:assert";
 import test from "node:test";
 
+import { E2E_DESTRUCTIVE_CONSENT } from "../../prisma/guards/_destructive-guard.js";
 import { validateE2eRuntimeTarget } from "./runtime-target.js";
-
-const CONSENT = "давай";
 
 function baseEnv(
   overrides: Record<string, string | undefined> = {},
@@ -14,7 +13,7 @@ function baseEnv(
       "postgresql://e2e_user:e2e_placeholder@127.0.0.1:5432/customreport_e2e",
     DATABASE_URL:
       "postgresql://app_user:app_placeholder@127.0.0.1:5432/customreport_e2e",
-    PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: CONSENT,
+    PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: E2E_DESTRUCTIVE_CONSENT,
     REDIS_DB: "15",
     REDIS_HOST: "127.0.0.1",
     REDIS_PORT: "6379",
@@ -46,7 +45,7 @@ void test("accepts loopback customreport_e2e with different credentials", () => 
   assert.strictEqual(result.redisDb, "15");
   assert.strictEqual(result.redisHost, "127.0.0.1");
   assert.strictEqual(result.redisPort, 6379);
-  assert.strictEqual(result.consentToken, CONSENT);
+  assert.strictEqual(result.consentToken, E2E_DESTRUCTIVE_CONSENT);
 });
 
 void test("accepts ::1 loopback", () => {

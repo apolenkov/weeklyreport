@@ -2,6 +2,7 @@ import { isIP } from "node:net";
 
 import {
   assertE2eRuntimeDestructive,
+  E2E_DESTRUCTIVE_CONSENT,
   parseE2eRuntimeDatabaseTarget,
   sameLocalPostgresDatabaseTarget,
 } from "../../prisma/guards/_destructive-guard.js";
@@ -106,6 +107,6 @@ export function validateE2eRuntimeTarget(
     redisHost: redis.host,
     redisPort: redis.port,
     redisDb: E2E_REDIS_DB,
-    consentToken: "давай",
+    consentToken: E2E_DESTRUCTIVE_CONSENT,
   };
 }

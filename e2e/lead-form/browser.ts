@@ -12,9 +12,6 @@ export type { BrowserSnapshot } from "./snapshot-scope.js";
 
 const execute = promisify(execFile);
 const COMMAND_TIMEOUT_MS = 40_000;
-const CLEANUP_TIMEOUT_MS = 40_000;
-const MAX_OUTPUT_BYTES = 8_388_608;
-const WEB_ORIGIN = "http://localhost:3000";
 const sessions: {
   base: string;
   lead: string;
@@ -72,8 +69,8 @@ function executeClient(
     ],
     {
       encoding: "utf8",
-      timeout: args.at(0) === "close" ? CLEANUP_TIMEOUT_MS : COMMAND_TIMEOUT_MS,
-      maxBuffer: MAX_OUTPUT_BYTES,
+      timeout: COMMAND_TIMEOUT_MS,
+      maxBuffer: 8_388_608,
       signal,
       env: runnerEnvironment(session),
     },
@@ -97,15 +94,9 @@ async function createSessions(signal: AbortSignal): Promise<void> {
   try {
     const configPath = join(directory, "agent-browser.json");
     await writeFile(configPath, "{}\n", { encoding: "utf8", signal });
+    const prefix = `e2e-${Date.now()}-${process.pid}`;
     const { stdout } = await executeClient(
-      [
-        "session",
-        "id",
-        "--scope",
-        "worktree",
-        "--prefix",
-        `e2e-${Date.now()}-${process.pid}`,
-      ],
+      ["session", "id", "--scope", "worktree", "--prefix", prefix],
       signal,
     );
     const base = stdout.trim();
@@ -139,11 +130,23 @@ export async function command(
   const selected = ownedSession(session);
   const isClosing = args.at(0) === "close";
   const signal = isClosing
-    ? AbortSignal.timeout(CLEANUP_TIMEOUT_MS)
+    ? AbortSignal.timeout(COMMAND_TIMEOUT_MS)
     : runtimeSignal(sessions.signal);
   signal.throwIfAborted();
   sessions.used.add(selected);
-  const { stdout } = await executeClient(args, signal, selected);
+  const { stdout } = await executeClient(args, signal, selected).catch(
+    (error: unknown) => {
+      if (
+        error instanceof Error &&
+        error.name !== "AbortError" &&
+        "stdout" in error &&
+        typeof error.stdout === "string"
+      ) {
+        error.message += `\n${error.stdout}`;
+      }
+      throw error;
+    },
+  );
   const response: unknown = JSON.parse(stdout);
   assert(isRecord(response), "agent-browser returned an invalid JSON response");
   assert(response.success === true, "agent-browser command failed");
@@ -155,7 +158,10 @@ export function open(
   pathOrUrl: string,
   session?: string,
 ): Promise<Record<string, unknown>> {
-  return command(["open", new URL(pathOrUrl, WEB_ORIGIN).href], session);
+  return command(
+    ["open", new URL(pathOrUrl, "http://localhost:3000").href],
+    session,
+  );
 }
 
 export function findRole(
@@ -166,19 +172,9 @@ export function findRole(
   session?: string,
 ): Promise<Record<string, unknown>> {
   assert(action !== "fill" || text !== undefined, "Fill requires text");
-  return command(
-    [
-      "find",
-      "role",
-      role,
-      action,
-      ...(text === undefined ? [] : [text]),
-      "--name",
-      name,
-      "--exact",
-    ],
-    session,
-  );
+  const args = ["find", "role", role, action];
+  if (text !== undefined) args.push(text);
+  return command([...args, "--name", name, "--exact"], session);
 }
 
 export function fill(
