@@ -1,3 +1,4 @@
+import type { PeriodStatus } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
@@ -49,6 +50,7 @@ function toScopedHistoryRow(
   report: {
     readonly id: string;
     readonly archived: boolean;
+    readonly periodStatus: PeriodStatus;
     readonly publishedSnapshot: Prisma.JsonValue | null;
   },
   session: WeeklyReportScopeSession,
@@ -62,7 +64,11 @@ function toScopedHistoryRow(
     session,
     "lead-own",
   );
-  return { archived: report.archived, snapshot: scopedSnapshot };
+  return {
+    archived: report.archived,
+    reopened: report.periodStatus === "reopened",
+    snapshot: scopedSnapshot,
+  };
 }
 
 export async function queryCompiledHistory(
@@ -85,6 +91,7 @@ export async function queryCompiledHistory(
       select: {
         id: true,
         archived: true,
+        periodStatus: true,
         publishedSnapshot: true,
       },
     }),

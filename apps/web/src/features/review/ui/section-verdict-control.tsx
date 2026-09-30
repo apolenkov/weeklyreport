@@ -69,13 +69,15 @@ const errorToastMessage = (err: unknown): string =>
     : "Failed to record verdict";
 
 const APPROVE_BUTTON_CLASSNAME =
-  "btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-2.5 py-0.5 text-xs font-semibold text-[var(--color-success-foreground)] transition-colors hover:border-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50";
+  "btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-2.5 py-0.5 text-xs font-semibold text-[var(--color-success-foreground)] transition-colors hover:border-[var(--color-success)] aria-disabled:cursor-not-allowed aria-disabled:opacity-50";
 
 const REQUEST_CHANGES_BUTTON_CLASSNAME =
-  "btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-2.5 py-0.5 text-xs font-semibold text-[var(--color-destructive)] transition-colors hover:border-[var(--color-destructive)] disabled:cursor-not-allowed disabled:opacity-50";
+  "btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-2.5 py-0.5 text-xs font-semibold text-[var(--color-destructive)] transition-colors hover:border-[var(--color-destructive)] aria-disabled:cursor-not-allowed aria-disabled:opacity-50";
 
 // Lists of leads repeat these buttons; the lead's name keeps each one unique
-// for assistive tech while the visible text stays short.
+// for assistive tech while the visible text stays short. The pending state uses
+// aria-disabled with a click guard: a natively disabled focused button drops
+// focus to <body>.
 function VerdictActions({
   subjectName,
   disabled,
@@ -93,8 +95,10 @@ function VerdictActions({
         type="button"
         data-interaction-effect="mutation-required"
         className={APPROVE_BUTTON_CLASSNAME}
-        onClick={onApprove}
-        disabled={disabled}
+        onClick={() => {
+          if (!disabled) onApprove();
+        }}
+        aria-disabled={disabled}
         aria-label={subjectName ? `Approve ${subjectName}` : undefined}
         aria-busy={disabled}
       >
@@ -104,8 +108,10 @@ function VerdictActions({
         type="button"
         data-interaction-effect="mutation-required"
         className={REQUEST_CHANGES_BUTTON_CLASSNAME}
-        onClick={onRequestChanges}
-        disabled={disabled}
+        onClick={() => {
+          if (!disabled) onRequestChanges();
+        }}
+        aria-disabled={disabled}
         aria-label={
           subjectName ? `Request changes for ${subjectName}` : undefined
         }

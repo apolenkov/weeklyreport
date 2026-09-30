@@ -80,7 +80,7 @@ export function PeriodsTabDialogs({
         <ConfirmationDialog
           open={true}
           title="Publish this period?"
-          description={`${publishConfirm.weekLabel ?? formatWeekLabel(publishConfirm.periodStart)} (${formatPeriodRangeWithYear(publishConfirm.periodStart, publishConfirm.periodEnd)}) will be published immediately, without waiting for the deadline. Leads will no longer be able to edit their sections until the period is reopened.`}
+          description={`${publishConfirm.weekLabel ?? formatWeekLabel(publishConfirm.periodStart)} (${formatPeriodRangeWithYear(publishConfirm.periodStart, publishConfirm.periodEnd)}) will be published immediately, without waiting for the deadline. Leads can no longer edit this period.`}
           confirmLabel={publishIsPending ? "Publishing…" : "Publish"}
           testId="periods-publish-dialog"
           isPending={publishIsPending}

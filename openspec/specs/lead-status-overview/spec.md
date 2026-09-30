@@ -126,6 +126,22 @@ separate Edit mode.
 - **THEN** Overview renders it without an edit action
 - **AND** activating the read-only content cannot emit a draft patch
 
+#### Scenario: A save held back by a lost connection is announced in the open editor
+
+- **GIVEN** the inline editor is open and its Save update is paused because the browser is offline
+- **WHEN** the status region renders
+- **THEN** it announces that the lead is offline and that changes save when the connection returns
+- **AND** it does not show only the generic unsaved-update copy
+
+#### Scenario: Discarding an editor after a failed save reverts the board
+
+- **GIVEN** Save update applied an edit to the draft and the save failed
+- **WHEN** the lead keeps the editor open
+- **THEN** the typed text is retained and saving can be retried
+- **WHEN** the lead then cancels the editor and confirms Discard
+- **THEN** the edited row returns to its last saved fields, or a newly created row is removed
+- **AND** the discarded text is not part of any later autosave payload
+
 ### Requirement: Overview MUST render each reporting unit once
 
 The Overview MUST treat Product and Project Activity as peer reporting-unit

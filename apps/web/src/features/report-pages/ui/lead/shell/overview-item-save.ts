@@ -14,6 +14,7 @@ import {
   overviewItemFieldsUnchanged,
   overviewSubmittedItemIsCurrent,
 } from "./overview-editor-recovery";
+import { restorePatchFor } from "./overview-save-restore";
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
 
 type ReadyEditor = Extract<LeadFormEditorHandle, { status: "ready" }>;
@@ -188,14 +189,15 @@ function armDraftSave(
   context: SaveContext,
   editor: ReadyEditor,
   dialog: OverviewItemDialogState,
-  submittedItem: KanbanItem,
+  { item, restore }: { item: KanbanItem; restore: DraftPatch | null },
 ): void {
   context.setError(null);
   context.setDialog({
     ...dialog,
     submission: {
       attempt: (dialog.submission?.attempt ?? 0) + 1,
-      item: submittedItem,
+      item,
+      restore,
       inputSnapshot: dialog.draftStore.getSnapshot(),
       lastSavedAtBefore: editor.draft.autosave.lastSavedAt,
       draftVersionBefore: editor.draft.version,
@@ -220,6 +222,7 @@ function submitDraftUpdate(
     dialog.mode === "create" && dialog.submission
       ? { ...updatedItem, id: dialog.submission.item.id }
       : updatedItem;
+  const restore = restorePatchFor(editor, dialog);
   const error = retrying
     ? null
     : applyDraftChange(editor, dialog, submittedItem);
@@ -227,7 +230,7 @@ function submitDraftUpdate(
     context.setError(error);
     return;
   }
-  armDraftSave(context, editor, dialog, submittedItem);
+  armDraftSave(context, editor, dialog, { item: submittedItem, restore });
 }
 
 export function saveOverviewItem(

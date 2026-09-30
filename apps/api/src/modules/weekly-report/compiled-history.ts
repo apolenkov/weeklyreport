@@ -10,6 +10,7 @@ const UNKNOWN_PUBLISHER_NAME = "Unknown";
 // independent of Prisma query types.
 export interface CompiledHistoryReportRow {
   readonly archived: boolean;
+  readonly reopened: boolean;
   readonly snapshot: AssembledReport;
 }
 
@@ -37,6 +38,7 @@ function foldReportEntry(
     periodEnd: snapshot.periodEnd,
     publishedAt: snapshot.publishedAt,
     archived: report.archived,
+    reopened: report.reopened,
     publishedByName: snapshot.publishedByName ?? UNKNOWN_PUBLISHER_NAME,
     trafficLights: snapshot.portfolioOverview.totals,
     itemCount: items.length,

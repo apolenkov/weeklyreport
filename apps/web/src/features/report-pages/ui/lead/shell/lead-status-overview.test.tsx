@@ -582,7 +582,7 @@ describe("LeadForm Overview", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "Replan deferred work: Deferred provider rollout",
+        name: /^Replan deferred work: Deferred provider rollout, /,
       }),
     );
     const composer = screen.getByRole("form", { name: "Resolve plan" });
@@ -606,7 +606,7 @@ describe("LeadForm Overview", () => {
     await pollUntil(() =>
       expect(
         screen.queryByRole("button", {
-          name: "Replan deferred work: Deferred provider rollout",
+          name: /^Replan deferred work: Deferred provider rollout, /,
         }),
       ).not.toBeInTheDocument(),
     );
@@ -643,7 +643,7 @@ describe("LeadForm Overview", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "Replan deferred work: Deferred provider rollout",
+        name: /^Replan deferred work: Deferred provider rollout, /,
       }),
     );
     // An untouched composer closes without asking.
@@ -652,7 +652,7 @@ describe("LeadForm Overview", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "Replan deferred work: Deferred provider rollout",
+        name: /^Replan deferred work: Deferred provider rollout, /,
       }),
     );
     const text = screen.getByRole("textbox", {
@@ -827,7 +827,7 @@ describe("LeadForm Overview", () => {
     );
     await user.click(
       await screen.findByRole("button", {
-        name: "Replan deferred work: Deferred provider rollout",
+        name: /^Replan deferred work: Deferred provider rollout, /,
       }),
     );
     const form = screen.getByRole("form", { name: "Resolve plan" });
@@ -1328,6 +1328,88 @@ describe("LeadForm Overview", () => {
     expect(
       within(screen.getByTestId("status-overview")).getByRole("status"),
     ).toHaveTextContent("Draft saved");
+  });
+
+  it("rolls the board back to the saved item when a failed save is discarded", async () => {
+    const user = userEvent.setup();
+    const saveDraft = vi.fn(() =>
+      Promise.reject(new Error("network unavailable")),
+    );
+    render(
+      <Wrapper saveDraft={saveDraft}>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Update progress for Current work",
+      }),
+    );
+    const description = screen.getByRole("textbox", { name: /Description/ });
+    await user.clear(description);
+    await user.type(description, "Never saved text");
+    await user.click(screen.getByRole("button", { name: "Save update" }));
+    expect(
+      await screen.findByText(
+        "Save failed. Your update is still here; try saving again.",
+      ),
+    ).toBeInTheDocument();
+    // The editor stays open and the retry path keeps the typed text.
+    expect(screen.getByRole("textbox", { name: /Description/ })).toHaveValue(
+      "Never saved text",
+    );
+
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Discard" }));
+
+    expect(
+      await screen.findByRole("button", {
+        name: "Update progress for Current work",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "Update progress for Never saved text",
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("status-overview")).getByRole("status"),
+    ).not.toHaveTextContent("Draft save failed");
+    expect(saveDraft).toHaveBeenCalledOnce();
+  });
+
+  it("removes a never-saved new item from the board when its failed save is discarded", async () => {
+    const user = userEvent.setup();
+    const saveDraft = vi.fn(() =>
+      Promise.reject(new Error("network unavailable")),
+    );
+    render(
+      <Wrapper saveDraft={saveDraft}>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Add item to Payments" }),
+    );
+    await user.type(screen.getByLabelText(/Description \*/i), "Phantom item");
+    await user.click(screen.getByRole("button", { name: "Save update" }));
+    expect(
+      await screen.findByText(
+        "Save failed. Your update is still here; try saving again.",
+      ),
+    ).toBeInTheDocument();
+    const board = within(screen.getByTestId("status-overview"));
+    expect(board.getAllByText("Phantom item").length).toBeGreaterThan(0);
+
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Discard" }));
+
+    await pollUntil(() =>
+      expect(board.queryAllByText("Phantom item")).toHaveLength(0),
+    );
+    expect(
+      screen.getByRole("button", { name: "Update progress for Current work" }),
+    ).toBeInTheDocument();
   });
 
   it("accepts a saved parent change as the new editor baseline", async () => {

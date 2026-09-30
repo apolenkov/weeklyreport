@@ -64,7 +64,7 @@ describe("admin tab alert labels", () => {
 
     const count = screen.getByTestId("reopen-tab-count");
     expect(count).toHaveTextContent("3");
-    expect(count).toHaveClass("absolute", "-right-3", "-top-2");
+    expect(count).toHaveClass("absolute", "left-full", "-top-2");
     expect(count).toHaveAttribute("aria-hidden", "true");
     expect(screen.getByText("3 pending reopen requests")).toHaveClass(
       "sr-only",
@@ -79,7 +79,7 @@ describe("admin tab alert labels", () => {
     const count = screen.getByTestId("jobs-tab-count");
     expect(screen.getByText("jobs")).toBeInTheDocument();
     expect(count).toHaveTextContent("2");
-    expect(count).toHaveClass("absolute", "-right-3", "-top-2");
+    expect(count).toHaveClass("absolute", "left-full", "-top-2");
     expect(count).toHaveClass(
       "bg-[var(--color-destructive)]",
       "text-[var(--color-destructive-foreground)]",

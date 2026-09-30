@@ -69,14 +69,14 @@ describe("OpenWorkRegister", () => {
     expect(screen.getByText("Deferral reason was not recorded.")).toBeVisible();
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Resume paused work: Provider rollout",
+        name: "Resume paused work: Provider rollout, Jul 6–12, 2026",
       }),
     );
     expect(onOpen).toHaveBeenCalledTimes(1);
     expect(onOpen.mock.calls[0]?.[0].action.kind).toBe("resume");
     expect(
       screen.getByRole("button", {
-        name: "Replan deferred work: Invoice review",
+        name: "Replan deferred work: Invoice review, Jul 6–12, 2026",
       }),
     ).toBeEnabled();
   });
@@ -127,13 +127,13 @@ describe("OpenWorkRegister", () => {
     expect(screen.getByText("Completed and cancelled work (1)")).toBeVisible();
     expect(
       screen.queryByRole("button", {
-        name: "Reopen in this report: Provider rollout",
+        name: "Reopen in this report: Provider rollout, Jul 6–12, 2026",
       }),
     ).not.toBeVisible();
     fireEvent.click(screen.getByText("Completed and cancelled work (1)"));
     expect(
       screen.getByRole("button", {
-        name: "Reopen in this report: Provider rollout",
+        name: "Reopen in this report: Provider rollout, Jul 6–12, 2026",
       }),
     ).toBeEnabled();
     expect(
@@ -182,7 +182,7 @@ describe("OpenWorkRegister", () => {
     ).toBeVisible();
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Resume paused work: Provider rollout",
+        name: "Resume paused work: Provider rollout, Jul 6–12, 2026",
       }),
     );
     expect(onOpen).toHaveBeenCalledTimes(1);

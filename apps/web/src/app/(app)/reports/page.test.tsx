@@ -146,6 +146,7 @@ const currentCompiled: CompiledHistoryEntry = {
   periodEnd: new Date("2026-05-10T23:59:59.000Z"),
   publishedAt: new Date("2026-05-11T09:00:00.000Z"),
   archived: false,
+  reopened: false,
   publishedByName: "Head User",
   trafficLights: { green: 2, yellow: 0, red: 0 },
   itemCount: 2,

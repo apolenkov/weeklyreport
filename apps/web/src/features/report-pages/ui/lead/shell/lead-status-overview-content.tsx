@@ -3,7 +3,6 @@
 import { useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 
-import { useIsOnline } from "../../../../../shared/lib/query/use-is-online";
 import { SdlcTooltipProvider } from "../../../../../shared/ui/feedback/sdlc-tooltip";
 import {
   projectReportHealthPulse,
@@ -11,7 +10,6 @@ import {
   StatusOverview,
   type StatusOverviewItem,
 } from "../../../../report-sections";
-import { autosaveStatusCopy } from "../chrome/autosave-state-copy";
 import { LeadFormDialogs } from "../chrome/lead-form-dialogs";
 import { EditorAvailabilityNotice } from "./lead-editor-availability-notice";
 import { LeadOverviewDetails } from "./lead-overview-details";
@@ -40,6 +38,7 @@ import {
   useOverviewItemEditor,
 } from "./use-overview-item-editor";
 import { useOverviewPlanActions } from "./use-overview-plan-actions";
+import { useSaveStatus } from "./use-save-status";
 
 type AvailableEditor = LeadFormEditorHandle;
 type ReadyEditor = Extract<AvailableEditor, { status: "ready" }>;
@@ -87,18 +86,6 @@ function useOverviewCompletion(
     isSlidesMode: false,
     isReadOnly,
   });
-}
-
-function useSaveStatus(
-  editor: ReadyEditor | null,
-  pendingInput: boolean,
-  outcomePending: boolean,
-): string | undefined {
-  const online = useIsOnline();
-  if (outcomePending) return "Saving plan outcome…";
-  if (pendingInput) return "Unsaved update — save or cancel the open edit";
-  if (!editor || editor.view.viewModel.isReadOnly) return undefined;
-  return autosaveStatusCopy(editor.draft.autosave.state, online);
 }
 
 function OverviewRefreshWarning({

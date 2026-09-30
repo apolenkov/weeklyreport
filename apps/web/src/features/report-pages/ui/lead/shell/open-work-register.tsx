@@ -134,7 +134,7 @@ function OpenWorkRow({
       <button
         type="button"
         disabled={disabled}
-        aria-label={`${item.action.label}: ${shortItemLabel(historical.text)}`}
+        aria-label={`${item.action.label}: ${shortItemLabel(historical.text)}, ${item.periodLabel}`}
         data-overview-focus={`open-work:${historical.stableId}`}
         className={ACTION_BUTTON}
         onClick={() => onOpen(item)}

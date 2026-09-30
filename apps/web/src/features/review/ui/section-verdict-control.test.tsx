@@ -204,6 +204,27 @@ describe("SectionVerdictControl — verdict buttons", () => {
     expect(onMutated).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps focus on Approve while the verdict saves and ignores repeat clicks", async () => {
+    const { captured } = renderControl({ canReview: true });
+    const mutationFn = expectDefined(captured["review.verdict"]).mutationFn;
+    mutationFn.mockReturnValue(new Promise(() => undefined));
+
+    const approve = screen.getByRole("button", { name: "Approve" });
+    await userEvent.click(approve);
+
+    await waitFor(() => {
+      expect(approve).toHaveAttribute("aria-disabled", "true");
+    });
+    // A natively disabled button would drop focus to <body>.
+    expect(document.activeElement).toBe(approve);
+    await userEvent.click(approve);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Request changes" }),
+    );
+    expect(mutationFn).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
   it("Request changes only opens the reason dialog and sends nothing", async () => {
     const { captured } = renderControl({ canReview: true });
     await userEvent.click(
