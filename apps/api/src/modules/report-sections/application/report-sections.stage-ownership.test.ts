@@ -10,9 +10,6 @@ import {
   ReportSectionsService,
 } from "./report-sections.service";
 
-const testGraceSettings = () =>
-  Promise.resolve({ gracePeriodHours: 0, allowLateSubmissions: true });
-
 const baseSection: ReportSectionReadModel = {
   reportSectionId: "11111111-1111-4111-8111-111111111111",
   reportId: "22222222-2222-4222-8222-222222222222",
@@ -131,10 +128,7 @@ describe("ReportSectionsService — stage-ownership guard", () => {
   };
 
   it("rejects saveDraft when a new risk carries a stage the author does not own", async () => {
-    const service = new ReportSectionsService(
-      createRepository(testingOwner),
-      testGraceSettings,
-    );
+    const service = new ReportSectionsService(createRepository(testingOwner));
 
     await expect(
       service.saveDraft(
@@ -155,10 +149,7 @@ describe("ReportSectionsService — stage-ownership guard", () => {
   });
 
   it("rejects submitSection when a new risk carries a stage the author does not own", async () => {
-    const service = new ReportSectionsService(
-      createRepository(testingOwner),
-      testGraceSettings,
-    );
+    const service = new ReportSectionsService(createRepository(testingOwner));
 
     await expect(
       service.submitSection(
@@ -180,10 +171,7 @@ describe("ReportSectionsService — stage-ownership guard", () => {
   });
 
   it("allows a write whose stages the author owns", async () => {
-    const service = new ReportSectionsService(
-      createRepository(testingOwner),
-      testGraceSettings,
-    );
+    const service = new ReportSectionsService(createRepository(testingOwner));
 
     const saved = await service.saveDraft(
       {
@@ -207,10 +195,7 @@ describe("ReportSectionsService — stage-ownership guard", () => {
   it("scopes stage validation to the section author's owned stages", async () => {
     // The fixture supplies the section author as actor and verifies that the
     // author's ownedStages reject an unowned stage.
-    const service = new ReportSectionsService(
-      createRepository(testingOwner),
-      testGraceSettings,
-    );
+    const service = new ReportSectionsService(createRepository(testingOwner));
 
     await expect(
       service.saveDraft(
@@ -234,10 +219,7 @@ describe("ReportSectionsService — stage-ownership guard", () => {
     // Decisions run a distinct row-mapping path (productId, null-normalization,
     // union-across-projects for a department-scoped decision), so they get their
     // own reject case.
-    const service = new ReportSectionsService(
-      createRepository(testingOwner),
-      testGraceSettings,
-    );
+    const service = new ReportSectionsService(createRepository(testingOwner));
 
     await expect(
       service.saveDraft(
@@ -288,7 +270,6 @@ describe("ReportSectionsService — stage-ownership guard", () => {
   it("rejects an unchanged cross row when its stage is not currently owned", async () => {
     const service = new ReportSectionsService(
       createRepository(crossRowSection),
-      testGraceSettings,
     );
 
     await expect(
@@ -322,7 +303,6 @@ describe("ReportSectionsService — stage-ownership guard", () => {
   it("rejects a smuggle that reuses a stableId but swaps in an unowned stage", async () => {
     const service = new ReportSectionsService(
       createRepository(crossRowSection),
-      testGraceSettings,
     );
 
     await expect(
@@ -375,7 +355,6 @@ describe("ReportSectionsService — stage-ownership guard", () => {
     };
     const service = new ReportSectionsService(
       createRepository(ownedRowSection),
-      testGraceSettings,
     );
 
     await expect(

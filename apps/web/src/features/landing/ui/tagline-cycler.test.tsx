@@ -64,17 +64,17 @@ describe("TaglineCycler", () => {
     expect(second).not.toBe(first);
   });
 
-  it("opacity is 1 initially and 0 during fade-out", () => {
+  it("exposes the fade state to the stylesheet during rotation", () => {
     render(<TaglineCycler />);
     const el = screen.getByRole("paragraph");
     expect(el).toHaveStyle({
-      opacity: "1",
       transitionDuration: `${TAGLINE_FADE_MS}ms`,
     });
+    expect(el).toHaveAttribute("data-visible", "true");
     // Advance into fade-out window (visible period elapsed but fade not done)
     act(() => {
       vi.advanceTimersByTime(TAGLINE_VISIBLE_MS + 1);
     });
-    expect(el).toHaveStyle({ opacity: "0" });
+    expect(el).toHaveAttribute("data-visible", "false");
   });
 });

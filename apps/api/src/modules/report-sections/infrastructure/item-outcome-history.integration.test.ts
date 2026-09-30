@@ -26,9 +26,6 @@ import { resolvePlanTx } from "./item-outcome.transaction";
 import { LeadFormPrismaRepository } from "./lead-form.prisma-repository";
 import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
 
-const graceSettings = () =>
-  Promise.resolve({ gracePeriodHours: 0, allowLateSubmissions: true });
-
 describe("item outcome history across reporting gaps (real database)", () => {
   const prisma = createTestPrisma();
   const prismaService = prisma as unknown as PrismaService;
@@ -39,10 +36,7 @@ describe("item outcome history across reporting gaps (real database)", () => {
     new LeadFormPrismaRepository(prismaService),
   );
   const sectionRepository = new ReportSectionsPrismaRepository(prismaService);
-  const ordinarySave = new ReportSectionsService(
-    sectionRepository,
-    graceSettings,
-  );
+  const ordinarySave = new ReportSectionsService(sectionRepository);
   let testData: Awaited<ReturnType<typeof seedTestData>>;
 
   beforeEach(async () => {

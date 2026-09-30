@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common";
 
 import { ConfigModule } from "../../infrastructure/config/config.module.js";
-import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { APP_LOGGER } from "../../lib/audit-logger.js";
 import type { AppLogger } from "../../lib/logger.js";
 import {
@@ -9,10 +8,6 @@ import {
   type LeadFormRepository,
   LeadFormService,
 } from "./application/lead-form.service.js";
-import {
-  REPORT_SECTIONS_GRACE_SETTINGS,
-  type ReportSectionsGraceSettings,
-} from "./application/report-sections.contract.js";
 import {
   REPORT_SECTIONS_REPOSITORY,
   type ReportSectionsRepository,
@@ -29,26 +24,6 @@ import { ReportSectionsPrometheusTelemetry } from "./infrastructure/report-secti
 @Module({
   imports: [ConfigModule],
   providers: [
-    {
-      provide: REPORT_SECTIONS_GRACE_SETTINGS,
-      useFactory: (
-        prisma: PrismaService,
-      ): (() => Promise<ReportSectionsGraceSettings>) => {
-        return async () => {
-          const settings = await prisma.appSettings.findUnique({
-            where: { id: "singleton" },
-            select: { gracePeriodHours: true, allowLateSubmissions: true },
-          });
-          if (!settings) {
-            throw new Error(
-              "AppSettings singleton row 'singleton' is missing — apply the canonical init migration or restore the row.",
-            );
-          }
-          return settings;
-        };
-      },
-      inject: [PrismaService],
-    },
     ReportSectionsPrometheusTelemetry,
     {
       provide: REPORT_SECTIONS_TELEMETRY,
@@ -63,19 +38,16 @@ import { ReportSectionsPrometheusTelemetry } from "./infrastructure/report-secti
       provide: ReportSectionsService,
       useFactory: (
         repo: ReportSectionsRepository,
-        getGraceSettings: () => Promise<ReportSectionsGraceSettings>,
         telemetry: ReportSectionsTelemetry,
         logger: AppLogger,
       ) =>
         new ReportSectionsService(
           repo,
-          getGraceSettings,
           telemetry,
           logger.child({ service: "ReportSectionsService" }),
         ),
       inject: [
         REPORT_SECTIONS_REPOSITORY,
-        REPORT_SECTIONS_GRACE_SETTINGS,
         REPORT_SECTIONS_TELEMETRY,
         APP_LOGGER,
       ],

@@ -1,21 +1,15 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   customreportSectionsSubmittedTotal,
   customreportSectionSubmissionLatencySeconds,
 } from "../../../infrastructure/metrics/metrics.registry.js";
-import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { ReportSectionsPrometheusTelemetry } from "../infrastructure/report-sections-prometheus-telemetry.adapter.js";
 import {
-  ReportSectionAccessError,
-  ReportSectionNotFoundError,
   type ReportSectionsRepository,
   ReportSectionsService,
 } from "./report-sections.service";
-
-const testGraceSettings = () =>
-  Promise.resolve({ gracePeriodHours: 0, allowLateSubmissions: true });
 
 // Deadlines in these suites are expressed as offsets from now.
 const ONE_HOUR = 60 * 60 * 1000;
@@ -68,180 +62,6 @@ const baseSection: ReportSectionReadModel = {
   activities: [],
   reviews: [],
 };
-
-describe("ReportSectionsService — deadline gate", () => {
-  function createGracedRepository(opts: {
-    section?: ReportSectionReadModel;
-    deadline: Date;
-  }): ReportSectionsRepository {
-    const section = structuredClone(opts.section ?? baseSection);
-    // Make the section's traffic light filled so the content validator
-    // doesn't fire — we want to test the deadline gate in isolation.
-    const fixed: ReportSectionReadModel = {
-      ...section,
-      projects: section.projects.map((p) => ({
-        ...p,
-        trafficLight: "green",
-      })),
-    };
-    let currentSection = fixed;
-    const getReportMeta = vi.fn().mockResolvedValue({
-      status: "draft" as const,
-      deadline: opts.deadline,
-    });
-    return {
-      getSectionById(id) {
-        return Promise.resolve(
-          id === currentSection.reportSectionId
-            ? structuredClone(currentSection)
-            : null,
-        );
-      },
-      getReportPeriodWriteGateForSection() {
-        return Promise.resolve({ periodStatus: "open", archived: false });
-      },
-      getReportMeta,
-      getPublishedLineage() {
-        return Promise.resolve({ itemStableIds: [], decisionStableIds: [] });
-      },
-      saveSection(next) {
-        currentSection = structuredClone(next);
-        return Promise.resolve(structuredClone(currentSection));
-      },
-      getMyHistoryPage() {
-        return Promise.resolve({ items: [], nextCursor: null });
-      },
-    };
-  }
-
-  function validSubmitPayload() {
-    return {
-      reportSectionId: baseSection.reportSectionId,
-      version: 1,
-      status: "draft" as const,
-      confirmed: true as const,
-      stageStatuses: [],
-      activityStatuses: [],
-      projectStatuses: [
-        {
-          projectId: expectDefined(baseSection.projects[0]).projectId,
-          status: "green" as const,
-        },
-      ],
-      items: baseSection.items,
-      risks: [],
-      decisions: [],
-    };
-  }
-
-  it("before deadline: submits with late=false (gate fully bypassed)", async () => {
-    const repo = createGracedRepository({
-      deadline: new Date(Date.now() + 24 * ONE_HOUR),
-    });
-    const service = new ReportSectionsService(repo, () =>
-      Promise.resolve({ gracePeriodHours: 24, allowLateSubmissions: false }),
-    );
-
-    const saved = await service.submitSection(
-      validSubmitPayload(),
-      baseSection.authorId,
-    );
-
-    expect(saved.status).toBe("submitted");
-    expect(saved.late).toBe(false);
-    expect(repo.getReportMeta).toHaveBeenCalledTimes(1);
-  });
-
-  it.each([
-    {
-      label: "past deadline within grace + allowLate=true",
-      hoursPast: 1,
-      allowLateSubmissions: true,
-    },
-    {
-      label:
-        "past deadline within grace + allowLate=false (grace still permissive)",
-      hoursPast: 1,
-      allowLateSubmissions: false,
-    },
-    {
-      label: "past grace window + allowLate=true",
-      hoursPast: 48,
-      allowLateSubmissions: true,
-    },
-  ] as const)(
-    "$label: submits with late=true",
-    async ({ hoursPast, allowLateSubmissions }) => {
-      const repo = createGracedRepository({
-        deadline: new Date(Date.now() - hoursPast * ONE_HOUR),
-      });
-      const service = new ReportSectionsService(repo, () =>
-        Promise.resolve({ gracePeriodHours: 24, allowLateSubmissions }),
-      );
-
-      const saved = await service.submitSection(
-        validSubmitPayload(),
-        baseSection.authorId,
-      );
-
-      expect(saved.status).toBe("submitted");
-      expect(saved.late).toBe(true);
-    },
-  );
-
-  it("past grace window + allowLate=false: 403 ReportSectionAccessError", async () => {
-    const repo = createGracedRepository({
-      deadline: new Date(Date.now() - 48 * ONE_HOUR),
-    });
-    const service = new ReportSectionsService(repo, () =>
-      Promise.resolve({ gracePeriodHours: 24, allowLateSubmissions: false }),
-    );
-
-    await expect(
-      service.submitSection(validSubmitPayload(), baseSection.authorId),
-    ).rejects.toBeInstanceOf(ReportSectionAccessError);
-  });
-
-  it("a period with an explicitly cleared deadline stamps late=false past any date (ruling F16)", async () => {
-    // deadline: null is a real domain state (admin cleared it) — no reference
-    // point, so nothing is ever late and the gate never throws.
-    const repo = {
-      ...createGracedRepository({
-        deadline: new Date(Date.now() - 48 * ONE_HOUR),
-      }),
-      getReportMeta: () =>
-        Promise.resolve({ status: "draft" as const, deadline: null }),
-    };
-    const service = new ReportSectionsService(repo, () =>
-      Promise.resolve({ gracePeriodHours: 0, allowLateSubmissions: false }),
-    );
-
-    const saved = await service.submitSection(
-      validSubmitPayload(),
-      baseSection.authorId,
-    );
-
-    expect(saved.status).toBe("submitted");
-    expect(saved.late).toBe(false);
-  });
-
-  it("fails closed when report meta is missing — never an un-gated submission", async () => {
-    // The section exists, so its report row must too; a null meta is a
-    // mid-flight deletion / integrity failure, surfaced as NOT_FOUND, never a
-    // silent pass-through to an on-time submission.
-    const repo = {
-      ...createGracedRepository({
-        deadline: new Date(Date.now() - 48 * ONE_HOUR),
-      }),
-      getReportMeta: () => Promise.resolve(null),
-    };
-    const service = new ReportSectionsService(repo, testGraceSettings);
-
-    await expect(
-      service.submitSection(validSubmitPayload(), baseSection.authorId),
-    ).rejects.toBeInstanceOf(ReportSectionNotFoundError);
-  });
-});
 
 // Verifies the submit path bumps `customreport_sections_submitted_total{late}`
 // with the stamped label and observes a positive latency-histogram value when
@@ -300,7 +120,10 @@ describe("ReportSectionsService — product telemetry", () => {
         return Promise.resolve({ itemStableIds: [], decisionStableIds: [] });
       },
       saveSection(next) {
-        current = structuredClone(next);
+        current = {
+          ...structuredClone(next),
+          late: Date.now() > deadline.getTime(),
+        };
         return Promise.resolve(structuredClone(current));
       },
       getMyHistoryPage() {
@@ -319,8 +142,6 @@ describe("ReportSectionsService — product telemetry", () => {
 
     const service = new ReportSectionsService(
       buildRepo(new Date(Date.now() + 6 * ONE_HOUR)),
-      () =>
-        Promise.resolve({ gracePeriodHours: 24, allowLateSubmissions: false }),
       new ReportSectionsPrometheusTelemetry(),
     );
     await service.submitSection(
@@ -374,8 +195,6 @@ describe("ReportSectionsService — product telemetry", () => {
 
     const service = new ReportSectionsService(
       buildRepo(new Date(Date.now() - 2 * ONE_HOUR)),
-      () =>
-        Promise.resolve({ gracePeriodHours: 24, allowLateSubmissions: true }),
       new ReportSectionsPrometheusTelemetry(),
     );
     await service.submitSection(

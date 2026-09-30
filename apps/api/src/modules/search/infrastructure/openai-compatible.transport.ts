@@ -202,8 +202,9 @@ const requestJson = (
   operation: ReportAssistantProviderOperation,
   signal?: AbortSignal,
 ): Promise<unknown> =>
-  withTransientRetry(() =>
-    requestJsonOnce(config, path, body, operation, signal),
+  withTransientRetry(
+    () => requestJsonOnce(config, path, body, operation, signal),
+    signal,
   );
 
 const asObject = (value: unknown, label: string): Record<string, unknown> => {

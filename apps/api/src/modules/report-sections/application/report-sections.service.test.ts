@@ -12,9 +12,6 @@ import {
   ReportSectionsService,
 } from "./report-sections.service";
 
-const testGraceSettings = () =>
-  Promise.resolve({ gracePeriodHours: 0, allowLateSubmissions: true });
-
 const baseSection: ReportSectionReadModel = {
   reportSectionId: "11111111-1111-4111-8111-111111111111",
   reportId: "22222222-2222-4222-8222-222222222222",
@@ -123,10 +120,7 @@ function createRepository(
 
 describe("ReportSectionsService", () => {
   it("loads a lead section as one typed payload", async () => {
-    const service = new ReportSectionsService(
-      createRepository(baseSection),
-      testGraceSettings,
-    );
+    const service = new ReportSectionsService(createRepository(baseSection));
 
     await expect(
       service.getActiveSection(baseSection.reportSectionId),
@@ -139,10 +133,7 @@ describe("ReportSectionsService", () => {
   });
 
   it("saves draft without changing submitted state", async () => {
-    const service = new ReportSectionsService(
-      createRepository(baseSection),
-      testGraceSettings,
-    );
+    const service = new ReportSectionsService(createRepository(baseSection));
     const saved = await service.saveDraft(
       {
         reportSectionId: baseSection.reportSectionId,
@@ -169,10 +160,7 @@ describe("ReportSectionsService", () => {
   });
 
   it("rejects saveDraft for another user section when actor is supplied", async () => {
-    const service = new ReportSectionsService(
-      createRepository(baseSection),
-      testGraceSettings,
-    );
+    const service = new ReportSectionsService(createRepository(baseSection));
 
     await expect(
       service.saveDraft(
@@ -222,7 +210,7 @@ describe("ReportSectionsService", () => {
       const repo = createRepository(baseSection);
       const saveSection = vi.fn();
       repo.saveSection = saveSection;
-      const service = new ReportSectionsService(repo, testGraceSettings);
+      const service = new ReportSectionsService(repo);
 
       await expect(call(service)).rejects.toBeInstanceOf(
         ReportSectionAccessError,
@@ -232,10 +220,7 @@ describe("ReportSectionsService", () => {
   );
 
   it("rejects submit when traffic light is missing", async () => {
-    const service = new ReportSectionsService(
-      createRepository(baseSection),
-      testGraceSettings,
-    );
+    const service = new ReportSectionsService(createRepository(baseSection));
 
     await expect(
       service.submitSection(
@@ -264,10 +249,7 @@ describe("ReportSectionsService", () => {
   });
 
   it("rejects submit for another user section before validation", async () => {
-    const service = new ReportSectionsService(
-      createRepository(baseSection),
-      testGraceSettings,
-    );
+    const service = new ReportSectionsService(createRepository(baseSection));
 
     await expect(
       service.submitSection(
@@ -294,10 +276,7 @@ describe("ReportSectionsService", () => {
   });
 
   it("submits by read-model scope and does not require owner-only projects", async () => {
-    const service = new ReportSectionsService(
-      createRepository(baseSection),
-      testGraceSettings,
-    );
+    const service = new ReportSectionsService(createRepository(baseSection));
 
     const saved = await service.submitSection(
       {
@@ -333,7 +312,7 @@ describe("ReportSectionsService", () => {
       repo.getReportPeriodWriteGateForSection = () =>
         Promise.resolve({ periodStatus: "published", archived: false });
 
-      const service = new ReportSectionsService(repo, testGraceSettings);
+      const service = new ReportSectionsService(repo);
 
       await expect(
         service.saveDraft(
@@ -366,7 +345,7 @@ describe("ReportSectionsService", () => {
       repo.getReportPeriodWriteGateForSection = () =>
         Promise.resolve({ periodStatus: "open", archived: true });
       const saveSection = vi.spyOn(repo, "saveSection");
-      const service = new ReportSectionsService(repo, testGraceSettings);
+      const service = new ReportSectionsService(repo);
 
       await expect(
         service.saveDraft(validDraftFor(baseSection), baseSection.authorId),
@@ -380,7 +359,7 @@ describe("ReportSectionsService", () => {
     it("allows editing when the period is open", async () => {
       const repo = createRepository(baseSection);
       // The default write gate is non-archived and open.
-      const service = new ReportSectionsService(repo, testGraceSettings);
+      const service = new ReportSectionsService(repo);
 
       const saved = await service.saveDraft(
         {
@@ -413,7 +392,7 @@ describe("ReportSectionsService", () => {
       repo.getReportPeriodWriteGateForSection = () =>
         Promise.resolve({ periodStatus: "reopened", archived: false });
 
-      const service = new ReportSectionsService(repo, testGraceSettings);
+      const service = new ReportSectionsService(repo);
 
       const saved = await service.saveDraft(
         {
@@ -448,7 +427,7 @@ describe("ReportSectionsService", () => {
         return original(sectionId);
       };
 
-      const service = new ReportSectionsService(repo, testGraceSettings);
+      const service = new ReportSectionsService(repo);
 
       await service.saveDraft(
         {
@@ -486,7 +465,6 @@ describe("ReportSectionsService", () => {
             },
           ],
         }),
-        testGraceSettings,
       );
 
       await expect(
@@ -549,7 +527,7 @@ describe("ReportSectionsService", () => {
       repo.getReportPeriodWriteGateForSection = () =>
         Promise.resolve({ periodStatus: "published", archived: false });
 
-      const service = new ReportSectionsService(repo, testGraceSettings);
+      const service = new ReportSectionsService(repo);
 
       await expect(
         service.submitSection(submitPayload, baseSection.authorId),
@@ -565,7 +543,7 @@ describe("ReportSectionsService", () => {
         Promise.resolve({ periodStatus: "reopened", archived: true });
       const getReportMeta = vi.spyOn(repo, "getReportMeta");
       const saveSection = vi.spyOn(repo, "saveSection");
-      const service = new ReportSectionsService(repo, testGraceSettings);
+      const service = new ReportSectionsService(repo);
 
       await expect(
         service.submitSection(submitPayload, baseSection.authorId),
@@ -578,10 +556,7 @@ describe("ReportSectionsService", () => {
     });
 
     it("succeeds submitting a draft section on an open period", async () => {
-      const service = new ReportSectionsService(
-        createRepository(greenSection),
-        testGraceSettings,
-      );
+      const service = new ReportSectionsService(createRepository(greenSection));
 
       const saved = await service.submitSection(
         submitPayload,
@@ -596,7 +571,7 @@ describe("ReportSectionsService", () => {
       repo.getReportPeriodWriteGateForSection = () =>
         Promise.resolve({ periodStatus: "reopened", archived: false });
 
-      const service = new ReportSectionsService(repo, testGraceSettings);
+      const service = new ReportSectionsService(repo);
 
       const saved = await service.submitSection(
         submitPayload,
@@ -617,7 +592,6 @@ describe("ReportSectionsService", () => {
           { ...expectDefined(baseSection.projects[0]), trafficLight: "green" },
         ],
       }),
-      testGraceSettings,
     );
 
     await expect(

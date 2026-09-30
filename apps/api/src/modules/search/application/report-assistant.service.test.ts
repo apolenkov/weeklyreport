@@ -1,6 +1,6 @@
 import type { ReportSectionReadModel, SearchPlan } from "@customreport/shared";
 import { searchPlanSchema } from "@customreport/shared";
-import { describe, expect, it, type Mock, vi } from "vitest";
+import { afterEach, describe, expect, it, type Mock, vi } from "vitest";
 
 import type { ClarificationTokenCodec } from "../domain/entity-resolver.types.js";
 import type { ReportOccurrence } from "../domain/report-retrieval.types.js";
@@ -24,6 +24,12 @@ import type {
 } from "./report-assistant.telemetry.js";
 import type { ReportSearchRepository } from "./report-search.repository.js";
 import type { SemanticRetrievalService } from "./semantic-retrieval.service.js";
+
+vi.mock("node:timers/promises", async () => {
+  const { timersPromisesOnGlobalTimers } =
+    await import("../../../test-utils/timers-promises-on-global-timers.js");
+  return timersPromisesOnGlobalTimers;
+});
 
 const ACTOR_ID = "659b2767-0f86-41e2-b025-49730ca010e4";
 const REPORT_ID = "6f99661a-cac6-4d06-bf08-2a14cced554d";
@@ -312,7 +318,59 @@ const permissiveResourceGuard: ReportAssistantResourceGuardPort = {
   }),
 };
 
+afterEach(() => vi.useRealTimers());
+
 describe("ReportAssistantService", () => {
+  it("releases a lost lease during provider backoff without a second fetch", async () => {
+    vi.useFakeTimers();
+    const leaseController = new AbortController();
+    const release = vi.fn().mockResolvedValue(undefined);
+    const fetcher = vi.fn<OpenAiCompatibleFetch>().mockResolvedValueOnce(
+      new Response(JSON.stringify({ error: { code: "rate_limit_exceeded" } }), {
+        status: 429,
+        headers: { "retry-after": "2" },
+      }),
+    );
+    const transport = new OpenAiCompatibleTransport({
+      baseUrl: "https://provider.example/v1",
+      credential: "secret",
+      timeoutMs: 60_000,
+      fetcher,
+    });
+    const guard: ReportAssistantResourceGuardPort = {
+      acquire: vi.fn().mockResolvedValue({
+        kind: "granted",
+        lease: { signal: leaseController.signal, release },
+      }),
+    };
+    const harness = createHarness(basePlan, { resourceGuard: guard });
+    harness.planner.mockImplementation((_input, signal) =>
+      transport
+        .chat(
+          { model: "planner", maxTokens: 10, messages: [] },
+          "planner",
+          signal,
+        )
+        .then(() => basePlan),
+    );
+    const pending = harness.service.answer(request, ACTOR_ID);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetcher).toHaveBeenCalledOnce();
+    expect(release).not.toHaveBeenCalled();
+
+    leaseController.abort(new Error("lease lost"));
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(release).toHaveBeenCalledOnce();
+    await expect(pending).resolves.toEqual({
+      kind: "resource_limited",
+      retryAfterSeconds: 1,
+    });
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(fetcher).toHaveBeenCalledOnce();
+    expect(harness.answerer).not.toHaveBeenCalled();
+  });
+
   it("returns a typed resource-limited outcome and does no assistant work", async () => {
     const release = vi.fn().mockResolvedValue(undefined);
     const guard: ReportAssistantResourceGuardPort = {

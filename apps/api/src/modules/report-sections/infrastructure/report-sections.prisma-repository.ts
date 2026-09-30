@@ -62,8 +62,7 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
     return row?.report ?? null;
   }
 
-  // Null (rather than a throw) on a missing report lets the submitSection
-  // grace-period gate no-op without ad-hoc try/catch.
+  // Post-save metadata for best-effort submission latency telemetry.
   async getReportMeta(
     reportId: string,
   ): Promise<{ status: ReportStatus; deadline: Date | null } | null> {

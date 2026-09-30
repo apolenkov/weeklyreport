@@ -228,6 +228,16 @@ async function seedUsers(prisma: PrismaClient, reportingGroupId: string) {
 }
 
 export async function seedTestData(prisma: PrismaClient) {
+  await prisma.appSettings.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: {
+      id: "singleton",
+      gracePeriodHours: 0,
+      allowLateSubmissions: true,
+    },
+  });
+
   const group = await prisma.reportingGroup.create({
     data: {
       id: TEST_IDS.group,
