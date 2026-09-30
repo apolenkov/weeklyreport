@@ -24,6 +24,8 @@ const ALLOWED_IGNORED_PATHS = [
   /(^|\/)codex-session-[^/]+\.md$/u,
   /(^|\/)pi-session-[^/]+\.html$/u,
   /(^|\/)\.pi\/(?:goals|subagents)(?:\/|$)/u,
+  /^(?:\.agents|\.claude)\/skills\/(?:openspec-[^/]+\/|\.openspec-target$)/u,
+  /^\.claude\/commands\/opsx\//u,
 ];
 const ALLOWED_EMPTY_DIRECTORIES = new Set(["openspec/changes/archive"]);
 const IGNORED_DIRECTORY_NAMES = new Set([
