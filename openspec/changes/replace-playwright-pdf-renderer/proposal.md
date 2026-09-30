@@ -93,7 +93,7 @@ isolated-renderer probe and source-audit reports (`gotenberg-probes`,
 ## Non-goals
 
 - No change to job lifecycle, generation fencing, reconciliation, orphan
-  recovery, artifact publication, download authorization, or the print route
-  itself.
+  recovery, artifact publication, or download authorization.
 - No external exposure of the renderer (no Caddy route, no public port).
-- No queue/schema/Prisma changes; no web frontend changes.
+- No queue/schema/Prisma changes. The only web change is server rendering of
+  the worker-token print view (D3).
