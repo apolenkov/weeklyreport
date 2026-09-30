@@ -283,6 +283,7 @@ describe("item outcomes (real database)", () => {
 
     const carry = await new CarryOverService(
       new CarryOverPrismaRepository(prismaService),
+      createNullLogger(),
     ).executeCarryOver(testData.report.id, targetReport.id);
     const rows = await prisma.item.findMany({
       where: { reportSectionId: targetSection.id },

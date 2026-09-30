@@ -382,6 +382,7 @@ describe("unified-activity lifecycle (integration)", () => {
 
     const leadService = new LeadFormService(
       new LeadFormPrismaRepository(prisma as unknown as PrismaService),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
     );
 
     await expect(
@@ -414,6 +415,7 @@ describe("unified-activity lifecycle (integration)", () => {
 
     const carryService = new CarryOverService(
       new CarryOverPrismaRepository(prisma as unknown as PrismaService),
+      createNullLogger(),
     );
 
     // Period N+1: carry forward → arrives carriedOver=true, type=current.
@@ -531,7 +533,7 @@ describe("unified-activity lifecycle (integration)", () => {
     const deps = buildAutoCarryOverDeps({
       prisma,
       repository,
-      carryOverService: new CarryOverService(repository),
+      carryOverService: new CarryOverService(repository, createNullLogger()),
       logger: { info: () => undefined, warn: () => undefined },
     });
     await carryOverIntoOpenedPeriod(deps, nextReport.id);

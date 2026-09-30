@@ -5,7 +5,7 @@ import {
   type ReportSectionReadModel,
 } from "@customreport/shared";
 
-import { type AppLogger, createNullLogger } from "../../lib/logger";
+import type { AppLogger } from "../../lib/logger";
 import {
   buildCarryOverExecution,
   carriedCounts,
@@ -113,9 +113,9 @@ export class CarryOverService {
 
   constructor(
     private readonly repository: CarryOverRepository,
-    logger?: AppLogger,
+    logger: AppLogger,
   ) {
-    this.logger = logger ?? createNullLogger();
+    this.logger = logger;
   }
 
   // The dedupe lookup and both section reads run before the period gate; the

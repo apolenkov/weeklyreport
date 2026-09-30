@@ -11,6 +11,7 @@ import {
 import { applySaveSection } from "../report-sections/test-seams/index.js";
 import { CarryOverPrismaRepository } from "./carry-over.prisma-repository";
 import { CarryOverConflictError, CarryOverService } from "./carry-over.service";
+import { createNullLogger } from "../../lib/logger";
 
 const LOCK_WAIT_POLL_MS = 25;
 const LOCK_WAIT_TIMEOUT_MS = 10_000;
@@ -281,10 +282,10 @@ describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races
       },
     });
 
-    const result = await new CarryOverService(repo).executeCarryOver(
-      testData.report.id,
-      targetReport.id,
-    );
+    const result = await new CarryOverService(
+      repo,
+      createNullLogger(),
+    ).executeCarryOver(testData.report.id, targetReport.id);
 
     expect(result.records).toHaveLength(1);
     expect(

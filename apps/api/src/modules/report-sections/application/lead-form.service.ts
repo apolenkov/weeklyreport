@@ -30,10 +30,7 @@ import {
 import { type GetByPeriodResult, readByPeriod } from "./lead-form-by-period.js";
 import { readLeadOpenWork } from "./lead-form-open-work.js";
 import { readStatusOverview } from "./lead-form-status-overview.js";
-import {
-  NOOP_REPORT_SECTIONS_TELEMETRY,
-  type ReportSectionsTelemetry,
-} from "./report-sections-telemetry.port.js";
+import type { ReportSectionsTelemetry } from "./report-sections-telemetry.port.js";
 
 // Single error definitions live in lead-form-shared (instanceof stays valid).
 export type {
@@ -54,7 +51,7 @@ export const LEAD_FORM_REPOSITORY = Symbol("LeadFormRepository");
 export class LeadFormService {
   constructor(
     private readonly repository: LeadFormRepository,
-    private readonly telemetry: ReportSectionsTelemetry = NOOP_REPORT_SECTIONS_TELEMETRY,
+    private readonly telemetry: ReportSectionsTelemetry,
   ) {}
 
   resolvePlan(command: ResolvePlanInput, userId: string) {

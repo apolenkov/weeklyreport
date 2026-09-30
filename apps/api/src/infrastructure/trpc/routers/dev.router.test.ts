@@ -132,3 +132,40 @@ describe("dev.wipeAndReseed — variant is required, never defaulted", () => {
     });
   });
 });
+
+describe("dev.wipeAndReseed — one reseed at a time", () => {
+  it("rejects a concurrent call and accepts a new one after completion", async () => {
+    vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
+    const caller = buildCaller(true);
+    let release: () => void = () => undefined;
+    execFileMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = () => resolve({ stdout: "ok", stderr: "" });
+        }),
+    );
+
+    const first = caller.wipeAndReseed({ variant: "minimal" });
+    await expect(
+      caller.wipeAndReseed({ variant: "minimal" }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    release();
+    await expect(first).resolves.toMatchObject({ ok: true });
+    await expect(
+      caller.wipeAndReseed({ variant: "minimal" }),
+    ).resolves.toMatchObject({ ok: true });
+  });
+
+  it("releases the flag when the reset fails", async () => {
+    vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
+    const caller = buildCaller(true);
+    execFileMock.mockRejectedValueOnce(new Error("boom"));
+
+    await expect(
+      caller.wipeAndReseed({ variant: "minimal" }),
+    ).rejects.toMatchObject({ code: "INTERNAL_SERVER_ERROR" });
+    await expect(
+      caller.wipeAndReseed({ variant: "minimal" }),
+    ).resolves.toMatchObject({ ok: true });
+  });
+});

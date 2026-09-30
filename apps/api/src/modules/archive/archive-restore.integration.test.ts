@@ -11,6 +11,7 @@ import { AdminPrismaRepository, PeriodAdminService } from "../admin/index.js";
 import { PeriodPrismaRepository } from "../period/test-seams/index.js";
 import { WeeklyReportPrismaRepository } from "../weekly-report/weekly-report.prisma-repository.js";
 import { ArchivePrismaRepository } from "./archive.prisma-repository";
+import { createNullLogger } from "../../lib/logger";
 
 // The pair behind the head's Archive / Restore toolbar controls: the same
 // service the archive router calls, read back through both list surfaces.
@@ -37,6 +38,7 @@ describe("Archive → restore round-trip (integration)", () => {
     periodRepo = new PeriodPrismaRepository(prisma as never, historyRepo);
     periodAdmin = new PeriodAdminService(
       new AdminPrismaRepository(prisma as never),
+      createNullLogger(),
     );
   });
 

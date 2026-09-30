@@ -15,6 +15,7 @@ import { RemindersScheduler } from "./reminders.scheduler.js";
 import { RemindersService } from "./reminders.service.js";
 import type { DueEscalationRule } from "./reminders.types.js";
 import type { ReminderQueueJobData } from "./reminders-queue-payload.js";
+import { createNullLogger } from "../../lib/logger";
 
 const recipients = [
   {
@@ -93,7 +94,7 @@ function createDispatchHarness(kind: "deadline" | "escalation" = "deadline") {
   );
   const service = new RemindersService(
     repository,
-    undefined,
+    createNullLogger(),
     { enqueue },
     undefined,
     fakeOrganizationService,

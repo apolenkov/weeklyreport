@@ -17,6 +17,7 @@ import {
   LeadFormDomainError,
   LeadFormService,
 } from "./lead-form.service";
+import { NOOP_REPORT_SECTIONS_TELEMETRY } from "./report-sections-telemetry.port.js";
 
 // ---------------------------------------------------------------------------
 // getByPeriod
@@ -31,7 +32,7 @@ describe("LeadFormService — getByPeriod", () => {
         }),
       ),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     const result = await service.getByPeriod(REPORT_ID, AUTHOR_ID);
 
@@ -46,7 +47,7 @@ describe("LeadFormService — getByPeriod", () => {
         .fn()
         .mockResolvedValue(forPeriod(structuredClone(draftSection), false)),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     const result = await service.getByPeriod(REPORT_ID, AUTHOR_ID);
 
@@ -61,7 +62,7 @@ describe("LeadFormService — getByPeriod", () => {
         .fn()
         .mockResolvedValue(forPeriod(structuredClone(submittedSection), false)),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     const result = await service.getByPeriod(REPORT_ID, AUTHOR_ID);
 
@@ -77,7 +78,7 @@ describe("LeadFormService — getByPeriod", () => {
         }),
       ),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     const result = await service.getByPeriod(REPORT_ID, AUTHOR_ID);
 
@@ -93,7 +94,7 @@ describe("LeadFormService — getByPeriod", () => {
         }),
       ),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     const result = await service.getByPeriod(REPORT_ID, AUTHOR_ID);
 
@@ -116,7 +117,7 @@ describe("LeadFormService — getByPeriod", () => {
       // the head and its target share a reporting group → in-group read
       getUserReportingGroupId: vi.fn().mockResolvedValue(HEAD_GROUP_ID),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     const result = await service.getByPeriod(
       REPORT_ID,
@@ -155,7 +156,7 @@ describe("LeadFormService — getByPeriod", () => {
         ),
       getSharedNonArchivedProductIds: vi.fn().mockResolvedValue([PROJECT_ID]),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     const result = await service.getByPeriod(
       REPORT_ID,
@@ -179,7 +180,7 @@ describe("LeadFormService — getByPeriod", () => {
         .mockResolvedValue(forPeriod(structuredClone(draftSection), false)),
       getSharedNonArchivedProductIds: vi.fn().mockResolvedValue([]),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
       service.getByPeriod(REPORT_ID, AUTHOR_ID, "lead", OTHER_USER_ID),
@@ -194,7 +195,7 @@ describe("LeadFormService — getByPeriod", () => {
 
   it("fails when no section found for user in report", async () => {
     const repo = createMockRepository();
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(service.getByPeriod(REPORT_ID, AUTHOR_ID)).rejects.toThrow(
       `No section found for user in report ${REPORT_ID}.`,

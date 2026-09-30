@@ -6,7 +6,7 @@ import {
 } from "@customreport/shared";
 
 import type { EnvConfig } from "../../infrastructure/config/env.schema.js";
-import { type AppLogger, createNullLogger } from "../../lib/logger";
+import type { AppLogger } from "../../lib/logger";
 import { OrganizationService } from "../organization/index.js";
 import {
   ReminderDomainError,
@@ -60,13 +60,13 @@ export class RemindersService {
 
   constructor(
     private readonly repository: RemindersRepository,
-    logger?: AppLogger,
+    logger: AppLogger,
     emailQueue?: RemindersEnqueuer,
     private readonly telemetry: RemindersTelemetry = NOOP_REMINDERS_TELEMETRY,
     private readonly organizationService?: OrganizationService,
     private readonly env?: Pick<EnvConfig, "APP_BASE_URL">,
   ) {
-    this.logger = logger ?? createNullLogger();
+    this.logger = logger;
     this.emailQueue = emailQueue ?? null;
     this.scope = new RemindersScopeService(
       repository,

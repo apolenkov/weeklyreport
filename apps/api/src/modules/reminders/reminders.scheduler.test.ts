@@ -22,6 +22,7 @@ import type {
   DueEscalationRule,
   RemindersRepository,
 } from "./reminders.types";
+import { createNullLogger } from "../../lib/logger";
 
 describe("RemindersScheduler — deadline reminder dispatch", () => {
   let queueAdds: { name: string; data: Record<string, unknown> }[];
@@ -55,7 +56,7 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
     };
     const service = new RemindersService(
       createServiceRepo(),
-      undefined,
+      createNullLogger(),
       fakeQueue as unknown as ConstructorParameters<typeof RemindersService>[2],
     );
     const scheduler = new RemindersScheduler(
@@ -102,7 +103,7 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
       createServiceRepo({
         insertExecutionOnConflict: recordExecution,
       }),
-      undefined,
+      createNullLogger(),
       fakeQueue as unknown as ConstructorParameters<typeof RemindersService>[2],
     );
     const scheduler = new RemindersScheduler(
@@ -134,7 +135,7 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
     };
     const service = new RemindersService(
       createServiceRepo(),
-      undefined,
+      createNullLogger(),
       fakeQueue as unknown as ConstructorParameters<typeof RemindersService>[2],
     );
     const scheduler = new RemindersScheduler(
@@ -162,7 +163,7 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
     };
     const service = new RemindersService(
       createServiceRepo(),
-      undefined,
+      createNullLogger(),
       fakeQueue as unknown as ConstructorParameters<typeof RemindersService>[2],
     );
     const scheduler = new RemindersScheduler(
@@ -192,7 +193,7 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
     };
     const service = new RemindersService(
       createServiceRepo(),
-      undefined,
+      createNullLogger(),
       fakeQueue as unknown as ConstructorParameters<typeof RemindersService>[2],
     );
     const scheduler = new RemindersScheduler(
@@ -230,7 +231,7 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
       };
       const service = new RemindersService(
         createServiceRepo(),
-        undefined,
+        createNullLogger(),
         fakeQueue as unknown as ConstructorParameters<
           typeof RemindersService
         >[2],
@@ -296,7 +297,7 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
 
     const service = new RemindersService(
       serviceRepo,
-      undefined,
+      createNullLogger(),
       fakeQueue as unknown as ConstructorParameters<typeof RemindersService>[2],
     );
     const scheduler = new RemindersScheduler(
@@ -443,7 +444,7 @@ describe("RemindersScheduler — escalation dispatch", () => {
 
     const service = new RemindersService(
       makeEscalationServiceRepo(),
-      undefined,
+      createNullLogger(),
       fakeQueue as unknown as ConstructorParameters<typeof RemindersService>[2],
     );
     const scheduler = new RemindersScheduler(
@@ -490,7 +491,7 @@ describe("RemindersScheduler — escalation dispatch", () => {
     };
     const service = new RemindersService(
       makeEscalationServiceRepo(),
-      undefined,
+      createNullLogger(),
       fakeQueue as unknown as ConstructorParameters<typeof RemindersService>[2],
     );
     const scheduler = new RemindersScheduler(
@@ -543,7 +544,7 @@ describe("RemindersScheduler — escalation dispatch", () => {
     };
     const service = new RemindersService(
       makeEscalationServiceRepo(),
-      undefined,
+      createNullLogger(),
       fakeQueue as unknown as ConstructorParameters<typeof RemindersService>[2],
     );
     const scheduler = new RemindersScheduler(
@@ -619,7 +620,7 @@ describe("RemindersScheduler — opt-out", () => {
     };
     const service = new RemindersService(
       createServiceRepo(),
-      undefined,
+      createNullLogger(),
       fakeQueue as unknown as ConstructorParameters<typeof RemindersService>[2],
     );
     const scheduler = new RemindersScheduler(
@@ -700,7 +701,7 @@ describe("RemindersScheduler — opt-out", () => {
     };
     const service = new RemindersService(
       escalationServiceRepo,
-      undefined,
+      createNullLogger(),
       fakeQueue as unknown as ConstructorParameters<typeof RemindersService>[2],
     );
     const scheduler = new RemindersScheduler(

@@ -28,6 +28,7 @@ import {
 } from "../application/review.service.js";
 import { ReviewActionsService } from "../application/review-actions.service";
 import { ReviewActionsPrismaRepository } from "./review-actions.prisma-repository";
+import { createNullLogger } from "../../../lib/logger";
 
 const STABLE_A = "aaaa1111-0000-4000-8000-00000000aaaa";
 
@@ -746,6 +747,7 @@ describe("review-actions (integration)", () => {
 
       const carryService = new CarryOverService(
         new CarryOverPrismaRepository(prisma as unknown as PrismaService),
+        createNullLogger(),
       );
       await carryService.executeCarryOver(testData.report.id, targetReport.id);
 

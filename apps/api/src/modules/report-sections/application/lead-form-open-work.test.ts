@@ -8,6 +8,7 @@ import {
   REPORT_ID,
 } from "./__tests__/lead-form-contract-harness.js";
 import { LeadFormDomainError, LeadFormService } from "./lead-form.service.js";
+import { NOOP_REPORT_SECTIONS_TELEMETRY } from "./report-sections-telemetry.port.js";
 
 describe("LeadFormService — getOpenWork", () => {
   it("authorizes the target through own by-period access before reading history", async () => {
@@ -23,10 +24,10 @@ describe("LeadFormService — getOpenWork", () => {
       getOpenWorkHistoryPage,
     });
 
-    const result = await new LeadFormService(repository).getOpenWork(
-      { reportId: REPORT_ID },
-      AUTHOR_ID,
-    );
+    const result = await new LeadFormService(
+      repository,
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+    ).getOpenWork({ reportId: REPORT_ID }, AUTHOR_ID);
 
     expect(result).toEqual({ occurrences: [], nextCursor: "next-page" });
     expect(getSectionForPeriod).toHaveBeenCalledWith(REPORT_ID, AUTHOR_ID);
@@ -41,10 +42,10 @@ describe("LeadFormService — getOpenWork", () => {
     const repository = createMockRepository({ getOpenWorkHistoryPage });
 
     await expect(
-      new LeadFormService(repository).getOpenWork(
-        { reportId: REPORT_ID },
-        AUTHOR_ID,
-      ),
+      new LeadFormService(
+        repository,
+        NOOP_REPORT_SECTIONS_TELEMETRY,
+      ).getOpenWork({ reportId: REPORT_ID }, AUTHOR_ID),
     ).rejects.toBeInstanceOf(LeadFormDomainError);
     expect(getOpenWorkHistoryPage).not.toHaveBeenCalled();
   });
@@ -58,10 +59,10 @@ describe("LeadFormService — getOpenWork", () => {
     });
 
     await expect(
-      new LeadFormService(repository).getOpenWork(
-        { reportId: REPORT_ID, limit: 5 },
-        AUTHOR_ID,
-      ),
+      new LeadFormService(
+        repository,
+        NOOP_REPORT_SECTIONS_TELEMETRY,
+      ).getOpenWork({ reportId: REPORT_ID, limit: 5 }, AUTHOR_ID),
     ).rejects.toThrow(`Report ${REPORT_ID} not found.`);
   });
 });

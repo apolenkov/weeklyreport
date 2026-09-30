@@ -15,6 +15,7 @@ import {
   toReminderCycleDate,
 } from "./reminders-dedupe-key.js";
 import type { ReminderQueuePayload } from "./reminders-queue-payload.js";
+import { createNullLogger } from "../../lib/logger";
 
 describe("resolveReminderDedupeKey", () => {
   const rule = {
@@ -171,7 +172,7 @@ describe("RemindersScopeService.dispatchDraftSections — manual dispatch after 
     } as OrganizationService;
     const service = new RemindersService(
       buildDispatchRepository(),
-      undefined,
+      createNullLogger(),
       undefined,
       undefined,
       organizationService,
@@ -218,7 +219,7 @@ describe("RemindersScopeService.dispatchDraftSections — manual dispatch after 
     } as OrganizationService;
     const service = new RemindersService(
       buildDispatchRepository(insertedPayloads),
-      undefined,
+      createNullLogger(),
       undefined,
       undefined,
       organizationService,
