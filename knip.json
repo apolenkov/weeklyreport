@@ -18,12 +18,7 @@
       "prisma": false
     },
     "apps/api": {
-      "entry": [
-        "src/**/*.test.ts",
-        "src/**/*.fixture.ts",
-        "src/pdf-artifact-migrator/main.ts",
-        "vitest*.config.ts"
-      ],
+      "entry": ["src/**/*.test.ts", "src/**/*.fixture.ts", "vitest*.config.ts"],
       "project": ["src/**/*.ts"],
       "ignoreDependencies": ["@customreport/migrator-runtime"]
     },
