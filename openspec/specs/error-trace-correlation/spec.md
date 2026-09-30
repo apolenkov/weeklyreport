@@ -91,8 +91,9 @@ Worker processors MUST emit their logs through `AppLogger` rather than
 hand-building JSON to `process.stderr`, so every worker log entry carries the
 job's `correlationId` (and trace id) and is forwarded to the configured
 application log sinks like in-request logs. The PDF export path MUST
-additionally emit per-step duration logs and apply an explicit timeout to
-`page.goto`.
+additionally emit per-step duration logs, including `renderer.render`. Its
+Gotenberg conversion HTTP request MUST have an explicit timeout that covers
+response-body consumption.
 
 #### Scenario: A worker failure log carries correlation context
 
@@ -107,9 +108,10 @@ additionally emit per-step duration logs and apply an explicit timeout to
 
 - **GIVEN** the PDF export worker is rendering a report
 - **WHEN** it runs its happy path
-- **THEN** it emits a duration log for each major step
-- **AND** `page.goto` is called with an explicit timeout so a hung navigation
-  fails the job instead of stalling indefinitely
+- **THEN** it emits a duration log for each major step, including `renderer.render`
+- **AND** the Gotenberg conversion HTTP request has an explicit timeout that
+  covers response-body consumption, so a hung conversion or body read fails the
+  job instead of stalling indefinitely
 
 ### Requirement: AppLogger redacts PII-shaped context fields
 
