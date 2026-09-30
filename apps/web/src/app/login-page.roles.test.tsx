@@ -148,7 +148,7 @@ describe("Landing page — last-role placeholder", () => {
     );
     expect(skeleton).not.toBeNull();
     expect(skeleton).toHaveAttribute("aria-hidden", "true");
-    expect(skeleton).toHaveClass("min-h-[129px]");
+    expect(skeleton).toHaveClass("min-h-40");
   });
 
   it("does not render last-role-hint section in production mode (no AUTH_STUB)", async () => {
@@ -174,6 +174,8 @@ describe("Landing page — a11y heading (page-has-heading-one)", () => {
     const headings = await screen.findAllByRole("heading", { level: 1 });
     expect(headings).toHaveLength(1);
     expect(headings[0]).toHaveTextContent("Weekly Report");
+    expect(headings[0]).not.toHaveClass("sr-only");
+    expect(headings[0]).toHaveClass("lg:sr-only");
   });
 });
 
@@ -195,7 +197,7 @@ describe("Landing page — last-role hint", () => {
 
     const hint = await screen.findByTestId("last-role-hint");
     expect(hint).toBeInTheDocument();
-    expect(hint).toHaveClass("min-h-[129px]");
+    expect(hint).toHaveClass("min-h-40");
     expect(hint).toHaveTextContent("Антон К.");
     expect(hint).toHaveTextContent("Head");
   });

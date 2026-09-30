@@ -50,7 +50,7 @@ function ProductHeading({ product }: { readonly product: Product }) {
       </h3>
       {product.riskSummary && (
         <span
-          className="inline-flex min-w-0 shrink items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-destructive-surface-subtle)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-destructive)]"
+          className="inline-flex min-w-0 shrink items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-destructive-surface-subtle)] px-2 py-0.5 text-xs font-semibold text-[var(--color-destructive)]"
           title={product.riskSummary}
         >
           <span
@@ -75,7 +75,7 @@ function CompletenessPill({
 }) {
   return (
     <span
-      className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-[var(--color-muted-foreground)]"
+      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-[var(--color-muted-foreground)]"
       style={{
         borderRadius: COMPLETENESS_RING_RADIUS,
         border: showRing

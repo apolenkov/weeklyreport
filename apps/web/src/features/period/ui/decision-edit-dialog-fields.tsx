@@ -88,7 +88,7 @@ function DecisionTextField({
       characterLimit={SAFE_TEXT_MAX_LENGTH}
       fill={false}
       hint={
-        <p className="mb-1 text-[11px] text-[var(--color-muted-foreground)]">
+        <p className="mb-1 text-xs text-[var(--color-muted-foreground)]">
           The choice you need leadership to make — phrase it as a yes/no or
           short statement, not a discussion topic.
         </p>

@@ -10,7 +10,7 @@ function StageChips({ stageTags }: { readonly stageTags: readonly string[] }) {
       {stageTags.map((stage) => (
         <span
           key={stage}
-          className="inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
+          className="inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2.5 py-0.5 text-xs font-semibold text-[var(--color-primary)]"
         >
           {stage}
         </span>
@@ -37,7 +37,7 @@ function AuthorMeta({
 }) {
   const showReadOnly = foreign && Boolean(authorName);
   return (
-    <span className="truncate text-[11px] font-medium text-[var(--color-muted-foreground)]">
+    <span className="truncate text-xs font-medium text-[var(--color-muted-foreground)]">
       {authorName ?? ""}
       {showReadOnly && (
         <span

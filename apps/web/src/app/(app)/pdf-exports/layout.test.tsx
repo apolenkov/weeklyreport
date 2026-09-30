@@ -76,7 +76,7 @@ describe("pdf-exports route role gate", () => {
       expect(screen.getByText(/page unavailable/i)).toBeInTheDocument();
       expect(screen.queryByTestId("gated-child")).not.toBeInTheDocument();
       expect(
-        screen.getByRole("link", { name: /go to dashboard/i }),
+        screen.getByRole("link", { name: /go to my home page/i }),
       ).toHaveAttribute("href", ROLE_HOME_PATH[role]);
     },
   );
@@ -87,7 +87,7 @@ describe("pdf-exports route role gate", () => {
     expect(screen.getByText(/page unavailable/i)).toBeInTheDocument();
     expect(screen.queryByTestId("gated-child")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: /go to dashboard/i }),
+      screen.getByRole("link", { name: /go to my home page/i }),
     ).toHaveAttribute("href", ROLE_HOME_PATH.head);
   });
 });

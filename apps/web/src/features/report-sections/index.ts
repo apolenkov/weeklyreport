@@ -1,5 +1,5 @@
 export { crossAuthorContentFetchEnabled } from "./model/cross-author/cross-author-content-gate";
-export { FOREIGN_ENTRY_OPACITY, STATUS_BADGE } from "./model/item-card-style";
+export { STATUS_BADGE } from "./model/item-card-style";
 export { buildItemDialogProps } from "./model/item-dialog-props";
 export { persistableItemStatusToWorkflow } from "./model/item-status";
 export {

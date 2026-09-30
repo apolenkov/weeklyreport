@@ -103,7 +103,7 @@ export function RiskCardSummary({ risk }: RiskCardSummaryProps) {
   return (
     <div className="space-y-2 text-sm text-[var(--color-foreground)]">
       <div>
-        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
+        <span className="text-xs font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
           Risk
         </span>
         <div className="mt-0.5 break-words">
@@ -114,7 +114,7 @@ export function RiskCardSummary({ risk }: RiskCardSummaryProps) {
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
         <div>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
+          <span className="text-xs font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
             Impact
           </span>
           <div className="mt-0.5 break-words text-[var(--color-muted-foreground)]">
@@ -122,7 +122,7 @@ export function RiskCardSummary({ risk }: RiskCardSummaryProps) {
           </div>
         </div>
         <div>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
+          <span className="text-xs font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
             Mitigation
           </span>
           <div className="mt-0.5 break-words text-[var(--color-muted-foreground)]">

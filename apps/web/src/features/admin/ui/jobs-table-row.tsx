@@ -56,7 +56,7 @@ function JobErrorCell({
         <button
           type="button"
           onClick={() => onToggleExpand(jobId)}
-          className="mt-1 text-[11px] font-semibold text-[var(--color-starbucks-accent)] hover:underline"
+          className="mt-1 text-xs font-semibold text-[var(--color-starbucks-accent)] hover:underline"
           aria-expanded={isExpanded}
           aria-label={
             isExpanded

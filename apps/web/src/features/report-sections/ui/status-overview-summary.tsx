@@ -13,7 +13,7 @@ function StatusBadge({ unit }: { readonly unit: StatusOverviewUnit }) {
   if (unit.status !== "blocked" && unit.status !== "at-risk") return null;
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] border px-2 py-0.5 text-[11px] font-semibold ${statusToneClassName(unit.status)}`}
+      className={`inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] border px-2 py-0.5 text-xs font-semibold ${statusToneClassName(unit.status)}`}
     >
       <span
         aria-hidden="true"
@@ -127,7 +127,7 @@ export function StatusOverviewUnitSummary({
           unit={health ? { ...unit, status: health.status } : unit}
         />
         {unit.historical ? (
-          <span className="text-[11px] font-semibold text-[var(--color-muted-foreground)]">
+          <span className="text-xs font-semibold text-[var(--color-muted-foreground)]">
             Historical
           </span>
         ) : null}

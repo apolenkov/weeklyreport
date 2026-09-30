@@ -174,7 +174,7 @@ function SeverityChoice({
       >
         Severity
       </span>
-      <p className="mb-1 text-[11px] text-[var(--color-muted-foreground)]">
+      <p className="mb-1 text-xs text-[var(--color-muted-foreground)]">
         <strong>At risk</strong> = needs attention; <strong>Blocked</strong> =
         work stopped.
       </p>

@@ -15,6 +15,15 @@ const offTrackGrid: SlideGridModel = {
 };
 
 describe("SlideGridHeader", () => {
+  it("lets the owner title wrap on mobile while retaining the desktop treatment", () => {
+    const ownerName = "Customer Insights and Reporting Platform";
+    render(<SlideGridHeader ownerName={ownerName} grid={offTrackGrid} />);
+
+    const title = screen.getByRole("heading", { name: ownerName });
+    expect(title).toHaveClass("break-words", "sm:truncate");
+    expect(title).not.toHaveClass("truncate");
+  });
+
   it("uses the accessible blocked status background when products are off track", () => {
     render(<SlideGridHeader ownerName="Owner" grid={offTrackGrid} />);
 
@@ -51,7 +60,7 @@ describe("SlideGridHeader", () => {
 });
 
 describe("SlidePriorityStrip", () => {
-  it("keeps the full priority text reachable when the card clamps it", () => {
+  it("shows full mobile priority text while keeping desktop details reachable", () => {
     const text = "Long priority ".repeat(30).trim();
     const grid: SlideGridModel = {
       ...offTrackGrid,
@@ -68,6 +77,9 @@ describe("SlidePriorityStrip", () => {
     };
     render(<SlidePriorityStrip grid={grid} authorsById={new Map()} />);
 
-    expect(screen.getByTitle(text)).toBeInTheDocument();
+    const body = screen.getByTitle(text);
+    expect(body).toBeInTheDocument();
+    expect(body).not.toHaveClass("line-clamp-3");
+    expect(body).toHaveClass("sm:line-clamp-3");
   });
 });

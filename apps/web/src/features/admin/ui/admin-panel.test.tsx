@@ -58,7 +58,7 @@ describe("AdminPanel query gating", () => {
     ["reminders", true, true],
     ["reopen", false, false],
     ["jobs", false, false],
-    ["actions", false, false],
+    ["actions", true, false],
     ["ai", false, false],
     ["settings", false, true],
   ] as const)(

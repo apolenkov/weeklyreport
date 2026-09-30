@@ -11,7 +11,7 @@ export function RankMark({ rank }: { readonly rank: number }) {
       className="flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold tabular-nums"
       style={{
         background: "var(--color-starbucks-gold)",
-        color: "var(--color-primary-foreground)",
+        color: "var(--color-foreground)",
       }}
       title={`Priority ${rank}`}
     >
@@ -20,8 +20,7 @@ export function RankMark({ rank }: { readonly rank: number }) {
   );
 }
 
-// The fixed-width meta gutter: SDLC stage over the contributing lead's
-// initials. An identity surface — it never encodes workflow status.
+// Stage and author share the mobile row above the item content.
 export function Gutter({
   stage,
   owner,
@@ -30,14 +29,14 @@ export function Gutter({
   readonly owner: string;
 }) {
   return (
-    <span className="flex min-w-0 flex-col gap-0.5 pt-px">
+    <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5 pt-px sm:flex-col sm:items-start sm:gap-x-0">
       {stage ? (
-        <span className="truncate text-[12.5px] font-semibold text-[var(--color-foreground)]">
+        <span className="text-[12.5px] font-semibold text-[var(--color-foreground)] [overflow-wrap:anywhere]">
           {stage}
         </span>
       ) : null}
       {owner ? (
-        <span className="text-[11px] font-medium tabular-nums text-[var(--color-muted-foreground)]">
+        <span className="text-xs font-medium tabular-nums text-[var(--color-muted-foreground)]">
           {owner}
         </span>
       ) : null}
@@ -52,9 +51,9 @@ export function StatusBadge({
 }) {
   const cfg = STATUS_BADGE[status];
   return (
-    <span className="flex justify-end pt-px">
+    <span className="flex justify-start pt-px sm:justify-end">
       <span
-        className="whitespace-nowrap rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[11px] font-semibold"
+        className="whitespace-nowrap rounded-[var(--radius-pill)] px-2.5 py-0.5 text-xs font-semibold"
         style={{ background: cfg.bg, color: cfg.fg }}
       >
         {cfg.label}

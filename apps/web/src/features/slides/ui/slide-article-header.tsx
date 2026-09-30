@@ -49,15 +49,15 @@ export function SlideGridHeader({
         status={trafficLightToCanonical(grid.worstStatus)}
         labelVariant="worstPill"
       />
-      <h2 className="min-w-0 truncate text-xl font-semibold text-[var(--color-foreground)]">
+      <h2 className="min-w-0 max-w-full break-words text-xl font-semibold text-[var(--color-foreground)] sm:truncate">
         {ownerName}
       </h2>
       {pageLabel ? (
-        <span className="text-sm font-semibold text-[var(--color-muted-foreground)]">
+        <span className="max-w-full break-words text-sm font-semibold text-[var(--color-muted-foreground)]">
           {pageLabel}
         </span>
       ) : null}
-      <span className="ml-auto flex items-center gap-2">
+      <span className="ml-auto flex max-w-full flex-wrap items-center gap-2">
         {metric(grid.counters.current, "current")}
         <span aria-hidden="true">·</span>
         {metric(grid.counters.risks, "risk", "risks")}
@@ -125,7 +125,7 @@ function PriorityCard({
   readonly showAuthorBadge: boolean;
 }) {
   return (
-    <div className="flex min-w-[180px] max-w-[320px] flex-1 flex-col gap-1.5 rounded-[10px] border border-[var(--color-chip-at-risk-border)] bg-[var(--color-chip-at-risk-bg)] p-2.5">
+    <div className="flex w-full min-w-0 flex-col gap-1.5 rounded-[10px] border border-[var(--color-chip-at-risk-border)] bg-[var(--color-chip-at-risk-bg)] p-2.5 sm:w-auto sm:min-w-[180px] sm:max-w-[320px] sm:flex-1">
       <div className="flex items-start gap-1.5">
         {/* The rank badge uses the author's color when attribution is visible;
             Mine hides the selected owner, so its tint stays neutral. */}
@@ -142,13 +142,13 @@ function PriorityCard({
         </span>
         <span
           title={card.text}
-          className="line-clamp-3 min-w-0 whitespace-normal break-words text-xs text-[var(--color-foreground)]"
+          className="min-w-0 whitespace-normal break-words text-xs text-[var(--color-foreground)] sm:line-clamp-3"
         >
           {card.text}
         </span>
       </div>
       <div className="mt-auto flex items-center justify-between gap-2">
-        <span className="truncate text-[11px] text-[var(--color-muted-foreground)]">
+        <span className="min-w-0 break-words text-xs text-[var(--color-muted-foreground)] sm:truncate">
           {card.productName}
         </span>
         <PriorityAuthorBadge
@@ -197,18 +197,23 @@ export function SlideLegend({
   return (
     <div
       data-testid="slide-legend"
-      className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-[var(--color-border-subtle)] pt-2 text-[10px] text-[var(--color-muted-foreground)]"
+      className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-[var(--color-border-subtle)] pt-2 text-xs text-[var(--color-muted-foreground)]"
     >
       {authors.map((author) => (
-        <span key={author.id} className="inline-flex items-center gap-1.5">
+        <span
+          key={author.id}
+          className="inline-flex min-w-0 max-w-full items-center gap-1.5"
+        >
           <span
-            className="inline-flex h-[18px] w-[26px] items-center justify-center rounded text-xs font-semibold text-[var(--color-foreground)]"
+            className="inline-flex h-[18px] w-[26px] shrink-0 items-center justify-center rounded text-xs font-semibold text-[var(--color-foreground)]"
             style={{ background: authorSlotBackground(author) }}
           >
             {author.initials}
           </span>
-          {shortNameFromName(author.name)}
-          {author.role === undefined ? "" : ` · ${author.role}`}
+          <span className="min-w-0 break-words">
+            {shortNameFromName(author.name)}
+            {author.role === undefined ? "" : ` · ${author.role}`}
+          </span>
         </span>
       ))}
     </div>

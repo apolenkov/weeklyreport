@@ -2,6 +2,7 @@
 
 import type { DbRole } from "@customreport/shared";
 import { ROLE_LABEL, shortName } from "@customreport/shared";
+import type { ReactNode } from "react";
 
 import type { AdminUserView } from "../model/admin-types";
 import { UserRowActions } from "./user-row-actions";
@@ -46,6 +47,8 @@ const ROLE_STYLES: Readonly<
   viewer: { bg: "var(--color-muted)", text: "var(--color-muted-foreground)" },
 };
 
+const USER_CELL_CLASS = "min-w-0 px-3 py-1 sm:px-4 sm:py-3";
+
 export function UsersTable({
   users,
   deactivatePending,
@@ -57,8 +60,11 @@ export function UsersTable({
 }: UsersTableProps) {
   return (
     <div className="relative overflow-x-auto rounded-[var(--radius)] border border-[var(--color-border)]">
-      <table className="w-full text-left text-sm" data-testid="users-table">
-        <thead>
+      <table
+        className="w-full table-fixed text-left text-sm sm:table-auto"
+        data-testid="users-table"
+      >
+        <thead className="sr-only sm:not-sr-only">
           <tr className="border-b border-[var(--color-border)] bg-[var(--color-background)]">
             {COLUMNS.map(({ label, alignRight }) => (
               <th
@@ -70,7 +76,7 @@ export function UsersTable({
             ))}
           </tr>
         </thead>
-        <tbody>
+        <tbody className="block sm:table-row-group">
           {users.map((user) => (
             <UserRow
               key={user.id}
@@ -93,6 +99,27 @@ type UserRowProps = Omit<UsersTableProps, "users"> & {
   readonly user: AdminUserView;
 };
 
+function UserMetadataCell({
+  label,
+  fullWidth = false,
+  children,
+}: {
+  readonly label: string;
+  readonly fullWidth?: boolean;
+  readonly children: ReactNode;
+}) {
+  return (
+    <td
+      className={`${USER_CELL_CLASS} break-words text-[var(--color-muted-foreground)]${fullWidth ? " col-span-2" : ""}`}
+    >
+      <span className="mb-1 block text-xs font-semibold sm:hidden">
+        {label}
+      </span>
+      {children}
+    </td>
+  );
+}
+
 function UserRow({
   user,
   deactivatePending,
@@ -103,11 +130,11 @@ function UserRow({
   onDelete,
 }: UserRowProps) {
   return (
-    <tr
-      className={`border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-hover)]${!user.isActive ? " opacity-60" : ""}`}
-    >
-      <td className="px-4 py-3 font-medium text-[var(--color-foreground)]">
-        <span className="flex items-center gap-2">
+    <tr className="grid grid-cols-2 gap-x-3 border-b border-[var(--color-border)] py-3 last:border-0 hover:bg-[var(--color-surface-hover)] sm:table-row sm:py-0">
+      <td
+        className={`${USER_CELL_CLASS} col-span-2 font-medium text-[var(--color-foreground)]`}
+      >
+        <span className="flex flex-wrap items-center gap-2 break-words">
           {shortName(user)}
           {!user.isActive && (
             <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-xs font-semibold text-[var(--color-muted-foreground)]">
@@ -116,19 +143,17 @@ function UserRow({
           )}
         </span>
       </td>
-      <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
+      <UserMetadataCell label="Email" fullWidth>
         {user.email}
-      </td>
-      <td className="px-4 py-3">
+      </UserMetadataCell>
+      <UserMetadataCell label="Role">
         <RoleBadge role={user.role} />
-      </td>
-      <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
-        {user.department}
-      </td>
-      <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
+      </UserMetadataCell>
+      <UserMetadataCell label="Group">{user.department}</UserMetadataCell>
+      <UserMetadataCell label="Position" fullWidth>
         {user.position ?? "—"}
-      </td>
-      <td className="px-4 py-3 text-right">
+      </UserMetadataCell>
+      <td className={`${USER_CELL_CLASS} col-span-2 pt-3 text-right sm:pt-3`}>
         <UserRowActions
           user={user}
           deactivatePending={deactivatePending}

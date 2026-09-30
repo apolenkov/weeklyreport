@@ -20,7 +20,7 @@ export default async function LeadReportPreviewPage({ params }: Props) {
         className="min-h-screen bg-[var(--color-background)]"
       >
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          <header className="mb-6 flex items-center justify-between">
+          <header className="mb-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
                 Section Preview
@@ -33,7 +33,7 @@ export default async function LeadReportPreviewPage({ params }: Props) {
             <div className="flex items-center gap-3">
               <Link
                 href={`/lead/report/${encodeURIComponent(reportId)}`}
-                className="rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
+                className="inline-flex min-h-11 items-center whitespace-nowrap rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
               >
                 ← Back to form
               </Link>

@@ -4,6 +4,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import type { WeeklyReportRisk } from "../../../report-sections";
+import { RankMark } from "./accordion-row-primitives";
 import { RiskRow } from "./accordion-rows";
 
 const risk: WeeklyReportRisk = {
@@ -17,6 +18,19 @@ const risk: WeeklyReportRisk = {
   impact: "Users cannot log in",
   mitigation: "Fixing timeout",
 };
+
+describe("RankMark", () => {
+  it("keeps the priority number readable on the gold marker", () => {
+    render(<RankMark rank={1} />);
+
+    const marker = screen.getByTitle("Priority 1");
+    expect(marker).toHaveTextContent("1");
+    expect(marker).toHaveStyle({
+      background: "var(--color-starbucks-gold)",
+      color: "var(--color-foreground)",
+    });
+  });
+});
 
 describe("RiskRow", () => {
   it("renders the problem inside a block container, not a span", () => {

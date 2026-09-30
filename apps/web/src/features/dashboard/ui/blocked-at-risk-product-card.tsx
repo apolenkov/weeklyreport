@@ -78,7 +78,7 @@ function IssueRow({ item }: { readonly item: BlockedAtRiskItem }) {
         <span className="truncate text-[12.5px] font-semibold text-[var(--color-foreground)]">
           {item.stage}
         </span>
-        <span className="truncate text-[11px] font-medium text-[var(--color-muted-foreground)]">
+        <span className="truncate text-xs font-medium text-[var(--color-muted-foreground)]">
           {item.assignee}
         </span>
       </span>
@@ -87,7 +87,7 @@ function IssueRow({ item }: { readonly item: BlockedAtRiskItem }) {
       </span>
       <span className="flex justify-end pt-px">
         <span
-          className="whitespace-nowrap rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[11px] font-semibold"
+          className="whitespace-nowrap rounded-[var(--radius-pill)] px-2.5 py-0.5 text-xs font-semibold"
           style={{ background: badge.bg, color: badge.fg }}
         >
           {statusLabel(item.severity, "print")}
@@ -105,7 +105,7 @@ export function ProductCard({ group }: { readonly group: ProductGroup }) {
     <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-inset)]">
       <div className="flex items-center gap-3 px-4 py-3">
         <div
-          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold"
           style={{ background: avatar.bg, color: avatar.fg }}
           aria-hidden="true"
         >
@@ -117,8 +117,8 @@ export function ProductCard({ group }: { readonly group: ProductGroup }) {
               {group.product}
             </h3>
             <span
-              className="inline-flex flex-shrink-0 items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.04em]"
-              style={{ color: tone }}
+              className="inline-flex flex-shrink-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.04em]"
+              style={{ color: SEVERITY_BADGE[severity].fg }}
             >
               <span
                 className="h-[7px] w-[7px] rounded-full"

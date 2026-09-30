@@ -1,14 +1,12 @@
-import type { Role } from "@customreport/shared";
+import { type Role, ROLE_LABEL } from "@customreport/shared";
 
 import { getLogoHref } from "./nav-active";
 
 const USER_IDENTITY_SLOT_CLASS =
-  "hidden h-8 min-w-0 max-w-[260px] flex-col justify-center xl:flex";
+  "flex min-w-0 max-w-[260px] flex-col justify-center py-3";
 const BRAND_SLOT_CLASS = "flex w-10 shrink-0 items-center justify-center py-4";
 
-// Home mark — user initials carry identity in the compact left slot;
-// organization identity stays textual in the metadata line. The unresolved
-// state keeps the same fixed slot so the nav centre never shifts.
+// Initials link home; the adjacent name and role identify the session.
 function BrandMark({
   role,
   homeLabel,
@@ -28,7 +26,7 @@ function BrandMark({
     >
       {userName !== null ? (
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-starbucks-accent)] shadow-[var(--shadow-brand-mark)]">
-          <span className="font-[family-name:var(--font-sans)] text-[11px] font-bold leading-none tracking-normal text-[var(--color-on-dark)]">
+          <span className="font-[family-name:var(--font-sans)] text-xs font-bold leading-none tracking-normal text-[var(--color-on-dark)]">
             {initials}
           </span>
         </div>
@@ -43,10 +41,12 @@ function BrandMark({
 }
 
 function IdentitySlot({
+  role,
   userName,
   identityMeta,
   sessionLoading,
 }: {
+  readonly role: Role | null;
   readonly userName: string | null;
   readonly identityMeta: string;
   readonly sessionLoading: boolean;
@@ -62,10 +62,15 @@ function IdentitySlot({
   if (userName === null) return null;
   return (
     <div className={USER_IDENTITY_SLOT_CLASS} data-testid="nav-identity">
-      <span className="min-w-0 max-w-full truncate whitespace-nowrap text-[13px] leading-4 text-[var(--color-foreground)]">
+      <span className="min-w-0 max-w-full text-[13px] leading-4 text-[var(--color-foreground)] [overflow-wrap:anywhere]">
         <span className="font-semibold">{userName}</span>
       </span>
-      <span className="min-w-0 max-w-full truncate whitespace-nowrap text-[10px] font-semibold uppercase leading-3 tracking-normal text-[var(--color-muted-foreground)]">
+      {role && (
+        <span className="text-xs font-semibold text-[var(--color-muted-foreground)] md:hidden">
+          {ROLE_LABEL[role]}
+        </span>
+      )}
+      <span className="hidden min-w-0 max-w-full truncate whitespace-nowrap text-xs font-semibold leading-4 text-[var(--color-muted-foreground)] md:block">
         {identityMeta}
       </span>
     </div>
@@ -96,6 +101,7 @@ export function NavBrand({
         userName={userName}
       />
       <IdentitySlot
+        role={role}
         userName={userName}
         identityMeta={identityMeta}
         sessionLoading={sessionLoading}

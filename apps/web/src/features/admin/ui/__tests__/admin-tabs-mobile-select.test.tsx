@@ -135,19 +135,18 @@ describe("AdminTabsMobileSelect", () => {
         "/admin?tab=reopen",
       );
       expect(screen.getByTestId("mobile-reopen-tab-count")).toHaveTextContent(
-        "!",
+        "Pending reopen count unavailable",
       );
-      expect(screen.getByText("Pending reopen count unavailable")).toHaveClass(
-        "sr-only",
-      );
-      expect(screen.getByRole("link", { name: /jobs/i })).toHaveAttribute(
-        "href",
-        "/admin?tab=jobs",
-      );
+      expect(
+        screen.getByText("Pending reopen count unavailable"),
+      ).not.toHaveClass("sr-only");
+      expect(
+        screen.getByRole("link", { name: "Failed job count unavailable" }),
+      ).toHaveAttribute("href", "/admin?tab=jobs");
       expect(screen.getByTestId("mobile-jobs-tab-count")).toHaveTextContent(
-        "!",
+        "Failed job count unavailable",
       );
-      expect(screen.getByText("Failed job count unavailable")).toHaveClass(
+      expect(screen.getByText("Failed job count unavailable")).not.toHaveClass(
         "sr-only",
       );
       expect(alerts).toHaveClass("lg:hidden");
@@ -169,14 +168,15 @@ describe("AdminTabsMobileSelect", () => {
       "href",
       "/admin?tab=reopen",
     );
-    expect(screen.getByText("3 pending reopen requests")).toHaveClass(
+    expect(screen.getByText("3 pending reopen requests")).not.toHaveClass(
       "sr-only",
     );
     expect(screen.getByRole("link", { name: /jobs/i })).toHaveAttribute(
       "href",
       "/admin?tab=jobs",
     );
-    expect(screen.getByText("2 failed jobs in DLQ")).toHaveClass("sr-only");
+    expect(screen.getByText("2 failed jobs in DLQ")).not.toHaveClass("sr-only");
+    expect(within(alerts).queryByText("2", { exact: true })).toBeNull();
     for (const link of within(alerts).getAllByRole("link")) {
       expect(link).toHaveClass(
         "focus-visible:ring-2",
@@ -184,6 +184,47 @@ describe("AdminTabsMobileSelect", () => {
         "focus-visible:ring-offset-2",
       );
     }
+  });
+
+  it("describes one pending reopen request in the visible destination", () => {
+    useQueryMock.mockImplementation((options: unknown) => ({
+      data: {
+        count:
+          hasQueryKey(options) &&
+          options.queryKey.includes("pendingReopenCount")
+            ? 1
+            : 0,
+      },
+    }));
+
+    render(<AdminTabsMobileSelect activeTab="users" />);
+
+    const link = screen.getByRole("link", {
+      name: "1 pending reopen request",
+    });
+    expect(link).toHaveAttribute("href", "/admin?tab=reopen");
+    expect(within(link).getByText("1 pending reopen request")).not.toHaveClass(
+      "sr-only",
+    );
+    expect(within(link).queryByText("1", { exact: true })).toBeNull();
+  });
+
+  it("describes one failed job in the visible destination", () => {
+    useQueryMock.mockImplementation((options: unknown) => ({
+      data: {
+        count:
+          hasQueryKey(options) && options.queryKey.includes("dlqCount") ? 1 : 0,
+      },
+    }));
+
+    render(<AdminTabsMobileSelect activeTab="users" />);
+
+    const link = screen.getByRole("link", { name: "1 failed job in DLQ" });
+    expect(link).toHaveAttribute("href", "/admin?tab=jobs");
+    expect(within(link).getByText("1 failed job in DLQ")).not.toHaveClass(
+      "sr-only",
+    );
+    expect(within(link).queryByText("1", { exact: true })).toBeNull();
   });
 
   it("shares operational query identity and refresh semantics with the wide labels", () => {

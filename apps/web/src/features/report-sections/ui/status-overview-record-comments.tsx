@@ -23,7 +23,7 @@ export function TrackedWorkComments({
       data-testid={`tracked-work-comments-${item.key}`}
       className="flex flex-col gap-1.5"
     >
-      <span className="text-[11px] font-bold uppercase tracking-[0.09em] text-[var(--color-muted-foreground)]">
+      <span className="text-xs font-bold uppercase tracking-[0.09em] text-[var(--color-muted-foreground)]">
         Reviewer comments
       </span>
       <ReviewCommentList comments={comments} />

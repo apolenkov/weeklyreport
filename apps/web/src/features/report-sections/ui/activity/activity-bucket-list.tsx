@@ -48,7 +48,7 @@ function BucketHeading({
       >
         {ACTIVITY_BUCKET_LABELS[bucket]}
       </span>
-      <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
+      <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-xs font-semibold text-[var(--color-muted-foreground)]">
         {count}
       </span>
     </div>

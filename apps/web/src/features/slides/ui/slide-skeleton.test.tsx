@@ -29,7 +29,7 @@ describe("SlideSkeleton", () => {
     expect(status).toHaveAttribute("aria-busy", "true");
   });
 
-  it("mirrors the full-width article and its four-column grid", () => {
+  it("mirrors the mobile canvas while retaining desktop column headers", () => {
     render(<SlideSkeleton />);
 
     expect(screen.getByTestId("slide-skeleton-scroll-owner")).toHaveClass(
@@ -39,12 +39,15 @@ describe("SlideSkeleton", () => {
     );
     expect(screen.getByTestId("slide-skeleton-article")).toHaveClass(
       "slide-canvas",
-      "min-w-[var(--slide-canvas-min-w)]",
+      "min-w-0",
+      "sm:min-w-[var(--slide-canvas-min-w)]",
       "max-w-[var(--slide-canvas-max-w)]",
     );
     const columnHeaders = screen.getByTestId("slide-skeleton-column-headers");
     expect(columnHeaders).toHaveClass(
-      "grid-cols-[1.35fr_1.25fr_0.85fr_0.85fr]",
+      "hidden",
+      "sm:grid",
+      "sm:grid-cols-[1.35fr_1.25fr_0.85fr_0.85fr]",
     );
     expect(columnHeaders.children).toHaveLength(4);
     for (const cell of columnHeaders.children) {

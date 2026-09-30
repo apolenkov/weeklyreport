@@ -123,6 +123,17 @@ describe("Primary CTA accessibility", () => {
   });
 });
 
+describe("Landing identity", () => {
+  it("keeps organization metadata opaque on the desktop green panel", async () => {
+    const LoginPageClient = await loadLoginPageClient();
+    render(<LoginPageClient initialOrg={STUB_ORG} />);
+
+    expect(
+      screen.getByText("Demo · Example Software Department"),
+    ).toHaveClass("text-[var(--color-primary-foreground)]");
+  });
+});
+
 describe("Dev-mode role picker (AUTH_STUB=true, no stored hint)", () => {
   it("shows the direct role picker instead of collapsing the block", async () => {
     vi.stubEnv("NEXT_PUBLIC_AUTH_STUB", "true");
@@ -137,6 +148,12 @@ describe("Dev-mode role picker (AUTH_STUB=true, no stored hint)", () => {
       expect(
         screen.getByTestId(`last-role-option-${role}`),
       ).toBeInTheDocument();
+    }
+    expect(screen.getByText("Sign in as:")).toBeInTheDocument();
+    const roleList = screen.getByRole("list", { name: "Sign in as" });
+    expect(roleList).toBeInTheDocument();
+    for (const option of roleList.querySelectorAll("a")) {
+      expect(option).toHaveClass("min-h-11", "text-sm");
     }
     expect(
       screen.queryByTestId("last-role-hint-skeleton"),

@@ -1,6 +1,6 @@
 "use client";
 
-import { type Role, ROLE_LABEL } from "@customreport/shared";
+import type { Role } from "@customreport/shared";
 import {
   Sheet,
   SheetContent,
@@ -26,14 +26,14 @@ export function MobileNav({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="flex items-center justify-between border-t border-[var(--color-border)] px-4 py-2 sm:hidden">
+    <div className="flex items-center border-t border-[var(--color-border)] px-4 py-2 sm:hidden">
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger
-          className="inline-flex h-11 min-w-11 items-center justify-center rounded-md text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
+          className="inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-md px-2 text-sm font-medium text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
           aria-label="Open navigation menu"
         >
           <Menu size={20} aria-hidden="true" />
-          <span className="sr-only">Menu</span>
+          <span>Menu</span>
         </SheetTrigger>
         <SheetContent side="left" className="w-72 p-0">
           <SheetHeader className="border-b border-[var(--color-border)] p-4">
@@ -47,11 +47,6 @@ export function MobileNav({
           />
         </SheetContent>
       </Sheet>
-      {role && (
-        <span className="text-[10px] text-[var(--color-muted-foreground)]">
-          {ROLE_LABEL[role]}
-        </span>
-      )}
     </div>
   );
 }

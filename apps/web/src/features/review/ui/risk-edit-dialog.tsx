@@ -66,7 +66,7 @@ function PreCheckedStagesBanner({
           )
           .join(" · ")}
       </div>
-      <div className="mt-0.5 text-[11px] text-[var(--color-status-at-risk-fg)]">
+      <div className="mt-0.5 text-xs text-[var(--color-status-at-risk-fg)]">
         Already flagged in SDLC pipeline.
       </div>
     </div>

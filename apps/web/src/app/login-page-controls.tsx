@@ -13,7 +13,7 @@ import {
 const LOGIN_HAIRLINE_CLASSNAME = "border-[var(--color-border-warm)]";
 
 // Reserve room for the last-session state while AUTH_STUB resolves it.
-const STUB_CARD_CLASSNAME = `min-h-[129px] rounded-md border ${LOGIN_HAIRLINE_CLASSNAME} bg-[var(--color-surface-empty)] px-3 py-2.5 text-left`;
+const STUB_CARD_CLASSNAME = `min-h-40 rounded-md border ${LOGIN_HAIRLINE_CLASSNAME} bg-[var(--color-surface-empty)] px-3 py-2.5 text-left`;
 
 const PRIMARY_CTA_MIN_HEIGHT = "52px";
 
@@ -21,13 +21,14 @@ function RoleOptionsList() {
   return (
     <ul
       className="mt-2 grid grid-cols-2 gap-1.5"
+      aria-label="Sign in as"
       data-testid="last-role-switcher"
     >
       {sessionRoleSchema.options.map((role) => (
         <li key={role}>
           <a
             href={devLoginHref(role, DEV_EMAIL_FOR_ROLE[role])}
-            className={`block rounded border ${LOGIN_HAIRLINE_CLASSNAME} bg-[var(--color-card)] px-2 py-1.5 text-center text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)]`}
+            className={`flex min-h-11 items-center justify-center rounded border ${LOGIN_HAIRLINE_CLASSNAME} bg-[var(--color-card)] px-2 py-1.5 text-center text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)]`}
             data-testid={`last-role-option-${role}`}
           >
             {ROLE_LABEL[role]}
@@ -104,7 +105,7 @@ export function LastRoleCard({ lastRoleLoaded, lastRole }: LastRoleCardProps) {
       <Skeleton className="h-3.5 w-40" />
       <div className="mt-2 grid grid-cols-2 gap-1.5">
         {sessionRoleSchema.options.map((role) => (
-          <Skeleton key={role} className="h-[30px] rounded" />
+          <Skeleton key={role} className="h-11 rounded" />
         ))}
       </div>
     </div>
@@ -122,7 +123,7 @@ export function LastRoleCard({ lastRoleLoaded, lastRole }: LastRoleCardProps) {
   ) : (
     <div className={STUB_CARD_CLASSNAME} data-testid="role-picker">
       <p className="text-xs leading-snug text-[var(--color-muted-foreground)]">
-        Enter as a specific role:
+        Sign in as:
       </p>
       <RoleOptionsList />
     </div>

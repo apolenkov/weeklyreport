@@ -75,17 +75,17 @@ function PeriodRowButton({
             {period.weekLabel} &middot; {period.dateRange}
           </span>
           {period.archived && (
-            <span className="inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[9px] font-semibold text-[var(--color-muted-foreground)]">
+            <span className="inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-xs font-semibold text-[var(--color-muted-foreground)]">
               Archived
             </span>
           )}
           {isPrevious && (
-            <span className="inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-2 py-0.5 text-[9px] font-semibold text-[var(--color-primary-foreground)]">
+            <span className="inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-2 py-0.5 text-xs font-semibold text-[var(--color-primary-foreground)]">
               Latest submitted
             </span>
           )}
         </div>
-        <div className="text-[11px] text-[var(--color-muted-foreground)]">
+        <div className="text-xs text-[var(--color-muted-foreground)]">
           {countLabel(period.productCount ?? 0, "product", "products")} &middot;{" "}
           {countLabel(period.itemCount ?? 0, "item", "items")} &middot;{" "}
           {countLabel(period.riskCount ?? 0, "risk", "risks")}

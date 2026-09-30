@@ -23,9 +23,9 @@ function ActivityFeedSlide({ slide }: { readonly slide: SectionSlideModel }) {
     <article
       data-layout-key="slide-article"
       data-layout-stability="position-width"
-      className="slide-canvas mx-auto w-full min-h-[var(--slide-canvas-min-h)] min-w-[var(--slide-canvas-min-w)] max-w-[var(--slide-canvas-max-w)] rounded-[var(--radius)] border border-[var(--card-surface-border)] bg-[var(--color-card)] p-5 shadow-[0_1px_2px_var(--color-border-subtle)]"
+      className="slide-canvas mx-auto w-full min-h-[var(--slide-canvas-min-h)] min-w-0 max-w-[var(--slide-canvas-max-w)] rounded-[var(--radius)] border border-[var(--card-surface-border)] bg-[var(--color-card)] p-5 shadow-[0_1px_2px_var(--color-border-subtle)] sm:min-w-[var(--slide-canvas-min-w)]"
     >
-      <h2 className="text-xl font-semibold text-[var(--color-foreground)]">
+      <h2 className="break-words text-xl font-semibold text-[var(--color-foreground)]">
         {slide.ownerName}
       </h2>
     </article>
@@ -60,7 +60,7 @@ function SlideProductList({
   );
 }
 
-// Shared slide canvas: auto-height, never clipped; deck scroll owns overflow below min width.
+// Shared auto-height canvas; wider decks own horizontal overflow below the desktop minimum.
 export function SlideArticle({
   slide,
   heroControls,
@@ -83,7 +83,7 @@ export function SlideArticle({
       data-testid="slide-article"
       data-layout-key="slide-article"
       data-layout-stability="position-width"
-      className="slide-canvas mx-auto flex w-full min-h-[var(--slide-canvas-min-h)] min-w-[var(--slide-canvas-min-w)] max-w-[var(--slide-canvas-max-w)] flex-col gap-3 rounded-[var(--radius)] border border-[var(--card-surface-border)] bg-[var(--color-card)] p-5 shadow-[0_1px_2px_var(--color-border-subtle)]"
+      className="slide-canvas mx-auto flex w-full min-h-[var(--slide-canvas-min-h)] min-w-0 max-w-[var(--slide-canvas-max-w)] flex-col gap-3 rounded-[var(--radius)] border border-[var(--card-surface-border)] bg-[var(--color-card)] p-5 shadow-[0_1px_2px_var(--color-border-subtle)] sm:min-w-[var(--slide-canvas-min-w)]"
     >
       <SlideGridHeader
         ownerName={slide.ownerName}

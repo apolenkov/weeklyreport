@@ -187,7 +187,7 @@ export function ItemCardActions(props: ItemCardActionsProps) {
 export function PublishedRecordMarker() {
   return (
     <span
-      className="inline-flex w-fit shrink-0 items-center rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 bg-[var(--color-card)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]"
+      className="inline-flex w-fit shrink-0 items-center rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 bg-[var(--color-card)] px-2 py-0.5 text-xs font-semibold text-[var(--color-primary)]"
       title="In the published report — mark it done or carry it forward; it cannot be deleted."
     >
       In published report

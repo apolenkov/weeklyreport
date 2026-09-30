@@ -133,7 +133,7 @@ export function AdminPanelContent(props: AdminPanelContentProps) {
     case "jobs":
       return <JobsTab />;
     case "actions":
-      return <ActionLogTab />;
+      return <ActionLogTab users={props.data?.users} />;
     default:
       return <SnapshotContent {...props} />;
   }

@@ -54,10 +54,10 @@ function StatusRow({
 function SearchHitMetaRow({ hit }: { readonly hit: SearchHit }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <span className="inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+      <span className="inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
         {TYPE_BADGE[hit.type].label}
       </span>
-      <span className="text-[11px] text-[var(--color-muted-foreground)]">
+      <span className="text-xs text-[var(--color-muted-foreground)]">
         {formatDateWithYear(new Date(hit.createdAt))}
       </span>
     </div>

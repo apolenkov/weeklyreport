@@ -76,7 +76,7 @@ export function ReopenRespondForm({
     <div className="mt-3 space-y-2 rounded-[var(--radius)] border border-[var(--color-starbucks-accent)] bg-[var(--color-approval-surface)] p-3">
       <label
         htmlFor={`reopen-note-${requestId}`}
-        className="block text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]"
+        className="block text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]"
       >
         {`Comment (optional, up to ${MAX_REOPEN_NOTE_LENGTH} characters)`}
       </label>
