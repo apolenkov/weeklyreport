@@ -3,10 +3,10 @@
 import { RefreshCw } from "lucide-react";
 import type { ReactNode } from "react";
 
-export function ChartSkeleton() {
+function TableSkeleton() {
   return (
     <div
-      aria-label="Loading chart"
+      aria-label="Loading data"
       className="h-64 w-full animate-pulse rounded-md bg-muted/50"
       role="status"
     />
@@ -61,7 +61,7 @@ function TrendsSectionContent({
   isRetrying,
   onRetry,
 }: TrendsSectionProps) {
-  if (isLoading) return <ChartSkeleton />;
+  if (isLoading) return <TableSkeleton />;
   if (isError)
     return <TrendsQueryIssue isRetrying={isRetrying} onRetry={onRetry} />;
   if (emptyMessage !== undefined)

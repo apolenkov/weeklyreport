@@ -22,7 +22,6 @@
     "next": "^16.3.3",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "recharts": "catalog:",
     "server-only": "^0.0.1",
     "sonner": "catalog:",
     "superjson": "catalog:",
