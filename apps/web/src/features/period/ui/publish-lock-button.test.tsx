@@ -236,18 +236,22 @@ describe("PublishLockButton", () => {
   });
 
   describe("focus after publishing", () => {
-    const renderStatus = (periodStatus: "open" | "published") => (
+    const succeeds = (onSuccess: () => void) => onSuccess();
+    const fails = () => undefined;
+    const renderStatus = (
+      periodStatus: "open" | "published",
+      onPublish: (onSuccess: () => void) => void = succeeds,
+    ) => (
       <PublishLockButton
         pendingCount={0}
         totalLeads={6}
         periodStatus={periodStatus}
-        onPublish={vi.fn()}
+        onPublish={onPublish}
         onReopen={vi.fn()}
       />
     );
 
-    it("moves focus to Reopen Period once the Publish button is replaced", async () => {
-      const { rerender } = render(renderStatus("open"));
+    async function confirmPublish() {
       await userEvent.click(
         screen.getByRole("button", { name: /publish & lock/i }),
       );
@@ -255,12 +259,26 @@ describe("PublishLockButton", () => {
       await userEvent.click(
         expectDefined([...dialog.querySelectorAll("button")].at(-1)),
       );
+    }
+
+    it("moves focus to Reopen Period once the Publish button is replaced", async () => {
+      const { rerender } = render(renderStatus("open"));
+      await confirmPublish();
 
       rerender(renderStatus("published"));
 
       expect(
         screen.getByRole("button", { name: /reopen period/i }),
       ).toHaveFocus();
+    });
+
+    it("does not steal focus when a failed publish is followed by someone else's publish", async () => {
+      const { rerender } = render(renderStatus("open", fails));
+      await confirmPublish();
+
+      rerender(renderStatus("published", fails));
+
+      expect(document.body).toHaveFocus();
     });
 
     it("does not steal focus when a published period is simply displayed", () => {
@@ -270,16 +288,18 @@ describe("PublishLockButton", () => {
   });
 
   describe("focus after reopening", () => {
+    const succeeds = (onSuccess: () => void) => onSuccess();
     const renderStatus = (
       periodStatus: "open" | "published",
       canPublish: boolean,
+      onReopen: (onSuccess: () => void) => void = succeeds,
     ) => (
       <PublishLockButton
         pendingCount={0}
         totalLeads={6}
         periodStatus={periodStatus}
         onPublish={vi.fn()}
-        onReopen={vi.fn()}
+        onReopen={onReopen}
         canPublish={canPublish}
       />
     );
@@ -314,6 +334,16 @@ describe("PublishLockButton", () => {
       rerender(renderStatus("open", false));
 
       expect(main).toHaveFocus();
+    });
+
+    it("does not steal focus when a failed reopen is followed by someone else's reopen", async () => {
+      const fails = () => undefined;
+      const { rerender } = render(renderStatus("published", true, fails));
+      await confirmReopen();
+
+      rerender(renderStatus("open", true, fails));
+
+      expect(document.body).toHaveFocus();
     });
 
     it("does not move focus when the period is reopened by someone else", () => {

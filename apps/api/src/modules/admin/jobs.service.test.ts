@@ -637,7 +637,7 @@ describe("JobsService — DLQ admin surface", () => {
     expect(job.remove).not.toHaveBeenCalled();
   });
 
-  it("countFailed: sums exact counts from every registered queue", async () => {
+  it("countFailed: sums exact counts and keeps the per-queue split", async () => {
     const counts = new Map(
       QUEUE_NAMES.map((name, index) => [name, index + 1] as const),
     );
@@ -659,9 +659,16 @@ describe("JobsService — DLQ admin surface", () => {
       createNullLogger(),
     );
 
-    await expect(service.countFailed()).resolves.toBe(
-      QUEUE_NAMES.reduce((sum, name) => sum + (counts.get(name) ?? 0), 0),
-    );
+    await expect(service.countFailed()).resolves.toEqual({
+      count: QUEUE_NAMES.reduce(
+        (sum, name) => sum + (counts.get(name) ?? 0),
+        0,
+      ),
+      byQueue: QUEUE_NAMES.map((queue) => ({
+        queue,
+        count: counts.get(queue),
+      })),
+    });
     for (const name of QUEUE_NAMES) {
       expect(getFailedCounts.get(name)).toHaveBeenCalledOnce();
     }

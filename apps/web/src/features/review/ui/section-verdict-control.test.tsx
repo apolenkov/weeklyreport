@@ -3,7 +3,7 @@ import "@testing-library/jest-dom/vitest";
 
 import type { SectionReviewView } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -223,6 +223,43 @@ describe("SectionVerdictControl — verdict buttons", () => {
     );
     expect(mutationFn).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("sends one verdict when Approve is activated twice before the pending state renders", async () => {
+    const { captured } = renderControl({ canReview: true });
+    const mutationFn = expectDefined(captured["review.verdict"]).mutationFn;
+    mutationFn.mockReturnValue(new Promise(() => undefined));
+    const approve = screen.getByRole("button", { name: "Approve" });
+
+    act(() => {
+      approve.click();
+      approve.click();
+    });
+
+    await waitFor(() => {
+      expect(approve).toHaveAttribute("aria-disabled", "true");
+    });
+    expect(mutationFn).toHaveBeenCalledTimes(1);
+  });
+
+  it("renames Approve to match its Saving text while the verdict saves", async () => {
+    const { captured } = renderControl({
+      canReview: true,
+      subjectName: "Ada Lovelace",
+    });
+    expectDefined(captured["review.verdict"]).mutationFn.mockReturnValue(
+      new Promise(() => undefined),
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Approve Ada Lovelace" }),
+    );
+
+    expect(
+      await screen.findByRole("button", {
+        name: "Saving verdict for Ada Lovelace",
+      }),
+    ).toHaveTextContent("Saving…");
   });
 
   it("Request changes only opens the reason dialog and sends nothing", async () => {

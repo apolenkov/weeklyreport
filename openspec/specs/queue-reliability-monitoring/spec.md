@@ -87,6 +87,16 @@ NOT cause the failed job to be removed as a stale reminder.
 - **THEN** the action targets only that named queue and opaque job id
 - **AND** the response contains allowlisted failure metadata only
 
+#### Scenario: The Jobs tab opens on a queue that has failures
+
+- **GIVEN** the failed-job count is non-zero and only `pdf-export` holds failures
+- **WHEN** an admin opens the Jobs tab of the Admin Panel
+- **THEN** the queue selector starts on `pdf-export`, not on an empty
+  `email-reminder`, and a later count refresh does not move it
+- **AND** the failed-job count read (`admin.dlqCount`, admin-only like the tab)
+  carries the per-queue split that drives the choice; when it is unavailable the
+  selector starts on `email-reminder`
+
 #### Scenario: A provider test execution id is not a reminder reference
 
 - **GIVEN** a failed `ai-provider-test` job carries its provider-test

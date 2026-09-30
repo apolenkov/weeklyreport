@@ -4,6 +4,13 @@ const DEFAULT_REOPEN_REQUEST_PAGE_LIMIT = 50;
 const MAX_REOPEN_REQUEST_PAGE_LIMIT = 100;
 const MAX_REOPEN_REQUEST_SEARCH_LENGTH = 500;
 
+/** Why a lead cannot request a section reopen; the read model ships it to the UI. */
+export type ReopenBlockedReason =
+  | "not_submitted"
+  | "period_archived"
+  | "period_closed"
+  | "pending_request_exists";
+
 /** Filters supported by the admin reopen-request list endpoint. */
 export const reopenRequestStatusFilterSchema = z.enum([
   "pending",

@@ -1,6 +1,7 @@
 import {
   type PublishedLineage,
   publishedLineageSchema,
+  type ReopenBlockedReason,
   type ReportSectionReadModel,
   type Role,
 } from "@customreport/shared";
@@ -22,7 +23,7 @@ export interface GetByPeriodResult {
   section: ReportSectionReadModel;
   readOnly: boolean;
   canRequestReopen: boolean;
-  reopenBlockedReason: string | null;
+  reopenBlockedReason: ReopenBlockedReason | null;
   // Resolve-not-delete: the section's published item/decision lineages, so the
   // form can mark locked records and hide Delete. Advisory for the UI only —
   // the save-path guard enforces the lock.

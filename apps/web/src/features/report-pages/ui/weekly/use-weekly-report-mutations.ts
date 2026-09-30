@@ -7,8 +7,8 @@ import { useTRPC } from "../../../../shared/lib/trpc/trpc-context";
 import { usePeriodReportMutations } from "../../../period/client";
 
 export interface WeeklyReportMutations {
-  readonly publish: (reportId: string) => void;
-  readonly reopen: (reportId: string) => void;
+  readonly publish: (reportId: string, onSuccess: () => void) => void;
+  readonly reopen: (reportId: string, onSuccess: () => void) => void;
   readonly archive: (reportId: string) => void;
   readonly restore: (reportId: string) => void;
   readonly isPublishOrReopenPending: boolean;

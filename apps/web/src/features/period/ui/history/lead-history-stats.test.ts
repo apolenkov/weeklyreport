@@ -32,5 +32,6 @@ describe("deriveHistoryStats", () => {
     expect(stats.streak).toBe(0);
     expect(stats.totalGreen).toBe(2);
     expect(stats.avgItems).toBe(4);
+    expect(stats.excludedCount).toBe(1);
   });
 });

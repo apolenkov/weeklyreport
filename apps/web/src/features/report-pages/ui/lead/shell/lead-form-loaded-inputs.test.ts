@@ -1,4 +1,7 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type {
+  ReopenBlockedReason,
+  ReportSectionReadModel,
+} from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../../../../test-utils/expect-defined";
@@ -69,7 +72,7 @@ describe("leadFormViewModelInput pending reopen", () => {
     selectedPeriodId: null,
     showArchivePeriods: false,
   };
-  const inputFor = (reopenBlockedReason: string | null) => {
+  const inputFor = (reopenBlockedReason: ReopenBlockedReason | null) => {
     const serverSection = section("report-a", "section-a");
     const state = loadedState(serverSection);
     const bundle = resolveLeadFormLoaded(

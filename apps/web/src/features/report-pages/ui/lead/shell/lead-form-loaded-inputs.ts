@@ -1,6 +1,7 @@
 import type {
   MyHistoryEntry,
   PublishedLineage,
+  ReopenBlockedReason,
   ReportSectionReadModel,
 } from "@customreport/shared";
 
@@ -17,12 +18,12 @@ interface LeadFormByPeriodLoaded {
   readonly section: ReportSectionReadModel;
   readonly readOnly: boolean;
   readonly canRequestReopen: boolean;
-  // Why the lead cannot request a reopen; the API owns the reason vocabulary.
-  readonly reopenBlockedReason?: string | null | undefined;
+  readonly reopenBlockedReason?: ReopenBlockedReason | null | undefined;
   readonly publishedLineage: PublishedLineage;
 }
 
-const PENDING_REOPEN_REASON = "pending_request_exists";
+const PENDING_REOPEN_REASON =
+  "pending_request_exists" satisfies ReopenBlockedReason;
 
 export interface LeadFormLoadingState {
   readonly isLoading: boolean;

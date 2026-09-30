@@ -22,6 +22,10 @@ export function restorePatchFor(
 // Patch that undoes a Save the lead abandons after it failed. Only the failed
 // state qualifies: a save in flight may still land, and a draft edited since
 // the submission is no longer this update's to revert.
+// ponytail: a network failure after the server already committed leaves the
+// restored draft equal to the baseline, so no rollback is sent and the server
+// keeps the "failed" version until the next edit or reload; add a rollback
+// write if that window matters.
 export function abandonedSaveRestorePatch(
   editor: ReadyEditor,
   dialog: OverviewItemDialogState,

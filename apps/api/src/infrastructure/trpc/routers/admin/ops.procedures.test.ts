@@ -198,13 +198,20 @@ describe("jobs contract uses the canonical Head authority", () => {
     return { service, listFailed, retryFailed, removeFailed };
   }
 
-  it("dlqCount reads the count from JobsService", async () => {
-    const countFailed = vi.fn().mockResolvedValue(3);
+  it("dlqCount returns the total and per-queue counts from JobsService", async () => {
+    const counts = {
+      count: 3,
+      byQueue: [
+        { queue: "email-reminder", count: 0 },
+        { queue: "pdf-export", count: 3 },
+      ],
+    };
+    const countFailed = vi.fn().mockResolvedValue(counts);
     const service = { countFailed } as unknown as JobsService;
 
     await expect(
       buildJobsCaller(service, "admin").admin.dlqCount(),
-    ).resolves.toEqual({ count: 3 });
+    ).resolves.toEqual(counts);
     expect(countFailed).toHaveBeenCalledOnce();
   });
 

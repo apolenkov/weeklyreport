@@ -200,6 +200,16 @@ export class PeriodPrismaRepository implements PeriodRepository {
             submittedAt: null,
           },
         });
+        // Their sections are draft again, so a pending section-reopen request
+        // has nothing left to reopen: close it like a stale approval does.
+        await tx.reopenRequest.updateMany({
+          where: { status: "pending", reportSection: { reportId } },
+          data: {
+            status: "rejected",
+            reviewedAt: reopenedAt,
+            reviewNote: "Auto-closed: the period was reopened.",
+          },
+        });
         await synchronizeReminderRulesForReport(
           tx,
           policies,

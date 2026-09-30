@@ -44,8 +44,14 @@ function SummaryCard({
   readonly title: string;
   readonly stats: HistoryStats;
 }) {
-  const { submitted, total, completionRate, avgItems, totalRisks, draftCount } =
-    stats;
+  const {
+    submitted,
+    total,
+    completionRate,
+    avgItems,
+    totalRisks,
+    excludedCount,
+  } = stats;
   return (
     <SidebarCard title={title}>
       <StatGrid>
@@ -69,10 +75,10 @@ function SummaryCard({
           accent={totalRisks > 0 ? "warn" : "muted"}
         />
       </StatGrid>
-      {draftCount > 0 && (
+      {excludedCount > 0 && (
         <p className="mt-2 text-xs text-[var(--color-muted-foreground)]">
-          {draftCount} {draftCount === 1 ? "draft" : "drafts"} not included in
-          aggregates.
+          {excludedCount} {excludedCount === 1 ? "week" : "weeks"} not included
+          in aggregates.
         </p>
       )}
       <TrafficLightFooter stats={stats} />

@@ -224,15 +224,18 @@ export function AcknowledgeSurface({
 
 // Self-gating verdict band: only in review mode so normal mode stays read-only.
 export function ReviewModeVerdictSurface({
+  reportId,
   reviewModel,
   reviewMode,
 }: {
+  readonly reportId: string;
   readonly reviewModel: ReviewModel;
   readonly reviewMode: ReviewMode;
 }) {
   if (reviewMode !== "review" || !reviewModel.context) return null;
   return (
     <ReviewVerdictBand
+      key={reportId}
       sections={reviewModel.sections}
       onMutated={reviewModel.context.onMutated}
     />

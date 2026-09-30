@@ -10,6 +10,7 @@ import {
   type QueryClient,
   useInfiniteQuery,
   useMutation,
+  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -184,8 +185,24 @@ function useFilteredJobs(jobs: readonly FailedJob[], search: string) {
   }, [jobs, search]);
 }
 
+// Opens on the first queue that has failed jobs (the tab badge counts every
+// queue). Chosen once so a later count refresh never moves the list under the
+// admin, e.g. after removing the last failure of the opened queue.
+function useSelectedQueue() {
+  const trpc = useTRPC();
+  const countQuery = useQuery(trpc.admin.dlqCount.queryOptions());
+  const [chosen, setChosen] = useState<QueueName | null>(null);
+  if (chosen === null && countQuery.data) {
+    setChosen(
+      countQuery.data.byQueue.find((entry) => entry.count > 0)?.queue ??
+        DEFAULT_QUEUE,
+    );
+  }
+  return [chosen ?? DEFAULT_QUEUE, setChosen] as const;
+}
+
 export function JobsTab() {
-  const [queue, setQueue] = useState<QueueName>(DEFAULT_QUEUE);
+  const [queue, setQueue] = useSelectedQueue();
   const [pendingRemoval, setPendingRemoval] = useState<{
     readonly queue: QueueName;
     readonly jobId: string;

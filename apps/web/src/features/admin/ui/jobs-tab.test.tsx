@@ -32,7 +32,7 @@ import { JobsTab } from "./jobs-tab";
 const BASE_DESCRIPTORS = [
   { path: ["admin", "jobs", "retryFailed"], mutation: true as const },
   { path: ["admin", "jobs", "removeFailed"], mutation: true as const },
-  { path: ["admin", "dlqCount"] },
+  { path: ["admin", "dlqCount"], query: { count: 0, byQueue: [] } },
 ];
 
 function withInfiniteListFilter(mock: ReturnType<typeof createMockTRPC>) {
@@ -195,6 +195,49 @@ describe("JobsTab — BullMQ DLQ admin UI", () => {
         /No failed email reminder jobs\. Queue is clean\./,
       ),
     ).toBeInTheDocument();
+  });
+
+  it("opens on the first queue that has failed jobs and keeps it after a count refresh", async () => {
+    const listQuery = vi.fn((input: { queue: string }) =>
+      Promise.resolve({
+        jobs: input.queue === "pdf-export" ? [makeJob("pdf-failure")] : [],
+        nextCursor: null,
+      }),
+    );
+    let byQueue = [
+      { queue: "email-reminder", count: 0 },
+      { queue: "pdf-export", count: 2 },
+    ];
+    const { proxy } = withInfiniteListFilter(
+      createMockTRPC([
+        { path: ["admin", "jobs", "listFailed"], query: listQuery },
+        { path: ["admin", "jobs", "retryFailed"], mutation: true as const },
+        { path: ["admin", "jobs", "removeFailed"], mutation: true as const },
+        { path: ["admin", "dlqCount"], query: () => ({ count: 2, byQueue }) },
+      ]),
+    );
+    const qc = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    render(<JobsTab />, {
+      wrapper: ({ children }: { readonly children: ReactNode }) => (
+        <QueryClientProvider client={qc}>
+          <TRPCProxyContext.Provider value={proxy}>
+            {children}
+          </TRPCProxyContext.Provider>
+        </QueryClientProvider>
+      ),
+    });
+
+    expect(await screen.findByText("pdf-failure")).toBeInTheDocument();
+    expect(screen.getByLabelText("Failed job queue")).toHaveValue("pdf-export");
+
+    byQueue = byQueue.map((entry) => ({ ...entry, count: 0 }));
+    await qc.invalidateQueries(proxy.admin.dlqCount.pathFilter());
+    expect(screen.getByLabelText("Failed job queue")).toHaveValue("pdf-export");
   });
 
   it("reports one structured list error, deduplicates rerenders, and recovers on queue change", async () => {
