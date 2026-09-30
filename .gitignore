@@ -25,6 +25,10 @@ coverage/
 .claude/commands/opsx/
 
 # Local agent and browser-tool artifacts: never committed.
+.claude/worktrees/
+.codegraph/
+.kilo/
+.superpowers/
 .opencode/
 .playwright-cli/
 .playwright-mcp/
