@@ -1131,7 +1131,7 @@ describe("StatusOverview", () => {
     ).toBeNull();
   });
 
-  it("renders canonical status and all three real period ranges without repeated planning labels", () => {
+  it('renders canonical status and all three real period ranges without a "Not in prior plan" label', () => {
     render(<StatusOverview model={model} />);
 
     expect(screen.getByText("Blocked")).toBeInTheDocument();

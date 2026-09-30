@@ -193,7 +193,7 @@ path must respect them and link the relevant `openspec/specs/` spec.
 ## Gates
 
 The repository lives on the private corporate GitLab (`gitlab` is the only
-remote; owner decision). `.gitlab-ci.yml` is the CI that targets this
+remote). `.gitlab-ci.yml` is the CI that targets this
 remote and carries only lint/test lanes (owner decision 2026-09-28): quality,
 coverage, API integration, migrate-reset, and the dependency audit on the
 shared Docker runner, with in-job loopback PostgreSQL and Redis/Mailpit service
@@ -211,7 +211,7 @@ end once their content is committed or archived.
 
 ## Browser verification
 
-Owner decision 2026-09-20 : agent-browser (Vercel) is the
+Owner decision 2026-09-20: agent-browser (Vercel) is the
 selected route for exercising the running app; the Reticle integration is
 removed. Verified on a source run (`next dev`, `customreport_e2e`, 2026-09-29): Lead sign-in, save, submit and reopen; Head approve; Viewer
 read-only; Admin DLQ; period reopen, resubmit and republish; the limit dialog.

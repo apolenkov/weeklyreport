@@ -1,5 +1,6 @@
 # Results, commitments and resolution share one lineage
 
+**Status:** accepted
 **Date:** 2026-09-11
 
 A current result and a next-period commitment belong to one tracked task, not
