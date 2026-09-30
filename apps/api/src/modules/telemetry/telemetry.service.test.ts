@@ -3,11 +3,17 @@ import { describe, expect, it, vi } from "vitest";
 
 import { scopeDiscriminator } from "../../lib/group-scope.js";
 import {
-  NullTelemetryCache,
   type TelemetryCachePort,
   type TelemetryRepository,
   TelemetryService,
 } from "./telemetry.service.js";
+
+class NullTelemetryCache implements TelemetryCachePort {
+  readonly getOrCompute = async <T>(
+    _key: string,
+    fn: () => Promise<T>,
+  ): Promise<T> => fn();
+}
 
 const GROUP_A = "a0000000-0000-4000-a000-000000000001";
 const GROUP_B = "b0000000-0000-4000-a000-000000000001";
@@ -43,7 +49,7 @@ function buildRepo(
 
 describe("TelemetryService", () => {
   it("composes the canonical summary shape from the repository ports", async () => {
-    const service = new TelemetryService(buildRepo());
+    const service = new TelemetryService(buildRepo(), new NullTelemetryCache());
     const summary = await service.getSummary(headA);
 
     expect(summary).toEqual({
@@ -62,6 +68,7 @@ describe("TelemetryService", () => {
       buildRepo({
         onTimeRatioPerPeriod: () => Promise.resolve([]),
       }),
+      new NullTelemetryCache(),
     );
     const summary = await service.getSummary(headA);
     expect(summary.onTimeRatio).toBeNull();
@@ -80,7 +87,9 @@ describe("TelemetryService", () => {
       ),
     } satisfies TelemetryRepository;
 
-    await new TelemetryService(repo).getSummary(headA);
+    await new TelemetryService(repo, new NullTelemetryCache()).getSummary(
+      headA,
+    );
 
     expect(repo.reportsThisPeriodCount).toHaveBeenCalledWith(headA);
     expect(repo.activeLeadsLastPublishedPeriod).toHaveBeenCalledWith(headA);
@@ -128,26 +137,12 @@ describe("TelemetryService", () => {
     );
   });
 
-  it("NullTelemetryCache delegates straight to compute (no caching)", async () => {
-    const reportsThisPeriodCount = vi.fn(() => Promise.resolve(6));
-    const service = new TelemetryService(
-      buildRepo({
-        reportsThisPeriodCount,
-      }),
-      new NullTelemetryCache(),
-    );
-
-    await service.getSummary(headA);
-    await service.getSummary(headA);
-
-    expect(reportsThisPeriodCount).toHaveBeenCalledTimes(2);
-  });
-
   it("passes the schema validator — rejects out-of-range repo data", async () => {
     const service = new TelemetryService(
       buildRepo({
         onTimeRatioPerPeriod: () => Promise.resolve([1.5, 0.5]),
       }),
+      new NullTelemetryCache(),
     );
 
     await expect(service.getSummary(headA)).rejects.toThrow();

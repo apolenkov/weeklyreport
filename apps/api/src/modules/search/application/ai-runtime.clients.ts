@@ -4,6 +4,7 @@ import type {
   AesGcmCredentialCodec,
   StoredAiProviderRevision,
 } from "../../ai-provider/index.js";
+import { toSharedProfile } from "../../ai-provider/index.js";
 import { OpenAiCompatiblePlannerAdapter } from "../infrastructure/openai-compatible.adapters.js";
 import { OpenAiCompatibleAnswerAdapter } from "../infrastructure/openai-compatible.answer-adapter.js";
 import { OpenAiCompatibleEmbeddingAdapter } from "../infrastructure/openai-compatible.embedding-adapter.js";
@@ -39,13 +40,6 @@ export type RuntimeClientEnvironment = Pick<
 >;
 
 type RuntimeErrorFactory = () => Error;
-
-const toSharedProfile = (
-  profile: StoredAiProviderRevision["generationProfile"],
-) =>
-  profile === "custom_openai_compatible"
-    ? ("custom-openai-compatible" as const)
-    : profile;
 
 const required = <Value>(
   value: Value | null,

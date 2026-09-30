@@ -25,7 +25,7 @@ export const sameScope = (
   left.inputVersion === right.inputVersion &&
   left.dimensions === right.dimensions;
 
-const locatorFor = (
+export const locatorFor = (
   candidate: SearchCandidate,
   input: SemanticInput,
 ): SemanticIndexLocator => ({

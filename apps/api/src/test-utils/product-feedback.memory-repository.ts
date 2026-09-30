@@ -13,7 +13,7 @@ import {
   type FeedbackUpdateInput,
   type ProductFeedbackRepository,
   WEEKLY_REPORT_FEEDBACK_PRODUCT,
-} from "./product-feedback.repository.js";
+} from "../modules/product-feedback/product-feedback.repository.js";
 
 interface ScopedFeedback {
   readonly record: FeedbackRecord;

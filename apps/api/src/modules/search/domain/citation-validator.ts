@@ -2,6 +2,7 @@ import type { SourceCitation } from "@customreport/shared";
 
 import type { GroundedAnswer } from "../application/report-assistant.ports.js";
 import type { GroundingBundle } from "./context-builder.js";
+import { uniqueStrings } from "./entity-resolver.catalog.js";
 
 export type CitationValidationResult =
   | Readonly<{ kind: "valid"; citations: readonly SourceCitation[] }>
@@ -10,9 +11,6 @@ export type CitationValidationResult =
 export type GroundedAnswerCitationValidationResult =
   | Readonly<{ kind: "valid"; citations: readonly SourceCitation[] }>
   | Readonly<{ kind: "invalid"; issues: readonly string[] }>;
-
-const unique = (values: readonly string[]): readonly string[] =>
-  values.filter((value, index) => values.indexOf(value) === index);
 
 export function validateCitationIds(
   sourceIds: readonly string[],
@@ -24,14 +22,14 @@ export function validateCitationIds(
       evidence.source,
     ]),
   );
-  const unknownSourceIds = unique(
+  const unknownSourceIds = uniqueStrings(
     sourceIds.filter((sourceId) => !sources.has(sourceId)),
   );
   return unknownSourceIds.length > 0
     ? { kind: "invalid", unknownSourceIds }
     : {
         kind: "valid",
-        citations: unique(sourceIds).flatMap((sourceId) => {
+        citations: uniqueStrings(sourceIds).flatMap((sourceId) => {
           const citation = sources.get(sourceId);
           return citation ? [citation] : [];
         }),
@@ -53,8 +51,8 @@ export function validateGroundedAnswerCitations(
   bundle: GroundingBundle,
 ): GroundedAnswerCitationValidationResult {
   const declared = [...answer.sourceIds];
-  const declaredUnique = unique(declared);
-  const inline = unique(inlineSourceIds(answer.answerMarkdown));
+  const declaredUnique = uniqueStrings(declared);
+  const inline = uniqueStrings(inlineSourceIds(answer.answerMarkdown));
   const idValidation = validateCitationIds(declared, bundle);
   const inlineValidation = validateCitationIds(inline, bundle);
   const issues = [
@@ -70,7 +68,7 @@ export function validateGroundedAnswerCitations(
       : []),
   ];
   return issues.length > 0
-    ? { kind: "invalid", issues: unique(issues) }
+    ? { kind: "invalid", issues: uniqueStrings(issues) }
     : {
         kind: "valid",
         citations: idValidation.kind === "valid" ? idValidation.citations : [],

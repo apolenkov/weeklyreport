@@ -17,7 +17,6 @@ export { applyRevokeTransition } from "./application/revoke-transition.js";
 export { filterSectionToSharedProducts } from "./domain/lead-form-cross-author-scope.js";
 export { LeadFormPrismaRepository } from "./infrastructure/lead-form.prisma-repository.js";
 export {
-  canReadPublishedSnapshot,
   filterPublishedSnapshotForSession,
   publishedReportScopeWhere,
   requireScopedPublishedSnapshot,

@@ -1,11 +1,11 @@
 import type { UserSession } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import { ProductFeedbackMemoryRepository } from "./product-feedback.memory-repository";
 import {
   feedbackAccessFromSession,
   type FeedbackCreateInput,
-} from "./product-feedback.repository";
+} from "../modules/product-feedback/product-feedback.repository";
+import { ProductFeedbackMemoryRepository } from "./product-feedback.memory-repository";
 
 function session(
   userId: string,
