@@ -143,8 +143,10 @@ migration, add a new one.
 
 ## Load-Bearing Invariants
 
-No DB constraint enforces these — code review and CI do. Any change to a write
-path must respect them and link the relevant `openspec/specs/` spec.
+The Report lifecycle tuple of the period dual-state is enforced by the
+`Report_lifecycle_tuple_check` constraint; the other two invariants are
+enforced only by code review and CI. Any change to a write path must respect
+them and link the relevant `openspec/specs/` spec.
 
 - **Period dual-state.** A Report carries canonical `periodState` plus its
   companion lifecycle tuple (`status`, `periodStatus`, `archived`, audit flags,
