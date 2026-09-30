@@ -83,7 +83,9 @@ function useRespondReopenMutation(onResponded: () => void) {
   );
 }
 
-export function useReopenTabState() {
+export function useReopenTabState({
+  onResponded,
+}: { readonly onResponded?: () => void } = {}) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const [filter, setFilterState] = useState<ReopenFilterStatus>("pending");
@@ -105,7 +107,10 @@ export function useReopenTabState() {
     context: { status: filter, search: search.trim() || null },
   });
 
-  const respondMut = useRespondReopenMutation(draft.reset);
+  const respondMut = useRespondReopenMutation(() => {
+    draft.reset();
+    onResponded?.();
+  });
 
   const requests = useMemo(
     () => listQuery.data?.pages.flatMap((page) => page.items) ?? [],

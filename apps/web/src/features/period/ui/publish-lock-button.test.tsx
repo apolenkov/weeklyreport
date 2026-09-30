@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { PublishLockButton } from "./publish-lock-button";
@@ -198,7 +198,7 @@ describe("PublishLockButton", () => {
     expect(onPublish).not.toHaveBeenCalled();
   });
 
-  it("does not describe publishing as irreversible because a head can reopen", async () => {
+  it("makes no reversibility claim the client cannot back (reopen may be disabled or expired)", async () => {
     render(
       <PublishLockButton
         pendingCount={0}
@@ -213,10 +213,8 @@ describe("PublishLockButton", () => {
     );
     const dialog = screen.getByRole("alertdialog");
     expect(dialog).not.toHaveTextContent("cannot be undone");
-    expect(dialog).toHaveTextContent(
-      "Leads can no longer edit this period until you reopen it.",
-    );
-    expect(dialog).toHaveTextContent("This can be reversed later.");
+    expect(dialog).not.toHaveTextContent("can be reversed");
+    expect(dialog).toHaveTextContent("Leads can no longer edit this period.");
   });
 
   it("tells the head that reopening returns submitted sections to draft", async () => {
@@ -267,6 +265,62 @@ describe("PublishLockButton", () => {
 
     it("does not steal focus when a published period is simply displayed", () => {
       render(renderStatus("published"));
+      expect(document.body).toHaveFocus();
+    });
+  });
+
+  describe("focus after reopening", () => {
+    const renderStatus = (
+      periodStatus: "open" | "published",
+      canPublish: boolean,
+    ) => (
+      <PublishLockButton
+        pendingCount={0}
+        totalLeads={6}
+        periodStatus={periodStatus}
+        onPublish={vi.fn()}
+        onReopen={vi.fn()}
+        canPublish={canPublish}
+      />
+    );
+
+    async function confirmReopen() {
+      await userEvent.click(
+        screen.getByRole("button", { name: /reopen period/i }),
+      );
+      await userEvent.click(screen.getByRole("button", { name: /^reopen$/i }));
+    }
+
+    it("moves focus to Publish & Lock once it replaces Reopen Period", async () => {
+      const { rerender } = render(renderStatus("published", true));
+      await confirmReopen();
+
+      rerender(renderStatus("open", true));
+
+      expect(
+        screen.getByRole("button", { name: /publish & lock/i }),
+      ).toHaveFocus();
+    });
+
+    it("falls back to the page when Publish is disabled for lack of submissions", async () => {
+      const main = document.createElement("main");
+      main.id = "main-content";
+      main.tabIndex = -1;
+      document.body.append(main);
+      onTestFinished(() => main.remove());
+      const { rerender } = render(renderStatus("published", true));
+      await confirmReopen();
+
+      rerender(renderStatus("open", false));
+
+      expect(main).toHaveFocus();
+    });
+
+    it("does not move focus when the period is reopened by someone else", () => {
+      const { rerender } = render(renderStatus("published", true));
+
+      rerender(renderStatus("open", true));
+
       expect(document.body).toHaveFocus();
     });
   });
