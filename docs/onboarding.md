@@ -191,10 +191,9 @@ AI-провайдеров и промптов. Управляющая запис
 ## 6. Наблюдаемость (логи, метрики, ошибки)
 
 - При локальном запуске API пишет структурированные логи в
-  `apps/api/.logs/app.log`. В production Compose файл находится в
-  `/app/logs/app.log` внутри контейнера `api` и сохраняется в named volume
-  `apilogs`. В обоих случаях записи содержат `traceId` и `spanId`, если они есть
-  в контексте запроса.
+  `apps/api/.logs/app.log` (без ротации). В production Compose API пишет только
+  в stdout, ротацию делает Docker. В обоих случаях записи содержат `traceId` и
+  `spanId`, если они есть в контексте запроса.
 - `GET /metrics` отдаёт внутренние метрики API. Production Caddy не публикует
   этот endpoint во внешний интернет.
 - Sentry-совместимый сервис получает ошибки API и Web, когда заданы
@@ -293,11 +292,10 @@ DOM-, сетевыми наблюдениями или снимком экран
 ## 9. Отладка
 
 - Локальные логи API — `pnpm logs` (хвост `apps/api/.logs/app.log`), только
-  ошибки — `pnpm logs:errors`. Production-файл читается точным Compose-контуром:
+  ошибки — `pnpm logs:errors`. Production-логи читаются из stdout контейнера:
 
   ```bash
-  docker compose --env-file .env.production -f docker-compose.prod.yml exec api \
-    tail -F /app/logs/app.log
+  docker compose --env-file .env.production -f docker-compose.prod.yml logs -f api
   ```
 
   Стандартный поток контейнера доступен через ту же конфигурацию командой
