@@ -1,7 +1,12 @@
-import type { PeriodState } from "@customreport/shared";
+import {
+  computeReportProgress,
+  type PeriodState,
+  type ReportProgress,
+} from "@customreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { lockAllReminderPolicies } from "../reminders/index.js";
+import { requirePublishedSnapshot } from "../report-sections/index.js";
 import type { PeriodRowFromRepo } from "./admin-shared";
 import { AdminAccessError, AdminPeriodNotFoundError } from "./admin-shared.js";
 
@@ -10,50 +15,61 @@ import { AdminAccessError, AdminPeriodNotFoundError } from "./admin-shared.js";
 
 type PeriodSelection = Omit<PeriodRowFromRepo, "submittedCount" | "totalCount">;
 
-interface SectionProgress {
-  readonly totalsById: ReadonlyMap<string, number>;
-  readonly submittedById: ReadonlyMap<string, number>;
-}
-
-// Two grouped queries beat N per-period counts, and keeping totals separate
-// from the submitted filter is what makes zero-total periods (created before
-// section provisioning ran) visible instead of silently absent.
-async function fetchSectionProgress(
+// One denominator everywhere (`weekly-progress-denominator`): open periods
+// count org-wide active leads, published periods the authors frozen in their
+// snapshot. Both sides go through the shared `computeReportProgress`.
+async function fetchProgress(
   prisma: PrismaService,
-  reportIds: string[],
-): Promise<SectionProgress> {
-  const [totalRows, submittedRows] = await Promise.all([
-    prisma.reportSection.groupBy({
-      by: ["reportId"],
-      where: { reportId: { in: reportIds } },
-      _count: { _all: true },
+  periods: readonly Pick<PeriodSelection, "id" | "periodStatus">[],
+): Promise<ReadonlyMap<string, ReportProgress>> {
+  const publishedIds = periods
+    .filter((period) => period.periodStatus === "published")
+    .map((period) => period.id);
+  const liveIds = periods
+    .filter((period) => period.periodStatus !== "published")
+    .map((period) => period.id);
+  const [leads, liveSections, publishedRows] = await Promise.all([
+    liveIds.length === 0
+      ? []
+      : prisma.user.findMany({
+          where: { role: "lead", isActive: true },
+          select: { id: true },
+        }),
+    prisma.reportSection.findMany({
+      where: { reportId: { in: liveIds } },
+      select: { reportId: true, authorId: true, status: true },
     }),
-    prisma.reportSection.groupBy({
-      by: ["reportId"],
-      where: { reportId: { in: reportIds }, status: "submitted" },
-      _count: { _all: true },
+    prisma.report.findMany({
+      where: { id: { in: publishedIds } },
+      select: { id: true, publishedSnapshot: true },
     }),
   ]);
 
-  return {
-    totalsById: new Map(
-      totalRows.map((row) => [row.reportId, row._count._all]),
-    ),
-    submittedById: new Map(
-      submittedRows.map((row) => [row.reportId, row._count._all]),
-    ),
-  };
-}
-
-function toPeriodRow(
-  period: PeriodSelection,
-  progress: SectionProgress,
-): PeriodRowFromRepo {
-  return {
-    ...period,
-    submittedCount: progress.submittedById.get(period.id) ?? 0,
-    totalCount: progress.totalsById.get(period.id) ?? 0,
-  };
+  const progress = new Map<string, ReportProgress>();
+  const leadIds = leads.map((lead) => lead.id);
+  for (const reportId of liveIds) {
+    progress.set(
+      reportId,
+      computeReportProgress(
+        leadIds,
+        liveSections.filter((section) => section.reportId === reportId),
+      ),
+    );
+  }
+  for (const row of publishedRows) {
+    const { sections } = requirePublishedSnapshot(
+      row.publishedSnapshot,
+      row.id,
+    );
+    progress.set(
+      row.id,
+      computeReportProgress(
+        sections.map((section) => section.authorId),
+        sections,
+      ),
+    );
+  }
+  return progress;
 }
 
 // Rides the `(periodState, periodStart desc)` composite index so filtering and
@@ -87,12 +103,13 @@ export async function listPeriodsByState(
 
   if (periods.length === 0) return [];
 
-  const progress = await fetchSectionProgress(
-    prisma,
-    periods.map((period) => period.id),
-  );
+  const progress = await fetchProgress(prisma, periods);
 
-  return periods.map((period) => toPeriodRow(period, progress));
+  return periods.map((period) => ({
+    ...period,
+    submittedCount: progress.get(period.id)?.submitted ?? 0,
+    totalCount: progress.get(period.id)?.total ?? 0,
+  }));
 }
 
 // Closed (inclusive) live-range intersect: a.start <= b.end AND a.end >=
