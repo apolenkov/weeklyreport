@@ -24,10 +24,14 @@ const ALLOWED_IGNORED_PATHS = [
   /(^|\/)codex-session-[^/]+\.md$/u,
   /(^|\/)pi-session-[^/]+\.html$/u,
   /(^|\/)\.pi\/(?:goals|subagents)(?:\/|$)/u,
+  /^(?:\.codegraph|\.kilo|\.superpowers|\.claude\/worktrees)(?:\/|$)/u,
   /^(?:\.agents|\.claude)\/skills\/(?:openspec-[^/]+\/|\.openspec-target$)/u,
   /^\.claude\/commands\/opsx\//u,
 ];
-const ALLOWED_EMPTY_DIRECTORIES = new Set(["openspec/changes/archive"]);
+const ALLOWED_EMPTY_DIRECTORIES = new Set([
+  "openspec/changes/archive",
+  ".claude/worktrees",
+]);
 const IGNORED_DIRECTORY_NAMES = new Set([
   ".git",
   "node_modules",
