@@ -69,6 +69,7 @@ pnpm format:check       # Prettier check without rewriting files
 pnpm test               # package unit suites plus root safety tests
 pnpm build              # turbo run build
 pnpm spec:check         # strict validation of all durable OpenSpec specs
+pnpm test:e2e           # agent-browser lead-form regression (running app on customreport_e2e, REDIS_DB=15; resets data)
 ```
 
 - `pnpm lint` runs its checks sequentially and stops at the first failure. Each
