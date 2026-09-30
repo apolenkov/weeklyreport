@@ -130,7 +130,7 @@ describe("StatusOverviewItemPreview", () => {
       "resolve:current:stable-1",
     );
     await user.click(
-      screen.getByRole("button", { name: "Move Original text to next week" }),
+      screen.getByRole("button", { name: "Move to next week: Original text" }),
     );
     expect(onMoveItem).toHaveBeenCalledWith(
       expect.objectContaining({ text: "Original text" }),
@@ -241,7 +241,7 @@ describe("StatusOverviewItemPreview", () => {
       screen.getByRole("button", { name: "Edit details: Original text" }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: /Move Original text/ }),
+      screen.queryByRole("button", { name: /Move to .* week: Original text/ }),
     ).toBeNull();
   });
 

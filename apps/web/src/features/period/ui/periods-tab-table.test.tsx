@@ -45,4 +45,34 @@ describe("PeriodTable responsive rows", () => {
     expect(onEdit).toHaveBeenCalledWith(row);
     expect(onPublish).toHaveBeenCalledWith(row);
   });
+
+  it("names the row actions by period dates instead of the raw id", () => {
+    const row = makeRow({});
+    render(
+      <PeriodTable
+        rows={[row]}
+        testIdPrefix="active"
+        onEdit={vi.fn()}
+        onPublish={vi.fn()}
+        onReopen={vi.fn()}
+        onArchive={vi.fn()}
+        onUnarchive={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+    const group = screen.getByRole("group", {
+      name: "Actions for May 4–10, 2026",
+    });
+    expect(group.getAttribute("aria-label")).not.toContain(row.id);
+    expect(
+      within(group).getByRole("button", {
+        name: "Edit period: May 4–10, 2026",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(group).getByRole("button", {
+        name: "Publish now: May 4–10, 2026",
+      }),
+    ).toBeInTheDocument();
+  });
 });

@@ -1,3 +1,4 @@
+import { shortItemLabel } from "../../../../../shared/lib/format/short-label";
 import type { OpenWorkRegisterItem } from "./open-work-register-model";
 import type { OpenWorkRegisterQuery } from "./use-open-work-register";
 
@@ -133,6 +134,7 @@ function OpenWorkRow({
       <button
         type="button"
         disabled={disabled}
+        aria-label={`${item.action.label}: ${shortItemLabel(historical.text)}`}
         data-overview-focus={`open-work:${historical.stableId}`}
         className={ACTION_BUTTON}
         onClick={() => onOpen(item)}

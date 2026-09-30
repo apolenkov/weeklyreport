@@ -354,7 +354,7 @@ async function chooseMove(
   await user.click(await within(preview).findByText("More actions"));
   await user.click(
     await within(preview).findByRole("button", {
-      name: `Move ${text} to ${destination}`,
+      name: `Move to ${destination}: ${text}`,
     }),
   );
 }
@@ -581,7 +581,9 @@ describe("LeadForm Overview", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", { name: "Replan deferred work" }),
+      await screen.findByRole("button", {
+        name: "Replan deferred work: Deferred provider rollout",
+      }),
     );
     const composer = screen.getByRole("form", { name: "Resolve plan" });
     expect(
@@ -603,9 +605,78 @@ describe("LeadForm Overview", () => {
     });
     await pollUntil(() =>
       expect(
-        screen.queryByRole("button", { name: "Replan deferred work" }),
+        screen.queryByRole("button", {
+          name: "Replan deferred work: Deferred provider rollout",
+        }),
       ).not.toBeInTheDocument(),
     );
+  });
+
+  it("asks before discarding edited plan text on Escape and Cancel", async () => {
+    const user = userEvent.setup();
+    const openWork: LeadOpenWorkHistoryOccurrence = {
+      source: "published",
+      reportId: "a0000000-0000-4000-8000-000000000020",
+      reportSectionId: "a0000000-0000-4000-8000-000000000023",
+      periodStart: new Date("2026-07-06T00:00:00.000Z"),
+      periodEnd: new Date("2026-07-12T00:00:00.000Z"),
+      parent: { kind: "product", id: PROJECT_ID, name: "Payments" },
+      item: {
+        id: "a0000000-0000-4000-8000-000000000021",
+        stableId: "a0000000-0000-4000-8000-000000000022",
+        projectId: PROJECT_ID,
+        activityId: null,
+        type: "next",
+        text: "Deferred provider rollout",
+        tag: "delivery",
+        workflowStatus: "postponed",
+        carriedOver: false,
+        pausedReason: null,
+        stageNames: ["Development"],
+      },
+    };
+    render(
+      <Wrapper openWork={[openWork]}>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Replan deferred work: Deferred provider rollout",
+      }),
+    );
+    // An untouched composer closes without asking.
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("form", { name: "Resolve plan" })).toBeNull();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Replan deferred work: Deferred provider rollout",
+      }),
+    );
+    const text = screen.getByRole("textbox", {
+      name: "Next-period commitment",
+    });
+    await user.type(text, " edited");
+    await user.keyboard("{Escape}");
+    expect(
+      await screen.findByRole("heading", { name: "Discard changes?" }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Keep editing" }));
+    expect(screen.getByRole("form", { name: "Resolve plan" })).toBeVisible();
+    expect(
+      screen.getByRole("textbox", { name: "Next-period commitment" }),
+    ).toHaveValue("Deferred provider rollout edited");
+
+    await user.click(
+      within(screen.getByRole("form", { name: "Resolve plan" })).getByRole(
+        "button",
+        { name: "Cancel" },
+      ),
+    );
+    await user.click(await screen.findByRole("button", { name: "Discard" }));
+    expect(screen.queryByRole("form", { name: "Resolve plan" })).toBeNull();
   });
 
   it("marks active work done through the canonical progress editor", async () => {
@@ -755,7 +826,9 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
     await user.click(
-      await screen.findByRole("button", { name: "Replan deferred work" }),
+      await screen.findByRole("button", {
+        name: "Replan deferred work: Deferred provider rollout",
+      }),
     );
     const form = screen.getByRole("form", { name: "Resolve plan" });
     await user.click(within(form).getByRole("button", { name: "Won't do" }));
@@ -1412,7 +1485,7 @@ describe("LeadForm Overview", () => {
     const preview = await itemPreview("Current work");
     await user.click(await within(preview).findByText("More actions"));
     const opener = await within(preview).findByRole("button", {
-      name: "Move Current work to next week",
+      name: "Move to next week: Current work",
     });
     expect(opener).toHaveAttribute(
       "data-overview-focus",

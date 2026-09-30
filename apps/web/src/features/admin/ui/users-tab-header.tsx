@@ -1,5 +1,6 @@
 "use client";
 
+import { countLabel } from "../../../shared/lib/format/pluralize";
 import { PlusIcon } from "../../../shared/ui/icons/action-icons";
 import {
   TabFilter,
@@ -89,7 +90,7 @@ export function UsersTabHeader({
     <TabHeader
       title="Users"
       description="Manage group members and their roles."
-      count={`${userCount} users`}
+      count={countLabel(userCount, "user", "users")}
       search={
         <UsersFilterBar
           filters={filters}

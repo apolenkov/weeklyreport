@@ -291,10 +291,14 @@ async function openWorkRow(text: string) {
   return row;
 }
 
+function openWorkActionName(action: string, text: string): string {
+  return `${action}: ${shortItemLabel(text)}`;
+}
+
 async function openWorkOutcome(text: string, action: string): Promise<void> {
   await waitOpenWork();
   const row = await openWorkRow(text);
-  const refs = refsByRole(row, "button", action);
+  const refs = refsByRole(row, "button", openWorkActionName(action, text));
   assert.equal(
     refs.length,
     1,
@@ -312,7 +316,7 @@ async function recoverWork(
   outcome: "Continue" | "Plan next",
 ) {
   const row = await openWorkRow(text);
-  const refs = refsByRole(row, "button", action);
+  const refs = refsByRole(row, "button", openWorkActionName(action, text));
   assert.equal(
     refs.length,
     1,
@@ -585,11 +589,11 @@ void test("More actions edits details and moves between current and next week", 
   await saveUpdate("Next week");
   await reloadOverview();
   await assertPlacement("Next week", text);
-  await moreAction(text, `Move ${text} to this week`);
+  await moreAction(text, `Move to this week: ${text}`);
   await saveUpdate("Current week");
   await reloadOverview();
   await assertPlacement("Current week", text);
-  await moreAction(text, `Move ${text} to next week`);
+  await moreAction(text, `Move to next week: ${text}`);
   await saveUpdate("Next week");
   await reloadOverview();
   await assertPlacement("Next week", text);
@@ -815,7 +819,11 @@ void test("open work Done records the changed result and readable prior text", a
   await openLeadReport();
   await waitOpenWork();
   const row = await openWorkRow(OPEN_WORK_FIXTURE.continue);
-  const controls = refsByRole(row, "button", "Continue work");
+  const controls = refsByRole(
+    row,
+    "button",
+    openWorkActionName("Continue work", OPEN_WORK_FIXTURE.continue),
+  );
   assert.equal(
     controls.length,
     1,
@@ -1016,7 +1024,7 @@ for (const week of ["Current week", "Next week"] as const) {
     );
     await moreAction(
       sourceText,
-      `Move ${shortItemLabel(sourceText)} to ${week === "Current week" ? "this week" : "next week"}`,
+      `Move to ${week === "Current week" ? "this week" : "next week"}: ${shortItemLabel(sourceText)}`,
     );
     const form = await namedBlock("form", `${week} update for ${parent}`);
     assert.ok(form.includes("No changes are made until you save."));
@@ -1088,7 +1096,11 @@ void test("Parent and stages retains pending outcome details and saves the chose
   await waitOpenWork();
   const before = await writeCount();
   const row = await openWorkRow(OPEN_WORK_FIXTURE.continue);
-  const controls = refsByRole(row, "button", "Continue work");
+  const controls = refsByRole(
+    row,
+    "button",
+    openWorkActionName("Continue work", OPEN_WORK_FIXTURE.continue),
+  );
   assert.equal(
     controls.length,
     1,

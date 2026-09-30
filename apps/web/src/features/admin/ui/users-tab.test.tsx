@@ -785,6 +785,17 @@ describe("UsersTab — role label rendering", () => {
     ["viewer", "Viewer", "var(--color-muted)", "var(--color-muted-foreground)"],
   ] as const;
 
+  it("pluralizes the user count badge", () => {
+    renderTab([USER]);
+    expect(screen.getByText("1 user")).toBeInTheDocument();
+    expect(screen.queryByText("1 users")).toBeNull();
+  });
+
+  it("uses the plural form for several users", () => {
+    renderTab([USER, { ...USER, id: "u2" }]);
+    expect(screen.getByText("2 users")).toBeInTheDocument();
+  });
+
   it("contains the wide table in its local horizontal scroll surface", () => {
     renderTab();
 
