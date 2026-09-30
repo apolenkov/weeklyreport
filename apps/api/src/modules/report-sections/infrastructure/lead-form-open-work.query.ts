@@ -141,13 +141,11 @@ async function occurrencesForReport(
     return [];
   }
 
-  const source = await resolveStatusOverviewPredecessor(
-    tx,
-    report,
+  const source = await resolveStatusOverviewPredecessor(tx, report, {
     authorId,
-    authorId,
-    "lead",
-  );
+    viewerId: authorId,
+    role: "lead",
+  });
   if (
     source.availability === "unavailable" &&
     source.reason === "invalid_published_snapshot"

@@ -193,13 +193,12 @@ export class LeadFormService {
     role?: Role,
     requestedAuthorId?: string,
   ): Promise<GetByPeriodResult> {
-    return readByPeriod(
-      this.repository,
+    return readByPeriod(this.repository, {
       reportId,
       userId,
       role,
       requestedAuthorId,
-    );
+    });
   }
 
   async getStatusOverview(
@@ -208,13 +207,12 @@ export class LeadFormService {
     role: Role,
     requestedAuthorId?: string,
   ) {
-    return readStatusOverview(
-      this.repository,
+    return readStatusOverview(this.repository, {
       reportId,
       userId,
       role,
       requestedAuthorId,
-    );
+    });
   }
 
   async getCrossAuthors(

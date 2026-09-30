@@ -12,14 +12,19 @@ import {
   type ReopenEligibilityFacts,
 } from "./lead-form-shared";
 
+export interface ByPeriodRequest {
+  readonly reportId: string;
+  readonly userId: string;
+  readonly role?: Role | undefined;
+  readonly requestedAuthorId?: string | undefined;
+}
+
 // Lead-only shared-product scope; null for head/admin/own/no-access (see lead-form-cross-author-scope).
 export async function resolveCrossAuthorScope(
   repository: LeadFormRepository,
-  reportId: string,
-  userId: string,
-  role: Role | undefined,
-  requestedAuthorId: string | undefined,
+  request: ByPeriodRequest,
 ): Promise<ReadonlySet<string> | null> {
+  const { reportId, userId, role, requestedAuthorId } = request;
   if (
     role !== "lead" ||
     requestedAuthorId === undefined ||
@@ -68,15 +73,15 @@ export async function assertHeadTargetInGroup(
 // See openspec/specs/lead-form-cross-author-scope.
 export async function readSectionForByPeriod(
   repository: LeadFormRepository,
-  reportId: string,
+  request: ByPeriodRequest,
   sectionAuthorId: string,
-  userId: string,
   isHeadCrossRead: boolean,
 ): Promise<{
   section: ReportSectionReadModel;
   readOnly: boolean;
   reopenFacts: ReopenEligibilityFacts;
 }> {
+  const { reportId, userId } = request;
   const result = isHeadCrossRead
     ? await repository.getSectionForPeriodAsGroupPeer(
         reportId,
