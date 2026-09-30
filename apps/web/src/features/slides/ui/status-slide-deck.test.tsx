@@ -180,6 +180,64 @@ describe("StatusSlideDeck — by-product grid article", () => {
     );
   });
 
+  it.each(["lead", "head"] as const)(
+    "labels every stacked mobile category on the %s deck without moving records",
+    (mode) => {
+      renderDeck(
+        makeSection({
+          items: [item(), item({ type: "next", text: "next item" })],
+          risks: [risk()],
+          decisions: [
+            {
+              id: "decision-1",
+              text: "own decision",
+              owner: "",
+              impact: "",
+              productId: "p1",
+            },
+          ],
+        }),
+        mode,
+      );
+
+      expect(screen.getByTestId("slide-article")).toHaveClass(
+        "min-w-0",
+        "sm:min-w-[var(--slide-canvas-min-w)]",
+      );
+      expect(screen.getByTestId("slide-column-headers")).toHaveClass(
+        "hidden",
+        "sm:grid",
+      );
+      const card = expectDefined(
+        screen.getAllByTestId("slide-product-card")[0],
+      );
+      const headings = within(card).getAllByRole("heading", { level: 4 });
+      expect(headings.map((heading) => heading.textContent)).toEqual([
+        "Current work",
+        "Next focus",
+        "Risks",
+        "Decisions",
+      ]);
+      for (const [label, text] of [
+        ["Current work", "own item"],
+        ["Next focus", "next item"],
+        ["Risks", "own risk"],
+        ["Decisions", "own decision"],
+      ] as const) {
+        const heading = within(card).getByRole("heading", { name: label });
+        expect(heading).toHaveClass("sm:hidden");
+        expect(heading.parentElement?.parentElement).toHaveClass(
+          "grid-cols-1",
+          "sm:grid-cols-[1.35fr_1.25fr_0.85fr_0.85fr]",
+        );
+        expect(heading.parentElement).toContainElement(
+          within(card).getByLabelText(label),
+        );
+        expect(within(card).getByLabelText(label)).toHaveTextContent(text);
+      }
+    },
+  );
+
   it("renders every row without count-based truncation", () => {
     const many = Array.from({ length: 12 }, (_, i) =>
       item({ text: `row number ${String(i)}` }),
