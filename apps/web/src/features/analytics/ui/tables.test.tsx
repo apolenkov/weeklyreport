@@ -12,7 +12,7 @@ import { LeadSubmissionsTable } from "./lead-submissions.table";
 import { PeriodComparisonTable } from "./period-comparison.table";
 import { TrafficLightHistoryTable } from "./traffic-light-history.table";
 
-const periods = ["2026-08-23", "2026-08-30"];
+const periods = ["2026-08-23", "2026-08-30"] as const;
 
 describe("TrafficLightHistoryTable", () => {
   it("renders the empty-state message when no periods", () => {
