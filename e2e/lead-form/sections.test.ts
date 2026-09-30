@@ -22,6 +22,7 @@ import { assertFocused } from "./focus.js";
 import {
   clickBackdrop,
   LEAD_FORM_FIXTURE,
+  modalScopeScript,
   roleText,
   saveDraft,
   type Scope,
@@ -158,15 +159,9 @@ async function waitModal(
   role: "dialog" | "alertdialog" = "dialog",
   session?: string,
 ): Promise<void> {
-  await command(
-    [
-      "wait",
-      "--fn",
-      String.raw`Array.from(document.getElementsByTagName('div')).some(element => element.getAttribute('role') === ${JSON.stringify(role)} && element.getAttribute('aria-modal') === 'true' && element.getClientRects().length > 0 && (${JSON.stringify(name)} === undefined || (element.getAttribute('aria-label') ?? (element.getAttribute('aria-labelledby') ?? '').split(/\s+/).map(id => document.getElementById(id)?.textContent?.trim() ?? '').join(' ')) === ${JSON.stringify(name)}))`,
-    ],
-    session,
-  );
-  await waitScope({ role, name: name ?? /.*/u }, session);
+  const scope: Scope = { role, name: name ?? /.*/u };
+  await command(["wait", "--fn", modalScopeScript(scope)], session);
+  await waitScope(scope, session);
 }
 
 async function assertModal(name: string): Promise<void> {

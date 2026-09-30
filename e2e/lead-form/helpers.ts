@@ -75,6 +75,11 @@ export async function scopedRef(
   );
 }
 
+/** Page-side expression: true when some `div` matches the scope and is a visible `aria-modal` dialog. */
+export function modalScopeScript(scope: Scope): string {
+  return `Array.from(document.getElementsByTagName('div')).some(element => ${scopePredicate(scope)} && element.getAttribute('aria-modal') === 'true' && element.getClientRects().length > 0)`;
+}
+
 function scopePredicate(scope: Scope): string {
   const name =
     scope.name instanceof RegExp

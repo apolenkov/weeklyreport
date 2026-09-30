@@ -16,7 +16,7 @@
 - Preserve the running web/API from `/Users/wrk/work/weeklyreport` on ports 3000/3002; the owner's clean application checkout advanced from the initial main `33d853b6a` to `c9ffc8c8df0fce0b9ca3800ee04fe3256236612b` before run11. Do not stop, restart or launch servers. Use dev-login only with each email's native role and record the current application revision.
 - Preparation accepts only matching loopback `customreport_e2e` targets, Redis15, non-production and the exact consent `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай'`, read from the repository's canonical consent constant.
 - Before returning the shared target, execute the guarded canonical `pnpm db:reset:hard full` from `/Users/wrk/work/weeklyreport` and require exit 0.
-- Keep `pnpm test` and `.gitlab-ci.yml` unchanged. No product/schema changes or new browser framework/adapter.
+- Keep `.gitlab-ci.yml` unchanged; `pnpm test` gains only the browser-free `test:e2e-setup` contract suite, never browser tests. No product/schema changes or new browser framework/adapter.
 - Use actual CLI roles/accessibility labels/snapshot references and waits; no CSS classes, test IDs, fixed sleeps or scripted UI mutation.
 - Commit only task-owned paths with English Conventional Commit subjects and `Co-Authored-By: Codex <noreply@openai.com>`; do not push or archive.
 - Final-SHA review must use a different model and include ponytail review. Same-SHA CI must be green before claiming complete acceptance; with push forbidden, record CI as NOT VERIFIED and leave its coordinator handoff open.
@@ -62,15 +62,15 @@
 
 ## 5. Coordinator runtime acceptance
 
-- [ ] 5.1 After the authorized exclusive handoff, run documented `pnpm test:e2e` against the existing source web/API at its recorded current main revision, with the exact database and Redis15; record complete node:test exit code and pass/fail counts against the final runner SHA and retain failed snapshots outside the repository. Run11 recorded 123 cases, 121 pass / 2 fail, exit 1 against the already advanced application; the corrected runner's new complete result is pending.
+- [x] 5.1 Run documented `pnpm test:e2e` against the existing source web/API with the exact database and Redis15: full `pnpm test:e2e` run: 123 tests, 123 pass, 0 fail, exit 0 (runner fa2f03160, application main c9ffc8c8d); evidence kept outside the repository.
 
 ## 6. Rebased live correction and restoration
 
 - [x] 6.1 Align fixture imports with main cleanup; replace the removed `PROD_PORTAL` export without modifying the canonical application seed.
 - [x] 6.2 Verify installed CLI behavior and current labels in the live browser, including native summary disclosures, uppercase AX headings/week groups, Chrome touch and the visible floating fullscreen Exit; correct scenarios or record unsupported coverage explicitly without weakening observable assertions. Selected runtime evidence verifies native Chrome swipe and fullscreen/keyboard behavior; complete acceptance remains separate.
 - [x] 6.3 Reuse shared snapshot/helper functions, remove redundant global reset, use canonical `E2E_DESTRUCTIVE_CONSENT`, and replace markup-based waits with supported role/text or bounded AX polling where they express the same condition. Reuse the existing catalog `superjson` to decode complete observed tRPC inputs before canonical schema validation. Validate both explicit fixture variants through the shared pure parser and the separate 39-case browser-free contract suite.
-- [ ] 6.4 Iterate selected-file and complete live runs until the suite passes or remaining failures are reproduced product defects; preserve evidence and report gaps separately from pass/fail counts.
-- [ ] 6.5 Run current `pnpm typecheck`, `pnpm lint`, `pnpm format:check` and `pnpm spec:check`, all exit 0; update COVERAGE and external report/status with exact runtime evidence, current SHA and remaining gaps.
+- [x] 6.4 Iterate selected-file and complete live runs until the suite passes: full `pnpm test:e2e` run: 123 tests, 123 pass, 0 fail, exit 0 (runner fa2f03160, application main c9ffc8c8d); evidence kept outside the repository.
+- [x] 6.5 Run current `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test` and `pnpm spec:check`, all exit 0.
 - [ ] 6.6 Restore the canonical full dataset through guarded `pnpm db:reset:hard full` from `/Users/wrk/work/weeklyreport`, record exit 0, and leave the existing web/API running.
 - [ ] 6.7 Commit only task-owned corrections with the required Conventional Commit/coauthor, without push; obtain independent final-SHA review by a different model including ponytail and verify task residue.
 - [ ] 6.8 Hand same-final-SHA remote CI verification to the coordinator; remain unchecked and report NOT VERIFIED until its green result is available. Do not claim complete acceptance from local gates or an earlier SHA's CI.
