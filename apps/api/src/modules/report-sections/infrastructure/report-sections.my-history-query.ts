@@ -1,4 +1,8 @@
-import { requirePublishedSnapshot } from "@customreport/report-persistence";
+import {
+  mapPrismaToReportSection,
+  reportSectionFullInclude,
+  requirePublishedSnapshot,
+} from "@customreport/report-persistence";
 import type {
   MyHistoryResult,
   PublishedReportSectionReadModel,
@@ -172,6 +176,7 @@ function publishedHistoryRows(
         status: project.trafficLight,
         updatedAt: timestamp,
       })),
+      productLights: section.projects.map((project) => project.trafficLight),
       stageStatuses: section.projects.flatMap((project) =>
         publishedStageStatusRows(project, timestamp),
       ),
@@ -211,7 +216,10 @@ async function queryMyHistoryPageInTransaction(
       { id: "desc" },
     ],
     take: limit + 1,
+    // The full section include lets the report's own mapper derive each
+    // product's effective light, so the card cannot drift from the report.
     include: {
+      ...reportSectionFullInclude,
       report: {
         select: {
           id: true,
@@ -222,15 +230,6 @@ async function queryMyHistoryPageInTransaction(
           publishedAt: true,
         },
       },
-      items: {
-        select: { projectId: true, updatedAt: true, priorityRank: true },
-      },
-      risks: { select: { projectId: true, updatedAt: true } },
-      decisions: { select: { productId: true, updatedAt: true } },
-      projectStatuses: {
-        select: { projectId: true, status: true, updatedAt: true },
-      },
-      stageStatuses: { select: { projectId: true, updatedAt: true } },
     },
   });
   const publishedReports = await prisma.report.findMany({
@@ -248,6 +247,9 @@ async function queryMyHistoryPageInTransaction(
   const candidates: HistoryCandidate[] = [
     ...liveRows.map((row) => ({
       ...row,
+      productLights: mapPrismaToReportSection(row).projects.map(
+        (project) => project.trafficLight,
+      ),
       cursorId: row.id,
       cursorSource: "live" as const,
     })),

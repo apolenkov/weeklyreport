@@ -18,6 +18,7 @@ import {
   type LeadCompletionActionContract,
   LeadCompletionActions,
 } from "./lead-completion-actions";
+import { OfflineSaveNotice } from "./offline-save-notice";
 
 export interface LeadFormHeaderWriteActions {
   readonly fillFromPending: boolean;
@@ -147,10 +148,12 @@ function ToolbarSecondaryButton({
 function SubmittedSectionAction({
   authorRole,
   canRequestReopen,
+  hasPendingReopen,
   writeActions,
 }: {
   readonly authorRole: LeadFormLoadedViewModel["currentUser"]["authorRole"];
   readonly canRequestReopen: boolean;
+  readonly hasPendingReopen: boolean;
   readonly writeActions: LeadFormHeaderWriteActions;
 }) {
   if (!isLead(authorRole)) {
@@ -161,6 +164,16 @@ function SubmittedSectionAction({
         onClick={writeActions.handleRevoke}
         disabled={writeActions.revokePending}
       />
+    );
+  }
+  if (hasPendingReopen) {
+    return (
+      <span
+        role="status"
+        className="inline-flex h-[var(--toolbar-control-h)] items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-4 text-sm font-semibold text-[var(--color-muted-foreground)]"
+      >
+        Reopen requested
+      </span>
     );
   }
   if (!canRequestReopen) return null;
@@ -225,6 +238,7 @@ function HeaderActionToolbar({
 }: Omit<LeadFormHeaderActionsProps, "isSlidesMode">) {
   const {
     canRequestReopen,
+    hasPendingReopen,
     currentUser,
     archivedHidden,
     fillFromLocked,
@@ -249,6 +263,7 @@ function HeaderActionToolbar({
         <SubmittedSectionAction
           authorRole={currentUser.authorRole}
           canRequestReopen={canRequestReopen}
+          hasPendingReopen={hasPendingReopen}
           writeActions={writeActions}
         />
       )}
@@ -280,6 +295,11 @@ export function LeadFormHeaderActions({
           periodLabel={header.periodLabel}
           isReadOnly={header.viewModel.isReadOnly}
         />
+        {!isSlidesMode && (header.announceAutosave ?? true) && (
+          <OfflineSaveNotice
+            saving={header.completionActions.autosave.isInFlight}
+          />
+        )}
         {!isSlidesMode && (
           <HeaderStatusBadge
             isSubmitted={header.isSubmitted}

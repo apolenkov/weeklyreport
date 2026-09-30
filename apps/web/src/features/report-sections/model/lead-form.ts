@@ -100,6 +100,7 @@ export interface MapLeadFormArgs {
     readOnly: boolean;
     // Server-computed lifecycle gate; the client never reconstructs policy.
     canRequestReopen?: boolean;
+    hasPendingReopen?: boolean;
   };
   history: readonly MyHistoryEntry[];
 }
@@ -117,6 +118,7 @@ export interface MappedLeadForm {
   readOnly: boolean;
   // Server-computed reopen control; the client never reconstructs lifecycle.
   canRequestReopen: boolean;
+  hasPendingReopen: boolean;
 }
 
 // Inputs must be settled before mapping; page guards own loading checks.
@@ -149,5 +151,6 @@ export function mapLeadFormData(args: MapLeadFormArgs): MappedLeadForm {
     },
     readOnly,
     canRequestReopen: args.byPeriod.canRequestReopen ?? false,
+    hasPendingReopen: args.byPeriod.hasPendingReopen ?? false,
   };
 }

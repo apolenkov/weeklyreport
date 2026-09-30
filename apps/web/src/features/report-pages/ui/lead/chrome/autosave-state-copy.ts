@@ -28,7 +28,14 @@ const AUTOSAVE_COPY: Record<AutosaveState, AutosaveCopy> = {
   },
 };
 
-export function autosaveStatusCopy(state: AutosaveState): string {
+export const OFFLINE_SAVING_STATUS =
+  "You’re offline — changes will save when the connection returns";
+
+export function autosaveStatusCopy(
+  state: AutosaveState,
+  online = true,
+): string {
+  if (state === "saving" && !online) return OFFLINE_SAVING_STATUS;
   return AUTOSAVE_COPY[state].status;
 }
 

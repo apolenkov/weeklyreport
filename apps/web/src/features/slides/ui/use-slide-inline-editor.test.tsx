@@ -265,6 +265,7 @@ function makeFormData(): MappedLeadForm {
     },
     readOnly: false,
     canRequestReopen: false,
+    hasPendingReopen: false,
   };
 }
 

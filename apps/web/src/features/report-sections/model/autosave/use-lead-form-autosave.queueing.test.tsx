@@ -532,6 +532,37 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
     expect(onVersionChange).toHaveBeenCalledWith(7);
   });
 
+  it.each([
+    ["a raw browser transport failure", new TypeError("Failed to fetch")],
+    ["an error without a message", new Error("")],
+  ])("shows one actionable toast for %s", async (_label, failure) => {
+    const { wrapper, writePort } = buildHarness({
+      mutationFn: () => Promise.reject(failure),
+    });
+    const { rerender } = renderHook(
+      ({ payload }: { payload: DraftSavePayload | null }) =>
+        useLeadFormAutosave({
+          writePort,
+          reportSectionId: SECTION_ID,
+          payload,
+          enabled: true,
+          version: 1,
+          onVersionChange: vi.fn(),
+          debounceMs: 3000,
+        }),
+      { wrapper, initialProps: { payload: null as DraftSavePayload | null } },
+    );
+
+    rerender({ payload: makePayload("first") });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+
+    expect(toast.error).toHaveBeenCalledExactlyOnceWith(
+      "Autosave failed. Check your connection and use Save to retry.",
+    );
+  });
+
   it("routes a stale-version CONFLICT to onConflict and suppresses the generic toast", async () => {
     const onConflict = vi.fn();
     const conflictError = new LeadFormWriteError("conflict", "stale");

@@ -1,6 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { onlineManager } from "@tanstack/react-query";
+import { act, render, screen } from "@testing-library/react";
 import { createElement } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { LeadFormLoadedViewModel } from "../../../../report-sections";
 import type { AutosaveSnapshot } from "../../../../report-sections/client";
@@ -153,5 +154,115 @@ describe("LeadFormHeaderActions", () => {
     );
     expect(screen.queryByRole("status")).toBeNull();
     expect(screen.getByText("Save failed")).toBeInTheDocument();
+  });
+
+  describe("submitted lead reopen state", () => {
+    const writeActions = {
+      fillFromPending: false,
+      handleFillFrom: vi.fn(),
+      reopenPending: false,
+      openReopenDialog: vi.fn(),
+      revokePending: false,
+      handleRevoke: vi.fn(),
+    };
+    const renderSubmitted = (overrides: Partial<LeadFormLoadedViewModel>) =>
+      render(
+        <LeadFormHeaderActions
+          viewModel={{ ...viewModel, ...overrides }}
+          writeActions={writeActions}
+          completionActions={{
+            autosave,
+            onSubmit: vi.fn(),
+            submitDisabled: false,
+          }}
+          completionSentinelRef={{ current: null }}
+          showCompletionActions
+          isSlidesMode
+          isSubmitted
+          isForeignSlidesDeck={false}
+        />,
+      );
+
+    it("shows a Reopen requested status instead of the action while a request is pending", () => {
+      renderSubmitted({ canRequestReopen: false, hasPendingReopen: true });
+
+      expect(screen.getByRole("status")).toHaveTextContent("Reopen requested");
+      expect(
+        screen.queryByRole("button", { name: "Request reopen" }),
+      ).toBeNull();
+    });
+
+    it("offers Request reopen when no request is pending", () => {
+      renderSubmitted({ canRequestReopen: true, hasPendingReopen: false });
+
+      expect(
+        screen.getByRole("button", { name: "Request reopen" }),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("status")).toBeNull();
+    });
+  });
+
+  describe("offline save notice", () => {
+    afterEach(() => {
+      onlineManager.setOnline(true);
+    });
+
+    const renderSaving = (isInFlight: boolean, announceAutosave = true) =>
+      render(
+        <LeadFormHeaderActions
+          viewModel={{ ...viewModel, isReadOnly: false }}
+          writeActions={{
+            fillFromPending: false,
+            handleFillFrom: vi.fn(),
+            reopenPending: false,
+            openReopenDialog: vi.fn(),
+            revokePending: false,
+            handleRevoke: vi.fn(),
+          }}
+          completionActions={{
+            autosave: { ...autosave, state: "saving", isInFlight },
+            onSubmit: vi.fn(),
+            submitDisabled: false,
+          }}
+          completionSentinelRef={{ current: null }}
+          showCompletionActions
+          isSlidesMode={false}
+          isSubmitted={false}
+          isForeignSlidesDeck={false}
+          announceAutosave={announceAutosave}
+        />,
+      );
+
+    it("announces why a paused save is stuck and clears once back online", () => {
+      onlineManager.setOnline(false);
+      renderSaving(true);
+
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "You’re offline — changes will save when the connection returns",
+      );
+
+      act(() => {
+        onlineManager.setOnline(true);
+      });
+      expect(screen.queryByRole("alert")).toBeNull();
+    });
+
+    it("leaves the announcement to pages with their own autosave live region", () => {
+      onlineManager.setOnline(false);
+      renderSaving(true, false);
+
+      expect(screen.queryByRole("alert")).toBeNull();
+    });
+
+    it("stays silent while offline without a save in flight, and while online", () => {
+      onlineManager.setOnline(false);
+      const idle = renderSaving(false);
+      expect(screen.queryByRole("alert")).toBeNull();
+      idle.unmount();
+
+      onlineManager.setOnline(true);
+      renderSaving(true);
+      expect(screen.queryByRole("alert")).toBeNull();
+    });
   });
 });

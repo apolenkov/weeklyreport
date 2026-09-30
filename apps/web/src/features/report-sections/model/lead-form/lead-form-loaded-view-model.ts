@@ -42,6 +42,8 @@ export interface LeadFormLoadedInput {
   readonly serverReadOnly: boolean;
   // Server-computed; the client must not reconstruct reopen policy.
   readonly canRequestReopen: boolean;
+  // The section already holds a pending reopen request (server-computed).
+  readonly hasPendingReopen?: boolean;
   readonly publishedLineage: PublishedLineage;
   readonly history: readonly MyHistoryEntry[];
   // Status-only cross-author data drives stage chips and is always fetched.
@@ -75,6 +77,7 @@ export interface LeadFormLoadedViewModel {
   readonly unifiedEntries: UnifiedActivityEntry[];
   readonly currentUser: LeadCurrentUser;
   readonly canRequestReopen: boolean;
+  readonly hasPendingReopen: boolean;
   readonly hasArchivedPeriods: boolean;
   // Archived periods exist but the archive toggle keeps them out of the list.
   readonly archivedHidden: boolean;
@@ -194,6 +197,7 @@ function assembleLoadedViewModel({
     ),
     currentUser: data.currentUser,
     canRequestReopen: data.canRequestReopen,
+    hasPendingReopen: data.hasPendingReopen,
     hasArchivedPeriods,
     archivedHidden: hasArchivedPeriods && !input.showArchivePeriods,
     visiblePeriods,
@@ -214,6 +218,7 @@ export function buildLeadFormLoadedViewModel(
       section: input.draftSection,
       readOnly: input.serverReadOnly,
       canRequestReopen: input.canRequestReopen,
+      hasPendingReopen: input.hasPendingReopen ?? false,
     },
     history: input.history,
   });

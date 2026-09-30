@@ -16,6 +16,7 @@ interface ChoiceChipRowProps<T extends string> {
   readonly value: T;
   readonly onSelect: (value: T) => void;
   readonly ariaLabelledBy?: string | undefined;
+  readonly ariaDescribedBy?: string | undefined;
 }
 
 const CHIP_IDLE_BORDER = "var(--color-border-strong)";
@@ -25,11 +26,13 @@ export function ChoiceChipRow<T extends string>({
   value,
   onSelect,
   ariaLabelledBy,
+  ariaDescribedBy,
 }: ChoiceChipRowProps<T>) {
   return (
     <div
       className="flex flex-wrap gap-2"
       role="group"
+      aria-describedby={ariaDescribedBy}
       {...(ariaLabelledBy
         ? { "aria-labelledby": ariaLabelledBy }
         : { "aria-label": "Options" })}
