@@ -123,14 +123,20 @@ redis.call('SET', KEYS[2], ARGV[2], 'EX', ARGV[3])
 return 1
 `;
 
+interface CacheRuntime {
+  readonly redis: Redis;
+  readonly logger: Logger;
+  readonly ttlSeconds: number;
+  readonly generationKey: string;
+}
+
 async function writeIfGenerationMatches(
-  redis: Redis,
-  generationKey: string,
+  runtime: CacheRuntime,
   namespaced: string,
   expectedGeneration: string,
   serialized: string,
-  ttlSeconds: number,
 ): Promise<boolean> {
+  const { redis, generationKey, ttlSeconds } = runtime;
   const result: unknown = await redis.eval(
     WRITE_IF_GENERATION_MATCHES,
     2,
@@ -179,15 +185,13 @@ async function readCacheState(
 }
 
 async function getOrComputeImpl<T>(
-  redis: Redis,
-  logger: Logger,
-  namespaced: string,
-  key: string,
-  ttlSeconds: number,
+  runtime: CacheRuntime,
+  entry: { readonly key: string; readonly namespaced: string },
   fn: () => Promise<T>,
   validate: ((value: unknown) => boolean) | undefined,
-  generationKey: string,
 ): Promise<T> {
+  const { redis, logger, generationKey } = runtime;
+  const { key, namespaced } = entry;
   const state = await readCacheState(redis, namespaced, generationKey);
   if (state.ok && state.cached !== null) {
     const parsed = parseCachedValue(logger, key, state.cached, validate);
@@ -219,12 +223,10 @@ async function getOrComputeImpl<T>(
   }
   try {
     const written = await writeIfGenerationMatches(
-      redis,
-      generationKey,
+      runtime,
       namespaced,
       generationBefore,
       serialized.value,
-      ttlSeconds,
     );
     if (!written) {
       // An invalidation committed while this compute was running, so its input
@@ -288,6 +290,7 @@ export function createRedisReadThroughCache(
     ...buildFailOpenRedisConnectionOptions(connection),
   });
   const generationKey = `${keyPrefix}${GENERATION_KEY}`;
+  const runtime: CacheRuntime = { redis, logger, ttlSeconds, generationKey };
   // A Redis blip must not crash the process, but it also must not pass
   // unseen: log AND count every connection-level error event.
   redis.on("error", (error: unknown) => {
@@ -305,14 +308,10 @@ export function createRedisReadThroughCache(
       validate?: (value: unknown) => value is T,
     ): Promise<T> =>
       getOrComputeImpl(
-        redis,
-        logger,
-        `${keyPrefix}${key}`,
-        key,
-        ttlSeconds,
+        runtime,
+        { key, namespaced: `${keyPrefix}${key}` },
         fn,
         validate,
-        generationKey,
       ),
 
     invalidateByPrefix: async (prefix: string): Promise<void> => {

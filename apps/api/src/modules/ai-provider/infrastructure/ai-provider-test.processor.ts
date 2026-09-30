@@ -1,12 +1,16 @@
 import type { AiProviderTestOutcome } from "@customreport/shared";
+import { Inject, Injectable } from "@nestjs/common";
 import { type Job, UnrecoverableError } from "bullmq";
-import type { ClsService } from "nestjs-cls";
+import { ClsService } from "nestjs-cls";
 
 import { RawBullMqProcessor } from "../../../infrastructure/bullmq/raw-bullmq-processor.js";
-import type { WorkerLivenessRegistry } from "../../../infrastructure/bullmq/worker-liveness.registry.js";
+import { WorkerLivenessRegistry } from "../../../infrastructure/bullmq/worker-liveness.registry.js";
+import { ENV_CONFIG } from "../../../infrastructure/config/config.module.js";
 import type { EnvConfig } from "../../../infrastructure/config/env.schema.js";
+import { APP_LOGGER } from "../../../lib/audit-logger.js";
 import type { AppLogger } from "../../../lib/logger.js";
 import { AiProviderConfigurationService } from "../application/ai-provider.service.js";
+import type { ProviderExecutionCompletion } from "./ai-provider.repository.executions.js";
 import { AiProviderConfigurationRepository } from "./ai-provider.repository.js";
 import {
   AI_PROVIDER_TEST_QUEUE_NAME,
@@ -14,16 +18,23 @@ import {
   aiProviderTestJobDataSchema,
 } from "./ai-provider-test.queue.js";
 
+@Injectable()
 export class AiProviderTestProcessor extends RawBullMqProcessor<AiProviderTestJobData> {
   protected readonly queueName = AI_PROVIDER_TEST_QUEUE_NAME;
   protected readonly spanName = "ai-provider-test.execute";
 
   constructor(
+    @Inject(AiProviderConfigurationRepository)
     private readonly repository: AiProviderConfigurationRepository,
+    @Inject(AiProviderConfigurationService)
     private readonly providerService: AiProviderConfigurationService,
+    @Inject(ENV_CONFIG)
     env: EnvConfig,
+    @Inject(APP_LOGGER)
     logger: AppLogger,
+    @Inject(ClsService)
     cls: ClsService | null,
+    @Inject(WorkerLivenessRegistry)
     workerLiveness?: WorkerLivenessRegistry,
   ) {
     super(env, logger, cls, workerLiveness);
@@ -60,8 +71,7 @@ export class AiProviderTestProcessor extends RawBullMqProcessor<AiProviderTestJo
         executionId,
         "inconclusive",
         AI_PROVIDER_TEST_JOB_FAILED,
-        [],
-        executionAttempt,
+        { checks: [], executionAttempt },
       );
     } catch {
       // A rejected terminal write leaves the row running for the manual queue
@@ -106,8 +116,7 @@ export class AiProviderTestProcessor extends RawBullMqProcessor<AiProviderTestJo
         executionId,
         classification.outcome,
         classification.failureCode,
-        [],
-        executionAttempt,
+        { checks: [], executionAttempt },
       );
     }
   };
@@ -116,22 +125,20 @@ export class AiProviderTestProcessor extends RawBullMqProcessor<AiProviderTestJo
     executionId: string,
     outcome: AiProviderTestOutcome,
     failureCode: string | null,
-    checks: Parameters<
-      AiProviderConfigurationRepository["completeExecution"]
-    >[3],
-    executionAttempt: number,
+    claim: Readonly<{
+      checks: ProviderExecutionCompletion["checks"];
+      executionAttempt: number;
+    }>,
   ): Promise<void> => {
     const completed = await this.repository.completeExecution(
       executionId,
       outcome,
-      failureCode,
-      checks,
-      executionAttempt,
+      { failureCode, ...claim },
     );
     if (completed) return;
     this.logger.warn("AI provider test execution claim was superseded", {
       executionId,
-      executionAttempt,
+      executionAttempt: claim.executionAttempt,
     });
   };
 }

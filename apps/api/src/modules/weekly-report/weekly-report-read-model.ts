@@ -163,10 +163,13 @@ export function buildLiveResult(
   report: WeeklyReportRow,
   leadSections: WeeklyReportLiveSection[],
   projects: WeeklyReportProjectRow[],
-  crossGroup: WeeklyReportRepositoryResult["crossGroup"],
-  progress: ReportProgress,
-  activeDeadlineRuleId: string | null,
+  summary: {
+    readonly crossGroup: WeeklyReportRepositoryResult["crossGroup"];
+    readonly progress: ReportProgress;
+    readonly activeDeadlineRuleId: string | null;
+  },
 ): WeeklyReportRepositoryResult {
+  const { crossGroup, progress, activeDeadlineRuleId } = summary;
   // Statuses come from the floored `leadSections` so a card cannot disagree
   // with the escalations in this same payload; membership still comes from the
   // scoped `projects` list, keeping untouched group-owned products present.

@@ -1,4 +1,3 @@
-import type { Prisma } from "@prisma/client";
 import {
   AiProviderLifecycle,
   AiProviderProfile,
@@ -6,9 +5,11 @@ import {
 } from "@prisma/client";
 import { describe, expect, it, type Mock, vi } from "vitest";
 
+import { createNullLogger } from "../../../lib/logger.js";
 import { providerEndpointIdentity } from "../domain/provider-profile.js";
 import type {
   AiProviderActivationReadiness,
+  AiProviderConfigurationRepository,
   NewAiProviderRevision,
   StoredAiProviderControl,
   StoredAiProviderRevision,
@@ -145,21 +146,7 @@ interface RepositoryHarness {
   createDraft: Mock<
     (input: NewAiProviderRevision) => Promise<StoredAiProviderRevision>
   >;
-  setTestResult: Mock<
-    (
-      id: string,
-      result: Prisma.InputJsonValue,
-      status: "passed" | "failed" | "inconclusive",
-      embeddingDimensions: number | null,
-      testedAt: Date,
-      currentLifecycle: AiProviderLifecycle,
-      identities?: Readonly<{
-        generationCompatibilityIdentity: string;
-        embeddingScopeIdentity: string;
-        compositeTestIdentity: string;
-      }>,
-    ) => Promise<StoredAiProviderRevision>
-  >;
+  setTestResult: Mock<AiProviderConfigurationRepository["setTestResult"]>;
   updateProgress: Mock<
     (
       id: string,
@@ -193,21 +180,7 @@ const repositoryFor = (values: {
       .fn<(input: NewAiProviderRevision) => Promise<StoredAiProviderRevision>>()
       .mockResolvedValue(draft),
     setTestResult: vi
-      .fn<
-        (
-          id: string,
-          result: Prisma.InputJsonValue,
-          status: "passed" | "failed" | "inconclusive",
-          embeddingDimensions: number | null,
-          testedAt: Date,
-          currentLifecycle: AiProviderLifecycle,
-          identities?: Readonly<{
-            generationCompatibilityIdentity: string;
-            embeddingScopeIdentity: string;
-            compositeTestIdentity: string;
-          }>,
-        ) => Promise<StoredAiProviderRevision>
-      >()
+      .fn<AiProviderConfigurationRepository["setTestResult"]>()
       .mockResolvedValue(
         revision(draft.id, {
           ...draft,
@@ -259,7 +232,10 @@ describe("AiProviderConfigurationService", () => {
       env,
       tester,
       undefined,
-      { record: (event) => events.push({ ...event }) },
+      {
+        ...createNullLogger(),
+        info: (_message, event) => events.push({ ...event }),
+      },
     );
 
     await expect(service.discard(revisionId, "admin-1")).resolves.toEqual({
@@ -368,7 +344,10 @@ describe("AiProviderConfigurationService", () => {
       env,
       tester,
       undefined,
-      { record: (event) => events.push({ ...event }) },
+      {
+        ...createNullLogger(),
+        info: (_message, event) => events.push({ ...event }),
+      },
     );
 
     const result = await service.save(
@@ -525,15 +504,23 @@ describe("AiProviderConfigurationService", () => {
 
     await service.executeTest(revisionId);
 
-    expect(repository.setTestResult).toHaveBeenCalledWith(
-      revisionId,
-      passedResult,
-      "passed",
-      1024,
-      expect.any(Date),
-      AiProviderLifecycle.draft,
-      expect.any(Object),
-    );
+    const recorded = repository.setTestResult.mock.lastCall?.[0];
+    expect(repository.setTestResult).toHaveBeenCalledWith({
+      id: revisionId,
+      result: passedResult,
+      status: "passed",
+      embeddingDimensions: 1024,
+      testedAt: recorded?.testedAt,
+      currentLifecycle: AiProviderLifecycle.draft,
+      generationCompatibilityIdentity:
+        recorded?.generationCompatibilityIdentity,
+      embeddingScopeIdentity: recorded?.embeddingScopeIdentity,
+      compositeTestIdentity: recorded?.compositeTestIdentity,
+    });
+    expect(recorded?.testedAt).toBeInstanceOf(Date);
+    expect(recorded?.generationCompatibilityIdentity).toBeTypeOf("string");
+    expect(recorded?.embeddingScopeIdentity).toBeTypeOf("string");
+    expect(recorded?.compositeTestIdentity).toBeTypeOf("string");
   });
 
   it("keeps an active revision active when its capability retest passes", async () => {
@@ -554,15 +541,23 @@ describe("AiProviderConfigurationService", () => {
 
     await service.executeTest(activeId);
 
-    expect(repository.setTestResult).toHaveBeenCalledWith(
-      activeId,
-      passedResult,
-      "passed",
-      1024,
-      expect.any(Date),
-      AiProviderLifecycle.active,
-      expect.any(Object),
-    );
+    const recorded = repository.setTestResult.mock.lastCall?.[0];
+    expect(repository.setTestResult).toHaveBeenCalledWith({
+      id: activeId,
+      result: passedResult,
+      status: "passed",
+      embeddingDimensions: 1024,
+      testedAt: recorded?.testedAt,
+      currentLifecycle: AiProviderLifecycle.active,
+      generationCompatibilityIdentity:
+        recorded?.generationCompatibilityIdentity,
+      embeddingScopeIdentity: recorded?.embeddingScopeIdentity,
+      compositeTestIdentity: recorded?.compositeTestIdentity,
+    });
+    expect(recorded?.testedAt).toBeInstanceOf(Date);
+    expect(recorded?.generationCompatibilityIdentity).toBeTypeOf("string");
+    expect(recorded?.embeddingScopeIdentity).toBeTypeOf("string");
+    expect(recorded?.compositeTestIdentity).toBeTypeOf("string");
   });
 
   it("keeps an active revision active when its capability retest fails", async () => {
@@ -603,15 +598,24 @@ describe("AiProviderConfigurationService", () => {
 
     await service.executeTest(activeId);
 
-    expect(repository.setTestResult).toHaveBeenCalledWith(
-      activeId,
-      expect.objectContaining({ status: "failed" }),
-      "failed",
-      null,
-      expect.any(Date),
-      AiProviderLifecycle.active,
-      expect.any(Object),
-    );
+    const recorded = repository.setTestResult.mock.lastCall?.[0];
+    expect(repository.setTestResult).toHaveBeenCalledWith({
+      id: activeId,
+      result: recorded?.result,
+      status: "failed",
+      embeddingDimensions: null,
+      testedAt: recorded?.testedAt,
+      currentLifecycle: AiProviderLifecycle.active,
+      generationCompatibilityIdentity:
+        recorded?.generationCompatibilityIdentity,
+      embeddingScopeIdentity: recorded?.embeddingScopeIdentity,
+      compositeTestIdentity: recorded?.compositeTestIdentity,
+    });
+    expect(recorded?.result).toMatchObject({ status: "failed" });
+    expect(recorded?.testedAt).toBeInstanceOf(Date);
+    expect(recorded?.generationCompatibilityIdentity).toBeTypeOf("string");
+    expect(recorded?.embeddingScopeIdentity).toBeTypeOf("string");
+    expect(recorded?.compositeTestIdentity).toBeTypeOf("string");
   });
 
   it("rejects embedding-scope activation when preparation is unavailable", async () => {
@@ -797,7 +801,10 @@ describe("AiProviderConfigurationService", () => {
         env,
         tester,
         preparation,
-        { record: (event) => events.push({ ...event }) },
+        {
+          ...createNullLogger(),
+          info: (_message, event) => events.push({ ...event }),
+        },
       );
 
       const result = await service[operation](revisionId, "admin-1");
@@ -850,7 +857,10 @@ describe("AiProviderConfigurationService", () => {
         env,
         tester,
         preparation,
-        { record: (event) => events.push({ ...event }) },
+        {
+          ...createNullLogger(),
+          info: (_message, event) => events.push({ ...event }),
+        },
       );
 
       const result = await service[operation](revisionId, "admin-1");
@@ -1039,7 +1049,10 @@ describe("AiProviderConfigurationService", () => {
         env,
         tester,
         preparation,
-        { record: (event) => events.push({ ...event }) },
+        {
+          ...createNullLogger(),
+          info: (_message, event) => events.push({ ...event }),
+        },
       );
 
       const attempt = service[operation](revisionId, "admin-1");
@@ -1106,7 +1119,10 @@ describe("AiProviderConfigurationService", () => {
         env,
         tester,
         preparation,
-        { record: (event) => events.push({ ...event }) },
+        {
+          ...createNullLogger(),
+          info: (_message, event) => events.push({ ...event }),
+        },
       );
 
       await expect(

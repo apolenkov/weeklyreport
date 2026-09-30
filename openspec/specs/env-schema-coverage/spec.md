@@ -98,8 +98,7 @@ already stored on the constructed instance), `PDF_OUTPUT_DIR`
 Raw `process.env` access remains permitted at these enumerated boundaries,
 which run before or outside the Nest DI container: the single
 `envSchema.safeParse(process.env)` entry point in `env.schema.ts`; the dynamic
-`sentry-bootstrap` import inside `start()`; the second `validateEnv()` at the
-BullMQ `worker-observability.ts` process boundary; the API auth-ingress
+`sentry-bootstrap` import inside `start()`; the API auth-ingress
 bootstrap that passes `process.env` into the validated auth/SAML factories;
 and `otel.bootstrap`. Services receive their logger from the shared
 `APP_LOGGER` provider, never from a raw `process.env` factory. `AUTH_DEV_MODE_ALLOW_TEST` is declared for

@@ -182,7 +182,7 @@ Authority model:
 - [hot-path-query-performance](./hot-path-query-performance/spec.md) — Parallelizes independent reads, batches ownership and reconciliation, paginates archives, and removes write-on-read hot paths.
 - [lead-assistant-provider-resilience](./lead-assistant-provider-resilience/spec.md) — Bounds assistant context and provider retries while returning deterministic recovery outcomes without automatic failover.
 - [manual-publish-telemetry](./manual-publish-telemetry/spec.md) — Emits publish counters only after a successful manual transition and records the real prior state.
-- [operational-logger-wiring](./operational-logger-wiring/spec.md) — Injects the shared operational logger into service factories instead of silently falling back to a null logger.
+- [operational-logger-wiring](./operational-logger-wiring/spec.md) — Injects the shared operational logger into service providers as a required dependency.
 - [period-scheduler-wiring](./period-scheduler-wiring/spec.md) — Makes scheduler composition executable, rejects overlapping periods under concurrency, and emits committed transition audit events.
 - [prod-trace-sampling](./prod-trace-sampling/spec.md) — Configures production OTLP export, parent-aware sampling, and loud untraced boot logging.
 - [queue-reliability-monitoring](./queue-reliability-monitoring/spec.md) — Monitors DLQs, Redis memory, retention, and queue shutdown behavior.

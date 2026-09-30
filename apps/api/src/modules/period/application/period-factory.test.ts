@@ -143,12 +143,9 @@ describe("ensureCurrentPeriod", () => {
   it("creates via buildTransition with the computed deadline (both lifecycle reps set)", async () => {
     const { client, create } = makePrisma({ createdId: "period-created" });
 
-    const result = await ensureCurrentPeriod(
-      client,
-      ANCHOR_MONDAY,
-      ANCHOR_MONDAY,
-      SETTINGS,
-    );
+    const result = await ensureCurrentPeriod(client, ANCHOR_MONDAY, SETTINGS, {
+      now: ANCHOR_MONDAY,
+    });
 
     expect(result).toMatchObject({
       created: true,
@@ -178,12 +175,12 @@ describe("ensureCurrentPeriod", () => {
     const result = await ensureCurrentPeriod(
       client,
       ANCHOR_MONDAY,
-      ANCHOR_MONDAY,
       {
         ...SETTINGS,
         defaultTimezone: "Asia/Tokyo",
         deadlineTime: "09:30",
       },
+      { now: ANCHOR_MONDAY },
     );
 
     expect(expectDefined(result.deadline).toISOString()).toBe(
@@ -196,12 +193,9 @@ describe("ensureCurrentPeriod", () => {
       existing: makePeriodRow(),
     });
 
-    const result = await ensureCurrentPeriod(
-      client,
-      ANCHOR_MONDAY,
-      ANCHOR_MONDAY,
-      SETTINGS,
-    );
+    const result = await ensureCurrentPeriod(client, ANCHOR_MONDAY, SETTINGS, {
+      now: ANCHOR_MONDAY,
+    });
 
     expect(result).toMatchObject({
       created: false,
@@ -228,7 +222,9 @@ describe("ensureCurrentPeriod", () => {
     });
 
     await expect(
-      ensureCurrentPeriod(client, ANCHOR_MONDAY, ANCHOR_MONDAY, SETTINGS),
+      ensureCurrentPeriod(client, ANCHOR_MONDAY, SETTINGS, {
+        now: ANCHOR_MONDAY,
+      }),
     ).resolves.toMatchObject({ created: false, periodState: "scheduled" });
   });
 
@@ -241,7 +237,9 @@ describe("ensureCurrentPeriod", () => {
     const { client, create } = makePrisma({ containing });
 
     await expect(
-      ensureCurrentPeriod(client, ANCHOR_MONDAY, ANCHOR_MONDAY, SETTINGS),
+      ensureCurrentPeriod(client, ANCHOR_MONDAY, SETTINGS, {
+        now: ANCHOR_MONDAY,
+      }),
     ).resolves.toMatchObject({
       created: false,
       reportId: "period-manual-containing-anchor",
@@ -270,7 +268,9 @@ describe("ensureCurrentPeriod", () => {
       const { client, create } = makePrisma({ existing: row });
 
       await expect(
-        ensureCurrentPeriod(client, ANCHOR_MONDAY, ANCHOR_MONDAY, SETTINGS),
+        ensureCurrentPeriod(client, ANCHOR_MONDAY, SETTINGS, {
+          now: ANCHOR_MONDAY,
+        }),
       ).resolves.toMatchObject({ created: true, reportId: "period-new" });
       expect(create).toHaveBeenCalledOnce();
     },
@@ -293,7 +293,9 @@ describe("ensureCurrentPeriod", () => {
     const { client, create } = makePrisma({ existing: row });
 
     await expect(
-      ensureCurrentPeriod(client, ANCHOR_MONDAY, ANCHOR_MONDAY, SETTINGS),
+      ensureCurrentPeriod(client, ANCHOR_MONDAY, SETTINGS, {
+        now: ANCHOR_MONDAY,
+      }),
     ).rejects.toMatchObject({
       name: "PeriodLifecycleIntegrityError",
       message: "Stored period lifecycle is inconsistent.",
@@ -308,12 +310,9 @@ describe("ensureCurrentPeriod", () => {
       raced,
     });
 
-    const result = await ensureCurrentPeriod(
-      client,
-      ANCHOR_MONDAY,
-      ANCHOR_MONDAY,
-      SETTINGS,
-    );
+    const result = await ensureCurrentPeriod(client, ANCHOR_MONDAY, SETTINGS, {
+      now: ANCHOR_MONDAY,
+    });
 
     expect(result).toMatchObject({ created: false, reportId: "period-winner" });
     expect(create).toHaveBeenCalledTimes(1);
@@ -329,12 +328,9 @@ describe("ensureCurrentPeriod", () => {
       raced,
     });
 
-    const result = await ensureCurrentPeriod(
-      client,
-      ANCHOR_MONDAY,
-      new Date("2026-05-10T09:00:00.000Z"),
-      SETTINGS,
-    );
+    const result = await ensureCurrentPeriod(client, ANCHOR_MONDAY, SETTINGS, {
+      now: new Date("2026-05-10T09:00:00.000Z"),
+    });
 
     expect(result).toMatchObject({
       created: false,
@@ -359,7 +355,9 @@ describe("ensureCurrentPeriod", () => {
     });
 
     await expect(
-      ensureCurrentPeriod(client, ANCHOR_MONDAY, ANCHOR_MONDAY, SETTINGS),
+      ensureCurrentPeriod(client, ANCHOR_MONDAY, SETTINGS, {
+        now: ANCHOR_MONDAY,
+      }),
     ).resolves.toMatchObject({
       created: false,
       reportId: "period-range-winner",
@@ -370,7 +368,9 @@ describe("ensureCurrentPeriod", () => {
     const { client } = makePrisma({ createThrows: P2039_PERIOD_OVERLAP });
 
     await expect(
-      ensureCurrentPeriod(client, ANCHOR_MONDAY, ANCHOR_MONDAY, SETTINGS),
+      ensureCurrentPeriod(client, ANCHOR_MONDAY, SETTINGS, {
+        now: ANCHOR_MONDAY,
+      }),
     ).rejects.toMatchObject({
       name: "PeriodOverlapError",
       message: "A reporting period overlaps an existing period.",
@@ -382,7 +382,9 @@ describe("ensureCurrentPeriod", () => {
     const { client } = makePrisma({ createThrows: other });
 
     await expect(
-      ensureCurrentPeriod(client, ANCHOR_MONDAY, ANCHOR_MONDAY, SETTINGS),
+      ensureCurrentPeriod(client, ANCHOR_MONDAY, SETTINGS, {
+        now: ANCHOR_MONDAY,
+      }),
     ).rejects.toBe(other);
   });
 
@@ -391,13 +393,10 @@ describe("ensureCurrentPeriod", () => {
     const { client } = makePrisma({ createdId: "period-fut" });
     const policyApplicator = makeApplicator();
 
-    await ensureCurrentPeriod(
-      client,
-      ANCHOR_MONDAY,
+    await ensureCurrentPeriod(client, ANCHOR_MONDAY, SETTINGS, {
       now,
-      SETTINGS,
       policyApplicator,
-    );
+    });
 
     expect(policyApplicator.applyToPeriod).toHaveBeenCalledTimes(1);
     // The factory delegates the elapsed-fireAt decision to the applicator by
@@ -414,13 +413,10 @@ describe("ensureCurrentPeriod", () => {
     const { client, create } = makePrisma({ createdId: "period-late" });
     const policyApplicator = makeApplicator();
 
-    await ensureCurrentPeriod(
-      client,
-      ANCHOR_MONDAY,
-      lateNow,
-      SETTINGS,
+    await ensureCurrentPeriod(client, ANCHOR_MONDAY, SETTINGS, {
+      now: lateNow,
       policyApplicator,
-    );
+    });
 
     expect(create).toHaveBeenCalledTimes(1);
     // The applicator is still invoked — it (not the factory) decides per rule
@@ -445,13 +441,10 @@ describe("ensureCurrentPeriod", () => {
     // The period is the durable artifact — a reminder-materialisation failure
     // must not propagate (it would 500 a login). It is logged and left for the
     // current-period and hourly missing-rule recovery passes.
-    const result = await ensureCurrentPeriod(
-      client,
-      ANCHOR_MONDAY,
-      ANCHOR_MONDAY,
-      SETTINGS,
+    const result = await ensureCurrentPeriod(client, ANCHOR_MONDAY, SETTINGS, {
+      now: ANCHOR_MONDAY,
       policyApplicator,
-    );
+    });
 
     expect(result).toMatchObject({
       created: true,
@@ -464,13 +457,10 @@ describe("ensureCurrentPeriod", () => {
     const { client } = makePrisma({ existing: makePeriodRow() });
     const policyApplicator = makeApplicator();
 
-    await ensureCurrentPeriod(
-      client,
-      ANCHOR_MONDAY,
-      ANCHOR_MONDAY,
-      SETTINGS,
+    await ensureCurrentPeriod(client, ANCHOR_MONDAY, SETTINGS, {
+      now: ANCHOR_MONDAY,
       policyApplicator,
-    );
+    });
 
     expect(policyApplicator.repairToPeriod).toHaveBeenCalledWith(
       "period-existing",

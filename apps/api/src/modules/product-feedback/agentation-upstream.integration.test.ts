@@ -119,6 +119,18 @@ describe("installed Agentation MCP against the authenticated adapter", () => {
     return { session, annotation, input, author };
   }
 
+  function findMatchingEvent(frames: readonly string[], type: string) {
+    for (const frame of frames) {
+      const data = frame.split("\n").find((line) => line.startsWith("data: "));
+      if (!data) continue;
+      const event = agentationSseEventSchema.parse(
+        JSON.parse(data.slice("data: ".length)),
+      );
+      if (event.type === type) return event;
+    }
+    return undefined;
+  }
+
   async function nextEvent(
     sessionId: string,
     type: string,
@@ -147,16 +159,8 @@ describe("installed Agentation MCP against the authenticated adapter", () => {
         state.buffer += decoder.decode(chunk.value, { stream: true });
         const frames = state.buffer.split("\n\n");
         state.buffer = frames.pop() ?? "";
-        for (const frame of frames) {
-          const data = frame
-            .split("\n")
-            .find((line) => line.startsWith("data: "));
-          if (!data) continue;
-          const event = agentationSseEventSchema.parse(
-            JSON.parse(data.slice("data: ".length)),
-          );
-          if (event.type === type) return event;
-        }
+        const event = findMatchingEvent(frames, type);
+        if (event) return event;
       }
     } finally {
       await reader.cancel();

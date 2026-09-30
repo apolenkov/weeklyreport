@@ -91,7 +91,7 @@ const createHarness = (
   const processor = new TestableSemanticIndexProcessor(
     { load },
     { findCachedHashes: vi.fn(), upsert, rank: vi.fn() },
-    { resolveRuntime },
+    { resolveExact: resolveRuntime },
     {} as never,
     {} as never,
     null,

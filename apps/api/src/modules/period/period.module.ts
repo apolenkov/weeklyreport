@@ -3,8 +3,7 @@ import { Logger, Module } from "@nestjs/common";
 import { ConfigModule } from "../../infrastructure/config/config.module.js";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { AuditLogger } from "../../lib/audit-logger.js";
-import { APP_LOGGER, AUDIT_LOGGER } from "../../lib/audit-logger.js";
-import type { AppLogger } from "../../lib/logger.js";
+import { AUDIT_LOGGER } from "../../lib/audit-logger.js";
 import { AdminModule, SnapshotAdminService } from "../admin/index.js";
 import { AnalyticsCache, AnalyticsModule } from "../analytics/index.js";
 import {
@@ -19,14 +18,12 @@ import { PublicationModule, PublicationService } from "../publication/index.js";
 import { PolicyApplicatorService } from "../reminders/index.js";
 import { WeeklyReportModule } from "../weekly-report/index.js";
 import {
+  PERIOD_ANALYTICS_CACHE,
   PERIOD_REPOSITORY,
-  type PeriodRepository,
+  PERIOD_SETTINGS,
   PeriodService,
 } from "./application/period.service.js";
-import {
-  PERIOD_TELEMETRY,
-  type PeriodTelemetry,
-} from "./application/period-telemetry.port.js";
+import { PERIOD_TELEMETRY } from "./application/period-telemetry.port.js";
 import { AutoArchiverScheduler } from "./infrastructure/auto-archiver.scheduler.js";
 import { AutoPublisherScheduler } from "./infrastructure/auto-publisher.scheduler.js";
 import { PeriodPrismaRepository } from "./infrastructure/period.prisma-repository.js";
@@ -49,46 +46,11 @@ import { PeriodPrometheusTelemetry } from "./infrastructure/period-prometheus-te
   ],
   providers: [
     { provide: PERIOD_REPOSITORY, useClass: PeriodPrismaRepository },
+    { provide: PERIOD_SETTINGS, useExisting: SnapshotAdminService },
+    { provide: PERIOD_ANALYTICS_CACHE, useExisting: AnalyticsCache },
     PeriodPrometheusTelemetry,
     { provide: PERIOD_TELEMETRY, useExisting: PeriodPrometheusTelemetry },
-    {
-      provide: PeriodService,
-      useFactory: (
-        repo: PeriodRepository,
-        cache: AnalyticsCache,
-        admin: SnapshotAdminService,
-        telemetry: PeriodTelemetry,
-        logger: AppLogger,
-      ) => {
-        return new PeriodService(
-          repo,
-          () => cache.invalidateAll(),
-          // Reopen-policy reader resolves the two AppSettings knobs;
-          // Settings.get upserts the singleton row, so this stays a single
-          // round-trip per reopen call.
-          async () => {
-            const settings = await admin.getSettings();
-            return {
-              allowReopenAfterPublish: settings.allowReopenAfterPublish,
-              reopenWindowHours: settings.reopenWindowHours,
-            };
-          },
-          telemetry,
-          (error) => {
-            logger.warn("publish side-effect failed", {
-              error: error instanceof Error ? error.message : String(error),
-            });
-          },
-        );
-      },
-      inject: [
-        PERIOD_REPOSITORY,
-        AnalyticsCache,
-        SnapshotAdminService,
-        PERIOD_TELEMETRY,
-        APP_LOGGER,
-      ],
-    },
+    PeriodService,
     // PolicyApplicatorService provided directly (depends only on PrismaService,
     // no circular dep). Injected into the scheduler so that auto-created periods
     // materialise reminder rules like admin-created ones.
@@ -118,31 +80,7 @@ import { PeriodPrometheusTelemetry } from "./infrastructure/period-prometheus-te
       },
       inject: [PrismaService, CarryOverService, CarryOverPrismaRepository],
     },
-    {
-      provide: PeriodCreatorScheduler,
-      useFactory: (
-        prisma: PrismaService,
-        admin: SnapshotAdminService,
-        auditLogger: AuditLogger,
-        policyApplicator: PolicyApplicatorService,
-        autoCarryOver: AutoCarryOver,
-      ) => {
-        return new PeriodCreatorScheduler(
-          prisma,
-          admin,
-          auditLogger,
-          policyApplicator,
-          autoCarryOver,
-        );
-      },
-      inject: [
-        PrismaService,
-        SnapshotAdminService,
-        AUDIT_LOGGER,
-        PolicyApplicatorService,
-        PERIOD_AUTO_CARRY_OVER,
-      ],
-    },
+    PeriodCreatorScheduler,
     {
       provide: AutoPublisherScheduler,
       useFactory: (

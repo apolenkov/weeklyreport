@@ -123,11 +123,11 @@ const ANCHOR_FK_CONSTRAINT: Record<RecordKind, string> = {
 
 async function createComment(
   tx: Prisma.TransactionClient,
-  reviewerId: string,
   lineage: AnchorLineage,
   currentAnchorId: string,
-  text: string,
+  content: { readonly reviewerId: string; readonly text: string },
 ): Promise<RecordCommentView> {
+  const { reviewerId, text } = content;
   try {
     const created = await tx.recordComment.create({
       data: {
@@ -183,6 +183,9 @@ export function insertCoordinatedComment(
     if (!groupId) throw new ReviewNotFoundError("Review group not found.");
     await assertReviewEntitlement(tx, actor, groupId);
     const currentAnchorId = await loadCurrentAnchorId(tx, lineage);
-    return createComment(tx, actor.userId, lineage, currentAnchorId, text);
+    return createComment(tx, lineage, currentAnchorId, {
+      reviewerId: actor.userId,
+      text,
+    });
   });
 }

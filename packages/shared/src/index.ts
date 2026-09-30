@@ -32,6 +32,7 @@ export * from "./schemas/ai-prompt-management";
 export * from "./schemas/ai-provider-configuration";
 export * from "./schemas/ai-provider-test-execution";
 export type {
+  AnalyticsPeriod,
   LeadVelocityInput,
   LeadVelocityOutput,
   PeriodComparisonInput,
@@ -41,6 +42,7 @@ export type {
   TrafficLightHistoryOutput,
 } from "./schemas/analytics/analytics";
 export {
+  analyticsPeriodSchema,
   leadVelocityInputSchema,
   leadVelocityOutputSchema,
   periodComparisonInputSchema,

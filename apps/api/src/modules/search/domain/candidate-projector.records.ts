@@ -28,13 +28,10 @@ const projectItems = (
     return [
       {
         kind: "item",
-        identity: candidateIdentity(
-          occurrence,
-          section,
-          "item",
-          item.id ?? item.stableId ?? `${item.type}:${item.text}`,
-          item.stableId,
-        ),
+        identity: candidateIdentity(occurrence, section, "item", {
+          recordId: item.id ?? item.stableId ?? `${item.type}:${item.text}`,
+          lineageId: item.stableId,
+        }),
         context: candidateContext(
           occurrence,
           section,
@@ -60,13 +57,10 @@ const projectRisks = (
     return [
       {
         kind: "risk",
-        identity: candidateIdentity(
-          occurrence,
-          section,
-          "risk",
-          risk.id ?? risk.stableId ?? `${risk.severity}:${risk.risk}`,
-          risk.stableId,
-        ),
+        identity: candidateIdentity(occurrence, section, "risk", {
+          recordId: risk.id ?? risk.stableId ?? `${risk.severity}:${risk.risk}`,
+          lineageId: risk.stableId,
+        }),
         context: candidateContext(
           occurrence,
           section,
@@ -91,13 +85,10 @@ const projectDecisions = (
     return [
       {
         kind: "decision",
-        identity: candidateIdentity(
-          occurrence,
-          section,
-          "decision",
-          decision.id ?? decision.stableId ?? decision.text,
-          decision.stableId,
-        ),
+        identity: candidateIdentity(occurrence, section, "decision", {
+          recordId: decision.id ?? decision.stableId ?? decision.text,
+          lineageId: decision.stableId,
+        }),
         context: candidateContext(
           occurrence,
           section,
@@ -119,13 +110,9 @@ const projectProductStatuses = (
 ): readonly ProductStatusCandidate[] =>
   section.projects.map((project) => ({
     kind: "product_status",
-    identity: candidateIdentity(
-      occurrence,
-      section,
-      "product_status",
-      project.projectId,
-      undefined,
-    ),
+    identity: candidateIdentity(occurrence, section, "product_status", {
+      recordId: project.projectId,
+    }),
     context: candidateContext(
       occurrence,
       section,
@@ -142,13 +129,9 @@ const projectStageStatuses = (
   section.projects.flatMap((project) =>
     project.ownedStages.map((stage) => ({
       kind: "stage_status" as const,
-      identity: candidateIdentity(
-        occurrence,
-        section,
-        "stage_status",
-        `${project.projectId}:${stage.stageId}`,
-        undefined,
-      ),
+      identity: candidateIdentity(occurrence, section, "stage_status", {
+        recordId: `${project.projectId}:${stage.stageId}`,
+      }),
       context: candidateContext(
         occurrence,
         section,
@@ -165,13 +148,9 @@ const projectActivityStatuses = (
 ): readonly ActivityStatusCandidate[] =>
   section.activities.map((activity) => ({
     kind: "activity_status",
-    identity: candidateIdentity(
-      occurrence,
-      section,
-      "activity_status",
-      activity.activityId,
-      undefined,
-    ),
+    identity: candidateIdentity(occurrence, section, "activity_status", {
+      recordId: activity.activityId,
+    }),
     context: candidateContext(
       occurrence,
       section,

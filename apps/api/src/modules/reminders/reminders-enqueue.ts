@@ -49,9 +49,8 @@ export function buildExecutionCandidate(
 
 async function addJob(
   ctx: EnqueueContext,
-  executionId: string,
   data: ReminderQueueJobData,
-  jobId: string = executionId,
+  jobId: string = data.executionId,
   options?: ReminderEnqueueOptions,
 ): Promise<void> {
   await ctx.queue.enqueue(
@@ -67,15 +66,16 @@ async function addJob(
 export async function enqueueOrMarkFailed(
   ctx: EnqueueContext,
   execution: AdminReminderExecution,
-  recipientEmail: string,
-  payload: ReminderQueuePayload,
+  message: {
+    readonly recipientEmail: string;
+    readonly payload: ReminderQueuePayload;
+  },
   jobId?: string,
 ): Promise<AdminReminderExecution> {
   try {
     await addJob(
       ctx,
-      execution.id,
-      buildQueuePayload(execution, recipientEmail, payload),
+      buildQueuePayload(execution, message.recipientEmail, message.payload),
       jobId,
     );
     ctx.logger.info("enqueued email reminder job", {
@@ -127,7 +127,6 @@ export async function reEnqueueStuck(
 ): Promise<void> {
   await addJob(
     ctx,
-    execution.id,
     buildQueuePayload(execution, execution.recipientEmail, payload),
     execution.id,
     { replaceTerminal: true },

@@ -35,12 +35,16 @@ interface AdminSnapshotIntegrityInput extends ReminderRecoverySnapshot {
   })[];
 }
 
+interface SnapshotUniqueKey {
+  readonly collection: SnapshotCollectionName;
+  readonly field: string;
+  readonly label: string;
+}
+
 function validateUniqueKey<Row>(
   rows: readonly Row[],
-  collection: SnapshotCollectionName,
-  field: string,
+  { collection, field, label }: SnapshotUniqueKey,
   keyOf: (row: Row) => string,
-  label: string,
   context: z.RefinementCtx,
 ): void {
   const firstIndexes = new Map(
@@ -66,10 +70,8 @@ function validateIds(
 ): void {
   validateUniqueKey(
     rows,
-    collection,
-    "id",
+    { collection, field: "id", label: "Snapshot id" },
     (row) => row.id,
-    "Snapshot id",
     context,
   );
 }
@@ -87,26 +89,28 @@ function validateUniqueIdentities(
   validateIds(snapshot.policies, "policies", context);
   validateUniqueKey(
     snapshot.users,
-    "users",
-    "email",
+    { collection: "users", field: "email", label: "User email" },
     (user) => user.email.trim().toLowerCase(),
-    "User email",
     context,
   );
   validateUniqueKey(
     snapshot.reminderRules,
-    "reminderRules",
-    "policyId",
+    {
+      collection: "reminderRules",
+      field: "policyId",
+      label: "Reminder report-policy-version tuple",
+    },
     (rule) => `${rule.reportId}\u0000${rule.policyId}\u0000${rule.version}`,
-    "Reminder report-policy-version tuple",
     context,
   );
   validateUniqueKey(
     snapshot.reminderExecutions,
-    "reminderExecutions",
-    "dedupeKey",
+    {
+      collection: "reminderExecutions",
+      field: "dedupeKey",
+      label: "Reminder execution dedupe key",
+    },
     (execution) => execution.dedupeKey,
-    "Reminder execution dedupe key",
     context,
   );
 }

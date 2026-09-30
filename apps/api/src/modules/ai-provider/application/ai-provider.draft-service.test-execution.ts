@@ -103,19 +103,17 @@ export const executeAiProviderTest = async (
         embeddingScopeIdentity,
         compositeTestIdentity,
       })
-    : await dependencies.repository.setTestResult(
-        revisionId,
+    : await dependencies.repository.setTestResult({
+        id: revisionId,
         result,
         status,
         embeddingDimensions,
-        now(),
-        revision.lifecycle,
-        {
-          generationCompatibilityIdentity,
-          embeddingScopeIdentity,
-          compositeTestIdentity,
-        },
-      );
+        testedAt: now(),
+        currentLifecycle: revision.lifecycle,
+        generationCompatibilityIdentity,
+        embeddingScopeIdentity,
+        compositeTestIdentity,
+      });
   if (!tested) {
     const current = await requireRevision(dependencies, revisionId);
     return safeRevision(current, dependencies.codec);

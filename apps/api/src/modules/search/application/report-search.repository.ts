@@ -1,8 +1,6 @@
 import type { SelectableReportSource } from "../domain/period-source-selection.js";
 import type { ReportOccurrence } from "../domain/report-retrieval.types.js";
 
-export const REPORT_SEARCH_REPOSITORY = Symbol("REPORT_SEARCH_REPOSITORY");
-
 export type ReportSourceOptions = Readonly<{
   readonly publishedMode?: "latest" | "all" | "named" | "none";
   readonly publishedCount?: number;

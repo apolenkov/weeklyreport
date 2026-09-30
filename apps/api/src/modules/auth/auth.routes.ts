@@ -241,23 +241,13 @@ function mountSamlRoutes(
 export function mountAuthRoutes(
   expressApp: Express,
   samlStrategy: SamlStrategy | undefined,
-  authController: ReturnType<typeof createAuthController>,
-  prisma: PrismaClient,
-  env: NodeJS.ProcessEnv,
-  provisionLeadWorkspace: ProvisionLeadWorkspace,
-  auditLogger: AuditLogger,
+  context: Omit<AuthRouteDeps, "frontendUrl">,
 ): void {
   // FRONTEND_URL is required by env.schema in every posture; auth routing has
   // no local fallback because redirect authority is security-sensitive.
+  const { env } = context;
   const frontendUrl = requireEnv(env, "FRONTEND_URL");
-  const deps: AuthRouteDeps = {
-    prisma,
-    authController,
-    auditLogger,
-    provisionLeadWorkspace,
-    frontendUrl,
-    env,
-  };
+  const deps: AuthRouteDeps = { ...context, frontendUrl };
 
   if (env.AUTH_DEV_MODE === "true") {
     mountDevLoginRoutes(expressApp, deps);

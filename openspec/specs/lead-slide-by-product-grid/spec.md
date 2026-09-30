@@ -241,7 +241,8 @@ MUST be communicated by the row's quiet frame tone; its English status label
 MUST be `sr-only` and available through the row's accessible/hover description.
 Status words and status glyphs MUST NOT be rendered visibly in the row.
 Author colors come from a deterministic cycle of existing tokens assigned per
-slide with the lead always first; the full name lives in the badge's tooltip.
+slide with the lead always first. The badge's tooltip MUST use the canonical
+short name as defined by `user-name-display`.
 The item status tone map MUST be exhaustive over the validated
 `ItemWorkflowStatus` contract (`planned | in_progress | paused | postponed |
 done`) and MUST reuse the canonical status mapping for own and foreign rows.

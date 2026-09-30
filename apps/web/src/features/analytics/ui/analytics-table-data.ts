@@ -1,21 +1,11 @@
-import type { LeadVelocityOutput } from "@customreport/shared";
-import { DAYS_PER_WEEK, MS_PER_DAY } from "@customreport/shared";
-
-import { formatPeriodRange } from "../../../shared/lib/format/format-date";
-
-/** Period ids are week-end dates; renders the Mon-Sun span, e.g. "Sep 21–27". */
-// ponytail: assumes 7-day periods; manual admin periods need a start date from the analytics API.
-export function weekEndingRange(end: string): string {
-  const start = new Date(Date.parse(end) - (DAYS_PER_WEEK - 1) * MS_PER_DAY);
-  return formatPeriodRange(start, end);
-}
+import type { AnalyticsPeriod, LeadVelocityOutput } from "@customreport/shared";
 
 interface TableSeries {
   readonly dataKey: string;
   readonly name: string;
 }
 
-type TableData = Readonly<Record<string, number | string>>;
+type TableData = AnalyticsPeriod & Readonly<Record<string, number | string>>;
 
 export function buildLeadSubmissionsTableData(rows: LeadVelocityOutput): {
   readonly data: readonly TableData[];
@@ -38,7 +28,8 @@ export function buildLeadSubmissionsTableData(rows: LeadVelocityOutput): {
       row.leads.map((lead) => [lead.leadId, lead.submittedSections] as const),
     );
     return {
-      period: row.periodLabel,
+      periodStart: row.periodStart,
+      periodEnd: row.periodEnd,
       ...Object.fromEntries(
         leadIds.map((id) => [id, submissionsByLead.get(id) ?? 0]),
       ),

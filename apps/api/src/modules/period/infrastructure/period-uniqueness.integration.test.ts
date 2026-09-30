@@ -137,8 +137,8 @@ describe("Report_no_live_period_overlap exclusion constraint (integration)", () 
       ensureCurrentPeriod(
         prisma,
         new Date("2026-08-10T09:00:00.000Z"),
-        new Date("2026-08-10T09:00:00.000Z"),
         FACTORY_SETTINGS,
+        { now: new Date("2026-08-10T09:00:00.000Z") },
       ),
     ).resolves.toMatchObject({
       created: false,
@@ -152,8 +152,8 @@ describe("Report_no_live_period_overlap exclusion constraint (integration)", () 
     const ensure = ensureCurrentPeriod(
       pausedPrisma,
       new Date("2026-08-10T09:00:00.000Z"),
-      new Date("2026-08-10T09:00:00.000Z"),
       FACTORY_SETTINGS,
+      { now: new Date("2026-08-10T09:00:00.000Z") },
     );
     await gate.paused;
 
@@ -182,8 +182,8 @@ describe("Report_no_live_period_overlap exclusion constraint (integration)", () 
       ensureCurrentPeriod(
         prisma,
         new Date("2026-08-10T09:00:00.000Z"),
-        new Date("2026-08-10T09:00:00.000Z"),
         FACTORY_SETTINGS,
+        { now: new Date("2026-08-10T09:00:00.000Z") },
       ),
     ).rejects.toBeInstanceOf(PeriodOverlapError);
   });

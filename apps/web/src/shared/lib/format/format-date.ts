@@ -171,6 +171,7 @@ export function formatPeriodRangeWithYear(
     s.getUTCMonth() === e.getUTCMonth() &&
     s.getUTCFullYear() === e.getUTCFullYear()
   ) {
+    if (sDay === eDay) return `${sMonth} ${sDay}, ${eYear}`;
     return `${sMonth} ${sDay}–${eDay}, ${eYear}`;
   }
   if (s.getUTCFullYear() === e.getUTCFullYear()) {

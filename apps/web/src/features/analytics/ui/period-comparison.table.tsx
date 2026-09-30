@@ -1,18 +1,15 @@
 "use client";
 
-import type {
-  PeriodComparisonInput,
-  PeriodComparisonOutput,
-} from "@customreport/shared";
+import type { PeriodComparisonOutput } from "@customreport/shared";
 import { trafficLightToCanonical } from "@customreport/shared";
 
+import { formatPeriodRangeWithYear } from "../../../shared/lib/format/format-date";
 import { SlideStatusBadge } from "../../../shared/ui/feedback/slide-status-badge";
 import {
   AnalyticsTable,
   StickyColumnHeader,
   StickyRowHeader,
 } from "./analytics-table";
-import { weekEndingRange } from "./analytics-table-data";
 
 function deltaClass(delta: number): string {
   if (delta > 0) return "text-[var(--color-destructive)]";
@@ -29,10 +26,9 @@ export function PeriodComparisonTable({
   periodA,
   periodB,
   headingId,
-}: PeriodComparisonOutput &
-  PeriodComparisonInput & {
-    readonly headingId: string;
-  }) {
+}: PeriodComparisonOutput & {
+  readonly headingId: string;
+}) {
   if (rows.length === 0) {
     return <p className="text-sm text-muted-foreground">No comparison data.</p>;
   }
@@ -40,9 +36,11 @@ export function PeriodComparisonTable({
   return (
     <>
       <p className="mb-3 text-sm text-muted-foreground">
-        Weeks of {weekEndingRange(periodA)} (previous) and{" "}
-        {weekEndingRange(periodB)} (latest). Risk change is latest minus
-        previous.
+        Periods{" "}
+        {formatPeriodRangeWithYear(periodA?.periodStart, periodA?.periodEnd)}{" "}
+        (previous) and{" "}
+        {formatPeriodRangeWithYear(periodB?.periodStart, periodB?.periodEnd)}{" "}
+        (latest). Risk change is latest minus previous.
       </p>
       <AnalyticsTable
         headingId={headingId}

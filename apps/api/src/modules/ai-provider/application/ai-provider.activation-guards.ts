@@ -41,7 +41,7 @@ export const requirePreparationEvidence = (
       dependencies,
       profile,
       "Semantic preparation evidence is incomplete; activation must be retried",
-      requested,
+      { requested },
     );
   }
   return revision as PreparedProviderRevision;
@@ -80,9 +80,12 @@ export const failActivation = (
   dependencies: AiProviderServiceDependencies,
   profile: ReturnType<typeof toSharedProfile>,
   message: string,
-  requested?: RequestedActivation,
-  errorClass: new (message: string) => Error = AiProviderConfigurationError,
+  failure: Readonly<{
+    requested?: RequestedActivation | undefined;
+    errorClass?: new (message: string) => Error;
+  }> = {},
 ): never => {
+  const { requested, errorClass = AiProviderConfigurationError } = failure;
   if (requested) {
     dependencies.audit.record({
       event: "ai_provider.activation_failed",
@@ -107,7 +110,7 @@ export const requirePreparedRevision = async (
       dependencies,
       profile,
       "AI provider revision disappeared during activation",
-      requested,
+      { requested },
     );
   }
   return requirePreparationEvidence(dependencies, profile, revision, requested);
@@ -127,7 +130,7 @@ export const verifyCurrentSourceFingerprint = async (
       dependencies,
       profile,
       "Report sources changed after embedding preparation; activation must be retried",
-      requested,
+      { requested },
     );
   }
 };

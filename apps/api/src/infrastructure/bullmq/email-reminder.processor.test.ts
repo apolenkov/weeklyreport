@@ -60,6 +60,7 @@ vi.mock("../../modules/email/index.js", () => ({
 
 import { renderEmail } from "../../modules/email/index.js";
 import type { EnvConfig } from "../config/env.schema";
+import type { EmailPort } from "../email/email.service.js";
 import {
   type EmailReminderJobData,
   EmailReminderProcessor as ProductionEmailReminderProcessor,
@@ -89,8 +90,10 @@ const STUB_ENV = {
 
 function createMockEmailService() {
   return {
-    sendMail: vi.fn().mockResolvedValue(undefined),
-    sendMailMultipart: vi.fn().mockResolvedValue(undefined),
+    sendMail: vi.fn<EmailPort["sendMail"]>().mockResolvedValue(undefined),
+    sendMailMultipart: vi
+      .fn<EmailPort["sendMailMultipart"]>()
+      .mockResolvedValue(undefined),
   };
 }
 
@@ -136,15 +139,16 @@ type SpyLogger = AppLogger & {
 };
 
 function makeSpyLogger(): SpyLogger {
-  return {
+  const logger: SpyLogger = {
     debug:
       vi.fn<(message: string, context?: Record<string, unknown>) => void>(),
     info: vi.fn<(message: string, context?: Record<string, unknown>) => void>(),
     warn: vi.fn<(message: string, context?: Record<string, unknown>) => void>(),
     error:
       vi.fn<(message: string, context?: Record<string, unknown>) => void>(),
-    child: () => makeSpyLogger(),
+    child: () => logger,
   };
+  return logger;
 }
 
 const organizationBrand = {
@@ -224,9 +228,7 @@ describe("EmailReminderProcessor.processJob", () => {
     // A null setting delegates the final From-address choice to EmailService.
     expect(mockEmail.sendMailMultipart).toHaveBeenCalledWith(
       "lead@test.com",
-      expect.any(String),
-      expect.any(String),
-      expect.any(String),
+      renderedEmailFixture,
       null,
     );
   });
@@ -251,9 +253,7 @@ describe("EmailReminderProcessor.processJob", () => {
     expect(mockAdmin.getSettings).toHaveBeenCalledTimes(1);
     expect(mockEmail.sendMailMultipart).toHaveBeenCalledWith(
       "lead@test.com",
-      expect.any(String),
-      expect.any(String),
-      expect.any(String),
+      renderedEmailFixture,
       "alerts@corp.example.com",
     );
   });
@@ -277,9 +277,7 @@ describe("EmailReminderProcessor.processJob", () => {
 
     expect(mockEmail.sendMailMultipart).toHaveBeenCalledWith(
       "lead@test.com",
-      expect.any(String),
-      expect.any(String),
-      expect.any(String),
+      renderedEmailFixture,
       null,
     );
   });
@@ -513,9 +511,11 @@ describe("EmailReminderProcessor.processJob", () => {
     });
     expect(mockEmail.sendMailMultipart).toHaveBeenCalledWith(
       deadlineJobData.recipientEmail,
-      renderedEmailFixture.subject,
-      renderedEmailFixture.html,
-      renderedEmailFixture.text,
+      {
+        subject: renderedEmailFixture.subject,
+        html: renderedEmailFixture.html,
+        text: renderedEmailFixture.text,
+      },
       null,
     );
   });
@@ -546,9 +546,11 @@ describe("EmailReminderProcessor.processJob", () => {
     });
     expect(mockEmail.sendMailMultipart).toHaveBeenCalledWith(
       escalationJobData.recipientEmail,
-      renderedEmailFixture.subject,
-      renderedEmailFixture.html,
-      renderedEmailFixture.text,
+      {
+        subject: renderedEmailFixture.subject,
+        html: renderedEmailFixture.html,
+        text: renderedEmailFixture.text,
+      },
       null,
     );
   });
@@ -593,18 +595,16 @@ describe("EmailReminderProcessor.processJob", () => {
     });
     expect(mockEmail.sendMailMultipart).toHaveBeenCalledWith(
       durablePayloadB.recipientEmail,
-      renderedEmailFixture.subject,
-      renderedEmailFixture.html,
-      renderedEmailFixture.text,
+      {
+        subject: renderedEmailFixture.subject,
+        html: renderedEmailFixture.html,
+        text: renderedEmailFixture.text,
+      },
       null,
     );
-    expect(mockEmail.sendMailMultipart).not.toHaveBeenCalledWith(
-      staleJobA.recipientEmail,
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-    );
+    expect(
+      mockEmail.sendMailMultipart.mock.calls.map(([recipient]) => recipient),
+    ).not.toContain(staleJobA.recipientEmail);
   });
 });
 

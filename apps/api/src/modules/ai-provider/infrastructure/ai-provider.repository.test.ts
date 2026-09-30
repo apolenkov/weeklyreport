@@ -414,14 +414,14 @@ describe("AiProviderConfigurationRepository", () => {
     const harness = buildHarness();
     const testedAt = new Date("2026-08-10T01:00:00.000Z");
 
-    await harness.repository.setTestResult(
-      "revision-active",
-      { status: "failed" },
-      "failed",
-      null,
+    await harness.repository.setTestResult({
+      id: "revision-active",
+      result: { status: "failed" },
+      status: "failed",
+      embeddingDimensions: null,
       testedAt,
-      AiProviderLifecycle.active,
-    );
+      currentLifecycle: AiProviderLifecycle.active,
+    });
 
     const update = harness.configurationUpdate.mock.calls[0]?.[0] as {
       data: {
@@ -445,14 +445,14 @@ describe("AiProviderConfigurationRepository", () => {
   it("returns an inconclusive non-active revision to draft", async () => {
     const harness = buildHarness();
 
-    await harness.repository.setTestResult(
-      "revision-new",
-      { status: "inconclusive" },
-      "inconclusive",
-      null,
-      new Date("2026-08-10T01:00:00.000Z"),
-      AiProviderLifecycle.failed,
-    );
+    await harness.repository.setTestResult({
+      id: "revision-new",
+      result: { status: "inconclusive" },
+      status: "inconclusive",
+      embeddingDimensions: null,
+      testedAt: new Date("2026-08-10T01:00:00.000Z"),
+      currentLifecycle: AiProviderLifecycle.failed,
+    });
 
     const update = harness.configurationUpdate.mock.calls.at(-1)?.[0] as {
       data?: Readonly<Record<string, unknown>>;

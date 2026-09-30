@@ -1,4 +1,5 @@
 import type {
+  AnalyticsPeriod,
   LeadVelocityInput,
   LeadVelocityOutput,
   PeriodComparisonInput,
@@ -85,10 +86,38 @@ function mapPublishedAnalyticsReport(
 
   return {
     id: row.id,
+    periodStart: snapshot.periodStart,
     periodEnd: snapshot.periodEnd,
     createdAt: row.createdAt,
     publishedAt: snapshot.publishedAt,
     sections,
+  };
+}
+
+function analyticsPeriod(report: {
+  periodStart: Date;
+  periodEnd: Date;
+}): AnalyticsPeriod {
+  return {
+    periodStart: isoDateOnly(report.periodStart),
+    periodEnd: isoDateOnly(report.periodEnd),
+  };
+}
+
+function mapComparisonSide(
+  rows: readonly PublishedAnalyticsRow[],
+  session: UserSession,
+) {
+  const reports = rows.map((row) => mapPublishedAnalyticsReport(row, session));
+  if (groupReportsByLabel(reports).size > 1) {
+    throw new PublishedSnapshotIntegrityError(
+      "Comparison side contains multiple frozen period end days.",
+    );
+  }
+  const winner = reportInEffectForPeriod(reports);
+  return {
+    period: winner === undefined ? null : analyticsPeriod(winner),
+    cells: collectComparisonCells(reports),
   };
 }
 
@@ -132,7 +161,7 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
             },
           ];
     });
-    const periods = reports.map((report) => isoDateOnly(report.periodEnd));
+    const periods = reports.map(analyticsPeriod);
 
     const projectMap = collectProjectNames(reports, input.projectId);
 
@@ -169,23 +198,21 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
       reportRows.map((row) => mapPublishedAnalyticsReport(row, session)),
     );
 
-    return Array.from(reportsByLabel.entries()).flatMap(
-      ([periodLabel, group]) => {
-        const report = reportInEffectForPeriod(group);
-        if (report === undefined) return [];
-        const byLead = new Map(
-          report.sections.map((section) => [
-            section.authorId,
-            {
-              leadId: section.authorId,
-              leadName: section.author.name,
-              submittedSections: section.status === "submitted" ? 1 : 0,
-            },
-          ]),
-        );
-        return [{ periodLabel, leads: [...byLead.values()] }];
-      },
-    );
+    return Array.from(reportsByLabel.values()).flatMap((group) => {
+      const report = reportInEffectForPeriod(group);
+      if (report === undefined) return [];
+      const byLead = new Map(
+        report.sections.map((section) => [
+          section.authorId,
+          {
+            leadId: section.authorId,
+            leadName: section.author.name,
+            submittedSections: section.status === "submitted" ? 1 : 0,
+          },
+        ]),
+      );
+      return [{ ...analyticsPeriod(report), leads: [...byLead.values()] }];
+    });
   };
 
   readonly periodComparison = async (
@@ -210,12 +237,10 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
       fetchAll(input.periodB),
     ]);
 
-    const cellsA = collectComparisonCells(
-      a.map((row) => mapPublishedAnalyticsReport(row, session)),
-    );
-    const cellsB = collectComparisonCells(
-      b.map((row) => mapPublishedAnalyticsReport(row, session)),
-    );
+    const sideA = mapComparisonSide(a, session);
+    const sideB = mapComparisonSide(b, session);
+    const { cells: cellsA } = sideA;
+    const { cells: cellsB } = sideB;
 
     const allProjectIds = new Set<string>([...cellsA.keys(), ...cellsB.keys()]);
 
@@ -233,6 +258,6 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
       };
     });
 
-    return { rows };
+    return { periodA: sideA.period, periodB: sideB.period, rows };
   };
 }

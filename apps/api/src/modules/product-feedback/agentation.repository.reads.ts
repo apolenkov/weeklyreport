@@ -9,10 +9,13 @@ export class AgentationReadRepository {
   async deletionEvents(
     access: FeedbackAccess,
     sessionId: string,
-    after: bigint,
-    through: bigint,
-    limit: number,
+    query: {
+      readonly after: bigint;
+      readonly through: bigint;
+      readonly limit: number;
+    },
   ): Promise<ReturnType<typeof mapEvent>[]> {
+    const { after, through, limit } = query;
     const rows = await this.prisma.agentationEvent.findMany({
       where: {
         sessionId,

@@ -11,6 +11,12 @@ import { cloneCarriedItem, cloneUnresolvedDecision } from "./carry-over-clones";
 type SourceItem = ReportSectionReadModel["items"][number];
 type SourceDecision = ReportSectionReadModel["decisions"][number];
 
+interface CarryOverContext {
+  readonly sourceReportId: string;
+  readonly targetReportId: string;
+  readonly carriedAt: Date;
+}
+
 export interface CarriedAuthorEntry {
   readonly authorId: string;
   readonly items: readonly { item: SourceItem; record: CarryOverRecord }[];
@@ -149,9 +155,7 @@ function isCarryableDecision(
 function carryEntryForAuthor(
   sourceSection: ReportSectionReadModel,
   targetSection: ReportSectionReadModel,
-  sourceReportId: string,
-  targetReportId: string,
-  carriedAt: Date,
+  { sourceReportId, targetReportId, carriedAt }: CarryOverContext,
 ): CarriedAuthorEntry {
   // Records can only carry into parents attached to this target section.
   const targetProjectIds = new Set(
@@ -197,9 +201,7 @@ function carryEntryForAuthor(
 export function planCarriedEntries(
   sourceSections: readonly ReportSectionReadModel[],
   targetSections: readonly ReportSectionReadModel[],
-  sourceReportId: string,
-  targetReportId: string,
-  carriedAt: Date,
+  context: CarryOverContext,
 ): CarriedAuthorEntry[] {
   const targetByAuthor = new Map(
     targetSections.map((target) => [target.authorId, target] as const),
@@ -207,15 +209,7 @@ export function planCarriedEntries(
   return sourceSections.flatMap((sourceSection) => {
     const targetSection = targetByAuthor.get(sourceSection.authorId);
     return targetSection
-      ? [
-          carryEntryForAuthor(
-            sourceSection,
-            targetSection,
-            sourceReportId,
-            targetReportId,
-            carriedAt,
-          ),
-        ]
+      ? [carryEntryForAuthor(sourceSection, targetSection, context)]
       : [];
   });
 }

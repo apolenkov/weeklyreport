@@ -104,23 +104,19 @@ describe("Agentation deletion protocol", () => {
     );
     await repository.updateAnnotation(admin, row.id, { status: "resolved" });
     expect(
-      await repository.deletionEvents(
-        author,
-        session.id,
-        0n,
-        await repository.latestEventSequence(author, session.id),
-        1,
-      ),
+      await repository.deletionEvents(author, session.id, {
+        after: 0n,
+        through: await repository.latestEventSequence(author, session.id),
+        limit: 1,
+      }),
     ).toEqual([]);
     await actions.delete(admin, `agentation_${row.id}`);
     const cursor = await repository.latestEventSequence(author, session.id);
-    const deleted = await repository.deletionEvents(
-      author,
-      session.id,
-      0n,
-      cursor,
-      1,
-    );
+    const deleted = await repository.deletionEvents(author, session.id, {
+      after: 0n,
+      through: cursor,
+      limit: 1,
+    });
     expect(deleted).toHaveLength(1);
     expect(deleted[0]?.payload).toMatchObject({
       id: row.id,
@@ -131,13 +127,15 @@ describe("Agentation deletion protocol", () => {
       await repository.deletionEvents(
         { ...author, userId: admin.userId },
         session.id,
-        0n,
-        cursor,
-        1,
+        { after: 0n, through: cursor, limit: 1 },
       ),
     ).toEqual([]);
     expect(
-      await repository.deletionEvents(author, session.id, cursor, cursor, 1),
+      await repository.deletionEvents(author, session.id, {
+        after: cursor,
+        through: cursor,
+        limit: 1,
+      }),
     ).toEqual([]);
   });
 

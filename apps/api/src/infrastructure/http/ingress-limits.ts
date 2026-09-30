@@ -29,9 +29,12 @@ export function mountClientLogsIngress(
     ) => unknown;
   },
   route: string,
-  limiter: import("express").RequestHandler,
-  jsonParser: import("express").RequestHandler,
-  handler: import("express").RequestHandler,
+  middleware: {
+    readonly limiter: import("express").RequestHandler;
+    readonly jsonParser: import("express").RequestHandler;
+    readonly handler: import("express").RequestHandler;
+  },
 ): void {
+  const { limiter, jsonParser, handler } = middleware;
   app.use(route, limiter, jsonParser, handler);
 }

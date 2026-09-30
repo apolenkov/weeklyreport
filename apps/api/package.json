@@ -73,6 +73,7 @@
     "@types/nodemailer": "^8.0.1",
     "@types/passport": "^1.0.17",
     "@types/pg": "^8.23.1",
+    "fast-check": "4.10.2",
     "samlify": "^2.13.1",
     "tsx": "catalog:"
   }

@@ -6,19 +6,9 @@ import { ClsService } from "nestjs-cls";
 
 import { BullMQModule } from "../../infrastructure/bullmq/bullmq.module";
 import { ConfigModule } from "../../infrastructure/config/config.module.js";
-import { ENV_CONFIG } from "../../infrastructure/config/config.module.js";
-import type { EnvConfig } from "../../infrastructure/config/env.schema.js";
-import { APP_LOGGER } from "../../lib/audit-logger.js";
-import type { AppLogger } from "../../lib/logger.js";
 import { OrganizationModule } from "../organization/index.js";
-import { OrganizationService } from "../organization/index.js";
 import { PolicyApplicatorService } from "./policy-applicator.service.js";
-import {
-  REMINDERS_ENQUEUER,
-  REMINDERS_TELEMETRY,
-  type RemindersEnqueuer,
-  type RemindersTelemetry,
-} from "./reminders.ports.js";
+import { REMINDERS_ENQUEUER, REMINDERS_TELEMETRY } from "./reminders.ports.js";
 import { RemindersPrismaRepository } from "./reminders.prisma-repository";
 import { RemindersScheduler } from "./reminders.scheduler";
 import { RemindersService } from "./reminders.service";
@@ -44,33 +34,7 @@ import { RemindersInfrastructureTelemetry } from "./reminders-telemetry.adapter.
         new RemindersInfrastructureTelemetry(cls),
       inject: [ClsService],
     },
-    {
-      provide: RemindersService,
-      useFactory: (
-        repo: RemindersPrismaRepository,
-        logger: AppLogger,
-        queue: RemindersEnqueuer,
-        telemetry: RemindersTelemetry,
-        organizationService: OrganizationService,
-        env: EnvConfig,
-      ) =>
-        new RemindersService(
-          repo,
-          logger,
-          queue,
-          telemetry,
-          organizationService,
-          env,
-        ),
-      inject: [
-        RemindersPrismaRepository,
-        APP_LOGGER,
-        REMINDERS_ENQUEUER,
-        REMINDERS_TELEMETRY,
-        OrganizationService,
-        ENV_CONFIG,
-      ],
-    },
+    RemindersService,
     // Hourly @Cron deadline reminder dispatcher.
     RemindersScheduler,
     PolicyApplicatorService,

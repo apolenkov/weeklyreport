@@ -59,7 +59,7 @@ export type AiProviderPreparationUpdate = Readonly<{
   lifecycle?: AiProviderLifecycle;
 }>;
 
-type SetTestResultInput = Readonly<{
+export type SetTestResultInput = Readonly<{
   id: string;
   result: Prisma.InputJsonValue;
   status: AiProviderCapabilityTestResult["status"];

@@ -49,9 +49,15 @@ export type AnswerProbe = Readonly<{
 export const runAnswer = async (
   transport: OpenAiCompatibleTransport,
   profile: ResolvedProviderProfile,
-  answerMaxTokens: number,
-  runtime: AiProviderCapabilityRuntimeConfig | undefined,
-  prompts: AiComposedPromptSet,
+  {
+    answerMaxTokens,
+    runtime,
+    prompts,
+  }: Readonly<{
+    answerMaxTokens: number;
+    runtime: AiProviderCapabilityRuntimeConfig | undefined;
+    prompts: AiComposedPromptSet;
+  }>,
 ): Promise<AnswerProbe> => {
   const input: GroundedAnswerInput = {
     question: "Synthetic answer capability probe.",

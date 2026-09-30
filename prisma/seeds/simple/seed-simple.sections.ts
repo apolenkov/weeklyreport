@@ -103,11 +103,15 @@ const statusProductsFor = (
     ? [PROD_CRM, PROD_CRM_SALES, PROD_CRM_DATA, PROD_CRM_360]
     : [lead.productId, ...secondary];
 
+interface SeedSectionIdentity {
+  readonly leadIdx: number;
+  readonly sectionId: string;
+}
+
 async function seedProjectStatuses(
   prisma: PrismaClient,
   lead: LeadCfg,
-  leadIdx: number,
-  sectionId: string,
+  { leadIdx, sectionId }: SeedSectionIdentity,
   products: readonly string[],
 ): Promise<void> {
   for (const [pIdx, productId] of products.entries()) {
@@ -156,8 +160,7 @@ async function seedStageStatuses(
 function buildItemRows(
   lead: LeadCfg,
   content: LeadContent,
-  leadIdx: number,
-  sectionId: string,
+  { leadIdx, sectionId }: SeedSectionIdentity,
   secondary: readonly string[],
 ) {
   return [
@@ -223,8 +226,7 @@ async function seedRiskAndDecisions(
   prisma: PrismaClient,
   lead: LeadCfg,
   content: LeadContent,
-  leadIdx: number,
-  sectionId: string,
+  { leadIdx, sectionId }: SeedSectionIdentity,
 ): Promise<void> {
   if (content.risk) {
     const assignment = requireAssignment(lead.id, lead.productId, 0);
@@ -284,18 +286,18 @@ async function seedLeadSection(
   });
 
   const secondary = secondaryProductsFor(lead);
+  const sectionIdentity = { leadIdx, sectionId };
   await seedProjectStatuses(
     prisma,
     lead,
-    leadIdx,
-    sectionId,
+    sectionIdentity,
     statusProductsFor(lead, secondary),
   );
   await seedStageStatuses(prisma, lead, leadIdx, sectionId);
   await prisma.item.createMany({
-    data: buildItemRows(lead, content, leadIdx, sectionId, secondary),
+    data: buildItemRows(lead, content, sectionIdentity, secondary),
   });
-  await seedRiskAndDecisions(prisma, lead, content, leadIdx, sectionId);
+  await seedRiskAndDecisions(prisma, lead, content, sectionIdentity);
 }
 
 export async function seedActiveSections(prisma: PrismaClient): Promise<void> {

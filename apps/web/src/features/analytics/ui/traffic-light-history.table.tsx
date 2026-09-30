@@ -2,6 +2,7 @@
 
 import {
   aggregateTrafficLight,
+  type AnalyticsPeriod,
   CANONICAL_STATUS_PRECEDENCE,
   type CanonicalStatus,
   canonicalStatusSchema,
@@ -9,6 +10,7 @@ import {
   trafficLightToCanonical,
 } from "@customreport/shared";
 
+import { formatPeriodRangeWithYear } from "../../../shared/lib/format/format-date";
 import { statusLabel } from "../../../shared/lib/status/status-presentation";
 import { SlideStatusBadge } from "../../../shared/ui/feedback/slide-status-badge";
 import {
@@ -16,7 +18,6 @@ import {
   StickyColumnHeader,
   StickyRowHeader,
 } from "./analytics-table";
-import { weekEndingRange } from "./analytics-table-data";
 
 function StatusChange({
   previous,
@@ -38,12 +39,12 @@ function StatusChange({
   );
 }
 
-function LatestWeekSummary({
+function LatestPeriodSummary({
   period,
   rows,
   index,
 }: {
-  readonly period: string;
+  readonly period: AnalyticsPeriod;
   readonly rows: TrafficLightHistoryOutput["rows"];
   readonly index: number;
 }) {
@@ -57,7 +58,7 @@ function LatestWeekSummary({
     .filter(({ count }) => count > 0);
   return (
     <p className="mb-3 text-sm text-muted-foreground">
-      Week of {weekEndingRange(period)}:{" "}
+      Period {formatPeriodRangeWithYear(period.periodStart, period.periodEnd)}:{" "}
       {counts
         .map(
           ({ status, count }, i) =>
@@ -100,7 +101,8 @@ export function TrafficLightHistoryTable({
   rows,
   headingId,
 }: TrafficLightHistoryOutput & { readonly headingId: string }) {
-  if (periods.length === 0 || rows.length === 0) {
+  const latestPeriod = periods.at(-1);
+  if (latestPeriod === undefined || rows.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
         No published periods in range.
@@ -129,8 +131,8 @@ export function TrafficLightHistoryTable({
 
   return (
     <>
-      <LatestWeekSummary
-        period={periods[latestIndex] ?? ""}
+      <LatestPeriodSummary
+        period={latestPeriod}
         rows={rows}
         index={latestIndex}
       />
@@ -144,11 +146,14 @@ export function TrafficLightHistoryTable({
             <StickyColumnHeader>Project</StickyColumnHeader>
             {displayPeriods.map(({ period, index }) => (
               <th
-                key={period}
+                key={period.periodEnd}
                 scope="col"
                 className={`whitespace-nowrap px-3 py-2 ${index === latestIndex ? "bg-[var(--color-surface-muted)]" : ""}`}
               >
-                {weekEndingRange(period)}
+                {formatPeriodRangeWithYear(
+                  period.periodStart,
+                  period.periodEnd,
+                )}
               </th>
             ))}
           </tr>
@@ -159,7 +164,7 @@ export function TrafficLightHistoryTable({
               <StickyRowHeader>{row.projectName}</StickyRowHeader>
               {displayPeriods.map(({ period, index }) => (
                 <HistoryCell
-                  key={period}
+                  key={period.periodEnd}
                   statuses={row.statuses}
                   index={index}
                   latest={index === latestIndex}

@@ -12,6 +12,7 @@ import type {
   ClarificationTokenCodec,
   ClarificationTokenDescriptor,
   ReferenceSlot,
+  ResolveSearchPlanInput,
   SingleReferenceOutcome,
 } from "./entity-resolver.types.js";
 
@@ -138,8 +139,10 @@ export const resolveReference = (
   catalog: AccessibleEntityCatalog,
   slot: ReferenceSlot,
   tokenIndex: ReadonlyMap<string, readonly ClarificationTokenDescriptor[]>,
-  actorId: string,
-  tokenCodec: ClarificationTokenCodec,
+  {
+    actorId,
+    tokenCodec,
+  }: Pick<ResolveSearchPlanInput, "actorId" | "tokenCodec">,
 ): SingleReferenceOutcome => {
   const tokens = tokenIndex.get(referenceKey(slot.kind, slot.reference)) ?? [];
   if (tokens.length > 0) {

@@ -4,10 +4,19 @@ import {
   type ReportAssistantRequest,
   reportAssistantRequestSchema,
 } from "@customreport/shared";
+import { Inject, Injectable } from "@nestjs/common";
 
+import { ENV_CONFIG } from "../../../infrastructure/config/config.module.js";
+import type { EnvConfig } from "../../../infrastructure/config/env.schema.js";
+import { ReportAssistantResourceGuard } from "../../../infrastructure/throttler/report-assistant-resource-guard.js";
 import { buildGroundingBundle } from "../domain/context-builder.js";
 import type { ClarificationTokenCodec } from "../domain/entity-resolver.types.js";
-import type { AiRuntimeResolverPort } from "./ai-runtime.resolver.js";
+import { ReportSearchPrismaRepository } from "../infrastructure/report-search.prisma-repository.js";
+import {
+  AiRuntimeResolver,
+  type AiRuntimeResolverPort,
+} from "./ai-runtime.resolver.js";
+import { createClarificationTokenCodec } from "./clarification-token.js";
 import {
   type CandidatePreparation,
   prepareReportAssistantCandidates,
@@ -15,7 +24,6 @@ import {
 import {
   type AnswerPort,
   answerWithCitationRepair,
-  type PlannerPort,
   planWithOneRepair,
 } from "./report-assistant.orchestration.js";
 import {
@@ -24,47 +32,25 @@ import {
   type ReportAssistantResourceGuardPort,
 } from "./report-assistant.ports.js";
 import {
+  createReportAssistantClock,
+  providerUnavailable,
+  type ReportAssistantClock,
+  type ReportAssistantConfig,
+  resolveReportAssistantTimeZone,
+} from "./report-assistant.runtime.js";
+import {
   EMPTY_REPORT_ASSISTANT_TRACE,
   NOOP_REPORT_ASSISTANT_TELEMETRY,
+  REPORT_ASSISTANT_TELEMETRY,
   type ReportAssistantTelemetry,
   type ReportAssistantTrace,
 } from "./report-assistant.telemetry.js";
 import type { ReportSearchRepository } from "./report-search.repository.js";
-import type { SemanticRetrievalService } from "./semantic-retrieval.service.js";
 
-const HTTP_TOO_MANY_REQUESTS = 429;
-const MILLISECONDS_PER_SECOND = 1000;
 const LEASE_LOSS_RETRY_AFTER_SECONDS = 1;
-
-export type ReportAssistantConfig = Readonly<{
-  candidateLimit: number;
-  exhaustiveLimit: number;
-  contextTokenBudget: number;
-  model: string;
-  timeZone: string;
-}>;
-
-export type ReportAssistantClock = Readonly<{ now: Date }>;
 
 const outcome = (value: ReportAssistantOutcome): ReportAssistantOutcome =>
   reportAssistantOutcomeSchema.parse(value);
-
-const providerUnavailable = (
-  error: ReportAssistantProviderError,
-): ReportAssistantOutcome =>
-  outcome({
-    kind: "provider_unavailable",
-    ...(error.statusCode === HTTP_TOO_MANY_REQUESTS &&
-    error.retryAfterMs !== undefined
-      ? {
-          rateLimit: {
-            retryAfterSeconds: Math.ceil(
-              error.retryAfterMs / MILLISECONDS_PER_SECOND,
-            ),
-          },
-        }
-      : {}),
-  });
 
 type AssistantExecution = Readonly<{
   outcome: ReportAssistantOutcome;
@@ -83,19 +69,42 @@ const complete = (
   model: string,
 ): AssistantExecution => ({ outcome: outcome(result), trace, model });
 
+@Injectable()
 export class ReportAssistantService {
+  private readonly tokenCodec: ClarificationTokenCodec;
+  private readonly config: ReportAssistantConfig;
+  private readonly clock: ReportAssistantClock;
+
   constructor(
+    @Inject(ReportSearchPrismaRepository)
     private readonly repository: ReportSearchRepository,
-    private readonly planner: PlannerPort,
-    private readonly answerer: AnswerPort,
-    private readonly tokenCodec: ClarificationTokenCodec,
-    private readonly config: ReportAssistantConfig,
-    private readonly clock: ReportAssistantClock,
-    private readonly resourceGuard: ReportAssistantResourceGuardPort,
-    private readonly semanticRetrieval?: SemanticRetrievalService,
+    @Inject(REPORT_ASSISTANT_TELEMETRY)
     private readonly telemetry: ReportAssistantTelemetry = NOOP_REPORT_ASSISTANT_TELEMETRY,
-    private readonly runtimeResolver?: AiRuntimeResolverPort,
-  ) {}
+    @Inject(AiRuntimeResolver)
+    private readonly runtimeResolver: AiRuntimeResolverPort,
+    @Inject(ENV_CONFIG)
+    env: Pick<
+      EnvConfig,
+      | "AUTH_JWT_SECRET"
+      | "REPORT_ASSISTANT_CANDIDATE_LIMIT"
+      | "REPORT_ASSISTANT_EXHAUSTIVE_LIMIT"
+      | "REPORT_ASSISTANT_CONTEXT_TOKEN_BUDGET"
+    >,
+    @Inject(ReportAssistantResourceGuard)
+    private readonly resourceGuard: ReportAssistantResourceGuardPort,
+  ) {
+    this.tokenCodec = createClarificationTokenCodec({
+      AUTH_JWT_SECRET: env.AUTH_JWT_SECRET,
+    });
+    this.config = {
+      candidateLimit: env.REPORT_ASSISTANT_CANDIDATE_LIMIT,
+      exhaustiveLimit: env.REPORT_ASSISTANT_EXHAUSTIVE_LIMIT,
+      contextTokenBudget: env.REPORT_ASSISTANT_CONTEXT_TOKEN_BUDGET,
+      model: "active-provider",
+      timeZone: resolveReportAssistantTimeZone(),
+    };
+    this.clock = createReportAssistantClock();
+  }
 
   async answer(
     request: ReportAssistantRequest,
@@ -165,22 +174,16 @@ export class ReportAssistantService {
   ): Promise<AssistantExecution> {
     signal.throwIfAborted();
     const parsedRequest = reportAssistantRequestSchema.parse(request);
-    const runtime = this.runtimeResolver
-      ? await this.runtimeResolver.resolveActive()
-      : undefined;
+    const runtime = await this.runtimeResolver.resolveActive();
     signal.throwIfAborted();
-    if (this.runtimeResolver && !runtime) {
+    if (!runtime) {
       return complete(
         { kind: "ai_not_configured" },
         EMPTY_REPORT_ASSISTANT_TRACE,
         this.config.model,
       );
     }
-    const planner = runtime?.planner ?? this.planner;
-    const answerer = runtime?.answerer ?? this.answerer;
-    const model = runtime?.model ?? this.config.model;
-    const semanticRetrieval =
-      runtime?.semanticRetrieval ?? this.semanticRetrieval;
+    const { planner, answerer, model, semanticRetrieval } = runtime;
     const planAttempt = await planWithOneRepair(
       planner,
       {
@@ -225,29 +228,38 @@ export class ReportAssistantService {
     if (preparation.kind === "terminal") {
       return complete(preparation.outcome, preparation.trace, model);
     }
-    return this.answerGroundedCandidates(
-      parsedRequest.question,
-      preparation,
+    return this.answerGroundedCandidates(parsedRequest.question, preparation, {
       answerer,
       model,
       signal,
-    );
+    });
   }
 
   private async answerGroundedCandidates(
     question: string,
     preparation: ReadyCandidatePreparation,
-    answerer: AnswerPort,
-    model: string,
-    signal: AbortSignal,
+    {
+      answerer,
+      model,
+      signal,
+    }: Readonly<{
+      answerer: AnswerPort;
+      model: string;
+      signal: AbortSignal;
+    }>,
   ): Promise<AssistantExecution> {
     signal.throwIfAborted();
     const grounding = buildGroundingBundle(
       preparation.sorted,
       preparation.plan,
-      this.config.contextTokenBudget,
-      { now: this.clock.now, timeZone: this.config.timeZone },
-      preparation.limited.candidates,
+      {
+        contextTokenBudget: this.config.contextTokenBudget,
+        classificationContext: {
+          now: this.clock.now,
+          timeZone: this.config.timeZone,
+        },
+        evidenceCandidates: preparation.limited.candidates,
+      },
     );
     const answered = await answerWithCitationRepair(
       answerer,

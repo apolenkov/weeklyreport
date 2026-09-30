@@ -34,7 +34,7 @@ function digestSelectedSources(
   occurrences: ReadonlyMap<string, ReportOccurrence>,
   authorized: {
     readonly occurrences: readonly ReportOccurrence[];
-    readonly sectionScopes: Parameters<typeof digestSource>[3];
+    readonly sectionScopes: Parameters<typeof digestSource>[2]["scopes"];
   },
   options: AssistantReadinessOptions,
 ): readonly AssistantReadinessDigestEntry[] {
@@ -43,14 +43,12 @@ function digestSelectedSources(
     const occurrence = occurrences.get(source.reportId);
     return occurrence === undefined
       ? []
-      : digestSource(
-          source,
-          occurrence,
-          authorized.occurrences,
-          authorized.sectionScopes,
+      : digestSource(source, occurrence, {
+          authorizedOccurrences: authorized.occurrences,
+          scopes: authorized.sectionScopes,
           options,
           seen,
-        );
+        });
   });
 }
 

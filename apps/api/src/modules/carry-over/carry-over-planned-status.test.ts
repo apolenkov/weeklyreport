@@ -187,13 +187,11 @@ describe("carry-over preserves planning intent", () => {
       projects: firstSource.projects,
     };
     const firstEntry = expectDefined(
-      planCarriedEntries(
-        [firstSource],
-        [middleTarget],
+      planCarriedEntries([firstSource], [middleTarget], {
         sourceReportId,
-        middleReportId,
-        new Date("2026-09-07T00:00:00.000Z"),
-      )[0],
+        targetReportId: middleReportId,
+        carriedAt: new Date("2026-09-07T00:00:00.000Z"),
+      })[0],
     );
     const firstClone = expectDefined(firstEntry.items[0]).item;
 
@@ -215,13 +213,11 @@ describe("carry-over preserves planning intent", () => {
       projects: middleTarget.projects,
     };
     const secondEntry = expectDefined(
-      planCarriedEntries(
-        [middleSource],
-        [finalTarget],
-        middleReportId,
+      planCarriedEntries([middleSource], [finalTarget], {
+        sourceReportId: middleReportId,
         targetReportId,
-        new Date("2026-09-14T00:00:00.000Z"),
-      )[0],
+        carriedAt: new Date("2026-09-14T00:00:00.000Z"),
+      })[0],
     );
     const secondClone = expectDefined(secondEntry.items[0]).item;
 
@@ -422,13 +418,11 @@ describe("carry-over selects one rollover target per lineage", () => {
     source: ReportSectionReadModel,
     target: ReportSectionReadModel,
   ) =>
-    planCarriedEntries(
-      [source],
-      [target],
-      source.reportId,
-      target.reportId,
-      new Date("2026-09-14T00:00:00.000Z"),
-    );
+    planCarriedEntries([source], [target], {
+      sourceReportId: source.reportId,
+      targetReportId: target.reportId,
+      carriedAt: new Date("2026-09-14T00:00:00.000Z"),
+    });
 
   it("continues a bare in-progress Current item once as in_progress", () => {
     const stableId = randomUUID();

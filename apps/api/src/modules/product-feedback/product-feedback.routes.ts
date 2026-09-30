@@ -15,7 +15,6 @@ import {
   annotationIdFromInboxId,
 } from "./agentation-inbox.repository.js";
 import { AgentationInboxActions } from "./agentation-inbox-actions.js";
-import { executeAgentationRequest } from "./agentation-wire.js";
 import { deleteFeedback } from "./product-feedback.delete.js";
 import {
   feedbackAccessFromSession,
@@ -54,6 +53,11 @@ export interface FeedbackRouteDeps {
   readonly logger: AppLogger;
   readonly prisma?: PrismaService;
   readonly agentationEnabled?: boolean;
+}
+
+interface FeedbackItemRequest {
+  readonly id: string;
+  readonly body: unknown;
 }
 
 function feedbackId(path: string, suffix = ""): string | null {
@@ -126,19 +130,19 @@ async function listFeedback(
   });
 }
 async function changeStatus(
-  req: Request,
+  request: FeedbackItemRequest,
   res: Response,
   session: UserSession,
   deps: FeedbackRouteDeps,
-  id: string,
 ): Promise<void> {
+  const { id } = request;
   if (session.role !== "admin" && session.role !== "head") {
     res
       .status(HTTP_NOT_FOUND)
       .json({ error: "not_found", message: NOT_FOUND_ERROR });
     return;
   }
-  const { status } = statusSchema.parse(req.body);
+  const { status } = statusSchema.parse(request.body);
   if (status === "wont_fix" && annotationIdFromInboxId(id)) {
     res.status(HTTP_BAD_REQUEST).json({
       error: "dismiss_reason_required",
@@ -170,13 +174,13 @@ async function changeStatus(
   res.status(HTTP_OK).json(serializeFeedback(changed, access));
 }
 async function editFeedback(
-  req: Request,
+  request: FeedbackItemRequest,
   res: Response,
   session: UserSession,
   deps: FeedbackRouteDeps,
-  id: string,
 ): Promise<void> {
-  const { comment } = commentSchema.parse(req.body);
+  const { id } = request;
+  const { comment } = commentSchema.parse(request.body);
   const access = feedbackAccessFromSession(session);
   const agentation = agentationInboxActions(deps);
   if (annotationIdFromInboxId(id) && agentation) {
@@ -198,18 +202,18 @@ async function editFeedback(
     .json(serializeFeedback(changed, feedbackAccessFromSession(session)));
 }
 async function replyFeedback(
-  req: Request,
+  request: FeedbackItemRequest,
   res: Response,
   session: UserSession,
   deps: FeedbackRouteDeps,
-  id: string,
 ): Promise<void> {
+  const { id } = request;
   const agentation = agentationInboxActions(deps);
   if (!agentation) {
     res.sendStatus(HTTP_NOT_FOUND);
     return;
   }
-  const { content } = replySchema.parse(req.body);
+  const { content } = replySchema.parse(request.body);
   const changed = await agentation.reply(
     feedbackAccessFromSession(session),
     id,
@@ -220,18 +224,18 @@ async function replyFeedback(
     .json(serializeFeedback(changed, feedbackAccessFromSession(session)));
 }
 async function dismissFeedback(
-  req: Request,
+  request: FeedbackItemRequest,
   res: Response,
   session: UserSession,
   deps: FeedbackRouteDeps,
-  id: string,
 ): Promise<void> {
+  const { id } = request;
   const agentation = agentationInboxActions(deps);
   if (!agentation || (session.role !== "admin" && session.role !== "head")) {
     res.sendStatus(HTTP_NOT_FOUND);
     return;
   }
-  const { reason } = dismissSchema.parse(req.body);
+  const { reason } = dismissSchema.parse(request.body);
   const changed = await agentation.dismiss(
     feedbackAccessFromSession(session),
     id,
@@ -240,20 +244,6 @@ async function dismissFeedback(
   res
     .status(HTTP_OK)
     .json(serializeFeedback(changed, feedbackAccessFromSession(session)));
-}
-export async function executeAgentationRoute(
-  req: Request,
-  res: Response,
-  session: UserSession,
-  deps: FeedbackRouteDeps,
-  agentationAgent: boolean,
-): Promise<boolean> {
-  if (deps.agentationEnabled !== true || !deps.prisma) return false;
-  return executeAgentationRequest(req, res, session, deps.prisma, deps.logger, {
-    actor: agentationAgent ? "agent" : "human",
-    isAgent: agentationAgent,
-    frontendOrigin: deps.frontendOrigin,
-  });
 }
 export async function executeFeedbackCollectionRoute(
   req: Request,
@@ -275,24 +265,39 @@ export async function executeFeedbackItemRoute(
   const statusTarget =
     req.method === "PATCH" ? feedbackId(req.path, "/status") : null;
   if (statusTarget) {
-    await changeStatus(req, res, session, deps, statusTarget);
+    await changeStatus(
+      { id: statusTarget, body: req.body },
+      res,
+      session,
+      deps,
+    );
     return true;
   }
   const editTarget = req.method === "PUT" ? feedbackId(req.path) : null;
   if (editTarget) {
-    await editFeedback(req, res, session, deps, editTarget);
+    await editFeedback({ id: editTarget, body: req.body }, res, session, deps);
     return true;
   }
   const replyTarget =
     req.method === "POST" ? feedbackId(req.path, "/replies") : null;
   if (replyTarget) {
-    await replyFeedback(req, res, session, deps, replyTarget);
+    await replyFeedback(
+      { id: replyTarget, body: req.body },
+      res,
+      session,
+      deps,
+    );
     return true;
   }
   const dismissTarget =
     req.method === "POST" ? feedbackId(req.path, "/dismiss") : null;
   if (dismissTarget) {
-    await dismissFeedback(req, res, session, deps, dismissTarget);
+    await dismissFeedback(
+      { id: dismissTarget, body: req.body },
+      res,
+      session,
+      deps,
+    );
     return true;
   }
   const deleteTarget = req.method === "DELETE" ? feedbackId(req.path) : null;

@@ -298,7 +298,9 @@ describe("Analytics day-range matching (integration)", () => {
     const first = await repo.trafficLightHistory(MAY, adminDR);
     const second = await repo.trafficLightHistory(MAY, adminDR);
 
-    const labelIdx = first.periods.indexOf("2026-05-10");
+    const labelIdx = first.periods.findIndex(
+      (period) => period.periodEnd === "2026-05-10",
+    );
     const row = first.rows.find((r) => r.projectId === DR_PROJECT);
     // Latest periodEnd (20:00, red) wins over the earlier (08:00, green).
     expect(row?.statuses[labelIdx]).toBe("red");
@@ -356,7 +358,9 @@ describe("Analytics day-range matching (integration)", () => {
     });
 
     const result = await repo.trafficLightHistory(MAY, adminDR);
-    const labelIdx = result.periods.indexOf("2026-05-10");
+    const labelIdx = result.periods.findIndex(
+      (period) => period.periodEnd === "2026-05-10",
+    );
     const row = result.rows.find((r) => r.projectId === DR_PROJECT);
     // periodEnd ties; the later createdAt (red) wins.
     expect(row?.statuses[labelIdx]).toBe("red");
@@ -373,11 +377,14 @@ describe("Analytics day-range matching (integration)", () => {
     });
 
     const history = await repo.trafficLightHistory(MAY, adminDR);
-    expect(history.periods).toContain("2026-05-31");
+    expect(history.periods).toContainEqual({
+      periodStart: "2026-05-25",
+      periodEnd: "2026-05-31",
+    });
     expect(history.rows.some((r) => r.projectId === DR_PROJECT)).toBe(true);
 
     const velocity = await repo.leadVelocity(MAY, adminDR);
-    const finalDay = velocity.find((p) => p.periodLabel === "2026-05-31");
+    const finalDay = velocity.find((p) => p.periodEnd === "2026-05-31");
     expect(finalDay?.leads.map((l) => l.leadId)).toContain(DR_LEAD);
   });
 
@@ -398,7 +405,7 @@ describe("Analytics day-range matching (integration)", () => {
     });
 
     const velocity = await repo.leadVelocity(MAY, adminDR);
-    const rows = velocity.filter((p) => p.periodLabel === "2026-05-10");
+    const rows = velocity.filter((p) => p.periodEnd === "2026-05-10");
     // Two reports share the 2026-05-10 label — grouping yields ONE row, and a
     // lead submitted in BOTH the original and the republish counts ONCE in it
     // (not one entry per report, which would overstate that lead's velocity).
