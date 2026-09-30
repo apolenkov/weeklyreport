@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 const STICKY =
-  "sticky left-0 w-28 min-w-28 max-w-28 whitespace-normal break-words bg-[var(--color-background)] shadow-[1px_0_0_var(--color-border)] px-3 py-2 sm:w-auto sm:min-w-0 sm:max-w-none";
+  "sticky left-0 w-36 min-w-36 max-w-36 whitespace-normal break-words bg-[var(--color-background)] shadow-[1px_0_0_var(--color-border)] px-3 py-2 sm:w-auto sm:min-w-0 sm:max-w-none";
 
 export function AnalyticsTable({
   headingId,

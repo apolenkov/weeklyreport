@@ -37,7 +37,7 @@ function ActionLogTable({
         id={scrollHintId}
         className="text-xs text-[var(--color-muted-foreground)] sm:hidden"
       >
-        Swipe horizontally to see status and details.
+        Scroll horizontally to see status and details.
       </p>
       <div
         role="region"

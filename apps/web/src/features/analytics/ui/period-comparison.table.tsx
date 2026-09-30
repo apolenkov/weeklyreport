@@ -53,10 +53,10 @@ export function PeriodComparisonTable({
               Previous status
             </th>
             <th scope="col" className="px-3 py-2">
-              Previous risks
+              Latest risks
             </th>
             <th scope="col" className="px-3 py-2">
-              Latest risks
+              Previous risks
             </th>
             <th scope="col" className="px-3 py-2">
               Risk change
@@ -79,8 +79,8 @@ export function PeriodComparisonTable({
                   labelVariant="screen"
                 />
               </td>
-              <td className="px-3 py-2">{r.riskCountA}</td>
               <td className="px-3 py-2">{r.riskCountB}</td>
+              <td className="px-3 py-2">{r.riskCountA}</td>
               <td className={`px-3 py-2 ${deltaClass(r.riskDelta)}`}>
                 {r.riskDelta > 0 ? `+${r.riskDelta}` : r.riskDelta}
               </td>
