@@ -11,6 +11,7 @@ import {
 } from "../../test-utils/prisma-test-helper";
 import { CarryOverPrismaRepository } from "./carry-over.prisma-repository";
 import { CarryOverService } from "./carry-over.service";
+import { createNullLogger } from "../../lib/logger";
 
 describe("CarryOverPrismaRepository (integration)", () => {
   const prisma = createTestPrisma();
@@ -817,7 +818,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
       where: { reportSectionId: testData.section.id },
     });
 
-    const service = new CarryOverService(repo);
+    const service = new CarryOverService(repo, createNullLogger());
     const first = await service.executeCarryOver(
       testData.report.id,
       targetReport.id,

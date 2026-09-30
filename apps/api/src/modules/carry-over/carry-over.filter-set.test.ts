@@ -10,6 +10,7 @@ import {
   type CarryOverRepository,
   CarryOverService,
 } from "./carry-over.service";
+import { createNullLogger } from "../../lib/logger";
 
 const sourceReportId = "22222222-2222-4222-8222-222222222222";
 const targetReportId = "55555555-5555-4555-8555-555555555555";
@@ -439,10 +440,10 @@ describe("CarryOverService — carry filter set (pin)", () => {
       items: 0,
     },
   ])("$name", async ({ opts, items }) => {
-    const result = await new CarryOverService(pinRepo(opts)).executeCarryOver(
-      sourceReportId,
-      targetReportId,
-    );
+    const result = await new CarryOverService(
+      pinRepo(opts),
+      createNullLogger(),
+    ).executeCarryOver(sourceReportId, targetReportId);
     expect(result.execution.carriedItemCount).toBe(items);
     expect(result.records).toHaveLength(items);
   });
@@ -487,10 +488,10 @@ describe("CarryOverService — carry filter set (pin)", () => {
       decisions: 0,
     },
   ])("$name", async ({ opts, decisions }) => {
-    const result = await new CarryOverService(pinRepo(opts)).executeCarryOver(
-      sourceReportId,
-      targetReportId,
-    );
+    const result = await new CarryOverService(
+      pinRepo(opts),
+      createNullLogger(),
+    ).executeCarryOver(sourceReportId, targetReportId);
     expect(result.execution.carriedDecisionCount).toBe(decisions);
     expect(result.records).toHaveLength(decisions);
   });
@@ -552,7 +553,7 @@ describe("CarryOverService — carry filter set (pin)", () => {
       },
     };
 
-    await new CarryOverService(repo).executeCarryOver(
+    await new CarryOverService(repo, createNullLogger()).executeCarryOver(
       sourceReportId,
       targetReportId,
     );
@@ -577,7 +578,7 @@ describe("CarryOverService — carry filter set (pin)", () => {
       ]);
 
     await expect(
-      new CarryOverService(repo).executeCarryOver(
+      new CarryOverService(repo, createNullLogger()).executeCarryOver(
         sourceReportId,
         targetReportId,
       ),

@@ -12,6 +12,7 @@ import {
 } from "../../test-utils/prisma-test-helper.js";
 import { RemindersPrismaRepository } from "./reminders.prisma-repository.js";
 import { RemindersService } from "./reminders.service.js";
+import { createNullLogger } from "../../lib/logger";
 
 const EXECUTION_COUNT = 105;
 const PAGE_SIZE = 20;
@@ -34,7 +35,7 @@ const QUEUE_PAYLOAD = {
 
 const prisma = createTestPrisma();
 const repository = new RemindersPrismaRepository(prisma as never);
-const service = new RemindersService(repository);
+const service = new RemindersService(repository, createNullLogger());
 
 async function seedExecutionHistory(): Promise<readonly string[]> {
   const { report } = await seedTestData(prisma);

@@ -19,6 +19,7 @@ import {
   LeadFormConstraintError,
   LeadFormService,
 } from "./lead-form.service";
+import { NOOP_REPORT_SECTIONS_TELEMETRY } from "./report-sections-telemetry.port.js";
 
 describe("LeadFormService — revokeSubmission", () => {
   it("succeeds for a submitted section", async () => {
@@ -27,7 +28,7 @@ describe("LeadFormService — revokeSubmission", () => {
         .fn()
         .mockResolvedValue(structuredClone(submittedSection)),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     const result = await service.revokeSubmission(
       SECTION_ID,
@@ -48,7 +49,7 @@ describe("LeadFormService — revokeSubmission", () => {
         .fn()
         .mockResolvedValue(structuredClone(draftSection)),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     // A state conflict on an existing section → typed LeadFormConstraintError
     // (→ BAD_REQUEST), not a bare Error (→ 500).
@@ -64,7 +65,7 @@ describe("LeadFormService — revokeSubmission", () => {
     // getSectionByIdScoped returns null for both a genuinely missing id and an
     // out-of-group id (no existence oracle) → LeadFormDomainError → NOT_FOUND.
     const repo = createMockRepository();
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
       service.revokeSubmission(SECTION_ID, OTHER_USER_ID, {}),
@@ -81,7 +82,7 @@ describe("LeadFormService — revokeSubmission", () => {
         .mockResolvedValue(structuredClone(submittedSection)),
       getReportPeriodStatusForSection: vi.fn().mockResolvedValue("published"),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
       service.revokeSubmission(SECTION_ID, OTHER_USER_ID, {}),
@@ -101,7 +102,7 @@ describe("LeadFormService — revokeSubmission", () => {
         .mockResolvedValue(structuredClone(submittedSection)),
       getReportPeriodStatusForSection: vi.fn().mockResolvedValue("reopened"),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
       service.revokeSubmission(SECTION_ID, OTHER_USER_ID, {}),
@@ -122,7 +123,7 @@ describe("LeadFormService — fillFrom authorization", () => {
     const repo = createMockRepository({
       getSectionById: vi.fn().mockResolvedValue(foreignTarget),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
       service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, 1),
@@ -144,7 +145,7 @@ describe("LeadFormService — fillFrom authorization", () => {
       ),
       getReportPeriodStatusForSection: vi.fn().mockResolvedValue("open"),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
       service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, 1),
@@ -169,7 +170,7 @@ describe("LeadFormService — fillFrom published-lineage lock", () => {
         decisionStableIds: [],
       }),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
       service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, 1),
@@ -188,7 +189,7 @@ describe("LeadFormService — fillFrom published-lineage lock", () => {
         decisionStableIds: [],
       }),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     const result = await service.fillFrom(
       SECTION_ID,
@@ -221,7 +222,7 @@ describe("LeadFormService — getCrossAuthors authorization", () => {
       // Admission is owned by the repository's single RepeatableRead call.
       getCrossAuthors: vi.fn().mockResolvedValue([]),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     const rows = await service.getCrossAuthors(REPORT_ID, AUTHOR_ID, "lead");
 
@@ -238,7 +239,7 @@ describe("LeadFormService — getCrossAuthors authorization", () => {
     const repo = createMockRepository({
       getCrossAuthors: vi.fn().mockResolvedValue([crossAuthorRow]),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     const rows = await service.getCrossAuthors(REPORT_ID, AUTHOR_ID, "lead");
 
@@ -254,7 +255,7 @@ describe("LeadFormService — getCrossAuthors authorization", () => {
     const repo = createMockRepository({
       getCrossAuthors: vi.fn().mockResolvedValue([crossAuthorRow]),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     const rows = await service.getCrossAuthors(REPORT_ID, AUTHOR_ID, "head");
 
@@ -382,7 +383,7 @@ describe("LeadFormService — getCrossAuthorContent authorization", () => {
         .fn()
         .mockResolvedValue({ coOwnsShared: false, rows: [] }),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     const rows = await service.getCrossAuthorContent(REPORT_ID, AUTHOR_ID);
 
@@ -402,7 +403,7 @@ describe("LeadFormService — getCrossAuthorContent authorization", () => {
         .fn()
         .mockResolvedValue({ coOwnsShared: true, rows: [contentRow] }),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     const rows = await service.getCrossAuthorContent(REPORT_ID, AUTHOR_ID);
 
@@ -424,7 +425,7 @@ describe("LeadFormService — revokeAllSubmitted", () => {
     const repo = createMockRepository({
       revokeAllSubmitted: vi.fn().mockResolvedValue(3),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     const result = await service.revokeAllSubmitted(REPORT_ID, OTHER_USER_ID, {
       author: { reportingGroupId: { in: ["group-a"] } },
@@ -444,7 +445,7 @@ describe("LeadFormService — revokeAllSubmitted", () => {
     const repo = createMockRepository({
       revokeAllSubmitted: vi.fn().mockResolvedValue(0),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     const result = await service.revokeAllSubmitted(
       REPORT_ID,
@@ -466,7 +467,7 @@ describe("LeadFormService — fillFrom", () => {
       getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
       fillFromSection: vi.fn().mockResolvedValue(7),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     const result = await service.fillFrom(
       SECTION_ID,
@@ -488,7 +489,7 @@ describe("LeadFormService — fillFrom", () => {
     const repo = createMockRepository({
       getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
       service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, OTHER_USER_ID, 1),
@@ -502,7 +503,7 @@ describe("LeadFormService — fillFrom", () => {
       getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
       getReportPeriodStatusForSection: vi.fn().mockResolvedValue("published"),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
       service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, 1),
@@ -517,7 +518,7 @@ describe("LeadFormService — fillFrom", () => {
       getReportPeriodStatusForSection: vi.fn().mockResolvedValue("reopened"),
       fillFromSection: vi.fn().mockResolvedValue(3),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     const result = await service.fillFrom(
       SECTION_ID,
@@ -536,7 +537,7 @@ describe("LeadFormService — fillFrom", () => {
         .fn()
         .mockResolvedValue(structuredClone(submittedSection)),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
       service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, 1),
@@ -545,7 +546,7 @@ describe("LeadFormService — fillFrom", () => {
 
   it("fails when target section does not exist", async () => {
     const repo = createMockRepository();
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
       service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, 1),
@@ -560,7 +561,7 @@ describe("LeadFormService — fillFrom", () => {
         ),
       ),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
       service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, 1),
@@ -576,7 +577,7 @@ describe("LeadFormService — fillFrom", () => {
     const repo = createMockRepository({
       getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
     });
-    const service = new LeadFormService(repo);
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
       service.fillFrom(SECTION_ID, SECTION_ID, AUTHOR_ID, 1),

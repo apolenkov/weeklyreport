@@ -42,6 +42,7 @@ import {
 import { lockRestoredReports } from "./admin-snapshot/period-locks.js";
 import { lockReminderRestoreGraph } from "./admin-snapshot/reminder-locks.js";
 import { PeriodAdminService } from "./period-admin.service.js";
+import { createNullLogger } from "../../lib/logger";
 
 describe("AdminPrismaRepository (integration)", () => {
   const prisma = createTestPrisma();
@@ -238,6 +239,7 @@ describe("AdminPrismaRepository (integration)", () => {
       const pausedPrisma = pauseBeforeTransaction(prisma, gate.pause);
       const service = new PeriodAdminService(
         new AdminPrismaRepository(pausedPrisma as never),
+        createNullLogger(),
       );
       const originalEnd = testData.report.periodEnd;
       const update = service.updatePeriodManual({
@@ -1261,7 +1263,7 @@ describe("AdminPrismaRepository (integration)", () => {
     const enqueued: unknown[] = [];
     const reminders = new RemindersService(
       new RemindersPrismaRepository(prisma as never),
-      undefined,
+      createNullLogger(),
       {
         enqueue: (...args: unknown[]) => {
           enqueued.push(args);

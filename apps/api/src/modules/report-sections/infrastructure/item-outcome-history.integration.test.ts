@@ -33,9 +33,11 @@ describe("item outcome history across reporting gaps (real database)", () => {
   const prismaService = prisma as unknown as PrismaService;
   const carry = new CarryOverService(
     new CarryOverPrismaRepository(prismaService),
+    createNullLogger(),
   );
   const leadForm = new LeadFormService(
     new LeadFormPrismaRepository(prismaService),
+    NOOP_REPORT_SECTIONS_TELEMETRY,
   );
   const sectionRepository = new ReportSectionsPrismaRepository(prismaService);
   const ordinarySave = new ReportSectionsService(

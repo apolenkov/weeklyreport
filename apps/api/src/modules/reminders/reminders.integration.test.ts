@@ -27,6 +27,7 @@ import {
   UNCERTAIN_DELIVERY_ERROR,
 } from "./reminders-execution.prisma-query.js";
 import type { ReminderQueuePayload } from "./reminders-queue-payload.js";
+import { createNullLogger } from "../../lib/logger";
 
 const DEADLINE_POLICY_ID = "a0000000-0000-4000-a000-000000000703";
 const ESCALATION_POLICY_ID = "a0000000-0000-4000-a000-000000000704";
@@ -242,7 +243,7 @@ describe("RemindersPrismaRepository (integration)", () => {
     });
 
     const queue = { enqueue: vi.fn().mockResolvedValue(undefined) };
-    const service = new RemindersService(repo, undefined, queue);
+    const service = new RemindersService(repo, createNullLogger(), queue);
     await expect(
       service.requestReminderExecutionWithOutcome(
         TEST_IDS.reminderRule,
@@ -291,7 +292,7 @@ describe("RemindersPrismaRepository (integration)", () => {
     });
 
     const queue = { enqueue: vi.fn().mockResolvedValue(undefined) };
-    const service = new RemindersService(repo, undefined, queue);
+    const service = new RemindersService(repo, createNullLogger(), queue);
     await expect(
       service.requestReminderExecutionWithOutcome(
         TEST_IDS.reminderRule,
@@ -315,7 +316,7 @@ describe("RemindersPrismaRepository (integration)", () => {
     });
 
     const queue = { enqueue: vi.fn().mockResolvedValue(undefined) };
-    const service = new RemindersService(repo, undefined, queue);
+    const service = new RemindersService(repo, createNullLogger(), queue);
     await expect(
       service.requestReminderExecutionWithOutcome(
         TEST_IDS.reminderRule,
@@ -366,7 +367,7 @@ describe("RemindersPrismaRepository (integration)", () => {
         return rule;
       });
     const queue = { enqueue: vi.fn().mockResolvedValue(undefined) };
-    const service = new RemindersService(repo, undefined, queue);
+    const service = new RemindersService(repo, createNullLogger(), queue);
 
     try {
       await expect(

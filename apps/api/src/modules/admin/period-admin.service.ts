@@ -15,7 +15,7 @@ import {
 } from "@customreport/shared";
 
 import { computeDeadline } from "../../lib/business-date.js";
-import { type AppLogger, createNullLogger } from "../../lib/logger";
+import type { AppLogger } from "../../lib/logger";
 import { initialPeriodState } from "../period/index.js";
 import {
   AdminPeriodNotFoundError,
@@ -80,10 +80,10 @@ export class PeriodAdminService {
 
   constructor(
     private readonly repository: AdminRepository,
-    logger?: AppLogger,
+    logger: AppLogger,
     clock: () => Date = () => new Date(),
   ) {
-    this.logger = logger ?? createNullLogger();
+    this.logger = logger;
     this.clock = clock;
   }
 

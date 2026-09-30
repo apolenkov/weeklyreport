@@ -13,6 +13,7 @@ import {
   CarryOverService,
   type TargetReportState,
 } from "./carry-over.service";
+import { createNullLogger } from "../../lib/logger";
 
 const sourceReportId = "aaaa0000-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const targetReportId = "bbbb0000-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -268,7 +269,7 @@ describe("CarryOverService — contract tests", () => {
       sourceSections: [sourceAlpha],
       targetSections: [makeTargetSection(sourceAlpha)],
     });
-    const service = new CarryOverService(repo);
+    const service = new CarryOverService(repo, createNullLogger());
 
     await expect(
       service.executeCarryOver(sourceReportId, sourceReportId),
@@ -286,7 +287,7 @@ describe("CarryOverService — contract tests", () => {
       sourceSections: [],
       targetSections: [makeTargetSection(sourceAlpha)],
     });
-    const service = new CarryOverService(repo);
+    const service = new CarryOverService(repo, createNullLogger());
 
     await expect(
       service.executeCarryOver(sourceReportId, targetReportId),
@@ -302,7 +303,7 @@ describe("CarryOverService — contract tests", () => {
       sourceSections: [sourceAlpha],
       targetSections: [],
     });
-    const service = new CarryOverService(repo);
+    const service = new CarryOverService(repo, createNullLogger());
 
     await expect(
       service.executeCarryOver(sourceReportId, targetReportId),
@@ -319,7 +320,7 @@ describe("CarryOverService — contract tests", () => {
       sourceSections: [sourceAlpha],
       targetSections: [target],
     });
-    const service = new CarryOverService(repo);
+    const service = new CarryOverService(repo, createNullLogger());
 
     const result = await service.executeCarryOver(
       sourceReportId,
@@ -345,7 +346,7 @@ describe("CarryOverService — contract tests", () => {
       sourceSections: [sourceAlpha],
       targetSections: [target],
     });
-    const service = new CarryOverService(repo);
+    const service = new CarryOverService(repo, createNullLogger());
 
     const result = await service.executeCarryOver(
       sourceReportId,
@@ -363,7 +364,7 @@ describe("CarryOverService — contract tests", () => {
       sourceSections: [sourceAlpha],
       targetSections: [target],
     });
-    const service = new CarryOverService(repo);
+    const service = new CarryOverService(repo, createNullLogger());
 
     const result = await service.executeCarryOver(
       sourceReportId,
@@ -383,7 +384,7 @@ describe("CarryOverService — contract tests", () => {
       sourceSections: [sourceAlpha],
       targetSections: [target],
     });
-    const service = new CarryOverService(repo);
+    const service = new CarryOverService(repo, createNullLogger());
 
     const result = await service.executeCarryOver(
       sourceReportId,
@@ -404,7 +405,7 @@ describe("CarryOverService — contract tests", () => {
       sourceSections: [sourceAlpha],
       targetSections: [target],
     });
-    const service = new CarryOverService(repo);
+    const service = new CarryOverService(repo, createNullLogger());
 
     const result = await service.executeCarryOver(
       sourceReportId,
@@ -421,7 +422,7 @@ describe("CarryOverService — contract tests", () => {
       sourceSections: [sourceAlpha],
       targetSections: [target],
     });
-    const service = new CarryOverService(repo);
+    const service = new CarryOverService(repo, createNullLogger());
 
     const first = await service.executeCarryOver(
       sourceReportId,
@@ -446,7 +447,7 @@ describe("CarryOverService — contract tests", () => {
       sourceSections: [sourceAlpha],
       targetSections: [targetAlpha],
     });
-    const service = new CarryOverService(repo);
+    const service = new CarryOverService(repo, createNullLogger());
 
     const result = await service.executeCarryOver(
       sourceReportId,
@@ -468,7 +469,7 @@ describe("CarryOverService — contract tests", () => {
       sourceSections: [sourceAlpha, sourceBeta, sourceGamma],
       targetSections: [targetAlpha, targetBeta, targetGamma],
     });
-    const service = new CarryOverService(repo);
+    const service = new CarryOverService(repo, createNullLogger());
 
     const result = await service.executeCarryOver(
       sourceReportId,
@@ -521,7 +522,7 @@ describe("CarryOverService — contract tests", () => {
       sourceSections: [sourceEmpty],
       targetSections: [target],
     });
-    const service = new CarryOverService(repo);
+    const service = new CarryOverService(repo, createNullLogger());
 
     const result = await service.executeCarryOver(
       sourceReportId,
@@ -543,7 +544,7 @@ describe("CarryOverService — contract tests", () => {
       sourceSections: [sourceAlpha],
       targetSections: [target],
     });
-    const service = new CarryOverService(repo);
+    const service = new CarryOverService(repo, createNullLogger());
 
     const result = await service.executeCarryOver(
       sourceReportId,
@@ -559,7 +560,7 @@ describe("CarryOverService — contract tests", () => {
       sourceSections: [sourceAlpha],
       targetSections: [target],
     });
-    const service = new CarryOverService(repo);
+    const service = new CarryOverService(repo, createNullLogger());
 
     const result = await service.executeCarryOver(
       sourceReportId,
@@ -599,7 +600,7 @@ describe("CarryOverService — contract tests", () => {
       sourceSections: [sourceNoNext],
       targetSections: [target],
     });
-    const service = new CarryOverService(repo);
+    const service = new CarryOverService(repo, createNullLogger());
 
     const result = await service.executeCarryOver(
       sourceReportId,
@@ -619,7 +620,7 @@ describe("CarryOverService — contract tests", () => {
       sourceSections: [sourceAlpha, sourceBeta],
       targetSections: [targetAlpha, targetBeta],
     });
-    const service = new CarryOverService(repo);
+    const service = new CarryOverService(repo, createNullLogger());
 
     const result = await service.executeCarryOver(
       sourceReportId,
@@ -669,7 +670,7 @@ describe("CarryOverService — contract tests", () => {
       sourceSections: [sourceAlpha, sourceGamma],
       targetSections: [targetAlpha],
     });
-    const service = new CarryOverService(repo);
+    const service = new CarryOverService(repo, createNullLogger());
 
     const result = await service.executeCarryOver(
       sourceReportId,
@@ -704,7 +705,7 @@ describe("CarryOverService — contract tests", () => {
       },
     });
     const saveSpy = vi.spyOn(repo, "saveCarryOver");
-    const service = new CarryOverService(repo);
+    const service = new CarryOverService(repo, createNullLogger());
 
     await expect(
       service.executeCarryOver(sourceReportId, targetReportId),
@@ -729,7 +730,7 @@ describe("CarryOverService — contract tests", () => {
       },
     });
     const saveSpy = vi.spyOn(repo, "saveCarryOver");
-    const service = new CarryOverService(repo);
+    const service = new CarryOverService(repo, createNullLogger());
 
     await expect(
       service.executeCarryOver(sourceReportId, targetReportId),
@@ -753,7 +754,7 @@ describe("CarryOverService — contract tests", () => {
       targetSections: [submittedTarget],
     });
     const saveSpy = vi.spyOn(repo, "saveCarryOver");
-    const service = new CarryOverService(repo);
+    const service = new CarryOverService(repo, createNullLogger());
 
     await expect(
       service.executeCarryOver(sourceReportId, targetReportId),

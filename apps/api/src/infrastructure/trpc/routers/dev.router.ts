@@ -113,6 +113,8 @@ const toReseedError = (error: unknown): TRPCError =>
   });
 
 export function createDevRouter(deps: DevRouterDeps) {
+  // ponytail: per-process flag; a multi-replica dev stack would need a DB lock.
+  let reseedInFlight = false;
   return router({
     // Lists every seeded user so a dev-mode login picker can show all of
     // them (not just the 3 hardcoded role buckets). publicProcedure so
@@ -150,6 +152,13 @@ export function createDevRouter(deps: DevRouterDeps) {
           deps.env.DATABASE_URL,
           process.env,
         );
+        if (reseedInFlight) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "A wipe and reseed is already running",
+          });
+        }
+        reseedInFlight = true;
         try {
           const options = {
             cwd: repoRoot,
@@ -177,6 +186,8 @@ export function createDevRouter(deps: DevRouterDeps) {
           };
         } catch (error) {
           throw toReseedError(error);
+        } finally {
+          reseedInFlight = false;
         }
       }),
   });
