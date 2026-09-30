@@ -1,10 +1,10 @@
-import type {
-  PortfolioProductOverview,
-  TrafficLightStatus,
+import {
+  aggregateTrafficLight,
+  type PortfolioProductOverview,
+  type TrafficLightStatus,
 } from "@customreport/shared";
 
 import { groupScopeFilter } from "../../lib/group-scope.js";
-import { computeWorstStatus } from "../report-sections/index.js";
 import type { WeeklyReportScopeSession } from "./weekly-report.service.js";
 
 // Raw statuses at this boundary are untrusted; only the three domain values
@@ -60,7 +60,7 @@ export function buildPortfolioOverview(
       matchingByProject.map((match) => match.authorName),
     );
 
-    const worstStatus = computeWorstStatus(statuses);
+    const worstStatus = aggregateTrafficLight(statuses);
 
     return {
       productId: project.id,

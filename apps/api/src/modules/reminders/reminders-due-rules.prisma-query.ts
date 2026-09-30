@@ -106,11 +106,7 @@ function isCurrentPolicyRule(
   }
   return sameInstant(
     rule.fireAt,
-    computeReminderFireAt(
-      reportDeadline,
-      policy.offsetMinutes,
-      policy.timezone,
-    ),
+    computeReminderFireAt(reportDeadline, policy.offsetMinutes),
   );
 }
 

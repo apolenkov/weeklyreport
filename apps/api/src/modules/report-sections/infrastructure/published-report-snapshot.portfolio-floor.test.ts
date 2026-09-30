@@ -1,12 +1,14 @@
 import {
   buildAssembledReportFromPrismaRow,
-  buildPortfolioProductsFromSnapshotSections,
   computePortfolioOverviewFromReadSections,
   PublishedSnapshotIntegrityError,
   requirePublishedSnapshot,
   toPublishedSnapshotJson,
 } from "@customreport/report-persistence";
-import { buildEscalationsFromReadSections } from "@customreport/shared";
+import {
+  buildEscalationsFromReadSections,
+  buildPortfolioProductsFromSnapshotSections,
+} from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { publishedSnapshotFixture } from "../../../test-utils/prisma-test-helper";

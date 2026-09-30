@@ -83,12 +83,6 @@ export const aiProviderReasoningModeSchema = z.enum([
   "custom",
 ]);
 
-/** Whether embeddings reuse generation or use a separate connection. */
-export const aiProviderEmbeddingModeSchema = z.enum([
-  "reuse_generation",
-  "separate",
-]);
-
 /** Validates a non-empty provider-specific reasoning value. */
 export const reasoningCustomValueSchema = z
   .string()

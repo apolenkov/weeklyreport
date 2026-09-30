@@ -1,14 +1,12 @@
 export {
   buildAssembledReportFromPrismaRow,
-  buildPortfolioProductsFromSnapshotSections,
   computePortfolioOverviewFromReadSections,
-  computeWorstStatus,
-  effectiveProjectStatus,
   reportFullIncludeForSnapshot,
   toPublishedSnapshotJson,
 } from "./published-report-snapshot.js";
 export {
   parsePublishedSnapshot,
+  publishedSnapshotFailure,
   PublishedSnapshotIntegrityError,
   requirePublishedSnapshot,
 } from "./published-snapshot.js";

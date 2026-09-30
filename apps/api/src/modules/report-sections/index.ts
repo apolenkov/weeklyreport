@@ -24,8 +24,6 @@ export {
 export { ReportSectionsModule } from "./report-sections.module.js";
 export {
   buildAssembledReportFromPrismaRow,
-  buildPortfolioProductsFromSnapshotSections,
-  computeWorstStatus,
   mapPrismaToReportSection,
   type PrismaReportSectionWithRelations,
   PublishedSnapshotIntegrityError,

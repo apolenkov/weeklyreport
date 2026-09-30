@@ -13,6 +13,7 @@ import { requireEnv } from "../../guards/_require-env.js";
 import { finalizePublishedSnapshots } from "../support/published-snapshot.js";
 import { assertAssistantReadiness } from "../support/seed-assistant-readiness.js";
 import { assertSeedCoverage } from "../support/seed-coverage-check.js";
+import { wipeSeedData } from "../support/wipe-seed-data.js";
 import {
   seedActionLog,
   seedGroupLeaderAndViewer,
@@ -40,7 +41,6 @@ import { seedActiveSections } from "./seed-simple.sections.js";
 import { seedStageAssignments, seedStages } from "./seed-simple.stages.js";
 import { logSeedSummary } from "./seed-simple.summary.js";
 import { seedUsers } from "./seed-simple.users.js";
-import { wipeExistingData } from "./seed-simple.wipe.js";
 
 const DATABASE_URL = requireEnv("DATABASE_URL");
 
@@ -49,7 +49,8 @@ async function main(): Promise<void> {
   const pool = new pg.Pool({ connectionString: DATABASE_URL });
   const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
   try {
-    await wipeExistingData(prisma);
+    console.log("[seed-simple] Wiping existing data...");
+    await wipeSeedData(prisma);
     await seedReportingGroups(prisma);
     await seedOrganizationSettings(prisma);
     await seedUsers(prisma);

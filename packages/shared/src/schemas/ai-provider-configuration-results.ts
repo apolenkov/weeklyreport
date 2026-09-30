@@ -25,12 +25,6 @@ const aiProviderEmbeddingCapabilitySchema = z.enum([
   "token_usage",
 ]);
 
-/** Public shared schema or contract constant for ai provider capability schema. */
-export const aiProviderCapabilitySchema = z.union([
-  aiProviderGenerationCapabilitySchema,
-  aiProviderEmbeddingCapabilitySchema,
-]);
-
 const capabilityResult = <TSchema extends z.ZodType>(capability: TSchema) =>
   z
     .object({

@@ -157,7 +157,6 @@ function latestRuleIsCompatible(
   const expectedFireAt = computeReminderFireAt(
     report.deadline,
     policy.offsetMinutes,
-    policy.timezone,
   );
   return (
     rule.kind === policy.kind &&

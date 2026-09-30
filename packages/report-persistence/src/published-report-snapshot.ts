@@ -2,19 +2,18 @@ import type { TrafficLightStatus } from "@customreport/shared";
 import {
   type AssembledReport,
   assembledReportSchema,
+  buildPortfolioProductsFromSnapshotSections,
   type PortfolioOverview,
   type PublishedReportSectionReadModel,
   publishedReportSectionReadModelSchema,
   publishedReportSnapshotSchema,
   type ReportSectionReadModel,
 } from "@customreport/shared";
-import { aggregateTrafficLight } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
 import { publishedSnapshotFailure } from "./published-snapshot.js";
 import { reportSectionFullInclude } from "./report-sections.include.js";
 import { mapPrismaToReportSection } from "./report-sections.mappers.js";
-import { deriveEffectiveProductStatus } from "./report-sections.status-derivation.js";
 
 const reportSectionFullIncludeForSnapshot = {
   ...reportSectionFullInclude,
@@ -99,47 +98,11 @@ export function toPublishedSnapshotJson(
   return JSON.parse(JSON.stringify(parsed)) as Prisma.InputJsonValue;
 }
 
-// Re-flooring keeps stale stored traffic lights aligned with product risks.
-export function effectiveProjectStatus(
-  section: ReportSectionReadModel,
-  project: ReportSectionReadModel["projects"][number],
-): TrafficLightStatus | null {
-  return deriveEffectiveProductStatus({
-    projectId: project.projectId,
-    trafficLight: project.trafficLight,
-    ownedStages: project.ownedStages,
-    risks: section.risks,
-  });
-}
-
-interface ProjectOccurrence {
-  readonly section: ReportSectionReadModel;
-  readonly project: ReportSectionReadModel["projects"][number];
-}
-
-function groupProjectOccurrences(
-  sections: readonly ReportSectionReadModel[],
-): Map<string, ProjectOccurrence[]> {
-  return Map.groupBy(
-    sections.flatMap((section) =>
-      section.projects.map((project) => ({ project, section })),
-    ),
-    ({ project }) => project.projectId,
-  );
-}
-
 export function computePortfolioOverviewFromReadSections(
   sections: readonly ReportSectionReadModel[],
 ): PortfolioOverview {
-  const totals = [...groupProjectOccurrences(sections).values()]
-    .map((occurrences) =>
-      computeWorstStatus(
-        occurrences.flatMap(({ project, section }) => {
-          const status = effectiveProjectStatus(section, project);
-          return status === null ? [] : [status];
-        }),
-      ),
-    )
+  const totals = buildPortfolioProductsFromSnapshotSections(sections)
+    .map(({ worstStatus }) => worstStatus)
     .filter((status): status is TrafficLightStatus => status !== null)
     .reduce<PortfolioOverview["totals"]>(
       (current, status) => ({
@@ -154,9 +117,3 @@ export function computePortfolioOverviewFromReadSections(
 
   return { status, totals };
 }
-
-export { buildPortfolioProductsFromSnapshotSections } from "@customreport/shared";
-
-export const computeWorstStatus: (
-  statuses: readonly TrafficLightStatus[],
-) => TrafficLightStatus | null = aggregateTrafficLight;

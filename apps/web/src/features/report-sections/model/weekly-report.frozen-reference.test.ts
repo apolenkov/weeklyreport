@@ -1,9 +1,9 @@
 import { publishedReportSnapshotSchema } from "@customreport/shared";
+import { buildPortfolioProductsFromSnapshotSections } from "@customreport/shared";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { buildPortfolioProductsFromSnapshotSections } from "../../../../../../packages/report-persistence/src/published-report-snapshot";
 import { PrintProductSection } from "../../../app/print/[reportId]/print-product-section";
 import {
   makeReportSectionFixture,

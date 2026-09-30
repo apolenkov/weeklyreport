@@ -110,7 +110,6 @@ function validateLatestIdentity(
   const expectedFireAt = computeReminderFireAt(
     report.deadline,
     policy.offsetMinutes,
-    policy.timezone,
   );
   const checks: readonly [string, boolean, string][] = [
     [

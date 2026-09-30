@@ -25,8 +25,6 @@ export const AI_PROMPT_EFFECTIVE_PROMPT_LIMIT =
   AI_PROMPT_CORE_LIMIT +
   AI_PROMPT_EDITABLE_TAIL_SEPARATOR.length +
   AI_PROMPT_SLOT_CONTENT_LIMIT;
-/** Character length of a lowercase SHA-256 content hash. */
-export const AI_PROMPT_HASH_LENGTH = 64;
 /** Maximum length of a prompt contract or composer version. */
 export const AI_PROMPT_VERSION_LIMIT = 120;
 /** Maximum display-name length for prompt features and slots. */
