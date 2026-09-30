@@ -141,7 +141,8 @@ export function startOtel(
     instrumentations: [
       // Start hooks also cover native request errors that precede requestHook.
       new HttpInstrumentation({
-        startIncomingSpanHook: () => ({ [ATTR_URL_QUERY]: "" }),
+        startIncomingSpanHook: (request) =>
+          request.url?.includes("?") ? { [ATTR_URL_QUERY]: "" } : {},
         startOutgoingSpanHook: (request) => ({
           [ATTR_URL_FULL]: format({
             protocol: request.protocol ?? "http:",

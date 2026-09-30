@@ -196,7 +196,7 @@ describe("HTTP span query privacy through startOtel", () => {
     expectPrivateQueryRemoved(spans);
   });
 
-  it("preserves a query-free outgoing URL", async () => {
+  it("preserves query-free incoming and outgoing URL attributes", async () => {
     const port = await listen((_req, res) => res.writeHead(200).end());
     expect(await request(port, "/health/live")).toBe(200);
     const spans = await finishedSpans(2);
@@ -205,6 +205,9 @@ describe("HTTP span query privacy through startOtel", () => {
         "url.full"
       ],
     ).toBe(`http://127.0.0.1:${port}/health/live`);
+    expect(
+      spans.find((span) => span.kind === SpanKind.SERVER)?.attributes,
+    ).not.toHaveProperty("url.query");
     expectPrivateQueryRemoved(spans);
   });
 
