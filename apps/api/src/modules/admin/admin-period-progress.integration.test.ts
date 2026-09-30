@@ -81,6 +81,17 @@ describe("listPeriodsByState progress (integration)", () => {
       where: { id: testData.section.id },
       data: { status: "submitted" },
     });
+    // A lead who joined after publication: live counting would give 2.
+    await prisma.user.create({
+      data: {
+        email: "late@test.local",
+        name: "Late",
+        lastName: "Late",
+        firstName: "Lead",
+        role: "lead",
+        samlId: "lead-late",
+      },
+    });
     const publishedAt = new Date("2026-04-14T10:00:00.000Z");
     await prisma.report.update({
       where: { id: testData.report.id },
