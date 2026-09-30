@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "tsx watch --env-file-if-exists=../../.env --clear-screen=false --exclude '../../node_modules/**' --exclude 'node_modules/**' --exclude '.logs/**' --exclude 'storage/**' --include '../../packages/report-persistence/src/**' --include '../../packages/shared/src/**' src/main.ts",
     "build": "rm -rf dist && tsc6 -p tsconfig.production.json && tsx scripts/fix-esm-extensions.ts && tsx ../../scripts/gates/production-dist.ts --api",
-    "build:pdf-artifact-migrator": "rm -rf dist/pdf-artifact-migrator && tsc6 -p tsconfig.pdf-artifact-migrator.json",
     "typecheck": "tsc6 --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:coverage": "NODE_OPTIONS=--throw-deprecation vitest run --config vitest.coverage.config.ts --coverage --fileParallelism=false",
