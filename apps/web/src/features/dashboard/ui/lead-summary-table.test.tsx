@@ -92,7 +92,7 @@ describe("LeadSummaryTable action queue", () => {
     const row = leadRow("Alice Lead");
     expect(within(row).getByText("Lead")).toBeVisible();
     expect(within(row).getByText("In progress")).toBeVisible();
-    expect(within(row).getByText("Not reviewed")).toBeVisible();
+    expect(within(row).queryByText("Not reviewed")).toBeNull();
     expect(within(row).getByText(/5 records · At risk/)).toBeVisible();
     const primaryAction = within(row).getByRole("button", { name: "Open" });
     expect(primaryAction).toBeVisible();

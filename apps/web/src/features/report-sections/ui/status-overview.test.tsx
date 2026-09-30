@@ -744,6 +744,12 @@ describe("StatusOverview", () => {
     render(<StatusOverview model={readOnlyModel} />);
 
     expect(screen.getByText("No item")).toBeVisible();
+    // Empty cell collapses to one compact line below md: no period date.
+    const emptyCell = screen
+      .getByText("No item")
+      .closest("[data-overview-lineage-lane]");
+    expect(emptyCell).toHaveClass("max-md:flex", "max-md:py-1");
+    expect(emptyCell).not.toHaveTextContent("Period unavailable");
     expect(screen.queryByRole("button", { name: "Add next step" })).toBeNull();
   });
 
