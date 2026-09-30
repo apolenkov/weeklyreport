@@ -7,7 +7,10 @@ import {
   StickyColumnHeader,
   StickyRowHeader,
 } from "./analytics-table";
-import { buildLeadSubmissionsTableData } from "./analytics-table-data";
+import {
+  buildLeadSubmissionsTableData,
+  weekEndingRange,
+} from "./analytics-table-data";
 
 export function LeadSubmissionsTable({
   rows,
@@ -42,7 +45,7 @@ export function LeadSubmissionsTable({
               scope="col"
               className="whitespace-nowrap px-3 py-2"
             >
-              {point.period}
+              {weekEndingRange(String(point.period))}
             </th>
           ))}
         </tr>

@@ -207,9 +207,9 @@ describe("LeadSubmissionsTable", () => {
     });
     expect(table).toBeVisible();
     expect(table.closest(".sr-only")).toBeNull();
-    for (const period of periods)
+    for (const range of ["Aug 17–23", "Aug 24–30"])
       expect(
-        within(table).getByRole("columnheader", { name: period }),
+        within(table).getByRole("columnheader", { name: range }),
       ).toHaveAttribute("scope", "col");
     expect(
       within(table).getAllByRole("rowheader", { name: "Alex" }),
@@ -254,7 +254,7 @@ describe("LeadSubmissionsTable", () => {
 
     expect(
       screen.getAllByRole("columnheader").map((header) => header.textContent),
-    ).toEqual(["Lead", "2026-09-06", "2026-08-30", "2026-08-23"]);
+    ).toEqual(["Lead", "Aug 31–Sep 6", "Aug 24–30", "Aug 17–23"]);
     const renderedRows = screen.getAllByRole("row").slice(1);
     expect(
       within(expectDefined(renderedRows[0]))
@@ -283,7 +283,7 @@ describe("LeadSubmissionsTable", () => {
     );
     expect(
       screen.getAllByRole("columnheader").map((header) => header.textContent),
-    ).toEqual(["Lead", "2026-08-23"]);
+    ).toEqual(["Lead", "Aug 17–23"]);
     expect(screen.getByRole("cell", { name: "Submitted" })).toBeVisible();
     expect(screen.queryByText(/Scroll horizontally/)).toBeNull();
   });
