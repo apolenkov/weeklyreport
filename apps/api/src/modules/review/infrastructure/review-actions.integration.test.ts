@@ -310,10 +310,6 @@ describe("review-actions (integration)", () => {
         { status: "draft", periodState: "scheduled", periodStatus: "open" },
       ],
       [
-        "contradictory",
-        { status: "draft", periodState: "open", periodStatus: "reopened" },
-      ],
-      [
         "published tuple",
         {
           status: "published",

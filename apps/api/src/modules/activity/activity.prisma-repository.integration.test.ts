@@ -83,6 +83,7 @@ describe("ActivityPrismaRepository (integration)", () => {
         periodStatus: "reopened",
         periodState: "open",
         publishedAt,
+        reopenedAt: publishedAt,
         publishedSnapshot: publishedSnapshotFixture({
           reportId,
           periodStart: "2026-05-04T00:00:00.000Z",
@@ -250,7 +251,11 @@ describe("ActivityPrismaRepository (integration)", () => {
   it("keeps lifecycle and live activity in one snapshot across publish and group drift", async () => {
     await prisma.report.update({
       where: { id: reportId },
-      data: { periodStatus: "reopened", periodState: "open" },
+      data: {
+        periodStatus: "reopened",
+        periodState: "open",
+        reopenedAt: publishedAt,
+      },
     });
     const gate = createPauseGate();
     const pausedPrisma = new Proxy(prisma, {

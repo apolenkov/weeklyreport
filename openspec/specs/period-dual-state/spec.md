@@ -71,6 +71,22 @@ Report lifecycle writers and MUST NOT write these fields.
 - **AND** a reopened report keeps its distinct `status`, `periodState`, and
   `periodStatus` values
 
+### Requirement: The database rejects contradictory lifecycle tuples
+
+The `Report_lifecycle_tuple_check` CHECK constraint MUST mirror
+`currentPeriodLifecycleSchema`: only the tuples `scheduled|draft|false|open`,
+`open|draft|false|open`, `open|published|false|reopened`,
+`published|published|false|published`, `archived|draft|true|open`, and
+`archived|published|true|published` (`periodState|status|archived|periodStatus`)
+are storable. A draft row MUST have no publication or reopen timestamp, no
+publisher, and no audit flag; a published row MUST have `publishedAt`; a
+reopened row MUST have `reopenedAt`.
+
+#### Scenario: A contradictory tuple is rejected by the database
+
+- **WHEN** a write leaves `periodState` `published` on a draft, or a published or reopened row without its timestamp
+- **THEN** PostgreSQL rejects the write with `Report_lifecycle_tuple_check`
+
 ### Requirement: Lifecycle writes are guarded against concurrent changes
 
 A lifecycle compare-and-set that follows an authorization or policy read MUST

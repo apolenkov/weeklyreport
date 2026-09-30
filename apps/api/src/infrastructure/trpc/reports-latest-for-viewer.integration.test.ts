@@ -66,6 +66,7 @@ describe("reports.latestForViewer (integration)", () => {
         periodStatus,
         archived,
         ...(periodStatus !== "open" ? { publishedAt } : {}),
+        ...(periodStatus === "reopened" ? { reopenedAt: publishedAt } : {}),
         periodState: archived
           ? "archived"
           : periodStatus === "published"

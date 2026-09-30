@@ -215,17 +215,4 @@ describe("due-rule editable lifecycle gate (integration)", () => {
       await expect(queryDue(kind)).resolves.toHaveLength(1);
     },
   );
-
-  it.each(["deadline", "escalation"] as const)(
-    "returns nothing for a %s rule with a mismatched lifecycle tuple",
-    async (kind) => {
-      const testData = await seedRule(kind);
-      await prisma.report.update({
-        where: { id: testData.report.id },
-        data: { periodState: "published" },
-      });
-
-      await expect(queryDue(kind)).resolves.toEqual([]);
-    },
-  );
 });
