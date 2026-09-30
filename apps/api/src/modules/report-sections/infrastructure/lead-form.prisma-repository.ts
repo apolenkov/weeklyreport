@@ -164,13 +164,11 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     viewerId: string,
     role: import("@customreport/shared").Role,
   ): ReturnType<LeadFormRepository["getStatusOverviewPeriods"]> {
-    return getStatusOverviewPeriodsRead(
-      this.prisma,
-      reportId,
+    return getStatusOverviewPeriodsRead(this.prisma, reportId, {
       authorId,
       viewerId,
       role,
-    );
+    });
   }
 
   getSectionReopenContext(

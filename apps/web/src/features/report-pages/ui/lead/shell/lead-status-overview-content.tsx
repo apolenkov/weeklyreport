@@ -207,7 +207,6 @@ export function LeadStatusOverviewContent({
   });
   const dialog = useOverviewItemEditor(
     readyEditor,
-    isReadOnly,
     model,
     targetReportId,
     output,
@@ -224,9 +223,11 @@ export function LeadStatusOverviewContent({
     buildOverviewEditorSlot(
       readyEditor,
       dialog.recoveryReason ? null : dialog.dialog,
-      dialog.save,
-      dialog.close,
-      dialog.changeWeek,
+      {
+        onSave: dialog.save,
+        onCancel: dialog.close,
+        onWeekChange: dialog.changeWeek,
+      },
     );
   const pendingInput =
     dialog.dialog !== null ||

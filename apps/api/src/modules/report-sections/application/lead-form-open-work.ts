@@ -18,7 +18,11 @@ export async function readLeadOpenWork(
   userId: string,
 ): Promise<LeadOpenWorkHistoryOutput> {
   const parsed = leadOpenWorkHistoryInputSchema.parse(input);
-  await readByPeriod(repository, parsed.reportId, userId, "lead", undefined);
+  await readByPeriod(repository, {
+    reportId: parsed.reportId,
+    userId,
+    role: "lead",
+  });
   const page = await repository.getOpenWorkHistoryPage(
     parsed.reportId,
     userId,

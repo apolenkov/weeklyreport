@@ -203,9 +203,7 @@ describe("getStatusOverviewPeriodsRead", () => {
     const result = await getStatusOverviewPeriodsRead(
       prisma,
       CURRENT_REPORT_ID,
-      AUTHOR_ID,
-      VIEWER_ID,
-      "lead",
+      { authorId: AUTHOR_ID, viewerId: VIEWER_ID, role: "lead" },
     );
 
     expect(result?.predecessor).toMatchObject({
@@ -249,9 +247,7 @@ describe("getStatusOverviewPeriodsRead", () => {
     const result = await getStatusOverviewPeriodsRead(
       prisma,
       CURRENT_REPORT_ID,
-      FOREIGN_AUTHOR_ID,
-      VIEWER_ID,
-      "lead",
+      { authorId: FOREIGN_AUTHOR_ID, viewerId: VIEWER_ID, role: "lead" },
     );
 
     expect(
@@ -286,9 +282,7 @@ describe("getStatusOverviewPeriodsRead", () => {
     const result = await getStatusOverviewPeriodsRead(
       prisma,
       CURRENT_REPORT_ID,
-      AUTHOR_ID,
-      VIEWER_ID,
-      "lead",
+      { authorId: AUTHOR_ID, viewerId: VIEWER_ID, role: "lead" },
     );
 
     expect(result?.predecessor).toMatchObject({
@@ -328,9 +322,7 @@ describe("getStatusOverviewPeriodsRead", () => {
     const result = await getStatusOverviewPeriodsRead(
       prisma,
       CURRENT_REPORT_ID,
-      FOREIGN_AUTHOR_ID,
-      VIEWER_ID,
-      "lead",
+      { authorId: FOREIGN_AUTHOR_ID, viewerId: VIEWER_ID, role: "lead" },
     );
 
     expect(
@@ -362,9 +354,7 @@ describe("getStatusOverviewPeriodsRead", () => {
     const result = await getStatusOverviewPeriodsRead(
       prisma,
       CURRENT_REPORT_ID,
-      AUTHOR_ID,
-      VIEWER_ID,
-      "lead",
+      { authorId: AUTHOR_ID, viewerId: VIEWER_ID, role: "lead" },
     );
 
     expect(result?.predecessor).toMatchObject({
@@ -394,9 +384,7 @@ describe("getStatusOverviewPeriodsRead", () => {
     const result = await getStatusOverviewPeriodsRead(
       prisma,
       CURRENT_REPORT_ID,
-      AUTHOR_ID,
-      VIEWER_ID,
-      "lead",
+      { authorId: AUTHOR_ID, viewerId: VIEWER_ID, role: "lead" },
     );
 
     expect(result?.predecessor).toMatchObject({
@@ -424,9 +412,7 @@ describe("getStatusOverviewPeriodsRead", () => {
     const result = await getStatusOverviewPeriodsRead(
       prisma,
       CURRENT_REPORT_ID,
-      AUTHOR_ID,
-      HEAD_ID,
-      "head",
+      { authorId: AUTHOR_ID, viewerId: HEAD_ID, role: "head" },
     );
 
     expect(result?.predecessor).toMatchObject({
@@ -443,9 +429,7 @@ describe("getStatusOverviewPeriodsRead", () => {
     const result = await getStatusOverviewPeriodsRead(
       prisma,
       CURRENT_REPORT_ID,
-      AUTHOR_ID,
-      VIEWER_ID,
-      "lead",
+      { authorId: AUTHOR_ID, viewerId: VIEWER_ID, role: "lead" },
     );
 
     expect(result?.predecessor).toEqual({

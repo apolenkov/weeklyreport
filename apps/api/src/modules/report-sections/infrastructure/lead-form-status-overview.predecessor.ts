@@ -34,6 +34,16 @@ export interface StatusOverviewPredecessorRow {
   }[];
 }
 
+export interface StatusOverviewViewer {
+  readonly authorId: string;
+  readonly viewerId: string;
+  readonly role: Role;
+}
+
+interface PredecessorScope extends StatusOverviewViewer {
+  readonly viewerGroupId: string | null;
+}
+
 const unavailable = (
   report: Pick<
     StatusOverviewPredecessorRow,
@@ -50,10 +60,7 @@ const unavailable = (
 
 function isPublishedScopeAdmitted(
   report: StatusOverviewPredecessorRow,
-  authorId: string,
-  viewerId: string,
-  role: Role,
-  viewerGroupId: string | null,
+  { authorId, viewerId, role, viewerGroupId }: PredecessorScope,
 ): boolean {
   if (role === "admin") return true;
   if (role === "head") {
@@ -87,9 +94,7 @@ type PublishedSectionResolution =
 function scopePublishedSectionForViewer(
   snapshot: PublishedReportSnapshot,
   target: PublishedReportSectionReadModel,
-  authorId: string,
-  viewerId: string,
-  role: Role,
+  { authorId, viewerId, role }: StatusOverviewViewer,
 ): PublishedSectionResolution {
   if (role !== "lead" || authorId === viewerId) return { section: target };
 
@@ -110,14 +115,10 @@ function scopePublishedSectionForViewer(
 
 function publishedPredecessor(
   report: StatusOverviewPredecessorRow,
-  authorId: string,
-  viewerId: string,
-  role: Role,
-  viewerGroupId: string | null,
+  scope: PredecessorScope,
 ): LeadStatusOverviewPredecessor {
-  if (
-    !isPublishedScopeAdmitted(report, authorId, viewerId, role, viewerGroupId)
-  ) {
+  const { authorId } = scope;
+  if (!isPublishedScopeAdmitted(report, scope)) {
     return unavailable(report, "section_unavailable");
   }
 
@@ -131,13 +132,7 @@ function publishedPredecessor(
     );
     if (!target) return unavailable(report, "invalid_published_snapshot");
 
-    const resolution = scopePublishedSectionForViewer(
-      snapshot,
-      target,
-      authorId,
-      viewerId,
-      role,
-    );
+    const resolution = scopePublishedSectionForViewer(snapshot, target, scope);
     if ("reason" in resolution) return unavailable(report, resolution.reason);
 
     return {
@@ -177,9 +172,7 @@ type LiveSharedScope =
 async function resolveLiveSharedScope(
   tx: Prisma.TransactionClient,
   reportId: string,
-  authorId: string,
-  viewerId: string,
-  role: Role,
+  { authorId, viewerId, role }: StatusOverviewViewer,
 ): Promise<LiveSharedScope> {
   if (role !== "lead" || authorId === viewerId) {
     return { admitted: true, projectIds: null };
@@ -199,20 +192,12 @@ async function resolveLiveSharedScope(
 async function submittedPredecessor(
   tx: Prisma.TransactionClient,
   report: StatusOverviewPredecessorRow,
-  authorId: string,
-  viewerId: string,
-  role: Role,
-  viewerGroupId: string | null,
+  scope: PredecessorScope,
 ): Promise<LeadStatusOverviewPredecessor> {
-  const authorScope = liveAuthorScope(role, viewerGroupId);
+  const { authorId } = scope;
+  const authorScope = liveAuthorScope(scope.role, scope.viewerGroupId);
   if (authorScope === null) return unavailable(report, "section_unavailable");
-  const sharedScope = await resolveLiveSharedScope(
-    tx,
-    report.id,
-    authorId,
-    viewerId,
-    role,
-  );
+  const sharedScope = await resolveLiveSharedScope(tx, report.id, scope);
   if (!sharedScope.admitted) return unavailable(report, "section_unavailable");
 
   const row = await tx.reportSection.findFirst({
@@ -246,10 +231,9 @@ async function submittedPredecessor(
 export async function resolveStatusOverviewPredecessor(
   tx: Prisma.TransactionClient,
   report: StatusOverviewPredecessorRow,
-  authorId: string,
-  viewerId: string,
-  role: Role,
+  viewer: StatusOverviewViewer,
 ): Promise<LeadStatusOverviewPredecessor> {
+  const { viewerId, role } = viewer;
   const viewerGroupId =
     role === "head"
       ? ((
@@ -260,7 +244,8 @@ export async function resolveStatusOverviewPredecessor(
         )?.reportingGroupId ?? null)
       : null;
 
+  const scope = { ...viewer, viewerGroupId };
   return report.publishedSnapshot !== null
-    ? publishedPredecessor(report, authorId, viewerId, role, viewerGroupId)
-    : submittedPredecessor(tx, report, authorId, viewerId, role, viewerGroupId);
+    ? publishedPredecessor(report, scope)
+    : submittedPredecessor(tx, report, scope);
 }

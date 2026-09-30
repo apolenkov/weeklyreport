@@ -7,6 +7,7 @@ import {
 
 import {
   assertHeadTargetInGroup,
+  type ByPeriodRequest,
   filterSectionToSharedProducts,
   readSectionForByPeriod,
   resolveCrossAuthorScope,
@@ -48,60 +49,41 @@ const selectSectionAuthor = (
 
 export async function readByPeriod(
   repository: LeadFormRepository,
-  reportId: string,
-  userId: string,
-  role: Role | undefined,
-  requestedAuthorId: string | undefined,
+  request: ByPeriodRequest,
 ): Promise<GetByPeriodResult> {
   const { sharedScope, sectionAuthorId, isHeadCrossRead } =
-    await resolveSectionAuthor(
-      repository,
-      reportId,
-      userId,
-      role,
-      requestedAuthorId,
-    );
+    await resolveSectionAuthor(repository, request);
   // `assertHeadTargetInGroup` is only the fast defense-in-depth pre-check;
   // `readSectionForByPeriod` is the actual enforcement — its head-cross branch
   // re-evaluates group membership in the SAME query as the section load.
   const result = await readSectionForByPeriod(
     repository,
-    reportId,
+    request,
     sectionAuthorId,
-    userId,
     isHeadCrossRead,
   );
   return buildByPeriodResult(
     repository,
     result,
     sharedScope,
-    sectionAuthorId,
-    userId,
+    sectionAuthorId === request.userId,
   );
 }
 
 async function resolveSectionAuthor(
   repository: LeadFormRepository,
-  reportId: string,
-  userId: string,
-  role: Role | undefined,
-  requestedAuthorId: string | undefined,
+  request: ByPeriodRequest,
 ): Promise<{
   sharedScope: Awaited<ReturnType<typeof resolveCrossAuthorScope>>;
   sectionAuthorId: string;
   isHeadCrossRead: boolean;
 }> {
+  const { reportId, userId, role, requestedAuthorId } = request;
   const isHeadLike = isHeadLikeRole(role);
   // One shared non-archived set gates AND scopes the lead cross-author read
   // (null = not granted, incl. archived-only sharing or no report access). The
   // head branch is group-scoped below; admin is global by design.
-  const sharedScope = await resolveCrossAuthorScope(
-    repository,
-    reportId,
-    userId,
-    role,
-    requestedAuthorId,
-  );
+  const sharedScope = await resolveCrossAuthorScope(repository, request);
   // A head is a single-group role: it may read another author's section only
   // inside its own reporting group. `requestedAuthorId` is a client URL param,
   // so bound it before the target section is loaded. admin is exempt (global).
@@ -136,8 +118,7 @@ async function buildByPeriodResult(
   repository: LeadFormRepository,
   result: Awaited<ReturnType<typeof readSectionForByPeriod>>,
   sharedScope: Awaited<ReturnType<typeof resolveCrossAuthorScope>>,
-  sectionAuthorId: string,
-  userId: string,
+  isOwnSection: boolean,
 ): Promise<GetByPeriodResult> {
   // A lead cross-author read returns only the records on products the two
   // leads share; the own-section and head/admin reads return the full section.
@@ -149,7 +130,6 @@ async function buildByPeriodResult(
   // The lead-only Request-Reopen affordance uses the same `computeReopenEligibility`
   // as the write guard, so the button shows exactly when `requestReopen` would
   // succeed; `reopenFacts` never leaves the API.
-  const isOwnSection = sectionAuthorId === userId;
   const { canRequestReopen, reason } = computeReopenEligibility(
     result.reopenFacts,
   );

@@ -167,11 +167,6 @@
       "count": 1
     }
   },
-  "apps/api/src/modules/report-sections/infrastructure/lead-form-status-overview.predecessor.ts": {
-    "max-params": {
-      "count": 1
-    }
-  },
   "apps/api/src/modules/report-sections/infrastructure/report-sections.my-history-query.ts": {
     "max-lines-per-function": {
       "count": 1
@@ -360,11 +355,6 @@
       "count": 1
     }
   },
-  "apps/web/src/features/report-pages/ui/lead/shell/overview-plan-command.ts": {
-    "max-params": {
-      "count": 1
-    }
-  },
   "apps/web/src/features/report-pages/ui/lead/shell/overview-plan-composer.tsx": {
     "max-lines-per-function": {
       "count": 1
@@ -390,11 +380,6 @@
       "count": 1
     }
   },
-  "apps/web/src/features/report-sections/model/lead-form/lead-form-outcome-coordinator-helpers.ts": {
-    "max-params": {
-      "count": 3
-    }
-  },
   "apps/web/src/features/report-sections/model/lead-form/lead-form-write-port.trpc-adapter.ts": {
     "max-lines-per-function": {
       "count": 1
@@ -408,11 +393,6 @@
   "apps/web/src/features/report-sections/model/lead-form/use-lead-form-outcome-coordinator.ts": {
     "max-lines-per-function": {
       "count": 1
-    }
-  },
-  "apps/web/src/features/report-sections/model/status-overview-items.ts": {
-    "max-params": {
-      "count": 3
     }
   },
   "apps/web/src/features/report-sections/ui/activity/unified-activity-section.tsx": {

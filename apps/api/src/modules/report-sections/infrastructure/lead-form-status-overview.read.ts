@@ -1,8 +1,9 @@
-import type { Role } from "@customreport/shared";
-
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import type { StatusOverviewPeriodRead } from "../domain/lead-form-shared.js";
-import { resolveStatusOverviewPredecessor } from "./lead-form-status-overview.predecessor.js";
+import {
+  resolveStatusOverviewPredecessor,
+  type StatusOverviewViewer,
+} from "./lead-form-status-overview.predecessor.js";
 
 /**
  * Reads only the selected period identity and the immediately earlier report.
@@ -12,10 +13,9 @@ import { resolveStatusOverviewPredecessor } from "./lead-form-status-overview.pr
 export function getStatusOverviewPeriodsRead(
   prisma: PrismaService,
   reportId: string,
-  authorId: string,
-  viewerId: string,
-  role: Role,
+  viewer: StatusOverviewViewer,
 ): Promise<StatusOverviewPeriodRead | null> {
+  const { authorId, viewerId } = viewer;
   return prisma.$transaction(
     async (tx) => {
       const current = await tx.report.findUnique({
@@ -66,9 +66,7 @@ export function getStatusOverviewPeriodsRead(
         predecessor: await resolveStatusOverviewPredecessor(
           tx,
           predecessor,
-          authorId,
-          viewerId,
-          role,
+          viewer,
         ),
       };
     },
