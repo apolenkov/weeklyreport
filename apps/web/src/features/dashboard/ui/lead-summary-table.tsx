@@ -48,7 +48,8 @@ function LeadStateBadges({ lead }: { readonly lead: LeadInfo }) {
       >
         {STATUS_LABELS[lead.status]}
       </span>
-      {lead.status === "submitted" ? (
+      {lead.status === "submitted" ||
+      lead.reviewState === "changes-requested" ? (
         <span className="inline-flex rounded-[var(--radius-pill)] bg-[var(--color-surface-muted)] px-2.5 py-0.5 text-xs font-medium text-[var(--color-foreground)]">
           {lead.reviewLabel}
         </span>
