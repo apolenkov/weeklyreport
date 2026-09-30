@@ -167,7 +167,9 @@ describe("SearchPrismaRepository — immutable published scope (integration)", (
         deadline: periodDate,
         status,
         periodStatus,
+        periodState: periodStatus === "published" ? "published" : "open",
         publishedAt: status === "published" ? periodDate : null,
+        ...(periodStatus === "reopened" ? { reopenedAt: periodDate } : {}),
         ...(status === "published"
           ? {
               publishedSnapshot: publishedSnapshotFixture({
@@ -457,6 +459,7 @@ describe("SearchPrismaRepository — immutable published scope (integration)", (
         deadline: stored.deadline,
         status: "published",
         periodStatus: "published",
+        periodState: "published",
         publishedAt: stored.publishedAt,
         publishedSnapshot: stored.publishedSnapshot ?? Prisma.JsonNull,
       },

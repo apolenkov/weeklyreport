@@ -43,6 +43,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
         deadline: new Date("2026-04-05T18:00:00.000Z"),
         status: "published",
         periodStatus: "published",
+        periodState: "published",
         publishedAt: new Date("2026-04-05T19:00:00.000Z"),
         id: sourceReportId,
         publishedSnapshot: publishedSnapshotFixture({

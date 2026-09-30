@@ -973,7 +973,12 @@ describe("AdminPrismaRepository (integration)", () => {
     // Corrupt the persisted lifecycle (row still exists → update branch).
     await prisma.report.update({
       where: { id: testData.report.id },
-      data: { periodState: "open", periodStatus: "open" },
+      data: {
+        status: "published",
+        periodState: "open",
+        periodStatus: "reopened",
+        reopenedAt: new Date("2026-04-14T09:00:00.000Z"),
+      },
     });
 
     await repo.saveSnapshot(snapshot);
