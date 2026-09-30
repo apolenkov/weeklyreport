@@ -5,15 +5,17 @@ import type {
   SubmitSectionPayload,
 } from "@customreport/shared";
 import { trafficLightStatusSchema } from "@customreport/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { createNullLogger } from "../../../lib/logger.js";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
+import { evaluateSubmissionDeadline } from "../domain/submission-deadline.js";
 import {
   OPEN_REPORT_META,
   reportMetaReader,
 } from "./__tests__/report-meta-fixture";
 import {
+  ReportSectionAccessError,
   ReportSectionNotFoundError,
   type ReportSectionsRepository,
   ReportSectionsService,
@@ -264,6 +266,61 @@ describe("ReportSectionsService — submitSection validation errors", () => {
         AUTHOR_ID,
       ),
     ).rejects.toMatchObject({ code: "MISSING_TRAFFIC_LIGHT" });
+  });
+
+  it("rejects missing traffic light before a deadline expired beyond grace", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-30T10:00:00.000Z"));
+    try {
+      const repository = createRepository(baseSection);
+      const settings = { gracePeriodHours: 24, allowLateSubmissions: false };
+      repository.getReportMeta = reportMetaReader({
+        status: "draft",
+        deadline: new Date("2026-09-28T10:00:00.000Z"),
+      });
+      const report = expectDefined(await repository.getReportMeta(REPORT_ID));
+      expect(report.deadline).toEqual(new Date("2026-09-28T10:00:00.000Z"));
+      expect(
+        evaluateSubmissionDeadline(
+          expectDefined(report.deadline),
+          settings,
+          Date.now(),
+        ),
+      ).toBe("closed");
+      const saveSection = vi.fn(async (nextSection: ReportSectionReadModel) => {
+        const meta = expectDefined(
+          await repository.getReportMeta(nextSection.reportId),
+        );
+        if (
+          evaluateSubmissionDeadline(
+            expectDefined(meta.deadline),
+            settings,
+            Date.now(),
+          ) === "closed"
+        ) {
+          throw new ReportSectionAccessError(
+            "Past deadline; submissions closed.",
+          );
+        }
+        return nextSection;
+      });
+      repository.saveSection = saveSection;
+      const service = new ReportSectionsService(
+        repository,
+        NOOP_REPORT_SECTIONS_TELEMETRY,
+        createNullLogger(),
+      );
+
+      await expect(
+        service.submitSection(validSubmit({ projectStatuses: [] }), AUTHOR_ID),
+      ).rejects.toMatchObject({
+        name: "ReportSectionDomainError",
+        code: "MISSING_TRAFFIC_LIGHT",
+      });
+      expect(saveSection).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("rejects when no current items for a project", async () => {
