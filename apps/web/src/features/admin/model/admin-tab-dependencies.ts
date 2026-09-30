@@ -47,7 +47,8 @@ export const ADMIN_TAB_QUERY_DEPENDENCIES = {
   reminders: { snapshot: true, settings: true },
   reopen: { snapshot: false, settings: false },
   jobs: { snapshot: false, settings: false },
-  actions: { snapshot: false, settings: false },
+  // The snapshot user list turns actor ids into names.
+  actions: { snapshot: true, settings: false },
   ai: { snapshot: false, settings: false },
   settings: { snapshot: false, settings: true },
 } as const satisfies Record<AdminTab, AdminTabQueryDependencies>;

@@ -420,13 +420,13 @@ describe("PeriodComparisonTable", () => {
         "Project",
         "Latest status",
         "Previous status",
-        "Previous risks",
         "Latest risks",
+        "Previous risks",
         "Risk change",
       ]);
       expect(
         screen.getAllByRole("cell").map((cell) => cell.textContent),
-      ).toEqual(["Blocked", "On track", "1", "4", "+3"]);
+      ).toEqual(["Blocked", "On track", "4", "1", "+3"]);
     },
   );
 });
@@ -621,8 +621,8 @@ describe("Native table affordances", () => {
           "sticky",
           "left-0",
           "bg-[var(--color-background)]",
-          "w-28",
-          "max-w-28",
+          "w-36",
+          "max-w-36",
           "whitespace-normal",
           "break-words",
         );

@@ -83,7 +83,7 @@ describe("ActionLogTab pagination", () => {
       name: "Action log table",
     });
     expect(scrollRegion).toHaveAccessibleDescription(
-      "Swipe horizontally to see status and details.",
+      "Scroll horizontally to see status and details.",
     );
 
     await user.type(
