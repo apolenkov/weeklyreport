@@ -42,6 +42,12 @@ export function DialogSurface({
   return (
     <div
       className={backdropClassName}
+      // A backdrop press must not move focus to the nearest focusable ancestor
+      // (e.g. <main tabindex="-1">): a nested confirm would record that ancestor
+      // and restore focus to it after the editor closes.
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) event.preventDefault();
+      }}
       onClick={(event) => {
         if (!isPending && event.target === event.currentTarget) onDismiss();
       }}
