@@ -40,6 +40,28 @@ describe("useFocusAfterRowRemoved", () => {
     expect(grace).toHaveFocus();
   });
 
+  it("leaves focus alone when a row is removed and focus was never inside", async () => {
+    const { rerender } = render(
+      <>
+        <button type="button">Elsewhere</button>
+        <Rows rows={["Ada", "Grace"]} />
+      </>,
+    );
+    // Focus was only ever on a control outside the list, then lands on body.
+    await userEvent.click(screen.getByRole("button", { name: "Elsewhere" }));
+    screen.getByRole("button", { name: "Elsewhere" }).blur();
+    expect(document.body).toHaveFocus();
+
+    rerender(
+      <>
+        <button type="button">Elsewhere</button>
+        <Rows rows={["Grace"]} />
+      </>,
+    );
+
+    expect(document.body).toHaveFocus();
+  });
+
   it("does not steal focus when a row is added", () => {
     const { rerender } = render(<Rows rows={["Ada"]} />);
 

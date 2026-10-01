@@ -66,6 +66,16 @@ function commentDeleteLabel(comment: RecordCommentView): string {
     : `Delete comment by ${author}`;
 }
 
+// Subject-specific accessible names keep repeated composers distinguishable.
+function composerLabels(subject: string | undefined) {
+  if (!subject) return {};
+  const excerpt = shortItemLabel(subject);
+  return {
+    label: `Add a review comment on ${excerpt}`,
+    submitLabel: `Comment on ${excerpt}`,
+  };
+}
+
 function commentValidationError(
   draft: string,
   validationSucceeded: boolean,
@@ -296,11 +306,7 @@ export function RecordComments({
           onSubmit={submitDraft}
           submitDisabled={submitDisabled}
           isPending={isCommentPending}
-          label={
-            subject
-              ? `Add a review comment on ${shortItemLabel(subject)}`
-              : undefined
-          }
+          {...composerLabels(subject)}
           validationError={validationError}
           {...(feedback ? { feedbackId } : {})}
         />

@@ -1,4 +1,7 @@
-import type { UserSession } from "@customreport/shared";
+import {
+  REOPEN_AUTO_CLOSE_NOTES,
+  type UserSession,
+} from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
@@ -151,7 +154,7 @@ async function applyApproval(
         status: "rejected",
         reviewedById: input.decidedBy,
         reviewedAt: new Date(),
-        reviewNote: "Auto-closed: the section was already reopened.",
+        reviewNote: REOPEN_AUTO_CLOSE_NOTES.sectionAlreadyReopened,
       },
     });
     return { kind: "stale" };

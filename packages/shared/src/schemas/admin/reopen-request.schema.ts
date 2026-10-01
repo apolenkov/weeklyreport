@@ -11,6 +11,23 @@ export type ReopenBlockedReason =
   | "period_closed"
   | "pending_request_exists";
 
+const REOPEN_AUTO_CLOSE_PREFIX = "Auto-closed:";
+
+/**
+ * Review notes the system writes when it closes a pending reopen request
+ * itself; the UI recognises them by prefix, as the reviewer FK is nulled when
+ * a user is deleted and cannot mark a system closure.
+ */
+export const REOPEN_AUTO_CLOSE_NOTES = {
+  periodReopened: `${REOPEN_AUTO_CLOSE_PREFIX} the period was reopened.`,
+  sectionAlreadyReopened: `${REOPEN_AUTO_CLOSE_PREFIX} the section was already reopened.`,
+} as const;
+
+/** True when a review note was written by a system auto-close. */
+export function isReopenAutoCloseNote(note: string | null): boolean {
+  return note?.startsWith(REOPEN_AUTO_CLOSE_PREFIX) === true;
+}
+
 /** Filters supported by the admin reopen-request list endpoint. */
 export const reopenRequestStatusFilterSchema = z.enum([
   "pending",

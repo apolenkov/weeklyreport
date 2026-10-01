@@ -24,6 +24,8 @@ export interface HistoryEntry {
   dateRange: string;
   status: "submitted" | "draft" | "published" | "reopened" | "archived";
   archived?: boolean | undefined;
+  // The period is live again; publishedAt names the last publication.
+  reopened?: boolean | undefined;
   submissionState: HistorySubmissionState;
   submittedAt: string | null;
   publishedAt?: string | null | undefined;
@@ -54,8 +56,11 @@ export function mapHistoryEntries(
     periodId: e.reportId,
     weekLabel: formatWeekLabel(e.periodStart),
     dateRange: formatPeriodRangeWithYear(e.periodStart, e.periodEnd),
-    status: e.sectionStatus,
+    // A reopened period's draft section reads "Reopened", as in compiled history.
+    status:
+      e.reopened && e.sectionStatus === "draft" ? "reopened" : e.sectionStatus,
     archived: e.archived ?? false,
+    reopened: e.reopened,
     submissionState:
       e.submittedAt !== null
         ? "submitted"
@@ -87,6 +92,7 @@ export function mapCompiledHistoryEntries(
     dateRange: formatPeriodRangeWithYear(e.periodStart, e.periodEnd),
     status: e.archived ? "archived" : e.reopened ? "reopened" : "published",
     archived: e.archived,
+    reopened: e.reopened,
     submissionState: "unavailable",
     submittedAt: null,
     publishedAt: formatHistoryTimestamp(e.publishedAt, now),

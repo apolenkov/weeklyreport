@@ -144,7 +144,7 @@ function HistoryTimeline({ entry }: { readonly entry: HistoryEntry }) {
       ) : null}
       {entry.publishedAt ? (
         <TimelineRow
-          label={entry.status === "reopened" ? "Last published" : "Published"}
+          label={entry.reopened ? "Last published" : "Published"}
           value={entry.publishedAt}
         />
       ) : null}

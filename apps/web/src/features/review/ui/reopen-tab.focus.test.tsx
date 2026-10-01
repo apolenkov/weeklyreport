@@ -33,14 +33,14 @@ const request = (id: string, name: string): ReopenRequest => ({
   },
 });
 
-async function renderTab() {
+async function renderTab(rows = ["Alice", "Bob"]) {
+  const listed = {
+    items: rows.map((name, index) => request(`r-${index + 1}`, name)),
+  };
   const { proxy, captured } = createMockTRPC([
     {
       path: ["admin", "listReopenRequests"],
-      query: {
-        items: [request("r-1", "Alice"), request("r-2", "Bob")],
-        nextCursor: null,
-      },
+      query: () => ({ items: listed.items, nextCursor: null }),
     },
     { path: ["admin", "pendingReopenCount"], query: { count: 2 } },
     { path: ["admin", "respondReopenRequest"], mutation: true },
@@ -68,6 +68,7 @@ async function renderTab() {
   const alice = expectDefined((await screen.findByText("Alice")).closest("li"));
   return {
     alice,
+    listed,
     decide: expectDefined(captured["admin.respondReopenRequest"]).mutationFn,
   };
 }
@@ -93,7 +94,7 @@ describe("ReopenTab focus", () => {
     ["Approve", "approved"],
     ["Reject", "rejected"],
   ] as const)(
-    "moves focus to the request list after %s removes the form",
+    "moves focus to the results region after %s removes the form",
     async (label, decision) => {
       const { alice, decide } = await renderTab();
       decide.mockResolvedValue({ staleAutoClosed: false, decision });
@@ -105,10 +106,33 @@ describe("ReopenTab focus", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByRole("list", { name: "Reopen requests" }),
+          screen.getByRole("region", { name: "Reopen requests" }),
         ).toHaveFocus();
       });
       expect(within(alice).queryByRole("textbox")).not.toBeInTheDocument();
     },
   );
+
+  it("lands on the visible empty state once the last request is decided", async () => {
+    const { alice, listed, decide } = await renderTab(["Alice"]);
+    decide.mockImplementation(() => {
+      listed.items = [];
+      return Promise.resolve({ staleAutoClosed: false, decision: "approved" });
+    });
+
+    await userEvent.click(
+      within(alice).getByRole("button", { name: "Respond" }),
+    );
+    await userEvent.click(
+      within(alice).getByRole("button", { name: "Approve" }),
+    );
+
+    const region = screen.getByRole("region", { name: "Reopen requests" });
+    await waitFor(() => {
+      expect(region).toHaveFocus();
+    });
+    expect(
+      within(region).getByText("No pending reopen requests."),
+    ).toBeInTheDocument();
+  });
 });

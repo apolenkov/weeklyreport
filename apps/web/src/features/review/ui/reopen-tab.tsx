@@ -1,7 +1,5 @@
 "use client";
 
-import type { RefObject } from "react";
-
 import { useFocusAfterRowRemoved } from "../../../shared/hooks/browser/use-focus-after-row-removed";
 import { formatClientErrorMessage } from "../../../shared/lib/errors/client-error-reporting";
 import type { ReopenDecision } from "../../../shared/ui/forms/reopen-respond-form";
@@ -54,7 +52,6 @@ function ReopenFilterBar({
 // The respond form is single-open: one `respondingId` and one shared note draft
 // serve the whole list, so the draft lives here rather than inside each card.
 interface ReopenRequestListProps {
-  readonly listRef: RefObject<HTMLUListElement | null>;
   readonly requests: readonly ReopenRequest[];
   readonly respondingId: string | null;
   readonly note: string;
@@ -67,7 +64,6 @@ interface ReopenRequestListProps {
 }
 
 function ReopenRequestList({
-  listRef,
   requests,
   respondingId,
   note,
@@ -79,12 +75,7 @@ function ReopenRequestList({
   respond,
 }: ReopenRequestListProps) {
   return (
-    <ul
-      ref={listRef}
-      tabIndex={-1}
-      aria-label="Reopen requests"
-      className="space-y-3 focus-visible:outline-none"
-    >
+    <ul className="space-y-3">
       {requests.map((r) => (
         <ReopenRequestCard
           key={r.id}
@@ -163,9 +154,10 @@ export function ReopenTab() {
     respond,
   } = useReopenTabState();
   // A decision removes the form (and, under the Pending filter, the row) that
-  // held focus; the list outlives both, so it is the stable place to land.
-  // The open form counts as one removable row.
-  const listRef = useFocusAfterRowRemoved<HTMLUListElement>(
+  // held focus. The results region outlives both and holds the empty state once
+  // the last row is gone, so it is the stable, visible place to land. The open
+  // form counts as one removable row.
+  const resultsRef = useFocusAfterRowRemoved<HTMLDivElement>(
     requests.length + (respondingId === null ? 0 : 1),
   );
 
@@ -183,36 +175,43 @@ export function ReopenTab() {
         setSearch={setSearch}
       />
 
-      <ReopenListStatus
-        isPending={listQuery.isPending}
-        errorMessage={
-          listQuery.isError && requests.length === 0
-            ? formatClientErrorMessage(
-                "Failed to load requests",
-                listQuery.error,
-              )
-            : null
-        }
-        isEmpty={requests.length === 0}
-        hasSearch={search.trim().length > 0}
-        filter={filter}
-        onRetry={() => {
-          void listQuery.refetch({ cancelRefetch: false });
-        }}
-      />
+      <div
+        ref={resultsRef}
+        tabIndex={-1}
+        role="region"
+        aria-label="Reopen requests"
+        className="space-y-4 rounded-[var(--radius)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2"
+      >
+        <ReopenListStatus
+          isPending={listQuery.isPending}
+          errorMessage={
+            listQuery.isError && requests.length === 0
+              ? formatClientErrorMessage(
+                  "Failed to load requests",
+                  listQuery.error,
+                )
+              : null
+          }
+          isEmpty={requests.length === 0}
+          hasSearch={search.trim().length > 0}
+          filter={filter}
+          onRetry={() => {
+            void listQuery.refetch({ cancelRefetch: false });
+          }}
+        />
 
-      <ReopenRequestList
-        listRef={listRef}
-        requests={requests}
-        respondingId={respondingId}
-        note={note}
-        isSaving={isSaving}
-        pendingDecision={pendingDecision}
-        onNoteChange={onNoteChange}
-        startRespond={startRespond}
-        cancelRespond={cancelRespond}
-        respond={respond}
-      />
+        <ReopenRequestList
+          requests={requests}
+          respondingId={respondingId}
+          note={note}
+          isSaving={isSaving}
+          pendingDecision={pendingDecision}
+          onNoteChange={onNoteChange}
+          startRespond={startRespond}
+          cancelRespond={cancelRespond}
+          respond={respond}
+        />
+      </div>
 
       {listQuery.isError && requests.length > 0 ? (
         <ReopenNextPageIssue

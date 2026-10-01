@@ -187,27 +187,35 @@ function useFilteredJobs(jobs: readonly FailedJob[], search: string) {
 
 // Opens on the first queue that has failed jobs (the tab badge counts every
 // queue). Chosen once so a later count refresh never moves the list under the
-// admin, e.g. after removing the last failure of the opened queue.
+// admin, e.g. after removing the last failure of the opened queue. A failed
+// count pins the default queue. `settled` is false until one of the two
+// happens, so the list shows its loading state instead of a premature
+// "Queue is clean".
 function useSelectedQueue() {
   const trpc = useTRPC();
   const countQuery = useQuery(trpc.admin.dlqCount.queryOptions());
   const [chosen, setChosen] = useState<QueueName | null>(null);
-  if (chosen === null && countQuery.data) {
+  if (chosen === null && (countQuery.data || countQuery.isError)) {
     setChosen(
-      countQuery.data.byQueue.find((entry) => entry.count > 0)?.queue ??
+      countQuery.data?.byQueue.find((entry) => entry.count > 0)?.queue ??
         DEFAULT_QUEUE,
     );
   }
-  return [chosen ?? DEFAULT_QUEUE, setChosen] as const;
+  return [chosen ?? DEFAULT_QUEUE, setChosen, chosen !== null] as const;
 }
 
 export function JobsTab() {
-  const [queue, setQueue] = useSelectedQueue();
+  const [queue, setQueue, queueSettled] = useSelectedQueue();
   const [pendingRemoval, setPendingRemoval] = useState<{
     readonly queue: QueueName;
     readonly jobId: string;
   } | null>(null);
-  const listQuery = useFailedJobsPagination(queue);
+  const fetched = useFailedJobsPagination(queue);
+  // Until the queue is settled the fetched list belongs to the placeholder
+  // default queue, so it is neither shown nor counted as empty.
+  const listQuery = queueSettled
+    ? fetched
+    : { ...fetched, jobs: [], isLoading: true };
 
   const [search, setSearch] = useState("");
   const rows = useExpandedRows();

@@ -1,3 +1,4 @@
+import { isReopenAutoCloseNote } from "@customreport/shared";
 import { type Ref, useEffect, useRef } from "react";
 
 import {
@@ -28,6 +29,13 @@ export interface ReopenRequest {
   };
 }
 
+// The system closes superseded requests as `rejected` with a shared auto-close
+// note (openspec/specs/reopen-requests); the reviewer FK cannot mark it because
+// deleting a user nulls it.
+function isSystemClosed(r: ReopenRequest): boolean {
+  return r.status === "rejected" && isReopenAutoCloseNote(r.reviewNote);
+}
+
 const STATUS_LABEL: Record<ReopenRequest["status"], string> = {
   pending: "Pending",
   approved: "Approved",
@@ -41,6 +49,9 @@ const STATUS_PALETTE: Record<ReopenRequest["status"], string> = {
   rejected:
     "bg-[var(--color-status-blocked-bg)] text-[var(--color-destructive)]",
 };
+
+const NEUTRAL_PALETTE =
+  "bg-[var(--color-surface-hover)] text-[var(--color-muted-foreground)]";
 
 function formatPeriod(
   periodStart: string,
@@ -58,6 +69,7 @@ function ReopenRequestMeta({
 }: {
   readonly request: ReopenRequest;
 }) {
+  const systemClosed = isSystemClosed(r);
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-2">
@@ -68,9 +80,9 @@ function ReopenRequestMeta({
           {r.requestedBy.email}
         </span>
         <span
-          className={`rounded-[var(--radius-pill)] px-2 py-0.5 text-xs font-bold uppercase tracking-wide ${STATUS_PALETTE[r.status]}`}
+          className={`rounded-[var(--radius-pill)] px-2 py-0.5 text-xs font-bold uppercase tracking-wide ${systemClosed ? NEUTRAL_PALETTE : STATUS_PALETTE[r.status]}`}
         >
-          {STATUS_LABEL[r.status]}
+          {systemClosed ? "Auto-closed" : STATUS_LABEL[r.status]}
         </span>
       </div>
       <div className="text-xs text-[var(--color-muted-foreground)]">
@@ -105,7 +117,7 @@ function ReopenRequestNotes({
       {r.status !== "pending" && r.reviewNote && (
         <div className="mt-3 rounded-[var(--radius)] border border-[var(--color-border)] p-3 text-sm">
           <div className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
-            Head Comment
+            {isSystemClosed(r) ? "System Note" : "Head Comment"}
           </div>
           <div className="mt-1 whitespace-pre-wrap">{r.reviewNote}</div>
           {r.reviewedBy && r.reviewedAt && (

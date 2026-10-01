@@ -31,6 +31,7 @@ export function RequestChangesButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
+        aria-label={`Request changes from ${leadName}`}
         className="inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-1.5 text-xs font-semibold text-[var(--color-destructive)] transition-colors hover:border-[var(--color-destructive)]"
       >
         <MessageSquareWarning aria-hidden="true" className="h-3.5 w-3.5" />

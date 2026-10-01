@@ -96,6 +96,8 @@ NOT cause the failed job to be removed as a stale reminder.
 - **AND** the failed-job count read (`admin.dlqCount`, admin-only like the tab)
   carries the per-queue split that drives the choice; when it is unavailable the
   selector starts on `email-reminder`
+- **AND** until the count read settles the list shows its loading state and never
+  "Queue is clean"; a queue the admin picked meanwhile is kept
 
 #### Scenario: A provider test execution id is not a reminder reference
 

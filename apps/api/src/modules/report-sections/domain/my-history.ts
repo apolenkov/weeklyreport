@@ -19,6 +19,7 @@ export interface MyHistorySectionRow {
     readonly periodEnd: Date;
     readonly status: ReportStatus;
     readonly archived: boolean;
+    readonly reopened: boolean;
     readonly publishedAt: Date | null;
   };
   readonly items: readonly {
@@ -95,6 +96,7 @@ function toHistoryEntry(s: MyHistorySectionRow) {
     reportStatus: s.report.status,
     sectionStatus: s.status,
     archived: s.report.archived,
+    reopened: s.report.reopened,
     submittedAt: s.submittedAt,
     publishedAt: s.report.publishedAt,
     createdAt: s.createdAt,

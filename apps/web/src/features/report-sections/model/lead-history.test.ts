@@ -128,6 +128,38 @@ describe("mapHistoryEntries", () => {
     expect(result[0]?.publishedAt).toBe("1 min ago");
   });
 
+  it("shows a draft section of a reopened period as Reopened, keeping the last publication", () => {
+    const published = new Date(now.getTime() - 8 * 60 * 1000);
+    const [entry] = mapHistoryEntries(
+      [
+        baseEntry({
+          sectionStatus: "draft",
+          reopened: true,
+          publishedAt: published,
+        }),
+      ],
+      now,
+    );
+    expect(entry?.status).toBe("reopened");
+    expect(entry?.reopened).toBe(true);
+    expect(entry?.publishedAt).toBe("8 min ago");
+  });
+
+  it("keeps Submitted for a section the lead resubmitted in a reopened period", () => {
+    const [entry] = mapHistoryEntries(
+      [
+        baseEntry({
+          sectionStatus: "submitted",
+          submittedAt: new Date(now.getTime() - 60 * 1000),
+          reopened: true,
+        }),
+      ],
+      now,
+    );
+    expect(entry?.status).toBe("submitted");
+    expect(entry?.reopened).toBe(true);
+  });
+
   it("computes dateRange 'Apr 14–20, 2026' for a same-month period", () => {
     const result = mapHistoryEntries(
       [
@@ -285,6 +317,7 @@ describe("mapCompiledHistoryEntries", () => {
     );
 
     expect(result[0]?.status).toBe("reopened");
+    expect(result[0]?.reopened).toBe(true);
     expect(result[0]?.archived).toBe(false);
   });
 });
