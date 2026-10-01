@@ -1167,7 +1167,7 @@ for (const entry of SLIDE_SAVE_CASES) {
     const modalName =
       entry.kind === "Decision"
         ? "Edit decision"
-        : `Edit ${entry.kind} — ${ACTIVITY.name}`;
+        : `Edit ${entry.kind.toLowerCase()} — ${ACTIVITY.name}`;
     await openLeadReport();
     await createSlideSaveRecord(record);
     await openSlides();
