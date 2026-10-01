@@ -9,18 +9,18 @@
 
 ## 1. Chart skeleton and fail-closed configuration
 
-- [ ] 1.1 Create `deploy/helm/weeklyreport/` (`Chart.yaml`, `.helmignore`,
+- [x] 1.1 Create `deploy/helm/weeklyreport/` (`Chart.yaml`, `.helmignore`,
       `values.yaml`, `values.schema.json`, `values.production.example.yaml`,
       `templates/`), and add only `deploy/helm/weeklyreport/templates/` to
       `.prettierignore` and `deploy/helm` to `.dockerignore`.
       Acceptance: `helm lint` passes with the fixture values; `pnpm format:check` passes.
-- [ ] 1.2 Schema marks every compose `${VAR:?}` input required, pattern for
+- [x] 1.2 Schema marks every compose `${VAR:?}` input required, pattern for
       `postgres.db`, `additionalProperties: false`; `secrets.existingSecret` xor
       `secrets.create`; template `fail` for password character set; `images.pullSecret`
       (optional name of an existing Secret) becomes `imagePullSecrets` on every pod.
       Acceptance: negative-render tests (drop each required key; both/neither secret
       source; password with `@`) all fail with the key named.
-- [ ] 1.3 Add the chart gate test in `scripts/gates/operations/` (spawns `helm`):
+- [x] 1.3 Add the chart gate test in `scripts/gates/operations/` (spawns `helm`):
       lint, render, negative renders, CHROMIUM
       invariants, literals `AUTH_DEV_MODE=false` and `NODE_ENV=production`, no
       secret value in any ConfigMap, no `latest`.
@@ -46,7 +46,7 @@
       (local `caddy` binary, no container); the forged-`X-Forwarded-For` scenarios
       (direct, and through a trusted peer) are proven against a local Caddy;
       compose rendering test still passes.
-- [ ] 2.3 Edge Deployment, Service `edge`, ConfigMap from `.Files`, emptyDir
+- [x] 2.3 Edge Deployment, Service `edge`, ConfigMap from `.Files`, emptyDir
       volumes, exec probe, Ingress with `className`, host, TLS secret, annotations
       as values.
       Acceptance: render test asserts one Ingress rule to `edge` and no other
@@ -54,37 +54,37 @@
 
 ## 3. Core workloads
 
-- [ ] 3.1 postgres StatefulSet (PGDATA subdirectory, fsGroup, probe), pgbouncer,
+- [x] 3.1 postgres StatefulSet (PGDATA subdirectory, fsGroup, probe), pgbouncer,
       redis StatefulSet (one `maxmemoryMb` value feeds flag and
       `REDIS_MAXMEMORY_BYTES`).
       Acceptance: render test compares image digests with compose; `redis` flag
       and env value derive from the same number.
-- [ ] 3.2a api Deployment (`Recreate`, one replica, `pdfdata` PVC, probes live/ready/startup,
+- [x] 3.2a api Deployment (`Recreate`, one replica, `pdfdata` PVC, probes live/ready/startup,
       20s grace), one initContainer `migrate` whose command starts with the
       DB_PASSWORD `case` check (`sh -ec 'case ...; esac; exec ... prisma migrate deploy'`),
       ConfigMap/Secret env, `DATABASE_URL` by `$(DB_PASSWORD)` expansion,
       `OTEL_SERVICE_VERSION` derived from `images.tag`, generic `api.podAnnotations: {}`.
       Acceptance: render test asserts the fields; the migrate command's first
       statement rejects a password with a reserved character when run with `sh`.
-- [ ] 3.2b web Deployment; gotenberg Deployment with fixed `CHROMIUM_*` and
+- [x] 3.2b web Deployment; gotenberg Deployment with fixed `CHROMIUM_*` and
       `PDF_BASE_URL`/allow-list from one template variable (`clusterDomain`,
       default `cluster.local`).
       Acceptance: allow-list equals the escaped `PDF_BASE_URL` origin for any
       namespace and cluster domain.
-- [ ] 3.2c Parity test: (a) third-party image digests and (b) the api env key set
+- [x] 3.2c Parity test: (a) third-party image digests and (b) the api env key set
       versus `docker-compose.prod.yml`, with the exception list kept in the test.
       Acceptance: test passes; adding a key to one side only fails and names it.
-- [ ] 3.3 Security contexts and resources per design section 4.
+- [x] 3.3 Security contexts and resources per design section 4.
       Acceptance: render test asserts the fields on every pod; read-only root
       filesystem only where task 8 verified it.
 
 ## 4. Backup
 
-- [ ] 4.1 Add `BACKUP_RUN_ONCE` mode to `deploy/postgres/backup-loop.sh` (interval
+- [x] 4.1 Add `BACKUP_RUN_ONCE` mode to `deploy/postgres/backup-loop.sh` (interval
       not required in that mode, exit status of the dump) and cases in
       `scripts/gates/operations/backup-loop.test.ts`; keep loop mode byte-identical in behaviour.
       Acceptance: `pnpm test` backup tests pass, including failed-dump non-zero exit and no leftover `.partial`.
-- [ ] 4.2 CronJob (`Forbid`, required schedule and retention, history 3/3,
+- [x] 4.2 CronJob (`Forbid`, required schedule and retention, history 3/3,
       `pgbackups` PVC) and restore instructions.
       Acceptance: render test; chart carries no off-cluster claim.
 
