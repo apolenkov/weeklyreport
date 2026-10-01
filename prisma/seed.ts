@@ -24,8 +24,10 @@ import {
 import { seedRisks } from "./seeds/advanced/seed-advanced.risks.js";
 import { seedSingletons } from "./seeds/advanced/seed-advanced.settings.js";
 import { seedStageAssignments } from "./seeds/advanced/seed-advanced.stage-assignments.js";
+import { seedUxFixtures } from "./seeds/advanced/seed-advanced.ux-fixtures.js";
 import {
   logSeedSummary,
+  NO_SECTION_COUNTS,
   sumSectionCounts,
 } from "./seeds/advanced/seed-advanced.summary.js";
 import { finalizePublishedSnapshots } from "./seeds/support/published-snapshot.js";
@@ -58,6 +60,7 @@ async function main(): Promise<void> {
 
     const published = await seedPublishedSections(prisma, ownership);
     const history = await seedHistoryPeriods(prisma, ownership);
+    const uxFixtures = await seedUxFixtures(prisma);
     await finalizePublishedSnapshots(prisma);
 
     const adminExamples = await seedAdminExamples(prisma);
@@ -72,8 +75,14 @@ async function main(): Promise<void> {
     logSeedSummary({
       ...organization,
       stageAssignments,
-      reports: activeReports + publishedReports + history.reports,
-      sections: sumSectionCounts([active, published, history.sections]),
+      reports:
+        activeReports + publishedReports + history.reports + uxFixtures.reports,
+      sections: sumSectionCounts([
+        active,
+        published,
+        history.sections,
+        { ...NO_SECTION_COUNTS, sections: uxFixtures.sections },
+      ]),
       risks,
       decisions,
       reminderPolicies: reminders.policies,
