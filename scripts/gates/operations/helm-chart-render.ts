@@ -31,6 +31,7 @@ export interface PodSpec {
   readonly containers: readonly Container[];
   readonly initContainers?: readonly Container[];
   readonly automountServiceAccountToken?: boolean;
+  readonly enableServiceLinks?: boolean;
   readonly imagePullSecrets?: readonly { readonly name: string }[];
   readonly securityContext: {
     readonly runAsNonRoot?: boolean;
