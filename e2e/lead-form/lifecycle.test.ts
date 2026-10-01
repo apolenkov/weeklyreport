@@ -1257,7 +1257,7 @@ for (const kind of ["risk", "decision"] as const) {
       `Expand ${kind === "risk" ? "Risks & Blockers" : "Decisions"}`,
       "click",
     );
-    await findRole("button", `+ Add ${title}`, "click");
+    await findRole("button", `+ Add ${kind}`, "click");
     await waitScope({
       role: "dialog",
       name: kind === "risk" ? /^Add risk — /u : "Add decision",
