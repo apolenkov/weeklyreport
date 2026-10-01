@@ -1313,7 +1313,7 @@ for (const kind of ["risk", "decision"] as const) {
       );
       await findRole(
         "button",
-        `Edit Decision: ${shortItemLabel(text)}`,
+        `Edit decision: ${shortItemLabel(text)}`,
         "click",
       );
     }

@@ -296,7 +296,7 @@ async function openSlideRecord(record: SlideRecord): Promise<void> {
   await assertModal(
     record.kind === "Decision"
       ? "Edit decision"
-      : `Edit ${record.kind} — ${record.parent.name}`,
+      : `Edit ${record.kind.toLowerCase()} — ${record.parent.name}`,
   );
 }
 
@@ -598,15 +598,15 @@ async function validateSupportingDialog(
     `E2E unsaved ${kind.toLowerCase()}`,
     kind === "Risk" ? `Add risk — ${ACTIVITY.name}` : "Add decision",
   );
-  await assertFocused(`+ Add ${kind}`);
+  await assertFocused(`+ Add ${kind.toLowerCase()}`);
   await openSupportingDialog(kind);
   await click("Cancel");
   await waitNoModals();
-  await assertFocused(`+ Add ${kind}`);
+  await assertFocused(`+ Add ${kind.toLowerCase()}`);
 }
 
 async function openSupportingDialog(kind: "Risk" | "Decision"): Promise<void> {
-  const name = `+ Add ${kind}`;
+  const name = `+ Add ${kind.toLowerCase()}`;
   await command(["focus", await ref("button", name)]);
   assert.equal(await activeName(), name);
   await click(name);
