@@ -43,6 +43,7 @@ This index maps every durable capability to one canonical home. Product capabili
 - [analytics-query-correctness](./analytics-query-correctness/spec.md) — Analytics results and cache keys stay correct under lead scoping, republished periods, and nested inputs. `[roles: Head, Admin]`
 - [pdf-export-integrity](./pdf-export-integrity/spec.md) — PDF workers capture only a successfully rendered report, and completed exports download without opening a blank tab. `[roles: Lead, Head, Viewer, Admin]`
 - [trends-query-window](./trends-query-window/spec.md) — Trends derives its date window from the current date and shows an explicit empty state when no results exist. `[roles: Head, Admin]`
+- [trends-chart-semantics](./trends-chart-semantics/spec.md) — Trends shows history, lead submissions and comparison as accessible tables with status badges, full period dates and keyboard-scrollable regions. `[roles: Head, Admin]`
 
 ### Lead
 
