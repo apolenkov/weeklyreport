@@ -1052,7 +1052,7 @@ describe("JobsService — pdf recovery surface", () => {
       jobId: RECOVERY_ROW.jobId,
       outcome: "retried",
     });
-    expect(pdfQueue.getJob).toHaveBeenCalledWith(INPUT.jobId + "-g2");
+    expect(pdfQueue.getJob).toHaveBeenCalledWith(`${INPUT.jobId}-g2`);
   });
 
   it("retryPdfRecovery touches no queue entry when the durable row declines", async () => {
