@@ -415,6 +415,11 @@ build-images:
     entrypoint: [""]
   timeout: 45m
   resource_group: weeklyreport-ci-heavy
+  variables:
+    # Job-side mitigation for a runner whose default seccomp/AppArmor profile
+    # denies rootless buildkitd its worker sandbox (mount proc: operation not
+    # permitted); the alternative is an unconfined runner profile.
+    BUILDKITD_FLAGS: --oci-worker-no-process-sandbox
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
       when: never
@@ -447,8 +452,9 @@ build-images:
       : "${WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES:?WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES is not set}"
 
       # Credentials live only in a job-local config.json and are never echoed.
-      export DOCKER_CONFIG="$CI_PROJECT_DIR/.registry-auth"
-      mkdir -p "$DOCKER_CONFIG"
+      # The config must stay outside $CI_PROJECT_DIR: every `--local context=.`
+      # build would otherwise ship it into the pruner stage's `COPY . .`.
+      export DOCKER_CONFIG="$(mktemp -d)"
       auth="$(printf '%s:%s' "$REGISTRY_USER" "$REGISTRY_PASSWORD" | base64 | tr -d '\n')"
       printf '{"auths":{"%s":{"auth":"%s"}}}' "${REGISTRY%%/*}" "$auth" > "$DOCKER_CONFIG/config.json"
 
@@ -488,6 +494,11 @@ build-images:
 # and rolls the release back on failure; it cannot undo a database migration.
 deploy-production:
   stage: deploy
+  # Deployable only after this pipeline's image build; optional because
+  # build-images is absent from pipeline shapes the deploy never joins.
+  needs:
+    - job: build-images
+      optional: true
   image:
     name: alpine/helm:4.3.0@sha256:a6cf54599ccb99d90cf0712b30f03fdb3cab062e6b94e0418cc4db7e8a1464b2
     entrypoint: [""]

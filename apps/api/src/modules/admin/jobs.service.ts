@@ -236,25 +236,13 @@ export class JobsService {
       };
     }
 
-    const outcome = await this.options.retryPdfExportGeneration({
+    const outcome = await this.retryPdfGeneration({
       jobId: identity.jobId,
       expectedGeneration: identity.generation,
     });
     // already-advanced is an idempotent repeat of the same caller-selected
     // generation — the requested end state already holds, so report success.
     if (outcome === "retried" || outcome === "already-advanced") {
-      // The fresh `-g${generation + 1}` job supersedes this failed entry;
-      // dropping it keeps the DLQ count and badge truthful. The durable row
-      // still drives recovery if the new generation fails in turn.
-      // Best effort: the durable advance already succeeded.
-      await job.remove().catch((error: unknown) => {
-        this.logger.warn("admin.jobs.retry — superseded entry not removed", {
-          phase: ADMIN_JOBS_RETRY_PHASE,
-          queue: PDF_EXPORT_QUEUE_NAME,
-          jobId,
-          error: String(error),
-        });
-      });
       this.logger.info("admin.jobs.retry — job requeued", {
         phase: ADMIN_JOBS_RETRY_PHASE,
         queue: PDF_EXPORT_QUEUE_NAME,
@@ -284,8 +272,48 @@ export class JobsService {
   async retryPdfRecovery(
     input: PdfRecoveryRetryInput,
   ): Promise<PdfRecoveryRetryResult> {
-    const outcome = await this.options.retryPdfExportGeneration(input);
+    const outcome = await this.retryPdfGeneration(input);
     return { jobId: input.jobId, outcome };
+  }
+
+  // Both retry surfaces — the failed-list entry and the recovery panel —
+  // share this path. After the durable advance commits, the superseded
+  // `${jobId}-g${expectedGeneration}` queue entry is dropped so the DLQ
+  // count and badge stay truthful; the fresh `-g${generation + 1}` job
+  // supersedes it and the durable row still drives recovery if the new
+  // generation fails in turn.
+  private async retryPdfGeneration(input: {
+    jobId: string;
+    expectedGeneration: number;
+  }): Promise<AdminPdfExportRetryOutcome> {
+    const outcome = await this.options.retryPdfExportGeneration(input);
+    if (outcome === "retried" || outcome === "already-advanced") {
+      await this.dropSupersededPdfExportEntry(input);
+    }
+    return outcome;
+  }
+
+  // Best effort: the durable advance already succeeded, so a lookup or
+  // removal failure is only logged — the recovery surface legitimately
+  // finds no queue entry when it was already pruned.
+  private async dropSupersededPdfExportEntry(input: {
+    jobId: string;
+    expectedGeneration: number;
+  }): Promise<void> {
+    const queueJobId = `${input.jobId}-g${input.expectedGeneration}`;
+    try {
+      const superseded = await this.queue(PDF_EXPORT_QUEUE_NAME).getJob(
+        queueJobId,
+      );
+      await superseded?.remove();
+    } catch (error) {
+      this.logger.warn("admin.jobs.retry — superseded entry not removed", {
+        phase: ADMIN_JOBS_RETRY_PHASE,
+        queue: PDF_EXPORT_QUEUE_NAME,
+        jobId: queueJobId,
+        error: String(error),
+      });
+    }
   }
 
   async removeFailed(input: {
