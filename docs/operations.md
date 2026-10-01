@@ -10,7 +10,7 @@ marked **untested in production**.
 ## The stack
 
 `docker compose --env-file .env.production -f docker-compose.prod.yml` brings up
-eleven services:
+ten services:
 
 | Service        | Role                                                                                                                                                                                                                           |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
