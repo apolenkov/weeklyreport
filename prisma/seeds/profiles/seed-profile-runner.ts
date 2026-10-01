@@ -32,6 +32,8 @@ export function runSeedProfile(profile: SeedProfile): void {
   const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
   const steps = [
     ...seedStepsFor(profile),
+    // Opt-in overlay: no-ops unless E2E_AI_PROVIDER_API_KEY is set.
+    { script: "../../seed-ai-provider.ts", args: [] },
     { script: "./seed-profile-validate.ts", args: [profile] },
   ];
   for (const step of steps) {
