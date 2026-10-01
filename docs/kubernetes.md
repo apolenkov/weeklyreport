@@ -80,6 +80,11 @@ helm upgrade --install weeklyreport deploy/helm/weeklyreport -n <ns> --create-na
 `--wait` as well. `helm lint -f <values>` and `helm template -f <values>` run
 offline; a plain `helm lint` without values fails by design.
 
+With a `WaitForFirstConsumer` storage class (the OrbStack default), the `pgbackups`
+volume stays Pending until the first backup Job mounts it, so the first
+`--atomic` install times out and rolls back. Install the first time without
+`--atomic`, check `kubectl rollout status`, and use `--atomic` for later upgrades.
+
 The api runs one replica with strategy `Recreate` because `pdfdata` is a
 ReadWriteOnce volume, so every upgrade has a short api outage (the initContainer
 plus the 60 second startup budget).

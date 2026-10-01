@@ -172,6 +172,7 @@ test("every workload pod is hardened and carries no API token", () => {
     const pod = podSpecOf(findManifest(manifests, kind, name));
     const label = `${kind}/${name}`;
     assert.equal(pod.automountServiceAccountToken, false, label);
+    assert.equal(pod.enableServiceLinks, false, label);
     assert.equal(pod.securityContext.runAsNonRoot, true, label);
     assert.equal(typeof pod.securityContext.runAsUser, "number", label);
     assert.deepEqual(

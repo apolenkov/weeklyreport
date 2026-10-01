@@ -30,9 +30,11 @@ valueFrom:
     {{- end }}
 {{- end }}
 
-{{/* Pod fields shared by every workload: no API token, pull secret, non-root. */}}
+{{/* Pod fields shared by every workload: no API token, no service-link env
+vars (a Service named `api` would inject API_PORT=tcp://... and crash Gotenberg), pull secret, non-root. */}}
 {{- define "wr.podCommon" -}}
 automountServiceAccountToken: false
+enableServiceLinks: false
 {{- with .root.Values.images.pullSecret }}
 imagePullSecrets:
   - name: {{ . }}
