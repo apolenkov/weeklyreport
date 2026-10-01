@@ -1,4 +1,10 @@
-## ADDED Requirements
+# trends-chart-semantics Specification
+
+## Purpose
+
+Trends presents status history, lead submissions and period comparison as accessible, keyboard-scrollable tables with product status badges and full period dates.
+
+## Requirements
 
 ### Requirement: Trends history and lead submissions are readable tables
 
