@@ -115,7 +115,7 @@ export interface WeeklyReportPeriod {
   periodStart: Date;
   // Explicit so publish/reopen consumers need not rely on id === reportId.
   reportId: string;
-  // Lifecycle state for Publish & Lock / Reopen toggle.
+  // Lifecycle state for Publish & lock / Reopen toggle.
   periodState: WeeklyReportReadModel["periodState"];
   periodStatus: WeeklyReportReadModel["periodStatus"];
   // Orthogonal to periodStatus: an archived report stays "published".

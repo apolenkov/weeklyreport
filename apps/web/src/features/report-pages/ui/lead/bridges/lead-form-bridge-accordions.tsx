@@ -167,7 +167,7 @@ export function RisksAccordion({
                 : NO_RECORD_PARENTS_MESSAGE
             }
           >
-            + Add Risk
+            + Add risk
           </LeadFormAddButton>
         ) : null
       }

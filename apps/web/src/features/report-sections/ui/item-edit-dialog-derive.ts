@@ -128,7 +128,7 @@ export function deriveItemEditFields(
     isActivityParent: parent.isActivityParent,
     selectedActivity: parent.selectedActivity,
     parentName: parent.parentName,
-    headerVerb: args.isCreate ? "Add Item" : "Edit Item",
+    headerVerb: args.isCreate ? "Add item" : "Edit item",
     ...stage,
     takenRanks,
     rankOptions,

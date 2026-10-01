@@ -61,7 +61,7 @@ export function ActivityEditDialog({
         }}
       >
         <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-          {editingActivity ? "Edit Activity" : "Add Activity"}
+          {editingActivity ? "Edit activity" : "Add activity"}
         </h3>
         <fieldset disabled={isSaving} className="contents">
           <ActivityFormFields
@@ -73,7 +73,7 @@ export function ActivityEditDialog({
           />
         </fieldset>
         <AdminEntityDialogActions
-          saveLabel={editingActivity !== null ? "Save Changes" : "Add Activity"}
+          saveLabel={editingActivity !== null ? "Save changes" : "Add activity"}
           canSave={canSave}
           isSaving={isSaving}
           onClose={closeIfIdle}

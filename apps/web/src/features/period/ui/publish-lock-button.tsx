@@ -51,7 +51,7 @@ function ReopenPeriodControl({
         className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
         onClick={() => setShowReopenDialog(true)}
         disabled={isPending}
-        aria-label="Reopen Period"
+        aria-label="Reopen period"
       >
         <svg
           viewBox="0 0 24 24"
@@ -66,7 +66,7 @@ function ReopenPeriodControl({
           <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
           <path d="M3 21v-5h5" />
         </svg>
-        Reopen Period
+        Reopen period
       </button>
 
       <ConfirmDeleteDialog
@@ -102,7 +102,7 @@ function PublishConfirmDialog({
   return (
     <ConfirmDeleteDialog
       open={open}
-      title="Publish & Lock Report?"
+      title="Publish & lock report?"
       preview={
         pendingCount > 0
           ? `${pendingCount} of ${totalLeads} leads haven't submitted yet.`
@@ -114,7 +114,7 @@ function PublishConfirmDialog({
           : undefined
       }
       consequence="Leads can no longer edit this period."
-      confirmLabel={pendingCount > 0 ? "Publish Anyway" : "Publish & Lock"}
+      confirmLabel={pendingCount > 0 ? "Publish anyway" : "Publish & lock"}
       tone="primary"
       showReversibility={false}
       onConfirm={onConfirm}
@@ -143,7 +143,7 @@ export function PublishLockButton({
     return requested;
   }, []);
 
-  // Reopening swaps Reopen Period for Publish & Lock, which held focus. The
+  // Reopening swaps Reopen period for Publish & lock, which held focus. The
   // button is disabled while nothing is submitted (reopen resets sections to
   // draft), so fall back to the page rather than dropping focus to <body>.
   useEffect(() => {
@@ -193,7 +193,7 @@ export function PublishLockButton({
         aria-disabled={publishDisabled}
         title={!canPublish ? publishDisabledReason : undefined}
       >
-        {canPublish ? "Publish & Lock" : "Nothing to publish"}
+        {canPublish ? "Publish & lock" : "Nothing to publish"}
       </button>
 
       <PublishConfirmDialog

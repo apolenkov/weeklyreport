@@ -293,7 +293,7 @@ describe("ProductsTab — Add/Edit dialog a11y", () => {
     );
 
     openAddAndPickLead();
-    fireEvent.click(screen.getByRole("button", { name: "Add Product" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add product" }));
 
     await screen.findByRole("button", { name: "Saving…" });
     expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
@@ -313,7 +313,7 @@ describe("ProductsTab — Add/Edit dialog a11y", () => {
 
     openAddAndPickLead();
     const name = screen.getByLabelText(/product name/i);
-    await user.click(screen.getByRole("button", { name: "Add Product" }));
+    await user.click(screen.getByRole("button", { name: "Add product" }));
 
     await screen.findByRole("button", { name: "Saving…" });
     expect(name).toBeDisabled();
@@ -414,7 +414,7 @@ describe("ProductsTab — slide-capacity advisory", () => {
       "6 of 6 products",
     );
     expect(screen.getByTestId("lead-product-overcap")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Add Product" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Add product" })).toBeEnabled();
   });
 
   it("starts the add dialog with no preselected owner and blocks save until one is chosen", async () => {
@@ -430,12 +430,12 @@ describe("ProductsTab — slide-capacity advisory", () => {
     // The owner select is unselected — an accidental save cannot bind the new
     // product to the first lead on the list even though the name is filled.
     expect(screen.getByLabelText(/lead owner/i)).toHaveValue("");
-    expect(screen.getByRole("button", { name: "Add Product" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Add product" })).toBeDisabled();
 
     fireEvent.change(screen.getByLabelText(/lead owner/i), {
       target: { value: LEAD_ID },
     });
-    expect(screen.getByRole("button", { name: "Add Product" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Add product" })).toBeEnabled();
   });
 
   it("shows no over-capacity advisory below the recommended ceiling", () => {
@@ -553,7 +553,7 @@ describe("ProductsTab — unresolved lead owner", () => {
     ).toBeEnabled();
 
     // Save is still blocked instead of silently submitting Carol.
-    await user.click(screen.getByRole("button", { name: "Add Product" }));
+    await user.click(screen.getByRole("button", { name: "Add product" }));
     expect(captured["admin.saveProject"]?.calls).toHaveLength(0);
     expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/lead/i));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
@@ -561,7 +561,7 @@ describe("ProductsTab — unresolved lead owner", () => {
 
     // A real user change picks Carol — the DOM value actually differs now.
     await user.selectOptions(select, replacementLead.id);
-    await user.click(screen.getByRole("button", { name: "Add Product" }));
+    await user.click(screen.getByRole("button", { name: "Add product" }));
 
     await waitFor(() =>
       expect(captured["admin.saveProject"]?.calls).toHaveLength(1),

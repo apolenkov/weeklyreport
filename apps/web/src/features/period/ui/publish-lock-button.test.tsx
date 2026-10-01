@@ -8,7 +8,7 @@ import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { PublishLockButton } from "./publish-lock-button";
 
 describe("PublishLockButton", () => {
-  it('renders "Publish & Lock" when periodStatus is open', () => {
+  it('renders "Publish & lock" when periodStatus is open', () => {
     render(
       <PublishLockButton
         pendingCount={0}
@@ -23,7 +23,7 @@ describe("PublishLockButton", () => {
     ).toBeInTheDocument();
   });
 
-  it('renders "Publish & Lock" when periodStatus is reopened', () => {
+  it('renders "Publish & lock" when periodStatus is reopened', () => {
     render(
       <PublishLockButton
         pendingCount={0}
@@ -38,7 +38,7 @@ describe("PublishLockButton", () => {
     ).toBeInTheDocument();
   });
 
-  it('renders "Reopen Period" when periodStatus is published', () => {
+  it('renders "Reopen period" when periodStatus is published', () => {
     render(
       <PublishLockButton
         pendingCount={0}
@@ -94,7 +94,7 @@ describe("PublishLockButton", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /publish & lock/i }),
     );
-    // Pick the dialog's confirm action — the only button labeled exactly "Publish & Lock"
+    // Pick the dialog's confirm action — the only button labeled exactly "Publish & lock"
     // inside the dialog (when pendingCount === 0).
     const dialog = screen.getByRole("alertdialog", {
       name: /publish & lock report/i,
@@ -121,7 +121,7 @@ describe("PublishLockButton", () => {
     expect(screen.getByText(/2 of 6 leads/i)).toBeInTheDocument();
   });
 
-  it('clicking "Reopen Period" opens a confirmation dialog and only fires onReopen on confirm', async () => {
+  it('clicking "Reopen period" opens a confirmation dialog and only fires onReopen on confirm', async () => {
     const onReopen = vi.fn();
     render(
       <PublishLockButton
@@ -261,7 +261,7 @@ describe("PublishLockButton", () => {
       );
     }
 
-    it("moves focus to Reopen Period once the Publish button is replaced", async () => {
+    it("moves focus to Reopen period once the Publish button is replaced", async () => {
       const { rerender } = render(renderStatus("open"));
       await confirmPublish();
 
@@ -311,7 +311,7 @@ describe("PublishLockButton", () => {
       await userEvent.click(screen.getByRole("button", { name: /^reopen$/i }));
     }
 
-    it("moves focus to Publish & Lock once it replaces Reopen Period", async () => {
+    it("moves focus to Publish & lock once it replaces Reopen period", async () => {
       const { rerender } = render(renderStatus("published", true));
       await confirmReopen();
 
@@ -355,8 +355,8 @@ describe("PublishLockButton", () => {
     });
   });
 
-  describe("a11y: Reopen Period button SVG", () => {
-    it("SVG inside Reopen Period button has aria-hidden='true'", () => {
+  describe("a11y: Reopen period button SVG", () => {
+    it("SVG inside Reopen period button has aria-hidden='true'", () => {
       render(
         <PublishLockButton
           pendingCount={0}

@@ -69,10 +69,10 @@ describe("LeadForm local add navigation", () => {
 
     expect(await screen.findAllByText("Report A product")).not.toHaveLength(0);
     fireEvent.click(
-      expectDefined(screen.getAllByRole("button", { name: "+ Add Item" })[0]),
+      expectDefined(screen.getAllByRole("button", { name: "+ Add item" })[0]),
     );
     expect(
-      await screen.findByRole("dialog", { name: /^Add Item/ }),
+      await screen.findByRole("dialog", { name: /^Add item/ }),
     ).toBeInTheDocument();
 
     rendered.rerender(<LeadForm reportId={reportB.reportId} />);
@@ -80,7 +80,7 @@ describe("LeadForm local add navigation", () => {
     expect(await screen.findAllByText("Report B product")).not.toHaveLength(0);
     await waitFor(() =>
       expect(
-        screen.queryByRole("dialog", { name: /^Add Item/ }),
+        screen.queryByRole("dialog", { name: /^Add item/ }),
       ).not.toBeInTheDocument(),
     );
     expect(queryClient.getMutationCache().getAll()).toEqual([]);
@@ -145,7 +145,7 @@ describe("LeadForm local add navigation", () => {
       name: /^Fill from Week \d+\?$/,
     });
     fireEvent.click(
-      within(dialog).getByRole("button", { name: "Replace & Fill" }),
+      within(dialog).getByRole("button", { name: "Replace & fill" }),
     );
 
     await waitFor(() =>

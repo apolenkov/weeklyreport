@@ -51,7 +51,7 @@ function RiskList({
       <div className="rounded-lg border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-empty)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
         {readOnly
           ? "No risks reported."
-          : "No risks reported. Use “+ Add Risk” when you spot one."}
+          : "No risks reported. Use “+ Add risk” when you spot one."}
       </div>
     );
   }

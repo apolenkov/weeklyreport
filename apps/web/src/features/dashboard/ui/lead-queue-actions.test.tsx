@@ -10,7 +10,7 @@ vi.mock("./remind-lead-button", () => ({
   RemindLeadButton: () => <button type="button">Remind</button>,
 }));
 vi.mock("./request-changes-button", () => ({
-  RequestChangesButton: () => <button type="button">Request Changes</button>,
+  RequestChangesButton: () => <button type="button">Request changes</button>,
 }));
 vi.mock("./revoke-lead-button", () => ({
   RevokeLeadButton: () => <button type="button">Revoke</button>,
@@ -84,14 +84,14 @@ describe("lead queue contextual actions", () => {
       screen.queryByRole("link", { name: "Review Alice Lead report section" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Request Changes" }),
+      screen.queryByRole("button", { name: "Request changes" }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Revoke" }),
     ).not.toBeInTheDocument();
   });
 
-  it("makes Review primary and keeps Open, Request Changes, and Revoke distinct", () => {
+  it("makes Review primary and keeps Open, Request changes, and Revoke distinct", () => {
     renderActions({
       ...lead({
         canOpen: true,
@@ -125,7 +125,7 @@ describe("lead queue contextual actions", () => {
     expect(openLink).toBeVisible();
     expect(openLink).toHaveClass("bg-[var(--color-card)]");
     expect(
-      screen.getByRole("button", { name: "Request Changes" }),
+      screen.getByRole("button", { name: "Request changes" }),
     ).toBeVisible();
     expect(screen.getByRole("button", { name: "Revoke" })).toBeVisible();
 

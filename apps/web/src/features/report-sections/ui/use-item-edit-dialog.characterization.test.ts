@@ -52,7 +52,7 @@ describe("useItemEditDialog — characterization", () => {
     expect(result.current.priorityRank).toBeNull();
     expect(result.current.stageNames).toEqual([]);
     expect(result.current.parent).toEqual({ kind: "product", id: "p1" });
-    expect(result.current.headerVerb).toBe("Add Item");
+    expect(result.current.headerVerb).toBe("Add item");
     expect(result.current.isDeadEnd).toBe(false);
   });
 
@@ -78,7 +78,7 @@ describe("useItemEditDialog — characterization", () => {
     expect(result.current.status).toBe("completed");
     expect(result.current.stageNames).toEqual(["Testing"]);
     expect(result.current.priorityRank).toBe(3);
-    expect(result.current.headerVerb).toBe("Edit Item");
+    expect(result.current.headerVerb).toBe("Edit item");
     expect(result.current.parentName).toBe("DevOps Tools");
   });
 

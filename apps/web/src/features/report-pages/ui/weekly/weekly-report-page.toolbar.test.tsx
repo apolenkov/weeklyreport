@@ -147,7 +147,7 @@ describe("WeeklyReportPage — shared period toolbar", () => {
 
   it("renders a shell-supplied leading document action before the built-in lifecycle actions", async () => {
     // documentActionsLeading replaces the default export and renders before the
-    // page's own Publish & Lock lifecycle action in the Document action row.
+    // page's own Publish & lock lifecycle action in the Document action row.
     renderWeeklyReportPage(makeWeeklyReportData("open"), {
       documentActionsLeading: <a href="/custom-action">Custom action</a>,
     });

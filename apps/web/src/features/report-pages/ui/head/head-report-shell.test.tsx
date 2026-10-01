@@ -24,7 +24,7 @@ vi.mock("../../../slides", async (importOriginal) => {
   };
 });
 
-// Shell test only verifies Publish & Lock is mounted, not its internals.
+// Shell test only verifies Publish & lock is mounted, not its internals.
 vi.mock("../../../period", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../period")>();
   return {
@@ -163,8 +163,8 @@ describe("HeadReportShell layout", () => {
     ).toHaveAttribute("data-layout-key", "report-context-toolbar");
   });
 
-  it("slides mode drops the Open focused report link and hosts Publish & Lock", () => {
-    // The deck owns navigation; the header hosts Publish & Lock.
+  it("slides mode drops the Open focused report link and hosts Publish & lock", () => {
+    // The deck owns navigation; the header hosts Publish & lock.
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="slides" />);
     expect(
       screen.queryByRole("link", { name: /open focused report/i }),

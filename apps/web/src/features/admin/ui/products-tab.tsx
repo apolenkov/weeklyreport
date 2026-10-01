@@ -171,7 +171,7 @@ function ProductsTabHeader({
           aria-label="Add new product"
         >
           <PlusIcon />
-          Add Product
+          Add product
         </button>
       }
     />

@@ -153,7 +153,7 @@ function useRevokeAllSubmitted() {
         invalidateLeadForm(queryClient, trpc);
         invalidateLeadHistory(queryClient, trpc);
       },
-      onError: (error) => toast.error(`Revoke All failed: ${error.message}`),
+      onError: (error) => toast.error(`Revoke all failed: ${error.message}`),
     }),
   );
 }
