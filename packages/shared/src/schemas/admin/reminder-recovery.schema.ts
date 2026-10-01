@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { organizationPublicSchema } from "../organization/organization";
+import { organizationPublicSchema } from "../organization/organization.js";
 
 // 'escalation' fires the T+2h heads-only digest and bypasses
 // User.notificationOptOut because heads must always be notified.

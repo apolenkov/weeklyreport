@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { MAX_PRODUCTS_PER_LEAD } from "./constants";
+import { MAX_PRODUCTS_PER_LEAD } from "./constants.js";
 
 describe("slide-capacity soft caps", () => {
   it("matches the agreed advisory value (6 products)", () => {

@@ -1,9 +1,9 @@
-import type { TrafficLightStatus } from "../schemas/primitives/report-primitives.schema";
+import type { TrafficLightStatus } from "../schemas/primitives/report-primitives.schema.js";
 import {
   canonicalToTrafficLight,
   trafficLightToCanonical,
   worstCanonicalStatus,
-} from "../schemas/status/canonical-status";
+} from "../schemas/status/canonical-status.js";
 
 /** Returns the highest-severity traffic-light status, ignoring unset values. */
 export function aggregateTrafficLight(

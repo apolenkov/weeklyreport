@@ -4,7 +4,7 @@ import {
   adminUpdatePeriodManualSchema,
   MAX_WEEK_LABEL_LENGTH,
   reportPeriodSchema,
-} from "./period.schema";
+} from "./period.schema.js";
 
 const REPORT_ID = "123e4567-e89b-42d3-a456-426614174000";
 const PUBLISHER_ID = "123e4567-e89b-42d3-a456-426614174001";

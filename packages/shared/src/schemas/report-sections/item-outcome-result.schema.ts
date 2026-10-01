@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { reportSectionReadModelSchema } from "./section.schema";
+import { reportSectionReadModelSchema } from "./section.schema.js";
 
 /** Describes the reconciled section returned by an item outcome command. */
 export const itemOutcomeResultSchema = z

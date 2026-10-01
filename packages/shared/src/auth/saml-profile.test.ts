@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { SamlProfileSchema } from "./saml-profile";
+import { SamlProfileSchema } from "./saml-profile.js";
 
 describe("SamlProfileSchema (structured-user-name: role-free)", () => {
   it("parses a valid profile (no role attribute)", () => {

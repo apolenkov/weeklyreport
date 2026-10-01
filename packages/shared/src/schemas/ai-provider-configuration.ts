@@ -9,7 +9,7 @@ import {
   profileSupportsRole,
   reasoningCustomValueSchema,
   validateEndpoint,
-} from "./ai-provider-configuration.base";
+} from "./ai-provider-configuration.base.js";
 
 export {
   AI_PROVIDER_CREDENTIAL_MASK,
@@ -22,7 +22,7 @@ export {
   aiProviderProfileSchema,
   aiProviderReasoningModeSchema,
   maskedCredentialSchema,
-} from "./ai-provider-configuration.base";
+} from "./ai-provider-configuration.base.js";
 export {
   aiProviderAvailabilityReadSchema,
   aiProviderConfigurationReadSchema,
@@ -30,11 +30,11 @@ export {
   aiProviderDiscardResultSchema,
   aiProviderPreparationProgressSchema,
   aiProviderRevisionInputSchema,
-} from "./ai-provider-configuration.read";
+} from "./ai-provider-configuration.read.js";
 export {
   aiProviderCapabilityStatusSchema,
   aiProviderCapabilityTestResultSchema,
-} from "./ai-provider-configuration-results";
+} from "./ai-provider-configuration-results.js";
 
 /** Public shared schema or contract constant for ai provider generation draft schema. */
 export const aiProviderGenerationDraftSchema = z
@@ -124,4 +124,4 @@ export const aiProviderDraftSchema = z
     }
   });
 
-export type * from "./ai-provider-configuration.types";
+export type * from "./ai-provider-configuration.types.js";

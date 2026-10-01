@@ -9,7 +9,7 @@ import {
   aiProviderDiscardResultSchema,
   aiProviderDraftSchema,
   aiProviderPreparationProgressSchema,
-} from "./ai-provider-configuration";
+} from "./ai-provider-configuration.js";
 
 const draft = {
   generation: {

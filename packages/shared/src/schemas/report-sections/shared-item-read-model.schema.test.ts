@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   itemReadModelSchema,
   sharedItemReadModelSchema,
-} from "./section-record.schema";
+} from "./section-record.schema.js";
 
 const IDS = {
   item: "10000000-0000-4000-8000-000000000001",

@@ -12,7 +12,7 @@ import {
   aiPromptDraftInputSchema,
   aiPromptRevisionInputSchema,
   aiPromptSlotReadSchema,
-} from "./ai-prompt-management";
+} from "./ai-prompt-management.js";
 
 const id = "659b2767-0f86-41e2-b025-49730ca010e4";
 const hash = "a".repeat(64);

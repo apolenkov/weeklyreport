@@ -1,8 +1,8 @@
 import { TRPCError } from "@trpc/server";
 import { describe, expect, it } from "vitest";
 
-import type { UserSession } from "../../schemas/auth/auth";
-import { assertRole } from "./role";
+import type { UserSession } from "../../schemas/auth/auth.js";
+import { assertRole } from "./role.js";
 
 const baseSession: UserSession = {
   userId: "a0000000-0000-4000-8000-000000000001",

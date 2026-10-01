@@ -1,12 +1,12 @@
 import { z } from "zod";
 
-import { reportDate } from "../primitives/report-primitives.schema";
+import { reportDate } from "../primitives/report-primitives.schema.js";
 import {
   publishedReportSectionReadModelSchema,
   reportSectionReadModelSchema,
   sharedPublishedReportSectionReadModelSchema,
   sharedReportSectionReadModelSchema,
-} from "./section.schema";
+} from "./section.schema.js";
 
 /** Identifies the selected report and optional section author for Overview. */
 export const leadStatusOverviewInputSchema = z

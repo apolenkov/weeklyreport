@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { safeText } from "./primitives/report-primitives.schema";
-import { searchPlanSchema } from "./report-assistant-search-plan";
+import { safeText } from "./primitives/report-primitives.schema.js";
+import { searchPlanSchema } from "./report-assistant-search-plan.js";
 
 /** Longest retry delay the report-assistant resource guard may expose. */
 export const REPORT_ASSISTANT_RESOURCE_RETRY_MAX_SECONDS = 120;

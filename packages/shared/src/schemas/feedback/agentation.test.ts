@@ -16,7 +16,7 @@ import {
   agentationSseEventSchema,
   agentationThreadSchema,
   normalizeAgentationPath,
-} from "./agentation";
+} from "./agentation.js";
 
 const valid = {
   id: "annotation-1",

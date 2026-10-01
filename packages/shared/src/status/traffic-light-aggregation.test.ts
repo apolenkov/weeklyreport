@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { aggregateTrafficLight } from "./traffic-light-aggregation";
+import { aggregateTrafficLight } from "./traffic-light-aggregation.js";
 
 describe("aggregateTrafficLight", () => {
   it("returns the worst set status", () => {

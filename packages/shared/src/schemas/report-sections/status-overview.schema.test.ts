@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   reportSectionReadModelSchema,
   sharedReportSectionReadModelSchema,
-} from "./section.schema";
-import { leadStatusOverviewOutputSchema } from "./status-overview.schema";
+} from "./section.schema.js";
+import { leadStatusOverviewOutputSchema } from "./status-overview.schema.js";
 
 const CURRENT_REPORT_ID = "11111111-1111-4111-8111-111111111111";
 const PREVIOUS_REPORT_ID = "22222222-2222-4222-8222-222222222222";

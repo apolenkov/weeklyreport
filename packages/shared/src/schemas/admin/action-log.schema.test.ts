@@ -4,7 +4,7 @@ import {
   type AdminActionLogEvent,
   adminActionLogEventSchema,
   adminActionLogPageSchema,
-} from "../../index";
+} from "../../index.js";
 
 const SUCCESS_EVENT = {
   id: "action-1",

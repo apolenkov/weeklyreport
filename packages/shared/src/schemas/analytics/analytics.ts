@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { trafficLightStatusSchema } from "../primitives/report-primitives.schema";
+import { trafficLightStatusSchema } from "../primitives/report-primitives.schema.js";
 
 const isoDateOnly = z.iso.date();
 

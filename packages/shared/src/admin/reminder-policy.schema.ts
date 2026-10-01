@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { resolvableTimeZoneSchema } from "../schemas/time-zone.schema";
+import { resolvableTimeZoneSchema } from "../schemas/time-zone.schema.js";
 
 /** Wire audience tokens (lowercase-hyphen); Prisma SCREAMING_SNAKE is mapped at the API. */
 export const reminderAudienceSchema = z.enum([
