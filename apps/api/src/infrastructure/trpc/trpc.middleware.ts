@@ -160,6 +160,11 @@ const isAuthed = t.middleware(({ ctx, next }) => {
 // PDF sessions: hard-coded read-only allowlist + reportId match so a
 // cookie for report X cannot read report Y. New print paths must be added
 // here. No-op for non-PDF sessions.
+// jobId is compared only in pdfExport.render: the read procedures take no
+// jobId input, and a signed worker token for the same report grants nothing
+// beyond what reportId already allows (read-only, same report, 5-minute TTL,
+// minted only by the worker). Binding reads to a job would need a job-state
+// lookup per request for no privilege gain.
 const PDF_EXPORT_ALLOWED_PATHS: ReadonlySet<string> = new Set([
   "weeklyReport.get",
   "archive.detail",
