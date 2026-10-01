@@ -571,20 +571,17 @@ describe("JobsService — pdf-export generation retry (Postgres + BullMQ integra
       error: SECOND_ATTEMPT_ERROR,
     });
 
-    // The stale retained entry still parses a valid generation-1 identity;
-    // the locked transition rejects it because the row is already at g2 —
-    // no write, no g3 dispatch.
+    // The superseded generation-1 entry was removed when g2 was dispatched,
+    // so retrying its identity finds no queue entry — no write, no g3
+    // dispatch. The locked-transition guard for a stale entry is covered by
+    // the jobs.service unit tests.
+    await expect(queue.getJob(queueJobId(jobId, 1))).resolves.toBeUndefined();
     await expect(
       jobsService.retryFailed({
         queue: QUEUE_NAME,
         jobId: queueJobId(jobId, 1),
       }),
-    ).resolves.toEqual({
-      retried: false,
-      jobId: queueJobId(jobId, 1),
-      reason:
-        "PDF export row is missing, not failed, or bound to another payload.",
-    });
+    ).resolves.toEqual({ retried: false, jobId: queueJobId(jobId, 1) });
     expect(await exportRow(jobId)).toEqual(failedAtG2);
     await expect(queue.getJob(queueJobId(jobId, 3))).resolves.toBeUndefined();
 
