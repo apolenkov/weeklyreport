@@ -47,12 +47,13 @@ export function ActivityEditDialog({
     containerRef: surfaceRef,
   });
 
+  const dialogTitle = editingActivity ? "Edit activity" : "Add activity";
   return (
     <DialogSurface
       surfaceRef={surfaceRef}
       onDismiss={closeIfIdle}
       surfaceClassName="animate-scale-in mx-4 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl"
-      ariaLabel={editingActivity ? "Edit activity" : "Add activity"}
+      ariaLabel={dialogTitle}
     >
       <form
         onSubmit={(event) => {
@@ -61,7 +62,7 @@ export function ActivityEditDialog({
         }}
       >
         <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-          {editingActivity ? "Edit activity" : "Add activity"}
+          {dialogTitle}
         </h3>
         <fieldset disabled={isSaving} className="contents">
           <ActivityFormFields
