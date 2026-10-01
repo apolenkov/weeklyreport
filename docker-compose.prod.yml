@@ -469,7 +469,7 @@ services:
       # violation silently.
       CADDY_CSP_REPORT_URI: ${CADDY_CSP_REPORT_URI:?CADDY_CSP_REPORT_URI must be set (CSP violation-report collector URL)}
     volumes:
-      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./deploy/helm/weeklyreport/files/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:

@@ -143,7 +143,7 @@ const backupDockerfile = readFileSync(
 const apiDockerfile = readFileSync(resolve("Dockerfile.api"), "utf8");
 const webDockerfile = readFileSync(resolve("Dockerfile.web"), "utf8");
 const caddyfileContent = readFileSync(
-  resolve("deploy/caddy/Caddyfile"),
+  resolve("deploy/helm/weeklyreport/files/Caddyfile"),
   "utf8",
 );
 const REVIEWED_EXTERNAL_IMAGES = new Set([

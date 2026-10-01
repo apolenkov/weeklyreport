@@ -27,7 +27,7 @@
 
 ## 2. Edge and Caddyfile
 
-- [ ] 2.1 `git mv deploy/caddy/Caddyfile deploy/helm/weeklyreport/files/Caddyfile`;
+- [x] 2.1 `git mv deploy/caddy/Caddyfile deploy/helm/weeklyreport/files/Caddyfile`;
       update the hard-coded path in the compose mount,
       `scripts/gates/operations/operations-config-docs.test.ts`,
       `scripts/gates/operations/prod-compose-gate.test.ts`, `docs/operations.md`,
@@ -36,7 +36,7 @@
       delete the directory; create no empty directory. Run `pnpm lint`
       (cleanliness, knip) to prove no stale path.
       Acceptance: `git grep "deploy/caddy"` returns nothing outside change history.
-- [ ] 2.2 Add `servers { trusted_proxies static ...; trusted_proxies_strict }` from
+- [x] 2.2 Add `servers { trusted_proxies static ...; trusted_proxies_strict }` from
       `CADDY_TRUSTED_PROXIES`, `header_up X-Forwarded-For {client_ip}` and
       `header_up X-Real-IP {client_ip}`; chart mode uses `http://:8080` and
       `auto_https off`. Decide the `email` global for chart mode.

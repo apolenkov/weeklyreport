@@ -1,9 +1,17 @@
-# Caddy reverse-proxy
+# WeeklyReport Helm chart
+
+Helm chart for the production stack on Kubernetes. Install, upgrade, rollback,
+secrets, and recovery are documented in [`docs/kubernetes.md`](../../../docs/kubernetes.md).
+Names are fixed (`api`, `web`, `gotenberg`, `postgres`, `pgbouncer`, `redis`, `edge`) because the web
+image bakes `http://api:3001`, so install **one release per namespace**.
+
+## Caddy reverse-proxy
 
 Edge service that terminates TLS, fans out HTTP traffic to the api/web
 containers, and adds security headers.
 
-`Caddyfile` is the single deployment configuration. It provides automatic HTTPS
+`files/Caddyfile` (in this chart directory) is the single deployment configuration, mounted by
+`docker-compose.prod.yml` and by the chart's `edge` Deployment. It provides automatic HTTPS
 for a publicly resolvable `CADDY_SITE_ADDRESS`; `/metrics` stays internal.
 
 ## Required env vars (in `.env.production`)
@@ -16,7 +24,7 @@ CADDY_CSP_REPORT_URI=https://csp-reports.example.net/customreport
 
 The production Compose contract also requires `HTTP_PORT`, `HTTPS_PORT`, and
 `HTTPS_PORT_QUIC`. See
-[`production.env.example`](../environment/production.env.example)
+[`production.env.example`](../../environment/production.env.example)
 for the complete names-only template. `CADDY_CSP_REPORT_URI` must point to an
 external operator-owned collector; the repository does not implement a local
 CSP-report endpoint.
@@ -37,7 +45,8 @@ CSP-report endpoint.
 /  (everything else)                                     ->  web:3000
 ```
 
-An operator-owned metrics collector can scrape `api:3001/metrics` over the
+The chart edge runs the same file over plain HTTP (`http://:8080`) behind the cluster Ingress and
+resolves the client address through `CADDY_TRUSTED_PROXIES`. An operator-owned metrics collector can scrape `api:3001/metrics` over the
 internal Compose network.
 
 ## Verifying

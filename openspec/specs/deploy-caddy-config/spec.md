@@ -8,7 +8,7 @@ Define the production Caddy reverse-proxy contract for WeeklyReport.
 
 ### Requirement: Production API-owned paths route directly to the API
 
-The `@api` matcher in `deploy/caddy/Caddyfile` MUST route the API-owned
+The `@api` matcher in `deploy/helm/weeklyreport/files/Caddyfile` MUST route the API-owned
 prefixes (`/api/web-vitals`, `/api/client-logs`, `/trpc`, `/auth`, `/health`,
 `/admin/queues`, and `/pdfs`, including their nested paths) directly to
 `api:3001`. The matcher MUST NOT claim frontend-owned Next.js routes. The
