@@ -131,6 +131,20 @@ function computeSnapshotProgress(
   );
 }
 
+/**
+ * Head and admin show one org-wide progress figure although their PDF job
+ * snapshot is group-scoped, so freeze that figure into the scoped copy.
+ */
+export function scopeSnapshotWithOrgProgress(
+  full: PublishedReportSnapshot,
+  session: UserSession,
+): PublishedReportSnapshot {
+  const scoped = requireScopedPublishedSnapshot(full, session);
+  return isOrgWideProgressRole(session)
+    ? { ...scoped, orgProgress: computeSnapshotProgress(full) }
+    : scoped;
+}
+
 /** Builds the weekly read model solely from an already-scoped frozen snapshot. */
 export function buildPublishedReadModelFromSnapshot(
   snapshot: PublishedReportSnapshot,
@@ -138,7 +152,8 @@ export function buildPublishedReadModelFromSnapshot(
     WeeklyReportMetadata,
     "periodState" | "periodStatus" | "archived" | "weekLabel"
   >,
-  progress: ReportProgress = computeSnapshotProgress(snapshot),
+  progress: ReportProgress = snapshot.orgProgress ??
+    computeSnapshotProgress(snapshot),
 ): WeeklyReportReadModel {
   const leadSections = snapshot.sections;
   return weeklyReportReadModelSchema.parse({
