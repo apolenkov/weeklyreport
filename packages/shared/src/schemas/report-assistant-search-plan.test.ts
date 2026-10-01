@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { searchPlanSchema } from "./report-assistant-search-plan";
-import { normalizeEntityReference } from "./report-assistant-search-plan-validation";
+import { searchPlanSchema } from "./report-assistant-search-plan.js";
+import { normalizeEntityReference } from "./report-assistant-search-plan-validation.js";
 
 const validPlan = () => ({
   periods: {

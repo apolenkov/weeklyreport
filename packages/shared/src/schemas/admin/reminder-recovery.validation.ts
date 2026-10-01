@@ -3,13 +3,13 @@ import { z } from "zod";
 import {
   computeReminderFireAt,
   reminderPolicyAppliesTo,
-} from "../../admin/reminder-policy-time";
-import type { ReportStatus } from "../primitives/report-primitives.schema";
-import type { PeriodState, PeriodStatus } from "../report/report.schema";
+} from "../../admin/reminder-policy-time.js";
+import type { ReportStatus } from "../primitives/report-primitives.schema.js";
+import type { PeriodState, PeriodStatus } from "../report/report.schema.js";
 import type {
   AdminSnapshotReminderExecution,
   AdminSnapshotReminderRule,
-} from "./reminder-recovery.schema";
+} from "./reminder-recovery.schema.js";
 
 const ISO_DATE_LENGTH = 10;
 

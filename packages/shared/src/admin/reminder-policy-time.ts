@@ -1,4 +1,4 @@
-import { MS_PER_MINUTE } from "../time";
+import { MS_PER_MINUTE } from "../time.js";
 
 /** Active interval in which a reminder policy applies to period deadlines. */
 export interface ReminderPolicyValidity {

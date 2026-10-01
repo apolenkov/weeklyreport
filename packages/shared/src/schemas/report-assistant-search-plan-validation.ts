@@ -1,6 +1,6 @@
 import type { z } from "zod";
 
-import type { SearchPlanBase } from "./report-assistant-search-plan";
+import type { SearchPlanBase } from "./report-assistant-search-plan.js";
 
 const semanticRecordKinds = new Set([
   "item",

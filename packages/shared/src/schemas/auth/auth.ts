@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { organizationPublicSchema } from "../organization/organization";
+import { organizationPublicSchema } from "../organization/organization.js";
 
 const MAX_REPORTING_GROUP_NAME_LENGTH = 200;
 

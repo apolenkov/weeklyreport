@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { appSettingsSchema } from "../report";
+import { appSettingsSchema } from "../report.js";
 
 const validSettings = () => ({
   autoCreatePeriods: false,

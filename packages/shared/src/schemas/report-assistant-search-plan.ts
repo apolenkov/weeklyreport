@@ -5,11 +5,11 @@ import {
   itemWorkflowStatusSchema,
   riskSeveritySchema,
   safeText,
-} from "./primitives/report-primitives.schema";
-import { validateSearchPlan } from "./report-assistant-search-plan-validation";
-import { canonicalStatusSchema } from "./status/canonical-status";
+} from "./primitives/report-primitives.schema.js";
+import { validateSearchPlan } from "./report-assistant-search-plan-validation.js";
+import { canonicalStatusSchema } from "./status/canonical-status.js";
 
-export { normalizeEntityReference } from "./report-assistant-search-plan-validation";
+export { normalizeEntityReference } from "./report-assistant-search-plan-validation.js";
 
 const MAX_REFERENCES = 20;
 /** Maximum number of published periods a search may inspect. */

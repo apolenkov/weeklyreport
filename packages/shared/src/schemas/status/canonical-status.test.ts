@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { TrafficLightStatus } from "../primitives/report-primitives.schema";
+import type { TrafficLightStatus } from "../primitives/report-primitives.schema.js";
 import {
   CANONICAL_STATUS_PRECEDENCE,
   type CanonicalStatus,
@@ -8,7 +8,7 @@ import {
   riskSeverityToCanonicalFloor,
   trafficLightToCanonical,
   worstCanonicalStatus,
-} from "./canonical-status";
+} from "./canonical-status.js";
 
 describe("CANONICAL_STATUS_PRECEDENCE", () => {
   it("orders the ladder blocked > at-risk > on-track > empty", () => {

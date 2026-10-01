@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { reportSectionReadModelSchema } from "../report-sections/section.schema";
-import { buildEscalationsFromReadSections } from "./report-escalations";
+import { reportSectionReadModelSchema } from "../report-sections/section.schema.js";
+import { buildEscalationsFromReadSections } from "./report-escalations.js";
 
 const REPORT_ID = "10000000-0000-4000-8000-000000000001";
 const FIRST_SECTION_ID = "10000000-0000-4000-8000-000000000002";

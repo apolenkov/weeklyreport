@@ -4,7 +4,7 @@ import {
   publishedDecisionReadModelSchema,
   publishedItemReadModelSchema,
   publishedRiskReadModelSchema,
-} from "./published-section-record.schema";
+} from "./published-section-record.schema.js";
 
 const ID = "10000000-0000-4000-8000-000000000001";
 const STABLE_ID = "10000000-0000-4000-8000-000000000002";

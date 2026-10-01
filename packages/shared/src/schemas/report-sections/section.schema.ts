@@ -1,16 +1,16 @@
 import { z } from "zod";
 
-import { roleSchema } from "../auth/auth";
+import { roleSchema } from "../auth/auth.js";
 import {
   reportSectionStatusSchema,
   trafficLightStatusSchema,
-} from "../primitives/report-primitives.schema";
-import { sectionReviewViewSchema } from "../review/review.schema";
+} from "../primitives/report-primitives.schema.js";
+import { sectionReviewViewSchema } from "../review/review.schema.js";
 import {
   publishedDecisionReadModelSchema,
   publishedItemReadModelSchema,
   publishedRiskReadModelSchema,
-} from "./published-section-record.schema";
+} from "./published-section-record.schema.js";
 import {
   activityStatusInputSchema,
   decisionReadModelSchema,
@@ -25,7 +25,7 @@ import {
   sharedItemReadModelSchema,
   sharedRiskReadModelSchema,
   stageStatusInputSchema,
-} from "./section-record.schema";
+} from "./section-record.schema.js";
 
 export {
   decisionInputSchema,
@@ -41,7 +41,7 @@ export {
   riskReadModelSchema,
   riskWriteSchema,
   sharedItemReadModelSchema,
-} from "./section-record.schema";
+} from "./section-record.schema.js";
 
 /** Maximum number of records accepted for any one section-save collection. */
 export const MAX_RECORDS_PER_SECTION_SAVE = 100;

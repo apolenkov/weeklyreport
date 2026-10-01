@@ -6,7 +6,7 @@ import {
   organizationPublicSchema,
   organizationSchema,
   organizationUpdateSchema,
-} from "./organization";
+} from "./organization.js";
 
 describe("organizationUpdateSchema character guard", () => {
   it("rejects a fullName carrying a script-breakout payload", () => {

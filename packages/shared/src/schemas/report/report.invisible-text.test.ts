@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import { decisionInputSchema, riskInputSchema, safeText } from "../report";
+import { decisionInputSchema, riskInputSchema, safeText } from "../report.js";
 
 const uuid = () => randomUUID();
 const invisibleTextMessage = "Text must contain visible characters";

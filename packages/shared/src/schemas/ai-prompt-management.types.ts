@@ -20,7 +20,7 @@ import type {
   aiPromptServingStatusSchema,
   aiPromptSlotReadSchema,
   aiPromptSlotSchema,
-} from "./ai-prompt-management";
+} from "./ai-prompt-management.js";
 
 /** Public shared type contract for ai feature key. */
 export type AiFeatureKey = z.infer<typeof aiFeatureKeySchema>;

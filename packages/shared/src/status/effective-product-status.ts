@@ -1,13 +1,13 @@
 import type {
   RiskSeverity,
   TrafficLightStatus,
-} from "../schemas/primitives/report-primitives.schema";
-import { riskCoversStage } from "../schemas/stages/stage-names";
+} from "../schemas/primitives/report-primitives.schema.js";
+import { riskCoversStage } from "../schemas/stages/stage-names.js";
 import {
   canonicalToTrafficLight,
   riskSeverityToCanonicalFloor,
-} from "../schemas/status/canonical-status";
-import { aggregateTrafficLight } from "./traffic-light-aggregation";
+} from "../schemas/status/canonical-status.js";
+import { aggregateTrafficLight } from "./traffic-light-aggregation.js";
 
 const asTrafficLight = (
   status: string | null | undefined,
