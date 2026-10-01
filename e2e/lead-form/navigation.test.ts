@@ -289,7 +289,7 @@ void test("repeated archive toggles never raise a React update-depth error", asy
   await command([
     "wait",
     "--url",
-    `**/lead/report/${LEAD_FORM_FIXTURE.previousReportId}`,
+    `**/lead/report/${LEAD_FORM_FIXTURE.previousReportId}?mode=overview`,
   ]);
   await waitText("Submitted");
   await command([
