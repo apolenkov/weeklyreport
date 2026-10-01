@@ -25,6 +25,9 @@ interface Job {
   readonly script: readonly string[];
   readonly rules: readonly Rule[];
   readonly variables?: Readonly<Record<string, string>>;
+  readonly needs?: readonly (
+    string | { readonly job: string; readonly optional?: boolean }
+  )[];
 }
 
 const jobs = parse(readFileSync(resolve(".gitlab-ci.yml"), "utf8"), {
@@ -183,4 +186,6 @@ test("the deploy job exists only with a kubeconfig, manually, on the default bra
   assert.match(script, /--atomic/);
   assert.doesNotMatch(script, /--wait/);
   assert.match(script, /images\.tag=\$CI_COMMIT_SHA/);
+  // A deploy must wait for this pipeline's image build, when it has one.
+  assert.deepEqual(deployJob.needs, [{ job: "build-images", optional: true }]);
 });
