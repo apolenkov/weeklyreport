@@ -51,6 +51,8 @@ overrides:
   brace-expansion@>=4 <6: '>=5.0.12 <6'
   mysql2: '>=3.23.1 <4'
   fast-uri: '>=3.1.7 <4'
+  undici: '>=8.10.2 <9'
+  hono: '>=4.13.7 <5'
   js-yaml: '>=4.3.1 <5'
   nanoid: '>=3.3.17 <4'
   find-my-way: '>=9.7.0 <10'
