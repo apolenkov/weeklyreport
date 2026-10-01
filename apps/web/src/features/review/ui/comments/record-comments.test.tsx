@@ -144,6 +144,15 @@ describe("RecordComments — mutation success", () => {
     expect(
       screen.queryByRole("textbox", { name: "Add a review comment" }),
     ).toBeNull();
+    expect(
+      screen.getByRole("button", {
+        name: "Comment on Ship the billing export",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^Comment on Vendor delay .+…$/u }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Comment" })).toBeNull();
   });
 
   it("scopes character descriptions to each rendered composer", () => {

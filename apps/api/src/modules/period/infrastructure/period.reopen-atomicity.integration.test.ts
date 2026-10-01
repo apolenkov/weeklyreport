@@ -1,3 +1,4 @@
+import { REOPEN_AUTO_CLOSE_NOTES } from "@customreport/shared";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
@@ -132,7 +133,9 @@ describe("PeriodPrismaRepository reopen atomicity (integration)", () => {
     });
     expect(closed.status).toBe("rejected");
     expect(closed.reviewedAt).not.toBeNull();
-    expect(closed.reviewNote).toBe("Auto-closed: the period was reopened.");
+    // No reviewer decided it.
+    expect(closed.reviewedById).toBeNull();
+    expect(closed.reviewNote).toBe(REOPEN_AUTO_CLOSE_NOTES.periodReopened);
     expect(
       await prisma.reopenRequest.count({ where: { status: "pending" } }),
     ).toBe(0);

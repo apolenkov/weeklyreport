@@ -868,7 +868,11 @@ void test("Head request changes returns reason to Lead", async () => {
     await command(
       [
         "click",
-        oneRef(headLeadRow(await snapshot(session)), "button", "Details"),
+        oneRef(
+          headLeadRow(await snapshot(session)),
+          "button",
+          `Details for ${LEAD_FORM_FIXTURE.leadDisplayName}`,
+        ),
       ],
       session,
     );
@@ -878,7 +882,7 @@ void test("Head request changes returns reason to Lead", async () => {
         oneRef(
           headLeadRow(await snapshot(session)),
           "button",
-          "Request Changes",
+          `Request changes from ${LEAD_FORM_FIXTURE.leadDisplayName}`,
         ),
       ],
       session,

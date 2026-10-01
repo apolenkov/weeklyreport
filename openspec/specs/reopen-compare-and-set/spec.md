@@ -89,6 +89,9 @@ were silently reset to draft.
   transaction as the transition
 - **AND** there is no committed state where the period is reopened but its
   sections were not reset, nor the reverse.
+- **AND** the same transaction closes the period's pending section reopen
+  requests (see the requirement "A period reopen closes the pending section
+  requests it supersedes" in `reopen-requests`).
 
 ### Requirement: Admin Manual Archive Is Guarded Against the Reopen Race
 

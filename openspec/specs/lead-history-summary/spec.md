@@ -99,6 +99,20 @@ that reach it depend on a tab state.
 - **WHEN** the NavBar renders the History link for a lead, head, or viewer
 - **THEN** the link's href is `/reports` with no `tab` query parameter
 
+### Requirement: A reopened week keeps its last publication time under a matching label
+
+The lead's own history read model (`reports.myHistory`) MUST expose whether the
+entry's period is currently reopened, as compiled history does. A reopened
+period's draft section MUST read "Reopened" (not "Draft"), and any publication
+time shown for a reopened period MUST be labelled "Last published", including
+when the lead has already resubmitted the section.
+
+#### Scenario: A reopened week is not shown as a draft published moments ago
+
+- **WHEN** a lead opens `/reports` and a period was published and then reopened
+- **THEN** its draft section shows the "Reopened" badge
+- **AND** its publication time is labelled "Last published"
+
 ### Requirement: Compiled history does not invent lead submission state
 
 The reports-history React route MUST NOT render `Submitted: Not submitted` for a compiled published or archived entry when the compiled history contract has no lead-specific submission timestamp. Lead-specific draft history MAY retain the explicit not-submitted state.

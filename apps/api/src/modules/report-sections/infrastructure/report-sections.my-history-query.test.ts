@@ -62,6 +62,7 @@ describe("queryMyHistoryPage", () => {
       sectionId,
       reportId,
       reportStatus: "published",
+      reopened: false,
     });
     expect(findManyLive).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -176,6 +177,34 @@ describe("queryMyHistoryPage", () => {
     ).toEqual({ green: 0, yellow: 0, red: 1 });
   });
 
+  it("flags a live section of a reopened period as reopened", async () => {
+    const at = new Date("2026-04-14T12:00:00Z");
+    const open = liveRow(sectionId, at, at);
+    const reopened = {
+      ...open,
+      id: "a0000000-0000-4000-8000-000000000013",
+      report: { ...open.report, periodStatus: "reopened" },
+    };
+    const client = {
+      reportSection: {
+        findMany: vi.fn(() => Promise.resolve([open, reopened])),
+      },
+      report: { findMany: vi.fn(() => Promise.resolve([])) },
+    };
+    const prisma = {
+      $transaction: (operation: (tx: typeof client) => unknown) =>
+        Promise.resolve(operation(client)),
+    } as never;
+
+    const { items } = await queryMyHistoryPage(prisma, authorId, {
+      limit: 20,
+    });
+
+    expect(
+      Object.fromEntries(items.map((e) => [e.sectionId, e.reopened])),
+    ).toEqual({ [sectionId]: false, [reopened.id]: true });
+  });
+
   it.each([
     ["a schema-invalid payload", { reportId }],
     [
@@ -254,6 +283,7 @@ function liveRow(
       periodEnd: new Date(periodStart.getTime() + 4 * 86_400_000),
       status: "draft",
       archived: false,
+      periodStatus: "open",
       publishedAt: null,
     },
   };

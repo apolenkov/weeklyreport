@@ -156,6 +156,8 @@ function publishedHistoryRows(
         periodEnd: snapshot.periodEnd,
         status: snapshot.status,
         archived: report.archived,
+        // This query only reads periods whose periodStatus is `published`.
+        reopened: false,
         publishedAt: timestamp,
       },
       items: section.items.map((item) => ({
@@ -227,6 +229,7 @@ async function queryMyHistoryPageInTransaction(
           periodEnd: true,
           status: true,
           archived: true,
+          periodStatus: true,
           publishedAt: true,
         },
       },
@@ -247,6 +250,10 @@ async function queryMyHistoryPageInTransaction(
   const candidates: HistoryCandidate[] = [
     ...liveRows.map((row) => ({
       ...row,
+      report: {
+        ...row.report,
+        reopened: row.report.periodStatus === "reopened",
+      },
       productLights: mapPrismaToReportSection(row).projects.map(
         (project) => project.trafficLight,
       ),

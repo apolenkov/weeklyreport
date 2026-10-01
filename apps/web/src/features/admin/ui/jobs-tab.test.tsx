@@ -1,7 +1,7 @@
 // Stub tRPC proxy; drive captured mutationFn, not a real network.
 import type { FailedJob } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -238,6 +238,149 @@ describe("JobsTab — BullMQ DLQ admin UI", () => {
     byQueue = byQueue.map((entry) => ({ ...entry, count: 0 }));
     await qc.invalidateQueries(proxy.admin.dlqCount.pathFilter());
     expect(screen.getByLabelText("Failed job queue")).toHaveValue("pdf-export");
+  });
+
+  it("keeps the loading state, not Queue is clean, until the failure count settles", async () => {
+    const count = Promise.withResolvers<unknown>();
+    const listQuery = vi.fn((input: { queue: string }) =>
+      Promise.resolve({
+        jobs: input.queue === "pdf-export" ? [makeJob("pdf-failure")] : [],
+        nextCursor: null,
+      }),
+    );
+    const { proxy } = withInfiniteListFilter(
+      createMockTRPC([
+        { path: ["admin", "jobs", "listFailed"], query: listQuery },
+        { path: ["admin", "jobs", "retryFailed"], mutation: true as const },
+        { path: ["admin", "jobs", "removeFailed"], mutation: true as const },
+        { path: ["admin", "dlqCount"], query: () => count.promise },
+      ]),
+    );
+    const qc = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    render(<JobsTab />, {
+      wrapper: ({ children }: { readonly children: ReactNode }) => (
+        <QueryClientProvider client={qc}>
+          <TRPCProxyContext.Provider value={proxy}>
+            {children}
+          </TRPCProxyContext.Provider>
+        </QueryClientProvider>
+      ),
+    });
+
+    await waitFor(() => {
+      expect(listQuery).toHaveBeenCalled();
+    });
+    // Let the default queue's (empty) list land before asserting on it.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 25)));
+    expect(screen.getByTestId("jobs-loading-state")).toBeInTheDocument();
+    expect(screen.queryByText(/Queue is clean/)).not.toBeInTheDocument();
+
+    count.resolve({
+      count: 2,
+      byQueue: [
+        { queue: "email-reminder", count: 0 },
+        { queue: "pdf-export", count: 2 },
+      ],
+    });
+    expect(await screen.findByText("pdf-failure")).toBeInTheDocument();
+    expect(screen.queryByText(/Queue is clean/)).not.toBeInTheDocument();
+  });
+
+  it("stays on the default queue when the count failed and a later refresh succeeds", async () => {
+    let failing = true;
+    const { proxy } = withInfiniteListFilter(
+      createMockTRPC([
+        {
+          path: ["admin", "jobs", "listFailed"],
+          query: () => ({ jobs: [], nextCursor: null }),
+        },
+        { path: ["admin", "jobs", "retryFailed"], mutation: true as const },
+        { path: ["admin", "jobs", "removeFailed"], mutation: true as const },
+        {
+          path: ["admin", "dlqCount"],
+          query: () =>
+            failing
+              ? Promise.reject(new Error("count unavailable"))
+              : { count: 2, byQueue: [{ queue: "pdf-export", count: 2 }] },
+        },
+      ]),
+    );
+    const qc = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    render(<JobsTab />, {
+      wrapper: ({ children }: { readonly children: ReactNode }) => (
+        <QueryClientProvider client={qc}>
+          <TRPCProxyContext.Provider value={proxy}>
+            {children}
+          </TRPCProxyContext.Provider>
+        </QueryClientProvider>
+      ),
+    });
+
+    expect(
+      await screen.findByText(/No failed email reminder jobs/),
+    ).toBeInTheDocument();
+    failing = false;
+    await qc.invalidateQueries(proxy.admin.dlqCount.pathFilter());
+
+    expect(screen.getByLabelText("Failed job queue")).toHaveValue(
+      "email-reminder",
+    );
+  });
+
+  it("never switches away from a queue the admin picked before the count arrived", async () => {
+    const count = Promise.withResolvers<unknown>();
+    const { proxy } = withInfiniteListFilter(
+      createMockTRPC([
+        {
+          path: ["admin", "jobs", "listFailed"],
+          query: () => ({ jobs: [], nextCursor: null }),
+        },
+        { path: ["admin", "jobs", "retryFailed"], mutation: true as const },
+        { path: ["admin", "jobs", "removeFailed"], mutation: true as const },
+        { path: ["admin", "dlqCount"], query: () => count.promise },
+      ]),
+    );
+    const qc = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    render(<JobsTab />, {
+      wrapper: ({ children }: { readonly children: ReactNode }) => (
+        <QueryClientProvider client={qc}>
+          <TRPCProxyContext.Provider value={proxy}>
+            {children}
+          </TRPCProxyContext.Provider>
+        </QueryClientProvider>
+      ),
+    });
+
+    await userEvent.selectOptions(
+      screen.getByLabelText("Failed job queue"),
+      "semantic-index",
+    );
+    count.resolve({
+      count: 2,
+      byQueue: [{ queue: "pdf-export", count: 2 }],
+    });
+
+    expect(
+      await screen.findByText(/No failed semantic indexing jobs/),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Failed job queue")).toHaveValue(
+      "semantic-index",
+    );
   });
 
   it("reports one structured list error, deduplicates rerenders, and recovers on queue change", async () => {

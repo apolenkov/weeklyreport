@@ -130,7 +130,9 @@ describe("LeadSummaryTable action queue", () => {
         onMutated={vi.fn()}
       />,
     );
-    const toggle = screen.getByRole("button", { name: /details/i });
+    const toggle = screen.getByRole("button", {
+      name: "Details for Alice Lead",
+    });
     expect(toggle).toHaveClass(
       "h-[var(--dashboard-action-h)]",
       "w-[var(--dashboard-summary-action-w)]",
@@ -141,6 +143,7 @@ describe("LeadSummaryTable action queue", () => {
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(toggle).toHaveAccessibleName("Less details for Alice Lead");
     expect(toggle).toHaveClass(
       "h-[var(--dashboard-action-h)]",
       "w-[var(--dashboard-summary-action-w)]",

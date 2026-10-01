@@ -9,8 +9,9 @@ import { useEffect } from "react";
 // ponytail: this hook does not compensate for the scrollbar gap, and Radix
 // dialogs (ConfirmationDialog) lock through react-remove-scroll, which is only
 // a transitive dependency; if a Radix dialog closes before the surface under
-// it, the page can stay overflow:hidden. Switch to RemoveScroll (a direct
-// dependency) if either matters.
+// it, the page can stay overflow:hidden. If either matters, adopt
+// RemoveScroll from react-remove-scroll; it is NOT a direct dependency of this
+// app, so that means adding one.
 const lock = { count: 0, previousOverflow: "" };
 
 export function useBodyScrollLock(): void {
