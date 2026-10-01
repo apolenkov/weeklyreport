@@ -90,30 +90,30 @@
 
 ## 5. CI image build
 
-- [ ] 5.1 `build-images` job per the requirement (variables, fail-closed guard,
+- [x] 5.1 `build-images` job per the requirement (variables, fail-closed guard,
       branch/tag/MR rules, SHA tags, digest artifact, `resource_group`).
       Registry and credentials default to `$CI_REGISTRY_IMAGE`, `$CI_REGISTRY_USER`,
       `$CI_REGISTRY_PASSWORD`, overridable by `IMAGE_REGISTRY*`; syntax stays within
       GitLab 15.10.
       Acceptance: a job whose resolved registry is empty fails at its first line and
       starts no build; `.gitlab-ci.yml` still passes `lint:runtime-node`.
-- [ ] 5.2 Update `prod-compose-gate.test.ts` (negative lock to "image build only
+- [x] 5.2 Update `prod-compose-gate.test.ts` (negative lock to "image build only
       in the gated job", reviewed external-image set, Caddyfile path),
       `docs/gitlab-ci.md`, `docs/operations.md` CI section.
       Acceptance: `pnpm test` passes; the old negative lock still rejects a
       Docker-in-Docker lane.
-- [ ] 5.3 `quality` job: pinned sha256 `helm` download like the existing
+- [x] 5.3 `quality` job: pinned sha256 `helm` download like the existing
       `docker-compose` step, so `helm lint` and `helm template` run in CI. No
       `kubeconform` and no permanent build-probe job in CI.
       Acceptance: the chart gate test passes in the job (pipeline log is a later check).
 
 ## 6. CD
 
-- [ ] 6.1 Optional `deploy-production` job (manual, default branch, defined only
+- [x] 6.1 Optional `deploy-production` job (manual, default branch, defined only
       with `KUBECONFIG`, pinned helm image, `--atomic --timeout 10m`, no separate `--wait`).
       Acceptance: the job is absent from a pipeline without `KUBECONFIG`
       (check with `gitlab-ci-lint` or a rules test); no credential in the repo.
-- [ ] 6.2 `docs/kubernetes.md`: install, upgrade, rollback limits (database not
+- [x] 6.2 `docs/kubernetes.md`: install, upgrade, rollback limits (database not
       rolled back), secret keys and rotation, restore drill, one release per
       namespace, what monitoring needs, assumptions about DevOps answers, the
       failed-migration recovery (`prisma migrate resolve --rolled-back <name>`;
