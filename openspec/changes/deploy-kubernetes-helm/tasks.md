@@ -133,11 +133,11 @@
 
 ## 8. Local acceptance on OrbStack (separate session, after 1 to 4)
 
-- [ ] 8.1 Preflight: memory headroom, `kubectl config current-context` is
+- [x] 8.1 Preflight: memory headroom, `kubectl config current-context` is
       `orbstack`, namespace `wr-k8s-accept` absent; `kubeconform` optional.
       Build `api`, `migrate`, `web`, `backup` one at a time with Docker (no
       registry). Acceptance: four images present; peak memory noted.
-- [ ] 8.2 `helm install` with a scratch values file kept outside the repository.
+- [x] 8.2 `helm install` with a scratch values file kept outside the repository.
       Verify every item of design.md section 8 step 4 and record command output.
       Decide the read-only root filesystem per workload; the allow-list check
       is one PASS item.
