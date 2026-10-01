@@ -50,14 +50,16 @@ const deployJob = requireJob("deploy-production");
 // must therefore be a plain string.
 test("every CI script entry is a string GitLab can parse", () => {
   for (const [name, job] of Object.entries(jobs)) {
-    const script = (job as { script?: unknown } | undefined)?.script;
-    if (!Array.isArray(script)) continue;
-    for (const entry of script) {
-      assert.equal(
-        typeof entry,
-        "string",
-        `${name} has a non-string script entry`,
-      );
+    for (const key of ["before_script", "script", "after_script"]) {
+      const lines = (job as Record<string, unknown> | undefined)?.[key];
+      if (!Array.isArray(lines)) continue;
+      for (const entry of lines) {
+        // `!reference [...]` parses as an array; a one-key mapping does not.
+        assert.ok(
+          typeof entry === "string" || Array.isArray(entry),
+          `${name}.${key} has an entry GitLab cannot parse`,
+        );
+      }
     }
   }
 });
@@ -204,5 +206,5 @@ test("the deploy job exists only with a kubeconfig, manually, on the default bra
   assert.doesNotMatch(script, /--wait/);
   assert.match(script, /images\.tag=\$CI_COMMIT_SHA/);
   // A deploy must wait for this pipeline's image build, when it has one.
-  assert.deepEqual(deployJob.needs, [{ job: "build-images", optional: true }]);
+  assert.deepEqual(deployJob.needs, [{ job: "build-images" }]);
 });

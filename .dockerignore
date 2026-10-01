@@ -66,6 +66,3 @@ apps/web/.tmp
 *.png
 **/*.png
 deploy/helm
-# Defence in depth: CI writes registry auth outside the project dir, but a
-# stray local copy must never enter the image build context either.
-.registry-auth
