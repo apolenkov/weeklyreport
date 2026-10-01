@@ -195,6 +195,7 @@ Authority model:
 ### Deployment and configuration
 
 - [deploy-caddy-config](./deploy-caddy-config/spec.md) — Defines the production proxy security headers and API routing behavior.
+- [deploy-kubernetes-chart](./deploy-kubernetes-chart/spec.md) — Defines the Helm chart for the Kubernetes deployment.
 - [deploy-healthchecks](./deploy-healthchecks/spec.md) — Exercises real PgBouncer and API dependency paths rather than process-only liveness.
 - [pdf-renderer-service](./pdf-renderer-service/spec.md) — Bounds the internal Gotenberg renderer: HTTP contract, readiness gating, credential transport, egress to the print origin, and deployment posture.
 - [env-schema-coverage](./env-schema-coverage/spec.md) — Declares every consumed environment variable, removes silent defaults, and fails boot when mandatory production config is missing.
