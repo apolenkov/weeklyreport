@@ -29,12 +29,22 @@ spec:
   jobTemplate:
     spec:
       backoffLimit: 0
+      activeDeadlineSeconds: {{ .Values.backup.activeDeadlineSeconds }}
       template:
         metadata:
           labels:
             {{- include "wr.labels" (dict "root" . "component" "backup") | nindent 12 }}
         spec:
           {{- include "wr.podCommon" (dict "root" . "user" .Values.backup.runAsUser "fsGroup" .Values.backup.runAsUser) | nindent 10 }}
+          # pgbackups is ReadWriteOnce and mounted by postgres too: on a
+          # multi-node cluster only the postgres node can attach it.
+          affinity:
+            podAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                    matchLabels:
+                      {{- include "wr.selector" (dict "component" "postgres") | nindent 22 }}
+                  topologyKey: kubernetes.io/hostname
           restartPolicy: Never
           containers:
             - name: backup
