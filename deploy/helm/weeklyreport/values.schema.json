@@ -512,6 +512,10 @@
         "startingDeadlineSeconds": {
           "type": "integer",
           "minimum": 1
+        },
+        "activeDeadlineSeconds": {
+          "type": "integer",
+          "minimum": 1
         }
       },
       "required": ["schedule", "retentionDays"]

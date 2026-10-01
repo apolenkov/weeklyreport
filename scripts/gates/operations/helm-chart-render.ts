@@ -33,6 +33,16 @@ export interface PodSpec {
   readonly automountServiceAccountToken?: boolean;
   readonly enableServiceLinks?: boolean;
   readonly imagePullSecrets?: readonly { readonly name: string }[];
+  readonly affinity?: {
+    readonly podAffinity?: {
+      readonly requiredDuringSchedulingIgnoredDuringExecution?: readonly {
+        readonly topologyKey?: string;
+        readonly labelSelector?: {
+          readonly matchLabels?: Readonly<Record<string, string>>;
+        };
+      }[];
+    };
+  };
   readonly securityContext: {
     readonly runAsNonRoot?: boolean;
     readonly runAsUser?: number;
@@ -47,7 +57,10 @@ interface ManifestSpec {
   readonly rules?: unknown;
   readonly template?: { readonly spec: PodSpec };
   readonly jobTemplate?: {
-    readonly spec: { readonly template: { readonly spec: PodSpec } };
+    readonly spec: {
+      readonly activeDeadlineSeconds?: number;
+      readonly template: { readonly spec: PodSpec };
+    };
   };
 }
 
