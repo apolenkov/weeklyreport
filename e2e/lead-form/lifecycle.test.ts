@@ -1250,7 +1250,6 @@ void test("next step limit accepts a corrected boundary value", async () => {
 
 for (const kind of ["risk", "decision"] as const) {
   void test(`${kind} text limits reject oversized fields and persist corrected boundaries`, async () => {
-    const title = kind === "risk" ? "Risk" : "Decision";
     await openLeadReport();
     await findRole(
       "button",
